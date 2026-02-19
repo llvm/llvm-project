@@ -16,18 +16,15 @@ int main(int argc, char **argv) {
   
   // Multiple valid strided updates
   #pragma omp target update from(s1.data[0:10:2], s2.data[0:7:3]) // OK
-  {}
   
   // Mixed: one with stride, one without
   #pragma omp target update from(s1.data[0:N], s2.data[0:5:2]) // OK
-  {}
   
   int stride1 = 2;
   int stride2 = 3;
   
   // Multiple with expression strides
   #pragma omp target update from(s1.data[1:5:stride1], s2.data[0:4:stride2]) // OK
-  {}
   
   // One valid, one invalid
   #pragma omp target update from(s1.data[0:5:2], s2.data[0:4:0]) // expected-error {{section stride is evaluated to a non-positive value 0}}
@@ -38,10 +35,8 @@ int main(int argc, char **argv) {
   
   // Syntax errors
   #pragma omp target update from(s1.data[0:5:2], s2.data[0:4 3]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
-  {}
   
   #pragma omp target update from(s1.data[0:5:2:3], s2.data[0:4:2]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
-  {}
   
   return 0;
 }

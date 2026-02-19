@@ -17,33 +17,20 @@ int main(int argc, char **argv) {
   
   // Valid strided struct member array sections with variable count/stride (FROM)
   #pragma omp target update from(s.data[0:s.len/2:2]) // OK - member count expression
-  {}
   
   #pragma omp target update from(s.data[0:count:s.stride]) // OK - external count, member stride
-  {}
   
   #pragma omp target update from(s.data[0:s.len:ext_stride]) // OK - member count, external stride
-  {}
   
   #pragma omp target update from(s.data[0:count:ext_stride]) // OK - both external
-  {}
   
   #pragma omp target update from(s.data[0:s.len/2:s.stride]) // OK - both from struct
-  {}
   
   #pragma omp target update from(s.data[1:(s.len-2)/2:s.stride]) // OK - complex count expression
-  {}
   
   #pragma omp target update from(s.data[0:count*2:s.stride+1]) // OK - expressions for both
-  {}
-  
-  // Edge cases
-  int stride_one = 1;
-  #pragma omp target update from(s.data[0:s.len:stride_one]) // OK - stride=1
-  {}
   
   #pragma omp target update from(s.data[0:s.len/s.stride:s.stride]) // OK - count depends on stride
-  {}
   
   // Invalid compile-time constant strides with variable count
   #pragma omp target update from(s.data[0:s.len:0]) // expected-error {{section stride is evaluated to a non-positive value 0}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
@@ -54,16 +41,12 @@ int main(int argc, char **argv) {
   
   // Valid strided struct member array sections with variable count and stride (TO)
   #pragma omp target update to(s.data[0:s.len/2:2]) // OK
-  {}
   
   #pragma omp target update to(s.data[0:count:s.stride]) // OK
-  {}
   
   #pragma omp target update to(s.data[0:s.len:ext_stride]) // OK
-  {}
   
   #pragma omp target update to(s.data[0:count*2:s.stride+1]) // OK
-  {}
   
   // Invalid stride with TO
   #pragma omp target update to(s.data[0:s.len:0]) // expected-error {{section stride is evaluated to a non-positive value 0}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}

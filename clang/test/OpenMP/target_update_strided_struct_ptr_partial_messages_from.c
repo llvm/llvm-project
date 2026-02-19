@@ -14,19 +14,13 @@ int main(int argc, char **argv) {
   s.data = (double *)__builtin_alloca(N * sizeof(double));
   
   // Valid partial strided updates with pointer member
-  #pragma omp target update from(s.data[0:2:10]) // OK - partial coverage
-  {}
-  
-  // Stride larger than length
-  #pragma omp target update from(s.data[0:2:20]) // OK
-  {}
+  #pragma omp target update from(s.data[0:2:10]) // OK - partial coverage (stride > length)
   
   // Valid: complex expressions
   int offset = 1;
 
   // Runtime-dependent stride expressions
   #pragma omp target update from(s.data[0:4:offset+1]) // OK
-  {}
   
   return 0;
 }
