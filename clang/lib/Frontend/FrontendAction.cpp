@@ -1441,7 +1441,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
           if (!PCHFile)
             return reportError(PCHFile.takeError());
           PCHCASID = PCHFile->getID().toString();
-          PCHPath = PCHCASID;
+          PCHPath = PCHBuffer->getBufferIdentifier();
         } else {
           PCHPath = CI.getPreprocessorOpts().ImplicitPCHInclude;
           DisableValidation =
