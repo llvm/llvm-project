@@ -898,11 +898,7 @@ defm TLBIP : TLBITableBase;
 
 multiclass TLBI<string name, bit hasTLBIP, bits<3> op1, bits<4> crn, bits<4> crm,
              bits<3> op2, bit needsreg = 1, bit optionalreg = 0> {
-  defvar HasE1IS = !ne(!find(name, "E1IS"), -1);
-  defvar HasE1OS = !ne(!find(name, "E1OS"), -1);
-  defvar HasE2IS = !ne(!find(name, "E2IS"), -1);
-  defvar HasE2OS = !ne(!find(name, "E2OS"), -1);
-  defvar allowTLBID = !or(!or(HasE1IS, HasE1OS), !or(HasE2IS, HasE2OS));
+  defvar allowTLBID = !match(name, ".*E[12][IO]S.*");
   defvar TLBIPRequires = !if(allowTLBID,
                              ["AArch64::FeatureD128", "AArch64::FeatureTLBID"],
                              ["AArch64::FeatureD128"]);
