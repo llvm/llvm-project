@@ -1,4 +1,4 @@
-//===-- Implementation of bf16mulf128 function ----------------------------===//
+//===-- Shared bf16mulf128 function -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/bf16mulf128.h"
+#ifndef LLVM_LIBC_SHARED_MATH_BF16MULF128_H
+#define LLVM_LIBC_SHARED_MATH_BF16MULF128_H
+
+#include "include/llvm-libc-types/float128.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT128
+
 #include "src/__support/math/bf16mulf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(bfloat16, bf16mulf128, (float128 x, float128 y)) {
-  return math::bf16mulf128(x, y);
-}
+using math::bf16mulf128;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT128
+
+#endif // LLVM_LIBC_SHARED_MATH_BF16MULF128_H

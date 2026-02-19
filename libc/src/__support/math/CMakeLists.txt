@@ -383,6 +383,47 @@ add_header_library(
 )
 
 add_header_library(
+  bf16mul
+  HDRS
+    bf16mul.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  bf16mulf
+  HDRS
+    bf16mulf.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  bf16mulf128
+  HDRS
+    bf16mulf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  bf16mull
+  HDRS
+    bf16mull.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   canonicalize
   HDRS
     canonicalize.h

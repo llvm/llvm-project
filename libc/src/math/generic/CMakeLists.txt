@@ -5243,11 +5243,7 @@ add_entrypoint_object(
   HDRS
     ../bf16mul.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.generic.mul
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.bf16mul
 )
 
 add_entrypoint_object(
@@ -5257,11 +5253,7 @@ add_entrypoint_object(
   HDRS
     ../bf16mulf.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.generic.mul
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.bf16mulf
 )
 
 add_entrypoint_object(
@@ -5271,11 +5263,7 @@ add_entrypoint_object(
   HDRS
     ../bf16mull.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.generic.mul
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.bf16mull
 )
 
 add_entrypoint_object(
@@ -5285,11 +5273,7 @@ add_entrypoint_object(
   HDRS
     ../bf16mulf128.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.generic.mul
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.bf16mulf128
 )
 
 add_entrypoint_object(
