@@ -725,3 +725,19 @@ int (*const_fold)[12] = new int[3][&const_fold + 12 - &const_fold];
 // expected-error@-5 {{cannot allocate object of variably modified type}}
 // expected-warning@-6 {{variable length arrays in C++ are a Clang extension}}
 #endif
+
+#if __cplusplus >= 201103L
+namespace PR81157 {
+  struct C {
+    C(int);
+  };
+  int f(int n) {
+    C *ptr1{new C[]{1L}};
+    C *ptr2{new C[n]{1L}};
+    // expected-error@-1 {{no matching constructor}}
+    // expected-note@-6 {{candidate constructor}}
+    // expected-note@-8 2 {{candidate constructor}}
+    // expected-note@-4 {{in implicit initialization of trailing array elements in runtime-sized array new}}
+  }
+}
+#endif
