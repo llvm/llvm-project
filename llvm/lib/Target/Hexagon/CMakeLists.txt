@@ -50,6 +50,7 @@ add_llvm_target(HexagonCodeGen
   HexagonLoopAlign.cpp
   HexagonLoopIdiomRecognition.cpp
   HexagonMachineFunctionInfo.cpp
+  HexagonMachineUnroller.cpp
   HexagonMachineScheduler.cpp
   HexagonMask.cpp
   HexagonMCInstLower.cpp

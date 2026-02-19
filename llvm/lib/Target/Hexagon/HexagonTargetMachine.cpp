@@ -16,6 +16,7 @@
 #include "HexagonLoopIdiomRecognition.h"
 #include "HexagonMachineFunctionInfo.h"
 #include "HexagonMachineScheduler.h"
+#include "HexagonMachineUnroller.h"
 #include "HexagonTargetObjectFile.h"
 #include "HexagonTargetTransformInfo.h"
 #include "HexagonVectorLoopCarriedReuse.h"
@@ -316,6 +317,11 @@ public:
     return getTM<HexagonTargetMachine>();
   }
 
+  MachineUnroller *
+  createMachineUnroller(MachineUnrollerContext *C) const override {
+    return new HexagonMachineUnroller(C);
+  }
+
   void addIRPasses() override;
   bool addInstSelector() override;
   bool addILPOpts() override;
@@ -429,6 +435,8 @@ void HexagonPassConfig::addPreRegAlloc() {
     if (!DisableHardwareLoops)
       addPass(createHexagonHardwareLoops());
   }
+  if (getOptLevel() == CodeGenOptLevel::Aggressive)
+    addPass(&MachineUnrollerPassID);
   if (TM->getOptLevel() >= CodeGenOptLevel::Default)
     addPass(&MachinePipelinerID);
 }

@@ -533,6 +533,9 @@ LLVM_ABI FunctionPass *createRegUsageInfoPropPass();
 /// This pass performs software pipelining on machine instructions.
 LLVM_ABI extern char &MachinePipelinerID;
 
+/// This pass performs loop unrolling at the machine instruction (MI) level.
+LLVM_ABI extern char &MachineUnrollerPassID;
+
 /// This pass frees the memory occupied by the MachineFunction.
 LLVM_ABI FunctionPass *createFreeMachineFunctionPass();
 

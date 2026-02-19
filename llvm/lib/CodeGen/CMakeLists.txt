@@ -143,6 +143,8 @@ add_llvm_component_library(LLVMCodeGen
   MachineOutliner.cpp
   MachinePassManager.cpp
   MachinePipeliner.cpp
+  MachineUnroller.cpp
+  MachineUnrollerPass.cpp
   MachinePostDominators.cpp
   MachineRegionInfo.cpp
   MachineRegisterInfo.cpp

@@ -213,6 +213,7 @@ LLVM_ABI void initializeMachineLateInstrsCleanupLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineLICMPass(PassRegistry &);
 LLVM_ABI void initializeMachineLoopInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineModuleInfoWrapperPassPass(PassRegistry &);
+LLVM_ABI void initializeMachineUnrollerPassPass(PassRegistry &);
 LLVM_ABI void
 initializeMachineOptimizationRemarkEmitterPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineOutlinerPass(PassRegistry &);
