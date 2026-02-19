@@ -56,7 +56,13 @@ namespace p3_example {
   auto x = 5;
   const auto *v = &x, u = 6;
   static auto y = 0.0;
-  auto int r;  // expected-warning {{storage class}} expected-error {{file-scope}}
+  auto int r;
+#if __cplusplus >= 201103L
+  // expected-error@-2 {{'auto' cannot be combined with a type specifier}}
+#else
+  // expected-warning@-4 {{storage class}}
+  // expected-error@-5 {{file-scope}}
+#endif
 
   static_assert(is_same<decltype(x), int>(), "");
   static_assert(is_same<decltype(v), const int*>(), "");

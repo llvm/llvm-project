@@ -63,7 +63,7 @@ int main()
     auto l = [](auto 
                       (*)(auto)) { }; //expected-error{{'auto' not allowed}}
     //FIXME: These diagnostics might need some work.
-    auto l2 = [](char auto::*pm) { };  //expected-error{{cannot combine with previous}}\
+    auto l2 = [](char auto::*pm) { };  //expected-error{{'auto' cannot be combined with a type specifier}}\
                                          expected-error{{'pm' does not point into a class}}
     auto l3 = [](char (auto::*pmf)()) { };  //expected-error{{'auto' not allowed}}\
                                               expected-error{{'pmf' does not point into a class}}\
