@@ -23896,7 +23896,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPNumTeamsClause(ArrayRef<Expr *> VarList,
 
     // Check if both are compile-time constants for validation
     if (!LowerBound->isValueDependent() && !UpperBound->isValueDependent() &&
-	LowerBound->isIntegerConstantExpr(getASTContext()) &&
+        LowerBound->isIntegerConstantExpr(getASTContext()) &&
         UpperBound->isIntegerConstantExpr(getASTContext())) {
 
       // Get the actual constant values
