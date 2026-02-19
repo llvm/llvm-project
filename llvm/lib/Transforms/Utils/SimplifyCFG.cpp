@@ -2492,6 +2492,23 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
       return false;
     };
 
+    // Check whether any of the sinkable instructions share the same parent
+    auto IsGEPInSameParent = [&LRI](Value *V) {
+      auto *VOp = dyn_cast<GEPOperator>(V);
+      if (!VOp)
+        return false;
+
+      auto *VInst = dyn_cast<Instruction>(VOp);
+      if (!VInst) {
+        return false;
+      }
+
+      return any_of(*LRI, [&VInst](Instruction *I) {
+        return is_contained(VInst->users(), I) &&
+               VInst->getParent() == I->getParent();
+      });
+    };
+
     // Okay, we *could* sink last ScanIdx instructions. But how many can we
     // actually sink before encountering instruction that is unprofitable to
     // sink?
@@ -2507,9 +2524,9 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
           // The gep can likely be folded into the load/store as an addressing
           // mode. Additionally, a load of a gep is easier to analyze than a
           // load of a phi.
-          if (IsMemOperand(U) &&
-              any_of(It->second, [](Value *V) { return isa<GEPOperator>(V); }))
+          if (IsMemOperand(U) && any_of(It->second, IsGEPInSameParent)) {
             return false;
+          }
           // FIXME: this check is overly optimistic. We may end up not sinking
           // said instruction, due to the very same profitability check.
           // See @creating_too_many_phis in sink-common-code.ll.
