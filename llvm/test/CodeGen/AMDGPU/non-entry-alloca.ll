@@ -3,7 +3,6 @@
 ; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck -check-prefixes=MUBUF,DEFAULTSIZE-V5 %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck -check-prefixes=MUBUF,DEFAULTSIZE-V5 %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-assume-dynamic-stack-object-size=1024 | FileCheck -check-prefixes=MUBUF,ASSUME1024 %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-assume-dynamic-stack-object-size=1024 | FileCheck -check-prefixes=MUBUF,ASSUME1024 %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+enable-flat-scratch | FileCheck -check-prefixes=FLATSCR,DEFAULTSIZE %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+enable-flat-scratch -amdgpu-assume-dynamic-stack-object-size=1024 | FileCheck -check-prefixes=FLATSCR,ASSUME1024 %s
 

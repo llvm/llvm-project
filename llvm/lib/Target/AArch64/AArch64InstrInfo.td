@@ -11384,39 +11384,37 @@ let Predicates = [HasRCPC3, HasNEON] in {
 //===----------------------------------------------------------------------===//
 // 128-bit System Instructions (FEAT_SYSINSTR128)
 //===----------------------------------------------------------------------===//
-let Predicates = [HasD128] in {
-  def SYSPxt  : SystemPXtI<0, "sysp">;
+def SYSPxt  : SystemPXtI<0, "sysp">;
 
-  def SYSPxt_XZR
-    : BaseSystemI<0, (outs),
-        (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, SyspXzrPairOperand:$xzr_pair),
-        "sysp", "\t$op1, $Cn, $Cm, $op2, $xzr_pair">,
-      Sched<[WriteSys]>
-  {
-    // Had to use a custom decoder because tablegen interprets this as having 4 fields (why?)
-    // and therefore autogenerates a decoder that builds an MC representation that has 4 fields
-    // (decodeToMCInst), but when printing we expect the MC representation to have 5 fields (one
-    // extra for the XZR) because AArch64InstPrinter::printInstruction in AArch64GenAsmWriter.inc
-    // is based off of the asm template (maybe) and therefore wants to print 5 operands.
-    // I could add a bits<5> xzr_pair. But without a way to constrain it to 0b11111 here it would
-    // overlap with the main SYSP instruction.
-    let DecoderMethod = "DecodeSyspXzrInstruction";
-    bits<3> op1;
-    bits<4> Cn;
-    bits<4> Cm;
-    bits<3> op2;
-    let Inst{22}    = 0b1; // override BaseSystemI
-    let Inst{20-19} = 0b01;
-    let Inst{18-16} = op1;
-    let Inst{15-12} = Cn;
-    let Inst{11-8}  = Cm;
-    let Inst{7-5}   = op2;
-    let Inst{4-0}   = 0b11111;
-  }
-
-  def : InstAlias<"sysp $op1, $Cn, $Cm, $op2",
-                  (SYSPxt_XZR imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, XZR)>;
+def SYSPxt_XZR
+  : BaseSystemI<0, (outs),
+      (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, SyspXzrPairOperand:$xzr_pair),
+      "sysp", "\t$op1, $Cn, $Cm, $op2, $xzr_pair">,
+    Sched<[WriteSys]>
+{
+  // Had to use a custom decoder because tablegen interprets this as having 4 fields (why?)
+  // and therefore autogenerates a decoder that builds an MC representation that has 4 fields
+  // (decodeToMCInst), but when printing we expect the MC representation to have 5 fields (one
+  // extra for the XZR) because AArch64InstPrinter::printInstruction in AArch64GenAsmWriter.inc
+  // is based off of the asm template (maybe) and therefore wants to print 5 operands.
+  // I could add a bits<5> xzr_pair. But without a way to constrain it to 0b11111 here it would
+  // overlap with the main SYSP instruction.
+  let DecoderMethod = "DecodeSyspXzrInstruction";
+  bits<3> op1;
+  bits<4> Cn;
+  bits<4> Cm;
+  bits<3> op2;
+  let Inst{22}    = 0b1; // override BaseSystemI
+  let Inst{20-19} = 0b01;
+  let Inst{18-16} = op1;
+  let Inst{15-12} = Cn;
+  let Inst{11-8}  = Cm;
+  let Inst{7-5}   = op2;
+  let Inst{4-0}   = 0b11111;
 }
+
+def : InstAlias<"sysp $op1, $Cn, $Cm, $op2",
+                (SYSPxt_XZR imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, XZR)>;
 
 //---
 // 128-bit System Registers (FEAT_SYSREG128)
@@ -11435,22 +11433,20 @@ let Predicates = [HasD128] in {
 //
 // ...where t is even (X0, X2, etc).
 
-let Predicates = [HasD128] in {
-  def MRRS : RtSystemI128<1,
-    (outs MrrsMssrPairClassOperand:$Rt), (ins mrs_sysreg_op:$systemreg),
-    "mrrs", "\t$Rt, $systemreg">
-  {
-    bits<16> systemreg;
-    let Inst{20-5} = systemreg;
-  }
+def MRRS : RtSystemI128<1,
+  (outs MrrsMssrPairClassOperand:$Rt), (ins mrs_sysreg_op:$systemreg),
+  "mrrs", "\t$Rt, $systemreg">
+{
+  bits<16> systemreg;
+  let Inst{20-5} = systemreg;
+}
 
-  def MSRR : RtSystemI128<0,
-    (outs),  (ins msr_sysreg_op:$systemreg, MrrsMssrPairClassOperand:$Rt),
-    "msrr", "\t$systemreg, $Rt">
-  {
-    bits<16> systemreg;
-    let Inst{20-5} = systemreg;
-  }
+def MSRR : RtSystemI128<0,
+  (outs),  (ins msr_sysreg_op:$systemreg, MrrsMssrPairClassOperand:$Rt),
+  "msrr", "\t$systemreg, $Rt">
+{
+  bits<16> systemreg;
+  let Inst{20-5} = systemreg;
 }
 
 //===----------------------------===//
