@@ -4487,9 +4487,12 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   }
 
   // canonicalize (sub X, (vscale * C)) to (add X, (vscale * -C))
+  // avoid if ISD::MUL handling is poor and ISD::SHL isn't an option.
   if (N1.getOpcode() == ISD::VSCALE && N1.hasOneUse()) {
     const APInt &IntVal = N1.getConstantOperandAPInt(0);
-    return DAG.getNode(ISD::ADD, DL, VT, N0, DAG.getVScale(DL, VT, -IntVal));
+    if (!IntVal.isPowerOf2() ||
+        hasOperation(ISD::MUL, N1.getOperand(0).getValueType()))
+      return DAG.getNode(ISD::ADD, DL, VT, N0, DAG.getVScale(DL, VT, -IntVal));
   }
 
   // canonicalize (sub X, step_vector(C)) to (add X, step_vector(-C))
@@ -7969,6 +7972,13 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
         X.getOperand(0).getScalarValueSizeInBits() == 1)
       return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, X.getOperand(0));
   }
+
+  // (X +/- Y) & Y --> ~X & Y when Y is a power of 2 (or zero).
+  if (sd_match(N, m_And(m_Value(Y),
+                        m_OneUse(m_AnyOf(m_Add(m_Value(X), m_Deferred(Y)),
+                                         m_Sub(m_Value(X), m_Deferred(Y)))))) &&
+      DAG.isKnownToBeAPowerOfTwo(Y, /*OrZero=*/true))
+    return DAG.getNode(ISD::AND, DL, VT, DAG.getNOT(DL, X, VT), Y);
 
   // fold (and (sign_extend_inreg x, i16 to i32), 1) -> (and x, 1)
   // fold (and (sra)) -> (and (srl)) when possible.
