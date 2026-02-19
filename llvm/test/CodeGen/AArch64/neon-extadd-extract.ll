@@ -786,7 +786,7 @@ define <2 x i8> @extract_scalable_vec() vscale_range(1,16) "target-features"="+s
 ; CHECK-GI-LABEL: extract_scalable_vec:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov x8, xzr
-; CHECK-GI-NEXT:    mov w9, #1 // =0x1
+; CHECK-GI-NEXT:    mov x9, #1 // =0x1
 ; CHECK-GI-NEXT:    ld1 { v0.b }[0], [x8]
 ; CHECK-GI-NEXT:    ldr b1, [x9]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI36_0

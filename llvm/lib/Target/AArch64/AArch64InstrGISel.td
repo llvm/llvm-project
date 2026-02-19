@@ -87,6 +87,7 @@ def G_DUP: AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$lane);
   let hasSideEffects = 0;
+  let GISelMatchGenericTypes = 1;
 }
 
 // Represents a lane duplicate operation.
@@ -560,18 +561,10 @@ let AddedComplexity = 19 in {
   defm : VecStoreLane64_0Pat<am_indexed16, store, v4i16, i16, hsub, uimm12s2, STRHui>;
   defm : VecStoreLane64_0Pat<am_indexed32, store, v2i32, i32, ssub, uimm12s4, STRSui>;
 
-  defm : VecStoreLane64_0Pat<am_indexed16, store, v4f16, f16, hsub, uimm12s2, STRHui>;
-  defm : VecStoreLane64_0Pat<am_indexed32, store, v2f32, f32, ssub, uimm12s4, STRSui>;
-
   defm : VecStoreULane64_0Pat<store, v4i16, i16, hsub, STURHi>;
   defm : VecStoreULane64_0Pat<store, v2i32, i32, ssub, STURSi>;
   defm : VecROStoreLane64_0Pat<ro16, store, v4i16, i16, hsub, STRHroW, STRHroX>;
   defm : VecROStoreLane64_0Pat<ro32, store, v2i32, i32, ssub, STRSroW, STRSroX>;
-
-  defm : VecStoreULane64_0Pat<store, v4f16, f16, hsub, STURHi>;
-  defm : VecStoreULane64_0Pat<store, v2f32, f32, ssub, STURSi>;
-  defm : VecROStoreLane64_0Pat<ro16, store, v4f16, f16, hsub, STRHroW, STRHroX>;
-  defm : VecROStoreLane64_0Pat<ro32, store, v2f32, f32, ssub, STRSroW, STRSroX>;
 }
 
 def : Pat<(v8i8 (AArch64dup (i8 (load GPR64sp:$Rn)))),
@@ -590,5 +583,3 @@ def : Pat<(v2i64 (AArch64dup (i64 (load GPR64sp:$Rn)))),
           (LD1Rv2d GPR64sp:$Rn)>;
 def : Pat<(v1i64 (AArch64dup (i64 (load GPR64sp:$Rn)))),
           (LD1Rv1d GPR64sp:$Rn)>;
-
-def : Pat<(f64 (bitconvert (i64 0))), (FMOVD0)>;

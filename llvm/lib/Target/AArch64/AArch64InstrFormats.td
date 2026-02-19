@@ -171,10 +171,6 @@ def extract_high_v4f32 :
 def extract_high_v2f64 :
     ComplexPattern<v1f64, 1, "SelectExtractHigh", [extract_subvector, bitconvert]>;
 
-def gi_extract_high_v8bf16 :
-  GIComplexOperandMatcher<v4s16, "selectExtractHigh">,
-  GIComplexPatternEquiv<extract_high_v8bf16>;
-
 def gi_extract_high_v8f16 :
   GIComplexOperandMatcher<v4s16, "selectExtractHigh">,
   GIComplexPatternEquiv<extract_high_v8f16>;

@@ -96,7 +96,10 @@ void applyFConstantToConstant(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
   MachineIRBuilder MIB(MI);
   const APFloat &ImmValAPF = MI.getOperand(1).getFPImm()->getValueAPF();
-  MIB.buildConstant(MI.getOperand(0).getReg(), ImmValAPF.bitcastToAPInt());
+  const Register DstReg = MI.getOperand(0).getReg();
+  const LLT DstTy = MIB.getMRI()->getType(DstReg);
+  MIB.getMRI()->setType(DstReg, LLT::scalar(DstTy.getSizeInBits()));
+  MIB.buildConstant(DstReg, ImmValAPF.bitcastToAPInt());
   MI.eraseFromParent();
 }
 
