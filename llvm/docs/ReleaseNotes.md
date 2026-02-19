@@ -199,6 +199,7 @@ Changes to LLDB
 
 #### Kernel Debugging
 
+* Support for ARM has been added.
 * The crashed thread is now automatically selected on start.
 * Threads are listed in incrmental order by pid then by tid.
 
