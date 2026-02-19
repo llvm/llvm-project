@@ -4996,8 +4996,7 @@ void TagDecl::printAnonymousTagDecl(llvm::raw_ostream &OS,
     OS << ' ' << getKindName();
 
   if (Policy.AnonymousTagNameStyle ==
-          llvm::to_underlying(
-              PrintingPolicy::AnonymousTagMode::SourceLocation)) {
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::SourceLocation)) {
     PresumedLoc PLoc =
         getASTContext().getSourceManager().getPresumedLoc(getLocation());
     if (PLoc.isValid()) {
