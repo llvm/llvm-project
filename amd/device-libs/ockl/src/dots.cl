@@ -9,6 +9,9 @@
 #include "oclc.h"
 #include "ockl.h"
 
+#define TO_INT2(X) __builtin_convertvector(X, int2)
+#define TO_UINT2(X) __builtin_convertvector(X, uint2)
+
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 __attribute__((target("dot10-insts"), const)) static float amdgcn_fdot2(half2 a, half2 b, float c, bool s)
@@ -92,15 +95,9 @@ ATTR int
 __ockl_sdot2(short2 a, short2 b, int c, bool s)
 {
     if (SWIDOT2) {
-        int p0 = (int)a.s0 * (int)b.s0;
-        int p1 = (int)a.s1 * (int)b.s1;
-        long r = (long)c + (long)p0 + (long)p1;
-
-        if (s)
-            return r < -2147483648L ? -2147483648 :
-                   (r > 2147483647L ? 2147483647 : (int)r);
-        else
-            return (int)r;
+        int2 p = TO_INT2(a) * TO_INT2(b);
+        int dot = p.x + p.y;
+        return s ? __ockl_add_sat_i32(dot, c) : dot + c;
     } else {
         return amdgcn_sdot2(a, b, c, s);
     }
@@ -110,10 +107,9 @@ ATTR uint
 __ockl_udot2(ushort2 a, ushort2 b, uint c, bool s)
 {
     if (SWIDOT2) {
-        uint p0 = (uint)a.s0 * (uint)b.s0;
-        uint p1 = (uint)a.s1 * (uint)b.s1;
-        ulong r = (ulong)c + (ulong)p0 + (ulong)p1;
-        return (s & (r > (ulong)0xffffffff)) ? 0xffffffff : (uint)r;
+        uint2 p = TO_UINT2(a) * TO_UINT2(b);
+        uint dot = p.x + p.y;
+        return s ? __ockl_add_sat_u32(dot, c) : dot + c;
     } else {
         return amdgcn_udot2(a, b, c, s);
     }
