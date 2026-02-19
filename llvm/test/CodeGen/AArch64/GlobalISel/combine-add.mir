@@ -494,7 +494,7 @@ body: |
     ; CHECK-NEXT: %n:_(s64) = COPY $x2
     ; CHECK-NEXT: %z:_(s64) = COPY $x3
     ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: %neg_y:_(s64) = G_SUB %zero, %y
+    ; CHECK-NEXT: %neg_y:_(s64) = G_SUB %zegit ro, %y
     ; CHECK-NEXT: %shl_neg:_(s64) = G_SHL %neg_y, %n(s64)
     ; CHECK-NEXT: %dst:_(s64) = G_ADD %shl_neg, %x
     ; CHECK-NEXT: %other:_(s64) = G_MUL %shl_neg, %z
@@ -534,5 +534,29 @@ body: |
     %add:_(s64) = G_ADD %x, %neg_one
     %xor:_(s64) = G_XOR %add, %neg_one
     $x0 = COPY %xor
+    RET_ReallyLR implicit $x0
+...
+
+
+---
+name:            NotAPlusNegOne_multi
+body: |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: NotAPlusNegOne_multi
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %xor:_(s64) = G_SUB [[C]], %x
+    ; CHECK-NEXT: $x0 = COPY %xor(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %x:_(s64) = COPY $x0
+    %neg_one:_(s64) = G_CONSTANT i64 -1
+    %add:_(s64) = G_ADD %x, %neg_one
+    %xor:_(s64) = G_XOR %add, %neg_one
+    %mul:_(s64) = G_MUL %xor, %mul
+    $x0 = COPY %mul
     RET_ReallyLR implicit $x0
 ...
