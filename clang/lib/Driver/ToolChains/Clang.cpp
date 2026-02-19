@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Clang.h"
+#include "Arch/AArch64.h"
 #include "Arch/ARM.h"
 #include "Arch/LoongArch.h"
 #include "Arch/Mips.h"
@@ -1688,12 +1689,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
 
   AddAAPCSVolatileBitfieldArgs(Args, CmdArgs);
 
-  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
+  if (auto TuneCPU = aarch64::getAArch64TargetTuneCPU(Args, Triple)) {
     CmdArgs.push_back("-tune-cpu");
-    if (strcmp(A->getValue(), "native") == 0)
-      CmdArgs.push_back(Args.MakeArgString(llvm::sys::getHostCPUName()));
-    else
-      CmdArgs.push_back(A->getValue());
+    CmdArgs.push_back(Args.MakeArgString(*TuneCPU));
   }
 
   AddUnalignedAccessWarning(CmdArgs);
@@ -4036,7 +4034,8 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
 
     if (Args.hasArg(options::OPT_fmodule_output_EQ))
       Args.AddLastArg(CmdArgs, options::OPT_fmodule_output_EQ);
-    else if (!Args.hasArg(options::OPT__precompile) ||
+    else if (!(Args.hasArg(options::OPT__precompile) ||
+               Args.hasArg(options::OPT__precompile_reduced_bmi)) ||
              Args.hasArg(options::OPT_fmodule_output))
       // If --precompile is specified, we will always generate a module file if
       // we're compiling an importable module unit. This is fine even if the
@@ -5142,9 +5141,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   } else if (isa<PrecompileJobAction>(JA)) {
     if (JA.getType() == types::TY_Nothing)
       CmdArgs.push_back("-fsyntax-only");
-    else if (JA.getType() == types::TY_ModuleFile)
-      CmdArgs.push_back("-emit-module-interface");
-    else if (JA.getType() == types::TY_HeaderUnit)
+    else if (JA.getType() == types::TY_ModuleFile) {
+      if (Args.hasArg(options::OPT__precompile_reduced_bmi))
+        CmdArgs.push_back("-emit-reduced-module-interface");
+      else
+        CmdArgs.push_back("-emit-module-interface");
+    } else if (JA.getType() == types::TY_HeaderUnit)
       CmdArgs.push_back("-emit-header-unit");
     else if (!Args.hasArg(options::OPT_ignore_pch))
       CmdArgs.push_back("-emit-pch");
@@ -6363,6 +6365,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.addOptInFlag(CmdArgs, options::OPT_ffixed_point,
                     options::OPT_fno_fixed_point);
+
+  Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_overflow_behavior_types,
+                    options::OPT_fno_experimental_overflow_behavior_types);
 
   if (Arg *A = Args.getLastArg(options::OPT_fcxx_abi_EQ))
     A->render(Args, CmdArgs);
@@ -9303,6 +9308,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
           (TC->getTriple().isAMDGPU() || TC->getTriple().isNVPTX()))
         LinkerArgs.emplace_back("-lompdevice");
 
+      // For SPIR-V some functions will be defined by the runtime so allow
+      // unresolved symbols.
+      if (TC->getTriple().isSPIRV())
+        LinkerArgs.emplace_back("--allow-partial-linkage");
+
       // Forward all of these to the appropriate toolchain.
       for (StringRef Arg : CompilerArgs)
         CmdArgs.push_back(Args.MakeArgString(
@@ -9403,13 +9413,17 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
             "--device-linker=" + TC.getTripleString() + "=" + "-lm"));
       }
       auto HasCompilerRT = getToolChain().getVFS().exists(
-          TC.getCompilerRT(Args, "builtins", ToolChain::FT_Static));
+          TC.getCompilerRT(Args, "builtins", ToolChain::FT_Static,
+                           /*IsFortran=*/false));
       if (HasCompilerRT)
         CmdArgs.push_back(
             Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
                                "-lclang_rt.builtins"));
-      bool HasFlangRT = HasCompilerRT && C.getDriver().IsFlangMode();
-      if (HasFlangRT)
+
+      bool HasFlangRT = getToolChain().getVFS().exists(
+          TC.getCompilerRT(Args, "runtime", ToolChain::FT_Static,
+                           /*IsFortran=*/true));
+      if (HasFlangRT && C.getDriver().IsFlangMode())
         CmdArgs.push_back(
             Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
                                "-lflang_rt.runtime"));

@@ -179,3 +179,12 @@ constexpr int invalidUnaryOrTypeTrait2() {
 /// Pointer::toRValue() of a function type.
 void foo() { *(void (*)()) ""; } // both-warning {{expression result unused}}
 
+namespace InvalidCallExpr {
+  constexpr bool foo() {
+    struct A {};
+    A a;
+    a.~A(__builtin_popcountg == 0, ""); // both-error {{builtin functions must be directly called}}
+
+    return true;
+  }
+}

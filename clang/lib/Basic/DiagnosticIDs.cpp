@@ -549,8 +549,14 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
   // If we are in a system header, we ignore it. We look at the diagnostic class
   // because we also want to ignore extensions and warnings in -Werror and
   // -pedantic-errors modes, which *map* warnings/extensions to errors.
-  if (State->SuppressSystemWarnings && Loc.isValid() &&
-      SM.isInSystemHeader(SM.getExpansionLoc(Loc))) {
+  //
+  // We check both the location-specific state and the ForceSystemWarnings
+  // override. In some cases (like template instantiations from system modules),
+  // the location-specific state might have suppression enabled, but the
+  // engine might have an override (e.g. AllowWarningInSystemHeaders) to show
+  // the warning.
+  if (State->SuppressSystemWarnings && !Diag.getForceSystemWarnings() &&
+      Loc.isValid() && SM.isInSystemHeader(SM.getExpansionLoc(Loc))) {
     bool ShowInSystemHeader = true;
     if (IsCustomDiag)
       ShowInSystemHeader =
@@ -561,9 +567,10 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
     if (!ShowInSystemHeader)
       return diag::Severity::Ignored;
   }
-  // We also ignore warnings due to system macros
-  if (State->SuppressSystemWarnings && Loc.isValid() &&
-      SM.isInSystemMacro(Loc)) {
+  // We also ignore warnings due to system macros. As above, we respect the
+  // ForceSystemWarnings override.
+  if (State->SuppressSystemWarnings && !Diag.getForceSystemWarnings() &&
+      Loc.isValid() && SM.isInSystemMacro(Loc)) {
 
     bool ShowInSystemMacro = true;
     if (const StaticDiagInfoRec *Rec = GetDiagInfo(DiagID))

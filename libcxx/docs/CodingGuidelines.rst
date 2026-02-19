@@ -210,17 +210,3 @@ prevent compilers from generating said debug information. Aliases inside type tr
 should be annotated for the same reason.
 
 This is enforced by the clang-tidy check ``libcpp-nodebug-on-aliases``.
-
-Pointer field protection
-========================
-
-To improve the effectiveness of Clang's `pointer field protection
-<https://clang.llvm.org/docs/StructureProtection.html>`_ feature, commonly
-used vocabulary types, or internal base classes or fields thereof,
-with pointer fields are marked with the ``_LIBCPP_PFP`` attribute, to
-give Clang permission to use PFP to protect their pointer fields. Newly
-added vocabulary types and their internal base classes or fields should
-be marked with this attribute if they contain pointer fields.
-
-For the time being, PFP is an experimental feature, so our criteria for
-marking types with ``_LIBCPP_PFP`` may change.

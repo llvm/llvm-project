@@ -302,7 +302,7 @@ class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_TYPE_INFO_VTABLE_POINTER_AUTH type_info 
 protected:
   typedef __type_info_implementations::__impl __impl;
 
-  _LIBCPP_DISABLE_POINTER_FIELD_PROTECTION __impl::__type_name_t __type_name;
+  __impl::__type_name_t __type_name;
 
   _LIBCPP_HIDE_FROM_ABI explicit type_info(const char* __n) : __type_name(__impl::__string_to_type_name(__n)) {}
 

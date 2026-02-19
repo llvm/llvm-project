@@ -1,8 +1,5 @@
 add_lldb_library(lldbHostPythonPathSetup STATIC
   PythonPathSetup.cpp
-
-  LINK_LIBS
-    LLVMSupport
 )
 
 if(DEFINED LLDB_PYTHON_DLL_RELATIVE_PATH)

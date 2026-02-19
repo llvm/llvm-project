@@ -849,7 +849,7 @@ def O_flag : Flag<["-"], "O">, Visibility<[ClangOption, CC1Option, FC1Option]>,
 def Ofast : Joined<["-"], "Ofast">, Group<O_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpTextForVariants<[FlangOption, FC1Option],
-    "Deprecated; use '-O3 -ffast-math -fstack-arrays' for the same behavior,"
+    "Deprecated; use '-O3 -ffast-math -fstack-arrays -fno-protect-parens' for the same behavior,"
     " or '-O3 -fstack-arrays' to enable only conforming optimizations">,
   HelpText<"Deprecated; use '-O3 -ffast-math' for the same behavior,"
            " or '-O3' to enable only conforming optimizations">;
@@ -1967,6 +1967,14 @@ defm lifetime_safety : BoolFOption<
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
   BothFlags<[], [CC1Option], " lifetime safety for C++">>;
 
+def lifetime_safety_max_cfg_blocks
+    : Joined<["-"], "lifetime-safety-max-cfg-blocks=">,
+      Group<m_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Skip LifetimeSafety analysis for functions with CFG block "
+               "count exceeding this threshold. Specify 0 for no limit.">,
+      MarshallingInfoInt<LangOpts<"LifetimeSafetyMaxCFGBlocks">>;
+
 defm lifetime_safety_inference
     : BoolFOption<"lifetime-safety-inference",
                   LangOpts<"EnableLifetimeSafetyInference">, DefaultFalse,
@@ -2379,6 +2387,13 @@ defm fixed_point : BoolFOption<"fixed-point",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
   BothFlags<[], [ClangOption], " fixed point types">>;
+defm experimental_overflow_behavior_types
+    : BoolFOption<"experimental-overflow-behavior-types",
+                  LangOpts<"OverflowBehaviorTypes">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+                  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+                  BothFlags<[], [CC1Option],
+                            " the experimental overflow behavior types">>;
 def cxx_static_destructors_EQ : Joined<["-"], "fc++-static-destructors=">, Group<f_Group>,
   HelpText<"Controls which variables C++ static destructors are registered for">,
   Values<"all,thread-local,none">,
@@ -3645,10 +3660,6 @@ defm implicit_modules : BoolFOption<"implicit-modules",
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
   PosFlag<SetTrue>, BothFlags<
           [NoXarchOption], [ClangOption, CLOption]>>;
-def fno_modules_check_relocated : Joined<["-"], "fno-modules-check-relocated">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Skip checks for relocated modules when loading PCM files">,
-  MarshallingInfoNegativeFlag<PreprocessorOpts<"ModulesCheckRelocated">>;
 def fretain_comments_from_system_headers : Flag<["-"], "fretain-comments-from-system-headers">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoFlag<LangOpts<"RetainCommentsFromSystemHeaders">>;
@@ -5296,14 +5307,15 @@ def mmacos_version_min_EQ : Joined<["-"], "mmacos-version-min=">,
 def : Joined<["-"], "mmacosx-version-min=">,
   Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>,
   Group<m_Group>, Alias<mmacos_version_min_EQ>;
+defm outline
+    : BoolMOption<
+          "outline", CodeGenOpts<"DisableOutlining">, DefaultFalse,
+          NegFlag<SetTrue, [], [ClangOption, CC1Option],
+                  "Disable function outlining (AArch64,Arm,RISC-V,X86 only)">,
+          PosFlag<SetFalse, [], [ClangOption],
+                  "Enable function outlining (AArch64,Arm,RISC-V,X86 only)">>;
 def mms_bitfields : Flag<["-"], "mms-bitfields">, Group<m_Group>,
   HelpText<"Set the default structure layout to be compatible with the Microsoft compiler standard">;
-def moutline : Flag<["-"], "moutline">, Group<f_clang_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-    HelpText<"Enable function outlining (AArch64 only)">;
-def mno_outline : Flag<["-"], "mno-outline">, Group<f_clang_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-    HelpText<"Disable function outlining (AArch64 only)">;
 def mno_ms_bitfields : Flag<["-"], "mno-ms-bitfields">, Group<m_Group>,
   HelpText<"Do not set the default structure layout to be compatible with the Microsoft compiler standard">;
 def fms_layout_compatibility_EQ : Joined<["-"], "fms-layout-compatibility=">,
@@ -6645,6 +6657,9 @@ def _param_EQ : Joined<["--"], "param=">, Alias<_param>;
 def _precompile : Flag<["--"], "precompile">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption]>,
   Group<Action_Group>, HelpText<"Only precompile the input">;
+def _precompile_reduced_bmi : Flag<["--"], "precompile-reduced-bmi">, Flags<[NoXarchOption]>,
+  Visibility<[ClangOption, CLOption]>,
+  Group<Action_Group>, HelpText<"Only precompile the input as a reduced BMI">;
 def _prefix_EQ : Joined<["--"], "prefix=">, Alias<B>;
 def _prefix : Separate<["--"], "prefix">, Alias<B>;
 def _preprocess : Flag<["--"], "preprocess">, Alias<E>;
@@ -8984,6 +8999,11 @@ def disable_pragma_debug_crash : Flag<["-"], "disable-pragma-debug-crash">,
 def source_date_epoch : Separate<["-"], "source-date-epoch">,
   MetaVarName<"<time since Epoch in seconds>">,
   HelpText<"Time to be used in __DATE__, __TIME__, and __TIMESTAMP__ macros">;
+def fno_modules_check_relocated
+    : Joined<["-"], "fno-modules-check-relocated">,
+      Group<f_Group>,
+      HelpText<"Skip checks for relocated modules when loading PCM files">,
+      MarshallingInfoNegativeFlag<PreprocessorOpts<"ModulesCheckRelocated">>;
 
 } // let Visibility = [CC1Option]
 
@@ -9858,6 +9878,13 @@ def fhlsl_spv_enable_maximal_reconvergence
                "module. This ensures that control flow reconverges at "
                "well-defined merge points as defined by the Vulkan spec.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvEnableMaximalReconvergence">>;
+
+def fexperimental_emit_sgep
+    : Flag<["-"], "fexperimental-emit-sgep">,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"Emit structured GEP intrinsic instead of GEP instructions "
+               "(experimental).">,
+      MarshallingInfoFlag<LangOpts<"EmitStructuredGEP">>;
 
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,

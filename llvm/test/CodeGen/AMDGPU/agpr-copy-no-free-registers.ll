@@ -568,17 +568,19 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:  ; %bb.3: ; %bb14
 ; GFX908-NEXT:    ; in Loop: Header=BB3_2 Depth=1
 ; GFX908-NEXT:    global_load_dwordx2 v[2:3], v[0:1], off
-; GFX908-NEXT:    v_cmp_gt_i64_e64 s[2:3], s[10:11], -1
+; GFX908-NEXT:    s_cmp_lt_i32 s11, 0
 ; GFX908-NEXT:    s_mov_b32 s13, s12
-; GFX908-NEXT:    v_cndmask_b32_e64 v6, 0, 1, s[2:3]
+; GFX908-NEXT:    s_cselect_b64 s[18:19], -1, 0
+; GFX908-NEXT:    s_cmp_gt_i32 s11, -1
 ; GFX908-NEXT:    v_mov_b32_e32 v4, s12
-; GFX908-NEXT:    v_cmp_ne_u32_e64 s[2:3], 1, v6
 ; GFX908-NEXT:    v_mov_b32_e32 v6, s12
 ; GFX908-NEXT:    v_mov_b32_e32 v8, s12
 ; GFX908-NEXT:    v_mov_b32_e32 v5, s13
+; GFX908-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; GFX908-NEXT:    v_mov_b32_e32 v7, s13
 ; GFX908-NEXT:    v_mov_b32_e32 v9, s13
-; GFX908-NEXT:    v_cmp_lt_i64_e64 s[18:19], s[10:11], 0
+; GFX908-NEXT:    v_cndmask_b32_e64 v10, 0, 1, s[2:3]
+; GFX908-NEXT:    v_cmp_ne_u32_e64 s[2:3], 1, v10
 ; GFX908-NEXT:    v_mov_b32_e32 v11, v5
 ; GFX908-NEXT:    s_mov_b64 s[20:21], s[14:15]
 ; GFX908-NEXT:    v_mov_b32_e32 v10, v4
@@ -599,9 +601,9 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    v_add_co_u32_sdwa v2, vcc, v2, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX908-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX908-NEXT:    s_add_u32 s20, s20, s4
-; GFX908-NEXT:    v_cmp_lt_i64_e64 s[24:25], -1, v[2:3]
 ; GFX908-NEXT:    s_addc_u32 s21, s21, s5
 ; GFX908-NEXT:    s_mov_b64 s[22:23], 0
+; GFX908-NEXT:    v_cmp_lt_i32_e64 s[24:25], -1, v3
 ; GFX908-NEXT:    s_andn2_b64 vcc, exec, s[24:25]
 ; GFX908-NEXT:    s_cbranch_vccz .LBB3_9
 ; GFX908-NEXT:  .LBB3_5: ; %bb16
@@ -728,15 +730,17 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-NEXT:  ; %bb.3: ; %bb14
 ; GFX90A-NEXT:    ; in Loop: Header=BB3_2 Depth=1
 ; GFX90A-NEXT:    global_load_dwordx2 v[4:5], v[2:3], off
-; GFX90A-NEXT:    v_cmp_gt_i64_e64 s[2:3], s[10:11], -1
+; GFX90A-NEXT:    s_cmp_lt_i32 s11, 0
 ; GFX90A-NEXT:    s_mov_b32 s13, s12
-; GFX90A-NEXT:    v_cndmask_b32_e64 v8, 0, 1, s[2:3]
+; GFX90A-NEXT:    s_cselect_b64 s[18:19], -1, 0
+; GFX90A-NEXT:    s_cmp_gt_i32 s11, -1
 ; GFX90A-NEXT:    v_pk_mov_b32 v[6:7], s[12:13], s[12:13] op_sel:[0,1]
-; GFX90A-NEXT:    v_cmp_ne_u32_e64 s[2:3], 1, v8
+; GFX90A-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; GFX90A-NEXT:    v_pk_mov_b32 v[8:9], s[12:13], s[12:13] op_sel:[0,1]
 ; GFX90A-NEXT:    v_pk_mov_b32 v[10:11], s[12:13], s[12:13] op_sel:[0,1]
-; GFX90A-NEXT:    v_cmp_lt_i64_e64 s[18:19], s[10:11], 0
+; GFX90A-NEXT:    v_cndmask_b32_e64 v12, 0, 1, s[2:3]
 ; GFX90A-NEXT:    s_mov_b64 s[20:21], s[14:15]
+; GFX90A-NEXT:    v_cmp_ne_u32_e64 s[2:3], 1, v12
 ; GFX90A-NEXT:    v_pk_mov_b32 v[12:13], v[6:7], v[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_readfirstlane_b32 s9, v4
@@ -756,8 +760,8 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v5, vcc
 ; GFX90A-NEXT:    s_add_u32 s20, s20, s4
 ; GFX90A-NEXT:    s_addc_u32 s21, s21, s5
-; GFX90A-NEXT:    v_cmp_lt_i64_e64 s[24:25], -1, v[4:5]
 ; GFX90A-NEXT:    s_mov_b64 s[22:23], 0
+; GFX90A-NEXT:    v_cmp_lt_i32_e64 s[24:25], -1, v5
 ; GFX90A-NEXT:    s_andn2_b64 vcc, exec, s[24:25]
 ; GFX90A-NEXT:    s_cbranch_vccz .LBB3_9
 ; GFX90A-NEXT:  .LBB3_5: ; %bb16
@@ -858,7 +862,7 @@ bb16:                                             ; preds = %bb58, %bb14
   %i33 = load volatile <2 x half>, ptr addrspace(1) %i31, align 8
   %i34 = getelementptr inbounds [16 x half], ptr addrspace(1) null, i64 %i24, i64 14
   %i36 = load volatile <2 x half>, ptr addrspace(1) %i34, align 4
-  %i43 = load volatile <2 x float>, ptr addrspace(3) null, align 8
+  %i43 = load volatile <2 x float>, ptr addrspace(3) zeroinitializer, align 8
   %i46 = load volatile <2 x float>, ptr addrspace(3) poison, align 32
   fence syncscope("workgroup") acquire
   br i1 %i11, label %bb58, label %bb51

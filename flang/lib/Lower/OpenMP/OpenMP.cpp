@@ -2039,12 +2039,27 @@ genLoopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   return loopOp;
 }
 
+// ´nestedEval´ is the Evaluation of a children loop of ´eval´.
+// In a regular OpenMP Construct Evaluation ´nestedEval´ is the only children.
+// Can be retrieved with getNestedDoConstruct(Evaluation).
+//   <<OpenMPConstruct>>
+//     Loop
+//   <<End OpenMPConstruct>>
+//
+// ´nestedEval´ is most useful in the case that ´eval´ contains a sequence
+// of loops. Then this function generates Canonical loop nests for individual
+// loops.
+//   <<OpenMPConstruct>>
+//     Loop 1
+//     Loop 2
+//   <<End OpenMPConstruct>>
+//
 static void genCanonicalLoopNest(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-    mlir::Location loc, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item, size_t numLoops,
-    llvm::SmallVectorImpl<mlir::omp::CanonicalLoopOp> &loops) {
+    lower::pft::Evaluation *nestedEval, mlir::Location loc,
+    const ConstructQueue &queue, ConstructQueue::const_iterator item,
+    size_t numLoops, llvm::SmallVectorImpl<mlir::omp::CanonicalLoopOp> &loops) {
   assert(loops.empty() && "Expecting empty list to fill");
   assert(numLoops >= 1 && "Expecting at least one loop");
 
@@ -2052,7 +2067,8 @@ static void genCanonicalLoopNest(
 
   mlir::omp::LoopRelatedClauseOps loopInfo;
   llvm::SmallVector<const semantics::Symbol *, 3> ivs;
-  collectLoopRelatedInfo(converter, loc, eval, numLoops, loopInfo, ivs);
+  collectLoopRelatedInfo(converter, loc, eval, nestedEval, numLoops, loopInfo,
+                         ivs);
   assert(ivs.size() == numLoops &&
          "Expected to parse as many loop variables as there are loops");
 
@@ -2074,7 +2090,7 @@ static void genCanonicalLoopNest(
 
   // Step 1: Loop prologues
   // Computing the trip count must happen before entering the outermost loop
-  lower::pft::Evaluation *innermostEval = &eval.getFirstNestedEvaluation();
+  lower::pft::Evaluation *innermostEval = nestedEval;
   for ([[maybe_unused]] auto iv : ivs) {
     if (innermostEval->getIf<parser::DoConstruct>()->IsDoConcurrent()) {
       // OpenMP specifies DO CONCURRENT only with the `!omp loop` construct.
@@ -2246,8 +2262,9 @@ static void genTileOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::omp::CanonicalLoopOp, 3> canonLoops;
   canonLoops.reserve(numLoops);
 
-  genCanonicalLoopNest(converter, symTable, semaCtx, eval, loc, queue, item,
-                       numLoops, canonLoops);
+  genCanonicalLoopNest(converter, symTable, semaCtx, eval,
+                       getNestedDoConstruct(eval), loc, queue, item, numLoops,
+                       canonLoops);
   assert((canonLoops.size() == numLoops) &&
          "Expecting the predetermined number of loops");
 
@@ -2277,6 +2294,50 @@ static void genTileOp(Fortran::lower::AbstractConverter &converter,
                             sizesClause.sizes);
 }
 
+static void genFuseOp(Fortran::lower::AbstractConverter &converter,
+                      Fortran::lower::SymMap &symTable,
+                      lower::StatementContext &stmtCtx,
+                      Fortran::semantics::SemanticsContext &semaCtx,
+                      Fortran::lower::pft::Evaluation &eval, mlir::Location loc,
+                      const ConstructQueue &queue,
+                      ConstructQueue::const_iterator item) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  int64_t count = 0;
+  mlir::omp::LooprangeClauseOps looprangeClause;
+  ClauseProcessor cp(converter, semaCtx, item->clauses);
+  bool looprange = cp.processLooprange(stmtCtx, looprangeClause, count);
+
+  llvm::SmallVector<mlir::Value> applyees;
+  for (auto &child : eval.getNestedEvaluations()) {
+    // Stop at OmpEndLoopDirective
+    if (&child == &eval.getLastNestedEvaluation())
+      break;
+    // Skip any Compiler Directive
+    if (child.getIf<parser::CompilerDirective>())
+      continue;
+
+    // Emit the associated loop
+    llvm::SmallVector<mlir::omp::CanonicalLoopOp> canonLoops;
+    genCanonicalLoopNest(converter, symTable, semaCtx, eval, &child, loc, queue,
+                         item, 1, canonLoops);
+
+    auto cli = llvm::getSingleElement(canonLoops).getCli();
+    applyees.push_back(cli);
+  }
+  // One generated loop + one for each loop not inside the specified looprange
+  // if present
+  llvm::SmallVector<mlir::Value> generatees;
+  int64_t numGeneratees = !looprange ? 1 : applyees.size() - count + 1;
+  for (int i = 0; i < numGeneratees; i++) {
+    auto fusedCLI = mlir::omp::NewCliOp::create(firOpBuilder, loc);
+    generatees.push_back(fusedCLI);
+  }
+
+  mlir::omp::FuseOp::create(firOpBuilder, loc, generatees, applyees,
+                            looprangeClause.first, looprangeClause.count);
+}
+
 static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
                         Fortran::lower::SymMap &symTable,
                         lower::StatementContext &stmtCtx,
@@ -2293,7 +2354,8 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
 
   // Emit the associated loop
   llvm::SmallVector<mlir::omp::CanonicalLoopOp, 1> canonLoops;
-  genCanonicalLoopNest(converter, symTable, semaCtx, eval, loc, queue, item, 1,
+  genCanonicalLoopNest(converter, symTable, semaCtx, eval,
+                       getNestedDoConstruct(eval), loc, queue, item, 1,
                        canonLoops);
 
   llvm::SmallVector<mlir::Value, 1> applyees;
@@ -3672,13 +3734,9 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
   case llvm::omp::Directive::OMPD_tile:
     genTileOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
     break;
-  case llvm::omp::Directive::OMPD_fuse: {
-    unsigned version = semaCtx.langOptions().OpenMPVersion;
-    if (!semaCtx.langOptions().OpenMPSimd)
-      TODO(loc, "Unhandled loop directive (" +
-                    llvm::omp::getOpenMPDirectiveName(dir, version) + ")");
+  case llvm::omp::Directive::OMPD_fuse:
+    genFuseOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
     break;
-  }
   case llvm::omp::Directive::OMPD_unroll:
     genUnrollOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
     break;

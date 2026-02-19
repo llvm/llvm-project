@@ -38,9 +38,13 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
 
   switch (BuiltinID) {
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_load_lds:
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_load_async_lds:
   case AMDGPU::BI__builtin_amdgcn_struct_ptr_buffer_load_lds:
+  case AMDGPU::BI__builtin_amdgcn_struct_ptr_buffer_load_async_lds:
   case AMDGPU::BI__builtin_amdgcn_load_to_lds:
-  case AMDGPU::BI__builtin_amdgcn_global_load_lds: {
+  case AMDGPU::BI__builtin_amdgcn_load_async_to_lds:
+  case AMDGPU::BI__builtin_amdgcn_global_load_lds:
+  case AMDGPU::BI__builtin_amdgcn_global_load_async_lds: {
     constexpr const int SizeIdx = 2;
     llvm::APSInt Size;
     Expr *ArgExpr = TheCall->getArg(SizeIdx);

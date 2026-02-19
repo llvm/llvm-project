@@ -66,8 +66,17 @@ Changes to the LLVM IR
 * "denormal-fp-math" and "denormal-fp-math-f32" string attributes were
   migrated to first-class denormal_fpenv attribute.
 
+* The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
+  bitcode will be automatically updated.
+
 Changes to LLVM infrastructure
 ------------------------------
+
+* Removed ``Constant::isZeroValue``. It was functionally identical to
+  ``Constant::isNullValue`` for all types except floating-point negative
+  zero. All callers should use ``isNullValue`` instead. ``isZeroValue``
+  will be reintroduced in the future with bitwise-all-zeros semantics
+  to support non-zero null pointers.
 
 * Removed TypePromoteFloat legalization from SelectionDAG
 
@@ -85,6 +94,9 @@ Changes to Vectorizers
 
 Changes to the AArch64 Backend
 ------------------------------
+
+* The `sysp`, `mrrs`, and `msrr` instructions are now accepted without
+  requiring the `+d128` feature gating.
 
 Changes to the AMDGPU Backend
 -----------------------------
@@ -134,6 +146,7 @@ Changes to the RISC-V Backend
   extensions.
 * Adds experimental assembler support for the 'Zvabd` (RISC-V Integer Vector
   Absolute Difference) extension.
+* `-mcpu=spacemit-a100` was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -179,15 +192,34 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------
 
-* Support for FreeBSD on MIPS64 has been removed.
-* The minimum assumed version of FreeBSD is now 14. The effect of which is that watchpoints are
+### Deprecated APIs
+
+* ``SBTarget::GetDataByteSize()``, ``SBTarget::GetCodeByteSize()``, and ``SBSection::GetTargetByteSize()``
+  have been deprecated. They always return 1, as before.
+
+### FreeBSD
+
+#### Userspace Debugging
+
+* Support for MIPS64 has been removed.
+* The minimum assumed FreeBSD version is now 14. The effect of which is that watchpoints are
   assumed to be supported.
+
+#### Kernel Debugging
+
+* Support for libfbsdvmcore has been removed. As a result, FreeBSD kernel dump debugging is now only
+  available on FreeBSD hosts. Live kernel debugging through the GDB remote protocol is still available
+  from any platform.
+* The crashed thread is now automatically selected on start.
+* Threads are listed in incrmental order by pid then by tid.
 
 Changes to BOLT
 ---------------
 
 Changes to Sanitizers
 ---------------------
+
+* Add a random delay into ThreadSanitizer to help find rare thread interleavings.
 
 Other Changes
 -------------

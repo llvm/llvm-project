@@ -203,7 +203,8 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
 
   BOOL result = ::CreateProcessW(
       wexecutable.c_str(), pwcommandLine, NULL, NULL,
-      /*bInheritHandles=*/!inherited_handles.empty(), flags, environment.data(),
+      /*bInheritHandles=*/!inherited_handles.empty() || use_pty, flags,
+      environment.data(),
       wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(),
       reinterpret_cast<STARTUPINFOW *>(&startupinfoex), &pi);
 

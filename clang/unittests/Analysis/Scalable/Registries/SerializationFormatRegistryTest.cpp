@@ -13,7 +13,8 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <memory>
 
@@ -58,26 +59,48 @@ TEST(SerializationFormatRegistryTest, EnumeratingRegistryEntries) {
 }
 
 TEST(SerializationFormatRegistryTest, Roundtrip) {
-  auto Inputs = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
-  Inputs->addFile("input/analyses.txt", /*ModificationTime=*/{},
-                  MemoryBuffer::getMemBufferCopy("FancyAnalysis\n"));
-  Inputs->addFile("input/FancyAnalysis.special", /*ModificationTime=*/{},
-                  MemoryBuffer::getMemBufferCopy("Some FancyAnalysisData..."));
+  // Create temporary input directory
+  SmallString<128> InputDir;
+  std::error_code EC = sys::fs::createUniqueDirectory("ssaf-input", InputDir);
+  ASSERT_FALSE(EC) << "Failed to create input directory: " << EC.message();
+  llvm::scope_exit CleanupInputOnExit(
+      [&] { sys::fs::remove_directories(InputDir); });
+
+  // Create input files
+  SmallString<128> AnalysesFile = InputDir;
+  sys::path::append(AnalysesFile, "analyses.txt");
+  {
+    raw_fd_ostream OS(AnalysesFile, EC);
+    ASSERT_FALSE(EC) << "Failed to create analyses.txt: " << EC.message();
+    OS << "FancyAnalysis\n";
+  }
+
+  SmallString<128> FancyAnalysisFile = InputDir;
+  sys::path::append(FancyAnalysisFile, "FancyAnalysis.special");
+  {
+    raw_fd_ostream OS(FancyAnalysisFile, EC);
+    ASSERT_FALSE(EC) << "Failed to create FancyAnalysis.special: "
+                     << EC.message();
+    OS << "Some FancyAnalysisData...";
+  }
 
   std::unique_ptr<SerializationFormat> Format =
-      makeFormat(Inputs, "MockSerializationFormat");
+      makeFormat("MockSerializationFormat");
   ASSERT_TRUE(Format);
 
-  TUSummary LoadedSummary = Format->readTUSummary("input");
+  auto LoadedSummaryOrErr = Format->readTUSummary(InputDir);
+  ASSERT_THAT_EXPECTED(LoadedSummaryOrErr, Succeeded());
+  TUSummary LoadedSummary = std::move(*LoadedSummaryOrErr);
 
   // Create a temporary output directory
   SmallString<128> OutputDir;
-  std::error_code EC = sys::fs::createUniqueDirectory("ssaf-test", OutputDir);
+  EC = sys::fs::createUniqueDirectory("ssaf-test", OutputDir);
   ASSERT_FALSE(EC) << "Failed to create temporary directory: " << EC.message();
   llvm::scope_exit CleanupOnExit(
       [&] { sys::fs::remove_directories(OutputDir); });
 
-  Format->writeTUSummary(LoadedSummary, OutputDir);
+  auto WriteErr = Format->writeTUSummary(LoadedSummary, OutputDir);
+  ASSERT_THAT_ERROR(std::move(WriteErr), Succeeded());
 
   EXPECT_EQ(readFilesFromDir(OutputDir),
             (std::map<std::string, std::string>{

@@ -825,7 +825,7 @@ private:
 
 #  ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
-  struct _LIBCPP_PFP __long {
+  struct __long {
     __long() = default;
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __long(__alloc_result __alloc, size_type __size)
@@ -879,7 +879,7 @@ private:
   // previous definition that did not use bit fields. This is because on
   // some platforms bit fields have a default size rather than the actual
   // size used, e.g., it is 4 bytes on AIX. See D128285 for details.
-  struct _LIBCPP_PFP __long {
+  struct __long {
     __long() = default;
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __long(__alloc_result __alloc, size_type __size)

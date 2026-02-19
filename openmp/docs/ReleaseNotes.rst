@@ -20,6 +20,9 @@ from the `LLVM releases web site <https://llvm.org/releases/>`_.
 Non-comprehensive list of changes in this release
 =================================================
 
+- Removed the standalone build mode. It is redundant with the runtimes default
+  build.
+
 Device Runtime
 --------------
 - Changed the OpenMP DeviceRTL to use 'generic' IR. The

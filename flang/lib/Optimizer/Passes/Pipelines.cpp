@@ -348,6 +348,11 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
   pm.addPass(flangomp::createAutomapToTargetDataPass());
   pm.addPass(flangomp::createMapInfoFinalizationPass());
   pm.addPass(flangomp::createMarkDeclareTargetPass());
+
+  // Delete unreachable target operations before FunctionFilteringPass
+  // extracts them.
+  pm.addPass(flangomp::createDeleteUnreachableTargetsPass());
+
   pm.addPass(flangomp::createGenericLoopConversionPass());
   if (opts.isTargetDevice)
     pm.addPass(flangomp::createFunctionFilteringPass());
@@ -395,6 +400,9 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
     framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::All;
   else if (config.FramePointerKind == llvm::FramePointerKind::Reserved)
     framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::Reserved;
+  else if (config.FramePointerKind == llvm::FramePointerKind::NonLeafNoReserve)
+    framePointerKind =
+        mlir::LLVM::framePointerKind::FramePointerKind::NonLeafNoReserve;
   else
     framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
 

@@ -4729,14 +4729,17 @@ void CodeGenFunction::EmitCallArgs(
     CallExpr::const_arg_iterator Arg = ArgRange.begin();
     for (QualType Ty : ArgTypes) {
       assert(Arg != ArgRange.end() && "Running over edge of argument list!");
-      assert(
-          (isGenericMethod || Ty->isVariablyModifiedType() ||
-           Ty.getNonReferenceType()->isObjCRetainableType() ||
-           getContext()
-                   .getCanonicalType(Ty.getNonReferenceType())
-                   .getTypePtr() ==
-               getContext().getCanonicalType((*Arg)->getType()).getTypePtr()) &&
-          "type mismatch in call argument!");
+      QualType ParamTy = Ty.getNonReferenceType();
+      QualType ArgTy = (*Arg)->getType();
+      if (const auto *OBT = ParamTy->getAs<OverflowBehaviorType>())
+        ParamTy = OBT->getUnderlyingType();
+      if (const auto *OBT = ArgTy->getAs<OverflowBehaviorType>())
+        ArgTy = OBT->getUnderlyingType();
+      assert((isGenericMethod || Ty->isVariablyModifiedType() ||
+              ParamTy->isObjCRetainableType() ||
+              getContext().getCanonicalType(ParamTy).getTypePtr() ==
+                  getContext().getCanonicalType(ArgTy).getTypePtr()) &&
+             "type mismatch in call argument!");
       ++Arg;
     }
 
