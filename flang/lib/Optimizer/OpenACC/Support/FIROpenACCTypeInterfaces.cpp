@@ -31,6 +31,19 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CommandLine.h"
+
+static llvm::cl::opt<bool> useAccReductionCombine(
+    "openacc-use-reduction-combine",
+    llvm::cl::desc("Whether to generate acc.reduction_combine. Does not "
+                   "control reduction for MIN/MAX and logical reductions."),
+    llvm::cl::init(false));
+
+static llvm::cl::opt<bool> useAccReductionCombineAll(
+    "openacc-use-reduction-combine-all",
+    llvm::cl::desc("Whether to generate acc.reduction_combine for all types "
+                   "and operators"),
+    llvm::cl::init(false));
 
 namespace fir::acc {
 
@@ -1045,6 +1058,25 @@ static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
   TODO(loc, "reduction operator");
 }
 
+static bool useAccReductionCombineOp(mlir::Type elementType,
+                                     mlir::acc::ReductionOperator op) {
+  if (useAccReductionCombineAll)
+    return true;
+  if (!useAccReductionCombine)
+    return false;
+  // LOGICAL operators do not have mlir operators and requires FIR specific
+  // logic to interpret the TRUE and FALSE values from the storage (implemented
+  // in fir.convert to i1).
+  if (!llvm::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType>(
+          elementType))
+    return false;
+  // MIN/MAX for floating point can have different edge-case behaviors (NANs).
+  // Currently the mlir operator does not match the behavior implemented by
+  // flang.
+  return op != mlir::acc::ReductionOperator::AccMax &&
+         op != mlir::acc::ReductionOperator::AccMin;
+}
+
 template <typename Ty>
 bool OpenACCMappableModel<Ty>::generateCombiner(
     mlir::Type type, mlir::OpBuilder &mlirBuilder, mlir::Location loc,
@@ -1069,11 +1101,25 @@ bool OpenACCMappableModel<Ty>::generateCombiner(
   }
 
   mlir::Type elementType = fir::getFortranElementType(dest.getType());
-  auto genKernel = [&](mlir::Location l, fir::FirOpBuilder &b,
-                       hlfir::Entity srcElementValue,
-                       hlfir::Entity destElementValue) -> hlfir::Entity {
-    return hlfir::Entity{genScalarCombiner(builder, loc, op, elementType,
-                                           srcElementValue, destElementValue)};
+  auto genKernel =
+      [&](mlir::Location l, fir::FirOpBuilder &b, hlfir::Entity destElementAddr,
+          hlfir::Entity srcElementAddr, mlir::ArrayAttr accessGroups) -> void {
+    assert(!accessGroups && "access groups not expected in acc reductions");
+    if (useAccReductionCombineOp(elementType, op)) {
+      mlir::acc::ReductionCombineOp::create(builder, loc, destElementAddr,
+                                            srcElementAddr, op);
+      return;
+    }
+    hlfir::Entity srcElementValue =
+        hlfir::loadTrivialScalar(loc, builder, srcElementAddr);
+    hlfir::Entity destElementValue =
+        hlfir::loadTrivialScalar(loc, builder, destElementAddr);
+    hlfir::Entity combined(genScalarCombiner(
+        builder, loc, op, elementType, destElementValue, srcElementValue));
+    hlfir::AssignOp::create(builder, loc, combined, destElementAddr,
+                            /*realloc=*/false,
+                            /*keep_lhs_length_if_realloc=*/false,
+                            /*temporary_lhs=*/false);
   };
   hlfir::genNoAliasAssignment(loc, builder, srcSection, destSection,
                               /*emitWorkshareLoop=*/false,
