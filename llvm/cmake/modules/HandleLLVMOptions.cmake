@@ -1323,17 +1323,21 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
 
   # Warn on possibly unintended interactions with ccache/sccache if the user
   # sets this via CMAKE_CXX_COMPILER_LAUNCHER (and not using LLVM_CCACHE_BUILD).
-  if(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  if(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "sccache")
+    # sccache doesn't support PCH, this can lead to false-positives when only
+    # a macro definition changes. For Clang, this sometimes even works
+    # correctly, but not always, so disable by default to be safe.
+    # See: https://github.com/mozilla/sccache/issues/615
+    # See: https://github.com/mozilla/sccache/issues/2562
+    message(NOTICE "Precompiled headers are disabled by default with sccache. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  elseif(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # ccache with PCH can lead to false-positives when only a macro
     # definition changes with non-Clang compilers, because macro definitions
     # are not compared in preprocessed mode.
     # See: https://github.com/ccache/ccache/issues/1668
-    #
-    # It is unclear to what extent sccache supports PCH, but Clang seems to work
-    # fine.
-    # See: https://github.com/mozilla/sccache/issues/615
-    # See: https://github.com/mozilla/sccache/issues/2562
-    message(WARNING "Using sccache/ccache with precompiled headers with non-Clang "
+    message(WARNING "Using ccache with precompiled headers with non-Clang "
       "compilers is not supported and may lead to false positives. "
       "Set CMAKE_DISABLE_PRECOMPILE_HEADERS to ON/OFF to silence this warning.")
   endif()
