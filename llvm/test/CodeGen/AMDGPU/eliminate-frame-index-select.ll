@@ -74,15 +74,13 @@ define void @wobble() #0 {
 ; CHECK-NEXT:    s_cselect_b32 s5, 4, s54
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, foo@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, foo@gotpcrel32@hi+12
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, foo@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, foo@rel32@hi+12
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
 ; CHECK-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 offen
-; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    s_mov_b32 s4, 1
 ; CHECK-NEXT:    s_mov_b32 vcc_lo, exec_lo
