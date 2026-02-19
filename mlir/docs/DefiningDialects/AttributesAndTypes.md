@@ -1200,6 +1200,30 @@ Note that these are mechanisms intended for long-tail cases by power users; for
 not-yet-implemented widely-applicable cases, improving the infrastructure is
 preferable.
 
+### Inheritable extra declarations and definitions
+
+Similar to [operations](Operations.md#inheritable-extra-declarations-and-definitions),
+attribute and type definitions support `inheritableExtraClassDeclaration` and
+`inheritableExtraClassDefinition`. These fields accumulate across the TableGen
+class hierarchy, so base classes can provide shared C++ code that is
+automatically included in all derived attributes or types. A derived class can
+opt out by setting the field to empty (`[{}]`).
+
+```tablegen
+class MyBaseType<string name> : TypeDef<MyDialect, name> {
+  let inheritableExtraClassDeclaration = [{
+    bool isCompatible(Type other);
+  }];
+  let inheritableExtraClassDefinition = [{
+    bool $cppClass::isCompatible(Type other) { return other == *this; }
+  }];
+}
+
+def FooType : MyBaseType<"Foo"> {
+  // FooType gets isCompatible() automatically.
+}
+```
+
 ### Mnemonic Alias in Assembly
 
 Attribute and Type can use aliases in the assembly to reduce verbosity.

@@ -204,3 +204,85 @@ def J_CustomStorageCtorAttr : AttrDef<Test_Dialect, "CustomStorageCtorAttr"> {
 // DEF-LABEL: struct CustomStorageCtorAttrAttrStorage : public ::mlir::AttributeStorage
 // DEF: static CustomStorageCtorAttrAttrStorage *construct
 // DEF-SAME: (::mlir::AttributeStorageAllocator &allocator, KeyTy &&tblgenKey);
+
+// Test inheritable extra class declarations/definitions for attributes.
+
+class InheritableTestAttr<string name> : AttrDef<Test_Dialect, name> {
+  let inheritableExtraClassDeclaration = [{
+    int getInheritedHelper();
+  }];
+  let inheritableExtraClassDefinition = [{
+    int $cppClass::getInheritedHelper() { return 42; }
+  }];
+}
+
+// Both inheritable and regular extra declarations should appear.
+def K_InheritableAttrA : InheritableTestAttr<"InheritableA"> {
+  let attrName = "test.inheritable_a";
+  let extraClassDeclaration = [{
+    void doA();
+  }];
+  let extraClassDefinition = [{
+    void $cppClass::doA() {}
+  }];
+}
+
+// DECL-LABEL: class InheritableAAttr
+// DECL: int getInheritedHelper();
+// DECL: void doA();
+
+// DEF-LABEL: int InheritableAAttr::getInheritedHelper()
+// DEF: return 42;
+// DEF-LABEL: void InheritableAAttr::doA()
+
+// Only inheritable declarations (no extraClassDeclaration).
+def L_InheritableAttrB : InheritableTestAttr<"InheritableB"> {
+  let attrName = "test.inheritable_b";
+}
+
+// DECL-LABEL: class InheritableBAttr
+// DECL: int getInheritedHelper();
+
+// Discard inheritable declarations by setting to empty.
+def M_InheritableAttrC : InheritableTestAttr<"InheritableC"> {
+  let attrName = "test.inheritable_c";
+  let inheritableExtraClassDeclaration = [{}];
+  let inheritableExtraClassDefinition = [{}];
+}
+
+// DECL-LABEL: class InheritableCAttr
+// DECL-NOT: int getInheritedHelper();
+
+// Middle-of-stack: accumulates with base inheritable declarations.
+class InheritableMiddleAttr<string name> : InheritableTestAttr<name> {
+  let inheritableExtraClassDeclaration = [{
+    int getMiddleHelper();
+  }];
+  let inheritableExtraClassDefinition = [{
+    int $cppClass::getMiddleHelper() { return 1; }
+  }];
+}
+
+// Concrete attr inheriting from middle gets both base and middle.
+def N_InheritableAttrD : InheritableMiddleAttr<"InheritableD"> {
+  let attrName = "test.inheritable_d";
+}
+
+// DECL-LABEL: class InheritableDAttr
+// DECL: int getInheritedHelper();
+// DECL: int getMiddleHelper();
+
+// DEF-LABEL: int InheritableDAttr::getInheritedHelper()
+// DEF: return 42;
+// DEF-LABEL: int InheritableDAttr::getMiddleHelper()
+// DEF: return 1;
+
+// Passthrough: middle class doesn't set inheritable, base value passes through.
+class InheritablePassthroughAttr<string name> : InheritableTestAttr<name> {}
+
+def O_InheritableAttrE : InheritablePassthroughAttr<"InheritableE"> {
+  let attrName = "test.inheritable_e";
+}
+
+// DECL-LABEL: class InheritableEAttr
+// DECL: int getInheritedHelper();

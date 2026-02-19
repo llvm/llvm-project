@@ -440,6 +440,15 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   // generated code is placed inside the op's C++ namespace. `$cppClass` is
   // replaced by the op's C++ class name.
   code extraClassDefinition = ?;
+
+  // Extra class declarations/definitions that are inherited by all derived op
+  // classes. These can be set at any level in the class hierarchy. Unlike
+  // extraClassDeclaration/extraClassDefinition, the inheritable values carry
+  // over to all derived ops — both the inheritable and the regular extra
+  // declarations are concatenated in the generated code. A derived class can
+  // discard inherited declarations by setting these to empty [{}].
+  code inheritableExtraClassDeclaration = [{}];
+  code inheritableExtraClassDefinition = [{}];
 }
 
 // The arguments of an op.

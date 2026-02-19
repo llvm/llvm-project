@@ -1161,6 +1161,45 @@ declaration. In these cases, users can add an `extraClassDefinition` to define
 code that is added to the generated source file inside the op's C++ namespace.
 The substitution `$cppClass` is replaced by the op's C++ class name.
 
+### Inheritable extra declarations and definitions
+
+When defining base op classes in TableGen, `extraClassDeclaration` and
+`extraClassDefinition` follow standard TableGen `let` override semantics: if a
+derived class sets them, the base class values are lost. To provide shared C++
+code that is automatically available to all derived ops, use
+`inheritableExtraClassDeclaration` and `inheritableExtraClassDefinition`.
+
+These fields **accumulate** across the class hierarchy. Each class in the
+inheritance chain that sets a new value contributes its code to all concrete ops
+below it. A derived class can opt out of inherited declarations by setting the
+field to empty (`[{}]`).
+
+```tablegen
+class MyDialectOp<string mnemonic, list<Trait> traits = []>
+    : Op<MyDialect, mnemonic, traits> {
+  let inheritableExtraClassDeclaration = [{
+    MyDialect &getDialectInstance();
+  }];
+  let inheritableExtraClassDefinition = [{
+    MyDialect &$cppClass::getDialectInstance() {
+      return static_cast<MyDialect &>((*this)->getDialect());
+    }
+  }];
+}
+
+def FooOp : MyDialectOp<"foo"> {
+  // FooOp gets both getDialectInstance() and doFoo().
+  let extraClassDeclaration = [{ void doFoo(); }];
+}
+
+def BarOp : MyDialectOp<"bar"> {
+  // BarOp gets getDialectInstance() automatically.
+}
+```
+
+Multiple levels of the hierarchy can set `inheritableExtraClassDeclaration`;
+all their values are concatenated in the generated code.
+
 ### Generated C++ code
 
 [OpDefinitionsGen][OpDefinitionsGen] processes the op definition spec file and

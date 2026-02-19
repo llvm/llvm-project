@@ -273,7 +273,9 @@ void DefGen::createParentWithTraits() {
 /// Include declarations specified on NativeTrait
 static std::string formatExtraDeclarations(const AttrOrTypeDef &def) {
   SmallVector<StringRef> extraDeclarations;
-  // Include extra class declarations from NativeTrait
+  // Include inheritable extra class declarations.
+  def.getInheritableExtraDecls(extraDeclarations);
+  // Include extra class declarations from NativeTrait.
   for (const auto &trait : def.getTraits()) {
     if (auto *attrOrTypeTrait = dyn_cast<tblgen::NativeTrait>(&trait)) {
       StringRef value = attrOrTypeTrait->getExtraConcreteClassDeclaration();
@@ -292,7 +294,9 @@ static std::string formatExtraDeclarations(const AttrOrTypeDef &def) {
 /// replaced by the C++ class name.
 static std::string formatExtraDefinitions(const AttrOrTypeDef &def) {
   SmallVector<StringRef> extraDefinitions;
-  // Include extra class definitions from NativeTrait
+  // Include inheritable extra class definitions.
+  def.getInheritableExtraDefs(extraDefinitions);
+  // Include extra class definitions from NativeTrait.
   for (const auto &trait : def.getTraits()) {
     if (auto *attrOrTypeTrait = dyn_cast<tblgen::NativeTrait>(&trait)) {
       StringRef value = attrOrTypeTrait->getExtraConcreteClassDefinition();

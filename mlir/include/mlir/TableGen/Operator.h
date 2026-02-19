@@ -303,6 +303,16 @@ public:
   /// Returns this op's extra class definition code.
   StringRef getExtraClassDefinition() const;
 
+  /// Collects inheritable extra class declarations accumulated across the
+  /// class hierarchy into `result`.
+  void getInheritableExtraClassDeclarations(
+      SmallVectorImpl<StringRef> &result) const;
+
+  /// Collects inheritable extra class definitions accumulated across the
+  /// class hierarchy into `result`.
+  void
+  getInheritableExtraClassDefinitions(SmallVectorImpl<StringRef> &result) const;
+
   /// Returns the Tablegen definition this operator was constructed from.
   /// TODO: do not expose the TableGen record, this is a temporary solution to
   /// OpEmitter requiring a Record because Operator does not provide enough

@@ -12,6 +12,7 @@
 
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Argument.h"
+#include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Predicate.h"
 #include "mlir/TableGen/Trait.h"
 #include "mlir/TableGen/Type.h"
@@ -178,6 +179,16 @@ StringRef Operator::getExtraClassDefinition() const {
   if (def.isValueUnset(attr))
     return {};
   return def.getValueAsString(attr);
+}
+
+void Operator::getInheritableExtraClassDeclarations(
+    SmallVectorImpl<StringRef> &result) const {
+  accumulateInheritableField(def, "inheritableExtraClassDeclaration", result);
+}
+
+void Operator::getInheritableExtraClassDefinitions(
+    SmallVectorImpl<StringRef> &result) const {
+  accumulateInheritableField(def, "inheritableExtraClassDefinition", result);
 }
 
 const Record &Operator::getDef() const { return def; }

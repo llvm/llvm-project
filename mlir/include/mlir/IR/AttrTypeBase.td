@@ -250,6 +250,15 @@ class AttrOrTypeDef<string valueType, string name, list<Trait> defTraits,
   // replaced by the class name.
   code extraClassDefinition = [{}];
 
+  // Extra class declarations/definitions that are inherited by all derived
+  // classes. These can be set at any level in the class hierarchy. Unlike
+  // extraClassDeclaration/extraClassDefinition, the inheritable values carry
+  // over to all derived classes — both the inheritable and the regular extra
+  // declarations are concatenated in the generated code. A derived class can
+  // discard inherited declarations by setting these to empty [{}].
+  code inheritableExtraClassDeclaration = [{}];
+  code inheritableExtraClassDefinition = [{}];
+
   // Generate a default 'getAlias' method for OpAsm{Type,Attr}Interface.
   bit genMnemonicAlias = 0;
 }

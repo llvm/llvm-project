@@ -207,6 +207,48 @@ std::optional<StringRef> AttrOrTypeDef::getExtraDefs() const {
   return value.empty() ? std::optional<StringRef>() : value;
 }
 
+void mlir::tblgen::accumulateInheritableField(
+    const Record &def, StringRef fieldName,
+    SmallVectorImpl<StringRef> &result) {
+  auto getFieldValue = [&](const Record *rec) -> StringRef {
+    const auto *val = rec->getValue(fieldName);
+    if (!val)
+      return {};
+    const auto *si = dyn_cast<StringInit>(val->getValue());
+    return si ? si->getValue() : StringRef();
+  };
+
+  // Track the previous value to detect when a class explicitly sets the field
+  // vs. merely inheriting it unchanged from a parent.
+  StringRef prev;
+  auto accumulate = [&](StringRef value) {
+    if (value == prev)
+      return;
+    // An empty value means the class opted out of inherited declarations,
+    // so discard everything accumulated so far.
+    if (value.empty())
+      result.clear();
+    else
+      result.push_back(value);
+    prev = value;
+  };
+
+  for (const Record *rec : def.getSuperClasses())
+    accumulate(getFieldValue(rec));
+  // The concrete def itself may also override the field.
+  accumulate(def.getValueAsString(fieldName));
+}
+
+void AttrOrTypeDef::getInheritableExtraDecls(
+    SmallVectorImpl<StringRef> &result) const {
+  accumulateInheritableField(*def, "inheritableExtraClassDeclaration", result);
+}
+
+void AttrOrTypeDef::getInheritableExtraDefs(
+    SmallVectorImpl<StringRef> &result) const {
+  accumulateInheritableField(*def, "inheritableExtraClassDefinition", result);
+}
+
 bool AttrOrTypeDef::genMnemonicAlias() const {
   return def->getValueAsBit("genMnemonicAlias");
 }

@@ -216,6 +216,14 @@ public:
   /// Returns the def's extra class definition code.
   std::optional<StringRef> getExtraDefs() const;
 
+  /// Collects inheritable extra class declarations accumulated across the
+  /// class hierarchy into `result`.
+  void getInheritableExtraDecls(SmallVectorImpl<StringRef> &result) const;
+
+  /// Collects inheritable extra class definitions accumulated across the
+  /// class hierarchy into `result`.
+  void getInheritableExtraDefs(SmallVectorImpl<StringRef> &result) const;
+
   /// Returns true if we need to generate a default 'getAlias' implementation
   /// using the mnemonic.
   bool genMnemonicAlias() const;
@@ -292,6 +300,12 @@ public:
   /// Get the unique type name "dialect.typename".
   StringRef getTypeName() const;
 };
+
+/// Walk the superclass chain of `def` and accumulate distinct values of
+/// `fieldName` into `result`. Used to collect inheritable extra class
+/// declarations/definitions across the TableGen class hierarchy.
+void accumulateInheritableField(const llvm::Record &def, StringRef fieldName,
+                                SmallVectorImpl<StringRef> &result);
 
 } // namespace tblgen
 } // namespace mlir
