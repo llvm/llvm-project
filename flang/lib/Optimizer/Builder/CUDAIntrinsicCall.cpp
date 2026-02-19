@@ -403,6 +403,16 @@ static constexpr IntrinsicHandler cudaHandlers[]{
          &CI::genCUDASetDefaultStream),
      {{{"stream", asValue}}},
      /*isElemental=*/false},
+    {"cudastreamsynchronize",
+     static_cast<CUDAIntrinsicLibrary::ExtendedGenerator>(
+         &CI::genCUDAStreamSynchronize),
+     {{{"stream", asValue}}},
+     /*isElemental=*/false},
+    {"cudastreamsynchronizenull",
+     static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(
+         &CI::genCUDAStreamSynchronizeNull),
+     {},
+     /*isElemental=*/false},
     {"fence_proxy_async",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
          &CI::genFenceProxyAsync),
@@ -1158,6 +1168,32 @@ fir::ExtendedValue CUDAIntrinsicLibrary::genCUDASetDefaultStreamArray(
   auto funcOp =
       builder.createFunction(loc, RTNAME_STRING(CUFSetAssociatedStream), ftype);
   auto call = fir::CallOp::create(builder, loc, funcOp, {voidPtr, stream});
+  return call.getResult(0);
+}
+
+// CUDASTREAMSYNCHRONIZE
+fir::ExtendedValue CUDAIntrinsicLibrary::genCUDAStreamSynchronize(
+    mlir::Type resTy, llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value stream = fir::getBase(args[0]);
+  mlir::Type i64Ty = builder.getI64Type();
+  auto ctx = builder.getContext();
+  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {i64Ty}, {resTy});
+  auto funcOp =
+      builder.createFunction(loc, RTNAME_STRING(CUFStreamSynchronize), ftype);
+  auto call = fir::CallOp::create(builder, loc, funcOp, {stream});
+  return call.getResult(0);
+}
+
+// CUDASTREAMSYNCHRONIZENULL
+mlir::Value CUDAIntrinsicLibrary::genCUDAStreamSynchronizeNull(
+    mlir::Type resTy, llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0);
+  auto ctx = builder.getContext();
+  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {}, {resTy});
+  auto funcOp = builder.createFunction(
+      loc, RTNAME_STRING(CUFStreamSynchronizeNull), ftype);
+  auto call = fir::CallOp::create(builder, loc, funcOp, {});
   return call.getResult(0);
 }
 
