@@ -3,13 +3,13 @@
 ;; a call to bcmp() as part of SimplifyLibCalls. Such deletions must not be
 ;; allowed.
 
-; RUN: opt %s -o %t -module-summary -mtriple x86_64-unknown-linux-musl
-; RUN: llvm-lto2 run -o %t2 \
-; RUN:   -r %t,foo,plx \
-; RUN:   -r %t,memcmp,x \
-; RUN:   -r %t,bcmp,pl \
-; RUN:   -r %t,bcmp_impl,x %t -save-temps
-; RUN: llvm-dis %t2.1.4.opt.bc -o - | FileCheck %s
+; RUN: opt %s -o %t.o -mtriple x86_64-unknown-linux-musl
+; RUN: llvm-lto2 run -o %t.lto.o \
+; RUN:   -r %t.o,foo,plx \
+; RUN:   -r %t.o,memcmp,x \
+; RUN:   -r %t.o,bcmp,pl \
+; RUN:   -r %t.o,bcmp_impl,x %t.o --bitcode-libfuncs=bcmp -save-temps
+; RUN: llvm-dis %t.lto.o.0.4.opt.bc -o - | FileCheck %s
 
 define i1 @foo(ptr %0, ptr %1, i64 %2) {
   ; CHECK-LABEL: define{{.*}}i1 @foo
