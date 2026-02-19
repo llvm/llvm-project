@@ -18,6 +18,7 @@
 #include "../ScriptInterpreterPythonImpl.h"
 #include "ScriptedPythonInterface.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/ValueObject/ValueObjectList.h"
 #include <optional>
 
@@ -309,6 +310,18 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
   }
 
   return out;
+}
+
+template <>
+FileSpec ScriptedPythonInterface::ExtractValueFromPythonObject<FileSpec>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBFileSpec *sb_file_spec = reinterpret_cast<lldb::SBFileSpec *>(
+          python::LLDBSWIGPython_CastPyObjectToSBFileSpec(p.get())))
+    return m_interpreter.GetOpaqueTypeFromSBFileSpec(*sb_file_spec);
+  error = Status::FromErrorString(
+      "Couldn't cast lldb::SBFileSpec to lldb_private::FileSpec.");
+
+  return {};
 }
 
 #endif

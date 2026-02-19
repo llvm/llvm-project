@@ -158,6 +158,13 @@ ScriptInterpreter::GetOpaqueTypeFromSBExecutionContext(
   return exe_ctx.m_exe_ctx_sp;
 }
 
+FileSpec ScriptInterpreter::GetOpaqueTypeFromSBFileSpec(
+    const lldb::SBFileSpec &file_spec) const {
+  if (file_spec.m_opaque_up)
+    return *file_spec.m_opaque_up;
+  return {};
+}
+
 lldb::StackFrameListSP ScriptInterpreter::GetOpaqueTypeFromSBFrameList(
     const lldb::SBFrameList &frame_list) const {
   return frame_list.m_opaque_sp;
