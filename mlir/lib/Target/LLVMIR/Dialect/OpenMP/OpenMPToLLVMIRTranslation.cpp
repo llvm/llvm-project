@@ -2229,6 +2229,71 @@ private:
   /// The type of the structure
   llvm::Type *structTy = nullptr;
 };
+
+class IteratorInfo {
+private:
+  llvm::SmallVector<llvm::Value *> lowerBounds;
+  llvm::SmallVector<llvm::Value *> upperBounds;
+  llvm::SmallVector<llvm::Value *> steps;
+  llvm::SmallVector<llvm::Value *> trips;
+  unsigned dims;
+  llvm::Value *totalTrips;
+  const mlir::LLVM::ModuleTranslation &moduleTranslation;
+  llvm::IRBuilderBase &builder;
+
+  llvm::Value *lookUpAsI64(mlir::Value val) {
+    llvm::Value *v = moduleTranslation.lookupValue(val);
+    if (!v)
+      return nullptr;
+    if (v->getType()->isIntegerTy(64))
+      return v;
+    if (v->getType()->isIntegerTy())
+      return builder.CreateZExtOrTrunc(v, builder.getInt64Ty());
+    return nullptr;
+  }
+
+public:
+  IteratorInfo(mlir::omp::IteratorsOp itersOp,
+               mlir::LLVM::ModuleTranslation &moduleTranslation,
+               llvm::IRBuilderBase &builder)
+      : moduleTranslation(moduleTranslation), builder(builder) {
+    dims = itersOp.getLbs().size();
+    this->lowerBounds.resize(dims);
+    this->upperBounds.resize(dims);
+    this->steps.resize(dims);
+    this->trips.resize(dims);
+
+    for (unsigned d = 0; d < dims; ++d) {
+      llvm::Value *lb = lookUpAsI64(itersOp.getLbs()[d]);
+      llvm::Value *ub = lookUpAsI64(itersOp.getUbs()[d]);
+      llvm::Value *st = lookUpAsI64(itersOp.getSteps()[d]);
+      assert(lb && ub && st &&
+             "Expect lowerBounds, upperBounds, and steps in IteratorsOp");
+
+      this->lowerBounds[d] = lb;
+      this->upperBounds[d] = ub;
+      this->steps[d] = st;
+
+      // trips = ((ub - lb) / step) + 1  (inclusive ub, assume positive step)
+      llvm::Value *diff = builder.CreateSub(ub, lb);
+      llvm::Value *div = builder.CreateUDiv(diff, st);
+      this->trips[d] = builder.CreateAdd(
+          div, llvm::ConstantInt::get(builder.getInt64Ty(), 1));
+    }
+
+    this->totalTrips = llvm::ConstantInt::get(builder.getInt64Ty(), 1);
+    for (unsigned d = 0; d < dims; ++d)
+      this->totalTrips = builder.CreateMul(this->totalTrips, this->trips[d]);
+  }
+
+  unsigned getDims() const { return dims; }
+  llvm::ArrayRef<llvm::Value *> getLowerBounds() const { return lowerBounds; }
+  llvm::ArrayRef<llvm::Value *> getUpperBounds() const { return upperBounds; }
+  llvm::ArrayRef<llvm::Value *> getSteps() const { return steps; }
+  llvm::ArrayRef<llvm::Value *> getTrips() const { return trips; }
+  llvm::Value *getTotalTrips() { return totalTrips; }
+};
+
 } // namespace
 
 void TaskContextStructManager::generateTaskContextStruct() {
@@ -2303,19 +2368,42 @@ void TaskContextStructManager::freeStructPtr() {
   builder.CreateFree(structPtr);
 }
 
+static void storeAffinityEntry(llvm::IRBuilderBase &builder,
+                               llvm::Value *affinityList, llvm::Value *index,
+                               llvm::Value *addr, llvm::Value *len) {
+  auto &ctx = builder.getContext();
+  // { base_addr (i64), len (i64), flags (i32) }
+  llvm::StructType *kmpTaskAffinityInfoTy = llvm::StructType::get(
+      llvm::Type::getInt64Ty(ctx), llvm::Type::getInt64Ty(ctx),
+      llvm::Type::getInt32Ty(ctx));
+
+  llvm::Value *entry = builder.CreateInBoundsGEP(
+      kmpTaskAffinityInfoTy, affinityList, index, "omp.affinity.entry");
+
+  llvm::Value *baseAddrI64 = builder.CreatePtrToInt(addr, builder.getInt64Ty());
+  llvm::Value *flags = builder.getInt32(0);
+
+  builder.CreateStore(baseAddrI64,
+                      builder.CreateStructGEP(kmpTaskAffinityInfoTy, entry, 0));
+  builder.CreateStore(len,
+                      builder.CreateStructGEP(kmpTaskAffinityInfoTy, entry, 1));
+  builder.CreateStore(flags,
+                      builder.CreateStructGEP(kmpTaskAffinityInfoTy, entry, 2));
+}
+
 static void buildTaskAffinityList(mlir::omp::TaskOp taskOp,
                                   llvm::IRBuilderBase &builder,
                                   LLVM::ModuleTranslation &moduleTranslation,
                                   llvm::OpenMPIRBuilder::AffinityData &ad) {
   auto &ctx = builder.getContext();
+  SmallVector<mlir::Value> affinityVars(taskOp.getAffinityVars().begin(),
+                                        taskOp.getAffinityVars().end());
+
+  // Define the type locally just for the Alloca
   llvm::StructType *kmpTaskAffinityInfoTy = llvm::StructType::get(
       llvm::Type::getInt64Ty(ctx), llvm::Type::getInt64Ty(ctx),
       llvm::Type::getInt32Ty(ctx));
 
-  SmallVector<mlir::Value> affinityVars(taskOp.getAffinityVars().begin(),
-                                        taskOp.getAffinityVars().end());
-
-  // Allocate [N x kmp_task_affinity_info_t]
   llvm::Value *count =
       llvm::ConstantInt::get(builder.getInt64Ty(), affinityVars.size());
   llvm::AllocaInst *affinityList =
@@ -2327,27 +2415,68 @@ static void buildTaskAffinityList(mlir::omp::TaskOp taskOp,
 
     llvm::Value *addr = moduleTranslation.lookupValue(entryOp.getAddr());
     assert(addr && "expect affinity addr to be non-null");
-    llvm::Value *baseAddr = builder.CreatePtrToInt(addr, builder.getInt64Ty());
     llvm::Value *len = moduleTranslation.lookupValue(entryOp.getLen());
-    llvm::Value *flags = builder.getInt32(0);
-
-    llvm::Value *entry =
-        builder.CreateInBoundsGEP(kmpTaskAffinityInfoTy, affinityList,
-                                  builder.getInt64(i), "omp.affinity.entry");
-
-    llvm::Value *gep0 =
-        builder.CreateStructGEP(kmpTaskAffinityInfoTy, entry, 0); // base_addr
-    llvm::Value *gep1 =
-        builder.CreateStructGEP(kmpTaskAffinityInfoTy, entry, 1); // len
-    llvm::Value *gep2 =
-        builder.CreateStructGEP(kmpTaskAffinityInfoTy, entry, 2); // flags (i32)
-
-    builder.CreateStore(baseAddr, gep0);
-    builder.CreateStore(len, gep1);
-    builder.CreateStore(flags, gep2);
+    storeAffinityEntry(builder, affinityList, builder.getInt64(i), addr, len);
   }
+
   ad.Info = affinityList;
   ad.Count = builder.getInt32(static_cast<uint32_t>(affinityVars.size()));
+}
+
+static mlir::LogicalResult
+buildAffinityIterator(mlir::omp::IteratorsOp itersOp,
+                      llvm::IRBuilderBase &builder,
+                      mlir::LLVM::ModuleTranslation &moduleTranslation,
+                      llvm::OpenMPIRBuilder::AffinityData &A) {
+  auto &ctx = builder.getContext();
+  llvm::StructType *kmpTaskAffinityInfoTy = llvm::StructType::get(
+      llvm::Type::getInt64Ty(ctx), llvm::Type::getInt64Ty(ctx),
+      llvm::Type::getInt32Ty(ctx));
+
+  mlir::Block &iteratorRegionBlock = itersOp.getRegion().front();
+  IteratorInfo iterInfo(itersOp, moduleTranslation, builder);
+
+  auto *list = builder.CreateAlloca(
+      kmpTaskAffinityInfoTy, iterInfo.getTotalTrips(), "omp.affinity_list");
+
+  llvm::IteratorLoopNestScope iterLoops(
+      builder, iterInfo.getDims(), iterInfo.getLowerBounds(),
+      iterInfo.getUpperBounds(), iterInfo.getSteps());
+  auto indVars = iterLoops.getIVs();
+  for (unsigned d = 0; d < iterInfo.getDims(); ++d)
+    moduleTranslation.mapValue(iteratorRegionBlock.getArgument(d), indVars[d]);
+
+  moduleTranslation.mapBlock(&iteratorRegionBlock, builder.GetInsertBlock());
+  if (mlir::failed(moduleTranslation.convertBlock(
+          iteratorRegionBlock, /*ignoreArguments=*/true, builder)))
+    return itersOp.emitOpError() << "failed to translate iterators region";
+
+  auto yield =
+      mlir::dyn_cast<mlir::omp::YieldOp>(iteratorRegionBlock.getTerminator());
+  auto entryOp =
+      yield.getResults()[0].getDefiningOp<mlir::omp::AffinityEntryOp>();
+
+  llvm::Value *addr = moduleTranslation.lookupValue(entryOp.getAddr());
+  llvm::Value *len = moduleTranslation.lookupValue(entryOp.getLen());
+
+  llvm::Value *linearIdx = llvm::ConstantInt::get(builder.getInt64Ty(), 0);
+  for (unsigned d = 0; d < iterInfo.getDims(); ++d) {
+    // Normalize the physical IV to a 0-based logical index for this dimension.
+    llvm::Value *logicalIdx = builder.CreateUDiv(
+        builder.CreateSub(indVars[d], iterInfo.getLowerBounds()[d]),
+        iterInfo.getSteps()[d]);
+    // Row-major flattening: linear = linear * Trips[d] + logicalIdx
+    linearIdx = builder.CreateAdd(
+        builder.CreateMul(linearIdx, iterInfo.getTrips()[d]), logicalIdx);
+  }
+
+  storeAffinityEntry(builder, list, linearIdx, addr, len);
+
+  moduleTranslation.forgetMapping(itersOp.getRegion());
+
+  A.Info = list;
+  A.Count = builder.CreateTrunc(iterInfo.getTotalTrips(), builder.getInt32Ty());
+  return mlir::success();
 }
 
 /// Converts an OpenMP task construct into LLVM IR using OpenMPIRBuilder.
@@ -2565,6 +2694,13 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::AffinityData ad = {nullptr, nullptr};
   if (!taskOp.getAffinityVars().empty())
     buildTaskAffinityList(taskOp, builder, moduleTranslation, ad);
+  else if (!taskOp.getIterated().empty()) {
+    for (size_t i = 0; i < taskOp.getIterated().size(); ++i) {
+      auto iterOp = taskOp.getIterated()[i].getDefiningOp<omp::IteratorsOp>();
+      if (failed(buildAffinityIterator(iterOp, builder, moduleTranslation, ad)))
+        return failure();
+    }
+  }
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
@@ -7336,7 +7472,7 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
             return convertOmpLoopNest(*op, builder, moduleTranslation);
           })
           .Case<omp::MapInfoOp, omp::MapBoundsOp, omp::PrivateClauseOp,
-                omp::AffinityEntryOp>([&](auto op) {
+                omp::AffinityEntryOp, omp::IteratorsOp>([&](auto op) {
             // No-op, should be handled by relevant owning operations e.g.
             // TargetOp, TargetEnterDataOp, TargetExitDataOp, TargetDataOp
             // etc. and then discarded
