@@ -1048,3 +1048,15 @@ func.func @test_if_weights(%cond: i1) {
   }
   return
 }
+
+// CHECK-LABEL: func @test_declare_value(
+// CHECK-SAME: %[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: !fir.dscope) {
+func.func @test_declare_value(%arg0: i32, %scope: !fir.dscope) {
+// CHECK: fir.declare_value %[[VAL_0]] {uniq_name = "test"} : i32
+  fir.declare_value %arg0 {uniq_name = "test"} : i32
+// CHECK: fir.declare_value %[[VAL_0]] dummy_scope %[[VAL_1]] {uniq_name = "test"} : i32
+  fir.declare_value %arg0 dummy_scope %scope {uniq_name = "test"} : i32
+// CHECK: fir.declare_value %[[VAL_0]] dummy_scope %[[VAL_1]] arg 1 {uniq_name = "test"} : i32
+  fir.declare_value %arg0 dummy_scope %scope arg 1 {uniq_name = "test"} : i32
+  return
+}

@@ -124,4 +124,29 @@ TEST_F(X86SelectionDAGTest, computeKnownBits_FANDN) {
   EXPECT_TRUE(KnownHi2xF64.isNonNegative());
 }
 
+TEST_F(X86SelectionDAGTest, computeKnownBits_FXOR) {
+  SDLoc Loc;
+
+  auto SignBitF32 = DAG->getConstantFP(-0.0f, Loc, MVT::f32);
+  auto OpF32 =
+      DAG->getNode(X86ISD::FXOR, Loc, MVT::f32, SignBitF32, SignBitF32);
+  KnownBits KnownF32 = DAG->computeKnownBits(OpF32);
+  EXPECT_TRUE(KnownF32.isZero());
+
+  auto ZeroF64 = DAG->getConstantFP(+0.0, Loc, MVT::f64);
+  auto SignBitF64 = DAG->getConstantFP(-0.0, Loc, MVT::f64);
+  auto NegNeg2xF64 =
+      DAG->getBuildVector(MVT::v2f64, Loc, {SignBitF64, SignBitF64});
+  auto NegZero2xF64 =
+      DAG->getBuildVector(MVT::v2f64, Loc, {SignBitF64, ZeroF64});
+  auto Op2xF64 =
+      DAG->getNode(X86ISD::FXOR, Loc, MVT::v2f64, NegNeg2xF64, NegZero2xF64);
+  KnownBits KnownAll2xF64 = DAG->computeKnownBits(Op2xF64);
+  KnownBits KnownLo2xF64 = DAG->computeKnownBits(Op2xF64, APInt(2, 1));
+  KnownBits KnownHi2xF64 = DAG->computeKnownBits(Op2xF64, APInt(2, 2));
+  EXPECT_FALSE(KnownAll2xF64.isNonNegative());
+  EXPECT_TRUE(KnownLo2xF64.isZero());
+  EXPECT_FALSE(KnownHi2xF64.isNonNegative());
+}
+
 } // end namespace llvm

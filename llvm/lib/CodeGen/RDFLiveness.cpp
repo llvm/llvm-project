@@ -671,7 +671,11 @@ void Liveness::computePhiInfo() {
   for (unsigned i = 0; i < PhiUQ.size(); ++i) {
     auto PA = DFG.addr<PhiNode *>(PhiUQ[i]);
     NodeList PUs = PA.Addr->members_if(DFG.IsRef<NodeAttrs::Use>, DFG);
-    RefMap &RUM = RealUseMap[PA.Id];
+    // Make a copy of RealUseMap[PA.Id] to avoid iterator invalidation.
+    // The inner loop may insert new entries into RealUseMap (via operator[]
+    // on line "RealUseMap[P.first]"), which can trigger a DenseMap rehash
+    // and invalidate any references/iterators into the map.
+    RefMap RUM = RealUseMap[PA.Id];
 
     for (NodeAddr<UseNode *> UA : PUs) {
       std::map<NodeId, RegisterAggr> &PUM = PhiUp[UA.Id];

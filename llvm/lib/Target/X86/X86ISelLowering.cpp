@@ -39341,6 +39341,14 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known |= Known2;
     break;
   }
+  case X86ISD::FXOR: {
+    KnownBits Known2;
+    Known = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+
+    Known ^= Known2;
+    break;
+  }
   case X86ISD::PSADBW: {
     SDValue LHS = Op.getOperand(0);
     SDValue RHS = Op.getOperand(1);
@@ -57588,23 +57596,18 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
       SDValue X, ShAmt;
       if (sd_match(LHS, m_OneUse(m_And(m_Value(X),
                                        m_Shl(m_One(), m_Value(ShAmt)))))) {
-        // Only attempt this if the shift amount is known to be in bounds.
-        KnownBits KnownAmt = DAG.computeKnownBits(ShAmt);
-        if (KnownAmt.getMaxValue().ult(OpVT.getScalarSizeInBits())) {
-          EVT AmtVT = ShAmt.getValueType();
-          SDValue AlignAmt =
-              DAG.getNode(ISD::AND, DL, AmtVT, ShAmt,
-                          DAG.getSignedConstant(-32LL, DL, AmtVT));
-          SDValue ModuloAmt = DAG.getNode(ISD::AND, DL, AmtVT, ShAmt,
-                                          DAG.getConstant(31, DL, AmtVT));
-          SDValue Mask = DAG.getNode(
-              ISD::SHL, DL, MVT::i32, DAG.getConstant(1, DL, MVT::i32),
-              DAG.getZExtOrTrunc(ModuloAmt, DL, MVT::i8));
-          X = DAG.getNode(ISD::SRL, DL, OpVT, X, AlignAmt);
-          X = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, X);
-          X = DAG.getNode(ISD::AND, DL, MVT::i32, X, Mask);
-          return DAG.getSetCC(DL, VT, X, DAG.getConstant(0, DL, MVT::i32), CC);
-        }
+        EVT AmtVT = ShAmt.getValueType();
+        SDValue AlignAmt = DAG.getNode(ISD::AND, DL, AmtVT, ShAmt,
+                                       DAG.getSignedConstant(-32LL, DL, AmtVT));
+        SDValue ModuloAmt = DAG.getNode(ISD::AND, DL, AmtVT, ShAmt,
+                                        DAG.getConstant(31, DL, AmtVT));
+        SDValue Mask = DAG.getNode(ISD::SHL, DL, MVT::i32,
+                                   DAG.getConstant(1, DL, MVT::i32),
+                                   DAG.getZExtOrTrunc(ModuloAmt, DL, MVT::i8));
+        X = DAG.getNode(ISD::SRL, DL, OpVT, X, AlignAmt);
+        X = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, X);
+        X = DAG.getNode(ISD::AND, DL, MVT::i32, X, Mask);
+        return DAG.getSetCC(DL, VT, X, DAG.getConstant(0, DL, MVT::i32), CC);
       }
     }
 
