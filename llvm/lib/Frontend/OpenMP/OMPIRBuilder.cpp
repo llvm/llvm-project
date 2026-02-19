@@ -9950,19 +9950,14 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
         (static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
              CombinedInfo.Types[I] &
              OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG) != 0);
-    // For NON_CONTIG entries ArgSizes must carry the dimension count
-    // (number of descriptor_dim records) – NOT the byte size expression.
-    // Variable subsection forms (e.g. 0:s.len/2:2) previously produced a
-    // non-constant size so we marked them runtime and stored the byte size,
-    // leading the runtime to treat it as DimSize and overrun descriptors.
+    // For NON_CONTIG entries, ArgSizes stores the dimension count (number of
+    // descriptor_dim records), not the byte size.
     if (IsNonContigEntry) {
-      // Dims must be long enough and positive.
       assert(I < CombinedInfo.NonContigInfo.Dims.size() &&
-             "Induction variable is in-bounds with the NON_CONTIG Dims array");
+             "Index must be in-bounds for NON_CONTIG Dims array");
       const uint64_t DimCount = CombinedInfo.NonContigInfo.Dims[I];
       assert(DimCount > 0 && "NON_CONTIG DimCount must be > 0");
-      ConstSizes[I] =
-          ConstantInt::get(Int64Ty, CombinedInfo.NonContigInfo.Dims[I]);
+      ConstSizes[I] = ConstantInt::get(Int64Ty, DimCount);
       continue;
     }
     if (auto *CI = dyn_cast<Constant>(CombinedInfo.Sizes[I])) {

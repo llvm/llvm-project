@@ -54,7 +54,7 @@ int main() {
   }
 
   // Update to device with expression-based count
-#pragma omp target data map(to : s)
+#pragma omp target data map(alloc : s)
   {
 #pragma omp target update to(s.data[0 : s.len / 2 : 2])
 
