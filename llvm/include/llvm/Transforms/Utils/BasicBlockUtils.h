@@ -630,7 +630,8 @@ LLVM_ABI BranchInst *GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
 LLVM_ABI bool SplitIndirectBrCriticalEdges(Function &F,
                                            bool IgnoreBlocksWithoutPHI,
                                            BranchProbabilityInfo *BPI = nullptr,
-                                           BlockFrequencyInfo *BFI = nullptr);
+                                           BlockFrequencyInfo *BFI = nullptr,
+                                           DomTreeUpdater *DTU = nullptr);
 
 // Utility function for inverting branch condition and for swapping its
 // successors
