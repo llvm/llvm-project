@@ -58,11 +58,11 @@ define i32 @replace_isinf_call_f128(fp128 %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str q0, [sp, #-16]!
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldp x9, x8, [sp], #16
-; CHECK-NEXT:    and x8, x8, #0x7fffffffffffffff
-; CHECK-NEXT:    eor x8, x8, #0x7fff000000000000
-; CHECK-NEXT:    orr x8, x9, x8
-; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    mov	x8, #-562949953421312
+; CHECK-NEXT:    ldp	x10, x9, [sp], #16
+; CHECK-NEXT:    lsl	x9, x9, #1
+; CHECK-NEXT:    cmp	x10, #0
+; CHECK-NEXT:    ccmp	x8, x9, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %abs = tail call fp128 @llvm.fabs.f128(fp128 %x)

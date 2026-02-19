@@ -27112,6 +27112,121 @@ performVecReduceBitwiseCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return SDValue();
 }
 
+static bool splitI128ValueToI64Halves(SDValue V, SelectionDAG &DAG,
+                                      const SDLoc &DL, SDValue &Lo,
+                                      SDValue &Hi) {
+  EVT VT = V.getValueType();
+  if (!VT.isInteger() || VT.getFixedSizeInBits() != 128)
+    return false;
+  Lo = DAG.getNode(ISD::TRUNCATE, DL, MVT::i64, V);
+  Hi = DAG.getNode(
+      ISD::TRUNCATE, DL, MVT::i64,
+      DAG.getNode(ISD::SRL, DL, VT, V, DAG.getShiftAmountConstant(64, VT, DL)));
+  return true;
+}
+
+static SDValue
+performExpandedI128CmpCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                              SelectionDAG &DAG, ISD::CondCode CCCode) {
+  SDValue NewLHS = N->getOperand(0);
+  SDValue NewRHS = N->getOperand(1);
+  if (N->hasOneUse()) {
+    auto User = N->user_begin();
+    if ((User)->getOpcode() == ISD::BRCOND)
+      return SDValue();
+  }
+  // Keep the dedicated shift+cmp-zero combine opportunities for wide integers.
+  // Canonicalizing these into split compares here tends to introduce an extra
+  // EXTR on AArch64 (see icmp-shift-opt.ll).
+  if ((CCCode == ISD::SETEQ || CCCode == ISD::SETNE) &&
+      isNullConstant(NewRHS) &&
+      (NewLHS.getOpcode() == ISD::SRL || NewLHS.getOpcode() == ISD::SHL))
+    return SDValue();
+
+  if (NewLHS.getNumOperands() != 2)
+    return SDValue();
+  if (NewLHS.getValueType().isScalableVT() ||
+      NewRHS.getValueType().isScalableVT() || NewLHS.getNumOperands() != 2 ||
+      !(NewLHS.getValueType().isInteger() &&
+        NewLHS.getValueSizeInBits() == 128) ||
+      !(NewRHS.getValueType().isInteger() &&
+        NewRHS.getValueSizeInBits() == 128))
+    return SDValue();
+  ConstantSDNode *ConstLHS = dyn_cast<ConstantSDNode>(NewLHS.getNode());
+  ConstantSDNode *ConstRHS = dyn_cast<ConstantSDNode>(NewRHS.getNode());
+  if (ConstLHS || !ConstRHS)
+    return SDValue();
+
+  SDValue LHSLo = NewLHS.getOperand(0);
+  SDValue LHSHi = NewLHS.getOperand(1);
+  SDValue RHSLo =
+      DAG.getConstant(ConstRHS->getAPIntValue().trunc(64), SDLoc(N), MVT::i64);
+  SDValue RHSHi = DAG.getConstant(ConstRHS->getAPIntValue().lshr(64).trunc(64),
+                                  SDLoc(N), MVT::i64);
+  if (!splitI128ValueToI64Halves(NewLHS, DAG, SDLoc(N), LHSLo, LHSHi)) {
+    return SDValue();
+  }
+
+  if (CCCode == ISD::SETEQ || CCCode == ISD::SETNE) {
+    SDValue LoCmpF =
+        DAG.FoldSetCC(N->getValueType(0), LHSLo, RHSLo, CCCode, SDLoc(N));
+    SDValue HiCmpF =
+        DAG.FoldSetCC(N->getValueType(0), LHSHi, RHSHi, CCCode, SDLoc(N));
+    auto IsConstBool = [](SDValue V) {
+      return isa_and_nonnull<ConstantSDNode>(V.getNode());
+    };
+    if (IsConstBool(LoCmpF) || IsConstBool(HiCmpF))
+      return SDValue();
+
+    SDValue LoCmp =
+        DAG.getSetCC(SDLoc(N), N->getValueType(0), LHSLo, RHSLo, CCCode);
+    SDValue HiCmp =
+        DAG.getSetCC(SDLoc(N), N->getValueType(0), LHSHi, RHSHi, CCCode);
+    unsigned Opcode = (CCCode == ISD::SETEQ) ? ISD::AND : ISD::OR;
+    return DAG.getNode(Opcode, SDLoc(N), LoCmp.getValueType(), LoCmp, HiCmp);
+  }
+
+  if (CCCode == ISD::SETUGT || CCCode == ISD::SETUGE) {
+    // x >  K  <=> (xhi > khi)  || (xhi==khi && xlo >  klo)
+    // x >= K  <=> (xhi > khi)  || (xhi==khi && xlo >= klo)
+    SDValue ZeroHi = DAG.getConstant(0, SDLoc(N), LHSHi.getValueType());
+
+    ISD::CondCode LoCC = (CCCode == ISD::SETUGT) ? ISD::SETULE : ISD::SETULT;
+
+    SDValue HiEq =
+        DAG.getSetCC(SDLoc(N), N->getValueType(0), LHSHi, ZeroHi, ISD::SETEQ);
+    SDValue LoCmp =
+        DAG.getSetCC(SDLoc(N), N->getValueType(0), LHSLo, RHSLo, LoCC);
+    SDValue Tree =
+        DAG.getNode(ISD::AND, SDLoc(N), N->getValueType(0), HiEq, LoCmp);
+
+    SDValue Zero = DAG.getConstant(0, SDLoc(N), N->getValueType(0));
+    return DAG.getSetCC(SDLoc(N), N->getValueType(0), Tree, Zero, ISD::SETEQ);
+  }
+
+  if (CCCode == ISD::SETULT || CCCode == ISD::SETULE) {
+    // x <  K  <=> (xhi < khi)  || (xhi==khi && xlo <  klo)
+    // x <= K  <=> (xhi < khi)  || (xhi==khi && xlo <= klo)
+    ISD::CondCode Opcode = ISD::SETULT;
+
+    SDValue HiCmp =
+        DAG.getSetCC(SDLoc(N), N->getValueType(0), LHSHi, RHSHi, Opcode);
+    SDValue HiEq =
+        DAG.getSetCC(SDLoc(N), N->getValueType(0), LHSHi, RHSHi, ISD::SETEQ);
+    SDValue LoCmp =
+        DAG.getSetCC(SDLoc(N), N->getValueType(0), LHSLo, RHSLo, CCCode);
+
+    SDValue LoAnd =
+        DAG.getNode(ISD::AND, SDLoc(N), HiEq.getValueType(), HiEq, LoCmp);
+    SDValue Tree =
+        DAG.getNode(ISD::OR, SDLoc(N), N->getValueType(0), HiCmp, LoAnd);
+
+    SDValue Zero = DAG.getConstant(0, SDLoc(N), N->getValueType(0));
+    return DAG.getSetCC(SDLoc(N), N->getValueType(0), Tree, Zero, ISD::SETNE);
+  }
+  return SDValue();
+}
+
 static SDValue performSETCCCombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG) {
@@ -27191,6 +27306,9 @@ static SDValue performSETCCCombine(SDNode *N,
       ISD::isConstantSplatVector(LHS.getNode(), SplatLHSVal) &&
       SplatLHSVal.isOne())
     return DAG.getSetCC(DL, VT, DAG.getConstant(0, DL, CmpVT), RHS, ISD::SETGE);
+
+  if (SDValue V = performExpandedI128CmpCombine(N, DCI, DAG, Cond))
+    return V;
 
   return SDValue();
 }
