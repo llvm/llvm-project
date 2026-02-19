@@ -865,7 +865,6 @@ static DWARFExpression CreateDWARFExpression(ModuleSP module_sp,
   const ArchSpec &architecture = module_sp->GetArchitecture();
   ByteOrder byte_order = architecture.GetByteOrder();
   uint32_t address_size = architecture.GetAddressByteSize();
-  uint32_t byte_size = architecture.GetDataByteSize();
 
   StreamBuffer<32> stream(Stream::eBinary, address_size, byte_order);
   stream.PutHex8(llvm::dwarf::DW_OP_addr);
@@ -873,8 +872,7 @@ static DWARFExpression CreateDWARFExpression(ModuleSP module_sp,
 
   DataBufferSP buffer =
       std::make_shared<DataBufferHeap>(stream.GetData(), stream.GetSize());
-  lldb_private::DataExtractor extractor(buffer, byte_order, address_size,
-                                        byte_size);
+  lldb_private::DataExtractor extractor(buffer, byte_order, address_size);
   DWARFExpression result(extractor);
   result.SetRegisterKind(eRegisterKindDWARF);
 

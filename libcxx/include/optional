@@ -265,10 +265,10 @@ namespace std {
 #  include <__concepts/invocable.h>
 #  include <__config>
 #  include <__exception/exception.h>
-#  include <__format/range_format.h>
 #  include <__functional/hash.h>
 #  include <__functional/invoke.h>
 #  include <__functional/unary_function.h>
+#  include <__fwd/format.h>
 #  include <__fwd/functional.h>
 #  include <__iterator/bounded_iter.h>
 #  include <__iterator/capacity_aware_iterator.h>

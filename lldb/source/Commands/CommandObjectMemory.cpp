@@ -565,16 +565,8 @@ protected:
     }
 
     size_t item_count = m_format_options.GetCountValue().GetCurrentValue();
-
-    // TODO For non-8-bit byte addressable architectures this needs to be
-    // revisited to fully support all lldb's range of formatting options.
-    // Furthermore code memory reads (for those architectures) will not be
-    // correctly formatted even w/o formatting options.
     size_t item_byte_size =
-        target->GetArchitecture().GetDataByteSize() > 1
-            ? target->GetArchitecture().GetDataByteSize()
-            : m_format_options.GetByteSizeValue().GetCurrentValue();
-
+        m_format_options.GetByteSizeValue().GetCurrentValue();
     const size_t num_per_line =
         m_memory_options.m_num_per_line.GetCurrentValue();
 
@@ -834,8 +826,7 @@ protected:
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
     DataExtractor data(data_sp, target->GetArchitecture().GetByteOrder(),
-                       target->GetArchitecture().GetAddressByteSize(),
-                       target->GetArchitecture().GetDataByteSize());
+                       target->GetArchitecture().GetAddressByteSize());
 
     Format format = m_format_options.GetFormat();
     if (((format == eFormatChar) || (format == eFormatCharPrintable)) &&
@@ -860,10 +851,10 @@ protected:
     }
 
     assert(output_stream_p);
-    size_t bytes_dumped = DumpDataExtractor(
-        data, output_stream_p, 0, format, item_byte_size, item_count,
-        num_per_line / target->GetArchitecture().GetDataByteSize(), addr, 0, 0,
-        exe_scope, m_memory_tag_options.GetShowTags().GetCurrentValue());
+    size_t bytes_dumped =
+        DumpDataExtractor(data, output_stream_p, 0, format, item_byte_size,
+                          item_count, num_per_line, addr, 0, 0, exe_scope,
+                          m_memory_tag_options.GetShowTags().GetCurrentValue());
     m_next_addr = addr + bytes_dumped;
     output_stream_p->EOL();
   }

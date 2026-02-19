@@ -626,8 +626,7 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
         file_offset,    // Offset of this section in the file.
         sect_info.size, // Size of the section as found in the file.
         0,              // Alignment of the section
-        0,              // Flags for this section.
-        1);             // Number of host bytes per target byte
+        0);             // Flags for this section.
     m_sections_up->AddSection(section_sp);
     unified_section_list.AddSection(section_sp);
   }

@@ -137,6 +137,7 @@ void LinuxSignals::Reset() {
   ADD_SIGCODE(SIGSEGV, 11, SEGV_MAPERR,  1, "address not mapped to object", SignalCodePrintOption::Address);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_ACCERR,  2, "invalid permissions for mapped object", SignalCodePrintOption::Address);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_BNDERR,  3, "failed address bounds checks", SignalCodePrintOption::Bounds);
+  ADD_SIGCODE(SIGSEGV, 11, SEGV_PKUERR,  4, "failed protection key checks", SignalCodePrintOption::Address);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_MTEAERR, 8, "async tag check fault");
   ADD_SIGCODE(SIGSEGV, 11, SEGV_MTESERR, 9, "sync tag check fault", SignalCodePrintOption::Address);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_CPERR,  10, "control protection fault");

@@ -1413,6 +1413,9 @@ class Base(unittest.TestCase):
     def isAArch64FPMR(self):
         return self.isAArch64() and self.isSupported(cpu_feature.AArch64.FPMR)
 
+    def isAArch64POE(self):
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.POE)
+
     def isAArch64Windows(self):
         """Returns true if the architecture is AArch64 and platform windows."""
         if self.getPlatform() == "windows":

@@ -355,7 +355,7 @@ DataExtractor ProcessMinidump::GetAuxvData() {
     return DataExtractor();
 
   return DataExtractor(auxv->data(), auxv->size(), GetByteOrder(),
-                       GetAddressByteSize(), GetAddressByteSize());
+                       GetAddressByteSize());
 }
 
 bool ProcessMinidump::IsLLDBMinidump() {

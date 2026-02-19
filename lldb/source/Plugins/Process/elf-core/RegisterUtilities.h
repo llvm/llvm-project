@@ -152,6 +152,10 @@ constexpr RegsetDesc AARCH64_GCS_Desc[] = {
     {llvm::Triple::Linux, llvm::Triple::aarch64, llvm::ELF::NT_ARM_GCS},
 };
 
+constexpr RegsetDesc AARCH64_POE_Desc[] = {
+    {llvm::Triple::Linux, llvm::Triple::aarch64, llvm::ELF::NT_ARM_POE},
+};
+
 constexpr RegsetDesc ARM_VFP_Desc[] = {
     {llvm::Triple::FreeBSD, llvm::Triple::arm, llvm::ELF::NT_ARM_VFP},
     {llvm::Triple::Linux, llvm::Triple::arm, llvm::ELF::NT_ARM_VFP},

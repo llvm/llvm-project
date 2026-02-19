@@ -401,8 +401,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
         if (base_addr != LLDB_INVALID_ADDRESS && memory_tag_map) {
           size_t line_len = offset - line_start_offset;
           lldb::addr_t line_base =
-              base_addr +
-              (offset - start_offset - line_len) / DE.getTargetByteSize();
+              base_addr + (offset - start_offset - line_len);
           printMemoryTags(DE, s, line_base, line_len, memory_tag_map);
         }
 
@@ -410,8 +409,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       }
       if (base_addr != LLDB_INVALID_ADDRESS)
         s->Printf("0x%8.8" PRIx64 ": ",
-                  (uint64_t)(base_addr +
-                             (offset - start_offset) / DE.getTargetByteSize()));
+                  (uint64_t)(base_addr + (offset - start_offset)));
 
       line_start_offset = offset;
     } else if (item_format != eFormatChar &&
@@ -897,8 +895,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
 
     if (base_addr != LLDB_INVALID_ADDRESS && memory_tag_map) {
       size_t line_len = offset - line_start_offset;
-      lldb::addr_t line_base = base_addr + (offset - start_offset - line_len) /
-                                               DE.getTargetByteSize();
+      lldb::addr_t line_base = base_addr + (offset - start_offset - line_len);
       printMemoryTags(DE, s, line_base, line_len, memory_tag_map);
     }
   }

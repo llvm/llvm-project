@@ -39312,6 +39312,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     }
     break;
   }
+  case X86ISD::FAND:
   case X86ISD::AND: {
     if (Op.getResNo() == 0) {
       KnownBits Known2;
@@ -39338,6 +39339,14 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known2 = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
 
     Known |= Known2;
+    break;
+  }
+  case X86ISD::FXOR: {
+    KnownBits Known2;
+    Known = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+
+    Known ^= Known2;
     break;
   }
   case X86ISD::PSADBW: {
