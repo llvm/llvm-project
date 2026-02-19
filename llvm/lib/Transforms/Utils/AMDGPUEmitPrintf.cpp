@@ -136,7 +136,7 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
 
   // Add one to the computed length.
   Builder.SetInsertPoint(WhileDone, WhileDone->begin());
-  auto Len = Builder.CreatePtrDiff(Str, PtrPhi);
+  auto Len = Builder.CreatePtrDiff(PtrPhi, Str);
   Len = Builder.CreateZExt(Len, Int64Ty);
   Len = Builder.CreateAdd(Len, One);
 

@@ -21,8 +21,13 @@
 // Helpers to define the SDNode patterns.
 //===----------------------------------------------------------------------===//
 
-def rvv_vnot : PatFrag<(ops node:$in),
-                       (xor node:$in, (riscv_vmset_vl (XLenVT srcvalue)))>;
+def rvv_vmnot : PatFrag<(ops node:$in),
+                        (xor node:$in, (riscv_vmset_vl (XLenVT srcvalue)))>;
+
+// Match xor+riscv_vmset_vl as an operand. By handling as a ComplexPattern we
+// can check both operands of the xor without needing tablegen to emit
+// multiple isel patterns.
+def rvv_vmnot_op : ComplexPattern<vAny, 1, "selectVMNOTOp", [xor], [], 3>;
 
 multiclass VPatUSLoadStoreSDNode<ValueType type,
                                  RegisterClass regclass,
@@ -1193,25 +1198,25 @@ foreach mti = AllMasks in {
               (!cast<Instruction>("PseudoVMXOR_MM_"#mti.BX)
                    VR:$rs1, VR:$rs2, mti.AVL, mti.Log2SEW)>;
 
-    def : Pat<(mti.Mask (rvv_vnot (and VR:$rs1, VR:$rs2))),
+    def : Pat<(mti.Mask (rvv_vmnot (and VR:$rs1, VR:$rs2))),
               (!cast<Instruction>("PseudoVMNAND_MM_"#mti.BX)
                    VR:$rs1, VR:$rs2, mti.AVL, mti.Log2SEW)>;
-    def : Pat<(mti.Mask (rvv_vnot (or VR:$rs1, VR:$rs2))),
+    def : Pat<(mti.Mask (rvv_vmnot (or VR:$rs1, VR:$rs2))),
               (!cast<Instruction>("PseudoVMNOR_MM_"#mti.BX)
                    VR:$rs1, VR:$rs2, mti.AVL, mti.Log2SEW)>;
-    def : Pat<(mti.Mask (rvv_vnot (xor VR:$rs1, VR:$rs2))),
+    def : Pat<(mti.Mask (rvv_vmnot (xor VR:$rs1, VR:$rs2))),
               (!cast<Instruction>("PseudoVMXNOR_MM_"#mti.BX)
                    VR:$rs1, VR:$rs2, mti.AVL, mti.Log2SEW)>;
 
-    def : Pat<(mti.Mask (and VR:$rs1, (rvv_vnot VR:$rs2))),
+    def : Pat<(mti.Mask (and VR:$rs1, rvv_vmnot_op:$rs2)),
               (!cast<Instruction>("PseudoVMANDN_MM_"#mti.BX)
                    VR:$rs1, VR:$rs2, mti.AVL, mti.Log2SEW)>;
-    def : Pat<(mti.Mask (or VR:$rs1, (rvv_vnot VR:$rs2))),
+    def : Pat<(mti.Mask (or VR:$rs1, rvv_vmnot_op:$rs2)),
               (!cast<Instruction>("PseudoVMORN_MM_"#mti.BX)
                    VR:$rs1, VR:$rs2, mti.AVL, mti.Log2SEW)>;
 
-    // Handle rvv_vnot the same as the vmnot.m pseudoinstruction.
-    def : Pat<(mti.Mask (rvv_vnot VR:$rs)),
+    // Handle rvv_vmnot_op the same as the vmnot.m pseudoinstruction.
+    def : Pat<(mti.Mask rvv_vmnot_op:$rs),
               (!cast<Instruction>("PseudoVMNAND_MM_"#mti.BX)
                    VR:$rs, VR:$rs, mti.AVL, mti.Log2SEW)>;
   }

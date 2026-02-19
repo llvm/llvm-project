@@ -1,4 +1,5 @@
-// RUN: %clang --target=x86_64-unknown-linux -c -g -O1 %s -o - | \
+// REQUIRES: x86-registered-target
+// RUN: %clang --target=x86_64-linux -c -g -O1 %s -o - | \
 // RUN: llvm-dwarfdump --debug-info - | FileCheck %s --check-prefix=CHECK
 
 // Simple base and derived class with virtual:

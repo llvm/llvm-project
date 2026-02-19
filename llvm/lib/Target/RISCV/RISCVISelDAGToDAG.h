@@ -156,6 +156,9 @@ public:
     return selectRVVSimm5(N, Width, Imm);
   }
 
+  bool selectVMNOTOp(SDValue N, SDValue &Res);
+  bool selectVMNOT_VLOp(SDNode *Parent, SDValue N, SDValue &Res);
+
   void addVectorLoadStoreOperands(SDNode *Node, unsigned SEWImm,
                                   const SDLoc &DL, unsigned CurOp,
                                   bool IsMasked, bool IsStridedOrIndexed,

@@ -2494,9 +2494,9 @@ multiclass MVE_VCLSCLZ_p<string opname, bit opcode, MVEVectorVTInfo VTI,
   }
 }
 
-defm MVE_VCLSs8  : MVE_VCLSCLZ_p<"cls", 0, MVE_v16s8, int_arm_mve_vcls>;
-defm MVE_VCLSs16 : MVE_VCLSCLZ_p<"cls", 0, MVE_v8s16, int_arm_mve_vcls>;
-defm MVE_VCLSs32 : MVE_VCLSCLZ_p<"cls", 0, MVE_v4s32, int_arm_mve_vcls>;
+defm MVE_VCLSs8  : MVE_VCLSCLZ_p<"cls", 0, MVE_v16s8, ctls>;
+defm MVE_VCLSs16 : MVE_VCLSCLZ_p<"cls", 0, MVE_v8s16, ctls>;
+defm MVE_VCLSs32 : MVE_VCLSCLZ_p<"cls", 0, MVE_v4s32, ctls>;
 
 defm MVE_VCLZs8  : MVE_VCLSCLZ_p<"clz", 1, MVE_v16i8, ctlz>;
 defm MVE_VCLZs16 : MVE_VCLSCLZ_p<"clz", 1, MVE_v8i16, ctlz>;

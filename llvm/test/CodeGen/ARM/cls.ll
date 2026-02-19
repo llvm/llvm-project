@@ -13,49 +13,15 @@ define i32 @cls(i32 %t) {
 ;
 ; CHECKV8-LABEL: cls:
 ; CHECKV8:       @ %bb.0:
+; CHECKV8-NEXT:    push {r7, lr}
 ; CHECKV8-NEXT:    asrs r1, r0, #31
 ; CHECKV8-NEXT:    eors r1, r0
 ; CHECKV8-NEXT:    lsls r0, r1, #1
-; CHECKV8-NEXT:    lsrs r1, r0, #1
-; CHECKV8-NEXT:    orrs r1, r0
-; CHECKV8-NEXT:    lsrs r0, r1, #2
-; CHECKV8-NEXT:    orrs r0, r1
-; CHECKV8-NEXT:    lsrs r1, r0, #4
-; CHECKV8-NEXT:    orrs r1, r0
-; CHECKV8-NEXT:    lsrs r0, r1, #8
-; CHECKV8-NEXT:    orrs r0, r1
-; CHECKV8-NEXT:    lsrs r1, r0, #16
-; CHECKV8-NEXT:    orrs r1, r0
-; CHECKV8-NEXT:    mvns r0, r1
-; CHECKV8-NEXT:    movs r1, #1
-; CHECKV8-NEXT:    lsrs r2, r0, #1
-; CHECKV8-NEXT:    bics r0, r1
-; CHECKV8-NEXT:    ldr r1, .LCPI0_0
-; CHECKV8-NEXT:    ands r1, r2
-; CHECKV8-NEXT:    subs r0, r0, r1
-; CHECKV8-NEXT:    ldr r1, .LCPI0_1
-; CHECKV8-NEXT:    lsrs r2, r0, #2
-; CHECKV8-NEXT:    ands r0, r1
-; CHECKV8-NEXT:    ands r2, r1
-; CHECKV8-NEXT:    adds r0, r0, r2
-; CHECKV8-NEXT:    lsrs r1, r0, #4
-; CHECKV8-NEXT:    adds r0, r0, r1
-; CHECKV8-NEXT:    ldr r1, .LCPI0_2
-; CHECKV8-NEXT:    ands r1, r0
-; CHECKV8-NEXT:    ldr r0, .LCPI0_3
-; CHECKV8-NEXT:    muls r0, r1, r0
-; CHECKV8-NEXT:    lsrs r0, r0, #24
-; CHECKV8-NEXT:    bx lr
-; CHECKV8-NEXT:    .p2align 2
-; CHECKV8-NEXT:  @ %bb.1:
-; CHECKV8-NEXT:  .LCPI0_0:
-; CHECKV8-NEXT:    .long 1431655765 @ 0x55555555
-; CHECKV8-NEXT:  .LCPI0_1:
-; CHECKV8-NEXT:    .long 858993459 @ 0x33333333
-; CHECKV8-NEXT:  .LCPI0_2:
-; CHECKV8-NEXT:    .long 252645135 @ 0xf0f0f0f
-; CHECKV8-NEXT:  .LCPI0_3:
-; CHECKV8-NEXT:    .long 16843009 @ 0x1010101
+; CHECKV8-NEXT:    adds r0, r0, #1
+; CHECKV8-NEXT:    bl __clzsi2
+; CHECKV8-NEXT:    pop {r7}
+; CHECKV8-NEXT:    pop {r1}
+; CHECKV8-NEXT:    bx r1
   %cls.i = call i32 @llvm.arm.cls(i32 %t)
   ret i32 %cls.i
 }
@@ -64,7 +30,7 @@ define i32 @cls64(i64 %t) {
 ; CHECKV5-LABEL: cls64:
 ; CHECKV5:       @ %bb.0:
 ; CHECKV5-NEXT:    cmp r1, #0
-; CHECKV5-NEXT:    mvnne r0, r0
+; CHECKV5-NEXT:    mvnmi r0, r0
 ; CHECKV5-NEXT:    clz r2, r0
 ; CHECKV5-NEXT:    eor r0, r1, r1, asr #31
 ; CHECKV5-NEXT:    mov r1, #1
@@ -79,7 +45,7 @@ define i32 @cls64(i64 %t) {
 ; CHECKV8-NEXT:    push {r4, lr}
 ; CHECKV8-NEXT:    movs r4, r0
 ; CHECKV8-NEXT:    cmp r1, #0
-; CHECKV8-NEXT:    beq .LBB1_2
+; CHECKV8-NEXT:    bpl .LBB1_2
 ; CHECKV8-NEXT:  @ %bb.1:
 ; CHECKV8-NEXT:    mvns r4, r4
 ; CHECKV8-NEXT:  .LBB1_2:

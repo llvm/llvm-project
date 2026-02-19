@@ -110,11 +110,9 @@ rcwswp x0, x1, [x2]
 // CHECK: rcwswp x0, x1, [x2]
 
 // This needs to come after `.arch_extension the` as it uses an instruction that
-// requires both the and d128
+// requires the extension.
 .arch_extension d128
-sysp #0, c2, c0, #0, x0, x1
 rcwcasp   x0, x1, x6, x7, [x4]
-// CHECK: sysp #0, c2, c0, #0, x0, x1
 // CHECK: rcwcasp   x0, x1, x6, x7, [x4]
 
 .arch_extension rasv2
