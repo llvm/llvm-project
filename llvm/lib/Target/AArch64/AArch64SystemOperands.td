@@ -898,6 +898,11 @@ defm TLBIP : TLBITableBase;
 
 multiclass TLBI<string name, bit hasTLBIP, bits<3> op1, bits<4> crn, bits<4> crm,
              bits<3> op2, bit needsreg = 1, bit optionalreg = 0> {
+  defvar allowTLBID = !match(name, ".*E[12][IO]S.*");
+  defvar TLBIPRequires = !if(allowTLBID,
+                             ["AArch64::FeatureD128", "AArch64::FeatureTLBID"],
+                             ["AArch64::FeatureD128"]);
+  defvar TLBIPRequiresNXS = !listconcat(TLBIPRequires, ["AArch64::FeatureXS"]);
   def : TLBIEntry<name, op1, crn, crm, op2, needsreg, optionalreg>;
   def : TLBIEntry<!strconcat(name, "nXS"), op1, crn, crm, op2, needsreg, optionalreg> {
     let Encoding{7} = 1;
@@ -905,11 +910,11 @@ multiclass TLBI<string name, bit hasTLBIP, bits<3> op1, bits<4> crn, bits<4> crm
   }
   if !eq(hasTLBIP, true) then {
     def : TLBIPEntry<name, op1, crn, crm, op2, needsreg, optionalreg> {
-      let ExtraRequires = ["AArch64::FeatureD128"];
+      let ExtraRequires = TLBIPRequires;
     }
     def : TLBIPEntry<!strconcat(name, "nXS"), op1, crn, crm, op2, needsreg, optionalreg> {
       let Encoding{7} = 1;
-      let ExtraRequires = ["AArch64::FeatureD128", "AArch64::FeatureXS"];
+      let ExtraRequires = TLBIPRequiresNXS;
     }
   }
 }
