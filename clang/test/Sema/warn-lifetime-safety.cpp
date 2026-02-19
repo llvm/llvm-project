@@ -1745,3 +1745,49 @@ View test3(std::string a) {
   return b;                 // expected-note {{returned here}}
 }
 } // namespace non_trivial_views
+
+namespace LoopLocalPointers {
+
+void conditional_assignment_in_loop() {
+  for (int i = 0; i < 10; ++i) {
+    MyObj obj;
+    MyObj* view;
+    if (i > 5) {
+      view = &obj;
+    }
+    (void)*view;
+  }
+}
+
+void unconditional_assignment_in_loop() {
+  for (int i = 0; i < 10; ++i) {
+    MyObj obj;
+    MyObj* view = &obj;
+    (void)*view;
+  }
+}
+
+void multi_level_pointer_in_loop() {
+  for (int i = 0; i < 10; ++i) {
+    MyObj obj;
+    MyObj* p;
+    MyObj** pp;
+    if (i > 5) {
+      p = &obj;
+      pp = &p;
+    }
+    (void)**pp;
+  }
+}
+
+void outer_pointer_outlives_inner_pointee() {
+  MyObj safe;
+  MyObj* view = &safe;
+  for (int i = 0; i < 10; ++i) {
+    MyObj obj;
+    view = &obj;     // expected-warning {{may not live long enough}}
+  }                  // expected-note {{destroyed here}}
+  (void)*view;       // expected-note {{later used here}}
+}
+
+} // namespace LoopLocalPointers

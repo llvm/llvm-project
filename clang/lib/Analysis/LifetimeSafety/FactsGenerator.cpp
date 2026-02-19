@@ -437,6 +437,14 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
   }
 }
 
+bool FactsGenerator::isEscapingOrigin(OriginID OID) const {
+  return llvm::any_of(EscapesInCurrentBlock, [OID](const Fact *F) {
+    if (const auto *EF = F->getAs<OriginEscapesFact>())
+      return EF->getEscapedOriginID() == OID;
+    return false;
+  });
+}
+
 void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   /// TODO: Handle loans to temporaries.
   const VarDecl *LifetimeEndsVD = LifetimeEnds.getVarDecl();
@@ -452,6 +460,17 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
       if (Path == LifetimeEndsVD)
         CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
             BL->getID(), LifetimeEnds.getTriggerStmt()->getEndLoc()));
+    }
+  }
+  // In loops, the back-edge can make a dead origin appear live at its
+  // pointee's ExpireFact. Expiring the origin here prevents that.
+  if (OriginList *List = getOriginsList(*LifetimeEndsVD)) {
+    for (OriginList *L = List; L; L = L->peelOuterOrigin()) {
+      OriginID OID = L->getOuterOriginID();
+      // Skip if this origin escapes. Its loans are still needed
+      // for the escape checker.
+      if (!isEscapingOrigin(OID))
+        CurrentBlockFacts.push_back(FactMgr.createFact<ExpireOriginFact>(OID));
     }
   }
 }

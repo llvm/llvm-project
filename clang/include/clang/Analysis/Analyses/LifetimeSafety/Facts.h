@@ -53,6 +53,8 @@ public:
     OriginEscapes,
     /// An origin is invalidated (e.g. vector resized).
     InvalidateOrigin,
+    /// An origin expires (e.g., its variable goes out of scope).
+    ExpireOrigin,
   };
 
 private:
@@ -243,6 +245,23 @@ public:
 
   OriginID getInvalidatedOrigin() const { return OID; }
   const Expr *getInvalidationExpr() const { return InvalidationExpr; }
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override;
+};
+
+/// Emitted when a variable's lifetime ends. Transfer functions use this to
+/// clear the origin's loans and liveness, preventing false positives when
+/// a pointer and its pointee die in the same scope inside a loop.
+class ExpireOriginFact : public Fact {
+  OriginID OID;
+
+public:
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::ExpireOrigin;
+  }
+
+  ExpireOriginFact(OriginID OID) : Fact(Kind::ExpireOrigin), OID(OID) {}
+  OriginID getExpiredOriginID() const { return OID; }
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &OM) const override;
 };

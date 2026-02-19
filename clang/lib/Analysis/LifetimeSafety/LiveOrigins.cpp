@@ -151,6 +151,11 @@ public:
                                LivenessInfo(&OEF, LivenessKind::Must)));
   }
 
+  /// Prevents a dead origin's liveness from leaking through loop back-edges.
+  Lattice transfer(Lattice In, const ExpireOriginFact &F) {
+    return Lattice(Factory.remove(In.LiveOrigins, F.getExpiredOriginID()));
+  }
+
   /// Issuing a new loan to an origin kills its liveness.
   Lattice transfer(Lattice In, const IssueFact &IF) {
     return Lattice(Factory.remove(In.LiveOrigins, IF.getOriginID()));
