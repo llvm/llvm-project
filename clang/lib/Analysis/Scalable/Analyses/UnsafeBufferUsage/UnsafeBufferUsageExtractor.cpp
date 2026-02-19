@@ -26,7 +26,7 @@ namespace {
 using namespace clang;
 using namespace ssaf;
 
-template <typename ExprOrDecl> static bool hasPointerType(const ExprOrDecl *E) {
+static bool hasPointerType(const Expr *E) {
   auto Ty = E->getType();
   return !Ty.isNull() && !Ty->isFunctionPointerType() &&
          (Ty->isPointerType() || Ty->isArrayType());
