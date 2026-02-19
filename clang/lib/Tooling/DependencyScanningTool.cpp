@@ -297,13 +297,13 @@ DependencyScanningTool::getModuleDependencies(
 
 static std::optional<SmallVector<std::string, 0>> getFirstCC1CommandLine(
     ArrayRef<std::string> CommandLine, DiagnosticsEngine &Diags,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> ScanFS) {
+    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
   // Compilation holds a non-owning a reference to the Driver, hence we need to
   // keep the Driver alive when we use Compilation. Arguments to commands may be
   // owned by Alloc when expanded from response files.
   llvm::BumpPtrAllocator Alloc;
   const auto [Driver, Compilation] =
-      buildCompilation(CommandLine, Diags, ScanFS, Alloc);
+      buildCompilation(CommandLine, Diags, OverlayFS, Alloc);
   if (!Compilation)
     return std::nullopt;
 
