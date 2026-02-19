@@ -13,6 +13,12 @@
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=neoverse-v3 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=neoverse-v3ae -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=exynos-m5 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=cortex-x1 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=cortex-x2 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=cortex-x3 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=cortex-x4 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=cortex-x925 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=c1-ultra -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
 
 ; Tests for selecting interleave counts for loops with loads and stores.
 
