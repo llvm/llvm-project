@@ -1190,7 +1190,8 @@ void Verifier::verifyLoopMetadata(const MDNode *LoopID) {
     if (llvm::is_contained(LoopBooleanAttributeNames, AttrName)) {
       // Boolean loop attribute: exactly 2 operands (name + i1).
       Check(Option->getNumOperands() == 2,
-            "llvm.loop boolean attribute must have exactly two operands", Option);
+            "llvm.loop boolean attribute must have exactly two operands",
+            Option);
       auto *Val =
           mdconst::dyn_extract_or_null<ConstantInt>(Option->getOperand(1));
       Check(Val && Val->getType()->isIntegerTy(1),
