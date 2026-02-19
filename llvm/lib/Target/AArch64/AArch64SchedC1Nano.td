@@ -1,4 +1,4 @@
-//==- AArch64SchedCortexNano.td - ARM C1-Nano Scheduling Definitions -*- tablegen -*-=//
+//==- AArch64Sched1Nano.td - ARM C1-Nano Scheduling Definitions -*- tablegen -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -41,7 +41,7 @@ let SchedModel = C1NanoModel in {
 // C1-Nano is in-order.
 let BufferSize = 0 in {
   def C1NanoUnitALU0   : ProcResource<1>;    // Int ALU0
-  def C1NanoUnitALU1   : ProcResource<2>;    // Int ALU1
+  def C1NanoUnitALU1   : ProcResource<2>;    // Int ALU1: models two integer ALU pipelines
   def C1NanoUnitMAC    : ProcResource<1>;    // Int MAC, 64-bit wide
   def C1NanoUnitDiv    : ProcResource<1>;    // Int Division, not pipelined
   // There are 2 LS pipes, 1 for Load/Store; 1 for Load only
@@ -319,13 +319,13 @@ def C1NanoWriteVLD4Latency4Release2: SchedWriteRes<[C1NanoUnitLdSt]> { let Laten
 def C1NanoWriteVLD4Latency5Release3: SchedWriteRes<[C1NanoUnitLdSt]> { let Latency = 5; let ReleaseAtCycles = [3]; }
 def C1NanoWriteVLD4Latency6Release5: SchedWriteRes<[C1NanoUnitLdSt]> { let Latency = 6; let ReleaseAtCycles = [5]; }
 
-def : InstRW<[C1NanoWriteVLD4Latency5Release3], (instregex "LD4Fourv(8b|16b|4h|8b|2s|4s|1d|2d)$")>;
+def : InstRW<[C1NanoWriteVLD4Latency5Release3], (instregex "LD4Fourv(8b|16b|4h|8h|2s|4s|1d|2d)$")>;
 def : InstRW<[C1NanoWriteVLD4Latency6Release5], (instregex "LD4i(8|16|32|64)$")>;
-def : InstRW<[C1NanoWriteVLD4Latency4Release2], (instregex "LD4Rv(8b|16b|4h|8b|2s|4s|1d|2d)$")>;
+def : InstRW<[C1NanoWriteVLD4Latency4Release2], (instregex "LD4Rv(8b|16b|4h|8h|2s|4s|1d|2d)$")>;
 
 def : InstRW<[WriteAdr, C1NanoWriteVLD4Latency5Release3], (instregex "LD4Fourv(8b|16b|4h|8h|2s|4s|1d|2d)_POST$")>;
 def : InstRW<[WriteAdr, C1NanoWriteVLD4Latency6Release5], (instregex "LD4i(8|16|32|64)_POST$")>;
-def : InstRW<[WriteAdr, C1NanoWriteVLD4Latency4Release2], (instregex "LD4Rv(8b|16b|4h|8b|2s|4s|1d|2d)_POST$")>;
+def : InstRW<[WriteAdr, C1NanoWriteVLD4Latency4Release2], (instregex "LD4Rv(8b|16b|4h|8h|2s|4s|1d|2d)_POST$")>;
 
 //---
 // Vector Stores
@@ -446,7 +446,7 @@ def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "(AND|EOR|NOT|ORN)v16i
   "(ORR|BIC)v(16i8|4i32|8i16)$", "MVNIv(4i32|4s|8i16)")>;
 // ASIMD max/min, basic
 def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "[SU](MIN|MAX)P?v(2i32|4i16|8i8)")>;
-def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "[SU](MIN|MAX)P?v(16i8|4i132|8i16)")>;
+def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "[SU](MIN|MAX)P?v(16i8|4i32|8i16)")>;
 // SIMD max/min, reduce
 def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU>], (instregex "[SU](MAX|MIN)Vv")>;
 // ASIMD multiply, by element
