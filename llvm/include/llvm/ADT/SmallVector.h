@@ -1242,7 +1242,7 @@ public:
     this->append(A.begin(), A.end());
   }
 
-  SmallVector(const SmallVector &RHS) : SmallVectorImpl<T>(N) {
+  SmallVector(const SmallVector &RHS) noexcept : SmallVectorImpl<T>(N) {
     if (!RHS.empty())
       SmallVectorImpl<T>::operator=(RHS);
   }
@@ -1252,7 +1252,7 @@ public:
     return *this;
   }
 
-  SmallVector(SmallVector &&RHS) : SmallVectorImpl<T>(N) {
+  SmallVector(SmallVector &&RHS) noexcept : SmallVectorImpl<T>(N) {
     if (!RHS.empty())
       SmallVectorImpl<T>::operator=(::std::move(RHS));
   }
