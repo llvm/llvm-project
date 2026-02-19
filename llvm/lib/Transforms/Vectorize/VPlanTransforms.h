@@ -73,8 +73,8 @@ struct VPlanTransforms {
       }
 #endif
       if (VerifyEachVPlan && EnableVerify) {
-        [[maybe_unused]] bool IsValid = verifyVPlanIsValid(Plan);
-        assert(IsValid && "VPlan is invalid");
+        if (!verifyVPlanIsValid(Plan))
+          report_fatal_error("Broken VPlan found, compilation aborted!");
       }
     }};
 
