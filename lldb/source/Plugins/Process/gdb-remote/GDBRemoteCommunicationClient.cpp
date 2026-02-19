@@ -493,19 +493,18 @@ bool GDBRemoteCommunicationClient::GetVContSupported(llvm::StringRef flavor) {
     m_supports_vCont_S = eLazyBoolNo;
     if (SendPacketAndWaitForResponse("vCont?", response) ==
         PacketResult::Success) {
-      std::string response_str(response.GetStringRef());
-      response_str += ';';
-      if (response_str.find(";c;") != std::string::npos)
-        m_supports_vCont_c = eLazyBoolYes;
-
-      if (response_str.find(";C;") != std::string::npos)
-        m_supports_vCont_C = eLazyBoolYes;
-
-      if (response_str.find(";s;") != std::string::npos)
-        m_supports_vCont_s = eLazyBoolYes;
-
-      if (response_str.find(";S;") != std::string::npos)
-        m_supports_vCont_S = eLazyBoolYes;
+      llvm::SmallVector<llvm::StringRef> flavors;
+      response.GetStringRef().split(";").second.split(flavors, ';');
+      for (llvm::StringRef flavor : flavors) {
+        if (flavor == "c")
+          m_supports_vCont_c = eLazyBoolYes;
+        if (flavor == "C")
+          m_supports_vCont_C = eLazyBoolYes;
+        if (flavor == "s")
+          m_supports_vCont_s = eLazyBoolYes;
+        if (flavor == "S")
+          m_supports_vCont_S = eLazyBoolYes;
+      }
 
       if (m_supports_vCont_c == eLazyBoolYes &&
           m_supports_vCont_C == eLazyBoolYes &&
