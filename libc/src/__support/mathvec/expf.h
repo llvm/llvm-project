@@ -19,7 +19,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace mathvec {
 
 template <size_t N>
-LIBC_INLINE cpp::simd<double, N> static inline_exp(cpp::simd<double, N> x) {
+LIBC_INLINE static cpp::simd<double, N> inline_exp(cpp::simd<double, N> x) {
   constexpr cpp::simd<double, N> shift = 0x1.800000000ffc0p+46;
 
   // inv_ln2 = round(1/log(2), D, RN);

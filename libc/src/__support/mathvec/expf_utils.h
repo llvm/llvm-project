@@ -18,7 +18,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace mathvec {
 
 template <size_t N>
-LIBC_INLINE cpp::simd<double, N> static exp_lookup(cpp::simd<uint64_t, N> u) {
+LIBC_INLINE static cpp::simd<double, N> exp_lookup(cpp::simd<uint64_t, N> u) {
   cpp::simd<uint64_t, N> index = u & cpp::simd<uint64_t, N>(0x3f);
   cpp::simd<uint64_t, N> mantissa =
       cpp::gather<cpp::simd<uint64_t, N>>(true, index, EXP_MANTISSA);
