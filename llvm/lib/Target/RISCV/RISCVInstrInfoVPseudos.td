@@ -566,6 +566,8 @@ class RISCVVPseudo<dag outs, dag ins, list<dag> pattern = [],
   bits<8> SEW = 0;
   bit IsAltFmt = !eq(AltFmtType.Value, IS_ALTFMT.Value);
   bit IncludeInInversePseudoTable = 1;
+
+  let UseNamedOperandTable = true;
 }
 
 // The actual table.

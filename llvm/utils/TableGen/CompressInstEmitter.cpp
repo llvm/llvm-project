@@ -166,13 +166,12 @@ public:
 bool CompressInstEmitter::validateRegister(const Record *Reg,
                                            const Record *RegClass,
                                            ArrayRef<SMLoc> Loc) {
-  assert(Reg->isSubClassOf("Register") && "Reg record should be a Register");
+  assert((Reg->isSubClassOf("Register") ||
+          Reg->isSubClassOf("RegisterByHwMode")) &&
+         "Reg record should be a Register");
   assert(RegClass->isSubClassOf("RegisterClassLike") &&
          "RegClass record should be RegisterClassLike");
-  const CodeGenRegisterClass &RC = Target.getRegisterClass(RegClass, Loc);
-  const CodeGenRegister *R = Target.getRegBank().getReg(Reg);
-  assert(R != nullptr && "Register not defined!!");
-  return RC.contains(R);
+  return Target.getRegBank().regClassContainsReg(RegClass, Reg, Loc);
 }
 
 bool CompressInstEmitter::validateTypes(const Record *DagOpType,
@@ -256,12 +255,13 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
                                            "' and Dag operand count mismatch");
 
       if (const auto *DI = dyn_cast<DefInit>(Dag->getArg(DAGOpNo))) {
-        if (DI->getDef()->isSubClassOf("Register")) {
+        if (DI->getDef()->isSubClassOf("Register") ||
+            DI->getDef()->isSubClassOf("RegisterByHwMode")) {
           // Check if the fixed register belongs to the Register class.
           if (!validateRegister(DI->getDef(), OpndRec, Rec->getLoc()))
             PrintFatalError(Rec->getLoc(),
                             "Error in Dag '" + Dag->getAsString() +
-                                "'Register: '" + DI->getDef()->getName() +
+                                "': Register '" + DI->getDef()->getName() +
                                 "' is not in register class '" +
                                 OpndRec->getName() + "'");
           OperandMap[OpNo].Kind = OpData::Reg;
@@ -762,8 +762,14 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
           const Record *Reg = SourceOperandMap[OpNo].RegRec;
           CondStream << CondSep << "MI.getOperand(" << OpNo << ").isReg()"
                      << CondSep << "(MI.getOperand(" << OpNo
-                     << ").getReg() == " << TargetName << "::" << Reg->getName()
-                     << ")";
+                     << ").getReg() == ";
+          if (Reg->isSubClassOf("RegisterByHwMode")) {
+            RegisterByHwMode(Reg, Target.getRegBank())
+                .emitResolverCall(CondStream, "HwModeId");
+          } else {
+            CondStream << TargetName << "::" << Reg->getName();
+          }
+          CondStream << ")";
           break;
         }
         }
@@ -880,9 +886,14 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
           if (CompressOrUncompress) {
             // Fixed register has been validated at pattern validation time.
             const Record *Reg = DestOperandMap[OpNo].RegRec;
-            CodeStream.indent(6)
-                << "OutInst.addOperand(MCOperand::createReg(" << TargetName
-                << "::" << Reg->getName() << "));\n";
+            CodeStream.indent(6) << "OutInst.addOperand(MCOperand::createReg(";
+            if (Reg->isSubClassOf("RegisterByHwMode")) {
+              RegisterByHwMode(Reg, Target.getRegBank())
+                  .emitResolverCall(CodeStream, "HwModeId");
+            } else {
+              CodeStream << TargetName << "::" << Reg->getName();
+            }
+            CodeStream << "));\n";
           }
         } break;
         }
