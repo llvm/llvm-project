@@ -38,8 +38,7 @@ def invoke_tool(exe, check_rc, cmd_args, testline, verbose=False):
     substs = SUBSTITUTIONS + [(t, exe) for t in mc_LIKE_TOOLS]
     args = [common.applySubstitutions(cmd, substs) for cmd in cmd_args.split("|")]
 
-    testline = testline.replace('"', '\\"')
-    cmd = 'echo "' + testline + '" | ' + exe + " " + " | ".join(args)
+    cmd = exe + " " + " | ".join(args)
     if verbose:
         print("Command: ", cmd)
 
@@ -47,6 +46,7 @@ def invoke_tool(exe, check_rc, cmd_args, testline, verbose=False):
         cmd,
         shell=True,
         check=check_rc,
+        input=(testline + "\n").encode("utf-8"),
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
     ).stdout
