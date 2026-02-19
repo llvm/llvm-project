@@ -611,6 +611,10 @@ struct FunCloner {
     if (LLVMGetValueKind(Src) == LLVMBlockAddressValueKind)
       return CloneBlockAddressConstant(Src);
 
+    // Some APIs surface basic blocks as values (e.g. blockaddress operands).
+    if (LLVMValueIsBasicBlock(Src))
+      return LLVMBasicBlockAsValue(DeclareBB(LLVMValueAsBasicBlock(Src)));
+
     // The value may be constant.
     if (LLVMIsAConstant(Src)) {
       return clone_constant(Src, M);
