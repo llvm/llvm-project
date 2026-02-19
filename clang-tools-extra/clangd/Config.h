@@ -133,6 +133,14 @@ struct Config {
     // List of matcher functions for inserting certain headers with <> or "".
     std::vector<std::function<bool(llvm::StringRef)>> QuotedHeaders;
     std::vector<std::function<bool(llvm::StringRef)>> AngledHeaders;
+
+    // Getter and setter's prefixes
+    // Prefix for a get accessor e.g. "get"
+    std::string GetterPrefix;
+    // Prefix for a set accessor e.g. "set"
+    std::string SetterPrefix;
+    // Prefix for a set accessor's parameter e.g. "new"
+    std::string SetterParameterPrefix;
   } Style;
 
   /// controls the completion options for argument lists.
