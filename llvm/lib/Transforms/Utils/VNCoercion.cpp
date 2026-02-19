@@ -6,16 +6,16 @@
 
 #define DEBUG_TYPE "vncoerce"
 
-namespace llvm {
-namespace VNCoercion {
+using namespace llvm;
+using namespace VNCoercion;
 
 static bool isFirstClassAggregateOrScalableType(Type *Ty) {
   return Ty->isStructTy() || Ty->isArrayTy() || isa<ScalableVectorType>(Ty);
 }
 
 /// Return true if coerceAvailableValueToLoadType will succeed.
-bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
-                                     Function *F) {
+bool VNCoercion::canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
+                                                 Function *F) {
   Type *StoredTy = StoredVal->getType();
   if (StoredTy == LoadTy)
     return true;
@@ -87,8 +87,10 @@ bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
 /// IRB is IRBuilder used to insert new instructions.
 ///
 /// If we can't do it, return null.
-Value *coerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
-                                      IRBuilderBase &Helper, Function *F) {
+Value *VNCoercion::coerceAvailableValueToLoadType(Value *StoredVal,
+                                                  Type *LoadedTy,
+                                                  IRBuilderBase &Helper,
+                                                  Function *F) {
   assert(canCoerceMustAliasedValueToLoad(StoredVal, LoadedTy, F) &&
          "precondition violation - materialization can't fail");
   const DataLayout &DL = F->getDataLayout();
@@ -231,8 +233,9 @@ static int analyzeLoadFromClobberingWrite(Type *LoadTy, Value *LoadPtr,
 
 /// This function is called when we have a
 /// memdep query of a load that ends up being a clobbering store.
-int analyzeLoadFromClobberingStore(Type *LoadTy, Value *LoadPtr,
-                                   StoreInst *DepSI, const DataLayout &DL) {
+int VNCoercion::analyzeLoadFromClobberingStore(Type *LoadTy, Value *LoadPtr,
+                                               StoreInst *DepSI,
+                                               const DataLayout &DL) {
   auto *StoredVal = DepSI->getValueOperand();
 
   // Cannot handle reading from store of first-class aggregate or scalable type.
@@ -252,8 +255,9 @@ int analyzeLoadFromClobberingStore(Type *LoadTy, Value *LoadPtr,
 /// This function is called when we have a
 /// memdep query of a load that ends up being clobbered by another load.  See if
 /// the other load can feed into the second load.
-int analyzeLoadFromClobberingLoad(Type *LoadTy, Value *LoadPtr, LoadInst *DepLI,
-                                  const DataLayout &DL) {
+int VNCoercion::analyzeLoadFromClobberingLoad(Type *LoadTy, Value *LoadPtr,
+                                              LoadInst *DepLI,
+                                              const DataLayout &DL) {
   // Cannot handle reading from store of first-class aggregate or scalable type.
   if (isFirstClassAggregateOrScalableType(DepLI->getType()))
     return -1;
@@ -266,8 +270,9 @@ int analyzeLoadFromClobberingLoad(Type *LoadTy, Value *LoadPtr, LoadInst *DepLI,
   return analyzeLoadFromClobberingWrite(LoadTy, LoadPtr, DepPtr, DepSize, DL);
 }
 
-int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
-                                     MemIntrinsic *MI, const DataLayout &DL) {
+int VNCoercion::analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
+                                                 MemIntrinsic *MI,
+                                                 const DataLayout &DL) {
   // If the mem operation is a non-constant size, we can't handle it.
   ConstantInt *SizeCst = dyn_cast<ConstantInt>(MI->getLength());
   if (!SizeCst)
@@ -276,9 +281,9 @@ int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
 
   // If this is memset, we just need to see if the offset is valid in the size
   // of the memset..
-  if (const auto *memset_inst = dyn_cast<MemSetInst>(MI)) {
+  if (const auto *Memset = dyn_cast<MemSetInst>(MI)) {
     if (DL.isNonIntegralPointerType(LoadTy->getScalarType())) {
-      auto *CI = dyn_cast<ConstantInt>(memset_inst->getValue());
+      auto *CI = dyn_cast<ConstantInt>(Memset->getValue());
       if (!CI || !CI->isZero())
         return -1;
     }
@@ -372,8 +377,8 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
   return SrcVal;
 }
 
-Value *getValueForLoad(Value *SrcVal, unsigned Offset, Type *LoadTy,
-                       Instruction *InsertPt, Function *F) {
+Value *VNCoercion::getValueForLoad(Value *SrcVal, unsigned Offset, Type *LoadTy,
+                                   Instruction *InsertPt, Function *F) {
   const DataLayout &DL = F->getDataLayout();
 #ifndef NDEBUG
   TypeSize MinSrcValSize = DL.getTypeStoreSize(SrcVal->getType());
@@ -393,8 +398,9 @@ Value *getValueForLoad(Value *SrcVal, unsigned Offset, Type *LoadTy,
   return coerceAvailableValueToLoadType(SrcVal, LoadTy, Builder, F);
 }
 
-Constant *getConstantValueForLoad(Constant *SrcVal, unsigned Offset,
-                                  Type *LoadTy, const DataLayout &DL) {
+Constant *VNCoercion::getConstantValueForLoad(Constant *SrcVal, unsigned Offset,
+                                              Type *LoadTy,
+                                              const DataLayout &DL) {
 #ifndef NDEBUG
   unsigned SrcValSize = DL.getTypeStoreSize(SrcVal->getType()).getFixedValue();
   unsigned LoadSize = DL.getTypeStoreSize(LoadTy).getFixedValue();
@@ -405,9 +411,10 @@ Constant *getConstantValueForLoad(Constant *SrcVal, unsigned Offset,
 
 /// This function is called when we have a
 /// memdep query of a load that ends up being a clobbering mem intrinsic.
-Value *getMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
-                              Type *LoadTy, Instruction *InsertPt,
-                              const DataLayout &DL) {
+Value *VNCoercion::getMemInstValueForLoad(MemIntrinsic *SrcInst,
+                                          unsigned Offset, Type *LoadTy,
+                                          Instruction *InsertPt,
+                                          const DataLayout &DL) {
   LLVMContext &Ctx = LoadTy->getContext();
   uint64_t LoadSize = DL.getTypeSizeInBits(LoadTy).getFixedValue() / 8;
   IRBuilder<> Builder(InsertPt);
@@ -453,8 +460,10 @@ Value *getMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
                                       DL);
 }
 
-Constant *getConstantMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
-                                         Type *LoadTy, const DataLayout &DL) {
+Constant *VNCoercion::getConstantMemInstValueForLoad(MemIntrinsic *SrcInst,
+                                                     unsigned Offset,
+                                                     Type *LoadTy,
+                                                     const DataLayout &DL) {
   LLVMContext &Ctx = LoadTy->getContext();
   uint64_t LoadSize = DL.getTypeSizeInBits(LoadTy).getFixedValue() / 8;
 
@@ -476,5 +485,3 @@ Constant *getConstantMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
   return ConstantFoldLoadFromConstPtr(Src, LoadTy, APInt(IndexSize, Offset),
                                       DL);
 }
-} // namespace VNCoercion
-} // namespace llvm

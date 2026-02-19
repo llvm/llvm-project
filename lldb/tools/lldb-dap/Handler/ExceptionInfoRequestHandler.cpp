@@ -19,6 +19,7 @@
 #include "lldb/API/SBValue.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Error.h"
@@ -49,10 +50,20 @@ struct MainThreadCheckerReport {
   std::string selector;
 };
 
-// FIXME: Support TSan, ASan, BoundsSafety formatting.
+// See `ReportRetriever::RetrieveReportData`.
+struct ASanReport {
+  std::string description;
+  lldb::addr_t address = LLDB_INVALID_ADDRESS;
+  lldb::addr_t program_counter = LLDB_INVALID_ADDRESS;
+  lldb::addr_t base_pointer = LLDB_INVALID_ADDRESS;
+  lldb::addr_t stack_pointer = LLDB_INVALID_ADDRESS;
+  std::string stop_type;
+};
+
+// FIXME: Support TSan, BoundsSafety formatting.
 
 using RuntimeInstrumentReport =
-    std::variant<UBSanReport, MainThreadCheckerReport>;
+    std::variant<UBSanReport, MainThreadCheckerReport, ASanReport>;
 
 static bool fromJSON(const json::Value &params, UBSanReport &report,
                      json::Path path) {
@@ -73,6 +84,17 @@ static bool fromJSON(const json::Value &params, MainThreadCheckerReport &report,
          O.mapOptional("selector", report.selector);
 }
 
+static bool fromJSON(const json::Value &params, ASanReport &report,
+                     json::Path path) {
+  json::ObjectMapper O(params, path);
+  return O.mapOptional("description", report.description) &&
+         O.mapOptional("address", report.address) &&
+         O.mapOptional("pc", report.program_counter) &&
+         O.mapOptional("bp", report.base_pointer) &&
+         O.mapOptional("sp", report.stack_pointer) &&
+         O.mapOptional("stop_type", report.stop_type);
+}
+
 static bool fromJSON(const json::Value &params, RuntimeInstrumentReport &report,
                      json::Path path) {
   json::ObjectMapper O(params, path);
@@ -89,6 +111,13 @@ static bool fromJSON(const json::Value &params, RuntimeInstrumentReport &report,
   }
   if (instrumentation_class == "MainThreadChecker") {
     MainThreadCheckerReport inner_report;
+    bool success = fromJSON(params, inner_report, path);
+    if (success)
+      report = std::move(inner_report);
+    return success;
+  }
+  if (instrumentation_class == "AddressSanitizer") {
+    ASanReport inner_report;
     bool success = fromJSON(params, inner_report, path);
     if (success)
       report = std::move(inner_report);
@@ -130,6 +159,25 @@ static raw_ostream &operator<<(raw_ostream &OS,
     OS << "Class Name: " << report.class_name << "\n";
   if (!report.selector.empty())
     OS << "Selector: " << report.selector << "\n";
+
+  return OS;
+}
+
+static raw_ostream &operator<<(raw_ostream &OS, ASanReport &report) {
+  if (!report.stop_type.empty())
+    OS << report.stop_type << ": ";
+  if (!report.description.empty())
+    OS << report.description << "\n";
+
+  if (report.address != LLDB_INVALID_ADDRESS)
+    OS << "Address: 0x" << llvm::utohexstr(report.address) << "\n";
+  if (report.program_counter != LLDB_INVALID_ADDRESS)
+    OS << "Program counter: 0x" << llvm::utohexstr(report.program_counter)
+       << "\n";
+  if (report.base_pointer != LLDB_INVALID_ADDRESS)
+    OS << "Base pointer: 0x" << llvm::utohexstr(report.base_pointer) << "\n";
+  if (report.stack_pointer != LLDB_INVALID_ADDRESS)
+    OS << "Stack pointer: 0x" << llvm::utohexstr(report.stack_pointer) << "\n";
 
   return OS;
 }
@@ -220,14 +268,17 @@ static std::optional<ExceptionDetails> FormatException(lldb::SBThread &thread) {
     return {};
 
   ExceptionDetails details;
-  raw_string_ostream OS(details.message);
 
   if (const char *name = exception.GetName())
     details.evaluateName = name;
   if (const char *typeName = exception.GetDisplayTypeName())
     details.typeName = typeName;
 
+  std::string message;
+  raw_string_ostream OS(message);
   OS << exception;
+
+  details.message = std::move(message);
 
   if (lldb::SBThread exception_backtrace =
           thread.GetCurrentExceptionBacktrace())
@@ -268,22 +319,19 @@ ExceptionInfoRequestHandler::Run(const ExceptionInfoArguments &args) const {
   body.breakMode = eExceptionBreakModeAlways;
   body.exceptionId = FormatExceptionId(dap, thread);
   body.details = FormatException(thread);
-
-  raw_string_ostream OS(body.description);
-  OS << FormatStopDescription(thread);
+  body.description = FormatStopDescription(thread);
 
   if (std::string stop_info = FormatExtendedStopInfo(thread);
       !stop_info.empty())
-    OS << "\n\n" << stop_info;
+    body.description += formatv("\n\n{0}", stop_info);
 
   if (std::string crash_report = FormatCrashReport(thread);
       !crash_report.empty())
-    OS << "\n\n" << crash_report;
+    body.description += formatv("\n\n{0}", crash_report);
 
   lldb::SBProcess process = thread.GetProcess();
   for (uint32_t idx = 0; idx < lldb::eNumInstrumentationRuntimeTypes; idx++) {
-    lldb::InstrumentationRuntimeType type =
-        static_cast<lldb::InstrumentationRuntimeType>(idx);
+    auto type = static_cast<lldb::InstrumentationRuntimeType>(idx);
     if (!process.IsInstrumentationRuntimePresent(type))
       continue;
 

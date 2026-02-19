@@ -60,7 +60,9 @@ public:
   void Apropos(llvm::StringRef keyword,
                std::vector<const Property *> &matching_properties) const;
 
-  void Initialize(const PropertyDefinitions &setting_definitions);
+  void Initialize(const PropertyCollectionDefinition &setting_definitions);
+
+  void SetExpectedPath(std::string path);
 
   // Subclass specific functions
 
@@ -174,9 +176,12 @@ protected:
     return ((idx < m_properties.size()) ? &m_properties[idx] : nullptr);
   }
 
+  bool VerifyPath();
+
   std::string m_name;
   std::vector<Property> m_properties;
   llvm::StringMap<size_t> m_name_to_index;
+  std::string m_expected_path;
 };
 
 } // namespace lldb_private

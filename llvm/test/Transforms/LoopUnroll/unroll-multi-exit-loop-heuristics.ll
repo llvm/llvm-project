@@ -1,5 +1,5 @@
-; RUN: opt < %s -passes=loop-unroll -unroll-runtime=true -verify-dom-info -verify-loop-info -S | FileCheck %s
-; RUN: opt < %s -passes=loop-unroll -unroll-runtime=true -verify-dom-info -verify-loop-info -unroll-runtime-multi-exit=false -S | FileCheck %s -check-prefix=NOUNROLL
+; RUN: opt < %s -passes=loop-unroll -unroll-runtime=true -verify-dom-info -verify-loop-info -unroll-runtime-other-exit-predictable=false -S | FileCheck %s
+; RUN: opt < %s -passes=loop-unroll -unroll-runtime=true -verify-dom-info -verify-loop-info -unroll-runtime-multi-exit=false -unroll-runtime-other-exit-predictable=false -S | FileCheck %s -check-prefix=NOUNROLL
 
 ; Multi exit loop with predictable exit -- unroll
 ; Exit before loop body.

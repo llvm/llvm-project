@@ -44,7 +44,7 @@ LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16, N_EXCEPTS>
 
 } // namespace sinf16_internal
 
-LIBC_INLINE static float16 sinf16(float16 x) {
+LIBC_INLINE float16 sinf16(float16 x) {
   using namespace sinf16_internal;
   using namespace sincosf16_internal;
   using FPBits = fputil::FPBits<float16>;

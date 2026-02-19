@@ -17,7 +17,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr int ilogbl(long double x) {
+LIBC_INLINE constexpr int ilogbl(long double x) {
   return fputil::intlogb<int>(x);
 }
 

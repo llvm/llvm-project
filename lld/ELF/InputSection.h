@@ -299,6 +299,7 @@ public:
   template <typename T> llvm::ArrayRef<T> getDataAs() const {
     size_t s = content().size();
     assert(s % sizeof(T) == 0);
+    assert(reinterpret_cast<uintptr_t>(content().data()) % alignof(T) == 0);
     return llvm::ArrayRef<T>((const T *)content().data(), s / sizeof(T));
   }
 

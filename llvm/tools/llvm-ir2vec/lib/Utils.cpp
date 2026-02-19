@@ -26,6 +26,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "llvm/CodeGen/MIR2Vec.h"
@@ -151,9 +152,73 @@ void IR2VecTool::writeEntitiesToStream(raw_ostream &OS) {
     OS << Entities[EntityID] << '\t' << EntityID << '\n';
 }
 
+Expected<Embedding> IR2VecTool::getFunctionEmbedding(const Function &F,
+                                                     IR2VecKind Kind) const {
+  if (!Vocab || !Vocab->isValid())
+    return createStringError(
+        errc::invalid_argument,
+        "Vocabulary is not valid. IR2VecTool not initialized.");
+
+  if (F.isDeclaration())
+    return createStringError(errc::invalid_argument,
+                             "Function is a declaration.");
+
+  auto Emb = Embedder::create(Kind, F, *Vocab);
+  if (!Emb)
+    return createStringError(errc::invalid_argument,
+                             "Failed to create embedder for function '%s'.",
+                             F.getName().str().c_str());
+
+  return Emb->getFunctionVector();
+}
+
+Expected<FuncEmbMap>
+IR2VecTool::getFunctionEmbeddingsMap(IR2VecKind Kind) const {
+  if (!Vocab || !Vocab->isValid())
+    return createStringError(
+        errc::invalid_argument,
+        "Vocabulary is not valid. IR2VecTool not initialized.");
+
+  FuncEmbMap Result;
+
+  for (const Function &F : M.getFunctionDefs()) {
+    auto Emb = getFunctionEmbedding(F, Kind);
+    if (!Emb)
+      return Emb.takeError();
+    Result.try_emplace(&F, std::move(*Emb));
+  }
+
+  return Result;
+}
+
+Expected<BBEmbeddingsMap>
+IR2VecTool::getBBEmbeddingsMap(const Function &F, IR2VecKind Kind) const {
+  if (!Vocab || !Vocab->isValid())
+    return createStringError(
+        errc::invalid_argument,
+        "Vocabulary is not valid. IR2VecTool not initialized.");
+
+  BBEmbeddingsMap Result;
+
+  if (F.isDeclaration())
+    return createStringError(errc::invalid_argument,
+                             "Function is a declaration.");
+
+  auto Emb = Embedder::create(Kind, F, *Vocab);
+  if (!Emb)
+    return createStringError(errc::invalid_argument,
+                             "Failed to create embedder for function '%s'.",
+                             F.getName().str().c_str());
+
+  for (const BasicBlock &BB : F)
+    Result.try_emplace(&BB, Emb->getBBVector(BB));
+
+  return Result;
+}
+
 void IR2VecTool::writeEmbeddingsToStream(raw_ostream &OS,
                                          EmbeddingLevel Level) const {
-  if (!Vocab->isValid()) {
+  if (!Vocab || !Vocab->isValid()) {
     WithColor::error(errs(), ToolName)
         << "Vocabulary is not valid. IR2VecTool not initialized.\n";
     return;
@@ -170,6 +235,7 @@ void IR2VecTool::writeEmbeddingsToStream(const Function &F, raw_ostream &OS,
         << "Vocabulary is not valid. IR2VecTool not initialized.\n";
     return;
   }
+
   if (F.isDeclaration()) {
     OS << "Function " << F.getName() << " is a declaration, skipping.\n";
     return;
