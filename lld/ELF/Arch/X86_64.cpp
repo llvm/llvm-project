@@ -50,6 +50,7 @@ public:
   bool deleteFallThruJmpInsn(InputSection &is,
                              InputSection *nextIS) const override;
   bool relaxOnce(int pass) const override;
+  void relaxCFIJumpTables() const override;
   void applyBranchToBranchOpt() const override;
   template <class ELFT, class RelTy>
   void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
@@ -309,6 +310,193 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is,
   is.drop_back(sizeOfDirectJmpInsn);
   is.nopFiller = true;
   return true;
+}
+
+void X86_64::relaxCFIJumpTables() const {
+  // Relax CFI jump tables.
+  // - Split jump table into pieces and place target functions inside the jump
+  //   table if small enough.
+  // - Move jump table before last called function and delete last branch
+  //   instruction.
+  std::map<InputSection *, std::vector<InputSection *>> sectionReplacements;
+  SmallVector<InputSection *, 0> storage;
+  for (OutputSection *osec : ctx.outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage)) {
+      if (sec->type != SHT_LLVM_CFI_JUMP_TABLE || sec->entsize == 0 ||
+          sec->size % sec->entsize != 0)
+        continue;
+
+      // We're going to replace the jump table with this list of sections. This
+      // list will be made up of slices of the original section and function
+      // bodies that were moved into the jump table.
+      std::vector<InputSection *> replacements;
+
+      // Add the slice [begin, end) of the original section to the replacement
+      // list. [rbegin, rend) is the slice of the relocation list that covers
+      // [begin, end).
+      auto addSectionSlice = [&](size_t begin, size_t end, Relocation *rbegin,
+                                 Relocation *rend) {
+        auto *slice = make<InputSection>(
+            sec->file, sec->name, sec->type, sec->flags, sec->entsize,
+            sec->entsize,
+            sec->contentMaybeDecompress().slice(begin, end - begin));
+        for (const Relocation &r : ArrayRef<Relocation>(rbegin, rend)) {
+          slice->relocations.push_back(
+              Relocation{r.expr, r.type, r.offset - begin, r.addend, r.sym});
+        }
+        replacements.push_back(slice);
+      };
+
+      // r is the only relocation in a jump table entry. Figure out whether it
+      // is a branch pointing to the start of a statically known section that
+      // hasn't already been moved while processing a different jump table
+      // section, and if so return it.
+      auto getMovableSection = [&](Relocation &r) -> InputSection * {
+        if (r.type != R_X86_64_PC32 && r.type != R_X86_64_PLT32)
+          return nullptr;
+        auto *sym = dyn_cast_or_null<Defined>(r.sym);
+        if (!sym || sym->isPreemptible || sym->isGnuIFunc() ||
+            sym->value + r.addend != -4ull)
+          return nullptr;
+        auto *target = dyn_cast_or_null<InputSection>(sym->section);
+        if (!target || sectionReplacements.count(target))
+          return nullptr;
+        return target;
+      };
+
+      // Figure out the movable section for the last entry. We do this first
+      // because the last entry controls which output section the jump table is
+      // placed into, which affects move eligibility for other sections.
+      auto *lastSec = [&]() -> InputSection * {
+        // If the jump table section is more aligned than the entry size, skip
+        // this because there's no guarantee that we'll be able to emit a
+        // padding section that places the last entry at a correctly aligned
+        // address.
+        if (sec->addralign > sec->entsize)
+          return nullptr;
+
+        Relocation *lastReloc = sec->relocs().end();
+        while (lastReloc != sec->relocs().begin() &&
+               (lastReloc - 1)->offset >= sec->size - sec->entsize)
+          --lastReloc;
+        if (lastReloc + 1 != sec->relocs().end())
+          return nullptr;
+        return getMovableSection(*lastReloc);
+      }();
+      OutputSection *targetOutputSec;
+      if (lastSec) {
+        // If the last section is more aligned than the jump table, we need
+        // to emit a padding section before the jump table to ensure that the
+        // last section ends up at the correct alignment.
+        if (lastSec->addralign > sec->addralign) {
+          // We need to add enough padding to make this equal to zero.
+          size_t mod = (sec->size - sec->entsize) % lastSec->addralign;
+          if (mod != 0) {
+            auto *pad = make<PaddingSection>(ctx, lastSec->addralign - mod,
+                                             lastSec->getParent());
+            pad->addralign = lastSec->addralign;
+            replacements.push_back(pad);
+          } else {
+            sec->addralign = lastSec->addralign;
+          }
+        }
+
+        // We've already decided to move the output section so make sure that we
+        // don't try to move it again.
+        sectionReplacements[lastSec] = {};
+        targetOutputSec = lastSec->getParent();
+      } else {
+        targetOutputSec = sec->getParent();
+      }
+
+      // First, push the original jump table section. This is only so that it
+      // can act as a relocation target. Later on, we will set the size of the
+      // jump table section to 0 so that the slices and moved function bodies
+      // become the actual relocation targets.
+      replacements.push_back(sec);
+
+      // Walk the jump table entries other than the last one looking for
+      // sections that are small enough to be moved into the jump table and in
+      // the same section as the jump table's destination.
+      size_t begin = 0;
+      Relocation *rbegin = sec->relocs().begin();
+      size_t cur = begin;
+      Relocation *rcur = rbegin;
+      while (cur != sec->size - sec->entsize) {
+        size_t next = cur + sec->entsize;
+        Relocation *rnext = rcur;
+        while (rnext != sec->relocs().end() && rnext->offset < next)
+          ++rnext;
+        if (rcur + 1 == rnext) {
+          InputSection *target = getMovableSection(*rcur);
+          if (target && target->size != 0 && target->size <= sec->entsize &&
+              target->addralign <= sec->entsize &&
+              target->getParent() == targetOutputSec) {
+            // Okay, we found a small enough section. Move it into the jump
+            // table. First add a slice for the unmodified jump table entries
+            // before this one.
+            addSectionSlice(begin, cur, rbegin, rcur);
+            // Add the target to our replacement list, and set the target's
+            // replacement list to the empty list. This removes it from its
+            // original position and adds it here, as well as causing
+            // future getMovableSection() queries to return nullptr.
+            replacements.push_back(target);
+            sectionReplacements[target] = {};
+            begin = next;
+            rbegin = rnext;
+          }
+        }
+        cur = next;
+        rcur = rnext;
+      }
+
+      // Finally, process the last entry. If it is movable, move the entire
+      // jump table behind it and delete the last entry (so that the last
+      // function's body acts as the last jump table entry), otherwise leave the
+      // jump table where it is and keep the last entry.
+      if (lastSec) {
+        addSectionSlice(begin, cur, rbegin, rcur);
+        replacements.push_back(lastSec);
+        sectionReplacements[sec] = {};
+        sectionReplacements[lastSec] = replacements;
+        for (auto *s : replacements)
+          s->parent = lastSec->parent;
+      } else {
+        addSectionSlice(begin, sec->size, rbegin, sec->relocs().end());
+        sectionReplacements[sec] = replacements;
+        for (auto *s : replacements)
+          s->parent = sec->parent;
+      }
+
+      // Everything from the original section has been recreated, so delete the
+      // original contents.
+      sec->relocations.clear();
+      sec->size = 0;
+    }
+  }
+
+  // Now that we have the complete mapping of replacements, go through the input
+  // section lists and apply the replacements.
+  for (OutputSection *osec : ctx.outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (SectionCommand *cmd : osec->commands) {
+      auto *isd = dyn_cast<InputSectionDescription>(cmd);
+      if (!isd)
+        continue;
+      SmallVector<InputSection *> newSections;
+      for (auto *sec : isd->sections) {
+        auto i = sectionReplacements.find(sec);
+        if (i == sectionReplacements.end())
+          newSections.push_back(sec);
+        else
+          newSections.append(i->second.begin(), i->second.end());
+      }
+      isd->sections = std::move(newSections);
+    }
+  }
 }
 
 bool X86_64::relaxOnce(int pass) const {
