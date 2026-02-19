@@ -381,7 +381,6 @@ static BinaryOperator *tryDistributeMul(BinaryOperator *I) {
   return cast<BinaryOperator>(NewAdd);
 }
 
-
 using RepeatedValue = std::pair<Value *, uint64_t>;
 
 /// Given an associative binary expression, return the leaf
@@ -1684,13 +1683,13 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
         continue;
 
       unsigned Occ = ++FactorOccurrences[Factor];
-      if (Occ > MaxOcc || 
-          (Occ == MaxOcc && 
-           (isa<Instruction>(Factor) || isa<Argument>(Factor)) && 
+      if (Occ > MaxOcc ||
+          (Occ == MaxOcc &&
+           (isa<Instruction>(Factor) || isa<Argument>(Factor)) &&
            isa<Constant>(MaxOccVal) && !isa<UndefValue>(MaxOccVal))) {
         MaxOcc = Occ;
         MaxOccVal = Factor;
-      }     
+      }
 
       // If Factor is a negative constant, add the negated value as a factor
       // because we can percolate the negate out.  Watch for minint, which
@@ -1701,9 +1700,9 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
           if (!Duplicates.insert(Factor).second)
             continue;
           unsigned Occ = ++FactorOccurrences[Factor];
-          if (Occ > MaxOcc || 
-              (Occ == MaxOcc && 
-               (isa<Instruction>(Factor) || isa<Argument>(Factor)) && 
+          if (Occ > MaxOcc ||
+              (Occ == MaxOcc &&
+               (isa<Instruction>(Factor) || isa<Argument>(Factor)) &&
                isa<Constant>(MaxOccVal) && !isa<UndefValue>(MaxOccVal))) {
             MaxOcc = Occ;
             MaxOccVal = Factor;
@@ -1717,13 +1716,13 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
           if (!Duplicates.insert(Factor).second)
             continue;
           unsigned Occ = ++FactorOccurrences[Factor];
-          if (Occ > MaxOcc || 
-              (Occ == MaxOcc && 
-               (isa<Instruction>(Factor) || isa<Argument>(Factor)) && 
+          if (Occ > MaxOcc ||
+              (Occ == MaxOcc &&
+               (isa<Instruction>(Factor) || isa<Argument>(Factor)) &&
                isa<Constant>(MaxOccVal) && !isa<UndefValue>(MaxOccVal))) {
             MaxOcc = Occ;
             MaxOccVal = Factor;
-          }         
+          }
         }
       }
     }
@@ -2675,7 +2674,6 @@ PreservedAnalyses ReassociatePass::run(Function &F, FunctionAnalysisManager &) {
       }
     }
   }
-
 
   // Traverse the same blocks that were analysed by BuildRankMap.
   for (BasicBlock *BI : RPOT) {
