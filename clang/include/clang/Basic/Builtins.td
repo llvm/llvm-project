@@ -1664,14 +1664,14 @@ def ReduceAdd : Builtin {
   let Prototype = "void(...)";
 }
 
-def ReduceAddf : Builtin {
-  let Spellings = ["__builtin_reduce_fadd"];
+def ReduceInOrderFAdd : Builtin {
+  let Spellings = ["__builtin_reduce_in_order_fadd"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def OrderedReduceAddf : Builtin {
-  let Spellings = ["__builtin_ordered_reduce_fadd"];
+def ReduceAnyOrderFAdd : Builtin {
+  let Spellings = ["__builtin_reduce_any_order_fadd"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
