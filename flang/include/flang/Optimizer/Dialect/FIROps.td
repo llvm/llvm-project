@@ -3399,6 +3399,9 @@ def fir_DeclareOp
                          MemoryEffects<[MemAlloc<DebuggingResource>]>,
                          DeclareOpInterfaceMethods<
                              fir_FortranVariableStorageOpInterface>,
+                         DeclareOpInterfaceMethods<PromotableOpInterface,
+                                                   ["requiresReplacedValues",
+                                                    "visitReplacedValues"]>,
                          fir_FortranObjectViewOpInterface]> {
   let summary = "declare a variable";
 
@@ -3468,6 +3471,42 @@ def fir_DeclareOp
     // FortranObjectViewOpInterface methods:
     mlir::Value getViewSource(mlir::OpResult) { return getMemref(); }
     std::optional<std::int64_t> getViewOffset(mlir::OpResult) { return 0; }
+  }];
+
+  let hasVerifier = 1;
+}
+
+def fir_DeclareValueOp
+    : fir_Op<"declare_value", [MemoryEffects<[MemAlloc<DebuggingResource>]>]> {
+  let summary = "declare a value";
+
+  let description = [{
+    Tie the properties of a simple scalar Fortran variable to a value.
+    The value must be a scalar integer, real, complex, or logical.
+    This is the value based version of fir.declare. It is used to keep track
+    of variable properties and debug info after mem2reg promotion.
+
+    Note that there is currently nothing that allows pinning this operation
+    relatively to the operation using the value of the variable,
+    this means that the when a mem2reg variable was assigned several
+    values, the variable value printed in the debugger at a given code
+    point main not be the actual value the variable had at that code point
+    if instructions using the value were moved above the fir.declare_value.
+  }];
+
+  let arguments = (ins AnyType:$value,
+      Optional<fir_DummyScopeType>:$dummy_scope,
+      Builtin_StringAttr:$uniq_name,
+      OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
+      OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
+      OptionalAttr<UI32Attr>:$dummy_arg_no);
+
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $value
+    (`dummy_scope` $dummy_scope^ (`arg` $dummy_arg_no^)?)?
+    attr-dict `:` type($value)
   }];
 
   let hasVerifier = 1;

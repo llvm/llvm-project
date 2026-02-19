@@ -4449,8 +4449,10 @@ LLVMValueRef LLVMBuildIsNotNull(LLVMBuilderRef B, LLVMValueRef Val,
 LLVMValueRef LLVMBuildPtrDiff2(LLVMBuilderRef B, LLVMTypeRef ElemTy,
                                LLVMValueRef LHS, LLVMValueRef RHS,
                                const char *Name) {
-  return wrap(unwrap(B)->CreatePtrDiff(unwrap(ElemTy), unwrap(LHS),
-                                       unwrap(RHS), Name));
+  IRBuilderBase *Builder = unwrap(B);
+  Value *Diff =
+      Builder->CreatePtrDiff(unwrap(ElemTy), unwrap(LHS), unwrap(RHS), Name);
+  return wrap(Builder->CreateSExtOrTrunc(Diff, Builder->getInt64Ty()));
 }
 
 LLVMValueRef LLVMBuildAtomicRMW(LLVMBuilderRef B,LLVMAtomicRMWBinOp op,

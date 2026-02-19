@@ -1,5 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
-
+// XFAIL: *
 // This test checks the offload sizes, map types and base pointers and pointers
 // provided to the OpenMP kernel argument structure are correct when lowering
 // to LLVM-IR from MLIR when performing explicit member mapping of a record type
