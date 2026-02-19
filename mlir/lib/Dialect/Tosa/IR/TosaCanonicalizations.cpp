@@ -1746,7 +1746,7 @@ OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
 
   if (onTrue == onFalse && onTrueTy == resultTy &&
       OpTrait::util::staticallyKnownBroadcastable(predShape, onTrueShape))
-    return getOnTrue();
+    return onTrue;
 
   auto predicate =
       llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getInput1());
@@ -1765,9 +1765,9 @@ OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
       OpTrait::util::staticallyKnownBroadcastable(shapes);
 
   if (predicateValue == true && onTrueTy == resultTy && isBroadcastable)
-    return getOnTrue();
+    return onTrue;
   if (predicateValue == false && onFalseTy == resultTy && isBroadcastable)
-    return getOnFalse();
+    return onFalse;
   return {};
 }
 
