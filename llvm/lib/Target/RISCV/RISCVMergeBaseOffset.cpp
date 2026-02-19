@@ -577,7 +577,7 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
 }
 
 // Try to fold sequences of the form:
-//   Hi/lo:    qc.e.li vreg1, s           -> qc.e.lo vreg1, s+imm
+//   Hi/lo:    qc.e.li vreg1, s           -> qc.e.li vreg1, s+imm
 //   TailAdd:  shxadd vreg2, vreg3, vreg1 -> deleted
 //   Tail:     lx vreg4, imm(vreg2)       -> qc.lrx vreg4, vreg1, vreg3, (1/2/3)
 bool RISCVMergeBaseOffsetOpt::foldShxaddIntoScaledMemory(MachineInstr &Hi,
