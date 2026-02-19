@@ -567,7 +567,8 @@ struct UnrollMultiReductionInnerParallelGeneralCase
           multiReductionOp.getKind());
 
       if (innerMask) {
-        auto maskOp = vector::maskOperation(rewriter, reductionOp, innerMask);
+        Operation *maskOp =
+            vector::maskOperation(rewriter, reductionOp, innerMask);
         result = maskOp->getResult(0);
       } else {
         result = reductionOp.getResult();
