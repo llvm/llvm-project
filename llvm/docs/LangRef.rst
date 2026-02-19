@@ -4162,9 +4162,9 @@ following flags to enable otherwise unsafe floating-point transformations.
    produces a :ref:`poison value <poisonvalues>` instead.
 
 ``nsz``
-   No Signed Zeros - Allow optimizations to treat the sign of a zero
-   argument or zero result as insignificant. This does not imply that -0.0
-   is poison and/or guaranteed to not exist in the operation.
+   No Signed Zeros - Unless otherwise mentioned, the sign bit of 0.0 or -0.0
+   input operands can be non-deterministically flipped. This does not imply
+   that -0.0 is poison and/or guaranteed to not exist in the operation.
 
 Note: For :ref:`phi <i_phi>`, :ref:`select <i_select>`, and :ref:`call <i_call>`
 instructions, the following return types are considered to be floating-point
