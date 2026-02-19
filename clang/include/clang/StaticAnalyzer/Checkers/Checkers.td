@@ -188,11 +188,6 @@ def CallAndMessageChecker
 ]>,
       Documentation<HasDocumentation>;
 
-def FixedAddressDereferenceChecker
-    : Checker<"FixedAddressDereference">,
-      HelpText<"Check for dereferences of fixed addresses">,
-      Documentation<HasDocumentation>;
-
 def NullDereferenceChecker
     : Checker<"NullDereference">,
       HelpText<"Check for dereferences of null pointers">,
@@ -347,6 +342,10 @@ def ErrnoModeling : Checker<"Errno">,
   HelpText<"Make the special value 'errno' available to other checkers.">,
   Documentation<NotDocumented>;
 
+def OpaqueSTLFunctionsModeling : Checker<"OpaqueSTLFunctionsModeling">,
+  HelpText<"Model opaque, conservative evaluation of some STL functions">,
+  Documentation<NotDocumented>;
+
 def TrustNonnullChecker : Checker<"TrustNonnull">,
   HelpText<"Trust that returns from framework methods annotated with _Nonnull "
            "are not null">,
@@ -421,6 +420,11 @@ let ParentPackage = CoreOptIn in {
 def EnumCastOutOfRangeChecker : Checker<"EnumCastOutOfRange">,
   HelpText<"Check integer to enumeration casts for out of range values">,
   Documentation<HasDocumentation>;
+
+def FixedAddressDereferenceChecker
+    : Checker<"FixedAddressDereference">,
+      HelpText<"Check for dereferences of fixed addresses">,
+      Documentation<HasDocumentation>;
 
 } // end "optin.core"
 
@@ -1634,6 +1638,14 @@ def TaintPropagationChecker : Checker<"TaintPropagation">, // Modelling checker
                   "Config",
                   "Specifies the name of the configuration file.",
                   "",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "EnableDefaultConfig",
+                  "If set to false, the default source, "
+                  "sink and propagation rules are not loaded."
+                  "This way, advanced users can fully customize "
+                  "their taint configuration model.",
+                  "true",
                   Released>
   ]>,
   Documentation<NotDocumented>,

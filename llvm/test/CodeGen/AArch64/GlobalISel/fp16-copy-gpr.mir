@@ -49,10 +49,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr16 = COPY $h0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr16 = COPY $h1
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, [[COPY]], %subreg.hsub
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG [[COPY]], %subreg.hsub
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: [[BFMWri:%[0-9]+]]:gpr32 = BFMWri [[DEF]], [[COPY2]], 0, 15
-    ; CHECK-NEXT: [[SUBREG_TO_REG1:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, [[COPY1]], %subreg.hsub
+    ; CHECK-NEXT: [[SUBREG_TO_REG1:%[0-9]+]]:fpr32 = SUBREG_TO_REG [[COPY1]], %subreg.hsub
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY [[SUBREG_TO_REG1]]
     ; CHECK-NEXT: [[BFMWri1:%[0-9]+]]:gpr32 = BFMWri [[BFMWri]], [[COPY3]], 16, 15
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr64sp = COPY $x0

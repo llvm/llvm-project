@@ -34,12 +34,12 @@ define amdgpu_ps void @return_void(float %0) #0 {
 ; CHECK-NEXT:  ; %bb.4: ; %end
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1.0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    exp mrt0 v1, v1, v1, v0 done vm
+; CHECK-NEXT:    exp mrt0, v1, v1, v1, v0 done vm
 ; CHECK-NEXT:  .LBB0_5: ; %UnifiedReturnBlock
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .LBB0_6:
 ; CHECK-NEXT:    s_mov_b64 exec, 0
-; CHECK-NEXT:    exp null off, off, off, off done vm
+; CHECK-NEXT:    exp null, off, off, off, off done vm
 ; CHECK-NEXT:    s_endpgm
 main_body:
   %cmp = fcmp olt float %0, 1.000000e+01
@@ -77,12 +77,12 @@ define amdgpu_ps void @return_void_compr(float %0) #0 {
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_5
 ; CHECK-NEXT:  ; %bb.4: ; %end
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    exp mrt0 v0, off, v0, off done compr vm
+; CHECK-NEXT:    exp mrt0, v0, off, v0, off done compr vm
 ; CHECK-NEXT:  .LBB1_5: ; %UnifiedReturnBlock
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .LBB1_6:
 ; CHECK-NEXT:    s_mov_b64 exec, 0
-; CHECK-NEXT:    exp null off, off, off, off done vm
+; CHECK-NEXT:    exp null, off, off, off, off done vm
 ; CHECK-NEXT:    s_endpgm
 main_body:
   %cmp = fcmp olt float %0, 1.000000e+01
@@ -115,7 +115,7 @@ define amdgpu_ps void @only_kill() #0 {
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .LBB2_4:
 ; CHECK-NEXT:    s_mov_b64 exec, 0
-; CHECK-NEXT:    exp null off, off, off, off done vm
+; CHECK-NEXT:    exp null, off, off, off, off done vm
 ; CHECK-NEXT:    s_endpgm
 main_body:
   br label %loop
@@ -150,7 +150,7 @@ define amdgpu_ps float @return_nonvoid(float %0) #0 {
 ; CHECK-NEXT:    s_branch .LBB3_5
 ; CHECK-NEXT:  .LBB3_4:
 ; CHECK-NEXT:    s_mov_b64 exec, 0
-; CHECK-NEXT:    exp null off, off, off, off done vm
+; CHECK-NEXT:    exp null, off, off, off, off done vm
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .LBB3_5:
 main_body:

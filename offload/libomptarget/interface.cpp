@@ -573,3 +573,10 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
   delete AsyncInfo;
   *AsyncHandle = nullptr;
 }
+
+EXTERN void __tgt_register_rpc_callback(unsigned (*Callback)(void *,
+                                                             unsigned)) {
+  for (auto &Plugin : PM->plugins())
+    if (Plugin.is_initialized())
+      Plugin.getRPCServer().registerCallback(Callback);
+}

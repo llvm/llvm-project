@@ -807,6 +807,32 @@ def RoundingModeAttr : LLVM_EnumAttr<
 def ValidRoundingModeAttr : ConfinedAttr<RoundingModeAttr, [IntMinValue<0>]>;
 
 //===----------------------------------------------------------------------===//
+// DenormalModeKind
+//===----------------------------------------------------------------------===//
+
+def DenormalModeIEEE : LLVM_EnumAttrCase<"IEEE", "ieee", "IEEE", 0>;
+def DenormalModePreserveSign
+    : LLVM_EnumAttrCase<"PreserveSign", "preservesign", "PreserveSign", 1>;
+def DenormalModePositiveZero
+    : LLVM_EnumAttrCase<"PositiveZero", "positivezero", "PositiveZero", 2>;
+def DenormalModeDynamic : LLVM_EnumAttrCase<"Dynamic", "dynamic", "Dynamic", 3>;
+// Needed as llvm::DenormalModeKind defines this.
+def DenormalModeInvalid
+    : LLVM_EnumAttrCase<"Invalid", "invalid", "Invalid", -1>;
+
+def DenormalModeKindAttr : LLVM_EnumAttr<
+    "DenormalModeKind",
+    "::llvm::DenormalMode::DenormalModeKind",
+    "LLVM Denormal Mode Kinds",
+    [DenormalModeIEEE,
+     DenormalModePreserveSign,
+     DenormalModePositiveZero,
+     DenormalModeDynamic,
+     DenormalModeInvalid]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+//===----------------------------------------------------------------------===//
 // FPExceptionBehavior
 //===----------------------------------------------------------------------===//
 

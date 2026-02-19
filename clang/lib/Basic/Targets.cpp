@@ -432,6 +432,7 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     return std::make_unique<AMDGPUTargetInfo>(Triple, Opts);
 
   case llvm::Triple::riscv32:
+  case llvm::Triple::riscv32be:
     switch (os) {
     case llvm::Triple::NetBSD:
       return std::make_unique<NetBSDTargetInfo<RISCV32TargetInfo>>(Triple,
@@ -443,6 +444,7 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     }
 
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv64be:
     switch (os) {
     case llvm::Triple::FreeBSD:
       return std::make_unique<FreeBSDTargetInfo<RISCV64TargetInfo>>(Triple,
@@ -680,13 +682,13 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     return std::make_unique<SPIRVTargetInfo>(Triple, Opts);
   }
   case llvm::Triple::spirv32: {
-    if (os != llvm::Triple::UnknownOS ||
+    if ((os != llvm::Triple::UnknownOS && os != llvm::Triple::ChipStar) ||
         Triple.getEnvironment() != llvm::Triple::UnknownEnvironment)
       return nullptr;
     return std::make_unique<SPIRV32TargetInfo>(Triple, Opts);
   }
   case llvm::Triple::spirv64: {
-    if (os != llvm::Triple::UnknownOS ||
+    if ((os != llvm::Triple::UnknownOS && os != llvm::Triple::ChipStar) ||
         Triple.getEnvironment() != llvm::Triple::UnknownEnvironment) {
       if (os == llvm::Triple::OSType::AMDHSA)
         return std::make_unique<SPIRV64AMDGCNTargetInfo>(Triple, Opts);

@@ -421,11 +421,17 @@ Status PlatformAppleSimulator::GetSymbolFile(const FileSpec &platform_file,
 Status PlatformAppleSimulator::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
     llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
+
+  Status error;
+  error = GetModuleFromSharedCaches(module_spec, process, module_sp,
+                                    old_modules, did_create_ptr);
+  if (module_sp)
+    return error;
+
   // For iOS/tvOS/watchOS, the SDK files are all cached locally on the
   // host system. So first we ask for the file in the cached SDK, then
   // we attempt to get a shared module for the right architecture with
   // the right UUID.
-  Status error;
   ModuleSpec platform_module_spec(module_spec);
   const FileSpec &platform_file = module_spec.GetFileSpec();
   error = GetSymbolFile(platform_file, module_spec.GetUUIDPtr(),

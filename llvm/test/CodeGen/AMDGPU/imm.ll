@@ -2623,14 +2623,14 @@ define amdgpu_vs void @literal_folding(float %arg) {
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    v_mul_f32_e32 v1, 0x3f4353f8, v0
 ; GCN-NEXT:    v_mul_f32_e32 v0, 0xbf4353f8, v0
-; GCN-NEXT:    exp pos0 v1, v1, v0, v0 done
+; GCN-NEXT:    exp pos0, v1, v1, v0, v0 done
 ; GCN-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: literal_folding:
 ; GFX942:       ; %bb.0: ; %main_body
 ; GFX942-NEXT:    v_mul_f32_e32 v1, 0x3f4353f8, v0
 ; GFX942-NEXT:    v_mul_f32_e32 v0, 0xbf4353f8, v0
-; GFX942-NEXT:    exp pos0 v1, v1, v0, v0 done
+; GFX942-NEXT:    exp pos0, v1, v1, v0, v0 done
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %tmp = fmul float %arg, 0x3FE86A7F00000000

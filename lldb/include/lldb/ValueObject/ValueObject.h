@@ -349,7 +349,7 @@ public:
 
   void SetNeedsUpdate();
 
-  CompilerType GetCompilerType() { return MaybeCalculateCompleteType(); }
+  CompilerType GetCompilerType();
 
   // this vends a TypeImpl that is useful at the SB API layer
   virtual TypeImpl GetTypeImpl() { return TypeImpl(GetCompilerType()); }
@@ -1105,7 +1105,6 @@ protected:
   virtual void DoUpdateChildrenAddressType(ValueObject &valobj) {};
 
 private:
-  virtual CompilerType MaybeCalculateCompleteType();
   void UpdateChildrenAddressType() {
     GetRoot()->DoUpdateChildrenAddressType(*this);
   }

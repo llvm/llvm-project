@@ -265,7 +265,9 @@ private:
     if (T.consume_back("*")) {
       // Pointers may have an address space qualifier immediately before them.
       std::optional<unsigned> AS = ConsumeAddrSpace();
-      ParseType(T);
+      // Pointers can apply to already parsed types, like vectors.
+      if (!T.empty())
+        ParseType(T);
       Type += "*";
       if (AS)
         Type += std::to_string(*AS);

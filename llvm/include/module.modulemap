@@ -276,6 +276,7 @@ module LLVM_IR {
   // These are intended for (repeated) textual inclusion.
   textual header "llvm/IR/ConstrainedOps.def"
   textual header "llvm/IR/DebugInfoFlags.def"
+  textual header "llvm/IR/FunctionProperties.def"
   textual header "llvm/IR/Instruction.def"
   textual header "llvm/IR/Metadata.def"
   textual header "llvm/IR/FixedMetadataKinds.def"

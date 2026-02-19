@@ -1,0 +1,25 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -run-pass=none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses mmra metadata correctly.
+
+--- |
+
+  define void @test_mmra(ptr addrspace(1) %ptr) {
+  entry:
+    fence syncscope("workgroup") release, !mmra !0
+    ret void
+  }
+
+  !0 = !{!"amdgpu-synchronize-as", !"local"}
+
+...
+---
+name:            test_mmra
+body:             |
+  bb.0.entry:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: test_mmra
+    ; CHECK: ATOMIC_FENCE 5, 2, mmra !0
+    ATOMIC_FENCE 5, 2, mmra !0
+    S_ENDPGM 0
+...

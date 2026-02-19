@@ -260,3 +260,30 @@ module @range_op {
     }
   }
 }
+
+// -----
+
+// CHECK-LABEL: module @named_pattern
+module @named_pattern {
+  // CHECK: pdl_interp.func @matcher(%[[ARG0:.*]]: !pdl.operation) {
+  // CHECK:   pdl_interp.check_operation_name of %[[ARG0]] is "foo.op" -> ^bb2, ^bb1
+  // CHECK: ^bb1:
+  // CHECK:   pdl_interp.finalize
+  // CHECK: ^bb2:
+  // CHECK:   pdl_interp.check_operand_count of %[[ARG0]] is 0 -> ^bb3, ^bb1
+  // CHECK: ^bb3:
+  // CHECK:   pdl_interp.check_result_count of %[[ARG0]] is 0 -> ^bb4, ^bb1
+  // CHECK: ^bb4:
+  // CHECK:   pdl_interp.record_match @rewriters::@my_pattern(%[[ARG0]] : !pdl.operation) : benefit(1), loc([%[[ARG0]]]), root("foo.op") -> ^bb1
+  // CHECK: }
+  // CHECK: module @rewriters {
+  // CHECK:   pdl_interp.func @my_pattern(%[[ARG0:.*]]: !pdl.operation) {
+  // CHECK:     pdl_interp.apply_rewrite "rewriter"(%[[ARG0]] : !pdl.operation)
+  // CHECK:     pdl_interp.finalize
+  // CHECK:   }
+  // CHECK: }
+  pdl.pattern @my_pattern : benefit(1) {
+    %root = operation "foo.op"
+    rewrite %root with "rewriter"
+  }
+}

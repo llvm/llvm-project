@@ -330,8 +330,22 @@ define i64 @cls_i64_not_32(i64 %x) {
   ret i64 %f
 }
 
-define i128 @slx_i128(i128 %x, i128 %y) {
-; CHECK-LABEL: slx_i128:
+define i128 @sll_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: sll_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sll a3, a0, a2
+; CHECK-NEXT:    slx a1, a0, a2
+; CHECK-NEXT:    slli a2, a2, 57
+; CHECK-NEXT:    srai a2, a2, 63
+; CHECK-NEXT:    mvm a1, a3, a2
+; CHECK-NEXT:    andn a0, a3, a2
+; CHECK-NEXT:    ret
+  %b = shl i128 %x, %y
+  ret i128 %b
+}
+
+define i128 @sll_small_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: sll_small_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sll a3, a0, a2
 ; CHECK-NEXT:    slx a1, a0, a2
@@ -342,8 +356,19 @@ define i128 @slx_i128(i128 %x, i128 %y) {
   ret i128 %b
 }
 
-define i128 @slxi_i128(i128 %x) {
-; CHECK-LABEL: slxi_i128:
+define i128 @sll_large_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: sll_large_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sll a1, a0, a2
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %a = or i128 %y, 64
+  %b = shl i128 %x, %a
+  ret i128 %b
+}
+
+define i128 @slli_i128(i128 %x) {
+; CHECK-LABEL: slli_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 49
 ; CHECK-NEXT:    slx a1, a0, a2
@@ -353,8 +378,32 @@ define i128 @slxi_i128(i128 %x) {
   ret i128 %a
 }
 
-define i128 @srx_i128(i128 %x, i128 %y) {
-; CHECK-LABEL: srx_i128:
+define i128 @slli_i128_large(i128 %x) {
+; CHECK-LABEL: slli_i128_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a0, 7
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %a = shl i128 %x, 71
+  ret i128 %a
+}
+
+define i128 @srl_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: srl_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srl a3, a1, a2
+; CHECK-NEXT:    srx a0, a1, a2
+; CHECK-NEXT:    slli a2, a2, 57
+; CHECK-NEXT:    srai a2, a2, 63
+; CHECK-NEXT:    mvm a0, a3, a2
+; CHECK-NEXT:    andn a1, a3, a2
+; CHECK-NEXT:    ret
+  %b = lshr i128 %x, %y
+  ret i128 %b
+}
+
+define i128 @srl_small_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: srl_small_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srl a3, a1, a2
 ; CHECK-NEXT:    srx a0, a1, a2
@@ -365,9 +414,20 @@ define i128 @srx_i128(i128 %x, i128 %y) {
   ret i128 %b
 }
 
+define i128 @srl_large_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: srl_large_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srl a0, a1, a2
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    ret
+  %a = or i128 %y, 64
+  %b = lshr i128 %x, %a
+  ret i128 %b
+}
+
 ; FIXME: Using srx instead of slx would avoid the mv.
-define i128 @srxi_i128(i128 %x) {
-; CHECK-LABEL: srxi_i128:
+define i128 @srli_i128(i128 %x) {
+; CHECK-LABEL: srli_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    li a3, 15
@@ -377,4 +437,250 @@ define i128 @srxi_i128(i128 %x) {
 ; CHECK-NEXT:    ret
   %a = lshr i128 %x, 49
   ret i128 %a
+}
+
+define i128 @srli_i128_large(i128 %x) {
+; CHECK-LABEL: srli_i128_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a0, a1, 7
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    ret
+  %a = lshr i128 %x, 71
+  ret i128 %a
+}
+
+define i128 @sra_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: sra_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sra a3, a1, a2
+; CHECK-NEXT:    srx a0, a1, a2
+; CHECK-NEXT:    slli a2, a2, 57
+; CHECK-NEXT:    srai a2, a2, 63
+; CHECK-NEXT:    mvm a0, a3, a2
+; CHECK-NEXT:    sra a1, a3, a2
+; CHECK-NEXT:    ret
+  %b = ashr i128 %x, %y
+  ret i128 %b
+}
+
+define i128 @sra_small_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: sra_small_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sra a3, a1, a2
+; CHECK-NEXT:    srx a0, a1, a2
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    ret
+  %a = and i128 %y, 63
+  %b = ashr i128 %x, %a
+  ret i128 %b
+}
+
+define i128 @sra_large_i128(i128 %x, i128 %y) {
+; CHECK-LABEL: sra_large_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sra a0, a1, a2
+; CHECK-NEXT:    srai a1, a1, 63
+; CHECK-NEXT:    ret
+  %a = or i128 %y, 64
+  %b = ashr i128 %x, %a
+  ret i128 %b
+}
+
+; FIXME: Using srx instead of slx would avoid the mv.
+define i128 @srai_i128(i128 %x) {
+; CHECK-LABEL: srai_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    li a3, 15
+; CHECK-NEXT:    srai a1, a1, 49
+; CHECK-NEXT:    slx a2, a0, a3
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    ret
+  %a = ashr i128 %x, 49
+  ret i128 %a
+}
+
+define i128 @srai_i128_large(i128 %x) {
+; CHECK-LABEL: srai_i128_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a0, a1, 7
+; CHECK-NEXT:    srai a1, a1, 63
+; CHECK-NEXT:    ret
+  %a = ashr i128 %x, 71
+  ret i128 %a
+}
+
+define i64 @slx_i64(i64 %a, i64 %b, i64 %shamt) {
+; CHECK-LABEL: slx_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slx a0, a1, a2
+; CHECK-NEXT:    ret
+  %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 %shamt)
+  ret i64 %1
+}
+
+define i64 @slxi_i64(i64 %a, i64 %b) {
+; CHECK-LABEL: slxi_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 25
+; CHECK-NEXT:    slx a0, a1, a2
+; CHECK-NEXT:    ret
+  %1 = tail call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 25)
+  ret i64 %1
+}
+
+define i64 @srx_i64(i64 %a, i64 %b, i64 %shamt) {
+; CHECK-LABEL: srx_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srx a1, a0, a2
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+  %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 %shamt)
+  ret i64 %1
+}
+
+define i64 @srxi_i64(i64 %a, i64 %b) {
+; CHECK-LABEL: srxi_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 25
+; CHECK-NEXT:    srx a1, a0, a2
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+  %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 25)
+  ret i64 %1
+}
+
+; Test bitwise merge: (mask & b) | (~mask & a)
+define i64 @merge_i64(i64 %mask, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: merge_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    merge a0, a1, a2
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test MERGE with swapped a/b arguments
+define i64 @merge_i64_2(i64 %mask, i64 %b, i64 %a) nounwind {
+; CHECK-LABEL: merge_i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    merge a0, a2, a1
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test MVM: result overwrites rs1 (%a)
+define i64 @mvm_i64(i64 %a, i64 %mask, i64 %b) nounwind {
+; CHECK-LABEL: mvm_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvm a0, a2, a1
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test MVM with mask as last argument
+define i64 @mvm_i64_2(i64 %a, i64 %b, i64 %mask) nounwind {
+; CHECK-LABEL: mvm_i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvm a0, a1, a2
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test MVMN: result overwrites rs2 (%b)
+define i64 @mvmn_i64(i64 %b, i64 %mask, i64 %a) nounwind {
+; CHECK-LABEL: mvmn_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvmn a0, a2, a1
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test MVMN with mask as last argument
+define i64 @mvmn_i64_2(i64 %b, i64 %a, i64 %mask) nounwind {
+; CHECK-LABEL: mvmn_i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvmn a0, a1, a2
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  ret i64 %or
+}
+
+; Test case where none of the source operands can be overwritten,
+; requiring a mv before merge
+define i64 @merge_i64_mv(i64 %mask, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: merge_i64_mv:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mv a3, a0
+; CHECK-NEXT:    merge a3, a1, a2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    add a0, a3, a0
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    ret
+  %and1 = and i64 %mask, %b
+  %not = xor i64 %mask, -1
+  %and2 = and i64 %not, %a
+  %or = or i64 %and1, %and2
+  %sum1 = add i64 %or, %mask
+  %sum2 = add i64 %sum1, %a
+  %sum3 = add i64 %sum2, %b
+  ret i64 %sum3
+}
+
+; Test alternate merge pattern: (a ^ b) & mask ^ a
+define i64 @merge_xor_i64(i64 %mask, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: merge_xor_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    merge a0, a1, a2
+; CHECK-NEXT:    ret
+  %xor1 = xor i64 %a, %b
+  %and = and i64 %xor1, %mask
+  %xor2 = xor i64 %and, %a
+  ret i64 %xor2
+}
+
+; Test alternate merge pattern with different argument order for MVM
+define i64 @mvm_xor_i64(i64 %a, i64 %mask, i64 %b) nounwind {
+; CHECK-LABEL: mvm_xor_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvm a0, a2, a1
+; CHECK-NEXT:    ret
+  %xor1 = xor i64 %a, %b
+  %and = and i64 %xor1, %mask
+  %xor2 = xor i64 %and, %a
+  ret i64 %xor2
+}
+
+; Test alternate merge pattern with different argument order for MVMN
+define i64 @mvmn_xor_i64(i64 %b, i64 %mask, i64 %a) nounwind {
+; CHECK-LABEL: mvmn_xor_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvmn a0, a2, a1
+; CHECK-NEXT:    ret
+  %xor1 = xor i64 %a, %b
+  %and = and i64 %xor1, %mask
+  %xor2 = xor i64 %and, %a
+  ret i64 %xor2
 }

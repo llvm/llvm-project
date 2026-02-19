@@ -44,7 +44,7 @@ define float @test_finite(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_finite(
 ; CHECK-NEXT:    [[XF:%.*]] = sitofp i32 [[X:%.*]] to float
 ; CHECK-NEXT:    [[YF:%.*]] = sitofp i32 [[Y:%.*]] to float
-; CHECK-NEXT:    [[CALL:%.*]] = fmul float [[XF]], [[YF]]
+; CHECK-NEXT:    [[CALL:%.*]] = fmul nnan float [[XF]], [[YF]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %xf = sitofp i32 %x to float
@@ -62,7 +62,7 @@ define float @test_finite_assumed(float %x, float %y) {
 ; CHECK-NEXT:    [[IS_FINITE_Y:%.*]] = fcmp one float [[FABS_Y]], 0x7FF0000000000000
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_FINITE_X]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_FINITE_Y]])
-; CHECK-NEXT:    [[CALL:%.*]] = fmul float [[X]], [[Y]]
+; CHECK-NEXT:    [[CALL:%.*]] = fmul nnan float [[X]], [[Y]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %fabs.x = call float @llvm.fabs.f32(float %x)

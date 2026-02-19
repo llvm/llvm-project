@@ -1,5 +1,7 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
+exports_files(["src/stubgen.py"])
+
 cc_library(
     name = "nanobind",
     srcs = glob(

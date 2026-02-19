@@ -1808,6 +1808,7 @@ class fixed_box {
   inline bool is_valid() const;
   inline isl::multi_aff offset() const;
   inline isl::multi_aff get_offset() const;
+  inline bool plain_is_equal(const isl::fixed_box &box2) const;
   inline isl::multi_val size() const;
   inline isl::multi_val get_size() const;
   inline isl::space space() const;
@@ -2652,6 +2653,7 @@ class multi_val {
   inline isl::multi_val flat_range_product(isl::multi_val multi2) const;
   inline bool has_range_tuple_id() const;
   inline bool involves_nan() const;
+  inline bool is_equal(const isl::multi_val &mv2) const;
   inline isl::val_list list() const;
   inline isl::val_list get_list() const;
   inline isl::multi_val max(isl::multi_val multi2) const;
@@ -10929,6 +10931,18 @@ isl::multi_aff fixed_box::get_offset() const
   return offset();
 }
 
+bool fixed_box::plain_is_equal(const isl::fixed_box &box2) const
+{
+  if (!ptr || box2.is_null())
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  auto saved_ctx = ctx();
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  auto res = isl_fixed_box_plain_is_equal(get(), box2.get());
+  if (res < 0)
+    exception::throw_last_error(saved_ctx);
+  return res;
+}
+
 isl::multi_val fixed_box::size() const
 {
   if (!ptr)
@@ -17153,6 +17167,18 @@ bool multi_val::involves_nan() const
   auto saved_ctx = ctx();
   options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
   auto res = isl_multi_val_involves_nan(get());
+  if (res < 0)
+    exception::throw_last_error(saved_ctx);
+  return res;
+}
+
+bool multi_val::is_equal(const isl::multi_val &mv2) const
+{
+  if (!ptr || mv2.is_null())
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  auto saved_ctx = ctx();
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  auto res = isl_multi_val_is_equal(get(), mv2.get());
   if (res < 0)
     exception::throw_last_error(saved_ctx);
   return res;
