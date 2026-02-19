@@ -2096,6 +2096,30 @@ def sys_cr_op : Operand<i32> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+// SYSP operands are more restricted than generic system CR/imm fields.
+def sysp_op1 : Operand<i64>, ImmLeaf<i64, [{
+  return Imm >= 0 && Imm <= 6;
+}]> {
+  let ParserMatchClass = Imm0_7Operand;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+def sysp_crn_op : Operand<i32>, ImmLeaf<i32, [{
+  return Imm == 8 || Imm == 9;
+}]> {
+  let PrintMethod = "printSysCROperand";
+  let ParserMatchClass = SysCRAsmOperand;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+def sysp_crm_op : Operand<i32>, ImmLeaf<i32, [{
+  return Imm >= 0 && Imm <= 7;
+}]> {
+  let PrintMethod = "printSysCROperand";
+  let ParserMatchClass = SysCRAsmOperand;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
 class SystemXtI<bit L, string asm>
   : RtSystemI<L, (outs),
        (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, GPR64:$Rt),
@@ -13245,7 +13269,8 @@ class BaseSYSPEncoding<bit L, string asm, string operands, dag outputs, dag inpu
 }
 class SystemPXtI<bit L, string asm> :
   BaseSYSPEncoding<L, asm, "\t$op1, $Cn, $Cm, $op2, $Rt", (outs),
-  (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, XSeqPairClassOperand:$Rt)>;
+  (ins sysp_op1:$op1, sysp_crn_op:$Cn, sysp_crm_op:$Cm, imm0_7:$op2,
+       XSeqPairClassOperand:$Rt)>;
 
 //----------------------------------------------------------------------------
 // 2023 Armv9.5 Extensions
