@@ -1,0 +1,52 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+subroutine associated_stream
+  use cuda_runtime_api
+  integer(kind=cuda_stream_kind) :: strm, strmout
+  integer, managed, allocatable :: v(:)
+  integer :: istat
+
+  istat = cudaforSetDefaultStream(v, strm)
+  strmout = cudaforGetDefaultStream(v)
+  
+end subroutine
+
+! CHECK-LABEL: func.func @_QPassociated_stream()
+! CHECK: %[[ADDR:.*]] = fir.box_addr %{{.*}} : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK: %[[STREAM:.*]] = fir.load %{{.*}}#0 : !fir.ref<i64>
+! CHECK: %[[VOIDPTR:.*]] = fir.convert %[[ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.llvm_ptr<i8>
+! CHECK: %[[STAT:.*]] = fir.call @_FortranACUFSetAssociatedStream(%[[VOIDPTR]], %[[STREAM]]) fastmath<contract> : (!fir.llvm_ptr<i8>, i64) -> i32
+! CHECK: hlfir.assign %[[STAT]] to %{{.*}}#0 : i32, !fir.ref<i32>
+
+! CHECK: %[[ADDR:.*]] = fir.box_addr %{{.*}} : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK: %[[VOIDPTR:.*]] = fir.convert %[[ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.llvm_ptr<i8>
+! CHECK: %[[STREAM:.*]] = fir.call @_FortranACUFGetAssociatedStream(%[[VOIDPTR]]) fastmath<contract> : (!fir.llvm_ptr<i8>) -> i64
+! CHECK: hlfir.assign %[[STREAM]] to %{{.*}}#0 : i64, !fir.ref<i64>
+
+subroutine default_stream
+  use cuda_runtime_api
+  
+  integer(kind=cuda_stream_kind) :: strm, strm2
+  integer :: istat
+  istat = cudaStreamCreate(strm2)
+  istat = cudaforSetDefaultStream(strm2)
+  strm = cudaforGetDefaultStream()
+  istat = cudaStreamSynchronize(cudaforGetDefaultStream())
+end subroutine
+
+! CHECK-LABEL: func.func @_QPdefault_stream()
+! CHECK: %{{.*}} = fir.call @_FortranACUFSetDefaultStream(%{{.*}}) fastmath<contract> : (i64) -> i32
+! CHECK: %{{.*}} = fir.call @_FortranACUFGetDefaultStream() fastmath<contract> : () -> i64
+! CHECK: %{{.*}} = fir.call @_FortranACUFGetDefaultStream() fastmath<contract> : () -> i64
+
+subroutine stream_synchronize
+  use cuda_runtime_api
+  integer(kind=cuda_stream_kind) :: strm
+  integer :: istat
+  istat = cudastreamsynchronize(strm)
+  istat = cudastreamsynchronize()
+end subroutine
+
+! CHECK-LABEL: func.func @_QPstream_synchronize()
+! CHECK: %{{.*}} = fir.call @_FortranACUFStreamSynchronize(%{{.*}}) fastmath<contract> : (i64) -> i32
+! CHECK: %{{.*}} = fir.call @_FortranACUFStreamSynchronizeNull() fastmath<contract> : () -> i32

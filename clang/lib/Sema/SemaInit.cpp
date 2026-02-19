@@ -5645,22 +5645,23 @@ static void TryReferenceInitializationCore(Sema &S,
     //   applied.
     // Postpone address space conversions to after the temporary materialization
     // conversion to allow creating temporaries in the alloca address space.
-    auto T1QualsIgnoreConversions = T1Quals;
-    auto T2QualsIgnoreConversions = T2Quals;
+    auto T1QualsIgnoreAS = T1Quals;
+    auto T2QualsIgnoreAS = T2Quals;
     if (T1Quals.getAddressSpace() != T2Quals.getAddressSpace()) {
-      T1QualsIgnoreConversions.removeAddressSpace();
-      T2QualsIgnoreConversions.removeAddressSpace();
+      T1QualsIgnoreAS.removeAddressSpace();
+      T2QualsIgnoreAS.removeAddressSpace();
     }
-    // Postpone ObjC lifetime conversions to after the temporary materialization
-    // conversion, similar to address space conversions. This handles cases like
-    // binding a __strong rvalue to a const __autoreleasing reference.
+    // Strip the existing ObjC lifetime qualifier from cv2T2 before combining
+    // with T1's qualifiers.
+    QualType T2ForQualConv = cv2T2;
     if (T1Quals.getObjCLifetime() != T2Quals.getObjCLifetime()) {
-      T1QualsIgnoreConversions.removeObjCLifetime();
-      T2QualsIgnoreConversions.removeObjCLifetime();
+      Qualifiers T2BaseQuals =
+          T2ForQualConv.getQualifiers().withoutObjCLifetime();
+      T2ForQualConv = S.Context.getQualifiedType(
+          T2ForQualConv.getUnqualifiedType(), T2BaseQuals);
     }
-    QualType cv1T4 =
-        S.Context.getQualifiedType(cv2T2, T1QualsIgnoreConversions);
-    if (T1QualsIgnoreConversions != T2QualsIgnoreConversions)
+    QualType cv1T4 = S.Context.getQualifiedType(T2ForQualConv, T1QualsIgnoreAS);
+    if (T1QualsIgnoreAS != T2QualsIgnoreAS)
       Sequence.AddQualificationConversionStep(cv1T4, ValueKind);
     Sequence.AddReferenceBindingStep(cv1T4, ValueKind == VK_PRValue);
     ValueKind = isLValueRef ? VK_LValue : VK_XValue;
@@ -5671,17 +5672,6 @@ static void TryReferenceInitializationCore(Sema &S,
       QualType cv1T4WithAS = S.Context.getQualifiedType(T2, T4Quals);
       Sequence.AddQualificationConversionStep(cv1T4WithAS, ValueKind);
       cv1T4 = cv1T4WithAS;
-    }
-    // Add ObjC lifetime conversion if required.
-    if (T1Quals.getObjCLifetime() != T2Quals.getObjCLifetime()) {
-      auto T4Quals = cv1T4.getQualifiers();
-      T4Quals.setObjCLifetime(T1Quals.getObjCLifetime());
-      // Apply T4Quals to the unqualified base type to avoid conflicting
-      // ObjC lifetime qualifiers in getQualifiedType.
-      QualType CV1T4WithLifetime =
-          S.Context.getQualifiedType(cv1T4.getUnqualifiedType(), T4Quals);
-      Sequence.AddQualificationConversionStep(CV1T4WithLifetime, ValueKind);
-      cv1T4 = CV1T4WithLifetime;
     }
 
     //   In any case, the reference is bound to the resulting glvalue (or to
@@ -6957,10 +6947,39 @@ void InitializationSequence::InitializeFrom(Sema &S,
   // For HLSL ext vector types we allow list initialization behavior for C++
   // functional cast expressions which look like constructor syntax. This is
   // accomplished by converting initialization arguments to InitListExpr.
-  if (S.getLangOpts().HLSL && Args.size() > 1 &&
-      (DestType->isExtVectorType() || DestType->isConstantMatrixType()) &&
-      (SourceType.isNull() ||
-       !Context.hasSameUnqualifiedType(SourceType, DestType))) {
+  auto ShouldTryListInitialization = [&]() -> bool {
+    // Only try list initialization for HLSL.
+    if (!S.getLangOpts().HLSL)
+      return false;
+
+    bool DestIsVec = DestType->isExtVectorType();
+    bool DestIsMat = DestType->isConstantMatrixType();
+
+    // If the destination type is neither a vector nor a matrix, then don't try
+    // list initialization.
+    if (!DestIsVec && !DestIsMat)
+      return false;
+
+    // If there is only a single source argument, then only try list
+    // initialization if initializing a matrix with a vector or vice versa.
+    if (Args.size() == 1) {
+      assert(!SourceType.isNull() &&
+             "Source QualType should not be null when arg size is exactly 1");
+      bool SourceIsVec = SourceType->isExtVectorType();
+      bool SourceIsMat = SourceType->isConstantMatrixType();
+
+      if (DestIsMat && !SourceIsVec)
+        return false;
+      if (DestIsVec && !SourceIsMat)
+        return false;
+    }
+
+    // Try list initialization if the source type is null or if the
+    // destination and source types differ.
+    return SourceType.isNull() ||
+           !Context.hasSameUnqualifiedType(SourceType, DestType);
+  };
+  if (ShouldTryListInitialization()) {
     InitListExpr *ILE = new (Context)
         InitListExpr(S.getASTContext(), Args.front()->getBeginLoc(), Args,
                      Args.back()->getEndLoc());
@@ -8522,8 +8541,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
         Expr::EvalResult ER;
         if (Entity.getType()->getAs<PointerType>() &&
             CurInit.get()->EvaluateAsRValue(ER, S.Context) &&
-            !ER.Val.isNullPointer()) {
+            (ER.Val.isLValue() && !ER.Val.isNullPointer())) {
           S.Diag(Kind.getLocation(), diag::err_c23_constexpr_pointer_not_null);
+          return ExprError();
         }
       }
 

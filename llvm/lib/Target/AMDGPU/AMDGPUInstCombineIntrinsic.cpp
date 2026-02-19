@@ -1454,7 +1454,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     auto *BC = cast<ConstantInt>(II.getArgOperand(5));
     auto *RM = cast<ConstantInt>(II.getArgOperand(3));
     auto *BM = cast<ConstantInt>(II.getArgOperand(4));
-    if (BC->isZeroValue() || RM->getZExtValue() != 0xF ||
+    if (BC->isNullValue() || RM->getZExtValue() != 0xF ||
         BM->getZExtValue() != 0xF || isa<PoisonValue>(Old))
       break;
 

@@ -186,3 +186,18 @@ class FindInMemoryTestCase(TestBase):
             collected_info[1].GetRegionBase(),
             "Different items should have different base addresses",
         )
+
+        self.assertEqual(
+            info_list[0].GetRegionBase(),
+            collected_info[0].GetRegionBase(),
+            "subscript [0] should match first collected item",
+        )
+        self.assertEqual(
+            info_list[-1].GetRegionBase(),
+            collected_info[-1].GetRegionBase(),
+            "subscript [-1] should match last collected item",
+        )
+        with self.assertRaises(IndexError):
+            info_list[info_list.GetSize()]
+        with self.assertRaises(TypeError):
+            info_list["invalid"]

@@ -338,10 +338,6 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
       OptionalDefIdx = CurrentDef++;
       continue;
     }
-    if (MRI.isConstant(Op.getReg())) {
-      CurrentDef++;
-      continue;
-    }
 
     WriteDescriptor &Write = ID.Writes[CurrentDef];
     Write.OpIndex = i;
@@ -420,8 +416,6 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
     const MCOperand &Op = MCI.getOperand(OpIndex);
     if (!Op.isReg())
       continue;
-    if (MRI.isConstant(Op.getReg()))
-      continue;
 
     WriteDescriptor &Write = ID.Writes[CurrentDef];
     Write.OpIndex = OpIndex;
@@ -457,8 +451,6 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
     const MCOperand &Op = MCI.getOperand(OpIndex);
     if (!Op.isReg())
       continue;
-    if (MRI.isConstant(Op.getReg()))
-      continue;
 
     ReadDescriptor &Read = ID.Reads[CurrentUse];
     Read.OpIndex = OpIndex;
@@ -476,8 +468,6 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
     Read.OpIndex = ~I;
     Read.UseIndex = NumExplicitUses + I;
     Read.RegisterID = MCDesc.implicit_uses()[I];
-    if (MRI.isConstant(Read.RegisterID))
-      continue;
     Read.SchedClassID = SchedClassID;
     LLVM_DEBUG(dbgs() << "\t\t[Use][I] OpIdx=" << ~Read.OpIndex
                       << ", UseIndex=" << Read.UseIndex << ", RegisterID="
@@ -563,7 +553,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
          "Itineraries are not yet supported!");
 
   // Obtain the instruction descriptor from the opcode.
-  unsigned short Opcode = MCI.getOpcode();
+  unsigned Opcode = MCI.getOpcode();
   const MCInstrDesc &MCDesc = MCII.get(Opcode);
   const MCSchedModel &SM = STI.getSchedModel();
 
@@ -741,6 +731,9 @@ InstrBuilder::createInstruction(const MCInst &MCI,
       const MCOperand &Op = MCI.getOperand(RD.OpIndex);
       // Skip non-register operands.
       if (!Op.isReg())
+        continue;
+      // Skip constant register operands.
+      if (MRI.isConstant(Op.getReg()))
         continue;
       RegID = Op.getReg().id();
     } else {

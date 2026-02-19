@@ -514,7 +514,6 @@ size_t ObjectFile::ReadSectionData(Section *section,
                                    lldb::offset_t section_offset, void *dst,
                                    size_t dst_len) {
   assert(section);
-  section_offset *= section->GetTargetByteSize();
 
   // If some other objectfile owns this data, pass this to them.
   if (section->GetObjectFile() != this)
