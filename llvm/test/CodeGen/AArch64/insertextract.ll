@@ -2887,20 +2887,18 @@ define i128 @extract_v2i128_c(<2 x i128> %a, i32 %c) {
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset w29, -16
 ; CHECK-GI-NEXT:    adds x8, x0, x0
-; CHECK-GI-NEXT:    mov x10, sp
 ; CHECK-GI-NEXT:    adc x9, x1, x1
 ; CHECK-GI-NEXT:    mov v0.d[0], x8
 ; CHECK-GI-NEXT:    adds x8, x2, x2
 ; CHECK-GI-NEXT:    mov v1.d[0], x8
 ; CHECK-GI-NEXT:    adc x8, x3, x3
 ; CHECK-GI-NEXT:    mov v0.d[1], x9
-; CHECK-GI-NEXT:    mov w9, #16 // =0x10
+; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    mov v1.d[1], x8
 ; CHECK-GI-NEXT:    mov w8, w4
 ; CHECK-GI-NEXT:    and x8, x8, #0x1
-; CHECK-GI-NEXT:    umaddl x8, w8, w9, x10
 ; CHECK-GI-NEXT:    stp q0, q1, [sp]
-; CHECK-GI-NEXT:    ldr q0, [x8]
+; CHECK-GI-NEXT:    ldr q0, [x9, x8, lsl #4]
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    fmov x0, d0
 ; CHECK-GI-NEXT:    fmov x1, d1

@@ -884,11 +884,10 @@ body:             |
     ; CHECK-LABEL: name: ldrsrox
     ; CHECK: liveins: $d0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $d0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64common = ADDXrr [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[LDRSui:%[0-9]+]]:fpr32 = LDRSui [[ADDXrr]], 0 :: (load (s32) from %ir.addr)
-    ; CHECK-NEXT: $s2 = COPY [[LDRSui]]
+    ; CHECK-NEXT: [[LDRSroX:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[COPY1]], 0, 0 :: (load (s32) from %ir.addr)
+    ; CHECK-NEXT: $s2 = COPY [[LDRSroX]]
     ; CHECK-NEXT: RET_ReallyLR implicit $h2
     %0:gpr(p0) = COPY $d0
     %1:gpr(s64) = COPY $x1
