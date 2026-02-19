@@ -483,6 +483,21 @@ static void computeKnownBitsFromLerpPattern(const Value *Op0, const Value *Op1,
   KnownOut.Zero.setHighBits(MinimumNumberOfLeadingZeros);
 }
 
+static bool isSubtractionKnownNonNegative(const Value *LHS, const Value *RHS) {
+  // Pattern: LHS - smin(LHS, X) = max(0, LHS - X) >= 0
+  if (auto *MinCall = dyn_cast<IntrinsicInst>(RHS)) {
+    if (MinCall->getIntrinsicID() == Intrinsic::smin) {
+      Value *MinOp0 = MinCall->getOperand(0);
+      Value *MinOp1 = MinCall->getOperand(1);
+
+      // If LHS appears in the smin, then LHS - smin(LHS, X) >= 0
+      if (MinOp0 == LHS || MinOp1 == LHS)
+        return true;
+    }
+  }
+  return false;
+}
+
 static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
                                    bool NSW, bool NUW,
                                    const APInt &DemandedElts,
@@ -501,6 +516,10 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   if (!Add && NSW && !KnownOut.isNonNegative() &&
       isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
           .value_or(false))
+    KnownOut.makeNonNegative();
+
+  if (!Add && !KnownOut.isNonNegative() &&
+        isSubtractionKnownNonNegative(Op0, Op1))
     KnownOut.makeNonNegative();
 
   if (Add)
@@ -1401,6 +1420,46 @@ static void unionWithMinMaxIntrinsicClamp(const IntrinsicInst *II,
         ConstantRange::getNonEmpty(*CLow, *CHigh + 1).toKnownBits());
 }
 
+static bool isSelectKnownNonNegative(const SelectInst *SI) {
+
+  if (auto *Cmp = dyn_cast<ICmpInst>(SI->getCondition())) {
+    const Value *TrueVal = SI->getTrueValue();
+    const Value *FalseVal = SI->getFalseValue();
+    const Value *CmpLHS = Cmp->getOperand(0);
+    const Value *CmpRHS = Cmp->getOperand(1);
+    ICmpInst::Predicate Pred = Cmp->getPredicate();
+
+    // Determine which value is zero and which is sub based on predicate
+    const Value *ZeroVal, *SubVal;
+    if (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SLE) {
+      // condition is (b < a) or (b <= a)
+      // zero is on true side, sub is on false side
+      ZeroVal = TrueVal;
+      SubVal = FalseVal;
+    } else if (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SGE) {
+      // condition is (b > a) or (b >= a)
+      // zero is on false side, sub is on true side
+      ZeroVal = FalseVal;
+      SubVal = TrueVal;
+    } else {
+      return false; // predicate we don't handle
+    }
+
+    // Now just check once
+    if (auto *ConstInt = dyn_cast<ConstantInt>(ZeroVal)) {
+      if (ConstInt->isZero()) {
+        if (auto *Sub = dyn_cast<BinaryOperator>(SubVal)) {
+          if (Sub->getOpcode() == Instruction::Sub &&
+              Sub->getOperand(0) == CmpLHS && Sub->getOperand(1) == CmpRHS)
+            return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 static void computeKnownBitsFromOperator(const Operator *I,
                                          const APInt &DemandedElts,
                                          KnownBits &Known,
@@ -1466,6 +1525,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
     Known =
         ComputeForArm(I->getOperand(1), /*Invert=*/false)
             .intersectWith(ComputeForArm(I->getOperand(2), /*Invert=*/true));
+            
+    if (isSelectKnownNonNegative(cast<SelectInst>(I)))
+    Known.makeNonNegative();
+    
     break;
   }
   case Instruction::FPTrunc:
