@@ -171,19 +171,20 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   }
 
   if (Triple.isRISCV32()) {
-    // Handle `-mzilsd-4byte-align` and `-mnozilsd-4byte-align` on rv32. These
+    // Handle `-mzilsd-word-align` and `-mzilsd-strict-align` on rv32. These
     // interact with the scalar alignment options - if unaligned scalar memory
     // is allowed then that takes precedence over this option, as zilsd accesses
-    // can be 1-byte aligned in this case. Otherwise, the option allows zilsd
-    // accesses to be 4-byte aligned rather than the usual 8-byte aligned.
+    // can be 1-byte aligned in this case. Otherwise, the option
+    // `-mzilsd-word-align` option allows zilsd accesses to be 4-byte aligned
+    // rather than the usual 8-byte aligned (`-mzilsd-strict-align`).
     if (const Arg *A = Args.getLastArg(
             options::OPT_mstrict_align, options::OPT_mscalar_strict_align,
-            options::OPT_mzilsd_4byte_align, options::OPT_mno_strict_align,
+            options::OPT_mzilsd_word_align, options::OPT_mno_strict_align,
             options::OPT_mno_scalar_strict_align,
-            options::OPT_mno_zilsd_4byte_align)) {
+            options::OPT_mzilsd_strict_align)) {
       if (A->getOption().matches(options::OPT_mno_strict_align) ||
           A->getOption().matches(options::OPT_mno_scalar_strict_align) ||
-          A->getOption().matches(options::OPT_mzilsd_4byte_align)) {
+          A->getOption().matches(options::OPT_mzilsd_word_align)) {
         Features.push_back("+zilsd-4byte-align");
       } else {
         Features.push_back("-zilsd-4byte-align");
@@ -191,8 +192,8 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     }
   } else {
     // Zilsd is not available on RV64, so report an error for these options.
-    if (const Arg *A = Args.getLastArg(options::OPT_mzilsd_4byte_align,
-                                       options::OPT_mno_zilsd_4byte_align)) {
+    if (const Arg *A = Args.getLastArg(options::OPT_mzilsd_word_align,
+                                       options::OPT_mzilsd_strict_align)) {
       D.Diag(clang::diag::err_drv_unsupported_opt_for_target)
           << A->getSpelling() << Triple.getTriple();
     }
