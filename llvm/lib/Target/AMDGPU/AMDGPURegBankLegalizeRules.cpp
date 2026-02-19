@@ -767,6 +767,16 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S64, {{Sgpr64}, {Sgpr64, Imm}})
       .Div(S64, {{Vgpr64}, {Vgpr64, Imm}});
 
+  addRulesForGOpcs({G_ASSERT_ALIGN}, Standard)
+      .Uni(S32, {{Sgpr32}, {Sgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32}})
+      .Uni(S64, {{Sgpr64}, {Sgpr64}})
+      .Div(S64, {{Vgpr64}, {Vgpr64}})
+      .Any({{UniPtr32}, {{SgprPtr32}, {SgprPtr32}}})
+      .Any({{DivPtr32}, {{VgprPtr32}, {VgprPtr32}}})
+      .Any({{UniPtr64}, {{SgprPtr64}, {SgprPtr64}}})
+      .Any({{DivPtr64}, {{VgprPtr64}, {VgprPtr64}}});
+
   // Atomic read-modify-write operations: result and value are always VGPR,
   // pointer varies by address space.
   addRulesForGOpcs({G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_XCHG,
