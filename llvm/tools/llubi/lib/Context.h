@@ -68,6 +68,10 @@ public:
   bool isConstant() const { return IsConstant; }
   void setIsConstant(bool C) { IsConstant = C; }
 
+  bool inBounds(const APInt &NewAddr) const {
+    return NewAddr.uge(Address) && NewAddr.ule(Address + Size);
+  }
+
   Byte &operator[](uint64_t Offset) {
     assert(Offset < Size && "Offset out of bounds");
     return Bytes[Offset];
@@ -129,6 +133,13 @@ class Context {
   // For now we don't model the behavior of address reuse, which is common
   // with stack coloring.
   uint64_t AllocationBase = 8;
+  // Maintains a global list of 'exposed' provenances. This is used to form a
+  // pointer with an exposed provenance.
+  // FIXME: Currently all the allocations are considered exposed, regardless of
+  // their interaction with ptrtoint. That is, ptrtoint is allowed to recover
+  // the provenance of any allocation. We may track the exposed provenances more
+  // precisely after we make ptrtoint have the implicit side-effect of exposing
+  // the provenance.
   std::map<uint64_t, IntrusiveRefCntPtr<MemoryObject>> MemoryObjects;
 
   // Constants
