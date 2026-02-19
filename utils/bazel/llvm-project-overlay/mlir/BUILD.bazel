@@ -1396,6 +1396,23 @@ td_library(
 )
 
 td_library(
+    name = "DialectFoldInterfaceTdFiles",
+    srcs = ["include/mlir/Interfaces/DialectFoldInterface.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "DialectFoldInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Interfaces/DialectFoldInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Interfaces/DialectFoldInterface.td",
+    deps = [":DialectFoldInterfaceTdFiles"],
+)
+
+td_library(
     name = "CallInterfacesTdFiles",
     srcs = ["include/mlir/Interfaces/CallInterfaces.td"],
     includes = ["include"],
@@ -4557,6 +4574,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":DataLayoutInterfacesIncGen",
+        ":DialectFoldInterfaceIncGen",
         ":IR",
         "//llvm:Support",
     ],
