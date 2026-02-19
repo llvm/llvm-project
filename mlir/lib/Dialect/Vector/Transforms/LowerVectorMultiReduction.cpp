@@ -513,16 +513,14 @@ struct UnrollMultiReductionInnerParallelBaseCase
 
     Value mask = maskingOp ? maskingOp.getMask() : nullptr;
 
-    SmallVector<Value> vectors;
+    SmallVector<Value> vectors(numElementwiseOps);
     for (int64_t i = 0; i < numElementwiseOps; ++i)
-      vectors.push_back(vector::ExtractOp::create(rewriter, loc, source, i));
+      vectors[i] = vector::ExtractOp::create(rewriter, loc, source, i);
 
-    SmallVector<Value> masks;
+    SmallVector<Value> masks(numElementwiseOps);
     for (int64_t i = 0; i < numElementwiseOps; ++i)
       if (mask)
-        masks.push_back(vector::ExtractOp::create(rewriter, loc, mask, i));
-      else
-        masks.push_back(nullptr);
+        masks[i] = vector::ExtractOp::create(rewriter, loc, mask, i);
 
     Value result = multiReductionOp.getAcc();
     for (auto [innerVector, innerMask] : llvm::zip(vectors, masks))
@@ -558,16 +556,14 @@ struct UnrollMultiReductionInnerParallelGeneralCase
 
     Value mask = maskingOp ? maskingOp.getMask() : nullptr;
 
-    SmallVector<Value> vectors;
+    SmallVector<Value> vectors(numElementwiseOps);
     for (int64_t i = 0; i < numElementwiseOps; ++i)
-      vectors.push_back(vector::ExtractOp::create(rewriter, loc, source, i));
+      vectors[i] = vector::ExtractOp::create(rewriter, loc, source, i);
 
-    SmallVector<Value> masks;
+    SmallVector<Value> masks(numElementwiseOps);
     for (int64_t i = 0; i < numElementwiseOps; ++i)
       if (mask)
-        masks.push_back(vector::ExtractOp::create(rewriter, loc, mask, i));
-      else
-        masks.push_back(nullptr);
+        masks[i] = vector::ExtractOp::create(rewriter, loc, mask, i);
 
     ArrayRef<bool> reductionMask =
         ArrayRef<bool>(multiReductionOp.getReductionMask()).drop_front();
