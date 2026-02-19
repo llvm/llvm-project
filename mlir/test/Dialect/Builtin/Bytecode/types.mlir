@@ -18,16 +18,40 @@ module @TestComplex attributes {
 module @TestFloat attributes {
   // CHECK: bytecode.test = bf16,
   // CHECK: bytecode.test1 = f16,
+  // CHECK: bytecode.test10 = f8E4M3FNUZ,
+  // CHECK: bytecode.test11 = f8E4M3B11FNUZ,
+  // CHECK: bytecode.test12 = f8E3M4,
+  // CHECK: bytecode.test13 = f4E2M1FN,
+  // CHECK: bytecode.test14 = f6E2M3FN,
+  // CHECK: bytecode.test15 = f6E3M2FN,
+  // CHECK: bytecode.test16 = f8E8M0FNU,
+  // CHECK: bytecode.test17 = tf32,
   // CHECK: bytecode.test2 = f32,
   // CHECK: bytecode.test3 = f64,
   // CHECK: bytecode.test4 = f80,
-  // CHECK: bytecode.test5 = f128
+  // CHECK: bytecode.test5 = f128,
+  // CHECK: bytecode.test6 = f8E5M2,
+  // CHECK: bytecode.test7 = f8E4M3,
+  // CHECK: bytecode.test8 = f8E4M3FN,
+  // CHECK: bytecode.test9 = f8E5M2FNUZ
   bytecode.test = bf16,
   bytecode.test1 = f16,
   bytecode.test2 = f32,
   bytecode.test3 = f64,
   bytecode.test4 = f80,
-  bytecode.test5 = f128
+  bytecode.test5 = f128,
+  bytecode.test6 = f8E5M2,
+  bytecode.test7 = f8E4M3,
+  bytecode.test8 = f8E4M3FN,
+  bytecode.test9 = f8E5M2FNUZ,
+  bytecode.test10 = f8E4M3FNUZ,
+  bytecode.test11 = f8E4M3B11FNUZ,
+  bytecode.test12 = f8E3M4,
+  bytecode.test13 = f4E2M1FN,
+  bytecode.test14 = f6E2M3FN,
+  bytecode.test15 = f6E3M2FN,
+  bytecode.test16 = f8E8M0FNU,
+  bytecode.test17 = tf32
 } {}
 
 //===----------------------------------------------------------------------===//
