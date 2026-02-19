@@ -4109,8 +4109,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_signed_v8f16_v8i16(<8 x half> %f) {
 define arm_aapcs_vfpcc <8 x i19> @test_signed_v8f16_v8i19(<8 x half> %f) {
 ; CHECK-LABEL: test_signed_v8f16_v8i19:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r7, r9, r11, lr}
-; CHECK-NEXT:    push.w {r4, r5, r7, r9, r11, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r9, r11, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r9, r11, lr}
 ; CHECK-NEXT:    vldr s6, .LCPI46_1
 ; CHECK-NEXT:    vcvtb.f32.f16 s12, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s0
@@ -4146,60 +4146,60 @@ define arm_aapcs_vfpcc <8 x i19> @test_signed_v8f16_v8i19(<8 x half> %f) {
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    lsll r2, r7, #19
 ; CHECK-NEXT:    bfc r1, #19, #13
-; CHECK-NEXT:    vmov r12, s10
+; CHECK-NEXT:    vmov lr, s10
 ; CHECK-NEXT:    vcmp.f32 s1, s1
 ; CHECK-NEXT:    vmaxnm.f32 s8, s0, s6
 ; CHECK-NEXT:    orr.w r1, r1, r2
 ; CHECK-NEXT:    str r1, [r0]
 ; CHECK-NEXT:    it vs
-; CHECK-NEXT:    movvs.w r12, #0
+; CHECK-NEXT:    movvs.w lr, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s0, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s2
 ; CHECK-NEXT:    vmaxnm.f32 s2, s0, s6
-; CHECK-NEXT:    vminnm.f32 s8, s8, s4
-; CHECK-NEXT:    vminnm.f32 s2, s2, s4
 ; CHECK-NEXT:    vmov r3, s7
+; CHECK-NEXT:    vminnm.f32 s2, s2, s4
+; CHECK-NEXT:    vminnm.f32 s8, s8, s4
 ; CHECK-NEXT:    vcvt.s32.f32 s2, s2
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r3, #0
 ; CHECK-NEXT:    vcvt.s32.f32 s8, s8
 ; CHECK-NEXT:    bfc r3, #19, #13
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    mov r2, lr
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    bfc r2, #19, #13
 ; CHECK-NEXT:    mov r4, r3
 ; CHECK-NEXT:    mov.w r9, #0
 ; CHECK-NEXT:    lsrl r2, r1, #7
+; CHECK-NEXT:    lsrl r4, r9, #26
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s0, s0
-; CHECK-NEXT:    lsrl r4, r9, #26
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s3
-; CHECK-NEXT:    mov lr, r1
-; CHECK-NEXT:    orr.w r1, r4, r2
-; CHECK-NEXT:    vmov r4, s2
+; CHECK-NEXT:    orr.w r12, r4, r2
+; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    vmaxnm.f32 s2, s0, s6
-; CHECK-NEXT:    vmov r2, s8
+; CHECK-NEXT:    vmov r4, s8
 ; CHECK-NEXT:    vminnm.f32 s2, s2, s4
 ; CHECK-NEXT:    it vs
-; CHECK-NEXT:    movvs r2, #0
+; CHECK-NEXT:    movvs r4, #0
 ; CHECK-NEXT:    vcvt.s32.f32 s2, s2
-; CHECK-NEXT:    bfc r2, #19, #13
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    lsll r2, r5, #12
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it vs
-; CHECK-NEXT:    movvs r4, #0
-; CHECK-NEXT:    orrs r2, r1
+; CHECK-NEXT:    movvs r2, #0
+; CHECK-NEXT:    mov r6, r1
 ; CHECK-NEXT:    bfc r4, #19, #13
+; CHECK-NEXT:    movs r5, #0
+; CHECK-NEXT:    bfc r2, #19, #13
 ; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    lsll r4, r1, #31
-; CHECK-NEXT:    vcmp.f32 s0, s0
+; CHECK-NEXT:    lsll r4, r5, #12
+; CHECK-NEXT:    lsll r2, r1, #31
 ; CHECK-NEXT:    orrs r2, r4
+; CHECK-NEXT:    vcmp.f32 s0, s0
+; CHECK-NEXT:    orr.w r2, r2, r12
 ; CHECK-NEXT:    str r2, [r0, #8]
 ; CHECK-NEXT:    orr.w r2, r7, r3, lsl #6
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s3
-; CHECK-NEXT:    orr.w r3, r2, r12, lsl #25
+; CHECK-NEXT:    orr.w r3, r2, lr, lsl #25
 ; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    vmaxnm.f32 s2, s0, s6
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
@@ -4213,6 +4213,7 @@ define arm_aapcs_vfpcc <8 x i19> @test_signed_v8f16_v8i19(<8 x half> %f) {
 ; CHECK-NEXT:    lsll r2, r7, #5
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    mov.w r11, #0
+; CHECK-NEXT:    orr.w r1, r1, r5
 ; CHECK-NEXT:    vmov r7, s2
 ; CHECK-NEXT:    it vs
 ; CHECK-NEXT:    movvs r7, #0
@@ -4224,12 +4225,11 @@ define arm_aapcs_vfpcc <8 x i19> @test_signed_v8f16_v8i19(<8 x half> %f) {
 ; CHECK-NEXT:    str r3, [r0, #4]
 ; CHECK-NEXT:    lsrs r2, r2, #16
 ; CHECK-NEXT:    strb r2, [r0, #18]
-; CHECK-NEXT:    orr.w r2, r9, lr
-; CHECK-NEXT:    orrs r2, r5
+; CHECK-NEXT:    orr.w r2, r9, r6
 ; CHECK-NEXT:    orrs r1, r2
 ; CHECK-NEXT:    orr.w r1, r1, r7, lsl #18
 ; CHECK-NEXT:    str r1, [r0, #12]
-; CHECK-NEXT:    pop.w {r4, r5, r7, r9, r11, pc}
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r9, r11, pc}
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI46_0:
