@@ -2798,6 +2798,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   Value *CreateShadowCast(IRBuilder<> &IRB, Value *V, Type *dstTy,
                           bool Signed = false) {
     Type *srcTy = V->getType();
+
+    // Shadow types should never be floating-point.
+    assert(!srcTy->isFPOrFPVectorTy());
+    assert(!dstTy->isFPOrFPVectorTy());
+
+    // TODO (though never needed in practice)
+    assert(!srcTy->isArrayTy());
+    assert(!dstTy->isArrayTy());
+
     if (srcTy == dstTy)
       return V;
     size_t srcSizeInBits = VectorOrPrimitiveTypeSizeInBits(srcTy);
@@ -2807,15 +2816,34 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     if (dstTy->isIntegerTy() && srcTy->isIntegerTy())
       return IRB.CreateIntCast(V, dstTy, Signed);
+
     if (dstTy->isVectorTy() && srcTy->isVectorTy() &&
         cast<VectorType>(dstTy)->getElementCount() ==
             cast<VectorType>(srcTy)->getElementCount())
+      // We rely on the assertion at the start of the function that neither
+      // type is a floating-point vector.
       return IRB.CreateIntCast(V, dstTy, Signed);
+
+    if (dstTy->isStructTy() && srcTy->isStructTy() &&
+        cast<StructType>(dstTy)->getNumElements() ==
+            cast<StructType>(srcTy)->getNumElements()) {
+      Value *DStruct = PoisonValue::get(dstTy);
+
+      for (unsigned i = 0, n = cast<StructType>(dstTy)->getNumElements(); i < n;
+           i++) {
+        Value *Elem = IRB.CreateExtractValue(V, i);
+        Type *ElemDstTy = cast<StructType>(dstTy)->getElementType(i);
+        Value *ElemDst = CreateShadowCast(IRB, Elem, ElemDstTy, Signed);
+        DStruct = IRB.CreateInsertValue(DStruct, ElemDst, i);
+      }
+
+      return DStruct;
+    }
+
     Value *V1 = IRB.CreateBitCast(V, Type::getIntNTy(*MS.C, srcSizeInBits));
     Value *V2 =
         IRB.CreateIntCast(V1, Type::getIntNTy(*MS.C, dstSizeInBits), Signed);
     return IRB.CreateBitCast(V2, dstTy);
-    // TODO: handle struct types.
   }
 
   /// Cast an application value to the type of its own shadow.
