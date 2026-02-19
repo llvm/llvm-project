@@ -1,8 +1,12 @@
-// RUN: %clang_cc1 -fsyntax-only -Wunused-but-set-variable -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -Wunused-but-set-variable -verify -std=c++17 %s
 
 static thread_local int tl_set_unused;  // expected-warning {{variable 'tl_set_unused' set but not used}}
 static thread_local int tl_set_and_used;
 thread_local int tl_no_static_set_unused;
+
+// Warning should respect attributes.
+[[maybe_unused]] static int with_maybe_unused;
+__attribute__((unused)) static int with_unused_attr;
 
 void f0() {
   tl_set_unused = 1;
@@ -11,6 +15,9 @@ void f0() {
   (void)x;
 
   tl_no_static_set_unused = 3;
+
+  with_maybe_unused = 4;
+  with_unused_attr = 5;
 }
 
 namespace test {
