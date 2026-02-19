@@ -7,16 +7,15 @@
 define void @pr166534(ptr %pa, ptr %pb, ptr %pc, ptr %pd) {
 ; SSE2-LABEL: pr166534:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movq (%rdi), %r8
-; SSE2-NEXT:    movq 8(%rdi), %rdi
-; SSE2-NEXT:    xorq 8(%rsi), %rdi
-; SSE2-NEXT:    xorq (%rsi), %r8
+; SSE2-NEXT:    movdqu (%rdi), %xmm0
+; SSE2-NEXT:    movdqu (%rsi), %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %esi
 ; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    movq %r8, %rsi
-; SSE2-NEXT:    orq %rdi, %rsi
+; SSE2-NEXT:    cmpl $65535, %esi # imm = 0xFFFF
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    orq %rax, (%rdx)
-; SSE2-NEXT:    orq %rdi, %r8
+; SSE2-NEXT:    cmpl $65535, %esi # imm = 0xFFFF
 ; SSE2-NEXT:    jne .LBB0_2
 ; SSE2-NEXT:  # %bb.1: # %if.then
 ; SSE2-NEXT:    orq %rax, (%rcx)
@@ -25,16 +24,14 @@ define void @pr166534(ptr %pa, ptr %pb, ptr %pc, ptr %pd) {
 ;
 ; SSE4-LABEL: pr166534:
 ; SSE4:       # %bb.0: # %entry
-; SSE4-NEXT:    movq (%rdi), %r8
-; SSE4-NEXT:    movq 8(%rdi), %rdi
-; SSE4-NEXT:    xorq 8(%rsi), %rdi
-; SSE4-NEXT:    xorq (%rsi), %r8
+; SSE4-NEXT:    movdqu (%rdi), %xmm0
+; SSE4-NEXT:    movdqu (%rsi), %xmm1
+; SSE4-NEXT:    pxor %xmm0, %xmm1
 ; SSE4-NEXT:    xorl %eax, %eax
-; SSE4-NEXT:    movq %r8, %rsi
-; SSE4-NEXT:    orq %rdi, %rsi
+; SSE4-NEXT:    ptest %xmm1, %xmm1
 ; SSE4-NEXT:    sete %al
 ; SSE4-NEXT:    orq %rax, (%rdx)
-; SSE4-NEXT:    orq %rdi, %r8
+; SSE4-NEXT:    ptest %xmm1, %xmm1
 ; SSE4-NEXT:    jne .LBB0_2
 ; SSE4-NEXT:  # %bb.1: # %if.then
 ; SSE4-NEXT:    orq %rax, (%rcx)
@@ -43,16 +40,13 @@ define void @pr166534(ptr %pa, ptr %pb, ptr %pc, ptr %pd) {
 ;
 ; AVX2-LABEL: pr166534:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    movq (%rdi), %r8
-; AVX2-NEXT:    movq 8(%rdi), %rdi
-; AVX2-NEXT:    xorq 8(%rsi), %rdi
-; AVX2-NEXT:    xorq (%rsi), %r8
+; AVX2-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX2-NEXT:    vpxor (%rsi), %xmm0, %xmm0
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    movq %r8, %rsi
-; AVX2-NEXT:    orq %rdi, %rsi
+; AVX2-NEXT:    vptest %xmm0, %xmm0
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    orq %rax, (%rdx)
-; AVX2-NEXT:    orq %rdi, %r8
+; AVX2-NEXT:    vptest %xmm0, %xmm0
 ; AVX2-NEXT:    jne .LBB0_2
 ; AVX2-NEXT:  # %bb.1: # %if.then
 ; AVX2-NEXT:    orq %rax, (%rcx)
@@ -61,16 +55,13 @@ define void @pr166534(ptr %pa, ptr %pb, ptr %pc, ptr %pd) {
 ;
 ; AVX512-LABEL: pr166534:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    movq (%rdi), %r8
-; AVX512-NEXT:    movq 8(%rdi), %rdi
-; AVX512-NEXT:    xorq 8(%rsi), %rdi
-; AVX512-NEXT:    xorq (%rsi), %r8
+; AVX512-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX512-NEXT:    vpxor (%rsi), %xmm0, %xmm0
 ; AVX512-NEXT:    xorl %eax, %eax
-; AVX512-NEXT:    movq %r8, %rsi
-; AVX512-NEXT:    orq %rdi, %rsi
+; AVX512-NEXT:    vptest %xmm0, %xmm0
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    orq %rax, (%rdx)
-; AVX512-NEXT:    orq %rdi, %r8
+; AVX512-NEXT:    vptest %xmm0, %xmm0
 ; AVX512-NEXT:    jne .LBB0_2
 ; AVX512-NEXT:  # %bb.1: # %if.then
 ; AVX512-NEXT:    orq %rax, (%rcx)

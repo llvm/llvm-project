@@ -1199,26 +1199,66 @@ define i32 @chain_reset_i256(ptr %p0, ptr %p1, ptr %p2, i32 %position) nounwind 
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: chain_reset_i256:
-; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; X64-NEXT:    movl $-2, %eax
-; X64-NEXT:    roll %cl, %eax
-; X64-NEXT:    shrl $3, %ecx
-; X64-NEXT:    andl $28, %ecx
-; X64-NEXT:    andl %eax, (%rdi,%rcx)
-; X64-NEXT:    movq (%rdi), %rcx
-; X64-NEXT:    movq 8(%rdi), %r8
-; X64-NEXT:    orq 24(%rdi), %r8
-; X64-NEXT:    movq 16(%rdi), %rdi
-; X64-NEXT:    orq %rcx, %rdi
-; X64-NEXT:    movl (%rsi), %eax
-; X64-NEXT:    movl %ecx, (%rsi)
-; X64-NEXT:    movl (%rdx), %ecx
-; X64-NEXT:    addl %ecx, %eax
-; X64-NEXT:    orq %r8, %rdi
-; X64-NEXT:    cmovnel %ecx, %eax
-; X64-NEXT:    retq
+; SSE2-LABEL: chain_reset_i256:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSE2-NEXT:    movl $-2, %eax
+; SSE2-NEXT:    roll %cl, %eax
+; SSE2-NEXT:    shrl $3, %ecx
+; SSE2-NEXT:    andl $28, %ecx
+; SSE2-NEXT:    andl %eax, (%rdi,%rcx)
+; SSE2-NEXT:    movl (%rdi), %ecx
+; SSE2-NEXT:    movdqa (%rdi), %xmm0
+; SSE2-NEXT:    por 16(%rdi), %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    movmskps %xmm1, %edi
+; SSE2-NEXT:    xorl $15, %edi
+; SSE2-NEXT:    movl (%rsi), %eax
+; SSE2-NEXT:    movl %ecx, (%rsi)
+; SSE2-NEXT:    movl (%rdx), %ecx
+; SSE2-NEXT:    addl %ecx, %eax
+; SSE2-NEXT:    testl %edi, %edi
+; SSE2-NEXT:    cmovnel %ecx, %eax
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: chain_reset_i256:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; SSE4-NEXT:    movl $-2, %eax
+; SSE4-NEXT:    roll %cl, %eax
+; SSE4-NEXT:    shrl $3, %ecx
+; SSE4-NEXT:    andl $28, %ecx
+; SSE4-NEXT:    andl %eax, (%rdi,%rcx)
+; SSE4-NEXT:    movl (%rdi), %ecx
+; SSE4-NEXT:    movdqa (%rdi), %xmm0
+; SSE4-NEXT:    por 16(%rdi), %xmm0
+; SSE4-NEXT:    movl (%rsi), %eax
+; SSE4-NEXT:    movl %ecx, (%rsi)
+; SSE4-NEXT:    movl (%rdx), %ecx
+; SSE4-NEXT:    addl %ecx, %eax
+; SSE4-NEXT:    ptest %xmm0, %xmm0
+; SSE4-NEXT:    cmovnel %ecx, %eax
+; SSE4-NEXT:    retq
+;
+; AVX-LABEL: chain_reset_i256:
+; AVX:       # %bb.0:
+; AVX-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX-NEXT:    movl $-2, %eax
+; AVX-NEXT:    roll %cl, %eax
+; AVX-NEXT:    shrl $3, %ecx
+; AVX-NEXT:    andl $28, %ecx
+; AVX-NEXT:    andl %eax, (%rdi,%rcx)
+; AVX-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX-NEXT:    movl (%rdi), %ecx
+; AVX-NEXT:    movl (%rsi), %eax
+; AVX-NEXT:    movl %ecx, (%rsi)
+; AVX-NEXT:    movl (%rdx), %ecx
+; AVX-NEXT:    addl %ecx, %eax
+; AVX-NEXT:    vptest %ymm0, %ymm0
+; AVX-NEXT:    cmovnel %ecx, %eax
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
   %rem = and i32 %position, 255
   %ofs = zext nneg i32 %rem to i256
   %bit = shl nuw i256 1, %ofs

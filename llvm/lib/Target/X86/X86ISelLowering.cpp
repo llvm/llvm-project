@@ -2922,6 +2922,7 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
     return true;
   if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
     return true;
+
   EVT VT = Op.getValueType();
   unsigned Opcode = Op.getOpcode();
   if ((VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512) &&
@@ -2946,6 +2947,7 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
                                AssumeSingleUse);
     }
   }
+
   if (!ISD::isNormalLoad(Op.getNode()))
     return false;
 
@@ -2962,13 +2964,35 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
     if (ISD::isNormalStore(User))
       continue;
 
-    if (!mayFoldIntoVector(SDValue(User, 0), DAG, Subtarget,
+    if (User->getOpcode() == ISD::SETCC) {
+      ISD::CondCode CC = cast<CondCodeSDNode>(User->getOperand(2))->get();
+      if (CC == ISD::SETEQ || CC == ISD::SETNE) {
+        if (mayFoldIntoVector(User->getOperand(0), DAG, Subtarget,
+                              /*AssumeSingleUse=*/true) &&
+            mayFoldIntoVector(User->getOperand(1), DAG, Subtarget,
+                              /*AssumeSingleUse=*/true))
+          continue;
+      }
+      return false;
+    }
+
+    if (User->getOpcode() == ISD::TRUNCATE)
+      continue;
+
+    SDValue Value = SDValue(User, 0);
+
+    if (isa<ConstantSDNode>(Value) || isa<ConstantFPSDNode>(Value))
+      continue;
+
+    if (Value.getValueType().isVector())
+      continue;
+
+    if (!mayFoldIntoVector(Value, DAG, Subtarget,
                            /*AssumeSingleUse=*/true))
       return false;
   }
 
-  // All users are vectorizable, now check the load itself
-  return X86::mayFoldLoad(Op, Subtarget, /*AssumeSingleUse=*/false,
+  return X86::mayFoldLoad(Op, Subtarget, /*AssumeSingleUse=*/true,
                           /*IgnoreAlignment=*/true);
 }
 
