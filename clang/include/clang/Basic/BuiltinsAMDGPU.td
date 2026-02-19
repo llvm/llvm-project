@@ -137,7 +137,7 @@ def __builtin_amdgcn_s_decperflevel : AMDGPUBuiltin<"void(_Constant int)">;
 def __builtin_amdgcn_s_setprio : AMDGPUBuiltin<"void(_Constant short)">;
 def __builtin_amdgcn_ds_swizzle : AMDGPUBuiltin<"int(int, _Constant int)", [Const]>;
 def __builtin_amdgcn_ds_permute : AMDGPUBuiltin<"int(int, int)", [Const]>;
-def __builtin_amdgcn_ds_bpermute : AMDGPUBuiltin<"int(int, int)", [Const]>;
+def __builtin_amdgcn_ds_bpermute : AMDGPUBuiltin<"void(...)", [Const, CustomTypeChecking]>;
 def __builtin_amdgcn_readfirstlane : AMDGPUBuiltin<"int(int)", [Const]>;
 def __builtin_amdgcn_readlane : AMDGPUBuiltin<"int(int, int)", [Const]>;
 def __builtin_amdgcn_fmed3f : AMDGPUBuiltin<"float(float, float, float)", [Const]>;

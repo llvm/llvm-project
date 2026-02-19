@@ -165,6 +165,107 @@ Value *EmitAMDGPUGridSize(CodeGenFunction &CGF, unsigned Index) {
                   llvm::MDNode::get(CGF.getLLVMContext(), {}));
   return LD;
 }
+
+// Emits LLVM IR to lower __builtin_amdgcn_ds_bpermute over arbitrary
+// trivially-copyable types. The payload is converted to an integer, extended
+// to a multiple of 32 bits, and each 32-bit word is permuted via the hardware
+// ds_bpermute_b32 intrinsic. For aggregate types, a single store+load-as-int
+// is used, which SROA can optimize for small types.
+llvm::Value *emitAMDGCNDsBpermute(CodeGenFunction &CGF,
+                                  const CallExpr *Call,
+                                  ReturnValueSlot Dest) {
+  CGBuilderTy &Builder = CGF.Builder;
+  CodeGenModule &CGM = CGF.CGM;
+  const llvm::DataLayout &DL = CGM.getDataLayout();
+
+  llvm::Type *I32Ty = Builder.getInt32Ty();
+  llvm::Function *BpermFn =
+      CGM.getIntrinsic(llvm::Intrinsic::amdgcn_ds_bpermute);
+
+  // Coerce index argument to i32.
+  llvm::Value *Index = CGF.EmitScalarExpr(Call->getArg(0));
+  if (Index->getType()->isPointerTy())
+    Index = Builder.CreatePtrToInt(
+        Index,
+        Builder.getIntNTy(DL.getPointerSizeInBits(
+            Index->getType()->getPointerAddressSpace())));
+  Index = Builder.CreateIntCast(Index, I32Ty, /*isSigned=*/false);
+
+  QualType SrcQT = Call->getArg(1)->getType();
+  llvm::Type *RetTy = CGF.ConvertType(Call->getType());
+  bool IsAggregate = SrcQT->isAggregateType() || SrcQT->isAnyComplexType();
+
+  // Convert the source value to an integer of the same bit width.
+  // For scalars/vectors: bitcast or ptrtoint to iN.
+  // For aggregates: store to temp, load as iN.
+  llvm::Value *SrcInt;
+  unsigned SrcBits;
+
+  if (!IsAggregate) {
+    llvm::Value *SrcVal = CGF.EmitScalarExpr(Call->getArg(1));
+    SrcBits = DL.getTypeSizeInBits(SrcVal->getType()).getFixedValue();
+    llvm::Type *SrcIntTy = Builder.getIntNTy(SrcBits);
+
+    SrcInt = Builder.CreateBitOrPointerCast(SrcVal, SrcIntTy);
+  } else {
+    llvm::Type *SrcTy = CGF.ConvertType(SrcQT);
+    uint64_t SizeBytes = DL.getTypeAllocSize(SrcTy);
+    SrcBits = SizeBytes * 8;
+    llvm::Type *SrcIntTy = Builder.getIntNTy(SrcBits);
+
+    // Store aggregate to temp, load back as integer.
+    Address SrcAddr = CGF.CreateMemTemp(SrcQT, "bperm.src");
+    CGF.EmitAnyExprToMem(Call->getArg(1), SrcAddr, SrcQT.getQualifiers(),
+                         /*IsInit=*/true);
+    Address AsIntAddr = SrcAddr.withElementType(SrcIntTy);
+    SrcInt = Builder.CreateLoad(AsIntAddr);
+  }
+
+  // Zero-extend to the next multiple of 32 bits.
+  unsigned PaddedBits = llvm::alignTo(SrcBits, 32u);
+  SrcInt = Builder.CreateZExtOrTrunc(SrcInt, Builder.getIntNTy(PaddedBits));
+
+  // Permute each 32-bit word.
+  unsigned NumWords = PaddedBits / 32;
+  llvm::Value *ResInt = nullptr;
+
+  for (unsigned I = 0; I < NumWords; ++I) {
+    // Extract word: (SrcInt >> (I * 32)) & 0xFFFFFFFF
+    llvm::Value *Word = SrcInt;
+    if (I > 0)
+      Word = Builder.CreateLShr(Word,
+                 llvm::ConstantInt::get(Word->getType(), I * 32));
+    Word = Builder.CreateTrunc(Word, I32Ty);
+
+    // Call ds_bpermute on this word.
+    llvm::Value *Perm = Builder.CreateCall(BpermFn, {Index, Word});
+
+    // Place result word into ResInt at the correct position.
+    llvm::Value *Extended =
+        Builder.CreateZExt(Perm, Builder.getIntNTy(PaddedBits));
+    if (I > 0)
+      Extended = Builder.CreateShl(Extended,
+                     llvm::ConstantInt::get(Extended->getType(), I * 32));
+    ResInt = (I == 0) ? Extended : Builder.CreateOr(ResInt, Extended);
+  }
+
+  // Truncate back to original bit width.
+  ResInt = Builder.CreateZExtOrTrunc(ResInt, Builder.getIntNTy(SrcBits));
+
+  // Convert back to the original type.
+  if (IsAggregate) {
+    // Store integer to temp, load back as aggregate.
+    llvm::Type *ResTy = CGF.ConvertType(SrcQT);
+    Address DestAddr = Dest.getAddress();
+    Address AsIntAddr = DestAddr.withElementType(Builder.getIntNTy(SrcBits));
+    Builder.CreateStore(ResInt, AsIntAddr);
+    return Builder.getTrue();
+  }
+
+  // Scalar/vector result.
+  return Builder.CreateBitOrPointerCast(ResInt, RetTy);
+}
+
 } // namespace
 
 // Generates the IR for __builtin_read_exec_*.
@@ -416,7 +517,8 @@ static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID) {
 }
 
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
-                                              const CallExpr *E) {
+                                              const CallExpr *E,
+                                              ReturnValueSlot ReturnValue) {
   llvm::AtomicOrdering AO = llvm::AtomicOrdering::SequentiallyConsistent;
   llvm::SyncScope::ID SSID;
   switch (BuiltinID) {
@@ -493,6 +595,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_ds_swizzle:
     return emitBuiltinWithOneOverloadedType<2>(*this, E,
                                                Intrinsic::amdgcn_ds_swizzle);
+
+  case AMDGPU::BI__builtin_amdgcn_ds_bpermute:
+    return emitAMDGCNDsBpermute(*this, E, ReturnValue);
+
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
   case AMDGPU::BI__builtin_amdgcn_update_dpp: {
