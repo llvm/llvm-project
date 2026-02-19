@@ -2261,15 +2261,15 @@ bool TargetLowering::SimplifyDemandedBits(
     // TODO: Add FSHL equivalent?
     if (!IsFSHL && !DemandedBits.isAllOnes() &&
         (!TLO.LegalOperations() || isOperationLegal(ISD::SRL, VT))) {
-      unsigned MaxShiftAmt = BitWidth - 1; // urem(Op2, BitWidth)
       KnownBits KnownAmt =
           TLO.DAG.computeKnownBits(Op2, DemandedElts, Depth + 1);
-      if (KnownAmt.getMaxValue().ult(BitWidth))
-        MaxShiftAmt = KnownAmt.getMaxValue().getZExtValue();
-      // Check we don't demand any shifted bits outside Op1.
-      if ((DemandedBits.getActiveBits() + MaxShiftAmt) <= BitWidth) {
-        SDValue NewOp = TLO.DAG.getNode(ISD::SRL, dl, VT, Op1, Op2);
-        return TLO.CombineTo(Op, NewOp);
+      if (KnownAmt.getMaxValue().ult(BitWidth)) {
+        unsigned MaxShiftAmt = KnownAmt.getMaxValue().getZExtValue();
+        // Check we don't demand any shifted bits outside Op1.
+        if (DemandedBits.countl_zero() >= MaxShiftAmt) {
+          SDValue NewOp = TLO.DAG.getNode(ISD::SRL, dl, VT, Op1, Op2);
+          return TLO.CombineTo(Op, NewOp);
+        }
       }
     }
 
