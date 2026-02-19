@@ -2392,6 +2392,11 @@ public:
   /// positive or negative zero.
   LLVM_ABI bool isKnownNeverZeroFloat(SDValue Op) const;
 
+  /// Test whether the given SDValue is known to contain non-zero value(s) for
+  /// all the demanded elements.
+  bool isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
+                        unsigned Depth = 0) const;
+
   /// Test whether the given SDValue is known to contain non-zero value(s).
   LLVM_ABI bool isKnownNeverZero(SDValue Op, unsigned Depth = 0) const;
 
