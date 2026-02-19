@@ -32,6 +32,7 @@
 #include <vector>
 
 #include "omp-tools.h"
+#include "omp.h" /* For omp_control_tool_result_t */
 
 // Define attribute that indicates that the fall through from the previous
 // case label is intentional and should not be diagnosed by a compiler
@@ -51,6 +52,9 @@
 #endif
 
 static int hasReductionCallback;
+
+enum ArcherState { ACTIVE = 0, PAUSED, ENDED };
+static thread_local ArcherState archer_state{ACTIVE};
 
 namespace {
 class ArcherFlags {
@@ -171,10 +175,18 @@ DECLARE_TSAN_FUNCTION(__tsan_func_exit)
 // This marker is used to define a happens-before arc. The race detector will
 // infer an arc from the begin to the end when they share the same pointer
 // argument.
-#define TsanHappensBefore(cv) AnnotateHappensBefore(__FILE__, __LINE__, cv)
+#define TsanHappensBefore(cv)                                                  \
+  do {                                                                         \
+    if (archer_state == ACTIVE)                                                \
+      AnnotateHappensBefore(__FILE__, __LINE__, cv);                           \
+  } while (0)
 
 // This marker defines the destination of a happens-before arc.
-#define TsanHappensAfter(cv) AnnotateHappensAfter(__FILE__, __LINE__, cv)
+#define TsanHappensAfter(cv)                                                   \
+  do {                                                                         \
+    if (archer_state == ACTIVE)                                                \
+      AnnotateHappensAfter(__FILE__, __LINE__, cv);                            \
+  } while (0)
 
 // Ignore any races on writes between here and the next TsanIgnoreWritesEnd.
 #define TsanIgnoreWritesBegin() AnnotateIgnoreWritesBegin(__FILE__, __LINE__)
@@ -601,6 +613,42 @@ static inline TaskData *ToTaskData(ompt_data_t *task_data) {
 static std::unordered_map<ompt_wait_id_t, std::mutex> Locks;
 static std::mutex LocksMutex;
 
+static int ompt_tsan_control_tool(uint64_t command, uint64_t modifier,
+                                  void *arg, const void *codeptr_ra) {
+  omp_control_tool_result_t res = omp_control_tool_ignored;
+  switch (command) {
+  case omp_control_tool_start:
+    if (archer_state == ENDED || archer_state == ACTIVE)
+      return omp_control_tool_ignored;
+    if (archer_flags->verbose)
+      std::cout << "[Archer] Started operation\n";
+    archer_state = ACTIVE;
+    TsanIgnoreWritesEnd();
+    return omp_control_tool_success;
+  case omp_control_tool_pause:
+    if (archer_flags->verbose)
+      std::cout << "[Archer] Paused operation\n";
+    if (archer_state == ACTIVE) {
+      TsanIgnoreWritesBegin();
+      archer_state = PAUSED;
+    }
+    return omp_control_tool_success;
+  case omp_control_tool_flush:
+    return omp_control_tool_ignored;
+  case omp_control_tool_end:
+    if (archer_flags->verbose) {
+      std::cout << "[Archer] Ended operation\n";
+    }
+    if (archer_state == ACTIVE)
+      TsanIgnoreWritesBegin();
+    archer_state = ENDED;
+    return omp_control_tool_success;
+  default:
+    return omp_control_tool_ignored;
+  }
+  return res;
+}
+
 static void ompt_tsan_thread_begin(ompt_thread_t thread_type,
                                    ompt_data_t *thread_data) {
   ParallelDataPool::ThreadDataPool = new ParallelDataPool;
@@ -625,6 +673,8 @@ static void ompt_tsan_thread_end(ompt_data_t *thread_data) {
   delete TaskDataPool::ThreadDataPool;
   delete DependencyDataPool::ThreadDataPool;
   TsanIgnoreWritesEnd();
+  if (archer_state != ACTIVE)
+    TsanIgnoreWritesEnd();
 }
 
 /// OMPT event callbacks for handling parallel regions.
@@ -1191,6 +1241,7 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
   findTsanFunction(__tsan_func_entry, (void (*)(const void *)));
   findTsanFunction(__tsan_func_exit, (void (*)(void)));
 
+  SET_CALLBACK(control_tool);
   SET_CALLBACK(thread_begin);
   SET_CALLBACK(thread_end);
   SET_CALLBACK(parallel_begin);
@@ -1238,6 +1289,7 @@ ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
   if (!archer_flags->enabled) {
     if (archer_flags->verbose)
       std::cout << "Archer disabled, stopping operation" << std::endl;
+    archer_state = ENDED;
     delete archer_flags;
     return NULL;
   }
