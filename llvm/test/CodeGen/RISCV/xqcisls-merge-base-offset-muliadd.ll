@@ -6,9 +6,8 @@
 define i32 @load_scaled(i32 %idx) nounwind {
 ; CHECK-LABEL: load_scaled:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    qc.e.li a1, sym
-; CHECK-NEXT:    sh2add a0, a0, a1
-; CHECK-NEXT:    lw a0, 16(a0)
+; CHECK-NEXT:    qc.e.li a1, sym+16
+; CHECK-NEXT:    qc.lrw a0, a1, a0, 2
 ; CHECK-NEXT:    ret
 entry:
   %baseptr = getelementptr i8, i8* @sym, i32 0
@@ -25,9 +24,8 @@ entry:
 define void @store_scaled(i32 %idx, i32 %val) nounwind {
 ; CHECK-LABEL: store_scaled:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    qc.e.li a2, sym
-; CHECK-NEXT:    sh3add a0, a0, a2
-; CHECK-NEXT:    sw a1, 12(a0)
+; CHECK-NEXT:    qc.e.li a2, sym+12
+; CHECK-NEXT:    qc.srw a1, a2, a0, 3
 ; CHECK-NEXT:    ret
 entry:
   %baseptr = getelementptr i8, i8* @sym, i32 0
@@ -44,9 +42,8 @@ entry:
 define i32 @load_scaled_i8(i32 %idx) nounwind {
 ; CHECK-LABEL: load_scaled_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    qc.e.li a1, sym
-; CHECK-NEXT:    sh2add a0, a0, a1
-; CHECK-NEXT:    lb a0, 5(a0)
+; CHECK-NEXT:    qc.e.li a1, sym+5
+; CHECK-NEXT:    qc.lrb a0, a1, a0, 2
 ; CHECK-NEXT:    ret
 entry:
   %baseptr = getelementptr i8, i8* @sym, i32 0
@@ -63,9 +60,8 @@ entry:
 define void @store_scaled_i8(i32 %idx, i32 %val) nounwind {
 ; CHECK-LABEL: store_scaled_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    qc.e.li a2, sym
-; CHECK-NEXT:    sh3add a0, a0, a2
-; CHECK-NEXT:    sb a1, 7(a0)
+; CHECK-NEXT:    qc.e.li a2, sym+7
+; CHECK-NEXT:    qc.srb a1, a2, a0, 3
 ; CHECK-NEXT:    ret
 entry:
   %baseptr = getelementptr i8, i8* @sym, i32 0
@@ -82,9 +78,8 @@ entry:
 define i32 @load_scaled_i16(i32 %idx) nounwind {
 ; CHECK-LABEL: load_scaled_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    qc.e.li a1, sym
-; CHECK-NEXT:    sh1add a0, a0, a1
-; CHECK-NEXT:    lh a0, 6(a0)
+; CHECK-NEXT:    qc.e.li a1, sym+6
+; CHECK-NEXT:    qc.lrh a0, a1, a0, 1
 ; CHECK-NEXT:    ret
 entry:
   %baseptr = getelementptr i8, i8* @sym, i32 0
@@ -101,9 +96,8 @@ entry:
 define void @store_scaled_i16(i32 %idx, i32 %val) nounwind {
 ; CHECK-LABEL: store_scaled_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    qc.e.li a2, sym
-; CHECK-NEXT:    sh2add a0, a0, a2
-; CHECK-NEXT:    sh a1, 10(a0)
+; CHECK-NEXT:    qc.e.li a2, sym+10
+; CHECK-NEXT:    qc.srh a1, a2, a0, 2
 ; CHECK-NEXT:    ret
 entry:
   %baseptr = getelementptr i8, i8* @sym, i32 0

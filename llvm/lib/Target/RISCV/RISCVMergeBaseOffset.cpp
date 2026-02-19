@@ -43,6 +43,7 @@ public:
                          MachineInstr &TailShXAdd, Register GSReg);
 
   bool foldIntoMemoryOps(MachineInstr &Hi, MachineInstr &Lo);
+  bool foldShxaddIntoScaledMemory(MachineInstr &Hi, MachineInstr &Lo);
 
   RISCVMergeBaseOffsetOpt() : MachineFunctionPass(ID) {}
 
@@ -575,6 +576,114 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
   return true;
 }
 
+// Try to fold sequences of the form:
+//   Hi/lo:    qc.e.li vreg1, s           -> qc.e.lo vreg1, s+imm
+//   TailAdd:  shxadd vreg2, vreg3, vreg1 -> deleted
+//   Tail:     lx vreg4, imm(vreg2)       -> qc.lrx vreg4, vreg1, vreg3, (1/2/3)
+bool RISCVMergeBaseOffsetOpt::foldShxaddIntoScaledMemory(MachineInstr &Hi,
+                                                         MachineInstr &Lo) {
+  if (!ST->hasVendorXqcisls())
+    return false;
+
+  if (Hi.getOpcode() != RISCV::QC_E_LI)
+    return false;
+
+  Register BaseReg = Hi.getOperand(0).getReg();
+  if (!BaseReg.isVirtual() || !MRI->hasOneUse(BaseReg))
+    return false;
+
+  MachineInstr &ShxAdd = *MRI->use_instr_begin(BaseReg);
+  unsigned ShxOpc = ShxAdd.getOpcode();
+  if (ShxOpc != RISCV::SH1ADD && ShxOpc != RISCV::SH2ADD &&
+      ShxOpc != RISCV::SH3ADD)
+    return false;
+
+  // shxadd Rd, Rs1, Rs2
+  Register Rd = ShxAdd.getOperand(0).getReg();
+  Register Rs1 = ShxAdd.getOperand(1).getReg();
+  Register Rs2 = ShxAdd.getOperand(2).getReg();
+
+  if (Rs2 != BaseReg)
+    return false;
+
+  if (!Rd.isVirtual() || !MRI->hasOneUse(Rd))
+    return false;
+
+  MachineInstr &TailMem = *MRI->use_instr_begin(Rd);
+  unsigned Opc = TailMem.getOpcode();
+
+  if (!TailMem.getOperand(1).isReg() || TailMem.getOperand(1).getReg() != Rd)
+    return false;
+  if (!TailMem.getOperand(2).isImm())
+    return false;
+  int64_t Imm = TailMem.getOperand(2).getImm();
+
+  // Update QC_E_LI offset.
+  int64_t NewOffset = SignExtend64<32>(Hi.getOperand(1).getOffset() + Imm);
+
+  if (!isInt<32>(NewOffset))
+    return false;
+
+  unsigned NewOpc = 0;
+  switch (Opc) {
+  case RISCV::LB:
+    NewOpc = RISCV::QC_LRB;
+    break;
+  case RISCV::LBU:
+    NewOpc = RISCV::QC_LRBU;
+    break;
+  case RISCV::LH:
+    NewOpc = RISCV::QC_LRH;
+    break;
+  case RISCV::LHU:
+    NewOpc = RISCV::QC_LRHU;
+    break;
+  case RISCV::LW:
+    NewOpc = RISCV::QC_LRW;
+    break;
+  case RISCV::SB:
+    NewOpc = RISCV::QC_SRB;
+    break;
+  case RISCV::SH:
+    NewOpc = RISCV::QC_SRH;
+    break;
+  case RISCV::SW:
+    NewOpc = RISCV::QC_SRW;
+    break;
+  default:
+    return false;
+  }
+
+  Hi.getOperand(1).setOffset(NewOffset);
+  TailMem.getOperand(2).ChangeToImmediate(0);
+
+  // Build scaled load/store.
+  auto *TII = ST->getInstrInfo();
+  auto *MBB = TailMem.getParent();
+  RegState DestRegState;
+  DestRegState = TailMem.mayLoad()
+                     ? RegState::Define
+                     : getKillRegState(TailMem.getOperand(0).isKill());
+  unsigned ShAmt = (ShxOpc == RISCV::SH1ADD)   ? 1
+                   : (ShxOpc == RISCV::SH2ADD) ? 2
+                                               : 3;
+
+  // Ensure index register satisfies GPRNoX0 class required by QC_LR*/QC_SR*.
+  MRI->constrainRegClass(Rs1, &RISCV::GPRNoX0RegClass);
+
+  BuildMI(*MBB, TailMem, TailMem.getDebugLoc(), TII->get(NewOpc))
+      .addReg(TailMem.getOperand(0).getReg(), DestRegState)
+      .addReg(Rs2, getKillRegState(ShxAdd.getOperand(2).isKill()))
+      .addReg(Rs1, getKillRegState(ShxAdd.getOperand(1).isKill()))
+      .addImm(ShAmt)
+      .cloneMemRefs(TailMem);
+
+  MRI->replaceRegWith(Rd, Rs2);
+  TailMem.eraseFromParent();
+  ShxAdd.eraseFromParent();
+  return true;
+}
+
 bool RISCVMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
@@ -591,6 +700,7 @@ bool RISCVMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
         continue;
       MadeChange |= detectAndFoldOffset(Hi, *Lo);
       MadeChange |= foldIntoMemoryOps(Hi, *Lo);
+      MadeChange |= foldShxaddIntoScaledMemory(Hi, *Lo);
     }
   }
 
