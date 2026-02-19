@@ -10042,48 +10042,93 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
 
   auto *Legal = CostCtx.CM.Legal;
 
-  auto *MiddleVPBB = Plan.getMiddleBlock();
-  VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
+  // Few helpers to process different kinds of memory operations.
 
-  for (VPInstruction *VPI : MemOps) {
-    Instruction *Instr = cast<Instruction>(VPI->getUnderlyingValue());
-    RecipeBuilder.getVPBuilder().setInsertPoint(VPI);
+  // To be used as argument to `VPlanTransforms::runPass` which explicitly
+  // specified pass name, hence `VPlan &` parameter.
+  auto ProcessSubset = [&](VPlan &, auto ProcessVPInst) {
+    SmallVector<VPInstruction *> RemainingMemOps;
+    for (VPInstruction *VPI : MemOps) {
+      RecipeBuilder.getVPBuilder().setInsertPoint(VPI);
 
-    auto ReplaceWith = [&](VPRecipeBase *New) {
-      RecipeBuilder.setRecipe(Instr, New);
-      RecipeBuilder.getVPBuilder().insert(New);
-      if (VPI->getOpcode() == Instruction::Load)
-        VPI->replaceAllUsesWith(New->getVPSingleValue());
-      VPI->eraseFromParent();
-    };
-
-    // The stores with invariant address inside the loop will be deleted, and
-    // in the exit block, a uniform store recipe will be created for the final
-    // invariant store of the reduction.
-    StoreInst *SI;
-    if ((SI = dyn_cast<StoreInst>(Instr)) &&
-        Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
-      // Only create recipe for the final invariant store of the reduction.
-      if (Legal->isInvariantStoreOfReduction(SI)) {
-        auto *Recipe = new VPReplicateRecipe(
-            SI, VPI->operandsWithoutMask(), true /* IsUniform */,
-            nullptr /*Mask*/, *VPI, *VPI, VPI->getDebugLoc());
-        Recipe->insertBefore(*MiddleVPBB, MBIP);
-      }
-      VPI->eraseFromParent();
-      continue;
+      if (!ProcessVPInst(VPI))
+        RemainingMemOps.push_back(VPI);
     }
 
-    if (VPI->getOpcode() == Instruction::Store)
-      if (auto HistInfo = Legal->getHistogramInfo(cast<StoreInst>(Instr))) {
-        ReplaceWith(RecipeBuilder.tryToWidenHistogram(*HistInfo, VPI));
-        continue;
-      }
+    MemOps.clear();
+    std::swap(MemOps, RemainingMemOps);
+  };
 
-    VPRecipeBase *Recipe = RecipeBuilder.tryToWidenMemory(VPI, Range);
-    if (!Recipe)
-      Recipe = RecipeBuilder.handleReplication(cast<VPInstruction>(VPI), Range);
+  auto ReplaceWith = [&](VPInstruction *VPI, VPRecipeBase *New) {
+    Instruction *Instr = cast<Instruction>(VPI->getUnderlyingValue());
+    RecipeBuilder.setRecipe(Instr, New);
+    RecipeBuilder.getVPBuilder().insert(New);
+    if (VPI->getOpcode() == Instruction::Load)
+      VPI->replaceAllUsesWith(New->getVPSingleValue());
+    VPI->eraseFromParent();
 
-    ReplaceWith(Recipe);
-  }
+    return true;
+  };
+
+  auto Scalarize = [&](VPInstruction *VPI) {
+    return ReplaceWith(VPI, RecipeBuilder.handleReplication(VPI, Range));
+  };
+
+  VPlanTransforms::runPass(
+      "lowerMemoryIdioms", ProcessSubset, Plan,
+      // Reduction stores need to happen in the same order, so MBIP shares state
+      // between iterations, hence mutable lambda.
+      [&, MBIP = Plan.getMiddleBlock()->getFirstNonPhi()](
+          VPInstruction *VPI) mutable {
+        Instruction *Instr = cast<Instruction>(VPI->getUnderlyingValue());
+
+        // The stores with invariant address inside the loop will be deleted,
+        // and in the exit block, a uniform store recipe will be created for
+        // the final invariant store of the reduction.
+        StoreInst *SI = dyn_cast<StoreInst>(Instr);
+        if (!SI)
+          return false;
+        if (Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
+          // Only create recipe for the final invariant store of the
+          // reduction.
+          if (Legal->isInvariantStoreOfReduction(SI)) {
+            auto *Recipe = new VPReplicateRecipe(
+                SI, VPI->operandsWithoutMask(), true /* IsUniform */,
+                nullptr /*Mask*/, *VPI, *VPI, VPI->getDebugLoc());
+            Recipe->insertBefore(*Plan.getMiddleBlock(), MBIP);
+          }
+          VPI->eraseFromParent();
+          return true;
+        }
+
+        if (auto HistInfo = Legal->getHistogramInfo(cast<StoreInst>(Instr))) {
+          return ReplaceWith(VPI,
+                             RecipeBuilder.tryToWidenHistogram(*HistInfo, VPI));
+        }
+
+        return false;
+      });
+
+  // If the instruction's allocated size doesn't equal it's type size, it
+  // requires padding and will be scalarized.
+  VPlanTransforms::runPass(
+      "scalarizeMemOpsWithIrregularTypes", ProcessSubset, Plan,
+      [&](VPInstruction *VPI) {
+        Instruction *I = VPI->getUnderlyingInstr();
+        if (hasIrregularType(getLoadStoreType(I), I->getDataLayout()))
+          return Scalarize(VPI);
+
+        return false;
+      });
+
+  VPlanTransforms::runPass("delegateMemOpWideningToLegacyCM", ProcessSubset,
+                           Plan, [&](VPInstruction *VPI) {
+                             VPRecipeBase *Recipe =
+                                 RecipeBuilder.tryToWidenMemory(VPI, Range);
+                             if (!Recipe)
+                               Recipe = RecipeBuilder.handleReplication(
+                                   cast<VPInstruction>(VPI), Range);
+
+                             return ReplaceWith(VPI, Recipe);
+                           });
 }
