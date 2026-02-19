@@ -34,8 +34,9 @@ void f2() {
 }
 }
 
-// Anonymous namespace
+// Anonymous namespace (all vars have internal linkage)
 namespace {
+  int anon_ns_unused; // expected-warning {{variable 'anon_ns_unused' set but not used}}
   static int anon_ns_static_unused; // expected-warning {{variable 'anon_ns_static_unused' set but not used}}
 
   // Should not warn on static data members in current implementation.
@@ -47,8 +48,9 @@ namespace {
   int AnonClass::unused_member = 0;
 
   void f3() {
-    anon_ns_static_unused = 1;
-    AnonClass::unused_member = 2;
+    anon_ns_unused = 1;
+    anon_ns_static_unused = 2;
+    AnonClass::unused_member = 3;
   }
 }
 
