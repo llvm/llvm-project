@@ -639,6 +639,14 @@ defm DPPSrc1SGPR : AMDGPUSubtargetFeature<"dpp-src1-sgpr",
   /*GenPredicate=*/0
 >;
 
+defm DPPWavefrontShifts : AMDGPUSubtargetFeature<"dpp-wavefront-shifts",
+  "Support DPP wave_shl/wave_rol/wave_shr/wave_ror"
+>;
+
+defm DPPBroadcasts : AMDGPUSubtargetFeature<"dpp-row-bcast",
+  "Support DPP row_bcast15/row_bcast31"
+>;
+
 defm PackedFP32Ops : AMDGPUSubtargetFeature<"packed-fp32-ops",
   "Support packed fp32 instructions"
 >;
@@ -1339,6 +1347,7 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureSMemRealTime, FeatureVGPRIndexMode, FeatureMovrel,
    FeatureScalarStores, FeatureInv2PiInlineImm,
    FeatureSDWA, FeatureSDWAOutModsVOPC, FeatureSDWAMac, FeatureDPP,
+   FeatureDPPWavefrontShifts, FeatureDPPBroadcasts,
    FeatureIntClamp, FeatureTrigReducedRange, FeatureGFX8Insts,
    FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
    FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureFastDenormalF32,
@@ -1356,8 +1365,8 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureScalarStores, FeatureInv2PiInlineImm,
    FeatureApertureRegs, FeatureGFX9Insts, FeatureVOP3PInsts, FeatureVGPRIndexMode,
-   FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
-   FeatureSDWA, FeatureSDWAOmod, FeatureSDWAScalar, FeatureSDWASdst,
+   FeatureFastFMAF32, FeatureDPP, FeatureDPPWavefrontShifts, FeatureDPPBroadcasts,
+   FeatureIntClamp, FeatureSDWA, FeatureSDWAOmod, FeatureSDWAScalar, FeatureSDWASdst,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
    FeatureAddNoCarryInsts, FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts,
    FeatureScalarFlatScratchInsts, FeatureScalarAtomics, FeatureR128A16,
