@@ -17,14 +17,12 @@ define void @test(ptr %A, ptr %B, ptr %C, i1 %cond) {
 ; CHECK-NEXT:    [[COL_LOAD138:%.*]] = load <2 x double>, ptr [[VEC_GEP137]], align 8
 ; CHECK-NEXT:    [[VEC_GEP139:%.*]] = getelementptr i8, ptr [[B]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD140:%.*]] = load <2 x double>, ptr [[VEC_GEP139]], align 8
-; CHECK-NEXT:    [[STORE_BEGIN:%.*]] = ptrtoint ptr [[C:%.*]] to i64
-; CHECK-NEXT:    [[STORE_END:%.*]] = add nuw nsw i64 [[STORE_BEGIN]], 72
-; CHECK-NEXT:    [[LOAD_BEGIN:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[STORE_END]], [[LOAD_BEGIN]]
+; CHECK-NEXT:    [[STORE_END:%.*]] = getelementptr inbounds nuw i8, ptr [[C:%.*]], i64 72
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[A]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; CHECK:       alias_cont:
-; CHECK-NEXT:    [[LOAD_END:%.*]] = add nuw nsw i64 [[LOAD_BEGIN]], 48
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[LOAD_END]], [[STORE_BEGIN]]
+; CHECK-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 48
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[C]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [6 x double], align 8
@@ -32,14 +30,12 @@ define void @test(ptr %A, ptr %B, ptr %C, i1 %cond) {
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[A]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
-; CHECK-NEXT:    [[STORE_BEGIN4:%.*]] = ptrtoint ptr [[C]] to i64
-; CHECK-NEXT:    [[STORE_END5:%.*]] = add nuw nsw i64 [[STORE_BEGIN4]], 72
-; CHECK-NEXT:    [[LOAD_BEGIN6:%.*]] = ptrtoint ptr [[B]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[STORE_END5]], [[LOAD_BEGIN6]]
+; CHECK-NEXT:    [[STORE_END4:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 72
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[B]], [[STORE_END4]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[ALIAS_CONT1:%.*]], label [[NO_ALIAS3:%.*]]
 ; CHECK:       alias_cont1:
-; CHECK-NEXT:    [[LOAD_END7:%.*]] = add nuw nsw i64 [[LOAD_BEGIN6]], 48
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[LOAD_END7]], [[STORE_BEGIN4]]
+; CHECK-NEXT:    [[LOAD_END5:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 48
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[C]], [[LOAD_END5]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[COPY2:%.*]], label [[NO_ALIAS3]]
 ; CHECK:       copy2:
 ; CHECK-NEXT:    [[TMP6:%.*]] = alloca [6 x double], align 8
@@ -125,35 +121,31 @@ define void @test(ptr %A, ptr %B, ptr %C, i1 %cond) {
 ; CHECK-NEXT:    store <2 x double> [[TMP31]], ptr [[VEC_GEP142]], align 8
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[STORE_BEGIN64:%.*]] = ptrtoint ptr [[C]] to i64
-; CHECK-NEXT:    [[STORE_END65:%.*]] = add nuw nsw i64 [[STORE_BEGIN64]], 72
-; CHECK-NEXT:    [[LOAD_BEGIN66:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    [[TMP32:%.*]] = icmp ugt i64 [[STORE_END65]], [[LOAD_BEGIN66]]
+; CHECK-NEXT:    [[STORE_END62:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 72
+; CHECK-NEXT:    [[TMP32:%.*]] = icmp ult ptr [[A]], [[STORE_END62]]
 ; CHECK-NEXT:    br i1 [[TMP32]], label [[ALIAS_CONT61:%.*]], label [[NO_ALIAS63:%.*]]
-; CHECK:       alias_cont61:
-; CHECK-NEXT:    [[LOAD_END67:%.*]] = add nuw nsw i64 [[LOAD_BEGIN66]], 48
-; CHECK-NEXT:    [[TMP33:%.*]] = icmp ugt i64 [[LOAD_END67]], [[STORE_BEGIN64]]
+; CHECK:       alias_cont59:
+; CHECK-NEXT:    [[LOAD_END63:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 48
+; CHECK-NEXT:    [[TMP33:%.*]] = icmp ult ptr [[C]], [[LOAD_END63]]
 ; CHECK-NEXT:    br i1 [[TMP33]], label [[COPY62:%.*]], label [[NO_ALIAS63]]
-; CHECK:       copy62:
+; CHECK:       copy60:
 ; CHECK-NEXT:    [[TMP34:%.*]] = alloca [6 x double], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(48) [[TMP34]], ptr noundef nonnull align 8 dereferenceable(48) [[A]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS63]]
-; CHECK:       no_alias63:
+; CHECK:       no_alias61:
 ; CHECK-NEXT:    [[TMP35:%.*]] = phi ptr [ [[A]], [[END]] ], [ [[A]], [[ALIAS_CONT61]] ], [ [[TMP34]], [[COPY62]] ]
-; CHECK-NEXT:    [[STORE_BEGIN71:%.*]] = ptrtoint ptr [[C]] to i64
-; CHECK-NEXT:    [[STORE_END72:%.*]] = add nuw nsw i64 [[STORE_BEGIN71]], 72
-; CHECK-NEXT:    [[LOAD_BEGIN73:%.*]] = ptrtoint ptr [[B]] to i64
-; CHECK-NEXT:    [[TMP36:%.*]] = icmp ugt i64 [[STORE_END72]], [[LOAD_BEGIN73]]
+; CHECK-NEXT:    [[STORE_END67:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 72
+; CHECK-NEXT:    [[TMP36:%.*]] = icmp ult ptr [[B]], [[STORE_END67]]
 ; CHECK-NEXT:    br i1 [[TMP36]], label [[ALIAS_CONT68:%.*]], label [[NO_ALIAS70:%.*]]
-; CHECK:       alias_cont68:
-; CHECK-NEXT:    [[LOAD_END74:%.*]] = add nuw nsw i64 [[LOAD_BEGIN73]], 48
-; CHECK-NEXT:    [[TMP37:%.*]] = icmp ugt i64 [[LOAD_END74]], [[STORE_BEGIN71]]
+; CHECK:       alias_cont64:
+; CHECK-NEXT:    [[LOAD_END68:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 48
+; CHECK-NEXT:    [[TMP37:%.*]] = icmp ult ptr [[C]], [[LOAD_END68]]
 ; CHECK-NEXT:    br i1 [[TMP37]], label [[COPY69:%.*]], label [[NO_ALIAS70]]
-; CHECK:       copy69:
+; CHECK:       copy65:
 ; CHECK-NEXT:    [[TMP38:%.*]] = alloca [6 x double], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(48) [[TMP38]], ptr noundef nonnull align 8 dereferenceable(48) [[B]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS70]]
-; CHECK:       no_alias70:
+; CHECK:       no_alias66:
 ; CHECK-NEXT:    [[TMP39:%.*]] = phi ptr [ [[B]], [[NO_ALIAS63]] ], [ [[B]], [[ALIAS_CONT68]] ], [ [[TMP38]], [[COPY69]] ]
 ; CHECK-NEXT:    [[COL_LOAD75:%.*]] = load <2 x double>, ptr [[TMP35]], align 8
 ; CHECK-NEXT:    [[VEC_GEP76:%.*]] = getelementptr i8, ptr [[TMP35]], i64 24

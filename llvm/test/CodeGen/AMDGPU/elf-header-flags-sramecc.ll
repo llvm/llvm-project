@@ -7,7 +7,7 @@
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx908 -mattr=+sramecc < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX908 %s
 
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx90a < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX90A %s
-; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx90a < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX90A %s
+; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx90a -mattr=+sramecc < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX90A %s
 
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx942 < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX942 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx942 -mattr=+sramecc < %s | llvm-readobj --file-header - | FileCheck --check-prefix=SRAM-ECC-GFX942 %s
