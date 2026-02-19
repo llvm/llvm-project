@@ -10,6 +10,8 @@ import re
 
 
 class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
     # Number of stderr lines to read from the simctl output.
     READ_LINES = 10
 

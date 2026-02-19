@@ -486,9 +486,26 @@ bool RISCVFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MF.getTarget().Options.DisableFramePointerElim(MF) ||
-         RegInfo->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
-         MFI.isFrameAddressTaken();
+  if (MF.getTarget().Options.DisableFramePointerElim(MF) ||
+      RegInfo->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
+      MFI.isFrameAddressTaken())
+    return true;
+
+  // With large callframes around we may need to use FP to access the scavenging
+  // emergency spillslot.
+  //
+  // We calculate the MaxCallFrameSize at the end of isel so this value should
+  // be stable for the whole post-isel MIR pipeline.
+  //
+  // NOTE: The idea of forcing a frame pointer is copied from AArch64, but they
+  // conservatively return true when the call frame size hasd not been
+  // computed yet. On RISC-V that caused MachineOutliner tests to fail the
+  // MachineVerifier due to outlined functions not computing max call frame
+  // size thus the frame pointer would always be reserved.
+  if (MFI.isMaxCallFrameSizeComputed() && MFI.getMaxCallFrameSize() > 2047)
+    return true;
+
+  return false;
 }
 
 bool RISCVFrameLowering::hasBP(const MachineFunction &MF) const {

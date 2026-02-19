@@ -5300,16 +5300,13 @@ def mmacos_version_min_EQ : Joined<["-"], "mmacos-version-min=">,
 def : Joined<["-"], "mmacosx-version-min=">,
   Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>,
   Group<m_Group>, Alias<mmacos_version_min_EQ>;
-def moutline
-    : Flag<["-"], "moutline">,
-      Group<f_clang_Group>,
-      Visibility<[ClangOption, CC1Option]>,
-      HelpText<"Enable function outlining (AArch64,Arm,RISC-V,X86 only)">;
-def mno_outline
-    : Flag<["-"], "mno-outline">,
-      Group<f_clang_Group>,
-      Visibility<[ClangOption, CC1Option]>,
-      HelpText<"Disable function outlining (AArch64,Arm,RISC-V,X86 only)">;
+defm outline
+    : BoolMOption<
+          "outline", CodeGenOpts<"DisableOutlining">, DefaultFalse,
+          NegFlag<SetTrue, [], [ClangOption, CC1Option],
+                  "Disable function outlining (AArch64,Arm,RISC-V,X86 only)">,
+          PosFlag<SetFalse, [], [ClangOption],
+                  "Enable function outlining (AArch64,Arm,RISC-V,X86 only)">>;
 def mms_bitfields : Flag<["-"], "mms-bitfields">, Group<m_Group>,
   HelpText<"Set the default structure layout to be compatible with the Microsoft compiler standard">;
 def mno_ms_bitfields : Flag<["-"], "mno-ms-bitfields">, Group<m_Group>,
@@ -9874,6 +9871,13 @@ def fhlsl_spv_enable_maximal_reconvergence
                "module. This ensures that control flow reconverges at "
                "well-defined merge points as defined by the Vulkan spec.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvEnableMaximalReconvergence">>;
+
+def fexperimental_emit_sgep
+    : Flag<["-"], "fexperimental-emit-sgep">,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"Emit structured GEP intrinsic instead of GEP instructions "
+               "(experimental).">,
+      MarshallingInfoFlag<LangOpts<"EmitStructuredGEP">>;
 
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,

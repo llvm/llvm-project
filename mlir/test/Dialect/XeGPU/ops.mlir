@@ -925,4 +925,18 @@ gpu.func @simt_store_matrix_vector(%arg0: !xegpu.mem_desc<16x64xf16, #xegpu.mem_
   gpu.return
 }
 
+// CHECK-LABEL: gpu.func @truncf
+gpu.func @truncf(%a: vector<8x16xf16>) {
+  // CHECK: %{{.+}} = xegpu.truncf %{{.+}} : vector<8x16xf16> -> vector<8x16xf8E5M2>
+  %1 = xegpu.truncf %a : vector<8x16xf16> -> vector<8x16xf8E5M2>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @dpas_mx
+gpu.func @dpas_mx(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>, %acc: vector<8x16xbf16>) {
+  // CHECK: %{{.+}} = xegpu.dpas_mx %{{.+}}, %{{.+}}, %{{.+}} : vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xbf16> -> vector<8x16xbf16>
+  %1 = xegpu.dpas_mx %a, %b, %acc : vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xbf16> -> vector<8x16xbf16>
+  gpu.return
+}
+
 }

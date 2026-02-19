@@ -1856,6 +1856,7 @@ void SubtargetEmitter::emitHwModeCheck(const std::string &ClassName,
       if (P.second->isSubClassOf("ValueType")) {
         ValueTypeModes |= (1 << (P.first - 1));
       } else if (P.second->isSubClassOf("RegInfo") ||
+                 P.second->isSubClassOf("Register") ||
                  P.second->isSubClassOf("SubRegRange") ||
                  P.second->isSubClassOf("RegisterClassLike")) {
         RegInfoModes |= (1 << (P.first - 1));
