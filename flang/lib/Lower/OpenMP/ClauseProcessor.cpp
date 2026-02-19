@@ -202,6 +202,92 @@ getIfClauseOperand(lower::AbstractConverter &converter,
                                     ifVal);
 }
 
+template <typename IteratorSpecT>
+static IteratorRange lowerIteratorRange(
+    Fortran::lower::AbstractConverter &converter, const IteratorSpecT &itSpec,
+    Fortran::lower::StatementContext &stmtCtx, mlir::Location loc) {
+  auto &builder = converter.getFirOpBuilder();
+
+  const auto &ivObj = std::get<1>(itSpec.t);
+  const auto &range = std::get<2>(itSpec.t);
+
+  IteratorRange r;
+  r.ivSym = ivObj.sym();
+  assert(r.ivSym && "expected iterator induction symbol");
+
+  const auto &lbExpr = std::get<0>(range.t);
+  const auto &ubExpr = std::get<1>(range.t);
+  const auto &stExprOpt = std::get<2>(range.t);
+
+  mlir::Value lbVal =
+      fir::getBase(converter.genExprValue(toEvExpr(lbExpr), stmtCtx));
+  mlir::Value ubVal =
+      fir::getBase(converter.genExprValue(toEvExpr(ubExpr), stmtCtx));
+
+  auto toIndex = [](fir::FirOpBuilder &builder, mlir::Location loc,
+                    mlir::Value v) -> mlir::Value {
+    if (v.getType().isIndex())
+      return v;
+    return mlir::arith::IndexCastOp::create(builder, loc,
+                                            builder.getIndexType(), v);
+  };
+
+  r.lb = toIndex(builder, loc, lbVal);
+  r.ub = toIndex(builder, loc, ubVal);
+
+  if (stExprOpt) {
+    mlir::Value stVal =
+        fir::getBase(converter.genExprValue(toEvExpr(*stExprOpt), stmtCtx));
+    r.step = toIndex(builder, loc, stVal);
+  } else {
+    r.step = mlir::arith::ConstantIndexOp::create(builder, loc, 1);
+  }
+
+  return r;
+}
+
+template <typename BuildBodyFn>
+static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
+                                   mlir::Location loc, mlir::Type iterTy,
+                                   llvm::ArrayRef<IteratorRange> ranges,
+                                   BuildBodyFn &&buildBody) {
+
+  auto &builder = converter.getFirOpBuilder();
+
+  llvm::SmallVector<mlir::Value> lbs, ubs, steps;
+  lbs.reserve(ranges.size());
+  ubs.reserve(ranges.size());
+  steps.reserve(ranges.size());
+  for (auto &r : ranges) {
+    lbs.push_back(r.lb);
+    ubs.push_back(r.ub);
+    steps.push_back(r.step);
+  }
+
+  auto itOp = mlir::omp::IteratorsOp::create(
+      builder, loc, iterTy, mlir::ValueRange{lbs}, mlir::ValueRange{ubs},
+      mlir::ValueRange{steps});
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+
+  mlir::Region &reg = itOp.getRegion();
+  mlir::Block *body = builder.createBlock(&reg);
+
+  llvm::SmallVector<mlir::Value> ivs;
+  ivs.reserve(ranges.size());
+  for (size_t i = 0; i < ranges.size(); ++i)
+    ivs.push_back(body->addArgument(builder.getIndexType(), loc));
+
+  Fortran::lower::SymMap &symMap = converter.getSymbolMap();
+  Fortran::lower::SymMapScope scope(symMap);
+  for (size_t i = 0; i < ranges.size(); ++i)
+    symMap.addSymbol(*ranges[i].ivSym, ivs[i], /*force=*/true);
+
+  mlir::omp::YieldOp::create(builder, loc, buildBody(builder, loc, ivs));
+
+  return itOp.getResult();
+}
+
 //===----------------------------------------------------------------------===//
 // ClauseProcessor unique clauses
 //===----------------------------------------------------------------------===//
@@ -756,14 +842,113 @@ bool ClauseProcessor::processAffinity(
     mlir::omp::AffinityClauseOps &result) const {
   return findRepeatableClause<omp::clause::Affinity>(
       [&](const omp::clause::Affinity &clause, const parser::CharBlock &) {
-        if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
-          TODO(converter.getCurrentLocation(),
-               "Support for iterator modifiers is not implemented yet");
+        const auto &objects = std::get<omp::ObjectList>(clause.t);
+        lower::StatementContext stmtCtx;
+        auto &builder = converter.getFirOpBuilder();
+        auto &context = converter.getMLIRContext();
+        mlir::Location clauseLocation = converter.getCurrentLocation();
+
+        mlir::Type refI8Ty = fir::ReferenceType::get(builder.getIntegerType(8));
+        mlir::Type entryTy = mlir::omp::AffinityEntryType::get(
+            &context, refI8Ty, builder.getI64Type());
+        mlir::Type iterTy = mlir::omp::IteratedType::get(&context, entryTy);
+
+        auto normalizeAddr = [](fir::FirOpBuilder &b, mlir::Location l,
+                                mlir::Type addrTy,
+                                mlir::Value v) -> mlir::Value {
+          mlir::Value addr = v;
+
+          // ref-to-box -> load box -> box_addr
+          if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(addr.getType())) {
+            if (auto innerBoxTy =
+                    mlir::dyn_cast<fir::BoxType>(refTy.getEleTy())) {
+              mlir::Value boxVal = fir::LoadOp::create(b, l, innerBoxTy, addr);
+              mlir::Type boxedEleTy = innerBoxTy.getEleTy();
+              addr = fir::BoxAddrOp::create(
+                  b, l, fir::ReferenceType::get(boxedEleTy), boxVal);
+            }
+          }
+
+          // box value -> box_addr
+          if (auto boxTy = mlir::dyn_cast<fir::BoxType>(addr.getType())) {
+            mlir::Type boxedEleTy = boxTy.getEleTy();
+            addr = fir::BoxAddrOp::create(
+                b, l, fir::ReferenceType::get(boxedEleTy), addr);
+          }
+
+          assert(mlir::isa<fir::ReferenceType>(addr.getType()) &&
+                 "expect fir.ref after normalization");
+          return fir::ConvertOp::create(b, l, addrTy, addr);
+        };
+
+        auto makeAffinityEntry = [&](fir::FirOpBuilder &b, mlir::Location l,
+                                     mlir::Type entryTy, mlir::Value addr,
+                                     mlir::Value len) -> mlir::Value {
+          mlir::Value addrI8 = normalizeAddr(b, l, refI8Ty, addr);
+          return mlir::omp::AffinityEntryOp::create(b, l, entryTy, addrI8, len)
+              .getResult();
+        };
+
+        llvm::SmallVector<IteratorRange> iteratorRanges;
+        llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4> ivSyms;
+
+        // If iterator modifier exists, collect ranges and IV symbols.
+        auto &iteratorModifier =
+            std::get<std::optional<omp::clause::Iterator>>(clause.t);
+        if (iteratorModifier.has_value()) {
+          const auto &iteratorModifierSpecs = *iteratorModifier;
+          iteratorRanges.reserve(iteratorModifierSpecs.size());
+          for (const auto &itSpec : iteratorModifierSpecs)
+            iteratorRanges.push_back(
+                lowerIteratorRange(converter, itSpec, stmtCtx, clauseLocation));
+
+          for (const IteratorRange &r : iteratorRanges)
+            ivSyms.insert(&r.ivSym->GetUltimate());
         }
 
-        const auto &objects = std::get<omp::ObjectList>(clause.t);
-        if (!objects.empty())
-          genObjectList(objects, converter, result.affinityVars);
+        for (const omp::Object &object : objects) {
+          llvm::SmallVector<mlir::Value> bounds;
+          std::stringstream asFortran;
+          if (iteratorModifier.has_value() && hasIVReference(object, ivSyms)) {
+            mlir::Value iterHandle = buildIteratorOp(
+                converter, clauseLocation, iterTy, iteratorRanges,
+                [&](fir::FirOpBuilder &builder, mlir::Location loc,
+                    llvm::ArrayRef<mlir::Value> ivs) -> mlir::Value {
+                  const Fortran::semantics::Symbol *sym = object.sym();
+                  assert(sym && "expected symbol for iterator object");
+                  fir::factory::AddrAndBoundsInfo info =
+                      Fortran::lower::getDataOperandBaseAddr(
+                          converter, builder, *sym, loc,
+                          /*unwrapFirBox=*/false);
+                  // TODO check correctness of genIteratorCoordinate
+                  mlir::Value addr =
+                      genIteratorCoordinate(converter, info.addr, ivs, loc);
+                  // Length of iterator-based affinity entry set as element size
+                  mlir::Value len = genAffinityLen(
+                      builder, clauseLocation, builder.getDataLayout(),
+                      info.addr, bounds, static_cast<bool>(object.ref()));
+                  return makeAffinityEntry(builder, loc, entryTy, addr, len);
+                });
+            iterHandle.dump();
+            result.iterated.push_back(iterHandle);
+          } else {
+            mlir::Value addr =
+                genAffinityAddr(converter, object, stmtCtx, clauseLocation);
+            fir::factory::AddrAndBoundsInfo info =
+                lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
+                                                      mlir::omp::MapBoundsType>(
+                    converter, builder, semaCtx, stmtCtx, *object.sym(),
+                    object.ref(), clauseLocation, asFortran, bounds,
+                    treatIndexAsSection);
+            mlir::Value len = genAffinityLen(
+                builder, clauseLocation, builder.getDataLayout(), info.addr,
+                bounds, static_cast<bool>(object.ref()));
+            // info.addr is not the base address so use the result from
+            // genAffinityAddr instead
+            result.affinityVars.push_back(
+                makeAffinityEntry(builder, clauseLocation, entryTy, addr, len));
+          }
+        }
 
         return true;
       });
