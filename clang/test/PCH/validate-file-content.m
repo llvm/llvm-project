@@ -24,5 +24,5 @@
 //
 // CHECK: file '[[M_H:.*[/\\]m\.h]]' has been modified since the precompiled header '[[A_PCH:.*[/\\]a\.pch]]' was built
 // CHECK: note: content changed
-// CHECK: please rebuild precompiled file '[[A_PCH]]'
+// CHECK: earlier input file validation has covered only user files
 // expected-no-diagnostics
