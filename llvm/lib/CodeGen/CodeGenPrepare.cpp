@@ -7495,12 +7495,12 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
 
   uint32_t ActiveBits = DemandBits.getActiveBits();
   // Avoid hoisting (and (load x) 1) since it is unlikely to be folded by the
-  // target even if isLoadExtLegal says an i1 EXTLOAD is valid.  For example,
-  // for the AArch64 target isLoadExtLegal(ZEXTLOAD, i32, i1) returns true, but
-  // (and (load x) 1) is not matched as a single instruction, rather as a LDR
-  // followed by an AND.
+  // target even if isLoadLegal says an i1 EXTLOAD is valid.  For example,
+  // for the AArch64 target isLoadLegal(i32, i1, ..., ZEXTLOAD, false) returns
+  // true, but (and (load x) 1) is not matched as a single instruction, rather
+  // as a LDR followed by an AND.
   // TODO: Look into removing this restriction by fixing backends to either
-  // return false for isLoadExtLegal for i1 or have them select this pattern to
+  // return false for isLoadLegal for i1 or have them select this pattern to
   // a single instruction.
   //
   // Also avoid hoisting if we didn't see any ands with the exact DemandBits
@@ -7515,7 +7515,9 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
 
   // Reject cases that won't be matched as extloads.
   if (!LoadResultVT.bitsGT(TruncVT) || !TruncVT.isRound() ||
-      !TLI->isLoadExtLegal(ISD::ZEXTLOAD, LoadResultVT, TruncVT))
+      !TLI->isLoadLegal(LoadResultVT, TruncVT, Load->getAlign(),
+                        TLI->getLoadMemOperandFlags(*Load, *DL),
+                        Load->getPointerAddressSpace(), ISD::ZEXTLOAD, false))
     return false;
 
   IRBuilder<> Builder(Load->getNextNode());
