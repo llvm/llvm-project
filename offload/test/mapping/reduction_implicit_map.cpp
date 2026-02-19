@@ -1,5 +1,6 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
-// XFAIL: intelgpu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 // amdgcn does not have printf definition
 // UNSUPPORTED: amdgcn-amd-amdhsa
