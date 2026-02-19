@@ -562,12 +562,21 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
 
   createExtractsForLiveOuts(Plan, MiddleVPBB);
 
+  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
   VPBuilder ScalarPHBuilder(ScalarPH);
   for (const auto &[PhiR, ScalarPhiR] : zip_equal(
            drop_begin(HeaderVPBB->phis()), Plan.getScalarHeader()->phis())) {
     auto *VectorPhiR = cast<VPPhi>(&PhiR);
+    VPValue *ResumeFromVectorLoop = VectorPhiR->getOperand(1);
+    if (!isa<VPIRValue>(ResumeFromVectorLoop)) {
+      ResumeFromVectorLoop = MiddleBuilder.createNaryOp(
+          VPInstruction::ExtractLastPart, ResumeFromVectorLoop);
+      ResumeFromVectorLoop = MiddleBuilder.createNaryOp(
+          VPInstruction::ExtractLastLane, ResumeFromVectorLoop);
+    }
     auto *ResumePhiR = ScalarPHBuilder.createScalarPhi(
-        {VectorPhiR, VectorPhiR->getOperand(0)}, VectorPhiR->getDebugLoc());
+        {ResumeFromVectorLoop, VectorPhiR->getOperand(0)},
+        VectorPhiR->getDebugLoc());
     cast<VPIRPhi>(&ScalarPhiR)->addOperand(ResumePhiR);
   }
 }
@@ -741,6 +750,30 @@ void VPlanTransforms::createHeaderPhiRecipes(
     HeaderPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(HeaderPhiR);
     PhiR->eraseFromParent();
+  }
+
+  for (const auto &[HeaderPhiR, ScalarPhiR] : zip_equal(
+           drop_begin(HeaderVPBB->phis()), Plan.getScalarPreheader()->phis())) {
+    auto *ResumePhiR = cast<VPPhi>(&ScalarPhiR);
+    if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&HeaderPhiR)) {
+      ResumePhiR->setName("scalar.recur.init");
+      auto *ExtractLastLane = cast<VPInstruction>(ResumePhiR->getOperand(0));
+      ExtractLastLane->setName("vector.recur.extract");
+      if (ExtractLastLane->getOpcode() == VPInstruction::ExitingIVValue) {
+        // The FOR's backedge value is shared with an induction and the extract
+        // chain was replaced. Create a fresh one from the backedge value.
+        VPBuilder MiddleBuilder(ExtractLastLane);
+        VPValue *Resume = MiddleBuilder.createNaryOp(
+            VPInstruction::ExtractLastPart, FOR->getBackedgeValue());
+        Resume =
+            MiddleBuilder.createNaryOp(VPInstruction::ExtractLastLane, Resume);
+        ResumePhiR->setOperand(0, Resume);
+      }
+      continue;
+    }
+    ResumePhiR->setName(isa<VPWidenInductionRecipe>(HeaderPhiR)
+                            ? "bc.resume.val"
+                            : "bc.merge.rdx");
   }
 }
 
