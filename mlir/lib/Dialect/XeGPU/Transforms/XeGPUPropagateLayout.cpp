@@ -1102,6 +1102,9 @@ void LayoutInfoPropagation::visitLoadMatrixOp(
     ArrayRef<const LayoutInfoLattice *> results) {
 
   LayoutInfo resLayoutInfo = results[0]->getValue();
+  if (!resLayoutInfo.isAssigned())
+    return;
+
   auto consumerLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
 
