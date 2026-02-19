@@ -2935,14 +2935,36 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
     case ISD::XOR:
     case ISD::ADD:
     case ISD::SUB:
-      return mayFoldIntoVector(Op.getOperand(0), DAG, Subtarget) &&
-             mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget);
+      return mayFoldIntoVector(Op.getOperand(0), DAG, Subtarget, AssumeSingleUse) &&
+             mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget, AssumeSingleUse);
     case ISD::SELECT:
-      return mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget) &&
-             mayFoldIntoVector(Op.getOperand(2), DAG, Subtarget);
+      return mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget, AssumeSingleUse) &&
+             mayFoldIntoVector(Op.getOperand(2), DAG, Subtarget, AssumeSingleUse);
     }
   }
-  return X86::mayFoldLoad(Op, Subtarget, AssumeSingleUse,
+  if (!ISD::isNormalLoad(Op.getNode()))
+    return false;
+
+  // Single-use loads just check the load itself
+  if (AssumeSingleUse || Op.hasOneUse())
+    return X86::mayFoldLoad(Op, Subtarget, /*AssumeSingleUse=*/true,
+                            /*IgnoreAlignment=*/true);
+
+  for (SDUse &Use : Op->uses()) {
+    if (Use.getResNo() != 0)
+      continue;
+
+    SDNode *User = Use.getUser();
+    if (ISD::isNormalStore(User))
+      continue;
+
+    if (!mayFoldIntoVector(SDValue(User, 0), DAG, Subtarget,
+                           /*AssumeSingleUse=*/true))
+      return false;
+  }
+
+  // All users are vectorizable, now check the load itself
+  return X86::mayFoldLoad(Op, Subtarget, /*AssumeSingleUse=*/false,
                           /*IgnoreAlignment=*/true);
 }
 
@@ -23467,8 +23489,8 @@ static SDValue combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y,
 
   // Don't perform this combine if constructing the vector will be expensive.
   // TODO: Drop AssumeSingleUse = true override.
-  if ((!mayFoldIntoVector(X, DAG, Subtarget, /*AssumeSingleUse=*/true) ||
-       !mayFoldIntoVector(Y, DAG, Subtarget, /*AssumeSingleUse=*/true)) &&
+  if ((!mayFoldIntoVector(X, DAG, Subtarget) ||
+       !mayFoldIntoVector(Y, DAG, Subtarget)) &&
       !IsOrXorXorTreeCCZero)
     return SDValue();
 
