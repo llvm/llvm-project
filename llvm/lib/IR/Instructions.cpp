@@ -690,6 +690,7 @@ void CallBase::setOnlyAccessesArgMemory() {
 bool CallBase::onlyAccessesInaccessibleMemory() const {
   return getMemoryEffects().onlyAccessesInaccessibleMem();
 }
+
 void CallBase::setOnlyAccessesInaccessibleMemory() {
   setMemoryEffects(getMemoryEffects() & MemoryEffects::inaccessibleMemOnly());
 }
