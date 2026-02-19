@@ -772,3 +772,14 @@ func.func @arith_truncf(%arg0: f64) -> f16 {
 
   return %truncd1 : f16
 }
+
+// -----
+
+// Ensure that vector.mask with an empty mask does not cause issues.
+
+// CHECK-LABEL: empty_vector_mask
+func.func @empty_vector_mask(%mask : vector<8xi1>) {
+  // CHECK: vector.mask
+  vector.mask %mask { vector.yield } : vector<8xi1>
+  return
+}
