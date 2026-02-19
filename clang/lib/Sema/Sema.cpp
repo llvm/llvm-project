@@ -1589,6 +1589,44 @@ void Sema::ActOnEndOfTranslationUnit() {
     emitAndClearUnusedLocalTypedefWarnings();
   }
 
+  if (!Diags.isIgnored(diag::warn_unused_but_set_variable, SourceLocation())) {
+    // Diagnose unused-but-set static globals in a deterministic order.
+    // Not tracking shadowing info for static globals; there's nothing to shadow.
+    struct LocAndDiag {
+      SourceLocation Loc;
+      PartialDiagnostic PD;
+    };
+    SmallVector<LocAndDiag, 16> DeclDiags;
+    auto addDiag = [&DeclDiags](SourceLocation Loc, PartialDiagnostic PD) {
+      DeclDiags.push_back(LocAndDiag{Loc, std::move(PD)});
+    };
+
+    // For -Wunused-but-set-variable we only care about variables that were
+    // referenced by the TU end.
+    SmallVector<const VarDecl *, 16> DeclsToErase;
+    for (const auto &Ref : RefsMinusAssignments) {
+      const VarDecl *VD = Ref.first;
+      // Only diagnose static file vars defined in the main file to match
+      // -Wunused-variable behavior and avoid false positives from header vars.
+      if (VD->isStaticFileVar() && SourceMgr.isInMainFile(VD->getLocation())) {
+        DiagnoseUnusedButSetDecl(VD, addDiag);
+        DeclsToErase.push_back(VD);
+      }
+    }
+    for (const VarDecl *VD : DeclsToErase) {
+      RefsMinusAssignments.erase(VD);
+    }
+
+    llvm::sort(DeclDiags,
+              [](const LocAndDiag &LHS, const LocAndDiag &RHS) -> bool {
+                // Sorting purely for determinism; matches behavior in
+                // SemaDecl.cpp.
+                return LHS.Loc.getRawEncoding() < RHS.Loc.getRawEncoding();
+              });
+    for (const LocAndDiag &D : DeclDiags)
+      Diag(D.Loc, D.PD);
+  }
+
   if (!Diags.isIgnored(diag::warn_unused_private_field, SourceLocation())) {
     // FIXME: Load additional unused private field candidates from the external
     // source.
@@ -1619,43 +1657,6 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   if (Context.hasAnyFunctionEffects())
     performFunctionEffectAnalysis(Context.getTranslationUnitDecl());
-
-  // Diagnose unused-but-set static globals in a deterministic order.
-  // Not tracking shadowing info for static globals; there's nothing to shadow.
-  struct LocAndDiag {
-    SourceLocation Loc;
-    PartialDiagnostic PD;
-  };
-  SmallVector<LocAndDiag, 16> DeclDiags;
-  auto addDiag = [&DeclDiags](SourceLocation Loc, PartialDiagnostic PD) {
-    DeclDiags.push_back(LocAndDiag{Loc, std::move(PD)});
-  };
-
-  // For -Wunused-but-set-variable we only care about variables that were
-  // referenced by the TU end.
-  SmallVector<const VarDecl *, 16> DeclsToErase;
-  for (const auto &Ref : RefsMinusAssignments) {
-    const VarDecl *VD = Ref.first;
-    // Only diagnose static file vars defined in the main file to match
-    // -Wunused-variable behavior and avoid false positives from header vars.
-    if (VD->isStaticFileVar() && SourceMgr.isInMainFile(VD->getLocation())) {
-      DiagnoseUnusedButSetDecl(VD, addDiag);
-      DeclsToErase.push_back(VD);
-    }
-  }
-  for (const VarDecl *VD : DeclsToErase) {
-    RefsMinusAssignments.erase(VD);
-  }
-
-  llvm::sort(DeclDiags,
-             [](const LocAndDiag &LHS, const LocAndDiag &RHS) -> bool {
-               // Sorting purely for determinism; matches behavior in
-               // SemaDecl.cpp.
-               return LHS.Loc.getRawEncoding() < RHS.Loc.getRawEncoding();
-             });
-  for (const LocAndDiag &D : DeclDiags) {
-    Diag(D.Loc, D.PD);
-  }
 
   // Check we've noticed that we're no longer parsing the initializer for every
   // variable. If we miss cases, then at best we have a performance issue and

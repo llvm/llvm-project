@@ -142,7 +142,7 @@ Attribute Changes in Clang
 Improvements to Clang's diagnostics
 -----------------------------------
 - ``-Wunused-but-set-variable`` now diagnoses file-scope variables with
-  internal linkage (``static`` storage class) that are assigned but never used.
+  internal linkage (``static`` storage class) that are assigned but never used. (#GH148361)
 
 - Added ``-Wlifetime-safety`` to enable lifetime safety analysis,
   a CFG-based intra-procedural analysis that detects use-after-free and related
