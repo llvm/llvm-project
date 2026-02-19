@@ -23,7 +23,8 @@ using namespace ssaf;
 
 namespace {
 
-const NamedDecl *findDeclByName(StringRef Name, ASTContext &Ctx) {
+template <typename SomeDecl = NamedDecl>
+const SomeDecl *findDeclByName(StringRef Name, ASTContext &Ctx) {
   class NamedDeclFinder : public DynamicRecursiveASTVisitor {
   public:
     StringRef SearchingName;
@@ -45,7 +46,11 @@ const NamedDecl *findDeclByName(StringRef Name, ASTContext &Ctx) {
   NamedDeclFinder Finder(Name);
 
   Finder.TraverseDecl(Ctx.getTranslationUnitDecl());
-  return Finder.FoundDecl;
+  return dyn_cast_or_null<SomeDecl>(Finder.FoundDecl);
+}
+
+const FunctionDecl *findFnByName(StringRef Name, ASTContext &Ctx) {
+  return findDeclByName<FunctionDecl>(Name, Ctx);
 }
 
 class UnsafeBufferUsageTest : public testing::Test {
@@ -65,7 +70,7 @@ protected:
   setUpTest(StringRef Code, StringRef ContributorName) {
     AST = tooling::buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
 
-    const Decl *ContributorDefn =
+    const auto *ContributorDefn =
         findDeclByName(ContributorName, AST->getASTContext());
     std::optional<EntityName> EN = getEntityName(ContributorDefn);
 
@@ -76,15 +81,14 @@ protected:
   }
 
   std::optional<EntityId> getEntityId(StringRef Name) {
-    if (auto *D = findDeclByName(Name, AST->getASTContext()))
+    if (const auto *D = findDeclByName(Name, AST->getASTContext()))
       if (auto EntityName = getEntityName(D))
         return Builder.addEntity(*EntityName);
     return std::nullopt;
   }
 
   std::optional<EntityId> getEntityIdForReturn(StringRef FunName) {
-    if (auto *D = llvm::dyn_cast_or_null<FunctionDecl>(
-            findDeclByName(FunName, AST->getASTContext())))
+    if (const auto *D = findFnByName(FunName, AST->getASTContext()))
       if (auto EntityName = getEntityNameForReturn(D))
         return Builder.addEntity(*EntityName);
     return std::nullopt;
