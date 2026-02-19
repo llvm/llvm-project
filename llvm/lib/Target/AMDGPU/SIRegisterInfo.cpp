@@ -1544,9 +1544,9 @@ void SIRegisterInfo::buildSpillLoadStore(
   if (!IsBlock && RegWidth > 4) {
     unsigned SpillOpcode =
         getFlatScratchSpillOpcode(TII, LoadStoreOp, std::min(RegWidth, 16u));
-    int VDataIdx = IsStore
-                 ? AMDGPU::getNamedOperandIdx(SpillOpcode, AMDGPU::OpName::vdata)
-                 : 0; // Restore Ops have data reg as the first (output) operand.
+    int VDataIdx =
+        IsStore ? AMDGPU::getNamedOperandIdx(SpillOpcode, AMDGPU::OpName::vdata)
+                : 0; // Restore Ops have data reg as the first (output) operand.
     const TargetRegisterClass *ExpectedRC =
         TII->getRegClass(TII->get(SpillOpcode), VDataIdx);
     unsigned NumRegs = std::min(RegWidth / 4, 4u);
