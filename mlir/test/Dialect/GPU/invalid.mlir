@@ -183,8 +183,8 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   module @kernels {
-    gpu.func @kernel_1(%arg1 : !llvm.ptr) kernel {
-      gpu.return
+    func.func @kernel_1(%arg1 : !llvm.ptr) {
+      return
     }
   }
 
