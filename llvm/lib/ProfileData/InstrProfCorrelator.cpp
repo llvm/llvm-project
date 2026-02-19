@@ -310,7 +310,7 @@ void InstrProfCorrelatorImpl<IntPtrT>::addDataProbe(uint64_t NameRef,
       maybeSwap<uint64_t>(CFGHash),
       // In this mode, CounterPtr actually stores the section relative address
       // of the counter.
-      maybeSwap<IntPtrT>(CounterOffset),
+      CounterOffset,
       // TODO: MC/DC is not yet supported.
       /*BitmapOffset=*/maybeSwap<IntPtrT>(0),
       maybeSwap<IntPtrT>(FunctionPtr),
