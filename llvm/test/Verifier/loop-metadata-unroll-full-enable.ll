@@ -8,7 +8,10 @@ entry:
   br label %loop
 
 loop:
-  br i1 true, label %loop, label %exit, !llvm.loop !0
+  %i = phi i32 [ 0, %entry ], [ %inc, %loop ]
+  %inc = add i32 %i, 1
+  %cmp = icmp ult i32 %inc, 4
+  br i1 %cmp, label %loop, label %exit, !llvm.loop !0
 
 exit:
   ret void
