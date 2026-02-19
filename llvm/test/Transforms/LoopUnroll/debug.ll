@@ -1,4 +1,6 @@
 ; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll < %s 2>&1 | FileCheck %s --match-full-lines --strict-whitespace
+; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -pass-remarks-missed=loop-unroll -unroll-allow-partial -pragma-unroll-threshold=100 -pragma-unroll-full-max-iterations=50 < %s 2>&1 | FileCheck %s --check-prefix=ALLOW-PARTIAL --match-full-lines --strict-whitespace
+; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -pass-remarks-missed=loop-unroll -unroll-partial-threshold=6 -pragma-unroll-threshold=6 -pragma-unroll-full-max-iterations=50 < %s 2>&1 | FileCheck %s --check-prefix=PATH2 --match-full-lines --strict-whitespace
 
 ; REQUIRES: asserts
 
@@ -197,8 +199,69 @@ exit:
   ret i32 %result
 }
 
+; ALLOW-PARTIAL-LABEL:Loop Unroll: F[pragma_full_partial] Loop %for.body
+; ALLOW-PARTIAL-NEXT:Loop Size = 6
+; ALLOW-PARTIAL:   Won't unroll; trip count is too large
+; ALLOW-PARTIAL:   partially unrolling with count: 25
+; ALLOW-PARTIAL-NEXT:remark: <unknown>:0:0: Unable to fully unroll loop as directed by unroll pragma(full) because unrolled size is too large.
+
+; PATH2-LABEL:Loop Unroll: F[pragma_full_partial] Loop %for.body
+; PATH2-NEXT:Loop Size = 6
+; PATH2:   Won't unroll; trip count is too large
+; PATH2:   partially unrolling with count: 0
+; PATH2-NEXT:remark: <unknown>:0:0: Unable to unroll loop as directed by unroll pragma(enable) because unrolled size is too large.
+
+define i32 @pragma_full_partial(ptr %A) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %sum = phi i32 [ 0, %entry ], [ %add, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i
+  %load = load i32, ptr %arrayidx
+  %add = add i32 %sum, %load
+  %inc = add i32 %i, 1
+  %cmp = icmp ult i32 %inc, 100
+  br i1 %cmp, label %for.body, label %exit, !llvm.loop !5
+
+exit:
+  ret i32 %add
+}
+
+; ALLOW-PARTIAL-LABEL:Loop Unroll: F[pragma_enable_partial] Loop %for.body
+; ALLOW-PARTIAL-NEXT:Loop Size = 6
+; ALLOW-PARTIAL:   partially unrolling with count: 25
+; ALLOW-PARTIAL-NOT:remark: {{.*}}Unable to
+; ALLOW-PARTIAL:UNROLLING loop %for.body by 25!
+
+; PATH2-LABEL:Loop Unroll: F[pragma_enable_partial] Loop %for.body
+; PATH2-NEXT:Loop Size = 6
+; PATH2:   partially unrolling with count: 0
+; PATH2-NEXT:remark: <unknown>:0:0: Unable to unroll loop as directed by unroll pragma(enable) because unrolled size is too large.
+
+define i32 @pragma_enable_partial(ptr %A) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %sum = phi i32 [ 0, %entry ], [ %add, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i
+  %load = load i32, ptr %arrayidx
+  %add = add i32 %sum, %load
+  %inc = add i32 %i, 1
+  %cmp = icmp ult i32 %inc, 100
+  br i1 %cmp, label %for.body, label %exit, !llvm.loop !6
+
+exit:
+  ret i32 %add
+}
+
 !0 = distinct !{!0, !3}
 !1 = distinct !{!1, !4}
 !2 = distinct !{!2, !4}
 !3 = !{!"llvm.loop.unroll.full"}
 !4 = !{!"llvm.loop.unroll.enable"}
+!5 = distinct !{!5, !3}
+!6 = distinct !{!6, !4}

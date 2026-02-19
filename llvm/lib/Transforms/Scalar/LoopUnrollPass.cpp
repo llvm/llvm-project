@@ -1043,30 +1043,24 @@ bool llvm::computeUnrollCount(
   if (auto UnrollFactor = shouldPartialUnroll(LoopSize, TripCount, UCE, UP)) {
     UP.Count = *UnrollFactor;
 
-    if ((PragmaFullUnroll || PragmaEnableUnroll) && TripCount &&
-        UP.Count != TripCount)
+    if (UP.Count) {
+      if (PragmaFullUnroll && UP.Count != TripCount)
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE,
+                                          "FullUnrollAsDirectedTooLarge",
+                                          L->getStartLoc(), L->getHeader())
+                 << "Unable to fully unroll loop as directed by unroll pragma(full) "
+                    "because unrolled size is too large.";
+        });
+    } else if (PragmaFullUnroll || PragmaEnableUnroll)
       ORE->emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE,
                                         "FullUnrollAsDirectedTooLarge",
                                         L->getStartLoc(), L->getHeader())
-               << "Unable to fully unroll loop as directed by unroll pragma "
-                  "because "
-                  "unrolled size is too large.";
+               << "Unable to unroll loop as directed by unroll pragma(enable) "
+                  "because unrolled size is too large.";
       });
 
-    if (UP.PartialThreshold != NoThreshold) {
-      if (UP.Count == 0) {
-        if (PragmaEnableUnroll)
-          ORE->emit([&]() {
-            return OptimizationRemarkMissed(DEBUG_TYPE,
-                                            "UnrollAsDirectedTooLarge",
-                                            L->getStartLoc(), L->getHeader())
-                   << "Unable to unroll loop as directed by unroll(enable) "
-                      "pragma "
-                      "because unrolled size is too large.";
-          });
-      }
-    }
     return ExplicitUnroll;
   }
   assert(TripCount == 0 &&
