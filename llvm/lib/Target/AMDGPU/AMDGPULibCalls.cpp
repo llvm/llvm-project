@@ -19,6 +19,7 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include <cmath>
@@ -42,6 +43,8 @@ static cl::list<std::string> UseNative("amdgpu-use-native",
 #define MATH_E       numbers::e
 #define MATH_SQRT2   numbers::sqrt2
 #define MATH_SQRT1_2 numbers::inv_sqrt2
+
+enum class PowKind { Pow, PowR, PowN, RootN };
 
 namespace llvm {
 
@@ -68,6 +71,9 @@ private:
 
   // pow/powr/pown
   bool fold_pow(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
+
+  /// Peform a fast math expansion of pow, powr, pown or rootn.
+  bool expandFastPow(FPMathOperator *FPOp, IRBuilder<> &B, PowKind Kind);
 
   // rootn
   bool fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
@@ -710,13 +716,35 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
         }
       }
 
-      return fold_pow(FPOp, B, FInfo);
+      if (fold_pow(FPOp, B, FInfo))
+        return true;
+
+      if (!FMF.approxFunc())
+        return false;
+      return expandFastPow(FPOp, B, PowKind::Pow);
     }
     case AMDGPULibFunc::EI_POWR:
+      if (fold_pow(FPOp, B, FInfo))
+        return true;
+      if (!FMF.approxFunc())
+        return false;
+      if (!shouldReplaceLibcallWithIntrinsic(CI))
+        return false;
+      return expandFastPow(FPOp, B, PowKind::PowR);
     case AMDGPULibFunc::EI_POWN:
-      return fold_pow(FPOp, B, FInfo);
+      if (fold_pow(FPOp, B, FInfo))
+        return true;
+      if (!FMF.approxFunc())
+        return false;
+      if (!shouldReplaceLibcallWithIntrinsic(CI))
+        return false;
+      return expandFastPow(FPOp, B, PowKind::PowN);
     case AMDGPULibFunc::EI_ROOTN:
-      return fold_rootn(FPOp, B, FInfo);
+      if (fold_rootn(FPOp, B, FInfo))
+        return true;
+      if (!FMF.approxFunc())
+        return false;
+      return expandFastPow(FPOp, B, PowKind::RootN);
     case AMDGPULibFunc::EI_SQRT:
       // TODO: Allow with strictfp + constrained intrinsic
       return tryReplaceLibcallWithSimpleIntrinsic(
@@ -1168,6 +1196,260 @@ bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
   }
 
   return false;
+}
+
+// is_integer(y) => trunc(y) == y
+static Value *emitIsInteger(IRBuilder<> &B, Value *Y) {
+  Value *TruncY = B.CreateUnaryIntrinsic(Intrinsic::trunc, Y);
+  return B.CreateFCmpOEQ(TruncY, Y);
+}
+
+static Value *emitIsEvenInteger(IRBuilder<> &B, Value *Y) {
+  // Even integers are still integers after division by 2.
+  auto *HalfY = B.CreateFMul(Y, ConstantFP::get(Y->getType(), 0.5));
+  return emitIsInteger(B, HalfY);
+}
+
+// is_odd_integer(y) => is_integer(y) && !is_even_integer(y)
+static Value *emitIsOddInteger(IRBuilder<> &B, Value *Y) {
+  Value *IsIntY = emitIsInteger(B, Y);
+  Value *IsEvenY = emitIsEvenInteger(B, Y);
+  Value *NotEvenY = B.CreateNot(IsEvenY);
+  return B.CreateAnd(IsIntY, NotEvenY);
+}
+
+// isinf(val) => fabs(val) == +inf
+static Value *emitIsInf(IRBuilder<> &B, Value *val) {
+  auto *fabsVal = B.CreateUnaryIntrinsic(Intrinsic::fabs, val);
+  return B.CreateFCmpOEQ(fabsVal, ConstantFP::getInfinity(val->getType()));
+}
+
+// y * log2(fabs(x))
+static Value *emitFastExpYLnx(IRBuilder<> &B, Value *X, Value *Y) {
+  Value *AbsX = B.CreateUnaryIntrinsic(Intrinsic::fabs, X);
+  Value *LogAbsX = B.CreateUnaryIntrinsic(Intrinsic::log2, AbsX);
+  Value *YTimesLogX = B.CreateFMul(Y, LogAbsX);
+  return B.CreateUnaryIntrinsic(Intrinsic::exp2, YTimesLogX);
+}
+
+/// Emit special case management epilog code for fast pow, powr, pown, and rootn
+/// expansions. \p x and \p y should be the arguments to the library call
+/// (possibly with some values clamped). \p expylnx should be the result to use
+/// in normal circumstances.
+static Value *emitPowFixup(IRBuilder<> &B, Value *X, Value *Y, Value *ExpYLnX,
+                           PowKind Kind) {
+  Constant *Zero = ConstantFP::getZero(X->getType());
+  Constant *One = ConstantFP::get(X->getType(), 1.0);
+  Constant *QNaN = ConstantFP::getQNaN(X->getType());
+  Constant *PInf = ConstantFP::getInfinity(X->getType());
+
+  switch (Kind) {
+  case PowKind::Pow: {
+    // is_odd_integer(y)
+    Value *IsOddY = emitIsOddInteger(B, Y);
+
+    // ret = copysign(expylnx, is_odd_y ? x : 1.0f)
+    Value *SelSign = B.CreateSelect(IsOddY, X, One);
+    Value *Ret = B.CreateCopySign(ExpYLnX, SelSign);
+
+    // if (x < 0 && !is_integer(y)) ret = QNAN
+    Value *IsIntY = emitIsInteger(B, Y);
+    Value *condNegX = B.CreateFCmpOLT(X, Zero);
+    Value *condNotIntY = B.CreateNot(IsIntY);
+    Value *condNaN = B.CreateAnd(condNegX, condNotIntY);
+    Ret = B.CreateSelect(condNaN, QNaN, Ret);
+
+    // if (isinf(ay)) { ... }
+
+    // FIXME: Missing backend optimization to save on materialization cost of
+    // mixed sign constant infinities.
+    Value *YIsInf = emitIsInf(B, Y);
+
+    Value *AY = B.CreateUnaryIntrinsic(Intrinsic::fabs, Y);
+    Value *YIsNegInf = B.CreateFCmpUNE(Y, AY);
+
+    Value *AX = B.CreateUnaryIntrinsic(Intrinsic::fabs, X);
+    Value *AxEqOne = B.CreateFCmpOEQ(AX, One);
+    Value *AxLtOne = B.CreateFCmpOLT(AX, One);
+    Value *XorCond = B.CreateXor(AxLtOne, YIsNegInf);
+    Value *SelInf =
+        B.CreateSelect(AxEqOne, AX, B.CreateSelect(XorCond, Zero, AY));
+    Ret = B.CreateSelect(YIsInf, SelInf, Ret);
+
+    // if (isinf(ax) || x == 0.0f) { ... }
+    Value *XIsInf = emitIsInf(B, X);
+    Value *XEqZero = B.CreateFCmpOEQ(X, Zero);
+    Value *AxInfOrZero = B.CreateOr(XIsInf, XEqZero);
+    Value *YLtZero = B.CreateFCmpOLT(Y, Zero);
+    Value *XorZeroInf = B.CreateXor(XEqZero, YLtZero);
+    Value *SelVal = B.CreateSelect(XorZeroInf, Zero, PInf);
+    Value *SelSign2 = B.CreateSelect(IsOddY, X, Zero);
+    Value *Copysign = B.CreateCopySign(SelVal, SelSign2);
+    Ret = B.CreateSelect(AxInfOrZero, Copysign, Ret);
+
+    // if (isunordered(x, y)) ret = QNAN
+    Value *isUnordered = B.CreateFCmpUNO(X, Y);
+    return B.CreateSelect(isUnordered, QNaN, Ret);
+  }
+  case PowKind::PowR: {
+    Value *YIsNeg = B.CreateFCmpOLT(Y, Zero);
+    Value *IZ = B.CreateSelect(YIsNeg, PInf, Zero);
+    Value *ZI = B.CreateSelect(YIsNeg, Zero, PInf);
+
+    Value *YEqZero = B.CreateFCmpOEQ(Y, Zero);
+    Value *SelZeroCase = B.CreateSelect(YEqZero, QNaN, IZ);
+    Value *XEqZero = B.CreateFCmpOEQ(X, Zero);
+    Value *Ret = B.CreateSelect(XEqZero, SelZeroCase, ExpYLnX);
+
+    Value *XEqInf = B.CreateFCmpOEQ(X, PInf);
+    Value *YNeZero = B.CreateFCmpUNE(Y, Zero);
+    Value *CondInfCase = B.CreateAnd(XEqInf, YNeZero);
+    Ret = B.CreateSelect(CondInfCase, ZI, Ret);
+
+    Value *IsInfY = emitIsInf(B, Y);
+    Value *XNeOne = B.CreateFCmpUNE(X, One);
+    Value *CondInfY = B.CreateAnd(IsInfY, XNeOne);
+    Value *XLtOne = B.CreateFCmpOLT(X, One);
+    Value *SelInfYCase = B.CreateSelect(XLtOne, IZ, ZI);
+    Ret = B.CreateSelect(CondInfY, SelInfYCase, Ret);
+
+    Value *IsUnordered = B.CreateFCmpUNO(X, Y);
+    return B.CreateSelect(IsUnordered, QNaN, Ret);
+  }
+  case PowKind::PowN: {
+    Constant *ZeroI = ConstantInt::get(Y->getType(), 0);
+
+    // is_odd_y = (ny & 1) != 0
+    Value *OneI = ConstantInt::get(Y->getType(), 1);
+    Value *YAnd1 = B.CreateAnd(Y, OneI);
+    Value *IsOddY = B.CreateICmpNE(YAnd1, ZeroI);
+
+    // ret = copysign(expylnx, is_odd_y ? x : 1.0f)
+    Value *SelSign = B.CreateSelect(IsOddY, X, One);
+    Value *Ret = B.CreateCopySign(ExpYLnX, SelSign);
+
+    // if (isinf(x) || x == 0.0f)
+    Value *FabsX = B.CreateUnaryIntrinsic(Intrinsic::fabs, X);
+    Value *XIsInf = B.CreateFCmpOEQ(FabsX, PInf);
+    Value *XEqZero = B.CreateFCmpOEQ(X, Zero);
+    Value *InfOrZero = B.CreateOr(XIsInf, XEqZero);
+
+    // (x == 0.0f) ^ (ny < 0) ? 0.0f : +inf
+    Value *YLtZero = B.CreateICmpSLT(Y, ZeroI);
+    Value *XorZeroInf = B.CreateXor(XEqZero, YLtZero);
+    Value *SelVal = B.CreateSelect(XorZeroInf, Zero, PInf);
+
+    // copysign(selVal, is_odd_y ? x : 0.0f)
+    Value *SelSign2 = B.CreateSelect(IsOddY, X, Zero);
+    Value *Copysign = B.CreateCopySign(SelVal, SelSign2);
+
+    return B.CreateSelect(InfOrZero, Copysign, Ret);
+  }
+  case PowKind::RootN: {
+    Constant *ZeroI = ConstantInt::get(Y->getType(), 0);
+
+    // is_odd_y = (ny & 1) != 0
+    Value *YAnd1 = B.CreateAnd(Y, ConstantInt::get(Y->getType(), 1));
+    Value *IsOddY = B.CreateICmpNE(YAnd1, ZeroI);
+
+    // ret = copysign(expylnx, is_odd_y ? x : 1.0f)
+    Value *SelSign = B.CreateSelect(IsOddY, X, One);
+    Value *Ret = B.CreateCopySign(ExpYLnX, SelSign);
+
+    // if (isinf(x) || x == 0.0f)
+    Value *FabsX = B.CreateUnaryIntrinsic(Intrinsic::fabs, X);
+    Value *IsInfX = B.CreateFCmpOEQ(FabsX, PInf);
+    Value *XEqZero = B.CreateFCmpOEQ(X, Zero);
+    Value *CondInfOrZero = B.CreateOr(IsInfX, XEqZero);
+
+    // (x == 0.0f) ^ (ny < 0) ? 0.0f : +inf
+    Value *YLtZero = B.CreateICmpSLT(Y, ZeroI);
+    Value *XorZeroInf = B.CreateXor(XEqZero, YLtZero);
+    Value *SelVal = B.CreateSelect(XorZeroInf, Zero, PInf);
+
+    // copysign(selVal, is_odd_y ? x : 0.0f)
+    Value *SelSign2 = B.CreateSelect(IsOddY, X, Zero);
+    Value *Copysign = B.CreateCopySign(SelVal, SelSign2);
+
+    Ret = B.CreateSelect(CondInfOrZero, Copysign, Ret);
+
+    // if ((x < 0.0f && !is_odd_y) || ny == 0) ret = QNAN
+    Value *XIsNeg = B.CreateFCmpOLT(X, Zero);
+    Value *NotOddY = B.CreateNot(IsOddY);
+    Value *CondNegAndNotOdd = B.CreateAnd(XIsNeg, NotOddY);
+    Value *YEqZero = B.CreateICmpEQ(Y, ZeroI);
+    Value *CondBad = B.CreateOr(CondNegAndNotOdd, YEqZero);
+    return B.CreateSelect(CondBad, QNaN, Ret);
+  }
+  }
+
+  llvm_unreachable("covered switch");
+}
+
+// TODO: Move the fold_pow folding to sqrt/fdiv here
+bool AMDGPULibCalls::expandFastPow(FPMathOperator *FPOp, IRBuilder<> &B,
+                                   PowKind Kind) {
+  Type *Ty = FPOp->getType();
+
+  // There's currently no reason to do this for half. The correct path is
+  // promote to float and use the fast float expansion.
+  //
+  // TODO: We could move this expansion to lowering to get half pow to work.
+  if (!Ty->getScalarType()->isFloatTy())
+    return false;
+
+  // TODO: Verify optimization for double and bfloat.
+  Value *X = FPOp->getOperand(0);
+  Value *Y = FPOp->getOperand(1);
+
+  switch (Kind) {
+  case PowKind::Pow: {
+    Constant *One = ConstantFP::get(X->getType(), 1.0);
+
+    // if (x == 1.0f) y = 1.0f;
+    Value *XEqOne = B.CreateFCmpOEQ(X, One);
+    Y = B.CreateSelect(XEqOne, One, Y);
+
+    // if (y == 0.0f) x = 1.0f;
+    Value *YEqZero = B.CreateFCmpOEQ(Y, ConstantFP::getZero(X->getType()));
+    X = B.CreateSelect(YEqZero, One, X);
+
+    Value *ExpYLnX = emitFastExpYLnx(B, X, Y);
+    Value *Fixed = emitPowFixup(B, X, Y, ExpYLnX, Kind);
+    replaceCall(FPOp, Fixed);
+    return true;
+  }
+  case PowKind::PowR: {
+    Value *NegX = B.CreateFCmpOLT(X, ConstantFP::getZero(X->getType()));
+    X = B.CreateSelect(NegX, ConstantFP::getQNaN(X->getType()), X);
+
+    Value *ExpYLnX = emitFastExpYLnx(B, X, Y);
+    Value *Fixed = emitPowFixup(B, X, Y, ExpYLnX, Kind);
+    replaceCall(FPOp, Fixed);
+    return true;
+  }
+  case PowKind::PowN: {
+    // ny == 0
+    Value *YEqZero = B.CreateICmpEQ(Y, ConstantInt::get(Y->getType(), 0));
+
+    // x = (ny == 0 ? 1.0f : x)
+    X = B.CreateSelect(YEqZero, ConstantFP::get(X->getType(), 1.0), X);
+
+    Value *CastY = B.CreateSIToFP(Y, X->getType());
+    Value *ExpYLnX = emitFastExpYLnx(B, X, CastY);
+    Value *Fixed = emitPowFixup(B, X, Y, ExpYLnX, Kind);
+    replaceCall(FPOp, Fixed);
+    return true;
+  }
+  case PowKind::RootN: {
+    Value *CastY = B.CreateSIToFP(Y, X->getType());
+    Value *RcpY = B.CreateUnaryIntrinsic(Intrinsic::amdgcn_rcp, CastY);
+    Value *ExpYLnX = emitFastExpYLnx(B, X, RcpY);
+    Value *Fixed = emitPowFixup(B, X, Y, ExpYLnX, Kind);
+    replaceCall(FPOp, Fixed);
+    return true;
+  }
+  }
 }
 
 // Get a scalar native builtin single argument FP function
