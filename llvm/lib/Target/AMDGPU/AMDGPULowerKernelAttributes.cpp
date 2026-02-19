@@ -378,10 +378,22 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
     if (!GroupSize)
       continue;
 
+    Type *GroupSizeType = GroupSize->getType();
     ConstantInt *KnownSize = mdconst::extract<ConstantInt>(MD->getOperand(I));
-    GroupSize->replaceAllUsesWith(
-        ConstantFoldIntegerCast(KnownSize, GroupSize->getType(), false, DL));
-    MadeChange = true;
+    Type *ScalarType = GroupSizeType->getScalarType();
+    Constant *Replacement =
+        ConstantFoldIntegerCast(KnownSize, ScalarType, false, DL);
+
+    if (auto *VecTy = dyn_cast<VectorType>(GroupSizeType)) {
+      Replacement = VecTy->getElementCount().isScalar()
+                        ? ConstantExpr::getBitCast(Replacement, GroupSizeType)
+                        : nullptr;
+    }
+
+    if (Replacement) {
+      GroupSize->replaceAllUsesWith(Replacement);
+      MadeChange = true;
+    }
   }
 
   return MadeChange;
