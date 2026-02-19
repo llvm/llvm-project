@@ -9,11 +9,11 @@
 ; RUN:   %t/local-two.ll -o -  | FileCheck %s --check-prefix=WRITE
 
 ; WRITE-LABEL: _OUTLINED_FUNCTION_{{.*}}:
-; WRITE:      adrp x1, l_.str.3
-; WRITE-NEXT: add x1, x1, l_.str.3
-; WRITE-NEXT: mov w2
+; WRITE:      mov w2
 ; WRITE-NEXT: mov w3
 ; WRITE-NEXT: mov w4
+; WRITE-NEXT: adrp x1, l_.str.3
+; WRITE-NEXT: add x1, x1, l_.str.3
 ; WRITE-NEXT: b
 
 ; Create an object file and merge it into the cgdata.
@@ -28,11 +28,11 @@
 ; RUN:   %t/local-one.ll -o -  | FileCheck %s --check-prefix=READ
 
 ; READ-LABEL: _OUTLINED_FUNCTION_{{.*}}:
-; READ:      adrp x1, l_.str.5
-; READ-NEXT: add x1, x1, l_.str.5
-; READ-NEXT: mov w2
+; READ:      mov w2
 ; READ-NEXT: mov w3
 ; READ-NEXT: mov w4
+; READ-NEXT: adrp x1, l_.str.5
+; READ-NEXT: add x1, x1, l_.str.5
 ; READ-NEXT: b
 
 ;--- local-two.ll

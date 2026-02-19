@@ -19,9 +19,9 @@ define dso_local i32 @_Z3fooi(i32 %x) #0 {
 ; CHECK-V8A-NEXT:    bl __cxa_allocate_exception
 ; CHECK-V8A-NEXT:    adrp x8, .L.str
 ; CHECK-V8A-NEXT:    add x8, x8, :lo12:.L.str
+; CHECK-V8A-NEXT:    mov x2, xzr
 ; CHECK-V8A-NEXT:    adrp x1, _ZTIPKc
 ; CHECK-V8A-NEXT:    add x1, x1, :lo12:_ZTIPKc
-; CHECK-V8A-NEXT:    mov x2, xzr
 ; CHECK-V8A-NEXT:    str x8, [x0]
 ; CHECK-V8A-NEXT:    bl __cxa_throw
 ;
@@ -37,9 +37,9 @@ define dso_local i32 @_Z3fooi(i32 %x) #0 {
 ; CHECK-V83A-NEXT:    bl __cxa_allocate_exception
 ; CHECK-V83A-NEXT:    adrp x8, .L.str
 ; CHECK-V83A-NEXT:    add x8, x8, :lo12:.L.str
+; CHECK-V83A-NEXT:    mov x2, xzr
 ; CHECK-V83A-NEXT:    adrp x1, _ZTIPKc
 ; CHECK-V83A-NEXT:    add x1, x1, :lo12:_ZTIPKc
-; CHECK-V83A-NEXT:    mov x2, xzr
 ; CHECK-V83A-NEXT:    str x8, [x0]
 ; CHECK-V83A-NEXT:    bl __cxa_throw
 entry:

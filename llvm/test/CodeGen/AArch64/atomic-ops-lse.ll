@@ -2412,9 +2412,9 @@ define dso_local i8 @test_atomic_load_sub_i8_neg_imm() nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i8_neg_imm:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var8
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldadd1_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -2422,9 +2422,9 @@ define dso_local i8 @test_atomic_load_sub_i8_neg_imm() nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i8_neg_imm:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var8
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var8
-; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldadd1_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -2447,9 +2447,9 @@ define dso_local i16 @test_atomic_load_sub_i16_neg_imm() nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i16_neg_imm:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var16
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldadd2_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -2457,9 +2457,9 @@ define dso_local i16 @test_atomic_load_sub_i16_neg_imm() nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i16_neg_imm:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var16
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var16
-; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldadd2_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -2482,9 +2482,9 @@ define dso_local i32 @test_atomic_load_sub_i32_neg_imm() nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i32_neg_imm:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldadd4_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -2492,9 +2492,9 @@ define dso_local i32 @test_atomic_load_sub_i32_neg_imm() nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i32_neg_imm:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldadd4_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -2517,9 +2517,9 @@ define dso_local i64 @test_atomic_load_sub_i64_neg_imm() nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i64_neg_imm:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldadd8_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -2527,9 +2527,9 @@ define dso_local i64 @test_atomic_load_sub_i64_neg_imm() nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i64_neg_imm:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldadd8_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -2684,9 +2684,9 @@ define dso_local i8 @test_atomic_load_and_i8(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var8
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr1_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -2694,9 +2694,9 @@ define dso_local i8 @test_atomic_load_and_i8(i8 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var8
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var8
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr1_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -2718,9 +2718,9 @@ define dso_local i16 @test_atomic_load_and_i16(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var16
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr2_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -2728,9 +2728,9 @@ define dso_local i16 @test_atomic_load_and_i16(i16 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var16
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var16
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr2_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -2752,9 +2752,9 @@ define dso_local i32 @test_atomic_load_and_i32(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -2762,9 +2762,9 @@ define dso_local i32 @test_atomic_load_and_i32(i32 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -2786,9 +2786,9 @@ define dso_local i64 @test_atomic_load_and_i64(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -2796,9 +2796,9 @@ define dso_local i64 @test_atomic_load_and_i64(i64 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -2820,9 +2820,9 @@ define dso_local i8 @test_atomic_load_and_i8_inv_imm() nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_inv_imm:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var8
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr1_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -2830,9 +2830,9 @@ define dso_local i8 @test_atomic_load_and_i8_inv_imm() nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_inv_imm:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var8
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var8
-; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr1_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -2853,9 +2853,9 @@ define dso_local i16 @test_atomic_load_and_i16_inv_imm() nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_inv_imm:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var16
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr2_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -2863,9 +2863,9 @@ define dso_local i16 @test_atomic_load_and_i16_inv_imm() nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_inv_imm:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var16
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var16
-; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr2_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -2886,9 +2886,9 @@ define dso_local i32 @test_atomic_load_and_i32_inv_imm() nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_inv_imm:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -2896,9 +2896,9 @@ define dso_local i32 @test_atomic_load_and_i32_inv_imm() nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_inv_imm:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -2919,9 +2919,9 @@ define dso_local i64 @test_atomic_load_and_i64_inv_imm() nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_inv_imm:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -2929,9 +2929,9 @@ define dso_local i64 @test_atomic_load_and_i64_inv_imm() nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_inv_imm:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, #1 // =0x1
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -3076,9 +3076,9 @@ define dso_local void @test_atomic_load_and_i32_noret(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -3086,9 +3086,9 @@ define dso_local void @test_atomic_load_and_i32_noret(i32 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -3110,9 +3110,9 @@ define dso_local void @test_atomic_load_and_i64_noret(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -3120,9 +3120,9 @@ define dso_local void @test_atomic_load_and_i64_noret(i64 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -4070,9 +4070,9 @@ define dso_local i8 @test_atomic_load_and_i8_acq_rel(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var8
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr1_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4080,9 +4080,9 @@ define dso_local i8 @test_atomic_load_and_i8_acq_rel(i8 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_acq_rel:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var8
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var8
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr1_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4103,9 +4103,9 @@ define dso_local i16 @test_atomic_load_and_i16_acq_rel(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var16
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr2_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4113,9 +4113,9 @@ define dso_local i16 @test_atomic_load_and_i16_acq_rel(i16 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_acq_rel:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var16
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var16
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr2_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4136,9 +4136,9 @@ define dso_local i32 @test_atomic_load_and_i32_acq_rel(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4146,9 +4146,9 @@ define dso_local i32 @test_atomic_load_and_i32_acq_rel(i32 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_acq_rel:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4169,9 +4169,9 @@ define dso_local i64 @test_atomic_load_and_i64_acq_rel(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4179,9 +4179,9 @@ define dso_local i64 @test_atomic_load_and_i64_acq_rel(i64 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_acq_rel:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4202,9 +4202,9 @@ define dso_local void @test_atomic_load_and_i32_noret_acq_rel(i32 %offset) nounw
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4212,9 +4212,9 @@ define dso_local void @test_atomic_load_and_i32_noret_acq_rel(i32 %offset) nounw
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret_acq_rel:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4235,9 +4235,9 @@ define dso_local void @test_atomic_load_and_i64_noret_acq_rel(i64 %offset) nounw
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4245,9 +4245,9 @@ define dso_local void @test_atomic_load_and_i64_noret_acq_rel(i64 %offset) nounw
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret_acq_rel:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4268,9 +4268,9 @@ define dso_local i8 @test_atomic_load_and_i8_acquire(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var8
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr1_acq
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4278,9 +4278,9 @@ define dso_local i8 @test_atomic_load_and_i8_acquire(i8 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_acquire:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var8
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var8
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr1_acq
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4301,9 +4301,9 @@ define dso_local i16 @test_atomic_load_and_i16_acquire(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var16
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr2_acq
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4311,9 +4311,9 @@ define dso_local i16 @test_atomic_load_and_i16_acquire(i16 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_acquire:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var16
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var16
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr2_acq
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4334,9 +4334,9 @@ define dso_local i32 @test_atomic_load_and_i32_acquire(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4344,9 +4344,9 @@ define dso_local i32 @test_atomic_load_and_i32_acquire(i32 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_acquire:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4367,9 +4367,9 @@ define dso_local i64 @test_atomic_load_and_i64_acquire(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4377,9 +4377,9 @@ define dso_local i64 @test_atomic_load_and_i64_acquire(i64 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_acquire:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4400,9 +4400,9 @@ define dso_local void @test_atomic_load_and_i32_noret_acquire(i32 %offset) nounw
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4410,9 +4410,9 @@ define dso_local void @test_atomic_load_and_i32_noret_acquire(i32 %offset) nounw
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret_acquire:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4433,9 +4433,9 @@ define dso_local void @test_atomic_load_and_i64_noret_acquire(i64 %offset) nounw
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4443,9 +4443,9 @@ define dso_local void @test_atomic_load_and_i64_noret_acquire(i64 %offset) nounw
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret_acquire:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4466,9 +4466,9 @@ define dso_local i8 @test_atomic_load_and_i8_monotonic(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var8
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr1_relax
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4476,9 +4476,9 @@ define dso_local i8 @test_atomic_load_and_i8_monotonic(i8 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_monotonic:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var8
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var8
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr1_relax
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4499,9 +4499,9 @@ define dso_local i16 @test_atomic_load_and_i16_monotonic(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var16
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr2_relax
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4509,9 +4509,9 @@ define dso_local i16 @test_atomic_load_and_i16_monotonic(i16 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_monotonic:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var16
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var16
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr2_relax
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4532,9 +4532,9 @@ define dso_local i32 @test_atomic_load_and_i32_monotonic(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_relax
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4542,9 +4542,9 @@ define dso_local i32 @test_atomic_load_and_i32_monotonic(i32 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_monotonic:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_relax
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4565,9 +4565,9 @@ define dso_local i64 @test_atomic_load_and_i64_monotonic(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_relax
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4575,9 +4575,9 @@ define dso_local i64 @test_atomic_load_and_i64_monotonic(i64 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_monotonic:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_relax
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4598,9 +4598,9 @@ define dso_local void @test_atomic_load_and_i32_noret_monotonic(i32 %offset) nou
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_relax
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4608,9 +4608,9 @@ define dso_local void @test_atomic_load_and_i32_noret_monotonic(i32 %offset) nou
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret_monotonic:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_relax
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4631,9 +4631,9 @@ define dso_local void @test_atomic_load_and_i64_noret_monotonic(i64 %offset) nou
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_relax
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4641,9 +4641,9 @@ define dso_local void @test_atomic_load_and_i64_noret_monotonic(i64 %offset) nou
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret_monotonic:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_relax
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4664,9 +4664,9 @@ define dso_local i8 @test_atomic_load_and_i8_release(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var8
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr1_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4674,9 +4674,9 @@ define dso_local i8 @test_atomic_load_and_i8_release(i8 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_release:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var8
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var8
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr1_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4697,9 +4697,9 @@ define dso_local i16 @test_atomic_load_and_i16_release(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var16
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr2_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4707,9 +4707,9 @@ define dso_local i16 @test_atomic_load_and_i16_release(i16 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_release:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var16
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var16
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr2_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4730,9 +4730,9 @@ define dso_local i32 @test_atomic_load_and_i32_release(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4740,9 +4740,9 @@ define dso_local i32 @test_atomic_load_and_i32_release(i32 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_release:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4763,9 +4763,9 @@ define dso_local i64 @test_atomic_load_and_i64_release(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4773,9 +4773,9 @@ define dso_local i64 @test_atomic_load_and_i64_release(i64 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_release:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4796,9 +4796,9 @@ define dso_local void @test_atomic_load_and_i32_noret_release(i32 %offset) nounw
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4806,9 +4806,9 @@ define dso_local void @test_atomic_load_and_i32_noret_release(i32 %offset) nounw
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret_release:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4829,9 +4829,9 @@ define dso_local void @test_atomic_load_and_i64_noret_release(i64 %offset) nounw
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4839,9 +4839,9 @@ define dso_local void @test_atomic_load_and_i64_noret_release(i64 %offset) nounw
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret_release:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
@@ -4862,9 +4862,9 @@ define dso_local i8 @test_atomic_load_and_i8_seq_cst(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var8
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr1_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4872,9 +4872,9 @@ define dso_local i8 @test_atomic_load_and_i8_seq_cst(i8 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_seq_cst:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var8
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var8
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr1_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -4896,9 +4896,9 @@ define dso_local i16 @test_atomic_load_and_i16_seq_cst(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var16
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr2_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4906,9 +4906,9 @@ define dso_local i16 @test_atomic_load_and_i16_seq_cst(i16 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_seq_cst:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var16
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var16
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr2_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -4930,9 +4930,9 @@ define dso_local i32 @test_atomic_load_and_i32_seq_cst(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4940,9 +4940,9 @@ define dso_local i32 @test_atomic_load_and_i32_seq_cst(i32 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_seq_cst:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -4964,9 +4964,9 @@ define dso_local i64 @test_atomic_load_and_i64_seq_cst(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4974,9 +4974,9 @@ define dso_local i64 @test_atomic_load_and_i64_seq_cst(i64 %offset) nounwind {
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_seq_cst:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -4998,9 +4998,9 @@ define dso_local void @test_atomic_load_and_i32_noret_seq_cst(i32 %offset) nounw
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -5008,9 +5008,9 @@ define dso_local void @test_atomic_load_and_i32_noret_seq_cst(i32 %offset) nounw
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret_seq_cst:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var32
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn w0, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr4_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -5032,9 +5032,9 @@ define dso_local void @test_atomic_load_and_i64_noret_seq_cst(i64 %offset) nounw
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -5042,9 +5042,9 @@ define dso_local void @test_atomic_load_and_i64_noret_seq_cst(i64 %offset) nounw
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret_seq_cst:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
 ; MSVC-OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x1, var64
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x1, x1, :lo12:var64
-; MSVC-OUTLINE-ATOMICS-NEXT:    mvn x0, x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    bl __aarch64_ldclr8_acq_rel
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
