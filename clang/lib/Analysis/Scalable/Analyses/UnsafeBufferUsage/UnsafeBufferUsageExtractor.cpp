@@ -54,8 +54,10 @@ constexpr inline auto buildEntityPointerLevel =
 //   Translate(cond ? p1[5] : p2)  -> {(p1, 2), (p2, 1)}
 //   Translate(&arr[5])            -> {(arr, 1)}
 class EntityPointerLevelTranslator
-    : public ConstStmtVisitor<EntityPointerLevelTranslator,
-                              Expected<EntityPointerLevelSet>> {
+    : ConstStmtVisitor<EntityPointerLevelTranslator,
+                       Expected<EntityPointerLevelSet>> {
+  friend class StmtVisitorBase;
+
   // Fallback method for all unsupported expression kind:
   llvm::Error fallback(const Stmt *E) {
     return llvm::createStringError(
@@ -96,6 +98,9 @@ public:
   EntityPointerLevelTranslator(UnsafeBufferUsageTUSummaryBuilder &Builder)
       : Builder(Builder) {}
 
+  Expected<EntityPointerLevelSet> translate(const Expr *E) { return Visit(E); }
+
+private:
   Expected<EntityPointerLevelSet> VisitStmt(const Stmt *E) {
     return fallback(E);
   }
@@ -234,7 +239,7 @@ buildEntityPointerLevels(std::set<const Expr *> &&UnsafePointers,
   EntityPointerLevelTranslator Translator{Builder};
 
   for (const Expr *Ptr : UnsafePointers) {
-    Expected<EntityPointerLevelSet> Translation = Translator.Visit(Ptr);
+    Expected<EntityPointerLevelSet> Translation = Translator.translate(Ptr);
 
     if (Translation) {
       // Filter out those temporary invalid EntityPointerLevels associated with
