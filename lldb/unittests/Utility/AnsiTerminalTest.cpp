@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Utility/AnsiTerminal.h"
+#include "lldb/Utility/StreamString.h"
 
 using namespace lldb_private;
 
@@ -115,4 +116,67 @@ TEST(AnsiTerminal, TrimAndPad) {
   EXPECT_EQ("    ❤️", ansi::TrimAndPad("    ❤️", 5));
   EXPECT_EQ("12❤️4❤️", ansi::TrimAndPad("12❤️4❤️", 5));
   EXPECT_EQ("12❤️45", ansi::TrimAndPad("12❤️45❤️", 5));
+}
+
+static void TestLines(const std::string &input, int indent,
+                      uint32_t output_max_columns,
+                      const llvm::StringRef &expected) {
+  StreamString strm;
+  strm.SetIndentLevel(indent);
+  ansi::OutputWordWrappedLines(strm, input, output_max_columns);
+  EXPECT_EQ(expected, strm.GetString());
+}
+
+TEST(AnsiTerminal, OutputWordWrappedLines) {
+  TestLines("", 0, 0, "");
+  TestLines("", 0, 1, "");
+  TestLines("", 2, 1, "");
+
+  // When it is a single word, we ignore the max columns and do not split it.
+  TestLines("abc", 0, 1, "abc\n");
+  TestLines("abc", 0, 2, "abc\n");
+  TestLines("abc", 0, 3, "abc\n");
+  TestLines("abc", 0, 4, "abc\n");
+  TestLines("abc", 1, 5, " abc\n");
+  TestLines("abc", 2, 5, "  abc\n");
+
+  // Leading whitespace is ignored because we're going to indent using the
+  // stream.
+  TestLines("  abc", 0, 4, "abc\n");
+  TestLines("        abc", 2, 6, "  abc\n");
+
+  TestLines("abc def", 0, 4, "abc\ndef\n");
+  TestLines("abc def", 0, 5, "abc\ndef\n");
+  // Length is 6, 7 required. Has to split at whitespace.
+  TestLines("abc def", 0, 6, "abc\ndef\n");
+  // FIXME: This should split after abc, and not print
+  // more whitespace on the end of the line or the start
+  // of the new one. Resulting in "abc\ndef\n".
+  TestLines("abc           def", 0, 6, "abc  \ndef\n");
+
+  const char *fox_str = "The quick brown fox.";
+  TestLines(fox_str, 0, 30, "The quick brown fox.\n");
+  TestLines(fox_str, 5, 30, "     The quick brown fox.\n");
+  TestLines(fox_str, 0, 15, "The quick\nbrown fox.\n");
+  // FIXME: Trim the spaces off of the end of the first line.
+  TestLines("The quick       brown fox.", 0, 15,
+            "The quick     \nbrown fox.\n");
+
+  // As ANSI codes do not add to visible length, the results
+  // should be the same as the plain text verison.
+  const char *fox_str_ansi = "\x1B[4mT\x1B[0mhe quick brown fox.";
+  TestLines(fox_str_ansi, 0, 30, "\x1B[4mT\x1B[0mhe quick brown fox.\n");
+  TestLines(fox_str_ansi, 5, 30, "     \x1B[4mT\x1B[0mhe quick brown fox.\n");
+  // FIXME: Account for ANSI codes not contributing to visible length.
+  TestLines(fox_str_ansi, 0, 15, "\x1B[4mT\x1B[0mhe\nquick br\n");
+
+  const std::string fox_str_emoji = "🦊 The quick brown fox. 🦊";
+  TestLines(fox_str_emoji, 0, 30, "🦊 The quick brown fox. 🦊\n");
+  // FIXME: This crashes when max columns is exactly 31.
+  // TestLines(fox_str_emoji, 5, 31, "     🦊 The quick brown fox. 🦊\n");
+  TestLines(fox_str_emoji, 5, 32, "     🦊 The quick brown fox. 🦊\n");
+  // FIXME: Final fox is missing.
+  TestLines(fox_str_emoji, 0, 15, "🦊 The quick\nbrown fox. \n");
+  // FIXME: should not split the middle of an emoji.
+  TestLines("🦊🦊🦊 🦊🦊", 0, 5, "\n\n\n\n\n\n\n\x8A\xF0\x9F\xA6\n");
 }

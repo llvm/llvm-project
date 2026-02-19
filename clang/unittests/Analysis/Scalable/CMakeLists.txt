@@ -3,6 +3,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   BuildNamespaceTest.cpp
   EntityIdTest.cpp
   EntityIdTableTest.cpp
+  EntityLinkageTest.cpp
   EntityNameTest.cpp
   Registries/FancyAnalysisData.cpp
   Registries/MockSerializationFormat.cpp
@@ -10,7 +11,10 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   Registries/MockSummaryExtractor2.cpp
   Registries/SerializationFormatRegistryTest.cpp
   Registries/SummaryExtractorRegistryTest.cpp
+  Serialization/JSONFormatTest.cpp
   SummaryNameTest.cpp
+  TestFixture.cpp
+  TUSummaryBuilderTest.cpp
 
   CLANG_LIBS
   clangAnalysisScalable

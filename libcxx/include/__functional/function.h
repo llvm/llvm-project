@@ -420,7 +420,7 @@ template <class _Fp>
 class __policy_func;
 
 template <class _Rp, class... _ArgTypes>
-class _LIBCPP_PFP __policy_func<_Rp(_ArgTypes...)> {
+class __policy_func<_Rp(_ArgTypes...)> {
   // Inline storage for small objects.
   __policy_storage __buf_;
 
@@ -540,7 +540,7 @@ public:
 #    if __has_feature(objc_arc)
       : __f_(__f)
 #    else
-      : __f_(reinterpret_cast<__block_type>(__f ? _Block_copy(__f) : nullptr))
+      : __f_(reinterpret_cast<__block_type>(__f ? __function::_Block_copy(__f) : nullptr))
 #    endif
   {
   }
@@ -563,7 +563,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy() _NOEXCEPT {
 #    if !__has_feature(objc_arc)
     if (__f_)
-      _Block_release(__f_);
+      __function::_Block_release(__f_);
 #    endif
     __f_ = 0;
   }

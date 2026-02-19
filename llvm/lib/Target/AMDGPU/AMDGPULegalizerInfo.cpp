@@ -3559,7 +3559,11 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
   const LLT F16 = LLT::scalar(16);
 
   if (Ty == F16 || MI.getFlag(MachineInstr::FmAfn)) {
-    if (Ty == F16 && !ST.has16BitInsts()) {
+    // TODO: The direct f16 path is 1.79 ulp for f16. This should be used
+    // depending on !fpmath metadata.
+    bool PromoteToF32 =
+        Ty == F16 && (!MI.getFlag(MachineInstr::FmAfn) || !ST.has16BitInsts());
+    if (PromoteToF32) {
       Register LogVal = MRI.createGenericVirtualRegister(F32);
       auto PromoteSrc = B.buildFPExt(F32, X);
       legalizeFlogUnsafe(B, LogVal, PromoteSrc.getReg(0), IsLog10, Flags);
@@ -8123,8 +8127,12 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_bf8: {
     Register Index = MI.getOperand(5).getReg();
     LLT S64 = LLT::scalar(64);
-    if (MRI.getType(Index) != S64)
-      MI.getOperand(5).setReg(B.buildAnyExt(S64, Index).getReg(0));
+    LLT IndexArgTy = MRI.getType(Index);
+    if (IndexArgTy != S64) {
+      auto NewIndex = IndexArgTy.isVector() ? B.buildBitcast(S64, Index)
+                                            : B.buildAnyExt(S64, Index);
+      MI.getOperand(5).setReg(NewIndex.getReg(0));
+    }
     return true;
   }
   case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16:
@@ -8154,8 +8162,12 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     LLT IdxTy = IntrID == Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8
                     ? LLT::scalar(64)
                     : LLT::scalar(32);
-    if (MRI.getType(Index) != IdxTy)
-      MI.getOperand(7).setReg(B.buildAnyExt(IdxTy, Index).getReg(0));
+    LLT IndexArgTy = MRI.getType(Index);
+    if (IndexArgTy != IdxTy) {
+      auto NewIndex = IndexArgTy.isVector() ? B.buildBitcast(IdxTy, Index)
+                                            : B.buildAnyExt(IdxTy, Index);
+      MI.getOperand(7).setReg(NewIndex.getReg(0));
+    }
     return true;
   }
 

@@ -13,19 +13,19 @@
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |  Number of Conditions: 5
 // CHECK-NEXT:  |     Condition C1 --> (9:7)
-// CHECK-NEXT:  |     Condition C2 --> (2:11)
-// CHECK-NEXT:  |     Condition C3 --> (3:11)
-// CHECK-NEXT:  |     Condition C4 --> (3:23)
-// CHECK-NEXT:  |     Condition C5 --> (9:22)
+// CHECK-NEXT:  |     Condition C2 --> (9:22)
+// CHECK-NEXT:  |     Condition C3 --> (2:11)
+// CHECK-NEXT:  |     Condition C4 --> (3:11)
+// CHECK-NEXT:  |     Condition C5 --> (3:23)
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |  Executed MC/DC Test Vectors:
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |     C1, C2, C3, C4, C5    Result
-// CHECK-NEXT:  |  1 { T,  C,  T,  T,  -  = T      }
+// CHECK-NEXT:  |  1 { T,  -,  C,  T,  T  = T      }
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |  C1-Pair: not covered
-// CHECK-NEXT:  |  C2-Pair: constant folded
-// CHECK-NEXT:  |  C3-Pair: not covered
+// CHECK-NEXT:  |  C2-Pair: not covered
+// CHECK-NEXT:  |  C3-Pair: constant folded
 // CHECK-NEXT:  |  C4-Pair: not covered
 // CHECK-NEXT:  |  C5-Pair: not covered
 // CHECK-NEXT:  |  MC/DC Coverage for Decision: 0.00%

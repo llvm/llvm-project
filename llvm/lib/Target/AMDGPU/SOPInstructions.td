@@ -1712,9 +1712,19 @@ let SubtargetPredicate = HasWaitXcnt in {
 
 // Represents the point at which a wave must wait for all outstanding direct loads to LDS.
 // Typically inserted by the memory legalizer and consumed by SIInsertWaitcnts.
-
 def S_WAITCNT_lds_direct : SPseudoInstSI<(outs), (ins)> {
    let hasSideEffects = 0;
+}
+
+let SubtargetPredicate = HasVMemToLDSLoad in {
+def ASYNCMARK : SPseudoInstSI<(outs), (ins),
+  [(int_amdgcn_asyncmark)]> {
+   let maybeAtomic = 0;
+}
+def WAIT_ASYNCMARK : SOPP_Pseudo <"", (ins s16imm:$simm16), "$simm16",
+    [(int_amdgcn_wait_asyncmark timm:$simm16)]> {
+    let maybeAtomic = 0;
+}
 }
 
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",

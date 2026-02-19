@@ -888,7 +888,7 @@ _LIBCPP_DIAGNOSE_WARNING(!__is_invocable_v<_Compare const&, _Tp const&, _Tp cons
 int __diagnose_non_const_comparator();
 
 template <class _Tp, class _Compare, class _Allocator>
-class _LIBCPP_PFP __tree {
+class __tree {
 public:
   using value_type     = __get_node_value_type_t<_Tp>;
   using value_compare  = _Compare;

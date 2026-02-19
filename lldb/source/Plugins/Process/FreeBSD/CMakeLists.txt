@@ -4,7 +4,7 @@ add_lldb_library(lldbPluginProcessFreeBSD
   NativeRegisterContextFreeBSD_arm.cpp
   NativeRegisterContextFreeBSD_arm64.cpp
   NativeRegisterContextFreeBSD_powerpc.cpp
-  NativeRegisterContextFreeBSD_x86_64.cpp
+  NativeRegisterContextFreeBSD_x86.cpp
   NativeThreadFreeBSD.cpp
 
   LINK_COMPONENTS

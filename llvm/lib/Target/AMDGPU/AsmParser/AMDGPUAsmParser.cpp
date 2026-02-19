@@ -126,6 +126,7 @@ public:
     ImmTySMEMOffsetMod,
     ImmTyCPol,
     ImmTyTFE,
+    ImmTyIsAsync,
     ImmTyD16,
     ImmTyClamp,
     ImmTyOModSI,
@@ -1121,6 +1122,7 @@ public:
     case ImmTyIndexKey16bit: OS << "index_key"; break;
     case ImmTyIndexKey32bit: OS << "index_key"; break;
     case ImmTyTFE: OS << "TFE"; break;
+    case ImmTyIsAsync: OS << "IsAsync"; break;
     case ImmTyD16: OS << "D16"; break;
     case ImmTyFORMAT: OS << "FORMAT"; break;
     case ImmTyClamp: OS << "Clamp"; break;
@@ -1553,6 +1555,8 @@ public:
   bool isGFX11Plus() const {
     return AMDGPU::isGFX11Plus(getSTI());
   }
+
+  bool isGFX1170() const { return AMDGPU::isGFX1170(getSTI()); }
 
   bool isGFX12() const { return AMDGPU::isGFX12(getSTI()); }
 

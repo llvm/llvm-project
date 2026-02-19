@@ -3893,7 +3893,7 @@ define amdgpu_kernel void @any_extend_to_perm(i8 %arg, <4 x i8> %arg1) {
 ; GFX9-NEXT:    s_endpgm
 bb:
   %insertelement = insertelement <4 x i8> %arg1, i8 %arg, i64 3
-  store <4 x i8> %insertelement, ptr addrspace(3) null, align 4
+  store <4 x i8> %insertelement, ptr addrspace(3) zeroinitializer, align 4
   ret void
 }
 

@@ -399,6 +399,8 @@ private:
   public:
     ConcurrencyState();
     ~ConcurrencyState();
+    ConcurrencyState(const ConcurrencyState &) = delete;
+    ConcurrencyState &operator=(const ConcurrencyState &) = delete;
 
     void start();
     void finish();
@@ -950,6 +952,9 @@ public:
       SmallVectorImpl<StandaloneDiagnostic> *StandaloneDiags);
 
   ~CaptureDroppedDiagnostics();
+  CaptureDroppedDiagnostics(const CaptureDroppedDiagnostics &) = delete;
+  CaptureDroppedDiagnostics &
+  operator=(const CaptureDroppedDiagnostics &) = delete;
 };
 
 } // namespace clang

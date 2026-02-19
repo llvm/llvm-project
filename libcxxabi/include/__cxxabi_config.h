@@ -128,10 +128,4 @@
 #  define _LIBCXXABI_NOEXCEPT noexcept
 #endif
 
-#if defined(__POINTER_FIELD_PROTECTION_ABI__)
-#  define _LIBCXXABI_DISABLE_POINTER_FIELD_PROTECTION [[_Clang::__no_field_protection__]]
-#else
-#  define _LIBCXXABI_DISABLE_POINTER_FIELD_PROTECTION
-#endif
-
 #endif // ____CXXABI_CONFIG_H
