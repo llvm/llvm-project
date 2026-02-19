@@ -87,6 +87,7 @@ extern cl::list<std::string> PrintOnly;
 extern cl::opt<std::string> PrintOnlyFile;
 extern cl::list<std::string> ReorderData;
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
+extern cl::opt<bool> SimplifyRODataLoads;
 extern cl::opt<bool> TerminalHLT;
 extern cl::opt<bool> TerminalTrap;
 extern cl::opt<bool> TimeBuild;
@@ -2418,6 +2419,14 @@ void RewriteInstance::adjustCommandLineOptions() {
       opts::TerminalHLT = false;
     if (!opts::TerminalTrap.getNumOccurrences())
       opts::TerminalTrap = false;
+  }
+
+  if (BC->isRISCV() || (BC->isAArch64() && !BC->HasRelocations)) {
+    // TODO: For RISCV, the optimization is not implemented yet.
+    // For AArch64, the one is disabled to avoid increasing
+    // the output functions size in non relocs mode.
+    opts::SimplifyRODataLoads = false;
+    BC->outs() << "BOLT-INFO: simplify rodata loads pass is disabled\n";
   }
 }
 
