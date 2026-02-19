@@ -79,10 +79,16 @@ add_flang_library(flangFrontend
   clangOptions
 )
 
-target_precompile_headers(flangFrontend PRIVATE
-  [["flang/Parser/parsing.h"]]
-  [["flang/Parser/parse-tree.h"]]
-  [["flang/Parser/dump-parse-tree.h"]]
-  [["flang/Lower/PFTBuilder.h"]]
-  [["flang/Lower/Bridge.h"]]
-)
+# Precompiled Headers for flangFrontend
+# Only enable PCH on non-Windows platforms, as the current usage of
+# target_precompile_headers appears fragile during incremental builds
+# involving CMake regeneration specifically on Windows.
+if(NOT WIN32)
+  target_precompile_headers(flangFrontend PRIVATE
+    [["flang/Parser/parsing.h"]]
+    [["flang/Parser/parse-tree.h"]]
+    [["flang/Parser/dump-parse-tree.h"]]
+    [["flang/Lower/PFTBuilder.h"]]
+    [["flang/Lower/Bridge.h"]]
+  )
+endif()
