@@ -14,7 +14,7 @@ _CLC_DEF bool __clc_fp16_subnormals_supported() { return false; }
 _CLC_DEF bool __clc_fp32_subnormals_supported() { return false; }
 
 _CLC_DEF bool __clc_fp64_subnormals_supported() {
-#if defined(__SPIRV__) || defined(__SPIR32__)
+#if defined(CLC_SPIRV) || defined(CLC_CLSPV)
   return false;
 #else
   return true;
