@@ -601,7 +601,7 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     for (const auto &[Idx, Op] : enumerate(NewOps)) {
       New->setOperand(Idx, Op);
     }
-    if (isa<VPScalarIVStepsRecipe>(New)) {
+    if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(New)) {
       if (Lane.getKnownLane() != 0) {
         VPTypeAnalysis TypeInfo(Plan);
         Type *BaseIVTy = TypeInfo.inferScalarType(DefR->getOperand(0));
@@ -612,12 +612,12 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
         LaneOffset = Builder.createScalarSExtOrTrunc(
             LaneOffset, IntStepTy, IdxTy, DebugLoc::getUnknown());
 
-        if (New->getNumOperands() == 4) {
-          // Already has startIndex from unrolling, add lane offset to it.
-          New->setOperand(3, Builder.createAdd(New->getOperand(3), LaneOffset));
+        if (VPValue *StartIndex = Steps->getStartIndex()) {
+          // Add lane offset to the existing start index.
+          Steps->setOperand(3, Builder.createAdd(StartIndex, LaneOffset));
         } else {
-          // No startIndex yet (3 operands), add lane offset as the startIndex.
-          New->addOperand(LaneOffset);
+          // No start index yet, add lane offset as the start index.
+          Steps->addOperand(LaneOffset);
         }
       }
     }
