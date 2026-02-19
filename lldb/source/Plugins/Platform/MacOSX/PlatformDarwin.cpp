@@ -33,6 +33,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -421,6 +422,51 @@ Status PlatformDarwin::GetSharedModule(
   if (module_sp)
     module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
   return error;
+}
+Status PlatformDarwin::GetModuleFromSharedCaches(
+    const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
+    llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
+  Status err;
+
+  SymbolSharedCacheUse sc_mode =
+      ModuleList::GetGlobalModuleListProperties().GetSharedCacheBinaryLoading();
+  SharedCacheImageInfo image_info;
+  if (process && process->GetDynamicLoader()) {
+    addr_t sc_base_addr;
+    UUID sc_uuid;
+    LazyBool using_sc, private_sc;
+    FileSpec sc_path;
+    if (process->GetDynamicLoader()->GetSharedCacheInformation(
+            sc_base_addr, sc_uuid, using_sc, private_sc, sc_path)) {
+      if (module_spec.GetUUID())
+        image_info = HostInfo::GetSharedCacheImageInfo(module_spec.GetUUID(),
+                                                       sc_uuid, sc_mode);
+      else
+        image_info = HostInfo::GetSharedCacheImageInfo(
+            module_spec.GetFileSpec().GetPathAsConstString(), sc_uuid, sc_mode);
+    }
+  }
+  // Fall back to looking for the file in lldb's own shared cache.
+  if (!image_info.GetUUID())
+    image_info = HostInfo::GetSharedCacheImageInfo(
+        module_spec.GetFileSpec().GetPathAsConstString(), sc_mode);
+
+  // If we found it and it has the correct UUID, let's proceed with
+  // creating a module from the memory contents.
+  if (image_info.GetUUID() && (!module_spec.GetUUID() ||
+                               module_spec.GetUUID() == image_info.GetUUID())) {
+    ModuleSpec shared_cache_spec(module_spec.GetFileSpec(),
+                                 image_info.GetUUID(),
+                                 image_info.GetExtractor());
+    err = ModuleList::GetSharedModule(shared_cache_spec, module_sp, old_modules,
+                                      did_create_ptr);
+    if (module_sp) {
+      Log *log = GetLog(LLDBLog::Platform | LLDBLog::Modules);
+      LLDB_LOGF(log, "module %s was found in a shared cache",
+                module_spec.GetFileSpec().GetPath().c_str());
+    }
+  }
+  return err;
 }
 
 size_t

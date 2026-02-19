@@ -234,10 +234,3 @@ add_mlir_dialect_library(MLIRXeVMTarget
   MLIRTargetLLVM
   MLIRXeVMToLLVMIRTranslation
 )
-
-target_include_directories(MLIRXeVMTarget
-  PRIVATE
-    ${PROJECT_SOURCE_DIR}/lib/Target/SPIRV
-    ${PROJECT_BINARY_DIR}/lib/Target/SPIRV
-)
-

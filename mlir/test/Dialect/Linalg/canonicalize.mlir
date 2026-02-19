@@ -2061,6 +2061,52 @@ func.func @no_fold_extract_slice_into_unpack_non_zero_offset(
 
 // -----
 
+// Must not fold because extract_slice cuts the 0'th dimension from 30 to 28.
+func.func @no_fold_extract_slice_into_unpack_slice_over_non_tiled_dim(
+    %src : tensor<30x2x16xf32>, %dest : tensor<30x32xf32>
+) -> tensor<28x28xf32> {
+  %unpack = linalg.unpack %src
+      inner_dims_pos = [1]
+      inner_tiles = [16]
+      into %dest : tensor<30x2x16xf32> -> tensor<30x32xf32>
+  %extracted_slice = tensor.extract_slice %unpack
+      [0, 0] [28, 28] [1, 1] : tensor<30x32xf32> to tensor<28x28xf32>
+  return %extracted_slice : tensor<28x28xf32>
+}
+
+// CHECK-LABEL: func @no_fold_extract_slice_into_unpack_slice_over_non_tiled_dim
+//  CHECK-SAME:     %[[SRC:.+]]: tensor<30x2x16xf32>
+//  CHECK-SAME:     %[[DEST:.+]]: tensor<30x32xf32>
+//       CHECK:   %[[UNPACK:.+]] = linalg.unpack %[[SRC]]
+//  CHECK-SAME:       into %[[DEST]]
+//       CHECK:   %[[SLICE:.+]] = tensor.extract_slice %[[UNPACK]]
+//       CHECK:   return %[[SLICE]]
+
+// -----
+
+// Must not fold because extract_slice's effect on the 0'th dimension is unknown.
+func.func @no_fold_extract_slice_into_unpack_slice_over_dynamic_dim(
+    %src : tensor<?x2x16xf32>, %dest : tensor<?x32xf32>, %size : index
+) -> tensor<?x28xf32> {
+  %unpack = linalg.unpack %src
+      inner_dims_pos = [1]
+      inner_tiles = [16]
+      into %dest : tensor<?x2x16xf32> -> tensor<?x32xf32>
+  %extracted_slice = tensor.extract_slice %unpack
+      [0, 0] [%size, 28] [1, 1] : tensor<?x32xf32> to tensor<?x28xf32>
+  return %extracted_slice : tensor<?x28xf32>
+}
+
+// CHECK-LABEL: func @no_fold_extract_slice_into_unpack_slice_over_dynamic_dim
+//  CHECK-SAME:     %[[SRC:.+]]: tensor<?x2x16xf32>
+//  CHECK-SAME:     %[[DEST:.+]]: tensor<?x32xf32>
+//       CHECK:   %[[UNPACK:.+]] = linalg.unpack %[[SRC]]
+//  CHECK-SAME:       into %[[DEST]]
+//       CHECK:   %[[SLICE:.+]] = tensor.extract_slice %[[UNPACK]]
+//       CHECK:   return %[[SLICE]]
+
+// -----
+
 // CHECK-LABEL:   func.func @fold_cast_unpack_dynamic_tile_size(
 // CHECK-SAME:      %[[SRC:.*]]: tensor<1x1x8x1xi32>,
 // CHECK-SAME:      %[[DEST:.*]]: tensor<7x?xi32>) -> tensor<7x?xi32> {

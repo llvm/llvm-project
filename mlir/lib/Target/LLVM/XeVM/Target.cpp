@@ -39,13 +39,6 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
-// From llvm/lib/Target/SPIRV
-#if LLVM_HAS_SPIRV_TARGET
-#include "MCTargetDesc/SPIRVBaseInfo.h"
-#include "SPIRVCommandLine.h"
-#include "SPIRVSubtarget.h"
-#include "SPIRVTargetMachine.h"
-#endif
 
 #include <cstdint>
 #include <cstdlib>
@@ -246,10 +239,6 @@ public:
 
   static void init();
 
-  /// Runs the serialization pipeline, returning `std::nullopt` on error.
-  std::optional<SmallVector<char, 0>> run() override;
-
-protected:
   /// Serializes the LLVM module to an object format, depending on the
   /// compilation target selected in target options.
   FailureOr<SmallVector<char, 0>>
@@ -276,101 +265,27 @@ void SPIRVSerializer::init() {
   });
 }
 
-#if LLVM_HAS_SPIRV_TARGET
-static const std::vector<std::string> getDefaultSPIRVExtensions() {
-  return {
-      "SPV_EXT_relaxed_printf_string_address_space",
-      "SPV_INTEL_cache_controls",
-      "SPV_INTEL_variable_length_array",
-  };
-}
-#endif
-
-std::optional<SmallVector<char, 0>> SPIRVSerializer::run() {
-  // Translate the module to LLVM IR.
-  llvm::LLVMContext llvmContext;
-  std::unique_ptr<llvm::Module> llvmModule = translateToLLVMIR(llvmContext);
-  if (!llvmModule) {
-    getOperation().emitError() << "Failed creating the llvm::Module.";
-    return std::nullopt;
-  }
-
+FailureOr<SmallVector<char, 0>>
+SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
 #define DEBUG_TYPE "serialize-to-llvm"
   LLVM_DEBUG({
     llvm::dbgs() << "LLVM IR for module: " << getGPUModuleOp().getNameAttr()
                  << "\n";
-    llvm::dbgs() << *llvmModule << "\n";
+    llvm::dbgs() << llvmModule << "\n";
     llvm::dbgs().flush();
   });
 #undef DEBUG_TYPE
 
   // Return LLVM IR if the compilation target is `offload`.
   if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Offload)
-    return SerializeGPUModuleBase::moduleToObject(*llvmModule);
+    return SerializeGPUModuleBase::moduleToObject(llvmModule);
 
-#if LLVM_HAS_SPIRV_TARGET
-  setDataLayoutAndTriple(*llvmModule);
-
-  // Create the target machine.
-  FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
-  if (failed(targetMachine)) {
-    getOperation().emitError()
-        << "Target Machine unavailable for triple " << triple
-        << ", can't output compilation target.\n";
-    return std::nullopt;
-  }
-  // Setup allowed SPIR-V extensions.
-  std::set<llvm::SPIRV::Extension::Extension> AllowedExtIds;
-  llvm::StringRef UnknownExt = llvm::SPIRVExtensionsParser::checkExtensions(
-      getDefaultSPIRVExtensions(), AllowedExtIds);
-  if (!UnknownExt.empty()) {
-    std::string ErrMsg{"Unknown SPIR-V extension: "};
-    ErrMsg.append(UnknownExt.str());
-    getOperation().emitError() << ErrMsg;
-    return std::nullopt;
-  }
-
-  llvm::SPIRVTargetMachine *STM =
-      static_cast<llvm::SPIRVTargetMachine *>(*targetMachine);
-  const_cast<llvm::SPIRVSubtarget *>(STM->getSubtargetImpl())
-      ->initAvailableExtensions(AllowedExtIds);
-
-  if (initialLlvmIRCallback)
-    initialLlvmIRCallback(*llvmModule);
-
-  // Link bitcode files.
-  handleModulePreLink(*llvmModule);
-  {
-    auto libs = loadBitcodeFiles(*llvmModule);
-    if (!libs)
-      return std::nullopt;
-    if (!libs->empty())
-      if (failed(linkFiles(*llvmModule, std::move(*libs))))
-        return std::nullopt;
-    handleModulePostLink(*llvmModule);
-  }
-
-  if (linkedLlvmIRCallback)
-    linkedLlvmIRCallback(*llvmModule);
-
-  // Optimize the module.
-  if (failed(optimizeModule(*llvmModule, optLevel)))
-    return std::nullopt;
-
-  if (optimizedLlvmIRCallback)
-    optimizedLlvmIRCallback(*llvmModule);
-
-  // Return the serialized object.
-  return moduleToObject(*llvmModule);
-#else
-  getOperation().emitError("The `SPIRV` target was not built. Please enable "
-                           "it when building LLVM.");
-  return std::nullopt;
+#if !LLVM_HAS_SPIRV_TARGET
+  return getGPUModuleOp()->emitError(
+      "The `SPIRV` target was not built. Please enable "
+      "it when building LLVM.");
 #endif // LLVM_HAS_SPIRV_TARGET
-}
 
-FailureOr<SmallVector<char, 0>>
-SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
   FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
   if (failed(targetMachine))
     return getGPUModuleOp().emitError()
