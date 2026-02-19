@@ -891,54 +891,53 @@ void test() {
 // CHECK1-NEXT:    [[TMP11:%.*]] = getelementptr %"class.std::complex.0", ptr [[TMP9]], i64 1
 // CHECK1-NEXT:    br [[DOTSHUFFLE_PRE_COND:label %.*]]
 // CHECK1:       [[_SHUFFLE_PRE_COND:.*:]]
-// CHECK1-NEXT:    [[TMP12:%.*]] = phi ptr [ [[TMP9]], %[[ENTRY]] ], [ [[TMP23:%.*]], %[[DOTSHUFFLE_THEN:.*]] ]
-// CHECK1-NEXT:    [[TMP13:%.*]] = phi ptr [ [[DOTOMP_REDUCTION_ELEMENT]], %[[ENTRY]] ], [ [[TMP24:%.*]], %[[DOTSHUFFLE_THEN]] ]
-// CHECK1-NEXT:    [[TMP14:%.*]] = ptrtoint ptr [[TMP11]] to i64
-// CHECK1-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[TMP12]] to i64
+// CHECK1-NEXT:    [[TMP12:%.*]] = phi ptr [ [[TMP9]], %[[ENTRY]] ], [ [[TMP22:%.*]], %[[DOTSHUFFLE_THEN:.*]] ]
+// CHECK1-NEXT:    [[TMP13:%.*]] = phi ptr [ [[DOTOMP_REDUCTION_ELEMENT]], %[[ENTRY]] ], [ [[TMP23:%.*]], %[[DOTSHUFFLE_THEN]] ]
+// CHECK1-NEXT:    [[TMP14:%.*]] = ptrtoaddr ptr [[TMP11]] to i64
+// CHECK1-NEXT:    [[TMP15:%.*]] = ptrtoaddr ptr [[TMP12]] to i64
 // CHECK1-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP14]], [[TMP15]]
-// CHECK1-NEXT:    [[TMP17:%.*]] = sdiv exact i64 [[TMP16]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CHECK1-NEXT:    [[TMP18:%.*]] = icmp sgt i64 [[TMP17]], 7
-// CHECK1-NEXT:    br i1 [[TMP18]], label %[[DOTSHUFFLE_THEN]], [[DOTSHUFFLE_EXIT:label %.*]]
+// CHECK1-NEXT:    [[TMP17:%.*]] = icmp sgt i64 [[TMP16]], 7
+// CHECK1-NEXT:    br i1 [[TMP17]], label %[[DOTSHUFFLE_THEN]], [[DOTSHUFFLE_EXIT:label %.*]]
 // CHECK1:       [[_SHUFFLE_THEN:.*:]]
-// CHECK1-NEXT:    [[TMP19:%.*]] = load i64, ptr [[TMP12]], align 8
-// CHECK1-NEXT:    [[TMP20:%.*]] = call i32 @__kmpc_get_warp_size()
-// CHECK1-NEXT:    [[TMP21:%.*]] = trunc i32 [[TMP20]] to i16
-// CHECK1-NEXT:    [[TMP22:%.*]] = call i64 @__kmpc_shuffle_int64(i64 [[TMP19]], i16 [[TMP6]], i16 [[TMP21]])
-// CHECK1-NEXT:    store i64 [[TMP22]], ptr [[TMP13]], align 8
-// CHECK1-NEXT:    [[TMP23]] = getelementptr i64, ptr [[TMP12]], i64 1
-// CHECK1-NEXT:    [[TMP24]] = getelementptr i64, ptr [[TMP13]], i64 1
+// CHECK1-NEXT:    [[TMP18:%.*]] = load i64, ptr [[TMP12]], align 8
+// CHECK1-NEXT:    [[TMP19:%.*]] = call i32 @__kmpc_get_warp_size()
+// CHECK1-NEXT:    [[TMP20:%.*]] = trunc i32 [[TMP19]] to i16
+// CHECK1-NEXT:    [[TMP21:%.*]] = call i64 @__kmpc_shuffle_int64(i64 [[TMP18]], i16 [[TMP6]], i16 [[TMP20]])
+// CHECK1-NEXT:    store i64 [[TMP21]], ptr [[TMP13]], align 8
+// CHECK1-NEXT:    [[TMP22]] = getelementptr i64, ptr [[TMP12]], i64 1
+// CHECK1-NEXT:    [[TMP23]] = getelementptr i64, ptr [[TMP13]], i64 1
 // CHECK1-NEXT:    br [[DOTSHUFFLE_PRE_COND]]
 // CHECK1:       [[_SHUFFLE_EXIT:.*:]]
 // CHECK1-NEXT:    store ptr [[DOTOMP_REDUCTION_ELEMENT]], ptr [[TMP10]], align 8
-// CHECK1-NEXT:    [[TMP25:%.*]] = icmp eq i16 [[TMP7]], 0
-// CHECK1-NEXT:    [[TMP26:%.*]] = icmp eq i16 [[TMP7]], 1
-// CHECK1-NEXT:    [[TMP27:%.*]] = icmp ult i16 [[TMP5]], [[TMP6]]
-// CHECK1-NEXT:    [[TMP28:%.*]] = and i1 [[TMP26]], [[TMP27]]
-// CHECK1-NEXT:    [[TMP29:%.*]] = icmp eq i16 [[TMP7]], 2
-// CHECK1-NEXT:    [[TMP30:%.*]] = and i16 [[TMP5]], 1
-// CHECK1-NEXT:    [[TMP31:%.*]] = icmp eq i16 [[TMP30]], 0
-// CHECK1-NEXT:    [[TMP32:%.*]] = and i1 [[TMP29]], [[TMP31]]
-// CHECK1-NEXT:    [[TMP33:%.*]] = icmp sgt i16 [[TMP6]], 0
-// CHECK1-NEXT:    [[TMP34:%.*]] = and i1 [[TMP32]], [[TMP33]]
-// CHECK1-NEXT:    [[TMP35:%.*]] = or i1 [[TMP25]], [[TMP28]]
-// CHECK1-NEXT:    [[TMP36:%.*]] = or i1 [[TMP35]], [[TMP34]]
-// CHECK1-NEXT:    br i1 [[TMP36]], label %[[THEN:.*]], label %[[ELSE:.*]]
+// CHECK1-NEXT:    [[TMP24:%.*]] = icmp eq i16 [[TMP7]], 0
+// CHECK1-NEXT:    [[TMP25:%.*]] = icmp eq i16 [[TMP7]], 1
+// CHECK1-NEXT:    [[TMP26:%.*]] = icmp ult i16 [[TMP5]], [[TMP6]]
+// CHECK1-NEXT:    [[TMP27:%.*]] = and i1 [[TMP25]], [[TMP26]]
+// CHECK1-NEXT:    [[TMP28:%.*]] = icmp eq i16 [[TMP7]], 2
+// CHECK1-NEXT:    [[TMP29:%.*]] = and i16 [[TMP5]], 1
+// CHECK1-NEXT:    [[TMP30:%.*]] = icmp eq i16 [[TMP29]], 0
+// CHECK1-NEXT:    [[TMP31:%.*]] = and i1 [[TMP28]], [[TMP30]]
+// CHECK1-NEXT:    [[TMP32:%.*]] = icmp sgt i16 [[TMP6]], 0
+// CHECK1-NEXT:    [[TMP33:%.*]] = and i1 [[TMP31]], [[TMP32]]
+// CHECK1-NEXT:    [[TMP34:%.*]] = or i1 [[TMP24]], [[TMP27]]
+// CHECK1-NEXT:    [[TMP35:%.*]] = or i1 [[TMP34]], [[TMP33]]
+// CHECK1-NEXT:    br i1 [[TMP35]], label %[[THEN:.*]], label %[[ELSE:.*]]
 // CHECK1:       [[THEN]]:
 // CHECK1-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z17complex_reductionIdEvv_l16_omp_outlined_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP4]], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]]) #[[ATTR4]]
 // CHECK1-NEXT:    br label %[[IFCONT:.*]]
 // CHECK1:       [[ELSE]]:
 // CHECK1-NEXT:    br label %[[IFCONT]]
 // CHECK1:       [[IFCONT]]:
-// CHECK1-NEXT:    [[TMP37:%.*]] = icmp eq i16 [[TMP7]], 1
-// CHECK1-NEXT:    [[TMP38:%.*]] = icmp uge i16 [[TMP5]], [[TMP6]]
-// CHECK1-NEXT:    [[TMP39:%.*]] = and i1 [[TMP37]], [[TMP38]]
-// CHECK1-NEXT:    br i1 [[TMP39]], label %[[THEN4:.*]], label %[[ELSE5:.*]]
+// CHECK1-NEXT:    [[TMP36:%.*]] = icmp eq i16 [[TMP7]], 1
+// CHECK1-NEXT:    [[TMP37:%.*]] = icmp uge i16 [[TMP5]], [[TMP6]]
+// CHECK1-NEXT:    [[TMP38:%.*]] = and i1 [[TMP36]], [[TMP37]]
+// CHECK1-NEXT:    br i1 [[TMP38]], label %[[THEN4:.*]], label %[[ELSE5:.*]]
 // CHECK1:       [[THEN4]]:
-// CHECK1-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]], i64 0, i64 0
-// CHECK1-NEXT:    [[TMP41:%.*]] = load ptr, ptr [[TMP40]], align 8
-// CHECK1-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP4]], i64 0, i64 0
-// CHECK1-NEXT:    [[TMP43:%.*]] = load ptr, ptr [[TMP42]], align 8
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP43]], ptr align 8 [[TMP41]], i64 16, i1 false)
+// CHECK1-NEXT:    [[TMP39:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]], i64 0, i64 0
+// CHECK1-NEXT:    [[TMP40:%.*]] = load ptr, ptr [[TMP39]], align 8
+// CHECK1-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP4]], i64 0, i64 0
+// CHECK1-NEXT:    [[TMP42:%.*]] = load ptr, ptr [[TMP41]], align 8
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP42]], ptr align 8 [[TMP40]], i64 16, i1 false)
 // CHECK1-NEXT:    br label %[[IFCONT6:.*]]
 // CHECK1:       [[ELSE5]]:
 // CHECK1-NEXT:    br label %[[IFCONT6]]

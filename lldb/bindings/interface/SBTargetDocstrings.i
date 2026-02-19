@@ -250,20 +250,10 @@ produces: ::
     :rtype: SBSymbolContextList"
 ) lldb::SBTarget::FindCompileUnits;
 
-%feature("docstring", "
-    Architecture data byte width accessor
-
-    :return: The size in 8-bit (host) bytes of a minimum addressable unit from the Architecture's data bus.
-
-    "
+%feature("docstring", "Deprecated. Always returns 1."
 ) lldb::SBTarget::GetDataByteSize;
 
-%feature("docstring", "
-    Architecture code byte width accessor.
-
-    :return: The size in 8-bit (host) bytes of a minimum addressable unit from the Architecture's code bus.
-
-    "
+%feature("docstring", "Deprecated. Always returns 1."
 ) lldb::SBTarget::GetCodeByteSize;
 
 %feature("docstring", "

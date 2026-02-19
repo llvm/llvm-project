@@ -9069,11 +9069,17 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   AddFreezeForFindLastIVReductions(MainPlan, true);
   AddFreezeForFindLastIVReductions(EpiPlan, false);
 
-  VPBasicBlock *MainScalarPH = MainPlan.getScalarPreheader();
-  VPValue *VectorTC = &MainPlan.getVectorTripCount();
+  VPValue *VectorTC = nullptr;
+  auto *Term =
+      MainPlan.getVectorLoopRegion()->getExitingBasicBlock()->getTerminator();
+  [[maybe_unused]] bool MatchedTC =
+      match(Term, m_BranchOnCount(m_VPValue(), m_VPValue(VectorTC)));
+  assert(MatchedTC && "must match vector trip count");
+
   // If there is a suitable resume value for the canonical induction in the
   // scalar (which will become vector) epilogue loop, use it and move it to the
   // beginning of the scalar preheader. Otherwise create it below.
+  VPBasicBlock *MainScalarPH = MainPlan.getScalarPreheader();
   auto ResumePhiIter =
       find_if(MainScalarPH->phis(), [VectorTC](VPRecipeBase &R) {
         return match(&R, m_VPInstruction<Instruction::PHI>(m_Specific(VectorTC),
@@ -9228,7 +9234,23 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
         if (auto *VPI = dyn_cast<VPInstruction>(PhiR->getStartValue())) {
           assert(VPI->getOpcode() == VPInstruction::ReductionStartVector &&
                  "unexpected start value");
-          VPI->setOperand(0, StartVal);
+          // Partial sub-reductions always start at 0 and account for the
+          // reduction start value in a final subtraction. Update it to use the
+          // resume value from the main vector loop.
+          if (PhiR->getVFScaleFactor() > 1 &&
+              PhiR->getRecurrenceKind() == RecurKind::Sub) {
+            auto *Sub = cast<VPInstruction>(RdxResult->getSingleUser());
+            assert(Sub->getOpcode() == Instruction::Sub && "Unexpected opcode");
+            assert(isa<VPIRValue>(Sub->getOperand(0)) &&
+                   "Expected operand to match the original start value of the "
+                   "reduction");
+            assert(VPlanPatternMatch::match(VPI->getOperand(0),
+                                            VPlanPatternMatch::m_ZeroInt()) &&
+                   "Expected start value for partial sub-reduction to start at "
+                   "zero");
+            Sub->setOperand(0, StartVal);
+          } else
+            VPI->setOperand(0, StartVal);
           continue;
         }
       }

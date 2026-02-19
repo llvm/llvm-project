@@ -12,6 +12,7 @@ import os
 class TestDisassembler(TestBase):
     expected_zbb_instrs = ["andn", "orn", "xnor", "rol", "ror"]
 
+    @skipIfLLVMTargetMissing("RISCV")
     def test_without_riscv_attributes(self):
         """
         Tests disassembly of a riscv binary without the .riscv.attributes.
@@ -39,6 +40,7 @@ class TestDisassembler(TestBase):
             "Instructions from the Zbb extension should be displayed as <unknown>",
         )
 
+    @skipIfLLVMTargetMissing("RISCV")
     def test_with_riscv_attributes(self):
         """
         Tests disassembly of a riscv binary with the .riscv.attributes.
@@ -55,6 +57,7 @@ class TestDisassembler(TestBase):
         for instr in self.expected_zbb_instrs:
             self.assertTrue(instr in output, "Invalid disassembler output")
 
+    @skipIfLLVMTargetMissing("RISCV")
     def test_conflicting_extensions(self):
         """
         This test demonstrates the scenario where:
