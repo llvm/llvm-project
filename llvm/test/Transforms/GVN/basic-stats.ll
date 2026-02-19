@@ -12,3 +12,4 @@ block2:
 ; CHECK: 1 gvn - Number of blocks merged
 ; CHECK: 2 gvn - Number of instructions deleted
 ; CHECK: 2 gvn - Number of instructions simplified
+
