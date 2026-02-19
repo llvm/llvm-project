@@ -189,7 +189,7 @@ Changes to the PowerPC Backend
 * Prototyped Dense Math Facility and DMR COPY support.
 * Implement the trampoline intrinsics and nest parameter for AIX.
 * Introduced a minimum threshold for the largest number of comparisons needed to trigger bit test generation during switch lowering.
-* Relax strictfp to constrain only ``libm`` libcalls, permitting non-FP optimizations elsewhere.
+* Relax strictfp to constrain only ``libm`` libcalls, permitting non-FP optimizations.
 * Use ``bne-`` for atomic operations after store conditional.
 * Consolidated predicate definitions into ``PPC.td``.
 * Cleanup asm parser code to use template functions for the various versions of
