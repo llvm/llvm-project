@@ -5299,11 +5299,7 @@ add_entrypoint_object(
   HDRS
     ../bf16sub.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.generic.add_sub
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.bf16sub
 )
 
 add_entrypoint_object(
@@ -5313,11 +5309,7 @@ add_entrypoint_object(
   HDRS
     ../bf16subf.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.generic.add_sub
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.bf16subf
 )
 
 add_entrypoint_object(
@@ -5341,9 +5333,5 @@ add_entrypoint_object(
   HDRS
     ../bf16subf128.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.generic.add_sub
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.bf16subf128
 )
