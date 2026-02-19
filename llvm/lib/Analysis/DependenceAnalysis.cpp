@@ -3212,9 +3212,8 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
     Pair[I].Src = SrcSubscripts[I];
     Pair[I].Dst = DstSubscripts[I];
 
-    // TODO: Is this check necessary?
-    if (Pair[I].Src->getType() != Pair[I].Dst->getType())
-      return false;
+    assert(Pair[I].Src->getType() == Pair[I].Dst->getType() &&
+           "Unexpected different types for the subscripts");
 
     if (EnableMonotonicityCheck) {
       if (MonChecker.checkMonotonicity(Pair[I].Src, OutermostLoop).isUnknown())
