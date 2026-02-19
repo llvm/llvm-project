@@ -1939,23 +1939,46 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetNodeForPrintingImpl(
       NodePointer rett = dem.createNode(Node::Kind::ReturnType);
       NodePointer args_ty = dem.createNode(Node::Kind::Type);
       NodePointer args_tuple = dem.createNode(Node::Kind::Tuple);
+      std::vector<NodePointer> result_types;
       for (NodePointer child : *node) {
         if (child->getKind() == Node::Kind::ImplParameter) {
-          for (NodePointer type : *node)
-            if (type->getKind() == Node::Kind::Type &&
-                type->getNumChildren() == 1)
-              rett->addChild(type->getChild(0), dem);
+          // Find Type child within ImplParameter and add to args_tuple.
+          for (NodePointer param_child : *child)
+            if (param_child->getKind() == Node::Kind::Type) {
+              // Wrap in TupleElement for the argument tuple.
+              NodePointer tuple_elem = dem.createNode(Node::Kind::TupleElement);
+              tuple_elem->addChild(param_child, dem);
+              args_tuple->addChild(tuple_elem, dem);
+            }
         } else if (child->getKind() == Node::Kind::ImplResult) {
-          for (NodePointer type : *node)
-            if (type->getKind() == Node::Kind::Type)
-              rett->addChild(type, dem);
+          // Collect Type children from ImplResult.
+          for (NodePointer result_child : *child)
+            if (result_child->getKind() == Node::Kind::Type)
+              result_types.push_back(result_child);
         }
       }
       args_ty->addChild(args_tuple, dem);
       args->addChild(args_ty, dem);
       fnty->addChild(args, dem);
-      if (rett->getNumChildren() != 1)
-        rett->addChild(dem.createNode(Node::Kind::Tuple), dem);
+      if (result_types.empty()) {
+        // No results: void return.
+        NodePointer ret_ty = dem.createNode(Node::Kind::Type);
+        ret_ty->addChild(dem.createNode(Node::Kind::Tuple), dem);
+        rett->addChild(ret_ty, dem);
+      } else if (result_types.size() == 1) {
+        rett->addChild(result_types[0], dem);
+      } else {
+        // Multiple results become a tuple return type.
+        NodePointer ret_tuple = dem.createNode(Node::Kind::Tuple);
+        for (NodePointer rt : result_types) {
+          NodePointer tuple_elem = dem.createNode(Node::Kind::TupleElement);
+          tuple_elem->addChild(rt, dem);
+          ret_tuple->addChild(tuple_elem, dem);
+        }
+        NodePointer ret_ty = dem.createNode(Node::Kind::Type);
+        ret_ty->addChild(ret_tuple, dem);
+        rett->addChild(ret_ty, dem);
+      }
       fnty->addChild(rett, dem);
       return fnty;
     }
