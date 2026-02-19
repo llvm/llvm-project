@@ -166,6 +166,14 @@ DECLARE_TSAN_FUNCTION(AnnotateNewMemory, const char *, int,
                       const volatile void *, size_t)
 DECLARE_TSAN_FUNCTION(__tsan_func_entry, const void *)
 DECLARE_TSAN_FUNCTION(__tsan_func_exit)
+DECLARE_TSAN_FUNCTION(AnnotateRWLockCreatePC, const char *, int,
+                      const volatile void *, const void *)
+DECLARE_TSAN_FUNCTION(AnnotateRWLockDestroyPC, const char *, int,
+                      const volatile void *, const void *)
+DECLARE_TSAN_FUNCTION(AnnotateRWLockAcquiredPC, const char *, int,
+                      const volatile void *, size_t, const void *)
+DECLARE_TSAN_FUNCTION(AnnotateRWLockReleasedPC, const char *, int,
+                      const volatile void *, size_t, const void *)
 }
 
 // This marker is used to define a happens-before arc. The race detector will
@@ -190,6 +198,16 @@ DECLARE_TSAN_FUNCTION(__tsan_func_exit)
   AnnotateNewMemory(__FILE__, __LINE__, addr, size)
 #define TsanFreeMemory(addr, size)                                             \
   AnnotateNewMemory(__FILE__, __LINE__, addr, size)
+
+// Locks
+#define TsanRWLockCreate(mutex, pc)                                            \
+  AnnotateRWLockCreatePC(__FILE__, __LINE__, mutex, pc)
+#define TsanRWLockDestroy(mutex, pc)                                           \
+  AnnotateRWLockDestroyPC(__FILE__, __LINE__, mutex, pc)
+#define TsanRWLockAcquired(mutex, isw, pc)                                     \
+  AnnotateRWLockAcquiredPC(__FILE__, __LINE__, mutex, isw, pc)
+#define TsanRWLockReleased(mutex, isw, pc)                                     \
+  AnnotateRWLockReleasedPC(__FILE__, __LINE__, mutex, isw, pc)
 #endif
 
 // Function entry/exit
@@ -1102,6 +1120,23 @@ static void ompt_tsan_dependences(ompt_data_t *task_data,
   }
 }
 
+static void ompt_tsan_lock_init(ompt_mutex_t kind, unsigned int hint,
+                                unsigned int impl, ompt_wait_id_t wait_id,
+                                const void *codeptr_ra) {
+  LocksMutex.lock();
+  std::mutex &Lock = Locks[wait_id];
+  LocksMutex.unlock();
+  TsanRWLockCreate(&Lock, codeptr_ra);
+}
+
+static void ompt_tsan_lock_destroy(ompt_mutex_t kind, ompt_wait_id_t wait_id,
+                                   const void *codeptr_ra) {
+  LocksMutex.lock();
+  std::mutex &Lock = Locks[wait_id];
+  LocksMutex.unlock();
+  TsanRWLockDestroy(&Lock, codeptr_ra);
+}
+
 /// OMPT event callbacks for handling locking.
 static void ompt_tsan_mutex_acquired(ompt_mutex_t kind, ompt_wait_id_t wait_id,
                                      const void *codeptr_ra) {
@@ -1115,6 +1150,7 @@ static void ompt_tsan_mutex_acquired(ompt_mutex_t kind, ompt_wait_id_t wait_id,
 
   Lock.lock();
   TsanHappensAfter(&Lock);
+  TsanRWLockAcquired(&Lock, 1, codeptr_ra);
 }
 
 static void ompt_tsan_mutex_released(ompt_mutex_t kind, ompt_wait_id_t wait_id,
@@ -1123,6 +1159,7 @@ static void ompt_tsan_mutex_released(ompt_mutex_t kind, ompt_wait_id_t wait_id,
   std::mutex &Lock = Locks[wait_id];
   LocksMutex.unlock();
   TsanHappensBefore(&Lock);
+  TsanRWLockReleased(&Lock, 1, codeptr_ra);
 
   Lock.unlock();
 }
@@ -1179,6 +1216,12 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
     exit(1);
   }
 
+  if (ompt_get_thread_data == NULL) {
+    fprintf(stderr, "Could not get inquiry function 'ompt_get_thread_data', "
+                    "exiting...\n");
+    exit(1);
+  }
+
   findTsanFunction(AnnotateHappensAfter,
                    (void (*)(const char *, int, const volatile void *)));
   findTsanFunction(AnnotateHappensBefore,
@@ -1190,6 +1233,18 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
       (void (*)(const char *, int, const volatile void *, size_t)));
   findTsanFunction(__tsan_func_entry, (void (*)(const void *)));
   findTsanFunction(__tsan_func_exit, (void (*)(void)));
+  findTsanFunction(
+      AnnotateRWLockCreatePC,
+      (void (*)(const char *, int, const volatile void *, const void *)));
+  findTsanFunction(
+      AnnotateRWLockDestroyPC,
+      (void (*)(const char *, int, const volatile void *, const void *)));
+  findTsanFunction(AnnotateRWLockAcquiredPC,
+                   (void (*)(const char *, int, const volatile void *, size_t,
+                             const void *)));
+  findTsanFunction(AnnotateRWLockReleasedPC,
+                   (void (*)(const char *, int, const volatile void *, size_t,
+                             const void *)));
 
   SET_CALLBACK(thread_begin);
   SET_CALLBACK(thread_end);
@@ -1204,6 +1259,8 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
 
   SET_CALLBACK_T(mutex_acquired, mutex);
   SET_CALLBACK_T(mutex_released, mutex);
+  SET_CALLBACK_T(lock_init, mutex_acquire);
+  SET_CALLBACK_T(lock_destroy, mutex);
   SET_OPTIONAL_CALLBACK_T(reduction, sync_region, hasReductionCallback,
                           ompt_set_never);
 
