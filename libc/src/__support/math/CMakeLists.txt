@@ -751,6 +751,57 @@ add_header_library(
     libc.src.__support.FPUtil.generic.add_sub
     libc.src.__support.macros.config
 )
+add_header_library(
+  fabs
+  HDRS
+    fabs.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+add_header_library(
+  fabsbf16
+  HDRS
+    fabsbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+)
+add_header_library(
+  fabsf
+  HDRS
+    fabsf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+add_header_library(
+  fabsf128
+  HDRS
+    fabsf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+add_header_library(
+  fabsf16
+  HDRS
+    fabsf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+add_header_library(
+  fabsl
+  HDRS
+    fabsl.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
 
 add_header_library(
   ffmal
