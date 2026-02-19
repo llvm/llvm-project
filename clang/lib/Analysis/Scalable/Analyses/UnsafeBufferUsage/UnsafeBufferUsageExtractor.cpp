@@ -24,7 +24,6 @@
 
 namespace {
 using namespace clang;
-using namespace llvm;
 using namespace ssaf;
 
 template <typename ExprOrDecl> static bool hasPointerType(const ExprOrDecl *E) {
@@ -209,8 +208,7 @@ public:
   // Translate("string-literal") -> {}
   // Buffer accesses on string literals are unsafe, but string literals are not
   // entities so there is no EntityPointerLevel associated with it.
-  Expected<EntityPointerLevelSet>
-  VisitStringLiteral(const clang::StringLiteral *E) {
+  Expected<EntityPointerLevelSet> VisitStringLiteral(const StringLiteral *E) {
     return EntityPointerLevelSet{};
   }
 
