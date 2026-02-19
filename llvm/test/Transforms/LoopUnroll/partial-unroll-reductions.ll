@@ -683,3 +683,55 @@ loop:
 exit:
   ret <4 x i32> %rdx.next
 }
+
+define i32 @test_findlast_reduction(ptr %data, i32 %a) {
+; CHECK-LABEL: define i32 @test_findlast_reduction(
+; CHECK-SAME: ptr [[DATA:%.*]], i32 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[DATA_PHI:%.*]] = phi i32 [ -1, %[[ENTRY]] ], [ [[SELECT_DATA_3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[LD_ADDR:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[LD_ADDR]], align 4
+; CHECK-NEXT:    [[SELECT_CMP:%.*]] = icmp slt i32 [[A]], [[LD]]
+; CHECK-NEXT:    [[SELECT_DATA:%.*]] = select i1 [[SELECT_CMP]], i32 [[LD]], i32 [[DATA_PHI]]
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[LD_ADDR_1:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[LD_1:%.*]] = load i32, ptr [[LD_ADDR_1]], align 4
+; CHECK-NEXT:    [[SELECT_CMP_1:%.*]] = icmp slt i32 [[A]], [[LD_1]]
+; CHECK-NEXT:    [[SELECT_DATA_1:%.*]] = select i1 [[SELECT_CMP_1]], i32 [[LD_1]], i32 [[SELECT_DATA]]
+; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[LD_ADDR_2:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV_NEXT_1]]
+; CHECK-NEXT:    [[LD_2:%.*]] = load i32, ptr [[LD_ADDR_2]], align 4
+; CHECK-NEXT:    [[SELECT_CMP_2:%.*]] = icmp slt i32 [[A]], [[LD_2]]
+; CHECK-NEXT:    [[SELECT_DATA_2:%.*]] = select i1 [[SELECT_CMP_2]], i32 [[LD_2]], i32 [[SELECT_DATA_1]]
+; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 3
+; CHECK-NEXT:    [[LD_ADDR_3:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[LD_3:%.*]] = load i32, ptr [[LD_ADDR_3]], align 4
+; CHECK-NEXT:    [[SELECT_CMP_3:%.*]] = icmp slt i32 [[A]], [[LD_3]]
+; CHECK-NEXT:    [[SELECT_DATA_3]] = select i1 [[SELECT_CMP_3]], i32 [[LD_3]], i32 [[SELECT_DATA_2]]
+; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
+; CHECK-NEXT:    [[EXIT_CMP_3:%.*]] = icmp eq i64 [[IV_NEXT_3]], 200
+; CHECK-NEXT:    br i1 [[EXIT_CMP_3]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA_3]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[SELECT_DATA_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %data.phi = phi i32 [ -1, %entry ], [ %select.data, %loop ]
+  %ld.addr = getelementptr inbounds i32, ptr %data, i64 %iv
+  %ld = load i32, ptr %ld.addr, align 4
+  %select.cmp = icmp slt i32 %a, %ld
+  %select.data = select i1 %select.cmp, i32 %ld, i32 %data.phi
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exit.cmp = icmp eq i64 %iv.next, 200
+  br i1 %exit.cmp, label %exit, label %loop
+
+exit:
+  ret i32 %select.data
+}

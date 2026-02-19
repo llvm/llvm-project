@@ -7,7 +7,7 @@ struct MyClass {
   }
 };
 
-// CHECK:           "PublicFunctions": [
+// CHECK:           "PublicMethods": [
 // CHECK-NEXT:        {
 // CHECK-NEXT:          "InfoType": "function",
 // CHECK-NEXT:          "IsStatic": false,

@@ -312,8 +312,6 @@ define float @fmaxnum_tailfold(ptr %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP50:%.*]] = phi <4 x float> [ [[TMP44]], %[[PRED_LOAD_CONTINUE13]] ], [ [[TMP49]], %[[PRED_LOAD_IF14]] ]
 ; CHECK-NEXT:    [[TMP51]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[TMP26]])
 ; CHECK-NEXT:    [[TMP52]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI1]], <4 x float> [[TMP50]])
-; CHECK-NEXT:    [[TMP53:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP51]], <4 x float> [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP54:%.*]] = select <4 x i1> [[TMP2]], <4 x float> [[TMP52]], <4 x float> [[VEC_PHI1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP55:%.*]] = fcmp uno <4 x float> [[TMP26]], [[TMP50]]
 ; CHECK-NEXT:    [[TMP56:%.*]] = freeze <4 x i1> [[TMP55]]
@@ -323,14 +321,15 @@ define float @fmaxnum_tailfold(ptr %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    br i1 [[TMP59]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP53:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP51]], <4 x float> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP54:%.*]] = select <4 x i1> [[TMP2]], <4 x float> [[TMP52]], <4 x float> [[VEC_PHI1]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = select i1 [[TMP57]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP53]]
 ; CHECK-NEXT:    [[TMP61:%.*]] = select i1 [[TMP57]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP54]]
 ; CHECK-NEXT:    [[TMP62:%.*]] = select i1 [[TMP57]], i64 [[INDEX]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP60]], <4 x float> [[TMP61]])
 ; CHECK-NEXT:    [[TMP63:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX]])
 ; CHECK-NEXT:    [[TMP64:%.*]] = xor i1 [[TMP57]], true
-; CHECK-NEXT:    [[TMP65:%.*]] = and i1 true, [[TMP64]]
-; CHECK-NEXT:    br i1 [[TMP65]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
+; CHECK-NEXT:    br i1 [[TMP64]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:

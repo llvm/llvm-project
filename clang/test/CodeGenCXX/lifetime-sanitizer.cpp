@@ -13,6 +13,9 @@
 // RUN: %clang -w -target aarch64-linux-gnu -S -emit-llvm -o - -fno-exceptions -O0 \
 // RUN:     -fsanitize=hwaddress -Xclang -disable-llvm-passes %s | \
 // RUN:     FileCheck %s -check-prefixes=CHECK,LIFETIME
+// RUN: %clang -w -target aarch64-linux-gnu -S -emit-llvm -o - -fno-exceptions -O0 \
+// RUN:     -fsanitize=memtag-stack -march=armv8a+memtag -Xclang -disable-llvm-passes %s | \
+// RUN:     FileCheck %s -check-prefixes=CHECK,LIFETIME
 
 extern int bar(char *A, int n);
 

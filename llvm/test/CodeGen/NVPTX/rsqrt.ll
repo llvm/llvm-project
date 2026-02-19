@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=nvptx64 -mattr=+ptx40 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mattr=+ptx40 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx40 | FileCheck %s
+; RUN: %if ptxas-sm_30 && ptxas-isa-4.0 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx40 | %ptxas-verify -arch=sm_30 %}
 
 ; CHECK-LABEL: .func{{.*}}test1
 define float @test1(float %in) local_unnamed_addr {

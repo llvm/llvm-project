@@ -30,11 +30,11 @@ body: |
     ; CHECK: %4:fr32 = VMOVDI2SSrr %3
     ; CHECK-NOT: COPY
     ; CHECK: %5:gr32 = MOVSS2DIrr %4
-    ; CHECK: %6:gr64 = SUBREG_TO_REG %5, 0
+    ; CHECK: %6:gr64 = SUBREG_TO_REG %5, %subreg.sub_32bit
     ; CHECK: NOOP implicit %6
     %3 = MOV32ri 42
     %4 = VMOVDI2SSrr %3
     %5 = MOVSS2DIrr %4
-    %6 = SUBREG_TO_REG %5, 0, %subreg.sub_32bit
+    %6 = SUBREG_TO_REG %5, %subreg.sub_32bit
     NOOP implicit %6
 ...

@@ -700,6 +700,9 @@ bool MachineFunction::needsFrameMoves() const {
 }
 
 MachineFunction::CallSiteInfo::CallSiteInfo(const CallBase &CB) {
+  if (MDNode *Node = CB.getMetadata(llvm::LLVMContext::MD_call_target))
+    CallTarget = Node;
+
   // Numeric callee_type ids are only for indirect calls.
   if (!CB.isIndirectCall())
     return;
@@ -1119,8 +1122,8 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
       SubReg = Cpy.getOperand(1).getSubReg();
     } else if (Cpy.isSubregToReg()) {
       OldReg = Cpy.getOperand(0).getReg();
-      NewReg = Cpy.getOperand(2).getReg();
-      SubReg = Cpy.getOperand(3).getImm();
+      NewReg = Cpy.getOperand(1).getReg();
+      SubReg = Cpy.getOperand(2).getImm();
     } else {
       auto CopyDetails = *TII.isCopyInstr(Cpy);
       const MachineOperand &Src = *CopyDetails.Source;

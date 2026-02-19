@@ -71,9 +71,26 @@ conversions (%r, %k); any fixed point number conversion will be treated as
 invalid. This reduces code size. This has no effect if the current compiler does
 not support fixed point numbers.
 
+LIBC_COPT_PRINTF_DISABLE_WIDE
+-----------------------------
+When set, this flag disables support for wide characters (%lc and %ls). Any
+conversions will be ignored. This reduces code size. This will be set by default
+on windows platforms as current printf implementation does not support UTF-16 wide
+characters.
+
+LIBC_COPT_PRINTF_DISABLE_BITINT
+-------------------------------
+When set, this flag disables the bit int length modifiers wNUM and wfNUM. The
+length modifiers will be treated as if they don't exist, so conversions using
+them will be treated as invalid. This reduces code size.
+
+.. _printf_no_nullptr_checks:
+
 LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 ----------------------------------
-When set, this flag disables the nullptr checks in %n and %s.
+When set, this flag disables the nullptr checks in %n and %s; passing a null
+pointer is undefined behavior. See :ref:`printf_conversion` for the behavior
+when nullptr checks are enabled.
 
 LIBC_COPT_PRINTF_CONV_ATLAS
 ---------------------------
@@ -181,6 +198,8 @@ If a number passed as a bit width is less than or equal to zero, the conversion
 is considered invalid. If the provided bit width is larger than the width of
 uintmax_t, it will be clamped to the width of uintmax_t.
 
+.. _printf_conversion:
+
 ----------
 Conversion
 ----------
@@ -192,7 +211,7 @@ If a conversion specification ends in %, then it will be treated as if it is
 "%%", ignoring all options.
 
 If a null pointer is passed to a %s conversion specification and null pointer
-checks are enabled, it will be treated as if the provided string is "null".
+checks are enabled, it will be treated as if the provided string is "(null)".
 
 If a null pointer is passed to a %n conversion specification and null pointer
 checks are enabled, the conversion will fail and printf will return a negative

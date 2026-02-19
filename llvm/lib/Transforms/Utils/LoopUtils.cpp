@@ -54,6 +54,9 @@ using namespace llvm::PatternMatch;
 
 static const char *LLVMLoopDisableNonforced = "llvm.loop.disable_nonforced";
 static const char *LLVMLoopDisableLICM = "llvm.licm.disable";
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
 
 bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU,
@@ -967,7 +970,7 @@ bool llvm::setLoopEstimatedTripCount(
     return true;
 
   // Calculate taken and exit weights.
-  unsigned LatchExitWeight = 0;
+  unsigned LatchExitWeight = ProfcheckDisableMetadataFixes ? 0 : 1;
   unsigned BackedgeTakenWeight = 0;
 
   if (EstimatedTripCount != 0) {
@@ -1015,6 +1018,40 @@ BranchProbability llvm::getBranchProbability(BranchInst *B,
   if (!ForFirstTarget)
     std::swap(Weight0, Weight1);
   return BranchProbability::getBranchProbability(Weight0, Denominator);
+}
+
+BranchProbability llvm::getBranchProbability(BasicBlock *Src, BasicBlock *Dst) {
+  assert(Src != Dst && "Passed in same source as destination");
+
+  Instruction *TI = Src->getTerminator();
+  if (!TI || TI->getNumSuccessors() == 0)
+    return BranchProbability::getZero();
+
+  SmallVector<uint32_t, 4> Weights;
+
+  if (!extractBranchWeights(*TI, Weights)) {
+    // No metadata
+    return BranchProbability::getUnknown();
+  }
+  assert(TI->getNumSuccessors() == Weights.size() &&
+         "Missing weights in branch_weights");
+
+  uint64_t Total = 0;
+  uint32_t Numerator = 0;
+  for (auto [i, Weight] : llvm::enumerate(Weights)) {
+    if (TI->getSuccessor(i) == Dst)
+      Numerator += Weight;
+    Total += Weight;
+  }
+
+  // Total of edges might be 0 if the metadata is incorrect/set by hand
+  // or missing. In such case return here to avoid division by 0 later on.
+  // There might also be a case where the value of Total cannot fit into
+  // uint32_t, in such case, just bail out.
+  if (Total == 0 || Total > std::numeric_limits<uint32_t>::max())
+    return BranchProbability::getUnknown();
+
+  return BranchProbability(Numerator, Total);
 }
 
 bool llvm::setBranchProbability(BranchInst *B, BranchProbability P,
@@ -1477,7 +1514,7 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
 Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
                                    RecurKind Kind, Value *Mask, Value *EVL) {
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-         !RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) &&
+         !RecurrenceDescriptor::isFindRecurrenceKind(Kind) &&
          "AnyOf and FindIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
   auto VPID = VPIntrinsic::getForIntrinsic(Id);
@@ -2136,6 +2173,24 @@ Value *llvm::addRuntimeChecks(
   return MemoryRuntimeCheck;
 }
 
+namespace {
+/// Rewriter to replace SCEVPtrToIntExpr with SCEVPtrToAddrExpr when the result
+/// type matches the pointer address type. This allows expressions mixing
+/// ptrtoint and ptrtoaddr to simplify properly.
+struct SCEVPtrToAddrRewriter : SCEVRewriteVisitor<SCEVPtrToAddrRewriter> {
+  const DataLayout &DL;
+  SCEVPtrToAddrRewriter(ScalarEvolution &SE, const DataLayout &DL)
+      : SCEVRewriteVisitor(SE), DL(DL) {}
+
+  const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
+    const SCEV *Op = visit(E->getOperand());
+    if (E->getType() == DL.getAddressType(E->getOperand()->getType()))
+      return SE.getPtrToAddrExpr(Op);
+    return Op == E->getOperand() ? E : SE.getPtrToIntExpr(Op, E->getType());
+  }
+};
+} // namespace
+
 Value *llvm::addDiffRuntimeChecks(
     Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
     function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC) {
@@ -2147,6 +2202,8 @@ Value *llvm::addDiffRuntimeChecks(
   Value *MemoryRuntimeCheck = nullptr;
 
   auto &SE = *Expander.getSE();
+  const DataLayout &DL = Loc->getDataLayout();
+  SCEVPtrToAddrRewriter Rewriter(SE, DL);
   // Map to keep track of created compares, The key is the pair of operands for
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
@@ -2156,8 +2213,10 @@ Value *llvm::addDiffRuntimeChecks(
     auto *VFTimesICTimesSize =
         ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
                              ConstantInt::get(Ty, IC * AccessSize));
-    Value *Diff =
-        Expander.expandCodeFor(SE.getMinusSCEV(SinkStart, SrcStart), Ty, Loc);
+    const SCEV *SinkStartRewritten = Rewriter.visit(SinkStart);
+    const SCEV *SrcStartRewritten = Rewriter.visit(SrcStart);
+    Value *Diff = Expander.expandCodeFor(
+        SE.getMinusSCEV(SinkStartRewritten, SrcStartRewritten), Ty, Loc);
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.
@@ -2334,7 +2393,7 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
     if (!Info.ExitForPath)
       Info.PathIsNoop = false;
 
-    Info.InstToDuplicate = InstToDuplicate;
+    Info.InstToDuplicate = std::move(InstToDuplicate);
     return Info;
   };
 

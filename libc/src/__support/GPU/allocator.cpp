@@ -61,7 +61,6 @@ static void *rpc_allocate(uint64_t size) {
       [&](rpc::Buffer *buffer, uint32_t) {
         ptr = reinterpret_cast<void *>(buffer->data[0]);
       });
-  port.close();
   return ptr;
 }
 
@@ -71,7 +70,6 @@ static void rpc_free(void *ptr) {
   port.send([=](rpc::Buffer *buffer, uint32_t) {
     buffer->data[0] = reinterpret_cast<uintptr_t>(ptr);
   });
-  port.close();
 }
 
 // Convert a potentially disjoint bitmask into an increasing integer per-lane
@@ -498,20 +496,21 @@ public:
     result = gpu::shuffle(lane_mask, cpp::countr_zero(uniform), result);
     count = gpu::shuffle(lane_mask, cpp::countr_zero(uniform), count);
 
+    if (!result)
+      return nullptr;
+
     // We defer storing the newly allocated slab until now so that we can use
     // multiple lanes to initialize it and release it for use.
-    uint64_t slab_mask =
-        gpu::ballot(lane_mask, result && impl::is_sentinel(count));
-    if (slab_mask & impl::id_in_mask()) {
-      result->initialize(slab_mask, uniform);
+    if (impl::is_sentinel(count)) {
+      uint64_t count_mask = gpu::get_lane_mask();
+      result->initialize(count_mask, uniform);
       if (gpu::get_lane_id() == uint32_t(cpp::countr_zero(uniform)))
         finalize(result, cpp::popcount(uniform), count);
-      count = gpu::shuffle(slab_mask, cpp::countr_zero(uniform), count);
+      count = gpu::shuffle(count_mask, cpp::countr_zero(uniform), count);
     }
 
-    if (result)
-      count = count - cpp::popcount(uniform) +
-              impl::lane_count(uniform, gpu::get_lane_id());
+    count = count - cpp::popcount(uniform) +
+            impl::lane_count(uniform, gpu::get_lane_id());
 
     return result;
   }

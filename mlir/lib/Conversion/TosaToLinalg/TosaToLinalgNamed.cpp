@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include <type_traits>
 
@@ -1107,8 +1108,8 @@ public:
                                 op.getInput1().getType().getElementType());
     rewriter.replaceOpWithNewOp<linalg::TransposeOp>(
         op, op.getInput1(), permutedInit,
-        llvm::to_vector(llvm::map_range(
-            constantPerms, [](int32_t v) -> int64_t { return v; })));
+        llvm::map_to_vector(constantPerms,
+                            [](int32_t v) -> int64_t { return v; }));
     return success();
   }
 };

@@ -81,7 +81,8 @@ bool ThreadPlanShouldStopHere::DefaultShouldStopHereCallback(
   // Check whether the frame we are in is a language runtime thunk, only for
   // step out:
   if (operation == eFrameCompareOlder) {
-    if (Symbol *symbol = frame->GetSymbolContext(eSymbolContextSymbol).symbol) {
+    if (const Symbol *symbol =
+            frame->GetSymbolContext(eSymbolContextSymbol).symbol) {
       ProcessSP process_sp(current_plan->GetThread().GetProcess());
       for (auto *runtime : process_sp->GetLanguageRuntimes()) {
         if (runtime->IsSymbolARuntimeThunk(*symbol) &&

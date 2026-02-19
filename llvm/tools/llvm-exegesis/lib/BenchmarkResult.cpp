@@ -297,7 +297,6 @@ template <> struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
       std::string Str;
       raw_string_ostream OSS(Str);
       Binary.writeAsBinary(OSS);
-      OSS.flush();
       Data.assign(Str.begin(), Str.end());
       return Data;
     }

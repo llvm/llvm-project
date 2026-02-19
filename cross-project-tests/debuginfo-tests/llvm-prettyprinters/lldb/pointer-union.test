@@ -15,6 +15,7 @@ p &f
 p &a
 p &z
 p &derived
+p &dv
 v -T z_float
 v -T raw_z_float
 v -T long_int_float
@@ -28,6 +29,11 @@ continue
 
 v -T z_float
 
+continue
+
+v -T virtual_float
+p virtual_float.Pointer
+
 #--- checks
 # CHECK:      (lldb) p &f
 # CHECK-NEXT: (float *) [[PTR_F:0x[0-9a-zA-Z]+]]
@@ -40,6 +46,9 @@ v -T z_float
 
 # CHECK:      (lldb) p &derived
 # CHECK-NEXT: (Derived *) [[PTR_DERIVED:0x[0-9a-zA-Z]+]]
+
+# CHECK:      (lldb) p &dv
+# CHECK-NEXT: (DerivedWithVirtual *) [[PTR_DV:0x[0-9a-zA-Z]+]]
 
 # CHECK:      (lldb) v -T z_float
 # CHECK-NEXT: (llvm::PointerUnion<Z *, float *>) z_float = {
@@ -84,3 +93,11 @@ v -T z_float
 # CHECK-NEXT: (llvm::PointerUnion<Z *, float *>) z_float = {
 # CHECK-NEXT:   (Z *) Pointer = [[PTR_DERIVED]]
 # CHECK-NEXT: }
+
+# CHECK:      (lldb) v -T virtual_float
+# CHECK-NEXT: (llvm::PointerUnion<HasVirtual *, float *>) virtual_float = {
+# CHECK-NEXT:   (DerivedWithVirtual *) Pointer = [[PTR_DV]]
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) p virtual_float.Pointer
+# CHECK-NEXT: (DerivedWithVirtual *) [[PTR_DV]]

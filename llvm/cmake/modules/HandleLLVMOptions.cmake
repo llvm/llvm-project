@@ -733,7 +733,6 @@ if (MSVC)
       -wd4244 # Suppress ''argument' : conversion from 'type1' to 'type2', possible loss of data'
       -wd4267 # Suppress ''var' : conversion from 'size_t' to 'type', possible loss of data'
       -wd4291 # Suppress ''declaration' : no matching operator delete found; memory will not be freed if initialization throws an exception'
-      -wd4351 # Suppress 'new behavior: elements of array 'array' will be default initialized'
       -wd4456 # Suppress 'declaration of 'var' hides local variable'
       -wd4457 # Suppress 'declaration of 'var' hides function parameter'
       -wd4458 # Suppress 'declaration of 'var' hides class member'
@@ -1302,6 +1301,13 @@ append_if(LLVM_BUILD_INSTRUMENTED_COVERAGE "-fprofile-instr-generate=\"${LLVM_PR
 
 if (LLVM_BUILD_INSTRUMENTED AND LLVM_BUILD_INSTRUMENTED_COVERAGE)
   message(FATAL_ERROR "LLVM_BUILD_INSTRUMENTED and LLVM_BUILD_INSTRUMENTED_COVERAGE cannot both be specified")
+endif()
+
+if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  # CMake weirdly marks all PCH as system headers. This undocumented variable
+  # can be used to suppress the "#pragma clang system_header".
+  # See: https://gitlab.kitware.com/cmake/cmake/-/issues/21219
+  set(CMAKE_PCH_PROLOGUE "")
 endif()
 
 set(LLVM_THINLTO_CACHE_PATH "${PROJECT_BINARY_DIR}/lto.cache" CACHE STRING "Set ThinLTO cache path. This can be used when building LLVM from several different directiories.")

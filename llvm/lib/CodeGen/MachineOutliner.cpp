@@ -489,9 +489,7 @@ struct MachineOutliner : public ModulePass {
     ModulePass::getAnalysisUsage(AU);
   }
 
-  MachineOutliner() : ModulePass(ID) {
-    initializeMachineOutlinerPass(*PassRegistry::getPassRegistry());
-  }
+  MachineOutliner() : ModulePass(ID) {}
 
   /// Remark output explaining that not outlining a set of candidates would be
   /// better than outlining that set.
@@ -1264,7 +1262,7 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M) {
   for (Function &F : M) {
     LLVM_DEBUG(dbgs() << "MAPPING FUNCTION: " << F.getName() << "\n");
 
-    if (F.hasFnAttribute("nooutline")) {
+    if (F.hasFnAttribute(Attribute::NoOutline)) {
       LLVM_DEBUG(dbgs() << "SKIP: Function has nooutline attribute\n");
       continue;
     }

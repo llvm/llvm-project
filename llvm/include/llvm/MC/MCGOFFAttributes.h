@@ -94,6 +94,7 @@ constexpr StringLiteral CLASS_CODE = "C_CODE64";
 constexpr StringLiteral CLASS_WSA = "C_WSA64";
 constexpr StringLiteral CLASS_DATA = "C_DATA64";
 constexpr StringLiteral CLASS_PPA2 = "C_@@QPPA2";
+constexpr StringLiteral CLASS_SINIT = "C_@@SQINIT";
 
 } // namespace GOFF
 } // namespace llvm

@@ -34,6 +34,21 @@ entry:
   ret void
 }
 
+define void @memtag() sanitize_memtag {
+entry:
+  ; CHECK-LABEL: @memtag(
+  %text = alloca i8, align 1
+
+  call void @llvm.lifetime.start.p0(ptr %text)
+  call void @llvm.lifetime.end.p0(ptr %text)
+  ; CHECK: call void @llvm.lifetime.start
+  ; CHECK-NEXT: call void @llvm.lifetime.end
+
+  call void @foo(ptr %text) ; Keep alloca alive
+
+  ret void
+}
+
 define void @msan() sanitize_memory {
 entry:
   ; CHECK-LABEL: @msan(

@@ -151,7 +151,7 @@ public:
 
       mlir::ArrayAttr accessGroups;
       if (auto attrs = assignOp.getOperation()->getAttrOfType<mlir::ArrayAttr>(
-              "access_groups"))
+              fir::getAccessGroupsAttrName()))
         accessGroups = attrs;
 
       // genScalarAssignment() must take care of potential overlap

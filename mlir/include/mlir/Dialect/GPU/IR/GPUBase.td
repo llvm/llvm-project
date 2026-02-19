@@ -99,6 +99,8 @@ def GPU_AddressSpaceEnum : GPU_I32Enum<
 def GPU_AddressSpaceAttr :
   GPU_I32EnumAttr<"address_space", GPU_AddressSpaceEnum>;
 
+def GPU_AddressSpaceAttrArray : TypedArrayAttrBase<GPU_AddressSpaceAttr, "GPU Address Space array">;
+
 //===----------------------------------------------------------------------===//
 // GPU Types.
 //===----------------------------------------------------------------------===//

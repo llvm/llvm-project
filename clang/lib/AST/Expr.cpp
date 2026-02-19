@@ -25,6 +25,7 @@
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
@@ -3734,6 +3735,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case PackIndexingExprClass:
   case HLSLOutArgExprClass:
   case OpenACCAsteriskSizeExprClass:
+  case CXXReflectExprClass:
     // These never have a side-effect.
     return false;
 
@@ -3802,6 +3804,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case BinaryConditionalOperatorClass:
   case CompoundLiteralExprClass:
   case ExtVectorElementExprClass:
+  case MatrixElementExprClass:
   case DesignatedInitExprClass:
   case DesignatedInitUpdateExprClass:
   case ArrayInitLoopExprClass:
@@ -4422,7 +4425,14 @@ unsigned ExtVectorElementExpr::getNumElements() const {
   return 1;
 }
 
-/// containsDuplicateElements - Return true if any element access is repeated.
+unsigned MatrixElementExpr::getNumElements() const {
+  if (const auto *MT = getType()->getAs<ConstantMatrixType>())
+    return MT->getNumElementsFlattened();
+  return 1;
+}
+
+/// containsDuplicateElements - Return true if any Vector element access is
+/// repeated.
 bool ExtVectorElementExpr::containsDuplicateElements() const {
   // FIXME: Refactor this code to an accessor on the AST node which returns the
   // "type" of component access, and share with code below and in Sema.
@@ -4441,6 +4451,78 @@ bool ExtVectorElementExpr::containsDuplicateElements() const {
         return true;
 
   return false;
+}
+
+namespace {
+struct MatrixAccessorFormat {
+  bool IsZeroIndexed = false;
+  unsigned ChunkLen = 0;
+};
+
+static MatrixAccessorFormat GetHLSLMatrixAccessorFormat(StringRef Comp) {
+  assert(!Comp.empty() && Comp[0] == '_' && "invalid matrix accessor");
+
+  MatrixAccessorFormat F;
+  if (Comp.size() >= 2 && Comp[0] == '_' && Comp[1] == 'm') {
+    F.IsZeroIndexed = true;
+    F.ChunkLen = 4; // _mRC
+  } else {
+    F.IsZeroIndexed = false;
+    F.ChunkLen = 3; // _RC
+  }
+
+  assert(F.ChunkLen != 0 && "unrecognized matrix swizzle format");
+  assert(Comp.size() % F.ChunkLen == 0 &&
+         "matrix swizzle accessor has invalid length");
+  return F;
+}
+
+template <typename Fn>
+static bool ForEachMatrixAccessorIndex(StringRef Comp, unsigned Rows,
+                                       unsigned Cols, Fn &&F) {
+  auto Format = GetHLSLMatrixAccessorFormat(Comp);
+
+  for (unsigned I = 0, E = Comp.size(); I < E; I += Format.ChunkLen) {
+    unsigned Row = 0, Col = 0;
+    unsigned ZeroIndexOffset = static_cast<unsigned>(Format.IsZeroIndexed);
+    unsigned OneIndexOffset = static_cast<unsigned>(!Format.IsZeroIndexed);
+    Row = static_cast<unsigned>(Comp[I + ZeroIndexOffset + 1] - '0') -
+          OneIndexOffset;
+    Col = static_cast<unsigned>(Comp[I + ZeroIndexOffset + 2] - '0') -
+          OneIndexOffset;
+
+    assert(Row < Rows && Col < Cols && "matrix swizzle index out of bounds");
+    const unsigned Index = Row * Cols + Col;
+    // Callback returns true to continue, false to stop early.
+    if (!F(Index))
+      return false;
+  }
+  return true;
+}
+
+} // namespace
+
+/// containsDuplicateElements - Return true if any Matrix element access is
+/// repeated.
+bool MatrixElementExpr::containsDuplicateElements() const {
+  StringRef Comp = Accessor->getName();
+  const auto *MT = getBase()->getType()->castAs<ConstantMatrixType>();
+  const unsigned Rows = MT->getNumRows();
+  const unsigned Cols = MT->getNumColumns();
+  const unsigned Max = Rows * Cols;
+
+  llvm::BitVector Seen(Max, /*t=*/false);
+  bool HasDup = false;
+  ForEachMatrixAccessorIndex(Comp, Rows, Cols, [&](unsigned Index) -> bool {
+    if (Seen[Index]) {
+      HasDup = true;
+      return false; // exit early
+    }
+    Seen.set(Index);
+    return true;
+  });
+
+  return HasDup;
 }
 
 /// getEncodedElementAccess - We encode the fields as a llvm ConstantArray.
@@ -4474,6 +4556,18 @@ void ExtVectorElementExpr::getEncodedElementAccess(
 
     Elts.push_back(Index);
   }
+}
+
+void MatrixElementExpr::getEncodedElementAccess(
+    SmallVectorImpl<uint32_t> &Elts) const {
+  StringRef Comp = Accessor->getName();
+  const auto *MT = getBase()->getType()->castAs<ConstantMatrixType>();
+  const unsigned Rows = MT->getNumRows();
+  const unsigned Cols = MT->getNumColumns();
+  ForEachMatrixAccessorIndex(Comp, Rows, Cols, [&](unsigned Index) -> bool {
+    Elts.push_back(Index);
+    return true;
+  });
 }
 
 ShuffleVectorExpr::ShuffleVectorExpr(const ASTContext &C, ArrayRef<Expr *> args,
@@ -5196,6 +5290,8 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_max_fetch:
   case AO__atomic_fetch_min:
   case AO__atomic_fetch_max:
+  case AO__atomic_fetch_uinc:
+  case AO__atomic_fetch_udec:
     return 3;
 
   case AO__scoped_atomic_load:
@@ -5218,8 +5314,8 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__scoped_atomic_fetch_min:
   case AO__scoped_atomic_fetch_max:
   case AO__scoped_atomic_exchange_n:
-  case AO__scoped_atomic_uinc_wrap:
-  case AO__scoped_atomic_udec_wrap:
+  case AO__scoped_atomic_fetch_uinc:
+  case AO__scoped_atomic_fetch_udec:
   case AO__hip_atomic_exchange:
   case AO__hip_atomic_fetch_add:
   case AO__hip_atomic_fetch_sub:

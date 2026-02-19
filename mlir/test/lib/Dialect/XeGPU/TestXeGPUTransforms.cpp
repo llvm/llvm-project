@@ -6,16 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::xegpu;
@@ -247,6 +255,77 @@ struct TestXeGPUSGDistribute
   }
 };
 
+/// This test pass is intended to test the subgroup to workitem distribution of
+/// xegpu/vector/arith operations in isolation, it does not handle any
+/// structural ops like scf.for etc.
+struct TestXeGPUSgToWiDistributeExperimental
+    : public PassWrapper<TestXeGPUSgToWiDistributeExperimental,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestXeGPUSgToWiDistributeExperimental)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-sg-to-wi-distribute-experimental";
+  }
+
+  StringRef getDescription() const final {
+    return "Test the experimental implementation of XeGPU Subgroup to "
+           "Work-item Distribution";
+  }
+
+  Option<bool> enableRewriteMultiReductionToReductions{
+      *this, "enable-rewrite-multi-reduction-to-reductions",
+      llvm::cl::desc("Partially lower multi-reduction ops to reduction ops if "
+                     "the reduction dimension is distributed."),
+      llvm::cl::init(false)};
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect>();
+    registry.insert<memref::MemRefDialect>();
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<vector::VectorDialect>();
+    registry.insert<index::IndexDialect>();
+    registry.insert<gpu::GPUDialect>();
+  }
+
+  TestXeGPUSgToWiDistributeExperimental() = default;
+  TestXeGPUSgToWiDistributeExperimental(
+      const TestXeGPUSgToWiDistributeExperimental &pass)
+      : PassWrapper(pass) {}
+
+  void runOnOperation() override {
+    MLIRContext *ctx = &getContext();
+    TypeConverter typeConverter;
+    // Define type materializations using UnrealizedConversionCastOp.
+    auto materializeCast = [&](mlir::OpBuilder &builder, mlir::Type type,
+                               mlir::ValueRange inputs,
+                               mlir::Location loc) -> mlir::Value {
+      return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
+          .getResult(0);
+    };
+    typeConverter.addSourceMaterialization(materializeCast);
+    typeConverter.addTargetMaterialization(materializeCast);
+
+    // If `enableRewriteMultiReductionToReductions` is set, only focus on
+    // testing the partial lowering of vector::MultiReductionOp.
+    if (enableRewriteMultiReductionToReductions) {
+      xegpu::populateXeGPUSgToWiDistributeTypeConversions(typeConverter);
+      ConversionTarget target(*ctx);
+      RewritePatternSet patterns(ctx);
+      xegpu::populateXeGPUSgToWiLowerVectorMultiReductionAndLegality(patterns,
+                                                                     target);
+      (void)applyPartialConversion(getOperation(), target, std::move(patterns));
+      return;
+    }
+
+    ConversionTarget target(*ctx);
+    RewritePatternSet patterns(ctx);
+    xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
+        typeConverter, patterns, target);
+    (void)applyPartialConversion(getOperation(), target, std::move(patterns));
+  }
+};
+
 struct TestXeGPUMoveFuncBodyToWarpOp
     : public PassWrapper<TestXeGPUMoveFuncBodyToWarpOp,
                          OperationPass<gpu::GPUModuleOp>> {
@@ -274,6 +353,80 @@ struct TestXeGPUMoveFuncBodyToWarpOp
     RewritePatternSet patterns(&getContext());
     xegpu::populateXeGPUMoveFuncBodyToWarpOpPatterns(patterns);
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  }
+};
+
+struct TestXeGPUPropagateLayouts
+    : public PassWrapper<TestXeGPUPropagateLayouts,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUPropagateLayouts)
+
+  StringRef getArgument() const final { return "test-xegpu-propagate-layouts"; }
+
+  StringRef getDescription() const final {
+    return "Test the implementation of XeGPU propagate layouts.";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<gpu::GPUDialect>();
+  }
+
+  TestXeGPUPropagateLayouts() = default;
+  TestXeGPUPropagateLayouts(const TestXeGPUPropagateLayouts &pass)
+      : PassWrapper(pass) {}
+
+  Option<std::string> layoutKind{
+      *this, "layout-kind",
+      llvm::cl::desc("Propagate `subgroup` / `inst` / `lane` level of xegpu "
+                     "layouts."),
+      llvm::cl::init("lane")};
+
+  void runOnOperation() override {
+    OpBuilder builder(getOperation());
+    LayoutKind kind;
+    if (layoutKind == "subgroup")
+      kind = LayoutKind::Subgroup;
+    else if (layoutKind == "inst")
+      kind = LayoutKind::InstData;
+    else if (layoutKind == "lane")
+      kind = LayoutKind::Lane;
+    else {
+      signalPassFailure();
+      return;
+    }
+    if (failed(xegpu::propagateLayouts(builder, getOperation(), kind))) {
+      signalPassFailure();
+    }
+  }
+};
+
+struct TestXeGPUResolveLayoutConflicts
+    : public PassWrapper<TestXeGPUResolveLayoutConflicts,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUResolveLayoutConflicts)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-resolve-layout-conflicts";
+  }
+
+  StringRef getDescription() const final {
+    return "Test the implementation of XeGPU layout conflict resolution.";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<gpu::GPUDialect>();
+  }
+
+  TestXeGPUResolveLayoutConflicts() = default;
+  TestXeGPUResolveLayoutConflicts(const TestXeGPUResolveLayoutConflicts &pass) =
+      default;
+
+  void runOnOperation() override {
+    if (failed(xegpu::resolveLayoutConflicts(getOperation()))) {
+      signalPassFailure();
+    }
   }
 };
 
@@ -341,7 +494,10 @@ void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUUnrollingPatterns>();
   PassRegistration<TestXeGPULayoutInterface>();
   PassRegistration<TestXeGPUSGDistribute>();
+  PassRegistration<TestXeGPUSgToWiDistributeExperimental>();
   PassRegistration<TestXeGPUMoveFuncBodyToWarpOp>();
+  PassRegistration<TestXeGPUPropagateLayouts>();
+  PassRegistration<TestXeGPUResolveLayoutConflicts>();
 }
 } // namespace test
 } // namespace mlir

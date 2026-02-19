@@ -710,62 +710,60 @@ private:
                       << " iterations of the first loop. \n");
 
     ValueToValueMapTy VMap;
-    FC0.Peeled =
-        peelLoop(FC0.L, PeelCount, false, &LI, &SE, DT, &AC, true, VMap);
-    if (FC0.Peeled) {
-      LLVM_DEBUG(dbgs() << "Done Peeling\n");
+    peelLoop(FC0.L, PeelCount, false, &LI, &SE, DT, &AC, true, VMap);
+    FC0.Peeled = true;
+    LLVM_DEBUG(dbgs() << "Done Peeling\n");
 
 #ifndef NDEBUG
-      auto IdenticalTripCount = haveIdenticalTripCounts(FC0, FC1);
+    auto IdenticalTripCount = haveIdenticalTripCounts(FC0, FC1);
 
-      assert(IdenticalTripCount.first && *IdenticalTripCount.second == 0 &&
-             "Loops should have identical trip counts after peeling");
+    assert(IdenticalTripCount.first && *IdenticalTripCount.second == 0 &&
+           "Loops should have identical trip counts after peeling");
 #endif
 
-      FC0.PP.PeelCount += PeelCount;
+    FC0.PP.PeelCount += PeelCount;
 
-      // Peeling does not update the PDT
-      PDT.recalculate(*FC0.Preheader->getParent());
+    // Peeling does not update the PDT
+    PDT.recalculate(*FC0.Preheader->getParent());
 
-      FC0.updateAfterPeeling();
+    FC0.updateAfterPeeling();
 
-      // In this case the iterations of the loop are constant, so the first
-      // loop will execute completely (will not jump from one of
-      // the peeled blocks to the second loop). Here we are updating the
-      // branch conditions of each of the peeled blocks, such that it will
-      // branch to its successor which is not the preheader of the second loop
-      // in the case of unguarded loops, or the succesors of the exit block of
-      // the first loop otherwise. Doing this update will ensure that the entry
-      // block of the first loop dominates the entry block of the second loop.
-      BasicBlock *BB =
-          FC0.GuardBranch ? FC0.ExitBlock->getUniqueSuccessor() : FC1.Preheader;
-      if (BB) {
-        SmallVector<DominatorTree::UpdateType, 8> TreeUpdates;
-        SmallVector<Instruction *, 8> WorkList;
-        for (BasicBlock *Pred : predecessors(BB)) {
-          if (Pred != FC0.ExitBlock) {
-            WorkList.emplace_back(Pred->getTerminator());
-            TreeUpdates.emplace_back(
-                DominatorTree::UpdateType(DominatorTree::Delete, Pred, BB));
-          }
+    // In this case the iterations of the loop are constant, so the first
+    // loop will execute completely (will not jump from one of
+    // the peeled blocks to the second loop). Here we are updating the
+    // branch conditions of each of the peeled blocks, such that it will
+    // branch to its successor which is not the preheader of the second loop
+    // in the case of unguarded loops, or the succesors of the exit block of
+    // the first loop otherwise. Doing this update will ensure that the entry
+    // block of the first loop dominates the entry block of the second loop.
+    BasicBlock *BB =
+        FC0.GuardBranch ? FC0.ExitBlock->getUniqueSuccessor() : FC1.Preheader;
+    if (BB) {
+      SmallVector<DominatorTree::UpdateType, 8> TreeUpdates;
+      SmallVector<Instruction *, 8> WorkList;
+      for (BasicBlock *Pred : predecessors(BB)) {
+        if (Pred != FC0.ExitBlock) {
+          WorkList.emplace_back(Pred->getTerminator());
+          TreeUpdates.emplace_back(
+              DominatorTree::UpdateType(DominatorTree::Delete, Pred, BB));
         }
-        // Cannot modify the predecessors inside the above loop as it will cause
-        // the iterators to be nullptrs, causing memory errors.
-        for (Instruction *CurrentBranch : WorkList) {
-          BasicBlock *Succ = CurrentBranch->getSuccessor(0);
-          if (Succ == BB)
-            Succ = CurrentBranch->getSuccessor(1);
-          ReplaceInstWithInst(CurrentBranch, BranchInst::Create(Succ));
-        }
-
-        DTU.applyUpdates(TreeUpdates);
-        DTU.flush();
       }
-      LLVM_DEBUG(
-          dbgs() << "Sucessfully peeled " << FC0.PP.PeelCount
-                 << " iterations from the first loop.\n"
-                    "Both Loops have the same number of iterations now.\n");
+      // Cannot modify the predecessors inside the above loop as it will cause
+      // the iterators to be nullptrs, causing memory errors.
+      for (Instruction *CurrentBranch : WorkList) {
+        BasicBlock *Succ = CurrentBranch->getSuccessor(0);
+        if (Succ == BB)
+          Succ = CurrentBranch->getSuccessor(1);
+        ReplaceInstWithInst(CurrentBranch, BranchInst::Create(Succ));
+      }
+
+      DTU.applyUpdates(TreeUpdates);
+      DTU.flush();
     }
+    LLVM_DEBUG(
+        dbgs() << "Sucessfully peeled " << FC0.PP.PeelCount
+               << " iterations from the first loop.\n"
+                  "Both Loops have the same number of iterations now.\n");
   }
 
   /// Walk each set of strictly adjacent fusion candidates and attempt to fuse
@@ -1081,28 +1079,6 @@ private:
     }
 
     return true;
-  }
-
-  /// This function fixes PHI nodes after fusion in \p SafeToSink.
-  /// \p SafeToSink instructions are the instructions that are to be moved past
-  /// the fused loop. Thus, the PHI nodes in \p SafeToSink should be updated to
-  /// receive values from the fused loop if they are currently taking values
-  /// from the first loop (i.e. FC0)'s latch.
-  void fixPHINodes(ArrayRef<Instruction *> SafeToSink,
-                   const FusionCandidate &FC0,
-                   const FusionCandidate &FC1) const {
-    for (Instruction *Inst : SafeToSink) {
-      // No update needed for non-PHI nodes.
-      PHINode *Phi = dyn_cast<PHINode>(Inst);
-      if (!Phi)
-        continue;
-      for (unsigned I = 0; I < Phi->getNumIncomingValues(); I++) {
-        if (Phi->getIncomingBlock(I) != FC0.Latch)
-          continue;
-        assert(FC1.Latch && "FC1 latch is not set");
-        Phi->setIncomingBlock(I, FC1.Latch);
-      }
-    }
   }
 
   /// Collect instructions in the \p FC1 Preheader that can be hoisted
@@ -1453,11 +1429,19 @@ private:
     // insert instructions in reverse order to maintain dominance relationship
     for (Instruction *I : reverse(SinkInsts)) {
       assert(I->getParent() == FC1.Preheader);
-      I->moveBefore(*FC1.ExitBlock, FC1.ExitBlock->getFirstInsertionPt());
+      if (isa<PHINode>(I)) {
+        // The Phis to be sunk should have only one incoming value, as is
+        // assured by the condition that the second loop is dominated by the
+        // first one which is enforced by isStrictlyAdjacent().
+        // Replace the phi uses with the corresponding incoming value to clean
+        // up the code.
+        assert(cast<PHINode>(I)->getNumIncomingValues() == 1 &&
+               "Expected the sunk PHI node to have 1 incoming value.");
+        I->replaceAllUsesWith(I->getOperand(0));
+        I->eraseFromParent();
+      } else
+        I->moveBefore(*FC1.ExitBlock, FC1.ExitBlock->getFirstInsertionPt());
     }
-    // PHI nodes in SinkInsts need to be updated to receive values from the
-    // fused loop.
-    fixPHINodes(SinkInsts, FC0, FC1);
   }
 
   /// Determine if two fusion candidates have identical guards
@@ -1715,6 +1699,10 @@ private:
     // pointers to erased/free'ed blocks. It should be done after mergeLatch()
     // since merging the latches may affect the dispositions.
     SE.forgetBlockAndLoopDispositions();
+
+    // Forget the cached SCEV values including the induction variable that may
+    // have changed after the fusion.
+    SE.forgetLoop(FC0.L);
 
     // Merge the loops.
     SmallVector<BasicBlock *, 8> Blocks(FC1.L->blocks());

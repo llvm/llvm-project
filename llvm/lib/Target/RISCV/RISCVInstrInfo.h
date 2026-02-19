@@ -19,7 +19,6 @@
 #include "llvm/IR/DiagnosticInfo.h"
 
 #define GET_INSTRINFO_HEADER
-#define GET_INSTRINFO_OPERAND_ENUM
 #include "RISCVGenInstrInfo.inc"
 #include "RISCVGenRegisterInfo.inc"
 
@@ -123,6 +122,7 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DstReg,
       int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   using TargetInstrInfo::foldMemoryOperandImpl;
@@ -173,10 +173,6 @@ public:
 
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
-
-  bool analyzeSelect(const MachineInstr &MI,
-                     SmallVectorImpl<MachineOperand> &Cond, unsigned &TrueOp,
-                     unsigned &FalseOp, bool &Optimizable) const override;
 
   MachineInstr *optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
@@ -235,6 +231,7 @@ public:
 
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
+  bool analyzeCandidate(outliner::Candidate &C) const;
   // Calculate target-specific information for a set of outlining candidates.
   std::optional<std::unique_ptr<outliner::OutlinedFunction>>
   getOutliningCandidateInfo(
@@ -419,6 +416,9 @@ namespace RISCVVPseudosTable {
 struct PseudoInfo {
   uint16_t Pseudo;
   uint16_t BaseInstr;
+  uint16_t VLMul : 3;
+  uint16_t SEW : 8;
+  uint16_t IsAltFmt : 1;
 };
 
 #define GET_RISCVVPseudosTable_DECL

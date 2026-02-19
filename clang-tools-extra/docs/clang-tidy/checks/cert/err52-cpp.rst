@@ -1,4 +1,6 @@
 .. title:: clang-tidy - cert-err52-cpp
+.. meta::
+   :http-equiv=refresh: 5;URL=../modernize/avoid-setjmp-longjmp.html
 
 cert-err52-cpp
 ==============

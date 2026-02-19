@@ -97,9 +97,7 @@ class RegAllocScoring : public MachineFunctionPass {
 public:
   static char ID;
 
-  RegAllocScoring() : MachineFunctionPass(ID) {
-    initializeRegAllocScoringPass(*PassRegistry::getPassRegistry());
-  }
+  RegAllocScoring() : MachineFunctionPass(ID) {}
 
   ~RegAllocScoring() override = default;
 

@@ -231,6 +231,9 @@ class SelectionDAG {
   const SelectionDAGTargetInfo *TSI = nullptr;
   const TargetLowering *TLI = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
+  const RTLIB::RuntimeLibcallsInfo *RuntimeLibcallInfo = nullptr;
+  const LibcallLoweringInfo *Libcalls = nullptr;
+
   const FunctionVarLocs *FnVarLocs = nullptr;
   MachineFunction *MF;
   MachineFunctionAnalysisManager *MFAM = nullptr;
@@ -435,10 +438,18 @@ private:
 
   template <typename SDNodeTy>
   static uint16_t getSyntheticNodeSubclassData(unsigned Opc, unsigned Order,
-                                                SDVTList VTs, EVT MemoryVT,
-                                                MachineMemOperand *MMO) {
+                                               SDVTList VTs, EVT MemoryVT,
+                                               MachineMemOperand *MMO) {
     return SDNodeTy(Opc, Order, DebugLoc(), VTs, MemoryVT, MMO)
-         .getRawSubclassData();
+        .getRawSubclassData();
+  }
+
+  template <typename SDNodeTy>
+  static uint16_t getSyntheticNodeSubclassData(
+      unsigned Opc, unsigned Order, SDVTList VTs, EVT MemoryVT,
+      PointerUnion<MachineMemOperand *, MachineMemOperand **> MemRefs) {
+    return SDNodeTy(Opc, Order, DebugLoc(), VTs, MemoryVT, MemRefs)
+        .getRawSubclassData();
   }
 
   void createOperands(SDNode *Node, ArrayRef<SDValue> Vals);
@@ -469,16 +480,19 @@ public:
   /// Prepare this SelectionDAG to process code in the given MachineFunction.
   LLVM_ABI void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
                      Pass *PassPtr, const TargetLibraryInfo *LibraryInfo,
+                     const LibcallLoweringInfo *LibcallsInfo,
                      UniformityInfo *UA, ProfileSummaryInfo *PSIin,
                      BlockFrequencyInfo *BFIin, MachineModuleInfo &MMI,
                      FunctionVarLocs const *FnVarLocs);
 
   void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
             MachineFunctionAnalysisManager &AM,
-            const TargetLibraryInfo *LibraryInfo, UniformityInfo *UA,
+            const TargetLibraryInfo *LibraryInfo,
+            const LibcallLoweringInfo *LibcallsInfo, UniformityInfo *UA,
             ProfileSummaryInfo *PSIin, BlockFrequencyInfo *BFIin,
             MachineModuleInfo &MMI, FunctionVarLocs const *FnVarLocs) {
-    init(NewMF, NewORE, nullptr, LibraryInfo, UA, PSIin, BFIin, MMI, FnVarLocs);
+    init(NewMF, NewORE, nullptr, LibraryInfo, LibcallsInfo, UA, PSIin, BFIin,
+         MMI, FnVarLocs);
     MFAM = &AM;
   }
 
@@ -503,6 +517,13 @@ public:
   }
   const TargetLowering &getTargetLoweringInfo() const { return *TLI; }
   const TargetLibraryInfo &getLibInfo() const { return *LibInfo; }
+
+  const LibcallLoweringInfo &getLibcalls() const { return *Libcalls; }
+
+  const RTLIB::RuntimeLibcallsInfo &getRuntimeLibcallInfo() const {
+    return *RuntimeLibcallInfo;
+  }
+
   const SelectionDAGTargetInfo &getSelectionDAGInfo() const { return *TSI; }
   const UniformityInfo *getUniformityInfo() const { return UA; }
   /// Returns the result of the AssignmentTrackingAnalysis pass if it's
@@ -1278,6 +1299,12 @@ public:
                                                  SDValue Size,
                                                  const CallInst *CI);
 
+  /// Lower a strcmp operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue> getStrcmp(SDValue Chain, const SDLoc &dl,
+                                                 SDValue S0, SDValue S1,
+                                                 const CallInst *CI);
+
   /// Lower a strcpy operation into a target library call and return the
   /// resulting chain and call result as SelectionDAG SDValues.
   LLVM_ABI std::pair<SDValue, SDValue> getStrcpy(SDValue Chain, const SDLoc &dl,
@@ -1288,6 +1315,12 @@ public:
   /// resulting chain and call result as SelectionDAG SDValues.
   LLVM_ABI std::pair<SDValue, SDValue>
   getStrlen(SDValue Chain, const SDLoc &dl, SDValue Src, const CallInst *CI);
+
+  /// Lower a strstr operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue> getStrstr(SDValue Chain, const SDLoc &dl,
+                                                 SDValue S0, SDValue S1,
+                                                 const CallInst *CI);
 
   /* \p CI if not null is the memset call being lowered.
    * \p OverrideTailCall is an optional parameter that can be used to override
@@ -1340,7 +1373,7 @@ public:
   /// ISD::CondCode instead of an SDValue.
   SDValue getSetCC(const SDLoc &DL, EVT VT, SDValue LHS, SDValue RHS,
                    ISD::CondCode Cond, SDValue Chain = SDValue(),
-                   bool IsSignaling = false) {
+                   bool IsSignaling = false, SDNodeFlags Flags = {}) {
     assert(LHS.getValueType().isVector() == RHS.getValueType().isVector() &&
            "Vector/scalar operand type mismatch for setcc");
     assert(LHS.getValueType().isVector() == VT.isVector() &&
@@ -1349,8 +1382,9 @@ public:
            "Cannot create a setCC of an invalid node.");
     if (Chain)
       return getNode(IsSignaling ? ISD::STRICT_FSETCCS : ISD::STRICT_FSETCC, DL,
-                     {VT, MVT::Other}, {Chain, LHS, RHS, getCondCode(Cond)});
-    return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond));
+                     {VT, MVT::Other}, {Chain, LHS, RHS, getCondCode(Cond)},
+                     Flags);
+    return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond), Flags);
   }
 
   /// Helper function to make it easier to build VP_SETCCs if you just have an
@@ -1455,6 +1489,12 @@ public:
   LLVM_ABI SDValue getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
                                        SDVTList VTList, ArrayRef<SDValue> Ops,
                                        EVT MemVT, MachineMemOperand *MMO);
+
+  /// getMemIntrinsicNode - Creates a MemIntrinsicNode with multiple MMOs.
+  LLVM_ABI SDValue getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
+                                       SDVTList VTList, ArrayRef<SDValue> Ops,
+                                       EVT MemVT,
+                                       ArrayRef<MachineMemOperand *> MMOs);
 
   /// Creates a LifetimeSDNode that starts (`IsStart==true`) or ends
   /// (`IsStart==false`) the lifetime of the `FrameIndex`.
@@ -1722,6 +1762,11 @@ public:
 
   /// Return a freeze using the SDLoc of the value operand.
   LLVM_ABI SDValue getFreeze(SDValue V);
+
+  /// Return a freeze of V if any of the demanded elts may be undef or poison.
+  /// If \p PoisonOnly is true, then only check for poison elements.
+  LLVM_ABI SDValue getFreeze(SDValue V, const APInt &DemandedElts,
+                             bool PoisonOnly = false);
 
   /// Return an AssertAlignSDNode.
   LLVM_ABI SDValue getAssertAlign(const SDLoc &DL, SDValue V, Align A);
@@ -2073,7 +2118,7 @@ public:
 
   /// Constant fold a setcc to true or false.
   LLVM_ABI SDValue FoldSetCC(EVT VT, SDValue N1, SDValue N2, ISD::CondCode Cond,
-                             const SDLoc &dl);
+                             const SDLoc &dl, SDNodeFlags Flags = {});
 
   /// Return true if the sign bit of Op is known to be zero.
   /// We use this predicate to simplify operations downstream.
@@ -2198,8 +2243,19 @@ public:
 
   /// Test if the given value is known to have exactly one bit set. This differs
   /// from computeKnownBits in that it doesn't necessarily determine which bit
-  /// is set.
-  LLVM_ABI bool isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth = 0) const;
+  /// is set. If 'OrZero' is set, then return true if the given value is either
+  /// a power of two or zero.
+  LLVM_ABI bool isKnownToBeAPowerOfTwo(SDValue Val, bool OrZero = false,
+                                       unsigned Depth = 0) const;
+
+  /// Test if the given value is known to have exactly one bit set. This differs
+  /// from computeKnownBits in that it doesn't necessarily determine which bit
+  /// is set. The DemandedElts argument allows us to only collect the minimum
+  /// sign bits of the requested vector elements. If 'OrZero' is set, then
+  /// return true if the given value is either a power of two or zero.
+  LLVM_ABI bool isKnownToBeAPowerOfTwo(SDValue Val, const APInt &DemandedElts,
+                                       bool OrZero = false,
+                                       unsigned Depth = 0) const;
 
   /// Test if the given _fp_ value is known to be an integer power-of-2, either
   /// positive or negative.
@@ -2346,7 +2402,8 @@ public:
   /// Check if a use of a float value is insensitive to signed zeros.
   LLVM_ABI bool canIgnoreSignBitOfZero(const SDUse &Use) const;
 
-  /// Check if at most two uses of a value are insensitive to signed zeros.
+  /// Check if \p Op has no-signed-zeros, or all users (limited to checking two
+  /// for compile-time performance) are insensitive to signed zeros.
   LLVM_ABI bool canIgnoreSignBitOfZero(SDValue Op) const;
 
   /// Test whether two SDValues are known to compare equal. This

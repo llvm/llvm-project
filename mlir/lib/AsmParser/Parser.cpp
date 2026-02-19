@@ -198,6 +198,45 @@ InFlightDiagnostic Parser::emitError(const Twine &message) {
   return emitError(SMLoc::getFromPointer(loc.getPointer() - 1), message);
 }
 
+/// Find the start of a line comment (`//`) in the given string, ignoring
+/// occurrences inside string literals. Returns StringRef::npos if no comment
+/// is found.
+static size_t findCommentStart(StringRef line) {
+  // Fast path: no comment in line at all.
+  size_t slashPos = line.find("//");
+  if (slashPos == StringRef::npos)
+    return StringRef::npos;
+
+  // Fast path: comment at start of line, or no quote before the '//'.
+  if (slashPos == 0)
+    return 0;
+  size_t quotePos = line.find('"');
+  if (quotePos == StringRef::npos || quotePos > slashPos)
+    return slashPos;
+
+  // A quote appears before '//'. Parse carefully to handle string literals.
+  bool inString = false;
+  for (size_t i = 0, e = line.size(); i < e; ++i) {
+    char c = line[i];
+    if (inString) {
+      // Skip escaped characters inside strings.
+      if (c == '\\') {
+        ++i;
+        continue;
+      }
+      if (c == '"')
+        inString = false;
+    } else {
+      if (c == '"') {
+        inString = true;
+      } else if (c == '/' && i + 1 < e && line[i + 1] == '/') {
+        return i;
+      }
+    }
+  }
+  return StringRef::npos;
+}
+
 InFlightDiagnostic Parser::emitError(SMLoc loc, const Twine &message) {
   auto diag = mlir::emitError(getEncodedSourceLocation(loc), message);
 
@@ -247,16 +286,15 @@ InFlightDiagnostic Parser::emitWrongTokenError(const Twine &message) {
     // Drop the \n so we emit the diagnostic at the end of the line.
     startOfBuffer = startOfBuffer.drop_back();
 
-    // Check to see if the preceding line has a comment on it.  We assume that a
-    // `//` is the start of a comment, which is mostly correct.
-    // TODO: This will do the wrong thing for // in a string literal.
+    // Check to see if the preceding line has a comment on it.
     auto prevLine = startOfBuffer;
     size_t newLineIndex = prevLine.find_last_of("\n\r");
     if (newLineIndex != StringRef::npos)
       prevLine = prevLine.drop_front(newLineIndex);
 
-    // If we find a // in the current line, then emit the diagnostic before it.
-    size_t commentStart = prevLine.find("//");
+    // If we find a // in the current line (outside of string literals), then
+    // emit the diagnostic before it.
+    size_t commentStart = findCommentStart(prevLine);
     if (commentStart != StringRef::npos)
       startOfBuffer = startOfBuffer.drop_back(prevLine.size() - commentStart);
   }

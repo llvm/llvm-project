@@ -1,10 +1,10 @@
 name: "Check LLVM ABI annotations"
+
+# TODO(https://github.com/llvm/llvm-project/issues/109483): Re-enable on pull
+# requests once the workflow is less diruptive.
 on:
-  pull_request:
-  push:
-    branches:
-      - 'main'
-      - 'release/**'
+  # pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -36,6 +36,7 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 # v47.0.0
         with:
+          path: "./llvm-project"
           separator: ","
           skip_initial_fetch: true
           base_sha: 'HEAD~1'
@@ -96,7 +97,7 @@ jobs:
             --changed-files "$CHANGED_FILES"
 
       - name: Upload results
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: workflow-args

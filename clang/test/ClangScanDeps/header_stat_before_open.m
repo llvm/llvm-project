@@ -8,12 +8,13 @@
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/header_stat_before_open_cdb.json > %t.cdb
 //
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 | \
-// RUN:   FileCheck %s
+// RUN:   FileCheck %s %if system-darwin && target={{.*}}-{{darwin|macos}}{{.*}} %{ --check-prefixes=CHECK,CHECK-DARWIN %}
 
 #include "Framework/Framework.h"
 #include "Framework/PrivateHeader.h"
 
 // CHECK: header_stat_before_open_input.o
+// CHECK-DARWIN-NEXT: SDKSettings.json
 // CHECK-NEXT: header_stat_before_open_input.m
 // CHECK-NEXT: Inputs{{/|\\}}frameworks{{/|\\}}Framework.framework{{/|\\}}Headers{{/|\\}}Framework.h
 // CHECK-NEXT: Inputs{{/|\\}}frameworks{{/|\\}}Framework.framework{{/|\\}}PrivateHeaders{{/|\\}}PrivateHeader.h

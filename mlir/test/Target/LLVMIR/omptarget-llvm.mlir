@@ -564,10 +564,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK:         %[[VAL_20:.*]] = icmp sgt i64 %[[VAL_15]], 1
 // CHECK:         %[[VAL_21:.*]] = and i64 %[[VAL_22:.*]], 8
 // CHECK:         %[[VAL_23:.*]] = icmp ne ptr %[[VAL_24:.*]], %[[VAL_19]]
-// CHECK:         %[[VAL_25:.*]] = and i64 %[[VAL_22]], 16
-// CHECK:         %[[VAL_26:.*]] = icmp ne i64 %[[VAL_25]], 0
-// CHECK:         %[[VAL_27:.*]] = and i1 %[[VAL_23]], %[[VAL_26]]
-// CHECK:         %[[VAL_28:.*]] = or i1 %[[VAL_20]], %[[VAL_27]]
+// CHECK:         %[[VAL_28:.*]] = or i1 %[[VAL_20]], %[[VAL_23]]
 // CHECK:         %[[VAL_29:.*]] = icmp eq i64 %[[VAL_21]], 0
 // CHECK:         %[[VAL_30:.*]] = and i1 %[[VAL_28]], %[[VAL_29]]
 // CHECK:         br i1 %[[VAL_30]], label %[[VAL_31:.*]], label %[[VAL_32:.*]]

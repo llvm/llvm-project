@@ -91,7 +91,6 @@ struct MissingFeatures {
   static bool opFuncUnwindTablesAttr() { return false; }
   static bool opFuncWillReturn() { return false; }
   static bool opFuncNoReturn() { return false; }
-  static bool setFunctionAttributes() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
 
   // CallOp handling
@@ -149,11 +148,7 @@ struct MissingFeatures {
   static bool zeroSizeRecordMembers() { return false; }
 
   // Coroutines
-  static bool coroEndBuiltinCall() { return false; }
-  static bool emitBodyAndFallthrough() { return false; }
   static bool coroOutsideFrameMD() { return false; }
-  static bool coroCoReturn() { return false; }
-  static bool coroCoYield() { return false; }
   static bool coroutineExceptions() { return false; };
 
   // Various handling of deferred processing in CIRGenModule.
@@ -193,6 +188,12 @@ struct MissingFeatures {
   // LowerModule handling
   static bool lowerModuleCodeGenOpts() { return false; }
   static bool lowerModuleLangOpts() { return false; }
+  static bool targetLoweringInfo() { return false; }
+
+  // Extra checks for lowerGetMethod in ItaniumCXXABI
+  static bool emitCFICheck() { return false; }
+  static bool emitVFEInfo() { return false; }
+  static bool emitWPDInfo() { return false; }
 
   // Misc
   static bool aarch64SIMDIntrinsics() { return false; }
@@ -211,14 +212,15 @@ struct MissingFeatures {
   static bool aggValueSlotVolatile() { return false; }
   static bool alignCXXRecordDecl() { return false; }
   static bool allocToken() { return false; }
+  static bool appleArm64CXXABI() { return false; }
   static bool appleKext() { return false; }
   static bool armComputeVolatileBitfields() { return false; }
   static bool asmGoto() { return false; }
-  static bool asmInputOperands() { return false; }
   static bool asmLabelAttr() { return false; }
+  static bool asmLLVMAssume() { return false; }
   static bool asmMemoryEffects() { return false; }
-  static bool asmOutputOperands() { return false; }
   static bool asmUnwindClobber() { return false; }
+  static bool asmVectorType() { return false; }
   static bool assignMemcpyizer() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool attributeBuiltin() { return false; }
@@ -236,6 +238,7 @@ struct MissingFeatures {
   static bool cleanupAfterErrorDiags() { return false; }
   static bool cleanupAppendInsts() { return false; }
   static bool cleanupBranchThrough() { return false; }
+  static bool cleanupDeactivationScope() { return false; }
   static bool cleanupIndexAndBIAdjustment() { return false; }
   static bool cleanupWithPreservedValues() { return false; }
   static bool cleanupsToDeactivate() { return false; }
@@ -276,13 +279,21 @@ struct MissingFeatures {
   static bool emitNullabilityCheck() { return false; }
   static bool emitTypeCheck() { return false; }
   static bool emitTypeMetadataCodeForVCall() { return false; }
+
+  // Fast math.
+  static bool fastMathGuard() { return false; }
+  // Should be implemented with a moduleOp level attribute and directly
+  // mapped to LLVM - those can be set directly for every relevant LLVM IR
+  // dialect operation (log10, ...).
   static bool fastMathFlags() { return false; }
+  static bool fastMathFuncAttributes() { return false; }
 
   static bool fpConstraints() { return false; }
   static bool generateDebugInfo() { return false; }
   static bool getRuntimeFunctionDecl() { return false; }
   static bool globalViewIndices() { return false; }
   static bool globalViewIntLowering() { return false; }
+  static bool guardAbortOnException() { return false; }
   static bool handleBuiltinICEArguments() { return false; }
   static bool hip() { return false; }
   static bool incrementProfileCounter() { return false; }
@@ -329,7 +340,6 @@ struct MissingFeatures {
   static bool setNonGC() { return false; }
   static bool setObjCGCLValueClass() { return false; }
   static bool setTargetAttributes() { return false; }
-  static bool shouldCreateMemCpyFromGlobal() { return false; }
   static bool shouldSplitConstantStore() { return false; }
   static bool shouldUseBZeroPlusStoresToInitialize() { return false; }
   static bool shouldUseMemSetToInitialize() { return false; }
@@ -368,21 +378,16 @@ struct MissingFeatures {
   static bool stringTypeWithDifferentArraySize() { return false; }
 
   // Future CIR operations
-  static bool awaitOp() { return false; }
   static bool callOp() { return false; }
-  static bool ifOp() { return false; }
-  static bool labelOp() { return false; }
-  static bool ptrDiffOp() { return false; }
   static bool llvmLoweringPtrDiffConsidersPointee() { return false; }
-  static bool ptrStrideOp() { return false; }
   static bool switchOp() { return false; }
-  static bool throwOp() { return false; }
   static bool tryOp() { return false; }
   static bool vecTernaryOp() { return false; }
   static bool zextOp() { return false; }
 
   // Future CIR attributes
   static bool optInfoAttr() { return false; }
+  static bool functionArgumentAttrs() { return false; }
 
   // Maybe only needed for Windows exception handling
   static bool currentFuncletPad() { return false; }

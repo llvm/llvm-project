@@ -62,11 +62,6 @@ int main(int argc, char** argv) {
   bm.operator()<std::deque<int>>("std::partition_point(deque<int>)", std_partition_point);
   bm.operator()<std::list<int>>("std::partition_point(list<int>)", std_partition_point);
 
-  // ranges::partition_point
-  bm.operator()<std::vector<int>>("rng::partition_point(vector<int>)", std::ranges::partition_point);
-  bm.operator()<std::deque<int>>("rng::partition_point(deque<int>)", std::ranges::partition_point);
-  bm.operator()<std::list<int>>("rng::partition_point(list<int>)", std::ranges::partition_point);
-
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
   benchmark::Shutdown();

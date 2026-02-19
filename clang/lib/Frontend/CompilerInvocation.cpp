@@ -622,6 +622,11 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     LangOpts.RawStringLiterals = true;
   }
 
+  if (Args.hasArg(OPT_freflection) && !LangOpts.CPlusPlus26) {
+    Diags.Report(diag::err_drv_reflection_requires_cxx26)
+        << Args.getLastArg(options::OPT_freflection)->getAsString(Args);
+  }
+
   LangOpts.NamedLoops =
       Args.hasFlag(OPT_fnamed_loops, OPT_fno_named_loops, LangOpts.C2y);
 
@@ -2244,7 +2249,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (UsingSampleProfile)
     NeedLocTracking = true;
 
-  if (!Opts.StackUsageOutput.empty())
+  if (!Opts.StackUsageFile.empty())
     NeedLocTracking = true;
 
   // If the user requested a flag that requires source locations available in
@@ -3693,6 +3698,10 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
       GenerateArg(Consumer, OPT_pic_is_pie);
     for (StringRef Sanitizer : serializeSanitizerKinds(Opts.Sanitize))
       GenerateArg(Consumer, OPT_fsanitize_EQ, Sanitizer);
+    for (StringRef Sanitizer :
+         serializeSanitizerKinds(Opts.UBSanFeatureIgnoredSanitize))
+      GenerateArg(Consumer, OPT_fsanitize_ignore_for_ubsan_feature_EQ,
+                  Sanitizer);
 
     return;
   }
@@ -3892,6 +3901,9 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
 
   for (StringRef Sanitizer : serializeSanitizerKinds(Opts.Sanitize))
     GenerateArg(Consumer, OPT_fsanitize_EQ, Sanitizer);
+  for (StringRef Sanitizer :
+       serializeSanitizerKinds(Opts.UBSanFeatureIgnoredSanitize))
+    GenerateArg(Consumer, OPT_fsanitize_ignore_for_ubsan_feature_EQ, Sanitizer);
 
   // Conflating '-fsanitize-system-ignorelist' and '-fsanitize-ignorelist'.
   for (const std::string &F : Opts.NoSanitizeFiles)
@@ -3982,6 +3994,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.PIE = Args.hasArg(OPT_pic_is_pie);
     parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                         Diags, Opts.Sanitize);
+    parseSanitizerKinds(
+        "-fsanitize-ignore-for-ubsan-feature=",
+        Args.getAllArgValues(OPT_fsanitize_ignore_for_ubsan_feature_EQ), Diags,
+        Opts.UBSanFeatureIgnoredSanitize);
 
     return Diags.getNumErrors() == NumErrorsBefore;
   }
@@ -4399,6 +4415,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   // Parse -fsanitize= arguments.
   parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                       Diags, Opts.Sanitize);
+  parseSanitizerKinds(
+      "-fsanitize-ignore-for-ubsan-feature=",
+      Args.getAllArgValues(OPT_fsanitize_ignore_for_ubsan_feature_EQ), Diags,
+      Opts.UBSanFeatureIgnoredSanitize);
   Opts.NoSanitizeFiles = Args.getAllArgValues(OPT_fsanitize_ignorelist_EQ);
   std::vector<std::string> systemIgnorelists =
       Args.getAllArgValues(OPT_fsanitize_system_ignorelist_EQ);
@@ -5141,7 +5161,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Invocation,
       Invocation, DummyInvocation, CommandLineArgs, Diags, Argv0);
 }
 
-std::string CompilerInvocation::getModuleHash() const {
+std::string CompilerInvocation::computeContextHash() const {
   // FIXME: Consider using SHA1 instead of MD5.
   llvm::HashBuilder<llvm::MD5, llvm::endianness::native> HBuilder;
 

@@ -239,6 +239,14 @@ public:
     return *this;
   }
 
+  /// Reset all properties and re-establish baseline invariants.
+  MachineFunctionProperties &resetToInitial() {
+    reset();
+    setIsSSA();
+    setTracksLiveness();
+    return *this;
+  }
+
   MachineFunctionProperties &set(const MachineFunctionProperties &MFP) {
     Properties |= MFP.Properties;
     return *this;
@@ -518,11 +526,17 @@ public:
     /// Callee type ids.
     SmallVector<ConstantInt *, 4> CalleeTypeIds;
 
+    /// 'call_target' metadata for the DISubprogram. It is the declaration
+    /// or definition of the target function and might be indirect.
+    MDNode *CallTarget = nullptr;
+
     CallSiteInfo() = default;
 
     /// Extracts the numeric type id from the CallBase's callee_type Metadata,
     /// and sets CalleeTypeIds. This is used as type id for the indirect call in
     /// the call graph section.
+    /// Extracts the MDNode from the CallBase's call_target Metadata to be used
+    /// during the construction of the debug info call site entries.
     LLVM_ABI CallSiteInfo(const CallBase &CB);
   };
 
@@ -1264,6 +1278,8 @@ public:
   /// Notes the global and target flags for a call site.
   void addCalledGlobal(const MachineInstr *MI, CalledGlobalInfo Details) {
     assert(MI && "MI must not be null");
+    assert(MI->isCandidateForAdditionalCallInfo() &&
+           "Cannot store called global info for this instruction");
     assert(Details.Callee && "Global must not be null");
     CalledGlobalsInfo.insert({MI, Details});
   }

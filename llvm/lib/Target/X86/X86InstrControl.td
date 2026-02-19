@@ -88,6 +88,10 @@ let isBranch = 1, isTerminator = 1, Uses = [EFLAGS], SchedRW = [WriteJump],
   }
 }
 
+let hasSideEffects = 1, Uses = [EFLAGS], SchedRW = [WriteJump] in
+def JCC_SELF : PseudoI<(outs), (ins ccode:$cond),
+                       [(X86brcond_self timm:$cond, EFLAGS)]>;
+
 // jcx/jecx/jrcx instructions.
 let isBranch = 1, isTerminator = 1, hasSideEffects = 0, SchedRW = [WriteJump] in {
   // These are the 32-bit versions of this instruction for the asmparser.  In
@@ -372,6 +376,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
   def TCRETURNmi64   : PseudoI<(outs),
                                (ins i64mem_TC:$dst, i32imm:$offset),
                                []>, Sched<[WriteJumpLd]>;
+  let mayLoad = 1 in
   def TCRETURN_WINmi64   : PseudoI<(outs),
                                (ins i64mem_w64TC:$dst, i32imm:$offset),
                                []>, Sched<[WriteJumpLd]>;

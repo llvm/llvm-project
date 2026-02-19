@@ -1685,7 +1685,7 @@ def : Pat<(AVRcall(i16 tglobaladdr:$dst)), (RCALLk tglobaladdr:$dst)>;
 def : Pat<(AVRcall(i16 texternalsym:$dst)), (RCALLk texternalsym:$dst)>;
 
 // `anyext`
-// FIMXE: Using INSERT_SUBREG is more efficient, but leads to issue #132203.
+// FIXME: Using INSERT_SUBREG is more efficient, but leads to issue #132203.
 def : Pat<(i16(anyext i8:$src)),
 //        (INSERT_SUBREG(i16(IMPLICIT_DEF)), i8:$src, sub_lo)>;
           (ZEXT i8:$src)>;

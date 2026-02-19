@@ -179,13 +179,13 @@ define <256 x i8> @select_v256i8(<256 x i1> %a, <256 x i8> %b, <256 x i8> %c, i3
 define <256 x i8> @select_evl_v256i8(<256 x i1> %a, <256 x i8> %b, <256 x i8> %c) {
 ; CHECK-LABEL: select_evl_v256i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v6, v0
+; CHECK-NEXT:    addi a2, a1, 128
+; CHECK-NEXT:    vle8.v v24, (a2)
 ; CHECK-NEXT:    li a2, 128
-; CHECK-NEXT:    addi a3, a1, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-NEXT:    vle8.v v24, (a3)
 ; CHECK-NEXT:    vle8.v v8, (a1)
 ; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, mu

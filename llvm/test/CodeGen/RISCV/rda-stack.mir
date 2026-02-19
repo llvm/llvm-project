@@ -8,7 +8,8 @@ stack:
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 body:             |
-  ; CHECK-LABEL: RDA results for test0
+  ; CHECK-LABEL: Reaching definitions for for machine function: test0
+  ; CHECK-NEXT: %bb.0:
   ; CHECK-NEXT: %stack.0:{ }
   ; CHECK-NEXT:0: $x10 = LD %stack.0, 0 :: (load (s64))
   ; CHECK-EMPTY:
@@ -31,7 +32,8 @@ stack:
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 body:             |
-  ; CHECK-LABEL: RDA results for test1
+  ; CHECK-LABEL: Reaching definitions for for machine function: test1
+  ; CHECK-NEXT: %bb.0:
   ; CHECK-NEXT: %stack.0:{ }
   ; CHECK-NEXT: 0: $x10 = LD %stack.0, 0 :: (load (s64))
   ; CHECK-EMPTY: 
@@ -63,7 +65,8 @@ stack:
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 body:             |
-  ; CHECK-LABEL: RDA results for test2
+  ; CHECK-LABEL: Reaching definitions for for machine function: test2
+  ; CHECK-NEXT: %bb.0:
   ; CHECK-NEXT: %stack.0:{ }
   ; CHECK-NEXT: 0: $x10 = LD %stack.0, 0 :: (load (s64))
   ; CHECK-EMPTY: 
@@ -101,11 +104,13 @@ stack:
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 body:             |
-  ; CHECK-LABEL: RDA results for test3
+  ; CHECK-LABEL: Reaching definitions for for machine function: test3
+  ; CHECK-NEXT: %bb.0:
   ; CHECK-NEXT: $x10:{ }
   ; CHECK-NEXT: $x0:{ }
   ; CHECK-NEXT: 0: BEQ $x10, $x0, %bb.2
   ; CHECK-EMPTY: 
+  ; CHECK-NEXT: %bb.1:
   ; CHECK-NEXT: $x10:{ }
   ; CHECK-NEXT: 1: $x10 = ADDI $x10, 1
   ; CHECK-EMPTY: 
@@ -113,17 +118,17 @@ body:             |
   ; CHECK-NEXT: %stack.0:{ }
   ; CHECK-NEXT: 2: SD $x10, %stack.0, 0 :: (store (s64))
   ; CHECK-EMPTY: 
-  ; CHECK-NEXT: $x0:{ }
-  ; CHECK-NEXT: $x0:{ }
-  ; CHECK-NEXT: 3: BEQ $x0, $x0, %bb.3
+  ; CHECK-NEXT: 3: PseudoBR %bb.3
   ; CHECK-EMPTY: 
-  ; CHECK-NEXT: $x10:{ 1 }
+  ; CHECK-NEXT: %bb.2:
+  ; CHECK-NEXT: $x10:{ }
   ; CHECK-NEXT: 4: $x10 = ADDI $x10, 2
   ; CHECK-EMPTY: 
   ; CHECK-NEXT: $x10:{ 4 }
-  ; CHECK-NEXT: %stack.0:{ 2 }
+  ; CHECK-NEXT: %stack.0:{ }
   ; CHECK-NEXT: 5: SD $x10, %stack.0, 0 :: (store (s64))
   ; CHECK-EMPTY: 
+  ; CHECK-NEXT: %bb.3:
   ; CHECK-NEXT: %stack.0:{ 2 5 }
   ; CHECK-NEXT: 6: $x10 = LD %stack.0, 0 :: (load (s64))
   ; CHECK-EMPTY: 
@@ -138,7 +143,7 @@ body:             |
     liveins: $x10
     $x10 = ADDI $x10, 1
     SD $x10, %stack.0, 0 :: (store (s64))
-    BEQ $x0, $x0, %bb.3
+    PseudoBR %bb.3
 
   bb.2:
     liveins: $x10
@@ -163,7 +168,8 @@ stack:
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 body:             |
-  ; CHECK: RDA results for test4
+  ; CHECK-LABEL: Reaching definitions for for machine function: test4
+  ; CHECK-NEXT: %bb.0:
   ; CHECK-NEXT: $x10:{ }
   ; CHECK-NEXT: %stack.0:{ }
   ; CHECK-NEXT: 0: SD $x10, %stack.0, 0 :: (store (s64))

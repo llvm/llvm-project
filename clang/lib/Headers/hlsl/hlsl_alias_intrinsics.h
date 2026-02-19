@@ -1106,6 +1106,27 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f16tof32)
 float4 f16tof32(uint4);
 
 //===----------------------------------------------------------------------===//
+// f32tof16 builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn uint f32tof16(float x)
+/// \brief Returns the float arg value converted to half in the low 16 bits of
+/// the uint return value
+/// \param x The float to be converted to half.
+///
+/// The return value is a uint containing the converted half value in the low
+/// 16 bits.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f32tof16)
+uint f32tof16(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f32tof16)
+uint2 f32tof16(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f32tof16)
+uint3 f32tof16(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f32tof16)
+uint4 f32tof16(float4);
+
+//===----------------------------------------------------------------------===//
 // firstbitlow builtins
 //===----------------------------------------------------------------------===//
 
@@ -2446,6 +2467,16 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_get_lane_count)
 __attribute__((convergent)) uint WaveGetLaneCount();
 
 //===----------------------------------------------------------------------===//
+// WavePrefixOp builtins
+//===----------------------------------------------------------------------===//
+/// \brief Returns the count of bits of Expr set to 1 on prior lanes.
+/// \param Expr The boolean expression to evaluate.
+/// \return the count of bits set to 1 on prior lanes.
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_count_bits)
+__attribute__((convergent)) uint WavePrefixCountBits(bool Expr);
+
+//===----------------------------------------------------------------------===//
 // WaveReadLaneAt builtins
 //===----------------------------------------------------------------------===//
 
@@ -2876,6 +2907,204 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
 __attribute__((convergent)) double3 WaveActiveSum(double3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
 __attribute__((convergent)) double4 WaveActiveSum(double4);
+
+//===----------------------------------------------------------------------===//
+// WavePrefixSum builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) half WavePrefixSum(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) half2 WavePrefixSum(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) half3 WavePrefixSum(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) half4 WavePrefixSum(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int16_t WavePrefixSum(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int16_t2 WavePrefixSum(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int16_t3 WavePrefixSum(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int16_t4 WavePrefixSum(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint16_t WavePrefixSum(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint16_t2 WavePrefixSum(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint16_t3 WavePrefixSum(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint16_t4 WavePrefixSum(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int WavePrefixSum(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int2 WavePrefixSum(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int3 WavePrefixSum(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int4 WavePrefixSum(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint WavePrefixSum(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint2 WavePrefixSum(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint3 WavePrefixSum(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint4 WavePrefixSum(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int64_t WavePrefixSum(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int64_t2 WavePrefixSum(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int64_t3 WavePrefixSum(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) int64_t4 WavePrefixSum(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint64_t WavePrefixSum(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint64_t2 WavePrefixSum(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint64_t3 WavePrefixSum(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) uint64_t4 WavePrefixSum(uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) float WavePrefixSum(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) float2 WavePrefixSum(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) float3 WavePrefixSum(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) float4 WavePrefixSum(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) double WavePrefixSum(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) double2 WavePrefixSum(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) double3 WavePrefixSum(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
+__attribute__((convergent)) double4 WavePrefixSum(double4);
+
+//===----------------------------------------------------------------------===//
+// WavePrefixProduct builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) half WavePrefixProduct(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) half2 WavePrefixProduct(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) half3 WavePrefixProduct(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) half4 WavePrefixProduct(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int16_t WavePrefixProduct(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int16_t2 WavePrefixProduct(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int16_t3 WavePrefixProduct(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int16_t4 WavePrefixProduct(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint16_t WavePrefixProduct(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint16_t2 WavePrefixProduct(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint16_t3 WavePrefixProduct(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint16_t4 WavePrefixProduct(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int WavePrefixProduct(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int2 WavePrefixProduct(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int3 WavePrefixProduct(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int4 WavePrefixProduct(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint WavePrefixProduct(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint2 WavePrefixProduct(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint3 WavePrefixProduct(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint4 WavePrefixProduct(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int64_t WavePrefixProduct(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int64_t2 WavePrefixProduct(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int64_t3 WavePrefixProduct(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) int64_t4 WavePrefixProduct(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint64_t WavePrefixProduct(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint64_t2 WavePrefixProduct(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint64_t3 WavePrefixProduct(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) uint64_t4 WavePrefixProduct(uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) float WavePrefixProduct(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) float2 WavePrefixProduct(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) float3 WavePrefixProduct(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) float4 WavePrefixProduct(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) double WavePrefixProduct(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) double2 WavePrefixProduct(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) double3 WavePrefixProduct(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
+__attribute__((convergent)) double4 WavePrefixProduct(double4);
 
 //===----------------------------------------------------------------------===//
 // sign builtins

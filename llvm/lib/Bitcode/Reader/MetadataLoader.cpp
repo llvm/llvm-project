@@ -116,6 +116,8 @@ public:
         RefsUpperBound(std::min((size_t)std::numeric_limits<unsigned>::max(),
                                 RefsUpperBound)) {}
 
+  using const_iterator = SmallVector<TrackingMDRef, 1>::const_iterator;
+
   // vector compatibility methods
   unsigned size() const { return MetadataPtrs.size(); }
   void resize(unsigned N) { MetadataPtrs.resize(N); }
@@ -124,6 +126,8 @@ public:
   Metadata *back() const { return MetadataPtrs.back(); }
   void pop_back() { MetadataPtrs.pop_back(); }
   bool empty() const { return MetadataPtrs.empty(); }
+  const_iterator begin() const { return MetadataPtrs.begin(); }
+  const_iterator end() const { return MetadataPtrs.end(); }
 
   Metadata *operator[](unsigned i) const { return MetadataPtrs[i]; }
 
@@ -165,11 +169,11 @@ public:
   /// Upgrade a type that had an MDString reference.
   Metadata *upgradeTypeRef(Metadata *MaybeUUID);
 
-  /// Upgrade a type ref array that may have MDString references.
-  Metadata *upgradeTypeRefArray(Metadata *MaybeTuple);
+  /// Upgrade a type array that may have MDString references.
+  Metadata *upgradeTypeArray(Metadata *MaybeTuple);
 
 private:
-  Metadata *resolveTypeRefArray(Metadata *MaybeTuple);
+  Metadata *resolveTypeArray(Metadata *MaybeTuple);
 };
 } // namespace
 
@@ -246,7 +250,7 @@ void BitcodeReaderMetadataList::tryToResolveCycles() {
   // Upgrade from old type ref arrays.  In strange cases, this could add to
   // OldTypeRefs.Unknown.
   for (const auto &Array : OldTypeRefs.Arrays)
-    Array.second->replaceAllUsesWith(resolveTypeRefArray(Array.first.get()));
+    Array.second->replaceAllUsesWith(resolveTypeArray(Array.first.get()));
   OldTypeRefs.Arrays.clear();
 
   // Replace old string-based type refs with the resolved node, if possible.
@@ -302,29 +306,29 @@ Metadata *BitcodeReaderMetadataList::upgradeTypeRef(Metadata *MaybeUUID) {
   return Ref.get();
 }
 
-Metadata *BitcodeReaderMetadataList::upgradeTypeRefArray(Metadata *MaybeTuple) {
+Metadata *BitcodeReaderMetadataList::upgradeTypeArray(Metadata *MaybeTuple) {
   auto *Tuple = dyn_cast_or_null<MDTuple>(MaybeTuple);
   if (!Tuple || Tuple->isDistinct())
     return MaybeTuple;
 
   // Look through the array immediately if possible.
   if (!Tuple->isTemporary())
-    return resolveTypeRefArray(Tuple);
+    return resolveTypeArray(Tuple);
 
   // Create and return a placeholder to use for now.  Eventually
-  // resolveTypeRefArrays() will be resolve this forward reference.
+  // resolveTypeArrays() will be resolve this forward reference.
   OldTypeRefs.Arrays.emplace_back(
       std::piecewise_construct, std::forward_as_tuple(Tuple),
       std::forward_as_tuple(MDTuple::getTemporary(Context, {})));
   return OldTypeRefs.Arrays.back().second.get();
 }
 
-Metadata *BitcodeReaderMetadataList::resolveTypeRefArray(Metadata *MaybeTuple) {
+Metadata *BitcodeReaderMetadataList::resolveTypeArray(Metadata *MaybeTuple) {
   auto *Tuple = dyn_cast_or_null<MDTuple>(MaybeTuple);
   if (!Tuple || Tuple->isDistinct())
     return MaybeTuple;
 
-  // Look through the DITypeRefArray, upgrading each DIType *.
+  // Look through the DITypeArray, upgrading each DIType *.
   SmallVector<Metadata *, 32> Ops;
   Ops.reserve(Tuple->getNumOperands());
   for (Metadata *MD : Tuple->operands())
@@ -448,6 +452,11 @@ class MetadataLoader::MetadataLoaderImpl {
   /// metadata.
   SmallDenseMap<Function *, DISubprogram *, 16> FunctionsWithSPs;
 
+  /// retainedNodes of these subprograms should be cleaned up from incorrectly
+  /// scoped local types.
+  /// See \ref DISubprogram::cleanupRetainedNodes.
+  SmallVector<DISubprogram *> NewDistinctSPs;
+
   // Map the bitcode's custom MDKind ID to the Module's MDKind ID.
   DenseMap<unsigned, unsigned> MDKindMap;
 
@@ -538,56 +547,82 @@ class MetadataLoader::MetadataLoaderImpl {
 
   /// Move local imports from DICompileUnit's 'imports' field to
   /// DISubprogram's retainedNodes.
+  /// Move function-local enums from DICompileUnit's enums
+  /// to DISubprogram's retainedNodes.
   void upgradeCULocals() {
-    if (NamedMDNode *CUNodes = TheModule.getNamedMetadata("llvm.dbg.cu")) {
-      for (MDNode *N : CUNodes->operands()) {
-        auto *CU = dyn_cast<DICompileUnit>(N);
-        if (!CU)
-          continue;
+    NamedMDNode *CUNodes = TheModule.getNamedMetadata("llvm.dbg.cu");
+    if (!CUNodes)
+      return;
 
-        if (CU->getRawImportedEntities()) {
-          // Collect a set of imported entities to be moved.
-          SetVector<Metadata *> EntitiesToRemove;
-          for (Metadata *Op : CU->getImportedEntities()->operands()) {
-            auto *IE = cast<DIImportedEntity>(Op);
-            if (isa_and_nonnull<DILocalScope>(IE->getScope())) {
-              EntitiesToRemove.insert(IE);
-            }
-          }
+    // Filter out elements of ToRemove from tuple T.
+    auto FilterTuple = [this](MDNode *T,
+                              const SetVector<Metadata *> &ToRemove) {
+      SmallVector<Metadata *> Result;
+      for (Metadata *Op : T->operands())
+        if (!ToRemove.contains(Op))
+          Result.push_back(Op);
+      return MDTuple::get(Context, Result);
+    };
 
-          if (!EntitiesToRemove.empty()) {
-            // Make a new list of CU's 'imports'.
-            SmallVector<Metadata *> NewImports;
-            for (Metadata *Op : CU->getImportedEntities()->operands()) {
-              if (!EntitiesToRemove.contains(cast<DIImportedEntity>(Op))) {
-                NewImports.push_back(Op);
-              }
-            }
+    // For each CU:
+    // - Collect local metadata nodes from CU's imports: and enums: lists in
+    //   MetadataToRemove set.
+    // - Remove metadata nodes of MetadataToRemove set from CU's imports: and
+    //   enums: lists.
+    // - Group MetadataToRemove items by their parent subprograms (in
+    //   SPToEntities map).
+    // - For each subprogram SP in SPToEntities:
+    //   - Append collected local metadata nodes to SP's retainedNodes: list.
+    for (MDNode *N : CUNodes->operands()) {
+      auto *CU = dyn_cast<DICompileUnit>(N);
+      if (!CU)
+        continue;
 
-            // Find DISubprogram corresponding to each entity.
-            std::map<DISubprogram *, SmallVector<Metadata *>> SPToEntities;
-            for (auto *I : EntitiesToRemove) {
-              auto *Entity = cast<DIImportedEntity>(I);
-              if (auto *SP = findEnclosingSubprogram(
-                      cast<DILocalScope>(Entity->getScope()))) {
-                SPToEntities[SP].push_back(Entity);
-              }
-            }
-
-            // Update DISubprograms' retainedNodes.
-            for (auto I = SPToEntities.begin(); I != SPToEntities.end(); ++I) {
-              auto *SP = I->first;
-              auto RetainedNodes = SP->getRetainedNodes();
-              SmallVector<Metadata *> MDs(RetainedNodes.begin(),
-                                          RetainedNodes.end());
-              MDs.append(I->second);
-              SP->replaceRetainedNodes(MDNode::get(Context, MDs));
-            }
-
-            // Remove entities with local scope from CU.
-            CU->replaceImportedEntities(MDTuple::get(Context, NewImports));
-          }
+      SetVector<Metadata *> MetadataToRemove;
+      // Collect imported entities to be moved.
+      if (CU->getRawImportedEntities())
+        for (Metadata *Op : CU->getImportedEntities()->operands()) {
+          auto *IE = cast<DIImportedEntity>(Op);
+          if (isa_and_nonnull<DILocalScope>(IE->getScope()))
+            MetadataToRemove.insert(IE);
         }
+      // Collect enums to be moved.
+      if (CU->getRawEnumTypes())
+        for (Metadata *Op : CU->getEnumTypes()->operands()) {
+          auto *Enum = cast<DICompositeType>(Op);
+          if (isa_and_nonnull<DILocalScope>(Enum->getScope()))
+            MetadataToRemove.insert(Enum);
+        }
+
+      if (MetadataToRemove.empty())
+        continue;
+
+      // Remove entities with local scope from CU.
+      if (CU->getRawImportedEntities())
+        CU->replaceImportedEntities(
+            FilterTuple(CU->getImportedEntities().get(), MetadataToRemove));
+
+      // Remove enums with local scope from CU.
+      if (CU->getRawEnumTypes())
+        CU->replaceEnumTypes(
+            FilterTuple(CU->getEnumTypes().get(), MetadataToRemove));
+
+      // Find DISubprogram corresponding to each entity.
+      SmallDenseMap<DISubprogram *, SmallVector<Metadata *>> SPToEntities;
+      for (auto *I : MetadataToRemove) {
+        DILocalScope *Scope =
+            DISubprogram::getRetainedNodeScope(cast<DINode>(I));
+        if (auto *SP = findEnclosingSubprogram(Scope))
+          SPToEntities[SP].push_back(I);
+      }
+
+      // Update DISubprograms' retainedNodes.
+      for (auto I = SPToEntities.begin(); I != SPToEntities.end(); ++I) {
+        auto *SP = I->first;
+        auto RetainedNodes = SP->getRetainedNodes();
+        SmallVector<Metadata *> MDs(RetainedNodes.begin(), RetainedNodes.end());
+        MDs.append(I->second);
+        SP->replaceRetainedNodes(MDNode::get(Context, MDs));
       }
     }
 
@@ -703,11 +738,38 @@ class MetadataLoader::MetadataLoaderImpl {
     return Error::success();
   }
 
-  void upgradeDebugInfo(bool ModuleLevel) {
+  /// Specifies which kind of debug info upgrade should be performed.
+  ///
+  /// The upgrade of compile units' enums: and imports: fields is performed
+  /// only when module level metadata block is loaded (i.e. all elements of
+  /// "llvm.dbg.cu" named metadata node are loaded).
+  enum class DebugInfoUpgradeMode {
+    /// No debug info upgrade.
+    None,
+    /// Debug info upgrade after loading function-level metadata block.
+    Partial,
+    /// Debug info upgrade after loading module-level metadata block.
+    ModuleLevel,
+  };
+
+  void upgradeDebugInfo(DebugInfoUpgradeMode Mode) {
+    if (Mode == DebugInfoUpgradeMode::None)
+      return;
     upgradeCUSubprograms();
     upgradeCUVariables();
-    if (ModuleLevel)
+    if (Mode == DebugInfoUpgradeMode::ModuleLevel)
       upgradeCULocals();
+  }
+
+  /// Prepare loaded metadata nodes to be used by loader clients.
+  void resolveLoadedMetadata(PlaceholderQueue &Placeholders,
+                             DebugInfoUpgradeMode DIUpgradeMode) {
+    resolveForwardRefsAndPlaceholders(Placeholders);
+    upgradeDebugInfo(DIUpgradeMode);
+    DISubprogram::cleanupRetainedNodes(NewDistinctSPs);
+    LLVM_DEBUG(llvm::dbgs() << "Resolved loaded metadata. Cleaned up "
+                            << NewDistinctSPs.size() << " subprogram(s).\n");
+    NewDistinctSPs.clear();
   }
 
   void callMDTypeCallback(Metadata **Val, unsigned TypeID);
@@ -735,7 +797,8 @@ public:
     if (ID < (MDStringRef.size() + GlobalMetadataBitPosIndex.size())) {
       PlaceholderQueue Placeholders;
       lazyLoadOneMetadata(ID, Placeholders);
-      resolveForwardRefsAndPlaceholders(Placeholders);
+      LLVM_DEBUG(llvm::dbgs() << "\nLazy metadata loading: ");
+      resolveLoadedMetadata(Placeholders, DebugInfoUpgradeMode::None);
       return MetadataList.lookup(ID);
     }
     return MetadataList.getMetadataFwdRef(ID);
@@ -1060,6 +1123,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
 
   SmallVector<uint64_t, 64> Record;
   PlaceholderQueue Placeholders;
+  auto DIUpgradeMode = ModuleLevel ? DebugInfoUpgradeMode::ModuleLevel
+                                   : DebugInfoUpgradeMode::Partial;
 
   // We lazy-load module-level metadata: we build an index for each record, and
   // then load individual record as needed, starting with the named metadata.
@@ -1084,8 +1149,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
 
       // Reading the named metadata created forward references and/or
       // placeholders, that we flush here.
-      resolveForwardRefsAndPlaceholders(Placeholders);
-      upgradeDebugInfo(ModuleLevel);
+      LLVM_DEBUG(llvm::dbgs() << "\nNamed metadata loading: ");
+      resolveLoadedMetadata(Placeholders, DIUpgradeMode);
       // Return at the beginning of the block, since it is easy to skip it
       // entirely from there.
       Stream.ReadBlockEnd(); // Pop the abbrev block context.
@@ -1115,8 +1180,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
-      resolveForwardRefsAndPlaceholders(Placeholders);
-      upgradeDebugInfo(ModuleLevel);
+      LLVM_DEBUG(llvm::dbgs() << "\nEager metadata loading: ");
+      resolveLoadedMetadata(Placeholders, DIUpgradeMode);
       return Error::success();
     case BitstreamEntry::Record:
       // The interesting case.
@@ -1800,14 +1865,14 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
   case bitc::METADATA_SUBROUTINE_TYPE: {
     if (Record.size() < 3 || Record.size() > 4)
       return error("Invalid record");
-    bool IsOldTypeRefArray = Record[0] < 2;
+    bool IsOldTypeArray = Record[0] < 2;
     unsigned CC = (Record.size() > 3) ? Record[3] : 0;
 
     IsDistinct = Record[0] & 0x1;
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[1]);
     Metadata *Types = getMDOrNull(Record[2]);
-    if (LLVM_UNLIKELY(IsOldTypeRefArray))
-      Types = MetadataList.upgradeTypeRefArray(Types);
+    if (LLVM_UNLIKELY(IsOldTypeArray))
+      Types = MetadataList.upgradeTypeArray(Types);
 
     MetadataList.assignValue(
         GET_OR_DISTINCT(DISubroutineType, (Context, Flags, CC, Types)),
@@ -1998,6 +2063,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
          UsesKeyInstructions));
     MetadataList.assignValue(SP, NextMetadataNo);
     NextMetadataNo++;
+
+    if (IsDistinct)
+      NewDistinctSPs.push_back(SP);
 
     // Upgrade sp->function mapping to function->sp mapping.
     if (HasFn) {
@@ -2482,7 +2550,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
-      resolveForwardRefsAndPlaceholders(Placeholders);
+      LLVM_DEBUG(llvm::dbgs() << "\nAttachment metadata loading: ");
+      resolveLoadedMetadata(Placeholders, DebugInfoUpgradeMode::None);
       return Error::success();
     case BitstreamEntry::Record:
       // The interesting case.
@@ -2525,7 +2594,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
           // Load the attachment if it is in the lazy-loadable range and hasn't
           // been loaded yet.
           lazyLoadOneMetadata(Idx, Placeholders);
-          resolveForwardRefsAndPlaceholders(Placeholders);
+          LLVM_DEBUG(llvm::dbgs() << "\nLazy attachment metadata loading: ");
+          resolveLoadedMetadata(Placeholders, DebugInfoUpgradeMode::None);
         }
 
         Metadata *Node = MetadataList.getMetadataFwdRef(Idx);

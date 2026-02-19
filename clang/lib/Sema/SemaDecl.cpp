@@ -5342,7 +5342,7 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
         DS.getTypeSpecType() == DeclSpec::TST_typename) {
       RecordDecl *Record = Tag ? dyn_cast<RecordDecl>(Tag)
                                : DS.getRepAsType().get()->getAsRecordDecl();
-      if (Record && getLangOpts().MicrosoftExt) {
+      if (Record && getLangOpts().MSAnonymousStructs) {
         Diag(DS.getBeginLoc(), diag::ext_ms_anonymous_record)
             << Record->isUnion() << DS.getSourceRange();
         return BuildMicrosoftCAnonymousStruct(S, DS, Record);
@@ -7050,45 +7050,43 @@ static void SetNestedNameSpecifier(Sema &S, DeclaratorDecl *DD, Declarator &D) {
   DD->setQualifierInfo(SS.getWithLocInContext(S.Context));
 }
 
-void Sema::deduceOpenCLAddressSpace(ValueDecl *Decl) {
-  if (Decl->getType().hasAddressSpace())
+void Sema::deduceOpenCLAddressSpace(VarDecl *Var) {
+  QualType Type = Var->getType();
+  if (Type.hasAddressSpace())
     return;
-  if (Decl->getType()->isDependentType())
+  if (Type->isDependentType())
     return;
-  if (VarDecl *Var = dyn_cast<VarDecl>(Decl)) {
-    QualType Type = Var->getType();
-    if (Type->isSamplerT() || Type->isVoidType())
-      return;
-    LangAS ImplAS = LangAS::opencl_private;
-    // OpenCL C v3.0 s6.7.8 - For OpenCL C 2.0 or with the
-    // __opencl_c_program_scope_global_variables feature, the address space
-    // for a variable at program scope or a static or extern variable inside
-    // a function are inferred to be __global.
-    if (getOpenCLOptions().areProgramScopeVariablesSupported(getLangOpts()) &&
-        Var->hasGlobalStorage())
-      ImplAS = LangAS::opencl_global;
-    // If the original type from a decayed type is an array type and that array
-    // type has no address space yet, deduce it now.
-    if (auto DT = dyn_cast<DecayedType>(Type)) {
-      auto OrigTy = DT->getOriginalType();
-      if (!OrigTy.hasAddressSpace() && OrigTy->isArrayType()) {
-        // Add the address space to the original array type and then propagate
-        // that to the element type through `getAsArrayType`.
-        OrigTy = Context.getAddrSpaceQualType(OrigTy, ImplAS);
-        OrigTy = QualType(Context.getAsArrayType(OrigTy), 0);
-        // Re-generate the decayed type.
-        Type = Context.getDecayedType(OrigTy);
-      }
+  if (Type->isSamplerT() || Type->isVoidType())
+    return;
+  LangAS ImplAS = LangAS::opencl_private;
+  // OpenCL C v3.0 s6.7.8 - For OpenCL C 2.0 or with the
+  // __opencl_c_program_scope_global_variables feature, the address space
+  // for a variable at program scope or a static or extern variable inside
+  // a function are inferred to be __global.
+  if (getOpenCLOptions().areProgramScopeVariablesSupported(getLangOpts()) &&
+      Var->hasGlobalStorage())
+    ImplAS = LangAS::opencl_global;
+  // If the original type from a decayed type is an array type and that array
+  // type has no address space yet, deduce it now.
+  if (auto DT = dyn_cast<DecayedType>(Type)) {
+    auto OrigTy = DT->getOriginalType();
+    if (!OrigTy.hasAddressSpace() && OrigTy->isArrayType()) {
+      // Add the address space to the original array type and then propagate
+      // that to the element type through `getAsArrayType`.
+      OrigTy = Context.getAddrSpaceQualType(OrigTy, ImplAS);
+      OrigTy = QualType(Context.getAsArrayType(OrigTy), 0);
+      // Re-generate the decayed type.
+      Type = Context.getDecayedType(OrigTy);
     }
-    Type = Context.getAddrSpaceQualType(Type, ImplAS);
-    // Apply any qualifiers (including address space) from the array type to
-    // the element type. This implements C99 6.7.3p8: "If the specification of
-    // an array type includes any type qualifiers, the element type is so
-    // qualified, not the array type."
-    if (Type->isArrayType())
-      Type = QualType(Context.getAsArrayType(Type), 0);
-    Decl->setType(Type);
   }
+  Type = Context.getAddrSpaceQualType(Type, ImplAS);
+  // Apply any qualifiers (including address space) from the array type to
+  // the element type. This implements C99 6.7.3p8: "If the specification of
+  // an array type includes any type qualifiers, the element type is so
+  // qualified, not the array type."
+  if (Type->isArrayType())
+    Type = QualType(Context.getAsArrayType(Type), 0);
+  Var->setType(Type);
 }
 
 static void checkWeakAttr(Sema &S, NamedDecl &ND) {
@@ -7647,6 +7645,32 @@ static void emitReadOnlyPlacementAttrWarning(Sema &S, const VarDecl *VD) {
     S.Diag(VD->getLocation(), diag::warn_var_decl_not_read_only) << RD;
     S.Diag(ConstDecl->getLocation(), diag::note_enforce_read_only_placement);
     return;
+  }
+}
+
+void Sema::ProcessPragmaExport(DeclaratorDecl *NewD) {
+  assert((isa<FunctionDecl>(NewD) || isa<VarDecl>(NewD)) &&
+         "NewD is not a function or variable");
+
+  if (PendingExportedNames.empty())
+    return;
+  if (FunctionDecl *FD = dyn_cast<FunctionDecl>(NewD)) {
+    if (getLangOpts().CPlusPlus && !FD->isExternC())
+      return;
+  }
+  IdentifierInfo *IdentName = NewD->getIdentifier();
+  if (IdentName == nullptr)
+    return;
+  auto PendingName = PendingExportedNames.find(IdentName);
+  if (PendingName != PendingExportedNames.end()) {
+    auto &Label = PendingName->second;
+    if (!Label.Used) {
+      Label.Used = true;
+      if (NewD->hasExternalFormalLinkage())
+        mergeVisibilityType(NewD, Label.NameLoc, VisibilityAttr::Default);
+      else
+        Diag(Label.NameLoc, diag::warn_pragma_not_applied) << "export" << NewD;
+    }
   }
 }
 
@@ -8364,6 +8388,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     CheckShadow(NewVD, ShadowedDecl, Previous);
 
   ProcessPragmaWeak(S, NewVD);
+  ProcessPragmaExport(NewVD);
 
   // If this is the first declaration of an extern C variable, update
   // the map of such variables.
@@ -8948,8 +8973,17 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
         NewVD->setInvalidDecl();
         return;
       }
-      if (T.getAddressSpace() == LangAS::opencl_constant ||
-          T.getAddressSpace() == LangAS::opencl_local) {
+      // When this extension is enabled, 'local' variables are permitted in
+      // non-kernel functions and within nested scopes of kernel functions,
+      // bypassing standard OpenCL address space restrictions.
+      bool AllowFunctionScopeLocalVariables =
+          T.getAddressSpace() == LangAS::opencl_local &&
+          getOpenCLOptions().isAvailableOption(
+              "__cl_clang_function_scope_local_variables", getLangOpts());
+      if (AllowFunctionScopeLocalVariables) {
+        // Direct pass: No further diagnostics needed for this specific case.
+      } else if (T.getAddressSpace() == LangAS::opencl_constant ||
+                 T.getAddressSpace() == LangAS::opencl_local) {
         FunctionDecl *FD = getCurFunctionDecl();
         // OpenCL v1.1 s6.5.2 and s6.5.3: no local or constant variables
         // in functions.
@@ -9157,6 +9191,12 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     Context.getFunctionFeatureMap(CallerFeatureMap, FD);
     RISCV().checkRVVTypeSupport(T, NewVD->getLocation(), cast<Decl>(CurContext),
                                 CallerFeatureMap);
+  }
+
+  if (T.hasAddressSpace() &&
+      !CheckVarDeclSizeAddressSpace(NewVD, T.getAddressSpace())) {
+    NewVD->setInvalidDecl();
+    return;
   }
 }
 
@@ -11010,6 +11050,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   }
 
   ProcessPragmaWeak(S, NewFD);
+  ProcessPragmaExport(NewFD);
   checkAttributesAfterMerging(*this, *NewFD);
 
   AddKnownFunctionAttributes(NewFD);
@@ -13788,7 +13829,7 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
 
 void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   llvm::scope_exit ResetDeclForInitializer([this]() {
-    if (this->ExprEvalContexts.empty())
+    if (!this->ExprEvalContexts.empty())
       this->ExprEvalContexts.back().DeclForInitializer = nullptr;
   });
 
@@ -14122,7 +14163,10 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     // C99 6.7.8p4: All the expressions in an initializer for an object that has
     // static storage duration shall be constant expressions or string literals.
     } else if (VDecl->getStorageClass() == SC_Static) {
-      CheckForConstantInitializer(Init);
+      // Avoid evaluating the initializer twice for constexpr variables. It will
+      // be evaluated later.
+      if (!VDecl->isConstexpr())
+        CheckForConstantInitializer(Init);
 
       // C89 is stricter than C99 for aggregate initializers.
       // C89 6.5.7p3: All the expressions [...] in an initializer list
@@ -14730,6 +14774,22 @@ StmtResult Sema::ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
   return ActOnDeclStmt(FinalizeDeclaratorGroup(S, DS, Var), IdentLoc,
                        Attrs.Range.getEnd().isValid() ? Attrs.Range.getEnd()
                                                       : IdentLoc);
+}
+
+void Sema::addLifetimeBoundToImplicitThis(CXXMethodDecl *MD) {
+  if (!MD || lifetimes::implicitObjectParamIsLifetimeBound(MD))
+    return;
+  auto *Attr = LifetimeBoundAttr::CreateImplicit(Context, MD->getLocation());
+  QualType MethodType = MD->getType();
+  QualType AttributedType =
+      Context.getAttributedType(Attr, MethodType, MethodType);
+  TypeLocBuilder TLB;
+  if (TypeSourceInfo *TSI = MD->getTypeSourceInfo())
+    TLB.pushFullCopy(TSI->getTypeLoc());
+  AttributedTypeLoc TyLoc = TLB.push<AttributedTypeLoc>(AttributedType);
+  TyLoc.setAttr(Attr);
+  MD->setType(AttributedType);
+  MD->setTypeSourceInfo(TLB.getTypeSourceInfo(Context, AttributedType));
 }
 
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
@@ -15426,7 +15486,7 @@ void Sema::ActOnDocumentableDecls(ArrayRef<Decl *> Group) {
     }
   }
 
-  // FIMXE: We assume every Decl in the group is in the same file.
+  // FIXME: We assume every Decl in the group is in the same file.
   // This is false when preprocessor constructs the group from decls in
   // different files (e. g. macros or #include).
   Context.attachCommentsToJustParsedDecls(Group, &getPreprocessor());

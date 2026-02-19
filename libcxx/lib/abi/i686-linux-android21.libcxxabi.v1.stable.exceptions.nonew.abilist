@@ -1223,7 +1223,9 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk132__atomic_notify_all_global_tableEPKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk132__atomic_notify_one_global_tableEPKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk132__destroy_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk133__atomic_wait_native_with_timeoutILj4EEEvPKvS2_y', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk134__construct_barrier_algorithm_baseERi', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk139__atomic_wait_global_table_with_timeoutEPKviy', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk13cinE', 'size': 148, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk13pmr15memory_resourceD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk13pmr15memory_resourceD1Ev', 'type': 'FUNC'}

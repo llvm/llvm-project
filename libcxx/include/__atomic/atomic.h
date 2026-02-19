@@ -26,9 +26,7 @@
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_copyable.h>
-#include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
-#include <__type_traits/remove_volatile.h>
 #include <__utility/forward.h>
 #include <cstring>
 

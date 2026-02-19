@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include <optional>
+#include <type_traits>
 using namespace clang;
 
 void LoopHintAttr::printPrettyPragma(raw_ostream &OS,
@@ -279,5 +281,84 @@ unsigned AlignedAttr::getAlignment(ASTContext &Ctx) const {
 StringLiteral *FormatMatchesAttr::getFormatString() const {
   return cast<StringLiteral>(getExpectedFormat());
 }
+
+namespace {
+// Arguments whose types fail this test never compare equal unless there's a
+// specialization of equalAttrArgs for the type. Specilization for the following
+// arguments haven't been implemented yet:
+//  - DeclArgument
+//  - OMPTraitInfoArgument
+//  - VariadicOMPInteropInfoArgument
+#define USE_DEFAULT_EQUALITY                                                   \
+  (std::is_same_v<T, StringRef> || std::is_same_v<T, VersionTuple> ||          \
+   std::is_same_v<T, IdentifierInfo *> || std::is_same_v<T, ParamIdx> ||       \
+   std::is_same_v<T, Attr *> || std::is_same_v<T, char *> ||                   \
+   std::is_enum_v<T> || std::is_integral_v<T>)
+
+template <class T>
+typename std::enable_if_t<!USE_DEFAULT_EQUALITY, bool>
+equalAttrArgs(T A, T B, StructuralEquivalenceContext &Context) {
+  return false;
+}
+
+template <class T>
+typename std::enable_if_t<USE_DEFAULT_EQUALITY, bool>
+equalAttrArgs(T A1, T A2, StructuralEquivalenceContext &Context) {
+  return A1 == A2;
+}
+
+template <class T>
+bool equalAttrArgs(T *A1_B, T *A1_E, T *A2_B, T *A2_E,
+                   StructuralEquivalenceContext &Context) {
+  if (A1_E - A1_B != A2_E - A2_B)
+    return false;
+
+  for (; A1_B != A1_E; ++A1_B, ++A2_B)
+    if (!equalAttrArgs(*A1_B, *A2_B, Context))
+      return false;
+
+  return true;
+}
+
+template <>
+bool equalAttrArgs<Attr *>(Attr *A1, Attr *A2,
+                           StructuralEquivalenceContext &Context) {
+  return A1->isEquivalent(*A2, Context);
+}
+
+template <>
+bool equalAttrArgs<Expr *>(Expr *A1, Expr *A2,
+                           StructuralEquivalenceContext &Context) {
+  return ASTStructuralEquivalence::isEquivalent(Context, A1, A2);
+}
+
+template <>
+bool equalAttrArgs<QualType>(QualType T1, QualType T2,
+                             StructuralEquivalenceContext &Context) {
+  return ASTStructuralEquivalence::isEquivalent(Context, T1, T2);
+}
+
+template <>
+bool equalAttrArgs<const IdentifierInfo *>(
+    const IdentifierInfo *Name1, const IdentifierInfo *Name2,
+    StructuralEquivalenceContext &Context) {
+  return ASTStructuralEquivalence::isEquivalent(Name1, Name2);
+}
+
+bool areAlignedAttrsEqual(const AlignedAttr &A1, const AlignedAttr &A2,
+                          StructuralEquivalenceContext &Context) {
+  if (A1.getSpelling() != A2.getSpelling())
+    return false;
+
+  if (A1.isAlignmentExpr() != A2.isAlignmentExpr())
+    return false;
+
+  if (A1.isAlignmentExpr())
+    return equalAttrArgs(A1.getAlignmentExpr(), A2.getAlignmentExpr(), Context);
+
+  return equalAttrArgs(A1.getAlignmentType()->getType(),
+                       A2.getAlignmentType()->getType(), Context);
+}
+} // namespace
 
 #include "clang/AST/AttrImpl.inc"

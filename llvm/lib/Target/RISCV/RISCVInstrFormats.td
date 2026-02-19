@@ -61,13 +61,19 @@ def InstFormatNDS_BRANCH_10 : InstFormat<27>;
 def InstFormatOther         : InstFormat<31>;
 
 
-class RISCVVConstraint<bits<3> val> {
-  bits<3> Value = val;
+// Indicates which operands cannot be the same as the Vd operand. This is used
+// by the assembler to provide some checking of the RVV overlap rules. We can't
+// check all overlap rules. Narrowing instructions allow overlap in the first
+// part of the register group, but not the later parts. We are not able to check
+// this in the assembler as we do not know how big the register group is since
+// that is controlled dynamically with vtype.
+class RISCVVConstraint<bit VS2 = 0, bit VS1 = 0, bit VM = 0> {
+  bits<3> Value = {VM, VS1, VS2};
 }
-def NoConstraint  : RISCVVConstraint<0b000>;
-def VS2Constraint : RISCVVConstraint<0b001>;
-def VS1Constraint : RISCVVConstraint<0b010>;
-def VMConstraint  : RISCVVConstraint<0b100>;
+def NoConstraint  : RISCVVConstraint<>;
+def VS2Constraint : RISCVVConstraint<VS2 = 1>;
+def VS1Constraint : RISCVVConstraint<VS1 = 1>;
+def VMConstraint  : RISCVVConstraint<VM = 1>;
 
 // Illegal instructions:
 //
@@ -100,26 +106,15 @@ def VMConstraint  : RISCVVConstraint<0b100>;
 //
 // * vcompress: The destination vector register group cannot overlap the
 // source vector register group or the source mask register
-def WidenVNoMask : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VS1Constraint.Value)>;
-def WidenV       : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VS1Constraint.Value,
-                                        VMConstraint.Value)>;
-def WidenW       : RISCVVConstraint<!or(VS1Constraint.Value,
-                                        VMConstraint.Value)>;
-def WidenCvt     : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VMConstraint.Value)>;
-def Iota         : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VMConstraint.Value)>;
-def SlideUp      : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VMConstraint.Value)>;
-def Vrgather     : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VS1Constraint.Value,
-                                        VMConstraint.Value)>;
-def Vcompress    : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VS1Constraint.Value)>;
-def Sha2Constraint : RISCVVConstraint<!or(VS2Constraint.Value,
-                                          VS1Constraint.Value)>;
+def WidenVNoMask : RISCVVConstraint<VS2 = 1, VS1 = 1>;
+def WidenV       : RISCVVConstraint<VS2 = 1, VS1 = 1, VM = 1>;
+def WidenW       : RISCVVConstraint<VS1 = 1, VM = 1>;
+def WidenCvt     : RISCVVConstraint<VS2 = 1, VM = 1>;
+def Iota         : RISCVVConstraint<VS2 = 1, VM = 1>;
+def SlideUp      : RISCVVConstraint<VS2 = 1, VM = 1>;
+def Vrgather     : RISCVVConstraint<VS2 = 1, VS1 = 1, VM = 1>;
+def Vcompress    : RISCVVConstraint<VS2 = 1, VS1 = 1>;
+def Sha2Constraint : RISCVVConstraint<VS2 = 1, VS1 = 1>;
 
 // The following opcode names match those given in Table 19.1 in the
 // RISC-V User-level ISA specification ("RISC-V base opcode map").
@@ -146,6 +141,7 @@ def OPC_MISC_MEM  : RISCVOpcode<"MISC_MEM",  0b0001111>;
 def OPC_OP_IMM    : RISCVOpcode<"OP_IMM",    0b0010011>;
 def OPC_AUIPC     : RISCVOpcode<"AUIPC",     0b0010111>;
 def OPC_OP_IMM_32 : RISCVOpcode<"OP_IMM_32", 0b0011011>;
+def OPC_0011111   : RISCVOpcode<"",          0b0011111>;
 def OPC_STORE     : RISCVOpcode<"STORE",     0b0100011>;
 def OPC_STORE_FP  : RISCVOpcode<"STORE_FP",  0b0100111>;
 def OPC_CUSTOM_1  : RISCVOpcode<"CUSTOM_1",  0b0101011>;
@@ -153,6 +149,7 @@ def OPC_AMO       : RISCVOpcode<"AMO",       0b0101111>;
 def OPC_OP        : RISCVOpcode<"OP",        0b0110011>;
 def OPC_LUI       : RISCVOpcode<"LUI",       0b0110111>;
 def OPC_OP_32     : RISCVOpcode<"OP_32",     0b0111011>;
+def OPC_0111111   : RISCVOpcode<"",          0b0111111>;
 def OPC_MADD      : RISCVOpcode<"MADD",      0b1000011>;
 def OPC_MSUB      : RISCVOpcode<"MSUB",      0b1000111>;
 def OPC_NMSUB     : RISCVOpcode<"NMSUB",     0b1001011>;
@@ -160,6 +157,7 @@ def OPC_NMADD     : RISCVOpcode<"NMADD",     0b1001111>;
 def OPC_OP_FP     : RISCVOpcode<"OP_FP",     0b1010011>;
 def OPC_OP_V      : RISCVOpcode<"OP_V",      0b1010111>;
 def OPC_CUSTOM_2  : RISCVOpcode<"CUSTOM_2",  0b1011011>;
+def OPC_1011111   : RISCVOpcode<"",          0b1011111>;
 def OPC_BRANCH    : RISCVOpcode<"BRANCH",    0b1100011>;
 def OPC_JALR      : RISCVOpcode<"JALR",      0b1100111>;
 def OPC_JAL       : RISCVOpcode<"JAL",       0b1101111>;

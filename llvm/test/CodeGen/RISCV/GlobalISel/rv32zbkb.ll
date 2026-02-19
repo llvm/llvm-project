@@ -143,7 +143,7 @@ define i32 @packh_i32_2(i32 %a, i32 %b) nounwind {
   ret i32 %or
 }
 
-; FIMXE: Use packh
+; FIXME: Use packh
 define i64 @packh_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: packh_i64:
 ; CHECK:       # %bb.0:

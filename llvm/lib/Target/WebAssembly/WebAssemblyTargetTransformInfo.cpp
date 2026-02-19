@@ -383,9 +383,9 @@ InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
 
 InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-    const Value *Op0, const Value *Op1) const {
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   InstructionCost Cost = BasicTTIImplBase::getVectorInstrCost(
-      Opcode, Val, CostKind, Index, Op0, Op1);
+      Opcode, Val, CostKind, Index, Op0, Op1, VIC);
 
   // SIMD128's insert/extract currently only take constant indices.
   if (Index == -1u)
@@ -398,7 +398,7 @@ InstructionCost WebAssemblyTTIImpl::getPartialReductionCost(
     unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
     ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
     TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-    TTI::TargetCostKind CostKind) const {
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
   InstructionCost Invalid = InstructionCost::getInvalid();
   if (!VF.isFixed() || !ST->hasSIMD128())
     return Invalid;

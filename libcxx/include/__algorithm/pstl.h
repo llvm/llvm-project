@@ -654,6 +654,31 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator transform(
       std::move(__op));
 }
 
+template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool
+is_sorted(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "is_sorted requires ForwardIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__is_sorted, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), less{});
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _Comp,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool
+is_sorted(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp __comp) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "is_sorted requires ForwardIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__is_sorted, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), std::move(__comp));
+}
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_EXPERIMENTAL_PSTL && _LIBCPP_STD_VER >= 17

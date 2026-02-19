@@ -165,6 +165,7 @@ on support follow.
      ``Svinval``       Assembly Support
      ``Svnapot``       Assembly Support
      ``Svpbmt``        Supported
+     ``Svrsw60t59b``   Supported
      ``Svvptc``        Supported
      ``V``             Supported
      ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
@@ -172,6 +173,7 @@ on support follow.
      ``Zaamo``         Assembly Support
      ``Zabha``         Supported
      ``Zacas``         Supported (`See note <#riscv-zacas-note>`__)
+     ``Zalasr``        Supported
      ``Zalrsc``        Assembly Support
      ``Zama16b``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zawrs``         Assembly Support
@@ -334,10 +336,7 @@ LLVM supports (to various degrees) a number of experimental extensions.  All exp
 The primary goal of experimental support is to assist in the process of ratification by providing an existence proof of an implementation, and simplifying efforts to validate the value of a proposed extension against large code bases.  Experimental extensions are expected to either transition to ratified status, or be eventually removed.  The decision on whether to accept an experimental extension is currently done on an entirely case by case basis; if you want to propose one, attending the bi-weekly RISC-V sync-up call is strongly advised.
 
 ``experimental-p``
-  LLVM implements the `018 draft specification <https://www.jhauser.us/RISCV/ext-P/>`__.
-
-``experimental-zalasr``
-  LLVM implements the `0.9 draft specification <https://github.com/riscv/riscv-zalasr/releases/tag/v0.9>`__.
+  LLVM implements the `019 draft specification <https://www.jhauser.us/RISCV/ext-P/>`__.
 
 ``experimental-zibi``
   LLVM implements the `0.1 release specification <https://github.com/riscv/zibi/releases/tag/v0.1.0>`__.
@@ -357,6 +356,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-smpmpmt``
   LLVM implements the `0.6 draft specification <https://github.com/riscv/riscv-isa-manual/blob/smpmpmt/src/smpmpmt.adoc>`__.
 
+``experimental-zvabd``
+  LLVM implements the `0.7 draft specification <https://github.com/riscv/integer-vector-absolute-difference/releases/tag/v0.7>`__.
+
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
 Vendor Extensions
@@ -369,6 +371,9 @@ Inclusion of a vendor extension will be considered on a case by case basis.  All
 It is our intention to follow the naming conventions described in `riscv-non-isa/riscv-toolchain-conventions <https://github.com/riscv-non-isa/riscv-toolchain-conventions#conventions-for-vendor-extensions>`__.  Exceptions to this naming will need to be strongly motivated.
 
 The current vendor extensions supported are:
+
+``XAIFET``
+  LLVM implements `the AIFET (AI Foundry's ET) vendor-defined instructions specified in <https://github.com/aifoundry-org/et-man/blob/main/ET%20Programmer's%20Reference%20Manual.pdf>`__ originally defined by Esperanto Technologies (and now under the AI Foundry non-profit).  Instructions are prefixed with `aif.` as described in the specification.
 
 ``XTHeadBa``
   LLVM implements `the THeadBa (address-generation) vendor-defined instructions specified in <https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.2/xthead-2023-01-30-2.2.2.pdf>`__ by T-HEAD of Alibaba.  Instructions are prefixed with `th.` as described in the specification.
@@ -610,3 +615,63 @@ Clang's ``-msmall-data-limit=`` option controls what the threshold size is (in b
 The small data limit threshold is also used to separate small constants into sections with names starting with ``.srodata``. LLD does not place these with the ``.sdata`` and ``.sbss`` sections as ``.srodata`` sections are read only and the other two are writable. Instead the ``.srodata`` sections are placed adjacent to ``.rodata``.
 
 Data suggests that these options can produce significant improvements across a range of benchmarks.
+
+Sanitizers
+==========
+
+.. note::
+   This is a summary of the current state of sanitizers, and not an official support statement.
+
+* UBSan is not platform-specific, and should work out of the box.
+
+* ASan and TSan already have shadow mappings defined for Linux on RISC-V, and are likely to work.
+
+* HWASan is also likely to work, though RISC-V Pointer Masking (very new) is needed as well to make it run efficiently.
+
+* Memtag: N/A - there is currently no ratified RISC-V memory tagging spec.
+
+* MSan is unlikely to work: there are currently no RISC-V-specific shadow mappings (this is probably easy to fix; perhaps the default Linux 64-bit mapping will work) and MSan does not explicitly handle any of the `@llvm.riscv.*` intrinsics (this is significantly more work to fix).
+
+  Some intrinsics will be handled correctly anyway, if the RISC-V intrinsic is auto-upgraded into cross-platform LLVM intrinsics. Some others will be "heuristically" handled (possibly incorrectly). The rest will default to the "strict" handler, which checks that all the parameters are fully initialized.
+
+  MSan intrinsics support is only required if code (including dependencies) manually calls the intrinsic.
+
+Processor-Specific Tuning Feature String
+========================================
+Due to RISC-V's highly configurable nature, it is often desirable to share a single scheduling model across multiple similar RISC-V processors that only differ in a small number of (uArch) tuning features. An example of such tuning feature could be whether the latency of vector operations depend on VL or not. This could be extended to tuning features that are not directly connected to scheduling model but other parts of the RISC-V backend, like the cost of ``vrgather.vv`` instruction.
+
+To that end, RISC-V LLVM supports a tuning feature string format that helps users to build a performance model by "configuring" an existing tune CPU, along with its scheduling model. For example, this string
+
+::
+    "sifive-x280:single-element-vec-fp64"
+
+takes ``sifive-x280`` as the "base" tune CPU and configured it with ``single-element-vec-fp64``. This gives us a performance model that looks exactly like that of ``sifive-x280``, except some of the 64-bit vector floating point instructions now produce only a single element per cycle due to ``single-element-vec-fp64``. This string could eventually be used in places like ``-mtune`` at the frontend.
+
+More formally speaking, each tuning feature string has the following format:
+
+::
+    <tune-cpu>[":"<tune-features>]?
+
+where
+
+::
+    tune-cpu      ::= 'tuning CPU name in lower case'
+    directive     ::= "[a-zA-Z0-9\_-]+"
+    tune-features ::= directive ["," directive]*
+
+A *directive* can and can only _enable_ or _disable_ a certain tuning feature from the tuning CPU. A **positive directive**, like the ``single-element-vec-fp64`` we just saw, enables an additional tuning feature in the associated tuning model. A **negative directive**, on the other hand, removes a certain tuning feature. For example, ``sifive-x390`` already has the ``single-element-vec-fp64`` feature, and we can use
+
+::
+    "sifive-x390:full-vec-fp64"
+
+to create a new performance model that looks nearly the same as ``sifive-x390`` except ``single-element-vec-fp64`` being cut out. In this case, ``full-vec-fp64`` is a negative directive.
+
+There are some rules for the list of directives, though:
+
+1. The same directive cannot appear more than once.
+
+2. The positive and negative directives that belong to the same feature cannot appear at the same time.
+
+3. If a feature implies other features -- for example, ``short-forward-branch-imul`` implies ``short-forward-branch-ialu`` -- then the _implied_ features are subject to the previous two rules, too. For example, we cannot write _"short-forward-branch-imul,no-short-forward-branch-ialu"_, because the feature implied by ``short-forward-branch-imul`` violates rule 2.
+
+In addition to the rules listed above, right now, this string only accepts directives that are explicitly supported by the tune CPU. For example, _"sifive-x280:prefer-w-inst"_ is not a valid string as ``prefer-w-inst`` is not supported by ``sifive-x280`` at this moment. Vendors of these processors are expected to maintain the compatibility of their supported directives across different versions. There have been lots of discussions on having "generic" features that are universally supported by all RISC-V CPUs, yet many concerns -- including the difficulty to maintain compatibility across _all_ CPU targets and versions -- make us decide to table this issue until we find a reliable process to select such features.

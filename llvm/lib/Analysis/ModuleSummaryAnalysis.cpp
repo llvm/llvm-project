@@ -468,13 +468,6 @@ static void computeFunctionSummary(
         ValueInfo.updateHotness(Hotness);
         if (CB->isTailCall())
           ValueInfo.setHasTailCall(true);
-        // Add the relative block frequency to CalleeInfo if there is no profile
-        // information.
-        if (BFI != nullptr && Hotness == CalleeInfo::HotnessType::Unknown) {
-          uint64_t BBFreq = BFI->getBlockFreq(&BB).getFrequency();
-          uint64_t EntryFreq = BFI->getEntryFreq().getFrequency();
-          ValueInfo.updateRelBlockFreq(BBFreq, EntryFreq);
-        }
       } else {
         HasUnknownCall = true;
         // If F is imported, a local linkage ifunc (e.g. target_clones on a

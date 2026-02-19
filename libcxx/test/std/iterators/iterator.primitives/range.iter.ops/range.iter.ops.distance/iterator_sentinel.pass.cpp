@@ -19,6 +19,7 @@
 #include <cassert>
 #include <deque>
 #include <iterator>
+#include <ranges>
 #include <vector>
 
 #include "test_iterators.h"

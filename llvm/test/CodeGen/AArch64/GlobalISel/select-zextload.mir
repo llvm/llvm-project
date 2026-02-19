@@ -52,7 +52,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load (s32))
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[LDRWui]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG [[LDRWui]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(p0) = COPY $x0
@@ -74,7 +74,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRHHui:%[0-9]+]]:gpr32 = LDRHHui [[COPY]], 0 :: (load (s16))
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[LDRHHui]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG [[LDRHHui]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(p0) = COPY $x0
@@ -96,7 +96,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (s8))
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[LDRBBui]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG [[LDRBBui]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(p0) = COPY $x0

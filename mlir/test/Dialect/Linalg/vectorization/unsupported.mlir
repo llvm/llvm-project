@@ -332,6 +332,31 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// This test verifies that vectorization correctly handles mixed static/dynamic
+// low padding.
+func.func @tensor_pad_non_zero_low_pad_mixed_dynamic_static(
+  %0 : tensor<1x?xf32>, %low : index, %high : index)
+    -> tensor<1x3xf32> {
+  // expected-error @+2 {{Attempted to vectorize, but failed}}
+  %cst = arith.constant 42.43 : f32
+  %1 = tensor.pad %0 low[0, %low] high[0, %high]  {
+    ^bb0(%i: index, %j: index):
+      tensor.yield %cst : f32
+    } : tensor<1x?xf32> to tensor<1x3xf32>
+  return %1: tensor<1x3xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [2, 4] : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // With dynamically shaped source, the vectorizer infers the vector size for
 // xfer Ops from the destination tensor and, conservatively, assumes
 // out-of-bounds accesses. Out-of-bounds accesses require a pad value, but

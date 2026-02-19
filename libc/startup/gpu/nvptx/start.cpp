@@ -51,7 +51,7 @@ static void call_fini_array_callbacks() {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-extern "C" [[gnu::visibility("protected"), clang::nvptx_kernel]] void
+extern "C" [[gnu::visibility("protected"), clang::device_kernel]] void
 _begin(int argc, char **argv, char **env) {
   __atomic_store_n(&LIBC_NAMESPACE::app.env_ptr,
                    reinterpret_cast<uintptr_t *>(env), __ATOMIC_RELAXED);
@@ -64,14 +64,14 @@ _begin(int argc, char **argv, char **env) {
   LIBC_NAMESPACE::call_init_array_callbacks(argc, argv, env);
 }
 
-extern "C" [[gnu::visibility("protected"), clang::nvptx_kernel]] void
+extern "C" [[gnu::visibility("protected"), clang::device_kernel]] void
 _start(int argc, char **argv, char **envp, int *ret) {
   // Invoke the 'main' function with every active thread that the user launched
   // the _start kernel with.
   __atomic_fetch_or(ret, main(argc, argv, envp), __ATOMIC_RELAXED);
 }
 
-extern "C" [[gnu::visibility("protected"), clang::nvptx_kernel]] void _end() {
+extern "C" [[gnu::visibility("protected"), clang::device_kernel]] void _end() {
   // Only a single thread should call the destructors registred with 'atexit'.
   // The loader utility will handle the actual exit and return code cleanly.
   __cxa_finalize(nullptr);

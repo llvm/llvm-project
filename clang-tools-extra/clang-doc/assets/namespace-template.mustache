@@ -15,7 +15,7 @@
     <main>
         <div class="container">
             <div class="sidebar">
-                <h2>{{#RecordType}}{{RecordType}} {{/RecordType}}{{Name}}</h2>
+                <h2>{{Name}}</h2>
                 <ul>
                     {{#HasEnums}}
                     <li>
@@ -37,7 +37,7 @@
                     <li>
                         <details open>
                             <summary class="sidebar-section">
-                                <a class="sidebar-item" href="#Classes">Inner Classes</a>
+                                <a class="sidebar-item" href="#Records">Records</a>
                             </summary>
                             <ul>
                                 {{#Records}}
@@ -158,8 +158,8 @@
                 </section>
                 {{/HasEnums}}
                 {{#HasRecords}}
-                <section id="Classes" class="section-container">
-                    <h2>Inner Classes</h2>
+                <section id="Records" class="section-container">
+                    <h2>Records</h2>
                     <ul class="class-container">
                         {{#Records}}
                         <li id="{{USR}}" style="max-height: 40px;">
@@ -187,7 +187,7 @@
                 <section id="Concepts" class="section-container">
                     <h2>Concepts</h2>
                     {{#Concepts}}
-                    <div id="{{ID}}" class="delimiter-container">
+                    <div id="{{USR}}" class="delimiter-container">
                         <div>
                             <pre><code class="language-cpp code-clang-doc">{{#Template}}template &lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Template}} {{Name}} {{ConstraintExpression}}</code></pre> 
                         </div>

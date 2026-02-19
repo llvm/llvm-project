@@ -540,6 +540,10 @@ def AEABI_MEMSET8 : RuntimeLibcall;
 def AEABI_MEMCLR : RuntimeLibcall;
 def AEABI_MEMCLR4 : RuntimeLibcall;
 def AEABI_MEMCLR8 : RuntimeLibcall;
+def AEABI_UREAD4 : RuntimeLibcall;
+def AEABI_UREAD8 : RuntimeLibcall;
+def AEABI_UWRITE4 : RuntimeLibcall;
+def AEABI_UWRITE8 : RuntimeLibcall;
 
 // Hexagon calls
 def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES : RuntimeLibcall;
@@ -2296,6 +2300,13 @@ def __aeabi_ddiv : RuntimeLibcallImpl<DIV_F64>; // CallingConv::ARM_AAPCS
 def __aeabi_dmul : RuntimeLibcallImpl<MUL_F64>; // CallingConv::ARM_AAPCS
 def __aeabi_dsub : RuntimeLibcallImpl<SUB_F64>; // CallingConv::ARM_AAPCS
 
+// Unaligned memory access helper functions
+// RTABI chapter 5.3.3
+def __aeabi_uread4  : RuntimeLibcallImpl<AEABI_UREAD4>;  // CallingConv::ARM_AAPCS
+def __aeabi_uread8  : RuntimeLibcallImpl<AEABI_UREAD8>;  // CallingConv::ARM_AAPCS
+def __aeabi_uwrite4 : RuntimeLibcallImpl<AEABI_UWRITE4>; // CallingConv::ARM_AAPCS
+def __aeabi_uwrite8 : RuntimeLibcallImpl<AEABI_UWRITE8>; // CallingConv::ARM_AAPCS
+
 defvar AEABIOverrides = [
   __eqsf2, __eqdf2,
   __nesf2, __nedf2,
@@ -2463,8 +2474,8 @@ def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32>;
 // non-watchos platforms, but are needed for some targets which use a
 // hard-float calling convention by default.
 def ARMHalfConvertLibcallCallingConv : LibcallCallingConv<
-  [{TT.isWatchABI() ? DefaultCC :
-    (isAAPCS_ABI(TT, ABIName) ? CallingConv::ARM_AAPCS : CallingConv::ARM_APCS)}]
+  [{TT.isWatchABI() ? static_cast<CallingConv::ID>(DefaultCC) :
+    static_cast<CallingConv::ID>(isAAPCS_ABI(TT, ABIName) ? CallingConv::ARM_AAPCS : CallingConv::ARM_APCS)}]
 >;
 
 def ARMLibgccHalfConvertCalls :
@@ -2610,6 +2621,15 @@ def AEABI45MemCalls : LibcallImpls<
   let CallingConv = ARM_AAPCS;
 }
 
+// Unaligned Memory read/write operations
+// RTABI chapter 5.3.3
+def AEABIUnalignedMemCalls : LibcallImpls<
+  (add __aeabi_uread4,  __aeabi_uread8,
+       __aeabi_uwrite4, __aeabi_uwrite8),
+  RuntimeLibcallPredicate<[{hasAEABILibcalls(TT) && isAAPCS_ABI(TT, ABIName)}]>> {
+  let CallingConv = ARM_AAPCS;
+}
+
 def isARMOrThumb : RuntimeLibcallPredicate<"TT.isARM() || TT.isThumb()">;
 
 def ARMSystemLibrary
@@ -2632,6 +2652,7 @@ def ARMSystemLibrary
 
            AEABICalls,
            AEABI45MemCalls,
+           AEABIUnalignedMemCalls,
            ARMLibgccHalfConvertCalls,
            EABIHalfConvertCalls,
            GNUEABIHalfConvertCalls,
@@ -3125,8 +3146,10 @@ defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
   def ___memmove64 : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset64 : RuntimeLibcallImpl<MEMSET>;
   def ___bzero64 : RuntimeLibcallImpl<BZERO>;
+  def ___strcmp64 : RuntimeLibcallImpl<STRCMP>;
   def ___strcpy64 : RuntimeLibcallImpl<STRCPY>;
   def ___strlen64 : RuntimeLibcallImpl<STRLEN>;
+  def ___strstr64 : RuntimeLibcallImpl<STRSTR>;
 }
 
 defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
@@ -3134,8 +3157,10 @@ defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
   def ___memmove : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset : RuntimeLibcallImpl<MEMSET>;
   def ___bzero : RuntimeLibcallImpl<BZERO>;
+  def ___strcmp : RuntimeLibcallImpl<STRCMP>;
   def ___strcpy : RuntimeLibcallImpl<STRCPY>;
   def ___strlen : RuntimeLibcallImpl<STRLEN>;
+  def ___strstr : RuntimeLibcallImpl<STRSTR>;
 }
 
 defvar PPCOverrides = !foreach(entry, PPCRuntimeLibcalls, entry.Provides);

@@ -105,8 +105,20 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
     const Type *Ty = Context.getCanonicalType(T).getTypePtr();
     const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
     llvm::Type *IRElemTy = ConvertType(MT->getElementType());
-    if (Context.getLangOpts().HLSL && T->isConstantMatrixBoolType())
-      IRElemTy = ConvertTypeForMem(Context.BoolTy);
+    if (Context.getLangOpts().HLSL) {
+      if (T->isConstantMatrixBoolType())
+        IRElemTy = ConvertTypeForMem(Context.BoolTy);
+
+      unsigned NumRows = MT->getNumRows();
+      unsigned NumCols = MT->getNumColumns();
+      bool IsRowMajor =
+          CGM.getContext().getLangOpts().getDefaultMatrixMemoryLayout() ==
+          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      unsigned VecLen = IsRowMajor ? NumCols : NumRows;
+      unsigned ArrayLen = IsRowMajor ? NumRows : NumCols;
+      llvm::Type *VecTy = llvm::FixedVectorType::get(IRElemTy, VecLen);
+      return llvm::ArrayType::get(VecTy, ArrayLen);
+    }
     return llvm::ArrayType::get(IRElemTy, MT->getNumElementsFlattened());
   }
 

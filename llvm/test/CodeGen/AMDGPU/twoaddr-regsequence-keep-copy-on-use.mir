@@ -1,0 +1,69 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -run-pass=twoaddressinstruction -o - %s | FileCheck -check-prefix=CHECK %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -run-pass=liveintervals,twoaddressinstruction -o - %s | FileCheck -check-prefix=LIS %s
+
+# Checks that while lowering REG_SEQUENCE, undef COPY are not skipped if there is no LIS
+# information
+
+---
+name:      regsequence-undef-subreg-use
+noPhis:          true
+body:             |
+  bb.0:
+
+    ; CHECK-LABEL: name: regsequence-undef-subreg-use
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr_32 = S_MOV_B32 0, implicit $exec
+    ; CHECK-NEXT: undef [[DEF:%[0-9]+]].sub0:sreg_64 = COPY [[COPY]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]].sub1:sreg_64 = COPY undef [[UND:%[0-9]+]]:sgpr_32
+    ; CHECK-NEXT: [[OTH:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 [[DEF]].sub1
+    
+    ; LIS-LABEL: name: regsequence-undef-subreg-use
+    ; LIS: [[COPY:%[0-9]+]]:sgpr_32 = S_MOV_B32 0, implicit $exec
+    ; LIS-NEXT: undef [[DEF:%[0-9]+]].sub0:sreg_64 = COPY [[COPY]]
+    ; LIS-NEXT: [[OTH:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 undef [[DEF]].sub1
+
+    %0:sgpr_32 = S_MOV_B32  0, implicit $exec
+
+    %1:sreg_64 = REG_SEQUENCE %0, %subreg.sub0, undef %2:sgpr_32, %subreg.sub1
+    %3:vgpr_32 = V_MOV_B32_e32 %1.sub1, implicit $exec
+...
+
+---
+name:      regsequence-undef-subreg-without-use
+noPhis:          true
+body:             |
+  bb.0:
+
+    ; CHECK-LABEL: name: regsequence-undef-subreg-without-use
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr_32 = S_MOV_B32 0, implicit $exec
+    ; CHECK-NEXT: undef [[DEF:%[0-9]+]].sub0:sreg_64 = COPY [[COPY]]
+    
+    ; LIS-LABEL: name: regsequence-undef-subreg-without-use
+    ; LIS: [[COPY:%[0-9]+]]:sgpr_32 = S_MOV_B32 0, implicit $exec
+    ; LIS-NEXT: undef [[DEF:%[0-9]+]].sub0:sreg_64 = COPY [[COPY]]
+
+    %0:sgpr_32 = S_MOV_B32  0, implicit $exec
+
+    %1:sreg_64 = REG_SEQUENCE %0, %subreg.sub0, undef %2:sgpr_32, %subreg.sub1
+...
+
+---
+name:      regsequence-undef-subreg-full-reg-use
+noPhis:          true
+body:             |
+  bb.0:
+
+    ; CHECK-LABEL: name: regsequence-undef-subreg-full-reg-use
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr_32 = S_MOV_B32 0, implicit $exec
+    ; CHECK-NEXT: undef [[DEF:%[0-9]+]].sub0:sreg_64 = COPY [[COPY]]
+    ; CHECK-NEXT: [[OTH:%[0-9]+]]:vreg_64 = COPY [[DEF]], implicit $exec 
+    
+    ; LIS-LABEL: name: regsequence-undef-subreg-full-reg-use
+    ; LIS: [[COPY:%[0-9]+]]:sgpr_32 = S_MOV_B32 0, implicit $exec
+    ; LIS-NEXT: undef [[DEF:%[0-9]+]].sub0:sreg_64 = COPY [[COPY]]
+    ; LIS-NEXT: [[OTH:%[0-9]+]]:vreg_64 = COPY [[DEF]], implicit $exec 
+
+    %0:sgpr_32 = S_MOV_B32  0, implicit $exec
+
+    %1:sreg_64 = REG_SEQUENCE %0, %subreg.sub0, undef %2:sgpr_32, %subreg.sub1
+    %3:vreg_64 = COPY %1, implicit $exec
+...

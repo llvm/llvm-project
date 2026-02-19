@@ -163,7 +163,7 @@ void f32(struct s32 s) { }
 // A composite type larger than 16 bytes should be passed indirectly.
 struct s33 { char buf[32*32]; };
 void f33(struct s33 s) { }
-// CHECK: define{{.*}} void @f33(ptr dead_on_return noundef %s)
+// CHECK: define{{.*}} void @f33(ptr noundef dead_on_return %s)
 
 struct s34 { char c; };
 void f34(struct s34 s);
@@ -226,9 +226,9 @@ T_float32x2 f1_0(T_float32x2 a0) { return a0; }
 // CHECK: define{{.*}} <4 x float> @f1_1(<4 x float> noundef %{{.*}})
 T_float32x4 f1_1(T_float32x4 a0) { return a0; }
 // Vector with length bigger than 16-byte is illegal and is passed indirectly.
-// CHECK: define{{.*}} void @f1_2(ptr dead_on_unwind noalias writable sret(<8 x float>) align 16 %{{.*}}, ptr dead_on_return noundef %0)
+// CHECK: define{{.*}} void @f1_2(ptr dead_on_unwind noalias writable sret(<8 x float>) align 16 %{{.*}}, ptr noundef dead_on_return %0)
 T_float32x8 f1_2(T_float32x8 a0) { return a0; }
-// CHECK: define{{.*}} void @f1_3(ptr dead_on_unwind noalias writable sret(<16 x float>) align 16 %{{.*}}, ptr dead_on_return noundef %0)
+// CHECK: define{{.*}} void @f1_3(ptr dead_on_unwind noalias writable sret(<16 x float>) align 16 %{{.*}}, ptr noundef dead_on_return %0)
 T_float32x16 f1_3(T_float32x16 a0) { return a0; }
 
 // Testing alignment with aggregates: HFA, aggregates with size <= 16 bytes and
@@ -278,7 +278,7 @@ struct s37
 typedef struct s37 s37_with_align;
 
 int32x4_t f37(int i, s37_with_align s1, s37_with_align s2) {
-// CHECK: define{{.*}} <4 x i32> @f37(i32 noundef %i, ptr dead_on_return noundef %s1, ptr dead_on_return noundef %s2)
+// CHECK: define{{.*}} <4 x i32> @f37(i32 noundef %i, ptr noundef dead_on_return %s1, ptr noundef dead_on_return %s2)
 // CHECK: load <4 x i32>, ptr %s1, align 16
 // CHECK: load <4 x i32>, ptr %s2, align 16
   int32x4_t v = vaddq_s32(*(int32x4_t *)&s1,
@@ -292,7 +292,7 @@ int32x4_t caller37() {
 // CHECK: %[[b:.*]] = alloca %struct.s37, align 16
 // CHECK: call void @llvm.memcpy
 // CHECK: call void @llvm.memcpy
-// CHECK: call <4 x i32> @f37(i32 noundef 3, ptr dead_on_return noundef %[[a]], ptr dead_on_return noundef %[[b]])
+// CHECK: call <4 x i32> @f37(i32 noundef 3, ptr noundef dead_on_return %[[a]], ptr noundef dead_on_return %[[b]])
   return f37(3, g37, g37);
 }
 
@@ -530,7 +530,7 @@ typedef struct s42 s42_no_align;
 // passing structs in registers
 __attribute__ ((noinline))
 int f42(int i, s42_no_align s1, s42_no_align s2) {
-// CHECK: define{{.*}} i32 @f42(i32 noundef %i, ptr dead_on_return noundef %s1, ptr dead_on_return noundef %s2)
+// CHECK: define{{.*}} i32 @f42(i32 noundef %i, ptr noundef dead_on_return %s1, ptr noundef dead_on_return %s2)
 // CHECK: getelementptr inbounds nuw %struct.s42, ptr %s1, i32 0, i32 0
 // CHECK: getelementptr inbounds nuw %struct.s42, ptr %s2, i32 0, i32 0
 // CHECK: getelementptr inbounds nuw %struct.s42, ptr %s1, i32 0, i32 1
@@ -545,14 +545,14 @@ int caller42() {
 // CHECK: %[[b:.*]] = alloca %struct.s42, align 4
 // CHECK: call void @llvm.memcpy.p0.p0.i64
 // CHECK: call void @llvm.memcpy.p0.p0.i64
-// CHECK: call i32 @f42(i32 noundef 3, ptr dead_on_return noundef %[[a]], ptr dead_on_return noundef %[[b]])
+// CHECK: call i32 @f42(i32 noundef 3, ptr noundef dead_on_return %[[a]], ptr noundef dead_on_return %[[b]])
   return f42(3, g42, g42_2);
 }
 // passing structs on stack
 __attribute__ ((noinline))
 int f42_stack(int i, int i2, int i3, int i4, int i5, int i6, int i7, int i8,
               int i9, s42_no_align s1, s42_no_align s2) {
-// CHECK: define{{.*}} i32 @f42_stack(i32 noundef %i, i32 noundef %i2, i32 noundef %i3, i32 noundef %i4, i32 noundef %i5, i32 noundef %i6, i32 noundef %i7, i32 noundef %i8, i32 noundef %i9, ptr dead_on_return noundef %s1, ptr dead_on_return noundef %s2)
+// CHECK: define{{.*}} i32 @f42_stack(i32 noundef %i, i32 noundef %i2, i32 noundef %i3, i32 noundef %i4, i32 noundef %i5, i32 noundef %i6, i32 noundef %i7, i32 noundef %i8, i32 noundef %i9, ptr noundef dead_on_return %s1, ptr noundef dead_on_return %s2)
 // CHECK: getelementptr inbounds nuw %struct.s42, ptr %s1, i32 0, i32 0
 // CHECK: getelementptr inbounds nuw %struct.s42, ptr %s2, i32 0, i32 0
 // CHECK: getelementptr inbounds nuw %struct.s42, ptr %s1, i32 0, i32 1
@@ -565,7 +565,7 @@ int caller42_stack() {
 // CHECK: %[[b:.*]] = alloca %struct.s42, align 4
 // CHECK: call void @llvm.memcpy.p0.p0.i64
 // CHECK: call void @llvm.memcpy.p0.p0.i64
-// CHECK: call i32 @f42_stack(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, i32 noundef 6, i32 noundef 7, i32 noundef 8, i32 noundef 9, ptr dead_on_return noundef %[[a]], ptr dead_on_return noundef %[[b]])
+// CHECK: call i32 @f42_stack(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, i32 noundef 6, i32 noundef 7, i32 noundef 8, i32 noundef 9, ptr noundef dead_on_return %[[a]], ptr noundef dead_on_return %[[b]])
   return f42_stack(1, 2, 3, 4, 5, 6, 7, 8, 9, g42, g42_2);
 }
 
@@ -583,7 +583,7 @@ typedef struct s43 s43_with_align;
 // passing aligned structs in registers
 __attribute__ ((noinline))
 int f43(int i, s43_with_align s1, s43_with_align s2) {
-// CHECK: define{{.*}} i32 @f43(i32 noundef %i, ptr dead_on_return noundef %s1, ptr dead_on_return noundef %s2)
+// CHECK: define{{.*}} i32 @f43(i32 noundef %i, ptr noundef dead_on_return %s1, ptr noundef dead_on_return %s2)
 // CHECK: getelementptr inbounds nuw %struct.s43, ptr %s1, i32 0, i32 0
 // CHECK: getelementptr inbounds nuw %struct.s43, ptr %s2, i32 0, i32 0
 // CHECK: getelementptr inbounds nuw %struct.s43, ptr %s1, i32 0, i32 1
@@ -598,14 +598,14 @@ int caller43() {
 // CHECK: %[[b:.*]] = alloca %struct.s43, align 16
 // CHECK: call void @llvm.memcpy.p0.p0.i64
 // CHECK: call void @llvm.memcpy.p0.p0.i64
-// CHECK: call i32 @f43(i32 noundef 3, ptr dead_on_return noundef %[[a]], ptr dead_on_return noundef %[[b]])
+// CHECK: call i32 @f43(i32 noundef 3, ptr noundef dead_on_return %[[a]], ptr noundef dead_on_return %[[b]])
   return f43(3, g43, g43_2);
 }
 // passing aligned structs on stack
 __attribute__ ((noinline))
 int f43_stack(int i, int i2, int i3, int i4, int i5, int i6, int i7, int i8,
               int i9, s43_with_align s1, s43_with_align s2) {
-// CHECK: define{{.*}} i32 @f43_stack(i32 noundef %i, i32 noundef %i2, i32 noundef %i3, i32 noundef %i4, i32 noundef %i5, i32 noundef %i6, i32 noundef %i7, i32 noundef %i8, i32 noundef %i9, ptr dead_on_return noundef %s1, ptr dead_on_return noundef %s2)
+// CHECK: define{{.*}} i32 @f43_stack(i32 noundef %i, i32 noundef %i2, i32 noundef %i3, i32 noundef %i4, i32 noundef %i5, i32 noundef %i6, i32 noundef %i7, i32 noundef %i8, i32 noundef %i9, ptr noundef dead_on_return %s1, ptr noundef dead_on_return %s2)
 // CHECK: getelementptr inbounds nuw %struct.s43, ptr %s1, i32 0, i32 0
 // CHECK: getelementptr inbounds nuw %struct.s43, ptr %s2, i32 0, i32 0
 // CHECK: getelementptr inbounds nuw %struct.s43, ptr %s1, i32 0, i32 1
@@ -618,7 +618,7 @@ int caller43_stack() {
 // CHECK: %[[b:.*]] = alloca %struct.s43, align 16
 // CHECK: call void @llvm.memcpy.p0.p0.i64
 // CHECK: call void @llvm.memcpy.p0.p0.i64
-// CHECK: call i32 @f43_stack(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, i32 noundef 6, i32 noundef 7, i32 noundef 8, i32 noundef 9, ptr dead_on_return noundef %[[a]], ptr dead_on_return noundef %[[b]])
+// CHECK: call i32 @f43_stack(i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 4, i32 noundef 5, i32 noundef 6, i32 noundef 7, i32 noundef 8, i32 noundef 9, ptr noundef dead_on_return %[[a]], ptr noundef dead_on_return %[[b]])
   return f43_stack(1, 2, 3, 4, 5, 6, 7, 8, 9, g43, g43_2);
 }
 

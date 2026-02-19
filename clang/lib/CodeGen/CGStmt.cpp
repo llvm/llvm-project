@@ -44,10 +44,6 @@ using namespace CodeGen;
 //                              Statement Emission
 //===----------------------------------------------------------------------===//
 
-namespace llvm {
-extern cl::opt<bool> EnableSingleByteCoverage;
-} // namespace llvm
-
 void CodeGenFunction::EmitStopPoint(const Stmt *S) {
   if (CGDebugInfo *DI = getDebugInfo()) {
     SourceLocation Loc;
@@ -918,8 +914,8 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     // If the skipped block has no labels in it, just emit the executed block.
     // This avoids emitting dead code and simplifies the CFG substantially.
     if (S.isConstexpr() || !ContainsLabel(Skipped)) {
-      if (CondConstant)
-        incrementProfileCounter(&S);
+      incrementProfileCounter(CondConstant ? UseExecPath : UseSkipPath, &S,
+                              /*UseBoth=*/true);
       if (Executed) {
         MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
         RunCleanupsScope ExecutedScope(*this);
@@ -930,14 +926,14 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     }
   }
 
+  auto HasSkip = hasSkipCounter(&S);
+
   // Otherwise, the condition did not fold, or we couldn't elide it.  Just emit
   // the conditional branch.
   llvm::BasicBlock *ThenBlock = createBasicBlock("if.then");
   llvm::BasicBlock *ContBlock = createBasicBlock("if.end");
-  llvm::BasicBlock *ElseBlock = ContBlock;
-  if (Else)
-    ElseBlock = createBasicBlock("if.else");
-
+  llvm::BasicBlock *ElseBlock =
+      (Else || HasSkip ? createBasicBlock("if.else") : ContBlock);
   // Prefer the PGO based weights over the likelihood attribute.
   // When the build isn't optimized the metadata isn't used, so don't generate
   // it.
@@ -973,10 +969,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
 
   // Emit the 'then' code.
   EmitBlock(ThenBlock);
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(S.getThen());
-  else
-    incrementProfileCounter(&S);
+  incrementProfileCounter(UseExecPath, &S);
   {
     RunCleanupsScope ThenScope(*this);
     EmitStmt(S.getThen());
@@ -990,9 +983,9 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
       auto NL = ApplyDebugLocation::CreateEmpty(*this);
       EmitBlock(ElseBlock);
     }
-    // When single byte coverage mode is enabled, add a counter to else block.
-    if (llvm::EnableSingleByteCoverage)
-      incrementProfileCounter(Else);
+    // Add a counter to else block unless it has CounterExpr.
+    if (HasSkip)
+      incrementProfileCounter(UseSkipPath, &S);
     {
       RunCleanupsScope ElseScope(*this);
       EmitStmt(Else);
@@ -1002,15 +995,14 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
       auto NL = ApplyDebugLocation::CreateEmpty(*this);
       EmitBranch(ContBlock);
     }
+  } else if (HasSkip) {
+    EmitBlock(ElseBlock);
+    incrementProfileCounter(UseSkipPath, &S);
+    EmitBranch(ContBlock);
   }
 
   // Emit the continuation block for code after the if.
   EmitBlock(ContBlock, true);
-
-  // When single byte coverage mode is enabled, add a counter to continuation
-  // block.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(&S);
 }
 
 bool CodeGenFunction::checkIfLoopMustProgress(const Expr *ControllingExpression,
@@ -1123,15 +1115,11 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
                  SourceLocToDebugLoc(R.getEnd()),
                  checkIfLoopMustProgress(S.getCond(), hasEmptyLoopBody(S)));
 
-  // When single byte coverage mode is enabled, add a counter to loop condition.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(S.getCond());
-
   // As long as the condition is true, go to the loop body.
   llvm::BasicBlock *LoopBody = createBasicBlock("while.body");
   if (EmitBoolCondBranch) {
     llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
-    if (ConditionScope.requiresCleanups())
+    if (hasSkipCounter(&S) || ConditionScope.requiresCleanups())
       ExitBlock = createBasicBlock("while.exit");
     llvm::MDNode *Weights =
         createProfileWeightsForLoop(S.getCond(), getProfileCount(S.getBody()));
@@ -1150,6 +1138,7 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
 
     if (ExitBlock != LoopExit.getBlock()) {
       EmitBlock(ExitBlock);
+      incrementProfileCounter(UseSkipPath, &S);
       EmitBranchThroughCleanup(LoopExit);
     }
   } else if (const Attr *A = Stmt::getLikelihoodAttr(S.getBody())) {
@@ -1167,11 +1156,7 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   {
     RunCleanupsScope BodyScope(*this);
     EmitBlock(LoopBody);
-    // When single byte coverage mode is enabled, add a counter to the body.
-    if (llvm::EnableSingleByteCoverage)
-      incrementProfileCounter(S.getBody());
-    else
-      incrementProfileCounter(&S);
+    incrementProfileCounter(UseExecPath, &S);
     EmitStmt(S.getBody());
   }
 
@@ -1191,13 +1176,10 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
 
   // The LoopHeader typically is just a branch if we skipped emitting
   // a branch, try to erase it.
-  if (!EmitBoolCondBranch)
+  if (!EmitBoolCondBranch) {
     SimplifyForwardingBlocks(LoopHeader.getBlock());
-
-  // When single byte coverage mode is enabled, add a counter to continuation
-  // block.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(&S);
+    PGO->markStmtAsUsed(true, &S);
+  }
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
@@ -1216,10 +1198,7 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // Emit the body of the loop.
   llvm::BasicBlock *LoopBody = createBasicBlock("do.body");
 
-  if (llvm::EnableSingleByteCoverage)
-    EmitBlockWithFallThrough(LoopBody, S.getBody());
-  else
-    EmitBlockWithFallThrough(LoopBody, &S);
+  EmitBlockWithFallThrough(LoopBody, &S);
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.push_back(emitConvergenceLoopToken(LoopBody));
@@ -1230,9 +1209,6 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   }
 
   EmitBlock(LoopCond.getBlock());
-  // When single byte coverage mode is enabled, add a counter to loop condition.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(S.getCond());
 
   // C99 6.8.5.2: "The evaluation of the controlling expression takes place
   // after each execution of the loop body."
@@ -1255,11 +1231,14 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
                  SourceLocToDebugLoc(R.getEnd()),
                  checkIfLoopMustProgress(S.getCond(), hasEmptyLoopBody(S)));
 
+  auto *LoopFalse = (hasSkipCounter(&S) ? createBasicBlock("do.loopfalse")
+                                        : LoopExit.getBlock());
+
   // As long as the condition is true, iterate the loop.
   if (EmitBoolCondBranch) {
     uint64_t BackedgeCount = getProfileCount(S.getBody()) - ParentCount;
     auto *I = Builder.CreateCondBr(
-        BoolCondVal, LoopBody, LoopExit.getBlock(),
+        BoolCondVal, LoopBody, LoopFalse,
         createProfileWeightsForLoop(S.getCond(), BackedgeCount));
 
     // Key Instructions: Emit the condition and branch as separate source
@@ -1274,6 +1253,11 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
 
   LoopStack.pop();
 
+  if (LoopFalse != LoopExit.getBlock()) {
+    EmitBlock(LoopFalse);
+    incrementProfileCounter(UseSkipPath, &S, /*UseBoth=*/true);
+  }
+
   // Emit the exit block.
   EmitBlock(LoopExit.getBlock());
 
@@ -1281,11 +1265,6 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // emitting a branch, try to erase it.
   if (!EmitBoolCondBranch)
     SimplifyForwardingBlocks(LoopCond.getBlock());
-
-  // When single byte coverage mode is enabled, add a counter to continuation
-  // block.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(&S);
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
@@ -1348,15 +1327,10 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
       BreakContinueStack.back().ContinueBlock = Continue;
     }
 
-    // When single byte coverage mode is enabled, add a counter to loop
-    // condition.
-    if (llvm::EnableSingleByteCoverage)
-      incrementProfileCounter(S.getCond());
-
     llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
     // If there are any cleanups between here and the loop-exit scope,
     // create a block to stage a loop exit along.
-    if (ForScope && ForScope->requiresCleanups())
+    if (hasSkipCounter(&S) || (ForScope && ForScope->requiresCleanups()))
       ExitBlock = createBasicBlock("for.cond.cleanup");
 
     // As long as the condition is true, iterate the loop.
@@ -1385,6 +1359,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
     if (ExitBlock != LoopExit.getBlock()) {
       EmitBlock(ExitBlock);
+      incrementProfileCounter(UseSkipPath, &S);
       EmitBranchThroughCleanup(LoopExit);
     }
 
@@ -1392,13 +1367,11 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   } else {
     // Treat it as a non-zero constant.  Don't even create a new block for the
     // body, just fall into it.
+    PGO->markStmtAsUsed(true, &S);
   }
 
-  // When single byte coverage mode is enabled, add a counter to the body.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(S.getBody());
-  else
-    incrementProfileCounter(&S);
+  incrementProfileCounter(UseExecPath, &S);
+
   {
     // Create a separate cleanup scope for the body, in case it is not
     // a compound statement.
@@ -1414,8 +1387,6 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   if (S.getInc()) {
     EmitBlock(Continue.getBlock());
     EmitStmt(S.getInc());
-    if (llvm::EnableSingleByteCoverage)
-      incrementProfileCounter(S.getInc());
   }
 
   BreakContinueStack.pop_back();
@@ -1432,11 +1403,6 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
   // Emit the fall-through block.
   EmitBlock(LoopExit.getBlock(), true);
-
-  // When single byte coverage mode is enabled, add a counter to continuation
-  // block.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(&S);
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
@@ -1479,7 +1445,7 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   // If there are any cleanups between here and the loop-exit scope,
   // create a block to stage a loop exit along.
   llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
-  if (ForScope.requiresCleanups())
+  if (hasSkipCounter(&S) || ForScope.requiresCleanups())
     ExitBlock = createBasicBlock("for.cond.cleanup");
 
   // The loop body, consisting of the specified body and the loop variable.
@@ -1504,14 +1470,12 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
 
   if (ExitBlock != LoopExit.getBlock()) {
     EmitBlock(ExitBlock);
+    incrementProfileCounter(UseSkipPath, &S);
     EmitBranchThroughCleanup(LoopExit);
   }
 
   EmitBlock(ForBody);
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(S.getBody());
-  else
-    incrementProfileCounter(&S);
+  incrementProfileCounter(UseExecPath, &S);
 
   // Create a block for the increment. In case of a 'continue', we jump there.
   JumpDest Continue = getJumpDestInCurrentScope("for.inc");
@@ -1544,11 +1508,6 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
 
   // Emit the fall-through block.
   EmitBlock(LoopExit.getBlock(), true);
-
-  // When single byte coverage mode is enabled, add a counter to continuation
-  // block.
-  if (llvm::EnableSingleByteCoverage)
-    incrementProfileCounter(&S);
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
@@ -2513,6 +2472,18 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
 
   ConditionScope.ForceCleanup();
 
+  // Close the last case (or DefaultBlock).
+  EmitBranch(SwitchExit.getBlock());
+
+  // Insert a False Counter if SwitchStmt doesn't have DefaultStmt.
+  if (hasSkipCounter(S.getCond())) {
+    auto *ImplicitDefaultBlock = createBasicBlock("sw.false");
+    EmitBlock(ImplicitDefaultBlock);
+    incrementProfileCounter(UseSkipPath, S.getCond());
+    Builder.CreateBr(SwitchInsn->getDefaultDest());
+    SwitchInsn->setDefaultDest(ImplicitDefaultBlock);
+  }
+
   // Emit continuation.
   EmitBlock(SwitchExit.getBlock(), true);
   incrementProfileCounter(&S);
@@ -2556,43 +2527,6 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   CaseRangeBlock = SavedCRBlock;
 }
 
-/// AddVariableConstraints - Look at AsmExpr and if it is a variable declared
-/// as using a particular register add that as a constraint that will be used
-/// in this asm stmt.
-static std::string
-AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
-                       const TargetInfo &Target, CodeGenModule &CGM,
-                       const AsmStmt &Stmt, const bool EarlyClobber,
-                       std::string *GCCReg = nullptr) {
-  const DeclRefExpr *AsmDeclRef = dyn_cast<DeclRefExpr>(&AsmExpr);
-  if (!AsmDeclRef)
-    return Constraint;
-  const ValueDecl &Value = *AsmDeclRef->getDecl();
-  const VarDecl *Variable = dyn_cast<VarDecl>(&Value);
-  if (!Variable)
-    return Constraint;
-  if (Variable->getStorageClass() != SC_Register)
-    return Constraint;
-  AsmLabelAttr *Attr = Variable->getAttr<AsmLabelAttr>();
-  if (!Attr)
-    return Constraint;
-  StringRef Register = Attr->getLabel();
-  assert(Target.isValidGCCRegisterName(Register));
-  // We're using validateOutputConstraint here because we only care if
-  // this is a register constraint.
-  TargetInfo::ConstraintInfo Info(Constraint, "");
-  if (Target.validateOutputConstraint(Info) &&
-      !Info.allowsRegister()) {
-    CGM.ErrorUnsupported(&Stmt, "__asm__");
-    return Constraint;
-  }
-  // Canonicalize the register here before returning it.
-  Register = Target.getNormalizedGCCRegisterName(Register);
-  if (GCCReg != nullptr)
-    *GCCReg = Register.str();
-  return (EarlyClobber ? "&{" : "{") + Register.str() + "}";
-}
-
 std::pair<llvm::Value*, llvm::Type *> CodeGenFunction::EmitAsmInputLValue(
     const TargetInfo::ConstraintInfo &Info, LValue InputValue,
     QualType InputType, std::string &ConstraintStr, SourceLocation Loc) {
@@ -2615,7 +2549,6 @@ std::pair<llvm::Value*, llvm::Type *> CodeGenFunction::EmitAsmInputLValue(
   ConstraintStr += '*';
   return {InputValue.getPointer(*this), Addr.getElementType()};
 }
-
 std::pair<llvm::Value *, llvm::Type *>
 CodeGenFunction::EmitAsmInput(const TargetInfo::ConstraintInfo &Info,
                               const Expr *InputExpr,
@@ -2944,10 +2877,12 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     OutExpr = OutExpr->IgnoreParenNoopCasts(getContext());
 
     std::string GCCReg;
-    OutputConstraint = AddVariableConstraints(OutputConstraint, *OutExpr,
-                                              getTarget(), CGM, S,
-                                              Info.earlyClobber(),
-                                              &GCCReg);
+    OutputConstraint = S.addVariableConstraints(
+        OutputConstraint, *OutExpr, getTarget(), Info.earlyClobber(),
+        [&](const Stmt *UnspStmt, StringRef Msg) {
+          CGM.ErrorUnsupported(UnspStmt, Msg);
+        },
+        &GCCReg);
     // Give an error on multiple outputs to same physreg.
     if (!GCCReg.empty() && !PhysRegOutputs.insert(GCCReg).second)
       CGM.Error(S.getAsmLoc(), "multiple outputs to hard register: " + GCCReg);
@@ -3102,9 +3037,12 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     InputConstraint =
         getTarget().simplifyConstraint(InputConstraint, &OutputConstraintInfos);
 
-    InputConstraint = AddVariableConstraints(
+    InputConstraint = S.addVariableConstraints(
         InputConstraint, *InputExpr->IgnoreParenNoopCasts(getContext()),
-        getTarget(), CGM, S, false /* No EarlyClobber */);
+        getTarget(), false /* No EarlyClobber */,
+        [&](const Stmt *UnspStmt, std::string_view Msg) {
+          CGM.ErrorUnsupported(UnspStmt, Msg);
+        });
 
     std::string ReplaceConstraint (InputConstraint);
     llvm::Value *Arg;
@@ -3401,6 +3339,8 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
     llvm::Function::Create(FuncLLVMTy, llvm::GlobalValue::InternalLinkage,
                            CapturedStmtInfo->getHelperName(), &CGM.getModule());
   CGM.SetInternalFunctionAttributes(CD, F, FuncInfo);
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    F->addFnAttr("sample-profile-suffix-elision-policy", "selected");
   if (CD->isNothrow())
     F->addFnAttr(llvm::Attribute::NoUnwind);
 

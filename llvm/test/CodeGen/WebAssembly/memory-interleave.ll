@@ -15,6 +15,8 @@ target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-n32:64-S128-ni:1:10:20
 %struct.EightBytes = type { i8, i8, i8, i8, i8, i8, i8, i8 }
 %struct.TwoFloats = type { float, float }
 %struct.FourFloats = type { float, float, float, float }
+%struct.TwoLongLongs = type { i64, i64 }
+%struct.FourLongLongs = type { i64, i64, i64, i64 }
 
 ; CHECK-LABEL: two_ints_same_op:
 ; CHECK: loop
@@ -2001,7 +2003,9 @@ for.body:                                         ; preds = %entry, %for.body
 
 ; CHECK-LABEL: four_floats_same_op:
 ; CHECK: loop
-; CHECK-NOT: v128.load
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: v128.store
 define hidden void @four_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
   %cmp45.not = icmp eq i32 %N, 0
@@ -2823,4 +2827,164 @@ define hidden void @mac_4d_i8(ptr dead_on_unwind noalias writable writeonly sret
   %43 = add nuw i32 %17, 1
   %44 = icmp eq i32 %43, %3
   br i1 %44, label %10, label %13
+}
+
+; CHECK-LABEL: mac_2d_i64
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_u
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_s
+; CHECK: i64x2.mul
+; CHECK: i64x2.add
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_u
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_s
+; CHECK: i64x2.mul
+; CHECK: i64x2.add
+define hidden void @mac_2d_i64(ptr dead_on_unwind noalias writable sret(%struct.TwoLongLongs) align 8 captures(none) %agg.result, ptr noundef readonly captures(none) %x, ptr noundef readonly captures(none) %y, i32 noundef %n) {
+entry:
+  %agg.result.promoted = load i64, ptr %agg.result, align 8
+  %cmp20.not = icmp eq i32 %n, 0
+  br i1 %cmp20.not, label %for.cond.cleanup, label %for.body.lr.ph
+
+for.body.lr.ph:                                   ; preds = %entry
+  %b11 = getelementptr inbounds nuw i8, ptr %agg.result, i32 8
+  %b11.promoted = load i64, ptr %b11, align 8
+  br label %for.body
+
+for.cond.for.cond.cleanup_crit_edge:              ; preds = %for.body
+  store i64 %add12, ptr %b11, align 8
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond.for.cond.cleanup_crit_edge, %entry
+  %.lcssa = phi i64 [ %add, %for.cond.for.cond.cleanup_crit_edge ], [ %agg.result.promoted, %entry ]
+  store i64 %.lcssa, ptr %agg.result, align 8
+  ret void
+
+for.body:                                         ; preds = %for.body.lr.ph, %for.body
+  %0 = phi i64 [ %b11.promoted, %for.body.lr.ph ], [ %add12, %for.body ]
+  %i.021 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
+  %1 = phi i64 [ %agg.result.promoted, %for.body.lr.ph ], [ %add, %for.body ]
+  %arrayidx = getelementptr inbounds nuw %struct.TwoInts, ptr %x, i32 %i.021
+  %2 = load i32, ptr %arrayidx, align 4
+  %conv = sext i32 %2 to i64
+  %arrayidx1 = getelementptr inbounds nuw %struct.TwoInts, ptr %y, i32 %i.021
+  %3 = load i32, ptr %arrayidx1, align 4
+  %conv3 = zext i32 %3 to i64
+  %mul = mul nsw i64 %conv3, %conv
+  %add = add nsw i64 %mul, %1
+  %b = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %4 = load i32, ptr %b, align 4
+  %conv6 = sext i32 %4 to i64
+  %b8 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %5 = load i32, ptr %b8, align 4
+  %conv9 = zext i32 %5 to i64
+  %mul10 = mul nsw i64 %conv9, %conv6
+  %add12 = add nsw i64 %mul10, %0
+  %inc = add nuw i32 %i.021, 1
+  %exitcond.not = icmp eq i32 %inc, %n
+  br i1 %exitcond.not, label %for.cond.for.cond.cleanup_crit_edge, label %for.body
+}
+
+; CHECK-LABEL: mac_4d_i64
+; CHECK: loop
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_u
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_s
+; CHECK: i64x2.mul
+; CHECK: i64x2.add
+; CHECK: i8x16.shuffle	8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_u
+; CHECK: i8x16.shuffle	8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_s
+; CHECK: i64x2.mul
+; CHECK: i64x2.add
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_u
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_s
+; CHECK: i64x2.mul
+; CHECK: i64x2.add
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_u
+; CHECK: i8x16.shuffle	0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK: i64x2.extend_low_i32x4_s
+; CHECK: i64x2.mul
+; CHECK: i64x2.add
+define hidden void @mac_4d_i64(ptr dead_on_unwind noalias writable sret(%struct.FourLongLongs) align 8 captures(none) %agg.result, ptr noundef readonly captures(none) %x, ptr noundef readonly captures(none) %y, i32 noundef %n) {
+entry:
+  %agg.result.promoted = load i64, ptr %agg.result, align 8
+  %cmp44.not = icmp eq i32 %n, 0
+  br i1 %cmp44.not, label %for.cond.cleanup, label %for.body.lr.ph
+
+for.body.lr.ph:                                   ; preds = %entry
+  %b11 = getelementptr inbounds nuw i8, ptr %agg.result, i32 8
+  %c19 = getelementptr inbounds nuw i8, ptr %agg.result, i32 16
+  %d27 = getelementptr inbounds nuw i8, ptr %agg.result, i32 24
+  %b11.promoted = load i64, ptr %b11, align 8
+  %c19.promoted = load i64, ptr %c19, align 8
+  %d27.promoted = load i64, ptr %d27, align 8
+  br label %for.body
+
+for.cond.for.cond.cleanup_crit_edge:              ; preds = %for.body
+  store i64 %add12, ptr %b11, align 8
+  store i64 %add20, ptr %c19, align 8
+  store i64 %add28, ptr %d27, align 8
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond.for.cond.cleanup_crit_edge, %entry
+  %.lcssa = phi i64 [ %add, %for.cond.for.cond.cleanup_crit_edge ], [ %agg.result.promoted, %entry ]
+  store i64 %.lcssa, ptr %agg.result, align 8
+  ret void
+
+for.body:                                         ; preds = %for.body.lr.ph, %for.body
+  %0 = phi i64 [ %d27.promoted, %for.body.lr.ph ], [ %add28, %for.body ]
+  %1 = phi i64 [ %c19.promoted, %for.body.lr.ph ], [ %add20, %for.body ]
+  %2 = phi i64 [ %b11.promoted, %for.body.lr.ph ], [ %add12, %for.body ]
+  %i.045 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
+  %3 = phi i64 [ %agg.result.promoted, %for.body.lr.ph ], [ %add, %for.body ]
+  %arrayidx = getelementptr inbounds nuw %struct.FourInts, ptr %x, i32 %i.045
+  %4 = load i32, ptr %arrayidx, align 4
+  %conv = sext i32 %4 to i64
+  %arrayidx1 = getelementptr inbounds nuw %struct.FourInts, ptr %y, i32 %i.045
+  %5 = load i32, ptr %arrayidx1, align 4
+  %conv3 = zext i32 %5 to i64
+  %mul = mul nsw i64 %conv3, %conv
+  %add = add nsw i64 %mul, %3
+  %b = getelementptr inbounds nuw i8, ptr %arrayidx, i32 4
+  %6 = load i32, ptr %b, align 4
+  %conv6 = sext i32 %6 to i64
+  %b8 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 4
+  %7 = load i32, ptr %b8, align 4
+  %conv9 = zext i32 %7 to i64
+  %mul10 = mul nsw i64 %conv9, %conv6
+  %add12 = add nsw i64 %mul10, %2
+  %c = getelementptr inbounds nuw i8, ptr %arrayidx, i32 8
+  %8 = load i32, ptr %c, align 4
+  %conv14 = sext i32 %8 to i64
+  %c16 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 8
+  %9 = load i32, ptr %c16, align 4
+  %conv17 = zext i32 %9 to i64
+  %mul18 = mul nsw i64 %conv17, %conv14
+  %add20 = add nsw i64 %mul18, %1
+  %d = getelementptr inbounds nuw i8, ptr %arrayidx, i32 12
+  %10 = load i32, ptr %d, align 4
+  %conv22 = sext i32 %10 to i64
+  %d24 = getelementptr inbounds nuw i8, ptr %arrayidx1, i32 12
+  %11 = load i32, ptr %d24, align 4
+  %conv25 = zext i32 %11 to i64
+  %mul26 = mul nsw i64 %conv25, %conv22
+  %add28 = add nsw i64 %mul26, %0
+  %inc = add nuw i32 %i.045, 1
+  %exitcond.not = icmp eq i32 %inc, %n
+  br i1 %exitcond.not, label %for.cond.for.cond.cleanup_crit_edge, label %for.body
 }

@@ -205,9 +205,10 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
                                         ctx.arg.ltoPartitions,
                                         ltoModes[ctx.arg.ltoKind]);
   else
-    ltoObj = std::make_unique<lto::DTLTO>(createConfig(ctx), backend,
-                                          ctx.arg.ltoPartitions,
-                                          ltoModes[ctx.arg.ltoKind]);
+    ltoObj = std::make_unique<lto::DTLTO>(
+        createConfig(ctx), backend, ctx.arg.ltoPartitions,
+        ltoModes[ctx.arg.ltoKind], ctx.arg.outputFile,
+        !ctx.arg.saveTempsArgs.empty());
   // Initialize usedStartStop.
   if (ctx.bitcodeFiles.empty())
     return;
@@ -258,7 +259,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     r.VisibleToRegularObj = ctx.arg.relocatable || sym->isUsedInRegularObj ||
                             sym->referencedAfterWrap ||
                             (r.Prevailing && sym->isExported) ||
-                            usedStartStop.count(objSym.getSectionName());
+                            usedStartStop.contains(objSym.getSectionName());
     // Identify symbols exported dynamically, and that therefore could be
     // referenced by a shared library not visible to the linker.
     r.ExportDynamic = sym->computeBinding(ctx) != STB_LOCAL &&

@@ -564,9 +564,6 @@ def FeatureLSUI: ExtensionWithMArch<"lsui", "LSUI", "FEAT_LSUI",
 def FeatureOCCMO: ExtensionWithMArch<"occmo", "OCCMO", "FEAT_OCCMO",
   "Enable Armv9.6-A Outer cacheable cache maintenance operations">;
 
-def FeaturePCDPHINT: ExtensionWithMArch<"pcdphint", "PCDPHINT", "FEAT_PCDPHINT",
-  "Enable Armv9.6-A Producer Consumer Data Placement hints">;
-
 def FeaturePoPS: ExtensionWithMArch<"pops", "PoPS", "FEAT_PoPS",
   "Enable Armv9.6-A Point Of Physical Storage (PoPS) DC instructions">;
 
@@ -586,8 +583,6 @@ def FeatureSSVE_FEXPA : ExtensionWithMArch<"ssve-fexpa", "SSVE_FEXPA", "FEAT_SSV
 //  Armv9.7 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureCMH : ExtensionWithMArch<"cmh", "CMH", "FEAT_CMH",
-  "Enable Armv9.7-A Contention Management Hints">;
 
 def FeatureLSCP : ExtensionWithMArch<"lscp", "LSCP", "FEAT_LSCP",
   "Enable Armv9.7-A Load-acquire and store-release pair extension">;
@@ -852,6 +847,10 @@ def FeatureAddrLSLSlow14 : SubtargetFeature<
 def FeatureALULSLFast : SubtargetFeature<
     "alu-lsl-fast", "HasALULSLFast", "true",
     "Add/Sub operations with lsl shift <= 4 are cheap">;
+
+def FeatureFastLD1Single : SubtargetFeature<
+    "fast-ld1-single", "HasFastLD1Single", "true",
+    "Single-element LD1 to vector lane has same performance as regular load">;
 
 def FeatureAggressiveFMA :
   SubtargetFeature<"aggressive-fma",

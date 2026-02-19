@@ -625,6 +625,7 @@ def LeadingOnesWMask : ImmLeaf<XLenVT, [{
 include "RISCVInstrFormats.td"
 include "RISCVInstrFormatsC.td"
 include "RISCVInstrFormatsV.td"
+include "RISCVInstrFormatsXAIF.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
@@ -1114,7 +1115,8 @@ def : InstAlias<"jalr $rd, (${rs})",      (JALR GPR:$rd, GPR:$rs, 0), 0>;
 
 def : InstAlias<"fence", (FENCE 0xF, 0xF)>; // 0xF == iorw
 
-let Predicates = [HasStdExtZihintpause] in
+// pause is always available in the assembler and disassembler, even without
+// enabling Zihintpause, per psABI decision (riscv-non-isa/riscv-elf-psabi-doc#474).
 def : InstAlias<"pause", (FENCE 0x1, 0x0)>; // 0x1 == w
 
 def : InstAlias<"rdinstret $rd", (CSRRS GPR:$rd, INSTRET.Encoding, X0), 2>;
@@ -1155,12 +1157,13 @@ def : InstAlias<"hfence.gvma $rs", (HFENCE_GVMA GPR:$rs, X0)>;
 def : InstAlias<"hfence.vvma",     (HFENCE_VVMA      X0, X0), 2>;
 def : InstAlias<"hfence.vvma $rs", (HFENCE_VVMA GPR:$rs, X0)>;
 
-let Predicates = [HasStdExtZihintntl] in {
-  def : InstAlias<"ntl.p1",     (ADD   X0, X0, X2)>;
-  def : InstAlias<"ntl.pall",   (ADD   X0, X0, X3)>;
-  def : InstAlias<"ntl.s1",     (ADD   X0, X0, X4)>;
-  def : InstAlias<"ntl.all",    (ADD   X0, X0, X5)>;
-} // Predicates = [HasStdExtZihintntl]
+// ntl.* hints are always available in the assembler and disassembler, even
+// without enabling Zihintntl, per psABI decision
+// (riscv-non-isa/riscv-elf-psabi-doc#474).
+def : InstAlias<"ntl.p1",     (ADD   X0, X0, X2)>;
+def : InstAlias<"ntl.pall",   (ADD   X0, X0, X3)>;
+def : InstAlias<"ntl.s1",     (ADD   X0, X0, X4)>;
+def : InstAlias<"ntl.all",    (ADD   X0, X0, X5)>;
 
 let EmitPriority = 0 in {
 def : InstAlias<"lb $rd, (${rs1})",
@@ -1228,9 +1231,9 @@ def : MnemonicAlias<"sbreak", "ebreak">;
 
 def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF)>;
 
-let Predicates = [HasStdExtZicfilp] in {
+// lpad is always available in the assembler and disassembler, even without
+// enabling Zicfilp, per psABI decision (riscv-non-isa/riscv-elf-psabi-doc#474).
 def : InstAlias<"lpad $imm20", (AUIPC X0, uimm20:$imm20)>;
-}
 
 //===----------------------------------------------------------------------===//
 // .insn directive instructions
@@ -1641,48 +1644,50 @@ def : Pat<(XLenVT (seteq (XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$m
 def : Pat<(XLenVT (setne (XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$mask)), 0)),
           (SLTU (XLenVT X0), (XLenVT (SLLI GPR:$rs, (XLenSubTrailingOnes imm:$mask))))>;
 
-def IntCCtoRISCVCC : SDNodeXForm<riscv_selectcc, [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+// Transforms cond -> cond_code
+def CCtoRISCVCC : SDNodeXForm<cond, [{
+  ISD::CondCode CC = N->get();
   RISCVCC::CondCode BrCC = getRISCVCCForIntCC(CC);
   return CurDAG->getTargetConstant(BrCC, SDLoc(N), Subtarget->getXLenVT());
 }]>;
 
-def riscv_selectcc_frag : PatFrag<(ops node:$lhs, node:$rhs, node:$cc,
-                                       node:$truev, node:$falsev),
-                                  (riscv_selectcc node:$lhs, node:$rhs,
-                                                  node:$cc, node:$truev,
-                                                  node:$falsev), [{}],
-                                  IntCCtoRISCVCC>;
+// Matches a `cond` and emits it as a (RISC-V specific) `cond_code`
+def riscv_cond : PatLeaf<(cond), [{}], CCtoRISCVCC>;
 
 multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt,
                               ValueType cmpvt = XLenVT> {
   let usesCustomInserter = 1 in
   def _Using_CC_GPR : Pseudo<(outs valty:$dst),
                              (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                              valty:$truev, valty:$falsev),
+                                  valty:$truev, valty:$falsev),
                              [(set valty:$dst,
-                               (riscv_selectcc_frag:$cc (cmpvt GPR:$lhs), GPR:$rhs, cond,
-                                                        (vt valty:$truev), valty:$falsev))]>;
+                               (riscv_selectcc (cmpvt GPR:$lhs), GPR:$rhs,
+                                               riscv_cond:$cc,
+                                               (vt valty:$truev),
+                                               valty:$falsev))]>;
+
   // Explicitly select 0 in the condition to X0. The register coalescer doesn't
   // always do it.
-  def : Pat<(riscv_selectcc_frag:$cc (cmpvt GPR:$lhs), 0, cond, (vt valty:$truev),
-                                     valty:$falsev),
+  def : Pat<(riscv_selectcc (cmpvt GPR:$lhs), 0, cond:$cc,
+                            (vt valty:$truev), valty:$falsev),
             (!cast<Instruction>(NAME#"_Using_CC_GPR") GPR:$lhs, (XLenVT X0),
-             (IntCCtoRISCVCC $cc), valty:$truev, valty:$falsev)>;
+             (CCtoRISCVCC $cc), valty:$truev, valty:$falsev)>;
 }
 
 let Predicates = [NoConditionalMoveFusion] in
 defm Select_GPR : SelectCC_GPR_rrirr<GPR, XLenVT>;
 
 class SelectCompressOpt<CondCode Cond>
-    : Pat<(riscv_selectcc_frag:$select (XLenVT GPR:$lhs), simm12_no6:$Constant, Cond,
-                                       (XLenVT GPR:$truev), GPR:$falsev),
-    (Select_GPR_Using_CC_GPR (XLenVT (ADDI GPR:$lhs, (NegImm simm12_lo:$Constant))), (XLenVT X0),
-                          (IntCCtoRISCVCC $select), GPR:$truev, GPR:$falsev)>;
+    : Pat<(riscv_selectcc (XLenVT GPR:$lhs), simm12_no6:$Constant, Cond:$cc,
+                          (XLenVT GPR:$truev), GPR:$falsev),
+          (Select_GPR_Using_CC_GPR (XLenVT (ADDI GPR:$lhs,
+                                                 (NegImm simm12_lo:$Constant))),
+                                   (XLenVT X0),
+                                   (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 
 def OptForMinSize : Predicate<"MF ? MF->getFunction().hasMinSize() : false">;
 
-let Predicates = [HasStdExtC, OptForMinSize] in {
+let Predicates = [HasStdExtZca, OptForMinSize] in {
   def : SelectCompressOpt<SETEQ>;
   def : SelectCompressOpt<SETNE>;
 }
@@ -1701,6 +1706,7 @@ def : Pat<(i32 (setlt (i32 GPR:$rs1), 0)), (SRLI GPR:$rs1, 31)>; // compressible
 let Predicates = [IsRV64] in {
 def : Pat<(i64 (setlt (i64 GPR:$rs1), 0)), (SRLI GPR:$rs1, 63)>; // compressible
 def : Pat<(i64 (setlt (sext_inreg GPR:$rs1, i32), 0)), (SRLIW GPR:$rs1, 31)>;
+def : Pat<(i64 (setlt (shl GPR:$rs1, (i64 32)), 0)), (SRLIW GPR:$rs1, 31)>;
 }
 
 /// Branches and jumps
@@ -2347,6 +2353,7 @@ include "RISCVInstrInfoZk.td"
 
 // Vector
 include "RISCVInstrInfoV.td"
+include "RISCVInstrInfoZvabd.td"
 include "RISCVInstrInfoZvk.td"
 include "RISCVInstrInfoZvqdotq.td"
 include "RISCVInstrInfoZvfofp8min.td"
@@ -2382,6 +2389,7 @@ include "RISCVInstrInfoXMips.td"
 include "RISCVInstrInfoXRivos.td"
 include "RISCVInstrInfoXAndes.td"
 include "RISCVInstrInfoXSpacemiT.td"
+include "RISCVInstrInfoXAIF.td"
 
 //===----------------------------------------------------------------------===//
 // Global ISel

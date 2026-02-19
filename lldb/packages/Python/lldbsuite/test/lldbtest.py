@@ -406,13 +406,24 @@ class _BaseProcess(object, metaclass=abc.ABCMeta):
 
 class _LocalProcess(_BaseProcess):
     def __init__(self, trace_on):
-        self._proc = None
+        self._proc: Optional[Popen] = None
         self._trace_on = trace_on
         self._delayafterterminate = 0.1
 
     @property
     def pid(self):
+        assert self._proc is not None, "No process"
         return self._proc.pid
+
+    @property
+    def stdout(self):
+        assert self._proc is not None, "No process"
+        return self._proc.stdout
+
+    @property
+    def stderr(self):
+        assert self._proc is not None, "No process"
+        return self._proc.stderr
 
     def launch(self, executable, args, extra_env, **kwargs):
         env = None
@@ -557,6 +568,11 @@ class Base(unittest.TestCase):
     # Time to wait before the next launching attempt in second(s).
     # Can be overridden by the LLDB_TIME_WAIT_NEXT_LAUNCH environment variable.
     timeWaitNextLaunch = 1.0
+
+    # Some test case classes require a separate build directory for each test
+    # function. Subclasses can set this to False in those cases. This slows down
+    # the test, but provides isolation where needed.
+    SHARED_BUILD_TESTCASE = True
 
     @staticmethod
     def compute_mydir(test_file):
@@ -743,7 +759,10 @@ class Base(unittest.TestCase):
         return os.path.join(configuration.test_src_root, self.mydir)
 
     def getBuildDirBasename(self):
-        return self.__class__.__module__ + "." + self.testMethodName
+        if self.SHARED_BUILD_TESTCASE:
+            return self.__class__.__module__
+        else:
+            return self.__class__.__module__ + "." + self.testMethodName
 
     def getBuildDir(self):
         """Return the full path to the current test."""
@@ -752,10 +771,10 @@ class Base(unittest.TestCase):
         )
 
     def makeBuildDir(self):
-        """Create the test-specific working directory, deleting any previous
-        contents."""
+        """Create the test-specific working directory, optionally deleting any
+        previous contents."""
         bdir = self.getBuildDir()
-        if os.path.isdir(bdir):
+        if os.path.isdir(bdir) and not self.SHARED_BUILD_TESTCASE:
             shutil.rmtree(bdir)
         lldbutil.mkdir_p(bdir)
 
@@ -1394,6 +1413,9 @@ class Base(unittest.TestCase):
     def isAArch64FPMR(self):
         return self.isAArch64() and self.isSupported(cpu_feature.AArch64.FPMR)
 
+    def isAArch64POE(self):
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.POE)
+
     def isAArch64Windows(self):
         """Returns true if the architecture is AArch64 and platform windows."""
         if self.getPlatform() == "windows":
@@ -1789,6 +1811,9 @@ class LLDBTestCaseFactory(type):
         )
         if original_testcase.NO_DEBUG_INFO_TESTCASE:
             return original_testcase
+
+        if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
+            original_testcase.SHARED_BUILD_TESTCASE = False
 
         # Default implementation for skip/xfail reason based on the debug category,
         # where "None" means to run the test as usual.
@@ -2336,7 +2361,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
             msg="FileCheck'ing result of `{0}`".format(command),
         )
 
-        self.assertTrue((not expect_cmd_failure) == self.res.Succeeded())
+        self.assertNotEqual(expect_cmd_failure, self.res.Succeeded())
 
         # Get the error text if there was an error, and the regular text if not.
         output = self.res.GetOutput() if self.res.Succeeded() else self.res.GetError()
@@ -2384,7 +2409,7 @@ FileCheck output:
         with recording(self, trace) as sbuf:
             print(filecheck_trace, file=sbuf)
 
-        self.assertTrue(cmd_status == 0)
+        self.assertEqual(cmd_status, 0)
 
     def expect(
         self,
@@ -2564,6 +2589,7 @@ FileCheck output:
         result_value=None,
         result_type=None,
         result_children=None,
+        options=None,
     ):
         """
         Evaluates the given expression and verifies the result.
@@ -2573,6 +2599,7 @@ FileCheck output:
         :param result_type: The type that the expression result should have. None if the type should not be checked.
         :param result_children: The expected children of the expression result
                                 as a list of ValueChecks. None if the children shouldn't be checked.
+        :param options: Expression evaluation options. None if a default set of options should be used.
         """
         self.assertTrue(
             expr.strip() == expr,
@@ -2580,13 +2607,15 @@ FileCheck output:
         )
 
         frame = self.frame()
-        options = lldb.SBExpressionOptions()
 
-        # Disable fix-its that tests don't pass by accident.
-        options.SetAutoApplyFixIts(False)
+        if not options:
+            options = lldb.SBExpressionOptions()
 
-        # Set the usual default options for normal expressions.
-        options.SetIgnoreBreakpoints(True)
+            # Disable fix-its that tests don't pass by accident.
+            options.SetAutoApplyFixIts(False)
+
+            # Set the usual default options for normal expressions.
+            options.SetIgnoreBreakpoints(True)
 
         if self.frame().IsValid():
             options.SetLanguage(frame.GuessLanguage())

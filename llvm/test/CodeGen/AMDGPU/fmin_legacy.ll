@@ -81,9 +81,9 @@ define amdgpu_kernel void @s_test_fmin_legacy_ule_f32_fast(ptr addrspace(1) %out
 
 ; VI-DAG: v_add_f32_e64 [[ADD_A:v[0-9]+]], s[[#LOAD + 2]], 1.0
 ; VI-DAG: v_add_f32_e64 [[ADD_B:v[0-9]+]], s[[#LOAD + 3]], 2.0
-; SI: v_min_legacy_f32_e32 {{v[0-9]+}}, [[ADD_B]], [[ADD_A]]
+; SI: v_min_legacy_f32_e32 {{v[0-9]+}}, [[ADD_A]], [[ADD_B]]
 
-; VI: v_cmp_ngt_f32_e32 vcc, [[ADD_A]], [[ADD_B]]
+; VI: v_cmp_le_f32_e32 vcc, [[ADD_A]], [[ADD_B]]
 ; VI: v_cndmask_b32_e32 {{v[0-9]+}}, [[ADD_B]], [[ADD_A]], vcc
 define amdgpu_kernel void @s_test_fmin_legacy_ule_f32_nnan_src(ptr addrspace(1) %out, float %a, float %b) #0 {
   %a.nnan = fadd nnan float %a, 1.0

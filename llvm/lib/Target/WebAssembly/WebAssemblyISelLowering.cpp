@@ -190,7 +190,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   if (Subtarget->hasRelaxedSIMD()) {
     setOperationAction(
         {ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXNUM, ISD::FMAXIMUMNUM},
-        {MVT::v4f32, MVT::v2f64}, Legal);
+        {MVT::v4f32, MVT::v2f64}, Custom);
   }
   // SIMD-specific configuration
   if (Subtarget->hasSIMD128()) {
@@ -270,11 +270,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // There is no i8x16.mul instruction
     setOperationAction(ISD::MUL, MVT::v16i8, Expand);
-
-    // There is no vector conditional select instruction
-    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
-                   MVT::v2f64})
-      setOperationAction(ISD::SELECT_CC, T, Expand);
 
     // Expand integer operations supported for scalars but not SIMD
     for (auto Op :
@@ -370,6 +365,16 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto Op : {ISD::BR_CC, ISD::SELECT_CC})
       setOperationAction(Op, T, Expand);
 
+  if (Subtarget->hasReferenceTypes())
+    for (auto Op : {ISD::BR_CC, ISD::SELECT_CC})
+      for (auto T : {MVT::externref, MVT::funcref})
+        setOperationAction(Op, T, Expand);
+
+  // There is no vector conditional select instruction
+  for (auto T :
+       {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64, MVT::v2f64})
+    setOperationAction(ISD::SELECT_CC, T, Expand);
+
   // We have custom switch handling.
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
 
@@ -442,7 +447,8 @@ MVT WebAssemblyTargetLowering::getPointerMemTy(const DataLayout &DL,
 }
 
 TargetLowering::AtomicExpansionKind
-WebAssemblyTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+WebAssemblyTargetLowering::shouldExpandAtomicRMWInIR(
+    const AtomicRMWInst *AI) const {
   // We have wasm instructions for these
   switch (AI->getOperation()) {
   case AtomicRMWInst::Add:
@@ -479,8 +485,9 @@ bool WebAssemblyTargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
 }
 
 FastISel *WebAssemblyTargetLowering::createFastISel(
-    FunctionLoweringInfo &FuncInfo, const TargetLibraryInfo *LibInfo) const {
-  return WebAssembly::createFastISel(FuncInfo, LibInfo);
+    FunctionLoweringInfo &FuncInfo, const TargetLibraryInfo *LibInfo,
+    const LibcallLoweringInfo *LibcallLowering) const {
+  return WebAssembly::createFastISel(FuncInfo, LibInfo, LibcallLowering);
 }
 
 MVT WebAssemblyTargetLowering::getScalarShiftAmountTy(const DataLayout & /*DL*/,
@@ -1063,10 +1070,10 @@ EVT WebAssemblyTargetLowering::getSetCCResultType(const DataLayout &DL,
   return EVT::getIntegerVT(C, 32);
 }
 
-bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                                   const CallBase &I,
-                                                   MachineFunction &MF,
-                                                   unsigned Intrinsic) const {
+void WebAssemblyTargetLowering::getTgtMemIntrinsic(
+    SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
+    MachineFunction &MF, unsigned Intrinsic) const {
+  IntrinsicInfo Info;
   switch (Intrinsic) {
   case Intrinsic::wasm_memory_atomic_notify:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -1081,7 +1088,8 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     // instructions are treated as volatiles in the backend, so we should be
     // consistent. The same applies for wasm_atomic_wait intrinsics too.
     Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
-    return true;
+    Infos.push_back(Info);
+    return;
   case Intrinsic::wasm_memory_atomic_wait32:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i32;
@@ -1089,7 +1097,8 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align = Align(4);
     Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
-    return true;
+    Infos.push_back(Info);
+    return;
   case Intrinsic::wasm_memory_atomic_wait64:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i64;
@@ -1097,7 +1106,8 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align = Align(8);
     Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
-    return true;
+    Infos.push_back(Info);
+    return;
   case Intrinsic::wasm_loadf16_f32:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::f16;
@@ -1105,7 +1115,8 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align = Align(2);
     Info.flags = MachineMemOperand::MOLoad;
-    return true;
+    Infos.push_back(Info);
+    return;
   case Intrinsic::wasm_storef16_f32:
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = MVT::f16;
@@ -1113,9 +1124,10 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align = Align(2);
     Info.flags = MachineMemOperand::MOStore;
-    return true;
+    Infos.push_back(Info);
+    return;
   default:
-    return false;
+    return;
   }
 }
 
@@ -1669,6 +1681,7 @@ void WebAssemblyTargetLowering::ReplaceNodeResults(
     // SIGN_EXTEND_INREG, but for non-vector sign extends the result might be an
     // illegal type.
     break;
+  case ISD::ANY_EXTEND_VECTOR_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
   case ISD::ZERO_EXTEND_VECTOR_INREG:
     // Do not add any results, signifying that N should not be custom lowered.
@@ -1745,6 +1758,12 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
     return LowerFP_TO_INT_SAT(Op, DAG);
+  case ISD::FMINNUM:
+  case ISD::FMINIMUMNUM:
+    return LowerFMIN(Op, DAG);
+  case ISD::FMAXNUM:
+  case ISD::FMAXIMUMNUM:
+    return LowerFMAX(Op, DAG);
   case ISD::LOAD:
     return LowerLoad(Op, DAG);
   case ISD::STORE:
@@ -2280,13 +2299,14 @@ WebAssemblyTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
 
 static SDValue GetExtendHigh(SDValue Op, unsigned UserOpc, EVT VT,
                              SelectionDAG &DAG) {
-  if (Op.getOpcode() != ISD::VECTOR_SHUFFLE)
+  SDValue Source = peekThroughBitcasts(Op);
+  if (Source.getOpcode() != ISD::VECTOR_SHUFFLE)
     return SDValue();
 
   assert((UserOpc == WebAssemblyISD::EXTEND_LOW_U ||
           UserOpc == WebAssemblyISD::EXTEND_LOW_S) &&
          "expected extend_low");
-  auto *Shuffle = cast<ShuffleVectorSDNode>(Op.getNode());
+  auto *Shuffle = cast<ShuffleVectorSDNode>(Source.getNode());
 
   ArrayRef<int> Mask = Shuffle->getMask();
   // Look for a shuffle which moves from the high half to the low half.
@@ -2301,7 +2321,11 @@ static SDValue GetExtendHigh(SDValue Op, unsigned UserOpc, EVT VT,
   unsigned Opc = UserOpc == WebAssemblyISD::EXTEND_LOW_S
                      ? WebAssemblyISD::EXTEND_HIGH_S
                      : WebAssemblyISD::EXTEND_HIGH_U;
-  return DAG.getNode(Opc, DL, VT, Shuffle->getOperand(0));
+  SDValue ShuffleSrc = Shuffle->getOperand(0);
+  if (Op.getOpcode() == ISD::BITCAST)
+    ShuffleSrc = DAG.getBitcast(Op.getValueType(), ShuffleSrc);
+
+  return DAG.getNode(Opc, DL, VT, ShuffleSrc);
 }
 
 SDValue
@@ -2856,6 +2880,33 @@ SDValue WebAssemblyTargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
   return SDValue();
 }
 
+static bool HasNoSignedZerosOrNaNs(SDValue Op, SelectionDAG &DAG) {
+  return (Op->getFlags().hasNoNaNs() ||
+          (DAG.isKnownNeverNaN(Op->getOperand(0)) &&
+           DAG.isKnownNeverNaN(Op->getOperand(1)))) &&
+         (Op->getFlags().hasNoSignedZeros() ||
+          DAG.isKnownNeverZeroFloat(Op->getOperand(0)) ||
+          DAG.isKnownNeverZeroFloat(Op->getOperand(1)));
+}
+
+SDValue WebAssemblyTargetLowering::LowerFMIN(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  if (Subtarget->hasRelaxedSIMD() && HasNoSignedZerosOrNaNs(Op, DAG)) {
+    return DAG.getNode(WebAssemblyISD::RELAXED_FMIN, SDLoc(Op),
+                       Op.getValueType(), Op.getOperand(0), Op.getOperand(1));
+  }
+  return SDValue();
+}
+
+SDValue WebAssemblyTargetLowering::LowerFMAX(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  if (Subtarget->hasRelaxedSIMD() && HasNoSignedZerosOrNaNs(Op, DAG)) {
+    return DAG.getNode(WebAssemblyISD::RELAXED_FMAX, SDLoc(Op),
+                       Op.getValueType(), Op.getOperand(0), Op.getOperand(1));
+  }
+  return SDValue();
+}
+
 //===----------------------------------------------------------------------===//
 //   Custom DAG combine hooks
 //===----------------------------------------------------------------------===//
@@ -3235,7 +3286,7 @@ static SDValue performBitcastCombine(SDNode *N,
 
   // bitcast <N x i1>(setcc ...) to concat iN, where N = 32 and 64 (illegal)
   if (NumElts == 32 || NumElts == 64) {
-    // Strategy: We will setcc them seperately in v16i8 -> v16i1
+    // Strategy: We will setcc them separately in v16i8 -> v16i1
     // Bitcast them to i16, extend them to either i32 or i64.
     // Add them together, shifting left 1 by 1.
     SDValue Concat, SetCCVector;

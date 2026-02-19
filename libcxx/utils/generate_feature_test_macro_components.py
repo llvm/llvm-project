@@ -562,7 +562,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_flat_set",
-            "values": {"c++23": 202207},
+            "values": {"c++23": 202511},
             "headers": ["flat_set"],
         },
         {
@@ -1169,7 +1169,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_zip",
             "values": {"c++23": 202110},
             "headers": ["ranges", "tuple", "utility"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ratio",
@@ -1271,7 +1270,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_shift",
-            "values": {"c++20": 201806},
+            "values": {"c++20": 201806, "c++23": 202202},
             "headers": ["algorithm"],
         },
         {

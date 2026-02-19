@@ -98,6 +98,10 @@ std::string MessageExpectedText::ToString() const {
   return common::visit(
       common::visitors{
           [](CharBlock cb) {
+            if (!cb.empty() && cb.back() == ' ') {
+              // Omit any trailing blank in the expected token string.
+              cb = CharBlock{cb.begin(), cb.size() - 1};
+            }
             return MessageFormattedText("expected '%s'"_err_en_US, cb)
                 .MoveString();
           },

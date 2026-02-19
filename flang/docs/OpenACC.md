@@ -30,6 +30,12 @@ local:
 * The OpenACC specification disallows a variable appearing multiple times in
   clauses of `!$acc declare` directives for a function, subroutine, program,
   or module, but it is allowed with a warning when same clause is used.
+* The OpenACC specification does not prohibit the same variable from appearing
+  in multiple data clauses, but this is disallowed for variables appearing in
+  `private`, `firstprivate`, or `reduction` clauses.
+* The OpenACC specification does not prohibit the same variable from appearing
+  multiple times in a `use_device` clause on a `host_data` construct, but this
+  is disallowed.
 
 ## Remarks about incompatibilities with other implementations
 * Array element references in the data clauses are equivalent to array sections

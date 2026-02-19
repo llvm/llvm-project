@@ -15,8 +15,8 @@ class VOP2e <bits<6> op, VOPProfile P> : Enc32 {
   bits<9> src0;
   bits<8> src1;
 
-  let Inst{8-0}   = !if(P.HasSrc0, src0, 0);
-  let Inst{16-9}  = !if(P.HasSrc1, src1, 0);
+  let Inst{8-0}   = !if(P.HasSrc0, src0, ?);
+  let Inst{16-9}  = !if(P.HasSrc1, src1, ?);
   let Inst{24-17} = !if(P.EmitDst, vdst, 0);
   let Inst{30-25} = op;
   let Inst{31}    = 0x0; //encoding
@@ -28,8 +28,8 @@ class VOP2_MADKe <bits<6> op, VOPProfile P> : Enc64 {
   bits<8>  src1;
   bits<32> imm;
 
-  let Inst{8-0}   = !if(P.HasSrc0, src0, 0);
-  let Inst{16-9}  = !if(P.HasSrc1, src1, 0);
+  let Inst{8-0}   = !if(P.HasSrc0, src0, ?);
+  let Inst{16-9}  = !if(P.HasSrc1, src1, ?);
   let Inst{24-17} = !if(P.EmitDst, vdst, 0);
   let Inst{30-25} = op;
   let Inst{31}    = 0x0; // encoding
@@ -42,8 +42,8 @@ class VOP2_MADK64e <bits<6> op, VOPProfile P> : Enc96 {
   bits<8>  src1;
   bits<64> imm;
 
-  let Inst{8-0}   = !if(P.HasSrc0, src0, 0);
-  let Inst{16-9}  = !if(P.HasSrc1, src1, 0);
+  let Inst{8-0}   = !if(P.HasSrc0, src0, ?);
+  let Inst{16-9}  = !if(P.HasSrc1, src1, ?);
   let Inst{24-17} = !if(P.EmitDst, vdst, 0);
   let Inst{30-25} = op;
   let Inst{31}    = 0x0; // encoding
@@ -55,7 +55,7 @@ class VOP2_SDWAe <bits<6> op, VOPProfile P> : VOP_SDWAe <P> {
   bits<8> src1;
 
   let Inst{8-0}   = 0xf9; // sdwa
-  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, 0);
+  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, ?);
   let Inst{24-17} = !if(P.EmitDst, vdst{7-0}, 0);
   let Inst{30-25} = op;
   let Inst{31}    = 0x0; // encoding
@@ -66,11 +66,11 @@ class VOP2_SDWA9Ae <bits<6> op, VOPProfile P> : VOP_SDWA9Ae <P> {
   bits<9> src1;
 
   let Inst{8-0}   = 0xf9; // sdwa
-  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, 0);
+  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, ?);
   let Inst{24-17} = !if(P.EmitDst, vdst{7-0}, 0);
   let Inst{30-25} = op;
   let Inst{31}    = 0x0; // encoding
-  let Inst{63}    = !if(P.HasSrc1, src1{8}, 0); // src1_sgpr
+  let Inst{63}    = !if(P.HasSrc1, src1{8}, ?); // src1_sgpr
 }
 
 class VOP2_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], string suffix = "_e32"> :
@@ -1348,10 +1348,15 @@ let isCommutable = 1 in
 def V_FMAAK_F64 : VOP2_Pseudo<"v_fmaak_f64", VOP_MADAK_F64, [], "">;
 } // End SubtargetPredicate = HasFmaakFmamkF64Insts, isReMaterializable = 1, FixedSize = 1, Size = 12, SchedRW = [Write64Bit]
 
+// A dedicated profile for V_PK_FMAC_F16.
+def VOP_V2F16_V2F16_V2F16_SPLAT : VOPProfile <[v2f16, v2f16, v2f16, untyped]> {
+  let Src0RC32 = VSrc_v2f16_splat;
+}
+
 let SubtargetPredicate = HasPkFmacF16Inst in {
 // FIXME: V_PK_FMAC_F16 is currently not used in instruction selection.
 // If this changes, ensure the DPP variant is not used for GFX11+.
-defm V_PK_FMAC_F16 : VOP2Inst<"v_pk_fmac_f16", VOP_V2F16_V2F16_V2F16>;
+defm V_PK_FMAC_F16 : VOP2Inst<"v_pk_fmac_f16", VOP_V2F16_V2F16_V2F16_SPLAT>;
 } // End SubtargetPredicate = HasPkFmacF16Inst
 
 // Note: 16-bit instructions produce a 0 result in the high 16-bits
@@ -1502,7 +1507,7 @@ class VOP2_DPP<bits<6> op, VOP2_DPP_Pseudo ps,
   bits<8> vdst;
   bits<8> src1;
   let Inst{8-0}   = 0xfa;
-  let Inst{16-9}  = !if(p.HasSrc1, src1{7-0}, 0);
+  let Inst{16-9}  = !if(p.HasSrc1, src1{7-0}, ?);
   let Inst{24-17} = !if(p.EmitDst, vdst{7-0}, 0);
   let Inst{30-25} = op;
   let Inst{31}    = 0x0;
@@ -1544,7 +1549,7 @@ class VOP2_DPP8<bits<6> op, VOP2_Pseudo ps,
   bits<8> src1;
 
   let Inst{8-0}   = fi;
-  let Inst{16-9}  = !if(p.HasSrc1, src1{7-0}, 0);
+  let Inst{16-9}  = !if(p.HasSrc1, src1{7-0}, ?);
   let Inst{24-17} = !if(p.EmitDst, vdst{7-0}, 0);
   let Inst{30-25} = op;
   let Inst{31}    = 0x0;
@@ -2346,7 +2351,7 @@ class VOP2_DPPe <bits<6> op, VOP2_DPP_Pseudo ps, VOPProfile P = ps.Pfl> :
   bits<8> vdst;
   bits<8> src1;
   let Inst{8-0}   = 0xfa; //dpp
-  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, 0);
+  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, ?);
   let Inst{24-17} = !if(P.EmitDst, vdst{7-0}, 0);
   let Inst{30-25} = op;
   let Inst{31}    = 0x0; //encoding

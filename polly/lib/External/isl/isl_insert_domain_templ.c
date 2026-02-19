@@ -18,7 +18,7 @@ __isl_give TYPE *FN(TYPE,insert_domain)(__isl_take TYPE *obj,
 	isl_space *obj_space;
 
 	obj_space = FN(TYPE,peek_space)(obj);
-	if (isl_space_check_is_set(domain) < 0 ||
+	if (isl_space_check_is_proper_set(domain) < 0 ||
 	    isl_space_check_is_set(obj_space) < 0)
 		goto error;
 	dim = isl_space_dim(domain, isl_dim_set);

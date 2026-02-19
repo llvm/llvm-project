@@ -35,8 +35,8 @@ public:
 
   const RISCVSubtarget &getSubtarget() const { return Subtarget; }
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                          MachineFunction &MF,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                          const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
                              unsigned AS,
@@ -70,6 +70,8 @@ public:
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
   bool preferScalarizeSplat(SDNode *N) const override;
+
+  void finalizeLowering(MachineFunction &MF) const override;
 
   /// Customize the preferred legalization strategy for certain types.
   LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
@@ -307,13 +309,13 @@ public:
                                    SDValue ConstNode) const override;
 
   TargetLowering::AtomicExpansionKind
-  shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
   Value *emitMaskedAtomicRMWIntrinsic(IRBuilderBase &Builder, AtomicRMWInst *AI,
                                       Value *AlignedAddr, Value *Incr,
                                       Value *Mask, Value *ShiftAmt,
                                       AtomicOrdering Ord) const override;
   TargetLowering::AtomicExpansionKind
-  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CI) const override;
+  shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *CI) const override;
   Value *emitMaskedAtomicCmpXchgIntrinsic(IRBuilderBase &Builder,
                                           AtomicCmpXchgInst *CI,
                                           Value *AlignedAddr, Value *CmpVal,
@@ -409,7 +411,8 @@ public:
 
   /// If the target has a standard location for the stack protector cookie,
   /// returns the address of that location. Otherwise, returns nullptr.
-  Value *getIRStackGuard(IRBuilderBase &IRB) const override;
+  Value *getIRStackGuard(IRBuilderBase &IRB,
+                         const LibcallLoweringInfo &Libcalls) const override;
 
   /// Returns whether or not generating a interleaved load/store intrinsic for
   /// this type will be legal.

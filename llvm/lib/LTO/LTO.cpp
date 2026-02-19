@@ -393,6 +393,9 @@ static void thinLTOResolvePrevailingGUID(
     // FIXME: We may want to split the compile time and correctness
     // aspects into separate routines.
     if (isPrevailing(VI.getGUID(), S.get())) {
+      assert(!S->wasPromoted() &&
+             "promoted symbols used to be internal linkage and shouldn't have "
+             "a prevailing variant");
       if (GlobalValue::isLinkOnceLinkage(OriginalLinkage)) {
         S->setLinkage(GlobalValue::getWeakLinkage(
             GlobalValue::isLinkOnceODRLinkage(OriginalLinkage)));
@@ -415,8 +418,11 @@ static void thinLTOResolvePrevailingGUID(
     // When force-import-all is used, it indicates that object linking is not
     // supported by the target. In this case, we can't change the linkage as
     // well in case the global is converted to declaration.
+    // Also, if the symbol was promoted, it wouldn't have a prevailing variant,
+    // but also its linkage is set correctly (to External) already.
     else if (!isa<AliasSummary>(S.get()) &&
-             !GlobalInvolvedWithAlias.count(S.get()) && !ForceImportAll)
+             !GlobalInvolvedWithAlias.count(S.get()) && !ForceImportAll &&
+             !S->wasPromoted())
       S->setLinkage(GlobalValue::AvailableExternallyLinkage);
 
     // For ELF, set visibility to the computed visibility from summaries. We
@@ -485,7 +491,7 @@ static void thinLTOInternalizeAndPromoteGUID(
     // exported.
     if (isExported(S->modulePath(), VI)) {
       if (GlobalValue::isLocalLinkage(S->linkage()))
-        S->setLinkage(GlobalValue::ExternalLinkage);
+        S->promote();
       continue;
     }
 
@@ -597,6 +603,11 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
   return std::move(File);
 }
 
+bool InputFile::Symbol::isLibcall(
+    const RTLIB::RuntimeLibcallsInfo &Libcalls) const {
+  return Libcalls.getSupportedLibcallImpl(IRName) != RTLIB::Unsupported;
+}
+
 StringRef InputFile::getName() const {
   return Mods[0].getModuleIdentifier();
 }
@@ -605,6 +616,8 @@ BitcodeModule &InputFile::getSingleBitcodeModule() {
   assert(Mods.size() == 1 && "Expect only one bitcode module");
   return Mods[0];
 }
+
+BitcodeModule &InputFile::getPrimaryBitcodeModule() { return Mods[0]; }
 
 LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
                                       const Config &Conf)
@@ -640,11 +653,13 @@ LTO::~LTO() = default;
 // their partitions.
 void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
                                ArrayRef<SymbolResolution> Res,
-                               unsigned Partition, bool InSummary) {
+                               unsigned Partition, bool InSummary,
+                               const Triple &TT) {
   llvm::TimeTraceScope timeScope("LTO add module to global resolution");
   auto *ResI = Res.begin();
   auto *ResE = Res.end();
   (void)ResE;
+  RTLIB::RuntimeLibcallsInfo Libcalls(TT);
   for (const InputFile::Symbol &Sym : Syms) {
     assert(ResI != ResE);
     SymbolResolution Res = *ResI++;
@@ -687,11 +702,14 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
       GlobalRes.VisibleOutsideSummary = true;
     }
 
+    bool IsLibcall = Sym.isLibcall(Libcalls);
+
     // Set the partition to external if we know it is re-defined by the linker
     // with -defsym or -wrap options, used elsewhere, e.g. it is visible to a
     // regular object, is referenced from llvm.compiler.used/llvm.used, or was
     // already recorded as being referenced from a different partition.
     if (Res.LinkerRedefined || Res.VisibleToRegularObj || Sym.isUsed() ||
+        IsLibcall ||
         (GlobalRes.Partition != GlobalResolution::Unknown &&
          GlobalRes.Partition != Partition)) {
       GlobalRes.Partition = GlobalResolution::External;
@@ -702,7 +720,7 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     // Flag as visible outside of summary if visible from a regular object or
     // from a module that does not have a summary.
     GlobalRes.VisibleOutsideSummary |=
-        (Res.VisibleToRegularObj || Sym.isUsed() || !InSummary);
+        (Res.VisibleToRegularObj || Sym.isUsed() || IsLibcall || !InSummary);
 
     GlobalRes.ExportDynamic |= Res.ExportDynamic;
   }
@@ -804,12 +822,12 @@ LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
   // If any of the modules inside of a input bitcode file was compiled with
   // ThinLTO, we assume that the whole input file also was compiled with
   // ThinLTO.
-  Input.IsThinLTO = IsThinLTO;
+  Input.IsThinLTO |= IsThinLTO;
 
   auto ModSyms = Input.module_symbols(ModI);
   addModuleToGlobalRes(ModSyms, Res,
                        IsThinLTO ? ThinLTO.ModuleMap.size() + 1 : 0,
-                       LTOInfo->HasSummary);
+                       LTOInfo->HasSummary, Triple(Input.getTargetTriple()));
 
   if (IsThinLTO)
     return addThinLTO(BM, ModSyms, Res);
@@ -1215,7 +1233,9 @@ Error LTO::checkPartiallySplit() {
 }
 
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
-  if (Error EC = handleArchiveInputs())
+  llvm::scope_exit CleanUp([this]() { cleanup(); });
+
+  if (Error EC = serializeInputsForDistribution())
     return EC;
 
   // Compute "dead" symbols, we don't want to import/export these!
@@ -1311,7 +1331,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       // Don't do anything if no instance of this common was prevailing.
       continue;
     GlobalVariable *OldGV = RegularLTO.CombinedModule->getNamedGlobal(I.first);
-    if (OldGV && DL.getTypeAllocSize(OldGV->getValueType()) == I.second.Size) {
+    if (OldGV && OldGV->getGlobalSize(DL) == I.second.Size) {
       // Don't create a new global if the type is already correct, just make
       // sure the alignment is correct.
       OldGV->setAlignment(I.second.Alignment);

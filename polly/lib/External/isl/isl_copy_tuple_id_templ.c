@@ -7,13 +7,17 @@
  * Cerebras Systems, 175 S San Antonio Rd, Los Altos, CA, USA
  */
 
-#define xFN(TYPE,NAME) TYPE ## _ ## NAME
-#define FN(TYPE,NAME) xFN(TYPE,NAME)
+#define xCAT(A,B) A ## B
+#define CAT(A,B) xCAT(A,B)
+#undef TYPE
+#define TYPE CAT(isl_,BASE)
+#define xBFN(BASE,NAME) isl_ ## BASE ## _ ## NAME
+#define BFN(BASE,NAME) xBFN(BASE,NAME)
 
 /* Copy the identifier of tuple "src_type" in "src"
  * to that of "dst_type" in "dst", if there is any such identifier.
  */
-__isl_give TYPE *FN(TYPE,copy_tuple_id)(__isl_take TYPE *dst,
+__isl_give TYPE *BFN(BASE,copy_tuple_id)(__isl_take TYPE *dst,
 	enum isl_dim_type dst_type, __isl_keep isl_space *src,
 	enum isl_dim_type src_type)
 {

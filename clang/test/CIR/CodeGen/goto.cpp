@@ -24,12 +24,11 @@ err:
 // CIR:    cir.return [[RET]] : !s32i
 // CIR:  ^bb2:
 // CIR:    cir.label "err"
-// CIR:    [[ONE:%.*]] = cir.const #cir.int<1> : !s32i
-// CIR:    [[MINUS:%.*]] = cir.unary(minus, [[ONE]]) nsw : !s32i, !s32i
-// CIR:    cir.store [[MINUS]], [[RETVAL]] : !s32i, !cir.ptr<!s32i>
+// CIR:    [[MINUS_ONE:%.*]] = cir.const #cir.int<-1> : !s32i
+// CIR:    cir.store [[MINUS_ONE]], [[RETVAL]] : !s32i, !cir.ptr<!s32i>
 // CIR:    cir.br ^bb1
 
-// LLVM: define dso_local i32 @_Z21shouldNotGenBranchReti
+// LLVM: define dso_local noundef i32 @_Z21shouldNotGenBranchReti
 // LLVM:   [[COND:%.*]] = load i32, ptr {{.*}}, align 4
 // LLVM:   [[CMP:%.*]] = icmp sgt i32 [[COND]], 5
 // LLVM:   br i1 [[CMP]], label %[[IFTHEN:.*]], label %[[IFEND:.*]]
@@ -71,7 +70,7 @@ err:
 // CIR:  ^bb1:
 // CIR:    cir.label "err"
 
-// LLVM: define dso_local i32 @_Z15shouldGenBranchi
+// LLVM: define dso_local noundef i32 @_Z15shouldGenBranchi
 // LLVM:   br i1 [[CMP:%.*]], label %[[IFTHEN:.*]], label %[[IFEND:.*]]
 // LLVM: [[IFTHEN]]:
 // LLVM:   br label %[[ERR:.*]]

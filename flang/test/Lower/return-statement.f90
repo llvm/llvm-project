@@ -1,10 +1,10 @@
-! RUN: bbc %s -o "-" -emit-fir -hlfir=false | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o "-" | FileCheck %s
 
 program basic
   return
 end program
 
-! CHECK-LABEL: func @_QQmain() attributes {fir.bindc_name = "BASIC"} {
+! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "BASIC"} {
 ! CHECK:         return
 ! CHECK:       }
 
@@ -12,7 +12,7 @@ subroutine sub1()
   return
 end
 
-! CHECK-LABEL: func @_QPsub1() {
+! CHECK-LABEL: func.func @_QPsub1() {
 ! CHECK:         cf.br ^bb1
 ! CHECK:       ^bb1:  // pred: ^bb0
 ! CHECK:         return
@@ -23,7 +23,7 @@ subroutine sub2()
   3 goto 2
 end
 
-! CHECK-LABEL: func @_QPsub2() {
+! CHECK-LABEL: func.func @_QPsub2() {
 ! CHECK:         cf.br ^bb2
 ! CHECK:       ^bb1:  // pred: ^bb2
 ! CHECK:         cf.br ^bb3

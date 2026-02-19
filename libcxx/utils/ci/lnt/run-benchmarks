@@ -1,0 +1,192 @@
+#!/usr/bin/env python
+# ===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===----------------------------------------------------------------------===##
+
+import argparse
+import json
+import logging
+import os
+import pathlib
+import platform
+import subprocess
+import sys
+import tempfile
+
+
+def directory_path(string):
+    if os.path.isdir(string):
+        return pathlib.Path(string)
+    else:
+        raise NotADirectoryError(string)
+
+def gather_machine_information(args):
+    """
+    Gather the machine information to upload to LNT as part of the submission.
+    """
+    info = {}
+    if platform.system() == 'Darwin':
+        profiler_info = json.loads(subprocess.check_output(['system_profiler', 'SPHardwareDataType', 'SPSoftwareDataType', '-json']).decode())
+        info['hardware'] = profiler_info['SPHardwareDataType'][0]['chip_type']
+        info['os'] = profiler_info['SPSoftwareDataType'][0]['os_version']
+        info['sdk'] = subprocess.check_output(['xcrun', '--show-sdk-version']).decode().strip()
+
+    info['compiler'] = subprocess.check_output([args.compiler, '--version']).decode().strip().splitlines()[0]
+    info['test_suite_commit'] = subprocess.check_output(['git', '-C', args.git_repo, 'rev-parse', args.test_suite_commit]).decode().strip()
+
+    return info
+
+def gather_run_information(args):
+    """
+    Gather the run information to upload to LNT as part of the submission.
+    """
+    info = {}
+    # TODO: For now, we don't include commit information. This happens to be a long string and
+    #       production instances of LNT dont't accept those as part of submissions for the time being.
+    # info['commit_info'] = subprocess.check_output(['git', '-C', args.git_repo, 'show', args.benchmark_commit, '--no-patch']).decode()
+    info['git_sha'] = subprocess.check_output(['git', '-C', args.git_repo, 'rev-parse', args.benchmark_commit]).decode().strip()
+    return info
+
+def dict_to_params(d):
+    """
+    Return a list of 'key=value' strings from a dictionary.
+    """
+    res = []
+    for (k, v) in d.items():
+        res.append(f'{k}={v}')
+    return res
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+        prog='run-benchmarks',
+        description='Benchmark libc++ at the given commit and submit to LNT.')
+    parser.add_argument('--benchmark-commit', type=str, required=True,
+        help='The SHA representing the version of the library to benchmark.')
+    parser.add_argument('--test-suite-commit', type=str, required=True,
+        help='The SHA representing the version of the test suite to use for benchmarking.')
+    parser.add_argument('--compiler', type=str, required=True,
+        help='Path to the compiler to use for testing.')
+    parser.add_argument('--machine', type=str, required=True,
+        help='The name of the machine for reporting LNT results.')
+    parser.add_argument('--test-suite', type=str, required=True,
+        help='The name of the test suite for reporting LNT results.')
+    parser.add_argument('--lnt-url', type=str, required=True,
+        help='The URL of the LNT instance to submit results to.')
+    parser.add_argument('--disable-microbenchmarks', action='store_true',
+        help="Do not run the microbenchmarks, only run SPEC (if possible).")
+    parser.add_argument('--spec-dir', type=pathlib.Path, required=False,
+        help='Optional path to a SPEC installation to use for benchmarking.')
+    parser.add_argument('--git-repo', type=directory_path, default=os.getcwd(),
+        help='Optional path to the Git repository to use. By default, the current working directory is used.')
+    parser.add_argument('--dry-run', action='store_true',
+        help='Do not actually perform any action. Use with -vv to see what would be executed.')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+        help='Verbosity level: passing the option multiple times increases the level.')
+    args = parser.parse_args(argv)
+
+    if args.verbose == 0:
+        logging.basicConfig(level=logging.INFO)
+    elif args.verbose >= 1:
+        logging.basicConfig(level=logging.DEBUG)
+
+    do_spec = args.spec_dir is not None
+    do_micro = not args.disable_microbenchmarks
+    if not (do_spec or do_micro):
+        raise ValueError("You must run at least the microbenchmarks or SPEC")
+
+    def run(command, *posargs, enforce_success=True, **kwargs):
+        command = [str(c) for c in command]
+        logging.debug(f'$ {" ".join(command)}')
+        if args.dry_run:
+            return
+
+        # If we are running with verbose, don't capture any output: just let the subprocess
+        # print anything to stdout and stderr. Otherwise, capture stderr and stdout so we can
+        # diagnose when something goes wrong.
+        try:
+            if not args.verbose:
+                if 'stdout' not in kwargs:
+                    kwargs['stdout'] = subprocess.PIPE
+                if 'stderr' not in kwargs:
+                    kwargs['stderr'] = subprocess.PIPE
+            subprocess.run(command, check=True, *posargs, **kwargs)
+        except subprocess.CalledProcessError as e:
+            if e.stdout:
+                sys.stdout.write(e.stdout.decode())
+            if e.stderr:
+                sys.stderr.write(e.stderr.decode())
+            # If we enforce success, don't swallow the exception
+            if enforce_success:
+                raise
+
+    with tempfile.TemporaryDirectory() as build_dir:
+        build_dir = pathlib.Path(build_dir)
+
+        logging.info('Installing LNT')
+        run(['python', '-m', 'venv', build_dir / '.venv'])
+        run([build_dir / '.venv/bin/pip', 'install', 'llvm-lnt'])
+
+        logging.info(f'Building libc++ at commit {args.benchmark_commit}')
+        run([args.git_repo / 'libcxx/utils/build-at-commit',
+                        '--git-repo', args.git_repo,
+                        '--install-dir', build_dir / 'install',
+                        '--commit', args.benchmark_commit,
+                        '--', '-DCMAKE_BUILD_TYPE=RelWithDebInfo', f'-DCMAKE_CXX_COMPILER={args.compiler}'])
+
+        if do_spec:
+            logging.info(f'Running SPEC benchmarks from {args.test_suite_commit} against libc++ {args.benchmark_commit}')
+            run([args.git_repo / 'libcxx/utils/test-at-commit',
+                        '--git-repo', args.git_repo,
+                        '--build-dir', build_dir / 'spec',
+                        '--test-suite-commit', args.test_suite_commit,
+                        '--libcxx-installation', build_dir / 'install',
+                        '--',
+                        '-j1', '--time-tests',
+                        '--param', f'compiler={args.compiler}',
+                        '--param', 'optimization=speed',
+                        '--param', 'std=c++17',
+                        '--param', f'spec_dir={args.spec_dir}',
+                        build_dir / 'spec/libcxx/test',
+                        '--filter', 'benchmarks/spec.gen.py'],
+                        enforce_success=False)
+            with open(build_dir / 'benchmarks.lnt', 'a') as f:
+                run([args.git_repo / 'libcxx/utils/consolidate-benchmarks', build_dir / 'spec'], stdout=f)
+
+        if do_micro:
+            logging.info(f'Running microbenchmarks from {args.test_suite_commit} against libc++ {args.benchmark_commit}')
+            run([args.git_repo / 'libcxx/utils/test-at-commit',
+                            '--git-repo', args.git_repo,
+                            '--build-dir', build_dir / 'micro',
+                            '--test-suite-commit', args.test_suite_commit,
+                            '--libcxx-installation', build_dir / 'install',
+                            '--',
+                            '-j1', '--time-tests',
+                            '--param', f'compiler={args.compiler}',
+                            '--param', 'optimization=speed',
+                            '--param', 'std=c++26',
+                            build_dir / 'micro/libcxx/test/benchmarks'],
+                            enforce_success=False)
+            with open(build_dir / 'benchmarks.lnt', 'a') as f:
+                run([args.git_repo / 'libcxx/utils/consolidate-benchmarks', build_dir / 'micro'], stdout=f)
+
+        logging.info('Creating JSON report for LNT')
+        order = len(subprocess.check_output(['git', '-C', args.git_repo, 'rev-list', args.benchmark_commit]).splitlines())
+        importreport = [build_dir / '.venv/bin/lnt', 'importreport', '--order', str(order), '--machine', args.machine]
+        for arg in dict_to_params(gather_run_information(args)):
+            importreport += ['--run-info', arg]
+        for arg in dict_to_params(gather_machine_information(args)):
+            importreport += ['--machine-info', arg]
+        importreport += [build_dir / 'benchmarks.lnt', build_dir / 'benchmarks.json']
+        run(importreport)
+
+        logging.info(f'Submitting results to {args.lnt_url}')
+        submission_url = f'{args.lnt_url}/db_default/v4/{args.test_suite}/submitRun'
+        run([build_dir / '.venv/bin/lnt', 'submit', '--ignore-regressions', submission_url, build_dir / 'benchmarks.json'])
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

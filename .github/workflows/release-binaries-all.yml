@@ -4,6 +4,8 @@ permissions:
   contents: read # Default everything to read-only
 
 on:
+  schedule:
+    - cron: "0 0 * * 6"
   workflow_dispatch:
     inputs:
       release-version:
@@ -67,7 +69,7 @@ jobs:
         run: |
           upload="${{ inputs.upload }}"
           release_version="${{ inputs.release-version }}"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ] || [ "${{ github.event_name }}" = "schedule" ]; then
             upload="false"
             release_version=""
           fi
@@ -92,6 +94,7 @@ jobs:
           - ubuntu-22.04-arm
           - macos-14
           - windows-2022
+          - windows-11-arm
 
     uses: ./.github/workflows/release-binaries.yml
     with:

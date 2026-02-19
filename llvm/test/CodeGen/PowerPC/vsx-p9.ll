@@ -137,8 +137,8 @@ entry:
   tail call void (...) @sink(<2 x double> %add.i12)
 ; CHECK: lxv 0, 0(3)
 ; CHECK: lxv 1, 0(3)
-; CHECK: xvadddp 0, 0, 1
-; CHECK: stxv 0,
+; CHECK: xvadddp {{[0-9]+}}, 0, 1
+; CHECK: stxv {{[0-9]+}},
 ; CHECK: bl sink
   ret void
 }

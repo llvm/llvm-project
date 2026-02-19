@@ -1,6 +1,6 @@
 ; Test the HLASM streamer on z/OS to ensure there's no GNU syntax anywhere
 
-; RUN: llc < %s -mtriple=s390x-ibm-zos -emit-gnuas-syntax-on-zos=0 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-ibm-zos | FileCheck %s
 
 @.str = private unnamed_addr constant [10 x i8] c"Hello %s\0A\00", align 2
 @Greeting = global ptr @.str, align 8
@@ -36,8 +36,8 @@ define void @foo() {
 ; CHECK: DC AD(L#EPM_foo_0-L#PPA1_foo_0)
 ; CHECK-LABEL: L#.str DS 0H
 ; CHECK: DC XL10'48656C6C6F2025730A00'
+; CHECK: Greeting XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(EXPORT)
 ; CHECK: DS 0B
-; CHECK-LABEL: Greeting DS 0H
 ; CHECK: DC AD(L#.str)
 ; CHECK: DS 0B
 ; CHECK-LABEL: L#.str.1 DS 0H

@@ -38,6 +38,7 @@
 #include "lldb/Target/Thread.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -702,9 +703,9 @@ static llvm::Error Evaluate_DW_OP_entry_value(DWARFExpression::Stack &stack,
     // produced by an ambiguous tail call. In this case, refuse to proceed.
     call_edge = parent_func->GetCallEdgeForReturnAddress(return_pc, target);
     if (!call_edge) {
-      return llvm::createStringError(
-          llvm::formatv("no call edge for retn-pc = {0:x} in parent frame {1}",
-                        return_pc, parent_func->GetName()));
+      return llvm::createStringErrorV(
+          "no call edge for retn-pc = {0:x} in parent frame {1}", return_pc,
+          parent_func->GetName());
     }
     Function *callee_func = call_edge->GetCallee(modlist, parent_exe_ctx);
     if (callee_func != current_func) {
@@ -1521,9 +1522,9 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       if (new_offset <= opcodes.GetByteSize())
         offset = new_offset;
       else {
-        return llvm::createStringError(llvm::formatv(
+        return llvm::createStringErrorV(
             "Invalid opcode offset in DW_OP_skip: {0}+({1}) > {2}", offset,
-            skip_offset, opcodes.GetByteSize()));
+            skip_offset, opcodes.GetByteSize());
       }
     } break;
 
@@ -1547,9 +1548,9 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         if (new_offset <= opcodes.GetByteSize())
           offset = new_offset;
         else {
-          return llvm::createStringError(llvm::formatv(
+          return llvm::createStringErrorV(
               "Invalid opcode offset in DW_OP_bra: {0}+({1}) > {2}", offset,
-              bra_offset, opcodes.GetByteSize()));
+              bra_offset, opcodes.GetByteSize());
         }
       }
     } break;
@@ -2268,8 +2269,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
           break;
         }
       }
-      return llvm::createStringError(llvm::formatv(
-          "Unhandled opcode {0} in DWARFExpression", LocationAtom(op)));
+      return llvm::createStringErrorV("Unhandled opcode {0} in DWARFExpression",
+                                      LocationAtom(op));
     }
   }
 

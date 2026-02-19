@@ -650,9 +650,9 @@ serializeInfo(const RecordInfo &I, json::Object &Obj,
     }
 
     if (!PubFunctionsArrayRef.empty())
-      insertArray(Obj, PubFunctionsArray, "PublicFunctions");
+      insertArray(Obj, PubFunctionsArray, "PublicMethods");
     if (!ProtFunctionsArrayRef.empty())
-      insertArray(Obj, ProtFunctionsArray, "ProtectedFunctions");
+      insertArray(Obj, ProtFunctionsArray, "ProtectedMethods");
   }
 
   if (!I.Members.empty()) {

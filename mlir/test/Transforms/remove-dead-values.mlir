@@ -250,13 +250,13 @@ func.func @main() -> (i32, i32) {
 // CHECK-NEXT:  }
 
 // CHECK-CANONICALIZE:       func.func @clean_region_branch_op_dont_remove_first_2_results_but_remove_first_operand(%[[arg0:.*]]: i1, %[[arg1:.*]]: i32, %[[arg2:.*]]: i32) -> i32 {
-// CHECK-CANONICALIZE-NEXT:    %[[live_and_non_live:.*]]:2 = scf.while (%[[arg4:.*]] = %[[arg2]]) : (i32) -> (i32, i32) {
+// CHECK-CANONICALIZE:         %[[live_and_non_live:.*]]:2 = scf.while (%[[arg4:.*]] = %[[arg2]]) : (i32) -> (i32, i32) {
 // CHECK-CANONICALIZE-NEXT:      %[[live_0:.*]] = arith.addi %[[arg4]], %[[arg4]]
-// CHECK-CANONICALIZE-NEXT:      scf.condition(%arg0) %[[live_0]], %[[arg4]] : i32, i32
+// CHECK-CANONICALIZE:           scf.condition(%arg0) %[[live_0]], %[[arg4]] : i32, i32
 // CHECK-CANONICALIZE-NEXT:    } do {
 // CHECK-CANONICALIZE-NEXT:    ^bb0(%[[arg5:.*]]: i32, %[[arg6:.*]]: i32):
 // CHECK-CANONICALIZE-NEXT:      %[[live_1:.*]] = arith.addi %[[arg6]], %[[arg6]]
-// CHECK-CANONICALIZE-NEXT:      scf.yield %[[live_1]] : i32
+// CHECK-CANONICALIZE:           scf.yield %[[live_1]] : i32
 // CHECK-CANONICALIZE-NEXT:    }
 // CHECK-CANONICALIZE-NEXT:    return %[[live_and_non_live]]#0
 // CHECK-CANONICALIZE-NEXT:  }
@@ -306,7 +306,7 @@ func.func @clean_region_branch_op_dont_remove_first_2_results_but_remove_first_o
 // CHECK-CANONICALIZE:       func.func @clean_region_branch_op_remove_last_2_results_last_2_arguments_and_last_operand(%[[arg2:.*]]: i1) -> i32 {
 // CHECK-CANONICALIZE-NEXT:    %[[c0:.*]] = arith.constant 0
 // CHECK-CANONICALIZE-NEXT:    %[[c1:.*]] = arith.constant 1
-// CHECK-CANONICALIZE-NEXT:    %[[live_and_non_live:.*]]:2 = scf.while (%[[arg3:.*]] = %[[c0]], %[[arg4:.*]] = %[[c1]]) : (i32, i32) -> (i32, i32) {
+// CHECK-CANONICALIZE:         %[[live_and_non_live:.*]]:2 = scf.while (%[[arg3:.*]] = %[[c0]], %[[arg4:.*]] = %[[c1]]) : (i32, i32) -> (i32, i32) {
 // CHECK-CANONICALIZE-NEXT:      func.call @identity() : () -> ()
 // CHECK-CANONICALIZE-NEXT:      scf.condition(%[[arg2]]) %[[arg3]], %[[arg4]] : i32, i32
 // CHECK-CANONICALIZE-NEXT:    } do {
@@ -795,4 +795,34 @@ func.func @scf_while_dead_iter_args() -> i32 {
     scf.yield %x : i32
   }
   return %result#0 : i32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @replace_dead_operation_results_with_poison
+func.func @replace_dead_operation_results_with_poison(%0: vector<1xindex>) -> vector<1xindex> {
+  %1 = scf.while (%arg0 = %0) : (vector<1xindex>) -> vector<1xindex> {
+    %cond = arith.constant true
+    scf.condition(%cond) %arg0 : vector<1xindex>
+  } do {
+    ^bb0(%arg0: vector<1xindex>):
+    scf.yield %arg0 : vector<1xindex>
+  }
+  %2 = scf.while (%arg0 = %1) : (vector<1xindex>) -> vector<1xindex> {
+    // Check that the binary value in condition is replaced with poison, and
+    // the condition itself is well-formed IR. This prevents a crash in the
+    // canonicalization phase which happens after the dead value removal phase.
+    // Also check that only used results of an erased op are replaced with ub.poison.
+    // CHECK-CANONICALIZE:      %[[COND:.*]] = ub.poison : i1
+    // CHECK-CANONICALIZE-NEXT: %[[NEXT:.*]] = ub.poison : vector<1xindex>
+    // CHECK-CANONICALIZE-NEXT: scf.condition(%[[COND]]) %[[NEXT]]
+    // CHECK-CANONICALIZE-NOT: ub.poison : i32
+    // CHECK-CANONICALIZE-NOT: "test.three"
+    %cond, %unused, %next = "test.three"(%1) : (vector<1xindex>) -> (i1, i32, vector<1xindex>)
+    scf.condition(%cond) %next : vector<1xindex>
+  } do {
+    ^bb0(%arg0: vector<1xindex>):
+    scf.yield %arg0 : vector<1xindex>
+  }
+  return %2 : vector<1xindex>
 }

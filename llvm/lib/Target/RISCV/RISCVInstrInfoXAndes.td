@@ -68,8 +68,8 @@ def simm20_lsb000 : Operand<XLenVT> {
 }
 
 // Predicate: True if immediate is a power of 2.
-def PowerOf2 : PatLeaf<(imm), [{
-  return isPowerOf2_64(N->getZExtValue());
+def PowerOf2 : IntImmLeaf<XLenVT, [{
+  return isPowerOf2_64(Imm.getZExtValue());
 }]>;
 
 // Transformation function: Get log2 of immediate.
@@ -379,7 +379,9 @@ class NDSRVInstVSINTLN<bits<5> funct5, string opcodestr>
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
+
+  let UseNamedOperandTable = true;
 }
 
 class NDSRVInstVSINTCvt<bits<5> fucnt5, string opcodestr>
@@ -401,6 +403,8 @@ class NDSRVInstVSINTCvt<bits<5> fucnt5, string opcodestr>
   let mayStore = 0;
   let Uses = [FRM, VL, VTYPE];
   let RVVConstraint = VMConstraint;
+
+  let UseNamedOperandTable = true;
 }
 
 class NDSRVInstBFHCvt<bits<7> funct7, bits<5> rs1val, DAGOperand rdty,
@@ -435,6 +439,8 @@ class NDSRVInstVFPMAD<bits<6> funct6, string opcodestr>
   let mayStore = 0;
 
   let RVVConstraint = VMConstraint;
+
+  let UseNamedOperandTable = true;
 }
 
 class NDSRVInstVD4DOT<bits<6> funct6, string opcodestr>
@@ -458,6 +464,8 @@ class NDSRVInstVD4DOT<bits<6> funct6, string opcodestr>
   let mayStore = 0;
 
   let RVVConstraint = VMConstraint;
+
+  let UseNamedOperandTable = true;
 }
 
 class NDSRVInstVBFHCvt<bits<5> vs1, string opcodestr>
@@ -477,6 +485,8 @@ class NDSRVInstVBFHCvt<bits<5> vs1, string opcodestr>
   let mayStore = 0;
 
   let Uses = [VL, VTYPE];
+
+  let UseNamedOperandTable = true;
 }
 
 class NDSRVInstVLN<bits<5> funct5, string opcodestr>
@@ -498,13 +508,15 @@ class NDSRVInstVLN<bits<5> funct5, string opcodestr>
   let mayLoad = 1;
   let mayStore = 0;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let RVVConstraint = VMConstraint;
+
+  let UseNamedOperandTable = true;
 }
 
 class VPseudoVLN8NoMask<VReg RetClass, bit U> :
       RISCVVPseudo<(outs RetClass:$rd),
-                   (ins RetClass:$dest,
+                   (ins RetClass:$passthru,
                         GPRMemZeroOffset:$rs1,
                         AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVNDSVLN</*Masked*/0, /*Unsigned*/U, !logtwo(8), VLMul> {
@@ -514,7 +526,7 @@ class VPseudoVLN8NoMask<VReg RetClass, bit U> :
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
-  let Constraints = "$rd = $dest";
+  let Constraints = "$rd = $passthru";
 }
 
 class VPseudoVLN8Mask<VReg RetClass, bit U> :
@@ -781,16 +793,16 @@ defm CC_UImmLog2XLen_NDS : SelectCC_GPR_riirr<GPR, uimmlog2xlen>;
 defm CC_UImm7_NDS        : SelectCC_GPR_riirr<GPR, uimm7>;
 
 class SelectNDS_BB<CondCode Cond>
-    : Pat<(riscv_selectcc_frag:$cc (and(XLenVT GPR:$lhs), PowerOf2:$mask), 0,
-              Cond, (XLenVT GPR:$truev), GPR:$falsev),
+    : Pat<(riscv_selectcc (and (XLenVT GPR:$lhs), PowerOf2:$mask), 0,
+                          Cond:$cc, (XLenVT GPR:$truev), GPR:$falsev),
           (Select_GPR_Using_CC_UImmLog2XLen_NDS GPR:$lhs, (Log2 PowerOf2:$mask),
-              (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
+              (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 
 class SelectNDS_BC<CondCode Cond>
-    : Pat<(riscv_selectcc_frag:$cc (XLenVT GPR:$lhs), uimm7:$cimm, Cond,
+    : Pat<(riscv_selectcc (XLenVT GPR:$lhs), uimm7:$cimm, Cond:$cc,
               (XLenVT GPR:$truev), GPR:$falsev),
           (Select_GPR_Using_CC_UImm7_NDS GPR:$lhs, uimm7:$cimm,
-              (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
+              (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 
 let Predicates = [HasVendorXAndesPerf] in {
   def : NDS_BBPat<SETEQ, NDS_BBC>;

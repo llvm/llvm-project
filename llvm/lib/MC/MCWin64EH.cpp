@@ -26,8 +26,7 @@ using namespace llvm;
 namespace {
 /// MCExpr that represents the epilog unwind code in an unwind table.
 class MCUnwindV2EpilogTargetExpr final : public MCTargetExpr {
-  const MCSymbol *Function;
-  const MCSymbol *FunctionEnd;
+  const WinEH::FrameInfo &FrameInfo;
   const MCSymbol *UnwindV2Start;
   const MCSymbol *EpilogEnd;
   uint8_t EpilogSize;
@@ -36,9 +35,11 @@ class MCUnwindV2EpilogTargetExpr final : public MCTargetExpr {
   MCUnwindV2EpilogTargetExpr(const WinEH::FrameInfo &FrameInfo,
                              const WinEH::FrameInfo::Epilog &Epilog,
                              uint8_t EpilogSize_)
-      : Function(FrameInfo.Function), FunctionEnd(FrameInfo.FuncletOrFuncEnd),
-        UnwindV2Start(Epilog.UnwindV2Start), EpilogEnd(Epilog.End),
-        EpilogSize(EpilogSize_), Loc(Epilog.Loc) {}
+      : FrameInfo(FrameInfo), UnwindV2Start(Epilog.UnwindV2Start),
+        EpilogEnd(Epilog.End), EpilogSize(EpilogSize_), Loc(Epilog.Loc) {
+    assert(UnwindV2Start && "Epilog must have a start");
+    assert(EpilogEnd && "Epilog must have an end");
+  }
 
 public:
   static MCUnwindV2EpilogTargetExpr *
@@ -252,6 +253,10 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
     // so, although there are terminators that are large than 1 byte, the
     // starting address of the terminator instruction will always be considered
     // inside the epilog).
+    assert(
+        LastEpilog.UnwindV2Start &&
+        "If unwind v2 is enabled, epilog must have a unwind v2 start marker");
+    assert(LastEpilog.End && "Epilog must have an end");
     auto MaybeSize = GetOptionalAbsDifference(
         OS->getAssembler(), LastEpilog.End, LastEpilog.UnwindV2Start);
     if (!MaybeSize) {
@@ -272,9 +277,14 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
     // If the last epilog is at the end of the function, we can use a special
     // encoding for it. Because of our +1 trick for the size, this will only
     // work where that final terminator instruction is 1 byte long.
-    auto LastEpilogToFuncEnd = GetOptionalAbsDifference(
-        OS->getAssembler(), info->FuncletOrFuncEnd, LastEpilog.UnwindV2Start);
-    LastEpilogIsAtEnd = (LastEpilogToFuncEnd == EpilogSize);
+    // NOTE: At the point where the unwind info is emitted, the function may not
+    // have ended yet (e.g., if there is EH Handler Data), so assume that we
+    // aren't at the end (since we can't calculate it).
+    if (info->End) {
+      auto LastEpilogToFuncEnd = GetOptionalAbsDifference(
+          OS->getAssembler(), info->End, LastEpilog.UnwindV2Start);
+      LastEpilogIsAtEnd = (LastEpilogToFuncEnd == EpilogSize);
+    }
 
     // If we have an odd number of epilog codes, we need to add a padding code.
     size_t numEpilogCodes =
@@ -386,28 +396,28 @@ bool MCUnwindV2EpilogTargetExpr::evaluateAsRelocatableImpl(
     MCValue &Res, const MCAssembler *Asm) const {
   // Calculate the offset to this epilog, and validate it's within the allowed
   // range.
-  auto Offset = GetOptionalAbsDifference(*Asm, FunctionEnd, UnwindV2Start);
+  auto Offset = GetOptionalAbsDifference(*Asm, FrameInfo.End, UnwindV2Start);
   if (!Offset) {
     Asm->getContext().reportError(
         Loc, "Failed to evaluate epilog offset for Unwind v2 in " +
-                 Function->getName());
+                 FrameInfo.Function->getName());
     return false;
   }
   assert(*Offset > 0);
   constexpr uint16_t MaxEpilogOffset = 0x0fff;
   if (*Offset > MaxEpilogOffset) {
     Asm->getContext().reportError(
-        Loc,
-        "Epilog offset is too large for Unwind v2 in " + Function->getName());
+        Loc, "Epilog offset is too large for Unwind v2 in " +
+                 FrameInfo.Function->getName());
     return false;
   }
 
-  // Sanity check that all epilogs are the same size.
+  // Validate that all epilogs are the same size.
   auto Size = GetOptionalAbsDifference(*Asm, EpilogEnd, UnwindV2Start);
   if (Size != (EpilogSize - 1)) {
     Asm->getContext().reportError(
         Loc, "Size of this epilog does not match size of last epilog in " +
-                 Function->getName());
+                 FrameInfo.Function->getName());
     return false;
   }
 
