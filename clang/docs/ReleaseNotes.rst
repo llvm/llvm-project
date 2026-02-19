@@ -154,6 +154,10 @@ New Compiler Flags
   can only generate the reduced BMI as a by-product, e.g, an object files or
   a full BMI.
 
+- There are a new pair of flags for riscv32 called ``-mzilsd-4byte-align`` and
+  ``-mzilsd-4byte-align`` which control whether Zilsd accesses are allowed to be
+  aligned to 4-bytes rather than fully unaligned or fully (8-byte) aligned.
+
 Deprecated Compiler Flags
 -------------------------
 

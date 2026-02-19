@@ -8,6 +8,7 @@
 
 #include "RISCV.h"
 #include "../Clang.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Options/Options.h"
@@ -167,6 +168,35 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     }
   } else if (CPUFastVectorUnaligned || Triple.isAndroid()) {
     Features.push_back("+unaligned-vector-mem");
+  }
+
+  if (Triple.isRISCV32()) {
+    // Handle `-mzilsd-word-align` and `-mzilsd-strict-align` on rv32. These
+    // interact with the scalar alignment options - if unaligned scalar memory
+    // is allowed then that takes precedence over this option, as zilsd accesses
+    // can be 1-byte aligned in this case. Otherwise, the option
+    // `-mzilsd-word-align` option allows zilsd accesses to be 4-byte aligned
+    // rather than the usual 8-byte aligned (`-mzilsd-strict-align`).
+    if (const Arg *A = Args.getLastArg(
+            options::OPT_mstrict_align, options::OPT_mscalar_strict_align,
+            options::OPT_mzilsd_word_align, options::OPT_mno_strict_align,
+            options::OPT_mno_scalar_strict_align,
+            options::OPT_mzilsd_strict_align)) {
+      if (A->getOption().matches(options::OPT_mno_strict_align) ||
+          A->getOption().matches(options::OPT_mno_scalar_strict_align) ||
+          A->getOption().matches(options::OPT_mzilsd_word_align)) {
+        Features.push_back("+zilsd-4byte-align");
+      } else {
+        Features.push_back("-zilsd-4byte-align");
+      }
+    }
+  } else {
+    // Zilsd is not available on RV64, so report an error for these options.
+    if (const Arg *A = Args.getLastArg(options::OPT_mzilsd_word_align,
+                                       options::OPT_mzilsd_strict_align)) {
+      D.Diag(clang::diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << Triple.getTriple();
+    }
   }
 
   // Now add any that the user explicitly requested on the command line,
