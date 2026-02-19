@@ -93,7 +93,7 @@ std::error_code llvm::setzOSFileTag(int FD, int CCSID, bool Text) {
 
   if (fcntl(FD, F_SETTAG, &Tag) == -1) {
     if (errno == ENOSYS)
-      // This is a workaround for file systems that do not support filetags.
+      // Some file systems do not support filetags.
       // Ignore ENOSYS error to allow compilation.
       errno = 0;
     else
