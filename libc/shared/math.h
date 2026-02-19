@@ -34,6 +34,7 @@
 #include "math/bf16addf.h"
 #include "math/bf16addf128.h"
 #include "math/bf16divf.h"
+#include "math/bf16divl.h"
 #include "math/bf16fmaf.h"
 #include "math/canonicalize.h"
 #include "math/canonicalizebf16.h"
