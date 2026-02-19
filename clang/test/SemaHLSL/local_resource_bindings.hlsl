@@ -19,6 +19,12 @@ void no_initial_assignment(int idx) {
     Out[idx] = In[idx];
 }
 
+void assignment_to_uninitialized(int idx) {
+    RWStructuredBuffer<int> Out;
+    Out = Out;
+    Out[idx] = In[idx];
+}
+
 void same_assignment(int idx) {
     RWStructuredBuffer<int> Out = Out1;
     if (cond) {
