@@ -20260,9 +20260,7 @@ static void DoMarkVarDeclReferenced(
   // We skip static data members because they have external linkage.
   // TODO: static data members in anonymous namespaces have internal linkage and
   // should be diagnosed.
-  bool ShouldTrackForUnusedButSet =
-      Var->isStaticFileVar() && !Var->isStaticDataMember();
-  if ((Var->isLocalVarDeclOrParm() || ShouldTrackForUnusedButSet) &&
+  if ((Var->isLocalVarDeclOrParm() || Var->hasInternalLinkageFileVar()) &&
       !Var->hasExternalStorage()) {
     RefsMinusAssignments.insert({Var, 0}).first->getSecond()++;
   }

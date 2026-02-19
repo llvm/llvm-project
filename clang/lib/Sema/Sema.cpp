@@ -1605,9 +1605,11 @@ void Sema::ActOnEndOfTranslationUnit() {
     // referenced by the TU end.
     for (const auto &Ref : RefsMinusAssignments) {
       const VarDecl *VD = Ref.first;
-      // Only diagnose static file vars defined in the main file to match
-      // -Wunused-variable behavior and avoid false positives from header vars.
-      if (VD->isStaticFileVar() && SourceMgr.isInMainFile(VD->getLocation()))
+      // Only diagnose internal linkage file vars defined in the main file to
+      // match -Wunused-variable behavior and avoid false positives from
+      // headers.
+      if (VD->hasInternalLinkageFileVar() &&
+          SourceMgr.isInMainFile(VD->getLocation()))
         DiagnoseUnusedButSetDecl(VD, addDiag);
     }
 
