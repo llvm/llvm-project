@@ -482,11 +482,61 @@ struct FunCloner {
     return TypeCloner(M).Clone(Src);
   }
 
+  LLVMValueRef CloneBlockAddressConstant(LLVMValueRef Src) {
+    check_value_kind(Src, LLVMBlockAddressValueKind);
+
+    auto i = VMap.find(Src);
+    if (i != VMap.end())
+      return i->second;
+
+    unsigned NumOps = LLVMGetNumOperands(Src);
+    if (NumOps != 1 && NumOps != 2)
+      report_fatal_error("BlockAddress should have one or two operands");
+
+    unsigned BBOpIndex = NumOps - 1;
+    LLVMValueRef BBVal = LLVMGetOperand(Src, BBOpIndex);
+    if (!LLVMValueIsBasicBlock(BBVal))
+      report_fatal_error("BlockAddress operand is not a basic block");
+
+    LLVMBasicBlockRef SrcBB = LLVMValueAsBasicBlock(BBVal);
+    LLVMValueRef SrcFn = nullptr;
+    if (NumOps == 2) {
+      LLVMValueRef FnOp = LLVMGetOperand(Src, 0);
+      if (!LLVMIsAFunction(FnOp))
+        report_fatal_error("BlockAddress function operand is not a function");
+      SrcFn = FnOp;
+    } else {
+      SrcFn = LLVMGetBasicBlockParent(SrcBB);
+    }
+
+    if (LLVMGetBasicBlockParent(SrcBB) != SrcFn)
+      report_fatal_error("BlockAddress function/block mismatch");
+
+    size_t FnNameLen;
+    const char *FnName = LLVMGetValueName2(SrcFn, &FnNameLen);
+    LLVMValueRef DstFn = LLVMGetNamedFunction(M, FnName);
+    if (!DstFn)
+      report_fatal_error("Could not find function for block address");
+
+    // Current cloning flow only supports blockaddress constants that refer to
+    // the function currently being cloned.
+    if (DstFn != Fun)
+      report_fatal_error("Cross-function blockaddress is not supported");
+
+    LLVMBasicBlockRef DstBB = DeclareBB(SrcBB);
+    return VMap[Src] = LLVMBlockAddress(DstFn, DstBB);
+  }
+
   // Try to clone everything in the llvm::Value hierarchy.
   LLVMValueRef CloneValue(LLVMValueRef Src) {
-    // First, the value may be constant.
-    if (LLVMIsAConstant(Src))
+    // Handle BlockAddress by value kind first.
+    if (LLVMGetValueKind(Src) == LLVMBlockAddressValueKind)
+      return CloneBlockAddressConstant(Src);
+
+    // The value may be constant.
+    if (LLVMIsAConstant(Src)) {
       return clone_constant(Src, M);
+    }
 
     // Function argument should always be in the map already.
     auto i = VMap.find(Src);
@@ -576,9 +626,32 @@ struct FunCloner {
         Dst = LLVMBuildCondBr(Builder, CloneValue(Cond), ThenBB, ElseBB);
         break;
       }
-      case LLVMSwitch:
-      case LLVMIndirectBr:
+      case LLVMSwitch: {
+        LLVMValueRef Cond = CloneValue(LLVMGetOperand(Src, 0));
+        unsigned SuccCount = LLVMGetNumSuccessors(Src);
+        if (SuccCount < 1)
+          report_fatal_error("Switch: expected at least a default successor");
+
+        LLVMBasicBlockRef DefaultBB = DeclareBB(LLVMGetSuccessor(Src, 0));
+        unsigned NumCases = SuccCount - 1;
+        Dst = LLVMBuildSwitch(Builder, Cond, DefaultBB, NumCases);
+
+        // Operand layout: [cond, default_dest, case0_val, case0_dest, ...]
+        for (unsigned i = 0; i < NumCases; ++i) {
+          LLVMValueRef CaseVal = CloneValue(LLVMGetOperand(Src, 2 + i * 2));
+          LLVMBasicBlockRef CaseBB = DeclareBB(LLVMGetSuccessor(Src, i + 1));
+          LLVMAddCase(Dst, CaseVal, CaseBB);
+        }
         break;
+      }
+      case LLVMIndirectBr: {
+        LLVMValueRef Addr = CloneValue(LLVMGetOperand(Src, 0));
+        unsigned NumDests = LLVMGetNumSuccessors(Src);
+        Dst = LLVMBuildIndirectBr(Builder, Addr, NumDests);
+        for (unsigned i = 0; i < NumDests; ++i)
+          LLVMAddDestination(Dst, DeclareBB(LLVMGetSuccessor(Src, i)));
+        break;
+      }
       case LLVMInvoke: {
         SmallVector<LLVMValueRef, 8> Args;
         SmallVector<LLVMOperandBundleRef, 8> Bundles;
