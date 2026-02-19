@@ -1,5 +1,4 @@
-// RUN: mlir-opt --test-xegpu-resolve-layout-conflicts="layout-kind=inst" \
-// RUN: -allow-unregistered-dialect -split-input-file %s | FileCheck %s
+// RUN: mlir-opt --test-xegpu-resolve-layout-conflicts -allow-unregistered-dialect -split-input-file %s | FileCheck %s
 
 #inst_data_8x16 = #xegpu.layout<inst_data = [8, 16]>
 #inst_data_16x16 = #xegpu.layout<inst_data = [16, 16]>
