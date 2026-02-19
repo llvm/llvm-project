@@ -48,14 +48,14 @@ static cl::opt<bool> NoLSEAtomics(
 
 namespace {
 
-static void getSystemFlag(MCInst &Inst, MCPhysReg RegName) {
+[[maybe_unused]] static void getSystemFlag(MCInst &Inst, MCPhysReg RegName) {
   Inst.setOpcode(AArch64::MRS);
   Inst.clear();
   Inst.addOperand(MCOperand::createReg(RegName));
   Inst.addOperand(MCOperand::createImm(AArch64SysReg::NZCV));
 }
 
-static void setSystemFlag(MCInst &Inst, MCPhysReg RegName) {
+[[maybe_unused]] static void setSystemFlag(MCInst &Inst, MCPhysReg RegName) {
   Inst.setOpcode(AArch64::MSR);
   Inst.clear();
   Inst.addOperand(MCOperand::createImm(AArch64SysReg::NZCV));
@@ -716,6 +716,55 @@ public:
     return Insts;
   }
 
+  bool isCompAndBranch(const MCInst &Inst) const {
+    const unsigned Opcode = Inst.getOpcode();
+    switch (Opcode) {
+    // Compare register with immediate and branch.
+    case AArch64::CBGTWri:
+    case AArch64::CBGTXri:
+    case AArch64::CBLTWri:
+    case AArch64::CBLTXri:
+    case AArch64::CBHIWri:
+    case AArch64::CBHIXri:
+    case AArch64::CBLOWri:
+    case AArch64::CBLOXri:
+    case AArch64::CBEQWri:
+    case AArch64::CBEQXri:
+    case AArch64::CBNEWri:
+    case AArch64::CBNEXri:
+    // Compare registers and branch.
+    case AArch64::CBGTWrr:
+    case AArch64::CBGTXrr:
+    case AArch64::CBGEWrr:
+    case AArch64::CBGEXrr:
+    case AArch64::CBHIWrr:
+    case AArch64::CBHIXrr:
+    case AArch64::CBHSWrr:
+    case AArch64::CBHSXrr:
+    case AArch64::CBEQWrr:
+    case AArch64::CBEQXrr:
+    case AArch64::CBNEWrr:
+    case AArch64::CBNEXrr:
+    // Compare bytes and branch.
+    case AArch64::CBBGTWrr:
+    case AArch64::CBBGEWrr:
+    case AArch64::CBBHIWrr:
+    case AArch64::CBBHSWrr:
+    case AArch64::CBBEQWrr:
+    case AArch64::CBBNEWrr:
+    // Compare halfwords and branch.
+    case AArch64::CBHGTWrr:
+    case AArch64::CBHGEWrr:
+    case AArch64::CBHHIWrr:
+    case AArch64::CBHHSWrr:
+    case AArch64::CBHEQWrr:
+    case AArch64::CBHNEWrr:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   bool isTB(const MCInst &Inst) const {
     return (Inst.getOpcode() == AArch64::TBNZW ||
             Inst.getOpcode() == AArch64::TBNZX ||
@@ -1260,7 +1309,7 @@ public:
       if (isConditionalBranch(Inst) || isADR(Inst) || isADRP(Inst) ||
           isMOVW(Inst))
         OpNum = 1;
-      if (isTB(Inst) || isAddXri(Inst))
+      if (isTB(Inst) || isAddXri(Inst) || isCompAndBranch(Inst))
         OpNum = 2;
     }
 
@@ -1329,7 +1378,7 @@ public:
       ++OI;
     }
 
-    if (isTB(Inst)) {
+    if (isTB(Inst) || isCompAndBranch(Inst)) {
       assert(MCPlus::getNumPrimeOperands(Inst) >= 3 &&
              "Invalid number of operands");
       OI = Inst.begin() + 2;
@@ -1798,6 +1847,7 @@ public:
   }
 
   unsigned getInvertedBranchOpcode(unsigned Opcode) const {
+    // clang-format off
     switch (Opcode) {
     default:
       llvm_unreachable("Failed to invert branch opcode");
@@ -1810,7 +1860,48 @@ public:
     case AArch64::CBZX:     return AArch64::CBNZX;
     case AArch64::CBNZW:    return AArch64::CBZW;
     case AArch64::CBNZX:    return AArch64::CBZX;
+    // Compare register with immediate and branch.
+    case AArch64::CBGTWri:  return AArch64::CBLTWri; // +1
+    case AArch64::CBGTXri:  return AArch64::CBLTXri; // +1
+    case AArch64::CBLTWri:  return AArch64::CBGTWri; // -1
+    case AArch64::CBLTXri:  return AArch64::CBGTXri; // -1
+    case AArch64::CBHIWri:  return AArch64::CBLOWri; // +1
+    case AArch64::CBHIXri:  return AArch64::CBLOXri; // +1
+    case AArch64::CBLOWri:  return AArch64::CBHIWri; // -1
+    case AArch64::CBLOXri:  return AArch64::CBHIXri; // -1
+    case AArch64::CBEQWri:  return AArch64::CBNEWri;
+    case AArch64::CBEQXri:  return AArch64::CBNEXri;
+    case AArch64::CBNEWri:  return AArch64::CBEQWri;
+    case AArch64::CBNEXri:  return AArch64::CBEQXri;
+    // Compare registers and branch.
+    case AArch64::CBGTWrr:  return AArch64::CBGEWrr; // swap
+    case AArch64::CBGTXrr:  return AArch64::CBGEXrr; // swap
+    case AArch64::CBGEWrr:  return AArch64::CBGTWrr; // swap
+    case AArch64::CBGEXrr:  return AArch64::CBGTXrr; // swap
+    case AArch64::CBHIWrr:  return AArch64::CBHSWrr; // swap
+    case AArch64::CBHIXrr:  return AArch64::CBHSXrr; // swap
+    case AArch64::CBHSWrr:  return AArch64::CBHIWrr; // swap
+    case AArch64::CBHSXrr:  return AArch64::CBHIXrr; // swap
+    case AArch64::CBEQWrr:  return AArch64::CBNEWrr;
+    case AArch64::CBEQXrr:  return AArch64::CBNEXrr;
+    case AArch64::CBNEWrr:  return AArch64::CBEQWrr;
+    case AArch64::CBNEXrr:  return AArch64::CBEQXrr;
+    // Compare bytes and branch.
+    case AArch64::CBBGTWrr: return AArch64::CBBGEWrr; // swap
+    case AArch64::CBBGEWrr: return AArch64::CBBGTWrr; // swap
+    case AArch64::CBBHIWrr: return AArch64::CBBHSWrr; // swap
+    case AArch64::CBBHSWrr: return AArch64::CBBHIWrr; // swap
+    case AArch64::CBBEQWrr: return AArch64::CBBNEWrr;
+    case AArch64::CBBNEWrr: return AArch64::CBBEQWrr;
+    // Compare halfwords and branch.
+    case AArch64::CBHGTWrr: return AArch64::CBHGEWrr; // swap
+    case AArch64::CBHGEWrr: return AArch64::CBHGTWrr; // swap
+    case AArch64::CBHHIWrr: return AArch64::CBHHSWrr; // swap
+    case AArch64::CBHHSWrr: return AArch64::CBHHIWrr; // swap
+    case AArch64::CBHEQWrr: return AArch64::CBHNEWrr;
+    case AArch64::CBHNEWrr: return AArch64::CBHEQWrr;
     }
+    // clang-format on
   }
 
   unsigned getCondCode(const MCInst &Inst) const override {
@@ -1830,11 +1921,89 @@ public:
     }
   }
 
+  bool needsRegSwap(unsigned Opcode) const {
+    switch (Opcode) {
+    default:
+      return false;
+    // Compare registers and branch.
+    case AArch64::CBGTWrr:
+    case AArch64::CBGTXrr:
+    case AArch64::CBGEWrr:
+    case AArch64::CBGEXrr:
+    case AArch64::CBHIWrr:
+    case AArch64::CBHIXrr:
+    case AArch64::CBHSWrr:
+    case AArch64::CBHSXrr:
+    // Compare bytes and branch.
+    case AArch64::CBBGTWrr:
+    case AArch64::CBBGEWrr:
+    case AArch64::CBBHIWrr:
+    case AArch64::CBBHSWrr:
+    // Compare halfwords and branch.
+    case AArch64::CBHGTWrr:
+    case AArch64::CBHGEWrr:
+    case AArch64::CBHHIWrr:
+    case AArch64::CBHHSWrr:
+      return true;
+    }
+  }
+
+  bool needsImmDec(unsigned Opcode) const {
+    switch (Opcode) {
+    default:
+      return false;
+    case AArch64::CBGTWri:
+    case AArch64::CBGTXri:
+    case AArch64::CBHIWri:
+    case AArch64::CBHIXri:
+      return true;
+    }
+  }
+
+  bool needsImmInc(unsigned Opcode) const {
+    switch (Opcode) {
+    default:
+      return false;
+    case AArch64::CBLTWri:
+    case AArch64::CBLTXri:
+    case AArch64::CBLOWri:
+    case AArch64::CBLOXri:
+      return true;
+    }
+  }
+
+  bool isReversibleBranch(const MCInst &Inst) const override {
+    if (isCompAndBranch(Inst)) {
+      unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
+      if (needsImmDec(InvertedOpcode) && Inst.getOperand(1).getImm() == 0)
+        return false;
+      if (needsImmInc(InvertedOpcode) && Inst.getOperand(1).getImm() == 63)
+        return false;
+    }
+    return MCPlusBuilder::isReversibleBranch(Inst);
+  }
+
   void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
                               MCContext *Ctx) const override {
-    if (isTB(Inst) || isCB(Inst)) {
-      Inst.setOpcode(getInvertedBranchOpcode(Inst.getOpcode()));
+    if (!isReversibleBranch(Inst)) {
+      errs() << "BOLT-ERROR: Cannot reverse branch " << Inst << "\n";
+      exit(1);
+    }
+
+    if (isTB(Inst) || isCB(Inst) || isCompAndBranch(Inst)) {
+      unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
+      Inst.setOpcode(InvertedOpcode);
       assert(Inst.getOpcode() != 0 && "Invalid branch instruction");
+      // The FEAT_CMPBR compare-and-branch instructions cannot encode all
+      // the possible condition codes, therefore we either have to adjust
+      // the immediate value by +-1, or to swap the register operands
+      // when reversing the branch condition.
+      if (needsRegSwap(InvertedOpcode))
+        std::swap(Inst.getOperand(0), Inst.getOperand(1));
+      else if (needsImmDec(InvertedOpcode))
+        Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() - 1);
+      else if (needsImmInc(InvertedOpcode))
+        Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() + 1);
     } else if (Inst.getOpcode() == AArch64::Bcc) {
       Inst.getOperand(0).setImm(AArch64CC::getInvertedCondCode(
           static_cast<AArch64CC::CondCode>(Inst.getOperand(0).getImm())));
@@ -1849,18 +2018,16 @@ public:
   }
 
   int getPCRelEncodingSize(const MCInst &Inst) const override {
+    if (isCompAndBranch(Inst))
+      return 11;
+    if (isTB(Inst))
+      return 16;
+    if (isCB(Inst))
+      return 21;
     switch (Inst.getOpcode()) {
     default:
       llvm_unreachable("Failed to get pcrel encoding size");
       return 0;
-    case AArch64::TBZW:     return 16;
-    case AArch64::TBZX:     return 16;
-    case AArch64::TBNZW:    return 16;
-    case AArch64::TBNZX:    return 16;
-    case AArch64::CBZW:     return 21;
-    case AArch64::CBZX:     return 21;
-    case AArch64::CBNZW:    return 21;
-    case AArch64::CBNZX:    return 21;
     case AArch64::B:        return 28;
     case AArch64::BL:       return 28;
     case AArch64::Bcc:      return 21;
@@ -2242,6 +2409,18 @@ public:
       convertJmpToTailCall(Inst);
   }
 
+  bool isShortRangeBranch(const MCInst &Inst) const override {
+    return isCompAndBranch(Inst);
+  }
+
+  void createDirectBranch(MCInst &Inst, const MCSymbol *Target,
+                          MCContext *Ctx) override {
+    Inst.setOpcode(AArch64::B);
+    Inst.clear();
+    Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
+        Inst, MCSymbolRefExpr::create(Target, *Ctx), *Ctx, 0)));
+  }
+
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
                      const MCSymbol *&TBB, const MCSymbol *&FBB,
                      MCInst *&CondBranch,
@@ -2599,21 +2778,14 @@ public:
   }
 
   InstructionListType createInstrumentedIndCallHandlerExitBB() const override {
-    InstructionListType Insts(5);
     // Code sequence for instrumented indirect call handler:
-    //   msr  nzcv, x1
-    //   ldp  x0, x1, [sp], #16
-    //   ldr  x16, [sp], #16
-    //   ldp  x0, x1, [sp], #16
-    //   br   x16
-    setSystemFlag(Insts[0], AArch64::X1);
-    createPopRegisters(Insts[1], AArch64::X0, AArch64::X1);
-    // Here we load address of the next function which should be called in the
-    // original binary to X16 register. Writing to X16 is permitted without
-    // needing to restore.
-    loadReg(Insts[2], AArch64::X16, AArch64::SP);
-    createPopRegisters(Insts[3], AArch64::X0, AArch64::X1);
-    createIndirectBranch(Insts[4], AArch64::X16, 0);
+    //   ret
+
+    InstructionListType Insts;
+
+    Insts.emplace_back();
+    createReturn(Insts.back());
+
     return Insts;
   }
 
@@ -2666,14 +2838,28 @@ public:
 
   InstructionListType createLoadImmediate(const MCPhysReg Dest,
                                           uint64_t Imm) const override {
-    InstructionListType Insts(4);
-    int Shift = 48;
-    for (int I = 0; I < 4; I++, Shift -= 16) {
-      Insts[I].setOpcode(AArch64::MOVKXi);
-      Insts[I].addOperand(MCOperand::createReg(Dest));
-      Insts[I].addOperand(MCOperand::createReg(Dest));
-      Insts[I].addOperand(MCOperand::createImm((Imm >> Shift) & 0xFFFF));
-      Insts[I].addOperand(MCOperand::createImm(Shift));
+    InstructionListType Insts;
+
+    Insts.emplace_back();
+    MCInst &Inst = Insts.back();
+    Inst.clear();
+    Inst.setOpcode(AArch64::MOVZXi);
+    Inst.addOperand(MCOperand::createReg(Dest));
+    Inst.addOperand(MCOperand::createImm(Imm & 0xFFFF));
+    Inst.addOperand(MCOperand::createImm(0));
+
+    int Shift = 16;
+    for (int I = 0; I < 3; I++, Shift += 16) {
+      const uint64_t ImmVal = (Imm >> Shift) & 0xFFFF;
+      if (!ImmVal)
+        continue;
+      Insts.emplace_back();
+      MCInst &Inst = Insts.back();
+      Inst.setOpcode(AArch64::MOVKXi);
+      Inst.addOperand(MCOperand::createReg(Dest));
+      Inst.addOperand(MCOperand::createReg(Dest));
+      Inst.addOperand(MCOperand::createImm(ImmVal));
+      Inst.addOperand(MCOperand::createImm(Shift));
     }
     return Insts;
   }
@@ -2687,41 +2873,48 @@ public:
 
   InstructionListType createInstrumentedIndirectCall(MCInst &&CallInst,
                                                      MCSymbol *HandlerFuncAddr,
-                                                     int CallSiteID,
+                                                     size_t CallSiteID,
                                                      MCContext *Ctx) override {
-    InstructionListType Insts;
     // Code sequence used to enter indirect call instrumentation helper:
-    //   stp x0, x1, [sp, #-16]! createPushRegisters
-    //   mov target x0  convertIndirectCallToLoad -> orr x0 target xzr
-    //   mov x1 CallSiteID createLoadImmediate ->
-    //   movk    x1, #0x0, lsl #48
-    //   movk    x1, #0x0, lsl #32
-    //   movk    x1, #0x0, lsl #16
-    //   movk    x1, #0x0
-    //   stp x0, x1, [sp, #-16]!
-    //   bl *HandlerFuncAddr createIndirectCall ->
-    //   adr x0 *HandlerFuncAddr -> adrp + add
-    //   blr x0
+    // snippet requires 2 registers: target address and call site id
+    //   stp CallIDReg, x30, [sp, #-16]!
+    //   movz/k CallIDReg, CallSiteID
+    //   stp TAReg, CallIDReg, [sp, #-16]! ; push address and id for lib
+    //   adr + add TAReg, *HandlerFuncAddr ; __bolt_instr_ind_call_handler_func
+    //   blr TAReg
+    //   ldr TAReg, [sp], #16 ; restore target address
+    //   ldp CallIDReg, x30, [sp], #16
+    //   blr TAReg
+
+    const MCRegister TAReg = CallInst.getOperand(0).getReg();
+    const MCRegister CallIDReg =
+        TAReg != AArch64::X0 ? AArch64::X0 : AArch64::X1;
+
+    InstructionListType Insts;
     Insts.emplace_back();
-    createPushRegisters(Insts.back(), AArch64::X0, AArch64::X1);
-    Insts.emplace_back(CallInst);
-    convertIndirectCallToLoad(Insts.back(), AArch64::X0);
-    InstructionListType LoadImm =
-        createLoadImmediate(getIntArgRegister(1), CallSiteID);
+    createPushRegisters(Insts.back(), CallIDReg, AArch64::LR);
+
+    InstructionListType LoadImm = createLoadImmediate(CallIDReg, CallSiteID);
     Insts.insert(Insts.end(), LoadImm.begin(), LoadImm.end());
+
     Insts.emplace_back();
-    createPushRegisters(Insts.back(), AArch64::X0, AArch64::X1);
+    createPushRegisters(Insts.back(), TAReg, CallIDReg);
+
     Insts.resize(Insts.size() + 2);
-    InstructionListType Addr =
-        materializeAddress(HandlerFuncAddr, Ctx, AArch64::X0);
+    InstructionListType Addr = materializeAddress(HandlerFuncAddr, Ctx, TAReg);
     assert(Addr.size() == 2 && "Invalid Addr size");
     std::copy(Addr.begin(), Addr.end(), Insts.end() - Addr.size());
-    Insts.emplace_back();
-    createIndirectCallInst(Insts.back(), isTailCall(CallInst), AArch64::X0);
 
-    // Carry over metadata including tail call marker if present.
-    stripAnnotations(Insts.back());
-    moveAnnotations(std::move(CallInst), Insts.back());
+    Insts.emplace_back();
+    createIndirectCallInst(Insts.back(), false, TAReg);
+
+    Insts.emplace_back();
+    loadReg(Insts.back(), TAReg, getStackPointer());
+
+    Insts.emplace_back();
+    createPopRegisters(Insts.back(), CallIDReg, AArch64::LR);
+
+    Insts.emplace_back(CallInst);
 
     return Insts;
   }
@@ -2730,12 +2923,10 @@ public:
   createInstrumentedIndCallHandlerEntryBB(const MCSymbol *InstrTrampoline,
                                           const MCSymbol *IndCallHandler,
                                           MCContext *Ctx) override {
-    // Code sequence used to check whether InstrTampoline was initialized
+    // Code sequence used to check whether InstrTrampoline was initialized
     // and call it if so, returns via IndCallHandler
-    //   stp     x0, x1, [sp, #-16]!
-    //   mrs     x1, nzcv
-    //   adr     x0, InstrTrampoline -> adrp + add
-    //   ldr     x0, [x0]
+    //   adrp    x0, InstrTrampoline
+    //   ldr     x0, [x0, #lo12:InstrTrampoline]
     //   subs    x0, x0, #0x0
     //   b.eq    IndCallHandler
     //   str     x30, [sp, #-16]!
@@ -2743,30 +2934,42 @@ public:
     //   ldr     x30, [sp], #16
     //   b       IndCallHandler
     InstructionListType Insts;
+
+    // load handler address
+    MCInst InstAdrp;
+    InstAdrp.setOpcode(AArch64::ADRP);
+    InstAdrp.addOperand(MCOperand::createReg(getIntArgRegister(0)));
+    InstAdrp.addOperand(MCOperand::createImm(0));
+    setOperandToSymbolRef(InstAdrp, /* OpNum */ 1, InstrTrampoline,
+                          /* Addend */ 0, Ctx, ELF::R_AARCH64_ADR_GOT_PAGE);
+    Insts.emplace_back(InstAdrp);
+
+    MCInst InstLoad;
+    InstLoad.setOpcode(AArch64::LDRXui);
+    InstLoad.addOperand(MCOperand::createReg(getIntArgRegister(0)));
+    InstLoad.addOperand(MCOperand::createReg(getIntArgRegister(0)));
+    InstLoad.addOperand(MCOperand::createImm(0));
+    setOperandToSymbolRef(InstLoad, /* OpNum */ 2, InstrTrampoline,
+                          /* Addend */ 0, Ctx, ELF::R_AARCH64_LD64_GOT_LO12_NC);
+    Insts.emplace_back(InstLoad);
+
+    InstructionListType CmpJmp =
+        createCmpJE(getIntArgRegister(0), 0, IndCallHandler, Ctx);
+    Insts.insert(Insts.end(), CmpJmp.begin(), CmpJmp.end());
+
     Insts.emplace_back();
-    createPushRegisters(Insts.back(), AArch64::X0, AArch64::X1);
-    Insts.emplace_back();
-    getSystemFlag(Insts.back(), getIntArgRegister(1));
-    Insts.emplace_back();
-    Insts.emplace_back();
-    InstructionListType Addr =
-        materializeAddress(InstrTrampoline, Ctx, AArch64::X0);
-    std::copy(Addr.begin(), Addr.end(), Insts.end() - Addr.size());
-    assert(Addr.size() == 2 && "Invalid Addr size");
-    Insts.emplace_back();
-    loadReg(Insts.back(), AArch64::X0, AArch64::X0);
-    InstructionListType cmpJmp =
-        createCmpJE(AArch64::X0, 0, IndCallHandler, Ctx);
-    Insts.insert(Insts.end(), cmpJmp.begin(), cmpJmp.end());
-    Insts.emplace_back();
-    storeReg(Insts.back(), AArch64::LR, AArch64::SP);
+    storeReg(Insts.back(), AArch64::LR, getStackPointer());
+
     Insts.emplace_back();
     Insts.back().setOpcode(AArch64::BLR);
-    Insts.back().addOperand(MCOperand::createReg(AArch64::X0));
+    Insts.back().addOperand(MCOperand::createReg(getIntArgRegister(0)));
+
     Insts.emplace_back();
-    loadReg(Insts.back(), AArch64::LR, AArch64::SP);
+    loadReg(Insts.back(), AArch64::LR, getStackPointer());
+
     Insts.emplace_back();
-    createDirectCall(Insts.back(), IndCallHandler, Ctx, /*IsTailCall*/ true);
+    createDirectBranch(Insts.back(), IndCallHandler, Ctx);
+
     return Insts;
   }
 

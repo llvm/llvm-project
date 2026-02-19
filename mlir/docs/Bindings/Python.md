@@ -1293,7 +1293,42 @@ The following sections outline how each of these can be implemented.
 
 ### Dialects
 
-Dialects can be defined through the IRDL dialect bindings in Python.
+The `mlir.dialects.ext` module provides support for defining Python-defined dialects.
+Users can define a new dialect (e.g., `MyDialect`) by subclassing the `Dialect` class,
+and define operations in that dialect by subclassing `MyDialect.Operation`.
+The dialect can then be loaded into MLIR by calling `MyDialect.load()` within a valid `Context`.
+After loading, these operations can be used just like other `OpView` subclasses.
+
+The following example shows how to define a dialect and construct IR using the newly defined ops.
+
+```python
+class MyInt(Dialect, name="myint"):
+    pass
+
+class ConstantOp(MyInt.Operation, name="constant"):
+    value: IntegerAttr
+    cst: Result[IntegerType[32]]
+
+class AddOp(MyInt.Operation, name="add"):
+    lhs: Operand[IntegerType[32]]
+    rhs: Operand[IntegerType[32]]
+    res: Result[IntegerType[32]]
+
+# The code below requires an available MLIR context and location.
+
+MyInt.load()
+
+module = Module.create()
+i32 = IntegerType.get(32)
+with InsertionPoint(module.body):
+    two = ConstantOp(IntegerAttr.get(i32, 2))
+    three = ConstantOp(IntegerAttr.get(i32, 3))
+    add1 = AddOp(two, three)
+    add2 = AddOp(add1, two)
+    add3 = AddOp(add2, three)
+```
+
+Dialects can also be defined through the IRDL dialect bindings in Python.
 The IRDL bindings offer a `load_dialects` function that
 converts an MLIR module containing `irdl.dialect` ops into MLIR dialects.
 For further details, see the documentation of [the IRDL dialect](../Dialects/IRDL.md).

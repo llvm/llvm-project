@@ -1493,6 +1493,17 @@ def riscv_addd : RVSDNode<"ADDD", SDT_RISCVIntBinOpD,
                           [SDNPCommutative, SDNPAssociative]>;
 def riscv_subd : RVSDNode<"SUBD", SDT_RISCVIntBinOpD>;
 
+def SDT_RISCVWideningAddSubAccumulate : SDTypeProfile<2, 4, [SDTCisVT<0, i32>,
+                                                             SDTCisVT<1, i32>,
+                                                             SDTCisSameAs<0, 2>,
+                                                             SDTCisSameAs<1, 3>,
+                                                             SDTCisSameAs<0, 4>,
+                                                             SDTCisSameAs<0, 5>]>;
+// Widening add accumulate unsigned: rd = rd + zext(rs1) + zext(rs2)
+def riscv_waddau : RVSDNode<"WADDAU", SDT_RISCVWideningAddSubAccumulate>;
+// Widening sub accumulate unsigned: rd = rd + zext(rs1) - zext(rs2)
+def riscv_wsubau : RVSDNode<"WSUBAU", SDT_RISCVWideningAddSubAccumulate>;
+
 def riscv_wmulsu : RVSDNode<"WMULSU", SDTIntBinHiLoOp>;
 
 // Narrowing shift: res = nsrl(lo, hi, shamt) is equivalent to
@@ -1504,22 +1515,16 @@ def SDT_RISCVNarrowingShift : SDTypeProfile<1, 3, [SDTCisVT<0, i32>,
 def riscv_nsrl : RVSDNode<"NSRL", SDT_RISCVNarrowingShift>;
 def riscv_nsra : RVSDNode<"NSRA", SDT_RISCVNarrowingShift>;
 
+// ComplexPattern for 64-bit shift mask (NSRL/NSRA only read 6 bits).
+def shiftMask64 : ComplexPattern<i32, 1, "selectShiftMask64", [], [], 0>;
+
+// Build a GPRPair from two GPR registers for narrowing shift instructions.
+def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
+  (REG_SEQUENCE GPRPair, $lo, sub_gpr_even, $hi, sub_gpr_odd)>;
+
 // Averaging subtraction, (a - b) >> 2
 def riscv_asub : RVSDNode<"ASUB", SDTIntBinOp>;
 def riscv_asubu : RVSDNode<"ASUBU", SDTIntBinOp>;
-
-// Widening multiply add (lo, hi) = wmacc(m1, m2, addlo, addhi)
-def SDT_RISCVWideningMAccW : SDTypeProfile<2, 4, [SDTCisVT<0, i32>,
-                                                  SDTCisVT<1, i32>,
-                                                  SDTCisVT<2, i32>,
-                                                  SDTCisVT<3, i32>,
-                                                  SDTCisSameAs<0, 4>,
-                                                  SDTCisSameAs<0, 5>]>;
-def riscv_wmacc  : RVSDNode<"WMACC", SDT_RISCVWideningMAccW,
-                            [SDNPCommutative]>;
-def riscv_wmaccu : RVSDNode<"WMACCU", SDT_RISCVWideningMAccW,
-                            [SDNPCommutative]>;
-def riscv_wmaccsu : RVSDNode<"WMACCSU", SDT_RISCVWideningMAccW>;
 
 // MULH/MULHU/MULHSU with rounding.
 def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp>;
@@ -1725,6 +1730,18 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def : PatGprGpr<uaddsat, SADDU>;
   def : PatGprGpr<usubsat, SSUBU>;
   def : PatGprGpr<sshlsat, SSHA>;
+
+  // Narrowing shift patterns (NSRL/NSRA)
+  // Immediate shift amount patterns
+  def : Pat<(i32 (riscv_nsrl GPR:$lo, GPR:$hi, uimm6:$shamt)),
+            (NSRLI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$shamt)>;
+  def : Pat<(i32 (riscv_nsra GPR:$lo, GPR:$hi, uimm6:$shamt)),
+            (NSRAI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$shamt)>;
+  // Register shift amount patterns
+  def : Pat<(i32 (riscv_nsrl GPR:$lo, GPR:$hi, shiftMask64:$shamt)),
+            (NSRL (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
+  def : Pat<(i32 (riscv_nsra GPR:$lo, GPR:$hi, shiftMask64:$shamt)),
+            (NSRA (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
 
   // 8/16-bit multiply low patterns
   def: Pat<(v4i8 (mul GPR:$rs1, GPR:$rs2)),

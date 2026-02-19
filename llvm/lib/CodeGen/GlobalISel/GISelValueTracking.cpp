@@ -368,6 +368,24 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known = KnownBits::mulhs(Known, Known2);
     break;
   }
+  case TargetOpcode::G_UDIV: {
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::udiv(Known, Known2,
+                            MI.getFlag(MachineInstr::MIFlag::IsExact));
+    break;
+  }
+  case TargetOpcode::G_SDIV: {
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::sdiv(Known, Known2,
+                            MI.getFlag(MachineInstr::MIFlag::IsExact));
+    break;
+  }
   case TargetOpcode::G_SELECT: {
     computeKnownBitsMin(MI.getOperand(2).getReg(), MI.getOperand(3).getReg(),
                         Known, DemandedElts, Depth + 1);
@@ -688,6 +706,17 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
           BitWidth > 1)
         Known.Zero.setBitsFrom(1);
     }
+    break;
+  }
+  case TargetOpcode::G_CTTZ:
+  case TargetOpcode::G_CTTZ_ZERO_UNDEF: {
+    KnownBits SrcOpKnown;
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
+                         Depth + 1);
+    // If we have a known 1, its position is our upper bound
+    unsigned PossibleTZ = SrcOpKnown.countMaxTrailingZeros();
+    unsigned LowBits = llvm::bit_width(PossibleTZ);
+    Known.Zero.setBitsFrom(LowBits);
     break;
   }
   case TargetOpcode::G_CTLZ:

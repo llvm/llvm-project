@@ -27,10 +27,9 @@
 using namespace clang;
 using namespace ssaf;
 
-char MockSerializationFormat::ID = 0;
+LLVM_INSTANTIATE_REGISTRY(llvm::Registry<MockSerializationFormat::FormatInfo>)
 
-MockSerializationFormat::MockSerializationFormat()
-    : llvm::RTTIExtends<MockSerializationFormat, SerializationFormat>() {
+MockSerializationFormat::MockSerializationFormat() {
   for (const auto &FormatInfoEntry : llvm::Registry<FormatInfo>::entries()) {
     std::unique_ptr<FormatInfo> Info = FormatInfoEntry.instantiate();
     bool Inserted = FormatInfos.try_emplace(Info->ForSummary, *Info).second;
@@ -42,12 +41,16 @@ MockSerializationFormat::MockSerializationFormat()
   }
 }
 
-TUSummary MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
+llvm::Expected<TUSummary>
+MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
   BuildNamespace NS(BuildNamespaceKind::CompilationUnit, "Mock.cpp");
   TUSummary Summary(NS);
 
   auto ManifestFile = llvm::MemoryBuffer::getFile(Path + "/analyses.txt");
-  assert(ManifestFile); // TODO Handle error.
+  if (!ManifestFile) {
+    return llvm::createStringError(ManifestFile.getError(),
+                                   "Failed to read manifest file");
+  }
   llvm::StringRef ManifestFileContent = (*ManifestFile)->getBuffer();
 
   llvm::SmallVector<llvm::StringRef, 5> Analyses;
@@ -58,10 +61,14 @@ TUSummary MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
     SummaryName Name(Analysis.str());
     auto InputFile =
         llvm::MemoryBuffer::getFile(Path + "/" + Name.str() + ".special");
-    assert(InputFile);
+    if (!InputFile) {
+      return llvm::createStringError(InputFile.getError(),
+                                     "Failed to read analysis file");
+    }
     auto InfoIt = FormatInfos.find(Name);
     if (InfoIt == FormatInfos.end()) {
-      llvm::report_fatal_error(
+      return llvm::createStringError(
+          std::make_error_code(std::errc::invalid_argument),
           "No FormatInfo was registered for summary name: " + Name.str());
     }
     const auto &InfoEntry = InfoIt->second;
@@ -71,8 +78,11 @@ TUSummary MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
     auto &Table = getIdTable(Summary);
 
     std::unique_ptr<EntitySummary> Result = InfoEntry.Deserialize(Repr, Table);
-    if (!Result) // TODO: Handle error.
-      continue;
+    if (!Result) {
+      return llvm::createStringError(
+          std::make_error_code(std::errc::invalid_argument),
+          "Failed to deserialize EntitySummary for analysis: " + Name.str());
+    }
 
     EntityId FooId = Table.getId(EntityName{"c:@F@foo", "", /*Namespace=*/{}});
     auto &IdMappings = getData(Summary).try_emplace(Name).first->second;
@@ -81,19 +91,19 @@ TUSummary MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
     assert(Inserted);
   }
 
-  return Summary;
+  return std::move(Summary);
 }
 
-void MockSerializationFormat::writeTUSummary(const TUSummary &Summary,
-                                             llvm::StringRef OutputDir) {
+llvm::Error MockSerializationFormat::writeTUSummary(const TUSummary &Summary,
+                                                    llvm::StringRef Path) {
   std::error_code EC;
 
   // Check if output directory exists, create if needed
-  if (!llvm::sys::fs::exists(OutputDir)) {
-    EC = llvm::sys::fs::create_directories(OutputDir);
+  if (!llvm::sys::fs::exists(Path)) {
+    EC = llvm::sys::fs::create_directories(Path);
     if (EC) {
-      llvm::report_fatal_error("Failed to create output directory '" +
-                               OutputDir + "': " + EC.message());
+      return llvm::createStringError(EC, "Failed to create output directory '" +
+                                             Path + "': " + EC.message());
     }
   }
 
@@ -104,9 +114,10 @@ void MockSerializationFormat::writeTUSummary(const TUSummary &Summary,
     for (const auto &Data : llvm::make_second_range(EntityMappings)) {
       auto InfoIt = FormatInfos.find(SummaryName);
       if (InfoIt == FormatInfos.end()) {
-        llvm::report_fatal_error(
+        return llvm::createStringError(
+            std::make_error_code(std::errc::invalid_argument),
             "There was no FormatInfo registered for summary name '" +
-            SummaryName.str() + "'");
+                SummaryName.str() + "'");
       }
       const auto &InfoEntry = InfoIt->second;
       assert(InfoEntry.ForSummary == SummaryName);
@@ -114,27 +125,30 @@ void MockSerializationFormat::writeTUSummary(const TUSummary &Summary,
       auto Output = InfoEntry.Serialize(*Data, *this);
 
       std::string AnalysisFilePath =
-          (OutputDir + "/" + SummaryName.str() + ".special").str();
+          (Path + "/" + SummaryName.str() + ".special").str();
       llvm::raw_fd_ostream AnalysisOutputFile(AnalysisFilePath, EC);
       if (EC) {
-        llvm::report_fatal_error("Failed to create file '" + AnalysisFilePath +
-                                 "': " + llvm::StringRef(EC.message()));
+        return llvm::createStringError(
+            EC, "Failed to create file '" + AnalysisFilePath +
+                    "': " + llvm::StringRef(EC.message()));
       }
       AnalysisOutputFile << Output.MockRepresentation;
     }
   }
 
-  std::string ManifestFilePath = (OutputDir + "/analyses.txt").str();
+  std::string ManifestFilePath = (Path + "/analyses.txt").str();
   llvm::raw_fd_ostream ManifestFile(ManifestFilePath, EC);
   if (EC) {
-    llvm::report_fatal_error("Failed to create manifest file '" +
-                             ManifestFilePath +
-                             "': " + llvm::StringRef(EC.message()));
+    return llvm::createStringError(
+        EC, "Failed to create manifest file '" + ManifestFilePath +
+                "': " + llvm::StringRef(EC.message()));
   }
 
   interleave(map_range(Analyses, std::mem_fn(&SummaryName::str)), ManifestFile,
              "\n");
   ManifestFile << "\n";
+
+  return llvm::Error::success();
 }
 
 static SerializationFormatRegistry::Add<MockSerializationFormat>

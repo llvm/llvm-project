@@ -18,10 +18,9 @@ class TestDAP_launch_shellExpandArguments_enabled(lldbdap_testcase.DAPTestCaseBa
     """
 
     @skipIfLinux  # shell argument expansion doesn't seem to work on Linux
-    @expectedFailureWindows(
-        bugnumber="https://github.com/llvm/llvm-project/issues/137599"
+    @expectedFailureAll(
+        oslist=["freebsd", "netbsd", "windows"], bugnumber="llvm.org/pr48349"
     )
-    @expectedFailureAll(oslist=["freebsd", "netbsd"], bugnumber="llvm.org/pr48349")
     def test(self):
         program = self.getBuildArtifact("a.out")
         program_dir = os.path.dirname(program)
