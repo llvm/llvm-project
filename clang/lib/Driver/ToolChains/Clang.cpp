@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Clang.h"
+#include "Arch/AArch64.h"
 #include "Arch/ARM.h"
 #include "Arch/LoongArch.h"
 #include "Arch/Mips.h"
@@ -1688,12 +1689,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
 
   AddAAPCSVolatileBitfieldArgs(Args, CmdArgs);
 
-  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
+  if (auto TuneCPU = aarch64::getAArch64TargetTuneCPU(Args, Triple)) {
     CmdArgs.push_back("-tune-cpu");
-    if (strcmp(A->getValue(), "native") == 0)
-      CmdArgs.push_back(Args.MakeArgString(llvm::sys::getHostCPUName()));
-    else
-      CmdArgs.push_back(A->getValue());
+    CmdArgs.push_back(Args.MakeArgString(*TuneCPU));
   }
 
   AddUnalignedAccessWarning(CmdArgs);
@@ -9306,6 +9304,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       if (Kind == Action::OFK_OpenMP && !Args.hasArg(OPT_no_offloadlib) &&
           (TC->getTriple().isAMDGPU() || TC->getTriple().isNVPTX()))
         LinkerArgs.emplace_back("-lompdevice");
+
+      // For SPIR-V some functions will be defined by the runtime so allow
+      // unresolved symbols.
+      if (TC->getTriple().isSPIRV())
+        LinkerArgs.emplace_back("--allow-partial-linkage");
 
       // Forward all of these to the appropriate toolchain.
       for (StringRef Arg : CompilerArgs)

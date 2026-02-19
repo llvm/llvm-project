@@ -617,6 +617,15 @@ func.func @invalid_indexing_maps_placement_matmul(%lhs: tensor<4x1xf32>, %rhs: t
 
 // -----
 
+func.func @invalid_type_matmul(%arg0 : !amx.tile<16x16xbf16>)
+{
+  // expected-error @below {{custom op 'linalg.matmul' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got '!amx.tile<16x16xbf16>' and '!amx.tile<16x16xbf16>'}}
+  %0 = linalg.matmul ins(%arg0, %arg0 : !amx.tile<16x16xbf16>, !amx.tile<16x16xbf16>) outs(%arg0 : !amx.tile<16x16xbf16>) -> !amx.tile<16x16xbf16>
+  return
+}
+
+// -----
+
 func.func @invalid_indexing_maps_placement_contraction(
     %lhs: tensor<4x1xf32>, %rhs: tensor<1x64xf32>, %init: tensor<4x64xf32>) {
   // expected-error @+3 {{custom op 'linalg.contract' expected 'indexing_maps' attribute}}
@@ -1553,6 +1562,14 @@ func.func @invalid_C_map_result_dim_batch_matmul(%arg0: memref<?x?x?xf32>, %arg1
     return
 }
 
+// -----
+
+func.func @invalid_type_batch_matmul(%arg0 : !amx.tile<16x16xbf16>)
+{
+  // expected-error @below {{custom op 'linalg.batch_matmul' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got '!amx.tile<16x16xbf16>' and '!amx.tile<16x16xbf16>'}}
+  %0 = linalg.batch_matmul ins(%arg0, %arg0 : !amx.tile<16x16xbf16>, !amx.tile<16x16xbf16>) outs(%arg0 : !amx.tile<16x16xbf16>) -> !amx.tile<16x16xbf16>
+  return
+}
 
 // -----
 
@@ -1750,6 +1767,15 @@ func.func @invalid_C_map_result_dim(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>
                        affine_map<(batch, m, n, k) -> (m, k)>]
       ins(%A, %B: memref<?x?x?xf32>, memref<?x?x?xf32>)
       outs(%C: memref<?x?xf32>)
+  return
+}
+
+// -----
+
+func.func @batch_reduce_matmul_invalid_type(%arg0 : !amx.tile<16x16xbf16>)
+{
+  // expected-error @below {{custom op 'linalg.batch_reduce_matmul' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got '!amx.tile<16x16xbf16>' and '!amx.tile<16x16xbf16>'}}
+  %0 = linalg.batch_reduce_matmul ins(%arg0, %arg0 : !amx.tile<16x16xbf16>, !amx.tile<16x16xbf16>) outs(%arg0 : !amx.tile<16x16xbf16>) -> !amx.tile<16x16xbf16>
   return
 }
 

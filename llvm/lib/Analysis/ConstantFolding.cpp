@@ -329,8 +329,7 @@ bool llvm::IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV,
 
   // Look through ptr->int and ptr->ptr casts.
   if (CE->getOpcode() == Instruction::PtrToInt ||
-      CE->getOpcode() == Instruction::PtrToAddr ||
-      CE->getOpcode() == Instruction::BitCast)
+      CE->getOpcode() == Instruction::PtrToAddr)
     return IsConstantOffsetFromGlobal(CE->getOperand(0), GV, Offset, DL,
                                       DSOEquiv);
 
@@ -985,9 +984,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
   // Otherwise canonicalize this to a single ptradd.
   LLVMContext &Ctx = Ptr->getContext();
-  return ConstantExpr::getGetElementPtr(Type::getInt8Ty(Ctx), Ptr,
-                                        ConstantInt::get(Ctx, Offset), NW,
-                                        InRange);
+  return ConstantExpr::getPtrAdd(Ptr, ConstantInt::get(Ctx, Offset), NW,
+                                 InRange);
 }
 
 /// Attempt to constant fold an instruction with the
