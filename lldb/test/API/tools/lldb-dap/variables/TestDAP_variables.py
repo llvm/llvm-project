@@ -306,6 +306,16 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             argv, 0x1234, "verify argv was set to 0x1234 (0x1234 != %#x)" % (argv)
         )
 
+        # Test hexadecimal format
+        response = self.set_local("argc", 42, is_hex=True)
+        verify_response = {
+            "type": "int",
+            "value": "0x0000002a",
+        }
+        for key, value in verify_response.items():
+            self.assertEqual(value, response["body"][key])
+        self.set_local("argc", 123)
+
         # Set a variable value whose name is synthetic, like a variable index
         # and verify the value by reading it
         variable_value = 100
