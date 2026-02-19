@@ -15,7 +15,7 @@ option(LIBOMPTEST_INSTALL_COMPONENTS
        "Install ompTest library, headers and package files." OFF)
 
 # Exit early if OMPT support or LLVM-tests were disabled by the user.
-if((NOT ${LIBOMP_OMPT_SUPPORT}) OR (NOT ${LLVM_INCLUDE_TESTS}))
+if((NOT LIBOMP_OMPT_SUPPORT) OR (NOT LLVM_INCLUDE_TESTS))
   return()
 endif()
 
