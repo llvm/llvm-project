@@ -354,16 +354,15 @@ generateOperationNumbering(FunctionOpInterface function) {
     for (Operation &op : block->getOperations()) {
       WalkResult walkResult =
           op.walk([&](ArmSMETileOpInterface nestedOp) -> WalkResult {
-            if (&op == nestedOp.getOperation())
-              return WalkResult::advance();
-            nestedOp.emitError(
-                "ArmSME tile allocation requires flattened control flow; run "
-                "-convert-scf-to-cf before this pass (e.g. via "
-                "convert-arm-sme-to-llvm pipeline)");
-            return WalkResult::interrupt();
+            if (&op != nestedOp.getOperation())
+              return WalkResult::interrupt();
+            return WalkResult::advance();
           });
-      if (walkResult.wasInterrupted())
-        return failure();
+      if (walkResult.wasInterrupted()) {
+        return op.emitError("ArmSME tile allocation requires flattened control "
+                            "flow; run -convert-scf-to-cf before this pass "
+                            "(e.g. via convert-arm-sme-to-llvm pipeline)");
+      }
       operationToIndexMap.try_emplace(&op, index++);
     }
   }
