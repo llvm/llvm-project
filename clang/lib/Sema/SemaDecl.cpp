@@ -10058,8 +10058,7 @@ static bool isStdBuiltin(ASTContext &Ctx, FunctionDecl *FD,
   }
 }
 
-void Sema::DiagnoseVlaSizeParameter(
-    const ArrayRef<ParmVarDecl *> &Params) {
+void Sema::DiagnoseVlaSizeParameter(const ArrayRef<ParmVarDecl *> &Params) {
   // Loop over the parameters to see if any of the size expressions contains
   // a DeclRefExpr which refers to a variable from an outer scope that is
   // also named later in the parameter list.
