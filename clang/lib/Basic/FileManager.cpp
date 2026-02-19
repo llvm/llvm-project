@@ -492,13 +492,17 @@ bool FileManager::fixupRelativePath(const FileSystemOptions &FileSystemOpts,
   return true;
 }
 
-bool FileManager::makeAbsolutePath(SmallVectorImpl<char> &Path) const {
+bool FileManager::makeAbsolutePath(SmallVectorImpl<char> &Path,
+                                   bool Canonicalize) const {
   bool Changed = FixupRelativePath(Path);
 
   if (!llvm::sys::path::is_absolute(StringRef(Path.data(), Path.size()))) {
     FS->makeAbsolute(Path);
     Changed = true;
   }
+
+  if (Canonicalize)
+    Changed |= llvm::sys::path::remove_dots(Path);
 
   return Changed;
 }
