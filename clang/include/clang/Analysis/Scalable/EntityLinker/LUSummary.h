@@ -25,8 +25,6 @@
 namespace clang::ssaf {
 
 class EntitySummary;
-class SerializationFormat;
-class SummaryViewBuilder;
 
 /// Represents a link unit (LU) summary containing merged entity summaries.
 ///
@@ -35,7 +33,6 @@ class SummaryViewBuilder;
 /// and the merged entity summaries.
 class LUSummary {
   friend class SerializationFormat;
-  friend class SummaryViewBuilder;
   friend class TestFixture;
 
   NestedBuildNamespace LUNamespace;

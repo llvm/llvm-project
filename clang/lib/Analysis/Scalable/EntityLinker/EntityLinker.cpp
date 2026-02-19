@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Scalable/EntityLinker/EntityLinker.h"
+#include "clang/Analysis/Scalable/EntityLinker/EntitySummaryEncoding.h"
 #include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
 #include "clang/Analysis/Scalable/Model/EntityLinkage.h"
 #include "clang/Analysis/Scalable/Model/EntityName.h"

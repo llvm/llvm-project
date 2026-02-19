@@ -25,9 +25,6 @@
 
 namespace clang::ssaf {
 
-class EntityLinker;
-class SerializationFormat;
-
 /// Represents a link unit summary in its serialized encoding.
 ///
 /// LUSummaryEncoding holds the combined entity summary data from multiple
