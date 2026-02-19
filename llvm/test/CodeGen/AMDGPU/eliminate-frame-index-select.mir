@@ -103,9 +103,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: renamable $vgpr2 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
-    ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 killed $vgpr1, killed $vgpr2, 0, 0, $sgpr4, implicit $exec
+    ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, killed $vgpr1, 0, killed $vgpr2, $sgpr4, implicit $exec
     ; CHECK-NEXT: SI_RETURN
     renamable $vgpr2 = V_MOV_B32_e32 0, implicit $exec
-    renamable $vgpr0 = V_CNDMASK_B32_e64 %stack.0, killed $vgpr2, 0, 0, $sgpr4, implicit $exec
+    renamable $vgpr0 = V_CNDMASK_B32_e64 0, %stack.0, 0, killed $vgpr2, $sgpr4, implicit $exec
     SI_RETURN
 ...

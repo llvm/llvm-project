@@ -3082,12 +3082,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     if (!IsMUBUF && !MFI->isBottomOfStack()) {
       // Convert to a swizzled stack address by scaling by the wave size.
       // In an entry function/kernel the offset is already swizzled.
-      const TargetRegisterClass *FiRC =
-          TII->getRegClass(MI->getDesc(), FIOperandNum);
-      // If FiRC is null, fall back to non-SALU handling to avoid crashing.
-      // Some instructions may not have regclass information for FI operands
-      // yet.
-      bool IsSALU = FiRC && isSGPRClass(FiRC);
+      bool IsSALU = isSGPRClass(TII->getRegClass(MI->getDesc(), FIOperandNum));
       bool LiveSCC = RS->isRegUsed(AMDGPU::SCC) &&
                      !MI->definesRegister(AMDGPU::SCC, /*TRI=*/nullptr);
       const TargetRegisterClass *RC = IsSALU && !LiveSCC
