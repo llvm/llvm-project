@@ -227,35 +227,32 @@ TEST(DumpASTTests, UnbalancedBraces) {
   ASSERT_EQ(Node.range, Case.range("func"));
 }
 
-TEST(DumpASTTests, DependentTemplateNameDoesNotCrash) {
-  // Regression test: DumpAST should not crash when traversing dependent
-  // nested template names such as Foo<V>::template Bar<W>::Value.
+TEST(DumpASTTests, NestedTemplates) {
+  // Test that we don't crash while trying to dump AST of a template function
+  // with nested template names such as Foo<V>::template Bar<W>::Value.
   const char *Code = R"cpp(
 template <typename T>
-struct Foo {
+struct TypeA {
   template <typename U>
-  struct Bar {
+  struct TypeB {
     static U Value;
   };
 };
 
 template <typename V, typename W>
-auto foo() {
-  return Foo<V>::template Bar<W>::Value;
+auto func() {
+  return TypeA<V>::template TypeB<W>::Value;
 }
   )cpp";
 
   ParsedAST AST = TestTU::withCode(Code).build();
-
-  // Just dumping the AST for the function should not crash.
-  const auto &Foo = findDecl(AST, [](const NamedDecl &D) {
-    return isa<FunctionDecl>(D) && D.getNameAsString() == "foo";
+  const NamedDecl &Func = findDecl(AST, [](const NamedDecl &D) {
+    return isa<FunctionDecl>(D) && D.getNameAsString() == "func";
   });
 
-  auto Node =
-      dumpAST(DynTypedNode::create(Foo), AST.getTokens(), AST.getASTContext());
+  const ASTNode Node =
+      dumpAST(DynTypedNode::create(Func), AST.getTokens(), AST.getASTContext());
 
-  // Minimal sanity check to ensure we actually got a node.
   EXPECT_EQ(Node.kind, "Function");
 }
 
