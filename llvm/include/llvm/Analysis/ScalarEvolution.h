@@ -80,13 +80,20 @@ struct SCEVUse : PointerIntPair<const SCEV *, 2> {
 
   void *getRawPointer() const { return getOpaqueValue(); }
 
+  /// Returns true of the SCEVUse is canonical, i.e. no SCEVUse flags set in any
+  /// operands.
+  bool isCanonical() const;
+
+  /// Return the canonical SCEV for this SCEVUse.
+  const SCEV *getCanonical() const;
+
   unsigned getFlags() const { return getInt(); }
 
   bool operator==(const SCEVUse &RHS) const {
-    return getRawPointer() == RHS.getRawPointer();
+    return getCanonical() == RHS.getCanonical();
   }
 
-  bool operator==(const SCEV *RHS) const { return getRawPointer() == RHS; }
+  inline bool operator==(const SCEV *RHS) const;
 
   /// Print out the internal representation of this scalar to the specified
   /// stream.  This should really only be used for debugging purposes.
@@ -122,13 +129,23 @@ template <> struct DenseMapInfo<SCEVUse> {
   }
 
   static unsigned getHashValue(SCEVUse U) {
-    return hash_value(U.getRawPointer());
+    return hash_value(U.getCanonical());
   }
 
   static bool isEqual(const SCEVUse LHS, const SCEVUse RHS) {
-    return LHS.getRawPointer() == RHS.getRawPointer();
+    void *L = LHS.getRawPointer();
+    void *R = RHS.getRawPointer();
+    void *Empty = getEmptyKey().getRawPointer();
+    void *Tombstone = getTombstoneKey().getRawPointer();
+    if (L == Empty || L == Tombstone || R == Empty || R == Tombstone)
+      return L == R;
+    return LHS.getCanonical() == RHS.getCanonical();
   }
 };
+
+inline bool SCEVUse::isCanonical() const {
+  return getCanonical() == getPointer() && getFlags() == 0;
+}
 
 template <> struct simplify_type<SCEVUse> {
   using SimpleType = const SCEV *;
@@ -158,6 +175,10 @@ protected:
   /// This field is initialized to zero and may be used in subclasses to store
   /// miscellaneous information.
   unsigned short SubclassData = 0;
+
+  /// Pointer to the canonical version of the SCEV, i.e. one where all operands
+  /// have no SCEVUse flags.
+  const SCEV *CanonicalSCEV = nullptr;
 
 public:
   /// NoWrapFlags are bitfield indices into SubclassData.
@@ -249,6 +270,16 @@ public:
 
   /// This method is used for debugging.
   LLVM_ABI void dump() const;
+
+  /// Compute and set the canonical SCEV, by constructing a SCEV with the same
+  /// operands, but all SCEVUse flags dropped.
+  LLVM_ABI void computeAndSetCanonical(ScalarEvolution &SE);
+
+  /// Return the canonical SCEV.
+  LLVM_ABI const SCEV *getCanonical() const {
+    assert(CanonicalSCEV && "canonical SCEV not yet computed");
+    return CanonicalSCEV;
+  }
 };
 
 // Specialize FoldingSetTrait for SCEV to avoid needing to compute
@@ -268,6 +299,11 @@ template <> struct FoldingSetTrait<SCEV> : DefaultFoldingSetTrait<SCEV> {
 
 inline raw_ostream &operator<<(raw_ostream &OS, const SCEV &S) {
   S.print(OS);
+  return OS;
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS, SCEVUse U) {
+  U.print(OS);
   return OS;
 }
 
@@ -2628,6 +2664,14 @@ template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
     return LHS == RHS;
   }
 };
+
+inline const SCEV *SCEVUse::getCanonical() const {
+  return getPointer()->getCanonical();
+}
+
+inline bool SCEVUse::operator==(const SCEV *RHS) const {
+  return getCanonical() == RHS->getCanonical();
+}
 
 } // end namespace llvm
 
