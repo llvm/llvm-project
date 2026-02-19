@@ -184,6 +184,14 @@ public:
     return hasPTXWithAccelSMs(87, {120, 121});
   }
 
+  bool hasMMABlockScaleNF4X4E8() const {
+    return hasPTXWithFamilySMs(91, {120});
+  }
+
+  bool hasMMASparseBlockScaleNF4X4E8() const {
+    return hasPTXWithAccelSMs(91, {120, 121});
+  }
+
   // f32x2 instructions in Blackwell family
   bool hasF32x2Instructions() const;
 
