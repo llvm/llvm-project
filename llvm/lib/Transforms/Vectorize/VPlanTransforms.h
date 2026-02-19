@@ -180,6 +180,8 @@ struct VPlanTransforms {
   /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
   /// VPValue and connect the block to \p Plan, using the VPValue as branch
   /// condition.
+  static void attachCheckBlock(VPlan &Plan, VPValue *Cond,
+                               VPBasicBlock *CheckBlock, bool AddBranchWeights);
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
 
@@ -421,6 +423,14 @@ struct VPlanTransforms {
   /// VPInstructions.
   static void materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
                                  ElementCount VF);
+
+  /// Materializes within the \p AliasCheck block. Updates the header mask of
+  /// the loop to use the alias mask. Returns the clamped VF.
+  static VPValue *materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheck,
+                                       ArrayRef<PointerDiffInfo> DiffChecks);
+
+  /// Replaces all users of the VF and VFxUF with the runtime clamped VF.
+  static void fixupVFUsersForClampedVF(VPlan &Plan, VPValue *ClampedVF);
 
   /// Expand VPExpandSCEVRecipes in \p Plan's entry block. Each
   /// VPExpandSCEVRecipe is replaced with a live-in wrapping the expanded IR

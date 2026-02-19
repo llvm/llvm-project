@@ -437,8 +437,8 @@ define i64 @ivopt_widen_ptr_indvar_1(ptr noalias %a, i64 %stride, i64 %n) {
 ;
 ; STRIDED-LABEL: @ivopt_widen_ptr_indvar_1(
 ; STRIDED-NEXT:  entry:
-; STRIDED-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
 ; STRIDED-NEXT:    [[TMP1:%.*]] = shl i64 [[STRIDE:%.*]], 3
+; STRIDED-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
 ; STRIDED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; STRIDED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
@@ -522,8 +522,8 @@ define i64 @ivopt_widen_ptr_indvar_2(ptr noalias %a, i64 %stride, i64 %n) {
 ;
 ; STRIDED-LABEL: @ivopt_widen_ptr_indvar_2(
 ; STRIDED-NEXT:  entry:
-; STRIDED-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
 ; STRIDED-NEXT:    [[TMP1:%.*]] = shl i64 [[STRIDE:%.*]], 3
+; STRIDED-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
 ; STRIDED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; STRIDED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
@@ -629,8 +629,8 @@ define i64 @ivopt_widen_ptr_indvar_3(ptr noalias %a, i64 %stride, i64 %n) {
 ;
 ; STRIDED-LABEL: @ivopt_widen_ptr_indvar_3(
 ; STRIDED-NEXT:  entry:
-; STRIDED-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
 ; STRIDED-NEXT:    [[TMP1:%.*]] = shl i64 [[STRIDE:%.*]], 3
+; STRIDED-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
 ; STRIDED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; STRIDED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
@@ -711,10 +711,10 @@ define void @strided_ptr_iv_runtime_stride(ptr %pIn, ptr %pOut, i32 %nCols, i32 
 ; STRIDED-NEXT:  entry:
 ; STRIDED-NEXT:    [[PIN2:%.*]] = ptrtoaddr ptr [[PIN:%.*]] to i64
 ; STRIDED-NEXT:    [[POUT1:%.*]] = ptrtoaddr ptr [[POUT:%.*]] to i64
-; STRIDED-NEXT:    [[TMP0:%.*]] = zext i32 [[NCOLS:%.*]] to i64
-; STRIDED-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 1)
 ; STRIDED-NEXT:    [[TMP1:%.*]] = sext i32 [[STRIDE:%.*]] to i64
 ; STRIDED-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP1]], 2
+; STRIDED-NEXT:    [[TMP10:%.*]] = zext i32 [[NCOLS:%.*]] to i64
+; STRIDED-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP10]], i64 1)
 ; STRIDED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX]], 4
 ; STRIDED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; STRIDED:       vector.scevcheck:
