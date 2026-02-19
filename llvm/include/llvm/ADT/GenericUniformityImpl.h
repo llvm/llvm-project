@@ -51,7 +51,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/IR/Argument.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "uniformity"
@@ -398,14 +397,11 @@ public:
 
   /// \brief Whether \p Val is divergent at its definition.
   bool isDivergent(ConstValueRefT V) const {
-    // For IR: Constants and GlobalValues are never divergent.
-    if constexpr (!std::is_same<InstructionT, MachineInstr>::value) {
-      if (!isa<InstructionT>(V) && !isa<Argument>(V))
-        return false;
-    }
-    // If UniformValues is empty (MIR, or before finalization), use original
-    // logic. If UniformValues is populated (IR after finalization), unknown
-    // values are conservatively treated as divergent.
+    if (ContextT::isNeverDivergent(V))
+      return false;
+    // If UniformValues is empty (before finalization), use original logic.
+    // If UniformValues is populated (after finalization), unknown values
+    // are conservatively treated as divergent.
     if (UniformValues.empty())
       return DivergentValues.count(V);
     return !UniformValues.count(V);
