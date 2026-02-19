@@ -210,6 +210,12 @@ MPFRNumber MPFRNumber::erf() const {
   return result;
 }
 
+MPFRNumber MPFRNumber::erfc() const {
+  MPFRNumber result(*this);
+  mpfr_erfc(result.value, value, mpfr_rounding);
+  return result;
+}
+
 MPFRNumber MPFRNumber::exp() const {
   MPFRNumber result(*this);
   mpfr_exp(result.value, value, mpfr_rounding);
