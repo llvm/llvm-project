@@ -2042,7 +2042,7 @@ class Target {
   // post-register-allocation renaming of registers. This is done by
   // setting hasExtraDefRegAllocReq and hasExtraSrcRegAllocReq to 1
   // for all opcodes if this flag is set to 0.
-  int AllowRegisterRenaming = 0;
+  bit AllowRegisterRenaming = 0;
 
   // RegistersAreIntervals - Controls whether registers units must form
   // contiguous intervals for each register.
@@ -2055,7 +2055,7 @@ class Target {
   //
   // This enables interval-based representation of register units, which can
   // improve data structure representations in target backends.
-  int RegistersAreIntervals = 0;
+  bit RegistersAreIntervals = 0;
 }
 
 //===----------------------------------------------------------------------===//
