@@ -2816,6 +2816,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     switch (Opcode) {
     case TargetOpcode::G_CTTZ:
     case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+    case TargetOpcode::G_CTLZ_ZERO_UNDEF: // undef bits shifted out below
       ExtOpc = TargetOpcode::G_ANYEXT;
       break;
     case TargetOpcode::G_CTLS:
