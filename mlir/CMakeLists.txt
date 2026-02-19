@@ -175,8 +175,11 @@ set(MLIR_INSTALL_AGGREGATE_OBJECTS 1 CACHE BOOL
 
 set(MLIR_BUILD_MLIR_C_DYLIB 0 CACHE BOOL "Builds libMLIR-C shared library.")
 
-set(MLIR_LINK_MLIR_DYLIB ${LLVM_LINK_LLVM_DYLIB} CACHE BOOL
-    "Link tools against libMLIR.so")
+option(MLIR_BUILD_MLIR_DYLIB "Builds the libMLIR shared library" OFF)
+option(MLIR_LINK_MLIR_DYLIB "Link tools against libMLIR.so" ${LLVM_LINK_LLVM_DYLIB})
+if (MLIR_LINK_MLIR_DYLIB)
+  set(MLIR_BUILD_MLIR_DYLIB ON)
+endif()
 
 configure_file(
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Config/mlir-config.h.cmake
@@ -254,6 +257,15 @@ set(MLIR_PDLL_TABLEGEN_EXE "${MLIR_PDLL_TABLEGEN_EXE}" CACHE INTERNAL "")
 set(MLIR_PDLL_TABLEGEN_TARGET "${MLIR_PDLL_TABLEGEN_TARGET}" CACHE INTERNAL "")
 set(MLIR_SRC_SHARDER_TABLEGEN_EXE "${MLIR_SRC_SHARDER_TABLEGEN_EXE}" CACHE INTERNAL "")
 set(MLIR_SRC_SHARDER_TABLEGEN_TARGET "${MLIR_SRC_SHARDER_TABLEGEN_TARGET}" CACHE INTERNAL "")
+
+# Add MLIR dylib target here, as calls to mlir_target_link_libraries (used by
+# individual libs below) assume that such a target may exist,
+# but we cannot define the actual dylib until after all individual libs
+# are defined.
+if (MLIR_BUILD_MLIR_DYLIB)
+  add_library(MLIRDylib INTERFACE)
+  add_mlir_library_install(MLIRDylib)
+endif()
 
 add_subdirectory(include/mlir)
 add_subdirectory(lib)

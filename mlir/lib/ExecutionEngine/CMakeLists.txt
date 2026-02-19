@@ -104,7 +104,7 @@ mlir_target_link_libraries(MLIRExecutionEngine PUBLIC
   MLIRTargetLLVMIRExport
   )
 
-if(LLVM_BUILD_LLVM_DYLIB AND NOT (WIN32 OR MINGW OR CYGWIN)) # Does not build on windows currently, see #106859
+if(MLIR_BUILD_MLIR_DYLIB AND NOT (WIN32 OR MINGW OR CYGWIN)) # Does not build on windows currently, see #106859
   # Build a shared library for the execution engine. Some downstream projects
   # use this library to build their own CPU runners while preserving dynamic
   # linkage.

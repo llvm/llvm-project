@@ -375,11 +375,11 @@ function(add_mlir_library name)
     # Yes, because the target "obj.${name}" is referenced.
     set(NEEDS_OBJECT_LIB ON)
   endif ()
-  if(LLVM_BUILD_LLVM_DYLIB AND NOT ARG_EXCLUDE_FROM_LIBMLIR AND NOT XCODE)
+  if(MLIR_BUILD_MLIR_DYLIB AND NOT ARG_EXCLUDE_FROM_LIBMLIR AND NOT XCODE)
     # Yes, because in addition to the shared library, the object files are
     # needed for linking into libMLIR.so (see mlir/tools/mlir-shlib/CMakeLists.txt).
     # For XCode, -force_load is used instead.
-    # Windows is not supported (LLVM_BUILD_LLVM_DYLIB=ON will cause an error).
+    # Windows is not supported (MLIR_BUILD_MLIR_DYLIB=ON will cause an error).
     set(NEEDS_OBJECT_LIB ON)
     set_property(GLOBAL APPEND PROPERTY MLIR_STATIC_LIBS ${name})
     set_property(GLOBAL APPEND PROPERTY MLIR_LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
@@ -766,7 +766,7 @@ function(mlir_target_link_libraries target type)
   endif()
 
   if (MLIR_LINK_MLIR_DYLIB)
-    target_link_libraries(${target} ${type} MLIR)
+    target_link_libraries(${target} ${type} MLIRDylib)
   else()
     target_link_libraries(${target} ${type} ${ARGN})
   endif()
