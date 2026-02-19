@@ -1,0 +1,23 @@
+# Link LibCURL if the user wants it
+if (LLVM_ENABLE_CURL)
+  set(imported_libs CURL::libcurl)
+endif()
+
+# Link cpp-httplib if the user wants it
+if (LLVM_ENABLE_HTTPLIB)
+  set(imported_libs ${imported_libs} httplib::httplib)
+endif()
+
+add_llvm_library(LLVMSupportHTTP
+  HTTPClient.cpp
+  HTTPServer.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/HTTP
+
+  LINK_LIBS
+  ${imported_libs}
+
+  LINK_COMPONENTS
+  Support
+)

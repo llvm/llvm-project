@@ -12,7 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Debuginfod/HTTPClient.h"
+#include "llvm/Support/HTTP/HTTPClient.h"
+
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
