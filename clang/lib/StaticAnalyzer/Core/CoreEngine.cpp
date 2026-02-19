@@ -577,6 +577,9 @@ ExplodedNode *CoreEngine::makeNode(const ProgramPoint &Loc,
 
 /// generateNode - Utility method to generate nodes, hook up successors,
 ///  and add nodes to the worklist.
+/// TODO: This and other similar methods should call CoreEngine::makeNode()
+/// instead of duplicating its logic. This would also fix that currently these
+/// can generate non-sink nodes with PosteriorlyOverconstrained state.
 void CoreEngine::generateNode(const ProgramPoint &Loc,
                               ProgramStateRef State,
                               ExplodedNode *Pred) {
