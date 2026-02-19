@@ -83,12 +83,8 @@ public:
   ///
   /// \param[in] addr_size
   ///     A new address byte size value.
-  ///
-  /// \param[in] target_byte_size
-  ///     A size of a target byte in 8-bit host bytes
   DataExtractor(const void *data, lldb::offset_t data_length,
-                lldb::ByteOrder byte_order, uint32_t addr_size,
-                uint32_t target_byte_size = 1);
+                lldb::ByteOrder byte_order, uint32_t addr_size);
 
   /// Construct with shared data.
   ///
@@ -105,11 +101,8 @@ public:
   ///
   /// \param[in] addr_size
   ///     A new address byte size value.
-  ///
-  /// \param[in] target_byte_size
-  ///     A size of a target byte in 8-bit host bytes
   DataExtractor(const lldb::DataBufferSP &data_sp, lldb::ByteOrder byte_order,
-                uint32_t addr_size, uint32_t target_byte_size = 1);
+                uint32_t addr_size);
 
   /// Construct with shared data, but byte-order & addr-size are unspecified.
   ///
@@ -120,8 +113,7 @@ public:
   ///
   /// \param[in] data_sp
   ///     A shared pointer to data.
-  DataExtractor(const lldb::DataBufferSP &data_sp,
-                uint32_t target_byte_size = 1);
+  explicit DataExtractor(const lldb::DataBufferSP &data_sp);
 
   /// Construct with a subset of \a data.
   ///
@@ -142,11 +134,8 @@ public:
   ///
   /// \param[in] length
   ///     The length in bytes of the subset of data.
-  ///
-  /// \param[in] target_byte_size
-  ///     A size of a target byte in 8-bit host bytes
   DataExtractor(const DataExtractor &data, lldb::offset_t offset,
-                lldb::offset_t length, uint32_t target_byte_size = 1);
+                lldb::offset_t length);
 
   /// Copy constructor.
   ///
@@ -180,8 +169,6 @@ public:
   /// count on the data will be decremented, and if zero, the data will be
   /// freed.
   virtual ~DataExtractor();
-
-  uint32_t getTargetByteSize() const { return m_target_byte_size; }
 
   /// Clears the object state.
   ///
@@ -1077,8 +1064,6 @@ protected:
   uint32_t m_addr_size; ///< The address size to use when extracting addresses.
   /// The shared pointer to data that can be shared among multiple instances
   lldb::DataBufferSP m_data_sp;
-  /// Making it const would require implementation of move assignment operator.
-  uint32_t m_target_byte_size = 1;
 };
 
 } // namespace lldb_private
