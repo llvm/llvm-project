@@ -60,14 +60,14 @@ add_custom_command(OUTPUT ${lldb_rpc_gen_byproducts}
   COMMAND ${CMAKE_COMMAND} -E make_directory
     ${lldb_rpc_server_generated_source_dir}
 
-  COMMAND ${LLDB_RPC_GEN_EXE}
+  COMMAND ${lldb_rpc_gen_exe}
     -p ${CMAKE_BINARY_DIR}
     --output-dir=${lldb_rpc_generated_dir}
     ${sysroot_arg}
     --extra-arg="-USWIG"
     ${api_headers}
 
-  DEPENDS ${LLDB_RPC_GEN_EXE} ${api_headers}
+  DEPENDS ${lldb_rpc_gen_exe} ${api_headers}
   COMMENT "Generating sources for lldb-rpc-server..."
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
