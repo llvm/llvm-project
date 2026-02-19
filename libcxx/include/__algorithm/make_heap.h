@@ -45,11 +45,11 @@ __make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compar
   if (__n > 1) {
     // start from the first parent, there is no need to consider children
 
-    for (__diff_t __start = (__sift_down_n - 2) / 2; __start >= 0; --__start) {
-      std::__sift_down<_AlgPolicy, __assume_both_children>(__first, __comp_ref, __sift_down_n, __start);
+    for (__diff_t __start = __sift_down_n / 2; __start != 0;) {
+      std::__sift_down<_AlgPolicy, __assume_both_children>(__first, __comp_ref, __sift_down_n, --__start);
     }
     if _LIBCPP_CONSTEXPR (__assume_both_children)
-      std::__sift_up<_AlgPolicy>(__first, __last, __comp, __n);
+      std::__sift_up<_AlgPolicy>(__first, --__last, __comp);
   }
 }
 
