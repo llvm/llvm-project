@@ -2314,8 +2314,9 @@ LogicalResult tosa::SliceOp::verify() {
   if (inputShape.hasRank() && startValues.size()) {
     SmallVector<int64_t> inputDims;
     inputShape.getDims(inputDims);
-    for (const auto &[start, size, inputDim] :
-         llvm::zip_equal(startValues, sizeValues, inputDims)) {
+    for (const auto &[index, vals] :
+         llvm::enumerate(llvm::zip_equal(startValues, sizeValues, inputDims))) {
+      const auto &[start, size, inputDim] = vals;
       if (start == kInferableDimSize || size == kInferableDimSize ||
           ShapedType::isDynamic(inputDim))
         continue;
@@ -2323,7 +2324,8 @@ LogicalResult tosa::SliceOp::verify() {
         return emitOpError("start + size must be less than or equal to input "
                            "dimension size, got start=")
                << start << ", size=" << size
-               << " vs input dim size=" << inputDim;
+               << " vs input dim size=" << inputDim << " at dimension "
+               << index;
     }
   }
 

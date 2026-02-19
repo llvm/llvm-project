@@ -201,9 +201,9 @@ func.func @test_slice_output_shape_mismatch(%arg0: tensor<4x5x6xf32>) {
 // -----
 
 func.func @test_slice_invalid_start_plus_size(%arg0: tensor<?x2xf32>) {
-  %start = tosa.const_shape {values = dense<[0, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %start = tosa.const_shape {values = dense<[-1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
   %size = tosa.const_shape {values = dense<[3, 2]> : tensor<2xindex>} : () -> !tosa.shape<2>
-  // expected-error@+1 {{'tosa.slice' op start + size must be less than or equal to input dimension size, got start=1, size=2 vs input dim size=2}}
+  // expected-error@+1 {{'tosa.slice' op start + size must be less than or equal to input dimension size, got start=1, size=2 vs input dim size=2 at dimension 1}}
   %1 = tosa.slice %arg0, %start, %size : (tensor<?x2xf32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x2xf32>
   return
 }
