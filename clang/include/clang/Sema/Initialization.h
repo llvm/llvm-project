@@ -342,7 +342,7 @@ public:
   /// Create the initialization entity for an object allocated via new.
   static InitializedEntity InitializeNew(SourceLocation NewLoc, QualType Type,
                                          bool VariableLengthArrayNew) {
-    return InitializedEntity(EK_New, NewLoc, Type, /*NRVO=*/ false,
+    return InitializedEntity(EK_New, NewLoc, Type, /*NRVO=*/false,
                              VariableLengthArrayNew);
   }
 

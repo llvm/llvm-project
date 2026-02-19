@@ -2208,7 +2208,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
     InitializedEntity Entity =
         InitializedEntity::InitializeNew(StartLoc, AllocType,
-                                         /*VariableLengthArrayNew=*/ false);
+                                         /*VariableLengthArrayNew=*/false);
     AllocType = DeduceTemplateSpecializationFromInitializer(
         AllocTypeInfo, Entity, Kind, Exprs);
     if (AllocType.isNull())
