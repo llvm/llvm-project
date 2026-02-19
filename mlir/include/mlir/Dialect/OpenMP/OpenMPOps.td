@@ -2300,4 +2300,37 @@ def DeclareSimdOp
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// [6.0] groupprivate Directive
+//===----------------------------------------------------------------------===//
+
+def GroupprivateOp : OpenMP_Op<"groupprivate",
+                      [AllTypesMatch<["sym_addr", "gp_addr"]>]> {
+  let summary = "groupprivate directive";
+  let description = [{
+    The groupprivate directive specifies that variables are replicated, with
+    each group having its own copy.
+
+    This operation takes in the address of a symbol that represents the original
+    variable and returns the address of its groupprivate copy. The symbol must
+    refer to a global variable so that type information can be obtained from it.
+
+    The `sym_addr` refers to the address of the symbol, which is a pointer to
+    the original variable. It must be obtained via `llvm.mlir.addressof` from
+    a global variable.
+
+    The optional `device_type` attribute specifies where the groupprivate
+    storage should be allocated (host, nohost, or any).
+  }];
+
+  let arguments = (ins
+    OpenMP_PointerLikeType:$sym_addr,
+    OptionalAttr<DeclareTargetDeviceTypeAttr>:$device_type
+  );
+  let results = (outs OpenMP_PointerLikeType:$gp_addr);
+  let assemblyFormat = [{
+    $sym_addr `:` type($sym_addr) ( `,` `device_type` $device_type^ )? `->` type($gp_addr) attr-dict
+  }];
+}
+
 #endif // OPENMP_OPS
