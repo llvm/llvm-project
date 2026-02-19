@@ -1015,6 +1015,66 @@ struct FunCloner {
         LLVMSetNNeg(Dst, NNeg);
         break;
       }
+      case LLVMTrunc: {
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMTypeRef DestTy = CloneType(LLVMTypeOf(Src));
+        Dst = LLVMBuildTrunc(Builder, Val, DestTy, Name);
+        break;
+      }
+      case LLVMSExt: {
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMTypeRef DestTy = CloneType(LLVMTypeOf(Src));
+        Dst = LLVMBuildSExt(Builder, Val, DestTy, Name);
+        break;
+      }
+      case LLVMFPToUI: {
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMTypeRef DestTy = CloneType(LLVMTypeOf(Src));
+        Dst = LLVMBuildFPToUI(Builder, Val, DestTy, Name);
+        break;
+      }
+      case LLVMFPToSI: {
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMTypeRef DestTy = CloneType(LLVMTypeOf(Src));
+        Dst = LLVMBuildFPToSI(Builder, Val, DestTy, Name);
+        break;
+      }
+      case LLVMUIToFP: {
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMTypeRef DestTy = CloneType(LLVMTypeOf(Src));
+        Dst = LLVMBuildUIToFP(Builder, Val, DestTy, Name);
+        break;
+      }
+      case LLVMSIToFP: {
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMTypeRef DestTy = CloneType(LLVMTypeOf(Src));
+        Dst = LLVMBuildSIToFP(Builder, Val, DestTy, Name);
+        break;
+      }
+      case LLVMFPTrunc: {
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMTypeRef DestTy = CloneType(LLVMTypeOf(Src));
+        Dst = LLVMBuildFPTrunc(Builder, Val, DestTy, Name);
+        break;
+      }
+      case LLVMFPExt: {
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMTypeRef DestTy = CloneType(LLVMTypeOf(Src));
+        Dst = LLVMBuildFPExt(Builder, Val, DestTy, Name);
+        break;
+      }
+      case LLVMPtrToInt: {
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMTypeRef DestTy = CloneType(LLVMTypeOf(Src));
+        Dst = LLVMBuildPtrToInt(Builder, Val, DestTy, Name);
+        break;
+      }
+      case LLVMIntToPtr: {
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMTypeRef DestTy = CloneType(LLVMTypeOf(Src));
+        Dst = LLVMBuildIntToPtr(Builder, Val, DestTy, Name);
+        break;
+      }
       case LLVMFAdd: {
         LLVMValueRef LHS = CloneValue(LLVMGetOperand(Src, 0));
         LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
