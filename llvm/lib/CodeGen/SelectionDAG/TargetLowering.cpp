@@ -8468,12 +8468,26 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
     // NOTE: If you change this expansion, please update the cost model
     // calculation in BasicTTIImpl::getTypeBasedIntrinsicInstrCost for
     // Intrinsic::clmul.
+
+    EVT SetCCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+
     SDValue Res = DAG.getConstant(0, DL, VT);
     for (unsigned I = 0; I < BW; ++I) {
       SDValue Mask = DAG.getConstant(APInt::getOneBitSet(BW, I), DL, VT);
       SDValue YMasked = DAG.getNode(ISD::AND, DL, VT, Y, Mask);
-      SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, X, YMasked);
-      Res = DAG.getNode(ISD::XOR, DL, VT, Res, Mul);
+      SDValue Part;
+      if (isOperationLegalOrCustom(
+              ISD::MUL, getTypeToTransformTo(*DAG.getContext(), VT))) {
+        Part = DAG.getNode(ISD::MUL, DL, VT, X, YMasked);
+      } else {
+        SDValue Zero = DAG.getConstant(0, DL, VT);
+        SDValue Cond = DAG.getSetCC(DL, SetCCVT, YMasked, Zero, ISD::SETNE);
+        SDValue XShifted = DAG.getNode(ISD::SHL, DL, VT, X,
+                                       DAG.getShiftAmountConstant(I, VT, DL));
+        Part = DAG.getSelect(DL, VT, Cond, XShifted, Zero);
+      }
+      Res = DAG.getNode(ISD::XOR, DL, VT, Res, Part);
     }
     return Res;
   }
