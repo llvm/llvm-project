@@ -49944,6 +49944,37 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Attempt to fold CMOV(LOAD(PTR0),LOAD(PTR1)) -> LOAD(CMOV(PTR0,PTR1))
+  // TODO: Allow matching extloads?
+  if (TrueOp.getResNo() == 0 && ISD::isNormalLoad(TrueOp.getNode()) &&
+      FalseOp.getResNo() == 0 && ISD::isNormalLoad(FalseOp.getNode()) &&
+      TrueOp.hasOneUse() && FalseOp.hasOneUse()) {
+    auto *TrueLd = cast<LoadSDNode>(TrueOp);
+    auto *FalseLd = cast<LoadSDNode>(FalseOp);
+    // Ensure the loads and pointers are as similar as possible.
+    EVT PtrVT = FalseLd->getBasePtr().getValueType();
+    if (TrueLd->getChain() == FalseLd->getChain() &&
+        TrueLd->getPointerInfo().getAddrSpace() ==
+            FalseLd->getPointerInfo().getAddrSpace() &&
+        TrueLd->getMemOperand()->getFlags() ==
+            FalseLd->getMemOperand()->getFlags() &&
+        TrueLd->isSimple() && FalseLd->isSimple() &&
+        !TrueLd->isPredecessorOf(Cond.getNode()) &&
+        !FalseLd->isPredecessorOf(Cond.getNode())) {
+      SDValue Ops[] = {FalseLd->getBasePtr(), TrueLd->getBasePtr(),
+                       DAG.getTargetConstant(CC, DL, MVT::i8), Cond};
+      SDValue NewPtr = DAG.getNode(X86ISD::CMOV, DL, PtrVT, Ops);
+      SDValue NewLd = DAG.getLoad(
+          VT, DL, FalseLd->getChain(), NewPtr,
+          MachinePointerInfo(FalseLd->getPointerInfo().getAddrSpace()),
+          std::min(FalseLd->getAlign(), TrueLd->getAlign()),
+          FalseLd->getMemOperand()->getFlags());
+      DAG.makeEquivalentMemoryOrdering(TrueLd, NewLd);
+      DAG.makeEquivalentMemoryOrdering(FalseLd, NewLd);
+      return NewLd;
+    }
+  }
+
   // If this is a select between two integer constants, try to do some
   // optimizations.  Note that the operands are ordered the opposite of SELECT
   // operands.
