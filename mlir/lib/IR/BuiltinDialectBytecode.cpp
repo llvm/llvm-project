@@ -165,7 +165,7 @@ readDenseIntOrFPElementsAttr(DialectBytecodeReader &reader, ShapedType type,
   // Note: this could be asserted instead as this should be the case. But we
   // did have period where the unpacked was being serialized, this enables
   // consuming those still and the check for which case we are in is pretty
-  // cheap.	
+  // cheap.
   size_t numElements = type.getNumElements();
   size_t packedSize = llvm::divideCeil(numElements, 8);
   if (blob.size() == packedSize && blob.size() != numElements &&
