@@ -1640,56 +1640,13 @@ FailureOr<linalg::GenericOp> deduplicateOperandsAndRemoveDeadResults(
 // functional-stye API call.
 //===----------------------------------------------------------------------===//
 
-/// Rewrites 2-D convolution ops with size-1 window dimensions into 1-D
-/// convolution ops. Works with both named ops and equivalent generic ops.
-template <typename Conv2DOp, typename Conv1DOp>
-struct DownscaleSizeOneWindowed2DConvolution final
-    : public OpInterfaceRewritePattern<LinalgOp> {
-  using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
-
-  FailureOr<Conv1DOp> returningMatchAndRewrite(LinalgOp convOp,
-                                               PatternRewriter &rewriter) const;
-
-  LogicalResult matchAndRewrite(LinalgOp convOp,
-                                PatternRewriter &rewriter) const override {
-    return returningMatchAndRewrite(convOp, rewriter);
-  }
-};
-
-extern template struct DownscaleSizeOneWindowed2DConvolution<Conv2DNhwcHwcfOp,
-                                                             Conv1DNwcWcfOp>;
-extern template struct DownscaleSizeOneWindowed2DConvolution<Conv2DNchwFchwOp,
-                                                             Conv1DNcwFcwOp>;
-
-/// Rewrites 2-D depthwise convolution ops with size-1 (w, kw) or (h, kh)
-/// dimensions into 1-D depthwise convolution ops.
-struct DownscaleDepthwiseConv2DNhwcHwcOp final
-    : public OpInterfaceRewritePattern<LinalgOp> {
-  DownscaleDepthwiseConv2DNhwcHwcOp(MLIRContext *context,
-                                    PatternBenefit benefit = 1)
-      : OpInterfaceRewritePattern<LinalgOp>(context, benefit) {}
-
-  FailureOr<DepthwiseConv1DNwcWcOp>
-  returningMatchAndRewrite(LinalgOp convOp, PatternRewriter &rewriter) const;
-
-  LogicalResult matchAndRewrite(LinalgOp convOp,
-                                PatternRewriter &rewriter) const override {
-    return returningMatchAndRewrite(convOp, rewriter);
-  }
-};
-
-struct DownscaleConv2DOp final : public OpInterfaceRewritePattern<LinalgOp> {
-  DownscaleConv2DOp(MLIRContext *context, PatternBenefit benefit = 1)
-      : OpInterfaceRewritePattern<LinalgOp>(context, benefit) {}
-
-  FailureOr<Conv1DOp> returningMatchAndRewrite(LinalgOp convOp,
-                                               PatternRewriter &rewriter) const;
-
-  LogicalResult matchAndRewrite(LinalgOp convOp,
-                                PatternRewriter &rewriter) const override {
-    return returningMatchAndRewrite(convOp, rewriter);
-  }
-};
+/// Rewrite convolution/pooling/depthwise ops with size-1 window dimensions
+/// into lower-dimensional ops. Uses `inferConvolutionDims` to work with any
+/// layout and handles both named ops and equivalent linalg.generic ops
+/// uniformly. The result is specialized back to a named op when possible.
+/// TODO: Support n-D to (n-1)-D downscaling.
+FailureOr<LinalgOp> downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
+                                                        LinalgOp op);
 
 ///
 /// Linalg generalization pattern.
