@@ -120,6 +120,18 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
   // TODO: skip functions that have no instrumented allocas for optimization
   IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 
+  if (Attribute SignReturnAddrHardenFnAttr =
+          F.getFnAttribute("sign-return-address-harden");
+      SignReturnAddrHardenFnAttr.isValid()) {
+    SignReturnAddressHardening =
+        StringSwitch<SignReturnAddressHardeningKind>(
+            SignReturnAddrHardenFnAttr.getValueAsString())
+            .Case("none", SignReturnAddressHardeningKind::None)
+            .Case("load-return-address",
+                  SignReturnAddressHardeningKind::LoadReturnAddress)
+            .Default(SignReturnAddressHardeningKind::None);
+  }
+
   // BTI/PAuthLR are set on the function attribute.
   BranchTargetEnforcement = F.hasFnAttribute("branch-target-enforcement");
   BranchProtectionPAuthLR = F.hasFnAttribute("branch-protection-pauth-lr");
