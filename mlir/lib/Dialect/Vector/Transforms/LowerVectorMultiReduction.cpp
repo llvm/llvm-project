@@ -494,7 +494,7 @@ struct UnrollMultiReductionInnerParallelBaseCase
         masks[i] = vector::ExtractOp::create(rewriter, loc, mask, i);
 
     Value result = multiReductionOp.getAcc();
-    for (auto [innerVector, innerMask] : llvm::zip(vectors, masks))
+    for (auto [innerVector, innerMask] : llvm::zip_equal(vectors, masks))
       result = makeArithReduction(rewriter, loc, multiReductionOp.getKind(),
                                   innerVector, result, /*fastmath=*/nullptr,
                                   innerMask);
@@ -561,7 +561,7 @@ struct UnrollMultiReductionInnerParallelGeneralCase
     ArrayRef<bool> reductionMask =
         ArrayRef<bool>(fullReductionMask).drop_front();
     Value result = multiReductionOp.getAcc();
-    for (auto [innerVector, innerMask] : llvm::zip(vectors, masks)) {
+    for (auto [innerVector, innerMask] : llvm::zip_equal(vectors, masks)) {
       auto reductionOp = vector::MultiDimReductionOp::create(
           rewriter, loc, innerVector, result, reductionMask,
           multiReductionOp.getKind());
