@@ -99,15 +99,15 @@ public:
   // the beginning of the output section this chunk was assigned to.
   int32_t outSecOff = 0;
 
-  uint8_t sectionKind : 3;
+  uint32_t sectionKind : 3;
 
   // Signals that the section is part of the output.  The garbage collector,
   // and COMDAT handling can set a sections' Live bit.
   // If GC is disabled, all sections start out as live by default.
-  unsigned live : 1;
+  uint32_t live : 1;
 
   // Signals the chunk was discarded by COMDAT handling.
-  unsigned discarded : 1;
+  uint32_t discarded : 1;
 
 protected:
   InputChunk(ObjFile *f, Kind k, StringRef name, uint32_t alignment = 0,
