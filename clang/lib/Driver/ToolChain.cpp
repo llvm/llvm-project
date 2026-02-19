@@ -229,8 +229,6 @@ static void getAArch64MultilibFlags(const Driver &D,
       break;
     }
   }
-
-  processMultilibCustomFlags(Result, Args);
 }
 
 static void getARMMultilibFlags(const Driver &D, const llvm::Triple &Triple,
@@ -319,8 +317,6 @@ static void getARMMultilibFlags(const Driver &D, const llvm::Triple &Triple,
       break;
     }
   }
-
-  processMultilibCustomFlags(Result, Args);
 }
 
 static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
@@ -377,6 +373,8 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
   default:
     break;
   }
+
+  processMultilibCustomFlags(Result, Args);
 
   // Include fno-exceptions and fno-rtti
   // to improve multilib selection
