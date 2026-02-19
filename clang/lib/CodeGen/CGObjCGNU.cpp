@@ -179,8 +179,16 @@ protected:
       (R.getVersion() >= VersionTuple(major, minor));
   }
 
-  std::string ManglePublicSymbol(StringRef Name) {
-    return (StringRef(CGM.getTriple().isOSBinFormatCOFF() ? "$_" : "._") + Name).str();
+  const std::string ManglePublicSymbol(StringRef Name) {
+    StringRef prefix = "._";
+
+    // Exported symbols in Emscripten must be a valid Javascript identifier.
+    auto triple = CGM.getTriple();
+    if (triple.isOSBinFormatCOFF() || triple.isOSBinFormatWasm()) {
+      prefix = "$_";
+    }
+
+    return (prefix + Name).str();
   }
 
   std::string SymbolForProtocol(Twine Name) {
@@ -2360,12 +2368,11 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
     MetaClassPtrAlias(nullptr), RuntimeVersion(runtimeABIVersion),
     ProtocolVersion(protocolClassVersion), ClassABIVersion(classABI) {
 
+  auto Triple = cgm.getContext().getTargetInfo().getTriple();
+
   msgSendMDKind = VMContext.getMDKindID("GNUObjCMessageSend");
-  usesSEHExceptions =
-      cgm.getContext().getTargetInfo().getTriple().isWindowsMSVCEnvironment();
-  usesCxxExceptions =
-      cgm.getContext().getTargetInfo().getTriple().isOSCygMing() &&
-      isRuntime(ObjCRuntime::GNUstep, 2);
+  usesSEHExceptions = Triple.isWindowsMSVCEnvironment();
+  usesCxxExceptions = (Triple.isOSCygMing() && isRuntime(ObjCRuntime::GNUstep, 2)) || Triple.isWasm();
 
   CodeGenTypes &Types = CGM.getTypes();
   IntTy = cast<llvm::IntegerType>(
@@ -4111,8 +4118,7 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
   if (!ClassAliases.empty()) {
     llvm::Type *ArgTypes[2] = {PtrTy, PtrToInt8Ty};
     llvm::FunctionType *RegisterAliasTy =
-      llvm::FunctionType::get(Builder.getVoidTy(),
-                              ArgTypes, false);
+        llvm::FunctionType::get(BoolTy, ArgTypes, false);
     llvm::Function *RegisterAlias = llvm::Function::Create(
       RegisterAliasTy,
       llvm::GlobalValue::ExternalWeakLinkage, "class_registerAlias_np",

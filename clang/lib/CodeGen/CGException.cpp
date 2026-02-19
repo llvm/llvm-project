@@ -161,6 +161,8 @@ static const EHPersonality &getObjCPersonality(const TargetInfo &Target,
   case ObjCRuntime::GNUstep:
     if (T.isOSCygMing())
       return EHPersonality::GNU_CPlusPlus_SEH;
+    else if (T.isWasm())
+      return EHPersonality::GNU_Wasm_CPlusPlus;
     else if (L.ObjCRuntime.getVersion() >= VersionTuple(1, 7))
       return EHPersonality::GNUstep_ObjC;
     [[fallthrough]];
@@ -200,7 +202,8 @@ static const EHPersonality &getCXXPersonality(const TargetInfo &Target,
 static const EHPersonality &getObjCXXPersonality(const TargetInfo &Target,
                                                  const CodeGenOptions &CGOpts,
                                                  const LangOptions &L) {
-  if (Target.getTriple().isWindowsMSVCEnvironment())
+  auto Triple = Target.getTriple();
+  if (Triple.isWindowsMSVCEnvironment())
     return EHPersonality::MSVC_CxxFrameHandler3;
 
   switch (L.ObjCRuntime.getKind()) {
@@ -218,8 +221,12 @@ static const EHPersonality &getObjCXXPersonality(const TargetInfo &Target,
     return getObjCPersonality(Target, CGOpts, L);
 
   case ObjCRuntime::GNUstep:
-    return Target.getTriple().isOSCygMing() ? EHPersonality::GNU_CPlusPlus_SEH
-                                            : EHPersonality::GNU_ObjCXX;
+    if (Triple.isWasm())
+      return EHPersonality::GNU_Wasm_CPlusPlus;
+    else if (Triple.isOSCygMing())
+      return EHPersonality::GNU_CPlusPlus_SEH;
+    else
+      return EHPersonality::GNU_ObjCXX;
 
   // The GCC runtime's personality function inherently doesn't support
   // mixed EH.  Use the ObjC personality just to avoid returning null.
