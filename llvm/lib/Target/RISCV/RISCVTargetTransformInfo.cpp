@@ -3236,6 +3236,9 @@ RISCVTTIImpl::getPreferredAddressingMode(const Loop *L,
   if (ST->hasVendorXCVmem() && !ST->is64Bit())
     return TTI::AMK_PostIndexed;
 
+  if (ST->hasVendorXTHeadMemIdx())
+    return TTI::AMK_PreIndexed;
+
   return BasicTTIImplBase::getPreferredAddressingMode(L, SE);
 }
 
