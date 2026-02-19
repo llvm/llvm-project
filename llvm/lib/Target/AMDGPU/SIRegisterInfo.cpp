@@ -1542,7 +1542,6 @@ void SIRegisterInfo::buildSpillLoadStore(
   // 32-bit splits.
   bool IsRegMisaligned = false;
   if (!IsBlock && RegWidth > 4) {
-    // clang-format off
     unsigned SpillOpcode =
         getFlatScratchSpillOpcode(TII, LoadStoreOp, std::min(RegWidth, 16u));
     int VDataIdx = IsStore
@@ -1550,12 +1549,17 @@ void SIRegisterInfo::buildSpillLoadStore(
                  : 0; // Restore Ops have data reg as the first (output) operand.
     const TargetRegisterClass *ExpectedRC =
         TII->getRegClass(TII->get(SpillOpcode), VDataIdx);
-    // For large tuples (>128-bit), consider the first 4 sub-regs for alignment
-    Register RegToCheck = RegWidth <= 16
-                        ? ValueReg
-                        : Register(getSubReg(ValueReg, getSubRegFromChannel(0, 4)));
-    IsRegMisaligned = !ExpectedRC->contains(RegToCheck);
-    // clang-format on
+    unsigned NumRegs = std::min(RegWidth / 4, 4u);
+    unsigned SubIdx = getSubRegFromChannel(0, NumRegs);
+    const TargetRegisterClass *MatchRC =
+        getMatchingSuperRegClass(RC, ExpectedRC, SubIdx);
+    // getMatchingSuperRegClass can return null for same-size VReg/AV pairs
+    // (e.g. VReg_64_Align2 vs AV_64_Align2). Just to be sure, check for a
+    // common subclass as well.
+    if (!MatchRC)
+      MatchRC = getCommonSubClass(RC, ExpectedRC);
+    if (MatchRC && !MatchRC->contains(ValueReg))
+      IsRegMisaligned = true;
   }
   // Always use 4 byte operations for AGPRs because we need to scavenge
   // a temporary VGPR.
