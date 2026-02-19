@@ -22661,6 +22661,15 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
   assert(SatWidth <= DstWidth && SatWidth <= TmpWidth &&
          "Expected saturation width smaller than result width");
 
+  // AVX512 provides VCVTSS/D2USI which return INT_MAX/LONG_MAX when overflow
+  // happens. X86ISD::FMAX makes sure negative value and NaN return 0.
+  if (Subtarget.hasAVX512() && !IsSigned && SatWidth == DstWidth &&
+      (DstVT == MVT::i32 || (Subtarget.is64Bit() && DstVT == MVT::i64))) {
+    SDValue MinFloatNode = DAG.getConstantFP(0.0, dl, SrcVT);
+    SDValue Clamped = DAG.getNode(X86ISD::FMAX, dl, SrcVT, Src, MinFloatNode);
+    return DAG.getNode(ISD::FP_TO_UINT, dl, DstVT, Clamped);
+  }
+
   // Promote result of FP_TO_*INT to at least 32 bits.
   if (TmpWidth < 32) {
     TmpVT = MVT::i32;
@@ -22722,14 +22731,19 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
       return DAG.getNode(ISD::TRUNCATE, dl, DstVT, FpToInt);
     }
 
-    // Clamp by MinFloat from below. If Src is NaN, the result is MinFloat.
-    SDValue MinClamped = DAG.getNode(
-      X86ISD::FMAX, dl, SrcVT, Src, MinFloatNode);
-    // Clamp by MaxFloat from above. NaN cannot occur.
-    SDValue BothClamped = DAG.getNode(
-      X86ISD::FMINC, dl, SrcVT, MinClamped, MaxFloatNode);
+    SDValue MinClamped = Src;
+    // If Src is NaN, the result is MaxFloat.
+    unsigned MinOpc = X86ISD::FMIN;
+    if (!IsSigned || SatWidth != DstWidth) {
+      // Clamp by MinFloat from below. If Src is NaN, the result is MinFloat.
+      MinClamped = DAG.getNode(X86ISD::FMAX, dl, SrcVT, Src, MinFloatNode);
+      // NaN cannot occur.
+      MinOpc = X86ISD::FMINC;
+    }
+    // Clamp by MaxFloat from above.
+    SDValue Clamped = DAG.getNode(MinOpc, dl, SrcVT, MinClamped, MaxFloatNode);
     // Convert clamped value to integer.
-    SDValue FpToInt = DAG.getNode(FpToIntOpcode, dl, DstVT, BothClamped);
+    SDValue FpToInt = DAG.getNode(FpToIntOpcode, dl, DstVT, Clamped);
 
     if (!IsSigned) {
       // In the unsigned case we're done, because we mapped NaN to MinFloat,

@@ -1455,7 +1455,6 @@ define i32 @test_signed_i32_f64(double %f) nounwind {
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE-NEXT:    xorl %eax, %eax
 ; X86-SSE-NEXT:    ucomisd %xmm0, %xmm0
-; X86-SSE-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    cvttsd2si %xmm0, %ecx
 ; X86-SSE-NEXT:    cmovnpl %ecx, %eax
@@ -1465,7 +1464,6 @@ define i32 @test_signed_i32_f64(double %f) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ucomisd %xmm0, %xmm0
-; X64-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    cvttsd2si %xmm0, %ecx
 ; X64-NEXT:    cmovnpl %ecx, %eax
