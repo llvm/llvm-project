@@ -4565,7 +4565,7 @@ bool RISCVDAGToDAGISel::selectRVVSimm5(SDValue N, unsigned Width,
   return false;
 }
 
-// Match XOR with a VMSET_VL operand. REturn the other operand.
+// Match XOR with a VMSET_VL operand. Return the other operand.
 bool RISCVDAGToDAGISel::selectVMNOTOp(SDValue N, SDValue &Res) {
   if (N.getOpcode() != ISD::XOR)
     return false;
