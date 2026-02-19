@@ -112,7 +112,7 @@ void SerializeGPUModuleBase::init() {
   static llvm::once_flag initializeBackendOnce;
   llvm::call_once(initializeBackendOnce, []() {
   // If the `AMDGPU` LLVM target was built, initialize it.
-#if MLIR_ENABLE_ROCM_CONVERSIONS
+#if LLVM_HAS_AMDGPU_TARGET
     LLVMInitializeAMDGPUTarget();
     LLVMInitializeAMDGPUTargetInfo();
     LLVMInitializeAMDGPUTargetMC();
