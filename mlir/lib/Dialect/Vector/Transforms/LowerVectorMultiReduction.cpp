@@ -301,61 +301,6 @@ private:
   const bool useInnerDimsForReduction;
 };
 
-/// Unrolls vector.multi_reduction with outermost reductions
-/// and combines results
-struct TwoDimMultiReductionToElementWise
-    : public OpRewritePattern<vector::MultiDimReductionOp> {
-  using Base::Base;
-
-  LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
-                                PatternRewriter &rewriter) const override {
-    auto srcRank = multiReductionOp.getSourceVectorType().getRank();
-    // Rank-2 ["parallel", "reduce"] or bail.
-    if (srcRank != 2)
-      return failure();
-
-    if (multiReductionOp.isReducedDim(1) || !multiReductionOp.isReducedDim(0))
-      return failure();
-
-    auto loc = multiReductionOp.getLoc();
-    ArrayRef<int64_t> srcShape =
-        multiReductionOp.getSourceVectorType().getShape();
-
-    Type elementType = getElementTypeOrSelf(multiReductionOp.getDestType());
-    if (!elementType.isIntOrIndexOrFloat())
-      return failure();
-
-    OpBuilder::InsertionGuard guard(rewriter);
-    auto maskableOp =
-        cast<vector::MaskableOpInterface>(multiReductionOp.getOperation());
-    Operation *rootOp;
-    Value mask = nullptr;
-    if (maskableOp.isMasked()) {
-      rewriter.setInsertionPoint(maskableOp.getMaskingOp());
-      rootOp = maskableOp.getMaskingOp();
-      mask = maskableOp.getMaskingOp().getMask();
-    } else {
-      rootOp = multiReductionOp;
-    }
-
-    Value result = multiReductionOp.getAcc();
-    for (int64_t i = 0; i < srcShape[0]; i++) {
-      auto operand = vector::ExtractOp::create(rewriter, loc,
-                                               multiReductionOp.getSource(), i);
-      Value extractMask = nullptr;
-      if (mask) {
-        extractMask = vector::ExtractOp::create(rewriter, loc, mask, i);
-      }
-      result =
-          makeArithReduction(rewriter, loc, multiReductionOp.getKind(), operand,
-                             result, /*fastmath=*/nullptr, extractMask);
-    }
-
-    rewriter.replaceOp(rootOp, result);
-    return success();
-  }
-};
-
 /// Converts 2d vector.multi_reduction with inner most reduction dimension into
 /// a sequence of vector.reduction ops.
 struct TwoDimMultiReductionToReduction
@@ -536,7 +481,7 @@ struct OneDimMultiReductionToTwoDim
 /// %res = vector.multi_reduction %Nminus1, %redNminus2 [ [[REDUCTION_DIMS]] ] :
 /// vector<Mx...xf32> to vector<Ix...xf32>
 /// ```
-struct UnrollMultiReductionOuterBaseCase
+struct UnrollMultiReductionInnerParallelBaseCase
     : public OpRewritePattern<vector::MultiDimReductionOp> {
   using Base::Base;
 
@@ -605,7 +550,7 @@ struct UnrollMultiReductionOuterBaseCase
   }
 };
 
-struct UnrollMultiReductionOuterGeneralCase
+struct UnrollMultiReductionInnerParallelGeneralCase
     : public OpRewritePattern<vector::MultiDimReductionOp> {
   using Base::Base;
 
@@ -739,9 +684,9 @@ void mlir::vector::populateVectorMultiReductionUnrollingPatterns(
     patterns.add<TwoDimMultiReductionToReduction>(patterns.getContext(),
                                                   benefit);
   } else {
-    patterns.add<UnrollMultiReductionOuterBaseCase,
-                 UnrollMultiReductionOuterGeneralCase>(patterns.getContext(),
-                                                       benefit);
+    patterns.add<UnrollMultiReductionInnerParallelBaseCase,
+                 UnrollMultiReductionInnerParallelGeneralCase>(
+        patterns.getContext(), benefit);
   }
 }
 

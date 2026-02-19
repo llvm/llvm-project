@@ -294,7 +294,8 @@ def ApplyMultiReductionUnrollingPatternsOp: Op<Transform_Dialect,
     This populates the patterns from
     `populateVectorMultiReductionUnrollingPatterns`, i.e.:
     * `TwoDimMultiReductionToReduction` (innerreduction)
-    * `TwoDimMultiReductionToElementWise` (innerparallel)
+    * `UnrollMultiReductionInnerParallelBaseCase`
+    * `UnrollMultiReductionInnerParallelGeneralCase`
   }];
 
   let arguments = (ins DefaultValuedAttr<VectorMultiReductionLoweringAttr,

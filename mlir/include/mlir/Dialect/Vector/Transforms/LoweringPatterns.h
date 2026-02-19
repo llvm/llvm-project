@@ -89,10 +89,13 @@ void populateVectorMultiReductionFlatteningPatterns(
 
 /// Populate the pattern set with the following patterns:
 ///
-/// [TwoDimMultiReductionToElementWise]
-/// Once in 2-D vector.multi_reduction form, with an **outermost** reduction
-/// dimension, unroll the outer dimension to obtain a sequence of 1-D vector
-/// ops. This also has an opportunity for tree-reduction (in the future).
+/// [UnrollMultiReductionInnerParallelBaseCase]
+/// Rank reducing unrolling for inner-parallel case, when there is only one
+/// reduction dimension and it is the outermost one.
+///
+/// [UnrollMultiReductionInnerParallelGeneralCase]
+/// Rank reducing unrolling for inner-parallel general case, when there is
+/// more than one reduction and it is the outermost one.
 ///
 /// [TwoDimMultiReductionToReduction]
 /// Once in 2-D vector.multi_reduction form, with an **innermost** reduction
