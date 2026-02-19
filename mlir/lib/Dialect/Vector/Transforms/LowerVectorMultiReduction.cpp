@@ -553,17 +553,17 @@ struct UnrollMultiReductionInnerParallelGeneralCase
 
     ArrayRef<int64_t> srcShape =
         multiReductionOp.getSourceVectorType().getShape();
-    int64_t numElementwiseOps = srcShape.front();
+    int64_t outerDimSize = srcShape.front();
 
     Value mask = maskingOp ? maskingOp.getMask() : nullptr;
 
-    SmallVector<Value> vectors(numElementwiseOps);
-    for (int64_t i = 0; i < numElementwiseOps; ++i)
+    SmallVector<Value> vectors(outerDimSize);
+    for (int64_t i = 0; i < outerDimSize; ++i)
       vectors[i] = vector::ExtractOp::create(rewriter, loc, source, i);
 
-    SmallVector<Value> masks(numElementwiseOps);
+    SmallVector<Value> masks(outerDimSize);
     if (mask)
-      for (int64_t i = 0; i < numElementwiseOps; ++i)
+      for (int64_t i = 0; i < outerDimSize; ++i)
         masks[i] = vector::ExtractOp::create(rewriter, loc, mask, i);
 
     SmallVector<bool> fullReductionMask = multiReductionOp.getReductionMask();
