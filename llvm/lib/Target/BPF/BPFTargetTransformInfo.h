@@ -68,8 +68,8 @@ public:
     if (ISD == ISD::ADD && CostKind == TTI::TCK_RecipThroughput)
       return SCEVCheapExpansionBudget.getValue() + 1;
 
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info);
+    return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
+                                             Op2Info);
   }
 
   TTI::MemCmpExpansionOptions

@@ -1054,6 +1054,24 @@ public:
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const override {
+
+    // Vector unsigned division/remainder will be simplified to shifts/masks.
+    if ((Opcode == Instruction::UDiv || Opcode == Instruction::URem) &&
+        Opd2Info.isConstant() && Opd2Info.isPowerOf2())
+      return getArithmeticInstrCost(
+          Opcode == Instruction::UDiv ? Instruction::LShr : Instruction::And,
+          Ty, CostKind, Opd1Info.getNoProps(), Opd2Info.getNoProps());
+
+    return getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Opd1Info, Opd2Info,
+                                      Args, CxtI);
+  }
+
+  virtual InstructionCost getArithmeticInstrCostImpl(
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
+      ArrayRef<const Value *> Args = {},
+      const Instruction *CxtI = nullptr) const {
     // Check if any of the operands are vector operands.
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);

@@ -1513,7 +1513,7 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
     if (const auto *Entry = CostTableLookup(CostTbl, ISDOpcode, LT.second))
       return LT.first * Entry->Cost;
 
-    InstructionCost Cost = BaseT::getArithmeticInstrCost(
+    InstructionCost Cost = BaseT::getArithmeticInstrCostImpl(
         Opcode, Ty, CostKind, Op1Info, Op2Info);
 
     // This is somewhat of a hack. The problem that we are facing is that SROA

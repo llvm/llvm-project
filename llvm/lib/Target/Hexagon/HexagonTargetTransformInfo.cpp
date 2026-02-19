@@ -265,8 +265,8 @@ InstructionCost HexagonTTIImpl::getArithmeticInstrCost(
     ArrayRef<const Value *> Args, const Instruction *CxtI) const {
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Args, CxtI);
+    return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
+                                             Op2Info, Args, CxtI);
 
   if (Ty->isVectorTy()) {
     if (!isHVXVectorType(Ty) && Ty->isFPOrFPVectorTy())
@@ -275,8 +275,8 @@ InstructionCost HexagonTTIImpl::getArithmeticInstrCost(
     if (LT.second.isFloatingPoint())
       return LT.first + FloatFactor * getTypeNumElements(Ty);
   }
-  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CxtI);
+  return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
+                                           Op2Info, Args, CxtI);
 }
 
 InstructionCost HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,

@@ -681,8 +681,8 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     break;
   }
 
-  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CxtI);
+  return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
+                                           Op2Info, Args, CxtI);
 }
 
 // Return true if there's a potential benefit from using v2f16/v2i16

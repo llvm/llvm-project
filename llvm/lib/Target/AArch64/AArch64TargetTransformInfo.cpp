@@ -4244,7 +4244,7 @@ std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(
   return Cost;
 }
 
-InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
+InstructionCost AArch64TTIImpl::getArithmeticInstrCostImpl(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
     ArrayRef<const Value *> Args, const Instruction *CxtI) const {
@@ -4259,8 +4259,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Args, CxtI);
+    return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
+                                             Op2Info, Args, CxtI);
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
@@ -4294,8 +4294,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
   switch (ISD) {
   default:
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info);
+    return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
+                                             Op2Info);
   case ISD::SREM:
   case ISD::SDIV:
     /*
@@ -4415,16 +4415,6 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::UREM: {
     auto VT = TLI->getValueType(DL, Ty);
     if (Op2Info.isConstant()) {
-      // If the operand is a power of 2 we can use the shift or and cost.
-      if (ISD == ISD::UDIV && Op2Info.isPowerOf2())
-        return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind,
-                                      Op1Info.getNoProps(),
-                                      Op2Info.getNoProps());
-      if (ISD == ISD::UREM && Op2Info.isPowerOf2())
-        return getArithmeticInstrCost(Instruction::And, Ty, CostKind,
-                                      Op1Info.getNoProps(),
-                                      Op2Info.getNoProps());
-
       if (ISD == ISD::UDIV || ISD == ISD::UREM) {
         // Divides by a constant are expanded to MULHU + SUB + SRL + ADD + SRL.
         // The MULHU will be expanded to UMULL for the types not listed below,
@@ -4456,7 +4446,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     if (!VT.isVector() && VT.getSizeInBits() > 64)
       return getCallInstrCost(/*Function*/ nullptr, Ty, {Ty, Ty}, CostKind);
 
-    InstructionCost Cost = BaseT::getArithmeticInstrCost(
+    InstructionCost Cost = BaseT::getArithmeticInstrCostImpl(
         Opcode, Ty, CostKind, Op1Info, Op2Info);
     if (Ty->isVectorTy() && (ISD == ISD::SDIV || ISD == ISD::UDIV)) {
       if (TLI->isOperationLegalOrCustom(ISD, LT.second) && ST->hasSVE()) {
@@ -4491,7 +4481,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
         if ((Op1Info.isConstant() && Op1Info.isUniform()) ||
             (Op2Info.isConstant() && Op2Info.isUniform())) {
           if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
-            InstructionCost DivCost = BaseT::getArithmeticInstrCost(
+            InstructionCost DivCost = BaseT::getArithmeticInstrCostImpl(
                 Opcode, Ty->getScalarType(), CostKind, Op1Info, Op2Info);
             return (4 + DivCost) * VTy->getNumElements();
           }
@@ -4568,15 +4558,15 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     if (!Ty->getScalarType()->isFP128Ty())
       return 2 * LT.first;
 
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info);
+    return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
+                                             Op2Info);
   case ISD::FREM:
     // Pass nullptr as fmod/fmodf calls are emitted by the backend even when
     // those functions are not declared in the module.
     if (!Ty->isVectorTy())
       return getCallInstrCost(/*Function*/ nullptr, Ty, {Ty, Ty}, CostKind);
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info);
+    return BaseT::getArithmeticInstrCostImpl(Opcode, Ty, CostKind, Op1Info,
+                                             Op2Info);
   }
 }
 
