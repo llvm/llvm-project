@@ -72,13 +72,15 @@ SignedDivisionByConstantInfo SignedDivisionByConstantInfo::get(const APInt &D) {
 /// of the divided value are known zero.
 UnsignedDivisionByConstantInfo
 UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros,
-                                    bool AllowEvenDivisorOptimization) {
+                                    bool AllowEvenDivisorOptimization,
+                                    bool AllowWidenOptimization) {
   assert(!D.isZero() && !D.isOne() && "Precondition violation.");
   assert(D.getBitWidth() > 1 && "Does not work at smaller bitwidths.");
 
   APInt Delta;
   struct UnsignedDivisionByConstantInfo Retval;
   Retval.IsAdd = false; // initialize "add" indicator
+  Retval.Widen = false; // initialize widen indicator
   APInt AllOnes =
       APInt::getLowBitsSet(D.getBitWidth(), D.getBitWidth() - LeadingZeros);
   APInt SignedMin = APInt::getSignedMinValue(D.getBitWidth());
@@ -151,5 +153,19 @@ UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros,
     Retval.PostShift -= 1;
   }
   Retval.PreShift = 0;
+
+  // For 32-bit IsAdd case with AllowWidenOptimization, compute widened magic.
+  // This is for optimizing 32-bit division using 64-bit multiplication.
+  // The actual magic constant is 2^32 + Magic (33-bit).
+  // We pre-shift it left by (64 - OriginalShift) to avoid runtime shift.
+  if (Retval.IsAdd && AllowWidenOptimization &&
+      D.getBitWidth() == 32) {
+    unsigned OriginalShift = Retval.PostShift + 33;
+    // Since PostShift >= 1, shift amount is at most 30, so 64 bits suffice.
+    Retval.Magic = (APInt(64, 1).shl(32) + Retval.Magic.zext(64))
+                       .shl(64 - OriginalShift);
+    Retval.Widen = true;
+  }
+
   return Retval;
 }
