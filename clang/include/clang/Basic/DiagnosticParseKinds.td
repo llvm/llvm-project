@@ -1356,8 +1356,6 @@ def err_pragma_comment_malformed : Error<
   "pragma comment requires parenthesized identifier and optional string">;
 def err_pragma_comment_unknown_kind : Error<"unknown kind of pragma comment">;
 // PS4 recognizes only #pragma comment(lib)
-def err_pragma_comment_copyright_unsupported
-    : Error<"pragma comment copyright is not supported for this target">;
 def warn_pragma_comment_ignored : Warning<"'#pragma comment %0' ignored">,
   InGroup<IgnoredPragmas>;
 def warn_pragma_comment_once

@@ -3306,25 +3306,12 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
-  if (PP.getTargetInfo().getTriple().isOSAIX() && (Kind != PCK_Copyright)) {
-    // On AIX, pragma comment linker, lib, compiler, exestr and user are
-    // ignored.
-    PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
-        << II->getName();
-    return;
-  }
-
-  if (PP.getTargetInfo().getTriple().isOSBinFormatELF() && Kind != PCK_Lib) {
-    PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
-        << II->getName();
-    return;
-  }
-
+  // Handle pragma comment copyright
   if (Kind == PCK_Copyright) {
     if (!PP.getTargetInfo().getTriple().isOSAIX()) {
       // Restrict pragma comment copyright to AIX targets only.
-      PP.Diag(Tok.getLocation(),
-              diag::err_pragma_comment_copyright_unsupported);
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
+        << II->getName();
       return;
     }
     if (SeenCopyrightInTU) {
@@ -3334,6 +3321,21 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
       return;
     }
     SeenCopyrightInTU = true;
+  }
+
+  // Handle AIX Target restrictions (all non-copyright kinds)
+  if (PP.getTargetInfo().getTriple().isOSAIX() && Kind != PCK_Copyright) {
+    // pragma comment linker, lib, compiler, exestr and user are
+    // ignored when targeting AIX.
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
+        << II->getName();
+    return;
+  }
+
+  if (PP.getTargetInfo().getTriple().isOSBinFormatELF() && Kind != PCK_Lib) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
+        << II->getName();
+    return;
   }
 
   // Read the optional string if present.

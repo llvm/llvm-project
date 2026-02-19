@@ -7,5 +7,5 @@
 #ifdef EXPOK
 #pragma comment(copyright,"copyright") // expected-no-diagnostics
 #else
-#pragma comment(copyright,"copyright") // expected-error {{pragma comment copyright is supported only on AIX target}}
+#pragma comment(copyright,"copyright") // expected-warning {{'#pragma comment copyright' ignored}}
 #endif
