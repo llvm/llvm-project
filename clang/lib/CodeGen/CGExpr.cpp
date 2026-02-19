@@ -5589,12 +5589,13 @@ static Address emitAddrOfZeroSizeField(CodeGenFunction &CGF, Address Base,
   return CGF.Builder.CreateConstInBoundsByteGEP(Base, Offset);
 }
 
-/// Drill down to the storage of a field without walking into
-/// reference types.
+/// Drill down to the storage of a field without walking into reference types,
+/// and without respect for pointer field protection.
 ///
 /// The resulting address doesn't necessarily have the right type.
-static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
-                                      const FieldDecl *field, bool IsInBounds) {
+static Address emitRawAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
+                                         const FieldDecl *field,
+                                         bool IsInBounds) {
   if (isEmptyFieldForLayout(CGF.getContext(), field))
     return emitAddrOfZeroSizeField(CGF, base, field, IsInBounds);
 
@@ -5615,6 +5616,21 @@ static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
     return CGF.Builder.CreateConstGEP2_32(base, 0, idx, field->getName());
 
   return CGF.Builder.CreateStructGEP(base, idx, field->getName());
+}
+
+/// Drill down to the storage of a field without walking into reference types,
+/// wrapping the address in an llvm.protected.field.ptr intrinsic for the
+/// pointer field protection feature if necessary.
+///
+/// The resulting address doesn't necessarily have the right type.
+static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
+                                      const FieldDecl *field, bool IsInBounds) {
+  Address Addr = emitRawAddrOfFieldStorage(CGF, base, field, IsInBounds);
+
+  if (!CGF.getContext().isPFPField(field))
+    return Addr;
+
+  return CGF.EmitAddressOfPFPField(base, Addr, field);
 }
 
 static Address emitPreserveStructAccess(CodeGenFunction &CGF, LValue base,
