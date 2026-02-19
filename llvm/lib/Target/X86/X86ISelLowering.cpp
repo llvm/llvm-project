@@ -27225,7 +27225,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     case CMP_MASK_CC: {
       MVT MaskVT = Op.getSimpleValueType();
-      SDValue CC = Op.getOperand(3);
+      SDValue CC =
+          DAG.getTargetConstant(Op.getConstantOperandVal(3), dl, MVT::i8);
       SDValue Mask = Op.getOperand(4);
       // We specify 2 possible opcodes for intrinsics with rounding modes.
       // First, we check if the intrinsic may have non-default rounding mode,
@@ -27245,7 +27246,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     case CMP_MASK_SCALAR_CC: {
       SDValue Src1 = Op.getOperand(1);
       SDValue Src2 = Op.getOperand(2);
-      SDValue CC = Op.getOperand(3);
+      SDValue CC =
+          DAG.getTargetConstant(Op.getConstantOperandVal(3), dl, MVT::i8);
       SDValue Mask = Op.getOperand(4);
 
       SDValue Cmp;
