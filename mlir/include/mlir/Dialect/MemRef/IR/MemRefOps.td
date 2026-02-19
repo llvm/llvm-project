@@ -1263,6 +1263,11 @@ def LoadOp : MemRef_Op<"load",
     be reused in the cache. For details, refer to the
     [LLVM load instruction](https://llvm.org/docs/LangRef.html#load-instruction).
 
+    A set `volatile` attribute indicates that this load must not be optimized
+    away or reordered with other volatile operations. Volatile accesses are
+    guaranteed to be executed in the order they appear. For details, refer to the
+    [LLVM load instruction](https://llvm.org/docs/LangRef.html#load-instruction).
+
     An optional `alignment` attribute allows to specify the byte alignment of the
     load operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
@@ -1279,14 +1284,16 @@ def LoadOp : MemRef_Op<"load",
                            [MemRead]>:$memref,
                        Variadic<Index>:$indices,
                        DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
+                       DefaultValuedOptionalAttr<BoolAttr, "false">:$volatile_,
                        OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
 
   let builders = [
     OpBuilder<(ins "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
+                   CArg<"bool", "false">:$volatile_,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
-      return build($_builder, $_state, memref, indices, nontemporal,
+      return build($_builder, $_state, memref, indices, nontemporal, volatile_,
                    alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
                                nullptr);
     }]>,
@@ -1294,8 +1301,9 @@ def LoadOp : MemRef_Op<"load",
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
+                   CArg<"bool", "false">:$volatile_,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
-      return build($_builder, $_state, resultType, memref, indices, nontemporal,
+      return build($_builder, $_state, resultType, memref, indices, nontemporal, volatile_,
                    alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
                                nullptr);
     }]>,
@@ -1303,8 +1311,9 @@ def LoadOp : MemRef_Op<"load",
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
+                   CArg<"bool", "false">:$volatile_,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
-      return build($_builder, $_state, resultTypes, memref, indices, nontemporal,
+      return build($_builder, $_state, resultTypes, memref, indices, nontemporal, volatile_,
                    alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
                                nullptr);
     }]>
@@ -2037,6 +2046,11 @@ def MemRef_StoreOp : MemRef_Op<"store",
     be reused in the cache. For details, refer to the
     [LLVM store instruction](https://llvm.org/docs/LangRef.html#store-instruction).
 
+    A set `volatile` attribute indicates that this store must not be optimized
+    away or reordered with other volatile operations. Volatile accesses are
+    guaranteed to be executed in the order they appear. For details, refer to the
+    [LLVM store instruction](https://llvm.org/docs/LangRef.html#store-instruction).
+
     An optional `alignment` attribute allows to specify the byte alignment of the
     store operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
@@ -2054,6 +2068,7 @@ def MemRef_StoreOp : MemRef_Op<"store",
                            [MemWrite]>:$memref,
                        Variadic<Index>:$indices,
                        DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
+                       DefaultValuedOptionalAttr<BoolAttr, "false">:$volatile_,
                        OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
 
   let builders = [
@@ -2061,8 +2076,9 @@ def MemRef_StoreOp : MemRef_Op<"store",
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
+                   CArg<"bool", "false">:$volatile_,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
-      return build($_builder, $_state, valueToStore, memref, indices, nontemporal,
+      return build($_builder, $_state, valueToStore, memref, indices, nontemporal, volatile_,
                    alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
                                nullptr);
     }]>,

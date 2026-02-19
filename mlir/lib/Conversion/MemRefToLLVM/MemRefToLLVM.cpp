@@ -946,7 +946,8 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
                                          adaptor.getIndices(), kNoWrapFlags);
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
         loadOp, typeConverter->convertType(type.getElementType()), dataPtr,
-        loadOp.getAlignment().value_or(0), false, loadOp.getNontemporal());
+        loadOp.getAlignment().value_or(0), loadOp.getVolatile_(),
+        loadOp.getNontemporal());
     return success();
   }
 };
@@ -967,9 +968,9 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
     Value dataPtr =
         getStridedElementPtr(rewriter, op.getLoc(), type, adaptor.getMemref(),
                              adaptor.getIndices(), kNoWrapFlags);
-    rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, adaptor.getValue(), dataPtr,
-                                               op.getAlignment().value_or(0),
-                                               false, op.getNontemporal());
+    rewriter.replaceOpWithNewOp<LLVM::StoreOp>(
+        op, adaptor.getValue(), dataPtr, op.getAlignment().value_or(0),
+        op.getVolatile_(), op.getNontemporal());
     return success();
   }
 };

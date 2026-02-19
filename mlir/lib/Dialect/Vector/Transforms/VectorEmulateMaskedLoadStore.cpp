@@ -75,6 +75,7 @@ struct VectorMaskedLoadOpConverter final
           [&](OpBuilder &builder, Location loc) {
             auto loadedValue = memref::LoadOp::create(
                 builder, loc, base, indices, /*nontemporal=*/false,
+                /*volatile_=*/false,
                 llvm::MaybeAlign(maskedLoadOp.getAlignment().value_or(0)));
             auto combinedValue =
                 vector::InsertOp::create(builder, loc, loadedValue, iValue, i);
@@ -134,6 +135,7 @@ struct VectorMaskedStoreOpConverter final
     Value base = maskedStoreOp.getBase();
     Value value = maskedStoreOp.getValueToStore();
     bool nontemporal = false;
+    bool volatile_ = false;
     auto indices = llvm::to_vector_of<Value>(maskedStoreOp.getIndices());
     Value one = arith::ConstantOp::create(rewriter, loc, indexType,
                                           IntegerAttr::get(indexType, 1));
@@ -144,7 +146,7 @@ struct VectorMaskedStoreOpConverter final
       rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
       auto extractedValue = vector::ExtractOp::create(rewriter, loc, value, i);
       memref::StoreOp::create(
-          rewriter, loc, extractedValue, base, indices, nontemporal,
+          rewriter, loc, extractedValue, base, indices, nontemporal, volatile_,
           llvm::MaybeAlign(maskedStoreOp.getAlignment().value_or(0)));
 
       rewriter.setInsertionPointAfter(ifOp);
