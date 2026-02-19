@@ -8,7 +8,6 @@
 // UNSUPPORTED: aarch64-unknown-linux-gnu
 // UNSUPPORTED: x86_64-unknown-linux-gnu
 // UNSUPPORTED: s390x-ibm-linux-gnu
-// XFAIL: intelgpu
 
 #include <omp.h>
 

@@ -193,6 +193,24 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS, raw_ostream &MainOS,
     }
     OS << "};\n";
   }
+
+  // Note: While these functions are not enums, we need to define them in the
+  // same place as <TARGET>::<REG>, so that the assembly parser can use them
+  // without having to include <TARGETT>RegisterInfo.h, which may not be
+  // possible due to build system structure.
+  ArrayRef<const Record *> RegisterByHwModeRecords =
+      Records.getAllDerivedDefinitions("RegisterByHwMode");
+  if (!RegisterByHwModeRecords.empty()) {
+    OS << "// Registers by HwMode\n";
+    OS << "class MCRegister;\n";
+    NamespaceEmitter RegClassNS(OS, Namespace + "::RegisterByHwMode");
+    // Define the getters for the RegisterByHwMode in one globally accessible
+    // location so they can be reused by all callers.
+    for (const Record *Rec : RegisterByHwModeRecords) {
+      OS << "LLVM_READONLY MCRegister get" << Rec->getName()
+         << "(unsigned HwMode);\n";
+    }
+  }
 }
 
 static void printInt(raw_ostream &OS, int Val) { OS << Val; }
@@ -1148,6 +1166,36 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
   EmitRegMapping(OS, Regs, false);
 
   OS << "}\n\n";
+
+  // Emit the register by HwMode (if present).
+  ArrayRef<const Record *> RegisterByHwModeRecords =
+      Records.getAllDerivedDefinitions("RegisterByHwMode");
+  if (!RegisterByHwModeRecords.empty()) {
+    OS << "// Registers by HwMode\n";
+    NamespaceEmitter RegClassNS(OS, RegisterClasses.front().Namespace +
+                                        "::RegisterByHwMode");
+
+    unsigned NumModes = Target.getHwModes().getNumModeIds();
+    for (const Record *Rec : RegisterByHwModeRecords) {
+      RegisterByHwMode RegByMode(Rec, RegBank);
+      OS << "LLVM_READONLY MCRegister get" << Rec->getName()
+         << "(unsigned HwMode) {\n";
+      OS << indent(2) << "switch (HwMode) {\n";
+      for (unsigned M = 0; M < NumModes; ++M) {
+        if (RegByMode.hasMode(M)) {
+          const CodeGenRegister *R = RegByMode.get(M);
+          OS << indent(2) << "case " << M << ": return "
+             << getQualifiedName(R->TheDef) << "; // "
+             << Target.getHwModes().getModeName(M, true) << "\n";
+        }
+      }
+      OS << indent(2)
+         << "default: llvm_unreachable(\"Unhandled HwMode for Register "
+         << Rec->getName() << "\");\n"
+         << indent(2) << "}\n"
+         << "}\n";
+    }
+  }
 }
 
 void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, raw_ostream &MainOS,

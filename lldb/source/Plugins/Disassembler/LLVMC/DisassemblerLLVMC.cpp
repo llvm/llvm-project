@@ -1465,8 +1465,15 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
   return InstrDesc.isAuthenticated() || IsBrkC47x;
 }
 
-static void UpdateFeatureString(llvm::StringRef default_features,
-                                std::string &user_feature_overrides) {
+static void
+UpdateSubtargetFeatures(const llvm::SubtargetFeatures &subtarget_features,
+                        std::string &user_feature_overrides) {
+
+  // Extract the default features string from the SubtargetFeatures object.
+  // We must store this in a std::string variable to ensure the memory exists
+  // for the StringRef to point to during the execution of this function.
+  std::string default_features_storage = subtarget_features.getString();
+  llvm::StringRef default_features = default_features_storage;
 
   // If the user has not provided any overrides AND defaults exist,
   // then simply use the default feature string.
@@ -1478,6 +1485,7 @@ static void UpdateFeatureString(llvm::StringRef default_features,
   std::string warning_reason;
   std::vector<std::string> valid_user_flags;
   std::set<std::string> user_disabled_features;
+
   for (llvm::StringRef flag : llvm::split(user_feature_overrides, ",")) {
     bool is_valid = true;
     flag = flag.trim();
@@ -1680,28 +1688,33 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
   }
 
   if (triple.isRISCV() && !cpu_or_features_overriden) {
-    uint32_t arch_flags = arch.GetFlags();
-    if (arch_flags & ArchSpec::eRISCV_rvc)
-      features_str += "+c,";
-    if (arch_flags & ArchSpec::eRISCV_rve)
-      features_str += "+e,";
-    if ((arch_flags & ArchSpec::eRISCV_float_abi_single) ==
-        ArchSpec::eRISCV_float_abi_single)
-      features_str += "+f,";
-    if ((arch_flags & ArchSpec::eRISCV_float_abi_double) ==
-        ArchSpec::eRISCV_float_abi_double)
-      features_str += "+f,+d,";
-    if ((arch_flags & ArchSpec::eRISCV_float_abi_quad) ==
-        ArchSpec::eRISCV_float_abi_quad)
-      features_str += "+f,+d,+q,";
-    // FIXME: how do we detect features such as `+a`, `+m`?
-    // Turn them on by default now, since everyone seems to use them
-    features_str += "+a,+m,";
+    auto subtarget_features = arch.GetSubtargetFeatures().getString();
+    if (!subtarget_features.empty()) {
+      features_str += subtarget_features;
+    } else {
+      uint32_t arch_flags = arch.GetFlags();
+      if (arch_flags & ArchSpec::eRISCV_rvc)
+        features_str += "+c,";
+      if (arch_flags & ArchSpec::eRISCV_rve)
+        features_str += "+e,";
+      if ((arch_flags & ArchSpec::eRISCV_float_abi_single) ==
+          ArchSpec::eRISCV_float_abi_single)
+        features_str += "+f,";
+      if ((arch_flags & ArchSpec::eRISCV_float_abi_double) ==
+          ArchSpec::eRISCV_float_abi_double)
+        features_str += "+f,+d,";
+      if ((arch_flags & ArchSpec::eRISCV_float_abi_quad) ==
+          ArchSpec::eRISCV_float_abi_quad)
+        features_str += "+f,+d,+q,";
+      // FIXME: how do we detect features such as `+a`, `+m`?
+      // Turn them on by default now, since everyone seems to use them
+      features_str += "+a,+m,";
+    }
   }
 
   // Prepend the default features if it's not already in the features_str to
   // avoid duplicates.
-  UpdateFeatureString(arch.GetDisassemblyFeatures(), features_str);
+  UpdateSubtargetFeatures(arch.GetSubtargetFeatures(), features_str);
 
   // We use m_disasm_up.get() to tell whether we are valid or not, so if this
   // isn't good for some reason, we won't be valid and FindPlugin will fail and

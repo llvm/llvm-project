@@ -35,6 +35,11 @@ Sections:
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
     AddressAlign:    0x4
     Content:         1F05580000001615
+  - Name:            .riscv.attributes
+    Type:            SHT_RISCV_ATTRIBUTES
+    # This hex encodes: Format=A, Section Length =35 Vendor="riscv", Tag_File=1, Size=24, Tag_Arch=riscv Arch String="rv32i2p1_xqci0p13"
+    # 41 23000000 726973637600 01 18000000 05 72763332693270315F787163693070313300
+    Content:         412300000072697363760001180000000572763332693270315F787163693070313300
 Symbols:
   - Name:            main
     Section:         .text

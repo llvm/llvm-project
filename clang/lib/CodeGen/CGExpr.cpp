@@ -2426,7 +2426,16 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *value, LValue lvalue,
 static RValue EmitLoadOfMatrixLValue(LValue LV, SourceLocation Loc,
                                      CodeGenFunction &CGF) {
   assert(LV.getType()->isConstantMatrixType());
-  Address Addr = MaybeConvertMatrixAddress(LV.getAddress(), CGF);
+  RawAddress DestAddr = LV.getAddress();
+
+  // HLSL constant buffers may pad matrix layouts, so copy elements into a
+  // non-padded local alloca before loading.
+  if (CGF.getLangOpts().HLSL &&
+      LV.getType().getAddressSpace() == LangAS::hlsl_constant)
+    DestAddr =
+        CGF.CGM.getHLSLRuntime().createBufferMatrixTempAddress(LV, Loc, CGF);
+
+  Address Addr = MaybeConvertMatrixAddress(DestAddr, CGF);
   LV.setAddress(Addr);
   return RValue::get(CGF.EmitLoadOfScalar(LV, Loc));
 }

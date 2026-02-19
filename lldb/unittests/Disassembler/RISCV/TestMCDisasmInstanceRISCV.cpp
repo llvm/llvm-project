@@ -29,11 +29,12 @@ public:
   static void TearDownTestCase();
 
 protected:
-  // Helper wrapper to call the UpdateFeatureString function under test
+  // Helper wrapper to call the UpdateSubtargetFeatures function under test
   void CheckFeatures(llvm::StringRef defaults, std::string user_input,
                      llvm::StringRef expected) {
     std::string features = user_input;
-    UpdateFeatureString(defaults, features);
+    llvm::SubtargetFeatures defaults_target_feature(defaults);
+    UpdateSubtargetFeatures(defaults_target_feature, features);
     EXPECT_EQ(features, expected.str());
   }
 };
@@ -149,7 +150,7 @@ TEST_F(TestMCDisasmInstanceRISCV, TestOpcodeBytePrinter) {
   }
 }
 
-// Unit test cases to validate UpdateFeatureString.
+// Unit test cases to validate UpdateSubtargetFeatures.
 TEST_F(TestMCDisasmInstanceRISCV, IgnoresInvalidFlagsWithoutStopping) {
   // "bad" is invalid (no +/-).
   // It should be ignored, but "+valid" should still be processed.

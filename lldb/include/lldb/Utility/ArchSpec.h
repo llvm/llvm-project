@@ -14,6 +14,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <cstdint>
@@ -542,14 +543,16 @@ public:
 
   void SetFlags(const std::string &elf_abi);
 
-  /// Sets the feature string that describes architecture specific capabilities
-  /// for use during instruction decoding.
-  void AddDisassemblyFeatures(std::string default_features);
+  /// Returns the sub target feature used by the disassembler to decode
+  /// instructions based on target specific features.
+  const llvm::SubtargetFeatures &GetSubtargetFeatures() const {
+    return m_subtarget_features;
+  }
 
-  /// Returns the feature string used by the disassembler to decode instructions
-  /// based on target specific features.
-  inline llvm::StringRef GetDisassemblyFeatures() const {
-    return m_disassembly_feature_str;
+  /// Sets the sub target feature that describes architecture specific
+  /// capabilities for use during instruction decoding.
+  void SetSubtargetFeatures(llvm::SubtargetFeatures &&subtarget_features) {
+    m_subtarget_features = std::move(subtarget_features);
   }
 
 protected:
@@ -567,7 +570,7 @@ protected:
   /// architecture) extensions present in the binary (e.g. "xqci" in RISCV).
   /// This string is passed to the disassembler to enable accurate instruction
   /// decoding based on the binary's supported ISA features.
-  std::string m_disassembly_feature_str;
+  llvm::SubtargetFeatures m_subtarget_features;
 
   // Called when m_def or m_entry are changed.  Fills in all remaining members
   // with default values.

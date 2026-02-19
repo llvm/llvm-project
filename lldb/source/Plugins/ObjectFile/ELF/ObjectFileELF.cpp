@@ -13,6 +13,7 @@
 #include <optional>
 #include <unordered_map>
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -27,12 +28,14 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -46,6 +49,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MipsABIFlags.h"
 #include "llvm/Support/RISCVAttributes.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 
 #define CASE_AND_STREAM(s, def, width)                                         \
   case def:                                                                    \
@@ -1338,73 +1343,6 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
   return error;
 }
 
-void ObjectFileELF::ParseRISCVAttributes(const DataExtractor &data,
-                                         uint64_t length, ArchSpec &arch_spec) {
-  lldb::offset_t offset = 0;
-
-  uint8_t format_version = data.GetU8(&offset);
-  if (format_version != llvm::ELFAttrs::Format_Version)
-    return;
-
-  // We are skipping over the Section Length field here.
-  offset = offset + sizeof(uint32_t);
-  llvm::StringRef vendor_name = data.GetCStr(&offset);
-  if (vendor_name != "riscv")
-    return;
-
-  llvm::StringRef attr = "";
-
-  // Loop through sub-sections until we reach the end or find the architecture
-  // string. We check attr.empty() to ensure we stop reading immediately after
-  // finding the target tag, preventing invalid reads of subsequent bytes.
-  while (offset < length && attr.empty()) {
-    uint8_t Tag = data.GetU8(&offset);
-    uint32_t Size = data.GetU32(&offset);
-
-    // If this is not a File attribute (Tag 1) or size is invalid, skip the
-    // whole sub-section.
-    if (Tag != llvm::ELFAttrs::File || Size == 0) {
-      offset += Size;
-      continue;
-    }
-    uint64_t end = offset + Size;
-
-    // Parse the inner attributes for the File sub-section.
-    // We stop if we exceed the sub-section size or have found our attribute.
-    while (offset < length && attr.empty()) {
-      uint64_t Tag = data.GetULEB128(&offset);
-      if (Tag == llvm::RISCVAttrs::ARCH) {
-        attr = data.GetCStr(&offset);
-        break;
-      } else {
-        // This is consuming a non-arch field (key-value pair).
-        // Since we are only interested in the ARCH tag, we skip the value.
-        // Note: This assumes the value is ULEB128, which is standard for most
-        // RISC-V int attributes, but string attributes would require different
-        // handling.
-        data.GetULEB128(&offset);
-      }
-    }
-    // Ensure we start the next sub-section at the correct boundary
-    // in case the inner loop exited early or skipped data.
-    offset = end;
-  }
-
-  // Limit detection to specific extensions (like 'xqci') that LLDB has been
-  // made aware of and can support by default. This ensures we do not attempt to
-  // enable features from the ELF attributes that this version of LLDB
-  // does not handle, while also verifying that the attribute is present in the
-  // ELF.
-  std::vector<std::string> riscv_extensions = {"xqci"};
-
-  for (const auto &ext : riscv_extensions) {
-    if (!attr.empty() && attr.contains(ext) &&
-        !arch_spec.GetDisassemblyFeatures().contains(ext)) {
-      arch_spec.AddDisassemblyFeatures("+" + ext + ",");
-    }
-  }
-}
-
 void ObjectFileELF::ParseARMAttributes(DataExtractor &data, uint64_t length,
                                        ArchSpec &arch_spec) {
   lldb::offset_t Offset = 0;
@@ -1472,6 +1410,178 @@ void ObjectFileELF::ParseARMAttributes(DataExtractor &data, uint64_t length,
       }
       }
     }
+  }
+}
+
+static std::optional<lldb::offset_t>
+FindSubSectionOffsetByName(const DataExtractor &data, lldb::offset_t offset,
+                           uint32_t length, llvm::StringRef name) {
+  uint32_t section_length = 0;
+  llvm::StringRef section_name;
+  do {
+    offset += section_length;
+    // Sub-section's size and name are included in the total sub-section length.
+    // Don't shift the offset here, so it will point at the beginning of the
+    // sub-section and could be used as a return value.
+    auto tmp_offset = offset;
+    section_length = data.GetU32(&tmp_offset);
+    section_name = data.GetCStr(&tmp_offset);
+  } while (section_name != name && offset + section_length < length);
+
+  if (section_name == name)
+    return offset;
+
+  return std::nullopt;
+}
+
+static std::optional<lldb::offset_t>
+FindSubSubSectionOffsetByTag(const DataExtractor &data, lldb::offset_t offset,
+                             unsigned tag) {
+  // Consume a sub-section size and name to shift the offset at the beginning of
+  // the sub-sub-sections list.
+  auto parent_section_length = data.GetU32(&offset);
+  data.GetCStr(&offset);
+  auto parent_section_end_offset = offset + parent_section_length;
+
+  uint32_t section_length = 0;
+  unsigned section_tag = 0;
+  do {
+    offset += section_length;
+    // Similar to sub-section sub-sub-section's tag and size are included in the
+    // total sub-sub-section length.
+    auto tmp_offset = offset;
+    section_tag = data.GetULEB128(&tmp_offset);
+    section_length = data.GetU32(&tmp_offset);
+  } while (section_tag != tag &&
+           offset + section_length < parent_section_end_offset);
+
+  if (section_tag == tag)
+    return offset;
+
+  return std::nullopt;
+}
+
+static std::optional<std::variant<uint64_t, llvm::StringRef>>
+GetAttributeValueByTag(const DataExtractor &data, lldb::offset_t offset,
+                       unsigned tag) {
+  // Consume a sub-sub-section tag and size to shift the offset at the beginning
+  // of the attribute list.
+  data.GetULEB128(&offset);
+  auto parent_section_length = data.GetU32(&offset);
+  auto parent_section_end_offset = offset + parent_section_length;
+
+  std::variant<uint64_t, llvm::StringRef> result;
+  unsigned attribute_tag = 0;
+  do {
+    attribute_tag = data.GetULEB128(&offset);
+    // From the riscv psABI document:
+    // RISC-V attributes have a string value if the tag number is odd and an
+    // integer value if the tag number is even.
+    if (attribute_tag % 2)
+      result = data.GetCStr(&offset);
+    else
+      result = data.GetULEB128(&offset);
+  } while (attribute_tag != tag && offset < parent_section_end_offset);
+
+  if (attribute_tag == tag)
+    return result;
+
+  return std::nullopt;
+}
+
+void ObjectFileELF::ParseRISCVAttributes(const DataExtractor &data,
+                                         uint64_t length, ArchSpec &arch_spec) {
+  Log *log = GetLog(LLDBLog::Modules);
+
+  lldb::offset_t offset = 0;
+
+  // According to the riscv psABI, the .riscv.attributes section has the
+  // following hierarchical structure:
+  //
+  // Section:
+  //   .riscv.attributes {
+  //       - (uint8_t) format
+  //       - Sub-Section 1 {
+  //           * (uint32_t) length
+  //           * (c_str) name
+  //           * Sub-Sub-Section 1.1 {
+  //               > (uleb128_t) tag
+  //               > (uint32_t) length
+  //               > (uleb128_t) attribute_tag_1.1.1
+  //                   $ (c_str or uleb128_t) value
+  //               > (uleb128_t) attribute_tag_1.1.2
+  //                   $ (c_str or uleb128_t) value
+  //               ...
+  //               Other attributes...
+  //               ...
+  //               > (uleb128_t) attribute_tag_1.1.N
+  //                   $ (c_str or uleb128_t) value
+  //           }
+  //           * Sub-Sub-Section 1.2 {
+  //               ...
+  //               Sub-Sub-Section structure...
+  //               ...
+  //           }
+  //           ...
+  //           Other sub-sub-sections...
+  //           ...
+  //       }
+  //       - Sub-Section 2 {
+  //           ...
+  //           Sub-Section structure...
+  //           ...
+  //       }
+  //       ...
+  //       Other sub-sections...
+  //       ...
+  //   }
+
+  uint8_t format_version = data.GetU8(&offset);
+  if (format_version != llvm::ELFAttrs::Format_Version)
+    return;
+
+  auto subsection_or_opt =
+      FindSubSectionOffsetByName(data, offset, length, "riscv");
+  if (!subsection_or_opt) {
+    LLDB_LOGF(log,
+              "ObjectFileELF::%s Ill-formed .riscv.attributes section: "
+              "mandatory 'riscv' sub-section was not preserved",
+              __FUNCTION__);
+    return;
+  }
+
+  auto subsubsection_or_opt = FindSubSubSectionOffsetByTag(
+      data, *subsection_or_opt, llvm::ELFAttrs::File);
+  if (!subsubsection_or_opt)
+    return;
+
+  auto value_or_opt = GetAttributeValueByTag(data, *subsubsection_or_opt,
+                                             llvm::RISCVAttrs::ARCH);
+  if (!value_or_opt)
+    return;
+
+  auto normalized_isa_info = llvm::RISCVISAInfo::parseNormalizedArchString(
+      std::get<llvm::StringRef>(*value_or_opt));
+  if (llvm::errorToBool(normalized_isa_info.takeError()))
+    return;
+
+  llvm::SubtargetFeatures features;
+  features.addFeaturesVector((*normalized_isa_info)->toFeatures());
+  arch_spec.SetSubtargetFeatures(std::move(features));
+
+  // Additional verification of the arch string. This is primarily needed to
+  // warn users if the executable file contains conflicting RISC-V extensions
+  // that could lead to invalid disassembler output.
+  auto isa_info = llvm::RISCVISAInfo::parseArchString(
+      std::get<llvm::StringRef>(*value_or_opt),
+      /* EnableExperimentalExtension=*/true);
+  if (auto error = isa_info.takeError()) {
+    StreamString ss;
+    ss << "The .riscv.attributes section contains an invalid RISC-V arch "
+          "string: "
+       << llvm::toString(std::move(error))
+       << "\n\tThis could result in misleading disassembler output.\n";
+    Debugger::ReportWarning(ss.GetString().str());
   }
 }
 
@@ -1692,14 +1802,13 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
             ParseARMAttributes(data, section_size, arch_spec);
         }
 
-        if (arch_spec.GetMachine() == llvm::Triple::riscv32 ||
-            arch_spec.GetMachine() == llvm::Triple::riscv64) {
+        if (arch_spec.GetTriple().isRISCV()) {
           DataExtractor data;
-          if (sheader.sh_type == SHT_RISCV_ATTRIBUTES && section_size != 0 &&
-              (data.SetData(object_data, sheader.sh_offset, section_size) ==
-               section_size)) {
+          if (sheader.sh_type == llvm::ELF::SHT_RISCV_ATTRIBUTES &&
+              section_size != 0 &&
+              data.SetData(object_data, sheader.sh_offset, section_size) ==
+                  section_size)
             ParseRISCVAttributes(data, section_size, arch_spec);
-          }
         }
 
         if (name == g_sect_name_gnu_debuglink) {
