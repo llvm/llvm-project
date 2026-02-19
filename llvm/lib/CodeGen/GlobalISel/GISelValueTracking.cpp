@@ -386,6 +386,22 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
                             MI.getFlag(MachineInstr::MIFlag::IsExact));
     break;
   }
+  case TargetOpcode::G_UREM: {
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::urem(Known, Known2);
+    break;
+  }
+  case TargetOpcode::G_SREM: {
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::srem(Known, Known2);
+    break;
+  }
   case TargetOpcode::G_SELECT: {
     computeKnownBitsMin(MI.getOperand(2).getReg(), MI.getOperand(3).getReg(),
                         Known, DemandedElts, Depth + 1);
