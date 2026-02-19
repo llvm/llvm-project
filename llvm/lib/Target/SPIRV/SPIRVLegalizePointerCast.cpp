@@ -82,11 +82,34 @@ class SPIRVLegalizePointerCast : public FunctionPass {
       TypeSize SourceTypeSize = DL.getTypeSizeInBits(SourceType);
       // Bitcast to a same-bitwidth vector with TargetType's element type.
       // When sizes differ, use an intermediate type to preserve bitwidth.
-      auto *BitcastType = TargetType;
+      FixedVectorType *BitcastType = TargetType;
       if (TargetTypeSize != SourceTypeSize) {
         unsigned ElemBits = TargetType->getElementType()->getScalarSizeInBits();
-        BitcastType = FixedVectorType::get(TargetType->getElementType(),
-                                           SourceTypeSize / ElemBits);
+        if (SourceTypeSize % ElemBits == 0) {
+          BitcastType = FixedVectorType::get(TargetType->getElementType(),
+                                             SourceTypeSize / ElemBits);
+        } else {
+          // Source total bits aren't evenly divisible by target element bits.
+          // Resize source (extract or pad) to match target bit width using
+          // source element type, then bitcast to target.
+          unsigned SourceElemBits =
+              SourceType->getElementType()->getScalarSizeInBits();
+          assert(TargetTypeSize % SourceElemBits == 0 &&
+                 "Target size must be a multiple of source element size");
+          unsigned NumNeeded = TargetTypeSize / SourceElemBits;
+          unsigned NumSource = SourceType->getNumElements();
+          auto *ResizedType =
+              FixedVectorType::get(SourceType->getElementType(), NumNeeded);
+          SmallVector<int> Mask(NumNeeded);
+          for (unsigned I = 0; I < NumNeeded; ++I)
+            Mask[I] = (I < NumSource) ? static_cast<int>(I) : -1;
+          Value *Resized = B.CreateShuffleVector(NewLoad, NewLoad, Mask);
+          buildAssignType(B, ResizedType, Resized);
+          AssignValue = B.CreateIntrinsic(Intrinsic::spv_bitcast,
+                                          {TargetType, ResizedType}, {Resized});
+          buildAssignType(B, TargetType, AssignValue);
+          return AssignValue;
+        }
       }
       AssignValue = B.CreateIntrinsic(Intrinsic::spv_bitcast,
                                       {BitcastType, SourceType}, {NewLoad});
