@@ -2261,7 +2261,7 @@ bool TargetLowering::SimplifyDemandedBits(
     // TODO: Add FSHL equivalent?
     if (!IsFSHL && !DemandedBits.isAllOnes() &&
         (!TLO.LegalOperations() || isOperationLegal(ISD::SRL, VT))) {
-      uint64_t MaxShiftAmt = BitWidth - 1; // urem(Op2, BitWidth)
+      unsigned MaxShiftAmt = BitWidth - 1; // urem(Op2, BitWidth)
       KnownBits KnownAmt =
           TLO.DAG.computeKnownBits(Op2, DemandedElts, Depth + 1);
       if (KnownAmt.getMaxValue().ult(BitWidth))
