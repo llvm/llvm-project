@@ -17,8 +17,11 @@ SC32TargetLowering::SC32TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::UDIVREM, MVT::i32, Expand);
 
   setOperationAction(ISD::BR_CC, MVT::i32, Custom);
+
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8, Expand);
+
   setLoadExtAction(ISD::SEXTLOAD, MVT::i32, MVT::i8, Expand);
+
   computeRegisterProperties(STI.getRegisterInfo());
 }
 

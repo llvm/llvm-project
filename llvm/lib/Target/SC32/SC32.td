@@ -131,21 +131,25 @@ let Namespace = "SC32" in {
     let InOperandList = (ins GP:$val, GP:$base, i32imm:$offset);
     let AsmString = "ST $val, $base, $offset";
   }
+
   def STB : Instruction {
     let OutOperandList = (outs);
     let InOperandList = (ins GP:$val, GP:$base, i32imm:$offset);
     let AsmString = "STB $val, $base, $offset";
   }
+
   def LD : Instruction {
     let OutOperandList = (outs GP:$val);
     let InOperandList = (ins GP:$base, i32imm:$offset);
     let AsmString = "LD $val, $base, $offset";
   }
+
   def LDB : Instruction {
     let OutOperandList = (outs GP:$val);
     let InOperandList = (ins GP:$base, i32imm:$offset);
     let AsmString = "LDB $val, $base, $offset";
   }
+
   def LUI : Instruction {
     let OutOperandList = (outs GP:$dst);
     let InOperandList = (ins i32imm:$val);
@@ -200,8 +204,8 @@ def : Pat<(truncstorei8 i32:$val, i32:$addr), (STB i32:$val, i32:$addr, (i32 0))
 
 def : Pat<(load i32:$addr), (LD i32:$addr, (i32 0))>;
 def : Pat<(zextloadi8 i32:$addr), (LDB i32:$addr, (i32 0))>;
-def : Pat<(sextloadi8 i32:$addr), (LDB i32:$addr, (i32 0))>;
 def : Pat<(extloadi8 i32:$addr), (LDB i32:$addr, (i32 0))>;
+
 def SC32InstrInfo : InstrInfo;
 
 def SC32 : Target {
