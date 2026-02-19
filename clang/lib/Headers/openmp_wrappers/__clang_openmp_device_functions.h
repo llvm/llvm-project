@@ -57,7 +57,7 @@ extern "C" {
 
 #ifdef __SPIRV__
 #pragma omp begin declare variant match(                                       \
-    device = {arch(spirv64)}, implementation = {extension(match_any)})
+        device = {arch(spirv64)}, implementation = {extension(match_any)})
 
 #define __OPENMP_SPIRV__
 
@@ -68,7 +68,6 @@ extern "C" {
 
 #pragma omp end declare variant
 #endif
-
 
 #ifdef __cplusplus
 } // extern "C"
