@@ -127,6 +127,11 @@ cl::opt<std::string>
                             "perf-script output in a textual format"),
                    cl::ReallyHidden, cl::init(""), cl::cat(AggregatorCategory));
 
+cl::opt<bool> GeneratePerfTextProfile(
+    "generate-perf-text-data",
+    cl::desc("Dump perf-script jobs' output into a file"), cl::Hidden,
+    cl::cat(AggregatorCategory));
+
 static cl::opt<bool>
 TimeAggregator("time-aggr",
   cl::desc("time BOLT aggregator"),
@@ -140,6 +145,8 @@ namespace {
 
 const char TimerGroupName[] = "aggregator";
 const char TimerGroupDesc[] = "Aggregator";
+
+constexpr const StringLiteral PerfTextMagicStr = "PERFTEXT";
 
 std::vector<SectionNameAndRange> getTextSections(const BinaryContext *BC) {
   std::vector<SectionNameAndRange> sections;
@@ -167,6 +174,17 @@ void deleteTempFile(const std::string &FileName) {
     errs() << "PERF2BOLT: failed to delete temporary file " << FileName
            << " with error " << Errc.message() << "\n";
 }
+}
+
+uint64_t DataAggregator::getFileSize(const StringRef File) {
+  uint64_t Size;
+  std::error_code EC = sys::fs::file_size(File, Size);
+  if (EC) {
+    errs() << "unable to obtain file size: " << EC.message() << "\n";
+    deleteTempFiles();
+    exit(1);
+  }
+  return Size;
 }
 
 void DataAggregator::deleteTempFiles() {
@@ -233,6 +251,8 @@ void DataAggregator::start() {
 
   launchPerfProcess("task events", TaskEventsPPI,
                     "script --show-task-events --no-itrace");
+
+  launchPerfProcess("buildid list", BuildIDProcessInfo, "buildid-list");
 }
 
 void DataAggregator::abort() {
@@ -303,8 +323,6 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
   };
 
-  PerfProcessInfo BuildIDProcessInfo;
-  launchPerfProcess("buildid list", BuildIDProcessInfo, "buildid-list");
   if (prepareToParse("buildid", BuildIDProcessInfo, WarningCallback))
     return;
 
@@ -380,6 +398,65 @@ void DataAggregator::parsePreAggregated() {
     errs() << "PERF2BOLT: failed to parse samples\n";
     exit(1);
   }
+}
+
+void DataAggregator::generatePerfTextData() {
+  std::error_code EC;
+  raw_fd_ostream OutFile(opts::OutputFilename, EC, sys::fs::OpenFlags::OF_None);
+  if (EC) {
+    errs() << "error opening output file: " << EC.message() << "\n";
+    deleteTempFiles();
+    exit(1);
+  }
+
+  SmallVector<PerfProcessInfo *, 5> ProcessInfos = {
+      &BuildIDProcessInfo, &MMapEventsPPI, &MainEventsPPI, &TaskEventsPPI};
+  if (opts::ParseMemProfile)
+    ProcessInfos.push_back(&MemEventsPPI);
+
+  // Create a file header as a table of the contents.
+  // Initially pre-allocate enough space for the header at the beginning of
+  // the file.
+  // The header can be maximum 132 character, this number is pre-calculated,
+  // the sum of the length of the magic strings, event names, their sizes,
+  // and the field separators.
+  // PERFTEXT;EVENT1={0x$SIZE};EVENT2={0x$SIZE}...
+  // The size of the events are printed in hex format (16 width) in order to be
+  // predictable fixed length.
+  OutFile << std::string(132, ' ') << "\n";
+  std::string Header;
+  raw_string_ostream SS(Header);
+  SS << PerfTextMagicStr << ";";
+  for (const auto PPI : ProcessInfos) {
+    std::string Error;
+    auto PathData = PPI->StdoutPath.data();
+    sys::Wait(PPI->PI, std::nullopt, &Error);
+    if (!Error.empty()) {
+      errs() << "PERF-ERROR: " << PerfPath << ": " << Error << "\n";
+      deleteTempFiles();
+      exit(1);
+    }
+
+    SS << PPI->Type << formatv("={0:x-16};", getFileSize(PathData));
+
+    // Merge all perf-scripts jobs' output into the single OutputFile
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
+        MemoryBuffer::getFileOrSTDIN(PathData);
+    if (std::error_code EC = MB.getError()) {
+      errs() << "Cannot open " << PathData << ": " << EC.message() << "\n";
+      deleteTempFiles();
+      exit(1);
+    }
+    OutFile << (*MB)->getBuffer();
+  }
+
+  OutFile.seek(0);
+  OutFile << Header;
+  OutFile.close();
+  outs() << "PERF2BOLT: Profile is saved to file " << opts::OutputFilename
+         << "\n";
+  deleteTempFiles();
+  exit(0);
 }
 
 void DataAggregator::filterBinaryMMapInfo() {
@@ -594,7 +671,9 @@ void DataAggregator::imputeFallThroughs() {
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   this->BC = &BC;
 
-  if (opts::ReadPreAggregated) {
+  if (opts::GeneratePerfTextProfile) {
+    generatePerfTextData();
+  } else if (opts::ReadPreAggregated) {
     parsePreAggregated();
   } else {
     parsePerfData(BC);
