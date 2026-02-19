@@ -17,11 +17,10 @@
 #include "llvm/Support/TimeProfiler.h"
 
 namespace cir {
-mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
-                                      mlir::MLIRContext &mlirContext,
-                                      clang::ASTContext &astContext,
-                                      bool enableVerifier,
-                                      bool enableCIRSimplify) {
+mlir::LogicalResult
+runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
+                  clang::ASTContext &astContext, bool enableVerifier,
+                  bool enableIdiomRecognizer, bool enableCIRSimplify) {
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
@@ -30,6 +29,9 @@ mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
 
   if (enableCIRSimplify)
     pm.addPass(mlir::createCIRSimplifyPass());
+
+  if (enableIdiomRecognizer)
+    pm.addPass(mlir::createIdiomRecognizerPass(&astContext));
 
   pm.addPass(mlir::createTargetLoweringPass());
   pm.addPass(mlir::createCXXABILoweringPass());
