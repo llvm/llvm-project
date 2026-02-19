@@ -416,9 +416,9 @@ public:
                                                    case LibFunc_sqrtl_finite:
     case LibFunc_strcpy:       case LibFunc_stpcpy:     case LibFunc_strlen:
     case LibFunc_strnlen:      case LibFunc_strstr:     case LibFunc_memchr:
-    case LibFunc_mempcpy:      case LibFunc_tan:        case LibFunc_tanf:
-    case LibFunc_tanl:         case LibFunc_tanh:       case LibFunc_tanhf:
-    case LibFunc_tanhl:
+    case LibFunc_memccpy:      case LibFunc_mempcpy:    case LibFunc_tan:
+    case LibFunc_tanf:         case LibFunc_tanl:       case LibFunc_tanh:
+    case LibFunc_tanhf:        case LibFunc_tanhl:
       // clang-format on
       return true;
     }
