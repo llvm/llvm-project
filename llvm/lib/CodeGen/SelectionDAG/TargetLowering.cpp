@@ -2259,7 +2259,8 @@ bool TargetLowering::SimplifyDemandedBits(
     // Fold FSHR(Op0,Op1,Op2) -> SRL(Op1,Op2)
     // iff we're guaranteed not to use Op0.
     // TODO: Add FSHL equivalent?
-    if (!IsFSHL && !DemandedBits.isAllOnes()) {
+    if (!IsFSHL && !DemandedBits.isAllOnes() &&
+        (!TLO.LegalOperations() || isOperationLegal(ISD::SRL, VT))) {
       uint64_t MaxShiftAmt = BitWidth - 1; // urem(Op2, BitWidth)
       KnownBits KnownAmt =
           TLO.DAG.computeKnownBits(Op2, DemandedElts, Depth + 1);
