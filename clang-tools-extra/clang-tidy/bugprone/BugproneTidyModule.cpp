@@ -106,6 +106,7 @@
 #include "UnintendedCharOstreamOutputCheck.h"
 #include "UniquePtrArrayMismatchCheck.h"
 #include "UnsafeFunctionsCheck.h"
+#include "UnsafeToAllowExceptionsCheck.h"
 #include "UnusedLocalNonTrivialVariableCheck.h"
 #include "UnusedRaiiCheck.h"
 #include "UnusedReturnValueCheck.h"
@@ -308,6 +309,8 @@ public:
         "bugprone-crtp-constructor-accessibility");
     CheckFactories.registerCheck<UnsafeFunctionsCheck>(
         "bugprone-unsafe-functions");
+    CheckFactories.registerCheck<UnsafeToAllowExceptionsCheck>(
+        "bugprone-unsafe-to-allow-exceptions");
     CheckFactories.registerCheck<UnusedLocalNonTrivialVariableCheck>(
         "bugprone-unused-local-non-trivial-variable");
     CheckFactories.registerCheck<UnusedRaiiCheck>("bugprone-unused-raii");

@@ -1,4 +1,0 @@
-math/clc_fma.cl
-math/clc_native_rsqrt.cl
-math/clc_rsqrt.cl
-math/clc_sw_fma.cl

@@ -812,7 +812,7 @@ unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc) {
 // Wrapper for Tablegen'd function.  enum Subtarget is not defined in any
 // header files, so we need to wrap it in a function that takes unsigned
 // instead.
-int64_t getMCOpcode(uint32_t Opcode, unsigned Gen) {
+int32_t getMCOpcode(uint32_t Opcode, unsigned Gen) {
   return getMCOpcodeGen(Opcode, static_cast<Subtarget>(Gen));
 }
 
@@ -2264,7 +2264,7 @@ bool isSupportedTgtId(unsigned Id, const MCSubtargetInfo &STI) {
     return isGFX11Plus(STI);
   default:
     if (Id >= ET_PARAM0 && Id <= ET_PARAM31)
-      return !isGFX11Plus(STI);
+      return !isGFX11Plus(STI) || isGFX13Plus(STI);
     return true;
   }
 }
@@ -2596,6 +2596,10 @@ bool isGFX10Plus(const MCSubtargetInfo &STI) {
 
 bool isGFX11(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX11);
+}
+
+bool isGFX1170(const MCSubtargetInfo &STI) {
+  return isGFX11(STI) && STI.hasFeature(AMDGPU::FeatureWMMA128bInsts);
 }
 
 bool isGFX11Plus(const MCSubtargetInfo &STI) {

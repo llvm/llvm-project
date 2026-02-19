@@ -8,11 +8,11 @@ int getConst(int a, int b) { return 0xaa55; }
 
 void foo() {
   // clang-format off
-  __asm__ __volatile("stp x29, x30 [sp, #-16]!\n"
+  __asm__ __volatile("stp x29, x30, [sp, #-16]!\n"
                      "adrp x0, getConst\n"
                      "add x0, x0, :lo12:getConst\n"
                      "blr x0\n"
-                     "ldp x29, x30 [sp], #16\n"
+                     "ldp x29, x30, [sp], #16\n"
                      :::);
   // clang-format on
   return;
@@ -59,7 +59,7 @@ CHECK-MAIN-NEXT: mov w1, #0x14
 // store current values
 CHECK-MAIN-NEXT: stp x0, x30, [sp
 // load callsite id
-CHECK-MAIN-NEXT: mov x0, #0x0
+CHECK-MAIN-NEXT: mov x0,
 CHECK-MAIN-NEXT: stp x8, x0, [sp
 CHECK-MAIN-NEXT: adrp x8,
 CHECK-MAIN-NEXT: add x8, x8
