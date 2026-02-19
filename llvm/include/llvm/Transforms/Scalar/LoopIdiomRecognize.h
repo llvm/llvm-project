@@ -43,6 +43,9 @@ struct DisableLIRP {
 
   /// When true, HashRecognize is disabled.
   static bool HashRecognize;
+
+  /// When true, Memcmp is disabled.
+  static bool Memcmp;
 };
 
 /// Performs Loop Idiom Recognize Pass.
