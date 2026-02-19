@@ -99,6 +99,8 @@ struct SCEVUse : public PointerIntPair<const SCEV *, 3> {
   /// This method is used for debugging.
   void dump() const;
 
+  static const SCEV *computeCanonical(ScalarEvolution &SE, const SCEV *);
+
   friend hash_code hash_value(const SCEVUse &U) {
     return hash_value(U.getRawPointer());
   }
@@ -119,6 +121,10 @@ template <> struct PointerLikeTypeTraits<SCEVUse> {
 };
 
 template <> struct DenseMapInfo<SCEVUse> {
+  // The following should hold, but it would require T to be complete:
+  // static_assert(alignof(T) <= (1 << Log2MaxAlign),
+  //               "DenseMap does not support pointer keys requiring more than "
+  //               "Log2MaxAlign bits of alignment");
   static constexpr uintptr_t Log2MaxAlign = 12;
 
   static inline SCEVUse getEmptyKey() {
@@ -245,7 +251,7 @@ public:
 
   explicit SCEV(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                 unsigned short ExpressionSize)
-      : FastID(ID), SCEVType(SCEVTy), ExpressionSize(ExpressionSize), CanonicalSCEV(this) {}
+      : FastID(ID), SCEVType(SCEVTy), ExpressionSize(ExpressionSize) {}
   SCEV(const SCEV &) = delete;
   SCEV &operator=(const SCEV &) = delete;
 
@@ -288,6 +294,8 @@ public:
 
   /// This method is used for debugging.
   LLVM_ABI void dump() const;
+
+  LLVM_ABI void computeAndSetCanonical(ScalarEvolution &SE);
 
   LLVM_ABI const SCEV *getCanonical() const { return CanonicalSCEV; }
 };
