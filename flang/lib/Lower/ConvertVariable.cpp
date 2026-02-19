@@ -1143,8 +1143,7 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     auto *sym = &var.getSymbol();
     const Fortran::semantics::Scope &owner = sym->owner();
     if (owner.kind() != Fortran::semantics::Scope::Kind::MainProgram) {
-      auto *converterPtr = &converter;
-      converter.getFctCtx().attachCleanup([converterPtr, builder, loc, exv]() {
+      converter.getFctCtx().attachCleanup([builder, loc, exv]() {
         mif::DeallocCoarrayOp::create(*builder, loc, fir::getBase(exv),
                                       /*stat*/ mlir::Value{},
                                       /*errmsg*/ mlir::Value{});

@@ -8,6 +8,7 @@
 
 #include "flang/Runtime/coarray.h"
 #include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/type-info.h"
 
 namespace Fortran::runtime {
@@ -18,6 +19,12 @@ RT_EXT_API_GROUP_BEGIN
 void RTDEF(ComputeLastUcobound)(
     int num_images, const Descriptor &lcobounds, const Descriptor &ucobounds) {
   int corank = ucobounds.GetDimension(0).Extent();
+  if (corank > 15)
+    Fortran::runtime::Terminator{}.Crash(
+        "Fortran runtime error: maximum corank for a coarray is 15, current "
+        "corank is %d.",
+        corank);
+
   int64_t *lcobounds_ptr = (int64_t *)lcobounds.raw().base_addr;
   int64_t *ucobounds_ptr = (int64_t *)ucobounds.raw().base_addr;
   int64_t index = 1;
@@ -25,7 +32,7 @@ void RTDEF(ComputeLastUcobound)(
     index *= ucobounds_ptr[i] - lcobounds_ptr[i] + 1;
   }
   if (corank == 1)
-    ucobounds_ptr[0] = num_images - lcobounds_ptr[0] + 1;
+    ucobounds_ptr[0] = lcobounds_ptr[0] + num_images;
   else if (index < num_images)
     ucobounds_ptr[corank - 1] =
         (num_images / index) + (num_images % index != 0);

@@ -27,21 +27,12 @@ static bool hasAllocatableOrPointerComponent(mlir::Type type) {
     return hasAllocatableOrPointerComponent(type);
   if (auto recType = mlir::dyn_cast<fir::RecordType>(type)) {
     for (auto field : recType.getTypeList()) {
-      mlir::Type fieldType = fir::unwrapPassByRefType(field.second);
-      if (mlir::isa<fir::PointerType>(fieldType))
-        return true;
-      if (mlir::isa<fir::HeapType>(fieldType))
+      mlir::Type fieldType = field.second;
+      if (fir::isAllocatableType(fieldType) || fir::isPointerType(fieldType) ||
+          fir::isAllocatableOrPointerArray(fieldType))
         return true;
       if (auto fieldRecType = mlir::dyn_cast<fir::RecordType>(fieldType))
         return hasAllocatableOrPointerComponent(fieldRecType);
-      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(fieldType)) {
-        if (seqTy.hasUnknownShape() || seqTy.hasDynamicExtents())
-          return true;
-        mlir::Type eleTy = seqTy.getEleTy();
-        if (mlir::isa<fir::PointerType>(eleTy) ||
-            mlir::isa<fir::HeapType>(eleTy))
-          return true;
-      }
     }
   }
   return false;
