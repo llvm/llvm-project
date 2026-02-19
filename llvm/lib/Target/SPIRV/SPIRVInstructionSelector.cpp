@@ -729,6 +729,12 @@ bool isDead(const MachineInstr &MI, const MachineRegisterInfo &MRI) {
   }
 
   if (isOpcodeWithNoSideEffects(MI.getOpcode())) {
+    // We cannot safely remove an unused type from the MachineFunction.
+    // The types may still be referenced through SPIRVGlobalRegistry.
+    // This is a horrible hack.
+    if (MI.getOpcode() == SPIRV::OpTypePointer)
+      return false;
+
     LLVM_DEBUG(dbgs() << "Dead: known opcode with no side effects\n");
     return true;
   }

@@ -1,4 +1,3 @@
-; XFAIL: asan
 ; RUN: llc -mtriple=spirv32-unknown-unknown < %s --spirv-ext=+SPV_INTEL_function_pointers | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -mtriple=spirv32-unknown-unknown < %s -filetype=obj | not spirv-val 2>&1 | FileCheck --check-prefix=SPIRV-VAL %s %}
 
