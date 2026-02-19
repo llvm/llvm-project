@@ -5,9 +5,6 @@ set(LLVM_LINK_COMPONENTS
 add_clang_executable(c-index-test
   c-index-test.c
   core_main.cpp
-
-  # Prevent CMake error with C source files.
-  DISABLE_PCH_REUSE
   )
 
 if(NOT MSVC)

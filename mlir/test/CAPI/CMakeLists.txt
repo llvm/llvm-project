@@ -8,8 +8,6 @@ function(_add_capi_test_executable name)
     )
   add_llvm_executable(${name}
     PARTIAL_SOURCES_INTENDED
-    # No C++ files, prevent CMake error.
-    DISABLE_PCH_REUSE
     ${ARG_UNPARSED_ARGUMENTS})
   set_target_properties(${name} PROPERTIES FOLDER "MLIR/Tests")
   set_target_properties(${name} PROPERTIES EXCLUDE_FROM_ALL ON)

@@ -12,7 +12,4 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_example(OrcV2CBindingsBasicUsage
   OrcV2CBindingsBasicUsage.c
-
-  # No C++ files, prevent CMake error.
-  DISABLE_PCH_REUSE
   )
