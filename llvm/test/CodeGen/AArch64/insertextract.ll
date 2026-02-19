@@ -1390,7 +1390,7 @@ define <2 x i128> @insert_v2i128_c(<2 x i128> %a, i128 %b, i32 %c) {
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset w29, -16
 ; CHECK-GI-NEXT:    adds x8, x0, x0
-; CHECK-GI-NEXT:    fmov d2, x4
+; CHECK-GI-NEXT:    mov v2.d[0], x4
 ; CHECK-GI-NEXT:    adc x9, x1, x1
 ; CHECK-GI-NEXT:    mov v0.d[0], x8
 ; CHECK-GI-NEXT:    adds x8, x2, x2
