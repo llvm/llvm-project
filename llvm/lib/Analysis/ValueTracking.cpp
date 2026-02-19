@@ -3072,19 +3072,27 @@ static bool isNonZeroAdd(const APInt &DemandedElts, const SimplifyQuery &Q,
   if (matchOpWithOpEqZero(X, Y))
     return true;
 
-  if (NUW)
+  if (NUW) {
+    // X + Y != 0 if X != Y, and X + Y is NUW.
+    if (isKnownNonEqual(X, Y, DemandedElts, Q, Depth))
+      return true;
     return isKnownNonZero(Y, DemandedElts, Q, Depth) ||
            isKnownNonZero(X, DemandedElts, Q, Depth);
+  }
 
   KnownBits XKnown = computeKnownBits(X, DemandedElts, Q, Depth);
   KnownBits YKnown = computeKnownBits(Y, DemandedElts, Q, Depth);
 
   // If X and Y are both non-negative (as signed values) then their sum is not
   // zero unless both X and Y are zero.
-  if (XKnown.isNonNegative() && YKnown.isNonNegative())
+  if (XKnown.isNonNegative() && YKnown.isNonNegative()) {
     if (isKnownNonZero(Y, DemandedElts, Q, Depth) ||
         isKnownNonZero(X, DemandedElts, Q, Depth))
       return true;
+    // X + Y != 0 if X != Y, and X + Y are both nonnegative.
+    if (isKnownNonEqual(X, Y, DemandedElts, Q, Depth))
+      return true;
+  }
 
   // If X and Y are both negative (as signed values) then their sum is not
   // zero unless both X and Y equal INT_MIN.
@@ -3097,6 +3105,9 @@ static bool isNonZeroAdd(const APInt &DemandedElts, const SimplifyQuery &Q,
     // The sign bit of Y is set.  If some other bit is set then Y is not equal
     // to INT_MIN.
     if (YKnown.One.intersects(Mask))
+      return true;
+    // X + Y != 0 because if they are not equal, they cannot both be INT_MIN.
+    if (isKnownNonEqual(X, Y, DemandedElts, Q, Depth))
       return true;
   }
 
