@@ -7943,6 +7943,7 @@ TEST_F(OpenMPIRBuilderTest, spliceBBWithEmptyBB) {
 // Test that NON_CONTIG entries with count expressions store dimension count
 TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysNonContigCountExpression) {
   OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.Config.setIsGPU(true);
   OMPBuilder.initialize();
   IRBuilder<> Builder(BB);
 
