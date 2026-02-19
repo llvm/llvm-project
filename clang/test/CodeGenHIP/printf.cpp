@@ -28,7 +28,7 @@ extern "C" __device__ int printf(const char *format, ...);
 // AMDGCN-NEXT:    br i1 [[TMP7]], label %[[STRLEN_WHILE_DONE:.*]], label %[[STRLEN_WHILE]]
 // AMDGCN:       [[STRLEN_WHILE_DONE]]:
 // AMDGCN-NEXT:    [[TMP8:%.*]] = ptrtoaddr ptr [[TMP4]] to i64
-// AMDGCN-NEXT:    [[TMP9:%.*]] = sub i64 ptrtoaddr (ptr addrspacecast (ptr addrspace(4) @.str.1 to ptr) to i64), [[TMP8]]
+// AMDGCN-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], ptrtoaddr (ptr addrspacecast (ptr addrspace(4) @.str.1 to ptr) to i64)
 // AMDGCN-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 1
 // AMDGCN-NEXT:    br label %[[STRLEN_JOIN]]
 // AMDGCN:       [[STRLEN_JOIN]]:
@@ -47,8 +47,8 @@ extern "C" __device__ int printf(const char *format, ...);
 // AMDGCN-NEXT:    [[TMP21:%.*]] = icmp eq i8 [[TMP20]], 0
 // AMDGCN-NEXT:    br i1 [[TMP21]], label %[[STRLEN_WHILE_DONE3:.*]], label %[[STRLEN_WHILE2]]
 // AMDGCN:       [[STRLEN_WHILE_DONE3]]:
-// AMDGCN-NEXT:    [[TMP22:%.*]] = ptrtoaddr ptr [[TMP0]] to i64
-// AMDGCN-NEXT:    [[TMP23:%.*]] = ptrtoaddr ptr [[TMP18]] to i64
+// AMDGCN-NEXT:    [[TMP22:%.*]] = ptrtoaddr ptr [[TMP18]] to i64
+// AMDGCN-NEXT:    [[TMP23:%.*]] = ptrtoaddr ptr [[TMP0]] to i64
 // AMDGCN-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP22]], [[TMP23]]
 // AMDGCN-NEXT:    [[TMP25:%.*]] = add i64 [[TMP24]], 1
 // AMDGCN-NEXT:    br label %[[STRLEN_JOIN1]]
@@ -79,7 +79,7 @@ extern "C" __device__ int printf(const char *format, ...);
 // AMDGCNSPIRV-NEXT:    br i1 [[TMP7]], label %[[STRLEN_WHILE_DONE:.*]], label %[[STRLEN_WHILE]]
 // AMDGCNSPIRV:       [[STRLEN_WHILE_DONE]]:
 // AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = ptrtoaddr ptr addrspace(4) [[TMP4]] to i64
-// AMDGCNSPIRV-NEXT:    [[TMP9:%.*]] = sub i64 ptrtoaddr (ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str.1 to ptr addrspace(4)) to i64), [[TMP8]]
+// AMDGCNSPIRV-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], ptrtoaddr (ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str.1 to ptr addrspace(4)) to i64)
 // AMDGCNSPIRV-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 1
 // AMDGCNSPIRV-NEXT:    br label %[[STRLEN_JOIN]]
 // AMDGCNSPIRV:       [[STRLEN_JOIN]]:
@@ -98,8 +98,8 @@ extern "C" __device__ int printf(const char *format, ...);
 // AMDGCNSPIRV-NEXT:    [[TMP21:%.*]] = icmp eq i8 [[TMP20]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[TMP21]], label %[[STRLEN_WHILE_DONE3:.*]], label %[[STRLEN_WHILE2]]
 // AMDGCNSPIRV:       [[STRLEN_WHILE_DONE3]]:
-// AMDGCNSPIRV-NEXT:    [[TMP22:%.*]] = ptrtoaddr ptr addrspace(4) [[TMP0]] to i64
-// AMDGCNSPIRV-NEXT:    [[TMP23:%.*]] = ptrtoaddr ptr addrspace(4) [[TMP18]] to i64
+// AMDGCNSPIRV-NEXT:    [[TMP22:%.*]] = ptrtoaddr ptr addrspace(4) [[TMP18]] to i64
+// AMDGCNSPIRV-NEXT:    [[TMP23:%.*]] = ptrtoaddr ptr addrspace(4) [[TMP0]] to i64
 // AMDGCNSPIRV-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP22]], [[TMP23]]
 // AMDGCNSPIRV-NEXT:    [[TMP25:%.*]] = add i64 [[TMP24]], 1
 // AMDGCNSPIRV-NEXT:    br label %[[STRLEN_JOIN1]]
@@ -134,7 +134,7 @@ __device__ char *dstr;
 // AMDGCN-NEXT:    br i1 [[TMP7]], label %[[STRLEN_WHILE_DONE:.*]], label %[[STRLEN_WHILE]]
 // AMDGCN:       [[STRLEN_WHILE_DONE]]:
 // AMDGCN-NEXT:    [[TMP8:%.*]] = ptrtoaddr ptr [[TMP4]] to i64
-// AMDGCN-NEXT:    [[TMP9:%.*]] = sub i64 ptrtoaddr (ptr addrspacecast (ptr addrspace(4) @.str.2 to ptr) to i64), [[TMP8]]
+// AMDGCN-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], ptrtoaddr (ptr addrspacecast (ptr addrspace(4) @.str.2 to ptr) to i64)
 // AMDGCN-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 1
 // AMDGCN-NEXT:    br label %[[STRLEN_JOIN]]
 // AMDGCN:       [[STRLEN_JOIN]]:
@@ -149,8 +149,8 @@ __device__ char *dstr;
 // AMDGCN-NEXT:    [[TMP17:%.*]] = icmp eq i8 [[TMP16]], 0
 // AMDGCN-NEXT:    br i1 [[TMP17]], label %[[STRLEN_WHILE_DONE3:.*]], label %[[STRLEN_WHILE2]]
 // AMDGCN:       [[STRLEN_WHILE_DONE3]]:
-// AMDGCN-NEXT:    [[TMP18:%.*]] = ptrtoaddr ptr [[TMP0]] to i64
-// AMDGCN-NEXT:    [[TMP19:%.*]] = ptrtoaddr ptr [[TMP14]] to i64
+// AMDGCN-NEXT:    [[TMP18:%.*]] = ptrtoaddr ptr [[TMP14]] to i64
+// AMDGCN-NEXT:    [[TMP19:%.*]] = ptrtoaddr ptr [[TMP0]] to i64
 // AMDGCN-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP18]], [[TMP19]]
 // AMDGCN-NEXT:    [[TMP21:%.*]] = add i64 [[TMP20]], 1
 // AMDGCN-NEXT:    br label %[[STRLEN_JOIN1]]
@@ -178,7 +178,7 @@ __device__ char *dstr;
 // AMDGCNSPIRV-NEXT:    br i1 [[TMP7]], label %[[STRLEN_WHILE_DONE:.*]], label %[[STRLEN_WHILE]]
 // AMDGCNSPIRV:       [[STRLEN_WHILE_DONE]]:
 // AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = ptrtoaddr ptr addrspace(4) [[TMP4]] to i64
-// AMDGCNSPIRV-NEXT:    [[TMP9:%.*]] = sub i64 ptrtoaddr (ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str.2 to ptr addrspace(4)) to i64), [[TMP8]]
+// AMDGCNSPIRV-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], ptrtoaddr (ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str.2 to ptr addrspace(4)) to i64)
 // AMDGCNSPIRV-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 1
 // AMDGCNSPIRV-NEXT:    br label %[[STRLEN_JOIN]]
 // AMDGCNSPIRV:       [[STRLEN_JOIN]]:
@@ -193,8 +193,8 @@ __device__ char *dstr;
 // AMDGCNSPIRV-NEXT:    [[TMP17:%.*]] = icmp eq i8 [[TMP16]], 0
 // AMDGCNSPIRV-NEXT:    br i1 [[TMP17]], label %[[STRLEN_WHILE_DONE3:.*]], label %[[STRLEN_WHILE2]]
 // AMDGCNSPIRV:       [[STRLEN_WHILE_DONE3]]:
-// AMDGCNSPIRV-NEXT:    [[TMP18:%.*]] = ptrtoaddr ptr addrspace(4) [[TMP0]] to i64
-// AMDGCNSPIRV-NEXT:    [[TMP19:%.*]] = ptrtoaddr ptr addrspace(4) [[TMP14]] to i64
+// AMDGCNSPIRV-NEXT:    [[TMP18:%.*]] = ptrtoaddr ptr addrspace(4) [[TMP14]] to i64
+// AMDGCNSPIRV-NEXT:    [[TMP19:%.*]] = ptrtoaddr ptr addrspace(4) [[TMP0]] to i64
 // AMDGCNSPIRV-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP18]], [[TMP19]]
 // AMDGCNSPIRV-NEXT:    [[TMP21:%.*]] = add i64 [[TMP20]], 1
 // AMDGCNSPIRV-NEXT:    br label %[[STRLEN_JOIN1]]
