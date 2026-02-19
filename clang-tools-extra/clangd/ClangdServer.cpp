@@ -62,8 +62,8 @@ namespace clangd {
 namespace {
 
 // Tracks number of times a tweak has been offered.
-static constexpr trace::Metric TweakAvailable(
-    "tweak_available", trace::Metric::Counter, "tweak_id");
+static constexpr trace::Metric
+    TweakAvailable("tweak_available", trace::Metric::Counter, "tweak_id");
 
 // Update the FileIndex with new ASTs and plumb the diagnostics responses.
 struct UpdateIndexCallbacks : public ParsingCallbacks {
@@ -872,29 +872,42 @@ void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
 }
 
 void ClangdServer::superTypes(
-    const TypeHierarchyItem &Item,
+    PathRef File, const TypeHierarchyItem &Item,
     Callback<std::optional<std::vector<TypeHierarchyItem>>> CB) {
-  WorkScheduler->run("typeHierarchy/superTypes", /*Path=*/"",
-                     [=, CB = std::move(CB)]() mutable {
-                       CB(clangd::superTypes(Item, Index));
-                     });
+  auto Action = [File = File.str(), Item, CB = std::move(CB),
+                 this](llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::superTypes(Item, Index, InpAST->AST));
+  };
+  WorkScheduler->runWithAST("superTypes Calls", File, std::move(Action));
 }
 
-void ClangdServer::subTypes(const TypeHierarchyItem &Item,
+void ClangdServer::subTypes(PathRef File, const TypeHierarchyItem &Item,
                             Callback<std::vector<TypeHierarchyItem>> CB) {
-  WorkScheduler->run(
-      "typeHierarchy/subTypes", /*Path=*/"",
-      [=, CB = std::move(CB)]() mutable { CB(clangd::subTypes(Item, Index)); });
+
+  auto Action = [File = File.str(), Item, CB = std::move(CB),
+                 this](llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::subTypes(Item, Index, InpAST->AST));
+  };
+  WorkScheduler->runWithAST("subTypes Calls", File, std::move(Action));
 }
 
 void ClangdServer::resolveTypeHierarchy(
-    TypeHierarchyItem Item, int Resolve, TypeHierarchyDirection Direction,
+    PathRef File, TypeHierarchyItem Item, int Resolve,
+    TypeHierarchyDirection Direction,
     Callback<std::optional<TypeHierarchyItem>> CB) {
-  WorkScheduler->run(
-      "Resolve Type Hierarchy", "", [=, CB = std::move(CB)]() mutable {
-        clangd::resolveTypeHierarchy(Item, Resolve, Direction, Index);
-        CB(Item);
-      });
+  auto Action = [Item = std::move(Item), Resolve, Direction, CB = std::move(CB),
+                 this](llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    clangd::resolveTypeHierarchy(Item, Resolve, Direction, Index, InpAST->AST);
+    CB(Item);
+  };
+  WorkScheduler->runWithAST("resolveTypeHierarchy Calls", File,
+                            std::move(Action));
 }
 
 void ClangdServer::prepareCallHierarchy(
@@ -909,12 +922,15 @@ void ClangdServer::prepareCallHierarchy(
 }
 
 void ClangdServer::incomingCalls(
-    const CallHierarchyItem &Item,
+    PathRef File, const CallHierarchyItem &Item,
     Callback<std::vector<CallHierarchyIncomingCall>> CB) {
-  WorkScheduler->run("Incoming Calls", "",
-                     [CB = std::move(CB), Item, this]() mutable {
-                       CB(clangd::incomingCalls(Item, Index));
-                     });
+  auto Action = [Item, CB = std::move(CB),
+                 this](llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::incomingCalls(Item, Index, InpAST->AST));
+  };
+  WorkScheduler->runWithAST("Incoming Calls", File, std::move(Action));
 }
 
 void ClangdServer::inlayHints(PathRef File, std::optional<Range> RestrictRange,
@@ -929,12 +945,15 @@ void ClangdServer::inlayHints(PathRef File, std::optional<Range> RestrictRange,
 }
 
 void ClangdServer::outgoingCalls(
-    const CallHierarchyItem &Item,
+    PathRef File, const CallHierarchyItem &Item,
     Callback<std::vector<CallHierarchyOutgoingCall>> CB) {
-  WorkScheduler->run("Outgoing Calls", "",
-                     [CB = std::move(CB), Item, this]() mutable {
-                       CB(clangd::outgoingCalls(Item, Index));
-                     });
+  auto Action = [Item, CB = std::move(CB),
+                 this](llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::outgoingCalls(Item, Index, InpAST->AST));
+  };
+  WorkScheduler->runWithAST("Outgoing Calls", File, std::move(Action));
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {

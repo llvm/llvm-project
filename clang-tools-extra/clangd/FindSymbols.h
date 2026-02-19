@@ -18,9 +18,13 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
+class NamedDecl;
+
 namespace clangd {
 class ParsedAST;
 class SymbolIndex;
+struct Symbol;
+struct SymbolLocation;
 
 /// A bitmask type representing symbol tags supported by LSP.
 /// \see
@@ -68,6 +72,9 @@ SymbolTags computeSymbolTags(const NamedDecl &ND);
 /// the tags into a vector.
 /// \p ND The declaration to get tags for.
 std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND);
+
+/// Returns the symbol tags for an index `Symbol`.
+std::vector<SymbolTag> getSymbolTags(const Symbol &S);
 
 } // namespace clangd
 } // namespace clang

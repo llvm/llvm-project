@@ -13,7 +13,10 @@
 #include "Quality.h"
 #include "SourceCode.h"
 #include "index/Index.h"
+#include "index/Symbol.h"
+#include "index/SymbolLocation.h"
 #include "support/Logger.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Index/IndexSymbol.h"
@@ -228,6 +231,20 @@ std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
   return Tags;
 }
 
+std::vector<SymbolTag> getSymbolTags(const Symbol &S) {
+  std::vector<SymbolTag> Tags;
+
+  if (S.Flags & Symbol::Deprecated)
+    Tags.push_back(SymbolTag::Deprecated);
+
+  if (S.Definition)
+    Tags.push_back(SymbolTag::Definition);
+  else
+    Tags.push_back(SymbolTag::Declaration);
+
+  return Tags;
+}
+
 namespace {
 using ScoredSymbolInfo = std::pair<float, SymbolInformation>;
 struct ScoredSymbolGreater {
@@ -359,6 +376,7 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
     Info.score = Relevance.NameMatch > std::numeric_limits<float>::epsilon()
                      ? Score / Relevance.NameMatch
                      : QualScore;
+    Info.tags = getSymbolTags(Sym);
     Top.push({Score, std::move(Info)});
   });
   for (auto &R : std::move(Top).items())
