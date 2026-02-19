@@ -21,9 +21,7 @@ define i32 @sext_i8_i32(ptr %p) {
 ; DAG: i32.load8_u $push0=, 0($0){{$}}
 ; DAG-NEXT: return $pop0{{$}}
 ; FAST:       i32.load8_u $push[[L:[0-9]+]]=, 0($0)
-; FAST-NEXT:       i32.const   $push[[C:[0-9]+]]=, 255
-; FAST-NEXT:       i32.and     $push[[R:[0-9]+]]=, $pop[[L]], $pop[[C]]
-; FAST-NEXT:       return      $pop[[R]]
+; FAST-NEXT:       return      $pop[[L]]
 define i32 @zext_i8_i32(ptr %p) {
   %v = load i8, ptr %p
   %e = zext i8 %v to i32
@@ -46,9 +44,7 @@ define i32 @sext_i16_i32(ptr %p) {
 ; DAG: i32.load16_u $push0=, 0($0){{$}}
 ; DAG-NEXT: return $pop0{{$}}
 ; FAST:      i32.load16_u $push[[L:[0-9]+]]=, 0($0)
-; FAST-NEXT: i32.const    $push[[C:[0-9]+]]=, 65535
-; FAST-NEXT: i32.and      $push[[R:[0-9]+]]=, $pop[[L]], $pop[[C]]
-; FAST-NEXT: return       $pop[[R]]
+; FAST-NEXT: return       $pop[[L]]
 define i32 @zext_i16_i32(ptr %p) {
   %v = load i16, ptr %p
   %e = zext i16 %v to i32
@@ -72,9 +68,7 @@ define i64 @sext_i8_i64(ptr %p) {
 ; DAG: i64.load8_u $push0=, 0($0){{$}}
 ; DAG-NEXT: return $pop0{{$}}
 ; FAST:      i32.load8_u      $push[[L:[0-9]+]]=, 0($0)
-; FAST-NEXT: i32.const        $push[[C:[0-9]+]]=, 255
-; FAST-NEXT: i32.and          $push[[AND:[0-9]+]]=, $pop[[L]], $pop[[C]]
-; FAST-NEXT: i64.extend_i32_u $push[[EXT:[0-9]+]]=, $pop[[AND]]
+; FAST-NEXT: i64.extend_i32_u $push[[EXT:[0-9]+]]=, $pop[[L]]
 ; FAST-NEXT: return           $pop[[EXT]]
 define i64 @zext_i8_i64(ptr %p) {
   %v = load i8, ptr %p
@@ -99,9 +93,7 @@ define i64 @sext_i16_i64(ptr %p) {
 ; DAG: i64.load16_u $push0=, 0($0){{$}}
 ; DAG-NEXT: return $pop0{{$}}
 ; FAST:      i32.load16_u     $push[[L:[0-9]+]]=, 0($0)
-; FAST-NEXT: i32.const        $push[[C:[0-9]+]]=, 65535
-; FAST-NEXT: i32.and          $push[[AND:[0-9]+]]=, $pop[[L]], $pop[[C]]
-; FAST-NEXT: i64.extend_i32_u $push[[EXT:[0-9]+]]=, $pop[[AND]]
+; FAST-NEXT: i64.extend_i32_u $push[[EXT:[0-9]+]]=, $pop[[L]]
 ; FAST-NEXT: return           $pop[[EXT]]
 define i64 @zext_i16_i64(ptr %p) {
   %v = load i16, ptr %p
