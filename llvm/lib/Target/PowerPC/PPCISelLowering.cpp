@@ -17223,28 +17223,28 @@ static SDValue DAGCombineAddc(SDNode *N,
   return SDValue();
 }
 
-/// Optimize zero-extension of setcc when the compared value is known to be 0
-/// or 1.
-///
-/// Pattern: zext(setcc(Value, 0, seteq/setne)) where Value is 0 or 1
-///   -> zext(xor(Value, 1))  for seteq
-///   -> zext(Value)          for setne
-///
-/// This optimization avoids the i32 -> i1 -> i32/i64 conversion sequence
-/// by keeping the value in its original i32 type throughout.
-///
-/// Example:
-///   Before: zext(setcc(test_data_class(...), 0, seteq))
-///           // test_data_class returns 0 or 1 in i32
-///           // setcc converts i32 -> i1
-///           // zext converts i1 -> i64
-///   After:  zext(xor(test_data_class(...), 1))
-///           // Stays in i32, then extends to i64
-///
-/// This is beneficial because:
-/// 1. Eliminates the setcc instruction
-/// 2. Avoids i32 -> i1 truncation
-/// 3. Keeps computation in native integer width
+// Optimize zero-extension of setcc when the compared value is known to be 0
+// or 1.
+//
+// Pattern: zext(setcc(Value, 0, seteq/setne)) where Value is 0 or 1
+//   -> zext(xor(Value, 1))  for seteq
+//   -> zext(Value)          for setne
+//
+// This optimization avoids the i32 -> i1 -> i32/i64 conversion sequence
+// by keeping the value in its original i32 type throughout.
+//
+// Example:
+//   Before: zext(setcc(test_data_class(...), 0, seteq))
+//           // test_data_class returns 0 or 1 in i32
+//           // setcc converts i32 -> i1
+//           // zext converts i1 -> i64
+//   After:  zext(xor(test_data_class(...), 1))
+//           // Stays in i32, then extends to i64
+//
+// This is beneficial because:
+// 1. Eliminates the setcc instruction
+// 2. Avoids i32 -> i1 truncation
+// 3. Keeps computation in native integer width
 
 static SDValue combineZextSetccWithZero(SDNode *N, SelectionDAG &DAG) {
   // Check if this is a zero_extend
