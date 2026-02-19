@@ -2787,6 +2787,64 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_ceil",
+    hdrs = ["src/__support/math/ceil.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ceilbf16",
+    hdrs = ["src/__support/math/ceilbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ceilf",
+    hdrs = ["src/__support/math/ceilf.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ceilf128",
+    hdrs = ["src/__support/math/ceilf128.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ceilf16",
+    hdrs = ["src/__support/math/ceilf16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ceill",
+    hdrs = ["src/__support/math/ceill.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_common_constants",
     hdrs = ["src/__support/math/common_constants.h"],
     deps = [
@@ -4703,15 +4761,47 @@ libc_math_function(
     additional_deps = [":__support_math_cbrtf"],
 )
 
-libc_math_function(name = "ceil")
+libc_math_function(
+    name = "ceil",
+    additional_deps = [
+        ":__support_math_ceil",
+    ],
+)
 
-libc_math_function(name = "ceilf")
+libc_math_function(
+    name = "ceilbf16",
+    additional_deps = [
+        ":__support_math_ceilbf16",
+    ],
+)
 
-libc_math_function(name = "ceill")
+libc_math_function(
+    name = "ceilf",
+    additional_deps = [
+        ":__support_math_ceilf",
+    ],
+)
 
-libc_math_function(name = "ceilf128")
+libc_math_function(
+    name = "ceill",
+    additional_deps = [
+        ":__support_math_ceill",
+    ],
+)
 
-libc_math_function(name = "ceilf16")
+libc_math_function(
+    name = "ceilf128",
+    additional_deps = [
+        ":__support_math_ceilf128",
+    ],
+)
+
+libc_math_function(
+    name = "ceilf16",
+    additional_deps = [
+        ":__support_math_ceilf16",
+    ],
+)
 
 libc_math_function(name = "copysign")
 
