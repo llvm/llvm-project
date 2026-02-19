@@ -1,10 +1,10 @@
 set(files
-  "__init__.py"
   "call_graph.py"
   "extract_type_map.py"
   "graph_helper.py"
   "stack_estimator.py"
-  "symbolizer.py")
+  "symbolizer.py"
+  "consolidate_sorted_table.py")
 
 foreach (file ${files})
   install(PROGRAMS ${file}

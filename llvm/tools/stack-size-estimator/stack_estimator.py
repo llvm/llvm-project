@@ -9,6 +9,8 @@ from typing import Dict, List, Any, Optional, Tuple, Set
 import call_graph
 import graph_helper
 import symbolizer
+import extract_type_map
+import consolidate_sorted_table
 
 # Type aliases
 SccResults = Dict[int, Dict[str, Any]]
@@ -284,6 +286,11 @@ def main():
         help="Demangle function names in the output (default: False)",
     )
     parser.add_argument(
+        "--produce-intermediate",
+        action="store_true",
+        help="Produce intermediate results (type_map.json and consolidated_types.json) for investigation",
+    )
+    parser.add_argument(
         "--export-json",
         help="Path to export analysis data as JSON (for visualization)",
     )
@@ -395,6 +402,18 @@ def main():
             print(
                 f"Warning: Demangler binary '{args.llvm_cxxfilt_path}' not found.",
                 file=sys.stderr)
+
+    if args.produce_intermediate:
+        type_map = extract_type_map.extract_type_map(data, demangler)
+        with open("type_map.json", 'w') as f:
+            json.dump(type_map, f, indent=2)
+        print("✅ Intermediate result 'type_map.json' produced.")
+
+        consolidated = consolidate_sorted_table.consolidate_type_ids(
+            data, type_map, demangler)
+        with open("consolidated_types.json", 'w') as f:
+            json.dump(consolidated, f, indent=2)
+        print("✅ Intermediate result 'consolidated_types.json' produced.")
 
     if args.export_json:
         excluded_funcs = set()

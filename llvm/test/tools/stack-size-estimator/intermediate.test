@@ -1,0 +1,16 @@
+; RUN: chmod +x %S/Inputs/mock-cxxfilt.py
+; RUN: %stack-size-estimator %S/Inputs/test_mangled.json --entry-function main --demangle --llvm-cxxfilt-path %S/Inputs/mock-cxxfilt.py --produce-intermediate
+; RUN: FileCheck %s --check-prefix=TYPEMAP < type_map.json
+; RUN: FileCheck %s --check-prefix=CONSOLIDATED < consolidated_types.json
+
+; TYPEMAP: "4524972987496481828": [
+; TYPEMAP-NEXT: "demangled_3foov"
+; TYPEMAP-NEXT: ]
+
+; CONSOLIDATED: [
+; CONSOLIDATED-NEXT:  {
+; CONSOLIDATED-NEXT:    "type_id": 4524972987496481828,
+; CONSOLIDATED-NEXT:    "target_count": 1,
+; CONSOLIDATED-NEXT:    "calling_function": "main"
+; CONSOLIDATED-NEXT:  }
+; CONSOLIDATED-NEXT: ]
