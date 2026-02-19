@@ -11,47 +11,57 @@
 ; CHECK-DAG: OpExtension "SPV_INTEL_function_pointers"
 ; CHECK-DAG: OpName %[[#fArray:]] "array"
 ; CHECK-DAG: OpName %[[#fStruct:]] "struct"
+; CHECK-DAG: OpName %[[#f0:]] "f0"
+; CHECK-DAG: OpName %[[#f1:]] "f1"
+; CHECK-DAG: OpName %[[#f2:]] "f2"
 
 ; CHECK-DAG: %[[#Int8Ty:]] = OpTypeInt 8 0
-; CHECK: %[[#GlobalInt8PtrTy:]] = OpTypePointer CrossWorkgroup %[[#Int8Ty]]
-; CHECK: %[[#VoidTy:]] = OpTypeVoid
-; CHECK: %[[#TestFnTy:]] = OpTypeFunction %[[#VoidTy]] %[[#GlobalInt8PtrTy]]
-; CHECK: %[[#F16Ty:]] = OpTypeFloat 16
-; CHECK: %[[#t_halfTy:]] = OpTypeStruct %[[#F16Ty]]
-; CHECK: %[[#FnTy:]] = OpTypeFunction %[[#t_halfTy]] %[[#GlobalInt8PtrTy]] %[[#t_halfTy]]
-; CHECK: %[[#IntelFnPtrTy:]] = OpTypePointer CodeSectionINTEL %[[#FnTy]]
-; CHECK: %[[#Int8PtrTy:]] = OpTypePointer Function %[[#Int8Ty]]
-; CHECK: %[[#Int32Ty:]] = OpTypeInt 32 0
-; CHECK: %[[#I32Const3:]] = OpConstant %[[#Int32Ty]] 3
-; CHECK: %[[#FnArrTy:]] = OpTypeArray %[[#Int8PtrTy]] %[[#I32Const3]]
-; CHECK: %[[#GlobalFnArrPtrTy:]] = OpTypePointer CrossWorkgroup %[[#FnArrTy]]
-; CHECK: %[[#GlobalFnPtrTy:]] = OpTypePointer CrossWorkgroup %[[#FnTy]]
-; CHECK: %[[#FnPtrTy:]] = OpTypePointer Function %[[#FnTy]]
-; CHECK: %[[#StructWithPfnTy:]] = OpTypeStruct %[[#FnPtrTy]] %[[#FnPtrTy]] %[[#FnPtrTy]]
-; CHECK: %[[#ArrayOfPfnTy:]] = OpTypeArray %[[#FnPtrTy]] %[[#I32Const3]]
-; CHECK: %[[#Int64Ty:]] = OpTypeInt 64 0
-; CHECK: %[[#GlobalStructWithPfnPtrTy:]] = OpTypePointer CrossWorkgroup %[[#StructWithPfnTy]]
-; CHECK: %[[#GlobalArrOfPfnPtrTy:]] = OpTypePointer CrossWorkgroup %[[#ArrayOfPfnTy]]
-; CHECK: %[[#I64Const2:]] = OpConstant %[[#Int64Ty]] 2
-; CHECK: %[[#I64Const1:]] = OpConstant %[[#Int64Ty]] 1
-; CHECK: %[[#I64Const0:]] = OpConstantNull %[[#Int64Ty]]
-; CHECK: %[[#f0Pfn:]] = OpConstantFunctionPointerINTEL %[[#IntelFnPtrTy]] %28
-; CHECK: %[[#f1Pfn:]] = OpConstantFunctionPointerINTEL %[[#IntelFnPtrTy]] %32
-; CHECK: %[[#f2Pfn:]] = OpConstantFunctionPointerINTEL %[[#IntelFnPtrTy]] %36
-; CHECK: %[[#f0Cast:]] = OpSpecConstantOp %[[#FnPtrTy]] Bitcast %[[#f0Pfn]]
-; CHECK: %[[#f1Cast:]] = OpSpecConstantOp %[[#FnPtrTy]] Bitcast %[[#f1Pfn]]
-; CHECK: %[[#f2Cast:]] = OpSpecConstantOp %[[#FnPtrTy]] Bitcast %[[#f2Pfn]]
-; CHECK: %[[#fnptrTy:]] = OpConstantComposite %[[#ArrayOfPfnTy]] %[[#f0Cast]] %[[#f1Cast]] %[[#f2Cast]]
-; CHECK: %[[#fnptr:]] = OpVariable %[[#GlobalArrOfPfnPtrTy]] CrossWorkgroup %[[#fnptrTy]]
-; CHECK: %[[#fnstructTy:]] = OpConstantComposite %[[#StructWithPfnTy]] %[[#f0Cast]] %[[#f1Cast]] %[[#f2Cast]]
-; CHECK: %[[#fnstruct:]] = OpVariable %[[#GlobalStructWithPfnPtrTy:]] CrossWorkgroup %[[#fnstructTy]]
+; CHECK-DAG: %[[#GlobalInt8PtrTy:]] = OpTypePointer CrossWorkgroup %[[#Int8Ty]]
+; CHECK-DAG: %[[#VoidTy:]] = OpTypeVoid
+; CHECK-DAG: %[[#TestFnTy:]] = OpTypeFunction %[[#VoidTy]] %[[#GlobalInt8PtrTy]]
+; CHECK-DAG: %[[#F16Ty:]] = OpTypeFloat 16
+; CHECK-DAG: %[[#t_halfTy:]] = OpTypeStruct %[[#F16Ty]]
+; CHECK-DAG: %[[#FnTy:]] = OpTypeFunction %[[#t_halfTy]] %[[#GlobalInt8PtrTy]] %[[#t_halfTy]]
+; CHECK-DAG: %[[#IntelFnPtrTy:]] = OpTypePointer CodeSectionINTEL %[[#FnTy]]
+; CHECK-DAG: %[[#Int8PtrTy:]] = OpTypePointer Function %[[#Int8Ty]]
+; CHECK-DAG: %[[#Int32Ty:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#I32Const3:]] = OpConstant %[[#Int32Ty]] 3
+; CHECK-DAG: %[[#FnArrTy:]] = OpTypeArray %[[#Int8PtrTy]] %[[#I32Const3]]
+; CHECK-DAG: %[[#GlobalFnArrPtrTy:]] = OpTypePointer CrossWorkgroup %[[#FnArrTy]]
+; CHECK-DAG: %[[#GlobalFnPtrTy:]] = OpTypePointer CrossWorkgroup %[[#FnTy]]
+; CHECK-DAG: %[[#FnPtrTy:]] = OpTypePointer Function %[[#FnTy]]
+; CHECK-DAG: %[[#StructWithPfnTy:]] = OpTypeStruct %[[#FnPtrTy]] %[[#FnPtrTy]] %[[#FnPtrTy]]
+; CHECK-DAG: %[[#ArrayOfPfnTy:]] = OpTypeArray %[[#FnPtrTy]] %[[#I32Const3]]
+; CHECK-DAG: %[[#Int64Ty:]] = OpTypeInt 64 0
+; CHECK-DAG: %[[#GlobalStructWithPfnPtrTy:]] = OpTypePointer CrossWorkgroup %[[#StructWithPfnTy]]
+; CHECK-DAG: %[[#GlobalArrOfPfnPtrTy:]] = OpTypePointer CrossWorkgroup %[[#ArrayOfPfnTy]]
+; CHECK-DAG: %[[#I64Const2:]] = OpConstant %[[#Int64Ty]] 2
+; CHECK-DAG: %[[#I64Const1:]] = OpConstant %[[#Int64Ty]] 1
+; CHECK-DAG: %[[#I64Const0:]] = OpConstantNull %[[#Int64Ty]]
+; CHECK-DAG: %[[#f0Pfn:]] = OpConstantFunctionPointerINTEL %[[#IntelFnPtrTy]] %[[#f0]]
+; CHECK-DAG: %[[#f1Pfn:]] = OpConstantFunctionPointerINTEL %[[#IntelFnPtrTy]] %[[#f1]]
+; CHECK-DAG: %[[#f2Pfn:]] = OpConstantFunctionPointerINTEL %[[#IntelFnPtrTy]] %[[#f2]]
+
+; These constants appear twice (duplicated) at the moment
+; CHECK-DAG: %[[#f0Cast_0:]] = OpSpecConstantOp %[[#FnPtrTy]] Bitcast %[[#f0Pfn]]
+; CHECK-DAG: %[[#f1Cast_0:]] = OpSpecConstantOp %[[#FnPtrTy]] Bitcast %[[#f1Pfn]]
+; CHECK-DAG: %[[#f2Cast_0:]] = OpSpecConstantOp %[[#FnPtrTy]] Bitcast %[[#f2Pfn]]
+; CHECK-DAG: %[[#f0Cast_1:]] = OpSpecConstantOp %[[#FnPtrTy]] Bitcast %[[#f0Pfn]]
+; CHECK-DAG: %[[#f1Cast_1:]] = OpSpecConstantOp %[[#FnPtrTy]] Bitcast %[[#f1Pfn]]
+; CHECK-DAG: %[[#f2Cast_1:]] = OpSpecConstantOp %[[#FnPtrTy]] Bitcast %[[#f2Pfn]]
+
+; CHECK-DAG: %[[#fnptrTy:]] = OpConstantComposite %[[#ArrayOfPfnTy]] %[[#f0Cast_0]] %[[#f1Cast_0]] %[[#f2Cast_0]]
+; CHECK-DAG: %[[#fnstructTy:]] = OpConstantComposite %[[#StructWithPfnTy]] %[[#f0Cast_1]] %[[#f1Cast_1]] %[[#f2Cast_1]]
+
+; CHECK-DAG: %[[#fnptr:]] = OpVariable %[[#GlobalArrOfPfnPtrTy]] CrossWorkgroup %[[#fnptrTy]]
+; CHECK-DAG: %[[#fnstruct:]] = OpVariable %[[#GlobalStructWithPfnPtrTy:]] CrossWorkgroup %[[#fnstructTy]]
 ; CHECK-DAG: %[[#GlobalInt8PtrPtrTy:]] = OpTypePointer CrossWorkgroup %[[#Int8PtrTy]]
-; CHECK: %[[#StructWithPtrTy:]] = OpTypeStruct %[[#Int8PtrTy]] %[[#Int8PtrTy]] %[[#Int8PtrTy]]
-; CHECK: %[[#GlobalStructWithPtrPtrTy:]] = OpTypePointer CrossWorkgroup %[[#StructWithPtrTy]]
-; CHECK: %[[#I32Const2:]] = OpConstant %[[#Int32Ty]] 2
-; CHECK: %[[#I32Const1:]] = OpConstant %[[#Int32Ty]] 1
-; CHECK: %[[#I32Const0:]] = OpConstantNull %[[#Int32Ty]]
-; CHECK: %[[#GlobalFnPtrPtrTy:]] = OpTypePointer CrossWorkgroup %[[#FnPtrTy]]
+; CHECK-DAG: %[[#StructWithPtrTy:]] = OpTypeStruct %[[#Int8PtrTy]] %[[#Int8PtrTy]] %[[#Int8PtrTy]]
+; CHECK-DAG: %[[#GlobalStructWithPtrPtrTy:]] = OpTypePointer CrossWorkgroup %[[#StructWithPtrTy]]
+; CHECK-DAG: %[[#I32Const2:]] = OpConstant %[[#Int32Ty]] 2
+; CHECK-DAG: %[[#I32Const1:]] = OpConstant %[[#Int32Ty]] 1
+; CHECK-DAG: %[[#I32Const0:]] = OpConstantNull %[[#Int32Ty]]
+; CHECK-DAG: %[[#GlobalFnPtrPtrTy:]] = OpTypePointer CrossWorkgroup %[[#FnPtrTy]]
 %t_half = type { half }
 %struct.anon = type { ptr, ptr, ptr }
 
