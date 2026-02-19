@@ -1,0 +1,9 @@
+# Test error handling for missing files
+
+# Missing expected file should fail
+# RUN: not json-diff %S/nonexistent.json %S/dummy.json 2>&1 | FileCheck --check-prefix=MISSING %s
+# MISSING: Error: failed to read JSON from {{.*}}nonexistent.json
+
+# Missing actual file should fail
+# RUN: not json-diff %S/dummy.json %S/nonexistent.json 2>&1 | FileCheck --check-prefix=MISSING2 %s
+# MISSING2: Error: failed to read JSON from {{.*}}nonexistent.json

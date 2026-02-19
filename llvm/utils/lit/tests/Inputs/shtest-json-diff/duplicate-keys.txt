@@ -1,0 +1,13 @@
+# Test error handling for duplicate keys in JSON
+
+# Single duplicate key should fail
+# RUN: not json-diff %S/duplicate-keys-single.json %S/dummy.json 2>&1 | FileCheck --check-prefix=SINGLE %s
+# SINGLE: Error: failed to read JSON. Found duplicate keys
+
+# Multiple duplicate keys should fail
+# RUN: not json-diff %S/dummy.json %S/duplicate-keys-multiple.json 2>&1 | FileCheck --check-prefix=MULTI %s
+# MULTI: Error: failed to read JSON. Found duplicate keys
+
+# Nested duplicate keys should fail
+# RUN: not json-diff %S/dummy.json %S/duplicate-keys-nested.json 2>&1 | FileCheck --check-prefix=NESTED %s
+# NESTED: Error: failed to read JSON. Found duplicate keys

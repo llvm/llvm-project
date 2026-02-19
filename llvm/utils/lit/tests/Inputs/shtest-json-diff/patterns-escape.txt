@@ -1,0 +1,2 @@
+# Test escape sequence pattern (@@)
+# RUN: json-diff %S/patterns-escape-expected.json %S/patterns-escape-actual.json

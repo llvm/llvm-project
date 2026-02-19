@@ -1,0 +1,9 @@
+{
+    "simple": "value",
+    "array": [
+        1,
+        2,
+        3
+    ],
+    "number": 42
+}

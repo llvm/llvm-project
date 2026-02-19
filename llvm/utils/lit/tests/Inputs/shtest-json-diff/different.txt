@@ -1,0 +1,3 @@
+# Test that different JSON files are detected
+# RUN: not json-diff %S/different-expected.json %S/different-actual.json 2>&1 | FileCheck --check-prefix=DIFF %s
+# DIFF: Match failure: array length mismatch

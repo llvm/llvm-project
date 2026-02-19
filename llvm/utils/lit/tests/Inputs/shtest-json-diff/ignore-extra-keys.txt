@@ -1,0 +1,12 @@
+# Test ignore-extra-keys functionality
+
+# Second file has extra keys, should fail by default
+# RUN: not json-diff %S/ignore-extra-keys-expected.json %S/ignore-extra-keys-actual.json 2>&1 | FileCheck --check-prefix=EXTRA %s
+# EXTRA: Match failure: extra keys in actual JSON
+
+# With --ignore-extra-keys, should succeed (extra keys in actual are ignored)
+# RUN: json-diff --ignore-extra-keys %S/ignore-extra-keys-expected.json %S/ignore-extra-keys-actual.json
+
+# But reversed should still fail (actual is missing keys that expected has)
+# RUN: not json-diff --ignore-extra-keys %S/ignore-extra-keys-actual.json %S/ignore-extra-keys-expected.json 2>&1 | FileCheck --check-prefix=MISSING %s
+# MISSING: Match failure: type mismatch
