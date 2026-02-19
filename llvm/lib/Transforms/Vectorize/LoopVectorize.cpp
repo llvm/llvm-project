@@ -4372,6 +4372,20 @@ static bool hasFindLastReductionPhi(VPlan &Plan) {
                 });
 }
 
+/// Returns true if the VPlan contains header phi recipes that are not currently
+/// supported for epilogue vectorization.
+static bool hasUnsupportedHeaderPhiRecipe(VPlan &Plan) {
+  return any_of(
+      Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+      [](VPRecipeBase &R) {
+        if (auto *WidenInd = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
+          return !WidenInd->getPHINode();
+        auto *RedPhi = dyn_cast<VPReductionPHIRecipe>(&R);
+        return RedPhi && RecurrenceDescriptor::isFindLastRecurrenceKind(
+                             RedPhi->getRecurrenceKind());
+      });
+}
+
 bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
     ElementCount VF) const {
   // Cross iteration phis such as fixed-order recurrences and FMaxNum/FMinNum
@@ -4385,9 +4399,9 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
       }))
     return false;
 
-  // FindLast reductions require special handling for the synthesized mask PHI
-  // and are currently unsupported for epilogue vectorization.
-  if (hasFindLastReductionPhi(getPlanFor(VF)))
+  // FindLast reductions and inductions without underlying PHI require special
+  // handling and are currently not supported for epilogue vectorization.
+  if (hasUnsupportedHeaderPhiRecipe(getPlanFor(VF)))
     return false;
 
   // Phis with uses outside of the loop require special handling and are
@@ -8346,7 +8360,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
   // Apply mandatory transformation to handle reductions with multiple in-loop
   // uses if possible, bail out otherwise.
-  if (!RUN_VPLAN_PASS(VPlanTransforms::handleMultiUseReductions, *Plan))
+  if (!RUN_VPLAN_PASS(VPlanTransforms::handleMultiUseReductions, *Plan, ORE,
+                      OrigLoop))
     return nullptr;
   // Apply mandatory transformation to handle FP maxnum/minnum reduction with
   // NaNs if possible, bail out otherwise.
@@ -8486,11 +8501,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
         (!RR || !RR->isPartialReduction())) {
       VPValue *Cond = vputils::findHeaderMask(*Plan);
-      VPIRFlags Flags = PhiTy->isFloatingPointTy()
-                            ? VPIRFlags(RdxDesc.getFastMathFlags())
-                            : VPIRFlags();
       NewExitingVPV =
-          Builder.createSelect(Cond, OrigExitingVPV, PhiR, {}, "", Flags);
+          Builder.createSelect(Cond, OrigExitingVPV, PhiR, {}, "", *PhiR);
       OrigExitingVPV->replaceUsesWithIf(NewExitingVPV, [](VPUser &U, unsigned) {
         using namespace VPlanPatternMatch;
         return match(
@@ -8537,12 +8549,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
           Builder.createNaryOp(VPInstruction::ComputeAnyOfResult,
                                {Start, NewVal, NewExitingVPV}, ExitDL);
     } else {
-      FastMathFlags FMFs =
-          RecurrenceDescriptor::isFloatingPointRecurrenceKind(RecurrenceKind)
-              ? RdxDesc.getFastMathFlags()
-              : FastMathFlags();
       VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
-                      FMFs);
+                      PhiR->getFastMathFlags());
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeReductionResult,
                                {NewExitingVPV}, Flags, ExitDL);
@@ -8628,20 +8636,18 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       continue;
     }
 
-    RecurKind RK = RdxDesc.getRecurrenceKind();
+    RecurKind RK = PhiR->getRecurrenceKind();
     if ((!RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isFindLastRecurrenceKind(RK))) {
       VPBuilder PHBuilder(Plan->getVectorPreheader());
       VPValue *Iden = Plan->getOrAddLiveIn(
-          getRecurrenceIdentity(RK, PhiTy, RdxDesc.getFastMathFlags()));
+          getRecurrenceIdentity(RK, PhiTy, PhiR->getFastMathFlags()));
       auto *ScaleFactorVPV = Plan->getConstantInt(32, 1);
       VPValue *StartV = PHBuilder.createNaryOp(
           VPInstruction::ReductionStartVector,
-          {PhiR->getStartValue(), Iden, ScaleFactorVPV},
-          PhiTy->isFloatingPointTy() ? RdxDesc.getFastMathFlags()
-                                     : FastMathFlags());
+          {PhiR->getStartValue(), Iden, ScaleFactorVPV}, *PhiR);
       PhiR->setOperand(0, StartV);
     }
   }

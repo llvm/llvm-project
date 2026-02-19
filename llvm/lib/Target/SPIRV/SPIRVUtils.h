@@ -25,6 +25,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "SPIRVTypeInst.h"
+
 namespace llvm {
 class MCInst;
 class MachineFunction;
