@@ -2250,29 +2250,83 @@ LogicalResult tosa::SliceOp::inferReturnTypeComponents(
 }
 
 LogicalResult tosa::SliceOp::verify() {
-  if (verifySameElementTypes(*this, /* inType = */ getInput1().getType(),
-                             /* outType = */ getOutput().getType())
+  const Value input = getInput1();
+  const Value output = getOutput();
+  if (verifySameElementTypes(*this, /* inType = */ input.getType(),
+                             /* outType = */ output.getType())
           .failed())
     return failure();
 
-  const ShapeAdaptor inputShape(getInput1().getType());
+  const Value start = getStart();
+  const Value size = getSize();
+  const ShapeAdaptor inputShape(input.getType());
+  const ShapeAdaptor outputShape(output.getType());
+
   if (inputShape.hasRank()) {
     const auto inputRank = inputShape.getRank();
-    const ShapeAdaptor outputShape(getOutput().getType());
     if (outputShape.hasRank() && inputRank != outputShape.getRank())
       return emitOpError(
                  "expect input1 and output to have the same ranks, got ")
              << inputRank << " and " << outputShape.getRank();
 
     const auto startShapeRank =
-        llvm::cast<tosa::shapeType>(getStart().getType()).getRank();
+        llvm::cast<tosa::shapeType>(start.getType()).getRank();
     if (inputRank != startShapeRank)
       return emitOpError("length of start is not equal to rank of input shape");
 
     const auto sizeShapeRank =
-        llvm::cast<tosa::shapeType>(getSize().getType()).getRank();
+        llvm::cast<tosa::shapeType>(size.getType()).getRank();
     if (inputRank != sizeShapeRank)
       return emitOpError("length of size is not equal to rank of input shape");
+  }
+
+  constexpr int64_t kInferableDimSize = -1;
+
+  SmallVector<int64_t> startValues;
+  tosa::getConstShapeValues(start.getDefiningOp(), startValues);
+  if (startValues.size()) {
+    if (llvm::any_of(startValues, [](const int64_t v) {
+          return v < 0 && v != kInferableDimSize;
+        }))
+      return emitOpError("start values must be non-negative, got [")
+             << startValues << "]";
+  }
+
+  SmallVector<int64_t> sizeValues;
+  if (!tosa::getConstShapeValues(size.getDefiningOp(), sizeValues))
+    return success();
+
+  if (llvm::any_of(sizeValues, [](const int64_t v) {
+        return v <= 0 && v != kInferableDimSize;
+      }))
+    return emitOpError("size values must be > 0, got [") << sizeValues << "]";
+  if (outputShape.hasRank()) {
+    SmallVector<int64_t> outputDims;
+    outputShape.getDims(outputDims);
+    const bool hasNoInferableDims = llvm::all_of(
+        sizeValues, [](const int64_t v) { return v != kInferableDimSize; });
+    if (hasNoInferableDims &&
+        failed(verifyCompatibleShape(outputDims, sizeValues)))
+      return emitOpError("expected output shape to match size values, got ")
+             << output.getType() << " vs [" << sizeValues << "]";
+  }
+
+  if (inputShape.hasRank() && startValues.size()) {
+    SmallVector<int64_t> inputDims;
+    inputShape.getDims(inputDims);
+    for (const auto &[index, vals] :
+         llvm::enumerate(llvm::zip_equal(startValues, sizeValues, inputDims))) {
+      const auto &[start, size, inputDim] = vals;
+      if (start == kInferableDimSize || size == kInferableDimSize ||
+          ShapedType::isDynamic(inputDim))
+        continue;
+      if (start + size > inputDim)
+        return emitOpError("start + size must be less than or equal to input "
+                           "dimension size, got start=")
+               << start << ", size=" << size
+               << " vs input dim size=" << inputDim << " at dimension "
+               << index;
+    }
   }
 
   return success();
