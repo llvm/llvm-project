@@ -9,7 +9,6 @@
 #ifndef LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_TESTFIXTURE_H
 #define LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_TESTFIXTURE_H
 
-#include "clang/Analysis/Scalable/EntityLinker/EntityLinker.h"
 #include "clang/Analysis/Scalable/EntityLinker/LUSummary.h"
 #include "clang/Analysis/Scalable/EntityLinker/LUSummaryEncoding.h"
 #include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
@@ -35,6 +34,9 @@ public:
   static void PrintTo(const EntityId &, std::ostream *);
   static void PrintTo(const SummaryName &, std::ostream *);
 };
+
+void PrintTo(const EntityId &E, std::ostream *OS);
+void PrintTo(const SummaryName &N, std::ostream *OS);
 
 } // namespace clang::ssaf
 
