@@ -1745,15 +1745,23 @@ static Value *simplifyX86FPMaxMin(const IntrinsicInst &II, InstCombiner &IC,
   APInt DemandedElts =
       IsScalar ? APInt::getOneBitSet(VWidth, 0) : APInt::getAllOnes(VWidth);
 
-  // Verify that the inputs are not one of (NaN, Inf, Subnormal, NegZero),
-  // otherwise we cannot safely generalize to MAXNUM/MINNUM.
-  FPClassTest Forbidden = fcNan | fcInf | fcSubnormal | fcNegZero;
+  FPClassTest Forbidden0 = fcNan | fcInf | fcSubnormal;
+  FPClassTest Forbidden1 = fcNan | fcInf | fcSubnormal;
+  if (NewIID == Intrinsic::maxnum) {
+    // For maxnum, only forbid NegZero in the second operand.
+    Forbidden1 |= fcNegZero;
+  } else {
+    assert(NewIID == Intrinsic::minnum && "Unknown intrinsic");
+    // For minnum, only forbid NegZero in the first operand.
+    Forbidden0 |= fcNegZero;
+  }
   KnownFPClass KnownArg0 =
-      computeKnownFPClass(Arg0, DemandedElts, Forbidden, SQ);
+      computeKnownFPClass(Arg0, DemandedElts, Forbidden0, SQ);
   KnownFPClass KnownArg1 =
-      computeKnownFPClass(Arg1, DemandedElts, Forbidden, SQ);
+      computeKnownFPClass(Arg1, DemandedElts, Forbidden1, SQ);
 
-  if (KnownArg0.isKnownNever(Forbidden) && KnownArg1.isKnownNever(Forbidden)) {
+  if (KnownArg0.isKnownNever(Forbidden0) &&
+      KnownArg1.isKnownNever(Forbidden1)) {
     if (IsScalar) {
       // It performs the operation on the first element and puts it back into
       // the vector.

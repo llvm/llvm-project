@@ -243,3 +243,16 @@ body: |
     %load:vrnov0 = PseudoVLE32_V_M1 $noreg, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */ :: (load unknown-size)
     %merge:vrnov0 = PseudoVMERGE_VVM_M1 %passthru, %passthru, %load, %mask, %avl, 5 /* e32 */
 ...
+---
+name: sink_past_false
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: sink_past_false
+    ; CHECK: %mask:vmv0 = COPY $v0
+    ; CHECK-NEXT: %y:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: %z:vrnov0 = PseudoVADD_VV_M1_MASK %y, $noreg, $noreg, %mask, -1 /* vl=VLMAX */, 5 /* e32 */, 1 /* ta, mu */
+    %mask:vmv0 = COPY $v0
+    %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5, 3
+    %y:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5, 3
+    %z:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, %y:vrnov0, %x:vrnov0, %mask, -1, 5
+...

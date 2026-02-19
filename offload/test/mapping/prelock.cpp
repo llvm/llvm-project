@@ -4,7 +4,6 @@
 // REQUIRES: gpu
 // UNSUPPORTED: nvidiagpu
 // UNSUPPORTED: amdgpu
-// XFAIL: intelgpu
 
 #include <cstdio>
 

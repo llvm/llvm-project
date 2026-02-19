@@ -19,12 +19,16 @@
 
 FIELD(BuildNamespace, Kind)
 FIELD(BuildNamespace, Name)
+FIELD(EntityId, Index)
+FIELD(EntityIdTable, Entities)
+FIELD(EntityLinkage, Linkage)
 FIELD(EntityName, Namespace)
 FIELD(EntityName, Suffix)
 FIELD(EntityName, USR)
 FIELD(NestedBuildNamespace, Namespaces)
 FIELD(TUSummary, Data)
 FIELD(TUSummary, IdTable)
+FIELD(TUSummary, LinkageTable)
 FIELD(TUSummary, TUNamespace)
 
 #undef FIELD
