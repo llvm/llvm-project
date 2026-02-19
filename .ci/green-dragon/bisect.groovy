@@ -132,7 +132,7 @@ pipeline {
                                     string(name: 'BISECT_GOOD', value: stepInfo.bisection_range.current_good),
                                     string(name: 'BISECT_BAD', value: stepInfo.bisection_range.current_bad),
                                     booleanParam(name: 'IS_BISECT_JOB', value: true),
-                                    booleanParam(name: 'SKIP_TESTS', value: params.RUN_TESTS),
+                                    booleanParam(name: 'SKIP_TESTS', value: !params.RUN_TESTS),
                                     booleanParam(name: 'SKIP_TRIGGER', value: true)
                                 ],
                                 propagate: false,
