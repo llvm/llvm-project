@@ -1983,6 +1983,9 @@ Demangler::demangleFunctionEncoding(std::string_view &MangledName) {
     return nullptr;
 
   if (TTN) {
+    // Copy the FunctionSignatureNode fields into the ThunkSignatureNode.
+    // Node::operator= intentionally does not copy Kind, so TTN retains its
+    // ThunkSignature kind through this slice assignment.
     *static_cast<FunctionSignatureNode *>(TTN) = *FSN;
     FSN = TTN;
   }
