@@ -6791,11 +6791,10 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   const unsigned SVTBits = SVT.getSizeInBits();
 
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
-  EVT WideVT64 = EVT::getIntegerVT(*DAG.getContext(), 64);
   bool HasWideVT64MULHU =
-      isOperationLegalOrCustom(ISD::MULHU, WideVT64, IsAfterLegalization);
+      isOperationLegalOrCustom(ISD::MULHU, MVT::i64, IsAfterLegalization);
   bool HasWideVT64UMUL_LOHI =
-      isOperationLegalOrCustom(ISD::UMUL_LOHI, WideVT64, IsAfterLegalization);
+      isOperationLegalOrCustom(ISD::UMUL_LOHI, MVT::i64, IsAfterLegalization);
   bool Use33BitOptimization = false;
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
 
@@ -6899,18 +6898,18 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   if (Use33BitOptimization) {
     // x is i32, MagicFactor is pre-shifted i64 constant
     // Compute: (i64(x) * MagicFactor) >> 64
-    SDValue X64 = DAG.getNode(ISD::ZERO_EXTEND, dl, WideVT64, N0);
+    SDValue X64 = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, N0);
 
     SDValue Result;
     // Perform 64x64 -> 128 multiplication and extract high 64 bits
     if (HasWideVT64MULHU) {
-      SDValue High = DAG.getNode(ISD::MULHU, dl, WideVT64, X64, MagicFactor);
+      SDValue High = DAG.getNode(ISD::MULHU, dl, MVT::i64, X64, MagicFactor);
       Created.push_back(High.getNode());
       // Truncate back to i32
       Result = DAG.getNode(ISD::TRUNCATE, dl, VT, High);
     } else if (HasWideVT64UMUL_LOHI) {
       SDValue LoHi =
-          DAG.getNode(ISD::UMUL_LOHI, dl, DAG.getVTList(WideVT64, WideVT64),
+          DAG.getNode(ISD::UMUL_LOHI, dl, DAG.getVTList(MVT::i64, MVT::i64),
                       X64, MagicFactor);
       SDValue High = SDValue(LoHi.getNode(), 1);
       Created.push_back(LoHi.getNode());
