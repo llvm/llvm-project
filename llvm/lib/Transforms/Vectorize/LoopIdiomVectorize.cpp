@@ -204,9 +204,17 @@ PreservedAnalyses LoopIdiomVectorizePass::run(Loop &L, LoopAnalysisManager &AM,
   if (ByteCmpVF.getNumOccurrences())
     BCVF = ByteCmpVF;
 
-  OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
+  Function &F = *L.getHeader()->getParent();
+  auto &FAMP = AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR);
+  auto *ORE = FAMP.getCachedResult<OptimizationRemarkEmitterAnalysis>(F);
 
-  LoopIdiomVectorize LIV(VecStyle, BCVF, &AR.DT, &AR.LI, &AR.TTI, DL, ORE);
+  std::optional<OptimizationRemarkEmitter> ORELocal;
+  if (!ORE) {
+    ORELocal.emplace(&F);
+    ORE = &*ORELocal;
+  }
+
+  LoopIdiomVectorize LIV(VecStyle, BCVF, &AR.DT, &AR.LI, &AR.TTI, DL, *ORE);
   if (!LIV.run(&L))
     return PreservedAnalyses::all();
 
