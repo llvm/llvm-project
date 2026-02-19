@@ -428,6 +428,9 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       N.second->resolveCycles();
   }
 
+  DISubprogram::cleanupRetainedNodes(NewDistinctSPs);
+  NewDistinctSPs.clear();
+
   for (auto *Inst : InstsWithTBAATag) {
     MDNode *MD = Inst->getMetadata(LLVMContext::MD_tbaa);
     // With incomplete IR, the tbaa metadata may have been dropped.
@@ -752,7 +755,8 @@ bool LLParser::parseDeclare() {
 ///   ::= 'define' FunctionHeader (!dbg !56)* '{' ...
 bool LLParser::parseDefine() {
   assert(Lex.getKind() == lltok::kw_define);
-  FileLoc FunctionStart(Lex.getTokLineColumnPos());
+
+  FileLoc FunctionStart = getTokLineColumnPos();
   Lex.Lex();
 
   Function *F;
@@ -764,7 +768,7 @@ bool LLParser::parseDefine() {
       parseFunctionBody(*F, FunctionNumber, UnnamedArgNums);
   if (ParserContext)
     ParserContext->addFunctionLocation(
-        F, FileLocRange(FunctionStart, Lex.getPrevTokEndLineColumnPos()));
+        F, FileLocRange(FunctionStart, getPrevTokEndLineColumnPos()));
 
   return RetValue;
 }
@@ -1653,6 +1657,14 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     if (!ME)
       return true;
     B.addMemoryAttr(*ME);
+    return false;
+  }
+  case Attribute::DenormalFPEnv: {
+    std::optional<DenormalFPEnv> Mode = parseDenormalFPEnvAttr();
+    if (!Mode)
+      return true;
+
+    B.addDenormalFPEnvAttr(*Mode);
     return false;
   }
   case Attribute::NoFPClass: {
@@ -2629,6 +2641,22 @@ static std::optional<ModRefInfo> keywordToModRef(lltok::Kind Tok) {
   }
 }
 
+static std::optional<DenormalMode::DenormalModeKind>
+keywordToDenormalModeKind(lltok::Kind Tok) {
+  switch (Tok) {
+  case lltok::kw_ieee:
+    return DenormalMode::IEEE;
+  case lltok::kw_preservesign:
+    return DenormalMode::PreserveSign;
+  case lltok::kw_positivezero:
+    return DenormalMode::PositiveZero;
+  case lltok::kw_dynamic:
+    return DenormalMode::Dynamic;
+  default:
+    return std::nullopt;
+  }
+}
+
 std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
   MemoryEffects ME = MemoryEffects::none();
 
@@ -2682,6 +2710,87 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
 
   tokError("unterminated memory attribute");
   return std::nullopt;
+}
+
+std::optional<DenormalMode> LLParser::parseDenormalFPEnvEntry() {
+  std::optional<DenormalMode::DenormalModeKind> OutputMode =
+      keywordToDenormalModeKind(Lex.getKind());
+  if (!OutputMode) {
+    tokError("expected denormal behavior kind (ieee, preservesign, "
+             "positivezero, dynamic)");
+    return {};
+  }
+
+  Lex.Lex();
+
+  std::optional<DenormalMode::DenormalModeKind> InputMode;
+  if (EatIfPresent(lltok::bar)) {
+    InputMode = keywordToDenormalModeKind(Lex.getKind());
+    if (!InputMode) {
+      tokError("expected denormal behavior kind (ieee, preservesign, "
+               "positivezero, dynamic)");
+      return {};
+    }
+
+    Lex.Lex();
+  } else {
+    // Single item, input == output mode
+    InputMode = OutputMode;
+  }
+
+  return DenormalMode(*OutputMode, *InputMode);
+}
+
+std::optional<DenormalFPEnv> LLParser::parseDenormalFPEnvAttr() {
+  // We use syntax like denormal_fpenv(float: preservesign), so the colon should
+  // not be interpreted as a label terminator.
+  Lex.setIgnoreColonInIdentifiers(true);
+  llvm::scope_exit _([&] { Lex.setIgnoreColonInIdentifiers(false); });
+
+  Lex.Lex();
+
+  if (parseToken(lltok::lparen, "expected '('"))
+    return {};
+
+  DenormalMode DefaultMode = DenormalMode::getIEEE();
+  DenormalMode F32Mode = DenormalMode::getInvalid();
+
+  bool HasDefaultSection = false;
+  if (Lex.getKind() != lltok::Type) {
+    std::optional<DenormalMode> ParsedDefaultMode = parseDenormalFPEnvEntry();
+    if (!ParsedDefaultMode)
+      return {};
+    DefaultMode = *ParsedDefaultMode;
+    HasDefaultSection = true;
+  }
+
+  bool HasComma = EatIfPresent(lltok::comma);
+  if (Lex.getKind() == lltok::Type) {
+    if (HasDefaultSection && !HasComma) {
+      tokError("expected ',' before float:");
+      return {};
+    }
+
+    Type *Ty = nullptr;
+    if (parseType(Ty) || !Ty->isFloatTy()) {
+      tokError("expected float:");
+      return {};
+    }
+
+    if (parseToken(lltok::colon, "expected ':' before float denormal_fpenv"))
+      return {};
+
+    std::optional<DenormalMode> ParsedF32Mode = parseDenormalFPEnvEntry();
+    if (!ParsedF32Mode)
+      return {};
+
+    F32Mode = *ParsedF32Mode;
+  }
+
+  if (parseToken(lltok::rparen, "unterminated denormal_fpenv"))
+    return {};
+
+  return DenormalFPEnv(DefaultMode, F32Mode);
 }
 
 static unsigned keywordToFPClassTest(lltok::Kind Tok) {
@@ -3452,18 +3561,26 @@ bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
         return error(TypeLoc, "argument can not have void type");
 
       std::string Name;
+      FileLoc IdentStart;
+      FileLoc IdentEnd;
+      bool Unnamed = false;
       if (Lex.getKind() == lltok::LocalVar) {
         Name = Lex.getStrVal();
+        IdentStart = getTokLineColumnPos();
         Lex.Lex();
+        IdentEnd = getPrevTokEndLineColumnPos();
       } else {
         unsigned ArgID;
         if (Lex.getKind() == lltok::LocalVarID) {
           ArgID = Lex.getUIntVal();
+          IdentStart = getTokLineColumnPos();
           if (checkValueID(TypeLoc, "argument", "%", CurValID, ArgID))
             return true;
           Lex.Lex();
+          IdentEnd = getPrevTokEndLineColumnPos();
         } else {
           ArgID = CurValID;
+          Unnamed = true;
         }
         UnnamedArgNums.push_back(ArgID);
         CurValID = ArgID + 1;
@@ -3472,9 +3589,11 @@ bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
       if (!FunctionType::isValidArgumentType(ArgTy))
         return error(TypeLoc, "invalid type for function argument");
 
-      ArgList.emplace_back(TypeLoc, ArgTy,
-                           AttributeSet::get(ArgTy->getContext(), Attrs),
-                           std::move(Name));
+      ArgList.emplace_back(
+          TypeLoc, ArgTy,
+          Unnamed ? std::nullopt
+                  : std::make_optional(FileLocRange(IdentStart, IdentEnd)),
+          AttributeSet::get(ArgTy->getContext(), Attrs), std::move(Name));
     } while (EatIfPresent(lltok::comma));
   }
 
@@ -6061,6 +6180,10 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
        thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
        declaration.Val, retainedNodes.Val, thrownTypes.Val, annotations.Val,
        targetFuncName.Val, keyInstructions.Val));
+
+  if (IsDistinct)
+    NewDistinctSPs.push_back(cast<DISubprogram>(Result));
+
   return false;
 }
 
@@ -6736,8 +6859,14 @@ bool LLParser::parseConstantValue(Type *Ty, Constant *&C) {
 bool LLParser::parseValue(Type *Ty, Value *&V, PerFunctionState *PFS) {
   V = nullptr;
   ValID ID;
-  return parseValID(ID, PFS, Ty) ||
-         convertValIDToValue(Ty, ID, V, PFS);
+
+  FileLoc Start = getTokLineColumnPos();
+  bool Ret = parseValID(ID, PFS, Ty) || convertValIDToValue(Ty, ID, V, PFS);
+  if (!Ret && ParserContext) {
+    FileLoc End = getPrevTokEndLineColumnPos();
+    ParserContext->addValueReferenceAtLocation(V, FileLocRange(Start, End));
+  }
+  return Ret;
 }
 
 bool LLParser::parseTypeAndValue(Value *&V, PerFunctionState *PFS) {
@@ -6986,6 +7115,9 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   // Add all of the arguments we parsed to the function.
   Function::arg_iterator ArgIt = Fn->arg_begin();
   for (unsigned i = 0, e = ArgList.size(); i != e; ++i, ++ArgIt) {
+    if (ParserContext && ArgList[i].IdentLoc)
+      ParserContext->addInstructionOrArgumentLocation(
+          &*ArgIt, ArgList[i].IdentLoc.value());
     // If the argument has a name, insert it into the argument symbol table.
     if (ArgList[i].Name.empty()) continue;
 
@@ -7101,7 +7233,7 @@ bool LLParser::parseFunctionBody(Function &Fn, unsigned FunctionNumber,
 /// parseBasicBlock
 ///   ::= (LabelStr|LabelID)? Instruction*
 bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
-  FileLoc BBStart(Lex.getTokLineColumnPos());
+  FileLoc BBStart = getTokLineColumnPos();
 
   // If this basic block starts out with a name, remember it.
   std::string Name;
@@ -7144,7 +7276,7 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
       TrailingDbgRecord.emplace_back(DR, DeleteDbgRecord);
     }
 
-    FileLoc InstStart(Lex.getTokLineColumnPos());
+    FileLoc InstStart = getTokLineColumnPos();
     // This instruction may have three possibilities for a name: a) none
     // specified, b) name specified "%foo =", c) number specified: "%4 =".
     LocTy NameLoc = Lex.getLoc();
@@ -7195,14 +7327,14 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
       BB->insertDbgRecordBefore(DR.release(), Inst->getIterator());
     TrailingDbgRecord.clear();
     if (ParserContext) {
-      ParserContext->addInstructionLocation(
-          Inst, FileLocRange(InstStart, Lex.getPrevTokEndLineColumnPos()));
+      ParserContext->addInstructionOrArgumentLocation(
+          Inst, FileLocRange(InstStart, getPrevTokEndLineColumnPos()));
     }
   } while (!Inst->isTerminator());
 
   if (ParserContext)
     ParserContext->addBlockLocation(
-        BB, FileLocRange(BBStart, Lex.getPrevTokEndLineColumnPos()));
+        BB, FileLocRange(BBStart, getPrevTokEndLineColumnPos()));
 
   assert(TrailingDbgRecord.empty() &&
          "All debug values should have been attached to an instruction.");

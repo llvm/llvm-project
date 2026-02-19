@@ -2,6 +2,7 @@
 ; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 
 declare nofpclass(inf norm sub zero) float @returns_nan_f32()
+declare nofpclass(qnan inf norm sub zero) float @returns_snan_f32()
 declare nofpclass(nan ninf norm sub zero) float @returns_pinf_f32()
 declare nofpclass(nan pinf norm sub zero) float @returns_ninf_f32()
 declare nofpclass(nan norm sub zero) float @returns_inf_f32()
@@ -602,6 +603,20 @@ define nofpclass(inf norm sub) half @zero_demands_norm_source(i1 %cond, float %u
 ;
   %norm = call float @returns_norm_f32()
   %select = select i1 %cond, float %norm, float %unknown
+  %result = fptrunc float %select to half
+  ret half %result
+}
+
+define nofpclass(snan) half @qnan_result_demands_snan_src2(i1 %cond, float %unknown0) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_src2(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan_f32()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc float [[SELECT]] to half
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %snan = call float @returns_snan_f32()
+  %select = select i1 %cond, float %snan, float %unknown0
   %result = fptrunc float %select to half
   ret half %result
 }

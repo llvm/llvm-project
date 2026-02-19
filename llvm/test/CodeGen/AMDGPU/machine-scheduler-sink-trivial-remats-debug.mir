@@ -10,6 +10,10 @@
   define void @sink_and_inc_idx_when_skipping_small_regions_2() "amdgpu-flat-work-group-size"="1,64" {
     ret void
   }
+
+  define void @test_occ_inc_revert_all_regions() {
+    ret void
+  }
 ---
 name:            sink_and_inc_idx_when_skipping_small_region_1
 tracksRegLiveness: true
@@ -19,8 +23,8 @@ body:             |
   ; DEBUG: Machine code for function sink_and_inc_idx_when_skipping_small_region_1: IsSSA, NoPHIs, TracksLiveness
   ; DEBUG: [PreRARemat] Retrying function scheduling with new min. occupancy of 10 from rematerializing (original was 9, target was 10)
   ; DEBUG-NEXT: ********** MI Scheduling **********
-  ; DEBUG-NEXT: sink_and_inc_idx_when_skipping_small_region_1:%bb.2
-  ; DEBUG-NEXT:   From: %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
+  ; DEBUG-NEXT: sink_and_inc_idx_when_skipping_small_region_1:%bb.1
+  ; DEBUG-NEXT:   From: %23:vgpr_32 = nofpexcept DBG_VALUE 23, implicit $noreg, implicit $noreg
   ; DEBUG-NEXT:     To: End RegionInstrs: 2
   bb.0:
     successors: %bb.1
@@ -91,9 +95,9 @@ body:             |
   ; DEBUG: Machine code for function sink_and_inc_idx_when_skipping_small_regions_2: IsSSA, NoPHIs, TracksLiveness
   ; DEBUG: [PreRARemat] Retrying function scheduling with new min. occupancy of 10 from rematerializing (original was 9, target was 10)
   ; DEBUG-NEXT: ********** MI Scheduling **********
-  ; DEBUG-NEXT: sink_and_inc_idx_when_skipping_small_regions_2:%bb.2
-  ; DEBUG-NEXT:   From: %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
-  ; DEBUG-NEXT:     To: End RegionInstrs: 4
+  ; DEBUG-NEXT: sink_and_inc_idx_when_skipping_small_regions_2:%bb.1
+  ; DEBUG-NEXT:   From: %23:vgpr_32 = nofpexcept DBG_VALUE 23, implicit $noreg, implicit $noreg
+  ; DEBUG-NEXT:     To: End RegionInstrs: 2
   bb.0:
     successors: %bb.1
 
@@ -152,5 +156,119 @@ body:             |
     S_NOP 0, implicit %18, implicit %19
     S_NOP 0, implicit %20, implicit %21
     S_NOP 0, implicit %22
+    S_ENDPGM 0
+...
+# bb.1 cannot meet the occupancy target even by rematerializing %64 into it
+# even though rematerialization heuristics believes it can; scheduling should
+# be interrupted and reverted in all re-scheduled regions.
+---
+name:            test_occ_inc_revert_all_regions
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  ; DEBUG: Machine code for function test_occ_inc_revert_all_regions: IsSSA, NoPHIs, TracksLiveness
+  ; DEBUG: [PreRARemat] Retrying function scheduling with new min. occupancy of 7 from rematerializing (original was 7, target was 8)
+  ; DEBUG: Region 1 cannot meet occupancy target, interrupting re-scheduling in all regions
+  ; DEBUG: Reverting re-scheduling in region 0
+  ; DEBUG: Reverting re-scheduling in region 1
+  ; DEBUG-NOT: Reverting re-scheduling in region 3
+  ; DEBUG-NOT: Reverting re-scheduling in region 4
+  bb.0:
+    successors: %bb.1
+
+    %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
+    %2:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode, implicit-def $m0
+    %3:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode, implicit-def $m0
+    %4:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 4, implicit $exec, implicit $mode, implicit-def $m0
+    %5:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 5, implicit $exec, implicit $mode, implicit-def $m0
+    %6:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 6, implicit $exec, implicit $mode, implicit-def $m0
+    %7:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 7, implicit $exec, implicit $mode, implicit-def $m0
+    %8:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 8, implicit $exec, implicit $mode, implicit-def $m0
+    %9:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 9, implicit $exec, implicit $mode, implicit-def $m0
+    %10:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 10, implicit $exec, implicit $mode, implicit-def $m0
+    %11:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 11, implicit $exec, implicit $mode, implicit-def $m0
+    %12:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 12, implicit $exec, implicit $mode, implicit-def $m0
+    %13:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 13, implicit $exec, implicit $mode, implicit-def $m0
+    %14:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 14, implicit $exec, implicit $mode, implicit-def $m0
+    %15:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 15, implicit $exec, implicit $mode, implicit-def $m0
+    %16:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 16, implicit $exec, implicit $mode, implicit-def $m0
+    %17:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 17, implicit $exec, implicit $mode, implicit-def $m0
+    %18:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 18, implicit $exec, implicit $mode, implicit-def $m0
+    %19:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 19, implicit $exec, implicit $mode, implicit-def $m0
+    %20:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 20, implicit $exec, implicit $mode, implicit-def $m0
+    %21:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 21, implicit $exec, implicit $mode, implicit-def $m0
+    %22:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 22, implicit $exec, implicit $mode, implicit-def $m0
+    %23:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode, implicit-def $m0
+    %24:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
+    %25:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 25, implicit $exec, implicit $mode, implicit-def $m0
+    %26:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 26, implicit $exec, implicit $mode, implicit-def $m0
+    %27:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 27, implicit $exec, implicit $mode, implicit-def $m0
+    %28:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 28, implicit $exec, implicit $mode, implicit-def $m0
+    %29:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 29, implicit $exec, implicit $mode, implicit-def $m0
+    %30:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 30, implicit $exec, implicit $mode, implicit-def $m0
+    %31:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 31, implicit $exec, implicit $mode, implicit-def $m0
+
+    %64:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 64, implicit $exec, implicit $mode
+
+  bb.1:
+    successors: %bb.2
+
+    S_NOP 0, implicit %64
+
+  bb.2:
+    successors: %bb.3
+
+    S_NOP 0, implicit %0,  implicit %1,  implicit %2,  implicit %3,  implicit %4,  implicit %5,  implicit %6,  implicit %7
+    S_NOP 0, implicit %8,  implicit %9,  implicit %10, implicit %11, implicit %12, implicit %13, implicit %14, implicit %15
+    S_NOP 0, implicit %16, implicit %17, implicit %18, implicit %19, implicit %20, implicit %21, implicit %22, implicit %23
+    S_NOP 0, implicit %24, implicit %25, implicit %26, implicit %27, implicit %28, implicit %29, implicit %30, implicit %31
+
+  bb.3:
+    successors: %bb.4
+
+    %32:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 32, implicit $exec, implicit $mode, implicit-def $m0
+    %33:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 33, implicit $exec, implicit $mode, implicit-def $m0
+    %34:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 34, implicit $exec, implicit $mode, implicit-def $m0
+    %35:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 35, implicit $exec, implicit $mode, implicit-def $m0
+    %36:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 36, implicit $exec, implicit $mode, implicit-def $m0
+    %37:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 37, implicit $exec, implicit $mode, implicit-def $m0
+    %38:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 38, implicit $exec, implicit $mode, implicit-def $m0
+    %39:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 39, implicit $exec, implicit $mode, implicit-def $m0
+    %40:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 40, implicit $exec, implicit $mode, implicit-def $m0
+    %41:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 41, implicit $exec, implicit $mode, implicit-def $m0
+    %42:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 42, implicit $exec, implicit $mode, implicit-def $m0
+    %43:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 43, implicit $exec, implicit $mode, implicit-def $m0
+    %44:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 44, implicit $exec, implicit $mode, implicit-def $m0
+    %45:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 45, implicit $exec, implicit $mode, implicit-def $m0
+    %46:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 46, implicit $exec, implicit $mode, implicit-def $m0
+    %47:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 47, implicit $exec, implicit $mode, implicit-def $m0
+    %48:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 48, implicit $exec, implicit $mode, implicit-def $m0
+    %49:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 49, implicit $exec, implicit $mode, implicit-def $m0
+    %50:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 50, implicit $exec, implicit $mode, implicit-def $m0
+    %51:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 51, implicit $exec, implicit $mode, implicit-def $m0
+    %52:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 52, implicit $exec, implicit $mode, implicit-def $m0
+    %53:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 53, implicit $exec, implicit $mode, implicit-def $m0
+    %54:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 54, implicit $exec, implicit $mode, implicit-def $m0
+    %55:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 55, implicit $exec, implicit $mode, implicit-def $m0
+    %56:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 56, implicit $exec, implicit $mode, implicit-def $m0
+    %57:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 57, implicit $exec, implicit $mode, implicit-def $m0
+    %58:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 58, implicit $exec, implicit $mode, implicit-def $m0
+    %59:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 59, implicit $exec, implicit $mode, implicit-def $m0
+    %60:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 60, implicit $exec, implicit $mode, implicit-def $m0
+    %61:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 61, implicit $exec, implicit $mode, implicit-def $m0
+    %62:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 62, implicit $exec, implicit $mode, implicit-def $m0
+    %63:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 63, implicit $exec, implicit $mode, implicit-def $m0
+
+    %65:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 65, implicit $exec, implicit $mode
+
+  bb.4:
+    S_NOP 0, implicit %32, implicit %33, implicit %34, implicit %35, implicit %36, implicit %37, implicit %38, implicit %39
+    S_NOP 0, implicit %40, implicit %41, implicit %42, implicit %43, implicit %44, implicit %45, implicit %46, implicit %47
+    S_NOP 0, implicit %48, implicit %49, implicit %50, implicit %51, implicit %52, implicit %53, implicit %54, implicit %55
+    S_NOP 0, implicit %56, implicit %57, implicit %58, implicit %59, implicit %60, implicit %61, implicit %62, implicit %63
+    S_NOP 0, implicit %65
+
     S_ENDPGM 0
 ...

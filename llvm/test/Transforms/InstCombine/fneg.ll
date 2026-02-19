@@ -110,6 +110,19 @@ define <4 x double> @fmul_fneg_vec(<4 x double> %x) {
   ret <4 x double> %r
 }
 
+; -(X / Y) --> (-X) / Y
+
+define float @fdiv_fneg_fpmath(float %x, float %y) {
+; CHECK-LABEL: @fdiv_fneg_fpmath(
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[NEG]], [[Y:%.*]], !fpmath
+; CHECK-NEXT:    ret float [[R]]
+;
+  %z = fdiv arcp float %x, %y, !fpmath !{float 2.5}
+  %w = fneg float %z
+  ret float %w
+}
+
 ; -(X / C) --> X / (-C)
 
 define float @fdiv_op1_constant_fsub(float %x) {
@@ -202,6 +215,16 @@ define <4 x double> @fdiv_op1_constant_fneg_vec(<4 x double> %x) {
   %d = fdiv <4 x double> %x, <double -42.0, double 0xFFF800000ABCD000, double 0xFFF0000000000000, double poison>
   %r = fneg <4 x double> %d
   ret <4 x double> %r
+}
+
+define float @fdiv_op1_constant_fneg_fpmath(float %x) {
+; CHECK-LABEL: @fdiv_op1_constant_fneg_fpmath(
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[X:%.*]], 4.200000e+01, !fpmath
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv float %x, -42.0, !fpmath !{float 2.5}
+  %r = fneg float %d
+  ret float %r
 }
 
 ; -(C / X) --> (-C) / X
@@ -305,6 +328,16 @@ define float @fdiv_op0_constant_fneg_nnan(float %x) {
 ;
   %d = fdiv float 42.0, %x
   %r = fneg nnan float %d
+  ret float %r
+}
+
+define float @fdiv_op0_constant_fneg_fpmath(float %x) {
+; CHECK-LABEL: @fdiv_op0_constant_fneg_fpmath(
+; CHECK-NEXT:    [[R:%.*]] = fdiv float -1.000000e+00, [[X:%.*]], !fpmath
+; CHECK-NEXT:    ret float [[R]]
+;
+  %d = fdiv float 1.0, %x, !fpmath !{float 2.5}
+  %r = fneg float %d
   ret float %r
 }
 

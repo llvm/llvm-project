@@ -18,7 +18,7 @@ def Arch : Target { let InstructionSet = ArchInstrInfo; }
 // A contiguous primary (Instruction) key should get a direct lookup instead of
 // binary search.
 // CHECK: const MyInstr *getCustomEncodingHelper(unsigned Opcode) {
-// CHECK: if ((unsigned)Opcode != std::clamp((unsigned)Opcode, (unsigned)B, (unsigned)D))
+// CHECK: if ((unsigned)Opcode != std::clamp<unsigned>(Opcode, B, D))
 // CHECK:   return nullptr;
 // CHECK:   auto Table = ArrayRef(InstrTable);
 // CHECK:   size_t Idx = Opcode - B;
@@ -54,7 +54,7 @@ def InstrTable : GenericTable {
 //
 // Verify contiguous check for SearchIndex.
 // const MyInfoEntry *getTable2ByValue(uint8_t Value) {
-// CHECK:   if ((uint8_t)Value != std::clamp((uint8_t)Value, (uint8_t)0xB, (uint8_t)0xD))
+// CHECK:   if ((uint8_t)Value != std::clamp<uint8_t>(Value, 0xB, 0xD))
 // CHECK:    return nullptr;
 // CHECK:  auto Table = ArrayRef(Index);
 // CHECK:  size_t Idx = Value - 0xB;

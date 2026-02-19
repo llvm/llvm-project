@@ -117,8 +117,8 @@ and add them to your patch when requesting a review.
 Suitable reviewers are the maintainers of the project you are modifying, and
 anyone else working in the area your patch touches. To find maintainers, look for
 the ``Maintainers.md`` or ``Maintainers.rst`` file in the root of the project's
-sub-directory. For example, LLVM's is ``llvm/Maintainers.md`` and Clang's is
-``clang/Maintainers.rst``.
+sub-directory. For example, LLVM's is ``llvm/Maintainers.md`` and
+clang-tools-extra's is ``clang-tools-extra/Maintainers.rst``.
 
 If you are a new contributor, you will not be able to select reviewers in such a
 way, in which case you can still get the attention of potential reviewers by CC'ing

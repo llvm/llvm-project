@@ -363,7 +363,7 @@ public:
     WatchOS,
     DriverKit,
     XROS,
-    LastDarwinPlatform = XROS
+    Firmware,
   };
   enum DarwinEnvironmentKind {
     NativeEnvironment,
@@ -387,6 +387,9 @@ public:
 
 private:
   void AddDeploymentTarget(llvm::opt::DerivedArgList &Args) const;
+
+  void VerifyTripleForSDK(const llvm::opt::ArgList &Args,
+                          const llvm::Triple Triple) const;
 
 public:
   Darwin(const Driver &D, const llvm::Triple &Triple,
@@ -517,6 +520,8 @@ public:
     return TargetPlatform == DriverKit;
   }
 
+  bool isTargetFirmware() const { return TargetPlatform == Firmware; }
+
   bool isTargetMacCatalyst() const {
     return TargetPlatform == IPhoneOS && TargetEnvironment == MacCatalyst;
   }
@@ -589,7 +594,6 @@ protected:
       const llvm::opt::ArgList &Args,
       llvm::opt::ArgStringList &CC1ASArgs) const override;
 
-  StringRef getPlatformFamily() const;
   StringRef getOSLibraryNameSuffix(bool IgnoreSim = false) const override;
 
 public:

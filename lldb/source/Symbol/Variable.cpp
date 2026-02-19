@@ -44,14 +44,14 @@ Variable::Variable(lldb::user_id_t uid, const char *name, const char *mangled,
                    const RangeList &scope_range, Declaration *decl_ptr,
                    const DWARFExpressionList &location_list, bool external,
                    bool artificial, bool location_is_constant_data,
-                   bool static_member)
+                   bool static_member, std::optional<uint64_t> tag_offset)
     : UserID(uid), m_name(name), m_mangled(ConstString(mangled)),
       m_symfile_type_sp(symfile_type_sp), m_scope(scope),
       m_owner_scope(context), m_scope_range(scope_range),
       m_declaration(decl_ptr), m_location_list(location_list),
       m_external(external), m_artificial(artificial),
       m_loc_is_const_data(location_is_constant_data),
-      m_static_member(static_member) {
+      m_static_member(static_member), m_tag_offset(tag_offset) {
 #ifndef NDEBUG
   if (TestingProperties::GetGlobalTestingProperties()
           .GetInjectVarLocListError())

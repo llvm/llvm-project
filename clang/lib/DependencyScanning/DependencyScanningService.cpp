@@ -8,13 +8,12 @@
 
 #include "clang/DependencyScanning/DependencyScanningService.h"
 
+#include "llvm/Support/Chrono.h"
+
 using namespace clang;
 using namespace dependencies;
 
-DependencyScanningService::DependencyScanningService(
-    ScanningMode Mode, ScanningOutputFormat Format,
-    ScanningOptimizations OptimizeArgs, bool EagerLoadModules, bool TraceVFS,
-    std::time_t BuildSessionTimestamp)
-    : Mode(Mode), Format(Format), OptimizeArgs(OptimizeArgs),
-      EagerLoadModules(EagerLoadModules), TraceVFS(TraceVFS),
-      BuildSessionTimestamp(BuildSessionTimestamp) {}
+DependencyScanningServiceOptions::DependencyScanningServiceOptions()
+    : MakeVFS([] { return llvm::vfs::createPhysicalFileSystem(); }),
+      BuildSessionTimestamp(
+          llvm::sys::toTimeT(std::chrono::system_clock::now())) {}

@@ -160,7 +160,12 @@ static void ProcessFlags() {
   // Make "strict_init_order" imply "check_initialization_order".
   // TODO(samsonov): Use a single runtime flag for an init-order checker.
   if (f->strict_init_order) {
+#if SANITIZER_AIX
+    Report("WARNING: strict_init_order is not supported on AIX.\n");
+    f->strict_init_order = false;
+#else
     f->check_initialization_order = true;
+#endif
   }
   CHECK_LE((uptr)common_flags()->malloc_context_size, kStackTraceMax);
   CHECK_LE(f->min_uar_stack_size_log, f->max_uar_stack_size_log);

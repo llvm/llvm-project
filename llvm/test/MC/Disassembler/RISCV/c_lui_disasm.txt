@@ -204,7 +204,7 @@
 0x7D 0x70
 
 # BAD: invalid instruction encoding
-# MOP: c.mop.1
+# MOP: c.sspush ra
 0x81 0x60
 
 # GOOD: c.lui ra, 1
@@ -782,7 +782,7 @@
 0x7D 0x72
 
 # BAD: invalid instruction encoding
-# MOP: c.mop.5
+# MOP: c.sspopchk t0
 0x81 0x62
 
 # GOOD: c.lui t0, 1

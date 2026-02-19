@@ -408,8 +408,16 @@ struct ConvertMemRefReinterpretCast final
 // ConvertMemrefStore
 //===----------------------------------------------------------------------===//
 
+/// Emulate narrow type memref store with a non-atomic or atomic
+/// read-modify-write sequence. The `disableAtomicRMW` indicates whether to use
+/// a normal read-modify-write sequence instead of using
+/// `memref.generic_atomic_rmw` to perform subbyte storing.
 struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
   using OpConversionPattern::OpConversionPattern;
+
+  ConvertMemrefStore(MLIRContext *context, bool disableAtomicRMW)
+      : OpConversionPattern<memref::StoreOp>(context),
+        disableAtomicRMW(disableAtomicRMW) {}
 
   LogicalResult
   matchAndRewrite(memref::StoreOp op, OpAdaptor adaptor,
@@ -437,11 +445,11 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
     Value extendedInput =
         arith::ExtUIOp::create(rewriter, loc, dstIntegerType, input);
 
-    // Special case 0-rank memref stores. No need for masking.
+    // Special case 0-rank memref stores. No need for masking. The non-atomic
+    // store is used because it operates on the entire value.
     if (convertedType.getRank() == 0) {
-      memref::AtomicRMWOp::create(rewriter, loc, arith::AtomicRMWKind::assign,
-                                  extendedInput, adaptor.getMemref(),
-                                  ValueRange{});
+      memref::StoreOp::create(rewriter, loc, extendedInput, adaptor.getMemref(),
+                              ValueRange{});
       rewriter.eraseOp(op);
       return success();
     }
@@ -454,19 +462,39 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
                                                 dstBits, rewriter);
     Value writeMask = getSubByteWriteMask(loc, linearizedIndices, srcBits,
                                           dstBits, bitwidthOffset, rewriter);
-    // Align the value to write with the destination bits
+    // Align the value to write with the destination bits.
     Value alignedVal =
         arith::ShLIOp::create(rewriter, loc, extendedInput, bitwidthOffset);
 
-    // Clear destination bits
-    memref::AtomicRMWOp::create(rewriter, loc, arith::AtomicRMWKind::andi,
-                                writeMask, adaptor.getMemref(), storeIndices);
-    // Write srcs bits to destination
-    memref::AtomicRMWOp::create(rewriter, loc, arith::AtomicRMWKind::ori,
-                                alignedVal, adaptor.getMemref(), storeIndices);
+    if (disableAtomicRMW) {
+      // Load the original value.
+      Value origValue = memref::LoadOp::create(
+          rewriter, loc, adaptor.getMemref(), storeIndices);
+      // Clear destination bits (and with mask).
+      Value clearedValue =
+          arith::AndIOp::create(rewriter, loc, origValue, writeMask);
+      // Write src bits to destination (or with aligned value), and store the
+      // result.
+      Value newValue =
+          arith::OrIOp::create(rewriter, loc, clearedValue, alignedVal);
+      memref::StoreOp::create(rewriter, loc, newValue, adaptor.getMemref(),
+                              storeIndices);
+    } else {
+      // Atomic read-modify-write operations.
+      // Clear destination bits.
+      memref::AtomicRMWOp::create(rewriter, loc, arith::AtomicRMWKind::andi,
+                                  writeMask, adaptor.getMemref(), storeIndices);
+      // Write src bits to destination.
+      memref::AtomicRMWOp::create(rewriter, loc, arith::AtomicRMWKind::ori,
+                                  alignedVal, adaptor.getMemref(),
+                                  storeIndices);
+    }
     rewriter.eraseOp(op);
     return success();
   }
+
+private:
+  bool disableAtomicRMW;
 };
 
 //===----------------------------------------------------------------------===//
@@ -601,16 +629,17 @@ struct ConvertMemRefExpandShape final
 
 void memref::populateMemRefNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, bool disableAtomicRMW) {
 
   // Populate `memref.*` conversion patterns.
   patterns.add<ConvertMemRefAllocation<memref::AllocOp>,
                ConvertMemRefAllocation<memref::AllocaOp>, ConvertMemRefCopy,
                ConvertMemRefDealloc, ConvertMemRefCollapseShape,
-               ConvertMemRefExpandShape, ConvertMemRefLoad, ConvertMemrefStore,
+               ConvertMemRefExpandShape, ConvertMemRefLoad,
                ConvertMemRefAssumeAlignment, ConvertMemRefMemorySpaceCast,
                ConvertMemRefSubview, ConvertMemRefReinterpretCast>(
       typeConverter, patterns.getContext());
+  patterns.insert<ConvertMemrefStore>(patterns.getContext(), disableAtomicRMW);
   memref::populateResolveExtractStridedMetadataPatterns(patterns);
 }
 

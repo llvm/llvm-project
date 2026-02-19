@@ -10,7 +10,7 @@
 (* Note that this takes a moment to link, so it's best to keep the number of
    individual tests low. *)
 
-let context = Llvm.global_context ()
+let context = Llvm.create_context ()
 
 let diagnostic_handler _ = ()
 
@@ -86,4 +86,6 @@ let _ =
       false
     with Llvm_bitreader.Error _ ->
       true
-  end
+  end;
+
+  Llvm.dispose_context context

@@ -362,7 +362,7 @@ define i65 @udiv_i65(i65 %x, i65 %y) nounwind {
 ; RV32-NEXT:    or t2, a5, a2
 ; RV32-NEXT:    seqz a2, a3
 ; RV32-NEXT:    sub a2, a4, a2
-; RV32-NEXT:    addi a5, t1, 1
+; RV32-NEXT:    not a5, t1
 ; RV32-NEXT:    andi a5, a5, 1
 ; RV32-NEXT:    andi s1, s1, 1
 ; RV32-NEXT:    srl t1, t4, a1
@@ -400,7 +400,7 @@ define i65 @udiv_i65(i65 %x, i65 %y) nounwind {
 ; RV32-NEXT:    andi s1, s0, 1
 ; RV32-NEXT:    sub t2, s2, t2
 ; RV32-NEXT:    add a6, a6, s3
-; RV32-NEXT:    addi a6, a6, 1
+; RV32-NEXT:    not a6, a6
 ; RV32-NEXT:    andi a6, a6, 1
 ; RV32-NEXT:    or t6, a1, t0
 ; RV32-NEXT:    or s2, t6, a6
@@ -1636,7 +1636,7 @@ define i129 @udiv_i129(i129 %x, i129 %y) nounwind {
 ; RV32-NEXT:    sub a5, a4, a2
 ; RV32-NEXT:    sw a5, 36(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sltu a2, a4, a2
-; RV32-NEXT:    addi a0, a0, 1
+; RV32-NEXT:    not a0, a0
 ; RV32-NEXT:    lw a4, 24(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    sub s6, a4, a2
 ; RV32-NEXT:    andi a0, a0, 1
@@ -1700,17 +1700,17 @@ define i129 @udiv_i129(i129 %x, i129 %y) nounwind {
 ; RV32-NEXT:    add a2, s1, a2
 ; RV32-NEXT:    sub t3, t3, a4
 ; RV32-NEXT:    or a4, a1, t6
-; RV32-NEXT:    addi a2, a2, 1
-; RV32-NEXT:    or a5, t2, t3
-; RV32-NEXT:    andi s1, a2, 1
-; RV32-NEXT:    or a4, a4, a5
-; RV32-NEXT:    or a4, a4, s1
+; RV32-NEXT:    not s1, a2
+; RV32-NEXT:    or a2, t2, t3
+; RV32-NEXT:    andi s1, s1, 1
+; RV32-NEXT:    or a2, a4, a2
+; RV32-NEXT:    or a2, a2, s1
 ; RV32-NEXT:    sub a3, s10, a3
 ; RV32-NEXT:    sw zero, 48(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw zero, 44(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw zero, 40(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    li s7, 0
-; RV32-NEXT:    beqz a4, .LBB3_56
+; RV32-NEXT:    beqz a2, .LBB3_56
 ; RV32-NEXT:  .LBB3_45: # %udiv-do-while
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    srli a2, ra, 31
@@ -2185,7 +2185,7 @@ define i129 @udiv_i129(i129 %x, i129 %y) nounwind {
 ; RV64-NEXT:    or t3, a5, a2
 ; RV64-NEXT:    seqz a2, a3
 ; RV64-NEXT:    sub a2, a4, a2
-; RV64-NEXT:    addi a5, t1, 1
+; RV64-NEXT:    not a5, t1
 ; RV64-NEXT:    andi a5, a5, 1
 ; RV64-NEXT:    andi s1, s1, 1
 ; RV64-NEXT:    srl t1, t4, a1
@@ -2223,7 +2223,7 @@ define i129 @udiv_i129(i129 %x, i129 %y) nounwind {
 ; RV64-NEXT:    andi s1, s0, 1
 ; RV64-NEXT:    sub t3, s2, t3
 ; RV64-NEXT:    add a6, a6, s3
-; RV64-NEXT:    addi a6, a6, 1
+; RV64-NEXT:    not a6, a6
 ; RV64-NEXT:    andi a6, a6, 1
 ; RV64-NEXT:    or t6, a1, t0
 ; RV64-NEXT:    or s2, t6, a6

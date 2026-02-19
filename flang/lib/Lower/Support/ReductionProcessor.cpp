@@ -582,6 +582,11 @@ DeclareRedType ReductionProcessor::createDeclareReductionHelper(
   if (isByRef) {
     boxedTy = fir::unwrapPassByRefType(valTy);
     boxedTyAttr = mlir::TypeAttr::get(boxedTy);
+    // For character types that are not already references, we need to wrap
+    // them in a reference type for by-ref reductions.
+    if (fir::isa_char(valTy) && !fir::isa_ref_type(type)) {
+      type = fir::ReferenceType::get(valTy);
+    }
   } else
     type = valTy;
 
