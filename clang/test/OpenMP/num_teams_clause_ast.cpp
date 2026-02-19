@@ -92,7 +92,7 @@ void test_multi_level_matching_delimiters() {
 }
 
 // Template tests
-
+// CHECK-LABEL: template <typename T> void test_template_type(T lower, T upper)
 template<typename T>
 void test_template_type(T lower, T upper) {
   // CHECK: #pragma omp teams num_teams(lower:upper)
