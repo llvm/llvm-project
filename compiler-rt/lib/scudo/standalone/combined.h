@@ -442,60 +442,30 @@ public:
                                       SizeOrUnusedBytes, FillContents);
   }
 
-  NOINLINE void deallocate(void *Ptr, Chunk::Origin Origin, uptr DeleteSize = 0,
-                           UNUSED uptr Alignment = MinAlignment) {
-    if (UNLIKELY(!Ptr))
-      return;
+  ALWAYS_INLINE void deallocate(void *Ptr, Chunk::Origin Origin) {
+    deallocate(Ptr, Origin, /*DeleteSize=*/0, /*HasDeleteSize=*/false,
+               /*DeleteAlignment=*/0, /*HasDeleteAlignment=*/false);
+  }
 
-    // For a deallocation, we only ensure minimal initialization, meaning thread
-    // local data will be left uninitialized for now (when using ELF TLS). The
-    // fallback cache will be used instead. This is a workaround for a situation
-    // where the only heap operation performed in a thread would be a free past
-    // the TLS destructors, ending up in initialized thread specific data never
-    // being destroyed properly. Any other heap operation will do a full init.
-    initThreadMaybe(/*MinimalInit=*/true);
+  ALWAYS_INLINE void deallocateSized(void *Ptr, Chunk::Origin Origin,
+                                     uptr DeleteSize) {
+    deallocate(Ptr, Origin, /*DeleteSize=*/DeleteSize, /*HasDeleteSize=*/true,
+               /*DeleteAlignment=*/0, /*HasDeleteAlignment=*/false);
+  }
 
-#ifdef GWP_ASAN_HOOKS
-    if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr))) {
-      GuardedAlloc.deallocate(Ptr);
-      Stats.lock();
-      Stats.add(StatFree, GuardedAllocSlotSize);
-      Stats.sub(StatAllocated, GuardedAllocSlotSize);
-      Stats.unlock();
-      return;
-    }
-#endif // GWP_ASAN_HOOKS
+  ALWAYS_INLINE void deallocateSizedAligned(void *Ptr, Chunk::Origin Origin,
+                                            uptr DeleteSize,
+                                            uptr DeleteAlignment) {
+    deallocate(Ptr, Origin, /*DeleteSize=*/DeleteSize, /*HasDeleteSize=*/true,
+               /*DeleteAlignment=*/DeleteAlignment,
+               /*HasDeleteAlignment=*/true);
+  }
 
-    if (UNLIKELY(!isAligned(reinterpret_cast<uptr>(Ptr), MinAlignment)))
-      reportMisalignedPointer(AllocatorAction::Deallocating, Ptr);
-
-    void *TaggedPtr = Ptr;
-    Ptr = getHeaderTaggedPointer(Ptr);
-
-    Chunk::UnpackedHeader Header;
-    Chunk::loadHeader(Cookie, Ptr, &Header);
-
-    if (UNLIKELY(Header.State != Chunk::State::Allocated))
-      reportInvalidChunkState(AllocatorAction::Deallocating, Ptr);
-
-    const Options Options = Primary.Options.load();
-    if (Options.get(OptionBit::DeallocTypeMismatch)) {
-      if (UNLIKELY(Header.OriginOrWasZeroed != Origin)) {
-        // With the exception of memalign'd chunks, that can be still be free'd.
-        if (Header.OriginOrWasZeroed != Chunk::Origin::Memalign ||
-            Origin != Chunk::Origin::Malloc)
-          reportDeallocTypeMismatch(AllocatorAction::Deallocating, Ptr,
-                                    Header.OriginOrWasZeroed, Origin);
-      }
-    }
-
-    const uptr Size = getSize(Ptr, &Header);
-    if (DeleteSize && Options.get(OptionBit::DeleteSizeMismatch)) {
-      if (UNLIKELY(DeleteSize != Size))
-        reportDeleteSizeMismatch(Ptr, DeleteSize, Size);
-    }
-
-    quarantineOrDeallocateChunk(Options, TaggedPtr, &Header, Size);
+  ALWAYS_INLINE void deallocateAligned(void *Ptr, Chunk::Origin Origin,
+                                       uptr DeleteAlignment) {
+    deallocate(Ptr, Origin, /*DeleteSize=*/0, /*HasDeleteSize=*/false,
+               /*DeleteAlignment=*/DeleteAlignment,
+               /*HasDeleteAlignment=*/true);
   }
 
   void *reallocate(void *OldPtr, uptr NewSize, uptr Alignment = MinAlignment) {
@@ -1312,6 +1282,63 @@ private:
     Chunk::storeHeader(Cookie, Ptr, &Header);
 
     return TaggedPtr;
+  }
+
+  NOINLINE void deallocate(void *Ptr, Chunk::Origin Origin, uptr DeleteSize,
+                           bool HasDeleteSize, uptr DeleteAlignment,
+                           bool HasDeleteAlignment) {
+    if (UNLIKELY(!Ptr))
+      return;
+
+    // For a deallocation, we only ensure minimal initialization, meaning thread
+    // local data will be left uninitialized for now (when using ELF TLS). The
+    // fallback cache will be used instead. This is a workaround for a situation
+    // where the only heap operation performed in a thread would be a free past
+    // the TLS destructors, ending up in initialized thread specific data never
+    // being destroyed properly. Any other heap operation will do a full init.
+    initThreadMaybe(/*MinimalInit=*/true);
+
+#ifdef GWP_ASAN_HOOKS
+    if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr))) {
+      GuardedAlloc.deallocate(Ptr);
+      Stats.lock();
+      Stats.add(StatFree, GuardedAllocSlotSize);
+      Stats.sub(StatAllocated, GuardedAllocSlotSize);
+      Stats.unlock();
+      return;
+    }
+#endif // GWP_ASAN_HOOKS
+
+    if (UNLIKELY(!isAligned(reinterpret_cast<uptr>(Ptr), MinAlignment)))
+      reportMisalignedPointer(AllocatorAction::Deallocating, Ptr);
+
+    void *TaggedPtr = Ptr;
+    Ptr = getHeaderTaggedPointer(Ptr);
+
+    Chunk::UnpackedHeader Header;
+    Chunk::loadHeader(Cookie, Ptr, &Header);
+
+    if (UNLIKELY(Header.State != Chunk::State::Allocated))
+      reportInvalidChunkState(AllocatorAction::Deallocating, Ptr);
+
+    const Options Options = Primary.Options.load();
+    if (Options.get(OptionBit::DeallocTypeMismatch)) {
+      if (UNLIKELY(Header.OriginOrWasZeroed != Origin)) {
+        // With the exception of memalign'd chunks, that can be still be free'd.
+        if (Header.OriginOrWasZeroed != Chunk::Origin::Memalign ||
+            Origin != Chunk::Origin::Malloc)
+          reportDeallocTypeMismatch(AllocatorAction::Deallocating, Ptr,
+                                    Header.OriginOrWasZeroed, Origin);
+      }
+    }
+
+    const uptr Size = getSize(Ptr, &Header);
+    if (DeleteSize && Options.get(OptionBit::DeleteSizeMismatch)) {
+      if (UNLIKELY(DeleteSize != Size))
+        reportDeleteSizeMismatch(Ptr, DeleteSize, Size);
+    }
+
+    quarantineOrDeallocateChunk(Options, TaggedPtr, &Header, Size);
   }
 
   void quarantineOrDeallocateChunk(const Options &Options, void *TaggedPtr,
