@@ -143,24 +143,11 @@ class LifetimeIterator {
       lifetime_cache.insert(this);
     }
 
-    Reference& operator=(const Reference& rhs) {
+    Reference operator=(const Reference& rhs) const {
       assert(lifetime_cache.contains(this) && lifetime_cache.contains(&rhs));
+      assert(!moved_from_);
       assert(!rhs.moved_from_);
-
       *v_ = *rhs.v_;
-      moved_from_ = false;
-
-      return *this;
-    }
-
-    Reference& operator=(Reference&& rhs) noexcept {
-      assert(lifetime_cache.contains(this) && lifetime_cache.contains(&rhs));
-
-      assert(!rhs.moved_from_);
-      rhs.moved_from_ = true;
-
-      *v_ = *rhs.v_;
-      moved_from_ = false;
 
       return *this;
     }
@@ -172,12 +159,10 @@ class LifetimeIterator {
       return *v_;
     }
 
-    Reference& operator=(Value v) {
+    Reference operator=(Value v) const {
       assert(lifetime_cache.contains(this));
       assert(!moved_from_);
-
       *v_ = v;
-      moved_from_ = false;
 
       return *this;
     }
@@ -366,10 +351,16 @@ class ConstexprIterator {
     constexpr Reference(int& v) : v_(&v) { }
 
     constexpr Reference(const Reference& rhs) = default;
-    constexpr Reference& operator=(const Reference& rhs) {
+    constexpr Reference operator=(const Reference& rhs) const {
       assert(!rhs.moved_from_);
-      v_ = rhs.v_;
-      moved_from_ = false;
+      assert(!moved_from_);
+      *v_ = *rhs.v_;
+
+      return *this;
+    }
+    constexpr Reference operator=(int v) const {
+      assert(!moved_from_);
+      *v_ = v;
 
       return *this;
     }
@@ -379,25 +370,9 @@ class ConstexprIterator {
       rhs.moved_from_ = true;
     }
 
-    constexpr Reference& operator=(Reference&& rhs) noexcept {
-      assert(!rhs.moved_from_);
-      rhs.moved_from_ = true;
-      moved_from_ = false;
-
-      v_ = rhs.v_;
-      return *this;
-    }
-
     constexpr operator int() const {
       assert(!moved_from_);
       return *v_;
-    }
-
-    constexpr Reference& operator=(int v) {
-      *v_ = v;
-      moved_from_ = false;
-
-      return *this;
     }
 
     friend constexpr bool operator<(const Reference& lhs, const Reference& rhs) {
