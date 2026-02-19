@@ -223,18 +223,19 @@ bool PredicateMapping::match(const MachineInstr &MI,
                              const MachineRegisterInfo &MRI) const {
   // Check LLT signature.
   for (unsigned i = 0; i < OpUniformityAndTypes.size(); ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
     if (OpUniformityAndTypes[i] == _) {
-      if (MI.getOperand(i).isReg())
-        return false;
+      assert((!MI.getOperand(i).isReg() ||
+              !MI.getOperand(i).getReg().isVirtual()) &&
+             "_ is for non-register and physical register operands only");
       continue;
     }
 
     // Remaining IDs check registers.
-    if (!MI.getOperand(i).isReg())
+    if (!MO.isReg())
       return false;
 
-    if (!matchUniformityAndLLT(MI.getOperand(i).getReg(),
-                               OpUniformityAndTypes[i], MUI, MRI))
+    if (!matchUniformityAndLLT(MO.getReg(), OpUniformityAndTypes[i], MUI, MRI))
       return false;
   }
 
@@ -1158,6 +1159,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForGOpcs({G_AMDGPU_WAVE_ADDRESS}).Any({{UniP5}, {{SgprP5}, {}}});
 
+  addRulesForGOpcs({G_SI_CALL})
+      .Any({{_, UniP0}, {{None}, {SgprP0}}})
+      .Any({{_, DivP0}, {{None}, {SgprP0Call_WF}}})
+      .Any({{_, UniP4}, {{None}, {SgprP4}}})
+      .Any({{_, DivP4}, {{None}, {SgprP4Call_WF}}});
+
   bool hasSALUFloat = ST->hasSALUFloatInsts();
 
   addRulesForGOpcs({G_FADD, G_FMUL, G_STRICT_FADD, G_STRICT_FMUL}, Standard)
@@ -1369,6 +1376,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS32, _, UniS32}, {{}, {Sgpr32, None, Vgpr32}}});
 
   addRulesForIOpcs({amdgcn_s_sleep}).Any({{_, _}, {{}, {IntrId, Imm}}});
+
+  addRulesForIOpcs({amdgcn_bitop3}, Standard)
+      .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}})
+      .Div(S16, {{Vgpr16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}})
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
 
   addRulesForIOpcs({amdgcn_mul_u24, amdgcn_mul_i24}, Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32}})
