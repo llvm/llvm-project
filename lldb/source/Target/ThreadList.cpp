@@ -933,9 +933,8 @@ void ThreadList::ThreadFinishedSteppingOverBreakpoint(addr_t breakpoint_addr,
               " finished stepping over breakpoint at 0x%" PRIx64
               " but no threads were registered, re-enabling directly",
               __FUNCTION__, tid, breakpoint_addr);
-    BreakpointSiteSP bp_site_sp(
-        m_process.GetBreakpointSiteList().FindByAddress(breakpoint_addr));
-    if (bp_site_sp)
+    if (BreakpointSiteSP bp_site_sp =
+            m_process.GetBreakpointSiteList().FindByAddress(breakpoint_addr))
       m_process.EnableBreakpointSite(bp_site_sp.get());
     return;
   }
@@ -957,9 +956,8 @@ void ThreadList::ThreadFinishedSteppingOverBreakpoint(addr_t breakpoint_addr,
               "at 0x%" PRIx64 ", re-enabling breakpoint",
               __FUNCTION__, breakpoint_addr);
 
-    BreakpointSiteSP bp_site_sp(
-        m_process.GetBreakpointSiteList().FindByAddress(breakpoint_addr));
-    if (bp_site_sp)
+    if (BreakpointSiteSP bp_site_sp =
+            m_process.GetBreakpointSiteList().FindByAddress(breakpoint_addr))
       m_process.EnableBreakpointSite(bp_site_sp.get());
 
     // Clean up the entry.
