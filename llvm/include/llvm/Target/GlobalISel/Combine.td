@@ -1879,6 +1879,16 @@ def APlusBMinusCMinusB : GICombineRule<
           (G_SUB $root, $add1, $B)),
    (apply (G_SUB $root, $A, $C))>;
 
+// fold ((A+(B+C))-B) -> A+C
+def APlusBPlusCMinusB : GICombineRule<
+  (defs root:$root),
+  (match (G_ADD $add1, $B, $C),
+         (G_ADD $add2, $A, $add1),
+         (G_SUB $root, $add2, $B),
+             [{ return MRI.hasOneNonDBGUse(${add1}.getReg()) &&
+                       MRI.hasOneNonDBGUse(${add2}.getReg()); }]),
+  (apply (G_ADD $root, $A, $C))>;
+
 // fold ((A-(B-C))-C) -> A-B
 def AMinusBMinusCMinusC : GICombineRule<
     (defs root:$root),
@@ -2007,6 +2017,7 @@ def AMinusC1PlusC2: GICombineRule<
 
 def integer_reassoc_combines: GICombineGroup<[
   APlusBMinusCMinusB,
+  APlusBPlusCMinusB,
   AMinusBMinusCMinusC,
   ZeroMinusAPlusB,
   APlusZeroMinusB,

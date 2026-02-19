@@ -413,3 +413,27 @@ body:             |
     $x0 = COPY %add
     RET_ReallyLR implicit $x0
 
+...
+---
+name:   APlusBPlusCMinusB
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+
+    ; CHECK-LABEL: name: APlusBPlusCMinusB
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = COPY $x0
+    ; CHECK-NEXT: %c:_(s64) = COPY $x2
+    ; CHECK-NEXT: %sub1:_(s64) = G_ADD %a, %c
+    ; CHECK-NEXT: $x0 = COPY %sub1(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(s64) = COPY $x0
+    %b:_(s64) = COPY $x1
+    %c:_(s64) = COPY $x2
+    %add1:_(s64) = G_ADD %b, %c
+    %add2:_(s64) = G_ADD %a, %add1
+    %sub1:_(s64) = G_SUB %add2, %b
+    $x0 = COPY %sub1
+    RET_ReallyLR implicit $x0
+
