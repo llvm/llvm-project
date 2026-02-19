@@ -46,7 +46,7 @@ def get_run_handler(triple):
 
     if handler is None:
         common.debug("Using default handler.")
-        handler = (scrub_isel_default, ISEL_FUNCTION_DEFAULT_RE)
+        handler = (scrub_isel_default, ISEL_FUNCTION_DEFAULT_RE, None)
 
     return handler
 

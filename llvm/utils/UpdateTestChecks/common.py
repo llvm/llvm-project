@@ -838,6 +838,7 @@ class function_body(object):
         self.attrs = attrs
         self.func_name_separator = func_name_separator
         self._ginfo = ginfo
+        self.const_info = None
 
     def is_same_except_arg_names(
         self, extrascrub, funcdef_attrs_and_ret, args_and_sig, attrs
@@ -888,6 +889,11 @@ class function_body(object):
 
 
 class FunctionTestBuilder:
+    class FunctionConstant:
+        def __init__(self, number, body):
+            self.number = number
+            self.body = body
+
     def __init__(self, run_list, flags, scrubber_args, path, ginfo):
         self._run_list = run_list
         self._verbose = flags.verbose
@@ -986,7 +992,9 @@ class FunctionTestBuilder:
                 return True
         return False
 
-    def process_run_line(self, function_re, scrubber, raw_tool_output, prefixes):
+    def process_run_line(
+        self, function_re, scrubber, raw_tool_output, prefixes, constant_re=None
+    ):
         """
         Returns the number of functions processed from the output by the regex.
         """
@@ -994,11 +1002,13 @@ class FunctionTestBuilder:
             self._global_var_dict, raw_tool_output, prefixes, self._ginfo
         )
         processed_func_count = 0
+        ordered_func_names = []
         for m in function_re.finditer(raw_tool_output):
             if not m:
                 continue
             processed_func_count += 1
             func = m.group("func")
+            ordered_func_names.append(func)
             body = m.group("body")
             # func_name_separator is the string that is placed right after function name at the
             # beginning of assembly function definition. In most assemblies, that is just a
@@ -1114,6 +1124,40 @@ class FunctionTestBuilder:
                         # preprocesser directives to exclude individual functions from some
                         # RUN lines.
                         self._func_dict[prefix][func] = None
+
+        if constant_re:
+            for prefix in prefixes:
+
+                def update_const_info(prefix, func_name, func_num, body):
+                    """Attempt to update the constant info for a given prefix/func.
+
+                    Null-ifies the entire entry if it different from current data.
+                    """
+                    if (
+                        func_name in self._func_dict[prefix]
+                        and self._func_dict[prefix][func_name] is not None
+                    ):
+                        const_info = self._func_dict[prefix][func_name].const_info
+                        if const_info is not None and const_info.body != body:
+                            self._func_dict[prefix][func_name]
+                        elif const_info is None:
+                            self._func_dict[prefix][
+                                func_name
+                            ].const_info = self.FunctionConstant(func_num, body)
+
+                func_num = 0
+                body = []
+                func_name = ""
+                for m in constant_re.finditer(raw_tool_output):
+                    new_func_name = ordered_func_names[int(m.group("func_num"))]
+                    if func_name != "" and func_name != new_func_name:
+                        update_const_info(prefix, func_name, func_num, body)
+                        body = []
+                    body.append(m.group("body"))
+                    func_name = new_func_name
+                    func_num = m.group("func_num")
+                update_const_info(prefix, func_name, func_num, body)
+
         return processed_func_count
 
     def processed_prefixes(self, prefixes):
@@ -2154,6 +2198,18 @@ def add_checks(
             if ginfo.is_asm():
                 if len(printed_prefixes) != 0:
                     output_lines.append(comment_marker)
+
+            # If we've stored any constant pool information, output check commands for that
+            if ginfo.is_asm():
+                const_info = func_dict[checkprefix][func_name].const_info
+                if const_info:
+                    func_num = const_info.number
+                    for Idx in range(len(const_info.body)):
+                        output_lines.append(
+                            f"; {checkprefix}-LABEL: LCPI{func_num}_{Idx}"
+                        )
+                        for line in const_info.body[Idx].split("\n")[:-1]:
+                            output_lines.append(f"; {checkprefix}-NEXT: {line}")
 
             if checkprefix not in global_vars_seen_dict:
                 global_vars_seen_dict[checkprefix] = {}
