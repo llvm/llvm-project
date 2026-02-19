@@ -182,17 +182,16 @@ define arm_aapcs_vfpcc <2 x i64> @vqshrni64_smaxmin(<2 x i64> %so) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    mvn r12, #-2147483648
 ; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    asrl r0, r1, #3
+; CHECK-NEXT:    mvn r12, #-2147483648
+; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    asrl r2, r3, #3
+; CHECK-NEXT:    asrl r0, r1, #3
+; CHECK-NEXT:    cmp r2, r12
 ; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
-; CHECK-NEXT:    subs.w r2, r2, r12
 ; CHECK-NEXT:    sbcs r2, r3, #0
-; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
 ; CHECK-NEXT:    csetm lr, lt
-; CHECK-NEXT:    subs.w r0, r0, r12
+; CHECK-NEXT:    cmp r0, r12
 ; CHECK-NEXT:    mov.w r2, #0
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    bfi r2, lr, #0, #8
@@ -200,10 +199,11 @@ define arm_aapcs_vfpcc <2 x i64> @vqshrni64_smaxmin(<2 x i64> %so) {
 ; CHECK-NEXT:    bfi r2, r0, #8, #8
 ; CHECK-NEXT:    adr r0, .LCPI12_0
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
 ; CHECK-NEXT:    vmsr p0, r2
 ; CHECK-NEXT:    mov.w r2, #-1
-; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    rsbs.w r0, r0, #-2147483648
 ; CHECK-NEXT:    sbcs.w r0, r2, r1
@@ -268,12 +268,12 @@ define arm_aapcs_vfpcc <2 x i64> @vqshrni64_sminmax(<2 x i64> %so) {
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:    vmov r0, r1, d0
-; CHECK-NEXT:    subs r0, r0, r2
+; CHECK-NEXT:    cmp r0, r2
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    csetm r0, lt
 ; CHECK-NEXT:    bfi r6, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    subs r0, r0, r2
+; CHECK-NEXT:    cmp r0, r2
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    csetm r0, lt
 ; CHECK-NEXT:    bfi r6, r0, #8, #8
@@ -306,21 +306,21 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @vqshrni64_umaxmin(<2 x i64> %so) {
 ; CHECK-LABEL: vqshrni64_umaxmin:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    vmov.i64 q1, #0xffffffff
 ; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    lsrl r0, r1, #3
+; CHECK-NEXT:    vmov.i64 q1, #0xffffffff
+; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    lsrl r2, r3, #3
+; CHECK-NEXT:    lsrl r0, r1, #3
+; CHECK-NEXT:    cmp.w r2, #-1
 ; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
-; CHECK-NEXT:    subs.w r2, r2, #-1
 ; CHECK-NEXT:    sbcs r2, r3, #0
-; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
 ; CHECK-NEXT:    csetm r2, lo
-; CHECK-NEXT:    subs.w r0, r0, #-1
-; CHECK-NEXT:    mov.w r3, #0
+; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    sbcs r0, r1, #0
-; CHECK-NEXT:    bfi r3, r2, #0, #8
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    mov.w r3, #0
 ; CHECK-NEXT:    csetm r0, lo
+; CHECK-NEXT:    bfi r3, r2, #0, #8
 ; CHECK-NEXT:    bfi r3, r0, #8, #8
 ; CHECK-NEXT:    vmsr p0, r3
 ; CHECK-NEXT:    vpsel q0, q0, q1
@@ -335,21 +335,21 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @vqshrni64_uminmax(<2 x i64> %so) {
 ; CHECK-LABEL: vqshrni64_uminmax:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    vmov.i64 q1, #0xffffffff
 ; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    lsrl r0, r1, #3
+; CHECK-NEXT:    vmov.i64 q1, #0xffffffff
+; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    lsrl r2, r3, #3
+; CHECK-NEXT:    lsrl r0, r1, #3
+; CHECK-NEXT:    cmp.w r2, #-1
 ; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
-; CHECK-NEXT:    subs.w r2, r2, #-1
 ; CHECK-NEXT:    sbcs r2, r3, #0
-; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
 ; CHECK-NEXT:    csetm r2, lo
-; CHECK-NEXT:    subs.w r0, r0, #-1
-; CHECK-NEXT:    mov.w r3, #0
+; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    sbcs r0, r1, #0
-; CHECK-NEXT:    bfi r3, r2, #0, #8
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    mov.w r3, #0
 ; CHECK-NEXT:    csetm r0, lo
+; CHECK-NEXT:    bfi r3, r2, #0, #8
 ; CHECK-NEXT:    bfi r3, r0, #8, #8
 ; CHECK-NEXT:    vmsr p0, r3
 ; CHECK-NEXT:    vpsel q0, q0, q1

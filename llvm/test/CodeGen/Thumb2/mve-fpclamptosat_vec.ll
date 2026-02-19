@@ -17,14 +17,14 @@ define arm_aapcs_vfpcc <2 x i32> @stest_f64i32(<2 x double> %x) {
 ; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl __aeabi_d2lz
-; CHECK-NEXT:    adr r3, .LCPI0_0
 ; CHECK-NEXT:    mvn r12, #-2147483648
+; CHECK-NEXT:    adr r3, .LCPI0_0
+; CHECK-NEXT:    cmp r4, r12
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
-; CHECK-NEXT:    subs.w r3, r4, r12
 ; CHECK-NEXT:    sbcs r3, r5, #0
 ; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    csetm r3, lt
-; CHECK-NEXT:    subs.w r0, r0, r12
+; CHECK-NEXT:    cmp r0, r12
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    vmov q1[3], q1[1], r5, r1
 ; CHECK-NEXT:    mov.w r5, #0
@@ -87,12 +87,12 @@ define arm_aapcs_vfpcc <2 x i32> @utest_f64i32(<2 x double> %x) {
 ; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl __aeabi_d2ulz
-; CHECK-NEXT:    subs.w r3, r4, #-1
+; CHECK-NEXT:    cmp.w r4, #-1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    sbcs r3, r5, #0
 ; CHECK-NEXT:    mov.w r2, #0
 ; CHECK-NEXT:    csetm r3, lo
-; CHECK-NEXT:    subs.w r0, r0, #-1
+; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    bfi r2, r3, #0, #8
 ; CHECK-NEXT:    csetm r0, lo
@@ -125,12 +125,12 @@ define arm_aapcs_vfpcc <2 x i32> @ustest_f64i32(<2 x double> %x) {
 ; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl __aeabi_d2lz
-; CHECK-NEXT:    subs.w r3, r4, #-1
+; CHECK-NEXT:    cmp.w r4, #-1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    sbcs r3, r5, #0
 ; CHECK-NEXT:    vmov q1[3], q1[1], r5, r1
 ; CHECK-NEXT:    csetm r3, lt
-; CHECK-NEXT:    subs.w r0, r0, #-1
+; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    mov.w r5, #0
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    bfi r5, r3, #0, #8
@@ -359,26 +359,26 @@ define arm_aapcs_vfpcc <2 x i16> @stest_f64i16(<2 x double> %x) {
 ; CHECK-NEXT:    movt lr, #65535
 ; CHECK-NEXT:    mov.w r12, #-1
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    subs r1, r1, r4
+; CHECK-NEXT:    cmp r1, r4
 ; CHECK-NEXT:    sbcs r1, r2, #0
 ; CHECK-NEXT:    mov.w r2, #0
 ; CHECK-NEXT:    csetm r1, lt
+; CHECK-NEXT:    cmp r3, r4
 ; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    subs r1, r3, r4
 ; CHECK-NEXT:    sbcs r1, r5, #0
-; CHECK-NEXT:    adr r4, .LCPI9_1
 ; CHECK-NEXT:    csetm r1, lt
+; CHECK-NEXT:    adr r4, .LCPI9_1
 ; CHECK-NEXT:    bfi r2, r1, #8, #8
 ; CHECK-NEXT:    vmsr p0, r2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vldrw.u32 q1, [r4]
 ; CHECK-NEXT:    vmov r1, r2, d0
 ; CHECK-NEXT:    vmov r3, r5, d1
-; CHECK-NEXT:    subs.w r1, lr, r1
+; CHECK-NEXT:    cmp lr, r1
 ; CHECK-NEXT:    sbcs.w r1, r12, r2
 ; CHECK-NEXT:    csetm r1, lt
+; CHECK-NEXT:    cmp lr, r3
 ; CHECK-NEXT:    bfi r0, r1, #0, #8
-; CHECK-NEXT:    subs.w r1, lr, r3
 ; CHECK-NEXT:    sbcs.w r1, r12, r5
 ; CHECK-NEXT:    csetm r1, lt
 ; CHECK-NEXT:    bfi r0, r1, #8, #8
@@ -429,11 +429,11 @@ define arm_aapcs_vfpcc <2 x i16> @utest_f64i16(<2 x double> %x) {
 ; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    vmov.i64 q1, #0xffff
 ; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    subs r0, r0, r4
+; CHECK-NEXT:    cmp r0, r4
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    csetm r0, lo
+; CHECK-NEXT:    cmp r2, r4
 ; CHECK-NEXT:    bfi r5, r0, #0, #8
-; CHECK-NEXT:    subs r0, r2, r4
 ; CHECK-NEXT:    sbcs r0, r3, #0
 ; CHECK-NEXT:    csetm r0, lo
 ; CHECK-NEXT:    bfi r5, r0, #8, #8
@@ -470,12 +470,12 @@ define arm_aapcs_vfpcc <2 x i16> @ustest_f64i16(<2 x double> %x) {
 ; CHECK-NEXT:    vmov r1, r2, d0
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    vmov r3, r5, d1
-; CHECK-NEXT:    subs r1, r1, r4
+; CHECK-NEXT:    cmp r1, r4
 ; CHECK-NEXT:    sbcs r1, r2, #0
 ; CHECK-NEXT:    mov.w r2, #0
 ; CHECK-NEXT:    csetm r1, lt
+; CHECK-NEXT:    cmp r3, r4
 ; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    subs r1, r3, r4
 ; CHECK-NEXT:    sbcs r1, r5, #0
 ; CHECK-NEXT:    csetm r1, lt
 ; CHECK-NEXT:    bfi r2, r1, #8, #8
@@ -678,7 +678,7 @@ define arm_aapcs_vfpcc <2 x i64> @stest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl __fixdfti
 ; CHECK-NEXT:    vmov r12, lr, d9
-; CHECK-NEXT:    subs.w r5, r0, #-1
+; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    mvn r4, #-2147483648
 ; CHECK-NEXT:    sbcs.w r5, r1, r4
 ; CHECK-NEXT:    sbcs r5, r2, #0
@@ -702,7 +702,7 @@ define arm_aapcs_vfpcc <2 x i64> @stest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    bl __fixdfti
-; CHECK-NEXT:    subs.w r6, r0, #-1
+; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    sbcs.w r6, r1, r4
 ; CHECK-NEXT:    sbcs r6, r2, #0
 ; CHECK-NEXT:    sbcs r6, r3, #0
@@ -746,7 +746,7 @@ define arm_aapcs_vfpcc <2 x i64> @utest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl __fixunsdfti
 ; CHECK-NEXT:    vmov r12, lr, d8
-; CHECK-NEXT:    subs r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    sbcs r2, r3, #0
 ; CHECK-NEXT:    cset r2, lo
 ; CHECK-NEXT:    cmp r2, #0
@@ -755,7 +755,7 @@ define arm_aapcs_vfpcc <2 x i64> @utest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    bl __fixunsdfti
-; CHECK-NEXT:    subs r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    sbcs r2, r3, #0
 ; CHECK-NEXT:    cset r2, lo
 ; CHECK-NEXT:    cmp r2, #0
@@ -784,7 +784,7 @@ define arm_aapcs_vfpcc <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl __fixdfti
 ; CHECK-NEXT:    vmov r12, lr, d8
-; CHECK-NEXT:    subs r4, r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    sbcs r4, r3, #0
 ; CHECK-NEXT:    mov.w r8, #1
 ; CHECK-NEXT:    cset r4, lt
@@ -805,7 +805,7 @@ define arm_aapcs_vfpcc <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    bl __fixdfti
-; CHECK-NEXT:    subs r6, r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    sbcs r6, r3, #0
 ; CHECK-NEXT:    cset r6, lt
 ; CHECK-NEXT:    cmp r6, #0
@@ -842,7 +842,7 @@ define arm_aapcs_vfpcc <2 x i64> @stest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, lr}
 ; CHECK-NEXT:    vmov r0, r9, d0
 ; CHECK-NEXT:    bl __fixsfti
-; CHECK-NEXT:    subs.w r7, r0, #-1
+; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    mvn r5, #-2147483648
 ; CHECK-NEXT:    sbcs.w r7, r1, r5
 ; CHECK-NEXT:    mov.w r6, #-1
@@ -865,7 +865,7 @@ define arm_aapcs_vfpcc <2 x i64> @stest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    csel r10, r0, r1, ne
 ; CHECK-NEXT:    mov r0, r9
 ; CHECK-NEXT:    bl __fixsfti
-; CHECK-NEXT:    subs.w r4, r0, #-1
+; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    sbcs.w r4, r1, r5
 ; CHECK-NEXT:    sbcs r4, r2, #0
 ; CHECK-NEXT:    sbcs r4, r3, #0
@@ -903,7 +903,7 @@ define arm_aapcs_vfpcc <2 x i64> @utest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-NEXT:    vmov r4, r0, d0
 ; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    subs r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    sbcs r2, r3, #0
 ; CHECK-NEXT:    cset r2, lo
 ; CHECK-NEXT:    cmp r2, #0
@@ -911,7 +911,7 @@ define arm_aapcs_vfpcc <2 x i64> @utest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    csel r5, r1, r2, ne
 ; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    subs r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    sbcs r2, r3, #0
 ; CHECK-NEXT:    cset r2, lo
 ; CHECK-NEXT:    cmp r2, #0
@@ -935,7 +935,7 @@ define arm_aapcs_vfpcc <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
 ; CHECK-NEXT:    vmov r5, r0, d0
 ; CHECK-NEXT:    bl __fixsfti
-; CHECK-NEXT:    subs r4, r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    mov.w r8, #1
 ; CHECK-NEXT:    sbcs r4, r3, #0
 ; CHECK-NEXT:    mov.w r6, #0
@@ -955,7 +955,7 @@ define arm_aapcs_vfpcc <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    csel r4, r1, r2, ne
 ; CHECK-NEXT:    bl __fixsfti
-; CHECK-NEXT:    subs r5, r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    sbcs r5, r3, #0
 ; CHECK-NEXT:    cset r5, lt
 ; CHECK-NEXT:    cmp r5, #0
@@ -1102,14 +1102,14 @@ define arm_aapcs_vfpcc <2 x i32> @stest_f64i32_mm(<2 x double> %x) {
 ; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl __aeabi_d2lz
-; CHECK-NEXT:    adr r3, .LCPI27_0
 ; CHECK-NEXT:    mvn r12, #-2147483648
+; CHECK-NEXT:    adr r3, .LCPI27_0
+; CHECK-NEXT:    cmp r4, r12
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
-; CHECK-NEXT:    subs.w r3, r4, r12
 ; CHECK-NEXT:    sbcs r3, r5, #0
 ; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    csetm r3, lt
-; CHECK-NEXT:    subs.w r0, r0, r12
+; CHECK-NEXT:    cmp r0, r12
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    vmov q1[3], q1[1], r5, r1
 ; CHECK-NEXT:    mov.w r5, #0
@@ -1170,12 +1170,12 @@ define arm_aapcs_vfpcc <2 x i32> @utest_f64i32_mm(<2 x double> %x) {
 ; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl __aeabi_d2ulz
-; CHECK-NEXT:    subs.w r3, r4, #-1
+; CHECK-NEXT:    cmp.w r4, #-1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    sbcs r3, r5, #0
 ; CHECK-NEXT:    mov.w r2, #0
 ; CHECK-NEXT:    csetm r3, lo
-; CHECK-NEXT:    subs.w r0, r0, #-1
+; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    bfi r2, r3, #0, #8
 ; CHECK-NEXT:    csetm r0, lo
@@ -1207,12 +1207,12 @@ define arm_aapcs_vfpcc <2 x i32> @ustest_f64i32_mm(<2 x double> %x) {
 ; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl __aeabi_d2lz
-; CHECK-NEXT:    subs.w r3, r4, #-1
+; CHECK-NEXT:    cmp.w r4, #-1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    sbcs r3, r5, #0
 ; CHECK-NEXT:    vmov q1[3], q1[1], r5, r1
 ; CHECK-NEXT:    csetm r3, lt
-; CHECK-NEXT:    subs.w r0, r0, #-1
+; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    mov.w r5, #0
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    bfi r5, r3, #0, #8
@@ -1429,26 +1429,26 @@ define arm_aapcs_vfpcc <2 x i16> @stest_f64i16_mm(<2 x double> %x) {
 ; CHECK-NEXT:    movt lr, #65535
 ; CHECK-NEXT:    mov.w r12, #-1
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    subs r1, r1, r4
+; CHECK-NEXT:    cmp r1, r4
 ; CHECK-NEXT:    sbcs r1, r2, #0
 ; CHECK-NEXT:    mov.w r2, #0
 ; CHECK-NEXT:    csetm r1, lt
+; CHECK-NEXT:    cmp r3, r4
 ; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    subs r1, r3, r4
 ; CHECK-NEXT:    sbcs r1, r5, #0
-; CHECK-NEXT:    adr r4, .LCPI36_1
 ; CHECK-NEXT:    csetm r1, lt
+; CHECK-NEXT:    adr r4, .LCPI36_1
 ; CHECK-NEXT:    bfi r2, r1, #8, #8
 ; CHECK-NEXT:    vmsr p0, r2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vldrw.u32 q1, [r4]
 ; CHECK-NEXT:    vmov r1, r2, d0
 ; CHECK-NEXT:    vmov r3, r5, d1
-; CHECK-NEXT:    subs.w r1, lr, r1
+; CHECK-NEXT:    cmp lr, r1
 ; CHECK-NEXT:    sbcs.w r1, r12, r2
 ; CHECK-NEXT:    csetm r1, lt
+; CHECK-NEXT:    cmp lr, r3
 ; CHECK-NEXT:    bfi r0, r1, #0, #8
-; CHECK-NEXT:    subs.w r1, lr, r3
 ; CHECK-NEXT:    sbcs.w r1, r12, r5
 ; CHECK-NEXT:    csetm r1, lt
 ; CHECK-NEXT:    bfi r0, r1, #8, #8
@@ -1497,11 +1497,11 @@ define arm_aapcs_vfpcc <2 x i16> @utest_f64i16_mm(<2 x double> %x) {
 ; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    vmov.i64 q1, #0xffff
 ; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    subs r0, r0, r4
+; CHECK-NEXT:    cmp r0, r4
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    csetm r0, lo
+; CHECK-NEXT:    cmp r2, r4
 ; CHECK-NEXT:    bfi r5, r0, #0, #8
-; CHECK-NEXT:    subs r0, r2, r4
 ; CHECK-NEXT:    sbcs r0, r3, #0
 ; CHECK-NEXT:    csetm r0, lo
 ; CHECK-NEXT:    bfi r5, r0, #8, #8
@@ -1537,12 +1537,12 @@ define arm_aapcs_vfpcc <2 x i16> @ustest_f64i16_mm(<2 x double> %x) {
 ; CHECK-NEXT:    vmov r1, r2, d0
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    vmov r3, r5, d1
-; CHECK-NEXT:    subs r1, r1, r4
+; CHECK-NEXT:    cmp r1, r4
 ; CHECK-NEXT:    sbcs r1, r2, #0
 ; CHECK-NEXT:    mov.w r2, #0
 ; CHECK-NEXT:    csetm r1, lt
+; CHECK-NEXT:    cmp r3, r4
 ; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    subs r1, r3, r4
 ; CHECK-NEXT:    sbcs r1, r5, #0
 ; CHECK-NEXT:    csetm r1, lt
 ; CHECK-NEXT:    bfi r2, r1, #8, #8
@@ -1733,7 +1733,7 @@ define arm_aapcs_vfpcc <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl __fixdfti
 ; CHECK-NEXT:    vmov r12, lr, d8
-; CHECK-NEXT:    subs.w r5, r0, #-1
+; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    mvn r4, #-2147483648
 ; CHECK-NEXT:    sbcs.w r5, r1, r4
 ; CHECK-NEXT:    sbcs r5, r2, #0
@@ -1757,7 +1757,7 @@ define arm_aapcs_vfpcc <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    bl __fixdfti
-; CHECK-NEXT:    subs.w r7, r0, #-1
+; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    sbcs.w r7, r1, r4
 ; CHECK-NEXT:    sbcs r7, r2, #0
 ; CHECK-NEXT:    sbcs r7, r3, #0
@@ -1799,7 +1799,7 @@ define arm_aapcs_vfpcc <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl __fixunsdfti
 ; CHECK-NEXT:    vmov r12, lr, d8
-; CHECK-NEXT:    subs r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    sbcs r2, r3, #0
 ; CHECK-NEXT:    cset r2, lo
 ; CHECK-NEXT:    cmp r2, #0
@@ -1808,7 +1808,7 @@ define arm_aapcs_vfpcc <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    bl __fixunsdfti
-; CHECK-NEXT:    subs r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    sbcs r2, r3, #0
 ; CHECK-NEXT:    cset r2, lo
 ; CHECK-NEXT:    cmp r2, #0
@@ -1836,7 +1836,7 @@ define arm_aapcs_vfpcc <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl __fixdfti
 ; CHECK-NEXT:    vmov r12, lr, d8
-; CHECK-NEXT:    subs r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    sbcs r2, r3, #0
 ; CHECK-NEXT:    cset r2, lt
 ; CHECK-NEXT:    cmp r2, #0
@@ -1850,7 +1850,7 @@ define arm_aapcs_vfpcc <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    bl __fixdfti
-; CHECK-NEXT:    subs r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    sbcs r2, r3, #0
 ; CHECK-NEXT:    cset r2, lt
 ; CHECK-NEXT:    cmp r2, #0
@@ -1880,7 +1880,7 @@ define arm_aapcs_vfpcc <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, lr}
 ; CHECK-NEXT:    vmov r8, r0, d0
 ; CHECK-NEXT:    bl __fixsfti
-; CHECK-NEXT:    subs.w r7, r0, #-1
+; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    mvn r5, #-2147483648
 ; CHECK-NEXT:    sbcs.w r7, r1, r5
 ; CHECK-NEXT:    mov.w r6, #-2147483648
@@ -1903,7 +1903,7 @@ define arm_aapcs_vfpcc <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    mov r0, r8
 ; CHECK-NEXT:    csel r9, r1, r6, ne
 ; CHECK-NEXT:    bl __fixsfti
-; CHECK-NEXT:    subs.w r4, r0, #-1
+; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    sbcs.w r4, r1, r5
 ; CHECK-NEXT:    sbcs r4, r2, #0
 ; CHECK-NEXT:    sbcs r4, r3, #0
@@ -1939,7 +1939,7 @@ define arm_aapcs_vfpcc <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-NEXT:    vmov r4, r0, d0
 ; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    subs r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    sbcs r2, r3, #0
 ; CHECK-NEXT:    cset r2, lo
 ; CHECK-NEXT:    cmp r2, #0
@@ -1947,7 +1947,7 @@ define arm_aapcs_vfpcc <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    csel r5, r1, r2, ne
 ; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    subs r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    sbcs r2, r3, #0
 ; CHECK-NEXT:    cset r2, lo
 ; CHECK-NEXT:    cmp r2, #0
@@ -1970,7 +1970,7 @@ define arm_aapcs_vfpcc <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-NEXT:    vmov r4, r0, d0
 ; CHECK-NEXT:    bl __fixsfti
-; CHECK-NEXT:    subs r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    sbcs r2, r3, #0
 ; CHECK-NEXT:    cset r2, lt
 ; CHECK-NEXT:    cmp r2, #0
@@ -1983,7 +1983,7 @@ define arm_aapcs_vfpcc <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    movmi r5, #0
 ; CHECK-NEXT:    movmi r6, #0
 ; CHECK-NEXT:    bl __fixsfti
-; CHECK-NEXT:    subs r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    sbcs r2, r3, #0
 ; CHECK-NEXT:    cset r2, lt
 ; CHECK-NEXT:    cmp r2, #0

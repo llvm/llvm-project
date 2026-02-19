@@ -7,7 +7,7 @@ define i1 @drop_flags(i32 noundef %numentries, i64 %cond, i64 %arg) {
 ; CHECK-LABEL: drop_flags:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldm sp, {r1, r12}
-; CHECK-NEXT:    subs r1, r2, r1
+; CHECK-NEXT:    cmp r2, r1
 ; CHECK-NEXT:    sbcs r1, r3, r12
 ; CHECK-NEXT:    movlo r0, r2
 ; CHECK-NEXT:    rsbs r1, r0, #0

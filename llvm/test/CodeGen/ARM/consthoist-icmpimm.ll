@@ -519,19 +519,19 @@ define i32 @icmp64_ule_m1(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7M-NEXT:    ldrd lr, r0, [sp, #8]
 ; CHECKV7M-NEXT:    beq .LBB5_2
 ; CHECKV7M-NEXT:  @ %bb.1: @ %then
-; CHECKV7M-NEXT:    subs r2, r2, r4
+; CHECKV7M-NEXT:    cmp r2, r4
 ; CHECKV7M-NEXT:    sbcs r2, r3, #0
 ; CHECKV7M-NEXT:    mov r2, r0
 ; CHECKV7M-NEXT:    it lo
 ; CHECKV7M-NEXT:    movlo r2, lr
-; CHECKV7M-NEXT:    subs.w r3, r12, r4
+; CHECKV7M-NEXT:    cmp r12, r4
 ; CHECKV7M-NEXT:    sbcs r1, r1, #0
 ; CHECKV7M-NEXT:    it lo
 ; CHECKV7M-NEXT:    movlo r0, lr
 ; CHECKV7M-NEXT:    add r0, r2
 ; CHECKV7M-NEXT:    pop {r4, pc}
 ; CHECKV7M-NEXT:  .LBB5_2: @ %else
-; CHECKV7M-NEXT:    subs r1, r2, r4
+; CHECKV7M-NEXT:    cmp r2, r4
 ; CHECKV7M-NEXT:    sbcs r1, r3, #0
 ; CHECKV7M-NEXT:    it lo
 ; CHECKV7M-NEXT:    movlo r0, lr
@@ -549,19 +549,19 @@ define i32 @icmp64_ule_m1(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7A-NEXT:    movt r4, #2
 ; CHECKV7A-NEXT:    beq .LBB5_2
 ; CHECKV7A-NEXT:  @ %bb.1: @ %then
-; CHECKV7A-NEXT:    subs r2, r2, r4
+; CHECKV7A-NEXT:    cmp r2, r4
 ; CHECKV7A-NEXT:    sbcs r2, r3, #0
 ; CHECKV7A-NEXT:    mov r2, r0
 ; CHECKV7A-NEXT:    it lo
 ; CHECKV7A-NEXT:    movlo r2, lr
-; CHECKV7A-NEXT:    subs.w r3, r12, r4
+; CHECKV7A-NEXT:    cmp r12, r4
 ; CHECKV7A-NEXT:    sbcs r1, r1, #0
 ; CHECKV7A-NEXT:    it lo
 ; CHECKV7A-NEXT:    movlo r0, lr
 ; CHECKV7A-NEXT:    add r0, r2
 ; CHECKV7A-NEXT:    pop {r4, pc}
 ; CHECKV7A-NEXT:  .LBB5_2: @ %else
-; CHECKV7A-NEXT:    subs r1, r2, r4
+; CHECKV7A-NEXT:    cmp r2, r4
 ; CHECKV7A-NEXT:    sbcs r1, r3, #0
 ; CHECKV7A-NEXT:    it lo
 ; CHECKV7A-NEXT:    movlo r0, lr
@@ -739,13 +739,13 @@ define i32 @icmp64_ugt_m1(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7M-NEXT:    ldrd lr, r0, [sp, #16]
 ; CHECKV7M-NEXT:    beq .LBB7_2
 ; CHECKV7M-NEXT:  @ %bb.1: @ %then
-; CHECKV7M-NEXT:    subs r2, r4, r2
+; CHECKV7M-NEXT:    cmp r4, r2
 ; CHECKV7M-NEXT:    mov.w r5, #0
 ; CHECKV7M-NEXT:    sbcs.w r2, r5, r3
 ; CHECKV7M-NEXT:    mov r2, r0
 ; CHECKV7M-NEXT:    it lo
 ; CHECKV7M-NEXT:    movlo r2, lr
-; CHECKV7M-NEXT:    subs.w r3, r4, r12
+; CHECKV7M-NEXT:    cmp r4, r12
 ; CHECKV7M-NEXT:    sbcs.w r1, r5, r1
 ; CHECKV7M-NEXT:    it lo
 ; CHECKV7M-NEXT:    movlo r0, lr
@@ -753,7 +753,7 @@ define i32 @icmp64_ugt_m1(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7M-NEXT:    pop {r4, r5, r7, pc}
 ; CHECKV7M-NEXT:  .LBB7_2: @ %else
 ; CHECKV7M-NEXT:    movs r1, #0
-; CHECKV7M-NEXT:    subs r2, r4, r2
+; CHECKV7M-NEXT:    cmp r4, r2
 ; CHECKV7M-NEXT:    sbcs r1, r3
 ; CHECKV7M-NEXT:    it lo
 ; CHECKV7M-NEXT:    movlo r0, lr
@@ -771,13 +771,13 @@ define i32 @icmp64_ugt_m1(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7A-NEXT:    movt r4, #2
 ; CHECKV7A-NEXT:    beq .LBB7_2
 ; CHECKV7A-NEXT:  @ %bb.1: @ %then
-; CHECKV7A-NEXT:    subs r2, r4, r2
+; CHECKV7A-NEXT:    cmp r4, r2
 ; CHECKV7A-NEXT:    mov.w r5, #0
 ; CHECKV7A-NEXT:    sbcs.w r2, r5, r3
 ; CHECKV7A-NEXT:    mov r2, r0
 ; CHECKV7A-NEXT:    it lo
 ; CHECKV7A-NEXT:    movlo r2, lr
-; CHECKV7A-NEXT:    subs.w r3, r4, r12
+; CHECKV7A-NEXT:    cmp r4, r12
 ; CHECKV7A-NEXT:    sbcs.w r1, r5, r1
 ; CHECKV7A-NEXT:    it lo
 ; CHECKV7A-NEXT:    movlo r0, lr
@@ -785,7 +785,7 @@ define i32 @icmp64_ugt_m1(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7A-NEXT:    pop {r4, r5, r7, pc}
 ; CHECKV7A-NEXT:  .LBB7_2: @ %else
 ; CHECKV7A-NEXT:    movs r1, #0
-; CHECKV7A-NEXT:    subs r2, r4, r2
+; CHECKV7A-NEXT:    cmp r4, r2
 ; CHECKV7A-NEXT:    sbcs r1, r3
 ; CHECKV7A-NEXT:    it lo
 ; CHECKV7A-NEXT:    movlo r0, lr

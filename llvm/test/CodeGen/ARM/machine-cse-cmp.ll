@@ -114,7 +114,7 @@ define void @f4(ptr %ptr1, ptr %ptr2, i64 %val) {
 ; CHECK-NEXT:    orrs r0, r2, r3
 ; CHECK-NEXT:    beq LBB3_2
 ; CHECK-NEXT:  @ %bb.1: @ %if.end
-; CHECK-NEXT:    subs r0, r2, #10
+; CHECK-NEXT:    cmp r2, #10
 ; CHECK-NEXT:    sbcs r0, r3, #0
 ; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:  LBB3_2: @ %if.end3

@@ -121,22 +121,22 @@ define void @func_blend18(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    vmov lr, r12, d18
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    vmov r2, r1, d20
-; CHECK-NEXT:    subs r2, r2, lr
+; CHECK-NEXT:    cmp r2, lr
 ; CHECK-NEXT:    vmov r2, r5, d22
 ; CHECK-NEXT:    sbcs r1, r1, r12
 ; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    movlt r1, #1
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    mvnne r1, #0
-; CHECK-NEXT:    subs r2, r2, r4
-; CHECK-NEXT:    sbcs r6, r5, r6
+; CHECK-NEXT:    cmp r2, r4
 ; CHECK-NEXT:    vmov r2, r12, d17
+; CHECK-NEXT:    sbcs r6, r5, r6
 ; CHECK-NEXT:    vmov r5, r4, d23
 ; CHECK-NEXT:    mov r6, #0
 ; CHECK-NEXT:    movlt r6, #1
 ; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    mvnne r6, #0
-; CHECK-NEXT:    subs r2, r5, r2
+; CHECK-NEXT:    cmp r5, r2
 ; CHECK-NEXT:    sbcs r2, r4, r12
 ; CHECK-NEXT:    vmov lr, r12, d19
 ; CHECK-NEXT:    vmov r4, r5, d21
@@ -147,7 +147,7 @@ define void @func_blend18(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    vdup.32 d25, r2
 ; CHECK-NEXT:    vdup.32 d24, r6
 ; CHECK-NEXT:    vbit q8, q11, q12
-; CHECK-NEXT:    subs r4, r4, lr
+; CHECK-NEXT:    cmp r4, lr
 ; CHECK-NEXT:    sbcs r5, r5, r12
 ; CHECK-NEXT:    movlt r0, #1
 ; CHECK-NEXT:    cmp r0, #0
@@ -188,7 +188,7 @@ define void @func_blend19(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0:128]
 ; CHECK-NEXT:    vmov r0, r12, d16
 ; CHECK-NEXT:    vmov r1, r2, d18
-; CHECK-NEXT:    subs r0, r1, r0
+; CHECK-NEXT:    cmp r1, r0
 ; CHECK-NEXT:    vmov r1, r4, d25
 ; CHECK-NEXT:    sbcs r0, r2, r12
 ; CHECK-NEXT:    mov r12, #0
@@ -196,7 +196,7 @@ define void @func_blend19(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    movlt r12, #1
 ; CHECK-NEXT:    cmp r12, #0
 ; CHECK-NEXT:    mvnne r12, #0
-; CHECK-NEXT:    subs r1, r1, r2
+; CHECK-NEXT:    cmp r1, r2
 ; CHECK-NEXT:    sbcs r0, r4, r0
 ; CHECK-NEXT:    vmov r2, r4, d24
 ; CHECK-NEXT:    mov r0, #0
@@ -205,7 +205,7 @@ define void @func_blend19(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    mvnne r0, #0
 ; CHECK-NEXT:    vdup.32 d1, r0
 ; CHECK-NEXT:    vmov r0, r1, d20
-; CHECK-NEXT:    subs r0, r2, r0
+; CHECK-NEXT:    cmp r2, r0
 ; CHECK-NEXT:    sbcs r0, r4, r1
 ; CHECK-NEXT:    vmov r2, r4, d26
 ; CHECK-NEXT:    mov r0, #0
@@ -214,7 +214,7 @@ define void @func_blend19(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    mvnne r0, #0
 ; CHECK-NEXT:    vdup.32 d0, r0
 ; CHECK-NEXT:    vmov r0, r1, d22
-; CHECK-NEXT:    subs r0, r2, r0
+; CHECK-NEXT:    cmp r2, r0
 ; CHECK-NEXT:    mov r2, #0
 ; CHECK-NEXT:    sbcs r0, r4, r1
 ; CHECK-NEXT:    vmov r4, r5, d31
@@ -222,7 +222,7 @@ define void @func_blend19(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    movlt r2, #1
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    mvnne r2, #0
-; CHECK-NEXT:    subs r0, r4, r0
+; CHECK-NEXT:    cmp r4, r0
 ; CHECK-NEXT:    sbcs r0, r5, r1
 ; CHECK-NEXT:    vmov r4, r5, d30
 ; CHECK-NEXT:    mov r0, #0
@@ -231,7 +231,7 @@ define void @func_blend19(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    mvnne r0, #0
 ; CHECK-NEXT:    vdup.32 d3, r0
 ; CHECK-NEXT:    vmov r0, r1, d28
-; CHECK-NEXT:    subs r0, r4, r0
+; CHECK-NEXT:    cmp r4, r0
 ; CHECK-NEXT:    sbcs r0, r5, r1
 ; CHECK-NEXT:    vmov r4, r5, d27
 ; CHECK-NEXT:    mov r0, #0
@@ -242,7 +242,7 @@ define void @func_blend19(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    vmov r0, r1, d23
 ; CHECK-NEXT:    vbit q14, q15, q1
 ; CHECK-NEXT:    vbit q10, q12, q0
-; CHECK-NEXT:    subs r0, r4, r0
+; CHECK-NEXT:    cmp r4, r0
 ; CHECK-NEXT:    sbcs r0, r5, r1
 ; CHECK-NEXT:    vmov r1, r4, d17
 ; CHECK-NEXT:    vmov r5, r6, d19
@@ -254,7 +254,7 @@ define void @func_blend19(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    vdup.32 d30, r2
 ; CHECK-NEXT:    vbit q11, q13, q15
 ; CHECK-NEXT:    vst1.64 {d28, d29}, [r3:128]!
-; CHECK-NEXT:    subs r1, r5, r1
+; CHECK-NEXT:    cmp r5, r1
 ; CHECK-NEXT:    sbcs r1, r6, r4
 ; CHECK-NEXT:    movlt lr, #1
 ; CHECK-NEXT:    cmp lr, #0
@@ -298,7 +298,7 @@ define void @func_blend20(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    vld1.64 {d20, d21}, [r8:128]!
 ; CHECK-NEXT:    vld1.64 {d22, d23}, [r8:128]!
 ; CHECK-NEXT:    vld1.64 {d0, d1}, [lr:128]!
-; CHECK-NEXT:    subs r4, r6, r4
+; CHECK-NEXT:    cmp r6, r4
 ; CHECK-NEXT:    sbcs r4, r7, r5
 ; CHECK-NEXT:    vmov r5, r6, d16
 ; CHECK-NEXT:    vmov r7, r2, d24
@@ -307,7 +307,7 @@ define void @func_blend20(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    mvnne r4, #0
 ; CHECK-NEXT:    vdup.32 d27, r4
-; CHECK-NEXT:    subs r5, r7, r5
+; CHECK-NEXT:    cmp r7, r5
 ; CHECK-NEXT:    sbcs r2, r2, r6
 ; CHECK-NEXT:    vmov r5, r6, d1
 ; CHECK-NEXT:    mov r2, #0
@@ -320,7 +320,7 @@ define void @func_blend20(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    vld1.64 {d24, d25}, [r0:128]!
 ; CHECK-NEXT:    vld1.64 {d26, d27}, [r1:128]!
 ; CHECK-NEXT:    vld1.64 {d28, d29}, [lr:128]!
-; CHECK-NEXT:    subs r2, r5, r2
+; CHECK-NEXT:    cmp r5, r2
 ; CHECK-NEXT:    sbcs r2, r6, r4
 ; CHECK-NEXT:    vmov r4, r5, d22
 ; CHECK-NEXT:    vmov r6, r7, d0
@@ -329,7 +329,7 @@ define void @func_blend20(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    mvnne r2, #0
 ; CHECK-NEXT:    vdup.32 d3, r2
-; CHECK-NEXT:    subs r4, r6, r4
+; CHECK-NEXT:    cmp r6, r4
 ; CHECK-NEXT:    sbcs r4, r7, r5
 ; CHECK-NEXT:    vmov r2, r5, d27
 ; CHECK-NEXT:    vmov r6, r7, d25
@@ -338,7 +338,7 @@ define void @func_blend20(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    mvnne r4, #0
 ; CHECK-NEXT:    vdup.32 d2, r4
-; CHECK-NEXT:    subs r2, r6, r2
+; CHECK-NEXT:    cmp r6, r2
 ; CHECK-NEXT:    sbcs r2, r7, r5
 ; CHECK-NEXT:    vmov r6, r7, d24
 ; CHECK-NEXT:    mov r2, #0
@@ -347,7 +347,7 @@ define void @func_blend20(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    mvnne r2, #0
 ; CHECK-NEXT:    vdup.32 d5, r2
 ; CHECK-NEXT:    vmov r2, r5, d26
-; CHECK-NEXT:    subs r2, r6, r2
+; CHECK-NEXT:    cmp r6, r2
 ; CHECK-NEXT:    sbcs r2, r7, r5
 ; CHECK-NEXT:    vmov r6, r7, d19
 ; CHECK-NEXT:    mov r2, #0
@@ -356,7 +356,7 @@ define void @func_blend20(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    mvnne r2, #0
 ; CHECK-NEXT:    vdup.32 d4, r2
 ; CHECK-NEXT:    vmov r2, r5, d21
-; CHECK-NEXT:    subs r2, r6, r2
+; CHECK-NEXT:    cmp r6, r2
 ; CHECK-NEXT:    sbcs r2, r7, r5
 ; CHECK-NEXT:    vmov r6, r7, d18
 ; CHECK-NEXT:    mov r2, #0
@@ -365,7 +365,7 @@ define void @func_blend20(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    mvnne r2, #0
 ; CHECK-NEXT:    vdup.32 d31, r2
 ; CHECK-NEXT:    vmov r2, r5, d20
-; CHECK-NEXT:    subs r2, r6, r2
+; CHECK-NEXT:    cmp r6, r2
 ; CHECK-NEXT:    sbcs r2, r7, r5
 ; CHECK-NEXT:    mov r2, #0
 ; CHECK-NEXT:    movlt r2, #1
@@ -385,14 +385,14 @@ define void @func_blend20(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    vld1.64 {d6, d7}, [r0:128]!
 ; CHECK-NEXT:    vld1.64 {d0, d1}, [r1:128]
 ; CHECK-NEXT:    vld1.64 {d2, d3}, [r0:128]
-; CHECK-NEXT:    subs r1, r6, r2
+; CHECK-NEXT:    cmp r6, r2
 ; CHECK-NEXT:    vmov r0, r6, d2
 ; CHECK-NEXT:    sbcs r1, r5, r7
 ; CHECK-NEXT:    vmov r2, r7, d0
 ; CHECK-NEXT:    movlt lr, #1
 ; CHECK-NEXT:    cmp lr, #0
 ; CHECK-NEXT:    mvnne lr, #0
-; CHECK-NEXT:    subs r0, r0, r2
+; CHECK-NEXT:    cmp r0, r2
 ; CHECK-NEXT:    sbcs r0, r6, r7
 ; CHECK-NEXT:    vmov r2, r7, d30
 ; CHECK-NEXT:    vmov r6, r5, d28
@@ -400,7 +400,7 @@ define void @func_blend20(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    movlt r0, #1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mvnne r0, #0
-; CHECK-NEXT:    subs r2, r6, r2
+; CHECK-NEXT:    cmp r6, r2
 ; CHECK-NEXT:    sbcs r2, r5, r7
 ; CHECK-NEXT:    vmov r7, r6, d31
 ; CHECK-NEXT:    vmov r5, r4, d29
@@ -408,7 +408,7 @@ define void @func_blend20(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    movlt r2, #1
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    mvnne r2, #0
-; CHECK-NEXT:    subs r7, r5, r7
+; CHECK-NEXT:    cmp r5, r7
 ; CHECK-NEXT:    vmov r5, r1, d7
 ; CHECK-NEXT:    sbcs r7, r4, r6
 ; CHECK-NEXT:    mov r4, #0
@@ -416,7 +416,7 @@ define void @func_blend20(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    movlt r4, #1
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    mvnne r4, #0
-; CHECK-NEXT:    subs r5, r5, r7
+; CHECK-NEXT:    cmp r5, r7
 ; CHECK-NEXT:    sbcs r1, r1, r6
 ; CHECK-NEXT:    vmov r6, r7, d6
 ; CHECK-NEXT:    mov r1, #0
@@ -425,7 +425,7 @@ define void @func_blend20(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    mvnne r1, #0
 ; CHECK-NEXT:    vdup.32 d9, r1
 ; CHECK-NEXT:    vmov r1, r5, d4
-; CHECK-NEXT:    subs r1, r6, r1
+; CHECK-NEXT:    cmp r6, r1
 ; CHECK-NEXT:    sbcs r1, r7, r5
 ; CHECK-NEXT:    vmov r6, r7, d3
 ; CHECK-NEXT:    mov r1, #0
@@ -437,7 +437,7 @@ define void @func_blend20(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    vbit q2, q3, q4
 ; CHECK-NEXT:    vdup.32 d9, r4
 ; CHECK-NEXT:    vdup.32 d8, r2
-; CHECK-NEXT:    subs r1, r6, r1
+; CHECK-NEXT:    cmp r6, r1
 ; CHECK-NEXT:    sbcs r1, r7, r5
 ; CHECK-NEXT:    vmov r5, r6, d24
 ; CHECK-NEXT:    mov r1, #0
@@ -447,19 +447,19 @@ define void @func_blend20(ptr %loadaddr, ptr %loadaddr2, ptr %blend, ptr %storea
 ; CHECK-NEXT:    vdup.32 d7, r1
 ; CHECK-NEXT:    vmov r1, r4, d20
 ; CHECK-NEXT:    vdup.32 d6, r0
-; CHECK-NEXT:    subs r1, r5, r1
+; CHECK-NEXT:    cmp r5, r1
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    sbcs r0, r6, r4
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1:128]!
 ; CHECK-NEXT:    vorr q8, q4, q4
 ; CHECK-NEXT:    movlt r12, #1
 ; CHECK-NEXT:    cmp r12, #0
+; CHECK-NEXT:    add r0, r3, #64
 ; CHECK-NEXT:    vbsl q8, q14, q15
 ; CHECK-NEXT:    vdup.32 d29, lr
 ; CHECK-NEXT:    vorr q15, q3, q3
 ; CHECK-NEXT:    mvnne r12, #0
 ; CHECK-NEXT:    vdup.32 d28, r12
-; CHECK-NEXT:    add r0, r3, #64
 ; CHECK-NEXT:    vbsl q15, q1, q0
 ; CHECK-NEXT:    vst1.64 {d26, d27}, [r1:128]!
 ; CHECK-NEXT:    vbit q10, q12, q14

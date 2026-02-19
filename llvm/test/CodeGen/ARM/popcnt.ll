@@ -403,7 +403,7 @@ define i32 @ctpop_eq_one(i64 %x) nounwind readnone {
 ; CHECK-NEXT:    sbc r3, r1, #0
 ; CHECK-NEXT:    eor r12, r1, r3
 ; CHECK-NEXT:    eor r1, r0, r2
-; CHECK-NEXT:    subs r1, r2, r1
+; CHECK-NEXT:    cmp r2, r1
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    sbcs r1, r3, r12
 ; CHECK-NEXT:    movlo r0, #1

@@ -494,7 +494,7 @@ define <2 x i64> @large_i128(<2 x double> %x) {
 ; CHECK-NEXT:    mov r8, r3
 ; CHECK-NEXT:    mov r5, r2
 ; CHECK-NEXT:    bl __fixdfti
-; CHECK-NEXT:    subs r7, r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    mov.w r9, #1
 ; CHECK-NEXT:    sbcs r7, r3, #0
 ; CHECK-NEXT:    mov.w r4, #0
@@ -515,7 +515,7 @@ define <2 x i64> @large_i128(<2 x double> %x) {
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    mov r1, r8
 ; CHECK-NEXT:    bl __fixdfti
-; CHECK-NEXT:    subs r5, r2, #1
+; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    sbcs r5, r3, #0
 ; CHECK-NEXT:    cset r5, lt
 ; CHECK-NEXT:    cmp r5, #0

@@ -128,7 +128,7 @@ define float @float_sel(i32 %a, i32 %b, float %x, float %y) {
 ; CHECK-V7-LABEL: float_sel:
 ; CHECK-V7:       @ %bb.0: @ %entry
 ; CHECK-V7-NEXT:    vmov s2, r2
-; CHECK-V7-NEXT:    subs r0, r0, r1
+; CHECK-V7-NEXT:    cmp r0, r1
 ; CHECK-V7-NEXT:    vmov s0, r3
 ; CHECK-V7-NEXT:    vmoveq.f32 s0, s2
 ; CHECK-V7-NEXT:    vmov r0, s0
@@ -136,7 +136,7 @@ define float @float_sel(i32 %a, i32 %b, float %x, float %y) {
 ;
 ; CHECK-V8-LABEL: float_sel:
 ; CHECK-V8:       @ %bb.0: @ %entry
-; CHECK-V8-NEXT:    subs r0, r0, r1
+; CHECK-V8-NEXT:    cmp r0, r1
 ; CHECK-V8-NEXT:    vmov s0, r3
 ; CHECK-V8-NEXT:    vmov s2, r2
 ; CHECK-V8-NEXT:    vseleq.f32 s0, s2, s0
@@ -154,7 +154,7 @@ define double @double_sel(i32 %a, i32 %b, double %x, double %y) {
 ; CHECK-V7:       @ %bb.0: @ %entry
 ; CHECK-V7-NEXT:    vmov d17, r2, r3
 ; CHECK-V7-NEXT:    vldr d16, [sp]
-; CHECK-V7-NEXT:    subs r0, r0, r1
+; CHECK-V7-NEXT:    cmp r0, r1
 ; CHECK-V7-NEXT:    vmoveq.f64 d16, d17
 ; CHECK-V7-NEXT:    vmov r0, r1, d16
 ; CHECK-V7-NEXT:    bx lr
@@ -163,7 +163,7 @@ define double @double_sel(i32 %a, i32 %b, double %x, double %y) {
 ; CHECK-V8:       @ %bb.0: @ %entry
 ; CHECK-V8-NEXT:    vldr d16, [sp]
 ; CHECK-V8-NEXT:    vmov d17, r2, r3
-; CHECK-V8-NEXT:    subs r0, r0, r1
+; CHECK-V8-NEXT:    cmp r0, r1
 ; CHECK-V8-NEXT:    vseleq.f64 d16, d17, d16
 ; CHECK-V8-NEXT:    vmov r0, r1, d16
 ; CHECK-V8-NEXT:    bx lr

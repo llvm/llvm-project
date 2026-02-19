@@ -46,7 +46,7 @@ define i32 @stest_f64i32(double %x) {
 ; VFP2-NEXT:    vmov r0, r1, d0
 ; VFP2-NEXT:    bl __aeabi_d2lz
 ; VFP2-NEXT:    mvn r12, #-2147483648
-; VFP2-NEXT:    subs.w r3, r0, r12
+; VFP2-NEXT:    cmp r0, r12
 ; VFP2-NEXT:    mov.w r2, #0
 ; VFP2-NEXT:    sbcs r3, r1, #0
 ; VFP2-NEXT:    it lt
@@ -98,7 +98,7 @@ define i32 @utest_f64i32(double %x) {
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    vmov r0, r1, d0
 ; VFP2-NEXT:    bl __aeabi_d2ulz
-; VFP2-NEXT:    subs.w r2, r0, #-1
+; VFP2-NEXT:    cmp.w r0, #-1
 ; VFP2-NEXT:    sbcs r1, r1, #0
 ; VFP2-NEXT:    it hs
 ; VFP2-NEXT:    movhs.w r0, #-1
@@ -159,7 +159,7 @@ define i32 @ustest_f64i32(double %x) {
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    vmov r0, r1, d0
 ; VFP2-NEXT:    bl __aeabi_d2lz
-; VFP2-NEXT:    subs.w r3, r0, #-1
+; VFP2-NEXT:    cmp.w r0, #-1
 ; VFP2-NEXT:    mov.w r2, #0
 ; VFP2-NEXT:    sbcs r3, r1, #0
 ; VFP2-NEXT:    mov.w r3, #0
@@ -1010,7 +1010,7 @@ define i64 @stest_f64i64(double %x) {
 ; VFP2-NEXT:    .save {r4, r5, r7, lr}
 ; VFP2-NEXT:    push {r4, r5, r7, lr}
 ; VFP2-NEXT:    bl __fixdfti
-; VFP2-NEXT:    subs.w r4, r0, #-1
+; VFP2-NEXT:    cmp.w r0, #-1
 ; VFP2-NEXT:    mvn lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r4, r1, lr
 ; VFP2-NEXT:    mov.w r12, #0
@@ -1042,7 +1042,7 @@ define i64 @stest_f64i64(double %x) {
 ; FULL-NEXT:    .save {r4, r5, r7, lr}
 ; FULL-NEXT:    push {r4, r5, r7, lr}
 ; FULL-NEXT:    bl __fixdfti
-; FULL-NEXT:    subs.w lr, r0, #-1
+; FULL-NEXT:    cmp.w r0, #-1
 ; FULL-NEXT:    mvn r12, #-2147483648
 ; FULL-NEXT:    sbcs.w lr, r1, r12
 ; FULL-NEXT:    sbcs lr, r2, #0
@@ -1099,7 +1099,7 @@ define i64 @utest_f64i64(double %x) {
 ; VFP2-NEXT:    .save {r7, lr}
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    bl __fixunsdfti
-; VFP2-NEXT:    subs r2, #1
+; VFP2-NEXT:    cmp r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
 ; VFP2-NEXT:    itt hs
@@ -1112,7 +1112,7 @@ define i64 @utest_f64i64(double %x) {
 ; FULL-NEXT:    .save {r7, lr}
 ; FULL-NEXT:    push {r7, lr}
 ; FULL-NEXT:    bl __fixunsdfti
-; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    cmp r2, #1
 ; FULL-NEXT:    mov.w r12, #0
 ; FULL-NEXT:    sbcs r2, r3, #0
 ; FULL-NEXT:    csel r0, r0, r12, lo
@@ -1161,7 +1161,7 @@ define i64 @ustest_f64i64(double %x) {
 ; VFP2-NEXT:    .save {r7, lr}
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    bl __fixdfti
-; VFP2-NEXT:    subs r2, #1
+; VFP2-NEXT:    cmp r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
 ; VFP2-NEXT:    itt ge
@@ -1178,7 +1178,7 @@ define i64 @ustest_f64i64(double %x) {
 ; FULL-NEXT:    .save {r7, lr}
 ; FULL-NEXT:    push {r7, lr}
 ; FULL-NEXT:    bl __fixdfti
-; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    cmp r2, #1
 ; FULL-NEXT:    mov.w r12, #0
 ; FULL-NEXT:    sbcs r2, r3, #0
 ; FULL-NEXT:    csel r2, r3, r12, lt
@@ -1266,7 +1266,7 @@ define i64 @stest_f32i64(float %x) {
 ; VFP2-NEXT:    .save {r4, r5, r7, lr}
 ; VFP2-NEXT:    push {r4, r5, r7, lr}
 ; VFP2-NEXT:    bl __fixsfti
-; VFP2-NEXT:    subs.w r4, r0, #-1
+; VFP2-NEXT:    cmp.w r0, #-1
 ; VFP2-NEXT:    mvn lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r4, r1, lr
 ; VFP2-NEXT:    mov.w r12, #0
@@ -1298,7 +1298,7 @@ define i64 @stest_f32i64(float %x) {
 ; FULL-NEXT:    .save {r4, r5, r7, lr}
 ; FULL-NEXT:    push {r4, r5, r7, lr}
 ; FULL-NEXT:    bl __fixsfti
-; FULL-NEXT:    subs.w lr, r0, #-1
+; FULL-NEXT:    cmp.w r0, #-1
 ; FULL-NEXT:    mvn r12, #-2147483648
 ; FULL-NEXT:    sbcs.w lr, r1, r12
 ; FULL-NEXT:    sbcs lr, r2, #0
@@ -1355,7 +1355,7 @@ define i64 @utest_f32i64(float %x) {
 ; VFP2-NEXT:    .save {r7, lr}
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    bl __fixunssfti
-; VFP2-NEXT:    subs r2, #1
+; VFP2-NEXT:    cmp r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
 ; VFP2-NEXT:    itt hs
@@ -1368,7 +1368,7 @@ define i64 @utest_f32i64(float %x) {
 ; FULL-NEXT:    .save {r7, lr}
 ; FULL-NEXT:    push {r7, lr}
 ; FULL-NEXT:    bl __fixunssfti
-; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    cmp r2, #1
 ; FULL-NEXT:    mov.w r12, #0
 ; FULL-NEXT:    sbcs r2, r3, #0
 ; FULL-NEXT:    csel r0, r0, r12, lo
@@ -1417,7 +1417,7 @@ define i64 @ustest_f32i64(float %x) {
 ; VFP2-NEXT:    .save {r7, lr}
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    bl __fixsfti
-; VFP2-NEXT:    subs r2, #1
+; VFP2-NEXT:    cmp r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
 ; VFP2-NEXT:    itt ge
@@ -1434,7 +1434,7 @@ define i64 @ustest_f32i64(float %x) {
 ; FULL-NEXT:    .save {r7, lr}
 ; FULL-NEXT:    push {r7, lr}
 ; FULL-NEXT:    bl __fixsfti
-; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    cmp r2, #1
 ; FULL-NEXT:    mov.w r12, #0
 ; FULL-NEXT:    sbcs r2, r3, #0
 ; FULL-NEXT:    csel r2, r3, r12, lt
@@ -1527,7 +1527,7 @@ define i64 @stest_f16i64(half %x) {
 ; VFP2-NEXT:    bl __aeabi_h2f
 ; VFP2-NEXT:    vmov s0, r0
 ; VFP2-NEXT:    bl __fixsfti
-; VFP2-NEXT:    subs.w r4, r0, #-1
+; VFP2-NEXT:    cmp.w r0, #-1
 ; VFP2-NEXT:    mvn lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r4, r1, lr
 ; VFP2-NEXT:    mov.w r12, #0
@@ -1561,7 +1561,7 @@ define i64 @stest_f16i64(half %x) {
 ; FULL-NEXT:    vmov.f16 r0, s0
 ; FULL-NEXT:    vmov s0, r0
 ; FULL-NEXT:    bl __fixhfti
-; FULL-NEXT:    subs.w lr, r0, #-1
+; FULL-NEXT:    cmp.w r0, #-1
 ; FULL-NEXT:    mvn r12, #-2147483648
 ; FULL-NEXT:    sbcs.w lr, r1, r12
 ; FULL-NEXT:    sbcs lr, r2, #0
@@ -1623,7 +1623,7 @@ define i64 @utesth_f16i64(half %x) {
 ; VFP2-NEXT:    bl __aeabi_h2f
 ; VFP2-NEXT:    vmov s0, r0
 ; VFP2-NEXT:    bl __fixunssfti
-; VFP2-NEXT:    subs r2, #1
+; VFP2-NEXT:    cmp r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
 ; VFP2-NEXT:    itt hs
@@ -1638,7 +1638,7 @@ define i64 @utesth_f16i64(half %x) {
 ; FULL-NEXT:    vmov.f16 r0, s0
 ; FULL-NEXT:    vmov s0, r0
 ; FULL-NEXT:    bl __fixunshfti
-; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    cmp r2, #1
 ; FULL-NEXT:    mov.w r12, #0
 ; FULL-NEXT:    sbcs r2, r3, #0
 ; FULL-NEXT:    csel r0, r0, r12, lo
@@ -1692,7 +1692,7 @@ define i64 @ustest_f16i64(half %x) {
 ; VFP2-NEXT:    bl __aeabi_h2f
 ; VFP2-NEXT:    vmov s0, r0
 ; VFP2-NEXT:    bl __fixsfti
-; VFP2-NEXT:    subs r2, #1
+; VFP2-NEXT:    cmp r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
 ; VFP2-NEXT:    itt ge
@@ -1711,7 +1711,7 @@ define i64 @ustest_f16i64(half %x) {
 ; FULL-NEXT:    vmov.f16 r0, s0
 ; FULL-NEXT:    vmov s0, r0
 ; FULL-NEXT:    bl __fixhfti
-; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    cmp r2, #1
 ; FULL-NEXT:    mov.w r12, #0
 ; FULL-NEXT:    sbcs r2, r3, #0
 ; FULL-NEXT:    csel r2, r3, r12, lt
@@ -1787,7 +1787,7 @@ define i32 @stest_f64i32_mm(double %x) {
 ; VFP2-NEXT:    vmov r0, r1, d0
 ; VFP2-NEXT:    bl __aeabi_d2lz
 ; VFP2-NEXT:    mvn r2, #-2147483648
-; VFP2-NEXT:    subs r3, r0, r2
+; VFP2-NEXT:    cmp r0, r2
 ; VFP2-NEXT:    sbcs r3, r1, #0
 ; VFP2-NEXT:    it ge
 ; VFP2-NEXT:    movge r0, r2
@@ -1884,7 +1884,7 @@ define i32 @ustest_f64i32_mm(double %x) {
 ; VFP2-NEXT:    cmp r1, #1
 ; VFP2-NEXT:    it ge
 ; VFP2-NEXT:    movge.w r0, #-1
-; VFP2-NEXT:    ands.w r1, r1, r1, asr #31
+; VFP2-NEXT:    tst.w r1, r1, asr #31
 ; VFP2-NEXT:    it mi
 ; VFP2-NEXT:    movmi r0, #0
 ; VFP2-NEXT:    pop {r7, pc}
@@ -2676,7 +2676,7 @@ define i64 @stest_f64i64_mm(double %x) {
 ; VFP2-NEXT:    .save {r4, r5, r7, lr}
 ; VFP2-NEXT:    push {r4, r5, r7, lr}
 ; VFP2-NEXT:    bl __fixdfti
-; VFP2-NEXT:    subs.w r4, r0, #-1
+; VFP2-NEXT:    cmp.w r0, #-1
 ; VFP2-NEXT:    mvn lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r4, r1, lr
 ; VFP2-NEXT:    mov.w r12, #0
@@ -2711,7 +2711,7 @@ define i64 @stest_f64i64_mm(double %x) {
 ; FULL-NEXT:    .save {r4, r5, r7, lr}
 ; FULL-NEXT:    push {r4, r5, r7, lr}
 ; FULL-NEXT:    bl __fixdfti
-; FULL-NEXT:    subs.w lr, r0, #-1
+; FULL-NEXT:    cmp.w r0, #-1
 ; FULL-NEXT:    mvn r12, #-2147483648
 ; FULL-NEXT:    sbcs.w lr, r1, r12
 ; FULL-NEXT:    sbcs lr, r2, #0
@@ -2774,7 +2774,7 @@ define i64 @utest_f64i64_mm(double %x) {
 ; VFP2-NEXT:    .save {r7, lr}
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    bl __fixunsdfti
-; VFP2-NEXT:    subs r2, #1
+; VFP2-NEXT:    cmp r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
 ; VFP2-NEXT:    it lo
@@ -2790,7 +2790,7 @@ define i64 @utest_f64i64_mm(double %x) {
 ; FULL-NEXT:    .save {r7, lr}
 ; FULL-NEXT:    push {r7, lr}
 ; FULL-NEXT:    bl __fixunsdfti
-; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    cmp r2, #1
 ; FULL-NEXT:    sbcs r2, r3, #0
 ; FULL-NEXT:    cset r2, lo
 ; FULL-NEXT:    cmp r2, #0
@@ -2859,7 +2859,7 @@ define i64 @ustest_f64i64_mm(double %x) {
 ; VFP2-NEXT:    .save {r7, lr}
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    bl __fixdfti
-; VFP2-NEXT:    subs r2, #1
+; VFP2-NEXT:    cmp r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
 ; VFP2-NEXT:    it lt
@@ -2880,7 +2880,7 @@ define i64 @ustest_f64i64_mm(double %x) {
 ; FULL-NEXT:    .save {r7, lr}
 ; FULL-NEXT:    push {r7, lr}
 ; FULL-NEXT:    bl __fixdfti
-; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    cmp r2, #1
 ; FULL-NEXT:    sbcs r2, r3, #0
 ; FULL-NEXT:    cset r2, lt
 ; FULL-NEXT:    cmp r2, #0
@@ -2989,7 +2989,7 @@ define i64 @stest_f32i64_mm(float %x) {
 ; VFP2-NEXT:    .save {r4, r5, r7, lr}
 ; VFP2-NEXT:    push {r4, r5, r7, lr}
 ; VFP2-NEXT:    bl __fixsfti
-; VFP2-NEXT:    subs.w r4, r0, #-1
+; VFP2-NEXT:    cmp.w r0, #-1
 ; VFP2-NEXT:    mvn lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r4, r1, lr
 ; VFP2-NEXT:    mov.w r12, #0
@@ -3024,7 +3024,7 @@ define i64 @stest_f32i64_mm(float %x) {
 ; FULL-NEXT:    .save {r4, r5, r7, lr}
 ; FULL-NEXT:    push {r4, r5, r7, lr}
 ; FULL-NEXT:    bl __fixsfti
-; FULL-NEXT:    subs.w lr, r0, #-1
+; FULL-NEXT:    cmp.w r0, #-1
 ; FULL-NEXT:    mvn r12, #-2147483648
 ; FULL-NEXT:    sbcs.w lr, r1, r12
 ; FULL-NEXT:    sbcs lr, r2, #0
@@ -3087,7 +3087,7 @@ define i64 @utest_f32i64_mm(float %x) {
 ; VFP2-NEXT:    .save {r7, lr}
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    bl __fixunssfti
-; VFP2-NEXT:    subs r2, #1
+; VFP2-NEXT:    cmp r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
 ; VFP2-NEXT:    it lo
@@ -3103,7 +3103,7 @@ define i64 @utest_f32i64_mm(float %x) {
 ; FULL-NEXT:    .save {r7, lr}
 ; FULL-NEXT:    push {r7, lr}
 ; FULL-NEXT:    bl __fixunssfti
-; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    cmp r2, #1
 ; FULL-NEXT:    sbcs r2, r3, #0
 ; FULL-NEXT:    cset r2, lo
 ; FULL-NEXT:    cmp r2, #0
@@ -3172,7 +3172,7 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; VFP2-NEXT:    .save {r7, lr}
 ; VFP2-NEXT:    push {r7, lr}
 ; VFP2-NEXT:    bl __fixsfti
-; VFP2-NEXT:    subs r2, #1
+; VFP2-NEXT:    cmp r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
 ; VFP2-NEXT:    it lt
@@ -3193,7 +3193,7 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; FULL-NEXT:    .save {r7, lr}
 ; FULL-NEXT:    push {r7, lr}
 ; FULL-NEXT:    bl __fixsfti
-; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    cmp r2, #1
 ; FULL-NEXT:    sbcs r2, r3, #0
 ; FULL-NEXT:    cset r2, lt
 ; FULL-NEXT:    cmp r2, #0
@@ -3307,7 +3307,7 @@ define i64 @stest_f16i64_mm(half %x) {
 ; VFP2-NEXT:    bl __aeabi_h2f
 ; VFP2-NEXT:    vmov s0, r0
 ; VFP2-NEXT:    bl __fixsfti
-; VFP2-NEXT:    subs.w r4, r0, #-1
+; VFP2-NEXT:    cmp.w r0, #-1
 ; VFP2-NEXT:    mvn lr, #-2147483648
 ; VFP2-NEXT:    sbcs.w r4, r1, lr
 ; VFP2-NEXT:    mov.w r12, #0
@@ -3344,7 +3344,7 @@ define i64 @stest_f16i64_mm(half %x) {
 ; FULL-NEXT:    vmov.f16 r0, s0
 ; FULL-NEXT:    vmov s0, r0
 ; FULL-NEXT:    bl __fixhfti
-; FULL-NEXT:    subs.w lr, r0, #-1
+; FULL-NEXT:    cmp.w r0, #-1
 ; FULL-NEXT:    mvn r12, #-2147483648
 ; FULL-NEXT:    sbcs.w lr, r1, r12
 ; FULL-NEXT:    sbcs lr, r2, #0
@@ -3412,7 +3412,7 @@ define i64 @utesth_f16i64_mm(half %x) {
 ; VFP2-NEXT:    bl __aeabi_h2f
 ; VFP2-NEXT:    vmov s0, r0
 ; VFP2-NEXT:    bl __fixunssfti
-; VFP2-NEXT:    subs r2, #1
+; VFP2-NEXT:    cmp r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
 ; VFP2-NEXT:    it lo
@@ -3430,7 +3430,7 @@ define i64 @utesth_f16i64_mm(half %x) {
 ; FULL-NEXT:    vmov.f16 r0, s0
 ; FULL-NEXT:    vmov s0, r0
 ; FULL-NEXT:    bl __fixunshfti
-; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    cmp r2, #1
 ; FULL-NEXT:    sbcs r2, r3, #0
 ; FULL-NEXT:    cset r2, lo
 ; FULL-NEXT:    cmp r2, #0
@@ -3504,7 +3504,7 @@ define i64 @ustest_f16i64_mm(half %x) {
 ; VFP2-NEXT:    bl __aeabi_h2f
 ; VFP2-NEXT:    vmov s0, r0
 ; VFP2-NEXT:    bl __fixsfti
-; VFP2-NEXT:    subs r2, #1
+; VFP2-NEXT:    cmp r2, #1
 ; VFP2-NEXT:    mov.w r12, #0
 ; VFP2-NEXT:    sbcs r2, r3, #0
 ; VFP2-NEXT:    it lt
@@ -3527,7 +3527,7 @@ define i64 @ustest_f16i64_mm(half %x) {
 ; FULL-NEXT:    vmov.f16 r0, s0
 ; FULL-NEXT:    vmov s0, r0
 ; FULL-NEXT:    bl __fixhfti
-; FULL-NEXT:    subs r2, #1
+; FULL-NEXT:    cmp r2, #1
 ; FULL-NEXT:    sbcs r2, r3, #0
 ; FULL-NEXT:    cset r2, lt
 ; FULL-NEXT:    cmp r2, #0
@@ -3949,7 +3949,7 @@ define i32 @stest_f32i32i64(float %x) {
 ; VFP2-NEXT:    vmov r0, s0
 ; VFP2-NEXT:    bl __aeabi_f2lz
 ; VFP2-NEXT:    movw r2, #32767
-; VFP2-NEXT:    subs r3, r0, r2
+; VFP2-NEXT:    cmp r0, r2
 ; VFP2-NEXT:    sbcs r1, r1, #0
 ; VFP2-NEXT:    it ge
 ; VFP2-NEXT:    movge r0, r2
@@ -3967,7 +3967,7 @@ define i32 @stest_f32i32i64(float %x) {
 ; FULL-NEXT:    vmov r0, s0
 ; FULL-NEXT:    bl __aeabi_f2lz
 ; FULL-NEXT:    movw r2, #32767
-; FULL-NEXT:    subs r3, r0, r2
+; FULL-NEXT:    cmp r0, r2
 ; FULL-NEXT:    sbcs r1, r1, #0
 ; FULL-NEXT:    csel r0, r0, r2, lt
 ; FULL-NEXT:    movw r1, #32768

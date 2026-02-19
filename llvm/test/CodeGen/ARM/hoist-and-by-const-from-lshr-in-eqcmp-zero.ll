@@ -371,8 +371,8 @@ define i1 @scalar_i64_signbit_eq(i64 %x, i64 %y) nounwind {
 define i1 @scalar_i64_lowestbit_eq(i64 %x, i64 %y) nounwind {
 ; ARM6-LABEL: scalar_i64_lowestbit_eq:
 ; ARM6:       @ %bb.0:
-; ARM6-NEXT:    subs r1, r2, #32
 ; ARM6-NEXT:    lsl r0, r0, r2
+; ARM6-NEXT:    cmp r2, #32
 ; ARM6-NEXT:    movpl r0, #0
 ; ARM6-NEXT:    mov r1, #1
 ; ARM6-NEXT:    bic r0, r1, r0
@@ -380,8 +380,8 @@ define i1 @scalar_i64_lowestbit_eq(i64 %x, i64 %y) nounwind {
 ;
 ; ARM78-LABEL: scalar_i64_lowestbit_eq:
 ; ARM78:       @ %bb.0:
-; ARM78-NEXT:    subs r1, r2, #32
 ; ARM78-NEXT:    lsl r0, r0, r2
+; ARM78-NEXT:    cmp r2, #32
 ; ARM78-NEXT:    movwpl r0, #0
 ; ARM78-NEXT:    mov r1, #1
 ; ARM78-NEXT:    bic r0, r1, r0
@@ -400,7 +400,7 @@ define i1 @scalar_i64_lowestbit_eq(i64 %x, i64 %y) nounwind {
 ; THUMB78-LABEL: scalar_i64_lowestbit_eq:
 ; THUMB78:       @ %bb.0:
 ; THUMB78-NEXT:    lsls r0, r2
-; THUMB78-NEXT:    subs.w r1, r2, #32
+; THUMB78-NEXT:    cmp r2, #32
 ; THUMB78-NEXT:    it pl
 ; THUMB78-NEXT:    movpl r0, #0
 ; THUMB78-NEXT:    movs r1, #1
@@ -970,7 +970,7 @@ define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 ; ARM6:       @ %bb.0:
 ; ARM6-NEXT:    uxtb r1, r1
 ; ARM6-NEXT:    mov r2, #24
-; ARM6-NEXT:    ands r0, r0, r2, lsr r1
+; ARM6-NEXT:    tst r0, r2, lsr r1
 ; ARM6-NEXT:    mov r0, #0
 ; ARM6-NEXT:    movmi r0, #1
 ; ARM6-NEXT:    bx lr
@@ -979,7 +979,7 @@ define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 ; ARM78:       @ %bb.0:
 ; ARM78-NEXT:    uxtb r1, r1
 ; ARM78-NEXT:    mov r2, #24
-; ARM78-NEXT:    ands r0, r0, r2, lsr r1
+; ARM78-NEXT:    tst r0, r2, lsr r1
 ; ARM78-NEXT:    mov r0, #0
 ; ARM78-NEXT:    movwmi r0, #1
 ; ARM78-NEXT:    bx lr
@@ -1003,7 +1003,7 @@ define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 ; THUMB78-NEXT:    uxtb r1, r1
 ; THUMB78-NEXT:    movs r2, #24
 ; THUMB78-NEXT:    lsr.w r1, r2, r1
-; THUMB78-NEXT:    ands r0, r1
+; THUMB78-NEXT:    tst r1, r0
 ; THUMB78-NEXT:    mov.w r0, #0
 ; THUMB78-NEXT:    it mi
 ; THUMB78-NEXT:    movmi r0, #1

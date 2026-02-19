@@ -508,7 +508,7 @@ define arm_aapcs_vfpcc <2 x i32> @vcmp_multi_v2i32(<2 x i64> %a, <2 x i32> %b, <
 ; CHECK-NEXT:    csel r12, zr, r2, eq
 ; CHECK-NEXT:    vmov r2, s8
 ; CHECK-NEXT:    asrs r3, r1, #31
-; CHECK-NEXT:    subs r1, r1, r2
+; CHECK-NEXT:    cmp r1, r2
 ; CHECK-NEXT:    sbcs.w r1, r3, r2, asr #31
 ; CHECK-NEXT:    vmov r2, s6
 ; CHECK-NEXT:    csel r1, zr, r12, ge
@@ -521,7 +521,7 @@ define arm_aapcs_vfpcc <2 x i32> @vcmp_multi_v2i32(<2 x i64> %a, <2 x i32> %b, <
 ; CHECK-NEXT:    csel r12, zr, r2, eq
 ; CHECK-NEXT:    vmov r2, s10
 ; CHECK-NEXT:    asrs r3, r1, #31
-; CHECK-NEXT:    subs r1, r1, r2
+; CHECK-NEXT:    cmp r1, r2
 ; CHECK-NEXT:    sbcs.w r1, r3, r2, asr #31
 ; CHECK-NEXT:    csel r1, zr, r12, ge
 ; CHECK-NEXT:    rsbs r1, r1, #0
@@ -1049,7 +1049,7 @@ define arm_aapcs_vfpcc <2 x i32> @vcmp_r_multi_v2i32(<2 x i64> %a, <2 x i32> %b,
 ; CHECK-NEXT:    csel r12, zr, r2, eq
 ; CHECK-NEXT:    vmov r2, s8
 ; CHECK-NEXT:    asrs r3, r1, #31
-; CHECK-NEXT:    subs r1, r1, r2
+; CHECK-NEXT:    cmp r1, r2
 ; CHECK-NEXT:    sbcs.w r1, r3, r2, asr #31
 ; CHECK-NEXT:    vmov r2, s6
 ; CHECK-NEXT:    csel r1, zr, r12, ge
@@ -1062,7 +1062,7 @@ define arm_aapcs_vfpcc <2 x i32> @vcmp_r_multi_v2i32(<2 x i64> %a, <2 x i32> %b,
 ; CHECK-NEXT:    csel r12, zr, r2, eq
 ; CHECK-NEXT:    vmov r2, s10
 ; CHECK-NEXT:    asrs r3, r1, #31
-; CHECK-NEXT:    subs r1, r1, r2
+; CHECK-NEXT:    cmp r1, r2
 ; CHECK-NEXT:    sbcs.w r1, r3, r2, asr #31
 ; CHECK-NEXT:    csel r1, zr, r12, ge
 ; CHECK-NEXT:    rsbs r1, r1, #0
