@@ -7371,10 +7371,8 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     auto *EpiRedHeaderPhi = cast_if_present<VPReductionPHIRecipe>(
         vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
     if (!EpiRedHeaderPhi) {
-      match(BackedgeVal, VPlanPatternMatch::m_Select(
-                             VPlanPatternMatch::m_VPValue(),
-                             VPlanPatternMatch::m_VPValue(BackedgeVal),
-                             VPlanPatternMatch::m_VPValue()));
+      match(BackedgeVal,
+            m_Select(m_VPValue(), m_VPValue(BackedgeVal), m_VPValue()));
       EpiRedHeaderPhi = cast<VPReductionPHIRecipe>(
           vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
     }

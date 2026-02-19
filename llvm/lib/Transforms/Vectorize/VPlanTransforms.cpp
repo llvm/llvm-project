@@ -2111,6 +2111,7 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                 {}, {}, Term->getDebugLoc());
   ExitingVPBB->appendRecipe(BOC);
   Term->eraseFromParent();
+
   return true;
 }
 
@@ -2715,9 +2716,8 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan) {
     if (VPBB->empty() || !match(&VPBB->back(), m_BranchOnCond(m_VPValue(Cond))))
       continue;
 
-    // BranchOnCond requires exactly 2 successors.
-    if (VPBB->getNumSuccessors() != 2)
-      continue;
+    assert(VPBB->getNumSuccessors() == 2 &&
+           "Two successors expected for BranchOnCond");
     unsigned RemovedIdx;
     if (match(Cond, m_True()))
       RemovedIdx = 1;
