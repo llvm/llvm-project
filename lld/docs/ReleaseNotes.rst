@@ -29,6 +29,9 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
+* Added ``--unresolved-symbols=@<file>`` flag to specify path to a file with the
+  list of unresolved symbols that will not trigger an error during lininking.
+
 Breaking changes
 ----------------
 
