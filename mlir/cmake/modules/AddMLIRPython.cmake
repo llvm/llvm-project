@@ -8,6 +8,198 @@
 # nomenclature, adds libraries.
 ################################################################################
 
+################################################################################
+# Multi-Python version support
+#
+# Set MLIR_PYTHON_VERSIONS to build Python bindings for multiple Python versions
+# in a single CMake configuration and build.
+#
+# Usage:
+#   cmake ... -DMLIR_PYTHON_VERSIONS="3.10;3.11;3.12"
+#
+# How it works:
+#   1. libMLIRPythonCAPI.so is built once (Python version independent)
+#   2. Python extension modules (e.g., _mlir*.so) are built for each version
+#   3. Pure Python sources (*.py) are shared across all versions
+#
+# Requirements for each Python version:
+#   - Python executable must be available (e.g., /usr/bin/python3.11)
+#   - Python development headers must be installed
+#   - nanobind must be installed: python3.X -m pip install nanobind
+#
+# Default behavior (empty MLIR_PYTHON_VERSIONS):
+#   Only build for the Python version specified by Python3_EXECUTABLE
+#
+################################################################################
+set(MLIR_PYTHON_VERSIONS "" CACHE STRING
+    "Semicolon-separated list of additional Python versions to build for (e.g., '3.10;3.11;3.12'). Empty means single version build using Python3_EXECUTABLE.")
+
+# Internal: Store discovered Python configs for each version
+set(_MLIR_MULTI_PYTHON_CONFIGS "" CACHE INTERNAL "List of successfully configured Python versions")
+
+# Function to find and configure a specific Python version
+function(_mlir_find_python_version version out_found)
+  set(${out_found} FALSE PARENT_SCOPE)
+
+  # Construct search paths for this Python version
+  set(_search_paths
+    "/usr/bin"
+    "/usr/local/bin"
+    "/opt/python/cp${version}*/bin"
+  )
+
+  # Add pyenv paths if HOME is set
+  if(DEFINED ENV{HOME})
+    list(APPEND _search_paths "$ENV{HOME}/.pyenv/versions/${version}*/bin")
+  endif()
+
+  # Try to find Python executable
+  find_program(_py_exe_${version}
+    NAMES "python${version}"
+    PATHS ${_search_paths}
+    NO_DEFAULT_PATH
+  )
+
+  if(NOT _py_exe_${version})
+    find_program(_py_exe_${version} NAMES "python${version}")
+  endif()
+
+  if(_py_exe_${version})
+    # Get include directory
+    execute_process(
+      COMMAND ${_py_exe_${version}} -c "import sysconfig; print(sysconfig.get_path('include'))"
+      OUTPUT_VARIABLE _py_include_${version}
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_QUIET
+      RESULT_VARIABLE _result
+    )
+
+    if(_result EQUAL 0 AND EXISTS "${_py_include_${version}}/Python.h")
+      # Get nanobind cmake dir (same method as MLIRDetectPythonEnv.cmake)
+      execute_process(
+        COMMAND ${_py_exe_${version}} -c "import nanobind;print(nanobind.cmake_dir(),end='')"
+        OUTPUT_VARIABLE _nanobind_dir_${version}
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE _nanobind_result
+      )
+      if(NOT _nanobind_result EQUAL 0)
+        set(_nanobind_dir_${version} "")
+      endif()
+
+      # Get nanobind include dir
+      execute_process(
+        COMMAND ${_py_exe_${version}} -c "import nanobind;print(nanobind.include_dir(),end='')"
+        OUTPUT_VARIABLE _nanobind_include_${version}
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+      )
+
+      # Get nanobind source dir (for building version-specific static library)
+      if(_nanobind_dir_${version})
+        get_filename_component(_nanobind_src_${version} "${_nanobind_dir_${version}}/.." ABSOLUTE)
+      endif()
+
+      # Get platform-specific extension suffix (e.g., .cpython-310-x86_64-linux-gnu.so)
+      execute_process(
+        COMMAND ${_py_exe_${version}} -c "import sysconfig;print(sysconfig.get_config_var('EXT_SUFFIX') or '',end='')"
+        OUTPUT_VARIABLE _ext_suffix_${version}
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+      )
+
+      # Store in cache
+      set(MLIR_PYTHON_${version}_EXECUTABLE "${_py_exe_${version}}" CACHE INTERNAL "")
+      set(MLIR_PYTHON_${version}_INCLUDE "${_py_include_${version}}" CACHE INTERNAL "")
+      set(MLIR_PYTHON_${version}_NANOBIND_DIR "${_nanobind_dir_${version}}" CACHE INTERNAL "")
+      set(MLIR_PYTHON_${version}_NANOBIND_INCLUDE "${_nanobind_include_${version}}" CACHE INTERNAL "")
+      set(MLIR_PYTHON_${version}_NANOBIND_SRC "${_nanobind_src_${version}}" CACHE INTERNAL "")
+      set(MLIR_PYTHON_${version}_EXT_SUFFIX "${_ext_suffix_${version}}" CACHE INTERNAL "")
+
+      # Get version without dots for suffix (fallback)
+      string(REPLACE "." "" _ver_nodot ${version})
+      set(MLIR_PYTHON_${version}_ABI_TAG "cpython-${_ver_nodot}" CACHE INTERNAL "")
+
+      set(${out_found} TRUE PARENT_SCOPE)
+      message(STATUS "Found Python ${version}: ${_py_exe_${version}} (suffix: ${_ext_suffix_${version}})")
+      if(_nanobind_dir_${version})
+        message(STATUS "  nanobind: ${_nanobind_dir_${version}}")
+      endif()
+    else()
+      message(STATUS "Python ${version} found but Python.h not available at ${_py_include_${version}}")
+    endif()
+  else()
+    message(STATUS "Python ${version} executable not found")
+  endif()
+
+  unset(_py_exe_${version} CACHE)
+endfunction()
+
+# Function to build a version-specific nanobind static library
+# This is needed because nanobind-static.a is Python version dependent
+function(_mlir_build_nanobind_static_for_version version)
+  string(REPLACE "." "" _ver_nodot ${version})
+  set(_target_name "nanobind-static-py${_ver_nodot}")
+
+  # Skip if already created
+  if(TARGET ${_target_name})
+    return()
+  endif()
+
+  set(_nb_src "${MLIR_PYTHON_${version}_NANOBIND_SRC}")
+  if(NOT _nb_src OR NOT EXISTS "${_nb_src}/src")
+    message(WARNING "Cannot build nanobind static library for Python ${version}: source not found")
+    return()
+  endif()
+
+  message(STATUS "Building nanobind static library for Python ${version}: ${_target_name}")
+
+  # Create static library with nanobind sources
+  add_library(${_target_name} STATIC
+    ${_nb_src}/src/nb_internals.cpp
+    ${_nb_src}/src/nb_func.cpp
+    ${_nb_src}/src/nb_type.cpp
+    ${_nb_src}/src/nb_enum.cpp
+    ${_nb_src}/src/nb_ndarray.cpp
+    ${_nb_src}/src/nb_static_property.cpp
+    ${_nb_src}/src/nb_ft.cpp
+    ${_nb_src}/src/common.cpp
+    ${_nb_src}/src/error.cpp
+    ${_nb_src}/src/trampoline.cpp
+    ${_nb_src}/src/implicit.cpp
+  )
+
+  target_include_directories(${_target_name} PUBLIC
+    ${MLIR_PYTHON_${version}_INCLUDE}
+    ${MLIR_PYTHON_${version}_NANOBIND_INCLUDE}
+    ${_nb_src}/ext/robin_map/include
+  )
+
+  set_target_properties(${_target_name} PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+  )
+
+  # Store target name in cache for later use
+  set(MLIR_PYTHON_${version}_NANOBIND_STATIC_TARGET "${_target_name}" CACHE INTERNAL "")
+endfunction()
+
+# Initialize multi-Python configuration if MLIR_PYTHON_VERSIONS is set
+if(MLIR_PYTHON_VERSIONS)
+  message(STATUS "Multi-Python build enabled for versions: ${MLIR_PYTHON_VERSIONS}")
+  foreach(_pyver IN LISTS MLIR_PYTHON_VERSIONS)
+    _mlir_find_python_version(${_pyver} _found)
+    if(_found)
+      list(APPEND _MLIR_MULTI_PYTHON_CONFIGS ${_pyver})
+    else()
+      message(WARNING "Python ${_pyver} not found or incomplete, skipping")
+    endif()
+  endforeach()
+  set(_MLIR_MULTI_PYTHON_CONFIGS "${_MLIR_MULTI_PYTHON_CONFIGS}" CACHE INTERNAL "")
+  message(STATUS "Will build Python extensions for: ${_MLIR_MULTI_PYTHON_CONFIGS}")
+endif()
+
 # Function: declare_mlir_python_sources
 # Declares pure python sources as part of a named grouping that can be built
 # later.
@@ -1048,5 +1240,108 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
       # NOTE: Even on DLL-platforms, extensions go in the lib directory tree.
       RUNTIME DESTINATION ${ARG_INSTALL_DIR}
     )
+  endif()
+
+  ################################################################################
+  # Multi-Python version support: build additional versions
+  ################################################################################
+  if(_MLIR_MULTI_PYTHON_CONFIGS)
+    # Get the primary Python version (the one configured via Python3_EXECUTABLE)
+    execute_process(
+      COMMAND ${Python3_EXECUTABLE} -c "import sys;print(f'{sys.version_info.major}.{sys.version_info.minor}',end='')"
+      OUTPUT_VARIABLE _primary_pyver
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_QUIET
+    )
+
+    foreach(_pyver IN LISTS _MLIR_MULTI_PYTHON_CONFIGS)
+      # Skip the primary version (already built above)
+      if(_pyver STREQUAL _primary_pyver)
+        continue()
+      endif()
+
+      # Check if this version was found
+      if(NOT MLIR_PYTHON_${_pyver}_EXECUTABLE)
+        continue()
+      endif()
+
+      # Check if the required binding library is available for this version
+      set(_pyver_binding_dir "${MLIR_PYTHON_${_pyver}_NANOBIND_DIR}")
+      set(_binding_name "nanobind")
+      # nanobind uses lowercase with hyphen: nanobind-config.cmake
+      set(_binding_config "nanobind-config.cmake")
+
+      # Create version-specific target name
+      string(REPLACE "." "" _ver_nodot ${_pyver})
+      set(_versioned_libname "${libname}_py${_ver_nodot}")
+
+      message(STATUS "Building ${extname} for Python ${_pyver} as ${_versioned_libname}")
+
+      # For nanobind, build version-specific static library if not already done
+      _mlir_build_nanobind_static_for_version(${_pyver})
+
+      # Create a MODULE library for this Python version
+      add_library(${_versioned_libname} MODULE ${ARG_SOURCES})
+
+      # Set include paths for the specific Python version
+        target_include_directories(${_versioned_libname} PRIVATE
+          ${MLIR_PYTHON_${_pyver}_INCLUDE}
+        ${MLIR_PYTHON_${_pyver}_NANOBIND_INCLUDE}
+      )
+
+      target_compile_options(${_versioned_libname} PRIVATE ${eh_rtti_enable})
+
+      # Link libraries
+      target_link_libraries(${_versioned_libname} PRIVATE ${ARG_LINK_LIBS})
+
+      # For nanobind, explicitly link to version-specific static library
+      # (nanobind_add_module adds this automatically, but we're creating the module manually)
+      if(TARGET ${MLIR_PYTHON_${_pyver}_NANOBIND_STATIC_TARGET})
+        target_link_libraries(${_versioned_libname} PRIVATE ${MLIR_PYTHON_${_pyver}_NANOBIND_STATIC_TARGET})
+      endif()
+
+      # Use the detected EXT_SUFFIX for correct platform-specific naming
+      # e.g., .cpython-311-x86_64-linux-gnu.so on Linux, .cpython-311-darwin.so on macOS
+      set(_ext_suffix "${MLIR_PYTHON_${_pyver}_EXT_SUFFIX}")
+      if(NOT _ext_suffix)
+        # Fallback to constructing suffix manually
+        if(APPLE)
+          set(_ext_suffix ".${MLIR_PYTHON_${_pyver}_ABI_TAG}-darwin.so")
+        elseif(WIN32)
+          set(_ext_suffix ".${MLIR_PYTHON_${_pyver}_ABI_TAG}.pyd")
+        else()
+          # Linux and other Unix-like systems
+          set(_ext_suffix ".${MLIR_PYTHON_${_pyver}_ABI_TAG}-${CMAKE_SYSTEM_PROCESSOR}-linux-gnu.so")
+        endif()
+      endif()
+
+      # Configure output - use SUFFIX to set the full extension including the ABI tag
+      set_target_properties(${_versioned_libname} PROPERTIES
+        PREFIX ""
+        OUTPUT_NAME "${extname}"
+        SUFFIX "${_ext_suffix}"
+        LIBRARY_OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
+        NO_SONAME ON
+      )
+
+      target_link_options(${_versioned_libname} PRIVATE
+        $<$<PLATFORM_ID:Linux>:LINKER:--exclude-libs,ALL>
+      )
+
+      # Install
+      if(ARG_INSTALL_DIR)
+        install(TARGETS ${_versioned_libname}
+          COMPONENT ${ARG_INSTALL_COMPONENT}
+          LIBRARY DESTINATION ${ARG_INSTALL_DIR}
+          ARCHIVE DESTINATION ${ARG_INSTALL_DIR}
+          RUNTIME DESTINATION ${ARG_INSTALL_DIR}
+        )
+      endif()
+
+      # Add to parent target dependencies if it exists
+      if(TARGET ${ARG_INSTALL_COMPONENT})
+        add_dependencies(${ARG_INSTALL_COMPONENT} ${_versioned_libname})
+      endif()
+    endforeach()
   endif()
 endfunction()
