@@ -213,10 +213,10 @@ define i32 @adc_add_multi_use(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, ptr %5) no
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    leal (%edi,%esi), %ebx
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    cmpl %ecx, %eax
 ; X86-NEXT:    movl %ebx, (%edx)
-; X86-NEXT:    adcl %esi, %edi
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    adcl %edi, %esi
 ; X86-NEXT:    js .LBB6_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl %ecx, %eax
@@ -232,10 +232,10 @@ define i32 @adc_add_multi_use(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, ptr %5) no
 ; X64-NEXT:    # kill: def $edx killed $edx def $rdx
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    leal (%rcx,%rdx), %esi
+; X64-NEXT:    addl %edx, %r8d
 ; X64-NEXT:    cmpl %eax, %edi
 ; X64-NEXT:    movl %esi, (%r9)
-; X64-NEXT:    adcl %edx, %ecx
-; X64-NEXT:    addl %r8d, %ecx
+; X64-NEXT:    adcl %ecx, %r8d
 ; X64-NEXT:    cmovsl %edi, %eax
 ; X64-NEXT:    retq
   %7 = icmp ult i32 %0, %1
