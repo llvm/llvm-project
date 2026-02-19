@@ -1773,12 +1773,13 @@ bool MachineConstEvaluator::evaluateEXTRACTi(const APInt &A1, unsigned Bits,
     return true;
   }
   if (BW <= 64) {
-    int64_t V = A1.getZExtValue();
-    V <<= (64-Bits-Offset);
+    uint64_t U = A1.getZExtValue();
+    U <<= (64 - Bits - Offset);
+    int64_t V;
     if (Signed)
-      V >>= (64-Bits);
+      V = static_cast<int64_t>(U) >> (64 - Bits);
     else
-      V = static_cast<uint64_t>(V) >> (64-Bits);
+      V = static_cast<int64_t>(U >> (64 - Bits));
     Result = APInt(BW, V, Signed);
     return true;
   }

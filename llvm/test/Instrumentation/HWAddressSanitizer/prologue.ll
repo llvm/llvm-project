@@ -61,16 +61,16 @@ define i32 @test_load(ptr %a) sanitize_hwaddress {
 ; FUCHSIA-LABEL: define i32 @test_load
 ; FUCHSIA-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FUCHSIA-NEXT:  entry:
-; FUCHSIA-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = load ptr, ptr @__hwasan_shadow_memory_dynamic_address, align 8
-; FUCHSIA-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 2)
+; FUCHSIA-NEXT:    [[TMP0:%.*]] = load ptr, ptr @__hwasan_shadow_memory_dynamic_address, align 8
+; FUCHSIA-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP0]], ptr [[A]], i32 2)
 ; FUCHSIA-NEXT:    [[X:%.*]] = load i32, ptr [[A]], align 4
 ; FUCHSIA-NEXT:    ret i32 [[X]]
 ;
 ; FUCHSIA-LIBCALL-LABEL: define i32 @test_load
 ; FUCHSIA-LIBCALL-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FUCHSIA-LIBCALL-NEXT:  entry:
-; FUCHSIA-LIBCALL-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = load ptr, ptr @__hwasan_shadow_memory_dynamic_address, align 8
-; FUCHSIA-LIBCALL-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 2)
+; FUCHSIA-LIBCALL-NEXT:    [[TMP0:%.*]] = load ptr, ptr @__hwasan_shadow_memory_dynamic_address, align 8
+; FUCHSIA-LIBCALL-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP0]], ptr [[A]], i32 2)
 ; FUCHSIA-LIBCALL-NEXT:    [[X:%.*]] = load i32, ptr [[A]], align 4
 ; FUCHSIA-LIBCALL-NEXT:    ret i32 [[X]]
 ;
@@ -92,7 +92,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 48
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = ashr i64 [[TMP2]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.read_register.i64(metadata [[META1:![0-9]+]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.read_register.i64(metadata [[META2:![0-9]+]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 44
@@ -138,7 +138,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 48
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP3:%.*]] = ashr i64 [[TMP2]], 3
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP4:%.*]] = call i64 @llvm.read_register.i64(metadata [[META1:![0-9]+]])
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP4:%.*]] = call i64 @llvm.read_register.i64(metadata [[META2:![0-9]+]])
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP5:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 44
@@ -273,84 +273,84 @@ define void @test_alloca() sanitize_hwaddress {
 ; FUCHSIA-LABEL: define void @test_alloca
 ; FUCHSIA-SAME: () #[[ATTR0]] personality ptr @__hwasan_personality_thunk {
 ; FUCHSIA-NEXT:  entry:
-; FUCHSIA-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = load ptr, ptr @__hwasan_shadow_memory_dynamic_address, align 8
-; FUCHSIA-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; FUCHSIA-NEXT:    [[TMP1:%.*]] = ashr i64 [[TMP0]], 3
-; FUCHSIA-NEXT:    [[TMP2:%.*]] = call i64 @llvm.read_register.i64(metadata [[META1:![0-9]+]])
-; FUCHSIA-NEXT:    [[TMP3:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
-; FUCHSIA-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[TMP3]] to i64
-; FUCHSIA-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP4]], 44
-; FUCHSIA-NEXT:    [[TMP6:%.*]] = or i64 [[TMP2]], [[TMP5]]
-; FUCHSIA-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP0]] to ptr
-; FUCHSIA-NEXT:    store i64 [[TMP6]], ptr [[TMP7]], align 8
-; FUCHSIA-NEXT:    [[TMP8:%.*]] = ashr i64 [[TMP0]], 56
-; FUCHSIA-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[TMP8]], 12
-; FUCHSIA-NEXT:    [[TMP10:%.*]] = xor i64 [[TMP9]], -1
-; FUCHSIA-NEXT:    [[TMP11:%.*]] = add i64 [[TMP0]], 8
-; FUCHSIA-NEXT:    [[TMP12:%.*]] = and i64 [[TMP11]], [[TMP10]]
-; FUCHSIA-NEXT:    store i64 [[TMP12]], ptr @__hwasan_tls, align 8
-; FUCHSIA-NEXT:    [[HWASAN_UAR_TAG:%.*]] = lshr i64 [[TMP4]], 56
+; FUCHSIA-NEXT:    [[TMP0:%.*]] = load ptr, ptr @__hwasan_shadow_memory_dynamic_address, align 8
+; FUCHSIA-NEXT:    [[TMP1:%.*]] = load i64, ptr @__hwasan_tls, align 8
+; FUCHSIA-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 3
+; FUCHSIA-NEXT:    [[TMP3:%.*]] = call i64 @llvm.read_register.i64(metadata [[META2:![0-9]+]])
+; FUCHSIA-NEXT:    [[TMP4:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
+; FUCHSIA-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[TMP4]] to i64
+; FUCHSIA-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP5]], 44
+; FUCHSIA-NEXT:    [[TMP7:%.*]] = or i64 [[TMP3]], [[TMP6]]
+; FUCHSIA-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP1]] to ptr
+; FUCHSIA-NEXT:    store i64 [[TMP7]], ptr [[TMP8]], align 8
+; FUCHSIA-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP1]], 56
+; FUCHSIA-NEXT:    [[TMP10:%.*]] = shl nuw nsw i64 [[TMP9]], 12
+; FUCHSIA-NEXT:    [[TMP11:%.*]] = xor i64 [[TMP10]], -1
+; FUCHSIA-NEXT:    [[TMP12:%.*]] = add i64 [[TMP1]], 8
+; FUCHSIA-NEXT:    [[TMP13:%.*]] = and i64 [[TMP12]], [[TMP11]]
+; FUCHSIA-NEXT:    store i64 [[TMP13]], ptr @__hwasan_tls, align 8
+; FUCHSIA-NEXT:    [[HWASAN_UAR_TAG:%.*]] = lshr i64 [[TMP5]], 56
 ; FUCHSIA-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
-; FUCHSIA-NEXT:    [[TMP13:%.*]] = xor i64 [[TMP1]], 0
-; FUCHSIA-NEXT:    [[TMP14:%.*]] = ptrtoint ptr [[X]] to i64
-; FUCHSIA-NEXT:    [[TMP15:%.*]] = and i64 [[TMP14]], 72057594037927935
-; FUCHSIA-NEXT:    [[TMP16:%.*]] = shl i64 [[TMP13]], 56
-; FUCHSIA-NEXT:    [[TMP17:%.*]] = or i64 [[TMP15]], [[TMP16]]
-; FUCHSIA-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; FUCHSIA-NEXT:    [[TMP18:%.*]] = trunc i64 [[TMP13]] to i8
-; FUCHSIA-NEXT:    [[TMP19:%.*]] = ptrtoint ptr [[X]] to i64
-; FUCHSIA-NEXT:    [[TMP20:%.*]] = and i64 [[TMP19]], 72057594037927935
-; FUCHSIA-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 4
-; FUCHSIA-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP21]]
-; FUCHSIA-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[TMP22]], i32 0
-; FUCHSIA-NEXT:    store i8 4, ptr [[TMP23]], align 1
-; FUCHSIA-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[X]], i32 15
-; FUCHSIA-NEXT:    store i8 [[TMP18]], ptr [[TMP24]], align 1
+; FUCHSIA-NEXT:    [[TMP14:%.*]] = xor i64 [[TMP2]], 0
+; FUCHSIA-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[X]] to i64
+; FUCHSIA-NEXT:    [[TMP16:%.*]] = and i64 [[TMP15]], 72057594037927935
+; FUCHSIA-NEXT:    [[TMP17:%.*]] = shl i64 [[TMP14]], 56
+; FUCHSIA-NEXT:    [[TMP18:%.*]] = or i64 [[TMP16]], [[TMP17]]
+; FUCHSIA-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; FUCHSIA-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP14]] to i8
+; FUCHSIA-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[X]] to i64
+; FUCHSIA-NEXT:    [[TMP21:%.*]] = and i64 [[TMP20]], 72057594037927935
+; FUCHSIA-NEXT:    [[TMP22:%.*]] = lshr i64 [[TMP21]], 4
+; FUCHSIA-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP22]]
+; FUCHSIA-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP23]], i32 0
+; FUCHSIA-NEXT:    store i8 4, ptr [[TMP24]], align 1
+; FUCHSIA-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[X]], i32 15
+; FUCHSIA-NEXT:    store i8 [[TMP19]], ptr [[TMP25]], align 1
 ; FUCHSIA-NEXT:    call void @use(ptr [[X_HWASAN]])
-; FUCHSIA-NEXT:    [[TMP25:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
-; FUCHSIA-NEXT:    [[TMP26:%.*]] = ptrtoint ptr [[X]] to i64
-; FUCHSIA-NEXT:    [[TMP27:%.*]] = and i64 [[TMP26]], 72057594037927935
-; FUCHSIA-NEXT:    [[TMP28:%.*]] = lshr i64 [[TMP27]], 4
-; FUCHSIA-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP28]]
-; FUCHSIA-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 1, i1 false)
+; FUCHSIA-NEXT:    [[TMP26:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; FUCHSIA-NEXT:    [[TMP27:%.*]] = ptrtoint ptr [[X]] to i64
+; FUCHSIA-NEXT:    [[TMP28:%.*]] = and i64 [[TMP27]], 72057594037927935
+; FUCHSIA-NEXT:    [[TMP29:%.*]] = lshr i64 [[TMP28]], 4
+; FUCHSIA-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP29]]
+; FUCHSIA-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP30]], i8 [[TMP26]], i64 1, i1 false)
 ; FUCHSIA-NEXT:    ret void
 ;
 ; FUCHSIA-LIBCALL-LABEL: define void @test_alloca
 ; FUCHSIA-LIBCALL-SAME: () #[[ATTR0]] personality ptr @__hwasan_personality_thunk {
 ; FUCHSIA-LIBCALL-NEXT:  entry:
-; FUCHSIA-LIBCALL-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = load ptr, ptr @__hwasan_shadow_memory_dynamic_address, align 8
-; FUCHSIA-LIBCALL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_register.i64(metadata [[META1:![0-9]+]])
-; FUCHSIA-LIBCALL-NEXT:    [[TMP1:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
-; FUCHSIA-LIBCALL-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
-; FUCHSIA-LIBCALL-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 44
-; FUCHSIA-LIBCALL-NEXT:    [[TMP4:%.*]] = or i64 [[TMP0]], [[TMP3]]
-; FUCHSIA-LIBCALL-NEXT:    call void @__hwasan_add_frame_record(i64 [[TMP4]])
-; FUCHSIA-LIBCALL-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP2]], 20
-; FUCHSIA-LIBCALL-NEXT:    [[HWASAN_STACK_BASE_TAG:%.*]] = xor i64 [[TMP2]], [[TMP5]]
-; FUCHSIA-LIBCALL-NEXT:    [[HWASAN_UAR_TAG:%.*]] = lshr i64 [[TMP2]], 56
+; FUCHSIA-LIBCALL-NEXT:    [[TMP0:%.*]] = load ptr, ptr @__hwasan_shadow_memory_dynamic_address, align 8
+; FUCHSIA-LIBCALL-NEXT:    [[TMP1:%.*]] = call i64 @llvm.read_register.i64(metadata [[META2:![0-9]+]])
+; FUCHSIA-LIBCALL-NEXT:    [[TMP2:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
+; FUCHSIA-LIBCALL-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP2]] to i64
+; FUCHSIA-LIBCALL-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 44
+; FUCHSIA-LIBCALL-NEXT:    [[TMP5:%.*]] = or i64 [[TMP1]], [[TMP4]]
+; FUCHSIA-LIBCALL-NEXT:    call void @__hwasan_add_frame_record(i64 [[TMP5]])
+; FUCHSIA-LIBCALL-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP3]], 20
+; FUCHSIA-LIBCALL-NEXT:    [[HWASAN_STACK_BASE_TAG:%.*]] = xor i64 [[TMP3]], [[TMP6]]
+; FUCHSIA-LIBCALL-NEXT:    [[HWASAN_UAR_TAG:%.*]] = lshr i64 [[TMP3]], 56
 ; FUCHSIA-LIBCALL-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
-; FUCHSIA-LIBCALL-NEXT:    [[TMP6:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 0
-; FUCHSIA-LIBCALL-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[X]] to i64
-; FUCHSIA-LIBCALL-NEXT:    [[TMP8:%.*]] = and i64 [[TMP7]], 72057594037927935
-; FUCHSIA-LIBCALL-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP6]], 56
-; FUCHSIA-LIBCALL-NEXT:    [[TMP10:%.*]] = or i64 [[TMP8]], [[TMP9]]
-; FUCHSIA-LIBCALL-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP10]] to ptr
-; FUCHSIA-LIBCALL-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP6]] to i8
-; FUCHSIA-LIBCALL-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[X]] to i64
-; FUCHSIA-LIBCALL-NEXT:    [[TMP13:%.*]] = and i64 [[TMP12]], 72057594037927935
-; FUCHSIA-LIBCALL-NEXT:    [[TMP14:%.*]] = lshr i64 [[TMP13]], 4
-; FUCHSIA-LIBCALL-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP14]]
-; FUCHSIA-LIBCALL-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP15]], i32 0
-; FUCHSIA-LIBCALL-NEXT:    store i8 4, ptr [[TMP16]], align 1
-; FUCHSIA-LIBCALL-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[X]], i32 15
-; FUCHSIA-LIBCALL-NEXT:    store i8 [[TMP11]], ptr [[TMP17]], align 1
+; FUCHSIA-LIBCALL-NEXT:    [[TMP7:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 0
+; FUCHSIA-LIBCALL-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[X]] to i64
+; FUCHSIA-LIBCALL-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 72057594037927935
+; FUCHSIA-LIBCALL-NEXT:    [[TMP10:%.*]] = shl i64 [[TMP7]], 56
+; FUCHSIA-LIBCALL-NEXT:    [[TMP11:%.*]] = or i64 [[TMP9]], [[TMP10]]
+; FUCHSIA-LIBCALL-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP11]] to ptr
+; FUCHSIA-LIBCALL-NEXT:    [[TMP12:%.*]] = trunc i64 [[TMP7]] to i8
+; FUCHSIA-LIBCALL-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[X]] to i64
+; FUCHSIA-LIBCALL-NEXT:    [[TMP14:%.*]] = and i64 [[TMP13]], 72057594037927935
+; FUCHSIA-LIBCALL-NEXT:    [[TMP15:%.*]] = lshr i64 [[TMP14]], 4
+; FUCHSIA-LIBCALL-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP15]]
+; FUCHSIA-LIBCALL-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP16]], i32 0
+; FUCHSIA-LIBCALL-NEXT:    store i8 4, ptr [[TMP17]], align 1
+; FUCHSIA-LIBCALL-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[X]], i32 15
+; FUCHSIA-LIBCALL-NEXT:    store i8 [[TMP12]], ptr [[TMP18]], align 1
 ; FUCHSIA-LIBCALL-NEXT:    call void @use(ptr [[X_HWASAN]])
-; FUCHSIA-LIBCALL-NEXT:    [[TMP18:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
-; FUCHSIA-LIBCALL-NEXT:    [[TMP19:%.*]] = ptrtoint ptr [[X]] to i64
-; FUCHSIA-LIBCALL-NEXT:    [[TMP20:%.*]] = and i64 [[TMP19]], 72057594037927935
-; FUCHSIA-LIBCALL-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 4
-; FUCHSIA-LIBCALL-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP21]]
-; FUCHSIA-LIBCALL-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP22]], i8 [[TMP18]], i64 1, i1 false)
+; FUCHSIA-LIBCALL-NEXT:    [[TMP19:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; FUCHSIA-LIBCALL-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[X]] to i64
+; FUCHSIA-LIBCALL-NEXT:    [[TMP21:%.*]] = and i64 [[TMP20]], 72057594037927935
+; FUCHSIA-LIBCALL-NEXT:    [[TMP22:%.*]] = lshr i64 [[TMP21]], 4
+; FUCHSIA-LIBCALL-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP22]]
+; FUCHSIA-LIBCALL-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP23]], i8 [[TMP19]], i64 1, i1 false)
 ; FUCHSIA-LIBCALL-NEXT:    ret void
 ;
 entry:

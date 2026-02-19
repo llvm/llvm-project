@@ -2089,6 +2089,12 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::CFISalt:
     OS << "cfi_salt(\"" << cast<CFISaltAttr>(T->getAttr())->getSalt() << "\")";
     break;
+  case attr::NoFieldProtection:
+    OS << "no_field_protection";
+    break;
+  case attr::PointerFieldProtection:
+    OS << "pointer_field_protection";
+    break;
   }
   OS << "))";
 }

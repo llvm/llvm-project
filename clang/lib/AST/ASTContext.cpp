@@ -15456,3 +15456,97 @@ bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
   ThunksToBeAbbreviated[VirtualMethodDecl] = std::move(SimplifiedThunkNames);
   return Result;
 }
+
+bool ASTContext::arePFPFieldsTriviallyCopyable(const RecordDecl *RD) const {
+  // Check for trivially-destructible here because non-trivially-destructible
+  // types will always cause the type and any types derived from it to be
+  // considered non-trivially-copyable. The same cannot be said for
+  // trivially-copyable because deleting special members of a type derived from
+  // a non-trivially-copyable type can cause the derived type to be considered
+  // trivially copyable.
+  if (getLangOpts().PointerFieldProtectionTagged)
+    return !isa<CXXRecordDecl>(RD) ||
+           cast<CXXRecordDecl>(RD)->hasTrivialDestructor();
+  return true;
+}
+
+static void findPFPFields(const ASTContext &Ctx, QualType Ty, CharUnits Offset,
+                          std::vector<PFPField> &Fields, bool IncludeVBases) {
+  if (auto *AT = Ctx.getAsConstantArrayType(Ty)) {
+    if (auto *ElemDecl = AT->getElementType()->getAsCXXRecordDecl()) {
+      const ASTRecordLayout &ElemRL = Ctx.getASTRecordLayout(ElemDecl);
+      for (unsigned i = 0; i != AT->getSize(); ++i)
+        findPFPFields(Ctx, AT->getElementType(), Offset + i * ElemRL.getSize(),
+                      Fields, true);
+    }
+  }
+  auto *Decl = Ty->getAsCXXRecordDecl();
+  // isPFPType() is inherited from bases and members (including via arrays), so
+  // we can early exit if it is false. Unions are excluded per the API
+  // documentation.
+  if (!Decl || !Decl->isPFPType() || Decl->isUnion())
+    return;
+  const ASTRecordLayout &RL = Ctx.getASTRecordLayout(Decl);
+  for (FieldDecl *Field : Decl->fields()) {
+    CharUnits FieldOffset =
+        Offset +
+        Ctx.toCharUnitsFromBits(RL.getFieldOffset(Field->getFieldIndex()));
+    if (Ctx.isPFPField(Field))
+      Fields.push_back({FieldOffset, Field});
+    findPFPFields(Ctx, Field->getType(), FieldOffset, Fields,
+                  /*IncludeVBases=*/true);
+  }
+  // Pass false for IncludeVBases below because vbases are only included in
+  // layout for top-level types, i.e. not bases or vbases.
+  for (CXXBaseSpecifier &Base : Decl->bases()) {
+    if (Base.isVirtual())
+      continue;
+    CharUnits BaseOffset =
+        Offset + RL.getBaseClassOffset(Base.getType()->getAsCXXRecordDecl());
+    findPFPFields(Ctx, Base.getType(), BaseOffset, Fields,
+                  /*IncludeVBases=*/false);
+  }
+  if (IncludeVBases) {
+    for (CXXBaseSpecifier &Base : Decl->vbases()) {
+      CharUnits BaseOffset =
+          Offset + RL.getVBaseClassOffset(Base.getType()->getAsCXXRecordDecl());
+      findPFPFields(Ctx, Base.getType(), BaseOffset, Fields,
+                    /*IncludeVBases=*/false);
+    }
+  }
+}
+
+std::vector<PFPField> ASTContext::findPFPFields(QualType Ty) const {
+  std::vector<PFPField> PFPFields;
+  ::findPFPFields(*this, Ty, CharUnits::Zero(), PFPFields, true);
+  return PFPFields;
+}
+
+bool ASTContext::hasPFPFields(QualType Ty) const {
+  return !findPFPFields(Ty).empty();
+}
+
+bool ASTContext::isPFPField(const FieldDecl *FD) const {
+  if (auto *RD = dyn_cast<CXXRecordDecl>(FD->getParent()))
+    return RD->isPFPType() && FD->getType()->isPointerType() &&
+           !FD->hasAttr<NoFieldProtectionAttr>();
+  return false;
+}
+
+void ASTContext::recordMemberDataPointerEvaluation(const ValueDecl *VD) {
+  auto *FD = dyn_cast<FieldDecl>(VD);
+  if (!FD)
+    FD = cast<FieldDecl>(cast<IndirectFieldDecl>(VD)->chain().back());
+  if (isPFPField(FD))
+    PFPFieldsWithEvaluatedOffset.insert(FD);
+}
+
+void ASTContext::recordOffsetOfEvaluation(const OffsetOfExpr *E) {
+  if (E->getNumComponents() == 0)
+    return;
+  OffsetOfNode Comp = E->getComponent(E->getNumComponents() - 1);
+  if (Comp.getKind() != OffsetOfNode::Field)
+    return;
+  if (FieldDecl *FD = Comp.getField(); isPFPField(FD))
+    PFPFieldsWithEvaluatedOffset.insert(FD);
+}
