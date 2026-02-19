@@ -51,9 +51,9 @@ DependencyScanningServiceOptions::DependencyScanningServiceOptions()
 DependencyScanningService::DependencyScanningService(
     DependencyScanningServiceOptions OptsArg)
     : Opts(std::move(OptsArg)) {
-  // The FullIncludeTree output format completely subsumes header search and
-  // VFS optimizations due to how it works. Disable these optimizations so
-  // we're not doing unneeded work.
-  if (Opts.Format == ScanningOutputFormat::FullIncludeTree)
+  // Include-tree compilation completely subsumes header search and VFS
+  // optimizations due to how it works. Disable these optimizations so we're not
+  // doing unneeded work.
+  if (std::holds_alternative<IncludeTreeCompilation>(Opts.Compilation))
     Opts.OptimizeArgs &= ~ScanningOptimizations::FullIncludeTreeIrrelevant;
 }

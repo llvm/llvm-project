@@ -1304,9 +1304,8 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   };
   Opts.Mode = ScanMode;
   Opts.Format = Format;
-  Opts.CASOpts = CASOpts;
-  Opts.CAS = CAS;
-  Opts.Cache = Cache;
+  if (CAS && Cache)
+    Opts.Compilation = IncludeTreeCompilation{CASOpts, CAS, Cache};
   Opts.OptimizeArgs = OptimizeArgs;
   Opts.EagerLoadModules = EagerLoadModules;
   Opts.TraceVFS = Verbose;

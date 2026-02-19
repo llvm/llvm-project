@@ -221,8 +221,19 @@ public:
     return Service.getOpts().Format;
   }
 
-  const CASOptions &getCASOpts() const { return CASOpts; }
-  std::shared_ptr<cas::ObjectStore> getCAS() const { return CAS; }
+  CASOptions getCASOpts() const {
+    if (auto *IncludeTree =
+            std::get_if<IncludeTreeCompilation>(&Service.getOpts().Compilation))
+      return IncludeTree->CASOpts;
+    return {};
+  }
+
+  std::shared_ptr<cas::ObjectStore> getCAS() const {
+    if (auto *IncludeTree =
+            std::get_if<IncludeTreeCompilation>(&Service.getOpts().Compilation))
+      return IncludeTree->CAS;
+    return nullptr;
+  }
 
   llvm::vfs::FileSystem &getVFS() const { return *DepFS; }
 
@@ -233,9 +244,6 @@ private:
   /// This is the caching (and optionally dependency-directives-providing) VFS
   /// overlaid on top of the base VFS passed in the constructor.
   IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
-
-  CASOptions CASOpts;
-  std::shared_ptr<cas::ObjectStore> CAS;
 
   friend CompilerInstanceWithContext;
   std::unique_ptr<CompilerInstanceWithContext> CIWithContext;

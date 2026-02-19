@@ -23,8 +23,7 @@ using llvm::Error;
 
 DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service)
-    : Service(Service), CASOpts(Service.getOpts().CASOpts),
-      CAS(Service.getOpts().CAS) {
+    : Service(Service) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   // We need to read object files from PCH built outside the scanner.
   PCHContainerOps->registerReader(
@@ -162,8 +161,8 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
 
 bool DependencyScanningWorker::initializeCompilerInstanceWithContext(
     StringRef CWD, ArrayRef<std::string> CommandLine, DiagnosticConsumer &DC) {
-  auto [OverlayFS, ModifiedCommandLine] =
-      initVFSForByNameScanning(DepFS, CommandLine, CWD, "ScanningByName", CAS);
+  auto [OverlayFS, ModifiedCommandLine] = initVFSForByNameScanning(
+      DepFS, CommandLine, CWD, "ScanningByName", getCAS());
   auto DiagEngineWithCmdAndOpts =
       std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
                                                       OverlayFS, DC);

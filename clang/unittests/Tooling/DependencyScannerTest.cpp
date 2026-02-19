@@ -437,8 +437,7 @@ TEST(DependencyScanner, NoNegativeCacheCAS) {
   DependencyScanningServiceOptions Opts;
   Opts.MakeVFS = [VFS] { return VFS; };
   Opts.Format = ScanningOutputFormat::FullIncludeTree;
-  Opts.CAS = DB;
-  Opts.Cache = Cache;
+  Opts.Compilation = IncludeTreeCompilation{CASOptions(), DB, Cache};
   DependencyScanningService Service(std::move(Opts));
   DependencyScanningTool ScanTool(Service);
 

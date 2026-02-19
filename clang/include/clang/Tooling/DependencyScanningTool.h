@@ -182,11 +182,7 @@ public:
 
   llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
 
-  clang::dependencies::ScanningOutputFormat getScanningFormat() const {
-    return Worker.getScanningFormat();
-  }
-
-  const CASOptions &getCASOpts() const { return Worker.getCASOpts(); }
+  CASOptions getCASOpts() const { return Worker.getCASOpts(); }
 
   static std::unique_ptr<clang::dependencies::DependencyActionController>
   createActionController(

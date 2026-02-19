@@ -15,6 +15,8 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/CAS/ActionCache.h"
 
+#include <variant>
+
 namespace clang {
 namespace dependencies {
 
@@ -84,6 +86,18 @@ enum class ScanningOptimizations {
   FullIncludeTreeIrrelevant = HeaderSearch | VFS,
 };
 
+struct RegularCompilation {};
+struct IncludeTreeCompilation {
+  /// The CAS configuration.
+  CASOptions CASOpts;
+  /// The CAS database to use.
+  std::shared_ptr<cas::ObjectStore> CAS;
+  /// The CAS cache to use.
+  std::shared_ptr<cas::ActionCache> Cache;
+};
+using CompilationMode =
+    std::variant<RegularCompilation, IncludeTreeCompilation>;
+
 #undef DSS_LAST_BITMASK_ENUM
 
 bool shouldCacheNegativeStatsDefault();
@@ -105,12 +119,8 @@ struct DependencyScanningServiceOptions {
   ScanningMode Mode = ScanningMode::DependencyDirectivesScan;
   /// What output format are we expected to produce.
   ScanningOutputFormat Format = ScanningOutputFormat::Full;
-  /// The CAS configuration.
-  CASOptions CASOpts;
-  /// The CAS database to use.
-  std::shared_ptr<llvm::cas::ObjectStore> CAS;
-  /// The CAS cache to use.
-  std::shared_ptr<llvm::cas::ActionCache> Cache;
+  /// How to compile the resulting modules and translation units.
+  CompilationMode Compilation = RegularCompilation{};
   /// How to optimize resulting explicit module command lines.
   ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default;
   /// Whether the resulting command lines should load explicit PCMs eagerly.
