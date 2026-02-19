@@ -416,7 +416,7 @@ inline bool hasNamedOperand(uint64_t Opcode, OpName NamedIdx) {
 }
 
 LLVM_READONLY
-int64_t getSOPPWithRelaxation(uint32_t Opcode);
+int32_t getSOPPWithRelaxation(uint32_t Opcode);
 
 struct MIMGBaseOpcodeInfo {
   MIMGBaseOpcode BaseOpcode;
@@ -646,7 +646,7 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                                                   const MCSubtargetInfo &STI);
 
 LLVM_READONLY
-int64_t getMCOpcode(uint32_t Opcode, unsigned Gen);
+int32_t getMCOpcode(uint32_t Opcode, unsigned Gen);
 
 LLVM_READONLY
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3);

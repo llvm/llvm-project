@@ -1937,9 +1937,12 @@ struct DarwinPlatform {
                                           const DarwinSDKInfo &SDKInfo) {
     const DarwinSDKInfo::SDKPlatformInfo PlatformInfo =
         SDKInfo.getCanonicalPlatformInfo();
-    DarwinPlatform Result(InferredFromSDK,
-                          getPlatformFromOS(PlatformInfo.getOS()),
-                          SDKInfo.getVersion());
+    const llvm::Triple::OSType OS = PlatformInfo.getOS();
+    VersionTuple Version = SDKInfo.getVersion();
+    if (OS == llvm::Triple::MacOSX)
+      Version = getVersionFromString(
+          getSystemOrSDKMacOSVersion(Version.getAsString()));
+    DarwinPlatform Result(InferredFromSDK, getPlatformFromOS(OS), Version);
     Result.Environment = getEnvKindFromEnvType(PlatformInfo.getEnvironment());
     Result.InferSimulatorFromArch = false;
     Result.InferredSource = SDKRoot;
