@@ -13116,9 +13116,13 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   // FIXME: We should be able to handle f128 as well with a clever lowering.
   const APInt ImmInt = Imm.bitcastToAPInt();
   if (VT == MVT::f64)
-    IsLegal = AArch64_AM::getFP64Imm(ImmInt) != -1 || Imm.isPosZero();
+    IsLegal = AArch64_AM::getFP64Imm(ImmInt) != -1 ||
+              AArch64_AM::isAdvSIMDModImmType12(ImmInt.getZExtValue()) ||
+              Imm.isPosZero();
   else if (VT == MVT::f32)
-    IsLegal = AArch64_AM::getFP32Imm(ImmInt) != -1 || Imm.isPosZero();
+    IsLegal = AArch64_AM::getFP32Imm(ImmInt) != -1 ||
+              AArch64_AM::isAdvSIMDModImmType11(ImmInt.getZExtValue()) ||
+              Imm.isPosZero();
   else if (VT == MVT::f16 || VT == MVT::bf16)
     IsLegal =
         (Subtarget->hasFullFP16() && AArch64_AM::getFP16Imm(ImmInt) != -1) ||
