@@ -959,9 +959,10 @@ public:
   /// Returns true if we should use strict in-order reductions for the given
   /// RdxDesc. This is true if the -enable-strict-reductions flag is passed,
   /// the IsOrdered flag of RdxDesc is set and we do not allow reordering
-  /// of FP operations.
+  /// of FP operations or FP reductions.
   bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) const {
-    return !Hints->allowReordering() && RdxDesc.isOrdered();
+    return !Hints->allowReordering() &&
+           !Hints->allowFPReductionReassociation() && RdxDesc.isOrdered();
   }
 
   /// \returns The smallest bitwidth each instruction can be represented with.

@@ -100,6 +100,7 @@ bool LoopVectorizeHints::Hint::validate(unsigned Val) {
   case HK_ISVECTORIZED:
   case HK_PREDICATE:
   case HK_SCALABLE:
+  case HK_REASSOCIATE_FP_REDUCTIONS:
     return (Val == 0 || Val == 1);
   }
   return false;
@@ -115,6 +116,8 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
       IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
       Predicate("vectorize.predicate.enable", FK_Undefined, HK_PREDICATE),
       Scalable("vectorize.scalable.enable", SK_Unspecified, HK_SCALABLE),
+      ReassociateFPReductions("vectorize.reassociate_fpreductions.enable",
+                              FK_Undefined, HK_REASSOCIATE_FP_REDUCTIONS),
       TheLoop(L), ORE(ORE) {
   // Populate values with existing loop metadata.
   getHintsFromMetadata();
@@ -277,6 +280,11 @@ bool LoopVectorizeHints::allowReordering() const {
           EC.getKnownMinValue() > 1);
 }
 
+bool LoopVectorizeHints::allowFPReductionReassociation() const {
+  return HintsAllowReordering &&
+         getReassociateFPReductions() == LoopVectorizeHints::FK_Enabled;
+}
+
 void LoopVectorizeHints::getHintsFromMetadata() {
   MDNode *LoopID = TheLoop->getLoopID();
   if (!LoopID)
@@ -322,8 +330,13 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
     return;
   unsigned Val = C->getZExtValue();
 
-  Hint *Hints[] = {&Width,        &Interleave, &Force,
-                   &IsVectorized, &Predicate,  &Scalable};
+  Hint *Hints[] = {&Width,
+                   &Interleave,
+                   &Force,
+                   &IsVectorized,
+                   &Predicate,
+                   &Scalable,
+                   &ReassociateFPReductions};
   for (auto *H : Hints) {
     if (Name == H->Name) {
       if (H->validate(Val))
@@ -1349,22 +1362,25 @@ bool LoopVectorizationLegality::canVectorizeFPMath(
     return true;
 
   // If the above is false, we have ExactFPMath & do not allow reordering.
-  // If the EnableStrictReductions flag is set, first check if we have any
-  // Exact FP induction vars, which we cannot vectorize.
-  if (!EnableStrictReductions ||
-      any_of(getInductionVars(), [&](auto &Induction) -> bool {
+  // First check if we have any Exact FP induction vars, which we cannot
+  // vectorize.
+  if (any_of(getInductionVars(), [&](auto &Induction) -> bool {
         InductionDescriptor IndDesc = Induction.second;
         return IndDesc.getExactFPMathInst();
       }))
     return false;
 
-  // We can now only vectorize if all reductions with Exact FP math also
-  // have the isOrdered flag set, which indicates that we can move the
-  // reduction operations in-loop.
-  return (all_of(getReductionVars(), [&](auto &Reduction) -> bool {
-    const RecurrenceDescriptor &RdxDesc = Reduction.second;
-    return !RdxDesc.hasExactFPMath() || RdxDesc.isOrdered();
-  }));
+  // We can now only vectorize if EnableStrictReductions flag is set and
+  // all reductions with Exact FP math also have the isOrdered flag set,
+  // which indicates that we can move the reduction operations in-loop.
+  // If the hints allow reassociating FP reductions, then skip
+  // all the checks.
+  return (Hints->allowFPReductionReassociation() ||
+          all_of(getReductionVars(), [&](auto &Reduction) -> bool {
+            const RecurrenceDescriptor &RdxDesc = Reduction.second;
+            return !RdxDesc.hasExactFPMath() ||
+                   (EnableStrictReductions && RdxDesc.isOrdered());
+          }));
 }
 
 bool LoopVectorizationLegality::isInvariantStoreOfReduction(StoreInst *SI) {
