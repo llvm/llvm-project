@@ -557,8 +557,6 @@ define half @reduction_maxnum_v4f16(<4 x half> %vec4) {
 ; GFX9-LABEL: reduction_maxnum_v4f16:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX9-NEXT:    v_pk_max_f16 v0, v0, v1
 ; GFX9-NEXT:    v_max_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -566,11 +564,7 @@ define half @reduction_maxnum_v4f16(<4 x half> %vec4) {
 ; VI-LABEL: reduction_maxnum_v4f16:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v2, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v3, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_max_f16_e32 v2, v3, v2
+; VI-NEXT:    v_max_f16_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-NEXT:    v_max_f16_e32 v0, v0, v1
 ; VI-NEXT:    v_max_f16_e32 v0, v0, v2
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -587,8 +581,6 @@ define half @reduction_minnum_v4f16(<4 x half> %vec4) {
 ; GFX9-LABEL: reduction_minnum_v4f16:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX9-NEXT:    v_pk_min_f16 v0, v0, v1
 ; GFX9-NEXT:    v_min_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -596,11 +588,7 @@ define half @reduction_minnum_v4f16(<4 x half> %vec4) {
 ; VI-LABEL: reduction_minnum_v4f16:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v2, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v3, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_min_f16_e32 v2, v3, v2
+; VI-NEXT:    v_min_f16_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-NEXT:    v_min_f16_e32 v0, v0, v1
 ; VI-NEXT:    v_min_f16_e32 v0, v0, v2
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -619,8 +607,6 @@ define half @reduction_fast_max_pattern_v4f16(<4 x half> %vec4) {
 ; GFX9-LABEL: reduction_fast_max_pattern_v4f16:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX9-NEXT:    v_pk_max_f16 v0, v0, v1
 ; GFX9-NEXT:    v_max_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -628,11 +614,7 @@ define half @reduction_fast_max_pattern_v4f16(<4 x half> %vec4) {
 ; VI-LABEL: reduction_fast_max_pattern_v4f16:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v2, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v3, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_max_f16_e32 v2, v3, v2
+; VI-NEXT:    v_max_f16_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-NEXT:    v_max_f16_e32 v0, v0, v1
 ; VI-NEXT:    v_max_f16_e32 v0, v0, v2
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -653,8 +635,6 @@ define half @reduction_fast_min_pattern_v4f16(<4 x half> %vec4) {
 ; GFX9-LABEL: reduction_fast_min_pattern_v4f16:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX9-NEXT:    v_pk_min_f16 v0, v0, v1
 ; GFX9-NEXT:    v_min_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -662,11 +642,7 @@ define half @reduction_fast_min_pattern_v4f16(<4 x half> %vec4) {
 ; VI-LABEL: reduction_fast_min_pattern_v4f16:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v2, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v3, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_min_f16_e32 v2, v3, v2
+; VI-NEXT:    v_min_f16_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-NEXT:    v_min_f16_e32 v0, v0, v1
 ; VI-NEXT:    v_min_f16_e32 v0, v0, v2
 ; VI-NEXT:    s_setpc_b64 s[30:31]

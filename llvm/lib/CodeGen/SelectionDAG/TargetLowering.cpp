@@ -8808,49 +8808,42 @@ TargetLowering::createSelectForFMINNUM_FMAXNUM(SDNode *Node,
 
 SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
                                               SelectionDAG &DAG) const {
-  if (SDValue Expanded = expandVectorNaryOpBySplitting(Node, DAG))
-    return Expanded;
-
   EVT VT = Node->getValueType(0);
-  if (VT.isScalableVector())
-    report_fatal_error(
-        "Expanding fminnum/fmaxnum for scalable vectors is undefined.");
-
   SDLoc dl(Node);
-  unsigned NewOp =
-      Node->getOpcode() == ISD::FMINNUM ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
+  SDValue Op0 = Node->getOperand(0);
+  SDValue Op1 = Node->getOperand(1);
+  SDNodeFlags Flags = Node->getFlags();
+  unsigned Opc = Node->getOpcode();
 
-  if (isOperationLegalOrCustom(NewOp, VT)) {
-    SDValue Quiet0 = Node->getOperand(0);
-    SDValue Quiet1 = Node->getOperand(1);
-
-    if (!Node->getFlags().hasNoNaNs()) {
-      // Insert canonicalizes if it's possible we need to quiet to get correct
-      // sNaN behavior.
-      if (!DAG.isKnownNeverSNaN(Quiet0)) {
-        Quiet0 = DAG.getNode(ISD::FCANONICALIZE, dl, VT, Quiet0,
-                             Node->getFlags());
-      }
-      if (!DAG.isKnownNeverSNaN(Quiet1)) {
-        Quiet1 = DAG.getNode(ISD::FCANONICALIZE, dl, VT, Quiet1,
-                             Node->getFlags());
-      }
-    }
-
-    return DAG.getNode(NewOp, dl, VT, Quiet0, Quiet1, Node->getFlags());
-  }
+  unsigned NewOp = Opc == ISD::FMINNUM ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
+  if (isOperationLegalOrCustom(NewOp, VT))
+    return DAG.getNode(NewOp, dl, VT, Op0, Op1, Flags);
 
   // If the target has FMINIMUM/FMAXIMUM but not FMINNUM/FMAXNUM use that
   // instead if there are no NaNs.
-  if (Node->getFlags().hasNoNaNs() ||
-      (DAG.isKnownNeverNaN(Node->getOperand(0)) &&
-       DAG.isKnownNeverNaN(Node->getOperand(1)))) {
-    unsigned IEEE2018Op =
-        Node->getOpcode() == ISD::FMINNUM ? ISD::FMINIMUM : ISD::FMAXIMUM;
-    if (isOperationLegalOrCustom(IEEE2018Op, VT))
-      return DAG.getNode(IEEE2018Op, dl, VT, Node->getOperand(0),
-                         Node->getOperand(1), Node->getFlags());
+  if (Flags.hasNoNaNs() ||
+      (DAG.isKnownNeverNaN(Op0) && DAG.isKnownNeverNaN(Op1))) {
+    unsigned IEEE2019Op = Opc == ISD::FMINNUM ? ISD::FMINIMUM : ISD::FMAXIMUM;
+    if (isOperationLegalOrCustom(IEEE2019Op, VT))
+      return DAG.getNode(IEEE2019Op, dl, VT, Op0, Op1, Flags);
   }
+
+  // If the target has FMINIMUMNUM/FMAXIMUMNUM but not FMINNUM/FMAXNUM use that
+  // instead if there are no NaNs.
+  if (Flags.hasNoNaNs() ||
+      (DAG.isKnownNeverSNaN(Op0) && DAG.isKnownNeverSNaN(Op1))) {
+    unsigned IEEE2019NumOp =
+        Opc == ISD::FMINNUM ? ISD::FMINIMUMNUM : ISD::FMAXIMUMNUM;
+    if (isOperationLegalOrCustom(IEEE2019NumOp, VT))
+      return DAG.getNode(IEEE2019NumOp, dl, VT, Op0, Op1, Flags);
+  }
+
+  if (SDValue Expanded = expandVectorNaryOpBySplitting(Node, DAG))
+    return Expanded;
+
+  if (VT.isScalableVector())
+    report_fatal_error(
+        "Expanding fminnum/fmaxnum for scalable vectors is undefined.");
 
   if (SDValue SelCC = createSelectForFMINNUM_FMAXNUM(Node, DAG))
     return SelCC;
