@@ -1,0 +1,576 @@
+## Tests how --call-graph-info prints the call graph information.
+
+## Check non-relocatable object file handling.
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --elf-output-style=GNU --call-graph-info %t1 2>&1 | count 0
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t1 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=LLVM-NONRELOC -DFILE=%t1
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t1 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=JSON-NONRELOC -DFILE=%t1
+
+# LLVM-NONRELOC:      CallGraph [
+# LLVM-NONRELOC-NEXT:     Function {
+# LLVM-NONRELOC-NEXT:       Names: [foo]
+# LLVM-NONRELOC-NEXT:       Address: 0x1790
+# LLVM-NONRELOC-NEXT:       Version: 0
+# LLVM-NONRELOC-NEXT:       IsIndirectTarget: Yes
+# LLVM-NONRELOC-NEXT:       TypeID: 0x3ECBEEF531F74424
+# LLVM-NONRELOC-NEXT:       NumDirectCallees: 0
+# LLVM-NONRELOC-NEXT:       DirectCallees [
+# LLVM-NONRELOC-NEXT:       ]
+# LLVM-NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 0
+# LLVM-NONRELOC-NEXT:       IndirectTypeIDs: []
+# LLVM-NONRELOC-NEXT:     }
+# LLVM-NONRELOC-NEXT:     Function {
+# LLVM-NONRELOC-NEXT:       Names: [bar]
+# LLVM-NONRELOC-NEXT:       Address: 0x17A0
+# LLVM-NONRELOC-NEXT:       Version: 0
+# LLVM-NONRELOC-NEXT:       IsIndirectTarget: Yes
+# LLVM-NONRELOC-NEXT:       TypeID: 0x3ECBEEF531F74424
+# LLVM-NONRELOC-NEXT:       NumDirectCallees: 0
+# LLVM-NONRELOC-NEXT:       DirectCallees [
+# LLVM-NONRELOC-NEXT:       ]
+# LLVM-NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 0
+# LLVM-NONRELOC-NEXT:       IndirectTypeIDs: []
+# LLVM-NONRELOC-NEXT:     }
+# LLVM-NONRELOC-NEXT:     Function {
+# LLVM-NONRELOC-NEXT:       Names: [baz]
+# LLVM-NONRELOC-NEXT:       Address: 0x17B0
+# LLVM-NONRELOC-NEXT:       Version: 0
+# LLVM-NONRELOC-NEXT:       IsIndirectTarget: Yes
+# LLVM-NONRELOC-NEXT:       TypeID: 0x308E4B8159BC8654
+# LLVM-NONRELOC-NEXT:       NumDirectCallees: 0
+# LLVM-NONRELOC-NEXT:       DirectCallees [
+# LLVM-NONRELOC-NEXT:       ]
+# LLVM-NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 0
+# LLVM-NONRELOC-NEXT:       IndirectTypeIDs: []
+# LLVM-NONRELOC-NEXT:     }
+# LLVM-NONRELOC-NEXT:     Function {
+# LLVM-NONRELOC-NEXT:       Names: [main]
+# LLVM-NONRELOC-NEXT:       Address: 0x17C0
+# LLVM-NONRELOC-NEXT:       Version: 0
+# LLVM-NONRELOC-NEXT:       IsIndirectTarget: Yes
+# LLVM-NONRELOC-NEXT:       TypeID: 0xFA6809609A76AFCA
+# LLVM-NONRELOC-NEXT:       NumDirectCallees: 3
+# LLVM-NONRELOC-NEXT:       DirectCallees [
+# LLVM-NONRELOC-NEXT:         {
+# LLVM-NONRELOC-NEXT:           Names: [foo]
+# LLVM-NONRELOC-NEXT:           Address: 0x1790
+# LLVM-NONRELOC-NEXT:         }
+# LLVM-NONRELOC-NEXT:         {
+# LLVM-NONRELOC-NEXT:           Names: [bar]
+# LLVM-NONRELOC-NEXT:           Address: 0x17A0
+# LLVM-NONRELOC-NEXT:         }
+# LLVM-NONRELOC-NEXT:         {
+# LLVM-NONRELOC-NEXT:           Names: [baz]
+# LLVM-NONRELOC-NEXT:           Address: 0x17B0
+# LLVM-NONRELOC-NEXT:         }
+# LLVM-NONRELOC-NEXT:       ]
+# LLVM-NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 2
+# LLVM-NONRELOC-NEXT:       IndirectTypeIDs: [0x3ECBEEF531F74424, 0x308E4B8159BC8654]
+# LLVM-NONRELOC-NEXT:     }
+# LLVM-NONRELOC-NEXT:   ]
+
+# JSON-NONRELOC:     "CallGraph": [
+# JSON-NONRELOC-NEXT:      {
+# JSON-NONRELOC-NEXT:        "Function": {
+# JSON-NONRELOC-NEXT:          "Names": [
+# JSON-NONRELOC-NEXT:            "foo"
+# JSON-NONRELOC-NEXT:          ],
+# JSON-NONRELOC-NEXT:          "Address": 6032,
+# JSON-NONRELOC-NEXT:          "Version": 0,
+# JSON-NONRELOC-NEXT:          "IsIndirectTarget": true,
+# JSON-NONRELOC-NEXT:          "TypeID": 4524972987496481828,
+# JSON-NONRELOC-NEXT:          "NumDirectCallees": 0,
+# JSON-NONRELOC-NEXT:          "DirectCallees": [],
+# JSON-NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
+# JSON-NONRELOC-NEXT:          "IndirectTypeIDs": []
+# JSON-NONRELOC-NEXT:        }
+# JSON-NONRELOC-NEXT:      },
+# JSON-NONRELOC-NEXT:      {
+# JSON-NONRELOC-NEXT:        "Function": {
+# JSON-NONRELOC-NEXT:          "Names": [
+# JSON-NONRELOC-NEXT:            "bar"
+# JSON-NONRELOC-NEXT:          ],
+# JSON-NONRELOC-NEXT:          "Address": 6048,
+# JSON-NONRELOC-NEXT:          "Version": 0,
+# JSON-NONRELOC-NEXT:          "IsIndirectTarget": true,
+# JSON-NONRELOC-NEXT:          "TypeID": 4524972987496481828,
+# JSON-NONRELOC-NEXT:          "NumDirectCallees": 0,
+# JSON-NONRELOC-NEXT:          "DirectCallees": [],
+# JSON-NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
+# JSON-NONRELOC-NEXT:          "IndirectTypeIDs": []
+# JSON-NONRELOC-NEXT:        }
+# JSON-NONRELOC-NEXT:      },
+# JSON-NONRELOC-NEXT:      {
+# JSON-NONRELOC-NEXT:        "Function": {
+# JSON-NONRELOC-NEXT:          "Names": [
+# JSON-NONRELOC-NEXT:            "baz"
+# JSON-NONRELOC-NEXT:          ],
+# JSON-NONRELOC-NEXT:          "Address": 6064,
+# JSON-NONRELOC-NEXT:          "Version": 0,
+# JSON-NONRELOC-NEXT:          "IsIndirectTarget": true,
+# JSON-NONRELOC-NEXT:          "TypeID": 3498816979441845844,
+# JSON-NONRELOC-NEXT:          "NumDirectCallees": 0,
+# JSON-NONRELOC-NEXT:          "DirectCallees": [],
+# JSON-NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
+# JSON-NONRELOC-NEXT:          "IndirectTypeIDs": []
+# JSON-NONRELOC-NEXT:        }
+# JSON-NONRELOC-NEXT:      },
+# JSON-NONRELOC-NEXT:      {
+# JSON-NONRELOC-NEXT:        "Function": {
+# JSON-NONRELOC-NEXT:          "Names": [
+# JSON-NONRELOC-NEXT:            "main"
+# JSON-NONRELOC-NEXT:          ],
+# JSON-NONRELOC-NEXT:          "Address": 6080,
+# JSON-NONRELOC-NEXT:          "Version": 0,
+# JSON-NONRELOC-NEXT:          "IsIndirectTarget": true,
+# JSON-NONRELOC-NEXT:          "TypeID": 18043682217572872138,
+# JSON-NONRELOC-NEXT:          "NumDirectCallees": 3,
+# JSON-NONRELOC-NEXT:          "DirectCallees": [
+# JSON-NONRELOC-NEXT:            {
+# JSON-NONRELOC-NEXT:              "Names": [
+# JSON-NONRELOC-NEXT:                "foo"
+# JSON-NONRELOC-NEXT:              ],
+# JSON-NONRELOC-NEXT:              "Address": 6032
+# JSON-NONRELOC-NEXT:            },
+# JSON-NONRELOC-NEXT:            {
+# JSON-NONRELOC-NEXT:              "Names": [
+# JSON-NONRELOC-NEXT:                "bar"
+# JSON-NONRELOC-NEXT:              ],
+# JSON-NONRELOC-NEXT:              "Address": 6048
+# JSON-NONRELOC-NEXT:            },
+# JSON-NONRELOC-NEXT:            {
+# JSON-NONRELOC-NEXT:              "Names": [
+# JSON-NONRELOC-NEXT:                "baz"
+# JSON-NONRELOC-NEXT:              ],
+# JSON-NONRELOC-NEXT:              "Address": 6064
+# JSON-NONRELOC-NEXT:            }
+# JSON-NONRELOC-NEXT:          ],
+# JSON-NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 2,
+# JSON-NONRELOC-NEXT:          "IndirectTypeIDs": [
+# JSON-NONRELOC-NEXT:            4524972987496481828,
+# JSON-NONRELOC-NEXT:            3498816979441845844
+# JSON-NONRELOC-NEXT:          ]
+# JSON-NONRELOC-NEXT:        }
+# JSON-NONRELOC-NEXT:      }
+# JSON-NONRELOC-NEXT:    ]
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+  - Type:   SHT_LLVM_CALL_GRAPH
+    Link:   .text
+    ContentArray: [
+      ## --- foo ---
+      0x00, ## Version
+      0x01, ## Flags
+      0x90, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x1790
+      0x24, 0x44, 0xF7, 0x31, 0xF5, 0xEE, 0xCB, 0x3E, ## FunctionTypeID: 0x3ECBEEF531F74424
+
+      ## --- bar ---
+      0x00, ## Version
+      0x01, ## Flags
+      0xA0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x17A0
+      0x24, 0x44, 0xF7, 0x31, 0xF5, 0xEE, 0xCB, 0x3E, ## FunctionTypeID: 0x3ECBEEF531F74424
+
+      ## --- baz ---
+      0x00, ## Version
+      0x01, ## Flags
+      0xB0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x17B0
+      0x54, 0x86, 0xBC, 0x59, 0x81, 0x4B, 0x8E, 0x30, ## FunctionTypeID: 0x308E4B8159BC8654
+
+      ## --- main ---
+      0x00, ## Version
+      0x07, ## Flags
+      0xC0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x17C0
+      0xCA, 0xAF, 0x76, 0x9A, 0x60, 0x09, 0x68, 0xFA, ## FunctionTypeID: 0xFA6809609A76AFCA
+
+      ## Direct Callees
+      0x03, ## NumDirectCallees
+      0x90, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 1: 0x1790 (foo)
+      0xA0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 2: 0x17A0 (bar)
+      0xB0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 3: 0x17B0 (baz)
+
+      ## Indirect Callees
+      0x02, ## NumIndirectTargetTypeIDs
+      0x24, 0x44, 0xF7, 0x31, 0xF5, 0xEE, 0xCB, 0x3E, ## TypeID 1
+      0x54, 0x86, 0xBC, 0x59, 0x81, 0x4B, 0x8E, 0x30  ## TypeID 2
+    ]
+Symbols:
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1790
+  - Name:     bar
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x17A0
+  - Name:     baz
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x17B0
+  - Name:     main
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x17C0
+...
+
+## Check relocatable object file handling.
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj --elf-output-style=GNU --call-graph-info %t2 2>&1 | count 0
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t2 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=LLVM-RELOC -DFILE=%t2
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t2 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=JSON-RELOC -DFILE=%t2
+
+# LLVM-RELOC:   CallGraph [
+# LLVM-RELOC-NEXT:   Function {
+# LLVM-RELOC-NEXT:     Name: foo
+# LLVM-RELOC-NEXT:     Version: 0
+# LLVM-RELOC-NEXT:     IsIndirectTarget: Yes
+# LLVM-RELOC-NEXT:     TypeID: 0xF85C699BB8EF20A2
+# LLVM-RELOC-NEXT:     NumDirectCallees: 0
+# LLVM-RELOC-NEXT:     DirectCallees [
+# LLVM-RELOC-NEXT:     ]
+# LLVM-RELOC-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-RELOC-NEXT:     IndirectTypeIDs: []
+# LLVM-RELOC-NEXT:   }
+# LLVM-RELOC-NEXT:   Function {
+# LLVM-RELOC-NEXT:     Name: bar
+# LLVM-RELOC-NEXT:     Version: 0
+# LLVM-RELOC-NEXT:     IsIndirectTarget: Yes
+# LLVM-RELOC-NEXT:     TypeID: 0xF85C699BB8EF20A2
+# LLVM-RELOC-NEXT:     NumDirectCallees: 0
+# LLVM-RELOC-NEXT:     DirectCallees [
+# LLVM-RELOC-NEXT:     ]
+# LLVM-RELOC-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-RELOC-NEXT:     IndirectTypeIDs: []
+# LLVM-RELOC-NEXT:   }
+# LLVM-RELOC-NEXT:   Function {
+# LLVM-RELOC-NEXT:     Name: baz
+# LLVM-RELOC-NEXT:     Version: 0
+# LLVM-RELOC-NEXT:     IsIndirectTarget: Yes
+# LLVM-RELOC-NEXT:     TypeID: 0x308E4B8159BC8654
+# LLVM-RELOC-NEXT:     NumDirectCallees: 0
+# LLVM-RELOC-NEXT:     DirectCallees [
+# LLVM-RELOC-NEXT:     ]
+# LLVM-RELOC-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-RELOC-NEXT:     IndirectTypeIDs: []
+# LLVM-RELOC-NEXT:   }
+# LLVM-RELOC-NEXT:   Function {
+# LLVM-RELOC-NEXT:     Name: caller
+# LLVM-RELOC-NEXT:     Version: 0
+# LLVM-RELOC-NEXT:     IsIndirectTarget: Yes
+# LLVM-RELOC-NEXT:     TypeID: 0xA9494DEF81A01DC
+# LLVM-RELOC-NEXT:     NumDirectCallees: 3
+# LLVM-RELOC-NEXT:     DirectCallees [
+# LLVM-RELOC-NEXT:       {
+# LLVM-RELOC-NEXT:         Name: foo
+# LLVM-RELOC-NEXT:       }
+# LLVM-RELOC-NEXT:       {
+# LLVM-RELOC-NEXT:         Name: bar
+# LLVM-RELOC-NEXT:       }
+# LLVM-RELOC-NEXT:       {
+# LLVM-RELOC-NEXT:         Name: baz
+# LLVM-RELOC-NEXT:       }
+# LLVM-RELOC-NEXT:     ]
+# LLVM-RELOC-NEXT:     NumIndirectTargetTypeIDs: 2
+# LLVM-RELOC-NEXT:     IndirectTypeIDs: [0xF85C699BB8EF20A2, 0x308E4B8159BC8654]
+# LLVM-RELOC-NEXT:   }
+# LLVM-RELOC-NEXT: ]
+
+# JSON-RELOC:     "CallGraph": [
+# JSON-RELOC-NEXT:      {
+# JSON-RELOC-NEXT:        "Function": {
+# JSON-RELOC-NEXT:          "Name": "foo",
+# JSON-RELOC-NEXT:          "Version": 0,
+# JSON-RELOC-NEXT:          "IsIndirectTarget": true,
+# JSON-RELOC-NEXT:          "TypeID": 17896295136807035042,
+# JSON-RELOC-NEXT:          "NumDirectCallees": 0,
+# JSON-RELOC-NEXT:          "DirectCallees": [],
+# JSON-RELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
+# JSON-RELOC-NEXT:          "IndirectTypeIDs": []
+# JSON-RELOC-NEXT:        }
+# JSON-RELOC-NEXT:      },
+# JSON-RELOC-NEXT:      {
+# JSON-RELOC-NEXT:        "Function": {
+# JSON-RELOC-NEXT:          "Name": "bar",
+# JSON-RELOC-NEXT:          "Version": 0,
+# JSON-RELOC-NEXT:          "IsIndirectTarget": true,
+# JSON-RELOC-NEXT:          "TypeID": 17896295136807035042,
+# JSON-RELOC-NEXT:          "NumDirectCallees": 0,
+# JSON-RELOC-NEXT:          "DirectCallees": [],
+# JSON-RELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
+# JSON-RELOC-NEXT:          "IndirectTypeIDs": []
+# JSON-RELOC-NEXT:        }
+# JSON-RELOC-NEXT:      },
+# JSON-RELOC-NEXT:      {
+# JSON-RELOC-NEXT:        "Function": {
+# JSON-RELOC-NEXT:          "Name": "baz",
+# JSON-RELOC-NEXT:          "Version": 0,
+# JSON-RELOC-NEXT:          "IsIndirectTarget": true,
+# JSON-RELOC-NEXT:          "TypeID": 3498816979441845844,
+# JSON-RELOC-NEXT:          "NumDirectCallees": 0,
+# JSON-RELOC-NEXT:          "DirectCallees": [],
+# JSON-RELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
+# JSON-RELOC-NEXT:          "IndirectTypeIDs": []
+# JSON-RELOC-NEXT:        }
+# JSON-RELOC-NEXT:      },
+# JSON-RELOC-NEXT:      {
+# JSON-RELOC-NEXT:        "Function": {
+# JSON-RELOC-NEXT:          "Name": "caller",
+# JSON-RELOC-NEXT:          "Version": 0,
+# JSON-RELOC-NEXT:          "IsIndirectTarget": true,
+# JSON-RELOC-NEXT:          "TypeID": 762397922298560988,
+# JSON-RELOC-NEXT:          "NumDirectCallees": 3,
+# JSON-RELOC-NEXT:          "DirectCallees": [
+# JSON-RELOC-NEXT:            {
+# JSON-RELOC-NEXT:              "Name": "foo"
+# JSON-RELOC-NEXT:            },
+# JSON-RELOC-NEXT:            {
+# JSON-RELOC-NEXT:              "Name": "bar"
+# JSON-RELOC-NEXT:            },
+# JSON-RELOC-NEXT:            {
+# JSON-RELOC-NEXT:              "Name": "baz"
+# JSON-RELOC-NEXT:            }
+# JSON-RELOC-NEXT:          ],
+# JSON-RELOC-NEXT:          "NumIndirectTargetTypeIDs": 2,
+# JSON-RELOC-NEXT:          "IndirectTypeIDs": [
+# JSON-RELOC-NEXT:            17896295136807035042,
+# JSON-RELOC-NEXT:            3498816979441845844
+# JSON-RELOC-NEXT:          ]
+# JSON-RELOC-NEXT:        }
+# JSON-RELOC-NEXT:      }
+# JSON-RELOC-NEXT:    ]
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+  - Name:   .llvm.callgraph
+    Type:   SHT_LLVM_CALL_GRAPH
+    Link:   .text
+    ContentArray: [
+      ## --- foo ---
+      ## Offset 0x0
+      0x00, ## Format Version
+      0x01, ## Flags
+      ## Offset 0x2 (Matches Reloc: foo)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Address of foo
+      0xA2, 0x20, 0xEF, 0xB8, 0x9B, 0x69, 0x5C, 0xF8, ## TypeID of foo
+
+      ## --- bar ---
+      ## Offset 0x12
+      0x00, ## Format Version
+      0x01, ## Flags
+      ## Offset 0x14 (Matches Reloc: bar)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Address of bar
+      0xA2, 0x20, 0xEF, 0xB8, 0x9B, 0x69, 0x5C, 0xF8, ## TypeID of bar
+
+      ## --- baz ---
+      ## Offset 0x24
+      0x00, ## Format Version
+      0x01, ## Flags
+      ## Offset 0x26 (Matches Reloc: baz)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Address of baz
+      0x54, 0x86, 0xBC, 0x59, 0x81, 0x4B, 0x8E, 0x30, ## TypeID of baz
+
+      ## --- caller ---
+      ## Offset 0x36
+      0x00, ## Format Version
+      0x07, ## Flags (HasDirectCallees | IsIndirectTarget | ...)
+      ## Offset 0x38 (Matches Reloc: caller)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Address of caller
+      0xDC, 0x01, 0x1A, 0xF8, 0xDE, 0x94, 0x94, 0x0A, ## TypeID of caller
+
+      ## Direct Callees List
+      0x03, ## NumDirectCallees (3)
+      ## Offset 0x49 (Matches Reloc: foo)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 1: foo
+      ## Offset 0x51 (Matches Reloc: bar)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 2: bar
+      ## Offset 0x59 (Matches Reloc: baz)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 3: baz
+
+      ## Indirect Callees List
+      0x02, ## NumIndirectTargetTypeIDs (2)
+      0xA2, 0x20, 0xEF, 0xB8, 0x9B, 0x69, 0x5C, 0xF8, ## Indirect TypeID 1 (matches foo/bar)
+      0x54, 0x86, 0xBC, 0x59, 0x81, 0x4B, 0x8E, 0x30  ## Indirect TypeID 2 (matches baz)
+    ]
+  - Type:   SHT_RELA
+    Info:   .llvm.callgraph
+    Relocations:
+      - Offset:  0x2
+        Symbol:  foo
+        Type:    R_X86_64_64
+      - Offset:  0x14
+        Symbol:  bar
+        Type:    R_X86_64_64
+      - Offset:  0x26
+        Symbol:  baz
+        Type:    R_X86_64_64
+      - Offset:  0x38
+        Symbol:  caller
+        Type:    R_X86_64_64
+      - Offset:  0x49
+        Symbol:  foo
+        Type:    R_X86_64_64
+      - Offset:  0x51
+        Symbol:  bar
+        Type:    R_X86_64_64
+      - Offset:  0x59
+        Symbol:  baz
+        Type:    R_X86_64_64
+Symbols:
+  - Name:  foo
+  - Name:  bar
+  - Name:  baz
+  - Name:  caller
+...
+
+## Check ARM 32-bit Thumb address handling.
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t3 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=LLVM-ARM-THUMB -DFILE=%t3
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t3 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=JSON-ARM-THUMB -DFILE=%t3
+
+# LLVM-ARM-THUMB:      CallGraph [
+# LLVM-ARM-THUMB-NEXT:   Function {
+# LLVM-ARM-THUMB-NEXT:     Name: foo
+# LLVM-ARM-THUMB-NEXT:     Version: 0
+# LLVM-ARM-THUMB-NEXT:     IsIndirectTarget: No
+# LLVM-ARM-THUMB-NEXT:     TypeID: 0x123456789ABCDEF0
+# LLVM-ARM-THUMB-NEXT:     NumDirectCallees: 0
+# LLVM-ARM-THUMB-NEXT:     DirectCallees [
+# LLVM-ARM-THUMB-NEXT:     ]
+# LLVM-ARM-THUMB-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-ARM-THUMB-NEXT:     IndirectTypeIDs: []
+# LLVM-ARM-THUMB-NEXT:   }
+# LLVM-ARM-THUMB-NEXT: ]
+
+# JSON-ARM-THUMB:       "CallGraph": [
+# JSON-ARM-THUMB-NEXT:    {
+# JSON-ARM-THUMB-NEXT:      "Function": {
+# JSON-ARM-THUMB-NEXT:        "Name": "foo",
+# JSON-ARM-THUMB-NEXT:        "Version": 0,
+# JSON-ARM-THUMB-NEXT:        "IsIndirectTarget": false,
+# JSON-ARM-THUMB-NEXT:        "TypeID": 1311768467463790320,
+# JSON-ARM-THUMB-NEXT:        "NumDirectCallees": 0,
+# JSON-ARM-THUMB-NEXT:        "DirectCallees": [],
+# JSON-ARM-THUMB-NEXT:        "NumIndirectTargetTypeIDs": 0,
+# JSON-ARM-THUMB-NEXT:        "IndirectTypeIDs": []
+# JSON-ARM-THUMB-NEXT:      }
+# JSON-ARM-THUMB-NEXT:    }
+# JSON-ARM-THUMB-NEXT:  ]
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS32
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_ARM
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+  - Name:   .llvm.callgraph
+    Type:   SHT_LLVM_CALL_GRAPH
+    Link:   .text
+    ContentArray: [
+      ## --- foo+1 (Thumb address) ---
+      0x00, ## Version
+      0x00, ## Flags
+      0x01, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x1 (relative to foo)
+      0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12 ## FunctionTypeID: 0x123456789ABCDEF0
+    ]
+  - Type:   SHT_RELA
+    Info:   .llvm.callgraph
+    Relocations:
+      - Offset:  0x2 ## Offset to FunctionEntryPC
+        Symbol:  foo
+        Type:    R_ARM_ABS32
+Symbols:
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x0 
+...
+
+## Check multiple function names handling.
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t4 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=LLVM-MULTI-NAMES -DFILE=%t4
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t4 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=JSON-MULTI-NAMES -DFILE=%t4
+
+# LLVM-MULTI-NAMES:      CallGraph [
+# LLVM-MULTI-NAMES-NEXT:   Function {
+# LLVM-MULTI-NAMES-NEXT:     Names: [alias, foo]
+# LLVM-MULTI-NAMES-NEXT:     Address: 0x1000
+# LLVM-MULTI-NAMES-NEXT:     Version: 0
+# LLVM-MULTI-NAMES-NEXT:     IsIndirectTarget: Yes
+# LLVM-MULTI-NAMES-NEXT:     TypeID: 0x0
+# LLVM-MULTI-NAMES-NEXT:     NumDirectCallees: 0
+# LLVM-MULTI-NAMES-NEXT:     DirectCallees [
+# LLVM-MULTI-NAMES-NEXT:     ]
+# LLVM-MULTI-NAMES-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-MULTI-NAMES-NEXT:     IndirectTypeIDs: []
+# LLVM-MULTI-NAMES-NEXT:   }
+# LLVM-MULTI-NAMES-NEXT: ]
+
+# JSON-MULTI-NAMES:      "CallGraph": [
+# JSON-MULTI-NAMES-NEXT:    {
+# JSON-MULTI-NAMES-NEXT:      "Function": {
+# JSON-MULTI-NAMES-NEXT:        "Names": [
+# JSON-MULTI-NAMES-NEXT:          "alias",
+# JSON-MULTI-NAMES-NEXT:          "foo"
+# JSON-MULTI-NAMES-NEXT:        ],
+# JSON-MULTI-NAMES-NEXT:        "Address": 4096,
+# JSON-MULTI-NAMES-NEXT:        "Version": 0,
+# JSON-MULTI-NAMES-NEXT:        "IsIndirectTarget": true,
+# JSON-MULTI-NAMES-NEXT:        "TypeID": 0,
+# JSON-MULTI-NAMES-NEXT:        "NumDirectCallees": 0,
+# JSON-MULTI-NAMES-NEXT:        "DirectCallees": [],
+# JSON-MULTI-NAMES-NEXT:        "NumIndirectTargetTypeIDs": 0,
+# JSON-MULTI-NAMES-NEXT:        "IndirectTypeIDs": []
+# JSON-MULTI-NAMES-NEXT:      }
+# JSON-MULTI-NAMES-NEXT:    }
+# JSON-MULTI-NAMES-NEXT:  ]
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+  - Type:   SHT_LLVM_CALL_GRAPH
+    Link:   .text
+    ContentArray: [
+      ## --- foo/alias ---
+      0x00, ## Version
+      0x01, ## Flags
+      0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x1000
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  ## FunctionTypeID: 0
+    ]
+Symbols:
+  - Name:     alias
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1000
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1000

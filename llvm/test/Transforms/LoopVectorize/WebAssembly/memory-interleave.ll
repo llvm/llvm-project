@@ -624,7 +624,7 @@ define hidden void @three_bytes_interleave_op(ptr noalias nocapture noundef writ
 
 ; CHECK-LABEL: four_bytes_same_op
 ; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
-; CHECK: Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4 
+; CHECK: Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4
 ; CHECK: Cost of 132 for VF 16: INTERLEAVE-GROUP with factor 4
 ; CHECK: LV: Scalar loop costs: 20.
 ; CHECK: LV: Vector loop of width 2 costs: 40.
@@ -685,7 +685,7 @@ define hidden void @four_bytes_same_op(ptr noalias nocapture noundef writeonly %
 
 ; CHECK-LABEL: four_bytes_split_op
 ; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
-; CHECK: Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4 
+; CHECK: Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4
 ; CHECK: Cost of 132 for VF 16: INTERLEAVE-GROUP with factor 4
 ; CHECK: LV: Scalar loop costs: 20.
 ; CHECK: LV: Vector loop of width 2 costs: 45.
@@ -750,7 +750,7 @@ define hidden void @four_bytes_split_op(ptr noalias nocapture noundef writeonly 
 
 ; CHECK-LABEL: four_bytes_interleave_op
 ; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
-; CHECK: Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4 
+; CHECK: Cost of 26 for VF 8: INTERLEAVE-GROUP with factor 4
 ; CHECK: Cost of 132 for VF 16: INTERLEAVE-GROUP with factor 4
 ; CHECK: LV: Scalar loop costs: 20.
 ; CHECK: LV: Vector loop of width 2 costs: 40
@@ -1771,7 +1771,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: LV: Scalar loop costs: 24
 ; CHECK: LV: Vector loop of width 2 costs: 33
 ; CHECK: LV: Vector loop of width 4 costs: 30
-; CHECK: LV: Selecting VF: 1
+; CHECK: LV: Selecting VF: 4
 define hidden void @four_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
   %cmp45.not = icmp eq i32 %N, 0

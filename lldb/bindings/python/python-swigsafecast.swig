@@ -147,12 +147,6 @@ PythonObject SWIGBridge::ToSWIGWrapper(
   return ToSWIGHelper(module_spec_sb.release(), SWIGTYPE_p_lldb__SBModuleSpec);
 }
 
-PythonObject SWIGBridge::ToSWIGWrapper(
-    std::unique_ptr<lldb::SBFileSpecList> file_spec_list_sb) {
-  return ToSWIGHelper(file_spec_list_sb.release(),
-                      SWIGTYPE_p_lldb__SBFileSpecList);
-}
-
 PythonObject SWIGBridge::ToSWIGWrapper(lldb::DescriptionLevel level) {
   return PythonInteger((int64_t) level);
 }

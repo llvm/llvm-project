@@ -134,10 +134,8 @@ static bool needsPlt(RelExpr expr) {
 }
 
 bool lld::elf::needsGot(RelExpr expr) {
-  return oneof<R_GOT, RE_AARCH64_AUTH_GOT, RE_AARCH64_AUTH_GOT_PC, R_GOT_OFF,
-               RE_MIPS_GOT_LOCAL_PAGE, RE_MIPS_GOT_OFF, RE_MIPS_GOT_OFF32,
-               RE_AARCH64_GOT_PAGE_PC, RE_AARCH64_AUTH_GOT_PAGE_PC,
-               RE_AARCH64_AUTH_GOT_PAGE_PC, R_GOT_PC, R_GOTPLT,
+  return oneof<R_GOT, R_GOT_OFF, RE_MIPS_GOT_LOCAL_PAGE, RE_MIPS_GOT_OFF,
+               RE_MIPS_GOT_OFF32, RE_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTPLT,
                RE_AARCH64_GOT_PAGE, RE_LOONGARCH_GOT, RE_LOONGARCH_GOT_PAGE_PC>(
       expr);
 }
@@ -843,13 +841,11 @@ bool RelocScan::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // These expressions always compute a constant
   if (oneof<R_GOTPLT, R_GOT_OFF, R_RELAX_HINT, RE_MIPS_GOT_LOCAL_PAGE,
             RE_MIPS_GOTREL, RE_MIPS_GOT_OFF, RE_MIPS_GOT_OFF32,
-            RE_MIPS_GOT_GP_PC, RE_AARCH64_GOT_PAGE_PC,
-            RE_AARCH64_AUTH_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
+            RE_MIPS_GOT_GP_PC, RE_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
             R_GOTPLTONLY_PC, R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT,
             R_GOTPLT_GOTREL, R_GOTPLT_PC, RE_PPC32_PLTREL, RE_PPC64_CALL_PLT,
-            RE_RISCV_ADD, RE_AARCH64_GOT_PAGE, RE_AARCH64_AUTH_GOT,
-            RE_AARCH64_AUTH_GOT_PC, RE_LOONGARCH_PLT_PAGE_PC, RE_LOONGARCH_GOT,
-            RE_LOONGARCH_GOT_PAGE_PC>(e))
+            RE_RISCV_ADD, RE_AARCH64_GOT_PAGE, RE_LOONGARCH_PLT_PAGE_PC,
+            RE_LOONGARCH_GOT, RE_LOONGARCH_GOT_PAGE_PC>(e))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -926,13 +922,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
   const bool isIfunc = sym.isGnuIFunc();
   if (!sym.isPreemptible && !isIfunc) {
     if (expr != R_GOT_PC) {
-      // R_HEX_GD_PLT_B22_PCREL (call a@GDPLT) is transformed into
-      // call __tls_get_addr even if the symbol is non-preemptible.
-      if (!(ctx.arg.emachine == EM_HEXAGON &&
-            (type == R_HEX_GD_PLT_B22_PCREL ||
-             type == R_HEX_GD_PLT_B22_PCREL_X ||
-             type == R_HEX_GD_PLT_B32_PCREL_X)))
-        expr = fromPlt(expr);
+      expr = fromPlt(expr);
     } else if (!isAbsoluteOrTls(sym)) {
       expr = ctx.target->adjustGotPcExpr(type, addend,
                                          sec->content().data() + offset);
@@ -966,11 +956,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
     } else if (!sym.isTls() || ctx.arg.emachine != EM_LOONGARCH) {
       // Many LoongArch TLS relocs reuse the RE_LOONGARCH_GOT type, in which
       // case the NEEDS_GOT flag shouldn't get set.
-      if (expr == RE_AARCH64_AUTH_GOT || expr == RE_AARCH64_AUTH_GOT_PAGE_PC ||
-          expr == RE_AARCH64_AUTH_GOT_PC)
-        sym.setFlags(NEEDS_GOT | NEEDS_GOT_AUTH);
-      else
-        sym.setFlags(NEEDS_GOT | NEEDS_GOT_NONAUTH);
+      sym.setFlags(NEEDS_GOT | NEEDS_GOT_NONAUTH);
     }
   } else if (needsPlt(expr)) {
     sym.setFlags(NEEDS_PLT);
@@ -1137,27 +1123,6 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
   printLocation(diag, *sec, sym, offset);
 }
 
-static unsigned handleAArch64PAuthTlsRelocation(InputSectionBase *sec,
-                                                RelExpr expr, RelType type,
-                                                uint64_t offset, Symbol &sym,
-                                                int64_t addend) {
-  // Do not optimize signed TLSDESC to LE/IE (as described in pauthabielf64).
-  // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#general-restrictions
-  // > PAUTHELF64 only supports the descriptor based TLS (TLSDESC).
-  if (oneof<RE_AARCH64_AUTH_TLSDESC_PAGE, RE_AARCH64_AUTH_TLSDESC>(expr)) {
-    sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH);
-    sec->addReloc({expr, type, offset, addend, &sym});
-    return 1;
-  }
-
-  // TLSDESC_CALL hint relocation should not be emitted by compiler with signed
-  // TLSDESC enabled.
-  if (expr == R_TLSDESC_CALL)
-    sym.setFlags(NEEDS_TLSDESC_NONAUTH);
-
-  return 0;
-}
-
 // Notes about General Dynamic and Local Dynamic TLS models below. They may
 // require the generation of a pair of GOT entries that have associated dynamic
 // relocations. The pair of GOT entries created are of the form GOT[e0] Module
@@ -1168,27 +1133,18 @@ static unsigned handleAArch64PAuthTlsRelocation(InputSectionBase *sec,
 unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
                                         uint64_t offset, Symbol &sym,
                                         int64_t addend) {
-  bool isAArch64 = ctx.arg.emachine == EM_AARCH64;
-
-  if (isAArch64)
-    if (unsigned processed = handleAArch64PAuthTlsRelocation(
-            sec, expr, type, offset, sym, addend))
-      return processed;
-
   if (expr == R_TPREL || expr == R_TPREL_NEG)
     return checkTlsLe(offset, sym, type) ? 1 : 0;
 
   bool isRISCV = ctx.arg.emachine == EM_RISCV;
 
-  if (oneof<RE_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
-            R_TLSDESC_GOTPLT, RE_LOONGARCH_TLSDESC_PAGE_PC>(expr) &&
+  if (oneof<R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC, R_TLSDESC_GOTPLT,
+            RE_LOONGARCH_TLSDESC_PAGE_PC>(expr) &&
       ctx.arg.shared) {
     // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a label. Do not
     // set NEEDS_TLSDESC on the label.
     if (expr != R_TLSDESC_CALL) {
-      if (isAArch64)
-        sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_NONAUTH);
-      else if (!isRISCV || type == R_RISCV_TLSDESC_HI20)
+      if (!isRISCV || type == R_RISCV_TLSDESC_HI20)
         sym.setFlags(NEEDS_TLSDESC);
       sec->addReloc({expr, type, offset, addend, &sym});
     }
@@ -1204,14 +1160,12 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
        type == R_LARCH_TLS_DESC_LD || type == R_LARCH_TLS_DESC_CALL ||
        type == R_LARCH_TLS_DESC_PCREL20_S2);
 
-  // ARM, Hexagon, LoongArch and RISC-V do not support GD/LD to IE/LE
-  // optimizations.
+  // ARM, LoongArch and RISC-V do not support GD/LD to IE/LE optimizations.
   // RISC-V supports TLSDESC to IE/LE optimizations.
   // For PPC64, if the file has missing R_PPC64_TLSGD/R_PPC64_TLSLD, disable
   // optimization as well.
   bool execOptimize =
       !ctx.arg.shared && ctx.arg.emachine != EM_ARM &&
-      ctx.arg.emachine != EM_HEXAGON &&
       (ctx.arg.emachine != EM_LOONGARCH || execOptimizeInLoongArch) &&
       !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL);
 
@@ -1264,9 +1218,9 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
     return 1;
   }
 
-  if (oneof<RE_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
-            R_TLSDESC_GOTPLT, R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC,
-            RE_LOONGARCH_TLSGD_PAGE_PC, RE_LOONGARCH_TLSDESC_PAGE_PC>(expr)) {
+  if (oneof<R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC, R_TLSDESC_GOTPLT,
+            R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC, RE_LOONGARCH_TLSGD_PAGE_PC,
+            RE_LOONGARCH_TLSDESC_PAGE_PC>(expr)) {
     if (!execOptimize) {
       sym.setFlags(NEEDS_TLSGD);
       sec->addReloc({expr, type, offset, addend, &sym});
@@ -1290,12 +1244,11 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
     return ctx.target->getTlsGdRelaxSkip(type);
   }
 
-  if (oneof<R_GOT, R_GOTPLT, R_GOT_PC, RE_AARCH64_GOT_PAGE_PC,
-            RE_LOONGARCH_GOT_PAGE_PC, R_GOT_OFF, R_TLSIE_HINT>(expr)) {
-    ctx.hasTlsIe.store(true, std::memory_order_relaxed);
+  if (oneof<R_GOT, R_GOTPLT, R_GOT_PC, RE_LOONGARCH_GOT_PAGE_PC, R_GOT_OFF,
+            R_TLSIE_HINT>(expr)) {
     // Initial-Exec relocs can be optimized to Local-Exec if the symbol is
-    // locally defined.  This is not supported on SystemZ.
-    if (execOptimize && isLocalInExecutable && ctx.arg.emachine != EM_S390) {
+    // locally defined.
+    if (execOptimize && isLocalInExecutable) {
       sec->addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     } else if (expr != R_TLSIE_HINT) {
       sym.setFlags(NEEDS_TLSIE);
@@ -1313,7 +1266,6 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
   // NEEDS_TLSIE shouldn't set. So we check independently.
   if (ctx.arg.emachine == EM_LOONGARCH && expr == RE_LOONGARCH_GOT &&
       execOptimize && isLocalInExecutable) {
-    ctx.hasTlsIe.store(true, std::memory_order_relaxed);
     sec->addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     return 1;
   }
@@ -1326,12 +1278,6 @@ void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   RelocScan rs(ctx, &sec);
   // Many relocations end up in sec.relocations.
   sec.relocations.reserve(rels.size());
-
-  // On SystemZ, all sections need to be sorted by r_offset, to allow TLS
-  // relaxation to be handled correctly - see SystemZ::getTlsGdRelaxSkip.
-  SmallVector<RelTy, 0> storage;
-  if (ctx.arg.emachine == EM_S390)
-    rels = sortRels(rels, storage);
 
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     auto type = it->getType(false);
@@ -1506,6 +1452,7 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
 }
 
 void elf::postScanRelocations(Ctx &ctx) {
+  bool needsTlsIe = false;
   auto fn = [&](Symbol &sym) {
     auto flags = sym.flags.load(std::memory_order_relaxed);
     if (handleNonPreemptibleIfunc(ctx, sym, flags))
@@ -1605,8 +1552,10 @@ void elf::postScanRelocations(Ctx &ctx) {
           {R_ABS, ctx.target->tlsOffsetRel, sym.getGotOffset(ctx), 0, &sym});
     }
 
-    if (flags & NEEDS_TLSIE)
+    if (flags & NEEDS_TLSIE) {
+      needsTlsIe = true;
       addTpOffsetGotEntry(ctx, sym);
+    }
   };
 
   GotSection *got = ctx.in.got.get();
@@ -1628,6 +1577,9 @@ void elf::postScanRelocations(Ctx &ctx) {
   for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
       fn(*sym);
+
+  if (needsTlsIe)
+    ctx.hasTlsIe.store(true, std::memory_order_relaxed);
 
   if (ctx.arg.branchToBranch)
     ctx.target->applyBranchToBranchOpt();

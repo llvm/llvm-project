@@ -16,6 +16,7 @@ class TestFrameVar(TestBase):
     # set this to true.  That way it won't be run once for
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def test_frame_var(self):
         self.build()

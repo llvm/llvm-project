@@ -9,7 +9,7 @@
 // RUN: cp %S/Inputs/foodir %t.dir/Inputs/foodir
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/headerwithdirname.json > %t.cdb
 //
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 | FileCheck %s %if system-darwin %{ --check-prefixes=CHECK,CHECK-DARWIN %}
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 | FileCheck %s %if system-darwin && target={{.*}}-{{darwin|macos}}{{.*}} %{ --check-prefixes=CHECK,CHECK-DARWIN %}
 
 #include <foodir>
 

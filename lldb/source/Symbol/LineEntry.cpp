@@ -7,9 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/LineEntry.h"
-#include "lldb/Core/Address.h"
-#include "lldb/Core/Module.h"
-#include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -245,25 +242,8 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
   return complete_line_range;
 }
 
-void LineEntry::ApplyFileMappings(lldb::TargetSP target_sp,
-                                  const Address &address) {
+void LineEntry::ApplyFileMappings(lldb::TargetSP target_sp) {
   if (target_sp) {
-    // Try to resolve the source file via SymbolLocator plugins (e.g.,
-    // ScriptedSymbolLocator). This allows users to fetch source files
-    // by build ID from remote servers.
-    // Use Address::GetModule() directly to avoid re-entering
-    // ResolveSymbolContextForAddress which would cause infinite recursion.
-    lldb::ModuleSP module_sp = address.GetModule();
-    if (module_sp) {
-      FileSpec resolved = PluginManager::LocateSourceFile(
-          module_sp, original_file_sp->GetSpecOnly());
-      if (resolved) {
-        original_file_sp = std::make_shared<SupportFile>(resolved);
-        file_sp = std::make_shared<SupportFile>(resolved);
-        return;
-      }
-    }
-
     // Apply any file remappings to our file.
     if (auto new_file_spec = target_sp->GetSourcePathMap().FindFile(
             original_file_sp->GetSpecOnly())) {
