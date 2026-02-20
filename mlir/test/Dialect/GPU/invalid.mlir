@@ -1,5 +1,14 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s
 
+func.func @empty_body(%sz : index) {
+  // expected-error@+1 {{'gpu.launch' op body region is empty}}
+  "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
+  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
+  return
+}
+
+// -----
+
 func.func @not_enough_sizes(%sz : index) {
   // expected-error@+1 {{expected 6 or more operands, but found 5}}
   "gpu.launch"(%sz, %sz, %sz, %sz, %sz) ({

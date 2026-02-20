@@ -4177,6 +4177,7 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   // Ext-Int is just an integer type.
   case clang::Type::BitInt:
   case clang::Type::DependentBitInt:
+  case clang::Type::OverflowBehavior:
     return lldb::eTypeClassBuiltin;
   case clang::Type::ObjCObjectPointer:
     return lldb::eTypeClassObjCObjectPointer;
@@ -4875,6 +4876,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
 
   case clang::Type::BitInt:
   case clang::Type::DependentBitInt:
+  case clang::Type::OverflowBehavior:
     return qual_type->isUnsignedIntegerType() ? lldb::eEncodingUint
                                               : lldb::eEncodingSint;
 
@@ -5175,6 +5177,7 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
 
   case clang::Type::BitInt:
   case clang::Type::DependentBitInt:
+  case clang::Type::OverflowBehavior:
     return qual_type->isUnsignedIntegerType() ? lldb::eFormatUnsigned
                                               : lldb::eFormatDecimal;
 

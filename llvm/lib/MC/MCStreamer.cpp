@@ -399,6 +399,9 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 
   Symbol->setFragment(&getCurrentSectionOnly()->getDummyFragment());
 
+  if (LFIRewriter)
+    LFIRewriter->onLabel(Symbol);
+
   MCTargetStreamer *TS = getTargetStreamer();
   if (TS)
     TS->emitLabel(Symbol);

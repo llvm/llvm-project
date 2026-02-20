@@ -3789,6 +3789,24 @@ void MicrosoftCXXNameMangler::mangleType(const HLSLInlineSpirvType *T,
   llvm_unreachable("HLSL uses Itanium name mangling");
 }
 
+void MicrosoftCXXNameMangler::mangleType(const OverflowBehaviorType *T,
+                                         Qualifiers, SourceRange Range) {
+  QualType UnderlyingType = T->getUnderlyingType();
+
+  llvm::SmallString<64> TemplateMangling;
+  llvm::raw_svector_ostream Stream(TemplateMangling);
+  MicrosoftCXXNameMangler Extra(Context, Stream);
+  Stream << "?$";
+  if (T->isWrapKind()) {
+    Extra.mangleSourceName("ObtWrap_");
+  } else {
+    Extra.mangleSourceName("ObtTrap_");
+  }
+  Extra.mangleType(UnderlyingType, Range, QMM_Escape);
+
+  mangleArtificialTagType(TagTypeKind::Struct, TemplateMangling, {"__clang"});
+}
+
 // <this-adjustment> ::= <no-adjustment> | <static-adjustment> |
 //                       <virtual-adjustment>
 // <no-adjustment>      ::= A # private near
