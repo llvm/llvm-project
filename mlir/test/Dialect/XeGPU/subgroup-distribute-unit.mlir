@@ -329,6 +329,44 @@ gpu.func @vector_multi_reduction_dim1_distributed_dim1_reduction(%laneid: index)
   gpu.return
 }
 
+// CHECK-LABEL: gpu.func @vector_multi_reduction_dim1_distributed_dim1_reductio_over_partial_sg_size
+// CHECK:   %[[W:.*]] = gpu.warp_execute_on_lane_0(%{{.*}})[16] -> ({{.*}}) {
+// CHECK:   %[[T1:.*]] = vector.extract %{{.*}}#2[0] : f32 from vector<2xf32>
+// CHECK:   %[[T2:.*]] = vector.extract %{{.*}}#1[0, 0] : f32 from vector<2x1xf32>
+// CHECK:   %[[SHUFFLE:.*]], %{{.*}} = gpu.shuffle  xor %[[T2]], %{{.*}}, %{{.*}} : f32
+// CHECK:   %[[ADD:.*]] = arith.addf %[[T2]], %[[SHUFFLE]] : f32
+// CHECK:   %[[SHUFFLE2:.*]], %{{.*}} = gpu.shuffle  xor %[[ADD]], %{{.*}}, %{{.*}} : f32
+// CHECK:   %[[ADD2:.*]] = arith.addf %[[ADD]], %[[SHUFFLE2]] : f32
+// CHECK:   %[[FINAL:.*]] = arith.addf %[[ADD2]], %[[T1]] : f32
+// CHECK:   %[[T8:.*]] = vector.extract %{{.*}}#2[1] : f32 from vector<2xf32>
+// CHECK:   %[[T9:.*]] = vector.extract %{{.*}}#1[1, 0] : f32 from vector<2x1xf32>
+// CHECK:   %[[SHUFFLE5:.*]], %{{.*}} = gpu.shuffle  xor %[[T9]], %{{.*}}, %{{.*}} : f32
+// CHECK:   %[[ADD5:.*]] = arith.addf %[[T9]], %[[SHUFFLE5]] : f32
+// CHECK:   %[[SHUFFLE6:.*]], %{{.*}} = gpu.shuffle  xor %[[ADD5]], %{{.*}}, %{{.*}} : f32
+// CHECK:   %[[ADD6:.*]] = arith.addf %[[ADD5]], %[[SHUFFLE6]] : f32
+// CHECK:   %[[FINAL2:.*]] = arith.addf %[[ADD6]], %[[T8]] : f32
+gpu.func @vector_multi_reduction_dim1_distributed_dim1_reductio_over_partial_sg_size(%laneid: index) {
+  %c0 = arith.constant 0 : index
+  %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<2xf32>) {
+    %src = "some_def"()
+      {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+      : () -> (vector<16x4xf32>)
+    %acc = arith.constant
+      {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>}
+      dense<0.0>  : vector<2xf32>
+    %1 = vector.multi_reduction <add>, %src, %acc
+      {
+        layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+        layout_operand_1 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>,
+        layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>
+      }
+      [1] : vector<16x4xf32> to vector<2xf32>
+    gpu.yield %1 : vector<2xf32>
+  }
+  "some_user_op"(%r) : (vector<2xf32>) -> ()
+  gpu.return
+}
+
 // CHECK-LABEL:   gpu.func @vector_multi_reduction_dim0_distributed_dim1_reduction
 // CHECK:       %[[ACC:.*]] = arith.constant {{.*}} dense<0.000000e+00> : vector<32xf32>
 // CHECK:       %[[W:.*]]:3 = gpu.warp_execute_on_lane_0(%{{.*}})[16] -> (vector<2xf32>, vector<2x16xf32>, vector<2xf32>) {
