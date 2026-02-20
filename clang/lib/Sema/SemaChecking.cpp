@@ -3690,7 +3690,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   }
 
-  case Builtin::BI__builtin_reduce_any_order_fadd:
+  case Builtin::BI__builtin_reduce_assoc_fadd:
   case Builtin::BI__builtin_reduce_in_order_fadd: {
     // For in-order reductions require the user to specify the start value.
     bool InOrder = BuiltinID == Builtin::BI__builtin_reduce_in_order_fadd;

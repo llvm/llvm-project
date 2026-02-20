@@ -4215,7 +4215,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_reduce_minimum:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, Intrinsic::vector_reduce_fminimum, "rdx.minimum"));
-  case Builtin::BI__builtin_reduce_any_order_fadd:
+  case Builtin::BI__builtin_reduce_assoc_fadd:
   case Builtin::BI__builtin_reduce_in_order_fadd: {
     llvm::Value *Vector = EmitScalarExpr(E->getArg(0));
     llvm::Type *ScalarTy = Vector->getType()->getScalarType();
@@ -4229,8 +4229,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Function *F =
         CGM.getIntrinsic(Intrinsic::vector_reduce_fadd, Vector->getType());
     llvm::CallBase *Reduce = Builder.CreateCall(F, Args, "rdx.addf");
-    if (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_reduce_any_order_fadd) {
-      // `__builtin_reduce_any_order_fadd` is an associative reduction which
+    if (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_reduce_assoc_fadd) {
+      // `__builtin_reduce_assoc_fadd` is an associative reduction which
       // requires the reassoc FMF flag.
       llvm::FastMathFlags FMF;
       FMF.setAllowReassoc();

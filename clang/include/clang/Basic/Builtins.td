@@ -1671,7 +1671,7 @@ def ReduceInOrderFAdd : Builtin {
 }
 
 def ReduceAnyOrderFAdd : Builtin {
-  let Spellings = ["__builtin_reduce_any_order_fadd"];
+  let Spellings = ["__builtin_reduce_assoc_fadd"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
