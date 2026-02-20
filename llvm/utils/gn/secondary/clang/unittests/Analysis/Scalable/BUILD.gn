@@ -18,6 +18,7 @@ unittest("ClangScalableAnalysisTests") {
     "BuildNamespaceTest.cpp",
     "EntityIdTableTest.cpp",
     "EntityIdTest.cpp",
+    "EntityLinkageTest.cpp",
     "EntityNameTest.cpp",
     "Registries/FancyAnalysisData.cpp",
     "Registries/MockSerializationFormat.cpp",
@@ -25,6 +26,9 @@ unittest("ClangScalableAnalysisTests") {
     "Registries/MockSummaryExtractor2.cpp",
     "Registries/SerializationFormatRegistryTest.cpp",
     "Registries/SummaryExtractorRegistryTest.cpp",
+    "Serialization/JSONFormatTest.cpp",
     "SummaryNameTest.cpp",
+    "TUSummaryBuilderTest.cpp",
+    "TestFixture.cpp",
   ]
 }

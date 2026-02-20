@@ -248,6 +248,7 @@ if (current_toolchain == default_toolchain) {
       "__algorithm/ranges_set_symmetric_difference.h",
       "__algorithm/ranges_set_union.h",
       "__algorithm/ranges_shift_left.h",
+      "__algorithm/ranges_shift_right.h",
       "__algorithm/ranges_shuffle.h",
       "__algorithm/ranges_sort.h",
       "__algorithm/ranges_sort_heap.h",

@@ -129,7 +129,7 @@ entry:
 ; CHECK-SEC-ELF:       [Nr] Name               Type     {{.*}} ES Flg Lk Inf Al
 ; CHECK-SEC-ELF:       [ 3] .text.foo          PROGBITS {{.*}} 00  AX  0   0 16
 ; CHECK-SEC-ELF:       [ 5] .text.foo2         PROGBITS {{.*}} 00  AX  0   0 16
-; CHECK-SEC-ELF:       [ 8] .text.foo3         PROGBITS {{.*}} 00  AXG 0   0 16
+; CHECK-SEC-ELF:       [ 8] .text.foo3         PROGBITS {{.*}} 00  AXG 0   0  1
 ; CHECK-SEC-ELF-COUNT-3:    .pseudo_probe_desc PROGBITS
 ; CHECK-SEC-ELF:            .pseudo_probe      PROGBITS {{.*}} 00   L  3   0  1
 ; CHECK-SEC-ELF-NEXT:       .pseudo_probe      PROGBITS {{.*}} 00   L  5   0  1
@@ -156,7 +156,7 @@ entry:
 ; CHECK-SEC2-ELF:      [Nr] Name               Type     {{.*}} ES Flg Lk Inf Al
 ; CHECK-SEC2-ELF:      [ 3] .text              PROGBITS {{.*}} 00  AX  0   0 16
 ; CHECK-SEC2-ELF:      [ 5] .text              PROGBITS {{.*}} 00  AX  0   0 16
-; CHECK-SEC2-ELF:      [ 8] .text              PROGBITS {{.*}} 00  AXG 0   0 16
+; CHECK-SEC2-ELF:      [ 8] .text              PROGBITS {{.*}} 00  AXG 0   0  1
 ; CHECK-SEC2-ELF-COUNT-3:   .pseudo_probe_desc PROGBITS
 ; CHECK-SEC2-ELF:           .pseudo_probe      PROGBITS {{.*}} 00   L  3   0  1
 ; CHECK-SEC2-ELF-NEXT:      .pseudo_probe      PROGBITS {{.*}} 00   L  5   0  1

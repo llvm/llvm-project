@@ -208,6 +208,7 @@ static_library("CodeGen") {
     "RegisterPressure.cpp",
     "RegisterScavenging.cpp",
     "RegisterUsageInfo.cpp",
+    "Rematerializer.cpp",
     "RemoveLoadsIntoFakeUses.cpp",
     "RemoveRedundantDebugValues.cpp",
     "RenameIndependentSubregs.cpp",

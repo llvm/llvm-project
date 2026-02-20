@@ -209,6 +209,9 @@ Changes in existing checks
   <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
   option to suppress warnings in macros.
 
+- Improved :doc:`modernize-redundant-void-arg
+  <clang-tidy/checks/modernize/redundant-void-arg>` check to work in C23.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
   when an argument is part of a macro expansion.
