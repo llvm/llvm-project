@@ -35,7 +35,7 @@ int RTDECL(CUFStreamSynchronize)(cudaStream_t stream) {
 }
 
 int RTDECL(CUFStreamSynchronizeNull)() {
-  return cudaStreamSynchronize(RTDECL(CUFGetDefaultStream)());
+  return cudaStreamSynchronize(RTNAME(CUFGetDefaultStream)());
 }
 }
 
