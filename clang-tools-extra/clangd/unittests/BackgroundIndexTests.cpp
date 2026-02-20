@@ -2,8 +2,6 @@
 #include "CompileCommands.h"
 #include "Config.h"
 #include "Headers.h"
-#include "PathMapping.h"
-#include "SourceCode.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
 #include "TestTU.h"
@@ -13,8 +11,6 @@
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -1033,38 +1029,6 @@ TEST(BackgroundIndex, Profile) {
   Idx.profile(MT);
   ASSERT_THAT(MT.children(),
               UnorderedElementsAre(Pair("slabs", _), Pair("index", _)));
-}
-
-// Verify shard filenames are unchanged when no path mappings are used
-TEST(BackgroundIndexStorage, ShardFilenameUnchangedWithoutPathMappings) {
-  llvm::SmallString<256> TempDir;
-  ASSERT_FALSE(llvm::sys::fs::createUniqueDirectory("clangd-test", TempDir));
-  llvm::scope_exit Cleanup([&] { llvm::sys::fs::remove_directories(TempDir); });
-
-  auto Factory = BackgroundIndexStorage::createDiskBackedStorageFactory(
-      [&](PathRef) -> std::optional<ProjectInfo> {
-        return ProjectInfo{TempDir.str().str()};
-      },
-      /*Mappings=*/{});
-
-  std::string TestFilePath = (TempDir + "/foo.cpp").str();
-  BackgroundIndexStorage *Storage = Factory(TestFilePath);
-  ASSERT_NE(Storage, nullptr);
-
-  // Store a minimal shard to create the file
-  SymbolSlab::Builder SB;
-  SymbolSlab Symbols = std::move(SB).build();
-  IndexFileOut Shard;
-  Shard.Symbols = &Symbols;
-  ASSERT_FALSE(Storage->storeShard(TestFilePath, std::move(Shard)));
-
-  // Shard filename hash must be based on TestFilePath, not a file:// URI
-  llvm::SmallString<256> ExpectedPath(TempDir);
-  llvm::sys::path::append(ExpectedPath, ".cache", "clangd", "index",
-                          "foo.cpp." + llvm::toHex(digest(TestFilePath)) +
-                              ".idx");
-  EXPECT_TRUE(llvm::sys::fs::exists(ExpectedPath))
-      << "Expected shard file not found: " << ExpectedPath;
 }
 
 } // namespace clangd
