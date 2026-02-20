@@ -11,12 +11,14 @@
 #include "clang/Analysis/Scalable/Model/EntityName.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
+#include <cctype>
 
 namespace clang::ssaf {
 namespace {
 
 static bool isNonNegativeInteger(llvm::StringRef S) {
-  return !S.empty() && llvm::all_of(S, llvm::isDigit);
+  return !S.empty() &&
+         llvm::all_of(S, [](unsigned char C) { return std::isdigit(C); });
 }
 
 TEST(EntityIdTest, Equality) {
