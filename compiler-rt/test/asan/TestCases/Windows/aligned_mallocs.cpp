@@ -1,5 +1,5 @@
 // RUN: %clang_cl_asan %Od %s %Fe%t
-// RUN: %run %t
+// RUN: not %run %t 2>&1 | FileCheck %s
 
 #include <windows.h>
 
@@ -31,5 +31,18 @@ int main(void) {
     return __LINE__;
   _aligned_free(p);
 
+  char *y = (char *)malloc(1024);
+  char *u = (char *)realloc(y, 2048);
+  u[0] = 'a';
+  _aligned_free(u);
+  u = (char *)_aligned_offset_malloc(1024, 8, 0);
+  _aligned_free(u);
+
+  char *t = (char *)_aligned_malloc(128, 8);
+  t[-153] = 'a';
+
   return 0;
 }
+
+// CHECK: AddressSanitizer: access-violation on unknown address
+// CHECK: The signal is caused by a WRITE memory access.
