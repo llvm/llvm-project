@@ -26,3 +26,7 @@ class TestFrameVarDepthAndElemCount(TestBase):
                 "[4] = {\n    b = {...}\n  }",
             ],
         )
+
+
+    def test(self):
+        pass

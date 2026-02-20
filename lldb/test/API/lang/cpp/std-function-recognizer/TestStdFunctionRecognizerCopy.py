@@ -108,3 +108,11 @@ class LibCxxStdFunctionRecognizerTestCase(TestBase):
         self.assertLess(num_hidden, thread.GetNumFrames())
 
     # TEST
+    @add_test_categories(["libc++"])
+    def test_api(self):
+        pass
+
+    # TEST
+    @add_test_categories(["libc++"])
+    def test_api(self):
+        pass
