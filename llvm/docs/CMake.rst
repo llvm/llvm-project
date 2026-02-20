@@ -958,6 +958,11 @@ things to go wrong.  They are also unstable across LLVM versions.
   Only matters if *LLVM_INSTALL_UTILS* is enabled.
   Defaults to *LLVM_TOOLS_INSTALL_DIR*.
 
+**LLVM_PLUGINS_INSTALL_DIR**:STRING
+  The path to install LLVM pass-plugins, relative to the *CMAKE_INSTALL_PREFIX*.
+  Defaults to *plugins*. Third-party vendors may install out-of-tree plugins
+  here for easy access and implicit version match.
+
 CMake Caches
 ============
 

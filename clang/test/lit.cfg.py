@@ -282,6 +282,9 @@ if "aarch64" in config.host_arch:
 if not (config.build_shared_libs or config.link_llvm_dylib or config.link_clang_dylib):
     config.available_features.add("static-libs")
 
+if config.link_llvm_dylib:
+    config.available_features.add("llvm-dylib")
+
 # Plugins (loadable modules)
 if config.has_plugins and config.llvm_plugin_ext:
     config.available_features.add("plugins")
