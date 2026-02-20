@@ -1114,6 +1114,7 @@ def VSETVL : RVInstVSetVL<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
 } // hasSideEffects = 1, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVInstructions]
 
+let ElementsDependOn = EltDepsNone in
 foreach eew = [8, 16, 32, 64] in {
   defvar w = !cast<RISCVWidth>("LSWidth" # eew);
 
@@ -1142,6 +1143,7 @@ foreach eew = [8, 16, 32, 64] in {
 }
 
 let Predicates = [HasVInstructions] in {
+let ElementsDependOn = EltDepsNone in
 def VLM_V : VUnitStrideMaskLoad<"vlm.v">,
              Sched<[WriteVLDM_WorstCase, ReadVLDX]>;
 def VSM_V : VUnitStrideMaskStore<"vsm.v">,
@@ -1166,13 +1168,16 @@ def : InstAlias<"vl8r.v $vd, $rs1", (VL8RE8_V VRM8:$vd, GPRMemZeroOffset:$rs1)>;
 
 let Predicates = [HasVInstructions] in {
 // Vector Single-Width Integer Add and Subtract
+let ElementsDependOn = EltDepsNone in {
 defm VADD_V : VALU_IV_V_X_I<"vadd", 0b000000>;
 defm VSUB_V : VALU_IV_V_X<"vsub", 0b000010>;
 defm VRSUB_V : VALU_IV_X_I<"vrsub", 0b000011>;
+} // ElementsDependOn = EltDepsNone
 
 def : InstAlias<"vneg.v $vd, $vs$vm", (VRSUB_VX VR:$vd, VR:$vs, X0, VMaskOp:$vm)>;
 def : InstAlias<"vneg.v $vd, $vs", (VRSUB_VX VR:$vd, VR:$vs, X0, zero_reg)>;
 
+let ElementsDependOn = EltDepsNone in {
 // Vector Widening Integer Add/Subtract
 // Refer to 11.2 Widening Vector Arithmetic Instructions
 // The destination vector register group cannot overlap a source vector
@@ -1196,6 +1201,7 @@ defm VWADD_W : VALU_MV_V_X<"vwadd", 0b110101, "w">;
 defm VWSUB_W : VALU_MV_V_X<"vwsub", 0b110111, "w">;
 } // RVVConstraint = WidenW
 } // Constraints = "@earlyclobber $vd", DestEEW = EEWSEWx2
+} // ElementsDependOn = EltDepsNone
 
 def : InstAlias<"vwcvt.x.x.v $vd, $vs$vm",
                 (VWADD_VX VR:$vd, VR:$vs, X0, VMaskOp:$vm)>;
@@ -1205,6 +1211,8 @@ def : InstAlias<"vwcvtu.x.x.v $vd, $vs$vm",
                 (VWADDU_VX VR:$vd, VR:$vs, X0, VMaskOp:$vm)>;
 def : InstAlias<"vwcvtu.x.x.v $vd, $vs",
                 (VWADDU_VX VR:$vd, VR:$vs, X0, zero_reg)>;
+
+let ElementsDependOn = EltDepsNone in {
 
 // Vector Integer Extension
 def VZEXT_VF8 : VEXT_MV_VS2<"vzext.vf8", 0b010010, 0b00010>;
@@ -1230,10 +1238,14 @@ defm VAND_V : VALU_IV_V_X_I<"vand", 0b001001>;
 defm VOR_V : VALU_IV_V_X_I<"vor", 0b001010>;
 defm VXOR_V : VALU_IV_V_X_I<"vxor", 0b001011>;
 
+} // ElementsDependOn = EltDepsNone
+
 def : InstAlias<"vnot.v $vd, $vs$vm",
                 (VXOR_VI VR:$vd, VR:$vs, -1, VMaskOp:$vm)>;
 def : InstAlias<"vnot.v $vd, $vs",
                 (VXOR_VI VR:$vd, VR:$vs, -1, zero_reg)>;
+
+let ElementsDependOn = EltDepsNone in {
 
 // Vector Single-Width Bit Shift Instructions
 defm VSLL_V : VSHT_IV_V_X_I<"vsll", 0b100101>;
@@ -1250,13 +1262,16 @@ defm VNSRL_W : VNSHT_IV_V_X_I<"vnsrl", 0b101100>;
 defm VNSRA_W : VNSHT_IV_V_X_I<"vnsra", 0b101101>;
 } // Constraints = "@earlyclobber $vd"
 
+} // ElementsDependOn = EltDepsNone
+
 def : InstAlias<"vncvt.x.x.w $vd, $vs$vm",
                 (VNSRL_WX VR:$vd, VR:$vs, X0, VMaskOp:$vm)>;
 def : InstAlias<"vncvt.x.x.w $vd, $vs",
                 (VNSRL_WX VR:$vd, VR:$vs, X0, zero_reg)>;
 
 // Vector Integer Comparison Instructions
-let RVVConstraint = NoConstraint, DestEEW = EEW1 in {
+let RVVConstraint = NoConstraint, DestEEW = EEW1,
+    ElementsDependOn = EltDepsNone in {
 defm VMSEQ_V : VCMP_IV_V_X_I<"vmseq", 0b011000>;
 defm VMSNE_V : VCMP_IV_V_X_I<"vmsne", 0b011001>;
 defm VMSLTU_V : VCMP_IV_V_X<"vmsltu", 0b011010>;
@@ -1275,6 +1290,8 @@ def : InstAlias<"vmsgeu.vv $vd, $va, $vb$vm",
                 (VMSLEU_VV VR:$vd, VR:$vb, VR:$va, VMaskOp:$vm), 0>;
 def : InstAlias<"vmsge.vv $vd, $va, $vb$vm",
                 (VMSLE_VV VR:$vd, VR:$vb, VR:$va, VMaskOp:$vm), 0>;
+
+let ElementsDependOn = EltDepsNone in {
 
 let isCodeGenOnly = 0, isAsmParserOnly = 1, hasSideEffects = 0, mayLoad = 0,
     mayStore = 0, DestEEW = EEW1 in {
@@ -1392,9 +1409,15 @@ let Constraints = "@earlyclobber $vd" in {
 defm VNCLIPU_W : VNCLP_IV_V_X_I<"vnclipu", 0b101110>;
 defm VNCLIP_W : VNCLP_IV_V_X_I<"vnclip", 0b101111>;
 } // Constraints = "@earlyclobber $vd"
+
+} // ElementsDependOn = EltDepsNone
+
 } // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructionsAnyF] in {
+
+let ElementsDependOn = EltDepsNone in {
+
 // Vector Single-Width Floating-Point Add/Subtract Instructions
 let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
 defm VFADD_V : VALU_FV_V_F<"vfadd", 0b000000>;
@@ -1474,6 +1497,8 @@ defm VFSGNJ_V : VSGNJ_FV_V_F<"vfsgnj", 0b001000>;
 defm VFSGNJN_V : VSGNJ_FV_V_F<"vfsgnjn", 0b001001>;
 defm VFSGNJX_V : VSGNJ_FV_V_F<"vfsgnjx", 0b001010>;
 
+} // ElementsDependOn = EltDepsNone
+
 def : InstAlias<"vfneg.v $vd, $vs$vm",
                 (VFSGNJN_VV VR:$vd, VR:$vs, VR:$vs, VMaskOp:$vm)>;
 def : InstAlias<"vfneg.v $vd, $vs",
@@ -1484,19 +1509,22 @@ def : InstAlias<"vfabs.v $vd, $vs",
                 (VFSGNJX_VV VR:$vd, VR:$vs, VR:$vs, zero_reg)>;
 
 // Vector Floating-Point Compare Instructions
-let RVVConstraint = NoConstraint, mayRaiseFPException = true, DestEEW = EEW1 in {
+let RVVConstraint = NoConstraint, mayRaiseFPException = true, DestEEW = EEW1,
+    ElementsDependOn = EltDepsNone in {
 defm VMFEQ_V : VCMP_FV_V_F<"vmfeq", 0b011000>;
 defm VMFNE_V : VCMP_FV_V_F<"vmfne", 0b011100>;
 defm VMFLT_V : VCMP_FV_V_F<"vmflt", 0b011011>;
 defm VMFLE_V : VCMP_FV_V_F<"vmfle", 0b011001>;
 defm VMFGT_V : VCMP_FV_F<"vmfgt", 0b011101>;
 defm VMFGE_V : VCMP_FV_F<"vmfge", 0b011111>;
-} // RVVConstraint = NoConstraint, mayRaiseFPException = true, DestEEW = EEW1
+} // RVVConstraint = NoConstraint, mayRaiseFPException = true, DestEEW = EEW1, ElementsDependOn = EltDepsNone
 
 def : InstAlias<"vmfgt.vv $vd, $va, $vb$vm",
                 (VMFLT_VV VR:$vd, VR:$vb, VR:$va, VMaskOp:$vm), 0>;
 def : InstAlias<"vmfge.vv $vd, $va, $vb$vm",
                 (VMFLE_VV VR:$vd, VR:$vb, VR:$va, VMaskOp:$vm), 0>;
+
+let ElementsDependOn = EltDepsNone in {
 
 // Vector Floating-Point Classify Instruction
 def VFCLASS_V : VCLS_FV_VS2<"vfclass.v", 0b010011, 0b10000>;
@@ -1566,12 +1594,13 @@ def VFNCVT_F_F_W : VNCVTF_FV_VS2<"vfncvt.f.f.w", 0b010010, 0b10100>;
 }
 def VFNCVT_ROD_F_F_W : VNCVTF_FV_VS2<"vfncvt.rod.f.f.w", 0b010010, 0b10101>;
 } // Constraints = "@earlyclobber $vd", mayRaiseFPException = true
+} // ElementsDependOn = EltDepsNone
 } // Predicates = HasVInstructionsAnyF]
 
 let Predicates = [HasVInstructions] in {
 
 // Vector Single-Width Integer Reduction Instructions
-let RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask in {
+let RVVConstraint = NoConstraint in {
 defm VREDSUM  : VRED_MV_V<"vredsum", 0b000000>;
 defm VREDMAXU : VREDMINMAX_MV_V<"vredmaxu", 0b000110>;
 defm VREDMAX  : VREDMINMAX_MV_V<"vredmax", 0b000111>;
@@ -1580,23 +1609,23 @@ defm VREDMIN  : VREDMINMAX_MV_V<"vredmin", 0b000101>;
 defm VREDAND  : VRED_MV_V<"vredand", 0b000001>;
 defm VREDOR   : VRED_MV_V<"vredor", 0b000010>;
 defm VREDXOR  : VRED_MV_V<"vredxor", 0b000011>;
-} // RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask
+} // RVVConstraint = NoConstraint
 
 // Vector Widening Integer Reduction Instructions
-let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask, DestEEW = EEWSEWx2 in {
+let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, DestEEW = EEWSEWx2 in {
 // Set earlyclobber for following instructions for second and mask operands.
 // This has the downside that the earlyclobber constraint is too coarse and
 // will impose unnecessary restrictions by not allowing the destination to
 // overlap with the first (wide) operand.
 defm VWREDSUMU : VWRED_IV_V<"vwredsumu", 0b110000>;
 defm VWREDSUM : VWRED_IV_V<"vwredsum", 0b110001>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask, DestEEW = EEWSEWx2
+} // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, DestEEW = EEWSEWx2
 
 } // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructionsAnyF] in {
 // Vector Single-Width Floating-Point Reduction Instructions
-let RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask in {
+let RVVConstraint = NoConstraint in {
 let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
 defm VFREDOSUM : VREDO_FV_V<"vfredosum", 0b000011>;
 defm VFREDUSUM : VRED_FV_V<"vfredusum", 0b000001>;
@@ -1605,12 +1634,12 @@ let mayRaiseFPException = true in {
 defm VFREDMAX : VREDMINMAX_FV_V<"vfredmax", 0b000111>;
 defm VFREDMIN : VREDMINMAX_FV_V<"vfredmin", 0b000101>;
 }
-} // RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask
+} // RVVConstraint = NoConstraint
 
 def : MnemonicAlias<"vfredsum.vs", "vfredusum.vs">;
 
 // Vector Widening Floating-Point Reduction Instructions
-let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask, DestEEW = EEWSEWx2 in {
+let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, DestEEW = EEWSEWx2 in {
 // Set earlyclobber for following instructions for second and mask operands.
 // This has the downside that the earlyclobber constraint is too coarse and
 // will impose unnecessary restrictions by not allowing the destination to
@@ -1619,14 +1648,15 @@ let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
 defm VFWREDOSUM : VWREDO_FV_V<"vfwredosum", 0b110011>;
 defm VFWREDUSUM : VWRED_FV_V<"vfwredusum", 0b110001>;
 }
-} // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask, DestEEW = EEWSEWx2
+} // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, DestEEW = EEWSEWx2
 
 def : MnemonicAlias<"vfwredsum.vs", "vfwredusum.vs">;
 } // Predicates = [HasVInstructionsAnyF]
 
 let Predicates = [HasVInstructions] in {
 // Vector Mask-Register Logical Instructions
-let RVVConstraint = NoConstraint, DestEEW = EEW1 in {
+let RVVConstraint = NoConstraint, DestEEW = EEW1,
+    ElementsDependOn = EltDepsNone in {
 defm VMAND_M : VMALU_MV_Mask<"vmand", 0b011001, "m">;
 defm VMNAND_M : VMALU_MV_Mask<"vmnand", 0b011101, "m">;
 defm VMANDN_M : VMALU_MV_Mask<"vmandn", 0b011000, "m">;
@@ -1649,8 +1679,7 @@ def : InstAlias<"vmnot.m $vd, $vs",
 def : MnemonicAlias<"vmandnot.mm", "vmandn.mm">;
 def : MnemonicAlias<"vmornot.mm", "vmorn.mm">;
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
-    ElementsDependOn = EltDepsVLMask in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 
 // Vector mask population count vcpop
 def VCPOP_M : RVInstVUnaryRd<0b010000, 0b10000, OPMVV, (outs GPR:$rd),
@@ -1664,7 +1693,7 @@ def VFIRST_M : RVInstVUnaryRd<0b010000, 0b10001, OPMVV, (outs GPR:$rd),
                               "vfirst.m", "$rd, $vs2$vm">,
               SchedUnaryMC<"WriteVMFFSV", "ReadVMFFSV">;
 
-} // hasSideEffects = 0, mayLoad = 0, mayStore = 0, RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 0, RVVConstraint = NoConstraint
 
 def : MnemonicAlias<"vpopc.m", "vcpop.m">;
 
@@ -1684,7 +1713,8 @@ def VIOTA_M : VIOTA_MV_VS2<"viota.m", 0b010100, 0b10000>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsMask
 
 // Vector Element Index Instruction
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
+    ElementsDependOn = EltDepsNone in {
 
 def VID_V : RVInstVUnary<0b010100, 0b10001, OPMVV, (outs VR:$vd),
                          (ins VMaskOp:$vm), "vid.v", "$vd$vm">,
@@ -1709,13 +1739,14 @@ def VMV_S_X : RVInstVX<0b010000, OPMVX, (outs VR:$vd_wb),
   let RVVConstraint = NoConstraint;
 }
 
-} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 0, ElementsDependOn = EltDepsNone
 
 } // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructionsAnyF] in {
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1 in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1,
+    ElementsDependOn = EltDepsNone in {
 // Floating-Point Scalar Move Instructions
 def VFMV_F_S : RVInstVUnaryRd<0b010000, 0b00000, OPFVV, (outs FPR32:$rd),
                               (ins VR:$vs2), "vfmv.f.s", "$rd, $vs2">,
@@ -1737,18 +1768,20 @@ def VFMV_S_F : RVInstVX<0b010000, OPFVF, (outs VR:$vd_wb),
 
 let Predicates = [HasVInstructions] in {
 // Vector Slide Instructions
-let Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp in {
+let Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp,
+    ElementsDependOn = EltDepsNone in {
 defm VSLIDEUP_V : VSLD_IV_X_I<"vslideup", 0b001110, /*slidesUp=*/true>;
 defm VSLIDE1UP_V : VSLD1_MV_X<"vslide1up", 0b001110>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp
-let ReadsPastVL = 1 in
+let ReadsPastVL = 1, ElementsDependOn = EltDepsNone in
 defm VSLIDEDOWN_V : VSLD_IV_X_I<"vslidedown", 0b001111, /*slidesUp=*/false>;
 let ElementsDependOn = EltDepsVL, ReadsPastVL = 1 in
 defm VSLIDE1DOWN_V : VSLD1_MV_X<"vslide1down", 0b001111>;
 } // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructionsAnyF] in {
-let Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp in {
+let Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp,
+    ElementsDependOn = EltDepsNone in {
 defm VFSLIDE1UP_V : VSLD1_FV_F<"vfslide1up", 0b001110>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp
 let ElementsDependOn = EltDepsVL, ReadsPastVL = 1 in
@@ -1757,18 +1790,19 @@ defm VFSLIDE1DOWN_V : VSLD1_FV_F<"vfslide1down", 0b001111>;
 
 let Predicates = [HasVInstructions] in {
 // Vector Register Gather Instruction
-let Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather, ReadsPastVL = 1 in {
+let Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather,
+    ReadsPastVL = 1, ElementsDependOn = EltDepsNone in {
 defm VRGATHER_V : VGTR_IV_V_X_I<"vrgather", 0b001100>;
 def VRGATHEREI16_VV : VALUVV<0b001110, OPIVV, "vrgatherei16.vv">,
                       SchedBinaryMC<"WriteVRGatherEI16VV",
                                     "ReadVRGatherEI16VV_data",
                                     "ReadVRGatherEI16VV_index">;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather, ReadsPastVL = 1
+} // Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather, ReadsPastVL = 1, ElementsDependOn = EltDepsNone
 
 // Vector Compress Instruction
-let Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress, ElementsDependOn = EltDepsVLMask in {
+let Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress in {
 defm VCOMPRESS_V : VCPR_MV_Mask<"vcompress", 0b010111>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress, ElementsDependOn = EltDepsVLMask
+} // Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isMoveReg = 1 in {
 // A future extension may relax the vector register alignment restrictions.
@@ -1786,6 +1820,7 @@ foreach n = [1, 2, 4, 8] in {
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVInstructions]
 
+let ElementsDependOn = EltDepsNone in {
 let Predicates = [HasVInstructions] in {
   foreach nfields=2-8 in {
     foreach eew = [8, 16, 32] in {
@@ -1876,6 +1911,7 @@ let Predicates = [HasVInstructionsI64, IsRV64] in {
           VSXSEGSchedMC<nfields, 64, isOrdered=1>;
   }
 } // Predicates = [HasVInstructionsI64, IsRV64]
+} // ElementsDependOn = EltDepsNone
 
 include "RISCVInstrInfoVPseudos.td"
 include "RISCVInstrInfoZvfbf.td"

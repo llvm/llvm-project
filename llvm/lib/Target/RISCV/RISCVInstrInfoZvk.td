@@ -115,6 +115,8 @@ multiclass VAES_MV_V_S<bits<6> funct6_vv, bits<6> funct6_vs, bits<5> vs1,
 // Instructions
 //===----------------------------------------------------------------------===//
 
+let ElementsDependOn = EltDepsNone in {
+
 let Predicates = [HasStdExtZvbb] in {
   def  VBREV_V  : VALUVs2<0b010010, 0b01010, OPMVV, "vbrev.v">;
   def  VCLZ_V   : VALUVs2<0b010010, 0b01100, OPMVV, "vclz.v">;
@@ -138,7 +140,7 @@ let Predicates = [HasStdExtZvkb] in {
   defm VROR_V   : VROR_IV_V_X_I<"vror", 0b010100>;
 } // Predicates = [HasStdExtZvkb]
 
-let ElementsDependOn = EltDepsVLMask in {
+} // ElementsDependOn = EltDepsNone
 
 let Predicates = [HasStdExtZvkg] in {
   def VGHSH_VV : ZvkALUVVNoVmTernary<0b101100, OPMVV, "vghsh.vv">,
@@ -194,8 +196,6 @@ let Predicates = [HasStdExtZvksh], RVVConstraint = VS2Constraint in {
   def VSM3ME_VV : ZvkALUVVNoVm<0b100000, OPMVV, "vsm3me.vv">,
                   SchedUnaryMC<"WriteVSM3MEV", "ReadVSM3MEV">;
 } // Predicates = [HasStdExtZvksh]
-
-} // ElementsDependOn = EltDepsVLMask
 
 //===----------------------------------------------------------------------===//
 // Pseudo instructions
