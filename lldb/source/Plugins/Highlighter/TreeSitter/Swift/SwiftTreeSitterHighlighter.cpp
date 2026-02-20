@@ -10,13 +10,13 @@
 #include "HighlightQuery.h"
 #include "lldb/Target/Language.h"
 
+using namespace lldb_private;
+
 LLDB_PLUGIN_DEFINE_ADV(SwiftTreeSitterHighlighter, HighlighterTreeSitterSwift)
 
 extern "C" {
 const TSLanguage *tree_sitter_swift();
 }
-
-using namespace lldb_private;
 
 const TSLanguage *SwiftTreeSitterHighlighter::GetLanguage() const {
   return tree_sitter_swift();
