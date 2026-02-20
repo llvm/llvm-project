@@ -7,7 +7,7 @@
 }}
 <div id="{{USR}}" class="delimiter-container">
     <div>
-        <pre><code class="language-cpp code-clang-doc">enum {{#Scoped}}class {{/Scoped}}{{Name}}{{#BaseType}} : {{QualName}}{{/BaseType}}</code></pre>
+        <pre><code class="language-cpp code-clang-doc">enum {{#Scoped}}class {{/Scoped}}{{Name}}{{^Name}}(unnamed){{/Name}}{{#BaseType}} : {{QualName}}{{/BaseType}}</code></pre>
     </div>
     {{! Enum Values }}
     <table class="table-wrapper">

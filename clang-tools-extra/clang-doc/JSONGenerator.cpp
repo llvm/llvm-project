@@ -560,8 +560,6 @@ static void serializeInfo(const EnumInfo &I, json::Object &Obj,
                           const std::optional<StringRef> &RepositoryUrl,
                           const std::optional<StringRef> &RepositoryLine) {
   serializeCommonAttributes(I, Obj, RepositoryUrl, RepositoryLine);
-  if (I.Name.empty())
-    Obj["Name"] = "(unnamed)";
   Obj["Scoped"] = I.Scoped;
 
   if (I.BaseType) {
