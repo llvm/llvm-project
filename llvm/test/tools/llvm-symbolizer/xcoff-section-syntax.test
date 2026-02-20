@@ -1,0 +1,31 @@
+## Test section-relative address syntax parsing for XCOFF
+## This tests that the (SECTION_TYPE)(+offset) syntax produces appropriate
+## error messages for invalid syntax
+
+# REQUIRES: system-aix
+
+## Create a simple XCOFF object for testing
+# RUN: echo "define void @test() { ret void }" | \
+# RUN:   llc -filetype=obj -mtriple=powerpc-aix-ibm-xcoff -o %t.o
+
+## Test invalid section type
+# RUN: llvm-symbolizer --obj=%t.o '(INVALID)(+0x10)' 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-TYPE
+
+## Test missing '+' sign
+# RUN: llvm-symbolizer --obj=%t.o '(TEXT)(0x10)' 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NO-PLUS
+
+## Test invalid offset value (not a hex number)
+# RUN: llvm-symbolizer --obj=%t.o '(TEXT)(+abc)' 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-OFFSET
+
+## Test empty section type
+# RUN: llvm-symbolizer --obj=%t.o '()(+0x10)' 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=EMPTY-SECTION
+
+## Verify error messages are helpful
+# INVALID-TYPE: unknown or unsupported section type
+# NO-PLUS: section-relative offset must start with '+'
+# INVALID-OFFSET: invalid offset in section-relative address
+# EMPTY-SECTION: unknown section type: empty section type
