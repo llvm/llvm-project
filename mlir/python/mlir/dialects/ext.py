@@ -257,20 +257,19 @@ class Operation(ir.OpView):
 
         cls._traits = traits
 
+        if dialect:
+            if hasattr(cls, "_dialect_obj"):
+                raise RuntimeError(
+                    f"This operation has already been attached to dialect '{cls._dialect_obj.DIALECT_NAMESPACE}'."
+                )
+            cls._dialect_obj = dialect
+
         # for subclasses without "name" parameter,
         # just treat them as normal classes
         if not name:
             return
 
-        if dialect:
-            if hasattr(cls, "_dialect_name") or hasattr(cls, "_dialect_obj"):
-                raise RuntimeError(
-                    f"This operation has already been attached to dialect '{cls._dialect_name}'."
-                )
-            cls._dialect_obj = dialect
-            cls._dialect_name = dialect.DIALECT_NAMESPACE
-
-        if not hasattr(cls, "_dialect_name") or not hasattr(cls, "_dialect_obj"):
+        if not hasattr(cls, "_dialect_obj"):
             raise RuntimeError(
                 "Operation subclasses must either inherit from a Dialect's Operation subclass "
                 "or provide the dialect as a class keyword argument."
@@ -278,7 +277,7 @@ class Operation(ir.OpView):
 
         op_name = name
         cls._op_name = op_name
-        dialect_name = cls._dialect_name
+        dialect_name = cls._dialect_obj.DIALECT_NAMESPACE
         dialect_obj = cls._dialect_obj
 
         cls._generate_class_attributes(dialect_name, op_name, fields)
@@ -519,7 +518,8 @@ class Dialect(ir.Dialect):
         cls.Operation = type(
             "Operation",
             (Operation,),
-            {"_dialect_obj": cls, "_dialect_name": name},
+            dict(),
+            dialect=cls,
         )
 
     @classmethod
