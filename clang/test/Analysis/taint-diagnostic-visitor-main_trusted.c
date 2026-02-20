@@ -8,10 +8,8 @@ int system(const char *command);
 size_t strlen( const char* str );
 char * strncat ( char * destination, const char * source, size_t num );
 
-// This is to test that in trusted env
-// the diagnostics are constructed so
-// that argc or argv are not marked as
-// taint origin.
+// This is to test that in trusted env the diagnostics are constructed so that
+// argc or argv are not marked as taint origin.
 int main(int argc, char * argv[]) {
    if (argc < 1)// expected-note {{'argc' is >= 1}}
                 // expected-note@-1 {{Taking false branch}}

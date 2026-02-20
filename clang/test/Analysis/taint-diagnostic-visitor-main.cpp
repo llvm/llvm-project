@@ -11,7 +11,7 @@ char * strncpy ( char * destination, const char * source, size_t num );
 // In an untrusted environment the cmd line arguments
 // are assumed to be tainted.
 int main(int argc, char * argv[]) {// expected-note {{Taint originated in 'argv'}}
-   if (argc < 1)// expected-note {{'argc' is >= 1}}
+   if (argc < 2)// expected-note {{'argc' is >= 2}}
                 // expected-note@-1 {{Taking false branch}}
      return 1;
    char cmd[2048] = "/bin/cat ";
@@ -23,12 +23,17 @@ int main(int argc, char * argv[]) {// expected-note {{Taint originated in 'argv'
    return 0;
 }
 
-//Arguments of main as a class member
-//are note taint sources.
-//no warning expected
+
+// Arguments of main as a class member
+// are note taint sources.
+// no warning expected
+// A function declared inside a class or namespace may be named "main" but it
+// cannot be _the_ `main` function that is executed at startup. Validate that
+// in a case like this the arguments are not marked as tainted and no warning
+// is produced.
 class MyClass{
   int main(int argc, char * argv[]) {
-    if (argc < 1)                
+    if (argc < 2)                
         return 1;
     char cmd[2048] = "/bin/cat ";
     char filename[1024];
