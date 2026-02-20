@@ -317,7 +317,7 @@ supports the following subcommands:
   convert from binary XRay traces (both basic and FDR mode) to YAML,
   `flame-graph <https://github.com/brendangregg/FlameGraph>`_ friendly text
   formats, as well as `Chrome Trace Viewer (catapult)
-  <https://github.com/catapult-project/catapult>` formats.
+  <https://chromium.googlesource.com/catapult>` formats.
 - ``graph``: Generates a DOT graph of the function call relationships between
   functions found in an XRay trace.
 - ``stack``: Reconstructs function call stacks from a timeline of function
