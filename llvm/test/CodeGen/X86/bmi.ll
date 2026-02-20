@@ -1948,27 +1948,35 @@ define void @pr42118_i64(i64 %x) {
 define i32 @blsi_cflag_32(i32 %x, i32 %y) nounwind {
 ; X86-LABEL: blsi_cflag_32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    jne .LBB59_1
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    negl %edx
+; X86-NEXT:    jb .LBB59_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB59_1:
-; X86-NEXT:    blsil %eax, %eax
+; X86-NEXT:    andl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: blsi_cflag_32:
 ; X64:       # %bb.0:
-; X64-NEXT:    blsil %edi, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    andl %edi, %eax
+; X64-NEXT:    negl %edi
 ; X64-NEXT:    cmovael %esi, %eax
 ; X64-NEXT:    retq
 ;
 ; EGPR-LABEL: blsi_cflag_32:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    blsil %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
-; EGPR-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
-; EGPR-NEXT:    cmovel %esi, %eax # encoding: [0x0f,0x44,0xc6]
+; EGPR-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; EGPR-NEXT:    negl %eax # encoding: [0xf7,0xd8]
+; EGPR-NEXT:    andl %edi, %eax # encoding: [0x21,0xf8]
+; EGPR-NEXT:    negl %edi # encoding: [0xf7,0xdf]
+; EGPR-NEXT:    cmovael %esi, %eax # encoding: [0x0f,0x43,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %tobool = icmp eq i32 %x, 0
   %sub = sub nsw i32 0, %x
@@ -1980,40 +1988,54 @@ define i32 @blsi_cflag_32(i32 %x, i32 %y) nounwind {
 define i64 @blsi_cflag_64(i64 %x, i64 %y) nounwind {
 ; X86-LABEL: blsi_cflag_64:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    negl %eax
-; X86-NEXT:    sbbl %esi, %edx
-; X86-NEXT:    movl %ecx, %edi
-; X86-NEXT:    orl %esi, %edi
-; X86-NEXT:    jne .LBB60_1
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    movl %esi, %edi
+; X86-NEXT:    negl %edi
+; X86-NEXT:    sbbl %ecx, %edx
+; X86-NEXT:    setae %bl
+; X86-NEXT:    jb .LBB60_1
 ; X86-NEXT:  # %bb.2:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    jmp .LBB60_3
+; X86-NEXT:    testb %bl, %bl
+; X86-NEXT:    jne .LBB60_5
+; X86-NEXT:  .LBB60_4:
+; X86-NEXT:    andl %ecx, %edx
+; X86-NEXT:    jmp .LBB60_6
 ; X86-NEXT:  .LBB60_1:
-; X86-NEXT:    andl %esi, %edx
-; X86-NEXT:    andl %ecx, %eax
-; X86-NEXT:  .LBB60_3:
+; X86-NEXT:    andl %esi, %eax
+; X86-NEXT:    testb %bl, %bl
+; X86-NEXT:    je .LBB60_4
+; X86-NEXT:  .LBB60_5:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:  .LBB60_6:
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: blsi_cflag_64:
 ; X64:       # %bb.0:
-; X64-NEXT:    blsiq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    negq %rax
+; X64-NEXT:    andq %rdi, %rax
+; X64-NEXT:    negq %rdi
 ; X64-NEXT:    cmovaeq %rsi, %rax
 ; X64-NEXT:    retq
 ;
 ; EGPR-LABEL: blsi_cflag_64:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    blsiq %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf8,0xf3,0xdf]
-; EGPR-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
-; EGPR-NEXT:    cmoveq %rsi, %rax # encoding: [0x48,0x0f,0x44,0xc6]
+; EGPR-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; EGPR-NEXT:    negq %rax # encoding: [0x48,0xf7,0xd8]
+; EGPR-NEXT:    andq %rdi, %rax # encoding: [0x48,0x21,0xf8]
+; EGPR-NEXT:    negq %rdi # encoding: [0x48,0xf7,0xdf]
+; EGPR-NEXT:    cmovaeq %rsi, %rax # encoding: [0x48,0x0f,0x43,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %tobool = icmp eq i64 %x, 0
   %sub = sub nsw i64 0, %x

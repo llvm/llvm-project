@@ -471,10 +471,12 @@ private:
 
   bool tryToSinkFreeOperands(Instruction *I);
   bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, Value *Arg0, Value *Arg1,
-                                   CmpInst *Cmp, Intrinsic::ID IID);
+                                   CmpInst *Cmp, Intrinsic::ID IID,
+                                   bool NegateOverflow = false);
   bool optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool optimizeURem(Instruction *Rem);
   bool combineToUSubWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
+  bool combineToUSubWithNegatedOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool combineToUAddWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool unfoldPowerOf2Test(CmpInst *Cmp);
   void verifyBFIUpdates(Function &F);
@@ -1550,7 +1552,8 @@ static bool isIVIncrement(const Value *V, const LoopInfo *LI) {
 bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
                                                  Value *Arg0, Value *Arg1,
                                                  CmpInst *Cmp,
-                                                 Intrinsic::ID IID) {
+                                                 Intrinsic::ID IID,
+                                                 bool NegateOverflow) {
   auto IsReplacableIVIncrement = [this, &Cmp](BinaryOperator *BO) {
     if (!isIVIncrement(BO, LI))
       return false;
@@ -1622,6 +1625,8 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     assert(BO->hasOneUse() &&
            "Patterns with XOr should use the BO only in the compare");
   Value *OV = Builder.CreateExtractValue(MathOV, 1, "ov");
+  if (NegateOverflow)
+    OV = Builder.CreateXor(OV, ConstantInt::getAllOnesValue(OV->getType()));
   replaceAllUsesWith(Cmp, OV, FreshBBs, IsHugeFunc);
   Cmp->eraseFromParent();
   BO->eraseFromParent();
@@ -1756,6 +1761,71 @@ bool CodeGenPrepare::combineToUSubWithOverflow(CmpInst *Cmp,
 
   if (!replaceMathCmpWithIntrinsic(Sub, Sub->getOperand(0), Sub->getOperand(1),
                                    Cmp, Intrinsic::usub_with_overflow))
+    return false;
+
+  // Reset callers - do not crash by iterating over a dead instruction.
+  ModifiedDT = ModifyDT::ModifyInstDT;
+  return true;
+}
+
+bool CodeGenPrepare::combineToUSubWithNegatedOverflow(CmpInst *Cmp,
+                                                      ModifyDT &ModifiedDT) {
+  // We are not expecting non-canonical/degenerate code. Just bail out.
+  Value *A = Cmp->getOperand(0), *B = Cmp->getOperand(1);
+  if (isa<Constant>(A) && isa<Constant>(B))
+    return false;
+
+  // Convert (A u<= B) to (A u>= B) to simplify pattern matching.
+  ICmpInst::Predicate Pred = Cmp->getPredicate();
+  if (Pred == ICmpInst::ICMP_ULE) {
+    std::swap(A, B);
+    Pred = ICmpInst::ICMP_UGE;
+  }
+  // Convert special-case: (A != 0) is the same as (A u>= 1).
+  if (Pred == ICmpInst::ICMP_NE && match(B, m_ZeroInt())) {
+    B = ConstantInt::get(B->getType(), 1);
+    Pred = ICmpInst::ICMP_UGE;
+  }
+
+  // Convert special-case: (A == 0) is the same as (0 u>= A).
+  if (Pred == ICmpInst::ICMP_EQ && match(B, m_ZeroInt())) {
+    std::swap(A, B);
+    Pred = ICmpInst::ICMP_UGE;
+  }
+
+  if (Pred != ICmpInst::ICMP_UGE)
+    return false;
+
+  // Walk the users of a variable operand of a compare looking for a subtract or
+  // add with that same operand. Also match the 2nd operand of the compare to
+  // the add/sub, but that may be a negated constant operand of an add.
+  Value *CmpVariableOperand = isa<Constant>(A) ? B : A;
+  BinaryOperator *Sub = nullptr;
+  for (User *U : CmpVariableOperand->users()) {
+    // A - B, A u> B --> usubo(A, B)
+    if (match(U, m_Sub(m_Specific(A), m_Specific(B)))) {
+      Sub = cast<BinaryOperator>(U);
+      break;
+    }
+
+    // A + (-C), A u> C (canonicalized form of (sub A, C))
+    const APInt *CmpC, *AddC;
+    if (match(U, m_Add(m_Specific(A), m_APInt(AddC))) &&
+        match(B, m_APInt(CmpC)) && *AddC == -(*CmpC)) {
+      Sub = cast<BinaryOperator>(U);
+      break;
+    }
+  }
+  if (!Sub)
+    return false;
+
+  if (!TLI->shouldFormOverflowOp(ISD::USUBO,
+                                 TLI->getValueType(*DL, Sub->getType()),
+                                 Sub->hasNUsesOrMore(1)))
+    return false;
+
+  if (!replaceMathCmpWithIntrinsic(Sub, Sub->getOperand(0), Sub->getOperand(1),
+                                   Cmp, Intrinsic::usub_with_overflow, true))
     return false;
 
   // Reset callers - do not crash by iterating over a dead instruction.
@@ -2243,6 +2313,9 @@ bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
     return true;
 
   if (combineToUSubWithOverflow(Cmp, ModifiedDT))
+    return true;
+
+  if (combineToUSubWithNegatedOverflow(Cmp, ModifiedDT))
     return true;
 
   if (unfoldPowerOf2Test(Cmp))
