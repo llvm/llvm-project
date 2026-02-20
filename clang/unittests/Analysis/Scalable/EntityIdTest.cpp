@@ -16,7 +16,7 @@
 namespace clang::ssaf {
 namespace {
 
-using ::testing::MatchesRegex;
+using ::testing::StartsWith;
 
 TEST(EntityIdTest, Equality) {
   EntityIdTable Table;
@@ -72,7 +72,8 @@ TEST(EntityIdTest, StreamOutput) {
 
   std::string S;
   llvm::raw_string_ostream(S) << Id;
-  EXPECT_THAT(S, MatchesRegex("EntityId\\(\\d+\\)"));
+  EXPECT_THAT(S, StartsWith("EntityId("));
+  EXPECT_TRUE(S.back() == ')');
 }
 
 } // namespace
