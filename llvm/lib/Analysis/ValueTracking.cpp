@@ -4716,6 +4716,14 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   case LibFunc_fmaxf:
   case LibFunc_fmaxl:
     return Intrinsic::maxnum;
+  case LibFunc_fminimum_num:
+  case LibFunc_fminimum_numf:
+  case LibFunc_fminimum_numl:
+    return Intrinsic::minimumnum;
+  case LibFunc_fmaximum_num:
+  case LibFunc_fmaximum_numf:
+  case LibFunc_fmaximum_numl:
+    return Intrinsic::maximumnum;
   case LibFunc_copysign:
   case LibFunc_copysignf:
   case LibFunc_copysignl:
