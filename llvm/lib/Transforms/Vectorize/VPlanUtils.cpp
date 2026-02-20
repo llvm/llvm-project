@@ -46,7 +46,8 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   if (U && !isa<Instruction>(U->getValue()))
     return Plan.getOrAddLiveIn(U->getValue());
   auto *Expanded = new VPExpandSCEVRecipe(Expr);
-  Plan.getEntry()->appendRecipe(Expanded);
+  VPBasicBlock *EntryVPBB = Plan.getEntry();
+  Plan.getEntry()->insert(Expanded, EntryVPBB->getFirstNonPhi());
   return Expanded;
 }
 
@@ -76,6 +77,12 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
     assert(Plan.hasScalarVFOnly() &&
            "Non-scalar VF using scalar IV steps for header mask?");
     return true;
+  }
+
+  // For plans with forced tail folding, the header mask may not be an ALM.
+  if (match(V, m_ICmp(m_VPValue(A),
+                      m_Broadcast(m_Specific(Plan.getBackedgeTakenCount()))))) {
+    return IsWideCanonicalIV(A);
   }
 
   return match(V, m_ICmp(m_VPValue(A), m_VPValue(B))) && IsWideCanonicalIV(A) &&
@@ -606,6 +613,15 @@ VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
       HeaderMask = VPI;
     }
   }
+
+  for (VPRecipeBase &R : LoopRegion->getEntryBasicBlock()->phis()) {
+    auto *Def = cast<VPSingleDefRecipe>(&R);
+    if (vputils::isHeaderMask(Def, Plan)) {
+      assert(!HeaderMask && "Multiple header masks found?");
+      HeaderMask = Def;
+    }
+  }
+
   return HeaderMask;
 }
 
