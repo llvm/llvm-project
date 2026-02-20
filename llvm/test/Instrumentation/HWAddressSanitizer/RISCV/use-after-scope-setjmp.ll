@@ -52,18 +52,30 @@ define dso_local noundef i1 @_Z6targetv() sanitize_hwaddress {
 ; CHECK:       sw.bb1:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP14]], ptr @stackbuf, i32 19)
-; CHECK-NEXT:    store ptr [[BUF_HWASAN]], ptr @stackbuf, align 8
-; CHECK-NEXT:    call void @may_jump()
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i1 [ true, [[WHILE_BODY]] ], [ true, [[SW_BB1]] ], [ false, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP25:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; CHECK-NEXT:    [[TMP25:%.*]] = trunc i64 [[TMP15]] to i8
 ; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr [[BUF]] to i64
 ; CHECK-NEXT:    [[TMP27:%.*]] = and i64 [[TMP26]], 72057594037927935
 ; CHECK-NEXT:    [[TMP28:%.*]] = lshr i64 [[TMP27]], 4
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP28]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 256, i1 false)
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP14]], ptr @stackbuf, i32 19)
+; CHECK-NEXT:    store ptr [[BUF_HWASAN]], ptr @stackbuf, align 8
+; CHECK-NEXT:    call void @may_jump()
+; CHECK-NEXT:    [[TMP30:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; CHECK-NEXT:    [[TMP31:%.*]] = ptrtoint ptr [[BUF]] to i64
+; CHECK-NEXT:    [[TMP32:%.*]] = and i64 [[TMP31]], 72057594037927935
+; CHECK-NEXT:    [[TMP33:%.*]] = lshr i64 [[TMP32]], 4
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP33]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP34]], i8 [[TMP30]], i64 256, i1 false)
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i1 [ true, [[WHILE_BODY]] ], [ true, [[SW_BB1]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP35:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; CHECK-NEXT:    [[TMP36:%.*]] = ptrtoint ptr [[BUF]] to i64
+; CHECK-NEXT:    [[TMP37:%.*]] = and i64 [[TMP36]], 72057594037927935
+; CHECK-NEXT:    [[TMP38:%.*]] = lshr i64 [[TMP37]], 4
+; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP38]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP39]], i8 [[TMP35]], i64 256, i1 false)
 ; CHECK-NEXT:    ret i1 [[RETVAL_0]]
 ;
 entry:
