@@ -507,7 +507,7 @@ function(cxx_add_basic_build_flags target)
   # Use C++23 for all targets.
   set_target_properties(${target} PROPERTIES
     CXX_STANDARD 23
-    CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
+	CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS NO)
 
   # When building the dylib, don't warn for unavailable aligned allocation

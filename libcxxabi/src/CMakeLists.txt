@@ -182,7 +182,7 @@ set_target_properties(cxxabi_shared_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
     CXX_STANDARD 23
-    CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
+	CXX_STANDARD_REQUIRED ON
     COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
     DEFINE_SYMBOL ""
 )
@@ -275,7 +275,7 @@ set_target_properties(cxxabi_static_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
     CXX_STANDARD 23
-    CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
+	CXX_STANDARD_REQUIRED ON
     COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
 )
 target_compile_options(cxxabi_static_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
