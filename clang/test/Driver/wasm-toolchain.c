@@ -303,3 +303,15 @@
 // RUN:   | FileCheck -check-prefix=LINK_WALI_BASIC %s
 // LINK_WALI_BASIC: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_WALI_BASIC: wasm-ld{{.*}}" "-L/foo/lib/wasm32-linux-muslwali" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"
+
+// `wasm32-wasip3` passes `+component-model-thread-context` by default.
+
+// RUN: %clang -### --target=wasm32-wasip3 --sysroot=/foo %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=LINK_WASIP3_THREAD_CONTEXT %s
+// LINK_WASIP3_THREAD_CONTEXT: "-cc1" {{.*}} "-target-feature" "+component-model-thread-context"
+
+// `wasm32-wasip3` does not pass `+component-model-thread-context` when `-mno-component-model-thread-context` is used.
+
+// RUN: %clang -### --target=wasm32-wasip3 --sysroot=/foo -mno-component-model-thread-context %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=LINK_WASIP3_NO_THREAD_CONTEXT %s
+// LINK_WASIP3_NO_THREAD_CONTEXT: "-cc1" {{.*}} "-target-feature" "-component-model-thread-context"
