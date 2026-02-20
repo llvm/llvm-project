@@ -2005,7 +2005,6 @@ struct VectorStepSliceDistribution final : public gpu::WarpDistributionPattern {
     unsigned operandIdx = operand->getOperandNumber();
     xegpu::DistributeLayoutAttr resultLayout =
         xegpu::getTemporaryLayout(stepOp->getResult(0));
-    auto stepResultVecTy = stepOp.getResult().getType();
     if (!resultLayout)
       return rewriter.notifyMatchFailure(
           stepOp, "the result vector of the step op lacks layout "
@@ -2020,6 +2019,7 @@ struct VectorStepSliceDistribution final : public gpu::WarpDistributionPattern {
 
     rewriter.setInsertionPointAfter(warpOp);
     auto loc = stepOp.getLoc();
+    auto stepResultVecTy = stepOp.getResult().getType();
     Value distributedVal = warpOp.getResult(operandIdx);
     VectorType newVecTy = cast<VectorType>(distributedVal.getType());
 
@@ -2028,33 +2028,33 @@ struct VectorStepSliceDistribution final : public gpu::WarpDistributionPattern {
     if (failed(laneDataBlockCoords))
       return rewriter.notifyMatchFailure(
           stepOp, "failed to compute lane data block coordinates");
-    // No dist units at lane level
+
     auto laneDataBlockCoordsVec = laneDataBlockCoords.value();
     auto laneDataBlockLength = resultLayout.getEffectiveLaneDataAsInt()[0];
-    assert(laneDataBlockCoordsVec.size() ==
+    assert(static_cast<int64_t>(laneDataBlockCoordsVec.size()) ==
            newVecTy.getNumElements() / laneDataBlockLength);
-    SmallVector<Value> stepOpVals;
-    // For the offset of each block of lane_data, get the "contiguous" slice
-    // from the sequence of vector.step. Example: vector.step
-    // {slice<layout<lane_layout=[2,4,2], lane_data=[1,2,1]>, slice[0,2]>} :
-    // vector<16xindex> Each logical lane holds 4 elements, with 2 blocks of 2
-    // elements each. The blocks are round-robin distributed, so logical lane id
-    // 0 will hold [0,1, 8,9] values.
-    for (int laneBlockIdx = 0; laneBlockIdx < laneDataBlockCoordsVec.size();
-         ++laneBlockIdx) {
-      auto laneDataBlockStartCoord = laneDataBlockCoordsVec[laneBlockIdx][0];
-      stepOpVals.push_back(laneDataBlockStartCoord);
+    SmallVector<Value> stepVals;
+    // For each lane_data block, reconstruct its sub-range
+    // from the range of SG-level vector.step. Example: vector.step
+    // {slice<layout<lane_layout=[2,4,2], lane_data=[1,2,1]>, dims=[0,2]>} :
+    // vector<16xindex>
+    // Each logical lane holds 4 elements as 2 blocks of 2 elements each.
+    // The blocks are round-robin distributed, so logical lane id 0
+    // holds values [0,1, 8,9].
+    for (auto &laneDataBlockCoords : laneDataBlockCoordsVec) {
+      auto laneDataBlockStartCoord = laneDataBlockCoords[0];
+      stepVals.push_back(laneDataBlockStartCoord);
       for (int i = 1; i < laneDataBlockLength; ++i) {
-        auto offset = rewriter.create<arith::ConstantIndexOp>(loc, i);
-        stepOpVals.push_back(rewriter.create<arith::AddIOp>(
-            loc, laneDataBlockStartCoord, offset));
+        auto offset = arith::ConstantIndexOp::create(rewriter, loc, i);
+        stepVals.push_back(arith::AddIOp::create(
+            rewriter, loc, laneDataBlockStartCoord, offset));
       }
     }
-    assert(stepOpVals.size() == newVecTy.getNumElements() &&
-           "Expecting the number of step op values to match the number of "
+    assert(static_cast<int64_t>(stepVals.size()) == newVecTy.getNumElements() &&
+           "Expecting the number of step values to match the number of "
            "elements in the vector");
     auto stepOpVal =
-        vector::FromElementsOp::create(rewriter, loc, newVecTy, stepOpVals);
+        vector::FromElementsOp::create(rewriter, loc, newVecTy, stepVals);
     rewriter.replaceAllUsesWith(distributedVal, stepOpVal);
     return success();
   }
