@@ -70,7 +70,8 @@
 .end_amdhsa_kernel
 
 // GCN-LABEL: warning: test_amdhsa_next_free_sgpr_missing
-// AMDHSA: error: .amdhsa_next_free_sgpr directive is required
+// PREGFX10: error: .amdhsa_next_free_sgpr directive is required
+// GFX10PLUS-NOT: error: .amdhsa_next_free_sgpr directive is required
 // NONAMDHSA: error: unknown directive
 .warning "test_amdhsa_next_free_sgpr_missing"
 .amdhsa_kernel test_amdhsa_next_free_sgpr_missing

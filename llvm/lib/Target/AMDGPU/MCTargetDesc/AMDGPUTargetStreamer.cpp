@@ -497,9 +497,11 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   EmitMCExpr(NextVGPR);
   OS << '\n';
 
-  OS << "\t\t.amdhsa_next_free_sgpr ";
-  EmitMCExpr(NextSGPR);
-  OS << '\n';
+  if (!AMDGPU::isGFX10Plus(STI)) {
+    OS << "\t\t.amdhsa_next_free_sgpr ";
+    EmitMCExpr(NextSGPR);
+    OS << '\n';
+  }
 
   if (AMDGPU::isGFX90A(STI)) {
     // MCExpr equivalent of taking the (accum_offset + 1) * 4.

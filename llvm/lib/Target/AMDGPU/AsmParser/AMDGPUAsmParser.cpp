@@ -6344,7 +6344,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   if (!Seen.contains(".amdhsa_next_free_vgpr"))
     return TokError(".amdhsa_next_free_vgpr directive is required");
 
-  if (!Seen.contains(".amdhsa_next_free_sgpr"))
+  if (!isGFX10Plus() && !Seen.contains(".amdhsa_next_free_sgpr"))
     return TokError(".amdhsa_next_free_sgpr directive is required");
 
   unsigned UserSGPRCount = ExplicitUserSGPRCount.value_or(ImpliedUserSGPRCount);
