@@ -3193,6 +3193,64 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_floor",
+    hdrs = ["src/__support/math/floor.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_floorbf16",
+    hdrs = ["src/__support/math/floorbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_floorf",
+    hdrs = ["src/__support/math/floorf.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_floorf128",
+    hdrs = ["src/__support/math/floorf128.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_floorf16",
+    hdrs = ["src/__support/math/floorf16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_floorl",
+    hdrs = ["src/__support/math/floorl.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_fmax",
     hdrs = ["src/__support/math/fmax.h"],
     deps = [
@@ -5198,15 +5256,47 @@ libc_math_function(
     additional_deps = [":__support_fputil_fma"],
 )
 
-libc_math_function(name = "floor")
+libc_math_function(
+    name = "floor",
+    additional_deps = [
+        ":__support_math_floor",
+    ],
+)
 
-libc_math_function(name = "floorf")
+libc_math_function(
+    name = "floorbf16",
+    additional_deps = [
+        ":__support_math_floorbf16",
+    ],
+)
 
-libc_math_function(name = "floorl")
+libc_math_function(
+    name = "floorf",
+    additional_deps = [
+        ":__support_math_floorf",
+    ],
+)
 
-libc_math_function(name = "floorf128")
+libc_math_function(
+    name = "floorl",
+    additional_deps = [
+        ":__support_math_floorl",
+    ],
+)
 
-libc_math_function(name = "floorf16")
+libc_math_function(
+    name = "floorf128",
+    additional_deps = [
+        ":__support_math_floorf128",
+    ],
+)
+
+libc_math_function(
+    name = "floorf16",
+    additional_deps = [
+        ":__support_math_floorf16",
+    ],
+)
 
 libc_math_function(
     name = "fma",

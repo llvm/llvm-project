@@ -90,6 +90,12 @@ add_fp_unittest(
     libc.src.__support.math.faddl
     libc.src.__support.math.ffma
     libc.src.__support.math.ffmal
+    libc.src.__support.math.floor
+    libc.src.__support.math.floorbf16
+    libc.src.__support.math.floorf
+    libc.src.__support.math.floorf128
+    libc.src.__support.math.floorf16
+    libc.src.__support.math.floorl
     libc.src.__support.math.fmax
     libc.src.__support.math.fmaxbf16
     libc.src.__support.math.fmaxf

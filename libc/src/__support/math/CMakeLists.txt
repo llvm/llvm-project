@@ -894,6 +894,58 @@ add_header_library(
     libc.src.__support.FPUtil.fma
     libc.src.__support.macros.config
 )
+add_header_library(
+  floor
+  HDRS
+    floor.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+add_header_library(
+  floorbf16
+  HDRS
+    floorbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+add_header_library(
+  floorf
+  HDRS
+    floorf.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+add_header_library(
+  floorf128
+  HDRS
+    floorf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+add_header_library(
+  floorf16
+  HDRS
+    floorf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+add_header_library(
+  floorl
+  HDRS
+    floorl.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
 
 add_header_library(
   fmax
