@@ -23,6 +23,7 @@ add_llvm_component_library(LLVMMC
   MCDXContainerWriter.cpp
   MCELFObjectTargetWriter.cpp
   MCELFStreamer.cpp
+  MCEncodingCommentHelper.cpp
   MCExpr.cpp
   MCFragment.cpp
   MCGOFFStreamer.cpp

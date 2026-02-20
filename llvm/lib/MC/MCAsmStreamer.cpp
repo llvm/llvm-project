@@ -16,6 +16,7 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCEncodingCommentHelper.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
@@ -2388,108 +2389,11 @@ void MCAsmStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
 void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
                                        const MCSubtargetInfo &STI) {
   raw_ostream &OS = getCommentOS();
-  SmallString<256> Code;
-  SmallVector<MCFixup, 4> Fixups;
-
-  // If we have no code emitter, don't emit code.
-  if (!getAssembler().getEmitterPtr())
-    return;
-
-  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
 
   // RISC-V instructions are always little-endian, even on BE systems.
   bool ForceLE = getContext().getTargetTriple().isRISCV();
 
-  // If we are showing fixups, create symbolic markers in the encoded
-  // representation. We do this by making a per-bit map to the fixup item index,
-  // then trying to display it as nicely as possible.
-  SmallVector<uint8_t, 64> FixupMap;
-  FixupMap.resize(Code.size() * 8);
-  for (unsigned i = 0, e = Code.size() * 8; i != e; ++i)
-    FixupMap[i] = 0;
-
-  for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {
-    MCFixup &F = Fixups[i];
-    MCFixupKindInfo Info =
-        getAssembler().getBackend().getFixupKindInfo(F.getKind());
-    for (unsigned j = 0; j != Info.TargetSize; ++j) {
-      unsigned Index = F.getOffset() * 8 + Info.TargetOffset + j;
-      assert(Index < Code.size() * 8 && "Invalid offset in fixup!");
-      FixupMap[Index] = 1 + i;
-    }
-  }
-
-  // FIXME: Note the fixup comments for Thumb2 are completely bogus since the
-  // high order halfword of a 32-bit Thumb2 instruction is emitted first.
-  OS << "encoding: [";
-  for (unsigned i = 0, e = Code.size(); i != e; ++i) {
-    if (i)
-      OS << ',';
-
-    // See if all bits are the same map entry.
-    uint8_t MapEntry = FixupMap[i * 8 + 0];
-    for (unsigned j = 1; j != 8; ++j) {
-      if (FixupMap[i * 8 + j] == MapEntry)
-        continue;
-
-      MapEntry = uint8_t(~0U);
-      break;
-    }
-
-    if (MapEntry != uint8_t(~0U)) {
-      if (MapEntry == 0) {
-        OS << format("0x%02x", uint8_t(Code[i]));
-      } else {
-        if (Code[i]) {
-          // FIXME: Some of the 8 bits require fix up.
-          OS << format("0x%02x", uint8_t(Code[i])) << '\''
-             << char('A' + MapEntry - 1) << '\'';
-        } else
-          OS << char('A' + MapEntry - 1);
-      }
-    } else {
-      // Otherwise, write out in binary.
-      OS << "0b";
-      for (unsigned j = 8; j--;) {
-        unsigned Bit = (Code[i] >> j) & 1;
-
-        unsigned FixupBit;
-        // RISC-V instructions are always little-endian.
-        // The FixupMap is indexed by actual bit positions in the LE
-        // instruction.
-        if (MAI->isLittleEndian() || ForceLE)
-          FixupBit = i * 8 + j;
-        else
-          FixupBit = i * 8 + (7-j);
-
-        if (uint8_t MapEntry = FixupMap[FixupBit]) {
-          assert(Bit == 0 && "Encoder wrote into fixed up bit!");
-          OS << char('A' + MapEntry - 1);
-        } else
-          OS << Bit;
-      }
-    }
-  }
-  OS << "]\n";
-
-  for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {
-    MCFixup &F = Fixups[i];
-    OS << "  fixup " << char('A' + i) << " - "
-       << "offset: " << F.getOffset() << ", value: ";
-    MAI->printExpr(OS, *F.getValue());
-    auto Kind = F.getKind();
-    if (mc::isRelocation(Kind))
-      OS << ", relocation type: " << Kind;
-    else {
-      OS << ", kind: ";
-      auto Info = getAssembler().getBackend().getFixupKindInfo(Kind);
-      if (F.isPCRel() && StringRef(Info.Name).starts_with("FK_Data_"))
-        OS << "FK_PCRel_" << (Info.TargetSize / 8);
-      else
-        OS << Info.Name;
-    }
-    OS << '\n';
-  }
+  mc::emitEncodingComment(OS, Inst, STI, getAssembler(), *MAI, ForceLE);
 }
 
 void MCAsmStreamer::emitInstruction(const MCInst &Inst,
