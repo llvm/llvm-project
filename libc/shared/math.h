@@ -117,6 +117,7 @@
 #include "math/logbf.h"
 #include "math/logbf128.h"
 #include "math/logbf16.h"
+#include "math/logbl.h"
 #include "math/logf.h"
 #include "math/logf16.h"
 #include "math/pow.h"
