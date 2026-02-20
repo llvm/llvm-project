@@ -699,8 +699,6 @@ FailureOr<SmallVector<SmallVector<Value>>>
 SliceAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
                                     Value linearId, ArrayRef<int64_t> shape) {
   assert(getRank() == static_cast<int64_t>(shape.size()) && "invalid shape.");
-  if (!isForWorkgroup())
-    return failure();
 
   SmallVector<int64_t> layout;
   SmallVector<int64_t> subShape;
