@@ -6814,43 +6814,35 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
       MagicFactor = NPQFactor = DAG.getUNDEF(SVT);
     } else {
       const bool AllowWiden = (EltBits == 32 && !VT.isVector() &&
-                         (HasWideVT64MULHU || HasWideVT64UMUL_LOHI));
+                               (HasWideVT64MULHU || HasWideVT64UMUL_LOHI));
       UnsignedDivisionByConstantInfo magics =
           UnsignedDivisionByConstantInfo::get(
               Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()),
               /*AllowEvenDivisorOptimization=*/true,
               /*AllowWidenOptimization=*/AllowWiden);
 
-      UseWiden = magics.Widen;
-      // Use pre-computed widened magic for 64x64->128 bit multiplication.
-      if (UseWiden) {
-        MagicFactor = DAG.getConstant(magics.Magic, dl,
-                                      EVT::getIntegerVT(*DAG.getContext(), 64));
-        PreShift = DAG.getConstant(0, dl, ShSVT);
-        PostShift = DAG.getConstant(0, dl, ShSVT);
-        NPQFactor = DAG.getConstant(APInt::getZero(SVTBits), dl, SVT);
-        UseNPQ = false;
-        UsePreShift = false;
-        UsePostShift = false;
+      if (magics.Widen) {
+        UseWiden = true;
+        MagicFactor = DAG.getConstant(magics.Magic, dl, MVT::i64);
       } else {
         MagicFactor = DAG.getConstant(magics.Magic.zext(SVTBits), dl, SVT);
-
-        assert(magics.PreShift < Divisor.getBitWidth() &&
-               "We shouldn't generate an undefined shift!");
-        assert(magics.PostShift < Divisor.getBitWidth() &&
-               "We shouldn't generate an undefined shift!");
-        assert((!magics.IsAdd || magics.PreShift == 0) &&
-               "Unexpected pre-shift");
-        PreShift = DAG.getConstant(magics.PreShift, dl, ShSVT);
-        PostShift = DAG.getConstant(magics.PostShift, dl, ShSVT);
-        NPQFactor = DAG.getConstant(
-            magics.IsAdd ? APInt::getOneBitSet(SVTBits, EltBits - 1)
-                         : APInt::getZero(SVTBits),
-            dl, SVT);
-        UseNPQ |= magics.IsAdd;
-        UsePreShift |= magics.PreShift != 0;
-        UsePostShift |= magics.PostShift != 0;
       }
+
+      assert(magics.PreShift < Divisor.getBitWidth() &&
+             "We shouldn't generate an undefined shift!");
+      assert(magics.PostShift < Divisor.getBitWidth() &&
+             "We shouldn't generate an undefined shift!");
+      assert((!magics.IsAdd || magics.PreShift == 0) &&
+             "Unexpected pre-shift");
+      PreShift = DAG.getConstant(magics.PreShift, dl, ShSVT);
+      PostShift = DAG.getConstant(magics.PostShift, dl, ShSVT);
+      NPQFactor = DAG.getConstant(
+          magics.IsAdd ? APInt::getOneBitSet(SVTBits, EltBits - 1)
+                       : APInt::getZero(SVTBits),
+          dl, SVT);
+      UseNPQ |= magics.IsAdd;
+      UsePreShift |= magics.PreShift != 0;
+      UsePostShift |= magics.PostShift != 0;
     }
 
     PreShifts.push_back(PreShift);
@@ -6887,7 +6879,6 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   }
 
   if (UseWiden) {
-    // x is i32, MagicFactor is pre-shifted i64 constant
     // Compute: (i64(x) * MagicFactor) >> 64
     SDValue X64 = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, N0);
 
@@ -6903,7 +6894,6 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     }
 
     Created.push_back(High.getNode());
-    // Truncate back to i32
     return DAG.getNode(ISD::TRUNCATE, dl, VT, High);
   }
 
