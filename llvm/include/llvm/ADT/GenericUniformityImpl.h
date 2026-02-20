@@ -446,9 +446,11 @@ private:
   /// the worklist.
   void taintAndPushAllDefs(const BlockT &JoinBlock);
 
-  /// \brief Mark all phi nodes in \p JoinBlock as divergent and push them on
-  /// the worklist.
-  void taintAndPushPhiNodes(const BlockT &JoinBlock);
+  /// \brief Mark phi nodes in \p JoinBlock as divergent and push them on
+  /// the worklist if they are divergent over the path from \p JoinBlock
+  /// to \p DivTermBlock.
+  void taintAndPushPhiNodes(const BlockT &JoinBlock, const BlockT &DivTermBlock,
+                            const DivergenceDescriptorT &DivDesc);
 
   /// \brief Identify all Instructions that become divergent because \p DivExit
   /// is a divergent cycle exit of \p DivCycle. Mark those instructions as
@@ -902,19 +904,70 @@ void GenericUniformityAnalysisImpl<ContextT>::taintAndPushAllDefs(
 /// Mark divergent phi nodes in a join block
 template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::taintAndPushPhiNodes(
-    const BlockT &JoinBlock) {
+    const BlockT &JoinBlock, const BlockT &DivTermBlock,
+    const DivergenceDescriptorT &DivDesc) {
   LLVM_DEBUG(dbgs() << "taintAndPushPhiNodes in " << Context.print(&JoinBlock)
                     << "\n");
   for (const auto &Phi : JoinBlock.phis()) {
-    // FIXME: The non-undef value is not constant per se; it just happens to be
-    // uniform and may not dominate this PHI. So assuming that the same value
-    // reaches along all incoming edges may itself be undefined behaviour. This
-    // particular interpretation of the undef value was added to
-    // DivergenceAnalysis in the following review:
-    //
-    // https://reviews.llvm.org/D19013
-    if (ContextT::isConstantOrUndefValuePhi(Phi))
+    // Attempt to maintain uniformity for PHIs by considering control
+    // dependencies before marking them.
+    SmallVector<ConstValueRefT> Values;
+    SmallVector<const BlockT *> Blocks;
+    Context.getPhiInputs(Phi, Values, Blocks);
+    assert(Blocks.size() == Values.size());
+
+    // Allow an empty Blocks/Values list to signify getPhiInputs is not
+    // implemented; in which case no uniformity is possible.
+    bool HasSingleValue = !Values.empty();
+    bool UniformOnPath = HasSingleValue;
+
+    std::optional<ConstValueRefT> PhiCommon, PathCommon;
+    for (unsigned I = 0; I < Blocks.size() && (UniformOnPath || HasSingleValue);
+         ++I) {
+      // FIXME: We assume undefs are uniform and/or do not dominate the PHI
+      // in the presence of other constant or uniform values.
+      // This particular interpretation of the undef value was added to
+      // DivergenceAnalysis in the following review:
+      //
+      // https://reviews.llvm.org/D19013
+      if (!Values[I])
+        continue;
+
+      // Track common value for all inputs.
+      if (!PhiCommon)
+        PhiCommon = Values[I];
+      else if (Values[I] != *PhiCommon)
+        HasSingleValue = false;
+
+      // Divergent path does not have uniform value.
+      if (!UniformOnPath)
+        continue;
+
+      // Only consider predecessors on divergent path.
+      if (Blocks[I] != &DivTermBlock &&
+          !DivDesc.BlockLabels.lookup_or(Blocks[I], nullptr))
+        continue;
+
+      // Phi is reached via divergent exit (i.e. respect temporal divergence).
+      if (DivDesc.CycleDivBlocks.contains(Blocks[I])) {
+        UniformOnPath = false;
+        continue;
+      }
+
+      // Phi uniformity is maintained if all values on divergent path match.
+      if (!PathCommon)
+        PathCommon = Values[I];
+      else if (Values[I] != *PathCommon) {
+        UniformOnPath = false;
+        assert(!HasSingleValue);
+        break;
+      }
+    }
+
+    if (UniformOnPath || HasSingleValue)
       continue;
+
+    LLVM_DEBUG(dbgs() << "tainted: " << Phi << "\n");
     markDivergent(Phi);
   }
 }
@@ -1072,7 +1125,7 @@ void GenericUniformityAnalysisImpl<ContextT>::analyzeControlDivergence(
       DivCycles.push_back(Outermost);
       continue;
     }
-    taintAndPushPhiNodes(*JoinBlock);
+    taintAndPushPhiNodes(*JoinBlock, *DivTermBlock, DivDesc);
   }
 
   // Sort by order of decreasing depth. This allows later cycles to be skipped
