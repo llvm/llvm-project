@@ -320,6 +320,11 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
                           options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fno-use-init-array");
 
+  if (WantsComponentModelThreadContext(getTriple(), DriverArgs)) {
+    CC1Args.push_back("-target-feature");
+    CC1Args.push_back("+component-model-thread-context");
+  }
+
   // '-pthread' implies bulk-memory, and, if shared memory is also used,
   // also implies atomics, mutable-globals, and sign-ext.
   if (WantsPthread(getTriple(), DriverArgs)) {

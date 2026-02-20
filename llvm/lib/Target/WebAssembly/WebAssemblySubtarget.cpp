@@ -40,14 +40,6 @@ WebAssemblySubtarget::initializeSubtargetDependencies(StringRef CPU,
 
   ParseSubtargetFeatures(CPU, /*TuneCPU*/ CPU, FS);  
   
-  // WASIP3 implies using the component model thread context intrinsics by default.
-  if (!FS.contains("component-model-thread-context") && 
-      !HasComponentModelThreadContext && 
-      TargetTriple.getOSName() == "wasip3") {
-    ToggleFeature(WebAssembly::FeatureComponentModelThreadContext);
-    HasComponentModelThreadContext = true;
-  }
-
   FeatureBitset Bits = getFeatureBits();
 
   // bulk-memory implies bulk-memory-opt

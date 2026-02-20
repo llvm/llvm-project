@@ -215,10 +215,6 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     addBleedingEdgeFeatures();
   }
 
-  if (getTriple().getOSName() == "wasip3") {
-    Features["component-model-thread-context"] = true;
-  }
-
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
 }
 
