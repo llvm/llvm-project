@@ -177,19 +177,20 @@ KnownBits llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
 }
 
 static bool haveNoCommonBitsSetSpecialCases(const Value *LHS, const Value *RHS,
-                                            const SimplifyQuery &SQ) {
+                                            const SimplifyQuery &SQ,
+                                            bool CheckNoUndef) {
   // Look for an inverted mask: (X & ~M) op (Y & M).
   {
     Value *M;
     if (match(LHS, m_c_And(m_Not(m_Value(M)), m_Value())) &&
         match(RHS, m_c_And(m_Specific(M), m_Value())) &&
-        isGuaranteedNotToBeUndef(M, SQ.AC, SQ.CxtI, SQ.DT))
+        (!CheckNoUndef || isGuaranteedNotToBeUndef(M, SQ.AC, SQ.CxtI, SQ.DT)))
       return true;
   }
 
   // X op (Y & ~X)
   if (match(RHS, m_c_And(m_Not(m_Specific(LHS)), m_Value())) &&
-      isGuaranteedNotToBeUndef(LHS, SQ.AC, SQ.CxtI, SQ.DT))
+      (!CheckNoUndef || isGuaranteedNotToBeUndef(LHS, SQ.AC, SQ.CxtI, SQ.DT)))
     return true;
 
   // X op ((X & Y) ^ Y) -- this is the canonical form of the previous pattern
@@ -197,15 +198,15 @@ static bool haveNoCommonBitsSetSpecialCases(const Value *LHS, const Value *RHS,
   Value *Y;
   if (match(RHS,
             m_c_Xor(m_c_And(m_Specific(LHS), m_Value(Y)), m_Deferred(Y))) &&
-      isGuaranteedNotToBeUndef(LHS, SQ.AC, SQ.CxtI, SQ.DT) &&
-      isGuaranteedNotToBeUndef(Y, SQ.AC, SQ.CxtI, SQ.DT))
+      (!CheckNoUndef || isGuaranteedNotToBeUndef(LHS, SQ.AC, SQ.CxtI, SQ.DT)) &&
+      (!CheckNoUndef || isGuaranteedNotToBeUndef(Y, SQ.AC, SQ.CxtI, SQ.DT)))
     return true;
 
   // Peek through extends to find a 'not' of the other side:
   // (ext Y) op ext(~Y)
   if (match(LHS, m_ZExtOrSExt(m_Value(Y))) &&
       match(RHS, m_ZExtOrSExt(m_Not(m_Specific(Y)))) &&
-      isGuaranteedNotToBeUndef(Y, SQ.AC, SQ.CxtI, SQ.DT))
+      (!CheckNoUndef || isGuaranteedNotToBeUndef(Y, SQ.AC, SQ.CxtI, SQ.DT)))
     return true;
 
   // Look for: (A & B) op ~(A | B)
@@ -213,8 +214,8 @@ static bool haveNoCommonBitsSetSpecialCases(const Value *LHS, const Value *RHS,
     Value *A, *B;
     if (match(LHS, m_And(m_Value(A), m_Value(B))) &&
         match(RHS, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))) &&
-        isGuaranteedNotToBeUndef(A, SQ.AC, SQ.CxtI, SQ.DT) &&
-        isGuaranteedNotToBeUndef(B, SQ.AC, SQ.CxtI, SQ.DT))
+        (!CheckNoUndef || isGuaranteedNotToBeUndef(A, SQ.AC, SQ.CxtI, SQ.DT)) &&
+        (!CheckNoUndef || isGuaranteedNotToBeUndef(B, SQ.AC, SQ.CxtI, SQ.DT)))
       return true;
   }
 
@@ -236,7 +237,7 @@ static bool haveNoCommonBitsSetSpecialCases(const Value *LHS, const Value *RHS,
 
 bool llvm::haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
                                const WithCache<const Value *> &RHSCache,
-                               const SimplifyQuery &SQ) {
+                               const SimplifyQuery &SQ, bool CheckNoUndef) {
   const Value *LHS = LHSCache.getValue();
   const Value *RHS = RHSCache.getValue();
 
@@ -245,8 +246,8 @@ bool llvm::haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
   assert(LHS->getType()->isIntOrIntVectorTy() &&
          "LHS and RHS should be integers");
 
-  if (haveNoCommonBitsSetSpecialCases(LHS, RHS, SQ) ||
-      haveNoCommonBitsSetSpecialCases(RHS, LHS, SQ))
+  if (haveNoCommonBitsSetSpecialCases(LHS, RHS, SQ, CheckNoUndef) ||
+      haveNoCommonBitsSetSpecialCases(RHS, LHS, SQ, CheckNoUndef))
     return true;
 
   return KnownBits::haveNoCommonBitsSet(LHSCache.getKnownBits(SQ),
