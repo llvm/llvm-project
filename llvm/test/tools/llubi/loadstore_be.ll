@@ -86,6 +86,11 @@ define void @main() {
   store [2 x i32] [i32 1, i32 2], ptr %alloc_array
   %val26 = load [2 x i32], ptr %alloc_array
 
+  %alloc_i1_vec = alloca <4 x i1>
+  store <4 x i1> <i1 1, i1 0, i1 poison, i1 0>, ptr %alloc_i1_vec
+  %val27 = load <4 x i1>, ptr %alloc_i1_vec
+  %val28 = load i8, ptr %alloc_i1_vec
+
   ret void
 }
 ; CHECK: Entering function: main
@@ -149,5 +154,9 @@ define void @main() {
 ; CHECK-NEXT:   %alloc_array = alloca [2 x i32], align 4 => ptr 0x70 [alloc_array]
 ; CHECK-NEXT:   store [2 x i32] [i32 1, i32 2], ptr %alloc_array, align 4
 ; CHECK-NEXT:   %val26 = load [2 x i32], ptr %alloc_array, align 4 => { i32 1, i32 2 }
+; CHECK-NEXT:   %alloc_i1_vec = alloca <4 x i1>, align 1 => ptr 0x78 [alloc_i1_vec]
+; CHECK-NEXT:   store <4 x i1> <i1 true, i1 false, i1 poison, i1 false>, ptr %alloc_i1_vec, align 1
+; CHECK-NEXT:   %val27 = load <4 x i1>, ptr %alloc_i1_vec, align 1 => { T, F, poison, F }
+; CHECK-NEXT:   %val28 = load i8, ptr %alloc_i1_vec, align 1 => poison
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

@@ -124,12 +124,14 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
         LogicalByte = Bytes[BitsStart / 8].lshr(BitsStart % 8);
       else
         LogicalByte =
-            Bytes[BitsStart / 8].fshr(Bytes[BitsEnd / 8], BitsStart % 8);
+            Byte::fshr(Bytes[BitsStart / 8], Bytes[BitsEnd / 8], BitsStart % 8);
 
       uint32_t Mask = (1U << NumBitsInByte) - 1;
       // If any of the bits in the byte is poison, the whole value is poison.
-      if (~LogicalByte.ConcreteMask & ~LogicalByte.Value & Mask)
+      if (~LogicalByte.ConcreteMask & ~LogicalByte.Value & Mask) {
+        OffsetInBits = NewOffsetInBits;
         return AnyValue::poison();
+      }
       uint8_t RandomBits = 0;
       if (UndefBehavior == UndefValueBehavior::NonDeterministic &&
           (~LogicalByte.ConcreteMask & Mask)) {

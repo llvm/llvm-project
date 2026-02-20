@@ -58,13 +58,13 @@ struct Byte {
 
   /// Returns a logical byte that is part of two adjacent bytes.
   /// Example with ShAmt = 5:
-  ///     |      Byte0      |     Byte1       |
+  ///     |       Low       |      High       |
   /// LSB | 0 1 0 1 0 1 0 1 | 0 0 0 0 1 1 1 1 | MSB
   ///     Result =  | 1 0 1   0 0 0 0 1 |
-  Byte fshr(const Byte &High, uint32_t ShAmt) const {
+  static Byte fshr(const Byte &Low, const Byte &High, uint32_t ShAmt) {
     return Byte{static_cast<uint8_t>(
-                    (ConcreteMask | (High.ConcreteMask << 8)) >> ShAmt),
-                static_cast<uint8_t>((Value | (High.Value << 8)) >> ShAmt)};
+                    (Low.ConcreteMask | (High.ConcreteMask << 8)) >> ShAmt),
+                static_cast<uint8_t>((Low.Value | (High.Value << 8)) >> ShAmt)};
   }
 
   Byte lshr(uint8_t Shift) const {

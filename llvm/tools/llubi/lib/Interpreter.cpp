@@ -260,7 +260,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
     // Loading from a stack object outside its lifetime is not undefined
     // behavior and returns a poison value instead. Storing to it is still
     // undefined behavior.
-    if (IsStore ? MO.getState() != MemoryObjectState::Alive : MO.getState() == MemoryObjectState::Freed) {
+    if (IsStore ? MO.getState() != MemoryObjectState::Alive
+                : MO.getState() == MemoryObjectState::Freed) {
       reportImmediateUB("Try to access a dead memory object.");
       return std::nullopt;
     }
@@ -294,7 +295,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
     auto &PtrVal = Ptr.asPointer();
     auto *MO = PtrVal.getMemoryObject();
     if (!MO) {
-      reportImmediateUB("Invalid memory access via a pointer with nullary provenance.");
+      reportImmediateUB(
+          "Invalid memory access via a pointer with nullary provenance.");
       return AnyValue::getPoisonValue(Ctx, ValTy);
     }
     // TODO: pointer capability check
@@ -319,7 +321,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
     auto &PtrVal = Ptr.asPointer();
     auto *MO = PtrVal.getMemoryObject();
     if (!MO) {
-      reportImmediateUB("Invalid memory access via a pointer with nullary provenance.");
+      reportImmediateUB(
+          "Invalid memory access via a pointer with nullary provenance.");
       return;
     }
     // TODO: pointer capability check
