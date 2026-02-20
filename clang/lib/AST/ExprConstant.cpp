@@ -12141,8 +12141,8 @@ static bool evalShiftWithCount(
   return true;
 }
 
-bool clang::MatchesPredicate(
-  const uint32_t Imm, const llvm::APFloatBase::cmpResult CompareResult) {
+bool clang::MatchesPredicate(const uint32_t Imm,
+                             const llvm::APFloatBase::cmpResult CompareResult) {
   using CmpResult = llvm::APFloatBase::cmpResult;
 
   bool IsUnordered = (CompareResult == llvm::APFloatBase::cmpUnordered);
