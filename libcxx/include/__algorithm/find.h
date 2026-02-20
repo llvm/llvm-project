@@ -216,13 +216,10 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
 __find(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value, _Proj& __proj) {
   using __local_iterator = typename __segmented_iterator_traits<_SegmentedIterator>::__local_iterator;
   return std::__find_segment_if(
-      std::move(__first),
-      std::move(__last),
-      [&__value](__local_iterator __lfirst, __local_iterator __llast, _Proj& __lproj) {
+      std::move(__first), std::move(__last), [&__value, &__proj](__local_iterator __lfirst, __local_iterator __llast) {
         return std::__rewrap_iter(
-            __lfirst, std::__find(std::__unwrap_iter(__lfirst), std::__unwrap_iter(__llast), __value, __lproj));
-      },
-      __proj);
+            __lfirst, std::__find(std::__unwrap_iter(__lfirst), std::__unwrap_iter(__llast), __value, __proj));
+      });
 }
 
 // public API
