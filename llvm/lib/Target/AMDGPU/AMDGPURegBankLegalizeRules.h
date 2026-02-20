@@ -266,7 +266,8 @@ enum LoweringMethodID {
   UnpackAExt,
   VerifyAllSgpr,
   ApplyAllVgpr,
-  UnmergeToShiftTrunc
+  UnmergeToShiftTrunc,
+  ApplyINTRIN_IMAGE
 };
 
 enum FastRulesTypes {

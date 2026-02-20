@@ -103,21 +103,6 @@ void populateVectorMultiReductionUnrollingPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit = 1);
 
-/// Collect a set of patterns to convert vector.multi_reduction op into
-/// a sequence of vector.reduction ops. These patterns are the ones
-/// populated by:
-///
-/// * populateVectorMultiReductionReorderAndExpandPatterns
-/// * populateVectorMultiReductionFlatteningPatterns
-/// * populateVectorMultiReductionUnrollingPatterns
-///
-/// This is just a convenience wrapper that we use in testing and is effectively
-/// deprecated.
-/// TODO: Delete.
-void populateVectorMultiReductionLoweringPatterns(
-    RewritePatternSet &patterns, VectorMultiReductionLowering options,
-    PatternBenefit benefit = 1);
-
 /// Populate the pattern set with the following patterns:
 ///
 /// [TransferReadToVectorLoadLowering]

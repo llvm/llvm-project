@@ -224,6 +224,7 @@ getOverflowBehaviorConsideringType(const CodeGenFunction &CGF,
   case LangOptions::SignedOverflowBehaviorTy::SOB_Trapping:
     return LangOptions::OverflowBehaviorKind::OB_Trap;
   }
+  llvm_unreachable("Unknown SignedOverflowBehaviorTy");
 }
 
 /// Check if we can skip the overflow check for \p Op.
