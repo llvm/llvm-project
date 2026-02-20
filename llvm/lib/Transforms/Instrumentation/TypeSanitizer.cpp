@@ -345,8 +345,18 @@ bool TypeSanitizer::generateBaseTypeDescriptor(
       Member = TypeDescriptors[MemberNode];
     }
 
-    uint64_t Offset =
-        mdconst::extract<ConstantInt>(MD->getOperand(i + 1))->getZExtValue();
+    uint64_t Offset;
+    if ((unsigned)i + 1 < MD->getNumOperands()) {
+      Offset =
+          mdconst::extract<ConstantInt>(MD->getOperand(i + 1))->getZExtValue();
+    } else if (i == 1 && MD->getNumOperands() == 2) {
+      // According to the LLVM language reference, the third operand for a
+      // scalar tag is actually optional, its absence indicating an offset
+      // of zero.
+      Offset = 0;
+    } else {
+      assert(false && "Malformed TBAA MD.");
+    }
 
     Members.push_back(std::make_pair(Member, Offset));
   }
