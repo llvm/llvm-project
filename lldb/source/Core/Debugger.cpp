@@ -150,6 +150,11 @@ static constexpr OptionEnumValueElement g_language_enumerators[] = {
         "Select python as the default scripting language.",
     },
     {
+        eScriptLanguageJavaScript,
+        "javascript",
+        "Select javascript as the default scripting language.",
+    },
+    {
         eScriptLanguageDefault,
         "default",
         "Select the lldb default as the default scripting language.",

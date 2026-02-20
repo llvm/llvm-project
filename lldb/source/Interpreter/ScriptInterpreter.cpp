@@ -66,6 +66,8 @@ std::string ScriptInterpreter::LanguageToString(lldb::ScriptLanguage language) {
     return "Python";
   case eScriptLanguageLua:
     return "Lua";
+  case eScriptLanguageJavaScript:
+    return "JavaScript";
   case eScriptLanguageUnknown:
     return "Unknown";
   }
@@ -180,6 +182,8 @@ ScriptInterpreter::StringToLanguage(const llvm::StringRef &language) {
     return eScriptLanguagePython;
   if (language.equals_insensitive(LanguageToString(eScriptLanguageLua)))
     return eScriptLanguageLua;
+  if (language.equals_insensitive(LanguageToString(eScriptLanguageJavaScript)))
+    return eScriptLanguageJavaScript;
   return eScriptLanguageUnknown;
 }
 

@@ -227,8 +227,17 @@ enum ScriptLanguage {
   eScriptLanguageNone = 0,
   eScriptLanguagePython,
   eScriptLanguageLua,
+  eScriptLanguageJavaScript,
   eScriptLanguageUnknown,
+#if LLDB_ENABLE_PYTHON
   eScriptLanguageDefault = eScriptLanguagePython
+#elif LLDB_ENABLE_LUA
+  eScriptLanguageDefault = eScriptLanguageLua
+#elif LLDB_ENABLE_JAVASCRIPT
+  eScriptLanguageDefault = eScriptLanguageJavaScript
+#else
+  eScriptLanguageDefault = eScriptLanguageNone
+#endif
 };
 
 /// Register numbering types.
@@ -314,7 +323,7 @@ enum ConnectionStatus {
   eConnectionStatusNoConnection,   ///< No connection
   eConnectionStatusLostConnection, ///< Lost connection while connected to a
                                    ///< valid connection
-  eConnectionStatusInterrupted ///< Interrupted read
+  eConnectionStatusInterrupted     ///< Interrupted read
 };
 
 enum ErrorType {
@@ -1112,7 +1121,7 @@ enum PathType {
   ePathTypeGlobalLLDBTempSystemDir, ///< The LLDB temp directory for this
                                     ///< system, NOT cleaned up on a process
                                     ///< exit.
-  ePathTypeClangDir ///< Find path to Clang builtin headers
+  ePathTypeClangDir                 ///< Find path to Clang builtin headers
 };
 
 /// Kind of member function.

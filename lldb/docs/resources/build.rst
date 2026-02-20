@@ -66,6 +66,8 @@ CMake configuration error.
 +-------------------+--------------------------------------------------------------+--------------------------+
 | Lua               | Lua scripting. Lua 5.3 and 5.4 are supported.                | ``LLDB_ENABLE_LUA``      |
 +-------------------+--------------------------------------------------------------+--------------------------+
+| JavaScript        | JavaScript scripting via V8 engine. Experimental.            | ``LLDB_ENABLE_JAVASCRIPT``|
++-------------------+--------------------------------------------------------------+--------------------------+
 
 Depending on your platform and package manager, one might run any of the
 commands below.
