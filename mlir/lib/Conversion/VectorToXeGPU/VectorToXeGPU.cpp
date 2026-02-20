@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/VectorToXeGPU/VectorToXeGPU.h"
+#include "mlir/Conversion/VectorToGPU/VectorToGPU.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -844,6 +845,11 @@ struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
 struct ConvertVectorToXeGPUPass
     : public impl::ConvertVectorToXeGPUBase<ConvertVectorToXeGPUPass> {
   void runOnOperation() override {
+    RewritePatternSet prep(&getContext());
+    populatePrepareVectorToMMAPatterns(prep);
+    if (failed(applyPatternsGreedily(getOperation(), std::move(prep))))
+      return signalPassFailure();
+
     RewritePatternSet patterns(&getContext());
     populateVectorToXeGPUConversionPatterns(patterns);
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
