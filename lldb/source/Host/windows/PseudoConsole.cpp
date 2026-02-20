@@ -129,6 +129,10 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
 }
 
 void PseudoConsole::Close() {
+  Sleep(50); // FIXME: This mitigates a race condition when closing the
+             // PseudoConsole. It's possible that there is still data in the
+             // pipe when we try to close it. We should wait until the data has
+             // been consumed.
   if (m_conpty_handle != INVALID_HANDLE_VALUE)
     kernel32.ClosePseudoConsole(m_conpty_handle);
   if (m_conpty_input != INVALID_HANDLE_VALUE)
