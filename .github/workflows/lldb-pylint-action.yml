@@ -46,7 +46,7 @@ jobs:
           files: |
             **/*.py
       
-      - name: Listed files
+      - name: List files
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
