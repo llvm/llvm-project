@@ -493,9 +493,7 @@ bool GDBRemoteCommunicationClient::GetVContSupported(llvm::StringRef flavor) {
     m_supports_vCont_S = eLazyBoolNo;
     if (SendPacketAndWaitForResponse("vCont?", response) ==
         PacketResult::Success) {
-      llvm::SmallVector<llvm::StringRef> flavors;
-      response.GetStringRef().split(";").second.split(flavors, ';');
-      for (llvm::StringRef flavor : flavors) {
+      for (llvm::StringRef flavor : llvm::split(response.GetStringRef(), ';')) {
         if (flavor == "c")
           m_supports_vCont_c = eLazyBoolYes;
         if (flavor == "C")
