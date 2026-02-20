@@ -155,7 +155,7 @@ define i8 @scmp_8_64(i64 %x, i64 %y) nounwind {
 ; THUMB2-NEXT:    subs.w r12, r0, r2
 ; THUMB2-NEXT:    mov.w r9, #0
 ; THUMB2-NEXT:    sbcs.w r12, r1, r3
-; THUMB2-NEXT:    mov.w r12, #0
+; THUMB2-NEXT:    mov r12, r9
 ; THUMB2-NEXT:    it lt
 ; THUMB2-NEXT:    movlt.w r12, #1
 ; THUMB2-NEXT:    subs r0, r2, r0
@@ -235,7 +235,7 @@ define i8 @scmp_8_128(i128 %x, i128 %y) nounwind {
 ; THUMB2-NEXT:    sbcs.w r6, r1, r12
 ; THUMB2-NEXT:    sbcs.w r6, r2, lr
 ; THUMB2-NEXT:    sbcs.w r6, r3, r4
-; THUMB2-NEXT:    mov.w r6, #0
+; THUMB2-NEXT:    mov r6, r5
 ; THUMB2-NEXT:    it lt
 ; THUMB2-NEXT:    movlt r6, #1
 ; THUMB2-NEXT:    subs.w r0, r9, r0
@@ -339,7 +339,7 @@ define i32 @scmp_32_64(i64 %x, i64 %y) nounwind {
 ; THUMB2-NEXT:    subs.w r12, r0, r2
 ; THUMB2-NEXT:    mov.w r9, #0
 ; THUMB2-NEXT:    sbcs.w r12, r1, r3
-; THUMB2-NEXT:    mov.w r12, #0
+; THUMB2-NEXT:    mov r12, r9
 ; THUMB2-NEXT:    it lt
 ; THUMB2-NEXT:    movlt.w r12, #1
 ; THUMB2-NEXT:    subs r0, r2, r0
@@ -393,7 +393,7 @@ define i64 @scmp_64_64(i64 %x, i64 %y) nounwind {
 ; THUMB2-NEXT:    subs.w r12, r0, r2
 ; THUMB2-NEXT:    mov.w r9, #0
 ; THUMB2-NEXT:    sbcs.w r12, r1, r3
-; THUMB2-NEXT:    mov.w r12, #0
+; THUMB2-NEXT:    mov r12, r9
 ; THUMB2-NEXT:    it lt
 ; THUMB2-NEXT:    movlt.w r12, #1
 ; THUMB2-NEXT:    subs r0, r2, r0

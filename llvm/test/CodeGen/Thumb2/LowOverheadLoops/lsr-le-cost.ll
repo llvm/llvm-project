@@ -13,7 +13,7 @@ define void @test(ptr %dst, i32 %n) {
 ; CHECK-NOMVE-NEXT:    add.w r0, r0, r1, lsl #1
 ; CHECK-NOMVE-NEXT:    movs r2, #0
 ; CHECK-NOMVE-NEXT:    sub.w r12, r0, #2
-; CHECK-NOMVE-NEXT:    movs r3, #0
+; CHECK-NOMVE-NEXT:    mov r3, r2
 ; CHECK-NOMVE-NEXT:  .LBB0_1: @ %outer_loop
 ; CHECK-NOMVE-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NOMVE-NEXT:    @ Child Loop BB0_2 Depth 2
@@ -35,9 +35,9 @@ define void @test(ptr %dst, i32 %n) {
 ; CHECK-MVE-LABEL: test:
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    push {r7, lr}
-; CHECK-MVE-NEXT:    add.w r12, r0, r1, lsl #1
 ; CHECK-MVE-NEXT:    movs r2, #0
-; CHECK-MVE-NEXT:    movs r3, #0
+; CHECK-MVE-NEXT:    add.w r12, r0, r1, lsl #1
+; CHECK-MVE-NEXT:    mov r3, r2
 ; CHECK-MVE-NEXT:  .LBB0_1: @ %outer_loop
 ; CHECK-MVE-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-MVE-NEXT:    @ Child Loop BB0_2 Depth 2
@@ -84,9 +84,9 @@ define void @test_optsize(ptr %dst, i32 %n) optsize {
 ; CHECK-LABEL: test_optsize:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    add.w r12, r0, r1, lsl #1
 ; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    add.w r12, r0, r1, lsl #1
+; CHECK-NEXT:    mov r3, r2
 ; CHECK-NEXT:  .LBB1_1: @ %outer_loop
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB1_2 Depth 2
@@ -139,10 +139,10 @@ define void @test_no_le(ptr %dst, i32 %n) {
 ; CHECK-NOMVE-LABEL: test_no_le:
 ; CHECK-NOMVE:       @ %bb.0: @ %entry
 ; CHECK-NOMVE-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NOMVE-NEXT:    movs r6, #0
 ; CHECK-NOMVE-NEXT:    add.w r5, r0, r1, lsl #1
 ; CHECK-NOMVE-NEXT:    mov r4, r1
-; CHECK-NOMVE-NEXT:    movs r6, #0
-; CHECK-NOMVE-NEXT:    mov.w r8, #0
+; CHECK-NOMVE-NEXT:    mov r8, r6
 ; CHECK-NOMVE-NEXT:  .LBB2_1: @ %outer_loop
 ; CHECK-NOMVE-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NOMVE-NEXT:    @ Child Loop BB2_2 Depth 2
@@ -167,10 +167,10 @@ define void @test_no_le(ptr %dst, i32 %n) {
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
 ; CHECK-MVE-NEXT:    sub sp, #4
+; CHECK-MVE-NEXT:    movs r6, #0
 ; CHECK-MVE-NEXT:    add.w r8, r0, r1, lsl #1
 ; CHECK-MVE-NEXT:    mov r9, r1
-; CHECK-MVE-NEXT:    movs r6, #0
-; CHECK-MVE-NEXT:    movs r7, #0
+; CHECK-MVE-NEXT:    mov r7, r6
 ; CHECK-MVE-NEXT:  .LBB2_1: @ %outer_loop
 ; CHECK-MVE-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-MVE-NEXT:    @ Child Loop BB2_2 Depth 2
@@ -221,10 +221,10 @@ define void @test_no_le_optsize(ptr %dst, i32 %n) optsize {
 ; CHECK-NOMVE-LABEL: test_no_le_optsize:
 ; CHECK-NOMVE:       @ %bb.0: @ %entry
 ; CHECK-NOMVE-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NOMVE-NEXT:    movs r6, #0
 ; CHECK-NOMVE-NEXT:    add.w r5, r0, r1, lsl #1
 ; CHECK-NOMVE-NEXT:    mov r4, r1
-; CHECK-NOMVE-NEXT:    movs r6, #0
-; CHECK-NOMVE-NEXT:    mov.w r8, #0
+; CHECK-NOMVE-NEXT:    mov r8, r6
 ; CHECK-NOMVE-NEXT:  .LBB3_1: @ %outer_loop
 ; CHECK-NOMVE-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NOMVE-NEXT:    @ Child Loop BB3_2 Depth 2
@@ -249,10 +249,10 @@ define void @test_no_le_optsize(ptr %dst, i32 %n) optsize {
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
 ; CHECK-MVE-NEXT:    sub sp, #4
+; CHECK-MVE-NEXT:    movs r6, #0
 ; CHECK-MVE-NEXT:    add.w r8, r0, r1, lsl #1
 ; CHECK-MVE-NEXT:    mov r9, r1
-; CHECK-MVE-NEXT:    movs r6, #0
-; CHECK-MVE-NEXT:    movs r7, #0
+; CHECK-MVE-NEXT:    mov r7, r6
 ; CHECK-MVE-NEXT:  .LBB3_1: @ %outer_loop
 ; CHECK-MVE-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-MVE-NEXT:    @ Child Loop BB3_2 Depth 2

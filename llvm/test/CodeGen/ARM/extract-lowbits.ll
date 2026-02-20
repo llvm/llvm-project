@@ -1406,7 +1406,7 @@ define i64 @bzhi64_c0(i64 %val, i64 %numlowbits) nounwind {
 ; V7M-NEXT:    rsbs.w lr, r2, #32
 ; V7M-NEXT:    rsb.w r2, r2, #64
 ; V7M-NEXT:    mov.w r12, #-1
-; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    mov r3, r12
 ; V7M-NEXT:    lsr.w r2, r12, r2
 ; V7M-NEXT:    it pl
 ; V7M-NEXT:    lsrpl.w r3, r3, lr
@@ -1438,7 +1438,7 @@ define i64 @bzhi64_c0(i64 %val, i64 %numlowbits) nounwind {
 ; V7A-T-NEXT:    rsbs.w lr, r2, #32
 ; V7A-T-NEXT:    rsb.w r2, r2, #64
 ; V7A-T-NEXT:    mov.w r12, #-1
-; V7A-T-NEXT:    mov.w r3, #-1
+; V7A-T-NEXT:    mov r3, r12
 ; V7A-T-NEXT:    lsr.w r2, r12, r2
 ; V7A-T-NEXT:    it pl
 ; V7A-T-NEXT:    lsrpl.w r3, r3, lr
@@ -1547,13 +1547,13 @@ define i64 @bzhi64_c1_indexzext(i64 %val, i8 %numlowbits) nounwind {
 define i64 @bzhi64_c2_load(ptr %w, i64 %numlowbits) nounwind {
 ; V7M-LABEL: bzhi64_c2_load:
 ; V7M:       @ %bb.0:
+; V7M-NEXT:    mov.w r12, #-1
 ; V7M-NEXT:    rsbs.w r1, r2, #32
-; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    mov r3, r12
 ; V7M-NEXT:    rsb.w r2, r2, #64
 ; V7M-NEXT:    it pl
 ; V7M-NEXT:    lsrpl r3, r1
 ; V7M-NEXT:    ldrd r0, r1, [r0]
-; V7M-NEXT:    mov.w r12, #-1
 ; V7M-NEXT:    lsr.w r2, r12, r2
 ; V7M-NEXT:    it pl
 ; V7M-NEXT:    movpl r2, #0
@@ -1581,13 +1581,13 @@ define i64 @bzhi64_c2_load(ptr %w, i64 %numlowbits) nounwind {
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    .save {r7, lr}
 ; V7A-T-NEXT:    push {r7, lr}
+; V7A-T-NEXT:    mov.w r12, #-1
 ; V7A-T-NEXT:    rsbs.w r1, r2, #32
-; V7A-T-NEXT:    mov.w r3, #-1
+; V7A-T-NEXT:    mov r3, r12
 ; V7A-T-NEXT:    ldrd r0, lr, [r0]
 ; V7A-T-NEXT:    it pl
 ; V7A-T-NEXT:    lsrpl r3, r1
 ; V7A-T-NEXT:    rsb.w r1, r2, #64
-; V7A-T-NEXT:    mov.w r12, #-1
 ; V7A-T-NEXT:    and.w r0, r0, r3
 ; V7A-T-NEXT:    lsr.w r1, r12, r1
 ; V7A-T-NEXT:    it pl
@@ -1705,7 +1705,7 @@ define i64 @bzhi64_c4_commutative(i64 %val, i64 %numlowbits) nounwind {
 ; V7M-NEXT:    rsbs.w lr, r2, #32
 ; V7M-NEXT:    rsb.w r2, r2, #64
 ; V7M-NEXT:    mov.w r12, #-1
-; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    mov r3, r12
 ; V7M-NEXT:    lsr.w r2, r12, r2
 ; V7M-NEXT:    it pl
 ; V7M-NEXT:    lsrpl.w r3, r3, lr
@@ -1737,7 +1737,7 @@ define i64 @bzhi64_c4_commutative(i64 %val, i64 %numlowbits) nounwind {
 ; V7A-T-NEXT:    rsbs.w lr, r2, #32
 ; V7A-T-NEXT:    rsb.w r2, r2, #64
 ; V7A-T-NEXT:    mov.w r12, #-1
-; V7A-T-NEXT:    mov.w r3, #-1
+; V7A-T-NEXT:    mov r3, r12
 ; V7A-T-NEXT:    lsr.w r2, r12, r2
 ; V7A-T-NEXT:    it pl
 ; V7A-T-NEXT:    lsrpl.w r3, r3, lr

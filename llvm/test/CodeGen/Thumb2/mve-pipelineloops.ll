@@ -19,7 +19,7 @@ define void @arm_cmplx_dot_prod_q15(ptr noundef %pSrcA, ptr noundef %pSrcB, i32 
 ; CHECK-NEXT:    add.w lr, r7, #1
 ; CHECK-NEXT:    mov r4, r5
 ; CHECK-NEXT:    vldrh.u16 q0, [r0], #32
-; CHECK-NEXT:    movs r7, #0
+; CHECK-NEXT:    mov r7, r5
 ; CHECK-NEXT:    mov r8, r5
 ; CHECK-NEXT:    vldrh.u16 q1, [r1], #32
 ; CHECK-NEXT:    vmlsldava.s16 r4, r7, q0, q1
@@ -80,7 +80,7 @@ define void @arm_cmplx_dot_prod_q15(ptr noundef %pSrcA, ptr noundef %pSrcB, i32 
 ; CHECK-NEXT:    lsls r6, r2, #1
 ; CHECK-NEXT:    mov r5, r4
 ; CHECK-NEXT:    mov r7, r4
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    dlstp.16 lr, r6
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LBB0_7: @ %while.body14
@@ -97,7 +97,7 @@ define void @arm_cmplx_dot_prod_q15(ptr noundef %pSrcA, ptr noundef %pSrcB, i32 
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LBB0_9:
 ; CHECK-NEXT:    mov r7, r4
-; CHECK-NEXT:    mov.w r8, #0
+; CHECK-NEXT:    mov r8, r4
 ; CHECK-NEXT:    mov r5, r4
 ; CHECK-NEXT:  .LBB0_10: @ %if.end
 ; CHECK-NEXT:    asrl r4, r7, #6

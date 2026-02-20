@@ -1319,6 +1319,15 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
   if (!TII->isReMaterializable(*DefMI))
     return false;
 
+  // For multiple uses of a cheap instruction, prefer to copy if it affects code
+  // size.
+  if (!MRI->hasOneNonDBGUse(SrcReg)) {
+    unsigned RematSize = TII->getInstSizeInBytes(*DefMI);
+    unsigned CopySize = TII->getInstSizeInBytes(*CopyMI);
+    if (RematSize && CopySize && CopySize < RematSize)
+      return false;
+  }
+
   bool SawStore = false;
   if (!DefMI->isSafeToMove(SawStore))
     return false;

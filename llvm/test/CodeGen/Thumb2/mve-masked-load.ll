@@ -1919,7 +1919,7 @@ define arm_aapcs_vfpcc <4 x i16> @anyext_v4i16_align1(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-NEXT:    vmrs r3, p0
 ; CHECK-LE-NEXT:    and r1, r3, #1
 ; CHECK-LE-NEXT:    rsbs r2, r1, #0
-; CHECK-LE-NEXT:    movs r1, #0
+; CHECK-LE-NEXT:    mov r1, r12
 ; CHECK-LE-NEXT:    bfi r1, r2, #0, #1
 ; CHECK-LE-NEXT:    ubfx r2, r3, #4, #1
 ; CHECK-LE-NEXT:    rsbs r2, r2, #0
@@ -1965,7 +1965,7 @@ define arm_aapcs_vfpcc <4 x i16> @anyext_v4i16_align1(ptr %dest, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vmrs r3, p0
 ; CHECK-BE-NEXT:    ubfx r1, r3, #12, #1
 ; CHECK-BE-NEXT:    rsbs r2, r1, #0
-; CHECK-BE-NEXT:    movs r1, #0
+; CHECK-BE-NEXT:    mov r1, r12
 ; CHECK-BE-NEXT:    bfi r1, r2, #0, #1
 ; CHECK-BE-NEXT:    ubfx r2, r3, #8, #1
 ; CHECK-BE-NEXT:    rsbs r2, r2, #0

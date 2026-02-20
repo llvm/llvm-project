@@ -148,8 +148,8 @@ define void @correlate(ptr nocapture noundef readonly %ID, ptr nocapture noundef
 ; CHECK-NEXT:    bhs .LBB4_7
 ; CHECK-NEXT:  @ %bb.6: @ in Loop: Header=BB4_4 Depth=1
 ; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    mov r5, r2
+; CHECK-NEXT:    mov r1, r6
 ; CHECK-NEXT:    b .LBB4_10
 ; CHECK-NEXT:  .LBB4_7: @ %vector.ph
 ; CHECK-NEXT:    @ in Loop: Header=BB4_4 Depth=1

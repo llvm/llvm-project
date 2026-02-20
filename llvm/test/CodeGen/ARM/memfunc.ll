@@ -27,7 +27,7 @@ entry:
   ; EABI memset swaps arguments
   ; CHECK-IOS: mov r1, #1
   ; CHECK-IOS: bl _memset
-  ; CHECK-DARWIN: movs r1, #1
+  ; CHECK-DARWIN: mov r1, r8
   ; CHECK-DARWIN: bl _memset
   ; CHECK-EABI: mov r2, #1
   ; CHECK-EABI: bl __aeabi_memset
@@ -38,7 +38,7 @@ entry:
   ; EABI uses memclr if value set to 0
   ; CHECK-IOS: mov r1, #0
   ; CHECK-IOS: bl _memset
-  ; CHECK-DARWIN: movs r1, #0
+  ; CHECK-DARWIN: mov r1, r9
   ; CHECK-DARWIN: bl _memset
   ; CHECK-EABI: bl __aeabi_memclr
   ; CHECK-GNUEABI: bl memset

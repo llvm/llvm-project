@@ -14,7 +14,7 @@ define i32 @add_i32(ptr nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    bhs .LBB0_4
 ; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    mov r0, r3
 ; CHECK-NEXT:    b .LBB0_7
 ; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    movs r0, #0
@@ -294,7 +294,7 @@ define i32 @or_i32(ptr nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    bhs .LBB3_4
 ; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r2, r3
 ; CHECK-NEXT:    b .LBB3_7
 ; CHECK-NEXT:  .LBB3_3:
 ; CHECK-NEXT:    movs r2, #0
@@ -391,7 +391,7 @@ define i32 @xor_i32(ptr nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    bhs .LBB4_4
 ; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r2, r3
 ; CHECK-NEXT:    b .LBB4_7
 ; CHECK-NEXT:  .LBB4_3:
 ; CHECK-NEXT:    movs r2, #0
@@ -1261,7 +1261,7 @@ define i32 @umax_i32(ptr nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    bhs .LBB13_4
 ; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r2, r3
 ; CHECK-NEXT:    b .LBB13_7
 ; CHECK-NEXT:  .LBB13_3:
 ; CHECK-NEXT:    movs r2, #0
@@ -1359,7 +1359,7 @@ define i32 @umax_i32_inloop(ptr nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    bhs .LBB14_4
 ; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    mov r0, r3
 ; CHECK-NEXT:    b .LBB14_7
 ; CHECK-NEXT:  .LBB14_3:
 ; CHECK-NEXT:    movs r0, #0

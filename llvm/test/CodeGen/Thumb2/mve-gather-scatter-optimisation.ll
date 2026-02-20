@@ -636,7 +636,7 @@ define dso_local void @arm_mat_mult_q15(ptr noalias nocapture readonly %A, ptr n
 ; CHECK-NEXT:    ldr r0, [sp, #24] @ 4-byte Reload
 ; CHECK-NEXT:    lsls r6, r7, #1
 ; CHECK-NEXT:    vshl.i32 q3, q1, #2
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r11
 ; CHECK-NEXT:    str r0, [sp, #20] @ 4-byte Spill
 ; CHECK-NEXT:    b .LBB10_5
 ; CHECK-NEXT:  .LBB10_3: @ %for.cond5.preheader.us73.preheader
@@ -688,7 +688,7 @@ define dso_local void @arm_mat_mult_q15(ptr noalias nocapture readonly %A, ptr n
 ; CHECK-NEXT:    bhi .LBB10_10
 ; CHECK-NEXT:  @ %bb.9: @ in Loop: Header=BB10_8 Depth=2
 ; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    mov.w r10, #0
+; CHECK-NEXT:    mov r10, r4
 ; CHECK-NEXT:    b .LBB10_13
 ; CHECK-NEXT:  .LBB10_10: @ %vector.ph
 ; CHECK-NEXT:    @ in Loop: Header=BB10_8 Depth=2

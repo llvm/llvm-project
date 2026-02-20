@@ -776,7 +776,7 @@ define i64 @func(i64 %arg) {
 ; THUMB2-NEXT:    adds r0, #1
 ; THUMB2-NEXT:    mov.w r2, #0
 ; THUMB2-NEXT:    adcs r0, r1, #0
-; THUMB2-NEXT:    mov.w r1, #0
+; THUMB2-NEXT:    mov r1, r2
 ; THUMB2-NEXT:    adcs r0, r2, #0
 ; THUMB2-NEXT:    it ne
 ; THUMB2-NEXT:    movne r0, #8

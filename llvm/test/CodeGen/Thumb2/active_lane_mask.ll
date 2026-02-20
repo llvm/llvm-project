@@ -20,31 +20,31 @@ define <2 x i64> @v2i64(i32 %index, i32 %TC, <2 x i64> %V1, <2 x i64> %V2) {
 ; CHECK-NEXT:    vmov q1[3], q1[1], r12, r4
 ; CHECK-NEXT:    csetm r12, lo
 ; CHECK-NEXT:    subs.w r6, r6, #-1
-; CHECK-NEXT:    bfi r5, r12, #0, #8
+; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    sbcs r6, r4, #0
-; CHECK-NEXT:    mov.w r0, #0
+; CHECK-NEXT:    bfi r0, r12, #0, #8
 ; CHECK-NEXT:    csetm r6, lo
-; CHECK-NEXT:    bfi r5, r6, #8, #8
-; CHECK-NEXT:    vmsr p0, r5
+; CHECK-NEXT:    bfi r0, r6, #8, #8
+; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q1, q1, q0
 ; CHECK-NEXT:    vand q0, q2, q0
 ; CHECK-NEXT:    vmov r1, r4, d0
-; CHECK-NEXT:    vmov r6, r5, d2
+; CHECK-NEXT:    vmov r0, r6, d2
 ; CHECK-NEXT:    vmov d0, r2, r3
-; CHECK-NEXT:    subs r1, r6, r1
-; CHECK-NEXT:    sbcs.w r1, r5, r4
-; CHECK-NEXT:    vmov r5, r4, d1
-; CHECK-NEXT:    csetm r1, lo
+; CHECK-NEXT:    subs r0, r0, r1
+; CHECK-NEXT:    sbcs.w r0, r6, r4
+; CHECK-NEXT:    vmov r6, r4, d1
+; CHECK-NEXT:    csetm r0, lo
 ; CHECK-NEXT:    vldr d1, [sp, #16]
-; CHECK-NEXT:    bfi r0, r1, #0, #8
-; CHECK-NEXT:    vmov r1, r6, d3
-; CHECK-NEXT:    subs r1, r1, r5
-; CHECK-NEXT:    sbcs.w r1, r6, r4
-; CHECK-NEXT:    csetm r1, lo
-; CHECK-NEXT:    bfi r0, r1, #8, #8
-; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    bfi r5, r0, #0, #8
+; CHECK-NEXT:    vmov r0, r1, d3
+; CHECK-NEXT:    subs r0, r0, r6
+; CHECK-NEXT:    sbcs.w r0, r1, r4
+; CHECK-NEXT:    csetm r0, lo
+; CHECK-NEXT:    bfi r5, r0, #8, #8
 ; CHECK-NEXT:    add r0, sp, #24
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vmsr p0, r5
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    vmov r2, r3, d1
@@ -276,7 +276,7 @@ define <16 x i8> @v16i8(i32 %index, i32 %TC, <16 x i8> %V1, <16 x i8> %V2) {
 define void @test_width2(ptr nocapture readnone %x, ptr nocapture %y, i8 zeroext %m) {
 ; CHECK-LABEL: test_width2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    beq .LBB5_3
@@ -284,6 +284,7 @@ define void @test_width2(ptr nocapture readnone %x, ptr nocapture %y, i8 zeroext
 ; CHECK-NEXT:    adds r0, r2, #1
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    bic r0, r0, #1
+; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    subs r0, #2
 ; CHECK-NEXT:    add.w r0, r3, r0, lsr #1
 ; CHECK-NEXT:    dls lr, r0
@@ -292,30 +293,30 @@ define void @test_width2(ptr nocapture readnone %x, ptr nocapture %y, i8 zeroext
 ; CHECK-NEXT:    vctp.64 r2
 ; CHECK-NEXT:    @ implicit-def: $q0
 ; CHECK-NEXT:    subs r2, #2
-; CHECK-NEXT:    vmrs r3, p0
-; CHECK-NEXT:    and r0, r3, #1
-; CHECK-NEXT:    ubfx r3, r3, #8, #1
-; CHECK-NEXT:    rsb.w r12, r0, #0
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    rsbs r3, r3, #0
-; CHECK-NEXT:    bfi r0, r12, #0, #1
-; CHECK-NEXT:    sub.w r12, r1, #8
-; CHECK-NEXT:    bfi r0, r3, #1, #1
-; CHECK-NEXT:    lsls r3, r0, #31
+; CHECK-NEXT:    vmrs r0, p0
+; CHECK-NEXT:    and r3, r0, #1
+; CHECK-NEXT:    ubfx r0, r0, #8, #1
+; CHECK-NEXT:    rsbs r4, r3, #0
+; CHECK-NEXT:    mov r3, r12
+; CHECK-NEXT:    rsbs r0, r0, #0
+; CHECK-NEXT:    bfi r3, r4, #0, #1
+; CHECK-NEXT:    bfi r3, r0, #1, #1
+; CHECK-NEXT:    lsls r0, r3, #31
+; CHECK-NEXT:    sub.w r0, r1, #8
 ; CHECK-NEXT:    itt ne
-; CHECK-NEXT:    ldrne.w r3, [r12]
-; CHECK-NEXT:    vmovne.32 q0[0], r3
-; CHECK-NEXT:    lsls r0, r0, #30
+; CHECK-NEXT:    ldrne r4, [r0]
+; CHECK-NEXT:    vmovne.32 q0[0], r4
+; CHECK-NEXT:    lsls r3, r3, #30
 ; CHECK-NEXT:    itt mi
-; CHECK-NEXT:    ldrmi.w r0, [r12, #4]
+; CHECK-NEXT:    ldrmi r0, [r0, #4]
 ; CHECK-NEXT:    vmovmi.32 q0[2], r0
 ; CHECK-NEXT:    vmrs r3, p0
 ; CHECK-NEXT:    and r0, r3, #1
 ; CHECK-NEXT:    ubfx r3, r3, #8, #1
-; CHECK-NEXT:    rsb.w r12, r0, #0
-; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    rsbs r4, r0, #0
+; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    rsbs r3, r3, #0
-; CHECK-NEXT:    bfi r0, r12, #0, #1
+; CHECK-NEXT:    bfi r0, r4, #0, #1
 ; CHECK-NEXT:    bfi r0, r3, #1, #1
 ; CHECK-NEXT:    lsls r3, r0, #31
 ; CHECK-NEXT:    itt ne
@@ -329,7 +330,7 @@ define void @test_width2(ptr nocapture readnone %x, ptr nocapture %y, i8 zeroext
 ; CHECK-NEXT:    le lr, .LBB5_2
 ; CHECK-NEXT:  .LBB5_3: @ %for.cond.cleanup
 ; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp9.not = icmp eq i8 %m, 0
   br i1 %cmp9.not, label %for.cond.cleanup, label %for.body.preheader

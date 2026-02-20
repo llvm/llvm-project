@@ -1850,7 +1850,7 @@ define void @infiniteloop3() "frame-pointer"="none" {
 ; THUMB-ENABLE-NEXT:    movs r0, #0
 ; THUMB-ENABLE-NEXT:    cbnz r0, LBB11_5
 ; THUMB-ENABLE-NEXT:  @ %bb.1: @ %loop2a.preheader
-; THUMB-ENABLE-NEXT:    movs r1, #0
+; THUMB-ENABLE-NEXT:    mov r1, r0
 ; THUMB-ENABLE-NEXT:    mov r2, r0
 ; THUMB-ENABLE-NEXT:    b LBB11_3
 ; THUMB-ENABLE-NEXT:  LBB11_2: @ %loop2b
@@ -1878,7 +1878,7 @@ define void @infiniteloop3() "frame-pointer"="none" {
 ; THUMB-DISABLE-NEXT:    movs r0, #0
 ; THUMB-DISABLE-NEXT:    cbnz r0, LBB11_5
 ; THUMB-DISABLE-NEXT:  @ %bb.1: @ %loop2a.preheader
-; THUMB-DISABLE-NEXT:    movs r1, #0
+; THUMB-DISABLE-NEXT:    mov r1, r0
 ; THUMB-DISABLE-NEXT:    mov r2, r0
 ; THUMB-DISABLE-NEXT:    b LBB11_3
 ; THUMB-DISABLE-NEXT:  LBB11_2: @ %loop2b

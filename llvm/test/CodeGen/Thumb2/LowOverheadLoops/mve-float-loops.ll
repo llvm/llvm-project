@@ -1417,7 +1417,7 @@ define arm_aapcs_vfpcc float @half_half_mac(ptr nocapture readonly %a, ptr nocap
 ; CHECK-NEXT:    bhs .LBB9_4
 ; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:    vldr s0, .LCPI9_0
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    b .LBB9_6
 ; CHECK-NEXT:  .LBB9_3:
 ; CHECK-NEXT:    vldr s0, .LCPI9_0
@@ -1428,12 +1428,12 @@ define arm_aapcs_vfpcc float @half_half_mac(ptr nocapture readonly %a, ptr nocap
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vldr s0, .LCPI9_0
 ; CHECK-NEXT:    add.w lr, r3, r2, lsr #2
-; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r3, r2
 ; CHECK-NEXT:  .LBB9_5: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    adds r5, r0, r3
-; CHECK-NEXT:    adds r4, r1, r3
+; CHECK-NEXT:    adds r5, r0, r2
+; CHECK-NEXT:    adds r4, r1, r2
 ; CHECK-NEXT:    vldr.16 s2, [r4, #6]
 ; CHECK-NEXT:    vldr.16 s4, [r5, #6]
 ; CHECK-NEXT:    vldr.16 s6, [r5, #4]
@@ -1445,11 +1445,11 @@ define arm_aapcs_vfpcc float @half_half_mac(ptr nocapture readonly %a, ptr nocap
 ; CHECK-NEXT:    vmul.f16 s4, s6, s4
 ; CHECK-NEXT:    vldr.16 s6, [r4, #2]
 ; CHECK-NEXT:    vcvtb.f32.f16 s4, s4
-; CHECK-NEXT:    adds r3, #8
+; CHECK-NEXT:    adds r2, #8
 ; CHECK-NEXT:    vmul.f16 s6, s8, s6
 ; CHECK-NEXT:    vldr.16 s8, [r4]
 ; CHECK-NEXT:    vcvtb.f32.f16 s6, s6
-; CHECK-NEXT:    adds r2, #4
+; CHECK-NEXT:    adds r3, #4
 ; CHECK-NEXT:    vmul.f16 s8, s10, s8
 ; CHECK-NEXT:    vcvtb.f32.f16 s8, s8
 ; CHECK-NEXT:    vadd.f32 s0, s0, s8
@@ -1460,8 +1460,8 @@ define arm_aapcs_vfpcc float @half_half_mac(ptr nocapture readonly %a, ptr nocap
 ; CHECK-NEXT:  .LBB9_6: @ %for.cond.cleanup.loopexit.unr-lcssa
 ; CHECK-NEXT:    wls lr, r12, .LBB9_9
 ; CHECK-NEXT:  @ %bb.7: @ %for.body.epil.preheader
-; CHECK-NEXT:    add.w r0, r0, r2, lsl #1
-; CHECK-NEXT:    add.w r1, r1, r2, lsl #1
+; CHECK-NEXT:    add.w r0, r0, r3, lsl #1
+; CHECK-NEXT:    add.w r1, r1, r3, lsl #1
 ; CHECK-NEXT:  .LBB9_8: @ %for.body.epil
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldr.16 s2, [r1]
@@ -1572,7 +1572,7 @@ define arm_aapcs_vfpcc float @half_half_acc(ptr nocapture readonly %a, ptr nocap
 ; CHECK-NEXT:    bhs .LBB10_4
 ; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:    vldr s0, .LCPI10_0
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    b .LBB10_6
 ; CHECK-NEXT:  .LBB10_3:
 ; CHECK-NEXT:    vldr s0, .LCPI10_0
@@ -1583,12 +1583,12 @@ define arm_aapcs_vfpcc float @half_half_acc(ptr nocapture readonly %a, ptr nocap
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vldr s0, .LCPI10_0
 ; CHECK-NEXT:    add.w lr, r3, r2, lsr #2
-; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r3, r2
 ; CHECK-NEXT:  .LBB10_5: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    adds r5, r0, r3
-; CHECK-NEXT:    adds r4, r1, r3
+; CHECK-NEXT:    adds r5, r0, r2
+; CHECK-NEXT:    adds r4, r1, r2
 ; CHECK-NEXT:    vldr.16 s2, [r4, #6]
 ; CHECK-NEXT:    vldr.16 s4, [r5, #6]
 ; CHECK-NEXT:    vldr.16 s6, [r5, #4]
@@ -1600,11 +1600,11 @@ define arm_aapcs_vfpcc float @half_half_acc(ptr nocapture readonly %a, ptr nocap
 ; CHECK-NEXT:    vadd.f16 s4, s6, s4
 ; CHECK-NEXT:    vldr.16 s6, [r4, #2]
 ; CHECK-NEXT:    vcvtb.f32.f16 s4, s4
-; CHECK-NEXT:    adds r3, #8
+; CHECK-NEXT:    adds r2, #8
 ; CHECK-NEXT:    vadd.f16 s6, s8, s6
 ; CHECK-NEXT:    vldr.16 s8, [r4]
 ; CHECK-NEXT:    vcvtb.f32.f16 s6, s6
-; CHECK-NEXT:    adds r2, #4
+; CHECK-NEXT:    adds r3, #4
 ; CHECK-NEXT:    vadd.f16 s8, s10, s8
 ; CHECK-NEXT:    vcvtb.f32.f16 s8, s8
 ; CHECK-NEXT:    vadd.f32 s0, s0, s8
@@ -1615,8 +1615,8 @@ define arm_aapcs_vfpcc float @half_half_acc(ptr nocapture readonly %a, ptr nocap
 ; CHECK-NEXT:  .LBB10_6: @ %for.cond.cleanup.loopexit.unr-lcssa
 ; CHECK-NEXT:    wls lr, r12, .LBB10_9
 ; CHECK-NEXT:  @ %bb.7: @ %for.body.epil.preheader
-; CHECK-NEXT:    add.w r0, r0, r2, lsl #1
-; CHECK-NEXT:    add.w r1, r1, r2, lsl #1
+; CHECK-NEXT:    add.w r0, r0, r3, lsl #1
+; CHECK-NEXT:    add.w r1, r1, r3, lsl #1
 ; CHECK-NEXT:  .LBB10_8: @ %for.body.epil
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldr.16 s2, [r1]
