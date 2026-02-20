@@ -4521,21 +4521,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, NestedStatusOrInOptional) {
 TEST_P(UncheckedStatusOrAccessModelTest, DISABLED_CoroutineCoAwait) {
   ExpectDiagnosticsFor(R"cc(
 #include "unchecked_statusor_access_test_defs.h"
-#include "std_coroutine.h"
-
-  template<typename T>
-  struct Task {
-    struct promise_type {
-        Task get_return_object();
-        std::suspend_never initial_suspend() noexcept;
-        std::suspend_always final_suspend() noexcept;
-        void return_value(T v);
-        void unhandled_exception();
-    };
-    bool await_ready() const noexcept;
-    T await_resume() noexcept;
-    void await_suspend(std::coroutine_handle<> handle) noexcept;
-  };
+#include "task.h"
 
   Task<STATUSOR_INT> call(STATUSOR_INT sor) {
     if (sor.ok()) {
@@ -4560,21 +4546,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, DISABLED_CoroutineCoAwait) {
 TEST_P(UncheckedStatusOrAccessModelTest, CoroutineCoReturn) {
   ExpectDiagnosticsFor(R"cc(
 #include "unchecked_statusor_access_test_defs.h"
-#include "std_coroutine.h"
-
-  template<typename T>
-  struct Task {
-    struct promise_type {
-        Task get_return_object();
-        std::suspend_never initial_suspend() noexcept;
-        std::suspend_always final_suspend() noexcept;
-        void return_value(T v);
-        void unhandled_exception();
-    };
-    bool await_ready() const noexcept;
-    T await_resume() noexcept;
-    void await_suspend(std::coroutine_handle<> handle) noexcept;
-  };
+#include "task.h"
 
   Task<STATUSOR_INT> target(STATUSOR_INT sor) {
     if (sor.ok()) {
