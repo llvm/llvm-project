@@ -3317,8 +3317,8 @@ bool SPIRVInstructionSelector::selectExp10(Register ResVReg,
             std::vector<Register>({ConstReg, I.getOperand(1).getReg()}),
             Opcode))
       return false;
-    return selectExtInstWithSrcs(
-        ResVReg, ResType, I, std::vector<Register>({ArgReg}), GL::Exp2);
+    return selectExtInstWithSrcs(ResVReg, ResType, I,
+                                 std::vector<Register>({ArgReg}), GL::Exp2);
   }
 
   return false;
