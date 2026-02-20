@@ -913,8 +913,10 @@ void AddDebugInfoPass::runOnOperation() {
 
   mlir::LLVM::DIFileAttr fileAttr =
       mlir::LLVM::DIFileAttr::get(context, fileName, filePath);
-  mlir::StringAttr producer =
-      mlir::StringAttr::get(context, Fortran::common::getFlangFullVersion());
+  std::string producerString = Fortran::common::getFlangFullVersion();
+  if (!dwarfDebugFlags.empty())
+    producerString += " " + dwarfDebugFlags;
+  mlir::StringAttr producer = mlir::StringAttr::get(context, producerString);
   mlir::LLVM::DICompileUnitAttr cuAttr = mlir::LLVM::DICompileUnitAttr::get(
       mlir::DistinctAttr::create(mlir::UnitAttr::get(context)),
       llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,

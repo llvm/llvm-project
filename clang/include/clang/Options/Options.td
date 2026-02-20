@@ -4978,9 +4978,11 @@ def gxcoff : Joined<["-"], "gxcoff">, Group<g_Group>, Flags<[Unsupported]>;
 def gvms : Joined<["-"], "gvms">, Group<g_Group>, Flags<[Unsupported]>;
 def gtoggle : Flag<["-"], "gtoggle">, Group<g_flags_Group>, Flags<[Unsupported]>;
 def grecord_command_line : Flag<["-"], "grecord-command-line">,
-  Group<g_flags_Group>;
+  Group<g_flags_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def gno_record_command_line : Flag<["-"], "gno-record-command-line">,
-  Group<g_flags_Group>;
+  Group<g_flags_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 def : Flag<["-"], "grecord-gcc-switches">, Alias<grecord_command_line>;
 def : Flag<["-"], "gno-record-gcc-switches">, Alias<gno_record_command_line>;
 defm strict_dwarf : BoolOption<"g", "strict-dwarf",
@@ -7924,6 +7926,9 @@ def debug_info_kind_EQ : Joined<["-"], "debug-info-kind=">;
 def record_command_line : Separate<["-"], "record-command-line">,
   HelpText<"The string to embed in the .LLVM.command.line section.">,
   MarshallingInfoString<CodeGenOpts<"RecordCommandLine">>;
+def dwarf_debug_flags : Separate<["-"], "dwarf-debug-flags">,
+  HelpText<"The string to embed in the Dwarf debug flags record.">,
+  MarshallingInfoString<CodeGenOpts<"DwarfDebugFlags">>;
 def dwarf_version_EQ : Joined<["-"], "dwarf-version=">,
   MarshallingInfoInt<CodeGenOpts<"DwarfVersion">>;
 
@@ -7945,9 +7950,6 @@ def debugger_tuning_EQ : Joined<["-"], "debugger-tuning=">,
   Values<"gdb,lldb,sce,dbx">,
   NormalizedValuesScope<"llvm::DebuggerKind">, NormalizedValues<["GDB", "LLDB", "SCE", "DBX"]>,
   MarshallingInfoEnum<CodeGenOpts<"DebuggerTuning">, "Default">;
-def dwarf_debug_flags : Separate<["-"], "dwarf-debug-flags">,
-  HelpText<"The string to embed in the Dwarf debug flags record.">,
-  MarshallingInfoString<CodeGenOpts<"DwarfDebugFlags">>;
 def compress_debug_sections_EQ : Joined<["-", "--"], "compress-debug-sections=">,
     HelpText<"DWARF debug sections compression type">, Values<"none,zlib,zstd">,
     NormalizedValuesScope<"llvm::DebugCompressionType">, NormalizedValues<["None", "Zlib", "Zstd"]>,
