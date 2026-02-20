@@ -26,6 +26,7 @@ void foo_ref() {
 void foo_ref_trivial() {
   RefCountable automatic;
   RefCountable &bar = automatic;
+  // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
 }
 
 void bar_ref(RefCountable &) {}
@@ -63,7 +64,12 @@ void foo4() {
 void foo5() {
   RefPtr<RefCountable> foo;
   auto* bar = foo.get();
+  // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
   bar->trivial();
+  {
+    auto* baz = foo.get();
+    baz->trivial();
+  }
 }
 
 void foo6() {
