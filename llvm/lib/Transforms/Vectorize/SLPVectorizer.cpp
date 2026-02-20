@@ -13541,9 +13541,11 @@ bool BoUpSLP::matchesInversedZExtSelect(
   const auto *Op2TE = getOperandEntry(&SelectTE, 2);
   // Compares must be alternate vectorized, and other operands must be gathers
   // or copyables.
+  // TODO: investigate opportunity for reordered/reused nodes.
   if (CmpTE->State != TreeEntry::Vectorize || !CmpTE->isAltShuffle() ||
       (CmpTE->getOpcode() != Instruction::ICmp &&
        CmpTE->getOpcode() != Instruction::FCmp) ||
+      !CmpTE->ReorderIndices.empty() || !CmpTE->ReuseShuffleIndices.empty() ||
       !Op1TE->ReorderIndices.empty() || !Op1TE->ReuseShuffleIndices.empty() ||
       !Op2TE->ReorderIndices.empty() || !Op2TE->ReuseShuffleIndices.empty())
     return false;
