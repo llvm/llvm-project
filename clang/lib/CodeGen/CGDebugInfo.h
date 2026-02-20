@@ -912,10 +912,7 @@ private:
   llvm::StringRef GetMethodLinkageName(const CXXMethodDecl *Method) const;
 
   /// Returns true if we should generate call target information.
-  bool shouldGenerateVirtualCallSite() const {
-    // Check general conditions for call site generation.
-    return (getCallSiteRelatedAttrs() != llvm::DINode::FlagZero);
-  }
+  bool shouldGenerateVirtualCallSite() const;
 };
 
 /// A scoped helper to set the current debug location to the specified

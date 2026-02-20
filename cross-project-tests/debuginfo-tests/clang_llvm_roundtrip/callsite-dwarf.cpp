@@ -1,10 +1,15 @@
-// RUN: %clang --target=x86_64-unknown-linux -c -g -O1 %s -o - | \
+// REQUIRES: x86-registered-target
+
+// RUN: %clang --target=x86_64-linux -c -g -O1 -gdwarf-5 %s -o - | \
 // RUN: llvm-dwarfdump --debug-info - | FileCheck %s --check-prefix=CHECK
+
+// RUN: %clang --target=x86_64-linux -c -g -O1 -gdwarf-4 %s -o - | \
+// RUN: llvm-dwarfdump --debug-info - | FileCheck %s --check-prefix=CHECK-DW4
 
 // Simple base and derived class with virtual:
 // We check for a generated 'DW_AT_LLVM_virtual_call_origin' for 'foo', that
 // corresponds to the 'call_target' metadata added to the indirect call
-// instruction.
+// instruction, when generating DWARF-5 or greater.
 
 // Note: We should add a test case inside LLDB that make use of the
 //       virtuality call-site target information in DWARF.
@@ -69,3 +74,26 @@ void CDerivedTwo::bar(int &j) { DerivedOne->foo(j); }
 // CHECK:       DW_AT_call_tail_call	(true)
 // CHECK:       DW_AT_call_pc	(0x{{.*}})
 // CHECK:       DW_AT_LLVM_virtual_call_origin	([[FOO_DCL]] "{{.*}}foo{{.*}}")
+
+// CHECK-DW4: DW_TAG_compile_unit
+// CHECK-DW4:   DW_TAG_structure_type
+// CHECK-DW4:     DW_AT_name	("CDerivedOne")
+// CHECK-DW4: [[FOO_DCL:0x[a-f0-9]+]]:    DW_TAG_subprogram
+// CHECK-DW4:       DW_AT_name	("foo")
+// CHECK-DW4:   DW_TAG_structure_type
+// CHECK-DW4:     DW_AT_name	("CBaseOne")
+// CHECK-DW4: [[FOO_DEF:0x[a-f0-9]+]]:  DW_TAG_subprogram
+// CHECK-DW4:     DW_AT_GNU_all_call_sites	(true)
+// CHECK-DW4:     DW_AT_specification	([[FOO_DCL]] "{{.*}}foo{{.*}}")
+// CHECK-DW4:   DW_TAG_structure_type
+// CHECK-DW4:     DW_AT_name	("CDerivedTwo")
+// CHECK-DW4:     DW_TAG_subprogram
+// CHECK-DW4:       DW_AT_name	("bar")
+// CHECK-DW4:   DW_TAG_structure_type
+// CHECK-DW4:     DW_AT_name	("CBaseTwo")
+// CHECK-DW4:   DW_TAG_subprogram
+// CHECK-DW4:     DW_AT_GNU_all_call_sites	(true)
+// CHECK-DW4:     DW_AT_specification	(0x{{.*}} "{{.*}}bar{{.*}}")
+// CHECK-DW4:     DW_TAG_GNU_call_site
+// CHECK-DW4:       DW_AT_GNU_call_site_target_clobbered	(DW_OP_reg0 RAX)
+// CHECK-DW4:       DW_AT_GNU_tail_call	(true)

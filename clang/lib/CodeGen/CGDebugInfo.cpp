@@ -2332,6 +2332,12 @@ CGDebugInfo::GetMethodLinkageName(const CXXMethodDecl *Method) const {
   return CGM.getMangledName(Method);
 }
 
+bool CGDebugInfo::shouldGenerateVirtualCallSite() const {
+  // Check general conditions for call site generation.
+  return ((getCallSiteRelatedAttrs() != llvm::DINode::FlagZero) &&
+          (CGM.getCodeGenOpts().DwarfVersion >= 5));
+}
+
 llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     const CXXMethodDecl *Method, llvm::DIFile *Unit, llvm::DIType *RecordTy) {
   assert(Method);
