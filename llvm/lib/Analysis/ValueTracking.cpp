@@ -5934,11 +5934,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       IntrinsicInst *I = dyn_cast<IntrinsicInst>(RecurValue);
       if (!I)
         continue;
-      Value *R, *L;
-      Value *Init;
+      Value *R, *L, *Init;
       PHINode *PN;
       const Function *F = I->getFunction();
-      const fltSemantics &FltSem =
+      const auto &FltSem =
           I->getType()->getScalarType()->getFltSemantics();
       DenormalMode Mode =
           F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
@@ -9294,10 +9293,7 @@ static bool matchThreeInputRecurrence(const PHINode *PN, InstTy *&Inst,
 
   for (unsigned I = 0; I != 2; ++I) {
     if (auto *Operation = dyn_cast<InstTy>(PN->getIncomingValue(I));
-        Operation) {
-      if (Operation->getNumOperands() < 3)
-        continue;
-
+        Operation && Operation->arg_size() == 3) {
       Value *Op0 = Operation->getOperand(0);
       Value *Op1 = Operation->getOperand(1);
       Value *Op2 = Operation->getOperand(2);
