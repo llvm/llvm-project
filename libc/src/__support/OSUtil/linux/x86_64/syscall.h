@@ -16,7 +16,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LIBC_INLINE long syscall_impl(long __number) {
+[[gnu::always_inline]] LIBC_INLINE long syscall_impl(long __number) {
   long retcode;
   LIBC_INLINE_ASM("syscall"
                   : "=a"(retcode)
@@ -25,7 +25,8 @@ LIBC_INLINE long syscall_impl(long __number) {
   return retcode;
 }
 
-LIBC_INLINE long syscall_impl(long __number, long __arg1) {
+[[gnu::always_inline]] LIBC_INLINE long syscall_impl(long __number,
+                                                     long __arg1) {
   long retcode;
   LIBC_INLINE_ASM("syscall"
                   : "=a"(retcode)
@@ -34,7 +35,8 @@ LIBC_INLINE long syscall_impl(long __number, long __arg1) {
   return retcode;
 }
 
-LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2) {
+[[gnu::always_inline]] LIBC_INLINE long syscall_impl(long __number, long __arg1,
+                                                     long __arg2) {
   long retcode;
   LIBC_INLINE_ASM("syscall"
                   : "=a"(retcode)
@@ -43,8 +45,8 @@ LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2) {
   return retcode;
 }
 
-LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2,
-                              long __arg3) {
+[[gnu::always_inline]] LIBC_INLINE long syscall_impl(long __number, long __arg1,
+                                                     long __arg2, long __arg3) {
   long retcode;
   LIBC_INLINE_ASM("syscall"
                   : "=a"(retcode)
@@ -53,8 +55,9 @@ LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2,
   return retcode;
 }
 
-LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2,
-                              long __arg3, long __arg4) {
+[[gnu::always_inline]] LIBC_INLINE long syscall_impl(long __number, long __arg1,
+                                                     long __arg2, long __arg3,
+                                                     long __arg4) {
   long retcode;
   register long r10 __asm__("r10") = __arg4;
   LIBC_INLINE_ASM("syscall"
@@ -65,8 +68,9 @@ LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2,
   return retcode;
 }
 
-LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2,
-                              long __arg3, long __arg4, long __arg5) {
+[[gnu::always_inline]] LIBC_INLINE long syscall_impl(long __number, long __arg1,
+                                                     long __arg2, long __arg3,
+                                                     long __arg4, long __arg5) {
   long retcode;
   register long r10 __asm__("r10") = __arg4;
   register long r8 __asm__("r8") = __arg5;
@@ -78,9 +82,10 @@ LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2,
   return retcode;
 }
 
-LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2,
-                              long __arg3, long __arg4, long __arg5,
-                              long __arg6) {
+[[gnu::always_inline]] LIBC_INLINE long syscall_impl(long __number, long __arg1,
+                                                     long __arg2, long __arg3,
+                                                     long __arg4, long __arg5,
+                                                     long __arg6) {
   long retcode;
   register long r10 __asm__("r10") = __arg4;
   register long r8 __asm__("r8") = __arg5;
