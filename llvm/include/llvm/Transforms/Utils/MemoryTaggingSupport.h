@@ -54,8 +54,8 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
                           const SmallVectorImpl<Instruction *> &RetVec,
                           llvm::function_ref<void(Instruction *)> Callback);
 
-bool isStandardLifetime(const AllocaInfo &AInfo, const DominatorTree *DT,
-                        const LoopInfo *LI, size_t MaxLifetimes);
+bool isSupportedLifetime(const AllocaInfo &AInfo, const DominatorTree *DT,
+                         const LoopInfo *LI);
 
 Instruction *getUntagLocationIfFunctionExit(Instruction &Inst);
 

@@ -69,8 +69,8 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
   return !UncoveredRets;
 }
 
-bool isStandardLifetime(const AllocaInfo &AInfo, const DominatorTree *DT,
-                        const LoopInfo *LI, size_t MaxLifetimes) {
+bool isSupportedLifetime(const AllocaInfo &AInfo, const DominatorTree *DT,
+                         const LoopInfo *LI) {
   if (AInfo.LifetimeStart.empty())
     return false;
   SmallVector<BasicBlock *, 2> LastEndBlocks;
