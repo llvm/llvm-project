@@ -829,6 +829,16 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
                             std::make_move_iterator(Rules.end()));
 }
 
+bool isPointerToCharArray(const QualType &QT) {
+  if (!QT->isPointerType())
+    return false;
+  QualType PointeeType = QT->getPointeeType();
+  if (!PointeeType->isPointerType() ||
+      !PointeeType->getPointeeType()->isCharType())
+    return false;
+  return true;
+}
+
 // The incoming parameters of the main function get tainted
 // if the program called in an untrusted environment.
 void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
@@ -841,12 +851,12 @@ void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
   if (!FD || !FD->isMain() || FD->param_size() < 2)
     return;
 
+  if (!FD->parameters()[0]->getType()->isIntegerType())
+    return;
+
+  if (!isPointerToCharArray(FD->parameters()[1]->getType()))
+    return;
   ProgramStateRef State = C.getState();
-  const MemRegion *ArgvReg =
-      State->getRegion(FD->parameters()[1], C.getLocationContext());
-  SVal ArgvSVal = State->getSVal(ArgvReg);
-  State = addTaint(State, ArgvSVal);
-  StringRef ArgvName = FD->parameters()[1]->getName();
 
   const MemRegion *ArgcReg =
       State->getRegion(FD->parameters()[0], C.getLocationContext());
@@ -861,21 +871,47 @@ void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
                                     llvm::APSInt::getUnsigned(2097152), true);
   }
 
+  const MemRegion *ArgvReg =
+      State->getRegion(FD->parameters()[1], C.getLocationContext());
+  SVal ArgvSVal = State->getSVal(ArgvReg);
+  State = addTaint(State, ArgvSVal);
+  StringRef ArgvName = FD->parameters()[1]->getName();
+
+  bool HaveEnvp = FD->param_size() > 2;
+  SVal EnvpSVal;
+  StringRef EnvpName;
+  if (HaveEnvp && !isPointerToCharArray(FD->parameters()[2]->getType()))
+    return;
+  if (HaveEnvp) {
+    const MemRegion *EnvPReg =
+        State->getRegion(FD->parameters()[2], C.getLocationContext());
+    EnvpSVal = State->getSVal(EnvPReg);
+    EnvpName = FD->parameters()[2]->getName();
+    State = addTaint(State, EnvpSVal);
+  }
+
   const NoteTag *OriginatingTag =
-      C.getNoteTag([ArgvSVal, ArgcSVal, ArgcName,
-                    ArgvName](PathSensitiveBugReport &BR) -> std::string {
+      C.getNoteTag([ArgvSVal, ArgcSVal, ArgcName, ArgvName, EnvpSVal,
+                    EnvpName](PathSensitiveBugReport &BR) -> std::string {
         // We give diagnostics only for taint related reports
-        if ((!BR.isInteresting(ArgcSVal) && !BR.isInteresting(ArgvSVal)) ||
+        if ((!BR.isInteresting(ArgcSVal) && !BR.isInteresting(ArgvSVal) &&
+             !BR.isInteresting(EnvpSVal)) ||
             BR.getBugType().getCategory() != categories::TaintedData)
           return "";
-        std::string Message = "Taint originated in ";
-        if (BR.isInteresting(ArgvSVal) && BR.isInteresting(ArgcSVal))
-          Message += "'" + ArgvName.str() + "' and '" + ArgcName.str() + "'";
-        else if (BR.isInteresting(ArgvSVal))
+        std::string Message = "";
+        if (BR.isInteresting(ArgvSVal))
           Message += "'" + ArgvName.str() + "'";
-        else
+        if (BR.isInteresting(ArgcSVal)){
+          if (Message.size()>0)
+            Message += ", ";
           Message += "'" + ArgcName.str() + "'";
-        return Message;
+        }
+        if (BR.isInteresting(EnvpSVal)){
+          if (Message.size()>0)
+            Message += ", ";
+          Message += "'" + EnvpName.str() + "'";
+        }
+        return "Taint originated in " + Message;
       });
   C.addTransition(State, OriginatingTag);
 }

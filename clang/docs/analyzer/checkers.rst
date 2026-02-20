@@ -1374,12 +1374,12 @@ For a more detailed description of configuration options, please see the
 * ``Config`` Specifies the name of the YAML configuration file. The user can
   define their own taint sources and sinks.
 
-* The if the analyzer option ``assume-controlled-environment`` is set to ``false``,
+* If the analyzer option ``assume-controlled-environment`` is set to ``false``,
   it is assumed that the command line arguments and the environment
   variables of the program are attacker controlled.
-  In particular, the ``argv`` argument of the ``main`` function and
-  the return value of the ``getenv()`` function are assumed to
-  hold tainted values.
+  In particular, the ``argv``, ``argc`` and ``envp`` arguments of the
+  ``main`` function and the return value of the ``getenv()``
+  function are assumed to hold tainted values.
 
 **Related Guidelines**
 
