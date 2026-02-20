@@ -29304,18 +29304,24 @@ uint64_t getGFNICtrlImm(unsigned Opcode, unsigned Amt = 0) {
   llvm_unreachable("Unsupported GFNI opcode");
 }
 
-// Generate a GFNI gf2p8affine bitmask for vXi8 bitreverse/shift/rotate.
-SDValue getGFNICtrlMask(unsigned Opcode, SelectionDAG &DAG, const SDLoc &DL,
-                        MVT VT, unsigned Amt = 0) {
+// Build a GFNI gf2p8affine bitmask from a raw 64-bit matrix value.
+static SDValue buildGFNIMatrixMask(uint64_t Imm, SelectionDAG &DAG,
+                                   const SDLoc &DL, MVT VT) {
   assert(VT.getVectorElementType() == MVT::i8 &&
          (VT.getSizeInBits() % 64) == 0 && "Illegal GFNI control type");
-  uint64_t Imm = getGFNICtrlImm(Opcode, Amt);
   SmallVector<SDValue> MaskBits;
   for (unsigned I = 0, E = VT.getSizeInBits(); I != E; I += 8) {
     uint64_t Bits = (Imm >> (I % 64)) & 255;
     MaskBits.push_back(DAG.getConstant(Bits, DL, MVT::i8));
   }
   return DAG.getBuildVector(VT, DL, MaskBits);
+}
+
+// Generate a GFNI gf2p8affine bitmask for vXi8 bitreverse/shift/rotate.
+SDValue getGFNICtrlMask(unsigned Opcode, SelectionDAG &DAG, const SDLoc &DL,
+                        MVT VT, unsigned Amt = 0) {
+  uint64_t Imm = getGFNICtrlImm(Opcode, Amt);
+  return buildGFNIMatrixMask(Imm, DAG, DL, VT);
 }
 
 /// Lower a vector CTLZ using native supported vector CTLZ instruction.
@@ -50816,6 +50822,59 @@ static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG,
   EVT VT = N0.getValueType();
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
   SDLoc DL(N);
+
+  // Fold: shl(gf2p8affineqb(X, M), amt) -> gf2p8affineqb(X, M')
+  // where M' = M composed with shift matrix.
+  // This folds the shift into the matrix transformation.
+  // Handle both the X86ISD::GF2P8AFFINEQB form and the intrinsic form.
+  if (Subtarget.hasGFNI() && VT.isVector() && EltSizeInBits == 8) {
+    bool IsGF2P8 = N0.getOpcode() == X86ISD::GF2P8AFFINEQB;
+    bool IsIntrinsic =
+        N0.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+        (N0.getConstantOperandVal(0) == Intrinsic::x86_vgf2p8affineqb_128 ||
+         N0.getConstantOperandVal(0) == Intrinsic::x86_vgf2p8affineqb_256 ||
+         N0.getConstantOperandVal(0) == Intrinsic::x86_vgf2p8affineqb_512);
+
+    if (IsGF2P8 || IsIntrinsic) {
+      // For vector shifts, the shift amount is a splat vector
+      APInt SplatVal;
+      if (ISD::isConstantSplatVector(N1.getNode(), SplatVal)) {
+        uint64_t ShiftAmt = SplatVal.getZExtValue();
+        if (ShiftAmt > 0 && ShiftAmt < 8) {
+          // Operand indices differ: X86ISD::GF2P8AFFINEQB uses 0,1,2
+          // INTRINSIC_WO_CHAIN uses 1,2,3 (operand 0 is intrinsic ID)
+          unsigned BaseIdx = IsIntrinsic ? 1 : 0;
+          SDValue Input = N0.getOperand(BaseIdx);
+          SDValue MatrixOp = N0.getOperand(BaseIdx + 1);
+          // Fold if matrix is constant. For non-zero XOR immediate, shift it
+          // too: (x ^ imm8) << i = (x << i) ^ (imm8 << i)
+          auto *BV = dyn_cast<BuildVectorSDNode>(MatrixOp);
+          if (BV) {
+            SmallVector<APInt> RawBits;
+            BitVector UndefElts;
+            if (BV->getConstantRawBits(/*IsLE=*/true, 64, RawBits, UndefElts) &&
+                !UndefElts[0]) {
+              uint64_t OrigMatrix = RawBits[0].getZExtValue();
+              // Shifting the matrix is equivalent to right-shifting by
+              // ShiftAmt bytes (each row moves to next position)
+              uint64_t NewMatrix = OrigMatrix >> (ShiftAmt * 8);
+
+              // Shift the XOR immediate as well
+              uint64_t OldImm = N0.getConstantOperandVal(BaseIdx + 2);
+              uint64_t NewImm = (OldImm << ShiftAmt) & 0xFF;
+
+              // Build new matrix vector and return new GF2P8AFFINEQB
+              SDValue NewMatrixOp = buildGFNIMatrixMask(
+                  NewMatrix, DAG, DL, MatrixOp.getSimpleValueType());
+              return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, Input,
+                                 NewMatrixOp,
+                                 DAG.getTargetConstant(NewImm, DL, MVT::i8));
+            }
+          }
+        }
+      }
+    }
+  }
 
   // Exploits AVX2 VSHLV/VSRLV instructions for efficient unsigned vector shifts
   // with out-of-bounds clamping.
