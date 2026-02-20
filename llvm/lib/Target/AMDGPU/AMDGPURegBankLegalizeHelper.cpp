@@ -1099,6 +1099,9 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr128:
   case Vgpr128:
     return LLT::scalar(128);
+  case Sgpr1024:
+  case Vgpr1024:
+    return LLT::scalar(1024);
   case SgprP0:
   case SgprP0Call_WF:
   case VgprP0:
@@ -1119,6 +1122,8 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case SgprP5:
   case VgprP5:
     return LLT::pointer(5, 32);
+  case SgprP6:
+    return LLT::pointer(6, 32);
   case SgprP8:
     return LLT::pointer(8, 128);
   case SgprV2S16:
@@ -1233,6 +1238,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr32_WF:
   case Sgpr64:
   case Sgpr128:
+  case Sgpr1024:
   case SgprP0:
   case SgprP0Call_WF:
   case SgprP1:
@@ -1241,6 +1247,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case SgprP4:
   case SgprP4Call_WF:
   case SgprP5:
+  case SgprP6:
   case SgprP8:
   case SgprPtr32:
   case SgprPtr64:
@@ -1281,6 +1288,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case Vgpr32:
   case Vgpr64:
   case Vgpr128:
+  case Vgpr1024:
   case VgprP0:
   case VgprP1:
   case VgprP2:
@@ -1331,11 +1339,13 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case Sgpr32:
     case Sgpr64:
     case Sgpr128:
+    case Sgpr1024:
     case SgprP0:
     case SgprP1:
     case SgprP3:
     case SgprP4:
     case SgprP5:
+    case SgprP6:
     case SgprP8:
     case SgprV2S16:
     case SgprV2S32:
@@ -1344,6 +1354,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case Vgpr32:
     case Vgpr64:
     case Vgpr128:
+    case Vgpr1024:
     case VgprP0:
     case VgprP1:
     case VgprP2:
@@ -1494,11 +1505,13 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case Sgpr32:
     case Sgpr64:
     case Sgpr128:
+    case Sgpr1024:
     case SgprP0:
     case SgprP1:
     case SgprP3:
     case SgprP4:
     case SgprP5:
+    case SgprP6:
     case SgprP8:
     case SgprV2S16:
     case SgprV2S32:
@@ -1527,6 +1540,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case Vgpr32:
     case Vgpr64:
     case Vgpr128:
+    case Vgpr1024:
     case VgprP0:
     case VgprP1:
     case VgprP2:
