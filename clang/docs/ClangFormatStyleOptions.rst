@@ -5742,7 +5742,7 @@ the configuration (without a prefix: ``Auto``).
 .. _PointerAlignment:
 
 **PointerAlignment** (``PointerAlignmentStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <PointerAlignment>`
-  Pointer and reference alignment style.
+  Pointer and reference alignment style. Only used if ``DerivePointerAlignment`` is not ``true``.
 
   Possible values:
 
