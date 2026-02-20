@@ -267,6 +267,320 @@ struct ValueEqualityComparisonCase {
   bool operator==(BasicBlock *RHSDest) const { return Dest == RHSDest; }
 };
 
+/// Extract ConstantInt from value, looking through IntToPtr
+/// and PointerNullValue. Return NULL if value is not a constant int.
+static ConstantInt *getConstantInt(Value *V, const DataLayout &DL) {
+  // Normal constant int.
+  ConstantInt *CI = dyn_cast<ConstantInt>(V);
+  if (CI || !isa<Constant>(V) || !V->getType()->isPointerTy())
+    return CI;
+
+  // It is not safe to look through inttoptr or ptrtoint when using unstable
+  // pointer types.
+  if (DL.hasUnstableRepresentation(V->getType()))
+    return nullptr;
+
+  // This is some kind of pointer constant. Turn it into a pointer-sized
+  // ConstantInt if possible.
+  IntegerType *IntPtrTy = cast<IntegerType>(DL.getIntPtrType(V->getType()));
+
+  // Null pointer means 0, see SelectionDAGBuilder::getValue(const Value*).
+  if (isa<ConstantPointerNull>(V))
+    return ConstantInt::get(IntPtrTy, 0);
+
+  // IntToPtr const int, we can look through this if the semantics of
+  // inttoptr for this address space are a simple (truncating) bitcast.
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V))
+    if (CE->getOpcode() == Instruction::IntToPtr)
+      if (ConstantInt *CI = dyn_cast<ConstantInt>(CE->getOperand(0))) {
+        // The constant is very likely to have the right type already.
+        if (CI->getType() == IntPtrTy)
+          return CI;
+        else
+          return cast<ConstantInt>(
+              ConstantFoldIntegerCast(CI, IntPtrTy, /*isSigned=*/false, DL));
+      }
+  return nullptr;
+}
+
+/// Given a chain of or (||) or and (&&) comparison of a value against a
+/// constant, this will try to recover the information required for a switch
+/// structure.
+/// It will depth-first traverse the chain of comparison, seeking for patterns
+/// like %a == 12 or %a < 4 and combine them to produce a set of integer
+/// representing the different cases for the switch.
+/// Note that if the chain is composed of '||' it will build the set of elements
+/// that matches the comparisons (i.e. any of this value validate the chain)
+/// while for a chain of '&&' it will build the set elements that make the test
+/// fail.
+struct ConstantComparesGatherer {
+  const DataLayout *DL;
+
+  /// Value found for the switch comparison
+  Value *CompValue = nullptr;
+
+  /// Extra clause to be checked before the switch
+  Value *Extra = nullptr;
+
+  /// Set of integers to match in switch
+  SmallVector<ConstantInt *, 8> Vals;
+
+  /// Number of comparisons matched in the and/or chain
+  unsigned UsedICmps = 0;
+
+  /// If the elements in Vals matches the comparisons
+  bool IsEq = false;
+
+  // Used to check if the first matched CompValue shall be the Extra check.
+  bool IgnoreFirstMatch = false;
+  bool MultipleMatches = false;
+
+  /// Construct and compute the result for the comparison instruction Cond
+  ConstantComparesGatherer(Instruction *Cond, const DataLayout &DL) : DL(&DL) {
+    gather(Cond);
+    if (CompValue || !MultipleMatches)
+      return;
+    Extra = nullptr;
+    Vals.clear();
+    UsedICmps = 0;
+    IgnoreFirstMatch = true;
+    gather(Cond);
+  }
+
+  ConstantComparesGatherer(const ConstantComparesGatherer &) = delete;
+  ConstantComparesGatherer &
+  operator=(const ConstantComparesGatherer &) = delete;
+  ConstantComparesGatherer(ConstantComparesGatherer &&) = default;
+  ConstantComparesGatherer &operator=(ConstantComparesGatherer &&) = default;
+
+private:
+  /// Try to set the current value used for the comparison, it succeeds only if
+  /// it wasn't set before or if the new value is the same as the old one
+  bool setValueOnce(Value *NewVal) {
+    if (IgnoreFirstMatch) {
+      IgnoreFirstMatch = false;
+      return false;
+    }
+    if (CompValue && CompValue != NewVal) {
+      MultipleMatches = true;
+      return false;
+    }
+    CompValue = NewVal;
+    return true;
+  }
+
+  /// Try to match Instruction "I" as a comparison against a constant and
+  /// populates the array Vals with the set of values that match (or do not
+  /// match depending on isEQ).
+  /// Return false on failure. On success, the Value the comparison matched
+  /// against is placed in CompValue.
+  /// If CompValue is already set, the function is expected to fail if a match
+  /// is found but the value compared to is different.
+  bool matchInstruction(Instruction *I, bool isEQ) {
+    if (match(I, m_Not(m_Instruction(I))))
+      isEQ = !isEQ;
+
+    Value *Val;
+    if (match(I, m_NUWTrunc(m_Value(Val)))) {
+      // If we already have a value for the switch, it has to match!
+      if (!setValueOnce(Val))
+        return false;
+      UsedICmps++;
+      Vals.push_back(ConstantInt::get(cast<IntegerType>(Val->getType()), isEQ));
+      return true;
+    }
+    // If this is an icmp against a constant, handle this as one of the cases.
+    ICmpInst *ICI;
+    ConstantInt *C;
+    if (!((ICI = dyn_cast<ICmpInst>(I)) &&
+          (C = getConstantInt(I->getOperand(1), *DL)))) {
+      return false;
+    }
+
+    Value *RHSVal;
+    const APInt *RHSC;
+
+    // Pattern match a special case
+    // (x & ~2^z) == y --> x == y || x == y|2^z
+    // This undoes a transformation done by instcombine to fuse 2 compares.
+    if (ICI->getPredicate() == (isEQ ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE)) {
+      // It's a little bit hard to see why the following transformations are
+      // correct. Here is a CVC3 program to verify them for 64-bit values:
+
+      /*
+         ONE  : BITVECTOR(64) = BVZEROEXTEND(0bin1, 63);
+         x    : BITVECTOR(64);
+         y    : BITVECTOR(64);
+         z    : BITVECTOR(64);
+         mask : BITVECTOR(64) = BVSHL(ONE, z);
+         QUERY( (y & ~mask = y) =>
+                ((x & ~mask = y) <=> (x = y OR x = (y |  mask)))
+         );
+         QUERY( (y |  mask = y) =>
+                ((x |  mask = y) <=> (x = y OR x = (y & ~mask)))
+         );
+      */
+
+      // Please note that each pattern must be a dual implication (<--> or
+      // iff). One directional implication can create spurious matches. If the
+      // implication is only one-way, an unsatisfiable condition on the left
+      // side can imply a satisfiable condition on the right side. Dual
+      // implication ensures that satisfiable conditions are transformed to
+      // other satisfiable conditions and unsatisfiable conditions are
+      // transformed to other unsatisfiable conditions.
+
+      // Here is a concrete example of a unsatisfiable condition on the left
+      // implying a satisfiable condition on the right:
+      //
+      // mask = (1 << z)
+      // (x & ~mask) == y  --> (x == y || x == (y | mask))
+      //
+      // Substituting y = 3, z = 0 yields:
+      // (x & -2) == 3 --> (x == 3 || x == 2)
+
+      // Pattern match a special case:
+      /*
+        QUERY( (y & ~mask = y) =>
+               ((x & ~mask = y) <=> (x = y OR x = (y |  mask)))
+        );
+      */
+      if (match(ICI->getOperand(0),
+                m_And(m_Value(RHSVal), m_APInt(RHSC)))) {
+        APInt Mask = ~*RHSC;
+        if (Mask.isPowerOf2() && (C->getValue() & ~Mask) == C->getValue()) {
+          // If we already have a value for the switch, it has to match!
+          if (!setValueOnce(RHSVal))
+            return false;
+
+          Vals.push_back(C);
+          Vals.push_back(
+              ConstantInt::get(C->getContext(),
+                               C->getValue() | Mask));
+          UsedICmps++;
+          return true;
+        }
+      }
+
+      // Pattern match a special case:
+      /*
+        QUERY( (y |  mask = y) =>
+               ((x |  mask = y) <=> (x = y OR x = (y & ~mask)))
+        );
+      */
+      if (match(ICI->getOperand(0),
+                m_Or(m_Value(RHSVal), m_APInt(RHSC)))) {
+        APInt Mask = *RHSC;
+        if (Mask.isPowerOf2() && (C->getValue() | Mask) == C->getValue()) {
+          // If we already have a value for the switch, it has to match!
+          if (!setValueOnce(RHSVal))
+            return false;
+
+          Vals.push_back(C);
+          Vals.push_back(ConstantInt::get(C->getContext(),
+                                          C->getValue() & ~Mask));
+          UsedICmps++;
+          return true;
+        }
+      }
+
+      // If we already have a value for the switch, it has to match!
+      if (!setValueOnce(ICI->getOperand(0)))
+        return false;
+
+      UsedICmps++;
+      Vals.push_back(C);
+      return true;
+    }
+
+    // If we have "x ult 3", for example, then we can add 0,1,2 to the set.
+    ConstantRange Span =
+        ConstantRange::makeExactICmpRegion(ICI->getPredicate(), C->getValue());
+
+    // Shift the range if the compare is fed by an add. This is the range
+    // compare idiom as emitted by instcombine.
+    Value *CandidateVal = I->getOperand(0);
+    if (match(I->getOperand(0), m_Add(m_Value(RHSVal), m_APInt(RHSC)))) {
+      Span = Span.subtract(*RHSC);
+      CandidateVal = RHSVal;
+    }
+
+    // If this is an and/!= check, then we are looking to build the set of
+    // value that *don't* pass the and chain. I.e. to turn "x ugt 2" into
+    // x != 0 && x != 1.
+    if (!isEQ)
+      Span = Span.inverse();
+
+    // If there are a ton of values, we don't want to make a ginormous switch.
+    if (Span.isSizeLargerThan(8) || Span.isEmptySet()) {
+      return false;
+    }
+
+    // If we already have a value for the switch, it has to match!
+    if (!setValueOnce(CandidateVal))
+      return false;
+
+    // Add all values from the range to the set
+    APInt Tmp = Span.getLower();
+    do
+      Vals.push_back(ConstantInt::get(I->getContext(), Tmp));
+    while (++Tmp != Span.getUpper());
+
+    UsedICmps++;
+    return true;
+  }
+
+  /// Given a potentially 'or'd or 'and'd together collection of icmp
+  /// eq/ne/lt/gt instructions that compare a value against a constant, extract
+  /// the value being compared, and stick the list constants into the Vals
+  /// vector.
+  /// One "Extra" case is allowed to differ from the other.
+  void gather(Value *V) {
+    Value *Op0, *Op1;
+    if (match(V, m_LogicalOr(m_Value(Op0), m_Value(Op1))))
+      IsEq = true;
+    else if (match(V, m_LogicalAnd(m_Value(Op0), m_Value(Op1))))
+      IsEq = false;
+    else
+      return;
+    // Keep a stack (SmallVector for efficiency) for depth-first traversal
+    SmallVector<Value *, 8> DFT{Op0, Op1};
+    SmallPtrSet<Value *, 8> Visited{V, Op0, Op1};
+
+    while (!DFT.empty()) {
+      V = DFT.pop_back_val();
+
+      if (Instruction *I = dyn_cast<Instruction>(V)) {
+        // If it is a || (or && depending on isEQ), process the operands.
+        if (IsEq ? match(I, m_LogicalOr(m_Value(Op0), m_Value(Op1)))
+                 : match(I, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
+          if (Visited.insert(Op1).second)
+            DFT.push_back(Op1);
+          if (Visited.insert(Op0).second)
+            DFT.push_back(Op0);
+
+          continue;
+        }
+
+        // Try to match the current instruction
+        if (matchInstruction(I, IsEq))
+          // Match succeed, continue the loop
+          continue;
+      }
+
+      // One element of the sequence of || (or &&) could not be match as a
+      // comparison against the same value as the others.
+      // We allow only one "Extra" case to be checked before the switch
+      if (!Extra) {
+        Extra = V;
+        continue;
+      }
+      // Failed to parse a proper sequence, abort now
+      CompValue = nullptr;
+      break;
+    }
+  }
+};
+
 class SimplifyCFGOpt {
   const TargetTransformInfo &TTI;
   DomTreeUpdater *DTU;
@@ -314,8 +628,12 @@ class SimplifyCFGOpt {
   bool simplifyTerminatorOnSelect(Instruction *OldTerm, Value *Cond,
                                   BasicBlock *TrueBB, BasicBlock *FalseBB,
                                   uint32_t TrueWeight, uint32_t FalseWeight);
-  bool simplifyBranchOnICmpChain(BranchInst *BI, IRBuilder<> &Builder,
-                                 const DataLayout &DL);
+  bool simplifyBranchOnICmpChain(
+      BranchInst *BI, IRBuilder<> &Builder, const DataLayout &DL,
+      std::optional<ConstantComparesGatherer> ExistingConstantComparesGatherer =
+          std::nullopt);
+  bool simplifyRetOfIcmpChain(ReturnInst &RI, IRBuilder<> &Builder,
+                              const DataLayout &DL);
   bool simplifySwitchOnSelect(SwitchInst *SI, SelectInst *Select);
   bool simplifyIndirectBrOnSelect(IndirectBrInst *IBI, SelectInst *SI);
   bool turnSwitchRangeIntoICmp(SwitchInst *SI, IRBuilder<> &Builder);
@@ -527,322 +845,6 @@ static bool dominatesMergePoint(
   AggressiveInsts.insert(I);
   return true;
 }
-
-/// Extract ConstantInt from value, looking through IntToPtr
-/// and PointerNullValue. Return NULL if value is not a constant int.
-static ConstantInt *getConstantInt(Value *V, const DataLayout &DL) {
-  // Normal constant int.
-  ConstantInt *CI = dyn_cast<ConstantInt>(V);
-  if (CI || !isa<Constant>(V) || !V->getType()->isPointerTy())
-    return CI;
-
-  // It is not safe to look through inttoptr or ptrtoint when using unstable
-  // pointer types.
-  if (DL.hasUnstableRepresentation(V->getType()))
-    return nullptr;
-
-  // This is some kind of pointer constant. Turn it into a pointer-sized
-  // ConstantInt if possible.
-  IntegerType *IntPtrTy = cast<IntegerType>(DL.getIntPtrType(V->getType()));
-
-  // Null pointer means 0, see SelectionDAGBuilder::getValue(const Value*).
-  if (isa<ConstantPointerNull>(V))
-    return ConstantInt::get(IntPtrTy, 0);
-
-  // IntToPtr const int, we can look through this if the semantics of
-  // inttoptr for this address space are a simple (truncating) bitcast.
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V))
-    if (CE->getOpcode() == Instruction::IntToPtr)
-      if (ConstantInt *CI = dyn_cast<ConstantInt>(CE->getOperand(0))) {
-        // The constant is very likely to have the right type already.
-        if (CI->getType() == IntPtrTy)
-          return CI;
-        else
-          return cast<ConstantInt>(
-              ConstantFoldIntegerCast(CI, IntPtrTy, /*isSigned=*/false, DL));
-      }
-  return nullptr;
-}
-
-namespace {
-
-/// Given a chain of or (||) or and (&&) comparison of a value against a
-/// constant, this will try to recover the information required for a switch
-/// structure.
-/// It will depth-first traverse the chain of comparison, seeking for patterns
-/// like %a == 12 or %a < 4 and combine them to produce a set of integer
-/// representing the different cases for the switch.
-/// Note that if the chain is composed of '||' it will build the set of elements
-/// that matches the comparisons (i.e. any of this value validate the chain)
-/// while for a chain of '&&' it will build the set elements that make the test
-/// fail.
-struct ConstantComparesGatherer {
-  const DataLayout &DL;
-
-  /// Value found for the switch comparison
-  Value *CompValue = nullptr;
-
-  /// Extra clause to be checked before the switch
-  Value *Extra = nullptr;
-
-  /// Set of integers to match in switch
-  SmallVector<ConstantInt *, 8> Vals;
-
-  /// Number of comparisons matched in the and/or chain
-  unsigned UsedICmps = 0;
-
-  /// If the elements in Vals matches the comparisons
-  bool IsEq = false;
-
-  // Used to check if the first matched CompValue shall be the Extra check.
-  bool IgnoreFirstMatch = false;
-  bool MultipleMatches = false;
-
-  /// Construct and compute the result for the comparison instruction Cond
-  ConstantComparesGatherer(Instruction *Cond, const DataLayout &DL) : DL(DL) {
-    gather(Cond);
-    if (CompValue || !MultipleMatches)
-      return;
-    Extra = nullptr;
-    Vals.clear();
-    UsedICmps = 0;
-    IgnoreFirstMatch = true;
-    gather(Cond);
-  }
-
-  ConstantComparesGatherer(const ConstantComparesGatherer &) = delete;
-  ConstantComparesGatherer &
-  operator=(const ConstantComparesGatherer &) = delete;
-
-private:
-  /// Try to set the current value used for the comparison, it succeeds only if
-  /// it wasn't set before or if the new value is the same as the old one
-  bool setValueOnce(Value *NewVal) {
-    if (IgnoreFirstMatch) {
-      IgnoreFirstMatch = false;
-      return false;
-    }
-    if (CompValue && CompValue != NewVal) {
-      MultipleMatches = true;
-      return false;
-    }
-    CompValue = NewVal;
-    return true;
-  }
-
-  /// Try to match Instruction "I" as a comparison against a constant and
-  /// populates the array Vals with the set of values that match (or do not
-  /// match depending on isEQ).
-  /// Return false on failure. On success, the Value the comparison matched
-  /// against is placed in CompValue.
-  /// If CompValue is already set, the function is expected to fail if a match
-  /// is found but the value compared to is different.
-  bool matchInstruction(Instruction *I, bool isEQ) {
-    if (match(I, m_Not(m_Instruction(I))))
-      isEQ = !isEQ;
-
-    Value *Val;
-    if (match(I, m_NUWTrunc(m_Value(Val)))) {
-      // If we already have a value for the switch, it has to match!
-      if (!setValueOnce(Val))
-        return false;
-      UsedICmps++;
-      Vals.push_back(ConstantInt::get(cast<IntegerType>(Val->getType()), isEQ));
-      return true;
-    }
-    // If this is an icmp against a constant, handle this as one of the cases.
-    ICmpInst *ICI;
-    ConstantInt *C;
-    if (!((ICI = dyn_cast<ICmpInst>(I)) &&
-          (C = getConstantInt(I->getOperand(1), DL)))) {
-      return false;
-    }
-
-    Value *RHSVal;
-    const APInt *RHSC;
-
-    // Pattern match a special case
-    // (x & ~2^z) == y --> x == y || x == y|2^z
-    // This undoes a transformation done by instcombine to fuse 2 compares.
-    if (ICI->getPredicate() == (isEQ ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE)) {
-      // It's a little bit hard to see why the following transformations are
-      // correct. Here is a CVC3 program to verify them for 64-bit values:
-
-      /*
-         ONE  : BITVECTOR(64) = BVZEROEXTEND(0bin1, 63);
-         x    : BITVECTOR(64);
-         y    : BITVECTOR(64);
-         z    : BITVECTOR(64);
-         mask : BITVECTOR(64) = BVSHL(ONE, z);
-         QUERY( (y & ~mask = y) =>
-                ((x & ~mask = y) <=> (x = y OR x = (y |  mask)))
-         );
-         QUERY( (y |  mask = y) =>
-                ((x |  mask = y) <=> (x = y OR x = (y & ~mask)))
-         );
-      */
-
-      // Please note that each pattern must be a dual implication (<--> or
-      // iff). One directional implication can create spurious matches. If the
-      // implication is only one-way, an unsatisfiable condition on the left
-      // side can imply a satisfiable condition on the right side. Dual
-      // implication ensures that satisfiable conditions are transformed to
-      // other satisfiable conditions and unsatisfiable conditions are
-      // transformed to other unsatisfiable conditions.
-
-      // Here is a concrete example of a unsatisfiable condition on the left
-      // implying a satisfiable condition on the right:
-      //
-      // mask = (1 << z)
-      // (x & ~mask) == y  --> (x == y || x == (y | mask))
-      //
-      // Substituting y = 3, z = 0 yields:
-      // (x & -2) == 3 --> (x == 3 || x == 2)
-
-      // Pattern match a special case:
-      /*
-        QUERY( (y & ~mask = y) =>
-               ((x & ~mask = y) <=> (x = y OR x = (y |  mask)))
-        );
-      */
-      if (match(ICI->getOperand(0),
-                m_And(m_Value(RHSVal), m_APInt(RHSC)))) {
-        APInt Mask = ~*RHSC;
-        if (Mask.isPowerOf2() && (C->getValue() & ~Mask) == C->getValue()) {
-          // If we already have a value for the switch, it has to match!
-          if (!setValueOnce(RHSVal))
-            return false;
-
-          Vals.push_back(C);
-          Vals.push_back(
-              ConstantInt::get(C->getContext(),
-                               C->getValue() | Mask));
-          UsedICmps++;
-          return true;
-        }
-      }
-
-      // Pattern match a special case:
-      /*
-        QUERY( (y |  mask = y) =>
-               ((x |  mask = y) <=> (x = y OR x = (y & ~mask)))
-        );
-      */
-      if (match(ICI->getOperand(0),
-                m_Or(m_Value(RHSVal), m_APInt(RHSC)))) {
-        APInt Mask = *RHSC;
-        if (Mask.isPowerOf2() && (C->getValue() | Mask) == C->getValue()) {
-          // If we already have a value for the switch, it has to match!
-          if (!setValueOnce(RHSVal))
-            return false;
-
-          Vals.push_back(C);
-          Vals.push_back(ConstantInt::get(C->getContext(),
-                                          C->getValue() & ~Mask));
-          UsedICmps++;
-          return true;
-        }
-      }
-
-      // If we already have a value for the switch, it has to match!
-      if (!setValueOnce(ICI->getOperand(0)))
-        return false;
-
-      UsedICmps++;
-      Vals.push_back(C);
-      return true;
-    }
-
-    // If we have "x ult 3", for example, then we can add 0,1,2 to the set.
-    ConstantRange Span =
-        ConstantRange::makeExactICmpRegion(ICI->getPredicate(), C->getValue());
-
-    // Shift the range if the compare is fed by an add. This is the range
-    // compare idiom as emitted by instcombine.
-    Value *CandidateVal = I->getOperand(0);
-    if (match(I->getOperand(0), m_Add(m_Value(RHSVal), m_APInt(RHSC)))) {
-      Span = Span.subtract(*RHSC);
-      CandidateVal = RHSVal;
-    }
-
-    // If this is an and/!= check, then we are looking to build the set of
-    // value that *don't* pass the and chain. I.e. to turn "x ugt 2" into
-    // x != 0 && x != 1.
-    if (!isEQ)
-      Span = Span.inverse();
-
-    // If there are a ton of values, we don't want to make a ginormous switch.
-    if (Span.isSizeLargerThan(8) || Span.isEmptySet()) {
-      return false;
-    }
-
-    // If we already have a value for the switch, it has to match!
-    if (!setValueOnce(CandidateVal))
-      return false;
-
-    // Add all values from the range to the set
-    APInt Tmp = Span.getLower();
-    do
-      Vals.push_back(ConstantInt::get(I->getContext(), Tmp));
-    while (++Tmp != Span.getUpper());
-
-    UsedICmps++;
-    return true;
-  }
-
-  /// Given a potentially 'or'd or 'and'd together collection of icmp
-  /// eq/ne/lt/gt instructions that compare a value against a constant, extract
-  /// the value being compared, and stick the list constants into the Vals
-  /// vector.
-  /// One "Extra" case is allowed to differ from the other.
-  void gather(Value *V) {
-    Value *Op0, *Op1;
-    if (match(V, m_LogicalOr(m_Value(Op0), m_Value(Op1))))
-      IsEq = true;
-    else if (match(V, m_LogicalAnd(m_Value(Op0), m_Value(Op1))))
-      IsEq = false;
-    else
-      return;
-    // Keep a stack (SmallVector for efficiency) for depth-first traversal
-    SmallVector<Value *, 8> DFT{Op0, Op1};
-    SmallPtrSet<Value *, 8> Visited{V, Op0, Op1};
-
-    while (!DFT.empty()) {
-      V = DFT.pop_back_val();
-
-      if (Instruction *I = dyn_cast<Instruction>(V)) {
-        // If it is a || (or && depending on isEQ), process the operands.
-        if (IsEq ? match(I, m_LogicalOr(m_Value(Op0), m_Value(Op1)))
-                 : match(I, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
-          if (Visited.insert(Op1).second)
-            DFT.push_back(Op1);
-          if (Visited.insert(Op0).second)
-            DFT.push_back(Op0);
-
-          continue;
-        }
-
-        // Try to match the current instruction
-        if (matchInstruction(I, IsEq))
-          // Match succeed, continue the loop
-          continue;
-      }
-
-      // One element of the sequence of || (or &&) could not be match as a
-      // comparison against the same value as the others.
-      // We allow only one "Extra" case to be checked before the switch
-      if (!Extra) {
-        Extra = V;
-        continue;
-      }
-      // Failed to parse a proper sequence, abort now
-      CompValue = nullptr;
-      break;
-    }
-  }
-};
-
-} // end anonymous namespace
 
 static void eraseTerminatorAndDCECond(Instruction *TI,
                                       MemorySSAUpdater *MSSAU = nullptr) {
@@ -5224,9 +5226,9 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpSelectInIt(
 /// The specified branch is a conditional branch.
 /// Check to see if it is branching on an or/and chain of icmp instructions, and
 /// fold it into a switch instruction if so.
-bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
-                                               IRBuilder<> &Builder,
-                                               const DataLayout &DL) {
+bool SimplifyCFGOpt::simplifyBranchOnICmpChain(
+    BranchInst *BI, IRBuilder<> &Builder, const DataLayout &DL,
+    std::optional<ConstantComparesGatherer> ExistingConstantComparesGatherer) {
   Instruction *Cond = dyn_cast<Instruction>(BI->getCondition());
   if (!Cond)
     return false;
@@ -5236,14 +5238,15 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
   // 'setne's and'ed together, collect them.
 
   // Try to gather values from a chain of and/or to be turned into a switch
-  ConstantComparesGatherer ConstantCompare(Cond, DL);
+  if (!ExistingConstantComparesGatherer.has_value())
+    ExistingConstantComparesGatherer.emplace(Cond, DL);
   // Unpack the result
-  SmallVectorImpl<ConstantInt *> &Values = ConstantCompare.Vals;
-  Value *CompVal = ConstantCompare.CompValue;
-  unsigned UsedICmps = ConstantCompare.UsedICmps;
-  Value *ExtraCase = ConstantCompare.Extra;
-  bool TrueWhenEqual = ConstantCompare.IsEq;
-
+  SmallVectorImpl<ConstantInt *> &Values =
+      ExistingConstantComparesGatherer->Vals;
+  Value *CompVal = ExistingConstantComparesGatherer->CompValue;
+  unsigned UsedICmps = ExistingConstantComparesGatherer->UsedICmps;
+  Value *ExtraCase = ExistingConstantComparesGatherer->Extra;
+  bool TrueWhenEqual = ExistingConstantComparesGatherer->IsEq;
   // If we didn't have a multiply compared value, fail.
   if (!CompVal)
     return false;
@@ -5387,6 +5390,116 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
 
   LLVM_DEBUG(dbgs() << "  ** 'icmp' chain result is:\n" << *BB << '\n');
   return true;
+}
+
+/// Attempt to convert a return of an icmp chain (or a select on an icmp chain)
+/// into a conditional branch structure that simplifyBranchOnICmpChain can
+/// convert to a switch.
+bool SimplifyCFGOpt::simplifyRetOfIcmpChain(ReturnInst &RI,
+                                            IRBuilder<> &Builder,
+                                            const DataLayout &DL) {
+  Value *const RetVal = RI.getReturnValue();
+  SelectInst *const SI = RetVal ? dyn_cast<SelectInst>(RetVal) : nullptr;
+
+  if (SI) {
+    // select+return case
+    // TODO: handle more than one use of the select?
+    if (!SI->hasOneUse())
+      return false;
+  } else {
+    // direct return case - return value must be i1
+    if (!RetVal || !RetVal->getType()->isIntegerTy(1))
+      return false;
+  }
+
+  Instruction *const Cond = SI ? dyn_cast<Instruction>(SI->getCondition())
+                               : dyn_cast<Instruction>(RetVal);
+  Value *const TrueVal =
+      SI ? SI->getTrueValue() : ConstantInt::getTrue(RetVal->getType());
+  Value *const FalseVal =
+      SI ? SI->getFalseValue() : ConstantInt::getFalse(RetVal->getType());
+
+  if (!Cond)
+    return false;
+
+  // Check if this is an icmp chain worth transforming
+  ConstantComparesGatherer ConstantCompare(Cond, DL);
+  if (!ConstantCompare.CompValue || ConstantCompare.UsedICmps <= 1)
+    return false;
+
+  // For just 2 cases, check if bitmask optimization is possible.
+  // Otherwise, we may enter recursion with foldSwitchToSelect.
+  {
+    SmallVector<ConstantInt *, 8> Values = ConstantCompare.Vals;
+    array_pod_sort(Values.begin(), Values.end(), constantIntSortPredicate);
+    Values.erase(llvm::unique(Values), Values.end());
+
+    if (Values.size() == 2) {
+      const APInt V0 = Values[0]->getValue();
+      const APInt V1 = Values[1]->getValue();
+      const APInt MinVal = V0.slt(V1) ? V0 : V1;
+      const APInt BitMask = (V0 - MinVal) | (V1 - MinVal);
+      // If BitMask has more than 1 bit set, no bitmask pattern is possible.
+      if (BitMask.popcount() != 1)
+        return false;
+    }
+  }
+
+  BasicBlock *const BB = RI.getParent();
+
+  LLVM_DEBUG(dbgs() << "Converting " << (SI ? "'select+ret'" : "'ret i1'")
+                    << " on icmp chain to branch.  BB is:\n"
+                    << *BB);
+
+  // Create intermediate blocks that branch to a common return block with PHI
+  BasicBlock *const TrueBB =
+      BasicBlock::Create(BB->getContext(), "ret.true", BB->getParent());
+  BasicBlock *const FalseBB =
+      BasicBlock::Create(BB->getContext(), "ret.false", BB->getParent());
+  BasicBlock *const CommonBB =
+      BasicBlock::Create(BB->getContext(), "switch.return", BB->getParent());
+
+  // Create branches from true/false blocks to common block
+  BranchInst::Create(CommonBB, TrueBB);
+  BranchInst::Create(CommonBB, FalseBB);
+
+  // Create PHI and return in the common block
+  IRBuilder CommonBuilder(CommonBB);
+  PHINode *const PHI = CommonBuilder.CreatePHI(TrueVal->getType(), 2);
+  PHI->addIncoming(TrueVal, TrueBB);
+  PHI->addIncoming(FalseVal, FalseBB);
+  CommonBuilder.CreateRet(PHI);
+
+  // Replace the return with a conditional branch.
+  // If we have a select with branch weights, propagate them to the new branch.
+  Builder.SetInsertPoint(&RI);
+  BranchInst *const NewBI = Builder.CreateCondBr(Cond, TrueBB, FalseBB);
+  if (SI && !ProfcheckDisableMetadataFixes) {
+    SmallVector<uint32_t, 2> Weights;
+    if (extractBranchWeights(*SI, Weights))
+      setBranchWeights(*NewBI, Weights, false);
+  }
+  RI.eraseFromParent();
+
+  // The select is now dead (if present)
+  if (SI) {
+    assert(SI->use_empty() && "Select should have no uses now");
+    SI->eraseFromParent();
+  }
+
+  // Update dominator tree
+  if (DTU) {
+    SmallVector<DominatorTree::UpdateType, 4> Updates;
+    Updates.emplace_back(DominatorTree::Insert, BB, TrueBB);
+    Updates.emplace_back(DominatorTree::Insert, BB, FalseBB);
+    Updates.emplace_back(DominatorTree::Insert, TrueBB, CommonBB);
+    Updates.emplace_back(DominatorTree::Insert, FalseBB, CommonBB);
+    DTU->applyUpdates(Updates);
+  }
+
+  LLVM_DEBUG(dbgs() << "  ** result is:\n" << *BB << '\n');
+  return simplifyBranchOnICmpChain(NewBI, Builder, DL,
+                                   std::move(ConstantCompare));
 }
 
 bool SimplifyCFGOpt::simplifyResume(ResumeInst *RI, IRBuilder<> &Builder) {
@@ -8933,6 +9046,11 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
   case Instruction::Br:
     Changed |= simplifyBranch(cast<BranchInst>(Terminator), Builder);
     break;
+  case Instruction::Ret: {
+    Changed |=
+        simplifyRetOfIcmpChain(*cast<ReturnInst>(Terminator), Builder, DL);
+    break;
+  }
   case Instruction::Resume:
     Changed |= simplifyResume(cast<ResumeInst>(Terminator), Builder);
     break;
