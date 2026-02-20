@@ -1941,6 +1941,7 @@ void NativeProcessLinux::SignalIfAllThreadsStopped() {
 
   // Clear any temporary breakpoints we used to implement software single
   // stepping.
+  SetCurrentThreadID(m_pending_notification_tid);
   for (const auto &thread_info : m_threads_stepping_with_breakpoint) {
     for (auto &&bp_addr : thread_info.second) {
       Status error = RemoveBreakpoint(bp_addr);
@@ -1952,7 +1953,6 @@ void NativeProcessLinux::SignalIfAllThreadsStopped() {
   m_threads_stepping_with_breakpoint.clear();
 
   // Notify the delegate about the stop
-  SetCurrentThreadID(m_pending_notification_tid);
   SetState(StateType::eStateStopped, true);
   m_pending_notification_tid = LLDB_INVALID_THREAD_ID;
 }
