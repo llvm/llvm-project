@@ -2488,14 +2488,19 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                     [=](const std::pair<uint64_t, SectionRef> &O) {
                       return O.first <= Target;
                     });
-                uint64_t TargetSecAddr = 0;
+                uint64_t TargetSecAddr = It == SectionAddresses.end() ? 0 : It->first;
+                bool FoundSymbols = false;
                 while (It != SectionAddresses.begin()) {
                   --It;
-                  if (TargetSecAddr == 0)
+                  if (It->first != TargetSecAddr) {
+                    if (FoundSymbols)
+                      break;
                     TargetSecAddr = It->first;
-                  if (It->first != TargetSecAddr)
-                    break;
-                  TargetSectionSymbols.push_back(&AllSymbols[It->second]);
+                  }
+                  auto *SectionSymbols = &AllSymbols[It->second];
+                  TargetSectionSymbols.push_back(SectionSymbols);
+                  if (!SectionSymbols->empty())
+                    FoundSymbols = true;
                 }
               } else {
                 TargetSectionSymbols.push_back(&Symbols);
