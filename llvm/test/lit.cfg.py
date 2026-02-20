@@ -74,14 +74,24 @@ if config.enable_profcheck:
         ["Hexagon", "NVPTX", "PowerPC", "RISCV", "SPARC", "WebAssembly"]
     )
     # these passes aren't hooked up to the pass pipeline:
-    config.excludes.append("IRCE")
+    config.excludes.extend(["IRCE", "LoopBoundSplit", "LoopInterchange", "Scalarizer"])
     # Not on by default in any standard CPU pipeline.
     config.excludes.extend(
-        ["Attributor", "IROutliner", "BlockExtractor", "CodeExtractor", "HotColdSplit"]
+        [
+            "Attributor",
+            "IROutliner",
+            "BlockExtractor",
+            "CodeExtractor",
+            "HotColdSplit",
+            "LowerGlobalDestructors",
+            "LowerSwitch",
+            "StructurizeCFG",
+            "UnifyLoopExits",
+        ]
     )
     # Not aimed at being used for peak-optimized binaries. These will be
-    # addressed later.
-    config.excludes.extend(["GCOVProfiling", "MergeFunc"])
+    # addressed later. PhaseOrdering has a couple merge function tests.
+    config.excludes.extend(["GCOVProfiling", "MergeFunc", "PhaseOrdering"])
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
