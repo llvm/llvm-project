@@ -2,6 +2,10 @@
 ; RUN: llc -mattr=+sve -force-streaming-compatible  < %s | FileCheck %s
 ; RUN: llc -force-streaming-compatible < %s | FileCheck %s --check-prefix=NONEON-NOSVE
 
+; RUN: llc -mattr=+sve -mattr=+fprcvt -mattr=+fullfp16  -force-streaming-compatible < %s | FileCheck %s --check-prefix=USE-NEON-NO-GPRS
+; RUN: llc -mattr=+sme -mattr=+fprcvt -mattr=+fullfp16 -force-streaming < %s | FileCheck %s --check-prefix=USE-NEON-NO-GPRS
+
+
 target triple = "aarch64-unknown-linux-gnu"
 
 ;
@@ -94,6 +98,14 @@ define void @ucvtf_v8i16_v8f16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    str q0, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_v8i16_v8f16:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.h, vl8
+; USE-NEON-NO-GPRS-NEXT:    ldr q0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z0.h, p0/m, z0.h
+; USE-NEON-NO-GPRS-NEXT:    str q0, [x1]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <8 x i16>, ptr %a
   %res = uitofp <8 x i16> %op1 to <8 x half>
   store <8 x half> %res, ptr %b
@@ -183,6 +195,15 @@ define void @ucvtf_v16i16_v16f16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_v16i16_v16f16:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldp q0, q1, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.h, vl8
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z0.h, p0/m, z0.h
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z1.h, p0/m, z1.h
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q1, [x1]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
   %res = uitofp <16 x i16> %op1 to <16 x half>
   store <16 x half> %res, ptr %b
@@ -296,6 +317,19 @@ define void @ucvtf_v8i16_v8f32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_v8i16_v8f32:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr q0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.s, vl4
+; USE-NEON-NO-GPRS-NEXT:    movprfx z1, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z1.b, z1.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z0.s, z0.h
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z1.s, z1.h
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z0.s, p0/m, z0.s
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z1.s, p0/m, z1.s
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q1, [x1]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <8 x i16>, ptr %a
   %res = uitofp <8 x i16> %op1 to <8 x float>
   store <8 x float> %res, ptr %b
@@ -378,6 +412,26 @@ define void @ucvtf_v16i16_v16f32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_v16i16_v16f32:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldp q1, q0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.s, vl4
+; USE-NEON-NO-GPRS-NEXT:    movprfx z2, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z2.b, z2.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    movprfx z3, z1
+; USE-NEON-NO-GPRS-NEXT:    ext z3.b, z3.b, z1.b, #8
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z0.s, z0.h
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z1.s, z1.h
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z2.s, z2.h
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z3.s, z3.h
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z0.s, p0/m, z0.s
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z1.s, p0/m, z1.s
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z2.s, p0/m, z2.s
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z3.s, p0/m, z3.s
+; USE-NEON-NO-GPRS-NEXT:    stp q1, q3, [x1]
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q2, [x1, #32]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
   %res = uitofp <16 x i16> %op1 to <16 x float>
   store <16 x float> %res, ptr %b
@@ -473,6 +527,20 @@ define void @ucvtf_v4i16_v4f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #48
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_v4i16_v4f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr d0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.d, vl2
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z0.s, z0.h
+; USE-NEON-NO-GPRS-NEXT:    movprfx z1, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z1.b, z1.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z0.d, z0.s
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z1.d, z1.s
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z0.d, p0/m, z0.d
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z1.d, p0/m, z1.d
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q1, [x1]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <4 x i16>, ptr %a
   %res = uitofp <4 x i16> %op1 to <4 x double>
   store <4 x double> %res, ptr %b
@@ -537,6 +605,30 @@ define void @ucvtf_v8i16_v8f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #96
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_v8i16_v8f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr q0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.d, vl2
+; USE-NEON-NO-GPRS-NEXT:    movprfx z1, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z1.b, z1.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z0.s, z0.h
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z1.s, z1.h
+; USE-NEON-NO-GPRS-NEXT:    movprfx z2, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z2.b, z2.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z0.d, z0.s
+; USE-NEON-NO-GPRS-NEXT:    movprfx z3, z1
+; USE-NEON-NO-GPRS-NEXT:    ext z3.b, z3.b, z1.b, #8
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z2.d, z2.s
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z1.d, z1.s
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z0.d, p0/m, z0.d
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z3.d, z3.s
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z2.d, p0/m, z2.d
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z1.d, p0/m, z1.d
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z3.d, p0/m, z3.d
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q2, [x1]
+; USE-NEON-NO-GPRS-NEXT:    stp q1, q3, [x1, #32]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <8 x i16>, ptr %a
   %res = uitofp <8 x i16> %op1 to <8 x double>
   store <8 x double> %res, ptr %b
@@ -645,6 +737,47 @@ define void @ucvtf_v16i16_v16f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q5, q2, [x1, #96]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #192
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_v16i16_v16f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldp q1, q0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.d, vl2
+; USE-NEON-NO-GPRS-NEXT:    movprfx z2, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z2.b, z2.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z3.s, z1.h
+; USE-NEON-NO-GPRS-NEXT:    ext z1.b, z1.b, z1.b, #8
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z0.s, z0.h
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z2.s, z2.h
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z1.s, z1.h
+; USE-NEON-NO-GPRS-NEXT:    movprfx z5, z3
+; USE-NEON-NO-GPRS-NEXT:    ext z5.b, z5.b, z3.b, #8
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z3.d, z3.s
+; USE-NEON-NO-GPRS-NEXT:    movprfx z4, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z4.b, z4.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z0.d, z0.s
+; USE-NEON-NO-GPRS-NEXT:    movprfx z6, z2
+; USE-NEON-NO-GPRS-NEXT:    ext z6.b, z6.b, z2.b, #8
+; USE-NEON-NO-GPRS-NEXT:    movprfx z7, z1
+; USE-NEON-NO-GPRS-NEXT:    ext z7.b, z7.b, z1.b, #8
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z5.d, z5.s
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z4.d, z4.s
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z2.d, z2.s
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z1.d, z1.s
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z0.d, p0/m, z0.d
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z3.d, p0/m, z3.d
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z6.d, z6.s
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z7.d, z7.s
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z5.d, p0/m, z5.d
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z4.d, p0/m, z4.d
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z2.d, p0/m, z2.d
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z1.d, p0/m, z1.d
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z6.d, p0/m, z6.d
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z7.d, p0/m, z7.d
+; USE-NEON-NO-GPRS-NEXT:    stp q3, q5, [x1]
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q4, [x1, #64]
+; USE-NEON-NO-GPRS-NEXT:    stp q1, q7, [x1, #32]
+; USE-NEON-NO-GPRS-NEXT:    stp q2, q6, [x1, #96]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
   %res = uitofp <16 x i16> %op1 to <16 x double>
   store <16 x double> %res, ptr %b
@@ -960,6 +1093,15 @@ define void @ucvtf_v8i32_v8f32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_v8i32_v8f32:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldp q0, q1, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.s, vl4
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z0.s, p0/m, z0.s
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z1.s, p0/m, z1.s
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q1, [x1]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
   %res = uitofp <8 x i32> %op1 to <8 x float>
   store <8 x float> %res, ptr %b
@@ -1029,6 +1171,19 @@ define void @ucvtf_v4i32_v4f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_v4i32_v4f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr q0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.d, vl2
+; USE-NEON-NO-GPRS-NEXT:    movprfx z1, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z1.b, z1.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z0.d, z0.s
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z1.d, z1.s
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z0.d, p0/m, z0.d
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z1.d, p0/m, z1.d
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q1, [x1]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <4 x i32>, ptr %a
   %res = uitofp <4 x i32> %op1 to <4 x double>
   store <4 x double> %res, ptr %b
@@ -1087,6 +1242,26 @@ define void @ucvtf_v8i32_v8f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_v8i32_v8f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldp q1, q0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.d, vl2
+; USE-NEON-NO-GPRS-NEXT:    movprfx z2, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z2.b, z2.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    movprfx z3, z1
+; USE-NEON-NO-GPRS-NEXT:    ext z3.b, z3.b, z1.b, #8
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z0.d, z0.s
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z1.d, z1.s
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z2.d, z2.s
+; USE-NEON-NO-GPRS-NEXT:    uunpklo z3.d, z3.s
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z0.d, p0/m, z0.d
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z1.d, p0/m, z1.d
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z2.d, p0/m, z2.d
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z3.d, p0/m, z3.d
+; USE-NEON-NO-GPRS-NEXT:    stp q1, q3, [x1]
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q2, [x1, #32]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
   %res = uitofp <8 x i32> %op1 to <8 x double>
   store <8 x double> %res, ptr %b
@@ -1417,6 +1592,15 @@ define void @ucvtf_v4i64_v4f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_v4i64_v4f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldp q0, q1, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.d, vl2
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z0.d, p0/m, z0.d
+; USE-NEON-NO-GPRS-NEXT:    ucvtf z1.d, p0/m, z1.d
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q1, [x1]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
   %res = uitofp <4 x i64> %op1 to <4 x double>
   store <4 x double> %res, ptr %b
@@ -1513,6 +1697,14 @@ define void @scvtf_v8i16_v8f16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    str q0, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_v8i16_v8f16:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.h, vl8
+; USE-NEON-NO-GPRS-NEXT:    ldr q0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    scvtf z0.h, p0/m, z0.h
+; USE-NEON-NO-GPRS-NEXT:    str q0, [x1]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <8 x i16>, ptr %a
   %res = sitofp <8 x i16> %op1 to <8 x half>
   store <8 x half> %res, ptr %b
@@ -1602,6 +1794,15 @@ define void @scvtf_v16i16_v16f16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_v16i16_v16f16:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldp q0, q1, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.h, vl8
+; USE-NEON-NO-GPRS-NEXT:    scvtf z0.h, p0/m, z0.h
+; USE-NEON-NO-GPRS-NEXT:    scvtf z1.h, p0/m, z1.h
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q1, [x1]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
   %res = sitofp <16 x i16> %op1 to <16 x half>
   store <16 x half> %res, ptr %b
@@ -1714,6 +1915,19 @@ define void @scvtf_v8i16_v8f32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_v8i16_v8f32:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr q0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.s, vl4
+; USE-NEON-NO-GPRS-NEXT:    movprfx z1, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z1.b, z1.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z0.s, z0.h
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z1.s, z1.h
+; USE-NEON-NO-GPRS-NEXT:    scvtf z0.s, p0/m, z0.s
+; USE-NEON-NO-GPRS-NEXT:    scvtf z1.s, p0/m, z1.s
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q1, [x1]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <8 x i16>, ptr %a
   %res = sitofp <8 x i16> %op1 to <8 x float>
   store <8 x float> %res, ptr %b
@@ -1796,6 +2010,26 @@ define void @scvtf_v16i16_v16f32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_v16i16_v16f32:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldp q1, q0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.s, vl4
+; USE-NEON-NO-GPRS-NEXT:    movprfx z2, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z2.b, z2.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    movprfx z3, z1
+; USE-NEON-NO-GPRS-NEXT:    ext z3.b, z3.b, z1.b, #8
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z0.s, z0.h
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z1.s, z1.h
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z2.s, z2.h
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z3.s, z3.h
+; USE-NEON-NO-GPRS-NEXT:    scvtf z0.s, p0/m, z0.s
+; USE-NEON-NO-GPRS-NEXT:    scvtf z1.s, p0/m, z1.s
+; USE-NEON-NO-GPRS-NEXT:    scvtf z2.s, p0/m, z2.s
+; USE-NEON-NO-GPRS-NEXT:    scvtf z3.s, p0/m, z3.s
+; USE-NEON-NO-GPRS-NEXT:    stp q1, q3, [x1]
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q2, [x1, #32]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
   %res = sitofp <16 x i16> %op1 to <16 x float>
   store <16 x float> %res, ptr %b
@@ -1870,6 +2104,20 @@ define void @scvtf_v4i16_v4f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #48
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_v4i16_v4f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr d0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.d, vl2
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z0.s, z0.h
+; USE-NEON-NO-GPRS-NEXT:    movprfx z1, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z1.b, z1.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z0.d, z0.s
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z1.d, z1.s
+; USE-NEON-NO-GPRS-NEXT:    scvtf z0.d, p0/m, z0.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z1.d, p0/m, z1.d
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q1, [x1]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <4 x i16>, ptr %a
   %res = sitofp <4 x i16> %op1 to <4 x double>
   store <4 x double> %res, ptr %b
@@ -1934,6 +2182,30 @@ define void @scvtf_v8i16_v8f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #96
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_v8i16_v8f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr q0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.d, vl2
+; USE-NEON-NO-GPRS-NEXT:    movprfx z1, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z1.b, z1.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z0.s, z0.h
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z1.s, z1.h
+; USE-NEON-NO-GPRS-NEXT:    movprfx z2, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z2.b, z2.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z0.d, z0.s
+; USE-NEON-NO-GPRS-NEXT:    movprfx z3, z1
+; USE-NEON-NO-GPRS-NEXT:    ext z3.b, z3.b, z1.b, #8
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z2.d, z2.s
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z1.d, z1.s
+; USE-NEON-NO-GPRS-NEXT:    scvtf z0.d, p0/m, z0.d
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z3.d, z3.s
+; USE-NEON-NO-GPRS-NEXT:    scvtf z2.d, p0/m, z2.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z1.d, p0/m, z1.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z3.d, p0/m, z3.d
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q2, [x1]
+; USE-NEON-NO-GPRS-NEXT:    stp q1, q3, [x1, #32]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <8 x i16>, ptr %a
   %res = sitofp <8 x i16> %op1 to <8 x double>
   store <8 x double> %res, ptr %b
@@ -2042,6 +2314,47 @@ define void @scvtf_v16i16_v16f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q5, q2, [x1, #96]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #192
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_v16i16_v16f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldp q1, q0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.d, vl2
+; USE-NEON-NO-GPRS-NEXT:    movprfx z2, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z2.b, z2.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z3.s, z1.h
+; USE-NEON-NO-GPRS-NEXT:    ext z1.b, z1.b, z1.b, #8
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z0.s, z0.h
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z2.s, z2.h
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z1.s, z1.h
+; USE-NEON-NO-GPRS-NEXT:    movprfx z5, z3
+; USE-NEON-NO-GPRS-NEXT:    ext z5.b, z5.b, z3.b, #8
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z3.d, z3.s
+; USE-NEON-NO-GPRS-NEXT:    movprfx z4, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z4.b, z4.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z0.d, z0.s
+; USE-NEON-NO-GPRS-NEXT:    movprfx z6, z2
+; USE-NEON-NO-GPRS-NEXT:    ext z6.b, z6.b, z2.b, #8
+; USE-NEON-NO-GPRS-NEXT:    movprfx z7, z1
+; USE-NEON-NO-GPRS-NEXT:    ext z7.b, z7.b, z1.b, #8
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z5.d, z5.s
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z4.d, z4.s
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z2.d, z2.s
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z1.d, z1.s
+; USE-NEON-NO-GPRS-NEXT:    scvtf z0.d, p0/m, z0.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z3.d, p0/m, z3.d
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z6.d, z6.s
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z7.d, z7.s
+; USE-NEON-NO-GPRS-NEXT:    scvtf z5.d, p0/m, z5.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z4.d, p0/m, z4.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z2.d, p0/m, z2.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z1.d, p0/m, z1.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z6.d, p0/m, z6.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z7.d, p0/m, z7.d
+; USE-NEON-NO-GPRS-NEXT:    stp q3, q5, [x1]
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q4, [x1, #64]
+; USE-NEON-NO-GPRS-NEXT:    stp q1, q7, [x1, #32]
+; USE-NEON-NO-GPRS-NEXT:    stp q2, q6, [x1, #96]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
   %res = sitofp <16 x i16> %op1 to <16 x double>
   store <16 x double> %res, ptr %b
@@ -2262,6 +2575,15 @@ define void @scvtf_v8i32_v8f32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_v8i32_v8f32:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldp q0, q1, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.s, vl4
+; USE-NEON-NO-GPRS-NEXT:    scvtf z0.s, p0/m, z0.s
+; USE-NEON-NO-GPRS-NEXT:    scvtf z1.s, p0/m, z1.s
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q1, [x1]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
   %res = sitofp <8 x i32> %op1 to <8 x float>
   store <8 x float> %res, ptr %b
@@ -2331,6 +2653,19 @@ define void @scvtf_v4i32_v4f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_v4i32_v4f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr q0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.d, vl2
+; USE-NEON-NO-GPRS-NEXT:    movprfx z1, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z1.b, z1.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z0.d, z0.s
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z1.d, z1.s
+; USE-NEON-NO-GPRS-NEXT:    scvtf z0.d, p0/m, z0.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z1.d, p0/m, z1.d
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q1, [x1]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <4 x i32>, ptr %a
   %res = sitofp <4 x i32> %op1 to <4 x double>
   store <4 x double> %res, ptr %b
@@ -2389,6 +2724,26 @@ define void @scvtf_v8i32_v8f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x1, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_v8i32_v8f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldp q1, q0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.d, vl2
+; USE-NEON-NO-GPRS-NEXT:    movprfx z2, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z2.b, z2.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    movprfx z3, z1
+; USE-NEON-NO-GPRS-NEXT:    ext z3.b, z3.b, z1.b, #8
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z0.d, z0.s
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z1.d, z1.s
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z2.d, z2.s
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z3.d, z3.s
+; USE-NEON-NO-GPRS-NEXT:    scvtf z0.d, p0/m, z0.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z1.d, p0/m, z1.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z2.d, p0/m, z2.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z3.d, p0/m, z3.d
+; USE-NEON-NO-GPRS-NEXT:    stp q1, q3, [x1]
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q2, [x1, #32]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
   %res = sitofp <8 x i32> %op1 to <8 x double>
   store <8 x double> %res, ptr %b
@@ -2496,6 +2851,41 @@ define void @scvtf_v16i32_v16f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q2, q5, [x1, #96]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #272
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_v16i32_v16f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldp q1, q0, [x0, #32]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.d, vl2
+; USE-NEON-NO-GPRS-NEXT:    ldp q5, q3, [x0]
+; USE-NEON-NO-GPRS-NEXT:    movprfx z2, z0
+; USE-NEON-NO-GPRS-NEXT:    ext z2.b, z2.b, z0.b, #8
+; USE-NEON-NO-GPRS-NEXT:    movprfx z4, z1
+; USE-NEON-NO-GPRS-NEXT:    ext z4.b, z4.b, z1.b, #8
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z0.d, z0.s
+; USE-NEON-NO-GPRS-NEXT:    movprfx z6, z3
+; USE-NEON-NO-GPRS-NEXT:    ext z6.b, z6.b, z3.b, #8
+; USE-NEON-NO-GPRS-NEXT:    movprfx z7, z5
+; USE-NEON-NO-GPRS-NEXT:    ext z7.b, z7.b, z5.b, #8
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z1.d, z1.s
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z3.d, z3.s
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z5.d, z5.s
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z2.d, z2.s
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z4.d, z4.s
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z6.d, z6.s
+; USE-NEON-NO-GPRS-NEXT:    sunpklo z7.d, z7.s
+; USE-NEON-NO-GPRS-NEXT:    scvtf z0.d, p0/m, z0.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z1.d, p0/m, z1.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z3.d, p0/m, z3.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z5.d, p0/m, z5.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z2.d, p0/m, z2.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z4.d, p0/m, z4.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z6.d, p0/m, z6.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z7.d, p0/m, z7.d
+; USE-NEON-NO-GPRS-NEXT:    stp q1, q4, [x1, #64]
+; USE-NEON-NO-GPRS-NEXT:    stp q5, q7, [x1]
+; USE-NEON-NO-GPRS-NEXT:    stp q3, q6, [x1, #32]
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q2, [x1, #96]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <16 x i32>, ptr %a
   %res = sitofp <16 x i32> %op1 to <16 x double>
   store <16 x double> %res, ptr %b
@@ -2699,6 +3089,15 @@ define void @scvtf_v4i64_v4f64(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_v4i64_v4f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldp q0, q1, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ptrue p0.d, vl2
+; USE-NEON-NO-GPRS-NEXT:    scvtf z0.d, p0/m, z0.d
+; USE-NEON-NO-GPRS-NEXT:    scvtf z1.d, p0/m, z1.d
+; USE-NEON-NO-GPRS-NEXT:    stp q0, q1, [x1]
+; USE-NEON-NO-GPRS-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
   %res = sitofp <4 x i64> %op1 to <4 x double>
   store <4 x double> %res, ptr %b
@@ -2721,6 +3120,12 @@ define half @scvtf_i16_f16(ptr %0) {
 ; NONEON-NOSVE-NEXT:    scvtf s0, w8
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_i16_f16:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldrsh w8, [x0]
+; USE-NEON-NO-GPRS-NEXT:    scvtf h0, w8
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i16, ptr %0, align 64
   %3 = sitofp i16 %2 to half
   ret half %3
@@ -2741,6 +3146,12 @@ define float @scvtf_i16_f32(ptr %0) {
 ; NONEON-NOSVE-NEXT:    ldrsh w8, [x0]
 ; NONEON-NOSVE-NEXT:    scvtf s0, w8
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_i16_f32:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldrsh w8, [x0]
+; USE-NEON-NO-GPRS-NEXT:    scvtf s0, w8
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i16, ptr %0, align 64
   %3 = sitofp i16 %2 to float
   ret float %3
@@ -2758,6 +3169,12 @@ define double @scvtf_i16_f64(ptr %0) {
 ; NONEON-NOSVE-NEXT:    ldrsh w8, [x0]
 ; NONEON-NOSVE-NEXT:    scvtf d0, w8
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_i16_f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldrsh w8, [x0]
+; USE-NEON-NO-GPRS-NEXT:    scvtf d0, w8
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i16, ptr %0, align 64
   %3 = sitofp i16 %2 to double
   ret double %3
@@ -2778,6 +3195,12 @@ define half @scvtf_i32_f16(ptr %0) {
 ; NONEON-NOSVE-NEXT:    scvtf s0, w8
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_i32_f16:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr w8, [x0]
+; USE-NEON-NO-GPRS-NEXT:    scvtf h0, w8
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i32, ptr %0, align 64
   %3 = sitofp i32 %2 to half
   ret half %3
@@ -2797,6 +3220,12 @@ define float @scvtf_i32_f32(ptr %0) {
 ; NONEON-NOSVE-NEXT:    ldr w8, [x0]
 ; NONEON-NOSVE-NEXT:    scvtf s0, w8
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_i32_f32:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr w8, [x0]
+; USE-NEON-NO-GPRS-NEXT:    scvtf s0, w8
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i32, ptr %0, align 64
   %3 = sitofp i32 %2 to float
   ret float %3
@@ -2814,6 +3243,12 @@ define double @scvtf_i32_f64(ptr %0) {
 ; NONEON-NOSVE-NEXT:    ldr w8, [x0]
 ; NONEON-NOSVE-NEXT:    scvtf d0, w8
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_i32_f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr w8, [x0]
+; USE-NEON-NO-GPRS-NEXT:    scvtf d0, w8
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i32, ptr %0, align 64
   %3 = sitofp i32 %2 to double
   ret double %3
@@ -2834,6 +3269,12 @@ define half @scvtf_i64_f16(ptr %0) {
 ; NONEON-NOSVE-NEXT:    scvtf s0, x8
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_i64_f16:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr x8, [x0]
+; USE-NEON-NO-GPRS-NEXT:    scvtf h0, x8
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i64, ptr %0, align 64
   %3 = sitofp i64 %2 to half
   ret half %3
@@ -2853,6 +3294,12 @@ define float @scvtf_i64_f32(ptr %0) {
 ; NONEON-NOSVE-NEXT:    ldr x8, [x0]
 ; NONEON-NOSVE-NEXT:    scvtf s0, x8
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_i64_f32:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr x8, [x0]
+; USE-NEON-NO-GPRS-NEXT:    scvtf s0, x8
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i64, ptr %0, align 64
   %3 = sitofp i64 %2 to float
   ret float %3
@@ -2872,6 +3319,12 @@ define double @scvtf_i64_f64(ptr %0) {
 ; NONEON-NOSVE-NEXT:    ldr x8, [x0]
 ; NONEON-NOSVE-NEXT:    scvtf d0, x8
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: scvtf_i64_f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr x8, [x0]
+; USE-NEON-NO-GPRS-NEXT:    scvtf d0, x8
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i64, ptr %0, align 64
   %3 = sitofp i64 %2 to double
   ret double %3
@@ -2893,6 +3346,12 @@ define half @ucvtf_i16_f16(ptr %0) {
 ; NONEON-NOSVE-NEXT:    ucvtf s0, w8
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_i16_f16:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldrh w8, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ucvtf h0, w8
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i16, ptr %0, align 64
   %3 = uitofp i16 %2 to half
   ret half %3
@@ -2913,6 +3372,12 @@ define float @ucvtf_i16_f32(ptr %0) {
 ; NONEON-NOSVE-NEXT:    ldrh w8, [x0]
 ; NONEON-NOSVE-NEXT:    ucvtf s0, w8
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_i16_f32:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr h0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ucvtf s0, s0
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i16, ptr %0, align 64
   %3 = uitofp i16 %2 to float
   ret float %3
@@ -2930,6 +3395,12 @@ define double @ucvtf_i16_f64(ptr %0) {
 ; NONEON-NOSVE-NEXT:    ldrh w8, [x0]
 ; NONEON-NOSVE-NEXT:    ucvtf d0, w8
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_i16_f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr h0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ucvtf d0, d0
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i16, ptr %0, align 64
   %3 = uitofp i16 %2 to double
   ret double %3
@@ -2950,6 +3421,12 @@ define half @ucvtf_i32_f16(ptr %0) {
 ; NONEON-NOSVE-NEXT:    ucvtf s0, w8
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_i32_f16:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr w8, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ucvtf h0, w8
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i32, ptr %0, align 64
   %3 = uitofp i32 %2 to half
   ret half %3
@@ -2969,6 +3446,12 @@ define float @ucvtf_i32_f32(ptr %0) {
 ; NONEON-NOSVE-NEXT:    ldr w8, [x0]
 ; NONEON-NOSVE-NEXT:    ucvtf s0, w8
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_i32_f32:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr w8, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ucvtf s0, w8
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i32, ptr %0, align 64
   %3 = uitofp i32 %2 to float
   ret float %3
@@ -2986,6 +3469,12 @@ define double @ucvtf_i32_f64(ptr %0) {
 ; NONEON-NOSVE-NEXT:    ldr w8, [x0]
 ; NONEON-NOSVE-NEXT:    ucvtf d0, w8
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_i32_f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr s0, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ucvtf d0, d0
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i32, ptr %0, align 64
   %3 = uitofp i32 %2 to double
   ret double %3
@@ -3006,6 +3495,12 @@ define half @ucvtf_i64_f16(ptr %0) {
 ; NONEON-NOSVE-NEXT:    ucvtf s0, x8
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_i64_f16:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr x8, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ucvtf h0, x8
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i64, ptr %0, align 64
   %3 = uitofp i64 %2 to half
   ret half %3
@@ -3025,6 +3520,12 @@ define float @ucvtf_i64_f32(ptr %0) {
 ; NONEON-NOSVE-NEXT:    ldr x8, [x0]
 ; NONEON-NOSVE-NEXT:    ucvtf s0, x8
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_i64_f32:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr x8, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ucvtf s0, x8
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i64, ptr %0, align 64
   %3 = uitofp i64 %2 to float
   ret float %3
@@ -3044,6 +3545,12 @@ define double @ucvtf_i64_f64(ptr %0) {
 ; NONEON-NOSVE-NEXT:    ldr x8, [x0]
 ; NONEON-NOSVE-NEXT:    ucvtf d0, x8
 ; NONEON-NOSVE-NEXT:    ret
+;
+; USE-NEON-NO-GPRS-LABEL: ucvtf_i64_f64:
+; USE-NEON-NO-GPRS:       // %bb.0:
+; USE-NEON-NO-GPRS-NEXT:    ldr x8, [x0]
+; USE-NEON-NO-GPRS-NEXT:    ucvtf d0, x8
+; USE-NEON-NO-GPRS-NEXT:    ret
   %2 = load i64, ptr %0, align 64
   %3 = uitofp i64 %2 to double
   ret double %3

@@ -7065,14 +7065,15 @@ multiclass SIMDTwoVectorS<bit U, bit S, bits<5> opc, string asm,
 let mayRaiseFPException = 1, Uses = [FPCR] in
 multiclass SIMDTwoVectorFPToInt<bit U, bit S, bits<5> opc, string asm,
                            SDPatternOperator OpNode> {
-  let Predicates = [HasNEON, HasFullFP16] in {
+  let Predicates = [HasNEONandIsFPRCVTStreamingSafe, HasFullFP16] in {
   def v4f16 : BaseSIMDTwoSameVector<0, U, {S,1}, opc, 0b11, V64,
                                 asm, ".4h", ".4h",
                           [(set (v4i16 V64:$Rd), (OpNode (v4f16 V64:$Rn)))]>;
   def v8f16 : BaseSIMDTwoSameVector<1, U, {S,1}, opc, 0b11, V128,
                                 asm, ".8h", ".8h",
                           [(set (v8i16 V128:$Rd), (OpNode (v8f16 V128:$Rn)))]>;
-  } // Predicates = [HasNEON, HasFullFP16]
+  } // Predicates = [HasNEONandIsFPRCVTStreamingSafe, HasFullFP16]
+  let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
   def v2f32 : BaseSIMDTwoSameVector<0, U, {S,0}, opc, 0b00, V64,
                                 asm, ".2s", ".2s",
                           [(set (v2i32 V64:$Rd), (OpNode (v2f32 V64:$Rn)))]>;
@@ -7082,19 +7083,21 @@ multiclass SIMDTwoVectorFPToInt<bit U, bit S, bits<5> opc, string asm,
   def v2f64 : BaseSIMDTwoSameVector<1, U, {S,1}, opc, 0b00, V128,
                                 asm, ".2d", ".2d",
                           [(set (v2i64 V128:$Rd), (OpNode (v2f64 V128:$Rn)))]>;
+  }
 }
 
 let mayRaiseFPException = 1, Uses = [FPCR] in
 multiclass SIMDTwoVectorIntToFP<bit U, bit S, bits<5> opc, string asm,
                            SDPatternOperator OpNode> {
-  let Predicates = [HasNEON, HasFullFP16] in {
+  let Predicates = [HasNEONandIsFPRCVTStreamingSafe, HasFullFP16] in {
   def v4f16 : BaseSIMDTwoSameVector<0, U, {S,1}, opc, 0b11, V64,
                                 asm, ".4h", ".4h",
                           [(set (v4f16 V64:$Rd), (OpNode (v4i16 V64:$Rn)))]>;
   def v8f16 : BaseSIMDTwoSameVector<1, U, {S,1}, opc, 0b11, V128,
                                 asm, ".8h", ".8h",
                           [(set (v8f16 V128:$Rd), (OpNode (v8i16 V128:$Rn)))]>;
-  } // Predicates = [HasNEON, HasFullFP16]
+  } // Predicates = [HasNEONandIsFPRCVTStreamingSafe, HasFullFP16]
+ let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
   def v2f32 : BaseSIMDTwoSameVector<0, U, {S,0}, opc, 0b00, V64,
                                 asm, ".2s", ".2s",
                           [(set (v2f32 V64:$Rd), (OpNode (v2i32 V64:$Rn)))]>;
@@ -7104,6 +7107,7 @@ multiclass SIMDTwoVectorIntToFP<bit U, bit S, bits<5> opc, string asm,
   def v2f64 : BaseSIMDTwoSameVector<1, U, {S,1}, opc, 0b00, V128,
                                 asm, ".2d", ".2d",
                           [(set (v2f64 V128:$Rd), (OpNode (v2i64 V128:$Rn)))]>;
+  }
 }
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
@@ -8071,6 +8075,35 @@ multiclass SIMDTwoScalarD<bit U, bits<5> opc, string asm,
 let mayRaiseFPException = 1, Uses = [FPCR], FastISelShouldIgnore = 1 in
 multiclass SIMDFPTwoScalar<bit U, bit S, bits<5> opc, string asm,
                            SDPatternOperator OpN = null_frag> {
+  let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
+  def v1i64       : BaseSIMDTwoScalar<U, {S,1}, 0b00, opc, FPR64, FPR64, asm,
+                    [(set (i64 FPR64:$Rd), (OpN (f64 FPR64:$Rn)))]>;
+  def v1i32       : BaseSIMDTwoScalar<U, {S,0}, 0b00, opc, FPR32, FPR32, asm,
+                    [(set FPR32:$Rd, (i32 (OpN (f32 FPR32:$Rn))))]>;
+  }
+  let Predicates = [HasNEONandIsFPRCVTStreamingSafe, HasFullFP16] in {
+  def v1f16       : BaseSIMDTwoScalar<U, {S,1}, 0b11, opc, FPR16, FPR16, asm,
+                    [(set FPR16:$Rd, (i16 (OpN (f16 FPR16:$Rn))))]>;
+  }
+}
+
+let mayRaiseFPException = 1, Uses = [FPCR] in
+multiclass SIMDFPTwoScalarCVT<bit U, bit S, bits<5> opc, string asm,
+                              SDPatternOperator OpNode> {
+  let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
+  def v1i64 : BaseSIMDTwoScalar<U, {S,1}, 0b00, opc, FPR64, FPR64, asm,
+                                [(set FPR64:$Rd, (OpNode (f64 FPR64:$Rn)))]>;
+  def v1i32 : BaseSIMDTwoScalar<U, {S,0}, 0b00, opc, FPR32, FPR32, asm,
+                                [(set FPR32:$Rd, (OpNode (f32 FPR32:$Rn)))]>;
+  }
+  let Predicates = [HasNEONandIsFPRCVTStreamingSafe, HasFullFP16] in {
+  def v1i16 : BaseSIMDTwoScalar<U, {S,1}, 0b11, opc, FPR16, FPR16, asm,
+                                [(set (f16 FPR16:$Rd), (OpNode (f16 FPR16:$Rn)))]>;
+  }
+}
+let mayRaiseFPException = 1, Uses = [FPCR], FastISelShouldIgnore = 1 in
+multiclass SIMDFPTwoScalarNonCVT<bit U, bit S, bits<5> opc, string asm,
+                           SDPatternOperator OpN = null_frag> {
   let Predicates = [HasNEONandIsStreamingSafe] in {
   def v1i64       : BaseSIMDTwoScalar<U, {S,1}, 0b00, opc, FPR64, FPR64, asm,
                     [(set (i64 FPR64:$Rd), (OpN (f64 FPR64:$Rn)))]>;
@@ -8080,21 +8113,6 @@ multiclass SIMDFPTwoScalar<bit U, bit S, bits<5> opc, string asm,
   let Predicates = [HasNEONandIsStreamingSafe, HasFullFP16] in {
   def v1f16       : BaseSIMDTwoScalar<U, {S,1}, 0b11, opc, FPR16, FPR16, asm,
                     [(set FPR16:$Rd, (i16 (OpN (f16 FPR16:$Rn))))]>;
-  }
-}
-
-let mayRaiseFPException = 1, Uses = [FPCR] in
-multiclass SIMDFPTwoScalarCVT<bit U, bit S, bits<5> opc, string asm,
-                              SDPatternOperator OpNode> {
-  let Predicates = [HasNEONandIsStreamingSafe] in {
-  def v1i64 : BaseSIMDTwoScalar<U, {S,1}, 0b00, opc, FPR64, FPR64, asm,
-                                [(set FPR64:$Rd, (OpNode (f64 FPR64:$Rn)))]>;
-  def v1i32 : BaseSIMDTwoScalar<U, {S,0}, 0b00, opc, FPR32, FPR32, asm,
-                                [(set FPR32:$Rd, (OpNode (f32 FPR32:$Rn)))]>;
-  }
-  let Predicates = [HasNEONandIsStreamingSafe, HasFullFP16] in {
-  def v1i16 : BaseSIMDTwoScalar<U, {S,1}, 0b11, opc, FPR16, FPR16, asm,
-                                [(set (f16 FPR16:$Rd), (OpNode (f16 FPR16:$Rn)))]>;
   }
 }
 
