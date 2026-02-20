@@ -5,11 +5,9 @@ permissions:
 
 on:
   pull_request:
-    branches:
-      - main
-      - 'users/**'
     paths:
       - 'lldb/test/API/**'
+      - '.github/workflows/lldb-pylint-action.yml'
 
 jobs:
   code_linter:
@@ -18,8 +16,6 @@ jobs:
     defaults:
       run:
         shell: bash
-    container:
-      image: 'ghcr.io/llvm/ci-ubuntu-24.04-lint'
     timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
@@ -37,7 +33,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python3.14 -m pip install --break-system-packages --require-hashes -r ./llvm/utils/git/requirements_pylint.txt
+          python3 -m pip install --require-hashes -r ./llvm/utils/git/requirements_pylint.txt
       
       - name: Get changed files
         id: changed-files
@@ -61,10 +57,4 @@ jobs:
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
-          pylint --fail-on=E0102 --fail-under=0 $CHANGED_FILES | grep E0102
-          if [ $? != 0 ]; then
-            exit 0
-          fi
-
-          exit 1
-        shell: bash --noprofile --norc {0}
+          pylint --disable=all --enable=E0102 $CHANGED_FILES
