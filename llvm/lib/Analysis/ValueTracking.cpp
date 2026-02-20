@@ -5937,8 +5937,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       Value *R, *L, *Init;
       PHINode *PN;
       const Function *F = I->getFunction();
-      const auto &FltSem =
-          I->getType()->getScalarType()->getFltSemantics();
+      const auto &FltSem = I->getType()->getScalarType()->getFltSemantics();
       DenormalMode Mode =
           F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
       if (matchSimpleTernaryIntrinsicRecurrence(I, PN, Init, L, R)) {
