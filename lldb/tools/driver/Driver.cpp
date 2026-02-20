@@ -400,7 +400,8 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   }
 
   if (m_option_data.m_print_python_path) {
-    SBFileSpec python_file_spec = SBHostOS::GetLLDBPythonPath();
+    SBFileSpec python_file_spec =
+        SBHostOS::GetScriptPath(lldb::eScriptLanguagePython);
     if (python_file_spec.IsValid()) {
       char python_path[PATH_MAX];
       size_t num_chars = python_file_spec.GetPath(python_path, PATH_MAX);

@@ -794,17 +794,11 @@ bool DependencyScanningAction::runInvocation(
       Service, *OriginalInvocation, Controller, *MaybePrebuiltModulesASTMap,
       StableDirs);
 
-  std::unique_ptr<FrontendAction> Action;
-
-  if (Service.getOpts().Format == ScanningOutputFormat::P1689)
-    Action = std::make_unique<PreprocessOnlyAction>();
-  else
-    Action = std::make_unique<ReadPCHAndPreprocessAction>();
-
   if (ScanInstance.getDiagnostics().hasErrorOccurred())
     return false;
 
-  const bool Result = ScanInstance.ExecuteAction(*Action);
+  ReadPCHAndPreprocessAction Action;
+  const bool Result = ScanInstance.ExecuteAction(Action);
 
   // ExecuteAction is responsible for calling finish.
   DiagConsumerFinished = true;
