@@ -8,7 +8,7 @@
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -static
 # RUN: llvm-bolt %t.exe -o %t.bolt --data %t.fdata --split-functions \
-# RUN:   --keep-nops --compact-code-model
+# RUN:   --keep-nops --compact-code-model --reorder-functions=cdsort
 # RUN: llvm-objdump -d \
 # RUN:   --disassemble-symbols=_start,_start.cold.0,foo,foo.cold.0 %t.bolt \
 # RUN:   | FileCheck %s

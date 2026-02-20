@@ -398,7 +398,8 @@ bool ReorderBasicBlocks::shouldPrint(const BinaryFunction &BF) const {
 
 bool ReorderBasicBlocks::shouldOptimize(const BinaryFunction &BF) const {
   // Apply execution count threshold
-  if (BF.getKnownExecutionCount() < opts::ExecutionCountThreshold)
+  if (BF.getKnownExecutionCount() < opts::ExecutionCountThreshold ||
+      BF.isPLTFunction())
     return false;
 
   return BinaryFunctionPass::shouldOptimize(BF);
@@ -2071,7 +2072,7 @@ Error RemoveNops::runOnFunctions(BinaryContext &BC) {
   };
 
   ParallelUtilities::PredicateTy SkipFunc = [&](const BinaryFunction &BF) {
-    return BF.shouldPreserveNops();
+    return BF.shouldPreserveNops() || BF.isPLTFunction();
   };
 
   ParallelUtilities::runOnEachFunction(

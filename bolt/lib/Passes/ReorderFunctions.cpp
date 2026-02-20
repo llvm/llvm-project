@@ -117,7 +117,7 @@ using Node = CallGraph::Node;
 
 void ReorderFunctions::reorder(BinaryContext &BC,
                                std::vector<Cluster> &&Clusters,
-                               std::map<uint64_t, BinaryFunction> &BFs) {
+                               BinaryFunctionListType &BFs) {
   std::vector<uint64_t> FuncAddr(Cg.numNodes()); // Just for computing stats
   uint64_t TotalSize = 0;
   uint32_t Index = 0;
@@ -132,10 +132,9 @@ void ReorderFunctions::reorder(BinaryContext &BC,
   }
 
   // Assign valid index for functions with valid profile.
-  for (auto &It : BFs) {
-    BinaryFunction &BF = It.second;
-    if (!BF.hasValidIndex() && BF.hasValidProfile())
-      BF.setIndex(Index++);
+  for (BinaryFunction *BF : BFs) {
+    if (!BF->hasValidIndex() && BF->hasValidProfile())
+      BF->setIndex(Index++);
   }
 
   if (opts::ReorderFunctions == RT_NONE)
@@ -270,7 +269,15 @@ Error ReorderFunctions::readFunctionOrderFile(
 }
 
 Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
-  auto &BFs = BC.getBinaryFunctions();
+  if (opts::ReorderFunctions == RT_NONE)
+    return Error::success();
+
+  BinaryFunctionListType BFs;
+  BFs.reserve(BC.getBinaryFunctions().size());
+  llvm::transform(llvm::make_second_range(BC.getBinaryFunctions()),
+                  std::back_inserter(BFs),
+                  [](BinaryFunction &BF) { return &BF; });
+  llvm::erase_if(BFs, [](BinaryFunction *BF) { return BF->isPLTFunction(); });
   if (opts::ReorderFunctions != RT_NONE &&
       opts::ReorderFunctions != RT_EXEC_COUNT &&
       opts::ReorderFunctions != RT_USER) {
@@ -280,6 +287,8 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
           if (!BF.hasProfile())
             return true;
           if (BF.getState() != BinaryFunction::State::CFG)
+            return true;
+          if (BF.isPLTFunction())
             return true;
           return false;
         },
@@ -296,9 +305,7 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   case RT_NONE:
     break;
   case RT_EXEC_COUNT: {
-    BinaryFunctionListType SortedFunctions(BFs.size());
-    llvm::transform(llvm::make_second_range(BFs), SortedFunctions.begin(),
-                    [](BinaryFunction &BF) { return &BF; });
+    BinaryFunctionListType SortedFunctions = BFs;
     llvm::stable_sort(SortedFunctions,
                       [&](const BinaryFunction *A, const BinaryFunction *B) {
                         if (A->isIgnored())
@@ -373,10 +380,10 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   case RT_USER: {
     // Build LTOCommonNameMap
     StringMap<std::vector<uint64_t>> LTOCommonNameMap;
-    for (const BinaryFunction &BF : llvm::make_second_range(BFs))
-      for (StringRef Name : BF.getNames())
+    for (const BinaryFunction *BF : BFs)
+      for (StringRef Name : BF->getNames())
         if (std::optional<StringRef> LTOCommonName = getLTOCommonName(Name))
-          LTOCommonNameMap[*LTOCommonName].push_back(BF.getAddress());
+          LTOCommonNameMap[*LTOCommonName].push_back(BF->getAddress());
 
     uint32_t Index = 0;
     uint32_t InvalidEntries = 0;
@@ -471,9 +478,7 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   }
 
   if (FuncsFile || LinkSectionsFile) {
-    BinaryFunctionListType SortedFunctions(BFs.size());
-    llvm::transform(llvm::make_second_range(BFs), SortedFunctions.begin(),
-                    [](BinaryFunction &BF) { return &BF; });
+    BinaryFunctionListType SortedFunctions = BFs;
 
     // Sort functions by index.
     llvm::stable_sort(SortedFunctions, compareBinaryFunctionByIndex);
