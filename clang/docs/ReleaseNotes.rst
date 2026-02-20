@@ -335,6 +335,20 @@ NVPTX Support
 X86 Support
 ^^^^^^^^^^^
 - ``march=znver6`` is now supported.
+- Support ISA of ``AVX512BMM``.
+  * Support intrinsic of ``_mm512_bmacor16x16x16_v32hi``.
+  * Support intrinsic of ``_mm512_bmacxor16x16x16_v32hi``.
+  * Support intrinsic of ``_mm512_mask_bitrev_epi8``.
+  * Support intrinsic of ``_mm512_maskz_bitrev_epi8``.
+  * Support intrinsic of ``_mm512_bitrev_epi8``.
+  * Support intrinsic of ``_mm256_bmacor16x16x16_v16hi``.
+  * Support intrinsic of ``_mm256_bmacxor16x16x16_v16hi``.
+  * Support intrinsic of ``_mm_mask_bitrev_epi8``.
+  * Support intrinsic of ``_mm256_mask_bitrev_epi8``.
+  * Support intrinsic of ``_mm_maskz_bitrev_epi8``.
+  * Support intrinsic of ``_mm256_maskz_bitrev_epi8``.
+  * Support intrinsic of ``_mm_bitrev_epi8``.
+  * Support intrinsic of ``_mm256_bitrev_epi8``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^

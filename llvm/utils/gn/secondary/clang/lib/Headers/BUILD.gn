@@ -162,6 +162,8 @@ copy("Headers") {
     "avx512bf16intrin.h",
     "avx512bitalgintrin.h",
     "avx512bwintrin.h",
+    "avx512bmmintrin.h"
+    "avx512bmmvlintrin.h"
     "avx512cdintrin.h",
     "avx512dqintrin.h",
     "avx512fintrin.h",
