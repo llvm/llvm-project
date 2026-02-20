@@ -1163,7 +1163,7 @@ void CIRGenModule::replacePointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF) {
 
 void CIRGenModule::applyReplacements() {
   for (auto &i : replacements) {
-    StringRef mangledName = i.first();
+    StringRef mangledName = i.first;
     mlir::Operation *replacement = i.second;
     mlir::Operation *entry = getGlobalValue(mangledName);
     if (!entry)
@@ -2225,12 +2225,18 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
   assert(!cir::MissingFeatures::opFuncExtraAttrs());
   // Initialize PAL with existing attributes to merge attributes.
   mlir::NamedAttrList pal{};
-  constructAttributeList(func.getName(), info, globalDecl, pal, callingConv,
-                         sideEffect,
+  mlir::NamedAttrList retAttrs{};
+  constructAttributeList(func.getName(), info, globalDecl, pal, retAttrs,
+                         callingConv, sideEffect,
                          /*attrOnCallSite=*/false, isThunk);
 
   for (mlir::NamedAttribute attr : pal)
     func->setAttr(attr.getName(), attr.getValue());
+
+  assert(!cir::MissingFeatures::functionArgumentAttrs());
+
+  for (mlir::NamedAttribute attr : retAttrs)
+    func.setResultAttr(/*index=*/0, attr.getName(), attr.getValue());
 
   // TODO(cir): Check X86_VectorCall incompatibility wiht WinARM64EC
 

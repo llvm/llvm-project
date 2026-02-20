@@ -41,7 +41,7 @@ using namespace llvm;
 // z/OS
 static cl::opt<bool> GNUAsOnzOSCL("emit-gnuas-syntax-on-zos",
                                   cl::desc("Emit GNU Assembly Syntax on z/OS."),
-                                  cl::init(true));
+                                  cl::init(false));
 
 const unsigned SystemZMC::GR32Regs[16] = {
     SystemZ::R0L,  SystemZ::R1L,  SystemZ::R2L,  SystemZ::R3L,

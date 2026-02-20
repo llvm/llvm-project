@@ -17,6 +17,7 @@
 #include "RISCVFrameLowering.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "RISCVTargetMachine.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -235,6 +236,16 @@ bool RISCVSubtarget::enableSubRegLiveness() const { return true; }
 
 bool RISCVSubtarget::enableMachinePipeliner() const {
   return getSchedModel().hasInstrSchedModel();
+}
+
+void RISCVSubtarget::mirFileLoaded(MachineFunction &MF) const {
+  // We usually compute max call frame size after ISel. Do the computation now
+  // if the .mir file didn't specify it. Note that this will probably give you
+  // bogus values after PEI has eliminated the callframe setup/destroy pseudo
+  // instructions, specify explicitly if you need it to be correct.
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (!MFI.isMaxCallFrameSizeComputed())
+    MFI.computeMaxCallFrameSize(MF);
 }
 
   /// Enable use of alias analysis during code generation (during MI

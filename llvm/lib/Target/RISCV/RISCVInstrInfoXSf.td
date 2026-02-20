@@ -131,6 +131,8 @@ class RVInstVCCustom2Base<VCIXInfo info>
   let Constraints = info.Constraints;
   let RVVConstraint = info.RVVConstraint;
   let ReadsPastVL = 1;
+
+  let UseNamedOperandTable = true;
 }
 
 // VCIX instructions with GPR rs1 operand
@@ -252,7 +254,7 @@ let Predicates = [HasVendorXSfvfexpa], DecoderNamespace = "XSfvector" in {
 }
 
 let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvector",
-    DestEEW = EEWSEWx4, RVVConstraint=VS2Constraint in {
+    DestEEW = EEWSEWx4, RVVConstraint=VS1Constraint in {
   def SF_VQMACCU_2x8x2  : CustomSiFiveVMACC<0b101100, OPMVV, "sf.vqmaccu.2x8x2">;
   def SF_VQMACC_2x8x2   : CustomSiFiveVMACC<0b101101, OPMVV, "sf.vqmacc.2x8x2">;
   def SF_VQMACCUS_2x8x2 : CustomSiFiveVMACC<0b101110, OPMVV, "sf.vqmaccus.2x8x2">;
@@ -280,8 +282,8 @@ let Predicates = [HasVendorXSfvfnrclipxfqf], DecoderNamespace = "XSfvector",
 
 class VPseudoVC_X<Operand OpClass, DAGOperand RS1Class> :
       RISCVVPseudo<(outs),
-                   (ins OpClass:$op1, payload5:$rs2, payload5:$rd, RS1Class:$r1,
-                        AVL:$vl, sew:$sew), []> {
+                   (ins OpClass:$op1, payload5:$rs2, payload5:$rd,
+                        RS1Class:$rs1, AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasVLOp = 1;
@@ -291,8 +293,8 @@ class VPseudoVC_X<Operand OpClass, DAGOperand RS1Class> :
 
 class VPseudoVC_XV<Operand OpClass, VReg RS2Class, DAGOperand RS1Class> :
       RISCVVPseudo<(outs),
-                   (ins OpClass:$op1, payload5:$rd, RS2Class:$rs2, RS1Class:$r1,
-                        AVL:$vl, sew:$sew), []> {
+                   (ins OpClass:$op1, payload5:$rd, RS2Class:$rs2,
+                        RS1Class:$rs1, AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasVLOp = 1;
@@ -303,7 +305,7 @@ class VPseudoVC_XV<Operand OpClass, VReg RS2Class, DAGOperand RS1Class> :
 class VPseudoVC_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
                     DAGOperand RS1Class> :
       RISCVVPseudo<(outs),
-                   (ins OpClass:$op1, RDClass:$rd, RS2Class:$rs2, RS1Class:$r1,
+                   (ins OpClass:$op1, RDClass:$rd, RS2Class:$rs2, RS1Class:$rs1,
                         AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
@@ -314,7 +316,7 @@ class VPseudoVC_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
 
 class VPseudoVC_V_X<Operand OpClass, VReg RDClass, DAGOperand RS1Class> :
       RISCVVPseudo<(outs RDClass:$rd),
-                   (ins OpClass:$op1, payload5:$rs2, RS1Class:$r1,
+                   (ins OpClass:$op1, payload5:$rs2, RS1Class:$rs1,
                         AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
@@ -326,7 +328,7 @@ class VPseudoVC_V_X<Operand OpClass, VReg RDClass, DAGOperand RS1Class> :
 class VPseudoVC_V_XV<Operand OpClass, VReg RDClass, VReg RS2Class,
                      DAGOperand RS1Class> :
       RISCVVPseudo<(outs RDClass:$rd),
-                   (ins OpClass:$op1, RS2Class:$rs2, RS1Class:$r1,
+                   (ins OpClass:$op1, RS2Class:$rs2, RS1Class:$rs1,
                         AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
@@ -338,7 +340,7 @@ class VPseudoVC_V_XV<Operand OpClass, VReg RDClass, VReg RS2Class,
 class VPseudoVC_V_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
                       DAGOperand RS1Class> :
       RISCVVPseudo<(outs RDClass:$rd),
-                   (ins OpClass:$op1, RDClass:$rs3, RS2Class:$rs2, RS1Class:$r1,
+                   (ins OpClass:$op1, RDClass:$rs3, RS2Class:$rs2, RS1Class:$rs1,
                         AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
