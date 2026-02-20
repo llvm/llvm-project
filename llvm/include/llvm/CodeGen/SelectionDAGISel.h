@@ -208,6 +208,8 @@ public:
     OPC_CheckTypeI32,
     OPC_CheckTypeI64,
     OPC_CheckTypeByHwMode,
+    // Space-optimized form that implicitly encodes index 0.
+    OPC_CheckTypeByHwMode0,
     OPC_CheckTypeRes,
     OPC_CheckTypeResByHwMode,
     OPC_SwitchType,

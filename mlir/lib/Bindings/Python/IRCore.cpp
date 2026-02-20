@@ -4685,7 +4685,7 @@ void populateIRCore(nb::module_ &m) {
   m.attr("_T") = nb::type_var("_T", "bound"_a = m.attr("Type"));
 
   nb::class_<PyValue>(m, "Value", nb::is_generic(),
-                      nb::sig("class Value(Generic[_T])"))
+                      nb::sig("class Value(typing.Generic[_T])"))
       .def(nb::init<PyValue &>(), nb::keep_alive<0, 1>(), "value"_a,
            "Creates a Value reference from another `Value`.")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyValue::getCapsule,
