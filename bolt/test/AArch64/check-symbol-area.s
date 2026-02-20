@@ -26,6 +26,10 @@ main:
         bl      first_block
         ret
 
+.type foo, %function
+foo:
+   nop
+
 .global first_block
 $d:
 first_block:
