@@ -2245,6 +2245,18 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
 
   if (Instruction *Mul = foldFDivPowDivisor(I, Builder))
     return Mul;
+  Value *ExpX;
+  // exp(exp(X)) / exp(X) -> exp(exp(X) - X)
+  if (match(Op0, m_Intrinsic<Intrinsic::exp>(m_Value(ExpX))) &&
+      match(Op1, m_Intrinsic<Intrinsic::exp>(m_Value(X))) &&
+      match(ExpX, m_Intrinsic<Intrinsic::exp>(m_Specific(X)))) {
+    // check that exp(x) is only used in the div expression.
+    if (Op1->hasNUses(2)) {
+      Value *XY = Builder.CreateFSubFMF(ExpX, X, &I);
+      auto *NewPow = Builder.CreateUnaryIntrinsic(Intrinsic::exp, XY, &I);
+      return replaceInstUsesWith(I, NewPow);
+    }
+  }
 
   if (Instruction *Mul = foldFDivSqrtDivisor(I, Builder))
     return Mul;
