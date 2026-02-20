@@ -131,6 +131,38 @@ void MemMapLinux::releaseAndZeroPagesToOSImpl(uptr From, uptr Size) {
   }
 }
 
+u64 MemMapLinux::getResidentPagesImpl(uptr From, uptr Size) {
+  unsigned char PageData[256];
+
+  uptr PageSize = getPageSizeCached();
+  uptr PageSizeLog = getPageSizeLogCached();
+
+  // Make sure the address is page aligned.
+  uptr CurrentAddress = From & ~(PageSize - 1);
+  uptr LastAddress = roundUp(From + Size, PageSize);
+  u64 ResidentPages = 0;
+  while (CurrentAddress < LastAddress) {
+    uptr Length = LastAddress - CurrentAddress;
+    if ((Length >> PageSizeLog) > sizeof(PageData)) {
+      Length = sizeof(PageData) << PageSizeLog;
+    }
+    if (mincore(reinterpret_cast<void *>(CurrentAddress), Length, PageData) ==
+        -1) {
+      ScopedString Str;
+      Str.append("mincore failed: %s\n", strerror(errno));
+      Str.output();
+      break;
+    }
+    for (size_t I = 0; I < Length >> PageSizeLog; ++I) {
+      if (PageData[I])
+        ++ResidentPages;
+    }
+    CurrentAddress += Length;
+  }
+
+  return ResidentPages;
+}
+
 bool ReservedMemoryLinux::createImpl(uptr Addr, uptr Size, const char *Name,
                                      uptr Flags) {
   ReservedMemoryLinux::MemMapT MemMap;

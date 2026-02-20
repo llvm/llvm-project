@@ -71,6 +71,23 @@ public:
     invokeImpl(&Derived::releaseAndZeroPagesToOSImpl, From, Size);
   }
 
+  // Get the total number of resident pages for From to From + Size.
+  // This function can run slowly, and is only expected to be called
+  // from getStats functions where performance does not matter. From represents
+  // the absolute address of the start of a memory region, not a relative offset
+  // from getBase().
+  u64 getResidentPages(uptr From, uptr Size) {
+    DCHECK(isAllocated());
+    DCHECK((From >= getBase()) && (From + Size <= getBase() + getCapacity()));
+    return invokeImpl(&Derived::getResidentPagesImpl, From, Size);
+  }
+
+  u64 getResidentPages() {
+    uptr From = getBase();
+    uptr Size = getCapacity();
+    return getResidentPages(From, Size);
+  }
+
   uptr getBase() { return invokeImpl(&Derived::getBaseImpl); }
   uptr getCapacity() { return invokeImpl(&Derived::getCapacityImpl); }
 

@@ -44,6 +44,7 @@ public:
   void releaseAndZeroPagesToOSImpl(uptr From, uptr Size);
   uptr getBaseImpl() { return Base; }
   uptr getCapacityImpl() { return Capacity; }
+  u64 getResidentPagesImpl(uptr From, uptr Size);
 
   void setMapPlatformData(MapPlatformData &NewData) { Data = NewData; }
 

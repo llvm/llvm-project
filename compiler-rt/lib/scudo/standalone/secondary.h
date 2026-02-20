@@ -238,12 +238,12 @@ public:
                   Entry.CommitSize, Entry.Time == 0 ? " [R]" : "");
 #if SCUDO_LINUX
       // getResidentPages only works on linux systems currently.
-      Str->append(", Resident Pages: %" PRId64 "/%zu\n",
-                  getResidentPages(Entry.CommitBase, Entry.CommitSize),
-                  Entry.CommitSize / getPageSizeCached());
-#else
-      Str->append("\n");
+      Str->append(
+          ", Resident Pages: %" PRId64 "/%zu",
+          Entry.MemMap.getResidentPages(Entry.CommitBase, Entry.CommitSize),
+          Entry.CommitSize / getPageSizeCached());
 #endif
+      Str->append("\n");
     }
   }
 

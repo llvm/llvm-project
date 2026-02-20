@@ -35,6 +35,7 @@ public:
   void releaseAndZeroPagesToOSImpl(uptr From, uptr Size);
   uptr getBaseImpl() { return MapBase; }
   uptr getCapacityImpl() { return MapCapacity; }
+  u64 getResidentPagesImpl(uptr From, uptr Size);
 
 private:
   uptr MapBase = 0;

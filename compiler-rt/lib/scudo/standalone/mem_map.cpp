@@ -61,6 +61,11 @@ void ReservedMemoryDefault::releaseImpl() {
   ::scudo::unmap(reinterpret_cast<void *>(Base), Capacity, UNMAP_ALL, &Data);
 }
 
+// TODO: Not implemented.
+u64 MemMapDefault::getResidentPagesImpl(UNUSED uptr From, UNUSED uptr Size) {
+  return 0;
+}
+
 bool ReservedMemoryDefault::createImpl(uptr Addr, uptr Size, const char *Name,
                                        uptr Flags) {
   void *Reserved = ::scudo::map(reinterpret_cast<void *>(Addr), Size, Name,
