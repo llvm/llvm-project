@@ -1027,11 +1027,10 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   assert(LoopRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
          "The vector loop region must have the middle block as its single "
          "successor for now");
-  DenseMap<VPValue *, SmallVector<VPUser *>> NeedsPhi;
+  MapVector<VPValue *, SmallVector<VPUser *>> NeedsPhi;
   for (VPRecipeBase &R : Header->phis())
-    if (auto *Phi = dyn_cast<VPHeaderPHIRecipe>(&R))
-      if (!isa<VPCanonicalIVPHIRecipe, VPWidenInductionRecipe>(Phi))
-        NeedsPhi[Phi->getBackedgeValue()].push_back(&R);
+    if (!isa<VPCanonicalIVPHIRecipe, VPWidenInductionRecipe>(R))
+      NeedsPhi[cast<VPHeaderPHIRecipe>(R).getBackedgeValue()].push_back(&R);
 
   VPValue *V;
   for (VPRecipeBase &R : *Plan.getMiddleBlock())
