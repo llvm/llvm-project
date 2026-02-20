@@ -1727,6 +1727,7 @@ bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
 bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
+bool hasDX10ClampAndIEEEMode(const MCSubtargetInfo &STI);
 
 inline bool supportsWave32(const MCSubtargetInfo &STI) {
   return AMDGPU::isGFX10Plus(STI) && !AMDGPU::isGFX1250(STI);

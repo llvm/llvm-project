@@ -2606,6 +2606,10 @@ bool isGFX11Plus(const MCSubtargetInfo &STI) {
   return isGFX11(STI) || isGFX12Plus(STI);
 }
 
+bool hasDX10ClampAndIEEEMode(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode);
+}
+
 bool isGFX12(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX12];
 }

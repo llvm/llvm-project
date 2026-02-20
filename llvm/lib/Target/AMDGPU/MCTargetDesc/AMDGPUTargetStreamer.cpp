@@ -559,7 +559,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
              amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64_SHIFT,
              amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64,
              ".amdhsa_float_denorm_mode_16_64");
-  if (IVersion.Major < 12) {
+  if (AMDGPU::hasDX10ClampAndIEEEMode(STI)) {
     PrintField(KD.compute_pgm_rsrc1,
                amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP_SHIFT,
                amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP,

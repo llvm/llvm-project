@@ -2411,13 +2411,13 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
 
   CHECK_RESERVED_BITS(COMPUTE_PGM_RSRC1_PRIV);
 
-  if (!isGFX12Plus())
+  if (AMDGPU::hasDX10ClampAndIEEEMode(STI))
     PRINT_DIRECTIVE(".amdhsa_dx10_clamp",
                     COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP);
 
   CHECK_RESERVED_BITS(COMPUTE_PGM_RSRC1_DEBUG_MODE);
 
-  if (!isGFX12Plus())
+  if (AMDGPU::hasDX10ClampAndIEEEMode(STI))
     PRINT_DIRECTIVE(".amdhsa_ieee_mode",
                     COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE);
 

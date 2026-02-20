@@ -692,10 +692,10 @@ public:
   bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
 
   // \returns true if the target has DX10_CLAMP kernel descriptor mode bit
-  bool hasDX10ClampMode() const { return getGeneration() < GFX12; }
+  bool hasDX10ClampMode() const { return hasDX10ClampAndIEEEMode(); }
 
   // \returns true if the target has IEEE kernel descriptor mode bit
-  bool hasIEEEMode() const { return getGeneration() < GFX12; }
+  bool hasIEEEMode() const { return hasDX10ClampAndIEEEMode(); }
 
   // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
   bool hasRrWGMode() const { return getGeneration() >= GFX12; }

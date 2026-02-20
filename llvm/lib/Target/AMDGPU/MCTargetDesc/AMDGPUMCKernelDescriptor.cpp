@@ -40,7 +40,7 @@ MCKernelDescriptor::getDefaultAmdhsaKernelDescriptor(const MCSubtargetInfo *STI,
       MCConstantExpr::create(amdhsa::FLOAT_DENORM_MODE_FLUSH_NONE, Ctx),
       amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64_SHIFT,
       amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64, Ctx);
-  if (Version.Major < 12) {
+  if (AMDGPU::hasDX10ClampAndIEEEMode(*STI)) {
     MCKernelDescriptor::bits_set(
         KD.compute_pgm_rsrc1, OneMCExpr,
         amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP_SHIFT,
