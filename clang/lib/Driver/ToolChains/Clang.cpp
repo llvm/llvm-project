@@ -4349,6 +4349,22 @@ static void renderDwarfFormat(const Driver &D, const llvm::Triple &T,
   DwarfFormatArg->render(Args, CmdArgs);
 }
 
+static bool getDebugSimpleTemplateNames(const ToolChain &TC, const Driver &D,
+                                        const ArgList &Args) {
+  bool NeedsSimpleTemplateNames =
+      Args.hasFlag(options::OPT_gsimple_template_names,
+                   options::OPT_gno_simple_template_names,
+                   TC.getDefaultDebugSimpleTemplateNames());
+  if (!NeedsSimpleTemplateNames)
+    return false;
+
+  if (const Arg *A = Args.getLastArg(options::OPT_gsimple_template_names))
+    if (!checkDebugInfoOption(A, Args, D, TC))
+      return false;
+
+  return true;
+}
+
 static void
 renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                    const ArgList &Args, types::ID InputType,
@@ -4633,17 +4649,11 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                             ? "-gpubnames"
                             : "-ggnu-pubnames");
   }
-  const auto *SimpleTemplateNamesArg =
-      Args.getLastArg(options::OPT_gsimple_template_names,
-                      options::OPT_gno_simple_template_names);
+
   bool ForwardTemplateParams = DebuggerTuning == llvm::DebuggerKind::SCE;
-  if (SimpleTemplateNamesArg &&
-      checkDebugInfoOption(SimpleTemplateNamesArg, Args, D, TC)) {
-    const auto &Opt = SimpleTemplateNamesArg->getOption();
-    if (Opt.matches(options::OPT_gsimple_template_names)) {
-      ForwardTemplateParams = true;
-      CmdArgs.push_back("-gsimple-template-names=simple");
-    }
+  if (getDebugSimpleTemplateNames(TC, D, Args)) {
+    ForwardTemplateParams = true;
+    CmdArgs.push_back("-gsimple-template-names=simple");
   }
 
   // Emit DW_TAG_template_alias for template aliases? True by default for SCE.

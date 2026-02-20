@@ -645,6 +645,16 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniBRC}, {{}, {}, VerifyAllSgpr}})
       .Any({{DivBRC}, {{}, {}, ApplyAllVgpr}});
 
+  // LOAD       {Div}, {{VgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
+  // LOAD       {Uni}, {{UniInVgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
+  // LOAD_NORET {}, {{}, {Imm, VgprSrc, ..., Sgpr_WF_RsrcIdx}}
+  // STORE      {}, {{}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
+  addRulesForGOpcs({G_AMDGPU_INTRIN_IMAGE_LOAD, G_AMDGPU_INTRIN_IMAGE_LOAD_D16,
+                    G_AMDGPU_INTRIN_IMAGE_LOAD_NORET,
+                    G_AMDGPU_INTRIN_IMAGE_STORE,
+                    G_AMDGPU_INTRIN_IMAGE_STORE_D16})
+      .Any({{}, {{}, {}, ApplyINTRIN_IMAGE}});
+
   Predicate isSignedICmp([](const MachineInstr &MI) -> bool {
     auto Pred =
         static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
