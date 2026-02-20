@@ -4389,7 +4389,7 @@ def warn_unknown_sanitizer_ignored : Warning<
 
 def warn_impcast_matrix_scalar : Warning<
   "implicit conversion turns matrix to scalar: %0 to %1">,
-  InGroup<Conversion>, DefaultIgnore;
+  InGroup<MatrixConversion>;
 def warn_impcast_vector_scalar : Warning<
   "implicit conversion turns vector to scalar: %0 to %1">,
   InGroup<Conversion>, DefaultIgnore;
@@ -4398,6 +4398,9 @@ def warn_impcast_complex_scalar : Warning<
   InGroup<Conversion>, DefaultIgnore;
 def err_impcast_complex_scalar : Error<
   "implicit conversion from %0 to %1 is not permitted in C++">;
+def warn_impcast_matrix_float_precision : Warning<
+  "implicit conversion loses floating-point precision: %0 to %1">,
+  InGroup<MatrixConversion>;
 def warn_impcast_float_precision : Warning<
   "implicit conversion loses floating-point precision: %0 to %1">,
   InGroup<ImplicitFloatConversion>, DefaultIgnore;
@@ -4407,12 +4410,18 @@ def warn_impcast_float_result_precision : Warning<
 def warn_impcast_double_promotion : Warning<
   "implicit conversion increases floating-point precision: %0 to %1">,
   InGroup<DoublePromotion>, DefaultIgnore;
+def warn_impcast_matrix_integer_sign : Warning<
+  "implicit conversion changes signedness: %0 to %1">,
+  InGroup<MatrixConversion>;
 def warn_impcast_integer_sign : Warning<
   "implicit conversion changes signedness: %0 to %1">,
   InGroup<SignConversion>, DefaultIgnore;
 def warn_impcast_integer_sign_conditional : Warning<
   "operand of ? changes signedness: %0 to %1">,
   InGroup<SignConversion>, DefaultIgnore;
+def warn_impcast_matrix_integer_precision : Warning<
+  "implicit conversion loses integer precision: %0 to %1">,
+  InGroup<MatrixConversion>;
 def warn_impcast_integer_precision : Warning<
   "implicit conversion loses integer precision: %0 to %1">,
   InGroup<ImplicitIntConversion>, DefaultIgnore;
@@ -4452,6 +4461,9 @@ def warn_impcast_literal_float_to_integer : Warning<
 def warn_impcast_literal_float_to_integer_out_of_range : Warning<
   "implicit conversion of out of range value from %0 to %1 is undefined">,
   InGroup<LiteralConversion>;
+def warn_impcast_matrix_float_integer : Warning<
+  "implicit conversion turns floating-point numbers into integers: %0 to %1">,
+  InGroup<MatrixConversion>;
 def warn_impcast_float_integer : Warning<
   "implicit conversion turns floating-point number into integer: %0 to %1">,
   InGroup<FloatConversion>, DefaultIgnore;
@@ -4463,6 +4475,9 @@ def warn_impcast_int_to_objc_signed_char_bool : Warning<
   InGroup<ObjCSignedCharBoolImplicitIntConversion>, DefaultIgnore;
 
 // Implicit int -> float conversion precision loss warnings.
+def warn_impcast_matrix_integer_float_precision : Warning<
+  "implicit conversion from %0 to %1 may lose precision">,
+  InGroup<MatrixConversion>;
 def warn_impcast_integer_float_precision : Warning<
   "implicit conversion from %0 to %1 may lose precision">,
   InGroup<ImplicitIntFloatConversion>, DefaultIgnore;
@@ -13423,49 +13438,25 @@ def warn_hlsl_impcast_vector_scalar : Warning<
   "implicit conversion turns vector to scalar: %0 to %1">,
   InGroup<VectorConversion>;
 
-def warn_hlsl_impcast_matrix_scalar : Warning<
-  "implicit conversion turns matrix to scalar: %0 to %1">,
-  InGroup<MatrixConversion>;
-
 def warn_hlsl_impcast_vector_float_precision : Warning<
   "implicit conversion loses floating-point precision: %0 to %1">,
   InGroup<VectorConversion>;
-
-def warn_hlsl_impcast_matrix_float_precision : Warning<
-  "implicit conversion loses floating-point precision: %0 to %1">,
-  InGroup<MatrixConversion>;
 
 def warn_hlsl_impcast_vector_integer_sign : Warning<
   "implicit conversion changes signedness: %0 to %1">,
   InGroup<VectorConversion>;
 
-def warn_hlsl_impcast_matrix_integer_sign : Warning<
-  "implicit conversion changes signedness: %0 to %1">,
-  InGroup<MatrixConversion>;
-
 def warn_hlsl_impcast_vector_integer_precision : Warning<
   "implicit conversion loses integer precision: %0 to %1">,
   InGroup<VectorConversion>;
-
-def warn_hlsl_impcast_matrix_integer_precision : Warning<
-  "implicit conversion loses integer precision: %0 to %1">,
-  InGroup<MatrixConversion>;
 
 def warn_hlsl_impcast_vector_float_integer : Warning<
   "implicit conversion turns floating-point numbers into integers: %0 to %1">,
   InGroup<VectorConversion>;
 
-def warn_hlsl_impcast_matrix_float_integer : Warning<
-  "implicit conversion turns floating-point numbers into integers: %0 to %1">,
-  InGroup<MatrixConversion>;
-
 def warn_hlsl_impcast_vector_integer_float_precision : Warning<
   "implicit conversion from %0 to %1 may lose precision">,
   InGroup<VectorConversion>;
-
-def warn_hlsl_impcast_matrix_integer_float_precision : Warning<
-  "implicit conversion from %0 to %1 may lose precision">,
-  InGroup<MatrixConversion>;
 
 def warn_hlsl_availability : Warning<
   "%0 is only available %select{|in %4 environment }3on %1 %2 or newer">,

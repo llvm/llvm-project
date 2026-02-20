@@ -12380,59 +12380,58 @@ static void DiagnoseImpCast(Sema &S, const Expr *E, QualType SourceType,
     return;
   }
 
-  // In HLSL, some vector and matrix diagnostic warnings should not be ignored
-  // by default and should instead be using diagnostics from the group
-  // VectorConversions and MatrixConversions.
-  if (S.getLangOpts().HLSL) {
-    const Type *Source =
-        S.getASTContext().getCanonicalType(E->getType()).getTypePtr();
+  const Type *Source =
+      S.getASTContext().getCanonicalType(E->getType()).getTypePtr();
 
-    if (diag == diag::warn_impcast_vector_scalar)
+  // In HLSL, some vector diagnostic warnings should not be ignored
+  // by default and should instead use diagnostics from the group
+  // VectorConversions.
+  if (S.getLangOpts().HLSL && isa<VectorType>(Source))
+    switch (diag) {
+    case diag::warn_impcast_vector_scalar:
       diag = diag::warn_hlsl_impcast_vector_scalar;
-    else if (diag == diag::warn_impcast_matrix_scalar)
-      diag = diag::warn_hlsl_impcast_matrix_scalar;
+      break;
+    case diag::warn_impcast_float_integer:
+      diag = diag::warn_hlsl_impcast_vector_float_integer;
+      break;
+    case diag::warn_impcast_float_precision:
+      diag = diag::warn_hlsl_impcast_vector_float_precision;
+      break;
+    case diag::warn_impcast_integer_precision:
+      diag = diag::warn_hlsl_impcast_vector_integer_precision;
+      break;
+    case diag::warn_impcast_integer_float_precision:
+      diag = diag::warn_hlsl_impcast_vector_integer_float_precision;
+      break;
+    case diag::warn_impcast_integer_sign:
+      diag = diag::warn_hlsl_impcast_vector_integer_sign;
+      break;
+    default:
+      break;
+    }
 
-    if (isa<VectorType>(Source))
-      switch (diag) {
-      case diag::warn_impcast_float_integer:
-        diag = diag::warn_hlsl_impcast_vector_float_integer;
-        break;
-      case diag::warn_impcast_float_precision:
-        diag = diag::warn_hlsl_impcast_vector_float_precision;
-        break;
-      case diag::warn_impcast_integer_precision:
-        diag = diag::warn_hlsl_impcast_vector_integer_precision;
-        break;
-      case diag::warn_impcast_integer_float_precision:
-        diag = diag::warn_hlsl_impcast_vector_integer_float_precision;
-        break;
-      case diag::warn_impcast_integer_sign:
-        diag = diag::warn_hlsl_impcast_vector_integer_sign;
-        break;
-      default:
-        break;
-      }
-    else if (isa<ConstantMatrixType>(Source))
-      switch (diag) {
-      case diag::warn_impcast_float_integer:
-        diag = diag::warn_hlsl_impcast_matrix_float_integer;
-        break;
-      case diag::warn_impcast_float_precision:
-        diag = diag::warn_hlsl_impcast_matrix_float_precision;
-        break;
-      case diag::warn_impcast_integer_precision:
-        diag = diag::warn_hlsl_impcast_matrix_integer_precision;
-        break;
-      case diag::warn_impcast_integer_float_precision:
-        diag = diag::warn_hlsl_impcast_matrix_integer_float_precision;
-        break;
-      case diag::warn_impcast_integer_sign:
-        diag = diag::warn_hlsl_impcast_matrix_integer_sign;
-        break;
-      default:
-        break;
-      }
-  }
+  // Matrices have their own diagnostics in the MatrixConversions group, which
+  // should be preferred over the non-matrix diagnostic.
+  if (isa<ConstantMatrixType>(Source))
+    switch (diag) {
+    case diag::warn_impcast_float_integer:
+      diag = diag::warn_impcast_matrix_float_integer;
+      break;
+    case diag::warn_impcast_float_precision:
+      diag = diag::warn_impcast_matrix_float_precision;
+      break;
+    case diag::warn_impcast_integer_precision:
+      diag = diag::warn_impcast_matrix_integer_precision;
+      break;
+    case diag::warn_impcast_integer_float_precision:
+      diag = diag::warn_impcast_matrix_integer_float_precision;
+      break;
+    case diag::warn_impcast_integer_sign:
+      diag = diag::warn_impcast_matrix_integer_sign;
+      break;
+    default:
+      break;
+    }
 
   S.Diag(E->getExprLoc(), diag)
     << SourceType << T << E->getSourceRange() << SourceRange(CContext);
