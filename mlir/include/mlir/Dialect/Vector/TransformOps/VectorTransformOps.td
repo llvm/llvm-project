@@ -223,26 +223,6 @@ def ApplyMaterializeMasksPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def ApplyLowerMultiReductionPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.vector.lower_multi_reduction",
-    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
-  let description = [{
-    Indicates that vector multi_reduction-like operations should be lowered to
-    finer-grained vector primitives.
-
-    This is usually a late step that is run after bufferization as part of the
-    process of lowering to e.g. LLVM or NVVM.
-  }];
-
-  let arguments = (ins DefaultValuedAttr<VectorMultiReductionLoweringAttr,
-      "vector::VectorMultiReductionLowering::InnerParallel">:$lowering_strategy
-  );
-
-  let assemblyFormat = [{
-    (`lowering_strategy` `=` $lowering_strategy^)? attr-dict
-  }];
-}
-
 def ApplyReorderAndExpandMultiReductionPatternsOp: Op<Transform_Dialect,
     "apply_patterns.vector.reorder_and_expand_multi_reduction_dims",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {

@@ -10,13 +10,13 @@
 #include "HighlightQuery.h"
 #include "lldb/Target/Language.h"
 
-LLDB_PLUGIN_DEFINE_ADV(RustTreeSitterHighlighter, HighlighterTreeSitterRust)
+using namespace lldb_private;
 
 extern "C" {
 const TSLanguage *tree_sitter_rust();
 }
 
-using namespace lldb_private;
+LLDB_PLUGIN_DEFINE_ADV(RustTreeSitterHighlighter, HighlighterTreeSitterRust)
 
 const TSLanguage *RustTreeSitterHighlighter::GetLanguage() const {
   return tree_sitter_rust();
