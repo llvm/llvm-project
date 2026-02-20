@@ -185,45 +185,39 @@ static bool isConfigurationValue(const ValueDecl *D, Preprocessor &PP);
 /// "sometimes unreachable" code.  Such code is usually not interesting
 /// to report as unreachable, and may mask truly unreachable code within
 /// those blocks.
-static bool isConfigurationValue(const Stmt *S,
-                                 Preprocessor &PP,
+static bool isConfigurationValue(const Expr *E, Preprocessor &PP,
                                  SourceRange *SilenceableCondVal = nullptr,
                                  bool IncludeIntegers = true,
                                  bool WrappedInParens = false) {
-  if (!S)
+  if (!E)
     return false;
 
-  if (const auto *Ex = dyn_cast<Expr>(S))
-    S = Ex->IgnoreImplicit();
-
-  if (const auto *Ex = dyn_cast<Expr>(S))
-    S = Ex->IgnoreCasts();
+  E = E->IgnoreImplicit();
+  E = E->IgnoreCasts();
 
   // Special case looking for the sigil '()' around an integer literal.
-  if (const ParenExpr *PE = dyn_cast<ParenExpr>(S))
+  if (const ParenExpr *PE = dyn_cast<ParenExpr>(E))
     if (!PE->getBeginLoc().isMacroID())
       return isConfigurationValue(PE->getSubExpr(), PP, SilenceableCondVal,
                                   IncludeIntegers, true);
 
-  if (const Expr *Ex = dyn_cast<Expr>(S))
-    S = Ex->IgnoreCasts();
+  E = E->IgnoreCasts();
 
   bool IgnoreYES_NO = false;
 
-  switch (S->getStmtClass()) {
+  switch (E->getStmtClass()) {
     case Stmt::CallExprClass: {
       const FunctionDecl *Callee =
-        dyn_cast_or_null<FunctionDecl>(cast<CallExpr>(S)->getCalleeDecl());
+        dyn_cast_or_null<FunctionDecl>(cast<CallExpr>(E)->getCalleeDecl());
       return Callee ? Callee->isConstexpr() : false;
     }
     case Stmt::DeclRefExprClass:
-      return isConfigurationValue(cast<DeclRefExpr>(S)->getDecl(), PP);
+      return isConfigurationValue(cast<DeclRefExpr>(E)->getDecl(), PP);
     case Stmt::ObjCBoolLiteralExprClass:
       IgnoreYES_NO = true;
       [[fallthrough]];
     case Stmt::CXXBoolLiteralExprClass:
     case Stmt::IntegerLiteralClass: {
-      const Expr *E = cast<Expr>(S);
       if (IncludeIntegers) {
         if (SilenceableCondVal && !SilenceableCondVal->getBegin().isValid())
           *SilenceableCondVal = E->getSourceRange();
@@ -233,11 +227,11 @@ static bool isConfigurationValue(const Stmt *S,
       return false;
     }
     case Stmt::MemberExprClass:
-      return isConfigurationValue(cast<MemberExpr>(S)->getMemberDecl(), PP);
+      return isConfigurationValue(cast<MemberExpr>(E)->getMemberDecl(), PP);
     case Stmt::UnaryExprOrTypeTraitExprClass:
       return true;
     case Stmt::BinaryOperatorClass: {
-      const BinaryOperator *B = cast<BinaryOperator>(S);
+      const BinaryOperator *B = cast<BinaryOperator>(E);
       // Only include raw integers (not enums) as configuration
       // values if they are used in a logical or comparison operator
       // (not arithmetic).
@@ -248,7 +242,7 @@ static bool isConfigurationValue(const Stmt *S,
                                   IncludeIntegers);
     }
     case Stmt::UnaryOperatorClass: {
-      const UnaryOperator *UO = cast<UnaryOperator>(S);
+      const UnaryOperator *UO = cast<UnaryOperator>(E);
       if (UO->getOpcode() != UO_LNot && UO->getOpcode() != UO_Minus)
         return false;
       bool SilenceableCondValNotSet =
@@ -298,8 +292,8 @@ static bool shouldTreatSuccessorsAsReachable(const CFGBlock *B,
     if (isa<SwitchStmt>(Term))
       return true;
     // Specially handle '||' and '&&'.
-    if (isa<BinaryOperator>(Term)) {
-      return isConfigurationValue(Term, PP);
+    if (const auto *BO = dyn_cast<BinaryOperator>(Term)) {
+      return isConfigurationValue(BO, PP);
     }
     // Do not treat constexpr if statement successors as unreachable in warnings
     // since the point of these statements is to determine branches at compile
@@ -309,8 +303,10 @@ static bool shouldTreatSuccessorsAsReachable(const CFGBlock *B,
       return true;
   }
 
-  const Stmt *Cond = B->getTerminatorCondition(/* stripParens */ false);
-  return isConfigurationValue(Cond, PP);
+  if (const Expr *Cond = dyn_cast_or_null<Expr>(
+          B->getTerminatorCondition(/*StripParens=*/false)))
+    return isConfigurationValue(Cond, PP);
+  return false;
 }
 
 static unsigned scanFromBlock(const CFGBlock *Start,
@@ -705,9 +701,9 @@ void DeadCodeScan::reportDeadCode(const CFGBlock *B,
     CFGBlock::const_pred_iterator PI = B->pred_begin();
     if (PI != B->pred_end()) {
       if (const CFGBlock *PredBlock = PI->getPossiblyUnreachableBlock()) {
-        const Stmt *TermCond =
-            PredBlock->getTerminatorCondition(/* strip parens */ false);
-        isConfigurationValue(TermCond, PP, &SilenceableCondVal);
+        if (const Expr *TermCond = dyn_cast_or_null<Expr>(
+                PredBlock->getTerminatorCondition(/*StripParens=*/false)))
+          isConfigurationValue(TermCond, PP, &SilenceableCondVal);
       }
     }
   }
