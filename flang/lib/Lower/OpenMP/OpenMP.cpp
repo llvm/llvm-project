@@ -2845,7 +2845,8 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
           if (!mapperIdName.empty()) {
             bool allowImplicitMapper =
-                semantics::IsAllocatableOrObjectPointer(&sym);
+                semantics::IsAllocatableOrObjectPointer(&sym) ||
+                requiresImplicitDefaultDeclareMapper(*typeSpec);
             bool hasDefaultMapper =
                 converter.getModuleOp().lookupSymbol(mapperIdName);
             if (hasDefaultMapper || allowImplicitMapper) {
