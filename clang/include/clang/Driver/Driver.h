@@ -228,12 +228,6 @@ public:
   /// The file to log CC_LOG_DIAGNOSTICS output to, if enabled.
   std::string CCLogDiagnosticsFilename;
 
-  /// An input type and its arguments.
-  using InputTy = std::pair<types::ID, const llvm::opt::Arg *>;
-
-  /// A list of inputs and their types for the given arguments.
-  using InputList = SmallVector<InputTy, 16>;
-
   /// Whether the driver should follow g++ like behavior.
   bool CCCIsCXX() const { return Mode == GXXMode; }
 
