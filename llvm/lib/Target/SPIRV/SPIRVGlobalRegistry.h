@@ -83,6 +83,9 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // Intrinsic::spv_assign_ptr_type instructions.
   DenseMap<Value *, CallInst *> AssignPtrTypeInstr;
 
+  DenseMap<const Metadata *, Register> MDMap;
+  llvm::DenseSet<llvm::Register> PlaceholderRegs;
+
   // Maps OpVariable and OpFunction-related v-regs to its LLVM IR definition.
   DenseMap<std::pair<const MachineFunction *, Register>, const Value *> Reg2GO;
 
@@ -135,6 +138,27 @@ public:
   const TypedPointerType *findReturnType(const Function *ArgF) {
     auto It = FunResPointerTypes.find(ArgF);
     return It == FunResPointerTypes.end() ? nullptr : It->second;
+  }
+
+  Register getDebugValue(const Metadata *MD) const {
+    auto It = MDMap.find(MD);
+    if (It != MDMap.end())
+      return It->second;
+    return Register();
+  }
+
+  void addDebugValue(const Metadata *MD, Register Reg) { MDMap[MD] = Reg; }
+
+  void markAsForwardPlaceholder(llvm::Register Reg) {
+    PlaceholderRegs.insert(Reg);
+  }
+
+  bool isForwardPlaceholder(llvm::Register Reg) const {
+    return PlaceholderRegs.count(Reg);
+  }
+
+  void resolveForwardPlaceholder(llvm::Register Reg) {
+    PlaceholderRegs.erase(Reg);
   }
 
   // A registry of "assign type" records:
