@@ -612,7 +612,8 @@ bool RISCVMergeBaseOffsetOpt::foldShxaddIntoScaledMemory(MachineInstr &Hi,
   MachineInstr &TailMem = *MRI->use_instr_begin(ScaledReg);
   unsigned Opc = TailMem.getOpcode();
 
-  if (!TailMem.getOperand(1).isReg() || TailMem.getOperand(1).getReg() != ScaledReg)
+  if (!TailMem.getOperand(1).isReg() ||
+      TailMem.getOperand(1).getReg() != ScaledReg)
     return false;
   if (!TailMem.getOperand(2).isImm())
     return false;
