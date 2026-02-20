@@ -28,20 +28,30 @@ struct e {
 // CHECK-NEXT:    store i1 true, ptr [[CLEANUP_ISACTIVE]], align 1
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[AGG_TMP]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    invoke void @_ZN1eC1E1b(ptr noundef nonnull align 1 dereferenceable(1) [[CALL]])
-// CHECK-NEXT:            to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]]
+// CHECK-NEXT:            to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD1:.*]]
 // CHECK:       [[INVOKE_CONT]]:
-// CHECK-NEXT:    store i1 false, ptr [[CLEANUP_ISACTIVE]], align 1
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AGG_TMP]]) #[[ATTR6]]
+// CHECK-NEXT:    store i1 false, ptr [[CLEANUP_ISACTIVE]], align 1
 // CHECK-NEXT:    call void @_Z1av()
 // CHECK-NEXT:    br label %[[SW_EPILOG:.*]]
-// CHECK:       [[LPAD]]:
+// CHECK:       [[LPAD:.*:]]
 // CHECK-NEXT:    [[TMP1:%.*]] = landingpad { ptr, i32 }
 // CHECK-NEXT:            cleanup
 // CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i32 } [[TMP1]], 0
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[EXN_SLOT]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i32 } [[TMP1]], 1
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[EHSELECTOR_SLOT]], align 4
+// CHECK-NEXT:    br label %[[EHCLEANUP:.*]]
+// CHECK:       [[LPAD1]]:
+// CHECK-NEXT:    [[TMP4:%.*]] = landingpad { ptr, i32 }
+// CHECK-NEXT:            cleanup
+// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { ptr, i32 } [[TMP4]], 0
+// CHECK-NEXT:    store ptr [[TMP5]], ptr [[EXN_SLOT]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, i32 } [[TMP4]], 1
+// CHECK-NEXT:    store i32 [[TMP6]], ptr [[EHSELECTOR_SLOT]], align 4
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AGG_TMP]]) #[[ATTR6]]
+// CHECK-NEXT:    br label %[[EHCLEANUP]]
+// CHECK:       [[EHCLEANUP]]:
 // CHECK-NEXT:    [[CLEANUP_IS_ACTIVE:%.*]] = load i1, ptr [[CLEANUP_ISACTIVE]], align 1
 // CHECK-NEXT:    br i1 [[CLEANUP_IS_ACTIVE]], label %[[CLEANUP_ACTION:.*]], label %[[CLEANUP_DONE:.*]]
 // CHECK:       [[CLEANUP_ACTION]]:
@@ -58,8 +68,8 @@ struct e {
 // CHECK-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // CHECK-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
 // CHECK-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
-// CHECK-NEXT:    [[LPAD_VAL1:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
-// CHECK-NEXT:    resume { ptr, i32 } [[LPAD_VAL1]]
+// CHECK-NEXT:    [[LPAD_VAL2:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
+// CHECK-NEXT:    resume { ptr, i32 } [[LPAD_VAL2]]
 //
 void f() {
   switch (d) {
