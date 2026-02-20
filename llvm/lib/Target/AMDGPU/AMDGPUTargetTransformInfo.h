@@ -19,6 +19,7 @@
 
 #include "AMDGPU.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include <optional>
 
@@ -212,6 +213,18 @@ public:
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const override {
     return AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::REGION_ADDRESS &&
            AS != AMDGPUAS::PRIVATE_ADDRESS;
+  }
+
+  bool preferLookThroughIntrinsicsForSLP() const override { return true; }
+
+  bool isLookThroughIntrinsicForSLP(Intrinsic::ID ID) const override {
+    switch (ID) {
+    case Intrinsic::amdgcn_exp2:
+    case Intrinsic::amdgcn_log:
+      return true;
+    default:
+      return false;
+    }
   }
 
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,

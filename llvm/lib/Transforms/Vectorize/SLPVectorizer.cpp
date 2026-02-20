@@ -223,6 +223,13 @@ static cl::opt<bool> VectorizeCopyableElements(
     cl::desc("Try to replace values with the idempotent instructions for "
              "better vectorization."));
 
+/// Enables look-through vectorization for non-vectorizable intrinsics.
+static cl::opt<bool>
+    LookThroughIntrinsics("slp-look-through-intrinsics", cl::init(true),
+                          cl::Hidden,
+                          cl::desc("When true, look through intrinsics for "
+                                   "vectorization of the operands"));
+
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
 static const unsigned AliasedCheckLimit = 10;
@@ -242,6 +249,33 @@ static const int MinScheduleRegionSize = 16;
 
 /// Maximum allowed number of operands in the PHI nodes.
 static const unsigned MaxPHINumOperands = 128;
+
+/// Special operand index for look-through intrinsics.
+static const unsigned LookThroughOperandIdx = UINT_MAX;
+
+/// For unary intrinsic calls that are not trivially vectorizable, look-through
+/// their operand to enable vectorization of the operand.
+static Value *getLookThroughOperand(Value *V, const TargetTransformInfo &TTI) {
+  auto *CI = dyn_cast<CallInst>(V);
+  if (!CI)
+    return nullptr;
+  Intrinsic::ID ID = CI->getIntrinsicID();
+  // Only look through non-trivially-vectorizable intrinsics
+  // that are known to be good candidates to look-through.
+  if (ID == Intrinsic::not_intrinsic || isTriviallyVectorizable(ID) ||
+      !Intrinsic::isTargetIntrinsic(ID) ||
+      !TTI.isLookThroughIntrinsicForSLP(ID))
+    return nullptr;
+  // Only look through unary intrinsic calls
+  if (CI->arg_size() != 1)
+    return nullptr;
+  return CI->getArgOperand(0);
+}
+
+/// Returns true if look-through for intrinsics should be enabled.
+static bool shouldLookThroughIntrinsics(const TargetTransformInfo &TTI) {
+  return LookThroughIntrinsics && TTI.preferLookThroughIntrinsicsForSLP();
+}
 
 /// Predicate for the element types that the SLP vectorizer supports.
 ///
@@ -1451,8 +1485,9 @@ convertTo(Instruction *I, const InstructionsState &S) {
 
 } // end anonymous namespace
 
-static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
-                                       const TargetLibraryInfo &TLI);
+static InstructionsState
+getSameOpcode(ArrayRef<Value *> VL, const TargetLibraryInfo &TLI,
+              const TargetTransformInfo *TTI = nullptr);
 
 /// Find an instruction with a specific opcode in VL.
 /// \param VL Array of values to search through. Must contain only Instructions
@@ -1477,21 +1512,23 @@ static Instruction *findInstructionWithOpcode(ArrayRef<Value *> VL,
 /// Checks if the provided operands of 2 cmp instructions are compatible, i.e.
 /// compatible instructions or constants, or just some other regular values.
 static bool areCompatibleCmpOps(Value *BaseOp0, Value *BaseOp1, Value *Op0,
-                                Value *Op1, const TargetLibraryInfo &TLI) {
+                                Value *Op1, const TargetLibraryInfo &TLI,
+                                const TargetTransformInfo *TTI) {
   return (isConstant(BaseOp0) && isConstant(Op0)) ||
          (isConstant(BaseOp1) && isConstant(Op1)) ||
          (!isa<Instruction>(BaseOp0) && !isa<Instruction>(Op0) &&
           !isa<Instruction>(BaseOp1) && !isa<Instruction>(Op1)) ||
          BaseOp0 == Op0 || BaseOp1 == Op1 ||
-         getSameOpcode({BaseOp0, Op0}, TLI) ||
-         getSameOpcode({BaseOp1, Op1}, TLI);
+         getSameOpcode({BaseOp0, Op0}, TLI, TTI) ||
+         getSameOpcode({BaseOp1, Op1}, TLI, TTI);
 }
 
 /// \returns true if a compare instruction \p CI has similar "look" and
 /// same predicate as \p BaseCI, "as is" or with its operands and predicate
 /// swapped, false otherwise.
 static bool isCmpSameOrSwapped(const CmpInst *BaseCI, const CmpInst *CI,
-                               const TargetLibraryInfo &TLI) {
+                               const TargetLibraryInfo &TLI,
+                               const TargetTransformInfo *TTI) {
   assert(BaseCI->getOperand(0)->getType() == CI->getOperand(0)->getType() &&
          "Assessing comparisons of different types?");
   CmpInst::Predicate BasePred = BaseCI->getPredicate();
@@ -1504,16 +1541,17 @@ static bool isCmpSameOrSwapped(const CmpInst *BaseCI, const CmpInst *CI,
   Value *Op1 = CI->getOperand(1);
 
   return (BasePred == Pred &&
-          areCompatibleCmpOps(BaseOp0, BaseOp1, Op0, Op1, TLI)) ||
+          areCompatibleCmpOps(BaseOp0, BaseOp1, Op0, Op1, TLI, TTI)) ||
          (BasePred == SwappedPred &&
-          areCompatibleCmpOps(BaseOp0, BaseOp1, Op1, Op0, TLI));
+          areCompatibleCmpOps(BaseOp0, BaseOp1, Op1, Op0, TLI, TTI));
 }
 
 /// \returns analysis of the Instructions in \p VL described in
 /// InstructionsState, the Opcode that we suppose the whole list
 /// could be vectorized even if its structure is diverse.
 static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
-                                       const TargetLibraryInfo &TLI) {
+                                       const TargetLibraryInfo &TLI,
+                                       const TargetTransformInfo *TTI) {
   // Make sure these are all Instructions.
   if (!all_of(VL, IsaPred<Instruction, PoisonValue>))
     return InstructionsState::invalid();
@@ -1566,7 +1604,14 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   if (auto *CallBase = dyn_cast<CallInst>(MainOp)) {
     BaseID = getVectorIntrinsicIDForCall(CallBase, &TLI);
     BaseMappings = VFDatabase(*CallBase).getMappings(*CallBase);
-    if (!isTriviallyVectorizable(BaseID) && BaseMappings.empty())
+    // When look-through is enabled, allow non-vectorizable intrinsics
+    // to pass through then buildTreeRec will handle them.
+    bool IsLookThroughIntrinsic =
+        TTI && shouldLookThroughIntrinsics(*TTI) &&
+        CallBase->getIntrinsicID() != Intrinsic::not_intrinsic &&
+        Intrinsic::isTargetIntrinsic(CallBase->getIntrinsicID());
+    if (!isTriviallyVectorizable(BaseID) && BaseMappings.empty() &&
+        !IsLookThroughIntrinsic)
       return InstructionsState::invalid();
   }
   bool AnyPoison = InstCnt != VL.size();
@@ -1622,11 +1667,11 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
             (BasePred == CurrentPred || BasePred == SwappedCurrentPred))
           continue;
 
-        if (isCmpSameOrSwapped(BaseInst, Inst, TLI))
+        if (isCmpSameOrSwapped(BaseInst, Inst, TLI, TTI))
           continue;
         auto *AltInst = cast<CmpInst>(AltOp);
         if (MainOp != AltOp) {
-          if (isCmpSameOrSwapped(AltInst, Inst, TLI))
+          if (isCmpSameOrSwapped(AltInst, Inst, TLI, TTI))
             continue;
         } else if (BasePred != CurrentPred) {
           assert(
@@ -1671,6 +1716,13 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
           return InstructionsState::invalid();
         if (!ID) {
           SmallVector<VFInfo> Mappings = VFDatabase(*Call).getMappings(*Call);
+          // When look-through is enabled, non-vectorizable target intrinsics
+          // will have VFDatabase mappings empty. Allow them as compatible
+          // since we look through to their vectorizable operands.
+          if (TTI && shouldLookThroughIntrinsics(*TTI) &&
+              !isTriviallyVectorizable(BaseID) && BaseMappings.empty() &&
+              Mappings.empty())
+            continue;
           if (Mappings.size() != BaseMappings.size() ||
               Mappings.front().ISA != BaseMappings.front().ISA ||
               Mappings.front().ScalarName != BaseMappings.front().ScalarName ||
@@ -2605,7 +2657,7 @@ public:
         SmallVector<Value *, 4> Ops(MainAltOps);
         Ops.push_back(I1);
         Ops.push_back(I2);
-        InstructionsState S = getSameOpcode(Ops, TLI);
+        InstructionsState S = getSameOpcode(Ops, TLI, R.TTI);
         // Note: Only consider instructions with <= 2 operands to avoid
         // complexity explosion.
         if (S &&
@@ -3145,7 +3197,7 @@ public:
         // Use Boyer-Moore majority voting for finding the majority opcode and
         // the number of times it occurs.
         if (auto *I = dyn_cast<Instruction>(OpData.V)) {
-          if (!OpcodeI || !getSameOpcode({OpcodeI, I}, TLI) ||
+          if (!OpcodeI || !getSameOpcode({OpcodeI, I}, TLI, R.TTI) ||
               I->getParent() != Parent) {
             if (NumOpsWithSameOpcodeParent == 0) {
               NumOpsWithSameOpcodeParent = 1;
@@ -3279,7 +3331,8 @@ public:
                 // 2.1. If we have only 2 lanes, need to check that value in the
                 // next lane does not build same opcode sequence.
                 (Lns == 2 &&
-                 !getSameOpcode({Op, getValue((OpI + 1) % OpE, Ln)}, TLI) &&
+                 !getSameOpcode({Op, getValue((OpI + 1) % OpE, Ln)}, TLI,
+                                R.TTI) &&
                  isa<Constant>(Data.V)))) ||
               // 3. The operand in the current lane is loop invariant (can be
               // hoisted out) and another operand is also a loop invariant
@@ -3288,7 +3341,7 @@ public:
               // FIXME: need to teach the cost model about this case for better
               // estimation.
               (IsInvariant && !isa<Constant>(Data.V) &&
-               !getSameOpcode({Op, Data.V}, TLI) &&
+               !getSameOpcode({Op, Data.V}, TLI, R.TTI) &&
                L->isLoopInvariant(Data.V))) {
             FoundCandidate = true;
             Data.IsUsed = Data.V == Op;
@@ -3318,7 +3371,7 @@ public:
                 return true;
               Value *OpILn = getValue(OpI, Ln);
               return (L && L->isLoopInvariant(OpILn)) ||
-                     (getSameOpcode({Op, OpILn}, TLI) &&
+                     (getSameOpcode({Op, OpILn}, TLI, R.TTI) &&
                       allSameBlock({Op, OpILn}));
             }))
           return true;
@@ -3476,8 +3529,8 @@ public:
               // Try to get the alternate opcode and follow it during analysis.
               if (MainAltOps[OpIdx].size() != 2) {
                 OperandData &AltOp = getData(OpIdx, Lane);
-                InstructionsState OpS =
-                    getSameOpcode({MainAltOps[OpIdx].front(), AltOp.V}, TLI);
+                InstructionsState OpS = getSameOpcode(
+                    {MainAltOps[OpIdx].front(), AltOp.V}, TLI, R.TTI);
                 if (OpS && OpS.isAltShuffle())
                   MainAltOps[OpIdx].push_back(AltOp.V);
               }
@@ -4471,7 +4524,7 @@ private:
                     return UndefValue::get(VL.front()->getType());
                   return VL[Idx];
                 });
-      InstructionsState S = getSameOpcode(Last->Scalars, *TLI);
+      InstructionsState S = getSameOpcode(Last->Scalars, *TLI, TTI);
       if (S)
         Last->setOperations(S);
       Last->ReorderIndices.append(ReorderIndices.begin(), ReorderIndices.end());
@@ -6602,6 +6655,7 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
 
 static bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
                                   const TargetLibraryInfo &TLI,
+                                  const TargetTransformInfo *TTI = nullptr,
                                   bool CompareOpcodes = true) {
   if (getUnderlyingObject(Ptr1, RecursionMaxDepth) !=
       getUnderlyingObject(Ptr2, RecursionMaxDepth))
@@ -6614,7 +6668,8 @@ static bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
            (!GEP2 || isConstant(GEP2->getOperand(1)))) ||
           !CompareOpcodes ||
           (GEP1 && GEP2 &&
-           getSameOpcode({GEP1->getOperand(1), GEP2->getOperand(1)}, TLI)));
+           getSameOpcode({GEP1->getOperand(1), GEP2->getOperand(1)}, TLI,
+                         TTI)));
 }
 
 /// Calculates minimal alignment as a common alignment.
@@ -7490,7 +7545,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
       return LoadsState::Gather;
 
     if (!all_of(PointerOps, [&](Value *P) {
-          return arePointersCompatible(P, PointerOps.front(), *TLI);
+          return arePointersCompatible(P, PointerOps.front(), *TLI, TTI);
         }))
       return LoadsState::Gather;
 
@@ -7949,7 +8004,8 @@ static bool areTwoInsertFromSameBuildVector(
 /// the given \p MainOp and \p AltOp instructions.
 static bool isAlternateInstruction(Instruction *I, Instruction *MainOp,
                                    Instruction *AltOp,
-                                   const TargetLibraryInfo &TLI);
+                                   const TargetLibraryInfo &TLI,
+                                   const TargetTransformInfo *TTI);
 
 std::optional<BoUpSLP::OrdersType>
 BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
@@ -8103,7 +8159,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
         [&](Instruction *I) {
           assert(TE.getMatchingMainOpOrAltOp(I) &&
                  "Unexpected main/alternate opcode");
-          return isAlternateInstruction(I, TE.getMainOp(), TE.getAltOp(), *TLI);
+          return isAlternateInstruction(I, TE.getMainOp(), TE.getAltOp(), *TLI,
+                                        TTI);
         },
         Mask);
     const int VF = TE.getVectorFactor();
@@ -10321,7 +10378,7 @@ bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
                  [&](ArrayRef<Value *> Op) {
                    if (allConstant(Op) ||
                        (!isSplat(Op) && allSameBlock(Op) && allSameType(Op) &&
-                        getSameOpcode(Op, *TLI)))
+                        getSameOpcode(Op, *TLI, TTI)))
                      return false;
                    DenseMap<Value *, unsigned> Uniques;
                    for (Value *V : Op) {
@@ -11039,7 +11096,7 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
         // Check that extended with poisons/copyable operations are still valid
         // for vectorization (div/rem are not allowed).
         if ((!S.areInstructionsWithCopyableElements() &&
-             !getSameOpcode(PaddedUniqueValues, TLI).valid()) ||
+             !getSameOpcode(PaddedUniqueValues, TLI, &TTI).valid()) ||
             (S.areInstructionsWithCopyableElements() && S.isMulDivLikeOp() &&
              (S.getMainOp()->isIntDivRem() || S.getMainOp()->isFPDivRem() ||
               isa<CallInst>(S.getMainOp())))) {
@@ -11101,7 +11158,7 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
                            *TLI)) ||
         (LocalState.getAltOpcode() == LocalState.getOpcode() &&
          !isAlternateInstruction(I, LocalState.getMainOp(),
-                                 LocalState.getAltOp(), *TLI))) {
+                                 LocalState.getAltOp(), *TLI, TTI))) {
       Op1.push_back(V);
       Op1Indices.set(Idx);
       continue;
@@ -11516,7 +11573,7 @@ public:
                          bool SkipSameCodeCheck = false) {
     InstructionsState S = (SkipSameCodeCheck || !allSameBlock(VL))
                               ? InstructionsState::invalid()
-                              : getSameOpcode(VL, TLI);
+                              : getSameOpcode(VL, TLI, &TTI);
     if (S)
       return S;
     // Check if series of selects + zext i1 %x to in can be combined into
@@ -11740,7 +11797,7 @@ BoUpSLP::ScalarsVectorizationLegality BoUpSLP::getScalarsVectorizationLegality(
     // Reset S to make it GetElementPtr kind of node.
     const auto *It = find_if(VL, IsaPred<GetElementPtrInst>);
     assert(It != VL.end() && "Expected at least one GEP.");
-    S = getSameOpcode(*It, *TLI);
+    S = getSameOpcode(*It, *TLI, TTI);
   }
   assert(S && "Must be valid.");
 
@@ -11926,7 +11983,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
                             UserTreeIdx, {}, ReorderIndices);
     LLVM_DEBUG(dbgs() << "SLP: split alternate node.\n"; TE->dump());
     auto AddNode = [&](ArrayRef<Value *> Op, unsigned Idx) {
-      InstructionsState S = getSameOpcode(Op, *TLI);
+      InstructionsState S = getSameOpcode(Op, *TLI, TTI);
       if (S && (isa<LoadInst>(S.getMainOp()) ||
                 getSameValuesTreeEntry(S.getMainOp(), Op, /*SameVF=*/true))) {
         // Build gather node for loads, they will be gathered later.
@@ -12009,7 +12066,32 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   TreeEntry::EntryState State = getScalarsVectorizationState(
       S, VL, IsScatterVectorizeUserTE, CurrentOrder, PointerOps, SPtrInfo);
   if (State == TreeEntry::NeedToGather) {
-    newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
+    TreeEntry *GatherTE =
+        newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
+
+    // For non-vectorizable intrinsics, check if we can look through to
+    // their operands and vectorize them. This enables vectorization
+    // for patterns like: fmul -> fsub -> amdgcn.exp2 -> insertelement, etc.
+    if (TTI && shouldLookThroughIntrinsics(*TTI) && GatherTE && S &&
+        S.getOpcode() == Instruction::Call) {
+      // Use getLookThroughOperand to check if calls are look-through candidates
+      // and collect their operands
+      SmallVector<Value *> CallOperands;
+      bool AllValid = true;
+      for (Value *V : VL) {
+        if (Value *LTOp = getLookThroughOperand(V, *TTI)) {
+          CallOperands.push_back(LTOp);
+        } else {
+          AllValid = false;
+          break;
+        }
+      }
+      if (AllValid && !CallOperands.empty()) {
+        // Build tree with look-through operands using LookThroughOperandIdx
+        buildTreeRec(CallOperands, Depth + 1,
+                     {GatherTE, LookThroughOperandIdx});
+      }
+    }
     return;
   }
 
@@ -12055,7 +12137,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       ArrayRef<Value *> Op = Operands[I];
       if (Op.empty())
         continue;
-      InstructionsState S = getSameOpcode(Op, *TLI);
+      InstructionsState S = getSameOpcode(Op, *TLI, TTI);
       if ((!S || S.getOpcode() != Instruction::PHI) || S.isAltShuffle())
         buildTreeRec(Op, Depth + 1, {TE, I});
       else
@@ -12420,7 +12502,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
             continue;
           auto *Cmp = cast<CmpInst>(V);
 
-          if (isAlternateInstruction(Cmp, MainCI, AltCI, *TLI)) {
+          if (isAlternateInstruction(Cmp, MainCI, AltCI, *TLI, TTI)) {
             if (AltP == CmpInst::getSwappedPredicate(Cmp->getPredicate()))
               std::swap(Operands.front()[Idx], Operands.back()[Idx]);
           } else {
@@ -12621,16 +12703,17 @@ static bool isMainInstruction(Instruction *I, Instruction *MainOp,
 
 static bool isAlternateInstruction(Instruction *I, Instruction *MainOp,
                                    Instruction *AltOp,
-                                   const TargetLibraryInfo &TLI) {
+                                   const TargetLibraryInfo &TLI,
+                                   const TargetTransformInfo *TTI) {
   if (auto *MainCI = dyn_cast<CmpInst>(MainOp)) {
     auto *AltCI = cast<CmpInst>(AltOp);
     CmpInst::Predicate MainP = MainCI->getPredicate();
     [[maybe_unused]] CmpInst::Predicate AltP = AltCI->getPredicate();
     assert(MainP != AltP && "Expected different main/alternate predicates.");
     auto *CI = cast<CmpInst>(I);
-    if (isCmpSameOrSwapped(MainCI, CI, TLI))
+    if (isCmpSameOrSwapped(MainCI, CI, TLI, TTI))
       return false;
-    if (isCmpSameOrSwapped(AltCI, CI, TLI))
+    if (isCmpSameOrSwapped(AltCI, CI, TLI, TTI))
       return true;
     CmpInst::Predicate P = CI->getPredicate();
     CmpInst::Predicate SwappedP = CmpInst::getSwappedPredicate(P);
@@ -13154,7 +13237,7 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
         }
         for (LoadInst *RLI : LIt->second) {
           if (arePointersCompatible(RLI->getPointerOperand(),
-                                    LI->getPointerOperand(), *TLI)) {
+                                    LI->getPointerOperand(), *TLI, TTI)) {
             hash_code SubKey = hash_value(RLI->getPointerOperand());
             return SubKey;
           }
@@ -13321,7 +13404,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   InstructionsCompatibilityAnalysis Analysis(DT, DL, TTI, TLI);
   SmallVector<BoUpSLP::ValueList> Operands = Analysis.buildOperands(S, VL);
 
-  InstructionsState OpS = getSameOpcode(Operands.front(), TLI);
+  InstructionsState OpS = getSameOpcode(Operands.front(), TLI, &TTI);
   if (!OpS.valid())
     return InstructionCost::getInvalid();
 
@@ -13825,7 +13908,7 @@ void BoUpSLP::transformNodes() {
                                                                    : 1)) {
             if (IsSplat)
               continue;
-            InstructionsState S = getSameOpcode(Slice, *TLI);
+            InstructionsState S = getSameOpcode(Slice, *TLI, TTI);
             if (!S || !allSameOpcode(Slice) || !allSameBlock(Slice) ||
                 (S.getOpcode() == Instruction::Load &&
                  areKnownNonVectorizableLoads(Slice)) ||
@@ -15162,7 +15245,12 @@ public:
 const BoUpSLP::TreeEntry *BoUpSLP::getOperandEntry(const TreeEntry *E,
                                                    unsigned Idx) const {
   TreeEntry *Op = OperandsToTreeEntry.at({E, Idx});
-  assert(Op->isSame(E->getOperand(Idx)) && "Operands mismatch!");
+  // For look-through operands (LookThroughOperandIdx=UINT_MAX), skip the
+  // assertion since the operand at LookThroughOperandIdx doesn't exist in the
+  // original instruction.
+  if (Idx != LookThroughOperandIdx) {
+    assert(Op->isSame(E->getOperand(Idx)) && "Operands mismatch!");
+  }
   return Op;
 }
 
@@ -15300,7 +15388,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   auto GetCastContextHint = [&](Value *V) {
     if (ArrayRef<TreeEntry *> OpTEs = getTreeEntries(V); OpTEs.size() == 1)
       return getCastContextHint(*OpTEs.front());
-    InstructionsState SrcState = getSameOpcode(E->getOperand(0), *TLI);
+    InstructionsState SrcState = getSameOpcode(E->getOperand(0), *TLI, TTI);
     if (SrcState && SrcState.getOpcode() == Instruction::Load &&
         !SrcState.isAltShuffle())
       return TTI::CastContextHint::GatherScatter;
@@ -16243,7 +16331,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             assert(E->getMatchingMainOpOrAltOp(I) &&
                    "Unexpected main/alternate opcode");
             return isAlternateInstruction(I, E->getMainOp(), E->getAltOp(),
-                                          *TLI);
+                                          *TLI, TTI);
           },
           Mask);
       VecCost += ::getShuffleCost(TTIRef, TargetTransformInfo::SK_PermuteTwoSrc,
@@ -16565,7 +16653,7 @@ bool BoUpSLP::isTreeNotExtendable() const {
         (!E.hasState() &&
          all_of(E.Scalars, IsaPred<ExtractElementInst, LoadInst>)) ||
         (isa<ExtractElementInst>(E.Scalars.front()) &&
-         getSameOpcode(ArrayRef(E.Scalars).drop_front(), *TLI).valid()))
+         getSameOpcode(ArrayRef(E.Scalars).drop_front(), *TLI, TTI).valid()))
       return false;
     if (isSplat(E.Scalars) || allConstant(E.Scalars))
       continue;
@@ -18552,7 +18640,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       Value *In1 = PHI1->getIncomingValue(I);
       if (isConstant(In) && isConstant(In1))
         continue;
-      if (!getSameOpcode({In, In1}, *TLI))
+      if (!getSameOpcode({In, In1}, *TLI, TTI))
         return false;
       if (cast<Instruction>(In)->getParent() !=
           cast<Instruction>(In1)->getParent())
@@ -18580,7 +18668,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     if (It != UsedValuesEntry.end())
       UsedInSameVTE = It->second == UsedValuesEntry.find(V)->second;
     return V != V1 && MightBeIgnored(V1) && !UsedInSameVTE &&
-           getSameOpcode({V, V1}, *TLI) &&
+           getSameOpcode({V, V1}, *TLI, TTI) &&
            cast<Instruction>(V)->getParent() ==
                cast<Instruction>(V1)->getParent() &&
            (!isa<PHINode>(V1) || AreCompatiblePHIs(V, V1));
@@ -20524,6 +20612,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     // Set insert point for non-reduction initial nodes.
     if (E->hasState() && E->Idx == 0 && !UserIgnoreList)
       setInsertPointAfterBundle(E);
+    // Vectorize look-through operands for non-vectorizable intrinsic calls.
+    if (TTI && shouldLookThroughIntrinsics(*TTI) &&
+        OperandsToTreeEntry.contains({E, LookThroughOperandIdx})) {
+      (void)vectorizeTree(getOperandEntry(E, LookThroughOperandIdx));
+    }
     Value *Vec = createBuildVector(E, ScalarTy);
     E->VectorizedValue = Vec;
     return Vec;
@@ -21558,7 +21651,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               assert(E->getMatchingMainOpOrAltOp(I) &&
                      "Unexpected main/alternate opcode");
               return isAlternateInstruction(I, E->getMainOp(), E->getAltOp(),
-                                            *TLI);
+                                            *TLI, TTI);
             },
             Mask, &OpScalars, &AltScalars);
 
@@ -25152,7 +25245,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
 
   // Check that all of the parts are instructions of the same type,
   // we permit an alternate opcode via InstructionsState.
-  InstructionsState S = getSameOpcode(VL, *TLI);
+  InstructionsState S = getSameOpcode(VL, *TLI, TTI);
   if (!S)
     return false;
 
@@ -25687,7 +25780,8 @@ public:
   /// Try to find a reduction tree.
   bool matchAssociativeReduction(BoUpSLP &R, Instruction *Root,
                                  ScalarEvolution &SE, const DataLayout &DL,
-                                 const TargetLibraryInfo &TLI) {
+                                 const TargetLibraryInfo &TLI,
+                                 const TargetTransformInfo *TTI) {
     RdxKind = HorizontalReduction::getRdxKind(Root);
     if (!isVectorizable(RdxKind, Root))
       return false;
@@ -25769,7 +25863,7 @@ public:
           }
           for (LoadInst *RLI : LIt->second) {
             if (arePointersCompatible(RLI->getPointerOperand(),
-                                      LI->getPointerOperand(), TLI)) {
+                                      LI->getPointerOperand(), TLI, TTI)) {
               hash_code SubKey = hash_value(RLI->getPointerOperand());
               return SubKey;
             }
@@ -25982,7 +26076,7 @@ public:
           isa<UndefValue>(LocalReducedVals.back().front()) &&
           isa<LoadInst>(RV.front())) {
         LocalReducedVals.emplace_back().append(RV.begin(), RV.end());
-        States.push_back(getSameOpcode(RV, TLI));
+        States.push_back(getSameOpcode(RV, TLI, TTI));
         continue;
       }
       SmallVector<Value *> Ops;
@@ -26003,7 +26097,7 @@ public:
         continue;
       }
       LocalReducedVals.emplace_back().append(RV.begin(), RV.end());
-      States.push_back(getSameOpcode(RV, TLI));
+      States.push_back(getSameOpcode(RV, TLI, TTI));
     }
     ReducedVals.swap(LocalReducedVals);
     for (unsigned I = 0, E = ReducedVals.size(); I < E; ++I) {
@@ -26642,7 +26736,7 @@ private:
           if (hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
             if (RdxKind == RecurKind::FAdd) {
               InstructionCost FMACost = canConvertToFMA(
-                  RdxOp, getSameOpcode(RdxOp, TLI), DT, DL, *TTI, TLI);
+                  RdxOp, getSameOpcode(RdxOp, TLI, TTI), DT, DL, *TTI, TLI);
               if (FMACost.isValid()) {
                 LLVM_DEBUG(dbgs() << "FMA cost: " << FMACost << "\n");
                 if (auto *I = dyn_cast<Instruction>(RdxVal)) {
@@ -26736,8 +26830,8 @@ private:
               Ops.push_back(RdxVal->user_back());
             }
             if (!Ops.empty()) {
-              FMACost = canConvertToFMA(Ops, getSameOpcode(Ops, TLI), DT, DL,
-                                        *TTI, TLI);
+              FMACost = canConvertToFMA(Ops, getSameOpcode(Ops, TLI, TTI), DT,
+                                        DL, *TTI, TLI);
               if (FMACost.isValid()) {
                 // Calculate actual FMAD cost.
                 IntrinsicCostAttributes ICA(Intrinsic::fmuladd, RVecTy,
@@ -27429,7 +27523,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
     if (!isReductionCandidate(Inst))
       return nullptr;
     HorizontalReduction HorRdx;
-    if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI))
+    if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI, TTI))
       return nullptr;
     return HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT);
   };
@@ -27498,7 +27592,7 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
   // Skip potential FMA candidates.
   if ((I->getOpcode() == Instruction::FAdd ||
        I->getOpcode() == Instruction::FSub) &&
-      canConvertToFMA(I, getSameOpcode(I, *TLI), *DT, *DL, *TTI, *TLI)
+      canConvertToFMA(I, getSameOpcode(I, *TLI, TTI), *DT, *DL, *TTI, *TLI)
           .isValid())
     return false;
 
@@ -27778,7 +27872,8 @@ static bool tryToVectorizeSequence(
 /// of the second cmp instruction.
 template <bool IsCompatibility>
 static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
-                       const DominatorTree &DT) {
+                       const DominatorTree &DT,
+                       const TargetTransformInfo *TTI) {
   assert(isValidElementType(V->getType()) &&
          isValidElementType(V2->getType()) &&
          "Expected valid element types only.");
@@ -27839,7 +27934,7 @@ static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
           if (NodeI1 != NodeI2)
             return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
         }
-        InstructionsState S = getSameOpcode({I1, I2}, TLI);
+        InstructionsState S = getSameOpcode({I1, I2}, TLI, TTI);
         if (S && (IsCompatibility || !S.isAltShuffle()))
           continue;
         if (IsCompatibility)
@@ -27877,13 +27972,13 @@ bool SLPVectorizerPass::vectorizeCmpInsts(iterator_range<ItT> CmpInsts,
   auto CompareSorter = [&](Value *V, Value *V2) {
     if (V == V2)
       return false;
-    return compareCmp<false>(V, V2, *TLI, *DT);
+    return compareCmp<false>(V, V2, *TLI, *DT, TTI);
   };
 
   auto AreCompatibleCompares = [&](ArrayRef<Value *> VL, Value *V1) {
     if (VL.empty() || VL.back() == V1)
       return true;
-    return compareCmp<true>(V1, VL.back(), *TLI, *DT);
+    return compareCmp<true>(V1, VL.back(), *TLI, *DT, TTI);
   };
 
   SmallVector<Value *> Vals;
@@ -27999,7 +28094,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
                  "Different nodes should have different DFS numbers");
           if (NodeI1 != NodeI2)
             return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
-          InstructionsState S = getSameOpcode({I1, I2}, *TLI);
+          InstructionsState S = getSameOpcode({I1, I2}, *TLI, TTI);
           if (S && !S.isAltShuffle() && I1->getOpcode() == I2->getOpcode()) {
             const auto *E1 = dyn_cast<ExtractElementInst>(I1);
             const auto *E2 = dyn_cast<ExtractElementInst>(I2);
@@ -28110,7 +28205,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
             return false;
           if (I1->getParent() != I2->getParent())
             return false;
-          if (getSameOpcode({I1, I2}, *TLI))
+          if (getSameOpcode({I1, I2}, *TLI, TTI))
             continue;
           return false;
         }

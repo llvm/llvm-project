@@ -1547,6 +1547,14 @@ bool TargetTransformInfo::allowVectorElementIndexingUsingGEP() const {
   return TTIImpl->allowVectorElementIndexingUsingGEP();
 }
 
+bool TargetTransformInfo::preferLookThroughIntrinsicsForSLP() const {
+  return TTIImpl->preferLookThroughIntrinsicsForSLP();
+}
+
+bool TargetTransformInfo::isLookThroughIntrinsicForSLP(Intrinsic::ID ID) const {
+  return TTIImpl->isLookThroughIntrinsicForSLP(ID);
+}
+
 TargetTransformInfoImplBase::~TargetTransformInfoImplBase() = default;
 
 TargetIRAnalysis::TargetIRAnalysis() : TTICallback(&getDefaultTTI) {}

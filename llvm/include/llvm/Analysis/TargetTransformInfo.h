@@ -2083,6 +2083,14 @@ public:
   /// target.
   LLVM_ABI bool allowVectorElementIndexingUsingGEP() const;
 
+  /// Returns true if the target prefers SLP vectorizer to look through
+  /// non-vectorizable intrinsics to vectorize their operands.
+  LLVM_ABI bool preferLookThroughIntrinsicsForSLP() const;
+
+  /// Returns true if the intrinsic is known to be good candidate for
+  /// look-through in SLP vectorizer.
+  LLVM_ABI bool isLookThroughIntrinsicForSLP(Intrinsic::ID ID) const;
+
 private:
   std::unique_ptr<const TargetTransformInfoImplBase> TTIImpl;
 };
