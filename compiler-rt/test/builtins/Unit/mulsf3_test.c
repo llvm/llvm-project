@@ -24,8 +24,8 @@
 // Returns: a * b
 COMPILER_RT_ABI float __mulsf3(float a, float b);
 
-int test__mulsf3(int line, uint32_t a_rep, uint32_t b_rep,
-                 uint32_t expected_rep) {
+int test__mulsf3(uint32_t a_rep, uint32_t b_rep, uint32_t expected_rep,
+                 int line) {
   float a = fromRep32(a_rep), b = fromRep32(b_rep);
   float x = __mulsf3(a, b);
 #ifdef EXPECT_EXACT_RESULTS
@@ -42,7 +42,7 @@ int test__mulsf3(int line, uint32_t a_rep, uint32_t b_rep,
   return ret;
 }
 
-#define test__mulsf3(a, b, x) test__mulsf3(__LINE__, a, b, x)
+#define test__mulsf3(a, b, x) test__mulsf3(a, b, x, __LINE__)
 
 int main(void) {
   int status = 0;
