@@ -1297,6 +1297,28 @@ TEST(TestRtsanInterceptors, PthreadCondWaitDiesWhenRealtime) {
   pthread_mutex_destroy(&mutex);
 }
 
+TEST(TestRtsanInterceptors, PthreadDetachDiesWhenRealtime) {
+  pthread_t thread{};
+  ASSERT_EQ(0,
+            pthread_create(&thread, nullptr, &FakeThreadEntryPoint, nullptr));
+
+  auto Func = [&thread]() { pthread_detach(thread); };
+
+  ExpectRealtimeDeath(Func, "pthread_detach");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, PthreadKillDiesWhenRealtime) {
+  pthread_t thread{};
+  ASSERT_EQ(0,
+            pthread_create(&thread, nullptr, &FakeThreadEntryPoint, nullptr));
+
+  auto Func = [&thread]() { pthread_kill(thread, -1); };
+
+  ExpectRealtimeDeath(Func, "pthread_kill");
+  ExpectNonRealtimeSurvival(Func);
+}
+
 class PthreadRwlockTest : public ::testing::Test {
 protected:
   void SetUp() override {
