@@ -252,7 +252,10 @@ loop:
 }
 
 ; CHECK-LABEL: .section .custom_section.target_features
-; CHECK-NEXT: .int8 2
+; CHECK-NEXT: .int8 3
+; CHECK-NEXT: .int8 45
+; CHECK-NEXT: .int8 30
+; CHECK-NEXT: .ascii "component-model-thread-context"
 ; CHECK-NEXT: .int8 43
 ; CHECK-NEXT: .int8 10
 ; CHECK-NEXT: .ascii "multivalue"
