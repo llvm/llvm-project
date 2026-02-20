@@ -471,6 +471,10 @@ def OneShotBufferizePass : Pass<"one-shot-bufferize", "ModuleOp"> {
        Option<"bufferAlignment", "buffer-alignment", "uint64_t",
               /*default=*/"64",
               "Sets the alignment of newly allocated buffers.">,
+       Option<"enforceAliasingInvariants", "enforce-aliasing-invariants", "bool",
+              /*default=*/"true",
+              "Enforce aliasing Op/Operand/OpResult invariants with buffer"
+              " copies.">,
   ];
 
   let statistics = [
