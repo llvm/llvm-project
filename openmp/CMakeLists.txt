@@ -41,20 +41,26 @@ else()
       "Path where built OpenMP libraries should be installed.")
 endif()
 
+set(OPENMP_TEST_C_COMPILER_default "${LLVM_TOOLS_BINARY_DIR}/clang${CMAKE_EXECUTABLE_SUFFIX}")
+set(OPENMP_TEST_CXX_COMPILER_default "${LLVM_TOOLS_BINARY_DIR}/clang++${CMAKE_EXECUTABLE_SUFFIX}")
+set(OPENMP_TEST_Fortran_COMPILER_default "${LLVM_TOOLS_BINARY_DIR}/flang${CMAKE_EXECUTABLE_SUFFIX}")
 if (NOT TARGET "clang")
-  set(OPENMP_TEST_C_COMPILER ${CMAKE_C_COMPILER} CACHE STRING
-    "C compiler to use for testing OpenMP runtime libraries.")
-  set(OPENMP_TEST_CXX_COMPILER ${CMAKE_CXX_COMPILER} CACHE STRING
-    "C++ compiler to use for testing OpenMP runtime libraries.")
-else()
-  if (NOT MSVC)
-    set(OPENMP_TEST_C_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang)
-    set(OPENMP_TEST_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++)
+  set(OPENMP_TEST_C_COMPILER_default "${CMAKE_C_COMPILER}")
+  set(OPENMP_TEST_CXX_COMPILER_default "${CMAKE_CXX_COMPILER}")
+endif()
+if (NOT TARGET "flang")
+  if (CMAKE_Fortran_COMPILER)
+    set(OPENMP_TEST_Fortran_COMPILER_default "${CMAKE_Fortran_COMPILER}")
   else()
-    set(OPENMP_TEST_C_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang.exe)
-    set(OPENMP_TEST_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++.exe)
+    unset(OPENMP_TEST_Fortran_COMPILER_default)
   endif()
 endif()
+set(OPENMP_TEST_C_COMPILER "${OPENMP_TEST_C_COMPILER_default}" CACHE STRING
+  "C compiler to use for testing OpenMP runtime libraries.")
+set(OPENMP_TEST_CXX_COMPILER "${OPENMP_TEST_CXX_COMPILER_default}" CACHE STRING
+  "C++ compiler to use for testing OpenMP runtime libraries.")
+set(OPENMP_TEST_Fortran_COMPILER "${OPENMP_TEST_Fortran_COMPILER_default}" CACHE STRING
+  "Fortran compiler to use for testing OpenMP runtime libraries.")
 
 # Set fortran test compiler if flang is found
 if (EXISTS "${OPENMP_TEST_Fortran_COMPILER}")
@@ -91,14 +97,6 @@ math(EXPR LIBOMP_VERSION_BUILD_MONTH_DAY "${LIBOMP_VERSION_BUILD}%10000")
 # Currently don't record any timestamps
 set(LIBOMP_BUILD_DATE "No_Timestamp")
 
-
-# Check for flang
-set(OPENMP_TEST_Fortran_COMPILER_default "")
-if (CMAKE_Fortran_COMPILER)
-  set(OPENMP_TEST_Fortran_COMPILER_default "${CMAKE_Fortran_COMPILER}")
-endif ()
-set(OPENMP_TEST_Fortran_COMPILER "${OPENMP_TEST_Fortran_COMPILER_default}" CACHE STRING
-  "Fortran compiler to use for testing OpenMP runtime libraries.")
 
 set(LIBOMP_FORTRAN_MODULES FALSE CACHE BOOL
   "Create Fortran module files? (requires fortran compiler)")

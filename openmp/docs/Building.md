@@ -269,6 +269,14 @@ tests.
 : Location, relative to [`CMAKE_INSTALL_PREFIX`][CMAKE_INSTALL_PREFIX], where to
 install the OpenMP libraries (`.a` and `.so`)
 
+**OPENMP_TEST_C_COMPILER**:STRING (default: Clang built in the same build configuration, or **CMAKE_C_COMPILER**)
+: C compiler to use for testing OpenMP runtime libraries.
+
+**OPENMP_TEST_CXX_COMPILER**:STRING (default: Clang built in the same build configuration, or **CMAKE_CXX_COMPILER**)
+: C++ compiler to use for testing OpenMP runtime libraries.
+
+**OPENMP_TEST_Fortran_COMPILER**:STRING (default: Flang built in the same build configuration, or **CMAKE_Fortran_COMPILER**)
+: Fortran compiler to use for testing OpenMP runtime libraries.
 
 ### Options for `libomp`
 

@@ -127,23 +127,23 @@ function(add_openmp_testsuite target comment)
     set_property(GLOBAL APPEND PROPERTY OPENMP_LIT_DEPENDS ${ARG_DEPENDS})
   endif()
 
-  set(CLANG_DEPEND)
+  unset(EXTRA_CHECK_DEPENDS)
   if (TARGET "clang")
-    set(CLANG_DEPEND clang)
+    list(APPEND EXTRA_CHECK_DEPENDS clang)
   endif()
   if (ARG_EXCLUDE_FROM_CHECK_ALL)
     add_lit_testsuite(${target}
       ${comment}
       ${ARG_UNPARSED_ARGUMENTS}
       EXCLUDE_FROM_CHECK_ALL
-      DEPENDS ${CLANG_DEPEND} FileCheck not ${ARG_DEPENDS}
+      DEPENDS ${EXTRA_CHECK_DEPENDS} FileCheck not ${ARG_DEPENDS}
       ARGS ${ARG_ARGS}
     )
   else()
     add_lit_testsuite(${target}
       ${comment}
       ${ARG_UNPARSED_ARGUMENTS}
-      DEPENDS ${CLANG_DEPEND} FileCheck not ${ARG_DEPENDS}
+      DEPENDS ${EXTRA_CHECK_DEPENDS} FileCheck not ${ARG_DEPENDS}
       ARGS ${ARG_ARGS}
     )
   endif()
