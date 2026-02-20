@@ -4772,10 +4772,10 @@ let AddedComplexity = 19 in {
 
 //---
 // (unsigned immediate)
-defm STRX : StoreUIz<0b11, 0, 0b00, GPR64z, uimm12s8, "str",
+defm STRX : StoreUI<0b11, 0, 0b00, GPR64z, uimm12s8, "str",
                    [(store GPR64z:$Rt,
                             (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))]>;
-defm STRW : StoreUIz<0b10, 0, 0b00, GPR32z, uimm12s4, "str",
+defm STRW : StoreUI<0b10, 0, 0b00, GPR32z, uimm12s4, "str",
                     [(store GPR32z:$Rt,
                             (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))]>;
 let Predicates = [HasFPARMv8] in {
@@ -4794,11 +4794,11 @@ defm STRD : StoreUI<0b11, 1, 0b00, FPR64Op, uimm12s8, "str",
 defm STRQ : StoreUI<0b00, 1, 0b10, FPR128Op, uimm12s16, "str", []>;
 }
 
-defm STRHH : StoreUIz<0b01, 0, 0b00, GPR32z, uimm12s2, "strh",
+defm STRHH : StoreUI<0b01, 0, 0b00, GPR32z, uimm12s2, "strh",
                      [(truncstorei16 GPR32z:$Rt,
                                      (am_indexed16 GPR64sp:$Rn,
                                                    uimm12s2:$offset))]>;
-defm STRBB : StoreUIz<0b00, 0, 0b00, GPR32z, uimm12s1,  "strb",
+defm STRBB : StoreUI<0b00, 0, 0b00, GPR32z, uimm12s1,  "strb",
                      [(truncstorei8 GPR32z:$Rt,
                                     (am_indexed8 GPR64sp:$Rn,
                                                  uimm12s1:$offset))]>;
