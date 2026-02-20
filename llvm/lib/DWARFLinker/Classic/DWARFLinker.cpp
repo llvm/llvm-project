@@ -2448,6 +2448,19 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
           insertLineSequence(Seq, OutputRows);
       }
 
+      // Recompute isStartSeqInOutput based on the final row ordering.
+      // A row is a sequence start (will have DW_LNE_set_address emitted) iff:
+      // 1. It's the first row, OR
+      // 2. The previous row has EndSequence = 1
+      // This is necessary because insertLineSequence may merge sequences when
+      // an EndSequence row is replaced by the start of a new sequence, which
+      // removes the EndSequence marker and invalidates the original flag.
+      if (!OutputRows.empty()) {
+        OutputRows[0].isStartSeqInOutput = true;
+        for (size_t i = 1; i < OutputRows.size(); ++i)
+          OutputRows[i].isStartSeqInOutput = OutputRows[i - 1].Row.EndSequence;
+      }
+
       // Materialize the tracked rows into final DWARFDebugLine::Row objects.
       LineTable.Rows.clear();
       LineTable.Rows.reserve(OutputRows.size());
@@ -2478,10 +2491,24 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
         if (!LT->Rows.empty())
           constructSeqOffsettoOrigRowMapping(Unit, *LT, SeqOffToOrigRow);
 
-        // Create a map of original row indices to new row indices.
-        DenseMap<size_t, size_t> OrigRowToNewRow;
-        for (size_t i = 0; i < OutputRows.size(); ++i)
-          OrigRowToNewRow[OutputRows[i].OriginalRowIndex] = i;
+        // Build two maps to handle stmt_sequence patching:
+        // 1. OrigRowToOutputRow: maps original row indices to output row
+        // indices (for all rows, not just sequence starts)
+        // 2. OutputRowToSeqStart: maps each output row index to its sequence
+        //    start's output row index
+        DenseMap<size_t, size_t> OrigRowToOutputRow;
+        std::vector<size_t> OutputRowToSeqStart(OutputRows.size());
+
+        size_t CurrentSeqStart = 0;
+        for (size_t i = 0; i < OutputRows.size(); ++i) {
+          // Track the current sequence start
+          if (OutputRows[i].isStartSeqInOutput)
+            CurrentSeqStart = i;
+          OutputRowToSeqStart[i] = CurrentSeqStart;
+
+          // Map original row index to output row index
+          OrigRowToOutputRow[OutputRows[i].OriginalRowIndex] = i;
+        }
 
         // Patch DW_AT_LLVM_stmt_sequence attributes in the compile unit DIE
         // with the correct offset into the .debug_line section.
@@ -2500,21 +2527,27 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
           }
           size_t OrigRowIndex = OrigRowIter->second;
 
-          // 2. Get the new row index from the original row index.
-          auto NewRowIter = OrigRowToNewRow.find(OrigRowIndex);
-          if (NewRowIter == OrigRowToNewRow.end()) {
-            // If the original row index is not found in the map, update the
-            // stmt_sequence attribute to the 'invalid offset' magic value.
+          // 2. Find the output row for this original row.
+          auto OutputRowIter = OrigRowToOutputRow.find(OrigRowIndex);
+          if (OutputRowIter == OrigRowToOutputRow.end()) {
+            // Row was dropped during linking.
             StmtSeq.set(InvalidOffset);
             continue;
           }
+          size_t OutputRowIdx = OutputRowIter->second;
 
-          // 3. Get the offset of the new row in the output .debug_line section.
-          assert(NewRowIter->second < OutputRowOffsets.size() &&
-                 "New row index out of bounds");
-          uint64_t NewStmtSeqOffset = OutputRowOffsets[NewRowIter->second];
+          // 3. Find the sequence start for this output row.
+          //    If the original row was a sequence start but got merged into
+          //    another sequence, this finds the correct sequence start.
+          size_t SeqStartIdx = OutputRowToSeqStart[OutputRowIdx];
 
-          // 4. Patch the stmt_list attribute with the new offset.
+          // 4. Get the offset of the sequence start in the output .debug_line
+          //    section. This offset points to the DW_LNE_set_address opcode.
+          assert(SeqStartIdx < OutputRowOffsets.size() &&
+                 "Sequence start index out of bounds");
+          uint64_t NewStmtSeqOffset = OutputRowOffsets[SeqStartIdx];
+
+          // 5. Patch the stmt_sequence attribute with the new offset.
           StmtSeq.set(NewStmtSeqOffset);
         }
       }
