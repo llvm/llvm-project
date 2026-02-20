@@ -57,6 +57,10 @@ TEST_F(LlvmLibcUtimesTest, ChangeTimesSpecific) {
   ASSERT_EQ(statbuf.st_mtim.tv_nsec,
             static_cast<long>(times[1].tv_usec * 1000));
 
+  // legacy way to check seconds
+  ASSERT_EQ(statbuf.st_atime, times[0].tv_sec);
+  ASSERT_EQ(statbuf.st_mtime, times[1].tv_sec);
+
   ASSERT_THAT(LIBC_NAMESPACE::remove(TEST_FILE), Succeeds(0));
 }
 
