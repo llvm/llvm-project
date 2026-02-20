@@ -15904,6 +15904,138 @@ Example:
         call void @llvm.call.preallocated.teardown(token %cs)
         ret void
 
+Constant-Time Intrinsics
+-------------------------
+
+These intrinsics are provided to support constant-time operations for
+security-sensitive code. Constant-time operations execute in time independent
+of secret data values, preventing timing side-channel leaks.
+
+.. _int_ct_select:
+
+'``llvm.ct.select.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.ct.select`` on any
+integer or floating-point type, pointer types, or vectors types.
+
+::
+
+      declare i32 @llvm.ct.select.i32(i1 <cond>, i32 <val1>, i32 <val2>)
+      declare i64 @llvm.ct.select.i64(i1 <cond>, i64 <val1>, i64 <val2>)
+      declare float @llvm.ct.select.f32(i1 <cond>, float <val1>, float <val2>)
+      declare double @llvm.ct.select.f64(i1 <cond>, double <val1>, double <val2>)
+      declare ptr @llvm.ct.select.p0(i1 <cond>, ptr <val1>, ptr <val2>)
+
+      ; 128-bit vectors
+      declare <4 x i32> @llvm.ct.select.v4i32(i1 <cond>, <4 x i32> <val1>, <4 x i32> <val2>)
+      declare <2 x i64> @llvm.ct.select.v2i64(i1 <cond>, <2 x i64> <val1>, <2 x i64> <val2>)
+      declare <4 x float> @llvm.ct.select.v4f32(i1 <cond>, <4 x float> <val1>, <4 x float> <val2>)
+      declare <2 x double> @llvm.ct.select.v2f64(i1 <cond>, <2 x double> <val1>, <2 x double> <val2>)
+
+      ; 256-bit vectors
+      declare <8 x i32> @llvm.ct.select.v8i32(i1 <cond>, <8 x i32> <val1>, <8 x i32> <val2>)
+      declare <8 x float> @llvm.ct.select.v8f32(i1 <cond>, <8 x float> <val1>, <8 x float> <val2>)
+      declare <4 x double> @llvm.ct.select.v4f64(i1 <cond>, <4 x double> <val1>, <4 x double> <val2>)
+
+Overview:
+"""""""""
+
+The '``llvm.ct.select``' family of intrinsic functions selects one of two
+values based on a condition, with the guarantee that the operation executes
+in constant time. Unlike the standard :ref:`select <i_select>` instruction,
+``llvm.ct.select`` ensures that the execution time and observable behavior
+do not depend on the condition value, preventing timing-based side-channel
+leaks.
+
+Arguments:
+""""""""""
+
+The '``llvm.ct.select``' intrinsic requires three arguments:
+
+1. The condition, which must be a scalar value of type 'i1'. Unlike
+   :ref:`select <i_select>` which accepts both scalar 'i1' and vector
+   '<N x i1>' conditions, ``llvm.ct.select`` only accepts a scalar 'i1'
+   condition. Vector conditions are not supported.
+2. The first value argument of any :ref:`first class <t_firstclass>` type.
+   This can be a scalar or vector type.
+3. The second value argument, which must have the same type as the first
+   value argument.
+
+When the value arguments are vectors, the scalar condition is broadcast to
+all vector elements (i.e., all elements are selected from the same source
+vector based on the single condition).
+
+Semantics:
+""""""""""
+
+If the condition evaluates to 1, the intrinsic returns the first value
+argument; otherwise, it returns the second value argument.
+
+The key semantic difference from :ref:`select <i_select>` is the constant-time
+code generation guarantee: the intrinsic must be lowered to machine code that:
+
+* Does not introduce data-dependent control flow based on the condition value
+* Executes the same sequence of instructions regardless of the condition value
+* Computes both value arguments before performing the selection
+
+**Platform Requirements:** The constant-time guarantee is conditional on
+platform support for data-independent timing, such as ARM DIT (Data Independent
+Timing) or x86 DOIT (Data Operand Independent Timing). Without such hardware
+support, the generated code will still be free from data-dependent control flow,
+but microarchitectural timing variations may still occur.
+
+The typical implementation uses bitwise operations to blend the two values
+based on a mask derived from the condition:
+
+::
+
+      mask = sext(cond)  ; sign-extend condition to all 1s or all 0s
+      result = val2 ^ ((val1 ^ val2) & mask)
+
+Targets with native constant-time select support use target-specific
+instructions to generate optimized bitwise operations with stronger guarantees.
+Targets without native support lower the intrinsic to a sequence of generic
+bitwise operations as shown above, structured to resist pattern recognition
+and preserve the constant-time property through optimization passes.
+
+Optimizations must preserve the constant-time code generation semantics.
+Transforms that would introduce data-dependent control flow are not permitted.
+This includes converting to conditional branches, using predicated instructions
+with data-dependent timing, or optimizing away either value argument before the
+selection completes (both paths must be computed).
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      ; Constant-time integer selection
+      %x = call i32 @llvm.ct.select.i32(i1 %cond, i32 42, i32 17)
+      %key = call i64 @llvm.ct.select.i64(i1 %cond, i64 %k_a, i64 %k_b)
+
+      ; Constant-time 128-bit integer vector selection (scalar condition broadcast to all lanes)
+      %v4 = call <4 x i32> @llvm.ct.select.v4i32(i1 %cond,
+                                                  <4 x i32> <i32 1, i32 2, i32 3, i32 4>,
+                                                  <4 x i32> <i32 5, i32 6, i32 7, i32 8>)
+
+      ; Constant-time 256-bit integer vector selection
+      %v8 = call <8 x i32> @llvm.ct.select.v8i32(i1 %cond,
+                                                  <8 x i32> %vec_a, <8 x i32> %vec_b)
+
+      ; Constant-time 256-bit float vector selection
+      %v8f = call <8 x float> @llvm.ct.select.v8f32(i1 %cond,
+                                                     <8 x float> %fvec_a, <8 x float> %fvec_b)
+
+      ; Constant-time float vector selection
+      %f = call float @llvm.ct.select.f32(i1 %cond, float 1.0, float 0.0)
+
+      ; Constant-time pointer selection
+      %ptr = call ptr @llvm.ct.select.p0(i1 %cond, ptr %ptr_a, ptr %ptr_b)
+
 Standard C/C++ Library Intrinsics
 ---------------------------------
 

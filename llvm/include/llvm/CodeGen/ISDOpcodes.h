@@ -795,6 +795,10 @@ enum NodeType {
   /// i1 then the high bits must conform to getBooleanContents.
   SELECT,
 
+  /// CT_SELECT(Cond, TrueVal, FalseVal). Cond is i1 and the value operands must
+  /// have the same type. Used to lower the constant-time select intrinsic.
+  CT_SELECT,
+
   /// Select with a vector condition (op #0) and two vector operands (ops #1
   /// and #2), returning a vector result.  All vectors have the same length.
   /// Much like the scalar select and setcc, each bit in the condition selects

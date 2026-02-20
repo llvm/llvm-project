@@ -1900,6 +1900,14 @@ def int_coro_subfn_addr : DefaultAttrsIntrinsic<
     [IntrReadMem, IntrArgMemOnly, ReadOnly<ArgIndex<0>>,
      NoCapture<ArgIndex<0>>]>;
 
+///===---------------------- Constant Time Intrinsics ----------------------===//
+//
+// Intrinsic to support constant time select
+def int_ct_select
+    : DefaultAttrsIntrinsic<[llvm_any_ty],
+                            [llvm_i1_ty, LLVMMatchType<0>, LLVMMatchType<0>],
+                            [IntrWriteMem, IntrWillReturn, NoUndef<RetIndex>]>;
+
 ///===-------------------------- Other Intrinsics --------------------------===//
 //
 // TODO: We should introduce a new memory kind fo traps (and other side effects

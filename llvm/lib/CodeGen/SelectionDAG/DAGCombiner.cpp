@@ -486,6 +486,9 @@ namespace {
     SDValue visitCTTZ_ZERO_UNDEF(SDNode *N);
     SDValue visitCTPOP(SDNode *N);
     SDValue visitSELECT(SDNode *N);
+    // ISD::CT_SELECT - Constant-Time SELECT (not related to CT in
+    // CTPOP/CTLZ/CTTZ where CT means "count").
+    SDValue visitCT_SELECT(SDNode *N);
     SDValue visitVSELECT(SDNode *N);
     SDValue visitVP_SELECT(SDNode *N);
     SDValue visitSELECT_CC(SDNode *N);
@@ -1994,6 +1997,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::CTTZ_ZERO_UNDEF:    return visitCTTZ_ZERO_UNDEF(N);
   case ISD::CTPOP:              return visitCTPOP(N);
   case ISD::SELECT:             return visitSELECT(N);
+  case ISD::CT_SELECT:           return visitCT_SELECT(N);
   case ISD::VSELECT:            return visitVSELECT(N);
   case ISD::SELECT_CC:          return visitSELECT_CC(N);
   case ISD::SETCC:              return visitSETCC(N);
@@ -12880,6 +12884,76 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
 
   if (SDValue R = combineSelectAsExtAnd(N0, N1, N2, DL, DAG))
     return R;
+
+  return SDValue();
+}
+
+// Keep CT_SELECT combines deliberately conservative to preserve constant-time
+// intent across generic DAG combines. We only accept:
+//  - canonicalization of negated conditions (flip true/false operands), and
+//  - i1 CT_SELECT nesting merges via AND/OR that keep the result as CT_SELECT.
+// Broader rewrites should be done in target-specific lowering when stronger
+// guarantees about legality and constant-time preservation are available.
+SDValue DAGCombiner::visitCT_SELECT(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue N2 = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+  EVT VT0 = N0.getValueType();
+  SDLoc DL(N);
+  SDNodeFlags Flags = N->getFlags();
+
+  // ct_select (not Cond), N1, N2 -> ct_select Cond, N2, N1
+  // This is a CT-safe canonicalization: flip negated condition by swapping
+  // arms. extractBooleanFlip only matches boolean xor-with-1, so this preserves
+  // dataflow semantics and does not introduce data-dependent control flow.
+  if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false)) {
+    SDValue SelectOp = DAG.getNode(ISD::CT_SELECT, DL, VT, F, N2, N1);
+    SelectOp->setFlags(Flags);
+    return SelectOp;
+  }
+
+  if (VT0 == MVT::i1) {
+    // Nested CT_SELECT merging optimizations for i1 conditions.
+    // These are CT-safe because:
+    //   1. AND/OR are bitwise operations that execute in constant time
+    //   2. The optimization combines two sequential CT_SELECTs into one,
+    //   reducing the total number of constant-time operations without
+    //   changing semantics
+    //   3. No data-dependent branches or memory accesses are introduced
+    //
+    // ct_select C0, (ct_select C1, X, Y), Y -> ct_select (C0 & C1), X, Y
+    // Semantic equivalence: If C0 is true, evaluate inner select (C1 ? X :
+    // Y). If C0 is false, choose Y. This is equivalent to (C0 && C1) ? X : Y.
+    if (N1->getOpcode() == ISD::CT_SELECT && N1->hasOneUse()) {
+      SDValue N1_0 = N1->getOperand(0);
+      SDValue N1_1 = N1->getOperand(1);
+      SDValue N1_2 = N1->getOperand(2);
+      if (N1_2 == N2 && N0.getValueType() == N1_0.getValueType()) {
+        SDValue And = DAG.getNode(ISD::AND, DL, N0.getValueType(), N0, N1_0);
+        SDValue SelectOp =
+            DAG.getNode(ISD::CT_SELECT, DL, N1.getValueType(), And, N1_1, N2);
+        SelectOp->setFlags(Flags);
+        return SelectOp;
+      }
+    }
+
+    // ct_select C0, X, (ct_select C1, X, Y) -> ct_select (C0 | C1), X, Y
+    // Semantic equivalence: If C0 is true, choose X. If C0 is false, evaluate
+    // inner select (C1 ? X : Y). This is equivalent to (C0 || C1) ? X : Y.
+    if (N2->getOpcode() == ISD::CT_SELECT && N2->hasOneUse()) {
+      SDValue N2_0 = N2->getOperand(0);
+      SDValue N2_1 = N2->getOperand(1);
+      SDValue N2_2 = N2->getOperand(2);
+      if (N2_1 == N1 && N0.getValueType() == N2_0.getValueType()) {
+        SDValue Or = DAG.getNode(ISD::OR, DL, N0.getValueType(), N0, N2_0);
+        SDValue SelectOp =
+            DAG.getNode(ISD::CT_SELECT, DL, N1.getValueType(), Or, N1, N2_2);
+        SelectOp->setFlags(Flags);
+        return SelectOp;
+      }
+    }
+  }
 
   return SDValue();
 }

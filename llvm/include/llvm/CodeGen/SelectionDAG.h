@@ -1409,6 +1409,13 @@ public:
     return getNode(Opcode, DL, VT, Cond, LHS, RHS, Flags);
   }
 
+  SDValue getCTSelect(const SDLoc &DL, EVT VT, SDValue Cond, SDValue LHS,
+                      SDValue RHS, SDNodeFlags Flags = SDNodeFlags()) {
+    assert(LHS.getValueType() == VT && RHS.getValueType() == VT &&
+           "Cannot use select on differing types");
+    return getNode(ISD::CT_SELECT, DL, VT, Cond, LHS, RHS, Flags);
+  }
+
   /// Helper function to make it easier to build SelectCC's if you just have an
   /// ISD::CondCode instead of an SDValue.
   SDValue getSelectCC(const SDLoc &DL, SDValue LHS, SDValue RHS, SDValue True,
