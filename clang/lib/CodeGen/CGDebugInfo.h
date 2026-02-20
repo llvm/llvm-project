@@ -198,6 +198,7 @@ private:
   llvm::DIType *CreateType(const BuiltinType *Ty);
   llvm::DIType *CreateType(const ComplexType *Ty);
   llvm::DIType *CreateType(const BitIntType *Ty);
+  llvm::DIType *CreateType(const OverflowBehaviorType *Ty, llvm::DIFile *U);
   llvm::DIType *CreateQualifiedType(QualType Ty, llvm::DIFile *Fg);
   llvm::DIType *CreateQualifiedType(const FunctionProtoType *Ty,
                                     llvm::DIFile *Fg);
