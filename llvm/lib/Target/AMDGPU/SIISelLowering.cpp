@@ -10568,7 +10568,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return SDValue();
 
     SDLoc SL(Op);
-    auto IndexKeyi64 = DAG.getAnyExtOrTrunc(Op.getOperand(4), SL, MVT::i64);
+    auto IndexKeyi64 =
+        Op.getOperand(4).getValueType() == MVT::v2i32
+            ? DAG.getBitcast(MVT::i64, Op.getOperand(4))
+            : DAG.getAnyExtOrTrunc(Op.getOperand(4), SL, MVT::i64);
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
                        {Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
                         Op.getOperand(3), IndexKeyi64, Op.getOperand(5),
@@ -10587,7 +10590,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return SDValue();
 
     SDLoc SL(Op);
-    auto IndexKey = DAG.getAnyExtOrTrunc(Op.getOperand(6), SL, IndexKeyTy);
+    auto IndexKey =
+        Op.getOperand(6).getValueType().isVector()
+            ? DAG.getBitcast(IndexKeyTy, Op.getOperand(6))
+            : DAG.getAnyExtOrTrunc(Op.getOperand(6), SL, IndexKeyTy);
     SmallVector<SDValue> Args{
         Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
         Op.getOperand(3), Op.getOperand(4), Op.getOperand(5),
@@ -17171,6 +17177,26 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
           return LHS.getOperand(0);
       }
     }
+
+    // setcc v.64, 0xXXXX'XXXX'0000'0000, lt/ge
+    //    => setcc v.hi32, 0xXXXX'XXXX, lt/ge
+    //
+    // setcc v.64, 0xXXXX'XXXX'FFFF'FFFF, le/gt
+    //    => setcc v.hi32, 0xXXXX'XXXX, le/gt
+    if (VT == MVT::i64) {
+      const uint64_t Mask32 = maskTrailingOnes<uint64_t>(32);
+      const uint64_t CRHSInt = CRHSVal.getZExtValue();
+
+      if ( // setcc v.64, 0xXXXX'XXXX'0000'0000, lt/ge
+          ((CRHSInt & Mask32) == 0 && (CC == ISD::SETULT || CC == ISD::SETUGE ||
+                                       CC == ISD::SETLT || CC == ISD::SETGE)) ||
+          // setcc v.64, 0xXXXX'XXXX'FFFF'FFFF, le/gt
+          ((CRHSInt & Mask32) == Mask32 &&
+           (CC == ISD::SETULE || CC == ISD::SETUGT || CC == ISD::SETLE ||
+            CC == ISD::SETGT)))
+        return DAG.getSetCC(SL, N->getValueType(0), getHiHalf64(LHS, DAG),
+                            DAG.getConstant(CRHSInt >> 32, SL, MVT::i32), CC);
+    }
   }
 
   // Eliminate setcc by using carryout from add/sub instruction
@@ -18662,6 +18688,11 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
     Known.Zero.setHighBits(16);
     break;
+  case AMDGPU::G_AMDGPU_COPY_SCC_VCC:
+    // G_AMDGPU_COPY_SCC_VCC converts a uniform boolean in VCC to SGPR s32,
+    // producing exactly 0 or 1.
+    Known.Zero.setHighBits(Known.getBitWidth() - 1);
+    break;
   case AMDGPU::G_AMDGPU_SMED3:
   case AMDGPU::G_AMDGPU_UMED3: {
     auto [Dst, Src0, Src1, Src2] = MI->getFirst4Regs();
@@ -18709,6 +18740,20 @@ Align SITargetLowering::computeKnownAlignForTargetInstr(
 Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   const Align PrefAlign = TargetLowering::getPrefLoopAlignment(ML);
   const Align CacheLineAlign = Align(64);
+
+  // GFX950: Prevent an 8-byte instruction at loop header from being split by
+  // the 32-byte instruction fetch window boundary. This avoids a significant
+  // fetch delay after backward branch. We use 32-byte alignment with max
+  // padding of 4 bytes (one s_nop), see getMaxPermittedBytesForAlignment().
+  if (ML && !DisableLoopAlignment &&
+      getSubtarget()->hasLoopHeadInstSplitSensitivity()) {
+    const MachineBasicBlock *Header = ML->getHeader();
+    // Respect user-specified or previously set alignment.
+    if (Header->getAlignment() != PrefAlign)
+      return Header->getAlignment();
+    if (needsFetchWindowAlignment(*Header))
+      return Align(32);
+  }
 
   // Pre-GFX10 target did not benefit from loop alignment
   if (!ML || DisableLoopAlignment || !getSubtarget()->hasInstPrefetch() ||
@@ -18778,6 +18823,30 @@ Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   }
 
   return CacheLineAlign;
+}
+
+unsigned SITargetLowering::getMaxPermittedBytesForAlignment(
+    MachineBasicBlock *MBB) const {
+  // GFX950: Limit padding to 4 bytes (one s_nop) for blocks where an 8-byte
+  // instruction could be split by the 32-byte fetch window boundary.
+  // See getPrefLoopAlignment() for context.
+  if (needsFetchWindowAlignment(*MBB))
+    return 4;
+  return TargetLowering::getMaxPermittedBytesForAlignment(MBB);
+}
+
+bool SITargetLowering::needsFetchWindowAlignment(
+    const MachineBasicBlock &MBB) const {
+  if (!getSubtarget()->hasLoopHeadInstSplitSensitivity())
+    return false;
+  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+  for (const MachineInstr &MI : MBB) {
+    if (MI.isMetaInstruction())
+      continue;
+    // Instructions larger than 4 bytes can be split by a 32-byte boundary.
+    return TII->getInstSizeInBytes(MI) > 4;
+  }
+  return false;
 }
 
 [[maybe_unused]]

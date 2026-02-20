@@ -61,13 +61,13 @@ bool test_temp_or() { return make_temp(1) || make_temp(2); }
 // LLVM:   br label %[[LOR_BEGIN:.*]]
 // LLVM: [[LOR_BEGIN]]:
 // LLVM:   call void @_ZN1BC2Ei(ptr %[[REF_TMP0]], i32 1)
-// LLVM:   %[[MAKE_TEMP0:.*]] = call i1 @_Z9make_tempRK1B(ptr %[[REF_TMP0]])
+// LLVM:   %[[MAKE_TEMP0:.*]] = call {{.*}} i1 @_Z9make_tempRK1B(ptr %[[REF_TMP0]])
 // LLVM:   br i1 %[[MAKE_TEMP0]], label %[[LHS_TRUE_BLOCK:.*]], label %[[LHS_FALSE_BLOCK:.*]]
 // LLVM: [[LHS_TRUE_BLOCK]]:
 // LLVM:   br label %[[RESULT_BLOCK:.*]]
 // LLVM: [[LHS_FALSE_BLOCK]]:
 // LLVM:   call void @_ZN1BC2Ei(ptr %[[REF_TMP1]], i32 2)
-// LLVM:   %[[MAKE_TEMP1:.*]] = call i1 @_Z9make_tempRK1B(ptr %[[REF_TMP1]])
+// LLVM:   %[[MAKE_TEMP1:.*]] = call {{.*}} i1 @_Z9make_tempRK1B(ptr %[[REF_TMP1]])
 // LLVM:   call void @_ZN1BD2Ev(ptr %[[REF_TMP1]])
 // LLVM:   br label %[[RESULT_BLOCK]]
 // LLVM: [[RESULT_BLOCK]]:
@@ -131,11 +131,11 @@ bool test_temp_and() { return make_temp(1) && make_temp(2); }
 // LLVM:   br label %[[LAND_BEGIN:.*]]
 // LLVM: [[LAND_BEGIN]]:
 // LLVM:   call void @_ZN1BC2Ei(ptr %[[REF_TMP0]], i32 1)
-// LLVM:   %[[MAKE_TEMP0:.*]] = call i1 @_Z9make_tempRK1B(ptr %[[REF_TMP0]])
+// LLVM:   %[[MAKE_TEMP0:.*]] = call {{.*}} i1 @_Z9make_tempRK1B(ptr %[[REF_TMP0]])
 // LLVM:   br i1 %[[MAKE_TEMP0]], label %[[LHS_TRUE_BLOCK:.*]], label %[[LHS_FALSE_BLOCK:.*]]
 // LLVM: [[LHS_TRUE_BLOCK]]:
 // LLVM:   call void @_ZN1BC2Ei(ptr %[[REF_TMP1]], i32 2)
-// LLVM:   %[[MAKE_TEMP1:.*]] = call i1 @_Z9make_tempRK1B(ptr %[[REF_TMP1]])
+// LLVM:   %[[MAKE_TEMP1:.*]] = call {{.*}} i1 @_Z9make_tempRK1B(ptr %[[REF_TMP1]])
 // LLVM:   call void @_ZN1BD2Ev(ptr %[[REF_TMP1]])
 // LLVM:   br label %[[RESULT_BLOCK:.*]]
 // LLVM: [[LHS_FALSE_BLOCK]]:

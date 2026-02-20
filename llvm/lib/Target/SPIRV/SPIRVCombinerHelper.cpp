@@ -251,7 +251,7 @@ bool SPIRVCombinerHelper::matchMatrixMultiply(MachineInstr &MI) const {
 
 SmallVector<Register, 4>
 SPIRVCombinerHelper::extractColumns(Register MatrixReg, uint32_t NumberOfCols,
-                                    SPIRVType *SpvColType,
+                                    SPIRVTypeInst SpvColType,
                                     SPIRVGlobalRegistry *GR) const {
   // If the matrix is a single colunm, return that single column.
   if (NumberOfCols == 1)
@@ -270,7 +270,7 @@ SPIRVCombinerHelper::extractColumns(Register MatrixReg, uint32_t NumberOfCols,
 
 SmallVector<Register, 4>
 SPIRVCombinerHelper::extractRows(Register MatrixReg, uint32_t NumRows,
-                                 uint32_t NumCols, SPIRVType *SpvRowType,
+                                 uint32_t NumCols, SPIRVTypeInst SpvRowType,
                                  SPIRVGlobalRegistry *GR) const {
   SmallVector<Register, 4> Rows;
   LLT VecTy = GR->getRegType(SpvRowType);
@@ -307,10 +307,10 @@ SPIRVCombinerHelper::extractRows(Register MatrixReg, uint32_t NumRows,
 }
 
 Register SPIRVCombinerHelper::computeDotProduct(Register RowA, Register ColB,
-                                                SPIRVType *SpvVecType,
+                                                SPIRVTypeInst SpvVecType,
                                                 SPIRVGlobalRegistry *GR) const {
   bool IsVectorOp = SpvVecType->getOpcode() == SPIRV::OpTypeVector;
-  SPIRVType *SpvScalarType = GR->getScalarOrVectorComponentType(SpvVecType);
+  SPIRVTypeInst SpvScalarType = GR->getScalarOrVectorComponentType(SpvVecType);
   bool IsFloatOp = SpvScalarType->getOpcode() == SPIRV::OpTypeFloat;
   LLT VecTy = GR->getRegType(SpvVecType);
 
@@ -336,7 +336,7 @@ Register SPIRVCombinerHelper::computeDotProduct(Register RowA, Register ColB,
 SmallVector<Register, 16>
 SPIRVCombinerHelper::computeDotProducts(const SmallVector<Register, 4> &RowsA,
                                         const SmallVector<Register, 4> &ColsB,
-                                        SPIRVType *SpvVecType,
+                                        SPIRVTypeInst SpvVecType,
                                         SPIRVGlobalRegistry *GR) const {
   SmallVector<Register, 16> ResultScalars;
   for (uint32_t J = 0; J < ColsB.size(); ++J) {
@@ -348,7 +348,7 @@ SPIRVCombinerHelper::computeDotProducts(const SmallVector<Register, 4> &RowsA,
   return ResultScalars;
 }
 
-SPIRVType *
+SPIRVTypeInst
 SPIRVCombinerHelper::getDotProductVectorType(Register ResReg, uint32_t K,
                                              SPIRVGlobalRegistry *GR) const {
   // Loop over all non debug uses of ResReg
@@ -389,7 +389,7 @@ void SPIRVCombinerHelper::applyMatrixMultiply(MachineInstr &MI) const {
   SPIRVGlobalRegistry *GR =
       MI.getMF()->getSubtarget<SPIRVSubtarget>().getSPIRVGlobalRegistry();
 
-  SPIRVType *SpvVecType = getDotProductVectorType(ResReg, NumColsA, GR);
+  SPIRVTypeInst SpvVecType = getDotProductVectorType(ResReg, NumColsA, GR);
   SmallVector<Register, 4> ColsB =
       extractColumns(BReg, NumColsB, SpvVecType, GR);
   SmallVector<Register, 4> RowsA =

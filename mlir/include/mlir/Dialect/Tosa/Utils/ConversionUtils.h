@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include <optional>
@@ -248,6 +249,28 @@ SmallVector<int64_t> convertFromIntAttr(const DenseElementsAttr &attr,
 // per batch
 bool hasUniqueConstantScatterIndices(ShapedType indicesType,
                                      DenseIntElementsAttr indicesAttr);
+
+// Try to get the values of a DenseResourceElementsAttr construct
+template <typename T>
+std::optional<ArrayRef<T>> tryGetDenseResourceValues(ElementsAttr attr) {
+  if (auto denseResource = dyn_cast<DenseResourceElementsAttr>(attr)) {
+    // Check that the resource memory blob exists
+    AsmResourceBlob *blob = denseResource.getRawHandle().getBlob();
+    if (!blob)
+      return std::nullopt;
+
+    // Check that the data are in a valid form
+    if (!DenseElementsAttr::isValidRawBuffer(attr.getShapedType(),
+                                             blob->getData())) {
+      return std::nullopt;
+    }
+
+    return blob->template getDataAs<T>();
+  }
+
+  return std::nullopt;
+}
+
 } // namespace tosa
 } // namespace mlir
 

@@ -404,7 +404,7 @@ public:
     //
     // Coordinated with LDNP and STNP constraints in
     // `llvm/lib/Target/AArch64/AArch64InstrInfo.td` and
-    // `AArch64TargetLowering`
+    // `AArch64ISelLowering.cpp`
     if (!ST->isLittleEndian())
       return false;
 

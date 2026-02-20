@@ -400,7 +400,8 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   }
 
   if (m_option_data.m_print_python_path) {
-    SBFileSpec python_file_spec = SBHostOS::GetLLDBPythonPath();
+    SBFileSpec python_file_spec =
+        SBHostOS::GetScriptPath(lldb::eScriptLanguagePython);
     if (python_file_spec.IsValid()) {
       char python_path[PATH_MAX];
       size_t num_chars = python_file_spec.GetPath(python_path, PATH_MAX);
@@ -737,8 +738,10 @@ int main(int argc, char const *argv[]) {
 #endif
 
 #ifdef _WIN32
-  if (llvm::Error error = SetupPythonRuntimeLibrary())
-    llvm::WithColor::error() << llvm::toString(std::move(error)) << '\n';
+  auto python_path_or_err = SetupPythonRuntimeLibrary();
+  if (!python_path_or_err)
+    llvm::WithColor::error()
+        << llvm::toString(python_path_or_err.takeError()) << '\n';
 #endif
 
   // Parse arguments.

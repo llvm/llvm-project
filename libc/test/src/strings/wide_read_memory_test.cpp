@@ -98,4 +98,25 @@ TEST_F(LlvmLibcWideAccessMemoryTest, StringLength) {
   });
 }
 
+TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstChar) {
+  // 1.5 k long vector of a's.
+  TwoKilobyteBuffer buf;
+  inline_memset(buf.data(), 'a', buf.size());
+  buf[buf.size() - 1] = 'b';
+  this->TestMemoryAccess(buf, [this, buf](const char *test_data) {
+    // Found case
+    ASSERT_EQ(
+        reinterpret_cast<const void *>(internal::find_first_character_impl(
+            reinterpret_cast<const unsigned char *>(test_data), 'b',
+            size_t(buf.size()))),
+        reinterpret_cast<const void *>(test_data + size_t(buf.size()) - 1));
+    // Not found case
+    ASSERT_EQ(
+        reinterpret_cast<const void *>(internal::find_first_character_impl(
+            reinterpret_cast<const unsigned char *>(test_data), 'c',
+            size_t(buf.size()))),
+        nullptr);
+  });
+}
+
 } // namespace LIBC_NAMESPACE_DECL

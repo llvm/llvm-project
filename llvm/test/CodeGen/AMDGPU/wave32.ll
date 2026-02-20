@@ -80,7 +80,7 @@ define amdgpu_ps void @test_vopc_vcmp(float %x) {
 ; GFX1032-NEXT:    s_endpgm
 ; GFX1032-NEXT:  .LBB2_1:
 ; GFX1032-NEXT:    s_mov_b32 exec_lo, 0
-; GFX1032-NEXT:    exp null off, off, off, off done vm
+; GFX1032-NEXT:    exp null, off, off, off, off done vm
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1064-LABEL: test_vopc_vcmp:
@@ -91,7 +91,7 @@ define amdgpu_ps void @test_vopc_vcmp(float %x) {
 ; GFX1064-NEXT:    s_endpgm
 ; GFX1064-NEXT:  .LBB2_1:
 ; GFX1064-NEXT:    s_mov_b64 exec, 0
-; GFX1064-NEXT:    exp null off, off, off, off done vm
+; GFX1064-NEXT:    exp null, off, off, off, off done vm
 ; GFX1064-NEXT:    s_endpgm
   %cmp = fcmp oge float %x, 0.0
   call void @llvm.amdgcn.kill(i1 %cmp)
@@ -1726,7 +1726,7 @@ define amdgpu_ps void @test_kill_i1_terminator_float() #0 {
 ; GFX1032-NEXT:    s_endpgm
 ; GFX1032-NEXT:  .LBB31_1:
 ; GFX1032-NEXT:    s_mov_b32 exec_lo, 0
-; GFX1032-NEXT:    exp null off, off, off, off done vm
+; GFX1032-NEXT:    exp null, off, off, off, off done vm
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1064-LABEL: test_kill_i1_terminator_float:
@@ -1736,7 +1736,7 @@ define amdgpu_ps void @test_kill_i1_terminator_float() #0 {
 ; GFX1064-NEXT:    s_endpgm
 ; GFX1064-NEXT:  .LBB31_1:
 ; GFX1064-NEXT:    s_mov_b64 exec, 0
-; GFX1064-NEXT:    exp null off, off, off, off done vm
+; GFX1064-NEXT:    exp null, off, off, off, off done vm
 ; GFX1064-NEXT:    s_endpgm
   call void @llvm.amdgcn.kill(i1 false)
   ret void
@@ -1753,7 +1753,7 @@ define amdgpu_gs void @test_kill_i1_terminator_i1(i32 %a, i32 %b, i32 %c, i32 %d
 ; GFX1032-NEXT:    s_andn2_b32 s1, s1, s0
 ; GFX1032-NEXT:    s_and_b32 exec_lo, exec_lo, s1
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1032-NEXT:    exp mrt0 off, off, off, off
+; GFX1032-NEXT:    exp mrt0, off, off, off, off
 ; GFX1032-NEXT:    s_endpgm
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_mov_b32 exec_lo, 0
@@ -1769,7 +1769,7 @@ define amdgpu_gs void @test_kill_i1_terminator_i1(i32 %a, i32 %b, i32 %c, i32 %d
 ; GFX1064-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[0:1]
 ; GFX1064-NEXT:    s_and_b64 exec, exec, s[2:3]
 ; GFX1064-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1064-NEXT:    exp mrt0 off, off, off, off
+; GFX1064-NEXT:    exp mrt0, off, off, off, off
 ; GFX1064-NEXT:    s_endpgm
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_mov_b64 exec, 0
@@ -2243,11 +2243,11 @@ define amdgpu_ps void @test_wqm_vote(float %a) {
 ; GFX1032-NEXT:    s_cbranch_scc0 .LBB44_2
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_and_b32 exec_lo, exec_lo, s0
-; GFX1032-NEXT:    exp mrt0 off, off, off, off
+; GFX1032-NEXT:    exp mrt0, off, off, off, off
 ; GFX1032-NEXT:    s_endpgm
 ; GFX1032-NEXT:  .LBB44_2:
 ; GFX1032-NEXT:    s_mov_b32 exec_lo, 0
-; GFX1032-NEXT:    exp null off, off, off, off done vm
+; GFX1032-NEXT:    exp null, off, off, off, off done vm
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1064-LABEL: test_wqm_vote:
@@ -2261,11 +2261,11 @@ define amdgpu_ps void @test_wqm_vote(float %a) {
 ; GFX1064-NEXT:    s_cbranch_scc0 .LBB44_2
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_and_b64 exec, exec, s[0:1]
-; GFX1064-NEXT:    exp mrt0 off, off, off, off
+; GFX1064-NEXT:    exp mrt0, off, off, off, off
 ; GFX1064-NEXT:    s_endpgm
 ; GFX1064-NEXT:  .LBB44_2:
 ; GFX1064-NEXT:    s_mov_b64 exec, 0
-; GFX1064-NEXT:    exp null off, off, off, off done vm
+; GFX1064-NEXT:    exp null, off, off, off, off done vm
 ; GFX1064-NEXT:    s_endpgm
   %c1 = fcmp une float %a, 0.0
   %c2 = call i1 @llvm.amdgcn.wqm.vote(i1 %c1)

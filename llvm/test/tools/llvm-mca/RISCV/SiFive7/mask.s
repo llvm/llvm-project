@@ -39,7 +39,7 @@ vmsof.m v8, v4
 # CHECK-NEXT: [2]   - VLEN512SiFive7PipeA:1
 # CHECK-NEXT: [3]   - VLEN512SiFive7PipeAB:2 VLEN512SiFive7PipeA, VLEN512SiFive7PipeB
 # CHECK-NEXT: [4]   - VLEN512SiFive7PipeB:1
-# CHECK-NEXT: [5]   - VLEN512SiFive7VA:1
+# CHECK-NEXT: [5]   - VLEN512SiFive7VA1:1
 # CHECK-NEXT: [6]   - VLEN512SiFive7VCQ:1
 # CHECK-NEXT: [7]   - VLEN512SiFive7VL:1
 # CHECK-NEXT: [8]   - VLEN512SiFive7VS:1
@@ -57,37 +57,37 @@ vmsof.m v8, v4
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        Instructions:
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m1, ta, ma
-# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMSLT_VV                   vmslt.vv	v0, v4, v20
-# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMSLE_VV                   vmsle.vv	v8, v4, v20
-# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMSLT_VV                   vmslt.vv	v8, v4, v20
-# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMSLE_VV                   vmsle.vv	v8, v4, v20
-# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMSEQ_VV                   vmseq.vv	v8, v4, v20
-# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMSNE_VV                   vmsne.vv	v8, v4, v20
-# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMSLTU_VV                  vmsltu.vv	v8, v4, v20
-# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMSLEU_VV                  vmsleu.vv	v8, v4, v20
-# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMSLTU_VV                  vmsltu.vv	v8, v4, v20
-# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMSLEU_VV                  vmsleu.vv	v8, v4, v20
-# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMFLT_VV                   vmflt.vv	v0, v4, v20
-# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMFLE_VV                   vmfle.vv	v8, v4, v20
-# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMFLT_VV                   vmflt.vv	v8, v4, v20
-# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMFLE_VV                   vmfle.vv	v8, v4, v20
-# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMFEQ_VV                   vmfeq.vv	v8, v4, v20
-# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMFNE_VV                   vmfne.vv	v8, v4, v20
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMADC_VV                   vmadc.vv	v8, v4, v20
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMSBC_VV                   vmsbc.vv	v8, v4, v20
-# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VFIRST_M                   vfirst.m	a2, v4
-# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VCPOP_M                    vcpop.m	a2, v4
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VIOTA_M                    viota.m	v8, v4
-# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VMSBF_M                    vmsbf.m	v8, v4
-# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VMSIF_M                    vmsif.m	v8, v4
-# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VMSOF_M                    vmsof.m	v8, v4
+# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMSLT_VV                   vmslt.vv	v0, v4, v20
+# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMSLE_VV                   vmsle.vv	v8, v4, v20
+# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMSLT_VV                   vmslt.vv	v8, v4, v20
+# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMSLE_VV                   vmsle.vv	v8, v4, v20
+# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMSEQ_VV                   vmseq.vv	v8, v4, v20
+# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMSNE_VV                   vmsne.vv	v8, v4, v20
+# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMSLTU_VV                  vmsltu.vv	v8, v4, v20
+# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMSLEU_VV                  vmsleu.vv	v8, v4, v20
+# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMSLTU_VV                  vmsltu.vv	v8, v4, v20
+# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMSLEU_VV                  vmsleu.vv	v8, v4, v20
+# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMFLT_VV                   vmflt.vv	v0, v4, v20
+# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMFLE_VV                   vmfle.vv	v8, v4, v20
+# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMFLT_VV                   vmflt.vv	v8, v4, v20
+# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMFLE_VV                   vmfle.vv	v8, v4, v20
+# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMFEQ_VV                   vmfeq.vv	v8, v4, v20
+# CHECK-NEXT:  1      5     2.00                         5     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMFNE_VV                   vmfne.vv	v8, v4, v20
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMADC_VV                   vmadc.vv	v8, v4, v20
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMSBC_VV                   vmsbc.vv	v8, v4, v20
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA1[1,4],VLEN512SiFive7VCQ   VFIRST_M                   vfirst.m	a2, v4
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA1[1,4],VLEN512SiFive7VCQ   VCPOP_M                    vcpop.m	a2, v4
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VIOTA_M                    viota.m	v8, v4
+# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA1[1,2],VLEN512SiFive7VCQ   VMSBF_M                    vmsbf.m	v8, v4
+# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA1[1,2],VLEN512SiFive7VCQ   VMSIF_M                    vmsif.m	v8, v4
+# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA1[1,2],VLEN512SiFive7VCQ   VMSOF_M                    vmsof.m	v8, v4
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - VLEN512SiFive7FDiv
 # CHECK-NEXT: [1]   - VLEN512SiFive7IDiv
 # CHECK-NEXT: [2]   - VLEN512SiFive7PipeA
 # CHECK-NEXT: [3]   - VLEN512SiFive7PipeB
-# CHECK-NEXT: [4]   - VLEN512SiFive7VA
+# CHECK-NEXT: [4]   - VLEN512SiFive7VA1
 # CHECK-NEXT: [5]   - VLEN512SiFive7VCQ
 # CHECK-NEXT: [6]   - VLEN512SiFive7VL
 # CHECK-NEXT: [7]   - VLEN512SiFive7VS
