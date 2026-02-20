@@ -1567,6 +1567,8 @@ const DenseMap<const Loop *, unsigned> &CacheCostManager::getCostMap() {
 /// value of the addrec to find the coefficients. If the expression is in a
 /// complex form, e.g., (addrec + addrec), then the coefficients may not be
 /// found.
+/// TODO: Handle more complex cases. Maybe using SCEVTraversal is a good way to
+/// do that.
 static void getAddRecCoefficients(ScalarEvolution &SE, const SCEV *S,
                                   const Loop *L0,
                                   std::optional<const SCEV *> &Coeff0,
@@ -1579,10 +1581,16 @@ static void getAddRecCoefficients(ScalarEvolution &SE, const SCEV *S,
     LLVM_DEBUG(dbgs() << "Unexpected non-affine addrec\n");
     return;
   }
-  if (AR->getLoop() == L0)
+  if (AR->getLoop() == L0) {
+    assert(!Coeff0.has_value() &&
+           "Found more than one addrec for the same loop");
     Coeff0 = AR->getStepRecurrence(SE);
-  if (AR->getLoop() == L1)
+  }
+  if (AR->getLoop() == L1) {
+    assert(!Coeff1.has_value() &&
+           "Found more than one addrec for the same loop");
     Coeff1 = AR->getStepRecurrence(SE);
+  }
   getAddRecCoefficients(SE, AR->getStart(), L0, Coeff0, L1, Coeff1);
 }
 
@@ -1600,6 +1608,12 @@ int LoopInterchangeProfitability::getInstrOrderCost() {
       if (!InnerCoeff.has_value() || !OuterCoeff.has_value())
         continue;
 
+      // This heuristic assumes that a smaller step recurrence implies that the
+      // induction variable corresponding to the loop is used in the inner
+      // dimension of the array. Placing such a loop in the inner position would
+      // be beneficial in terms of locality. If the array access is of the form
+      // like `A[3*i + 2*j]`, this heuristic may lead to an unprofitable
+      // interchange, but we expect such cases to be rare.
       const SCEV *OuterStep = SE->getAbsExpr(*OuterCoeff, /*IsNSW=*/false);
       const SCEV *InnerStep = SE->getAbsExpr(*InnerCoeff, /*IsNSW=*/false);
       if (SE->isKnownPredicate(ICmpInst::ICMP_SLT, InnerStep, OuterStep)) {
