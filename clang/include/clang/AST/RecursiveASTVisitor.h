@@ -1167,6 +1167,9 @@ DEF_TRAVERSE_TYPE(ValueTerminatedType, { TRY_TO(TraverseType(T->desugar())); })
 DEF_TRAVERSE_TYPE(BTFTagAttributedType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
+DEF_TRAVERSE_TYPE(OverflowBehaviorType,
+                  { TRY_TO(TraverseType(T->getUnderlyingType())); })
+
 DEF_TRAVERSE_TYPE(HLSLAttributedResourceType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
@@ -1528,6 +1531,9 @@ DEF_TRAVERSE_TYPELOC(ValueTerminatedType,
 /* TO_UPSTREAM(BoundsSafety) OFF */
 
 DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
+                     { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
+
+DEF_TRAVERSE_TYPELOC(OverflowBehaviorType,
                      { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
 
 DEF_TRAVERSE_TYPELOC(HLSLAttributedResourceType,
