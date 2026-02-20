@@ -54,17 +54,29 @@ define dso_local noundef i1 @_Z6targetv() sanitize_hwaddress {
 ; CHECK:       sw.bb1:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    store ptr [[BUF_HWASAN]], ptr @stackbuf, align 8
-; CHECK-NEXT:    call void @may_jump()
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i1 [ true, [[WHILE_BODY]] ], [ true, [[SW_BB1]] ], [ false, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP27:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; CHECK-NEXT:    [[TMP27:%.*]] = trunc i64 [[TMP17]] to i8
 ; CHECK-NEXT:    [[TMP28:%.*]] = ptrtoint ptr [[BUF]] to i64
 ; CHECK-NEXT:    [[TMP29:%.*]] = and i64 [[TMP28]], 72057594037927935
 ; CHECK-NEXT:    [[TMP30:%.*]] = lshr i64 [[TMP29]], 4
 ; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP30]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP31]], i8 [[TMP27]], i64 256, i1 false)
+; CHECK-NEXT:    store ptr [[BUF_HWASAN]], ptr @stackbuf, align 8
+; CHECK-NEXT:    call void @may_jump()
+; CHECK-NEXT:    [[TMP32:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; CHECK-NEXT:    [[TMP33:%.*]] = ptrtoint ptr [[BUF]] to i64
+; CHECK-NEXT:    [[TMP34:%.*]] = and i64 [[TMP33]], 72057594037927935
+; CHECK-NEXT:    [[TMP35:%.*]] = lshr i64 [[TMP34]], 4
+; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP35]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP36]], i8 [[TMP32]], i64 256, i1 false)
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i1 [ true, [[WHILE_BODY]] ], [ true, [[SW_BB1]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP37:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; CHECK-NEXT:    [[TMP38:%.*]] = ptrtoint ptr [[BUF]] to i64
+; CHECK-NEXT:    [[TMP39:%.*]] = and i64 [[TMP38]], 72057594037927935
+; CHECK-NEXT:    [[TMP40:%.*]] = lshr i64 [[TMP39]], 4
+; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP40]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP41]], i8 [[TMP37]], i64 256, i1 false)
 ; CHECK-NEXT:    ret i1 [[RETVAL_0]]
 ;
 entry:
