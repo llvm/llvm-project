@@ -11500,6 +11500,15 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
                                Approximate);
       }
 
+      QualType T = E->getType();
+      if (const auto *VT = T->getAs<VectorType>()) {
+        QualType ElemTy = VT->getElementType();
+        if (ElemTy->isUnsignedIntegerType()) {
+          return TryGetExprRange(C, UO->getSubExpr(), MaxWidth,
+                                 InConstantContext, Approximate);
+        }
+      }
+
       std::optional<IntRange> SubRange = TryGetExprRange(
           C, UO->getSubExpr(), MaxWidth, InConstantContext, Approximate);
 
@@ -11518,6 +11527,15 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
                                Approximate);
       }
 
+      QualType T = E->getType();
+
+      if (const auto *VT = T->getAs<VectorType>()) {
+        QualType ElemTy = VT->getElementType();
+        if (ElemTy->isUnsignedIntegerType()) {
+          return TryGetExprRange(C, UO->getSubExpr(), MaxWidth,
+                                 InConstantContext, Approximate);
+        }
+      }
       std::optional<IntRange> SubRange = TryGetExprRange(
           C, UO->getSubExpr(), MaxWidth, InConstantContext, Approximate);
 
