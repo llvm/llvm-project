@@ -523,6 +523,7 @@ public:
   LLVM_ABI LegalizeResult lowerFPTOSI(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPTOINT_SAT(MachineInstr &MI);
 
+  LLVM_ABI LegalizeResult lowerFPExtAndTruncMem(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPTRUNC_F64_TO_F16(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPTRUNC(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPOWI(MachineInstr &MI);

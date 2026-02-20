@@ -1685,7 +1685,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     return reduceLoadStoreWidth(LoadMI, TypeIdx, NarrowTy);
   }
   case TargetOpcode::G_ZEXTLOAD:
-  case TargetOpcode::G_SEXTLOAD: {
+  case TargetOpcode::G_SEXTLOAD:
+  case TargetOpcode::G_FPEXTLOAD: {
     auto &LoadMI = cast<GExtLoad>(MI);
     Register DstReg = LoadMI.getDstReg();
     Register PtrReg = LoadMI.getPointerReg();
@@ -1705,8 +1706,10 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
     if (isa<GZExtLoad>(LoadMI))
       MIRBuilder.buildZExt(DstReg, TmpReg);
-    else
+    else if (isa<GSExtLoad>(LoadMI))
       MIRBuilder.buildSExt(DstReg, TmpReg);
+    else
+      MIRBuilder.buildFPExt(DstReg, TmpReg);
 
     LoadMI.eraseFromParent();
     return Legalized;
@@ -1734,6 +1737,30 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     }
 
     return reduceLoadStoreWidth(StoreMI, 0, NarrowTy);
+  }
+  case TargetOpcode::G_FPTRUNCSTORE: {
+    auto &StoreMI = cast<GFPTruncStore>(MI);
+    Register SrcReg = StoreMI.getValueReg();
+    Register PtrReg = StoreMI.getPointerReg();
+
+    auto &MMO = StoreMI.getMMO();
+    unsigned MemSize = MMO.getSizeInBits().getValue();
+    if (MemSize > NarrowSize) {
+      return UnableToLegalize;
+    }
+
+    auto TmpReg = MIRBuilder.buildFPTrunc(NarrowTy, SrcReg).getReg(0);
+    if (MemSize == NarrowSize) {
+      MIRBuilder.buildStore(TmpReg, PtrReg, MMO);
+    } else if (MemSize < NarrowSize) {
+      MIRBuilder.buildInstr(TargetOpcode::G_FPTRUNCSTORE)
+          .addUse(TmpReg)
+          .addUse(PtrReg)
+          .addMemOperand(&MMO);
+    }
+
+    StoreMI.eraseFromParent();
+    return Legalized;
   }
   case TargetOpcode::G_SELECT:
     return narrowScalarSelect(MI, TypeIdx, NarrowTy);
@@ -3159,6 +3186,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
+  case TargetOpcode::G_FPEXTLOAD:
     Observer.changingInstr(MI);
     widenScalarDst(MI, WideTy);
     Observer.changedInstr(MI);
@@ -3192,6 +3220,13 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_FPTRUNCSTORE:
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    widenScalarSrc(MI, WideTy, 0, TargetOpcode::G_FPEXT);
+    Observer.changedInstr(MI);
+    return Legalized;
   case TargetOpcode::G_CONSTANT: {
     MachineOperand &SrcMO = MI.getOperand(1);
     LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
@@ -4759,6 +4794,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_FPTOUI_SAT:
   case G_FPTOSI_SAT:
     return lowerFPTOINT_SAT(MI);
+  case G_FPEXT:
+    return lowerFPExtAndTruncMem(MI);
   case G_FPTRUNC:
     return lowerFPTRUNC(MI);
   case G_FPOWI:
@@ -8593,6 +8630,45 @@ LegalizerHelper::lowerFPTOINT_SAT(MachineInstr &MI) {
   return Legalized;
 }
 
+// Floating-point conversions using truncating and extending loads and stores.
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFPExtAndTruncMem(MachineInstr &MI) {
+  assert((MI.getOpcode() == TargetOpcode::G_FPEXT ||
+          MI.getOpcode() == TargetOpcode::G_FPTRUNC) &&
+         "Only G_FPEXT and G_FPTRUNC are expected");
+
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  MachinePointerInfo PtrInfo;
+  unsigned StoreOpc;
+  unsigned LoadOpc;
+  LLT StackTy;
+  if (MI.getOpcode() == TargetOpcode::G_FPEXT) {
+    StackTy = SrcTy;
+    StoreOpc = TargetOpcode::G_STORE;
+    LoadOpc = TargetOpcode::G_FPEXTLOAD;
+  } else {
+    StackTy = DstTy;
+    StoreOpc = TargetOpcode::G_FPTRUNCSTORE;
+    LoadOpc = TargetOpcode::G_LOAD;
+  }
+
+  Align StackTyAlign = getStackTemporaryAlignment(StackTy);
+  auto StackTemp =
+      createStackTemporary(StackTy.getSizeInBytes(), StackTyAlign, PtrInfo);
+
+  MachineFunction &MF = MIRBuilder.getMF();
+  auto *StoreMMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
+                                           StackTy, StackTyAlign);
+  MIRBuilder.buildStoreInstr(StoreOpc, SrcReg, StackTemp, *StoreMMO);
+
+  auto *LoadMMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad,
+                                          StackTy, StackTyAlign);
+  MIRBuilder.buildLoadInstr(LoadOpc, DstReg, StackTemp, *LoadMMO);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
 // f64 -> f16 conversion using round-to-nearest-even rounding mode.
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
@@ -8718,7 +8794,7 @@ LegalizerHelper::lowerFPTRUNC(MachineInstr &MI) {
   if (DstTy.getScalarType() == S16 && SrcTy.getScalarType() == S64)
     return lowerFPTRUNC_F64_TO_F16(MI);
 
-  return UnableToLegalize;
+  return lowerFPExtAndTruncMem(MI);
 }
 
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPOWI(MachineInstr &MI) {

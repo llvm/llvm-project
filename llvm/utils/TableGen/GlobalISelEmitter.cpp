@@ -541,8 +541,12 @@ GlobalISelEmitter::getEquivNode(const Record &Equiv,
       N.getIntrinsicInfo(CGP)->isConvergent)
     return &Target.getInstruction(Equiv.getValueAsDef("IfConvergent"));
 
+  bool IsAnyExtLoad = false;
+  bool IsTruncStore = false;
   for (const TreePredicateCall &Call : N.getPredicateCalls()) {
     const TreePredicateFn &Predicate = Call.Fn;
+    IsAnyExtLoad |= Predicate.isAnyExtLoad();
+    IsTruncStore |= Predicate.isTruncStore();
     if (!Equiv.isValueUnset("IfSignExtend") &&
         (Predicate.isLoad() || Predicate.isAtomic()) &&
         Predicate.isSignExtLoad())
@@ -551,6 +555,16 @@ GlobalISelEmitter::getEquivNode(const Record &Equiv,
         (Predicate.isLoad() || Predicate.isAtomic()) &&
         Predicate.isZeroExtLoad())
       return &Target.getInstruction(Equiv.getValueAsDef("IfZeroExtend"));
+    if (!Equiv.isValueUnset("IfFPExtend") &&
+        (Predicate.isLoad() || Predicate.isAtomic()) && IsAnyExtLoad &&
+        Predicate.getMemoryVT() != nullptr &&
+        getValueType(Predicate.getMemoryVT()).isFloatingPoint())
+      return &Target.getInstruction(Equiv.getValueAsDef("IfFPExtend"));
+    if (!Equiv.isValueUnset("IfFPTrunc") &&
+        (Predicate.isStore() || Predicate.isAtomic()) && IsTruncStore &&
+        Predicate.getMemoryVT() != nullptr &&
+        getValueType(Predicate.getMemoryVT()).isFloatingPoint())
+      return &Target.getInstruction(Equiv.getValueAsDef("IfFPTrunc"));
   }
 
   return &Target.getInstruction(Equiv.getValueAsDef("I"));

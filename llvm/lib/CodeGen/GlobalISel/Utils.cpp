@@ -1776,8 +1776,10 @@ bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FNEARBYINT:
   case TargetOpcode::G_FNEG:
   case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPEXTLOAD:
   case TargetOpcode::G_FPOW:
   case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_FPTRUNCSTORE:
   case TargetOpcode::G_FREM:
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FSIN:

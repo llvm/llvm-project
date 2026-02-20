@@ -400,6 +400,12 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
     // TODO - SSE41/AVX2/AVX512F/AVX512BW vector extensions
   }
 
+  for (unsigned Op : {G_FPEXTLOAD, G_FPTRUNCSTORE}) {
+    auto &Action = getActionDefinitionsBuilder(Op);
+    Action.legalForTypesWithMemDesc(
+        UseX87, {{s80, p0, s32, 1}, {s80, p0, s64, 1}, {s64, p0, s32, 1}});
+  }
+
   // sext, zext, and anyext
   getActionDefinitionsBuilder(G_ANYEXT)
       .legalFor({s8, s16, s32, s128})
@@ -454,12 +460,14 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .legalFor(HasSSE2, {{s64, s32}})
       .legalFor(HasAVX, {{v4s64, v4s32}})
       .legalFor(HasAVX512, {{v8s64, v8s32}})
+      .lowerFor(UseX87, {{s64, s32}, {s80, s32}, {s80, s64}})
       .libcall();
 
   getActionDefinitionsBuilder(G_FPTRUNC)
       .legalFor(HasSSE2, {{s32, s64}})
       .legalFor(HasAVX, {{v4s32, v4s64}})
-      .legalFor(HasAVX512, {{v8s32, v8s64}});
+      .legalFor(HasAVX512, {{v8s32, v8s64}})
+      .lowerFor(UseX87, {{s32, s64}, {s32, s80}, {s64, s80}});
 
   getActionDefinitionsBuilder(G_SITOFP)
       .legalFor(HasSSE1, {{s32, s32}})

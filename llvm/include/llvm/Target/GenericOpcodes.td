@@ -1352,6 +1352,15 @@ def G_ZEXTLOAD : GenericInstruction {
   let mayLoad = true;
 }
 
+// Generic floating-point extending load. Expects a MachineMemOperand in
+// addition to explicit operands.
+def G_FPEXTLOAD : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins ptype1:$addr);
+  let hasSideEffects = false;
+  let mayLoad = true;
+}
+
 // Generic indexed load. Combines a GEP with a load. $newaddr is set to $base + $offset.
 // If $am is 0 (post-indexed), then the value is loaded from $base; if $am is 1 (pre-indexed)
 //  then the value is loaded from $newaddr.
@@ -1380,6 +1389,15 @@ def G_INDEXED_ZEXTLOAD : GenericInstruction {
 
 // Generic store. Expects a MachineMemOperand in addition to explicit operands.
 def G_STORE : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$src, ptype1:$addr);
+  let hasSideEffects = false;
+  let mayStore = true;
+}
+
+// Generic floating-point truncating store. Expects a MachineMemOperand in
+// addition to explicit operands.
+def G_FPTRUNCSTORE : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$src, ptype1:$addr);
   let hasSideEffects = false;
