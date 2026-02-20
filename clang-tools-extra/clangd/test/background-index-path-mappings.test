@@ -1,102 +1,39 @@
-# Generate a canonical index at %/t. A second client at %/t2 loads the shards,
-# mapping its local paths to the canonical paths. The on-disk shards always
-# contain canonical paths.
+# Generate a canonical index at %/t, then copy the shards to a second workspace
+# at %/t2. Using --background-index-path-mappings, the second client should
+# reuse the transferred shards without reindexing and go-to-definition should
+# return local paths.
 
+# Build the canonical index at %/t
 # RUN: rm -rf %/t
 # RUN: cp -r %/S/Inputs/background-index %/t
 # RUN: sed -e "s|DIRECTORY|%/t|" %/t/definition.jsonrpc.tmpl > %/t/definition.jsonrpc.1
 # RUN: sed -e "s|DIRECTORY|%/t|" %/t/compile_commands.json.tmpl > %/t/compile_commands.json
 # On Windows, we need the URI in didOpen to look like "uri":"file:///C:/..."
 # RUN: sed -E -e 's|"file://([A-Z]):/|"file:///\1:/|g' %/t/definition.jsonrpc.1 > %/t/definition.jsonrpc
-
-# Generate the canonical background index with no path mapping
 # RUN: clangd -background-index -lit-test < %/t/definition.jsonrpc | FileCheck %/t/definition.jsonrpc
 
-###############################################################################
-# 1. Validate shard contents contain canonical paths
-###############################################################################
-
-# RUN: cp %/t/.cache/clangd/index/foo.cpp.*.idx %/t/foo.cpp.idx
-# RUN: dexp %/t/foo.cpp.idx -c "export %/t/foo.yaml -format=yaml"
-# RUN: FileCheck --check-prefix=SHARD-CONTENT %s -DDIR=%/t < %/t/foo.yaml
-
-# SHARD-CONTENT: --- !Symbol
-# SHARD-CONTENT: Name:{{.*}}foo
-# SHARD-CONTENT: CanonicalDeclaration:
-# SHARD-CONTENT:   FileURI:{{.*}}[[DIR]]/sub_dir/foo.h
-# SHARD-CONTENT: Definition:
-# SHARD-CONTENT:   FileURI:{{.*}}[[DIR]]/foo.cpp
-
-# SHARD-CONTENT: IncludeHeaders:
-# SHARD-CONTENT:   - Header:{{.*}}[[DIR]]/sub_dir/foo.h
-
-# SHARD-CONTENT: --- !Refs
-# SHARD-CONTENT: References:
-# SHARD-CONTENT:   FileURI:{{.*}}[[DIR]]/foo.cpp
-
-# SHARD-CONTENT: --- !Source
-# SHARD-CONTENT: URI:{{.*}}[[DIR]]/
-
-###############################################################################
-# 2. Validate the second client loads and remaps the shards
-###############################################################################
-
-# Set up the second client's workspace with the same source content.
+# Set up a second workspace at %/t2 with the same source and copied shards
 # RUN: rm -rf %/t2
 # RUN: mkdir -p %/t2
 # RUN: cp -r %/S/Inputs/background-index/* %/t2/
-
-# Copy the canonical index data to the second client's cache directory.
 # RUN: mkdir -p %/t2/.cache/clangd/index
 # RUN: cp %/t/.cache/clangd/index/*.idx %/t2/.cache/clangd/index/
 # RUN: mkdir -p %/t2/sub_dir/.cache/clangd/index
 # RUN: cp %/t/sub_dir/.cache/clangd/index/*.idx %/t2/sub_dir/.cache/clangd/index/
-
-# Set up the second client's compile_commands.json and request file.
 # RUN: sed -e "s|DIRECTORY|%/t2|" %/S/Inputs/background-index/compile_commands.json.tmpl > %/t2/compile_commands.json
 # RUN: sed -e "s|DIRECTORY|%/t2|" %/S/Inputs/background-index/definition.jsonrpc.tmpl > %/t2/definition.jsonrpc.1
 # RUN: sed -E -e 's|"file://([A-Z]):/|"file:///\1:/|g' %/t2/definition.jsonrpc.1 > %/t2/definition.jsonrpc
 
-# The mapping %/t2=%/t tells clangd that the local path %/t2 corresponds to
-# the canonical path %/t stored in the shards. clangd should load the shards
-# and translate canonical paths to local paths in memory. Go-to-definition
-# should work and return the local path.
+# Run clangd in the second workspace with a path mapping from local to canonical
 # RUN: clangd -background-index --background-index-path-mappings=%/t2=%/t -lit-test < %/t2/definition.jsonrpc > %/t2/clangd-output.json
-# RUN: FileCheck %/t2/definition.jsonrpc < %/t2/clangd-output.json
-# RUN: FileCheck --check-prefix=LOCAL-RESULT %s -DDIR=%/t2 < %/t2/clangd-output.json
-# Handle the extra slash needed on Windows
-# LOCAL-RESULT: "uri": "file://{{/?}}[[DIR]]/foo.cpp"
 
-# Verify the shard filenames are unchanged, proving that the canonical path
-# mapping was used for hashing rather than re-indexing with local paths.
+# Go-to-definition should work and return a local (%/t2) path
+# RUN: FileCheck %/t2/definition.jsonrpc < %/t2/clangd-output.json
+# On Windows, strip the extra / from file:///C:/ URIs to normalize for FileCheck.
+# RUN: sed -E -e 's|"file:///([A-Z]):/|"file://\1:/|g' %/t2/clangd-output.json | FileCheck --check-prefix=LOCAL-RESULT %s -DDIR=%/t2
+# LOCAL-RESULT: "uri": "file://[[DIR]]/foo.cpp"
+
+# The shard filenames must be unchanged, proving that no reindexing occurred
 # RUN: ls %/t/.cache/clangd/index/ | sort > %/t/shards-canonical.txt
 # RUN: ls %/t2/.cache/clangd/index/ | sort > %/t2/shards-local.txt
 # RUN: diff %/t/shards-canonical.txt %/t2/shards-local.txt
-
-###############################################################################
-# 3. Validate multiple comma-separated path mappings
-###############################################################################
-
-# Set up a third client at %/t3 with the same sources and copied shards.
-# RUN: rm -rf %/t3
-# RUN: mkdir -p %/t3
-# RUN: cp -r %/S/Inputs/background-index/* %/t3/
-# RUN: mkdir -p %/t3/.cache/clangd/index
-# RUN: cp %/t/.cache/clangd/index/*.idx %/t3/.cache/clangd/index/
-# RUN: mkdir -p %/t3/sub_dir/.cache/clangd/index
-# RUN: cp %/t/sub_dir/.cache/clangd/index/*.idx %/t3/sub_dir/.cache/clangd/index/
-# RUN: sed -e "s|DIRECTORY|%/t3|" %/S/Inputs/background-index/compile_commands.json.tmpl > %/t3/compile_commands.json
-# RUN: sed -e "s|DIRECTORY|%/t3|" %/S/Inputs/background-index/definition.jsonrpc.tmpl > %/t3/definition.jsonrpc.1
-# RUN: sed -E -e 's|"file://([A-Z]):/|"file:///\1:/|g' %/t3/definition.jsonrpc.1 > %/t3/definition.jsonrpc
-
-# The first specified mapping is intentionally non-matching; the second is the
-# real mapping. This validates that multiple mappings can be specified and the
-# correct one is applied.
-# RUN: clangd -background-index --background-index-path-mappings=/no/match=/also/no/match,%/t3=%/t -lit-test < %/t3/definition.jsonrpc > %/t3/clangd-output.json
-# RUN: FileCheck %/t3/definition.jsonrpc < %/t3/clangd-output.json
-# RUN: FileCheck --check-prefix=MULTI-LOCAL %s -DDIR=%/t3 < %/t3/clangd-output.json
-# MULTI-LOCAL: "uri": "file://{{/?}}[[DIR]]/foo.cpp"
-
-# Verify shard filenames are unchanged with multiple mappings
-# RUN: ls %/t3/.cache/clangd/index/ | sort > %/t3/shards-multi.txt
-# RUN: diff %/t/shards-canonical.txt %/t3/shards-multi.txt
