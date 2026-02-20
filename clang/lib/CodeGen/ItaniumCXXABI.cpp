@@ -2274,6 +2274,24 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
   auto *MethodDecl = cast<CXXMethodDecl>(GD.getDecl());
   llvm::Value *VTable = CGF.GetVTablePtr(This, PtrTy, MethodDecl->getParent());
 
+  // For the translation of virtual functions, we need to map the (potential)
+  // host vtable to the device vtable. This is done by calling the runtime
+  // function
+  // __llvm_omp_indirect_call_lookup.
+  if (CGM.getLangOpts().OpenMPIsTargetDevice) {
+    auto *NewPtrTy = CGM.VoidPtrTy;
+    llvm::Type *RtlFnArgs[] = {NewPtrTy};
+    llvm::FunctionCallee DeviceRtlFn = CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(NewPtrTy, RtlFnArgs, false),
+        "__llvm_omp_indirect_call_lookup");
+    auto *BackupTy = VTable->getType();
+    // Need to convert to generic address space
+    VTable = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(VTable, NewPtrTy);
+    VTable = CGF.EmitRuntimeCall(DeviceRtlFn, {VTable});
+    // convert to original address space
+    VTable = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(VTable, BackupTy);
+  }
+
   uint64_t VTableIndex = CGM.getItaniumVTableContext().getMethodVTableIndex(GD);
   llvm::Value *VFunc, *VTableSlotPtr = nullptr;
   auto &Schema = CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers;

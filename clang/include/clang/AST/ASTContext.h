@@ -1388,6 +1388,10 @@ public:
   /// are stored here.
   llvm::DenseMap<const CXXMethodDecl *, CXXCastPath> LambdaCastPaths;
 
+  /// Keep track of indirect call expressions within OpenMP target regions.
+  /// Used to instert calls to __llvm_omp_indirect_call_lookup during codegen.
+  llvm::DenseSet<const CallExpr *> OMPTargetCalls;
+
   ASTContext(LangOptions &LOpts, SourceManager &SM, IdentifierTable &idents,
              SelectorTable &sels, Builtin::Context &builtins,
              TranslationUnitKind TUKind);
