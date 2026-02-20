@@ -457,6 +457,11 @@ LLVM_21 {
     clang_Cursor_isGCCAssemblyVolatile;
 };
 
+LLVM_23 {
+  global:
+    clang_CXXIsCoroutine;
+};
+
 # Example of how to add a new symbol version entry.  If you do add a new symbol
 # version, please update the example to depend on the version you added.
 # LLVM_X {

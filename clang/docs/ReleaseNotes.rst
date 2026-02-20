@@ -409,6 +409,7 @@ clang-format
 libclang
 --------
 - Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
+- Add clang_CXXIsCoroutine()
 
 Code Completion
 ---------------

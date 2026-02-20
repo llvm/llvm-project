@@ -10220,3 +10220,26 @@ enum CXUnaryOperatorKind clang_getCursorUnaryOperatorKind(CXCursor cursor) {
 
   return CXUnaryOperator_Invalid;
 }
+
+int clang_CXXIsCoroutine(CXCursor cursor) {
+  if (cursor.kind == CXCursor_FunctionDecl ||
+      cursor.kind == CXCursor_CXXMethod) {
+    if (const Decl *D = getCursorDecl(cursor)) {
+      if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+        if (const Stmt *Body = FD->getBody())
+          return isa<CoroutineBodyStmt>(Body);
+      }
+    }
+  }
+
+  if (cursor.kind == CXCursor_LambdaExpr) {
+    if (const Expr *E = getCursorExpr(cursor)) {
+      if (const LambdaExpr *L = dyn_cast<LambdaExpr>(E)) {
+        if (const Stmt *Body = L->getBody())
+          return isa<CoroutineBodyStmt>(Body);
+      }
+    }
+  }
+
+  return 0;
+}
