@@ -22,9 +22,6 @@
 #include "mlir/Bindings/Python/NanobindUtils.h"
 #include "mlir/CAPI/Support.h"
 
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Regex.h"
-
 namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {

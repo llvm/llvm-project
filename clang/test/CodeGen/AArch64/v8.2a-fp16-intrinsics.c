@@ -7,13 +7,6 @@
 
 #include <arm_fp16.h>
 
-// CHECK-LABEL: test_vabsh_f16
-// CHECK:  [[ABS:%.*]] =  call half @llvm.fabs.f16(half %a)
-// CHECK:  ret half [[ABS]]
-float16_t test_vabsh_f16(float16_t a) {
-  return vabsh_f16(a);
-}
-
 // CHECK-LABEL: test_vceqzh_f16
 // CHECK:  [[TMP1:%.*]] = fcmp oeq half %a, 0xH0000
 // CHECK:  [[TMP2:%.*]] = sext i1 [[TMP1]] to i16

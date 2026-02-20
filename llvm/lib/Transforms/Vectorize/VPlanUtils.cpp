@@ -399,18 +399,22 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
     return true;
 
   VPRecipeBase *R = V->getDefiningRecipe();
-  if (R && V->isDefinedOutsideLoopRegions()) {
+  VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
+  VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
+  if (VPBB &&
+      (VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
     if (match(V->getDefiningRecipe(),
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
       return false;
     return all_of(R->operands(), isUniformAcrossVFsAndUFs);
   }
 
-  auto *CanonicalIV =
-      R->getParent()->getEnclosingLoopRegion()->getCanonicalIV();
-  // Canonical IV chain is uniform.
-  if (V == CanonicalIV || V == CanonicalIV->getBackedgeValue())
-    return true;
+  if (VPRegionBlock *EnclosingRegion = VPBB->getEnclosingLoopRegion()) {
+    auto *CanonicalIV = EnclosingRegion->getCanonicalIV();
+    // Canonical IV chain is uniform.
+    if (V == CanonicalIV || V == CanonicalIV->getBackedgeValue())
+      return true;
+  }
 
   return TypeSwitch<const VPRecipeBase *, bool>(R)
       .Case([](const VPDerivedIVRecipe *R) { return true; })

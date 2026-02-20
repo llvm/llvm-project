@@ -18,8 +18,6 @@
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/ExtensibleRTTI.h"
-#include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang::ssaf {
 
@@ -29,19 +27,14 @@ class EntityName;
 class EntitySummary;
 
 /// Abstract base class for serialization formats.
-class SerializationFormat
-    : public llvm::RTTIExtends<SerializationFormat, llvm::RTTIRoot> {
+class SerializationFormat {
 public:
-  explicit SerializationFormat(
-      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
   virtual ~SerializationFormat() = default;
 
   virtual TUSummary readTUSummary(llvm::StringRef Path) = 0;
 
   virtual void writeTUSummary(const TUSummary &Summary,
                               llvm::StringRef OutputDir) = 0;
-
-  static char ID; // For RTTIExtends.
 
 protected:
   // Helpers providing access to implementation details of basic data structures
@@ -50,8 +43,6 @@ protected:
   static const auto &get##FIELD_NAME(const CLASS &X) { return X.FIELD_NAME; }  \
   static auto &get##FIELD_NAME(CLASS &X) { return X.FIELD_NAME; }
 #include "clang/Analysis/Scalable/Model/PrivateFieldNames.def"
-
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
 };
 
 template <class SerializerFn, class DeserializerFn> struct FormatInfoEntry {
