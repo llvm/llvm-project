@@ -951,9 +951,11 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
       return IsDeferredCheck || DeferCheck(Ty);
 
     Type *NewTy = ArgTys[D.getArgumentNumber()];
-    if (VectorType *VTy = dyn_cast<VectorType>(NewTy))
+    if (VectorType *VTy = dyn_cast<VectorType>(NewTy)) {
+      if (!VTy->getElementType()->isIntegerTy())
+        return true;
       NewTy = VectorType::getExtendedElementVectorType(VTy);
-    else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
+    } else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
       NewTy = IntegerType::get(ITy->getContext(), 2 * ITy->getBitWidth());
     else
       return true;
@@ -966,9 +968,15 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
       return IsDeferredCheck || DeferCheck(Ty);
 
     Type *NewTy = ArgTys[D.getArgumentNumber()];
-    if (VectorType *VTy = dyn_cast<VectorType>(NewTy))
+    if (VectorType *VTy = dyn_cast<VectorType>(NewTy)) {
+      Type *EltTy = VTy->getElementType();
+      if (!EltTy->isIntegerTy() && !EltTy->isFloatingPointTy())
+        return true;
+      if (EltTy->isFloatingPointTy() &&
+          (EltTy->isHalfTy() || EltTy->isBFloatTy()))
+        return true;
       NewTy = VectorType::getTruncatedElementVectorType(VTy);
-    else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
+    } else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
       NewTy = IntegerType::get(ITy->getContext(), ITy->getBitWidth() / 2);
     else
       return true;
