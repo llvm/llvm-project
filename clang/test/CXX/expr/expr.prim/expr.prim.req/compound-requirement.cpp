@@ -327,6 +327,16 @@ concept DependentNoexceptExpr = requires(T t) {
 static_assert(DependentNoexceptExpr<int, true>);
 static_assert(DependentNoexceptExpr<int, false>);
 
+// noexcept expression referencing a static constexpr member of a template specialization
+// must have its initializer instantiated before evaluation.
+template<typename T, bool B>
+concept DependentNoexceptMaythrow = requires(T t) {
+  { maythrow() } noexcept(BoolValue<B>::value);
+};
+
+static_assert(DependentNoexceptMaythrow<int, false>);  // noexcept(false): satisfied
+static_assert(!DependentNoexceptMaythrow<int, true>);  // noexcept(true): maythrow() fails
+
 } // namespace noexcept_expression
 
 // Test case from the paper (P3822R0)

@@ -2673,7 +2673,16 @@ TemplateInstantiator::TransformExprRequirement(concepts::ExprRequirement *Req) {
   ExceptionSpecificationType TransNoexceptType = Req->getNoexceptType();
   Expr *TransNoexceptExpr = nullptr;
   if (Req->getNoexceptExpr()) {
+    // Use a ConstantEvaluated context to trigger eager instantiation of any
+    // constexpr variables referenced, then call ActOnNoexceptSpec to resolve
+    // the ExceptionSpecificationType.
+    EnterExpressionEvaluationContext ConstantEval(
+        getSema(), Sema::ExpressionEvaluationContext::ConstantEvaluated);
     ExprResult TransNoexceptExprRes = TransformExpr(Req->getNoexceptExpr());
+    if (TransNoexceptExprRes.isInvalid())
+      return nullptr;
+    TransNoexceptExprRes = getSema().ActOnNoexceptSpec(
+        TransNoexceptExprRes.get(), TransNoexceptType);
     if (TransNoexceptExprRes.isInvalid())
       return nullptr;
     TransNoexceptExpr = TransNoexceptExprRes.get();

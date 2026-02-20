@@ -7928,35 +7928,15 @@ concepts::ExprRequirement *Sema::BuildExprRequirement(
            NoexceptType == EST_NoexceptTrue ||
            NoexceptType == EST_NoexceptFalse ||
            NoexceptType == EST_DependentNoexcept) {
-    // Determine whether we need to check noexcept
-    bool NoexceptValue = false;
-
-    if (NoexceptType == EST_BasicNoexcept || NoexceptType == EST_NoexceptTrue) {
-      // Bare noexcept or noexcept(true) - requires noexcept
-      NoexceptValue = true;
-    } else if (NoexceptType == EST_NoexceptFalse) {
-      // noexcept(false) - does not require noexcept, always satisfied
-      NoexceptValue = false;
-    } else if (NoexceptType == EST_DependentNoexcept) {
-      // noexcept(expr) where expr is dependent
-      if (NoexceptExpr && NoexceptExpr->isInstantiationDependent()) {
-        // If the noexcept expression is dependent, the requirement is dependent
-        Status = concepts::ExprRequirement::SS_Dependent;
-      } else if (NoexceptExpr) {
-        // Evaluate the noexcept expression as a boolean condition
-        if (!NoexceptExpr->EvaluateAsBooleanCondition(NoexceptValue, Context)) {
-          // If we can't evaluate it, treat it as noexcept(true) for backward
-          // compatibility
-          NoexceptValue = true;
-        }
-      }
+    if (NoexceptType == EST_DependentNoexcept && NoexceptExpr &&
+        NoexceptExpr->isInstantiationDependent()) {
+      Status = concepts::ExprRequirement::SS_Dependent;
+    } else if (Status != concepts::ExprRequirement::SS_Dependent) {
+      bool NoexceptValue = (NoexceptType == EST_BasicNoexcept ||
+                            NoexceptType == EST_NoexceptTrue);
+      if (NoexceptValue && canThrow(E) == CanThrowResult::CT_Can)
+        Status = concepts::ExprRequirement::SS_NoexceptNotMet;
     }
-
-    // Only check if the expression can throw if noexcept is required and not
-    // dependent
-    if (Status != concepts::ExprRequirement::SS_Dependent && NoexceptValue &&
-        canThrow(E) == CanThrowResult::CT_Can)
-      Status = concepts::ExprRequirement::SS_NoexceptNotMet;
   }
   if (Status == concepts::ExprRequirement::SS_Satisfied &&
       ReturnTypeRequirement.isSubstitutionFailure())
