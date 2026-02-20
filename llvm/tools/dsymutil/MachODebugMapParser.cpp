@@ -12,6 +12,7 @@
 #include "RelocationMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Path.h"
@@ -27,15 +28,17 @@ using namespace llvm::object;
 
 class MachODebugMapParser {
 public:
-  MachODebugMapParser(BinaryHolder &BinHolder, StringRef BinaryPath,
-                      ArrayRef<std::string> Archs,
-                      ArrayRef<std::string> DSYMSearchPaths,
-                      StringRef PathPrefix = "", StringRef VariantSuffix = "",
-                      bool Verbose = false)
+  MachODebugMapParser(
+      BinaryHolder &BinHolder, StringRef BinaryPath,
+      ArrayRef<std::string> Archs, ArrayRef<std::string> DSYMSearchPaths,
+      StringRef PathPrefix = "", StringRef VariantSuffix = "",
+      bool Verbose = false,
+      const std::optional<StringSet<>> &AllowedDebugMapObjects = std::nullopt)
       : BinaryPath(std::string(BinaryPath)), Archs(Archs),
         DSYMSearchPaths(DSYMSearchPaths), PathPrefix(std::string(PathPrefix)),
         VariantSuffix(std::string(VariantSuffix)), BinHolder(BinHolder),
-        CurrentDebugMapObject(nullptr), SkipDebugMapObject(false) {}
+        CurrentDebugMapObject(nullptr), SkipDebugMapObject(false),
+        AllowedDebugMapObjects(AllowedDebugMapObjects) {}
 
   /// Parses and returns the DebugMaps of the input binary. The binary contains
   /// multiple maps in case it is a universal binary.
@@ -80,6 +83,10 @@ private:
   /// Whether we need to skip the current debug map object.
   bool SkipDebugMapObject;
 
+  /// Optional set of allowed debug map object paths. If set, only objects
+  /// whose path is in this set will be included.
+  const std::optional<StringSet<>> &AllowedDebugMapObjects;
+
   /// Holds function info while function scope processing.
   const char *CurrentFunctionName;
   uint64_t CurrentFunctionAddress;
@@ -119,6 +126,13 @@ private:
   }
 
   void addCommonSymbols();
+
+  /// Check if a debug map object should be included based on the allowed list.
+  bool shouldIncludeObject(StringRef Path) const {
+    if (!AllowedDebugMapObjects.has_value())
+      return true;
+    return AllowedDebugMapObjects->contains(Path);
+  }
 
   /// Dump the symbol table output header.
   void dumpSymTabHeader(raw_ostream &OS, StringRef Arch);
@@ -190,6 +204,11 @@ void MachODebugMapParser::switchToNewDebugMapObject(
 
   SmallString<80> Path(PathPrefix);
   sys::path::append(Path, Filename);
+
+  if (!shouldIncludeObject(Path)) {
+    SkipDebugMapObject = true;
+    return;
+  }
 
   auto ObjectEntry = BinHolder.getObjectEntry(Path, Timestamp);
   if (!ObjectEntry) {
@@ -857,13 +876,15 @@ llvm::ErrorOr<std::vector<std::unique_ptr<DebugMap>>>
 parseDebugMap(BinaryHolder &BinHolder, StringRef InputFile,
               ArrayRef<std::string> Archs,
               ArrayRef<std::string> DSYMSearchPaths, StringRef PrependPath,
-              StringRef VariantSuffix, bool Verbose, bool InputIsYAML) {
+              StringRef VariantSuffix, bool Verbose, bool InputIsYAML,
+              const std::optional<StringSet<>> &AllowedDebugMapObjects) {
   if (InputIsYAML)
     return DebugMap::parseYAMLDebugMap(BinHolder, InputFile, PrependPath,
                                        Verbose);
 
   MachODebugMapParser Parser(BinHolder, InputFile, Archs, DSYMSearchPaths,
-                             PrependPath, VariantSuffix, Verbose);
+                             PrependPath, VariantSuffix, Verbose,
+                             AllowedDebugMapObjects);
 
   return Parser.parse();
 }

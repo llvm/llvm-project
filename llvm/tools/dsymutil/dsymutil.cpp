@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
@@ -38,6 +39,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ThreadPool.h"
@@ -114,6 +116,7 @@ struct DsymutilOptions {
   std::string OutputFile;
   std::string Toolchain;
   std::string ReproducerPath;
+  std::string AllowedDebugMapObjectsFile;
   std::vector<std::string> Archs;
   std::vector<std::string> InputFiles;
   unsigned NumThreads;
@@ -198,6 +201,12 @@ static Error verifyOptions(const DsymutilOptions &Options) {
       Options.ReproMode != ReproducerMode::Use)
     return make_error<StringError>(
         "cannot combine --gen-reproducer and --use-reproducer.",
+        errc::invalid_argument);
+
+  if (Options.InputIsYAMLDebugMap &&
+      !Options.AllowedDebugMapObjectsFile.empty())
+    return make_error<StringError>(
+        "-y and --allowed-debug-map-objects cannot be specified together",
         errc::invalid_argument);
 
   return Error::success();
@@ -401,6 +410,9 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
 
   for (auto *SearchPath : Args.filtered(OPT_dsym_search_path))
     Options.LinkOpts.DSYMSearchPaths.push_back(SearchPath->getValue());
+
+  if (opt::Arg *AllowedObjs = Args.getLastArg(OPT_allowed_debug_map_objects))
+    Options.AllowedDebugMapObjectsFile = AllowedObjs->getValue();
 
   if (Error E = verifyOptions(Options))
     return std::move(E);
@@ -688,10 +700,32 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       continue;
     }
 
+    // Read the allowed debug map objects file if specified.
+    std::optional<StringSet<>> AllowedDebugMapObjects;
+    if (!Options.AllowedDebugMapObjectsFile.empty()) {
+      auto BufOrErr = MemoryBuffer::getFile(Options.AllowedDebugMapObjectsFile);
+      if (!BufOrErr) {
+        WithColor::error() << "cannot open allowed debug map objects file '"
+                           << Options.AllowedDebugMapObjectsFile
+                           << "': " << BufOrErr.getError().message() << '\n';
+        return EXIT_FAILURE;
+      }
+      AllowedDebugMapObjects.emplace();
+      StringRef Content = (*BufOrErr)->getBuffer();
+      SmallVector<StringRef, 0> Lines;
+      Content.split(Lines, '\n');
+      for (StringRef Line : Lines) {
+        Line = Line.trim();
+        if (!Line.empty())
+          AllowedDebugMapObjects->insert(Line);
+      }
+    }
+
     auto DebugMapPtrsOrErr = parseDebugMap(
         BinHolder, InputFile, Options.Archs, Options.LinkOpts.DSYMSearchPaths,
         Options.LinkOpts.PrependPath, Options.LinkOpts.BuildVariantSuffix,
-        Options.LinkOpts.Verbose, Options.InputIsYAMLDebugMap);
+        Options.LinkOpts.Verbose, Options.InputIsYAMLDebugMap,
+        AllowedDebugMapObjects);
 
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       WithColor::error() << "cannot parse the debug map for '" << InputFile
