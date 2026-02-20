@@ -228,20 +228,24 @@ OffloadAction::OffloadAction(const HostDependence &HDep,
   // We use the kinds of the host dependence for this action.
   OffloadingArch = HDep.getBoundArch();
   ActiveOffloadKindMask = HDep.getOffloadKinds();
-  HDep.getAction()->propagateHostOffloadInfo(HDep.getOffloadKinds(),
-                                             HDep.getBoundArch());
+  HDep.getAction()->propagateHostOffloadInfo(ActiveOffloadKindMask, OffloadingArch);
 
+  // Store references to avoid repeated getter calls
+  const auto &Actions = DDeps.getActions();
+  const auto &OffloadKinds = DDeps.getOffloadKinds();
+  const auto &BoundArchs = DDeps.getBoundArchs();
+  const auto &ToolChains = DDeps.getToolChains();
+
+  const unsigned NumActions = Actions.size();
   // Add device inputs and propagate info to the device actions. Do work only if
   // we have dependencies.
-  for (unsigned i = 0, e = DDeps.getActions().size(); i != e; ++i) {
-    if (auto *A = DDeps.getActions()[i]) {
+  for (unsigned i = 0; i != NumActions; ++i) {
+    if (auto *A = Actions[i]) {
       getInputs().push_back(A);
-      A->propagateDeviceOffloadInfo(DDeps.getOffloadKinds()[i],
-                                    DDeps.getBoundArchs()[i],
-                                    DDeps.getToolChains()[i]);
+      A->propagateDeviceOffloadInfo(OffloadKinds[i], BoundArchs[i], ToolChains[i]);
       // If this action is used to forward single dependency, set the toolchain.
-      if (DDeps.getActions().size() == 1)
-        OffloadingToolChain = DDeps.getToolChains()[i];
+      if (NumActions == 1)
+        OffloadingToolChain = ToolChains[i];
     }
   }
 }
