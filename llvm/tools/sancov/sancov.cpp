@@ -29,6 +29,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
@@ -690,8 +691,13 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
     failIfError(FlagsOrErr);
     uint32_t Flags = FlagsOrErr.get();
 
+    // XCOFF uses "." prefix for function entry point symbols.
+    StringRef EffectiveName =
+        (isa<object::XCOFFObjectFile>(&O) && Name.starts_with("."))
+            ? Name.drop_front(1)
+            : Name;
     if (!(Flags & object::BasicSymbolRef::SF_Undefined) &&
-        isCoveragePointSymbol(Name)) {
+        isCoveragePointSymbol(EffectiveName)) {
       Result.insert(Address);
     }
   }
