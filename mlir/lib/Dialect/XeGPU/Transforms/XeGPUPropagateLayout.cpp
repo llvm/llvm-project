@@ -395,10 +395,6 @@ private:
                             ArrayRef<LayoutInfoLattice *> operands,
                             ArrayRef<const LayoutInfoLattice *> results);
 
-  void visitCreateDescOp(xegpu::CreateDescOp createDesc,
-                         ArrayRef<LayoutInfoLattice *> operands,
-                         ArrayRef<const LayoutInfoLattice *> results);
-
   void visitUpdateNdOffsetOp(xegpu::UpdateNdOffsetOp updateNdOffset,
                              ArrayRef<LayoutInfoLattice *> operands,
                              ArrayRef<const LayoutInfoLattice *> results);
@@ -472,9 +468,6 @@ LogicalResult LayoutInfoPropagation::visitOperation(
       })
       .Case([&](xegpu::LoadGatherOp loadGatherOp) {
         visitLoadGatherOp(loadGatherOp, operands, results);
-      })
-      .Case([&](xegpu::CreateDescOp createDescOp) {
-        visitCreateDescOp(createDescOp, operands, results);
       })
       .Case([&](xegpu::UpdateNdOffsetOp updateNdOffsetOp) {
         visitUpdateNdOffsetOp(updateNdOffsetOp, operands, results);
@@ -1229,22 +1222,6 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   propagateIfChanged(operands[1], operands[1]->meet(maskLayout));
   if (load.getOffsets())
     propagateIfChanged(operands[2], operands[2]->meet(maskLayout));
-}
-
-/// Propagate the layout of the descriptor to the vector offset operand in
-/// CreateDescOp.
-void LayoutInfoPropagation::visitCreateDescOp(
-    xegpu::CreateDescOp createDesc, ArrayRef<LayoutInfoLattice *> operands,
-    ArrayRef<const LayoutInfoLattice *> results) {
-  LayoutInfo descLayout = results[0]->getValue();
-  // Need the layout of the descriptor to propagate to the operands.
-  if (!descLayout.isAssigned())
-    return;
-  auto uArch = getUArch(getChipStr(createDesc).value_or(""));
-  // For offset operand propagate 1D default layout.
-  LayoutInfo layout = getDefaultSIMTLayoutInfo(createDesc->getContext(), 1,
-                                               uArch->getSubgroupSize());
-  propagateIfChanged(operands[1], operands[1]->meet(layout));
 }
 
 /// Set the layout for the value, tensor descriptor, offset and mask operands in

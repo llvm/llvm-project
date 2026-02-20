@@ -476,74 +476,6 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
   }
 };
 
-struct UnrollCreateDescOp : public UnrollPattern<xegpu::CreateDescOp> {
-  using UnrollPattern<xegpu::CreateDescOp>::UnrollPattern;
-  LogicalResult matchAndRewrite(xegpu::CreateDescOp op,
-                                PatternRewriter &rewriter) const override {
-    Location loc = op.getLoc();
-    xegpu::TensorDescType tdescTy = op.getType();
-    TypedValue<::mlir::VectorType> indiceVec = op.getOffsets();
-    VectorType indiceVecTy = indiceVec.getType();
-
-    if (!tdescTy.isScattered())
-      return failure();
-
-    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
-    if (!targetShape)
-      return failure();
-
-    SmallVector<int64_t> targetIndiceShape(*targetShape);
-    int64_t originalChunkSize = tdescTy.getChunkSizeAsInt();
-    // IndiceVec is 1 dim lower than tdescTy when chunkSize is larger than 1.
-    if (originalChunkSize > 1)
-      targetIndiceShape.pop_back();
-
-    auto newTdescTy = getUnrolledTypes(tdescTy, *targetShape)[0];
-    SmallVector<Type> convertedIndiceTypes =
-        getUnrolledTypes(indiceVecTy, targetIndiceShape);
-    SmallVector<Value> convertedIndiceVec =
-        pack(indiceVec, convertedIndiceTypes, targetIndiceShape, loc, rewriter);
-
-    SmallVector<Value> newOps;
-
-    // More indices is need when chunkSize > 1. Since a big load from one
-    // address could be break into multiple small loads.
-    if (originalChunkSize > 1) {
-      int64_t blockedChunkSize = targetShape->back();
-      int64_t numNewChunks = originalChunkSize / blockedChunkSize;
-
-      for (auto [indice, indiceType] :
-           llvm::zip(convertedIndiceVec, convertedIndiceTypes)) {
-        for (int64_t i = 0; i < numNewChunks; ++i) {
-          // Compute the offset
-          Value inc = arith::ConstantIndexOp::create(rewriter, loc,
-                                                     i * blockedChunkSize);
-          Value incVec =
-              vector::BroadcastOp::create(rewriter, loc, indiceType, inc);
-          Value offsetIndice =
-              arith::AddIOp::create(rewriter, loc, indice, incVec);
-
-          auto newOp = xegpu::CreateDescOp::create(
-              rewriter, loc, newTdescTy, op.getSource(), offsetIndice);
-
-          newOps.push_back(newOp);
-        }
-      }
-    } else {
-      for (auto indice : convertedIndiceVec) {
-        auto newOp = xegpu::CreateDescOp::create(rewriter, loc, newTdescTy,
-                                                 op.getSource(), indice);
-        newOps.push_back(newOp);
-      }
-    }
-
-    Value castOp = unpack(newOps, tdescTy, *targetShape, loc, rewriter);
-    rewriter.replaceOp(op, castOp);
-
-    return success();
-  }
-};
-
 struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
   using UnrollPattern<xegpu::LoadGatherOp>::UnrollPattern;
   LogicalResult matchAndRewrite(xegpu::LoadGatherOp op,
@@ -1037,7 +969,7 @@ void mlir::xegpu::populateXeGPUUnrollPatterns(
     RewritePatternSet &patterns, const xegpu::UnrollOptions &options) {
   patterns
       .add<UnrollCreateNdOp, UnrollUpdateNdOffsetOp, UnrollPrefetchNdOp,
-           UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp, UnrollCreateDescOp,
+           UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp,
            UnrollLoadGatherOp, UnrollStoreScatterOp, UnrollPrefetchOp,
            UnrollUpdateOffsetOp, UnrollLoadMatrixOp, UnrollStoreMatrixOp,
            UnrollLoadGatherOpWithOffset, UnrollStoreScatterOpWithOffsets>(

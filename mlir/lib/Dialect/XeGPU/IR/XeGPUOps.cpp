@@ -740,59 +740,6 @@ LogicalResult UpdateNdOffsetOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// XeGPU_CreateDescOp
-//===----------------------------------------------------------------------===//
-
-void CreateDescOp::build(OpBuilder &builder, OperationState &state,
-                         TensorDescType TensorDesc, Value source,
-                         llvm::ArrayRef<OpFoldResult> offsets) {
-  auto loc = source.getLoc();
-  int64_t size = static_cast<int64_t>(offsets.size());
-  auto type = VectorType::get(size, builder.getIndexType());
-  auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
-  auto offset = vector::FromElementsOp::create(builder, loc, type, values);
-  build(builder, state, TensorDesc, source, offset);
-}
-
-void CreateDescOp::build(OpBuilder &builder, OperationState &state,
-                         TensorDescType TensorDesc, Value source,
-                         llvm::ArrayRef<int64_t> offsets) {
-  auto ofrs = getAsIndexOpFoldResult(builder.getContext(), offsets);
-  build(builder, state, TensorDesc, source, ofrs);
-}
-
-LogicalResult CreateDescOp::verify() {
-  auto tdescTy = getTensorDescType();
-
-  if (!tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.\n");
-
-  // Memory space of created TensorDesc should match with the source.
-  // Both source and TensorDesc are considered for global memory by default,
-  // if the memory scope attr is not specified. If source is an integer,
-  // it is considered as ptr to global memory.
-  auto srcMemorySpace = getSourceMemorySpace();
-  auto tdescMemorySpace = static_cast<unsigned>(tdescTy.getMemorySpace());
-  if (srcMemorySpace != tdescMemorySpace)
-    return emitOpError("Memory space mismatch.")
-           << " Source: " << srcMemorySpace
-           << ", TensorDesc: " << tdescMemorySpace;
-
-  // check total size
-  auto chunkSize = tdescTy.getChunkSizeAsInt();
-  SmallVector<int64_t> shape(getOffsetsType().getShape());
-  if (chunkSize != 1)
-    shape.push_back(chunkSize);
-
-  auto tdescShape = getShapeOf(tdescTy);
-  if (shape != tdescShape)
-    return emitOpError("Incorrect TensorDesc shape. ")
-           << "Expected is " << makeString(shape) << "\n";
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // XeGPU_PrefetchOp
 //===----------------------------------------------------------------------===//
 LogicalResult PrefetchOp::verify() {

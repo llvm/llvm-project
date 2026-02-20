@@ -60,7 +60,7 @@ struct TestXeGPUUnrollingPatterns
                                  -> std::optional<SmallVector<int64_t>> {
       if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp,
               xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::StoreNdOp,
-              xegpu::CreateDescOp, xegpu::UpdateOffsetOp, xegpu::PrefetchOp,
+              xegpu::UpdateOffsetOp, xegpu::PrefetchOp,
               xegpu::LoadGatherOp, xegpu::StoreScatterOp>(op)) {
         xegpu::TensorDescType tdescTy;
         if (auto createNdOp = dyn_cast<xegpu::CreateNdDescOp>(op)) {
@@ -73,8 +73,6 @@ struct TestXeGPUUnrollingPatterns
           tdescTy = loadNdOp.getTensorDescType();
         } else if (auto storeNdOp = dyn_cast<xegpu::StoreNdOp>(op)) {
           tdescTy = storeNdOp.getTensorDescType();
-        } else if (auto createOp = dyn_cast<xegpu::CreateDescOp>(op)) {
-          tdescTy = createOp.getType();
         } else if (auto updateOp = dyn_cast<xegpu::UpdateOffsetOp>(op)) {
           tdescTy = updateOp.getTensorDescType();
         } else if (auto prefetchOp = dyn_cast<xegpu::PrefetchOp>(op)) {
