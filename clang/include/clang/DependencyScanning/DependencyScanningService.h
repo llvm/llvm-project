@@ -123,6 +123,8 @@ struct DependencyScanningServiceOptions {
   CompilationMode Compilation = RegularCompilation{};
   /// How to optimize resulting explicit module command lines.
   ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default;
+  /// Whether to make reported file paths absolute.
+  bool ReportAbsolutePaths = true;
   /// Whether the resulting command lines should load explicit PCMs eagerly.
   bool EagerLoadModules = false;
   /// Whether to trace VFS accesses during the scan.
