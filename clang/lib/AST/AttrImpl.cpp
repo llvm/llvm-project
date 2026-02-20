@@ -43,25 +43,38 @@ std::string LoopHintAttr::getValueString(const PrintingPolicy &Policy) const {
   std::string ValueName;
   llvm::raw_string_ostream OS(ValueName);
   OS << "(";
-  if (state == Numeric)
+  switch (state) {
+  case Numeric:
     value->printPretty(OS, nullptr, Policy);
-  else if (state == FixedWidth || state == ScalableWidth) {
+    break;
+  case FixedWidth:
     if (value) {
       value->printPretty(OS, nullptr, Policy);
-      if (state == ScalableWidth)
-        OS << ", scalable";
-    } else if (state == ScalableWidth)
-      OS << "scalable";
-    else
+    } else {
       OS << "fixed";
-  } else if (state == Enable)
+    }
+    break;
+  case ScalableWidth:
+    if (value) {
+      value->printPretty(OS, nullptr, Policy);
+      OS << ", scalable";
+    } else {
+      OS << "scalable";
+    }
+    break;
+  case Enable:
     OS << "enable";
-  else if (state == Full)
+    break;
+  case Full:
     OS << "full";
-  else if (state == AssumeSafety)
+    break;
+  case AssumeSafety:
     OS << "assume_safety";
-  else
+    break;
+  case Disable:
     OS << "disable";
+    break;
+  }
   OS << ")";
   return ValueName;
 }
@@ -197,7 +210,7 @@ OMPDeclareTargetDeclAttr::getLocation(const ValueDecl *VD) {
 namespace clang {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const OMPTraitInfo &TI);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const OMPTraitInfo *TI);
-}
+} // namespace clang
 
 void OMPDeclareVariantAttr::printPrettyPragma(
     raw_ostream &OS, const PrintingPolicy &Policy) const {
