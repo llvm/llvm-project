@@ -185,7 +185,7 @@ static cl::opt<bool> EnableEagerlyInvalidateAnalyses(
     cl::desc("Eagerly invalidate more analyses in default pipelines"));
 
 static cl::opt<bool> EnableMergeFunctions(
-    "enable-merge-functions", cl::init(false), cl::Hidden,
+    "enable-merge-functions", cl::init(true), cl::Hidden,
     cl::desc("Enable function merging as part of the optimization pipeline"));
 
 static cl::opt<bool> EnablePostPGOLoopRotation(
