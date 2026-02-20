@@ -1676,6 +1676,15 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     }
   }
 
+  if (Opc == AMDGPU::V_ADD_U32_e64 || Opc == AMDGPU::V_ADD_U32_e32) {
+    if (Src1Val == 0) {
+      // y = add x, 0 -> y = copy x
+      MI->removeOperand(Src1Idx);
+      mutateCopyOp(*MI, TII->get(AMDGPU::COPY));
+      return true;
+    }
+  }
+
   return false;
 }
 
