@@ -151,22 +151,24 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
                         : dwarf::DW_EH_PE_absptr;
     break;
   case Triple::x86_64:
+    // For huge binaries (>2GiB), medium code model may need 64-bit encodings
+    // to avoid relocation overflow in sections such as .gcc_except_table
+    // (LSDA).
     if (isPositionIndependent()) {
       PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
-        ((CM == CodeModel::Small || CM == CodeModel::Medium)
-         ? dwarf::DW_EH_PE_sdata4 : dwarf::DW_EH_PE_sdata8);
+                            (CM == CodeModel::Small ? dwarf::DW_EH_PE_sdata4
+                                                    : dwarf::DW_EH_PE_sdata8);
       LSDAEncoding = dwarf::DW_EH_PE_pcrel |
-        (CM == CodeModel::Small
-         ? dwarf::DW_EH_PE_sdata4 : dwarf::DW_EH_PE_sdata8);
+                     (CM == CodeModel::Small ? dwarf::DW_EH_PE_sdata4
+                                             : dwarf::DW_EH_PE_sdata8);
       TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
-        ((CM == CodeModel::Small || CM == CodeModel::Medium)
-         ? dwarf::DW_EH_PE_sdata4 : dwarf::DW_EH_PE_sdata8);
+                      (CM == CodeModel::Small ? dwarf::DW_EH_PE_sdata4
+                                              : dwarf::DW_EH_PE_sdata8);
     } else {
-      PersonalityEncoding =
-        (CM == CodeModel::Small || CM == CodeModel::Medium)
-        ? dwarf::DW_EH_PE_udata4 : dwarf::DW_EH_PE_absptr;
-      LSDAEncoding = (CM == CodeModel::Small)
-        ? dwarf::DW_EH_PE_udata4 : dwarf::DW_EH_PE_absptr;
+      PersonalityEncoding = (CM == CodeModel::Small) ? dwarf::DW_EH_PE_udata4
+                                                     : dwarf::DW_EH_PE_absptr;
+      LSDAEncoding = (CM == CodeModel::Small) ? dwarf::DW_EH_PE_udata4
+                                              : dwarf::DW_EH_PE_absptr;
       TTypeEncoding = (CM == CodeModel::Small)
         ? dwarf::DW_EH_PE_udata4 : dwarf::DW_EH_PE_absptr;
     }
