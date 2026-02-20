@@ -12245,19 +12245,68 @@ SDValue DAGCombiner::foldShiftToAvg(SDNode *N, const SDLoc &DL) {
   bool IsUnsigned = Opcode == ISD::SRL;
 
   // Captured values.
-  SDValue A, B;
-
-  // Match floor average as it is common to both floor/ceil avgs, ensure the add
-  // doesn't wrap.
-  SDNodeFlags Flags =
-      IsUnsigned ? SDNodeFlags::NoUnsignedWrap : SDNodeFlags::NoSignedWrap;
+  SDValue X, Y, XorRHS;
   if (sd_match(N, m_BinOp(Opcode,
-                          m_c_BinOp(ISD::ADD, m_Value(A), m_Value(B), Flags),
+                          m_Sub(m_Value(X), m_Xor(m_Value(Y), m_Value(XorRHS))),
+                          m_One()))) {
+    // The XOR RHS must be a splat of all ones (i.e. -1), so that
+    // x - (y ^ -1) == x + y + 1. The constant may be stored at a
+    // wider bit width than the vector element type, so truncate
+    // before checking.
+    if (auto *Splat = dyn_cast<ConstantSDNode>(XorRHS.getOperand(0))) {
+      unsigned EltBits =
+          XorRHS.getValueType().getVectorElementType().getSizeInBits();
+      if (Splat->getAPIntValue().trunc(EltBits).isAllOnes()) {
+        unsigned CeilISD = IsUnsigned ? ISD::AVGCEILU : ISD::AVGCEILS;
+
+        auto IsSExt = [](SDValue V) {
+          return V.getOpcode() == ISD::SIGN_EXTEND ||
+                 V.getOpcode() == ISD::SIGN_EXTEND_INREG;
+        };
+        auto IsZExt = [](SDValue V) {
+          return V.getOpcode() == ISD::ZERO_EXTEND ||
+                 V.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG;
+        };
+
+        // Try to fold (trunc (sra (sub x, (xor y, -1)), 1)) -> (avgceils y, x)
+        if (N->hasOneUse() &&
+            N->use_begin()->getUser()->getOpcode() == ISD::TRUNCATE) {
+          EVT NarrowVT = (*N->user_begin())->getValueType(0);
+          if (!TLI.isOperationLegalOrCustom(CeilISD, NarrowVT))
+            return SDValue();
+          return DAG.getNode(CeilISD, DL, VT, Y, X);
+        }
+
+        // Ensure operands are extended from a narrower type so that the
+        // intermediate add does not overflow the original width.
+        if (Opcode == ISD::SRA && (!IsSExt(X) || !IsSExt(Y)))
+          return SDValue();
+
+        if (Opcode == ISD::SRL && (!IsZExt(X) || !IsZExt(Y)))
+          return SDValue();
+
+        if (TLI.isOperationLegalOrCustom(CeilISD, VT))
+          return DAG.getNode(CeilISD, DL, VT, Y, X);
+      }
+    }
+  }
+
+  // Match floor average as it is common to both floor/ceil avgs.
+  SDValue A, B, Add;
+  if (sd_match(N, m_BinOp(Opcode,
+                          m_AllOf(m_Value(Add), m_Add(m_Value(A), m_Value(B))),
                           m_One()))) {
     // Decide whether signed or unsigned.
     unsigned FloorISD = IsUnsigned ? ISD::AVGFLOORU : ISD::AVGFLOORS;
-    if (hasOperation(FloorISD, VT))
-      return DAG.getNode(FloorISD, DL, VT, {A, B});
+    if (!hasOperation(FloorISD, VT))
+      return SDValue();
+
+    // Can't optimize adds that may wrap.
+    if ((IsUnsigned && !Add->getFlags().hasNoUnsignedWrap()) ||
+        (!IsUnsigned && !Add->getFlags().hasNoSignedWrap()))
+      return SDValue();
+
+    return DAG.getNode(FloorISD, DL, N->getValueType(0), {A, B});
   }
 
   return SDValue();
