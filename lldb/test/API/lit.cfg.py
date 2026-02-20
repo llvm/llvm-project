@@ -348,7 +348,7 @@ if "XDG_CACHE_HOME" in os.environ:
 
 # Transfer some environment variables into the tests on Windows build host.
 if platform.system() == "Windows":
-    for v in ["SystemDrive"]:
+    for v in ["SystemDrive", "APPDATA"]:
         if v in os.environ:
             config.environment[v] = os.environ[v]
 
