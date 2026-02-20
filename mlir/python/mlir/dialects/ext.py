@@ -216,7 +216,12 @@ class Operation(ir.OpView):
 
     @classmethod
     def __init_subclass__(
-        cls, *, name: str | None = None, traits: list[type] | None = None, **kwargs
+        cls,
+        *,
+        name: str | None = None,
+        traits: list[type] | None = None,
+        dialect: type | None = None,
+        **kwargs,
     ):
         """
         This method is to perform all magic to make a `Operation` subclass works like a dataclass, like:
@@ -251,9 +256,18 @@ class Operation(ir.OpView):
         if not name:
             return
 
+        if dialect:
+            if hasattr(cls, "_dialect_name") or hasattr(cls, "_dialect_obj"):
+                raise RuntimeError(
+                    f"This operation has already been attached to dialect '{cls._dialect_name}'."
+                )
+            cls._dialect_obj = dialect
+            cls._dialect_name = dialect.DIALECT_NAMESPACE
+
         if not hasattr(cls, "_dialect_name") or not hasattr(cls, "_dialect_obj"):
             raise RuntimeError(
-                "Operation subclasses must inherit from a Dialect's Operation subclass"
+                "Operation subclasses must either inherit from a Dialect's Operation subclass "
+                "or provide the dialect as a class keyword argument."
             )
 
         op_name = name
@@ -278,7 +292,7 @@ class Operation(ir.OpView):
     @staticmethod
     def _generate_segments(
         operands_or_results: List[Union[OperandDef, ResultDef]],
-    ) -> List[int]:
+    ) -> List[int] | None:
         if any(i.variadicity != Variadicity.single for i in operands_or_results):
             return [
                 Operation._variadicity_to_segment(i.variadicity)
