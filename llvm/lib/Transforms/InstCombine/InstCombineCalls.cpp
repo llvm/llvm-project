@@ -48,6 +48,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
@@ -4261,6 +4262,46 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(
           *II, Builder.CreateZExtOrTrunc(II->getArgOperand(0), II->getType()));
     return nullptr;
+  }
+  case Intrinsic::riscv_vmv_v_x: {
+    // If all operands are constant, constant-fold with bitcast. The rationale
+    // for this is to optimize the number of inserted vsetivli instructions, by
+    // RISCVInsertVSETVLI.
+    const APInt *Scalar, *VL;
+    if (!match(II, m_Intrinsic<Intrinsic::riscv_vmv_v_x>(
+                       m_Poison(), m_APInt(Scalar), m_APInt(VL))) ||
+        VL->isOne() || Scalar->getBitWidth() > VL->getBitWidth())
+      return nullptr;
+    auto *VecTy = cast<VectorType>(II->getType());
+    bool IsScalable = VecTy->isScalableTy();
+    ElementCount EC = VecTy->getElementCount();
+    ElementCount ScaleFactor =
+        ElementCount::get(VL->getZExtValue(), IsScalable);
+    auto *EltTy = cast<IntegerType>(VecTy->getScalarType());
+    auto *NewEltTy = IntegerType::get(
+        CI.getContext(), EltTy->getScalarSizeInBits() * VL->getZExtValue());
+    if (!EC.hasKnownScalarFactor(ScaleFactor) ||
+        NewEltTy->getBitWidth() > VL->getBitWidth())
+      return nullptr;
+    ElementCount NewEC =
+        ElementCount::get(EC.getKnownScalarFactor(ScaleFactor), IsScalable);
+    Type *RetTy = VectorType::get(NewEltTy, NewEC);
+    assert(VecTy->canLosslesslyBitCastTo(RetTy) &&
+           "Lossless bitcast between types expected");
+    APInt ScalarExt = Scalar->abs().zext(NewEltTy->getBitWidth());
+    APInt NewScalar(ScalarExt.getBitWidth(), 0);
+    for (unsigned Idx : seq(VL->getZExtValue()))
+      NewScalar |= ScalarExt << Scalar->getBitWidth() * Idx;
+    if (Scalar->isSignBitSet())
+      NewScalar.setSignBit();
+    return replaceInstUsesWith(
+        *II,
+        Builder.CreateBitCast(
+            Builder.CreateIntrinsic(
+                RetTy, Intrinsic::riscv_vmv_v_x,
+                {PoisonValue::get(RetTy), ConstantInt::get(NewEltTy, NewScalar),
+                 ConstantInt::get(II->getOperand(2)->getType(), 1)}),
+            VecTy));
   }
   default: {
     // Handle target specific intrinsics
