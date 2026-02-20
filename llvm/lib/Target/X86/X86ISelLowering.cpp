@@ -2922,6 +2922,7 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
     return true;
   if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
     return true;
+
   EVT VT = Op.getValueType();
   unsigned Opcode = Op.getOpcode();
   if ((VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512) &&
@@ -2935,14 +2936,63 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
     case ISD::XOR:
     case ISD::ADD:
     case ISD::SUB:
-      return mayFoldIntoVector(Op.getOperand(0), DAG, Subtarget) &&
-             mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget);
+      return mayFoldIntoVector(Op.getOperand(0), DAG, Subtarget,
+                               AssumeSingleUse) &&
+             mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget,
+                               AssumeSingleUse);
     case ISD::SELECT:
-      return mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget) &&
-             mayFoldIntoVector(Op.getOperand(2), DAG, Subtarget);
+      return mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget,
+                               AssumeSingleUse) &&
+             mayFoldIntoVector(Op.getOperand(2), DAG, Subtarget,
+                               AssumeSingleUse);
     }
   }
-  return X86::mayFoldLoad(Op, Subtarget, AssumeSingleUse,
+
+  if (!ISD::isNormalLoad(Op.getNode()))
+    return false;
+
+  // Single-use loads just check the load itself
+  if (AssumeSingleUse || Op.hasOneUse())
+    return X86::mayFoldLoad(Op, Subtarget, /*AssumeSingleUse=*/true,
+                            /*IgnoreAlignment=*/true);
+
+  for (SDUse &Use : Op->uses()) {
+    if (Use.getResNo() != 0)
+      continue;
+
+    SDNode *User = Use.getUser();
+    if (ISD::isNormalStore(User))
+      continue;
+
+    if (User->getOpcode() == ISD::SETCC) {
+      ISD::CondCode CC = cast<CondCodeSDNode>(User->getOperand(2))->get();
+      if (CC == ISD::SETEQ || CC == ISD::SETNE) {
+        if (mayFoldIntoVector(User->getOperand(0), DAG, Subtarget,
+                              /*AssumeSingleUse=*/true) &&
+            mayFoldIntoVector(User->getOperand(1), DAG, Subtarget,
+                              /*AssumeSingleUse=*/true))
+          continue;
+      }
+      return false;
+    }
+
+    if (User->getOpcode() == ISD::TRUNCATE)
+      continue;
+
+    SDValue Value = SDValue(User, 0);
+
+    if (isa<ConstantSDNode>(Value) || isa<ConstantFPSDNode>(Value))
+      continue;
+
+    if (Value.getValueType().isVector())
+      continue;
+
+    if (!mayFoldIntoVector(Value, DAG, Subtarget,
+                           /*AssumeSingleUse=*/true))
+      return false;
+  }
+
+  return X86::mayFoldLoad(Op, Subtarget, /*AssumeSingleUse=*/true,
                           /*IgnoreAlignment=*/true);
 }
 
@@ -23466,9 +23516,8 @@ static SDValue combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y,
     return SDValue();
 
   // Don't perform this combine if constructing the vector will be expensive.
-  // TODO: Drop AssumeSingleUse = true override.
-  if ((!mayFoldIntoVector(X, DAG, Subtarget, /*AssumeSingleUse=*/true) ||
-       !mayFoldIntoVector(Y, DAG, Subtarget, /*AssumeSingleUse=*/true)) &&
+  if ((!mayFoldIntoVector(X, DAG, Subtarget) ||
+       !mayFoldIntoVector(Y, DAG, Subtarget)) &&
       !IsOrXorXorTreeCCZero)
     return SDValue();
 
