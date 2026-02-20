@@ -4895,6 +4895,169 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
   }
 }
 
+/// Emit array bounds constraints using llvm.assume for optimization hints.
+///
+/// C Standard (ISO/IEC 9899:2011 - C11)
+/// Section J.2 (Undefined behavior): An array subscript is out of range, even
+/// if an object is apparently accessible with the given subscript (as in the
+/// lvalue expression a[1][7] given the declaration int a[4][5]) (6.5.6).
+///
+/// Section 6.5.6 (Additive operators): If both the pointer operand and the
+/// result point to elements of the same array object, or one past the last
+/// element of the array object, the evaluation shall not produce an overflow;
+/// otherwise, the behavior is undefined.
+///
+/// C++ Standard (ISO/IEC 14882 - 2017)
+/// Section 8.7 (Additive operators):
+/// 4 When an expression that has integral type is added to or subtracted from a
+///   pointer, the result has the type of the pointer operand. If the expression
+///   P points to element x[i] of an array object x with n elements,^86 the
+///   expressions P + J and J + P (where J has the value j) point to the
+///   (possibly-hypothetical) element x[i + j] if 0 ≤ i + j ≤ n; otherwise, the
+///   behavior is undefined. Likewise, the expression P - J points to the
+///   (possibly-hypothetical) element x[i − j] if 0 ≤ i − j ≤ n; otherwise, the
+///   behavior is undefined.
+/// ^86 A pointer past the last element of an array x of n elements is
+///     considered to be equivalent to a pointer to a hypothetical element x[n]
+///     for this purpose; see 6.9.2.
+///
+
+/// The standards allow &arr[size] (one-past-the-end) for iterators,
+/// but dereferencing one-past-the-end is UB. This function uses the Accessed
+/// parameter to distinguish: Accessed=true uses strict bounds (index < size),
+/// Accessed=false allows one-past-the-end (index <= size).
+///
+/// Code that intentionally dereferences out-of-bounds (UB) may break with
+/// optimizations. Disabled when -fsanitize=array-bounds is active.
+///
+void CodeGenFunction::EmitArrayBoundsConstraints(const ArraySubscriptExpr *E,
+                                                 llvm::Value *IndexVal,
+                                                 bool Accessed) {
+  // Disable with -fno-assume-array-bounds.
+  if (!CGM.getCodeGenOpts().AssumeArrayBounds)
+    return;
+
+  // Disable at -O0.
+  if (CGM.getCodeGenOpts().OptimizationLevel == 0)
+    return;
+
+  // Disable with array-bounds sanitizer.
+  if (SanOpts.has(SanitizerKind::ArrayBounds))
+    return;
+
+  // Use the provided IndexVal to avoid duplicating side effects.
+  // The caller has already emitted the index expression once.
+  if (!IndexVal)
+    return;
+
+  const Expr *Base = E->getBase();
+  const Expr *Idx = E->getIdx();
+  QualType BaseType = Base->getType();
+
+  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(Base)) {
+    if (ICE->getCastKind() == CK_ArrayToPointerDecay) {
+      BaseType = ICE->getSubExpr()->getType();
+    }
+  }
+
+  // Handle both constant arrays and VLAs (variable-length arrays.)
+  const ConstantArrayType *CAT = getContext().getAsConstantArrayType(BaseType);
+  llvm::Value *VLASize = nullptr;
+
+  if (!CAT) {
+    if (const VariableArrayType *VAT =
+            getContext().getAsVariableArrayType(BaseType))
+      VLASize = getVLASize(VAT).NumElts;
+    else
+      return; // Not a constant or VLA.
+  }
+
+  llvm::APInt ArraySize;
+  if (CAT)
+    ArraySize = CAT->getSize();
+
+  // Don't generate assumes for flexible array member pattern.
+  // Size-1 arrays: "struct { int len; char data[1]; }" (pre-C99 idiom.)
+  // Zero-length arrays: "struct { int len; char data[0]; }" (GCC extension
+  // https://gcc.gnu.org/onlinedocs/gcc/Zero-Length.html)
+  // Both patterns use arrays as placeholders for variable-length data.
+  if (CAT && (ArraySize == 0 || ArraySize == 1)) {
+    if (const auto *ME = dyn_cast<MemberExpr>(Base->IgnoreParenImpCasts())) {
+      if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
+        const RecordDecl *RD = FD->getParent();
+        // Check if this field is the last field in the record.
+        // Only the last field can be a flexible array member.
+        const FieldDecl *LastField = nullptr;
+        for (const auto *Field : RD->fields())
+          LastField = Field;
+        if (LastField == FD)
+          // This is a zero-length or size-1 array as the last field.
+          // Likely a flexible array member pattern - skip assumes.
+          return;
+      }
+    }
+  }
+
+  QualType IdxType = Idx->getType();
+  llvm::Type *IndexType = ConvertType(IdxType);
+  llvm::Value *ArraySizeVal;
+
+  if (CAT)
+    // Constant array: use compile-time size.
+    ArraySizeVal =
+        llvm::ConstantInt::get(IndexType, ArraySize.getLimitedValue());
+  else
+    // VLA: use runtime size.
+    ArraySizeVal =
+        VLASize->getType() == IndexType
+            ? VLASize
+            : Builder.CreateIntCast(VLASize, IndexType, false, "vla.size.cast");
+
+  // Ensure index value has the same type as our constants.
+  if (IndexVal->getType() != IndexType) {
+    bool IsSigned = IdxType->isSignedIntegerOrEnumerationType();
+    IndexVal = Builder.CreateIntCast(IndexVal, IndexType, IsSigned, "idx.cast");
+  }
+
+  // Create bounds constraint: 0 <= index && index (< or <=) size.
+  // The Accessed parameter indicates whether the array element will be
+  // dereferenced.  Per C/C++ standards, &arr[size] (one-past-the-end) is legal
+  // for iterators.
+  // Accessed = true: element is dereferenced, strict bounds: 0 <= index < size
+  // Accessed = false: address only, allow one-past-the-end: 0 <= index <= size
+
+  // Mark array bounds assumes with metadata so they can be dropped before
+  // vectorization by DropUnnecessaryAssumesPass to prevent IR bloat.
+  auto AddArrayBoundsMetadata = [&](llvm::CallInst *Assume) {
+    llvm::LLVMContext &Ctx = Assume->getContext();
+    llvm::MDNode *MD = llvm::MDNode::get(Ctx, {});
+    Assume->setMetadata("llvm.array.bounds", MD);
+  };
+
+  if (IdxType->isSignedIntegerOrEnumerationType()) {
+    // For signed indices: index >= 0 && index [<|<=] size.
+    llvm::Value *Zero = llvm::ConstantInt::get(IndexType, 0);
+    llvm::Value *LowerBound =
+        Builder.CreateICmpSGE(IndexVal, Zero, "idx.ge.zero");
+    llvm::Value *UpperBound =
+        Accessed
+            ? Builder.CreateICmpSLT(IndexVal, ArraySizeVal, "idx.slt.size")
+            : Builder.CreateICmpSLE(IndexVal, ArraySizeVal, "idx.sle.size");
+    llvm::Value *BoundsConstraint =
+        Builder.CreateAnd(LowerBound, UpperBound, "bounds.constraint");
+    llvm::CallInst *Assume = Builder.CreateAssumption(BoundsConstraint);
+    AddArrayBoundsMetadata(Assume);
+  } else {
+    // For unsigned indices: index [<|<=] size. (>= 0 is implicit.)
+    llvm::Value *UpperBound =
+        Accessed
+            ? Builder.CreateICmpULT(IndexVal, ArraySizeVal, "idx.ult.size")
+            : Builder.CreateICmpULE(IndexVal, ArraySizeVal, "idx.ule.size");
+    llvm::CallInst *Assume = Builder.CreateAssumption(UpperBound);
+    AddArrayBoundsMetadata(Assume);
+  }
+}
+
 LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                                bool Accessed) {
   // The index must always be an integer, which is not an aggregate.  Emit it
@@ -4924,13 +5087,20 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
   };
   IdxPre = nullptr;
 
+  // Array bounds constraints will be emitted after index evaluation to avoid
+  // duplicating side effects from the index expression.
+
   // If the base is a vector type, then we are forming a vector element lvalue
   // with this subscript.
   if (E->getBase()->getType()->isSubscriptableVectorType() &&
       !isa<ExtVectorElementExpr>(E->getBase())) {
     // Emit the vector as an lvalue to get its address.
     LValue LHS = EmitLValue(E->getBase());
-    auto *Idx = EmitIdxAfterBase(/*Promote*/false);
+    auto *Idx = EmitIdxAfterBase(/*Promote*/ false);
+
+    // Emit array bounds constraints for vector subscripts.
+    EmitArrayBoundsConstraints(E, Idx, Accessed);
+
     assert(LHS.isSimple() && "Can only subscript lvalue vectors here!");
     return LValue::MakeVectorElt(LHS.getAddress(), Idx, E->getBase()->getType(),
                                  LHS.getBaseInfo(), TBAAAccessInfo());
@@ -4975,7 +5145,10 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     // it.  It needs to be emitted first in case it's what captures
     // the VLA bounds.
     Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
-    auto *Idx = EmitIdxAfterBase(/*Promote*/true);
+    auto *Idx = EmitIdxAfterBase(/*Promote*/ true);
+
+    // Emit array bounds constraints for VLA access.
+    EmitArrayBoundsConstraints(E, Idx, Accessed);
 
     // The element count here is the total number of non-VLA elements.
     llvm::Value *numElements = getVLASize(vla).NumElts;
@@ -4999,7 +5172,10 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
 
     // Emit the base pointer.
     Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
-    auto *Idx = EmitIdxAfterBase(/*Promote*/true);
+    auto *Idx = EmitIdxAfterBase(/*Promote*/ true);
+
+    // Emit array bounds constraints for ObjC interface access.
+    EmitArrayBoundsConstraints(E, Idx, Accessed);
 
     CharUnits InterfaceSize = getContext().getTypeSizeInChars(OIT);
     llvm::Value *InterfaceSizeVal =
@@ -5034,7 +5210,10 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
       ArrayLV = EmitArraySubscriptExpr(ASE, /*Accessed*/ true);
     else
       ArrayLV = EmitLValue(Array);
-    auto *Idx = EmitIdxAfterBase(/*Promote*/true);
+    auto *Idx = EmitIdxAfterBase(/*Promote*/ true);
+
+    // Emit array bounds constraints for optimization.
+    EmitArrayBoundsConstraints(E, Idx, Accessed);
 
     if (SanOpts.has(SanitizerKind::ArrayBounds))
       EmitCountedByBoundsChecking(Array, Array->getType(), ArrayLV.getAddress(),
@@ -5078,7 +5257,11 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     // The base must be a pointer; emit it with an estimate of its alignment.
     Address BaseAddr =
         EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
-    auto *Idx = EmitIdxAfterBase(/*Promote*/true);
+    auto *Idx = EmitIdxAfterBase(/*Promote*/ true);
+
+    // Emit array bounds constraints for pointer-based array access.
+    EmitArrayBoundsConstraints(E, Idx, Accessed);
+
     QualType ptrType = E->getBase()->getType();
     Addr = emitArraySubscriptGEP(*this, BaseAddr, Idx, E->getType(),
                                  !getLangOpts().PointerOverflowDefined,

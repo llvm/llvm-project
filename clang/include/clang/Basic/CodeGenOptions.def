@@ -33,6 +33,7 @@ CODEGENOPT(ImplicitMapSyms, 1, 0, Benign) ///< -Wa,-mmapsyms=implicit
 CODEGENOPT(AsmVerbose        , 1, 0, Benign) ///< -dA, -fverbose-asm.
 CODEGENOPT(PreserveAsmComments, 1, 1, Benign) ///< -dA, -fno-preserve-as-comments.
 CODEGENOPT(AssumeSaneOperatorNew , 1, 1, Benign) ///< implicit __attribute__((malloc)) operator new
+CODEGENOPT(AssumeArrayBounds , 1, 0, Benign) ///< Generate llvm.assume for array bounds.
 CODEGENOPT(AssumeUniqueVTables , 1, 1, Benign) ///< Assume a class has only one vtable.
 CODEGENOPT(Autolink          , 1, 1, Benign) ///< -fno-autolink
 CODEGENOPT(AutoImport        , 1, 1, Benign) ///< -fno-auto-import
