@@ -970,8 +970,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   std::vector<std::unique_ptr<config::Provider>> ProviderStack;
   std::unique_ptr<config::Provider> Config;
   if (EnableConfig) {
-    ProviderStack.push_back(
-        config::Provider::fromAncestorRelativeYAMLFiles(".clangd", TFS));
     llvm::SmallString<256> UserConfig;
     if (llvm::sys::path::user_config_directory(UserConfig)) {
       llvm::sys::path::append(UserConfig, "clangd", "config.yaml");
@@ -981,6 +979,8 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     } else {
       elog("Couldn't determine user config file, not loading");
     }
+    ProviderStack.push_back(
+        config::Provider::fromAncestorRelativeYAMLFiles(".clangd", TFS));
   }
   ProviderStack.push_back(std::make_unique<FlagsConfigProvider>());
   std::vector<const config::Provider *> ProviderPointers;
