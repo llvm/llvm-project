@@ -4150,6 +4150,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_AMDGPU_SMED3:
   case AMDGPU::G_AMDGPU_FMED3:
     return getDefaultMappingVOP(MI);
+  case AMDGPU::G_ROTR:
+  case AMDGPU::G_ROTL: {
+    if (isSALUMapping(MI))
+      return getDefaultMappingSOP(MI);
+    return getDefaultMappingVOP(MI);
+  }
   case AMDGPU::G_UMULH:
   case AMDGPU::G_SMULH: {
     if (Subtarget.hasScalarMulHiInsts() && isSALUMapping(MI))

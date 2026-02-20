@@ -2124,9 +2124,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(0, S32, S64)
     .lower();
 
-  getActionDefinitionsBuilder({G_ROTR, G_ROTL})
-    .scalarize(0)
-    .lower();
+  getActionDefinitionsBuilder(G_ROTR).legalFor({S32}).scalarize(0).lower();
+
+  getActionDefinitionsBuilder(G_ROTL).scalarize(0).lower();
 
   auto &FSHRActionDefs = getActionDefinitionsBuilder(G_FSHR);
   FSHRActionDefs.legalFor({{S32, S32}})

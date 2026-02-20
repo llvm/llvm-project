@@ -228,6 +228,7 @@ private:
 
   bool selectScaleOffset(MachineOperand &Root, Register &Offset,
                          bool IsSigned) const;
+
   bool selectSmrdOffset(MachineOperand &Root, Register &Base, Register *SOffset,
                         int64_t *Offset, bool *ScaleOffset) const;
   InstructionSelector::ComplexRendererFns
