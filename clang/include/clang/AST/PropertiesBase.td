@@ -353,6 +353,29 @@ let Class = PropertyTypeCase<APValue, "Vector"> in {
     return result;
   }]>;
 }
+let Class = PropertyTypeCase<APValue, "Matrix"> in {
+  def : ReadHelper<[{
+    SmallVector<APValue, 16> buffer;
+    unsigned numElts = node.getMatrixNumElements();
+    for (unsigned i = 0; i < numElts; ++i)
+      buffer.push_back(node.getMatrixElt(i));
+  }]>;
+  def : Property<"numRows", UInt32> {
+    let Read = [{ node.getMatrixNumRows() }];
+  }
+  def : Property<"numCols", UInt32> {
+    let Read = [{ node.getMatrixNumColumns() }];
+  }
+  def : Property<"elements", Array<APValue>> { let Read = [{ buffer }]; }
+  def : Creator<[{
+    APValue result;
+    result.MakeMatrix();
+    (void)result.setMatrixUninit(numRows, numCols);
+    for (unsigned i = 0; i < elements.size(); i++)
+      result.getMatrixElt(i) = elements[i];
+    return result;
+  }]>;
+}
 let Class = PropertyTypeCase<APValue, "Array"> in {
   def : ReadHelper<[{
     SmallVector<APValue, 4> buffer{};

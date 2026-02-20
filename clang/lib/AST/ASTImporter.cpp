@@ -10628,6 +10628,9 @@ ASTNodeImporter::ImportAPValue(const APValue &FromValue) {
                Elts.data(), FromValue.getVectorLength());
     break;
   }
+  case APValue::Matrix:
+    // Matrix values cannot currently arise in APValue import contexts.
+    llvm_unreachable("Matrix APValue import not yet supported");
   case APValue::Array:
     Result.MakeArray(FromValue.getArrayInitializedElts(),
                      FromValue.getArraySize());

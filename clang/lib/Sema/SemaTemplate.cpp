@@ -8132,6 +8132,9 @@ static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
     return MakeInitList(Elts);
   }
 
+  case APValue::Matrix:
+    llvm_unreachable("Matrix template argument expression not yet supported");
+
   case APValue::None:
   case APValue::Indeterminate:
     llvm_unreachable("Unexpected APValue kind.");

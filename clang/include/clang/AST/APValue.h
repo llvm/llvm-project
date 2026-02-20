@@ -136,6 +136,7 @@ public:
     ComplexFloat,
     LValue,
     Vector,
+    Matrix,
     Array,
     Struct,
     Union,
@@ -275,6 +276,15 @@ private:
     Vec &operator=(const Vec &) = delete;
     ~Vec() { delete[] Elts; }
   };
+  struct Mat {
+    APValue *Elts = nullptr;
+    unsigned NumRows = 0;
+    unsigned NumCols = 0;
+    Mat() = default;
+    Mat(const Mat &) = delete;
+    Mat &operator=(const Mat &) = delete;
+    ~Mat() { delete[] Elts; }
+  };
   struct Arr {
     APValue *Elts;
     unsigned NumElts, ArrSize;
@@ -308,8 +318,9 @@ private:
 
   // We ensure elsewhere that Data is big enough for LV and MemberPointerData.
   typedef llvm::AlignedCharArrayUnion<void *, APSInt, APFloat, ComplexAPSInt,
-                                      ComplexAPFloat, Vec, Arr, StructData,
-                                      UnionData, AddrLabelDiffData> DataType;
+                                      ComplexAPFloat, Vec, Mat, Arr, StructData,
+                                      UnionData, AddrLabelDiffData>
+      DataType;
   static const size_t DataSize = sizeof(DataType);
 
   DataType Data;
@@ -340,6 +351,13 @@ public:
   explicit APValue(const APValue *E, unsigned N)
       : Kind(None), AllowConstexprUnknown(false) {
     MakeVector(); setVector(E, N);
+  }
+  /// Creates a matrix APValue with given dimensions. The elements
+  /// are read from \p E and assumed to be in row-major order.
+  explicit APValue(const APValue *E, unsigned NumRows, unsigned NumCols)
+      : Kind(None), AllowConstexprUnknown(false) {
+    MakeMatrix();
+    setMatrix(E, NumRows, NumCols);
   }
   /// Creates an integer complex APValue with the given real and imaginary
   /// values.
@@ -471,6 +489,7 @@ public:
   bool isComplexFloat() const { return Kind == ComplexFloat; }
   bool isLValue() const { return Kind == LValue; }
   bool isVector() const { return Kind == Vector; }
+  bool isMatrix() const { return Kind == Matrix; }
   bool isArray() const { return Kind == Array; }
   bool isStruct() const { return Kind == Struct; }
   bool isUnion() const { return Kind == Union; }
@@ -573,6 +592,37 @@ public:
     return ((const Vec *)(const void *)&Data)->NumElts;
   }
 
+  unsigned getMatrixNumRows() const {
+    assert(isMatrix() && "Invalid accessor");
+    return ((const Mat *)(const void *)&Data)->NumRows;
+  }
+  unsigned getMatrixNumColumns() const {
+    assert(isMatrix() && "Invalid accessor");
+    return ((const Mat *)(const void *)&Data)->NumCols;
+  }
+  unsigned getMatrixNumElements() const {
+    return getMatrixNumRows() * getMatrixNumColumns();
+  }
+  APValue &getMatrixElt(unsigned Idx) {
+    assert(isMatrix() && "Invalid accessor");
+    assert(Idx < getMatrixNumElements() && "Index out of range");
+    return ((Mat *)(char *)&Data)->Elts[Idx];
+  }
+  const APValue &getMatrixElt(unsigned Idx) const {
+    return const_cast<APValue *>(this)->getMatrixElt(Idx);
+  }
+  APValue &getMatrixElt(unsigned Row, unsigned Col) {
+    assert(isMatrix() && "Invalid accessor");
+    assert(Row < getMatrixNumRows() && "Row index out of range");
+    assert(Col < getMatrixNumColumns() && "Column index out of range");
+    // Matrix elements are stored in row-major order.
+    unsigned I = Row * getMatrixNumColumns() + Col;
+    return ((Mat *)(char *)&Data)->Elts[I];
+  }
+  const APValue &getMatrixElt(unsigned Row, unsigned Col) const {
+    return const_cast<APValue *>(this)->getMatrixElt(Row, Col);
+  }
+
   APValue &getArrayInitializedElt(unsigned I) {
     assert(isArray() && "Invalid accessor");
     assert(I < getArrayInitializedElts() && "Index out of range");
@@ -668,6 +718,11 @@ public:
     for (unsigned i = 0; i != N; ++i)
       InternalElts[i] = E[i];
   }
+  void setMatrix(const APValue *E, unsigned NumRows, unsigned NumCols) {
+    MutableArrayRef<APValue> InternalElts = setMatrixUninit(NumRows, NumCols);
+    for (unsigned i = 0; i != NumRows * NumCols; ++i)
+      InternalElts[i] = E[i];
+  }
   void setComplexInt(APSInt R, APSInt I) {
     assert(R.getBitWidth() == I.getBitWidth() &&
            "Invalid complex int (type mismatch).");
@@ -716,6 +771,11 @@ private:
     new ((void *)(char *)&Data) Vec();
     Kind = Vector;
   }
+  void MakeMatrix() {
+    assert(isAbsent() && "Bad state change");
+    new ((void *)(char *)&Data) Mat();
+    Kind = Matrix;
+  }
   void MakeComplexInt() {
     assert(isAbsent() && "Bad state change");
     new ((void *)(char *)&Data) ComplexAPSInt();
@@ -756,6 +816,14 @@ private:
     V->Elts = new APValue[N];
     V->NumElts = N;
     return {V->Elts, V->NumElts};
+  }
+  MutableArrayRef<APValue> setMatrixUninit(unsigned NumRows, unsigned NumCols) {
+    assert(isMatrix() && "Invalid accessor");
+    Mat *M = ((Mat *)(char *)&Data);
+    M->Elts = new APValue[NumRows * NumCols];
+    M->NumRows = NumRows;
+    M->NumCols = NumCols;
+    return {M->Elts, NumRows * NumCols};
   }
   MutableArrayRef<LValuePathEntry>
   setLValueUninit(LValueBase B, const CharUnits &O, unsigned Size,

@@ -2548,6 +2548,36 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
     }
     return llvm::ConstantVector::get(Inits);
   }
+  case APValue::Matrix: {
+    const auto *MT = DestType->castAs<ConstantMatrixType>();
+    unsigned NumRows = Value.getMatrixNumRows();
+    unsigned NumCols = Value.getMatrixNumColumns();
+    unsigned NumElts = NumRows * NumCols;
+    SmallVector<llvm::Constant *, 16> Inits(NumElts);
+
+    bool IsRowMajor = CGM.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+
+    for (unsigned Row = 0; Row != NumRows; ++Row) {
+      for (unsigned Col = 0; Col != NumCols; ++Col) {
+        const APValue &Elt = Value.getMatrixElt(Row, Col);
+        // Compute flat index based on memory layout.
+        unsigned Idx = IsRowMajor ? Row * NumCols + Col : Col * NumRows + Row;
+        if (Elt.isInt())
+          Inits[Idx] =
+              llvm::ConstantInt::get(CGM.getLLVMContext(), Elt.getInt());
+        else if (Elt.isFloat())
+          Inits[Idx] =
+              llvm::ConstantFP::get(CGM.getLLVMContext(), Elt.getFloat());
+        else if (Elt.isIndeterminate())
+          Inits[Idx] = llvm::PoisonValue::get(
+              CGM.getTypes().ConvertType(MT->getElementType()));
+        else
+          llvm_unreachable("unsupported matrix element type");
+      }
+    }
+    return llvm::ConstantVector::get(Inits);
+  }
   case APValue::AddrLabelDiff: {
     const AddrLabelExpr *LHSExpr = Value.getAddrLabelDiffLHS();
     const AddrLabelExpr *RHSExpr = Value.getAddrLabelDiffRHS();
