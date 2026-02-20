@@ -136,8 +136,8 @@ is expected to have been built from the same Git commit as OpenMP. It will,
 however, use the compiler detected by CMake, usually gcc.
 To also make it use Clang, add
 `-DCMAKE_C_COMPILER=../build/bin/clang -DCMAKE_C_COMPILER=../build/bin/clang++`.
-In any case, it will use Clang from `LLVM_BINARY_DIR` for running the regression
-tests. `LLVM_BINARY_DIR` can also be omitted in which case testing
+It will use Clang from `LLVM_BINARY_DIR` for running the regression tests, if Clang is included in that build.
+`LLVM_BINARY_DIR` can also be omitted in which case testing
 (`ninja check-openmp`) is disabled.
 
 The `CMAKE_INSTALL_PREFIX` can be the same, but does not need to. Using the same
@@ -269,6 +269,14 @@ tests.
 : Location, relative to [`CMAKE_INSTALL_PREFIX`][CMAKE_INSTALL_PREFIX], where to
 install the OpenMP libraries (`.a` and `.so`)
 
+**OPENMP_TEST_C_COMPILER**:STRING (default: Clang built in the same build configuration, or **CMAKE_C_COMPILER**)
+: C compiler to use for testing OpenMP runtime libraries.
+
+**OPENMP_TEST_CXX_COMPILER**:STRING (default: Clang built in the same build configuration, or **CMAKE_CXX_COMPILER**)
+: C++ compiler to use for testing OpenMP runtime libraries.
+
+**OPENMP_TEST_Fortran_COMPILER**:STRING (default: Flang built in the same build configuration, or **CMAKE_Fortran_COMPILER**)
+: Fortran compiler to use for testing OpenMP runtime libraries.
 
 ### Options for `libomp`
 
