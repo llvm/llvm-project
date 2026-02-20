@@ -33,8 +33,21 @@ using namespace llvm;
 static void diagnoseNonUniqueResourceAccess(Instruction *I,
                                             ArrayRef<IntrinsicInst *> Handles) {
   LLVMContext &Context = I->getContext();
+  std::string InstStr;
+  raw_string_ostream InstOS(InstStr);
+  I->print(InstOS);
+  Context.diagnose(
+      DiagnosticInfoGeneric("At resource access:" + Twine(InstStr), DS_Note));
+
+  for (auto *Handle : Handles) {
+    std::string HandleStr;
+    raw_string_ostream HandleOS(HandleStr);
+    Handle->print(HandleOS);
+    Context.diagnose(DiagnosticInfoGeneric(
+        "Uses resource handle:" + Twine(HandleStr), DS_Note));
+  }
   Context.diagnose(DiagnosticInfoGeneric(
-      "Resource access is not guarenteed to map to a unique global resource"));
+      "Resource access is not guaranteed to map to a unique global resource"));
 }
 
 static Value *traverseGEPOffsets(const DataLayout &DL, IRBuilder<> &Builder,

@@ -1,6 +1,9 @@
 ; RUN: not opt -S -dxil-resource-access -mtriple=dxil--shadermodel6.3-library %s 2>&1 | FileCheck %s
 
-; CHECK: error: Resource access is not guarenteed to map to a unique global resource
+; CHECK: note: At resource access:  store i32 %7, ptr %8, align 4
+; CHECK: note: Uses resource handle:  %1 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 1, i32 1, i32 0, ptr nonnull @.str.2)
+; CHECK: note: Uses resource handle:  %2 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 2, i32 1, i32 0, ptr nonnull @.str.4)
+; CHECK: error: Resource access is not guaranteed to map to a unique global resource
 
 %__cblayout_c = type <{ i32 }>
 
