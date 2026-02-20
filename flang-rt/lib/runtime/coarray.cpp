@@ -32,7 +32,7 @@ void RTDEF(ComputeLastUcobound)(
     index *= ucobounds_ptr[i] - lcobounds_ptr[i] + 1;
   }
   if (corank == 1)
-    ucobounds_ptr[0] = lcobounds_ptr[0] + num_images;
+    ucobounds_ptr[0] = lcobounds_ptr[0] + num_images - 1;
   else if (index < num_images)
     ucobounds_ptr[corank - 1] =
         (num_images / index) + (num_images % index != 0);
