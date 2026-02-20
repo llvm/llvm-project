@@ -1010,7 +1010,8 @@ void SubtargetEmitter::expandProcResources(
         continue;
       ConstRecVec SuperResources = PR->getValueAsListOfDefs("Resources");
       bool AllContained =
-          all_of(SubResources, [SuperResources](const Record *SubResource) {
+          all_of(SubResources, [SuperResources = std::move(SuperResources)](
+                                   const Record *SubResource) {
             return is_contained(SuperResources, SubResource);
           });
       if (AllContained) {

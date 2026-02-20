@@ -3470,8 +3470,8 @@ namespace ISD {
                                   std::function<bool(ConstantSDNode *)> Match,
                                   bool AllowUndefs = false,
                                   bool AllowTruncation = false) {
-    return matchUnaryPredicateImpl<ConstantSDNode>(Op, Match, AllowUndefs,
-                                                   AllowTruncation);
+    return matchUnaryPredicateImpl<ConstantSDNode>(
+        Op, std::move(Match), AllowUndefs, AllowTruncation);
   }
 
   /// Hook for matching ConstantFPSDNode predicate
