@@ -9,6 +9,7 @@
 #include "SystemZHLASMAsmStreamer.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/GOFF.h"
+#include "llvm/MC/MCEncodingCommentHelper.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCGOFFStreamer.h"
@@ -115,6 +116,12 @@ void SystemZHLASMAsmStreamer::emitAlignmentDS(uint64_t ByteAlignment,
   EmitEOL();
 }
 
+raw_ostream &SystemZHLASMAsmStreamer::getCommentOS() {
+  if (!IsVerboseAsm)
+    return nulls(); // Discard comments unless in verbose asm mode.
+  return CommentStream;
+}
+
 void SystemZHLASMAsmStreamer::AddComment(const Twine &T, bool EOL) {
   if (!IsVerboseAsm)
     return;
@@ -186,8 +193,20 @@ void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
   EmitEOL();
 }
 
+void SystemZHLASMAsmStreamer::addEncodingComment(const MCInst &Inst,
+                                                 const MCSubtargetInfo &STI) {
+  raw_ostream &OS = getCommentOS();
+
+  // SystemZ uses big-endian encoding, so don't force little-endian.
+  mc::emitEncodingComment(OS, Inst, STI, getAssembler(), *MAI,
+                          /*ForceLE=*/false);
+}
+
 void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
                                               const MCSubtargetInfo &STI) {
+  // Show the encoding in a comment if we have a code emitter.
+  addEncodingComment(Inst, STI);
+  EmitEOL();
 
   InstPrinter->printInst(&Inst, 0, "", STI, OS);
   EmitEOL();
