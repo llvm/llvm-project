@@ -16200,7 +16200,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
       ConsecutiveValCount = 0;
       PrevVal = V;
     }
-      if (MaybeLowHalfZeroHigh) {
+    if (MaybeLowHalfZeroHigh) {
       if (i < HalfElts) {
         if (V != LowHalfFirstVal)
           MaybeLowHalfZeroHigh = false;
