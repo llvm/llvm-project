@@ -758,7 +758,6 @@ if (MSVC)
       -wd4722 # Suppress 'function' : destructor never returns, potential memory leak
       -wd4100 # Suppress 'unreferenced formal parameter'
       -wd4127 # Suppress 'conditional expression is constant'
-      -wd4512 # Suppress 'assignment operator could not be generated'
       -wd4505 # Suppress 'unreferenced local function has been removed'
       -wd4510 # Suppress 'default constructor could not be generated'
       -wd4702 # Suppress 'unreachable code'
