@@ -83,3 +83,63 @@ tensor_store_from_lds s[0:3], s[4:11], s[12:15], null
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // GFX1250-ERR: tensor_store_from_lds s[0:3], s[4:11], s[12:15], null
 // GFX1250-ERR:                                                  ^
+
+tensor_load_to_lds s[14:17], s[4:11]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register alignment
+// GFX1250-ERR: tensor_load_to_lds s[14:17], s[4:11]
+// GFX1250-ERR:                    ^
+
+tensor_load_to_lds s[0:3], s[6:13]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register alignment
+// GFX1250-ERR: tensor_load_to_lds s[0:3], s[6:13]
+// GFX1250-ERR:                            ^
+
+tensor_load_to_lds s[58:61], s[4:11], s[12:15], s[16:19]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register alignment
+// GFX1250-ERR: tensor_load_to_lds s[58:61], s[4:11], s[12:15], s[16:19]
+// GFX1250-ERR:                    ^
+
+tensor_load_to_lds s[0:3], s[22:29], s[12:15], s[16:19]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register alignment
+// GFX1250-ERR: tensor_load_to_lds s[0:3], s[22:29], s[12:15], s[16:19]
+// GFX1250-ERR:                            ^
+
+tensor_load_to_lds s[0:3], s[4:11], s[58:61], s[16:19]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register alignment
+// GFX1250-ERR: tensor_load_to_lds s[0:3], s[4:11], s[58:61], s[16:19]
+// GFX1250-ERR:                                     ^
+
+tensor_load_to_lds s[0:3], s[4:11], s[12:15], s[18:21]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register alignment
+// GFX1250-ERR: tensor_load_to_lds s[0:3], s[4:11], s[12:15], s[18:21]
+// GFX1250-ERR:                                               ^
+
+tensor_store_from_lds s[14:17], s[4:11]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register alignment
+// GFX1250-ERR: tensor_store_from_lds s[14:17], s[4:11]
+// GFX1250-ERR:                       ^
+
+tensor_store_from_lds s[0:3], s[6:13]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register alignment
+// GFX1250-ERR: tensor_store_from_lds s[0:3], s[6:13]
+// GFX1250-ERR:                               ^
+
+tensor_store_from_lds s[58:61], s[4:11], s[12:15], s[16:19]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register alignment
+// GFX1250-ERR: tensor_store_from_lds s[58:61], s[4:11], s[12:15], s[16:19]
+// GFX1250-ERR:                       ^
+
+tensor_store_from_lds s[0:3], s[22:29], s[12:15], s[16:19]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register alignment
+// GFX1250-ERR: tensor_store_from_lds s[0:3], s[22:29], s[12:15], s[16:19]
+// GFX1250-ERR:                               ^
+
+tensor_store_from_lds s[0:3], s[4:11], s[58:61], s[16:19]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register alignment
+// GFX1250-ERR: tensor_store_from_lds s[0:3], s[4:11], s[58:61], s[16:19]
+// GFX1250-ERR:                                        ^
+
+tensor_store_from_lds s[0:3], s[4:11], s[12:15], s[18:21]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register alignment
+// GFX1250-ERR: tensor_store_from_lds s[0:3], s[4:11], s[12:15], s[18:21
+// GFX1250-ERR:                                                  ^
