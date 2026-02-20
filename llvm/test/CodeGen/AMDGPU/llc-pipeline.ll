@@ -516,9 +516,10 @@
 ; GCN-O1-OPTS-NEXT:      Straight line strength reduction
 ; GCN-O1-OPTS-NEXT:      Early CSE
 ; GCN-O1-OPTS-NEXT:      Scalar Evolution Analysis
+; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
+; GCN-O1-OPTS-NEXT:      Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:      Nary reassociation
 ; GCN-O1-OPTS-NEXT:      Early CSE
-; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:      Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:      AMDGPU IR optimizations
 ; GCN-O1-OPTS-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -831,9 +832,10 @@
 ; GCN-O2-NEXT:      Straight line strength reduction
 ; GCN-O2-NEXT:      Early CSE
 ; GCN-O2-NEXT:      Scalar Evolution Analysis
+; GCN-O2-NEXT:      Cycle Info Analysis
+; GCN-O2-NEXT:      Uniformity Analysis
 ; GCN-O2-NEXT:      Nary reassociation
 ; GCN-O2-NEXT:      Early CSE
-; GCN-O2-NEXT:      Cycle Info Analysis
 ; GCN-O2-NEXT:      Uniformity Analysis
 ; GCN-O2-NEXT:      AMDGPU IR optimizations
 ; GCN-O2-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -1162,9 +1164,10 @@
 ; GCN-O3-NEXT:      Optimization Remark Emitter
 ; GCN-O3-NEXT:      Global Value Numbering
 ; GCN-O3-NEXT:      Scalar Evolution Analysis
+; GCN-O3-NEXT:      Cycle Info Analysis
+; GCN-O3-NEXT:      Uniformity Analysis
 ; GCN-O3-NEXT:      Nary reassociation
 ; GCN-O3-NEXT:      Early CSE
-; GCN-O3-NEXT:      Cycle Info Analysis
 ; GCN-O3-NEXT:      Uniformity Analysis
 ; GCN-O3-NEXT:      AMDGPU IR optimizations
 ; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
