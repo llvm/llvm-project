@@ -1,8 +1,7 @@
 // RUN: mlir-opt --allow-unregistered-dialect --xevm-attach-target='module=xevm_* chip=pvc' \
 // RUN: --xegpu-sg-to-wi-distribute-experimental --split-input-file %s --canonicalize --cse | FileCheck %s
 
-// CHECK-LABEL: gpu.func @gemm(%arg0: memref<1024x1024xbf16>, %arg1: memref<1024x1024xbf16>, %arg2: memref<1024x1024xf32>)
-// CHECK-SAME: attributes {intel_reqd_sub_group_size = 16 : i32}
+// CHECK-LABEL: gpu.func @gemm
 // CHECK-DAG  : %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG  : %[[C16:.*]] = arith.constant 16 : index
 // CHECK-DAG  : %[[C8:.*]] = arith.constant 8 : index
@@ -214,6 +213,13 @@ gpu.func @gemm_with_postop(%arg0: memref<1024x1024xbf16>, %arg1: memref<1024x102
   %postop = math.exp %4 {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x16xf32>
   xegpu.store_nd %postop, %2[%0, %1] {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}: vector<8x16xf32>,
     !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @dummy_func()
+// CHECK-SAME: attributes {intel_reqd_sub_group_size = 16 : i32}
+// CHECK      : gpu.return
+gpu.func @dummy_func(){
   gpu.return
 }
 
