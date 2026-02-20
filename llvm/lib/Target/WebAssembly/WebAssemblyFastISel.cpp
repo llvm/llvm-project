@@ -1285,7 +1285,7 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
   const Value *Ext = nullptr;
   MVT::SimpleValueType ExtVT = MVT::INVALID_SIMPLE_VALUE_TYPE;
   bool FoldExt = false;
-  if (Load->hasOneUse()) {
+  if (Subtarget->hasSignExt() && Load->hasOneUse()) {
     if ((Ext = dyn_cast<SExtInst>(*Load->user_begin()))) {
       ExtVT = getSimpleType(Ext->getType());
       FoldExt = true;
@@ -1355,7 +1355,7 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
   addLoadStoreOperands(Addr, MIB, createMachineMemOperandFor(Load));
 
   if (FoldExt) {
-    unsigned ExtReg = lookUpRegForValue(Ext);
+    Register ExtReg = lookUpRegForValue(Ext);
     if (ExtReg) {
       if (MachineInstr *ExtMI = MRI.getUniqueVRegDef(ExtReg)) {
         MRI.replaceRegWith(ExtReg, ResultReg);
