@@ -9,6 +9,7 @@
 #include "InputFiles.h"
 #include "OutputSections.h"
 #include "RelocScan.h"
+#include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -181,10 +182,21 @@ void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       continue;
     case R_HEX_GD_PLT_B22_PCREL:
     case R_HEX_GD_PLT_B22_PCREL_X:
-    case R_HEX_GD_PLT_B32_PCREL_X:
-      sym.setFlags(NEEDS_PLT);
-      sec.addReloc({R_PLT_PC, type, offset, addend, &sym});
+    case R_HEX_GD_PLT_B32_PCREL_X: {
+      // GD PLT: call foo@GDPLT becomes call __tls_get_addr. Create the
+      // __tls_get_addr symbol if needed and route the PLT entry to it
+      // instead of the TLS symbol.
+      Symbol *ta = ctx.symtab->find("__tls_get_addr");
+      if (!ta) {
+        ta = ctx.symtab->addSymbol(Undefined{ctx.internalFile, "__tls_get_addr",
+                                             STB_GLOBAL, STV_DEFAULT,
+                                             STT_NOTYPE});
+        ta->isPreemptible = true;
+      }
+      ta->setFlags(NEEDS_PLT);
+      sec.addReloc({R_PLT_PC, type, offset, addend, ta});
       continue;
+    }
 
     // GOT-generating relocations:
     case R_HEX_GOT_11_X:

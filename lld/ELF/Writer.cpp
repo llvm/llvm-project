@@ -1533,10 +1533,6 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   };
   finalizeOrderDependentContent();
 
-  // Converts call x@GDPLT to call __tls_get_addr
-  if (ctx.arg.emachine == EM_HEXAGON)
-    hexagonTLSSymbolUpdate(ctx);
-
   if (ctx.arg.randomizeSectionPadding)
     randomizeSectionPadding(ctx);
 
@@ -2037,15 +2033,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       sec->addrExpr = [=] { return i->second; };
   }
 
-  // With the ctx.outputSections available check for GDPLT relocations
-  // and add __tls_get_addr symbol if needed.
-  if (ctx.arg.emachine == EM_HEXAGON &&
-      hexagonNeedsTLSSymbol(ctx.outputSections)) {
-    Symbol *sym =
-        ctx.symtab->addSymbol(Undefined{ctx.internalFile, "__tls_get_addr",
-                                        STB_GLOBAL, STV_DEFAULT, STT_NOTYPE});
-    sym->isPreemptible = true;
-    ctx.partitions[0].dynSymTab->addSymbol(sym);
+  // For Hexagon TLS GD, __tls_get_addr is created during relocation scanning
+  // in Hexagon::scanSectionImpl. Add it to the dynamic symbol table here.
+  if (ctx.arg.emachine == EM_HEXAGON) {
+    if (Symbol *sym = ctx.symtab->find("__tls_get_addr"))
+      ctx.partitions[0].dynSymTab->addSymbol(sym);
   }
 
   // This is a bit of a hack. A value of 0 means undef, so we set it
