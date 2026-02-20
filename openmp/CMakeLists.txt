@@ -41,12 +41,19 @@ else()
       "Path where built OpenMP libraries should be installed.")
 endif()
 
-if (NOT MSVC)
-  set(OPENMP_TEST_C_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang)
-  set(OPENMP_TEST_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++)
+if (NOT TARGET "clang")
+  set(OPENMP_TEST_C_COMPILER ${CMAKE_C_COMPILER} CACHE STRING
+    "C compiler to use for testing OpenMP runtime libraries.")
+  set(OPENMP_TEST_CXX_COMPILER ${CMAKE_CXX_COMPILER} CACHE STRING
+    "C++ compiler to use for testing OpenMP runtime libraries.")
 else()
-  set(OPENMP_TEST_C_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang.exe)
-  set(OPENMP_TEST_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++.exe)
+  if (NOT MSVC)
+    set(OPENMP_TEST_C_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang)
+    set(OPENMP_TEST_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++)
+  else()
+    set(OPENMP_TEST_C_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang.exe)
+    set(OPENMP_TEST_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++.exe)
+  endif()
 endif()
 
 # Set fortran test compiler if flang is found
