@@ -102,5 +102,8 @@ int main(int, char**)
     test<long double, float>();
     test<long double, double>();
 
-  return 0;
+    // Make sure LWG4191: P1467 is respected.
+    static_assert(std::is_same_v<decltype(std::pow(std::complex<float>(), int())), std::complex<double>>, "");
+
+    return 0;
 }
