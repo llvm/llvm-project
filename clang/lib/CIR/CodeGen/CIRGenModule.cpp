@@ -2884,3 +2884,111 @@ cir::LabelOp
 CIRGenModule::lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo) {
   return blockAddressInfoToLabel.lookup(blockInfo);
 }
+
+mlir::Operation *
+CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
+                                       const Expr *init) {
+  assert((mte->getStorageDuration() == SD_Static ||
+          mte->getStorageDuration() == SD_Thread) &&
+         "not a global temporary");
+  const auto *varDecl = cast<VarDecl>(mte->getExtendingDecl());
+
+  // If we're not materializing a subobject of the temporary, keep the
+  // cv-qualifiers from the type of the MaterializeTemporaryExpr.
+  QualType materializedType = init->getType();
+  if (init == mte->getSubExpr())
+    materializedType = mte->getType();
+
+  CharUnits align = getASTContext().getTypeAlignInChars(materializedType);
+
+  assert(!cir::MissingFeatures::materializedGlobalTempCache());
+
+  // FIXME: If an externally-visible declaration extends multiple temporaries,
+  // we need to give each temporary the same name in every translation unit (and
+  // we also need to make the temporaries externally-visible).
+  llvm::SmallString<256> name;
+  llvm::raw_svector_ostream out(name);
+  getCXXABI().getMangleContext().mangleReferenceTemporary(
+      varDecl, mte->getManglingNumber(), out);
+
+  APValue *value = nullptr;
+  if (mte->getStorageDuration() == SD_Static && varDecl->evaluateValue()) {
+    // If the initializer of the extending declaration is a constant
+    // initializer, we should have a cached constant initializer for this
+    // temporay. Note taht this m ight have a different value from the value
+    // computed by evaluating the initializer if the surrounding constant
+    // expression modifies the temporary.
+    value = mte->getOrCreateValue(/*MayCreate=*/false);
+  }
+
+  // Try evaluating it now, it might have a constant initializer
+  Expr::EvalResult evalResult;
+  if (!value && init->EvaluateAsRValue(evalResult, getASTContext()) &&
+      !evalResult.hasSideEffects())
+    value = &evalResult.Val;
+
+  assert(!cir::MissingFeatures::addressSpace());
+
+  std::optional<ConstantEmitter> emitter;
+  mlir::Attribute initialValue = nullptr;
+  bool isConstant = false;
+  mlir::Type type;
+
+  if (value) {
+    emitter.emplace(*this);
+    initialValue =
+        emitter->emitForInitializer(*value, materializedType);
+
+    isConstant = materializedType.isConstantStorage(
+        getASTContext(), /*ExcludeCtor=*/value, /*ExcludeDtor=*/false);
+
+    type = mlir::cast<mlir::TypedAttr>(initialValue).getType();
+  } else {
+    // No initializer, the initialization will be provided when we initialize
+    // the declaration which performed lifetime extension.
+    type = getTypes().convertTypeForMem(materializedType);
+  }
+
+  // Create a global variable for this lifetime-extended temporary.
+  cir::GlobalLinkageKind linkage =
+      getCIRLinkageVarDefinition(varDecl, /*isConstant=*/false);
+  if (linkage == cir::GlobalLinkageKind::ExternalLinkage) {
+    const VarDecl *initVD;
+    if (varDecl->isStaticDataMember() && varDecl->getAnyInitializer(initVD) &&
+        isa<CXXRecordDecl>(initVD->getLexicalDeclContext())) {
+      // Temporaries defined inside a class get linkonce_odr linkage because the
+      // calss can be defined in multiple translation units.
+      errorNYI(mte->getSourceRange(), "static data member initialization");
+    } else {
+      // There is no need for this temporary to have external linkage if the
+      // VarDecl has external linkage.
+      linkage = cir::GlobalLinkageKind::InternalLinkage;
+    }
+  }
+  auto loc = getLoc(mte->getSourceRange());
+  auto gv = createGlobalOp(*this, loc, name, type, isConstant);
+  gv.setInitialValueAttr(initialValue);
+
+  if (emitter)
+    emitter->finalize(gv);
+  // Don't assign dllimport or dllexport to local linkage globals
+  if (!gv.hasLocalLinkage()) {
+    setGVProperties(gv, varDecl);
+    assert(!cir::MissingFeatures::setDLLStorageClass());
+  }
+
+  gv.setAlignment(align.getAsAlign().value());
+  if (supportsCOMDAT() && gv.isWeakForLinker())
+    errorNYI(mte->getSourceRange(),
+             "Global temporary with comdat/weak linkage");
+  if (varDecl->getTLSKind())
+    errorNYI(mte->getSourceRange(),
+             "Global temporary with thread local storage");
+  mlir::Operation *cv = gv;
+
+  assert(!cir::MissingFeatures::addressSpace());
+
+  assert(!cir::MissingFeatures::materializedGlobalTempCache());
+
+  return cv;
+}

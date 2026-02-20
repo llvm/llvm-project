@@ -655,6 +655,11 @@ public:
   // Finalize CIR code generation.
   void release();
 
+  /// Returns a pointer to a global variable representing a temporary with
+  /// static or thread storage duration.
+  mlir::Operation *getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
+                                            const Expr *init);
+
   /// -------
   /// Visibility and Linkage
   /// -------
