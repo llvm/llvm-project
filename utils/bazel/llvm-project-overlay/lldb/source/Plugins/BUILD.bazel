@@ -2078,6 +2078,7 @@ cc_library(
         "//llvm:BinaryFormat",
         "//llvm:Object",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
