@@ -990,3 +990,38 @@ bb:
   ret void
 }
 
+define <16 x i32> @shuffle_v16f32_00_18_02_18_4_22_06_22_08_26_10_26_12_30_14_30(<16 x i32> %a) {
+; AVX512F-LABEL: shuffle_v16f32_00_18_02_18_4_22_06_22_08_26_10_26_12_30_14_30:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    movw $-21846, %ax # imm = 0xAAAA
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[2,2,2,2,6,6,6,6,10,10,10,10,14,14,14,14]
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: shuffle_v16f32_00_18_02_18_4_22_06_22_08_26_10_26_12_30_14_30:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    movw $-21846, %ax # imm = 0xAAAA
+; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[2,2,2,2,6,6,6,6,10,10,10,10,14,14,14,14]
+; AVX512BW-NEXT:    retq
+  %res = shufflevector <16 x i32> <i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison>, <16 x i32> %a, <16 x i32> <i32 0, i32 18, i32 2, i32 18, i32 4, i32 22, i32 6, i32 22, i32 8, i32 26, i32 10, i32 26, i32 12, i32 30, i32 14, i32 30>
+  ret <16 x i32> %res
+}
+
+define <16 x i32> @shuffle_v16f32_16_02_18_02_20_06_22_06_24_10_26_10_28_14_30_14(<16 x i32> %a) {
+; AVX512F-LABEL: shuffle_v16f32_16_02_18_02_20_06_22_06_24_10_26_10_28_14_30_14:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    movw $-21846, %ax # imm = 0xAAAA
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[2,2,2,2,6,6,6,6,10,10,10,10,14,14,14,14]
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: shuffle_v16f32_16_02_18_02_20_06_22_06_24_10_26_10_28_14_30_14:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    movw $-21846, %ax # imm = 0xAAAA
+; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[2,2,2,2,6,6,6,6,10,10,10,10,14,14,14,14]
+; AVX512BW-NEXT:    retq
+  %res = shufflevector <16 x i32> %a , <16 x i32> <i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison>, <16 x i32> <i32 16, i32 2, i32 18, i32 2, i32 20, i32 6, i32 22, i32 6, i32 24, i32 10, i32 26, i32 10, i32 28, i32 14, i32 30, i32 14>
+  ret <16 x i32> %res
+}
