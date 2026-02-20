@@ -28,17 +28,13 @@ define amdgpu_ps half @image_sample_2d_v2f32(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX7-NEXT:  main_body:
 ; GFX7-NEXT:    [[TEX:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.lz.2d.v2f32.f32.v8i32.v4i32(i32 3, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
 ; GFX7-NEXT:    [[TEX_2_HALF:%.*]] = fptrunc <2 x float> [[TEX]] to <2 x half>
-; GFX7-NEXT:    [[TEX_HALF_0:%.*]] = extractelement <2 x half> [[TEX_2_HALF]], i64 0
-; GFX7-NEXT:    [[TEX_HALF_1:%.*]] = extractelement <2 x half> [[TEX_2_HALF]], i64 1
-; GFX7-NEXT:    [[ADDF_SUM_0:%.*]] = fadd half [[TEX_HALF_0]], [[TEX_HALF_1]]
+; GFX7-NEXT:    [[ADDF_SUM_0:%.*]] = call half @llvm.vector.reduce.fadd.v2f16(half 0xH8000, <2 x half> [[TEX_2_HALF]])
 ; GFX7-NEXT:    ret half [[ADDF_SUM_0]]
 ;
 ; GFX81PLUS-LABEL: @image_sample_2d_v2f32(
 ; GFX81PLUS-NEXT:  main_body:
 ; GFX81PLUS-NEXT:    [[TEX:%.*]] = call <2 x half> @llvm.amdgcn.image.sample.lz.2d.v2f16.f32.v8i32.v4i32(i32 3, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; GFX81PLUS-NEXT:    [[TEX_HALF_0:%.*]] = extractelement <2 x half> [[TEX]], i64 0
-; GFX81PLUS-NEXT:    [[TEX_HALF_1:%.*]] = extractelement <2 x half> [[TEX]], i64 1
-; GFX81PLUS-NEXT:    [[ADDF_SUM_0:%.*]] = fadd half [[TEX_HALF_0]], [[TEX_HALF_1]]
+; GFX81PLUS-NEXT:    [[ADDF_SUM_0:%.*]] = call half @llvm.vector.reduce.fadd.v2f16(half 0xH8000, <2 x half> [[TEX]])
 ; GFX81PLUS-NEXT:    ret half [[ADDF_SUM_0]]
 ;
 main_body:
@@ -55,21 +51,13 @@ define amdgpu_ps half @image_sample_2d_v3f32(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX7-NEXT:  main_body:
 ; GFX7-NEXT:    [[TEX:%.*]] = call <3 x float> @llvm.amdgcn.image.sample.lz.2d.v3f32.f32.v8i32.v4i32(i32 7, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
 ; GFX7-NEXT:    [[TEX_3_HALF:%.*]] = fptrunc <3 x float> [[TEX]] to <3 x half>
-; GFX7-NEXT:    [[TEX_HALF_0:%.*]] = extractelement <3 x half> [[TEX_3_HALF]], i64 0
-; GFX7-NEXT:    [[TEX_HALF_1:%.*]] = extractelement <3 x half> [[TEX_3_HALF]], i64 1
-; GFX7-NEXT:    [[TEX_HALF_2:%.*]] = extractelement <3 x half> [[TEX_3_HALF]], i64 2
-; GFX7-NEXT:    [[ADDF_SUM_0:%.*]] = fadd half [[TEX_HALF_0]], [[TEX_HALF_1]]
-; GFX7-NEXT:    [[ADDF_SUM_1:%.*]] = fadd half [[ADDF_SUM_0]], [[TEX_HALF_2]]
+; GFX7-NEXT:    [[ADDF_SUM_1:%.*]] = call half @llvm.vector.reduce.fadd.v3f16(half 0xH8000, <3 x half> [[TEX_3_HALF]])
 ; GFX7-NEXT:    ret half [[ADDF_SUM_1]]
 ;
 ; GFX81PLUS-LABEL: @image_sample_2d_v3f32(
 ; GFX81PLUS-NEXT:  main_body:
 ; GFX81PLUS-NEXT:    [[TEX:%.*]] = call <3 x half> @llvm.amdgcn.image.sample.lz.2d.v3f16.f32.v8i32.v4i32(i32 7, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
-; GFX81PLUS-NEXT:    [[TEX_HALF_0:%.*]] = extractelement <3 x half> [[TEX]], i64 0
-; GFX81PLUS-NEXT:    [[TEX_HALF_1:%.*]] = extractelement <3 x half> [[TEX]], i64 1
-; GFX81PLUS-NEXT:    [[TEX_HALF_2:%.*]] = extractelement <3 x half> [[TEX]], i64 2
-; GFX81PLUS-NEXT:    [[ADDF_SUM_0:%.*]] = fadd half [[TEX_HALF_0]], [[TEX_HALF_1]]
-; GFX81PLUS-NEXT:    [[ADDF_SUM_1:%.*]] = fadd half [[ADDF_SUM_0]], [[TEX_HALF_2]]
+; GFX81PLUS-NEXT:    [[ADDF_SUM_1:%.*]] = call half @llvm.vector.reduce.fadd.v3f16(half 0xH8000, <3 x half> [[TEX]])
 ; GFX81PLUS-NEXT:    ret half [[ADDF_SUM_1]]
 ;
 main_body:
@@ -297,16 +285,12 @@ define amdgpu_ps half @load_1d_v2(i16 %s, <8 x i32> inreg %rsrc) {
 ; GFX7-LABEL: @load_1d_v2(
 ; GFX7-NEXT:    [[V2_FLOAT:%.*]] = call <2 x float> @llvm.amdgcn.image.load.1d.v2f32.i16.v8i32(i32 3, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX7-NEXT:    [[V2_HALF:%.*]] = fptrunc <2 x float> [[V2_FLOAT]] to <2 x half>
-; GFX7-NEXT:    [[S0:%.*]] = extractelement <2 x half> [[V2_HALF]], i64 0
-; GFX7-NEXT:    [[S1:%.*]] = extractelement <2 x half> [[V2_HALF]], i64 1
-; GFX7-NEXT:    [[ADDF_SUM_0:%.*]] = fadd half [[S0]], [[S1]]
+; GFX7-NEXT:    [[ADDF_SUM_0:%.*]] = call half @llvm.vector.reduce.fadd.v2f16(half 0xH8000, <2 x half> [[V2_HALF]])
 ; GFX7-NEXT:    ret half [[ADDF_SUM_0]]
 ;
 ; GFX81PLUS-LABEL: @load_1d_v2(
 ; GFX81PLUS-NEXT:    [[V2_FLOAT:%.*]] = call <2 x half> @llvm.amdgcn.image.load.1d.v2f16.i16.v8i32(i32 3, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
-; GFX81PLUS-NEXT:    [[S0:%.*]] = extractelement <2 x half> [[V2_FLOAT]], i64 0
-; GFX81PLUS-NEXT:    [[S1:%.*]] = extractelement <2 x half> [[V2_FLOAT]], i64 1
-; GFX81PLUS-NEXT:    [[ADDF_SUM_0:%.*]] = fadd half [[S0]], [[S1]]
+; GFX81PLUS-NEXT:    [[ADDF_SUM_0:%.*]] = call half @llvm.vector.reduce.fadd.v2f16(half 0xH8000, <2 x half> [[V2_FLOAT]])
 ; GFX81PLUS-NEXT:    ret half [[ADDF_SUM_0]]
 ;
   %v2_float = call <2 x float> @llvm.amdgcn.image.load.1d.v2f32.i16.v8i32(i32 3, i16 %s, <8 x i32> %rsrc, i32 0, i32 0)
@@ -406,17 +390,13 @@ define amdgpu_ps half @load_2dmsaa_v2(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32
 ; GFX7-NEXT:  main_body:
 ; GFX7-NEXT:    [[V2_FLOAT:%.*]] = call <2 x float> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v2f32.i32.v8i32(i32 3, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFX7-NEXT:    [[V2_HALF:%.*]] = fptrunc <2 x float> [[V2_FLOAT]] to <2 x half>
-; GFX7-NEXT:    [[S0:%.*]] = extractelement <2 x half> [[V2_HALF]], i64 0
-; GFX7-NEXT:    [[S1:%.*]] = extractelement <2 x half> [[V2_HALF]], i64 1
-; GFX7-NEXT:    [[ADDF_SUM_0:%.*]] = fadd half [[S0]], [[S1]]
+; GFX7-NEXT:    [[ADDF_SUM_0:%.*]] = call half @llvm.vector.reduce.fadd.v2f16(half 0xH8000, <2 x half> [[V2_HALF]])
 ; GFX7-NEXT:    ret half [[ADDF_SUM_0]]
 ;
 ; GFX81PLUS-LABEL: @load_2dmsaa_v2(
 ; GFX81PLUS-NEXT:  main_body:
 ; GFX81PLUS-NEXT:    [[V2_FLOAT:%.*]] = call <2 x half> @llvm.amdgcn.image.msaa.load.x.2dmsaa.v2f16.i32.v8i32(i32 3, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[FRAGID:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
-; GFX81PLUS-NEXT:    [[S0:%.*]] = extractelement <2 x half> [[V2_FLOAT]], i64 0
-; GFX81PLUS-NEXT:    [[S1:%.*]] = extractelement <2 x half> [[V2_FLOAT]], i64 1
-; GFX81PLUS-NEXT:    [[ADDF_SUM_0:%.*]] = fadd half [[S0]], [[S1]]
+; GFX81PLUS-NEXT:    [[ADDF_SUM_0:%.*]] = call half @llvm.vector.reduce.fadd.v2f16(half 0xH8000, <2 x half> [[V2_FLOAT]])
 ; GFX81PLUS-NEXT:    ret half [[ADDF_SUM_0]]
 ;
 main_body:

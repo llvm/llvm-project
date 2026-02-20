@@ -2362,6 +2362,12 @@ inline CastInst_match<OpTy, FPExtInst> m_FPExt(const OpTy &Op) {
   return CastInst_match<OpTy, FPExtInst>(Op);
 }
 
+template <typename OpTy>
+inline match_combine_or<CastInst_match<OpTy, FPExtInst>, OpTy>
+m_FPExtOrSelf(const OpTy &Op) {
+  return m_CombineOr(m_FPExt(Op), Op);
+}
+
 //===----------------------------------------------------------------------===//
 // Matchers for control flow.
 //

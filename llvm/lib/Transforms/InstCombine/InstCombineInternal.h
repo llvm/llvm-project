@@ -399,6 +399,7 @@ private:
   Instruction *matchSAddSubSat(IntrinsicInst &MinMax1);
   Instruction *foldNot(BinaryOperator &I);
   Instruction *foldBinOpOfDisplacedShifts(BinaryOperator &I);
+  Instruction *foldOrderedFloatingPointReduction(Instruction *I);
 
   /// Determine if a pair of casts can be replaced by a single cast.
   ///

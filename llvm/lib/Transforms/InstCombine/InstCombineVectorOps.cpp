@@ -324,6 +324,82 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
   return nullptr;
 }
 
+/// Folds a chain of vector extracts + fadds into an ordered floating-point
+/// reduction. This is intended to match trivial cases SLP currently misses
+/// without fast-math, which can occur from common patterns in user code (like
+/// `vec[0] + vec[1] + vec[2] + vec[3]`).
+///
+///  The reduction can include fpexts and a final fptrunc:
+///  ```
+///  %elt.0 = extractelement <8 x half> %vec, i64 0
+///  %ext.elt.0 = fpext half %elt.0 to float
+///  %acc.1 = fadd float %ext.elt.0, ...
+///  ...
+///  %elt.7 = extractelement <8 x half> %vec, i64 7
+///  %ext.elt.7 = fpext half %elt.7 to float
+///  %acc.7 = fadd float %acc.6, %ext.elt.7
+///  %result = fptrunc float %acc.7 to half
+///  ```
+///
+///  Or operate directly on the type:
+///  ```
+///  %elt.0 = extractelement <4 x float> %vec, i64 0
+///  %acc.1 = fadd float %ext.0, ...
+///  ...
+///  %elt.3 = extractelement <4 x float> %vec, i64 3
+///  %result = fadd float %acc.2, %elt.3
+///  ```
+///
+/// TODO: Support reductions other than fadd? (fmin/max)
+/// TODO: Support out-of-order extracts with an additional shufflevector?
+Instruction *
+InstCombinerImpl::foldOrderedFloatingPointReduction(Instruction *I) {
+  Value *Root = I;
+  if (auto *FPTrunc = dyn_cast<FPTruncInst>(Root))
+    Root = FPTrunc->getOperand(0);
+
+  // Match the final fadd in the chain.
+  Value *Vec, *Acc;
+  uint64_t ExtractIdx;
+  if (!match(Root, m_FAdd(m_Value(Acc),
+                          m_FPExtOrSelf(m_ExtractElt(
+                              m_Value(Vec), m_ConstantInt(ExtractIdx))))))
+    return nullptr;
+
+  auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+  if (!VecTy || I->getType() != VecTy->getScalarType())
+    return nullptr;
+
+  unsigned NumElts = VecTy->getNumElements();
+  if (ExtractIdx != NumElts - 1)
+    return nullptr;
+
+  // Walk up all intermediate fadds until we find the first lane.
+  FastMathFlags FMF = cast<FPMathOperator>(Root)->getFastMathFlags();
+  for (int Idx = ExtractIdx - 1; Idx > 0; --Idx) {
+    Value *NextAcc;
+    if (!match(Acc,
+               m_OneUse(m_FAdd(m_Value(NextAcc),
+                               m_FPExtOrSelf(m_ExtractElt(
+                                   m_Specific(Vec), m_SpecificInt(Idx)))))))
+      return nullptr;
+
+    FMF &= cast<FPMathOperator>(Acc)->getFastMathFlags();
+    Acc = NextAcc;
+  }
+
+  // Check the start value is the first element.
+  if (!match(Acc,
+             m_FPExtOrSelf(m_ExtractElt(m_Specific(Vec), m_SpecificInt(0)))))
+    return nullptr;
+
+  // Create the reduction propagating common fast-math flags.
+  auto *Reduce = Builder.CreateIntrinsic(
+      Intrinsic::vector_reduce_fadd, {VecTy},
+      {ConstantFP::get(VecTy->getScalarType(), -0.0), Vec}, FMF);
+  return replaceInstUsesWith(*I, Reduce);
+}
+
 /// Find elements of V demanded by UserInstr. If returns false, we were not able
 /// to determine all elements.
 static bool findDemandedEltsBySingleUser(Value *V, Instruction *UserInstr,
