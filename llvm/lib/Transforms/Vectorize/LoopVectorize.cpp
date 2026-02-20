@@ -6968,45 +6968,6 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     }
   }
 
-  /// Compute the cost of all exiting conditions of the loop using the legacy
-  /// cost model. This is to match the legacy behavior, which adds the cost of
-  /// all exit conditions. Note that this over-estimates the cost, as there will
-  /// be a single condition to control the vector loop.
-  SmallVector<BasicBlock *> Exiting;
-  CM.TheLoop->getExitingBlocks(Exiting);
-  SetVector<Instruction *> ExitInstrs;
-  // Collect all exit conditions.
-  for (BasicBlock *EB : Exiting) {
-    auto *Term = dyn_cast<BranchInst>(EB->getTerminator());
-    if (!Term || CostCtx.skipCostComputation(Term, VF.isVector()))
-      continue;
-    if (auto *CondI = dyn_cast<Instruction>(Term->getOperand(0))) {
-      ExitInstrs.insert(CondI);
-    }
-  }
-  // Compute the cost of all instructions only feeding the exit conditions.
-  for (unsigned I = 0; I != ExitInstrs.size(); ++I) {
-    Instruction *CondI = ExitInstrs[I];
-    if (!OrigLoop->contains(CondI) ||
-        !CostCtx.SkipCostComputation.insert(CondI).second)
-      continue;
-    InstructionCost CondICost = CostCtx.getLegacyCost(CondI, VF);
-    LLVM_DEBUG({
-      dbgs() << "Cost of " << CondICost << " for VF " << VF
-             << ": exit condition instruction " << *CondI << "\n";
-    });
-    Cost += CondICost;
-    for (Value *Op : CondI->operands()) {
-      auto *OpI = dyn_cast<Instruction>(Op);
-      if (!OpI || CostCtx.skipCostComputation(OpI, VF.isVector()) ||
-          any_of(OpI->users(), [&ExitInstrs](User *U) {
-            return !ExitInstrs.contains(cast<Instruction>(U));
-          }))
-        continue;
-      ExitInstrs.insert(OpI);
-    }
-  }
-
   // Pre-compute the costs for branches except for the backedge, as the number
   // of replicate regions in a VPlan may not directly match the number of
   // branches, which would lead to different decisions.
@@ -7130,8 +7091,8 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       }
       // Unused FOR splices are removed by VPlan transforms, so the VPlan-based
       // cost model won't cost it whilst the legacy will.
+      using namespace VPlanPatternMatch;
       if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R)) {
-        using namespace VPlanPatternMatch;
         if (none_of(FOR->users(),
                     match_fn(m_VPInstruction<
                              VPInstruction::FirstOrderRecurrenceSplice>())))
@@ -7182,10 +7143,19 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
                 RepR->getUnderlyingInstr(), VF))
           return true;
       }
+
+      // The VPlan-based cost model knows that if TC <= VF then no compare is
+      // needed in branch-on-count, but the legacy cost model does not.
+      if (match(&R, m_BranchOnCount(m_VPValue(), m_VPValue()))) {
+        Value *TC = Plan.getTripCount()->getUnderlyingValue();
+        ConstantInt *TCConst = dyn_cast_if_present<ConstantInt>(TC);
+        if (TCConst && TCConst->getValue().ule(VF.getKnownMinValue()))
+          return true;
+      }
+
       if (Instruction *UI = GetInstructionForCost(&R)) {
         // If we adjusted the predicate of the recipe, the cost in the legacy
         // cost model may be different.
-        using namespace VPlanPatternMatch;
         CmpPredicate Pred;
         if (match(&R, m_Cmp(Pred, m_VPValue(), m_VPValue())) &&
             cast<VPRecipeWithIRFlags>(R).getPredicate() !=
@@ -7217,6 +7187,55 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       return !SeenInstrs.contains(&I) && !CostCtx.skipCostComputation(&I, true);
     });
   });
+}
+
+static bool planContainsDifferentCompares(VPlan &Plan, VPCostContext &CostCtx,
+                                          Loop *TheLoop, ElementCount VF) {
+  // Count how many compare instructions there are in the legacy cost model.
+  unsigned NumLegacyScalarCompares = 0, NumLegacyVectorCompares = 0;
+  for (BasicBlock *BB : TheLoop->blocks()) {
+    for (auto &I : *BB) {
+      if (isa<CmpInst>(I)) {
+        if (CostCtx.CM.isUniformAfterVectorization(&I, VF))
+          NumLegacyScalarCompares += 1;
+        else
+          NumLegacyVectorCompares += 1;
+      }
+    }
+  }
+
+  // Count how many compare instructions there are in the VPlan.
+  unsigned NumVPlanScalarCompares = 0, NumVPlanVectorCompares = 0;
+  VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
+  auto Iter = vp_depth_first_deep(VectorRegion->getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
+    // Only the blocks in the vector region are relevant.
+    if (VPBB->getEnclosingLoopRegion() != VectorRegion)
+      continue;
+    for (VPRecipeBase &R : *VPBB) {
+      using namespace VPlanPatternMatch;
+      if (match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())) ||
+          match(&R, m_Cmp(m_VPValue(), m_VPValue()))) {
+        if (vputils::onlyFirstLaneUsed(cast<VPSingleDefRecipe>(&R)))
+          NumVPlanScalarCompares += 1;
+        else
+          NumVPlanVectorCompares += 1;
+      }
+    }
+  }
+
+  // If we have a different amount, then the legacy cost model and vplan will
+  // disagree.
+  bool Disagree = NumLegacyScalarCompares != NumVPlanScalarCompares ||
+                  NumLegacyVectorCompares != NumVPlanVectorCompares;
+  if (Disagree)
+    LLVM_DEBUG(
+        dbgs() << "LV: Legacy and VPlan disagree about number of compares."
+               << " Legacy Scalar=" << NumLegacyScalarCompares
+               << " Vector=" << NumLegacyVectorCompares
+               << ", VPlan Scalar=" << NumVPlanScalarCompares
+               << " Vector=" << NumVPlanVectorCompares << "\n");
+  return Disagree;
 }
 #endif
 
@@ -7325,6 +7344,8 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // * VPlans with additional VPlan simplifications,
   // * EVL-based VPlans with gather/scatters (the VPlan-based cost model uses
   //   vp_scatter/vp_gather).
+  // * VPlans containing a different number of compare instructions to what's
+  //   present in the original scalar loop.
   // The legacy cost model doesn't properly model costs for such loops.
   bool UsesEVLGatherScatter =
       any_of(VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
@@ -7338,6 +7359,8 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   assert(
       (BestFactor.Width == LegacyVF.Width || BestPlan.hasEarlyExit() ||
        !Legal->getLAI()->getSymbolicStrides().empty() || UsesEVLGatherScatter ||
+       planContainsDifferentCompares(BestPlan, CostCtx, OrigLoop,
+                                     BestFactor.Width) ||
        planContainsAdditionalSimplifications(
            getPlanFor(BestFactor.Width), CostCtx, OrigLoop, BestFactor.Width) ||
        planContainsAdditionalSimplifications(

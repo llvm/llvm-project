@@ -1194,7 +1194,7 @@ define void @log10(ptr %a, ptr %b, i64 %N) {
 ; NO-VP-NEXT:  [[ENTRY:.*]]:
 ; NO-VP-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; NO-VP-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 12
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP1:%.*]] = sub i64 [[A1]], [[B2]]
