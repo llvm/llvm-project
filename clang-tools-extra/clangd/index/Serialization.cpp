@@ -185,9 +185,8 @@ public:
   // If path remapping is enabled, transform and store the new value.
   void intern(llvm::StringRef &S) {
     if (Transform) {
-      std::string Transformed = (*Transform)(S);
-      if (Transformed != S)
-        S = TransformSaver.save(std::move(Transformed));
+      if (auto Transformed = (*Transform)(S))
+        S = TransformSaver.save(std::move(*Transformed));
     }
     S = *Unique.insert(S).first;
   }
@@ -265,10 +264,9 @@ readStringTable(llvm::StringRef Data,
     if (Len == llvm::StringRef::npos)
       return error("Bad string table: not null terminated");
     llvm::StringRef S = R.consume(Len);
-    if (Transform)
-      Table.Strings.push_back(Saver.save((*Transform)(S)));
-    else
-      Table.Strings.push_back(Saver.save(S));
+    auto Transformed = Transform ? (*Transform)(S) : std::nullopt;
+    Table.Strings.push_back(
+        Saver.save(Transformed ? std::move(*Transformed) : llvm::StringRef(S)));
     R.consume8();
   }
   if (R.err())

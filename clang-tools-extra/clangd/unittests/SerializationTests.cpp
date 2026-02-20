@@ -451,21 +451,27 @@ TEST(SerializationTest, NoCrashOnBadStringTableSize) {
 TEST(SerializationTest, PathTransformRoundTrip) {
   // Store transform: map /workarea/project -> /home/project so that
   // on-disk content stays in the canonical /home/project paths.
-  PathTransform StoreTransform = [](llvm::StringRef URI) -> std::string {
+  PathTransform StoreTransform =
+      [](llvm::StringRef URI) -> std::optional<std::string> {
     std::string S = URI.str();
     size_t Pos = S.find("/workarea/project/");
-    if (Pos != std::string::npos)
+    if (Pos != std::string::npos) {
       S.replace(Pos, strlen("/workarea/project/"), "/home/project/");
-    return S;
+      return S;
+    }
+    return std::nullopt;
   };
   // Load transform: map /home/project -> /workarea/project so that
   // in-memory paths match the local filesystem.
-  PathTransform LoadTransform = [](llvm::StringRef URI) -> std::string {
+  PathTransform LoadTransform =
+      [](llvm::StringRef URI) -> std::optional<std::string> {
     std::string S = URI.str();
     size_t Pos = S.find("/home/project/");
-    if (Pos != std::string::npos)
+    if (Pos != std::string::npos) {
       S.replace(Pos, strlen("/home/project/"), "/workarea/project/");
-    return S;
+      return S;
+    }
+    return std::nullopt;
   };
 
   // The index is generated with /home/project paths.

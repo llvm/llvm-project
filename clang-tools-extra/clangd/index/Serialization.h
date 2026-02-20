@@ -36,7 +36,9 @@ namespace clang {
 namespace clangd {
 
 // Used to remap URIs and paths during serialization/deserialization.
-using PathTransform = llvm::unique_function<std::string(llvm::StringRef) const>;
+// Return std::nullopt if the path was not transformed.
+using PathTransform =
+    llvm::unique_function<std::optional<std::string>(llvm::StringRef) const>;
 
 enum class IndexFileFormat {
   RIFF, // Versioned binary format, suitable for production use.

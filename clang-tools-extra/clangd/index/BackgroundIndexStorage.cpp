@@ -25,11 +25,11 @@ namespace clang {
 namespace clangd {
 namespace {
 
-// Apply path mapping to file:// URIs or raw file paths. Return unmodified
-// path if no mapping was applied.
-std::string applyPathMapping(llvm::StringRef S,
-                             PathMapping::Direction Direction,
-                             const PathMappings &Mappings) {
+// Apply path mapping to file:// URIs or raw file paths. Returns std::nullopt
+// if no mapping was applied.
+std::optional<std::string> applyPathMapping(llvm::StringRef S,
+                                            PathMapping::Direction Direction,
+                                            const PathMappings &Mappings) {
   // First, attempt URI mapping
   if (auto Mapped = doPathMapping(S, Direction, Mappings))
     return std::move(*Mapped);
@@ -50,7 +50,7 @@ std::string applyPathMapping(llvm::StringRef S,
         return (S.substr(0, Pos) + To + After).str();
     }
   }
-  return S.str();
+  return std::nullopt;
 }
 
 std::string getShardPathFromFilePath(llvm::StringRef ShardRoot,
@@ -82,12 +82,12 @@ public:
       : DiskShardRoot(Directory), Mappings(std::move(Mappings)) {
     // Background path mappings are specified as /local/path=/canonical/path.
     // During load we transform from canonical to local (ServerToClient).
-    LoadTransform = [this](llvm::StringRef S) {
+    LoadTransform = [this](llvm::StringRef S) -> std::optional<std::string> {
       return applyPathMapping(S, PathMapping::Direction::ServerToClient,
                               this->Mappings);
     };
     // During store we transform from local to canonical (ClientToServer).
-    StoreTransform = [this](llvm::StringRef S) {
+    StoreTransform = [this](llvm::StringRef S) -> std::optional<std::string> {
       return applyPathMapping(S, PathMapping::Direction::ClientToServer,
                               this->Mappings);
     };
