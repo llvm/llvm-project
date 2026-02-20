@@ -1273,7 +1273,7 @@ llvm.func @rocdl.tensor.load.to.lds(%dgroup0 : vector<4xi32>, %dgroup1 : vector<
                                     %dgroup2 : vector<4xi32>, %dgroup3 : vector<4xi32>,
                                     %dgroup4 : vector<8xi32>) {
   // CHECK: call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %{{.*}}, <8 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <8 x i32> %{{.*}}, i32 0)
-  rocdl.tensor.load.to.lds %dgroup0, %dgroup1, %dgroup2, %dgroup3, dgroup4 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  rocdl.tensor.load.to.lds %dgroup0, %dgroup1, %dgroup2, %dgroup3, %dgroup4 cachepolicy 0 : vector<4xi32>, vector<8xi32>
   llvm.return
 }
 
