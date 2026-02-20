@@ -168,12 +168,11 @@ readDenseIntOrFPElementsAttr(DialectBytecodeReader &reader, ShapedType type,
   // cheap.
   size_t numElements = type.getNumElements();
   size_t packedSize = llvm::divideCeil(numElements, 8);
-  if (blob.size() == packedSize && blob.size() != numElements &&
-      blob.size() != 1) {
+  if (blob.size() == packedSize && blob.size() != numElements) {
     // Unpack the blob.
     rawData.resize(numElements);
     for (size_t i = 0; i < numElements; ++i)
-      rawData[i] = (blob[i / 8] & (1 << (i % 8))) ? 0xFF : 0x00;
+      rawData[i] = (blob[i / 8] & (1 << (i % 8))) ? 1 : 0;
     return success();
   }
   // Otherwise, fallback to the default behavior.
