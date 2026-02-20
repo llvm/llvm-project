@@ -317,6 +317,71 @@ void test_relational() {
 #endif
 }
 
+struct A1 {
+  bool operator==(const A1&) const { return true; }
+  bool operator!=(const A1&) const { return true; }
+  bool operator<(const A1&) const { return true; }
+  bool operator>(const A1&) const { return true; }
+  bool operator<=(const A1&) const { return true; }
+  bool operator>=(const A1&) const { return true; }
+};
+struct A2 {
+  bool operator==(const A2&) const { return true; }
+  bool operator!=(const A2&) const { return true; }
+  bool operator<(const A2&) const { return true; }
+  bool operator>(const A2&) const { return true; }
+  bool operator<=(const A2&) const { return true; }
+  bool operator>=(const A2&) const { return true; }
+};
+
+struct Array;
+
+using Var1 = std::variant<A1, Array>;
+using Var2 = std::variant<A2, Array>;
+
+struct Array {
+  Var1* ptr;
+
+  template <class Other>
+  friend constexpr bool operator==(const Array& lhs, const Other& rhs) {
+    return *lhs.ptr == *rhs.ptr;
+  }
+
+  template <class Other>
+  friend constexpr bool operator!=(const Array& lhs, const Other& rhs) {
+    return *lhs.ptr != *rhs.ptr;
+  }
+
+  template <class Other>
+  friend constexpr bool operator<(const Array& lhs, const Other& rhs) {
+    return *lhs.ptr < *rhs.ptr;
+  }
+
+  template <class Other>
+  friend constexpr bool operator>(const Array& lhs, const Other& rhs) {
+    return *lhs.ptr > *rhs.ptr;
+  }
+
+  template <class Other>
+  friend constexpr bool operator<=(const Array& lhs, const Other& rhs) {
+    return *lhs.ptr <= *rhs.ptr;
+  }
+
+  template <class Other>
+  friend constexpr bool operator>=(const Array& lhs, const Other& rhs) {
+    return *lhs.ptr >= *rhs.ptr;
+  }
+};
+
+void test_recursive() {
+  (void)(Var2{} == Var2{});
+  (void)(Var2{} != Var2{});
+  (void)(Var2{} < Var2{});
+  (void)(Var2{} > Var2{});
+  (void)(Var2{} <= Var2{});
+  (void)(Var2{} >= Var2{});
+}
+
 int main(int, char**) {
   test_equality();
   test_relational();
