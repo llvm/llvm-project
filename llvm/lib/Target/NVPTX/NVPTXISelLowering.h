@@ -76,6 +76,28 @@ public:
            DstTy->getPrimitiveSizeInBits() == 32;
   }
 
+  bool isTruncateFree(EVT SrcVT, EVT DstVT) const override {
+    // Truncating from i64 to i32 is free
+    if (SrcVT.isInteger() && DstVT.isInteger())
+      return SrcVT.getSizeInBits() == 64 && DstVT.getSizeInBits() == 32;
+    return false;
+  }
+
+  bool isZExtFree(EVT FromVT, EVT ToVT) const override {
+    // Zero-extending from i32 to i64 is free
+    if (FromVT.isInteger() && ToVT.isInteger())
+      return FromVT.getSizeInBits() == 32 && ToVT.getSizeInBits() == 64;
+    return false;
+  }
+
+  bool isZExtFree(Type *SrcTy, Type *DstTy) const override {
+    // Zero-extending from i32 to i64 is free
+    if (SrcTy->isIntegerTy() && DstTy->isIntegerTy())
+      return SrcTy->getPrimitiveSizeInBits() == 32 &&
+             DstTy->getPrimitiveSizeInBits() == 64;
+    return false;
+  }
+
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Ctx,
                          EVT VT) const override {
     if (VT.isVector())
