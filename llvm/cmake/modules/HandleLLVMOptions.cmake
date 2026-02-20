@@ -770,9 +770,6 @@ if (MSVC)
       -wd4389 # Suppress 'signed/unsigned mismatch'
       -wd4805 # Suppress 'unsafe mix of type <type> and type <type> in operation'
       -wd4577 # Suppress 'noexcept used with no exception handling mode specified; termination on exception is not guaranteed'
-          # C4592 is disabled because of false positives in Visual Studio 2015
-          # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
-      -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
       -wd4319 # Suppress ''operator' : zero extending 'type' to 'type' of greater size'
 
       # Ideally, we'd like this warning to be enabled, but even MSVC 2019 doesn't
@@ -1308,6 +1305,17 @@ if (LLVM_BUILD_INSTRUMENTED AND LLVM_BUILD_INSTRUMENTED_COVERAGE)
 endif()
 
 if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+    # PCH is working in principle on AIX, but due to transitive includes,
+    # sys/mode.h ends up in the LLVMSupport PCH, which happens to define macros
+    # named S_RESERVED{1,2,3,4}, which cause collisions in CodeViewSymbols.def.
+    # AIX systems are not easily accessible, which makes identifying and
+    # debugging such cases rather difficult. Therefore, disable PCH on AIX by
+    # default.
+    message(NOTICE "Precompiled headers are disabled by default on AIX. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # Pre-compiled headers with GCC (tested versions 14+15) provide very little
     # compile-time improvements, but substantially increase the build dir size.

@@ -100,10 +100,12 @@ define float @div_select_constant_fold(i1 zeroext %arg) {
 ; CHECK-LABEL: div_select_constant_fold:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    movl ${{\.?LCPI[0-9]+_[0-9]+}}, %eax
-; CHECK-NEXT:    movl ${{\.?LCPI[0-9]+_[0-9]+}}, %ecx
-; CHECK-NEXT:    cmovneq %rax, %rcx
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    jne .LBB6_1
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [3.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB6_1:
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [2.5E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    retq
   %tmp = select i1 %arg, float 5.000000e+00, float 6.000000e+00
   %B2 = fdiv nnan float %tmp, 2.000000e+00
