@@ -206,4 +206,5 @@
 // S390X-ZOS:       #define __TOS_390__ 1
 // S390X-ZOS:       #define __TOS_MVS__ 1
 // S390X-ZOS:       #define __XPLINK__ 1
+// S390X-ZOS:       #define __clang_literal_encoding__ IBM-1047
 // S390X-ZOS-GNUXX: #define __wchar_t 1

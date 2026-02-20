@@ -115,6 +115,11 @@ inline bool isLiteral(TokenKind K) {
   return isInLiteralRange;
 }
 
+/// Return true if this is a wide literal kind.
+inline bool isWideLiteral(TokenKind K) {
+  return K == tok::wide_char_constant || K == tok::wide_string_literal;
+}
+
 /// Return true if this is any of tok::annot_* kinds.
 bool isAnnotation(TokenKind K);
 

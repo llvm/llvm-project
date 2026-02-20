@@ -34,6 +34,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Lex/TextEncodingConfig.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
@@ -544,6 +545,10 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   if (GetDependencyDirectives)
     PP->setDependencyDirectivesGetter(*GetDependencyDirectives);
+
+  if (TextEncodingConfig::setConvertersFromOptions(PP->getTextEncodingConfig(),
+                                                   getLangOpts(), getTarget()))
+    PP->getDiagnostics().Report(clang::diag::err_fe_text_encoding_config);
 }
 
 std::string

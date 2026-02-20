@@ -1645,7 +1645,8 @@ void Preprocessor::HandleLineDirective() {
     return;
   } else {
     // Parse and validate the string, converting it into a unique ID.
-    StringLiteralParser Literal(StrTok, *this);
+    StringLiteralParser Literal(
+        StrTok, *this, StringLiteralEvalMethod::Evaluated, CA_NoConversion);
     assert(Literal.isOrdinary() && "Didn't allow wide strings in");
     if (Literal.hadError) {
       DiscardUntilEndOfDirective();
@@ -1796,7 +1797,8 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
     return;
   } else {
     // Parse and validate the string, converting it into a unique ID.
-    StringLiteralParser Literal(StrTok, *this);
+    StringLiteralParser Literal(
+        StrTok, *this, StringLiteralEvalMethod::Evaluated, CA_NoConversion);
     assert(Literal.isOrdinary() && "Didn't allow wide strings in");
     if (Literal.hadError) {
       DiscardUntilEndOfDirective();

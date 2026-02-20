@@ -51,6 +51,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/TextEncoding.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
@@ -7579,12 +7580,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                           << value;
   }
 
-  // -fexec_charset=UTF-8 is default. Reject others
-  if (Arg *execCharset = Args.getLastArg(options::OPT_fexec_charset_EQ)) {
-    StringRef value = execCharset->getValue();
-    if (!value.equals_insensitive("utf-8"))
-      D.Diag(diag::err_drv_invalid_value) << execCharset->getAsString(Args)
-                                          << value;
+  if (Arg *ExecEncoding = Args.getLastArg(options::OPT_fexec_charset_EQ)) {
+    StringRef Value = ExecEncoding->getValue();
+    if (llvm::TextEncodingConverter::isEncodingSupported(Value)) {
+      CmdArgs.push_back("-fexec-charset");
+      CmdArgs.push_back(Args.MakeArgString(Value));
+    } else {
+      D.Diag(diag::err_drv_invalid_value)
+          << ExecEncoding->getAsString(Args) << Value;
+    }
+  } else {
+    // Set the default fexec-charset as the system charset.
+    CmdArgs.push_back("-fexec-charset");
+    CmdArgs.push_back(
+        Args.MakeArgString(Triple.getDefaultNarrowTextEncoding()));
   }
 
   RenderDiagnosticsOptions(D, Args, CmdArgs);

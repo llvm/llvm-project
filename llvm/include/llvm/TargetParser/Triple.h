@@ -513,6 +513,10 @@ public:
   /// For example, "fooos1.2.3" would return "1.2.3".
   LLVM_ABI StringRef getEnvironmentVersionString() const;
 
+  /// Get the default system encoding of the triple.
+  /// For example, "IBM-1047" for z/OS, "UTF-8" for others
+  LLVM_ABI StringRef getDefaultNarrowTextEncoding() const;
+
   /// @}
   /// @name Convenience Predicates
   /// @{
