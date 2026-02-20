@@ -79,13 +79,12 @@ define amdgpu_kernel void @_start() {
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_4
 ; CHECK-NEXT:  .LBB0_5: ; %dynamic-memcpy-post-expansion
 ; CHECK-NEXT:    s_endpgm
-  %src_ptr = getelementptr inbounds [4 x i8], [4 x i8]* @src_array, i64 0, i64 0
-  %dst_ptr = getelementptr inbounds [4 x i8], [4 x i8]* @dst_array, i64 0, i64 0
+  %src_ptr = getelementptr inbounds [128 x i8], ptr @src_array, i64 0, i64 0
+  %dst_ptr = getelementptr inbounds [128 x i8], ptr @dst_array, i64 0, i64 0
   call void @llvm.memcpy.p0.p0.i64(ptr %dst_ptr, ptr %src_ptr, i64 add (i64 sub (i64 16, i64 ptrtoint (ptr addrspacecast (ptr addrspace(4) null to ptr) to i64)), i64 13), i1 false)
   ret void
 }
 
-; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.memcpy.p0.p4.i64(ptr noalias writeonly captures(none), ptr addrspace(4) noalias readonly captures(none), i64, i1 immarg) #0
 
 attributes #0 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
