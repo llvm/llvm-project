@@ -39,6 +39,11 @@ Options
    A string specifying the corresponding header of make-shared-ptr function.
    Default is `<memory>`.
 
+.. option:: MakeSmartPtrType
+
+   A string specifying the smart pointer type to match. Default is
+   `::std::shared_ptr`.
+
 .. option:: IncludeStyle
 
    A string specifying which include-style is used, `llvm` or `google`. Default

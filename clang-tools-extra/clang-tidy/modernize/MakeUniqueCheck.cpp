@@ -14,14 +14,14 @@ namespace clang::tidy::modernize {
 
 MakeUniqueCheck::MakeUniqueCheck(StringRef Name,
                                  clang::tidy::ClangTidyContext *Context)
-    : MakeSmartPtrCheck(Name, Context, "std::make_unique"),
+    : MakeSmartPtrCheck(Name, Context, "std::make_unique", "::std::unique_ptr"),
       RequireCPlusPlus14(Options.get("MakeSmartPtrFunction", "").empty()) {}
 
 MakeUniqueCheck::SmartPtrTypeMatcher
 MakeUniqueCheck::getSmartPointerTypeMatcher() const {
   return qualType(hasUnqualifiedDesugaredType(
       recordType(hasDeclaration(classTemplateSpecializationDecl(
-          hasName("::std::unique_ptr"), templateArgumentCountIs(2),
+          hasName(MakeSmartPtrType), templateArgumentCountIs(2),
           hasTemplateArgument(
               0, templateArgument(refersToType(qualType().bind(PointerType)))),
           hasTemplateArgument(

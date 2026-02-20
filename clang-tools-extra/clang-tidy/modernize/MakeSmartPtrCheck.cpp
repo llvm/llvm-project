@@ -34,8 +34,10 @@ static std::string getNewExprName(const CXXNewExpr *NewExpr,
 }
 
 MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
-                                     StringRef MakeSmartPtrFunctionName)
+                                     StringRef MakeSmartPtrFunctionName,
+                                     StringRef MakeSmartPtrType)
     : ClangTidyCheck(Name, Context),
+      MakeSmartPtrType(Options.get("MakeSmartPtrType", MakeSmartPtrType)),
       Inserter(Options.getLocalOrGlobal("IncludeStyle",
                                         utils::IncludeSorter::IS_LLVM),
                areDiagsSelfContained()),
@@ -50,6 +52,7 @@ MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
 void MakeSmartPtrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", Inserter.getStyle());
   Options.store(Opts, "MakeSmartPtrFunctionHeader", MakeSmartPtrFunctionHeader);
+  Options.store(Opts, "MakeSmartPtrType", MakeSmartPtrType);
   Options.store(Opts, "MakeSmartPtrFunction", MakeSmartPtrFunctionName);
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
   Options.store(Opts, "IgnoreDefaultInitialization",

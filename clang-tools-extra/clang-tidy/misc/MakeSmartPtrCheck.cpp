@@ -6,21 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MakeSharedCheck.h"
+#include "MakeSmartPtrCheck.h"
 
 // FixItHint - Hint to check documentation script to mark this check as
 // providing a FixIt.
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::modernize {
+namespace clang::tidy::misc {
 
-MakeSharedCheck::MakeSharedCheck(StringRef Name, ClangTidyContext *Context)
-    : MakeSmartPtrCheck(Name, Context, "std::make_shared",
-                        "::std::shared_ptr") {}
+MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context)
+    : modernize::MakeSmartPtrCheck(Name, Context, "", "") {}
 
-MakeSharedCheck::SmartPtrTypeMatcher
-MakeSharedCheck::getSmartPointerTypeMatcher() const {
+MakeSmartPtrCheck::SmartPtrTypeMatcher
+MakeSmartPtrCheck::getSmartPointerTypeMatcher() const {
   return qualType(hasUnqualifiedDesugaredType(
       recordType(hasDeclaration(classTemplateSpecializationDecl(
           hasName(MakeSmartPtrType), templateArgumentCountIs(1),
@@ -28,4 +27,13 @@ MakeSharedCheck::getSmartPointerTypeMatcher() const {
                                      qualType().bind(PointerType)))))))));
 }
 
-} // namespace clang::tidy::modernize
+bool MakeSmartPtrCheck::isLanguageVersionSupported(
+    const LangOptions &LangOpts) const {
+  // This check requires both MakeSmartPtrType and MakeSmartPtrFunction to be
+  // configured. If either is empty (the default), disable the check.
+  if (MakeSmartPtrType.empty())
+    return false;
+  return LangOpts.CPlusPlus11;
+}
+
+} // namespace clang::tidy::misc
