@@ -3692,7 +3692,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   case Builtin::BI__builtin_reduce_any_order_fadd:
   case Builtin::BI__builtin_reduce_in_order_fadd: {
-    if (checkArgCountRange(TheCall, 1, 2))
+    // For in-order reductions require the user to specify the start value.
+    bool InOrder = BuiltinID == Builtin::BI__builtin_reduce_in_order_fadd;
+    if (InOrder ? checkArgCount(TheCall, 2) : checkArgCountRange(TheCall, 1, 2))
       return ExprError();
 
     ExprResult Vec = UsualUnaryConversions(TheCall->getArg(0));
