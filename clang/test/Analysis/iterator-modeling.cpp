@@ -482,6 +482,39 @@ void forward_list_assign(std::forward_list<int> &FL, int n) {
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
 }
 
+/// assign_range()
+///
+/// - Invalidates all iterators, including the past-the-end iterator for all
+///   container types.
+
+void list_assign_range(std::list<int> &L, std::vector<int> vec) {
+  auto i0 = L.cbegin(), i1 = L.cend();
+  L.assign_range(vec);
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
+}
+
+void vector_assign_range(std::vector<int> &V, std::vector<int> vec) {
+  auto i0 = V.cbegin(), i1 = V.cend();
+  V.assign_range(vec);
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
+}
+
+void deque_assign_range(std::deque<int> &D, std::vector<int> vec) {
+  auto i0 = D.cbegin(), i1 = D.cend();
+  D.assign_range(vec);
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
+}
+
+void forward_list_assign_range(std::forward_list<int> &FL, std::vector<int> vec) {
+  auto i0 = FL.cbegin(), i1 = FL.cend();
+  FL.assign_range(vec);
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
+}
+
 /// clear()
 ///
 /// - Invalidates all iterators, including the past-the-end iterator for all
@@ -629,6 +662,66 @@ void deque_emplace_back(std::deque<int> &D, int n) {
   clang_analyzer_denote(clang_analyzer_container_end(D), "$D.end()");
 
   D.emplace_back(n);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
+}
+
+/// append_range()
+///
+/// - Design decision: extends containers to the ->RIGHT-> (i.e. the
+///   past-the-end position of the container is incremented).
+///
+/// - Iterator invalidation rules depend the container type.
+
+/// std::list-like containers: No iterators are invalidated.
+
+void list_append_range(std::list<int> &L, std::vector<int>& vec) {
+  auto i0 = L.cbegin(), i1 = --L.cend(), i2 = L.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(L), "$L.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(L), "$L.end()");
+
+  L.append_range(vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.end() - 1{{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}  FIXME: Should be $L.end() + 1
+}
+
+/// std::vector-like containers: The past-the-end iterator is invalidated.
+
+void vector_append_range(std::vector<int> &V, std::vector<int>& vec) {
+  auto i0 = V.cbegin(), i1 = --V.cend(), i2 = V.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(V), "$V.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(V), "$V.end()");
+
+  V.emplace_back(vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$V.end() - 1{{$}}}}
+}
+
+/// std::deque-like containers: All iterators, including the past-the-end
+///                             iterator, are invalidated.
+
+void deque_append_range(std::deque<int> &D, std::vector<int>& vec) {
+  auto i0 = D.cbegin(), i1 = --D.cend(), i2 = D.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(D), "$D.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(D), "$D.end()");
+
+  D.append_range(vec);
 
   clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{FALSE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
@@ -803,6 +896,63 @@ void forward_list_emplace_front(std::forward_list<int> &FL, int n) {
   clang_analyzer_denote(clang_analyzer_container_end(FL), "$FL.end()");
 
   FL.emplace_front(n);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$FL.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$FL.end(){{$}}}}
+}
+
+/// prepend_range()
+///
+/// - Design decision: extends containers to the <-LEFT<- (i.e. the first
+///                    position of the container is decremented).
+///
+/// - Iterator invalidation rules depend the container type.
+
+/// std::list-like containers: No iterators are invalidated.
+
+void list_prepend_range(std::list<int> &L, std::vector<int>& vec) {
+  auto i0 = L.cbegin(), i1 = L.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(L), "$L.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(L), "$L.end()");
+
+  L.prepend_range(vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.end(){{$}}}}
+}
+
+/// std::deque-like containers: All iterators, including the past-the-end
+///                             iterator, are invalidated.
+
+void deque_prepend_range(std::deque<int> &D, std::vector<int>& vec) {
+  auto i0 = D.cbegin(), i1 = --D.cend(), i2 = D.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(D), "$D.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(D), "$D.end()");
+
+  D.prepend_range(vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
+}
+
+/// std::forward_list-like containers: No iterators are invalidated.
+
+void forward_list_prepend_range(std::forward_list<int> &FL, std::vector<int>& vec) {
+  auto i0 = FL.cbegin(), i1 = FL.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(FL), "$FL.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(FL), "$FL.end()");
+
+  FL.prepend_range(vec);
 
   clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
@@ -1139,6 +1289,271 @@ void deque_insert_end(std::deque<int> &D, int n) {
   // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $D.end() - 1
 }
 
+/// insert_range()
+///
+/// - Design decision: shifts positions to the <-LEFT<- (i.e. all iterator
+///                    ahead of the insertion point are decremented; if the
+///                    relation between the insertion point and the first
+///                    position of the container is known, the first position
+///                    of the container is also decremented).
+///
+/// - Iterator invalidation rules depend the container type.
+
+/// std::list-like containers: No iterators are invalidated.
+
+void list_insert_range_begin(std::list<int> &L, std::vector<int>& vec) {
+  auto i0 = L.cbegin(), i1 = L.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(L), "$L.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(L), "$L.end()");
+
+  auto i2 = L.insert_range(i0, vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  // clang_analyzer_express(clang_analyzer_iterator_position(i2)); FIXME: expect warning $L.begin() - 1
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.end(){{$}}}}
+}
+
+void list_insert_range_behind_begin(std::list<int> &L, std::vector<int>& vec) {
+  auto i0 = L.cbegin(), i1 = ++L.cbegin(), i2 = L.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(L), "$L.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(L), "$L.end()");
+
+  auto i3 = L.insert_range(i1, vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}} FIXME: Should be $L.begin() - 1
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.begin() + 1{{$}}}}
+  // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $L.begin()
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}
+}
+
+template <typename Iter> Iter return_any_iterator(const Iter &It);
+
+void list_insert_range_unknown(std::list<int> &L, std::vector<int>& vec) {
+  auto i0 = L.cbegin(), i1 = return_any_iterator(L.cbegin()), i2 = L.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(L), "$L.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(L), "$L.end()");
+  clang_analyzer_denote(clang_analyzer_iterator_position(i1), "$i1");
+
+  auto i3 = L.insert_range(i1, vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$i1{{$}}}}
+  // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $i - 1
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}
+}
+
+void list_insert_range_ahead_of_end(std::list<int> &L, std::vector<int>& vec) {
+  auto i0 = L.cbegin(), i1 = --L.cend(), i2 = L.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(L), "$L.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(L), "$L.end()");
+
+  auto i3 = L.insert_range(i1, vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.end() - 1{{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}
+  // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $L.end() - 2
+}
+
+void list_insert_range_end(std::list<int> &L, std::vector<int>& vec) {
+  auto i0 = L.cbegin(), i1 = --L.cend(), i2 = L.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(L), "$L.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(L), "$L.end()");
+
+  auto i3 = L.insert_range(i2, vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$L.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$L.end() - 1{{$}}}} FIXME: should be $L.end() - 2
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$L.end(){{$}}}}
+  // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $L.end() - 1
+}
+
+/// std::vector-like containers: Only the iterators before the insertion point
+///                              remain valid. The past-the-end iterator is also
+///                              invalidated.
+
+void vector_insert_range_begin(std::vector<int> &V, std::vector<int>& vec) {
+  auto i0 = V.cbegin(), i1 = V.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(V), "$V.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(V), "$V.end()");
+
+  auto i2 = V.insert_range(i0, vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
+
+  // clang_analyzer_express(clang_analyzer_iterator_position(i2)); FIXME: expect warning $V.begin() - 1
+}
+
+void vector_insert_range_behind_begin(std::vector<int> &V, std::vector<int>& vec) {
+  auto i0 = V.cbegin(), i1 = ++V.cbegin(), i2 = V.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(V), "$V.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(V), "$V.end()");
+
+  auto i3 = V.insert_range(i1, vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}} FIXME: Should be $V.begin() - 1
+  // clang_analyzer_express(clang_analyzer_iterator_position(i3)); // FIXME: expect -warning $V.begin()
+}
+
+void vector_insert_range_unknown(std::vector<int> &V, std::vector<int>& vec) {
+  auto i0 = V.cbegin(), i1 = return_any_iterator(V.cbegin()), i2 = V.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(V), "$V.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(V), "$V.end()");
+  clang_analyzer_denote(clang_analyzer_iterator_position(i1), "$i1");
+
+  auto i3 = V.insert_range(i1, vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}}
+  // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expecte warning $i1 - 1
+}
+
+void vector_insert_range_ahead_of_end(std::vector<int> &V, std::vector<int>& vec) {
+  auto i0 = V.cbegin(), i1 = --V.cend(), i2 = V.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(V), "$V.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(V), "$V.end()");
+
+  auto i3 = V.insert_range(i1, vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}}
+  // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $V.end() - 2
+}
+
+void vector_insert_range_end(std::vector<int> &V, std::vector<int>& vec) {
+  auto i0 = V.cbegin(), i1 = --V.cend(), i2 = V.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(V), "$V.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(V), "$V.end()");
+
+  auto i3 = V.insert_range(i2, vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$V.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$V.end() - 1{{$}}}} FIXME: Should be $V.end() - 2
+  // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $V.end() - 1
+}
+
+/// std::deque-like containers: All iterators, including the past-the-end
+///                             iterator, are invalidated.
+
+void deque_insert_range_begin(std::deque<int> &D, std::vector<int>& vec) {
+  auto i0 = D.cbegin(), i1 = D.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(D), "$D.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(D), "$D.end()");
+
+  auto i2 = D.insert_range(i0, vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
+
+  // clang_analyzer_express(clang_analyzer_iterator_position(i2)); FIXME: expect warning $D.begin() - 1
+}
+
+void deque_insert_range_behind_begin(std::deque<int> &D, std::vector<int>& vec) {
+  auto i0 = D.cbegin(), i1 = ++D.cbegin(), i2 = D.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(D), "$D.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(D), "$D.end()");
+
+  auto i3 = D.insert_range(i1, vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
+
+  // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $D.begin() - 1
+}
+
+void deque_insert_range_unknown(std::deque<int> &D, std::vector<int>& vec) {
+  auto i0 = D.cbegin(), i1 = return_any_iterator(D.cbegin()), i2 = D.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(D), "$D.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(D), "$D.end()");
+  clang_analyzer_denote(clang_analyzer_iterator_position(i1), "$i1");
+
+  auto i3 = D.insert_range(i1, vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
+
+  // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $i1 - 1
+}
+
+void deque_insert_range_ahead_of_end(std::deque<int> &D, std::vector<int>& vec) {
+  auto i0 = D.cbegin(), i1 = --D.cend(), i2 = D.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(D), "$D.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(D), "$D.end()");
+
+  auto i3 = D.insert_range(i1, vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
+
+  // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $D.end() - 2
+}
+
+void deque_insert_range_end(std::deque<int> &D, std::vector<int>& vec) {
+  auto i0 = D.cbegin(), i1 = --D.cend(), i2 = D.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(D), "$D.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(D), "$D.end()");
+
+  auto i3 = D.insert_range(i2, vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{FALSE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{FALSE}}
+
+  // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $D.end() - 1
+}
+
 /// insert_after()   [std::forward_list-like containers]
 ///
 /// - Design decision: shifts positions to the ->RIGHT-> (i.e. all iterator
@@ -1191,6 +1606,69 @@ void forward_list_insert_after_unknown(std::forward_list<int> &FL, int n) {
   clang_analyzer_denote(clang_analyzer_iterator_position(i1), "$i1");
 
   auto i3 = FL.insert_after(i1, n);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$FL.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$i1{{$}}}}
+  // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $i1 + 1
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$FL.end(){{$}}}}
+}
+
+/// insert_range_after()   [std::forward_list-like containers]
+///
+/// - Design decision: shifts positions to the ->RIGHT-> (i.e. all iterator
+///                    ahead of the insertion point are incremented; if the
+///                    relation between the insertion point and the past-the-end
+///                    position of the container is known, the first position of
+///                    the container is also incremented).
+///
+/// - No iterators are invalidated.
+
+void forward_list_insert_range_after_begin(std::forward_list<int> &FL, std::vector<int>& vec) {
+  auto i0 = FL.cbegin(), i1 = FL.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(FL), "$FL.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(FL), "$FL.end()");
+
+  auto i2 = FL.insert_range_after(i0, vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$FL.begin(){{$}}}}
+  // clang_analyzer_express(clang_analyzer_iterator_position(i2)); FIXME: expect warning $FL.begin() + 1
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$FL.end(){{$}}}}
+}
+
+void forward_list_insert_range_after_behind_begin(std::forward_list<int> &FL, std::vector<int>& vec) {
+  auto i0 = FL.cbegin(), i1 = ++FL.cbegin(), i2 = FL.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(FL), "$FL.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(FL), "$FL.end()");
+
+  auto i3 = FL.insert_range_after(i1, vec);
+
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}
+  clang_analyzer_eval(clang_analyzer_iterator_validity(i2)); //expected-warning{{TRUE}}
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i0)); // expected-warning-re {{$FL.begin(){{$}}}}
+  clang_analyzer_express(clang_analyzer_iterator_position(i1)); // expected-warning-re {{$FL.begin() + 1{{$}}}}
+  // clang_analyzer_express(clang_analyzer_iterator_position(i3)); FIXME: expect warning $FL.begin() + 2
+  clang_analyzer_express(clang_analyzer_iterator_position(i2)); // expected-warning-re {{$FL.end(){{$}}}}
+}
+
+void forward_list_insert_range_after_unknown(std::forward_list<int> &FL, std::vector<int>& vec) {
+  auto i0 = FL.cbegin(), i1 = return_any_iterator(FL.cbegin()), i2 = FL.cend();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(FL), "$FL.begin()");
+  clang_analyzer_denote(clang_analyzer_container_end(FL), "$FL.end()");
+  clang_analyzer_denote(clang_analyzer_iterator_position(i1), "$i1");
+
+  auto i3 = FL.insert_range_after(i1, vec);
 
   clang_analyzer_eval(clang_analyzer_iterator_validity(i0)); //expected-warning{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_validity(i1)); //expected-warning{{TRUE}}

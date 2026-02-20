@@ -336,6 +336,15 @@ namespace std {
     iterator erase(const_iterator position);
     iterator erase(const_iterator first, const_iterator last);
 
+    template<typename R>
+    void assign_range(R&& rg);
+
+    template<typename R>
+    iterator insert_range(const_iterator position, R&& rg);
+
+    template<typename R>
+    void append_range(R&& rg);
+
     T &operator[](size_t n) {
       return _start[n];
     }
@@ -414,6 +423,18 @@ namespace std {
     iterator erase(const_iterator position);
     iterator erase(const_iterator first, const_iterator last);
 
+    template<typename R>
+    void assign_range(R&& rg);
+
+    template<typename R>
+    iterator insert_range(const_iterator position, R&& rg);
+
+    template<typename R>
+    void append_range(R&& rg);
+
+    template<typename R>
+    void prepend_range(R&& rg);
+
     iterator begin() { return iterator(_start); }
     const_iterator begin() const { return const_iterator(_start); }
     const_iterator cbegin() const { return const_iterator(_start); }
@@ -488,6 +509,18 @@ namespace std {
     iterator erase(const_iterator position);
     iterator erase(const_iterator first, const_iterator last);
 
+    template<typename R>
+    void assign_range(R&& rg);
+
+    template<typename R>
+    iterator insert_range(const_iterator position, R&& rg);
+
+    template<typename R>
+    void append_range(R&& rg);
+
+    template<typename R>
+    void prepend_range(R&& rg);
+
     T &operator[](size_t n) {
       return _start[n];
     }
@@ -560,6 +593,15 @@ namespace std {
 
     iterator erase_after(const_iterator position);
     iterator erase_after(const_iterator first, const_iterator last);
+
+    template<typename R>
+    void assign_range(R&& rg);
+
+    template<typename R>
+    void prepend_range(R&& rg);
+
+    template<typename R>
+    iterator insert_range_after(const_iterator pos, R&& rg);
 
     iterator begin() { return iterator(_start); }
     const_iterator begin() const { return const_iterator(_start); }
