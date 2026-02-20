@@ -3753,6 +3753,70 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (BuiltinCountedByRef(TheCall))
       return ExprError();
     break;
+
+  case Builtin::BI__builtin_ct_select: {
+    if (TheCall->getNumArgs() != 3) {
+      // Simple argument count check without complex diagnostics
+      if (TheCall->getNumArgs() < 3) {
+        return Diag(TheCall->getEndLoc(),
+                    diag::err_typecheck_call_too_few_args_at_least)
+               << 0 << 3 << TheCall->getNumArgs() << 0
+               << TheCall->getCallee()->getSourceRange();
+      } else {
+        return Diag(TheCall->getEndLoc(),
+                    diag::err_typecheck_call_too_many_args)
+               << 0 << 3 << TheCall->getNumArgs() << 0
+               << TheCall->getCallee()->getSourceRange();
+      }
+    }
+    auto *Cond = TheCall->getArg(0);
+    auto *A = TheCall->getArg(1);
+    auto *B = TheCall->getArg(2);
+
+    QualType CondTy = Cond->getType();
+    if (!CondTy->isIntegerType()) {
+      return Diag(Cond->getBeginLoc(), diag::err_typecheck_cond_expect_scalar)
+             << CondTy << Cond->getSourceRange();
+    }
+
+    ExprResult ARes = DefaultFunctionArrayLvalueConversion(A);
+    ExprResult BRes = DefaultFunctionArrayLvalueConversion(B);
+    if (ARes.isInvalid() || BRes.isInvalid())
+      return ExprError();
+
+    A = ARes.get();
+    B = BRes.get();
+    TheCall->setArg(1, A);
+    TheCall->setArg(2, B);
+
+    QualType ATy = A->getType();
+    QualType BTy = B->getType();
+
+    // check for scalar or vector scalar type
+    if ((!ATy->isScalarType() && !ATy->isVectorType()) ||
+        (!BTy->isScalarType() && !BTy->isVectorType())) {
+      return Diag(A->getBeginLoc(),
+                  diag::err_typecheck_cond_incompatible_operands)
+             << ATy << BTy << A->getSourceRange() << B->getSourceRange();
+    }
+
+    // Check if both operands have the same type or can be implicitly converted
+    if (!Context.hasSameType(ATy, BTy)) {
+      // For non-arithmetic types, they must be exactly the same
+      return Diag(A->getBeginLoc(),
+                  diag::err_typecheck_cond_incompatible_operands)
+             << ATy << BTy << A->getSourceRange() << B->getSourceRange();
+    }
+
+    QualType ResultTy = ATy;
+    ExprResult CondRes = PerformContextuallyConvertToBool(Cond);
+    if (CondRes.isInvalid())
+      return ExprError();
+
+    TheCall->setArg(0, CondRes.get());
+    TheCall->setType(ResultTy);
+    return TheCall;
+  }
   }
 
   if (getLangOpts().HLSL && HLSL().CheckBuiltinFunctionCall(BuiltinID, TheCall))

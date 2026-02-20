@@ -5452,3 +5452,11 @@ def CountedByRef : Builtin {
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "int(...)";
 }
+
+// Constant-time select builtin
+def CtSelect : Builtin {
+  let Spellings = ["__builtin_ct_select"];
+  let Attributes = [NoThrow, Const, UnevaluatedArguments,
+                    ConstIgnoringExceptions, CustomTypeChecking];
+  let Prototype = "void(...)";
+}

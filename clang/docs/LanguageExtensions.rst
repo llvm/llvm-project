@@ -7005,3 +7005,47 @@ Clang fails to reject some code that should be rejected. e.g.,
   // own initializer rather than rejecting the code with an undeclared identifier
   // diagnostic.
   auto x = x;
+
+.. _langext-__builtin_ct_select:
+
+``__builtin_ct_select``
+-----------------------
+
+``__builtin_ct_select`` performs a constant-time conditional selection between
+two values. Unlike the ternary operator ``?:``, this builtin is designed to
+execute in constant time regardless of the condition value, making it suitable
+for cryptographic and security-sensitive code where timing side-channels must
+be avoided.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  __builtin_ct_select(condition, true_value, false_value)
+
+**Examples**:
+
+.. code-block:: c++
+
+  // Select between two integers
+  int result = __builtin_ct_select(secret_bit, value_a, value_b);
+
+  // Select between two pointers
+  int *ptr = __builtin_ct_select(condition, ptr_a, ptr_b);
+
+  // Select between two floating-point values
+  double d = __builtin_ct_select(flag, 1.0, 2.0);
+
+**Description**:
+
+The first argument is an integer condition that is converted to a boolean
+(non-zero is true, zero is false). The second and third arguments must have
+the same scalar or vector type. The builtin returns the second argument if
+the condition is true, otherwise the third argument.
+
+The operation is guaranteed to be lowered to constant-time machine code that
+does not branch on the condition value, preventing timing-based side-channel
+attacks.
+
+Query for this feature with ``__has_builtin(__builtin_ct_select)``.
+

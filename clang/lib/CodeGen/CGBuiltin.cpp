@@ -6443,6 +6443,19 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto Str = CGM.GetAddrOfConstantCString(Name, "");
     return RValue::get(Str.getPointer());
   }
+  case Builtin::BI__builtin_ct_select: {
+    auto *Cond = EmitScalarExpr(E->getArg(0));
+    auto *A = EmitScalarExpr(E->getArg(1));
+    auto *B = EmitScalarExpr(E->getArg(2));
+
+    if (Cond->getType()->getIntegerBitWidth() != 1)
+      Cond = Builder.CreateICmpNE(
+          Cond, llvm::ConstantInt::get(Cond->getType(), 0), "cond.bool");
+
+    llvm::Function *Fn =
+        CGM.getIntrinsic(llvm::Intrinsic::ct_select, {A->getType()});
+    return RValue::get(Builder.CreateCall(Fn, {Cond, A, B}));
+  }
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
