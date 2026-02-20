@@ -216,6 +216,8 @@ class LitConfig(object):
         # Step out of _write_message, and then out of wrapper.
         f = f.f_back.f_back
         file = os.path.abspath(inspect.getsourcefile(f))
+        if lit.util.pythonize_bool(self.params.get("use_normalized_slashes")):
+            file = file.replace("\\", "/")
         line = inspect.getlineno(f)
         sys.stderr.write(
             "%s: %s:%d: %s: %s\n" % (self.progname, file, line, kind, message)

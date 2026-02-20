@@ -91,12 +91,13 @@ class ShellEnvironment(object):
     we maintain a dir stack for pushd/popd.
     """
 
-    def __init__(self, cwd, env, umask=-1, ulimit=None):
+    def __init__(self, cwd, env, umask=-1, ulimit=None, normalize_slashes=False):
         self.cwd = cwd
         self.env = dict(env)
         self.umask = umask
         self.dirStack = []
         self.ulimit = ulimit if ulimit else {}
+        self.normalize_slashes = normalize_slashes
 
     def change_dir(self, newdir):
         if os.path.isabs(newdir):
@@ -725,7 +726,7 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
     return std_fds
 
 
-def _expandLateSubstitutions(cmd, arguments, cwd):
+def _expandLateSubstitutions(cmd, arguments, cwd, normalize_slashes=False):
     for i, arg in enumerate(arguments):
         if not isinstance(arg, str):
             continue
@@ -734,6 +735,8 @@ def _expandLateSubstitutions(cmd, arguments, cwd):
             filePath = match.group(1)
             if not os.path.isabs(filePath):
                 filePath = os.path.join(cwd, filePath)
+            if normalize_slashes:
+                filePath = filePath.replace("\\", "/")
             try:
                 with open(filePath) as fileHandle:
                     return fileHandle.read()
@@ -817,7 +820,9 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         not_crash = False
 
         # Expand all late substitutions.
-        args = _expandLateSubstitutions(j, args, cmd_shenv.cwd)
+        args = _expandLateSubstitutions(
+            j, args, cmd_shenv.cwd, cmd_shenv.normalize_slashes
+        )
 
         while True:
             if args[0] == "env":
@@ -828,7 +833,12 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                 #   env FOO=1 llc < %s | env BAR=2 llvm-mc | FileCheck %s
                 #   env FOO=1 %{another_env_plus_cmd} | FileCheck %s
                 if cmd_shenv is shenv:
-                    cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env, shenv.umask)
+                    cmd_shenv = ShellEnvironment(
+                        shenv.cwd,
+                        shenv.env,
+                        shenv.umask,
+                        normalize_slashes=shenv.normalize_slashes,
+                    )
                 args = updateEnv(cmd_shenv, args)
                 if not args:
                     # Return the environment variables if no argument is provided.
@@ -1226,7 +1236,10 @@ def executeScriptInternal(
 
     results = []
     timeoutInfo = None
-    shenv = ShellEnvironment(cwd, test.config.environment)
+    normalize_slashes = litConfig.params.get("use_normalized_slashes", False)
+    shenv = ShellEnvironment(
+        cwd, test.config.environment, normalize_slashes=normalize_slashes
+    )
     shenv.env["LIT_CURRENT_TESTCASE"] = test.getFullName()
 
     exitCode, timeoutInfo = executeShCmd(
@@ -1525,11 +1538,25 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     substitutions.append(("%{s:basename}", sourceBaseName))
     substitutions.append(("%{t:stem}", tmpBaseName))
 
+    fs_sep = os.path.sep
+    if normalize_slashes:
+        fs_sep = "/"
+
     substitutions.extend(
         [
-            ("%{fs-src-root}", pathlib.Path(sourcedir).anchor),
-            ("%{fs-tmp-root}", pathlib.Path(tmpBase).anchor),
-            ("%{fs-sep}", os.path.sep),
+            (
+                "%{fs-src-root}",
+                pathlib.Path(sourcedir).anchor.replace("\\", "/")
+                if normalize_slashes
+                else pathlib.Path(sourcedir).anchor,
+            ),
+            (
+                "%{fs-tmp-root}",
+                pathlib.Path(tmpBase).anchor.replace("\\", "/")
+                if normalize_slashes
+                else pathlib.Path(tmpBase).anchor,
+            ),
+            ("%{fs-sep}", fs_sep),
         ]
     )
 
@@ -2457,7 +2484,11 @@ def executeShTest(
     tmpDir, tmpBase = getTempPaths(test)
     substitutions = list(extra_substitutions)
     substitutions += getDefaultSubstitutions(
-        test, tmpDir, tmpBase, normalize_slashes=useExternalSh
+        test,
+        tmpDir,
+        tmpBase,
+        normalize_slashes=useExternalSh
+        or litConfig.params.get("use_normalized_slashes", False),
     )
     conditions = {feature: True for feature in test.config.available_features}
     script = applySubstitutions(
