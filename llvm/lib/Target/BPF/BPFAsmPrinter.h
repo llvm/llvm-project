@@ -18,8 +18,8 @@ namespace llvm {
 class BPFAsmPrinter : public AsmPrinter {
 public:
   explicit BPFAsmPrinter(TargetMachine &TM,
-                         std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID), BTF(nullptr), TM(TM) {}
+                         std::unique_ptr<MCStreamer> Streamer);
+  ~BPFAsmPrinter() override;
 
   StringRef getPassName() const override { return "BPF Assembly Printer"; }
   bool doInitialization(Module &M) override;

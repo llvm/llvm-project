@@ -25,7 +25,7 @@ public:
   /// any breakpoint locations it found in that module.
   virtual bool ResolverCallback(SymbolContext sym_ctx) { return true; }
   virtual lldb::SearchDepth GetDepth() { return lldb::eSearchDepthModule; }
-  virtual std::optional<std::string> GetShortHelp() { return nullptr; }
+  virtual std::optional<std::string> GetShortHelp() { return std::nullopt; }
   /// WasHit returns the breakpoint location SP for the location that was "hit".
   virtual lldb::BreakpointLocationSP
   WasHit(lldb::StackFrameSP frame_sp, lldb::BreakpointLocationSP bp_loc_sp) {

@@ -40,6 +40,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
+BPFAsmPrinter::BPFAsmPrinter(TargetMachine &TM,
+                             std::unique_ptr<MCStreamer> Streamer)
+    : AsmPrinter(TM, std::move(Streamer), ID), BTF(nullptr), TM(TM) {}
+
+BPFAsmPrinter::~BPFAsmPrinter() = default;
+
 bool BPFAsmPrinter::doInitialization(Module &M) {
   AsmPrinter::doInitialization(M);
 
@@ -154,17 +160,21 @@ bool BPFAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   assert(OpNum + 1 < MI->getNumOperands() && "Insufficient operands");
   const MachineOperand &BaseMO = MI->getOperand(OpNum);
   const MachineOperand &OffsetMO = MI->getOperand(OpNum + 1);
-  assert(BaseMO.isReg() && "Unexpected base pointer for inline asm memory operand.");
-  assert(OffsetMO.isImm() && "Unexpected offset for inline asm memory operand.");
+  assert(BaseMO.isReg() &&
+         "Unexpected base pointer for inline asm memory operand.");
+  assert(OffsetMO.isImm() &&
+         "Unexpected offset for inline asm memory operand.");
   int Offset = OffsetMO.getImm();
 
   if (ExtraCode)
     return true; // Unknown modifier.
 
   if (Offset < 0)
-    O << "(" << BPFInstPrinter::getRegisterName(BaseMO.getReg()) << " - " << -Offset << ")";
+    O << "(" << BPFInstPrinter::getRegisterName(BaseMO.getReg()) << " - "
+      << -Offset << ")";
   else
-    O << "(" << BPFInstPrinter::getRegisterName(BaseMO.getReg()) << " + " << Offset << ")";
+    O << "(" << BPFInstPrinter::getRegisterName(BaseMO.getReg()) << " + "
+      << Offset << ")";
 
   return false;
 }

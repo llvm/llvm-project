@@ -41,8 +41,7 @@ using BreakpointLocations = std::vector<lldb::addr_t>;
 class SingleStepBreakpointLocationsPredictor {
 public:
   SingleStepBreakpointLocationsPredictor(
-      std::unique_ptr<EmulateInstruction> emulator_up)
-      : m_emulator_up{std::move(emulator_up)} {}
+      std::unique_ptr<EmulateInstruction> emulator_up);
 
   virtual BreakpointLocations GetBreakpointLocations(Status &status);
 
@@ -51,13 +50,13 @@ public:
     return 4;
   }
 
-  virtual ~SingleStepBreakpointLocationsPredictor() = default;
+  virtual ~SingleStepBreakpointLocationsPredictor();
 
 protected:
-  // This function retrieves the address of the next instruction as it appears
-  // in the binary file. Essentially, it reads the value of the PC register,
-  // determines the size of the current instruction (where the PC is pointing),
-  // and returns the sum of these two values.
+  // This function retrieves the address of the next instruction as it
+  // appears in the binary file. Essentially, it reads the value of the PC
+  // register, determines the size of the current instruction (where the PC
+  // is pointing), and returns the sum of these two values.
   lldb::addr_t GetNextInstructionAddress(Status &error);
 
   lldb::addr_t GetBreakpointLocationAddress(lldb::addr_t entry_pc,

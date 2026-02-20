@@ -68,7 +68,8 @@ public:
 
   /// Register a PTU produced by Parse.
   PartialTranslationUnit &RegisterPTU(TranslationUnitDecl *TU,
-                                      std::unique_ptr<llvm::Module> M = {});
+                                      std::unique_ptr<llvm::Module> M);
+  PartialTranslationUnit &RegisterPTU(TranslationUnitDecl *TU);
 
 private:
   llvm::Expected<TranslationUnitDecl *> ParseOrWrapTopLevelDecl();

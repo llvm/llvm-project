@@ -196,7 +196,7 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
 
 PartialTranslationUnit &
 IncrementalParser::RegisterPTU(TranslationUnitDecl *TU,
-                               std::unique_ptr<llvm::Module> M /*={}*/) {
+                               std::unique_ptr<llvm::Module> M) {
   PTUs.emplace_back(PartialTranslationUnit());
   PartialTranslationUnit &LastPTU = PTUs.back();
   LastPTU.TUPart = TU;
@@ -215,4 +215,10 @@ IncrementalParser::RegisterPTU(TranslationUnitDecl *TU,
   LLVM_DEBUG(llvm::dbgs() << "]\n");
   return LastPTU;
 }
+
+PartialTranslationUnit &
+IncrementalParser::RegisterPTU(TranslationUnitDecl *TU) {
+  return RegisterPTU(TU, nullptr);
+}
+
 } // end namespace clang

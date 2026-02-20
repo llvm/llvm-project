@@ -72,8 +72,7 @@ public:
 
 // MatcherFnImpl takes a matcher function object and implements
 // MatcherInterface.
-template <typename MatcherFn>
-class MatcherFnImpl : public MatcherInterface {
+template <typename MatcherFn> class MatcherFnImpl : public MatcherInterface {
 public:
   MatcherFnImpl(MatcherFn &matcherFn) : matcherFn(matcherFn) {}
 
@@ -102,13 +101,11 @@ using VariadicOperatorFunction = bool (*)(Operation *op,
 template <VariadicOperatorFunction Func>
 class VariadicMatcher : public MatcherInterface {
 public:
-  VariadicMatcher(std::vector<DynMatcher> matchers)
-      : matchers(std::move(matchers)) {}
+  VariadicMatcher(std::vector<DynMatcher> matchers);
+  ~VariadicMatcher() override;
 
-  bool match(Operation *op) override { return Func(op, nullptr, matchers); }
-  bool match(Operation *op, SetVector<Operation *> &matchedOps) override {
-    return Func(op, &matchedOps, matchers);
-  }
+  bool match(Operation *op) override;
+  bool match(Operation *op, SetVector<Operation *> &matchedOps) override;
 
 private:
   std::vector<DynMatcher> matchers;
@@ -169,8 +166,7 @@ private:
 };
 
 // VariadicOperatorMatcher related types.
-template <typename... Ps>
-class VariadicOperatorMatcher {
+template <typename... Ps> class VariadicOperatorMatcher {
 public:
   VariadicOperatorMatcher(DynMatcher::VariadicOperator varOp, Ps &&...params)
       : varOp(varOp), params(std::forward<Ps>(params)...) {}

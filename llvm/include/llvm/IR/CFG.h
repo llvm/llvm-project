@@ -70,8 +70,8 @@ public:
   }
   inline PredIterator(Ptr *bb, bool) : It(bb->user_end()) {}
 
-  inline bool operator==(const Self& x) const { return It == x.It; }
-  inline bool operator!=(const Self& x) const { return !operator==(x); }
+  inline bool operator==(const Self &x) const { return It == x.It; }
+  inline bool operator!=(const Self &x) const { return !operator==(x); }
 
   inline reference operator*() const {
     assert(!It.atEnd() && "pred_iterator out of range!");
@@ -79,27 +79,26 @@ public:
   }
   inline pointer *operator->() const { return &operator*(); }
 
-  inline Self& operator++() {   // Preincrement
+  inline Self &operator++() { // Preincrement
     assert(!It.atEnd() && "pred_iterator out of range!");
-    ++It; advancePastNonTerminators();
+    ++It;
+    advancePastNonTerminators();
     return *this;
   }
 
   inline Self operator++(int) { // Postincrement
-    Self tmp = *this; ++*this; return tmp;
+    Self tmp = *this;
+    ++*this;
+    return tmp;
   }
 
   /// getOperandNo - Return the operand number in the predecessor's
   /// terminator of the successor.
-  unsigned getOperandNo() const {
-    return It.getOperandNo();
-  }
+  unsigned getOperandNo() const { return It.getOperandNo(); }
 
   /// getUse - Return the operand Use in the predecessor's terminator
   /// of the successor.
-  Use &getUse() const {
-    return It.getUse();
-  }
+  Use &getUse() const { return It.getUse(); }
 };
 
 using pred_iterator = PredIterator<BasicBlock, Value::user_iterator>;
@@ -112,7 +111,9 @@ inline pred_iterator pred_begin(BasicBlock *BB) { return pred_iterator(BB); }
 inline const_pred_iterator pred_begin(const BasicBlock *BB) {
   return const_pred_iterator(BB);
 }
-inline pred_iterator pred_end(BasicBlock *BB) { return pred_iterator(BB, true);}
+inline pred_iterator pred_end(BasicBlock *BB) {
+  return pred_iterator(BB, true);
+}
 inline const_pred_iterator pred_end(const BasicBlock *BB) {
   return const_pred_iterator(BB, true);
 }
@@ -180,6 +181,7 @@ private:
   };
 
 public:
+  SuccIterator() : Inst(nullptr), Idx(0) {}
   // begin iterator
   explicit inline SuccIterator(InstructionT *Inst) : Inst(Inst), Idx(0) {}
   // end iterator
@@ -299,7 +301,7 @@ inline const_succ_range successors(const BasicBlock *BB) {
 // Provide specializations of GraphTraits to be able to treat a function as a
 // graph of basic blocks...
 
-template <> struct GraphTraits<BasicBlock*> {
+template <> struct GraphTraits<BasicBlock *> {
   using NodeRef = BasicBlock *;
   using ChildIteratorType = succ_iterator;
 
@@ -313,7 +315,7 @@ template <> struct GraphTraits<BasicBlock*> {
 static_assert(GraphHasNodeNumbers<BasicBlock *>,
               "GraphTraits getNumber() not detected");
 
-template <> struct GraphTraits<const BasicBlock*> {
+template <> struct GraphTraits<const BasicBlock *> {
   using NodeRef = const BasicBlock *;
   using ChildIteratorType = const_succ_iterator;
 
@@ -333,7 +335,7 @@ static_assert(GraphHasNodeNumbers<const BasicBlock *>,
 // a function is considered to be when traversing the predecessor edges of a BB
 // instead of the successor edges.
 //
-template <> struct GraphTraits<Inverse<BasicBlock*>> {
+template <> struct GraphTraits<Inverse<BasicBlock *>> {
   using NodeRef = BasicBlock *;
   using ChildIteratorType = pred_iterator;
 
@@ -347,7 +349,7 @@ template <> struct GraphTraits<Inverse<BasicBlock*>> {
 static_assert(GraphHasNodeNumbers<Inverse<BasicBlock *>>,
               "GraphTraits getNumber() not detected");
 
-template <> struct GraphTraits<Inverse<const BasicBlock*>> {
+template <> struct GraphTraits<Inverse<const BasicBlock *>> {
   using NodeRef = const BasicBlock *;
   using ChildIteratorType = const_pred_iterator;
 
@@ -369,7 +371,7 @@ static_assert(GraphHasNodeNumbers<Inverse<const BasicBlock *>>,
 // graph of basic blocks... these are the same as the basic block iterators,
 // except that the root node is implicitly the first node of the function.
 //
-template <> struct GraphTraits<Function*> : public GraphTraits<BasicBlock*> {
+template <> struct GraphTraits<Function *> : public GraphTraits<BasicBlock *> {
   static NodeRef getEntryNode(Function *F) { return &F->getEntryBlock(); }
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
@@ -392,8 +394,8 @@ template <> struct GraphTraits<Function*> : public GraphTraits<BasicBlock*> {
     return F->getBlockNumberEpoch();
   }
 };
-template <> struct GraphTraits<const Function*> :
-  public GraphTraits<const BasicBlock*> {
+template <>
+struct GraphTraits<const Function *> : public GraphTraits<const BasicBlock *> {
   static NodeRef getEntryNode(const Function *F) { return &F->getEntryBlock(); }
 
   // nodes_iterator/begin/end - Allow iteration over all nodes in the graph
@@ -422,8 +424,9 @@ template <> struct GraphTraits<const Function*> :
 // a function is considered to be when traversing the predecessor edges of a BB
 // instead of the successor edges.
 //
-template <> struct GraphTraits<Inverse<Function*>> :
-  public GraphTraits<Inverse<BasicBlock*>> {
+template <>
+struct GraphTraits<Inverse<Function *>>
+    : public GraphTraits<Inverse<BasicBlock *>> {
   static NodeRef getEntryNode(Inverse<Function *> G) {
     return &G.Graph->getEntryBlock();
   }
@@ -435,8 +438,9 @@ template <> struct GraphTraits<Inverse<Function*>> :
     return F->getBlockNumberEpoch();
   }
 };
-template <> struct GraphTraits<Inverse<const Function*>> :
-  public GraphTraits<Inverse<const BasicBlock*>> {
+template <>
+struct GraphTraits<Inverse<const Function *>>
+    : public GraphTraits<Inverse<const BasicBlock *>> {
   static NodeRef getEntryNode(Inverse<const Function *> G) {
     return &G.Graph->getEntryBlock();
   }

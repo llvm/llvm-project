@@ -76,16 +76,17 @@ private:
       : public llvm::RTTIExtends<ClangUtilityFunctionHelper,
                                  ClangExpressionHelper> {
   public:
+    ClangUtilityFunctionHelper();
+    ~ClangUtilityFunctionHelper() override;
+
     // LLVM RTTI support
     static char ID;
 
     /// Return the object that the parser should use when resolving external
     /// values.  May be NULL if everything should be self-contained.
-    ClangExpressionDeclMap *DeclMap() override {
-      return m_expr_decl_map_up.get();
-    }
+    ClangExpressionDeclMap *DeclMap() override;
 
-    void ResetDeclMap() { m_expr_decl_map_up.reset(); }
+    void ResetDeclMap(/* Requires full type */);
 
     void ResetDeclMap(ExecutionContext &exe_ctx, bool keep_result_in_memory);
 

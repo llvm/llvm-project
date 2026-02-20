@@ -114,15 +114,15 @@ private:
   clang::ASTContext
       *m_ast_context; ///< The AST context to use for identifiers and types.
   clang::ASTConsumer *m_passthrough; ///< The ASTConsumer down the chain, for
-                                     ///passthrough.  NULL if it's a
-                                     ///SemaConsumer.
+                                     /// passthrough.  NULL if it's a
+                                     /// SemaConsumer.
   clang::SemaConsumer *m_passthrough_sema; ///< The SemaConsumer down the chain,
-                                           ///for passthrough.  NULL if it's an
-                                           ///ASTConsumer.
+                                           /// for passthrough.  NULL if it's an
+                                           /// ASTConsumer.
   clang::Sema *m_sema;                     ///< The Sema to use.
 
   ClangFunctionCaller &m_function; ///< The function to populate with
-                                   ///information about the argument structure.
+                                   /// information about the argument structure.
   std::string m_struct_name;       ///< The name of the structure to extract.
 };
 

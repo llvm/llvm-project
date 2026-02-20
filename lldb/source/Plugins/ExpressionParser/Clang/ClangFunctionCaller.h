@@ -64,7 +64,9 @@ class ClangFunctionCaller : public FunctionCaller {
     // LLVM RTTI support
     static char ID;
 
-    ClangFunctionCallerHelper(ClangFunctionCaller &owner) : m_owner(owner) {}
+    ClangFunctionCallerHelper(
+        ClangFunctionCaller
+            &owner); // Avoid make implementation in header : m_owner(owner) {}
 
     /// Return the object that the parser should use when resolving external
     /// values.  May be NULL if everything should be self-contained.
@@ -79,12 +81,14 @@ class ClangFunctionCaller : public FunctionCaller {
     clang::ASTConsumer *
     ASTTransformer(clang::ASTConsumer *passthrough) override;
 
+    ~ClangFunctionCallerHelper() override;
+
   private:
     ClangFunctionCaller &m_owner;
     std::unique_ptr<ASTStructExtractor> m_struct_extractor; ///< The class that
-                                                            ///generates the
-                                                            ///argument struct
-                                                            ///layout.
+                                                            /// generates the
+                                                            /// argument struct
+                                                            /// layout.
   };
 
   // LLVM RTTI support

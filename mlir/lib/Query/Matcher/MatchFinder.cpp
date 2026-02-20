@@ -11,7 +11,31 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Query/Matcher/MatchFinder.h"
+#include "mlir/Query/Matcher/MatchersInternal.h"
+
 namespace mlir::query::matcher {
+
+template <VariadicOperatorFunction Func>
+VariadicMatcher<Func>::VariadicMatcher(std::vector<DynMatcher> matchers)
+    : matchers(std::move(matchers)) {}
+
+template <VariadicOperatorFunction Func>
+VariadicMatcher<Func>::~VariadicMatcher() = default;
+
+template <VariadicOperatorFunction Func>
+bool VariadicMatcher<Func>::match(Operation *op) {
+  return Func(op, nullptr, matchers);
+}
+
+template <VariadicOperatorFunction Func>
+bool VariadicMatcher<Func>::match(Operation *op,
+                                  SetVector<Operation *> &matchedOps) {
+  return Func(op, &matchedOps, matchers);
+}
+
+template class VariadicMatcher<&internal::allOfVariadicOperator>;
+
+template class VariadicMatcher<&internal::anyOfVariadicOperator>;
 
 MatchFinder::MatchResult::MatchResult(Operation *rootOp,
                                       std::vector<Operation *> matchedOps)

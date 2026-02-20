@@ -8,13 +8,13 @@
 
 #include "ClangUtilityFunction.h"
 #include "ClangExpressionDeclMap.h"
+#include "ClangExpressionHelper.h"
 #include "ClangExpressionParser.h"
 #include "ClangExpressionSourceCode.h"
 #include "ClangPersistentVariables.h"
 
 #include <cstdio>
 #include <sys/types.h>
-
 
 #include "lldb/Core/Module.h"
 #include "lldb/Expression/IRExecutionUnit.h"
@@ -174,7 +174,22 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
   }
 }
 
+ClangUtilityFunction::ClangUtilityFunctionHelper::ClangUtilityFunctionHelper() =
+    default;
+
+ClangUtilityFunction::ClangUtilityFunctionHelper::
+    ~ClangUtilityFunctionHelper() = default;
+
 char ClangUtilityFunction::ClangUtilityFunctionHelper::ID;
+
+ClangExpressionDeclMap *
+ClangUtilityFunction::ClangUtilityFunctionHelper::DeclMap() {
+  return m_expr_decl_map_up.get();
+}
+
+void ClangUtilityFunction::ClangUtilityFunctionHelper::ResetDeclMap() {
+  return m_expr_decl_map_up.reset();
+}
 
 void ClangUtilityFunction::ClangUtilityFunctionHelper::ResetDeclMap(
     ExecutionContext &exe_ctx, bool keep_result_in_memory) {

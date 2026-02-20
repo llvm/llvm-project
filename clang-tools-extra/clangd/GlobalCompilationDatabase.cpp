@@ -349,6 +349,94 @@ bool DirectoryBasedGlobalCompilationDatabase::DirectoryCache::load(
   return true;
 }
 
+// The broadcast thread announces files with new compile commands to the world.
+// Primarily this is used to enqueue them for background indexing.
+//
+// It's on a separate thread because:
+//  - otherwise it would block the first parse of the initial file
+//  - we need to enumerate all files in the CDB, of which there are many
+//  - we (will) have to evaluate config for every file in the CDB, which is slow
+class DirectoryBasedGlobalCompilationDatabase::BroadcastThread {
+  class Filter;
+  DirectoryBasedGlobalCompilationDatabase &Parent;
+
+  std::mutex Mu;
+  std::condition_variable CV;
+  // Shutdown flag (CV is notified after writing).
+  // This is atomic so that broadcasts can also observe it and abort early.
+  std::atomic<bool> ShouldStop = {false};
+  struct Task {
+    CDBLookupResult Lookup;
+    Context Ctx;
+  };
+  std::deque<Task> Queue;
+  std::optional<Task> ActiveTask;
+  std::thread Thread; // Must be last member.
+
+  // Thread body: this is just the basic queue procesing boilerplate.
+  void run() {
+    std::unique_lock<std::mutex> Lock(Mu);
+    while (true) {
+      bool Stopping = false;
+      CV.wait(Lock, [&] {
+        return (Stopping = ShouldStop.load(std::memory_order_acquire)) ||
+               !Queue.empty();
+      });
+      if (Stopping) {
+        Queue.clear();
+        CV.notify_all();
+        return;
+      }
+      ActiveTask = std::move(Queue.front());
+      Queue.pop_front();
+
+      Lock.unlock();
+      {
+        WithContext WithCtx(std::move(ActiveTask->Ctx));
+        process(ActiveTask->Lookup);
+      }
+      Lock.lock();
+      ActiveTask.reset();
+      CV.notify_all();
+    }
+  }
+
+  // Inspects a new CDB and broadcasts the files it owns.
+  void process(const CDBLookupResult &T);
+
+public:
+  BroadcastThread(DirectoryBasedGlobalCompilationDatabase &Parent)
+      : Parent(Parent), Thread([this] { run(); }) {}
+
+  void enqueue(CDBLookupResult Lookup) {
+    {
+      assert(!Lookup.PI.SourceRoot.empty());
+      std::lock_guard<std::mutex> Lock(Mu);
+      // New CDB takes precedence over any queued one for the same directory.
+      llvm::erase_if(Queue, [&](const Task &T) {
+        return T.Lookup.PI.SourceRoot == Lookup.PI.SourceRoot;
+      });
+      Queue.push_back({std::move(Lookup), Context::current().clone()});
+    }
+    CV.notify_all();
+  }
+
+  bool blockUntilIdle(Deadline Timeout) {
+    std::unique_lock<std::mutex> Lock(Mu);
+    return wait(Lock, CV, Timeout,
+                [&] { return Queue.empty() && !ActiveTask; });
+  }
+
+  ~BroadcastThread() {
+    {
+      std::lock_guard<std::mutex> Lock(Mu);
+      ShouldStop.store(true, std::memory_order_release);
+    }
+    CV.notify_all();
+    Thread.join();
+  }
+};
+
 DirectoryBasedGlobalCompilationDatabase::
     DirectoryBasedGlobalCompilationDatabase(const Options &Opts)
     : GlobalCompilationDatabase(Opts.FallbackWorkingDirectory), Opts(Opts),
@@ -477,94 +565,6 @@ void DirectoryBasedGlobalCompilationDatabase::Options::
     this->FallbackWorkingDirectory = std::string(CWD);
   }
 }
-
-// The broadcast thread announces files with new compile commands to the world.
-// Primarily this is used to enqueue them for background indexing.
-//
-// It's on a separate thread because:
-//  - otherwise it would block the first parse of the initial file
-//  - we need to enumerate all files in the CDB, of which there are many
-//  - we (will) have to evaluate config for every file in the CDB, which is slow
-class DirectoryBasedGlobalCompilationDatabase::BroadcastThread {
-  class Filter;
-  DirectoryBasedGlobalCompilationDatabase &Parent;
-
-  std::mutex Mu;
-  std::condition_variable CV;
-  // Shutdown flag (CV is notified after writing).
-  // This is atomic so that broadcasts can also observe it and abort early.
-  std::atomic<bool> ShouldStop = {false};
-  struct Task {
-    CDBLookupResult Lookup;
-    Context Ctx;
-  };
-  std::deque<Task> Queue;
-  std::optional<Task> ActiveTask;
-  std::thread Thread; // Must be last member.
-
-  // Thread body: this is just the basic queue procesing boilerplate.
-  void run() {
-    std::unique_lock<std::mutex> Lock(Mu);
-    while (true) {
-      bool Stopping = false;
-      CV.wait(Lock, [&] {
-        return (Stopping = ShouldStop.load(std::memory_order_acquire)) ||
-               !Queue.empty();
-      });
-      if (Stopping) {
-        Queue.clear();
-        CV.notify_all();
-        return;
-      }
-      ActiveTask = std::move(Queue.front());
-      Queue.pop_front();
-
-      Lock.unlock();
-      {
-        WithContext WithCtx(std::move(ActiveTask->Ctx));
-        process(ActiveTask->Lookup);
-      }
-      Lock.lock();
-      ActiveTask.reset();
-      CV.notify_all();
-    }
-  }
-
-  // Inspects a new CDB and broadcasts the files it owns.
-  void process(const CDBLookupResult &T);
-
-public:
-  BroadcastThread(DirectoryBasedGlobalCompilationDatabase &Parent)
-      : Parent(Parent), Thread([this] { run(); }) {}
-
-  void enqueue(CDBLookupResult Lookup) {
-    {
-      assert(!Lookup.PI.SourceRoot.empty());
-      std::lock_guard<std::mutex> Lock(Mu);
-      // New CDB takes precedence over any queued one for the same directory.
-      llvm::erase_if(Queue, [&](const Task &T) {
-        return T.Lookup.PI.SourceRoot == Lookup.PI.SourceRoot;
-      });
-      Queue.push_back({std::move(Lookup), Context::current().clone()});
-    }
-    CV.notify_all();
-  }
-
-  bool blockUntilIdle(Deadline Timeout) {
-    std::unique_lock<std::mutex> Lock(Mu);
-    return wait(Lock, CV, Timeout,
-                [&] { return Queue.empty() && !ActiveTask; });
-  }
-
-  ~BroadcastThread() {
-    {
-      std::lock_guard<std::mutex> Lock(Mu);
-      ShouldStop.store(true, std::memory_order_release);
-    }
-    CV.notify_all();
-    Thread.join();
-  }
-};
 
 // The DirBasedCDB associates each file with a specific CDB.
 // When a CDB is discovered, it may claim to describe files that we associate

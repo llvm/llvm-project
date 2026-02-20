@@ -684,3 +684,10 @@ SingleStepBreakpointLocationsPredictor::GetBreakpointLocationAddress(
   error = Status("Instruction emulation failed unexpectedly.");
   return LLDB_INVALID_ADDRESS;
 }
+
+SingleStepBreakpointLocationsPredictor::SingleStepBreakpointLocationsPredictor(
+    std::unique_ptr<EmulateInstruction> emuluator_up)
+    : m_emulator_up{std::move(emuluator_up)} {}
+
+SingleStepBreakpointLocationsPredictor::
+    ~SingleStepBreakpointLocationsPredictor() = default;
