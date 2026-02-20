@@ -449,10 +449,44 @@ struct VPlanTransforms {
   static std::unique_ptr<VPlan>
   narrowInterleaveGroups(VPlan &Plan, const TargetTransformInfo &TTI);
 
+  /// Adapts the vector loop region for tail folding by introducing a header
+  /// mask and predicating the region:
+  ///
+  /// Vector loop region before:
+  /// +-------------------------------------------+
+  /// |%iv = ...                                  |
+  /// |...                                        |
+  /// |%iv.next = add %iv, vfxuf                  |
+  /// |branch-on-count %iv.next, vector-trip-count|
+  /// +-------------------------------------------+
+  ///
+  /// Vector loop region after:
+  /// +-------------------------------------------+
+  /// |%iv = ...                                  |
+  /// |%wide.iv = widen-canonical-iv ...          |
+  /// |%header-mask = icmp ult %wide.iv, BTC      |
+  /// |branch-on-cond %header-mask                |---+
+  /// +-------------------------------------------+   |
+  ///                      |                          |
+  ///                      v                          |
+  /// +-------------------------------------------+   |
+  /// |                   ...                     |   |
+  /// +-------------------------------------------+   |
+  ///                      |                          |
+  ///                      v                          |
+  /// +-------------------------------------------+   |
+  /// |<phis> = phi [..., ...], [poison, header]  |
+  /// |%iv.next = add %iv, vfxuf                  |<--+
+  /// |branch-on-count %iv.next, vector-trip-count|
+  /// +-------------------------------------------+
+  ///
+  /// Any VPInstruction::ExtractLastLanes are also updated to extract from the
+  /// last active lane of the header mask.
+  static void foldTailByMasking(VPlan &Plan);
+
   /// Predicate and linearize the control-flow in the only loop region of
-  /// \p Plan. If \p FoldTail is true, create a mask guarding the loop
-  /// header, otherwise use all-true for the header mask.
-  static void introduceMasksAndLinearize(VPlan &Plan, bool FoldTail);
+  /// \p Plan.
+  static void introduceMasksAndLinearize(VPlan &Plan);
 
   /// Add branch weight metadata, if the \p Plan's middle block is terminated by
   /// a BranchOnCond recipe.
