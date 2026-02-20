@@ -30,6 +30,7 @@ class EntityIdTable;
 class EntityId {
   friend class EntityIdTable;
   friend class SerializationFormat;
+  friend class TestFixture;
 
   size_t Index;
 

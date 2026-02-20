@@ -42,7 +42,6 @@
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
 #include "lldb/Interpreter/OptionValues.h"
 #include "lldb/Interpreter/Property.h"
-#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
@@ -3425,93 +3424,6 @@ void Target::SaveScriptedLaunchInfo(lldb_private::ProcessInfo &process_info) {
     default_launch_info.SetScriptedMetadata(process_info.GetScriptedMetadata());
     SetProcessLaunchInfo(default_launch_info);
   }
-}
-
-Status
-Target::RegisterScriptedSymbolLocator(llvm::StringRef class_name,
-                                      StructuredData::DictionarySP args_sp) {
-  if (class_name.empty())
-    return Status::FromErrorString(
-        "class name must not be empty; use ClearScriptedSymbolLocator() to "
-        "unregister");
-
-  ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
-  if (!interpreter)
-    return Status::FromErrorString("no script interpreter available");
-
-  auto interface_sp = interpreter->CreateScriptedSymbolLocatorInterface();
-  if (!interface_sp)
-    return Status::FromErrorString(
-        "failed to create scripted symbol locator interface");
-
-  ExecutionContext exe_ctx;
-  TargetSP target_sp(shared_from_this());
-  exe_ctx.SetTargetSP(target_sp);
-
-  auto obj_or_err =
-      interface_sp->CreatePluginObject(class_name, exe_ctx, args_sp);
-  if (!obj_or_err)
-    return Status::FromError(obj_or_err.takeError());
-
-  m_scripted_symbol_locator_metadata_sp =
-      std::make_shared<ScriptedMetadata>(class_name, args_sp);
-  m_scripted_symbol_locator_interface_sp = interface_sp;
-  m_scripted_source_file_cache.clear();
-
-  // Invalidate cached stack frames so the next backtrace re-resolves line
-  // entries through ApplyFileMappings, which will call our locator.
-  ProcessSP process_sp = GetProcessSP();
-  if (process_sp) {
-    ThreadList &thread_list = process_sp->GetThreadList();
-    for (uint32_t i = 0; i < thread_list.GetSize(false); i++) {
-      if (ThreadSP thread_sp = thread_list.GetThreadAtIndex(i, false))
-        thread_sp->ClearStackFrames();
-    }
-  }
-
-  return Status();
-}
-
-void Target::ClearScriptedSymbolLocator() {
-  m_scripted_symbol_locator_metadata_sp.reset();
-  m_scripted_symbol_locator_interface_sp.reset();
-  m_scripted_source_file_cache.clear();
-
-  // Invalidate cached stack frames so the next backtrace re-resolves line
-  // entries without the scripted locator.
-  ProcessSP process_sp = GetProcessSP();
-  if (process_sp) {
-    ThreadList &thread_list = process_sp->GetThreadList();
-    for (uint32_t i = 0; i < thread_list.GetSize(false); i++) {
-      if (ThreadSP thread_sp = thread_list.GetThreadAtIndex(i, false))
-        thread_sp->ClearStackFrames();
-    }
-  }
-}
-
-ScriptedSymbolLocatorInterfaceSP Target::GetScriptedSymbolLocatorInterface() {
-  return m_scripted_symbol_locator_interface_sp;
-}
-
-llvm::StringRef Target::GetScriptedSymbolLocatorClassName() const {
-  return m_scripted_symbol_locator_metadata_sp
-             ? m_scripted_symbol_locator_metadata_sp->GetClassName()
-             : "";
-}
-
-bool Target::LookupScriptedSourceFileCache(
-    llvm::StringRef key, std::optional<FileSpec> &result) const {
-  auto it = m_scripted_source_file_cache.find(key);
-  if (it != m_scripted_source_file_cache.end()) {
-    result = it->second;
-    return true;
-  }
-  return false;
-}
-
-void Target::InsertScriptedSourceFileCache(
-    llvm::StringRef key, const std::optional<FileSpec> &result) {
-  m_scripted_source_file_cache[key] = result;
 }
 
 Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {

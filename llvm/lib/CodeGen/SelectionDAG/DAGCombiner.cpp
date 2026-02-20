@@ -4487,9 +4487,12 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   }
 
   // canonicalize (sub X, (vscale * C)) to (add X, (vscale * -C))
+  // avoid if ISD::MUL handling is poor and ISD::SHL isn't an option.
   if (N1.getOpcode() == ISD::VSCALE && N1.hasOneUse()) {
     const APInt &IntVal = N1.getConstantOperandAPInt(0);
-    return DAG.getNode(ISD::ADD, DL, VT, N0, DAG.getVScale(DL, VT, -IntVal));
+    if (!IntVal.isPowerOf2() ||
+        hasOperation(ISD::MUL, N1.getOperand(0).getValueType()))
+      return DAG.getNode(ISD::ADD, DL, VT, N0, DAG.getVScale(DL, VT, -IntVal));
   }
 
   // canonicalize (sub X, step_vector(C)) to (add X, step_vector(-C))
@@ -7970,6 +7973,13 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
       return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, X.getOperand(0));
   }
 
+  // (X +/- Y) & Y --> ~X & Y when Y is a power of 2 (or zero).
+  if (sd_match(N, m_And(m_Value(Y),
+                        m_OneUse(m_AnyOf(m_Add(m_Value(X), m_Deferred(Y)),
+                                         m_Sub(m_Value(X), m_Deferred(Y)))))) &&
+      DAG.isKnownToBeAPowerOfTwo(Y, /*OrZero=*/true))
+    return DAG.getNode(ISD::AND, DL, VT, DAG.getNOT(DL, X, VT), Y);
+
   // fold (and (sign_extend_inreg x, i16 to i32), 1) -> (and x, 1)
   // fold (and (sra)) -> (and (srl)) when possible.
   if (SimplifyDemandedBits(SDValue(N, 0)))
@@ -8500,17 +8510,35 @@ static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
     return V;
   };
 
-  // (fshl X, ?, Y) | (shl X, Y) --> fshl X, ?, Y
   if (N0.getOpcode() == ISD::FSHL && N1.getOpcode() == ISD::SHL &&
-      N0.getOperand(0) == N1.getOperand(0) &&
-      peekThroughZext(N0.getOperand(2)) == peekThroughZext(N1.getOperand(1)))
-    return N0;
+      peekThroughZext(N0.getOperand(2)) == peekThroughZext(N1.getOperand(1))) {
+    // (fshl X, ?, Y) | (shl X, Y) --> fshl X, ?, Y
+    if (N0.getOperand(0) == N1.getOperand(0))
+      return N0;
+    // (fshl A, X, Y) | (shl X, Y) --> fshl (A|X), X, Y
+    if (N0.getOperand(1) == N1.getOperand(0) && N0.hasOneUse() &&
+        N1.hasOneUse()) {
+      SDValue A = N0.getOperand(0);
+      SDValue X = N1.getOperand(0);
+      SDValue NewLHS = DAG.getNode(ISD::OR, DL, VT, A, X);
+      return DAG.getNode(ISD::FSHL, DL, VT, NewLHS, X, N0.getOperand(2));
+    }
+  }
 
-  // (fshr ?, X, Y) | (srl X, Y) --> fshr ?, X, Y
   if (N0.getOpcode() == ISD::FSHR && N1.getOpcode() == ISD::SRL &&
-      N0.getOperand(1) == N1.getOperand(0) &&
-      peekThroughZext(N0.getOperand(2)) == peekThroughZext(N1.getOperand(1)))
-    return N0;
+      peekThroughZext(N0.getOperand(2)) == peekThroughZext(N1.getOperand(1))) {
+    // (fshr ?, X, Y) | (srl X, Y) --> fshr ?, X, Y
+    if (N0.getOperand(1) == N1.getOperand(0))
+      return N0;
+    // (fshr X, B, Y) | (srl X, Y) --> fshr X, (X|B), Y
+    if (N0.getOperand(0) == N1.getOperand(0) && N0.hasOneUse() &&
+        N1.hasOneUse()) {
+      SDValue X = N1.getOperand(0);
+      SDValue B = N0.getOperand(1);
+      SDValue NewRHS = DAG.getNode(ISD::OR, DL, VT, X, B);
+      return DAG.getNode(ISD::FSHR, DL, VT, X, NewRHS, N0.getOperand(2));
+    }
+  }
 
   // Attempt to match a legalized build_pair-esque pattern:
   // or(shl(aext(Hi),BW/2),zext(Lo))

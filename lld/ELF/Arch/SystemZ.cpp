@@ -88,6 +88,9 @@ RelExpr SystemZ::getRelExpr(RelType type, const Symbol &s,
   case R_390_32:
   case R_390_64:
     return R_ABS;
+  case R_390_TLS_LDO32:
+  case R_390_TLS_LDO64:
+    return R_DTPREL;
   case R_390_PC32:
   case R_390_PC64:
     return R_PC;

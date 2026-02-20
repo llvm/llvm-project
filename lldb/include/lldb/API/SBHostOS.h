@@ -18,7 +18,10 @@ class LLDB_API SBHostOS {
 public:
   static lldb::SBFileSpec GetProgramFileSpec();
 
+  LLDB_DEPRECATED_FIXME("Use GetScriptPath instead.", "GetScriptPath()")
   static lldb::SBFileSpec GetLLDBPythonPath();
+
+  static lldb::SBFileSpec GetScriptPath(lldb::ScriptLanguage language);
 
   static lldb::SBFileSpec GetLLDBPath(lldb::PathType path_type);
 

@@ -914,6 +914,15 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
   scf::ForOp innermost = loops.back();
   scf::ForOp outermost = loops.front();
 
+  // Bail out if any loop has a known zero step, as normalization
+  // would result in a division by zero.
+  for (auto loop : loops) {
+    if (auto step = getConstantIntValue(loop.getStep())) {
+      if (step.value() == 0) {
+        return failure();
+      }
+    }
+  }
   // 1. Make sure all loops iterate from 0 to upperBound with step 1.  This
   // allows the following code to assume upperBound is the number of iterations.
   for (auto loop : loops) {
@@ -1558,6 +1567,25 @@ bool mlir::isPerfectlyNestedForLoops(
     }
   }
   return true;
+}
+
+llvm::SmallVector<std::tuple<int64_t, int64_t, int64_t>>
+mlir::getConstLoopBounds(mlir::LoopLikeOpInterface loopOp) {
+  std::optional<SmallVector<OpFoldResult>> loBnds = loopOp.getLoopLowerBounds();
+  std::optional<SmallVector<OpFoldResult>> upBnds = loopOp.getLoopUpperBounds();
+  std::optional<SmallVector<OpFoldResult>> steps = loopOp.getLoopSteps();
+  if (!loBnds || !upBnds || !steps)
+    return {};
+  llvm::SmallVector<std::tuple<int64_t, int64_t, int64_t>> loopRanges;
+  for (auto [lb, ub, step] : llvm::zip(*loBnds, *upBnds, *steps)) {
+    auto lbCst = getConstantIntValue(lb);
+    auto ubCst = getConstantIntValue(ub);
+    auto stepCst = getConstantIntValue(step);
+    if (!lbCst || !ubCst || !stepCst)
+      return {};
+    loopRanges.emplace_back(*lbCst, *ubCst, *stepCst);
+  }
+  return loopRanges;
 }
 
 llvm::SmallVector<llvm::APInt>
