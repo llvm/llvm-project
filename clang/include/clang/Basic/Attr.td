@@ -3288,6 +3288,7 @@ def InitPriority : InheritableAttr, TargetSpecificAttr<TargetSupportsInitPriorit
   let Args = [UnsignedArgument<"Priority">];
   let Subjects = SubjectList<[Var], ErrorDiag>;
   let Documentation = [InitPriorityDocs];
+  let IsTypeDependent = 1;
 }
 
 def Section : InheritableAttr {
