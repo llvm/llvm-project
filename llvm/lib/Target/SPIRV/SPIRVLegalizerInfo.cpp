@@ -445,6 +445,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_FMODF,
                                G_FSINCOS,
                                G_FEXP2,
+                               G_FEXP10,
                                G_FLOG,
                                G_FLOG2,
                                G_FLOG10,
