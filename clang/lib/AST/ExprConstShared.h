@@ -142,7 +142,7 @@ static bool MatchesPredicate(const uint32_t Imm,
     return true;
   }
   return false;
-};
+}
 } // namespace clang
 
 using namespace clang;
