@@ -1448,7 +1448,8 @@ void LinkerDriver::pullArm64ECIcallHelper() {
 // explicitly specified. The automatic behavior can be disabled using the
 // -exclude-all-symbols option, so that lld-link behaves like link.exe rather
 // than MinGW in the case that nothing is explicitly exported.
-void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
+void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args,
+                                           bool preLTOCheck) {
   if (!args.hasArg(OPT_export_all_symbols)) {
     if (!ctx.config.dll)
       return;
@@ -1479,7 +1480,7 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
       if (!exporter.shouldExport(def))
         return;
 
-      if (!def->isGCRoot) {
+      if (!preLTOCheck && !def->isGCRoot) {
         def->isGCRoot = true;
         ctx.config.gcroot.push_back(def);
       }
@@ -1491,7 +1492,8 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
         if (!(c->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
           e.data = true;
       s->isUsedInRegularObj = true;
-      symtab.exports.push_back(e);
+      if (!preLTOCheck)
+        symtab.exports.push_back(e);
     });
   });
 }
@@ -2699,6 +2701,16 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     ctx.forEachActiveSymtab(
         [&](SymbolTable &symtab) { symtab.addUndefinedGlob(pat); });
 
+  // combination of LTO and EmuTLS needs special handlings
+  const bool isEmuTLS = llvm::is_contained(config->mllvmOpts, "-emulated-tls");
+  const bool isLTO = [&]() {
+    bool isLTO = false;
+    ctx.forEachSymtab([&](SymbolTable &symtab) {
+      isLTO |= !symtab.bitcodeFileInstances.empty();
+    });
+    return isLTO;
+  }();
+
   // Create wrapped symbols for -wrap option.
   ctx.forEachSymtab([&](SymbolTable &symtab) {
     addWrappedSymbols(symtab, args);
@@ -2737,11 +2749,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // If we are going to do codegen for link-time optimization, check for
   // unresolvable symbols first, so we don't spend time generating code that
   // will fail to link anyway.
-  if (!config->forceUnresolved)
-    ctx.forEachSymtab([](SymbolTable &symtab) {
-      if (!symtab.bitcodeFileInstances.empty())
-        symtab.reportUnresolvable();
-    });
+  // This check cannot be appllied if emulated TLS enabled since LTO invokes
+  // LLVM passes that modify symbol set.
+  if (isLTO && !isEmuTLS && !config->forceUnresolved)
+    ctx.forEachSymtab(
+        [&](SymbolTable &symtab) { symtab.reportUnresolvable(); });
   if (errorCount())
     return;
 
@@ -2751,7 +2763,20 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (config->mingw) {
     // In MinGW, all symbols are automatically exported if no symbols
     // are chosen to be exported.
-    maybeExportMinGWSymbols(args);
+    maybeExportMinGWSymbols(args, isLTO && isEmuTLS);
+  }
+
+  // retain VAR if __emutls_v.VAR is retained
+  if (isLTO && isEmuTLS) {
+    ctx.forEachActiveSymtab([&](SymbolTable &symtab) {
+      symtab.forEachSymbol([&](Symbol *s) {
+        auto name = s->getName();
+        if (!name.starts_with("__emutls_v.") || !s->isUsedInRegularObj)
+          return;
+        if (Symbol *tls = symtab.find(name.substr(strlen("__emutls_v."))))
+          tls->isUsedInRegularObj = true;
+      });
+    });
   }
 
   // Do LTO by compiling bitcode input files to a set of native COFF files then
@@ -2759,6 +2784,15 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // resolve symbols and write indices, but don't generate native code or link).
   ltoCompilationDone = true;
   ctx.forEachSymtab([](SymbolTable &symtab) { symtab.compileBitcodeFiles(); });
+
+  // When emulated TLS enabled, LTO modifies symbol set. Secondly check is
+  // needed here.
+  if (isLTO && isEmuTLS && config->mingw) {
+    if (config->autoImport || config->stdcallFixup) {
+      ctx.forEachSymtab([](SymbolTable &symtab) { symtab.loadMinGWSymbols(); });
+    }
+    maybeExportMinGWSymbols(args, false);
+  }
 
   if (Defined *d =
           dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore("_tls_used")))
