@@ -34,7 +34,7 @@ define i64 @mv_to_fmv(i64 %a, i64 %b) nounwind {
 ; CHECK32P-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; CHECK32P-NEXT:    addd s0, a0, a2
 ; CHECK32P-NEXT:    call foo
-; CHECK32P-NEXT:    addd a0, s0, zero
+; CHECK32P-NEXT:    padd.dw a0, s0, zero
 ; CHECK32P-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32P-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK32P-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload

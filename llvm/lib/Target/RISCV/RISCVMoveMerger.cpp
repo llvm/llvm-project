@@ -71,14 +71,11 @@ static unsigned getMoveFromOpcode(const RISCVSubtarget &ST, bool MoveFromSToA) {
   if (ST.hasVendorXqccmp())
     return MoveFromSToA ? RISCV::QC_CM_MVA01S : RISCV::QC_CM_MVSA01;
 
-  if (ST.hasStdExtZdinx()) {
-    if (ST.is64Bit())
-      return RISCV::FSGNJ_D;
+  if (ST.hasStdExtZdinx())
     return RISCV::FSGNJ_D_IN32X;
-  }
 
   if (ST.hasStdExtP())
-    return RISCV::ADDD;
+    return RISCV::PADD_DW;
 
   llvm_unreachable("Unhandled subtarget with paired A to S move.");
 }
@@ -176,11 +173,7 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
     SrcReg1 =
         TRI->getMatchingSuperReg(FirstPair.Source->getReg(),
                                  RISCV::sub_gpr_even, &RISCV::GPRPairRegClass);
-    SrcReg2 =
-        ST->hasStdExtZdinx()
-            ? SrcReg1
-            : Register(TRI->getMatchingSuperReg(RISCV::X0, RISCV::sub_gpr_even,
-                                                &RISCV::GPRPairRegClass));
+    SrcReg2 = ST->hasStdExtZdinx() ? SrcReg1 : Register(RISCV::X0_Pair);
     DestReg =
         TRI->getMatchingSuperReg(FirstPair.Destination->getReg(),
                                  RISCV::sub_gpr_even, &RISCV::GPRPairRegClass);
@@ -337,7 +330,7 @@ bool RISCVMoveMerge::runOnMachineFunction(MachineFunction &Fn) {
       !ST->hasStdExtP())
     return false;
 
-  if (ST->hasStdExtP() && ST->is64Bit())
+  if ((ST->hasStdExtP() || ST->hasStdExtZdinx()) && ST->is64Bit())
     return false;
 
   TII = ST->getInstrInfo();

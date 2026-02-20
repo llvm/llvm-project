@@ -814,7 +814,7 @@ define i64 @wmaccu(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmaccu:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmaccu a2, a0, a1
-; CHECK-NEXT:    addd a0, a2, zero
+; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    ret
   %aext = zext i32 %a to i64
   %bext = zext i32 %b to i64
@@ -827,7 +827,7 @@ define i64 @wmaccu_commute(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmaccu_commute:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmaccu a2, a0, a1
-; CHECK-NEXT:    addd a0, a2, zero
+; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    ret
   %aext = zext i32 %a to i64
   %bext = zext i32 %b to i64
@@ -840,7 +840,7 @@ define i64 @wmacc(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmacc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmacc a2, a0, a1
-; CHECK-NEXT:    addd a0, a2, zero
+; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = sext i32 %b to i64
@@ -853,7 +853,7 @@ define i64 @wmacc_commute(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmacc_commute:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmacc a2, a0, a1
-; CHECK-NEXT:    addd a0, a2, zero
+; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = sext i32 %b to i64
@@ -866,7 +866,7 @@ define i64 @wmaccsu(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmaccsu:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmaccsu a2, a0, a1
-; CHECK-NEXT:    addd a0, a2, zero
+; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = zext i32 %b to i64
@@ -879,7 +879,7 @@ define i64 @wmaccsu_commute(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmaccsu_commute:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmaccsu a2, a0, a1
-; CHECK-NEXT:    addd a0, a2, zero
+; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = zext i32 %b to i64
@@ -919,7 +919,7 @@ define i64 @wmacc_first_mul_multiple_uses(i32 %a, i32 %b, i32 %c, i32 %d, ptr %o
 ; CHECK-NEXT:    wmacc a2, a0, a1
 ; CHECK-NEXT:    sw a6, 0(a4)
 ; CHECK-NEXT:    sw a5, 4(a4)
-; CHECK-NEXT:    addd a0, a2, zero
+; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = sext i32 %b to i64
