@@ -4406,6 +4406,24 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
         }
       }
     }
+
+    // fold (srl (bitcast (build_vector e0, ..., eN)), N * eltsize) -> (zext eN)
+    if (VT.isScalarInteger()) {
+      SDValue BV = peekThroughBitcasts(LHS);
+      if (BV.getOpcode() == ISD::BUILD_VECTOR) {
+        EVT BVVT = BV.getValueType();
+        unsigned EltSizeInBits = BVVT.getScalarSizeInBits();
+        unsigned NumElts = BVVT.getVectorNumElements();
+        if (RHSVal == (NumElts - 1) * EltSizeInBits) {
+          SDValue LastElt = BV.getOperand(NumElts - 1);
+          if (!LastElt.isUndef()) {
+            EVT IntEltVT = EVT::getIntegerVT(*DAG.getContext(), EltSizeInBits);
+            return DAG.getZExtOrTrunc(DAG.getBitcast(IntEltVT, LastElt), SL,
+                                      VT);
+          }
+        }
+      }
+    }
   }
 
   if (VT.getScalarType() != MVT::i64)
