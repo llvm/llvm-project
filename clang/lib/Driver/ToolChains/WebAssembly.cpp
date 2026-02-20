@@ -83,7 +83,7 @@ static bool WantsComponentModelThreadContext(const llvm::Triple &Triple, const A
   // If the target is WASIP3, then enable the
   // component-model-thread-context feature by default, unless explicitly
   // disabled.
-  return Triple.getOSName() == "wasip3" &&
+  return Triple.getOS() == llvm::Triple::WASIp3 &&
          Args.hasFlag(options::OPT_mcomponent_model_thread_context,
                      options::OPT_mno_component_model_thread_context, true);
 }
