@@ -488,6 +488,10 @@ class MCBoundaryAlignFragment : public MCFragment {
   /// is not meaningful before that.
   uint64_t Size = 0;
 
+  /// If true, align the last instruction in the fragment to the end of the
+  /// fragment.
+  bool AlignToEnd = false;
+
 public:
   MCBoundaryAlignFragment(Align AlignBoundary, const MCSubtargetInfo &STI)
       : MCFragment(FT_BoundaryAlign), AlignBoundary(AlignBoundary) {
@@ -499,6 +503,9 @@ public:
 
   Align getAlignment() const { return AlignBoundary; }
   void setAlignment(Align Value) { AlignBoundary = Value; }
+
+  bool isAlignToEnd() const { return AlignToEnd; }
+  void setAlignToEnd(bool Value) { AlignToEnd = Value; }
 
   const MCFragment *getLastFragment() const { return LastFragment; }
   void setLastFragment(const MCFragment *F) {
@@ -552,6 +559,10 @@ private:
   // subsection. When present, the offset between two locations crossing this
   // fragment may not be fully resolved.
   unsigned FirstLinkerRelaxable = -1u;
+
+  /// If bundle-locked, we ensure all instructions in the section are placed in
+  /// the same bundle.
+  bool IsBundleLocked;
 
   /// Whether this section has had instructions emitted into it.
   bool HasInstructions : 1;
@@ -631,6 +642,9 @@ public:
   unsigned firstLinkerRelaxable() const { return FirstLinkerRelaxable; }
   bool isLinkerRelaxable() const { return FirstLinkerRelaxable != -1u; }
   void setFirstLinkerRelaxable(unsigned Order) { FirstLinkerRelaxable = Order; }
+
+  bool isBundleLocked() const { return IsBundleLocked; }
+  void setIsBundleLocked(bool Value) { IsBundleLocked = Value; }
 
   MCFragment &getDummyFragment() { return DummyFragment; }
 

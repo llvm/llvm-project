@@ -1354,6 +1354,9 @@ void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                    unsigned MaxBytesToEmit) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                    SMLoc Loc) {}
+void MCStreamer::emitBundleAlignMode(Align Alignment) {}
+void MCStreamer::emitBundleLock(bool AlignToEnd, const MCSubtargetInfo &STI) {}
+void MCStreamer::emitBundleUnlock(const MCSubtargetInfo &STI) {}
 void MCStreamer::finishImpl() {}
 
 bool MCStreamer::popSection() {

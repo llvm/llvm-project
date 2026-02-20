@@ -422,6 +422,9 @@ private:
     DK_ORG,
     DK_FILL,
     DK_ENDR,
+    DK_BUNDLE_ALIGN_MODE,
+    DK_BUNDLE_LOCK,
+    DK_BUNDLE_UNLOCK,
     DK_ZERO,
     DK_EXTERN,
     DK_GLOBL,
@@ -701,6 +704,13 @@ private:
   // Directives to support address-significance tables.
   bool parseDirectiveAddrsig();
   bool parseDirectiveAddrsigSym();
+
+  // ".bundle_align_mode"
+  bool parseDirectiveBundleAlignMode();
+  // ".bundle_lock"
+  bool parseDirectiveBundleLock();
+  // ".bundle_unlock"
+  bool parseDirectiveBundleUnlock();
 
   void initializeDirectiveKindMap();
   void initializeCVDefRangeTypeMap();
@@ -2060,6 +2070,12 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveIrpc(IDLoc);
     case DK_ENDR:
       return parseDirectiveEndr(IDLoc);
+    case DK_BUNDLE_ALIGN_MODE:
+      return parseDirectiveBundleAlignMode();
+    case DK_BUNDLE_LOCK:
+      return parseDirectiveBundleLock();
+    case DK_BUNDLE_UNLOCK:
+      return parseDirectiveBundleUnlock();
     case DK_SLEB128:
       return parseDirectiveLEB128(true);
     case DK_ULEB128:
@@ -5446,6 +5462,9 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".irp"] = DK_IRP;
   DirectiveKindMap[".irpc"] = DK_IRPC;
   DirectiveKindMap[".endr"] = DK_ENDR;
+  DirectiveKindMap[".bundle_align_mode"] = DK_BUNDLE_ALIGN_MODE;
+  DirectiveKindMap[".bundle_lock"] = DK_BUNDLE_LOCK;
+  DirectiveKindMap[".bundle_unlock"] = DK_BUNDLE_UNLOCK;
   DirectiveKindMap[".if"] = DK_IF;
   DirectiveKindMap[".ifeq"] = DK_IFEQ;
   DirectiveKindMap[".ifge"] = DK_IFGE;
@@ -5797,6 +5816,55 @@ bool AsmParser::parseDirectiveAddrsigSym() {
   if (check(parseSymbol(Sym), "expected identifier") || parseEOL())
     return true;
   getStreamer().emitAddrsigSym(Sym);
+  return false;
+}
+
+/// parseDirectiveBundleAlignMode
+/// ::= {.bundle_align_mode} expression
+bool AsmParser::parseDirectiveBundleAlignMode() {
+  // Expect a single argument: an expression that evaluates to a constant
+  // in the inclusive range 0-30.
+  SMLoc ExprLoc = getLexer().getLoc();
+  int64_t AlignSizePow2;
+  if (checkForValidSection() || parseAbsoluteExpression(AlignSizePow2) ||
+      parseEOL() ||
+      check(AlignSizePow2 < 0 || AlignSizePow2 > 30, ExprLoc,
+            "invalid bundle alignment size (expected between 0 and 30)"))
+    return true;
+
+  getStreamer().emitBundleAlignMode(Align(1ULL << AlignSizePow2));
+  return false;
+}
+
+/// parseDirectiveBundleLock
+/// ::= {.bundle_lock} [align_to_end]
+bool AsmParser::parseDirectiveBundleLock() {
+  if (checkForValidSection())
+    return true;
+  bool AlignToEnd = false;
+
+  StringRef Option;
+  SMLoc Loc = getTok().getLoc();
+  const char *InvalidOptionError = "invalid option";
+
+  if (!parseOptionalToken(AsmToken::EndOfStatement)) {
+    if (check(parseIdentifier(Option), Loc, InvalidOptionError) ||
+        check(Option != "align_to_end", Loc, InvalidOptionError) || parseEOL())
+      return true;
+    AlignToEnd = true;
+  }
+
+  getStreamer().emitBundleLock(AlignToEnd, getTargetParser().getSTI());
+  return false;
+}
+
+/// parseDirectiveBundleLock
+/// ::= {.bundle_unlock}
+bool AsmParser::parseDirectiveBundleUnlock() {
+  if (checkForValidSection() || parseEOL())
+    return true;
+
+  getStreamer().emitBundleUnlock(getTargetParser().getSTI());
   return false;
 }
 
