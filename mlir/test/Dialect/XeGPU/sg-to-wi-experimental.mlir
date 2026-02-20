@@ -1,7 +1,8 @@
 // RUN: mlir-opt --allow-unregistered-dialect --xevm-attach-target='module=xevm_* chip=pvc' \
 // RUN: --xegpu-sg-to-wi-distribute-experimental --split-input-file %s --canonicalize --cse | FileCheck %s
 
-// CHECK-LABEL: gpu.func @gemm
+// CHECK-LABEL: gpu.func @gemm(%arg0: memref<1024x1024xbf16>, %arg1: memref<1024x1024xbf16>, %arg2: memref<1024x1024xf32>)
+// CHECK-SAME: attributes {intel_reqd_sub_group_size = 16 : i32}
 // CHECK-DAG  : %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG  : %[[C16:.*]] = arith.constant 16 : index
 // CHECK-DAG  : %[[C8:.*]] = arith.constant 8 : index
