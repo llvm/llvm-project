@@ -6220,7 +6220,7 @@ defm VQNEG    : N2VInt_QHS<0b11, 0b11, 0b00, 0b01111, 0,
 //   VCLS     : Vector Count Leading Sign Bits
 defm VCLS     : N2VInt_QHS<0b11, 0b11, 0b00, 0b01000, 0,
                            IIC_VCNTiD, IIC_VCNTiQ, "vcls", "s",
-                           int_arm_neon_vcls>;
+                           ctls>;
 //   VCLZ     : Vector Count Leading Zeros
 defm VCLZ     : N2VInt_QHS<0b11, 0b11, 0b00, 0b01001, 0,
                            IIC_VCNTiD, IIC_VCNTiQ, "vclz", "i",
