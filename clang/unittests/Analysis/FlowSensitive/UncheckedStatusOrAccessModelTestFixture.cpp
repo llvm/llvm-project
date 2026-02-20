@@ -4543,7 +4543,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, DISABLED_Coroutine) {
     } else {
       sor.value();  // [[unsafe]]
     }
-    co_return sor;
+    co_return sor;  // [[unsafe]]
   }
   Task<int> target() {
     auto x = co_await call(Make<STATUSOR_INT>());
