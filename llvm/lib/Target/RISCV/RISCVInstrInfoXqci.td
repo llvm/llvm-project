@@ -838,7 +838,7 @@ class QCIRVInst48EJ<bits<2> func2, string opcodestr>
 
 class SFBQC_LI
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, SFBRHS:$rhs, bcc_opcode:$cc, GPR:$falsev,
+             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev,
                   simm20_li:$imm), []> {
   let hasSideEffects = 0;
   let mayLoad = 0;
@@ -848,7 +848,7 @@ class SFBQC_LI
 
 class SFBQC_E_LI
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, SFBRHS:$rhs, bcc_opcode:$cc, GPR:$falsev,
+             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev,
                   bare_simm32:$imm), []> {
   let hasSideEffects = 0;
   let mayLoad = 0;
@@ -858,7 +858,7 @@ class SFBQC_E_LI
 
 class SFBQCLoad
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, SFBRHS:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
+             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
                   simm26:$imm), []> {
   let hasSideEffects = 0;
   let mayLoad = 1;

@@ -216,7 +216,8 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
 
   // We want to copy the "true" value when the condition is true which means
   // we need to invert the branch condition to jump over TrueBB when the
-  // condition is false.
+  // condition is false. We can directly use the branch opcode which has been
+  // inverted when SDNodeXform transforms were applied on it.
 
   unsigned BranchOpCode = MI.getOperand(3).getImm();
 
@@ -345,62 +346,33 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
       MI.getOperand(5).getReg() == RISCV::X0)
     return false;
 
+  // Use branch opcode to select appropriate Xqcicm instruction
   auto BCC = MI.getOperand(3).getImm();
-  auto CC = RISCVCC::COND_EQ;
+  unsigned CMovOpcode, CMovIOpcode;
   switch (BCC) {
   default:
-    llvm_unreachable("Unexpected branch opcode!");
-  case RISCV::BEQ: {
-    CC = RISCVCC::COND_NE;
-    break;
-  }
-  case RISCV::BNE: {
-    CC = RISCVCC::COND_EQ;
-    break;
-  }
-  case RISCV::BLT: {
-    CC = RISCVCC::COND_GE;
-    break;
-  }
-  case RISCV::BGE: {
-    CC = RISCVCC::COND_LT;
-    break;
-  }
-  case RISCV::BLTU: {
-    CC = RISCVCC::COND_GEU;
-    break;
-  }
-  case RISCV::BGEU: {
-    CC = RISCVCC::COND_LTU;
-    break;
-  }
-  }
-
-  unsigned CMovOpcode, CMovIOpcode;
-  switch (CC) {
-  default:
-    llvm_unreachable("Unhandled CC");
-  case RISCVCC::COND_EQ:
+    return false; // Unhandled branch opcodes
+  case RISCV::BNE:
     CMovOpcode = RISCV::QC_MVEQ;
     CMovIOpcode = RISCV::QC_MVEQI;
     break;
-  case RISCVCC::COND_NE:
+  case RISCV::BEQ:
     CMovOpcode = RISCV::QC_MVNE;
     CMovIOpcode = RISCV::QC_MVNEI;
     break;
-  case RISCVCC::COND_LT:
+  case RISCV::BGE:
     CMovOpcode = RISCV::QC_MVLT;
     CMovIOpcode = RISCV::QC_MVLTI;
     break;
-  case RISCVCC::COND_GE:
+  case RISCV::BLT:
     CMovOpcode = RISCV::QC_MVGE;
     CMovIOpcode = RISCV::QC_MVGEI;
     break;
-  case RISCVCC::COND_LTU:
+  case RISCV::BGEU:
     CMovOpcode = RISCV::QC_MVLTU;
     CMovIOpcode = RISCV::QC_MVLTUI;
     break;
-  case RISCVCC::COND_GEU:
+  case RISCV::BLTU:
     CMovOpcode = RISCV::QC_MVGEU;
     CMovIOpcode = RISCV::QC_MVGEUI;
     break;

@@ -15,9 +15,9 @@ def bcc_opcode : RISCVOp<i32> {
   let OperandType = "OPERAND_BCC_OPCODE";
 }
 
-def SFBRHS : RegisterOperand<GPR> {
+def sfb_rhs : RegisterOperand<GPR> {
   let OperandNamespace = "RISCVOp";
-  let OperandType = "OPERAND_SFBRHS";
+  let OperandType = "OPERAND_SFB_RHS";
 }
 
 // cond -> bcc_opcode
@@ -29,23 +29,14 @@ def CCtoRISCVBCC : SDNodeXForm<cond, [{
   return CurDAG->getTargetConstant(BccOpcode, SDLoc(N), MVT::i32);
 }]>;
 
-// cond_code -> bcc_opcode
-def RISCVCCtoRISCVBCC : SDNodeXForm<imm, [{
-  auto CCImm = cast<ConstantSDNode>(N)->getZExtValue();
-  auto RvCC = static_cast<RISCVCC::CondCode>(CCImm);
-  RvCC = RISCVCC::getInverseBranchCondition(RvCC);
-  unsigned BccOpcode = RISCVCC::getBrCond(RvCC);
-  return CurDAG->getTargetConstant(BccOpcode, SDLoc(N), MVT::i32);
-}]>;
-
-def cond_as_bcc_opcode : PatLeaf<(cond), [{}], CCtoRISCVBCC>;
-
+// For each of the short forward branch pseudos, corresponding code for
+// getting correct size of the pseduo is needed in getInstSizeInBytes.
 let Predicates = [HasShortForwardBranchIALU], isSelect = 1,
     Constraints = "$dst = $falsev", isCommutable = 1 in {
 // This instruction moves $truev to $dst when the condition is true. It will
 // be expanded to control flow in RISCVExpandPseudoInsts.
 def PseudoCCMOVGPR : Pseudo<(outs GPR:$dst),
-                            (ins GPR:$lhs, SFBRHS:$rhs, bcc_opcode:$bcc,
+                            (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$bcc,
                              GPR:$falsev, GPR:$truev),
                             []>,
                      Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
@@ -64,7 +55,7 @@ let Predicates = [HasConditionalMoveFusion, NoShortForwardBranch],
 // be expanded to control flow in RISCVExpandPseudoInsts.
 // We use GPRNoX0 because c.mv cannot encode X0.
 def PseudoCCMOVGPRNoX0 : Pseudo<(outs GPRNoX0:$dst),
-                                (ins GPR:$lhs, SFBRHS:$rhs, bcc_opcode:$bcc,
+                                (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$bcc,
                                  GPRNoX0:$falsev, GPRNoX0:$truev),
                                 []>,
                          Sched<[]>;
@@ -76,7 +67,7 @@ def :Pat<(riscv_selectcc (XLenVT GPR:$lhs), GPR:$rhs, cond:$cc, (XLenVT GPRNoX0:
 
 class SFBALU_rr
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, SFBRHS:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
+             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
                   GPR:$rs2), []>,
       Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU,
              ReadSFBALU]> {
@@ -88,7 +79,7 @@ class SFBALU_rr
 
 class SFBALU_ri
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, SFBRHS:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
+             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
                   simm12_lo:$imm), []>,
       Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU]> {
   let hasSideEffects = 0;
@@ -99,7 +90,7 @@ class SFBALU_ri
 
 class SFBLUI
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, SFBRHS:$rhs, bcc_opcode:$cc, GPR:$falsev,
+             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev,
                   uimm20_lui:$imm), []> {
   let hasSideEffects = 0;
   let mayLoad = 0;
@@ -109,7 +100,7 @@ class SFBLUI
 
 class SFBLoad
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, SFBRHS:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
+             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
                   simm12_lo:$imm), []> {
   let hasSideEffects = 0;
   let mayLoad = 1;
@@ -119,7 +110,7 @@ class SFBLoad
 
 class SFBShift_ri
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, SFBRHS:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
+             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
                   uimmlog2xlen:$imm), []>,
       Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU]> {
   let hasSideEffects = 0;
@@ -130,7 +121,7 @@ class SFBShift_ri
 
 class SFBShiftW_ri
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, SFBRHS:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
+             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
                   uimm5:$imm), []>,
       Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU]> {
   let hasSideEffects = 0;
@@ -182,6 +173,15 @@ def PseudoCCANDN : SFBALU_rr;
 def PseudoCCORN  : SFBALU_rr;
 def PseudoCCXNOR : SFBALU_rr;
 }
+
+// imm -> bcc_opcode
+def RISCVCCtoRISCVBCC : SDNodeXForm<imm, [{
+  auto CCImm = cast<ConstantSDNode>(N)->getZExtValue();
+  auto RvCC = static_cast<RISCVCC::CondCode>(CCImm);
+  RvCC = RISCVCC::getInverseBranchCondition(RvCC);
+  unsigned BccOpcode = RISCVCC::getBrCond(RvCC);
+  return CurDAG->getTargetConstant(BccOpcode, SDLoc(N), MVT::i32);
+}]>;
 
 let Predicates = [HasShortForwardBranchIALU] in
 def : Pat<(XLenVT (abs GPR:$rs1)),

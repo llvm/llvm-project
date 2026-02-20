@@ -969,7 +969,7 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
                                       MI.getDebugLoc(), get(PredOpc), DestReg)
                                   .add({MI.getOperand(1), MI.getOperand(2)});
 
-  // Add condition code, inverting if necessary.
+  // Add branch opcode, inverting if necessary.
   auto BCC = MI.getOperand(3).getImm();
   if (!Invert)
     BCC = RISCVCC::getInverseBranchOpcode(BCC);
@@ -1286,8 +1286,9 @@ RISCVCC::CondCode RISCVCC::getInverseBranchCondition(RISCVCC::CondCode CC) {
   }
 }
 
-unsigned RISCVCC::getInverseBranchOpcode(unsigned CC) {
-  switch (CC) {
+// Return inverse branch
+unsigned RISCVCC::getInverseBranchOpcode(unsigned BCC) {
+  switch (BCC) {
   default:
     llvm_unreachable("Unexpected condition code!");
   case RISCV::BEQ:
@@ -2000,7 +2001,7 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
   NewMI.add(MI.getOperand(1));
   NewMI.add(MI.getOperand(2));
 
-  // Add condition code, inverting if necessary.
+  // Add branch opcode, inverting if necessary.
   unsigned BCCOpcode = MI.getOperand(3).getImm();
   if (Invert)
     BCCOpcode = RISCVCC::getInverseBranchOpcode(BCCOpcode);
@@ -2068,6 +2069,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case RISCV::PseudoMV_FPR32INX:
     // MV is always compressible to either c.mv or c.li rd, 0.
     return STI.hasStdExtZca() ? 2 : 4;
+  // Below cases are for short forward branch pseudos
   case RISCV::PseudoCCMOVGPRNoX0:
     return get(MI.getOperand(3).getImm()).getSize() + 2;
   case RISCV::PseudoCCMOVGPR:
@@ -3293,7 +3295,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         return false;
       }
       break;
-    case RISCVOp::OPERAND_SFBRHS:
+    case RISCVOp::OPERAND_SFB_RHS:
       if (!MO.isReg() && !MO.isImm()) {
         ErrInfo = "Expected a register or immediate operand.";
         return false;
