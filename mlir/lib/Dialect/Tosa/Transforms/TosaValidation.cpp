@@ -26,6 +26,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -1214,6 +1215,47 @@ LogicalResult checkErrorIfPad(Operation *op) {
   return success();
 }
 
+LogicalResult checkErrorIfReshape(Operation *op) {
+  auto reshapeOp = dyn_cast<tosa::ReshapeOp>(op);
+  if (!reshapeOp)
+    return success();
+
+  constexpr int64_t kInferableDim = -1;
+  SmallVector<int64_t> shapeValues;
+  if (!tosa::getConstShapeValues(reshapeOp.getShape().getDefiningOp(),
+                                 shapeValues))
+    return success();
+
+  if (llvm::is_contained(shapeValues, kInferableDim))
+    return op->emitOpError("shape input contains inferable dimension (-1) "
+                           "which does not conform to the TOSA specification");
+
+  return success();
+}
+
+LogicalResult checkErrorIfSlice(Operation *op) {
+  auto sliceOp = dyn_cast<tosa::SliceOp>(op);
+  if (!sliceOp)
+    return success();
+
+  constexpr int64_t kInferableDim = -1;
+  SmallVector<int64_t> startValues;
+  SmallVector<int64_t> sizeValues;
+  const bool hasStartValues = tosa::getConstShapeValues(
+      sliceOp.getStart().getDefiningOp(), startValues);
+  const bool hasSizeValues =
+      tosa::getConstShapeValues(sliceOp.getSize().getDefiningOp(), sizeValues);
+
+  if (hasStartValues && llvm::is_contained(startValues, kInferableDim))
+    return op->emitOpError("start input contains inferable dimension (-1) "
+                           "which does not conform to the TOSA specification");
+  if (hasSizeValues && llvm::is_contained(sizeValues, kInferableDim))
+    return op->emitOpError("size input contains inferable dimension (-1) which "
+                           "does not conform to the TOSA specification");
+
+  return success();
+}
+
 static bool isOpIsolatedWithinRegion(Operation *op, Region *region) {
   return llvm::all_of(op->getOperands(), [&](auto operand) {
     Region *operandRegion = operand.getParentRegion();
@@ -1321,7 +1363,8 @@ LogicalResult checkErrorIfScatter(Operation *op) {
 LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   if (failed(checkErrorIfResize(op)) || failed(checkErrorIfMul(op)) ||
       failed(checkErrorIfTable(op)) || failed(checkErrorIfRescale(op)) ||
-      failed(checkErrorIfPad(op)) || failed(checkErrorIfCondIf(op)) ||
+      failed(checkErrorIfPad(op)) || failed(checkErrorIfReshape(op)) ||
+      failed(checkErrorIfSlice(op)) || failed(checkErrorIfCondIf(op)) ||
       failed(checkErrorIfWhileLoop(op)) || failed(checkErrorIfScatter(op)))
     return failure();
   return success();
