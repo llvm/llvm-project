@@ -448,10 +448,10 @@ bool Pointer::isInitialized() const {
   if (!isBlockPointer())
     return true;
 
-  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
-      Offset == BS.Base) {
+  if (isStatic() && BS.Base == sizeof(GlobalInlineDescriptor)) {
     const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
-    return GD.InitState == GlobalInitState::Initialized;
+    if (GD.InitState == GlobalInitState::Initialized)
+      return true;
   }
 
   assert(BS.Pointee && "Cannot check if null pointer was initialized");
@@ -462,6 +462,12 @@ bool Pointer::isInitialized() const {
 
   if (asBlockPointer().Base == 0)
     return true;
+
+  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor)) {
+    const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
+    return GD.InitState == GlobalInitState::Initialized;
+  }
+
   // Field has its bit in an inline descriptor.
   return getInlineDesc()->IsInitialized;
 }
@@ -476,10 +482,10 @@ bool Pointer::isElementInitialized(unsigned Index) const {
   if (isStatic() && BS.Base == 0)
     return true;
 
-  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
-      Offset == BS.Base) {
+  if (isStatic() && BS.Base == sizeof(GlobalInlineDescriptor)) {
     const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
-    return GD.InitState == GlobalInitState::Initialized;
+    if (GD.InitState == GlobalInitState::Initialized)
+      return true;
   }
 
   if (Desc->isPrimitiveArray()) {

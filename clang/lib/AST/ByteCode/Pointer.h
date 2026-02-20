@@ -311,6 +311,8 @@ public:
 
   /// Returns a pointer to the object of which this pointer is a field.
   [[nodiscard]] Pointer getBase() const {
+    if (isRoot())
+      return *this;
     if (BS.Base == RootPtrMark) {
       assert(Offset == PastEndMark && "cannot get base of a block");
       return Pointer(BS.Pointee, BS.Base, 0);
@@ -407,10 +409,14 @@ public:
     return false;
   }
   bool inUnion() const {
-    if (isBlockPointer() && BS.Base >= sizeof(InlineDescriptor))
-      return getInlineDesc()->InUnion;
-    return false;
-  };
+    if (!isBlockPointer())
+      return false;
+    if (isRoot())
+      return false;
+    if (isStatic() && BS.Base == sizeof(GlobalInlineDescriptor))
+      return false;
+    return getInlineDesc()->InUnion;
+  }
 
   /// Checks if the structure is a primitive array.
   bool inPrimitiveArray() const {
@@ -432,6 +438,9 @@ public:
     const BlockPointer &BP = BS;
     if (inArray() && BP.Base != Offset)
       return true;
+
+    if (BP.Base == sizeof(GlobalInlineDescriptor) && isStatic())
+      return false;
 
     // Might be a narrow()'ed element in a composite array.
     // Check the inline descriptor.
@@ -527,7 +536,11 @@ public:
   bool isMutable() const {
     if (!isBlockPointer())
       return false;
-    return !isRoot() && getInlineDesc()->IsFieldMutable;
+    if (isRoot())
+      return false;
+    if (isStatic() && BS.Base == sizeof(GlobalInlineDescriptor))
+      return false;
+    return getInlineDesc()->IsFieldMutable;
   }
 
   bool isWeak() const {
@@ -543,11 +556,25 @@ public:
   bool isActive() const {
     if (!isBlockPointer())
       return true;
-    return isRoot() || getInlineDesc()->IsActive;
+    if (isRoot())
+      return true;
+    if (isStatic() && BS.Base == sizeof(GlobalInlineDescriptor))
+      return true;
+    return getInlineDesc()->IsActive;
   }
   /// Checks if a structure is a base class.
-  bool isBaseClass() const { return isField() && getInlineDesc()->IsBase; }
+  bool isBaseClass() const {
+    if (isRoot())
+      return false;
+    if (isStatic() && BS.Base == sizeof(GlobalInlineDescriptor))
+      return false;
+    return isField() && getInlineDesc()->IsBase;
+  }
   bool isVirtualBaseClass() const {
+    if (isRoot())
+      return false;
+    if (isStatic() && BS.Base == sizeof(GlobalInlineDescriptor))
+      return false;
     return isField() && getInlineDesc()->IsVirtualBase;
   }
   /// Checks if the pointer points to a dummy value.
@@ -564,19 +591,31 @@ public:
   bool isConst() const {
     if (isIntegralPointer())
       return true;
-    return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
+    if (isRoot())
+      return getDeclDesc()->IsConst;
+    if (isStatic() && BS.Base == sizeof(GlobalInlineDescriptor))
+      return getDeclDesc()->IsConst;
+    return getInlineDesc()->IsConst;
   }
   bool isConstInMutable() const {
     if (!isBlockPointer())
       return false;
-    return isRoot() ? false : getInlineDesc()->IsConstInMutable;
+    if (isRoot())
+      return false;
+    if (isStatic() && BS.Base == sizeof(GlobalInlineDescriptor))
+      return false;
+    return isField() && getInlineDesc()->IsConstInMutable;
   }
 
   /// Checks if an object or a subfield is volatile.
   bool isVolatile() const {
     if (!isBlockPointer())
       return false;
-    return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
+    if (isRoot())
+      return getDeclDesc()->IsVolatile;
+    if (isStatic() && BS.Base == sizeof(GlobalInlineDescriptor))
+      return getDeclDesc()->IsVolatile;
+    return getInlineDesc()->IsVolatile;
   }
 
   /// Returns the declaration ID.
