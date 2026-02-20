@@ -2340,10 +2340,18 @@ public:
     llvm_unreachable("impossible call instruction");
   }
 
-  /// Return the uniformity behavior of the given instruction.
-  virtual InstructionUniformity
-  getInstructionUniformity(const MachineInstr &MI) const {
-    return InstructionUniformity::Default;
+  /// Return true if the given terminator instruction causes divergent
+  /// control flow. This is used during uniformity analysis to identify
+  /// blocks with divergent exits.
+  virtual bool isTerminatorDivergent(const MachineInstr &MI) const {
+    return false;
+  }
+
+  /// Return the uniformity behavior of the given value (def operand).
+  /// \p DefIdx specifies which output to query (for multi-output instructions).
+  virtual ValueUniformity getValueUniformity(const MachineInstr &MI,
+                                             unsigned DefIdx) const {
+    return ValueUniformity::Default;
   }
 
   /// Returns true if the given \p MI defines a TargetIndex operand that can be

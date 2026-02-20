@@ -221,7 +221,7 @@ public:
     return false;
   }
 
-  InstructionUniformity getInstructionUniformity(const Value *V) const override;
+  ValueUniformity getValueUniformity(const Value *V) const override;
 };
 
 } // end namespace llvm

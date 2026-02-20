@@ -47,23 +47,82 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::markDefsDivergent(
 }
 
 template <>
+bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::isAlwaysUniform(
+    const MachineInstr &Instr) const {
+  // For MIR, an instruction is "always uniform" only if it has at least one
+  // virtual register def AND all those defs are in UniformOverrides.
+  // Instructions with no virtual register defs (e.g., terminators like
+  // G_BRCOND, G_BR) return false to ensure they can be properly processed
+  // for divergence during propagation.
+  bool HasVirtualDef = false;
+  for (const MachineOperand &Op : Instr.all_defs()) {
+    if (!Op.getReg().isVirtual())
+      continue;
+    HasVirtualDef = true;
+    if (!UniformOverrides.contains(Op.getReg()))
+      return false;
+  }
+  // Only return true if we found at least one virtual def and all were uniform
+  return HasVirtualDef;
+}
+
+template <>
 void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
-  const auto &InstrInfo = *F.getSubtarget().getInstrInfo();
+  const TargetInstrInfo &InstrInfo = *F.getSubtarget().getInstrInfo();
+  const MachineRegisterInfo &MRI = F.getRegInfo();
+  const RegisterBankInfo &RBI = *F.getSubtarget().getRegBankInfo();
+  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
 
-  for (const MachineBasicBlock &block : F) {
-    for (const MachineInstr &instr : block) {
-      auto uniformity = InstrInfo.getInstructionUniformity(instr);
-
-      switch (uniformity) {
-      case InstructionUniformity::AlwaysUniform:
-        addUniformOverride(instr);
-        break;
-      case InstructionUniformity::NeverUniform:
-        markDivergent(instr);
-        break;
-      case InstructionUniformity::Default:
-        break;
+  for (const MachineBasicBlock &Block : F) {
+    for (const MachineInstr &Instr : Block) {
+      // Terminators are handled separately because:
+      // 1. Many terminators (G_BRCOND, G_BR) have no def operands, so the
+      // per-def loop below would skip them entirely.
+      // 2. Divergent terminators mark the BLOCK as
+      // divergent(DivergentTermBlocks), not individual values, which is
+      // different from regular instructions.
+      if (Instr.isTerminator()) {
+        if (InstrInfo.isTerminatorDivergent(Instr)) {
+          if (DivergentTermBlocks.insert(Instr.getParent()).second) {
+            Worklist.push_back(&Instr);
+          }
+        }
+        continue;
       }
+
+      // Query uniformity for each def operand separately.
+      unsigned DefIdx = 0;
+      bool HasDivergentDef = false;
+      for (const MachineOperand &Op : Instr.all_defs()) {
+        if (!Op.getReg().isVirtual()) {
+          DefIdx++;
+          continue;
+        }
+
+        ValueUniformity Uniformity =
+            InstrInfo.getValueUniformity(Instr, DefIdx);
+
+        switch (Uniformity) {
+        case ValueUniformity::AlwaysUniform:
+          addUniformOverride(Op.getReg());
+          break;
+        case ValueUniformity::NeverUniform:
+          // Skip registers that are inherently uniform (e.g., SGPRs on AMDGPU)
+          // even if the instruction is marked as NeverUniform.
+          if (!TRI.isUniformReg(MRI, RBI, Op.getReg())) {
+            if (markDivergent(Op.getReg()))
+              HasDivergentDef = true;
+          }
+          break;
+        case ValueUniformity::Default:
+          break;
+        }
+        DefIdx++;
+      }
+      // If any def was marked divergent, add the instruction to worklist
+      // for divergence propagation to users.
+      if (HasDivergentDef)
+        Worklist.push_back(&Instr);
     }
   }
 }

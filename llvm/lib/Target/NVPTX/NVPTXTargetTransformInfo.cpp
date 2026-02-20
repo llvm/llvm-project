@@ -671,10 +671,9 @@ void NVPTXTTIImpl::collectKernelLaunchBounds(
     LB.push_back({"maxntidz", MaxNTID[2]});
 }
 
-InstructionUniformity
-NVPTXTTIImpl::getInstructionUniformity(const Value *V) const {
+ValueUniformity NVPTXTTIImpl::getValueUniformity(const Value *V) const {
   if (isSourceOfDivergence(V))
-    return InstructionUniformity::NeverUniform;
+    return ValueUniformity::NeverUniform;
 
-  return InstructionUniformity::Default;
+  return ValueUniformity::Default;
 }
