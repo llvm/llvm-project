@@ -786,6 +786,9 @@ class LLVMConfig(object):
             ]
             self.add_tool_substitutions(tool_substitutions)
             self.config.substitutions.append(("%resource_dir", builtin_include_dir))
+            self.config.substitutions.append(
+                ("%clang_dir", os.path.dirname(self.config.clang))
+            )
 
         # FIXME: Find nicer way to prohibit this.
         def prefer(this, to):
