@@ -85,20 +85,26 @@ function(llvm_update_pch name)
     set(ARG_DISABLE_PCH_REUSE ON)
   endif()
 
-  if(NOT ARG_PRECOMPILE_HEADERS)
+  get_property(srcs TARGET ${name} PROPERTY SOURCES)
+  foreach(src ${srcs})
+    get_filename_component(extension ${src} EXT)
+    if(extension STREQUAL ".c")
+      set(HAS_C_SRC ON)
+    elseif(extension STREQUAL ".mm")
+      set(HAS_MM_SRC ON)
+    endif()
+  endforeach()
+
+  if(HAS_C_SRC AND NOT ARG_PRECOMPILE_HEADERS)
     # We only use PCH for C++. For targets with C source files that re-use a
     # precompiled headers from another target, CMake complains that there is no
     # PCH for C. There doesn't seem to be a disable PCH reuse for C files only,
     # so disable PCH reuse for targets that contain C sources.
-    get_property(srcs TARGET ${name} PROPERTY SOURCES)
-    foreach(src ${srcs})
-      get_filename_component(extension ${src} EXT)
-      if(extension STREQUAL ".c")
-        message(DEBUG "Disable PCH for ${name} due to C file ${src}")
-        set(ARG_DISABLE_PCH_REUSE ON)
-        break()
-      endif()
-    endforeach()
+    set(ARG_DISABLE_PCH_REUSE ON)
+  endif()
+  if(HAS_MM_SRC)
+    # Disable for Objective-C as well to avoid errors due to mixed languages.
+    set(ARG_DISABLE_PCH_REUSE ON)
   endif()
 
   # Find PCH with highest priority from dependencies. We reuse the first PCH
