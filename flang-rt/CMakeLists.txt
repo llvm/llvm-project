@@ -57,6 +57,8 @@ if (CMAKE_VERSION VERSION_LESS "3.24")
 endif ()
 enable_language(Fortran)
 
+# Try to include the RPC utilities from the `libc` project for GPU I/O support.
+include(FindLibcCommonUtils)
 
 list(APPEND CMAKE_MODULE_PATH
     "${FLANG_RT_SOURCE_DIR}/cmake/modules"

@@ -12,7 +12,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#if (defined(__NVPTX__) || defined(__AMDGPU__)) &&                             \
+#if (defined(__NVPTX__) || defined(__AMDGPU__) || defined(__SPIRV__)) &&       \
     !((defined(__CUDA__) && !defined(__CUDA_ARCH__)) ||                        \
       (defined(__HIP__) && !defined(__HIP_DEVICE_COMPILE__)))
 #include <gpuintrin.h>
@@ -63,24 +63,23 @@ using remove_reference_t = typename remove_reference<T>::type;
 
 template <typename T> struct is_const : type_constant<bool, false> {};
 template <typename T> struct is_const<const T> : type_constant<bool, true> {};
-template <typename T> RPC_ATTRS constexpr bool is_const_v = is_const<T>::value;
+template <typename T> inline constexpr bool is_const_v = is_const<T>::value;
 
 template <typename T> struct is_pointer : type_constant<bool, false> {};
 template <typename T> struct is_pointer<T *> : type_constant<bool, true> {};
 template <typename T>
 struct is_pointer<T *const> : type_constant<bool, true> {};
-template <typename T>
-RPC_ATTRS constexpr bool is_pointer_v = is_pointer<T>::value;
+template <typename T> inline constexpr bool is_pointer_v = is_pointer<T>::value;
 
 template <typename T, typename U>
 struct is_same : type_constant<bool, false> {};
 template <typename T> struct is_same<T, T> : type_constant<bool, true> {};
 template <typename T, typename U>
-RPC_ATTRS constexpr bool is_same_v = is_same<T, U>::value;
+inline constexpr bool is_same_v = is_same<T, U>::value;
 
 template <typename T> struct is_void : type_constant<bool, false> {};
 template <> struct is_void<void> : type_constant<bool, true> {};
-template <typename T> RPC_ATTRS constexpr bool is_void_v = is_void<T>::value;
+template <typename T> inline constexpr bool is_void_v = is_void<T>::value;
 
 // Scary trait that can change within a TU, use with caution.
 template <typename...> using void_t = void;
@@ -90,21 +89,35 @@ template <typename T>
 struct is_complete<T, void_t<decltype(sizeof(T))>> : type_constant<bool, true> {
 };
 template <typename T>
-RPC_ATTRS constexpr bool is_complete_v = is_complete<T>::value;
+inline constexpr bool is_complete_v = is_complete<T>::value;
 
 template <typename T>
 struct is_trivially_copyable
     : public type_constant<bool, __is_trivially_copyable(T)> {};
 template <typename T>
-RPC_ATTRS constexpr bool is_trivially_copyable_v =
-    is_trivially_copyable<T>::value;
+inline constexpr bool is_trivially_copyable_v = is_trivially_copyable<T>::value;
 
 template <typename T, typename... Args>
 struct is_trivially_constructible
     : type_constant<bool, __is_trivially_constructible(T, Args...)> {};
 template <typename T, typename... Args>
-RPC_ATTRS constexpr bool is_trivially_constructible_v =
+inline constexpr bool is_trivially_constructible_v =
     is_trivially_constructible<T>::value;
+
+/// Tag type to indicate an array of elements being passed through RPC.
+template <typename T> struct span {
+  T *data;
+  uint64_t size;
+  RPC_ATTRS operator T *() const { return data; }
+};
+
+template <typename T> struct is_span : type_constant<bool, false> {};
+template <typename T> struct is_span<span<T>> : type_constant<bool, true> {};
+template <typename T> inline constexpr bool is_span_v = is_span<T>::value;
+
+template <typename T> struct remove_span : type_identity<T> {};
+template <typename T> struct remove_span<span<T>> : type_identity<T *> {};
+template <typename T> using remove_span_t = typename remove_span<T>::type;
 
 template <bool B, typename T, typename F>
 struct conditional : type_identity<T> {};
@@ -179,7 +192,9 @@ template <typename T> struct optional {
 
     template <typename... Args>
     RPC_ATTRS constexpr explicit OptionalStorage(in_place_t, Args &&...args)
-        : stored_value(forward<Args>(args)...) {}
+        : stored_value(forward<Args>(args)...) {
+      in_use = true;
+    }
 
     RPC_ATTRS constexpr void reset() {
       if (in_use)
@@ -194,15 +209,15 @@ public:
   RPC_ATTRS constexpr optional() = default;
   RPC_ATTRS constexpr optional(nullopt_t) {}
 
-  RPC_ATTRS constexpr optional(const T &t) : storage(in_place, t) {
-    storage.in_use = true;
-  }
+  RPC_ATTRS constexpr optional(const T &t) : storage(in_place, t) {}
   RPC_ATTRS constexpr optional(const optional &) = default;
 
-  RPC_ATTRS constexpr optional(T &&t) : storage(in_place, move(t)) {
-    storage.in_use = true;
-  }
+  RPC_ATTRS constexpr optional(T &&t) : storage(in_place, move(t)) {}
   RPC_ATTRS constexpr optional(optional &&O) = default;
+
+  template <typename... Args>
+  RPC_ATTRS constexpr optional(in_place_t, Args &&...args)
+      : storage(in_place, forward<Args>(args)...) {}
 
   RPC_ATTRS constexpr optional &operator=(T &&t) {
     storage = move(t);
@@ -366,7 +381,7 @@ RPC_ATTRS uint32_t get_num_lanes() {
 #endif
 }
 
-/// Returns the id of the thread inside of an AMD wavefront executing together.
+/// Returns a bitmask of the currently active lanes.
 RPC_ATTRS uint64_t get_lane_mask() {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_lane_mask();
@@ -443,6 +458,12 @@ RPC_ATTRS constexpr uint64_t string_length(const char *s) {
 /// Helper for dealing with function pointers and lambda types.
 template <typename> struct function_traits;
 template <typename R, typename... Args> struct function_traits<R (*)(Args...)> {
+  using return_type = R;
+  using arg_types = rpc::tuple<Args...>;
+  static constexpr uint64_t ARITY = sizeof...(Args);
+};
+template <typename R, typename... Args>
+struct function_traits<R (*)(Args...) noexcept> {
   using return_type = R;
   using arg_types = rpc::tuple<Args...>;
   static constexpr uint64_t ARITY = sizeof...(Args);

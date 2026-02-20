@@ -13,6 +13,7 @@ from pathlib import Path
 
 class ProcessLaunchTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def setUp(self):
         # Call super's setUp().

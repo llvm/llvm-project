@@ -44,7 +44,7 @@ deserializeFancyAnalysis(const SpecialFileRepresentation &File,
 
 namespace {
 using FormatInfo = MockSerializationFormat::FormatInfo;
-struct FancyAnalysisFormatInfo : FormatInfo {
+struct FancyAnalysisFormatInfo final : FormatInfo {
   FancyAnalysisFormatInfo()
       : FormatInfo{
             SummaryName("FancyAnalysis"),

@@ -2120,11 +2120,11 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    sb t2, 105(sp)
 ; RV32ZVFHMIN-NEXT:    lh a1, 336(sp)
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a0
-; RV32ZVFHMIN-NEXT:    lh t3, 208(sp)
+; RV32ZVFHMIN-NEXT:    lh t2, 208(sp)
 ; RV32ZVFHMIN-NEXT:    flt.h a0, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a1
-; RV32ZVFHMIN-NEXT:    vmv.x.s t2, v23
-; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, t3
+; RV32ZVFHMIN-NEXT:    vmv.x.s t3, v23
+; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, t2
 ; RV32ZVFHMIN-NEXT:    flt.h a1, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a5
 ; RV32ZVFHMIN-NEXT:    sb a1, 104(sp)
@@ -2133,7 +2133,7 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    flt.h a1, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    lh a7, 206(sp)
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a5
-; RV32ZVFHMIN-NEXT:    vmv.x.s t3, v22
+; RV32ZVFHMIN-NEXT:    vmv.x.s t2, v22
 ; RV32ZVFHMIN-NEXT:    vslidedown.vi v22, v16, 11
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a7
 ; RV32ZVFHMIN-NEXT:    flt.h a5, fa4, fa5
@@ -2158,10 +2158,10 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    vslidedown.vi v24, v16, 10
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, t0
 ; RV32ZVFHMIN-NEXT:    flt.h t0, fa4, fa5
-; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, t2
+; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, t3
 ; RV32ZVFHMIN-NEXT:    sb t0, 101(sp)
 ; RV32ZVFHMIN-NEXT:    lh t0, 328(sp)
-; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, t3
+; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, t2
 ; RV32ZVFHMIN-NEXT:    lh t1, 200(sp)
 ; RV32ZVFHMIN-NEXT:    flt.h t2, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, t0
@@ -2270,76 +2270,76 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    lh a6, 240(sp)
 ; RV32ZVFHMIN-NEXT:    flt.h a1, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a4
-; RV32ZVFHMIN-NEXT:    vmv.x.s a7, v6
+; RV32ZVFHMIN-NEXT:    vmv.x.s a4, v6
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a6
-; RV32ZVFHMIN-NEXT:    flt.h a4, fa4, fa5
+; RV32ZVFHMIN-NEXT:    flt.h a6, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, t0
-; RV32ZVFHMIN-NEXT:    sb a4, 120(sp)
+; RV32ZVFHMIN-NEXT:    sb a6, 120(sp)
 ; RV32ZVFHMIN-NEXT:    lh a6, 366(sp)
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, t1
-; RV32ZVFHMIN-NEXT:    lh t0, 238(sp)
-; RV32ZVFHMIN-NEXT:    flt.h a4, fa4, fa5
+; RV32ZVFHMIN-NEXT:    lh a7, 238(sp)
+; RV32ZVFHMIN-NEXT:    flt.h t0, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a6
 ; RV32ZVFHMIN-NEXT:    vmv.x.s a6, v24
-; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, t0
-; RV32ZVFHMIN-NEXT:    flt.h t0, fa4, fa5
+; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a7
+; RV32ZVFHMIN-NEXT:    flt.h a7, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, t2
-; RV32ZVFHMIN-NEXT:    sb t0, 119(sp)
-; RV32ZVFHMIN-NEXT:    lh t0, 364(sp)
+; RV32ZVFHMIN-NEXT:    sb a7, 119(sp)
+; RV32ZVFHMIN-NEXT:    lh a7, 364(sp)
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, t3
 ; RV32ZVFHMIN-NEXT:    lh t1, 236(sp)
 ; RV32ZVFHMIN-NEXT:    flt.h t2, fa4, fa5
-; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, t0
-; RV32ZVFHMIN-NEXT:    vmv.x.s t0, v30
+; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a7
+; RV32ZVFHMIN-NEXT:    vmv.x.s a7, v30
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, t1
 ; RV32ZVFHMIN-NEXT:    flt.h t1, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a5
 ; RV32ZVFHMIN-NEXT:    sb t1, 118(sp)
 ; RV32ZVFHMIN-NEXT:    lh a5, 362(sp)
-; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a7
-; RV32ZVFHMIN-NEXT:    lh a7, 234(sp)
+; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a4
+; RV32ZVFHMIN-NEXT:    lh a4, 234(sp)
 ; RV32ZVFHMIN-NEXT:    flt.h t1, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a5
 ; RV32ZVFHMIN-NEXT:    vmv.x.s a5, v26
-; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a7
-; RV32ZVFHMIN-NEXT:    flt.h a7, fa4, fa5
+; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a4
+; RV32ZVFHMIN-NEXT:    flt.h a4, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a6
-; RV32ZVFHMIN-NEXT:    sb a7, 117(sp)
-; RV32ZVFHMIN-NEXT:    lh a6, 360(sp)
-; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, t0
-; RV32ZVFHMIN-NEXT:    lh a7, 232(sp)
-; RV32ZVFHMIN-NEXT:    flt.h t0, fa4, fa5
-; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a6
-; RV32ZVFHMIN-NEXT:    vmv.x.s a6, v28
+; RV32ZVFHMIN-NEXT:    sb a4, 117(sp)
+; RV32ZVFHMIN-NEXT:    lh a4, 360(sp)
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a7
+; RV32ZVFHMIN-NEXT:    lh a6, 232(sp)
 ; RV32ZVFHMIN-NEXT:    flt.h a7, fa4, fa5
-; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a5
-; RV32ZVFHMIN-NEXT:    sb a7, 116(sp)
-; RV32ZVFHMIN-NEXT:    lh a5, 358(sp)
-; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a6
-; RV32ZVFHMIN-NEXT:    lh a6, 230(sp)
-; RV32ZVFHMIN-NEXT:    flt.h a7, fa4, fa5
-; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a5
-; RV32ZVFHMIN-NEXT:    vmv.x.s a5, v16
+; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a4
+; RV32ZVFHMIN-NEXT:    vmv.x.s a4, v28
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a6
 ; RV32ZVFHMIN-NEXT:    flt.h a6, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a5
+; RV32ZVFHMIN-NEXT:    sb a6, 116(sp)
+; RV32ZVFHMIN-NEXT:    lh a5, 358(sp)
+; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a4
+; RV32ZVFHMIN-NEXT:    lh a4, 230(sp)
+; RV32ZVFHMIN-NEXT:    flt.h a6, fa4, fa5
+; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a5
+; RV32ZVFHMIN-NEXT:    vmv.x.s a5, v16
+; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a4
+; RV32ZVFHMIN-NEXT:    flt.h a4, fa4, fa5
+; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a5
 ; RV32ZVFHMIN-NEXT:    vmv.x.s a5, v8
 ; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a5
-; RV32ZVFHMIN-NEXT:    sb a6, 115(sp)
-; RV32ZVFHMIN-NEXT:    lh a5, 356(sp)
-; RV32ZVFHMIN-NEXT:    lh a6, 228(sp)
+; RV32ZVFHMIN-NEXT:    sb a4, 115(sp)
+; RV32ZVFHMIN-NEXT:    lh a4, 356(sp)
+; RV32ZVFHMIN-NEXT:    lh a5, 228(sp)
 ; RV32ZVFHMIN-NEXT:    sb t2, 76(sp)
-; RV32ZVFHMIN-NEXT:    sb a4, 77(sp)
+; RV32ZVFHMIN-NEXT:    sb t0, 77(sp)
 ; RV32ZVFHMIN-NEXT:    sb a1, 78(sp)
 ; RV32ZVFHMIN-NEXT:    sb a0, 79(sp)
 ; RV32ZVFHMIN-NEXT:    flt.h a0, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    sb a0, 72(sp)
-; RV32ZVFHMIN-NEXT:    sb a7, 73(sp)
-; RV32ZVFHMIN-NEXT:    sb t0, 74(sp)
+; RV32ZVFHMIN-NEXT:    sb a6, 73(sp)
+; RV32ZVFHMIN-NEXT:    sb a7, 74(sp)
 ; RV32ZVFHMIN-NEXT:    sb t1, 75(sp)
-; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a5
-; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a6
+; RV32ZVFHMIN-NEXT:    fmv.h.x fa5, a4
+; RV32ZVFHMIN-NEXT:    fmv.h.x fa4, a5
 ; RV32ZVFHMIN-NEXT:    flt.h a0, fa4, fa5
 ; RV32ZVFHMIN-NEXT:    sb a0, 114(sp)
 ; RV32ZVFHMIN-NEXT:    addi a0, sp, 64
@@ -2571,11 +2571,11 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    sb t2, 105(sp)
 ; RV64ZVFHMIN-NEXT:    lh a1, 336(sp)
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a0
-; RV64ZVFHMIN-NEXT:    lh t3, 208(sp)
+; RV64ZVFHMIN-NEXT:    lh t2, 208(sp)
 ; RV64ZVFHMIN-NEXT:    flt.h a0, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a1
-; RV64ZVFHMIN-NEXT:    vmv.x.s t2, v23
-; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, t3
+; RV64ZVFHMIN-NEXT:    vmv.x.s t3, v23
+; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, t2
 ; RV64ZVFHMIN-NEXT:    flt.h a1, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a5
 ; RV64ZVFHMIN-NEXT:    sb a1, 104(sp)
@@ -2584,7 +2584,7 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    flt.h a1, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    lh a7, 206(sp)
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a5
-; RV64ZVFHMIN-NEXT:    vmv.x.s t3, v22
+; RV64ZVFHMIN-NEXT:    vmv.x.s t2, v22
 ; RV64ZVFHMIN-NEXT:    vslidedown.vi v22, v16, 11
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a7
 ; RV64ZVFHMIN-NEXT:    flt.h a5, fa4, fa5
@@ -2609,10 +2609,10 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    vslidedown.vi v24, v16, 10
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, t0
 ; RV64ZVFHMIN-NEXT:    flt.h t0, fa4, fa5
-; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, t2
+; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, t3
 ; RV64ZVFHMIN-NEXT:    sb t0, 101(sp)
 ; RV64ZVFHMIN-NEXT:    lh t0, 328(sp)
-; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, t3
+; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, t2
 ; RV64ZVFHMIN-NEXT:    lh t1, 200(sp)
 ; RV64ZVFHMIN-NEXT:    flt.h t2, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, t0
@@ -2721,76 +2721,76 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    lh a6, 240(sp)
 ; RV64ZVFHMIN-NEXT:    flt.h a1, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a4
-; RV64ZVFHMIN-NEXT:    vmv.x.s a7, v6
+; RV64ZVFHMIN-NEXT:    vmv.x.s a4, v6
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a6
-; RV64ZVFHMIN-NEXT:    flt.h a4, fa4, fa5
+; RV64ZVFHMIN-NEXT:    flt.h a6, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, t0
-; RV64ZVFHMIN-NEXT:    sb a4, 120(sp)
+; RV64ZVFHMIN-NEXT:    sb a6, 120(sp)
 ; RV64ZVFHMIN-NEXT:    lh a6, 366(sp)
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, t1
-; RV64ZVFHMIN-NEXT:    lh t0, 238(sp)
-; RV64ZVFHMIN-NEXT:    flt.h a4, fa4, fa5
+; RV64ZVFHMIN-NEXT:    lh a7, 238(sp)
+; RV64ZVFHMIN-NEXT:    flt.h t0, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a6
 ; RV64ZVFHMIN-NEXT:    vmv.x.s a6, v24
-; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, t0
-; RV64ZVFHMIN-NEXT:    flt.h t0, fa4, fa5
+; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a7
+; RV64ZVFHMIN-NEXT:    flt.h a7, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, t2
-; RV64ZVFHMIN-NEXT:    sb t0, 119(sp)
-; RV64ZVFHMIN-NEXT:    lh t0, 364(sp)
+; RV64ZVFHMIN-NEXT:    sb a7, 119(sp)
+; RV64ZVFHMIN-NEXT:    lh a7, 364(sp)
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, t3
 ; RV64ZVFHMIN-NEXT:    lh t1, 236(sp)
 ; RV64ZVFHMIN-NEXT:    flt.h t2, fa4, fa5
-; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, t0
-; RV64ZVFHMIN-NEXT:    vmv.x.s t0, v30
+; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a7
+; RV64ZVFHMIN-NEXT:    vmv.x.s a7, v30
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, t1
 ; RV64ZVFHMIN-NEXT:    flt.h t1, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a5
 ; RV64ZVFHMIN-NEXT:    sb t1, 118(sp)
 ; RV64ZVFHMIN-NEXT:    lh a5, 362(sp)
-; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a7
-; RV64ZVFHMIN-NEXT:    lh a7, 234(sp)
+; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a4
+; RV64ZVFHMIN-NEXT:    lh a4, 234(sp)
 ; RV64ZVFHMIN-NEXT:    flt.h t1, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a5
 ; RV64ZVFHMIN-NEXT:    vmv.x.s a5, v26
-; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a7
-; RV64ZVFHMIN-NEXT:    flt.h a7, fa4, fa5
+; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a4
+; RV64ZVFHMIN-NEXT:    flt.h a4, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a6
-; RV64ZVFHMIN-NEXT:    sb a7, 117(sp)
-; RV64ZVFHMIN-NEXT:    lh a6, 360(sp)
-; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, t0
-; RV64ZVFHMIN-NEXT:    lh a7, 232(sp)
-; RV64ZVFHMIN-NEXT:    flt.h t0, fa4, fa5
-; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a6
-; RV64ZVFHMIN-NEXT:    vmv.x.s a6, v28
+; RV64ZVFHMIN-NEXT:    sb a4, 117(sp)
+; RV64ZVFHMIN-NEXT:    lh a4, 360(sp)
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a7
+; RV64ZVFHMIN-NEXT:    lh a6, 232(sp)
 ; RV64ZVFHMIN-NEXT:    flt.h a7, fa4, fa5
-; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a5
-; RV64ZVFHMIN-NEXT:    sb a7, 116(sp)
-; RV64ZVFHMIN-NEXT:    lh a5, 358(sp)
-; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a6
-; RV64ZVFHMIN-NEXT:    lh a6, 230(sp)
-; RV64ZVFHMIN-NEXT:    flt.h a7, fa4, fa5
-; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a5
-; RV64ZVFHMIN-NEXT:    vmv.x.s a5, v16
+; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a4
+; RV64ZVFHMIN-NEXT:    vmv.x.s a4, v28
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a6
 ; RV64ZVFHMIN-NEXT:    flt.h a6, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a5
+; RV64ZVFHMIN-NEXT:    sb a6, 116(sp)
+; RV64ZVFHMIN-NEXT:    lh a5, 358(sp)
+; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a4
+; RV64ZVFHMIN-NEXT:    lh a4, 230(sp)
+; RV64ZVFHMIN-NEXT:    flt.h a6, fa4, fa5
+; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a5
+; RV64ZVFHMIN-NEXT:    vmv.x.s a5, v16
+; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a4
+; RV64ZVFHMIN-NEXT:    flt.h a4, fa4, fa5
+; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a5
 ; RV64ZVFHMIN-NEXT:    vmv.x.s a5, v8
 ; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a5
-; RV64ZVFHMIN-NEXT:    sb a6, 115(sp)
-; RV64ZVFHMIN-NEXT:    lh a5, 356(sp)
-; RV64ZVFHMIN-NEXT:    lh a6, 228(sp)
+; RV64ZVFHMIN-NEXT:    sb a4, 115(sp)
+; RV64ZVFHMIN-NEXT:    lh a4, 356(sp)
+; RV64ZVFHMIN-NEXT:    lh a5, 228(sp)
 ; RV64ZVFHMIN-NEXT:    sb t2, 76(sp)
-; RV64ZVFHMIN-NEXT:    sb a4, 77(sp)
+; RV64ZVFHMIN-NEXT:    sb t0, 77(sp)
 ; RV64ZVFHMIN-NEXT:    sb a1, 78(sp)
 ; RV64ZVFHMIN-NEXT:    sb a0, 79(sp)
 ; RV64ZVFHMIN-NEXT:    flt.h a0, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    sb a0, 72(sp)
-; RV64ZVFHMIN-NEXT:    sb a7, 73(sp)
-; RV64ZVFHMIN-NEXT:    sb t0, 74(sp)
+; RV64ZVFHMIN-NEXT:    sb a6, 73(sp)
+; RV64ZVFHMIN-NEXT:    sb a7, 74(sp)
 ; RV64ZVFHMIN-NEXT:    sb t1, 75(sp)
-; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a5
-; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a6
+; RV64ZVFHMIN-NEXT:    fmv.h.x fa5, a4
+; RV64ZVFHMIN-NEXT:    fmv.h.x fa4, a5
 ; RV64ZVFHMIN-NEXT:    flt.h a0, fa4, fa5
 ; RV64ZVFHMIN-NEXT:    sb a0, 114(sp)
 ; RV64ZVFHMIN-NEXT:    addi a0, sp, 64

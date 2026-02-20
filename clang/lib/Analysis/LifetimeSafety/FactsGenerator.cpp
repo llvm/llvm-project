@@ -18,6 +18,9 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
+#include "clang/Analysis/CFG.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -84,17 +87,6 @@ static const PathLoan *createLoan(FactManager &FactMgr,
   return FactMgr.getLoanMgr().createLoan<PathLoan>(Path, MTE);
 }
 
-/// Try to find a CXXBindTemporaryExpr that descends from MTE, stripping away
-/// any implicit casts.
-/// \param MTE MaterializeTemporaryExpr whose descendants we are interested in.
-/// \return Pointer to descendant CXXBindTemporaryExpr or nullptr when not
-/// found.
-static const CXXBindTemporaryExpr *
-getChildBinding(const MaterializeTemporaryExpr *MTE) {
-  const Expr *Child = MTE->getSubExpr()->IgnoreImpCasts();
-  return dyn_cast<CXXBindTemporaryExpr>(Child);
-}
-
 void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
   const CFG &Cfg = *AC.getCFG();
@@ -117,9 +109,10 @@ void FactsGenerator::run() {
       else if (std::optional<CFGLifetimeEnds> LifetimeEnds =
                    Element.getAs<CFGLifetimeEnds>())
         handleLifetimeEnds(*LifetimeEnds);
-      else if (std::optional<CFGTemporaryDtor> TemporaryDtor =
-                   Element.getAs<CFGTemporaryDtor>())
-        handleTemporaryDtor(*TemporaryDtor);
+      else if (std::optional<CFGFullExprCleanup> FullExprCleanup =
+                   Element.getAs<CFGFullExprCleanup>()) {
+        handleFullExprCleanup(*FullExprCleanup);
+      }
     }
     if (Block == &Cfg.getExit())
       handleExitBlock();
@@ -429,7 +422,7 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
   OriginList *RValMTEList = getRValueOrigins(MTE, MTEList);
   flow(RValMTEList, SubExprList, /*Kill=*/true);
   OriginID OuterMTEID = MTEList->getOuterOriginID();
-  if (getChildBinding(MTE)) {
+  if (MTE->getStorageDuration() == SD_FullExpression) {
     // Issue a loan to MTE for the storage location represented by MTE.
     const Loan *L = createLoan(FactMgr, MTE);
     CurrentBlockFacts.push_back(
@@ -438,7 +431,6 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
 }
 
 void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
-  /// TODO: Handle loans to temporaries.
   const VarDecl *LifetimeEndsVD = LifetimeEnds.getVarDecl();
   if (!LifetimeEndsVD)
     return;
@@ -456,12 +448,8 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   }
 }
 
-void FactsGenerator::handleTemporaryDtor(
-    const CFGTemporaryDtor &TemporaryDtor) {
-  const CXXBindTemporaryExpr *ExpiringBTE =
-      TemporaryDtor.getBindTemporaryExpr();
-  if (!ExpiringBTE)
-    return;
+void FactsGenerator::handleFullExprCleanup(
+    const CFGFullExprCleanup &FullExprCleanup) {
   // Iterate through all loans to see if any expire.
   for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
     if (const auto *PL = dyn_cast<PathLoan>(Loan)) {
@@ -471,9 +459,9 @@ void FactsGenerator::handleTemporaryDtor(
       const MaterializeTemporaryExpr *Path = AP.getAsMaterializeTemporaryExpr();
       if (!Path)
         continue;
-      if (ExpiringBTE == getChildBinding(Path)) {
-        CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
-            PL->getID(), TemporaryDtor.getBindTemporaryExpr()->getEndLoc()));
+      if (llvm::is_contained(FullExprCleanup.getExpiringMTEs(), Path)) {
+        CurrentBlockFacts.push_back(
+            FactMgr.createFact<ExpireFact>(PL->getID(), Path->getEndLoc()));
       }
     }
   }
@@ -523,9 +511,20 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
 void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
                                            ArrayRef<const Expr *> Args) {
   unsigned IsInstance = 0;
-  if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD))
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+      MD && MD->isInstance() && !isa<CXXConstructorDecl>(FD)) {
     IsInstance = 1;
+    // std::unique_ptr::release() transfers ownership.
+    // Treat it as a move to prevent false-positive warnings when the unique_ptr
+    // destructor runs after ownership has been transferred.
+    if (isUniquePtrRelease(*MD)) {
+      const Expr *UniquePtrExpr = Args[0];
+      OriginList *MovedOrigins = getOriginsList(*UniquePtrExpr);
+      if (MovedOrigins)
+        CurrentBlockFacts.push_back(FactMgr.createFact<MovedOriginFact>(
+            UniquePtrExpr, MovedOrigins->getOuterOriginID()));
+    }
+  }
 
   // Skip 'this' arg as it cannot be moved.
   for (unsigned I = IsInstance;
@@ -549,16 +548,6 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
   const auto *MD = dyn_cast<CXXMethodDecl>(FD);
   if (!MD || !MD->isInstance())
     return;
-  // std::unique_ptr::release() transfers ownership.
-  // Treat it as a move to prevent false-positive warnings when the unique_ptr
-  // destructor runs after ownership has been transferred.
-  if (isUniquePtrRelease(*MD)) {
-    const Expr *UniquePtrExpr = Args[0];
-    OriginList *MovedOrigins = getOriginsList(*UniquePtrExpr);
-    if (MovedOrigins)
-      CurrentBlockFacts.push_back(FactMgr.createFact<MovedOriginFact>(
-          UniquePtrExpr, MovedOrigins->getOuterOriginID()));
-  }
 
   if (!isContainerInvalidationMethod(*MD))
     return;
@@ -710,10 +699,10 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
     return {};
 
   llvm::SmallVector<Fact *> PlaceholderLoanFacts;
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD); MD && MD->isInstance()) {
-    OriginList *List = *FactMgr.getOriginMgr().getThisOrigins();
-    const PlaceholderLoan *L =
-        FactMgr.getLoanMgr().createLoan<PlaceholderLoan>(MD);
+  if (auto ThisOrigins = FactMgr.getOriginMgr().getThisOrigins()) {
+    OriginList *List = *ThisOrigins;
+    const PlaceholderLoan *L = FactMgr.getLoanMgr().createLoan<PlaceholderLoan>(
+        cast<CXXMethodDecl>(FD));
     PlaceholderLoanFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
   }

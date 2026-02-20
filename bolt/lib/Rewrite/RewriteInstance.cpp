@@ -4544,7 +4544,7 @@ void RewriteInstance::patchELFPHDRTable() {
 
   Phnum = Obj.getHeader().e_phnum;
 
-  if (BC->NewSegments.empty()) {
+  if (BC->NewSegments.empty() && BC->BOLTReserved.empty()) {
     BC->outs() << "BOLT-INFO: not adding new segments\n";
     return;
   }
@@ -4597,6 +4597,13 @@ void RewriteInstance::patchELFPHDRTable() {
   for (const ELF64LE::Phdr &Phdr : cantFail(Obj.program_headers())) {
     ELF64LE::Phdr NewPhdr = Phdr;
     switch (Phdr.p_type) {
+    case ELF::PT_LOAD: {
+      // Mark segment as executable if it contains BOLTReserved space.
+      AddressRange Seg(Phdr.p_vaddr, Phdr.p_vaddr + Phdr.p_memsz);
+      if (!BC->BOLTReserved.empty() && Seg.contains(BC->BOLTReserved))
+        NewPhdr.p_flags |= ELF::PF_X;
+      break;
+    }
     case ELF::PT_PHDR:
       if (PHDRTableAddress) {
         NewPhdr.p_offset = PHDRTableOffset;
