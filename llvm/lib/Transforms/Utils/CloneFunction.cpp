@@ -719,6 +719,51 @@ void PruningFunctionCloner::CloneBlock(
   }
 }
 
+/// Propagate fast-math flags flags from OldFunc's new arguments to their users
+/// if applicable.
+static void propagateFastMathFlags(const Function *OldFunc,
+                                   ValueToValueMapTy &VMap,
+                                   const FastMathFlags &FMFs) {
+  if (!FMFs.any())
+    return;
+
+  // Visit all instructions reachable from the arguments of OldFunc. This
+  // ensures we only visit instructions in the original function. The arguments
+  // have FMFs as fast-math flags. Set them for all applicable instructions in
+  // the new function (retrieved via VMap).
+
+  DenseSet<const Value *> Visited;
+  SmallVector<const Instruction *, 32> Worklist;
+  for (const Argument &Arg : OldFunc->args()) {
+    Visited.insert(&Arg);
+    for (const User *U : Arg.users()) {
+      if (Visited.insert(U).second)
+        Worklist.push_back(cast<Instruction>(U));
+    }
+  }
+
+  while (!Worklist.empty()) {
+    const Instruction *CurrentOld = Worklist.pop_back_val();
+    Instruction *Current = dyn_cast<Instruction>(VMap.lookup(CurrentOld));
+    if (!Current || !isa<FPMathOperator>(Current))
+      continue;
+
+    // TODO: Assumes all FP ops propagate the flags from args to the result, if
+    // all operands have the same flags.
+    if (!all_of(CurrentOld->operands(),
+                [&Visited](Value *V) { return Visited.contains(V); }))
+      continue;
+
+    Current->setFastMathFlags(Current->getFastMathFlags() | FMFs);
+
+    // Add all users of this instruction to the worklist
+    for (const User *U : CurrentOld->users()) {
+      if (Visited.insert(U).second)
+        Worklist.push_back(cast<Instruction>(U));
+    }
+  }
+}
+
 /// This works like CloneAndPruneFunctionInto, except that it does not clone the
 /// entire function. Instead it starts at an instruction provided by the caller
 /// and copies (and prunes) only the code reachable from that instruction.
@@ -999,6 +1044,8 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
        I != E; ++I)
     if (ReturnInst *RI = dyn_cast<ReturnInst>(I->getTerminator()))
       Returns.push_back(RI);
+
+  propagateFastMathFlags(OldFunc, VMap, CodeInfo->FMFs);
 }
 
 /// This works exactly like CloneFunctionInto,
