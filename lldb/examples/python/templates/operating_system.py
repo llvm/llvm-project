@@ -56,14 +56,14 @@ class OperatingSystem(ScriptedThread):
         """Lazily create an operating system thread using a thread information
         dictionary and an optional operating system thread context address.
         This method is called manually, using the SBAPI
-        `lldb.SBProcess.CreateOSPluginThread` affordance.
+        ``lldb.SBProcess.CreateOSPluginThread`` affordance.
 
         Args:
-            tid (int): Thread ID to get `thread_info` dictionary for.
+            tid (int): Thread ID to get ``thread_info`` dictionary for.
             context (int): Address of the operating system thread struct.
 
         Returns:
-            Dict: The `thread_info` dictionary containing the various information
+            Dict: The ``thread_info`` dictionary containing the various information
             for lldb to create a Thread object and add it to the process thread list.
         """
         return None
@@ -75,10 +75,10 @@ class OperatingSystem(ScriptedThread):
         thread list.
 
         Returns:
-            List[thread_info]: A list of `os_thread` dictionaries
+            List[thread_info]: A list of ``os_thread`` dictionaries
                 containing at least for each entry, the thread id, it's name,
                 queue, state, stop reason. It can also contain a
-                `register_data_addr`. The list can be empty.
+                ``register_data_addr``. The list can be empty.
         """
         pass
 

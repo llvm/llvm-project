@@ -13,7 +13,7 @@ class ScriptedThreadPlan:
         """Initialization needs a valid lldb.SBThreadPlan object. This plug-in will get created after a live process is valid and has stopped.
 
         Args:
-            thread_plan (lldb.SBThreadPlan): The underlying `ThreadPlan` that is pushed onto the plan stack.
+            thread_plan (lldb.SBThreadPlan): The underlying ``ThreadPlan`` that is pushed onto the plan stack.
         """
         self.thread_plan = thread_plan
 
@@ -24,8 +24,8 @@ class ScriptedThreadPlan:
             event (lldb.SBEvent): The process stop event.
 
         Returns:
-            bool: `True` if this stop could be claimed by this thread plan, `False` otherwise.
-            Defaults to `True`.
+            bool: ``True`` if this stop could be claimed by this thread plan, ``False`` otherwise.
+            Defaults to ``True``.
         """
         return True
 
@@ -33,8 +33,8 @@ class ScriptedThreadPlan:
         """If your plan is no longer relevant (for instance, you were stepping in a particular stack frame, but some other operation pushed that frame off the stack) return True and your plan will get popped.
 
         Returns:
-            bool: `True` if this thread plan is stale, `False` otherwise.
-            Defaults to `False`.
+            bool: ``True`` if this thread plan is stale, ``False`` otherwise.
+            Defaults to ``False``.
         """
         return False
 
@@ -46,8 +46,8 @@ class ScriptedThreadPlan:
             event (lldb.SBEvent): The process stop event.
 
         Returns:
-            bool: `True` if this plan wants to stop and return control to the user at this point, `False` otherwise.
-            Defaults to `False`.
+            bool: ``True`` if this plan wants to stop and return control to the user at this point, ``False`` otherwise.
+            Defaults to ``False``.
         """
         self.thread_plan.SetPlanComplete(True)
         return True
@@ -56,8 +56,8 @@ class ScriptedThreadPlan:
         """Whether this thread plan should instruction step one instruction, or continue till the next breakpoint is hit.
 
         Returns:
-            bool: `True` if this plan will instruction step one instruction, `False` otherwise.
-            Defaults to `True`.
+            bool: ``True`` if this plan will instruction step one instruction, ``False`` otherwise.
+            Defaults to ``True``.
         """
         return True
 

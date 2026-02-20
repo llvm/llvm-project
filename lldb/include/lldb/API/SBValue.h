@@ -273,8 +273,8 @@ public:
   /// doing any expensive type completion.
   ///
   /// \return
-  ///     Returns \b true if the SBValue might have children, or \b
-  ///     false otherwise.
+  ///     Returns \b true if the SBValue might have children, or
+  ///     \b false otherwise.
   bool MightHaveChildren();
 
   bool IsRuntimeSupportValue();

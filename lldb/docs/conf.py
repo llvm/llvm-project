@@ -154,6 +154,10 @@ pygments_style = "friendly"
 # A list of ignored prefixes for module index sorting.
 # modindex_common_prefix = []
 
+suppress_warnings = [
+    # "WARNING: 'any' reference target not found"
+    "ref.any"
+]
 
 # -- Options for HTML output ---------------------------------------------------
 

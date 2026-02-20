@@ -364,25 +364,25 @@ public:
 
   /// Save the state of the process in a core file.
   ///
-  /// \param[in] file_name - The name of the file to save the core file to.
+  /// \param[in] file_name The name of the file to save the core file to.
   ///
-  /// \param[in] flavor - Specify the flavor of a core file plug-in to save.
-  /// Currently supported flavors include "mach-o" and "minidump"
+  /// \param[in] flavor Specify the flavor of a core file plug-in to save.
+  ///     Currently supported flavors include "mach-o" and "minidump"
   ///
-  /// \param[in] core_style - Specify the style of a core file to save.
+  /// \param[in] core_style Specify the style of a core file to save.
   lldb::SBError SaveCore(const char *file_name, const char *flavor,
                          SaveCoreStyle core_style);
 
   /// Save the state of the process with the a flavor that matches the
   /// current process' main executable (if supported).
   ///
-  /// \param[in] file_name - The name of the file to save the core file to.
+  /// \param[in] file_name The name of the file to save the core file to.
   lldb::SBError SaveCore(const char *file_name);
 
   /// Save the state of the process with the desired settings
   /// as defined in the options object.
   ///
-  /// \param[in] options - The options to use when saving the core file.
+  /// \param[in] options The options to use when saving the core file.
   lldb::SBError SaveCore(SBSaveCoreOptions &options);
 
   /// Query the address load_addr and store the details of the memory
