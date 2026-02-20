@@ -19413,20 +19413,18 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
     Value *createShuffleVector(Value *V1, Value *V2, ArrayRef<int> Mask) {
       if (V1->getType() != V2->getType()) {
         assert(V1->getType()->isIntOrIntVectorTy() &&
-               V1->getType()->isIntOrIntVectorTy() &&
+               V2->getType()->isIntOrIntVectorTy() &&
                "Expected integer vector types only.");
-        if (V1->getType() != V2->getType()) {
-          if (cast<VectorType>(V2->getType())
-                  ->getElementType()
-                  ->getIntegerBitWidth() < cast<VectorType>(V1->getType())
-                                               ->getElementType()
-                                               ->getIntegerBitWidth())
-            V2 = Builder.CreateIntCast(
-                V2, V1->getType(), !isKnownNonNegative(V2, SimplifyQuery(DL)));
-          else
-            V1 = Builder.CreateIntCast(
-                V1, V2->getType(), !isKnownNonNegative(V1, SimplifyQuery(DL)));
-        }
+        if (cast<VectorType>(V2->getType())
+                ->getElementType()
+                ->getIntegerBitWidth() < cast<VectorType>(V1->getType())
+                                             ->getElementType()
+                                             ->getIntegerBitWidth())
+          V2 = Builder.CreateIntCast(
+              V2, V1->getType(), !isKnownNonNegative(V2, SimplifyQuery(DL)));
+        else
+          V1 = Builder.CreateIntCast(
+              V1, V2->getType(), !isKnownNonNegative(V1, SimplifyQuery(DL)));
       }
       Value *Vec = Builder.CreateShuffleVector(V1, V2, Mask);
       if (auto *I = dyn_cast<Instruction>(Vec)) {
