@@ -254,7 +254,7 @@ static void reportError(void *Addr, int Size, tysan_type_descriptor *TD,
     Printf("\n");
   }
 
-  if(flags().halt_on_error){
+  if (flags().halt_on_error) {
     Report("ABORTING\n");
     Die();
   }
