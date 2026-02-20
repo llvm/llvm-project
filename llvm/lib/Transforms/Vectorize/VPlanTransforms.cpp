@@ -1483,6 +1483,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  // Simplify MaskedCond with no block mask to its single operand.
+  if (match(Def, m_VPInstruction<VPInstruction::MaskedCond>()) &&
+      !cast<VPInstruction>(Def)->isMasked())
+    return Def->replaceAllUsesWith(Def->getOperand(0));
+
   // Look through ExtractLastLane.
   if (match(Def, m_ExtractLastLane(m_VPValue(A)))) {
     if (match(A, m_BuildVector())) {
@@ -4000,6 +4005,17 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         continue;
       }
 
+      // Lower MaskedCond with block mask to LogicalAnd.
+      if (match(&R, m_VPInstruction<VPInstruction::MaskedCond>())) {
+        auto *VPI = cast<VPInstruction>(&R);
+        assert(VPI->isMasked() &&
+               "Unmasked MaskedCond should be simplified earlier");
+        VPI->replaceAllUsesWith(Builder.createNaryOp(
+            VPInstruction::LogicalAnd, {VPI->getOperand(0), VPI->getMask()}));
+        ToRemove.push_back(VPI);
+        continue;
+      }
+
       // Lower BranchOnCount to ICmp + BranchOnCond.
       VPValue *IV, *TC;
       if (match(&R, m_BranchOnCount(m_VPValue(IV), m_VPValue(TC)))) {
@@ -4080,10 +4096,17 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
           match(EarlyExitingVPBB->getTerminator(),
                 m_BranchOnCond(m_VPValue(CondOfEarlyExitingVPBB)));
       assert(Matched && "Terminator must be BranchOnCond");
-      auto *CondToEarlyExit = TrueSucc == ExitBlock
-                                  ? CondOfEarlyExitingVPBB
-                                  : Builder.createNot(CondOfEarlyExitingVPBB);
+
+      // Insert the MaskedCond in the EarlyExitingVPBB so the predicator adds
+      // the correct block mask.
+      VPBuilder EarlyExitBuilder(EarlyExitingVPBB->getTerminator());
+      auto *CondToEarlyExit = EarlyExitBuilder.createNaryOp(
+          VPInstruction::MaskedCond,
+          TrueSucc == ExitBlock
+              ? CondOfEarlyExitingVPBB
+              : EarlyExitBuilder.createNot(CondOfEarlyExitingVPBB));
       assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
+              !VPDT.properlyDominates(EarlyExitingVPBB, LatchVPBB) ||
               VPDT.properlyDominates(
                   CondOfEarlyExitingVPBB->getDefiningRecipe()->getParent(),
                   LatchVPBB)) &&
@@ -4097,10 +4120,28 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
   }
 
   assert(!Exits.empty() && "must have at least one early exit");
-  // Sort exits by dominance to get the correct program order.
-  llvm::sort(Exits, [&VPDT](const EarlyExitInfo &A, const EarlyExitInfo &B) {
-    return VPDT.properlyDominates(A.EarlyExitingVPBB, B.EarlyExitingVPBB);
-  });
+  // Sort exits by RPO order to get correct program order. RPO gives a
+  // topological ordering of the CFG, ensuring upstream exits are checked
+  // before downstream exits in the dispatch chain.
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      HeaderVPBB);
+  DenseMap<VPBlockBase *, unsigned> RPONumber;
+  unsigned Num = 0;
+  for (VPBlockBase *VPB : RPOT)
+    RPONumber[VPB] = Num++;
+  llvm::sort(
+      Exits, [&RPONumber](const EarlyExitInfo &A, const EarlyExitInfo &B) {
+        return RPONumber[A.EarlyExitingVPBB] < RPONumber[B.EarlyExitingVPBB];
+      });
+#ifndef NDEBUG
+  // After RPO sorting, verify that for any pair where one exit dominates
+  // another, the dominating exit comes first. This is guaranteed by RPO
+  // (topological order) and is required for the dispatch chain correctness.
+  for (unsigned I = 0; I + 1 < Exits.size(); ++I)
+    assert(!VPDT.properlyDominates(Exits[I + 1].EarlyExitingVPBB,
+                                   Exits[I].EarlyExitingVPBB) &&
+           "RPO sort must place dominating exits before dominated ones");
+#endif
 
   // Build the AnyOf condition for the latch terminator using logical OR
   // to avoid poison propagation from later exit conditions when an earlier
