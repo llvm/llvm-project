@@ -108,9 +108,9 @@ UnrollVerifyLoopInfo("unroll-verify-loopinfo", cl::Hidden,
 #endif
                     );
 
-static cl::opt<bool> UnrollAddParallelReductions(
-    "unroll-add-parallel-reductions", cl::init(false), cl::Hidden,
-    cl::desc("Allow unrolling to add parallel reduction phis."));
+static cl::opt<bool> UnrollParallelReductions(
+    "unroll-parallel-reductions", cl::init(false), cl::Hidden,
+    cl::desc("Allow unrolling to parallelize reductions."));
 
 /// Check if unrolling created a situation where we need to insert phi nodes to
 /// preserve LCSSA form.
@@ -670,8 +670,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // to not exit.
   DenseMap<PHINode *, RecurrenceDescriptor> Reductions;
   bool CanAddAdditionalAccumulators =
-      (UnrollAddParallelReductions.getNumOccurrences() > 0
-           ? UnrollAddParallelReductions
+      (UnrollParallelReductions.getNumOccurrences() > 0
+           ? UnrollParallelReductions
            : ULO.AddAdditionalAccumulators) &&
       !CompletelyUnroll && L->getNumBlocks() == 1 &&
       (ULO.Runtime ||
@@ -1102,9 +1102,12 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         Builder.setFastMathFlags(Reductions.begin()->second.getFastMathFlags());
         RecurKind RK = Reductions.begin()->second.getRecurrenceKind();
         for (Instruction *RdxPart : drop_begin(PartialReductions)) {
-          RdxResult = Builder.CreateBinOp(
-              (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
-              RdxPart, RdxResult, "bin.rdx");
+          if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
+            RdxResult = createMinMaxOp(Builder, RK, RdxResult, RdxPart);
+          else
+            RdxResult = Builder.CreateBinOp(
+                (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
+                RdxPart, RdxResult, "bin.rdx");
         }
         NeedToFixLCSSA = true;
         for (Instruction *RdxPart : PartialReductions)
@@ -1263,12 +1266,10 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
   if (RdxDesc.hasUsesOutsideReductionChain())
     return std::nullopt;
   RecurKind RK = RdxDesc.getRecurrenceKind();
-  // Skip unsupported reductions.
-  // TODO: Handle additional reductions, including FP and min-max
-  // reductions.
+  // Skip unsupported reductions. Min/max (integer and FP) are supported.
+  // TODO: Handle additional reductions.
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isFindRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
+      RecurrenceDescriptor::isFindRecurrenceKind(RK))
     return std::nullopt;
 
   if (RdxDesc.hasExactFPMath())
