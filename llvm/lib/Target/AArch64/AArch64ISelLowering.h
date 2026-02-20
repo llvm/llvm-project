@@ -159,8 +159,6 @@ public:
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
 
-  bool isCtSelectSupported(EVT VT) const override { return false; }
-
   SDValue ReconstructShuffle(SDValue Op, SelectionDAG &DAG) const;
 
   MachineBasicBlock *EmitF128CSEL(MachineInstr &MI,

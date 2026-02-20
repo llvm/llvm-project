@@ -1413,7 +1413,7 @@ public:
                       SDValue RHS, SDNodeFlags Flags = SDNodeFlags()) {
     assert(LHS.getValueType() == VT && RHS.getValueType() == VT &&
            "Cannot use select on differing types");
-    return getNode(ISD::CTSELECT, DL, VT, Cond, LHS, RHS, Flags);
+    return getNode(ISD::CT_SELECT, DL, VT, Cond, LHS, RHS, Flags);
   }
 
   /// Helper function to make it easier to build SelectCC's if you just have an
