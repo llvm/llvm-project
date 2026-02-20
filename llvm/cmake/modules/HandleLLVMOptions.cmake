@@ -760,13 +760,6 @@ if (MSVC)
       -wd4389 # Suppress 'signed/unsigned mismatch'
       -wd4805 # Suppress 'unsafe mix of type <type> and type <type> in operation'
       -wd4577 # Suppress 'noexcept used with no exception handling mode specified; termination on exception is not guaranteed'
-<<<<<<< aballman-msvc-cmake-warning-4592
-      -wd4091 # Suppress 'typedef: ignored on left of '' when no variable is declared'
-=======
-          # C4592 is disabled because of false positives in Visual Studio 2015
-          # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
-      -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
->>>>>>> main
       -wd4319 # Suppress ''operator' : zero extending 'type' to 'type' of greater size'
           # C4709 is disabled because of a bug with Visual Studio 2017 as of
           # v15.8.8. Re-evaluate the usefulness of this diagnostic when the bug
