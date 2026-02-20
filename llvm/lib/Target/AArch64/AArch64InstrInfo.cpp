@@ -10796,7 +10796,6 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
 static void signOutlinedFunction(MachineFunction &MF, MachineBasicBlock &MBB,
                                  const AArch64InstrInfo *TII,
                                  bool ShouldSignReturnAddr) {
-  assert(&MF.front() == &MBB);
   if (!ShouldSignReturnAddr)
     return;
 
