@@ -317,6 +317,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::SHL_PARTS, ISD::SRA_PARTS, ISD::SRL_PARTS}, MVT::i64,
                      Expand);
 
+  setOperationAction(ISD::INLINEASM, MVT::Other, Custom);
+
 #if 0
   setOperationAction({ISD::UADDO_CARRY, ISD::USUBO_CARRY}, MVT::i64, Legal);
 #endif
@@ -7190,6 +7192,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerSET_FPENV(Op, DAG);
   case ISD::ROTR:
     return lowerROTR(Op, DAG);
+  case ISD::INLINEASM:
+    return LowerINLINEASM(Op, DAG);
   }
   return SDValue();
 }
@@ -8575,6 +8579,83 @@ SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
       static_cast<uint64_t>(GCNSubtarget::TrapID::LLVMAMDHSADebugTrap);
   SDValue Ops[] = {Chain, DAG.getTargetConstant(TrapID, SL, MVT::i16)};
   return DAG.getNode(AMDGPUISD::TRAP, SL, MVT::Other, Ops);
+}
+
+/// When a divergent value (in VGPR) is passed to an inline asm with an SGPR
+/// constraint ('s'), we need to insert v_readfirstlane to move the value from
+/// VGPR to SGPR. This is done by modifying the CopyToReg nodes in the glue
+/// chain that feed into the INLINEASM node.
+SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
+  unsigned NumOps = Op.getNumOperands();
+
+  if (Op.getOperand(NumOps - 1).getValueType() != MVT::Glue)
+    return Op;
+
+  const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+  DenseSet<Register> SGPRInputRegs;
+
+  for (unsigned I = InlineAsm::Op_FirstOperand; I < NumOps - 1;) {
+    const InlineAsm::Flag Flags(Op.getConstantOperandVal(I));
+    unsigned NumVals = Flags.getNumOperandRegisters();
+    ++I;
+
+    unsigned RCID;
+    bool IsSGPRInput = Flags.getKind() == InlineAsm::Kind::RegUse &&
+                       NumVals > 0 && Flags.hasRegClassConstraint(RCID) &&
+                       TRI->isSGPRClass(TRI->getRegClass(RCID));
+
+    for (unsigned J = 0; J < NumVals; ++J, ++I) {
+      SDValue Val = Op.getOperand(I);
+      if (Val.getOpcode() != ISD::Register)
+        continue;
+
+      Register Reg = cast<RegisterSDNode>(Val.getNode())->getReg();
+
+      IsSGPRInput = Reg.isPhysical() ? TRI->isSGPRPhysReg(Reg) : IsSGPRInput;
+      if (IsSGPRInput)
+        SGPRInputRegs.insert(Reg);
+    }
+  }
+
+  if (SGPRInputRegs.empty())
+    return Op;
+
+  // Walk the glue chain and insert readfirstlane for divergent SGPR inputs.
+  SDLoc DL(Op);
+  SDNode *N = Op.getOperand(NumOps - 1).getNode();
+
+  while (N && N->getOpcode() == ISD::CopyToReg) {
+    Register Reg = cast<RegisterSDNode>(N->getOperand(1))->getReg();
+    SDValue SrcVal = N->getOperand(2);
+
+    // Insert readfirstlane if copying a divergent value to an SGPR input.
+    if (SGPRInputRegs.count(Reg) && SrcVal->isDivergent()) {
+      SDValue ReadFirstLaneID =
+          DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, DL, MVT::i32);
+      SDValue ReadFirstLane =
+          DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, SrcVal.getValueType(),
+                      ReadFirstLaneID, SrcVal);
+
+      SmallVector<SDValue, 4> Ops = {N->getOperand(0), N->getOperand(1),
+                                     ReadFirstLane};
+      if (N->getNumOperands() > 3)
+        Ops.push_back(N->getOperand(3)); // Glue input
+
+      DAG.UpdateNodeOperands(N, Ops);
+    }
+
+    // Follow glue chain to next CopyToReg.
+    SDNode *Next = nullptr;
+    for (unsigned I = 0, E = N->getNumOperands(); I != E; ++I) {
+      if (N->getOperand(I).getValueType() == MVT::Glue) {
+        Next = N->getOperand(I).getNode();
+        break;
+      }
+    }
+    N = Next;
+  }
+
+  return Op;
 }
 
 SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
