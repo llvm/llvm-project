@@ -13,9 +13,6 @@ jobs:
   code_linter:
     if: github.repository_owner == 'llvm'
     runs-on: ubuntu-24.04
-    defaults:
-      run:
-        shell: bash
     timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
