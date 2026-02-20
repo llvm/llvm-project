@@ -186,7 +186,7 @@ multiclass SICommonWriteRes {
   def : HWWriteRes<Write2PassMAI,  [HWXDL], 2>;
   let ReleaseAtCycles = [4] in
   def : HWWriteRes<Write4PassMAI,  [HWXDL], 4>;
-  let ReleaseAtCycles = [8] in
+  let ReleaseAtCycles = [7] in
   def : HWWriteRes<Write8PassMAI,  [HWXDL], 8>;
   let ReleaseAtCycles = [16] in
   def : HWWriteRes<Write16PassMAI, [HWXDL], 16>;
