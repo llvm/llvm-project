@@ -755,7 +755,10 @@ void PipelineSolver::greedyFind(
 
   if (BestGroupID != -1) {
     BestGroup->add(*CurrSU.first);
-    AddedEdges.splice(AddedEdges.end(), BestEdges);
+    if (AddedEdges.empty())
+      AddedEdges = BestEdges;
+    else
+      AddedEdges.splice(std::prev(AddedEdges.cend()), BestEdges);
     std::for_each(BestEdges.begin(), BestEdges.end(),
                   [this](std::pair<SUnit *, SUnit *> E) {
                     if (!tryAddEdge(DAG, E.first, E.second))
