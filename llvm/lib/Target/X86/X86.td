@@ -1188,6 +1188,7 @@ def ProcessorFeatures {
                                                   FeatureAMXTF32];
   list<SubtargetFeature> DMRFeatures =
     !listconcat(GNRDFeatures, DMRAdditionalFeatures);
+  list<SubtargetFeature> DMRTuning = !listremove(GNRTuning, [TuningPrefer256Bit]);
 
   // Atom
   list<SubtargetFeature> AtomFeatures = [FeatureX87,
@@ -1358,6 +1359,7 @@ def ProcessorFeatures {
                                                   FeaturePREFETCHI];
   list<SubtargetFeature> NVLFeatures =
       !listconcat(PTLFeatures, NVLAdditionalFeatures);
+  list<SubtargetFeature> NVLTuning = !listremove(ADLTuning, [TuningPrefer256Bit]);
 
   // Clearwaterforest
   list<SubtargetFeature> CWFAdditionalFeatures = [FeaturePREFETCHI,
@@ -1914,7 +1916,7 @@ def : ProcModel<P, AlderlakePModel,
                 ProcessorFeatures.PTLFeatures, ProcessorFeatures.ADLTuning>;
 }
 def : ProcModel<"novalake", AlderlakePModel, ProcessorFeatures.NVLFeatures,
-                ProcessorFeatures.ADLTuning>;
+                ProcessorFeatures.NVLTuning>;
 
 def : ProcModel<"clearwaterforest", AlderlakePModel,
                 ProcessorFeatures.CWFFeatures, ProcessorFeatures.ADLTuning>;
@@ -1927,7 +1929,7 @@ def : ProcModel<P, SapphireRapidsModel,
                 ProcessorFeatures.GNRDFeatures, ProcessorFeatures.GNRTuning>;
 }
 def : ProcModel<"diamondrapids", SapphireRapidsModel,
-                ProcessorFeatures.DMRFeatures, ProcessorFeatures.GNRTuning>;
+                ProcessorFeatures.DMRFeatures, ProcessorFeatures.DMRTuning>;
 
 // AMD CPUs.
 
