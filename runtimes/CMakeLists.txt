@@ -26,7 +26,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
   "${LLVM_COMMON_CMAKE_UTILS}"
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake"
@@ -85,7 +85,8 @@ include(CheckLibraryExists)
 include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
-
+include(GetToolchainDirs)
+include(ExtendPath)
 
 # Determine whether we are in the runtimes/runtimes-bins directory of a
 # bootstrap build.
@@ -235,6 +236,67 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang")
     message(WARNING "Failed to execute `${print_target_triple}` to normalize target triple.")
   endif()
 endif()
+
+# Determine output and install paths based on LLVM_TARGET_TRIPLE
+if(LLVM_TREE_AVAILABLE)
+  # Despite Clang in the name, get_clang_resource_dir does not depend on Clang
+  # being added to the build. Flang uses the same resource dir as Clang.
+  include(GetClangResourceDir)
+  get_clang_resource_dir(RUNTIMES_OUTPUT_RESOURCE_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/..")
+  get_clang_resource_dir(RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT)
+else()
+  # For the install prefix, still use the resource dir assuming the compilers
+  # looking for it (Clang, Flang) will be installed there using the same prefix.
+  # This is to not have a difference between bootstrapping and default/standalone runtimes
+  # builds.
+  set(RUNTIMES_OUTPUT_RESOURCE_DIR "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
+  set(RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT "lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
+endif()
+
+# Determine build and install paths. The output paths are absolute, but the
+# install dirs are relative to CMAKE_INSTALL_PREFIX to be resolved by CMake.
+get_toolchain_library_subdir(toolchain_lib_subdir)
+extend_path(RUNTIMES_OUTPUT_RESOURCE_LIB_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_lib_subdir}")
+
+set(RUNTIMES_INSTALL_RESOURCE_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT}" CACHE PATH "Path to install headers, runtime libraries, and Fortran modules to (default: Clang resource dir)")
+extend_path(RUNTIMES_INSTALL_RESOURCE_LIB_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "${toolchain_lib_subdir}")
+
+cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_DIR)
+cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_PATH)
+cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_LIB_DIR)
+cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_LIB_PATH)
+
+
+# Handle Fortran code. When a Fortran  toolchain is available and required by
+# one or more of the runtimes, enables CMake's Fortran support and sets
+# RUNTIMES_FLANG_MODULES_ENABLED.
+# Makes use of RUNTIMES_OUTPUT_RESOURCE_DIR, RUNTIMES_INSTALL_RESOURCE_PATH,
+# hence must be included their those variables are defined.
+include(config-Fortran)
+
+
+# For subprojects supporting offloading targets (offload, flang-rt, ..) specify
+# which architectures should be included in the fat binaries.
+set(RUNTIMES_DEVICE_ARCHITECTURES "all" CACHE STRING
+    "List of offload device architectures to be used to compile the offload code (e.g. 'gfx1103;sm_90')"
+  )
+if (RUNTIMES_DEVICE_ARCHITECTURES STREQUAL "all")
+  # TODO: support auto detection on the build system.
+  set(all_amdgpu_architectures
+    "gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906"
+    "gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030"
+    "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036"
+    "gfx1100;gfx1101;gfx1102;gfx1103;gfx1150;gfx1151"
+    "gfx1152;gfx1153")
+  set(all_nvptx_architectures
+    "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
+    "sm_70;sm_72;sm_75;sm_80;sm_86;sm_89;sm_90")
+  set(all_gpu_architectures
+    "${all_amdgpu_architectures};${all_nvptx_architectures}")
+  set(RUNTIMES_DEVICE_ARCHITECTURES ${all_gpu_architectures})
+endif()
+list(REMOVE_DUPLICATES RUNTIMES_DEVICE_ARCHITECTURES)
+
 
 option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." ON)
 option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation." ON)
