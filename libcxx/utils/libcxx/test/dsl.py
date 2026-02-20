@@ -511,6 +511,28 @@ class AddCompileFlag(ConfigAction):
         return "add {} to %{{compile_flags}}".format(self._getFlag(config))
 
 
+class AddBenchmarkCompileFlag(ConfigAction):
+    """
+    This action adds the given flag to the %{benchmark_flags} substitution.
+
+    The flag can be a string or a callable, in which case it is called with the
+    configuration to produce the actual flag (as a string).
+    """
+
+    def __init__(self, flag):
+        self._getFlag = lambda config: flag(config) if callable(flag) else flag
+
+    def applyTo(self, config):
+        flag = self._getFlag(config)
+        _ensureFlagIsSupported(config, flag)
+        config.substitutions = _appendToSubstitution(
+            config.substitutions, "%{benchmark_flags}", flag
+        )
+
+    def pretty(self, config, litParams):
+        return "add {} to %{{benchmark_flags}}".format(self._getFlag(config))
+
+
 class AddLinkFlag(ConfigAction):
     """
     This action appends the given flag to the %{link_flags} substitution.
