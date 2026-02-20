@@ -521,10 +521,12 @@ a, a:visited, a:hover, a:active {
   padding: 10px;
 }
 
+
 .params-vertical {
     display: flex;
     flex-wrap: wrap;
 }
+
 
 .param {
     display: block;
