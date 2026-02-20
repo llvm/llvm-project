@@ -1188,36 +1188,31 @@ bool llvm::computeUnrollCount(
   if (auto UnrollFactor = shouldPartialUnroll(LoopSize, TripCount, UCE, UP)) {
     UP.Count = *UnrollFactor;
 
-    if (PragmaFullUnroll && TripCount && UP.Count && UP.Count != TripCount) {
+    if (UP.Count) {
+      if (PragmaFullUnroll && UP.Count != TripCount) {
+        LLVM_DEBUG(dbgs().indent(1)
+                   << "Partial unroll instead of full: unrolled size "
+                      "too large. Unrolling "
+                   << UP.Count << " times instead of " << TripCount << ".\n");
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE,
+                                          "FullUnrollAsDirectedTooLarge",
+                                          L->getStartLoc(), L->getHeader())
+                 << "unable to fully unroll loop as directed by full unroll "
+                    "pragma because unrolled size is too large";
+        });
+      }
+    } else if (PragmaFullUnroll || PragmaEnableUnroll) {
       LLVM_DEBUG(dbgs().indent(1)
-                 << "Partial unroll instead of full: unrolled size "
-                    "too large. Unrolling "
-                 << UP.Count << " times instead of " << TripCount << ".\n");
+                 << "Not unrolling as directed: unrolled size too large.\n");
       ORE->emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE,
-                                        "FullUnrollAsDirectedTooLarge",
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnrollAsDirectedTooLarge",
                                         L->getStartLoc(), L->getHeader())
-               << "unable to fully unroll loop as directed by full unroll "
-                  "pragma because unrolled size is too large";
+               << "unable to unroll loop as directed by unroll pragma "
+                  "because unrolled size is too large";
       });
     }
 
-    if (UP.PartialThreshold != NoThreshold) {
-      if (UP.Count == 0) {
-        if (PragmaEnableUnroll) {
-          LLVM_DEBUG(dbgs().indent(1)
-                     << "Not unrolling as directed: unrolled size too "
-                     << "large.\n");
-          ORE->emit([&]() {
-            return OptimizationRemarkMissed(DEBUG_TYPE,
-                                            "UnrollAsDirectedTooLarge",
-                                            L->getStartLoc(), L->getHeader())
-                   << "unable to unroll loop as directed by unroll "
-                      "pragma because unrolled size is too large";
-          });
-        }
-      }
-    }
     return ExplicitUnroll;
   }
   assert(TripCount == 0 &&

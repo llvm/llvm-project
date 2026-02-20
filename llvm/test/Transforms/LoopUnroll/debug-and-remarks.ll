@@ -39,7 +39,7 @@
 ; RUN:     | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=NO-PROFIT
 ; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -pass-remarks=loop-unroll \
 ; RUN:     -pass-remarks-missed=loop-unroll -pass-remarks-analysis=loop-unroll -unroll-allow-partial -pragma-unroll-threshold=10 \
-; RUN:     -unroll-threshold=10 -unroll-partial-threshold=10 < %s 2>&1 \
+; RUN:     -unroll-threshold=10 -unroll-partial-threshold=10 -pragma-unroll-full-max-iterations=10 < %s 2>&1 \
 ; RUN:     | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=UNROLL-AS-DIRECTED-FAIL
 ; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -pass-remarks=loop-unroll \
 ; RUN:     -pass-remarks-missed=loop-unroll -pass-remarks-analysis=loop-unroll -unroll-count=8 -unroll-threshold=10 < %s 2>&1 \
@@ -953,6 +953,58 @@ for.body:
   %inc = add i32 %i, 1
   %cmp = icmp ult i32 %inc, 100
   br i1 %cmp, label %for.body, label %exit, !llvm.loop !1
+
+exit:
+  ret i32 %add8
+}
+
+; UNROLL-AS-DIRECTED-FAIL-LABEL:Loop Unroll: F[full_unroll_as_directed_fail] Loop %for.body (depth=1)
+; UNROLL-AS-DIRECTED-FAIL-NEXT:Loop Size = 19
+; UNROLL-AS-DIRECTED-FAIL-NEXT: Computing unroll count: TripCount=100, MaxTripCount=0, TripMultiple=100
+; UNROLL-AS-DIRECTED-FAIL-NEXT: Explicit unroll requested: pragma-full
+; UNROLL-AS-DIRECTED-FAIL-NEXT: Trying pragma unroll...
+; UNROLL-AS-DIRECTED-FAIL-NEXT:   Won't unroll; trip count is too large.
+; UNROLL-AS-DIRECTED-FAIL-NEXT:remark: <unknown>:0:0: unable to fully unroll loop: trip count 100 exceeds limit 10
+; UNROLL-AS-DIRECTED-FAIL-NEXT: Trying full unroll...
+; UNROLL-AS-DIRECTED-FAIL-NEXT:  Unrolled size {{[0-9]+}} exceeds threshold {{[0-9]+}}; checking for cost benefit.
+; UNROLL-AS-DIRECTED-FAIL-NEXT:   Not analyzing loop cost: trip count too large.
+; UNROLL-AS-DIRECTED-FAIL-NEXT:  Skipping: cost analysis unavailable.
+; UNROLL-AS-DIRECTED-FAIL-NEXT:remark: <unknown>:0:0: unable to fully unroll loop: estimated unrolled size {{[0-9]+}} exceeds threshold {{[0-9]+}}
+; UNROLL-AS-DIRECTED-FAIL-NEXT: Trying upper-bound unroll...
+; UNROLL-AS-DIRECTED-FAIL-NEXT: Trying loop peeling...
+; UNROLL-AS-DIRECTED-FAIL-NEXT: Trying partial unroll...
+; UNROLL-AS-DIRECTED-FAIL-NEXT:  Unrolled size exceeds threshold; reducing count from {{[0-9]+}} to 0.
+; UNROLL-AS-DIRECTED-FAIL-NEXT:  Will not partially unroll: no profitable count.
+; UNROLL-AS-DIRECTED-FAIL-NEXT:   Partially unrolling with count: 0
+; UNROLL-AS-DIRECTED-FAIL-NEXT: Not unrolling as directed: unrolled size too large.
+; UNROLL-AS-DIRECTED-FAIL-NEXT:remark: <unknown>:0:0: unable to unroll loop as directed by unroll pragma because unrolled size is too large
+
+define i32 @full_unroll_as_directed_fail(ptr %A, ptr %B, ptr %C, ptr %D) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %sum = phi i32 [ 0, %entry ], [ %add8, %for.body ]
+  %idx1 = add i32 %i, 0
+  %arrayidx1 = getelementptr inbounds i32, ptr %A, i32 %idx1
+  %load1 = load i32, ptr %arrayidx1
+  %idx2 = add i32 %i, 1
+  %arrayidx2 = getelementptr inbounds i32, ptr %B, i32 %idx2
+  %load2 = load i32, ptr %arrayidx2
+  %idx3 = add i32 %i, 2
+  %arrayidx3 = getelementptr inbounds i32, ptr %C, i32 %idx3
+  %load3 = load i32, ptr %arrayidx3
+  %idx4 = add i32 %i, 3
+  %arrayidx4 = getelementptr inbounds i32, ptr %D, i32 %idx4
+  %load4 = load i32, ptr %arrayidx4
+  %add1 = add i32 %sum, %load1
+  %add2 = add i32 %add1, %load2
+  %add3 = add i32 %add2, %load3
+  %add8 = add i32 %add3, %load4
+  %inc = add i32 %i, 1
+  %cmp = icmp ult i32 %inc, 100
+  br i1 %cmp, label %for.body, label %exit, !llvm.loop !0
 
 exit:
   ret i32 %add8
