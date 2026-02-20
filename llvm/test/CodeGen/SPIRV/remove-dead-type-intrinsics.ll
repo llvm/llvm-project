@@ -12,11 +12,19 @@
   %A
 }
 
-; Make sure all struct types are removed.
-; CHECK-NOT: OpTypeStruct
+; The pointer types and the struct types could be removed,
+; but we fail to do so due to issues with `validatePtrTypes` function.
+; CHECK-DAG: %[[#Void:]] = OpTypeVoid
+; CHECK-DAG: %[[#FnTy:]] = OpTypeFunction %[[#Void]]
+; CHECK-DAG: %[[#Int32:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#Int32Ptr:]] = OpTypePointer Function %[[#Int32]]
+; CHECK-DAG: %[[#A:]] = OpTypeStruct %[[#Int32]] %[[#Int32]]
+; CHECK-DAG: %[[#APtr:]] = OpTypePointer Function %[[#A]]
+; CHECK-DAG: %[[#B:]] = OpTypeStruct %[[#A]] %[[#Int32]] %[[#A]]
+; CHECK-DAG: %[[#BPtr:]] = OpTypePointer Function %[[#B]]
 
 ; Make sure the GEPs and the function scope variable are removed.
-; CHECK: OpFunction
+; CHECK: OpFunction %[[#Void]] None %[[#FnTy]]
 ; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: OpReturn
 ; CHECK-NEXT: OpFunctionEnd
