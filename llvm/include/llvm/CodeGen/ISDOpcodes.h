@@ -540,6 +540,11 @@ enum NodeType {
   /// Returns platform specific canonical encoding of a floating point number.
   FCANONICALIZE,
 
+  /// Returns platform specific canonical encoding of a floating point number
+  /// using multiplying it by 1.0. The fist operand is the floating-point
+  /// number, the second is constant 1.0.
+  FCANONICALIZE_MUL,
+
   /// Performs a check of floating point class property, defined by IEEE-754.
   /// The first operand is the floating point value to check. The second operand
   /// specifies the checked property and is a TargetConstant which specifies

@@ -717,7 +717,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FROUNDEVEN, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FTRUNC, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::f16, Custom);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Custom);
 
@@ -1238,6 +1238,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FNEG, MVT::v8f16, Custom);
     setOperationAction(ISD::FABS, MVT::v8f16, Custom);
     setOperationAction(ISD::FCOPYSIGN, MVT::v8f16, Custom);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v8f16, Expand);
 
     // Custom lower v2i64 and v2f64 selects.
     setOperationAction(ISD::SELECT,             MVT::v2f64, Custom);
@@ -1719,6 +1720,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSUB, MVT::v16f16, Expand);
     setOperationAction(ISD::FMUL, MVT::v16f16, Expand);
     setOperationAction(ISD::FDIV, MVT::v16f16, Expand);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v16f16, Expand);
 
     // Only PCLMUL required as we always unroll clmul vectors.
     if (Subtarget.hasPCLMUL()) {
@@ -1790,9 +1792,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_UINT,                MVT::v2i1,  Custom);
     setOperationAction(ISD::STRICT_FP_TO_SINT,         MVT::v2i1,  Custom);
     setOperationAction(ISD::STRICT_FP_TO_UINT,         MVT::v2i1,  Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v8f16, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v16f16, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v32f16, Custom);
 
     // There is no byte sized k-register load or store without AVX512DQ.
     if (!Subtarget.hasDQI()) {
@@ -2105,7 +2104,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::v16f16, Custom);
     setOperationAction(ISD::FP_EXTEND, MVT::v16f32, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::v16f32, Custom);
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
+    for (unsigned Opc :
+         {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FCANONICALIZE})
       setOperationPromotedToType(Opc, MVT::v32f16, MVT::v32f32);
     setOperationAction(ISD::SETCC, MVT::v32f16, Custom);
 
@@ -33955,17 +33955,9 @@ static SDValue LowerFCanonicalize(SDValue Op, SelectionDAG &DAG) {
   SDValue Operand = N->getOperand(0);
   EVT VT = Operand.getValueType();
   SDLoc dl(N);
-
   SDValue One = DAG.getConstantFP(1.0, dl, VT);
-
-  // TODO: Fix Crash for bf16 when generating strict_fmul as it
-  // leads to a error : SoftPromoteHalfResult #0: t11: bf16,ch = strict_fmul t0,
-  // ConstantFP:bf16<APFloat(16256)>, t5 LLVM ERROR: Do not know how to soft
-  // promote this operator's result!
-  SDValue Chain = DAG.getEntryNode();
-  SDValue StrictFmul = DAG.getNode(ISD::STRICT_FMUL, dl, {VT, MVT::Other},
-                                   {Chain, Operand, One});
-  return StrictFmul;
+  SDValue NewNode = DAG.getNode(ISD::FCANONICALIZE_MUL, dl, VT, Operand, One);
+  return NewNode;
 }
 
 static StringRef getInstrStrFromOpNo(const SmallVectorImpl<StringRef> &AsmStrs,
