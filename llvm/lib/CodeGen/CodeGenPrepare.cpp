@@ -444,7 +444,7 @@ private:
   bool optimizeShuffleVectorInst(ShuffleVectorInst *SVI);
   bool optimizeSwitchType(SwitchInst *SI);
   bool optimizeSwitchPhiConstants(SwitchInst *SI);
-  bool optimizeSwitchInst(SwitchInst *SI);
+  bool optimizeSwitchInst(SwitchInst *SI, ModifyDT &ModifiedDT);
   bool optimizeExtractElementInst(Instruction *Inst);
   bool dupRetToEnableTailCallOpts(BasicBlock *BB, ModifyDT &ModifiedDT);
   bool fixupDbgVariableRecord(DbgVariableRecord &I);
@@ -8125,9 +8125,101 @@ bool CodeGenPrepare::optimizeSwitchPhiConstants(SwitchInst *SI) {
   return Changed;
 }
 
-bool CodeGenPrepare::optimizeSwitchInst(SwitchInst *SI) {
+// Converts switch(ucmp(x,y)) into direct branches to avoid materializing the
+// -1/0/1 value.
+static bool optimizeSwitchOnCompare(SwitchInst *SI, Function &F,
+                                    const TargetTransformInfo &TTI,
+                                    ModifyDT &ModifiedDT) {
+  Value *Cond = SI->getCondition();
+  Instruction::CastOps CastOp = Instruction::CastOps::CastOpsEnd;
+
+  if (auto *Cast = dyn_cast<CastInst>(Cond)) {
+    CastOp = Cast->getOpcode();
+    if (CastOp == Instruction::ZExt || CastOp == Instruction::SExt) {
+      Cond = Cast->getOperand(0);
+    } else {
+      CastOp = Instruction::CastOps::CastOpsEnd;
+    }
+  }
+
+  auto *II = dyn_cast<CmpIntrinsic>(Cond);
+  if (!II)
+    return false;
+
+  Value *LHS = II->getOperand(0);
+  Value *RHS = II->getOperand(1);
+
+  // 1. Map Targets (-1 -> Less, 0 -> Equal, 1 -> Greater)
+  BasicBlock *DestLess = SI->getDefaultDest();
+  BasicBlock *DestEqual = SI->getDefaultDest();
+  BasicBlock *DestGreater = SI->getDefaultDest();
+
+  unsigned IntrinsicWidth = II->getType()->getScalarSizeInBits();
+
+  for (auto Case : SI->cases()) {
+    APInt Val = Case.getCaseValue()->getValue();
+
+    if (CastOp == Instruction::ZExt) {
+      if (Val.getActiveBits() > IntrinsicWidth)
+        continue; // Unreachable case
+    }
+    else if (CastOp == Instruction::SExt) {
+      unsigned MinSignedBits = Val.getBitWidth() - Val.getNumSignBits() + 1;
+      if (MinSignedBits > IntrinsicWidth)
+        continue; // Unreachable case
+    }
+
+    if (Val.getBitWidth() > IntrinsicWidth)
+      Val = Val.trunc(IntrinsicWidth);
+
+    if (Val.isAllOnes())
+      DestLess = Case.getCaseSuccessor();
+    else if (Val.isZero())
+      DestEqual = Case.getCaseSuccessor();
+    else if (Val.isOne())
+      DestGreater = Case.getCaseSuccessor();
+  }
+
+  // Cases with common destinations will be simplified by
+  // simplifySwitchOfCmpIntrinsic
+  if (DestLess == DestEqual || DestLess == DestGreater ||
+      DestEqual == DestGreater)
+    return false;
+
+  BasicBlock *HeadBB = SI->getParent();
+  LLVMContext &Ctx = F.getContext();
+
+  // Create the intermediate block
+  BasicBlock *CheckEqBB = BasicBlock::Create(Ctx, "check.eq", &F);
+
+  CheckEqBB->moveAfter(HeadBB);
+
+  // Compare Less
+  IRBuilder<> Builder(SI);
+  CmpInst::Predicate PredLess = II->getLTPredicate();
+  Value *CmpLess = Builder.CreateICmp(PredLess, LHS, RHS, "cmp.less");
+
+  // Replace Switch with Branch
+  BranchInst::Create(DestLess, CheckEqBB, CmpLess, HeadBB);
+  SI->eraseFromParent();
+
+  // Compare Equal
+  Builder.SetInsertPoint(CheckEqBB);
+  Value *CmpEq = Builder.CreateICmp(ICmpInst::ICMP_EQ, LHS, RHS, "cmp.eq");
+  BranchInst::Create(DestEqual, DestGreater, CmpEq, CheckEqBB);
+
+  for (BasicBlock *Dest : {DestEqual, DestGreater})
+    Dest->replacePhiUsesWith(HeadBB, CheckEqBB);
+
+  ModifiedDT = ModifyDT::ModifyBBDT;
+  return true;
+}
+
+bool CodeGenPrepare::optimizeSwitchInst(SwitchInst *SI, ModifyDT &ModifiedDT) {
   bool Changed = optimizeSwitchType(SI);
   Changed |= optimizeSwitchPhiConstants(SI);
+  if (optimizeSwitchOnCompare(SI, *SI->getFunction(), *TTI, ModifiedDT))
+    return true;
   return Changed;
 }
 
@@ -9052,7 +9144,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   case Instruction::ShuffleVector:
     return optimizeShuffleVectorInst(cast<ShuffleVectorInst>(I));
   case Instruction::Switch:
-    return optimizeSwitchInst(cast<SwitchInst>(I));
+    return optimizeSwitchInst(cast<SwitchInst>(I), ModifiedDT);
   case Instruction::ExtractElement:
     return optimizeExtractElementInst(cast<ExtractElementInst>(I));
   case Instruction::Br:
@@ -9086,6 +9178,7 @@ bool CodeGenPrepare::makeBitReverse(Instruction &I) {
 // selection.
 bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, ModifyDT &ModifiedDT) {
   SunkAddrs.clear();
+
   bool MadeChange = false;
 
   do {
