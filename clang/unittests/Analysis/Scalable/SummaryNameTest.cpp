@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -48,6 +49,12 @@ TEST(SummaryNameTest, Str) {
   EXPECT_EQ(Handle1.str(), "TestAnalysis1");
   EXPECT_EQ(Handle2.str(), "TestAnalysis1");
   EXPECT_EQ(Handle3.str(), "TestAnalysis2");
+}
+
+TEST(SummaryNameTest, StreamOutput) {
+  std::string S;
+  llvm::raw_string_ostream(S) << SummaryName("MyAnalysis");
+  EXPECT_EQ(S, "SummaryName(MyAnalysis)");
 }
 
 } // namespace

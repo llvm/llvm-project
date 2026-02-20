@@ -5,7 +5,9 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   EntityIdTest.cpp
   EntityIdTableTest.cpp
   EntityLinkageTest.cpp
+  EntityLinkerTest.cpp
   EntityNameTest.cpp
+  ErrorBuilderTest.cpp
   Registries/FancyAnalysisData.cpp
   Registries/MockSerializationFormat.cpp
   Registries/MockSummaryExtractor1.cpp

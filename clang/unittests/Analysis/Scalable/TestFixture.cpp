@@ -7,23 +7,36 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestFixture.h"
+#include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "clang/Analysis/Scalable/Model/EntityId.h"
-#include "llvm/Support/raw_ostream.h"
+#include "clang/Analysis/Scalable/Model/EntityLinkage.h"
+#include "clang/Analysis/Scalable/Model/EntityName.h"
+#include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include <ostream>
 #include <string>
 
-using namespace clang;
-using namespace ssaf;
+namespace clang::ssaf {
 
 template <class T> static std::string asString(const T &Obj) {
-  std::string Repr;
-  llvm::raw_string_ostream(Repr) << Obj;
-  return Repr;
+  std::string S;
+  llvm::raw_string_ostream(S) << Obj;
+  return S;
 }
 
-void TestFixture::PrintTo(const EntityId &E, std::ostream *OS) {
-  *OS << "EntityId(" << E.Index << ")";
+void PrintTo(const BuildNamespace &BN, std::ostream *OS) {
+  *OS << asString(BN);
 }
-void TestFixture::PrintTo(const SummaryName &N, std::ostream *OS) {
-  *OS << "SummaryName(" << N.Name << ")";
+
+void PrintTo(const EntityId &EI, std::ostream *OS) { *OS << asString(EI); }
+
+void PrintTo(const EntityLinkage &EL, std::ostream *OS) { *OS << asString(EL); }
+
+void PrintTo(const EntityName &EN, std::ostream *OS) { *OS << asString(EN); }
+
+void PrintTo(const NestedBuildNamespace &NBN, std::ostream *OS) {
+  *OS << asString(NBN);
 }
+
+void PrintTo(const SummaryName &SN, std::ostream *OS) { *OS << asString(SN); }
+
+} // namespace clang::ssaf
