@@ -691,6 +691,7 @@ Expected<Value> parse(StringRef JSON) {
 
 char ParseError::ID = 0;
 
+// Defined out-of-line to place vtable in this compilation unit.
 void ParseError::log(llvm::raw_ostream &OS) const {
   OS << llvm::formatv("[{0}:{1}, byte={2}]: {3}", Line, Column, Offset, Msg);
 }
