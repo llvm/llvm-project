@@ -952,8 +952,9 @@ class BinOpSameOpcodeHelper {
   using MaskType = std::uint_fast16_t;
   /// Sort SupportedOp because it is used by binary_search.
   constexpr static std::initializer_list<unsigned> SupportedOp = {
-      Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
-      Instruction::AShr, Instruction::And, Instruction::Or,  Instruction::Xor};
+      Instruction::Add, Instruction::Sub,  Instruction::Mul,  Instruction::UDiv,
+      Instruction::Shl, Instruction::LShr, Instruction::AShr, Instruction::And,
+      Instruction::Or,  Instruction::Xor};
   static_assert(llvm::is_sorted_constexpr(SupportedOp) &&
                 "SupportedOp is not sorted.");
   enum : MaskType {
@@ -965,7 +966,9 @@ class BinOpSameOpcodeHelper {
     AndBIT = 0b100000,
     OrBIT = 0b1000000,
     XorBIT = 0b10000000,
-    MainOpBIT = 0b100000000,
+    LShrBIT = 0b100000000,
+    UDivBIT = 0b1000000000,
+    MainOpBIT = 0b10000000000,
     LLVM_MARK_AS_BITMASK_ENUM(MainOpBIT)
   };
   /// Return a non-nullptr if either operand of I is a ConstantInt.
@@ -982,7 +985,8 @@ class BinOpSameOpcodeHelper {
     if (auto *CI = dyn_cast<ConstantInt>(BinOp->getOperand(1)))
       return {CI, 1};
     if (Opcode == Instruction::Sub || Opcode == Instruction::Shl ||
-        Opcode == Instruction::AShr)
+        Opcode == Instruction::AShr || Opcode == Instruction::LShr ||
+        Opcode == Instruction::UDiv)
       return {nullptr, 0};
     if (auto *CI = dyn_cast<ConstantInt>(BinOp->getOperand(0)))
       return {CI, 0};
@@ -992,7 +996,7 @@ class BinOpSameOpcodeHelper {
     const Instruction *I = nullptr;
     /// The bit it sets represents whether MainOp can be converted to.
     MaskType Mask = MainOpBIT | XorBIT | OrBIT | AndBIT | SubBIT | AddBIT |
-                    MulBIT | AShrBIT | ShlBIT;
+                    MulBIT | AShrBIT | ShlBIT | LShrBIT | UDivBIT;
     /// We cannot create an interchangeable instruction that does not exist in
     /// VL. For example, VL [x + 0, y * 1] can be converted to [x << 0, y << 0],
     /// but << does not exist in VL. In the end, we convert VL to [x * 1, y *
@@ -1033,6 +1037,10 @@ class BinOpSameOpcodeHelper {
         return Instruction::Or;
       if (Candidate & XorBIT)
         return Instruction::Xor;
+      if (Candidate & LShrBIT)
+        return Instruction::LShr;
+      if (Candidate & UDivBIT)
+        return Instruction::UDiv;
       llvm_unreachable("Cannot find interchangeable instruction.");
     }
 
@@ -1057,11 +1065,13 @@ class BinOpSameOpcodeHelper {
       case Instruction::Xor:
         return Candidate & XorBIT;
       case Instruction::LShr:
+        return Candidate & LShrBIT;
+      case Instruction::UDiv:
+        return Candidate & UDivBIT;
       case Instruction::FAdd:
       case Instruction::FSub:
       case Instruction::FMul:
       case Instruction::SDiv:
-      case Instruction::UDiv:
       case Instruction::FDiv:
       case Instruction::SRem:
       case Instruction::URem:
@@ -1096,9 +1106,31 @@ class BinOpSameOpcodeHelper {
                                                /*AllowRHSConstant=*/true);
         }
         break;
+      case Instruction::LShr:
+        if (ToOpcode == Instruction::UDiv) {
+          RHS = ConstantInt::get(
+              RHSType, APInt::getOneBitSet(FromCIValueBitWidth,
+                                           FromCIValue.getZExtValue()));
+        } else {
+          assert(FromCIValue.isZero() && "Cannot convert the instruction.");
+          RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
+                                               /*AllowRHSConstant=*/true);
+        }
+        break;
       case Instruction::Mul:
         assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
         if (ToOpcode == Instruction::Shl) {
+          RHS = ConstantInt::get(
+              RHSType, APInt(FromCIValueBitWidth, FromCIValue.logBase2()));
+        } else {
+          assert(FromCIValue.isOne() && "Cannot convert the instruction.");
+          RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
+                                               /*AllowRHSConstant=*/true);
+        }
+        break;
+      case Instruction::UDiv:
+        assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
+        if (ToOpcode == Instruction::LShr) {
           RHS = ConstantInt::get(
               RHSType, APInt(FromCIValueBitWidth, FromCIValue.logBase2()));
         } else {
@@ -1166,7 +1198,8 @@ public:
            "BinOpSameOpcodeHelper only accepts BinaryOperator.");
     unsigned Opcode = I->getOpcode();
     MaskType OpcodeInMaskForm;
-    // Prefer Shl, AShr, Mul, Add, Sub, And, Or and Xor over MainOp.
+    // Prefer Shl, AShr, Mul, Add, Sub, And, Or, Xor, LShr, and UDiv over
+    // MainOp.
     switch (Opcode) {
     case Instruction::Shl:
       OpcodeInMaskForm = ShlBIT;
@@ -1192,6 +1225,12 @@ public:
     case Instruction::Xor:
       OpcodeInMaskForm = XorBIT;
       break;
+    case Instruction::LShr:
+      OpcodeInMaskForm = LShrBIT;
+      break;
+    case Instruction::UDiv:
+      OpcodeInMaskForm = UDivBIT;
+      break;
     default:
       return MainOp.equal(Opcode) ||
              (initializeAltOp(I) && AltOp.equal(Opcode));
@@ -1199,13 +1238,18 @@ public:
     MaskType InterchangeableMask = OpcodeInMaskForm;
     ConstantInt *CI = isBinOpWithConstantInt(I).first;
     if (CI) {
-      constexpr MaskType CanBeAll =
-          XorBIT | OrBIT | AndBIT | SubBIT | AddBIT | MulBIT | AShrBIT | ShlBIT;
+      constexpr MaskType CanBeAll = XorBIT | OrBIT | AndBIT | SubBIT | AddBIT |
+                                    MulBIT | AShrBIT | ShlBIT | LShrBIT |
+                                    UDivBIT;
       const APInt &CIValue = CI->getValue();
       switch (Opcode) {
       case Instruction::Shl:
         if (CIValue.ult(CIValue.getBitWidth()))
           InterchangeableMask = CIValue.isZero() ? CanBeAll : MulBIT | ShlBIT;
+        break;
+      case Instruction::LShr:
+        if (CIValue.ult(CIValue.getBitWidth()))
+          InterchangeableMask = CIValue.isZero() ? CanBeAll : UDivBIT | LShrBIT;
         break;
       case Instruction::Mul:
         if (CIValue.isOne()) {
@@ -1214,6 +1258,14 @@ public:
         }
         if (CIValue.isPowerOf2())
           InterchangeableMask = MulBIT | ShlBIT;
+        break;
+      case Instruction::UDiv:
+        if (CIValue.isOne()) {
+          InterchangeableMask = CanBeAll;
+          break;
+        }
+        if (CIValue.isPowerOf2())
+          InterchangeableMask = UDivBIT | LShrBIT;
         break;
       case Instruction::Add:
       case Instruction::Sub:
