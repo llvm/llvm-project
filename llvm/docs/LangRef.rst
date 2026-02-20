@@ -11735,8 +11735,11 @@ is of scalar type then the number of bytes read does not exceed the
 minimum number of bytes needed to hold all bits of the type. For
 example, loading an ``i24`` reads at most three bytes. When loading a
 value of a type like ``i20`` with a size that is not an integral number
-of bytes, the result is undefined if the value was not originally
-written using a store of the same type.
+of bytes, the load will be performed on the next larger multiple of the byte
+size (here ``i24``) and truncated. If any of the truncated bits are non-zero,
+the result is a poison value. As such, a non-byte-sized load behaves like a
+byte-sized load followed by a ``trunc nuw`` operation.
+
 If the value being loaded is of aggregate type, the bytes that correspond to
 padding may be accessed but are ignored, because it is impossible to observe
 padding from the loaded aggregate value.
@@ -11829,8 +11832,10 @@ of scalar type then the number of bytes written does not exceed the
 minimum number of bytes needed to hold all bits of the type. For
 example, storing an ``i24`` writes at most three bytes. When writing a
 value of a type like ``i20`` with a size that is not an integral number
-of bytes, it is unspecified what happens to the extra bits that do not
-belong to the type, but they will typically be overwritten.
+of bytes, the value will be zero extended to the next larger multiple of the
+byte size (here ``i24``) and then stored. As such, a non-byte-sized store
+behaves like a ``zext`` followed by a byte-sized store.
+
 If ``<value>`` is of aggregate type, padding is filled with
 :ref:`undef <undefvalues>`.
 If ``<pointer>`` is not a well-defined value, the behavior is undefined.
