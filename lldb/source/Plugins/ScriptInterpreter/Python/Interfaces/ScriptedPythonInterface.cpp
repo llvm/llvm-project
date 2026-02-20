@@ -10,8 +10,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
 
-#if LLDB_ENABLE_PYTHON
-
 // LLDB Python header must be included first
 #include "../lldb-python.h"
 
@@ -310,5 +308,3 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
 
   return out;
 }
-
-#endif

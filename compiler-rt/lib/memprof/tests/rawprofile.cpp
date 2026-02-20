@@ -69,7 +69,7 @@ TEST(MemProf, Basic) {
   FakeIds[1] = PopulateFakeMap(FakeMIB, /*StackPCBegin=*/200, FakeMap);
 
   char *Ptr = nullptr;
-  __sanitizer::Vector<uint64_t> FakeAddresses;
+  __sanitizer::Vector<__sanitizer::u64> FakeAddresses;
   FakeAddresses.PushBack(0x100);
   FakeAddresses.PushBack(0x200);
   uint64_t NumBytes =

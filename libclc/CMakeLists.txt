@@ -42,8 +42,6 @@ endif()
 set( LIBCLC_TARGETS_TO_BUILD ${LIBCLC_DEFAULT_TARGET}
     CACHE STRING "Semicolon-separated list of libclc targets to build, or 'all'." )
 
-option( ENABLE_RUNTIME_SUBNORMAL "Enable runtime linking of subnormal support." OFF )
-
 option(
   LIBCLC_USE_SPIRV_BACKEND "Build SPIR-V targets with the SPIR-V backend." OFF
 )
@@ -216,19 +214,6 @@ set( cayman_aliases aruba )
 configure_file( libclc.pc.in libclc.pc @ONLY )
 install( FILES ${CMAKE_CURRENT_BINARY_DIR}/libclc.pc DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig" )
 
-if( ENABLE_RUNTIME_SUBNORMAL )
-  foreach( file IN ITEMS subnormal_use_default subnormal_disable )
-    link_bc(
-       TARGET ${file}
-       INPUTS ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/${file}.ll
-    )
-    install(
-      FILES $<TARGET_PROPERTY:${file},TARGET_FILE>
-      DESTINATION "${CMAKE_INSTALL_DATADIR}/clc"
-    )
-  endforeach()
-endif()
-
 set_source_files_properties(
   # CLC builtins
   ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_cos.cl
@@ -326,12 +311,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
   set( opencl_lib_files )
 
-  if( NOT ARCH STREQUAL spirv AND NOT ARCH STREQUAL spirv64 AND
-      NOT ARCH STREQUAL clspv AND NOT ARCH STREQUAL clspv64 AND
-      NOT ENABLE_RUNTIME_SUBNORMAL )
-    list( APPEND opencl_lib_files opencl/lib/generic/subnormal_use_default.ll )
-  endif()
-
   libclc_configure_lib_source(
     opencl_lib_files
     LIB_ROOT_DIR opencl
@@ -389,6 +368,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       # Error on undefined macros
       -Werror=undef
       -fdiscard-value-names
+      -ffp-contract=fast-honor-pragmas
     )
 
     if( NOT "${cpu}" STREQUAL "" )
