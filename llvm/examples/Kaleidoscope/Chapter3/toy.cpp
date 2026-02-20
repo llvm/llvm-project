@@ -490,6 +490,9 @@ Function *FunctionAST::codegen() {
   if (!TheFunction)
     return nullptr;
 
+  if (!TheFunction->empty())
+    return (Function *)LogErrorV("Function cannot be redefined.");
+
   // Create a new basic block to start insertion into.
   BasicBlock *BB = BasicBlock::Create(*TheContext, "entry", TheFunction);
   Builder->SetInsertPoint(BB);
