@@ -3717,28 +3717,32 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   // select (~a | c), a, b -> select a, (select c, true, b), false
   if (match(CondVal,
             m_OneUse(m_c_Or(m_Not(m_Specific(TrueVal)), m_Value(C))))) {
-    Value *OrV = Builder.CreateSelect(C, One, FalseVal);
-    return SelectInst::Create(TrueVal, OrV, Zero);
+    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
+    Value *OrV = Builder.CreateSelect(C, One, FalseVal, "", MDFrom);
+    return SelectInst::Create(TrueVal, OrV, Zero, "", nullptr, MDFrom);
   }
   // select (c & b), a, b -> select b, (select ~c, true, a), false
   if (match(CondVal, m_OneUse(m_c_And(m_Value(C), m_Specific(FalseVal))))) {
     if (Value *NotC = getFreelyInverted(C, C->hasOneUse(), &Builder)) {
-      Value *OrV = Builder.CreateSelect(NotC, One, TrueVal);
-      return SelectInst::Create(FalseVal, OrV, Zero);
+      Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
+      Value *OrV = Builder.CreateSelect(NotC, One, TrueVal, "", MDFrom);
+      return SelectInst::Create(FalseVal, OrV, Zero, "", nullptr, MDFrom);
     }
   }
   // select (a | c), a, b -> select a, true, (select ~c, b, false)
   if (match(CondVal, m_OneUse(m_c_Or(m_Specific(TrueVal), m_Value(C))))) {
     if (Value *NotC = getFreelyInverted(C, C->hasOneUse(), &Builder)) {
-      Value *AndV = Builder.CreateSelect(NotC, FalseVal, Zero);
-      return SelectInst::Create(TrueVal, One, AndV);
+      Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
+      Value *AndV = Builder.CreateSelect(NotC, FalseVal, Zero, "", MDFrom);
+      return SelectInst::Create(TrueVal, One, AndV, "", nullptr, MDFrom);
     }
   }
   // select (c & ~b), a, b -> select b, true, (select c, a, false)
   if (match(CondVal,
             m_OneUse(m_c_And(m_Value(C), m_Not(m_Specific(FalseVal)))))) {
-    Value *AndV = Builder.CreateSelect(C, TrueVal, Zero);
-    return SelectInst::Create(FalseVal, One, AndV);
+    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
+    Value *AndV = Builder.CreateSelect(C, TrueVal, Zero, "", MDFrom);
+    return SelectInst::Create(FalseVal, One, AndV, "", nullptr, MDFrom);
   }
 
   if (match(FalseVal, m_Zero()) || match(TrueVal, m_One())) {
@@ -4843,9 +4847,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     // Is (select B, T, F) a SPF?
     if (CondVal->hasOneUse() && SelType->isIntOrIntVectorTy()) {
       if (ICmpInst *Cmp = dyn_cast<ICmpInst>(B))
-        if (Value *V = canonicalizeSPF(*Cmp, TrueVal, FalseVal, *this))
+        if (Value *V = canonicalizeSPF(*Cmp, TrueVal, FalseVal, *this)) {
+          Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
           return SelectInst::Create(A, IsAnd ? V : TrueVal,
-                                    IsAnd ? FalseVal : V);
+                                    IsAnd ? FalseVal : V, "", nullptr, MDFrom);
+        }
     }
 
     return nullptr;
