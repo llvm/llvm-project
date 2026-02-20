@@ -4457,6 +4457,73 @@ static Value *simplifySwitchOnSelectUsingRanges(SwitchInst &SI,
   return X;
 }
 
+/// Remove redundant binary operation in a switch's select condition.
+///
+/// For example:
+/// ```
+/// switch (cond ? A + C1 : C2) {
+///   C3 => {}
+///   C4 => {}
+///   C5 => {}
+/// }
+/// ```
+///
+/// is turned into:
+/// ```
+/// switch (cond ? A : C2 - C1) {
+///   C3 - C1 => {}
+///   C4 - C1 => {}
+///   C5 - C1 => {}
+/// }
+/// ```
+static Value *removeRedundantBinOp(SwitchInst &SI, SelectInst *Select,
+                                   InstCombiner::BuilderTy &Builder) {
+  Value *Cond, *TrueVal;
+  Constant *FalseC;
+  if (!match(Select, m_OneUse(m_Select(m_Value(Cond), m_Value(TrueVal),
+                                       m_Constant(FalseC)))))
+    return nullptr;
+
+  auto *BinOp = dyn_cast<BinaryOperator>(TrueVal);
+  if (!BinOp || !BinOp->hasOneUse())
+    return nullptr;
+
+  Value *BinOpLHS;
+  Constant *BinOpRHS;
+  if (!match(BinOp, m_BinOp(m_Value(BinOpLHS), m_Constant(BinOpRHS))))
+    return nullptr;
+
+  auto getInverseBinaryOp = [](Instruction::BinaryOps BinOp)
+      -> std::optional<Instruction::BinaryOps> {
+    switch (BinOp) {
+    default:
+      return std::nullopt;
+    case Instruction::Add:
+      return Instruction::Sub;
+    case Instruction::Sub:
+      return Instruction::Add;
+    }
+  };
+
+  auto InverseBinOp = getInverseBinaryOp(BinOp->getOpcode());
+  if (!InverseBinOp)
+    return nullptr;
+
+  const DataLayout &DL = SI.getDataLayout();
+  Constant *NewFalseVal =
+      ConstantFoldBinaryOpOperands(*InverseBinOp, FalseC, BinOpRHS, DL);
+  if (!NewFalseVal)
+    return nullptr;
+
+  auto *NewSelect = Builder.CreateSelect(Cond, BinOpLHS, NewFalseVal);
+  for (auto &OrigCase : SI.cases()) {
+    auto *NewCase = ConstantFoldBinaryOpOperands(
+        *InverseBinOp, OrigCase.getCaseValue(), BinOpRHS, DL);
+    OrigCase.setValue(cast<ConstantInt>(NewCase));
+  }
+  return NewSelect;
+}
+
 Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
   Value *Cond = SI.getCondition();
   Value *Op0;
@@ -4537,13 +4604,16 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
     }
   }
 
-  // Fold switch(select cond, X, Y) into switch(X/Y) if possible
   if (auto *Select = dyn_cast<SelectInst>(Cond)) {
+    // Fold switch(select cond, X, Y) into switch(X/Y) if possible
     if (Value *V =
             simplifySwitchOnSelectUsingRanges(SI, Select, /*IsTrueArm=*/true))
       return replaceOperand(SI, 0, V);
     if (Value *V =
             simplifySwitchOnSelectUsingRanges(SI, Select, /*IsTrueArm=*/false))
+      return replaceOperand(SI, 0, V);
+
+    if (Value *V = removeRedundantBinOp(SI, Select, Builder))
       return replaceOperand(SI, 0, V);
   }
 
