@@ -7588,9 +7588,9 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskAffinity) {
   Builder.CreateStore(Builder.getInt32(0),
                       Builder.CreateStructGEP(AffInfoTy, Entry0, 2));
 
-  OpenMPIRBuilder::AffinityData Affinity;
-  Affinity.Count = CountI32;
-  Affinity.Info = AffArr;
+  SmallVector<OpenMPIRBuilder::AffinityData> Affinities;
+  OpenMPIRBuilder::AffinityData Affinity{CountI32, AffArr};
+  Affinities.push_back(Affinity);
 
   BasicBlock *AllocaBB = Builder.GetInsertBlock();
   BasicBlock *BodyBB = splitBB(Builder, /*CreateBranch=*/true, "alloca.split");
@@ -7606,7 +7606,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskAffinity) {
           /*Final=*/nullptr,
           /*IfCondition=*/nullptr,
           /*Dependencies=*/{},
-          /*Affinity=*/Affinity,
+          /*Affinity=*/Affinities,
           /*Mergeable=*/false,
           /*EventHandle=*/nullptr,
           /*Priority=*/nullptr));
