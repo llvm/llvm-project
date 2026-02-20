@@ -2434,8 +2434,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     BodyGenCallbackTy BodyGenCB, bool Tied, Value *Final, Value *IfCondition,
-    SmallVector<DependData> Dependencies, AffinityData Affinity, bool Mergeable,
-    Value *EventHandle, Value *Priority) {
+    SmallVector<DependData> Dependencies, SmallVector<AffinityData> Affinities,
+    bool Mergeable, Value *EventHandle, Value *Priority) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -2481,8 +2481,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       Builder, AllocaIP, ToBeDeleted, TaskAllocaIP, "global.tid", false));
 
   OI.PostOutlineCB = [this, Ident, Tied, Final, IfCondition, Dependencies,
-                      Affinity, Mergeable, Priority, EventHandle, TaskAllocaBB,
-                      ToBeDeleted](Function &OutlinedFn) mutable {
+                      Affinities, Mergeable, Priority, EventHandle,
+                      TaskAllocaBB, ToBeDeleted](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
@@ -2555,20 +2555,13 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
                       /*sizeof_task=*/TaskSize, /*sizeof_shared=*/SharedsSize,
                       /*task_func=*/&OutlinedFn});
 
-    if (Affinity.Count && Affinity.Info) {
+    if (!Affinities.empty()) {
       Function *RegAffFn = getOrCreateRuntimeFunctionPtr(
           OMPRTL___kmpc_omp_reg_task_with_affinity);
-
-      // bitcast to i8*
-      Value *AffPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-          Affinity.Info, Builder.getPtrTy(0));
-
-      if (!Affinity.Count->getType()->isIntegerTy(32))
-        Affinity.Count =
-            Builder.CreateTruncOrBitCast(Affinity.Count, Builder.getInt32Ty());
-
-      createRuntimeFunctionCall(
-          RegAffFn, {Ident, ThreadID, TaskData, Affinity.Count, AffPtr});
+      for (const auto &Affinity : Affinities) {
+        createRuntimeFunctionCall(RegAffFn, {Ident, ThreadID, TaskData,
+                                             Affinity.Count, Affinity.Info});
+      }
     }
 
     // Emit detach clause initialization.
@@ -11546,6 +11539,65 @@ void OpenMPIRBuilder::loadOffloadInfoMetadata(vfs::FileSystem &VFS,
   }
 
   loadOffloadInfoMetadata(*M.get());
+}
+
+OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
+    LocationDescription Loc, llvm::Value *TripCount, IteratorBodyGenTy BodyGen,
+    llvm::StringRef Name) {
+  IRBuilderBase &B = Builder;
+  B.restoreIP(Loc.IP);
+
+  BasicBlock *CurBB = Builder.GetInsertBlock();
+  assert(CurBB &&
+         "expected a valid insertion block for creating an iterator loop");
+  Function *F = CurBB->getParent();
+  LLVMContext &Ctx = F->getContext();
+
+  // If splitting at end but CurBB has no terminator, make it well-formed first.
+  if (B.GetInsertPoint() == CurBB->end() && !CurBB->getTerminator()) {
+    BasicBlock *TmpCont = BasicBlock::Create(Ctx, "omp.it.tmp.cont", F);
+    B.SetInsertPoint(CurBB);
+    B.CreateBr(TmpCont);
+
+    // The terminator we just inserted is now the end of CurBB. To split after
+    // it, set insertion point to CurBB->end() (which is fine now).
+    B.SetInsertPoint(CurBB->end());
+  }
+
+  BasicBlock *ContBB =
+      CurBB->splitBasicBlock(Builder.GetInsertPoint(), "omp.it.cont");
+  // Remove the branch to contBB since we will branch to contBB after the loop
+  CurBB->getTerminator()->eraseFromParent();
+
+  CanonicalLoopInfo *CLI =
+      createLoopSkeleton(B.getCurrentDebugLocation(), TripCount, F,
+                         /*PreInsertBefore=*/ContBB,
+                         /*PostInsertBefore=*/ContBB, Name);
+
+  // Enter loop from original block.
+  B.SetInsertPoint(CurBB);
+  B.CreateBr(CLI->getPreheader());
+
+  // Remove the unconditional branch inserted by createLoopSkeleton in the body
+  if (Instruction *T = CLI->getBody()->getTerminator())
+    T->eraseFromParent();
+
+  InsertPointTy BodyIP = CLI->getBodyIP();
+  if (llvm::Error Err = BodyGen(BodyIP, CLI->getIndVar()))
+    return Err;
+
+  // Ensure we end the loop body by jumping to the latch
+  if (!CLI->getBody()->getTerminator()) {
+    B.SetInsertPoint(CLI->getBody());
+    B.CreateBr(CLI->getLatch());
+  }
+
+  // Link After -> ContBB
+  B.SetInsertPoint(CLI->getAfter(), CLI->getAfter()->begin());
+  if (!CLI->getAfter()->getTerminator())
+    B.CreateBr(ContBB);
+
+  return InsertPointTy{ContBB, ContBB->begin()};
 }
 
 //===----------------------------------------------------------------------===//

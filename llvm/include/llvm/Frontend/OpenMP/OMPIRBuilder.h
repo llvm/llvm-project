@@ -1583,7 +1583,7 @@ public:
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       BodyGenCallbackTy BodyGenCB, bool Tied = true, Value *Final = nullptr,
       Value *IfCondition = nullptr, SmallVector<DependData> Dependencies = {},
-      AffinityData Affinity = {}, bool Mergeable = false,
+      SmallVector<AffinityData> Affinities = {}, bool Mergeable = false,
       Value *EventHandle = nullptr, Value *Priority = nullptr);
 
   /// Generator for the taskgroup construct
@@ -3932,6 +3932,39 @@ public:
   LLVM_ABI GlobalVariable *
   getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
                               std::optional<unsigned> AddressSpace = {});
+
+  using IteratorBodyGenTy = llvm::function_ref<llvm::Error(
+      InsertPointTy BodyIP, llvm::Value *LinearIV)>;
+
+  /// Create a canonical iterator loop at the current insertion point.
+  ///
+  /// This helper splits the current block and builds a canonical loop
+  /// using createLoopSkeleton(). The resulting control flow looks like:
+  ///
+  ///   CurBB -> Preheader -> Header -> Body -> Latch -> After -> ContBB
+  ///
+  /// The body of the loop is produced by calling \p BodyGen with the insertion
+  /// point for the loop body and the induction variable.
+  /// Unlike createCanonicalLoop(), this function is intended for \p BodyGen
+  /// that may perform region lowering (e.g., translating MLIR regions) and are
+  /// not guaranteed to preserve the canonical skeleton's body terminator. In
+  /// particular:
+  ///
+  ///  - The skeleton’s unconditional branch from the loop body is removed
+  ///    before invoking \p BodyGen.
+  ///  - \p BodyGen may freely emit instructions and temporarily introduce
+  ///    control flow.
+  ///  - If the loop body does not end with a terminator after \p BodyGen
+  ///    returns, a branch to the latch is inserted to restore canonical form.
+  ///
+  /// \param Loc The location where the iterator modifier was encountered.
+  /// \param TripCount Number of loop iterations.
+  /// \param BodyGen Callback to generate the loop body.
+  /// \param Name Base name used for creating the loop
+  /// \returns The insertion position *after* the iterator loop
+  LLVM_ABI InsertPointOrErrorTy createIteratorLoop(
+      LocationDescription Loc, llvm::Value *TripCount,
+      IteratorBodyGenTy BodyGen, llvm::StringRef Name = "iterator");
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.
