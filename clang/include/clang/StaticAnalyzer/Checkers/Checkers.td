@@ -422,6 +422,11 @@ def FixedAddressDereferenceChecker
       HelpText<"Check for dereferences of fixed addresses">,
       Documentation<HasDocumentation>;
 
+def UnconditionalVAArgChecker
+    : Checker<"UnconditionalVAArg">,
+      HelpText<"Check variadic functions unconditionally using va_arg">,
+      Documentation<HasDocumentation>;
+
 } // end "optin.core"
 
 //===----------------------------------------------------------------------===//
