@@ -65,7 +65,7 @@ protected:
   }
 
   /// Build the VPlan for the loop starting from \p LoopHeader.
-  VPlanPtr buildVPlan(BasicBlock *LoopHeader, bool HasUncountableExit = false) {
+  VPlanPtr buildVPlan(BasicBlock *LoopHeader) {
     Function &F = *LoopHeader->getParent();
     assert(!verifyFunction(F) && "input function must be valid");
     doAnalysis(F);
@@ -75,11 +75,23 @@ protected:
     auto Plan = VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
                                              {}, PSE);
 
-    VPlanTransforms::handleEarlyExits(*Plan, HasUncountableExit);
+    // TODO: Add tests for uncountable-with-side-effects.
+    VPlanTransforms::handleEarlyExits(*Plan, UncountableEarlyExitDetail::None);
     VPlanTransforms::addMiddleCheck(*Plan, true, false);
 
     VPlanTransforms::createLoopRegions(*Plan);
     return Plan;
+  }
+
+  VPlanPtr buildVPlan0(BasicBlock *LoopHeader) {
+    Function &F = *LoopHeader->getParent();
+    assert(!verifyFunction(F) && "input function must be valid");
+    doAnalysis(F);
+
+    Loop *L = LI->getLoopFor(LoopHeader);
+    PredicatedScalarEvolution PSE(*SE, *L);
+    return VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64), {},
+                                        PSE);
   }
 };
 

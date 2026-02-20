@@ -20,6 +20,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 
 namespace llvm {
 
@@ -148,8 +149,8 @@ struct VPlanTransforms {
       ElementCount MinVF);
 
   /// Update \p Plan to account for all early exits.
-  LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,
-                                                 bool HasUncountableExit);
+  LLVM_ABI_FOR_TEST static bool
+  handleEarlyExits(VPlan &Plan, UncountableEarlyExitDetail Detail);
 
   /// If a check is needed to guard executing the scalar epilogue loop, it will
   /// be added to the middle block.
@@ -324,9 +325,10 @@ struct VPlanTransforms {
   /// appropriate branching logic in the latch that handles early exits and the
   /// latch exit condition. Multiple exits are handled with a dispatch block
   /// that determines which exit to take based on lane-by-lane semantics.
-  static void handleUncountableEarlyExits(VPlan &Plan, VPBasicBlock *HeaderVPBB,
+  static bool handleUncountableEarlyExits(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                           VPBasicBlock *LatchVPBB,
-                                          VPBasicBlock *MiddleVPBB);
+                                          VPBasicBlock *MiddleVPBB,
+                                          EarlyExitStyleTy Style);
 
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)

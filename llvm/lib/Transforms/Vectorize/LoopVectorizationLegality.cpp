@@ -1873,8 +1873,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   LLVM_DEBUG(dbgs() << "LV: Found an early exit loop with symbolic max "
                        "backedge taken count: "
                     << *SymbolicMaxBTC << '\n');
-  HasUncountableEarlyExit = true;
-  UncountableExitWithSideEffects = HasSideEffects;
+  UncountableExitType = HasSideEffects ? UncountableEarlyExitDetail::ReadWrite
+                                       : UncountableEarlyExitDetail::ReadOnly;
   return true;
 }
 
@@ -1952,7 +1952,11 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
       if (&I == Load)
         continue;
 
-      if (I.mayWriteToMemory()) {
+      // We need to mask all other memory ops.
+      if (I.mayReadOrWriteMemory()) {
+        MaskedOp.insert(&I);
+        if (isa<LoadInst>(&I))
+          continue;
         if (auto *SI = dyn_cast<StoreInst>(&I)) {
           AliasResult AR = AA->alias(Ptr, SI->getPointerOperand());
           if (AR == AliasResult::NoAlias)
@@ -2039,8 +2043,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
         return false;
     } else {
       if (!isVectorizableEarlyExitLoop()) {
-        assert(!hasUncountableEarlyExit() &&
-               !hasUncountableExitWithSideEffects() &&
+        assert(UncountableExitType == UncountableEarlyExitDetail::None &&
                "Must be false without vectorizable early-exit loop");
         if (DoExtraAnalysis)
           Result = false;
@@ -2059,12 +2062,23 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  // Bail out for state-changing loops with uncountable exits for now.
-  if (UncountableExitWithSideEffects) {
-    reportVectorizationFailure(
-        "Writes to memory unsupported in early exit loops",
-        "Cannot vectorize early exit loop with writes to memory",
-        "WritesInEarlyExitLoop", ORE, TheLoop);
+  // TODO: Remove this restriction once we're sure it's safe to do so.
+  //       Handling stores to invariant addresses will be slightly different
+  //       based on the vectorization style chosen. If we bail out to a scalar
+  //       tail before executing any lane that would take the uncountable exit,
+  //       then the store that occurs in the scalar loop would suffice.
+  //
+  //       If we instead handle the lane taking the uncountable exit within the
+  //       vectorized loop, then we will have to ensure that we extract the
+  //       last active lane at that point in the loop instead of the last lane
+  //       of the vector before performing a scalar store.
+  if (UncountableExitType == UncountableEarlyExitDetail::ReadWrite &&
+      !LAI->getStoresToInvariantAddresses().empty()) {
+    LLVM_DEBUG(dbgs() << "LV: Cannot vectorize early exit loops with stores to "
+                         "loop-invariant addresses\n");
+    reportVectorizationFailure("Cannot vectorize early exit loops with stores "
+                               "to loop-invariant addresses",
+                               "LoopInvariantStoresInEELoop", ORE, TheLoop);
     return false;
   }
 
