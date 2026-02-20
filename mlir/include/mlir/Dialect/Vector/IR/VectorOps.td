@@ -727,8 +727,9 @@ def Vector_ExtractOp :
 def Vector_FMAOp :
   Op<Vector_Dialect, "fma", [
        Pure, AllTypesMatch<["lhs", "rhs", "acc", "result"]>,
-       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
-     ] # ElementwiseMappable.traits>,
+       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+       Elementwise, Vectorizable
+     ] >,
     Arguments<(ins VectorOfAnyRankOf<[AnyFloat]>:$lhs,
                    VectorOfAnyRankOf<[AnyFloat]>:$rhs,
                    VectorOfAnyRankOf<[AnyFloat]>:$acc)>,

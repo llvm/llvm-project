@@ -460,7 +460,8 @@ struct UnrollElementwisePattern : public RewritePattern {
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    if (!OpTrait::hasElementwiseMappableTraits(op) || op->getNumResults() != 1)
+    if (!op->hasTrait<OpTrait::Elementwise>() ||
+        !op->hasTrait<OpTrait::Vectorizable>() || op->getNumResults() != 1)
       return failure();
     auto targetShape = getTargetShape(options, op);
     if (!targetShape)
