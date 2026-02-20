@@ -438,6 +438,31 @@ declaration kind), all of which are optional:
     - Name: NSIndexSet
       SwiftBridge: IndexSet
 
+:SwiftReturnOwnership:
+
+  Used for methods and functions. Specifies the ownership convention for the
+  return value when it is a foreign reference type (a type imported as
+  ``SwiftImportAs: reference``). Possible values are:
+
+  - ``retained`` --- the caller receives an owned reference
+    (equivalent to ``__attribute__((swift_attr("returns_retained")))``).
+  - ``unretained`` --- the caller receives an unowned reference
+    (equivalent to ``__attribute__((swift_attr("returns_unretained")))``).
+
+  ::
+
+    Functions:
+    - Name: createRefCounted
+      SwiftReturnOwnership: retained
+    - Name: getSharedRefCounted
+      SwiftReturnOwnership: unretained
+    Tags:
+    - Name: ImmortalRefType
+      SwiftImportAs: reference
+      Methods:
+      - Name: createChild
+        SwiftReturnOwnership: retained
+
 :DesignatedInit:
 
   Used for init methods. Equivalent to ``NS_DESIGNATED_INITIALIZER``.
