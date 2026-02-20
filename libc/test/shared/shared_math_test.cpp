@@ -280,4 +280,7 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::ceilbf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0),
                LIBC_NAMESPACE::shared::fmaxbf16(bfloat16(0.0), bfloat16(0.0)));
+
+  EXPECT_FP_EQ(bfloat16(10.0),
+               LIBC_NAMESPACE::shared::bf16fma(2.0, 3.0, 4.0));
 }

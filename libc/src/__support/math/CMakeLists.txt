@@ -373,6 +373,16 @@ add_header_library(
 )
 
 add_header_library(
+  bf16fma
+  HDRS
+    bf16fma.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   bf16fmaf
   HDRS
     bf16fmaf.h

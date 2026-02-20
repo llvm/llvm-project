@@ -2686,6 +2686,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_bf16fma",
+    hdrs = ["src/__support/math/bf16fma.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_bf16fmaf",
     hdrs = ["src/__support/math/bf16fmaf.h"],
     deps = [
@@ -4734,6 +4744,11 @@ libc_math_function(
 libc_math_function(
     name = "bf16divl",
     additional_deps = [":__support_math_bf16divl"],
+)
+
+libc_math_function(
+    name = "bf16fma",
+    additional_deps = [":__support_math_bf16fma"],
 )
 
 libc_math_function(
