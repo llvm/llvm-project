@@ -8,7 +8,7 @@ define i64 @func1(i32 %a, i32 %b) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = tail call i32 @llvm.smin.i32(i32 [[B]], i32 [[A]])
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[B]], [[SPEC_SELECT]]
-; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[SUB]] to i64
+; CHECK-NEXT:    [[CONV:%.*]] = zext nneg i32 [[SUB]] to i64
 ; CHECK-NEXT:    ret i64 [[CONV]]
 ;
 entry:
@@ -26,7 +26,7 @@ define i64 @func3(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 0, i32 [[SUB]]
-; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[COND]] to i64
+; CHECK-NEXT:    [[CONV:%.*]] = zext nneg i32 [[COND]] to i64
 ; CHECK-NEXT:    ret i64 [[CONV]]
 ;
 entry:
@@ -43,7 +43,7 @@ define i64 @smin_commutative(i32 %a, i32 %b) {
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[A]], [[MIN]]
-; CHECK-NEXT:    [[EXT:%.*]] = sext i32 [[SUB]] to i64
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[SUB]] to i64
 ; CHECK-NEXT:    ret i64 [[EXT]]
 ;
   %min = call i32 @llvm.smin.i32(i32 %a, i32 %b)
@@ -60,7 +60,7 @@ define i64 @select_reversed(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 0
-; CHECK-NEXT:    [[EXT:%.*]] = sext i32 [[COND]] to i64
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[COND]] to i64
 ; CHECK-NEXT:    ret i64 [[EXT]]
 ;
   %cmp = icmp sgt i32 %b, %a

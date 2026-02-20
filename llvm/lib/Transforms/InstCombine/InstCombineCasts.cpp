@@ -1768,6 +1768,34 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     return CI;
   }
 
+   // Match against non-negative x - smin(x,y)
+   Value *U, *V;
+   if (match(Src, m_NSWSub(m_Value(U), m_SMin(m_Deferred(U), m_Value(V)))) ||
+       match(Src, m_NSWSub(m_Value(U), m_SMin(m_Value(V), m_Deferred(U))))
+     ) {
+         auto CI = CastInst::Create(Instruction::ZExt, Src, DestTy);
+         CI->setNonNeg(true);
+         return CI;
+   }
+ 
+   // Match against non-negative select
+ 
+   Value *C, *D;
+   if (match(Src, m_Select(m_SpecificICmp(ICmpInst::ICMP_SLT, m_Value(C), m_Value(D)),
+                         m_Zero(),
+                         m_NSWSub(m_Deferred(C), m_Deferred(D)))) ||
+       match(Src, m_Select(m_SpecificICmp(ICmpInst::ICMP_SGT, m_Value(C), m_Value(D)),
+                         m_Zero(),
+                         m_NSWSub(m_Deferred(D), m_Deferred(C)))) ||
+       match(Src, m_Select(m_SpecificICmp(ICmpInst::ICMP_SGT, m_Value(C), m_Value(D)),
+                     m_NSWSub(m_Deferred(C), m_Deferred(D)),
+                     m_Zero()))) {
+ 
+       auto CI = CastInst::Create(Instruction::ZExt, Src, DestTy);
+       CI->setNonNeg(true);
+       return CI;
+   }
+
   // Try to extend the entire expression tree to the wide destination type.
   bool ShouldExtendExpression = true;
   Value *TruncSrc = nullptr;
