@@ -564,18 +564,23 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::SELECT:             return lowerSELECT(Op, DAG);
   case ISD::BITCAST:            return lowerBITCAST(Op, DAG);
   case ISD::FADD:
+    return lowerR5900FPOp(Op, DAG, MipsISD::R5900_FADD, RTLIB::ADD_F32);
   case ISD::FSUB:
+    return lowerR5900FPOp(Op, DAG, MipsISD::R5900_FSUB, RTLIB::SUB_F32);
   case ISD::FMUL:
+    return lowerR5900FPOp(Op, DAG, MipsISD::R5900_FMUL, RTLIB::MUL_F32);
   case ISD::FDIV:
+    return lowerR5900FPOp(Op, DAG, MipsISD::R5900_FDIV, RTLIB::DIV_F32);
   case ISD::FSQRT:
-    return lowerR5900FPOp(Op, DAG);
+    return lowerR5900FPOp(Op, DAG, MipsISD::R5900_FSQRT, RTLIB::SQRT_F32);
   }
 
   return MipsTargetLowering::LowerOperation(Op, DAG);
 }
 
-SDValue MipsSETargetLowering::lowerR5900FPOp(SDValue Op,
-                                             SelectionDAG &DAG) const {
+SDValue MipsSETargetLowering::lowerR5900FPOp(SDValue Op, SelectionDAG &DAG,
+                                             unsigned HWOpc,
+                                             RTLIB::Libcall LC) const {
   assert(Subtarget.isR5900());
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
@@ -586,53 +591,13 @@ SDValue MipsSETargetLowering::lowerR5900FPOp(SDValue Op,
   if (Flags.hasNoNaNs() && Flags.hasNoInfs()) {
     // Use the hardware FPU instruction if the operation is guaranteed per-
     // instruction to have no NaN or infinity inputs/outputs (nnan+ninf flags).
-    unsigned HWOpc;
-    switch (Op.getOpcode()) {
-    case ISD::FADD:
-      HWOpc = MipsISD::R5900_FADD;
-      break;
-    case ISD::FSUB:
-      HWOpc = MipsISD::R5900_FSUB;
-      break;
-    case ISD::FMUL:
-      HWOpc = MipsISD::R5900_FMUL;
-      break;
-    case ISD::FDIV:
-      HWOpc = MipsISD::R5900_FDIV;
-      break;
-    case ISD::FSQRT:
-      HWOpc = MipsISD::R5900_FSQRT;
-      break;
-    default:
-      llvm_unreachable("Unexpected opcode");
-    }
     return DAG.getNode(HWOpc, DL, VT, Ops);
-  } else {
-    // Fall back to a software libcall for IEEE correctness.
-    RTLIB::Libcall LC;
-    switch (Op.getOpcode()) {
-    case ISD::FADD:
-      LC = RTLIB::ADD_F32;
-      break;
-    case ISD::FSUB:
-      LC = RTLIB::SUB_F32;
-      break;
-    case ISD::FMUL:
-      LC = RTLIB::MUL_F32;
-      break;
-    case ISD::FDIV:
-      LC = RTLIB::DIV_F32;
-      break;
-    case ISD::FSQRT:
-      LC = RTLIB::SQRT_F32;
-      break;
-    default:
-      llvm_unreachable("Unexpected opcode");
-    }
-    TargetLowering::MakeLibCallOptions CallOptions;
-    auto [Result, Chain] = makeLibCall(DAG, LC, VT, Ops, CallOptions, DL);
-    return Result;
   }
+
+  // Fall back to a software libcall for IEEE correctness.
+  TargetLowering::MakeLibCallOptions CallOptions;
+  auto [Result, Chain] = makeLibCall(DAG, LC, VT, Ops, CallOptions, DL);
+  return Result;
 }
 
 // Fold zero extensions into MipsISD::VEXTRACT_[SZ]EXT_ELT
