@@ -78,4 +78,9 @@ entry:
 ; CHECK-NEXT:         Name:            bar
 ; CHECK-NEXT:         Flags:           [ UNDEFINED ]
 ; CHECK-NEXT:         Function:        0
-; CHECK-NEXT: ...
+; CHECK-NEXT:    - Type:           CUSTOM
+; CHECK-NEXT:         Name:            target_features 
+; CHECK-NEXT:         Features: 
+; CHECK-NEXT:           - Prefix:          DISALLOWED 
+; CHECK-NEXT:         Name:            component-model-thread-context 
+; CHECK-NEXT:        ... 

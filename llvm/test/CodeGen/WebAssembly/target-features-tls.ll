@@ -43,14 +43,17 @@ target triple = "wasm32-unknown-unknown"
 
 ; -bulk-memory,+component-model-thread-context
 ; NO-BULK-MEM-CMTC-LABEL: .custom_section.target_features,"",@
-; NO-BULK-MEM-CMTC-NEXT: .int8 2
+; NO-BULK-MEM-CMTC-NEXT: .int8 3
 ; NO-BULK-MEM-CMTC-NEXT: .int8 43
 ; NO-BULK-MEM-CMTC-NEXT: .int8 7
 ; NO-BULK-MEM-CMTC-NEXT: .ascii "atomics"
 ; NO-BULK-MEM-CMTC-NEXT: .int8 43
 ; NO-BULK-MEM-CMTC-NEXT: .int8 30
 ; NO-BULK-MEM-CMTC-NEXT: .ascii "component-model-thread-context"
-; NO-BULK-MEM-CMTC-NEXT: .tbss.foo,"T",@
+; NO-BULK-MEM-CMTC-NEXT: .int8 45
+; NO-BULK-MEM-CMTC-NEXT: .int8 10
+; NO-BULK-MEM-CMTC-NEXT: .ascii "shared-mem"
+; NO-BULK-MEM-CMTC-NEXT: .bss.foo,"",@
 
 ; +bulk-memory,+component-model-thread-context
 ; BULK-MEM-CMTC-LABEL: .custom_section.target_features,"",@
