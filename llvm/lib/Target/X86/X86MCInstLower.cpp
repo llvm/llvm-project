@@ -2311,10 +2311,9 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (IndCSPrefix && MI->hasRegisterImplicitUseOperand(X86::R11))
       EmitAndCountInstruction(MCInstBuilder(X86::CS_PREFIX));
 
-    if (EnableImportCallOptimization && isImportedFunction(MI->getOperand(0))) {
-      emitLabelAndRecordForImportCallOptimization(
-          IMAGE_RETPOLINE_AMD64_IMPORT_BR);
-    }
+    if (EnableImportCallOptimization && isImportedFunction(MI->getOperand(0)))
+      reportFatalInternalError(
+          "Tail jumps to imported functions must use TAILJMPm64_REX");
 
     // Lower this as normal, but add a comment.
     OutStreamer->AddComment("TAILCALL");
@@ -2329,8 +2328,9 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::TAILJMPm64:
   case X86::TAILJMPd64_CC:
     if (EnableImportCallOptimization)
-      report_fatal_error("Unexpected TAILJMP instruction was emitted when "
-                         "import call optimization was enabled");
+      reportFatalInternalError(
+          "Unexpected TAILJMP instruction was emitted when "
+          "import call optimization was enabled");
 
     // Lower these as normal, but add some comments.
     OutStreamer->AddComment("TAILCALL");
@@ -2338,9 +2338,22 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     break;
 
   case X86::TAILJMPm64_REX:
-    if (EnableImportCallOptimization && isCallToCFGuardFunction(MI)) {
-      emitLabelAndRecordForImportCallOptimization(
-          IMAGE_RETPOLINE_AMD64_CFG_BR_REX);
+    if (EnableImportCallOptimization) {
+      if (isCallToCFGuardFunction(MI)) {
+        emitLabelAndRecordForImportCallOptimization(
+            IMAGE_RETPOLINE_AMD64_CFG_BR_REX);
+      } else if (isImportedFunction(MI->getOperand(3))) {
+        emitLabelAndRecordForImportCallOptimization(
+            IMAGE_RETPOLINE_AMD64_IMPORT_BR);
+        MCInst TmpInst;
+        MCInstLowering.Lower(MI, TmpInst);
+        emitCallInstruction(TmpInst);
+
+        // Must be followed by five int3 instructions.
+        for (int i = 0; i < 5; ++i)
+          EmitAndCountInstruction(MCInstBuilder(X86::INT3));
+        return;
+      }
     }
 
     OutStreamer->AddComment("TAILCALL");
@@ -2349,11 +2362,20 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case X86::TAILJMPr64_REX: {
     if (EnableImportCallOptimization) {
-      assert(MI->getOperand(0).getReg() == X86::RAX &&
-             "Indirect tail calls with impcall enabled must go through RAX (as "
-             "enforced by TCRETURNImpCallri64)");
+      if (MI->getOperand(0).getReg() != X86::RAX)
+        reportFatalInternalError(
+            "Indirect tail calls with impcall enabled must go through RAX (as "
+            "enforced by TCRETURNImpCallri64)");
       emitLabelAndRecordForImportCallOptimization(
-          IMAGE_RETPOLINE_AMD64_INDIR_BR);
+          IMAGE_RETPOLINE_AMD64_INDIR_BR_REX);
+      MCInst TmpInst;
+      MCInstLowering.Lower(MI, TmpInst);
+      emitCallInstruction(TmpInst);
+
+      // Must be followed by 2 int3 instructions.
+      for (int i = 0; i < 2; ++i)
+        EmitAndCountInstruction(MCInstBuilder(X86::INT3));
+      return;
     }
 
     OutStreamer->AddComment("TAILCALL");
@@ -2369,6 +2391,14 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
       emitLabelAndRecordForImportCallOptimization(
           (ImportCallKind)(IMAGE_RETPOLINE_AMD64_SWITCHTABLE_FIRST +
                            EncodedReg));
+      MCInst TmpInst;
+      MCInstLowering.Lower(MI, TmpInst);
+      emitCallInstruction(TmpInst);
+
+      // Must be followed by 4 int3 instructions.
+      for (int i = 0; i < 4; ++i)
+        EmitAndCountInstruction(MCInstBuilder(X86::INT3));
+      return;
     }
     break;
 
@@ -2378,7 +2408,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::JMP32m:
   case X86::JMP64m:
     if (EnableImportCallOptimization && hasJumpTableInfoInBlock(MI))
-      report_fatal_error(
+      reportFatalInternalError(
           "Unexpected JMP instruction was emitted for a jump-table when import "
           "call optimization was enabled");
     break;
@@ -2556,29 +2586,19 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (IndCSPrefix && MI->hasRegisterImplicitUseOperand(X86::R11))
       EmitAndCountInstruction(MCInstBuilder(X86::CS_PREFIX));
 
-    if (EnableImportCallOptimization && isImportedFunction(MI->getOperand(0))) {
-      emitLabelAndRecordForImportCallOptimization(
-          IMAGE_RETPOLINE_AMD64_IMPORT_CALL);
-
-      MCInst TmpInst;
-      MCInstLowering.Lower(MI, TmpInst);
-
-      // For Import Call Optimization to work, we need a the call instruction
-      // with a rex prefix, and a 5-byte nop after the call instruction.
-      EmitAndCountInstruction(MCInstBuilder(X86::REX64_PREFIX));
-      emitCallInstruction(TmpInst);
-      emitNop(*OutStreamer, 5, Subtarget);
-      maybeEmitNopAfterCallForWindowsEH(MI);
-      return;
-    }
+    if (EnableImportCallOptimization && isImportedFunction(MI->getOperand(0)))
+      reportFatalInternalError(
+          "Calls to imported functions with import call optimization "
+          "should be lowered to CALL64m via CALL64_ImpCall");
 
     break;
 
   case X86::CALL64r:
     if (EnableImportCallOptimization) {
-      assert(MI->getOperand(0).getReg() == X86::RAX &&
-             "Indirect calls with impcall enabled must go through RAX (as "
-             "enforced by CALL64r_ImpCall)");
+      if (MI->getOperand(0).getReg() != X86::RAX)
+        reportFatalInternalError(
+            "Indirect calls with import call optimization enabled must go "
+            "through RAX");
 
       emitLabelAndRecordForImportCallOptimization(
           IMAGE_RETPOLINE_AMD64_INDIR_CALL);
@@ -2595,9 +2615,33 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     break;
 
   case X86::CALL64m:
-    if (EnableImportCallOptimization && isCallToCFGuardFunction(MI)) {
-      emitLabelAndRecordForImportCallOptimization(
-          IMAGE_RETPOLINE_AMD64_CFG_CALL);
+    if (EnableImportCallOptimization) {
+      if (isCallToCFGuardFunction(MI)) {
+        emitLabelAndRecordForImportCallOptimization(
+            IMAGE_RETPOLINE_AMD64_CFG_CALL);
+      } else if (isImportedFunction(MI->getOperand(3))) {
+        emitLabelAndRecordForImportCallOptimization(
+            IMAGE_RETPOLINE_AMD64_IMPORT_CALL);
+
+        MCInst TmpInst;
+        MCInstLowering.Lower(MI, TmpInst);
+
+        // For Import Call Optimization to work, we need a the call instruction
+        // with a rex prefix, and a 5-byte nop after the call instruction.
+        EmitAndCountInstruction(MCInstBuilder(X86::REX64_PREFIX));
+        emitCallInstruction(TmpInst);
+        // MSVC Linker is *very* picky about the exact nop to use.
+        MCInst Nop = MCInstBuilder(X86::NOOPL)
+                         .addReg(X86::RAX)
+                         .addImm(1)
+                         .addReg(X86::RAX)
+                         .addImm(0)
+                         .addReg(0);
+        Nop.setFlags(X86::IP_USE_DISP8);
+        EmitAndCountInstruction(Nop);
+        maybeEmitNopAfterCallForWindowsEH(MI);
+        return;
+      }
     }
     break;
 

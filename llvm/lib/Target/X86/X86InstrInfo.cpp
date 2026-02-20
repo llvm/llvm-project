@@ -3695,7 +3695,6 @@ bool X86InstrInfo::isUnconditionalTailCall(const MachineInstr &MI) const {
   case X86::TCRETURNmi:
   case X86::TCRETURNdi64:
   case X86::TCRETURNri64:
-  case X86::TCRETURNri64_ImpCall:
   case X86::TCRETURNmi64:
     return true;
   default:
@@ -3726,9 +3725,16 @@ bool X86InstrInfo::canMakeTailCallConditional(
     return false;
   }
 
-  if (Subtarget.isTargetWin64() && MF->hasWinCFI()) {
+  if (Subtarget.isTargetWin64()) {
     // Conditional tail calls confuse the Win64 unwinder.
-    return false;
+    if (MF->hasWinCFI())
+      return false;
+
+    // Conditional tail calls cannot be encoded in the Import Call Optimization
+    // metadata.
+    if (MF->getFunction().getParent()->getModuleFlag(
+            "import-call-optimization"))
+      return false;
   }
 
   assert(BranchCond.size() == 1);
@@ -7488,8 +7494,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   // do not fold loads into calls or pushes, unless optimizing for size
   // aggressively.
   if (isSlowTwoMemOps && !MF.getFunction().hasMinSize() &&
-      (Opc == X86::CALL32r || Opc == X86::CALL64r ||
-       Opc == X86::CALL64r_ImpCall || Opc == X86::PUSH16r ||
+      (Opc == X86::CALL32r || Opc == X86::CALL64r || Opc == X86::PUSH16r ||
        Opc == X86::PUSH32r || Opc == X86::PUSH64r))
     return nullptr;
 
