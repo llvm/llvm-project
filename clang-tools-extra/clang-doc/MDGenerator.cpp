@@ -156,19 +156,17 @@ static void writeNameLink(const StringRef &CurrentPath, const Reference &R,
 
 static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
                         llvm::raw_ostream &OS) {
-  std::string Header = "| enum ";
+  OS << "| enum ";
   if (I.Scoped)
-    Header += "class ";
-  Header += I.Name;
-  Header += " ";
-  if (I.BaseType && I.BaseType->Type.QualName != "") {
-    Header += ": ";
-    Header += I.BaseType->Type.QualName;
-    Header += " ";
+    OS << "class ";
+  if(I.Name.empty())
+    OS << "(unnamed) ";
+  else
+    OS << I.Name << " ";
+  if (I.BaseType && !I.BaseType->Type.QualName.empty()) {
+    OS << ": " << I.BaseType->Type.QualName << " ";
   }
-  Header += "|";
-  writeLine(Header, OS);
-  writeLine("--", OS);
+  OS << "|\n\n" << "--\n\n";
 
   std::string Buffer;
   llvm::raw_string_ostream Members(Buffer);
