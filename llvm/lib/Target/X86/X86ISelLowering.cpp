@@ -3473,6 +3473,18 @@ bool X86TargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
   if (!ISD::isConstantSplatVector(C.getNode(), MulC))
     return false;
 
+  if (VT.isVector() && VT.getScalarSizeInBits() == 8) {
+    // Check whether a vXi8 multiply can be decomposed into two shifts
+    // (decomposing 2^m ± 2^n as 2^(a+b) ± 2^b). Similar to
+    // DAGCombiner::visitMUL, consider the constant `2` decomposable as
+    // (2^0 + 1).
+    APInt ShiftedMulC = MulC.abs();
+    unsigned TZeros = ShiftedMulC == 2 ? 0 : ShiftedMulC.countr_zero();
+    ShiftedMulC.lshrInPlace(TZeros);
+    if ((ShiftedMulC - 1).isPowerOf2() || (ShiftedMulC + 1).isPowerOf2())
+      return true;
+  }
+
   // Find the type this will be legalized too. Otherwise we might prematurely
   // convert this to shl+add/sub and then still have to type legalize those ops.
   // Another choice would be to defer the decision for illegal types until
