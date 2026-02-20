@@ -258,7 +258,7 @@ if (RUNTIMES_EXECUTE_ONLY_CODE)
 endif()
 
 # Use libtool instead of ar if you are both on an Apple host, and targeting Apple.
-if(CMAKE_HOST_APPLE AND APPLE)
+if((CMAKE_HOST_APPLE OR CMAKE_LIBTOOL) AND APPLE)
   include(UseLibtool)
 endif()
 
