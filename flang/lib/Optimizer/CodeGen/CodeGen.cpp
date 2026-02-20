@@ -321,8 +321,7 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
 
     // A value defined by a block arg, such as fir.if for a
     // optional assumed character dummy len, doesn't have a defining op.
-    if (auto *defOp = size.getDefiningOp();
-        defOp && mlir::isa<mlir::LLVM::ConstantOp>(size.getDefiningOp())) {
+    if (mlir::isa_and_nonnull<mlir::LLVM::ConstantOp>(size.getDefiningOp())) {
       // Set the Block in which the llvm alloca should be inserted.
       mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
       mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
