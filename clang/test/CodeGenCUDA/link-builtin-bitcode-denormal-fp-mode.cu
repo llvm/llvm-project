@@ -127,39 +127,39 @@ __global__ void kernel_f64(double* out, double* a, double* b, double* c) {
 // We should not be littering call sites with the attribute
 // Everything should use the default ieee with no explicit attribute
 
-// FIXME: Should check-not "denormal-fp-math" within the denormal-fp-math-f32
+// FIXME: Should check-not denormal_fpenv within the denormal-fp-math-f32
 // lines.
 
 // Default mode relies on the implicit check-not for the denormal-fp-math.
 
-// PSZ: #[[$KERNELATTR]] = { {{.*}} "denormal-fp-math"="preserve-sign,preserve-sign"
+// PSZ: #[[$KERNELATTR]] = { {{.*}} denormal_fpenv(preservesign)
 // PSZ-SAME: "target-cpu"="gfx803"
-// PSZ: #[[$FUNCATTR]] = { {{.*}} "denormal-fp-math-f32"="preserve-sign,preserve-sign"
+// PSZ: #[[$FUNCATTR]] = { {{.*}} denormal_fpenv(float: preservesign)
 // PSZ-SAME: "target-cpu"="gfx803"
-// PSZ: #[[$WEAK_FUNCATTR]] = { {{.*}} "denormal-fp-math-f32"="preserve-sign,preserve-sign"
+// PSZ: #[[$WEAK_FUNCATTR]] = { {{.*}} denormal_fpenv(float: preservesign)
 // PSZ-SAME: "target-cpu"="gfx803"
 
-// FIXME: Should check-not "denormal-fp-math" within the line
-// IEEEF64-PSZF32: #[[$KERNELATTR]] = { {{.*}} "denormal-fp-math-f32"="preserve-sign,preserve-sign"
+// FIXME: Should check-not denormal_fpenv within the line
+// IEEEF64-PSZF32: #[[$KERNELATTR]] = { {{.*}} denormal_fpenv(float: preservesign)
 // IEEEF64-PSZF32-SAME: "target-cpu"="gfx803"
-// IEEEF64-PSZF32: #[[$FUNCATTR]] = { {{.*}} "denormal-fp-math-f32"="preserve-sign,preserve-sign"
+// IEEEF64-PSZF32: #[[$FUNCATTR]] = { {{.*}} denormal_fpenv(float: preservesign)
 // IEEEF64-PSZF32-SAME: "target-cpu"="gfx803"
-// IEEEF64-PSZF32: #[[$WEAK_FUNCATTR]] = { {{.*}} "denormal-fp-math-f32"="preserve-sign,preserve-sign"
+// IEEEF64-PSZF32: #[[$WEAK_FUNCATTR]] = { {{.*}} denormal_fpenv(float: preservesign)
 // IEEEF64-PSZF32-SAME: "target-cpu"="gfx803"
 
-// IEEEF32-PSZF64-DYNF32: #[[$KERNELATTR]] = { {{.*}} "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" {{.*}} "target-cpu"="gfx803" {{.*}}  }
+// IEEEF32-PSZF64-DYNF32: #[[$KERNELATTR]] = { {{.*}} denormal_fpenv(preservesign, float: ieee) {{.*}} "target-cpu"="gfx803" {{.*}}  }
+// implicit-not
 // implicit check-not
-// implicit check-not
 
 
-// IEEEF32-PSZF64-DYNFULL: #[[$KERNELATTR]] = { {{.*}} "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee"
+// IEEEF32-PSZF64-DYNFULL: #[[$KERNELATTR]] = { {{.*}} denormal_fpenv(preservesign, float: ieee)
 // IEEEF32-PSZF64-DYNFULL-SAME: "target-cpu"="gfx803"
-// IEEEF32-PSZF64-DYNFULL: #[[$FUNCATTR]] = { {{.*}} "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee"
+// IEEEF32-PSZF64-DYNFULL: #[[$FUNCATTR]] = { {{.*}} denormal_fpenv(preservesign, float: ieee)
 // IEEEF32-PSZF64-DYNFULL-SAME: "target-cpu"="gfx803"
-// IEEEF32-PSZF64-DYNFULL: #[[$WEAK_FUNCATTR]] = { {{.*}} "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee"
+// IEEEF32-PSZF64-DYNFULL: #[[$WEAK_FUNCATTR]] = { {{.*}} denormal_fpenv(preservesign, float: ieee)
 // IEEEF32-PSZF64-DYNFULL-SAME: "target-cpu"="gfx803"
 
 // -mlink-bitcode-file doesn't internalize or propagate attributes.
-// NOINTERNALIZE-IEEEF32-PSZF64-DYNFULL: #[[$KERNELATTR]] = { {{.*}} "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" {{.*}} "target-cpu"="gfx803" {{.*}} }
-// NOINTERNALIZE-IEEEF32-PSZF64-DYNFULL: #[[$FUNCATTR]] = { {{.*}} "denormal-fp-math"="dynamic,dynamic" {{.*}} }
-// NOINTERNALIZE-IEEEF32-PSZF64-DYNFULL: #[[$WEAK_FUNCATTR]] = { {{.*}} "denormal-fp-math"="dynamic,dynamic" {{.*}} }
+// NOINTERNALIZE-IEEEF32-PSZF64-DYNFULL: #[[$KERNELATTR]] = { {{.*}} denormal_fpenv(preservesign, float: ieee) {{.*}} "target-cpu"="gfx803" {{.*}} }
+// NOINTERNALIZE-IEEEF32-PSZF64-DYNFULL: #[[$FUNCATTR]] = { {{.*}} denormal_fpenv(dynamic) {{.*}} }
+// NOINTERNALIZE-IEEEF32-PSZF64-DYNFULL: #[[$WEAK_FUNCATTR]] = { {{.*}} denormal_fpenv(dynamic) {{.*}} }

@@ -677,7 +677,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64all = COPY $x2
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[COPY1]], %subreg.sub_32
     ; CHECK-NEXT: %zext:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 15
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr64 = COPY [[COPY2]]
     ; CHECK-NEXT: STRXroX [[COPY3]], [[COPY]], %zext, 0, 1 :: (store (p0))
@@ -713,7 +713,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64all = COPY $x2
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[COPY1]], %subreg.sub_32
     ; CHECK-NEXT: %zext:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 7
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr64 = COPY [[COPY2]]
     ; CHECK-NEXT: STRXroX [[COPY3]], [[COPY]], %zext, 0, 1 :: (store (p0))
@@ -749,7 +749,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64all = COPY $x2
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[COPY1]], %subreg.sub_32
     ; CHECK-NEXT: %zext:gpr64 = SBFMXri [[SUBREG_TO_REG]], 0, 15
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr64 = COPY [[COPY2]]
     ; CHECK-NEXT: STRXroX [[COPY3]], [[COPY]], %zext, 0, 1 :: (store (p0))
@@ -785,7 +785,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64all = COPY $x2
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[COPY1]], %subreg.sub_32
     ; CHECK-NEXT: %zext:gpr64 = SBFMXri [[SUBREG_TO_REG]], 0, 7
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr64 = COPY [[COPY2]]
     ; CHECK-NEXT: STRXroX [[COPY3]], [[COPY]], %zext, 0, 1 :: (store (p0))

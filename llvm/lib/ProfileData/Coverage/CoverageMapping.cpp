@@ -685,166 +685,154 @@ static unsigned getMaxBitmapSize(const CoverageMappingRecord &Record,
 
 namespace {
 
-/// Walk MappingRegions along Expansions and emit CountedRegions.
-struct CountedRegionEmitter {
-  /// A nestable Decision.
+/// Collect Decisions, Branchs, and Expansions and associate them.
+class MCDCDecisionRecorder {
+private:
+  /// This holds the DecisionRegion and MCDCBranches under it.
+  /// Also traverses Expansion(s).
+  /// The Decision has the number of MCDCBranches and will complete
+  /// when it is filled with unique ConditionID of MCDCBranches.
   struct DecisionRecord {
     const CounterMappingRegion *DecisionRegion;
-    unsigned NumConditions; ///< Copy of DecisionRegion.NumConditions
-    /// Pushed by traversal order.
+
+    /// They are reflected from DecisionRegion for convenience.
+    mcdc::DecisionParameters DecisionParams;
+    LineColPair DecisionStartLoc;
+    LineColPair DecisionEndLoc;
+
+    /// This is passed to `MCDCRecordProcessor`, so this should be compatible
+    /// to`ArrayRef<const CounterMappingRegion *>`.
     SmallVector<const CounterMappingRegion *> MCDCBranches;
-#ifndef NDEBUG
+
+    /// IDs that are stored in MCDCBranches
+    /// Complete when all IDs (1 to NumConditions) are met.
     DenseSet<mcdc::ConditionID> ConditionIDs;
-#endif
+
+    /// Set of IDs of Expansion(s) that are relevant to DecisionRegion
+    /// and its children (via expansions).
+    /// FileID  pointed by ExpandedFileID is dedicated to the expansion, so
+    /// the location in the expansion doesn't matter.
+    DenseSet<unsigned> ExpandedFileIDs;
 
     DecisionRecord(const CounterMappingRegion &Decision)
         : DecisionRegion(&Decision),
-          NumConditions(Decision.getDecisionParams().NumConditions) {
+          DecisionParams(Decision.getDecisionParams()),
+          DecisionStartLoc(Decision.startLoc()),
+          DecisionEndLoc(Decision.endLoc()) {
       assert(Decision.Kind == CounterMappingRegion::MCDCDecisionRegion);
     }
 
-    bool pushBranch(const CounterMappingRegion &B) {
-      assert(B.Kind == CounterMappingRegion::MCDCBranchRegion);
-      assert(ConditionIDs.insert(B.getBranchParams().ID).second &&
-             "Duplicate CondID");
-      MCDCBranches.push_back(&B);
-      assert(MCDCBranches.size() <= NumConditions &&
-             "MCDCBranch exceeds NumConds");
-      return (MCDCBranches.size() == NumConditions);
+    /// Determine whether DecisionRecord dominates `R`.
+    bool dominates(const CounterMappingRegion &R) const {
+      // Determine whether `R` is included in `DecisionRegion`.
+      if (R.FileID == DecisionRegion->FileID &&
+          R.startLoc() >= DecisionStartLoc && R.endLoc() <= DecisionEndLoc)
+        return true;
+
+      // Determine whether `R` is pointed by any of Expansions.
+      return ExpandedFileIDs.contains(R.FileID);
+    }
+
+    enum Result {
+      NotProcessed = 0, /// Irrelevant to this Decision
+      Processed,        /// Added to this Decision
+      Completed,        /// Added and filled this Decision
+    };
+
+    /// Add Branch into the Decision
+    /// \param Branch expects MCDCBranchRegion
+    /// \returns NotProcessed/Processed/Completed
+    Result addBranch(const CounterMappingRegion &Branch) {
+      assert(Branch.Kind == CounterMappingRegion::MCDCBranchRegion);
+
+      auto ConditionID = Branch.getBranchParams().ID;
+
+      if (ConditionIDs.contains(ConditionID) ||
+          ConditionID >= DecisionParams.NumConditions)
+        return NotProcessed;
+
+      if (!this->dominates(Branch))
+        return NotProcessed;
+
+      assert(MCDCBranches.size() < DecisionParams.NumConditions);
+
+      // Put `ID=0` in front of `MCDCBranches` for convenience
+      // even if `MCDCBranches` is not topological.
+      if (ConditionID == 0)
+        MCDCBranches.insert(MCDCBranches.begin(), &Branch);
+      else
+        MCDCBranches.push_back(&Branch);
+
+      // Mark `ID` as `assigned`.
+      ConditionIDs.insert(ConditionID);
+
+      // `Completed` when `MCDCBranches` is full
+      return (MCDCBranches.size() == DecisionParams.NumConditions ? Completed
+                                                                  : Processed);
+    }
+
+    /// Record Expansion if it is relevant to this Decision.
+    /// Each `Expansion` may nest.
+    /// \returns true if recorded.
+    bool recordExpansion(const CounterMappingRegion &Expansion) {
+      if (!this->dominates(Expansion))
+        return false;
+
+      ExpandedFileIDs.insert(Expansion.ExpandedFileID);
+      return true;
     }
   };
 
-  const CoverageMappingRecord &Record;
-  CounterMappingContext &Ctx;
-  FunctionRecord &Function;
-  bool IsVersion11;
+private:
+  /// Decisions in progress
+  /// DecisionRecord is added for each MCDCDecisionRegion.
+  /// DecisionRecord is removed when Decision is completed.
+  SmallVector<DecisionRecord> Decisions;
 
-  /// Evaluated Counters.
-  std::map<Counter, uint64_t> CounterValues;
-
-  /// Decisions are nestable.
-  SmallVector<DecisionRecord, 1> DecisionStack;
-
-  /// A File pointed by Expansion
-  struct FileInfo {
-    /// The last index(+1) for each FileID in MappingRegions.
-    unsigned LastIndex = 0;
-    /// Mark Files pointed by Expansions.
-    /// Non-marked Files are root Files.
-    bool IsExpanded = false;
-  };
-
-  /// The last element is a sentinel with Index=NumRegions.
-  std::vector<FileInfo> Files;
-#ifndef NDEBUG
-  DenseSet<unsigned> Visited;
-#endif
-
-  CountedRegionEmitter(const CoverageMappingRecord &Record,
-                       CounterMappingContext &Ctx, FunctionRecord &Function,
-                       bool IsVersion11)
-      : Record(Record), Ctx(Ctx), Function(Function), IsVersion11(IsVersion11),
-        Files(Record.Filenames.size()) {
-    // Scan MappingRegions and mark each last index by FileID.
-    for (auto [I, Region] : enumerate(Record.MappingRegions)) {
-      if (Region.FileID >= Files.size()) {
-        // Extend (only possible in CoverageMappingTests)
-        Files.resize(Region.FileID + 1);
-      }
-      Files[Region.FileID].LastIndex = I + 1;
-      if (Region.Kind == CounterMappingRegion::ExpansionRegion) {
-        if (Region.ExpandedFileID >= Files.size()) {
-          // Extend (only possible in CoverageMappingTests)
-          Files.resize(Region.ExpandedFileID + 1);
-        }
-        Files[Region.ExpandedFileID].IsExpanded = true;
-      }
-    }
+public:
+  ~MCDCDecisionRecorder() {
+    assert(Decisions.empty() && "All Decisions have not been resolved");
   }
 
-  /// Evaluate C and store its evaluated Value into CounterValues.
-  Error evaluateAndCacheCounter(Counter C) {
-    if (CounterValues.count(C) > 0)
-      return Error::success();
-
-    auto ValueOrErr = Ctx.evaluate(C);
-    if (!ValueOrErr)
-      return ValueOrErr.takeError();
-    CounterValues[C] = *ValueOrErr;
-    return Error::success();
+  /// Register Region and start recording.
+  void registerDecision(const CounterMappingRegion &Decision) {
+    Decisions.emplace_back(Decision);
   }
 
-  Error walk(unsigned Idx) {
-    assert(Idx < Files.size());
-    unsigned B = (Idx == 0 ? 0 : Files[Idx - 1].LastIndex);
-    unsigned E = Files[Idx].LastIndex;
-    assert(B != E && "Empty FileID");
-    assert(Visited.insert(Idx).second && "Duplicate Expansions");
-    for (unsigned I = B; I != E; ++I) {
-      const auto &Region = Record.MappingRegions[I];
-      if (Region.FileID != Idx)
-        break;
+  void recordExpansion(const CounterMappingRegion &Expansion) {
+    any_of(Decisions, [&Expansion](auto &Decision) {
+      return Decision.recordExpansion(Expansion);
+    });
+  }
 
-      if (Region.Kind == CounterMappingRegion::ExpansionRegion)
-        if (auto E = walk(Region.ExpandedFileID))
-          return E;
+  using DecisionAndBranches =
+      std::pair<const CounterMappingRegion *,             /// Decision
+                SmallVector<const CounterMappingRegion *> /// Branches
+                >;
 
-      if (auto E = evaluateAndCacheCounter(Region.Count))
-        return E;
-
-      if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion) {
-        // Start the new Decision on the stack.
-        DecisionStack.emplace_back(Region);
-      } else if (Region.Kind == CounterMappingRegion::MCDCBranchRegion) {
-        assert(!DecisionStack.empty() && "Orphan MCDCBranch");
-        auto &D = DecisionStack.back();
-
-        if (D.pushBranch(Region)) {
-          // All Branches have been found in the Decision.
-          auto RecordOrErr = Ctx.evaluateMCDCRegion(
-              *D.DecisionRegion, D.MCDCBranches, IsVersion11);
-          if (!RecordOrErr)
-            return RecordOrErr.takeError();
-
-          // Finish the stack.
-          Function.pushMCDCRecord(std::move(*RecordOrErr));
-          DecisionStack.pop_back();
-        }
+  /// Add MCDCBranchRegion to DecisionRecord.
+  /// \param Branch to be processed
+  /// \returns DecisionsAndBranches if DecisionRecord completed.
+  ///     Or returns nullopt.
+  std::optional<DecisionAndBranches>
+  processBranch(const CounterMappingRegion &Branch) {
+    // Seek each Decision and apply Region to it.
+    for (auto DecisionIter = Decisions.begin(), DecisionEnd = Decisions.end();
+         DecisionIter != DecisionEnd; ++DecisionIter)
+      switch (DecisionIter->addBranch(Branch)) {
+      case DecisionRecord::NotProcessed:
+        continue;
+      case DecisionRecord::Processed:
+        return std::nullopt;
+      case DecisionRecord::Completed:
+        DecisionAndBranches Result =
+            std::make_pair(DecisionIter->DecisionRegion,
+                           std::move(DecisionIter->MCDCBranches));
+        Decisions.erase(DecisionIter); // No longer used.
+        return Result;
       }
 
-      // Evaluate FalseCount
-      // It may have the Counter in Branches, or Zero.
-      if (auto E = evaluateAndCacheCounter(Region.FalseCount))
-        return E;
-    }
-
-    assert((Idx != 0 || DecisionStack.empty()) && "Decision wasn't closed");
-
-    return Error::success();
-  }
-
-  Error emitCountedRegions() {
-    // Walk MappingRegions along Expansions.
-    // - Evaluate Counters
-    // - Emit MCDCRecords
-    for (auto [I, F] : enumerate(Files)) {
-      if (!F.IsExpanded)
-        if (auto E = walk(I))
-          return E;
-    }
-    assert(Visited.size() == Files.size() && "Dangling FileID");
-
-    // Emit CountedRegions in the same order as MappingRegions.
-    for (const auto &Region : Record.MappingRegions) {
-      if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion)
-        continue; // Don't emit.
-      // Adopt values from the CounterValues.
-      // FalseCount may be Zero unless Branches.
-      Function.pushRegion(Region, CounterValues[Region.Count],
-                          CounterValues[Region.FalseCount]);
-    }
-
-    return Error::success();
+    llvm_unreachable("Branch not found in Decisions");
   }
 };
 
@@ -919,12 +907,57 @@ Error CoverageMapping::loadFunctionRecord(
       Record.MappingRegions[0].Count.isZero() && Counts[0] > 0)
     return Error::success();
 
+  MCDCDecisionRecorder MCDCDecisions;
   FunctionRecord Function(OrigFuncName, Record.Filenames);
+  for (const auto &Region : Record.MappingRegions) {
+    // MCDCDecisionRegion should be handled first since it overlaps with
+    // others inside.
+    if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion) {
+      MCDCDecisions.registerDecision(Region);
+      continue;
+    }
+    Expected<int64_t> ExecutionCount = Ctx.evaluate(Region.Count);
+    if (auto E = ExecutionCount.takeError()) {
+      consumeError(std::move(E));
+      return Error::success();
+    }
+    Expected<int64_t> AltExecutionCount = Ctx.evaluate(Region.FalseCount);
+    if (auto E = AltExecutionCount.takeError()) {
+      consumeError(std::move(E));
+      return Error::success();
+    }
+    Function.pushRegion(Region, *ExecutionCount, *AltExecutionCount);
 
-  // Emit CountedRegions into FunctionRecord.
-  if (auto E = CountedRegionEmitter(Record, Ctx, Function, IsVersion11)
-                   .emitCountedRegions())
-    return E;
+    // Record ExpansionRegion.
+    if (Region.Kind == CounterMappingRegion::ExpansionRegion) {
+      MCDCDecisions.recordExpansion(Region);
+      continue;
+    }
+
+    // Do nothing unless MCDCBranchRegion.
+    if (Region.Kind != CounterMappingRegion::MCDCBranchRegion)
+      continue;
+
+    auto Result = MCDCDecisions.processBranch(Region);
+    if (!Result) // Any Decision doesn't complete.
+      continue;
+
+    auto MCDCDecision = Result->first;
+    auto &MCDCBranches = Result->second;
+
+    // Since the bitmap identifies the executed test vectors for an MC/DC
+    // DecisionRegion, all of the information is now available to process.
+    // This is where the bulk of the MC/DC progressing takes place.
+    Expected<MCDCRecord> Record =
+        Ctx.evaluateMCDCRegion(*MCDCDecision, MCDCBranches, IsVersion11);
+    if (auto E = Record.takeError()) {
+      consumeError(std::move(E));
+      return Error::success();
+    }
+
+    // Save the MC/DC Record so that it can be visualized later.
+    Function.pushMCDCRecord(std::move(*Record));
+  }
 
   // Don't create records for (filenames, function) pairs we've already seen.
   auto FilenamesHash = hash_combine_range(Record.Filenames);

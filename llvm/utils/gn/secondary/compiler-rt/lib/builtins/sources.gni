@@ -508,6 +508,9 @@ if (current_cpu == "ppc64") {
     "ppc/gcc_qsub.c",
     "ppc/multc3.c",
   ]
+  if (current_os == "aix") {
+    builtins_sources += [ "ppc/init_ifuncs.c" ]
+  }
 }
 
 if (current_cpu == "riscv" || current_cpu == "riscv64") {

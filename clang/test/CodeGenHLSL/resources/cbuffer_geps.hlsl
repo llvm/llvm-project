@@ -73,7 +73,7 @@ void cbstructs() {
   use(s1.a1);
   // CHECK: load <3 x i16>, ptr addrspace(2) getelementptr inbounds nuw (%B, ptr addrspace(2) @s2, i32 0, i32 1), align 2
   use(s2.b1);
-  // CHECK: load <2 x float>, ptr addrspace(2) getelementptr inbounds nuw (%C, ptr addrspace(2) @s3, i32 0, i32 1), align 8
+  // CHECK: load <2 x float>, ptr addrspace(2) getelementptr inbounds nuw (%C, ptr addrspace(2) @s3, i32 0, i32 2), align 8
   use(s3.c2.a1);
   // CHECK: load <2 x float>, ptr addrspace(2) getelementptr (<{ %A, target("dx.Padding", 8) }>, ptr addrspace(2) @s4, i32 2, i32 0), align 8
   use(s4[2].a1);
@@ -108,9 +108,9 @@ void cbmix() {
   use(m3.y);
   // CHECK: load <2 x float>, ptr addrspace(2) getelementptr (<{ <2 x float>, target("dx.Padding", 8) }>, ptr addrspace(2) getelementptr (<{ <{ [3 x <{ <2 x float>, target("dx.Padding", 8) }>], <2 x float> }>, target("dx.Padding", 8) }>, ptr addrspace(2) @m4, i32 2, i32 0), i32 3, i32 0), align 16
   use(m4[2][3]);
-  // CHECK: load <4 x i32>, ptr addrspace(2) getelementptr inbounds nuw ([[ANON_1]], ptr addrspace(2) @m5, i32 0, i32 1), align 16
+  // CHECK: load <4 x i32>, ptr addrspace(2) getelementptr inbounds nuw ([[ANON_1]], ptr addrspace(2) @m5, i32 0, i32 2), align 16
   use(m5.d);
-  // CHECK: load <4 x i32>, ptr addrspace(2) getelementptr inbounds ([5 x <4 x i32>], ptr addrspace(2) getelementptr (<{ %ArrayAndScalar, target("dx.Padding", 12) }>, ptr addrspace(2) getelementptr inbounds nuw ([[ANON_2]], ptr addrspace(2) @m6, i32 0, i32 1), i32 2, i32 0), i32 0, i32 2), align 16
+  // CHECK: load <4 x i32>, ptr addrspace(2) getelementptr inbounds ([5 x <4 x i32>], ptr addrspace(2) getelementptr (<{ %ArrayAndScalar, target("dx.Padding", 12) }>, ptr addrspace(2) getelementptr inbounds nuw ([[ANON_2]], ptr addrspace(2) @m6, i32 0, i32 2), i32 2, i32 0), i32 0, i32 2), align 16
   use(m6.j[2].x[2]);
   // CHECK: load <1 x double>, ptr addrspace(2) @m7, align 8
   use(m7);

@@ -1172,7 +1172,7 @@ HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
       assert(isPowerOf2_32(VecLen) &&
              "conversion only supported for pow2 VectorSize");
       for (unsigned i = 0; i < VecLen; ++i)
-        NewConst.push_back(IRB.getInt8(CV->getOperand(i)->isZeroValue()));
+        NewConst.push_back(IRB.getInt8(CV->getOperand(i)->isNullValue()));
 
       CVal = ConstantVector::get(NewConst);
       isVTi1Type = true;
@@ -1505,6 +1505,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   MaxStoresPerMemmoveOptSize = 4;
   MaxStoresPerMemset = 8;
   MaxStoresPerMemsetOptSize = 4;
+
+  setTargetDAGCombine(ISD::VECREDUCE_ADD);
 
   //
   // Set up register classes.
@@ -2342,9 +2344,18 @@ HexagonTargetLowering::getVectorShiftByInt(SDValue Op, SelectionDAG &DAG)
     default:
       llvm_unreachable("Unexpected shift opcode");
   }
+  if (SDValue Sp = getSplatValue(Op.getOperand(1), DAG)) {
+    const SDLoc dl(Op);
+    // Canonicalize shift amount to i32 as required.
+    SDValue Sh = Sp;
+    if (Sh.getValueType() != MVT::i32)
+      Sh = DAG.getZExtOrTrunc(Sh, dl, MVT::i32);
 
-  if (SDValue Sp = getSplatValue(Op.getOperand(1), DAG))
-    return DAG.getNode(NewOpc, SDLoc(Op), ty(Op), Op.getOperand(0), Sp);
+    assert(Sh.getValueType() == MVT::i32 &&
+           "Hexagon vector shift-by-int must use i32 shift operand");
+    return DAG.getNode(NewOpc, dl, ty(Op), Op.getOperand(0), Sh);
+  }
+
   return SDValue();
 }
 
@@ -2441,7 +2452,8 @@ HexagonTargetLowering::getBuildVectorConstInts(ArrayRef<SDValue> Values,
     // Make sure to always cast to IntTy.
     if (auto *CN = dyn_cast<ConstantSDNode>(V.getNode())) {
       const ConstantInt *CI = CN->getConstantIntValue();
-      Consts[i] = ConstantInt::getSigned(IntTy, CI->getValue().getSExtValue());
+      Consts[i] = cast<ConstantInt>(
+          ConstantInt::get(IntTy, CI->getValue().trunc(ElemWidth)));
     } else if (auto *CN = dyn_cast<ConstantFPSDNode>(V.getNode())) {
       const ConstantFP *CF = CN->getConstantFPValue();
       APInt A = CF->getValueAPF().bitcastToAPInt();
@@ -3403,15 +3415,49 @@ HexagonTargetLowering::ReplaceNodeResults(SDNode *N,
 SDValue
 HexagonTargetLowering::PerformDAGCombine(SDNode *N,
                                          DAGCombinerInfo &DCI) const {
+  SDValue Op(N, 0);
+  const SDLoc &dl(Op);
+  unsigned Opc = Op.getOpcode();
+
+  // Combining transformations applicable for arbitrary vector sizes.
+  if (DCI.isBeforeLegalizeOps()) {
+    switch (Opc) {
+    case ISD::VECREDUCE_ADD:
+      if (SDValue V = splitVecReduceAdd(N, DCI.DAG))
+        return V;
+      if (SDValue V = expandVecReduceAdd(N, DCI.DAG))
+        return V;
+      return SDValue();
+    case ISD::PARTIAL_REDUCE_SMLA:
+    case ISD::PARTIAL_REDUCE_UMLA:
+    case ISD::PARTIAL_REDUCE_SUMLA:
+      if (SDValue V = splitExtendingPartialReduceMLA(N, DCI.DAG))
+        return V;
+      return SDValue();
+    }
+  } else {
+    switch (Opc) {
+    case ISD::VSELECT: {
+      // (vselect (xor x, ptrue), v0, v1) -> (vselect x, v1, v0)
+      SDValue Cond = Op.getOperand(0);
+      if (Cond->getOpcode() == ISD::XOR) {
+        SDValue C0 = Cond.getOperand(0), C1 = Cond.getOperand(1);
+        if (C1->getOpcode() == HexagonISD::PTRUE) {
+          SDValue VSel = DCI.DAG.getNode(ISD::VSELECT, dl, ty(Op), C0,
+                                         Op.getOperand(2), Op.getOperand(1));
+          return VSel;
+        }
+      }
+      return SDValue();
+    }
+    }
+  }
+
   if (isHvxOperation(N, DCI.DAG)) {
     if (SDValue V = PerformHvxDAGCombine(N, DCI))
       return V;
     return SDValue();
   }
-
-  SDValue Op(N, 0);
-  const SDLoc &dl(Op);
-  unsigned Opc = Op.getOpcode();
 
   if (Opc == ISD::TRUNCATE) {
     SDValue Op0 = Op.getOperand(0);
@@ -3431,7 +3477,8 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
-  if (Opc == HexagonISD::P2D) {
+  switch (Opc) {
+  case HexagonISD::P2D: {
     SDValue P = Op.getOperand(0);
     switch (P.getOpcode()) {
     case HexagonISD::PTRUE:
@@ -3441,20 +3488,9 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
     default:
       break;
     }
-  } else if (Opc == ISD::VSELECT) {
-    // This is pretty much duplicated in HexagonISelLoweringHVX...
-    //
-    // (vselect (xor x, ptrue), v0, v1) -> (vselect x, v1, v0)
-    SDValue Cond = Op.getOperand(0);
-    if (Cond->getOpcode() == ISD::XOR) {
-      SDValue C0 = Cond.getOperand(0), C1 = Cond.getOperand(1);
-      if (C1->getOpcode() == HexagonISD::PTRUE) {
-        SDValue VSel = DCI.DAG.getNode(ISD::VSELECT, dl, ty(Op), C0,
-                                       Op.getOperand(2), Op.getOperand(1));
-        return VSel;
-      }
-    }
-  } else if (Opc == ISD::TRUNCATE) {
+    break;
+  }
+  case ISD::TRUNCATE: {
     SDValue Op0 = Op.getOperand(0);
     // fold (truncate (build pair x, y)) -> (truncate x) or x
     if (Op0.getOpcode() == ISD::BUILD_PAIR) {
@@ -3467,7 +3503,9 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
       if (ty(Elem0).bitsGT(TruncTy))
         return DCI.DAG.getNode(ISD::TRUNCATE, dl, TruncTy, Elem0);
     }
-  } else if (Opc == ISD::OR) {
+    break;
+  }
+  case ISD::OR: {
     // fold (or (shl xx, s), (zext y)) -> (COMBINE (shl xx, s-32), y)
     // if s >= 32
     auto fold0 = [&, this](SDValue Op) {
@@ -3497,6 +3535,8 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
 
     if (SDValue R = fold0(Op))
       return R;
+    break;
+  }
   }
 
   return SDValue();
@@ -3738,6 +3778,78 @@ EVT HexagonTargetLowering::getOptimalMemOpType(
   if (Op.size() >= 2 && Op.isAligned(Align(2)))
     return MVT::i16;
   return MVT::Other;
+}
+
+// The helpers below are versions of llvm::getShuffleReduction and
+// llvm::getOrderedReduction, adapted to use during DAG passes and simplified as
+// follows:
+// - ICmp and FCmp are not handled;
+// - in every step in getShuffleReduction, the input is split into halves (not
+// pairwise).
+
+static SDValue getOrderedReduction(SDValue Vec, unsigned Op,
+                                   SelectionDAG &DAG) {
+  assert(Op != Instruction::ICmp && Op != Instruction::FCmp);
+
+  EVT VT = Vec.getValueType();
+  EVT EltT = VT.getVectorElementType();
+  unsigned VF = VT.getVectorNumElements();
+  assert(VF > 0 &&
+         "Reduction emission only supported for non-zero length vectors!");
+
+  SDLoc DL(Vec);
+  SDValue Result = DAG.getExtractVectorElt(DL, EltT, Vec, 0);
+  for (unsigned ExtractIdx = 1; ExtractIdx < VF; ++ExtractIdx) {
+    SDValue Ext = DAG.getExtractVectorElt(DL, EltT, Vec, ExtractIdx);
+    Result = DAG.getNode(Op, DL, EltT, {Result, Ext});
+  }
+
+  return Result;
+}
+
+static SDValue getShuffleReduction(SDValue Vec, unsigned Op,
+                                   SelectionDAG &DAG) {
+  assert(Op != Instruction::ICmp && Op != Instruction::FCmp);
+
+  EVT VT = Vec.getValueType();
+  unsigned VF = VT.getVectorNumElements();
+  if (VF == 0)
+    llvm_unreachable("Vector must be non-zero length");
+  // VF is a power of 2 so we can emit the reduction using log2(VF) shuffles
+  // and vector ops, reducing the set of values being computed by half each
+  // round.
+  assert(isPowerOf2_32(VF) &&
+         "Reduction emission only supported for pow2 vectors!");
+
+  SDLoc DL(Vec);
+  // TODO: Is it correct to create double-vector shuffle and fill 3/4 of it with
+  // undefs?
+  SmallVector<int, 32> ShuffleMask(VF);
+  for (unsigned i = VF; i > 1; i >>= 1) {
+    // Move the upper half of the vector to the lower half.
+    for (unsigned j = 0; j != i / 2; ++j)
+      ShuffleMask[j] = i / 2 + j;
+    // Fill the rest of the mask with undef.
+    std::fill(&ShuffleMask[i / 2], ShuffleMask.end(), -1);
+
+    SDValue Shuf =
+        DAG.getVectorShuffle(VT, DL, Vec, DAG.getUNDEF(VT), ShuffleMask);
+
+    Vec = DAG.getNode(Op, DL, VT, {Vec, Shuf});
+  }
+  // The result is in the first element of the vector.
+  return DAG.getExtractVectorElt(DL, VT.getVectorElementType(), Vec, 0);
+}
+
+SDValue HexagonTargetLowering::expandVecReduceAdd(SDNode *N,
+                                                  SelectionDAG &DAG) const {
+  // Since we disabled automatic reduction expansion, generate log2 ladder code
+  // if the vector is of a power-of-two length.
+  SDValue Input = N->getOperand(0);
+  if (isPowerOf2_32(Input.getValueType().getVectorNumElements()))
+    return getShuffleReduction(Input, ISD::ADD, DAG);
+  // Otherwise, reduction will be scalarized.
+  return getOrderedReduction(Input, ISD::ADD, DAG);
 }
 
 bool HexagonTargetLowering::allowsMemoryAccess(

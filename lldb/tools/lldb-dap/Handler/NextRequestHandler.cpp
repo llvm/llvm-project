@@ -27,7 +27,7 @@ namespace lldb_dap {
 /// adapter first sends the response and then a `stopped` event (with reason
 /// `step`) after the step has completed.
 Error NextRequestHandler::Run(const NextArguments &args) const {
-  if (!SBDebugger::StateIsStoppedState(dap.target.GetProcess().GetState()))
+  if (dap.ProcessIsNotStopped())
     return make_error<NotStoppedError>();
 
   lldb::SBThread thread = dap.GetLLDBThread(args.threadId);

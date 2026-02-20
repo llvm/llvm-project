@@ -407,6 +407,7 @@ def : AlwaysUniform<int_amdgcn_cluster_workgroup_max_flat_id>;
 def : AlwaysUniform<int_amdgcn_workgroup_id_x>;
 def : AlwaysUniform<int_amdgcn_workgroup_id_y>;
 def : AlwaysUniform<int_amdgcn_workgroup_id_z>;
+def : AlwaysUniform<int_amdgcn_s_alloc_vgpr>;
 def : AlwaysUniform<int_amdgcn_s_getpc>;
 def : AlwaysUniform<int_amdgcn_s_getreg>;
 def : AlwaysUniform<int_amdgcn_s_memrealtime>;

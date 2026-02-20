@@ -86,7 +86,7 @@ body:             |
     %8:gpr64 = COPY killed $x0
     %9:gpr64 = IMPLICIT_DEF
     %10:gpr64 = IMPLICIT_DEF
-    %11:gpr64 = SUBREG_TO_REG 0, killed undef %1, %subreg.sub_32
+    %11:gpr64 = SUBREG_TO_REG killed undef %1, %subreg.sub_32
     ADJCALLSTACKDOWN 16, 0, implicit-def dead $sp, implicit $sp
     BL @_ZL9testScanfPKcjz, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
     ADJCALLSTACKUP 16, 0, implicit-def dead $sp, implicit $sp

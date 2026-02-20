@@ -1373,7 +1373,7 @@ public:
   /// ISD::CondCode instead of an SDValue.
   SDValue getSetCC(const SDLoc &DL, EVT VT, SDValue LHS, SDValue RHS,
                    ISD::CondCode Cond, SDValue Chain = SDValue(),
-                   bool IsSignaling = false) {
+                   bool IsSignaling = false, SDNodeFlags Flags = {}) {
     assert(LHS.getValueType().isVector() == RHS.getValueType().isVector() &&
            "Vector/scalar operand type mismatch for setcc");
     assert(LHS.getValueType().isVector() == VT.isVector() &&
@@ -1382,8 +1382,9 @@ public:
            "Cannot create a setCC of an invalid node.");
     if (Chain)
       return getNode(IsSignaling ? ISD::STRICT_FSETCCS : ISD::STRICT_FSETCC, DL,
-                     {VT, MVT::Other}, {Chain, LHS, RHS, getCondCode(Cond)});
-    return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond));
+                     {VT, MVT::Other}, {Chain, LHS, RHS, getCondCode(Cond)},
+                     Flags);
+    return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond), Flags);
   }
 
   /// Helper function to make it easier to build VP_SETCCs if you just have an
@@ -1762,6 +1763,11 @@ public:
   /// Return a freeze using the SDLoc of the value operand.
   LLVM_ABI SDValue getFreeze(SDValue V);
 
+  /// Return a freeze of V if any of the demanded elts may be undef or poison.
+  /// If \p PoisonOnly is true, then only check for poison elements.
+  LLVM_ABI SDValue getFreeze(SDValue V, const APInt &DemandedElts,
+                             bool PoisonOnly = false);
+
   /// Return an AssertAlignSDNode.
   LLVM_ABI SDValue getAssertAlign(const SDLoc &DL, SDValue V, Align A);
 
@@ -2112,7 +2118,7 @@ public:
 
   /// Constant fold a setcc to true or false.
   LLVM_ABI SDValue FoldSetCC(EVT VT, SDValue N1, SDValue N2, ISD::CondCode Cond,
-                             const SDLoc &dl);
+                             const SDLoc &dl, SDNodeFlags Flags = {});
 
   /// Return true if the sign bit of Op is known to be zero.
   /// We use this predicate to simplify operations downstream.
@@ -2237,8 +2243,19 @@ public:
 
   /// Test if the given value is known to have exactly one bit set. This differs
   /// from computeKnownBits in that it doesn't necessarily determine which bit
-  /// is set.
-  LLVM_ABI bool isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth = 0) const;
+  /// is set. If 'OrZero' is set, then return true if the given value is either
+  /// a power of two or zero.
+  LLVM_ABI bool isKnownToBeAPowerOfTwo(SDValue Val, bool OrZero = false,
+                                       unsigned Depth = 0) const;
+
+  /// Test if the given value is known to have exactly one bit set. This differs
+  /// from computeKnownBits in that it doesn't necessarily determine which bit
+  /// is set. The DemandedElts argument allows us to only collect the minimum
+  /// sign bits of the requested vector elements. If 'OrZero' is set, then
+  /// return true if the given value is either a power of two or zero.
+  LLVM_ABI bool isKnownToBeAPowerOfTwo(SDValue Val, const APInt &DemandedElts,
+                                       bool OrZero = false,
+                                       unsigned Depth = 0) const;
 
   /// Test if the given _fp_ value is known to be an integer power-of-2, either
   /// positive or negative.

@@ -5,12 +5,13 @@
 ---
 name:            gemm_loop1
 tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
 body:             |
   ; GFX11-LABEL: name: gemm_loop1
   ; GFX11: bb.0:
   ; GFX11-NEXT:   successors: %bb.1(0x80000000)
   ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT:   S_WAITCNT 0
   ; GFX11-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-NEXT:   renamable $vgpr1 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-NEXT:   renamable $vgpr2 = V_MOV_B32_e32 0, implicit $exec
