@@ -486,7 +486,8 @@ public:
                       Target *target) const;
 
 private:
-  using collection = llvm::SetVector<SymbolContext, std::vector<SymbolContext>>;
+  using collection =
+      llvm::SetVector<SymbolContext, llvm::SmallVector<SymbolContext>>;
   using const_iterator = collection::const_iterator;
 
   // Member variables.
