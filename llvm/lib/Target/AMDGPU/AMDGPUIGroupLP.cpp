@@ -115,12 +115,10 @@ public:
 
 using SUnitsToCandidateSGsMap = DenseMap<SUnit *, SmallVector<int, 4>>;
 
-namespace {
 /// Try to add and edge from SU \p A to SU \p B to the \p DAG.
-bool tryAddEdge(ScheduleDAGInstrs *DAG, SUnit *A, SUnit *B) {
+static bool tryAddEdge(ScheduleDAGInstrs *DAG, SUnit *A, SUnit *B) {
   return A != B && DAG->addEdge(B, SDep(A, SDep::Artificial));
 }
-} // namespace
 
 // Classify instructions into groups to enable fine tuned control over the
 // scheduler. These groups may be more specific than current SchedModel
@@ -761,8 +759,8 @@ void PipelineSolver::greedyFind(
 
     for (auto &E : BestEdges) {
       AddedEdges.push_back(E);
-      [[maybe_unused]] bool Added = tryAddEdge(DAG, E.first, E.second);
-      assert(Added && "Edges known to be insertable.");
+      if (!tryAddEdge(DAG, E.first, E.second))
+        llvm_unreachable("Edges known to be insertable.");
     }
 
     LLVM_DEBUG(dbgs() << "Best Group has ID: " << BestGroupID << " and Mask"
