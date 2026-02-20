@@ -210,9 +210,9 @@
 # CHECK: rolw	%dx, %dx
 # CHECK: encoding: [0x62,0xf4,0x6d,0x18,0xd1,0xc2]
          rolw	%dx, %dx
-# CHECK: {nf}	rolw	%dx, %dx
+# CHECK: {nf}	rolw	$1, %dx, %dx
 # CHECK: encoding: [0x62,0xf4,0x6d,0x1c,0xd1,0xc2]
-         {nf}	rolw	%dx, %dx
+         {nf}	rolw	$1, %dx, %dx
 # CHECK: {evex}	roll	%ecx
 # CHECK: encoding: [0x62,0xf4,0x7c,0x08,0xd1,0xc1]
          {evex}	roll	%ecx
@@ -222,9 +222,9 @@
 # CHECK: roll	%ecx, %ecx
 # CHECK: encoding: [0x62,0xf4,0x74,0x18,0xd1,0xc1]
          roll	%ecx, %ecx
-# CHECK: {nf}	roll	%ecx, %ecx
+# CHECK: {nf}	roll	$1, %ecx, %ecx
 # CHECK: encoding: [0x62,0xf4,0x74,0x1c,0xd1,0xc1]
-         {nf}	roll	%ecx, %ecx
+         {nf}	roll	$1, %ecx, %ecx
 # CHECK: {evex}	rolq	%r9
 # CHECK: encoding: [0x62,0xd4,0xfc,0x08,0xd1,0xc1]
          {evex}	rolq	%r9
@@ -234,9 +234,9 @@
 # CHECK: rolq	%r9, %r9
 # CHECK: encoding: [0x62,0xd4,0xb4,0x18,0xd1,0xc1]
          rolq	%r9, %r9
-# CHECK: {nf}	rolq	%r9, %r9
+# CHECK: {nf}	rolq	$1, %r9, %r9
 # CHECK: encoding: [0x62,0xd4,0xb4,0x1c,0xd1,0xc1]
-         {nf}	rolq	%r9, %r9
+         {nf}	rolq	$1, %r9, %r9
 # CHECK: {evex}	rolb	291(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x7c,0x08,0xd0,0x84,0x80,0x23,0x01,0x00,0x00]
          {evex}	rolb	291(%r8,%rax,4)

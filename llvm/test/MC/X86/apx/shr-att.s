@@ -210,9 +210,9 @@
 # CHECK: shrw	%dx, %dx
 # CHECK: encoding: [0x62,0xf4,0x6d,0x18,0xd1,0xea]
          shrw	%dx, %dx
-# CHECK: {nf}	shrw	%dx, %dx
+# CHECK: {nf}	shrw	$1, %dx, %dx
 # CHECK: encoding: [0x62,0xf4,0x6d,0x1c,0xd1,0xea]
-         {nf}	shrw	%dx, %dx
+         {nf}	shrw	$1, %dx, %dx
 # CHECK: {evex}	shrl	%ecx
 # CHECK: encoding: [0x62,0xf4,0x7c,0x08,0xd1,0xe9]
          {evex}	shrl	%ecx
@@ -222,9 +222,9 @@
 # CHECK: shrl	%ecx, %ecx
 # CHECK: encoding: [0x62,0xf4,0x74,0x18,0xd1,0xe9]
          shrl	%ecx, %ecx
-# CHECK: {nf}	shrl	%ecx, %ecx
+# CHECK: {nf}	shrl	$1, %ecx, %ecx
 # CHECK: encoding: [0x62,0xf4,0x74,0x1c,0xd1,0xe9]
-         {nf}	shrl	%ecx, %ecx
+         {nf}	shrl	$1, %ecx, %ecx
 # CHECK: {evex}	shrq	%r9
 # CHECK: encoding: [0x62,0xd4,0xfc,0x08,0xd1,0xe9]
          {evex}	shrq	%r9
@@ -234,9 +234,9 @@
 # CHECK: shrq	%r9, %r9
 # CHECK: encoding: [0x62,0xd4,0xb4,0x18,0xd1,0xe9]
          shrq	%r9, %r9
-# CHECK: {nf}	shrq	%r9, %r9
+# CHECK: {nf}	shrq	$1, %r9, %r9
 # CHECK: encoding: [0x62,0xd4,0xb4,0x1c,0xd1,0xe9]
-         {nf}	shrq	%r9, %r9
+         {nf}	shrq	$1, %r9, %r9
 # CHECK: {evex}	shrb	291(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x7c,0x08,0xd0,0xac,0x80,0x23,0x01,0x00,0x00]
          {evex}	shrb	291(%r8,%rax,4)
