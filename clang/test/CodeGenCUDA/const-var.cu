@@ -15,8 +15,8 @@
 // Both are promoted to device side.
 
 // DEV-DAG: @_ZN5Test1L1aE = internal addrspace(4) constant i32 1
-// DEV-DAG: @_ZN5Test11B2p1E = addrspace(4) externally_initialized constant ptr addrspacecast (ptr addrspace(4) @_ZN5Test1L1aE to ptr)
-// DEV-DAG: @_ZN5Test11B2p2E = addrspace(4) externally_initialized constant ptr addrspacecast (ptr addrspace(4) @_ZN5Test1L1aE to ptr)
+// DEV-DAG: @_ZN5Test11B2p1E = addrspace(4) constant ptr addrspacecast (ptr addrspace(4) @_ZN5Test1L1aE to ptr)
+// DEV-DAG: @_ZN5Test11B2p2E = addrspace(4) constant ptr addrspacecast (ptr addrspace(4) @_ZN5Test1L1aE to ptr)
 // DEV-DAG: @_ZN5Test12b2E = addrspace(1) externally_initialized global i32 1
 // HOST-DAG: @_ZN5Test1L1aE = internal constant i32 1
 // HOST-DAG: @_ZN5Test11B2p1E = constant ptr @_ZN5Test1L1aE
