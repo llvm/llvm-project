@@ -360,6 +360,10 @@ void ThreadedCommunication::SetReadThreadBytesReceivedCallback(
   m_callback_baton = callback_baton;
 }
 
+void ThreadedCommunication::InterruptRead() {
+  m_connection_sp->InterruptRead();
+}
+
 void ThreadedCommunication::SynchronizeWithReadThread() {
   // Only one thread can do the synchronization dance at a time.
   std::lock_guard<std::mutex> guard(m_synchronize_mutex);
@@ -374,7 +378,7 @@ void ThreadedCommunication::SynchronizeWithReadThread() {
     return;
 
   // Notify the read thread.
-  m_connection_sp->InterruptRead();
+  InterruptRead();
 
   // Wait for the synchronization event.
   EventSP event_sp;

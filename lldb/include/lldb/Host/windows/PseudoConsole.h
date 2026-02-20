@@ -10,6 +10,7 @@
 #define LIBLLDB_HOST_WINDOWS_PSEUDOCONSOLE_H_
 
 #include "llvm/Support/Error.h"
+#include <mutex>
 #include <string>
 
 #define PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE 0x20016
@@ -29,10 +30,30 @@ public:
   PseudoConsole &operator=(const PseudoConsole &) = delete;
   PseudoConsole &operator=(PseudoConsole &&) = delete;
 
+  /// Creates and opens a new ConPTY instance with a default console size of
+  /// 80x25. Also sets up the associated STDIN/STDOUT pipes and drains any
+  /// initialization sequences emitted by Windows.
+  ///
+  /// \return
+  ///     An llvm::Error if the ConPTY could not be created, or if ConPTY is
+  ///     not available on this version of Windows, llvm::Error::success()
+  ///     otherwise.
   llvm::Error OpenPseudoConsole();
 
-  /// Close the ConPTY, its read/write handles and invalidate them.
+  /// Closes the ConPTY and invalidates its handle, without closing the STDIN
+  /// and STDOUT pipes. Closing the ConPTY signals EOF to any process currently
+  /// attached to it.
   void Close();
+
+  /// Closes the STDIN and STDOUT pipe handles and invalidates them
+  void ClosePipes();
+
+  /// Returns whether the ConPTY and its pipes are currently open and valid.
+  ///
+  /// \return
+  ///     True if the ConPTY handle, STDIN write handle, and STDOUT read handle
+  ///     are all valid, false otherwise.
+  bool IsConnected() const;
 
   /// The ConPTY HPCON handle accessor.
   ///
@@ -71,10 +92,33 @@ public:
   /// then drain all output before launching the actual debuggee.
   llvm::Error DrainInitSequences();
 
+  /// Returns a reference to the mutex used to synchronize access to the
+  /// ConPTY state.
+  std::mutex &GetMutex() { return m_mutex; };
+
+  /// Returns a reference to the condition variable used to signal state changes
+  /// to threads waiting on the ConPTY (e.g. waiting for output or shutdown).
+  std::condition_variable &GetCV() { return m_cv; };
+
+  /// Returns whether the ConPTY is in the process of shutting down.
+  ///
+  /// \return
+  ///     A reference to the atomic bool that is set to true when the ConPTY
+  ///     is stopping. Callers should check this in their read/write loops to
+  ///     exit gracefully.
+  const std::atomic<bool> &IsStopping() const { return m_stopping; };
+
+  /// Sets the stopping flag to \p value, signalling to threads waiting on the
+  /// ConPTY that they should stop.
+  void SetStopping(bool value) { m_stopping = value; };
+
 protected:
   HANDLE m_conpty_handle = ((HANDLE)(long long)-1);
   HANDLE m_conpty_output = ((HANDLE)(long long)-1);
   HANDLE m_conpty_input = ((HANDLE)(long long)-1);
+  std::mutex m_mutex{};
+  std::condition_variable m_cv{};
+  std::atomic<bool> m_stopping = false;
 };
 } // namespace lldb_private
 
