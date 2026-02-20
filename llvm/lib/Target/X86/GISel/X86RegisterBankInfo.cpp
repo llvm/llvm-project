@@ -292,6 +292,7 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   switch (Opc) {
   case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FNEG:
   case TargetOpcode::G_FPTRUNC:
   case TargetOpcode::G_FCONSTANT:
     // Instruction having only floating-point operands (all scalars in

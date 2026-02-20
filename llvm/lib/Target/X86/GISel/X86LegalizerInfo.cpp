@@ -132,6 +132,12 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
        G_FLOG,  G_FLOG2, G_FLOG10, G_FPOWI, G_FSINCOS, G_FCEIL, G_FFLOOR})
       .libcall();
 
+  getActionDefinitionsBuilder(G_FNEG)
+      .legalFor(UseX87 && !HasSSE1, {s32})
+      .legalFor(UseX87 && !HasSSE2, {s64})
+      .legalFor(UseX87, {s80})
+      .lowerFor({s32, s64});
+
   getActionDefinitionsBuilder(G_FSQRT)
       .legalFor(HasSSE1 || UseX87, {s32})
       .legalFor(HasSSE2 || UseX87, {s64})
