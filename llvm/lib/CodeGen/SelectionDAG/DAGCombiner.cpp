@@ -26143,10 +26143,8 @@ static SDValue combineConcatVectorOfCasts(SDNode *N, SelectionDAG &DAG) {
   // the operation support type parameter depends on the opcode. In addition,
   // check the other type in the cast to make sure this is really legal.
   EVT VT = N->getValueType(0);
-  EVT SrcEltVT = SrcVT.getVectorElementType();
   ElementCount NumElts = SrcVT.getVectorElementCount() * N->getNumOperands();
-  EVT ConcatSrcVT =
-      SrcVT.changeVectorElementCount(*DAG.getContext(), NumElts);
+  EVT ConcatSrcVT = SrcVT.changeVectorElementCount(*DAG.getContext(), NumElts);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   switch (CastOpcode) {
   case ISD::SINT_TO_FP:
