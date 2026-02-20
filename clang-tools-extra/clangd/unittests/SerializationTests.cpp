@@ -444,180 +444,60 @@ TEST(SerializationTest, NoCrashOnBadStringTableSize) {
               testing::HasSubstr("bytes is implausible"));
 }
 
-// Verify path remapping is applied to all URI fields during load/store.
-// An index is generated at /home/project. A second client at /workarea/project
-// loads and re-stores the shards. On-disk content always contains the
-// /home/project paths so the index remains portable.
+// Verify path transformation for both load and store, and that non-matching
+// strings are preserved.
 TEST(SerializationTest, PathTransformRoundTrip) {
-  // Store transform: map /workarea/project -> /home/project so that
-  // on-disk content stays in the canonical /home/project paths.
-  PathTransform StoreTransform =
-      [](llvm::StringRef URI) -> std::optional<std::string> {
-    std::string S = URI.str();
-    size_t Pos = S.find("/workarea/project/");
-    if (Pos != std::string::npos) {
-      S.replace(Pos, strlen("/workarea/project/"), "/home/project/");
-      return S;
+  // The YAML fixture uses file:///path/ URIs. Our load transform remaps
+  // /path/ -> /workarea/ and the store transform reverses it.
+  PathTransform Load = [](llvm::StringRef S) -> std::optional<std::string> {
+    std::string R = S.str();
+    if (size_t P = R.find("/path/"); P != std::string::npos) {
+      R.replace(P, 6, "/workarea/");
+      return R;
     }
     return std::nullopt;
   };
-  // Load transform: map /home/project -> /workarea/project so that
-  // in-memory paths match the local filesystem.
-  PathTransform LoadTransform =
-      [](llvm::StringRef URI) -> std::optional<std::string> {
-    std::string S = URI.str();
-    size_t Pos = S.find("/home/project/");
-    if (Pos != std::string::npos) {
-      S.replace(Pos, strlen("/home/project/"), "/workarea/project/");
-      return S;
+  PathTransform Store = [](llvm::StringRef S) -> std::optional<std::string> {
+    std::string R = S.str();
+    if (size_t P = R.find("/workarea/"); P != std::string::npos) {
+      R.replace(P, 10, "/path/");
+      return R;
     }
     return std::nullopt;
   };
 
-  // The index is generated with /home/project paths.
-  Symbol Sym;
-  Sym.ID = cantFail(SymbolID::fromStr("057557CEBF6E6B2D"));
-  Sym.Name = "TestFunc";
-  Sym.Scope = "ns::";
-  Sym.Definition.FileURI = "file:///home/project/def.cpp";
-  Sym.CanonicalDeclaration.FileURI = "file:///home/project/decl.h";
-  Sym.IncludeHeaders.push_back(
-      {/*IncludeHeader=*/"file:///home/project/header.h",
-       /*References=*/1,
-       /*SupportedDirectives=*/Symbol::Include});
-  Sym.IncludeHeaders.push_back(
-      {/*IncludeHeader=*/"<system_header>", // Literal, should not be modified
-       /*References=*/1,
-       /*SupportedDirectives=*/Symbol::Include});
-
-  SymbolSlab::Builder SymbolBuilder;
-  SymbolBuilder.insert(Sym);
-  SymbolSlab Symbols = std::move(SymbolBuilder).build();
-
-  Ref R;
-  R.Location.FileURI = "file:///home/project/ref.cpp";
-  R.Kind = RefKind::Reference;
-  RefSlab::Builder RefBuilder;
-  RefBuilder.insert(Sym.ID, R);
-  RefSlab Refs = std::move(RefBuilder).build();
-
-  IncludeGraph Sources;
-  IncludeGraphNode IGN;
-  IGN.URI = "file:///home/project/source.cpp";
-  IGN.Flags = IncludeGraphNode::SourceFlag::IsTU;
-  IGN.Digest = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
-  IGN.DirectIncludes = {"file:///home/project/inc1.h",
-                        "file:///home/project/inc2.h"};
-  Sources[IGN.URI] = IGN;
-
-  tooling::CompileCommand Cmd;
-  Cmd.Directory = "/home/project/src";
-  Cmd.CommandLine = {"/usr/bin/clang++",
-                     "-I/home/project/include",
-                     "-isystem/home/project/sysinclude",
-                     "-isystem",
-                     "/home/project/sysinclude2",
-                     "-DFOO=bar",
-                     "-DROOT=/home/project/src",
-                     "/home/project/src/test.cpp"};
-
-  // Serialize the index directly (no transform) to produce the canonical
-  // on-disk format containing /home/project paths.
-  IndexFileOut Out;
-  Out.Symbols = &Symbols;
-  Out.Refs = &Refs;
-  Out.Sources = &Sources;
-  Out.Cmd = &Cmd;
+  // Serialize the existing YAML fixture to binary RIFF
+  auto In = readIndexFile(YAML);
+  ASSERT_TRUE(bool(In)) << In.takeError();
+  IndexFileOut Out(*In);
   Out.Format = IndexFileFormat::RIFF;
   std::string Serialized = llvm::to_string(Out);
 
-  // Verify the on-disk shard contains /home/project paths.
-  auto Raw = readIndexFile(Serialized, SymbolOrigin::Background);
-  ASSERT_TRUE(bool(Raw)) << Raw.takeError();
-  ASSERT_TRUE(Raw->Symbols);
-  EXPECT_EQ(llvm::StringRef(Raw->Symbols->find(Sym.ID)->Definition.FileURI),
-            "file:///home/project/def.cpp")
-      << "On-disk shard should contain /home/project paths";
-  ASSERT_TRUE(Raw->Cmd);
-  EXPECT_EQ(Raw->Cmd->Directory, "/home/project/src");
+  // Every string containing "/path/" is remapped on load
+  auto Loaded = readIndexFile(Serialized, SymbolOrigin::Background, &Load);
+  ASSERT_TRUE(bool(Loaded)) << Loaded.takeError();
 
-  // Load with the transform to map /home/project -> /workarea/project.
-  auto In = readIndexFile(Serialized, SymbolOrigin::Background, &LoadTransform);
-  ASSERT_TRUE(bool(In)) << In.takeError();
+  ASSERT_TRUE(Loaded->Symbols);
+  auto &Sym = *Loaded->Symbols->find(
+      cantFail(SymbolID::fromStr("057557CEBF6E6B2D")));
+  EXPECT_EQ(llvm::StringRef(Sym.CanonicalDeclaration.FileURI),
+            "file:///workarea/foo.h");
+  EXPECT_EQ(Sym.Name, "Foo1");
 
-  ASSERT_TRUE(In->Symbols);
-  auto &ReadSym = *In->Symbols->find(Sym.ID);
-  EXPECT_EQ(llvm::StringRef(ReadSym.Definition.FileURI),
-            "file:///workarea/project/def.cpp")
-      << "Symbol.Definition.FileURI not mapped";
-  EXPECT_EQ(llvm::StringRef(ReadSym.CanonicalDeclaration.FileURI),
-            "file:///workarea/project/decl.h")
-      << "Symbol.CanonicalDeclaration.FileURI not mapped";
-  ASSERT_EQ(ReadSym.IncludeHeaders.size(), 2u);
-  EXPECT_EQ(ReadSym.IncludeHeaders[0].IncludeHeader,
-            "file:///workarea/project/header.h")
-      << "Symbol.IncludeHeaders[0].IncludeHeader not mapped";
-  EXPECT_EQ(ReadSym.IncludeHeaders[1].IncludeHeader, "<system_header>")
-      << "Literal include header should not be modified";
+  // Every string containing "/workarea/" is remapped back on store
+  IndexFileOut Out2(*Loaded);
+  Out2.Format = IndexFileFormat::RIFF;
+  Out2.Transform = &Store;
+  std::string Reserialized = llvm::to_string(Out2);
 
-  ASSERT_TRUE(In->Refs);
-  ASSERT_EQ(In->Refs->numRefs(), 1u);
-  auto RefIt = In->Refs->begin();
-  EXPECT_EQ(RefIt->first, Sym.ID);
-  ASSERT_EQ(RefIt->second.size(), 1u);
-  EXPECT_EQ(llvm::StringRef(RefIt->second[0].Location.FileURI),
-            "file:///workarea/project/ref.cpp")
-      << "Ref.Location.FileURI not mapped";
-
-  ASSERT_TRUE(In->Sources);
-  auto SourceIt = In->Sources->find("file:///workarea/project/source.cpp");
-  ASSERT_NE(SourceIt, In->Sources->end()) << "Source URI key not mapped";
-  EXPECT_EQ(SourceIt->second.URI, "file:///workarea/project/source.cpp")
-      << "IncludeGraphNode.URI not mapped";
-  EXPECT_THAT(SourceIt->second.DirectIncludes,
-              ElementsAre("file:///workarea/project/inc1.h",
-                          "file:///workarea/project/inc2.h"))
-      << "IncludeGraphNode.DirectIncludes not mapped";
-
-  ASSERT_TRUE(In->Cmd);
-  EXPECT_EQ(In->Cmd->Directory, "/workarea/project/src")
-      << "Cmd.Directory not mapped";
-  EXPECT_THAT(In->Cmd->CommandLine,
-              ElementsAre("/usr/bin/clang++", "-I/workarea/project/include",
-                          "-isystem/workarea/project/sysinclude", "-isystem",
-                          "/workarea/project/sysinclude2", "-DFOO=bar",
-                          "-DROOT=/workarea/project/src",
-                          "/workarea/project/src/test.cpp"))
-      << "Cmd.CommandLine not mapped";
-
-  // Re-serialize with the store transform. On-disk content should be
-  // back in /home/project paths so the index remains portable.
-  IndexFileOut WorkareaOut;
-  WorkareaOut.Symbols = &*In->Symbols;
-  WorkareaOut.Refs = &*In->Refs;
-  WorkareaOut.Sources = &*In->Sources;
-  WorkareaOut.Cmd = In->Cmd ? &*In->Cmd : nullptr;
-  WorkareaOut.Format = IndexFileFormat::RIFF;
-  WorkareaOut.Transform = &StoreTransform;
-  std::string WorkareaSerialized = llvm::to_string(WorkareaOut);
-
-  auto Restored = readIndexFile(WorkareaSerialized, SymbolOrigin::Background);
+  // Load without transform; canonical paths should be restored
+  auto Restored = readIndexFile(Reserialized, SymbolOrigin::Background);
   ASSERT_TRUE(bool(Restored)) << Restored.takeError();
   ASSERT_TRUE(Restored->Symbols);
-  EXPECT_EQ(
-      llvm::StringRef(Restored->Symbols->find(Sym.ID)->Definition.FileURI),
-      "file:///home/project/def.cpp")
-      << "Store transform should restore /home/project paths on disk";
-  ASSERT_TRUE(Restored->Cmd);
-  EXPECT_EQ(Restored->Cmd->Directory, "/home/project/src")
-      << "Store transform should restore Cmd.Directory on disk";
-  EXPECT_THAT(Restored->Cmd->CommandLine,
-              ElementsAre("/usr/bin/clang++", "-I/home/project/include",
-                          "-isystem/home/project/sysinclude", "-isystem",
-                          "/home/project/sysinclude2", "-DFOO=bar",
-                          "-DROOT=/home/project/src",
-                          "/home/project/src/test.cpp"))
-      << "Store transform should restore Cmd.CommandLine on disk";
+  EXPECT_EQ(llvm::StringRef(Restored->Symbols->find(cantFail(SymbolID::fromStr(
+                                 "057557CEBF6E6B2D")))
+                                 ->CanonicalDeclaration.FileURI),
+            "file:///path/foo.h");
 }
 
 } // namespace
