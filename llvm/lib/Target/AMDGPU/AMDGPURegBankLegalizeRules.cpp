@@ -645,6 +645,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniBRC}, {{}, {}, VerifyAllSgpr}})
       .Any({{DivBRC}, {{}, {}, ApplyAllVgpr}});
 
+  addRulesForGOpcs({G_PHI})
+      .Any({{UniS1}, {{}, {}, AextToS32InIncomingBlockGPHI}})
+      .Any({{UniS16}, {{}, {}, VerifyAllSgprGPHI}})
+      .Any({{UniBRC}, {{}, {}, VerifyAllSgprGPHI}})
+      .Any({{DivBRC}, {{}, {}, VerifyAllSgprOrVgprGPHI}});
+
   Predicate isSignedICmp([](const MachineInstr &MI) -> bool {
     auto Pred =
         static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());

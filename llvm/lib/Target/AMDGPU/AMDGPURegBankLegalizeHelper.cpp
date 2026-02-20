@@ -1061,6 +1061,44 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     MI.eraseFromParent();
     return true;
   }
+  case AextToS32InIncomingBlockGPHI: {
+    Register Dst = MI.getOperand(0).getReg();
+    Register NewDst = MRI.createVirtualRegister(SgprRB_S32);
+    B.setInsertPt(*MI.getParent(), MI.getParent()->getFirstNonPHI());
+    MI.getOperand(0).setReg(NewDst);
+    B.buildTrunc(Dst, NewDst);
+
+    for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
+      Register UseReg = MI.getOperand(i).getReg();
+
+      auto DefMI = MRI.getVRegDef(UseReg)->getIterator();
+      MachineBasicBlock *DefMBB = DefMI->getParent();
+
+      B.setInsertPt(*DefMBB, DefMBB->SkipPHIsAndLabels(std::next(DefMI)));
+
+      auto NewUse = B.buildAnyExt(SgprRB_S32, UseReg);
+      MI.getOperand(i).setReg(NewUse.getReg(0));
+    }
+    break;
+  }
+  case VerifyAllSgprGPHI: {
+    assert(llvm::all_of(MI.operands(), [&](const MachineOperand &Op) {
+      if (Op.isMBB())
+        return true;
+      return MRI.getRegBankOrNull(Op.getReg()) == SgprRB;
+    }));
+    return true;
+  }
+  case VerifyAllSgprOrVgprGPHI: {
+    assert(MRI.getRegBankOrNull(MI.getOperand(0).getReg()) == VgprRB);
+    assert(llvm::all_of(MI.operands(), [&](const MachineOperand &Op) {
+      if (Op.isMBB())
+        return true;
+      const RegisterBank *RB = MRI.getRegBankOrNull(Op.getReg());
+      return RB == VgprRB || RB == SgprRB;
+    }));
+    return true;
+  }
   }
 
   if (!WFI.SgprWaterfallOperandRegs.empty()) {
@@ -1666,56 +1704,6 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     }
   }
   return true;
-}
-
-bool RegBankLegalizeHelper::applyMappingPHI(MachineInstr &MI) {
-  Register Dst = MI.getOperand(0).getReg();
-  LLT Ty = MRI.getType(Dst);
-
-  if (Ty == LLT::scalar(1) && MUI.isUniform(Dst)) {
-    B.setInsertPt(*MI.getParent(), MI.getParent()->getFirstNonPHI());
-
-    Register NewDst = MRI.createVirtualRegister(SgprRB_S32);
-    MI.getOperand(0).setReg(NewDst);
-    B.buildTrunc(Dst, NewDst);
-
-    for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
-      Register UseReg = MI.getOperand(i).getReg();
-
-      auto DefMI = MRI.getVRegDef(UseReg)->getIterator();
-      MachineBasicBlock *DefMBB = DefMI->getParent();
-
-      B.setInsertPt(*DefMBB, DefMBB->SkipPHIsAndLabels(std::next(DefMI)));
-
-      auto NewUse = B.buildAnyExt(SgprRB_S32, UseReg);
-      MI.getOperand(i).setReg(NewUse.getReg(0));
-    }
-
-    return true;
-  }
-
-  // ALL divergent i1 phis should have been lowered and inst-selected into PHI
-  // with sgpr reg class and S1 LLT in AMDGPUGlobalISelDivergenceLowering pass.
-  // Note: this includes divergent phis that don't require lowering.
-  if (Ty == LLT::scalar(1) && MUI.isDivergent(Dst)) {
-    reportGISelFailure(MF, MORE, "amdgpu-regbanklegalize",
-                       "AMDGPU RegBankLegalize: Can't lower divergent S1 G_PHI",
-                       MI);
-    return false;
-  }
-
-  // We accept all types that can fit in some register class.
-  // Uniform G_PHIs have all sgpr registers.
-  // Divergent G_PHIs have vgpr dst but inputs can be sgpr or vgpr.
-  if (Ty == LLT::scalar(32) || Ty == LLT::pointer(1, 64) ||
-      Ty == LLT::pointer(4, 64)) {
-    return true;
-  }
-
-  reportGISelFailure(MF, MORE, "amdgpu-regbanklegalize",
-                     "AMDGPU RegBankLegalize: type not supported for G_PHI",
-                     MI);
-  return false;
 }
 
 [[maybe_unused]] static bool verifyRegBankOnOperands(MachineInstr &MI,
