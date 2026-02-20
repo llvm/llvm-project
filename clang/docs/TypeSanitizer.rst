@@ -119,8 +119,6 @@ brief dictionary of these terms.
 
 * ``omnipotent char``: This is a special type which can alias with anything. Its name comes from the C/C++ 
   type ``char``.
-* ``type p[x]``: This signifies pointers to the type. ``x`` is the number of indirections to reach the final value.
-  As an example, a pointer to a pointer to an integer would be ``type p2 int``.
 
 TypeSanitizer is still experimental. User-facing error messages should be improved in the future to remove 
 references to LLVM IR specific terms.
