@@ -289,6 +289,7 @@ Bug Fixes to Compiler Builtins
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a behavioral discrepancy between deleted functions and private members when checking the ``enable_if`` attribute. (#GH175895)
+- Fixed ``init_priority`` attribute by delaying type checks until after the type is deduced.
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -396,6 +397,7 @@ Fixed Point Support in Clang
 AST Matchers
 ------------
 - Add ``functionTypeLoc`` matcher for matching ``FunctionTypeLoc``.
+- Add missing support for ``TraversalKind`` in some ``addMatcher()`` overloads.
 
 clang-format
 ------------
@@ -406,6 +408,7 @@ clang-format
 
 libclang
 --------
+- Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
 
 Code Completion
 ---------------

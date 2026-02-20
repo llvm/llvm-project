@@ -310,6 +310,22 @@ if(LLVM_CCACHE_BUILD)
         set(CCACHE_PROGRAM "CCACHE_DIR=${LLVM_CCACHE_DIR} ${CCACHE_PROGRAM}")
       endif()
       set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_PROGRAM})
+
+      if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        # ccache with PCH can lead to false-positives when only a macro
+        # definition changes with non-Clang compilers, because macro definitions
+        # are not compared in preprocessed mode.
+        # See: https://github.com/ccache/ccache/issues/1668
+        if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
+          message(NOTICE "Using ccache with precompiled headers with non-Clang "
+            "compilers is not supported. CMAKE_DISABLE_PRECOMPILE_HEADERS will be set to ON. "
+            "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override this.")
+          set(CMAKE_DISABLE_PRECOMPILE_HEADERS "ON")
+        elseif(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+          message(WARNING "Using ccache with precompiled headers with non-Clang "
+            "compilers is not supported.")
+        endif()
+      endif()
     else()
       # Until a way to reliably configure ccache on Windows is found,
       # disable precompiled headers for Windows + ccache builds
