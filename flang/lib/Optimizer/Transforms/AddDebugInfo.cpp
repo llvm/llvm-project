@@ -54,6 +54,12 @@ class AddDebugInfoPass : public fir::impl::AddDebugInfoBase<AddDebugInfoPass> {
                        mlir::LLVM::DIScopeAttr scopeAttr,
                        fir::DebugTypeGenerator &typeGen,
                        mlir::SymbolTable *symbolTable, mlir::Value dummyScope);
+  void handleDeclareValueOp(fir::DeclareValueOp declOp,
+                            mlir::LLVM::DIFileAttr fileAttr,
+                            mlir::LLVM::DIScopeAttr scopeAttr,
+                            fir::DebugTypeGenerator &typeGen,
+                            mlir::SymbolTable *symbolTable,
+                            mlir::Value dummyScope);
 
 public:
   AddDebugInfoPass(fir::AddDebugInfoOptions options) : Base(options) {}
@@ -112,6 +118,14 @@ private:
   getModuleAttrFromGlobalOp(fir::GlobalOp globalOp,
                             mlir::LLVM::DIFileAttr fileAttr,
                             mlir::LLVM::DIScopeAttr scope);
+
+  template <typename Op>
+  void handleLocalVariable(Op declOp, llvm::StringRef name,
+                           mlir::LLVM::DIFileAttr fileAttr,
+                           mlir::LLVM::DIScopeAttr scopeAttr,
+                           fir::DebugTypeGenerator &typeGen,
+                           mlir::Value dummyScope, mlir::Type typeToConvert,
+                           fir::cg::XDeclareOp typeGenDeclOp);
 };
 
 bool debugInfoIsAlreadySet(mlir::Location loc) {
@@ -266,14 +280,40 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
   return true;
 }
 
+template <typename Op>
+void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
+                                           mlir::LLVM::DIFileAttr fileAttr,
+                                           mlir::LLVM::DIScopeAttr scopeAttr,
+                                           fir::DebugTypeGenerator &typeGen,
+                                           mlir::Value dummyScope,
+                                           mlir::Type typeToConvert,
+                                           fir::cg::XDeclareOp typeGenDeclOp) {
+  mlir::MLIRContext *context = &getContext();
+  mlir::OpBuilder builder(context);
+
+  // Get the dummy argument position from the explicit attribute.
+  unsigned argNo = 0;
+  if (dummyScope && declOp.getDummyScope() == dummyScope) {
+    if (auto argNoOpt = declOp.getDummyArgNo())
+      argNo = *argNoOpt;
+  }
+
+  auto tyAttr =
+      typeGen.convertType(typeToConvert, fileAttr, scopeAttr, typeGenDeclOp);
+
+  auto localVarAttr = mlir::LLVM::DILocalVariableAttr::get(
+      context, scopeAttr, mlir::StringAttr::get(context, name), fileAttr,
+      getLineFromLoc(declOp.getLoc()), argNo, /* alignInBits*/ 0, tyAttr,
+      mlir::LLVM::DIFlags::Zero);
+  declOp->setLoc(builder.getFusedLoc({declOp->getLoc()}, localVarAttr));
+}
+
 void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
                                        mlir::LLVM::DIFileAttr fileAttr,
                                        mlir::LLVM::DIScopeAttr scopeAttr,
                                        fir::DebugTypeGenerator &typeGen,
                                        mlir::SymbolTable *symbolTable,
                                        mlir::Value dummyScope) {
-  mlir::MLIRContext *context = &getContext();
-  mlir::OpBuilder builder(context);
   auto result = fir::NameUniquer::deconstruct(declOp.getUniqName());
 
   if (result.first != fir::NameUniquer::NameKind::VARIABLE)
@@ -293,21 +333,23 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
     }
   }
 
-  // Get the dummy argument position from the explicit attribute.
-  unsigned argNo = 0;
-  if (dummyScope && declOp.getDummyScope() == dummyScope) {
-    if (auto argNoOpt = declOp.getDummyArgNo())
-      argNo = *argNoOpt;
-  }
+  handleLocalVariable(declOp, result.second.name, fileAttr, scopeAttr, typeGen,
+                      dummyScope, fir::unwrapRefType(declOp.getType()), declOp);
+}
 
-  auto tyAttr = typeGen.convertType(fir::unwrapRefType(declOp.getType()),
-                                    fileAttr, scopeAttr, declOp);
+void AddDebugInfoPass::handleDeclareValueOp(fir::DeclareValueOp declOp,
+                                            mlir::LLVM::DIFileAttr fileAttr,
+                                            mlir::LLVM::DIScopeAttr scopeAttr,
+                                            fir::DebugTypeGenerator &typeGen,
+                                            mlir::SymbolTable *symbolTable,
+                                            mlir::Value dummyScope) {
+  auto result = fir::NameUniquer::deconstruct(declOp.getUniqName());
 
-  auto localVarAttr = mlir::LLVM::DILocalVariableAttr::get(
-      context, scopeAttr, mlir::StringAttr::get(context, result.second.name),
-      fileAttr, getLineFromLoc(declOp.getLoc()), argNo, /* alignInBits*/ 0,
-      tyAttr, mlir::LLVM::DIFlags::Zero);
-  declOp->setLoc(builder.getFusedLoc({declOp->getLoc()}, localVarAttr));
+  if (result.first != fir::NameUniquer::NameKind::VARIABLE)
+    return;
+
+  handleLocalVariable(declOp, result.second.name, fileAttr, scopeAttr, typeGen,
+                      dummyScope, declOp.getValue().getType(), nullptr);
 }
 
 mlir::LLVM::DICommonBlockAttr AddDebugInfoPass::getOrCreateCommonBlockAttr(
@@ -426,6 +468,18 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
       globalOp.getContext(), gvAttr, nullptr);
   auto arrayAttr = mlir::ArrayAttr::get(context, {dbgExpr});
   globalOp->setLoc(builder.getFusedLoc({globalOp.getLoc()}, arrayAttr));
+}
+
+static mlir::LLVM::DISubprogramAttr
+getScope(mlir::Operation *op, mlir::LLVM::DISubprogramAttr defaultScope) {
+  if (auto tOp = op->getParentOfType<mlir::omp::TargetOp>()) {
+    if (auto fusedLoc = llvm::dyn_cast<mlir::FusedLoc>(tOp.getLoc())) {
+      if (auto sp = llvm::dyn_cast<mlir::LLVM::DISubprogramAttr>(
+              fusedLoc.getMetadata()))
+        return sp;
+    }
+  }
+  return defaultScope;
 }
 
 void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
@@ -687,15 +741,13 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   });
 
   funcOp.walk([&](fir::cg::XDeclareOp declOp) {
-    mlir::LLVM::DISubprogramAttr spTy = spAttr;
-    if (auto tOp = declOp->getParentOfType<mlir::omp::TargetOp>()) {
-      if (auto fusedLoc = llvm::dyn_cast<mlir::FusedLoc>(tOp.getLoc())) {
-        if (auto sp = llvm::dyn_cast<mlir::LLVM::DISubprogramAttr>(
-                fusedLoc.getMetadata()))
-          spTy = sp;
-      }
-    }
+    mlir::LLVM::DISubprogramAttr spTy = getScope(declOp, spAttr);
     handleDeclareOp(declOp, fileAttr, spTy, typeGen, symbolTable, dummyScope);
+  });
+  funcOp.walk([&](fir::DeclareValueOp declOp) {
+    mlir::LLVM::DISubprogramAttr spTy = getScope(declOp, spAttr);
+    handleDeclareValueOp(declOp, fileAttr, spTy, typeGen, symbolTable,
+                         dummyScope);
   });
   // commonBlockMap ensures that we don't create multiple DICommonBlockAttr of
   // the same name in one function. But it is ok (rather required) to create
