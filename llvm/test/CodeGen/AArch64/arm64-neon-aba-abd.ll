@@ -200,10 +200,8 @@ define <2 x i32> @test_sabd_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
 define <2 x i32> @test_sabd_v2i32_const() {
 ; CHECK-SD-LABEL: test_sabd_v2i32_const:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov x8, #2147418112 // =0x7fff0000
-; CHECK-SD-NEXT:    movk x8, #32769, lsl #32
-; CHECK-SD-NEXT:    movk x8, #32766, lsl #48
-; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    adrp x8, .LCPI19_0
+; CHECK-SD-NEXT:    ldr d0, [x8, :lo12:.LCPI19_0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_sabd_v2i32_const:
