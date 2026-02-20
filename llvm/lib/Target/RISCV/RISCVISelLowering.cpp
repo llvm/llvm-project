@@ -21350,6 +21350,54 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     }
     break;
   }
+  case RISCVISD::ADDD: {
+    assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
+           "ADDD is only for RV32 with P extension");
+
+    SDValue Op0Lo = N->getOperand(0);
+    SDValue Op0Hi = N->getOperand(1);
+    SDValue Op1Lo = N->getOperand(2);
+    SDValue Op1Hi = N->getOperand(3);
+
+    // (ADDD lo, hi, x, 0) -> (WADDAU lo, hi, x, 0)
+    if (isNullConstant(Op1Hi)) {
+      SDValue Result =
+          DAG.getNode(RISCVISD::WADDAU, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                      Op0Lo, Op0Hi, Op1Lo, DAG.getConstant(0, DL, MVT::i32));
+      return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
+    }
+    // (ADDD x, 0, lo, hi) -> (WADDAU lo, hi, x, 0)
+    if (isNullConstant(Op0Hi)) {
+      SDValue Result =
+          DAG.getNode(RISCVISD::WADDAU, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                      Op1Lo, Op1Hi, Op0Lo, DAG.getConstant(0, DL, MVT::i32));
+      return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
+    }
+    break;
+  }
+  case RISCVISD::WADDAU: {
+    assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
+           "WADDAU is only for RV32 with P extension");
+    // (WADDAU (WADDAU lo, hi, x, 0), y, 0) -> (WADDAU lo, hi, x, y)
+    SDValue Op0Lo = N->getOperand(0);
+    SDValue Op0Hi = N->getOperand(1);
+    SDValue Op1 = N->getOperand(2);
+    SDValue Op2 = N->getOperand(3);
+
+    // Check if this WADDAU has a zero second operand and the accumulator
+    // comes from another WADDAU with a zero second operand.
+    // FIXME: Canonicalize zero Op1 to Op2.
+    if (isNullConstant(Op2) && Op0Lo.getOpcode() == RISCVISD::WADDAU &&
+        Op0Lo.getNode() == Op0Hi.getNode() && Op0Lo.getResNo() == 0 &&
+        Op0Hi.getResNo() == 1 && Op0Lo.hasOneUse() && Op0Hi.hasOneUse() &&
+        isNullConstant(Op0Lo.getOperand(3))) {
+      SDValue Result = DAG.getNode(
+          RISCVISD::WADDAU, DL, DAG.getVTList(MVT::i32, MVT::i32),
+          Op0Lo.getOperand(0), Op0Lo.getOperand(1), Op0Lo.getOperand(2), Op1);
+      return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
+    }
+    break;
+  }
   case RISCVISD::FMV_W_X_RV64: {
     // If the input to FMV_W_X_RV64 is just FMV_X_ANYEXTW_RV64 the the
     // conversion is unnecessary and can be replaced with the
@@ -26083,6 +26131,11 @@ bool RISCVTargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
   bool OptSize = Attr.hasFnAttr(Attribute::MinSize);
   return OptSize && !VT.isVector() &&
          VT.getSizeInBits() <= getMaxDivRemBitWidthSupported();
+}
+
+void RISCVTargetLowering::finalizeLowering(MachineFunction &MF) const {
+  MF.getFrameInfo().computeMaxCallFrameSize(MF);
+  TargetLoweringBase::finalizeLowering(MF);
 }
 
 bool RISCVTargetLowering::preferScalarizeSplat(SDNode *N) const {

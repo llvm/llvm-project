@@ -20,18 +20,6 @@ namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
-constexpr static const char *constructorDoc =
-    R"(Creates an interface from a given operation/opview object or from a
-subclass of OpView. Raises ValueError if the operation does not implement the
-interface.)";
-
-constexpr static const char *operationDoc =
-    R"(Returns an Operation for which the interface was constructed.)";
-
-constexpr static const char *opviewDoc =
-    R"(Returns an OpView subclass _instance_ for which the interface was
-constructed)";
-
 /// CRTP base class for Python classes representing MLIR Op interfaces.
 /// Interface hierarchies are flat so no base class is expected here. The
 /// derived class is expected to define the following static fields:
@@ -97,10 +85,16 @@ public:
     nanobind::class_<ConcreteIface> cls(m, ConcreteIface::pyClassName);
     cls.def(nanobind::init<nanobind::object, DefaultingPyMlirContext>(),
             nanobind::arg("object"),
-            nanobind::arg("context") = nanobind::none(), constructorDoc)
-        .def_prop_ro("operation", &PyConcreteOpInterface::getOperationObject,
-                     operationDoc)
-        .def_prop_ro("opview", &PyConcreteOpInterface::getOpView, opviewDoc);
+            nanobind::arg("context") = nanobind::none(),
+            "Creates an interface from a given operation/opview object or from "
+            "a subclass of OpView. Raises ValueError if the operation does not "
+            "implement the interface.")
+        .def_prop_ro(
+            "operation", &PyConcreteOpInterface::getOperationObject,
+            "Returns an Operation for which the interface was constructed.")
+        .def_prop_ro("opview", &PyConcreteOpInterface::getOpView,
+                     "Returns an OpView subclass _instance_ for which the "
+                     "interface was constructed");
     ConcreteIface::bindDerived(cls);
   }
 

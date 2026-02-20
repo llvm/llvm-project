@@ -1172,7 +1172,7 @@ HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
       assert(isPowerOf2_32(VecLen) &&
              "conversion only supported for pow2 VectorSize");
       for (unsigned i = 0; i < VecLen; ++i)
-        NewConst.push_back(IRB.getInt8(CV->getOperand(i)->isZeroValue()));
+        NewConst.push_back(IRB.getInt8(CV->getOperand(i)->isNullValue()));
 
       CVal = ConstantVector::get(NewConst);
       isVTi1Type = true;
@@ -2450,7 +2450,8 @@ HexagonTargetLowering::getBuildVectorConstInts(ArrayRef<SDValue> Values,
     // Make sure to always cast to IntTy.
     if (auto *CN = dyn_cast<ConstantSDNode>(V.getNode())) {
       const ConstantInt *CI = CN->getConstantIntValue();
-      Consts[i] = ConstantInt::getSigned(IntTy, CI->getValue().getSExtValue());
+      Consts[i] = cast<ConstantInt>(
+          ConstantInt::get(IntTy, CI->getValue().trunc(ElemWidth)));
     } else if (auto *CN = dyn_cast<ConstantFPSDNode>(V.getNode())) {
       const ConstantFP *CF = CN->getConstantFPValue();
       APInt A = CF->getValueAPF().bitcastToAPInt();

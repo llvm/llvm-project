@@ -1211,6 +1211,7 @@ public:
     // during unrolling.
     ExtractPenultimateElement,
     LogicalAnd, // Non-poison propagating logical And.
+    LogicalOr,  // Non-poison propagating logical Or.
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
@@ -1519,6 +1520,9 @@ public:
 
   /// Returns the incoming block with index \p Idx.
   const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
+
+  /// Returns the incoming value for \p VPBB. \p VPBB must be an incoming block.
+  VPValue *getIncomingValueForBlock(const VPBasicBlock *VPBB) const;
 
   /// Returns the number of incoming values, also number of incoming blocks.
   virtual unsigned getNumIncoming() const {
@@ -4515,6 +4519,9 @@ class VPlan {
   /// Represents the vectorization factor of the loop.
   VPSymbolicValue VF;
 
+  /// Represents the unroll factor of the loop.
+  VPSymbolicValue UF;
+
   /// Represents the loop-invariant VF * UF of the vector loop region.
   VPSymbolicValue VFxUF;
 
@@ -4654,6 +4661,9 @@ public:
   VPValue &getVF() { return VF; };
   const VPValue &getVF() const { return VF; };
 
+  /// Returns the UF of the vector loop region.
+  VPValue &getUF() { return UF; };
+
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
 
@@ -4667,6 +4677,12 @@ public:
     assert(hasVF(VF) && "Cannot set VF not already in plan");
     VFs.clear();
     VFs.insert(VF);
+  }
+
+  /// Remove \p VF from the plan.
+  void removeVF(ElementCount VF) {
+    assert(hasVF(VF) && "tried to remove VF not present in plan");
+    VFs.remove(VF);
   }
 
   bool hasVF(ElementCount VF) const { return VFs.count(VF); }
@@ -4689,7 +4705,8 @@ public:
 
   bool hasUF(unsigned UF) const { return UFs.empty() || UFs.contains(UF); }
 
-  unsigned getUF() const {
+  /// Returns the concrete UF of the plan, after unrolling.
+  unsigned getConcreteUF() const {
     assert(UFs.size() == 1 && "Expected a single UF");
     return UFs[0];
   }

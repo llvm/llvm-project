@@ -31,6 +31,7 @@ class SBValue;
 class SBStream;
 class SBStructuredData;
 class SBFileSpec;
+class SBFileSpecList;
 class SBModuleSpec;
 class SBStringList;
 } // namespace lldb
@@ -116,6 +117,8 @@ public:
   ToSWIGWrapper(std::unique_ptr<lldb::SBFileSpec> file_spec_sb);
   static PythonObject
   ToSWIGWrapper(std::unique_ptr<lldb::SBModuleSpec> module_spec_sb);
+  static PythonObject
+  ToSWIGWrapper(std::unique_ptr<lldb::SBFileSpecList> file_spec_list_sb);
 
   static python::ScopedPythonObject<lldb::SBCommandReturnObject>
   ToSWIGWrapper(CommandReturnObject &cmd_retobj);
@@ -273,6 +276,10 @@ void *LLDBSWIGPython_CastPyObjectToSBValueList(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBFileSpec(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBModuleSpec(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBModule(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBFileSpecList(PyObject *data);
 } // namespace python
 
 } // namespace lldb_private

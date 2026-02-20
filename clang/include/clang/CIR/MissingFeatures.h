@@ -381,6 +381,7 @@ struct MissingFeatures {
 
   // Future CIR attributes
   static bool optInfoAttr() { return false; }
+  static bool functionArgumentAttrs() { return false; }
 
   // Maybe only needed for Windows exception handling
   static bool currentFuncletPad() { return false; }

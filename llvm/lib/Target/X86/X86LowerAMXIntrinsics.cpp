@@ -71,7 +71,7 @@ private:
   DomTreeUpdater &DTU;
   LoopInfo *LI;
   BasicBlock *createLoop(BasicBlock *Preheader, BasicBlock *Exit, Value *Bound,
-                         Value *Step, StringRef Name, IRBuilderBase &B,
+                         ConstantInt *Step, StringRef Name, IRBuilderBase &B,
                          Loop *L);
   template <bool IsTileLoad>
   Value *createTileLoadStoreLoops(BasicBlock *Start, BasicBlock *End,
@@ -103,7 +103,7 @@ private:
 
 BasicBlock *X86LowerAMXIntrinsics::createLoop(BasicBlock *Preheader,
                                               BasicBlock *Exit, Value *Bound,
-                                              Value *Step, StringRef Name,
+                                              ConstantInt *Step, StringRef Name,
                                               IRBuilderBase &B, Loop *L) {
   LLVMContext &Ctx = Preheader->getContext();
   BasicBlock *Header =

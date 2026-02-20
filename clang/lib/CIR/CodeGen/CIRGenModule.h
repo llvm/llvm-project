@@ -102,6 +102,19 @@ private:
 
   void createCUDARuntime();
 
+  /// A helper for constructAttributeList that handles return attributes.
+  void constructFunctionReturnAttributes(const CIRGenFunctionInfo &info,
+                                         const Decl *targetDecl, bool isThunk,
+                                         mlir::NamedAttrList &retAttrs);
+  /// A helper for constructAttributeList that handles argument attributes.
+  void constructFunctionArgumentAttributes();
+  /// A helper function for constructAttributeList that determines whether a
+  /// return value might have been discarded.
+  bool mayDropFunctionReturn(const ASTContext &context, QualType retTy);
+  /// A helper function for constructAttributeList that determines whether
+  /// `noundef` on a return is possible.
+  bool hasStrictReturn(QualType retTy, const Decl *targetDecl);
+
 public:
   mlir::ModuleOp getModule() const { return theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }
@@ -276,13 +289,11 @@ public:
   /// attributes.
   /// \param attrOnCallSite - Whether or not the attributes are on a call site.
   /// \param isThunk - Whether the function is a thunk.
-  void constructAttributeList(llvm::StringRef name,
-                              const CIRGenFunctionInfo &info,
-                              CIRGenCalleeInfo calleeInfo,
-                              mlir::NamedAttrList &attrs,
-                              cir::CallingConv &callingConv,
-                              cir::SideEffect &sideEffect, bool attrOnCallSite,
-                              bool isThunk);
+  void constructAttributeList(
+      llvm::StringRef name, const CIRGenFunctionInfo &info,
+      CIRGenCalleeInfo calleeInfo, mlir::NamedAttrList &attrs,
+      mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
+      cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk);
   /// Helper function for constructAttributeList/others.  Builds a set of
   /// function attributes to add to a function based on language opts, codegen
   /// opts, and some small properties.
@@ -368,7 +379,18 @@ public:
   /// FIXME: this could likely be a common helper and not necessarily related
   /// with codegen.
   clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
-                                           LValueBaseInfo *baseInfo);
+                                           LValueBaseInfo *baseInfo = nullptr);
+
+  /// Returns the minimum object size for an object of the given class type
+  /// (or a class derived from it).
+  CharUnits getMinimumClassObjectSize(const CXXRecordDecl *cd);
+
+  /// Returns the minimum object size for an object of the given type.
+  CharUnits getMinimumObjectSize(QualType ty) {
+    if (CXXRecordDecl *rd = ty->getAsCXXRecordDecl())
+      return getMinimumClassObjectSize(rd);
+    return getASTContext().getTypeSizeInChars(ty);
+  }
 
   /// TODO: Add TBAAAccessInfo
   CharUnits getDynamicOffsetAlignment(CharUnits actualBaseAlign,

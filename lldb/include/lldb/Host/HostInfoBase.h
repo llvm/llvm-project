@@ -185,16 +185,28 @@ public:
 
   /// Return information about module \p image_name if it is loaded in
   /// the current process's address space.
+  ///
+  /// \param[in] use_sc_binary_directly
+  ///     Flag to control if this method can try to read a shared
+  ///     cache binary blob directly, needed to keep user settings out of
+  ///     Host.
   static SharedCacheImageInfo
-  GetSharedCacheImageInfo(llvm::StringRef image_name) {
+  GetSharedCacheImageInfo(llvm::StringRef image_name,
+                          lldb::SymbolSharedCacheUse sc_mode) {
     return {};
   }
 
   /// Return information about module \p image_name if it is loaded in
   /// the current process's address space using shared cache \p uuid.
   /// The shared cache UUID must have been previously indexed.
+  ///
+  /// \param[in] use_sc_binary_directly
+  ///     Flag to control if this method can try to read a shared
+  ///     cache binary blob directly, needed to keep user settings out of
+  ///     Host.
   static SharedCacheImageInfo
-  GetSharedCacheImageInfo(llvm::StringRef image_name, const UUID &uuid) {
+  GetSharedCacheImageInfo(llvm::StringRef image_name, const UUID &uuid,
+                          lldb::SymbolSharedCacheUse sc_mode) {
     return {};
   }
 
@@ -202,7 +214,8 @@ public:
   /// on the debug host.
   /// Returns false if the shared cache filepath did not exist, or uuid
   /// did not match.
-  static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid) {
+  static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid,
+                                    lldb::SymbolSharedCacheUse sc_mode) {
     return false;
   }
 

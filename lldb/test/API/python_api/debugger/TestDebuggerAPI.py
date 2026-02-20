@@ -59,6 +59,7 @@ class DebuggerAPITestCase(TestBase):
             )
 
             self.assertEqual(value_list.GetSize(), 1)
+            self.assertEqual(value_list[0], value_list.GetStringAtIndex(0))
             try:
                 return int(value_list.GetStringAtIndex(0))
             except ValueError as error:

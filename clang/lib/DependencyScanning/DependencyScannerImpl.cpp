@@ -414,7 +414,7 @@ void dependencies::initializeScanCompilerInstance(
   ScanInstance.createSourceManager();
 
   // Use DepFS for getting the dependency directives if requested to do so.
-  if (Service.getMode() == ScanningMode::DependencyDirectivesScan) {
+  if (Service.getOpts().Mode == ScanningMode::DependencyDirectivesScan) {
     DepFS->resetBypassedPathPrefix();
     SmallString<256> ModulesCachePath;
     normalizeModuleCachePath(ScanInstance.getFileManager(),
@@ -442,7 +442,7 @@ createScanCompilerInvocation(const CompilerInvocation &Invocation,
 
   if (ScanInvocation->getHeaderSearchOpts().ModulesValidateOncePerBuildSession)
     ScanInvocation->getHeaderSearchOpts().BuildSessionTimestamp =
-        Service.getBuildSessionTimestamp();
+        Service.getOpts().BuildSessionTimestamp;
 
   ScanInvocation->getFrontendOpts().DisableFree = false;
   ScanInvocation->getFrontendOpts().GenerateGlobalModuleIndex = false;
@@ -454,7 +454,7 @@ createScanCompilerInvocation(const CompilerInvocation &Invocation,
   ScanInvocation->getFrontendOpts().ModulesShareFileManager = true;
   ScanInvocation->getHeaderSearchOpts().ModuleFormat = "raw";
   ScanInvocation->getHeaderSearchOpts().ModulesIncludeVFSUsage =
-      any(Service.getOptimizeArgs() & ScanningOptimizations::VFS);
+      any(Service.getOpts().OptimizeArgs & ScanningOptimizations::VFS);
 
   // Consider different header search and diagnostic options to create
   // different modules. This avoids the unsound aliasing of module PCMs.
@@ -536,7 +536,7 @@ dependencies::initializeScanInstanceDependencyCollector(
     PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
     llvm::SmallVector<StringRef> &StableDirs) {
   std::shared_ptr<ModuleDepCollector> MDC;
-  switch (Service.getFormat()) {
+  switch (Service.getOpts().Format) {
   case ScanningOutputFormat::Make:
     ScanInstance.addDependencyCollector(
         std::make_shared<DependencyConsumerForwarder>(
@@ -689,7 +689,7 @@ bool DependencyScanningAction::runInvocation(
     DiagnosticConsumer *DiagConsumer) {
   // Making sure that we canonicalize the defines early to avoid unnecessary
   // variants in both the scanner and in the resulting  explicit command lines.
-  if (any(Service.getOptimizeArgs() & ScanningOptimizations::Macros))
+  if (any(Service.getOpts().OptimizeArgs & ScanningOptimizations::Macros))
     canonicalizeDefines(OriginalInvocation->getPreprocessorOpts());
 
   if (Scanned) {
@@ -711,7 +711,7 @@ bool DependencyScanningAction::runInvocation(
       createScanCompilerInvocation(*OriginalInvocation, Service);
 
   // Quickly discovers and compiles modules for the real scan below.
-  if (Service.shouldScanModulesAsynchronously()) {
+  if (Service.getOpts().AsyncScanModules) {
     auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
     auto ScanInstanceStorage = std::make_unique<CompilerInstance>(
         std::make_shared<CompilerInvocation>(*ScanInvocation), PCHContainerOps,
@@ -761,7 +761,7 @@ bool DependencyScanningAction::runInvocation(
 
   std::unique_ptr<FrontendAction> Action;
 
-  if (Service.getFormat() == ScanningOutputFormat::P1689)
+  if (Service.getOpts().Format == ScanningOutputFormat::P1689)
     Action = std::make_unique<PreprocessOnlyAction>();
   else
     Action = std::make_unique<ReadPCHAndPreprocessAction>();
@@ -809,7 +809,8 @@ bool CompilerInstanceWithContext::initialize(
     return false;
   }
 
-  if (any(Worker.Service.getOptimizeArgs() & ScanningOptimizations::Macros))
+  if (any(Worker.Service.getOpts().OptimizeArgs &
+          ScanningOptimizations::Macros))
     canonicalizeDefines(OriginalInvocation->getPreprocessorOpts());
 
   // Create the CompilerInstance.
