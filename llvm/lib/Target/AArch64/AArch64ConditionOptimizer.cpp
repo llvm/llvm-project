@@ -115,6 +115,7 @@ public:
   AArch64ConditionOptimizer() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool canAdjustCmp(MachineInstr &CmpMI);
   bool registersMatch(MachineInstr *FirstMI, MachineInstr *SecondMI);
   bool nzcvLivesOut(MachineBasicBlock *MBB);
   MachineInstr *findSuitableCompare(MachineBasicBlock *MBB);
@@ -152,6 +153,25 @@ void AArch64ConditionOptimizer::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
+// Verify that the MI's immediate is adjustable and it only sets flags (pure
+// cmp)
+bool AArch64ConditionOptimizer::canAdjustCmp(MachineInstr &CmpMI) {
+  unsigned ShiftAmt = AArch64_AM::getShiftValue(CmpMI.getOperand(3).getImm());
+  if (!CmpMI.getOperand(2).isImm()) {
+    LLVM_DEBUG(dbgs() << "Immediate of cmp is symbolic, " << CmpMI << '\n');
+    return false;
+  } else if (CmpMI.getOperand(2).getImm() << ShiftAmt >= 0xfff) {
+    LLVM_DEBUG(dbgs() << "Immediate of cmp may be out of range, " << CmpMI
+                      << '\n');
+    return false;
+  } else if (!MRI->use_nodbg_empty(CmpMI.getOperand(0).getReg())) {
+    LLVM_DEBUG(dbgs() << "Destination of cmp is not dead, " << CmpMI << '\n');
+    return false;
+  }
+
+  return true;
+}
+
 // Ensure both compare MIs use the same register, tracing through copies.
 bool AArch64ConditionOptimizer::registersMatch(MachineInstr *FirstMI,
                                                MachineInstr *SecondMI) {
@@ -182,6 +202,25 @@ bool AArch64ConditionOptimizer::nzcvLivesOut(MachineBasicBlock *MBB) {
   return false;
 }
 
+// Returns true if the opcode is a comparison instruction (CMP/CMN).
+static bool isCmpInstruction(unsigned Opc) {
+  switch (Opc) {
+  // cmp is an alias for SUBS with a dead destination register.
+  case AArch64::SUBSWri:
+  case AArch64::SUBSXri:
+  // cmp is an alias for ADDS with a dead destination register.
+  case AArch64::ADDSWri:
+  case AArch64::ADDSXri:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isCSINCInstruction(unsigned Opc) {
+  return Opc == AArch64::CSINCWr || Opc == AArch64::CSINCXr;
+}
+
 // Finds compare instruction that corresponds to supported types of branching.
 // Returns the instruction or nullptr on failures or detecting unsupported
 // instructions.
@@ -203,31 +242,18 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
     It = prev_nodbg(It, B);
     MachineInstr &I = *It;
     assert(!I.isTerminator() && "Spurious terminator");
+
     // Check if there is any use of NZCV between CMP and Bcc.
     if (I.readsRegister(AArch64::NZCV, /*TRI=*/nullptr))
       return nullptr;
-    switch (I.getOpcode()) {
-    // cmp is an alias for subs with a dead destination register.
-    case AArch64::SUBSWri:
-    case AArch64::SUBSXri:
-    // cmn is an alias for adds with a dead destination register.
-    case AArch64::ADDSWri:
-    case AArch64::ADDSXri: {
-      unsigned ShiftAmt = AArch64_AM::getShiftValue(I.getOperand(3).getImm());
-      if (!I.getOperand(2).isImm()) {
-        LLVM_DEBUG(dbgs() << "Immediate of cmp is symbolic, " << I << '\n');
-        return nullptr;
-      } else if (I.getOperand(2).getImm() << ShiftAmt >= 0xfff) {
-        LLVM_DEBUG(dbgs() << "Immediate of cmp may be out of range, " << I
-                          << '\n');
-        return nullptr;
-      } else if (!MRI->use_nodbg_empty(I.getOperand(0).getReg())) {
-        LLVM_DEBUG(dbgs() << "Destination of cmp is not dead, " << I << '\n');
+
+    if (isCmpInstruction(I.getOpcode())) {
+      if (!canAdjustCmp(I)) {
         return nullptr;
       }
       return &I;
     }
-    }
+
     if (I.modifiesRegister(AArch64::NZCV, /*TRI=*/nullptr))
       return nullptr;
   }
@@ -389,31 +415,22 @@ bool AArch64ConditionOptimizer::optimizeIntraBlock(MachineBasicBlock &MBB) {
 
   // Find two CMP + CSINC pairs
   for (MachineInstr &MI : MBB) {
-    switch (MI.getOpcode()) {
-    // cmp is an alias for subs with a dead destination register.
-    case AArch64::SUBSWri:
-    case AArch64::SUBSXri:
-    // cmn is an alias for adds with a dead destination register.
-    case AArch64::ADDSWri:
-    case AArch64::ADDSXri: {
+    if (isCmpInstruction(MI.getOpcode())) {
       if (!FirstCmp) {
         FirstCmp = &MI;
       } else if (FirstCSINC && !SecondCmp) {
         SecondCmp = &MI;
       }
-      break;
+      continue;
     }
 
-    case AArch64::CSINCWr:
-    case AArch64::CSINCXr: {
+    if (isCSINCInstruction(MI.getOpcode())) {
       // Found a CSINC, ensure it comes after the corresponding comparison
       if (FirstCmp && !FirstCSINC) {
         FirstCSINC = &MI;
       } else if (SecondCmp && !SecondCSINC) {
         SecondCSINC = &MI;
       }
-      break;
-    }
     }
 
     if (SecondCSINC)
