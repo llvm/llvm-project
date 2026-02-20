@@ -16096,6 +16096,72 @@ SDValue AArch64TargetLowering::LowerFixedLengthBuildVectorToSVE(
   return convertFromScalableVector(DAG, VT, Vec);
 }
 
+static std::optional<int64_t> getSplatConstant(SDValue V,
+                                               ConstantSDNode *&Const) {
+  if (auto *BV = dyn_cast<BuildVectorSDNode>(V))
+    if ((Const = dyn_cast_if_present<ConstantSDNode>(BV->getSplatValue())))
+      return Const->getZExtValue();
+  return std::nullopt;
+}
+
+static bool isSVESplatImmForOp(unsigned Opcode, MVT VT, int64_t SplatImm) {
+  // TODO: Support more than integer binops.
+  switch (Opcode) {
+  case ISD::SUB:
+  case ISD::ADD:
+    return isUInt<8>(SplatImm) || (VT.getFixedSizeInBits() > 8 &&
+                                   isUInt<16>(SplatImm) && SplatImm % 256 == 0);
+  case ISD::XOR:
+  case ISD::OR:
+  case ISD::AND:
+    return AArch64_AM::isLogicalImmediate(SplatImm, 64);
+  case ISD::MUL:
+    return isInt<8>(SplatImm);
+  default:
+    return false;
+  }
+}
+
+static SDValue tryFoldSplatIntoUsersWithSVE(SDValue Op, SelectionDAG &DAG) {
+  auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  if (!Subtarget.isSVEorStreamingSVEAvailable())
+    return SDValue();
+
+  EVT VT = Op->getValueType(0);
+  if (!VT.is128BitVector())
+    return SDValue();
+
+  ConstantSDNode *Splat;
+  auto SplatImm = getSplatConstant(Op, Splat);
+  if (!SplatImm)
+    return SDValue();
+
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+
+  for (SDUse &U : Op->uses()) {
+    SDNode *User = U.getUser();
+    unsigned UserOpc = User->getOpcode();
+    if (U.getOperandNo() != 1 ||
+        !isSVESplatImmForOp(UserOpc, VT.getScalarType().getSimpleVT(),
+                            *SplatImm))
+      continue;
+
+    SDLoc DL(U);
+    SDValue LHS =
+        convertToScalableVector(DAG, ContainerVT, User->getOperand(0));
+    SDValue SVESplat = DAG.getSplatVector(ContainerVT, DL, SDValue(Splat, 0));
+    SDValue Result = DAG.getNode(UserOpc, DL, ContainerVT, LHS, SVESplat);
+    Result = convertFromScalableVector(DAG, VT, Result);
+    DAG.ReplaceAllUsesWith(SDValue(User, 0), Result);
+  }
+
+  // FIXME: We always have to return SDValue() as LowerBUILD_VECTOR is called in
+  // many places, and there's no guarantee `Op->uses()` contains all the users.
+  // This means the BV will still be lowered (but then DCE'd if we replaced all
+  // users in this fold).
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -16129,6 +16195,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
       if (Const->isZero() && !Const->isNegative())
         return Op;
   }
+
+  if (SDValue V = tryFoldSplatIntoUsersWithSVE(Op, DAG))
+    return V;
 
   if (SDValue V = ConstantBuildVector(Op, DAG, Subtarget))
     return V;

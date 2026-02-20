@@ -378,11 +378,11 @@ define <4 x i32> @amull_v4i16_v4i32(ptr %A, ptr %B) nounwind {
 ;
 ; CHECK-SVE-LABEL: amull_v4i16_v4i32:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    ldr d1, [x0]
-; CHECK-SVE-NEXT:    ldr d2, [x1]
-; CHECK-SVE-NEXT:    movi v0.2d, #0x00ffff0000ffff
-; CHECK-SVE-NEXT:    smull v1.4s, v1.4h, v2.4h
-; CHECK-SVE-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-SVE-NEXT:    ldr d0, [x0]
+; CHECK-SVE-NEXT:    ldr d1, [x1]
+; CHECK-SVE-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-SVE-NEXT:    and z0.s, z0.s, #0xffff
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: amull_v4i16_v4i32:
@@ -414,11 +414,11 @@ define <2 x i64> @amull_v2i32_v2i64(ptr %A, ptr %B) nounwind {
 ;
 ; CHECK-SVE-LABEL: amull_v2i32_v2i64:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    ldr d1, [x0]
-; CHECK-SVE-NEXT:    ldr d2, [x1]
-; CHECK-SVE-NEXT:    movi v0.2d, #0x000000ffffffff
-; CHECK-SVE-NEXT:    smull v1.2d, v1.2s, v2.2s
-; CHECK-SVE-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-SVE-NEXT:    ldr d0, [x0]
+; CHECK-SVE-NEXT:    ldr d1, [x1]
+; CHECK-SVE-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-SVE-NEXT:    and z0.d, z0.d, #0xffffffff
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: amull_v2i32_v2i64:
@@ -602,8 +602,8 @@ define <4 x i32> @amlal_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-SVE-NEXT:    ldr d1, [x1]
 ; CHECK-SVE-NEXT:    ldr d2, [x2]
 ; CHECK-SVE-NEXT:    smlal v0.4s, v1.4h, v2.4h
-; CHECK-SVE-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-SVE-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-SVE-NEXT:    and z0.s, z0.s, #0xffff
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: amlal_v4i16_v4i32:
@@ -643,8 +643,8 @@ define <2 x i64> @amlal_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-SVE-NEXT:    ldr d1, [x1]
 ; CHECK-SVE-NEXT:    ldr d2, [x2]
 ; CHECK-SVE-NEXT:    smlal v0.2d, v1.2s, v2.2s
-; CHECK-SVE-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-SVE-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-SVE-NEXT:    and z0.d, z0.d, #0xffffffff
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: amlal_v2i32_v2i64:
@@ -831,8 +831,8 @@ define <4 x i32> @amlsl_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-SVE-NEXT:    ldr d1, [x1]
 ; CHECK-SVE-NEXT:    ldr d2, [x2]
 ; CHECK-SVE-NEXT:    smlsl v0.4s, v1.4h, v2.4h
-; CHECK-SVE-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-SVE-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-SVE-NEXT:    and z0.s, z0.s, #0xffff
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: amlsl_v4i16_v4i32:
@@ -872,8 +872,8 @@ define <2 x i64> @amlsl_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-SVE-NEXT:    ldr d1, [x1]
 ; CHECK-SVE-NEXT:    ldr d2, [x2]
 ; CHECK-SVE-NEXT:    smlsl v0.2d, v1.2s, v2.2s
-; CHECK-SVE-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-SVE-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-SVE-NEXT:    and z0.d, z0.d, #0xffffffff
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: amlsl_v2i32_v2i64:
@@ -1111,8 +1111,8 @@ define <4 x i32> @amull_extvec_v4i16_v4i32(<4 x i16> %arg) nounwind {
 ; CHECK-SVE-NEXT:    mov w8, #1234 // =0x4d2
 ; CHECK-SVE-NEXT:    dup v1.4h, w8
 ; CHECK-SVE-NEXT:    smull v0.4s, v0.4h, v1.4h
-; CHECK-SVE-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-SVE-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-SVE-NEXT:    and z0.s, z0.s, #0xffff
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: amull_extvec_v4i16_v4i32:
@@ -1144,8 +1144,8 @@ define <2 x i64> @amull_extvec_v2i32_v2i64(<2 x i32> %arg) nounwind {
 ; CHECK-SVE-NEXT:    mov w8, #1234 // =0x4d2
 ; CHECK-SVE-NEXT:    dup v1.2s, w8
 ; CHECK-SVE-NEXT:    smull v0.2d, v0.2s, v1.2s
-; CHECK-SVE-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-SVE-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-SVE-NEXT:    and z0.d, z0.d, #0xffffffff
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: amull_extvec_v2i32_v2i64:
@@ -1457,11 +1457,12 @@ define <8 x i32> @amull2_i16(<8 x i16> %arg1, <8 x i16> %arg2) {
 ;
 ; CHECK-SVE-LABEL: amull2_i16:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    movi v2.2d, #0x00ffff0000ffff
-; CHECK-SVE-NEXT:    smull v3.4s, v0.4h, v1.4h
-; CHECK-SVE-NEXT:    smull2 v0.4s, v0.8h, v1.8h
-; CHECK-SVE-NEXT:    and v1.16b, v0.16b, v2.16b
-; CHECK-SVE-NEXT:    and v0.16b, v3.16b, v2.16b
+; CHECK-SVE-NEXT:    smull v2.4s, v0.4h, v1.4h
+; CHECK-SVE-NEXT:    smull2 v1.4s, v0.8h, v1.8h
+; CHECK-SVE-NEXT:    and z2.s, z2.s, #0xffff
+; CHECK-SVE-NEXT:    and z1.s, z1.s, #0xffff
+; CHECK-SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; CHECK-SVE-NEXT:    mov v0.16b, v2.16b
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: amull2_i16:
@@ -1491,11 +1492,12 @@ define <4 x i64> @amull2_i32(<4 x i32> %arg1, <4 x i32> %arg2) {
 ;
 ; CHECK-SVE-LABEL: amull2_i32:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    movi v2.2d, #0x000000ffffffff
-; CHECK-SVE-NEXT:    smull v3.2d, v0.2s, v1.2s
-; CHECK-SVE-NEXT:    smull2 v0.2d, v0.4s, v1.4s
-; CHECK-SVE-NEXT:    and v1.16b, v0.16b, v2.16b
-; CHECK-SVE-NEXT:    and v0.16b, v3.16b, v2.16b
+; CHECK-SVE-NEXT:    smull v2.2d, v0.2s, v1.2s
+; CHECK-SVE-NEXT:    smull2 v1.2d, v0.4s, v1.4s
+; CHECK-SVE-NEXT:    and z2.d, z2.d, #0xffffffff
+; CHECK-SVE-NEXT:    and z1.d, z1.d, #0xffffffff
+; CHECK-SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; CHECK-SVE-NEXT:    mov v0.16b, v2.16b
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: amull2_i32:
@@ -1573,13 +1575,29 @@ entry:
 }
 
 define <8 x i16> @umull_and256_v8i16(<8 x i8> %src1, <8 x i16> %src2) {
-; CHECK-LABEL: umull_and256_v8i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.8h, #1, lsl #8
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    ret
+; CHECK-NEON-LABEL: umull_and256_v8i16:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v2.8h, #1, lsl #8
+; CHECK-NEON-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEON-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEON-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umull_and256_v8i16:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-SVE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SVE-NEXT:    and z1.h, z1.h, #0x100
+; CHECK-SVE-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-GI-LABEL: umull_and256_v8i16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v2.8h, #1, lsl #8
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    ret
 entry:
   %in1 = zext <8 x i8> %src1 to <8 x i16>
   %in2 = and <8 x i16> %src2, <i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256>
@@ -1647,13 +1665,29 @@ entry:
 }
 
 define <4 x i32> @umull_and_v4i32(<4 x i16> %src1, <4 x i32> %src2) {
-; CHECK-LABEL: umull_and_v4i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x0000ff000000ff
-; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    xtn v1.4h, v1.4s
-; CHECK-NEXT:    umull v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    ret
+; CHECK-NEON-LABEL: umull_and_v4i32:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v2.2d, #0x0000ff000000ff
+; CHECK-NEON-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEON-NEXT:    xtn v1.4h, v1.4s
+; CHECK-NEON-NEXT:    umull v0.4s, v0.4h, v1.4h
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umull_and_v4i32:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-SVE-NEXT:    and z1.s, z1.s, #0xff
+; CHECK-SVE-NEXT:    xtn v1.4h, v1.4s
+; CHECK-SVE-NEXT:    umull v0.4s, v0.4h, v1.4h
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-GI-LABEL: umull_and_v4i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v2.2d, #0x0000ff000000ff
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    xtn v1.4h, v1.4s
+; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    ret
 entry:
   %in1 = zext <4 x i16> %src1 to <4 x i32>
   %in2 = and <4 x i32> %src2, <i32 255, i32 255, i32 255, i32 255>
@@ -1674,9 +1708,10 @@ define <8 x i32> @umull_and_v8i32(<8 x i16> %src1, <8 x i32> %src2) {
 ;
 ; CHECK-SVE-LABEL: umull_and_v8i32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v3.2d, #0x0000ff000000ff
-; CHECK-SVE-NEXT:    and v2.16b, v2.16b, v3.16b
-; CHECK-SVE-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-SVE-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-SVE-NEXT:    and z2.s, z2.s, #0xff
+; CHECK-SVE-NEXT:    and z1.s, z1.s, #0xff
 ; CHECK-SVE-NEXT:    uzp1 v2.8h, v1.8h, v2.8h
 ; CHECK-SVE-NEXT:    umull2 v1.4s, v0.8h, v2.8h
 ; CHECK-SVE-NEXT:    umull v0.4s, v0.4h, v2.4h
@@ -1736,13 +1771,29 @@ entry:
 }
 
 define <2 x i64> @umull_and_v2i64(<2 x i32> %src1, <2 x i64> %src2) {
-; CHECK-LABEL: umull_and_v2i64:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x000000000000ff
-; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    xtn v1.2s, v1.2d
-; CHECK-NEXT:    umull v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    ret
+; CHECK-NEON-LABEL: umull_and_v2i64:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v2.2d, #0x000000000000ff
+; CHECK-NEON-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEON-NEXT:    xtn v1.2s, v1.2d
+; CHECK-NEON-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umull_and_v2i64:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-SVE-NEXT:    and z1.d, z1.d, #0xff
+; CHECK-SVE-NEXT:    xtn v1.2s, v1.2d
+; CHECK-SVE-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-GI-LABEL: umull_and_v2i64:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v2.2d, #0x000000000000ff
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    xtn v1.2s, v1.2d
+; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    ret
 entry:
   %in1 = zext <2 x i32> %src1 to <2 x i64>
   %in2 = and <2 x i64> %src2, <i64 255, i64 255>
@@ -1763,9 +1814,10 @@ define <4 x i64> @umull_and_v4i64(<4 x i32> %src1, <4 x i64> %src2) {
 ;
 ; CHECK-SVE-LABEL: umull_and_v4i64:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v3.2d, #0x000000000000ff
-; CHECK-SVE-NEXT:    and v2.16b, v2.16b, v3.16b
-; CHECK-SVE-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-SVE-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-SVE-NEXT:    and z2.d, z2.d, #0xff
+; CHECK-SVE-NEXT:    and z1.d, z1.d, #0xff
 ; CHECK-SVE-NEXT:    uzp1 v2.4s, v1.4s, v2.4s
 ; CHECK-SVE-NEXT:    umull2 v1.2d, v0.4s, v2.4s
 ; CHECK-SVE-NEXT:    umull v0.2d, v0.2s, v2.2s
