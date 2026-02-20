@@ -966,9 +966,14 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
       return IsDeferredCheck || DeferCheck(Ty);
 
     Type *NewTy = ArgTys[D.getArgumentNumber()];
-    if (VectorType *VTy = dyn_cast<VectorType>(NewTy))
-      NewTy = VectorType::getTruncatedElementVectorType(VTy);
-    else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
+    if (VectorType *VTy = dyn_cast<VectorType>(NewTy)) {
+      unsigned EltBits =
+          VTy->getElementType()->getPrimitiveSizeInBits().getFixedValue();
+      if ((EltBits & 1) == 0)
+        NewTy = VectorType::getTruncatedElementVectorType(VTy);
+      else
+        return true;
+    } else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
       NewTy = IntegerType::get(ITy->getContext(), ITy->getBitWidth() / 2);
     else
       return true;
