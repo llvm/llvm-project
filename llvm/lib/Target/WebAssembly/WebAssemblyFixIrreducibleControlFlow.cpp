@@ -18,14 +18,16 @@
 /// The big picture: We recursively process each "region", defined as a group
 /// of blocks with a single entry and no branches back to that entry. A region
 /// may be the entire function body, or the inner part of a loop, i.e., the
-/// loop's body without branches back to the loop entry. In each region we fix
-/// up multi-entry loops by adding a new block that can dispatch to each of the
-/// loop entries, based on the value of a label "helper" variable, and we
-/// replace direct branches to the entries with assignments to the label
-/// variable and a branch to the dispatch block. Then the dispatch block is the
-/// single entry in the loop containing the previous multiple entries. After
-/// ensuring all the loops in a region are reducible, we recurse into them. The
-/// total time complexity of this pass is:
+/// loop's body without branches back to the loop entry. In each region we
+/// identify all the strongly-connected components (SCCs). We fix up multi-entry
+/// loops (SCCs) by adding a new block that can dispatch to each of the loop
+/// entries, based on the value of a label "helper" variable, and we replace
+/// direct branches to the entries with assignments to the label variable and a
+/// branch to the dispatch block. Then the dispatch block is the single entry in
+/// the loop containing the previous multiple entries. Each time we fix some
+/// irreducibility, we recalculate the SCCs. After ensuring all the SCCs in a
+/// region are reducible, we recurse into them. The total time complexity of
+/// this pass is:
 ///
 ///   O(NumBlocks * NumNestedLoops * NumIrreducibleLoops +
 ///     NumLoops * NumLoops)
@@ -141,9 +143,8 @@ private:
 
 namespace llvm {
 template <> struct GraphTraits<ReachabilityGraph *> {
-  typedef ReachabilityNode NodeType;
-  typedef NodeType *NodeRef;
-  typedef SmallVectorImpl<NodeRef>::iterator ChildIteratorType;
+  using NodeRef = ReachabilityNode *;
+  using ChildIteratorType = SmallVectorImpl<NodeRef>::iterator;
 
   static NodeRef getEntryNode(ReachabilityGraph *G) {
     return G->getNode(G->Entry);
@@ -205,12 +206,10 @@ void ReachabilityGraph::calculate() {
     if (SCC.size() == 1) {
       auto &Node = SCC[0];
 
-      if (Node->MBB != Entry) {
-        for (auto *Succ : Node->Succs) {
-          if (Succ == Node) {
-            SelfLoop = true;
-            break;
-          }
+      for (auto *Succ : Node->Succs) {
+        if (Succ == Node) {
+          SelfLoop = true;
+          break;
         }
       }
     }
