@@ -28,9 +28,14 @@
 #include <functional>
 #include <vector>
 
+// Match the PluginInitCallback and PluginTermCallback signature. The generated
+// initializer always succeeds.
 #define LLDB_PLUGIN_DEFINE_ADV(ClassName, PluginName)                          \
-  namespace lldb_private {                                                     \
-  void lldb_initialize_##PluginName() { ClassName::Initialize(); }             \
+  extern "C" {                                                                 \
+  bool lldb_initialize_##PluginName() {                                        \
+    ClassName::Initialize();                                                   \
+    return true;                                                               \
+  }                                                                            \
   void lldb_terminate_##PluginName() { ClassName::Terminate(); }               \
   }
 
@@ -39,8 +44,8 @@
 
 // FIXME: Generate me with CMake
 #define LLDB_PLUGIN_DECLARE(PluginName)                                        \
-  namespace lldb_private {                                                     \
-  extern void lldb_initialize_##PluginName();                                  \
+  extern "C" {                                                                 \
+  extern bool lldb_initialize_##PluginName();                                  \
   extern void lldb_terminate_##PluginName();                                   \
   }
 
@@ -492,8 +497,7 @@ public:
       llvm::StringRef schema,
       DebuggerInitializeCallback debugger_init_callback);
 
-  static bool
-  UnregisterPlugin(TraceCreateInstanceFromBundle create_callback);
+  static bool UnregisterPlugin(TraceCreateInstanceFromBundle create_callback);
 
   static TraceCreateInstanceFromBundle
   GetTraceCreateCallback(llvm::StringRef plugin_name);
