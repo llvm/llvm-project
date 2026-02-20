@@ -2056,6 +2056,15 @@ class Target {
   // This enables interval-based representation of register units, which can
   // improve data structure representations in target backends.
   bit RegistersAreIntervals = false;
+
+  // Generate compact names for synthesized registers and sub-register indices
+  // instead of just concatenating the names of individual components.
+  // Specifically instead of generating:
+  //
+  // prefix<K>_prefix<K+S>_prefix<K+2S>...prefix<N>, we will generate
+  // prefix<K>_to_<N>_by_<S>, where [K,N] is a closed range and S is the stride.
+  // The stride will be omitted if its 1.
+  bit CompactRegisterNames = false;
 }
 
 //===----------------------------------------------------------------------===//

@@ -123,6 +123,10 @@ bool CodeGenTarget::getRegistersAreIntervals() const {
   return TargetRec->getValueAsBit("RegistersAreIntervals");
 }
 
+bool CodeGenTarget::getCompactRegisterNames() const {
+  return TargetRec->getValueAsBit("CompactRegisterNames");
+}
+
 /// getAsmParser - Return the AssemblyParser definition for this target.
 ///
 const Record *CodeGenTarget::getAsmParser() const {
@@ -167,7 +171,8 @@ const Record *CodeGenTarget::getAsmWriter() const {
 CodeGenRegBank &CodeGenTarget::getRegBank() const {
   if (!RegBank)
     RegBank = std::make_unique<CodeGenRegBank>(Records, getHwModes(),
-                                               getRegistersAreIntervals());
+                                               getRegistersAreIntervals(),
+                                               getCompactRegisterNames());
   return *RegBank;
 }
 
