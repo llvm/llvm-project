@@ -142,6 +142,16 @@ if( LLVM_ENABLE_ASSERTIONS )
   else()
     set(LIBCXX_HARDENING_MODE "extensive")
   endif()
+
+  string(TOUPPER "_LIBCPP_HARDENING_MODE_${LIBCXX_HARDENING_MODE}" LIBCXX_HARDENING_MODE_SPELLING)
+  CHECK_CXX_SOURCE_COMPILES("
+  #define _LIBCPP_HARDENING_MODE ${LIBCXX_HARDENING_MODE_SPELLING}
+  #include <string>
+  int main() { return 0; }
+  " SUPPORTS_LIBCXX_HARDENING_MODE)
+  if(SUPPORTS_LIBCXX_HARDENING_MODE)
+    add_compile_definitions(_LIBCPP_HARDENING_MODE=${LIBCXX_HARDENING_MODE_SPELLING})
+  endif()
 endif()
 
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
@@ -760,18 +770,7 @@ if (MSVC)
       -wd4389 # Suppress 'signed/unsigned mismatch'
       -wd4805 # Suppress 'unsafe mix of type <type> and type <type> in operation'
       -wd4577 # Suppress 'noexcept used with no exception handling mode specified; termination on exception is not guaranteed'
-          # C4592 is disabled because of false positives in Visual Studio 2015
-          # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
-      -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
       -wd4319 # Suppress ''operator' : zero extending 'type' to 'type' of greater size'
-          # C4709 is disabled because of a bug with Visual Studio 2017 as of
-          # v15.8.8. Re-evaluate the usefulness of this diagnostic when the bug
-          # is fixed.
-      -wd4709 # Suppress comma operator within array index expression
-
-      # We'd like this warning to be enabled, but it triggers from code in
-      # WinBase.h that we don't have control over.
-      -wd5105 # Suppress macro expansion producing 'defined' has undefined behavior
 
       # Ideally, we'd like this warning to be enabled, but even MSVC 2019 doesn't
       # support the 'aligned' attribute in the way that clang sources requires (for
@@ -1306,6 +1305,17 @@ if (LLVM_BUILD_INSTRUMENTED AND LLVM_BUILD_INSTRUMENTED_COVERAGE)
 endif()
 
 if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+    # PCH is working in principle on AIX, but due to transitive includes,
+    # sys/mode.h ends up in the LLVMSupport PCH, which happens to define macros
+    # named S_RESERVED{1,2,3,4}, which cause collisions in CodeViewSymbols.def.
+    # AIX systems are not easily accessible, which makes identifying and
+    # debugging such cases rather difficult. Therefore, disable PCH on AIX by
+    # default.
+    message(NOTICE "Precompiled headers are disabled by default on AIX. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # Pre-compiled headers with GCC (tested versions 14+15) provide very little
     # compile-time improvements, but substantially increase the build dir size.
