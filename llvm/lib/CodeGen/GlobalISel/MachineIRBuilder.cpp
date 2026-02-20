@@ -170,6 +170,20 @@ MachineInstrBuilder MachineIRBuilder::buildGlobalValue(const DstOp &Res,
   return MIB;
 }
 
+MachineInstrBuilder
+MachineIRBuilder::buildTargetGlobalValue(const DstOp &Res,
+                                         const GlobalValue *GV) {
+  assert(Res.getLLTTy(*getMRI()).isPointer() && "invalid operand type");
+  assert(Res.getLLTTy(*getMRI()).getAddressSpace() ==
+             GV->getType()->getAddressSpace() &&
+         "address space mismatch");
+
+  auto MIB = buildInstr(TargetOpcode::G_TARGET_GLOBAL_VALUE);
+  Res.addDefToMIB(*getMRI(), MIB);
+  MIB.addGlobalAddress(GV);
+  return MIB;
+}
+
 MachineInstrBuilder MachineIRBuilder::buildConstantPool(const DstOp &Res,
                                                         unsigned Idx) {
   assert(Res.getLLTTy(*getMRI()).isPointer() && "invalid operand type");
