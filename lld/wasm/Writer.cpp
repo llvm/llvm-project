@@ -1167,7 +1167,7 @@ void Writer::createSyntheticInitFunctions() {
         "__wasm_init_memory", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(nullSignature, "__wasm_init_memory"));
     ctx.sym.initMemory->markLive();
-    if (ctx.isMultithreaded()) {
+    if (ctx.arg.sharedMemory) {
       // This global is assigned during  __wasm_init_memory in the shared memory
       // case.
       ctx.sym.tlsBase->markLive();
