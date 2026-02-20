@@ -154,18 +154,35 @@ entry:
   ret void
 }
 
-; FIXME: This should be folded once we add support for QC.SHLADD in RISCVMergeBaseOffset
-define i32 @no_load_scaled_i16_shift_gt_3(i32 %idx) nounwind {
-; CHECK-LABEL: no_load_scaled_i16_shift_gt_3:
+define i32 @load_scaled_i16_shift_gt_3(i32 %idx) nounwind {
+; CHECK-LABEL: load_scaled_i16_shift_gt_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    qc.e.li a1, sym
-; CHECK-NEXT:    qc.shladd a0, a0, a1, 5
-; CHECK-NEXT:    lh a0, 6(a0)
+; CHECK-NEXT:    qc.e.li a1, sym+6
+; CHECK-NEXT:    qc.lrh a0, a1, a0, 5
 ; CHECK-NEXT:    ret
 entry:
   %baseptr = getelementptr i8, i8* @sym, i32 0
   %baseint = ptrtoint i8* %baseptr to i32
   %idxsh   = shl i32 %idx, 5
+  %sum     = add i32 %baseint, %idxsh
+  %sum_ptr = inttoptr i32 %sum to i16*
+  %addr_plus_imm = getelementptr i16, i16* %sum_ptr, i32 3
+  %val16 = load i16, i16* %addr_plus_imm, align 2
+  %val = sext i16 %val16 to i32
+  ret i32 %val
+}
+
+define i32 @no_load_scaled_i16_shift_gt_7(i32 %idx) nounwind {
+; CHECK-LABEL: no_load_scaled_i16_shift_gt_7:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    qc.e.li a1, sym
+; CHECK-NEXT:    qc.shladd a0, a0, a1, 8
+; CHECK-NEXT:    lh a0, 6(a0)
+; CHECK-NEXT:    ret
+entry:
+  %baseptr = getelementptr i8, i8* @sym, i32 0
+  %baseint = ptrtoint i8* %baseptr to i32
+  %idxsh   = shl i32 %idx, 8
   %sum     = add i32 %baseint, %idxsh
   %sum_ptr = inttoptr i32 %sum to i16*
   %addr_plus_imm = getelementptr i16, i16* %sum_ptr, i32 3

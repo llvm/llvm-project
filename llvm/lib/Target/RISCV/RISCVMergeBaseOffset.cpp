@@ -582,7 +582,7 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
 //   Tail:     lx vreg4, imm(vreg2)       -> qc.lrx vreg4, vreg1, vreg3, (1/2/3)
 bool RISCVMergeBaseOffsetOpt::foldShxaddIntoScaledMemory(MachineInstr &Hi,
                                                          MachineInstr &Lo) {
-  if (!ST->hasVendorXqcisls())
+  if (!ST->hasVendorXqcisls() || ST->is64Bit())
     return false;
 
   if (Hi.getOpcode() != RISCV::QC_E_LI)
@@ -594,14 +594,33 @@ bool RISCVMergeBaseOffsetOpt::foldShxaddIntoScaledMemory(MachineInstr &Hi,
 
   MachineInstr &ShxAdd = *MRI->use_instr_begin(BaseReg);
   unsigned ShxOpc = ShxAdd.getOpcode();
-  // TODO: Add support for QC.SHLADD
-  if (ShxOpc != RISCV::SH1ADD && ShxOpc != RISCV::SH2ADD &&
-      ShxOpc != RISCV::SH3ADD)
+  unsigned ShAmt = 0;
+  switch (ShxOpc) {
+  default:
     return false;
+  case RISCV::SH1ADD:
+    ShAmt = 1;
+    break;
+  case RISCV::SH2ADD:
+    ShAmt = 2;
+    break;
+  case RISCV::SH3ADD:
+    ShAmt = 3;
+    break;
+  case RISCV::QC_SHLADD:
+    uint8_t ShlImm = ShxAdd.getOperand(3).getImm();
+    if (ShlImm > 7)
+      return false;
+    ShAmt = ShlImm;
+    break;
+  }
 
   // shxadd Rd, Rs1, Rs2
   Register ScaledReg = ShxAdd.getOperand(0).getReg();
   Register IndexReg = ShxAdd.getOperand(1).getReg();
+
+  if (!IndexReg.isVirtual())
+    return false;
 
   if (ShxAdd.getOperand(2).getReg() != BaseReg)
     return false;
@@ -620,10 +639,7 @@ bool RISCVMergeBaseOffsetOpt::foldShxaddIntoScaledMemory(MachineInstr &Hi,
   int64_t Imm = TailMem.getOperand(2).getImm();
 
   // Update QC_E_LI offset.
-  int64_t NewOffset = Hi.getOperand(1).getOffset() + Imm;
-
-  if (!isInt<32>(NewOffset))
-    return false;
+  int64_t NewOffset = SignExtend64<32>(Hi.getOperand(1).getOffset() + Imm);
 
   unsigned NewOpc = 0;
   switch (Opc) {
@@ -664,9 +680,6 @@ bool RISCVMergeBaseOffsetOpt::foldShxaddIntoScaledMemory(MachineInstr &Hi,
   DestRegState = TailMem.mayLoad()
                      ? RegState::Define
                      : getKillRegState(TailMem.getOperand(0).isKill());
-  unsigned ShAmt = (ShxOpc == RISCV::SH1ADD)   ? 1
-                   : (ShxOpc == RISCV::SH2ADD) ? 2
-                                               : 3;
 
   // Ensure index register satisfies GPRNoX0 class required by QC_LR*/QC_SR*.
   MRI->constrainRegClass(IndexReg, &RISCV::GPRNoX0RegClass);
