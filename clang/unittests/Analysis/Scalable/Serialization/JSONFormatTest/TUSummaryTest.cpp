@@ -11,11 +11,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "JSONFormatTest.h"
+#include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
 #include "llvm/Support/Registry.h"
+#include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
 #include <memory>
 #include <vector>
 
+using namespace clang::ssaf;
+using namespace llvm;
+using ::testing::AllOf;
+using ::testing::HasSubstr;
 namespace {
 
 // ============================================================================
@@ -92,7 +100,7 @@ static llvm::Registry<JSONFormat::FormatInfo>::Add<
         "PairsEntitySummaryForJSONFormatTest",
         "Format info for PairsArrayEntitySummary");
 
-class JSONFormatTUSummaryTest final : public JSONFormatTest {
+class JSONFormatTUSummaryTest : public JSONFormatTest {
 protected:
   llvm::Expected<TUSummary> readTUSummaryFromFile(StringRef FileName) const {
     PathString FilePath = makePath(FileName);
