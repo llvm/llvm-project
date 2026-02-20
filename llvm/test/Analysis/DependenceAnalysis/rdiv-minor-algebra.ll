@@ -12,16 +12,15 @@
 ;   }
 ; }
 ;
-; FIXME: DependenceAnalysis currently detects no dependency between the two
-; stores, but it does exist.
+; There is a dependency between the two stores.
 ;
 ;  memory access                | (i, j) == (1, 1)
 ; ------------------------------|------------------
 ;  A[-2]                        | A[-2]
 ;  A[INT64_MAX*i + INT64_MAX*j] | A[-2]
 ;
-; The root cause is that RDIV performs "minor algebra" and transforms the
-; subscripts as follows:
+; Previously, this dependency was missed because RDIV performs "minor algebra"
+; and transforms the subscripts as follows:
 ;
 ;   A[-2] and A[INT64_MAX*i + INT64_MAX*j]
 ;
@@ -45,7 +44,7 @@ define void @f(ptr %A) {
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - consistent output [S]!
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - none!
+; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [* *]!
 ;
