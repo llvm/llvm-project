@@ -478,8 +478,8 @@ TEST(SerializationTest, PathTransformRoundTrip) {
   ASSERT_TRUE(bool(Loaded)) << Loaded.takeError();
 
   ASSERT_TRUE(Loaded->Symbols);
-  auto &Sym = *Loaded->Symbols->find(
-      cantFail(SymbolID::fromStr("057557CEBF6E6B2D")));
+  auto &Sym =
+      *Loaded->Symbols->find(cantFail(SymbolID::fromStr("057557CEBF6E6B2D")));
   EXPECT_EQ(llvm::StringRef(Sym.CanonicalDeclaration.FileURI),
             "file:///workarea/foo.h");
   EXPECT_EQ(Sym.Name, "Foo1");
@@ -494,9 +494,10 @@ TEST(SerializationTest, PathTransformRoundTrip) {
   auto Restored = readIndexFile(Reserialized, SymbolOrigin::Background);
   ASSERT_TRUE(bool(Restored)) << Restored.takeError();
   ASSERT_TRUE(Restored->Symbols);
-  EXPECT_EQ(llvm::StringRef(Restored->Symbols->find(cantFail(SymbolID::fromStr(
-                                 "057557CEBF6E6B2D")))
-                                 ->CanonicalDeclaration.FileURI),
+  EXPECT_EQ(llvm::StringRef(
+                Restored->Symbols
+                    ->find(cantFail(SymbolID::fromStr("057557CEBF6E6B2D")))
+                    ->CanonicalDeclaration.FileURI),
             "file:///path/foo.h");
 }
 
