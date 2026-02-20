@@ -14,9 +14,6 @@ import time
 
 class TestFrameVarDILCast(TestBase):
     def test_type_cast(self):
-        pass
-
-    def test_type_cast(self):
         self.build()
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
