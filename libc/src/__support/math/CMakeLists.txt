@@ -2087,6 +2087,18 @@ add_header_library(
 )
 
 add_header_library(
+  bf16divf128
+  HDRS
+    bf16divf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.include.llvm-libc-types.float128
+)
+
+add_header_library(
   tan
   HDRS
     tan.h
