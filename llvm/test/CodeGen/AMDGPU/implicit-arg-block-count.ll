@@ -4,7 +4,7 @@
 define i32 @num_blocks_x() {
 ; CHECK-LABEL: define i32 @num_blocks_x() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[IMPLICITARG]], align 4, !invariant.load [[META0:![0-9]+]], !noundef [[META0]]
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
@@ -23,7 +23,7 @@ entry:
 define i32 @num_blocks_y() {
 ; CHECK-LABEL: define i32 @num_blocks_y() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG]], i64 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[TMP0]], align 4, !invariant.load [[META0]], !noundef [[META0]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
@@ -43,7 +43,7 @@ entry:
 define i32 @num_blocks_z() {
 ; CHECK-LABEL: define i32 @num_blocks_z() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG]], i64 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[TMP0]], align 4, !invariant.load [[META0]], !noundef [[META0]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
@@ -64,7 +64,7 @@ define i32 @num_blocks(i32 %dim) {
 ; CHECK-LABEL: define i32 @num_blocks(
 ; CHECK-SAME: i32 [[DIM:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[TMP1:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; CHECK-NEXT:    switch i32 [[DIM]], label %[[DEFAULT:.*]] [
 ; CHECK-NEXT:      i32 0, label %[[DIM_X:.*]]
 ; CHECK-NEXT:      i32 1, label %[[DIM_Y:.*]]
@@ -133,7 +133,7 @@ exit:
 define i64 @larger() {
 ; CHECK-LABEL: define i64 @larger() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; CHECK-NEXT:    [[GRID_SIZE_X:%.*]] = load i32, ptr addrspace(4) [[IMPLICITARG]], align 4, !invariant.load [[META0]], !noundef [[META0]]
 ; CHECK-NEXT:    [[CONV_GRID_X:%.*]] = zext i32 [[GRID_SIZE_X]] to i64
 ; CHECK-NEXT:    ret i64 [[CONV_GRID_X]]
@@ -157,8 +157,8 @@ define i32 @bad_offset() {
 ; CHECK-NEXT:    [[DISPATCH:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 ; CHECK-NEXT:    [[D_GEP_Y:%.*]] = getelementptr i8, ptr addrspace(4) [[DISPATCH]], i64 16
 ; CHECK-NEXT:    [[GRID_SIZE_Y:%.*]] = load i32, ptr addrspace(4) [[D_GEP_Y]], align 4
-; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; CHECK-NEXT:    [[I_GEP_X:%.*]] = getelementptr i8, ptr addrspace(4) [[IMPLICITARG]], i64 12
+; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[I_GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG]], i64 12
 ; CHECK-NEXT:    [[WG_SIZE_X:%.*]] = load i16, ptr addrspace(4) [[I_GEP_X]], align 2
 ; CHECK-NEXT:    [[CONV_X:%.*]] = zext i16 [[WG_SIZE_X]] to i32
 ; CHECK-NEXT:    [[COUNT_X:%.*]] = udiv i32 [[GRID_SIZE_Y]], [[CONV_X]]
@@ -201,8 +201,8 @@ define i32 @wrong_cast() {
 ; CHECK-NEXT:    [[DISPATCH:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 ; CHECK-NEXT:    [[D_GEP_X:%.*]] = getelementptr i8, ptr addrspace(4) [[DISPATCH]], i64 12
 ; CHECK-NEXT:    [[GRID_SIZE_X:%.*]] = load i32, ptr addrspace(4) [[D_GEP_X]], align 4
-; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; CHECK-NEXT:    [[I_GEP_X:%.*]] = getelementptr i8, ptr addrspace(4) [[IMPLICITARG]], i64 12
+; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[I_GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG]], i64 12
 ; CHECK-NEXT:    [[WG_SIZE_X:%.*]] = load i16, ptr addrspace(4) [[I_GEP_X]], align 2
 ; CHECK-NEXT:    [[CONV_X:%.*]] = sext i16 [[WG_SIZE_X]] to i32
 ; CHECK-NEXT:    [[COUNT_X:%.*]] = udiv i32 [[GRID_SIZE_X]], [[CONV_X]]
@@ -226,8 +226,8 @@ define i32 @wrong_size() {
 ; CHECK-NEXT:    [[DISPATCH:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 ; CHECK-NEXT:    [[D_GEP_X:%.*]] = getelementptr i8, ptr addrspace(4) [[DISPATCH]], i64 12
 ; CHECK-NEXT:    [[GRID_SIZE_X:%.*]] = load i32, ptr addrspace(4) [[D_GEP_X]], align 4
-; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; CHECK-NEXT:    [[I_GEP_X:%.*]] = getelementptr i8, ptr addrspace(4) [[IMPLICITARG]], i64 12
+; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[I_GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG]], i64 12
 ; CHECK-NEXT:    [[WG_SIZE_X:%.*]] = load i8, ptr addrspace(4) [[I_GEP_X]], align 2
 ; CHECK-NEXT:    [[CONV_X:%.*]] = zext i8 [[WG_SIZE_X]] to i32
 ; CHECK-NEXT:    [[COUNT_X:%.*]] = udiv i32 [[GRID_SIZE_X]], [[CONV_X]]
@@ -248,11 +248,11 @@ entry:
 define i32 @wrong_intrinsic() {
 ; CHECK-LABEL: define i32 @wrong_intrinsic() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[DISPATCH:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; CHECK-NEXT:    [[D_GEP_X:%.*]] = getelementptr i8, ptr addrspace(4) [[DISPATCH]], i64 16
+; CHECK-NEXT:    [[DISPATCH:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[D_GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[DISPATCH]], i64 16
 ; CHECK-NEXT:    [[GRID_SIZE_X:%.*]] = load i32, ptr addrspace(4) [[D_GEP_X]], align 4
-; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; CHECK-NEXT:    [[I_GEP_X:%.*]] = getelementptr i8, ptr addrspace(4) [[IMPLICITARG]], i64 12
+; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[I_GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG]], i64 12
 ; CHECK-NEXT:    [[WG_SIZE_X:%.*]] = load i16, ptr addrspace(4) [[I_GEP_X]], align 2
 ; CHECK-NEXT:    [[CONV_X:%.*]] = zext i16 [[WG_SIZE_X]] to i32
 ; CHECK-NEXT:    [[COUNT_X:%.*]] = udiv i32 [[GRID_SIZE_X]], [[CONV_X]]
@@ -277,8 +277,8 @@ define i16 @empty_use() {
 ; CHECK-NEXT:    [[D_GEP_X:%.*]] = getelementptr i8, ptr addrspace(4) [[DISPATCH]], i64 12
 ; CHECK-NEXT:    [[GRID_SIZE_X:%.*]] = load i32, ptr addrspace(4) [[D_GEP_X]], align 4
 ; CHECK-NEXT:    [[TRUNC_X:%.*]] = trunc i32 [[GRID_SIZE_X]] to i16
-; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; CHECK-NEXT:    [[I_GEP_X:%.*]] = getelementptr i8, ptr addrspace(4) [[IMPLICITARG]], i64 12
+; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[I_GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG]], i64 12
 ; CHECK-NEXT:    [[WG_SIZE_X:%.*]] = load i16, ptr addrspace(4) [[I_GEP_X]], align 2
 ; CHECK-NEXT:    [[COUNT_X:%.*]] = udiv i16 [[TRUNC_X]], [[WG_SIZE_X]]
 ; CHECK-NEXT:    ret i16 [[COUNT_X]]
@@ -298,7 +298,7 @@ entry:
 define i32 @multiple_use() {
 ; CHECK-LABEL: define i32 @multiple_use() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[IMPLICITARG]], align 4, !invariant.load [[META0]], !noundef [[META0]]
 ; CHECK-NEXT:    [[SUM:%.*]] = shl i32 [[TMP0]], 1
 ; CHECK-NEXT:    ret i32 [[SUM]]

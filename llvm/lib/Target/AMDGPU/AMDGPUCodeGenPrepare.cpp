@@ -94,12 +94,6 @@ static cl::opt<bool> DisableFDivExpand(
   cl::ReallyHidden,
   cl::init(false));
 
-static cl::opt<bool> MarkDereferenceableCalls(
-    "amdgpu-codegenprepare-mark-dereferenceable-calls",
-    cl::desc("Mark implicitarg.ptr calls as dereferenceable to enable LICM "
-             "optimization"),
-    cl::ReallyHidden, cl::init(true));
-
 class AMDGPUCodeGenPrepareImpl
     : public InstVisitor<AMDGPUCodeGenPrepareImpl, bool> {
 public:
@@ -289,36 +283,6 @@ public:
   StringRef getPassName() const override { return "AMDGPU IR optimizations"; }
 };
 
-static bool markDereferenceableCalls(Function &F) {
-  if (F.hasFnAttribute("amdgpu-no-implicitarg-ptr"))
-    return false;
-
-  bool Changed = false;
-  unsigned CodeObjectVersion =
-      AMDGPU::getAMDHSACodeObjectVersion(*(F.getParent()));
-  uint64_t Bytes = (CodeObjectVersion >= AMDGPU::AMDHSA_COV5) ? 256 : 64;
-
-  for (BasicBlock &BB : F)
-    for (Instruction &I : BB)
-      if (auto *CI = dyn_cast<CallInst>(&I)) {
-        Function *Callee = CI->getCalledFunction();
-        if (!Callee)
-          continue;
-
-        // Check if this is a call to amdgcn_implicitarg_ptr intrinsic
-        Intrinsic::ID IID = Callee->getIntrinsicID();
-        if (IID != Intrinsic::amdgcn_implicitarg_ptr)
-          continue;
-
-        if (!CI->hasRetAttr(Attribute::Dereferenceable)) {
-          CI->addRetAttr(
-              Attribute::getWithDereferenceableBytes(CI->getContext(), Bytes));
-          Changed = true;
-        }
-      }
-
-  return Changed;
-}
 } // end anonymous namespace
 
 bool AMDGPUCodeGenPrepareImpl::run() {
@@ -339,9 +303,6 @@ bool AMDGPUCodeGenPrepareImpl::run() {
     if (auto *I = dyn_cast_or_null<Instruction>(DeadVals.pop_back_val()))
       RecursivelyDeleteTriviallyDeadInstructions(I, TLI);
   }
-
-  if (MarkDereferenceableCalls)
-    MadeChange |= markDereferenceableCalls(F);
 
   return MadeChange;
 }
