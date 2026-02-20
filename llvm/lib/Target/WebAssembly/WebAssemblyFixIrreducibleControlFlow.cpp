@@ -27,10 +27,8 @@
 /// the loop containing the previous multiple entries. Each time we fix some
 /// irreducibility, we recalculate the SCCs. After ensuring all the SCCs in a
 /// region are reducible, we recurse into them. The total time complexity of
-/// this pass is:
-///
-///   O(NumBlocks * NumNestedLoops * NumIrreducibleLoops +
-///     NumLoops * NumLoops)
+/// this pass is roughly:
+/// O((NumBlocks + NumEdges) * (NumNestedLoops + NumIrreducibleLoops))
 ///
 /// This pass is similar to what the Relooper [1] does. Both identify looping
 /// code that requires multiple entries, and resolve it in a similar way (in
@@ -193,7 +191,7 @@ void ReachabilityGraph::calculate() {
   unsigned CurrSCCIdx = 0;
   for (auto &SCC : make_range(scc_begin(this), scc_end(this))) {
     LoopEntriesBySCC.push_back({});
-    auto &SCCLoopEntries = LoopEntriesBySCC[CurrSCCIdx];
+    auto &SCCLoopEntries = LoopEntriesBySCC.back();
 
     for (auto *Node : SCC) {
       // Make sure nodes are only ever assigned one SCC
