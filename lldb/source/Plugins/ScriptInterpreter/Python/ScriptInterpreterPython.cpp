@@ -295,7 +295,8 @@ void ScriptInterpreterPython::Initialize() {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                   GetPluginDescriptionStatic(),
                                   lldb::eScriptLanguagePython,
-                                  ScriptInterpreterPythonImpl::CreateInstance);
+                                  ScriptInterpreterPythonImpl::CreateInstance,
+                                  ScriptInterpreterPythonImpl::GetPythonDir);
     ScriptInterpreterPythonImpl::Initialize();
   });
 }
