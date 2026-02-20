@@ -152,6 +152,7 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
+  // TODO: Consider moving SPIR-V linking to a separate tool.
   if (C.getDriver().isUsingLTO()) {
     // Implement limited LTO support through llvm-lto.
     if (Args.hasArg(options::OPT_sycl_link)) {
