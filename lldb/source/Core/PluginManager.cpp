@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -42,47 +43,134 @@ typedef void (*PluginTermCallback)();
 struct PluginInfo {
   PluginInfo() = default;
 
+  PluginInfo(const PluginInfo &) = delete;
+  PluginInfo &operator=(const PluginInfo &) = delete;
+
+  PluginInfo(PluginInfo &&) = default;
+  PluginInfo &operator=(PluginInfo &&) = default;
+
+  ~PluginInfo() {
+    if (!library.isValid())
+      return;
+    if (!plugin_term_callback)
+      return;
+    plugin_term_callback();
+  }
+
+  static llvm::Expected<PluginInfo> Create(const FileSpec &path);
+
+private:
   llvm::sys::DynamicLibrary library;
   PluginInitCallback plugin_init_callback = nullptr;
   PluginTermCallback plugin_term_callback = nullptr;
 };
 
-typedef std::map<FileSpec, PluginInfo> PluginTerminateMap;
+typedef llvm::SmallDenseMap<FileSpec, PluginInfo> DynamicPluginMap;
 
 static std::recursive_mutex &GetPluginMapMutex() {
   static std::recursive_mutex g_plugin_map_mutex;
   return g_plugin_map_mutex;
 }
 
-static PluginTerminateMap &GetPluginMap() {
-  static PluginTerminateMap g_plugin_map;
+static DynamicPluginMap &GetPluginMap() {
+  static DynamicPluginMap g_plugin_map;
   return g_plugin_map;
 }
 
 static bool PluginIsLoaded(const FileSpec &plugin_file_spec) {
   std::lock_guard<std::recursive_mutex> guard(GetPluginMapMutex());
-  PluginTerminateMap &plugin_map = GetPluginMap();
-  return plugin_map.find(plugin_file_spec) != plugin_map.end();
+  return GetPluginMap().contains(plugin_file_spec);
 }
 
 static void SetPluginInfo(const FileSpec &plugin_file_spec,
-                          const PluginInfo &plugin_info) {
+                          PluginInfo plugin_info) {
   std::lock_guard<std::recursive_mutex> guard(GetPluginMapMutex());
-  PluginTerminateMap &plugin_map = GetPluginMap();
-  assert(plugin_map.find(plugin_file_spec) == plugin_map.end());
-  plugin_map[plugin_file_spec] = plugin_info;
+  DynamicPluginMap &plugin_map = GetPluginMap();
+  assert(!plugin_map.contains(plugin_file_spec));
+  plugin_map.try_emplace(plugin_file_spec, std::move(plugin_info));
 }
 
 template <typename FPtrTy> static FPtrTy CastToFPtr(void *VPtr) {
   return reinterpret_cast<FPtrTy>(VPtr);
 }
 
+static constexpr llvm::StringLiteral g_plugin_prefix = "liblldbPlugin";
+struct PluginDir {
+  enum LoadPolicy {
+    /// Try to load anything that looks like a shared library
+    LoadAnyDylib,
+
+    /// Only load shared libraries who's filename start with g_plugin_prefix.
+    LoadOnlyWithLLDBPrefix,
+  };
+
+  PluginDir(FileSpec path, LoadPolicy policy)
+      : path(std::move(path)), policy(policy) {}
+
+  explicit operator bool() const { return FileSystem::Instance().Exists(path); }
+
+  /// The path to the plugin directory.
+  const FileSpec path;
+
+  /// Filter when looking for plugins.
+  const LoadPolicy policy;
+};
+
+llvm::Expected<PluginInfo> PluginInfo::Create(const FileSpec &path) {
+  PluginInfo plugin_info;
+  std::string error;
+  plugin_info.library = llvm::sys::DynamicLibrary::getPermanentLibrary(
+      path.GetPath().c_str(), &error);
+  if (!plugin_info.library.isValid())
+    return llvm::createStringError(error);
+
+  // Look for files that follow the convention <g_plugin_prefix><name>.<ext>, in
+  // which case we need to call lldb_initialize_<name> and
+  // lldb_terminate_<name>.
+  llvm::StringRef file_name =
+      path.GetFileNameStrippingExtension().GetStringRef();
+  if (file_name.starts_with(g_plugin_prefix)) {
+    llvm::StringRef plugin_name = file_name.substr(g_plugin_prefix.size());
+    std::string init_symbol =
+        llvm::Twine("lldb_initialize_" + plugin_name).str();
+
+    if (auto *init_fn = CastToFPtr<PluginInitCallback>(
+            plugin_info.library.getAddressOfSymbol(init_symbol.c_str()))) {
+      if (!init_fn())
+        return llvm::createStringErrorV("initializer '{0}' returned false",
+                                        init_symbol);
+      const std::string term_symbol =
+          llvm::Twine("lldb_terminate_" + plugin_name).str();
+      plugin_info.plugin_term_callback = CastToFPtr<PluginTermCallback>(
+          plugin_info.library.getAddressOfSymbol(term_symbol.c_str()));
+    }
+    return plugin_info;
+  }
+
+  // Look for the legacy LLDBPluginInitialize/LLDBPluginTerminate symbols.
+  if (auto *init_fn = CastToFPtr<PluginInitCallback>(
+          plugin_info.library.getAddressOfSymbol("LLDBPluginInitialize"))) {
+    if (!init_fn())
+      return llvm::createStringError(
+          "initializer 'LLDBPluginInitialize' returned false");
+
+    plugin_info.plugin_init_callback = init_fn;
+    plugin_info.plugin_term_callback = CastToFPtr<PluginTermCallback>(
+        plugin_info.library.getAddressOfSymbol("LLDBPluginTerminate"));
+    return plugin_info;
+  }
+
+  return llvm::createStringError("no initialize symbol found");
+}
+
 static FileSystem::EnumerateDirectoryResult
 LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
                    llvm::StringRef path) {
-  Status error;
-
   namespace fs = llvm::sys::fs;
+
+  static constexpr llvm::StringLiteral g_dylibext(".dylib");
+  static constexpr llvm::StringLiteral g_solibext(".so");
+
   // If we have a regular file, a symbolic link or unknown file type, try and
   // process the file. We must handle unknown as sometimes the directory
   // enumeration might be enumerating a file system that doesn't have correct
@@ -92,42 +180,36 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
     FileSpec plugin_file_spec(path);
     FileSystem::Instance().Resolve(plugin_file_spec);
 
+    // Don't try to load unknown extensions.
+    if (plugin_file_spec.GetFileNameExtension() != g_dylibext &&
+        plugin_file_spec.GetFileNameExtension() != g_solibext)
+      return FileSystem::eEnumerateDirectoryResultNext;
+
+    // Don't try to load libraries that don't start with g_plugin_prefix when
+    // filtering.
+    PluginDir::LoadPolicy *policy = (PluginDir::LoadPolicy *)baton;
+    if (*policy == PluginDir::LoadOnlyWithLLDBPrefix &&
+        !plugin_file_spec.GetFilename().GetStringRef().starts_with(
+            g_plugin_prefix))
+      return FileSystem::eEnumerateDirectoryResultNext;
+
+    // Don't try to load an already loaded plugin again.
     if (PluginIsLoaded(plugin_file_spec))
       return FileSystem::eEnumerateDirectoryResultNext;
-    else {
-      PluginInfo plugin_info;
 
-      std::string pluginLoadError;
-      plugin_info.library = llvm::sys::DynamicLibrary::getPermanentLibrary(
-          plugin_file_spec.GetPath().c_str(), &pluginLoadError);
-      if (plugin_info.library.isValid()) {
-        bool success = false;
-        plugin_info.plugin_init_callback = CastToFPtr<PluginInitCallback>(
-            plugin_info.library.getAddressOfSymbol("LLDBPluginInitialize"));
-        if (plugin_info.plugin_init_callback) {
-          // Call the plug-in "bool LLDBPluginInitialize(void)" function
-          success = plugin_info.plugin_init_callback();
-        }
+    llvm::Expected<PluginInfo> plugin_info =
+        PluginInfo::Create(plugin_file_spec);
+    if (plugin_info) {
+      SetPluginInfo(plugin_file_spec, std::move(*plugin_info));
+    } else {
+      // Cache an empty plugin info so we don't try to load it again and again.
+      SetPluginInfo(plugin_file_spec, PluginInfo());
 
-        if (success) {
-          // It is ok for the "LLDBPluginTerminate" symbol to be nullptr
-          plugin_info.plugin_term_callback = CastToFPtr<PluginTermCallback>(
-              plugin_info.library.getAddressOfSymbol("LLDBPluginTerminate"));
-        } else {
-          // The initialize function returned FALSE which means the plug-in
-          // might not be compatible, or might be too new or too old, or might
-          // not want to run on this machine.  Set it to a default-constructed
-          // instance to invalidate it.
-          plugin_info = PluginInfo();
-        }
-
-        // Regardless of success or failure, cache the plug-in load in our
-        // plug-in info so we don't try to load it again and again.
-        SetPluginInfo(plugin_file_spec, plugin_info);
-
-        return FileSystem::eEnumerateDirectoryResultNext;
-      }
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Host), plugin_info.takeError(),
+                     "could not load plugin: {0}");
     }
+
+    return FileSystem::eEnumerateDirectoryResultNext;
   }
 
   if (ft == fs::file_type::directory_file ||
@@ -143,43 +225,31 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
 }
 
 void PluginManager::Initialize() {
-  const bool find_directories = true;
-  const bool find_files = true;
-  const bool find_other = true;
-  char dir_path[PATH_MAX];
-  if (FileSpec dir_spec = HostInfo::GetSystemPluginDir()) {
-    if (FileSystem::Instance().Exists(dir_spec) &&
-        dir_spec.GetPath(dir_path, sizeof(dir_path))) {
-      FileSystem::Instance().EnumerateDirectory(dir_path, find_directories,
-                                                find_files, find_other,
-                                                LoadPluginCallback, nullptr);
-    }
-  }
+  static const bool find_directories = true;
+  static const bool find_files = true;
+  static const bool find_other = true;
 
-  if (FileSpec dir_spec = HostInfo::GetUserPluginDir()) {
-    if (FileSystem::Instance().Exists(dir_spec) &&
-        dir_spec.GetPath(dir_path, sizeof(dir_path))) {
-      FileSystem::Instance().EnumerateDirectory(dir_path, find_directories,
-                                                find_files, find_other,
-                                                LoadPluginCallback, nullptr);
+  // Directories to scan for plugins. Unlike the plugin directories, which are
+  // meant exclusively for LLDB, the shared library directory is likely to
+  // contain unrelated shared libraries that we do not want to load. Therefore,
+  // limit the scan to libraries that start with g_plugin_prefix.
+  const std::array<PluginDir, 3> plugin_dirs = {
+      PluginDir(HostInfo::GetShlibDir(), PluginDir::LoadOnlyWithLLDBPrefix),
+      PluginDir(HostInfo::GetSystemPluginDir(), PluginDir::LoadAnyDylib),
+      PluginDir(HostInfo::GetUserPluginDir(), PluginDir::LoadAnyDylib)};
+
+  for (const PluginDir &plugin_dir : plugin_dirs) {
+    if (plugin_dir) {
+      FileSystem::Instance().EnumerateDirectory(
+          plugin_dir.path.GetPath().c_str(), find_directories, find_files,
+          find_other, LoadPluginCallback, (void *)&plugin_dir.policy);
     }
   }
 }
 
 void PluginManager::Terminate() {
   std::lock_guard<std::recursive_mutex> guard(GetPluginMapMutex());
-  PluginTerminateMap &plugin_map = GetPluginMap();
-
-  PluginTerminateMap::const_iterator pos, end = plugin_map.end();
-  for (pos = plugin_map.begin(); pos != end; ++pos) {
-    // Call the plug-in "void LLDBPluginTerminate (void)" function if there is
-    // one (if the symbol was not nullptr).
-    if (pos->second.library.isValid()) {
-      if (pos->second.plugin_term_callback)
-        pos->second.plugin_term_callback();
-    }
-  }
-  plugin_map.clear();
+  GetPluginMap().clear();
 }
 
 llvm::ArrayRef<PluginNamespace> PluginManager::GetPluginNamespaces() {
@@ -1150,7 +1220,8 @@ llvm::StringRef PluginManager::GetProcessPluginNameAtIndex(uint32_t idx) {
   return GetProcessInstances().GetNameAtIndex(idx);
 }
 
-llvm::StringRef PluginManager::GetProcessPluginDescriptionAtIndex(uint32_t idx) {
+llvm::StringRef
+PluginManager::GetProcessPluginDescriptionAtIndex(uint32_t idx) {
   return GetProcessInstances().GetDescriptionAtIndex(idx);
 }
 
@@ -1606,8 +1677,7 @@ FileSpec PluginManager::FindSymbolFileInBundle(const FileSpec &symfile_bundle,
 
 #pragma mark Trace
 
-struct TraceInstance
-    : public PluginInstance<TraceCreateInstanceFromBundle> {
+struct TraceInstance : public PluginInstance<TraceCreateInstanceFromBundle> {
   TraceInstance(
       llvm::StringRef name, llvm::StringRef description,
       CallbackType create_callback_from_bundle,
@@ -1652,7 +1722,8 @@ PluginManager::GetTraceCreateCallback(llvm::StringRef plugin_name) {
 }
 
 TraceCreateInstanceForLiveProcess
-PluginManager::GetTraceCreateCallbackForLiveProcess(llvm::StringRef plugin_name) {
+PluginManager::GetTraceCreateCallbackForLiveProcess(
+    llvm::StringRef plugin_name) {
   if (auto instance = GetTracePluginInstances().GetInstanceForName(plugin_name))
     return instance->create_callback_for_live_process;
 
@@ -1969,7 +2040,8 @@ static REPLInstances &GetREPLInstances() {
   return g_instances;
 }
 
-bool PluginManager::RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+bool PluginManager::RegisterPlugin(llvm::StringRef name,
+                                   llvm::StringRef description,
                                    REPLCreateInstance create_callback,
                                    LanguageSet supported_languages) {
   return GetREPLInstances().RegisterPlugin(name, description, create_callback,
@@ -2051,10 +2123,9 @@ void PluginManager::DebuggerInitialize(Debugger &debugger) {
 // This is the preferred new way to register plugin specific settings.  e.g.
 // This will put a plugin's settings under e.g.
 // "plugin.<plugin_type_name>.<plugin_type_desc>.SETTINGNAME".
-static lldb::OptionValuePropertiesSP
-GetDebuggerPropertyForPlugins(Debugger &debugger, llvm::StringRef plugin_type_name,
-                              llvm::StringRef plugin_type_desc,
-                              bool can_create) {
+static lldb::OptionValuePropertiesSP GetDebuggerPropertyForPlugins(
+    Debugger &debugger, llvm::StringRef plugin_type_name,
+    llvm::StringRef plugin_type_desc, bool can_create) {
   lldb::OptionValuePropertiesSP parent_properties_sp(
       debugger.GetValueProperties());
   if (parent_properties_sp) {
@@ -2292,9 +2363,8 @@ bool PluginManager::CreateSettingForJITLoaderPlugin(
 
 static const char *kOperatingSystemPluginName("os");
 
-lldb::OptionValuePropertiesSP
-PluginManager::GetSettingForOperatingSystemPlugin(Debugger &debugger,
-                                                  llvm::StringRef setting_name) {
+lldb::OptionValuePropertiesSP PluginManager::GetSettingForOperatingSystemPlugin(
+    Debugger &debugger, llvm::StringRef setting_name) {
   lldb::OptionValuePropertiesSP properties_sp;
   lldb::OptionValuePropertiesSP plugin_type_properties_sp(
       GetDebuggerPropertyForPlugins(
