@@ -3879,15 +3879,6 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
     // Check that VNI is live-out of all predecessors.
     for (const MachineBasicBlock *Pred : MFI->predecessors()) {
       SlotIndex PEnd = LiveInts->getMBBEndIdx(Pred);
-      // Predecessor of landing pad live-out on last call.
-      if (MFI->isEHPad()) {
-        for (const MachineInstr &MI : llvm::reverse(*Pred)) {
-          if (MI.isCall()) {
-            PEnd = Indexes->getInstructionIndex(MI).getBoundaryIndex();
-            break;
-          }
-        }
-      }
       const VNInfo *PVNI = LR.getVNInfoBefore(PEnd);
 
       // All predecessors must have a live-out value. However for a phi
