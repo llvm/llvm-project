@@ -20,7 +20,17 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include <memory>
 #include <string>
+
+namespace clang {
+class DiagnosticConsumer;
+class DiagnosticsEngine;
+namespace driver {
+class Driver;
+class Compilation;
+} // namespace driver
+} // namespace clang
 
 namespace llvm::advisor {
 
@@ -28,16 +38,44 @@ class BuildExecutor {
 public:
   BuildExecutor(const AdvisorConfig &config);
 
-  auto execute(llvm::StringRef compiler,
-               const llvm::SmallVectorImpl<std::string> &args,
-               BuildContext &buildContext, llvm::StringRef tempDir)
+  struct PreparedBuild {
+    std::string CompilerPath;
+    llvm::SmallVector<std::string, 16> InstrumentedArgs;
+    std::unique_ptr<clang::driver::Driver> Driver;
+    std::unique_ptr<clang::driver::Compilation> Compilation;
+    std::shared_ptr<clang::DiagnosticsEngine> Diagnostics;
+    std::unique_ptr<clang::DiagnosticConsumer> DiagnosticClient;
+    bool UsesDriver = false;
+  };
+
+  auto execute(llvm::StringRef Compiler,
+               const llvm::SmallVectorImpl<std::string> &Args,
+               BuildContext &BuildCtx, llvm::StringRef TempDir,
+               llvm::StringRef ArtifactRoot = llvm::StringRef())
       -> llvm::Expected<int>;
 
+  /// Build a Compilation from the original, non-instrumented user args.
+  /// The result is used exclusively for analysis (phase refinement, unit
+  /// detection) and must NOT be executed.  Returns a PreparedBuild whose
+  /// InstrumentedArgs are a verbatim copy of Args.
+  auto buildOriginalCompilation(llvm::StringRef Compiler,
+                                const llvm::SmallVectorImpl<std::string> &Args)
+      -> llvm::Expected<PreparedBuild>;
+
+  auto prepareBuild(llvm::StringRef Compiler,
+                    const llvm::SmallVectorImpl<std::string> &Args,
+                    BuildContext &BuildCtx, llvm::StringRef TempDir,
+                    llvm::StringRef ArtifactRoot = llvm::StringRef())
+      -> llvm::Expected<PreparedBuild>;
+
+  auto executePreparedBuild(PreparedBuild &Build) -> llvm::Expected<int>;
+
 private:
-  auto instrumentCompilerArgs(const llvm::SmallVectorImpl<std::string> &args,
-                              BuildContext &buildContext,
-                              llvm::StringRef tempDir)
-      -> llvm::SmallVector<std::string, 16>;
+  auto instrumentCompilerArgs(llvm::StringRef CompilerPath,
+                              const llvm::SmallVectorImpl<std::string> &Args,
+                              BuildContext &BuildCtx, llvm::StringRef TempDir,
+                              llvm::StringRef ArtifactRoot)
+      -> llvm::Expected<llvm::SmallVector<std::string, 16>>;
 
   const AdvisorConfig &config;
 };
