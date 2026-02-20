@@ -17,6 +17,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_target_unittest(SPIRVTests
   SPIRVConvergenceRegionAnalysisTests.cpp
+  SPIRVTypeAnalysisTests.cpp
   SPIRVSortBlocksTests.cpp
   SPIRVPartialOrderingVisitorTests.cpp
   SPIRVAPITest.cpp
