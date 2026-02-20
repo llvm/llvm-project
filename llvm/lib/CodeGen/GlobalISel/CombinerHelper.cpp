@@ -392,6 +392,70 @@ void CombinerHelper::applyCombineConcatVectors(
   MI.eraseFromParent();
 }
 
+bool CombinerHelper::matchCombineBuildVectorOfBitcast(
+    MachineInstr &MI, SmallVector<Register> &Ops) const {
+  auto &BV = cast<GBuildVector>(MI);
+
+  // Look at the first operand for a unmerge(bitcast) from a scalar type.
+  GUnmerge *Unmerge = getOpcodeDef<GUnmerge>(BV.getSourceReg(0), MRI);
+  if (!Unmerge || Unmerge->getReg(0) != BV.getSourceReg(0))
+    return false;
+  MachineInstr *BC = MRI.getVRegDef(Unmerge->getSourceReg());
+  if (BC->getOpcode() != TargetOpcode::G_BITCAST)
+    return false;
+  LLT InputTy = MRI.getType(BC->getOperand(1).getReg());
+  unsigned Factor = Unmerge->getNumDefs();
+  if (!InputTy.isScalar() || BV.getNumSources() % Factor != 0)
+    return false;
+
+  // Check if the build_vector is legal
+  LLT BVDstTy = LLT::fixed_vector(BV.getNumSources() / Factor, InputTy);
+  if (!isLegal({TargetOpcode::G_BUILD_VECTOR, {BVDstTy, InputTy}}))
+    return false;
+
+  // Check all other operands are bitcasts or undef.
+  for (unsigned Idx = 0; Idx < BV.getNumSources(); Idx += Factor) {
+    GUnmerge *Unmerge = getOpcodeDef<GUnmerge>(BV.getSourceReg(Idx), MRI);
+    if (!all_of(iota_range<unsigned>(0, Factor, false), [&](unsigned J) {
+          MachineInstr *Src = MRI.getVRegDef(BV.getSourceReg(Idx + J));
+          if (Src->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+            return true;
+          return Unmerge && BV.getSourceReg(Idx + J) == Unmerge->getReg(J);
+        }))
+      return false;
+    if (!Unmerge)
+      Ops.push_back(0);
+    else {
+      MachineInstr *BC = MRI.getVRegDef(Unmerge->getSourceReg());
+      if (BC->getOpcode() != TargetOpcode::G_BITCAST ||
+          MRI.getType(BC->getOperand(1).getReg()) != InputTy)
+        return false;
+      Ops.push_back(BC->getOperand(1).getReg());
+    }
+  }
+
+  return true;
+}
+
+void CombinerHelper::applyCombineBuildVectorOfBitcast(
+    MachineInstr &MI, SmallVector<Register> &Ops) const {
+  LLT SrcTy = MRI.getType(Ops[0]);
+  // Build undef if any operations require it.
+  Register Undef = 0;
+  for (Register &Op : Ops) {
+    if (!Op) {
+      if (!Undef)
+        Undef = Builder.buildUndef(SrcTy).getReg(0);
+      Op = Undef;
+    }
+  }
+
+  LLT BVDstTy = LLT::fixed_vector(Ops.size(), SrcTy);
+  auto BV = Builder.buildBuildVector(BVDstTy, Ops);
+  Builder.buildBitcast(MI.getOperand(0).getReg(), BV);
+  MI.eraseFromParent();
+}
+
 void CombinerHelper::applyCombineShuffleToBuildVector(MachineInstr &MI) const {
   auto &Shuffle = cast<GShuffleVector>(MI);
 
