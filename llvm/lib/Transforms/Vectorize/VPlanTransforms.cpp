@@ -4191,30 +4191,6 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
     VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, EarlyExitVPBB);
   }
 
-  // For exit blocks that also have the middle block as predecessor (latch
-  // exits to the same block as an early exit), extract the last lane of the
-  // first operand for the middle block's incoming value.
-  VPBuilder MiddleBuilder(MiddleVPBB);
-  VPBasicBlock *MiddleSuccVPBB =
-      cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
-  if (MiddleSuccVPBB->getNumPredecessors() > 1) {
-    assert(all_of(MiddleSuccVPBB->getPredecessors(),
-                  [&](VPBlockBase *Pred) {
-                    return Pred == MiddleVPBB ||
-                           is_contained(VectorEarlyExitVPBBs, Pred);
-                  }) &&
-           "All predecessors must be either the middle block or early exit "
-           "blocks");
-
-    for (VPRecipeBase &R : MiddleSuccVPBB->phis()) {
-      auto *ExitIRI = cast<VPIRPhi>(&R);
-      assert(ExitIRI->getIncomingValueForBlock(MiddleVPBB) ==
-                 ExitIRI->getOperand(0) &&
-             "First operand must come from middle block");
-      ExitIRI->extractLastLaneOfLastPartOfFirstOperand(MiddleBuilder);
-    }
-  }
-
   // Chain through exits: for each exit, check if its condition is true at
   // the first active lane. If so, take that exit; otherwise, try the next.
   // The last exit needs no check since it must be taken if all others fail.

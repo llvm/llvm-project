@@ -1523,6 +1523,10 @@ public:
   /// Returns the incoming value for \p VPBB. \p VPBB must be an incoming block.
   VPValue *getIncomingValueForBlock(const VPBasicBlock *VPBB) const;
 
+  /// Sets the incoming value for \p VPBB to \p V. \p VPBB must be an incoming
+  /// block.
+  void setIncomingValueForBlock(const VPBasicBlock *VPBB, VPValue *V) const;
+
   /// Returns the number of incoming values, also number of incoming blocks.
   virtual unsigned getNumIncoming() const {
     return getAsRecipe()->getNumOperands();
@@ -1654,11 +1658,6 @@ public:
            "Op must be an operand of the recipe");
     return true;
   }
-
-  /// Update the recipe's first operand to the last lane of the last part of the
-  /// operand using \p Builder. Must only be used for VPIRInstructions with at
-  /// least one operand wrapping a PHINode.
-  void extractLastLaneOfLastPartOfFirstOperand(VPBuilder &Builder);
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

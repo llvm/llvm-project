@@ -492,21 +492,17 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
 static void createExtractsForLiveOuts(VPlan &Plan, VPBasicBlock *MiddleVPBB) {
   VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
   for (VPBasicBlock *EB : Plan.getExitBlocks()) {
-    if (EB->getSinglePredecessor() != MiddleVPBB)
+    if (!is_contained(EB->predecessors(), MiddleVPBB))
       continue;
 
     for (VPRecipeBase &R : EB->phis()) {
       auto *ExitIRI = cast<VPIRPhi>(&R);
-      for (unsigned Idx = 0; Idx != ExitIRI->getNumIncoming(); ++Idx) {
-        VPRecipeBase *Inc = ExitIRI->getIncomingValue(Idx)->getDefiningRecipe();
-        if (!Inc)
-          continue;
-        assert(ExitIRI->getNumOperands() == 1 &&
-               ExitIRI->getParent()->getSinglePredecessor() == MiddleVPBB &&
-               "exit values from early exits must be fixed when branch to "
-               "early-exit is added");
-        ExitIRI->extractLastLaneOfLastPartOfFirstOperand(B);
-      }
+      VPValue *Exiting = ExitIRI->getIncomingValueForBlock(MiddleVPBB);
+      if (isa<VPIRValue>(Exiting))
+        continue;
+      Exiting = B.createNaryOp(VPInstruction::ExtractLastPart, Exiting);
+      Exiting = B.createNaryOp(VPInstruction::ExtractLastLane, Exiting);
+      ExitIRI->setIncomingValueForBlock(MiddleVPBB, Exiting);
     }
   }
 }
