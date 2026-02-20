@@ -1475,6 +1475,31 @@ INTERCEPTOR(int, execve, const char *filename, char *const argv[],
   return REAL(execve)(filename, argv, envp);
 }
 
+#if SANITIZER_GLIBC
+INTERCEPTOR(int, clone, int (*f)(void *), void *stack, int flags, void *arg,
+            ...) {
+  __rtsan_notify_intercepted_call("clone");
+
+  if ((flags & CLONE_PIDFD) || (flags & CLONE_SETTLS) ||
+      (flags & CLONE_PARENT_SETTID) || (flags & CLONE_CHILD_SETTID) ||
+      (flags & CLONE_CHILD_CLEARTID)) {
+    va_list args;
+    va_start(args, arg);
+    pid_t *parent = va_arg(args, pid_t *);
+    void *tls = va_arg(args, void *);
+    pid_t *child = va_arg(args, pid_t *);
+    va_end(args);
+
+    return REAL(clone)(f, stack, flags, arg, parent, tls, child);
+  }
+
+  return REAL(clone)(f, stack, flags, arg);
+}
+#define RTSAN_MAYBE_INTERCEPT_CLONE INTERCEPT_FUNCTION(clone)
+#else
+#define RTSAN_MAYBE_INTERCEPT_CLONE
+#endif
+
 #if SANITIZER_INTERCEPT_PROCESS_VM_READV
 INTERCEPTOR(ssize_t, process_vm_readv, pid_t pid, const struct iovec *local_iov,
             unsigned long liovcnt, const struct iovec *remote_iov,
@@ -1735,6 +1760,7 @@ void __rtsan::InitializeInterceptors() {
 
   INTERCEPT_FUNCTION(fork);
   INTERCEPT_FUNCTION(execve);
+  RTSAN_MAYBE_INTERCEPT_CLONE;
 
   RTSAN_MAYBE_INTERCEPT_PROCESS_VM_READV;
   RTSAN_MAYBE_INTERCEPT_PROCESS_VM_WRITEV;

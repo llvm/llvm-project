@@ -1370,6 +1370,35 @@ TEST_F(PthreadRwlockTest, PthreadRwlockWrlockSurvivesWhenNonRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_GLIBC
+TEST(TestRtsanInterceptors, CloneDiesWhenRealtime) {
+  std::vector<char> buf;
+  buf.resize(1024 * 1024);
+  auto Call = [](void *a) { return 0; };
+  auto Func = [&buf, &Call]() {
+    clone(Call, buf.data() + buf.size(), 0, nullptr);
+  };
+
+  ExpectRealtimeDeath(Func, "clone");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, CloneWithTldDiesWhenRealtime) {
+  std::vector<char> buf;
+  pid_t pidfd;
+  void *tls = ::operator new(4096, std::align_val_t(16));
+  buf.resize(1024 * 1024);
+  auto Call = [](void *a) { return 0; };
+  auto Func = [&buf, &Call, &pidfd, &tls]() {
+    clone(Call, buf.data() + buf.size(), CLONE_PIDFD | CLONE_SETTLS, &pidfd,
+          tls, nullptr);
+  };
+
+  ExpectRealtimeDeath(Func, "clone");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 /*
     Sockets
 */
