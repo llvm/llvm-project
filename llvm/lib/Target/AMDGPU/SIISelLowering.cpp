@@ -1033,6 +1033,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::ANY_EXTEND,
                        ISD::EXTRACT_VECTOR_ELT,
                        ISD::INSERT_VECTOR_ELT,
+                       ISD::BUILD_VECTOR,
+                       ISD::VECTOR_SHUFFLE,
                        ISD::FCOPYSIGN});
 
   if (Subtarget->has16BitInsts() && !Subtarget->hasMed3_16())
@@ -15678,6 +15680,543 @@ SDValue SITargetLowering::performCvtPkRTZCombine(SDNode *N,
   return SDValue();
 }
 
+// Suppose that we have 16 input bytes sitting in four 32-bit dwords and want to
+// form four output dwords so that each output dword takes exactly one byte from
+// each input dword. This is achievable in two stages of four independent
+// v_perms each.
+//
+// To match for a single instance of the pattern, we trace byte provenance up
+// a chain of vector_shuffles or an extract_vector_elt into a build_vector to
+// collect source-side dwords, and then we track bytes of those dwords down the
+// same network pattern to collect destination-side dwords. We then verify that
+// we have a bijection and that each output dword selects one byte from each
+// input dword. After processing, we directly emit AMDGPUISD::PERM nodes and
+// build the replacement vectors from the results.
+
+// For given element in vec `V` at index `Lane`, try to find a vec `SrcVec` from
+// which the element originates through vector_shuffles or extract_vector_elt.
+static bool findVecEltSrc(SDValue V, unsigned Lane, SDValue &SrcVec,
+                          unsigned &SrcLane) {
+  EVT VT = V.getValueType();
+  if (!VT.isVector())
+    return false;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  if (Lane >= NumElts)
+    return false;
+
+  // V = build_vector(.., extract_vector_elt(SrcVec, SrcLane), ..)
+  if (V.getOpcode() == ISD::BUILD_VECTOR) {
+    SDValue Op = V.getOperand(Lane);
+    if (Op.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      return false;
+
+    auto *Idx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+    if (!Idx)
+      return false;
+
+    SrcVec = Op.getOperand(0);
+    SrcLane = Idx->getZExtValue();
+    if (SrcLane >= SrcVec.getValueType().getVectorNumElements())
+      return false;
+    return true;
+  }
+
+  // V = vector_shuffle(..vector_shuffle(SrcVec, Mask0), ..)
+  for (unsigned Depth = 0; Depth < NumElts; ++Depth) {
+    if (V.getOpcode() != ISD::VECTOR_SHUFFLE) {
+      SrcVec = V;
+      SrcLane = Lane;
+      return true;
+    }
+
+    auto *SVN = cast<ShuffleVectorSDNode>(V.getNode());
+    int MaskElt = SVN->getMaskElt(Lane);
+    if (MaskElt < 0)
+      return false;
+    unsigned MaskEltU = MaskElt;
+    unsigned OpIdx = MaskEltU >= NumElts ? 1 : 0;
+    Lane = MaskEltU >= NumElts ? MaskEltU - NumElts : MaskEltU;
+    V = V.getOperand(OpIdx);
+  }
+
+  return false;
+}
+
+static bool isViableBytePermVecType(EVT VT) {
+  if (!VT.isVector() || VT.getVectorElementType() != MVT::i8)
+    return false;
+  unsigned NumElts = VT.getVectorNumElements();
+  return NumElts == 4 || NumElts == 8 || NumElts == 16;
+}
+
+// Track a byte forward through VECTOR_SHUFFLE and EXTRACT_VECTOR_ELT->
+// BUILD_VECTOR edges and require the routing successor be unique at each step.
+static bool findVecEltDst(SDValue SrcVec, unsigned SrcLane, SDValue &DstVec,
+                          unsigned &DstLane) {
+  SDValue CurVec = SrcVec;
+  unsigned CurLane = SrcLane;
+
+  bool HasNext = false;
+  SDValue NextVec;
+  unsigned NextLane = 0;
+  unsigned Steps = 0;
+
+  do {
+    if (++Steps > 16)
+      return false;
+    if (!isViableBytePermVecType(CurVec.getValueType()))
+      return false;
+    unsigned NumElts = CurVec.getValueType().getVectorNumElements();
+    if (CurLane >= NumElts)
+      return false;
+
+    HasNext = false;
+
+    // Try to set next forward step. Return false if encountered ambiguity.
+    auto TryAdd = [&](SDValue V, unsigned Lane) {
+      if (!HasNext) {
+        NextVec = V;
+        NextLane = Lane;
+        HasNext = true;
+        return true;
+      }
+      return NextVec == V && NextLane == Lane;
+    };
+
+    // Walk users of CurVec and find the unique routing successor, if any.
+    for (SDNode *User : CurVec.getNode()->users()) {
+      unsigned Opc = User->getOpcode();
+
+      if (Opc == ISD::VECTOR_SHUFFLE) {
+        SDValue Op0 = User->getOperand(0);
+        SDValue Op1 = User->getOperand(1);
+        unsigned ShufElts = User->getValueType(0).getVectorNumElements();
+
+        auto *SVN = cast<ShuffleVectorSDNode>(User);
+
+        // Search for output lanes of shuffle which select CurLane of CurVec.
+        auto ScanMaskIdx = [&](unsigned OpIdx) {
+          unsigned MaskIdx = CurLane + (OpIdx ? ShufElts : 0);
+          for (unsigned OutLane = 0; OutLane < ShufElts; ++OutLane) {
+            int M = SVN->getMaskElt(OutLane);
+            if (M < 0)
+              continue;
+            if (unsigned(M) == MaskIdx)
+              if (!TryAdd(SDValue(User, 0), OutLane))
+                return false;
+          }
+          return true;
+        };
+
+        if (Op0 == CurVec && !ScanMaskIdx(0))
+          return false;
+        if (Op1 == CurVec && !ScanMaskIdx(1))
+          return false;
+        continue;
+      }
+
+      if (Opc == ISD::EXTRACT_VECTOR_ELT) {
+        auto *Idx = dyn_cast<ConstantSDNode>(User->getOperand(1));
+        if (!Idx || Idx->getZExtValue() != CurLane)
+          continue;
+
+        SDValue ExtractedVal(User, 0);
+
+        for (SDNode *BV : User->users()) {
+          if (BV->getOpcode() != ISD::BUILD_VECTOR)
+            continue;
+          if (!isViableBytePermVecType(BV->getValueType(0)))
+            continue;
+
+          unsigned NumOps = BV->getNumOperands();
+          unsigned BVElts = BV->getValueType(0).getVectorNumElements();
+          if (NumOps != BVElts)
+            continue;
+
+          for (unsigned L = 0; L < NumOps; ++L) {
+            if (BV->getOperand(L) == ExtractedVal)
+              if (!TryAdd(SDValue(BV, 0), L))
+                return false;
+          }
+        }
+        continue;
+      }
+    }
+
+    if (HasNext) {
+      CurVec = NextVec;
+      CurLane = NextLane;
+    }
+  } while (HasNext);
+
+  // Leaf for this byte: CurVec/CurLane is the destination position.
+  unsigned LeafOpc = CurVec.getOpcode();
+  if (LeafOpc != ISD::VECTOR_SHUFFLE && LeafOpc != ISD::BUILD_VECTOR)
+    return false;
+
+  // If CurVec is used in a further shuffle, bail to be safe.
+  for (SDNode *User : CurVec.getNode()->users()) {
+    if (User->getOpcode() != ISD::VECTOR_SHUFFLE)
+      continue;
+    return false;
+  }
+
+  DstVec = CurVec;
+  DstLane = CurLane;
+  return true;
+}
+
+// For a dword in `DstVec`, trace all lanes backwards and record the source vecs
+// and lane indices.
+static bool findDwordSrcLanes(SDValue DstVec, unsigned DstDwordIdx,
+                              std::array<SDValue, 4> &SrcVecs,
+                              std::array<unsigned, 4> &SrcLanes) {
+  EVT DstVT = DstVec.getValueType();
+  if (!isViableBytePermVecType(DstVT))
+    return false;
+
+  unsigned Base = DstDwordIdx * 4;
+  if (Base + 4 > DstVT.getVectorNumElements())
+    return false;
+
+  for (unsigned Lane = 0; Lane < 4; ++Lane) {
+    if (!findVecEltSrc(DstVec, Base + Lane, SrcVecs[Lane], SrcLanes[Lane]))
+      return false;
+    if (!isViableBytePermVecType(SrcVecs[Lane].getValueType()))
+      return false;
+  }
+
+  return true;
+}
+
+// We consider only {v4,v8.v16}i8 vectors, so dword index is at most 3.
+using DwordKey = PointerIntPair<SDNode *, 2, unsigned>;
+
+// Determine if the dword `DstDwordSeed` is one of the four outputs of a
+// 4x4 byte permutation. On success, returns the 4 input dwords, the 4 output
+// dwords, and the 16x4-bit permutation encoding used by emitBytePerm4x4.
+static bool matchDwordBYTEPERM_4X4(DwordKey DstDwordSeed,
+                                   std::array<DwordKey, 4> &SrcDwords,
+                                   std::array<DwordKey, 4> &DstDwords,
+                                   uint64_t &PermMask) {
+  SDValue SeedVec(DstDwordSeed.getPointer(), 0);
+  unsigned SeedDwordIdx = DstDwordSeed.getInt();
+
+  std::array<SDValue, 4> SeedSrcVecs;
+  std::array<unsigned, 4> SeedSrcLanes;
+  if (!findDwordSrcLanes(SeedVec, SeedDwordIdx, SeedSrcVecs, SeedSrcLanes))
+    return false;
+
+  SrcDwords = {
+      DwordKey(SeedSrcVecs[0].getNode(), SeedSrcLanes[0] / 4),
+      DwordKey(SeedSrcVecs[1].getNode(), SeedSrcLanes[1] / 4),
+      DwordKey(SeedSrcVecs[2].getNode(), SeedSrcLanes[2] / 4),
+      DwordKey(SeedSrcVecs[3].getNode(), SeedSrcLanes[3] / 4),
+  };
+
+  // Canonicalize dword order.
+  auto DwordComparator = [](DwordKey A, DwordKey B) {
+    if (A.getPointer() != B.getPointer())
+      return A.getPointer() < B.getPointer();
+    return A.getInt() < B.getInt();
+  };
+  llvm::sort(SrcDwords, DwordComparator);
+
+  // Check for 4 distinct source dwords.
+  for (unsigned I = 1; I < 4; ++I)
+    if (SrcDwords[I] == SrcDwords[I - 1])
+      return false;
+
+  // Forward-walk all 16 source bytes to find their corresponding destination
+  // bytes.
+  std::array<SDValue, 16> DstVecs;
+  std::array<unsigned, 16> DstLanes;
+  for (unsigned I = 0; I < 4; ++I) {
+    SDValue SrcVec(SrcDwords[I].getPointer(), 0);
+    unsigned SrcVecDwordIdx = SrcDwords[I].getInt();
+    for (unsigned J = 0; J < 4; ++J) {
+      unsigned SrcLane = SrcVecDwordIdx * 4 + J;
+      unsigned FlatSrcIdx = I * 4 + J;
+      if (!findVecEltDst(SrcVec, SrcLane, DstVecs[FlatSrcIdx],
+                         DstLanes[FlatSrcIdx]))
+        return false;
+    }
+  }
+
+  // Check for 4 distinct destination dwords.
+  SmallVector<DwordKey, 4> DstDwordsVec;
+  for (unsigned I = 0; I < 16; ++I) {
+    DwordKey K(DstVecs[I].getNode(), DstLanes[I] / 4);
+    if (!llvm::is_contained(DstDwordsVec, K))
+      DstDwordsVec.push_back(K);
+  }
+  if (DstDwordsVec.size() != 4)
+    return false;
+
+  DstDwords = {DstDwordsVec[0], DstDwordsVec[1], DstDwordsVec[2],
+               DstDwordsVec[3]};
+  llvm::sort(DstDwords, DwordComparator);
+
+  // Verify a full 4x4 permutation and build the perm mask from the forward
+  // mapping of all 16 source bytes.
+  uint16_t DstSeen = 0;
+  PermMask = 0;
+  uint8_t SrcDwordMask[4] = {0, 0, 0, 0};
+
+  for (unsigned SrcByteIdx = 0; SrcByteIdx < 16; ++SrcByteIdx) {
+    DwordKey DstDword(DstVecs[SrcByteIdx].getNode(), DstLanes[SrcByteIdx] / 4);
+    // Find output dword index corresponding to DstDword.
+    int OutDwordIdx = -1;
+    for (unsigned OutIdx = 0; OutIdx < 4; ++OutIdx)
+      if (DstDwords[OutIdx] == DstDword) {
+        OutDwordIdx = OutIdx;
+        break;
+      }
+    if (OutDwordIdx < 0)
+      return false;
+
+    // Verify bijectivity.
+    unsigned ByteInDword = DstLanes[SrcByteIdx] & 3;
+    unsigned FlatDstIdx = unsigned(OutDwordIdx) * 4 + ByteInDword;
+    uint16_t Bit = uint16_t(1u) << FlatDstIdx;
+    if (DstSeen & Bit)
+      return false;
+    DstSeen |= Bit;
+
+    // Verify each output dword receives one byte from each input dword.
+    unsigned SrcDwordIdx = SrcByteIdx / 4;
+    if (SrcDwordMask[OutDwordIdx] & (1u << SrcDwordIdx))
+      return false;
+    SrcDwordMask[OutDwordIdx] |= 1u << SrcDwordIdx;
+
+    // PermMask[4k + 3 : 4k] encodes the index of the input byte that output
+    // byte k receives.
+    PermMask |= uint64_t(SrcByteIdx) << (FlatDstIdx * 4);
+  }
+
+  // Final sanity checks
+  if (DstSeen != 0xffff)
+    return false;
+  for (unsigned OutIdx = 0; OutIdx < 4; ++OutIdx)
+    if (SrcDwordMask[OutIdx] != 0xf)
+      return false;
+
+  return true;
+}
+
+// Check `Seed` is a leaf of routing network.
+static bool isCandidateDstVec(SDValue Seed) {
+  unsigned Opc = Seed.getOpcode();
+  if (!(Opc == ISD::VECTOR_SHUFFLE || Opc == ISD::BUILD_VECTOR))
+    return false;
+
+  if (!isViableBytePermVecType(Seed.getValueType()))
+    return false;
+
+  for (SDNode *User : Seed.getNode()->users()) {
+    if (User->getOpcode() == ISD::VECTOR_SHUFFLE)
+      return false;
+
+    if (User->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      continue;
+
+    if (!isa<ConstantSDNode>(User->getOperand(1)))
+      continue;
+
+    for (SDNode *BV : User->users()) {
+      if (BV->getOpcode() != ISD::BUILD_VECTOR)
+        continue;
+
+      if (isViableBytePermVecType(BV->getValueType(0)))
+        return false;
+    }
+  }
+
+  unsigned NumElts = Seed.getValueType().getVectorNumElements();
+
+  // Reject poison/undef and dynamic indexing.
+  if (Opc == ISD::VECTOR_SHUFFLE) {
+    auto *SVN = cast<ShuffleVectorSDNode>(Seed.getNode());
+
+    for (unsigned i = 0; i < NumElts; ++i)
+      if (SVN->getMaskElt(i) < 0)
+        return false;
+
+    return true;
+  }
+
+  SDNode *N = Seed.getNode();
+  for (unsigned i = 0; i < NumElts; ++i) {
+    SDValue Op = N->getOperand(i);
+
+    if (Op.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      return false;
+
+    if (!isa<ConstantSDNode>(Op.getOperand(1)))
+      return false;
+
+    if (Op.isUndef() || Op.getOpcode() == ISD::POISON)
+      return false;
+  }
+
+  return true;
+}
+
+// Emit two stages of 4 v_perm_b32 each to effect a 4x4 byte permutation.
+//
+// Let P0 and P1 be a partition of the input dwords into sets of 2, and
+// similarly let Q0 and Q1 be such a partition of the output dwords. The
+// partition determines the contents of the nodes of a network: the first stage
+// of the network is comprised of nodes which collect the elements of P_i which
+// are requested by Q_j. Labelling these nodes as I_{ij}, the nodes of stage 2
+// then take I_{0j} and I_{1j} as operands to produce the desired outputs.
+static bool emitBytePerm4x4(SelectionDAG &DAG, SDLoc DL,
+                            ArrayRef<SDValue> SrcDwordVals, uint64_t PermMask,
+                            SmallVectorImpl<SDValue> &Results) {
+  auto EmitPerm = [&](SDValue Src0, SDValue Src1, uint32_t MaskVal) {
+    return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, Src0, Src1,
+                       DAG.getConstant(MaskVal, DL, MVT::i32));
+  };
+
+  auto PackMask = [](uint8_t B0, uint8_t B1, uint8_t B2, uint8_t B3) {
+    return uint32_t(B0) | (uint32_t(B1) << 8) | (uint32_t(B2) << 16) |
+           (uint32_t(B3) << 24);
+  };
+
+  // SrcId[FlatDstByte] = FlatSrcByte
+  // ByteSel[DstDword][SrcDword] = SrcByte
+  uint8_t SrcId[16];
+  uint8_t ByteSel[4][4] = {};
+  for (unsigned DstDword = 0; DstDword < 4; ++DstDword) {
+    for (unsigned DstByte = 0; DstByte < 4; ++DstByte) {
+      unsigned FlatDstByte = DstDword * 4 + DstByte;
+      uint8_t FlatSrcByte = (PermMask >> (FlatDstByte * 4)) & 0xF;
+      SrcId[FlatDstByte] = FlatSrcByte;
+
+      uint8_t SrcDword = FlatSrcByte >> 2;
+      uint8_t SrcByte = FlatSrcByte & 3;
+      ByteSel[DstDword][SrcDword] = SrcByte;
+    }
+  }
+
+  // Choose a simple partition of input and output dwords. TODO: Optimize for
+  // v_swap_b16.
+  static constexpr uint8_t P[2][2] = {{0, 1}, {2, 3}};
+  static constexpr uint8_t Q[2][2] = {{0, 1}, {2, 3}};
+  static constexpr uint8_t DstToQ[4] = {0, 0, 1, 1};
+
+  // Stage 1 intermediates.
+  SDValue I[2][2];
+  uint8_t Stage1Src[2][2][4];
+
+  // Emit stage 1.
+  for (unsigned Pi = 0; Pi < 2; ++Pi) {
+    uint8_t A = P[Pi][0];
+    uint8_t B = P[Pi][1];
+    for (unsigned Qj = 0; Qj < 2; ++Qj) {
+      uint8_t D0 = Q[Qj][0];
+      uint8_t D1 = Q[Qj][1];
+
+      uint8_t A0b = ByteSel[D0][A];
+      uint8_t A1b = ByteSel[D1][A];
+      if (A1b < A0b)
+        std::swap(A0b, A1b);
+
+      uint8_t B0b = ByteSel[D0][B];
+      uint8_t B1b = ByteSel[D1][B];
+      if (B1b < B0b)
+        std::swap(B0b, B1b);
+
+      uint32_t M = PackMask(A0b, A1b, uint8_t(4 + B0b), uint8_t(4 + B1b));
+      Stage1Src[Pi][Qj][0] = uint8_t(A * 4 + A0b);
+      Stage1Src[Pi][Qj][1] = uint8_t(A * 4 + A1b);
+      Stage1Src[Pi][Qj][2] = uint8_t(B * 4 + B0b);
+      Stage1Src[Pi][Qj][3] = uint8_t(B * 4 + B1b);
+      I[Pi][Qj] = EmitPerm(SrcDwordVals[B], SrcDwordVals[A], M);
+    }
+  }
+
+  // Emit stage 2.
+  Results.assign(4, SDValue());
+  for (unsigned DstDword = 0; DstDword < 4; ++DstDword) {
+    unsigned Qj = DstToQ[DstDword];
+
+    uint32_t M = 0;
+    for (unsigned DstByte = 0; DstByte < 4; ++DstByte) {
+      unsigned FlatDstByte = DstDword * 4 + DstByte;
+      uint8_t Want = SrcId[FlatDstByte];
+      int Sel = -1;
+      for (unsigned Pi = 0; Pi < 2 && Sel < 0; ++Pi) {
+        for (unsigned Pos = 0; Pos < 4; ++Pos) {
+          if (Stage1Src[Pi][Qj][Pos] == Want) {
+            Sel = (Pi ? 4 : 0) + Pos;
+            break;
+          }
+        }
+      }
+      if (Sel < 0)
+        return false;
+      M |= uint32_t(Sel) << (8 * DstByte);
+    }
+
+    Results[DstDword] = EmitPerm(I[1][Qj], I[0][Qj], M);
+  }
+
+  return true;
+}
+
+static SDValue matchBYTEPERM_4X4(SDNode *N,
+                                 AMDGPUTargetLowering::DAGCombinerInfo &DCI) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  SDValue Seed(N, 0);
+  if (!isCandidateDstVec(Seed))
+    return SDValue();
+
+  EVT SeedVT = Seed.getValueType();
+  if (SeedVT != MVT::v16i8)
+    return SDValue();
+
+  std::array<DwordKey, 4> SrcDwords;
+  std::array<DwordKey, 4> DstDwords;
+  uint64_t PermMask = 0;
+  if (!matchDwordBYTEPERM_4X4(DwordKey(Seed.getNode(), 0), SrcDwords, DstDwords,
+                              PermMask))
+    return SDValue();
+
+  SDNode *SrcNode = SrcDwords[0].getPointer();
+  for (unsigned I = 0; I < 4; ++I) {
+    if (SrcDwords[I].getPointer() != SrcNode)
+      return SDValue();
+    if (SrcDwords[I].getInt() != I)
+      return SDValue();
+  }
+  for (unsigned Out = 0; Out < 4; ++Out) {
+    DwordKey DstDword = DstDwords[Out];
+    if (DstDword.getPointer() != Seed.getNode())
+      return SDValue();
+    if (DstDword.getInt() != Out)
+      return SDValue();
+  }
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(Seed);
+  SDValue In[4];
+  for (unsigned I = 0; I < 4; ++I) {
+    SDValue SrcVec(SrcDwords[I].getPointer(), 0);
+    In[I] = getDWordFromOffset(DAG, DL, SrcVec, SrcDwords[I].getInt());
+  }
+
+  SmallVector<SDValue, 4> DwordsI32;
+  if (!emitBytePerm4x4(DAG, DL, In, PermMask, DwordsI32))
+    return SDValue();
+
+  SDValue DwordVec = DAG.getBuildVector(MVT::v4i32, DL, DwordsI32);
+  return DAG.getNode(ISD::BITCAST, DL, SeedVT, DwordVec);
+}
+
 // Check if EXTRACT_VECTOR_ELT/INSERT_VECTOR_ELT (<n x e>, var-idx) should be
 // expanded into a set of cmp/select instructions.
 bool SITargetLowering::shouldExpandVectorDynExt(unsigned EltSize,
@@ -17565,6 +18104,9 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
 
     break;
   }
+  case ISD::BUILD_VECTOR:
+  case ISD::VECTOR_SHUFFLE:
+    return matchBYTEPERM_4X4(N, DCI);
   case ISD::EXTRACT_VECTOR_ELT:
     return performExtractVectorEltCombine(N, DCI);
   case ISD::INSERT_VECTOR_ELT:
