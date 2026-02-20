@@ -14626,8 +14626,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       const bool Matches = MatchesPredicate(Predicate, CompareResult);
 
       // Create bit patterns for comparison results:
-      // True = all bits set (0xFFFFFFFF for float, 0xFFFFFFFFFFFFFFFF for double)
-      // False = all bits zero
+      // True = all bits set (0xFFFFFFFF for float, 0xFFFFFFFFFFFFFFFF for
+      // double) False = all bits zero
       const llvm::fltSemantics &Sem = A0.getSemantics();
       const unsigned BitWidth = llvm::APFloat::getSizeInBits(Sem);
       const llvm::APFloat True(Sem, llvm::APInt::getAllOnes(BitWidth));
@@ -17793,7 +17793,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     }
     return Success(APValue(RetMask), E);
   }
-  
   }
 }
 
