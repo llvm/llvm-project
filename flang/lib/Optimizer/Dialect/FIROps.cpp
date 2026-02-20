@@ -227,7 +227,25 @@ mlir::Value fir::AllocaOp::getDefaultValue(const mlir::MemorySlot &slot,
 
 void fir::AllocaOp::handleBlockArgument(const mlir::MemorySlot &slot,
                                         mlir::BlockArgument argument,
-                                        mlir::OpBuilder &builder) {}
+                                        mlir::OpBuilder &builder) {
+  // When there is a fir.declare, fir.debug_value must be emitted at each value
+  // change and at each beginning of a block where the reaching value is
+  // propagated as a block argument.
+  // TODO: in order to get proper inter-dialect mem2reg, the
+  // PromotableOpInterface should be provided with a
+  // requiresInsertedBlockArguments similar to requiresReplacedValues so that
+  // fir::DeclareOp can be the one dictating that this needs to happen instead
+  // of the allocation. There are other challenges to inter dialect mem2reg to
+  // solve first, like having a common concept for going through converts and
+  // no-ops like fir.declare (i.e., to replace the FIR specific
+  // isSlotOrDeclaredSlot).
+  for (mlir::Operation *user : getOperation()->getUsers())
+    if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(user))
+      fir::DeclareValueOp::create(
+          builder, declareOp.getLoc(), argument, declareOp.getDummyScope(),
+          declareOp.getUniqNameAttr(), declareOp.getFortranAttrsAttr(),
+          declareOp.getDataAttrAttr(), declareOp.getDummyArgNoAttr());
+}
 
 std::optional<mlir::PromotableAllocationOpInterface>
 fir::AllocaOp::handlePromotionComplete(const mlir::MemorySlot &slot,
@@ -2961,8 +2979,17 @@ llvm::SmallVector<mlir::Attribute> fir::LenParamIndexOp::getAttributes() {
 // LoadOp
 //===----------------------------------------------------------------------===//
 
+static bool isSlotOrDeclaredSlot(mlir::Value val,
+                                 const mlir::MemorySlot &slot) {
+  if (val == slot.ptr)
+    return true;
+  if (auto declareOp = val.getDefiningOp<fir::DeclareOp>())
+    return declareOp.getMemref() == slot.ptr;
+  return false;
+}
+
 bool fir::LoadOp::loadsFrom(const mlir::MemorySlot &slot) {
-  return getMemref() == slot.ptr;
+  return isSlotOrDeclaredSlot(getMemref(), slot);
 }
 
 bool fir::LoadOp::storesTo(const mlir::MemorySlot &slot) { return false; }
@@ -2982,7 +3009,7 @@ bool fir::LoadOp::canUsesBeRemoved(
   if (blockingUses.size() != 1)
     return false;
   mlir::Value blockingUse = (*blockingUses.begin())->get();
-  return blockingUse == slot.ptr && getMemref() == slot.ptr;
+  return isSlotOrDeclaredSlot(blockingUse, slot) && getMemref() == blockingUse;
 }
 
 mlir::DeletionKind fir::LoadOp::removeBlockingUses(
@@ -4397,7 +4424,7 @@ llvm::LogicalResult fir::SliceOp::verify() {
 bool fir::StoreOp::loadsFrom(const mlir::MemorySlot &slot) { return false; }
 
 bool fir::StoreOp::storesTo(const mlir::MemorySlot &slot) {
-  return getMemref() == slot.ptr;
+  return isSlotOrDeclaredSlot(getMemref(), slot);
 }
 
 mlir::Value fir::StoreOp::getStored(const mlir::MemorySlot &slot,
@@ -4415,8 +4442,8 @@ bool fir::StoreOp::canUsesBeRemoved(
   if (blockingUses.size() != 1)
     return false;
   mlir::Value blockingUse = (*blockingUses.begin())->get();
-  return blockingUse == slot.ptr && getMemref() == slot.ptr &&
-         getValue() != slot.ptr;
+  return isSlotOrDeclaredSlot(blockingUse, slot) &&
+         getMemref() == blockingUse && getValue() != blockingUse;
 }
 
 mlir::DeletionKind fir::StoreOp::removeBlockingUses(
@@ -5248,6 +5275,22 @@ std::optional<int64_t> fir::getAllocaByteSize(fir::AllocaOp alloca,
 }
 
 //===----------------------------------------------------------------------===//
+// DeclareValueOp
+//===----------------------------------------------------------------------===//
+
+static bool isLegalTypeForValueDeclare(mlir::Type type) {
+  return mlir::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType,
+                   fir::LogicalType>(type);
+}
+
+llvm::LogicalResult fir::DeclareValueOp::verify() {
+  if (!isLegalTypeForValueDeclare(getValue().getType()))
+    return emitOpError(
+        "value must be a simple scalar (integer, real, complex, or logical)");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // DeclareOp
 //===----------------------------------------------------------------------===//
 
@@ -5255,6 +5298,37 @@ llvm::LogicalResult fir::DeclareOp::verify() {
   auto fortranVar =
       mlir::cast<fir::FortranVariableOpInterface>(this->getOperation());
   return fortranVar.verifyDeclareLikeOpImpl(getMemref());
+}
+
+bool fir::DeclareOp::canUsesBeRemoved(
+    const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
+    mlir::SmallVectorImpl<mlir::OpOperand *> &newBlockingUses,
+    const mlir::DataLayout &dataLayout) {
+  if (!isLegalTypeForValueDeclare(fir::unwrapRefType(getType())))
+    return false;
+  // Forward uses to the users of the fir.declare.
+  for (mlir::OpOperand &use : getResult().getUses())
+    newBlockingUses.push_back(&use);
+  return true;
+}
+
+mlir::DeletionKind fir::DeclareOp::removeBlockingUses(
+    const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
+    mlir::OpBuilder &builder) {
+  return mlir::DeletionKind::Delete;
+}
+
+bool fir::DeclareOp::requiresReplacedValues() { return true; }
+
+void fir::DeclareOp::visitReplacedValues(
+    llvm::ArrayRef<std::pair<mlir::Operation *, mlir::Value>> definitions,
+    mlir::OpBuilder &builder) {
+  for (auto [op, value] : definitions) {
+    builder.setInsertionPointAfter(op);
+    fir::DeclareValueOp::create(builder, getLoc(), value, getDummyScope(),
+                                getUniqNameAttr(), getFortranAttrsAttr(),
+                                getDataAttrAttr(), getDummyArgNoAttr());
+  }
 }
 
 //===----------------------------------------------------------------------===//
