@@ -645,6 +645,16 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniBRC}, {{}, {}, VerifyAllSgpr}})
       .Any({{DivBRC}, {{}, {}, ApplyAllVgpr}});
 
+  // LOAD       {Div}, {{VgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
+  // LOAD       {Uni}, {{UniInVgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
+  // LOAD_NORET {}, {{}, {Imm, VgprSrc, ..., Sgpr_WF_RsrcIdx}}
+  // STORE      {}, {{}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
+  addRulesForGOpcs({G_AMDGPU_INTRIN_IMAGE_LOAD, G_AMDGPU_INTRIN_IMAGE_LOAD_D16,
+                    G_AMDGPU_INTRIN_IMAGE_LOAD_NORET,
+                    G_AMDGPU_INTRIN_IMAGE_STORE,
+                    G_AMDGPU_INTRIN_IMAGE_STORE_D16})
+      .Any({{}, {{}, {}, ApplyINTRIN_IMAGE}});
+
   Predicate isSignedICmp([](const MachineInstr &MI) -> bool {
     auto Pred =
         static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
@@ -1114,6 +1124,21 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{B64}, {{}, {VgprB64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
       .Any({{B96}, {{}, {VgprB96, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
       .Any({{B128}, {{}, {VgprB128, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}});
+
+  // Buffer atomics: resource descriptor + scalar offset are SGPR, data and
+  // address components are VGPR.
+  //
+  // Operand order (SIInstructions.td BufferAtomicGenericInstruction):
+  //   dst = op vdata, rsrc, vindex, voffset, soffset, offset_imm, cachepolicy,
+  //        idxen_imm
+  addRulesForGOpcs({G_AMDGPU_BUFFER_ATOMIC_FADD})
+      .Any({{S32, S32, V4S32, S32, S32, S32},
+            {{Vgpr32}, {Vgpr32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{S64, S64, V4S32, S32, S32, S32},
+            {{Vgpr64}, {Vgpr64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{V2S16, V2S16, V4S32, S32, S32, S32},
+            {{VgprV2S16},
+             {VgprV2S16, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}});
 
   addRulesForGOpcs({G_PTR_ADD})
       .Any({{UniPtr32}, {{SgprPtr32}, {SgprPtr32, Sgpr32}}})
