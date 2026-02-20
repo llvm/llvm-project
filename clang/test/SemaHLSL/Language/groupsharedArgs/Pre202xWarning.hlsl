@@ -8,6 +8,15 @@ void fn1(groupshared uint Sh) {
   Sh = 5;
 }
 
+template<typename T>
+void fnT(T A, T B) {
+  A = B;
+}
+
+template void fnT<groupshared int>(groupshared int A, groupshared int B);
+// expected-warning@-1{{support for groupshared parameter annotation not added until HLSL 202x}}
+// expected-warning@-2{{support for groupshared parameter annotation not added until HLSL 202x}}
+
 void fn2() {
   fn1(SharedData);
 }

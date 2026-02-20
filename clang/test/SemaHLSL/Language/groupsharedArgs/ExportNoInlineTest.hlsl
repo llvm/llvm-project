@@ -14,6 +14,3 @@ template<typename T>
 void fn3(T A, T B) {
   A = B;
 }
-
-//export template void fn3<groupshared uint3>(groupshared uint3 A, groupshared uint3 B);
-// //expected-error@-1{{'export' attribute is not compatible with 'groupshared' parameter attribute}}

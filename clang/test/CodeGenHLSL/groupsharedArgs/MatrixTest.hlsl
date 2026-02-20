@@ -6,9 +6,8 @@ groupshared float4x4 SharedData;
 // CHECK: [[ShAddr:%.*]] = alloca ptr addrspace(3), align 4
 // CHECK: store ptr addrspace(3) %Sh, ptr [[ShAddr]], align 4
 // CHECK: [[A:%.*]] = load ptr addrspace(3), ptr [[ShAddr]], align 4
-// CHECK: [[B:%.*]] = load <16 x float>, ptr addrspace(3) [[A]], align 4
-// CHECK: [[Matins:%.*]] = insertelement <16 x float> [[B]], float 5.000000e+00, i32 4
-// CHECK: store <16 x float> [[Matins]], ptr addrspace(3) [[A]], align 4
+// CHECK: [[B:%.*]] = getelementptr <16 x float>, ptr addrspace(3) [[A]], i32 0, i32 4
+// CHECK: store float 5.000000e+00, ptr addrspace(3) [[B]], align 4
 // CHECK: ret void
 void fn1(groupshared float4x4 Sh) {
   Sh[0][1] = 5.0;
