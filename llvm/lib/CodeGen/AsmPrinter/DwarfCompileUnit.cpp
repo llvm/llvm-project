@@ -1739,8 +1739,34 @@ void DwarfCompileUnit::addLocationList(DIE &Die, dwarf::Attribute Attribute,
 void DwarfCompileUnit::applyCommonDbgVariableAttributes(const DbgVariable &Var,
                                                         DIE &VariableDie) {
   StringRef Name = Var.getName();
+  DIE *CurrentDie = &VariableDie;
+  std::string FullName = "";
+  unsigned lexicalBlockCount = 0;
+  //   while(true) {
+  //     DIE* ParentDIE = CurrentDie->getParent();
+  //     if (ParentDIE == nullptr)
+  //       break;
+  //     auto ParentName = ParentDIE->findAttribute(dwarf::DW_AT_linkage_name);
+  //     if (ParentName.getAttribute() == 0) {
+  //       auto PName = ParentDIE->findAttribute(dwarf::DW_AT_name);
+  //       if (PName.getAttribute() == 0) {
+  //         if (ParentDIE->getTag() == dwarf::DW_TAG_lexical_block)
+  //           FullName.insert(0, "_" +
+  //           std::string(std::to_string(++lexicalBlockCount)));
+  //         goto label;
+  //       }
+  //       FullName.insert(0, PName.getDIEString().getString());
+  //       goto label;
+  //     }
+  //     FullName.insert(0, ParentName.getDIEString().getString());
+  // label:
+  //     CurrentDie = ParentDIE;
+  //     if (ParentDIE->getTag() == dwarf::DW_TAG_compile_unit)
+  //       break;
+  //   }
+  std::string FinalName = FullName + Name.str();
   if (!Name.empty())
-    addString(VariableDie, dwarf::DW_AT_name, Name);
+    addString(VariableDie, dwarf::DW_AT_name, FinalName);
   const auto *DIVar = Var.getVariable();
   if (DIVar) {
     if (uint32_t AlignInBytes = DIVar->getAlignInBytes())

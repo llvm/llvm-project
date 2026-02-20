@@ -275,7 +275,8 @@ static void collectStatsForDie(DWARFDie Die, const std::string &FnPrefix,
                                StringMap<PerFunctionStats> &FnStatMap,
                                GlobalStats &GlobalStats,
                                LocationStats &LocStats,
-                               AbstractOriginVarsTy *AbstractOriginVariables) {
+                               AbstractOriginVarsTy *AbstractOriginVariables,
+                               std::string Prefix) {
   const dwarf::Tag Tag = Die.getTag();
   // Skip CU node.
   if (Tag == dwarf::DW_TAG_compile_unit)
@@ -366,6 +367,23 @@ static void collectStatsForDie(DWARFDie Die, const std::string &FnPrefix,
       consumeError(Loc.takeError());
     } else {
       HasLoc = true;
+      auto Name = Die.find(dwarf::DW_AT_name);
+      auto StringName = Name->getAsCString();
+      if (!StringName) {
+        consumeError(StringName.takeError());
+        auto AbsOrigin = Die.find(dwarf::DW_AT_abstract_origin);
+        if (AbsOrigin != std::nullopt) {
+          if (const char *Name =
+                  Die.getAttributeValueAsReferencedDie(*AbsOrigin)
+                      .getName(DINameKind::LinkageName)) {
+            llvm::outs() << "\nvariable name: " << Prefix << " " << Name
+                         << "\n";
+          }
+        }
+      } else {
+        std::string S(*StringName);
+        llvm::outs() << "\nvariable name: " << Prefix << " " << S << "\n";
+      }
       // Get PC coverage.
       auto Default = find_if(
           *Loc, [](const DWARFLocationExpression &L) { return !L.Range; });
@@ -500,7 +518,7 @@ static void collectStatsRecursive(
     AbstractOriginVarsTyMap &GlobalAbstractOriginFnInfo,
     AbstractOriginVarsTyMap &LocalAbstractOriginFnInfo,
     FunctionsWithAbstractOriginTy &FnsWithAbstractOriginToBeProcessed,
-    AbstractOriginVarsTy *AbstractOriginVarsPtr = nullptr) {
+    std::string Prefix, AbstractOriginVarsTy *AbstractOriginVarsPtr = nullptr) {
   // Skip NULL nodes.
   if (Die.isNULL())
     return;
@@ -609,7 +627,8 @@ static void collectStatsRecursive(
   } else {
     // Not a scope, visit the Die itself. It could be a variable.
     collectStatsForDie(Die, FnPrefix, VarPrefix, BytesInScope, InlineDepth,
-                       FnStatMap, GlobalStats, LocStats, AbstractOriginVarsPtr);
+                       FnStatMap, GlobalStats, LocStats, AbstractOriginVarsPtr,
+                       Prefix);
   }
 
   // Set InlineDepth correctly for child recursion
@@ -623,6 +642,65 @@ static void collectStatsRecursive(
   unsigned FormalParameterIndex = 0;
   DWARFDie Child = Die.getFirstChild();
   while (Child) {
+    std::string PreName = "";
+    if (Child.getTag() != dwarf::DW_TAG_formal_parameter &&
+        Child.getTag() != dwarf::DW_TAG_variable) {
+      if (Child.getTag() == dwarf::DW_TAG_lexical_block) {
+        PreName = " LinkageName: _" + std::to_string(LexicalBlockIndex);
+      } else if (Child.getTag() == dwarf::DW_TAG_subprogram) {
+        if (auto AbsOrig = Child.find(dwarf::DW_AT_abstract_origin)) {
+          if (const char *Name =
+                  Child.getAttributeValueAsReferencedDie(*AbsOrig).getName(
+                      DINameKind::LinkageName)) {
+            PreName = " Subprogram: " + std::string(Name) + ", ";
+          }
+        }
+        if (auto LinkName = Child.find(dwarf::DW_AT_linkage_name)) {
+          if (auto CString = LinkName->getAsCString()) {
+            PreName = " Subprogram: " + std::string(*CString) + ", ";
+          }
+        }
+      } else if (auto AbsOrig = Child.find(dwarf::DW_AT_abstract_origin)) {
+        if (const char *Name =
+                Child.getAttributeValueAsReferencedDie(*AbsOrig).getName(
+                    DINameKind::LinkageName)) {
+          if (Child.getTag() == dwarf::DW_TAG_namespace)
+            PreName = " Namespace: " + std::to_string(Child.getTag()) + " " +
+                      std::string(Name) + ", ";
+          else if (Child.getTag() == dwarf::DW_TAG_inlined_subroutine)
+            PreName = " InlinedSubroutine: " + std::to_string(Child.getTag()) +
+                      " " + std::string(Name) + ", ";
+          else
+            PreName = " AnythingElse: " + std::to_string(Child.getTag()) + " " +
+                      std::string(Name) + ", ";
+        }
+      } else if (auto LinkName = Child.find(dwarf::DW_AT_linkage_name)) {
+        if (auto CString = LinkName->getAsCString()) {
+          if (Child.getTag() == dwarf::DW_TAG_namespace)
+            PreName = " Namespace: " + std::to_string(Child.getTag()) + " " +
+                      std::string(*CString) + ", ";
+          else if (Child.getTag() == dwarf::DW_TAG_inlined_subroutine)
+            PreName = " InlinedSubroutine: " + std::to_string(Child.getTag()) +
+                      " " + std::string(*CString) + ", ";
+          else
+            PreName = " AnythingElse: " + std::to_string(Child.getTag()) + " " +
+                      std::string(*CString) + ", ";
+        }
+      } else if (auto Name = Child.find(dwarf::DW_AT_name)) {
+        if (auto CString = Name->getAsCString()) {
+          if (Child.getTag() == dwarf::DW_TAG_namespace)
+            PreName = " Namespace: " + std::to_string(Child.getTag()) + " " +
+                      std::string(*CString) + ", ";
+          else if (Child.getTag() == dwarf::DW_TAG_inlined_subroutine)
+            PreName = " InlinedSubroutine: " + std::to_string(Child.getTag()) +
+                      " " + std::string(*CString) + ", ";
+          else
+            PreName = " AnythingElse: " + std::to_string(Child.getTag()) + " " +
+                      std::string(*CString) + ", ";
+        }
+      }
+    }
+
     std::string ChildVarPrefix = VarPrefix;
     if (Child.getTag() == dwarf::DW_TAG_lexical_block)
       ChildVarPrefix += toHex(LexicalBlockIndex++) + '.';
@@ -633,7 +711,7 @@ static void collectStatsRecursive(
         Child, FnPrefix, ChildVarPrefix, BytesInScope, InlineDepth, FnStatMap,
         GlobalStats, LocStats, AbstractOriginFnCUs, GlobalAbstractOriginFnInfo,
         LocalAbstractOriginFnInfo, FnsWithAbstractOriginToBeProcessed,
-        AbstractOriginVarsPtr);
+        Prefix + PreName, AbstractOriginVarsPtr);
     Child = Child.getSibling();
   }
 
@@ -885,10 +963,18 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
       AbstractOriginVarsTyMap LocalAbstractOriginFnInfo;
       FunctionsWithAbstractOriginTy FnsWithAbstractOriginToBeProcessed;
 
+      auto CUName = CUDie.find(dwarf::DW_AT_name);
+      std::string name = "";
+      if (CUName != std::nullopt) {
+        auto Sname = CUName->getAsCString();
+        if (!Sname)
+          name.insert(0, *Sname);
+      }
+
       collectStatsRecursive(
           CUDie, "/", "g", 0, 0, Statistics, GlobalStats, LocStats,
           AbstractOriginFnCUs, GlobalAbstractOriginFnInfo,
-          LocalAbstractOriginFnInfo, FnsWithAbstractOriginToBeProcessed);
+          LocalAbstractOriginFnInfo, FnsWithAbstractOriginToBeProcessed, name);
 
       // collectZeroLocCovForVarsWithAbstractOrigin will filter out all
       // out-of-order DWARF functions that have been processed within it,
