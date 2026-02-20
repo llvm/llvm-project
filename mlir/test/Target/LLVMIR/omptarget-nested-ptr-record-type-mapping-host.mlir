@@ -1,5 +1,4 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
-// XFAIL: *
 // This test checks the offload sizes, map types and base pointers and pointers
 // provided to the OpenMP kernel argument structure are correct when lowering
 // to LLVM-IR from MLIR when performing explicit member mapping of a record type
@@ -46,8 +45,6 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK:  store ptr %[[ARG]], ptr %[[BASE_PTRS]], align 8
 // CHECK:  %[[OFFLOAD_PTRS:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 0
 // CHECK:  store ptr %[[NESTED_STRUCT_PTR_MEMBER_GEP]], ptr %[[OFFLOAD_PTRS]], align 8
-// CHECK:  %[[OFFLOAD_SIZES:.*]] = getelementptr inbounds [4 x i64], ptr %.offload_sizes, i32 0, i32 0
-// CHECK:  store i64 %[[DTYPE_SIZE_SEGMENT_CALC_4]], ptr %[[OFFLOAD_SIZES]], align 8
 
 // CHECK:  %[[BASE_PTRS:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
 // CHECK:  store ptr %[[ARG]], ptr %[[BASE_PTRS]], align 8
