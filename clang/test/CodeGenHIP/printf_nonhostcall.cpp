@@ -27,9 +27,9 @@ extern "C" __device__ int printf(const char *format, ...);
 // CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i8 [[TMP5]], 0
 // CHECK-NEXT:    br i1 [[TMP6]], label [[STRLEN_WHILE_DONE:%.*]], label [[STRLEN_WHILE]]
 // CHECK:       strlen.while.done:
-// CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP0]] to i64
-// CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP3]] to i64
-// CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[TMP7]]
+// CHECK-NEXT:    [[TMP7:%.*]] = ptrtoaddr ptr [[TMP0]] to i64
+// CHECK-NEXT:    [[TMP8:%.*]] = ptrtoaddr ptr [[TMP3]] to i64
+// CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP7]], [[TMP8]]
 // CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 1
 // CHECK-NEXT:    br label [[STRLEN_JOIN]]
 // CHECK:       strlen.join:
@@ -82,9 +82,9 @@ extern "C" __device__ int printf(const char *format, ...);
 // CHECK_CONSTRAINED-NEXT:    [[TMP6:%.*]] = icmp eq i8 [[TMP5]], 0
 // CHECK_CONSTRAINED-NEXT:    br i1 [[TMP6]], label [[STRLEN_WHILE_DONE:%.*]], label [[STRLEN_WHILE]]
 // CHECK_CONSTRAINED:       strlen.while.done:
-// CHECK_CONSTRAINED-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP0]] to i64
-// CHECK_CONSTRAINED-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP3]] to i64
-// CHECK_CONSTRAINED-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[TMP7]]
+// CHECK_CONSTRAINED-NEXT:    [[TMP7:%.*]] = ptrtoaddr ptr [[TMP0]] to i64
+// CHECK_CONSTRAINED-NEXT:    [[TMP8:%.*]] = ptrtoaddr ptr [[TMP3]] to i64
+// CHECK_CONSTRAINED-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP7]], [[TMP8]]
 // CHECK_CONSTRAINED-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 1
 // CHECK_CONSTRAINED-NEXT:    br label [[STRLEN_JOIN]]
 // CHECK_CONSTRAINED:       strlen.join:
@@ -143,9 +143,9 @@ __device__ const
 // CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i8 [[TMP5]], 0
 // CHECK-NEXT:    br i1 [[TMP6]], label [[STRLEN_WHILE_DONE:%.*]], label [[STRLEN_WHILE]]
 // CHECK:       strlen.while.done:
-// CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP0]] to i64
-// CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP3]] to i64
-// CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[TMP7]]
+// CHECK-NEXT:    [[TMP7:%.*]] = ptrtoaddr ptr [[TMP0]] to i64
+// CHECK-NEXT:    [[TMP8:%.*]] = ptrtoaddr ptr [[TMP3]] to i64
+// CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP7]], [[TMP8]]
 // CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 1
 // CHECK-NEXT:    br label [[STRLEN_JOIN]]
 // CHECK:       strlen.join:
@@ -193,9 +193,9 @@ __device__ const
 // CHECK_CONSTRAINED-NEXT:    [[TMP6:%.*]] = icmp eq i8 [[TMP5]], 0
 // CHECK_CONSTRAINED-NEXT:    br i1 [[TMP6]], label [[STRLEN_WHILE_DONE:%.*]], label [[STRLEN_WHILE]]
 // CHECK_CONSTRAINED:       strlen.while.done:
-// CHECK_CONSTRAINED-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP0]] to i64
-// CHECK_CONSTRAINED-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP3]] to i64
-// CHECK_CONSTRAINED-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[TMP7]]
+// CHECK_CONSTRAINED-NEXT:    [[TMP7:%.*]] = ptrtoaddr ptr [[TMP0]] to i64
+// CHECK_CONSTRAINED-NEXT:    [[TMP8:%.*]] = ptrtoaddr ptr [[TMP3]] to i64
+// CHECK_CONSTRAINED-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP7]], [[TMP8]]
 // CHECK_CONSTRAINED-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 1
 // CHECK_CONSTRAINED-NEXT:    br label [[STRLEN_JOIN]]
 // CHECK_CONSTRAINED:       strlen.join:
@@ -385,9 +385,9 @@ __device__ int foo3() {
 // CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 0
 // CHECK-NEXT:    br i1 [[TMP5]], label [[STRLEN_WHILE_DONE:%.*]], label [[STRLEN_WHILE]]
 // CHECK:       strlen.while.done:
-// CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP0]] to i64
-// CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP2]] to i64
-// CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP7]], [[TMP6]]
+// CHECK-NEXT:    [[TMP6:%.*]] = ptrtoaddr ptr [[TMP0]] to i64
+// CHECK-NEXT:    [[TMP7:%.*]] = ptrtoaddr ptr [[TMP2]] to i64
+// CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP6]], [[TMP7]]
 // CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 1
 // CHECK-NEXT:    br label [[STRLEN_JOIN]]
 // CHECK:       strlen.join:
@@ -428,9 +428,9 @@ __device__ int foo3() {
 // CHECK_CONSTRAINED-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 0
 // CHECK_CONSTRAINED-NEXT:    br i1 [[TMP5]], label [[STRLEN_WHILE_DONE:%.*]], label [[STRLEN_WHILE]]
 // CHECK_CONSTRAINED:       strlen.while.done:
-// CHECK_CONSTRAINED-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP0]] to i64
-// CHECK_CONSTRAINED-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP2]] to i64
-// CHECK_CONSTRAINED-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP7]], [[TMP6]]
+// CHECK_CONSTRAINED-NEXT:    [[TMP6:%.*]] = ptrtoaddr ptr [[TMP0]] to i64
+// CHECK_CONSTRAINED-NEXT:    [[TMP7:%.*]] = ptrtoaddr ptr [[TMP2]] to i64
+// CHECK_CONSTRAINED-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP6]], [[TMP7]]
 // CHECK_CONSTRAINED-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 1
 // CHECK_CONSTRAINED-NEXT:    br label [[STRLEN_JOIN]]
 // CHECK_CONSTRAINED:       strlen.join:
