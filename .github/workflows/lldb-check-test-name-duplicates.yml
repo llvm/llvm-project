@@ -33,7 +33,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python3.14 -m pip install --require-hashes -r ./llvm/utils/git/requirements_pylint.txt
+          python3 -m pip install --require-hashes -r ./llvm/utils/git/requirements_pylint.txt
       
       - name: Get changed files
         id: changed-files
