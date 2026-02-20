@@ -31,19 +31,16 @@ const int &constGlobalIntRef = 5;
 DefCtor defCtor{};
 // CIR: cir.global external @defCtor = #cir.undef : !rec_DefCtor {alignment = 1 : i64}
 // LLVM: @defCtor = global %struct.DefCtor undef, align 1
-// OGCG: FAIL
 
 DefCtor &defCtorRef = defCtor;
 // CIR: cir.global constant external @defCtorRef = #cir.global_view<@defCtor> : !cir.ptr<!rec_DefCtor> {alignment = 8 : i64}
 // LLVM: @defCtorRef = constant ptr @defCtor, align 8
-// OGCG: FAIL
 
 const DefCtor &constDefCtorRef{};
 // CIR: cir.global "private" constant external @_ZGR15constDefCtorRef_ = #cir.undef : !rec_DefCtor {alignment = 1 : i64}
 // CIR: cir.global constant external @constDefCtorRef = #cir.global_view<@_ZGR15constDefCtorRef_> : !cir.ptr<!rec_DefCtor> {alignment = 8 : i64}
 // LLVM: @_ZGR15constDefCtorRef_ = {{.*}}constant %struct.DefCtor undef, align 1
 // LLVM: @constDefCtorRef = constant ptr @_ZGR15constDefCtorRef_, align 8
-// OGCG: FAIL
 
 WithCtor withCtor{};
 // CIR: cir.global external @withCtor = #cir.zero : !rec_WithCtor {alignment = 1 : i64, ast = #cir.var.decl.ast}
@@ -53,12 +50,10 @@ WithCtor withCtor{};
 // CIR-NEXT:   cir.return
 // CIR-NEXT: }
 // LLVM: @withCtor = global %struct.WithCtor zeroinitializer, align 1
-// OGCG: FAIL
 
 WithCtor &withCtorRef = withCtor;
 // CIR: cir.global constant external @withCtorRef = #cir.global_view<@withCtor> : !cir.ptr<!rec_WithCtor> {alignment = 8 : i64}
 // LLVM: @withCtorRef = constant ptr @withCtor, align 8
-// OGCG: FAIL
 
 const WithCtor &constWithCtorRef{};
 // CIR: cir.global external @constWithCtorRef = #cir.ptr<null> : !cir.ptr<!rec_WithCtor> {alignment = 8 : i64, ast = #cir.var.decl.ast}
@@ -70,7 +65,6 @@ const WithCtor &constWithCtorRef{};
 // CIR-NEXT:   cir.return
 // CIR-NEXT: }
 // LLVM: @constWithCtorRef = global ptr null, align 8
-// OGCG: FAIL
 
 const WithCtor &constWithCtorRef2{5};
 // CIR: cir.global external @constWithCtorRef2 = #cir.ptr<null> : !cir.ptr<!rec_WithCtor> {alignment = 8 : i64, ast = #cir.var.decl.ast}
@@ -83,7 +77,6 @@ const WithCtor &constWithCtorRef2{5};
 // CIR-NEXT:   cir.return
 // CIR-NEXT: }
 // LLVM: @constWithCtorRef2 = global ptr null, align 8
-// OGCG: FAIL
 
 WithCtorDtor withCtorDtor{};
 // CIR: cir.global external @withCtorDtor = #cir.zero : !rec_WithCtorDtor {alignment = 1 : i64, ast = #cir.var.decl.ast}
@@ -99,12 +92,10 @@ WithCtorDtor withCtorDtor{};
 // CIR-NEXT:   cir.return
 // CIR-NEXT: }
 // LLVM: @withCtorDtor = global %struct.WithCtorDtor zeroinitializer, align 1
-// OGCG: FAIL
 
 WithCtorDtor &withCtorDtorRef = withCtorDtor;
 // CIR: cir.global constant external @withCtorDtorRef = #cir.global_view<@withCtorDtor> : !cir.ptr<!rec_WithCtorDtor> {alignment = 8 : i64}
 // LLVM: @withCtorDtorRef = constant ptr @withCtorDtor, align 8
-// OGCG: FAIL
 
 // LLVM: define internal void @__cxx_global_var_init{{.*}}()
 // LLVM:   call void @_ZN8WithCtorC1Ev(ptr {{.*}}@withCtor)
