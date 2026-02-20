@@ -183,8 +183,9 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
                                          FirstPair.Source->isKill()))
         .addReg(SrcReg2, getKillRegState(PairedSource.isKill() &&
                                          FirstPair.Source->isKill()));
-  } else
+  } else {
     BuildMI(*I->getParent(), I, DL, TII->get(Opcode)).add(*Sreg1).add(*Sreg2);
+  }
 
   I->eraseFromParent();
   Paired->eraseFromParent();
