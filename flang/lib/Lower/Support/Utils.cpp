@@ -16,6 +16,7 @@
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/IterationSpace.h"
+#include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/PrivateReductionUtils.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -692,8 +693,7 @@ void privatizeSymbol(
       !symTable.lookupSymbol(ultimate)) {
     Fortran::lower::AggregateStoreMap storeMap;
     Fortran::lower::instantiateVariable(
-        converter,
-        Fortran::lower::pft::Variable{ultimate, /*global=*/true},
+        converter, Fortran::lower::pft::Variable{ultimate, /*global=*/true},
         symTable, storeMap);
   }
   lower::SymbolBox hsb = symTable.lookupSymbol(*sym);
