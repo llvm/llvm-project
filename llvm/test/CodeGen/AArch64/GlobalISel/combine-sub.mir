@@ -24,6 +24,33 @@ body:             |
 ...
 
 ---
+name: sub_one_from_sub_vec
+body:             |
+  bb.1:
+  liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: sub_one_from_sub_vec
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $x1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 -1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<4 x s16>) = G_XOR [[COPY1]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<4 x s16>) = G_ADD [[XOR]], [[COPY]]
+    ; CHECK-NEXT: $x0 = COPY [[ADD]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(<4 x s16>) = COPY $x0
+    %1:_(<4 x s16>) = COPY $x1
+    %c1:_(s16) = G_CONSTANT i16 1
+    %cst:_(<4 x s16>) = G_BUILD_VECTOR %c1(s16), %c1(s16), %c1(s16), %c1(s16)
+    %2:_(<4 x s16>) = G_SUB %0, %1
+    %3:_(<4 x s16>) = G_SUB %2, %cst
+    $x0 = COPY %3
+    RET_ReallyLR implicit $x0
+...
+
+---
 name: sub_one_from_sub_one_use
 body:             |
   bb.1:
