@@ -5717,8 +5717,26 @@ Instruction *InstCombinerImpl::foldICmpWithMinMax(Instruction &I,
   Pred = Pred.dropSameSign();
   auto CmpXZ = IsCondKnownTrue(simplifyICmpInst(Pred, X, Z, Q));
   auto CmpYZ = IsCondKnownTrue(simplifyICmpInst(Pred, Y, Z, Q));
-  if (!CmpXZ.has_value() && !CmpYZ.has_value())
+
+  if (!CmpXZ.has_value() && !CmpYZ.has_value()) {
+    // General decomposition of icmp over min/max intrinsic:
+    // min(X, Y) pred Z --> (X pred Z) and (Y pred Z) when pred is >, >=
+    // min(X, Y) pred Z --> (X pred Z)  or (Y pred Z) when pred is <, <=
+    // max(X, Y) pred Z --> (X pred Z)  or (Y pred Z) when pred is >, >=
+    // max(X, Y) pred Z --> (X pred Z) and (Y pred Z) when pred is <, <=
+    if (MinMax->hasOneUse() && !ICmpInst::isEquality(Pred) &&
+        isa<Constant>(Z)) {
+      bool IsSame =
+          MinMax->getPredicate() == ICmpInst::getStrictPredicate(Pred);
+      Value *CmpX = Builder.CreateICmp(Pred, X, Z);
+      Value *CmpY = Builder.CreateICmp(Pred, Y, Z);
+      if (IsSame)
+        return BinaryOperator::CreateOr(CmpX, CmpY);
+      return BinaryOperator::CreateAnd(CmpX, CmpY);
+    }
     return nullptr;
+  }
+
   if (!CmpXZ.has_value()) {
     std::swap(X, Y);
     std::swap(CmpXZ, CmpYZ);
