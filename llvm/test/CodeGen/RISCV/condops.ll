@@ -4416,3 +4416,111 @@ entry:
   %cond = select i1 %tobool.not, i64 0, i64 %y
   ret i64 %cond
 }
+
+define i64 @single_bit4(i64 %x) {
+; RV32I-LABEL: single_bit4:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    bexti a2, a0, 10
+; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    and a0, a2, a0
+; RV32I-NEXT:    and a1, a2, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: single_bit4:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    bexti a1, a0, 10
+; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV32XVENTANACONDOPS-LABEL: single_bit4:
+; RV32XVENTANACONDOPS:       # %bb.0: # %entry
+; RV32XVENTANACONDOPS-NEXT:    bexti a2, a0, 10
+; RV32XVENTANACONDOPS-NEXT:    vt.maskcn a0, a0, a2
+; RV32XVENTANACONDOPS-NEXT:    vt.maskcn a1, a1, a2
+; RV32XVENTANACONDOPS-NEXT:    ret
+;
+; RV64XVENTANACONDOPS-LABEL: single_bit4:
+; RV64XVENTANACONDOPS:       # %bb.0: # %entry
+; RV64XVENTANACONDOPS-NEXT:    bexti a1, a0, 10
+; RV64XVENTANACONDOPS-NEXT:    vt.maskcn a0, a0, a1
+; RV64XVENTANACONDOPS-NEXT:    ret
+;
+; RV64XTHEADCONDMOV-LABEL: single_bit4:
+; RV64XTHEADCONDMOV:       # %bb.0: # %entry
+; RV64XTHEADCONDMOV-NEXT:    th.tst a1, a0, 10
+; RV64XTHEADCONDMOV-NEXT:    th.mvnez a0, zero, a1
+; RV64XTHEADCONDMOV-NEXT:    ret
+;
+; RV32ZICOND-LABEL: single_bit4:
+; RV32ZICOND:       # %bb.0: # %entry
+; RV32ZICOND-NEXT:    bexti a2, a0, 10
+; RV32ZICOND-NEXT:    czero.nez a0, a0, a2
+; RV32ZICOND-NEXT:    czero.nez a1, a1, a2
+; RV32ZICOND-NEXT:    ret
+;
+; RV64ZICOND-LABEL: single_bit4:
+; RV64ZICOND:       # %bb.0: # %entry
+; RV64ZICOND-NEXT:    bexti a1, a0, 10
+; RV64ZICOND-NEXT:    czero.nez a0, a0, a1
+; RV64ZICOND-NEXT:    ret
+entry:
+  %and = and i64 %x, 1024
+  %tobool.not = icmp ne i64 %and, 0
+  %cond = select i1 %tobool.not, i64 0, i64 %x
+  ret i64 %cond
+}
+
+define i64 @single_bit5(i64 %x) {
+; RV32I-LABEL: single_bit5:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    bexti a2, a0, 11
+; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    and a0, a2, a0
+; RV32I-NEXT:    and a1, a2, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: single_bit5:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    bexti a1, a0, 11
+; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV32XVENTANACONDOPS-LABEL: single_bit5:
+; RV32XVENTANACONDOPS:       # %bb.0: # %entry
+; RV32XVENTANACONDOPS-NEXT:    bexti a2, a0, 11
+; RV32XVENTANACONDOPS-NEXT:    vt.maskcn a0, a0, a2
+; RV32XVENTANACONDOPS-NEXT:    vt.maskcn a1, a1, a2
+; RV32XVENTANACONDOPS-NEXT:    ret
+;
+; RV64XVENTANACONDOPS-LABEL: single_bit5:
+; RV64XVENTANACONDOPS:       # %bb.0: # %entry
+; RV64XVENTANACONDOPS-NEXT:    bexti a1, a0, 11
+; RV64XVENTANACONDOPS-NEXT:    vt.maskcn a0, a0, a1
+; RV64XVENTANACONDOPS-NEXT:    ret
+;
+; RV64XTHEADCONDMOV-LABEL: single_bit5:
+; RV64XTHEADCONDMOV:       # %bb.0: # %entry
+; RV64XTHEADCONDMOV-NEXT:    th.tst a1, a0, 11
+; RV64XTHEADCONDMOV-NEXT:    th.mvnez a0, zero, a1
+; RV64XTHEADCONDMOV-NEXT:    ret
+;
+; RV32ZICOND-LABEL: single_bit5:
+; RV32ZICOND:       # %bb.0: # %entry
+; RV32ZICOND-NEXT:    bexti a2, a0, 11
+; RV32ZICOND-NEXT:    czero.nez a0, a0, a2
+; RV32ZICOND-NEXT:    czero.nez a1, a1, a2
+; RV32ZICOND-NEXT:    ret
+;
+; RV64ZICOND-LABEL: single_bit5:
+; RV64ZICOND:       # %bb.0: # %entry
+; RV64ZICOND-NEXT:    bexti a1, a0, 11
+; RV64ZICOND-NEXT:    czero.nez a0, a0, a1
+; RV64ZICOND-NEXT:    ret
+entry:
+  %and = and i64 %x, 2048
+  %tobool.not = icmp ne i64 %and, 0
+  %cond = select i1 %tobool.not, i64 0, i64 %x
+  ret i64 %cond
+}
