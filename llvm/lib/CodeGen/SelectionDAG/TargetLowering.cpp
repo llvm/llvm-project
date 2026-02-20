@@ -8489,9 +8489,9 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
       } else {
         // Canonical bit test: (Y & (1 << I)) != 0
         SDValue Zero = DAG.getConstant(0, DL, VT);
-        SDValue Cond = DAG.getSetCC(DL, SetCCVT, YMasked, Zero, ISD::SETNE);
+        SDValue Cond = DAG.getSetCC(DL, SetCCVT, YMasked, Zero, ISD::SETEQ);
         SDValue XShifted = DAG.getNode(ISD::SHL, DL, VT, X, ShiftAmt);
-        Part = DAG.getSelect(DL, VT, Cond, XShifted, Zero);
+        Part = DAG.getSelect(DL, VT, Cond, Zero, XShifted);
       }
       Res = DAG.getNode(ISD::XOR, DL, VT, Res, Part);
     }

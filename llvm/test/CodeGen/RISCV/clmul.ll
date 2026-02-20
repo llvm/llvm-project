@@ -9,145 +9,139 @@
 define i4 @clmul_i4(i4 %a, i4 %b) nounwind {
 ; RV32I-LABEL: clmul_i4:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a2, a1, 30
-; RV32I-NEXT:    slli a3, a0, 1
-; RV32I-NEXT:    slli a4, a1, 29
-; RV32I-NEXT:    srli a2, a2, 31
-; RV32I-NEXT:    neg a2, a2
-; RV32I-NEXT:    and a2, a2, a3
-; RV32I-NEXT:    slli a3, a0, 2
-; RV32I-NEXT:    srli a4, a4, 31
-; RV32I-NEXT:    neg a4, a4
-; RV32I-NEXT:    and a3, a4, a3
+; RV32I-NEXT:    slli a2, a0, 1
+; RV32I-NEXT:    slli a3, a1, 30
+; RV32I-NEXT:    slli a4, a0, 2
+; RV32I-NEXT:    srai a3, a3, 31
+; RV32I-NEXT:    and a2, a3, a2
+; RV32I-NEXT:    slli a3, a1, 29
+; RV32I-NEXT:    srai a3, a3, 31
+; RV32I-NEXT:    and a3, a3, a4
 ; RV32I-NEXT:    slli a4, a1, 31
-; RV32I-NEXT:    slli a1, a1, 28
 ; RV32I-NEXT:    srai a4, a4, 31
 ; RV32I-NEXT:    and a4, a4, a0
 ; RV32I-NEXT:    slli a0, a0, 3
-; RV32I-NEXT:    srli a1, a1, 31
-; RV32I-NEXT:    neg a1, a1
-; RV32I-NEXT:    and a0, a1, a0
+; RV32I-NEXT:    andi a1, a1, 8
+; RV32I-NEXT:    seqz a1, a1
+; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    xor a2, a4, a2
-; RV32I-NEXT:    xor a0, a3, a0
+; RV32I-NEXT:    xor a2, a2, a3
+; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    xor a0, a2, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: clmul_i4:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a2, a1, 62
-; RV64I-NEXT:    slli a3, a0, 1
-; RV64I-NEXT:    slli a4, a1, 61
-; RV64I-NEXT:    srli a2, a2, 63
-; RV64I-NEXT:    neg a2, a2
-; RV64I-NEXT:    and a2, a2, a3
-; RV64I-NEXT:    slli a3, a0, 2
-; RV64I-NEXT:    srli a4, a4, 63
-; RV64I-NEXT:    neg a4, a4
-; RV64I-NEXT:    and a3, a4, a3
+; RV64I-NEXT:    slli a2, a0, 1
+; RV64I-NEXT:    slli a3, a1, 62
+; RV64I-NEXT:    slli a4, a0, 2
+; RV64I-NEXT:    srai a3, a3, 63
+; RV64I-NEXT:    and a2, a3, a2
+; RV64I-NEXT:    slli a3, a1, 61
+; RV64I-NEXT:    srai a3, a3, 63
+; RV64I-NEXT:    and a3, a3, a4
 ; RV64I-NEXT:    slli a4, a1, 63
-; RV64I-NEXT:    slli a1, a1, 60
 ; RV64I-NEXT:    srai a4, a4, 63
 ; RV64I-NEXT:    and a4, a4, a0
 ; RV64I-NEXT:    slli a0, a0, 3
-; RV64I-NEXT:    srli a1, a1, 63
-; RV64I-NEXT:    neg a1, a1
-; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    andi a1, a1, 8
+; RV64I-NEXT:    seqz a1, a1
+; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    xor a2, a4, a2
-; RV64I-NEXT:    xor a0, a3, a0
+; RV64I-NEXT:    xor a2, a2, a3
+; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    xor a0, a2, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV32IM-LABEL: clmul_i4:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    slli a2, a1, 30
-; RV32IM-NEXT:    slli a3, a0, 1
-; RV32IM-NEXT:    slli a4, a1, 29
-; RV32IM-NEXT:    srli a2, a2, 31
-; RV32IM-NEXT:    neg a2, a2
-; RV32IM-NEXT:    and a2, a2, a3
-; RV32IM-NEXT:    slli a3, a0, 2
-; RV32IM-NEXT:    srli a4, a4, 31
-; RV32IM-NEXT:    neg a4, a4
-; RV32IM-NEXT:    and a3, a4, a3
+; RV32IM-NEXT:    slli a2, a0, 1
+; RV32IM-NEXT:    slli a3, a1, 30
+; RV32IM-NEXT:    slli a4, a0, 2
+; RV32IM-NEXT:    srai a3, a3, 31
+; RV32IM-NEXT:    and a2, a3, a2
+; RV32IM-NEXT:    slli a3, a1, 29
+; RV32IM-NEXT:    srai a3, a3, 31
+; RV32IM-NEXT:    and a3, a3, a4
 ; RV32IM-NEXT:    slli a4, a1, 31
-; RV32IM-NEXT:    slli a1, a1, 28
 ; RV32IM-NEXT:    srai a4, a4, 31
 ; RV32IM-NEXT:    and a4, a4, a0
 ; RV32IM-NEXT:    slli a0, a0, 3
-; RV32IM-NEXT:    srli a1, a1, 31
-; RV32IM-NEXT:    neg a1, a1
-; RV32IM-NEXT:    and a0, a1, a0
+; RV32IM-NEXT:    andi a1, a1, 8
+; RV32IM-NEXT:    seqz a1, a1
+; RV32IM-NEXT:    addi a1, a1, -1
 ; RV32IM-NEXT:    xor a2, a4, a2
-; RV32IM-NEXT:    xor a0, a3, a0
+; RV32IM-NEXT:    xor a2, a2, a3
+; RV32IM-NEXT:    and a0, a1, a0
 ; RV32IM-NEXT:    xor a0, a2, a0
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: clmul_i4:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slli a2, a1, 62
-; RV64IM-NEXT:    slli a3, a0, 1
-; RV64IM-NEXT:    slli a4, a1, 61
-; RV64IM-NEXT:    srli a2, a2, 63
-; RV64IM-NEXT:    neg a2, a2
-; RV64IM-NEXT:    and a2, a2, a3
-; RV64IM-NEXT:    slli a3, a0, 2
-; RV64IM-NEXT:    srli a4, a4, 63
-; RV64IM-NEXT:    neg a4, a4
-; RV64IM-NEXT:    and a3, a4, a3
+; RV64IM-NEXT:    slli a2, a0, 1
+; RV64IM-NEXT:    slli a3, a1, 62
+; RV64IM-NEXT:    slli a4, a0, 2
+; RV64IM-NEXT:    srai a3, a3, 63
+; RV64IM-NEXT:    and a2, a3, a2
+; RV64IM-NEXT:    slli a3, a1, 61
+; RV64IM-NEXT:    srai a3, a3, 63
+; RV64IM-NEXT:    and a3, a3, a4
 ; RV64IM-NEXT:    slli a4, a1, 63
-; RV64IM-NEXT:    slli a1, a1, 60
 ; RV64IM-NEXT:    srai a4, a4, 63
 ; RV64IM-NEXT:    and a4, a4, a0
 ; RV64IM-NEXT:    slli a0, a0, 3
-; RV64IM-NEXT:    srli a1, a1, 63
-; RV64IM-NEXT:    neg a1, a1
-; RV64IM-NEXT:    and a0, a1, a0
+; RV64IM-NEXT:    andi a1, a1, 8
+; RV64IM-NEXT:    seqz a1, a1
+; RV64IM-NEXT:    addi a1, a1, -1
 ; RV64IM-NEXT:    xor a2, a4, a2
-; RV64IM-NEXT:    xor a0, a3, a0
+; RV64IM-NEXT:    xor a2, a2, a3
+; RV64IM-NEXT:    and a0, a1, a0
 ; RV64IM-NEXT:    xor a0, a2, a0
 ; RV64IM-NEXT:    ret
 ;
 ; RV32IMZBS-LABEL: clmul_i4:
 ; RV32IMZBS:       # %bb.0:
-; RV32IMZBS-NEXT:    bexti a2, a1, 1
-; RV32IMZBS-NEXT:    slli a3, a0, 1
-; RV32IMZBS-NEXT:    bexti a4, a1, 2
-; RV32IMZBS-NEXT:    neg a2, a2
-; RV32IMZBS-NEXT:    and a2, a2, a3
-; RV32IMZBS-NEXT:    slli a3, a0, 2
-; RV32IMZBS-NEXT:    neg a4, a4
-; RV32IMZBS-NEXT:    and a3, a4, a3
+; RV32IMZBS-NEXT:    slli a2, a0, 1
+; RV32IMZBS-NEXT:    slli a3, a1, 30
+; RV32IMZBS-NEXT:    slli a4, a0, 2
+; RV32IMZBS-NEXT:    srai a3, a3, 31
+; RV32IMZBS-NEXT:    and a2, a3, a2
+; RV32IMZBS-NEXT:    slli a3, a1, 29
+; RV32IMZBS-NEXT:    srai a3, a3, 31
+; RV32IMZBS-NEXT:    and a3, a3, a4
 ; RV32IMZBS-NEXT:    slli a4, a1, 31
-; RV32IMZBS-NEXT:    bexti a1, a1, 3
 ; RV32IMZBS-NEXT:    srai a4, a4, 31
 ; RV32IMZBS-NEXT:    and a4, a4, a0
 ; RV32IMZBS-NEXT:    slli a0, a0, 3
-; RV32IMZBS-NEXT:    neg a1, a1
-; RV32IMZBS-NEXT:    and a0, a1, a0
+; RV32IMZBS-NEXT:    andi a1, a1, 8
+; RV32IMZBS-NEXT:    seqz a1, a1
+; RV32IMZBS-NEXT:    addi a1, a1, -1
 ; RV32IMZBS-NEXT:    xor a2, a4, a2
-; RV32IMZBS-NEXT:    xor a0, a3, a0
+; RV32IMZBS-NEXT:    xor a2, a2, a3
+; RV32IMZBS-NEXT:    and a0, a1, a0
 ; RV32IMZBS-NEXT:    xor a0, a2, a0
 ; RV32IMZBS-NEXT:    ret
 ;
 ; RV64IMZBS-LABEL: clmul_i4:
 ; RV64IMZBS:       # %bb.0:
-; RV64IMZBS-NEXT:    bexti a2, a1, 1
-; RV64IMZBS-NEXT:    slli a3, a0, 1
-; RV64IMZBS-NEXT:    bexti a4, a1, 2
-; RV64IMZBS-NEXT:    neg a2, a2
-; RV64IMZBS-NEXT:    and a2, a2, a3
-; RV64IMZBS-NEXT:    slli a3, a0, 2
-; RV64IMZBS-NEXT:    neg a4, a4
-; RV64IMZBS-NEXT:    and a3, a4, a3
+; RV64IMZBS-NEXT:    slli a2, a0, 1
+; RV64IMZBS-NEXT:    slli a3, a1, 62
+; RV64IMZBS-NEXT:    slli a4, a0, 2
+; RV64IMZBS-NEXT:    srai a3, a3, 63
+; RV64IMZBS-NEXT:    and a2, a3, a2
+; RV64IMZBS-NEXT:    slli a3, a1, 61
+; RV64IMZBS-NEXT:    srai a3, a3, 63
+; RV64IMZBS-NEXT:    and a3, a3, a4
 ; RV64IMZBS-NEXT:    slli a4, a1, 63
-; RV64IMZBS-NEXT:    bexti a1, a1, 3
 ; RV64IMZBS-NEXT:    srai a4, a4, 63
 ; RV64IMZBS-NEXT:    and a4, a4, a0
 ; RV64IMZBS-NEXT:    slli a0, a0, 3
-; RV64IMZBS-NEXT:    neg a1, a1
-; RV64IMZBS-NEXT:    and a0, a1, a0
+; RV64IMZBS-NEXT:    andi a1, a1, 8
+; RV64IMZBS-NEXT:    seqz a1, a1
+; RV64IMZBS-NEXT:    addi a1, a1, -1
 ; RV64IMZBS-NEXT:    xor a2, a4, a2
-; RV64IMZBS-NEXT:    xor a0, a3, a0
+; RV64IMZBS-NEXT:    xor a2, a2, a3
+; RV64IMZBS-NEXT:    and a0, a1, a0
 ; RV64IMZBS-NEXT:    xor a0, a2, a0
 ; RV64IMZBS-NEXT:    ret
   %res = call i4 @llvm.clmul.i4(i4 %a, i4 %b)
@@ -157,46 +151,40 @@ define i4 @clmul_i4(i4 %a, i4 %b) nounwind {
 define i8 @clmul_i8(i8 %a, i8 %b) nounwind {
 ; RV32I-LABEL: clmul_i8:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a2, a1, 30
-; RV32I-NEXT:    slli a3, a0, 1
-; RV32I-NEXT:    slli a4, a1, 29
-; RV32I-NEXT:    slli a5, a0, 2
-; RV32I-NEXT:    slli a6, a1, 28
-; RV32I-NEXT:    slli a7, a0, 3
-; RV32I-NEXT:    slli t0, a1, 27
-; RV32I-NEXT:    srli a2, a2, 31
-; RV32I-NEXT:    neg a2, a2
-; RV32I-NEXT:    and a2, a2, a3
-; RV32I-NEXT:    slli a3, a0, 4
-; RV32I-NEXT:    srli a4, a4, 31
-; RV32I-NEXT:    neg a4, a4
-; RV32I-NEXT:    and a4, a4, a5
-; RV32I-NEXT:    slli a5, a1, 26
-; RV32I-NEXT:    srli a6, a6, 31
-; RV32I-NEXT:    neg a6, a6
-; RV32I-NEXT:    and a6, a6, a7
-; RV32I-NEXT:    slli a7, a0, 5
-; RV32I-NEXT:    srli t0, t0, 31
-; RV32I-NEXT:    neg t0, t0
-; RV32I-NEXT:    and a3, t0, a3
-; RV32I-NEXT:    slli t0, a1, 25
-; RV32I-NEXT:    srli a5, a5, 31
-; RV32I-NEXT:    neg a5, a5
-; RV32I-NEXT:    and a5, a5, a7
-; RV32I-NEXT:    slli a7, a0, 6
-; RV32I-NEXT:    srli t0, t0, 31
-; RV32I-NEXT:    neg t0, t0
-; RV32I-NEXT:    and a7, t0, a7
+; RV32I-NEXT:    slli a2, a0, 1
+; RV32I-NEXT:    slli a3, a1, 30
+; RV32I-NEXT:    slli a4, a0, 2
+; RV32I-NEXT:    slli a5, a1, 29
+; RV32I-NEXT:    slli a6, a0, 3
+; RV32I-NEXT:    slli a7, a1, 28
+; RV32I-NEXT:    slli t0, a0, 4
+; RV32I-NEXT:    srai a3, a3, 31
+; RV32I-NEXT:    and a2, a3, a2
+; RV32I-NEXT:    slli a3, a1, 27
+; RV32I-NEXT:    srai a5, a5, 31
+; RV32I-NEXT:    and a4, a5, a4
+; RV32I-NEXT:    slli a5, a0, 5
+; RV32I-NEXT:    srai a7, a7, 31
+; RV32I-NEXT:    and a6, a7, a6
+; RV32I-NEXT:    slli a7, a1, 26
+; RV32I-NEXT:    srai a3, a3, 31
+; RV32I-NEXT:    and a3, a3, t0
+; RV32I-NEXT:    slli t0, a0, 6
+; RV32I-NEXT:    srai a7, a7, 31
+; RV32I-NEXT:    and a5, a7, a5
+; RV32I-NEXT:    slli a7, a1, 25
+; RV32I-NEXT:    srai a7, a7, 31
+; RV32I-NEXT:    and a7, a7, t0
 ; RV32I-NEXT:    slli t0, a1, 31
 ; RV32I-NEXT:    srai t0, t0, 31
 ; RV32I-NEXT:    and t0, t0, a0
 ; RV32I-NEXT:    xor a2, t0, a2
 ; RV32I-NEXT:    xor a4, a4, a6
 ; RV32I-NEXT:    xor a3, a3, a5
-; RV32I-NEXT:    slli a1, a1, 24
 ; RV32I-NEXT:    slli a0, a0, 7
-; RV32I-NEXT:    srli a1, a1, 31
-; RV32I-NEXT:    neg a1, a1
+; RV32I-NEXT:    andi a1, a1, 128
+; RV32I-NEXT:    seqz a1, a1
+; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    xor a2, a2, a4
 ; RV32I-NEXT:    xor a3, a3, a7
 ; RV32I-NEXT:    xor a2, a2, a3
@@ -206,46 +194,40 @@ define i8 @clmul_i8(i8 %a, i8 %b) nounwind {
 ;
 ; RV64I-LABEL: clmul_i8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a2, a1, 62
-; RV64I-NEXT:    slli a3, a0, 1
-; RV64I-NEXT:    slli a4, a1, 61
-; RV64I-NEXT:    slli a5, a0, 2
-; RV64I-NEXT:    slli a6, a1, 60
-; RV64I-NEXT:    slli a7, a0, 3
-; RV64I-NEXT:    slli t0, a1, 59
-; RV64I-NEXT:    srli a2, a2, 63
-; RV64I-NEXT:    neg a2, a2
-; RV64I-NEXT:    and a2, a2, a3
-; RV64I-NEXT:    slli a3, a0, 4
-; RV64I-NEXT:    srli a4, a4, 63
-; RV64I-NEXT:    neg a4, a4
-; RV64I-NEXT:    and a4, a4, a5
-; RV64I-NEXT:    slli a5, a1, 58
-; RV64I-NEXT:    srli a6, a6, 63
-; RV64I-NEXT:    neg a6, a6
-; RV64I-NEXT:    and a6, a6, a7
-; RV64I-NEXT:    slli a7, a0, 5
-; RV64I-NEXT:    srli t0, t0, 63
-; RV64I-NEXT:    neg t0, t0
-; RV64I-NEXT:    and a3, t0, a3
-; RV64I-NEXT:    slli t0, a1, 57
-; RV64I-NEXT:    srli a5, a5, 63
-; RV64I-NEXT:    neg a5, a5
-; RV64I-NEXT:    and a5, a5, a7
-; RV64I-NEXT:    slli a7, a0, 6
-; RV64I-NEXT:    srli t0, t0, 63
-; RV64I-NEXT:    neg t0, t0
-; RV64I-NEXT:    and a7, t0, a7
+; RV64I-NEXT:    slli a2, a0, 1
+; RV64I-NEXT:    slli a3, a1, 62
+; RV64I-NEXT:    slli a4, a0, 2
+; RV64I-NEXT:    slli a5, a1, 61
+; RV64I-NEXT:    slli a6, a0, 3
+; RV64I-NEXT:    slli a7, a1, 60
+; RV64I-NEXT:    slli t0, a0, 4
+; RV64I-NEXT:    srai a3, a3, 63
+; RV64I-NEXT:    and a2, a3, a2
+; RV64I-NEXT:    slli a3, a1, 59
+; RV64I-NEXT:    srai a5, a5, 63
+; RV64I-NEXT:    and a4, a5, a4
+; RV64I-NEXT:    slli a5, a0, 5
+; RV64I-NEXT:    srai a7, a7, 63
+; RV64I-NEXT:    and a6, a7, a6
+; RV64I-NEXT:    slli a7, a1, 58
+; RV64I-NEXT:    srai a3, a3, 63
+; RV64I-NEXT:    and a3, a3, t0
+; RV64I-NEXT:    slli t0, a0, 6
+; RV64I-NEXT:    srai a7, a7, 63
+; RV64I-NEXT:    and a5, a7, a5
+; RV64I-NEXT:    slli a7, a1, 57
+; RV64I-NEXT:    srai a7, a7, 63
+; RV64I-NEXT:    and a7, a7, t0
 ; RV64I-NEXT:    slli t0, a1, 63
 ; RV64I-NEXT:    srai t0, t0, 63
 ; RV64I-NEXT:    and t0, t0, a0
 ; RV64I-NEXT:    xor a2, t0, a2
 ; RV64I-NEXT:    xor a4, a4, a6
 ; RV64I-NEXT:    xor a3, a3, a5
-; RV64I-NEXT:    slli a1, a1, 56
 ; RV64I-NEXT:    slli a0, a0, 7
-; RV64I-NEXT:    srli a1, a1, 63
-; RV64I-NEXT:    neg a1, a1
+; RV64I-NEXT:    andi a1, a1, 128
+; RV64I-NEXT:    seqz a1, a1
+; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    xor a2, a2, a4
 ; RV64I-NEXT:    xor a3, a3, a7
 ; RV64I-NEXT:    xor a2, a2, a3
@@ -255,46 +237,40 @@ define i8 @clmul_i8(i8 %a, i8 %b) nounwind {
 ;
 ; RV32IM-LABEL: clmul_i8:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    slli a2, a1, 30
-; RV32IM-NEXT:    slli a3, a0, 1
-; RV32IM-NEXT:    slli a4, a1, 29
-; RV32IM-NEXT:    slli a5, a0, 2
-; RV32IM-NEXT:    slli a6, a1, 28
-; RV32IM-NEXT:    slli a7, a0, 3
-; RV32IM-NEXT:    slli t0, a1, 27
-; RV32IM-NEXT:    srli a2, a2, 31
-; RV32IM-NEXT:    neg a2, a2
-; RV32IM-NEXT:    and a2, a2, a3
-; RV32IM-NEXT:    slli a3, a0, 4
-; RV32IM-NEXT:    srli a4, a4, 31
-; RV32IM-NEXT:    neg a4, a4
-; RV32IM-NEXT:    and a4, a4, a5
-; RV32IM-NEXT:    slli a5, a1, 26
-; RV32IM-NEXT:    srli a6, a6, 31
-; RV32IM-NEXT:    neg a6, a6
-; RV32IM-NEXT:    and a6, a6, a7
-; RV32IM-NEXT:    slli a7, a0, 5
-; RV32IM-NEXT:    srli t0, t0, 31
-; RV32IM-NEXT:    neg t0, t0
-; RV32IM-NEXT:    and a3, t0, a3
-; RV32IM-NEXT:    slli t0, a1, 25
-; RV32IM-NEXT:    srli a5, a5, 31
-; RV32IM-NEXT:    neg a5, a5
-; RV32IM-NEXT:    and a5, a5, a7
-; RV32IM-NEXT:    slli a7, a0, 6
-; RV32IM-NEXT:    srli t0, t0, 31
-; RV32IM-NEXT:    neg t0, t0
-; RV32IM-NEXT:    and a7, t0, a7
+; RV32IM-NEXT:    slli a2, a0, 1
+; RV32IM-NEXT:    slli a3, a1, 30
+; RV32IM-NEXT:    slli a4, a0, 2
+; RV32IM-NEXT:    slli a5, a1, 29
+; RV32IM-NEXT:    slli a6, a0, 3
+; RV32IM-NEXT:    slli a7, a1, 28
+; RV32IM-NEXT:    slli t0, a0, 4
+; RV32IM-NEXT:    srai a3, a3, 31
+; RV32IM-NEXT:    and a2, a3, a2
+; RV32IM-NEXT:    slli a3, a1, 27
+; RV32IM-NEXT:    srai a5, a5, 31
+; RV32IM-NEXT:    and a4, a5, a4
+; RV32IM-NEXT:    slli a5, a0, 5
+; RV32IM-NEXT:    srai a7, a7, 31
+; RV32IM-NEXT:    and a6, a7, a6
+; RV32IM-NEXT:    slli a7, a1, 26
+; RV32IM-NEXT:    srai a3, a3, 31
+; RV32IM-NEXT:    and a3, a3, t0
+; RV32IM-NEXT:    slli t0, a0, 6
+; RV32IM-NEXT:    srai a7, a7, 31
+; RV32IM-NEXT:    and a5, a7, a5
+; RV32IM-NEXT:    slli a7, a1, 25
+; RV32IM-NEXT:    srai a7, a7, 31
+; RV32IM-NEXT:    and a7, a7, t0
 ; RV32IM-NEXT:    slli t0, a1, 31
 ; RV32IM-NEXT:    srai t0, t0, 31
 ; RV32IM-NEXT:    and t0, t0, a0
 ; RV32IM-NEXT:    xor a2, t0, a2
 ; RV32IM-NEXT:    xor a4, a4, a6
 ; RV32IM-NEXT:    xor a3, a3, a5
-; RV32IM-NEXT:    slli a1, a1, 24
 ; RV32IM-NEXT:    slli a0, a0, 7
-; RV32IM-NEXT:    srli a1, a1, 31
-; RV32IM-NEXT:    neg a1, a1
+; RV32IM-NEXT:    andi a1, a1, 128
+; RV32IM-NEXT:    seqz a1, a1
+; RV32IM-NEXT:    addi a1, a1, -1
 ; RV32IM-NEXT:    xor a2, a2, a4
 ; RV32IM-NEXT:    xor a3, a3, a7
 ; RV32IM-NEXT:    xor a2, a2, a3
@@ -304,46 +280,40 @@ define i8 @clmul_i8(i8 %a, i8 %b) nounwind {
 ;
 ; RV64IM-LABEL: clmul_i8:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slli a2, a1, 62
-; RV64IM-NEXT:    slli a3, a0, 1
-; RV64IM-NEXT:    slli a4, a1, 61
-; RV64IM-NEXT:    slli a5, a0, 2
-; RV64IM-NEXT:    slli a6, a1, 60
-; RV64IM-NEXT:    slli a7, a0, 3
-; RV64IM-NEXT:    slli t0, a1, 59
-; RV64IM-NEXT:    srli a2, a2, 63
-; RV64IM-NEXT:    neg a2, a2
-; RV64IM-NEXT:    and a2, a2, a3
-; RV64IM-NEXT:    slli a3, a0, 4
-; RV64IM-NEXT:    srli a4, a4, 63
-; RV64IM-NEXT:    neg a4, a4
-; RV64IM-NEXT:    and a4, a4, a5
-; RV64IM-NEXT:    slli a5, a1, 58
-; RV64IM-NEXT:    srli a6, a6, 63
-; RV64IM-NEXT:    neg a6, a6
-; RV64IM-NEXT:    and a6, a6, a7
-; RV64IM-NEXT:    slli a7, a0, 5
-; RV64IM-NEXT:    srli t0, t0, 63
-; RV64IM-NEXT:    neg t0, t0
-; RV64IM-NEXT:    and a3, t0, a3
-; RV64IM-NEXT:    slli t0, a1, 57
-; RV64IM-NEXT:    srli a5, a5, 63
-; RV64IM-NEXT:    neg a5, a5
-; RV64IM-NEXT:    and a5, a5, a7
-; RV64IM-NEXT:    slli a7, a0, 6
-; RV64IM-NEXT:    srli t0, t0, 63
-; RV64IM-NEXT:    neg t0, t0
-; RV64IM-NEXT:    and a7, t0, a7
+; RV64IM-NEXT:    slli a2, a0, 1
+; RV64IM-NEXT:    slli a3, a1, 62
+; RV64IM-NEXT:    slli a4, a0, 2
+; RV64IM-NEXT:    slli a5, a1, 61
+; RV64IM-NEXT:    slli a6, a0, 3
+; RV64IM-NEXT:    slli a7, a1, 60
+; RV64IM-NEXT:    slli t0, a0, 4
+; RV64IM-NEXT:    srai a3, a3, 63
+; RV64IM-NEXT:    and a2, a3, a2
+; RV64IM-NEXT:    slli a3, a1, 59
+; RV64IM-NEXT:    srai a5, a5, 63
+; RV64IM-NEXT:    and a4, a5, a4
+; RV64IM-NEXT:    slli a5, a0, 5
+; RV64IM-NEXT:    srai a7, a7, 63
+; RV64IM-NEXT:    and a6, a7, a6
+; RV64IM-NEXT:    slli a7, a1, 58
+; RV64IM-NEXT:    srai a3, a3, 63
+; RV64IM-NEXT:    and a3, a3, t0
+; RV64IM-NEXT:    slli t0, a0, 6
+; RV64IM-NEXT:    srai a7, a7, 63
+; RV64IM-NEXT:    and a5, a7, a5
+; RV64IM-NEXT:    slli a7, a1, 57
+; RV64IM-NEXT:    srai a7, a7, 63
+; RV64IM-NEXT:    and a7, a7, t0
 ; RV64IM-NEXT:    slli t0, a1, 63
 ; RV64IM-NEXT:    srai t0, t0, 63
 ; RV64IM-NEXT:    and t0, t0, a0
 ; RV64IM-NEXT:    xor a2, t0, a2
 ; RV64IM-NEXT:    xor a4, a4, a6
 ; RV64IM-NEXT:    xor a3, a3, a5
-; RV64IM-NEXT:    slli a1, a1, 56
 ; RV64IM-NEXT:    slli a0, a0, 7
-; RV64IM-NEXT:    srli a1, a1, 63
-; RV64IM-NEXT:    neg a1, a1
+; RV64IM-NEXT:    andi a1, a1, 128
+; RV64IM-NEXT:    seqz a1, a1
+; RV64IM-NEXT:    addi a1, a1, -1
 ; RV64IM-NEXT:    xor a2, a2, a4
 ; RV64IM-NEXT:    xor a3, a3, a7
 ; RV64IM-NEXT:    xor a2, a2, a3
@@ -353,39 +323,40 @@ define i8 @clmul_i8(i8 %a, i8 %b) nounwind {
 ;
 ; RV32IMZBS-LABEL: clmul_i8:
 ; RV32IMZBS:       # %bb.0:
-; RV32IMZBS-NEXT:    bexti a2, a1, 1
-; RV32IMZBS-NEXT:    slli a3, a0, 1
-; RV32IMZBS-NEXT:    bexti a4, a1, 2
-; RV32IMZBS-NEXT:    slli a5, a0, 2
-; RV32IMZBS-NEXT:    bexti a6, a1, 3
-; RV32IMZBS-NEXT:    slli a7, a0, 3
-; RV32IMZBS-NEXT:    bexti t0, a1, 4
-; RV32IMZBS-NEXT:    neg a2, a2
-; RV32IMZBS-NEXT:    and a2, a2, a3
-; RV32IMZBS-NEXT:    slli a3, a0, 4
-; RV32IMZBS-NEXT:    neg a4, a4
-; RV32IMZBS-NEXT:    and a4, a4, a5
-; RV32IMZBS-NEXT:    bexti a5, a1, 5
-; RV32IMZBS-NEXT:    neg a6, a6
-; RV32IMZBS-NEXT:    and a6, a6, a7
-; RV32IMZBS-NEXT:    slli a7, a0, 5
-; RV32IMZBS-NEXT:    neg t0, t0
-; RV32IMZBS-NEXT:    and a3, t0, a3
-; RV32IMZBS-NEXT:    bexti t0, a1, 6
-; RV32IMZBS-NEXT:    neg a5, a5
-; RV32IMZBS-NEXT:    and a5, a5, a7
-; RV32IMZBS-NEXT:    slli a7, a0, 6
-; RV32IMZBS-NEXT:    neg t0, t0
-; RV32IMZBS-NEXT:    and a7, t0, a7
+; RV32IMZBS-NEXT:    slli a2, a0, 1
+; RV32IMZBS-NEXT:    slli a3, a1, 30
+; RV32IMZBS-NEXT:    slli a4, a0, 2
+; RV32IMZBS-NEXT:    slli a5, a1, 29
+; RV32IMZBS-NEXT:    slli a6, a0, 3
+; RV32IMZBS-NEXT:    slli a7, a1, 28
+; RV32IMZBS-NEXT:    slli t0, a0, 4
+; RV32IMZBS-NEXT:    srai a3, a3, 31
+; RV32IMZBS-NEXT:    and a2, a3, a2
+; RV32IMZBS-NEXT:    slli a3, a1, 27
+; RV32IMZBS-NEXT:    srai a5, a5, 31
+; RV32IMZBS-NEXT:    and a4, a5, a4
+; RV32IMZBS-NEXT:    slli a5, a0, 5
+; RV32IMZBS-NEXT:    srai a7, a7, 31
+; RV32IMZBS-NEXT:    and a6, a7, a6
+; RV32IMZBS-NEXT:    slli a7, a1, 26
+; RV32IMZBS-NEXT:    srai a3, a3, 31
+; RV32IMZBS-NEXT:    and a3, a3, t0
+; RV32IMZBS-NEXT:    slli t0, a0, 6
+; RV32IMZBS-NEXT:    srai a7, a7, 31
+; RV32IMZBS-NEXT:    and a5, a7, a5
+; RV32IMZBS-NEXT:    slli a7, a1, 25
+; RV32IMZBS-NEXT:    srai a7, a7, 31
+; RV32IMZBS-NEXT:    and a7, a7, t0
 ; RV32IMZBS-NEXT:    slli t0, a1, 31
 ; RV32IMZBS-NEXT:    srai t0, t0, 31
 ; RV32IMZBS-NEXT:    and t0, t0, a0
 ; RV32IMZBS-NEXT:    xor a2, t0, a2
 ; RV32IMZBS-NEXT:    xor a4, a4, a6
 ; RV32IMZBS-NEXT:    xor a3, a3, a5
-; RV32IMZBS-NEXT:    bexti a1, a1, 7
 ; RV32IMZBS-NEXT:    slli a0, a0, 7
-; RV32IMZBS-NEXT:    neg a1, a1
+; RV32IMZBS-NEXT:    andi a1, a1, 128
+; RV32IMZBS-NEXT:    seqz a1, a1
+; RV32IMZBS-NEXT:    addi a1, a1, -1
 ; RV32IMZBS-NEXT:    xor a2, a2, a4
 ; RV32IMZBS-NEXT:    xor a3, a3, a7
 ; RV32IMZBS-NEXT:    xor a2, a2, a3
@@ -395,39 +366,40 @@ define i8 @clmul_i8(i8 %a, i8 %b) nounwind {
 ;
 ; RV64IMZBS-LABEL: clmul_i8:
 ; RV64IMZBS:       # %bb.0:
-; RV64IMZBS-NEXT:    bexti a2, a1, 1
-; RV64IMZBS-NEXT:    slli a3, a0, 1
-; RV64IMZBS-NEXT:    bexti a4, a1, 2
-; RV64IMZBS-NEXT:    slli a5, a0, 2
-; RV64IMZBS-NEXT:    bexti a6, a1, 3
-; RV64IMZBS-NEXT:    slli a7, a0, 3
-; RV64IMZBS-NEXT:    bexti t0, a1, 4
-; RV64IMZBS-NEXT:    neg a2, a2
-; RV64IMZBS-NEXT:    and a2, a2, a3
-; RV64IMZBS-NEXT:    slli a3, a0, 4
-; RV64IMZBS-NEXT:    neg a4, a4
-; RV64IMZBS-NEXT:    and a4, a4, a5
-; RV64IMZBS-NEXT:    bexti a5, a1, 5
-; RV64IMZBS-NEXT:    neg a6, a6
-; RV64IMZBS-NEXT:    and a6, a6, a7
-; RV64IMZBS-NEXT:    slli a7, a0, 5
-; RV64IMZBS-NEXT:    neg t0, t0
-; RV64IMZBS-NEXT:    and a3, t0, a3
-; RV64IMZBS-NEXT:    bexti t0, a1, 6
-; RV64IMZBS-NEXT:    neg a5, a5
-; RV64IMZBS-NEXT:    and a5, a5, a7
-; RV64IMZBS-NEXT:    slli a7, a0, 6
-; RV64IMZBS-NEXT:    neg t0, t0
-; RV64IMZBS-NEXT:    and a7, t0, a7
+; RV64IMZBS-NEXT:    slli a2, a0, 1
+; RV64IMZBS-NEXT:    slli a3, a1, 62
+; RV64IMZBS-NEXT:    slli a4, a0, 2
+; RV64IMZBS-NEXT:    slli a5, a1, 61
+; RV64IMZBS-NEXT:    slli a6, a0, 3
+; RV64IMZBS-NEXT:    slli a7, a1, 60
+; RV64IMZBS-NEXT:    slli t0, a0, 4
+; RV64IMZBS-NEXT:    srai a3, a3, 63
+; RV64IMZBS-NEXT:    and a2, a3, a2
+; RV64IMZBS-NEXT:    slli a3, a1, 59
+; RV64IMZBS-NEXT:    srai a5, a5, 63
+; RV64IMZBS-NEXT:    and a4, a5, a4
+; RV64IMZBS-NEXT:    slli a5, a0, 5
+; RV64IMZBS-NEXT:    srai a7, a7, 63
+; RV64IMZBS-NEXT:    and a6, a7, a6
+; RV64IMZBS-NEXT:    slli a7, a1, 58
+; RV64IMZBS-NEXT:    srai a3, a3, 63
+; RV64IMZBS-NEXT:    and a3, a3, t0
+; RV64IMZBS-NEXT:    slli t0, a0, 6
+; RV64IMZBS-NEXT:    srai a7, a7, 63
+; RV64IMZBS-NEXT:    and a5, a7, a5
+; RV64IMZBS-NEXT:    slli a7, a1, 57
+; RV64IMZBS-NEXT:    srai a7, a7, 63
+; RV64IMZBS-NEXT:    and a7, a7, t0
 ; RV64IMZBS-NEXT:    slli t0, a1, 63
 ; RV64IMZBS-NEXT:    srai t0, t0, 63
 ; RV64IMZBS-NEXT:    and t0, t0, a0
 ; RV64IMZBS-NEXT:    xor a2, t0, a2
 ; RV64IMZBS-NEXT:    xor a4, a4, a6
 ; RV64IMZBS-NEXT:    xor a3, a3, a5
-; RV64IMZBS-NEXT:    bexti a1, a1, 7
 ; RV64IMZBS-NEXT:    slli a0, a0, 7
-; RV64IMZBS-NEXT:    neg a1, a1
+; RV64IMZBS-NEXT:    andi a1, a1, 128
+; RV64IMZBS-NEXT:    seqz a1, a1
+; RV64IMZBS-NEXT:    addi a1, a1, -1
 ; RV64IMZBS-NEXT:    xor a2, a2, a4
 ; RV64IMZBS-NEXT:    xor a3, a3, a7
 ; RV64IMZBS-NEXT:    xor a2, a2, a3
@@ -441,220 +413,186 @@ define i8 @clmul_i8(i8 %a, i8 %b) nounwind {
 define i16 @clmul_i16(i16 %a, i16 %b) nounwind {
 ; RV32I-LABEL: clmul_i16:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -32
-; RV32I-NEXT:    sw s0, 28(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s1, 24(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s2, 20(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s3, 16(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s4, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    slli a2, a1, 30
-; RV32I-NEXT:    slli a3, a0, 1
-; RV32I-NEXT:    slli a4, a1, 29
-; RV32I-NEXT:    slli a5, a0, 2
-; RV32I-NEXT:    slli a6, a1, 28
-; RV32I-NEXT:    slli a7, a0, 3
-; RV32I-NEXT:    slli t0, a1, 27
-; RV32I-NEXT:    slli t1, a0, 4
-; RV32I-NEXT:    slli t2, a1, 26
-; RV32I-NEXT:    slli t3, a0, 5
-; RV32I-NEXT:    slli t4, a1, 25
-; RV32I-NEXT:    slli t5, a0, 6
-; RV32I-NEXT:    slli t6, a1, 24
-; RV32I-NEXT:    slli s0, a0, 7
-; RV32I-NEXT:    slli s1, a1, 23
-; RV32I-NEXT:    srli a2, a2, 31
-; RV32I-NEXT:    neg a2, a2
-; RV32I-NEXT:    and a2, a2, a3
-; RV32I-NEXT:    slli s2, a0, 8
-; RV32I-NEXT:    srli a4, a4, 31
-; RV32I-NEXT:    neg a3, a4
-; RV32I-NEXT:    and a3, a3, a5
-; RV32I-NEXT:    slli s3, a1, 22
-; RV32I-NEXT:    srli a4, a6, 31
-; RV32I-NEXT:    neg a4, a4
-; RV32I-NEXT:    and a4, a4, a7
-; RV32I-NEXT:    slli s4, a0, 9
-; RV32I-NEXT:    srli a5, t0, 31
-; RV32I-NEXT:    neg a5, a5
-; RV32I-NEXT:    and a5, a5, t1
-; RV32I-NEXT:    slli t0, a1, 21
-; RV32I-NEXT:    srli a6, t2, 31
-; RV32I-NEXT:    neg a6, a6
-; RV32I-NEXT:    and a6, a6, t3
-; RV32I-NEXT:    slli t1, a0, 10
-; RV32I-NEXT:    srli a7, t4, 31
-; RV32I-NEXT:    neg a7, a7
-; RV32I-NEXT:    and a7, a7, t5
-; RV32I-NEXT:    slli t2, a1, 20
-; RV32I-NEXT:    srli t3, t6, 31
-; RV32I-NEXT:    neg t3, t3
-; RV32I-NEXT:    and t3, t3, s0
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s2, 4(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    slli a2, a0, 1
+; RV32I-NEXT:    slli a3, a1, 30
+; RV32I-NEXT:    slli a4, a0, 2
+; RV32I-NEXT:    slli a5, a1, 29
+; RV32I-NEXT:    slli a6, a0, 3
+; RV32I-NEXT:    slli a7, a1, 28
+; RV32I-NEXT:    slli t0, a0, 4
+; RV32I-NEXT:    slli t1, a1, 27
+; RV32I-NEXT:    slli t2, a0, 5
+; RV32I-NEXT:    slli t3, a1, 26
+; RV32I-NEXT:    slli t4, a0, 6
+; RV32I-NEXT:    slli t5, a1, 25
+; RV32I-NEXT:    slli t6, a0, 7
+; RV32I-NEXT:    slli s0, a1, 24
+; RV32I-NEXT:    slli s1, a0, 8
+; RV32I-NEXT:    srai a3, a3, 31
+; RV32I-NEXT:    and a2, a3, a2
+; RV32I-NEXT:    slli s2, a1, 23
+; RV32I-NEXT:    srai a3, a5, 31
+; RV32I-NEXT:    and a3, a3, a4
+; RV32I-NEXT:    slli a4, a0, 9
+; RV32I-NEXT:    srai a5, a7, 31
+; RV32I-NEXT:    and a5, a5, a6
+; RV32I-NEXT:    slli a6, a1, 22
+; RV32I-NEXT:    srai a7, t1, 31
+; RV32I-NEXT:    and a7, a7, t0
+; RV32I-NEXT:    slli t0, a0, 10
+; RV32I-NEXT:    srai t1, t3, 31
+; RV32I-NEXT:    and t1, t1, t2
+; RV32I-NEXT:    slli t2, a1, 21
+; RV32I-NEXT:    srai t3, t5, 31
+; RV32I-NEXT:    and t3, t3, t4
 ; RV32I-NEXT:    slli t4, a0, 11
-; RV32I-NEXT:    srli s1, s1, 31
-; RV32I-NEXT:    neg t5, s1
-; RV32I-NEXT:    and t5, t5, s2
-; RV32I-NEXT:    slli t6, a1, 19
-; RV32I-NEXT:    srli s0, s3, 31
-; RV32I-NEXT:    neg s0, s0
-; RV32I-NEXT:    and s0, s0, s4
+; RV32I-NEXT:    srai s0, s0, 31
+; RV32I-NEXT:    and t5, s0, t6
+; RV32I-NEXT:    slli t6, a1, 20
+; RV32I-NEXT:    srai s0, s2, 31
+; RV32I-NEXT:    and s0, s0, s1
 ; RV32I-NEXT:    slli s1, a0, 12
-; RV32I-NEXT:    srli t0, t0, 31
-; RV32I-NEXT:    neg t0, t0
-; RV32I-NEXT:    and t0, t0, t1
-; RV32I-NEXT:    slli t1, a1, 18
-; RV32I-NEXT:    srli t2, t2, 31
-; RV32I-NEXT:    neg t2, t2
-; RV32I-NEXT:    and t2, t2, t4
-; RV32I-NEXT:    slli t4, a0, 13
-; RV32I-NEXT:    srli t6, t6, 31
-; RV32I-NEXT:    neg t6, t6
+; RV32I-NEXT:    srai a6, a6, 31
+; RV32I-NEXT:    and a4, a6, a4
+; RV32I-NEXT:    slli a6, a1, 19
+; RV32I-NEXT:    srai t2, t2, 31
+; RV32I-NEXT:    and t0, t2, t0
+; RV32I-NEXT:    slli t2, a0, 13
+; RV32I-NEXT:    srai t6, t6, 31
+; RV32I-NEXT:    and t4, t6, t4
+; RV32I-NEXT:    slli t6, a1, 18
+; RV32I-NEXT:    srai a6, a6, 31
+; RV32I-NEXT:    and a6, a6, s1
+; RV32I-NEXT:    slli s1, a0, 14
+; RV32I-NEXT:    srai t6, t6, 31
+; RV32I-NEXT:    and t2, t6, t2
+; RV32I-NEXT:    slli t6, a1, 17
+; RV32I-NEXT:    srai t6, t6, 31
 ; RV32I-NEXT:    and t6, t6, s1
-; RV32I-NEXT:    slli s1, a1, 17
-; RV32I-NEXT:    srli t1, t1, 31
-; RV32I-NEXT:    neg t1, t1
-; RV32I-NEXT:    and t1, t1, t4
-; RV32I-NEXT:    slli t4, a0, 14
-; RV32I-NEXT:    srli s1, s1, 31
-; RV32I-NEXT:    neg s1, s1
-; RV32I-NEXT:    and t4, s1, t4
-; RV32I-NEXT:    slli s1, a1, 31
-; RV32I-NEXT:    slli a1, a1, 16
-; RV32I-NEXT:    srai s1, s1, 31
-; RV32I-NEXT:    and s1, s1, a0
+; RV32I-NEXT:    lui s1, 8
+; RV32I-NEXT:    and s1, a1, s1
+; RV32I-NEXT:    slli a1, a1, 31
+; RV32I-NEXT:    srai a1, a1, 31
+; RV32I-NEXT:    and a1, a1, a0
+; RV32I-NEXT:    xor a1, a1, a2
+; RV32I-NEXT:    xor a3, a3, a5
+; RV32I-NEXT:    xor a2, a7, t1
+; RV32I-NEXT:    xor a5, t5, s0
+; RV32I-NEXT:    xor a6, t4, a6
+; RV32I-NEXT:    xor a1, a1, a3
+; RV32I-NEXT:    xor a2, a2, t3
+; RV32I-NEXT:    xor a4, a5, a4
+; RV32I-NEXT:    xor a3, a6, t2
 ; RV32I-NEXT:    slli a0, a0, 15
-; RV32I-NEXT:    srli a1, a1, 31
-; RV32I-NEXT:    neg a1, a1
-; RV32I-NEXT:    and a0, a1, a0
-; RV32I-NEXT:    xor a2, s1, a2
-; RV32I-NEXT:    xor a3, a3, a4
-; RV32I-NEXT:    xor a1, a5, a6
-; RV32I-NEXT:    xor a4, t3, t5
-; RV32I-NEXT:    xor a5, t2, t6
-; RV32I-NEXT:    xor a2, a2, a3
-; RV32I-NEXT:    xor a1, a1, a7
-; RV32I-NEXT:    xor a4, a4, s0
-; RV32I-NEXT:    xor a3, a5, t1
-; RV32I-NEXT:    xor a1, a2, a1
+; RV32I-NEXT:    seqz a5, s1
+; RV32I-NEXT:    addi a5, a5, -1
+; RV32I-NEXT:    and a0, a5, a0
+; RV32I-NEXT:    xor a1, a1, a2
 ; RV32I-NEXT:    xor a2, a4, t0
-; RV32I-NEXT:    xor a3, a3, t4
+; RV32I-NEXT:    xor a3, a3, t6
 ; RV32I-NEXT:    xor a1, a1, a2
 ; RV32I-NEXT:    xor a0, a3, a0
 ; RV32I-NEXT:    xor a0, a1, a0
-; RV32I-NEXT:    lw s0, 28(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 24(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s3, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s4, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: clmul_i16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -48
-; RV64I-NEXT:    sd s0, 40(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 32(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s2, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s3, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    slli a2, a1, 62
-; RV64I-NEXT:    slli a3, a0, 1
-; RV64I-NEXT:    slli a4, a1, 61
-; RV64I-NEXT:    slli a5, a0, 2
-; RV64I-NEXT:    slli a6, a1, 60
-; RV64I-NEXT:    slli a7, a0, 3
-; RV64I-NEXT:    slli t0, a1, 59
-; RV64I-NEXT:    slli t1, a0, 4
-; RV64I-NEXT:    slli t2, a1, 58
-; RV64I-NEXT:    slli t3, a0, 5
-; RV64I-NEXT:    slli t4, a1, 57
-; RV64I-NEXT:    slli t5, a0, 6
-; RV64I-NEXT:    slli t6, a1, 56
-; RV64I-NEXT:    slli s0, a0, 7
-; RV64I-NEXT:    slli s1, a1, 55
-; RV64I-NEXT:    srli a2, a2, 63
-; RV64I-NEXT:    neg a2, a2
-; RV64I-NEXT:    and a2, a2, a3
-; RV64I-NEXT:    slli s2, a0, 8
-; RV64I-NEXT:    srli a4, a4, 63
-; RV64I-NEXT:    neg a3, a4
-; RV64I-NEXT:    and a3, a3, a5
-; RV64I-NEXT:    slli s3, a1, 54
-; RV64I-NEXT:    srli a4, a6, 63
-; RV64I-NEXT:    neg a4, a4
-; RV64I-NEXT:    and a4, a4, a7
-; RV64I-NEXT:    slli s4, a0, 9
-; RV64I-NEXT:    srli a5, t0, 63
-; RV64I-NEXT:    neg a5, a5
-; RV64I-NEXT:    and a5, a5, t1
-; RV64I-NEXT:    slli t0, a1, 53
-; RV64I-NEXT:    srli a6, t2, 63
-; RV64I-NEXT:    neg a6, a6
-; RV64I-NEXT:    and a6, a6, t3
-; RV64I-NEXT:    slli t1, a0, 10
-; RV64I-NEXT:    srli a7, t4, 63
-; RV64I-NEXT:    neg a7, a7
-; RV64I-NEXT:    and a7, a7, t5
-; RV64I-NEXT:    slli t2, a1, 52
-; RV64I-NEXT:    srli t3, t6, 63
-; RV64I-NEXT:    neg t3, t3
-; RV64I-NEXT:    and t3, t3, s0
+; RV64I-NEXT:    addi sp, sp, -32
+; RV64I-NEXT:    sd s0, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s1, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s2, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    slli a2, a0, 1
+; RV64I-NEXT:    slli a3, a1, 62
+; RV64I-NEXT:    slli a4, a0, 2
+; RV64I-NEXT:    slli a5, a1, 61
+; RV64I-NEXT:    slli a6, a0, 3
+; RV64I-NEXT:    slli a7, a1, 60
+; RV64I-NEXT:    slli t0, a0, 4
+; RV64I-NEXT:    slli t1, a1, 59
+; RV64I-NEXT:    slli t2, a0, 5
+; RV64I-NEXT:    slli t3, a1, 58
+; RV64I-NEXT:    slli t4, a0, 6
+; RV64I-NEXT:    slli t5, a1, 57
+; RV64I-NEXT:    slli t6, a0, 7
+; RV64I-NEXT:    slli s0, a1, 56
+; RV64I-NEXT:    slli s1, a0, 8
+; RV64I-NEXT:    srai a3, a3, 63
+; RV64I-NEXT:    and a2, a3, a2
+; RV64I-NEXT:    slli s2, a1, 55
+; RV64I-NEXT:    srai a3, a5, 63
+; RV64I-NEXT:    and a3, a3, a4
+; RV64I-NEXT:    slli a4, a0, 9
+; RV64I-NEXT:    srai a5, a7, 63
+; RV64I-NEXT:    and a5, a5, a6
+; RV64I-NEXT:    slli a6, a1, 54
+; RV64I-NEXT:    srai a7, t1, 63
+; RV64I-NEXT:    and a7, a7, t0
+; RV64I-NEXT:    slli t0, a0, 10
+; RV64I-NEXT:    srai t1, t3, 63
+; RV64I-NEXT:    and t1, t1, t2
+; RV64I-NEXT:    slli t2, a1, 53
+; RV64I-NEXT:    srai t3, t5, 63
+; RV64I-NEXT:    and t3, t3, t4
 ; RV64I-NEXT:    slli t4, a0, 11
-; RV64I-NEXT:    srli s1, s1, 63
-; RV64I-NEXT:    neg t5, s1
-; RV64I-NEXT:    and t5, t5, s2
-; RV64I-NEXT:    slli t6, a1, 51
-; RV64I-NEXT:    srli s0, s3, 63
-; RV64I-NEXT:    neg s0, s0
-; RV64I-NEXT:    and s0, s0, s4
+; RV64I-NEXT:    srai s0, s0, 63
+; RV64I-NEXT:    and t5, s0, t6
+; RV64I-NEXT:    slli t6, a1, 52
+; RV64I-NEXT:    srai s0, s2, 63
+; RV64I-NEXT:    and s0, s0, s1
 ; RV64I-NEXT:    slli s1, a0, 12
-; RV64I-NEXT:    srli t0, t0, 63
-; RV64I-NEXT:    neg t0, t0
-; RV64I-NEXT:    and t0, t0, t1
-; RV64I-NEXT:    slli t1, a1, 50
-; RV64I-NEXT:    srli t2, t2, 63
-; RV64I-NEXT:    neg t2, t2
-; RV64I-NEXT:    and t2, t2, t4
-; RV64I-NEXT:    slli t4, a0, 13
-; RV64I-NEXT:    srli t6, t6, 63
-; RV64I-NEXT:    neg t6, t6
+; RV64I-NEXT:    srai a6, a6, 63
+; RV64I-NEXT:    and a4, a6, a4
+; RV64I-NEXT:    slli a6, a1, 51
+; RV64I-NEXT:    srai t2, t2, 63
+; RV64I-NEXT:    and t0, t2, t0
+; RV64I-NEXT:    slli t2, a0, 13
+; RV64I-NEXT:    srai t6, t6, 63
+; RV64I-NEXT:    and t4, t6, t4
+; RV64I-NEXT:    slli t6, a1, 50
+; RV64I-NEXT:    srai a6, a6, 63
+; RV64I-NEXT:    and a6, a6, s1
+; RV64I-NEXT:    slli s1, a0, 14
+; RV64I-NEXT:    srai t6, t6, 63
+; RV64I-NEXT:    and t2, t6, t2
+; RV64I-NEXT:    slli t6, a1, 49
+; RV64I-NEXT:    srai t6, t6, 63
 ; RV64I-NEXT:    and t6, t6, s1
-; RV64I-NEXT:    slli s1, a1, 49
-; RV64I-NEXT:    srli t1, t1, 63
-; RV64I-NEXT:    neg t1, t1
-; RV64I-NEXT:    and t1, t1, t4
-; RV64I-NEXT:    slli t4, a0, 14
-; RV64I-NEXT:    srli s1, s1, 63
-; RV64I-NEXT:    neg s1, s1
-; RV64I-NEXT:    and t4, s1, t4
-; RV64I-NEXT:    slli s1, a1, 63
-; RV64I-NEXT:    slli a1, a1, 48
-; RV64I-NEXT:    srai s1, s1, 63
-; RV64I-NEXT:    and s1, s1, a0
+; RV64I-NEXT:    lui s1, 8
+; RV64I-NEXT:    and s1, a1, s1
+; RV64I-NEXT:    slli a1, a1, 63
+; RV64I-NEXT:    srai a1, a1, 63
+; RV64I-NEXT:    and a1, a1, a0
+; RV64I-NEXT:    xor a1, a1, a2
+; RV64I-NEXT:    xor a3, a3, a5
+; RV64I-NEXT:    xor a2, a7, t1
+; RV64I-NEXT:    xor a5, t5, s0
+; RV64I-NEXT:    xor a6, t4, a6
+; RV64I-NEXT:    xor a1, a1, a3
+; RV64I-NEXT:    xor a2, a2, t3
+; RV64I-NEXT:    xor a4, a5, a4
+; RV64I-NEXT:    xor a3, a6, t2
 ; RV64I-NEXT:    slli a0, a0, 15
-; RV64I-NEXT:    srli a1, a1, 63
-; RV64I-NEXT:    neg a1, a1
-; RV64I-NEXT:    and a0, a1, a0
-; RV64I-NEXT:    xor a2, s1, a2
-; RV64I-NEXT:    xor a3, a3, a4
-; RV64I-NEXT:    xor a1, a5, a6
-; RV64I-NEXT:    xor a4, t3, t5
-; RV64I-NEXT:    xor a5, t2, t6
-; RV64I-NEXT:    xor a2, a2, a3
-; RV64I-NEXT:    xor a1, a1, a7
-; RV64I-NEXT:    xor a4, a4, s0
-; RV64I-NEXT:    xor a3, a5, t1
-; RV64I-NEXT:    xor a1, a2, a1
+; RV64I-NEXT:    seqz a5, s1
+; RV64I-NEXT:    addi a5, a5, -1
+; RV64I-NEXT:    and a0, a5, a0
+; RV64I-NEXT:    xor a1, a1, a2
 ; RV64I-NEXT:    xor a2, a4, t0
-; RV64I-NEXT:    xor a3, a3, t4
+; RV64I-NEXT:    xor a3, a3, t6
 ; RV64I-NEXT:    xor a1, a1, a2
 ; RV64I-NEXT:    xor a0, a3, a0
 ; RV64I-NEXT:    xor a0, a1, a0
-; RV64I-NEXT:    ld s0, 40(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 32(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 48
+; RV64I-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
 ; RV32IM-LABEL: clmul_i16:
@@ -663,95 +601,83 @@ define i16 @clmul_i16(i16 %a, i16 %b) nounwind {
 ; RV32IM-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s2, 4(sp) # 4-byte Folded Spill
-; RV32IM-NEXT:    sw s3, 0(sp) # 4-byte Folded Spill
-; RV32IM-NEXT:    slli a2, a1, 30
-; RV32IM-NEXT:    slli a3, a0, 1
-; RV32IM-NEXT:    slli a4, a1, 29
-; RV32IM-NEXT:    slli a5, a0, 2
-; RV32IM-NEXT:    slli a6, a1, 28
-; RV32IM-NEXT:    slli a7, a0, 3
-; RV32IM-NEXT:    slli t0, a1, 27
-; RV32IM-NEXT:    slli t1, a0, 4
-; RV32IM-NEXT:    slli t2, a1, 26
-; RV32IM-NEXT:    slli t3, a0, 5
-; RV32IM-NEXT:    slli t4, a1, 25
-; RV32IM-NEXT:    slli t5, a0, 6
-; RV32IM-NEXT:    slli t6, a1, 24
-; RV32IM-NEXT:    slli s0, a0, 7
-; RV32IM-NEXT:    slli s1, a1, 23
-; RV32IM-NEXT:    srli a2, a2, 31
-; RV32IM-NEXT:    neg a2, a2
-; RV32IM-NEXT:    and a2, a2, a3
-; RV32IM-NEXT:    slli s2, a0, 8
-; RV32IM-NEXT:    srli a4, a4, 31
-; RV32IM-NEXT:    neg a3, a4
-; RV32IM-NEXT:    and a3, a3, a5
-; RV32IM-NEXT:    slli s3, a1, 22
-; RV32IM-NEXT:    srli a4, a6, 31
-; RV32IM-NEXT:    neg a4, a4
-; RV32IM-NEXT:    and a4, a4, a7
-; RV32IM-NEXT:    slli a6, a0, 9
-; RV32IM-NEXT:    srli a5, t0, 31
-; RV32IM-NEXT:    neg a5, a5
-; RV32IM-NEXT:    and a5, a5, t1
-; RV32IM-NEXT:    slli a7, a1, 21
-; RV32IM-NEXT:    srli t0, t2, 31
-; RV32IM-NEXT:    neg t0, t0
-; RV32IM-NEXT:    and t0, t0, t3
-; RV32IM-NEXT:    slli t1, a0, 10
-; RV32IM-NEXT:    srli t2, t4, 31
-; RV32IM-NEXT:    neg t2, t2
-; RV32IM-NEXT:    and t2, t2, t5
-; RV32IM-NEXT:    li t3, 1
-; RV32IM-NEXT:    srli t4, t6, 31
-; RV32IM-NEXT:    neg t4, t4
-; RV32IM-NEXT:    and t4, t4, s0
-; RV32IM-NEXT:    lui t5, 1
-; RV32IM-NEXT:    srli s1, s1, 31
-; RV32IM-NEXT:    neg t6, s1
-; RV32IM-NEXT:    and t6, t6, s2
-; RV32IM-NEXT:    lui s0, 2
-; RV32IM-NEXT:    srli s1, s3, 31
-; RV32IM-NEXT:    neg s1, s1
-; RV32IM-NEXT:    and a6, s1, a6
-; RV32IM-NEXT:    lui s1, 4
-; RV32IM-NEXT:    srli a7, a7, 31
-; RV32IM-NEXT:    neg a7, a7
-; RV32IM-NEXT:    and a7, a7, t1
-; RV32IM-NEXT:    lui t1, 1048568
-; RV32IM-NEXT:    slli t3, t3, 11
-; RV32IM-NEXT:    and t5, a1, t5
-; RV32IM-NEXT:    and s0, a1, s0
+; RV32IM-NEXT:    slli a2, a0, 1
+; RV32IM-NEXT:    slli a3, a1, 30
+; RV32IM-NEXT:    slli a4, a0, 2
+; RV32IM-NEXT:    slli a5, a1, 29
+; RV32IM-NEXT:    slli a6, a0, 3
+; RV32IM-NEXT:    slli a7, a1, 28
+; RV32IM-NEXT:    slli t0, a0, 4
+; RV32IM-NEXT:    slli t1, a1, 27
+; RV32IM-NEXT:    slli t2, a0, 5
+; RV32IM-NEXT:    slli t3, a1, 26
+; RV32IM-NEXT:    slli t4, a0, 6
+; RV32IM-NEXT:    slli t5, a1, 25
+; RV32IM-NEXT:    slli t6, a0, 7
+; RV32IM-NEXT:    slli s0, a1, 24
+; RV32IM-NEXT:    slli s1, a0, 8
+; RV32IM-NEXT:    srai a3, a3, 31
+; RV32IM-NEXT:    and a2, a3, a2
+; RV32IM-NEXT:    slli s2, a1, 23
+; RV32IM-NEXT:    srai a3, a5, 31
+; RV32IM-NEXT:    and a3, a3, a4
+; RV32IM-NEXT:    slli a4, a0, 9
+; RV32IM-NEXT:    srai a5, a7, 31
+; RV32IM-NEXT:    and a5, a5, a6
+; RV32IM-NEXT:    slli a6, a1, 22
+; RV32IM-NEXT:    srai a7, t1, 31
+; RV32IM-NEXT:    and a7, a7, t0
+; RV32IM-NEXT:    slli t0, a0, 10
+; RV32IM-NEXT:    srai t1, t3, 31
+; RV32IM-NEXT:    and t1, t1, t2
+; RV32IM-NEXT:    slli t2, a1, 21
+; RV32IM-NEXT:    srai t3, t5, 31
+; RV32IM-NEXT:    and t3, t3, t4
+; RV32IM-NEXT:    li t4, 1
+; RV32IM-NEXT:    srai s0, s0, 31
+; RV32IM-NEXT:    and t5, s0, t6
+; RV32IM-NEXT:    lui t6, 1
+; RV32IM-NEXT:    srai s0, s2, 31
+; RV32IM-NEXT:    and s0, s0, s1
+; RV32IM-NEXT:    lui s1, 2
+; RV32IM-NEXT:    srai a6, a6, 31
+; RV32IM-NEXT:    and a4, a6, a4
+; RV32IM-NEXT:    lui a6, 4
+; RV32IM-NEXT:    srai t2, t2, 31
+; RV32IM-NEXT:    and t0, t2, t0
+; RV32IM-NEXT:    lui t2, 1048568
+; RV32IM-NEXT:    slli t4, t4, 11
+; RV32IM-NEXT:    and t6, a1, t6
 ; RV32IM-NEXT:    and s1, a1, s1
-; RV32IM-NEXT:    and t1, a1, t1
-; RV32IM-NEXT:    and t3, a1, t3
+; RV32IM-NEXT:    and a6, a1, a6
+; RV32IM-NEXT:    and t2, a1, t2
+; RV32IM-NEXT:    and t4, a1, t4
 ; RV32IM-NEXT:    slli a1, a1, 31
 ; RV32IM-NEXT:    srai a1, a1, 31
 ; RV32IM-NEXT:    and a1, a1, a0
-; RV32IM-NEXT:    mul t5, a0, t5
-; RV32IM-NEXT:    mul s0, a0, s0
-; RV32IM-NEXT:    mul s1, a0, s1
-; RV32IM-NEXT:    mul t1, a0, t1
-; RV32IM-NEXT:    mul a0, a0, t3
+; RV32IM-NEXT:    xor a1, a1, a2
+; RV32IM-NEXT:    xor a3, a3, a5
+; RV32IM-NEXT:    xor a2, a7, t1
+; RV32IM-NEXT:    xor a5, t5, s0
+; RV32IM-NEXT:    xor a1, a1, a3
+; RV32IM-NEXT:    xor a2, a2, t3
+; RV32IM-NEXT:    xor a4, a5, a4
+; RV32IM-NEXT:    mul a3, a0, t6
+; RV32IM-NEXT:    mul a5, a0, t4
+; RV32IM-NEXT:    xor a3, a5, a3
+; RV32IM-NEXT:    xor a1, a1, a2
+; RV32IM-NEXT:    xor a2, a4, t0
+; RV32IM-NEXT:    mul a4, a0, s1
+; RV32IM-NEXT:    xor a3, a3, a4
+; RV32IM-NEXT:    mul a4, a0, a6
 ; RV32IM-NEXT:    xor a1, a1, a2
 ; RV32IM-NEXT:    xor a3, a3, a4
-; RV32IM-NEXT:    xor a2, a5, t0
-; RV32IM-NEXT:    xor a4, t4, t6
-; RV32IM-NEXT:    xor a0, a0, t5
 ; RV32IM-NEXT:    xor a1, a1, a3
-; RV32IM-NEXT:    xor a2, a2, t2
-; RV32IM-NEXT:    xor a3, a4, a6
-; RV32IM-NEXT:    xor a0, a0, s0
-; RV32IM-NEXT:    xor a1, a1, a2
-; RV32IM-NEXT:    xor a2, a3, a7
-; RV32IM-NEXT:    xor a0, a0, s1
-; RV32IM-NEXT:    xor a1, a1, a2
-; RV32IM-NEXT:    xor a0, a0, t1
+; RV32IM-NEXT:    mul a0, a0, t2
 ; RV32IM-NEXT:    xor a0, a1, a0
 ; RV32IM-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
-; RV32IM-NEXT:    lw s3, 0(sp) # 4-byte Folded Reload
 ; RV32IM-NEXT:    addi sp, sp, 16
 ; RV32IM-NEXT:    ret
 ;
@@ -761,95 +687,83 @@ define i16 @clmul_i16(i16 %a, i16 %b) nounwind {
 ; RV64IM-NEXT:    sd s0, 24(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s1, 16(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s2, 8(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    sd s3, 0(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    slli a2, a1, 62
-; RV64IM-NEXT:    slli a3, a0, 1
-; RV64IM-NEXT:    slli a4, a1, 61
-; RV64IM-NEXT:    slli a5, a0, 2
-; RV64IM-NEXT:    slli a6, a1, 60
-; RV64IM-NEXT:    slli a7, a0, 3
-; RV64IM-NEXT:    slli t0, a1, 59
-; RV64IM-NEXT:    slli t1, a0, 4
-; RV64IM-NEXT:    slli t2, a1, 58
-; RV64IM-NEXT:    slli t3, a0, 5
-; RV64IM-NEXT:    slli t4, a1, 57
-; RV64IM-NEXT:    slli t5, a0, 6
-; RV64IM-NEXT:    slli t6, a1, 56
-; RV64IM-NEXT:    slli s0, a0, 7
-; RV64IM-NEXT:    slli s1, a1, 55
-; RV64IM-NEXT:    srli a2, a2, 63
-; RV64IM-NEXT:    neg a2, a2
-; RV64IM-NEXT:    and a2, a2, a3
-; RV64IM-NEXT:    slli s2, a0, 8
-; RV64IM-NEXT:    srli a4, a4, 63
-; RV64IM-NEXT:    neg a3, a4
-; RV64IM-NEXT:    and a3, a3, a5
-; RV64IM-NEXT:    slli s3, a1, 54
-; RV64IM-NEXT:    srli a4, a6, 63
-; RV64IM-NEXT:    neg a4, a4
-; RV64IM-NEXT:    and a4, a4, a7
-; RV64IM-NEXT:    slli a6, a0, 9
-; RV64IM-NEXT:    srli a5, t0, 63
-; RV64IM-NEXT:    neg a5, a5
-; RV64IM-NEXT:    and a5, a5, t1
-; RV64IM-NEXT:    slli a7, a1, 53
-; RV64IM-NEXT:    srli t0, t2, 63
-; RV64IM-NEXT:    neg t0, t0
-; RV64IM-NEXT:    and t0, t0, t3
-; RV64IM-NEXT:    slli t1, a0, 10
-; RV64IM-NEXT:    srli t2, t4, 63
-; RV64IM-NEXT:    neg t2, t2
-; RV64IM-NEXT:    and t2, t2, t5
-; RV64IM-NEXT:    li t3, 1
-; RV64IM-NEXT:    srli t4, t6, 63
-; RV64IM-NEXT:    neg t4, t4
-; RV64IM-NEXT:    and t4, t4, s0
-; RV64IM-NEXT:    lui t5, 1
-; RV64IM-NEXT:    srli s1, s1, 63
-; RV64IM-NEXT:    neg t6, s1
-; RV64IM-NEXT:    and t6, t6, s2
-; RV64IM-NEXT:    lui s0, 2
-; RV64IM-NEXT:    srli s1, s3, 63
-; RV64IM-NEXT:    neg s1, s1
-; RV64IM-NEXT:    and a6, s1, a6
-; RV64IM-NEXT:    lui s1, 4
-; RV64IM-NEXT:    srli a7, a7, 63
-; RV64IM-NEXT:    neg a7, a7
-; RV64IM-NEXT:    and a7, a7, t1
-; RV64IM-NEXT:    lui t1, 1048568
-; RV64IM-NEXT:    slli t3, t3, 11
-; RV64IM-NEXT:    and t5, a1, t5
-; RV64IM-NEXT:    and s0, a1, s0
+; RV64IM-NEXT:    slli a2, a0, 1
+; RV64IM-NEXT:    slli a3, a1, 62
+; RV64IM-NEXT:    slli a4, a0, 2
+; RV64IM-NEXT:    slli a5, a1, 61
+; RV64IM-NEXT:    slli a6, a0, 3
+; RV64IM-NEXT:    slli a7, a1, 60
+; RV64IM-NEXT:    slli t0, a0, 4
+; RV64IM-NEXT:    slli t1, a1, 59
+; RV64IM-NEXT:    slli t2, a0, 5
+; RV64IM-NEXT:    slli t3, a1, 58
+; RV64IM-NEXT:    slli t4, a0, 6
+; RV64IM-NEXT:    slli t5, a1, 57
+; RV64IM-NEXT:    slli t6, a0, 7
+; RV64IM-NEXT:    slli s0, a1, 56
+; RV64IM-NEXT:    slli s1, a0, 8
+; RV64IM-NEXT:    srai a3, a3, 63
+; RV64IM-NEXT:    and a2, a3, a2
+; RV64IM-NEXT:    slli s2, a1, 55
+; RV64IM-NEXT:    srai a3, a5, 63
+; RV64IM-NEXT:    and a3, a3, a4
+; RV64IM-NEXT:    slli a4, a0, 9
+; RV64IM-NEXT:    srai a5, a7, 63
+; RV64IM-NEXT:    and a5, a5, a6
+; RV64IM-NEXT:    slli a6, a1, 54
+; RV64IM-NEXT:    srai a7, t1, 63
+; RV64IM-NEXT:    and a7, a7, t0
+; RV64IM-NEXT:    slli t0, a0, 10
+; RV64IM-NEXT:    srai t1, t3, 63
+; RV64IM-NEXT:    and t1, t1, t2
+; RV64IM-NEXT:    slli t2, a1, 53
+; RV64IM-NEXT:    srai t3, t5, 63
+; RV64IM-NEXT:    and t3, t3, t4
+; RV64IM-NEXT:    li t4, 1
+; RV64IM-NEXT:    srai s0, s0, 63
+; RV64IM-NEXT:    and t5, s0, t6
+; RV64IM-NEXT:    lui t6, 1
+; RV64IM-NEXT:    srai s0, s2, 63
+; RV64IM-NEXT:    and s0, s0, s1
+; RV64IM-NEXT:    lui s1, 2
+; RV64IM-NEXT:    srai a6, a6, 63
+; RV64IM-NEXT:    and a4, a6, a4
+; RV64IM-NEXT:    lui a6, 4
+; RV64IM-NEXT:    srai t2, t2, 63
+; RV64IM-NEXT:    and t0, t2, t0
+; RV64IM-NEXT:    lui t2, 1048568
+; RV64IM-NEXT:    slli t4, t4, 11
+; RV64IM-NEXT:    and t6, a1, t6
 ; RV64IM-NEXT:    and s1, a1, s1
-; RV64IM-NEXT:    and t1, a1, t1
-; RV64IM-NEXT:    and t3, a1, t3
+; RV64IM-NEXT:    and a6, a1, a6
+; RV64IM-NEXT:    and t2, a1, t2
+; RV64IM-NEXT:    and t4, a1, t4
 ; RV64IM-NEXT:    slli a1, a1, 63
 ; RV64IM-NEXT:    srai a1, a1, 63
 ; RV64IM-NEXT:    and a1, a1, a0
-; RV64IM-NEXT:    mul t5, a0, t5
-; RV64IM-NEXT:    mul s0, a0, s0
-; RV64IM-NEXT:    mul s1, a0, s1
-; RV64IM-NEXT:    mul t1, a0, t1
-; RV64IM-NEXT:    mul a0, a0, t3
+; RV64IM-NEXT:    xor a1, a1, a2
+; RV64IM-NEXT:    xor a3, a3, a5
+; RV64IM-NEXT:    xor a2, a7, t1
+; RV64IM-NEXT:    xor a5, t5, s0
+; RV64IM-NEXT:    xor a1, a1, a3
+; RV64IM-NEXT:    xor a2, a2, t3
+; RV64IM-NEXT:    xor a4, a5, a4
+; RV64IM-NEXT:    mul a3, a0, t6
+; RV64IM-NEXT:    mul a5, a0, t4
+; RV64IM-NEXT:    xor a3, a5, a3
+; RV64IM-NEXT:    xor a1, a1, a2
+; RV64IM-NEXT:    xor a2, a4, t0
+; RV64IM-NEXT:    mul a4, a0, s1
+; RV64IM-NEXT:    xor a3, a3, a4
+; RV64IM-NEXT:    mul a4, a0, a6
 ; RV64IM-NEXT:    xor a1, a1, a2
 ; RV64IM-NEXT:    xor a3, a3, a4
-; RV64IM-NEXT:    xor a2, a5, t0
-; RV64IM-NEXT:    xor a4, t4, t6
-; RV64IM-NEXT:    xor a0, a0, t5
 ; RV64IM-NEXT:    xor a1, a1, a3
-; RV64IM-NEXT:    xor a2, a2, t2
-; RV64IM-NEXT:    xor a3, a4, a6
-; RV64IM-NEXT:    xor a0, a0, s0
-; RV64IM-NEXT:    xor a1, a1, a2
-; RV64IM-NEXT:    xor a2, a3, a7
-; RV64IM-NEXT:    xor a0, a0, s1
-; RV64IM-NEXT:    xor a1, a1, a2
-; RV64IM-NEXT:    xor a0, a0, t1
+; RV64IM-NEXT:    mul a0, a0, t2
 ; RV64IM-NEXT:    xor a0, a1, a0
 ; RV64IM-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
 ; RV64IM-NEXT:    ld s1, 16(sp) # 8-byte Folded Reload
 ; RV64IM-NEXT:    ld s2, 8(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    ld s3, 0(sp) # 8-byte Folded Reload
 ; RV64IM-NEXT:    addi sp, sp, 32
 ; RV64IM-NEXT:    ret
 ;
@@ -859,89 +773,88 @@ define i16 @clmul_i16(i16 %a, i16 %b) nounwind {
 ; RV32IMZBS-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
 ; RV32IMZBS-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; RV32IMZBS-NEXT:    sw s2, 4(sp) # 4-byte Folded Spill
-; RV32IMZBS-NEXT:    sw s3, 0(sp) # 4-byte Folded Spill
-; RV32IMZBS-NEXT:    bexti a2, a1, 1
-; RV32IMZBS-NEXT:    slli a3, a0, 1
-; RV32IMZBS-NEXT:    bexti a4, a1, 2
-; RV32IMZBS-NEXT:    slli a5, a0, 2
-; RV32IMZBS-NEXT:    bexti a6, a1, 3
-; RV32IMZBS-NEXT:    slli a7, a0, 3
-; RV32IMZBS-NEXT:    bexti t0, a1, 4
-; RV32IMZBS-NEXT:    slli t1, a0, 4
-; RV32IMZBS-NEXT:    bexti t2, a1, 5
-; RV32IMZBS-NEXT:    slli t3, a0, 5
-; RV32IMZBS-NEXT:    bexti t4, a1, 6
-; RV32IMZBS-NEXT:    slli t5, a0, 6
-; RV32IMZBS-NEXT:    bexti t6, a1, 7
-; RV32IMZBS-NEXT:    slli s0, a0, 7
-; RV32IMZBS-NEXT:    bexti s1, a1, 8
-; RV32IMZBS-NEXT:    neg a2, a2
-; RV32IMZBS-NEXT:    and a2, a2, a3
-; RV32IMZBS-NEXT:    slli s2, a0, 8
-; RV32IMZBS-NEXT:    neg a3, a4
-; RV32IMZBS-NEXT:    and a3, a3, a5
-; RV32IMZBS-NEXT:    bexti s3, a1, 9
-; RV32IMZBS-NEXT:    neg a4, a6
-; RV32IMZBS-NEXT:    and a4, a4, a7
-; RV32IMZBS-NEXT:    slli a6, a0, 9
-; RV32IMZBS-NEXT:    neg a5, t0
-; RV32IMZBS-NEXT:    and a5, a5, t1
-; RV32IMZBS-NEXT:    bexti a7, a1, 10
-; RV32IMZBS-NEXT:    neg t0, t2
-; RV32IMZBS-NEXT:    and t0, t0, t3
-; RV32IMZBS-NEXT:    slli t1, a0, 10
-; RV32IMZBS-NEXT:    neg t2, t4
-; RV32IMZBS-NEXT:    and t2, t2, t5
-; RV32IMZBS-NEXT:    bexti t3, a1, 11
-; RV32IMZBS-NEXT:    neg t4, t6
-; RV32IMZBS-NEXT:    and t4, t4, s0
-; RV32IMZBS-NEXT:    slli t5, a0, 11
-; RV32IMZBS-NEXT:    neg t6, s1
-; RV32IMZBS-NEXT:    and t6, t6, s2
-; RV32IMZBS-NEXT:    bexti s0, a1, 12
-; RV32IMZBS-NEXT:    neg s1, s3
-; RV32IMZBS-NEXT:    and a6, s1, a6
-; RV32IMZBS-NEXT:    slli s1, a0, 12
-; RV32IMZBS-NEXT:    neg a7, a7
-; RV32IMZBS-NEXT:    and a7, a7, t1
-; RV32IMZBS-NEXT:    bexti t1, a1, 13
-; RV32IMZBS-NEXT:    neg t3, t3
-; RV32IMZBS-NEXT:    and t3, t3, t5
-; RV32IMZBS-NEXT:    slli t5, a0, 13
-; RV32IMZBS-NEXT:    neg s0, s0
+; RV32IMZBS-NEXT:    slli a2, a0, 1
+; RV32IMZBS-NEXT:    slli a3, a1, 30
+; RV32IMZBS-NEXT:    slli a4, a0, 2
+; RV32IMZBS-NEXT:    slli a5, a1, 29
+; RV32IMZBS-NEXT:    slli a6, a0, 3
+; RV32IMZBS-NEXT:    slli a7, a1, 28
+; RV32IMZBS-NEXT:    slli t0, a0, 4
+; RV32IMZBS-NEXT:    slli t1, a1, 27
+; RV32IMZBS-NEXT:    slli t2, a0, 5
+; RV32IMZBS-NEXT:    slli t3, a1, 26
+; RV32IMZBS-NEXT:    slli t4, a0, 6
+; RV32IMZBS-NEXT:    slli t5, a1, 25
+; RV32IMZBS-NEXT:    slli t6, a0, 7
+; RV32IMZBS-NEXT:    slli s0, a1, 24
+; RV32IMZBS-NEXT:    slli s1, a0, 8
+; RV32IMZBS-NEXT:    srai a3, a3, 31
+; RV32IMZBS-NEXT:    and a2, a3, a2
+; RV32IMZBS-NEXT:    slli s2, a1, 23
+; RV32IMZBS-NEXT:    srai a3, a5, 31
+; RV32IMZBS-NEXT:    and a3, a3, a4
+; RV32IMZBS-NEXT:    slli a4, a0, 9
+; RV32IMZBS-NEXT:    srai a5, a7, 31
+; RV32IMZBS-NEXT:    and a5, a5, a6
+; RV32IMZBS-NEXT:    slli a6, a1, 22
+; RV32IMZBS-NEXT:    srai a7, t1, 31
+; RV32IMZBS-NEXT:    and a7, a7, t0
+; RV32IMZBS-NEXT:    slli t0, a0, 10
+; RV32IMZBS-NEXT:    srai t1, t3, 31
+; RV32IMZBS-NEXT:    and t1, t1, t2
+; RV32IMZBS-NEXT:    slli t2, a1, 21
+; RV32IMZBS-NEXT:    srai t3, t5, 31
+; RV32IMZBS-NEXT:    and t3, t3, t4
+; RV32IMZBS-NEXT:    slli t4, a0, 11
+; RV32IMZBS-NEXT:    srai s0, s0, 31
+; RV32IMZBS-NEXT:    and t5, s0, t6
+; RV32IMZBS-NEXT:    slli t6, a1, 20
+; RV32IMZBS-NEXT:    srai s0, s2, 31
 ; RV32IMZBS-NEXT:    and s0, s0, s1
-; RV32IMZBS-NEXT:    bexti s1, a1, 14
-; RV32IMZBS-NEXT:    neg t1, t1
-; RV32IMZBS-NEXT:    and t1, t1, t5
-; RV32IMZBS-NEXT:    slli t5, a0, 14
-; RV32IMZBS-NEXT:    neg s1, s1
-; RV32IMZBS-NEXT:    and t5, s1, t5
+; RV32IMZBS-NEXT:    slli s1, a0, 12
+; RV32IMZBS-NEXT:    srai a6, a6, 31
+; RV32IMZBS-NEXT:    and a4, a6, a4
+; RV32IMZBS-NEXT:    slli a6, a1, 19
+; RV32IMZBS-NEXT:    srai t2, t2, 31
+; RV32IMZBS-NEXT:    and t0, t2, t0
+; RV32IMZBS-NEXT:    slli t2, a0, 13
+; RV32IMZBS-NEXT:    srai t6, t6, 31
+; RV32IMZBS-NEXT:    and t4, t6, t4
+; RV32IMZBS-NEXT:    slli t6, a1, 18
+; RV32IMZBS-NEXT:    srai a6, a6, 31
+; RV32IMZBS-NEXT:    and a6, a6, s1
+; RV32IMZBS-NEXT:    slli s1, a0, 14
+; RV32IMZBS-NEXT:    srai t6, t6, 31
+; RV32IMZBS-NEXT:    and t2, t6, t2
+; RV32IMZBS-NEXT:    slli t6, a1, 17
+; RV32IMZBS-NEXT:    srai t6, t6, 31
+; RV32IMZBS-NEXT:    and t6, t6, s1
 ; RV32IMZBS-NEXT:    slli s1, a1, 31
-; RV32IMZBS-NEXT:    bexti a1, a1, 15
 ; RV32IMZBS-NEXT:    srai s1, s1, 31
 ; RV32IMZBS-NEXT:    and s1, s1, a0
-; RV32IMZBS-NEXT:    slli a0, a0, 15
-; RV32IMZBS-NEXT:    neg a1, a1
-; RV32IMZBS-NEXT:    and a0, a1, a0
 ; RV32IMZBS-NEXT:    xor a2, s1, a2
-; RV32IMZBS-NEXT:    xor a3, a3, a4
-; RV32IMZBS-NEXT:    xor a1, a5, t0
-; RV32IMZBS-NEXT:    xor a4, t4, t6
-; RV32IMZBS-NEXT:    xor a5, t3, s0
+; RV32IMZBS-NEXT:    xor a3, a3, a5
+; RV32IMZBS-NEXT:    xor a5, a7, t1
+; RV32IMZBS-NEXT:    xor a7, t5, s0
+; RV32IMZBS-NEXT:    xor a6, t4, a6
+; RV32IMZBS-NEXT:    slli a0, a0, 15
+; RV32IMZBS-NEXT:    not a1, a1
+; RV32IMZBS-NEXT:    bexti a1, a1, 15
+; RV32IMZBS-NEXT:    addi a1, a1, -1
+; RV32IMZBS-NEXT:    and a0, a1, a0
 ; RV32IMZBS-NEXT:    xor a2, a2, a3
-; RV32IMZBS-NEXT:    xor a1, a1, t2
-; RV32IMZBS-NEXT:    xor a3, a4, a6
-; RV32IMZBS-NEXT:    xor a4, a5, t1
+; RV32IMZBS-NEXT:    xor a1, a5, t3
+; RV32IMZBS-NEXT:    xor a3, a7, a4
+; RV32IMZBS-NEXT:    xor a4, a6, t2
 ; RV32IMZBS-NEXT:    xor a1, a2, a1
-; RV32IMZBS-NEXT:    xor a2, a3, a7
-; RV32IMZBS-NEXT:    xor a3, a4, t5
+; RV32IMZBS-NEXT:    xor a2, a3, t0
+; RV32IMZBS-NEXT:    xor a3, a4, t6
 ; RV32IMZBS-NEXT:    xor a1, a1, a2
 ; RV32IMZBS-NEXT:    xor a0, a3, a0
 ; RV32IMZBS-NEXT:    xor a0, a1, a0
 ; RV32IMZBS-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32IMZBS-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32IMZBS-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
-; RV32IMZBS-NEXT:    lw s3, 0(sp) # 4-byte Folded Reload
 ; RV32IMZBS-NEXT:    addi sp, sp, 16
 ; RV32IMZBS-NEXT:    ret
 ;
@@ -951,89 +864,88 @@ define i16 @clmul_i16(i16 %a, i16 %b) nounwind {
 ; RV64IMZBS-NEXT:    sd s0, 24(sp) # 8-byte Folded Spill
 ; RV64IMZBS-NEXT:    sd s1, 16(sp) # 8-byte Folded Spill
 ; RV64IMZBS-NEXT:    sd s2, 8(sp) # 8-byte Folded Spill
-; RV64IMZBS-NEXT:    sd s3, 0(sp) # 8-byte Folded Spill
-; RV64IMZBS-NEXT:    bexti a2, a1, 1
-; RV64IMZBS-NEXT:    slli a3, a0, 1
-; RV64IMZBS-NEXT:    bexti a4, a1, 2
-; RV64IMZBS-NEXT:    slli a5, a0, 2
-; RV64IMZBS-NEXT:    bexti a6, a1, 3
-; RV64IMZBS-NEXT:    slli a7, a0, 3
-; RV64IMZBS-NEXT:    bexti t0, a1, 4
-; RV64IMZBS-NEXT:    slli t1, a0, 4
-; RV64IMZBS-NEXT:    bexti t2, a1, 5
-; RV64IMZBS-NEXT:    slli t3, a0, 5
-; RV64IMZBS-NEXT:    bexti t4, a1, 6
-; RV64IMZBS-NEXT:    slli t5, a0, 6
-; RV64IMZBS-NEXT:    bexti t6, a1, 7
-; RV64IMZBS-NEXT:    slli s0, a0, 7
-; RV64IMZBS-NEXT:    bexti s1, a1, 8
-; RV64IMZBS-NEXT:    neg a2, a2
-; RV64IMZBS-NEXT:    and a2, a2, a3
-; RV64IMZBS-NEXT:    slli s2, a0, 8
-; RV64IMZBS-NEXT:    neg a3, a4
-; RV64IMZBS-NEXT:    and a3, a3, a5
-; RV64IMZBS-NEXT:    bexti s3, a1, 9
-; RV64IMZBS-NEXT:    neg a4, a6
-; RV64IMZBS-NEXT:    and a4, a4, a7
-; RV64IMZBS-NEXT:    slli a6, a0, 9
-; RV64IMZBS-NEXT:    neg a5, t0
-; RV64IMZBS-NEXT:    and a5, a5, t1
-; RV64IMZBS-NEXT:    bexti a7, a1, 10
-; RV64IMZBS-NEXT:    neg t0, t2
-; RV64IMZBS-NEXT:    and t0, t0, t3
-; RV64IMZBS-NEXT:    slli t1, a0, 10
-; RV64IMZBS-NEXT:    neg t2, t4
-; RV64IMZBS-NEXT:    and t2, t2, t5
-; RV64IMZBS-NEXT:    bexti t3, a1, 11
-; RV64IMZBS-NEXT:    neg t4, t6
-; RV64IMZBS-NEXT:    and t4, t4, s0
-; RV64IMZBS-NEXT:    slli t5, a0, 11
-; RV64IMZBS-NEXT:    neg t6, s1
-; RV64IMZBS-NEXT:    and t6, t6, s2
-; RV64IMZBS-NEXT:    bexti s0, a1, 12
-; RV64IMZBS-NEXT:    neg s1, s3
-; RV64IMZBS-NEXT:    and a6, s1, a6
-; RV64IMZBS-NEXT:    slli s1, a0, 12
-; RV64IMZBS-NEXT:    neg a7, a7
-; RV64IMZBS-NEXT:    and a7, a7, t1
-; RV64IMZBS-NEXT:    bexti t1, a1, 13
-; RV64IMZBS-NEXT:    neg t3, t3
-; RV64IMZBS-NEXT:    and t3, t3, t5
-; RV64IMZBS-NEXT:    slli t5, a0, 13
-; RV64IMZBS-NEXT:    neg s0, s0
+; RV64IMZBS-NEXT:    slli a2, a0, 1
+; RV64IMZBS-NEXT:    slli a3, a1, 62
+; RV64IMZBS-NEXT:    slli a4, a0, 2
+; RV64IMZBS-NEXT:    slli a5, a1, 61
+; RV64IMZBS-NEXT:    slli a6, a0, 3
+; RV64IMZBS-NEXT:    slli a7, a1, 60
+; RV64IMZBS-NEXT:    slli t0, a0, 4
+; RV64IMZBS-NEXT:    slli t1, a1, 59
+; RV64IMZBS-NEXT:    slli t2, a0, 5
+; RV64IMZBS-NEXT:    slli t3, a1, 58
+; RV64IMZBS-NEXT:    slli t4, a0, 6
+; RV64IMZBS-NEXT:    slli t5, a1, 57
+; RV64IMZBS-NEXT:    slli t6, a0, 7
+; RV64IMZBS-NEXT:    slli s0, a1, 56
+; RV64IMZBS-NEXT:    slli s1, a0, 8
+; RV64IMZBS-NEXT:    srai a3, a3, 63
+; RV64IMZBS-NEXT:    and a2, a3, a2
+; RV64IMZBS-NEXT:    slli s2, a1, 55
+; RV64IMZBS-NEXT:    srai a3, a5, 63
+; RV64IMZBS-NEXT:    and a3, a3, a4
+; RV64IMZBS-NEXT:    slli a4, a0, 9
+; RV64IMZBS-NEXT:    srai a5, a7, 63
+; RV64IMZBS-NEXT:    and a5, a5, a6
+; RV64IMZBS-NEXT:    slli a6, a1, 54
+; RV64IMZBS-NEXT:    srai a7, t1, 63
+; RV64IMZBS-NEXT:    and a7, a7, t0
+; RV64IMZBS-NEXT:    slli t0, a0, 10
+; RV64IMZBS-NEXT:    srai t1, t3, 63
+; RV64IMZBS-NEXT:    and t1, t1, t2
+; RV64IMZBS-NEXT:    slli t2, a1, 53
+; RV64IMZBS-NEXT:    srai t3, t5, 63
+; RV64IMZBS-NEXT:    and t3, t3, t4
+; RV64IMZBS-NEXT:    slli t4, a0, 11
+; RV64IMZBS-NEXT:    srai s0, s0, 63
+; RV64IMZBS-NEXT:    and t5, s0, t6
+; RV64IMZBS-NEXT:    slli t6, a1, 52
+; RV64IMZBS-NEXT:    srai s0, s2, 63
 ; RV64IMZBS-NEXT:    and s0, s0, s1
-; RV64IMZBS-NEXT:    bexti s1, a1, 14
-; RV64IMZBS-NEXT:    neg t1, t1
-; RV64IMZBS-NEXT:    and t1, t1, t5
-; RV64IMZBS-NEXT:    slli t5, a0, 14
-; RV64IMZBS-NEXT:    neg s1, s1
-; RV64IMZBS-NEXT:    and t5, s1, t5
+; RV64IMZBS-NEXT:    slli s1, a0, 12
+; RV64IMZBS-NEXT:    srai a6, a6, 63
+; RV64IMZBS-NEXT:    and a4, a6, a4
+; RV64IMZBS-NEXT:    slli a6, a1, 51
+; RV64IMZBS-NEXT:    srai t2, t2, 63
+; RV64IMZBS-NEXT:    and t0, t2, t0
+; RV64IMZBS-NEXT:    slli t2, a0, 13
+; RV64IMZBS-NEXT:    srai t6, t6, 63
+; RV64IMZBS-NEXT:    and t4, t6, t4
+; RV64IMZBS-NEXT:    slli t6, a1, 50
+; RV64IMZBS-NEXT:    srai a6, a6, 63
+; RV64IMZBS-NEXT:    and a6, a6, s1
+; RV64IMZBS-NEXT:    slli s1, a0, 14
+; RV64IMZBS-NEXT:    srai t6, t6, 63
+; RV64IMZBS-NEXT:    and t2, t6, t2
+; RV64IMZBS-NEXT:    slli t6, a1, 49
+; RV64IMZBS-NEXT:    srai t6, t6, 63
+; RV64IMZBS-NEXT:    and t6, t6, s1
 ; RV64IMZBS-NEXT:    slli s1, a1, 63
-; RV64IMZBS-NEXT:    bexti a1, a1, 15
 ; RV64IMZBS-NEXT:    srai s1, s1, 63
 ; RV64IMZBS-NEXT:    and s1, s1, a0
-; RV64IMZBS-NEXT:    slli a0, a0, 15
-; RV64IMZBS-NEXT:    neg a1, a1
-; RV64IMZBS-NEXT:    and a0, a1, a0
 ; RV64IMZBS-NEXT:    xor a2, s1, a2
-; RV64IMZBS-NEXT:    xor a3, a3, a4
-; RV64IMZBS-NEXT:    xor a1, a5, t0
-; RV64IMZBS-NEXT:    xor a4, t4, t6
-; RV64IMZBS-NEXT:    xor a5, t3, s0
+; RV64IMZBS-NEXT:    xor a3, a3, a5
+; RV64IMZBS-NEXT:    xor a5, a7, t1
+; RV64IMZBS-NEXT:    xor a7, t5, s0
+; RV64IMZBS-NEXT:    xor a6, t4, a6
+; RV64IMZBS-NEXT:    slli a0, a0, 15
+; RV64IMZBS-NEXT:    not a1, a1
+; RV64IMZBS-NEXT:    bexti a1, a1, 15
+; RV64IMZBS-NEXT:    addi a1, a1, -1
+; RV64IMZBS-NEXT:    and a0, a1, a0
 ; RV64IMZBS-NEXT:    xor a2, a2, a3
-; RV64IMZBS-NEXT:    xor a1, a1, t2
-; RV64IMZBS-NEXT:    xor a3, a4, a6
-; RV64IMZBS-NEXT:    xor a4, a5, t1
+; RV64IMZBS-NEXT:    xor a1, a5, t3
+; RV64IMZBS-NEXT:    xor a3, a7, a4
+; RV64IMZBS-NEXT:    xor a4, a6, t2
 ; RV64IMZBS-NEXT:    xor a1, a2, a1
-; RV64IMZBS-NEXT:    xor a2, a3, a7
-; RV64IMZBS-NEXT:    xor a3, a4, t5
+; RV64IMZBS-NEXT:    xor a2, a3, t0
+; RV64IMZBS-NEXT:    xor a3, a4, t6
 ; RV64IMZBS-NEXT:    xor a1, a1, a2
 ; RV64IMZBS-NEXT:    xor a0, a3, a0
 ; RV64IMZBS-NEXT:    xor a0, a1, a0
 ; RV64IMZBS-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
 ; RV64IMZBS-NEXT:    ld s1, 16(sp) # 8-byte Folded Reload
 ; RV64IMZBS-NEXT:    ld s2, 8(sp) # 8-byte Folded Reload
-; RV64IMZBS-NEXT:    ld s3, 0(sp) # 8-byte Folded Reload
 ; RV64IMZBS-NEXT:    addi sp, sp, 32
 ; RV64IMZBS-NEXT:    ret
   %res = call i16 @llvm.clmul.i16(i16 %a, i16 %b)
@@ -1314,166 +1226,136 @@ define i32 @clmul_i32(i32 %a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd s9, 88(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s10, 80(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s11, 72(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    slli a2, a1, 62
-; RV64I-NEXT:    slliw s9, a0, 1
-; RV64I-NEXT:    slli a3, a1, 61
-; RV64I-NEXT:    slliw s10, a0, 2
-; RV64I-NEXT:    slli a4, a1, 60
+; RV64I-NEXT:    slliw a6, a0, 1
+; RV64I-NEXT:    slli a3, a1, 62
+; RV64I-NEXT:    slliw a4, a0, 2
+; RV64I-NEXT:    slli t0, a1, 61
 ; RV64I-NEXT:    slliw a5, a0, 3
-; RV64I-NEXT:    slli t3, a1, 59
-; RV64I-NEXT:    slliw s11, a0, 4
-; RV64I-NEXT:    slli a6, a1, 58
-; RV64I-NEXT:    slliw s1, a0, 5
-; RV64I-NEXT:    slli a7, a1, 57
-; RV64I-NEXT:    slliw t0, a0, 6
-; RV64I-NEXT:    slli t1, a1, 56
-; RV64I-NEXT:    slliw s2, a0, 7
-; RV64I-NEXT:    slli t2, a1, 55
-; RV64I-NEXT:    slliw s3, a0, 8
-; RV64I-NEXT:    slli t4, a1, 54
-; RV64I-NEXT:    slliw s4, a0, 9
-; RV64I-NEXT:    slli t5, a1, 53
-; RV64I-NEXT:    slliw s5, a0, 10
-; RV64I-NEXT:    slli s6, a1, 52
-; RV64I-NEXT:    slliw ra, a0, 11
-; RV64I-NEXT:    slli t6, a1, 51
-; RV64I-NEXT:    slliw s7, a0, 12
-; RV64I-NEXT:    slli s0, a1, 50
-; RV64I-NEXT:    slliw s8, a0, 13
-; RV64I-NEXT:    srli a2, a2, 63
-; RV64I-NEXT:    neg a2, a2
-; RV64I-NEXT:    and a2, a2, s9
-; RV64I-NEXT:    sd a2, 64(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    slli s9, a1, 49
-; RV64I-NEXT:    srli a3, a3, 63
-; RV64I-NEXT:    neg a2, a3
-; RV64I-NEXT:    and a2, a2, s10
-; RV64I-NEXT:    sd a2, 56(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    slliw s10, a0, 14
-; RV64I-NEXT:    srli a4, a4, 63
-; RV64I-NEXT:    neg a4, a4
-; RV64I-NEXT:    and a4, a4, a5
-; RV64I-NEXT:    sd a4, 48(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    slli a3, a1, 48
-; RV64I-NEXT:    srli a5, t3, 63
-; RV64I-NEXT:    neg a5, a5
-; RV64I-NEXT:    and a2, a5, s11
+; RV64I-NEXT:    slli t4, a1, 60
+; RV64I-NEXT:    slliw a2, a0, 4
+; RV64I-NEXT:    slli t5, a1, 59
+; RV64I-NEXT:    slliw t1, a0, 5
+; RV64I-NEXT:    slli s1, a1, 58
+; RV64I-NEXT:    slliw a7, a0, 6
+; RV64I-NEXT:    slli t2, a1, 57
+; RV64I-NEXT:    slliw t6, a0, 7
+; RV64I-NEXT:    slli s5, a1, 56
+; RV64I-NEXT:    slliw t3, a0, 8
+; RV64I-NEXT:    slli s2, a1, 55
+; RV64I-NEXT:    slliw s3, a0, 9
+; RV64I-NEXT:    slli s7, a1, 54
+; RV64I-NEXT:    slliw s0, a0, 10
+; RV64I-NEXT:    slli s6, a1, 53
+; RV64I-NEXT:    slliw s8, a0, 11
+; RV64I-NEXT:    slli s11, a1, 52
+; RV64I-NEXT:    slliw s4, a0, 12
+; RV64I-NEXT:    slli s9, a1, 51
+; RV64I-NEXT:    slliw s10, a0, 13
+; RV64I-NEXT:    slli ra, a1, 50
+; RV64I-NEXT:    srai a3, a3, 63
+; RV64I-NEXT:    and a3, a3, a6
+; RV64I-NEXT:    sd a3, 64(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    slliw a6, a0, 14
+; RV64I-NEXT:    srai a3, t0, 63
+; RV64I-NEXT:    and a3, a3, a4
+; RV64I-NEXT:    sd a3, 56(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    slli a4, a1, 49
+; RV64I-NEXT:    srai a3, t4, 63
+; RV64I-NEXT:    and a3, a3, a5
+; RV64I-NEXT:    sd a3, 48(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    slliw t4, a0, 15
+; RV64I-NEXT:    srai a5, t5, 63
+; RV64I-NEXT:    and a2, a5, a2
 ; RV64I-NEXT:    sd a2, 40(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    slliw s11, a0, 15
-; RV64I-NEXT:    srli a6, a6, 63
-; RV64I-NEXT:    neg a6, a6
-; RV64I-NEXT:    and a2, a6, s1
+; RV64I-NEXT:    slli t5, a1, 48
+; RV64I-NEXT:    srai s1, s1, 63
+; RV64I-NEXT:    and a2, s1, t1
 ; RV64I-NEXT:    sd a2, 32(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    slli s1, a1, 47
-; RV64I-NEXT:    srli a7, a7, 63
-; RV64I-NEXT:    neg a7, a7
-; RV64I-NEXT:    and a2, a7, t0
+; RV64I-NEXT:    slliw a3, a0, 16
+; RV64I-NEXT:    srai t0, t2, 63
+; RV64I-NEXT:    and a2, t0, a7
 ; RV64I-NEXT:    sd a2, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    slliw a2, a0, 16
-; RV64I-NEXT:    srli t0, t1, 63
-; RV64I-NEXT:    neg t0, t0
-; RV64I-NEXT:    and a4, t0, s2
-; RV64I-NEXT:    sd a4, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    slli a2, a1, 47
+; RV64I-NEXT:    srai t0, s5, 63
+; RV64I-NEXT:    and a5, t0, t6
+; RV64I-NEXT:    sd a5, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    slliw s5, a0, 17
+; RV64I-NEXT:    srai t1, s2, 63
+; RV64I-NEXT:    and t3, t1, t3
 ; RV64I-NEXT:    slli s2, a1, 46
-; RV64I-NEXT:    srli t0, t2, 63
-; RV64I-NEXT:    neg t0, t0
-; RV64I-NEXT:    and t3, t0, s3
-; RV64I-NEXT:    slliw s3, a0, 17
-; RV64I-NEXT:    srli t0, t4, 63
-; RV64I-NEXT:    neg t0, t0
-; RV64I-NEXT:    and t2, t0, s4
-; RV64I-NEXT:    slli s4, a1, 45
-; RV64I-NEXT:    srli t0, t5, 63
-; RV64I-NEXT:    neg t0, t0
-; RV64I-NEXT:    and a4, t0, s5
-; RV64I-NEXT:    sd a4, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    slliw s5, a0, 18
-; RV64I-NEXT:    srli t4, s6, 63
-; RV64I-NEXT:    neg t4, t4
-; RV64I-NEXT:    and t5, t4, ra
-; RV64I-NEXT:    slli t4, a1, 44
-; RV64I-NEXT:    srli t6, t6, 63
-; RV64I-NEXT:    neg t6, t6
-; RV64I-NEXT:    and ra, t6, s7
-; RV64I-NEXT:    slliw t6, a0, 19
-; RV64I-NEXT:    srli s0, s0, 63
-; RV64I-NEXT:    neg s0, s0
-; RV64I-NEXT:    and s0, s0, s8
-; RV64I-NEXT:    slli s8, a1, 43
-; RV64I-NEXT:    srli s6, s9, 63
-; RV64I-NEXT:    neg s6, s6
-; RV64I-NEXT:    and s10, s6, s10
-; RV64I-NEXT:    slliw s9, a0, 20
-; RV64I-NEXT:    srli a3, a3, 63
-; RV64I-NEXT:    neg a3, a3
-; RV64I-NEXT:    and s11, a3, s11
-; RV64I-NEXT:    slli s6, a1, 42
-; RV64I-NEXT:    srli s1, s1, 63
-; RV64I-NEXT:    neg a3, s1
-; RV64I-NEXT:    and t0, a3, a2
-; RV64I-NEXT:    slliw a2, a0, 21
-; RV64I-NEXT:    srli s1, s2, 63
-; RV64I-NEXT:    neg s1, s1
-; RV64I-NEXT:    and s3, s1, s3
-; RV64I-NEXT:    slli s1, a1, 41
-; RV64I-NEXT:    srli s2, s4, 63
-; RV64I-NEXT:    neg s2, s2
-; RV64I-NEXT:    and s7, s2, s5
-; RV64I-NEXT:    slliw s2, a0, 22
-; RV64I-NEXT:    srli t4, t4, 63
-; RV64I-NEXT:    neg t4, t4
-; RV64I-NEXT:    and t4, t4, t6
-; RV64I-NEXT:    slli t6, a1, 40
-; RV64I-NEXT:    srli s4, s8, 63
-; RV64I-NEXT:    neg s4, s4
-; RV64I-NEXT:    and s4, s4, s9
-; RV64I-NEXT:    slliw s9, a0, 23
-; RV64I-NEXT:    srli s5, s6, 63
-; RV64I-NEXT:    neg s5, s5
-; RV64I-NEXT:    and s5, s5, a2
-; RV64I-NEXT:    slli a2, a1, 39
-; RV64I-NEXT:    srli s1, s1, 63
-; RV64I-NEXT:    neg s1, s1
-; RV64I-NEXT:    and s8, s1, s2
-; RV64I-NEXT:    slliw s1, a0, 24
-; RV64I-NEXT:    srli t6, t6, 63
-; RV64I-NEXT:    neg t6, t6
-; RV64I-NEXT:    and t6, t6, s9
-; RV64I-NEXT:    slli s2, a1, 38
-; RV64I-NEXT:    srli a2, a2, 63
-; RV64I-NEXT:    neg a2, a2
-; RV64I-NEXT:    and s6, a2, s1
-; RV64I-NEXT:    slliw a2, a0, 25
-; RV64I-NEXT:    srli s1, s2, 63
-; RV64I-NEXT:    neg s1, s1
-; RV64I-NEXT:    and a7, s1, a2
-; RV64I-NEXT:    slli s1, a1, 37
-; RV64I-NEXT:    srli s1, s1, 63
-; RV64I-NEXT:    neg s1, s1
-; RV64I-NEXT:    slliw s2, a0, 26
-; RV64I-NEXT:    and s9, s1, s2
-; RV64I-NEXT:    slli s1, a1, 36
-; RV64I-NEXT:    srli s1, s1, 63
-; RV64I-NEXT:    neg s1, s1
-; RV64I-NEXT:    slliw s2, a0, 27
-; RV64I-NEXT:    and s1, s1, s2
-; RV64I-NEXT:    slli s2, a1, 35
-; RV64I-NEXT:    srli s2, s2, 63
-; RV64I-NEXT:    neg s2, s2
-; RV64I-NEXT:    slliw a4, a0, 28
-; RV64I-NEXT:    and a4, s2, a4
-; RV64I-NEXT:    slli s2, a1, 34
-; RV64I-NEXT:    srli s2, s2, 63
-; RV64I-NEXT:    neg s2, s2
-; RV64I-NEXT:    slliw a5, a0, 29
-; RV64I-NEXT:    and a5, s2, a5
-; RV64I-NEXT:    slli s2, a1, 33
-; RV64I-NEXT:    srli s2, s2, 63
-; RV64I-NEXT:    neg s2, s2
-; RV64I-NEXT:    slliw a6, a0, 30
-; RV64I-NEXT:    and a6, s2, a6
-; RV64I-NEXT:    lui s2, 524288
-; RV64I-NEXT:    and s2, a1, s2
+; RV64I-NEXT:    srai t1, s7, 63
+; RV64I-NEXT:    and a5, t1, s3
+; RV64I-NEXT:    sd a5, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    slliw s3, a0, 18
+; RV64I-NEXT:    srai t2, s6, 63
+; RV64I-NEXT:    and t2, t2, s0
+; RV64I-NEXT:    slli s7, a1, 45
+; RV64I-NEXT:    srai t6, s11, 63
+; RV64I-NEXT:    and s11, t6, s8
+; RV64I-NEXT:    slliw s8, a0, 19
+; RV64I-NEXT:    srai t6, s9, 63
+; RV64I-NEXT:    and s1, t6, s4
+; RV64I-NEXT:    slli s9, a1, 44
+; RV64I-NEXT:    srai t6, ra, 63
+; RV64I-NEXT:    and t6, t6, s10
+; RV64I-NEXT:    slliw s10, a0, 20
+; RV64I-NEXT:    srai a4, a4, 63
+; RV64I-NEXT:    and s0, a4, a6
+; RV64I-NEXT:    slli a4, a1, 43
+; RV64I-NEXT:    srai a6, t5, 63
+; RV64I-NEXT:    and t4, a6, t4
+; RV64I-NEXT:    slliw a6, a0, 21
+; RV64I-NEXT:    srai a2, a2, 63
+; RV64I-NEXT:    and s4, a2, a3
+; RV64I-NEXT:    slli a2, a1, 42
+; RV64I-NEXT:    srai a3, s2, 63
+; RV64I-NEXT:    and s6, a3, s5
+; RV64I-NEXT:    slliw a3, a0, 22
+; RV64I-NEXT:    srai t5, s7, 63
+; RV64I-NEXT:    and s7, t5, s3
+; RV64I-NEXT:    slli t5, a1, 41
+; RV64I-NEXT:    srai s2, s9, 63
+; RV64I-NEXT:    and s5, s2, s8
+; RV64I-NEXT:    slliw s8, a0, 23
+; RV64I-NEXT:    srai a4, a4, 63
+; RV64I-NEXT:    and s2, a4, s10
+; RV64I-NEXT:    slli a4, a1, 40
+; RV64I-NEXT:    srai a2, a2, 63
+; RV64I-NEXT:    and s3, a2, a6
+; RV64I-NEXT:    slliw a2, a0, 24
+; RV64I-NEXT:    srai a6, t5, 63
+; RV64I-NEXT:    and t0, a6, a3
+; RV64I-NEXT:    slli a6, a1, 39
+; RV64I-NEXT:    srai a4, a4, 63
+; RV64I-NEXT:    and a4, a4, s8
+; RV64I-NEXT:    slliw t5, a0, 25
+; RV64I-NEXT:    srai a6, a6, 63
+; RV64I-NEXT:    and a7, a6, a2
+; RV64I-NEXT:    slli a6, a1, 38
+; RV64I-NEXT:    srai a6, a6, 63
+; RV64I-NEXT:    and a6, a6, t5
+; RV64I-NEXT:    slli t5, a1, 37
+; RV64I-NEXT:    srai t5, t5, 63
+; RV64I-NEXT:    slliw s8, a0, 26
+; RV64I-NEXT:    and s8, t5, s8
+; RV64I-NEXT:    slli t5, a1, 36
+; RV64I-NEXT:    srai t5, t5, 63
+; RV64I-NEXT:    slliw s9, a0, 27
+; RV64I-NEXT:    and s9, t5, s9
+; RV64I-NEXT:    slli t5, a1, 35
+; RV64I-NEXT:    srai t5, t5, 63
+; RV64I-NEXT:    slliw s10, a0, 28
+; RV64I-NEXT:    and t5, t5, s10
+; RV64I-NEXT:    slli s10, a1, 34
+; RV64I-NEXT:    srai s10, s10, 63
+; RV64I-NEXT:    slliw ra, a0, 29
+; RV64I-NEXT:    and s10, s10, ra
+; RV64I-NEXT:    slli ra, a1, 33
+; RV64I-NEXT:    srai ra, ra, 63
+; RV64I-NEXT:    slliw a5, a0, 30
+; RV64I-NEXT:    and a5, ra, a5
+; RV64I-NEXT:    lui ra, 524288
+; RV64I-NEXT:    and ra, a1, ra
 ; RV64I-NEXT:    slli a1, a1, 63
 ; RV64I-NEXT:    srai a1, a1, 63
 ; RV64I-NEXT:    and a1, a1, a0
@@ -1485,40 +1367,40 @@ define i32 @clmul_i32(i32 %a, i32 %b) nounwind {
 ; RV64I-NEXT:    ld a2, 40(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld t1, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    xor a2, a2, t1
-; RV64I-NEXT:    ld t1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    xor t1, t1, t3
-; RV64I-NEXT:    xor t3, t5, ra
-; RV64I-NEXT:    xor t0, t0, s3
-; RV64I-NEXT:    xor t5, s8, t6
-; RV64I-NEXT:    xor a5, a5, a6
+; RV64I-NEXT:    ld t1, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    xor t3, t1, t3
+; RV64I-NEXT:    xor s1, s11, s1
+; RV64I-NEXT:    xor s4, s4, s6
+; RV64I-NEXT:    xor a4, t0, a4
+; RV64I-NEXT:    xor a5, s10, a5
 ; RV64I-NEXT:    xor a1, a3, a1
 ; RV64I-NEXT:    ld a3, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    xor a2, a2, a3
-; RV64I-NEXT:    xor a3, t1, t2
-; RV64I-NEXT:    xor a6, t3, s0
-; RV64I-NEXT:    xor t0, t0, s7
-; RV64I-NEXT:    xor t1, t5, s6
+; RV64I-NEXT:    ld a3, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    xor a3, t3, a3
+; RV64I-NEXT:    xor t0, s1, t6
+; RV64I-NEXT:    xor t1, s4, s7
+; RV64I-NEXT:    xor a4, a4, a7
+; RV64I-NEXT:    xor a1, a1, a2
+; RV64I-NEXT:    xor a2, a3, t2
+; RV64I-NEXT:    xor a3, t0, s0
+; RV64I-NEXT:    xor a7, t1, s5
+; RV64I-NEXT:    xor a4, a4, a6
 ; RV64I-NEXT:    slliw a0, a0, 31
-; RV64I-NEXT:    sext.w s2, s2
-; RV64I-NEXT:    seqz t2, s2
-; RV64I-NEXT:    addi t2, t2, -1
-; RV64I-NEXT:    and a0, t2, a0
+; RV64I-NEXT:    sext.w ra, ra
+; RV64I-NEXT:    seqz a6, ra
+; RV64I-NEXT:    addi a6, a6, -1
+; RV64I-NEXT:    and a0, a6, a0
 ; RV64I-NEXT:    xor a1, a1, a2
-; RV64I-NEXT:    ld a2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    xor a2, a3, a2
-; RV64I-NEXT:    xor a3, a6, s10
-; RV64I-NEXT:    xor a6, t0, t4
-; RV64I-NEXT:    xor a7, t1, a7
+; RV64I-NEXT:    xor a2, a3, t4
+; RV64I-NEXT:    xor a3, a7, s2
+; RV64I-NEXT:    xor a4, a4, s8
 ; RV64I-NEXT:    xor a1, a1, a2
-; RV64I-NEXT:    xor a2, a3, s11
-; RV64I-NEXT:    xor a3, a6, s4
-; RV64I-NEXT:    xor a6, a7, s9
+; RV64I-NEXT:    xor a2, a3, s3
+; RV64I-NEXT:    xor a3, a4, s9
 ; RV64I-NEXT:    xor a1, a1, a2
-; RV64I-NEXT:    xor a2, a3, s5
-; RV64I-NEXT:    xor a3, a6, s1
+; RV64I-NEXT:    xor a2, a3, t5
 ; RV64I-NEXT:    xor a1, a1, a2
-; RV64I-NEXT:    xor a3, a3, a4
-; RV64I-NEXT:    xor a1, a1, a3
 ; RV64I-NEXT:    xor a0, a5, a0
 ; RV64I-NEXT:    xor a0, a1, a0
 ; RV64I-NEXT:    ld ra, 168(sp) # 8-byte Folded Reload
@@ -1730,192 +1612,186 @@ define i32 @clmul_i32(i32 %a, i32 %b) nounwind {
 ;
 ; RV64IM-LABEL: clmul_i32:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    addi sp, sp, -144
-; RV64IM-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    sd s0, 128(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    sd s1, 120(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    sd s2, 112(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    sd s3, 104(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    sd s4, 96(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    sd s5, 88(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    sd s6, 80(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    sd s7, 72(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    sd s8, 64(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    sd s9, 56(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    sd s10, 48(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    sd s11, 40(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    slli a2, a1, 62
-; RV64IM-NEXT:    slliw s10, a0, 1
-; RV64IM-NEXT:    slli a3, a1, 61
-; RV64IM-NEXT:    slliw s11, a0, 2
-; RV64IM-NEXT:    slli a6, a1, 60
-; RV64IM-NEXT:    slliw s8, a0, 3
-; RV64IM-NEXT:    slli t1, a1, 59
-; RV64IM-NEXT:    slliw s9, a0, 4
-; RV64IM-NEXT:    slli t4, a1, 58
-; RV64IM-NEXT:    slliw s7, a0, 5
-; RV64IM-NEXT:    slli t3, a1, 57
-; RV64IM-NEXT:    slliw s5, a0, 6
-; RV64IM-NEXT:    slli s4, a1, 56
-; RV64IM-NEXT:    slliw s6, a0, 7
+; RV64IM-NEXT:    addi sp, sp, -160
+; RV64IM-NEXT:    sd ra, 152(sp) # 8-byte Folded Spill
+; RV64IM-NEXT:    sd s0, 144(sp) # 8-byte Folded Spill
+; RV64IM-NEXT:    sd s1, 136(sp) # 8-byte Folded Spill
+; RV64IM-NEXT:    sd s2, 128(sp) # 8-byte Folded Spill
+; RV64IM-NEXT:    sd s3, 120(sp) # 8-byte Folded Spill
+; RV64IM-NEXT:    sd s4, 112(sp) # 8-byte Folded Spill
+; RV64IM-NEXT:    sd s5, 104(sp) # 8-byte Folded Spill
+; RV64IM-NEXT:    sd s6, 96(sp) # 8-byte Folded Spill
+; RV64IM-NEXT:    sd s7, 88(sp) # 8-byte Folded Spill
+; RV64IM-NEXT:    sd s8, 80(sp) # 8-byte Folded Spill
+; RV64IM-NEXT:    sd s9, 72(sp) # 8-byte Folded Spill
+; RV64IM-NEXT:    sd s10, 64(sp) # 8-byte Folded Spill
+; RV64IM-NEXT:    sd s11, 56(sp) # 8-byte Folded Spill
+; RV64IM-NEXT:    slliw a2, a0, 1
+; RV64IM-NEXT:    slli a4, a1, 62
+; RV64IM-NEXT:    slliw s6, a0, 2
+; RV64IM-NEXT:    slli s10, a1, 61
+; RV64IM-NEXT:    slliw a5, a0, 3
+; RV64IM-NEXT:    slli s7, a1, 60
+; RV64IM-NEXT:    slliw a6, a0, 4
+; RV64IM-NEXT:    slli s8, a1, 59
+; RV64IM-NEXT:    slliw s1, a0, 5
+; RV64IM-NEXT:    slli s4, a1, 58
+; RV64IM-NEXT:    slliw a3, a0, 6
+; RV64IM-NEXT:    slli s2, a1, 57
+; RV64IM-NEXT:    slliw t5, a0, 7
+; RV64IM-NEXT:    slli s3, a1, 56
+; RV64IM-NEXT:    slliw t2, a0, 8
 ; RV64IM-NEXT:    slli t6, a1, 55
-; RV64IM-NEXT:    slliw s2, a0, 8
-; RV64IM-NEXT:    slli s0, a1, 54
-; RV64IM-NEXT:    slliw s3, a0, 9
-; RV64IM-NEXT:    slli t5, a1, 53
-; RV64IM-NEXT:    slliw s1, a0, 10
-; RV64IM-NEXT:    li a5, 1
-; RV64IM-NEXT:    lui t2, 1
-; RV64IM-NEXT:    lui a7, 4
+; RV64IM-NEXT:    slliw t0, a0, 9
+; RV64IM-NEXT:    slli t4, a1, 54
+; RV64IM-NEXT:    slliw a7, a0, 10
+; RV64IM-NEXT:    slli t3, a1, 53
+; RV64IM-NEXT:    lui s0, 1
+; RV64IM-NEXT:    lui s5, 2
+; RV64IM-NEXT:    lui s9, 4
+; RV64IM-NEXT:    lui s11, 8
 ; RV64IM-NEXT:    lui ra, 16
-; RV64IM-NEXT:    srli a2, a2, 63
-; RV64IM-NEXT:    neg a2, a2
-; RV64IM-NEXT:    and a2, a2, s10
+; RV64IM-NEXT:    srai a4, a4, 63
+; RV64IM-NEXT:    and a2, a4, a2
+; RV64IM-NEXT:    sd a2, 48(sp) # 8-byte Folded Spill
+; RV64IM-NEXT:    lui t1, 32
+; RV64IM-NEXT:    srai a4, s10, 63
+; RV64IM-NEXT:    and a2, a4, s6
 ; RV64IM-NEXT:    sd a2, 32(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    lui a4, 32
-; RV64IM-NEXT:    srli a3, a3, 63
-; RV64IM-NEXT:    neg a3, a3
-; RV64IM-NEXT:    and a2, a3, s11
+; RV64IM-NEXT:    lui s6, 64
+; RV64IM-NEXT:    srai s7, s7, 63
+; RV64IM-NEXT:    and a2, s7, a5
 ; RV64IM-NEXT:    sd a2, 24(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    lui t0, 64
-; RV64IM-NEXT:    srli a6, a6, 63
-; RV64IM-NEXT:    neg a6, a6
-; RV64IM-NEXT:    and a2, a6, s8
+; RV64IM-NEXT:    lui s7, 128
+; RV64IM-NEXT:    srai s8, s8, 63
+; RV64IM-NEXT:    and a2, s8, a6
 ; RV64IM-NEXT:    sd a2, 16(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    lui s8, 128
-; RV64IM-NEXT:    srli t1, t1, 63
-; RV64IM-NEXT:    neg t1, t1
-; RV64IM-NEXT:    and a2, t1, s9
+; RV64IM-NEXT:    lui s8, 256
+; RV64IM-NEXT:    srai s4, s4, 63
+; RV64IM-NEXT:    and s1, s4, s1
+; RV64IM-NEXT:    lui s4, 512
+; RV64IM-NEXT:    srai s2, s2, 63
+; RV64IM-NEXT:    and a2, s2, a3
+; RV64IM-NEXT:    sd a2, 40(sp) # 8-byte Folded Spill
+; RV64IM-NEXT:    lui s2, 1024
+; RV64IM-NEXT:    srai s3, s3, 63
+; RV64IM-NEXT:    and t5, s3, t5
+; RV64IM-NEXT:    lui s3, 2048
+; RV64IM-NEXT:    srai t6, t6, 63
+; RV64IM-NEXT:    and t2, t6, t2
+; RV64IM-NEXT:    lui t6, 4096
+; RV64IM-NEXT:    srai t4, t4, 63
+; RV64IM-NEXT:    and a2, t4, t0
 ; RV64IM-NEXT:    sd a2, 8(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    lui s9, 256
-; RV64IM-NEXT:    srli t4, t4, 63
-; RV64IM-NEXT:    neg t4, t4
-; RV64IM-NEXT:    and t4, t4, s7
-; RV64IM-NEXT:    lui s7, 512
-; RV64IM-NEXT:    srli t3, t3, 63
-; RV64IM-NEXT:    neg t3, t3
-; RV64IM-NEXT:    and a2, t3, s5
+; RV64IM-NEXT:    lui t4, 8192
+; RV64IM-NEXT:    srai t3, t3, 63
+; RV64IM-NEXT:    and a2, t3, a7
 ; RV64IM-NEXT:    sd a2, 0(sp) # 8-byte Folded Spill
-; RV64IM-NEXT:    lui s5, 1024
-; RV64IM-NEXT:    srli s4, s4, 63
-; RV64IM-NEXT:    neg s4, s4
-; RV64IM-NEXT:    and s4, s4, s6
-; RV64IM-NEXT:    lui s6, 2048
-; RV64IM-NEXT:    srli t6, t6, 63
-; RV64IM-NEXT:    neg t6, t6
-; RV64IM-NEXT:    and s2, t6, s2
-; RV64IM-NEXT:    lui s11, 4096
-; RV64IM-NEXT:    srli s0, s0, 63
-; RV64IM-NEXT:    neg t6, s0
-; RV64IM-NEXT:    and t6, t6, s3
-; RV64IM-NEXT:    lui s0, 8192
-; RV64IM-NEXT:    srli t5, t5, 63
-; RV64IM-NEXT:    neg t5, t5
-; RV64IM-NEXT:    and t5, t5, s1
-; RV64IM-NEXT:    lui s1, 16384
-; RV64IM-NEXT:    and s3, a1, ra
-; RV64IM-NEXT:    and a4, a1, a4
-; RV64IM-NEXT:    mulw s3, a0, s3
-; RV64IM-NEXT:    mulw a4, a0, a4
-; RV64IM-NEXT:    xor s3, s3, a4
-; RV64IM-NEXT:    lui ra, 32768
-; RV64IM-NEXT:    and a4, a1, s6
-; RV64IM-NEXT:    and s6, a1, s11
-; RV64IM-NEXT:    mulw a4, a0, a4
-; RV64IM-NEXT:    mulw s6, a0, s6
-; RV64IM-NEXT:    xor s6, a4, s6
-; RV64IM-NEXT:    lui s11, 65536
-; RV64IM-NEXT:    slli a2, a5, 11
-; RV64IM-NEXT:    and a4, a1, t2
-; RV64IM-NEXT:    lui a5, 2
-; RV64IM-NEXT:    and a5, a1, a5
-; RV64IM-NEXT:    and a6, a1, a7
-; RV64IM-NEXT:    lui a3, 8
-; RV64IM-NEXT:    and t1, a1, a3
-; RV64IM-NEXT:    and t0, a1, t0
-; RV64IM-NEXT:    and s8, a1, s8
-; RV64IM-NEXT:    and s9, a1, s9
-; RV64IM-NEXT:    and s7, a1, s7
-; RV64IM-NEXT:    and s5, a1, s5
+; RV64IM-NEXT:    lui t3, 16384
+; RV64IM-NEXT:    li s10, 1
+; RV64IM-NEXT:    slli s10, s10, 11
 ; RV64IM-NEXT:    and s0, a1, s0
-; RV64IM-NEXT:    and s1, a1, s1
-; RV64IM-NEXT:    and ra, a1, ra
+; RV64IM-NEXT:    and s5, a1, s5
+; RV64IM-NEXT:    and s9, a1, s9
 ; RV64IM-NEXT:    and s11, a1, s11
-; RV64IM-NEXT:    lui s10, 131072
+; RV64IM-NEXT:    and ra, a1, ra
+; RV64IM-NEXT:    and t1, a1, t1
+; RV64IM-NEXT:    and s6, a1, s6
+; RV64IM-NEXT:    and s7, a1, s7
+; RV64IM-NEXT:    and s8, a1, s8
+; RV64IM-NEXT:    and s4, a1, s4
+; RV64IM-NEXT:    and s2, a1, s2
+; RV64IM-NEXT:    and s3, a1, s3
+; RV64IM-NEXT:    and t6, a1, t6
+; RV64IM-NEXT:    and t4, a1, t4
+; RV64IM-NEXT:    and t3, a1, t3
+; RV64IM-NEXT:    lui a2, 32768
+; RV64IM-NEXT:    and a7, a1, a2
+; RV64IM-NEXT:    lui a3, 65536
+; RV64IM-NEXT:    and a3, a1, a3
+; RV64IM-NEXT:    lui a4, 131072
+; RV64IM-NEXT:    and a4, a1, a4
+; RV64IM-NEXT:    lui a5, 262144
+; RV64IM-NEXT:    and a5, a1, a5
+; RV64IM-NEXT:    lui a6, 524288
+; RV64IM-NEXT:    and a6, a1, a6
 ; RV64IM-NEXT:    and s10, a1, s10
-; RV64IM-NEXT:    lui t2, 262144
-; RV64IM-NEXT:    and t2, a1, t2
-; RV64IM-NEXT:    lui a7, 524288
-; RV64IM-NEXT:    and a7, a1, a7
-; RV64IM-NEXT:    and a2, a1, a2
 ; RV64IM-NEXT:    slli a1, a1, 63
 ; RV64IM-NEXT:    srai a1, a1, 63
 ; RV64IM-NEXT:    and a1, a1, a0
-; RV64IM-NEXT:    ld a3, 32(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    xor a3, a1, a3
-; RV64IM-NEXT:    ld a1, 24(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    ld t3, 16(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    xor a1, a1, t3
-; RV64IM-NEXT:    ld t3, 8(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    xor t4, t3, t4
-; RV64IM-NEXT:    xor s2, s4, s2
+; RV64IM-NEXT:    ld a2, 48(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    xor a2, a1, a2
+; RV64IM-NEXT:    ld a1, 32(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    ld t0, 24(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    xor a1, a1, t0
+; RV64IM-NEXT:    ld t0, 16(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    xor s1, t0, s1
+; RV64IM-NEXT:    xor t2, t5, t2
+; RV64IM-NEXT:    mulw t5, a0, s0
+; RV64IM-NEXT:    mulw s0, a0, s5
+; RV64IM-NEXT:    mulw s5, a0, s9
+; RV64IM-NEXT:    mulw s9, a0, s11
+; RV64IM-NEXT:    mulw s11, a0, ra
+; RV64IM-NEXT:    mulw t1, a0, t1
+; RV64IM-NEXT:    mulw s6, a0, s6
+; RV64IM-NEXT:    mulw s7, a0, s7
+; RV64IM-NEXT:    mulw s8, a0, s8
+; RV64IM-NEXT:    mulw s4, a0, s4
+; RV64IM-NEXT:    mulw s2, a0, s2
+; RV64IM-NEXT:    mulw s3, a0, s3
+; RV64IM-NEXT:    mulw t6, a0, t6
+; RV64IM-NEXT:    mulw t4, a0, t4
+; RV64IM-NEXT:    mulw t3, a0, t3
+; RV64IM-NEXT:    mulw a7, a0, a7
+; RV64IM-NEXT:    mulw a3, a0, a3
 ; RV64IM-NEXT:    mulw a4, a0, a4
-; RV64IM-NEXT:    mulw a2, a0, a2
-; RV64IM-NEXT:    xor a2, a2, a4
-; RV64IM-NEXT:    mulw a4, a0, t0
-; RV64IM-NEXT:    xor a4, s3, a4
-; RV64IM-NEXT:    mulw t0, a0, s0
-; RV64IM-NEXT:    xor t0, s6, t0
-; RV64IM-NEXT:    xor a1, a3, a1
-; RV64IM-NEXT:    ld a3, 0(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    xor a3, t4, a3
-; RV64IM-NEXT:    xor t3, s2, t6
 ; RV64IM-NEXT:    mulw a5, a0, a5
-; RV64IM-NEXT:    xor a2, a2, a5
-; RV64IM-NEXT:    mulw a5, a0, s8
-; RV64IM-NEXT:    xor a4, a4, a5
-; RV64IM-NEXT:    mulw a5, a0, s1
-; RV64IM-NEXT:    xor a5, t0, a5
-; RV64IM-NEXT:    xor a1, a1, a3
-; RV64IM-NEXT:    xor a3, t3, t5
 ; RV64IM-NEXT:    mulw a6, a0, a6
-; RV64IM-NEXT:    xor a2, a2, a6
-; RV64IM-NEXT:    mulw a6, a0, s9
-; RV64IM-NEXT:    xor a4, a4, a6
-; RV64IM-NEXT:    mulw a6, a0, ra
-; RV64IM-NEXT:    xor a5, a5, a6
-; RV64IM-NEXT:    xor a1, a1, a3
-; RV64IM-NEXT:    mulw a3, a0, t1
-; RV64IM-NEXT:    xor a2, a2, a3
-; RV64IM-NEXT:    mulw a3, a0, s7
-; RV64IM-NEXT:    xor a3, a4, a3
-; RV64IM-NEXT:    mulw a4, a0, s11
-; RV64IM-NEXT:    xor a4, a5, a4
-; RV64IM-NEXT:    xor a1, a1, a2
-; RV64IM-NEXT:    mulw a2, a0, s5
-; RV64IM-NEXT:    xor a2, a3, a2
-; RV64IM-NEXT:    mulw a3, a0, s10
-; RV64IM-NEXT:    xor a3, a4, a3
-; RV64IM-NEXT:    mulw a4, a0, t2
-; RV64IM-NEXT:    xor a1, a1, a2
+; RV64IM-NEXT:    mulw a0, a0, s10
+; RV64IM-NEXT:    xor s9, s9, s11
+; RV64IM-NEXT:    xor s2, s4, s2
 ; RV64IM-NEXT:    xor a3, a3, a4
-; RV64IM-NEXT:    xor a1, a1, a3
-; RV64IM-NEXT:    mulw a0, a0, a7
+; RV64IM-NEXT:    xor a1, a2, a1
+; RV64IM-NEXT:    ld a2, 40(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    xor a2, s1, a2
+; RV64IM-NEXT:    ld a4, 8(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    xor a4, t2, a4
+; RV64IM-NEXT:    xor a0, a0, t5
+; RV64IM-NEXT:    xor t0, s9, t1
+; RV64IM-NEXT:    xor t1, s2, s3
+; RV64IM-NEXT:    xor a3, a3, a5
+; RV64IM-NEXT:    xor a1, a1, a2
+; RV64IM-NEXT:    ld a2, 0(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    xor a2, a4, a2
+; RV64IM-NEXT:    xor a0, a0, s0
+; RV64IM-NEXT:    xor a4, t0, s6
+; RV64IM-NEXT:    xor a5, t1, t6
+; RV64IM-NEXT:    xor a1, a1, a2
+; RV64IM-NEXT:    xor a0, a0, s5
+; RV64IM-NEXT:    xor a2, a4, s7
+; RV64IM-NEXT:    xor a4, a5, t4
 ; RV64IM-NEXT:    xor a0, a1, a0
-; RV64IM-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    ld s1, 120(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    ld s2, 112(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    ld s3, 104(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    ld s4, 96(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    ld s5, 88(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    ld s6, 80(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    ld s7, 72(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    ld s8, 64(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    ld s9, 56(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    ld s10, 48(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    ld s11, 40(sp) # 8-byte Folded Reload
-; RV64IM-NEXT:    addi sp, sp, 144
+; RV64IM-NEXT:    xor a1, a2, s8
+; RV64IM-NEXT:    xor a2, a4, t3
+; RV64IM-NEXT:    xor a0, a0, a1
+; RV64IM-NEXT:    xor a1, a2, a7
+; RV64IM-NEXT:    xor a0, a0, a1
+; RV64IM-NEXT:    xor a1, a3, a6
+; RV64IM-NEXT:    xor a0, a0, a1
+; RV64IM-NEXT:    ld ra, 152(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    ld s0, 144(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    ld s1, 136(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    ld s2, 128(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    ld s3, 120(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    ld s4, 112(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    ld s5, 104(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    ld s6, 96(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    ld s7, 88(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    ld s8, 80(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    ld s9, 72(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    ld s10, 64(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    ld s11, 56(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    addi sp, sp, 160
 ; RV64IM-NEXT:    ret
 ;
 ; RV32IMZBS-LABEL: clmul_i32:
@@ -2152,136 +2028,134 @@ define i32 @clmul_i32(i32 %a, i32 %b) nounwind {
 ; RV64IMZBS-NEXT:    sd s9, 88(sp) # 8-byte Folded Spill
 ; RV64IMZBS-NEXT:    sd s10, 80(sp) # 8-byte Folded Spill
 ; RV64IMZBS-NEXT:    sd s11, 72(sp) # 8-byte Folded Spill
-; RV64IMZBS-NEXT:    bexti a2, a1, 1
-; RV64IMZBS-NEXT:    slliw a5, a0, 1
-; RV64IMZBS-NEXT:    bexti a3, a1, 2
-; RV64IMZBS-NEXT:    slliw a7, a0, 2
-; RV64IMZBS-NEXT:    bexti a4, a1, 3
-; RV64IMZBS-NEXT:    sd a4, 48(sp) # 8-byte Folded Spill
-; RV64IMZBS-NEXT:    slliw a4, a0, 3
-; RV64IMZBS-NEXT:    bexti t1, a1, 4
-; RV64IMZBS-NEXT:    slliw t4, a0, 4
-; RV64IMZBS-NEXT:    bexti t2, a1, 5
-; RV64IMZBS-NEXT:    slliw t5, a0, 5
-; RV64IMZBS-NEXT:    bexti a6, a1, 6
-; RV64IMZBS-NEXT:    slliw t3, a0, 6
-; RV64IMZBS-NEXT:    bexti t6, a1, 7
-; RV64IMZBS-NEXT:    slliw s1, a0, 7
-; RV64IMZBS-NEXT:    bexti s0, a1, 8
-; RV64IMZBS-NEXT:    slliw s2, a0, 8
-; RV64IMZBS-NEXT:    bexti s3, a1, 9
-; RV64IMZBS-NEXT:    slliw s5, a0, 9
-; RV64IMZBS-NEXT:    bexti s4, a1, 10
-; RV64IMZBS-NEXT:    slliw s6, a0, 10
-; RV64IMZBS-NEXT:    bexti s8, a1, 11
-; RV64IMZBS-NEXT:    slliw s11, a0, 11
-; RV64IMZBS-NEXT:    bexti s7, a1, 12
-; RV64IMZBS-NEXT:    slliw s9, a0, 12
-; RV64IMZBS-NEXT:    bexti s10, a1, 13
-; RV64IMZBS-NEXT:    slliw ra, a0, 13
-; RV64IMZBS-NEXT:    neg a2, a2
-; RV64IMZBS-NEXT:    and a2, a2, a5
-; RV64IMZBS-NEXT:    sd a2, 64(sp) # 8-byte Folded Spill
-; RV64IMZBS-NEXT:    bexti t0, a1, 14
-; RV64IMZBS-NEXT:    neg a3, a3
-; RV64IMZBS-NEXT:    and a2, a3, a7
-; RV64IMZBS-NEXT:    sd a2, 56(sp) # 8-byte Folded Spill
-; RV64IMZBS-NEXT:    slliw a5, a0, 14
-; RV64IMZBS-NEXT:    ld a2, 48(sp) # 8-byte Folded Reload
-; RV64IMZBS-NEXT:    neg a3, a2
+; RV64IMZBS-NEXT:    slliw a6, a0, 1
+; RV64IMZBS-NEXT:    slli a3, a1, 62
+; RV64IMZBS-NEXT:    slliw a4, a0, 2
+; RV64IMZBS-NEXT:    slli t0, a1, 61
+; RV64IMZBS-NEXT:    slliw a5, a0, 3
+; RV64IMZBS-NEXT:    slli t4, a1, 60
+; RV64IMZBS-NEXT:    slliw a2, a0, 4
+; RV64IMZBS-NEXT:    slli t5, a1, 59
+; RV64IMZBS-NEXT:    slliw t1, a0, 5
+; RV64IMZBS-NEXT:    slli s1, a1, 58
+; RV64IMZBS-NEXT:    slliw a7, a0, 6
+; RV64IMZBS-NEXT:    slli t2, a1, 57
+; RV64IMZBS-NEXT:    slliw t6, a0, 7
+; RV64IMZBS-NEXT:    slli s5, a1, 56
+; RV64IMZBS-NEXT:    slliw t3, a0, 8
+; RV64IMZBS-NEXT:    slli s2, a1, 55
+; RV64IMZBS-NEXT:    slliw s3, a0, 9
+; RV64IMZBS-NEXT:    slli s7, a1, 54
+; RV64IMZBS-NEXT:    slliw s0, a0, 10
+; RV64IMZBS-NEXT:    slli s6, a1, 53
+; RV64IMZBS-NEXT:    slliw s8, a0, 11
+; RV64IMZBS-NEXT:    slli s11, a1, 52
+; RV64IMZBS-NEXT:    slliw s4, a0, 12
+; RV64IMZBS-NEXT:    slli s9, a1, 51
+; RV64IMZBS-NEXT:    slliw s10, a0, 13
+; RV64IMZBS-NEXT:    slli ra, a1, 50
+; RV64IMZBS-NEXT:    srai a3, a3, 63
+; RV64IMZBS-NEXT:    and a3, a3, a6
+; RV64IMZBS-NEXT:    sd a3, 64(sp) # 8-byte Folded Spill
+; RV64IMZBS-NEXT:    slliw a6, a0, 14
+; RV64IMZBS-NEXT:    srai a3, t0, 63
 ; RV64IMZBS-NEXT:    and a3, a3, a4
+; RV64IMZBS-NEXT:    sd a3, 56(sp) # 8-byte Folded Spill
+; RV64IMZBS-NEXT:    slli a4, a1, 49
+; RV64IMZBS-NEXT:    srai a3, t4, 63
+; RV64IMZBS-NEXT:    and a3, a3, a5
 ; RV64IMZBS-NEXT:    sd a3, 48(sp) # 8-byte Folded Spill
-; RV64IMZBS-NEXT:    bexti a4, a1, 15
-; RV64IMZBS-NEXT:    neg a3, t1
-; RV64IMZBS-NEXT:    and a2, a3, t4
-; RV64IMZBS-NEXT:    sd a2, 40(sp) # 8-byte Folded Spill
 ; RV64IMZBS-NEXT:    slliw t4, a0, 15
-; RV64IMZBS-NEXT:    neg a7, t2
-; RV64IMZBS-NEXT:    and a2, a7, t5
-; RV64IMZBS-NEXT:    sd a2, 24(sp) # 8-byte Folded Spill
-; RV64IMZBS-NEXT:    bexti t5, a1, 16
-; RV64IMZBS-NEXT:    neg a6, a6
-; RV64IMZBS-NEXT:    and a2, a6, t3
+; RV64IMZBS-NEXT:    srai a5, t5, 63
+; RV64IMZBS-NEXT:    and a2, a5, a2
+; RV64IMZBS-NEXT:    sd a2, 40(sp) # 8-byte Folded Spill
+; RV64IMZBS-NEXT:    slli t5, a1, 48
+; RV64IMZBS-NEXT:    srai s1, s1, 63
+; RV64IMZBS-NEXT:    and a2, s1, t1
 ; RV64IMZBS-NEXT:    sd a2, 32(sp) # 8-byte Folded Spill
-; RV64IMZBS-NEXT:    slliw a2, a0, 16
-; RV64IMZBS-NEXT:    neg a3, t6
-; RV64IMZBS-NEXT:    and a3, a3, s1
-; RV64IMZBS-NEXT:    sd a3, 16(sp) # 8-byte Folded Spill
-; RV64IMZBS-NEXT:    bexti t6, a1, 17
-; RV64IMZBS-NEXT:    neg t1, s0
-; RV64IMZBS-NEXT:    and t3, t1, s2
-; RV64IMZBS-NEXT:    slliw s2, a0, 17
-; RV64IMZBS-NEXT:    neg t1, s3
-; RV64IMZBS-NEXT:    and a3, t1, s5
-; RV64IMZBS-NEXT:    sd a3, 8(sp) # 8-byte Folded Spill
-; RV64IMZBS-NEXT:    bexti s3, a1, 18
-; RV64IMZBS-NEXT:    neg t2, s4
-; RV64IMZBS-NEXT:    and t2, t2, s6
-; RV64IMZBS-NEXT:    slliw s5, a0, 18
-; RV64IMZBS-NEXT:    neg s0, s8
-; RV64IMZBS-NEXT:    and s11, s0, s11
-; RV64IMZBS-NEXT:    bexti s8, a1, 19
-; RV64IMZBS-NEXT:    neg s0, s7
-; RV64IMZBS-NEXT:    and s1, s0, s9
-; RV64IMZBS-NEXT:    slliw s0, a0, 19
-; RV64IMZBS-NEXT:    neg s4, s10
-; RV64IMZBS-NEXT:    and s9, s4, ra
-; RV64IMZBS-NEXT:    bexti s10, a1, 20
-; RV64IMZBS-NEXT:    neg t0, t0
-; RV64IMZBS-NEXT:    and a7, t0, a5
-; RV64IMZBS-NEXT:    slliw t0, a0, 20
-; RV64IMZBS-NEXT:    neg a4, a4
-; RV64IMZBS-NEXT:    and t4, a4, t4
-; RV64IMZBS-NEXT:    bexti a4, a1, 21
-; RV64IMZBS-NEXT:    neg t5, t5
-; RV64IMZBS-NEXT:    and s4, t5, a2
-; RV64IMZBS-NEXT:    slliw a2, a0, 21
-; RV64IMZBS-NEXT:    neg t5, t6
-; RV64IMZBS-NEXT:    and s7, t5, s2
-; RV64IMZBS-NEXT:    bexti t5, a1, 22
-; RV64IMZBS-NEXT:    neg t6, s3
-; RV64IMZBS-NEXT:    and s6, t6, s5
-; RV64IMZBS-NEXT:    slliw t6, a0, 22
-; RV64IMZBS-NEXT:    neg s2, s8
-; RV64IMZBS-NEXT:    and s5, s2, s0
-; RV64IMZBS-NEXT:    bexti s0, a1, 23
-; RV64IMZBS-NEXT:    neg s2, s10
-; RV64IMZBS-NEXT:    and s2, s2, t0
-; RV64IMZBS-NEXT:    slliw t0, a0, 23
-; RV64IMZBS-NEXT:    neg a4, a4
-; RV64IMZBS-NEXT:    and s3, a4, a2
-; RV64IMZBS-NEXT:    bexti a2, a1, 24
-; RV64IMZBS-NEXT:    neg a4, t5
-; RV64IMZBS-NEXT:    and a5, a4, t6
-; RV64IMZBS-NEXT:    slliw t5, a0, 24
-; RV64IMZBS-NEXT:    neg t6, s0
-; RV64IMZBS-NEXT:    and t0, t6, t0
-; RV64IMZBS-NEXT:    bexti t6, a1, 25
-; RV64IMZBS-NEXT:    neg a2, a2
-; RV64IMZBS-NEXT:    and a4, a2, t5
+; RV64IMZBS-NEXT:    slliw a3, a0, 16
+; RV64IMZBS-NEXT:    srai t0, t2, 63
+; RV64IMZBS-NEXT:    and a2, t0, a7
+; RV64IMZBS-NEXT:    sd a2, 24(sp) # 8-byte Folded Spill
+; RV64IMZBS-NEXT:    slli a2, a1, 47
+; RV64IMZBS-NEXT:    srai t0, s5, 63
+; RV64IMZBS-NEXT:    and a5, t0, t6
+; RV64IMZBS-NEXT:    sd a5, 16(sp) # 8-byte Folded Spill
+; RV64IMZBS-NEXT:    slliw s5, a0, 17
+; RV64IMZBS-NEXT:    srai t1, s2, 63
+; RV64IMZBS-NEXT:    and t3, t1, t3
+; RV64IMZBS-NEXT:    slli s2, a1, 46
+; RV64IMZBS-NEXT:    srai t1, s7, 63
+; RV64IMZBS-NEXT:    and a5, t1, s3
+; RV64IMZBS-NEXT:    sd a5, 8(sp) # 8-byte Folded Spill
+; RV64IMZBS-NEXT:    slliw s3, a0, 18
+; RV64IMZBS-NEXT:    srai t2, s6, 63
+; RV64IMZBS-NEXT:    and t2, t2, s0
+; RV64IMZBS-NEXT:    slli s7, a1, 45
+; RV64IMZBS-NEXT:    srai t6, s11, 63
+; RV64IMZBS-NEXT:    and s11, t6, s8
+; RV64IMZBS-NEXT:    slliw s8, a0, 19
+; RV64IMZBS-NEXT:    srai t6, s9, 63
+; RV64IMZBS-NEXT:    and s1, t6, s4
+; RV64IMZBS-NEXT:    slli s9, a1, 44
+; RV64IMZBS-NEXT:    srai t6, ra, 63
+; RV64IMZBS-NEXT:    and t6, t6, s10
+; RV64IMZBS-NEXT:    slliw s10, a0, 20
+; RV64IMZBS-NEXT:    srai a4, a4, 63
+; RV64IMZBS-NEXT:    and s0, a4, a6
+; RV64IMZBS-NEXT:    slli a4, a1, 43
+; RV64IMZBS-NEXT:    srai a6, t5, 63
+; RV64IMZBS-NEXT:    and t4, a6, t4
+; RV64IMZBS-NEXT:    slliw a6, a0, 21
+; RV64IMZBS-NEXT:    srai a2, a2, 63
+; RV64IMZBS-NEXT:    and s4, a2, a3
+; RV64IMZBS-NEXT:    slli a2, a1, 42
+; RV64IMZBS-NEXT:    srai a3, s2, 63
+; RV64IMZBS-NEXT:    and s6, a3, s5
+; RV64IMZBS-NEXT:    slliw a3, a0, 22
+; RV64IMZBS-NEXT:    srai t5, s7, 63
+; RV64IMZBS-NEXT:    and s7, t5, s3
+; RV64IMZBS-NEXT:    slli t5, a1, 41
+; RV64IMZBS-NEXT:    srai s2, s9, 63
+; RV64IMZBS-NEXT:    and s5, s2, s8
+; RV64IMZBS-NEXT:    slliw s8, a0, 23
+; RV64IMZBS-NEXT:    srai a4, a4, 63
+; RV64IMZBS-NEXT:    and s2, a4, s10
+; RV64IMZBS-NEXT:    slli a4, a1, 40
+; RV64IMZBS-NEXT:    srai a2, a2, 63
+; RV64IMZBS-NEXT:    and s3, a2, a6
+; RV64IMZBS-NEXT:    slliw a2, a0, 24
+; RV64IMZBS-NEXT:    srai a6, t5, 63
+; RV64IMZBS-NEXT:    and t0, a6, a3
+; RV64IMZBS-NEXT:    slli a6, a1, 39
+; RV64IMZBS-NEXT:    srai a4, a4, 63
+; RV64IMZBS-NEXT:    and a4, a4, s8
 ; RV64IMZBS-NEXT:    slliw t5, a0, 25
-; RV64IMZBS-NEXT:    neg t6, t6
-; RV64IMZBS-NEXT:    and t5, t6, t5
-; RV64IMZBS-NEXT:    bexti t6, a1, 26
-; RV64IMZBS-NEXT:    neg t6, t6
-; RV64IMZBS-NEXT:    slliw s0, a0, 26
-; RV64IMZBS-NEXT:    and s8, t6, s0
-; RV64IMZBS-NEXT:    bexti t6, a1, 27
-; RV64IMZBS-NEXT:    neg t6, t6
-; RV64IMZBS-NEXT:    slliw s0, a0, 27
-; RV64IMZBS-NEXT:    and t6, t6, s0
-; RV64IMZBS-NEXT:    bexti s0, a1, 28
-; RV64IMZBS-NEXT:    neg s0, s0
+; RV64IMZBS-NEXT:    srai a6, a6, 63
+; RV64IMZBS-NEXT:    and a7, a6, a2
+; RV64IMZBS-NEXT:    slli a6, a1, 38
+; RV64IMZBS-NEXT:    srai a6, a6, 63
+; RV64IMZBS-NEXT:    and a6, a6, t5
+; RV64IMZBS-NEXT:    slli t5, a1, 37
+; RV64IMZBS-NEXT:    srai t5, t5, 63
+; RV64IMZBS-NEXT:    slliw s8, a0, 26
+; RV64IMZBS-NEXT:    and s8, t5, s8
+; RV64IMZBS-NEXT:    slli t5, a1, 36
+; RV64IMZBS-NEXT:    srai t5, t5, 63
+; RV64IMZBS-NEXT:    slliw s9, a0, 27
+; RV64IMZBS-NEXT:    and s9, t5, s9
+; RV64IMZBS-NEXT:    slli t5, a1, 35
+; RV64IMZBS-NEXT:    srai t5, t5, 63
 ; RV64IMZBS-NEXT:    slliw s10, a0, 28
-; RV64IMZBS-NEXT:    and s0, s0, s10
-; RV64IMZBS-NEXT:    bexti s10, a1, 29
-; RV64IMZBS-NEXT:    neg s10, s10
+; RV64IMZBS-NEXT:    and t5, t5, s10
+; RV64IMZBS-NEXT:    slli s10, a1, 34
+; RV64IMZBS-NEXT:    srai s10, s10, 63
 ; RV64IMZBS-NEXT:    slliw ra, a0, 29
 ; RV64IMZBS-NEXT:    and s10, s10, ra
-; RV64IMZBS-NEXT:    bexti ra, a1, 30
-; RV64IMZBS-NEXT:    neg ra, ra
-; RV64IMZBS-NEXT:    slliw a6, a0, 30
-; RV64IMZBS-NEXT:    and a6, ra, a6
+; RV64IMZBS-NEXT:    slli ra, a1, 33
+; RV64IMZBS-NEXT:    srai ra, ra, 63
+; RV64IMZBS-NEXT:    slliw a5, a0, 30
+; RV64IMZBS-NEXT:    and a5, ra, a5
 ; RV64IMZBS-NEXT:    lui ra, 524288
 ; RV64IMZBS-NEXT:    and ra, a1, ra
 ; RV64IMZBS-NEXT:    slli a1, a1, 63
@@ -2293,43 +2167,43 @@ define i32 @clmul_i32(i32 %a, i32 %b) nounwind {
 ; RV64IMZBS-NEXT:    ld a2, 48(sp) # 8-byte Folded Reload
 ; RV64IMZBS-NEXT:    xor a1, a1, a2
 ; RV64IMZBS-NEXT:    ld a2, 40(sp) # 8-byte Folded Reload
-; RV64IMZBS-NEXT:    ld t1, 24(sp) # 8-byte Folded Reload
+; RV64IMZBS-NEXT:    ld t1, 32(sp) # 8-byte Folded Reload
 ; RV64IMZBS-NEXT:    xor a2, a2, t1
 ; RV64IMZBS-NEXT:    ld t1, 16(sp) # 8-byte Folded Reload
 ; RV64IMZBS-NEXT:    xor t3, t1, t3
 ; RV64IMZBS-NEXT:    xor s1, s11, s1
-; RV64IMZBS-NEXT:    xor s4, s4, s7
-; RV64IMZBS-NEXT:    xor a5, a5, t0
-; RV64IMZBS-NEXT:    xor a6, s10, a6
+; RV64IMZBS-NEXT:    xor s4, s4, s6
+; RV64IMZBS-NEXT:    xor a4, t0, a4
+; RV64IMZBS-NEXT:    xor a5, s10, a5
 ; RV64IMZBS-NEXT:    xor a1, a3, a1
-; RV64IMZBS-NEXT:    ld a3, 32(sp) # 8-byte Folded Reload
+; RV64IMZBS-NEXT:    ld a3, 24(sp) # 8-byte Folded Reload
 ; RV64IMZBS-NEXT:    xor a2, a2, a3
 ; RV64IMZBS-NEXT:    ld a3, 8(sp) # 8-byte Folded Reload
 ; RV64IMZBS-NEXT:    xor a3, t3, a3
-; RV64IMZBS-NEXT:    xor t0, s1, s9
-; RV64IMZBS-NEXT:    xor t1, s4, s6
-; RV64IMZBS-NEXT:    xor a4, a5, a4
+; RV64IMZBS-NEXT:    xor t0, s1, t6
+; RV64IMZBS-NEXT:    xor t1, s4, s7
+; RV64IMZBS-NEXT:    xor a4, a4, a7
 ; RV64IMZBS-NEXT:    xor a1, a1, a2
 ; RV64IMZBS-NEXT:    xor a2, a3, t2
-; RV64IMZBS-NEXT:    xor a3, t0, a7
-; RV64IMZBS-NEXT:    xor a5, t1, s5
-; RV64IMZBS-NEXT:    xor a4, a4, t5
+; RV64IMZBS-NEXT:    xor a3, t0, s0
+; RV64IMZBS-NEXT:    xor a7, t1, s5
+; RV64IMZBS-NEXT:    xor a4, a4, a6
 ; RV64IMZBS-NEXT:    slliw a0, a0, 31
 ; RV64IMZBS-NEXT:    sext.w ra, ra
-; RV64IMZBS-NEXT:    seqz a7, ra
-; RV64IMZBS-NEXT:    addi a7, a7, -1
-; RV64IMZBS-NEXT:    and a0, a7, a0
+; RV64IMZBS-NEXT:    seqz a6, ra
+; RV64IMZBS-NEXT:    addi a6, a6, -1
+; RV64IMZBS-NEXT:    and a0, a6, a0
 ; RV64IMZBS-NEXT:    xor a1, a1, a2
 ; RV64IMZBS-NEXT:    xor a2, a3, t4
-; RV64IMZBS-NEXT:    xor a3, a5, s2
+; RV64IMZBS-NEXT:    xor a3, a7, s2
 ; RV64IMZBS-NEXT:    xor a4, a4, s8
 ; RV64IMZBS-NEXT:    xor a1, a1, a2
 ; RV64IMZBS-NEXT:    xor a2, a3, s3
-; RV64IMZBS-NEXT:    xor a3, a4, t6
+; RV64IMZBS-NEXT:    xor a3, a4, s9
 ; RV64IMZBS-NEXT:    xor a1, a1, a2
-; RV64IMZBS-NEXT:    xor a3, a3, s0
-; RV64IMZBS-NEXT:    xor a1, a1, a3
-; RV64IMZBS-NEXT:    xor a0, a6, a0
+; RV64IMZBS-NEXT:    xor a2, a3, t5
+; RV64IMZBS-NEXT:    xor a1, a1, a2
+; RV64IMZBS-NEXT:    xor a0, a5, a0
 ; RV64IMZBS-NEXT:    xor a0, a1, a0
 ; RV64IMZBS-NEXT:    ld ra, 168(sp) # 8-byte Folded Reload
 ; RV64IMZBS-NEXT:    ld s0, 160(sp) # 8-byte Folded Reload
@@ -6618,48 +6492,42 @@ declare i8 @use(i8, i1)
 define void @commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ; RV32I-LABEL: commutative_clmul_i8:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a4, a1, 30
-; RV32I-NEXT:    slli a5, a0, 1
-; RV32I-NEXT:    slli a6, a1, 29
-; RV32I-NEXT:    slli a7, a0, 2
-; RV32I-NEXT:    slli t0, a1, 28
-; RV32I-NEXT:    slli t1, a0, 3
-; RV32I-NEXT:    slli t2, a1, 27
-; RV32I-NEXT:    srli a4, a4, 31
-; RV32I-NEXT:    neg a4, a4
-; RV32I-NEXT:    and a4, a4, a5
-; RV32I-NEXT:    slli a5, a0, 4
-; RV32I-NEXT:    srli a6, a6, 31
-; RV32I-NEXT:    neg a6, a6
-; RV32I-NEXT:    and a6, a6, a7
-; RV32I-NEXT:    slli a7, a1, 26
-; RV32I-NEXT:    srli t0, t0, 31
-; RV32I-NEXT:    neg t0, t0
-; RV32I-NEXT:    and t0, t0, t1
-; RV32I-NEXT:    slli t1, a0, 5
-; RV32I-NEXT:    srli t2, t2, 31
-; RV32I-NEXT:    neg t2, t2
-; RV32I-NEXT:    and a5, t2, a5
-; RV32I-NEXT:    slli t2, a1, 25
-; RV32I-NEXT:    srli a7, a7, 31
-; RV32I-NEXT:    neg a7, a7
-; RV32I-NEXT:    and a7, a7, t1
-; RV32I-NEXT:    slli t1, a0, 6
-; RV32I-NEXT:    srli t2, t2, 31
-; RV32I-NEXT:    neg t2, t2
-; RV32I-NEXT:    and t1, t2, t1
+; RV32I-NEXT:    slli a4, a0, 1
+; RV32I-NEXT:    slli a5, a1, 30
+; RV32I-NEXT:    slli a6, a0, 2
+; RV32I-NEXT:    slli a7, a1, 29
+; RV32I-NEXT:    slli t0, a0, 3
+; RV32I-NEXT:    slli t1, a1, 28
+; RV32I-NEXT:    slli t2, a0, 4
+; RV32I-NEXT:    srai a5, a5, 31
+; RV32I-NEXT:    and a4, a5, a4
+; RV32I-NEXT:    slli a5, a1, 27
+; RV32I-NEXT:    srai a7, a7, 31
+; RV32I-NEXT:    and a6, a7, a6
+; RV32I-NEXT:    slli a7, a0, 5
+; RV32I-NEXT:    srai t1, t1, 31
+; RV32I-NEXT:    and t0, t1, t0
+; RV32I-NEXT:    slli t1, a1, 26
+; RV32I-NEXT:    srai a5, a5, 31
+; RV32I-NEXT:    and a5, a5, t2
+; RV32I-NEXT:    slli t2, a0, 6
+; RV32I-NEXT:    srai t1, t1, 31
+; RV32I-NEXT:    and a7, t1, a7
+; RV32I-NEXT:    slli t1, a1, 25
+; RV32I-NEXT:    srai t1, t1, 31
+; RV32I-NEXT:    and t1, t1, t2
 ; RV32I-NEXT:    slli t2, a1, 31
-; RV32I-NEXT:    slli a1, a1, 24
 ; RV32I-NEXT:    srai t2, t2, 31
 ; RV32I-NEXT:    and t2, t2, a0
-; RV32I-NEXT:    slli a0, a0, 7
-; RV32I-NEXT:    srli a1, a1, 31
-; RV32I-NEXT:    neg a1, a1
-; RV32I-NEXT:    and a0, a1, a0
-; RV32I-NEXT:    xor a1, t2, a4
-; RV32I-NEXT:    xor a4, a6, t0
+; RV32I-NEXT:    xor a4, t2, a4
+; RV32I-NEXT:    xor a6, a6, t0
 ; RV32I-NEXT:    xor a5, a5, a7
-; RV32I-NEXT:    xor a1, a1, a4
+; RV32I-NEXT:    slli a0, a0, 7
+; RV32I-NEXT:    andi a1, a1, 128
+; RV32I-NEXT:    seqz a1, a1
+; RV32I-NEXT:    addi a1, a1, -1
+; RV32I-NEXT:    and a0, a1, a0
+; RV32I-NEXT:    xor a1, a4, a6
 ; RV32I-NEXT:    xor a4, a5, t1
 ; RV32I-NEXT:    xor a1, a1, a4
 ; RV32I-NEXT:    xor a0, a1, a0
@@ -6669,48 +6537,42 @@ define void @commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ;
 ; RV64I-LABEL: commutative_clmul_i8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a4, a1, 62
-; RV64I-NEXT:    slli a5, a0, 1
-; RV64I-NEXT:    slli a6, a1, 61
-; RV64I-NEXT:    slli a7, a0, 2
-; RV64I-NEXT:    slli t0, a1, 60
-; RV64I-NEXT:    slli t1, a0, 3
-; RV64I-NEXT:    slli t2, a1, 59
-; RV64I-NEXT:    srli a4, a4, 63
-; RV64I-NEXT:    neg a4, a4
-; RV64I-NEXT:    and a4, a4, a5
-; RV64I-NEXT:    slli a5, a0, 4
-; RV64I-NEXT:    srli a6, a6, 63
-; RV64I-NEXT:    neg a6, a6
-; RV64I-NEXT:    and a6, a6, a7
-; RV64I-NEXT:    slli a7, a1, 58
-; RV64I-NEXT:    srli t0, t0, 63
-; RV64I-NEXT:    neg t0, t0
-; RV64I-NEXT:    and t0, t0, t1
-; RV64I-NEXT:    slli t1, a0, 5
-; RV64I-NEXT:    srli t2, t2, 63
-; RV64I-NEXT:    neg t2, t2
-; RV64I-NEXT:    and a5, t2, a5
-; RV64I-NEXT:    slli t2, a1, 57
-; RV64I-NEXT:    srli a7, a7, 63
-; RV64I-NEXT:    neg a7, a7
-; RV64I-NEXT:    and a7, a7, t1
-; RV64I-NEXT:    slli t1, a0, 6
-; RV64I-NEXT:    srli t2, t2, 63
-; RV64I-NEXT:    neg t2, t2
-; RV64I-NEXT:    and t1, t2, t1
+; RV64I-NEXT:    slli a4, a0, 1
+; RV64I-NEXT:    slli a5, a1, 62
+; RV64I-NEXT:    slli a6, a0, 2
+; RV64I-NEXT:    slli a7, a1, 61
+; RV64I-NEXT:    slli t0, a0, 3
+; RV64I-NEXT:    slli t1, a1, 60
+; RV64I-NEXT:    slli t2, a0, 4
+; RV64I-NEXT:    srai a5, a5, 63
+; RV64I-NEXT:    and a4, a5, a4
+; RV64I-NEXT:    slli a5, a1, 59
+; RV64I-NEXT:    srai a7, a7, 63
+; RV64I-NEXT:    and a6, a7, a6
+; RV64I-NEXT:    slli a7, a0, 5
+; RV64I-NEXT:    srai t1, t1, 63
+; RV64I-NEXT:    and t0, t1, t0
+; RV64I-NEXT:    slli t1, a1, 58
+; RV64I-NEXT:    srai a5, a5, 63
+; RV64I-NEXT:    and a5, a5, t2
+; RV64I-NEXT:    slli t2, a0, 6
+; RV64I-NEXT:    srai t1, t1, 63
+; RV64I-NEXT:    and a7, t1, a7
+; RV64I-NEXT:    slli t1, a1, 57
+; RV64I-NEXT:    srai t1, t1, 63
+; RV64I-NEXT:    and t1, t1, t2
 ; RV64I-NEXT:    slli t2, a1, 63
-; RV64I-NEXT:    slli a1, a1, 56
 ; RV64I-NEXT:    srai t2, t2, 63
 ; RV64I-NEXT:    and t2, t2, a0
-; RV64I-NEXT:    slli a0, a0, 7
-; RV64I-NEXT:    srli a1, a1, 63
-; RV64I-NEXT:    neg a1, a1
-; RV64I-NEXT:    and a0, a1, a0
-; RV64I-NEXT:    xor a1, t2, a4
-; RV64I-NEXT:    xor a4, a6, t0
+; RV64I-NEXT:    xor a4, t2, a4
+; RV64I-NEXT:    xor a6, a6, t0
 ; RV64I-NEXT:    xor a5, a5, a7
-; RV64I-NEXT:    xor a1, a1, a4
+; RV64I-NEXT:    slli a0, a0, 7
+; RV64I-NEXT:    andi a1, a1, 128
+; RV64I-NEXT:    seqz a1, a1
+; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    xor a1, a4, a6
 ; RV64I-NEXT:    xor a4, a5, t1
 ; RV64I-NEXT:    xor a1, a1, a4
 ; RV64I-NEXT:    xor a0, a1, a0
@@ -6720,48 +6582,42 @@ define void @commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ;
 ; RV32IM-LABEL: commutative_clmul_i8:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    slli a4, a1, 30
-; RV32IM-NEXT:    slli a5, a0, 1
-; RV32IM-NEXT:    slli a6, a1, 29
-; RV32IM-NEXT:    slli a7, a0, 2
-; RV32IM-NEXT:    slli t0, a1, 28
-; RV32IM-NEXT:    slli t1, a0, 3
-; RV32IM-NEXT:    slli t2, a1, 27
-; RV32IM-NEXT:    srli a4, a4, 31
-; RV32IM-NEXT:    neg a4, a4
-; RV32IM-NEXT:    and a4, a4, a5
-; RV32IM-NEXT:    slli a5, a0, 4
-; RV32IM-NEXT:    srli a6, a6, 31
-; RV32IM-NEXT:    neg a6, a6
-; RV32IM-NEXT:    and a6, a6, a7
-; RV32IM-NEXT:    slli a7, a1, 26
-; RV32IM-NEXT:    srli t0, t0, 31
-; RV32IM-NEXT:    neg t0, t0
-; RV32IM-NEXT:    and t0, t0, t1
-; RV32IM-NEXT:    slli t1, a0, 5
-; RV32IM-NEXT:    srli t2, t2, 31
-; RV32IM-NEXT:    neg t2, t2
-; RV32IM-NEXT:    and a5, t2, a5
-; RV32IM-NEXT:    slli t2, a1, 25
-; RV32IM-NEXT:    srli a7, a7, 31
-; RV32IM-NEXT:    neg a7, a7
-; RV32IM-NEXT:    and a7, a7, t1
-; RV32IM-NEXT:    slli t1, a0, 6
-; RV32IM-NEXT:    srli t2, t2, 31
-; RV32IM-NEXT:    neg t2, t2
-; RV32IM-NEXT:    and t1, t2, t1
+; RV32IM-NEXT:    slli a4, a0, 1
+; RV32IM-NEXT:    slli a5, a1, 30
+; RV32IM-NEXT:    slli a6, a0, 2
+; RV32IM-NEXT:    slli a7, a1, 29
+; RV32IM-NEXT:    slli t0, a0, 3
+; RV32IM-NEXT:    slli t1, a1, 28
+; RV32IM-NEXT:    slli t2, a0, 4
+; RV32IM-NEXT:    srai a5, a5, 31
+; RV32IM-NEXT:    and a4, a5, a4
+; RV32IM-NEXT:    slli a5, a1, 27
+; RV32IM-NEXT:    srai a7, a7, 31
+; RV32IM-NEXT:    and a6, a7, a6
+; RV32IM-NEXT:    slli a7, a0, 5
+; RV32IM-NEXT:    srai t1, t1, 31
+; RV32IM-NEXT:    and t0, t1, t0
+; RV32IM-NEXT:    slli t1, a1, 26
+; RV32IM-NEXT:    srai a5, a5, 31
+; RV32IM-NEXT:    and a5, a5, t2
+; RV32IM-NEXT:    slli t2, a0, 6
+; RV32IM-NEXT:    srai t1, t1, 31
+; RV32IM-NEXT:    and a7, t1, a7
+; RV32IM-NEXT:    slli t1, a1, 25
+; RV32IM-NEXT:    srai t1, t1, 31
+; RV32IM-NEXT:    and t1, t1, t2
 ; RV32IM-NEXT:    slli t2, a1, 31
-; RV32IM-NEXT:    slli a1, a1, 24
 ; RV32IM-NEXT:    srai t2, t2, 31
 ; RV32IM-NEXT:    and t2, t2, a0
-; RV32IM-NEXT:    slli a0, a0, 7
-; RV32IM-NEXT:    srli a1, a1, 31
-; RV32IM-NEXT:    neg a1, a1
-; RV32IM-NEXT:    and a0, a1, a0
-; RV32IM-NEXT:    xor a1, t2, a4
-; RV32IM-NEXT:    xor a4, a6, t0
+; RV32IM-NEXT:    xor a4, t2, a4
+; RV32IM-NEXT:    xor a6, a6, t0
 ; RV32IM-NEXT:    xor a5, a5, a7
-; RV32IM-NEXT:    xor a1, a1, a4
+; RV32IM-NEXT:    slli a0, a0, 7
+; RV32IM-NEXT:    andi a1, a1, 128
+; RV32IM-NEXT:    seqz a1, a1
+; RV32IM-NEXT:    addi a1, a1, -1
+; RV32IM-NEXT:    and a0, a1, a0
+; RV32IM-NEXT:    xor a1, a4, a6
 ; RV32IM-NEXT:    xor a4, a5, t1
 ; RV32IM-NEXT:    xor a1, a1, a4
 ; RV32IM-NEXT:    xor a0, a1, a0
@@ -6771,48 +6627,42 @@ define void @commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ;
 ; RV64IM-LABEL: commutative_clmul_i8:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slli a4, a1, 62
-; RV64IM-NEXT:    slli a5, a0, 1
-; RV64IM-NEXT:    slli a6, a1, 61
-; RV64IM-NEXT:    slli a7, a0, 2
-; RV64IM-NEXT:    slli t0, a1, 60
-; RV64IM-NEXT:    slli t1, a0, 3
-; RV64IM-NEXT:    slli t2, a1, 59
-; RV64IM-NEXT:    srli a4, a4, 63
-; RV64IM-NEXT:    neg a4, a4
-; RV64IM-NEXT:    and a4, a4, a5
-; RV64IM-NEXT:    slli a5, a0, 4
-; RV64IM-NEXT:    srli a6, a6, 63
-; RV64IM-NEXT:    neg a6, a6
-; RV64IM-NEXT:    and a6, a6, a7
-; RV64IM-NEXT:    slli a7, a1, 58
-; RV64IM-NEXT:    srli t0, t0, 63
-; RV64IM-NEXT:    neg t0, t0
-; RV64IM-NEXT:    and t0, t0, t1
-; RV64IM-NEXT:    slli t1, a0, 5
-; RV64IM-NEXT:    srli t2, t2, 63
-; RV64IM-NEXT:    neg t2, t2
-; RV64IM-NEXT:    and a5, t2, a5
-; RV64IM-NEXT:    slli t2, a1, 57
-; RV64IM-NEXT:    srli a7, a7, 63
-; RV64IM-NEXT:    neg a7, a7
-; RV64IM-NEXT:    and a7, a7, t1
-; RV64IM-NEXT:    slli t1, a0, 6
-; RV64IM-NEXT:    srli t2, t2, 63
-; RV64IM-NEXT:    neg t2, t2
-; RV64IM-NEXT:    and t1, t2, t1
+; RV64IM-NEXT:    slli a4, a0, 1
+; RV64IM-NEXT:    slli a5, a1, 62
+; RV64IM-NEXT:    slli a6, a0, 2
+; RV64IM-NEXT:    slli a7, a1, 61
+; RV64IM-NEXT:    slli t0, a0, 3
+; RV64IM-NEXT:    slli t1, a1, 60
+; RV64IM-NEXT:    slli t2, a0, 4
+; RV64IM-NEXT:    srai a5, a5, 63
+; RV64IM-NEXT:    and a4, a5, a4
+; RV64IM-NEXT:    slli a5, a1, 59
+; RV64IM-NEXT:    srai a7, a7, 63
+; RV64IM-NEXT:    and a6, a7, a6
+; RV64IM-NEXT:    slli a7, a0, 5
+; RV64IM-NEXT:    srai t1, t1, 63
+; RV64IM-NEXT:    and t0, t1, t0
+; RV64IM-NEXT:    slli t1, a1, 58
+; RV64IM-NEXT:    srai a5, a5, 63
+; RV64IM-NEXT:    and a5, a5, t2
+; RV64IM-NEXT:    slli t2, a0, 6
+; RV64IM-NEXT:    srai t1, t1, 63
+; RV64IM-NEXT:    and a7, t1, a7
+; RV64IM-NEXT:    slli t1, a1, 57
+; RV64IM-NEXT:    srai t1, t1, 63
+; RV64IM-NEXT:    and t1, t1, t2
 ; RV64IM-NEXT:    slli t2, a1, 63
-; RV64IM-NEXT:    slli a1, a1, 56
 ; RV64IM-NEXT:    srai t2, t2, 63
 ; RV64IM-NEXT:    and t2, t2, a0
-; RV64IM-NEXT:    slli a0, a0, 7
-; RV64IM-NEXT:    srli a1, a1, 63
-; RV64IM-NEXT:    neg a1, a1
-; RV64IM-NEXT:    and a0, a1, a0
-; RV64IM-NEXT:    xor a1, t2, a4
-; RV64IM-NEXT:    xor a4, a6, t0
+; RV64IM-NEXT:    xor a4, t2, a4
+; RV64IM-NEXT:    xor a6, a6, t0
 ; RV64IM-NEXT:    xor a5, a5, a7
-; RV64IM-NEXT:    xor a1, a1, a4
+; RV64IM-NEXT:    slli a0, a0, 7
+; RV64IM-NEXT:    andi a1, a1, 128
+; RV64IM-NEXT:    seqz a1, a1
+; RV64IM-NEXT:    addi a1, a1, -1
+; RV64IM-NEXT:    and a0, a1, a0
+; RV64IM-NEXT:    xor a1, a4, a6
 ; RV64IM-NEXT:    xor a4, a5, t1
 ; RV64IM-NEXT:    xor a1, a1, a4
 ; RV64IM-NEXT:    xor a0, a1, a0
@@ -6822,41 +6672,42 @@ define void @commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ;
 ; RV32IMZBS-LABEL: commutative_clmul_i8:
 ; RV32IMZBS:       # %bb.0:
-; RV32IMZBS-NEXT:    bexti a4, a1, 1
-; RV32IMZBS-NEXT:    slli a5, a0, 1
-; RV32IMZBS-NEXT:    bexti a6, a1, 2
-; RV32IMZBS-NEXT:    slli a7, a0, 2
-; RV32IMZBS-NEXT:    bexti t0, a1, 3
-; RV32IMZBS-NEXT:    slli t1, a0, 3
-; RV32IMZBS-NEXT:    bexti t2, a1, 4
-; RV32IMZBS-NEXT:    neg a4, a4
-; RV32IMZBS-NEXT:    and a4, a4, a5
-; RV32IMZBS-NEXT:    slli a5, a0, 4
-; RV32IMZBS-NEXT:    neg a6, a6
-; RV32IMZBS-NEXT:    and a6, a6, a7
-; RV32IMZBS-NEXT:    bexti a7, a1, 5
-; RV32IMZBS-NEXT:    neg t0, t0
-; RV32IMZBS-NEXT:    and t0, t0, t1
-; RV32IMZBS-NEXT:    slli t1, a0, 5
-; RV32IMZBS-NEXT:    neg t2, t2
-; RV32IMZBS-NEXT:    and a5, t2, a5
-; RV32IMZBS-NEXT:    bexti t2, a1, 6
-; RV32IMZBS-NEXT:    neg a7, a7
-; RV32IMZBS-NEXT:    and a7, a7, t1
-; RV32IMZBS-NEXT:    slli t1, a0, 6
-; RV32IMZBS-NEXT:    neg t2, t2
-; RV32IMZBS-NEXT:    and t1, t2, t1
+; RV32IMZBS-NEXT:    slli a4, a0, 1
+; RV32IMZBS-NEXT:    slli a5, a1, 30
+; RV32IMZBS-NEXT:    slli a6, a0, 2
+; RV32IMZBS-NEXT:    slli a7, a1, 29
+; RV32IMZBS-NEXT:    slli t0, a0, 3
+; RV32IMZBS-NEXT:    slli t1, a1, 28
+; RV32IMZBS-NEXT:    slli t2, a0, 4
+; RV32IMZBS-NEXT:    srai a5, a5, 31
+; RV32IMZBS-NEXT:    and a4, a5, a4
+; RV32IMZBS-NEXT:    slli a5, a1, 27
+; RV32IMZBS-NEXT:    srai a7, a7, 31
+; RV32IMZBS-NEXT:    and a6, a7, a6
+; RV32IMZBS-NEXT:    slli a7, a0, 5
+; RV32IMZBS-NEXT:    srai t1, t1, 31
+; RV32IMZBS-NEXT:    and t0, t1, t0
+; RV32IMZBS-NEXT:    slli t1, a1, 26
+; RV32IMZBS-NEXT:    srai a5, a5, 31
+; RV32IMZBS-NEXT:    and a5, a5, t2
+; RV32IMZBS-NEXT:    slli t2, a0, 6
+; RV32IMZBS-NEXT:    srai t1, t1, 31
+; RV32IMZBS-NEXT:    and a7, t1, a7
+; RV32IMZBS-NEXT:    slli t1, a1, 25
+; RV32IMZBS-NEXT:    srai t1, t1, 31
+; RV32IMZBS-NEXT:    and t1, t1, t2
 ; RV32IMZBS-NEXT:    slli t2, a1, 31
-; RV32IMZBS-NEXT:    bexti a1, a1, 7
 ; RV32IMZBS-NEXT:    srai t2, t2, 31
 ; RV32IMZBS-NEXT:    and t2, t2, a0
-; RV32IMZBS-NEXT:    slli a0, a0, 7
-; RV32IMZBS-NEXT:    neg a1, a1
-; RV32IMZBS-NEXT:    and a0, a1, a0
-; RV32IMZBS-NEXT:    xor a1, t2, a4
-; RV32IMZBS-NEXT:    xor a4, a6, t0
+; RV32IMZBS-NEXT:    xor a4, t2, a4
+; RV32IMZBS-NEXT:    xor a6, a6, t0
 ; RV32IMZBS-NEXT:    xor a5, a5, a7
-; RV32IMZBS-NEXT:    xor a1, a1, a4
+; RV32IMZBS-NEXT:    slli a0, a0, 7
+; RV32IMZBS-NEXT:    andi a1, a1, 128
+; RV32IMZBS-NEXT:    seqz a1, a1
+; RV32IMZBS-NEXT:    addi a1, a1, -1
+; RV32IMZBS-NEXT:    and a0, a1, a0
+; RV32IMZBS-NEXT:    xor a1, a4, a6
 ; RV32IMZBS-NEXT:    xor a4, a5, t1
 ; RV32IMZBS-NEXT:    xor a1, a1, a4
 ; RV32IMZBS-NEXT:    xor a0, a1, a0
@@ -6866,41 +6717,42 @@ define void @commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ;
 ; RV64IMZBS-LABEL: commutative_clmul_i8:
 ; RV64IMZBS:       # %bb.0:
-; RV64IMZBS-NEXT:    bexti a4, a1, 1
-; RV64IMZBS-NEXT:    slli a5, a0, 1
-; RV64IMZBS-NEXT:    bexti a6, a1, 2
-; RV64IMZBS-NEXT:    slli a7, a0, 2
-; RV64IMZBS-NEXT:    bexti t0, a1, 3
-; RV64IMZBS-NEXT:    slli t1, a0, 3
-; RV64IMZBS-NEXT:    bexti t2, a1, 4
-; RV64IMZBS-NEXT:    neg a4, a4
-; RV64IMZBS-NEXT:    and a4, a4, a5
-; RV64IMZBS-NEXT:    slli a5, a0, 4
-; RV64IMZBS-NEXT:    neg a6, a6
-; RV64IMZBS-NEXT:    and a6, a6, a7
-; RV64IMZBS-NEXT:    bexti a7, a1, 5
-; RV64IMZBS-NEXT:    neg t0, t0
-; RV64IMZBS-NEXT:    and t0, t0, t1
-; RV64IMZBS-NEXT:    slli t1, a0, 5
-; RV64IMZBS-NEXT:    neg t2, t2
-; RV64IMZBS-NEXT:    and a5, t2, a5
-; RV64IMZBS-NEXT:    bexti t2, a1, 6
-; RV64IMZBS-NEXT:    neg a7, a7
-; RV64IMZBS-NEXT:    and a7, a7, t1
-; RV64IMZBS-NEXT:    slli t1, a0, 6
-; RV64IMZBS-NEXT:    neg t2, t2
-; RV64IMZBS-NEXT:    and t1, t2, t1
+; RV64IMZBS-NEXT:    slli a4, a0, 1
+; RV64IMZBS-NEXT:    slli a5, a1, 62
+; RV64IMZBS-NEXT:    slli a6, a0, 2
+; RV64IMZBS-NEXT:    slli a7, a1, 61
+; RV64IMZBS-NEXT:    slli t0, a0, 3
+; RV64IMZBS-NEXT:    slli t1, a1, 60
+; RV64IMZBS-NEXT:    slli t2, a0, 4
+; RV64IMZBS-NEXT:    srai a5, a5, 63
+; RV64IMZBS-NEXT:    and a4, a5, a4
+; RV64IMZBS-NEXT:    slli a5, a1, 59
+; RV64IMZBS-NEXT:    srai a7, a7, 63
+; RV64IMZBS-NEXT:    and a6, a7, a6
+; RV64IMZBS-NEXT:    slli a7, a0, 5
+; RV64IMZBS-NEXT:    srai t1, t1, 63
+; RV64IMZBS-NEXT:    and t0, t1, t0
+; RV64IMZBS-NEXT:    slli t1, a1, 58
+; RV64IMZBS-NEXT:    srai a5, a5, 63
+; RV64IMZBS-NEXT:    and a5, a5, t2
+; RV64IMZBS-NEXT:    slli t2, a0, 6
+; RV64IMZBS-NEXT:    srai t1, t1, 63
+; RV64IMZBS-NEXT:    and a7, t1, a7
+; RV64IMZBS-NEXT:    slli t1, a1, 57
+; RV64IMZBS-NEXT:    srai t1, t1, 63
+; RV64IMZBS-NEXT:    and t1, t1, t2
 ; RV64IMZBS-NEXT:    slli t2, a1, 63
-; RV64IMZBS-NEXT:    bexti a1, a1, 7
 ; RV64IMZBS-NEXT:    srai t2, t2, 63
 ; RV64IMZBS-NEXT:    and t2, t2, a0
-; RV64IMZBS-NEXT:    slli a0, a0, 7
-; RV64IMZBS-NEXT:    neg a1, a1
-; RV64IMZBS-NEXT:    and a0, a1, a0
-; RV64IMZBS-NEXT:    xor a1, t2, a4
-; RV64IMZBS-NEXT:    xor a4, a6, t0
+; RV64IMZBS-NEXT:    xor a4, t2, a4
+; RV64IMZBS-NEXT:    xor a6, a6, t0
 ; RV64IMZBS-NEXT:    xor a5, a5, a7
-; RV64IMZBS-NEXT:    xor a1, a1, a4
+; RV64IMZBS-NEXT:    slli a0, a0, 7
+; RV64IMZBS-NEXT:    andi a1, a1, 128
+; RV64IMZBS-NEXT:    seqz a1, a1
+; RV64IMZBS-NEXT:    addi a1, a1, -1
+; RV64IMZBS-NEXT:    and a0, a1, a0
+; RV64IMZBS-NEXT:    xor a1, a4, a6
 ; RV64IMZBS-NEXT:    xor a4, a5, t1
 ; RV64IMZBS-NEXT:    xor a1, a1, a4
 ; RV64IMZBS-NEXT:    xor a0, a1, a0
@@ -6922,46 +6774,40 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwi
 ; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a3
-; RV32I-NEXT:    slli a3, a1, 30
-; RV32I-NEXT:    slli a4, a0, 1
-; RV32I-NEXT:    slli a5, a1, 29
-; RV32I-NEXT:    slli a6, a0, 2
-; RV32I-NEXT:    slli a7, a1, 28
-; RV32I-NEXT:    slli t0, a0, 3
-; RV32I-NEXT:    slli t1, a1, 27
-; RV32I-NEXT:    srli a3, a3, 31
-; RV32I-NEXT:    neg a3, a3
-; RV32I-NEXT:    and a3, a3, a4
-; RV32I-NEXT:    slli a4, a0, 4
-; RV32I-NEXT:    srli a5, a5, 31
-; RV32I-NEXT:    neg a5, a5
-; RV32I-NEXT:    and a5, a5, a6
-; RV32I-NEXT:    slli a6, a1, 26
-; RV32I-NEXT:    srli a7, a7, 31
-; RV32I-NEXT:    neg a7, a7
-; RV32I-NEXT:    and a7, a7, t0
-; RV32I-NEXT:    slli t0, a0, 5
-; RV32I-NEXT:    srli t1, t1, 31
-; RV32I-NEXT:    neg t1, t1
-; RV32I-NEXT:    and a4, t1, a4
-; RV32I-NEXT:    slli t1, a1, 25
-; RV32I-NEXT:    srli a6, a6, 31
-; RV32I-NEXT:    neg a6, a6
-; RV32I-NEXT:    and a6, a6, t0
-; RV32I-NEXT:    slli t0, a0, 6
-; RV32I-NEXT:    srli t1, t1, 31
-; RV32I-NEXT:    neg t1, t1
-; RV32I-NEXT:    and t0, t1, t0
+; RV32I-NEXT:    slli a3, a0, 1
+; RV32I-NEXT:    slli a4, a1, 30
+; RV32I-NEXT:    slli a5, a0, 2
+; RV32I-NEXT:    slli a6, a1, 29
+; RV32I-NEXT:    slli a7, a0, 3
+; RV32I-NEXT:    slli t0, a1, 28
+; RV32I-NEXT:    slli t1, a0, 4
+; RV32I-NEXT:    srai a4, a4, 31
+; RV32I-NEXT:    and a3, a4, a3
+; RV32I-NEXT:    slli a4, a1, 27
+; RV32I-NEXT:    srai a6, a6, 31
+; RV32I-NEXT:    and a5, a6, a5
+; RV32I-NEXT:    slli a6, a0, 5
+; RV32I-NEXT:    srai t0, t0, 31
+; RV32I-NEXT:    and a7, t0, a7
+; RV32I-NEXT:    slli t0, a1, 26
+; RV32I-NEXT:    srai a4, a4, 31
+; RV32I-NEXT:    and a4, a4, t1
+; RV32I-NEXT:    slli t1, a0, 6
+; RV32I-NEXT:    srai t0, t0, 31
+; RV32I-NEXT:    and a6, t0, a6
+; RV32I-NEXT:    slli t0, a1, 25
+; RV32I-NEXT:    srai t0, t0, 31
+; RV32I-NEXT:    and t0, t0, t1
 ; RV32I-NEXT:    slli t1, a1, 31
 ; RV32I-NEXT:    srai t1, t1, 31
 ; RV32I-NEXT:    and t1, t1, a0
 ; RV32I-NEXT:    xor a3, t1, a3
 ; RV32I-NEXT:    xor a5, a5, a7
 ; RV32I-NEXT:    xor a4, a4, a6
-; RV32I-NEXT:    slli a1, a1, 24
 ; RV32I-NEXT:    slli a0, a0, 7
-; RV32I-NEXT:    srli a1, a1, 31
-; RV32I-NEXT:    neg a1, a1
+; RV32I-NEXT:    andi a1, a1, 128
+; RV32I-NEXT:    seqz a1, a1
+; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    xor a3, a3, a5
 ; RV32I-NEXT:    xor a4, a4, t0
 ; RV32I-NEXT:    xor a3, a3, a4
@@ -6984,46 +6830,40 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwi
 ; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a3
-; RV64I-NEXT:    slli a3, a1, 62
-; RV64I-NEXT:    slli a4, a0, 1
-; RV64I-NEXT:    slli a5, a1, 61
-; RV64I-NEXT:    slli a6, a0, 2
-; RV64I-NEXT:    slli a7, a1, 60
-; RV64I-NEXT:    slli t0, a0, 3
-; RV64I-NEXT:    slli t1, a1, 59
-; RV64I-NEXT:    srli a3, a3, 63
-; RV64I-NEXT:    neg a3, a3
-; RV64I-NEXT:    and a3, a3, a4
-; RV64I-NEXT:    slli a4, a0, 4
-; RV64I-NEXT:    srli a5, a5, 63
-; RV64I-NEXT:    neg a5, a5
-; RV64I-NEXT:    and a5, a5, a6
-; RV64I-NEXT:    slli a6, a1, 58
-; RV64I-NEXT:    srli a7, a7, 63
-; RV64I-NEXT:    neg a7, a7
-; RV64I-NEXT:    and a7, a7, t0
-; RV64I-NEXT:    slli t0, a0, 5
-; RV64I-NEXT:    srli t1, t1, 63
-; RV64I-NEXT:    neg t1, t1
-; RV64I-NEXT:    and a4, t1, a4
-; RV64I-NEXT:    slli t1, a1, 57
-; RV64I-NEXT:    srli a6, a6, 63
-; RV64I-NEXT:    neg a6, a6
-; RV64I-NEXT:    and a6, a6, t0
-; RV64I-NEXT:    slli t0, a0, 6
-; RV64I-NEXT:    srli t1, t1, 63
-; RV64I-NEXT:    neg t1, t1
-; RV64I-NEXT:    and t0, t1, t0
+; RV64I-NEXT:    slli a3, a0, 1
+; RV64I-NEXT:    slli a4, a1, 62
+; RV64I-NEXT:    slli a5, a0, 2
+; RV64I-NEXT:    slli a6, a1, 61
+; RV64I-NEXT:    slli a7, a0, 3
+; RV64I-NEXT:    slli t0, a1, 60
+; RV64I-NEXT:    slli t1, a0, 4
+; RV64I-NEXT:    srai a4, a4, 63
+; RV64I-NEXT:    and a3, a4, a3
+; RV64I-NEXT:    slli a4, a1, 59
+; RV64I-NEXT:    srai a6, a6, 63
+; RV64I-NEXT:    and a5, a6, a5
+; RV64I-NEXT:    slli a6, a0, 5
+; RV64I-NEXT:    srai t0, t0, 63
+; RV64I-NEXT:    and a7, t0, a7
+; RV64I-NEXT:    slli t0, a1, 58
+; RV64I-NEXT:    srai a4, a4, 63
+; RV64I-NEXT:    and a4, a4, t1
+; RV64I-NEXT:    slli t1, a0, 6
+; RV64I-NEXT:    srai t0, t0, 63
+; RV64I-NEXT:    and a6, t0, a6
+; RV64I-NEXT:    slli t0, a1, 57
+; RV64I-NEXT:    srai t0, t0, 63
+; RV64I-NEXT:    and t0, t0, t1
 ; RV64I-NEXT:    slli t1, a1, 63
 ; RV64I-NEXT:    srai t1, t1, 63
 ; RV64I-NEXT:    and t1, t1, a0
 ; RV64I-NEXT:    xor a3, t1, a3
 ; RV64I-NEXT:    xor a5, a5, a7
 ; RV64I-NEXT:    xor a4, a4, a6
-; RV64I-NEXT:    slli a1, a1, 56
 ; RV64I-NEXT:    slli a0, a0, 7
-; RV64I-NEXT:    srli a1, a1, 63
-; RV64I-NEXT:    neg a1, a1
+; RV64I-NEXT:    andi a1, a1, 128
+; RV64I-NEXT:    seqz a1, a1
+; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    xor a3, a3, a5
 ; RV64I-NEXT:    xor a4, a4, t0
 ; RV64I-NEXT:    xor a3, a3, a4
@@ -7046,46 +6886,40 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwi
 ; RV32IM-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32IM-NEXT:    mv s0, a3
-; RV32IM-NEXT:    slli a3, a1, 30
-; RV32IM-NEXT:    slli a4, a0, 1
-; RV32IM-NEXT:    slli a5, a1, 29
-; RV32IM-NEXT:    slli a6, a0, 2
-; RV32IM-NEXT:    slli a7, a1, 28
-; RV32IM-NEXT:    slli t0, a0, 3
-; RV32IM-NEXT:    slli t1, a1, 27
-; RV32IM-NEXT:    srli a3, a3, 31
-; RV32IM-NEXT:    neg a3, a3
-; RV32IM-NEXT:    and a3, a3, a4
-; RV32IM-NEXT:    slli a4, a0, 4
-; RV32IM-NEXT:    srli a5, a5, 31
-; RV32IM-NEXT:    neg a5, a5
-; RV32IM-NEXT:    and a5, a5, a6
-; RV32IM-NEXT:    slli a6, a1, 26
-; RV32IM-NEXT:    srli a7, a7, 31
-; RV32IM-NEXT:    neg a7, a7
-; RV32IM-NEXT:    and a7, a7, t0
-; RV32IM-NEXT:    slli t0, a0, 5
-; RV32IM-NEXT:    srli t1, t1, 31
-; RV32IM-NEXT:    neg t1, t1
-; RV32IM-NEXT:    and a4, t1, a4
-; RV32IM-NEXT:    slli t1, a1, 25
-; RV32IM-NEXT:    srli a6, a6, 31
-; RV32IM-NEXT:    neg a6, a6
-; RV32IM-NEXT:    and a6, a6, t0
-; RV32IM-NEXT:    slli t0, a0, 6
-; RV32IM-NEXT:    srli t1, t1, 31
-; RV32IM-NEXT:    neg t1, t1
-; RV32IM-NEXT:    and t0, t1, t0
+; RV32IM-NEXT:    slli a3, a0, 1
+; RV32IM-NEXT:    slli a4, a1, 30
+; RV32IM-NEXT:    slli a5, a0, 2
+; RV32IM-NEXT:    slli a6, a1, 29
+; RV32IM-NEXT:    slli a7, a0, 3
+; RV32IM-NEXT:    slli t0, a1, 28
+; RV32IM-NEXT:    slli t1, a0, 4
+; RV32IM-NEXT:    srai a4, a4, 31
+; RV32IM-NEXT:    and a3, a4, a3
+; RV32IM-NEXT:    slli a4, a1, 27
+; RV32IM-NEXT:    srai a6, a6, 31
+; RV32IM-NEXT:    and a5, a6, a5
+; RV32IM-NEXT:    slli a6, a0, 5
+; RV32IM-NEXT:    srai t0, t0, 31
+; RV32IM-NEXT:    and a7, t0, a7
+; RV32IM-NEXT:    slli t0, a1, 26
+; RV32IM-NEXT:    srai a4, a4, 31
+; RV32IM-NEXT:    and a4, a4, t1
+; RV32IM-NEXT:    slli t1, a0, 6
+; RV32IM-NEXT:    srai t0, t0, 31
+; RV32IM-NEXT:    and a6, t0, a6
+; RV32IM-NEXT:    slli t0, a1, 25
+; RV32IM-NEXT:    srai t0, t0, 31
+; RV32IM-NEXT:    and t0, t0, t1
 ; RV32IM-NEXT:    slli t1, a1, 31
 ; RV32IM-NEXT:    srai t1, t1, 31
 ; RV32IM-NEXT:    and t1, t1, a0
 ; RV32IM-NEXT:    xor a3, t1, a3
 ; RV32IM-NEXT:    xor a5, a5, a7
 ; RV32IM-NEXT:    xor a4, a4, a6
-; RV32IM-NEXT:    slli a1, a1, 24
 ; RV32IM-NEXT:    slli a0, a0, 7
-; RV32IM-NEXT:    srli a1, a1, 31
-; RV32IM-NEXT:    neg a1, a1
+; RV32IM-NEXT:    andi a1, a1, 128
+; RV32IM-NEXT:    seqz a1, a1
+; RV32IM-NEXT:    addi a1, a1, -1
 ; RV32IM-NEXT:    xor a3, a3, a5
 ; RV32IM-NEXT:    xor a4, a4, t0
 ; RV32IM-NEXT:    xor a3, a3, a4
@@ -7108,46 +6942,40 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwi
 ; RV64IM-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64IM-NEXT:    mv s0, a3
-; RV64IM-NEXT:    slli a3, a1, 62
-; RV64IM-NEXT:    slli a4, a0, 1
-; RV64IM-NEXT:    slli a5, a1, 61
-; RV64IM-NEXT:    slli a6, a0, 2
-; RV64IM-NEXT:    slli a7, a1, 60
-; RV64IM-NEXT:    slli t0, a0, 3
-; RV64IM-NEXT:    slli t1, a1, 59
-; RV64IM-NEXT:    srli a3, a3, 63
-; RV64IM-NEXT:    neg a3, a3
-; RV64IM-NEXT:    and a3, a3, a4
-; RV64IM-NEXT:    slli a4, a0, 4
-; RV64IM-NEXT:    srli a5, a5, 63
-; RV64IM-NEXT:    neg a5, a5
-; RV64IM-NEXT:    and a5, a5, a6
-; RV64IM-NEXT:    slli a6, a1, 58
-; RV64IM-NEXT:    srli a7, a7, 63
-; RV64IM-NEXT:    neg a7, a7
-; RV64IM-NEXT:    and a7, a7, t0
-; RV64IM-NEXT:    slli t0, a0, 5
-; RV64IM-NEXT:    srli t1, t1, 63
-; RV64IM-NEXT:    neg t1, t1
-; RV64IM-NEXT:    and a4, t1, a4
-; RV64IM-NEXT:    slli t1, a1, 57
-; RV64IM-NEXT:    srli a6, a6, 63
-; RV64IM-NEXT:    neg a6, a6
-; RV64IM-NEXT:    and a6, a6, t0
-; RV64IM-NEXT:    slli t0, a0, 6
-; RV64IM-NEXT:    srli t1, t1, 63
-; RV64IM-NEXT:    neg t1, t1
-; RV64IM-NEXT:    and t0, t1, t0
+; RV64IM-NEXT:    slli a3, a0, 1
+; RV64IM-NEXT:    slli a4, a1, 62
+; RV64IM-NEXT:    slli a5, a0, 2
+; RV64IM-NEXT:    slli a6, a1, 61
+; RV64IM-NEXT:    slli a7, a0, 3
+; RV64IM-NEXT:    slli t0, a1, 60
+; RV64IM-NEXT:    slli t1, a0, 4
+; RV64IM-NEXT:    srai a4, a4, 63
+; RV64IM-NEXT:    and a3, a4, a3
+; RV64IM-NEXT:    slli a4, a1, 59
+; RV64IM-NEXT:    srai a6, a6, 63
+; RV64IM-NEXT:    and a5, a6, a5
+; RV64IM-NEXT:    slli a6, a0, 5
+; RV64IM-NEXT:    srai t0, t0, 63
+; RV64IM-NEXT:    and a7, t0, a7
+; RV64IM-NEXT:    slli t0, a1, 58
+; RV64IM-NEXT:    srai a4, a4, 63
+; RV64IM-NEXT:    and a4, a4, t1
+; RV64IM-NEXT:    slli t1, a0, 6
+; RV64IM-NEXT:    srai t0, t0, 63
+; RV64IM-NEXT:    and a6, t0, a6
+; RV64IM-NEXT:    slli t0, a1, 57
+; RV64IM-NEXT:    srai t0, t0, 63
+; RV64IM-NEXT:    and t0, t0, t1
 ; RV64IM-NEXT:    slli t1, a1, 63
 ; RV64IM-NEXT:    srai t1, t1, 63
 ; RV64IM-NEXT:    and t1, t1, a0
 ; RV64IM-NEXT:    xor a3, t1, a3
 ; RV64IM-NEXT:    xor a5, a5, a7
 ; RV64IM-NEXT:    xor a4, a4, a6
-; RV64IM-NEXT:    slli a1, a1, 56
 ; RV64IM-NEXT:    slli a0, a0, 7
-; RV64IM-NEXT:    srli a1, a1, 63
-; RV64IM-NEXT:    neg a1, a1
+; RV64IM-NEXT:    andi a1, a1, 128
+; RV64IM-NEXT:    seqz a1, a1
+; RV64IM-NEXT:    addi a1, a1, -1
 ; RV64IM-NEXT:    xor a3, a3, a5
 ; RV64IM-NEXT:    xor a4, a4, t0
 ; RV64IM-NEXT:    xor a3, a3, a4
@@ -7170,39 +6998,40 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwi
 ; RV32IMZBS-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32IMZBS-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32IMZBS-NEXT:    mv s0, a3
-; RV32IMZBS-NEXT:    bexti a3, a1, 1
-; RV32IMZBS-NEXT:    slli a4, a0, 1
-; RV32IMZBS-NEXT:    bexti a5, a1, 2
-; RV32IMZBS-NEXT:    slli a6, a0, 2
-; RV32IMZBS-NEXT:    bexti a7, a1, 3
-; RV32IMZBS-NEXT:    slli t0, a0, 3
-; RV32IMZBS-NEXT:    bexti t1, a1, 4
-; RV32IMZBS-NEXT:    neg a3, a3
-; RV32IMZBS-NEXT:    and a3, a3, a4
-; RV32IMZBS-NEXT:    slli a4, a0, 4
-; RV32IMZBS-NEXT:    neg a5, a5
-; RV32IMZBS-NEXT:    and a5, a5, a6
-; RV32IMZBS-NEXT:    bexti a6, a1, 5
-; RV32IMZBS-NEXT:    neg a7, a7
-; RV32IMZBS-NEXT:    and a7, a7, t0
-; RV32IMZBS-NEXT:    slli t0, a0, 5
-; RV32IMZBS-NEXT:    neg t1, t1
-; RV32IMZBS-NEXT:    and a4, t1, a4
-; RV32IMZBS-NEXT:    bexti t1, a1, 6
-; RV32IMZBS-NEXT:    neg a6, a6
-; RV32IMZBS-NEXT:    and a6, a6, t0
-; RV32IMZBS-NEXT:    slli t0, a0, 6
-; RV32IMZBS-NEXT:    neg t1, t1
-; RV32IMZBS-NEXT:    and t0, t1, t0
+; RV32IMZBS-NEXT:    slli a3, a0, 1
+; RV32IMZBS-NEXT:    slli a4, a1, 30
+; RV32IMZBS-NEXT:    slli a5, a0, 2
+; RV32IMZBS-NEXT:    slli a6, a1, 29
+; RV32IMZBS-NEXT:    slli a7, a0, 3
+; RV32IMZBS-NEXT:    slli t0, a1, 28
+; RV32IMZBS-NEXT:    slli t1, a0, 4
+; RV32IMZBS-NEXT:    srai a4, a4, 31
+; RV32IMZBS-NEXT:    and a3, a4, a3
+; RV32IMZBS-NEXT:    slli a4, a1, 27
+; RV32IMZBS-NEXT:    srai a6, a6, 31
+; RV32IMZBS-NEXT:    and a5, a6, a5
+; RV32IMZBS-NEXT:    slli a6, a0, 5
+; RV32IMZBS-NEXT:    srai t0, t0, 31
+; RV32IMZBS-NEXT:    and a7, t0, a7
+; RV32IMZBS-NEXT:    slli t0, a1, 26
+; RV32IMZBS-NEXT:    srai a4, a4, 31
+; RV32IMZBS-NEXT:    and a4, a4, t1
+; RV32IMZBS-NEXT:    slli t1, a0, 6
+; RV32IMZBS-NEXT:    srai t0, t0, 31
+; RV32IMZBS-NEXT:    and a6, t0, a6
+; RV32IMZBS-NEXT:    slli t0, a1, 25
+; RV32IMZBS-NEXT:    srai t0, t0, 31
+; RV32IMZBS-NEXT:    and t0, t0, t1
 ; RV32IMZBS-NEXT:    slli t1, a1, 31
 ; RV32IMZBS-NEXT:    srai t1, t1, 31
 ; RV32IMZBS-NEXT:    and t1, t1, a0
 ; RV32IMZBS-NEXT:    xor a3, t1, a3
 ; RV32IMZBS-NEXT:    xor a5, a5, a7
 ; RV32IMZBS-NEXT:    xor a4, a4, a6
-; RV32IMZBS-NEXT:    bexti a1, a1, 7
 ; RV32IMZBS-NEXT:    slli a0, a0, 7
-; RV32IMZBS-NEXT:    neg a1, a1
+; RV32IMZBS-NEXT:    andi a1, a1, 128
+; RV32IMZBS-NEXT:    seqz a1, a1
+; RV32IMZBS-NEXT:    addi a1, a1, -1
 ; RV32IMZBS-NEXT:    xor a3, a3, a5
 ; RV32IMZBS-NEXT:    xor a4, a4, t0
 ; RV32IMZBS-NEXT:    xor a3, a3, a4
@@ -7225,39 +7054,40 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwi
 ; RV64IMZBS-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64IMZBS-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64IMZBS-NEXT:    mv s0, a3
-; RV64IMZBS-NEXT:    bexti a3, a1, 1
-; RV64IMZBS-NEXT:    slli a4, a0, 1
-; RV64IMZBS-NEXT:    bexti a5, a1, 2
-; RV64IMZBS-NEXT:    slli a6, a0, 2
-; RV64IMZBS-NEXT:    bexti a7, a1, 3
-; RV64IMZBS-NEXT:    slli t0, a0, 3
-; RV64IMZBS-NEXT:    bexti t1, a1, 4
-; RV64IMZBS-NEXT:    neg a3, a3
-; RV64IMZBS-NEXT:    and a3, a3, a4
-; RV64IMZBS-NEXT:    slli a4, a0, 4
-; RV64IMZBS-NEXT:    neg a5, a5
-; RV64IMZBS-NEXT:    and a5, a5, a6
-; RV64IMZBS-NEXT:    bexti a6, a1, 5
-; RV64IMZBS-NEXT:    neg a7, a7
-; RV64IMZBS-NEXT:    and a7, a7, t0
-; RV64IMZBS-NEXT:    slli t0, a0, 5
-; RV64IMZBS-NEXT:    neg t1, t1
-; RV64IMZBS-NEXT:    and a4, t1, a4
-; RV64IMZBS-NEXT:    bexti t1, a1, 6
-; RV64IMZBS-NEXT:    neg a6, a6
-; RV64IMZBS-NEXT:    and a6, a6, t0
-; RV64IMZBS-NEXT:    slli t0, a0, 6
-; RV64IMZBS-NEXT:    neg t1, t1
-; RV64IMZBS-NEXT:    and t0, t1, t0
+; RV64IMZBS-NEXT:    slli a3, a0, 1
+; RV64IMZBS-NEXT:    slli a4, a1, 62
+; RV64IMZBS-NEXT:    slli a5, a0, 2
+; RV64IMZBS-NEXT:    slli a6, a1, 61
+; RV64IMZBS-NEXT:    slli a7, a0, 3
+; RV64IMZBS-NEXT:    slli t0, a1, 60
+; RV64IMZBS-NEXT:    slli t1, a0, 4
+; RV64IMZBS-NEXT:    srai a4, a4, 63
+; RV64IMZBS-NEXT:    and a3, a4, a3
+; RV64IMZBS-NEXT:    slli a4, a1, 59
+; RV64IMZBS-NEXT:    srai a6, a6, 63
+; RV64IMZBS-NEXT:    and a5, a6, a5
+; RV64IMZBS-NEXT:    slli a6, a0, 5
+; RV64IMZBS-NEXT:    srai t0, t0, 63
+; RV64IMZBS-NEXT:    and a7, t0, a7
+; RV64IMZBS-NEXT:    slli t0, a1, 58
+; RV64IMZBS-NEXT:    srai a4, a4, 63
+; RV64IMZBS-NEXT:    and a4, a4, t1
+; RV64IMZBS-NEXT:    slli t1, a0, 6
+; RV64IMZBS-NEXT:    srai t0, t0, 63
+; RV64IMZBS-NEXT:    and a6, t0, a6
+; RV64IMZBS-NEXT:    slli t0, a1, 57
+; RV64IMZBS-NEXT:    srai t0, t0, 63
+; RV64IMZBS-NEXT:    and t0, t0, t1
 ; RV64IMZBS-NEXT:    slli t1, a1, 63
 ; RV64IMZBS-NEXT:    srai t1, t1, 63
 ; RV64IMZBS-NEXT:    and t1, t1, a0
 ; RV64IMZBS-NEXT:    xor a3, t1, a3
 ; RV64IMZBS-NEXT:    xor a5, a5, a7
 ; RV64IMZBS-NEXT:    xor a4, a4, a6
-; RV64IMZBS-NEXT:    bexti a1, a1, 7
 ; RV64IMZBS-NEXT:    slli a0, a0, 7
-; RV64IMZBS-NEXT:    neg a1, a1
+; RV64IMZBS-NEXT:    andi a1, a1, 128
+; RV64IMZBS-NEXT:    seqz a1, a1
+; RV64IMZBS-NEXT:    addi a1, a1, -1
 ; RV64IMZBS-NEXT:    xor a3, a3, a5
 ; RV64IMZBS-NEXT:    xor a4, a4, t0
 ; RV64IMZBS-NEXT:    xor a3, a3, a4
@@ -7283,48 +7113,42 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwi
 define void @neg_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ; RV32I-LABEL: neg_commutative_clmul_i8:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a4, a1, 30
-; RV32I-NEXT:    slli a5, a0, 1
-; RV32I-NEXT:    slli a6, a1, 29
-; RV32I-NEXT:    slli a7, a0, 2
-; RV32I-NEXT:    slli t0, a1, 28
-; RV32I-NEXT:    slli t1, a0, 3
-; RV32I-NEXT:    slli t2, a1, 27
-; RV32I-NEXT:    srli a4, a4, 31
-; RV32I-NEXT:    neg a4, a4
-; RV32I-NEXT:    and a4, a4, a5
-; RV32I-NEXT:    slli a5, a0, 4
-; RV32I-NEXT:    srli a6, a6, 31
-; RV32I-NEXT:    neg a6, a6
-; RV32I-NEXT:    and a6, a6, a7
-; RV32I-NEXT:    slli a7, a1, 26
-; RV32I-NEXT:    srli t0, t0, 31
-; RV32I-NEXT:    neg t0, t0
-; RV32I-NEXT:    and t0, t0, t1
-; RV32I-NEXT:    slli t1, a0, 5
-; RV32I-NEXT:    srli t2, t2, 31
-; RV32I-NEXT:    neg t2, t2
-; RV32I-NEXT:    and a5, t2, a5
-; RV32I-NEXT:    slli t2, a1, 25
-; RV32I-NEXT:    srli a7, a7, 31
-; RV32I-NEXT:    neg a7, a7
-; RV32I-NEXT:    and a7, a7, t1
-; RV32I-NEXT:    slli t1, a0, 6
-; RV32I-NEXT:    srli t2, t2, 31
-; RV32I-NEXT:    neg t2, t2
-; RV32I-NEXT:    and t1, t2, t1
+; RV32I-NEXT:    slli a4, a0, 1
+; RV32I-NEXT:    slli a5, a1, 30
+; RV32I-NEXT:    slli a6, a0, 2
+; RV32I-NEXT:    slli a7, a1, 29
+; RV32I-NEXT:    slli t0, a0, 3
+; RV32I-NEXT:    slli t1, a1, 28
+; RV32I-NEXT:    slli t2, a0, 4
+; RV32I-NEXT:    srai a5, a5, 31
+; RV32I-NEXT:    and a4, a5, a4
+; RV32I-NEXT:    slli a5, a1, 27
+; RV32I-NEXT:    srai a7, a7, 31
+; RV32I-NEXT:    and a6, a7, a6
+; RV32I-NEXT:    slli a7, a0, 5
+; RV32I-NEXT:    srai t1, t1, 31
+; RV32I-NEXT:    and t0, t1, t0
+; RV32I-NEXT:    slli t1, a1, 26
+; RV32I-NEXT:    srai a5, a5, 31
+; RV32I-NEXT:    and a5, a5, t2
+; RV32I-NEXT:    slli t2, a0, 6
+; RV32I-NEXT:    srai t1, t1, 31
+; RV32I-NEXT:    and a7, t1, a7
+; RV32I-NEXT:    slli t1, a1, 25
+; RV32I-NEXT:    srai t1, t1, 31
+; RV32I-NEXT:    and t1, t1, t2
 ; RV32I-NEXT:    slli t2, a1, 31
-; RV32I-NEXT:    slli a1, a1, 24
 ; RV32I-NEXT:    srai t2, t2, 31
 ; RV32I-NEXT:    and t2, t2, a0
-; RV32I-NEXT:    slli a0, a0, 7
-; RV32I-NEXT:    srli a1, a1, 31
-; RV32I-NEXT:    neg a1, a1
-; RV32I-NEXT:    and a0, a1, a0
-; RV32I-NEXT:    xor a1, t2, a4
-; RV32I-NEXT:    xor a4, a6, t0
+; RV32I-NEXT:    xor a4, t2, a4
+; RV32I-NEXT:    xor a6, a6, t0
 ; RV32I-NEXT:    xor a5, a5, a7
-; RV32I-NEXT:    xor a1, a1, a4
+; RV32I-NEXT:    slli a0, a0, 7
+; RV32I-NEXT:    andi a1, a1, 128
+; RV32I-NEXT:    seqz a1, a1
+; RV32I-NEXT:    addi a1, a1, -1
+; RV32I-NEXT:    and a0, a1, a0
+; RV32I-NEXT:    xor a1, a4, a6
 ; RV32I-NEXT:    xor a4, a5, t1
 ; RV32I-NEXT:    xor a1, a1, a4
 ; RV32I-NEXT:    xor a0, a1, a0
@@ -7334,48 +7158,42 @@ define void @neg_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ;
 ; RV64I-LABEL: neg_commutative_clmul_i8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a4, a1, 62
-; RV64I-NEXT:    slli a5, a0, 1
-; RV64I-NEXT:    slli a6, a1, 61
-; RV64I-NEXT:    slli a7, a0, 2
-; RV64I-NEXT:    slli t0, a1, 60
-; RV64I-NEXT:    slli t1, a0, 3
-; RV64I-NEXT:    slli t2, a1, 59
-; RV64I-NEXT:    srli a4, a4, 63
-; RV64I-NEXT:    neg a4, a4
-; RV64I-NEXT:    and a4, a4, a5
-; RV64I-NEXT:    slli a5, a0, 4
-; RV64I-NEXT:    srli a6, a6, 63
-; RV64I-NEXT:    neg a6, a6
-; RV64I-NEXT:    and a6, a6, a7
-; RV64I-NEXT:    slli a7, a1, 58
-; RV64I-NEXT:    srli t0, t0, 63
-; RV64I-NEXT:    neg t0, t0
-; RV64I-NEXT:    and t0, t0, t1
-; RV64I-NEXT:    slli t1, a0, 5
-; RV64I-NEXT:    srli t2, t2, 63
-; RV64I-NEXT:    neg t2, t2
-; RV64I-NEXT:    and a5, t2, a5
-; RV64I-NEXT:    slli t2, a1, 57
-; RV64I-NEXT:    srli a7, a7, 63
-; RV64I-NEXT:    neg a7, a7
-; RV64I-NEXT:    and a7, a7, t1
-; RV64I-NEXT:    slli t1, a0, 6
-; RV64I-NEXT:    srli t2, t2, 63
-; RV64I-NEXT:    neg t2, t2
-; RV64I-NEXT:    and t1, t2, t1
+; RV64I-NEXT:    slli a4, a0, 1
+; RV64I-NEXT:    slli a5, a1, 62
+; RV64I-NEXT:    slli a6, a0, 2
+; RV64I-NEXT:    slli a7, a1, 61
+; RV64I-NEXT:    slli t0, a0, 3
+; RV64I-NEXT:    slli t1, a1, 60
+; RV64I-NEXT:    slli t2, a0, 4
+; RV64I-NEXT:    srai a5, a5, 63
+; RV64I-NEXT:    and a4, a5, a4
+; RV64I-NEXT:    slli a5, a1, 59
+; RV64I-NEXT:    srai a7, a7, 63
+; RV64I-NEXT:    and a6, a7, a6
+; RV64I-NEXT:    slli a7, a0, 5
+; RV64I-NEXT:    srai t1, t1, 63
+; RV64I-NEXT:    and t0, t1, t0
+; RV64I-NEXT:    slli t1, a1, 58
+; RV64I-NEXT:    srai a5, a5, 63
+; RV64I-NEXT:    and a5, a5, t2
+; RV64I-NEXT:    slli t2, a0, 6
+; RV64I-NEXT:    srai t1, t1, 63
+; RV64I-NEXT:    and a7, t1, a7
+; RV64I-NEXT:    slli t1, a1, 57
+; RV64I-NEXT:    srai t1, t1, 63
+; RV64I-NEXT:    and t1, t1, t2
 ; RV64I-NEXT:    slli t2, a1, 63
-; RV64I-NEXT:    slli a1, a1, 56
 ; RV64I-NEXT:    srai t2, t2, 63
 ; RV64I-NEXT:    and t2, t2, a0
-; RV64I-NEXT:    slli a0, a0, 7
-; RV64I-NEXT:    srli a1, a1, 63
-; RV64I-NEXT:    neg a1, a1
-; RV64I-NEXT:    and a0, a1, a0
-; RV64I-NEXT:    xor a1, t2, a4
-; RV64I-NEXT:    xor a4, a6, t0
+; RV64I-NEXT:    xor a4, t2, a4
+; RV64I-NEXT:    xor a6, a6, t0
 ; RV64I-NEXT:    xor a5, a5, a7
-; RV64I-NEXT:    xor a1, a1, a4
+; RV64I-NEXT:    slli a0, a0, 7
+; RV64I-NEXT:    andi a1, a1, 128
+; RV64I-NEXT:    seqz a1, a1
+; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    xor a1, a4, a6
 ; RV64I-NEXT:    xor a4, a5, t1
 ; RV64I-NEXT:    xor a1, a1, a4
 ; RV64I-NEXT:    xor a0, a1, a0
@@ -7385,48 +7203,42 @@ define void @neg_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ;
 ; RV32IM-LABEL: neg_commutative_clmul_i8:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    slli a4, a1, 30
-; RV32IM-NEXT:    slli a5, a0, 1
-; RV32IM-NEXT:    slli a6, a1, 29
-; RV32IM-NEXT:    slli a7, a0, 2
-; RV32IM-NEXT:    slli t0, a1, 28
-; RV32IM-NEXT:    slli t1, a0, 3
-; RV32IM-NEXT:    slli t2, a1, 27
-; RV32IM-NEXT:    srli a4, a4, 31
-; RV32IM-NEXT:    neg a4, a4
-; RV32IM-NEXT:    and a4, a4, a5
-; RV32IM-NEXT:    slli a5, a0, 4
-; RV32IM-NEXT:    srli a6, a6, 31
-; RV32IM-NEXT:    neg a6, a6
-; RV32IM-NEXT:    and a6, a6, a7
-; RV32IM-NEXT:    slli a7, a1, 26
-; RV32IM-NEXT:    srli t0, t0, 31
-; RV32IM-NEXT:    neg t0, t0
-; RV32IM-NEXT:    and t0, t0, t1
-; RV32IM-NEXT:    slli t1, a0, 5
-; RV32IM-NEXT:    srli t2, t2, 31
-; RV32IM-NEXT:    neg t2, t2
-; RV32IM-NEXT:    and a5, t2, a5
-; RV32IM-NEXT:    slli t2, a1, 25
-; RV32IM-NEXT:    srli a7, a7, 31
-; RV32IM-NEXT:    neg a7, a7
-; RV32IM-NEXT:    and a7, a7, t1
-; RV32IM-NEXT:    slli t1, a0, 6
-; RV32IM-NEXT:    srli t2, t2, 31
-; RV32IM-NEXT:    neg t2, t2
-; RV32IM-NEXT:    and t1, t2, t1
+; RV32IM-NEXT:    slli a4, a0, 1
+; RV32IM-NEXT:    slli a5, a1, 30
+; RV32IM-NEXT:    slli a6, a0, 2
+; RV32IM-NEXT:    slli a7, a1, 29
+; RV32IM-NEXT:    slli t0, a0, 3
+; RV32IM-NEXT:    slli t1, a1, 28
+; RV32IM-NEXT:    slli t2, a0, 4
+; RV32IM-NEXT:    srai a5, a5, 31
+; RV32IM-NEXT:    and a4, a5, a4
+; RV32IM-NEXT:    slli a5, a1, 27
+; RV32IM-NEXT:    srai a7, a7, 31
+; RV32IM-NEXT:    and a6, a7, a6
+; RV32IM-NEXT:    slli a7, a0, 5
+; RV32IM-NEXT:    srai t1, t1, 31
+; RV32IM-NEXT:    and t0, t1, t0
+; RV32IM-NEXT:    slli t1, a1, 26
+; RV32IM-NEXT:    srai a5, a5, 31
+; RV32IM-NEXT:    and a5, a5, t2
+; RV32IM-NEXT:    slli t2, a0, 6
+; RV32IM-NEXT:    srai t1, t1, 31
+; RV32IM-NEXT:    and a7, t1, a7
+; RV32IM-NEXT:    slli t1, a1, 25
+; RV32IM-NEXT:    srai t1, t1, 31
+; RV32IM-NEXT:    and t1, t1, t2
 ; RV32IM-NEXT:    slli t2, a1, 31
-; RV32IM-NEXT:    slli a1, a1, 24
 ; RV32IM-NEXT:    srai t2, t2, 31
 ; RV32IM-NEXT:    and t2, t2, a0
-; RV32IM-NEXT:    slli a0, a0, 7
-; RV32IM-NEXT:    srli a1, a1, 31
-; RV32IM-NEXT:    neg a1, a1
-; RV32IM-NEXT:    and a0, a1, a0
-; RV32IM-NEXT:    xor a1, t2, a4
-; RV32IM-NEXT:    xor a4, a6, t0
+; RV32IM-NEXT:    xor a4, t2, a4
+; RV32IM-NEXT:    xor a6, a6, t0
 ; RV32IM-NEXT:    xor a5, a5, a7
-; RV32IM-NEXT:    xor a1, a1, a4
+; RV32IM-NEXT:    slli a0, a0, 7
+; RV32IM-NEXT:    andi a1, a1, 128
+; RV32IM-NEXT:    seqz a1, a1
+; RV32IM-NEXT:    addi a1, a1, -1
+; RV32IM-NEXT:    and a0, a1, a0
+; RV32IM-NEXT:    xor a1, a4, a6
 ; RV32IM-NEXT:    xor a4, a5, t1
 ; RV32IM-NEXT:    xor a1, a1, a4
 ; RV32IM-NEXT:    xor a0, a1, a0
@@ -7436,48 +7248,42 @@ define void @neg_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ;
 ; RV64IM-LABEL: neg_commutative_clmul_i8:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slli a4, a1, 62
-; RV64IM-NEXT:    slli a5, a0, 1
-; RV64IM-NEXT:    slli a6, a1, 61
-; RV64IM-NEXT:    slli a7, a0, 2
-; RV64IM-NEXT:    slli t0, a1, 60
-; RV64IM-NEXT:    slli t1, a0, 3
-; RV64IM-NEXT:    slli t2, a1, 59
-; RV64IM-NEXT:    srli a4, a4, 63
-; RV64IM-NEXT:    neg a4, a4
-; RV64IM-NEXT:    and a4, a4, a5
-; RV64IM-NEXT:    slli a5, a0, 4
-; RV64IM-NEXT:    srli a6, a6, 63
-; RV64IM-NEXT:    neg a6, a6
-; RV64IM-NEXT:    and a6, a6, a7
-; RV64IM-NEXT:    slli a7, a1, 58
-; RV64IM-NEXT:    srli t0, t0, 63
-; RV64IM-NEXT:    neg t0, t0
-; RV64IM-NEXT:    and t0, t0, t1
-; RV64IM-NEXT:    slli t1, a0, 5
-; RV64IM-NEXT:    srli t2, t2, 63
-; RV64IM-NEXT:    neg t2, t2
-; RV64IM-NEXT:    and a5, t2, a5
-; RV64IM-NEXT:    slli t2, a1, 57
-; RV64IM-NEXT:    srli a7, a7, 63
-; RV64IM-NEXT:    neg a7, a7
-; RV64IM-NEXT:    and a7, a7, t1
-; RV64IM-NEXT:    slli t1, a0, 6
-; RV64IM-NEXT:    srli t2, t2, 63
-; RV64IM-NEXT:    neg t2, t2
-; RV64IM-NEXT:    and t1, t2, t1
+; RV64IM-NEXT:    slli a4, a0, 1
+; RV64IM-NEXT:    slli a5, a1, 62
+; RV64IM-NEXT:    slli a6, a0, 2
+; RV64IM-NEXT:    slli a7, a1, 61
+; RV64IM-NEXT:    slli t0, a0, 3
+; RV64IM-NEXT:    slli t1, a1, 60
+; RV64IM-NEXT:    slli t2, a0, 4
+; RV64IM-NEXT:    srai a5, a5, 63
+; RV64IM-NEXT:    and a4, a5, a4
+; RV64IM-NEXT:    slli a5, a1, 59
+; RV64IM-NEXT:    srai a7, a7, 63
+; RV64IM-NEXT:    and a6, a7, a6
+; RV64IM-NEXT:    slli a7, a0, 5
+; RV64IM-NEXT:    srai t1, t1, 63
+; RV64IM-NEXT:    and t0, t1, t0
+; RV64IM-NEXT:    slli t1, a1, 58
+; RV64IM-NEXT:    srai a5, a5, 63
+; RV64IM-NEXT:    and a5, a5, t2
+; RV64IM-NEXT:    slli t2, a0, 6
+; RV64IM-NEXT:    srai t1, t1, 63
+; RV64IM-NEXT:    and a7, t1, a7
+; RV64IM-NEXT:    slli t1, a1, 57
+; RV64IM-NEXT:    srai t1, t1, 63
+; RV64IM-NEXT:    and t1, t1, t2
 ; RV64IM-NEXT:    slli t2, a1, 63
-; RV64IM-NEXT:    slli a1, a1, 56
 ; RV64IM-NEXT:    srai t2, t2, 63
 ; RV64IM-NEXT:    and t2, t2, a0
-; RV64IM-NEXT:    slli a0, a0, 7
-; RV64IM-NEXT:    srli a1, a1, 63
-; RV64IM-NEXT:    neg a1, a1
-; RV64IM-NEXT:    and a0, a1, a0
-; RV64IM-NEXT:    xor a1, t2, a4
-; RV64IM-NEXT:    xor a4, a6, t0
+; RV64IM-NEXT:    xor a4, t2, a4
+; RV64IM-NEXT:    xor a6, a6, t0
 ; RV64IM-NEXT:    xor a5, a5, a7
-; RV64IM-NEXT:    xor a1, a1, a4
+; RV64IM-NEXT:    slli a0, a0, 7
+; RV64IM-NEXT:    andi a1, a1, 128
+; RV64IM-NEXT:    seqz a1, a1
+; RV64IM-NEXT:    addi a1, a1, -1
+; RV64IM-NEXT:    and a0, a1, a0
+; RV64IM-NEXT:    xor a1, a4, a6
 ; RV64IM-NEXT:    xor a4, a5, t1
 ; RV64IM-NEXT:    xor a1, a1, a4
 ; RV64IM-NEXT:    xor a0, a1, a0
@@ -7487,41 +7293,42 @@ define void @neg_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ;
 ; RV32IMZBS-LABEL: neg_commutative_clmul_i8:
 ; RV32IMZBS:       # %bb.0:
-; RV32IMZBS-NEXT:    bexti a4, a1, 1
-; RV32IMZBS-NEXT:    slli a5, a0, 1
-; RV32IMZBS-NEXT:    bexti a6, a1, 2
-; RV32IMZBS-NEXT:    slli a7, a0, 2
-; RV32IMZBS-NEXT:    bexti t0, a1, 3
-; RV32IMZBS-NEXT:    slli t1, a0, 3
-; RV32IMZBS-NEXT:    bexti t2, a1, 4
-; RV32IMZBS-NEXT:    neg a4, a4
-; RV32IMZBS-NEXT:    and a4, a4, a5
-; RV32IMZBS-NEXT:    slli a5, a0, 4
-; RV32IMZBS-NEXT:    neg a6, a6
-; RV32IMZBS-NEXT:    and a6, a6, a7
-; RV32IMZBS-NEXT:    bexti a7, a1, 5
-; RV32IMZBS-NEXT:    neg t0, t0
-; RV32IMZBS-NEXT:    and t0, t0, t1
-; RV32IMZBS-NEXT:    slli t1, a0, 5
-; RV32IMZBS-NEXT:    neg t2, t2
-; RV32IMZBS-NEXT:    and a5, t2, a5
-; RV32IMZBS-NEXT:    bexti t2, a1, 6
-; RV32IMZBS-NEXT:    neg a7, a7
-; RV32IMZBS-NEXT:    and a7, a7, t1
-; RV32IMZBS-NEXT:    slli t1, a0, 6
-; RV32IMZBS-NEXT:    neg t2, t2
-; RV32IMZBS-NEXT:    and t1, t2, t1
+; RV32IMZBS-NEXT:    slli a4, a0, 1
+; RV32IMZBS-NEXT:    slli a5, a1, 30
+; RV32IMZBS-NEXT:    slli a6, a0, 2
+; RV32IMZBS-NEXT:    slli a7, a1, 29
+; RV32IMZBS-NEXT:    slli t0, a0, 3
+; RV32IMZBS-NEXT:    slli t1, a1, 28
+; RV32IMZBS-NEXT:    slli t2, a0, 4
+; RV32IMZBS-NEXT:    srai a5, a5, 31
+; RV32IMZBS-NEXT:    and a4, a5, a4
+; RV32IMZBS-NEXT:    slli a5, a1, 27
+; RV32IMZBS-NEXT:    srai a7, a7, 31
+; RV32IMZBS-NEXT:    and a6, a7, a6
+; RV32IMZBS-NEXT:    slli a7, a0, 5
+; RV32IMZBS-NEXT:    srai t1, t1, 31
+; RV32IMZBS-NEXT:    and t0, t1, t0
+; RV32IMZBS-NEXT:    slli t1, a1, 26
+; RV32IMZBS-NEXT:    srai a5, a5, 31
+; RV32IMZBS-NEXT:    and a5, a5, t2
+; RV32IMZBS-NEXT:    slli t2, a0, 6
+; RV32IMZBS-NEXT:    srai t1, t1, 31
+; RV32IMZBS-NEXT:    and a7, t1, a7
+; RV32IMZBS-NEXT:    slli t1, a1, 25
+; RV32IMZBS-NEXT:    srai t1, t1, 31
+; RV32IMZBS-NEXT:    and t1, t1, t2
 ; RV32IMZBS-NEXT:    slli t2, a1, 31
-; RV32IMZBS-NEXT:    bexti a1, a1, 7
 ; RV32IMZBS-NEXT:    srai t2, t2, 31
 ; RV32IMZBS-NEXT:    and t2, t2, a0
-; RV32IMZBS-NEXT:    slli a0, a0, 7
-; RV32IMZBS-NEXT:    neg a1, a1
-; RV32IMZBS-NEXT:    and a0, a1, a0
-; RV32IMZBS-NEXT:    xor a1, t2, a4
-; RV32IMZBS-NEXT:    xor a4, a6, t0
+; RV32IMZBS-NEXT:    xor a4, t2, a4
+; RV32IMZBS-NEXT:    xor a6, a6, t0
 ; RV32IMZBS-NEXT:    xor a5, a5, a7
-; RV32IMZBS-NEXT:    xor a1, a1, a4
+; RV32IMZBS-NEXT:    slli a0, a0, 7
+; RV32IMZBS-NEXT:    andi a1, a1, 128
+; RV32IMZBS-NEXT:    seqz a1, a1
+; RV32IMZBS-NEXT:    addi a1, a1, -1
+; RV32IMZBS-NEXT:    and a0, a1, a0
+; RV32IMZBS-NEXT:    xor a1, a4, a6
 ; RV32IMZBS-NEXT:    xor a4, a5, t1
 ; RV32IMZBS-NEXT:    xor a1, a1, a4
 ; RV32IMZBS-NEXT:    xor a0, a1, a0
@@ -7531,41 +7338,42 @@ define void @neg_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ;
 ; RV64IMZBS-LABEL: neg_commutative_clmul_i8:
 ; RV64IMZBS:       # %bb.0:
-; RV64IMZBS-NEXT:    bexti a4, a1, 1
-; RV64IMZBS-NEXT:    slli a5, a0, 1
-; RV64IMZBS-NEXT:    bexti a6, a1, 2
-; RV64IMZBS-NEXT:    slli a7, a0, 2
-; RV64IMZBS-NEXT:    bexti t0, a1, 3
-; RV64IMZBS-NEXT:    slli t1, a0, 3
-; RV64IMZBS-NEXT:    bexti t2, a1, 4
-; RV64IMZBS-NEXT:    neg a4, a4
-; RV64IMZBS-NEXT:    and a4, a4, a5
-; RV64IMZBS-NEXT:    slli a5, a0, 4
-; RV64IMZBS-NEXT:    neg a6, a6
-; RV64IMZBS-NEXT:    and a6, a6, a7
-; RV64IMZBS-NEXT:    bexti a7, a1, 5
-; RV64IMZBS-NEXT:    neg t0, t0
-; RV64IMZBS-NEXT:    and t0, t0, t1
-; RV64IMZBS-NEXT:    slli t1, a0, 5
-; RV64IMZBS-NEXT:    neg t2, t2
-; RV64IMZBS-NEXT:    and a5, t2, a5
-; RV64IMZBS-NEXT:    bexti t2, a1, 6
-; RV64IMZBS-NEXT:    neg a7, a7
-; RV64IMZBS-NEXT:    and a7, a7, t1
-; RV64IMZBS-NEXT:    slli t1, a0, 6
-; RV64IMZBS-NEXT:    neg t2, t2
-; RV64IMZBS-NEXT:    and t1, t2, t1
+; RV64IMZBS-NEXT:    slli a4, a0, 1
+; RV64IMZBS-NEXT:    slli a5, a1, 62
+; RV64IMZBS-NEXT:    slli a6, a0, 2
+; RV64IMZBS-NEXT:    slli a7, a1, 61
+; RV64IMZBS-NEXT:    slli t0, a0, 3
+; RV64IMZBS-NEXT:    slli t1, a1, 60
+; RV64IMZBS-NEXT:    slli t2, a0, 4
+; RV64IMZBS-NEXT:    srai a5, a5, 63
+; RV64IMZBS-NEXT:    and a4, a5, a4
+; RV64IMZBS-NEXT:    slli a5, a1, 59
+; RV64IMZBS-NEXT:    srai a7, a7, 63
+; RV64IMZBS-NEXT:    and a6, a7, a6
+; RV64IMZBS-NEXT:    slli a7, a0, 5
+; RV64IMZBS-NEXT:    srai t1, t1, 63
+; RV64IMZBS-NEXT:    and t0, t1, t0
+; RV64IMZBS-NEXT:    slli t1, a1, 58
+; RV64IMZBS-NEXT:    srai a5, a5, 63
+; RV64IMZBS-NEXT:    and a5, a5, t2
+; RV64IMZBS-NEXT:    slli t2, a0, 6
+; RV64IMZBS-NEXT:    srai t1, t1, 63
+; RV64IMZBS-NEXT:    and a7, t1, a7
+; RV64IMZBS-NEXT:    slli t1, a1, 57
+; RV64IMZBS-NEXT:    srai t1, t1, 63
+; RV64IMZBS-NEXT:    and t1, t1, t2
 ; RV64IMZBS-NEXT:    slli t2, a1, 63
-; RV64IMZBS-NEXT:    bexti a1, a1, 7
 ; RV64IMZBS-NEXT:    srai t2, t2, 63
 ; RV64IMZBS-NEXT:    and t2, t2, a0
-; RV64IMZBS-NEXT:    slli a0, a0, 7
-; RV64IMZBS-NEXT:    neg a1, a1
-; RV64IMZBS-NEXT:    and a0, a1, a0
-; RV64IMZBS-NEXT:    xor a1, t2, a4
-; RV64IMZBS-NEXT:    xor a4, a6, t0
+; RV64IMZBS-NEXT:    xor a4, t2, a4
+; RV64IMZBS-NEXT:    xor a6, a6, t0
 ; RV64IMZBS-NEXT:    xor a5, a5, a7
-; RV64IMZBS-NEXT:    xor a1, a1, a4
+; RV64IMZBS-NEXT:    slli a0, a0, 7
+; RV64IMZBS-NEXT:    andi a1, a1, 128
+; RV64IMZBS-NEXT:    seqz a1, a1
+; RV64IMZBS-NEXT:    addi a1, a1, -1
+; RV64IMZBS-NEXT:    and a0, a1, a0
+; RV64IMZBS-NEXT:    xor a1, a4, a6
 ; RV64IMZBS-NEXT:    xor a4, a5, t1
 ; RV64IMZBS-NEXT:    xor a1, a1, a4
 ; RV64IMZBS-NEXT:    xor a0, a1, a0
