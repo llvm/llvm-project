@@ -318,9 +318,6 @@ public:
   virtual LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                           const VarDecl *D) const;
 
-  /// Get the AST address space for alloca.
-  virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
-
   /// Get address space of pointer parameter for __cxa_atexit.
   virtual LangAS getAddrSpaceOfCxaAtexitPtrParam() const {
     return LangAS::Default;

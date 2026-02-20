@@ -209,8 +209,7 @@ RawAddress CodeGenFunction::CreateMemTemp(QualType Ty, CharUnits Align,
     }
     auto *VectorTy = llvm::FixedVectorType::get(ArrayElementTy, ArrayElements);
 
-    Result = Address(Result.getPointer(), VectorTy, Result.getAlignment(),
-                     KnownNonNull);
+    Result = Result.withElementType(VectorTy);
   }
   return Result;
 }

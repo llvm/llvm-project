@@ -26,12 +26,10 @@ struct __half2 {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca <2 x half>, align 4, addrspace(5)
-// CHECK-NEXT:    [[ADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR_ADDR]] to ptr
-// CHECK-NEXT:    [[VAL_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VAL_ADDR]] to ptr
-// CHECK-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    store <2 x half> [[VAL]], ptr [[VAL_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[VAL_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store ptr [[ADDR]], ptr addrspace(5) [[ADDR_ADDR]], align 8
+// CHECK-NEXT:    store <2 x half> [[VAL]], ptr addrspace(5) [[VAL_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[ADDR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(5) [[VAL_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], <2 x half> [[TMP1]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4:![0-9]+]]
 // CHECK-NEXT:    ret <2 x half> [[TMP2]]
 //
