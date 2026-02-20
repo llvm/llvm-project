@@ -517,7 +517,8 @@ class TrivialFunctionAnalysisVisitor
   }
 
   bool CanTriviallyDestruct(QualType Ty) {
-    assert(!Ty.isNull());
+    if (Ty.isNull())
+      return false;
 
     // T*, T& or T&& does not run its destructor.
     if (Ty->isPointerOrReferenceType())
@@ -529,7 +530,7 @@ class TrivialFunctionAnalysisVisitor
 
     if (const auto *R = Ty->getAsCXXRecordDecl()) {
       // C++ trivially destructible classes are fine.
-      if (R->hasTrivialDestructor())
+      if (R->hasDefinition() && R->hasTrivialDestructor())
         return true;
 
       // For Webkit, side-effects are fine as long as we don't delete objects,
