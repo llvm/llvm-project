@@ -1703,20 +1703,14 @@ void VPPhiAccessors::removeIncomingValueFor(VPBlockBase *IncomingBlock) const {
 
 VPValue *
 VPPhiAccessors::getIncomingValueForBlock(const VPBasicBlock *VPBB) const {
-  for (unsigned Idx = 0; Idx != getNumIncoming(); ++Idx)
-    if (getIncomingBlock(Idx) == VPBB)
-      return getIncomingValue(Idx);
-  llvm_unreachable("VPBB is not an incoming block");
+  VPRecipeBase *R = const_cast<VPRecipeBase *>(getAsRecipe());
+  return getIncomingValue(R->getParent()->getIndexForPredecessor(VPBB));
 }
 
 void VPPhiAccessors::setIncomingValueForBlock(const VPBasicBlock *VPBB,
                                               VPValue *V) const {
-  for (unsigned Idx = 0; Idx != getNumIncoming(); ++Idx)
-    if (getIncomingBlock(Idx) == VPBB) {
-      const_cast<VPRecipeBase *>(getAsRecipe())->setOperand(Idx, V);
-      return;
-    }
-  llvm_unreachable("VPBB is not an incoming block");
+  VPRecipeBase *R = const_cast<VPRecipeBase *>(getAsRecipe());
+  R->setOperand(R->getParent()->getIndexForPredecessor(VPBB), V);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
