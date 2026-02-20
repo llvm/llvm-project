@@ -743,7 +743,8 @@ public:
                               SmallSet<Register, 4> &RegsToUpdate,
                               MachineInstr **KilledDef = nullptr) const;
   bool foldFrameOffset(MachineInstr &MI) const;
-  bool combineRLWINM(MachineInstr &MI, MachineInstr **ToErase = nullptr) const;
+  bool simplifyRotateAndMaskInstr(MachineInstr &MI,
+                                  MachineInstr *&ToErase) const;
   bool isADDIInstrEligibleForFolding(MachineInstr &ADDIMI, int64_t &Imm) const;
   bool isADDInstrEligibleForFolding(MachineInstr &ADDMI) const;
   bool isImmInstrEligibleForFolding(MachineInstr &MI, unsigned &BaseReg,
