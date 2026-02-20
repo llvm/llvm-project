@@ -819,6 +819,34 @@ add_header_library(
 )
 
 add_header_library(
+  fadd
+  HDRS
+    fadd.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  faddf128
+  HDRS
+    faddf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  faddl
+  HDRS
+    faddl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   ffmal
   HDRS
     ffmal.h
@@ -916,6 +944,71 @@ add_header_library(
     floorl.h
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fmax
+  HDRS
+    fmax.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
+)
+
+add_header_library(
+  fmaxbf16
+  HDRS
+    fmaxbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
+)
+
+add_header_library(
+  fmaxf
+  HDRS
+    fmaxf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
+)
+
+add_header_library(
+  fmaxf128
+  HDRS
+    fmaxf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fmaxf16
+  HDRS
+    fmaxf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
+)
+
+add_header_library(
+  fmaxl
+  HDRS
+    fmaxl.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.config
 )
 

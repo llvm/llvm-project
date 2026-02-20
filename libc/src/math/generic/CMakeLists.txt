@@ -548,7 +548,7 @@ add_entrypoint_object(
   HDRS
     ../fadd.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.math.fadd
 )
 
 add_entrypoint_object(
@@ -558,7 +558,7 @@ add_entrypoint_object(
   HDRS
     ../faddl.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.math.faddl
 )
 
 add_entrypoint_object(
@@ -568,8 +568,7 @@ add_entrypoint_object(
   HDRS
     ../faddf128.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.add_sub
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.faddf128
 )
 
 add_entrypoint_object(
@@ -2153,9 +2152,7 @@ add_entrypoint_object(
   HDRS
     ../fmax.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.fmax
 )
 
 add_entrypoint_object(
@@ -2165,9 +2162,7 @@ add_entrypoint_object(
   HDRS
     ../fmaxf.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.fmaxf
 )
 
 add_entrypoint_object(
@@ -2177,7 +2172,7 @@ add_entrypoint_object(
   HDRS
     ../fmaxl.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.fmaxl
 )
 
 add_entrypoint_object(
@@ -2187,8 +2182,7 @@ add_entrypoint_object(
   HDRS
     ../fmaxf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.fmaxf128
 )
 
 add_entrypoint_object(
@@ -2198,10 +2192,7 @@ add_entrypoint_object(
   HDRS
     ../fmaxf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.fmaxf16
 )
 
 add_entrypoint_object(
@@ -2211,13 +2202,7 @@ add_entrypoint_object(
   HDRS
     ../fmaxbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.fmaxbf16
 )
 
 add_entrypoint_object(
