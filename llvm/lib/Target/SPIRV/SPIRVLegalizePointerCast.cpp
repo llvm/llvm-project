@@ -78,18 +78,48 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     Value *AssignValue = NewLoad;
     if (TargetType->getElementType() != SourceType->getElementType()) {
       const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
-      [[maybe_unused]] TypeSize TargetTypeSize =
-          DL.getTypeSizeInBits(TargetType);
-      [[maybe_unused]] TypeSize SourceTypeSize =
-          DL.getTypeSizeInBits(SourceType);
-      assert(TargetTypeSize == SourceTypeSize);
+      TypeSize TargetTypeSize = DL.getTypeSizeInBits(TargetType);
+      TypeSize SourceTypeSize = DL.getTypeSizeInBits(SourceType);
+      // Bitcast to a same-bitwidth vector with TargetType's element type.
+      // When sizes differ, use an intermediate type to preserve bitwidth.
+      FixedVectorType *BitcastType = TargetType;
+      if (TargetTypeSize != SourceTypeSize) {
+        unsigned ElemBits = TargetType->getElementType()->getScalarSizeInBits();
+        if (SourceTypeSize % ElemBits == 0) {
+          BitcastType = FixedVectorType::get(TargetType->getElementType(),
+                                             SourceTypeSize / ElemBits);
+        } else {
+          // Source total bits aren't evenly divisible by target element bits.
+          // Resize source (extract or pad) to match target bit width using
+          // source element type, then bitcast to target.
+          unsigned SourceElemBits =
+              SourceType->getElementType()->getScalarSizeInBits();
+          assert(TargetTypeSize % SourceElemBits == 0 &&
+                 "Target size must be a multiple of source element size");
+          unsigned NumNeeded = TargetTypeSize / SourceElemBits;
+          unsigned NumSource = SourceType->getNumElements();
+          auto *ResizedType =
+              FixedVectorType::get(SourceType->getElementType(), NumNeeded);
+          SmallVector<int> Mask(NumNeeded);
+          for (unsigned I = 0; I < NumNeeded; ++I)
+            Mask[I] = (I < NumSource) ? static_cast<int>(I) : -1;
+          Value *Resized = B.CreateShuffleVector(NewLoad, NewLoad, Mask);
+          buildAssignType(B, ResizedType, Resized);
+          AssignValue = B.CreateIntrinsic(Intrinsic::spv_bitcast,
+                                          {TargetType, ResizedType}, {Resized});
+          buildAssignType(B, TargetType, AssignValue);
+          return AssignValue;
+        }
+      }
       AssignValue = B.CreateIntrinsic(Intrinsic::spv_bitcast,
-                                      {TargetType, SourceType}, {NewLoad});
-      buildAssignType(B, TargetType, AssignValue);
-      return AssignValue;
+                                      {BitcastType, SourceType}, {NewLoad});
+      buildAssignType(B, BitcastType, AssignValue);
+      if (BitcastType == TargetType)
+        return AssignValue;
     }
 
-    assert(TargetType->getNumElements() < SourceType->getNumElements());
+    assert(TargetType->getNumElements() <
+           cast<FixedVectorType>(AssignValue->getType())->getNumElements());
     SmallVector<int> Mask(/* Size= */ TargetType->getNumElements());
     for (unsigned I = 0; I < TargetType->getNumElements(); ++I)
       Mask[I] = I;
