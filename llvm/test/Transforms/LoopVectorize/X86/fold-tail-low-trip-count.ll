@@ -6,20 +6,38 @@ target triple = "x86_64-pc-windows-gnu"
 define ptr @low_trip_count_via_profile_info_with_live_out(ptr align 16 %start, ptr align 16 %end, ptr noalias %src) #0 {
 ; CHECK-LABEL: define ptr @low_trip_count_via_profile_info_with_live_out(
 ; CHECK-SAME: ptr align 16 [[START:%.*]], ptr align 16 [[END:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[START]], %[[ENTRY]] ], [ [[PTR_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP1]], 63
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 64
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-NEXT:    [[PTR_NEXT_LCSSA:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP1]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <64 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <64 x i64> [[BROADCAST_SPLATINSERT]], <64 x i64> poison, <64 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[IV]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <64 x i64> poison, i64 [[IV]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <64 x i64> [[BROADCAST_SPLATINSERT3]], <64 x i64> poison, <64 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC_IV:%.*]] = add <64 x i64> [[BROADCAST_SPLAT4]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23, i64 24, i64 25, i64 26, i64 27, i64 28, i64 29, i64 30, i64 31, i64 32, i64 33, i64 34, i64 35, i64 36, i64 37, i64 38, i64 39, i64 40, i64 41, i64 42, i64 43, i64 44, i64 45, i64 46, i64 47, i64 48, i64 49, i64 50, i64 51, i64 52, i64 53, i64 54, i64 55, i64 56, i64 57, i64 58, i64 59, i64 60, i64 61, i64 62, i64 63>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule <64 x i64> [[VEC_IV]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[IV_NEXT]]
-; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[GEP_SRC]], align 1
-; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr i8, ptr [[PTR]], i64 1
-; CHECK-NEXT:    store i8 [[L]], ptr [[PTR]], align 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq ptr [[PTR]], [[END]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <64 x i8> @llvm.masked.load.v64i8.p0(ptr align 1 [[GEP_SRC]], <64 x i1> [[TMP3]], <64 x i8> poison)
+; CHECK-NEXT:    call void @llvm.masked.store.v64i8.p0(<64 x i8> [[WIDE_MASKED_LOAD]], ptr align 1 [[NEXT_GEP]], <64 x i1> [[TMP3]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[IV]], 64
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[EXIT:.*]], label %[[VECTOR_BODY]], !prof [[PROF0:![0-9]+]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[PTR_NEXT_LCSSA:%.*]] = phi ptr [ [[PTR_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret ptr [[PTR_NEXT_LCSSA]]
 ;
 entry:
@@ -70,7 +88,7 @@ define void @low_trip_count_via_profile_info(ptr align 16 %start, ptr align 16 %
 ; CHECK-NEXT:    call void @llvm.masked.store.v64i8.p0(<64 x i8> [[WIDE_MASKED_LOAD]], ptr align 1 [[NEXT_GEP]], <64 x i1> [[TMP2]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 64
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF0]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:

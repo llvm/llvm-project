@@ -463,9 +463,8 @@ struct VPlanTransforms {
   /// Update the resume phis in the scalar preheader after creating wide recipes
   /// for first-order recurrences, reductions and inductions. End values for
   /// inductions are added to \p IVEndValues.
-  static void
-  updateScalarResumePhis(VPlan &Plan,
-                         DenseMap<VPValue *, VPValue *> &IVEndValues);
+  static void updateScalarResumePhis(
+      VPlan &Plan, DenseMap<VPValue *, VPValue *> &IVEndValues, bool FoldTail);
 
   /// Handle users in the exit block for first order reductions in the original
   /// exit block. The penultimate value of recurrences is fed to their LCSSA phi
