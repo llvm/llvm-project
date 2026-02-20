@@ -2368,6 +2368,12 @@ public:
     llvm_unreachable("unknown number of operands necessary");
   }
 
+  /// Return false if \p MBB whose any predecessor is not analyzable is not safe
+  /// to do \p BranchFolding.
+  virtual bool isMBBSafeToBranchFolding(const MachineBasicBlock &MBB) const {
+    return true;
+  }
+
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;

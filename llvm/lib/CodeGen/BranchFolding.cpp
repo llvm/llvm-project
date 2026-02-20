@@ -1356,6 +1356,19 @@ static void salvageDebugInfoFromEmptyBlock(const TargetInstrInfo *TII,
       copyDebugInfoToPredecessor(TII, MBB, *PredBB);
 }
 
+static bool areAllPredsAnalyzable(const llvm::TargetInstrInfo *TII,
+                                  MachineBasicBlock *MBB) {
+  for (auto itr = MBB->pred_begin(); itr != MBB->pred_end(); ++itr) {
+    MachineBasicBlock *CurTBB = nullptr, *CurFBB = nullptr;
+    SmallVector<MachineOperand, 4> CurCond;
+    bool CantAnalyzable = TII->analyzeBranch(**itr, CurTBB, CurFBB, CurCond,
+                                             /*AllowModify*/ false);
+    if (CantAnalyzable)
+      return false;
+  }
+  return true;
+}
+
 bool BranchFolder::OptimizeBlock(MachineBasicBlock *MBB) {
   bool MadeChange = false;
   MachineFunction &MF = *MBB->getParent();
@@ -1399,6 +1412,9 @@ ReoptimizeBlock:
       // TODO: Is it ever worth rewriting predecessors which don't already
       // jump to a landing pad, and so can safely jump to the fallthrough?
     } else if (MBB->isSuccessor(&*FallThrough)) {
+      if (!TII->isMBBSafeToBranchFolding(*MBB) &&
+          !areAllPredsAnalyzable(TII, MBB))
+        return MadeChange;
       // Rewrite all predecessors of the old block to go to the fallthrough
       // instead.
       while (!MBB->pred_empty()) {
