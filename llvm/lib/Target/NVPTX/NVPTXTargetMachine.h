@@ -76,6 +76,9 @@ public:
 
   std::pair<const Value *, unsigned>
   getPredicatedAddrSpace(const Value *V) const override;
+  bool getMutableLSBSizeInAddrSpaces(
+      SmallVectorImpl<std::pair<unsigned, unsigned>> &AsLSBSizePairs)
+      const override;
 }; // NVPTXTargetMachine.
 
 class NVPTXTargetMachine32 : public NVPTXTargetMachine {

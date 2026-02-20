@@ -572,6 +572,19 @@ public:
   LLVM_ABI KnownBits computeKnownBitsAddrSpaceCast(
       unsigned FromAS, unsigned ToAS, const KnownBits &FromPtrBits) const;
 
+  /// Return true if the LSB bit of the target address space is mutable to bit
+  /// change. It means the bit changes in LSB doesn't affect address space cast.
+  /// \p AsLSBSizePairs return the LSB bit size corresponding to the address
+  /// space. Take the following code on NVPTX as an example.
+  ///   %gp = addrspacecast ptr addrspace(2) %sp to ptr
+  ///   %a = ptrtoint ptr %gp to i64
+  ///   %b = xor i64 7, %a
+  ///   %gp2 = inttoptr i64 %b to ptr
+  /// Since only lsb 3 bits are changed, we can infer %gp2 is retain the address
+  /// space 2.
+  LLVM_ABI bool getMutableLSBSizeInAddrSpaces(
+      SmallVectorImpl<std::pair<unsigned, unsigned>> &AsLSBSizePairs) const;
+
   /// Return true if globals in this address space can have initializers other
   /// than `undef`.
   LLVM_ABI bool

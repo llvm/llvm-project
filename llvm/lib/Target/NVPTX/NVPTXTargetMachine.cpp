@@ -287,6 +287,16 @@ NVPTXTargetMachine::getPredicatedAddrSpace(const Value *V) const {
   return std::make_pair(nullptr, -1);
 }
 
+bool NVPTXTargetMachine::getMutableLSBSizeInAddrSpaces(
+    SmallVectorImpl<std::pair<unsigned, unsigned>> &AsLSBSizePairs) const {
+  // Address change within 4K size does not change the original address space
+  // and is safe to perform address cast form SrcAS to DstAS.
+  AsLSBSizePairs.clear();
+  AsLSBSizePairs.push_back({llvm::ADDRESS_SPACE_GLOBAL, 12});
+  AsLSBSizePairs.push_back({llvm::ADDRESS_SPACE_SHARED, 12});
+  return true;
+}
+
 void NVPTXPassConfig::addEarlyCSEOrGVNPass() {
   if (getOptLevel() == CodeGenOptLevel::Aggressive)
     addPass(createGVNPass());

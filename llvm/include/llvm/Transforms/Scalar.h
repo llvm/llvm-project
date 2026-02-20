@@ -158,6 +158,10 @@ LLVM_ABI Pass *createMergeICmpsLegacyPass();
 // obtained from the TargetTransformInfo.
 //
 LLVM_ABI FunctionPass *
+createInferAddressSpacesPreparePass(unsigned AddressSpace = ~0u);
+LLVM_ABI extern char &InferAddressSpacesPrepareID;
+
+LLVM_ABI FunctionPass *
 createInferAddressSpacesPass(unsigned AddressSpace = ~0u);
 LLVM_ABI extern char &InferAddressSpacesID;
 

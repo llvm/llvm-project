@@ -433,6 +433,13 @@ public:
     return getTLI()->getTargetMachine().isNoopAddrSpaceCast(FromAS, ToAS);
   }
 
+  bool getMutableLSBSizeInAddrSpaces(
+      SmallVectorImpl<std::pair<unsigned, unsigned>> &AsLSBSizePairs)
+      const override {
+    return getTLI()->getTargetMachine().getMutableLSBSizeInAddrSpaces(
+        AsLSBSizePairs);
+  }
+
   unsigned getAssumedAddrSpace(const Value *V) const override {
     return getTLI()->getTargetMachine().getAssumedAddrSpace(V);
   }

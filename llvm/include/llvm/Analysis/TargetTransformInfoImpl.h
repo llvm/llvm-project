@@ -193,6 +193,11 @@ public:
     return FromPtrBits.anyextOrTrunc(ToASBitSize);
   }
 
+  virtual bool getMutableLSBSizeInAddrSpaces(
+      SmallVectorImpl<std::pair<unsigned, unsigned>> &AsLSBSizePairs) const {
+    return false;
+  }
+
   virtual bool
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const {
     return AS == 0;
