@@ -488,8 +488,8 @@ static hlsl::Binding getHandleIntrinsicBinding(IntrinsicInst *Handle,
   return hlsl::Binding(Class, Space, LowerBound, UpperBound, nullptr);
 }
 namespace {
-/// Helper for propogating the current handle and ptr indicies.
-struct AccessIndicies {
+/// Helper for propagating the current handle and ptr indices.
+struct AccessIndices {
   Value *GetPtrIdx;
   Value *HandleIdx;
 
@@ -497,14 +497,13 @@ struct AccessIndicies {
 };
 } // namespace
 
-// getAccessIndicies traverses up the control flow that a ptr came from and
-// propagates back the indicies used to access the resource (AccessIndicies):
+// getAccessIndices traverses up the control flow that a ptr came from and
+// propagates back the indicies used to access the resource (AccessIndices):
 //
 //  - GetPtrIdx is the index of dx.resource.getpointer
 //  - HandleIdx is the index of dx.resource.handlefrom.*
-static AccessIndicies
-getAccessIndicies(Instruction *I,
-                  SmallSetVector<Instruction *, 16> &DeadInsts) {
+static AccessIndices
+getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
     if (llvm::is_contained(HandleIntrins, II->getIntrinsicID())) {
       DeadInsts.insert(II);
@@ -513,7 +512,7 @@ getAccessIndicies(Instruction *I,
 
     if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
       auto *V = dyn_cast<Instruction>(II->getArgOperand(/*Handle=*/0));
-      auto AccessIdx = getAccessIndicies(V, DeadInsts);
+      auto AccessIdx = getAccessIndices(V, DeadInsts);
       assert(!AccessIdx.hasGetPtrIdx() &&
              "Encountered multiple dx.resource.getpointers in ptr chain?");
       AccessIdx.GetPtrIdx = II->getArgOperand(1);
@@ -535,7 +534,7 @@ getAccessIndicies(Instruction *I,
     for (unsigned I = 0; I < NumEdges; I++) {
       auto *BB = Phi->getIncomingBlock(I);
       auto *V = dyn_cast<Instruction>(Phi->getIncomingValue(I));
-      auto AccessIdx = getAccessIndicies(V, DeadInsts);
+      auto AccessIdx = getAccessIndices(V, DeadInsts);
       HasGetPtr &= AccessIdx.hasGetPtrIdx();
       if (HasGetPtr)
         GetPtrPhi->addIncoming(AccessIdx.GetPtrIdx, BB);
@@ -555,10 +554,10 @@ getAccessIndicies(Instruction *I,
 
   if (auto *Select = dyn_cast<SelectInst>(I)) {
     auto *TrueV = dyn_cast<Instruction>(Select->getTrueValue());
-    auto TrueAccessIdx = getAccessIndicies(TrueV, DeadInsts);
+    auto TrueAccessIdx = getAccessIndices(TrueV, DeadInsts);
 
     auto *FalseV = dyn_cast<Instruction>(Select->getFalseValue());
-    auto FalseAccessIdx = getAccessIndicies(FalseV, DeadInsts);
+    auto FalseAccessIdx = getAccessIndices(FalseV, DeadInsts);
 
     IRBuilder<> Builder(Select);
     Value *GetPtrSelect = nullptr;
@@ -579,9 +578,9 @@ getAccessIndicies(Instruction *I,
 }
 
 static void
-replaceHandleWithIndicies(Instruction *Ptr, IntrinsicInst *OldHandle,
-                          SmallSetVector<Instruction *, 16> &DeadInsts) {
-  auto AccessIdx = getAccessIndicies(Ptr, DeadInsts);
+replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
+                         SmallSetVector<Instruction *, 16> &DeadInsts) {
+  auto AccessIdx = getAccessIndices(Ptr, DeadInsts);
 
   IRBuilder<> Builder(Ptr);
   IntrinsicInst *Handle = cast<IntrinsicInst>(OldHandle->clone());
@@ -597,12 +596,12 @@ replaceHandleWithIndicies(Instruction *Ptr, IntrinsicInst *OldHandle,
 }
 
 // Try to legalize dx.resource.handlefrom.*.binding and dx.resource.getpointer
-// calls with their respective index values and propogate the index values to
+// calls with their respective index values and propagate the index values to
 // be used at resource access.
 //
 // If it can't be transformed to be legal then:
 //
-// Reports an error if a resource access is not guarenteed to be into a unique
+// Reports an error if a resource access is not guaranteed to be into a unique
 // global resource.
 //
 // Returns true if any changes are made.
@@ -627,7 +626,7 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
           continue;
         }
 
-        replaceHandleWithIndicies(PtrOp, Handles[0], DeadInsts);
+        replaceHandleWithIndices(PtrOp, Handles[0], DeadInsts);
       }
 
   bool MadeChanges = DeadInsts.size() > 0;
