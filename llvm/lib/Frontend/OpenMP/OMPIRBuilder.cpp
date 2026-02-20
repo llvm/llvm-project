@@ -11544,6 +11544,67 @@ void OpenMPIRBuilder::loadOffloadInfoMetadata(vfs::FileSystem &VFS,
   loadOffloadInfoMetadata(*M.get());
 }
 
+OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
+    LocationDescription Loc, llvm::Value *TripCount, IteratorBodyGenTy BodyGen,
+    llvm::StringRef Name) {
+  IRBuilderBase &B = Builder;
+  B.restoreIP(Loc.IP);
+
+  BasicBlock *CurBB = Builder.GetInsertBlock();
+  assert(CurBB &&
+         "expected a valid insertion block for creating an iterator loop");
+  Function *F = CurBB->getParent();
+  LLVMContext &Ctx = F->getContext();
+
+  // If splitting at end() but CurBB has no terminator, make it well-formed
+  // first. This happens in some pipelines where blocks are still under
+  // construction.
+  if (B.GetInsertPoint() == CurBB->end() && !CurBB->getTerminator()) {
+    BasicBlock *TmpCont = BasicBlock::Create(Ctx, "omp.it.tmp.cont", F);
+    B.SetInsertPoint(CurBB);
+    B.CreateBr(TmpCont);
+
+    // The terminator we just inserted is now the "end" of CurBB. To split after
+    // it, set insertion point to CurBB->end() (which is fine now).
+    B.SetInsertPoint(CurBB->end());
+  }
+
+  BasicBlock *ContBB =
+      CurBB->splitBasicBlock(Builder.GetInsertPoint(), "omp.it.cont");
+  // Remove the branch to contBB since we will branch to contBB after the loop
+  CurBB->getTerminator()->eraseFromParent();
+
+  CanonicalLoopInfo *CLI =
+      createLoopSkeleton(B.getCurrentDebugLocation(), TripCount, F,
+                         /*PreInsertBefore=*/ContBB,
+                         /*PostInsertBefore=*/ContBB, Name);
+
+  // Enter loop from original block.
+  B.SetInsertPoint(CurBB);
+  B.CreateBr(CLI->getPreheader());
+
+  // Remove the unconditional branch inserted by createLoopSkeleton in the body
+  if (Instruction *T = CLI->getBody()->getTerminator())
+    T->eraseFromParent();
+
+  InsertPointTy BodyIP = CLI->getBodyIP();
+  if (llvm::Error Err = BodyGen(BodyIP, CLI->getIndVar()))
+    return Err;
+
+  // Ensure we end the loop body by jumping to the latch
+  if (!CLI->getBody()->getTerminator()) {
+    B.SetInsertPoint(CLI->getBody());
+    B.CreateBr(CLI->getLatch());
+  }
+
+  // Link After -> ContBB
+  B.SetInsertPoint(CLI->getAfter(), CLI->getAfter()->begin());
+  if (!CLI->getAfter()->getTerminator())
+    B.CreateBr(ContBB);
+
+  return InsertPointTy{ContBB, ContBB->begin()};
+}
+
 //===----------------------------------------------------------------------===//
 // OffloadEntriesInfoManager
 //===----------------------------------------------------------------------===//

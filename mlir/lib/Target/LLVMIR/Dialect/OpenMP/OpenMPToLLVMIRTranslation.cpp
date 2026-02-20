@@ -2429,92 +2429,86 @@ buildTaskAffinityIteratorLoop(mlir::omp::IteratorsOp itersOp,
                               llvm::IRBuilderBase &builder,
                               mlir::LLVM::ModuleTranslation &moduleTranslation,
                               llvm::OpenMPIRBuilder::AffinityData &ad) {
-
   auto &ctx = builder.getContext();
-  auto &ompBuilder = *moduleTranslation.getOpenMPBuilder();
+  auto *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  if (!ompBuilder)
+    return itersOp.emitOpError() << "missing OpenMPIRBuilder";
+
   IteratorInfo iterInfo(itersOp, moduleTranslation, builder);
 
   llvm::StructType *kmpTaskAffinityInfoTy = llvm::StructType::get(
       llvm::Type::getInt64Ty(ctx), llvm::Type::getInt64Ty(ctx),
       llvm::Type::getInt32Ty(ctx));
-  auto *list = builder.CreateAlloca(
-      kmpTaskAffinityInfoTy, iterInfo.getTotalTrips(), "omp.affinity_list");
 
-  mlir::Block &iteratorRegionBlock = itersOp.getRegion().front();
+  auto *list = builder.CreateAlloca(kmpTaskAffinityInfoTy, iterInfo.getTotalTrips(),
+                                   "omp.affinity_list");
 
-  llvm::Function *F = builder.GetInsertBlock()->getParent();
-  llvm::BasicBlock *curBB = builder.GetInsertBlock();
-  llvm::Instruction *splitPt = (builder.GetInsertPoint() == curBB->end())
-                                   ? curBB->getTerminator()
-                                   : &*builder.GetInsertPoint();
-  if (!splitPt) {
-    llvm::BasicBlock *tmp = llvm::BasicBlock::Create(ctx, "omp.tmp.cont", F);
-    builder.SetInsertPoint(curBB);
-    builder.CreateBr(tmp);
-    splitPt = curBB->getTerminator();
-  }
+  mlir::Region &itersRegion = itersOp.getRegion();
+  mlir::Block &iteratorRegionBlock = itersRegion.front();
 
-  llvm::BasicBlock *contBB = curBB->splitBasicBlock(splitPt, "omp.task.cont");
-  // Remove the branch to contBB since we will branch to contBB after the loop
-  curBB->getTerminator()->eraseFromParent();
+  llvm::OpenMPIRBuilder::LocationDescription loc(builder);
 
-  auto *cli = ompBuilder.createLoopSkeleton(
-      builder.getCurrentDebugLocation(), iterInfo.getTotalTrips(),
-      builder.GetInsertBlock()->getParent(), contBB, contBB, "iterator");
-  builder.SetInsertPoint(curBB);
-  builder.CreateBr(cli->getPreheader());
+  // Build the iterator loop using the new OMPIRBuilder helper.
+  auto bodyGen = [&](llvm::OpenMPIRBuilder::InsertPointTy bodyIP,
+                     llvm::Value *linearIV) -> llvm::Error {
+    llvm::IRBuilderBase::InsertPointGuard g(builder);
+    builder.restoreIP(bodyIP);
 
-  // Remove the unconditional branch inserted by createLoopSkeleton in the body
-  if (llvm::Instruction *T = cli->getBody()->getTerminator())
-    T->eraseFromParent();
+    // Unflatten linearIV into per-dimension logical indices (row-major).
+    llvm::Value *tmp = linearIV;
+    for (int d = (int)iterInfo.getDims() - 1; d >= 0; --d) {
+      llvm::Value *trip = iterInfo.getTrips()[d];
+      // idx_d = tmp % trip_d
+      llvm::Value *idx = builder.CreateURem(tmp, trip, "omp.it.idx");
+      // tmp = tmp / trip_d
+      tmp = builder.CreateUDiv(tmp, trip, "omp.it.lin.next");
 
-  // Start building the loop body
-  builder.SetInsertPoint(cli->getBody());
+      // physIV_d = lb_d + idx_d * step_d
+      llvm::Value *physIV = builder.CreateAdd(
+          iterInfo.getLowerBounds()[d],
+          builder.CreateMul(idx, iterInfo.getSteps()[d]),
+          "omp.it.phys_iv");
 
-  llvm::Value *linearIV = cli->getIndVar();
-  for (int d = (int)iterInfo.getDims() - 1; d >= 0; --d) {
-    llvm::Value *trip = iterInfo.getTrips()[d];
-    // idx = linearIV % trips[d]
-    llvm::Value *idx = builder.CreateURem(linearIV, trip);
-    // linearIV = linearIV / trips[d]
-    linearIV = builder.CreateUDiv(linearIV, trip);
+      moduleTranslation.mapValue(iteratorRegionBlock.getArgument(d), physIV);
+    }
 
-    // physicalIV = lb + logical * step.
-    llvm::Value *physicalIV = builder.CreateAdd(
-        iterInfo.getLowerBounds()[d],
-        builder.CreateMul(idx, iterInfo.getSteps()[d]), "omp.it.phys_iv");
+    // Translate the iterator region into the loop body.
+    moduleTranslation.mapBlock(&iteratorRegionBlock, builder.GetInsertBlock());
+    if (mlir::failed(moduleTranslation.convertBlock(iteratorRegionBlock,
+                                                    /*ignoreArguments=*/true,
+                                                    builder))) {
+      return llvm::make_error<llvm::StringError>(
+          "failed to translate iterators region",
+          llvm::inconvertibleErrorCode());
+    }
 
-    moduleTranslation.mapValue(iteratorRegionBlock.getArgument(d), physicalIV);
-  }
+    // Extract affinity entry from omp.yield and store into list[linearIV].
+    auto yield = mlir::dyn_cast<mlir::omp::YieldOp>(
+        iteratorRegionBlock.getTerminator());
+    auto entryOp =
+        yield.getResults()[0].getDefiningOp<mlir::omp::AffinityEntryOp>();
 
-  moduleTranslation.mapBlock(&iteratorRegionBlock, builder.GetInsertBlock());
-  if (mlir::failed(moduleTranslation.convertBlock(iteratorRegionBlock,
-                                                  /*ignoreArguments=*/true,
-                                                  builder))) {
-    return itersOp.emitOpError() << "failed to translate iterators region";
-  }
+    llvm::Value *addr = moduleTranslation.lookupValue(entryOp.getAddr());
+    llvm::Value *len  = moduleTranslation.lookupValue(entryOp.getLen());
 
-  auto yield =
-      mlir::dyn_cast<mlir::omp::YieldOp>(iteratorRegionBlock.getTerminator());
-  auto entryOp =
-      yield.getResults()[0].getDefiningOp<mlir::omp::AffinityEntryOp>();
-  llvm::Value *addr = moduleTranslation.lookupValue(entryOp.getAddr());
-  llvm::Value *len = moduleTranslation.lookupValue(entryOp.getLen());
-  storeAffinityEntry(builder, list, cli->getIndVar(), addr, len);
+    storeAffinityEntry(builder, list, linearIV, addr, len);
 
-  // Ensure we end the loop body by jumping to the latch
-  if (!builder.GetInsertBlock()->getTerminator())
-    builder.CreateBr(cli->getLatch());
+    // Avoid leaking region mappings if this iterator loop is reused/expanded.
+    moduleTranslation.forgetMapping(itersRegion);
 
-  moduleTranslation.forgetMapping(itersOp.getRegion());
+    return llvm::Error::success();
+  };
 
-  builder.SetInsertPoint(cli->getAfter(), cli->getAfter()->begin());
-  builder.CreateBr(contBB);
-  builder.SetInsertPoint(contBB, contBB->begin());
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
+      ompBuilder->createIteratorLoop(loc, iterInfo.getTotalTrips(), bodyGen,
+                                     /*Name=*/"iterator");
+  if (!afterIP)
+    return itersOp.emitOpError() << llvm::toString(afterIP.takeError());
 
-  ad.Info = list;
-  ad.Count =
-      builder.CreateTrunc(iterInfo.getTotalTrips(), builder.getInt32Ty());
+  builder.restoreIP(*afterIP);
+
+  ad.Info  = list;
+  ad.Count = builder.CreateTrunc(iterInfo.getTotalTrips(), builder.getInt32Ty());
   return mlir::success();
 }
 

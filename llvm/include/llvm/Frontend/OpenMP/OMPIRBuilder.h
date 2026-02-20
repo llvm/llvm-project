@@ -3932,6 +3932,13 @@ public:
   LLVM_ABI GlobalVariable *
   getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
                               std::optional<unsigned> AddressSpace = {});
+
+  using IteratorBodyGenTy = llvm::function_ref<llvm::Error(
+      InsertPointTy BodyIP, llvm::Value *LinearIV)>;
+
+  LLVM_ABI InsertPointOrErrorTy createIteratorLoop(
+      LocationDescription Loc, llvm::Value *TripCount,
+      IteratorBodyGenTy BodyGen, llvm::StringRef Name = "iterator");
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.
