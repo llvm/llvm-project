@@ -341,30 +341,27 @@ static unsigned scanFromBlock(const CFGBlock *Start,
     // This allows us to potentially uncover some "always unreachable" code
     // within the "sometimes unreachable" code.
     // Look at the successors and mark then reachable.
-    std::optional<bool> TreatAllSuccessorsAsReachable;
-    if (!IncludeSometimesUnreachableEdges)
+    bool TreatAllSuccessorsAsReachable;
+    if (IncludeSometimesUnreachableEdges) {
+      assert(PP);
+      TreatAllSuccessorsAsReachable =
+          shouldTreatSuccessorsAsReachable(item, *PP);
+    } else {
       TreatAllSuccessorsAsReachable = false;
+    }
 
     for (CFGBlock::const_succ_iterator I = item->succ_begin(),
          E = item->succ_end(); I != E; ++I) {
       const CFGBlock *B = *I;
-      if (!B) do {
+      if (!B) {
         const CFGBlock *UB = I->getPossiblyUnreachableBlock();
         if (!UB)
-          break;
+          continue;
 
-        if (!TreatAllSuccessorsAsReachable) {
-          assert(PP);
-          TreatAllSuccessorsAsReachable =
-            shouldTreatSuccessorsAsReachable(item, *PP);
-        }
-
-        if (*TreatAllSuccessorsAsReachable) {
+        if (TreatAllSuccessorsAsReachable) {
           B = UB;
-          break;
         }
       }
-      while (false);
 
       if (B) {
         unsigned blockID = B->getBlockID();
