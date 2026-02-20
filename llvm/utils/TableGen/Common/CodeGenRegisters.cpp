@@ -1516,7 +1516,7 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
   CoveringLanes = LaneBitmask::getAll();
   for (CodeGenSubRegIndex &Idx : SubRegIndices) {
     if (Idx.getComposites().empty()) {
-      if (Bit > LaneBitmask::BitWidth) {
+      if (Bit >= LaneBitmask::BitWidth) {
         PrintFatalError(
             Twine("Ran out of lanemask bits to represent subregister ") +
             Idx.getName());
