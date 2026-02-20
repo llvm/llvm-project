@@ -35,6 +35,7 @@ public:
                                  // true)
       show_locals : 1,  // Frame option only (include_frame_options == true)
       show_globals : 1, // Frame option only (include_frame_options == true)
+      show_extended : 1, // Frame option only (include_frame_options == true)
       use_regex : 1, show_scope : 1, show_decl : 1;
   OptionValueString summary;        // the name of a named summary
   OptionValueString summary_string; // a summary string

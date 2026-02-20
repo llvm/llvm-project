@@ -32,6 +32,9 @@ static constexpr OptionDefinition g_variable_options[] = {
     {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "show-globals", 'g',
      OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
      "Show the current frame source file global and static variables."},
+     {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "no-extended", 'e',
+     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
+     "Omit extended variables."},
     {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "show-declaration", 'c',
      OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
      "Show variable declaration information (source file and line where the "
@@ -77,8 +80,9 @@ static Status ValidateSummaryString(const char *str, void *) {
 OptionGroupVariable::OptionGroupVariable(bool show_frame_options)
     : include_frame_options(show_frame_options), show_args(false),
       show_recognized_args(false), show_locals(false), show_globals(false),
-      use_regex(false), show_scope(false), show_decl(false),
-      summary(ValidateNamedSummary), summary_string(ValidateSummaryString) {}
+      show_extended(true), use_regex(false), show_scope(false),
+      show_decl(false), summary(ValidateNamedSummary),
+      summary_string(ValidateSummaryString) {}
 
 Status
 OptionGroupVariable::SetOptionValue(uint32_t option_idx,
@@ -100,6 +104,9 @@ OptionGroupVariable::SetOptionValue(uint32_t option_idx,
     break;
   case 'g':
     show_globals = true;
+    break;
+  case 'e':
+    show_extended = false;
     break;
   case 'c':
     show_decl = true;
@@ -129,6 +136,7 @@ void OptionGroupVariable::OptionParsingStarting(
   show_recognized_args = true; // Frame option only
   show_locals = true;   // Frame option only
   show_globals = false; // Frame option only
+  show_extended = true; // Frame option only
   show_decl = false;
   use_regex = false;
   show_scope = false;
