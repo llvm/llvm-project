@@ -159,7 +159,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
   OS << "| enum ";
   if (I.Scoped)
     OS << "class ";
-  OS <<  (I.Name.empty() ? StringRef("(unnamed)") : StringRef(I.Name)) << " ";
+  OS << (I.Name.empty() ? StringRef("(unnamed)") : StringRef(I.Name)) << " ";
   if (I.BaseType && !I.BaseType->Type.QualName.empty()) {
     OS << ": " << I.BaseType->Type.QualName << " ";
   }
