@@ -4129,26 +4129,36 @@ static bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
   const Pointer &VectorA = S.Stk.pop<Pointer>();
   Pointer &Dst = S.Stk.peek<Pointer>();
 
-  const bool IsScalar = (ID == X86::BI__builtin_ia32_cmpss) ||
-                        (ID == X86::BI__builtin_ia32_cmpsd);
-  const bool IsF64 = (ID == X86::BI__builtin_ia32_cmppd) ||
-                     (ID == X86::BI__builtin_ia32_cmpsd) ||
-                     (ID == X86::BI__builtin_ia32_cmppd256);
+  const bool IsScalar = ID == X86::BI__builtin_ia32_cmpss ||
+            ID == X86::BI__builtin_ia32_cmpsd;
 
   const auto NumLanes = VectorA.getNumElems();
   if (NumLanes != VectorB.getNumElems())
     return false;
 
   for (unsigned int i = 0; i < NumLanes; ++i) {
+    // Handle cmpss/cmpsd
+    if (IsScalar && i > 0) {
+      // Copy the upper 3 packed elements from a to the upper elements of dst
+      Dst.elem<Floating>(i) = VectorA.elem<Floating>(i);
+      continue;
+    }
+
     llvm::APFloat AElement = VectorA.elem<Floating>(i).getAPFloat();
     llvm::APFloat BElement = VectorB.elem<Floating>(i).getAPFloat();
 
     auto CompareResult = AElement.compare(BElement);
-    const auto ComparisonResult = MatchesPredicate(ImmZExt, CompareResult);
+    const bool Matches = MatchesPredicate(ImmZExt, CompareResult);
 
-    const llvm::APFloat True(-1.0);
-    const llvm::APFloat False(0.0);
-    if (ComparisonResult)
+    // Create bit patterns for comparison results:
+    // True = all bits set (0xFFFFFFFF for float, 0xFFFFFFFFFFFFFFFF for double)
+    // False = all bits zero
+    const llvm::fltSemantics &Sem = AElement.getSemantics();
+    const unsigned BitWidth = llvm::APFloat::getSizeInBits(Sem);
+    const llvm::APFloat True(Sem, llvm::APInt::getAllOnes(BitWidth));
+    const llvm::APFloat False(Sem, llvm::APInt(BitWidth, 0));
+
+    if (Matches)
       Dst.elem<Floating>(i) = Floating(True);
     else
       Dst.elem<Floating>(i) = Floating(False);
@@ -5918,8 +5928,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return llvm::maximum(A, B);
         });
 
+  case X86::BI__builtin_ia32_cmpps:
   case X86::BI__builtin_ia32_cmppd:
+  case X86::BI__builtin_ia32_cmpps256:
   case X86::BI__builtin_ia32_cmppd256:
+  case X86::BI__builtin_ia32_cmpss:
+  case X86::BI__builtin_ia32_cmpsd:
     return interp__builtin_x86_cmp(S, OpPC, Frame, Call, BuiltinID);
 
   default:

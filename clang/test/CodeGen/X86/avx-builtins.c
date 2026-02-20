@@ -24,6 +24,9 @@
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
+#define ALL_ONES_F __builtin_bit_cast(float, 0xFFFFFFFFU)
+#define ALL_ONES_D __builtin_bit_cast(double, 0xFFFFFFFFFFFFFFFFULL)
+
 // NOTE: This should match the tests in llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll
 
 __m256d test_mm256_add_pd(__m256d A, __m256d B) {
@@ -261,24 +264,24 @@ __m256d test_mm256_cmp_pd_eq_oq(__m256d a, __m256d b) {
   // CHECK: fcmp oeq <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_EQ_OQ);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_EQ_OQ), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), (((__m256d){1.0, 2.0, 3.0, 5.0})), _CMP_EQ_OQ), -1.0, -1.0, -1.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_EQ_OQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), (((__m256d){1.0, 2.0, 3.0, 5.0})), _CMP_EQ_OQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, 0.0));
 
 __m256d test_mm256_cmp_pd_lt_os(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_lt_os
   // CHECK: fcmp olt <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_LT_OS);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){2.0, 3.0, 4.0, 5.0}), _CMP_LT_OS), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){2.0, 3.0, 4.0, 3.0}), _CMP_LT_OS), -1.0, -1.0, -1.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){2.0, 3.0, 4.0, 5.0}), _CMP_LT_OS), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){2.0, 3.0, 4.0, 3.0}), _CMP_LT_OS), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, 0.0));
 
 __m256d test_mm256_cmp_pd_le_os(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_le_os
   // CHECK: fcmp ole <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_LE_OS);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_LE_OS), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 3.0}), _CMP_LE_OS), -1.0, -1.0, -1.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_LE_OS), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 3.0}), _CMP_LE_OS), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, 0.0));
 
 __m256d test_mm256_cmp_pd_unord_q(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_unord_q
@@ -287,13 +290,17 @@ __m256d test_mm256_cmp_pd_unord_q(__m256d a, __m256d b) {
 }
 TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_UNORD_Q), 0.0, 0.0, 0.0, 0.0));
 TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_UNORD_Q), 0.0, 0.0, 0.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){__builtin_nan(""), 2.0, 3.0, __builtin_nan("")}),
+                                              ((__m256d){1.0, 2.0, 3.0, 4.0}),
+                                              _CMP_UNORD_Q),
+                           ALL_ONES_D, 0.0, 0.0, ALL_ONES_D));
 
 __m256d test_mm256_cmp_pd_neq_uq(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_neq_uq
   // CHECK: fcmp une <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_NEQ_UQ);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_NEQ_UQ), -1.0, -1.0, -1.0, -1.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_NEQ_UQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
 TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_NEQ_UQ), 0.0, 0.0, 0.0, 0.0));
 
 __m256d test_mm256_cmp_pd_nlt_us(__m256d a, __m256d b) {
@@ -301,47 +308,51 @@ __m256d test_mm256_cmp_pd_nlt_us(__m256d a, __m256d b) {
   // CHECK: fcmp uge <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_NLT_US);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){0.0, 1.0, 2.0, 3.0}), _CMP_NLT_US), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){0.0, 1.0, 2.0, 5.0}), _CMP_NLT_US), -1.0, -1.0, -1.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){0.0, 1.0, 2.0, 3.0}), _CMP_NLT_US), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){0.0, 1.0, 2.0, 5.0}), _CMP_NLT_US), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, 0.0));
 
 __m256d test_mm256_cmp_pd_nle_us(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_nle_us
   // CHECK: fcmp ugt <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_NLE_US);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){0.0, 1.0, 2.0, 3.0}), _CMP_NLE_US), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){0.0, 1.0, 2.0, 4.0}), _CMP_NLE_US), -1.0, -1.0, -1.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){0.0, 1.0, 2.0, 3.0}), _CMP_NLE_US), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){0.0, 1.0, 2.0, 4.0}), _CMP_NLE_US), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, 0.0));
 
 __m256d test_mm256_cmp_pd_ord_q(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_ord_q
   // CHECK: fcmp ord <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_ORD_Q);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_ORD_Q), -1.0, -1.0, -1.0, -1.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_ORD_Q), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){__builtin_nan(""), 2.0, 3.0, __builtin_nan("")}),
+                                              ((__m256d){1.0, 2.0, 3.0, 4.0}),
+                                              _CMP_ORD_Q),
+                           0.0, ALL_ONES_D, ALL_ONES_D, 0.0));
 
 __m256d test_mm256_cmp_pd_eq_uq(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_eq_uq
   // CHECK: fcmp ueq <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_EQ_UQ);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_EQ_UQ), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 5.0}), _CMP_EQ_UQ), -1.0, -1.0, -1.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_EQ_UQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 5.0}), _CMP_EQ_UQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, 0.0));
 
 __m256d test_mm256_cmp_pd_nge_us(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_nge_us
   // CHECK: fcmp ult <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_NGE_US);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_NGE_US), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 3.0, 2.0}), _CMP_NGE_US), -1.0, -1.0, 0.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_NGE_US), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 3.0, 2.0}), _CMP_NGE_US), ALL_ONES_D, ALL_ONES_D, 0.0, 0.0));
 
 __m256d test_mm256_cmp_pd_ngt_us(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_ngt_us
   // CHECK: fcmp ule <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_NGT_US);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 3.0, 2.0}), _CMP_NGT_US), -1.0, -1.0, -1.0, 0.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 3.0, 2.0}), _CMP_NGT_US), -1.0, -1.0, -1.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 3.0, 2.0}), _CMP_NGT_US), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 3.0, 2.0}), _CMP_NGT_US), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, 0.0));
 
 __m256d test_mm256_cmp_pd_false_oq(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_false_oq
@@ -356,56 +367,56 @@ __m256d test_mm256_cmp_pd_neq_oq(__m256d a, __m256d b) {
   // CHECK: fcmp one <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_NEQ_OQ);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_NEQ_OQ), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 5.0}), _CMP_NEQ_OQ), 0.0, 0.0, 0.0, -1.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_NEQ_OQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 5.0}), _CMP_NEQ_OQ), 0.0, 0.0, 0.0, ALL_ONES_D));
 
 __m256d test_mm256_cmp_pd_ge_os(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_ge_os
   // CHECK: fcmp oge <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_GE_OS);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_GE_OS), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 6.0, 3.0, 8.0}), _CMP_GE_OS), -1.0, -1.0, -1.0, -1.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_GE_OS), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 6.0, 3.0, 8.0}), _CMP_GE_OS), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
 
 __m256d test_mm256_cmp_pd_gt_os(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_gt_os
   // CHECK: fcmp ogt <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_GT_OS);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_GT_OS), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 6.0, 3.0, 8.0}), _CMP_GT_OS), -1.0, 0.0, -1.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_GT_OS), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 6.0, 3.0, 8.0}), _CMP_GT_OS), ALL_ONES_D, 0.0, ALL_ONES_D, 0.0));
 
 __m256d test_mm256_cmp_pd_true_uq(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_true_uq
   // CHECK: fcmp true <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_TRUE_UQ);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_TRUE_UQ), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_TRUE_UQ), -1.0, -1.0, -1.0, -1.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_TRUE_UQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_TRUE_UQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
 
 __m256d test_mm256_cmp_pd_eq_os(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_eq_os
   // CHECK: fcmp oeq <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_EQ_OS);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_EQ_OS), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 5.0}), _CMP_EQ_OS), -1.0, -1.0, -1.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_EQ_OS), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 5.0}), _CMP_EQ_OS), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, 0.0));
 
 __m256d test_mm256_cmp_pd_lt_oq(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_lt_oq
   // CHECK: fcmp olt <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_LT_OQ);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_LT_OQ), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 3.0, 2.0}), _CMP_LT_OQ), -1.0, -1.0, 0.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_LT_OQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 3.0, 2.0}), _CMP_LT_OQ), ALL_ONES_D, ALL_ONES_D, 0.0, 0.0));
 
 __m256d test_mm256_cmp_pd_le_oq(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_le_oq
   // CHECK: fcmp ole <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_LE_OQ);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_LE_OQ), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 5.0}), _CMP_LE_OQ), -1.0, -1.0, -1.0, -1.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_LE_OQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 5.0}), _CMP_LE_OQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
 
 __m256d test_mm256_cmp_pd_unord_s(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_unord_s
@@ -414,61 +425,69 @@ __m256d test_mm256_cmp_pd_unord_s(__m256d a, __m256d b) {
 }
 TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_UNORD_S), 0.0, 0.0, 0.0, 0.0));
 TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_UNORD_S), 0.0, 0.0, 0.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){__builtin_nan(""), 2.0, 3.0, __builtin_nan("")}),
+                                              ((__m256d){1.0, 2.0, 3.0, 4.0}),
+                                              _CMP_UNORD_S),
+                           ALL_ONES_D, 0.0, 0.0, ALL_ONES_D));
 
 __m256d test_mm256_cmp_pd_neq_us(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_neq_us
   // CHECK: fcmp une <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_NEQ_US);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_NEQ_US), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 6.0, 3.0, 8.0}), _CMP_NEQ_US), 0.0, -1.0, 0.0, -1.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_NEQ_US), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 6.0, 3.0, 8.0}), _CMP_NEQ_US), 0.0, ALL_ONES_D, 0.0, ALL_ONES_D));
 
 __m256d test_mm256_cmp_pd_nlt_uq(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_nlt_uq
   // CHECK: fcmp uge <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_NLT_UQ);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_NLT_UQ), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 6.0, 3.0, 8.0}), _CMP_NLT_UQ), -1.0, -1.0, -1.0, -1.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_NLT_UQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 6.0, 3.0, 8.0}), _CMP_NLT_UQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
 
 __m256d test_mm256_cmp_pd_nle_uq(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_nle_uq
   // CHECK: fcmp ugt <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_NLE_UQ);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_NLE_UQ), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 6.0, 3.0, 8.0}), _CMP_NLE_UQ), -1.0, 0.0, -1.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_NLE_UQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 6.0, 3.0, 8.0}), _CMP_NLE_UQ), ALL_ONES_D, 0.0, ALL_ONES_D, 0.0));
 
 __m256d test_mm256_cmp_pd_ord_s(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_ord_s
   // CHECK: fcmp ord <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_ORD_S);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_ORD_S), -1.0, -1.0, -1.0, -1.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_ORD_S), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){__builtin_nan(""), 2.0, 3.0, __builtin_nan("")}),
+                                              ((__m256d){1.0, 2.0, 3.0, 4.0}),
+                                              _CMP_ORD_S),
+                           0.0, ALL_ONES_D, ALL_ONES_D, 0.0));
 
 __m256d test_mm256_cmp_pd_eq_us(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_eq_us
   // CHECK: fcmp ueq <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_EQ_US);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_EQ_US), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 6.0, 3.0, 8.0}), _CMP_EQ_US), -1.0, 0.0, -1.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_EQ_US), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 6.0, 3.0, 8.0}), _CMP_EQ_US), ALL_ONES_D, 0.0, ALL_ONES_D, 0.0));
 
 __m256d test_mm256_cmp_pd_nge_uq(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_nge_uq
   // CHECK: fcmp ult <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_NGE_UQ);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_NGE_UQ), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 2.0, 7.0, 4.0}), _CMP_NGE_UQ), -1.0, 0.0, -1.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_NGE_UQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 2.0, 7.0, 4.0}), _CMP_NGE_UQ), ALL_ONES_D, 0.0, ALL_ONES_D, 0.0));
 
 __m256d test_mm256_cmp_pd_ngt_uq(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_ngt_uq
   // CHECK: fcmp ule <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_NGT_UQ);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_NGT_UQ), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 2.0, 7.0, 4.0}), _CMP_NGT_UQ), -1.0, -1.0, -1.0, -1.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_NGT_UQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 2.0, 7.0, 4.0}), _CMP_NGT_UQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
 
 __m256d test_mm256_cmp_pd_false_os(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_false_os
@@ -483,224 +502,272 @@ __m256d test_mm256_cmp_pd_neq_os(__m256d a, __m256d b) {
   // CHECK: fcmp one <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_NEQ_OS);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_NEQ_OS), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 6.0, 3.0, 8.0}), _CMP_NEQ_OS), 0.0, -1.0, 0.0, -1.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_NEQ_OS), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 6.0, 3.0, 8.0}), _CMP_NEQ_OS), 0.0, ALL_ONES_D, 0.0, ALL_ONES_D));
 
 __m256d test_mm256_cmp_pd_ge_oq(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_ge_oq
   // CHECK: fcmp oge <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_GE_OQ);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_GE_OQ), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){5.0, 6.0, 3.0, 8.0}), _CMP_GE_OQ), -1.0, -1.0, -1.0, -1.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_GE_OQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){5.0, 6.0, 3.0, 8.0}), _CMP_GE_OQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
 
 __m256d test_mm256_cmp_pd_gt_oq(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_gt_oq
   // CHECK: fcmp ogt <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_GT_OQ);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_GT_OQ), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){5.0, 6.0, 3.0, 8.0}), _CMP_GT_OQ), 0.0, 0.0, -1.0, 0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_GT_OQ), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){5.0, 6.0, 7.0, 8.0}), ((__m256d){5.0, 6.0, 3.0, 8.0}), _CMP_GT_OQ), 0.0, 0.0, ALL_ONES_D, 0.0));
 
 __m256d test_mm256_cmp_pd_true_us(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_true_us
   // CHECK: fcmp true <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_TRUE_US);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_TRUE_US), -1.0, -1.0, -1.0, -1.0));
-TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_TRUE_US), -1.0, -1.0, -1.0, -1.0));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){5.0, 6.0, 7.0, 8.0}), _CMP_TRUE_US), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m256d(_mm256_cmp_pd(((__m256d){1.0, 2.0, 3.0, 4.0}), ((__m256d){1.0, 2.0, 3.0, 4.0}), _CMP_TRUE_US), ALL_ONES_D, ALL_ONES_D, ALL_ONES_D, ALL_ONES_D));
 
 __m256 test_mm256_cmp_ps_eq_oq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_eq_oq
   // CHECK: fcmp oeq <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_EQ_OQ);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){1.0f, 2.5f, 3.0f, 4.5f, 5.0f, 6.5f, 7.0f, 8.5f}), _CMP_EQ_OQ), __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f));
 
 __m256 test_mm256_cmp_ps_lt_os(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_lt_os
   // CHECK: fcmp olt <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_LT_OS);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){2.0f, 2.0f, 4.0f, 4.0f, 6.0f, 6.0f, 8.0f, 8.0f}), _CMP_LT_OS), __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f));
 
 __m256 test_mm256_cmp_ps_le_os(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_le_os
   // CHECK: fcmp ole <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_LE_OS);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){2.0f, 2.0f, 3.0f, 3.0f, 6.0f, 6.0f, 7.0f, 7.0f}), _CMP_LE_OS), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f));
 
 __m256 test_mm256_cmp_ps_unord_q(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_unord_q
   // CHECK: fcmp uno <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_UNORD_Q);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), _CMP_UNORD_Q), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f));
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){__builtin_nanf(""), 2.0f, 3.0f, __builtin_nanf(""), 5.0f, 6.0f, 7.0f, 8.0f}),
+                                            ((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}),
+                                            _CMP_UNORD_Q),
+                         ALL_ONES_F, 0.0f, 0.0f, ALL_ONES_F, 0.0f, 0.0f, 0.0f, 0.0f));
 
 __m256 test_mm256_cmp_ps_neq_uq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_neq_uq
   // CHECK: fcmp une <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_NEQ_UQ);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){1.0f, 2.5f, 3.0f, 4.5f, 5.0f, 6.5f, 7.0f, 8.5f}), _CMP_NEQ_UQ), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU)));
 
 __m256 test_mm256_cmp_ps_nlt_us(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_nlt_us
   // CHECK: fcmp uge <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_NLT_US);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){2.0f, 2.0f, 4.0f, 4.0f, 6.0f, 6.0f, 8.0f, 8.0f}), ((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), _CMP_NLT_US), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU)));
 
 __m256 test_mm256_cmp_ps_nle_us(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_nle_us
   // CHECK: fcmp ugt <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_NLE_US);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f}), ((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), _CMP_NLE_US), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU)));
 
 __m256 test_mm256_cmp_ps_ord_q(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_ord_q
   // CHECK: fcmp ord <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_ORD_Q);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), _CMP_ORD_Q), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU)));
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){__builtin_nanf(""), 2.0f, 3.0f, __builtin_nanf(""), 5.0f, 6.0f, 7.0f, 8.0f}),
+                                            ((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}),
+                                            _CMP_ORD_Q),
+                         0.0f, ALL_ONES_F, ALL_ONES_F, 0.0f, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
 
 __m256 test_mm256_cmp_ps_eq_uq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_eq_uq
   // CHECK: fcmp ueq <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_EQ_UQ);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){1.0f, 2.5f, 3.0f, 4.5f, 5.0f, 6.5f, 7.0f, 8.5f}), _CMP_EQ_UQ), __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f));
 
 __m256 test_mm256_cmp_ps_nge_us(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_nge_us
   // CHECK: fcmp ult <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_NGE_US);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){2.0f, 2.0f, 4.0f, 4.0f, 6.0f, 6.0f, 8.0f, 8.0f}), _CMP_NGE_US), __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f));
 
 __m256 test_mm256_cmp_ps_ngt_us(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_ngt_us
   // CHECK: fcmp ule <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_NGT_US);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){2.0f, 2.0f, 3.0f, 3.0f, 6.0f, 6.0f, 7.0f, 7.0f}), _CMP_NGT_US), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f));
 
 __m256 test_mm256_cmp_ps_false_oq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_false_oq
   // CHECK: fcmp false <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_FALSE_OQ);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){9.0f, 8.0f, 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f}), _CMP_FALSE_OQ), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f));
 
 __m256 test_mm256_cmp_ps_neq_oq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_neq_oq
   // CHECK: fcmp one <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_NEQ_OQ);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){1.0f, 2.5f, 3.0f, 4.5f, 5.0f, 6.5f, 7.0f, 8.5f}), _CMP_NEQ_OQ), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU)));
 
 __m256 test_mm256_cmp_ps_ge_os(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_ge_os
   // CHECK: fcmp oge <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_GE_OS);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){2.0f, 2.0f, 4.0f, 4.0f, 6.0f, 6.0f, 8.0f, 8.0f}), ((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), _CMP_GE_OS), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU)));
 
 __m256 test_mm256_cmp_ps_gt_os(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_gt_os
   // CHECK: fcmp ogt <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_GT_OS);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f}), ((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), _CMP_GT_OS), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU)));
 
 __m256 test_mm256_cmp_ps_true_uq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_true_uq
   // CHECK: fcmp true <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_TRUE_UQ);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){9.0f, 8.0f, 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f}), _CMP_TRUE_UQ), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU)));
 
 __m256 test_mm256_cmp_ps_eq_os(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_eq_os
   // CHECK: fcmp oeq <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_EQ_OS);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){1.0f, 2.5f, 3.0f, 4.5f, 5.0f, 6.5f, 7.0f, 8.5f}), _CMP_EQ_OS), __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f));
 
 __m256 test_mm256_cmp_ps_lt_oq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_lt_oq
   // CHECK: fcmp olt <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_LT_OQ);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){2.0f, 2.0f, 4.0f, 4.0f, 6.0f, 6.0f, 8.0f, 8.0f}), _CMP_LT_OQ), __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f));
 
 __m256 test_mm256_cmp_ps_le_oq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_le_oq
   // CHECK: fcmp ole <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_LE_OQ);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){2.0f, 2.0f, 3.0f, 3.0f, 6.0f, 6.0f, 7.0f, 7.0f}), _CMP_LE_OQ), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f));
 
 __m256 test_mm256_cmp_ps_unord_s(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_unord_s
   // CHECK: fcmp uno <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_UNORD_S);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), _CMP_UNORD_S), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f));
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){__builtin_nanf(""), 2.0f, 3.0f, __builtin_nanf(""), 5.0f, 6.0f, 7.0f, 8.0f}),
+                                            ((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}),
+                                            _CMP_UNORD_S),
+                         ALL_ONES_F, 0.0f, 0.0f, ALL_ONES_F, 0.0f, 0.0f, 0.0f, 0.0f));
 
 __m256 test_mm256_cmp_ps_neq_us(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_neq_us
   // CHECK: fcmp une <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_NEQ_US);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){1.0f, 2.5f, 3.0f, 4.5f, 5.0f, 6.5f, 7.0f, 8.5f}), _CMP_NEQ_US), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU)));
 
 __m256 test_mm256_cmp_ps_nlt_uq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_nlt_uq
   // CHECK: fcmp uge <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_NLT_UQ);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){2.0f, 2.0f, 4.0f, 4.0f, 6.0f, 6.0f, 8.0f, 8.0f}), ((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), _CMP_NLT_UQ), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU)));
 
 __m256 test_mm256_cmp_ps_nle_uq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_nle_uq
   // CHECK: fcmp ugt <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_NLE_UQ);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f}), ((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), _CMP_NLE_UQ), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU)));
 
 __m256 test_mm256_cmp_ps_ord_s(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_ord_s
   // CHECK: fcmp ord <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_ORD_S);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), _CMP_ORD_S), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU)));
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){__builtin_nanf(""), 2.0f, 3.0f, __builtin_nanf(""), 5.0f, 6.0f, 7.0f, 8.0f}),
+                                            ((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}),
+                                            _CMP_ORD_S),
+                         0.0f, ALL_ONES_F, ALL_ONES_F, 0.0f, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
 
 __m256 test_mm256_cmp_ps_eq_us(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_eq_us
   // CHECK: fcmp ueq <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_EQ_US);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){1.0f, 2.5f, 3.0f, 4.5f, 5.0f, 6.5f, 7.0f, 8.5f}), _CMP_EQ_US), __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f));
 
 __m256 test_mm256_cmp_ps_nge_uq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_nge_uq
   // CHECK: fcmp ult <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_NGE_UQ);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){2.0f, 2.0f, 4.0f, 4.0f, 6.0f, 6.0f, 8.0f, 8.0f}), _CMP_NGE_UQ), __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f));
 
 __m256 test_mm256_cmp_ps_ngt_uq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_ngt_uq
   // CHECK: fcmp ule <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_NGT_UQ);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){2.0f, 2.0f, 3.0f, 3.0f, 6.0f, 6.0f, 7.0f, 7.0f}), _CMP_NGT_UQ), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f));
 
 __m256 test_mm256_cmp_ps_false_os(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_false_os
   // CHECK: fcmp false <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_FALSE_OS);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){9.0f, 8.0f, 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f}), _CMP_FALSE_OS), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f));
 
 __m256 test_mm256_cmp_ps_neq_os(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_neq_os
   // CHECK: fcmp one <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_NEQ_OS);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){1.0f, 2.5f, 3.0f, 4.5f, 5.0f, 6.5f, 7.0f, 8.5f}), _CMP_NEQ_OS), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU), 0.0f, __builtin_bit_cast(float, 0xFFFFFFFFU)));
 
 __m256 test_mm256_cmp_ps_ge_oq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_ge_oq
   // CHECK: fcmp oge <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_GE_OQ);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){2.0f, 2.0f, 4.0f, 4.0f, 6.0f, 6.0f, 8.0f, 8.0f}), ((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), _CMP_GE_OQ), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU)));
 
 __m256 test_mm256_cmp_ps_gt_oq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_gt_oq
   // CHECK: fcmp ogt <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_GT_OQ);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f}), ((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), _CMP_GT_OQ), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU)));
 
 __m256 test_mm256_cmp_ps_true_us(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_true_us
   // CHECK: fcmp true <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_TRUE_US);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cmp_ps(((__m256){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f}), ((__m256){9.0f, 8.0f, 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f}), _CMP_TRUE_US), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU), __builtin_bit_cast(float, 0xFFFFFFFFU)));
 
 __m128d test_mm_cmp_pd_eq_uq(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_eq_uq
@@ -851,156 +918,250 @@ __m128 test_mm_cmp_ps_eq_uq(__m128 a, __m128 b) {
   // CHECK: fcmp ueq <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_EQ_UQ);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){1.0f, 2.0f, 3.0f, 4.0f}), _CMP_EQ_UQ), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){1.0f, 2.0f, 3.0f, 5.0f}), _CMP_EQ_UQ), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, 0.0f));
 
 __m128 test_mm_cmp_ps_nge_us(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_nge_us
   // CHECK: fcmp ult <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_NGE_US);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), _CMP_NGE_US), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 3.0f, 2.0f}), _CMP_NGE_US), ALL_ONES_F, ALL_ONES_F, 0.0f, 0.0f));
 
 __m128 test_mm_cmp_ps_ngt_us(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_ngt_us
   // CHECK: fcmp ule <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_NGT_US);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 3.0f, 2.0f}), _CMP_NGT_US), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, 0.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 3.0f, 2.0f}), _CMP_NGT_US), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, 0.0f));
 
 __m128 test_mm_cmp_ps_false_oq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_false_oq
   // CHECK: fcmp false <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_FALSE_OQ);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), _CMP_FALSE_OQ), 0.0f, 0.0f, 0.0f, 0.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 3.0f, 2.0f}), _CMP_FALSE_OQ), 0.0f, 0.0f, 0.0f, 0.0f));
 
 __m128 test_mm_cmp_ps_neq_oq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_neq_oq
   // CHECK: fcmp one <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_NEQ_OQ);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), _CMP_NEQ_OQ), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){1.0f, 2.0f, 3.0f, 5.0f}), _CMP_NEQ_OQ), 0.0f, 0.0f, 0.0f, ALL_ONES_F));
 
 __m128 test_mm_cmp_ps_ge_os(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_ge_os
   // CHECK: fcmp oge <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_GE_OS);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){5.0f, 6.0f, 7.0f, 8.0f}), ((__m128){1.0f, 2.0f, 3.0f, 4.0f}), _CMP_GE_OS), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){5.0f, 6.0f, 7.0f, 8.0f}), ((__m128){1.0f, 6.0f, 3.0f, 8.0f}), _CMP_GE_OS), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
 
 __m128 test_mm_cmp_ps_gt_os(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_gt_os
   // CHECK: fcmp ogt <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_GT_OS);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){5.0f, 6.0f, 7.0f, 8.0f}), ((__m128){1.0f, 2.0f, 3.0f, 4.0f}), _CMP_GT_OS), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){5.0f, 6.0f, 7.0f, 8.0f}), ((__m128){1.0f, 6.0f, 3.0f, 8.0f}), _CMP_GT_OS), ALL_ONES_F, 0.0f, ALL_ONES_F, 0.0f));
 
 __m128 test_mm_cmp_ps_true_uq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_true_uq
   // CHECK: fcmp true <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_TRUE_UQ);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), _CMP_TRUE_UQ), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){1.0f, 2.0f, 3.0f, 4.0f}), _CMP_TRUE_UQ), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
 
 __m128 test_mm_cmp_ps_eq_os(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_eq_os
   // CHECK: fcmp oeq <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_EQ_OS);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){1.0f, 2.0f, 3.0f, 4.0f}), _CMP_EQ_OS), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){1.0f, 2.0f, 3.0f, 5.0f}), _CMP_EQ_OS), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, 0.0f));
 
 __m128 test_mm_cmp_ps_lt_oq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_lt_oq
   // CHECK: fcmp olt <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_LT_OQ);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), _CMP_LT_OQ), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 3.0f, 2.0f}), _CMP_LT_OQ), ALL_ONES_F, ALL_ONES_F, 0.0f, 0.0f));
 
 __m128 test_mm_cmp_ps_le_oq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_le_oq
   // CHECK: fcmp ole <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_LE_OQ);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){1.0f, 2.0f, 3.0f, 4.0f}), _CMP_LE_OQ), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){1.0f, 2.0f, 3.0f, 5.0f}), _CMP_LE_OQ), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
 
 __m128 test_mm_cmp_ps_unord_s(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_unord_s
   // CHECK: fcmp uno <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_UNORD_S);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), _CMP_UNORD_S), 0.0f, 0.0f, 0.0f, 0.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){1.0f, 2.0f, 3.0f, 4.0f}), _CMP_UNORD_S), 0.0f, 0.0f, 0.0f, 0.0f));
 
 __m128 test_mm_cmp_ps_neq_us(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_neq_us
   // CHECK: fcmp une <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_NEQ_US);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), _CMP_NEQ_US), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){1.0f, 6.0f, 3.0f, 8.0f}), _CMP_NEQ_US), 0.0f, ALL_ONES_F, 0.0f, ALL_ONES_F));
 
 __m128 test_mm_cmp_ps_nlt_uq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_nlt_uq
   // CHECK: fcmp uge <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_NLT_UQ);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){5.0f, 6.0f, 7.0f, 8.0f}), ((__m128){1.0f, 2.0f, 3.0f, 4.0f}), _CMP_NLT_UQ), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){5.0f, 6.0f, 7.0f, 8.0f}), ((__m128){1.0f, 6.0f, 3.0f, 8.0f}), _CMP_NLT_UQ), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
 
 __m128 test_mm_cmp_ps_nle_uq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_nle_uq
   // CHECK: fcmp ugt <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_NLE_UQ);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){5.0f, 6.0f, 7.0f, 8.0f}), ((__m128){1.0f, 2.0f, 3.0f, 4.0f}), _CMP_NLE_UQ), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){5.0f, 6.0f, 7.0f, 8.0f}), ((__m128){1.0f, 6.0f, 3.0f, 8.0f}), _CMP_NLE_UQ), ALL_ONES_F, 0.0f, ALL_ONES_F, 0.0f));
 
 __m128 test_mm_cmp_ps_ord_s(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_ord_s
   // CHECK: fcmp ord <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_ORD_S);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), _CMP_ORD_S), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
 
 __m128 test_mm_cmp_ps_eq_us(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_eq_us
   // CHECK: fcmp ueq <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_EQ_US);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){1.0f, 2.0f, 3.0f, 4.0f}), _CMP_EQ_US), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){1.0f, 6.0f, 3.0f, 8.0f}), _CMP_EQ_US), ALL_ONES_F, 0.0f, ALL_ONES_F, 0.0f));
 
 __m128 test_mm_cmp_ps_nge_uq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_nge_uq
   // CHECK: fcmp ult <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_NGE_UQ);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), _CMP_NGE_UQ), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 2.0f, 7.0f, 4.0f}), _CMP_NGE_UQ), ALL_ONES_F, 0.0f, ALL_ONES_F, 0.0f));
 
 __m128 test_mm_cmp_ps_ngt_uq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_ngt_uq
   // CHECK: fcmp ule <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_NGT_UQ);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), _CMP_NGT_UQ), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 2.0f, 7.0f, 4.0f}), _CMP_NGT_UQ), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
 
 __m128 test_mm_cmp_ps_false_os(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_false_os
   // CHECK: fcmp false <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_FALSE_OS);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), _CMP_FALSE_OS), 0.0f, 0.0f, 0.0f, 0.0f));
 
 __m128 test_mm_cmp_ps_neq_os(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_neq_os
   // CHECK: fcmp one <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_NEQ_OS);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), _CMP_NEQ_OS), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){1.0f, 2.0f, 7.0f, 4.0f}), _CMP_NEQ_OS), 0.0f, 0.0f, ALL_ONES_F, 0.0f));
 
 __m128 test_mm_cmp_ps_ge_oq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_ge_oq
   // CHECK: fcmp oge <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_GE_OQ);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){5.0f, 6.0f, 7.0f, 8.0f}), ((__m128){1.0f, 2.0f, 3.0f, 4.0f}), _CMP_GE_OQ), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){5.0f, 6.0f, 7.0f, 8.0f}), ((__m128){1.0f, 6.0f, 3.0f, 8.0f}), _CMP_GE_OQ), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
 
 __m128 test_mm_cmp_ps_gt_oq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_gt_oq
   // CHECK: fcmp ogt <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_GT_OQ);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){5.0f, 6.0f, 7.0f, 8.0f}), ((__m128){1.0f, 2.0f, 3.0f, 4.0f}), _CMP_GT_OQ), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){5.0f, 6.0f, 7.0f, 8.0f}), ((__m128){1.0f, 6.0f, 3.0f, 8.0f}), _CMP_GT_OQ), ALL_ONES_F, 0.0f, ALL_ONES_F, 0.0f));
 
 __m128 test_mm_cmp_ps_true_us(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_true_us
   // CHECK: fcmp true <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_TRUE_US);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), _CMP_TRUE_US), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){1.0f, 2.0f, 3.0f, 4.0f}), _CMP_TRUE_US), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
 
 __m128d test_mm_cmp_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmp_sd
   // CHECK: call {{.*}}<2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 13)
   return _mm_cmp_sd(A, B, _CMP_GE_OS);
 }
+TEST_CONSTEXPR(match_m128d(
+  _mm_cmp_sd(((__m128d){2.0, __builtin_bit_cast(double, 0x1111111122222222ULL)}),
+         ((__m128d){1.0, __builtin_bit_cast(double, 0xaaaaaaaa55555555ULL)}),
+         _CMP_GE_OS),
+  ALL_ONES_D, __builtin_bit_cast(double, 0x1111111122222222ULL)));
+TEST_CONSTEXPR(match_m128d(
+  _mm_cmp_sd(((__m128d){1.0, __builtin_bit_cast(double, 0x1111111122222222ULL)}),
+         ((__m128d){2.0, __builtin_bit_cast(double, 0xaaaaaaaa55555555ULL)}),
+         _CMP_GE_OS),
+  0.0, __builtin_bit_cast(double, 0x1111111122222222ULL)));
+TEST_CONSTEXPR(match_m128d(
+  _mm_cmp_sd(((__m128d){__builtin_nan(""), __builtin_bit_cast(double, 0x1111111122222222ULL)}),
+         ((__m128d){1.0, __builtin_bit_cast(double, 0xaaaaaaaa55555555ULL)}),
+         _CMP_UNORD_Q),
+  ALL_ONES_D, __builtin_bit_cast(double, 0x1111111122222222ULL)));
 
 __m128 test_mm_cmp_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_cmp_ss
   // CHECK: call {{.*}}<4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 13)
   return _mm_cmp_ss(A, B, _CMP_GE_OS);
 }
+TEST_CONSTEXPR(match_m128(
+  _mm_cmp_ss(((__m128){2.0f, __builtin_bit_cast(float, 0x11111111U),
+             __builtin_bit_cast(float, 0x22222222U),
+             __builtin_bit_cast(float, 0x33333333U)}),
+         ((__m128){1.0f, __builtin_bit_cast(float, 0xaaaaaaaaU),
+             __builtin_bit_cast(float, 0xbbbbbbbbU),
+             __builtin_bit_cast(float, 0xccccccccU)}),
+         _CMP_GE_OS),
+  ALL_ONES_F, __builtin_bit_cast(float, 0x11111111U),
+  __builtin_bit_cast(float, 0x22222222U),
+  __builtin_bit_cast(float, 0x33333333U)));
+TEST_CONSTEXPR(match_m128(
+  _mm_cmp_ss(((__m128){1.0f, __builtin_bit_cast(float, 0x11111111U),
+             __builtin_bit_cast(float, 0x22222222U),
+             __builtin_bit_cast(float, 0x33333333U)}),
+         ((__m128){2.0f, __builtin_bit_cast(float, 0xaaaaaaaaU),
+             __builtin_bit_cast(float, 0xbbbbbbbbU),
+             __builtin_bit_cast(float, 0xccccccccU)}),
+         _CMP_GE_OS),
+  0.0f, __builtin_bit_cast(float, 0x11111111U),
+  __builtin_bit_cast(float, 0x22222222U),
+  __builtin_bit_cast(float, 0x33333333U)));
+TEST_CONSTEXPR(match_m128(
+  _mm_cmp_ss(((__m128){__builtin_nan(""), __builtin_bit_cast(float, 0x11111111U),
+             __builtin_bit_cast(float, 0x22222222U),
+             __builtin_bit_cast(float, 0x33333333U)}),
+         ((__m128){1.0f, __builtin_bit_cast(float, 0xaaaaaaaaU),
+             __builtin_bit_cast(float, 0xbbbbbbbbU),
+             __builtin_bit_cast(float, 0xccccccccU)}),
+         _CMP_UNORD_S),
+  ALL_ONES_F, __builtin_bit_cast(float, 0x11111111U),
+  __builtin_bit_cast(float, 0x22222222U),
+  __builtin_bit_cast(float, 0x33333333U)));
 
 __m256d test_mm256_cvtepi32_pd(__m128i A) {
   // CHECK-LABEL: test_mm256_cvtepi32_pd

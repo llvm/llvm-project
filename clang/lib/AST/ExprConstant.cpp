@@ -14417,10 +14417,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
     return Success(R, E);
   }
+  case X86::BI__builtin_ia32_cmpps:
   case X86::BI__builtin_ia32_cmppd:
-  case X86::BI__builtin_ia32_cmppd256: {
-    using CmpResult = llvm::APFloatBase::cmpResult;
-
+  case X86::BI__builtin_ia32_cmpps256:
+  case X86::BI__builtin_ia32_cmppd256:
+  case X86::BI__builtin_ia32_cmpss:
+  case X86::BI__builtin_ia32_cmpsd: {
     const Expr *A = E->getArg(0);
     const Expr *B = E->getArg(1);
     const Expr *Imm = E->getArg(2);
@@ -14441,14 +14443,20 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!VT)
       return false;
 
-    const bool IsF64 =
-        VT->getElementType()->isSpecificBuiltinType(BuiltinType::Double);
+    const uint32_t ImmZExt = ImmVal.getZExtValue();
     const bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpss) ||
                           (BuiltinOp == X86::BI__builtin_ia32_cmpsd);
-    const uint32_t ImmZExt = ImmVal.getZExtValue();
 
-    std::vector<APValue> results;
+    SmallVector<APValue, 8> ResultElements;
+    ResultElements.reserve(NumLanes);
     for (unsigned i = 0; i < NumLanes; ++i) {
+      // Handle cmpss/cmpsd
+      if (IsScalar && i > 0) {
+        // Copy the upper 3 packed elements from a to the upper elements of dst
+        ResultElements.push_back(AV.getVectorElt(i));
+        continue;
+      }
+
       const auto AElem = AV.getVectorElt(i);
       const auto BElem = BV.getVectorElt(i);
 
@@ -14456,19 +14464,23 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       const auto B0 = BElem.getFloat();
 
       const auto CompareResult = A0.compare(B0);
+      const bool Matches = MatchesPredicate(ImmZExt, CompareResult);
 
-      const auto ComparisonResult = MatchesPredicate(ImmZExt, CompareResult);
-      const llvm::APFloat True(-1.0);
-      const llvm::APFloat False(0.0);
+      // Create bit patterns for comparison results:
+      // True = all bits set (0xFFFFFFFF for float, 0xFFFFFFFFFFFFFFFF for double)
+      // False = all bits zero
+      const llvm::fltSemantics &Sem = A0.getSemantics();
+      const unsigned BitWidth = llvm::APFloat::getSizeInBits(Sem);
+      const llvm::APFloat True(Sem, llvm::APInt::getAllOnes(BitWidth));
+      const llvm::APFloat False(Sem, llvm::APInt(BitWidth, 0));
 
-      if (ComparisonResult)
-        results.push_back(APValue(True));
+      if (Matches)
+        ResultElements.push_back(APValue(True));
       else
-        results.push_back(APValue(False));
+        ResultElements.push_back(APValue(False));
     }
 
-    const APValue retVal(results.data(), results.size());
-    return Success(retVal, E);
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
   }
 }
