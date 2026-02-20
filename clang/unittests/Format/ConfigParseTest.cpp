@@ -502,7 +502,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
                    .value());
   ASSERT_EQ(Style.BreakBinaryOperations.PerOperator.size(), 1u);
   std::vector<tok::TokenKind> ExpectedShiftOps = {tok::greater,
-                                                   tok::greatergreater};
+                                                  tok::greatergreater};
   EXPECT_EQ(Style.BreakBinaryOperations.PerOperator[0].Operators,
             ExpectedShiftOps);
 

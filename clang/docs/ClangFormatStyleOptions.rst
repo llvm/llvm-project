@@ -3674,8 +3674,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``List of BinaryOperationBreakRules PerOperator`` Per-operator override rules.
 
-  * ``List of Strings Operators`` :versionbadge:`clang-format 23`
-  The list of operators this rule applies to, e.g. ``&&``, ``||``, ``|``.
+  * ``List of Strings Operators`` :versionbadge:`clang-format 23` The list of operators this rule applies to, e.g. ``&&``, ``||``, ``|``.
     Alternative spellings (e.g. ``and`` for ``&&``) are accepted.
 
   * ``BreakBinaryOperationsStyle Style``

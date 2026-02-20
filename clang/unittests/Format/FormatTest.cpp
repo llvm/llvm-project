@@ -28748,7 +28748,6 @@ TEST_F(FormatTest, BreakBinaryOperationsPerOperator) {
                "    packet_number >>\n"
                "    packet_scale;",
                Style);
-
 }
 
 TEST_F(FormatTest, BreakBinaryOperationsMinChainLength) {

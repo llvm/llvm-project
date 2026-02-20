@@ -154,7 +154,7 @@ class NestedField(object):
 
     def __str__(self):
         if self.version:
-            return "\n* ``%s`` :versionbadge:`clang-format %s`\n%s" % (
+            return "\n* ``%s`` :versionbadge:`clang-format %s` %s" % (
                 self.name,
                 self.version,
                 doxygen2rst(indent(self.comment, 2, indent_first_line=False)),
@@ -401,29 +401,22 @@ class OptionsReader:
                             )
                         )
                     else:
-                        vec_match = re.match(
-                            r"std::vector<(.*)>$", field_type
-                        )
+                        vec_match = re.match(r"std::vector<(.*)>$", field_type)
                         if vec_match and vec_match.group(1) in nested_structs:
                             inner_struct = nested_structs[vec_match.group(1)]
-                            display = (
-                                "List of %ss %s"
-                                % (vec_match.group(1), field_name)
+                            display = "List of %ss %s" % (
+                                vec_match.group(1),
+                                field_name,
                             )
                             nested_struct.values.append(
                                 NestedField(display, comment, version)
                             )
                             nested_struct.values.extend(inner_struct.values)
                         else:
-                            vec_match = re.match(
-                                r"std::vector<(.*)>$", field_type
-                            )
+                            vec_match = re.match(r"std::vector<(.*)>$", field_type)
                             if vec_match:
-                                display_type = (
-                                    "List of "
-                                    + pluralize(
-                                        to_yaml_type(vec_match.group(1))
-                                    )
+                                display_type = "List of " + pluralize(
+                                    to_yaml_type(vec_match.group(1))
                                 )
                             else:
                                 display_type = field_type
