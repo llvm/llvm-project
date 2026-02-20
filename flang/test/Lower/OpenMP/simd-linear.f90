@@ -80,3 +80,21 @@ subroutine linear_expr
     !CHECK: } {linear_var_types = [i32]}
     !IMPLICIT: } {linear_var_types = [i32, i32]}
 end subroutine
+
+subroutine simple_linear_i8
+  implicit none
+  integer(kind=8) :: x, y, i
+
+  ! CHECK-LABEL: func.func @_QPsimple_linear_i8
+
+  ! CHECK-DAG: %[[X_ALLOC:.*]] = fir.alloca i64 {bindc_name = "x"
+  ! CHECK: %[[C1_I32:.*]] = arith.constant 1 : i32
+
+  ! CHECK: omp.simd linear(%[[X_DECL:.*]]#0 = %[[C1_I32]] : !fir.ref<i64>) {{.*}}
+
+  !$omp simd linear(x)
+  do i = 1_8, 10_8
+  end do
+
+  ! CHECK: } {linear_var_types = [i64]}
+end subroutine
