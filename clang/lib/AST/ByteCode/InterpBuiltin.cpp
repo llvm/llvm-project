@@ -4173,7 +4173,8 @@ static bool interp__builtin_x86_comi(InterpState &S, CodePtr OpPC,
   const Pointer &VectorB = S.Stk.pop<Pointer>();
   const Pointer &VectorA = S.Stk.pop<Pointer>();
 
-  if (VectorA.getNumElems() == 0 || VectorA.getNumElems() != VectorB.getNumElems())
+  if (VectorA.getNumElems() == 0 ||
+      VectorA.getNumElems() != VectorB.getNumElems())
     return false;
 
   const llvm::APFloat A = VectorA.elem<Floating>(0).getAPFloat();
@@ -4187,12 +4188,10 @@ static bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
                                     const InterpFrame *Frame,
                                     const CallExpr *Call, unsigned ID) {
   const bool HasImmArg =
-      ID == X86::BI__builtin_ia32_cmpps ||
-      ID == X86::BI__builtin_ia32_cmppd ||
+      ID == X86::BI__builtin_ia32_cmpps || ID == X86::BI__builtin_ia32_cmppd ||
       ID == X86::BI__builtin_ia32_cmpps256 ||
       ID == X86::BI__builtin_ia32_cmppd256 ||
-      ID == X86::BI__builtin_ia32_cmpss ||
-      ID == X86::BI__builtin_ia32_cmpsd;
+      ID == X86::BI__builtin_ia32_cmpss || ID == X86::BI__builtin_ia32_cmpsd;
 
   uint32_t Predicate;
   if (HasImmArg) {
@@ -4281,33 +4280,32 @@ static bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
   const Pointer &VectorA = S.Stk.pop<Pointer>();
   Pointer &Dst = S.Stk.peek<Pointer>();
 
-  const bool IsScalar =
-      ID == X86::BI__builtin_ia32_cmpss ||
-      ID == X86::BI__builtin_ia32_cmpsd ||
-      ID == X86::BI__builtin_ia32_cmpeqss ||
-      ID == X86::BI__builtin_ia32_cmpeqsd ||
-      ID == X86::BI__builtin_ia32_cmpgess ||
-      ID == X86::BI__builtin_ia32_cmpgesd ||
-      ID == X86::BI__builtin_ia32_cmpgtss ||
-      ID == X86::BI__builtin_ia32_cmpgtsd ||
-      ID == X86::BI__builtin_ia32_cmpltss ||
-      ID == X86::BI__builtin_ia32_cmpltsd ||
-      ID == X86::BI__builtin_ia32_cmpless ||
-      ID == X86::BI__builtin_ia32_cmplesd ||
-      ID == X86::BI__builtin_ia32_cmpneqss ||
-      ID == X86::BI__builtin_ia32_cmpneqsd ||
-      ID == X86::BI__builtin_ia32_cmpngess ||
-      ID == X86::BI__builtin_ia32_cmpngesd ||
-      ID == X86::BI__builtin_ia32_cmpngtss ||
-      ID == X86::BI__builtin_ia32_cmpngtsd ||
-      ID == X86::BI__builtin_ia32_cmpnless ||
-      ID == X86::BI__builtin_ia32_cmpnlesd ||
-      ID == X86::BI__builtin_ia32_cmpnltss ||
-      ID == X86::BI__builtin_ia32_cmpnltsd ||
-      ID == X86::BI__builtin_ia32_cmpordss ||
-      ID == X86::BI__builtin_ia32_cmpordsd ||
-      ID == X86::BI__builtin_ia32_cmpunordss ||
-      ID == X86::BI__builtin_ia32_cmpunordsd;
+  const bool IsScalar = ID == X86::BI__builtin_ia32_cmpss ||
+                        ID == X86::BI__builtin_ia32_cmpsd ||
+                        ID == X86::BI__builtin_ia32_cmpeqss ||
+                        ID == X86::BI__builtin_ia32_cmpeqsd ||
+                        ID == X86::BI__builtin_ia32_cmpgess ||
+                        ID == X86::BI__builtin_ia32_cmpgesd ||
+                        ID == X86::BI__builtin_ia32_cmpgtss ||
+                        ID == X86::BI__builtin_ia32_cmpgtsd ||
+                        ID == X86::BI__builtin_ia32_cmpltss ||
+                        ID == X86::BI__builtin_ia32_cmpltsd ||
+                        ID == X86::BI__builtin_ia32_cmpless ||
+                        ID == X86::BI__builtin_ia32_cmplesd ||
+                        ID == X86::BI__builtin_ia32_cmpneqss ||
+                        ID == X86::BI__builtin_ia32_cmpneqsd ||
+                        ID == X86::BI__builtin_ia32_cmpngess ||
+                        ID == X86::BI__builtin_ia32_cmpngesd ||
+                        ID == X86::BI__builtin_ia32_cmpngtss ||
+                        ID == X86::BI__builtin_ia32_cmpngtsd ||
+                        ID == X86::BI__builtin_ia32_cmpnless ||
+                        ID == X86::BI__builtin_ia32_cmpnlesd ||
+                        ID == X86::BI__builtin_ia32_cmpnltss ||
+                        ID == X86::BI__builtin_ia32_cmpnltsd ||
+                        ID == X86::BI__builtin_ia32_cmpordss ||
+                        ID == X86::BI__builtin_ia32_cmpordsd ||
+                        ID == X86::BI__builtin_ia32_cmpunordss ||
+                        ID == X86::BI__builtin_ia32_cmpunordsd;
 
   const auto NumLanes = VectorA.getNumElems();
   if (NumLanes != VectorB.getNumElems())

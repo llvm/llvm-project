@@ -1260,8 +1260,8 @@ static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_ucomige_sd(__m128d __a,
 ///    A 128-bit vector of [2 x double]. The lower double-precision value is
 ///    compared to the lower double-precision value of \a __a.
 /// \returns An integer containing the comparison result.
-static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_ucomineq_sd(__m128d __a,
-                                                                   __m128d __b) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_ucomineq_sd(__m128d __a, __m128d __b) {
   return __builtin_ia32_ucomisdneq((__v2df)__a, (__v2df)__b);
 }
 

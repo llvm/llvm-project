@@ -14487,33 +14487,32 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
                            (BuiltinOp == X86::BI__builtin_ia32_cmpps256) ||
                            (BuiltinOp == X86::BI__builtin_ia32_cmppd256);
 
-    const bool IsScalar =
-        (BuiltinOp == X86::BI__builtin_ia32_cmpss) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpsd) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpeqss) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpeqsd) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpgess) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpgesd) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpgtss) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpgtsd) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpltss) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpltsd) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpless) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmplesd) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpneqss) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpneqsd) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpngess) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpngesd) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpngtss) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpngtsd) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpnless) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpnlesd) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpnltss) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpnltsd) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpordss) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpordsd) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpunordss) ||
-        (BuiltinOp == X86::BI__builtin_ia32_cmpunordsd);
+    const bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpss) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpsd) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpeqss) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpeqsd) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpgess) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpgesd) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpgtss) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpgtsd) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpltss) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpltsd) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpless) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmplesd) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpneqss) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpneqsd) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpngess) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpngesd) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpngtss) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpngtsd) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpnless) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpnlesd) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpnltss) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpnltsd) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpordss) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpordsd) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpunordss) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpunordsd);
 
     uint32_t Predicate = X86CmpImm::CMP_EQ_OQ;
     if (HasImmArg) {
@@ -17468,7 +17467,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         !EvaluateVector(E->getArg(1), BV, Info))
       return false;
 
-    if (AV.getVectorLength() == 0 || BV.getVectorLength() != AV.getVectorLength())
+    if (AV.getVectorLength() == 0 ||
+        BV.getVectorLength() != AV.getVectorLength())
       return false;
 
     uint32_t Predicate;

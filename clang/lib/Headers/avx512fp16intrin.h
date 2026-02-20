@@ -299,74 +299,74 @@ _mm512_zextph256_ph512(__m256h __a) {
 #define _mm_comi_sh(A, B, pred)                                                \
   _mm_comi_round_sh((A), (B), (pred), _MM_FROUND_CUR_DIRECTION)
 
-static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_comieq_sh(__m128h __A,
-                                                                    __m128h __B) {
+static __inline__ int
+    __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_comieq_sh(__m128h __A, __m128h __B) {
   return __builtin_ia32_vcomish((__v8hf)__A, (__v8hf)__B, _CMP_EQ_OS,
                                 _MM_FROUND_CUR_DIRECTION);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_comilt_sh(__m128h __A,
-                                                                    __m128h __B) {
+static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_comilt_sh(__m128h __A, __m128h __B) {
   return __builtin_ia32_vcomish((__v8hf)__A, (__v8hf)__B, _CMP_LT_OS,
                                 _MM_FROUND_CUR_DIRECTION);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_comile_sh(__m128h __A,
-                                                                    __m128h __B) {
+static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_comile_sh(__m128h __A, __m128h __B) {
   return __builtin_ia32_vcomish((__v8hf)__A, (__v8hf)__B, _CMP_LE_OS,
                                 _MM_FROUND_CUR_DIRECTION);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_comigt_sh(__m128h __A,
-                                                                    __m128h __B) {
+static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_comigt_sh(__m128h __A, __m128h __B) {
   return __builtin_ia32_vcomish((__v8hf)__A, (__v8hf)__B, _CMP_GT_OS,
                                 _MM_FROUND_CUR_DIRECTION);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_comige_sh(__m128h __A,
-                                                                    __m128h __B) {
+static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_comige_sh(__m128h __A, __m128h __B) {
   return __builtin_ia32_vcomish((__v8hf)__A, (__v8hf)__B, _CMP_GE_OS,
                                 _MM_FROUND_CUR_DIRECTION);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_comineq_sh(__m128h __A,
-                                                                     __m128h __B) {
+static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_comineq_sh(__m128h __A, __m128h __B) {
   return __builtin_ia32_vcomish((__v8hf)__A, (__v8hf)__B, _CMP_NEQ_US,
                                 _MM_FROUND_CUR_DIRECTION);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_ucomieq_sh(__m128h __A,
-                                                                     __m128h __B) {
+static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_ucomieq_sh(__m128h __A, __m128h __B) {
   return __builtin_ia32_vcomish((__v8hf)__A, (__v8hf)__B, _CMP_EQ_OQ,
                                 _MM_FROUND_CUR_DIRECTION);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_ucomilt_sh(__m128h __A,
-                                                                     __m128h __B) {
+static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_ucomilt_sh(__m128h __A, __m128h __B) {
   return __builtin_ia32_vcomish((__v8hf)__A, (__v8hf)__B, _CMP_LT_OQ,
                                 _MM_FROUND_CUR_DIRECTION);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_ucomile_sh(__m128h __A,
-                                                                     __m128h __B) {
+static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_ucomile_sh(__m128h __A, __m128h __B) {
   return __builtin_ia32_vcomish((__v8hf)__A, (__v8hf)__B, _CMP_LE_OQ,
                                 _MM_FROUND_CUR_DIRECTION);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_ucomigt_sh(__m128h __A,
-                                                                     __m128h __B) {
+static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_ucomigt_sh(__m128h __A, __m128h __B) {
   return __builtin_ia32_vcomish((__v8hf)__A, (__v8hf)__B, _CMP_GT_OQ,
                                 _MM_FROUND_CUR_DIRECTION);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_ucomige_sh(__m128h __A,
-                                                                     __m128h __B) {
+static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_ucomige_sh(__m128h __A, __m128h __B) {
   return __builtin_ia32_vcomish((__v8hf)__A, (__v8hf)__B, _CMP_GE_OQ,
                                 _MM_FROUND_CUR_DIRECTION);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_ucomineq_sh(__m128h __A,
-                                                                      __m128h __B) {
+static __inline__ int __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_ucomineq_sh(__m128h __A, __m128h __B) {
   return __builtin_ia32_vcomish((__v8hf)__A, (__v8hf)__B, _CMP_NEQ_UQ,
                                 _MM_FROUND_CUR_DIRECTION);
 }
