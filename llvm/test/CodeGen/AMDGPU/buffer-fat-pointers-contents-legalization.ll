@@ -3262,16 +3262,14 @@ define <4 x i4> @load_v4i4(ptr addrspace(8) inreg %buf) {
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    buffer_load_ushort v0, off, s[16:19], 0
-; SDAG-NEXT:    v_mov_b32_e32 v2, 15
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    buffer_store_short v0, off, s[0:3], s32
-; SDAG-NEXT:    buffer_load_ushort v1, off, s[0:3], s32
+; SDAG-NEXT:    buffer_load_ushort v2, off, s[0:3], s32
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    v_lshrrev_b16_e32 v4, 4, v1
-; SDAG-NEXT:    v_and_b32_e32 v0, 15, v1
-; SDAG-NEXT:    v_lshrrev_b16_e32 v3, 12, v1
-; SDAG-NEXT:    v_and_b32_sdwa v2, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
-; SDAG-NEXT:    v_and_b32_e32 v1, 15, v4
+; SDAG-NEXT:    v_and_b32_e32 v0, 15, v2
+; SDAG-NEXT:    v_lshrrev_b16_e32 v3, 12, v2
+; SDAG-NEXT:    v_bfe_u32 v1, v2, 4, 4
+; SDAG-NEXT:    v_bfe_u32 v2, v2, 8, 4
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: load_v4i4:
