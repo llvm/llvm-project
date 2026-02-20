@@ -214,7 +214,7 @@ public:
 
   void GetRemoteQSupported();
 
-  bool GetVContSupported(char flavor);
+  bool GetVContSupported(llvm::StringRef flavor);
 
   bool GetpPacketSupported(lldb::tid_t tid);
 
@@ -262,9 +262,9 @@ public:
 
   bool GetGroupName(uint32_t gid, std::string &name);
 
-  bool HasFullVContSupport() { return GetVContSupported('A'); }
+  bool HasFullVContSupport() { return GetVContSupported("A"); }
 
-  bool HasAnyVContSupport() { return GetVContSupported('a'); }
+  bool HasAnyVContSupport() { return GetVContSupported("a"); }
 
   bool GetStopReply(StringExtractorGDBRemote &response);
 
