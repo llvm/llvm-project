@@ -760,8 +760,6 @@ StringRef remove_leading_dotslash(StringRef Path, Style style) {
   return Path;
 }
 
-// Remove path traversal components ("." and "..") when possible, and
-// canonicalize slashes.
 bool remove_dots(SmallVectorImpl<char> &the_path, bool remove_dot_dot,
                  Style style) {
   style = real_style(style);

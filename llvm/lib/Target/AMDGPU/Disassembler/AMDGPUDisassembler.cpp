@@ -2684,8 +2684,8 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
   case amdhsa::RESERVED0_OFFSET:
     // 4 reserved bytes, must be 0.
     ReservedBytes = DE.getBytes(Cursor, 4);
-    for (int I = 0; I < 4; ++I) {
-      if (ReservedBytes[I] != 0)
+    for (char B : ReservedBytes) {
+      if (B != 0)
         return createReservedKDBytesError(amdhsa::RESERVED0_OFFSET, 4);
     }
     return true;
@@ -2700,8 +2700,8 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
   case amdhsa::RESERVED1_OFFSET:
     // 20 reserved bytes, must be 0.
     ReservedBytes = DE.getBytes(Cursor, 20);
-    for (int I = 0; I < 20; ++I) {
-      if (ReservedBytes[I] != 0)
+    for (char B : ReservedBytes) {
+      if (B != 0)
         return createReservedKDBytesError(amdhsa::RESERVED1_OFFSET, 20);
     }
     return true;
@@ -2783,8 +2783,8 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
   case amdhsa::RESERVED3_OFFSET:
     // 4 bytes from here are reserved, must be 0.
     ReservedBytes = DE.getBytes(Cursor, 4);
-    for (int I = 0; I < 4; ++I) {
-      if (ReservedBytes[I] != 0)
+    for (char B : ReservedBytes) {
+      if (B != 0)
         return createReservedKDBytesError(amdhsa::RESERVED3_OFFSET, 4);
     }
     return true;

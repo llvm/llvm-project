@@ -207,12 +207,12 @@ LLVM_ABI bool replace_path_prefix(SmallVectorImpl<char> &Path,
 LLVM_ABI StringRef remove_leading_dotslash(StringRef path LLVM_LIFETIME_BOUND,
                                            Style style = Style::native);
 
-/// In-place remove any './' and optionally '../' components from a path.
+/// Remove './' and optionally '../' components, and canonicalize separators.
 ///
-/// @param path processed path
+/// @param path processed path.
 /// @param remove_dot_dot specify if '../' (except for leading "../") should be
-/// removed
-/// @result True if path was changed
+/// removed.
+/// @result True if path was changed.
 LLVM_ABI bool remove_dots(SmallVectorImpl<char> &path,
                           bool remove_dot_dot = false,
                           Style style = Style::native);
