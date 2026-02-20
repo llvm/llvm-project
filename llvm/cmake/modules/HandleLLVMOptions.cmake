@@ -142,6 +142,16 @@ if( LLVM_ENABLE_ASSERTIONS )
   else()
     set(LIBCXX_HARDENING_MODE "extensive")
   endif()
+
+  string(TOUPPER "_LIBCPP_HARDENING_MODE_${LIBCXX_HARDENING_MODE}" LIBCXX_HARDENING_MODE_SPELLING)
+  CHECK_CXX_SOURCE_COMPILES("
+  #define _LIBCPP_HARDENING_MODE ${LIBCXX_HARDENING_MODE_SPELLING}
+  #include <string>
+  int main() { return 0; }
+  " SUPPORTS_LIBCXX_HARDENING_MODE)
+  if(SUPPORTS_LIBCXX_HARDENING_MODE)
+    add_compile_definitions(_LIBCPP_HARDENING_MODE=${LIBCXX_HARDENING_MODE_SPELLING})
+  endif()
 endif()
 
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
@@ -626,7 +636,14 @@ if( MSVC )
   # PDBs without changing codegen.
   option(LLVM_ENABLE_PDB OFF)
   if (LLVM_ENABLE_PDB AND uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
-    append("/Zi" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    # Add /Zi to CMAKE_*_FLAGS_RELEASE instead of CMAKE_*_FLAGS, because CMake
+    # runs additional logic when PCH are enabled, but only extracts flags from
+    # these variables. See:
+    # https://gitlab.kitware.com/cmake/cmake/-/blob/315042dfd0d/Source/cmLocalGenerator.cxx#L2811-2813
+    #
+    # For CMake 3.25+, this should change according to:
+    # https://cmake.org/cmake/help/latest/policy/CMP0141.html
+    append("/Zi" CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE)
     # /DEBUG disables linker GC and ICF, but we want those in Release mode.
     append("/DEBUG /OPT:REF /OPT:ICF"
           CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS
@@ -737,14 +754,12 @@ if (MSVC)
       -wd4457 # Suppress 'declaration of 'var' hides function parameter'
       -wd4458 # Suppress 'declaration of 'var' hides class member'
       -wd4459 # Suppress 'declaration of 'var' hides global declaration'
-      -wd4503 # Suppress ''identifier' : decorated name length exceeded, name was truncated'
       -wd4624 # Suppress ''derived class' : destructor could not be generated because a base class destructor is inaccessible'
       -wd4722 # Suppress 'function' : destructor never returns, potential memory leak
       -wd4100 # Suppress 'unreferenced formal parameter'
       -wd4127 # Suppress 'conditional expression is constant'
       -wd4512 # Suppress 'assignment operator could not be generated'
       -wd4505 # Suppress 'unreferenced local function has been removed'
-      -wd4610 # Suppress '<class> can never be instantiated'
       -wd4510 # Suppress 'default constructor could not be generated'
       -wd4702 # Suppress 'unreachable code'
       -wd4245 # Suppress ''conversion' : conversion from 'type1' to 'type2', signed/unsigned mismatch'
@@ -753,23 +768,9 @@ if (MSVC)
       -wd4701 # Suppress 'potentially uninitialized local variable'
       -wd4703 # Suppress 'potentially uninitialized local pointer variable'
       -wd4389 # Suppress 'signed/unsigned mismatch'
-      -wd4611 # Suppress 'interaction between '_setjmp' and C++ object destruction is non-portable'
       -wd4805 # Suppress 'unsafe mix of type <type> and type <type> in operation'
-      -wd4204 # Suppress 'nonstandard extension used : non-constant aggregate initializer'
       -wd4577 # Suppress 'noexcept used with no exception handling mode specified; termination on exception is not guaranteed'
-      -wd4091 # Suppress 'typedef: ignored on left of '' when no variable is declared'
-          # C4592 is disabled because of false positives in Visual Studio 2015
-          # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
-      -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
       -wd4319 # Suppress ''operator' : zero extending 'type' to 'type' of greater size'
-          # C4709 is disabled because of a bug with Visual Studio 2017 as of
-          # v15.8.8. Re-evaluate the usefulness of this diagnostic when the bug
-          # is fixed.
-      -wd4709 # Suppress comma operator within array index expression
-
-      # We'd like this warning to be enabled, but it triggers from code in
-      # WinBase.h that we don't have control over.
-      -wd5105 # Suppress macro expansion producing 'defined' has undefined behavior
 
       # Ideally, we'd like this warning to be enabled, but even MSVC 2019 doesn't
       # support the 'aligned' attribute in the way that clang sources requires (for
@@ -1303,11 +1304,70 @@ if (LLVM_BUILD_INSTRUMENTED AND LLVM_BUILD_INSTRUMENTED_COVERAGE)
   message(FATAL_ERROR "LLVM_BUILD_INSTRUMENTED and LLVM_BUILD_INSTRUMENTED_COVERAGE cannot both be specified")
 endif()
 
+if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+    # PCH is working in principle on AIX, but due to transitive includes,
+    # sys/mode.h ends up in the LLVMSupport PCH, which happens to define macros
+    # named S_RESERVED{1,2,3,4}, which cause collisions in CodeViewSymbols.def.
+    # AIX systems are not easily accessible, which makes identifying and
+    # debugging such cases rather difficult. Therefore, disable PCH on AIX by
+    # default.
+    message(NOTICE "Precompiled headers are disabled by default on AIX. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Pre-compiled headers with GCC (tested versions 14+15) provide very little
+    # compile-time improvements, but substantially increase the build dir size.
+    # Therefore, disable PCH with GCC by default.
+    message(NOTICE "Precompiled headers are disabled by default with GCC. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18)
+    # Clang before version 18 has problems with mixed default visibility.
+    # Therefore, disable PCH with older Clang versions by default.
+    message(NOTICE "Precompiled headers are disabled by default with Clang <18. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
+
+  # Warn on possibly unintended interactions with ccache/sccache if the user
+  # sets this via CMAKE_CXX_COMPILER_LAUNCHER (and not using LLVM_CCACHE_BUILD).
+  if(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "sccache")
+    # sccache doesn't support PCH, this can lead to false-positives when only
+    # a macro definition changes. For Clang, this sometimes even works
+    # correctly, but not always, so disable by default to be safe.
+    # See: https://github.com/mozilla/sccache/issues/615
+    # See: https://github.com/mozilla/sccache/issues/2562
+    message(NOTICE "Precompiled headers are disabled by default with sccache. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  elseif(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # ccache with PCH can lead to false-positives when only a macro
+    # definition changes with non-Clang compilers, because macro definitions
+    # are not compared in preprocessed mode.
+    # See: https://github.com/ccache/ccache/issues/1668
+    message(WARNING "Using ccache with precompiled headers with non-Clang "
+      "compilers is not supported and may lead to false positives. "
+      "Set CMAKE_DISABLE_PRECOMPILE_HEADERS to ON/OFF to silence this warning.")
+  endif()
+endif()
 if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  message(STATUS "Precompiled headers enabled.")
   # CMake weirdly marks all PCH as system headers. This undocumented variable
   # can be used to suppress the "#pragma clang system_header".
   # See: https://gitlab.kitware.com/cmake/cmake/-/issues/21219
   set(CMAKE_PCH_PROLOGUE "")
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Clang requires this flag in order for precompiled headers to work with ccache.
+    append("-Xclang -fno-pch-timestamp" CMAKE_CXX_FLAGS)
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # GCC requires this flag in order for precompiled headers to work with ccache.
+    append("-fpch-preprocess" CMAKE_CXX_FLAGS)
+  endif()
+else()
+  message(STATUS "Precompiled headers disabled.")
 endif()
 
 set(LLVM_THINLTO_CACHE_PATH "${PROJECT_BINARY_DIR}/lto.cache" CACHE STRING "Set ThinLTO cache path. This can be used when building LLVM from several different directiories.")

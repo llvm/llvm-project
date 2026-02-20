@@ -4703,6 +4703,30 @@ static QualType adjustVectorType(ASTContext &Context, QualType FromTy,
   return Context.getExtVectorType(ElType, FromVec->getNumElements());
 }
 
+/// Check if an integral conversion involves incompatible overflow behavior
+/// types. Returns true if the conversion is invalid.
+static bool checkIncompatibleOBTConversion(Sema &S, QualType FromType,
+                                           QualType ToType, Expr *From) {
+  const auto *FromOBT = FromType->getAs<OverflowBehaviorType>();
+  const auto *ToOBT = ToType->getAs<OverflowBehaviorType>();
+
+  if (FromOBT && ToOBT &&
+      FromOBT->getBehaviorKind() != ToOBT->getBehaviorKind()) {
+    S.Diag(From->getExprLoc(), diag::err_incompatible_obt_kinds_assignment)
+        << ToType << FromType
+        << (ToOBT->getBehaviorKind() ==
+                    OverflowBehaviorType::OverflowBehaviorKind::Trap
+                ? "__ob_trap"
+                : "__ob_wrap")
+        << (FromOBT->getBehaviorKind() ==
+                    OverflowBehaviorType::OverflowBehaviorKind::Trap
+                ? "__ob_trap"
+                : "__ob_wrap");
+    return true;
+  }
+  return false;
+}
+
 ExprResult
 Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                 const StandardConversionSequence& SCS,
@@ -4862,6 +4886,11 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     QualType StepTy = ToType;
     if (FromType->isVectorType() || ToType->isVectorType())
       StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
+
+    // Check for incompatible OBT kinds before converting
+    if (checkIncompatibleOBTConversion(*this, FromType, StepTy, From))
+      return ExprError();
+
     if (ElTy->isBooleanType()) {
       assert(FromType->castAsEnumDecl()->isFixed() &&
              SCS.Second == ICK_Integral_Promotion &&

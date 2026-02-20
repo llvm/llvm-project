@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 class CustomRivosVXI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
-                string opcodestr, string argstr>
+                     string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
   bits<5> imm;
   bits<5> rs1;
@@ -27,7 +27,7 @@ class CustomRivosVXI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
   let Inst{6-0} = OPC_CUSTOM_2.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = NoConstraint;
+  let VMConstraint = false;
   let Constraints = "$vd = $vd_wb";
 
   let UseNamedOperandTable = true;
@@ -50,7 +50,7 @@ class CustomRivosXVI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
   let Inst{6-0} = OPC_CUSTOM_2.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = NoConstraint;
+  let VMConstraint = false;
 
   let UseNamedOperandTable = true;
 }
@@ -87,7 +87,7 @@ multiclass RIVPseudoVALU_VV {
 }
 
 let Predicates = [HasVendorXRivosVizip],
-  Constraints = "@earlyclobber $rd, $rd = $passthru" in {
+    Constraints = "@earlyclobber $rd, $rd = $passthru" in {
 defm PseudoRI_VZIPEVEN   : RIVPseudoVALU_VV;
 defm PseudoRI_VZIPODD   : RIVPseudoVALU_VV;
 defm PseudoRI_VZIP2A   : RIVPseudoVALU_VV;
@@ -129,7 +129,7 @@ def RI_VZERO : RVInstVUnary<0b000000, 0b00000, OPCFG, (outs VR:$vd),
 
   let Inst{6-0} = OPC_CUSTOM_2.Value;
 
-  let RVVConstraint = NoConstraint;
+  let VMConstraint = false;
 }
 
 def RI_VINSERT : CustomRivosVXI<0b010000, OPMVX, (outs VR:$vd_wb),

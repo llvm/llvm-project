@@ -23,8 +23,8 @@ long test_InterlockedAdd_constant(int32_t volatile *Addend) {
 }
 
 // CHECK-LABEL: define {{.*}} i32 @test_InterlockedAdd(ptr %Addend, i32 %Value) {{.*}} {
-// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %1, i32 %2 seq_cst, align 4
-// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %2, i32 %1 seq_cst, align 4
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %1
 // CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: call to undeclared function '_InterlockedAdd'
 
@@ -33,8 +33,8 @@ long test_InterlockedAdd_acq(int32_t volatile *Addend, long Value) {
 }
 
 // CHECK-LABEL: define {{.*}} i32 @test_InterlockedAdd_acq(ptr %Addend, i32 %Value) {{.*}} {
-// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %1, i32 %2 acquire, align 4
-// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %2, i32 %1 acquire, align 4
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %1
 // CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: call to undeclared function '_InterlockedAdd_acq'
 
@@ -43,8 +43,8 @@ long test_InterlockedAdd_nf(int32_t volatile *Addend, long Value) {
 }
 
 // CHECK-LABEL: define {{.*}} i32 @test_InterlockedAdd_nf(ptr %Addend, i32 %Value) {{.*}} {
-// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %1, i32 %2 monotonic, align 4
-// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %2, i32 %1 monotonic, align 4
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %1
 // CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: call to undeclared function '_InterlockedAdd_nf'
 
@@ -53,8 +53,8 @@ long test_InterlockedAdd_rel(int32_t volatile *Addend, long Value) {
 }
 
 // CHECK-LABEL: define {{.*}} i32 @test_InterlockedAdd_rel(ptr %Addend, i32 %Value) {{.*}} {
-// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %1, i32 %2 release, align 4
-// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %2, i32 %1 release, align 4
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %1
 // CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: call to undeclared function '_InterlockedAdd_rel'
 
@@ -67,8 +67,8 @@ __int64 test_InterlockedAdd64_constant(__int64 volatile *Addend) {
 }
 
 // CHECK-LABEL: define {{.*}} i64 @test_InterlockedAdd64(ptr %Addend, i64 %Value) {{.*}} {
-// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %1, i64 %2 seq_cst, align 8
-// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %2, i64 %1 seq_cst, align 8
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %1
 // CHECK-MSVC: ret i64 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: call to undeclared function '_InterlockedAdd64'
 
@@ -77,8 +77,8 @@ __int64 test_InterlockedAdd64_acq(__int64 volatile *Addend, __int64 Value) {
 }
 
 // CHECK-LABEL: define {{.*}} i64 @test_InterlockedAdd64_acq(ptr %Addend, i64 %Value) {{.*}} {
-// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %1, i64 %2 acquire, align 8
-// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %2, i64 %1 acquire, align 8
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %1
 // CHECK-MSVC: ret i64 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: call to undeclared function '_InterlockedAdd64_acq'
 
@@ -87,8 +87,8 @@ __int64 test_InterlockedAdd64_nf(__int64 volatile *Addend, __int64 Value) {
 }
 
 // CHECK-LABEL: define {{.*}} i64 @test_InterlockedAdd64_nf(ptr %Addend, i64 %Value) {{.*}} {
-// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %1, i64 %2 monotonic, align 8
-// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %2, i64 %1 monotonic, align 8
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %1
 // CHECK-MSVC: ret i64 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: call to undeclared function '_InterlockedAdd64_nf'
 
@@ -97,8 +97,8 @@ __int64 test_InterlockedAdd64_rel(__int64 volatile *Addend, __int64 Value) {
 }
 
 // CHECK-LABEL: define {{.*}} i64 @test_InterlockedAdd64_rel(ptr %Addend, i64 %Value) {{.*}} {
-// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %1, i64 %2 release, align 8
-// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %2, i64 %1 release, align 8
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %1
 // CHECK-MSVC: ret i64 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: call to undeclared function '_InterlockedAdd64_rel'
 
