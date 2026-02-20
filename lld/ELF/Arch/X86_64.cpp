@@ -438,7 +438,7 @@ void X86_64::writePlt(uint8_t *buf, const Symbol &sym,
 
 RelType X86_64::getDynRel(RelType type) const {
   if (type == R_X86_64_64 || type == R_X86_64_PC64 || type == R_X86_64_SIZE32 ||
-      type == R_X86_64_SIZE64)
+      type == R_X86_64_SIZE64 || type == R_X86_64_32)
     return type;
   return R_X86_64_NONE;
 }
