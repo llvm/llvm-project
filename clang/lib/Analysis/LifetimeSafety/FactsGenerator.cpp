@@ -111,24 +111,7 @@ void FactsGenerator::run() {
         handleLifetimeEnds(*LifetimeEnds);
       else if (std::optional<CFGFullExprCleanup> FullExprCleanup =
                    Element.getAs<CFGFullExprCleanup>()) {
-        ArrayRef<const MaterializeTemporaryExpr *> CollectedMTEs =
-            FullExprCleanup->getExpiringMTEs();
-        // Iterate through all loans to see if any expire.
-        for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
-          if (const auto *PL = dyn_cast<PathLoan>(Loan)) {
-            // Check if the loan is for a temporary materialization and if that
-            // storage location is the one being destructed.
-            const AccessPath &AP = PL->getAccessPath();
-            const MaterializeTemporaryExpr *Path =
-                AP.getAsMaterializeTemporaryExpr();
-            if (!Path)
-              continue;
-            if (llvm::is_contained(CollectedMTEs, Path)) {
-              CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
-                  PL->getID(), Path->getEndLoc()));
-            }
-          }
-        }
+        handleFullExprCleanup(*FullExprCleanup);
       }
     }
     if (Block == &Cfg.getExit())
@@ -461,6 +444,25 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
       if (Path == LifetimeEndsVD)
         CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
             BL->getID(), LifetimeEnds.getTriggerStmt()->getEndLoc()));
+    }
+  }
+}
+
+void FactsGenerator::handleFullExprCleanup(
+    const CFGFullExprCleanup &FullExprCleanup) {
+  // Iterate through all loans to see if any expire.
+  for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
+    if (const auto *PL = dyn_cast<PathLoan>(Loan)) {
+      // Check if the loan is for a temporary materialization and if that
+      // storage location is the one being destructed.
+      const AccessPath &AP = PL->getAccessPath();
+      const MaterializeTemporaryExpr *Path = AP.getAsMaterializeTemporaryExpr();
+      if (!Path)
+        continue;
+      if (llvm::is_contained(FullExprCleanup.getExpiringMTEs(), Path)) {
+        CurrentBlockFacts.push_back(
+            FactMgr.createFact<ExpireFact>(PL->getID(), Path->getEndLoc()));
+      }
     }
   }
 }

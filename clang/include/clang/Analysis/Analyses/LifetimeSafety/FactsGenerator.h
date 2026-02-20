@@ -63,6 +63,8 @@ private:
 
   void handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds);
 
+  void handleFullExprCleanup(const CFGFullExprCleanup &FullExprCleanup);
+
   void handleExitBlock();
 
   void handleGSLPointerConstruction(const CXXConstructExpr *CCE);
