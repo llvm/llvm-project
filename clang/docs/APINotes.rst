@@ -195,6 +195,52 @@ declaration kind), all of which are optional:
       SwiftReleaseOp: immortal
       SwiftRetainOp: immortal
 
+:SwiftReturnOwnership:
+
+  Specifies the ownership convention of a function or method returning a C++ type
+  that has been imported as a Swift reference type using ``SwiftImportAs: reference``.
+  This allows Swift to correctly manage the retain and release operations at the
+  language boundary.
+
+  The possible values are:
+
+  - ``retained`` — Indicates that the function or method returns a +1 reference.
+    Swift will take ownership and is responsible for releasing it.
+    Equivalent to ``SWIFT_RETURNS_RETAINED``.
+  - ``unretained`` — Indicates that the function or method returns a +0 reference.
+    The caller must ensure the returned object remains alive.
+    Equivalent to ``SWIFT_RETURNS_UNRETAINED``.
+
+  This attribute can be applied to:
+
+  - **C++ functions**
+  - **C++ instance or static methods**
+  - **Objective-C / Objective-C++ methods or functions that return a C++ reference type**
+
+  When omitted, the default behavior is that Swift assumes the function returns an
+  ```unretained``` (```+0```) reference unless the function or API has ``create`` or ``copy`` string in their name. 
+  Use ``SwiftReturnOwnership`` to override this and
+  ensure proper memory management when interoperating with Swift's ARC.
+
+  ::
+
+    Tags:
+    - Name: ImmortalRefType
+      SwiftImportAs: reference
+      Methods:
+        - Name: methodReturningFrt__
+        - Name: methodReturningFrt_returns_unretained
+          SwiftReturnOwnership: unretained
+        - Name: methodReturningFrt_returns_retained
+          SwiftReturnOwnership: retained
+
+    Functions:
+      - Name: functionReturningFrt__
+      - Name: functionReturningFrt_returns_unretained
+        SwiftReturnOwnership: unretained
+      - Name: functionReturningFrt_returns_retained
+        SwiftReturnOwnership: retained
+
 :SwiftCopyable:
 
   Allows annotating a C++ class as non-copyable in Swift. Equivalent to
