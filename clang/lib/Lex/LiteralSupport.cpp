@@ -917,6 +917,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   isFloat = false;
   isImaginary = false;
   isFloat16 = false;
+  isBFloat16 = false;
   isFloat128 = false;
   MicrosoftInteger = 0;
   isFract = false;
@@ -978,6 +979,24 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   // we break out of the loop.
   for (; s != ThisTokEnd; ++s) {
     switch (*s) {
+    case 'b': // FP Suffix for "__bf16"
+    case 'B':
+      if (!Target.hasBFloat16Type())
+        break;
+      if (!isFPConstant)
+        break; // Error for integer constant.
+      if (HasSize)
+        break;
+      HasSize = true;
+
+      if (s + 3 < ThisTokEnd &&
+          ((s[0] == 'b' && s[1] == 'f') || (s[0] == 'B' && s[1] == 'F')) &&
+          s[2] == '1' && s[3] == '6') {
+        s += 3; // success, eat up 3 characters.
+        isBFloat16 = true;
+        continue;
+      }
+      break;
     case 'R':
     case 'r':
       if (!LangOpts.FixedPoint)
@@ -1183,6 +1202,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
         isSizeT = false;
         isFloat = false;
         isFloat16 = false;
+        isBFloat16 = false;
         isHalf = false;
         isImaginary = false;
         isBitInt = false;

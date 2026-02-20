@@ -389,6 +389,26 @@ DWARF Support in Clang
 
 Floating Point Support in Clang
 -------------------------------
+- Added 15 ``__BFLT16_`` macros to indicate support of ``__bf16`` type. The new macros are:
+
+ + ``__BFLT16_DECIMAL_DIG__``
+ + ``__BFLT16_DENORM_MIN__``
+ + ``__BFLT16_DIG__``
+ + ``__BFLT16_EPSILON__``
+ + ``__BFLT16_HAS_DENORM__``
+ + ``__BFLT16_HAS_INFINITY__``
+ + ``__BFLT16_HAS_QUIET_NAN__``
+ + ``__BFLT16_MANT_DIG__``
+ + ``__BFLT16_MAX_10_EXP__``
+ + ``__BFLT16_MAX_EXP__``
+ + ``__BFLT16_MAX__``
+ + ``__BFLT16_MIN_10_EXP__``
+ + ``__BFLT16_MIN_EXP__``
+ + ``__BFLT16_MIN__``
+ + ``__BFLT16_NORM_MAX__``
+
+- Added brain float literal suffix (``1.0bf16`` and ``1.0BF16``).
+
 
 Fixed Point Support in Clang
 ----------------------------
