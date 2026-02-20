@@ -316,6 +316,9 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
           .Case([](const VPExpandSCEVRecipe *R) {
             return R->getSCEV()->getType();
           })
+          .Case([this](const VPExpandStridePredicatesRecipe *R) {
+            return Type::getInt1Ty(Ctx);
+          })
           .Case([this](const VPReductionRecipe *R) {
             return inferScalarType(R->getChainOp());
           })
