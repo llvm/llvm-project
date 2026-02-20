@@ -119,7 +119,7 @@ void const Bar (void) // expected-warning {{function cannot return qualified voi
 {
 }
 
-// issue 182154
+// PR #182484
 int gh182154_g(int);
 int gh182154_h(int);
 int gh182154_x = 0;
