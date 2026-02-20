@@ -477,41 +477,63 @@ __m128 test_mm_cmpunord_ss(__m128 __a, __m128 __b) {
 TEST_CONSTEXPR(match_m128(_mm_cmpunord_ss((__m128){__builtin_nanf(""), +2.0f, +3.0f, +4.0f}, (__m128){+5.0f, +9.0f, +8.0f, +7.0f}), ALL_ONES_F, +2.0f, +3.0f, +4.0f));
 TEST_CONSTEXPR(match_m128(_mm_cmpunord_ss((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+5.0f, +9.0f, +8.0f, +7.0f}), +0.0f, +2.0f, +3.0f, +4.0f));
 
+#define COMI_SS_CASE(FN, A0, B0, EXPECT)                                          \
+  TEST_CONSTEXPR(FN((__m128){A0, +0.0f, +0.0f, +0.0f},                            \
+                    (__m128){B0, +1.0f, +1.0f, +1.0f}) == (EXPECT));
+
 int test_mm_comieq_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comieq_ss
   // CHECK: call {{.*}}i32 @llvm.x86.sse.comieq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comieq_ss(A, B);
 }
+COMI_SS_CASE(_mm_comieq_ss, +2.0f, +2.0f, 1)
+COMI_SS_CASE(_mm_comieq_ss, +1.0f, +2.0f, 0)
+COMI_SS_CASE(_mm_comieq_ss, __builtin_nanf(""), +2.0f, 0)
 
 int test_mm_comige_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comige_ss
   // CHECK: call {{.*}}i32 @llvm.x86.sse.comige.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comige_ss(A, B);
 }
+COMI_SS_CASE(_mm_comige_ss, +3.0f, +2.0f, 1)
+COMI_SS_CASE(_mm_comige_ss, +1.0f, +2.0f, 0)
+COMI_SS_CASE(_mm_comige_ss, __builtin_nanf(""), +2.0f, 0)
 
 int test_mm_comigt_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comigt_ss
   // CHECK: call {{.*}}i32 @llvm.x86.sse.comigt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comigt_ss(A, B);
 }
+COMI_SS_CASE(_mm_comigt_ss, +3.0f, +2.0f, 1)
+COMI_SS_CASE(_mm_comigt_ss, +2.0f, +2.0f, 0)
+COMI_SS_CASE(_mm_comigt_ss, __builtin_nanf(""), +2.0f, 0)
 
 int test_mm_comile_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comile_ss
   // CHECK: call {{.*}}i32 @llvm.x86.sse.comile.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comile_ss(A, B);
 }
+COMI_SS_CASE(_mm_comile_ss, +2.0f, +2.0f, 1)
+COMI_SS_CASE(_mm_comile_ss, +3.0f, +2.0f, 0)
+COMI_SS_CASE(_mm_comile_ss, __builtin_nanf(""), +2.0f, 0)
 
 int test_mm_comilt_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comilt_ss
   // CHECK: call {{.*}}i32 @llvm.x86.sse.comilt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comilt_ss(A, B);
 }
+COMI_SS_CASE(_mm_comilt_ss, +1.0f, +2.0f, 1)
+COMI_SS_CASE(_mm_comilt_ss, +2.0f, +2.0f, 0)
+COMI_SS_CASE(_mm_comilt_ss, __builtin_nanf(""), +2.0f, 0)
 
 int test_mm_comineq_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comineq_ss
   // CHECK: call {{.*}}i32 @llvm.x86.sse.comineq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comineq_ss(A, B);
 }
+COMI_SS_CASE(_mm_comineq_ss, +1.0f, +2.0f, 1)
+COMI_SS_CASE(_mm_comineq_ss, +2.0f, +2.0f, 0)
+COMI_SS_CASE(_mm_comineq_ss, __builtin_nanf(""), +2.0f, 1)
 
 int test_mm_cvt_ss2si(__m128 A) {
   // CHECK-LABEL: test_mm_cvt_ss2si
@@ -1058,36 +1080,56 @@ int test_mm_ucomieq_ss(__m128 A, __m128 B) {
   // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomieq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomieq_ss(A, B);
 }
+COMI_SS_CASE(_mm_ucomieq_ss, +2.0f, +2.0f, 1)
+COMI_SS_CASE(_mm_ucomieq_ss, +1.0f, +2.0f, 0)
+COMI_SS_CASE(_mm_ucomieq_ss, __builtin_nanf(""), +2.0f, 0)
 
 int test_mm_ucomige_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_ucomige_ss
   // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomige.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomige_ss(A, B);
 }
+COMI_SS_CASE(_mm_ucomige_ss, +3.0f, +2.0f, 1)
+COMI_SS_CASE(_mm_ucomige_ss, +1.0f, +2.0f, 0)
+COMI_SS_CASE(_mm_ucomige_ss, __builtin_nanf(""), +2.0f, 0)
 
 int test_mm_ucomigt_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_ucomigt_ss
   // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomigt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomigt_ss(A, B);
 }
+COMI_SS_CASE(_mm_ucomigt_ss, +3.0f, +2.0f, 1)
+COMI_SS_CASE(_mm_ucomigt_ss, +2.0f, +2.0f, 0)
+COMI_SS_CASE(_mm_ucomigt_ss, __builtin_nanf(""), +2.0f, 0)
 
 int test_mm_ucomile_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_ucomile_ss
   // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomile.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomile_ss(A, B);
 }
+COMI_SS_CASE(_mm_ucomile_ss, +2.0f, +2.0f, 1)
+COMI_SS_CASE(_mm_ucomile_ss, +3.0f, +2.0f, 0)
+COMI_SS_CASE(_mm_ucomile_ss, __builtin_nanf(""), +2.0f, 0)
 
 int test_mm_ucomilt_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_ucomilt_ss
   // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomilt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomilt_ss(A, B);
 }
+COMI_SS_CASE(_mm_ucomilt_ss, +1.0f, +2.0f, 1)
+COMI_SS_CASE(_mm_ucomilt_ss, +2.0f, +2.0f, 0)
+COMI_SS_CASE(_mm_ucomilt_ss, __builtin_nanf(""), +2.0f, 0)
 
 int test_mm_ucomineq_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_ucomineq_ss
   // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomineq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomineq_ss(A, B);
 }
+COMI_SS_CASE(_mm_ucomineq_ss, +1.0f, +2.0f, 1)
+COMI_SS_CASE(_mm_ucomineq_ss, +2.0f, +2.0f, 0)
+COMI_SS_CASE(_mm_ucomineq_ss, __builtin_nanf(""), +2.0f, 1)
+
+#undef COMI_SS_CASE
 
 __m128 test_mm_undefined_ps(void) {
   // CHECK-LABEL: test_mm_undefined_ps

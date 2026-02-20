@@ -663,41 +663,62 @@ __m128d test_mm_cmpunord_sd(__m128d A, __m128d B) {
 }
 TEST_CONSTEXPR(match_m128d(_mm_cmpunord_sd((__m128d){__builtin_nan(""), +2.0}, (__m128d){+5.0, +9.0}), ALL_ONES_D, +2.0));
 
+#define COMI_SD_CASE(FN, A0, B0, EXPECT)                                          \
+  TEST_CONSTEXPR(FN((__m128d){A0, +0.0}, (__m128d){B0, +1.0}) == (EXPECT));
+
 int test_mm_comieq_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_comieq_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comieq.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comieq_sd(A, B);
 }
+COMI_SD_CASE(_mm_comieq_sd, +2.0, +2.0, 1)
+COMI_SD_CASE(_mm_comieq_sd, +1.0, +2.0, 0)
+COMI_SD_CASE(_mm_comieq_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_comige_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_comige_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comige.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comige_sd(A, B);
 }
+COMI_SD_CASE(_mm_comige_sd, +3.0, +2.0, 1)
+COMI_SD_CASE(_mm_comige_sd, +1.0, +2.0, 0)
+COMI_SD_CASE(_mm_comige_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_comigt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_comigt_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comigt.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comigt_sd(A, B);
 }
+COMI_SD_CASE(_mm_comigt_sd, +3.0, +2.0, 1)
+COMI_SD_CASE(_mm_comigt_sd, +2.0, +2.0, 0)
+COMI_SD_CASE(_mm_comigt_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_comile_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_comile_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comile.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comile_sd(A, B);
 }
+COMI_SD_CASE(_mm_comile_sd, +2.0, +2.0, 1)
+COMI_SD_CASE(_mm_comile_sd, +3.0, +2.0, 0)
+COMI_SD_CASE(_mm_comile_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_comilt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_comilt_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comilt.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comilt_sd(A, B);
 }
+COMI_SD_CASE(_mm_comilt_sd, +1.0, +2.0, 1)
+COMI_SD_CASE(_mm_comilt_sd, +2.0, +2.0, 0)
+COMI_SD_CASE(_mm_comilt_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_comineq_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_comineq_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comineq.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comineq_sd(A, B);
 }
+COMI_SD_CASE(_mm_comineq_sd, +1.0, +2.0, 1)
+COMI_SD_CASE(_mm_comineq_sd, +2.0, +2.0, 0)
+COMI_SD_CASE(_mm_comineq_sd, __builtin_nan(""), +2.0, 1)
 
 __m128d test_mm_cvtepi32_pd(__m128i A) {
   // CHECK-LABEL: test_mm_cvtepi32_pd
@@ -2019,36 +2040,56 @@ int test_mm_ucomieq_sd(__m128d A, __m128d B) {
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomieq.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomieq_sd(A, B);
 }
+COMI_SD_CASE(_mm_ucomieq_sd, +2.0, +2.0, 1)
+COMI_SD_CASE(_mm_ucomieq_sd, +1.0, +2.0, 0)
+COMI_SD_CASE(_mm_ucomieq_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_ucomige_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_ucomige_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomige.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomige_sd(A, B);
 }
+COMI_SD_CASE(_mm_ucomige_sd, +3.0, +2.0, 1)
+COMI_SD_CASE(_mm_ucomige_sd, +1.0, +2.0, 0)
+COMI_SD_CASE(_mm_ucomige_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_ucomigt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_ucomigt_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomigt.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomigt_sd(A, B);
 }
+COMI_SD_CASE(_mm_ucomigt_sd, +3.0, +2.0, 1)
+COMI_SD_CASE(_mm_ucomigt_sd, +2.0, +2.0, 0)
+COMI_SD_CASE(_mm_ucomigt_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_ucomile_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_ucomile_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomile.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomile_sd(A, B);
 }
+COMI_SD_CASE(_mm_ucomile_sd, +2.0, +2.0, 1)
+COMI_SD_CASE(_mm_ucomile_sd, +3.0, +2.0, 0)
+COMI_SD_CASE(_mm_ucomile_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_ucomilt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_ucomilt_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomilt.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomilt_sd(A, B);
 }
+COMI_SD_CASE(_mm_ucomilt_sd, +1.0, +2.0, 1)
+COMI_SD_CASE(_mm_ucomilt_sd, +2.0, +2.0, 0)
+COMI_SD_CASE(_mm_ucomilt_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_ucomineq_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_ucomineq_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomineq.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomineq_sd(A, B);
 }
+COMI_SD_CASE(_mm_ucomineq_sd, +1.0, +2.0, 1)
+COMI_SD_CASE(_mm_ucomineq_sd, +2.0, +2.0, 0)
+COMI_SD_CASE(_mm_ucomineq_sd, __builtin_nan(""), +2.0, 1)
+
+#undef COMI_SD_CASE
 
 __m128d test_mm_undefined_pd(void) {
   // X64-LABEL: test_mm_undefined_pd

@@ -3391,7 +3391,7 @@ let Features = "avx512vp2intersect,avx512vl", Attributes = [NoThrow, RequiredVec
   def vp2intersect_d_128 : X86Builtin<"void(_Vector<4, int>, _Vector<4, int>, unsigned char *, unsigned char *)">;
 }
 
-let Features = "avx512fp16", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512fp16", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def vcomish : X86Builtin<"int(_Vector<8, _Float16>, _Vector<8, _Float16>, _Constant int, _Constant int)">;
 }
 
