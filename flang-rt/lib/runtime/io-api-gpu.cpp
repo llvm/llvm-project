@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Implements the subset of the I/O statement API needed for basic
-// list-directed output (PRINT *) of intrinsic types for the GPU.
+// Implements the subset of the I/O statement API needed for basic list-directed
+// output (PRINT *) of intrinsic types for the GPU.
 //
 // The RPC interface forwards each runtime call from the client to the server
 // using a shared buffer. These calls are buffered on the server, so only the
-// return value from 'BeginExternalListOutput' and 'EndIoStatement' are
-// meaningful.
+// return values from 'Begin' and 'EndIoStatement' are meaningful.
 
 #include "io-api-gpu.h"
 #include "flang/Runtime/io-api.h"
@@ -31,6 +30,21 @@ Cookie IODEF(BeginExternalListOutput)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   return rpc::dispatch<BeginExternalListOutput_Opcode>(client,
       IONAME(BeginExternalListOutput), unitNumber, sourceFile, sourceLine);
+}
+
+Cookie IODEF(BeginExternalFormattedOutput)(const char *format,
+    std::size_t formatLength, const Descriptor *formatDescriptor,
+    ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
+  return rpc::dispatch<BeginExternalFormattedOutput_Opcode>(client,
+      IONAME(BeginExternalFormattedOutput),
+      rpc::span<const char>{format, formatLength}, formatLength,
+      formatDescriptor, unitNumber, sourceFile, sourceLine);
+}
+
+void IODEF(EnableHandlers)(Cookie cookie, bool hasIoStat, bool hasErr,
+    bool hasEnd, bool hasEor, bool hasIoMsg) {
+  return rpc::dispatch<EnableHandlers_Opcode>(client, IONAME(EnableHandlers),
+      cookie, hasIoStat, hasErr, hasEnd, hasEor, hasIoMsg);
 }
 
 enum Iostat IODEF(EndIoStatement)(Cookie cookie) {
@@ -86,8 +100,14 @@ bool IODEF(OutputComplex64)(Cookie cookie, double re, double im) {
 }
 
 bool IODEF(OutputAscii)(Cookie cookie, const char *x, std::size_t length) {
-  return rpc::dispatch<OutputAscii_Opcode>(
-      client, IONAME(OutputAscii), cookie, x, length);
+  return rpc::dispatch<OutputAscii_Opcode>(client, IONAME(OutputAscii), cookie,
+      rpc::span<const char>{x, length}, length);
+}
+
+bool IODEF(OutputCharacter)(
+    Cookie cookie, const char *x, std::size_t length, int kind) {
+  return rpc::dispatch<OutputCharacter_Opcode>(client, IONAME(OutputCharacter),
+      cookie, rpc::span<const char>{x, length * kind}, length, kind);
 }
 
 bool IODEF(OutputLogical)(Cookie cookie, bool truth) {
