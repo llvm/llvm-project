@@ -46,8 +46,8 @@ define dso_local noundef i1 @_Z6targetv() sanitize_hwaddress {
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP24]], i8 [[TMP20]], i64 256, i1 false)
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @setjmp(ptr noundef @jbuf)
 ; CHECK-NEXT:    switch i32 [[CALL]], label [[WHILE_BODY:%.*]] [
-; CHECK-NEXT:    i32 1, label [[RETURN:%.*]]
-; CHECK-NEXT:    i32 2, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i32 1, label [[RETURN:%.*]]
+; CHECK-NEXT:      i32 2, label [[SW_BB1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb1:
 ; CHECK-NEXT:    br label [[RETURN]]
