@@ -58,6 +58,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
@@ -1889,6 +1890,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ADD, MVT::i512, Custom);
     setOperationAction(ISD::SUB, MVT::i512, Custom);
     setOperationAction(ISD::SELECT, MVT::i512, Custom);
+    setOperationAction(ISD::SHL, MVT::i512, Custom);
+    setOperationAction(ISD::SRL, MVT::i512, Custom);
+    setOperationAction(ISD::SRA, MVT::i512, Custom);
 
     for (MVT VT : { MVT::v16i1, MVT::v16i8 }) {
       setOperationPromotedToType(ISD::FP_TO_SINT       , VT, MVT::v16i32);
@@ -2935,6 +2939,9 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
     case ISD::XOR:
     case ISD::ADD:
     case ISD::SUB:
+    case ISD::SHL:
+    case ISD::SRL:
+    case ISD::SRA:
       return mayFoldIntoVector(Op.getOperand(0), DAG, Subtarget) &&
              mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget);
     case ISD::SELECT:
@@ -6149,6 +6156,9 @@ static bool getTargetShuffleMask(SDValue N, bool AllowSentinelZero,
     SmallVector<APInt> EltBits;
     if (!getTargetConstantBitsFromNode(ExpMask, 1, UndefElts, EltBits))
       return false;
+
+    LDBG() << "lookie here" << UndefElts.getBitWidth() << " " << NumElems << " "
+           << EltBits.size();
     assert(UndefElts.getBitWidth() == NumElems && EltBits.size() == NumElems &&
            "Illegal expansion mask");
     unsigned ExpIndex = 0;
@@ -34395,6 +34405,88 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         DAG.getNode(ISD::VSELECT, dl, VecVT, CorrVec, Adjusted, Partial);
 
     Results.push_back(DAG.getBitcast(VT, Res));
+    return;
+  }
+  case ISD::SRA:
+  case ISD::SRL:
+  case ISD::SHL: {
+    SDValue ShiftVal = N->getOperand(0);
+    SDValue ShiftAmt = N->getOperand(1);
+    EVT VT = N->getValueType(0);
+
+    assert(VT == MVT::i512 && "Unexpected VT!");
+    assert(Subtarget.useAVX512Regs() && "AVX512 required");
+
+    LDBG() << "Here with " << VT.getSizeInBits() << '\n';
+
+    if (!mayFoldIntoVector(ShiftVal, DAG, Subtarget))
+      return;
+
+    EVT VecVT = MVT::v8i64;
+    SDValue ShiftValVec = DAG.getBitcast(VecVT, ShiftVal);
+    SDValue ShiftAmtExt = DAG.getZExtOrTrunc(ShiftAmt, dl, MVT::i32);
+
+    // Complete Lanes to shift - a / 64
+    SDValue LaneShift = DAG.getNode(ISD::SRL, dl, MVT::i32, ShiftAmtExt,
+                                    DAG.getConstant(6, dl, MVT::i32));
+
+    // Remaining bits to shift - a % 64
+    SDValue BitShift = DAG.getNode(ISD::UREM, dl, MVT::i32, ShiftAmtExt,
+                                   DAG.getConstant(64, dl, MVT::i32));
+
+    SDValue BitShift64 = DAG.getZExtOrTrunc(BitShift, dl, MVT::i64);
+    SDValue BitShiftV = DAG.getSplatBuildVector(VecVT, dl, BitShift64);
+
+    SDValue MaskShift =
+        DAG.getNode(ISD::SHL, dl, MVT::i8, DAG.getConstant(0xFF, dl, MVT::i8),
+                    DAG.getZExtOrTrunc(LaneShift, dl, MVT::i8));
+
+    SDValue ZeroV = getZeroVector(VecVT.getSimpleVT(), Subtarget, DAG, dl);
+
+    SDValue Lo, Hi, Res;
+    bool IsShiftLeft = Opc == ISD::SHL;
+
+    switch (Opc) {
+    case ISD::SHL: {
+      Lo =
+          DAG.getNode(X86ISD::EXPAND, dl, VecVT, ShiftValVec, ZeroV, MaskShift);
+
+      Results.push_back(DAG.getBitcast(MVT::i512, Lo));
+      return;
+
+      Hi = DAG.getNode(X86ISD::VALIGN, dl, VecVT, Lo, ZeroV,
+                       DAG.getConstant(7 * 8, dl, MVT::i8));
+      break;
+    }
+    case ISD::SRL: {
+      Hi = DAG.getNode(X86ISD::COMPRESS, dl, VecVT, ShiftValVec, ZeroV,
+                       MaskShift);
+
+      Lo = DAG.getNode(X86ISD::VALIGN, dl, VecVT, ZeroV, Hi,
+                       DAG.getConstant(1 * 8, dl, MVT::i8));
+      break;
+    }
+
+    case ISD::SRA: {
+      SDValue AShr = DAG.getNode(ISD::SRA, dl, VT, ShiftVal,
+                                 DAG.getShiftAmountConstant(63, VT, dl));
+      SDValue Sign =
+          DAG.getVectorShuffle(VT, dl, AShr, AShr, {7, 7, 7, 7, 7, 7, 7, 7});
+      Hi = DAG.getNode(X86ISD::COMPRESS, dl, VecVT, ShiftValVec, ZeroV,
+                       MaskShift);
+
+      Lo = DAG.getNode(X86ISD::VALIGN, dl, VecVT, Sign, Hi,
+                       DAG.getConstant(1 * 8, dl, MVT::i8));
+      break;
+    }
+    }
+
+    // Funnel shift such that res[i] = (lo[i] << bit) | (hi[i] >> (64 - bit))
+    Res = DAG.getNode(IsShiftLeft ? X86ISD::FSHL : X86ISD::FSHR, dl, VecVT, Lo,
+                      Hi, BitShiftV);
+
+    // Cast back to i512
+    Results.push_back(DAG.getBitcast(MVT::i512, Res));
     return;
   }
   case ISD::CTPOP: {
