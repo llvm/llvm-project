@@ -1285,7 +1285,7 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
   const Value *Ext = nullptr;
   MVT::SimpleValueType ExtVT = MVT::INVALID_SIMPLE_VALUE_TYPE;
   bool FoldExt = false;
-  if (Subtarget->hasSignExt() && Load->hasOneUse()) {
+  if (Load->hasOneUse()) {
     if ((Ext = dyn_cast<SExtInst>(*Load->user_begin()))) {
       ExtVT = getSimpleType(Ext->getType());
       FoldExt = true;
