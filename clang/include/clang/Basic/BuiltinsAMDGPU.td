@@ -399,32 +399,14 @@ def __builtin_amdgcn_set_fpenv : AMDGPUBuiltin<"void(uint64_t)">;
 
 //===----------------------------------------------------------------------===//
 
-def __builtin_amdgcn_wave_reduce_add_u32 : AMDGPUBuiltin<"uint32_t(uint32_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_sub_u32 : AMDGPUBuiltin<"uint32_t(uint32_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_min_i32 : AMDGPUBuiltin<"int32_t(int32_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_min_u32 : AMDGPUBuiltin<"uint32_t(uint32_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_max_i32 : AMDGPUBuiltin<"int32_t(int32_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_max_u32 : AMDGPUBuiltin<"uint32_t(uint32_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_and_b32 : AMDGPUBuiltin<"int32_t(int32_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_or_b32 : AMDGPUBuiltin<"int32_t(int32_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_xor_b32 : AMDGPUBuiltin<"int32_t(int32_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_add_u64 : AMDGPUBuiltin<"uint64_t(uint64_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_sub_u64 : AMDGPUBuiltin<"uint64_t(uint64_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_min_i64 : AMDGPUBuiltin<"int64_t(int64_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_min_u64 : AMDGPUBuiltin<"uint64_t(uint64_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_max_i64 : AMDGPUBuiltin<"int64_t(int64_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_max_u64 : AMDGPUBuiltin<"uint64_t(uint64_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_and_b64 : AMDGPUBuiltin<"int64_t(int64_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_or_b64 : AMDGPUBuiltin<"int64_t(int64_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_xor_b64 : AMDGPUBuiltin<"int64_t(int64_t, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_fadd_f32 : AMDGPUBuiltin<"float(float, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_fsub_f32 : AMDGPUBuiltin<"float(float, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_fmin_f32 : AMDGPUBuiltin<"float(float, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_fmax_f32 : AMDGPUBuiltin<"float(float, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_fadd_f64 : AMDGPUBuiltin<"double(double, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_fsub_f64 : AMDGPUBuiltin<"double(double, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_fmin_f64 : AMDGPUBuiltin<"double(double, _Constant int32_t)", [Const]>;
-def __builtin_amdgcn_wave_reduce_fmax_f64 : AMDGPUBuiltin<"double(double, _Constant int32_t)", [Const]>;
+// These are overloaded builtins modelled after the atomic ones
+def __builtin_amdgcn_wave_reduce_add : AMDGPUBuiltin<"void(...)", [Const, CustomTypeChecking]>;
+def __builtin_amdgcn_wave_reduce_sub : AMDGPUBuiltin<"void(...)", [Const, CustomTypeChecking]>;
+def __builtin_amdgcn_wave_reduce_min : AMDGPUBuiltin<"void(...)", [Const, CustomTypeChecking]>;
+def __builtin_amdgcn_wave_reduce_max : AMDGPUBuiltin<"void(...)", [Const, CustomTypeChecking]>;
+def __builtin_amdgcn_wave_reduce_and : AMDGPUBuiltin<"void(...)", [Const, CustomTypeChecking]>;
+def __builtin_amdgcn_wave_reduce_or  : AMDGPUBuiltin<"void(...)", [Const, CustomTypeChecking]>;
+def __builtin_amdgcn_wave_reduce_xor : AMDGPUBuiltin<"void(...)", [Const, CustomTypeChecking]>;
 
 //===----------------------------------------------------------------------===//
 // R600-NI only builtins.

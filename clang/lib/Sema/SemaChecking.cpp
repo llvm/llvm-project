@@ -2129,9 +2129,9 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case llvm::Triple::spirv:
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
-    if (TI.getTriple().getOS() != llvm::Triple::OSType::AMDHSA)
+    if (TI.getTriple().getVendor() != llvm::Triple::VendorType::AMD)
       return SPIRV().CheckSPIRVBuiltinFunctionCall(TI, BuiltinID, TheCall);
-    return false;
+    return AMDGPU().CheckAMDGCNBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::systemz:
     return SystemZ().CheckSystemZBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::x86:
