@@ -1686,6 +1686,10 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
               dirty_page_list.push_back(page);
           }
           region_info.SetDirtyPageList(dirty_page_list);
+        } else if (name == "protection-key") {
+          unsigned protection_key = 0;
+          if (!value.getAsInteger(10, protection_key))
+            region_info.SetProtectionKey(protection_key);
         }
       }
 

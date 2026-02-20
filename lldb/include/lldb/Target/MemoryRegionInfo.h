@@ -29,11 +29,13 @@ public:
                    OptionalBool execute, OptionalBool shared,
                    OptionalBool mapped, ConstString name, OptionalBool flash,
                    lldb::offset_t blocksize, OptionalBool memory_tagged,
-                   OptionalBool stack_memory, OptionalBool shadow_stack)
+                   OptionalBool stack_memory, OptionalBool shadow_stack,
+                   std::optional<unsigned> protection_key)
       : m_range(range), m_read(read), m_write(write), m_execute(execute),
         m_shared(shared), m_mapped(mapped), m_name(name), m_flash(flash),
         m_blocksize(blocksize), m_memory_tagged(memory_tagged),
-        m_is_stack_memory(stack_memory), m_is_shadow_stack(shadow_stack) {}
+        m_is_stack_memory(stack_memory), m_is_shadow_stack(shadow_stack),
+        m_protection_key(protection_key) {}
 
   RangeType &GetRange() { return m_range; }
 
@@ -56,6 +58,8 @@ public:
   OptionalBool GetMemoryTagged() const { return m_memory_tagged; }
 
   OptionalBool IsShadowStack() const { return m_is_shadow_stack; }
+
+  std::optional<unsigned> GetProtectionKey() const { return m_protection_key; }
 
   void SetReadable(OptionalBool val) { m_read = val; }
 
@@ -80,6 +84,8 @@ public:
   void SetMemoryTagged(OptionalBool val) { m_memory_tagged = val; }
 
   void SetIsShadowStack(OptionalBool val) { m_is_shadow_stack = val; }
+
+  void SetProtectionKey(std::optional<unsigned> key) { m_protection_key = key; }
 
   // Get permissions as a uint32_t that is a mask of one or more bits from the
   // lldb::Permissions
@@ -111,7 +117,8 @@ public:
            m_memory_tagged == rhs.m_memory_tagged &&
            m_pagesize == rhs.m_pagesize &&
            m_is_stack_memory == rhs.m_is_stack_memory &&
-           m_is_shadow_stack == rhs.m_is_shadow_stack;
+           m_is_shadow_stack == rhs.m_is_shadow_stack &&
+           m_protection_key == rhs.m_protection_key;
   }
 
   bool operator!=(const MemoryRegionInfo &rhs) const { return !(*this == rhs); }
@@ -154,6 +161,7 @@ protected:
   OptionalBool m_memory_tagged = eDontKnow;
   OptionalBool m_is_stack_memory = eDontKnow;
   OptionalBool m_is_shadow_stack = eDontKnow;
+  std::optional<unsigned> m_protection_key = std::nullopt;
   int m_pagesize = 0;
   std::optional<std::vector<lldb::addr_t>> m_dirty_pages;
 };
