@@ -17171,93 +17171,96 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
           return LHS.getOperand(0);
       }
     }
-
-    // setcc v.64, 0xXXXX'XXXX'0000'0000, lt/ge
-    //    => setcc v.hi32, 0xXXXX'XXXX, lt/ge
-    //
-    // setcc v.64, 0xXXXX'XXXX'FFFF'FFFF, le/gt
-    //    => setcc v.hi32, 0xXXXX'XXXX, le/gt
-    if (VT == MVT::i64) {
-      const uint64_t Mask32 = maskTrailingOnes<uint64_t>(32);
-      const uint64_t CRHSInt = CRHSVal.getZExtValue();
-
-      if ( // setcc v.64, 0xXXXX'XXXX'0000'0000, lt/ge
-          ((CRHSInt & Mask32) == 0 && (CC == ISD::SETULT || CC == ISD::SETUGE ||
-                                       CC == ISD::SETLT || CC == ISD::SETGE)) ||
-          // setcc v.64, 0xXXXX'XXXX'FFFF'FFFF, le/gt
-          ((CRHSInt & Mask32) == Mask32 &&
-           (CC == ISD::SETULE || CC == ISD::SETUGT || CC == ISD::SETLE ||
-            CC == ISD::SETGT)))
-        return DAG.getSetCC(SL, N->getValueType(0), getHiHalf64(LHS, DAG),
-                            DAG.getConstant(CRHSInt >> 32, SL, MVT::i32), CC);
-    }
   }
 
-  // Try to fold
-  //    setcc (v.64 & 0xXXXX'XXXX'0000'0000), Y, cmp
-  //       => setcc (v.hi32, 0xXXXX'XXXX), Y.hi32, cmp2
-  // when valid
+  // Truncate 64-bit setcc to test only upper 32-bits of its operands in the
+  // following cases where information about the lower 32-bits of its operands
+  // is known:
+  //
+  // If LHS.lo32 == RHS.lo32:
+  //    setcc LHS, RHS, eq/ne => setcc LHS.hi32, RHS.hi32, eq/ne
+  // If LHS.lo32 != RHS.lo32:
+  //    setcc LHS, RHS, eq/ne => setcc LHS.hi32, RHS.hi32, false/true
+  // If LHS.lo32 >= RHS.lo32 (unsigned):
+  //    setcc LHS, RHS, [u]lt/ge => LHS.hi32, RHS.hi32, [u]lt/ge
+  // If LHS.lo32 > RHS.lo32 (unsigned):
+  //    setcc LHS, RHS, [u]le/gt => LHS.hi32, RHS.hi32, [u]lt/ge
+  // If LHS.lo32 <= RHS.lo32 (unsigned):
+  //    setcc LHS, RHS, [u]le/gt => LHS.hi32, RHS.hi32, [u]le/gt
+  // If LHS.lo32 < RHS.lo32 (unsigned):
+  //    setcc LHS, RHS, [u]lt/ge => LHS.hi32, RHS.hi32, [u]le/gt
   if (VT == MVT::i64) {
-    SDValue LHSUnmasked;
-    APInt LHSMask;
-    if (sd_match(LHS, m_And(m_Value(LHSUnmasked), m_ConstInt(LHSMask)))) {
-      const uint64_t Mask32 = maskTrailingOnes<uint64_t>(32);
-      if ((LHSMask.getZExtValue() & Mask32) == 0) {
-        const int Unknown = -1, KnownZero = 0, KnownNonZero = 1;
-        const int RHSLo32 = CRHS ? (CRHS->getZExtValue() & Mask32) == 0
-                                       ? KnownZero
-                                       : KnownNonZero
-                                 : Unknown;
+    const KnownBits LHSKnownLo32 = DAG.computeKnownBits(LHS).trunc(32);
+    const KnownBits RHSKnownLo32 = DAG.computeKnownBits(RHS).trunc(32);
 
-        ISD::CondCode NewCC = ISD::SETCC_INVALID;
-        switch (CC) {
-        default:
-          break;
-        case ISD::SETEQ:
-          if (RHSLo32 != Unknown)
-            NewCC = RHSLo32 == KnownNonZero ? ISD::SETFALSE : ISD::SETEQ;
-          break;
-        case ISD::SETNE:
-          if (RHSLo32 != Unknown)
-            NewCC = RHSLo32 == KnownNonZero ? ISD::SETTRUE : ISD::SETNE;
-          break;
-        case ISD::SETULT:
-          // (X << 32) lt Y iff:
-          //    X lt Y.hi32, if Y.lo32 == 0
-          //    X le Y.hi32, if Y.lo32 != 0
-          if (RHSLo32 != Unknown)
-            NewCC = RHSLo32 == KnownNonZero ? ISD::SETULE : ISD::SETULT;
-          break;
-        case ISD::SETLT:
-          if (RHSLo32 != Unknown)
-            NewCC = RHSLo32 == KnownNonZero ? ISD::SETLE : ISD::SETLT;
-          break;
-        case ISD::SETUGE:
-          // (X << 32) ge Y iff:
-          //    X ge Y.hi32, if Y.lo32 == 0
-          //    X gt Y.hi32, if Y.lo32 != 0
-          if (RHSLo32 != Unknown)
-            NewCC = RHSLo32 == KnownNonZero ? ISD::SETUGT : ISD::SETUGE;
-          break;
-        case ISD::SETGE:
-          if (RHSLo32 != Unknown)
-            NewCC = RHSLo32 == KnownNonZero ? ISD::SETGT : ISD::SETGE;
-          break;
-        case ISD::SETUGT:
-        case ISD::SETULE:
-        case ISD::SETGT:
-        case ISD::SETLE:
-          // (X << 32) gt Y iff X gt Y.hi32
-          // (X << 32) le Y iff X le Y.hi32
-          NewCC = CC;
-          break;
-        }
+    // NewCC is valid iff we can truncate the setcc to only test the upper 32
+    // bits
+    ISD::CondCode NewCC = ISD::SETCC_INVALID;
 
-        if (NewCC != ISD::SETCC_INVALID)
-          return DAG.getSetCC(SL, N->getValueType(0), getHiHalf64(LHS, DAG),
-                              getHiHalf64(RHS, DAG), NewCC);
+    switch (CC) {
+    default:
+      break;
+    case ISD::SETEQ: {
+      const std::optional<bool> KnownEq =
+          KnownBits::eq(LHSKnownLo32, RHSKnownLo32);
+      if (KnownEq) {
+        NewCC = *KnownEq ? ISD::SETEQ : ISD::SETFALSE;
       }
+      break;
     }
+    case ISD::SETNE: {
+      const std::optional<bool> KnownEq =
+          KnownBits::eq(LHSKnownLo32, RHSKnownLo32);
+      if (KnownEq) {
+        NewCC = *KnownEq ? ISD::SETNE : ISD::SETTRUE;
+      }
+      break;
+    }
+    case ISD::SETULT:
+    case ISD::SETUGE:
+    case ISD::SETLT:
+    case ISD::SETGE: {
+      const std::optional<bool> KnownUge =
+          KnownBits::uge(LHSKnownLo32, RHSKnownLo32);
+      if (KnownUge) {
+        if (*KnownUge) {
+          // LHS.lo32 uge RHS.lo32, so LHS >= RHS iff LHS.hi32 >= RHS.hi32
+          NewCC = CC;
+        } else {
+          // LHS.lo32 ult RHS.lo32, so LHS >= RHS iff LHS.hi32 > RHS.hi32
+          NewCC = CC == ISD::SETULT   ? ISD::SETULE
+                  : CC == ISD::SETUGE ? ISD::SETUGT
+                  : CC == ISD::SETLT  ? ISD::SETLE
+                                      : ISD::SETGT;
+        }
+      }
+      break;
+    }
+    case ISD::SETULE:
+    case ISD::SETUGT:
+    case ISD::SETLE:
+    case ISD::SETGT: {
+      const std::optional<bool> KnownUle =
+          KnownBits::ule(LHSKnownLo32, RHSKnownLo32);
+      if (KnownUle) {
+        if (*KnownUle) {
+          // LHS.lo32 ule RHS.lo32, so LHS <= RHS iff LHS.hi32 <= RHS.hi32
+          NewCC = CC;
+        } else {
+          // LHS.lo32 ugt RHS.lo32, so LHS <= RHS iff LHS.hi32 < RHS.hi32
+          NewCC = CC == ISD::SETULE   ? ISD::SETULT
+                  : CC == ISD::SETUGT ? ISD::SETUGE
+                  : CC == ISD::SETLE  ? ISD::SETLT
+                                      : ISD::SETGE;
+        }
+      }
+      break;
+    }
+    }
+
+    if (NewCC != ISD::SETCC_INVALID)
+      return DAG.getSetCC(SL, N->getValueType(0), getHiHalf64(LHS, DAG),
+                          getHiHalf64(RHS, DAG), NewCC);
   }
 
   // Eliminate setcc by using carryout from add/sub instruction
