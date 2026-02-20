@@ -3507,10 +3507,14 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
                                            {ValNumActiveBitsOffset, Start},
                                            /*FMFSource=*/nullptr, "iv.final");
 
+  // Check if the offset was added with NUW flag
+  bool OffsetAddHasNUW = OffsetIsZero;
+  if (auto *OffsetAddInst = dyn_cast<BinaryOperator>(ValNumActiveBitsOffset))
+    OffsetAddHasNUW |= OffsetAddInst->hasNoUnsignedWrap();
+
   auto *LoopBackedgeTakenCount = cast<Instruction>(Builder.CreateSub(
       IVFinal, Start, CurLoop->getName() + ".backedgetakencount",
-      /*HasNUW=*/OffsetIsZero, /*HasNSW=*/true));
-  // FIXME: or when the offset was `add nuw`
+      /*HasNUW=*/OffsetAddHasNUW, /*HasNSW=*/true));
 
   // We know loop's backedge-taken count, but what's loop's trip count?
   Value *LoopTripCount =
