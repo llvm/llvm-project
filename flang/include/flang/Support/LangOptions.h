@@ -44,10 +44,10 @@ public:
   };
 
   enum FortranStandardTy {
-    FortranUnspecified = 0, // default
-    Fortran2018 = 1,
-    Fortran2023 = 2,
-    Fortran202Y = 3,
+    FortranUnspecified, // default
+    Fortran2018,
+    Fortran2023,
+    Fortran202Y,
   };
 
 #define LANGOPT(Name, Bits, Default) unsigned Name : Bits;
