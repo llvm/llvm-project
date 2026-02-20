@@ -4516,6 +4516,22 @@ TEST_P(UncheckedStatusOrAccessModelTest, NestedStatusOrInOptional) {
       )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, CoroutineCoReturn) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+#include "task.h"
+
+  Task<STATUSOR_INT> target(STATUSOR_INT sor) {
+    if (sor.ok()) {
+      sor.value();
+    } else {
+      sor.value();  // [[unsafe]]
+    }
+    co_return sor;
+  }
+  )cc");
+}
+
 } // namespace
 
 std::string
