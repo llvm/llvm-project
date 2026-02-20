@@ -594,32 +594,32 @@ bool RISCVMergeBaseOffsetOpt::foldShxaddIntoScaledMemory(MachineInstr &Hi,
 
   MachineInstr &ShxAdd = *MRI->use_instr_begin(BaseReg);
   unsigned ShxOpc = ShxAdd.getOpcode();
+  // TODO: Add support for QC.SHLADD
   if (ShxOpc != RISCV::SH1ADD && ShxOpc != RISCV::SH2ADD &&
       ShxOpc != RISCV::SH3ADD)
     return false;
 
   // shxadd Rd, Rs1, Rs2
-  Register Rd = ShxAdd.getOperand(0).getReg();
-  Register Rs1 = ShxAdd.getOperand(1).getReg();
-  Register Rs2 = ShxAdd.getOperand(2).getReg();
+  Register ScaledReg = ShxAdd.getOperand(0).getReg();
+  Register IndexReg = ShxAdd.getOperand(1).getReg();
 
-  if (Rs2 != BaseReg)
+  if (ShxAdd.getOperand(2).getReg() != BaseReg)
     return false;
 
-  if (!Rd.isVirtual() || !MRI->hasOneUse(Rd))
+  if (!ScaledReg.isVirtual() || !MRI->hasOneUse(ScaledReg))
     return false;
 
-  MachineInstr &TailMem = *MRI->use_instr_begin(Rd);
+  MachineInstr &TailMem = *MRI->use_instr_begin(ScaledReg);
   unsigned Opc = TailMem.getOpcode();
 
-  if (!TailMem.getOperand(1).isReg() || TailMem.getOperand(1).getReg() != Rd)
+  if (!TailMem.getOperand(1).isReg() || TailMem.getOperand(1).getReg() != ScaledReg)
     return false;
   if (!TailMem.getOperand(2).isImm())
     return false;
   int64_t Imm = TailMem.getOperand(2).getImm();
 
   // Update QC_E_LI offset.
-  int64_t NewOffset = SignExtend64<32>(Hi.getOperand(1).getOffset() + Imm);
+  int64_t NewOffset = Hi.getOperand(1).getOffset() + Imm;
 
   if (!isInt<32>(NewOffset))
     return false;
@@ -655,7 +655,6 @@ bool RISCVMergeBaseOffsetOpt::foldShxaddIntoScaledMemory(MachineInstr &Hi,
   }
 
   Hi.getOperand(1).setOffset(NewOffset);
-  TailMem.getOperand(2).ChangeToImmediate(0);
 
   // Build scaled load/store.
   auto *TII = ST->getInstrInfo();
@@ -669,16 +668,15 @@ bool RISCVMergeBaseOffsetOpt::foldShxaddIntoScaledMemory(MachineInstr &Hi,
                                                : 3;
 
   // Ensure index register satisfies GPRNoX0 class required by QC_LR*/QC_SR*.
-  MRI->constrainRegClass(Rs1, &RISCV::GPRNoX0RegClass);
+  MRI->constrainRegClass(IndexReg, &RISCV::GPRNoX0RegClass);
 
   BuildMI(*MBB, TailMem, TailMem.getDebugLoc(), TII->get(NewOpc))
       .addReg(TailMem.getOperand(0).getReg(), DestRegState)
-      .addReg(Rs2, getKillRegState(ShxAdd.getOperand(2).isKill()))
-      .addReg(Rs1, getKillRegState(ShxAdd.getOperand(1).isKill()))
+      .addReg(BaseReg, getKillRegState(ShxAdd.getOperand(2).isKill()))
+      .addReg(IndexReg, getKillRegState(ShxAdd.getOperand(1).isKill()))
       .addImm(ShAmt)
       .cloneMemRefs(TailMem);
 
-  MRI->replaceRegWith(Rd, Rs2);
   TailMem.eraseFromParent();
   ShxAdd.eraseFromParent();
   return true;
