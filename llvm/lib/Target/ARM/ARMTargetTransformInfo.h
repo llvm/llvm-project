@@ -455,6 +455,12 @@ public:
   unsigned getNumBytesToPadGlobalArray(unsigned Size,
                                        Type *ArrayType) const override;
 
+  bool supportsTailCalls() const { return ST->supportsTailCall(); }
+
+  bool supportsTailCallFor(const CallBase *CB) const {
+    return supportsTailCalls();
+  }
+
   /// @}
 };
 
