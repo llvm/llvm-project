@@ -88,6 +88,23 @@ define bfloat @test_fadd(bfloat %0, bfloat %1) {
   ret bfloat %3
 }
 
+define bfloat @test_fadd_inlineasm(bfloat %0, bfloat %1) nounwind {
+; SM90-LABEL: test_fadd_inlineasm(
+; SM90:       {
+; SM90-NEXT:    .reg .b16 %rs<4>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs2, [test_fadd_inlineasm_param_0];
+; SM90-NEXT:    ld.param.b16 %rs3, [test_fadd_inlineasm_param_1];
+; SM90-NEXT:    // begin inline asm
+; SM90-NEXT:    add.rn.bf16 %rs1, %rs2, %rs3
+; SM90-NEXT:    // end inline asm
+; SM90-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM90-NEXT:    ret;
+  %3 = tail call bfloat asm "add.rn.bf16 $0, $1, $2", "=h,h,h"(bfloat %0, bfloat %1) nounwind
+  ret bfloat %3
+}
+
 define bfloat @test_fsub(bfloat %0, bfloat %1) {
 ; SM70-LABEL: test_fsub(
 ; SM70:       {
