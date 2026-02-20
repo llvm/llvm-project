@@ -402,7 +402,7 @@ class NDSRVInstVSINTCvt<bits<5> fucnt5, string opcodestr>
   let mayLoad = 0;
   let mayStore = 0;
   let Uses = [FRM, VL, VTYPE];
-  let RVVConstraint = VMConstraint;
+  let VMConstraint = true;
 
   let UseNamedOperandTable = true;
 }
@@ -438,7 +438,7 @@ class NDSRVInstVFPMAD<bits<6> funct6, string opcodestr>
   let mayLoad = 0;
   let mayStore = 0;
 
-  let RVVConstraint = VMConstraint;
+  let VMConstraint = true;
 
   let UseNamedOperandTable = true;
 }
@@ -463,7 +463,7 @@ class NDSRVInstVD4DOT<bits<6> funct6, string opcodestr>
   let mayLoad = 0;
   let mayStore = 0;
 
-  let RVVConstraint = VMConstraint;
+  let VMConstraint = true;
 
   let UseNamedOperandTable = true;
 }
@@ -509,7 +509,7 @@ class NDSRVInstVLN<bits<5> funct5, string opcodestr>
   let mayStore = 0;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
+  let VMConstraint = true;
 
   let UseNamedOperandTable = true;
 }

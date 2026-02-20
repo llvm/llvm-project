@@ -233,7 +233,7 @@ class CustomSiFiveVMACC<bits<6> funct6, RISCVVFormat opv, string opcodestr>
   let Inst{6-0} = OPC_CUSTOM_2.Value;
 
   let Constraints = "$vd = $vd_wb";
-  let RVVConstraint = NoConstraint;
+  let VMConstraint = false;
   let ElementsDependOn = EltDepsVLMask;
   let ReadsPastVL = true;
 }
@@ -264,7 +264,7 @@ let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvector",
 }
 
 let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvector",
-    DestEEW = EEWSEWx4, RVVConstraint=WidenVNoMask in {
+    DestEEW = EEWSEWx4, RVVConstraint=WidenV in {
   def SF_VQMACCU_4x8x4  : CustomSiFiveVMACC<0b111100, OPMVV, "sf.vqmaccu.4x8x4">;
   def SF_VQMACC_4x8x4   : CustomSiFiveVMACC<0b111101, OPMVV, "sf.vqmacc.4x8x4">;
   def SF_VQMACCUS_4x8x4 : CustomSiFiveVMACC<0b111110, OPMVV, "sf.vqmaccus.4x8x4">;
@@ -272,7 +272,7 @@ let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvector",
 }
 
 let Predicates = [HasVendorXSfvfwmaccqqq], DecoderNamespace = "XSfvector",
-    DestEEW = EEWSEWx2, RVVConstraint=WidenVNoMask in {
+    DestEEW = EEWSEWx2, RVVConstraint=WidenV in {
   def SF_VFWMACC_4x4x4 : CustomSiFiveVMACC<0b111100, OPFVV, "sf.vfwmacc.4x4x4">;
 }
 

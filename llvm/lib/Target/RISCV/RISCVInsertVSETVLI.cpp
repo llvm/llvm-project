@@ -64,8 +64,8 @@ static VNInfo *getVNInfoFromReg(Register Reg, const MachineInstr &MI,
   return LI.getVNInfoBefore(SI);
 }
 
-static unsigned getVLOpNum(const MachineInstr &MI) {
-  return RISCVII::getVLOpNum(MI.getDesc());
+static MachineOperand &getVLOp(MachineInstr &MI) {
+  return MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
 }
 
 struct BlockData {
@@ -575,7 +575,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       }
 
       if (RISCVII::hasVLOp(TSFlags)) {
-        MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
+        MachineOperand &VLOp = getVLOp(MI);
         if (VLOp.isReg()) {
           Register Reg = VLOp.getReg();
 

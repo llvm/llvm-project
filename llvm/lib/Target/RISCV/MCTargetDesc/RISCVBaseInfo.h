@@ -341,6 +341,11 @@ static inline bool hasTMOp(uint64_t TSFlags) { return TSFlags & HasTMOpMask; }
 
 static inline bool hasTKOp(uint64_t TSFlags) { return TSFlags & HasTKOpMask; }
 
+static inline unsigned getTWidenOpNum(const MCInstrDesc &Desc) {
+  assert(hasTWidenOp(Desc.TSFlags));
+  return Desc.getNumOperands() - 1;
+}
+
 static inline unsigned getTNOpNum(const MCInstrDesc &Desc) {
   const uint64_t TSFlags = Desc.TSFlags;
   assert(hasTWidenOp(TSFlags) && hasVLOp(TSFlags));
