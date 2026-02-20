@@ -88,6 +88,10 @@ public:
 
   static void Terminate();
 
+  /// Load a plugin from a specific file path. Returns true if the plugin was
+  /// successfully loaded and initialized.
+  static bool LoadPlugin(const FileSpec &spec);
+
   // Support for enabling and disabling plugins.
 
   // Return the plugins that can be enabled or disabled by the user.

@@ -34,7 +34,7 @@ public:
     HostInfo::Initialize();
     PlatformMacOSX::Initialize();
     std::call_once(TestUtilities::g_debugger_initialize_flag,
-                   []() { Debugger::Initialize(nullptr); });
+                   []() { Debugger::Initialize(); });
     ArchSpec arch("x86_64-apple-macosx-");
     Platform::SetHostPlatform(
         PlatformRemoteMacOSX::CreateInstance(true, &arch));

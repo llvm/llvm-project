@@ -25,8 +25,7 @@ static std::once_flag debugger_initialize_flag;
 
 class DWARFASTParserClangTests : public testing::Test {
   void SetUp() override {
-    std::call_once(debugger_initialize_flag,
-                   []() { Debugger::Initialize(nullptr); });
+    std::call_once(debugger_initialize_flag, []() { Debugger::Initialize(); });
   }
 };
 

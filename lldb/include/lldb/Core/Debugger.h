@@ -104,7 +104,7 @@ public:
 
   static lldb::TargetSP FindTargetWithProcess(Process *process);
 
-  static void Initialize(LoadPluginCallbackType load_plugin_callback);
+  static void Initialize();
 
   static void Terminate();
 
@@ -392,8 +392,6 @@ public:
   bool GetShowInlineDiagnostics() const;
 
   bool SetShowInlineDiagnostics(bool);
-
-  bool LoadPlugin(const FileSpec &spec, Status &error);
 
   void RunIOHandlers();
 
@@ -777,9 +775,6 @@ protected:
   llvm::StringMap<std::weak_ptr<LogHandler>> m_stream_handlers;
   std::shared_ptr<CallbackLogHandler> m_callback_handler_sp;
   const std::string m_instance_name;
-  static LoadPluginCallbackType g_load_plugin_callback;
-  typedef std::vector<llvm::sys::DynamicLibrary> LoadedPluginsList;
-  LoadedPluginsList m_loaded_plugins;
   HostThread m_event_handler_thread;
   HostThread m_io_handler_thread;
   Broadcaster m_sync_broadcaster; ///< Private debugger synchronization.

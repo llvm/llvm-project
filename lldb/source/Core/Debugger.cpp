@@ -230,8 +230,6 @@ TestingProperties &TestingProperties::GetGlobalTestingProperties() {
 }
 #endif
 
-LoadPluginCallbackType Debugger::g_load_plugin_callback = nullptr;
-
 Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
                                   VarSetOperationType op,
                                   llvm::StringRef property_path,
@@ -748,13 +746,12 @@ bool Debugger::SetShowInlineDiagnostics(bool b) {
 //}
 //
 
-void Debugger::Initialize(LoadPluginCallbackType load_plugin_callback) {
+void Debugger::Initialize() {
   assert(g_debugger_list_ptr == nullptr &&
          "Debugger::Initialize called more than once!");
   g_debugger_list_mutex_ptr = new std::recursive_mutex();
   g_debugger_list_ptr = new DebuggerList();
   g_thread_pool = new llvm::DefaultThreadPool(llvm::optimal_concurrency());
-  g_load_plugin_callback = load_plugin_callback;
 }
 
 void Debugger::Terminate() {
@@ -787,91 +784,7 @@ void Debugger::SettingsInitialize() { Target::SettingsInitialize(); }
 
 void Debugger::SettingsTerminate() { Target::SettingsTerminate(); }
 
-bool Debugger::LoadPlugin(const FileSpec &spec, Status &error) {
-  if (g_load_plugin_callback) {
-    llvm::sys::DynamicLibrary dynlib =
-        g_load_plugin_callback(shared_from_this(), spec, error);
-    if (dynlib.isValid()) {
-      m_loaded_plugins.push_back(dynlib);
-      return true;
-    }
-  } else {
-    // The g_load_plugin_callback is registered in SBDebugger::Initialize() and
-    // if the public API layer isn't available (code is linking against all of
-    // the internal LLDB static libraries), then we can't load plugins
-    error = Status::FromErrorString("Public API layer is not available");
-  }
-  return false;
-}
-
-static FileSystem::EnumerateDirectoryResult
-LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
-                   llvm::StringRef path) {
-  Status error;
-
-  static constexpr llvm::StringLiteral g_dylibext(".dylib");
-  static constexpr llvm::StringLiteral g_solibext(".so");
-
-  if (!baton)
-    return FileSystem::eEnumerateDirectoryResultQuit;
-
-  Debugger *debugger = (Debugger *)baton;
-
-  namespace fs = llvm::sys::fs;
-  // If we have a regular file, a symbolic link or unknown file type, try and
-  // process the file. We must handle unknown as sometimes the directory
-  // enumeration might be enumerating a file system that doesn't have correct
-  // file type information.
-  if (ft == fs::file_type::regular_file || ft == fs::file_type::symlink_file ||
-      ft == fs::file_type::type_unknown) {
-    FileSpec plugin_file_spec(path);
-    FileSystem::Instance().Resolve(plugin_file_spec);
-
-    if (plugin_file_spec.GetFileNameExtension() != g_dylibext &&
-        plugin_file_spec.GetFileNameExtension() != g_solibext) {
-      return FileSystem::eEnumerateDirectoryResultNext;
-    }
-
-    Status plugin_load_error;
-    debugger->LoadPlugin(plugin_file_spec, plugin_load_error);
-
-    return FileSystem::eEnumerateDirectoryResultNext;
-  } else if (ft == fs::file_type::directory_file ||
-             ft == fs::file_type::symlink_file ||
-             ft == fs::file_type::type_unknown) {
-    // Try and recurse into anything that a directory or symbolic link. We must
-    // also do this for unknown as sometimes the directory enumeration might be
-    // enumerating a file system that doesn't have correct file type
-    // information.
-    return FileSystem::eEnumerateDirectoryResultEnter;
-  }
-
-  return FileSystem::eEnumerateDirectoryResultNext;
-}
-
 void Debugger::InstanceInitialize() {
-  const bool find_directories = true;
-  const bool find_files = true;
-  const bool find_other = true;
-  char dir_path[PATH_MAX];
-  if (FileSpec dir_spec = HostInfo::GetSystemPluginDir()) {
-    if (FileSystem::Instance().Exists(dir_spec) &&
-        dir_spec.GetPath(dir_path, sizeof(dir_path))) {
-      FileSystem::Instance().EnumerateDirectory(dir_path, find_directories,
-                                                find_files, find_other,
-                                                LoadPluginCallback, this);
-    }
-  }
-
-  if (FileSpec dir_spec = HostInfo::GetUserPluginDir()) {
-    if (FileSystem::Instance().Exists(dir_spec) &&
-        dir_spec.GetPath(dir_path, sizeof(dir_path))) {
-      FileSystem::Instance().EnumerateDirectory(dir_path, find_directories,
-                                                find_files, find_other,
-                                                LoadPluginCallback, this);
-    }
-  }
-
   PluginManager::DebuggerInitialize(*this);
 }
 
@@ -1016,7 +929,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
           std::make_unique<CommandInterpreter>(*this, false)),
       m_io_handler_stack(),
       m_instance_name(llvm::formatv("debugger_{0}", GetID()).str()),
-      m_loaded_plugins(), m_event_handler_thread(), m_io_handler_thread(),
+      m_event_handler_thread(), m_io_handler_thread(),
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
       m_broadcaster(m_broadcaster_manager_sp,
                     GetStaticBroadcasterClass().str()),

@@ -51,7 +51,7 @@ llvm::Error SystemInitializerTest::Initialize() {
   // Settings must be initialized AFTER PluginManager::Initialize is called.
   Debugger::SettingsInitialize();
 
-  Debugger::Initialize(nullptr);
+  Debugger::Initialize();
 
   return llvm::Error::success();
 }

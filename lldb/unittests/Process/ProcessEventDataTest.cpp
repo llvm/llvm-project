@@ -30,7 +30,7 @@ public:
     HostInfo::Initialize();
     PlatformMacOSX::Initialize();
     std::call_once(TestUtilities::g_debugger_initialize_flag,
-                   []() { Debugger::Initialize(nullptr); });
+                   []() { Debugger::Initialize(); });
   }
   void TearDown() override {
     PlatformMacOSX::Terminate();
@@ -187,7 +187,7 @@ TEST_F(ProcessEventDataTest, DoOnRemoval) {
                ->m_should_stop_hit_count == 0;
   ASSERT_TRUE(result);
 }
-#endif 
+#endif
 
 TEST_F(ProcessEventDataTest, ShouldStop) {
   ArchSpec arch("x86_64-apple-macosx-");

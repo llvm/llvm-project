@@ -80,8 +80,6 @@ template <typename FPtrTy> static FPtrTy CastToFPtr(void *VPtr) {
 static FileSystem::EnumerateDirectoryResult
 LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
                    llvm::StringRef path) {
-  Status error;
-
   namespace fs = llvm::sys::fs;
   // If we have a regular file, a symbolic link or unknown file type, try and
   // process the file. We must handle unknown as sometimes the directory
@@ -91,43 +89,8 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
       ft == fs::file_type::type_unknown) {
     FileSpec plugin_file_spec(path);
     FileSystem::Instance().Resolve(plugin_file_spec);
-
-    if (PluginIsLoaded(plugin_file_spec))
-      return FileSystem::eEnumerateDirectoryResultNext;
-    else {
-      PluginInfo plugin_info;
-
-      std::string pluginLoadError;
-      plugin_info.library = llvm::sys::DynamicLibrary::getPermanentLibrary(
-          plugin_file_spec.GetPath().c_str(), &pluginLoadError);
-      if (plugin_info.library.isValid()) {
-        bool success = false;
-        plugin_info.plugin_init_callback = CastToFPtr<PluginInitCallback>(
-            plugin_info.library.getAddressOfSymbol("LLDBPluginInitialize"));
-        if (plugin_info.plugin_init_callback) {
-          // Call the plug-in "bool LLDBPluginInitialize(void)" function
-          success = plugin_info.plugin_init_callback();
-        }
-
-        if (success) {
-          // It is ok for the "LLDBPluginTerminate" symbol to be nullptr
-          plugin_info.plugin_term_callback = CastToFPtr<PluginTermCallback>(
-              plugin_info.library.getAddressOfSymbol("LLDBPluginTerminate"));
-        } else {
-          // The initialize function returned FALSE which means the plug-in
-          // might not be compatible, or might be too new or too old, or might
-          // not want to run on this machine.  Set it to a default-constructed
-          // instance to invalidate it.
-          plugin_info = PluginInfo();
-        }
-
-        // Regardless of success or failure, cache the plug-in load in our
-        // plug-in info so we don't try to load it again and again.
-        SetPluginInfo(plugin_file_spec, plugin_info);
-
-        return FileSystem::eEnumerateDirectoryResultNext;
-      }
-    }
+    PluginManager::LoadPlugin(plugin_file_spec);
+    return FileSystem::eEnumerateDirectoryResultNext;
   }
 
   if (ft == fs::file_type::directory_file ||
@@ -140,6 +103,45 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
   }
 
   return FileSystem::eEnumerateDirectoryResultNext;
+}
+
+bool PluginManager::LoadPlugin(const FileSpec &plugin_file_spec) {
+  if (PluginIsLoaded(plugin_file_spec))
+    return false;
+
+  PluginInfo plugin_info;
+
+  std::string pluginLoadError;
+  plugin_info.library = llvm::sys::DynamicLibrary::getPermanentLibrary(
+      plugin_file_spec.GetPath().c_str(), &pluginLoadError);
+  if (plugin_info.library.isValid()) {
+    bool success = false;
+    plugin_info.plugin_init_callback = CastToFPtr<PluginInitCallback>(
+        plugin_info.library.getAddressOfSymbol("LLDBPluginInitialize"));
+    if (plugin_info.plugin_init_callback) {
+      // Call the plug-in "bool LLDBPluginInitialize(void)" function
+      success = plugin_info.plugin_init_callback();
+    }
+
+    if (success) {
+      // It is ok for the "LLDBPluginTerminate" symbol to be nullptr
+      plugin_info.plugin_term_callback = CastToFPtr<PluginTermCallback>(
+          plugin_info.library.getAddressOfSymbol("LLDBPluginTerminate"));
+    } else {
+      // The initialize function returned FALSE which means the plug-in
+      // might not be compatible, or might be too new or too old, or might
+      // not want to run on this machine.  Set it to a default-constructed
+      // instance to invalidate it.
+      plugin_info = PluginInfo();
+    }
+
+    // Regardless of success or failure, cache the plug-in load in our
+    // plug-in info so we don't try to load it again and again.
+    SetPluginInfo(plugin_file_spec, plugin_info);
+
+    return success;
+  }
+  return false;
 }
 
 void PluginManager::Initialize() {

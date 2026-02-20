@@ -155,8 +155,6 @@ public:
     ArchSpec arch("i386-pc-linux");
     Platform::SetHostPlatform(
         platform_linux::PlatformLinux::CreateInstance(true, &arch));
-    // std::call_once(TestUtilities::g_debugger_initialize_flag,
-    //                []() { Debugger::Initialize(nullptr); });
     m_debugger_sp = Debugger::CreateInstance();
     ASSERT_TRUE(m_debugger_sp);
     m_debugger_sp->GetTargetList().CreateTarget(*m_debugger_sp, "", arch,

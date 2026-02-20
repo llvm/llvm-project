@@ -39,7 +39,7 @@ struct ElfCoreTest : public testing::Test {
     HostInfo::Initialize();
     platform_linux::PlatformLinux::Initialize();
     std::call_once(TestUtilities::g_debugger_initialize_flag,
-                   []() { Debugger::Initialize(nullptr); });
+                   []() { Debugger::Initialize(); });
   }
   static void TearDownTestCase() {
     platform_linux::PlatformLinux::Terminate();

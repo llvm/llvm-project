@@ -16,21 +16,12 @@
 
 #include <type_traits>
 
-namespace llvm {
-namespace sys {
-class DynamicLibrary;
-}
-}
-
 namespace lldb_private {
 class Platform;
 class ExecutionContext;
 class RegisterFlags;
 
 typedef llvm::SmallString<256> PathSmallString;
-
-typedef llvm::sys::DynamicLibrary (*LoadPluginCallbackType)(
-    const lldb::DebuggerSP &debugger_sp, const FileSpec &spec, Status &error);
 
 /// Every register is described in detail including its name, alternate name
 /// (optional), encoding, size in bytes and the default display format.

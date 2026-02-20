@@ -35,16 +35,13 @@ protected:
       return;
     }
 
-    Status error;
-
     FileSpec dylib_fspec(command[0].ref());
     FileSystem::Instance().Resolve(dylib_fspec);
 
-    if (GetDebugger().LoadPlugin(dylib_fspec, error))
+    if (PluginManager::LoadPlugin(dylib_fspec))
       result.SetStatus(eReturnStatusSuccessFinishResult);
-    else {
-      result.AppendError(error.AsCString());
-    }
+    else
+      result.AppendError("failed to load plugin");
   }
 };
 

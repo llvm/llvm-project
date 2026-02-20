@@ -47,7 +47,7 @@ public:
 protected:
   void SetUp() override {
     std::call_once(TestUtilities::g_debugger_initialize_flag,
-                   []() { Debugger::Initialize(nullptr); });
+                   []() { Debugger::Initialize(); });
   };
 
   DebuggerSP m_debugger_sp;
