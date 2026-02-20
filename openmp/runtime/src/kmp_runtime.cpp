@@ -8490,60 +8490,24 @@ void __kmp_aux_set_library(enum library_type arg) {
   }
 }
 
-/* Getting team information common for all team API */
-// Returns NULL if not in teams construct
-static kmp_team_t *__kmp_aux_get_team_info(int &teams_serialized) {
-  kmp_info_t *thr = __kmp_entry_thread();
-  teams_serialized = 0;
-  if (thr->th.th_teams_microtask) {
-    kmp_team_t *team = thr->th.th_team;
-    int tlevel = thr->th.th_teams_level; // the level of the teams construct
-    int ii = team->t.t_level;
-    teams_serialized = team->t.t_serialized;
-    int level = tlevel + 1;
-    KMP_DEBUG_ASSERT(ii >= tlevel);
-    while (ii > level) {
-      for (teams_serialized = team->t.t_serialized;
-           (teams_serialized > 0) && (ii > level); teams_serialized--, ii--) {
-      }
-      if (team->t.t_serialized && (!teams_serialized)) {
-        team = team->t.t_parent;
-        continue;
-      }
-      if (ii > level) {
-        team = team->t.t_parent;
-        ii--;
-      }
-    }
-    return team;
-  }
-  return NULL;
-}
-
 int __kmp_aux_get_team_num() {
-  int serialized;
-  kmp_team_t *team = __kmp_aux_get_team_info(serialized);
-  if (team) {
-    if (serialized > 1) {
-      return 0; // teams region is serialized ( 1 team of 1 thread ).
-    } else {
-      return team->t.t_master_tid;
-    }
-  }
-  return 0;
+  auto *team = __kmp_entry_thread()->th.th_team;
+  while (team && team->t.t_parent &&
+         team->t.t_parent->t.t_pkfn != (microtask_t)__kmp_teams_master)
+    team = team->t.t_parent;
+  if (!team || !team->t.t_parent)
+    return 0;
+  return team->t.t_master_tid;
 }
 
 int __kmp_aux_get_num_teams() {
-  int serialized;
-  kmp_team_t *team = __kmp_aux_get_team_info(serialized);
-  if (team) {
-    if (serialized > 1) {
-      return 1;
-    } else {
-      return team->t.t_parent->t.t_nproc;
-    }
-  }
-  return 1;
+  auto *team = __kmp_entry_thread()->th.th_team;
+  while (team && team->t.t_parent &&
+         team->t.t_parent->t.t_pkfn != (microtask_t)__kmp_teams_master)
+    team = team->t.t_parent;
+  if (!team || !team->t.t_parent)
+    return 1;
+  return team->t.t_parent->t.t_nproc;
 }
 
 /* ------------------------------------------------------------------------ */
