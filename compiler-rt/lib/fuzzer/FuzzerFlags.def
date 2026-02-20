@@ -56,6 +56,9 @@ FUZZER_FLAG_INT(timeout_exitcode, 70, "When libFuzzer reports a timeout "
   "this exit code will be used.")
 FUZZER_FLAG_INT(max_total_time, 0, "If positive, indicates the maximal total "
                                    "time in seconds to run the fuzzer.")
+FUZZER_FLAG_INT(exit_on_time, 0,
+                "If positive, indicates the maximum time in seconds to run the "
+                "fuzzer after new input is added to the corpus.")
 FUZZER_FLAG_INT(help, 0, "Print help.")
 FUZZER_FLAG_INT(fork, 0, "Experimental mode where fuzzing happens "
                 "in a subprocess")
