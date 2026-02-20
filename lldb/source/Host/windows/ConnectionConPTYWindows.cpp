@@ -23,13 +23,16 @@ using namespace lldb_private;
 ///             Modified in place: if the initialization sequences are present
 ///             as a prefix, they are removed by shifting the remaining bytes
 ///             to the front of the buffer.
+/// \param dst_len The size of \p dst.
 /// \param len  On input, the number of valid bytes in \p dst. On output,
 ///             reduced by the number of bytes stripped.
 /// \return
 ///     \p true if the sequence was found and stripped.
-static bool StripConPTYInitSequences(void *dst, size_t &len) {
+static bool StripConPTYInitSequences(void *dst, size_t dst_len, size_t &len) {
   static const char sequences[] = "\x1b[?9001l\x1b[?1004l";
   static const size_t sequences_len = sizeof(sequences) - 1;
+
+  assert(dst_len >= len - sequences_len);
 
   char *buf = static_cast<char *>(dst);
   if (len >= sequences_len && memcmp(buf, sequences, sequences_len) == 0) {
@@ -62,15 +65,15 @@ size_t ConnectionConPTY::Read(void *dst, size_t dst_len,
                               lldb::ConnectionStatus &status,
                               Status *error_ptr) {
   std::unique_lock<std::mutex> guard(m_pty->GetMutex());
-  if (m_pty->IsStopping().load()) {
-    m_pty->GetCV().wait(guard, [this] { return !m_pty->IsStopping().load(); });
+  if (m_pty->IsStopping()) {
+    m_pty->GetCV().wait(guard, [this] { return !m_pty->IsStopping(); });
   }
 
   size_t bytes_read =
       ConnectionGenericFile::Read(dst, dst_len, timeout, status, error_ptr);
 
   if (bytes_read > 0 && !m_pty_vt_sequence_was_stripped) {
-    if (StripConPTYInitSequences(dst, bytes_read))
+    if (StripConPTYInitSequences(dst, dst_len, bytes_read))
       m_pty_vt_sequence_was_stripped = true;
   }
 

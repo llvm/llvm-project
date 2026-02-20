@@ -102,7 +102,7 @@ public:
   ///     A reference to the atomic bool that is set to true when the ConPTY
   ///     is stopping. Callers should check this in their read/write loops to
   ///     exit gracefully.
-  const std::atomic<bool> &IsStopping() const { return m_stopping; };
+  const bool &IsStopping() const { return m_stopping; };
 
   /// Sets the stopping flag to \p value, signalling to threads waiting on the
   /// ConPTY that they should stop.
