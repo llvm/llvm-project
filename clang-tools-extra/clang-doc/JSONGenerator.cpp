@@ -794,19 +794,25 @@ static Error serializeIndex(const ClangDocContext &CDCtx, StringRef RootDir) {
 
   if (IndexCopy.Children.empty()) {
     // If the index is empty, default to displaying the global namespace.
-    IndexCopy.Children.emplace_back(GlobalNamespaceID, "",
+    IndexCopy.Children.try_emplace(toStringRef(GlobalNamespaceID), GlobalNamespaceID, "",
                                     InfoType::IT_namespace, "GlobalNamespace");
   } else {
     IndexArrayRef.reserve(CDCtx.Idx.Children.size());
   }
 
-  for (auto &Idx : IndexCopy.Children) {
-    if (Idx.Children.empty())
+  llvm::SmallVector<const Index *> Children;
+  Children.reserve(IndexCopy.Children.size());
+  for (const auto &[_, Idx] : IndexCopy.Children)
+    Children.push_back(&Idx);
+  llvm::sort(Children, [](const Index *A, const Index *B) { return *A < *B; });
+
+  for (const auto *Idx : Children) {
+    if (Idx->Children.empty())
       continue;
-    std::string TypeStr = infoTypeToString(Idx.RefType);
+    std::string TypeStr = infoTypeToString(Idx->RefType);
     json::Value IdxVal = Object();
     auto &IdxObj = *IdxVal.getAsObject();
-    serializeReference(Idx, IdxObj);
+    serializeReference(*Idx, IdxObj);
     IndexArrayRef.push_back(IdxVal);
   }
   Obj["Index"] = IndexArray;

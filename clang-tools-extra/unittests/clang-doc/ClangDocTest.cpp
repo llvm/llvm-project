@@ -247,8 +247,8 @@ void CheckBaseRecordInfo(BaseRecordInfo *Expected, BaseRecordInfo *Actual) {
 void CheckIndex(Index &Expected, Index &Actual) {
   CheckReference(Expected, Actual);
   ASSERT_EQ(Expected.Children.size(), Actual.Children.size());
-  for (size_t Idx = 0; Idx < Actual.Children.size(); ++Idx)
-    CheckIndex(Expected.Children[Idx], Actual.Children[Idx]);
+  for (auto &[_, C] : Expected.Children)
+    CheckIndex(C, Actual.Children.find(llvm::toStringRef(C.USR))->second);
 }
 
 } // namespace doc

@@ -46,45 +46,99 @@ TEST(GeneratorTest, emitIndex) {
   Index ExpectedIdx;
   Index IndexA;
   IndexA.Name = "A";
-  ExpectedIdx.Children.emplace_back(std::move(IndexA));
+  IndexA.USR = serialize::hashUSR("1");
+  ExpectedIdx.Children.try_emplace(llvm::toStringRef(IndexA.USR),
+                                   std::move(IndexA));
   Index IndexB;
   IndexB.Name = "B";
+  IndexB.USR = serialize::hashUSR("2");
   Index IndexC;
   IndexC.Name = "C";
-  IndexB.Children.emplace_back(std::move(IndexC));
-  ExpectedIdx.Children.emplace_back(std::move(IndexB));
+  IndexC.USR = serialize::hashUSR("3");
+  IndexB.Children.try_emplace(llvm::toStringRef(IndexC.USR), std::move(IndexC));
+  ExpectedIdx.Children.try_emplace(llvm::toStringRef(IndexB.USR),
+                                   std::move(IndexB));
   Index IndexD;
   IndexD.Name = "D";
+  IndexD.USR = serialize::hashUSR("4");
   Index IndexE;
   IndexE.Name = "E";
+  IndexE.USR = serialize::hashUSR("5");
   Index IndexF;
   IndexF.Name = "F";
-  IndexE.Children.emplace_back(std::move(IndexF));
-  IndexD.Children.emplace_back(std::move(IndexE));
-  ExpectedIdx.Children.emplace_back(std::move(IndexD));
+  IndexF.USR = serialize::hashUSR("6");
+  IndexE.Children.try_emplace(llvm::toStringRef(IndexF.USR), std::move(IndexF));
+  IndexD.Children.try_emplace(llvm::toStringRef(IndexE.USR), std::move(IndexE));
+  ExpectedIdx.Children.try_emplace(llvm::toStringRef(IndexD.USR),
+                                   std::move(IndexD));
   Index IndexG;
   IndexG.Name = "GlobalNamespace";
   IndexG.RefType = InfoType::IT_namespace;
-  ExpectedIdx.Children.emplace_back(std::move(IndexG));
+  ExpectedIdx.Children.try_emplace(llvm::toStringRef(IndexG.USR),
+                                   std::move(IndexG));
 
   CheckIndex(ExpectedIdx, Idx);
 }
 
 TEST(GeneratorTest, sortIndex) {
   Index Idx;
-  Idx.Children.emplace_back("b");
-  Idx.Children.emplace_back("aA");
-  Idx.Children.emplace_back("aa");
-  Idx.Children.emplace_back("A");
-  Idx.Children.emplace_back("a");
+  Index IndexA;
+  IndexA.Name = "a";
+  IndexA.USR = serialize::hashUSR("1");
+  Idx.Children.try_emplace(llvm::toStringRef(IndexA.USR), std::move(IndexA));
+
+  Index IndexB;
+  IndexB.Name = "A";
+  IndexB.USR = serialize::hashUSR("2");
+  Idx.Children.try_emplace(llvm::toStringRef(IndexB.USR), std::move(IndexB));
+
+  Index IndexC;
+  IndexC.Name = "aa";
+  IndexC.USR = serialize::hashUSR("3");
+  Idx.Children.try_emplace(llvm::toStringRef(IndexC.USR), std::move(IndexC));
+
+  Index IndexD;
+  IndexD.Name = "aA";
+  IndexD.USR = serialize::hashUSR("4");
+  Idx.Children.try_emplace(llvm::toStringRef(IndexD.USR), std::move(IndexD));
+
+  Index IndexE;
+  IndexE.Name = "b";
+  IndexE.USR = serialize::hashUSR("5");
+  Idx.Children.try_emplace(llvm::toStringRef(IndexE.USR), std::move(IndexE));
+
   Idx.sort();
 
   Index ExpectedIdx;
-  ExpectedIdx.Children.emplace_back("a");
-  ExpectedIdx.Children.emplace_back("A");
-  ExpectedIdx.Children.emplace_back("aa");
-  ExpectedIdx.Children.emplace_back("aA");
-  ExpectedIdx.Children.emplace_back("b");
+  Index IndexAExp;
+  IndexAExp.Name = "a";
+  IndexAExp.USR = serialize::hashUSR("1");
+  ExpectedIdx.Children.try_emplace(llvm::toStringRef(IndexAExp.USR),
+                                   std::move(IndexAExp));
+
+  Index IndexBExp;
+  IndexBExp.Name = "A";
+  IndexBExp.USR = serialize::hashUSR("2");
+  ExpectedIdx.Children.try_emplace(llvm::toStringRef(IndexBExp.USR),
+                                   std::move(IndexBExp));
+
+  Index IndexCExp;
+  IndexCExp.Name = "aa";
+  IndexCExp.USR = serialize::hashUSR("3");
+  ExpectedIdx.Children.try_emplace(llvm::toStringRef(IndexCExp.USR),
+                                   std::move(IndexCExp));
+
+  Index IndexDExp;
+  IndexDExp.Name = "aA";
+  IndexDExp.USR = serialize::hashUSR("4");
+  ExpectedIdx.Children.try_emplace(llvm::toStringRef(IndexDExp.USR),
+                                   std::move(IndexDExp));
+
+  Index IndexEExp;
+  IndexEExp.Name = "b";
+  IndexEExp.USR = serialize::hashUSR("5");
+  ExpectedIdx.Children.try_emplace(llvm::toStringRef(IndexEExp.USR),
+                                   std::move(IndexEExp));
 
   CheckIndex(ExpectedIdx, Idx);
 }
