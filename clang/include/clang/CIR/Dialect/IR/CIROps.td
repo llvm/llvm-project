@@ -5799,6 +5799,35 @@ def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
   }];
 }
 
+def CIR_AbsOp : CIR_Op<"abs", [Pure, SameOperandsAndResultType]> {
+  let summary = "Computes the absolute value of a signed integer";
+  let description = [{
+    `cir.abs` computes the absolute value of a signed integer or vector
+    of signed integers.
+
+    The `min_is_poison` attribute indicates whether the result value is a
+    poison value if the argument is statically or dynamically the minimum
+    value for the type.
+
+    Example:
+
+    ```mlir
+      %0 = cir.const #cir.int<-42> : s32i
+      %1 = cir.abs %0 min_is_poison : s32i
+      %2 = cir.abs %3 : !cir.vector<!s32i x 4>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_AnySIntOrVecOfSIntType:$src,
+    UnitAttr:$min_is_poison
+  );
+
+  let results = (outs CIR_AnySIntOrVecOfSIntType:$result);
+
+  let assemblyFormat = "$src ( `min_is_poison` $min_is_poison^ )? `:` type($src) attr-dict";
+}
+
 def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FloorOp"> {
   let summary = "Computes the floating-point floor value";
   let description = [{
@@ -6211,12 +6240,6 @@ def CIR_TryOp : CIR_Op<"try",[
     Holds the lexical scope of `try {}`. Note that resources used on catch
     clauses are usually allocated in the same parent as `cir.try`.
 
-    `synthetic`: use `cir.try` to represent try/catches not originally
-    present in the source code. For example, a synthetic `cir.try` region
-    is created around the constructor call when `operator new` is used
-    so that the memory allocated will be freed if the constructor throws
-    an exception.
-
     `cleanup`: indicates that there are cleanups that must be performed
     when exiting the try region via exception, even if the exception is not
     caught.
@@ -6238,7 +6261,6 @@ def CIR_TryOp : CIR_Op<"try",[
   }];
 
   let arguments = (ins
-    UnitAttr:$synthetic,
     UnitAttr:$cleanup,
     DefaultValuedAttr<CIR_TryHandlerArrayAttr, "{}">:$handler_types
   );
@@ -6249,7 +6271,6 @@ def CIR_TryOp : CIR_Op<"try",[
   );
 
   let assemblyFormat = [{
-    (`synthetic` $synthetic^)?
     (`cleanup` $cleanup^)?
     $try_region
     custom<TryHandlerRegions>($handler_regions, $handler_types)

@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 
 class AbiTagStructorsTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @skipIf(
         compiler="clang",
         compiler_version=["<", "22"],

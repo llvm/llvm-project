@@ -655,6 +655,19 @@ let Class = BTFTagAttributedType in {
   }]>;
 }
 
+let Class = OverflowBehaviorType in {
+  def : Property<"behaviorKind", OverflowBehaviorKind> {
+    let Read = [{ node->getBehaviorKind() }];
+  }
+  def : Property<"underlyingType", QualType> {
+    let Read = [{ node->getUnderlyingType() }];
+  }
+
+  def : Creator<[{
+    return ctx.getOverflowBehaviorType(behaviorKind, underlyingType);
+  }]>;
+}
+
 let Class = HLSLAttributedResourceType in {
   def : Property<"resClass", UInt32> {
     let Read = [{ static_cast<uint32_t>(node->getAttrs().ResourceClass) }];

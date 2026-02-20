@@ -1,5 +1,4 @@
 // RUN: %libomptarget-compilexx-generic -O3 && %libomptarget-run-generic
-// XFAIL: intelgpu
 
 #include <stdio.h>
 

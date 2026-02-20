@@ -2387,6 +2387,13 @@ defm fixed_point : BoolFOption<"fixed-point",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
   BothFlags<[], [ClangOption], " fixed point types">>;
+defm experimental_overflow_behavior_types
+    : BoolFOption<"experimental-overflow-behavior-types",
+                  LangOpts<"OverflowBehaviorTypes">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+                  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+                  BothFlags<[], [CC1Option],
+                            " the experimental overflow behavior types">>;
 def cxx_static_destructors_EQ : Joined<["-"], "fc++-static-destructors=">, Group<f_Group>,
   HelpText<"Controls which variables C++ static destructors are registered for">,
   Values<"all,thread-local,none">,
@@ -3229,6 +3236,31 @@ defm experimental_omit_vtable_rtti : BoolFOption<"experimental-omit-vtable-rtti"
   PosFlag<SetTrue, [], [CC1Option], "Omit">,
   NegFlag<SetFalse, [], [CC1Option], "Do not omit">,
   BothFlags<[], [CC1Option], " the RTTI component from virtual tables">>;
+
+defm experimental_allow_pointer_field_protection_attr
+    : BoolFOption<"experimental-allow-pointer-field-protection-attr",
+                  LangOpts<"PointerFieldProtectionAttr">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Allow">,
+                  NegFlag<SetFalse, [], [], "Disallow">,
+                  BothFlags<[], [ClangOption],
+                            " the use of the "
+                            "[[clang::pointer_field_protection]] attribute">>;
+defm experimental_pointer_field_protection_abi
+    : BoolFOption<"experimental-pointer-field-protection-abi",
+                  LangOpts<"PointerFieldProtectionABI">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+                  NegFlag<SetFalse, [], [], "Do not enable">,
+                  BothFlags<[], [ClangOption],
+                            " pointer field protection on all non-standard "
+                            "layout struct types">>;
+defm experimental_pointer_field_protection_tagged
+    : BoolFOption<"experimental-pointer-field-protection-tagged",
+                  LangOpts<"PointerFieldProtectionTagged">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Use">,
+                  NegFlag<SetFalse, [], [], "Do not use">,
+                  BothFlags<[], [ClangOption],
+                            " pointer identity (tag) to discriminate pointers "
+                            "of non-trivially-copyable types">>;
 
 def fcxx_abi_EQ : Joined<["-"], "fc++-abi=">,
                   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
@@ -5300,16 +5332,13 @@ def mmacos_version_min_EQ : Joined<["-"], "mmacos-version-min=">,
 def : Joined<["-"], "mmacosx-version-min=">,
   Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>,
   Group<m_Group>, Alias<mmacos_version_min_EQ>;
-def moutline
-    : Flag<["-"], "moutline">,
-      Group<f_clang_Group>,
-      Visibility<[ClangOption, CC1Option]>,
-      HelpText<"Enable function outlining (AArch64,Arm,RISC-V,X86 only)">;
-def mno_outline
-    : Flag<["-"], "mno-outline">,
-      Group<f_clang_Group>,
-      Visibility<[ClangOption, CC1Option]>,
-      HelpText<"Disable function outlining (AArch64,Arm,RISC-V,X86 only)">;
+defm outline
+    : BoolMOption<
+          "outline", CodeGenOpts<"DisableOutlining">, DefaultFalse,
+          NegFlag<SetTrue, [], [ClangOption, CC1Option],
+                  "Disable function outlining (AArch64,Arm,RISC-V,X86 only)">,
+          PosFlag<SetFalse, [], [ClangOption],
+                  "Enable function outlining (AArch64,Arm,RISC-V,X86 only)">>;
 def mms_bitfields : Flag<["-"], "mms-bitfields">, Group<m_Group>,
   HelpText<"Set the default structure layout to be compatible with the Microsoft compiler standard">;
 def mno_ms_bitfields : Flag<["-"], "mno-ms-bitfields">, Group<m_Group>,
@@ -9876,6 +9905,13 @@ def fhlsl_spv_enable_maximal_reconvergence
                "module. This ensures that control flow reconverges at "
                "well-defined merge points as defined by the Vulkan spec.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvEnableMaximalReconvergence">>;
+
+def fexperimental_emit_sgep
+    : Flag<["-"], "fexperimental-emit-sgep">,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"Emit structured GEP intrinsic instead of GEP instructions "
+               "(experimental).">,
+      MarshallingInfoFlag<LangOpts<"EmitStructuredGEP">>;
 
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,

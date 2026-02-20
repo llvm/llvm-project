@@ -733,7 +733,6 @@ if (MSVC)
       -wd4244 # Suppress ''argument' : conversion from 'type1' to 'type2', possible loss of data'
       -wd4267 # Suppress ''var' : conversion from 'size_t' to 'type', possible loss of data'
       -wd4291 # Suppress ''declaration' : no matching operator delete found; memory will not be freed if initialization throws an exception'
-      -wd4351 # Suppress 'new behavior: elements of array 'array' will be default initialized'
       -wd4456 # Suppress 'declaration of 'var' hides local variable'
       -wd4457 # Suppress 'declaration of 'var' hides function parameter'
       -wd4458 # Suppress 'declaration of 'var' hides class member'
@@ -1304,11 +1303,59 @@ if (LLVM_BUILD_INSTRUMENTED AND LLVM_BUILD_INSTRUMENTED_COVERAGE)
   message(FATAL_ERROR "LLVM_BUILD_INSTRUMENTED and LLVM_BUILD_INSTRUMENTED_COVERAGE cannot both be specified")
 endif()
 
+if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Pre-compiled headers with GCC (tested versions 14+15) provide very little
+    # compile-time improvements, but substantially increase the build dir size.
+    # Therefore, disable PCH with GCC by default.
+    message(NOTICE "Precompiled headers are disabled by default with GCC. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18)
+    # Clang before version 18 has problems with mixed default visibility.
+    # Therefore, disable PCH with older Clang versions by default.
+    message(NOTICE "Precompiled headers are disabled by default with Clang <18. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
+
+  # Warn on possibly unintended interactions with ccache/sccache if the user
+  # sets this via CMAKE_CXX_COMPILER_LAUNCHER (and not using LLVM_CCACHE_BUILD).
+  if(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "sccache")
+    # sccache doesn't support PCH, this can lead to false-positives when only
+    # a macro definition changes. For Clang, this sometimes even works
+    # correctly, but not always, so disable by default to be safe.
+    # See: https://github.com/mozilla/sccache/issues/615
+    # See: https://github.com/mozilla/sccache/issues/2562
+    message(NOTICE "Precompiled headers are disabled by default with sccache. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  elseif(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # ccache with PCH can lead to false-positives when only a macro
+    # definition changes with non-Clang compilers, because macro definitions
+    # are not compared in preprocessed mode.
+    # See: https://github.com/ccache/ccache/issues/1668
+    message(WARNING "Using ccache with precompiled headers with non-Clang "
+      "compilers is not supported and may lead to false positives. "
+      "Set CMAKE_DISABLE_PRECOMPILE_HEADERS to ON/OFF to silence this warning.")
+  endif()
+endif()
 if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  message(STATUS "Precompiled headers enabled.")
   # CMake weirdly marks all PCH as system headers. This undocumented variable
   # can be used to suppress the "#pragma clang system_header".
   # See: https://gitlab.kitware.com/cmake/cmake/-/issues/21219
   set(CMAKE_PCH_PROLOGUE "")
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Clang requires this flag in order for precompiled headers to work with ccache.
+    append("-Xclang -fno-pch-timestamp" CMAKE_CXX_FLAGS)
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # GCC requires this flag in order for precompiled headers to work with ccache.
+    append("-fpch-preprocess" CMAKE_CXX_FLAGS)
+  endif()
+else()
+  message(STATUS "Precompiled headers disabled.")
 endif()
 
 set(LLVM_THINLTO_CACHE_PATH "${PROJECT_BINARY_DIR}/lto.cache" CACHE STRING "Set ThinLTO cache path. This can be used when building LLVM from several different directiories.")

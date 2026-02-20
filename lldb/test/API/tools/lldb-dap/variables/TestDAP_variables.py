@@ -17,6 +17,8 @@ def make_buffer_verify_dict(start_idx, count, offset=0):
 
 
 class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
     def verify_values(self, verify_dict, actual, varref_dict=None, expression=None):
         if "equals" in verify_dict:
             verify = verify_dict["equals"]
@@ -193,6 +195,8 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 },
                 "readOnly": True,
             },
+            "valid_str": {},
+            "malformed_str": {},
             "x": {"equals": {"type": "int"}},
         }
 
@@ -306,6 +310,16 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             argv, 0x1234, "verify argv was set to 0x1234 (0x1234 != %#x)" % (argv)
         )
 
+        # Test hexadecimal format
+        response = self.set_local("argc", 42, is_hex=True)
+        verify_response = {
+            "type": "int",
+            "value": "0x0000002a",
+        }
+        for key, value in verify_response.items():
+            self.assertEqual(value, response["body"][key])
+        self.set_local("argc", 123)
+
         # Set a variable value whose name is synthetic, like a variable index
         # and verify the value by reading it
         variable_value = 100
@@ -345,9 +359,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         verify_locals["argc"]["equals"]["value"] = "123"
         verify_locals["pt"]["children"]["x"]["equals"]["value"] = "111"
-        verify_locals["x @ main.cpp:19"] = {"equals": {"type": "int", "value": "89"}}
-        verify_locals["x @ main.cpp:21"] = {"equals": {"type": "int", "value": "42"}}
-        verify_locals["x @ main.cpp:23"] = {"equals": {"type": "int", "value": "72"}}
+        verify_locals["x @ main.cpp:23"] = {"equals": {"type": "int", "value": "89"}}
+        verify_locals["x @ main.cpp:25"] = {"equals": {"type": "int", "value": "42"}}
+        verify_locals["x @ main.cpp:27"] = {"equals": {"type": "int", "value": "72"}}
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
@@ -355,22 +369,22 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.assertFalse(self.set_local("x2", 9)["success"])
         self.assertFalse(self.set_local("x @ main.cpp:0", 9)["success"])
 
-        self.assertTrue(self.set_local("x @ main.cpp:19", 19)["success"])
-        self.assertTrue(self.set_local("x @ main.cpp:21", 21)["success"])
-        self.assertTrue(self.set_local("x @ main.cpp:23", 23)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:23", 19)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:25", 21)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:27", 23)["success"])
 
         # The following should have no effect
-        self.assertFalse(self.set_local("x @ main.cpp:23", "invalid")["success"])
+        self.assertFalse(self.set_local("x @ main.cpp:27", "invalid")["success"])
 
-        verify_locals["x @ main.cpp:19"]["equals"]["value"] = "19"
-        verify_locals["x @ main.cpp:21"]["equals"]["value"] = "21"
-        verify_locals["x @ main.cpp:23"]["equals"]["value"] = "23"
+        verify_locals["x @ main.cpp:23"]["equals"]["value"] = "19"
+        verify_locals["x @ main.cpp:25"]["equals"]["value"] = "21"
+        verify_locals["x @ main.cpp:27"]["equals"]["value"] = "23"
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
         # The plain x variable shold refer to the innermost x
         self.assertTrue(self.set_local("x", 22)["success"])
-        verify_locals["x @ main.cpp:23"]["equals"]["value"] = "22"
+        verify_locals["x @ main.cpp:27"]["equals"]["value"] = "22"
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
@@ -387,9 +401,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         names = [var["name"] for var in locals]
         # The first shadowed x shouldn't have a suffix anymore
         verify_locals["x"] = {"equals": {"type": "int", "value": "19"}}
-        self.assertNotIn("x @ main.cpp:19", names)
-        self.assertNotIn("x @ main.cpp:21", names)
         self.assertNotIn("x @ main.cpp:23", names)
+        self.assertNotIn("x @ main.cpp:25", names)
+        self.assertNotIn("x @ main.cpp:27", names)
 
         self.verify_variables(verify_locals, locals)
 
@@ -459,6 +473,22 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                     },
                 },
                 "readOnly": True,
+            },
+            "valid_str": {
+                "equals": {
+                    "type": "const char *",
+                },
+                "matches": {
+                    "value": r'0x\w+ "𐌶𐌰L𐌾𐍈 C𐍈𐌼𐌴𐍃"',
+                },
+            },
+            "malformed_str": {
+                "equals": {
+                    "type": "const char *",
+                },
+                "matches": {
+                    "value": r'0x\w+ "lone trailing \\x81\\x82 bytes"',
+                },
             },
             "x": {
                 "equals": {"type": "int"},
@@ -700,6 +730,8 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             "argc": {},
             "argv": {},
             "pt": {"readOnly": True},
+            "valid_str": {},
+            "malformed_str": {},
             "x": {},
             "return_result": {"equals": {"type": "int"}},
         }
