@@ -337,6 +337,8 @@ add_header_library(
   HDRS
     asinpif16.h
   DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.polyeval

@@ -13,6 +13,8 @@
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
+#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -25,7 +27,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE constexpr float16 asinpif16(float16 x) {
+LIBC_INLINE float16 asinpif16(float16 x) {
   using FPBits = fputil::FPBits<float16>;
 
   FPBits xbits(x);

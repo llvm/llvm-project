@@ -4193,6 +4193,7 @@ add_entrypoint_object(
   HDRS
     ../asinpif16.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.src.__support.math.asinpif16
 )
 
