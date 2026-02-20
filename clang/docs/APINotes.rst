@@ -141,6 +141,47 @@ Each entry under 'Classes' and 'Protocols' can contain "Methods" and
         PropertyKind: Instance
         …
 
+Each entry under "Tags" can contain "Methods", "Fields", and nested "Tags"
+arrays. Methods under Tags are C++ methods identified by 'Name' (rather than
+'Selector' and 'MethodKind' as used for Objective-C methods).
+
+:Methods (under Tags):
+
+  Identified by 'Name'.
+
+  ::
+
+    Tags:
+    - Name: MyClass
+      Methods:
+      - Name: doSomething
+        …
+
+:Fields:
+
+  Identified by 'Name'.
+
+  ::
+
+    Tags:
+    - Name: MyStruct
+      Fields:
+      - Name: value
+        Nullability: O
+        …
+
+:Tags (nested):
+
+  Nested tags follow the same schema as top-level Tags entries.
+
+  ::
+
+    Tags:
+    - Name: OuterClass
+      Tags:
+      - Name: InnerClass
+        …
+
 Each declaration supports the following annotations (if relevant to that
 declaration kind), all of which are optional:
 
