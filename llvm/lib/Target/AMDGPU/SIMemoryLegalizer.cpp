@@ -2481,8 +2481,7 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
               MO.setIsInternalRead(false);
         }
 
-        MI->eraseFromParent();
-        MI = II->getIterator();
+        MI = MI->eraseFromParent();
       }
 
       if (MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic) {
