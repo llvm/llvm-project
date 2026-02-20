@@ -572,6 +572,21 @@ public:
   LLVM_ABI KnownBits computeKnownBitsAddrSpaceCast(
       unsigned FromAS, unsigned ToAS, const KnownBits &FromPtrBits) const;
 
+  /// Return the preserved ptr bit mask that is safe to cast integer to pointer
+  /// with new address space. The returned APInt size is identical to the source
+  /// address space size. The address of integer form may only change in the
+  /// least significant bit (e.g. within a page). In that case target can
+  /// determine if it is safe to cast the generic address space to the original
+  /// address space. For below example, we can replace `%gp2 = inttoptr i64 %b
+  /// to ptr` with `%gp2 = inttoptr i64 %b to ptr addrspace(2)`
+  ///   %gp = addrspacecast ptr addrspace(2) %sp to ptr
+  ///   %a = ptrtoint ptr %gp to i64
+  ///   %b = xor i64 7, %a
+  ///   %gp2 = inttoptr i64 %b to ptr
+  ///   store i16 0, ptr %gp2, align 2
+  LLVM_ABI APInt getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
+                                                  unsigned DstAS) const;
+
   /// Return true if globals in this address space can have initializers other
   /// than `undef`.
   LLVM_ABI bool
