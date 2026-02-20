@@ -182,15 +182,15 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
   assert(hasEffect<MemoryEffects::Read>(toOp) &&
          "expected read effect on toOp");
 
-  // Collect the memory regions of fromOp's read effects. A write can only
-  // block CSE if its resource region is not disjoint from one of these.
-  SmallPtrSet<SideEffects::MemoryRegion *, 1> readRegions;
+  // Collect the resources of fromOp's read effects. A write can only block
+  // CSE if its resource is not disjoint from one of these.
+  SmallPtrSet<SideEffects::Resource *, 1> readResources;
   if (auto memOp = dyn_cast<MemoryEffectOpInterface>(fromOp)) {
     SmallVector<MemoryEffects::EffectInstance> fromEffects;
     memOp.getEffects(fromEffects);
     for (const auto &e : fromEffects)
       if (isa<MemoryEffects::Read>(e.getEffect()))
-        readRegions.insert(e.getResource()->getMemoryRegion());
+        readResources.insert(e.getResource());
   }
 
   Operation *nextOp = fromOp->getNextNode();
@@ -222,11 +222,11 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
 
     for (const MemoryEffects::EffectInstance &effect : *effects) {
       if (isa<MemoryEffects::Write>(effect.getEffect())) {
-        // A write on a memory region disjoint from all read regions cannot
+        // A write on a resource disjoint from all read resources cannot
         // conflict with the reads being CSE'd.
-        auto *writeRegion = effect.getResource()->getMemoryRegion();
-        bool canConflict = llvm::any_of(readRegions, [&](auto *readRegion) {
-          return !writeRegion->isDisjointFrom(readRegion);
+        auto *writeResource = effect.getResource();
+        bool canConflict = llvm::any_of(readResources, [&](auto *readResource) {
+          return !writeResource->isDisjointFrom(readResource);
         });
         if (canConflict) {
           result.first->second = {nextOp, MemoryEffects::Write::get()};

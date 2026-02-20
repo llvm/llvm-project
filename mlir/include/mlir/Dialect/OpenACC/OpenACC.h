@@ -211,26 +211,20 @@ static constexpr StringLiteral getCombinedConstructsAttrName() {
 
 struct RuntimeCounters
     : public mlir::SideEffects::Resource::Base<RuntimeCounters> {
-  mlir::StringRef getName() final { return "AccRuntimeCounters"; }
-  mlir::SideEffects::MemoryRegion *getMemoryRegion() const override {
-    return mlir::SideEffects::NonAddressableMemory::get();
-  }
+  mlir::StringRef getName() const final { return "AccRuntimeCounters"; }
+  bool isAddressable() const override { return false; }
 };
 
 struct ConstructResource
     : public mlir::SideEffects::Resource::Base<ConstructResource> {
-  mlir::StringRef getName() final { return "AccConstructResource"; }
-  mlir::SideEffects::MemoryRegion *getMemoryRegion() const override {
-    return mlir::SideEffects::NonAddressableMemory::get();
-  }
+  mlir::StringRef getName() const final { return "AccConstructResource"; }
+  bool isAddressable() const override { return false; }
 };
 
 struct CurrentDeviceIdResource
     : public mlir::SideEffects::Resource::Base<CurrentDeviceIdResource> {
-  mlir::StringRef getName() final { return "AccCurrentDeviceIdResource"; }
-  mlir::SideEffects::MemoryRegion *getMemoryRegion() const override {
-    return mlir::SideEffects::NonAddressableMemory::get();
-  }
+  mlir::StringRef getName() const final { return "AccCurrentDeviceIdResource"; }
+  bool isAddressable() const override { return false; }
 };
 
 } // namespace acc

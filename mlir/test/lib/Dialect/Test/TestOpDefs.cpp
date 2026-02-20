@@ -452,7 +452,7 @@ namespace {
 struct TestResource : public SideEffects::Resource::Base<TestResource> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestResource)
 
-  StringRef getName() final { return "<Test>"; }
+  StringRef getName() const final { return "<Test>"; }
 };
 } // namespace
 

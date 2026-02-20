@@ -1,9 +1,9 @@
 // RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(cse))' | FileCheck %s
 
-// Verify that acc.set (which writes CurrentDeviceIdResource, a non-addressable
-// resource) does not block CSE of identical memref.load operations (which
-// read DefaultResource, an addressable resource). The two resource regions are
-// disjoint, so the write cannot conflict with the loads.
+// Verify that acc.set (which writes CurrentDeviceIdResource, a root disjoint
+// from DefaultResource) does not block CSE of identical memref.load operations
+// (which read DefaultResource). The two resources are disjoint, so the write
+// cannot conflict with the loads.
 
 // CHECK-LABEL: @cse_across_acc_set
 func.func @cse_across_acc_set(%a: memref<10xf32>, %i: index) -> (f32, f32) {

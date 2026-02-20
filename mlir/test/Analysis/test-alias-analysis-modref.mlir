@@ -68,8 +68,8 @@ func.func @unknown(%arg0: memref<i32>) attributes {test.ptr = "func"} {
 
 // -----
 
-// An op writing to a non-addressable resource cannot modify or reference
-// a Value-based (addressable) memory location → NoModRef.
+// An op writing to a non-addressable resource cannot modify or reference a
+// Value-based memory location -> NoModRef.
 // CHECK-LABEL: Testing : "nonaddressable_write"
 // CHECK-DAG: side_effect_op -> func.region0#0: NoModRef
 // CHECK-DAG: return -> func.region0#0: NoModRef
@@ -80,8 +80,8 @@ func.func @nonaddressable_write(%arg: memref<2xf32>) attributes {test.ptr = "fun
 
 // -----
 
-// An op writing to an addressable resource (DefaultResource) without an
-// associated Value → MayAlias → Mod.
+// An op writing to an addressable resource without an associated Value ->
+// MayAlias -> Mod.
 // CHECK-LABEL: Testing : "addressable_write"
 // CHECK-DAG: side_effect_op -> func.region0#0: Mod
 // CHECK-DAG: return -> func.region0#0: NoModRef

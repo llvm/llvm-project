@@ -51,57 +51,64 @@ class TestDialect;
 // TestResource
 //===----------------------------------------------------------------------===//
 
-/// A test resource for side effects.
-struct TestResource : public mlir::SideEffects::Resource::Base<TestResource> {
-  llvm::StringRef getName() final { return "<Test>"; }
+/// A test resource for side effects (under DefaultResource).
+struct TestResource : public mlir::SideEffects::Resource::Base<
+                          TestResource, mlir::SideEffects::DefaultResource> {
+  llvm::StringRef getName() const final { return "<Test>"; }
+  mlir::SideEffects::Resource *getParent() const override {
+    return mlir::SideEffects::DefaultResource::get();
+  }
 };
 
-/// A test resource in NonAddressableMemory (disjoint from AddressableMemory).
+/// A test resource that is a root (disjoint from DefaultResource).
 struct TestNonAddressableResource
     : public mlir::SideEffects::Resource::Base<TestNonAddressableResource> {
-  llvm::StringRef getName() final { return "<TestNonAddressable>"; }
-  mlir::SideEffects::MemoryRegion *getMemoryRegion() const override {
-    return mlir::SideEffects::NonAddressableMemory::get();
-  }
+  llvm::StringRef getName() const final { return "<TestNonAddressable>"; }
+  bool isAddressable() const override { return false; }
 };
 
-/// Two disjoint sub-regions under NonAddressableMemory for testing sibling
-/// disjointness within non-addressable memory.
-struct TestNonAddressableSubRegionA
-    : public mlir::SideEffects::MemoryRegion::Base<
-          TestNonAddressableSubRegionA> {
+/// Two disjoint sub-resources (roots) for testing sibling disjointness.
+struct TestNonAddressableSubResourceA
+    : public mlir::SideEffects::Resource::Base<TestNonAddressableSubResourceA> {
+  TestNonAddressableSubResourceA() = default;
   llvm::StringRef getName() const override {
-    return "TestNonAddressableSubRegionA";
+    return "TestNonAddressableSubResourceA";
   }
-  mlir::SideEffects::MemoryRegion *getParent() const override {
-    return mlir::SideEffects::NonAddressableMemory::get();
-  }
+  bool isAddressable() const override { return false; }
+
+protected:
+  TestNonAddressableSubResourceA(mlir::TypeID id) : Base(id) {}
 };
 
-struct TestNonAddressableSubRegionB
-    : public mlir::SideEffects::MemoryRegion::Base<
-          TestNonAddressableSubRegionB> {
+struct TestNonAddressableSubResourceB
+    : public mlir::SideEffects::Resource::Base<TestNonAddressableSubResourceB> {
+  TestNonAddressableSubResourceB() = default;
   llvm::StringRef getName() const override {
-    return "TestNonAddressableSubRegionB";
+    return "TestNonAddressableSubResourceB";
   }
-  mlir::SideEffects::MemoryRegion *getParent() const override {
-    return mlir::SideEffects::NonAddressableMemory::get();
-  }
+  bool isAddressable() const override { return false; }
+
+protected:
+  TestNonAddressableSubResourceB(mlir::TypeID id) : Base(id) {}
 };
 
 struct TestNonAddressableResourceA
-    : public mlir::SideEffects::Resource::Base<TestNonAddressableResourceA> {
-  llvm::StringRef getName() final { return "<TestNonAddressableA>"; }
-  mlir::SideEffects::MemoryRegion *getMemoryRegion() const override {
-    return TestNonAddressableSubRegionA::get();
+    : public mlir::SideEffects::Resource::Base<TestNonAddressableResourceA,
+                                               TestNonAddressableSubResourceA> {
+  llvm::StringRef getName() const final { return "<TestNonAddressableA>"; }
+  bool isAddressable() const override { return false; }
+  mlir::SideEffects::Resource *getParent() const override {
+    return TestNonAddressableSubResourceA::get();
   }
 };
 
 struct TestNonAddressableResourceB
-    : public mlir::SideEffects::Resource::Base<TestNonAddressableResourceB> {
-  llvm::StringRef getName() final { return "<TestNonAddressableB>"; }
-  mlir::SideEffects::MemoryRegion *getMemoryRegion() const override {
-    return TestNonAddressableSubRegionB::get();
+    : public mlir::SideEffects::Resource::Base<TestNonAddressableResourceB,
+                                               TestNonAddressableSubResourceB> {
+  llvm::StringRef getName() const final { return "<TestNonAddressableB>"; }
+  bool isAddressable() const override { return false; }
+  mlir::SideEffects::Resource *getParent() const override {
+    return TestNonAddressableSubResourceB::get();
   }
 };
 
