@@ -6,16 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <sycl/__impl/device.hpp>
-
 #include <detail/device_impl.hpp>
 #include <detail/platform_impl.hpp>
 
 #include <algorithm>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
-
-device::device() : device(default_selector_v) {}
 
 bool device::is_cpu() const { return impl->isCPU(); }
 

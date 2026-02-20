@@ -81,11 +81,13 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
 endfunction(add_sycl_rt_library)
 
 set(LIBSYCL_SOURCES
+    "context.cpp"
     "exception.cpp"
     "exception_list.cpp"
     "device.cpp"
     "device_selector.cpp"
     "platform.cpp"
+    "detail/context_impl.cpp"
     "detail/device_impl.cpp"
     "detail/global_objects.cpp"
     "detail/platform_impl.cpp"
