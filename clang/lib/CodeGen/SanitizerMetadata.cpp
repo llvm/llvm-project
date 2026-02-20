@@ -36,7 +36,8 @@ void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
                                      SourceLocation Loc, StringRef Name,
                                      QualType Ty,
                                      SanitizerMask NoSanitizeAttrMask,
-                                     bool IsDynInit) {
+                                     bool IsDynInit,
+                                     bool HasForcedSanitizeMemtag) {
   SanitizerSet FsanitizeArgument = CGM.getLangOpts().Sanitize;
   if (!isAsanHwasanMemTagOrTysan(FsanitizeArgument))
     return;
@@ -63,6 +64,7 @@ void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
   Meta.Memtag &= !NoSanitizeAttrSet.hasOneOf(SanitizerKind::MemTag);
   Meta.Memtag &= !CGM.isInNoSanitizeList(
       FsanitizeArgument.Mask & SanitizerKind::MemTag, GV, Loc, Ty);
+  Meta.ForceMemtag |= HasForcedSanitizeMemtag;
 
   Meta.IsDynInit = IsDynInit && !Meta.NoAddress &&
                    FsanitizeArgument.has(SanitizerKind::Address) &&
@@ -119,7 +121,7 @@ void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV, const VarDecl &D,
   };
 
   reportGlobal(GV, D.getLocation(), QualName, D.getType(), getNoSanitizeMask(D),
-               IsDynInit);
+               IsDynInit, D.hasAttr<ForceMemtagAttr>());
 }
 
 void SanitizerMetadata::disableSanitizerForGlobal(llvm::GlobalVariable *GV) {

@@ -42,7 +42,8 @@ public:
   void reportGlobal(llvm::GlobalVariable *GV, SourceLocation Loc,
                     StringRef Name, QualType Ty = {},
                     SanitizerMask NoSanitizeAttrMask = {},
-                    bool IsDynInit = false);
+                    bool IsDynInit = false,
+                    bool HasForcedSanitizeMemtag = false);
   void disableSanitizerForGlobal(llvm::GlobalVariable *GV);
 };
 } // end namespace CodeGen

@@ -2674,6 +2674,9 @@ static uint64_t globalSize(const llvm::GlobalVariable &G) {
 }
 
 static bool shouldTagGlobal(const llvm::GlobalVariable &G) {
+  if (G.hasSanitizerMetadata() && G.getSanitizerMetadata().ForceMemtag)
+    return true;
+
   // We used to do this in clang, but there are optimization passes that turn
   // non-constant globals into constants. So now, clang only tells us whether
   // it would *like* a global to be tagged, but we still make the decision here.

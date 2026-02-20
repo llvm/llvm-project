@@ -292,6 +292,7 @@ CONSTRUCTOR(".preinit_array") func_t preinit_array = func_constructor;
 CONSTRUCTOR("array_of_globals") int global1;
 CONSTRUCTOR("array_of_globals") int global2;
 CONSTRUCTOR("array_of_globals") int global_string;
+CONSTRUCTOR("opt_in_memtag") __attribute__((force_memtag)) int tagged_global;
 
 // CHECK-NOT: .memtag func_constructor
 // CHECK-NOT: .memtag func_init
@@ -304,3 +305,4 @@ CONSTRUCTOR("array_of_globals") int global_string;
 // CHECK-NOT: .memtag global1
 // CHECK-NOT: .memtag global2
 // CHECK-NOT: .memtag global_string
+// CHECK: .memtag tagged_global
