@@ -49,6 +49,7 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT``: Use dyadic float for faster and smaller but less accurate printf doubles.
     - ``LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320``: Use an alternative printf float implementation based on 320-bit floats
     - ``LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE``: Use large table for better printf long double performance.
+    - ``LIBC_CONF_PRINTF_MODULAR``: Split printf implementation into modules that can be lazily linked in.
     - ``LIBC_CONF_PRINTF_RUNTIME_DISPATCH``: Use dynamic dispatch for the output mechanism to reduce code size.
     - ``LIBC_COPT_PRINTF_DISABLE_BITINT``: Disable bitint length modifiers to reduce code size. Specifically the wNUM and wfNUM modifiers.
 * **"pthread" options**

@@ -1124,71 +1124,103 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer<write_mode> *writer,
 
 // TODO: unify the float converters to remove the duplicated checks for inf/nan.
 
-template <WriteMode write_mode>
-LIBC_INLINE int convert_float_decimal(Writer<write_mode> *writer,
-                                      const FormatSection &to_conv) {
-  if (to_conv.length_modifier == LengthModifier::L) {
-    fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
-    fputil::FPBits<long double> float_bits(float_raw);
-    if (!float_bits.is_inf_or_nan()) {
-      return convert_float_decimal_typed<long double>(writer, to_conv,
-                                                      float_bits);
-    }
-  } else {
-    fputil::FPBits<double>::StorageType float_raw =
-        static_cast<fputil::FPBits<double>::StorageType>(to_conv.conv_val_raw);
-    fputil::FPBits<double> float_bits(float_raw);
-    if (!float_bits.is_inf_or_nan()) {
-      return convert_float_decimal_typed<double>(writer, to_conv, float_bits);
-    }
-  }
+LIBC_PRINTF_MODULE((template <WriteMode write_mode>
+                    int convert_float_decimal(Writer<write_mode> *writer,
+                                              const FormatSection &to_conv)),
+                   {
+                     if (to_conv.length_modifier == LengthModifier::L) {
+                       fputil::FPBits<long double>::StorageType float_raw =
+                           to_conv.conv_val_raw;
+                       fputil::FPBits<long double> float_bits(float_raw);
+                       if (!float_bits.is_inf_or_nan()) {
+                         return convert_float_decimal_typed<long double>(
+                             writer, to_conv, float_bits);
+                       }
+                     } else {
+                       fputil::FPBits<double>::StorageType float_raw =
+                           static_cast<fputil::FPBits<double>::StorageType>(
+                               to_conv.conv_val_raw);
+                       fputil::FPBits<double> float_bits(float_raw);
+                       if (!float_bits.is_inf_or_nan()) {
+                         return convert_float_decimal_typed<double>(
+                             writer, to_conv, float_bits);
+                       }
+                     }
 
-  return convert_inf_nan(writer, to_conv);
-}
+                     return convert_inf_nan(writer, to_conv);
+                   })
 
-template <WriteMode write_mode>
-LIBC_INLINE int convert_float_dec_exp(Writer<write_mode> *writer,
-                                      const FormatSection &to_conv) {
-  if (to_conv.length_modifier == LengthModifier::L) {
-    fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
-    fputil::FPBits<long double> float_bits(float_raw);
-    if (!float_bits.is_inf_or_nan()) {
-      return convert_float_dec_exp_typed<long double>(writer, to_conv,
-                                                      float_bits);
-    }
-  } else {
-    fputil::FPBits<double>::StorageType float_raw =
-        static_cast<fputil::FPBits<double>::StorageType>(to_conv.conv_val_raw);
-    fputil::FPBits<double> float_bits(float_raw);
-    if (!float_bits.is_inf_or_nan()) {
-      return convert_float_dec_exp_typed<double>(writer, to_conv, float_bits);
-    }
-  }
+LIBC_PRINTF_MODULE((template <WriteMode write_mode>
+                    int convert_float_dec_exp(Writer<write_mode> *writer,
+                                              const FormatSection &to_conv)),
+                   {
+                     if (to_conv.length_modifier == LengthModifier::L) {
+                       fputil::FPBits<long double>::StorageType float_raw =
+                           to_conv.conv_val_raw;
+                       fputil::FPBits<long double> float_bits(float_raw);
+                       if (!float_bits.is_inf_or_nan()) {
+                         return convert_float_dec_exp_typed<long double>(
+                             writer, to_conv, float_bits);
+                       }
+                     } else {
+                       fputil::FPBits<double>::StorageType float_raw =
+                           static_cast<fputil::FPBits<double>::StorageType>(
+                               to_conv.conv_val_raw);
+                       fputil::FPBits<double> float_bits(float_raw);
+                       if (!float_bits.is_inf_or_nan()) {
+                         return convert_float_dec_exp_typed<double>(
+                             writer, to_conv, float_bits);
+                       }
+                     }
 
-  return convert_inf_nan(writer, to_conv);
-}
+                     return convert_inf_nan(writer, to_conv);
+                   })
 
-template <WriteMode write_mode>
-LIBC_INLINE int convert_float_dec_auto(Writer<write_mode> *writer,
-                                       const FormatSection &to_conv) {
-  if (to_conv.length_modifier == LengthModifier::L) {
-    fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
-    fputil::FPBits<long double> float_bits(float_raw);
-    if (!float_bits.is_inf_or_nan()) {
-      return convert_float_dec_auto_typed<long double>(writer, to_conv,
-                                                       float_bits);
-    }
-  } else {
-    fputil::FPBits<double>::StorageType float_raw =
-        static_cast<fputil::FPBits<double>::StorageType>(to_conv.conv_val_raw);
-    fputil::FPBits<double> float_bits(float_raw);
-    if (!float_bits.is_inf_or_nan()) {
-      return convert_float_dec_auto_typed<double>(writer, to_conv, float_bits);
-    }
-  }
+LIBC_PRINTF_MODULE((template <WriteMode write_mode>
+                    int convert_float_dec_auto(Writer<write_mode> *writer,
+                                               const FormatSection &to_conv)),
+                   {
+                     if (to_conv.length_modifier == LengthModifier::L) {
+                       fputil::FPBits<long double>::StorageType float_raw =
+                           to_conv.conv_val_raw;
+                       fputil::FPBits<long double> float_bits(float_raw);
+                       if (!float_bits.is_inf_or_nan()) {
+                         return convert_float_dec_auto_typed<long double>(
+                             writer, to_conv, float_bits);
+                       }
+                     } else {
+                       fputil::FPBits<double>::StorageType float_raw =
+                           static_cast<fputil::FPBits<double>::StorageType>(
+                               to_conv.conv_val_raw);
+                       fputil::FPBits<double> float_bits(float_raw);
+                       if (!float_bits.is_inf_or_nan()) {
+                         return convert_float_dec_auto_typed<double>(
+                             writer, to_conv, float_bits);
+                       }
+                     }
 
-  return convert_inf_nan(writer, to_conv);
-}
+                     return convert_inf_nan(writer, to_conv);
+                   })
+
+#ifdef LIBC_PRINTF_DEFINE_MODULES
+#define HANDLE_WRITE_MODE(MODE)                                                \
+  template int convert_float_decimal<WriteMode::MODE>(                         \
+      Writer<WriteMode::MODE> * writer, const FormatSection &to_conv);
+#include "src/stdio/printf_core/write_modes.def"
+#undef HANDLE_WRITE_MODE
+
+#define HANDLE_WRITE_MODE(MODE)                                                \
+  template int convert_float_dec_exp<WriteMode::MODE>(                         \
+      Writer<WriteMode::MODE> * writer, const FormatSection &to_conv);
+#include "src/stdio/printf_core/write_modes.def"
+#undef HANDLE_WRITE_MODE
+
+#define HANDLE_WRITE_MODE(MODE)                                                \
+  template int convert_float_dec_auto<WriteMode::MODE>(                        \
+      Writer<WriteMode::MODE> * writer, const FormatSection &to_conv);
+#include "src/stdio/printf_core/write_modes.def"
+#undef HANDLE_WRITE_MODE
+#endif // LIBC_PRINTF_DEFINE_MODULES
 
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL

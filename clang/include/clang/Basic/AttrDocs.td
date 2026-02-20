@@ -9793,9 +9793,9 @@ not all aspects of the implementation are needed for a given call, the compiler
 may redirect the call to the identifier given as the first argument to the
 attribute (the modular implementation function).
 
-The second argument is a implementation name, and the remaining arguments are
+The second argument is an implementation name, and the remaining arguments are
 aspects of the format string for the compiler to report. The implementation
-name is an unevaluated identifier be in the C namespace.
+name is an unevaluated identifier in the C namespace.
 
 The compiler reports that a call requires an aspect by issuing a relocation for
 the symbol ``<impl_name>_<aspect>`` at the point of the call. This arranges for
