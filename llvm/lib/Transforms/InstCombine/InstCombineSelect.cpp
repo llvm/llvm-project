@@ -4477,6 +4477,61 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     if (Instruction *Result = foldSelectInstWithICmp(SI, ICI))
       return Result;
 
+  // Fold: OR of bit tests with shifted constants.
+  //
+  // ((X & (C0 << Y)) != 0) || ((X & (C1 << Y)) != 0)
+  //   --> (X & ((C0 | C1) << Y)) != 0
+  auto *CondICmp = dyn_cast<ICmpInst>(CondVal);
+  auto *FalseICmp = dyn_cast<ICmpInst>(FalseVal);
+
+  if (CondICmp && FalseICmp && match(TrueVal, m_One()) &&
+      CondICmp->getPredicate() == ICmpInst::ICMP_NE &&
+      FalseICmp->getPredicate() == ICmpInst::ICMP_NE &&
+      match(CondICmp->getOperand(1), m_Zero()) &&
+      match(FalseICmp->getOperand(1), m_Zero())) {
+    Value *X, *Mask0, *Mask1;
+
+    if (match(CondICmp->getOperand(0), m_And(m_Value(X), m_Value(Mask0))) &&
+        match(FalseICmp->getOperand(0), m_And(m_Specific(X), m_Value(Mask1)))) {
+      auto Extract = [&](Value *V, Value *&Shift, const APInt *&Base) -> bool {
+        if (auto *T = dyn_cast<TruncInst>(V))
+          V = T->getOperand(0);
+
+        Value *LHS, *RHS;
+
+        if (!match(V, m_Shl(m_Value(LHS), m_Value(RHS))))
+          return false;
+
+        if (!match(LHS, m_APInt(Base)))
+          return false;
+
+        Shift = RHS;
+
+        return true;
+      };
+
+      Value *Shift0, *Shift1;
+      const APInt *Base0, *Base1;
+
+      if (Extract(Mask0, Shift0, Base0) &&
+          Extract(Mask1, Shift1, Base1) && (Shift0 == Shift1)) {
+        APInt NewBase = *Base0 | *Base1;
+        Value *NewShl = Builder.CreateShl(
+          ConstantInt::get(Shift0->getType(), NewBase), Shift0);
+        Value *NewMask = NewShl;
+
+        if (Mask0->getType() != NewShl->getType())
+          NewMask = Builder.CreateTrunc(NewShl, Mask0->getType());
+
+        Value *NewAnd = Builder.CreateAnd(X, NewMask);
+        Instruction *NewCmp = cast<Instruction>(Builder.CreateICmpNE(
+          NewAnd, ConstantInt::getNullValue(NewAnd->getType())));
+
+        return replaceInstUsesWith(SI, NewCmp);
+      }
+    }
+  }
+
   if (Value *V = foldSelectBitTest(SI, CondVal, TrueVal, FalseVal, Builder, SQ))
     return replaceInstUsesWith(SI, V);
 
