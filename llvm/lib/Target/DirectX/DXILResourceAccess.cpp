@@ -546,9 +546,9 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
     PHINode *HandlePhi = PHINode::Create(Builder.getInt32Ty(), NumEdges);
 
     bool HasGetPtr = true;
-    for (unsigned I = 0; I < NumEdges; I++) {
-      auto *BB = Phi->getIncomingBlock(I);
-      auto *V = dyn_cast<Instruction>(Phi->getIncomingValue(I));
+    for (unsigned Idx = 0; Idx < NumEdges; Idx++) {
+      auto *BB = Phi->getIncomingBlock(Idx);
+      auto *V = dyn_cast<Instruction>(Phi->getIncomingValue(Idx));
       auto AccessIdx = getAccessIndices(V, DeadInsts);
       HasGetPtr &= AccessIdx.hasGetPtrIdx();
       if (HasGetPtr)
