@@ -18253,7 +18253,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       // Check for lossy scalar/vector conversions.
       if (VT.isVector() && VT.getSizeInBits() != 32)
         return std::pair(0U, nullptr);
-      if (Idx < RC->getNumRegs())
+      if (RC && Idx < RC->getNumRegs())
         return std::pair(RC->getRegister(Idx), RC);
       return std::pair(0U, nullptr);
     }
