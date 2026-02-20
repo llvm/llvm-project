@@ -478,7 +478,7 @@ void SystemZELFFrameLowering::processFunctionBeforeFrameFinalized(
 static void emitIncrement(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator &MBBI, const DebugLoc &DL,
                           Register Reg, int64_t NumBytes,
-                          const TargetInstrInfo *TII) {
+                          const TargetInstrInfo *TII, unsigned Align = 8) {
   while (NumBytes) {
     unsigned Opcode;
     int64_t ThisVal = NumBytes;
@@ -486,9 +486,9 @@ static void emitIncrement(MachineBasicBlock &MBB,
       Opcode = SystemZ::AGHI;
     else {
       Opcode = SystemZ::AGFI;
-      // Make sure we maintain 8-byte stack alignment.
+      // Make sure we maintain Align-byte stack alignment.
       int64_t MinVal = -uint64_t(1) << 31;
-      int64_t MaxVal = (int64_t(1) << 31) - 8;
+      int64_t MaxVal = (int64_t(1) << 31) - Align;
       if (ThisVal < MinVal)
         ThisVal = MinVal;
       else if (ThisVal > MaxVal)
@@ -1298,8 +1298,8 @@ void SystemZXPLINKFrameLowering::emitPrologue(MachineFunction &MF,
           .addReg(0);
     }
 
-    emitIncrement(MBB, InsertPt, DL, Regs.getStackPointerRegister(), Delta,
-                  ZII);
+    emitIncrement(MBB, InsertPt, DL, Regs.getStackPointerRegister(), Delta, ZII,
+                  /* Align = */ 32);
 
     // If the requested stack size is larger than the guard page, then we need
     // to check if we need to call the stack extender. This requires adding a
@@ -1369,7 +1369,7 @@ void SystemZXPLINKFrameLowering::emitEpilogue(MachineFunction &MF,
     unsigned SPReg = Regs.getStackPointerRegister();
     if (ZFI->getRestoreGPRRegs().LowGPR != SPReg) {
       DebugLoc DL = MBBI->getDebugLoc();
-      emitIncrement(MBB, MBBI, DL, SPReg, StackSize, ZII);
+      emitIncrement(MBB, MBBI, DL, SPReg, StackSize, ZII, /* Align = */ 32);
     }
   }
 }
