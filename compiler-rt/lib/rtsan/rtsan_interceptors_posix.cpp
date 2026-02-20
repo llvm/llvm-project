@@ -1501,6 +1501,20 @@ INTERCEPTOR(ssize_t, process_vm_writev, pid_t pid,
 #define RTSAN_MAYBE_INTERCEPT_PROCESS_VM_WRITEV
 #endif
 
+// Signals
+
+#if SANITIZER_LINUX
+/* same as eventfd, signalfd calls SYS_signalfd4 to support the flags argument
+ */
+INTERCEPTOR(int, signalfd, const sigset_t *mask, int flags) {
+  __rtsan_notify_intercepted_call("signalfd");
+  return REAL(signalfd)(mask, flags);
+}
+#define RTSAN_MAYBE_INTERCEPT_SIGNALFD INTERCEPT_FUNCTION(signalfd)
+#else
+#define RTSAN_MAYBE_INTERCEPT_SIGNALFD
+#endif
+
 // TODO: the `wait` family of functions is an oddity. In testing, if you
 // intercept them, Darwin seemingly ignores them, and linux never returns from
 // the test. Revisit this in the future, but hopefully intercepting fork/exec is
@@ -1738,6 +1752,8 @@ void __rtsan::InitializeInterceptors() {
 
   RTSAN_MAYBE_INTERCEPT_PROCESS_VM_READV;
   RTSAN_MAYBE_INTERCEPT_PROCESS_VM_WRITEV;
+
+  RTSAN_MAYBE_INTERCEPT_SIGNALFD;
 
   INTERCEPT_FUNCTION(syscall);
 }
