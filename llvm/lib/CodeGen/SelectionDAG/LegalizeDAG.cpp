@@ -3538,12 +3538,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // Float8E8M0FNU.
     EVT DstVT = Node->getValueType(0);
 
-    // For vector types, unroll into scalar operations.
-    if (DstVT.isVector()) {
-      Results.push_back(DAG.UnrollVectorOp(Node));
-      break;
-    }
-
     SDValue IntVal = Node->getOperand(0);
     const uint64_t SemEnum = Node->getConstantOperandVal(1);
     const auto Sem = static_cast<APFloatBase::Semantics>(SemEnum);
@@ -3592,8 +3586,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), DstBits);
     SDValue Src = DAG.getZExtOrTrunc(IntVal, dl, IntVT);
 
-    EVT SetCCVT =
-        TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), IntVT);
+    EVT SetCCVT = getSetCCResultType(IntVT);
+
     SDValue Zero = DAG.getConstant(0, dl, IntVT);
     SDValue One = DAG.getConstant(1, dl, IntVT);
 
