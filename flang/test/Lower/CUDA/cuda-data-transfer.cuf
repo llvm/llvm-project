@@ -604,3 +604,15 @@ end subroutine
 ! CHECK: cuf.alloc !fir.box<!fir.heap<!fir.array<?x!fir.type<_QFsub31Tt30{q:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>> 
 ! CHECK: hlfir.assign 
 ! CHECK-NOT: cuf.data_transfer
+
+subroutine sub32()
+  integer, managed :: adev(10)
+  integer :: a
+
+  adev = a
+
+  adev = 0
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub32() 
+! CHECK-COUNT-2: cuf.data_transfer
