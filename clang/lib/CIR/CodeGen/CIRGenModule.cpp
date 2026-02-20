@@ -2936,8 +2936,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
 
   if (value) {
     emitter.emplace(*this);
-    initialValue =
-        emitter->emitForInitializer(*value, materializedType);
+    initialValue = emitter->emitForInitializer(*value, materializedType);
 
     isConstant = materializedType.isConstantStorage(
         getASTContext(), /*ExcludeCtor=*/value, /*ExcludeDtor=*/false);

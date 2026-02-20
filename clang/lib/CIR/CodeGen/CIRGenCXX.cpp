@@ -318,8 +318,8 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
         builder.setInsertionPoint(cast<cir::YieldOp>(rvalSrcBlock->back()));
       }
     }
-    cgf.emitStoreOfScalar(rv.getValue(), declAddr, /*isVolatile=*/false,
-                          ty, LValueBaseInfo{});
+    cgf.emitStoreOfScalar(rv.getValue(), declAddr, /*isVolatile=*/false, ty,
+                          LValueBaseInfo{});
   }
 
   builder.setInsertionPointToEnd(block);
