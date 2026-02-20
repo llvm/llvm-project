@@ -845,11 +845,11 @@ def SimdOp : OpenMP_Op<"simd", traits = [
   let hasRegionVerifier = 1;
 }
 
-
-def YieldOp : OpenMP_Op<"yield",
-    [Pure, ReturnLike, Terminator,
-     ParentOneOf<["AtomicUpdateOp", "DeclareReductionOp", "LoopNestOp",
-                  "PrivateClauseOp"]>]> {
+def YieldOp
+    : OpenMP_Op<"yield", [Pure, ReturnLike, Terminator,
+                          ParentOneOf<["AtomicUpdateOp", "DeclareReductionOp",
+                                       "LoopNestOp", "PrivateClauseOp",
+                                       "IteratorsOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "omp.yield" yields SSA values from the OpenMP dialect op region and
@@ -2296,6 +2296,43 @@ def DeclareSimdOp
 
   let builders = [OpBuilder<(
       ins CArg<"const DeclareSimdOperands &">:$clauses)>];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Iterators Op
+//===----------------------------------------------------------------------===//
+
+def IteratorsOp
+    : OpenMP_Op<"iterators", [AttrSizedOperandSegments,
+                              SingleBlockImplicitTerminator<"YieldOp">]> {
+  let summary = "OpenMP iterator modifier";
+  let description = [{
+    The result of `omp.iterators` is an abstract handle of type
+    `!omp.iterated<T>`, representing the list of yielded values. This handle
+    can be directly consumed by OpenMP clauses that accept iterator modifiers,
+    such as `affinity`, `map`, `to`, `from`, or `depend`.
+
+    Example:
+      %it = omp.iterators(%i, %j) =
+        (%lb_i to %ub_i step %st_i, %lb_j to %ub_j step %st_j) {
+        %addr = ...
+        omp.yield(%addr)
+      } -> !omp.iterated<ptr>
+  }];
+
+  let arguments = (ins Variadic<IntLikeType>:$lbs, Variadic<IntLikeType>:$ubs,
+      Variadic<IntLikeType>:$steps);
+  let regions = (region SizedRegion<1>:$region);
+  let results = (outs OpenMP_IteratedType:$iterated);
+
+  let assemblyFormat = [{
+    `(` custom<IteratorsHeader>($region,
+                                $lbs, $ubs, $steps,
+                                type($lbs), type($ubs), type($steps))
+    `->` qualified(type($iterated)) attr-dict
+  }];
 
   let hasVerifier = 1;
 }

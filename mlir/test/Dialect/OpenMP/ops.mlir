@@ -3550,3 +3550,32 @@ func.func @task_affinity_multi() {
   }
   return
 }
+
+// CHECK-LABEL: func.func @omp_iterators(
+func.func @omp_iterators(%lb : index, %ub : index, %step : index) -> () {
+  // CHECK: %[[IT:.*]] = omp.iterators(%[[IV:.*]]: index) = (%[[LB:.*]] to %[[UB:.*]] step %[[ST:.*]]) {
+  // CHECK:   omp.yield({{.*}} : index)
+  // CHECK: } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
+  %0 = omp.iterators(%arg0: index) = (%lb to %ub step %step) {
+    omp.yield(%arg0 : index)
+  } -> !omp.iterated<!llvm.struct<(!llvm.ptr, i64)>>
+  return
+}
+
+// CHECK-LABEL: func.func @omp_iterators_2d(
+func.func @omp_iterators_2d(%lb0 : index, %ub0 : index, %st0 : index,
+                            %lb1 : index, %ub1 : index, %st1 : index) -> () {
+  // CHECK: %[[IT:.*]] = omp.iterators(%[[IV0:.*]]: index, %[[IV1:.*]]: index) =
+  // CHECK-SAME: (%[[LB0:.*]] to %[[UB0:.*]] step %[[ST0:.*]],
+  // CHECK-SAME:  %[[LB1:.*]] to %[[UB1:.*]] step %[[ST1:.*]]) {
+  // CHECK: omp.yield(%[[IV0]], %[[IV1]] : index, index)
+  // CHECK: } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
+
+  %it = omp.iterators(%i0: index, %i1: index) =
+        (%lb0 to %ub0 step %st0,
+         %lb1 to %ub1 step %st1) {
+    omp.yield(%i0, %i1 : index, index)
+  } -> !omp.iterated<!llvm.struct<(!llvm.ptr, i64)>>
+
+  return
+}

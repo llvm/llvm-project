@@ -38,6 +38,13 @@ def OpenMP_MapBoundsType : OpenMP_Type<"MapBounds", "map_bounds_ty"> {
   let summary = "Type for representing omp map clause bounds information";
 }
 
+def OpenMP_IteratedType : OpenMP_Type<"Iterated", "iterated"> {
+  let summary = "OpenMP iterator-produced list handle";
+
+  let parameters = (ins "Type":$elementType);
+  let assemblyFormat = "`<` $elementType `>`";
+}
+
 //===---------------------------------------------------------------------===//
 // OpenMP Canonical Loop Info Type
 //===---------------------------------------------------------------------===//
