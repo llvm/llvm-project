@@ -1706,14 +1706,6 @@ LValue CodeGenFunction::EmitLValue(const Expr *E,
   return LV;
 }
 
-static QualType getConstantExprReferredType(const FullExpr *E,
-                                            const ASTContext &Ctx) {
-  const Expr *SE = E->getSubExpr()->IgnoreImplicit();
-  if (isa<OpaqueValueExpr>(SE))
-    return SE->getType();
-  return cast<CallExpr>(SE)->getCallReturnType(Ctx)->getPointeeType();
-}
-
 LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
                                          KnownNonNull_t IsKnownNonNull) {
   ApplyDebugLocation DL(*this, E);
@@ -1751,10 +1743,8 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitDeclRefLValue(cast<DeclRefExpr>(E));
   case Expr::ConstantExprClass: {
     const ConstantExpr *CE = cast<ConstantExpr>(E);
-    if (llvm::Value *Result = ConstantEmitter(*this).tryEmitConstantExpr(CE)) {
-      QualType RetType = getConstantExprReferredType(CE, getContext());
-      return MakeNaturalAlignAddrLValue(Result, RetType);
-    }
+    if (llvm::Value *Result = ConstantEmitter(*this).tryEmitConstantExpr(CE))
+      return MakeNaturalAlignPointeeAddrLValue(Result, CE->getType());
     return EmitLValue(cast<ConstantExpr>(E)->getSubExpr(), IsKnownNonNull);
   }
   case Expr::ParenExprClass:
@@ -2436,7 +2426,16 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *value, LValue lvalue,
 static RValue EmitLoadOfMatrixLValue(LValue LV, SourceLocation Loc,
                                      CodeGenFunction &CGF) {
   assert(LV.getType()->isConstantMatrixType());
-  Address Addr = MaybeConvertMatrixAddress(LV.getAddress(), CGF);
+  RawAddress DestAddr = LV.getAddress();
+
+  // HLSL constant buffers may pad matrix layouts, so copy elements into a
+  // non-padded local alloca before loading.
+  if (CGF.getLangOpts().HLSL &&
+      LV.getType().getAddressSpace() == LangAS::hlsl_constant)
+    DestAddr =
+        CGF.CGM.getHLSLRuntime().createBufferMatrixTempAddress(LV, Loc, CGF);
+
+  Address Addr = MaybeConvertMatrixAddress(DestAddr, CGF);
   LV.setAddress(Addr);
   return RValue::get(CGF.EmitLoadOfScalar(LV, Loc));
 }
@@ -4448,12 +4447,6 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     SanitizerHandler CheckHandlerID,
                                     bool NoMerge, const TrapReason *TR) {
-  if (CGM.getCodeGenOpts().SanitizeTrapLoop) {
-    Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::cond_loop),
-                       Builder.CreateNot(Checked));
-    return;
-  }
-
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
   // If we're optimizing, collapse all calls to trap down to just one per
@@ -4505,9 +4498,14 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
     ApplyDebugLocation applyTrapDI(*this, TrapLocation);
 
-    llvm::CallInst *TrapCall =
-        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
-                           llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID));
+    llvm::CallInst *TrapCall;
+    if (CGM.getCodeGenOpts().SanitizeTrapLoop)
+      TrapCall =
+          Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::looptrap));
+    else
+      TrapCall = Builder.CreateCall(
+          CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
+          llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID));
 
     if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
       auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
@@ -4559,7 +4557,16 @@ Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
   if (!E->getType()->isVariableArrayType()) {
     assert(isa<llvm::ArrayType>(Addr.getElementType()) &&
            "Expected pointer to array");
-    Addr = Builder.CreateConstArrayGEP(Addr, 0, "arraydecay");
+
+    if (getLangOpts().EmitStructuredGEP) {
+      // Array-to-pointer decay for an SGEP is a no-op as we don't do any
+      // logical indexing. See #179951 for some additional context.
+      auto *SGEP =
+          Builder.CreateStructuredGEP(NewTy, Addr.emitRawPointer(*this), {});
+      Addr = Address(SGEP, NewTy, Addr.getAlignment(), Addr.isKnownNonNull());
+    } else {
+      Addr = Builder.CreateConstArrayGEP(Addr, 0, "arraydecay");
+    }
   }
 
   // The result of this decay conversion points to an array element within the
@@ -4598,6 +4605,9 @@ static llvm::Value *emitArraySubscriptGEP(CodeGenFunction &CGF,
                                           bool signedIndices,
                                           SourceLocation loc,
                                     const llvm::Twine &name = "arrayidx") {
+  if (inbounds && CGF.getLangOpts().EmitStructuredGEP)
+    return CGF.Builder.CreateStructuredGEP(elemType, ptr, indices);
+
   if (inbounds) {
     return CGF.EmitCheckedInBoundsGEP(elemType, ptr, indices, signedIndices,
                                       CodeGenFunction::NotSubtraction, loc,
@@ -4609,10 +4619,17 @@ static llvm::Value *emitArraySubscriptGEP(CodeGenFunction &CGF,
 
 static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
                                      ArrayRef<llvm::Value *> indices,
+                                     llvm::Type *arrayType,
                                      llvm::Type *elementType, bool inbounds,
                                      bool signedIndices, SourceLocation loc,
                                      CharUnits align,
                                      const llvm::Twine &name = "arrayidx") {
+  if (inbounds && CGF.getLangOpts().EmitStructuredGEP)
+    return RawAddress(CGF.Builder.CreateStructuredGEP(arrayType,
+                                                      addr.emitRawPointer(CGF),
+                                                      indices.drop_front()),
+                      elementType, align);
+
   if (inbounds) {
     return CGF.EmitCheckedInBoundsGEP(addr, indices, elementType, signedIndices,
                                       CodeGenFunction::NotSubtraction, loc,
@@ -4729,6 +4746,8 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   if (!LastIndex ||
       (!CGF.IsInPreservedAIRegion && !IsPreserveAIArrayBase(CGF, Base))) {
     addr = emitArraySubscriptGEP(CGF, addr, indices,
+                                 arrayType ? CGF.ConvertTypeForMem(*arrayType)
+                                           : nullptr,
                                  CGF.ConvertTypeForMem(eltType), inbounds,
                                  signedIndices, loc, eltAlign, name);
     return addr;
@@ -5570,12 +5589,13 @@ static Address emitAddrOfZeroSizeField(CodeGenFunction &CGF, Address Base,
   return CGF.Builder.CreateConstInBoundsByteGEP(Base, Offset);
 }
 
-/// Drill down to the storage of a field without walking into
-/// reference types.
+/// Drill down to the storage of a field without walking into reference types,
+/// and without respect for pointer field protection.
 ///
 /// The resulting address doesn't necessarily have the right type.
-static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
-                                      const FieldDecl *field, bool IsInBounds) {
+static Address emitRawAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
+                                         const FieldDecl *field,
+                                         bool IsInBounds) {
   if (isEmptyFieldForLayout(CGF.getContext(), field))
     return emitAddrOfZeroSizeField(CGF, base, field, IsInBounds);
 
@@ -5583,11 +5603,34 @@ static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
 
   unsigned idx =
     CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMFieldNo(field);
+  llvm::Type *StructType =
+      CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMType();
+
+  if (CGF.getLangOpts().EmitStructuredGEP)
+    return RawAddress(
+        CGF.Builder.CreateStructuredGEP(StructType, base.emitRawPointer(CGF),
+                                        {CGF.Builder.getSize(idx)}),
+        base.getElementType(), base.getAlignment());
 
   if (!IsInBounds)
     return CGF.Builder.CreateConstGEP2_32(base, 0, idx, field->getName());
 
   return CGF.Builder.CreateStructGEP(base, idx, field->getName());
+}
+
+/// Drill down to the storage of a field without walking into reference types,
+/// wrapping the address in an llvm.protected.field.ptr intrinsic for the
+/// pointer field protection feature if necessary.
+///
+/// The resulting address doesn't necessarily have the right type.
+static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
+                                      const FieldDecl *field, bool IsInBounds) {
+  Address Addr = emitRawAddrOfFieldStorage(CGF, base, field, IsInBounds);
+
+  if (!CGF.getContext().isPFPField(field))
+    return Addr;
+
+  return CGF.EmitAddressOfPFPField(base, Addr, field);
 }
 
 static Address emitPreserveStructAccess(CodeGenFunction &CGF, LValue base,
@@ -7181,8 +7224,6 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
   while (!WorkList.empty()) {
     auto [LVal, T, IdxList] = WorkList.pop_back_val();
     T = T.getCanonicalType().getUnqualifiedType();
-    assert(!isa<MatrixType>(T) && "Matrix types not yet supported in HLSL");
-
     if (const auto *CAT = dyn_cast<ConstantArrayType>(T)) {
       uint64_t Size = CAT->getZExtSize();
       for (int64_t I = Size - 1; I > -1; I--) {
@@ -7255,6 +7296,35 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
             LValue::MakeVectorElt(Base.getAddress(), Idx, VT->getElementType(),
                                   Base.getBaseInfo(), TBAAAccessInfo());
         AccessList.emplace_back(LV);
+      }
+    } else if (const auto *MT = dyn_cast<ConstantMatrixType>(T)) {
+      // Matrices are represented as flat arrays in memory, but has a vector
+      // value type. So we use ConvertMatrixAddress to convert the address from
+      // array to vector, and extract elements similar to the vector case above.
+      // The matrix elements are iterated over in row-major order regardless of
+      // the memory layout of the matrix.
+      llvm::Type *LLVMT = ConvertTypeForMem(T);
+      CharUnits Align = getContext().getTypeAlignInChars(T);
+      Address GEP = Builder.CreateInBoundsGEP(LVal.getAddress(), IdxList, LLVMT,
+                                              Align, "matrix.gep");
+      LValue Base = MakeAddrLValue(GEP, T);
+      Address MatAddr = MaybeConvertMatrixAddress(Base.getAddress(), *this);
+      unsigned NumRows = MT->getNumRows();
+      unsigned NumCols = MT->getNumColumns();
+      bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                              LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      llvm::MatrixBuilder MB(Builder);
+      for (unsigned Row = 0; Row < MT->getNumRows(); Row++) {
+        for (unsigned Col = 0; Col < MT->getNumColumns(); Col++) {
+          llvm::Value *RowIdx = llvm::ConstantInt::get(IdxTy, Row);
+          llvm::Value *ColIdx = llvm::ConstantInt::get(IdxTy, Col);
+          llvm::Value *Idx = MB.CreateIndex(RowIdx, ColIdx, NumRows, NumCols,
+                                            IsMatrixRowMajor);
+          LValue LV =
+              LValue::MakeMatrixElt(MatAddr, Idx, MT->getElementType(),
+                                    Base.getBaseInfo(), TBAAAccessInfo());
+          AccessList.emplace_back(LV);
+        }
       }
     } else { // a scalar/builtin type
       if (!IdxList.empty()) {

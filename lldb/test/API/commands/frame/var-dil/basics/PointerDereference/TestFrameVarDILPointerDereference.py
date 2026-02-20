@@ -17,7 +17,7 @@ class TestFrameVarDILPointerDereference(TestBase):
 
     def test_frame_var(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
@@ -46,3 +46,10 @@ class TestFrameVarDILPointerDereference(TestBase):
             pp_int0_2stars_got.GetValueAsAddress(),
             pp_int0_2stars_exp.GetValueAsAddress(),
         )
+
+        # Check that * is not allowed in simple mode, but allowed in legacy mode
+        frame = thread.GetFrameAtIndex(0)
+        simple = frame.GetValueForVariablePath("*p_int0", lldb.eDILModeSimple)
+        legacy = frame.GetValueForVariablePath("*p_int0", lldb.eDILModeLegacy)
+        self.assertFailure(simple.GetError())
+        self.assertSuccess(legacy.GetError())

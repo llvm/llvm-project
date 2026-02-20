@@ -12,6 +12,8 @@ import json
 
 @skipIfBuildType(["debug"])
 class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
     def read_pid_message(self, fifo_file):
         with open(fifo_file, "r") as file:
             self.assertIn("pid", file.readline())

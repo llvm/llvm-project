@@ -77,7 +77,10 @@ int c_string(const char *s) {
 int empty() { return 42; }
 
 // 7. Divergent values.
-void divergent(int *) {}
+void divergent(int *p) {
+  assert(p);
+  *p = *p;
+}
 
 //===------------------------------------------------------------------------===
 // RPC client dispatch.
@@ -117,25 +120,28 @@ template <uint32_t NUM_LANES>
 rpc::Status handleOpcodesImpl(rpc::Server::Port &Port) {
   switch (Port.get_opcode()) {
   case FOO_OPCODE:
-    rpc::invoke<NUM_LANES>(foo, Port);
+    rpc::invoke<NUM_LANES>(Port, foo);
     break;
   case VOID_OPCODE:
-    rpc::invoke<NUM_LANES>(void_fn, Port);
+    rpc::invoke<NUM_LANES>(Port, void_fn);
     break;
   case WRITEBACK_OPCODE:
-    rpc::invoke<NUM_LANES>(writeback_fn, Port);
+    rpc::invoke<NUM_LANES>(Port, writeback_fn);
     break;
   case CONST_PTR_OPCODE:
-    rpc::invoke<NUM_LANES>(sum_const, Port);
+    rpc::invoke<NUM_LANES>(Port, sum_const);
     break;
   case STRING_OPCODE:
-    rpc::invoke<NUM_LANES>(c_string, Port);
+    rpc::invoke<NUM_LANES>(Port, c_string);
     break;
   case EMPTY_OPCODE:
-    rpc::invoke<NUM_LANES>(empty, Port);
+    rpc::invoke<NUM_LANES>(Port, empty);
     break;
   case DIVERGENT_OPCODE:
-    rpc::invoke<NUM_LANES>(divergent, Port);
+    rpc::invoke<NUM_LANES>(Port, [](int *p) {
+      assert(p);
+      *p = *p;
+    });
     break;
   default:
     return rpc::RPC_UNHANDLED_OPCODE;

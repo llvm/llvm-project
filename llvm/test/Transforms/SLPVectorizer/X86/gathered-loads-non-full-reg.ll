@@ -65,7 +65,8 @@ define void @test(ptr noalias %0) {
 ; CHECK-NEXT:    [[TMP53:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[TMP43]], i32 0
 ; CHECK-NEXT:    [[TMP54:%.*]] = fmul <2 x double> [[TMP52]], [[TMP53]]
 ; CHECK-NEXT:    [[TMP55:%.*]] = fadd <2 x double> [[TMP54]], zeroinitializer
-; CHECK-NEXT:    [[TMP56:%.*]] = insertelement <2 x double> [[TMP62]], double [[TMP60]], i32 0
+; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <2 x double> poison, double [[TMP60]], i32 0
+; CHECK-NEXT:    [[TMP56:%.*]] = insertelement <2 x double> [[TMP63]], double [[TMP40]], i32 1
 ; CHECK-NEXT:    [[TMP57:%.*]] = fadd <2 x double> [[TMP56]], [[TMP55]]
 ; CHECK-NEXT:    [[TMP58:%.*]] = fsub <2 x double> zeroinitializer, [[TMP57]]
 ; CHECK-NEXT:    store <2 x double> [[TMP58]], ptr getelementptr inbounds (i8, ptr @solid_, i64 296), align 8

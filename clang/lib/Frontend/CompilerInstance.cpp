@@ -1998,9 +1998,9 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
         PPCb->moduleLoadSkipped(Module);
       // Mark the module and its submodules as if they were loaded from a PCM.
       // This prevents emission of the "missing submodule" diagnostic below.
-      std::vector Worklist{Module};
+      std::vector<clang::Module *> Worklist{Module};
       while (!Worklist.empty()) {
-        auto *M = Worklist.back();
+        clang::Module *M = Worklist.back();
         Worklist.pop_back();
         M->IsFromModuleFile = true;
         for (auto *SubM : M->submodules())

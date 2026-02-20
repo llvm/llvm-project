@@ -31,6 +31,16 @@
 
 #include <arm_fp16.h>
 
+// ALL-LABEL: @test_vabsh_f16
+float16_t test_vabsh_f16(float16_t a) {
+// CIR: {{%.*}} = cir.fabs {{%.*}} : !cir.f16
+
+// LLVM-SAME: (half{{.*}} [[A:%.*]])
+// LLVM:  [[ABS:%.*]] = call half @llvm.fabs.f16(half [[A]])
+// LLVM:  ret half [[ABS]]
+  return vabsh_f16(a);
+}
+
 // ALL-LABEL: @test_vnegh_f16
 float16_t test_vnegh_f16(float16_t a) {
 // CIR: cir.unary(minus, {{.*}}) : !cir.f16
@@ -39,4 +49,26 @@ float16_t test_vnegh_f16(float16_t a) {
 // LLVM: [[NEG:%.*]] = fneg half [[A:%.*]]
 // LLVM: ret half [[NEG]]
   return vnegh_f16(a);
+}
+
+// ALL-LABEL: test_vfmah_f16
+float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
+// CIR: cir.call_llvm_intrinsic "fma" {{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+
+// LLVM-SAME: half{{.*}} [[A:%.*]], half{{.*}} [[B:%.*]], half{{.*}} [[C:%.*]])
+// LLVM:  [[FMA:%.*]] = call half @llvm.fma.f16(half [[B]], half [[C]], half [[A]])
+// LLVM:  ret half [[FMA]]
+  return vfmah_f16(a, b, c);
+}
+
+// ALL-LABEL: test_vfmsh_f16
+float16_t test_vfmsh_f16(float16_t a, float16_t b, float16_t c) {
+// CIR: [[SUB:%.*]] = cir.unary(minus, %{{.*}}) : !cir.f16, !cir.f16
+// CIR: cir.call_llvm_intrinsic "fma" [[SUB]], {{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+
+// LLVM-SAME: half{{.*}} [[A:%.*]], half{{.*}} [[B:%.*]], half{{.*}} [[C:%.*]])
+// LLVM:  [[SUB:%.*]] = fneg half [[B]]
+// LLVM:  [[ADD:%.*]] = call half @llvm.fma.f16(half [[SUB]], half [[C]], half [[A]])
+// LLVM:  ret half [[ADD]]
+  return vfmsh_f16(a, b, c);
 }

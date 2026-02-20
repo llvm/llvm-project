@@ -391,6 +391,20 @@ llvm.func @rocdl.s.wait.tensorcnt() {
   llvm.return
 }
 
+llvm.func @rocdl.asyncmark() {
+  // CHECK-LABEL: rocdl.asyncmark
+  // CHECK-NEXT: call void @llvm.amdgcn.asyncmark()
+  rocdl.asyncmark
+  llvm.return
+}
+
+llvm.func @rocdl.wait.asyncmark() {
+  // CHECK-LABEL: rocdl.wait.asyncmark
+  // CHECK-NEXT: call void @llvm.amdgcn.wait.asyncmark(i16 0)
+  rocdl.wait.asyncmark 0
+  llvm.return
+}
+
 llvm.func @rocdl.setprio() {
   // CHECK: call void @llvm.amdgcn.s.setprio(i16 0)
   rocdl.s.setprio 0
@@ -1210,9 +1224,21 @@ llvm.func @rocdl.load.to.lds(%src : !llvm.ptr<7>, %dst: !llvm.ptr<3>) {
   llvm.return
 }
 
+llvm.func @rocdl.load.async.to.lds(%src : !llvm.ptr<7>, %dst: !llvm.ptr<3>) {
+  //CHECK: call void @llvm.amdgcn.load.async.to.lds.p7
+  rocdl.load.async.to.lds %src, %dst, 4, 0, 0 : !llvm.ptr<7>, !llvm.ptr<3>
+  llvm.return
+}
+
 llvm.func @rocdl.global.load.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
   //CHECK: call void @llvm.amdgcn.global.load.lds
   rocdl.global.load.lds %src, %dst, 4, 0, 0
+  llvm.return
+}
+
+llvm.func @rocdl.global.load.async.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
+  //CHECK: call void @llvm.amdgcn.global.load.async.lds
+  rocdl.global.load.async.lds %src, %dst, 4, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
   llvm.return
 }
 
@@ -1372,6 +1398,18 @@ llvm.func @rocdl.raw.ptr.buffer.load.lds(%rsrc : !llvm.ptr<8>, %dstLds : !llvm.p
   // CHECK-LABEL: rocdl.raw.ptr.buffer.load.lds
   // CHECK: call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) %{{.*}}, ptr addrspace(3) %{{.*}}, i32 4, i32 %{{.*}}, i32 %{{.*}}, i32 128, i32 1
   rocdl.raw.ptr.buffer.load.lds %rsrc, %dstLds, %size, %voffset, %soffset, %offset, %aux
+
+  llvm.return
+}
+
+llvm.func @rocdl.raw.ptr.buffer.load.async.lds(%rsrc : !llvm.ptr<8>, %dstLds : !llvm.ptr<3>,
+                        %voffset : i32, %soffset : i32) {
+  %size = llvm.mlir.constant(4 : i32) : i32
+  %offset = llvm.mlir.constant(128 : i32) : i32
+  %aux = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-LABEL: rocdl.raw.ptr.buffer.load.async.lds
+  // CHECK: call void @llvm.amdgcn.raw.ptr.buffer.load.async.lds(ptr addrspace(8) %{{.*}}, ptr addrspace(3) %{{.*}}, i32 4, i32 %{{.*}}, i32 %{{.*}}, i32 128, i32 1
+  rocdl.raw.ptr.buffer.load.async.lds %rsrc, %dstLds, %size, %voffset, %soffset, %offset, %aux
 
   llvm.return
 }

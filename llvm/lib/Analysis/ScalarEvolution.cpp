@@ -9641,7 +9641,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeShiftCompareExitLimit(
   assert(Result->getType()->isIntegerTy(1) &&
          "Otherwise cannot be an operand to a branch instruction");
 
-  if (Result->isZeroValue()) {
+  if (Result->isNullValue()) {
     unsigned BitWidth = getTypeSizeInBits(RHS->getType());
     const SCEV *UpperBound =
         getConstant(getEffectiveSCEVType(RHS->getType()), BitWidth);
@@ -10032,8 +10032,7 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
       if (OpC->getType()->isPointerTy()) {
         // The offsets have been converted to bytes.  We can add bytes using
         // an i8 GEP.
-        C = ConstantExpr::getGetElementPtr(Type::getInt8Ty(C->getContext()),
-                                           OpC, C);
+        C = ConstantExpr::getPtrAdd(OpC, C);
       } else {
         C = ConstantExpr::getAdd(C, OpC);
       }
@@ -11496,6 +11495,11 @@ ScalarEvolution::getLoopInvariantExitCondDuringFirstIterationsImpl(
   if (!AR || AR->getLoop() != L)
     return std::nullopt;
 
+  // Even if both are valid, we need to consistently chose the unsigned or the
+  // signed predicate below, not mixtures of both. For now, prefer the unsigned
+  // predicate.
+  Pred = Pred.dropSameSign();
+
   // The predicate must be relational (i.e. <, <=, >=, >).
   if (!ICmpInst::isRelational(Pred))
     return std::nullopt;
@@ -11526,7 +11530,7 @@ ScalarEvolution::getLoopInvariantExitCondDuringFirstIterationsImpl(
   ICmpInst::Predicate NoOverflowPred =
       CmpInst::isSigned(Pred) ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
   if (Step == MinusOne)
-    NoOverflowPred = ICmpInst::getSwappedCmpPredicate(NoOverflowPred);
+    NoOverflowPred = ICmpInst::getSwappedPredicate(NoOverflowPred);
   const SCEV *Start = AR->getStart();
   if (!isKnownPredicateAt(NoOverflowPred, Start, Last, CtxI))
     return std::nullopt;

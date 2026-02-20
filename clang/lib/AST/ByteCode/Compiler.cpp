@@ -269,34 +269,61 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_DerivedToBaseMemberPointer: {
-    assert(classifyPrim(CE->getType()) == PT_MemberPtr);
-    assert(classifyPrim(SubExpr->getType()) == PT_MemberPtr);
-    const auto *FromMP = SubExpr->getType()->castAs<MemberPointerType>();
-    const auto *ToMP = CE->getType()->castAs<MemberPointerType>();
-
-    unsigned DerivedOffset =
-        Ctx.collectBaseOffset(ToMP->getMostRecentCXXRecordDecl(),
-                              FromMP->getMostRecentCXXRecordDecl());
+    assert(classifyPrim(CE) == PT_MemberPtr);
+    assert(classifyPrim(SubExpr) == PT_MemberPtr);
 
     if (!this->delegate(SubExpr))
       return false;
 
-    return this->emitGetMemberPtrBasePop(DerivedOffset, CE);
+    const CXXRecordDecl *CurDecl = SubExpr->getType()
+                                       ->castAs<MemberPointerType>()
+                                       ->getMostRecentCXXRecordDecl();
+    for (const CXXBaseSpecifier *B : CE->path()) {
+      const CXXRecordDecl *ToDecl = B->getType()->getAsCXXRecordDecl();
+      unsigned DerivedOffset = Ctx.collectBaseOffset(ToDecl, CurDecl);
+
+      if (!this->emitCastMemberPtrBasePop(DerivedOffset, ToDecl, CE))
+        return false;
+      CurDecl = ToDecl;
+    }
+
+    return true;
   }
 
   case CK_BaseToDerivedMemberPointer: {
     assert(classifyPrim(CE) == PT_MemberPtr);
     assert(classifyPrim(SubExpr) == PT_MemberPtr);
-    const auto *FromMP = SubExpr->getType()->castAs<MemberPointerType>();
-    const auto *ToMP = CE->getType()->castAs<MemberPointerType>();
-
-    unsigned DerivedOffset =
-        Ctx.collectBaseOffset(FromMP->getMostRecentCXXRecordDecl(),
-                              ToMP->getMostRecentCXXRecordDecl());
 
     if (!this->delegate(SubExpr))
       return false;
-    return this->emitGetMemberPtrBasePop(-DerivedOffset, CE);
+
+    const CXXRecordDecl *CurDecl = SubExpr->getType()
+                                       ->castAs<MemberPointerType>()
+                                       ->getMostRecentCXXRecordDecl();
+    // Base-to-derived member pointer casts store the path in derived-to-base
+    // order, so iterate backwards. The CXXBaseSpecifier also provides us with
+    // the wrong end of the derived->base arc, so stagger the path by one class.
+    typedef std::reverse_iterator<CastExpr::path_const_iterator> ReverseIter;
+    for (ReverseIter PathI(CE->path_end() - 1), PathE(CE->path_begin());
+         PathI != PathE; ++PathI) {
+      const CXXRecordDecl *ToDecl = (*PathI)->getType()->getAsCXXRecordDecl();
+      unsigned DerivedOffset = Ctx.collectBaseOffset(CurDecl, ToDecl);
+
+      if (!this->emitCastMemberPtrDerivedPop(-DerivedOffset, ToDecl, CE))
+        return false;
+      CurDecl = ToDecl;
+    }
+
+    const CXXRecordDecl *ToDecl = CE->getType()
+                                      ->castAs<MemberPointerType>()
+                                      ->getMostRecentCXXRecordDecl();
+    assert(ToDecl != CurDecl);
+    unsigned DerivedOffset = Ctx.collectBaseOffset(CurDecl, ToDecl);
+
+    if (!this->emitCastMemberPtrDerivedPop(-DerivedOffset, ToDecl, CE))
+      return false;
+
+    return true;
   }
 
   case CK_UncheckedDerivedToBase:
@@ -5245,6 +5272,8 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
+  if (E->containsErrors())
+    return false;
   const FunctionDecl *FuncDecl = E->getDirectCallee();
 
   if (FuncDecl) {
@@ -6971,7 +7000,7 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
   };
 
   switch (E->getOpcode()) {
-  case UO_Minus:
+  case UO_Minus: // -x
     if (!prepareResult())
       return false;
     if (!createTemp())
@@ -7020,7 +7049,7 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
     return this->emitArrayElemPop(classifyPrim(E->getType()), 1, E);
 
   case UO_Not: // ~x
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
     // Negate the imaginary component.
     if (!this->emitArrayElem(ElemT, 1, E))
@@ -7624,7 +7653,6 @@ bool Compiler<Emitter>::emitDestructionPop(const Descriptor *Desc,
 template <class Emitter>
 bool Compiler<Emitter>::emitDummyPtr(const DeclTy &D, const Expr *E) {
   assert(!DiscardResult && "Should've been checked before");
-
   unsigned DummyID = P.getOrCreateDummy(D);
 
   if (!this->emitGetPtrGlobal(DummyID, E))

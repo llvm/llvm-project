@@ -1960,6 +1960,14 @@ def AMinusBMinusA: GICombineRule<
    (match (G_SUB $add, $A, $B),
           (G_SUB $root, $A, $add)),
    (apply (GIReplaceReg $root, $B))>;
+   
+// fold (not (add X, -1)) -> (sub 0, X)
+def NotAPlusNegOne: GICombineRule<
+   (defs root:$root),
+   (match (G_ADD $add, $A, -1),
+          (G_XOR $root, $add, -1),
+          [{ return MRI.hasOneNonDBGUse(${add}.getReg()); }]),
+   (apply (G_SUB $root, 0, $A))>;
 
 // fold (A+C1)-C2 -> A+(C1-C2)
 def APlusC1MinusC2: GICombineRule<
@@ -2024,6 +2032,7 @@ def integer_reassoc_combines: GICombineGroup<[
   APlusBMinusCPlusA,
   AMinusZeroMinusB,
   AMinusBMinusA,
+  NotAPlusNegOne,
   APlusC1MinusC2,
   C2MinusAPlusC1,
   AMinusC1MinusC2,

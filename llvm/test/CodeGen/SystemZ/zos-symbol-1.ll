@@ -1,4 +1,4 @@
-; RUN: llc <%s --mtriple s390x-ibm-zos -emit-gnuas-syntax-on-zos=false | FileCheck %s
+; RUN: llc <%s --mtriple s390x-ibm-zos | FileCheck %s
 
 declare extern_weak void @other1(...)
 declare void @other2(...)

@@ -4,7 +4,7 @@
 # information gathered by the script that runs those benchmarks for
 # uploading with LNT.
 format_version: '2'
-name: libcxx
+name: libcxx2 # libcxx already exists on lnt.llvm.org, and sadly its schema is not correct
 metrics:
 - name: execution_time
   type: Real
