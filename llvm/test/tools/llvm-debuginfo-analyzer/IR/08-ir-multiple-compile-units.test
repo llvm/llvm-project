@@ -1,0 +1,165 @@
+; REQUIRES: x86-registered-target
+
+; Test case 8 - Multiple compile units.
+
+; Using the following input files:
+
+; unit-1.cpp
+; 1 int Var_1 = 1;
+; 2 int foo_1(int P1) {
+; 3   int V1 = P1;
+; 4   return V1 + Var_1;
+; 5 }
+; 6
+; 7 void f1() {
+; 8   foo_1(111);
+; 9 }
+
+; unit-2.cpp
+; 1 int Var_2 = 1;
+; 2 int foo_2(int P2) {
+; 3   int V2 = P2;
+; 4   return V2 + Var_2;
+; 5 }
+; 6
+; 7 void f2() {
+; 8   foo_2(222);
+; 9 }
+
+; unit-3.cpp
+; 1 int Var_3 = 1;
+; 2 int foo_3(int P3) {
+; 3   int V3 = P3;
+; 4   return V3 + Var_3;
+; 5 }
+; 6
+; 7 void f3() {
+; 8   foo_3(333);
+; 9 }
+
+; unit.cpp
+; 1 void f1();
+; 2 void f2();
+; 3 void f3();
+; 4
+; 5 void foo() {
+; 6   f1();
+; 7   f2();
+; 8   f3();
+; 9 }
+
+; Generate a combined IR (bitcode) and print its basic details.
+; The following command prints basic details for all the logical-- elements
+; sorted by the debug information internal offset; it includes its lexical
+; level and debug info format.
+
+; Generate individual bitcode files
+; RUN: llvm-as %p/Inputs/unit-1.ll -o %t.unit-1.bc
+; RUN: llvm-as %p/Inputs/unit-2.ll -o %t.unit-2.bc
+; RUN: llvm-as %p/Inputs/unit-3.ll -o %t.unit-3.bc
+; RUN: llvm-as %p/Inputs/unit.ll   -o %t.unit.bc
+
+; Combine the individual bitcode files
+; RUN: llvm-link %t.unit-1.bc %t.unit-2.bc %t.unit-3.bc %t.unit.bc -o %t.unit-combined.bc
+
+; RUN: llvm-debuginfo-analyzer --attribute=level,format \
+; RUN:                         --output-sort=offset \
+; RUN:                         --print=scopes,symbols,types,lines,instructions \
+; RUN:                         %t.unit-combined.bc 2>&1 > %t.unit-combined.view
+
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s < %t.unit-combined.view
+
+; ONE:      Logical View:
+; ONE-NEXT: [000]           {File} '{{.*}}unit-combined.bc' -> Bitcode IR
+; ONE-EMPTY:
+; ONE-NEXT: [001]             {CompileUnit} 'unit-1.cpp'
+; ONE-NEXT: [002]     2         {Function} extern not_inlined 'foo_1' -> 'int'
+; ONE-NEXT: [003]     2           {Parameter} 'P1' -> 'int'
+; ONE-NEXT: [003]     3           {Variable} 'V1' -> 'int'
+; ONE-NEXT: [003]     2           {Line}
+; ONE-NEXT: [003]                 {Code} '%P1.addr = alloca i32, align 4'
+; ONE-NEXT: [003]                 {Code} '%V1 = alloca i32, align 4'
+; ONE-NEXT: [003]                 {Code} 'store i32 %P1, ptr %P1.addr, align 4'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} '%0 = load i32, ptr %P1.addr, align 4, !dbg !{{.*}}'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} 'store i32 %0, ptr %V1, align 4, !dbg !{{.*}}'
+; ONE-NEXT: [003]     4           {Line}
+; ONE-NEXT: [003]                 {Code} '%1 = load i32, ptr %V1, align 4, !dbg !{{.*}}'
+; ONE-NEXT: [003]     4           {Line}
+; ONE-NEXT: [003]                 {Code} '%2 = load i32, ptr @Var_1, align 4, !dbg !{{.*}}'
+; ONE-NEXT: [003]     4           {Line}
+; ONE-NEXT: [003]                 {Code} '%add = add nsw i32 %1, %2, !dbg !{{.*}}'
+; ONE-NEXT: [003]     4           {Line}
+; ONE-NEXT: [003]                 {Code} 'ret i32 %add, !dbg !{{.*}}'
+; ONE-NEXT: [002]     7         {Function} extern not_inlined 'f1' -> 'void'
+; ONE-NEXT: [003]     8           {Line}
+; ONE-NEXT: [003]                 {Code} '%call = call noundef i32 @_Z5foo_1i(i32 noundef 111), !dbg !{{.*}}'
+; ONE-NEXT: [003]     9           {Line}
+; ONE-NEXT: [003]                 {Code} 'ret void, !dbg !{{.*}}'
+; ONE-NEXT: [002]     1         {Variable} extern 'Var_1' -> 'int'
+; ONE-EMPTY:
+; ONE-NEXT: [001]             {CompileUnit} 'unit-2.cpp'
+; ONE-NEXT: [002]     2         {Function} extern not_inlined 'foo_2' -> 'int'
+; ONE-NEXT: [003]     2           {Parameter} 'P2' -> 'int'
+; ONE-NEXT: [003]     3           {Variable} 'V2' -> 'int'
+; ONE-NEXT: [003]     2           {Line}
+; ONE-NEXT: [003]                 {Code} '%P2.addr = alloca i32, align 4'
+; ONE-NEXT: [003]                 {Code} '%V2 = alloca i32, align 4'
+; ONE-NEXT: [003]                 {Code} 'store i32 %P2, ptr %P2.addr, align 4'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} '%0 = load i32, ptr %P2.addr, align 4, !dbg !{{.*}}'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} 'store i32 %0, ptr %V2, align 4, !dbg !{{.*}}'
+; ONE-NEXT: [003]     4           {Line}
+; ONE-NEXT: [003]                 {Code} '%1 = load i32, ptr %V2, align 4, !dbg !{{.*}}'
+; ONE-NEXT: [003]     4           {Line}
+; ONE-NEXT: [003]                 {Code} '%2 = load i32, ptr @Var_2, align 4, !dbg !{{.*}}'
+; ONE-NEXT: [003]     4           {Line}
+; ONE-NEXT: [003]                 {Code} '%add = add nsw i32 %1, %2, !dbg !{{.*}}'
+; ONE-NEXT: [003]     4           {Line}
+; ONE-NEXT: [003]                 {Code} 'ret i32 %add, !dbg !{{.*}}'
+; ONE-NEXT: [002]     7         {Function} extern not_inlined 'f2' -> 'void'
+; ONE-NEXT: [003]     8           {Line}
+; ONE-NEXT: [003]                 {Code} '%call = call noundef i32 @_Z5foo_2i(i32 noundef 222), !dbg !{{.*}}'
+; ONE-NEXT: [003]     9           {Line}
+; ONE-NEXT: [003]                 {Code} 'ret void, !dbg !{{.*}}'
+; ONE-NEXT: [002]     1         {Variable} extern 'Var_2' -> 'int'
+; ONE-EMPTY:
+; ONE-NEXT: [001]             {CompileUnit} 'unit-3.cpp'
+; ONE-NEXT: [002]     2         {Function} extern not_inlined 'foo_3' -> 'int'
+; ONE-NEXT: [003]     2           {Parameter} 'P3' -> 'int'
+; ONE-NEXT: [003]     3           {Variable} 'V3' -> 'int'
+; ONE-NEXT: [003]     2           {Line}
+; ONE-NEXT: [003]                 {Code} '%P3.addr = alloca i32, align 4'
+; ONE-NEXT: [003]                 {Code} '%V3 = alloca i32, align 4'
+; ONE-NEXT: [003]                 {Code} 'store i32 %P3, ptr %P3.addr, align 4'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} '%0 = load i32, ptr %P3.addr, align 4, !dbg !{{.*}}'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} 'store i32 %0, ptr %V3, align 4, !dbg !{{.*}}'
+; ONE-NEXT: [003]     4           {Line}
+; ONE-NEXT: [003]                 {Code} '%1 = load i32, ptr %V3, align 4, !dbg !{{.*}}'
+; ONE-NEXT: [003]     4           {Line}
+; ONE-NEXT: [003]                 {Code} '%2 = load i32, ptr @Var_3, align 4, !dbg !{{.*}}'
+; ONE-NEXT: [003]     4           {Line}
+; ONE-NEXT: [003]                 {Code} '%add = add nsw i32 %1, %2, !dbg !{{.*}}'
+; ONE-NEXT: [003]     4           {Line}
+; ONE-NEXT: [003]                 {Code} 'ret i32 %add, !dbg !{{.*}}'
+; ONE-NEXT: [002]     7         {Function} extern not_inlined 'f3' -> 'void'
+; ONE-NEXT: [003]     8           {Line}
+; ONE-NEXT: [003]                 {Code} '%call = call noundef i32 @_Z5foo_3i(i32 noundef 333), !dbg !{{.*}}'
+; ONE-NEXT: [003]     9           {Line}
+; ONE-NEXT: [003]                 {Code} 'ret void, !dbg !{{.*}}'
+; ONE-NEXT: [002]     1         {Variable} extern 'Var_3' -> 'int'
+; ONE-EMPTY:
+; ONE-NEXT: [001]             {CompileUnit} 'unit.cpp'
+; ONE-NEXT: [002]     5         {Function} extern not_inlined 'foo' -> 'void'
+; ONE-NEXT: [003]     6           {Line}
+; ONE-NEXT: [003]                 {Code} 'call void @_Z2f1v(), !dbg !{{.*}}'
+; ONE-NEXT: [003]     7           {Line}
+; ONE-NEXT: [003]                 {Code} 'call void @_Z2f2v(), !dbg !{{.*}}'
+; ONE-NEXT: [003]     8           {Line}
+; ONE-NEXT: [003]                 {Code} 'call void @_Z2f3v(), !dbg !{{.*}}'
+; ONE-NEXT: [003]     9           {Line}
+; ONE-NEXT: [003]                 {Code} 'ret void, !dbg !{{.*}}'

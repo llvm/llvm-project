@@ -22,10 +22,35 @@ using namespace llvm::logicalview;
 
 #define DEBUG_TYPE "Reader"
 
+// Traverse all the logical elements and print their basic information.
+void LVReader::printCollectedElements(LVScope *Root) {
+  std::function<void(LVScope * Parent)> TraverseScope = [&](LVScope *Parent) {
+    // Print the elements.
+    auto Print = [&](const auto &Set) {
+      if (Set)
+        for (const auto &Entry : *Set)
+          Entry->printCommon(dbgs());
+    };
+
+    for (LVElement *Element : Parent->getChildren())
+      Element->print(dbgs());
+    Print(Parent->getLines());
+    Print(Parent->getRanges());
+    if (const LVScopes *Scopes = Parent->getScopes())
+      for (LVScope *Scope : *Scopes)
+        TraverseScope(Scope);
+  };
+
+  // Start traversing the scopes root.
+  dbgs() << "\n** Collected logical elements **\n";
+  Root->print(dbgs());
+  TraverseScope(Root);
+}
+
 // Detect elements that are inserted more than once at different scopes,
 // causing a crash on the reader destruction, as the element is already
 // deleted from other scope. Helper for CodeView reader.
-bool checkIntegrityScopesTree(LVScope *Root) {
+bool LVReader::checkIntegrityScopesTree(LVScope *Root) {
   using LVDuplicateEntry = std::tuple<LVElement *, LVScope *, LVScope *>;
   using LVDuplicate = std::vector<LVDuplicateEntry>;
   LVDuplicate Duplicate;
@@ -60,6 +85,9 @@ bool checkIntegrityScopesTree(LVScope *Root) {
     Traverse(Parent->getTypes());
     Traverse(Parent->getLines());
   };
+
+  // Print collected elements.
+  printCollectedElements(Root);
 
   // Start traversing the scopes root and print any duplicates.
   TraverseScope(Root);
@@ -148,7 +176,7 @@ std::error_code LVSplitContext::open(std::string ContextName,
   return std::error_code();
 }
 
-static LVReader *CurrentReader = nullptr;
+LVReader *CurrentReader = nullptr;
 LVReader &LVReader::getInstance() {
   if (CurrentReader)
     return *CurrentReader;

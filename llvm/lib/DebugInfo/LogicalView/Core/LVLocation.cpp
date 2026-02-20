@@ -603,6 +603,11 @@ void LVLocation::setKind() {
     getParentSymbol()->setFillGaps();
 }
 
+void LVLocation::printCommon(raw_ostream &OS, bool Full) const {
+  print(OS, Full);
+  printExtra(OS, Full);
+}
+
 void LVLocationSymbol::updateKind() {
   // Update the location type for simple ones.
   if (Entries && Entries->size() == 1) {
