@@ -28,5 +28,5 @@
 // CHECK: note: content changed
 // CHECK: '[[M_H]]' required by '[[M_PCM:.*[/\\]m.*\.pcm]]'
 // CHECK: '[[M_PCM]]' required by '[[A_PCH]]'
-// CHECK: please rebuild precompiled file '[[A_PCH]]'
+// CHECK: earlier input file validation has covered only user files
 // expected-no-diagnostics
