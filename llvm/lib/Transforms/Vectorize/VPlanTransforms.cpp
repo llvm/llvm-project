@@ -1438,15 +1438,6 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     }
   }
 
-  if (match(Def, m_VPInstruction<VPInstruction::MaskedCond>())) {
-    if (Def->getNumOperands() == 2) {
-      VPValue *And = Builder.createNaryOp(
-          VPInstruction::LogicalAnd, {Def->getOperand(0), Def->getOperand(1)});
-      return Def->replaceAllUsesWith(And);
-    }
-    return Def->replaceAllUsesWith(Def->getOperand(0));
-  }
-
   // Fold (fcmp uno %X, %X) or (fcmp uno %Y, %Y) -> fcmp uno %X, %Y
   // This is useful for fmax/fmin without fast-math flags, where we need to
   // check if any operand is NaN.
@@ -1491,6 +1482,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
       Phi->replaceAllUsesWith(Phi->getOperand(0));
     return;
   }
+
+  // Simplify MaskedCond with no block mask to its single operand.
+  if (match(Def, m_VPInstruction<VPInstruction::MaskedCond>()) &&
+      !cast<VPInstruction>(Def)->isMasked())
+    return Def->replaceAllUsesWith(Def->getOperand(0));
 
   // Look through ExtractLastLane.
   if (match(Def, m_ExtractLastLane(m_VPValue(A)))) {
@@ -4006,6 +4002,17 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
 
         LastActiveL->replaceAllUsesWith(LastLane);
         ToRemove.push_back(LastActiveL);
+        continue;
+      }
+
+      // Lower MaskedCond with block mask to LogicalAnd.
+      if (match(&R, m_VPInstruction<VPInstruction::MaskedCond>())) {
+        auto *VPI = cast<VPInstruction>(&R);
+        assert(VPI->isMasked() &&
+               "Unmasked MaskedCond should be simplified earlier");
+        VPI->replaceAllUsesWith(Builder.createNaryOp(
+            VPInstruction::LogicalAnd, {VPI->getOperand(0), VPI->getMask()}));
+        ToRemove.push_back(VPI);
         continue;
       }
 
