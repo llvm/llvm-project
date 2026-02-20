@@ -350,7 +350,7 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
 
     SymbolInformation Info;
     Info.name = (Sym.Name + Sym.TemplateSpecializationArgs).str();
-    Info.kind = indexSymbolKindToSymbolKind(Sym.SymInfo.Kind);
+    Info.kind = indexSymbolKindToSymbolKind(Sym.SymInfo);
     Info.location = *Loc;
     Scope.consume_back("::");
     Info.containerName = Scope.str();
@@ -431,7 +431,7 @@ std::optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   index::SymbolInfo SymInfo = index::getSymbolInfo(&ND);
   // FIXME: This is not classifying constructors, destructors and operators
   // correctly.
-  SymbolKind SK = indexSymbolKindToSymbolKind(SymInfo.Kind);
+  SymbolKind SK = indexSymbolKindToSymbolKind(SymInfo);
 
   DocumentSymbol SI;
   SI.name = getSymbolName(Ctx, ND);
