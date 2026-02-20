@@ -2662,8 +2662,7 @@ static uint64_t globalSize(const llvm::GlobalVariable &G) {
 }
 
 static bool shouldTagGlobal(const llvm::GlobalVariable &G) {
-  auto Meta = G.getSanitizerMetadata();
-  if (Meta.ForceMemtag)
+  if (G.hasSanitizerMetadata() && G.getSanitizerMetadata().ForceMemtag)
     return true;
 
   // We used to do this in clang, but there are optimization passes that turn

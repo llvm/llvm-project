@@ -298,11 +298,9 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
   // If the global is marked constant, we can put it into a mergable section,
   // a mergable string section, or general .data if it contains relocations.
   if (GVar->isConstant()) {
-    if (GVar->hasSanitizerMetadata()) {
-      auto Meta = GVar->getSanitizerMetadata();
-      if (Meta.ForceMemtag)
-        return SectionKind::getData();
-    }
+    if (GVar->hasSanitizerMetadata() &&
+        GVar->getSanitizerMetadata().ForceMemtag)
+      return SectionKind::getData();
 
     // If the initializer for the global contains something that requires a
     // relocation, then we may have to drop this into a writable data section
