@@ -49,10 +49,6 @@ public:
   void ClosePipes();
 
   /// Returns whether the ConPTY and its pipes are currently open and valid.
-  ///
-  /// \return
-  ///     True if the ConPTY handle, STDIN write handle, and STDOUT read handle
-  ///     are all valid, false otherwise.
   bool IsConnected() const;
 
   /// The ConPTY HPCON handle accessor.
