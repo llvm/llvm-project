@@ -574,6 +574,9 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   if (Args.hasArg(OPT_embed_bitcode))
     CmdArgs.push_back("-Wl,--lto-emit-llvm");
 
+  if (Args.hasArg(OPT_allow_multiple_definition))
+    CmdArgs.push_back("-Wl,--allow-multiple-definition");
+
   // For linking device code with the SYCL offload kind, special handling is
   // required. Passing --sycl-link to clang results in a call to
   // clang-sycl-linker. Additional linker flags required by clang-sycl-linker
