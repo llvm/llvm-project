@@ -1382,6 +1382,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     addRegisterClass(MVT::v256i1, &PPC::VSRpRCRegClass);
     setOperationAction(ISD::LOAD, MVT::v256i1, Custom);
     setOperationAction(ISD::STORE, MVT::v256i1, Custom);
+    setOperationAction(ISD::BUILD_VECTOR, MVT::v256i1, Custom);
   }
   if (Subtarget.hasMMA()) {
     if (Subtarget.isISAFuture()) {
@@ -9546,6 +9547,40 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   SDLoc dl(Op);
   BuildVectorSDNode *BVN = dyn_cast<BuildVectorSDNode>(Op.getNode());
   assert(BVN && "Expected a BuildVectorSDNode in LowerBUILD_VECTOR");
+
+  EVT VT1 = Op.getValueType();
+  if (VT1 == MVT::v256i1) {
+    assert(Subtarget.pairedVectorMemops() &&
+           "v256i1 requires paired vector support");
+
+    // Group 256 individual i1 bits into 4 i64 scalars
+    SmallVector<SDValue, 4> Vals;
+
+    for (unsigned i = 0; i < 4; ++i) {
+      SDValue Val = DAG.getConstant(0, dl, MVT::i64);
+      for (unsigned j = 0; j < 64; ++j) {
+        SDValue Elt = Op.getOperand(i * 64 + j);
+        if (Elt.isUndef())
+          continue;
+        SDValue Bit = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, Elt);
+        if (j > 0)
+          Bit = DAG.getNode(ISD::SHL, dl, MVT::i64, Bit,
+                            DAG.getConstant(j, dl, MVT::i64));
+        Val = DAG.getNode(ISD::OR, dl, MVT::i64, Val, Bit);
+      }
+      Vals.push_back(Val);
+    }
+
+    SDValue Low = DAG.getBuildVector(MVT::v2i64, dl, {Vals[0], Vals[1]});
+    SDValue High = DAG.getBuildVector(MVT::v2i64, dl, {Vals[2], Vals[3]});
+
+    Low = DAG.getBitcast(MVT::v4i32, Low);
+    High = DAG.getBitcast(MVT::v4i32, High);
+
+    return DAG.getNode(PPCISD::PAIR_BUILD, dl, MVT::v256i1,
+                       Subtarget.isLittleEndian() ? High : Low,
+                       Subtarget.isLittleEndian() ? Low : High);
+  }
 
   if (Subtarget.hasP10Vector()) {
     APInt BitMask(32, 0);
