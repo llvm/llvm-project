@@ -594,6 +594,31 @@ private:
   static void SignalHandler(void *);
 };
 
+
+class ExtendedIRType {
+public:
+  ExtendedIRType() = default;
+
+  ExtendedIRType(const ExtendedIRType&) = delete;
+  ExtendedIRType& operator=(const ExtendedIRType&) = delete;
+
+  ExtendedIRType(ExtendedIRType&&) = delete;
+  ExtendedIRType& operator=(ExtendedIRType&&) = delete;
+
+  virtual ~ExtendedIRType() = default;
+  virtual std::optional<std::string> getIRName(Any IR);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
+
+  // Register an extended IR type handler.
+  static LLVM_ABI void registerExtendedIRTypeHandler(std::function<std::optional<std::string>(Any)> Handler);
+
+  // Get IR name using registered handlers.
+  static LLVM_ABI std::optional<std::string> getExtendedIRName(Any IR);
+
+private:
+  static llvm::SmallVector<std::function<std::optional<std::string>(Any)>> ExtendedIRTypeHandlers;
+};
+
 /// This class provides an interface to register all the standard pass
 /// instrumentations and manages their state (if any).
 class StandardInstrumentations {
@@ -612,6 +637,7 @@ class StandardInstrumentations {
   IRChangedTester ChangeTester;
   VerifyInstrumentation Verify;
   DroppedVariableStatsIR DroppedStatsIR;
+  ExtendedIRType ExtendedIR;
 
   bool VerifyEach;
 
