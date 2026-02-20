@@ -735,7 +735,7 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
   auto elemBitWidth = resVecTy.getElementType().getIntOrFloatBitWidth();
 
   const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::SpirvLoadGatherInstruction>(
+      dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
   int maxChunkSize = uArchInstruction->getMaxLaneLoadSize(elemBitWidth);
 
@@ -757,8 +757,9 @@ xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
   auto context = resVecTy.getContext();
   auto elemBitWidth = resVecTy.getElementType().getIntOrFloatBitWidth();
 
-  const auto *uArchInstruction = dyn_cast<xegpu::uArch::LoadMatrixInstruction>(
-      uArch->getInstruction(xegpu::uArch::InstructionKind::LoadMatrix));
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
+          uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
   int maxChunkSize = uArchInstruction->getMaxLaneLoadSize(elemBitWidth);
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
                                       false, maxChunkSize, resShapeSize,
@@ -828,7 +829,7 @@ xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
   auto elemBitWidth = srcVecTy.getElementType().getIntOrFloatBitWidth();
 
   const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::SpirvStoreScatterInstruction>(
+      dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
   int maxChunkSize = uArchInstruction->getMaxLaneStoreSize(elemBitWidth);
   return setupGenericStoreAnchorLayout(layoutKind, context, (chunkSize > 1),
@@ -846,8 +847,9 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
   auto context = srcVecTy.getContext();
   auto elemBitWidth = srcVecTy.getElementType().getIntOrFloatBitWidth();
 
-  const auto *uArchInstruction = dyn_cast<xegpu::uArch::StoreMatrixInstruction>(
-      uArch->getInstruction(xegpu::uArch::InstructionKind::StoreMatrix));
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
+          uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
   int maxChunkSize = uArchInstruction->getMaxLaneStoreSize(elemBitWidth);
 
   return setupGenericStoreAnchorLayout(layoutKind, context, false, maxChunkSize,
