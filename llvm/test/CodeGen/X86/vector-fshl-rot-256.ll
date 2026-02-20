@@ -1583,7 +1583,7 @@ define <16 x i16> @splatconstant_funnnel_v16i16(<16 x i16> %x) nounwind {
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vpsrlw $9, %ymm0, %ymm1
 ; AVX512VLBW-NEXT:    vpsllw $7, %ymm0, %ymm0
-; AVX512VLBW-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512VLBW-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    retq
 ;
 ; AVX512VBMI2-LABEL: splatconstant_funnnel_v16i16:

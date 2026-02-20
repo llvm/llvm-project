@@ -100,55 +100,48 @@ define dso_local <16 x i32> @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; O0-NEXT:    movb $1, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movw %si, %cx
 ; O0-NEXT:    movw %cx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; O0-NEXT:    movw %di, %ax
-; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; O0-NEXT:    movw %di, %dx
+; O0-NEXT:    movw %dx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; O0-NEXT:    movl $buf, %esi
 ; O0-NEXT:    movl $32, %edi
-; O0-NEXT:    movw $8, %dx
-; O0-NEXT:    # implicit-def: $al
-; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; O0-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
-; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; O0-NEXT:    tileloadd (%rsi,%rdi), %tmm0
-; O0-NEXT:    movl $64, %edi
-; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
-; O0-NEXT:    movw $8, %dx
-; O0-NEXT:    tilestored %tmm0, (%rsi,%rdi)
-; O0-NEXT:    movl $32, %esi
-; O0-NEXT:    movl $buf+1024, %edx
 ; O0-NEXT:    movw $8, %ax
+; O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; O0-NEXT:    # implicit-def: $al
 ; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
+; O0-NEXT:    # implicit-def: $dl
+; O0-NEXT:    movb %dl, {{[0-9]+}}(%rsp)
+; O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; O0-NEXT:    tileloadd (%rdx,%rsi), %tmm0
+; O0-NEXT:    tileloadd (%rsi,%rdi), %tmm0
 ; O0-NEXT:    movl $64, %esi
+; O0-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
+; O0-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    tilestored %tmm0, (%r8,%rsi)
+; O0-NEXT:    movl $buf+1024, %edx
+; O0-NEXT:    tileloadd (%rdx,%rdi), %tmm0
 ; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; O0-NEXT:    movw $8, %ax
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    tilestored %tmm0, (%rdx,%rsi)
 ; O0-NEXT:    vzeroupper
 ; O0-NEXT:    callq foo
-; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %dx # 2-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
+; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %di # 2-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %cx # 2-byte Reload
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; O0-NEXT:    movl $64, %edi
-; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
-; O0-NEXT:    movw $8, %cx
-; O0-NEXT:    # implicit-def: $cl
-; O0-NEXT:    movb %cl, {{[0-9]+}}(%rsp)
-; O0-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
-; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; O0-NEXT:    tileloadd (%rsi,%rdi), %tmm0
-; O0-NEXT:    movw $8, %cx
-; O0-NEXT:    tilemovrow $2, %tmm0, %zmm0
-; O0-NEXT:    movl $64, %esi
-; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; O0-NEXT:    movw $8, %cx
 ; O0-NEXT:    # implicit-def: $al
 ; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
+; O0-NEXT:    # implicit-def: $cl
+; O0-NEXT:    movb %cl, {{[0-9]+}}(%rsp)
+; O0-NEXT:    movw %di, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; O0-NEXT:    tileloadd (%r8,%rsi), %tmm0
+; O0-NEXT:    tilemovrow $2, %tmm0, %zmm0
 ; O0-NEXT:    tileloadd (%rdx,%rsi), %tmm0
-; O0-NEXT:    movw $8, %cx
 ; O0-NEXT:    tilemovrow $2, %tmm0, %zmm1
 ; O0-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; O0-NEXT:    movq %rbp, %rsp
