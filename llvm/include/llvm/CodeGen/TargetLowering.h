@@ -5936,6 +5936,10 @@ public:
                                        LoadSDNode *OriginalLoad,
                                        SelectionDAG &DAG) const;
 
+protected:
+  void setTypeIdForCallsiteInfo(const CallBase *CB, MachineFunction &MF,
+                                MachineFunction::CallSiteInfo &CSInfo) const;
+
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                            const SDLoc &DL, DAGCombinerInfo &DCI) const;
