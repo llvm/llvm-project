@@ -2424,7 +2424,7 @@ def err_destructor_template : Error<
 
 // C++ initialization
 def err_init_conversion_failed : Error<
-  "cannot initialize %select{a variable|a parameter|template parameter|"
+  "cannot initialize %select{a constant|a variable|a parameter|template parameter|"
   "return object|statement expression result|an "
   "exception object|a member subobject|an array element|a new value|a value|a "
   "base class|a constructor delegation|a vector element|a matrix element|a "

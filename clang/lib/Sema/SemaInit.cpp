@@ -9233,12 +9233,22 @@ bool InitializationSequence::Diagnose(Sema &S,
 
   case FK_ConversionFailed: {
     QualType FromType = OnlyArg->getType();
-    PartialDiagnostic PDiag = S.PDiag(diag::err_init_conversion_failed)
-      << (int)Entity.getKind()
-      << DestType
-      << OnlyArg->isLValue()
-      << FromType
-      << Args[0]->getSourceRange();
+
+    // NOTE: need to be in sync with err_init_conversion_failed
+    const auto TotalSpecialKinds = 1;
+
+    PartialDiagnostic PDiag = S.PDiag(diag::err_init_conversion_failed);
+    if (Entity.getKind() == InitializedEntity::EK_Variable &&
+        DestType.isConstQualified()) {
+      QualType NonConstDestType = DestType;
+      NonConstDestType.removeLocalConst();
+      PDiag << 0 /* a constant */
+            << NonConstDestType;
+    } else {
+      PDiag << (TotalSpecialKinds + (int)Entity.getKind()) << DestType;
+    }
+    PDiag << OnlyArg->isLValue() << FromType << Args[0]->getSourceRange();
+
     S.HandleFunctionTypeMismatch(PDiag, FromType, DestType);
     S.Diag(Kind.getLocation(), PDiag);
     emitBadConversionNotes(S, Entity, Args[0]);
