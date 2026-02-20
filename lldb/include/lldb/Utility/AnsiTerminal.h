@@ -289,10 +289,91 @@ inline size_t ColumnWidth(llvm::StringRef str) {
   return llvm::sys::locale::columnWidth(stripped);
 }
 
+struct VisibleActualPositionPair {
+  size_t visible;
+  size_t actual;
+
+  bool operator==(const VisibleActualPositionPair &rhs) const {
+    return visible == rhs.visible && actual == rhs.actual;
+  }
+};
+
+/// This function converts a position in "visible" text (text with ANSI codes
+/// removed) into a position in the data of the text (which includes ANSI
+/// codes). That actual position should be used when printing out the data.
+//
+/// If a character is preceeded by an ANSI code, the returned position will
+/// point to that ANSI code. As formatting that visible character requires the
+/// code.
+//
+/// This logic does not extend to whole words. This function assumes you are not
+/// going to split up the words of whatever text you pass in here. Making sure
+/// not to split words is the responsibility of the caller of this function.
+//
+/// Returns a pair containing {visible position, actual position}. This may be
+/// passed back to the function later as "hint" to allow it to skip ahead if you
+/// are asking for a visible position equal or greater to the one in the hint.
+//
+/// The function assumes that the hint provided is correct, even if it refers
+/// to a position that does not exist. If the hint is for the exact requested
+/// visible position, it will return the hint, without checking the string at
+/// all.
+///
+/// FIXME: This function is not Unicode aware.
+inline VisibleActualPositionPair
+VisiblePositionToActualPosition(llvm::StringRef text, size_t visible_position,
+                                std::optional<VisibleActualPositionPair> hint) {
+  size_t actual_position = 0;
+  const size_t wanted_visible_position = visible_position;
+  visible_position = 0;
+  llvm::StringRef remaining_text = text;
+
+  if (hint) {
+    if (hint->visible == wanted_visible_position)
+      return *hint;
+
+    if (hint->visible < wanted_visible_position) {
+      // Skip forward using the hint.
+      visible_position = hint->visible;
+      actual_position = hint->actual;
+
+      remaining_text = remaining_text.drop_front(actual_position);
+    }
+  }
+
+  while (remaining_text.size()) {
+    auto [left, escape, right] = ansi::FindNextAnsiSequence(remaining_text);
+
+    // FIXME: We are assuming left.size() ==  the number of visible characters
+    // on the left. This is not true for Unicode.
+    for (unsigned i = 0; i < left.size(); ++i) {
+      if (visible_position == wanted_visible_position)
+        return {wanted_visible_position, actual_position};
+
+      actual_position++;
+      visible_position++;
+    }
+
+    if (visible_position == wanted_visible_position)
+      return {wanted_visible_position, actual_position};
+
+    actual_position += escape.size();
+    remaining_text = right;
+  }
+
+  assert(visible_position == wanted_visible_position &&
+         "should have found visible_position by now");
+
+  return {wanted_visible_position, actual_position};
+}
+
 // Output text that may contain ANSI codes, word wrapped (wrapped at whitespace)
 // to the given stream. The indent level of the stream is counted towards the
 // output line length.
-// FIXME: This contains several bugs and does not handle unicode.
+// FIXME: This does not handle unicode correctly.
+// FIXME: If an ANSI code is applied to multiple words and those words are split
+//        across lines, the code will apply to the indentation as well as the
+//        text.
 inline void OutputWordWrappedLines(Stream &strm, llvm::StringRef text,
                                    uint32_t output_max_columns) {
   // We will indent using the stream, so leading whitespace is not significant.
@@ -321,14 +402,24 @@ inline void OutputWordWrappedLines(Stream &strm, llvm::StringRef text,
   //   applied to the indent too.
 
   const int max_text_width = output_max_columns - strm.GetIndentLevel() - 1;
+  // start, end and final_end are all positions in the visible text,
+  // not the data representing that text.
   int start = 0;
   int end = start;
   const int final_end = visible_length;
+  std::optional<ansi::VisibleActualPositionPair> conversion_hint;
+
+  // FIXME: This removes ANSI but unicode will still take up > 1 byte per
+  // character.
+  // We can either constantly convert between visible and actual position,
+  // or make a copy and only convert at the end. Assume that a copy is cheap to
+  // do.
+  const std::string text_without_ansi = ansi::StripAnsiTerminalCodes(text);
 
   while (end < final_end) {
     // Don't start the 'text' on a space, since we're already outputting the
     // indentation.
-    while ((start < final_end) && (text[start] == ' '))
+    while ((start < final_end) && (text_without_ansi[start] == ' '))
       start++;
 
     end = start + max_text_width;
@@ -338,18 +429,35 @@ inline void OutputWordWrappedLines(Stream &strm, llvm::StringRef text,
     if (end != final_end) {
       // If we're not at the end of the text, make sure we break the line on
       // white space.
-      while (end > start && text[end] != ' ' && text[end] != '\t' &&
-             text[end] != '\n')
+      while (end > start && text_without_ansi[end] != ' ' &&
+             text_without_ansi[end] != '\t' && text_without_ansi[end] != '\n')
         end--;
     }
 
-    const int sub_len = end - start;
     if (start != 0)
       strm.EOL();
     strm.Indent();
+
+    const int sub_len = end - start;
+    UNUSED_IF_ASSERT_DISABLED(sub_len);
     assert(start < final_end);
     assert(start + sub_len <= final_end);
-    strm << text.substr(start, sub_len);
+
+    conversion_hint =
+        ansi::VisiblePositionToActualPosition(text, start, conversion_hint);
+    const size_t start_actual = conversion_hint->actual;
+    conversion_hint =
+        ansi::VisiblePositionToActualPosition(text, end, conversion_hint);
+    size_t end_actual = conversion_hint->actual;
+
+    // If the end is proceeded by an ANSI code, include that code.
+    llvm::StringRef end_of_line = text.substr(end_actual);
+    auto [left, escape, right] = ansi::FindNextAnsiSequence(end_of_line);
+    if (left.size() == 0)
+      end_actual += escape.size();
+
+    const int sub_len_actual = end_actual - start_actual;
+    strm << text.substr(start_actual, sub_len_actual);
     start = end + 1;
   }
   strm.EOL();

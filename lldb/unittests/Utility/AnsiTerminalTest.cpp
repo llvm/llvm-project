@@ -139,9 +139,13 @@ TEST(AnsiTerminal, OutputWordWrappedLines) {
   TestLines("abc", 0, 4, "abc\n");
   TestLines("abc", 1, 5, " abc\n");
   TestLines("abc", 2, 5, "  abc\n");
+  // If the indent uses up all the columns, print the word on the same line
+  // anyway. This prevents us outputting indent only lines forever.
+  TestLines("abcdefghij", 4, 2, "    abcdefghij\n");
 
   // Leading whitespace is ignored because we're going to indent using the
   // stream.
+  TestLines("       ", 3, 10, "");
   TestLines("  abc", 0, 4, "abc\n");
   TestLines("        abc", 2, 6, "  abc\n");
 
@@ -163,12 +167,29 @@ TEST(AnsiTerminal, OutputWordWrappedLines) {
             "The quick     \nbrown fox.\n");
 
   // As ANSI codes do not add to visible length, the results
-  // should be the same as the plain text verison.
+  // should be the same as the plain text version.
   const char *fox_str_ansi = "\x1B[4mT\x1B[0mhe quick brown fox.";
   TestLines(fox_str_ansi, 0, 30, "\x1B[4mT\x1B[0mhe quick brown fox.\n");
   TestLines(fox_str_ansi, 5, 30, "     \x1B[4mT\x1B[0mhe quick brown fox.\n");
-  // FIXME: Account for ANSI codes not contributing to visible length.
-  TestLines(fox_str_ansi, 0, 15, "\x1B[4mT\x1B[0mhe\nquick br\n");
+  TestLines(fox_str_ansi, 0, 15, "\x1B[4mT\x1B[0mhe quick\nbrown fox.\n");
+
+  // This should be the same when it applies to >1 character.
+  const char *fox_str_ansi_2 = "\x1B[4mTh\x1B[0me quick brown fox.";
+  TestLines(fox_str_ansi_2, 0, 30, "\x1B[4mTh\x1B[0me quick brown fox.\n");
+  TestLines(fox_str_ansi_2, 5, 30, "     \x1B[4mTh\x1B[0me quick brown fox.\n");
+  TestLines(fox_str_ansi_2, 0, 15, "\x1B[4mTh\x1B[0me quick\nbrown fox.\n");
+
+  // Or when the ANSI code is at the end of the string.
+  const char *fox_str_ansi_3 = "The quick brown fox\x1B[4m.\x1B[0m";
+  TestLines(fox_str_ansi_3, 0, 30, "The quick brown fox\x1B[4m.\x1B[0m\n");
+  TestLines(fox_str_ansi_3, 5, 30, "     The quick brown fox\x1B[4m.\x1B[0m\n");
+  TestLines(fox_str_ansi_3, 0, 15, "The quick\nbrown fox\x1B[4m.\x1B[0m\n");
+
+  // FIXME: ANSI codes applied to > 1 word end up applying to all those words
+  // and the indent if those words are split up. We should use cursor
+  // positioning to do the indentation instead.
+  TestLines("\x1B[4mabc def\x1B[0m ghi", 2, 6,
+            "  \x1B[4mabc\n  def\x1B[0m\n  ghi\n");
 
   const std::string fox_str_emoji = "🦊 The quick brown fox. 🦊";
   TestLines(fox_str_emoji, 0, 30, "🦊 The quick brown fox. 🦊\n");
@@ -179,4 +200,64 @@ TEST(AnsiTerminal, OutputWordWrappedLines) {
   TestLines(fox_str_emoji, 0, 15, "🦊 The quick\nbrown fox. \n");
   // FIXME: should not split the middle of an emoji.
   TestLines("🦊🦊🦊 🦊🦊", 0, 5, "\n\n\n\n\n\n\n\x8A\xF0\x9F\xA6\n");
+}
+
+TEST(AnsiTerminal, VisiblePositionToActualPosition) {
+  using Hint = ansi::VisibleActualPositionPair;
+  EXPECT_EQ((Hint{0, 0}),
+            ansi::VisiblePositionToActualPosition("", 0, std::nullopt));
+  EXPECT_EQ((Hint{0, 0}),
+            ansi::VisiblePositionToActualPosition("abc", 0, std::nullopt));
+  EXPECT_EQ((Hint{1, 1}),
+            ansi::VisiblePositionToActualPosition("abc", 1, std::nullopt));
+  EXPECT_EQ((Hint{2, 2}),
+            ansi::VisiblePositionToActualPosition("abc", 2, std::nullopt));
+  // We expect callers to limit the visible index to its valid range.
+
+  // When a visible character is preceeded by an ANSI code, we would need to
+  // print that code when printing the character. Therefore, the actual index
+  // points to the preceeding ANSI code, not the visible character itself.
+  EXPECT_EQ((Hint{0, 0}), ansi::VisiblePositionToActualPosition("\x1B[4mabc", 0,
+                                                                std::nullopt));
+  EXPECT_EQ((Hint{1, 1}), ansi::VisiblePositionToActualPosition("a\x1B[4mbc", 1,
+                                                                std::nullopt));
+  EXPECT_EQ((Hint{2, 2}), ansi::VisiblePositionToActualPosition("ab\x1B[4mc", 2,
+                                                                std::nullopt));
+
+  // If the visible character is proceeded by an ANSI code, we don't need to
+  // adjust anything. The actual index is the index of the visible character
+  // itself.
+  EXPECT_EQ((Hint{0, 0}), ansi::VisiblePositionToActualPosition("a\x1B[4mbc", 0,
+                                                                std::nullopt));
+  EXPECT_EQ((Hint{1, 1}), ansi::VisiblePositionToActualPosition("ab\x1B[4mc", 1,
+                                                                std::nullopt));
+  EXPECT_EQ((Hint{2, 2}), ansi::VisiblePositionToActualPosition("abc\x1B[4m", 2,
+                                                                std::nullopt));
+
+  // If we want a visible character that is after ANSI codes for other
+  // characters, the actual index must know to skip those previous codes.
+  EXPECT_EQ((Hint{1, 5}), ansi::VisiblePositionToActualPosition("\x1B[4mabc", 1,
+                                                                std::nullopt));
+  EXPECT_EQ((Hint{2, 6}), ansi::VisiblePositionToActualPosition("a\x1B[4mbc", 2,
+                                                                std::nullopt));
+
+  // We can give it a previous result to skip forward. To prove it does not look
+  // at the early parts of the string, give it hints that actually produce
+  // incorrect results.
+
+  const char *actual_text = "abcdefghijk";
+  // This does nothing because the hint is the answer.
+  EXPECT_EQ((Hint{1, 5}),
+            ansi::VisiblePositionToActualPosition(actual_text, 1, Hint{1, 5}));
+  // The hint can be completely bogus, but we trust it. So if it refers to the
+  // visible index being asked for, we just return the hint.
+  EXPECT_EQ((Hint{99, 127}), ansi::VisiblePositionToActualPosition(
+                                 actual_text, 99, Hint{99, 127}));
+  // This should return {2, 1}, but the actual is offset by 5 due to the hint.
+  EXPECT_EQ((Hint{2, 6}),
+            ansi::VisiblePositionToActualPosition(actual_text, 2, Hint{1, 5}));
+  // If the hint is for a visible index > the wanted visible index, we cannot do
+  // anything with it. The function can only look forward.
+  EXPECT_EQ((Hint{2, 2}),
+            ansi::VisiblePositionToActualPosition(actual_text, 2, Hint{3, 6}));
 }
