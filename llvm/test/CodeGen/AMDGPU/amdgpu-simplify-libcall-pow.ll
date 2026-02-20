@@ -1293,7 +1293,7 @@ define <2 x float> @test_pow_afn_v2f32_plus_minus_0.5(<2 x float> %x) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
 ; CHECK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -1520,7 +1520,7 @@ define float @test_pow_afn_f32_3.99(float %x) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul afn float [[TMP2]], 5.000000e-01
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
 ; CHECK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -1558,7 +1558,7 @@ define float @test_pow_afn_f32_neg3.99(float %x) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.exp2.f32(float [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call afn float @llvm.trunc.f32(float [[TMP2]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP7]], [[TMP2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul afn float [[TMP2]], 5.000000e-01
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul nnan afn float [[TMP2]], 5.000000e-01
 ; CHECK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.trunc.f32(float [[TMP9]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = fcmp afn une float [[TMP10]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP8]], [[TMP11]]
@@ -1598,7 +1598,7 @@ define <2 x float> @test_pow_afn_v2f32_3.99(<2 x float> %x) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
 ; CHECK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -1636,7 +1636,7 @@ define <2 x float> @test_pow_afn_v2f32_neg3.99(<2 x float> %x) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
 ; CHECK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
@@ -1676,7 +1676,7 @@ define <2 x float> @test_pow_afn_v2f32_plus_minus_3.99(<2 x float> %x) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP2]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq <2 x float> [[TMP7]], [[TMP2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul nnan afn <2 x float> [[TMP2]], splat (float 5.000000e-01)
 ; CHECK-NEXT:    [[TMP10:%.*]] = call afn <2 x float> @llvm.trunc.v2f32(<2 x float> [[TMP9]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = fcmp afn une <2 x float> [[TMP10]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = and <2 x i1> [[TMP8]], [[TMP11]]
