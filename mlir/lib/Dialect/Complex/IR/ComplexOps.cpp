@@ -396,10 +396,10 @@ OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
   // Fold only if RHS is complex.constant<1.0, 0.0>
   APFloat rhsImag = cast<FloatAttr>(rhsArrayAttr[1]).getValue();
   APFloat rhsReal = cast<FloatAttr>(rhsArrayAttr[0]).getValue();
-  if (rhsReal != APFloat(rhsReal.getSemantics(), 1) || !rhsImag.isZero())
+  if (!rhsImag.isZero() || rhsReal != APFloat(rhsReal.getSemantics(), 1))
     return {};
 
-  // Fold to LHS if it doesn't contains NaNs or fast math flag nan is exists
+  // Fold to LHS if it doesn't contains NaNs or fast math flag nan is set
   // complex.div(a, complex.constant<1.0, 0.0>) fastmath<nnan> -> a
   if ((lhsArrayAttr && !isLhsComplexHasNan) ||
       arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::nnan))
