@@ -491,6 +491,8 @@ public:
                                       Stream &feedback_stream,
                                       bool continue_on_error = true);
 
+  static void AppendGlobalModuleListPropertiesTo(Debugger &debugger);
+
   static ModuleListProperties &GetGlobalModuleListProperties();
 
   static bool ModuleIsInCache(const Module *module_ptr);

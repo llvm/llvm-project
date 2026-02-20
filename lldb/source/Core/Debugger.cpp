@@ -1024,24 +1024,15 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   // Initialize the debugger properties as early as possible as other parts of
   // LLDB will start querying them during construction.
   m_collection_sp->Initialize(g_debugger_properties_def);
-  m_collection_sp->AppendProperty(
-      "target", "Settings specify to debugging targets.", true,
-      Target::GetGlobalProperties().GetValueProperties());
-  m_collection_sp->AppendProperty(
-      "platform", "Platform settings.", true,
-      Platform::GetGlobalPlatformProperties().GetValueProperties());
-  m_collection_sp->AppendProperty(
-      "symbols", "Symbol lookup and cache settings.", true,
-      ModuleList::GetGlobalModuleListProperties().GetValueProperties());
-  m_collection_sp->AppendProperty(
-      LanguageProperties::GetSettingName(), "Language settings.", true,
-      Language::GetGlobalLanguageProperties().GetValueProperties());
-  if (m_command_interpreter_up) {
-    m_collection_sp->AppendProperty(
-        "interpreter",
-        "Settings specify to the debugger's command interpreter.", true,
-        m_command_interpreter_up->GetValueProperties());
-  }
+  Target::AppendGlobalPropertiesTo(*this);
+  Process::AppendGlobalPropertiesTo(*this);
+  Thread::AppendGlobalPropertiesTo(*this);
+  Platform::AppendGlobalPropertiesTo(*this);
+  ModuleList::AppendGlobalModuleListPropertiesTo(*this);
+  Language::AppendGlobalLanguagePropertiesTo(*this);
+  if (m_command_interpreter_up)
+    m_command_interpreter_up->AppendGlobalPropertiesTo(*this);
+
   if (log_callback)
     m_callback_handler_sp =
         std::make_shared<CallbackLogHandler>(log_callback, baton);

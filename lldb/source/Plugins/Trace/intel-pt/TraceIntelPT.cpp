@@ -15,6 +15,7 @@
 #include "TraceIntelPTBundleLoader.h"
 #include "TraceIntelPTBundleSaver.h"
 #include "TraceIntelPTConstants.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Target/Process.h"
@@ -83,13 +84,11 @@ void TraceIntelPT::Initialize() {
 }
 
 void TraceIntelPT::DebuggerInitialize(Debugger &debugger) {
-  if (!PluginManager::GetSettingForProcessPlugin(
-          debugger, PluginProperties::GetSettingName())) {
-    const bool is_global_setting = true;
-    PluginManager::CreateSettingForTracePlugin(
-        debugger, GetGlobalProperties().GetValueProperties(),
-        "Properties for the intel-pt trace plug-in.", is_global_setting);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_traceintelpt_properties_def.expected_path,
+      GetGlobalPluginProperties().GetValueProperties(),
+      "Properties for the intel-pt trace plug-in.",
+      /*is_global_property=*/true);
 }
 
 void TraceIntelPT::Terminate() {

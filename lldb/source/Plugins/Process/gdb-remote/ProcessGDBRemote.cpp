@@ -3851,13 +3851,11 @@ void ProcessGDBRemote::Initialize() {
 }
 
 void ProcessGDBRemote::DebuggerInitialize(Debugger &debugger) {
-  if (!PluginManager::GetSettingForProcessPlugin(
-          debugger, PluginProperties::GetSettingName())) {
-    const bool is_global_setting = true;
-    PluginManager::CreateSettingForProcessPlugin(
-        debugger, GetGlobalPluginProperties().GetValueProperties(),
-        "Properties for the gdb-remote process plug-in.", is_global_setting);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_processgdbremote_properties_def.expected_path,
+      GetGlobalPluginProperties().GetValueProperties(),
+      "Properties for the gdb-remote process plug-in.",
+      /*is_global_property=*/true);
 }
 
 bool ProcessGDBRemote::StartAsyncThread() {

@@ -137,6 +137,13 @@ void Platform::Initialize() {}
 
 void Platform::Terminate() {}
 
+void Platform::AppendGlobalPropertiesTo(Debugger &debugger) {
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_platform_properties_def.expected_path,
+      GetGlobalPlatformProperties().GetValueProperties(), "Platform settings.",
+      /*is_global_property=*/true);
+}
+
 PlatformProperties &Platform::GetGlobalPlatformProperties() {
   static PlatformProperties g_settings;
   return g_settings;

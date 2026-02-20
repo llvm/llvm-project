@@ -694,13 +694,11 @@ void ProcessKDP::Initialize() {
 }
 
 void ProcessKDP::DebuggerInitialize(lldb_private::Debugger &debugger) {
-  if (!PluginManager::GetSettingForProcessPlugin(
-          debugger, PluginProperties::GetSettingName())) {
-    const bool is_global_setting = true;
-    PluginManager::CreateSettingForProcessPlugin(
-        debugger, GetGlobalPluginProperties().GetValueProperties(),
-        "Properties for the kdp-remote process plug-in.", is_global_setting);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_processkdp_properties_def.expected_path,
+      GetGlobalPluginProperties().GetValueProperties(),
+      "Properties for the kdp-remote process plug-in.",
+      /*is_global_property=*/true);
 }
 
 bool ProcessKDP::StartAsyncThread() {

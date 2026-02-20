@@ -114,6 +114,8 @@ public:
   FollowForkMode GetFollowForkMode() const;
   bool TrackMemoryCacheChanges() const;
 
+  ProcessExperimentalProperties &GetExperimentalProperties();
+
 protected:
   Process *m_process; // Can be nullptr for global ProcessProperties
   std::unique_ptr<ProcessExperimentalProperties> m_experimental_properties_up;
@@ -511,6 +513,8 @@ public:
   static void SettingsInitialize();
 
   static void SettingsTerminate();
+
+  static void AppendGlobalPropertiesTo(Debugger &debugger);
 
   static ProcessProperties &GetGlobalProperties();
 

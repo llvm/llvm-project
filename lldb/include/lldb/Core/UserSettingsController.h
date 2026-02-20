@@ -97,6 +97,10 @@ public:
     return m_collection_sp->SetPropertyAtIndex<T>(idx, t, exe_ctx);
   }
 
+  void SetPropertiesAtPathIfNotExists(
+      llvm::StringRef path, const lldb::OptionValuePropertiesSP &properties_sp,
+      llvm::StringRef description, bool is_global_property);
+
 protected:
   lldb::OptionValuePropertiesSP m_collection_sp;
 };

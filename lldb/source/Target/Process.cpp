@@ -158,9 +158,6 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
     // Global process properties, set them up one time
     m_collection_sp = std::make_shared<ProcessOptionValueProperties>("process");
     m_collection_sp->Initialize(g_process_properties_def);
-    m_collection_sp->AppendProperty(
-        "thread", "Settings specific to threads.", true,
-        Thread::GetGlobalProperties().GetValueProperties());
   } else {
     m_collection_sp =
         OptionValueProperties::CreateLocalCopy(Process::GetGlobalProperties());
@@ -174,11 +171,6 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
 
   m_experimental_properties_up =
       std::make_unique<ProcessExperimentalProperties>();
-  m_collection_sp->AppendProperty(
-      Properties::GetExperimentalSettingsName(),
-      "Experimental settings - setting these won't produce "
-      "errors if the setting is not present.",
-      true, m_experimental_properties_up->GetValueProperties());
 }
 
 ProcessProperties::~ProcessProperties() = default;
@@ -379,6 +371,10 @@ bool ProcessProperties::TrackMemoryCacheChanges() const {
       idx, g_process_properties[idx].default_uint_value != 0);
 }
 
+ProcessExperimentalProperties &ProcessProperties::GetExperimentalProperties() {
+  return *m_experimental_properties_up;
+}
+
 ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
                               llvm::StringRef plugin_name,
                               ListenerSP listener_sp,
@@ -535,6 +531,19 @@ ProcessProperties &Process::GetGlobalProperties() {
   static ProcessProperties *g_settings_ptr =
       new ProcessProperties(nullptr);
   return *g_settings_ptr;
+}
+
+void Process::AppendGlobalPropertiesTo(Debugger &debugger) {
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_process_properties_def.expected_path,
+      GetGlobalProperties().GetValueProperties(),
+      "Settings specific to processes.", /*is_global_property=*/true);
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_process_experimental_properties_def.expected_path,
+      GetGlobalProperties().GetExperimentalProperties().GetValueProperties(),
+      "Experimental settings - setting these won't produce errors if the "
+      "setting is not present.",
+      /*is_global_property=*/true);
 }
 
 void Process::Finalize(bool destructing) {

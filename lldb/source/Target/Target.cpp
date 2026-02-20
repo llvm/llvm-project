@@ -4512,14 +4512,6 @@ TargetProperties::TargetProperties(Target *target)
     m_collection_sp->Initialize(g_target_properties_def);
     m_experimental_properties_up =
         std::make_unique<TargetExperimentalProperties>();
-    m_collection_sp->AppendProperty(
-        Properties::GetExperimentalSettingsName(),
-        "Experimental settings - setting these won't produce "
-        "errors if the setting is not present.",
-        true, m_experimental_properties_up->GetValueProperties());
-    m_collection_sp->AppendProperty(
-        "process", "Settings specific to processes.", true,
-        Process::GetGlobalProperties().GetValueProperties());
     m_collection_sp->SetValueChangedCallback(
         ePropertySaveObjectsDir, [this] { CheckJITObjectsDir(); });
   }
@@ -5261,6 +5253,23 @@ bool TargetProperties::GetDebugUtilityExpression() const {
 void TargetProperties::SetDebugUtilityExpression(bool debug) {
   const uint32_t idx = ePropertyDebugUtilityExpression;
   SetPropertyAtIndex(idx, debug);
+}
+
+TargetExperimentalProperties &TargetProperties::GetExperimentalProperties() {
+  return *m_experimental_properties_up;
+}
+
+void Target::AppendGlobalPropertiesTo(Debugger &debugger) {
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_target_properties_def.expected_path,
+      GetGlobalProperties().GetValueProperties(),
+      "Settings specify to debugging targets.", /*is_global_property=*/true);
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_target_experimental_properties_def.expected_path,
+      GetGlobalProperties().GetExperimentalProperties().GetValueProperties(),
+      "Experimental settings - setting these won't produce errors if the "
+      "setting is not present.",
+      /*is_global_property=*/true);
 }
 
 // Target::TargetEventData

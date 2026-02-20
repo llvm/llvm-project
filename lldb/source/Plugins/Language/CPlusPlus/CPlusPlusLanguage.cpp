@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/ItaniumDemangle.h"
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/DemangledNameInfo.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
@@ -2632,11 +2633,9 @@ FormatEntity::Entry CPlusPlusLanguage::GetFunctionNameFormat() const {
 }
 
 void CPlusPlusLanguage::DebuggerInitialize(Debugger &debugger) {
-  if (!PluginManager::GetSettingForCPlusPlusLanguagePlugin(
-          debugger, PluginProperties::GetSettingName())) {
-    PluginManager::CreateSettingForCPlusPlusLanguagePlugin(
-        debugger, GetGlobalPluginProperties().GetValueProperties(),
-        "Properties for the CPlusPlus language plug-in.",
-        /*is_global_property=*/true);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_language_cplusplus_properties_def.expected_path,
+      GetGlobalPluginProperties().GetValueProperties(),
+      "Properties for the CPlusPlus language plug-in.",
+      /*is_global_property=*/true);
 }
