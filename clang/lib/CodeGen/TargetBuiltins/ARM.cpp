@@ -4523,7 +4523,11 @@ Value *CodeGenFunction::EmitSVEReinterpret(Value *Val, llvm::Type *Ty) {
     return Tuple;
   }
 
-  return Builder.CreateBitCast(Val, Ty);
+  Value *Res = Builder.CreateBitCast(Val, Ty);
+  if (getTarget().isBigEndian())
+    Res = Builder.CreateVectorReverse(Res, "sve.reinterpret");
+
+  return Res;
 }
 
 static void InsertExplicitZeroOperand(CGBuilderTy &Builder, llvm::Type *Ty,

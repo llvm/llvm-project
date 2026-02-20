@@ -1352,10 +1352,6 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "#ifndef __ARM_SVE_H\n";
   OS << "#define __ARM_SVE_H\n\n";
 
-  OS << "#if !defined(__LITTLE_ENDIAN__)\n";
-  OS << "#error \"Big endian is currently not supported for arm_sve.h\"\n";
-  OS << "#endif\n";
-
   OS << "#include <stdint.h>\n\n";
   OS << "#ifdef  __cplusplus\n";
   OS << "extern \"C\" {\n";
