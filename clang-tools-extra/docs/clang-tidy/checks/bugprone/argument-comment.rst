@@ -146,6 +146,50 @@ After:
 
   foo(/*Character=*/'A');
 
+.. option:: CommentAnonymousInitLists
+
+   When `true`, the check will add argument comments in the format
+   ``/*ParameterName=*/`` right before anonymous braced-init list arguments
+   such as ``{}`` and ``{1, 2, 3}``. Default is `false`.
+
+Before:
+
+.. code-block:: c++
+
+  void foo(const std::vector<int> &Dims);
+
+  foo({});
+
+After:
+
+.. code-block:: c++
+
+  void foo(const std::vector<int> &Dims);
+
+  foo(/*Dims=*/{});
+
+.. option:: CommentTypedInitLists
+
+   When `true`, the check will add argument comments in the format
+   ``/*ParameterName=*/`` right before typed braced-init list arguments such
+   as ``Type{}``. Default is `false`.
+
+Before:
+
+.. code-block:: c++
+
+  void foo(const std::vector<int> &Dims);
+
+  foo(std::vector<int>{});
+
+After:
+
+.. code-block:: c++
+
+  void foo(const std::vector<int> &Dims);
+
+  foo(/*Dims=*/std::vector<int>{});
+
 .. option:: CommentUserDefinedLiterals
 
    When `true`, the check will add argument comments in the format

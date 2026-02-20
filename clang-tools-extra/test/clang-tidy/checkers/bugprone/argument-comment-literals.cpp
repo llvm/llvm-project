@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-argument-comment %t -- \
+// RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s bugprone-argument-comment %t -- \
 // RUN:   -config="{CheckOptions: { \
 // RUN:     bugprone-argument-comment.CommentBoolLiterals: true, \
 // RUN:     bugprone-argument-comment.CommentIntegerLiterals: true, \
@@ -7,7 +7,6 @@
 // RUN:     bugprone-argument-comment.CommentStringLiterals: true, \
 // RUN:     bugprone-argument-comment.CommentNullPtrs: true, \
 // RUN:     bugprone-argument-comment.CommentCharacterLiterals: true}}" --
-
 struct A {
   void foo(bool abc);
   void foo(bool abc, bool cde);
