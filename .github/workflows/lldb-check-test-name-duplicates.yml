@@ -5,11 +5,9 @@ permissions:
 
 on:
   pull_request:
-    branches:
-      - main
-      - 'users/**'
     paths:
       - 'lldb/test/API/**'
+      - '.github/workflows/lldb-pylint-action.yml'
 
 jobs:
   code_linter:
@@ -18,8 +16,6 @@ jobs:
     defaults:
       run:
         shell: bash
-    container:
-      image: 'ghcr.io/llvm/ci-ubuntu-24.04-lint'
     timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
