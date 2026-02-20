@@ -336,8 +336,9 @@ bool CombinerHelper::matchCombineConcatVectors(
       for (const MachineOperand &BuildVecMO : Def->uses())
         Ops.push_back(BuildVecMO.getReg());
       break;
-    case TargetOpcode::G_IMPLICIT_DEF: {
-      LLT OpType = MRI.getType(Reg);
+    case TargetOpcode::G_IMPLICIT_DEF:
+    case TargetOpcode::G_POISON: {
+    LLT OpType = MRI.getType(Reg);
       // Keep one undef value for all the undef operands.
       if (!Undef) {
         Builder.setInsertPt(*MI.getParent(), MI);
@@ -361,9 +362,9 @@ bool CombinerHelper::matchCombineConcatVectors(
   // Check if the combine is illegal
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
   if (!isLegalOrBeforeLegalizer(
-          {TargetOpcode::G_BUILD_VECTOR, {DstTy, MRI.getType(Ops[0])}})) {
+        {TargetOpcode::G_IMPLICIT_DEF, TargetOpcode::G_POISON, {ConcatSrcTy}}))
     return false;
-  }
+
 
   if (IsUndef)
     Ops.clear();

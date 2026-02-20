@@ -302,7 +302,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_ZEXTLOAD:
     return getInstructionMapping(DefaultMappingID, /*Cost=*/1, GPRValueMapping,
                                  NumOperands);
-  case TargetOpcode::G_IMPLICIT_DEF: {
+  case TargetOpcode::G_IMPLICIT_DEF: 
+  case TargetOpcode::G_POISON: {
     Register Dst = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(Dst);
     unsigned DstMinSize = DstTy.getSizeInBits().getKnownMinValue();

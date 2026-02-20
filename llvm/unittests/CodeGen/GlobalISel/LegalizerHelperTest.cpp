@@ -904,6 +904,7 @@ TEST_F(AArch64GISelMITest, WidenUADDE) {
   const char *CheckStr = R"(
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
   CHECK: [[Implicit:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
+  CHECK: [[Implicit:%[0-9]+]]:_(s1) = G_POISON
   CHECK: [[LHS:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
   CHECK: [[RHS:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
   CHECK: [[UADDE:%[0-9]+]]:_(s16), [[CARRY:%[0-9]+]]:_(s1) = G_UADDE [[LHS]]:_, [[RHS]]:_, [[Implicit]]:_
@@ -944,6 +945,9 @@ TEST_F(AArch64GISelMITest, WidenUSUBE) {
   const char *CheckStr = R"(
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
   CHECK: [[Implicit:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
+  CHECK: [[Implicit:%[0-9]+]]:_(s1) = G_POISON
+  CHECK: [[Implicit:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
+  CHECK: [[Implicit:%[0-9]+]]:_(s1) = G_POISON
   CHECK: [[LHS:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
   CHECK: [[RHS:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
   CHECK: [[USUBE:%[0-9]+]]:_(s16), [[CARRY:%[0-9]+]]:_(s1) = G_USUBE [[LHS]]:_, [[RHS]]:_, [[Implicit]]:_
@@ -984,6 +988,7 @@ TEST_F(AArch64GISelMITest, WidenSADDE) {
   const char *CheckStr = R"(
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
   CHECK: [[Implicit:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
+  CHECK: [[Implicit:%[0-9]+]]:_(s1) = G_POISON
   CHECK: [[LHS:%[0-9]+]]:_(s16) = G_SEXT [[Trunc]]
   CHECK: [[RHS:%[0-9]+]]:_(s16) = G_SEXT [[Trunc]]
   CHECK: [[SADDE:%[0-9]+]]:_(s16), [[CARRY:%[0-9]+]]:_(s1) = G_UADDE [[LHS]]:_, [[RHS]]:_, [[Implicit]]:_
@@ -1024,6 +1029,7 @@ TEST_F(AArch64GISelMITest, WidenSSUBE) {
   const char *CheckStr = R"(
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
   CHECK: [[Implicit:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
+  CHECK: [[Implicit:%[0-9]+]]:_(s1) = G_POISON
   CHECK: [[LHS:%[0-9]+]]:_(s16) = G_SEXT [[Trunc]]
   CHECK: [[RHS:%[0-9]+]]:_(s16) = G_SEXT [[Trunc]]
   CHECK: [[SSUBE:%[0-9]+]]:_(s16), [[CARRY:%[0-9]+]]:_(s1) = G_USUBE [[LHS]]:_, [[RHS]]:_, [[Implicit]]:_
@@ -1097,7 +1103,9 @@ TEST_F(AArch64GISelMITest, NarrowUADDO) {
 
   const char *CheckStr = R"(
   CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_POISON
   CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_POISON
   CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
   CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
   CHECK: [[UADDO0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_UADDO [[OP0_0]]:_, [[OP1_0]]:_
@@ -1134,7 +1142,9 @@ TEST_F(AArch64GISelMITest, NarrowUSUBO) {
 
   const char *CheckStr = R"(
   CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_POISON
   CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_POISON
   CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
   CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
   CHECK: [[USUBO0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_USUBO [[OP0_0]]:_, [[OP1_0]]:_
@@ -1171,7 +1181,9 @@ TEST_F(AArch64GISelMITest, NarrowSADDO) {
 
   const char *CheckStr = R"(
   CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_POISON
   CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_POISON
   CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
   CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
   CHECK: [[SADDO0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_UADDO [[OP0_0]]:_, [[OP1_0]]:_
@@ -1208,7 +1220,9 @@ TEST_F(AArch64GISelMITest, NarrowSSUBO) {
 
   const char *CheckStr = R"(
   CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_POISON
   CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_POISON
   CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
   CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
   CHECK: [[SSUBO0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_USUBO [[OP0_0]]:_, [[OP1_0]]:_
@@ -1246,8 +1260,11 @@ TEST_F(AArch64GISelMITest, NarrowUADDE) {
 
   const char *CheckStr = R"(
   CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_POISON
   CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_POISON
   CHECK: [[IMP_DEF2:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF2:%[0-9]+]]:_(s1) = G_POISON
   CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
   CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
   CHECK: [[UADDE0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_UADDE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
@@ -1285,8 +1302,11 @@ TEST_F(AArch64GISelMITest, NarrowUSUBE) {
 
   const char *CheckStr = R"(
   CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_POISON
   CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_POISON
   CHECK: [[IMP_DEF2:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF2:%[0-9]+]]:_(s1) = G_POISON
   CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
   CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
   CHECK: [[USUBE0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_USUBE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
@@ -1324,8 +1344,11 @@ TEST_F(AArch64GISelMITest, NarrowSADDE) {
 
   const char *CheckStr = R"(
   CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_POISON
   CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_POISON
   CHECK: [[IMP_DEF2:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF2:%[0-9]+]]:_(s1) = G_POISON
   CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
   CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
   CHECK: [[SADDE0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_UADDE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
@@ -1363,8 +1386,11 @@ TEST_F(AArch64GISelMITest, NarrowSSUBE) {
 
   const char *CheckStr = R"(
   CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s96) = G_POISON
   CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s96) = G_POISON
   CHECK: [[IMP_DEF2:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF2:%[0-9]+]]:_(s1) = G_POISON
   CHECK: [[OP0_0:%[0-9]+]]:_(s32), [[OP0_1:%[0-9]+]]:_(s32), [[OP0_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]
   CHECK: [[OP1_0:%[0-9]+]]:_(s32), [[OP1_1:%[0-9]+]]:_(s32), [[OP1_2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF1]]
   CHECK: [[SSUBE0:%[0-9]+]]:_(s32), [[CARRY0:%[0-9]+]]:_(s1) = G_USUBE [[OP0_0]]:_, [[OP1_0]]:_, [[IMP_DEF2]]:_
@@ -1403,7 +1429,9 @@ TEST_F(AArch64GISelMITest, FewerElementsAnd) {
 
   auto CheckStr = R"(
   CHECK: [[IMP_DEF0:%[0-9]+]]:_(<5 x s32>) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(<5 x s32>) = G_POISON
   CHECK: [[IMP_DEF1:%[0-9]+]]:_(<5 x s32>) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(<5 x s32>) = G_POISON
   CHECK: [[VALUE0:%[0-9]+]]:_(s32), [[VALUE1:%[0-9]+]]:_(s32), [[VALUE2:%[0-9]+]]:_(s32), [[VALUE3:%[0-9]+]]:_(s32), [[VALUE4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[IMP_DEF0]]:_(<5 x s32>)
   CHECK: [[VECTOR0:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[VALUE0]]:_(s32), [[VALUE1]]:_(s32)
   CHECK: [[VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[VALUE2]]:_(s32), [[VALUE3]]:_(s32)
@@ -1457,10 +1485,12 @@ TEST_F(AArch64GISelMITest, MoreElementsAnd) {
 
   CHECK: [[BITCAST0_E0:%[0-9]+]]:_(s32), [[BITCAST0_E1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST0]]:_(<2 x s32>)
   CHECK: [[IMP_DEF0:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s32) = G_POISON
   CHECK: [[BITCAST0_LARGE:%[0-9]+]]:_(<6 x s32>) = G_BUILD_VECTOR [[BITCAST0_E0]]:_(s32), [[BITCAST0_E1]]:_(s32), [[IMP_DEF0]]:_(s32), [[IMP_DEF0]]:_(s32), [[IMP_DEF0]]:_(s32), [[IMP_DEF0]]:_(s32)
 
   CHECK: [[BITCAST1_E0:%[0-9]+]]:_(s32), [[BITCAST1_E1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST1]]:_(<2 x s32>)
   CHECK: [[IMP_DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s32) = G_POISON
   CHECK: [[BITCAST1_LARGE:%[0-9]+]]:_(<6 x s32>) = G_BUILD_VECTOR [[BITCAST1_E0]]:_(s32), [[BITCAST1_E1]]:_(s32), [[IMP_DEF1]]:_(s32), [[IMP_DEF1]]:_(s32), [[IMP_DEF1]]:_(s32), [[IMP_DEF1]]:_(s32)
 
   CHECK: [[AND:%[0-9]+]]:_(<6 x s32>) = G_AND [[BITCAST0_LARGE]]:_, [[BITCAST1_LARGE]]:_
@@ -1542,12 +1572,14 @@ TEST_F(AArch64GISelMITest, FewerElementsPhi) {
 
   auto CheckStr = R"(
   CHECK: [[INITVAL:%[0-9]+]]:_(<5 x s32>) = G_IMPLICIT_DEF
+  CHECK: [[INITVAL:%[0-9]+]]:_(<5 x s32>) = G_POISON
   CHECK: [[INITVAL_E0:%[0-9]+]]:_(s32), [[INITVAL_E1:%[0-9]+]]:_(s32), [[INITVAL_E2:%[0-9]+]]:_(s32), [[INITVAL_E3:%[0-9]+]]:_(s32), [[INITVAL_E4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[INITVAL]]:_(<5 x s32>)
   CHECK: [[INITVAL_E01:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[INITVAL_E0]]:_(s32), [[INITVAL_E1]]:_(s32)
   CHECK: [[INITVAL_E23:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[INITVAL_E2]]:_(s32), [[INITVAL_E3]]:_(s32)
   CHECK: G_BRCOND
 
   CHECK: [[MIDVAL:%[0-9]+]]:_(<5 x s32>) = G_IMPLICIT_DEF
+  CHECK: [[MIDVAL:%[0-9]+]]:_(<5 x s32>) = G_POISON
   CHECK: [[MIDVAL_E0:%[0-9]+]]:_(s32), [[MIDVAL_E1:%[0-9]+]]:_(s32), [[MIDVAL_E2:%[0-9]+]]:_(s32), [[MIDVAL_E3:%[0-9]+]]:_(s32), [[MIDVAL_E4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MIDVAL]]:_(<5 x s32>)
   CHECK: [[MIDVAL_E01:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[MIDVAL_E0]]:_(s32), [[MIDVAL_E1]]:_(s32)
   CHECK: [[MIDVAL_E23:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[MIDVAL_E2]]:_(s32), [[MIDVAL_E3]]:_(s32)
@@ -1823,6 +1855,7 @@ TEST_F(AArch64GISelMITest, LowerMergeValues) {
   CHECK-NEXT: [[K6:%[0-9]+]]:_(s3) = G_CONSTANT i3 -2
   CHECK-NEXT: [[K7:%[0-9]+]]:_(s3) = G_CONSTANT i3 -1
   CHECK-NEXT: [[IMPDEF0:%[0-9]+]]:_(s3) = G_IMPLICIT_DEF
+  CHECK-NEXT: [[IMPDEF0:%[0-9]+]]:_(s3) = G_POISON
   CHECK-NEXT: [[MERGE0:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K0]]:_(s3), [[K1]]:_(s3), [[K2]]:_(s3)
   CHECK-NEXT: [[MERGE1:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K3]]:_(s3), [[K4]]:_(s3), [[K5]]:_(s3)
   CHECK-NEXT: [[MERGE2:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K6]]:_(s3), [[K7]]:_(s3), [[IMPDEF0]]:_(s3)
@@ -1838,6 +1871,7 @@ TEST_F(AArch64GISelMITest, LowerMergeValues) {
   CHECK-NEXT: [[K13:%[0-9]+]]:_(s3) = G_CONSTANT i3 -3
   CHECK-NEXT: [[K14:%[0-9]+]]:_(s3) = G_CONSTANT i3 -2
   CHECK-NEXT: [[IMPDEF1:%[0-9]+]]:_(s3) = G_IMPLICIT_DEF
+  CHECK-NEXT: [[IMPDEF1:%[0-9]+]]:_(s3) = G_POISON
   CHECK-NEXT: [[MERGE4:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K8]]:_(s3), [[K9]]:_(s3), [[K10]]:_(s3)
   CHECK-NEXT: [[MERGE5:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K11]]:_(s3), [[K12]]:_(s3), [[K13]]:_(s3)
   CHECK-NEXT: [[MERGE6:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K14]]:_(s3), [[IMPDEF1]]:_(s3), [[IMPDEF1]]:_(s3)
@@ -3546,6 +3580,7 @@ TEST_F(AArch64GISelMITest, BitcastLoad) {
 
   auto CheckStr = R"(
   CHECK: [[PTR:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+  CHECK: [[PTR:%[0-9]+]]:_(p0) = G_POISON
   CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD
   CHECK: [[CAST:%[0-9]+]]:_(<4 x s8>) = G_BITCAST [[LOAD]]
 
@@ -3581,6 +3616,7 @@ TEST_F(AArch64GISelMITest, BitcastStore) {
 
   auto CheckStr = R"(
   CHECK: [[VAL:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
+  CHECK: [[VAL:%[0-9]+]]:_(<4 x s8>) = G_POISON
   CHECK: [[CAST:%[0-9]+]]:_(s32) = G_BITCAST [[VAL]]
   CHECK: G_STORE [[CAST]]
   )";
@@ -3761,19 +3797,27 @@ TEST_F(AArch64GISelMITest, NarrowImplicitDef) {
 
   const auto *CheckStr = R"(
   CHECK: [[DEF:%[0-9]+]]:_(s48) = G_IMPLICIT_DEF
+  CHECK: [[DEF:%[0-9]+]]:_(s48) = G_POISON
   CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[DEF]]
 
   CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  CHECK: [[DEF:%[0-9]+]]:_(s32) = G_POISON
   CHECK: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  CHECK: [[DEF1:%[0-9]+]]:_(s32) = G_POISON
   CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[DEF]]:_(s32), [[DEF1]]
 
   CHECK: [[DEF:%[0-9]+]]:_(<2 x s48>) = G_IMPLICIT_DEF
+  CHECK: [[DEF:%[0-9]+]]:_(<2 x s48>) = G_POISON
   CHECK: [[ANYEXT:%[0-9]+]]:_(<2 x s64>) = G_ANYEXT [[DEF]]
 
   CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  CHECK: [[DEF:%[0-9]+]]:_(s32) = G_POISON
   CHECK: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  CHECK: [[DEF1:%[0-9]+]]:_(s32) = G_POISON
   CHECK: [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  CHECK: [[DEF2:%[0-9]+]]:_(s32) = G_POISON
   CHECK: [[DEF3:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  CHECK: [[DEF3:%[0-9]+]]:_(s32) = G_POISON
   CHECK: [[BV:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[DEF]]:_(s32), [[DEF1]]:_(s32), [[DEF2]]:_(s32), [[DEF3]]:_(s32)
   )";
 
@@ -3905,6 +3949,7 @@ TEST_F(AArch64GISelMITest, NarrowFreeze) {
 
   CHECK: [[UV5:%[0-9]+]]:_(s16), [[UV6:%[0-9]+]]:_(s16), [[UV7:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[BITCAST]]
   CHECK: [[IMP_DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF:%[0-9]+]]:_(s16) = G_POISON
   CHECK: [[BV1:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[UV5]]:_(s16), [[UV6]]:_(s16), [[UV7]]:_(s16), [[IMP_DEF]]:_(s16)
   CHECK: [[FREEZE5:%[0-9]+]]:_(<4 x s16>) = G_FREEZE [[BV1]]
   CHECK: [[FREEZE5_E0:%[0-9]+]]:_(s16), [[FREEZE5_E1:%[0-9]+]]:_(s16), [[FREEZE5_E2:%[0-9]+]]:_(s16), [[FREEZE5_E3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[FREEZE5]]
@@ -3996,6 +4041,7 @@ TEST_F(AArch64GISelMITest, MoreElementsFreeze) {
   CHECK: [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[COPY]]
   CHECK: [[BITCAST_E0:%[0-9]+]]:_(s32), [[BITCAST_E1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]]:_(<2 x s32>)
   CHECK: [[IMP_DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF:%[0-9]+]]:_(s32) = G_POISON
   CHECK: [[BITCAST_LARGE:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[BITCAST_E0]]:_(s32), [[BITCAST_E1]]:_(s32), [[IMP_DEF]]:_(s32), [[IMP_DEF]]:_(s32)
   CHECK: [[FREEZE:%[0-9]+]]:_(<4 x s32>) = G_FREEZE [[BITCAST_LARGE]]
   CHECK: [[FREEZE_E0:%[0-9]+]]:_(s32), [[FREEZE_E1:%[0-9]+]]:_(s32), [[FREEZE_E2:%[0-9]+]]:_(s32), [[FREEZE_E3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[FREEZE]]:_(<4 x s32>)
@@ -4070,10 +4116,12 @@ TEST_F(AArch64GISelMITest, FewerElementsInsertVectorElt) {
 
   CHECK: [[UNMERGE1_0:%[0-9]+]]:_(s16), [[UNMERGE1_1:%[0-9]+]]:_(s16), [[UNMERGE1_2:%[0-9]+]]:_(s16), [[UNMERGE1_3:%[0-9]+]]:_(s16), [[UNMERGE1_4:%[0-9]+]]:_(s16), [[UNMERGE1_5:%[0-9]+]]:_(s16), [[UNMERGE1_6:%[0-9]+]]:_(s16), [[UNMERGE1_7:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[VEC8]]:_(<8 x s16>)
   CHECK: [[IMPDEF_S16:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+  CHECK: [[IMPDEF_S16:%[0-9]+]]:_(s16) = G_POISON
   CHECK: [[BUILD0:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[UNMERGE1_0]]:_(s16), [[UNMERGE1_1]]:_(s16), [[UNMERGE1_2]]:_(s16)
   CHECK: [[BUILD1:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[UNMERGE1_3]]:_(s16), [[UNMERGE1_4]]:_(s16), [[UNMERGE1_5]]:_(s16)
   CHECK: [[BUILD2:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[UNMERGE1_6]]:_(s16), [[UNMERGE1_7]]:_(s16), [[IMPDEF_S16]]:_(s16)
   CHECK: [[IMPDEF_V3S16:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
+  CHECK: [[IMPDEF_V3S16:%[0-9]+]]:_(<3 x s16>) = G_POISON
   CHECK: [[ONE_1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   CHECK: [[SUB_INSERT_7_V3S16:%[0-9]+]]:_(<3 x s16>) = G_INSERT_VECTOR_ELT [[BUILD2]]:_, [[INSERT_VAL]]:_(s16), [[ONE_1]]
 
@@ -4170,10 +4218,12 @@ TEST_F(AArch64GISelMITest, moreElementsShuffle) {
 
   CHECK: [[BV1_E0:%[0-9]+]]:_(s64), [[BV1_E1:%[0-9]+]]:_(s64), [[BV1_E2:%[0-9]+]]:_(s64), [[BV1_E3:%[0-9]+]]:_(s64), [[BV1_E4:%[0-9]+]]:_(s64), [[BV1_E5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[BV1]]:_(<6 x s64>)
   CHECK: [[IMP_DEF0:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(s64) = G_POISON
   CHECK: [[BV1_LARGE:%[0-9]+]]:_(<8 x s64>) = G_BUILD_VECTOR [[BV1_E0]]:_(s64), [[BV1_E1]]:_(s64), [[BV1_E2]]:_(s64), [[BV1_E3]]:_(s64), [[BV1_E4]]:_(s64), [[BV1_E5]]:_(s64), [[IMP_DEF0]]:_(s64), [[IMP_DEF0]]:_(s64)
 
   CHECK: [[BV2_E0:%[0-9]+]]:_(s64), [[BV2_E1:%[0-9]+]]:_(s64), [[BV2_E2:%[0-9]+]]:_(s64), [[BV2_E3:%[0-9]+]]:_(s64), [[BV2_E4:%[0-9]+]]:_(s64), [[BV2_E5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[BV2]]:_(<6 x s64>)
   CHECK: [[IMP_DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(s64) = G_POISON
   CHECK: [[BV2_LARGE:%[0-9]+]]:_(<8 x s64>) = G_BUILD_VECTOR [[BV2_E0]]:_(s64), [[BV2_E1]]:_(s64), [[BV2_E2]]:_(s64), [[BV2_E3]]:_(s64), [[BV2_E4]]:_(s64), [[BV2_E5]]:_(s64), [[IMP_DEF1]]:_(s64), [[IMP_DEF1]]:_(s64)
 
   CHECK: [[SHUF:%[0-9]+]]:_(<8 x s64>) = G_SHUFFLE_VECTOR [[BV1_LARGE]]:_(<8 x s64>), [[BV2_LARGE]]:_, shufflemask(3, 4, 9, 0, 1, 13, undef, undef)
@@ -4267,6 +4317,7 @@ TEST_F(AArch64GISelMITest, MoreElementsSelect) {
   CHECK: [[ZERO0:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   CHECK: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), %{{[0-9]+}}:_(s64), [[ZERO0]]
   CHECK: [[IMPDEF:%[0-9]+]]:_(<2 x s1>) = G_IMPLICIT_DEF
+  CHECK: [[IMPDEF:%[0-9]+]]:_(<2 x s1>) = G_POISON
   CHECK: [[ZERO1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   CHECK: [[INSERT:%[0-9]+]]:_(<2 x s1>) = G_INSERT_VECTOR_ELT [[IMPDEF]]:_, [[CMP]]:_(s1), [[ZERO1]]
   CHECK: [[SHUFFLE:%[0-9]+]]:_(<2 x s1>) = G_SHUFFLE_VECTOR [[INSERT]]:_(<2 x s1>), [[IMPDEF]]:_, shufflemask(0, 0)

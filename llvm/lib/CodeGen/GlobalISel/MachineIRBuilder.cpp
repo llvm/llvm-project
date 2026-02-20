@@ -666,6 +666,11 @@ MachineInstrBuilder MachineIRBuilder::buildUndef(const DstOp &Res) {
   return buildInstr(TargetOpcode::G_IMPLICIT_DEF, {Res}, {});
 }
 
+MachineInstrBuilder MachineIRBuilder::buildPoison(const DstOp &Res) {
+    return buildInstr(TargetOpcode::G_POISON, {Res}, {});
+}
+
+
 MachineInstrBuilder MachineIRBuilder::buildMergeValues(const DstOp &Res,
                                                        ArrayRef<Register> Ops) {
   // Unfortunately to convert from ArrayRef<LLT> to ArrayRef<SrcOp>,

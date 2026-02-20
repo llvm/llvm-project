@@ -84,6 +84,11 @@ bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
     MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
     return true;
   }
+      isLegalOrBeforeLegalizer({TargetOpcode::G_POISON, {DstTy}})) {
+    // For fixed-length vectors, it's invalid to extract out-of-range elements.
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
+    return true;
+  }
 
   return false;
 }
@@ -305,7 +310,10 @@ bool CombinerHelper::matchExtractVectorElementWithShuffleVector(
     MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
     return true;
   }
-
+      isLegalOrBeforeLegalizer({TargetOpcode::G_POISON, {DstTy}})) {
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
+    return true;
+  }
   // If the legality check failed, then we still have to abort.
   if (SrcIdx < 0)
     return false;
@@ -355,6 +363,10 @@ bool CombinerHelper::matchInsertVectorElementOOB(MachineInstr &MI,
 
   if (MaybeIndex && MaybeIndex->Value.uge(DstTy.getNumElements()) &&
       isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}})) {
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
+    return true;
+  }
+      isLegalOrBeforeLegalizer({TargetOpcode::G_POISON, {DstTy}})) {
     MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
     return true;
   }
