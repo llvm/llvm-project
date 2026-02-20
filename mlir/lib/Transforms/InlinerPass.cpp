@@ -41,11 +41,7 @@ static void defaultInlinerOptPipeline(OpPassManager &pm) {
 namespace {
 class InlinerPass : public impl::InlinerBase<InlinerPass> {
 public:
-  InlinerPass();
-  InlinerPass(const InlinerPass &) = default;
-  InlinerPass(std::function<void(OpPassManager &)> defaultPipeline);
-  InlinerPass(std::function<void(OpPassManager &)> defaultPipeline,
-              llvm::StringMap<OpPassManager> opPipelines);
+  InlinerPass(const InlinerConfig &inlinerConfig, unsigned inliningThreshold_);
   void runOnOperation() override;
 
   /// A callback provided to the inliner driver to execute
@@ -74,23 +70,14 @@ private:
 };
 } // namespace
 
-InlinerPass::InlinerPass() : InlinerPass(defaultInlinerOptPipeline) {}
-
-InlinerPass::InlinerPass(
-    std::function<void(OpPassManager &)> defaultPipelineArg)
-    : InlinerPass(std::move(defaultPipelineArg),
-                  llvm::StringMap<OpPassManager>{}) {}
-
-InlinerPass::InlinerPass(std::function<void(OpPassManager &)> defaultPipeline,
-                         llvm::StringMap<OpPassManager> opPipelines)
-    : config(std::move(defaultPipeline), maxInliningIterations) {
-  if (opPipelines.empty())
-    return;
+InlinerPass::InlinerPass(const InlinerConfig &inlinerConfig,
+                         unsigned inliningThreshold_)
+    : config(inlinerConfig) {
+  inliningThreshold = inliningThreshold_;
 
   // Update the option for the op specific optimization pipelines.
-  for (auto &it : opPipelines)
+  for (auto &it : config.getOpPipelines())
     opPipelineList.addValue(it.second);
-  config.setOpPipelines(std::move(opPipelines));
 }
 
 // Return true if the inlining ratio does not exceed the threshold.
@@ -184,16 +171,23 @@ LogicalResult InlinerPass::initializeOptions(
 }
 
 std::unique_ptr<Pass> mlir::createInlinerPass() {
-  return std::make_unique<InlinerPass>();
+  return createInlinerPass(llvm::StringMap<OpPassManager>{});
 }
 std::unique_ptr<Pass>
 mlir::createInlinerPass(llvm::StringMap<OpPassManager> opPipelines) {
-  return std::make_unique<InlinerPass>(defaultInlinerOptPipeline,
-                                       std::move(opPipelines));
+  return createInlinerPass(std::move(opPipelines), defaultInlinerOptPipeline);
 }
 std::unique_ptr<Pass> mlir::createInlinerPass(
     llvm::StringMap<OpPassManager> opPipelines,
     std::function<void(OpPassManager &)> defaultPipelineBuilder) {
-  return std::make_unique<InlinerPass>(std::move(defaultPipelineBuilder),
-                                       std::move(opPipelines));
+  InlinerConfig config;
+
+  config.setDefaultPipeline(std::move(defaultPipelineBuilder));
+  config.setOpPipelines(std::move(opPipelines));
+
+  return createInlinerPass(config);
+}
+std::unique_ptr<Pass> createInlinerPass(const InlinerConfig &inlinerConfig,
+                                        unsigned inliningThreshold) {
+  return std::make_unique<InlinerPass>(inlinerConfig, inliningThreshold);
 }

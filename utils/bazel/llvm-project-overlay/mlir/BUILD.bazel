@@ -7819,6 +7819,7 @@ cc_library(
         "include/mlir/Transforms/FoldUtils.h",
         "include/mlir/Transforms/GreedyPatternRewriteDriver.h",
         "include/mlir/Transforms/Inliner.h",
+        "include/mlir/Transforms/InlinerConfig.h",
         "include/mlir/Transforms/LoopInvariantCodeMotionUtils.h",
         "include/mlir/Transforms/RegionUtils.h",
         "include/mlir/Transforms/WalkPatternRewriteDriver.h",
