@@ -38327,6 +38327,37 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
       BuildMI(DispContBB, MIMD, TII->get(X86::JMP64r)).addReg(TReg);
       break;
     }
+    case MachineJumpTableInfo::EK_CoffImgRel32: {
+      Register ImageBaseReg = MRI->createVirtualRegister(&X86::GR64RegClass);
+      Register OReg64 = MRI->createVirtualRegister(&X86::GR64RegClass);
+      Register TReg = MRI->createVirtualRegister(&X86::GR64RegClass);
+
+      // movl (BReg,IReg64,4), OReg
+      // This implicitly zero-extends from uint32 to uint64.
+      BuildMI(DispContBB, MIMD, TII->get(X86::MOV32rm), OReg64)
+          .addReg(BReg)
+          .addImm(4)
+          .addReg(IReg64)
+          .addImm(0)
+          .addReg(0);
+
+      // leaq (__ImageBase,OReg64), ImageBaseReg
+      BuildMI(DispContBB, MIMD, TII->get(X86::LEA64r), ImageBaseReg)
+          .addReg(X86::RIP)
+          .addImm(0)
+          .addReg(0)
+          .addExternalSymbol("__ImageBase", X86II::MO_COFF_IMGREL32)
+          .addReg(0);
+
+      // addq ImageBaseReg, OReg64
+      BuildMI(DispContBB, MIMD, TII->get(X86::ADD64rr), TReg)
+          .addReg(ImageBaseReg)
+          .addReg(OReg64);
+
+      // jmpq *TReg
+      BuildMI(DispContBB, MIMD, TII->get(X86::JMP64r)).addReg(TReg);
+      break;
+    }
     default:
       llvm_unreachable("Unexpected jump table encoding");
     }

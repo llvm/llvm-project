@@ -1353,6 +1353,7 @@ unsigned MachineJumpTableInfo::getEntrySize(const DataLayout &TD) const {
   case MachineJumpTableInfo::EK_GPRel32BlockAddress:
   case MachineJumpTableInfo::EK_LabelDifference32:
   case MachineJumpTableInfo::EK_Custom32:
+  case MachineJumpTableInfo::EK_CoffImgRel32:
     return 4;
   case MachineJumpTableInfo::EK_Inline:
     return 0;
@@ -1373,10 +1374,30 @@ unsigned MachineJumpTableInfo::getEntryAlignment(const DataLayout &TD) const {
     return TD.getABIIntegerTypeAlignment(64).value();
   case MachineJumpTableInfo::EK_GPRel32BlockAddress:
   case MachineJumpTableInfo::EK_LabelDifference32:
+  case MachineJumpTableInfo::EK_CoffImgRel32:
   case MachineJumpTableInfo::EK_Custom32:
     return TD.getABIIntegerTypeAlignment(32).value();
   case MachineJumpTableInfo::EK_Inline:
     return 1;
+  }
+  llvm_unreachable("Unknown jump table encoding!");
+}
+
+/// getEntryIsSigned - Return true if the load for the jump table index
+/// should use signed extension, false if zero extension (unsigned)
+bool MachineJumpTableInfo::getEntryIsSigned() const {
+  switch (getEntryKind()) {
+  case MachineJumpTableInfo::EK_BlockAddress:
+  case MachineJumpTableInfo::EK_GPRel64BlockAddress:
+  case MachineJumpTableInfo::EK_GPRel32BlockAddress:
+  case MachineJumpTableInfo::EK_LabelDifference32:
+  case MachineJumpTableInfo::EK_LabelDifference64:
+  case MachineJumpTableInfo::EK_Inline:
+  case MachineJumpTableInfo::EK_Custom32:
+    return true;
+
+  case MachineJumpTableInfo::EK_CoffImgRel32:
+    return false;
   }
   llvm_unreachable("Unknown jump table encoding!");
 }

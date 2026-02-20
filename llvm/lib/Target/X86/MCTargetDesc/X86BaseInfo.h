@@ -486,6 +486,9 @@ enum TOF {
   /// reference is actually to the ".refptr.FOO" symbol.  This is used for
   /// stub symbols on windows.
   MO_COFFSTUB,
+  /// MO_COFF_IMGREL32: Indicates that the operand value is unsigned 32-bit
+  /// offset from ImageBase to a symbol (basically .imgrel32).
+  MO_COFF_IMGREL32,
 };
 
 enum : uint64_t {

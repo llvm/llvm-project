@@ -1,6 +1,6 @@
 ; RUN: llc < %s -relocation-model=static | FileCheck %s
-; RUN: llc < %s -relocation-model=pic | FileCheck %s --check-prefix=PIC
-; RUN: llc < %s -relocation-model=pic -code-model=large | FileCheck %s --check-prefix=PIC
+; RUN: llc < %s -relocation-model=pic | FileCheck %s --check-prefixes=CHECK,PIC
+; RUN: llc < %s -relocation-model=pic -code-model=large | FileCheck %s --check-prefixes=CHECK,LARGE
 
 ; FIXME: Remove '-relocation-model=static' when it is no longer necessary to
 ; trigger the separate .rdata section.
@@ -43,25 +43,39 @@ declare void @g(i32)
 ; CHECK: .text
 ; CHECK: f:
 ; CHECK: .seh_proc f
-; CHECK: jmpq    *.LJTI0_0
+; CHECK: .seh_endprologue
+
+; STATIC: movl .LJTI0_0(,%rax,4), %eax
+; STATIC: leaq __ImageBase(%rax), %rax
+; STATIC: jmpq *%rax
+
+; PIC: movl %ecx, %eax
+; PIC: leaq .LJTI0_0(%rip), %rcx
+; PIC: movl (%rcx,%rax,4), %eax
+; PIC: leaq __ImageBase(%rip), %rcx
+; PIC: addq %rax, %rcx
+; PIC: jmpq *%rcx
+
+; LARGE: movl %ecx, %eax
+; LARGE-NEXT: movabsq $.LJTI0_0, %rcx
+; LARGE-NEXT: movl (%rcx,%rax,4), %eax
+; LARGE-NEXT: movabsq $__ImageBase, %rcx
+; LARGE-NEXT: addq %rax, %rcx
+; LARGE-NEXT: jmpq *%rcx
+
 ; CHECK: .LBB0_{{.*}}: # %sw.bb
 ; CHECK: .LBB0_{{.*}}: # %sw.bb2
 ; CHECK: .LBB0_{{.*}}: # %sw.bb3
 ; CHECK: .LBB0_{{.*}}: # %sw.bb1
-; CHECK: callq g
-; CHECK: jmp g # TAILCALL
+; STATIC: callq g
+; STATIC: jmp g # TAILCALL
 ; CHECK: .section        .rdata,"dr"
-; CHECK: .quad .LBB0_
-; CHECK: .quad .LBB0_
-; CHECK: .quad .LBB0_
-; CHECK: .quad .LBB0_
+; CHECK: .LJTI0_0:
+; CHECK: .long .LBB0_{{[0-9]+}}@IMGREL
+; CHECK: .long .LBB0_{{[0-9]+}}@IMGREL
+; CHECK: .long .LBB0_{{[0-9]+}}@IMGREL
+; CHECK: .long .LBB0_{{[0-9]+}}@IMGREL
 
 ; It's important that we switch back to .text here, not .rdata.
 ; CHECK: .text
 ; CHECK: .seh_endproc
-
-; Windows PIC code should use 32-bit entries
-; PIC: .long .LBB0_2-.LJTI0_0
-; PIC: .long .LBB0_3-.LJTI0_0
-; PIC: .long .LBB0_4-.LJTI0_0
-; PIC: .long .LBB0_5-.LJTI0_0
