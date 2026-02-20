@@ -443,6 +443,8 @@ define void @foo(i8 %v) {
   auto *F = Ctx.createFunction(LLVMF);
   EXPECT_DEATH(sandboxir::Region::createRegionsFromMD(*F, *TTI), "No region.*");
 #endif
+  EXPECT_DEATH(sandboxir::Region::createRegionsFromMD(*F, *TTI),
+               "No region specified for Aux!");
 }
 
 TEST_F(RegionTest, AuxRoundTrip) {
