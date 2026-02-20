@@ -938,20 +938,12 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
               << " the destination value is 0x"
               << Twine::utohexstr(ArrayStart + *Value) << '\n';
 
-    TargetAddress = ArrayStart + *Value;
-
-    // Remove spurious JumpTable at EntryAddress caused by PIC reference from
-    // the load instruction.
-    BC.deleteJumpTable(EntryAddress);
-
-    // Replace FixedEntryDispExpr used in target address calculation with outer
-    // jump table reference.
-    JumpTable *JT = BC.getJumpTableContainingAddress(ArrayStart);
-    assert(JT && "Must have a containing jump table for PIC fixed branch");
-    BC.MIB->replaceMemOperandDisp(*FixedEntryLoadInstr, JT->getFirstLabel(),
-                                  EntryAddress - ArrayStart, &*BC.Ctx);
-
-    return BranchType;
+    JumpTable *JT = BC.getJumpTableContainingAddress(EntryAddress);
+    if (JT) {
+      // Remove spurious JumpTable at EntryAddress caused by PIC reference from
+      // the load instruction.
+      BC.deleteJumpTable(JT->getAddress());
+    }
   }
 
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: addressed memory is 0x"
@@ -1009,7 +1001,8 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
 
   // Check that jump table type in instruction pattern matches memory contents.
   JumpTable::JumpTableType JTType;
-  if (BranchType == IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE) {
+  if (BranchType == IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE ||
+      BranchType == IndirectBranchType::POSSIBLE_PIC_FIXED_BRANCH) {
     if (MemType != MemoryContentsType::POSSIBLE_PIC_JUMP_TABLE)
       return IndirectBranchType::UNKNOWN;
     JTType = JumpTable::JTT_PIC;
@@ -1030,6 +1023,22 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   BC.MIB->setJumpTable(Instruction, ArrayStart, IndexRegNum);
 
   JTSites.emplace_back(Offset, ArrayStart);
+
+  if (FixedEntryLoadInstr) {
+    assert(BranchType == IndirectBranchType::POSSIBLE_PIC_FIXED_BRANCH &&
+           "Invalid IndirectBranch type");
+    JumpTable *JT = BC.getJumpTableContainingAddress(ArrayStart);
+    if (!JT)
+      return BranchType;
+    MCInst::iterator FixedEntryDispOperand =
+        BC.MIB->getMemOperandDisp(*FixedEntryLoadInstr);
+    assert(FixedEntryDispOperand != FixedEntryLoadInstr->end() &&
+           "Invalid memory instruction");
+    const MCExpr *FixedEntryDispExpr = FixedEntryDispOperand->getExpr();
+    const uint64_t EntryAddress = getExprValue(FixedEntryDispExpr);
+    BC.MIB->replaceMemOperandDisp(*FixedEntryLoadInstr, JT->getFirstLabel(),
+                                  EntryAddress - ArrayStart, &*BC.Ctx);
+  }
 
   return BranchType;
 }
