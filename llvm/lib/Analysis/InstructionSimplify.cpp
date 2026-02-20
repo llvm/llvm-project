@@ -2223,6 +2223,20 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       match(Op1, m_Xor(m_Specific(A), m_SpecificInt(~*C1))))
     return Constant::getNullValue(Op0->getType());
 
+  // (X <= ~Y) && (Y > ~X) --> 0
+  CmpPredicate Pred0, Pred1;
+  if (match(Op0, m_c_ICmp(Pred0, m_Value(X), m_Not(m_Value(Y)))) &&
+      match(Op1, m_c_ICmp(Pred1, m_Specific(Y), m_Not(m_Specific(X))))) {
+    if (ICmpInst::isSigned(Pred0) == ICmpInst::isSigned(Pred1)) {
+      if (ICmpInst::isLE(Pred0) && ICmpInst::isGT(Pred1))
+        return ConstantInt::getFalse(Op0->getType());
+      if (ICmpInst::isLT(Pred0) && ICmpInst::isGE(Pred1))
+        return ConstantInt::getFalse(Op0->getType());
+      if (ICmpInst::isLT(Pred0) && ICmpInst::isGT(Pred1))
+        return ConstantInt::getFalse(Op0->getType());
+    }
+  }
+
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
     if (std::optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL)) {
       // If Op0 is true implies Op1 is true, then Op0 is a subset of Op1.
