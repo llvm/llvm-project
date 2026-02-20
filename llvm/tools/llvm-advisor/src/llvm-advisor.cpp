@@ -23,107 +23,63 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
-static llvm::cl::opt<std::string>
-    g_ConfigFile("config", llvm::cl::desc("Configuration file"),
-               llvm::cl::value_desc("filename"));
-static llvm::cl::opt<std::string> g_OutputDir("output-dir",
-                                            llvm::cl::desc("Output directory"),
-                                            llvm::cl::value_desc("directory"));
-static llvm::cl::opt<bool> g_Verbose("verbose", llvm::cl::desc("Verbose output"));
-static llvm::cl::opt<bool> g_KeepTemps("keep-temps",
-                                     llvm::cl::desc("Keep temporary files"));
-static llvm::cl::opt<bool> g_NoProfiler("no-profiler",
-                                      llvm::cl::desc("Disable profiler"));
-static llvm::cl::opt<int>
-    g_Port("port", llvm::cl::desc("Web server port (for view command)"),
-         llvm::cl::value_desc("port"), llvm::cl::init(8000));
+namespace {
+
+llvm::cl::OptionCategory AdvisorCategory("llvm-advisor options");
+
+llvm::cl::opt<std::string> g_ConfigFile("config",
+                                        llvm::cl::desc("Configuration file"),
+                                        llvm::cl::value_desc("filename"),
+                                        llvm::cl::cat(AdvisorCategory));
+llvm::cl::opt<std::string> g_OutputDir("output-dir",
+                                       llvm::cl::desc("Output directory"),
+                                       llvm::cl::value_desc("directory"),
+                                       llvm::cl::cat(AdvisorCategory));
+llvm::cl::opt<bool> g_Verbose("verbose", llvm::cl::desc("Verbose output"),
+                              llvm::cl::cat(AdvisorCategory));
+llvm::cl::opt<bool> g_KeepTemps("keep-temps",
+                                llvm::cl::desc("Keep temporary files"),
+                                llvm::cl::cat(AdvisorCategory));
+llvm::cl::opt<bool> g_NoProfiler("no-profiler",
+                                 llvm::cl::desc("Disable profiler"),
+                                 llvm::cl::cat(AdvisorCategory));
+
+llvm::cl::SubCommand ViewCmd("view", "Compile and launch web viewer");
+
+llvm::cl::opt<int> g_Port("port",
+                          llvm::cl::desc("Web server port (for view command)"),
+                          llvm::cl::value_desc("port"), llvm::cl::init(8000),
+                          llvm::cl::sub(ViewCmd));
+
+llvm::cl::list<std::string> g_DefaultCompileCommand(
+    llvm::cl::Positional, llvm::cl::desc("<compiler> [compiler-args...]"),
+    llvm::cl::ZeroOrMore, llvm::cl::cat(AdvisorCategory));
+llvm::cl::list<std::string>
+    g_ViewCompileCommand(llvm::cl::Positional,
+                         llvm::cl::desc("<compiler> [compiler-args...]"),
+                         llvm::cl::ZeroOrMore, llvm::cl::sub(ViewCmd));
+
+} // namespace
 
 auto main(int argc, char **argv) -> int {
   llvm::InitLLVM X(argc, argv);
 
-  // Handle help and subcommands before argument parsing
-  if (argc > 1) {
-    llvm::StringRef firstArg(argv[1]);
-    if (firstArg == "--help" || firstArg == "-h") {
-      llvm::outs() << "LLVM Advisor - Compilation analysis tool\n\n";
-      llvm::outs() << "Usage:\n";
-      llvm::outs() << "  llvm-advisor [options] <compiler> [compiler-args...]  "
-                      "   - Compile with data collection\n";
-      llvm::outs() << "  llvm-advisor view [options] <compiler> "
-                      "[compiler-args...] - Compile and launch web viewer\n\n";
-      llvm::outs() << "Examples:\n";
-      llvm::outs() << "  llvm-advisor clang -O2 -g main.c\n";
-      llvm::outs() << "  llvm-advisor view --port 8080 clang++ -O3 app.cpp\n\n";
-      llvm::outs() << "Options:\n";
-      llvm::outs() << "  --config <file>      Configuration file\n";
-      llvm::outs() << "  --output-dir <dir>   Output directory (default: "
-                      ".llvm-advisor)\n";
-      llvm::outs() << "  --verbose            Verbose output\n";
-      llvm::outs() << "  --keep-temps         Keep temporary files\n";
-      llvm::outs() << "  --no-profiler        Disable profiler\n";
-      llvm::outs() << "  --port <port>        Web server port for view command "
-                      "(default: 8000)\n";
-      return 0;
-    }
-  }
+  llvm::cl::HideUnrelatedOptions({&AdvisorCategory});
+  llvm::cl::ParseCommandLineOptions(argc, argv, "LLVM Compilation Advisor");
 
-  // Check for 'view' subcommand
-  bool isViewCommand = false;
-  int argOffset = 0;
-
-  if (argc > 1 && llvm::StringRef(argv[1]) == "view") {
-    isViewCommand = true;
-    argOffset = 1;
-  }
-
-  // Parse llvm-advisor options until we find the compiler
-  llvm::SmallVector<const char *, 8> advisorArgs;
-  advisorArgs.push_back(argv[0]);
-
-  int compilerArgStart = 1 + argOffset;
-  bool foundCompiler = false;
-
-  for (int i = 1 + argOffset; i < argc; ++i) {
-    llvm::StringRef arg(argv[i]);
-    if (arg.starts_with("--") ||
-        (arg.starts_with("-") && arg.size() > 1 && arg != "-")) {
-      advisorArgs.push_back(argv[i]);
-      if (arg == "--config" || arg == "--output-dir" || arg == "--port") {
-        if (i + 1 < argc && !llvm::StringRef(argv[i + 1]).starts_with("-")) {
-          advisorArgs.push_back(argv[++i]);
-        }
-      }
-    } else {
-      compilerArgStart = i;
-      foundCompiler = true;
-      break;
-    }
-  }
-
-  if (!foundCompiler) {
-    llvm::errs() << "Error: No compiler command provided.\n";
-    if (isViewCommand) {
-      llvm::errs() << "Usage: llvm-advisor view [options] <compiler> "
-                      "[compiler-args...]\n";
-    } else {
-      llvm::errs()
-          << "Usage: llvm-advisor [options] <compiler> [compiler-args...]\n";
-    }
+  const bool isViewCommand = ViewCmd;
+  const auto &CommandLine =
+      isViewCommand ? g_ViewCompileCommand : g_DefaultCompileCommand;
+  if (CommandLine.empty()) {
+    llvm::errs() << "error: missing compiler command\n";
+    llvm::cl::PrintHelpMessage();
     return 1;
   }
 
-  // Parse llvm-advisor options
-  int advisorArgc = static_cast<int>(advisorArgs.size());
-  llvm::cl::ParseCommandLineOptions(advisorArgc,
-                                    const_cast<char **>(advisorArgs.data()),
-                                    "LLVM Compilation Advisor");
-
-  // Extract compiler and arguments
-  std::string compiler = argv[compilerArgStart];
+  std::string compiler = CommandLine.front();
   llvm::SmallVector<std::string, 8> compilerArgs;
-  for (int i = compilerArgStart + 1; i < argc; ++i) {
-    compilerArgs.push_back(argv[i]);
-  }
+  for (size_t i = 1; i < CommandLine.size(); ++i)
+    compilerArgs.push_back(CommandLine[i]);
 
   // Configure advisor
   llvm::advisor::AdvisorConfig config;
