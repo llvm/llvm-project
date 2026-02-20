@@ -139,6 +139,12 @@ public:
     setPropertiesFromAttr(OperationName, OpaqueProperties, Attribute,
                           function_ref<InFlightDiagnostic()> emitError) = 0;
     virtual Attribute getPropertiesAsAttr(Operation *) = 0;
+    virtual LogicalResult
+    setPropertyFromAttr(OperationName, OpaqueProperties, StringRef name,
+                        Attribute,
+                        function_ref<InFlightDiagnostic()> emitError) = 0;
+    virtual FailureOr<Attribute> getPropertyAsAttr(Operation *,
+                                                   StringRef name) = 0;
     virtual void copyProperties(OpaqueProperties, OpaqueProperties) = 0;
     virtual bool compareProperties(OpaqueProperties, OpaqueProperties) = 0;
     virtual llvm::hash_code hashProperties(OpaqueProperties) = 0;
@@ -220,6 +226,11 @@ protected:
     setPropertiesFromAttr(OperationName, OpaqueProperties, Attribute,
                           function_ref<InFlightDiagnostic()> emitError) final;
     Attribute getPropertiesAsAttr(Operation *) final;
+    LogicalResult
+    setPropertyFromAttr(OperationName, OpaqueProperties, StringRef name,
+                        Attribute,
+                        function_ref<InFlightDiagnostic()> emitError) final;
+    FailureOr<Attribute> getPropertyAsAttr(Operation *, StringRef name) final;
     void copyProperties(OpaqueProperties, OpaqueProperties) final;
     bool compareProperties(OpaqueProperties, OpaqueProperties) final;
     llvm::hash_code hashProperties(OpaqueProperties) final;
@@ -441,6 +452,20 @@ public:
                                             emitError);
   }
 
+  /// Return an op property converted to an Attribute.
+  FailureOr<Attribute> getOpPropertyAsAttribute(Operation *op,
+                                                StringRef name) const {
+    return getImpl()->getPropertyAsAttr(op, name);
+  }
+
+  /// Define an op property from the provided Attribute.
+  LogicalResult setOpPropertyFromAttribute(
+      OperationName opName, OpaqueProperties properties, StringRef name,
+      Attribute attr, function_ref<InFlightDiagnostic()> emitError) const {
+    return getImpl()->setPropertyFromAttr(opName, properties, name, attr,
+                                          emitError);
+  }
+
   void copyOpProperties(OpaqueProperties lhs, OpaqueProperties rhs) const {
     return getImpl()->copyProperties(lhs, rhs);
   }
@@ -649,6 +674,26 @@ public:
                                                concreteOp.getProperties());
       }
       return {};
+    }
+    LogicalResult
+    setPropertyFromAttr(OperationName opName, OpaqueProperties properties,
+                        StringRef name, Attribute attr,
+                        function_ref<InFlightDiagnostic()> emitError) final {
+      if constexpr (hasProperties) {
+        auto p = properties.as<Properties *>();
+        return ConcreteOp::setPropertyFromAttr(*p, name, attr, emitError);
+      }
+      emitError() << "this operation does not support properties";
+      return failure();
+    }
+    FailureOr<Attribute> getPropertyAsAttr(Operation *op,
+                                           StringRef name) final {
+      if constexpr (hasProperties) {
+        auto concreteOp = cast<ConcreteOp>(op);
+        return ConcreteOp::getPropertyAsAttr(concreteOp->getContext(),
+                                             concreteOp.getProperties(), name);
+      }
+      return failure();
     }
     bool compareProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {
       if constexpr (hasProperties) {

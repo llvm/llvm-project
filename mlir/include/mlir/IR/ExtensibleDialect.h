@@ -564,6 +564,17 @@ public:
     return failure();
   }
   Attribute getPropertiesAsAttr(Operation *op) final { return {}; }
+
+  LogicalResult
+  setPropertyFromAttr(OperationName opName, OpaqueProperties properties,
+                      StringRef name, Attribute attr,
+                      function_ref<InFlightDiagnostic()> emitError) final {
+    emitError() << "extensible Dialects don't support properties";
+    return failure();
+  }
+  FailureOr<Attribute> getPropertyAsAttr(Operation *op, StringRef name) final {
+    return failure();
+  }
   void copyProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {}
   bool compareProperties(OpaqueProperties, OpaqueProperties) final {
     return false;
