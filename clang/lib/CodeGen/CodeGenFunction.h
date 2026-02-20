@@ -2452,6 +2452,13 @@ public:
 
   void FinishThunk();
 
+  /// Start an Objective-C direct method thunk.
+  void StartObjCDirectThunk(const ObjCMethodDecl *OMD, llvm::Function *Fn,
+                            const CGFunctionInfo &FI);
+
+  /// Finish an Objective-C direct method thunk.
+  void FinishObjCDirectThunk();
+
   /// Emit a musttail call for a thunk with a potentially adjusted this pointer.
   void EmitMustTailThunk(GlobalDecl GD, llvm::Value *AdjustedThisPtr,
                          llvm::FunctionCallee Callee);
