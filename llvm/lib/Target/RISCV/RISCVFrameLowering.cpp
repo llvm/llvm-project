@@ -1580,6 +1580,35 @@ static MCRegister getRVVBaseRegister(const RISCVRegisterInfo &TRI,
   return BaseReg;
 }
 
+#define GET_REGISTER_MATCHER
+#include "RISCVGenAsmMatcher.inc"
+
+void RISCVFrameLowering::determineUncondPrologCalleeSaves(
+    MachineFunction &MF, const MCPhysReg *CSRegs,
+    BitVector &UncondPrologCSRs) const {
+
+  const Function &F = MF.getFunction();
+  if (!F.hasFnAttribute("riscv-user-defined-uncond-prolog-csrs"))
+    return;
+  const AttributeList &Attrs = F.getAttributes();
+  StringRef RegString = Attrs.getFnAttr("riscv-user-defined-uncond-prolog-csrs")
+                            .getValueAsString();
+  SmallVector<llvm::StringRef, 4> RegNames;
+  llvm::SplitString(RegString, RegNames, ",");
+  for (auto &Name : RegNames) {
+    Register Reg = MatchRegisterName(Name);
+    if (!Reg)
+      Reg = MatchRegisterAltName(Name);
+    if (!Reg) {
+      reportFatalUsageError(Twine("Couldn't parse register: ") + Name + "\n");
+    }
+    UncondPrologCSRs.set(Reg.id());
+  }
+
+  TargetFrameLowering::determineUncondPrologCalleeSaves(MF, CSRegs,
+                                                        UncondPrologCSRs);
+}
+
 void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                               BitVector &SavedRegs,
                                               RegScavenger *RS) const {
