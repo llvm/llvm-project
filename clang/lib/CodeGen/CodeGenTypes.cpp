@@ -40,8 +40,10 @@ CodeGenTypes::CodeGenTypes(CodeGenModule &cgm)
 
 CodeGenTypes::~CodeGenTypes() {
   for (llvm::FoldingSet<CGFunctionInfo>::iterator
-       I = FunctionInfos.begin(), E = FunctionInfos.end(); I != E; )
-    delete &*I++;
+       I = FunctionInfos.begin(), E = FunctionInfos.end(); I != E; ) {
+    I->~CGFunctionInfo();
+    operator delete(&*I++);
+  }
 }
 
 CGCXXABI &CodeGenTypes::getCXXABI() const { return getCGM().getCXXABI(); }
