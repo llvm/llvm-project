@@ -75,12 +75,20 @@ Changes to the LLVM IR
   the requirements of each call. Currently only `float` is supported; this can
   keep floating point support out of printf if it can be proven unused.
 * Case values are no longer operands of `SwitchInst`.
+* Allow metadata to be attached to IFuncs.
 
 Changes to LLVM infrastructure
 ------------------------------
+* On AIX, fixed the OS version in target triples on PASE.
+* On AIX, automatically raise soft memory limits to hard limits on tool startup ([#167928](https://github.com/llvm/llvm-project/pull/167928)).
 
 Changes to building LLVM
 ------------------------
+
+* On AIX, remove default flag `-fno-semantic-interposition`.
+* On AIX, LLVM shared libraries are now built as shared library archives by default ([#155686](https://github.com/llvm/llvm-project/pull/155686)).
+* On AIX, enable building with CMake 4.0 and above ([#154537](https://github.com/llvm/llvm-project/pull/154537)).
+* On AIX, enable building with the AIX form of the lto cache dir option ([#168868](https://github.com/llvm/llvm-project/pull/168868)).
 
 Changes to TableGen
 -------------------
@@ -164,6 +172,28 @@ Changes to the PowerPC Backend
 ------------------------------
 
 * `half` now uses a soft float ABI, which works correctly in more cases.
+* Add ``mtpidr`` alias introduced in ISA3.0.
+* Update `tlbie` instruction implementation for ISA3.0+.
+* Update ``strlen``, ``strcpy`` and ``memcmp`` to use milicode calls instead of library calls.
+* Prototyped intrinsic for xvrlw and load/store with right length left-justified.
+* Prototyped Elliptic Curve Cryptography (ECC) Instructions.
+* Prototyped VSX Vector Integer Arithmetic Instructions.
+* Prototyped AES Acceleration Instructions.
+* Prototyped vector uncompress instructions.
+* Prototyped vector unpack instructions.
+* Prototyped 32-byte indexed paired load and store instructions.
+* Prototyped Context Switch instruction ``mtlpl``.
+* Prototyped VSX rotate left word instruction.
+* Prototyped paddis.
+* Prototyped eTCE instructions.
+* Prototyped Dense Math Facility and DMR COPY support.
+* Implement the trampoline intrinsics and nest parameter for AIX.
+* Introduced a minimum threshold for the largest number of comparisons needed to trigger bit test generation during switch lowering.
+* Relax strictfp to constrain only ``libm`` libcalls, permitting non-FP optimizations.
+* Use ``bne-`` for atomic operations after store conditional.
+* Consolidated predicate definitions into ``PPC.td``.
+* Cleanup asm parser code to use template functions for the various versions of
+  ``getImm*Encoding()`` and ``is*Imm()`` used in ``PPCRegisterInfo.td``.
 
 Changes to the RISC-V Backend
 -----------------------------

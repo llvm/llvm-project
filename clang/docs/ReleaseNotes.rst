@@ -786,6 +786,13 @@ CUDA Support
 
 - Support calling `consteval` function between different target.
 
+PowerPC Support
+^^^^^^^^^^^^^^^
+
+- Prototyped Dense Math Facility builtins.
+- Prototyped initial support for AMO load builtins.
+- Add support for ``-fpatchable-function-entry`` on PPC64LE.
+
 AIX Support
 ^^^^^^^^^^^
 
