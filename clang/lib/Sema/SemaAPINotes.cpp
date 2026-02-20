@@ -335,6 +335,11 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                             ASTAllocateString(S.Context, Info.SwiftName));
         });
   }
+
+  // swift_attr
+  for (const std::string &swiftAttrName : Info.SwiftAttributes) {
+    D->addAttr(SwiftAttrAttr::Create(S.Context, swiftAttrName));
+  }
 }
 
 static void ProcessAPINotes(Sema &S, Decl *D,

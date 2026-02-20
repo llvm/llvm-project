@@ -83,6 +83,9 @@ public:
   /// Swift name of this entity.
   std::string SwiftName;
 
+  /// Swift attributes to apply to this entity.
+  std::vector<std::string> SwiftAttributes;
+
   CommonEntityInfo()
       : Unavailable(0), UnavailableInSwift(0), SwiftPrivateSpecified(0),
         SwiftPrivate(0), SwiftSafetyAudited(0), SwiftSafety(0) {}
@@ -133,6 +136,10 @@ public:
     if (SwiftName.empty())
       SwiftName = RHS.SwiftName;
 
+    // Merge SwiftAttributes
+    SwiftAttributes.insert(SwiftAttributes.end(), RHS.SwiftAttributes.begin(),
+                           RHS.SwiftAttributes.end());
+
     return *this;
   }
 
@@ -147,7 +154,8 @@ inline bool operator==(const CommonEntityInfo &LHS,
          LHS.SwiftPrivateSpecified == RHS.SwiftPrivateSpecified &&
          LHS.SwiftPrivate == RHS.SwiftPrivate &&
          LHS.SwiftSafetyAudited == RHS.SwiftSafetyAudited &&
-         LHS.SwiftSafety == RHS.SwiftSafety && LHS.SwiftName == RHS.SwiftName;
+         LHS.SwiftSafety == RHS.SwiftSafety && LHS.SwiftName == RHS.SwiftName &&
+         LHS.SwiftAttributes == RHS.SwiftAttributes;
 }
 
 inline bool operator!=(const CommonEntityInfo &LHS,

@@ -502,6 +502,14 @@ public:
   }
 };
 
+/// Emit a serialized representation of the Attribute from the SwifrAttributes
+/// sequence.
+void emitSwiftAttribute(raw_ostream &OS, const std::string &Attribute) {
+  llvm::support::endian::Writer writer(OS, llvm::endianness::little);
+  writer.write<uint16_t>(Attribute.size());
+  OS.write(Attribute.c_str(), Attribute.size());
+}
+
 /// Emit a serialized representation of the common entity information.
 void emitCommonEntityInfo(raw_ostream &OS, const CommonEntityInfo &CEI) {
   llvm::support::endian::Writer writer(OS, llvm::endianness::little);
@@ -530,12 +538,26 @@ void emitCommonEntityInfo(raw_ostream &OS, const CommonEntityInfo &CEI) {
 
   writer.write<uint16_t>(CEI.SwiftName.size());
   OS.write(CEI.SwiftName.c_str(), CEI.SwiftName.size());
+
+  writer.write<uint16_t>(CEI.SwiftAttributes.size());
+  for (const auto &Attribute : CEI.SwiftAttributes)
+    emitSwiftAttribute(OS, Attribute);
+}
+
+/// Retrieve the serialized size of the given an Attribute in a SwiftAttributes
+/// sequence, for use in on-disk hash tables.
+unsigned getSwiftAttributeSize(const std::string &Attribute) {
+  return sizeof(uint16_t) + Attribute.size(); // length and contents
 }
 
 /// Retrieve the serialized size of the given CommonEntityInfo, for use in
 /// on-disk hash tables.
 unsigned getCommonEntityInfoSize(const CommonEntityInfo &CEI) {
-  return 5 + CEI.UnavailableMsg.size() + CEI.SwiftName.size();
+  unsigned size = 5 + CEI.UnavailableMsg.size() + CEI.SwiftName.size();
+  size += sizeof(uint16_t); // SwiftAttributes length
+  for (const auto &Attribute : CEI.SwiftAttributes)
+    size += getSwiftAttributeSize(Attribute);
+  return size;
 }
 
 // Retrieve the serialized size of the given CommonTypeInfo, for use
