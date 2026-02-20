@@ -9,6 +9,8 @@
 #include "BuiltinDialectBytecode.h"
 #include "AttributeDetail.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
+#include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -86,6 +88,302 @@ static void writePotentiallySplatString(DialectBytecodeWriter &writer,
 
   for (StringRef str : attr.getRawStringData())
     writer.writeOwnedString(str);
+}
+
+//===----------------------------------------------------------------------===//
+// AffineExpr / AffineMap bytecode helpers
+//===----------------------------------------------------------------------===//
+
+// AffineExpr kind encoding:
+// Extra kinds may be appended here but the existing ones and their ordering
+// should not be changed.
+enum class AffineExprBytecodeKind : uint64_t {
+  DimId = 0,
+  SymbolId = 1,
+  Constant = 2,
+  Add = 3,
+  Mul = 4,
+  Mod = 5,
+  FloorDiv = 6,
+  CeilDiv = 7
+};
+
+// AffineMap kind encoding. These are packed into the low 2 bits of the header
+// varint and fixed.
+enum class AffineMapBytecodeKind : unsigned {
+  Identity = 0,
+  Permutation = 1,
+  ProjectedPermutation = 2,
+  General = 3
+};
+
+/// Convert a binary AffineExprKind to its bytecode wire encoding.
+static AffineExprBytecodeKind toBytecodeKind(AffineExprKind k) {
+  switch (k) {
+  case AffineExprKind::Add:      return AffineExprBytecodeKind::Add;
+  case AffineExprKind::Mul:      return AffineExprBytecodeKind::Mul;
+  case AffineExprKind::Mod:      return AffineExprBytecodeKind::Mod;
+  case AffineExprKind::FloorDiv: return AffineExprBytecodeKind::FloorDiv;
+  case AffineExprKind::CeilDiv:  return AffineExprBytecodeKind::CeilDiv;
+  default:
+    llvm_unreachable("not a binary AffineExprKind");
+  }
+}
+
+/// Convert a bytecode wire value back to a binary AffineExprKind.
+/// Caller must guarantee `kind` is one of the binary operator values.
+static AffineExprKind fromBytecodeKind(uint64_t kind) {
+  switch (kind) {
+  case static_cast<uint64_t>(AffineExprBytecodeKind::Add):      return AffineExprKind::Add;
+  case static_cast<uint64_t>(AffineExprBytecodeKind::Mul):      return AffineExprKind::Mul;
+  case static_cast<uint64_t>(AffineExprBytecodeKind::Mod):      return AffineExprKind::Mod;
+  case static_cast<uint64_t>(AffineExprBytecodeKind::FloorDiv): return AffineExprKind::FloorDiv;
+  case static_cast<uint64_t>(AffineExprBytecodeKind::CeilDiv):  return AffineExprKind::CeilDiv;
+  }
+  llvm_unreachable("not a binary AffineExprBytecodeKind");
+}
+
+/// Read a single AffineExpr using iterative prefix decoding. The wire format
+/// is prefix order (operator and then children), which is self-delimiting.
+/// Instead of C++ recursion the reader uses an explicit work stack, bounding
+/// memory to O(depth) and eliminating stack-overflow risk on malicious input.
+static FailureOr<AffineExpr> readAffineExpr(DialectBytecodeReader &reader,
+                                            MLIRContext *context) {
+  // A work-stack item is either ReadOperand (0) or a combine marker whose
+  // payload is an AffineExprKind.
+  struct WorkItem {
+    bool isCombine;
+    AffineExprKind combineKind; // only valid when isCombine == true
+    static WorkItem read() { return {false, {}}; }
+    static WorkItem combine(AffineExprKind k) { return {true, k}; }
+  };
+
+  SmallVector<WorkItem, 16> work;
+  SmallVector<AffineExpr, 8> operands;
+  work.push_back(WorkItem::read());
+
+  while (!work.empty()) {
+    // Bound total iterations to catch malformed input.
+    if (work.size() > 128)
+      return reader.emitError("AffineExpr work stack overflow"), failure();
+
+    WorkItem item = work.pop_back_val();
+
+    if (item.isCombine) {
+      // Pop two operands and combine.
+      if (operands.size() < 2)
+        return reader.emitError("malformed AffineExpr: operand underflow"),
+               failure();
+      AffineExpr rhs = operands.pop_back_val();
+      AffineExpr lhs = operands.pop_back_val();
+      operands.push_back(getAffineBinaryOpExpr(item.combineKind, lhs, rhs));
+      continue;
+    }
+
+    // ReadOperand: read the next token.
+    uint64_t kind;
+    if (failed(reader.readVarInt(kind)))
+      return failure();
+
+    // Switch on the raw uint64_t to keep the default case valid for
+    // unknown/future wire values without triggering -Wcovered-switch-default.
+    switch (kind) {
+    case static_cast<uint64_t>(AffineExprBytecodeKind::DimId): {
+      uint64_t position;
+      if (failed(reader.readVarInt(position)))
+        return failure();
+      operands.push_back(getAffineDimExpr(position, context));
+      break;
+    }
+    case static_cast<uint64_t>(AffineExprBytecodeKind::SymbolId): {
+      uint64_t position;
+      if (failed(reader.readVarInt(position)))
+        return failure();
+      operands.push_back(getAffineSymbolExpr(position, context));
+      break;
+    }
+    case static_cast<uint64_t>(AffineExprBytecodeKind::Constant): {
+      int64_t value;
+      if (failed(reader.readSignedVarInt(value)))
+        return failure();
+      operands.push_back(getAffineConstantExpr(value, context));
+      break;
+    }
+    case static_cast<uint64_t>(AffineExprBytecodeKind::Add):
+    case static_cast<uint64_t>(AffineExprBytecodeKind::Mul):
+    case static_cast<uint64_t>(AffineExprBytecodeKind::Mod):
+    case static_cast<uint64_t>(AffineExprBytecodeKind::FloorDiv):
+    case static_cast<uint64_t>(AffineExprBytecodeKind::CeilDiv): {
+      // Schedule: read RHS, read LHS, then combine.
+      // Work stack is LIFO, so push in reverse order.
+      work.push_back(WorkItem::combine(fromBytecodeKind(kind)));
+      work.push_back(WorkItem::read()); // RHS
+      work.push_back(WorkItem::read()); // LHS
+      break;
+    }
+    default:
+      return reader.emitError("unknown AffineExpr kind: ") << kind, failure();
+    }
+  }
+
+  if (operands.size() != 1)
+    return reader.emitError("malformed AffineExpr: expected single result"),
+           failure();
+
+  return operands.front();
+}
+
+/// Write an AffineExpr in prefix order (operator first, then children).
+static void writeAffineExpr(DialectBytecodeWriter &writer, AffineExpr expr) {
+  switch (expr.getKind()) {
+  case AffineExprKind::DimId:
+    writer.writeVarInt(static_cast<uint64_t>(AffineExprBytecodeKind::DimId));
+    writer.writeVarInt(cast<AffineDimExpr>(expr).getPosition());
+    break;
+  case AffineExprKind::SymbolId:
+    writer.writeVarInt(static_cast<uint64_t>(AffineExprBytecodeKind::SymbolId));
+    writer.writeVarInt(cast<AffineSymbolExpr>(expr).getPosition());
+    break;
+  case AffineExprKind::Constant:
+    writer.writeVarInt(static_cast<uint64_t>(AffineExprBytecodeKind::Constant));
+    writer.writeSignedVarInt(cast<AffineConstantExpr>(expr).getValue());
+    break;
+  case AffineExprKind::Add:
+  case AffineExprKind::Mul:
+  case AffineExprKind::Mod:
+  case AffineExprKind::FloorDiv:
+  case AffineExprKind::CeilDiv: {
+    // Write operator first (prefix order).
+    writer.writeVarInt(static_cast<uint64_t>(toBytecodeKind(expr.getKind())));
+    auto binExpr = cast<AffineBinaryOpExpr>(expr);
+    writeAffineExpr(writer, binExpr.getLHS());
+    writeAffineExpr(writer, binExpr.getRHS());
+    break;
+  }
+  }
+}
+
+/// Read an AffineMap with packed kind header.
+///
+/// AffineMap :=
+///   header(varint)        // (numDims << 2) | mapKind
+///   payload               // depends on mapKind
+///
+/// The header is there for concise encoding of the most common occuring cases.
+///
+/// mapKind = header & 0x3:
+///   Identity(0): no further data
+///   Permutation(1): positions(varint*)
+///   ProjectedPermutation(2): numResults(varint), positions(varint*)
+///   General(3): numSymbols(varint), numResults(varint), results(AffineExpr*)
+static LogicalResult readAffineMap(DialectBytecodeReader &reader,
+                                   MLIRContext *context, AffineMap &map) {
+  uint64_t header;
+  if (failed(reader.readVarInt(header)))
+    return failure();
+
+  // Keep as unsigned to avoid -Wcovered-switch-default below.
+  unsigned mapKind = header & 0x3;
+  unsigned numDims = header >> 2;
+
+  switch (mapKind) {
+  case static_cast<unsigned>(AffineMapBytecodeKind::Identity):
+    map = AffineMap::getMultiDimIdentityMap(numDims, context);
+    return success();
+
+  case static_cast<unsigned>(AffineMapBytecodeKind::Permutation): {
+    SmallVector<unsigned> perm(numDims);
+    for (unsigned i = 0; i < numDims; ++i) {
+      uint64_t pos;
+      if (failed(reader.readVarInt(pos)))
+        return failure();
+      perm[i] = pos;
+    }
+    map = AffineMap::getPermutationMap(perm, context);
+    return success();
+  }
+
+  case static_cast<unsigned>(AffineMapBytecodeKind::ProjectedPermutation): {
+    uint64_t numResults;
+    if (failed(reader.readVarInt(numResults)))
+      return failure();
+    SmallVector<AffineExpr> results;
+    results.reserve(numResults);
+    for (uint64_t i = 0; i < numResults; ++i) {
+      uint64_t pos;
+      if (failed(reader.readVarInt(pos)))
+        return failure();
+      results.push_back(getAffineDimExpr(pos, context));
+    }
+    map = AffineMap::get(numDims, /*numSymbols=*/0, results, context);
+    return success();
+  }
+
+  case static_cast<unsigned>(AffineMapBytecodeKind::General): {
+    uint64_t numSymbols, numResults;
+    if (failed(reader.readVarInt(numSymbols)) ||
+        failed(reader.readVarInt(numResults)))
+      return failure();
+    SmallVector<AffineExpr> results;
+    results.reserve(numResults);
+    for (uint64_t i = 0; i < numResults; ++i) {
+      auto expr = readAffineExpr(reader, context);
+      if (failed(expr))
+        return failure();
+      results.push_back(*expr);
+    }
+    map = AffineMap::get(numDims, numSymbols, results, context);
+    return success();
+  }
+
+  default:
+    return reader.emitError("unknown AffineMap kind: ")
+               << static_cast<unsigned>(mapKind),
+           failure();
+  }
+}
+
+/// Write an AffineMap with packed kind header (see readAffineMap for format).
+static void writeAffineMap(DialectBytecodeWriter &writer, AffineMapAttr attr) {
+  AffineMap map = attr.getValue();
+  unsigned numDims = map.getNumDims();
+
+  // Identity maps: (d0, d1, ..., d_{n-1}) -> (d0, d1, ..., d_{n-1})
+  // Note: isIdentity() does not check numSymbols, so guard explicitly.
+  if (map.getNumSymbols() == 0 && map.isIdentity()) {
+    writer.writeVarInt((numDims << 2) |
+                       static_cast<unsigned>(AffineMapBytecodeKind::Identity));
+    return;
+  }
+
+  // Permutation maps: numResults == numDims, each result is a unique dim
+  if (map.isPermutation()) {
+    writer.writeVarInt(
+        (numDims << 2) |
+        static_cast<unsigned>(AffineMapBytecodeKind::Permutation));
+    for (unsigned i = 0; i < map.getNumResults(); ++i)
+      writer.writeVarInt(map.getDimPosition(i));
+    return;
+  }
+
+  // Projected permutation maps (symbol-less): subset of dims
+  if (map.getNumSymbols() == 0 && map.isProjectedPermutation()) {
+    writer.writeVarInt(
+        (numDims << 2) |
+        static_cast<unsigned>(AffineMapBytecodeKind::ProjectedPermutation));
+    writer.writeVarInt(map.getNumResults());
+    for (unsigned i = 0; i < map.getNumResults(); ++i)
+      writer.writeVarInt(map.getDimPosition(i));
+    return;
+  }
+
+  // General case
+  writer.writeVarInt((numDims << 2) |
+                     static_cast<unsigned>(AffineMapBytecodeKind::General));
+  writer.writeVarInt(map.getNumSymbols());
+  writer.writeVarInt(map.getNumResults());
+  for (AffineExpr expr : map.getResults())
+    writeAffineExpr(writer, expr);
 }
 
 static FileLineColRange getFileLineColRange(MLIRContext *context,
