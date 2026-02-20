@@ -323,43 +323,25 @@ void PPCInstPrinter::printATBitsAsHint(const MCInst *MI, unsigned OpNo,
     O << "+";
 }
 
-void PPCInstPrinter::printU1ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
+// Template for unsigned immediate operands with validation.
+// Validates that the value fits within the specified width and prints it.
+template <unsigned Width>
+void PPCInstPrinter::printUImmOperand(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
   unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 1 && "Invalid u1imm argument!");
+  assert(Value <= ((1U << Width) - 1) && "Invalid uimm argument!");
   O << (unsigned int)Value;
 }
 
-void PPCInstPrinter::printU2ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 3 && "Invalid u2imm argument!");
-  O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printU3ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 8 && "Invalid u3imm argument!");
-  O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printU4ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 15 && "Invalid u4imm argument!");
-  O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printS5ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
+// Template for signed immediate operands with sign extension.
+// Sign-extends the value to the specified width and prints it.
+template <unsigned Width>
+void PPCInstPrinter::printSImmOperand(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
   int Value = MI->getOperand(OpNo).getImm();
-  Value = SignExtend32<5>(Value);
+  Value = SignExtend32<Width>(Value);
   O << (int)Value;
 }
 
@@ -371,54 +353,14 @@ void PPCInstPrinter::printImmZeroOperand(const MCInst *MI, unsigned OpNo,
   O << (unsigned int)Value;
 }
 
-void PPCInstPrinter::printU5ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 31 && "Invalid u5imm argument!");
-  O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printU6ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 63 && "Invalid u6imm argument!");
-  O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printU7ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 127 && "Invalid u7imm argument!");
-  O << (unsigned int)Value;
-}
-
-// Operands of BUILD_VECTOR are signed and we use this to print operands
-// of XXSPLTIB which are unsigned. So we simply truncate to 8 bits and
-// print as unsigned.
-void PPCInstPrinter::printU8ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
+// Truncating version specifically for BUILD_VECTOR operands that may be
+// sign-extended (e.g., -1 becomes 0xFFFFFFFF). Truncates to 8 bits without
+// validation, unlike the standard printUImmOperand<8> which validates.
+void PPCInstPrinter::printU8ImmOperandTrunc(const MCInst *MI, unsigned OpNo,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O) {
   unsigned char Value = MI->getOperand(OpNo).getImm();
   O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printU10ImmOperand(const MCInst *MI, unsigned OpNo,
-                                        const MCSubtargetInfo &STI,
-                                        raw_ostream &O) {
-  unsigned short Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 1023 && "Invalid u10imm argument!");
-  O << (unsigned short)Value;
-}
-
-void PPCInstPrinter::printU12ImmOperand(const MCInst *MI, unsigned OpNo,
-                                        const MCSubtargetInfo &STI,
-                                        raw_ostream &O) {
-  unsigned short Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 4095 && "Invalid u12imm argument!");
-  O << (unsigned short)Value;
 }
 
 void PPCInstPrinter::printS16ImmOperand(const MCInst *MI, unsigned OpNo,

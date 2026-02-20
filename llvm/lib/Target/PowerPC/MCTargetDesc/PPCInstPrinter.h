@@ -56,28 +56,18 @@ public:
   void printATBitsAsHint(const MCInst *MI, unsigned OpNo,
                          const MCSubtargetInfo &STI, raw_ostream &O);
 
-  void printU1ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU2ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU3ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU4ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printS5ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU5ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU6ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU7ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU8ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU10ImmOperand(const MCInst *MI, unsigned OpNo,
-                          const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU12ImmOperand(const MCInst *MI, unsigned OpNo,
-                          const MCSubtargetInfo &STI, raw_ostream &O);
+  // Template for unsigned immediate operands with validation.
+  template <unsigned Width>
+  void printUImmOperand(const MCInst *MI, unsigned OpNo,
+                        const MCSubtargetInfo &STI, raw_ostream &O);
+
+  // Template for signed immediate operands with sign extension.
+  template <unsigned Width>
+  void printSImmOperand(const MCInst *MI, unsigned OpNo,
+                        const MCSubtargetInfo &STI, raw_ostream &O);
+
+  void printU8ImmOperandTrunc(const MCInst *MI, unsigned OpNo,
+                              const MCSubtargetInfo &STI, raw_ostream &O);
   void printS16ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printS32ImmOperand(const MCInst *MI, unsigned OpNo,

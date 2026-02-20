@@ -1707,7 +1707,7 @@ let Predicates = [HasVSX, HasP9Vector] in {
                         RegConstraint<"$XTi = $XT">;
 
   // Vector Splat Immediate Byte
-  def XXSPLTIB : X_RD6_IMM8<60, 360, (outs vsrc:$XT), (ins u8imm:$IMM8),
+  def XXSPLTIB : X_RD6_IMM8<60, 360, (outs vsrc:$XT), (ins u8imm_trunc:$IMM8),
                             "xxspltib $XT, $IMM8", IIC_VecPerm, []>;
 
   // When adding new D-Form loads/stores, be sure to update the ImmToIdxMap in
