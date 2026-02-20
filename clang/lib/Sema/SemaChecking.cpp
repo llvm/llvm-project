@@ -12887,6 +12887,7 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
                              diag::warn_impcast_objective_c_literal_to_bool);
     }
     if (Source->isPointerType() || Source->canDecayToPointerType()) {
+      Diag(E->getExprLoc(), diag::warn_impcast_pointer_to_bool_strict);
       // Warn on pointer to bool conversion that is always true.
       DiagnoseAlwaysNonNullPointer(E, Expr::NPCK_NotNull, /*IsEqual*/ false,
                                    SourceRange(CC));

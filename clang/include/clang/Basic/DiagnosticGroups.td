@@ -80,6 +80,7 @@ def LiteralConversion : DiagGroup<"literal-conversion">;
 def StringConversion : DiagGroup<"string-conversion">;
 def SignConversion : DiagGroup<"sign-conversion">;
 def PointerBoolConversion : DiagGroup<"pointer-bool-conversion">;
+def PointerBoolConversionStrict : DiagGroup<"pointer-bool-conversion-strict">;
 def UndefinedBoolConversion : DiagGroup<"undefined-bool-conversion">;
 def BitwiseInsteadOfLogical : DiagGroup<"bitwise-instead-of-logical">;
 def BoolOperation : DiagGroup<"bool-operation", [BitwiseInsteadOfLogical]>;

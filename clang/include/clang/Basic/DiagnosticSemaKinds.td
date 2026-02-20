@@ -4578,6 +4578,10 @@ def warn_impcast_pointer_to_bool : Warning<
     "address of %select{'%1'|function '%1'|array '%1'|lambda function pointer "
     "conversion operator}0 will always evaluate to 'true'">,
     InGroup<PointerBoolConversion>;
+def warn_impcast_pointer_to_bool_strict: Warning<
+    "implicit conversion of pointer to bool">,
+    InGroup<PointerBoolConversionStrict>,
+    DefaultIgnore;
 def warn_cast_nonnull_to_bool : Warning<
     "nonnull %select{function call|parameter}0 '%1' will evaluate to "
     "'true' on first encounter">,
