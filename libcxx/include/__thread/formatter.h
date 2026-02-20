@@ -61,11 +61,7 @@ public:
     static_assert(!is_same_v<_Cp, void>, "unsupported thread::id type, please file a bug report");
 
     __format_spec::__parsed_specifications<_CharT> __specs = __parser_.__get_parsed_std_specifications(__ctx);
-    if constexpr (is_pointer_v<_Tp>) {
-      __specs.__std_.__alternate_form_ = true;
-      __specs.__std_.__type_           = __format_spec::__type::__hexadecimal_lower_case;
-    }
-    return __formatter::__format_integer(reinterpret_cast<_Cp>(__get_underlying_id(__id)), __ctx, __specs);
+    return __formatter::__format_integer(__get_underlying_id(__id), __ctx, __specs);
   }
 
   __format_spec::__parser<_CharT> __parser_{.__alignment_ = __format_spec::__alignment::__right};
