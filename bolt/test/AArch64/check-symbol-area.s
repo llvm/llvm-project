@@ -13,10 +13,9 @@
 // Now BOLT throws a warning and does not crash.
 # CHECK: BOLT-WARNING: corrupted control flow detected in function main{{.*}}:
 # CHECK-SAME: an external branch/call targets an invalid instruction in
-# CHECK-SAME: function first_block at address {{.*}}; ignoring both functions
+# CHECK-SAME: function foo{{.*}} at address {{.*}}; ignoring both functions
 
-# CHECK: BOLT-WARNING: ignoring entry point at address 0x{{[0-9a-f]+}}
-# CHECK-SAME: in constant island of function first_block
+# CHECK: BOLT-WARNING: ignoring entry point at address 0x{{[0-9a-f]+}} in constant island of function foo{{.*}}
 
 .text
 .global main
@@ -29,8 +28,6 @@ main:
 .type foo, %function
 foo:
    nop
-
-.global first_block
 $d:
 first_block:
         add     x0, x1, x1
