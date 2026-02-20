@@ -137,6 +137,11 @@ public:
                                       const CXXRecordDecl *unadjustedClass,
                                       const ReturnAdjustment &ra) override;
 
+  bool shouldTypeidBeNullChecked(QualType srcTy) override;
+  mlir::Value emitTypeid(CIRGenFunction &cgf, QualType SrcRecordTy,
+                         Address thisPtr, mlir::Type StdTypeInfoPtrTy) override;
+  void emitBadTypeidCall(CIRGenFunction &cgf, mlir::Location loc) override;
+
   mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                           QualType ty) override;
 
@@ -997,12 +1002,13 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
   case Type::ConstantArray:
   case Type::IncompleteArray:
   case Type::VariableArray:
-    cgm.errorNYI("VTableClassNameForType: __array_type_info");
-    break;
+    // abi::__array_type_info.
+    return "_ZTVN10__cxxabiv117__array_type_infoE";
 
   case Type::FunctionNoProto:
   case Type::FunctionProto:
-    cgm.errorNYI("VTableClassNameForType: __function_type_info");
+    // abi::__function_type_info.
+    return "_ZTVN10__cxxabiv120__function_type_infoE";
     break;
 
   case Type::Enum:
@@ -1033,11 +1039,13 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
 
   case Type::ObjCObjectPointer:
   case Type::Pointer:
-    cgm.errorNYI("VTableClassNameForType: __pointer_type_info");
+    // abi::__pointer_type_info.
+    return "_ZTVN10__cxxabiv119__pointer_type_infoE";
     break;
 
   case Type::MemberPointer:
-    cgm.errorNYI("VTableClassNameForType: __pointer_to_member_type_info");
+    // abi::__pointer_to_member_type_info.
+    return "_ZTVN10__cxxabiv129__pointer_to_member_type_infoE";
     break;
 
   case Type::HLSLAttributedResource:
@@ -1548,6 +1556,49 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
 
   CIRGenModule::setInitializer(gv, init);
   return builder.getGlobalViewAttr(builder.getUInt8PtrTy(), gv);
+}
+
+bool CIRGenItaniumCXXABI::shouldTypeidBeNullChecked(QualType srcTy) {
+  return true;
+}
+
+void CIRGenItaniumCXXABI::emitBadTypeidCall(CIRGenFunction &cgf,
+                                            mlir::Location loc) {
+  // void __cxa_bad_typeid();
+  cir::FuncType fnTy =
+      cgf.getBuilder().getFuncType({}, cgf.getBuilder().getVoidTy());
+  mlir::NamedAttrList attrs;
+  attrs.set(cir::CIRDialect::getNoReturnAttrName(),
+            mlir::UnitAttr::get(&cgf.cgm.getMLIRContext()));
+
+  cgf.emitRuntimeCall(
+      loc, cgf.cgm.createRuntimeFunction(fnTy, "__cxa_bad_typeid", attrs), {},
+      attrs);
+  cir::UnreachableOp::create(cgf.getBuilder(), loc);
+  cgf.getBuilder().clearInsertionPoint();
+}
+
+mlir::Value CIRGenItaniumCXXABI::emitTypeid(CIRGenFunction &cgf, QualType srcTy,
+                                            Address thisPtr,
+                                            mlir::Type typeInfoPtrTy) {
+  auto *classDecl = srcTy->castAsCXXRecordDecl();
+  mlir::Location loc = cgm.getLoc(classDecl->getSourceRange());
+  mlir::Value vptr = cgf.getVTablePtr(loc, thisPtr, classDecl);
+  mlir::Value vtbl;
+
+  // TODO(cir): In classic codegen relative layouts cause us to do a
+  // 'load_relative' of -4 here. We probably don't want to reprensent this in
+  // CIR at all, but we should have the NYI here since this could be
+  // meaningful/notable for implementation of relative layout in the future.
+  if (cgm.getItaniumVTableContext().isRelativeLayout())
+    cgm.errorNYI("buildVTablePointer: isRelativeLayout");
+  else
+    vtbl = cir::VTableGetTypeInfoOp::create(
+        cgf.getBuilder(), loc, cgf.getBuilder().getPointerTo(typeInfoPtrTy),
+        vptr);
+
+  return cgf.getBuilder().createAlignedLoad(loc, typeInfoPtrTy, vtbl,
+                                            cgf.getPointerAlign());
 }
 
 mlir::Attribute CIRGenItaniumCXXABI::getAddrOfRTTIDescriptor(mlir::Location loc,

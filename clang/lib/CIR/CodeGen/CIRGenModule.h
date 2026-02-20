@@ -621,7 +621,16 @@ public:
                          clang::GlobalDecl gd, bool forVTable,
                          bool dontDefer = false, bool isThunk = false,
                          ForDefinition_t isForDefinition = NotForDefinition,
-                         mlir::ArrayAttr extraAttrs = {});
+                         mlir::NamedAttrList extraAttrs = {});
+
+  cir::FuncOp getOrCreateCIRFunction(llvm::StringRef mangledName,
+                                     mlir::Type funcType, clang::GlobalDecl gd,
+                                     bool forVTable,
+                                     mlir::NamedAttrList extraAttrs) {
+    return getOrCreateCIRFunction(mangledName, funcType, gd, forVTable,
+                                  /*dontDefer=*/false, /*isThunk=*/false,
+                                  NotForDefinition, extraAttrs);
+  }
 
   cir::FuncOp createCIRFunction(mlir::Location loc, llvm::StringRef name,
                                 cir::FuncType funcType,
@@ -637,7 +646,8 @@ public:
                                const clang::FunctionDecl *funcDecl);
 
   cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
-                                    mlir::ArrayAttr = {}, bool isLocal = false,
+                                    mlir::NamedAttrList extraAttrs = {},
+                                    bool isLocal = false,
                                     bool assumeConvergent = false);
 
   static constexpr const char *builtinCoroId = "__builtin_coro_id";
