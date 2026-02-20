@@ -63,19 +63,6 @@ private:
   // "FuncName" exists. It may create a new function prototype in pre-link mode.
   FunctionCallee getFunction(Module *M, const FuncInfo &fInfo);
 
-  /// Wrapper around getFunction which tries to use a faster variant if
-  /// available, and falls back to a less fast option.
-  ///
-  /// Return a replacement function for \p fInfo that has float-typed fast
-  /// variants. \p NewFunc is a base replacement function to use. \p
-  /// NewFuncFastVariant is a faster version to use if the calling context knows
-  /// it's legal. If there is no fast variant to use, \p NewFuncFastVariant
-  /// should be EI_NONE.
-  FunctionCallee getFloatFastVariant(Module *M, const FuncInfo &fInfo,
-                                     FuncInfo &newInfo,
-                                     AMDGPULibFunc::EFuncId NewFunc,
-                                     AMDGPULibFunc::EFuncId NewFuncFastVariant);
-
   bool parseFunctionName(const StringRef &FMangledName, FuncInfo &FInfo);
 
   bool TDOFold(CallInst *CI, const FuncInfo &FInfo);
@@ -87,9 +74,6 @@ private:
 
   /// Peform a fast math expansion of pow, powr, pown or rootn.
   bool expandFastPow(FPMathOperator *FPOp, IRBuilder<> &B, PowKind Kind);
-
-  bool tryOptimizePow(FPMathOperator *FPOp, IRBuilder<> &B,
-                      const FuncInfo &FInfo);
 
   // rootn
   bool fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
@@ -426,22 +410,6 @@ FunctionCallee AMDGPULibCalls::getFunction(Module *M, const FuncInfo &fInfo) {
                        : AMDGPULibFunc::getFunction(M, fInfo);
 }
 
-FunctionCallee AMDGPULibCalls::getFloatFastVariant(
-    Module *M, const FuncInfo &fInfo, FuncInfo &newInfo,
-    AMDGPULibFunc::EFuncId NewFunc, AMDGPULibFunc::EFuncId FastVariant) {
-  assert(NewFunc != FastVariant);
-
-  if (FastVariant != AMDGPULibFunc::EI_NONE &&
-      getArgType(fInfo) == AMDGPULibFunc::F32) {
-    newInfo = AMDGPULibFunc(FastVariant, fInfo);
-    if (FunctionCallee NewCallee = getFunction(M, newInfo))
-      return NewCallee;
-  }
-
-  newInfo = AMDGPULibFunc(NewFunc, fInfo);
-  return getFunction(M, newInfo);
-}
-
 bool AMDGPULibCalls::parseFunctionName(const StringRef &FMangledName,
                                        FuncInfo &FInfo) {
   return AMDGPULibFunc::parse(FMangledName, FInfo);
@@ -712,69 +680,71 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
           {CI->getType(), CI->getArgOperand(1)->getType()}));
       return true;
     }
-    case AMDGPULibFunc::EI_POW:
-    case AMDGPULibFunc::EI_POW_FAST:
-      return tryOptimizePow(FPOp, B, FInfo);
+    case AMDGPULibFunc::EI_POW: {
+      Module *M = Callee->getParent();
+      AMDGPULibFunc PowrInfo(AMDGPULibFunc::EI_POWR, FInfo);
+      FunctionCallee PowrFunc = getFunction(M, PowrInfo);
+      CallInst *Call = cast<CallInst>(FPOp);
+
+      // pow(x, y) -> powr(x, y) for x >= -0.0
+      // TODO: Account for flags on current call
+      if (PowrFunc && cannotBeOrderedLessThanZero(
+                          FPOp->getOperand(0), SQ.getWithInstruction(Call))) {
+        Call->setCalledFunction(PowrFunc);
+        return fold_pow(FPOp, B, PowrInfo) || true;
+      }
+
+      // pow(x, y) -> pown(x, y) for known integral y
+      if (isKnownIntegral(FPOp->getOperand(1), SQ.getWithInstruction(CI),
+                          FPOp->getFastMathFlags())) {
+        FunctionType *PownType = getPownType(CI->getFunctionType());
+        AMDGPULibFunc PownInfo(AMDGPULibFunc::EI_POWN, PownType, true);
+        FunctionCallee PownFunc = getFunction(M, PownInfo);
+        if (PownFunc) {
+          // TODO: If the incoming integral value is an sitofp/uitofp, it won't
+          // fold out without a known range. We can probably take the source
+          // value directly.
+          Value *CastedArg =
+              B.CreateFPToSI(FPOp->getOperand(1), PownType->getParamType(1));
+          // Have to drop any nofpclass attributes on the original call site.
+          Call->removeParamAttrs(
+              1, AttributeFuncs::typeIncompatible(CastedArg->getType(),
+                                                  Call->getParamAttributes(1)));
+          Call->setCalledFunction(PownFunc);
+          Call->setArgOperand(1, CastedArg);
+          return fold_pow(FPOp, B, PownInfo) || true;
+        }
+      }
+
+      if (fold_pow(FPOp, B, FInfo))
+        return true;
+
+      if (!FMF.approxFunc())
+        return false;
+      return expandFastPow(FPOp, B, PowKind::Pow);
+    }
     case AMDGPULibFunc::EI_POWR:
-    case AMDGPULibFunc::EI_POWR_FAST: {
       if (fold_pow(FPOp, B, FInfo))
         return true;
       if (!FMF.approxFunc())
         return false;
-
-      if (FInfo.getId() == AMDGPULibFunc::EI_POWR && FMF.approxFunc() &&
-          getArgType(FInfo) == AMDGPULibFunc::F32) {
-        Module *M = Callee->getParent();
-        AMDGPULibFunc PowrFastInfo(AMDGPULibFunc::EI_POWR_FAST, FInfo);
-        if (FunctionCallee PowrFastFunc = getFunction(M, PowrFastInfo)) {
-          CI->setCalledFunction(PowrFastFunc);
-          return true;
-        }
-      }
-
       if (!shouldReplaceLibcallWithIntrinsic(CI))
         return false;
       return expandFastPow(FPOp, B, PowKind::PowR);
-    }
     case AMDGPULibFunc::EI_POWN:
-    case AMDGPULibFunc::EI_POWN_FAST: {
       if (fold_pow(FPOp, B, FInfo))
         return true;
       if (!FMF.approxFunc())
         return false;
-
-      if (FInfo.getId() == AMDGPULibFunc::EI_POWN &&
-          getArgType(FInfo) == AMDGPULibFunc::F32) {
-        Module *M = Callee->getParent();
-        AMDGPULibFunc PownFastInfo(AMDGPULibFunc::EI_POWN_FAST, FInfo);
-        if (FunctionCallee PownFastFunc = getFunction(M, PownFastInfo)) {
-          CI->setCalledFunction(PownFastFunc);
-          return true;
-        }
-      }
-
       if (!shouldReplaceLibcallWithIntrinsic(CI))
         return false;
       return expandFastPow(FPOp, B, PowKind::PowN);
-    }
     case AMDGPULibFunc::EI_ROOTN:
-    case AMDGPULibFunc::EI_ROOTN_FAST: {
       if (fold_rootn(FPOp, B, FInfo))
         return true;
       if (!FMF.approxFunc())
         return false;
-
-      if (getArgType(FInfo) == AMDGPULibFunc::F32) {
-        Module *M = Callee->getParent();
-        AMDGPULibFunc RootnFastInfo(AMDGPULibFunc::EI_ROOTN_FAST, FInfo);
-        if (FunctionCallee RootnFastFunc = getFunction(M, RootnFastInfo)) {
-          CI->setCalledFunction(RootnFastFunc);
-          return true;
-        }
-      }
-
       return expandFastPow(FPOp, B, PowKind::RootN);
-    }
     case AMDGPULibFunc::EI_SQRT:
       // TODO: Allow with strictfp + constrained intrinsic
       return tryReplaceLibcallWithSimpleIntrinsic(
@@ -876,11 +846,8 @@ static double log2(double V) {
 bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
                               const FuncInfo &FInfo) {
   assert((FInfo.getId() == AMDGPULibFunc::EI_POW ||
-          FInfo.getId() == AMDGPULibFunc::EI_POW_FAST ||
           FInfo.getId() == AMDGPULibFunc::EI_POWR ||
-          FInfo.getId() == AMDGPULibFunc::EI_POWR_FAST ||
-          FInfo.getId() == AMDGPULibFunc::EI_POWN ||
-          FInfo.getId() == AMDGPULibFunc::EI_POWN_FAST) &&
+          FInfo.getId() == AMDGPULibFunc::EI_POWN) &&
          "fold_pow: encounter a wrong function call");
 
   Module *M = B.GetInsertBlock()->getModule();
@@ -1033,21 +1000,18 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
 
       V = log2(std::abs(V));
       cnval = ConstantFP::get(eltType, V);
-      needcopysign = (FInfo.getId() != AMDGPULibFunc::EI_POWR &&
-                      FInfo.getId() != AMDGPULibFunc::EI_POWR_FAST) &&
+      needcopysign = (FInfo.getId() != AMDGPULibFunc::EI_POWR) &&
                      CF->isNegative();
     } else {
       needlog = true;
-      needcopysign = needabs = FInfo.getId() != AMDGPULibFunc::EI_POWR &&
-                               FInfo.getId() != AMDGPULibFunc::EI_POWR_FAST;
+      needcopysign = needabs = FInfo.getId() != AMDGPULibFunc::EI_POWR;
     }
   } else {
     ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(opr0);
 
     if (!CDV) {
       needlog = true;
-      needcopysign = needabs = FInfo.getId() != AMDGPULibFunc::EI_POWR &&
-                               FInfo.getId() != AMDGPULibFunc::EI_POWR_FAST;
+      needcopysign = needabs = FInfo.getId() != AMDGPULibFunc::EI_POWR;
     } else {
       assert ((int)CDV->getNumElements() == getVecSize(FInfo) &&
               "Wrong vector size detected");
@@ -1072,8 +1036,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     }
   }
 
-  if (needcopysign && (FInfo.getId() == AMDGPULibFunc::EI_POW ||
-                       FInfo.getId() == AMDGPULibFunc::EI_POW_FAST)) {
+  if (needcopysign && (FInfo.getId() == AMDGPULibFunc::EI_POW)) {
     // We cannot handle corner cases for a general pow() function, give up
     // unless y is a constant integral value. Then proceed as if it were pown.
     if (!isKnownIntegral(opr1, SQ.getWithInstruction(cast<Instruction>(FPOp)),
@@ -1101,8 +1064,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     nval = CreateCallEx(B,LogExpr, nval, "__log2");
   }
 
-  if (FInfo.getId() == AMDGPULibFunc::EI_POWN ||
-      FInfo.getId() == AMDGPULibFunc::EI_POWN_FAST) {
+  if (FInfo.getId() == AMDGPULibFunc::EI_POWN) {
     // convert int(32) to fp(f32 or f64)
     opr1 = B.CreateSIToFP(opr1, nval->getType(), "pownI2F");
   }
@@ -1489,77 +1451,6 @@ bool AMDGPULibCalls::expandFastPow(FPMathOperator *FPOp, IRBuilder<> &B,
   }
   }
   llvm_unreachable("Unhandled PowKind enum");
-}
-
-bool AMDGPULibCalls::tryOptimizePow(FPMathOperator *FPOp, IRBuilder<> &B,
-                                    const FuncInfo &FInfo) {
-  FastMathFlags FMF = FPOp->getFastMathFlags();
-  CallInst *Call = cast<CallInst>(FPOp);
-  Module *M = Call->getModule();
-
-  FuncInfo PowrInfo;
-  AMDGPULibFunc::EFuncId FastPowrFuncId =
-      FMF.approxFunc() || FInfo.getId() == AMDGPULibFunc::EI_POW_FAST
-          ? AMDGPULibFunc::EI_POWR_FAST
-          : AMDGPULibFunc::EI_NONE;
-  FunctionCallee PowrFunc = getFloatFastVariant(
-      M, FInfo, PowrInfo, AMDGPULibFunc::EI_POWR, FastPowrFuncId);
-
-  // TODO: Prefer fast pown to fast powr, but slow powr to slow pown.
-
-  // pow(x, y) -> powr(x, y) for x >= -0.0
-  // TODO: Account for flags on current call
-  if (PowrFunc && cannotBeOrderedLessThanZero(FPOp->getOperand(0),
-                                              SQ.getWithInstruction(Call))) {
-    Call->setCalledFunction(PowrFunc);
-    return fold_pow(FPOp, B, PowrInfo) || true;
-  }
-
-  // pow(x, y) -> pown(x, y) for known integral y
-  if (isKnownIntegral(FPOp->getOperand(1), SQ.getWithInstruction(Call),
-                      FPOp->getFastMathFlags())) {
-    FunctionType *PownType = getPownType(Call->getFunctionType());
-
-    FuncInfo PownInfo;
-    AMDGPULibFunc::EFuncId FastPownFuncId =
-        FMF.approxFunc() || FInfo.getId() == AMDGPULibFunc::EI_POW_FAST
-            ? AMDGPULibFunc::EI_POWN_FAST
-            : AMDGPULibFunc::EI_NONE;
-    FunctionCallee PownFunc = getFloatFastVariant(
-        M, FInfo, PownInfo, AMDGPULibFunc::EI_POWN, FastPownFuncId);
-
-    if (PownFunc) {
-      // TODO: If the incoming integral value is an sitofp/uitofp, it won't
-      // fold out without a known range. We can probably take the source
-      // value directly.
-      Value *CastedArg =
-          B.CreateFPToSI(FPOp->getOperand(1), PownType->getParamType(1));
-      // Have to drop any nofpclass attributes on the original call site.
-      Call->removeParamAttrs(
-          1, AttributeFuncs::typeIncompatible(CastedArg->getType(),
-                                              Call->getParamAttributes(1)));
-      Call->setCalledFunction(PownFunc);
-      Call->setArgOperand(1, CastedArg);
-      return fold_pow(FPOp, B, PownInfo) || true;
-    }
-  }
-
-  if (fold_pow(FPOp, B, FInfo))
-    return true;
-
-  if (!FMF.approxFunc())
-    return false;
-
-  if (FInfo.getId() == AMDGPULibFunc::EI_POW && FMF.approxFunc() &&
-      getArgType(FInfo) == AMDGPULibFunc::F32) {
-    AMDGPULibFunc PowFastInfo(AMDGPULibFunc::EI_POW_FAST, FInfo);
-    if (FunctionCallee PowFastFunc = getFunction(M, PowFastInfo)) {
-      Call->setCalledFunction(PowFastFunc);
-      return fold_pow(FPOp, B, PowFastInfo) || true;
-    }
-  }
-
-  return expandFastPow(FPOp, B, PowKind::Pow);
 }
 
 // Get a scalar native builtin single argument FP function
