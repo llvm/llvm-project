@@ -18,5 +18,6 @@ static_library("Scalable") {
     "Serialization/JSONFormat.cpp",
     "Serialization/SerializationFormatRegistry.cpp",
     "TUSummary/ExtractorRegistry.cpp",
+    "TUSummary/TUSummaryBuilder.cpp",
   ]
 }
