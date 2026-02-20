@@ -36,24 +36,6 @@ public:
 
   lldb::addr_t GetBreakpointLoadAddress() const { return m_breakpoint_addr; }
 
-  /// When set to true, the breakpoint site will NOT be re-enabled directly
-  /// by this plan. Instead, the plan will call
-  /// ThreadList::ThreadFinishedSteppingOverBreakpoint() when it completes,
-  /// allowing ThreadList to track all threads stepping over the same
-  /// breakpoint and only re-enable it when ALL threads have finished.
-  void SetDeferReenableBreakpointSite(bool defer) {
-    m_defer_reenable_breakpoint_site = defer;
-  }
-
-  bool GetDeferReenableBreakpointSite() const {
-    return m_defer_reenable_breakpoint_site;
-  }
-
-  /// Mark the breakpoint site as already re-enabled, suppressing any
-  /// re-enable in DidPop()/ThreadDestroyed(). Used when discarding plans
-  /// during WillResume cleanup to avoid spurious breakpoint toggles.
-  void SetReenabledBreakpointSite() { m_reenabled_breakpoint_site = true; }
-
 protected:
   bool DoPlanExplainsStop(Event *event_ptr) override;
   bool DoWillResume(lldb::StateType resume_state, bool current_plan) override;
@@ -65,7 +47,6 @@ private:
   lldb::user_id_t m_breakpoint_site_id;
   bool m_auto_continue;
   bool m_reenabled_breakpoint_site;
-  bool m_defer_reenable_breakpoint_site;
 
   ThreadPlanStepOverBreakpoint(const ThreadPlanStepOverBreakpoint &) = delete;
   const ThreadPlanStepOverBreakpoint &
