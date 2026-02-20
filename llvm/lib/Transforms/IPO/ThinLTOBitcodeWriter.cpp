@@ -178,28 +178,29 @@ void simplifyExternals(Module &M) {
   FunctionType *EmptyFT =
       FunctionType::get(Type::getVoidTy(M.getContext()), false);
 
-  for (Function &F : llvm::make_early_inc_range(M)) {
-    if (F.isDeclaration() && F.use_empty()) {
+  for (Function &F : llvm::make_early_inc_range(M))
+    if (F.isDeclaration() && F.use_empty())
       F.eraseFromParent();
-      continue;
+
+  // Wasm should preserve function signatures for the linker.
+  if (!Triple(M.getTargetTriple()).isWasm()) {
+    for (Function &F : llvm::make_early_inc_range(M)) {
+      if (!F.isDeclaration() || F.getFunctionType() == EmptyFT ||
+          // Changing the type of an intrinsic may invalidate the IR.
+          F.getName().starts_with("llvm."))
+        continue;
+
+      Function *NewF = Function::Create(EmptyFT, GlobalValue::ExternalLinkage,
+                                        F.getAddressSpace(), "", &M);
+      NewF->copyAttributesFrom(&F);
+      // Only copy function attribtues.
+      NewF->setAttributes(AttributeList::get(M.getContext(),
+                                             AttributeList::FunctionIndex,
+                                             F.getAttributes().getFnAttrs()));
+      NewF->takeName(&F);
+      F.replaceAllUsesWith(NewF);
+      F.eraseFromParent();
     }
-
-    if (!F.isDeclaration() || F.getFunctionType() == EmptyFT ||
-        // Changing the type of an intrinsic may invalidate the IR.
-        F.getName().starts_with("llvm."))
-      continue;
-
-    Function *NewF =
-        Function::Create(EmptyFT, GlobalValue::ExternalLinkage,
-                         F.getAddressSpace(), "", &M);
-    NewF->copyAttributesFrom(&F);
-    // Only copy function attribtues.
-    NewF->setAttributes(AttributeList::get(M.getContext(),
-                                           AttributeList::FunctionIndex,
-                                           F.getAttributes().getFnAttrs()));
-    NewF->takeName(&F);
-    F.replaceAllUsesWith(NewF);
-    F.eraseFromParent();
   }
 
   for (GlobalIFunc &I : llvm::make_early_inc_range(M.ifuncs())) {
