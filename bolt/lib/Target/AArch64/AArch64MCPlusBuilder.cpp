@@ -839,6 +839,7 @@ public:
     case AArch64::LDTRBi:
     case AArch64::LDTRSBWi:
     case AArch64::LDTRSBXi:
+    case AArch64::LDARB:
       return true;
     default:
       break;
@@ -877,6 +878,7 @@ public:
     case AArch64::LDTRHi:
     case AArch64::LDTRSHWi:
     case AArch64::LDTRSHXi:
+    case AArch64::LDARH:
       return true;
     default:
       break;
@@ -911,6 +913,7 @@ public:
     case AArch64::LDPSWpost:
     case AArch64::LDPSWpre:
     case AArch64::LDNPWi:
+    case AArch64::LDARW:
       return true;
     default:
       break;
@@ -934,6 +937,7 @@ public:
     case AArch64::LDPXi:
     case AArch64::LDPXpost:
     case AArch64::LDPXpre:
+    case AArch64::LDARX:
       return true;
     default:
       break;
@@ -1028,33 +1032,55 @@ public:
   }
 
   bool isAArch64ExclusiveLoad(const MCInst &Inst) const override {
-    return (Inst.getOpcode() == AArch64::LDXPX ||
-            Inst.getOpcode() == AArch64::LDXPW ||
-            Inst.getOpcode() == AArch64::LDXRX ||
-            Inst.getOpcode() == AArch64::LDXRW ||
-            Inst.getOpcode() == AArch64::LDXRH ||
-            Inst.getOpcode() == AArch64::LDXRB ||
-            Inst.getOpcode() == AArch64::LDAXPX ||
-            Inst.getOpcode() == AArch64::LDAXPW ||
-            Inst.getOpcode() == AArch64::LDAXRX ||
-            Inst.getOpcode() == AArch64::LDAXRW ||
-            Inst.getOpcode() == AArch64::LDAXRH ||
-            Inst.getOpcode() == AArch64::LDAXRB);
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::LDXPX:
+    case AArch64::LDXPW:
+    case AArch64::LDXRX:
+    case AArch64::LDXRW:
+    case AArch64::LDXRH:
+    case AArch64::LDXRB:
+    case AArch64::LDAXPX:
+    case AArch64::LDAXPW:
+    case AArch64::LDAXRX:
+    case AArch64::LDAXRW:
+    case AArch64::LDAXRH:
+    case AArch64::LDAXRB:
+    case AArch64::LDAEX:
+    case AArch64::LDAEXB:
+    case AArch64::LDAEXH:
+    case AArch64::LDAEXD:
+      return true;
+    default:
+      break;
+    }
+    return false;
   }
 
   bool isAArch64ExclusiveStore(const MCInst &Inst) const override {
-    return (Inst.getOpcode() == AArch64::STXPX ||
-            Inst.getOpcode() == AArch64::STXPW ||
-            Inst.getOpcode() == AArch64::STXRX ||
-            Inst.getOpcode() == AArch64::STXRW ||
-            Inst.getOpcode() == AArch64::STXRH ||
-            Inst.getOpcode() == AArch64::STXRB ||
-            Inst.getOpcode() == AArch64::STLXPX ||
-            Inst.getOpcode() == AArch64::STLXPW ||
-            Inst.getOpcode() == AArch64::STLXRX ||
-            Inst.getOpcode() == AArch64::STLXRW ||
-            Inst.getOpcode() == AArch64::STLXRH ||
-            Inst.getOpcode() == AArch64::STLXRB);
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::STXPX:
+    case AArch64::STXPW:
+    case AArch64::STXRX:
+    case AArch64::STXRW:
+    case AArch64::STXRH:
+    case AArch64::STXRB:
+    case AArch64::STLXPX:
+    case AArch64::STLXPW:
+    case AArch64::STLXRX:
+    case AArch64::STLXRW:
+    case AArch64::STLXRH:
+    case AArch64::STLXRB:
+    case AArch64::STLEX:
+    case AArch64::STLEXB:
+    case AArch64::STLEXH:
+    case AArch64::STLEXD:
+      return true;
+    default:
+      break;
+    }
+    return false;
   }
 
   bool isAArch64ExclusiveClear(const MCInst &Inst) const override {
@@ -2373,9 +2399,23 @@ public:
       return false;
     };
 
+    auto isStoreRelease = [&]() {
+      switch (opcode) {
+      case AArch64::STLRB:
+      case AArch64::STLRH:
+      case AArch64::STLRW:
+      case AArch64::STLRX:
+        return true;
+      default:
+        break;
+      }
+
+      return false;
+    };
+
     return isStoreRegUnscaleImm() || isStoreRegScaledImm() ||
            isStoreRegImmPreIndexed() || isStoreRegImmPostIndexed() ||
-           isStoreRegUnscaleUnpriv() || isStoreRegTrunc();
+           isStoreRegUnscaleUnpriv() || isStoreRegTrunc() || isStoreRelease();
   }
 
   bool mayStore(const MCInst &Inst) const override {
