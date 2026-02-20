@@ -30,11 +30,16 @@ class AllocaInst;
 class Instruction;
 namespace memtag {
 struct AllocaInfo {
+  struct BBInfo {
+    Intrinsic::ID First = Intrinsic::not_intrinsic;
+    Intrinsic::ID Last = Intrinsic::not_intrinsic;
+    bool DoubleEnd = false;
+  };
   AllocaInst *AI;
   SmallVector<IntrinsicInst *, 2> LifetimeStart;
   SmallVector<IntrinsicInst *, 2> LifetimeEnd;
   SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
-  MapVector<BasicBlock *, Intrinsic::ID> LastBBLifetime;
+  MapVector<BasicBlock *, struct BBInfo> BBInfos;
 };
 
 // For an alloca valid between lifetime markers Start and Ends, call the
@@ -49,8 +54,8 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
                           const SmallVectorImpl<Instruction *> &RetVec,
                           llvm::function_ref<void(Instruction *)> Callback);
 
-bool isStandardLifetime(const AllocaInfo &AInfo, const DominatorTree *DT,
-                        const LoopInfo *LI, size_t MaxLifetimes);
+bool isSupportedLifetime(const AllocaInfo &AInfo, const DominatorTree *DT,
+                         const LoopInfo *LI);
 
 Instruction *getUntagLocationIfFunctionExit(Instruction &Inst);
 
