@@ -1004,7 +1004,7 @@ func.func @test_tensor_size_valid(%arg0: tensor<1x536870911xf32>) {
 
 func.func @test_slice_tensor_size_invalid(%arg0: tensor<1x536870912xf32>) {
   %0 = tosa.const_shape {values = dense<0> : tensor<2xindex>} : () -> !tosa.shape<2>
-  %1 = tosa.const_shape {values = dense<536870912> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %1 = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.slice' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
   %2= tosa.slice %arg0, %0, %1 : (tensor<1x536870912xf32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x1xf32>
   return
