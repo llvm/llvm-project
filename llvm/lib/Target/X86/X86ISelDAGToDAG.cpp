@@ -486,8 +486,7 @@ namespace {
       if (VT == MVT::i64) {
         Zero = SDValue(
             CurDAG->getMachineNode(
-                TargetOpcode::SUBREG_TO_REG, dl, MVT::i64,
-                CurDAG->getTargetConstant(0, dl, MVT::i64), Zero,
+                TargetOpcode::SUBREG_TO_REG, dl, MVT::i64, Zero,
                 CurDAG->getTargetConstant(X86::sub_32bit, dl, MVT::i32)),
             0);
       }
@@ -603,6 +602,7 @@ namespace {
     bool onlyUsesZeroFlag(SDValue Flags) const;
     bool hasNoSignFlagUses(SDValue Flags) const;
     bool hasNoCarryFlagUses(SDValue Flags) const;
+    bool checkTCRetEnoughRegs(SDNode *N) const;
   };
 
   class X86DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
@@ -875,6 +875,12 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
       LD->getExtensionType() != ISD::NON_EXTLOAD)
     return false;
 
+  // If the load's outgoing chain has more than one use, we can't (currently)
+  // move the load since we'd most likely create a loop. TODO: Maybe it could
+  // work if moveBelowOrigChain() updated *all* the chain users.
+  if (!Callee.getValue(1).hasOneUse())
+    return false;
+
   // Now let's find the callseq_start.
   while (HasCallSeq && Chain.getOpcode() != ISD::CALLSEQ_START) {
     if (!Chain.hasOneUse())
@@ -882,20 +888,39 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
     Chain = Chain.getOperand(0);
   }
 
-  if (!Chain.getNumOperands())
+  while (true) {
+    if (!Chain.getNumOperands())
+      return false;
+
+    // It's not safe to move the callee (a load) across e.g. a store.
+    // Conservatively abort if the chain contains a node other than the ones
+    // below.
+    switch (Chain.getNode()->getOpcode()) {
+    case ISD::CALLSEQ_START:
+    case ISD::CopyToReg:
+    case ISD::LOAD:
+      break;
+    default:
+      return false;
+    }
+
+    if (Chain.getOperand(0).getNode() == Callee.getNode())
+      return true;
+    if (Chain.getOperand(0).getOpcode() == ISD::TokenFactor &&
+        Chain.getOperand(0).getValue(0).hasOneUse() &&
+        Callee.getValue(1).isOperandOf(Chain.getOperand(0).getNode()) &&
+        Callee.getValue(1).hasOneUse())
+      return true;
+
+    // Look past CopyToRegs. We only walk one path, so the chain mustn't branch.
+    if (Chain.getOperand(0).getOpcode() == ISD::CopyToReg &&
+        Chain.getOperand(0).getValue(0).hasOneUse()) {
+      Chain = Chain.getOperand(0);
+      continue;
+    }
+
     return false;
-  // Since we are not checking for AA here, conservatively abort if the chain
-  // writes to memory. It's not safe to move the callee (a load) across a store.
-  if (isa<MemSDNode>(Chain.getNode()) &&
-      cast<MemSDNode>(Chain.getNode())->writeMem())
-    return false;
-  if (Chain.getOperand(0).getNode() == Callee.getNode())
-    return true;
-  if (Chain.getOperand(0).getOpcode() == ISD::TokenFactor &&
-      Callee.getValue(1).isOperandOf(Chain.getOperand(0).getNode()) &&
-      Callee.getValue(1).hasOneUse())
-    return true;
-  return false;
+  }
 }
 
 static bool isEndbrImm64(uint64_t Imm) {
@@ -1364,6 +1389,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       SDValue Load  = N->getOperand(1);
       if (!isCalleeLoad(Load, Chain, HasCallSeq))
         continue;
+      if (N->getOpcode() == X86ISD::TC_RETURN && !checkTCRetEnoughRegs(N))
+        continue;
       moveBelowOrigChain(CurDAG, Load, SDValue(N, 0), Chain);
       ++NumLoadMoved;
       MadeChange = true;
@@ -1720,11 +1747,11 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
     }
     // Attempt to remove vectors moves that were inserted to zero upper bits.
     case TargetOpcode::SUBREG_TO_REG: {
-      unsigned SubRegIdx = N->getConstantOperandVal(2);
+      unsigned SubRegIdx = N->getConstantOperandVal(1);
       if (SubRegIdx != X86::sub_xmm && SubRegIdx != X86::sub_ymm)
         continue;
 
-      SDValue Move = N->getOperand(1);
+      SDValue Move = N->getOperand(0);
       if (!Move.isMachineOpcode())
         continue;
 
@@ -1764,7 +1791,7 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
 
     // Producing instruction is another vector instruction. We can drop the
     // move.
-    CurDAG->UpdateNodeOperands(N, N->getOperand(0), In, N->getOperand(2));
+    CurDAG->UpdateNodeOperands(N, In, N->getOperand(1));
     MadeChange = true;
     }
     }
@@ -1851,6 +1878,11 @@ bool X86DAGToDAGISel::foldOffsetIntoAddress(uint64_t Offset,
     if (Subtarget->isTarget64BitILP32() &&
         !isDispSafeForFrameIndexOrRegBase((uint32_t)Val) &&
         !AM.hasBaseOrIndexReg())
+      return true;
+  } else if (Subtarget->is16Bit()) {
+    // In 16-bit mode, displacements are limited to [-65535,65535] for FK_Data_2
+    // fixups of unknown signedness. See X86AsmBackend::applyFixup.
+    if (Val < -(int64_t)UINT16_MAX || Val > (int64_t)UINT16_MAX)
       return true;
   } else if (AM.hasBaseOrIndexReg() && !isDispSafeForFrameIndexOrRegBase(Val))
     // For 32-bit X86, make sure the displacement still isn't close to the
@@ -3472,6 +3504,65 @@ static bool mayUseCarryFlag(X86::CondCode CC) {
     if (mayUseCarryFlag(CC))
       return false;
   }
+  return true;
+}
+
+bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
+  // Check that there is enough volatile registers to load the callee address.
+
+  const X86RegisterInfo *RI = Subtarget->getRegisterInfo();
+  unsigned AvailGPRs;
+  // The register classes below must stay in sync with what's used for
+  // TCRETURNri, TCRETURN_HIPE32ri, TCRETURN_WIN64ri, etc).
+  if (Subtarget->is64Bit()) {
+    const TargetRegisterClass *TCGPRs =
+        Subtarget->isCallingConvWin64(MF->getFunction().getCallingConv())
+            ? &X86::GR64_TCW64RegClass
+            : &X86::GR64_TCRegClass;
+    // Can't use RSP or RIP for the load in general.
+    assert(TCGPRs->contains(X86::RSP));
+    assert(TCGPRs->contains(X86::RIP));
+    AvailGPRs = TCGPRs->getNumRegs() - 2;
+  } else {
+    const TargetRegisterClass *TCGPRs =
+        MF->getFunction().getCallingConv() == CallingConv::HiPE
+            ? &X86::GR32RegClass
+            : &X86::GR32_TCRegClass;
+    // Can't use ESP for the address in general.
+    assert(TCGPRs->contains(X86::ESP));
+    AvailGPRs = TCGPRs->getNumRegs() - 1;
+  }
+
+  // The load's base and index need up to two registers.
+  unsigned LoadGPRs = 2;
+
+  assert(N->getOpcode() == X86ISD::TC_RETURN);
+  // X86tcret args: (*chain, ptr, imm, regs..., glue)
+
+  if (Subtarget->is32Bit()) {
+    // FIXME: This was carried from X86tcret_1reg which was used for 32-bit,
+    // but it could apply to 64-bit too.
+    const SDValue &BasePtr = cast<LoadSDNode>(N->getOperand(1))->getBasePtr();
+    if (isa<FrameIndexSDNode>(BasePtr)) {
+      LoadGPRs -= 2; // Base is fixed index off ESP; no regs needed.
+    } else if (BasePtr.getOpcode() == X86ISD::Wrapper &&
+               isa<GlobalAddressSDNode>(BasePtr->getOperand(0))) {
+      assert(!getTargetMachine().isPositionIndependent());
+      LoadGPRs -= 1; // Base is a global (immediate since this is non-PIC), no
+                     // reg needed.
+    }
+  }
+
+  unsigned ArgGPRs = 0;
+  for (unsigned I = 3, E = N->getNumOperands(); I != E; ++I) {
+    if (const auto *RN = dyn_cast<RegisterSDNode>(N->getOperand(I))) {
+      if (!RI->isGeneralPurposeRegister(*MF, RN->getReg()))
+        continue;
+      if (++ArgGPRs + LoadGPRs > AvailGPRs)
+        return false;
+    }
+  }
+
   return true;
 }
 
@@ -5969,13 +6060,11 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         case MVT::i32:
           break;
         case MVT::i64:
-          ClrNode =
-              SDValue(CurDAG->getMachineNode(
-                          TargetOpcode::SUBREG_TO_REG, dl, MVT::i64,
-                          CurDAG->getTargetConstant(0, dl, MVT::i64), ClrNode,
-                          CurDAG->getTargetConstant(X86::sub_32bit, dl,
-                                                    MVT::i32)),
-                      0);
+          ClrNode = SDValue(
+              CurDAG->getMachineNode(
+                  TargetOpcode::SUBREG_TO_REG, dl, MVT::i64, ClrNode,
+                  CurDAG->getTargetConstant(X86::sub_32bit, dl, MVT::i32)),
+              0);
           break;
         default:
           llvm_unreachable("Unexpected division source");

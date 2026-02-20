@@ -329,6 +329,12 @@ def : GINodeEquiv<G_AMDGPU_WHOLE_WAVE_FUNC_SETUP, AMDGPUwhole_wave_setup>;
 // G_AMDGPU_WHOLE_WAVE_FUNC_RETURN is simpler than AMDGPUwhole_wave_return,
 // so we don't mark it as equivalent.
 
+def : GINodeEquiv<G_AMDGPU_SPONENTRY, sponentry>;
+
+def : GINodeEquiv<G_AMDGPU_FLAT_LOAD_MONITOR, AMDGPUflat_load_monitor>;
+def : GINodeEquiv<G_AMDGPU_GLOBAL_LOAD_MONITOR, AMDGPUglobal_load_monitor>;
+
+
 class GISelSop2Pat <
   SDPatternOperator node,
   Instruction inst,

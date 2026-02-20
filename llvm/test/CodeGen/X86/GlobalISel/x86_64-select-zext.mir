@@ -364,7 +364,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; CHECK-NEXT: [[MOV32rr:%[0-9]+]]:gr32 = MOV32rr [[COPY]]
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[MOV32rr]], %subreg.sub_32bit
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[MOV32rr]], %subreg.sub_32bit
     ; CHECK-NEXT: $rax = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET 0, implicit $rax
     %0:gpr(s32) = COPY $edi

@@ -21,14 +21,14 @@ define void @simplify_udiv_1_in_replicate_region(i8 %arg, ptr %src) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP3]], align 1
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP4]], <4 x i8> zeroinitializer, <4 x i8> [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i8> [[PREDPHI]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP5]] to <4 x i32>
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP4]], <4 x i8> zeroinitializer, <4 x i8> [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i8> [[PREDPHI]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP5]] to <4 x i32>
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP6]], i32 3
 ; CHECK-NEXT:    br label %[[LATCH:.*]]
 ; CHECK:       [[LATCH]]:
@@ -222,13 +222,13 @@ define void @simplify_udiv_4_in_replicate_region2(i8 %arg, ptr noalias %src, ptr
 ; CHECK-NEXT:    store i8 [[TMP77]], ptr [[TMP23]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE29]]
 ; CHECK:       [[PRED_STORE_CONTINUE29]]:
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP11]], <4 x i8> [[TMP61]], <4 x i8> zeroinitializer
-; CHECK-NEXT:    [[TMP78:%.*]] = icmp ne <4 x i8> [[PREDPHI]], zeroinitializer
-; CHECK-NEXT:    [[TMP79:%.*]] = zext <4 x i1> [[TMP78]] to <4 x i32>
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP80:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP80]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP11]], <4 x i8> [[TMP61]], <4 x i8> zeroinitializer
+; CHECK-NEXT:    [[TMP78:%.*]] = icmp ne <4 x i8> [[PREDPHI]], zeroinitializer
+; CHECK-NEXT:    [[TMP79:%.*]] = zext <4 x i1> [[TMP78]] to <4 x i32>
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP79]], i32 3
 ; CHECK-NEXT:    br label %[[LATCH:.*]]
 ; CHECK:       [[LATCH]]:

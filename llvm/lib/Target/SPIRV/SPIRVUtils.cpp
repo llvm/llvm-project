@@ -171,15 +171,17 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
     // Asm Printer needs this info to print 64-bit operands correctly
     MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH64);
     return;
-  } else if (Bitwidth <= 128) {
-    uint32_t LowBits = Imm.getRawData()[0] & 0xffffffff;
-    uint32_t MidBits0 = (Imm.getRawData()[0] >> 32) & 0xffffffff;
-    uint32_t MidBits1 = Imm.getRawData()[1] & 0xffffffff;
-    uint32_t HighBits = (Imm.getRawData()[1] >> 32) & 0xffffffff;
-    MIB.addImm(LowBits).addImm(MidBits0).addImm(MidBits1).addImm(HighBits);
+  } else {
+    // Emit ceil(Bitwidth / 32) words to conform SPIR-V spec.
+    unsigned NumWords = (Bitwidth + 31) / 32;
+    for (unsigned I = 0; I < NumWords; ++I) {
+      unsigned LimbIdx = I / 2;
+      unsigned LimbShift = (I % 2) * 32;
+      uint32_t Word = (Imm.getRawData()[LimbIdx] >> LimbShift) & 0xffffffff;
+      MIB.addImm(Word);
+    }
     return;
   }
-  report_fatal_error("Unsupported constant bitwidth");
 }
 
 void buildOpName(Register Target, const StringRef &Name,
@@ -861,9 +863,9 @@ bool getVacantFunctionName(Module &M, std::string &Name) {
 
 // Assign SPIR-V type to the register. If the register has no valid assigned
 // class, set register LLT type and class according to the SPIR-V type.
-void setRegClassType(Register Reg, SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
-                     MachineRegisterInfo *MRI, const MachineFunction &MF,
-                     bool Force) {
+void setRegClassType(Register Reg, SPIRVTypeInst SpvType,
+                     SPIRVGlobalRegistry *GR, MachineRegisterInfo *MRI,
+                     const MachineFunction &MF, bool Force) {
   GR->assignSPIRVTypeToVReg(SpvType, Reg, MF);
   if (!MRI->getRegClassOrNull(Reg) || Force) {
     MRI->setRegClass(Reg, GR->getRegClass(SpvType));
@@ -885,7 +887,7 @@ void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
 
 // Create a virtual register and assign SPIR-V type to the register. Set
 // register LLT type and class according to the SPIR-V type.
-Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+Register createVirtualRegister(SPIRVTypeInst SpvType, SPIRVGlobalRegistry *GR,
                                MachineRegisterInfo *MRI,
                                const MachineFunction &MF) {
   Register Reg = MRI->createVirtualRegister(GR->getRegClass(SpvType));
@@ -896,7 +898,7 @@ Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
 
 // Create a virtual register and assign SPIR-V type to the register. Set
 // register LLT type and class according to the SPIR-V type.
-Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
+Register createVirtualRegister(SPIRVTypeInst SpvType, SPIRVGlobalRegistry *GR,
                                MachineIRBuilder &MIRBuilder) {
   return createVirtualRegister(SpvType, GR, MIRBuilder.getMRI(),
                                MIRBuilder.getMF());

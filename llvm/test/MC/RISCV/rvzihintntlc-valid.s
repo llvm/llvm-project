@@ -8,8 +8,25 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zihintntl,+c < %s \
 # RUN:     | llvm-objdump --mattr=+zihintntl,+c -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
-# RUN: not llvm-mc %s -triple=riscv32 -mattr=+zihintntl 2>&1 | FileCheck -check-prefix=CHECK-NO-C %s
-# RUN: not llvm-mc %s -triple=riscv64 -mattr=+zihintntl 2>&1 | FileCheck -check-prefix=CHECK-NO-C %s
+#
+# c.ntl.* hints are available when C extension is present, even without
+# enabling Zihintntl (riscv-non-isa/riscv-elf-psabi-doc#474).
+#
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+c -show-encoding \
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+c -show-encoding \
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+c < %s \
+# RUN:     | llvm-objdump --mattr=+c -d -r - \
+# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c < %s \
+# RUN:     | llvm-objdump --mattr=+c -d -r - \
+# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
+#
+# c.ntl.* still require the C extension.
+#
+# RUN: not llvm-mc %s -triple=riscv32 2>&1 | FileCheck -check-prefix=CHECK-NO-C %s
+# RUN: not llvm-mc %s -triple=riscv64 2>&1 | FileCheck -check-prefix=CHECK-NO-C %s
 
 # CHECK-ASM-AND-OBJ: ntl.p1
 # CHECK-ASM: encoding: [0x33,0x00,0x20,0x00]

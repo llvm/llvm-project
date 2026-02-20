@@ -495,7 +495,8 @@ bool DWARFTypePrinter<DieType>::appendTemplateParameters(DieType D,
       // symbol in the ELF symbol table to get back to the variable...
       // but probably not worth it.
       if (T.getTag() == dwarf::DW_TAG_pointer_type ||
-          T.getTag() == dwarf::DW_TAG_reference_type)
+          T.getTag() == dwarf::DW_TAG_reference_type ||
+          T.getTag() == dwarf::DW_TAG_ptr_to_member_type)
         continue;
       const char *RawName = detail::toString(T.find(dwarf::DW_AT_name));
       assert(RawName);

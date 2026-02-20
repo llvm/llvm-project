@@ -839,8 +839,30 @@ bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
   return true;
 }
 
-bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
-  return llvm::StringSwitch<bool>(Feature)
+/// A helper class for "hasFeature" lookups (mimicking a StringSwitch).
+struct FeatureLookupBuilder {
+  FeatureLookupBuilder(AArch64FeatureSet &Features) : Features(Features) {
+    Features.clear();
+  }
+
+  FeatureLookupBuilder &Case(StringRef Feat, bool HasFeature) {
+    if (HasFeature)
+      Features.insert(Feat);
+    return *this;
+  }
+
+  FeatureLookupBuilder &Cases(ArrayRef<StringRef> Feats, bool HasFeature) {
+    if (HasFeature)
+      Features.insert_range(Feats);
+    return *this;
+  }
+
+private:
+  AArch64FeatureSet &Features;
+};
+
+void AArch64TargetInfo::computeFeatureLookup() {
+  FeatureLookupBuilder(HasFeatureLookup)
       .Cases({"aarch64", "arm64", "arm"}, true)
       .Case("fmv", HasFMV)
       .Case("fp", FPU & FPUMode)
@@ -911,8 +933,11 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sve-aes2", HasSVE_AES2)
       .Case("ssve-aes", HasSSVE_AES)
       .Case("sve2p2", FPU & SveMode && HasSVE2p2)
-      .Case("sme2p2", HasSME2p2)
-      .Default(false);
+      .Case("sme2p2", HasSME2p2);
+}
+
+bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
+  return HasFeatureLookup.contains(Feature);
 }
 
 void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
@@ -1286,6 +1311,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   if (HasNoSVE)
     FPU &= ~SveMode;
 
+  computeFeatureLookup();
   return true;
 }
 

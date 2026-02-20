@@ -21,4 +21,10 @@
 !$omp parallel
 !$acc+comment
 !$omp end parallel
+
+! Conditional compilation statements beginning with a continuation line
+! are allowed with a warning.
+! CHECK: !$ &i=5
+c     comment
+c$   !i=5
       end

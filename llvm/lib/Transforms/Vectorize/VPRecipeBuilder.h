@@ -38,11 +38,6 @@ class VPRecipeBuilder {
 
   VPBuilder &Builder;
 
-  /// The mask of each VPBB, generated earlier and used for predicating recipes
-  /// in VPBB.
-  /// TODO: remove by applying predication when generating the masks.
-  DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache;
-
   // VPlan construction support: Hold a mapping from ingredients to
   // their recipe.
   DenseMap<Instruction *, VPRecipeBase *> Ingredient2Recipe;
@@ -87,10 +82,8 @@ class VPRecipeBuilder {
 public:
   VPRecipeBuilder(VPlan &Plan, const TargetLibraryInfo *TLI,
                   LoopVectorizationLegality *Legal,
-                  LoopVectorizationCostModel &CM, VPBuilder &Builder,
-                  DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache)
-      : Plan(Plan), TLI(TLI), Legal(Legal), CM(CM), Builder(Builder),
-        BlockMaskCache(BlockMaskCache) {}
+                  LoopVectorizationCostModel &CM, VPBuilder &Builder)
+      : Plan(Plan), TLI(TLI), Legal(Legal), CM(CM), Builder(Builder) {}
 
   /// Create and return a widened recipe for a non-phi recipe \p R if one can be
   /// created within the given VF \p Range.
@@ -102,12 +95,6 @@ public:
     assert(!Ingredient2Recipe.contains(I) &&
            "Cannot reset recipe for instruction.");
     Ingredient2Recipe[I] = R;
-  }
-
-  /// Returns the *entry* mask for block \p VPBB or null if the mask is
-  /// all-true.
-  VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
-    return BlockMaskCache.lookup(VPBB);
   }
 
   /// Return the recipe created for given ingredient.
@@ -130,15 +117,6 @@ public:
         return R->getVPSingleValue();
     }
     return Plan.getOrAddLiveIn(V);
-  }
-
-  void updateBlockMaskCache(DenseMap<VPValue *, VPValue *> &Old2New) {
-    for (auto &[_, V] : BlockMaskCache) {
-      if (auto *New = Old2New.lookup(V)) {
-        V->replaceAllUsesWith(New);
-        V = New;
-      }
-    }
   }
 };
 } // end namespace llvm

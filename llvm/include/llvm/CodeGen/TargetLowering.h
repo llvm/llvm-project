@@ -1244,15 +1244,32 @@ public:
   };
 
   /// Given an intrinsic, checks if on the target the intrinsic will need to map
-  /// to a MemIntrinsicNode (touches memory). If this is the case, it returns
-  /// true and store the intrinsic information into the IntrinsicInfo that was
-  /// passed to the function.
+  /// to a MemIntrinsicNode (touches memory). If this is the case, it stores
+  /// the intrinsic information into the IntrinsicInfo vector passed to the
+  /// function. The vector may contain multiple entries for intrinsics that
+  /// access multiple memory locations.
+  virtual void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                                  const CallBase &I, MachineFunction &MF,
+                                  unsigned Intrinsic) const {
+    // The default implementation forwards to the legacy single-info overload
+    // for compatibility.
+    IntrinsicInfo Info;
+    if (getTgtMemIntrinsic(Info, I, MF, Intrinsic))
+      Infos.push_back(Info);
+  }
+
+protected:
+  /// This is a legacy single-info overload. New code should override the
+  /// SmallVectorImpl overload instead to support multiple memory operands.
+  ///
+  /// TODO: Remove this once the refactoring is complete.
   virtual bool getTgtMemIntrinsic(IntrinsicInfo &, const CallBase &,
                                   MachineFunction &,
                                   unsigned /*Intrinsic*/) const {
     return false;
   }
 
+public:
   /// Returns true if the target can instruction select the specified FP
   /// immediate natively. If false, the legalizer will materialize the FP
   /// immediate as a load from a constant pool.
@@ -5425,7 +5442,8 @@ public:
   /// comparison may check if the operand is NAN, INF, zero, normal, etc. The
   /// result should be used as the condition operand for a select or branch.
   virtual SDValue getSqrtInputTest(SDValue Operand, SelectionDAG &DAG,
-                                   const DenormalMode &Mode) const;
+                                   const DenormalMode &Mode,
+                                   SDNodeFlags Flags = {}) const;
 
   /// Return a target-dependent result if the input operand is not suitable for
   /// use with a square root estimate calculation.
@@ -5591,6 +5609,12 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTLZ(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand CTLS (count leading sign bits) nodes.
+  /// CTLS(x) = CTLZ(OR(SHL(XOR(x, SRA(x, BW-1)), 1), 1))
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandCTLS(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand CTTZ via Table Lookup.
   /// \param N Node to expand

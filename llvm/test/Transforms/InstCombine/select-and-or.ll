@@ -789,6 +789,118 @@ define i1 @or_and2_commuted(i1 %a, i1 %b, i1 %c) {
   ret i1 %r
 }
 
+define i1 @fold_or_of_ands_with_select_to_logical1(i1 %a, i1 %b, i1 %c) !prof !0 {
+; CHECK-LABEL: @fold_or_of_ands_with_select_to_logical1(
+; CHECK-NEXT:    [[OR1:%.*]] = select i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    ret i1 [[OR1]]
+;
+  %not = xor i1 %c, true
+  %and1 = and i1 %c, %a
+  %and2 = select i1 %not, i1 %b, i1 false, !prof !1
+  %or1 = or i1 %and1, %and2
+  ret i1 %or1
+}
+
+define i1 @fold_or_of_ands_with_select_to_logical2(i1 %a, i1 %b, i1 %c) !prof !0 {
+; CHECK-LABEL: @fold_or_of_ands_with_select_to_logical2(
+; CHECK-NEXT:    [[OR1:%.*]] = select i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B:%.*]], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    ret i1 [[OR1]]
+;
+  %not = xor i1 %c, true
+  %and1 = and i1 %c, %a
+  %and2 = select i1 %b, i1 %not, i1 false, !prof !1
+  %or1 = or i1 %and1, %and2
+  ret i1 %or1
+}
+
+define i1 @fold_or_of_ands_with_select_to_logical3(i1 %a, i1 %b, i1 %c) !prof !0 {
+; CHECK-LABEL: @fold_or_of_ands_with_select_to_logical3(
+; CHECK-NEXT:    [[OR1:%.*]] = select i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    ret i1 [[OR1]]
+;
+  %not = xor i1 %c, true
+  %and1 = and i1 %a, %c
+  %and2 = select i1 %not, i1 %b, i1 false, !prof !1
+  %or1 = or i1 %and1, %and2
+  ret i1 %or1
+}
+
+define i1 @fold_or_of_ands_with_select_to_logical4(i1 %a, i1 %b, i1 %c) !prof !0 {
+; CHECK-LABEL: @fold_or_of_ands_with_select_to_logical4(
+; CHECK-NEXT:    [[OR1:%.*]] = select i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B:%.*]], !prof [[PROF2]]
+; CHECK-NEXT:    ret i1 [[OR1]]
+;
+  %not = xor i1 %c, true
+  %and1 = and i1 %a, %c
+  %and2 = select i1 %b, i1 %not, i1 false, !prof !1
+  %or1 = or i1 %and1, %and2
+  ret i1 %or1
+}
+
+define i1 @fold_or_of_ands_with_select_to_logical5(i1 %a, i1 %b, i1 %c) !prof !0 {
+; CHECK-LABEL: @fold_or_of_ands_with_select_to_logical5(
+; CHECK-NEXT:    [[OR1:%.*]] = select i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B:%.*]], !prof [[PROF2]]
+; CHECK-NEXT:    ret i1 [[OR1]]
+;
+  %not = xor i1 %c, true
+  %and1 = select i1 %a, i1 %c, i1 false, !prof !1
+  %and2 = and i1 %not, %b
+  %or1 = or i1 %and1, %and2
+  ret i1 %or1
+}
+
+define i1 @fold_or_of_ands_with_select_to_logical6(i1 %a, i1 %b, i1 %c) !prof !0 {
+; CHECK-LABEL: @fold_or_of_ands_with_select_to_logical6(
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[C:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = select i1 [[TMP1]], i1 [[A:%.*]], i1 [[B:%.*]], !prof [[PROF2]]
+; CHECK-NEXT:    ret i1 [[OR1]]
+;
+  %not = xor i1 %c, true
+  %and1 = select i1 %a, i1 %c, i1 false, !prof !1
+  %and2 = select i1 %b, i1 %not, i1 false, !prof !1
+  %or1 = or i1 %and1, %and2
+  ret i1 %or1
+}
+
+define i1 @fold_or_of_ands_with_select_to_logical7(i1 %a, i1 %b, i1 %c) !prof !0 {
+; CHECK-LABEL: @fold_or_of_ands_with_select_to_logical7(
+; CHECK-NEXT:    [[OR1:%.*]] = select i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    ret i1 [[OR1]]
+;
+  %not = xor i1 %c, true
+  %and1 = and i1 %c, %a
+  %and2 = select i1 %not, i1 %b, i1 false, !prof !1
+  %or1 = or i1 %and2, %and1
+  ret i1 %or1
+}
+
+define i8 @fold_or_of_ands_with_select_to_logical_neg(i8 %a, i8 %b, i8 %c) !prof !0 {
+; CHECK-LABEL: @fold_or_of_ands_with_select_to_logical_neg(
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[C:%.*]], 1
+; CHECK-NEXT:    [[AND1:%.*]] = and i8 [[C]], [[A:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[NOT]], [[B:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[AND1]], [[AND2]]
+; CHECK-NEXT:    ret i8 [[OR1]]
+;
+  %not = xor i8 %c, 1
+  %and1 = and i8 %c, %a
+  %and2 = and i8 %not, %b
+  %or1 = or i8 %and1, %and2
+  ret i8 %or1
+}
+
+define <4 x i1> @fold_or_of_ands_with_select_to_logical9(<4 x i1> %a, <4 x i1> %b, <4 x i1> %c) !prof !0 {
+; CHECK-LABEL: @fold_or_of_ands_with_select_to_logical9(
+; CHECK-NEXT:    [[OR1:%.*]] = select <4 x i1> [[C:%.*]], <4 x i1> [[A:%.*]], <4 x i1> [[B:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    ret <4 x i1> [[OR1]]
+;
+  %not = xor <4 x i1> %c, splat (i1 true)
+  %and1 = and <4 x i1> %c, %a
+  %and2 = select <4 x i1> %not, <4 x i1> %b, <4 x i1> splat (i1 false), !prof !1
+  %or1 = or <4 x i1> %and1, %and2
+  ret <4 x i1> %or1
+}
+
 define i1 @or_and1_multiuse(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @or_and1_multiuse(
 ; CHECK-NEXT:    [[NOTB:%.*]] = xor i1 [[B:%.*]], true
@@ -1356,8 +1468,10 @@ define i8 @test_logical_commuted_and_ne_a_b(i1 %other_cond, i8 %a, i8 %b)  {
 !0 = !{!"function_entry_count", i64 1000}
 !1 = !{!"branch_weights", i32 2, i32 3}
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 3, i32 2}
+; CHECK: [[PROF2]] = !{!"unknown", !"instcombine"}
 ;.

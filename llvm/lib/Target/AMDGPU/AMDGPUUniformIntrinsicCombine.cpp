@@ -165,10 +165,7 @@ namespace {
 class AMDGPUUniformIntrinsicCombineLegacy : public FunctionPass {
 public:
   static char ID;
-  AMDGPUUniformIntrinsicCombineLegacy() : FunctionPass(ID) {
-    initializeAMDGPUUniformIntrinsicCombineLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AMDGPUUniformIntrinsicCombineLegacy() : FunctionPass(ID) {}
 
 private:
   bool runOnFunction(Function &F) override;

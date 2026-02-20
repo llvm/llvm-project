@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
@@ -1566,8 +1567,15 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
       mlir::isa<fir::BaseBoxType>(fir::getBase(rhs).getType());
   auto recTy = mlir::dyn_cast<fir::RecordType>(baseTy);
   assert(recTy && "must be a record type");
+
+  // Use alias analysis to guard the fast path.
+  fir::AliasAnalysis aa;
+  // Aliased SEQUENCE types must take the conservative (slow) path.
+  bool disjoint = isTemporaryLHS || !recTy.isSequence() ||
+                  (aa.alias(fir::getBase(lhs), fir::getBase(rhs)) ==
+                   mlir::AliasResult::NoAlias);
   if ((needFinalization && mayHaveFinalizer(recTy, builder)) ||
-      hasBoxOperands || !recordTypeCanBeMemCopied(recTy)) {
+      hasBoxOperands || !recordTypeCanBeMemCopied(recTy) || !disjoint) {
     auto to = fir::getBase(builder.createBox(loc, lhs));
     auto from = fir::getBase(builder.createBox(loc, rhs));
     // The runtime entry point may modify the LHS descriptor if it is

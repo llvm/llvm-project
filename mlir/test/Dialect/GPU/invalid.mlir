@@ -1,5 +1,14 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s
 
+func.func @empty_body(%sz : index) {
+  // expected-error@+1 {{'gpu.launch' op body region is empty}}
+  "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
+  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
+  return
+}
+
+// -----
+
 func.func @not_enough_sizes(%sz : index) {
   // expected-error@+1 {{expected 6 or more operands, but found 5}}
   "gpu.launch"(%sz, %sz, %sz, %sz, %sz) ({
@@ -39,6 +48,40 @@ func.func @launch_result_no_async() {
   %c1 = arith.constant 1 : index
   // expected-error@+1 {{gpu.launch requires 'async' keyword to return a value}}
   %0 = gpu.launch blocks(%bx, %by, %bz) in (%gx = %c1, %gy = %c1, %gz = %c1) threads(%tx, %ty, %tz) in (%lx = %c1, %ly = %c1, %lz = %c1) {
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @launch_wrong_clusters(%sz : index) {
+  // expected-error@+1 {{'gpu.launch' clusters expects 3 arguments, but got 1}}
+  gpu.launch clusters(%cx) in (%scx = %sz, %scy = %sz, %scz = %sz)
+             blocks(%bx, %by, %bz) in (%sbx = %sz, %sby = %sz, %sbz = %sz)
+             threads(%tx, %ty, %tz) in (%stx = %sz, %sty = %sz, %stz = %sz) {
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @launch_wrong_blocks(%sz : index) {
+  // expected-error@+1 {{'gpu.launch' blocks expects 3 arguments, but got 1}}
+  gpu.launch blocks(%bx) in (%sbx = %sz, %sby = %sz, %sbz = %sz)
+             threads(%tx, %ty, %tz) in (%stx = %sz, %sty = %sz, %stz = %sz) {
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @launch_wrong_threads(%sz : index) {
+  // expected-error@+1 {{'gpu.launch' threads expects 3 arguments, but got 1}}
+  gpu.launch blocks(%bx, %by, %bz) in (%sbx = %sz, %sby = %sz, %sbz = %sz)
+             threads(%tx) in (%stx = %sz, %sty = %sz, %stz = %sz) {
     gpu.terminator
   }
   return
@@ -135,7 +178,7 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   gpu.module @kernels {
     // expected-note@+1 {{see the kernel definition here}}
-    memref.global "private" @kernel_1 : memref<4xi32>
+    memref.global @kernel_1 : memref<4xi32>
   }
 
   func.func @launch_func_undefined_function(%sz : index) {
@@ -816,8 +859,19 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   gpu.module @kernel {
-    // expected-error@+1 {{'gpu.func' op attribute 'known_block_size' failed to satisfy constraint: i32 dense array attribute with 3 elements (if present)}}
+    // expected-error@+1 {{'gpu.func' op attribute 'known_block_size' failed to satisfy constraint: i32 dense array attribute with 3 elements (if present) and all elements >= 1}}
     gpu.func @kernel() kernel attributes {known_block_size = array<i32: 2, 1>} {
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  gpu.module @kernel {
+    // expected-error@+1 {{'gpu.func' op attribute 'known_block_size' failed to satisfy constraint: i32 dense array attribute with 3 elements (if present) and all elements >= 1}}
+    gpu.func @kernel() kernel attributes {known_block_size = array<i32: 2, 1, -1>} {
       gpu.return
     }
   }

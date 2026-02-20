@@ -147,25 +147,10 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-bforceimprw");
   }
 
-  // PGO instrumentation generates symbols belonging to special sections, and
-  // the linker needs to place all symbols in a particular section together in
-  // memory; the AIX linker does that under an option.
-  if (Args.hasFlag(options::OPT_fprofile_arcs, options::OPT_fno_profile_arcs,
-                    false) ||
-       Args.hasFlag(options::OPT_fprofile_generate,
-                    options::OPT_fno_profile_generate, false) ||
-       Args.hasFlag(options::OPT_fprofile_generate_EQ,
-                    options::OPT_fno_profile_generate, false) ||
-       Args.hasFlag(options::OPT_fprofile_instr_generate,
-                    options::OPT_fno_profile_instr_generate, false) ||
-       Args.hasFlag(options::OPT_fprofile_instr_generate_EQ,
-                    options::OPT_fno_profile_instr_generate, false) ||
-       Args.hasFlag(options::OPT_fcs_profile_generate,
-                    options::OPT_fno_profile_generate, false) ||
-       Args.hasFlag(options::OPT_fcs_profile_generate_EQ,
-                    options::OPT_fno_profile_generate, false) ||
-       Args.hasArg(options::OPT_fcreate_profile) ||
-       Args.hasArg(options::OPT_coverage))
+  // PGO and ifunc support depends on the named sections linker feature that is
+  // available on AIX 7.2 TL5 SP5 onwards.
+  if (ToolChain.getTriple().getOSMajorVersion() == 0 ||
+      ToolChain.getTriple().getOSVersion() >= VersionTuple(7, 2))
     CmdArgs.push_back("-bdbg:namedsects:ss");
 
   if (Arg *A = Args.getLastArg(options::OPT_mxcoff_build_id_EQ)) {
@@ -365,6 +350,10 @@ AIX::AIX(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   ParseInlineAsmUsingAsmParser = Args.hasFlag(
       options::OPT_fintegrated_as, options::OPT_fno_integrated_as, true);
   getLibraryPaths().push_back(getDriver().SysRoot + "/usr/lib");
+
+  // FilePaths gets System Paths for -print-search-dirs
+  getFilePaths().push_back(getDriver().SysRoot + "/usr/lib");
+  getFilePaths().push_back(getDriver().SysRoot + "/lib");
 }
 
 // Returns the effective header sysroot path to use.
@@ -460,6 +449,19 @@ void AIX::AddClangCXXStdlibIncludeArgs(
   }
 
   llvm_unreachable("Unexpected C++ library type; only libc++ is supported.");
+}
+
+void AIX::AddFilePathLibArgs(const llvm::opt::ArgList &Args,
+                             llvm::opt::ArgStringList &CmdArgs) const {
+  // AIX linker searches /usr/lib and /lib by default. Don't add them as -L
+  // flags to avoid duplicates. But keep them in FilePaths for
+  // -print-search-dirs
+  for (const auto &LibPath : getFilePaths()) {
+    if (LibPath.length() > 0 && LibPath != getDriver().SysRoot + "/usr/lib" &&
+        LibPath != getDriver().SysRoot + "/lib") {
+      CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + LibPath));
+    }
+  }
 }
 
 void AIX::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,

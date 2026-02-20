@@ -31,12 +31,11 @@ class LowerModule {
   const std::unique_ptr<clang::TargetInfo> target;
   std::unique_ptr<TargetLoweringInfo> targetLoweringInfo;
   std::unique_ptr<CIRCXXABI> abi;
-  [[maybe_unused]] mlir::PatternRewriter &rewriter;
 
 public:
   LowerModule(clang::LangOptions langOpts, clang::CodeGenOptions codeGenOpts,
-              mlir::ModuleOp &module, std::unique_ptr<clang::TargetInfo> target,
-              mlir::PatternRewriter &rewriter);
+              mlir::ModuleOp &module,
+              std::unique_ptr<clang::TargetInfo> target);
   ~LowerModule() = default;
 
   clang::TargetCXXABI::Kind getCXXABIKind() const {
@@ -51,8 +50,7 @@ public:
   const TargetLoweringInfo &getTargetLoweringInfo();
 };
 
-std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module,
-                                               mlir::PatternRewriter &rewriter);
+std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module);
 
 } // namespace cir
 

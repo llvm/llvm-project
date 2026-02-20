@@ -227,12 +227,20 @@ template <typename T> bool operator!=(const RefPtr<T> &, T &) { return false; }
 struct RefCountable {
   static Ref<RefCountable> create();
   static std::unique_ptr<RefCountable> makeUnique();
-  void ref() {}
-  void deref() {}
+  void ref() { ++m_refCount; }
+  void deref() {
+    --m_refCount;
+    if (!--m_refCount)
+      delete this;
+  }
+  ~RefCountable();
   void method();
   void constMethod() const;
   int trivial() { return 123; }
   RefCountable* next();
+  
+private:
+  unsigned m_refCount { 0 };
 };
 
 template <typename T> T *downcast(T *t) { return t; }
@@ -280,11 +288,14 @@ public:
 
 class CheckedObj {
 public:
-  void incrementCheckedPtrCount();
-  void decrementCheckedPtrCount();
+  void incrementCheckedPtrCount() { ++m_ptrCount; }
+  void decrementCheckedPtrCount() { --m_ptrCount; }
   void method();
   int trivial() { return 123; }
   CheckedObj* next();
+
+private:
+  unsigned m_ptrCount { 0 };
 };
 
 class RefCountableAndCheckable {
@@ -348,8 +359,8 @@ public:
 
 private:
   template <typename T>
-  WeakPtrImpl(T* t)
-    : ptr(static_cast<void*>(t))
+  WeakPtrImpl(T& t)
+    : ptr(static_cast<void*>(&t))
   { }
 };
 
@@ -361,9 +372,9 @@ private:
   template <typename U> friend class CanMakeWeakPtr;
   template <typename U> friend class WeakPtr;
 
-  Ref<WeakPtrImpl> createWeakPtrImpl() {
+  WeakPtrImpl& createWeakPtrImpl() {
     if (!impl)
-      impl = WeakPtrImpl::create(static_cast<T>(*this));
+      impl = WeakPtrImpl::create(static_cast<T&>(*this));
     return *impl;
   }
 
@@ -382,21 +393,26 @@ private:
   RefPtr<WeakPtrImpl> impl;
 
 public:
-  WeakPtr(T& t) {
-    *this = t;
+  WeakPtr(T& t)
+    : impl(t.createWeakPtrImpl()) {
   }
-  WeakPtr(T* t) {
-    *this = t;
+  WeakPtr(T* t)
+    : impl(t ? &t->createWeakPtrImpl() : nullptr) {
   }
 
   template <typename U>
   WeakPtr<T> operator=(U& obj) {
     impl = obj.createWeakPtrImpl();
+    return *this;
   }
 
   template <typename U>
   WeakPtr<T> operator=(U* obj) {
-    impl = obj ? obj->createWeakPtrImpl() : nullptr;
+    if (obj)
+      impl = obj->createWeakPtrImpl();
+    else
+      impl = nullptr;
+    return *this;
   }
 
   T* get() {
