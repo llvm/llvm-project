@@ -2,10 +2,10 @@
 ; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/csspgo-import-list.prof --sample-profile-even-flow-distribution=0 -S | FileCheck %s
 ; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/csspgo-import-list.prof -o %t.prof
 ; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%t.prof --sample-profile-even-flow-distribution=0 -S | FileCheck %s
-; RUN: llvm-profdata show --sample -show-sec-info-only %t.prof | FileCheck %s --check-prefix=CHECK-ORDERED
+; RUN: llvm-profdata show --sample --show-sec-info-only %t.prof | FileCheck %s --check-prefix=CHECK-ORDERED
 ; RUN: llvm-profdata merge --sample --extbinary --use-md5 %S/Inputs/csspgo-import-list.prof -o %t.md5
 ; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%t.md5 --sample-profile-even-flow-distribution=0 -S | FileCheck %s
-; RUN: llvm-profdata show --sample -show-sec-info-only %t.md5 | FileCheck %s --check-prefix=CHECK-ORDERED
+; RUN: llvm-profdata show --sample --show-sec-info-only %t.md5 | FileCheck %s --check-prefix=CHECK-ORDERED
 
 ;; Validate that with replay in effect, we import call sites even if they are below the threshold
 ;; Baseline import decisions

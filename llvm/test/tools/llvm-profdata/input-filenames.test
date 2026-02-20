@@ -10,8 +10,8 @@ RUN: echo ' ' > %t.foo
 RUN: echo ' ' > %t.bar
 RUN: echo ' ' > %t.baz
 
-RUN: llvm-profdata merge -f %t.input -dump-input-file-list -o /dev/null %t.foo | FileCheck %s
-RUN: llvm-profdata merge -input-files %t.input -dump-input-file-list -o /dev/null %t.foo | FileCheck %s
+RUN: llvm-profdata merge -f %t.input --dump-input-file-list -o /dev/null %t.foo | FileCheck %s
+RUN: llvm-profdata merge --input-files %t.input --dump-input-file-list -o /dev/null %t.foo | FileCheck %s
 
 CHECK: 1,{{.*}}.foo
 CHECK-NEXT: 1,{{.*}}.bar

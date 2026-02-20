@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=900000 -profile-sample-accurate -S | FileCheck %s --check-prefix=CALL_SUM_IS_HOT
 
-; RUN: llvm-profdata merge -sample -extbinary -prof-sym-list=%S/Inputs/profile-symbol-list.text %S/Inputs/profsampleacc.extbinary.afdo -o %t.symlist.afdo
+; RUN: llvm-profdata merge --sample --extbinary --prof-sym-list %S/Inputs/profile-symbol-list.text %S/Inputs/profsampleacc.extbinary.afdo -o %t.symlist.afdo
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.symlist.afdo -profile-summary-cutoff-hot=600000 -profile-accurate-for-symsinlist -S | FileCheck %s --check-prefix=PROFSYMLIST
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.symlist.afdo -profile-accurate-for-symsinlist -profile-symbol-list-cutoff=2 -S | FileCheck %s --check-prefix=PSLCUTOFF2
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.symlist.afdo -profile-accurate-for-symsinlist -profile-symbol-list-cutoff=3 -S | FileCheck %s --check-prefix=PSLCUTOFF3

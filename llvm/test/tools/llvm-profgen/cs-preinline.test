@@ -21,15 +21,15 @@
 
 ; Test preInlined flat is set for extbinary profiles with preinliner on.
 ; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=0 --sample-profile-hot-inline-threshold=3000 --sample-profile-cold-inline-threshold=45 --output=%t2.prof
-; RUN: llvm-profdata show --sample -show-sec-info-only %t2.prof | FileCheck %s -check-prefix=CHECK-PREINL-FLAG
+; RUN: llvm-profdata show --sample --show-sec-info-only %t2.prof | FileCheck %s -check-prefix=CHECK-PREINL-FLAG
 ; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin  --csspgo-preinliner=1 --sample-profile-hot-inline-threshold=3000 --sample-profile-cold-inline-threshold=45 --output=%t5.prof --gen-cs-nested-profile=1
-; RUN: llvm-profdata show --sample -show-sec-info-only %t5.prof | FileCheck %s -check-prefix=CHECK-PREINL-FLAG
+; RUN: llvm-profdata show --sample --show-sec-info-only %t5.prof | FileCheck %s -check-prefix=CHECK-PREINL-FLAG
 
 ; Test preInlined flat is set when converted from a text profile that has "ShouldInline" contexts.
 ; RUN: llvm-profdata merge --sample %t2 -o %t2.prof --extbinary
-; RUN: llvm-profdata show --sample -show-sec-info-only %t2.prof | FileCheck %s -check-prefix=CHECK-PREINL-FLAG
+; RUN: llvm-profdata show --sample --show-sec-info-only %t2.prof | FileCheck %s -check-prefix=CHECK-PREINL-FLAG
 ; RUN: llvm-profdata merge --sample %t5 -o %t5.prof --extbinary
-; RUN: llvm-profdata show --sample -show-sec-info-only %t5.prof | FileCheck %s -check-prefix=CHECK-PREINL-FLAG
+; RUN: llvm-profdata show --sample --show-sec-info-only %t5.prof | FileCheck %s -check-prefix=CHECK-PREINL-FLAG
 
 
 ; CHECK-DEFAULT:     [main:1 @ foo]:309:0

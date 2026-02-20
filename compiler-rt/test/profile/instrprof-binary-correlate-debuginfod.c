@@ -37,5 +37,5 @@
 // MISSING-CORRELATION-KIND: error: Expected --correlate when --debug-file-directory is provided
 
 // Test error for llvm-profdata merge profile correlation with mixing correlation options.
-// RUN: not llvm-profdata merge -o %t.error.profdata --binary-file=%t.correlate.exe --debug-file-directory %t --correlate=binary %t.correlate.profraw  2>&1 | FileCheck %s --check-prefix=MIXING-FLAGS
+// RUN: not llvm-profdata merge -o %t.error.profdata --binary-file %t.correlate.exe --debug-file-directory %t --correlate=binary %t.correlate.profraw  2>&1 | FileCheck %s --check-prefix=MIXING-FLAGS
 // MIXING-FLAGS: error: Expected only one of -binary-file, -debuginfod or -debug-file-directory

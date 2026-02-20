@@ -3264,7 +3264,7 @@ instrumentation:
 
    .. code-block:: console
 
-     $ llvm-profdata merge -output=code.profdata code-*.profraw
+     $ llvm-profdata merge --output=code.profdata code-*.profraw
 
    Note that this step is necessary even when there is only one "raw" profile,
    since the merge operation also changes the file format.
@@ -3309,7 +3309,7 @@ indexed format, regardeless whether it is produced by frontend or the IR pass.
 
   .. code-block:: console
 
-    $ llvm-profdata merge -output=code.profdata yyy/zzz/
+    $ llvm-profdata merge --output=code.profdata yyy/zzz/
 
   If the user wants to turn off the auto-merging feature, or simply override the
   the profile dumping path specified at command line, the environment variable
@@ -3334,7 +3334,7 @@ indexed format, regardeless whether it is produced by frontend or the IR pass.
 
     $ clang++ -O2 -fprofile-generate=yyy/zzz code.cc -o code
     $ ./code
-    $ llvm-profdata merge -output=code.profdata yyy/zzz/
+    $ llvm-profdata merge --output=code.profdata yyy/zzz/
 
   The first few steps are the same as that in ``-fprofile-generate``
   compilation. Then perform a second round of instrumentation.
@@ -3344,7 +3344,7 @@ indexed format, regardeless whether it is produced by frontend or the IR pass.
     $ clang++ -O2 -fprofile-use=code.profdata -fcs-profile-generate=sss/ttt \
       -o cs_code
     $ ./cs_code
-    $ llvm-profdata merge -output=cs_code.profdata sss/ttt code.profdata
+    $ llvm-profdata merge --output=cs_code.profdata sss/ttt code.profdata
 
   The resulted ``cs_code.prodata`` combines ``code.profdata`` and the profile
   generated from binary ``cs_code``. Profile ``cs_code.profata`` can be used by
@@ -3650,7 +3650,7 @@ instrument functions in a specified group. This can be done using the
 
   .. code-block:: console
 
-    $ llvm-profdata merge -output=code.profdata group_*/*.profraw
+    $ llvm-profdata merge --output=code.profdata group_*/*.profraw
 
 
 Profile remapping

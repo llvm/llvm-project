@@ -13,9 +13,9 @@
 
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t1 --profile-summary-cold-count=0
 ; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/noinline-cs-noprobe.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t2 --profile-summary-cold-count=0 -use-md5
-; RUN: llvm-profdata show --sample -show-sec-info-only %t2 | FileCheck %s --check-prefix=CHECK-MD5
-; RUN: llvm-profdata show --sample -detailed-summary --function=dummy %t1 > %t.summary
-; RUN: llvm-profdata show --sample -detailed-summary --function=dummy %t2 > %t2.summary
+; RUN: llvm-profdata show --sample --show-sec-info-only %t2 | FileCheck %s --check-prefix=CHECK-MD5
+; RUN: llvm-profdata show --sample --detailed-summary --function dummy %t1 > %t.summary
+; RUN: llvm-profdata show --sample --detailed-summary --function dummy %t2 > %t2.summary
 ; RUN: diff -b %t.summary %t2.summary
 
 

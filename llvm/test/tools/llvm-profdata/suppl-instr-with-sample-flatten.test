@@ -3,9 +3,9 @@ with flattening.
 
 Test bar.cc:bar's counters will be set to PseudoHot.
 RUN: llvm-profdata merge \
-RUN:     -supplement-instr-with-sample=%p/Inputs/flatten_sample.proftext \
+RUN:     --supplement-instr-with-sample %p/Inputs/flatten_sample.proftext \
 RUN:     %p/Inputs/flatten_instr.proftext -o %t
-RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FLATTEN
+RUN: llvm-profdata show %t --all-functions --counts | FileCheck %s --check-prefix=FLATTEN
 
 FLATTEN:  foo:
 FLATTEN-NEXT:    Hash: 0x0000000000000457

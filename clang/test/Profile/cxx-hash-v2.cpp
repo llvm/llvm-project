@@ -1,7 +1,7 @@
 // Check that all of the hashes in this file are unique (i.e, that none of the
 // profiles for these functions are mutually interchangeable).
 //
-// RUN: llvm-profdata show -all-functions %S/Inputs/cxx-hash-v2.profdata.v5 | grep "Hash: 0x" | sort > %t.hashes
+// RUN: llvm-profdata show --all-functions %S/Inputs/cxx-hash-v2.profdata.v5 | grep "Hash: 0x" | sort > %t.hashes
 // RUN: uniq %t.hashes > %t.hashes.unique
 // RUN: diff %t.hashes %t.hashes.unique
 

@@ -1,6 +1,6 @@
-; RUN: llvm-profdata merge --sample -profile-isfs -o %t0.afdo %S/Inputs/fsloader.afdo
+; RUN: llvm-profdata merge --sample --profile-isfs -o %t0.afdo %S/Inputs/fsloader.afdo
 ; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=false -fs-profile-file=%t0.afdo -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false -print-machine-bfi -print-bfi-func-name=foo -print-before=fs-profile-loader -stop-after=fs-profile-loader < %s 2>&1 | FileCheck %s --check-prefixes=BFI,BFIV0
-; RUN: llvm-profdata merge --sample -profile-isfs -o %t1.afdo %S/Inputs/fsloader_v1.afdo
+; RUN: llvm-profdata merge --sample --profile-isfs -o %t1.afdo %S/Inputs/fsloader_v1.afdo
 ; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true -fs-profile-file=%t1.afdo -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false -print-machine-bfi -print-bfi-func-name=foo -print-before=fs-profile-loader -stop-after=fs-profile-loader < %s 2>&1 | FileCheck %s --check-prefixes=BFI,BFIV1
 ;
 ;;

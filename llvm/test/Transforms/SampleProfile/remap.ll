@@ -1,7 +1,7 @@
 ; RUN: opt %s -passes=sample-profile -sample-profile-file=%S/Inputs/remap.prof -sample-profile-remapping-file=%S/Inputs/remap.map | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 ;
 ; Check whether profile remapping work with loading profile on demand used by extbinary format profile.
-; RUN: llvm-profdata merge -sample -extbinary %S/Inputs/remap.prof -o %t.extbinary.afdo
+; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/remap.prof -o %t.extbinary.afdo
 ; RUN: opt %s -passes=sample-profile -sample-profile-file=%t.extbinary.afdo -sample-profile-remapping-file=%S/Inputs/remap.map | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 ;
 ; Reduced from branch.ll

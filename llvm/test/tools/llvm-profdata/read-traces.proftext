@@ -1,9 +1,9 @@
-# RUN: llvm-profdata merge -text %s -o %t.1.proftext
-# RUN: llvm-profdata merge -binary %t.1.proftext -o %t.2.profdata
-# RUN: llvm-profdata merge -text %t.2.profdata -o %t.3.proftext
+# RUN: llvm-profdata merge --text %s -o %t.1.proftext
+# RUN: llvm-profdata merge --binary %t.1.proftext -o %t.2.profdata
+# RUN: llvm-profdata merge --text %t.2.profdata -o %t.3.proftext
 # RUN: diff %t.1.proftext %t.3.proftext
 
-# RUN: llvm-profdata merge -text %s | FileCheck %s
+# RUN: llvm-profdata merge --text %s | FileCheck %s
 
 # CHECK:      :temporal_prof_traces
 # CHECK:      # Num Temporal Profile Traces:

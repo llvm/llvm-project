@@ -4,9 +4,9 @@
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
 // RUN: llvm-profdata merge -o %t-2.profdata %t-2.profraw
 // RUN: llvm-profdata merge -o %t-merged.profdata %t.profraw %t-2.profdata
-// RUN: llvm-profdata show --all-functions -ic-targets  %t-2.profdata | FileCheck  %s -check-prefix=NO-VALUE
-// RUN: llvm-profdata show --all-functions -ic-targets  %t.profdata | FileCheck  %s
-// RUN: llvm-profdata show --all-functions -ic-targets  %t-merged.profdata | FileCheck  %s
+// RUN: llvm-profdata show --all-functions --ic-targets  %t-2.profdata | FileCheck  %s -check-prefix=NO-VALUE
+// RUN: llvm-profdata show --all-functions --ic-targets  %t.profdata | FileCheck  %s
+// RUN: llvm-profdata show --all-functions --ic-targets  %t-merged.profdata | FileCheck  %s
 //
 // RUN: env LLVM_PROFILE_FILE=%t-3.profraw LLVM_VP_BUFFER_SIZE=1 %run %t
 // RUN: env LLVM_PROFILE_FILE=%t-4.profraw LLVM_VP_BUFFER_SIZE=8 %run %t
@@ -18,11 +18,11 @@
 // RUN: llvm-profdata merge -o %t-5.profdata %t-5.profraw
 // RUN: llvm-profdata merge -o %t-6.profdata %t-6.profraw
 // RUN: llvm-profdata merge -o %t-7.profdata %t-7.profraw
-// RUN: llvm-profdata show --all-functions -ic-targets  %t-3.profdata | FileCheck  %s
-// RUN: llvm-profdata show --all-functions -ic-targets  %t-4.profdata | FileCheck  %s
-// RUN: llvm-profdata show --all-functions -ic-targets  %t-5.profdata | FileCheck  %s
-// RUN: llvm-profdata show --all-functions -ic-targets  %t-6.profdata | FileCheck  %s
-// RUN: llvm-profdata show --all-functions -ic-targets  %t-7.profdata | FileCheck  %s
+// RUN: llvm-profdata show --all-functions --ic-targets  %t-3.profdata | FileCheck  %s
+// RUN: llvm-profdata show --all-functions --ic-targets  %t-4.profdata | FileCheck  %s
+// RUN: llvm-profdata show --all-functions --ic-targets  %t-5.profdata | FileCheck  %s
+// RUN: llvm-profdata show --all-functions --ic-targets  %t-6.profdata | FileCheck  %s
+// RUN: llvm-profdata show --all-functions --ic-targets  %t-7.profdata | FileCheck  %s
 
 #include <stdint.h>
 #include <stdio.h>

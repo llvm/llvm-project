@@ -260,7 +260,7 @@ Merge three profiles:
 
 ::
 
-    llvm-profdata merge foo.profdata bar.profdata baz.profdata -output merged.profdata
+    llvm-profdata merge foo.profdata bar.profdata baz.profdata --output merged.profdata
 
 Weighted Input
 ++++++++++++++

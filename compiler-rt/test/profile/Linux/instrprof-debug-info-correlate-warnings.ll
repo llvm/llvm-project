@@ -1,7 +1,7 @@
 ; RUN: split-file %s %t
 ; RUN: %clang %t/a.ll -o %t/a.out
-; RUN: llvm-profdata merge --debug-info=%t/a.out %t/a.proftext --max-debug-info-correlation-warnings=2 -o %t/a.profdata 2>&1 | FileCheck %s --implicit-check-not=warning --check-prefixes=CHECK,LIMIT
-; RUN: llvm-profdata merge --debug-info=%t/a.out %t/a.proftext --max-debug-info-correlation-warnings=0 -o %t/a.profdata 2>&1 | FileCheck %s --implicit-check-not=warning --check-prefixes=CHECK,NOLIMIT
+; RUN: llvm-profdata merge --debug-info %t/a.out %t/a.proftext --max-debug-info-correlation-warnings 2 -o %t/a.profdata 2>&1 | FileCheck %s --implicit-check-not=warning --check-prefixes=CHECK,LIMIT
+; RUN: llvm-profdata merge --debug-info %t/a.out %t/a.proftext --max-debug-info-correlation-warnings 0 -o %t/a.profdata 2>&1 | FileCheck %s --implicit-check-not=warning --check-prefixes=CHECK,NOLIMIT
 
 ; CHECK: warning: Incomplete DIE for function None:
 ; CHECK: warning: Incomplete DIE for function no_cfg: CFGHash=None

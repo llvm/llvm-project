@@ -8,7 +8,7 @@ RUN: echo '# empty profile 1' >  %t.prof1.proftxt
 RUN: echo '# empty profile 2' >> %t.prof2.proftxt
 
 # Prevent LIT itself from globbing by quoting the wildcard argument.
-RUN: llvm-profdata merge "%t.*.proftxt" -dump-input-file-list -o /dev/null | FileCheck %s
+RUN: llvm-profdata merge "%t.*.proftxt" --dump-input-file-list -o /dev/null | FileCheck %s
 
 # Verify that llvm-profdata expanded the wildcard argument.
 CHECK: 1,{{.*}}.prof1.proftxt

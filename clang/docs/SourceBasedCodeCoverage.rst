@@ -156,7 +156,7 @@ coverage reports. This is done using the "merge" tool in ``llvm-profdata``
 .. code-block:: console
 
     # Step 3(a): Index the raw profile.
-    % llvm-profdata merge -sparse foo.profraw -o foo.profdata
+    % llvm-profdata merge --sparse foo.profraw -o foo.profdata
 
 For an example of merging multiple profiles created by testing,
 see the LLVM `coverage build script <https://github.com/llvm/llvm-zorg/blob/main/zorg/jenkins/jobs/jobs/llvm-coverage>`_.
@@ -261,7 +261,7 @@ A few final notes:
 
   .. code-block:: console
 
-      % llvm-profdata merge -sparse foo1.profraw foo2.profdata -o foo3.profdata
+      % llvm-profdata merge --sparse foo1.profraw foo2.profdata -o foo3.profdata
 
 Exporting coverage data
 =======================

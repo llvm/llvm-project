@@ -1,9 +1,9 @@
-# RUN: llvm-profdata show -memop-sizes -ic-targets -function=foo %s | FileCheck %s --check-prefixes=MEMOP,MEMOP_SUM,ICALL,ICALL_SUM
-# RUN: llvm-profdata show -memop-sizes -ic-targets -counts -text -function=foo %s | FileCheck %s --check-prefixes=TEXT,MEMOP_TEXT,ICALL_TEXT
+# RUN: llvm-profdata show --memop-sizes --ic-targets --function foo %s | FileCheck %s --check-prefixes=MEMOP,MEMOP_SUM,ICALL,ICALL_SUM
+# RUN: llvm-profdata show --memop-sizes --ic-targets --counts --text --function foo %s | FileCheck %s --check-prefixes=TEXT,MEMOP_TEXT,ICALL_TEXT
 # RUN: llvm-profdata merge -o %t.profdata  %s
-# RUN: llvm-profdata show -memop-sizes -ic-targets -function=foo %t.profdata | FileCheck %s --check-prefixes=MEMOP,MEMOP_SUM,ICALL,ICALL_SUM
-# RUN: llvm-profdata merge -o %t.proftext -text %s
-# RUN: llvm-profdata show -memop-sizes -ic-targets -function=foo %t.proftext| FileCheck %s --check-prefixes=MEMOP,MEMOP_SUM,ICALL,ICALL_SUM
+# RUN: llvm-profdata show --memop-sizes --ic-targets --function foo %t.profdata | FileCheck %s --check-prefixes=MEMOP,MEMOP_SUM,ICALL,ICALL_SUM
+# RUN: llvm-profdata merge -o %t.proftext --text %s
+# RUN: llvm-profdata show --memop-sizes --ic-targets --function foo %t.proftext| FileCheck %s --check-prefixes=MEMOP,MEMOP_SUM,ICALL,ICALL_SUM
 
 # IR level Instrumentation Flag
 :ir

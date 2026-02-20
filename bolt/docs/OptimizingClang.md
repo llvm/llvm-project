@@ -258,7 +258,7 @@ Once the build is completed, the profile files will be saved under
 passed back into Clang:
 ```bash
 $ cd ${TOPLEV}/stage2-prof-gen/profiles
-$ ${TOPLEV}/stage1/install/bin/llvm-profdata merge -output=clang.profdata *
+$ ${TOPLEV}/stage1/install/bin/llvm-profdata merge --output=clang.profdata *
 ```
 
 ### Building Clang with PGO and LTO

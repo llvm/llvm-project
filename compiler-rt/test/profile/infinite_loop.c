@@ -1,6 +1,6 @@
 // RUN: %clang_pgogen  -O2 -o %t %s
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
-// RUN: llvm-profdata show -function main -counts  %t.profraw| FileCheck  %s 
+// RUN: llvm-profdata show --function main --counts  %t.profraw| FileCheck  %s
 
 void exit(int);
 int g;

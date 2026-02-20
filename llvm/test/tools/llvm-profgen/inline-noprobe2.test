@@ -6,7 +6,7 @@
 ; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK
 
 ; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/inline-noprobe2.perfscript --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t --populate-profile-symbol-list=1
-; RUN: llvm-profdata show -show-prof-sym-list -sample %t | FileCheck %s --check-prefix=CHECK-SYM-LIST
+; RUN: llvm-profdata show --show-prof-sym-list --sample %t | FileCheck %s --check-prefix=CHECK-SYM-LIST
 
 ; CHECK-EXT-ADDR:      2
 ; CHECK-EXT-ADDR-NEXT: 400870-400870:2

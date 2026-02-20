@@ -61,7 +61,7 @@ RUN: printf '\101\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\3\0bar\0\0\0' >> %t-bar.profraw
 
 RUN: cat %t-foo.profraw %t-bar.profraw > %t-pad.profraw
-RUN: llvm-profdata show %t-pad.profraw -all-functions -counts | FileCheck %s
+RUN: llvm-profdata show %t-pad.profraw --all-functions --counts | FileCheck %s
 
 CHECK: Counters:
 CHECK:   foo:

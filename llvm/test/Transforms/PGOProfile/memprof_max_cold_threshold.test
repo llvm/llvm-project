@@ -6,7 +6,7 @@
 ; RUN: split-file %s %t
 
 ;; Specify version 4 so that a summary is generated.
-; RUN: llvm-profdata merge --memprof-version=4 %t/memprof_max_cold_threshold.yaml -o %t/memprof_max_cold_threshold.memprofdata
+; RUN: llvm-profdata merge --memprof-version 4 %t/memprof_max_cold_threshold.yaml -o %t/memprof_max_cold_threshold.memprofdata
 
 ; RUN: llvm-profdata show --memory %t/memprof_max_cold_threshold.memprofdata | FileCheck %s --check-prefixes=SUMMARY
 ; SUMMARY: # MemProfSummary:

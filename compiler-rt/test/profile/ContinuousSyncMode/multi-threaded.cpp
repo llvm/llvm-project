@@ -3,7 +3,7 @@
 // RUN: rm -rf %t.dir
 // RUN: %clangxx_pgogen=%t.dir -fprofile-continuous -lpthread %s -o %t.exe -mllvm -disable-vp -fprofile-update=atomic
 // RUN: %run %t.exe
-// RUN: llvm-profdata show --counts --function=accum  %t.dir/default_*.profraw | FileCheck %s
+// RUN: llvm-profdata show --counts --function accum  %t.dir/default_*.profraw | FileCheck %s
 // CHECK:    Block counts: [100000, 4]
 
 #include <thread>
