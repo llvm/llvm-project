@@ -4516,6 +4516,33 @@ TEST_P(UncheckedStatusOrAccessModelTest, NestedStatusOrInOptional) {
       )cc");
 }
 
+// TODO: this crashes with "Assertion `Children.size() == 1' failed." in
+// ResultObjectVisitor::PropagateResultObject.
+TEST_P(UncheckedStatusOrAccessModelTest, DISABLED_CoroutineCoAwait) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+#include "task.h"
+
+  Task<STATUSOR_INT> call(STATUSOR_INT sor) {
+    if (sor.ok()) {
+      sor.value();
+    } else {
+      sor.value();  // [[unsafe]]
+    }
+    co_return sor;  // [[unsafe]]
+  }
+  Task<int> target() {
+    auto x = co_await call(Make<STATUSOR_INT>());
+    if (x.ok()) {
+      co_return x.value();
+    } else {
+      x.value();  // [[unsafe]]
+      co_return 0;
+    }
+  }
+  )cc");
+}
+
 TEST_P(UncheckedStatusOrAccessModelTest, CoroutineCoReturn) {
   ExpectDiagnosticsFor(R"cc(
 #include "unchecked_statusor_access_test_defs.h"
