@@ -82,6 +82,9 @@ public:
 
 namespace {
 
+const fltSemantics *HexFloatSemantics[] = {
+    &APFloat::HexFP32(), &APFloat::HexFP64(), &APFloat::HexFP128()};
+
 TEST(APFloatTest, isSignaling) {
   // We test qNaN, -qNaN, +sNaN, -sNaN with and without payloads. *NOTE* The
   // positive/negative distinction is included only since the getQNaN/getSNaN
@@ -557,7 +560,7 @@ TEST(APFloatTest, FMA) {
   {
     APFloat f1(0.0);
     APFloat f2(-0.0);
-    APFloat f3(-0.0);
+    APFloat f3(f2);
     f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
     EXPECT_TRUE(f1.isNegative() && f1.isZero());
   }
@@ -700,6 +703,89 @@ TEST(APFloatTest, FMA) {
   }
 }
 
+TEST(APFloatTest, FMAHexFloat) {
+  APFloat::roundingMode rdmd = APFloat::rmNearestTiesToEven;
+
+  for (const auto *S : HexFloatSemantics) {
+    auto SemanticsName = APFloat::semanticsName(*S);
+    APFloat f1(*S, "14.5");
+    APFloat f2(*S, "-14.5");
+    APFloat f3(*S, "225.0");
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(APFloat(*S, "14.75"), f1) << " Semantics: " << SemanticsName;
+  }
+
+  for (const auto *S : HexFloatSemantics) {
+    auto SemanticsName = APFloat::semanticsName(*S);
+    APFloat Val2(*S, "2.0");
+    APFloat f1(APFloat::getSmallestNormalized(*S));
+    APFloat f2(f1);
+    f1.divide(Val2, rdmd);
+    f2.divide(Val2, rdmd);
+    APFloat f3(*S, "12.0");
+    f1.fusedMultiplyAdd(f2, f3, rdmd);
+    EXPECT_EQ(f3, f1) << " Semantics: " << SemanticsName;
+  }
+
+  // Test for correct zero sign when answer is exactly zero.
+  // fma(1.0, -1.0, 1.0) -> +ve 0.
+  for (const auto *S : HexFloatSemantics) {
+    auto SemanticsName = APFloat::semanticsName(*S);
+    APFloat f1(APFloat::getOne(*S, false));
+    APFloat f2(APFloat::getOne(*S, true));
+    APFloat f3(f1);
+    f1.fusedMultiplyAdd(f2, f3, rdmd);
+    EXPECT_TRUE(!f1.isNegative()) << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(f1.isZero()) << " Semantics: " << SemanticsName;
+  }
+
+  // If result is zero, FMA always returns +ve zero
+  // Test for correct zero sign when answer is exactly zero and rounding towards
+  // negative.
+  // fma(1.0, -1.0, 1.0) -> +ve 0.
+  for (const auto *S : HexFloatSemantics) {
+    auto SemanticsName = APFloat::semanticsName(*S);
+    APFloat f1(APFloat::getOne(*S, false));
+    APFloat f2(APFloat::getOne(*S, true));
+    APFloat f3(f1);
+    f1.fusedMultiplyAdd(f2, f3, rdmd);
+    EXPECT_TRUE(!f1.isNegative()) << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(f1.isZero()) << " Semantics: " << SemanticsName;
+  }
+
+  // Test for correct (in this case -ve) sign when adding like signed zeros.
+  // Test fma(0.0, -0.0, -0.0) -> +ve 0.
+  for (const auto *S : HexFloatSemantics) {
+    auto SemanticsName = APFloat::semanticsName(*S);
+    APFloat f1(APFloat::getZero(*S, false));
+    APFloat f2(APFloat::getZero(*S, true));
+    APFloat f3(f2);
+    f1.fusedMultiplyAdd(f2, f3, rdmd);
+    EXPECT_TRUE(!f1.isNegative()) << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(f1.isZero()) << " Semantics: " << SemanticsName;
+  }
+
+  // Test when small negative results underflow.
+  for (const auto *S : HexFloatSemantics) {
+    auto SemanticsName = APFloat::semanticsName(*S);
+    APFloat f1(APFloat::getSmallest(*S, true));
+    APFloat f2(APFloat::getSmallest(*S, false));
+    APFloat f3(APFloat::getZero(*S, false));
+    f1.fusedMultiplyAdd(f2, f3, rdmd);
+    EXPECT_TRUE(!f1.isNegative()) << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(f1.isZero()) << " Semantics: " << SemanticsName;
+  }
+
+  // Test using only a single instance of APFloat.
+  for (const auto *S : HexFloatSemantics) {
+    auto SemanticsName = APFloat::semanticsName(*S);
+    APFloat F(*S, "1.5");
+
+    F.fusedMultiplyAdd(F, F, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(APFloat(*S, "3.75"), F) << " Semantics: " << SemanticsName;
+  }
+}
+
 TEST(APFloatTest, MinNum) {
   APFloat f1(1.0);
   APFloat f2(2.0);
@@ -809,6 +895,29 @@ TEST(APFloatTest, MaxNum) {
       EXPECT_TRUE(res.bitwiseIsEqual(n1[1]) || res.bitwiseIsEqual(n2[1]));
       EXPECT_FALSE(res.isSignaling());
     }
+}
+
+TEST(APFloatTest, MinMaxNumHexFloat) {
+  for (const auto *S : HexFloatSemantics) {
+    APFloat One(APFloat::getOne(*S, false));
+    APFloat Two(*S, "2.0");
+    auto SemanticsName = APFloat::semanticsName(*S);
+
+    EXPECT_EQ(One, minnum(One, Two)) << " Semantics: " << SemanticsName;
+    EXPECT_EQ(One, minnum(Two, One)) << " Semantics: " << SemanticsName;
+
+    EXPECT_EQ(Two, maxnum(One, Two)) << " Semantics: " << SemanticsName;
+    EXPECT_EQ(Two, maxnum(Two, One)) << " Semantics: " << SemanticsName;
+
+    APFloat zp(APFloat::getZero(*S, false));
+    APFloat zn(APFloat::getZero(*S, true));
+
+    EXPECT_EQ(zn, minnum(zp, zn)) << " Semantics: " << SemanticsName;
+    EXPECT_EQ(zn, minnum(zn, zp)) << " Semantics: " << SemanticsName;
+
+    EXPECT_EQ(zp, maxnum(zp, zn)) << " Semantics: " << SemanticsName;
+    EXPECT_EQ(zp, maxnum(zn, zp)) << " Semantics: " << SemanticsName;
+  }
 }
 
 TEST(APFloatTest, Minimum) {
@@ -1027,6 +1136,83 @@ TEST(APFloatTest, Denormal) {
     EXPECT_TRUE(NegT.isDenormal());
     EXPECT_EQ(fcNegSubnormal, NegT.classify());
   }
+
+  // Test HexFloat
+  {
+    bool HasError;
+    const char *MinDenorm32 = "0x0.000001p-256";
+    APFloat HFP32(APFloat::HexFP32());
+
+    HasError = !HFP32.convertFromString(MinDenorm32, APFloat::rmTowardZero);
+    EXPECT_FALSE(HasError);
+    EXPECT_TRUE(HFP32.isDenormal());
+    EXPECT_FALSE(HFP32.isNormal());
+    EXPECT_TRUE(HFP32.isNonZero());
+    EXPECT_TRUE(HFP32.isSmallest());
+    HFP32.next(true);
+    EXPECT_TRUE(HFP32.isZero());
+
+    const char *MinNorm32 = "0x0.100000p-256";
+    HasError = !HFP32.convertFromString(MinNorm32, APFloat::rmTowardZero);
+    EXPECT_FALSE(HasError);
+    EXPECT_FALSE(HFP32.isDenormal());
+    EXPECT_TRUE(HFP32.isNormal());
+    EXPECT_TRUE(HFP32.isNonZero());
+    EXPECT_FALSE(HFP32.isSmallest());
+    HFP32.next(true);
+    EXPECT_TRUE(HFP32.isDenormal());
+    EXPECT_FALSE(HFP32.isNormal());
+    EXPECT_TRUE(HFP32.isNonZero());
+    EXPECT_FALSE(HFP32.isSmallest());
+
+    const char *MinDenorm64 = "0x0.00000000000001p-256";
+    APFloat HFP64(APFloat::HexFP64());
+    HasError = !HFP64.convertFromString(MinDenorm64, APFloat::rmTowardZero);
+    EXPECT_FALSE(HasError);
+    EXPECT_TRUE(HFP64.isDenormal());
+    EXPECT_FALSE(HFP64.isNormal());
+    EXPECT_TRUE(HFP64.isNonZero());
+    EXPECT_TRUE(HFP64.isSmallest());
+    HFP64.next(true);
+    EXPECT_TRUE(HFP64.isZero());
+
+    const char *MinNorm64 = "0x0.10000000000000p-256";
+    HasError = !HFP64.convertFromString(MinNorm64, APFloat::rmTowardZero);
+    EXPECT_FALSE(HasError);
+    EXPECT_FALSE(HFP64.isDenormal());
+    EXPECT_TRUE(HFP64.isNormal());
+    EXPECT_TRUE(HFP64.isNonZero());
+    EXPECT_FALSE(HFP64.isSmallest());
+    HFP64.next(true);
+    EXPECT_TRUE(HFP64.isDenormal());
+    EXPECT_FALSE(HFP64.isNormal());
+    EXPECT_TRUE(HFP64.isNonZero());
+    EXPECT_FALSE(HFP64.isSmallest());
+
+    const char *MinDenorm128 = "0x0.0000000000000000000000000001p-256";
+    APFloat HFP128(APFloat::HexFP128());
+    HasError = !HFP128.convertFromString(MinDenorm128, APFloat::rmTowardZero);
+    EXPECT_FALSE(HasError);
+    EXPECT_TRUE(HFP128.isDenormal());
+    EXPECT_FALSE(HFP128.isNormal());
+    EXPECT_TRUE(HFP128.isNonZero());
+    EXPECT_TRUE(HFP128.isSmallest());
+    HFP128.next(true);
+    EXPECT_TRUE(HFP128.isZero());
+
+    const char *MinNorm128 = "0x0.1000000000000000000000000000p-256";
+    HasError = !HFP128.convertFromString(MinNorm128, APFloat::rmTowardZero);
+    EXPECT_FALSE(HasError);
+    EXPECT_FALSE(HFP128.isDenormal());
+    EXPECT_TRUE(HFP128.isNormal());
+    EXPECT_TRUE(HFP128.isNonZero());
+    EXPECT_FALSE(HFP128.isSmallest());
+    HFP128.next(true);
+    EXPECT_TRUE(HFP128.isDenormal());
+    EXPECT_FALSE(HFP128.isNormal());
+    EXPECT_TRUE(HFP128.isNonZero());
+    EXPECT_FALSE(HFP128.isSmallest());
+  }
 }
 
 TEST(APFloatTest, IsSmallestNormalized) {
@@ -1109,6 +1295,17 @@ TEST(APFloatTest, getOne) {
             1.0f);
   EXPECT_EQ(APFloat::getOne(APFloat::IEEEsingle(), true).convertToFloat(),
             -1.0f);
+
+  for (const auto *S : HexFloatSemantics) {
+    APFloat HFP(APFloat::getOne(*S));
+    llvm::SmallVector<char, 100> Buffer;
+    HFP.toString(Buffer);
+    EXPECT_EQ("1", std::string(Buffer.data(), Buffer.size()));
+    HFP = APFloat::getOne(*S, /* Negative */ true);
+    Buffer.clear();
+    HFP.toString(Buffer);
+    EXPECT_EQ("-1", std::string(Buffer.data(), Buffer.size()));
+  }
 }
 
 TEST(APFloatTest, DecimalStringsWithoutNullTerminators) {
@@ -1120,6 +1317,26 @@ TEST(APFloatTest, DecimalStringsWithoutNullTerminators) {
   EXPECT_EQ(convertToDoubleFromString(StringRef("0.095", 4)), 0.09);
   EXPECT_EQ(convertToDoubleFromString(StringRef("0.00e+3", 7)), 0.00);
   EXPECT_EQ(convertToDoubleFromString(StringRef("0e+3", 4)), 0.00);
+
+  // HexFloat
+  for (const auto *S : HexFloatSemantics) {
+    APFloat One(APFloat::getOne(*S, false));
+    APFloat F(*S);
+    auto SemanticsName = APFloat::semanticsName(*S);
+
+    auto StatusOrErr =
+        F.convertFromString(StringRef("1.0", 3), APFloat::rmNearestTiesToEven);
+    EXPECT_FALSE(!StatusOrErr);
+    consumeError(StatusOrErr.takeError());
+    EXPECT_EQ(One, F) << " Semantics: " << SemanticsName;
+
+    One.changeSign();
+    StatusOrErr =
+        F.convertFromString(StringRef("-1.0", 4), APFloat::rmNearestTiesToEven);
+    EXPECT_FALSE(!StatusOrErr);
+    consumeError(StatusOrErr.takeError());
+    EXPECT_EQ(One, F) << " Semantics: " << SemanticsName;
+  }
 }
 
 TEST(APFloatTest, fromZeroDecimalString) {
@@ -1150,6 +1367,30 @@ TEST(APFloatTest, fromZeroDecimalString) {
   EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0000.00000").convertToDouble());
   EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0000.00000").convertToDouble());
   EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-0000.00000").convertToDouble());
+
+  // HexFloat
+  bool HasError;
+  for (const auto *S : HexFloatSemantics) {
+    const APFloat One(APFloat::getOne(*S));
+    APFloat HFP(*S);
+
+    for (const auto *s :
+         {"0",          "+0",      "-0",      "0.",         "+0.",
+          "-0.",        ".0",      "+.0",     "-.0",        "0.0",
+          "+0.0",       "-0.0",    "00000.",  "-00000.",    "+00000.",
+          ".00000",     "-.00000", "+.00000", "0000.00000", "-0000.00000",
+          "+0000.00000"}) {
+      const bool ExpectNegative = ('-' == s[0]);
+      // set to something known not to be zero so we know
+      // we are converting the string
+      HFP = One;
+      EXPECT_TRUE(HFP.isNonZero());
+      HasError = !HFP.convertFromString(s, APFloat::rmTowardZero);
+      EXPECT_FALSE(HasError);
+      EXPECT_TRUE(HFP.isZero()) << " value is " << s;
+      EXPECT_EQ(ExpectNegative, HFP.isNegative()) << " value is " << s;
+    }
+  }
 }
 
 TEST(APFloatTest, fromZeroDecimalSingleExponentString) {
@@ -1207,6 +1448,33 @@ TEST(APFloatTest, fromZeroDecimalSingleExponentString) {
   EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "000.0000e1").convertToDouble());
   EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+000.0000e+1").convertToDouble());
   EXPECT_EQ(-0.0, APFloat(APFloat::IEEEdouble(), "-000.0000e+1").convertToDouble());
+
+  // HexFloat
+  bool HasError;
+  for (const auto *S : HexFloatSemantics) {
+    const APFloat One(APFloat::getOne(*S));
+    APFloat HFP(*S);
+
+    for (const auto *s :
+         {"0e1",     "+0e1",       "-0e1",         "0e+1",        "+0e+1",
+          "-0e+1",   "0e-1",       "+0e-1",        "-0e-1",       "0.e1",
+          "+0.e1",   "-0.e1",      "0.e+1",        "+0.e+1",      "-0.e+1",
+          "0.e-1",   "+0.e-1",     "-0.e-1",       ".0e1",        "+.0e1",
+          "-.0e1",   ".0e+1",      "+.0e+1",       "-0.e+1",      ".0e-1",
+          "+.0e-1",  "-0.e-1",     "0.0e1",        "+0.0e1",      "-0.0e1",
+          "0.0e+1",  "+0.0e+1",    "-0.0e+1",      "0.0e-1",      "+0.0e-1",
+          "-0.0e-1", "000.0000e1", "+000.0000e+1", "-000.0000e+1"}) {
+      const bool ExpectNegative = ('-' == s[0]);
+      // set to something known not to be zero so we know
+      // we are converting the string
+      HFP = One;
+      EXPECT_TRUE(HFP.isNonZero());
+      HasError = !HFP.convertFromString(s, APFloat::rmTowardZero);
+      EXPECT_FALSE(HasError);
+      EXPECT_TRUE(HFP.isZero()) << " value is " << s;
+      EXPECT_EQ(ExpectNegative, HFP.isNegative()) << " value is " << s;
+    }
+  }
 }
 
 TEST(APFloatTest, fromZeroDecimalLargeExponentString) {
@@ -1226,6 +1494,33 @@ TEST(APFloatTest, fromZeroDecimalLargeExponentString) {
   EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble(), "000.0000e-1234").convertToDouble());
 
   EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble(), StringRef("0e1234" "\0" "2", 6)).convertToDouble());
+
+  // HexFloat
+  bool HasError;
+  for (const auto *S : HexFloatSemantics) {
+    const APFloat One(APFloat::getOne(*S));
+    APFloat HFP(*S);
+
+    using SR = StringRef;
+    for (const StringRef &s :
+         {SR("0e1234"), SR("+0e1234"), SR("-0e1234"), SR("0e+1234"),
+          SR("+0e+1234"), SR("-0e+1234"), SR("0e-1234"), SR("+0e-1234"),
+          SR("-0e-1234"), SR("000.0000e1234"), SR("000.0000e-1234"),
+          SR("0e1234"
+             "\0"
+             "2",
+             6)}) {
+      const bool ExpectNegative = ('-' == s[0]);
+      // set to something known not to be zero so we know we are
+      // converting the string
+      HFP = One;
+      EXPECT_TRUE(HFP.isNonZero());
+      HasError = !HFP.convertFromString(s, APFloat::rmTowardZero);
+      EXPECT_FALSE(HasError);
+      EXPECT_TRUE(HFP.isZero()) << " value is " << s;
+      EXPECT_EQ(ExpectNegative, HFP.isNegative()) << " value is " << s;
+    }
+  }
 }
 
 TEST(APFloatTest, fromZeroHexadecimalString) {
@@ -1291,6 +1586,47 @@ TEST(APFloatTest, fromZeroHexadecimalString) {
   EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(), "0x0000.00000p1234").convertToDouble());
   EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(), "0x.00000p1234").convertToDouble());
   EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(), "0x0.p1234").convertToDouble());
+
+  // HexFloat
+  bool HasError;
+  for (const auto *S : HexFloatSemantics) {
+    const APFloat One(APFloat::getOne(*S));
+    APFloat HFP(*S);
+
+    for (const auto *s : {"0x0p1",         "+0x0p1",
+                          "-0x0p1",        "0x0p+1",
+                          "+0x0p+1",       "-0x0p+1",
+                          "0x0p-1",        "+0x0p-1",
+                          "-0x0p-1",       "0x0.p1",
+                          "+0x0.p1",       "-0x0.p1",
+                          "0x0.p+1",       "+0x0.p+1",
+                          "-0x0.p+1",      "0x0.p-1",
+                          "+0x0.p-1",      "-0x0.p-1",
+                          "0x.0p1",        "+0x.0p1",
+                          "-0x.0p1",       "0x.0p+1",
+                          "+0x.0p+1",      "-0x.0p+1",
+                          "0x.0p-1",       "+0x.0p-1",
+                          "-0x.0p-1",      "0x0.0p1",
+                          "+0x0.0p1",      "-0x0.0p1",
+                          "0x0.0p+1",      "+0x0.0p+1",
+                          "-0x0.0p+1",     "0x0.0p-1",
+                          "+0x0.0p-1",     "-0x0.0p-1",
+                          "0x00000.p1",    "0x0000.00000p1",
+                          "0x.00000p1",    "0x0.p1",
+                          "0x0p1234",      "-0x0p1234",
+                          "0x00000.p1234", "0x0000.00000p1234",
+                          "0x.00000p1234", "0x0.p1234"}) {
+      const bool ExpectNegative = ('-' == s[0]);
+      // set to something known not to be zero so we know we
+      // are converting the string
+      HFP = One;
+      EXPECT_TRUE(HFP.isNonZero());
+      HasError = !HFP.convertFromString(s, APFloat::rmTowardZero);
+      EXPECT_FALSE(HasError);
+      EXPECT_TRUE(HFP.isZero()) << " value is " << s;
+      EXPECT_EQ(ExpectNegative, HFP.isNegative()) << " value is " << s;
+    }
+  }
 }
 
 TEST(APFloatTest, fromDecimalString) {
@@ -1354,6 +1690,61 @@ TEST(APFloatTest, fromDecimalString) {
   EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "-1e-99999").isNegZero());
 
   EXPECT_EQ(2.71828, convertToDoubleFromString("2.71828"));
+
+  // HexFloat
+  struct test_t {
+    const char *expected;
+    const char *value;
+  };
+  const test_t tests[] = {
+      // clang-format off
+      { "1",     "1" },       { "2",    "2." },     { "0.5",   ".5" },
+      { "1",     "1.0" },     { "-2",   "-2" },     { "-4",    "-4." },
+      { "-0.5",  "-.5" },     { "-1.5", "-1.5" },   { "1.25E+12",   "1.25e12" },
+      { "1.25E+12",  "1.25E+12" },                  { "1.25E-12",  "1.25E-12" },
+      { "1024",  "1024." },   { "1024.05",   "1024.05000" },
+      { "0.05",      ".05000" },                    { "2",     "2." },
+      { "200", "2.e2" },      { "200",  "2.e+2" },  { "0.02",  "2.e-2" },
+      { "205",     "002.05000e2" },                 { "205",   "002.05000e+2" },
+      { "0.0205",    "002.05000e-2" },
+      { "2.05E+12",    "002.05000e12" },
+      { "2.05E+12",   "002.05000e+12" },
+      { "2.05E-12", "002.05000e-12" },
+      { "1",     "1e" },      { "1",    "+1e" },    { "-1",    "-1e" },
+      { "1",     "1.e" },     { "1",    "+1.e" },   { "-1",    "-1.e" },
+      { "0.1",   ".1e" },     { "0.1",  "+.1e" },   { "-0.1",  "-.1e" },
+      { "1.1",   "1.1e" },    { "1.1",  "+1.1e" },  { "-1.1",  "-1.1e" },
+      { "1",     "1e+" },     { "1",    "1e-" },    { "0.1",   ".1e" },
+      { "0.1",   ".1e+" },    { "0.1",  ".1e-" },   { "1",     "1.0e" },
+      { "1",     "1.0e+" },   { "1",    "1.0e-" } // clang-format on
+  };
+
+  bool HasError;
+  llvm::SmallVector<char, 100> Buffer;
+  for (const auto *S : HexFloatSemantics) {
+    auto SemanticsName = APFloat::semanticsName(*S);
+    const APFloat Zero(APFloat::getZero(*S));
+    APFloat HFP(*S);
+
+    for (const auto &test : tests) {
+      const bool ExpectNegative = ('-' == test.value[0]);
+      // set to zero so we know we are converting the string
+      HFP = Zero;
+      EXPECT_TRUE(HFP.isZero());
+      HasError = !HFP.convertFromString(test.value, APFloat::rmTowardZero);
+      EXPECT_FALSE(HasError);
+      EXPECT_TRUE(HFP.isNonZero()) << " Semantics: " << SemanticsName << "\n"
+                                   << " value is " << test.value;
+      EXPECT_EQ(ExpectNegative, HFP.isNegative())
+          << " Semantics: " << SemanticsName << "\n"
+          << " value is " << test.value;
+      Buffer.clear();
+      HFP.toString(Buffer, 6);
+      EXPECT_EQ(test.expected, std::string(Buffer.data(), Buffer.size()))
+          << " Semantics: " << SemanticsName << "\n"
+          << " value is " << test.value;
+    }
+  }
 }
 
 TEST(APFloatTest, fromStringSpecials) {
@@ -1571,6 +1962,75 @@ TEST(APFloatTest, fromHexadecimalString) {
             convertToDoubleFromString("+0x800000000000000001.p-221"));
   EXPECT_EQ(2251799813685248.5,
             convertToDoubleFromString("0x80000000000004000000.010p-28"));
+
+  // HexFloat
+  struct test_t {
+    const char *expected;
+    const char *value;
+  };
+  const test_t tests[] = {
+      // clang-format off
+      { "1",     "0x1p0" },     { "1",    "+0x1p0" },     { "-1",   "-0x1p0" },
+      { "1",     "0x1p+0" },    { "1",    "+0x1p+0" },    { "-1",   "-0x1p+0" },
+      { "1",     "0x1p-0" },    { "1",    "+0x1p-0" },    { "-1",   "-0x1p-0" },
+      { "2",     "0x1p1" },     { "2",    "+0x1p1" },     { "-2",   "-0x1p1" },
+      { "2",     "0x1p+1" },    { "2",    "+0x1p+1" },    { "-2",   "-0x1p+1" },
+      { "0.5",   "0x1p-1" },    { "0.5",  "+0x1p-1" },    { "-0.5", "-0x1p-1" },
+      { "3",     "0x1.8p1" },   { "3",    "+0x1.8p1" },   { "-3",   "-0x1.8p1" },
+      { "3",     "0x1.8p+1" },  { "3",    "+0x1.8p+1" },  { "-3",   "-0x1.8p+1" },
+      { "0.75",  "0x1.8p-1" },  { "0.75", "+0x1.8p-1" },
+      { "-0.75", "-0x1.8p-1" },
+      { "8192",  "0x1000.000p1" },        { "8192",     "+0x1000.000p1" },
+      { "-8192", "-0x1000.000p1" },
+      { "8192",  "0x1000.000p+1" },       { "8192",     "+0x1000.000p+1" },
+      { "-8192", "-0x1000.000p+1" },
+      { "2048",  "0x1000.000p-1" },       { "2048",     "+0x1000.000p-1" },
+      { "-2048", "-0x1000.000p-1" },
+      { "8192",  "0x1000p1" },            { "8192",     "+0x1000p1" },
+      { "-8192", "-0x1000p1" },
+      { "8192",  "0x1000p+1" },           { "8192",     "+0x1000p+1" },
+      { "-8192", "-0x1000p+1" },
+      { "2048",   "0x1000p-1" },          { "2048",     "+0x1000p-1" },
+      { "-2048",  "-0x1000p-1" },
+      { "16384",  "0x10p10" },            { "16384",    "+0x10p10" },
+      { "-16384",  "-0x10p10" },
+      { "16384",   "0x10p+10" },          { "16384",    "+0x10p+10" },
+      { "-16384",  "-0x10p+10" },
+      { "0.015625",   "0x10p-10" },       { "0.015625", "+0x10p-10" },
+      { "-0.015625",  "-0x10p-10" },
+      { "1.0625",    "0x1.1p0" },
+      { "7.00649E-46", "+0x800000000000000001.p-221" },
+      { "2.2518E+15", "0x80000000000004000000.010p-28" }
+      //clang-foramt on
+  };
+
+  bool HasError;
+  llvm::SmallVector<char, 100> Buffer;
+  for (const auto *S : HexFloatSemantics) {
+    auto SemanticsName = APFloat::semanticsName(*S);
+    const APFloat Zero(APFloat::getZero(*S));
+    APFloat HFP(*S);
+
+    for (const auto &test : tests) {
+      const bool ExpectNegative = ('-' == test.value[0]);
+      // set to zero so we know we are converting the string
+      HFP = Zero;
+      EXPECT_TRUE(HFP.isZero());
+      HasError = !HFP.convertFromString(test.value, APFloat::rmTowardZero);
+      EXPECT_FALSE(HasError);
+      EXPECT_TRUE(HFP.isNonZero())
+          << " Semantics: " << SemanticsName << "\n"
+          << " value is " << test.value;
+      EXPECT_EQ(ExpectNegative, HFP.isNegative())
+          << " Semantics: " << SemanticsName << "\n"
+          << " value is " << test.value;
+      Buffer.clear();
+      HFP.toString(Buffer, 6);
+      EXPECT_EQ(test.expected, std::string(Buffer.data(), Buffer.size()))
+          << " Semantics: " << SemanticsName << "\n"
+          << " value is " << test.value;;
+    }
+  }
 }
 
 TEST(APFloatTest, toString) {
@@ -1610,54 +2070,72 @@ TEST(APFloatTest, toString) {
     UnnormalZero.toString(Str);
     ASSERT_EQ("NaN", Str);
   }
+
+  // HexFloat: toString is exercised in the methods above
 }
 
 TEST(APFloatTest, toInteger) {
   bool isExact = false;
   APSInt result(5, /*isUnsigned=*/true);
 
-  EXPECT_EQ(APFloat::opOK,
-            APFloat(APFloat::IEEEdouble(), "10")
-            .convertToInteger(result, APFloat::rmTowardZero, &isExact));
-  EXPECT_TRUE(isExact);
-  EXPECT_EQ(APSInt(APInt(5, 10), true), result);
+  for (const auto *S : {&APFloat::IEEEdouble(), &APFloat::HexFP32(),
+                        &APFloat::HexFP64(), &APFloat::HexFP128()}) {
+    auto SemanticsName = APFloat::semanticsName(*S);
+    result.setIsUnsigned(true);
+    EXPECT_EQ(APFloat::opOK, APFloat(*S, "10").convertToInteger(
+                                 result, APFloat::rmTowardZero, &isExact))
+        << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(isExact) << " Semantics: " << SemanticsName;
+    EXPECT_EQ(APSInt(APInt(5, 10), true), result) << " Semantics: " << SemanticsName;
 
-  EXPECT_EQ(APFloat::opInvalidOp,
-            APFloat(APFloat::IEEEdouble(), "-10")
-            .convertToInteger(result, APFloat::rmTowardZero, &isExact));
-  EXPECT_FALSE(isExact);
-  EXPECT_EQ(APSInt::getMinValue(5, true), result);
+    EXPECT_EQ(APFloat::opInvalidOp,
+              APFloat(*S, "-10").convertToInteger(result, APFloat::rmTowardZero,
+                                                  &isExact))
+        << " Semantics: " << SemanticsName;
+    EXPECT_FALSE(isExact) << " Semantics: " << SemanticsName;
+    EXPECT_EQ(APSInt::getMinValue(5, true), result)
+        << " Semantics: " << SemanticsName;
 
-  EXPECT_EQ(APFloat::opInvalidOp,
-            APFloat(APFloat::IEEEdouble(), "32")
-            .convertToInteger(result, APFloat::rmTowardZero, &isExact));
-  EXPECT_FALSE(isExact);
-  EXPECT_EQ(APSInt::getMaxValue(5, true), result);
+    EXPECT_EQ(APFloat::opInvalidOp,
+              APFloat(*S, "32").convertToInteger(result, APFloat::rmTowardZero,
+                                                 &isExact))
+        << " Semantics: " << SemanticsName;
+    EXPECT_FALSE(isExact) << " Semantics: " << SemanticsName;
+    EXPECT_EQ(APSInt::getMaxValue(5, true), result)
+        << " Semantics: " << SemanticsName;
 
-  EXPECT_EQ(APFloat::opInexact,
-            APFloat(APFloat::IEEEdouble(), "7.9")
-            .convertToInteger(result, APFloat::rmTowardZero, &isExact));
-  EXPECT_FALSE(isExact);
-  EXPECT_EQ(APSInt(APInt(5, 7), true), result);
+    EXPECT_EQ(APFloat::opInexact,
+              APFloat(*S, "7.9").convertToInteger(result, APFloat::rmTowardZero,
+                                                  &isExact))
+        << " Semantics: " << SemanticsName;
+    EXPECT_FALSE(isExact) << " Semantics: " << SemanticsName;
+    EXPECT_EQ(APSInt(APInt(5, 7), true), result)
+        << " Semantics: " << SemanticsName;
 
-  result.setIsUnsigned(false);
-  EXPECT_EQ(APFloat::opOK,
-            APFloat(APFloat::IEEEdouble(), "-10")
-            .convertToInteger(result, APFloat::rmTowardZero, &isExact));
-  EXPECT_TRUE(isExact);
-  EXPECT_EQ(APSInt(APInt(5, -10, true), false), result);
+    result.setIsUnsigned(false);
+    EXPECT_EQ(APFloat::opOK, APFloat(*S, "-10").convertToInteger(
+                                 result, APFloat::rmTowardZero, &isExact))
+        << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(isExact) << " Semantics: " << SemanticsName;
+    EXPECT_EQ(APSInt(APInt(5, -10, true), false), result)
+        << " Semantics: " << SemanticsName;
 
-  EXPECT_EQ(APFloat::opInvalidOp,
-            APFloat(APFloat::IEEEdouble(), "-17")
-            .convertToInteger(result, APFloat::rmTowardZero, &isExact));
-  EXPECT_FALSE(isExact);
-  EXPECT_EQ(APSInt::getMinValue(5, false), result);
+    EXPECT_EQ(APFloat::opInvalidOp,
+              APFloat(*S, "-17").convertToInteger(result, APFloat::rmTowardZero,
+                                                  &isExact))
+        << " Semantics: " << SemanticsName;
+    EXPECT_FALSE(isExact) << " Semantics: " << SemanticsName;
+    EXPECT_EQ(APSInt::getMinValue(5, false), result)
+        << " Semantics: " << SemanticsName;
 
-  EXPECT_EQ(APFloat::opInvalidOp,
-            APFloat(APFloat::IEEEdouble(), "16")
-            .convertToInteger(result, APFloat::rmTowardZero, &isExact));
-  EXPECT_FALSE(isExact);
-  EXPECT_EQ(APSInt::getMaxValue(5, false), result);
+    EXPECT_EQ(APFloat::opInvalidOp,
+              APFloat(*S, "16").convertToInteger(result, APFloat::rmTowardZero,
+                                                 &isExact))
+        << " Semantics: " << SemanticsName;
+    EXPECT_FALSE(isExact) << " Semantics: " << SemanticsName;
+    EXPECT_EQ(APSInt::getMaxValue(5, false), result)
+        << " Semantics: " << SemanticsName;
+  }
 }
 
 class APFloatConvertFromAPIntParamTest
@@ -1669,6 +2147,7 @@ protected:
                                           APFloat::roundingMode RM,
                                           const APInt &ExpectedIntValue) {
     const fltSemantics &Sem = *GetParam();
+    auto SemanticsName = APFloat::semanticsName(Sem);
     APFloat F(Sem);
     F.convertFromAPInt(InputValue, /*IsSigned=*/IsSigned, RM);
 
@@ -1676,10 +2155,12 @@ protected:
     bool IsExact;
     F.convertToInteger(ResultInt, APFloat::rmTowardZero, &IsExact);
 
-    EXPECT_TRUE(IsExact);
+    EXPECT_TRUE(IsExact) << "Semantics: " << SemanticsName;
     EXPECT_TRUE(ResultInt.eq(ExpectedIntValue))
         << "InputValue: " << InputValue << "\n"
-        << ResultInt << " vs " << ExpectedIntValue << "\n";
+        << ResultInt << " vs " << ExpectedIntValue << "\n"
+        << "Semantics: " << SemanticsName << "\n"
+        << "Rounding mode: " << RM << "\n";
   }
 };
 
@@ -1690,12 +2171,15 @@ TEST_P(APFloatConvertFromAPIntParamTest, HalfwayRounding) {
   if (Precision == 0)
     GTEST_SKIP() << "Skipping test for semantics with no significand.";
 
-  for (bool IsSigned : {false, true}) {
-    const unsigned BitWidth = Precision + 1 + (IsSigned ? 1 : 0);
+  const unsigned Radix = APFloat::semanticsRadix(Sem);
+  const unsigned Log2Radix = llvm::countr_zero(Radix);
 
-    const APInt RoundedDownVal = APInt::getOneBitSet(BitWidth, Precision);
-    const APInt HalfwayVal = RoundedDownVal + 1;
-    const APInt RoundedUpVal = RoundedDownVal + 2;
+  for (bool IsSigned : {false, true}) {
+    const unsigned BitWidth = (Precision  + 1) * Log2Radix + (IsSigned ? 1 : 0);
+
+    const APInt RoundedDownVal = APInt::getOneBitSet(BitWidth, Precision * Log2Radix);
+    const APInt HalfwayVal = RoundedDownVal + (Radix / 2);
+    const APInt RoundedUpVal = RoundedDownVal + Radix;
 
     testConversionAndCompareInt(HalfwayVal, IsSigned,
                                 APFloat::rmNearestTiesToEven, RoundedDownVal);
@@ -1713,20 +2197,27 @@ TEST_P(APFloatConvertFromAPIntParamTest, HalfwayRounding) {
 TEST_P(APFloatConvertFromAPIntParamTest, MaxMagnitude) {
   const fltSemantics &Sem = *GetParam();
   const unsigned Precision = APFloat::semanticsPrecision(Sem);
+  auto SemanticsName = APFloat::semanticsName(Sem);
 
   if (Precision == 0)
     GTEST_SKIP() << "Skipping test for semantics with no significand.";
 
+  const unsigned Radix = APFloat::semanticsRadix(Sem);
+  const unsigned Log2Radix = llvm::countr_zero(Radix);
+
   const APFloat Largest = APFloat::getLargest(Sem, /*Negative=*/false);
   const int Exp = ilogb(Largest);
   for (bool IsSigned : {false, true}) {
-    const unsigned BitWidth = Exp + 1 + (IsSigned ? 1 : 0);
+    const unsigned BitWidth = (Exp + 1) * Log2Radix + (IsSigned ? 1 : 0);
 
     bool IsExact;
     APSInt LargestAsInt{BitWidth, /*IsUnsigned=*/!IsSigned};
     const APFloat::opStatus ToIntStatus =
         Largest.convertToInteger(LargestAsInt, APFloat::rmTowardZero, &IsExact);
-    EXPECT_EQ(ToIntStatus, APFloat::opOK);
+    EXPECT_EQ(ToIntStatus, APFloat::opOK)
+        << "Semantics:; " << SemanticsName << "\n"
+        << " isSigned == " << IsSigned
+        << " Exp == " << Exp;
 
     for (const APFloat::roundingMode RM :
          {APFloat::rmNearestTiesToAway, APFloat::rmTowardNegative,
@@ -1742,7 +2233,10 @@ INSTANTIATE_TEST_SUITE_P(IEEESemantics, APFloatConvertFromAPIntParamTest,
                                            &APFloat::BFloat(),
                                            &APFloat::IEEEsingle(),
                                            &APFloat::IEEEdouble(),
-                                           &APFloat::IEEEquad()));
+                                           &APFloat::IEEEquad(),
+                                           &APFloat::HexFP32(),
+                                           &APFloat::HexFP64(),
+                                           &APFloat::HexFP128()));
 
 static APInt nanbitsFromAPInt(const fltSemantics &Sem, bool SNaN, bool Negative,
                               uint64_t payload) {
@@ -2012,6 +2506,30 @@ TEST(APFloatTest, exactInverse) {
   EXPECT_TRUE(
       inv.bitwiseIsEqual(APFloat(APFloat::PPCDoubleDouble(), "0x1p-1022")));
 
+  for (const auto *S : HexFloatSemantics) {
+    EXPECT_TRUE(APFloat(*S, "2.0").getExactInverse(&inv));
+    EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(*S, "0.5")));
+    EXPECT_TRUE(inv.getExactInverse(&inv));
+    EXPECT_TRUE(APFloat(*S, "2.0").bitwiseIsEqual(inv));
+
+    EXPECT_TRUE(APFloat(*S, "-2.0").getExactInverse(&inv));
+    EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(*S, "-0.5")));
+    EXPECT_TRUE(inv.getExactInverse(&inv));
+    EXPECT_TRUE(APFloat(*S, "-2.0").bitwiseIsEqual(inv));
+
+    EXPECT_TRUE(APFloat(*S, "32.0").getExactInverse(&inv));
+    EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(*S, "0.03125")));
+    EXPECT_TRUE(inv.getExactInverse(&inv));
+    EXPECT_TRUE(APFloat(*S, "32.0").bitwiseIsEqual(inv));
+
+    EXPECT_TRUE(APFloat(*S, "-32.0").getExactInverse(&inv));
+    EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(*S, "-0.03125")));
+    EXPECT_TRUE(inv.getExactInverse(&inv));
+    EXPECT_TRUE(APFloat(*S, "-32.0").bitwiseIsEqual(inv));
+
+    EXPECT_FALSE(APFloat::getZero(*S).getExactInverse(nullptr));
+  }
+
   // FLT_MIN
   EXPECT_TRUE(APFloat(1.17549435e-38f).getExactInverse(&inv));
   EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(8.5070592e+37f)));
@@ -2201,6 +2719,179 @@ TEST(APFloatTest, roundToIntegral) {
   St = P.roundToIntegral(APFloat::rmNearestTiesToEven);
   EXPECT_EQ(10.0, P.convertToDouble());
   EXPECT_EQ(APFloat::opInexact, St);
+
+  // HexFloat
+  {
+    constexpr bool Positive = false;
+    constexpr bool Negative = !Positive;
+    APFloat::opStatus St;
+    for (const auto *Sem : HexFloatSemantics) {
+      APFloat T(*Sem, "-0.5"), S(*Sem, "3.14");
+      APFloat R(APFloat::getLargest(*Sem)), P(*Sem, "0.0");
+
+      P = T;
+      St = P.roundToIntegral(APFloat::rmTowardZero);
+      EXPECT_EQ(APFloat::opInexact, St);
+      EXPECT_TRUE(P.isZero());
+      EXPECT_TRUE(P.isNegative());
+      EXPECT_TRUE(P.isNegZero());
+
+      P = T;
+      St = P.roundToIntegral(APFloat::rmTowardNegative);
+      EXPECT_EQ(APFloat::opInexact, St);
+      EXPECT_EQ(APFloat::getOne(*Sem, Negative), P);
+      P = T;
+      St = P.roundToIntegral(APFloat::rmTowardPositive);
+      EXPECT_EQ(APFloat::opInexact, St);
+      EXPECT_TRUE(P.isZero());
+      EXPECT_TRUE(P.isNegative());
+      EXPECT_TRUE(P.isNegZero());
+      P = T;
+      St = P.roundToIntegral(APFloat::rmNearestTiesToEven);
+      EXPECT_EQ(APFloat::opInexact, St);
+      EXPECT_TRUE(P.isZero());
+      EXPECT_TRUE(P.isNegative());
+      EXPECT_TRUE(P.isNegZero());
+
+      P = S;
+      St = P.roundToIntegral(APFloat::rmTowardZero);
+      EXPECT_EQ(APFloat::opInexact, St);
+      EXPECT_EQ(APFloat(*Sem, "3"), P);
+      P = S;
+      St = P.roundToIntegral(APFloat::rmTowardNegative);
+      EXPECT_EQ(APFloat::opInexact, St);
+      EXPECT_EQ(APFloat(*Sem, "3"), P);
+      P = S;
+      St = P.roundToIntegral(APFloat::rmTowardPositive);
+      EXPECT_EQ(APFloat::opInexact, St);
+      EXPECT_EQ(APFloat(*Sem, "4"), P);
+      P = S;
+      St = P.roundToIntegral(APFloat::rmNearestTiesToEven);
+      EXPECT_EQ(APFloat::opInexact, St);
+      EXPECT_EQ(APFloat(*Sem, "3"), P);
+
+      P = R;
+      St = P.roundToIntegral(APFloat::rmTowardZero);
+      EXPECT_EQ(APFloat::opOK, St);
+      EXPECT_EQ(R, P);
+      P = R;
+      St = P.roundToIntegral(APFloat::rmTowardNegative);
+      EXPECT_EQ(APFloat::opOK, St);
+      EXPECT_EQ(R, P);
+      P = R;
+      St = P.roundToIntegral(APFloat::rmTowardPositive);
+      EXPECT_EQ(APFloat::opOK, St);
+      EXPECT_EQ(R, P);
+      P = R;
+      St = P.roundToIntegral(APFloat::rmNearestTiesToEven);
+      EXPECT_EQ(APFloat::opOK, St);
+      EXPECT_EQ(R, P);
+
+      P = APFloat::getZero(*Sem, Positive);
+      St = P.roundToIntegral(APFloat::rmTowardZero);
+      EXPECT_EQ(APFloat::opOK, St);
+      EXPECT_TRUE(P.isZero());
+      EXPECT_FALSE(P.isNegative());
+      EXPECT_TRUE(P.isPosZero());
+
+      P = APFloat::getZero(*Sem, Negative);
+      St = P.roundToIntegral(APFloat::rmTowardZero);
+      EXPECT_EQ(APFloat::opOK, St);
+      EXPECT_TRUE(P.isZero());
+      EXPECT_TRUE(P.isNegative());
+      EXPECT_TRUE(P.isNegZero());
+
+      P = APFloat::getZero(*Sem, Positive);
+      St = P.roundToIntegral(APFloat::rmTowardNegative);
+      EXPECT_TRUE(P.isZero());
+      EXPECT_FALSE(P.isNegative());
+      EXPECT_EQ(APFloat::opOK, St);
+
+      P = APFloat::getSmallest(*Sem, Positive);
+      St = P.roundToIntegral(APFloat::rmTowardNegative);
+      EXPECT_TRUE(P.isZero());
+      EXPECT_FALSE(P.isNegative());
+      EXPECT_EQ(APFloat::opInexact, St);
+
+      P = APFloat::getSmallest(*Sem, Positive);
+      St = P.roundToIntegral(APFloat::rmTowardPositive);
+      EXPECT_EQ(APFloat::getOne(*Sem, Positive), P);
+      EXPECT_FALSE(P.isNegative());
+      EXPECT_EQ(APFloat::opInexact, St);
+
+      P = APFloat::getSmallest(*Sem, Negative);
+      St = P.roundToIntegral(APFloat::rmTowardNegative);
+      EXPECT_TRUE(P.isNegative());
+      EXPECT_EQ(APFloat::getOne(*Sem, Negative), P);
+      EXPECT_EQ(APFloat::opInexact, St);
+
+      P = APFloat::getSmallest(*Sem, Negative);
+      St = P.roundToIntegral(APFloat::rmTowardPositive);
+      EXPECT_TRUE(P.isZero());
+      EXPECT_TRUE(P.isNegative());
+      EXPECT_EQ(APFloat::opInexact, St);
+
+      P = APFloat(*Sem, "10.0");
+      St = P.roundToIntegral(APFloat::rmTowardZero);
+      EXPECT_EQ(APFloat(*Sem, "10.0"), P);
+      EXPECT_EQ(APFloat::opOK, St);
+
+      P = APFloat(*Sem, "10.5");
+      St = P.roundToIntegral(APFloat::rmTowardZero);
+      EXPECT_EQ(APFloat(*Sem, "10.0"), P);
+      EXPECT_EQ(APFloat::opInexact, St);
+
+      P = APFloat(*Sem, "10.5");
+      St = P.roundToIntegral(APFloat::rmTowardPositive);
+      EXPECT_EQ(APFloat(*Sem, "11.0"), P);
+      EXPECT_EQ(APFloat::opInexact, St);
+
+      P = APFloat(*Sem, "10.5");
+      St = P.roundToIntegral(APFloat::rmTowardNegative);
+      EXPECT_EQ(APFloat(*Sem, "10.0"), P);
+      EXPECT_EQ(APFloat::opInexact, St);
+
+      P = APFloat(*Sem, "10.5");
+      St = P.roundToIntegral(APFloat::rmNearestTiesToAway);
+      EXPECT_EQ(APFloat(*Sem, "11.0"), P);
+      EXPECT_EQ(APFloat::opInexact, St);
+
+      P = APFloat(*Sem, "10.5");
+      St = P.roundToIntegral(APFloat::rmNearestTiesToEven);
+      EXPECT_EQ(APFloat(*Sem, "10.0"), P);
+      EXPECT_EQ(APFloat::opInexact, St);
+
+      P = APFloat(*Sem, "-10.0");
+      St = P.roundToIntegral(APFloat::rmTowardZero);
+      EXPECT_EQ(APFloat(*Sem, "-10.0"), P);
+      EXPECT_EQ(APFloat::opOK, St);
+
+      P = APFloat(*Sem, "-10.5");
+      St = P.roundToIntegral(APFloat::rmTowardZero);
+      EXPECT_EQ(APFloat(*Sem, "-10.0"), P);
+      EXPECT_EQ(APFloat::opInexact, St);
+
+      P = APFloat(*Sem, "-10.5");
+      St = P.roundToIntegral(APFloat::rmTowardPositive);
+      EXPECT_EQ(APFloat(*Sem, "-10.0"), P);
+      EXPECT_EQ(APFloat::opInexact, St);
+
+      P = APFloat(*Sem, "-10.5");
+      St = P.roundToIntegral(APFloat::rmTowardNegative);
+      EXPECT_EQ(APFloat(*Sem, "-11.0"), P);
+      EXPECT_EQ(APFloat::opInexact, St);
+
+      P = APFloat(*Sem, "-10.5");
+      St = P.roundToIntegral(APFloat::rmNearestTiesToAway);
+      EXPECT_EQ(APFloat(*Sem, "-11.0"), P);
+      EXPECT_EQ(APFloat::opInexact, St);
+
+      P = APFloat(*Sem, "-10.5");
+      St = P.roundToIntegral(APFloat::rmNearestTiesToEven);
+      EXPECT_EQ(APFloat(*Sem, "-10.0"), P);
+      EXPECT_EQ(APFloat::opInexact, St);
+    }
+  }
 }
 
 TEST(APFloatTest, isInteger) {
@@ -2216,6 +2907,17 @@ TEST(APFloatTest, isInteger) {
   EXPECT_FALSE(T.isInteger());
   T = APFloat::getLargest(APFloat::IEEEdouble());
   EXPECT_TRUE(T.isInteger());
+
+  {
+    for (const auto *Sem : HexFloatSemantics) {
+      APFloat T(*Sem, "-0.0");
+      EXPECT_TRUE(T.isInteger());
+      T = APFloat(*Sem, "3.14159");
+      EXPECT_FALSE(T.isInteger());
+      T = APFloat::getLargest(*Sem);
+      EXPECT_TRUE(T.isInteger());
+    }
+  }
 }
 
 TEST(DoubleAPFloatTest, isInteger) {
@@ -2305,6 +3007,16 @@ TEST(APFloatTest, getLargest) {
   EXPECT_EQ(7.5,
             APFloat::getLargest(APFloat::Float6E2M3FN()).convertToDouble());
   EXPECT_EQ(6, APFloat::getLargest(APFloat::Float4E2M1FN()).convertToDouble());
+  EXPECT_EQ(APFloat::getLargest(APFloat::HexFP32()),
+            APFloat(APFloat::HexFP32(), "0x.ffffffp252"));
+  EXPECT_EQ(APFloat::getLargest(APFloat::HexFP64()),
+            APFloat(APFloat::HexFP64(), "0x.ffffff"
+                                        "ffffffffp252"));
+  EXPECT_EQ(APFloat::getLargest(APFloat::HexFP128()),
+            APFloat(APFloat::HexFP128(), "0x.ffffff"
+                                         "ffffffff"
+                                         "ffffff"
+                                         "ffffffffp252"));
 }
 
 TEST(APFloatTest, getSmallest) {
@@ -2391,6 +3103,17 @@ TEST(APFloatTest, getSmallest) {
   EXPECT_TRUE(test.isFiniteNonZero());
   EXPECT_FALSE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
+
+  EXPECT_EQ(APFloat::getSmallest(APFloat::HexFP32()),
+            APFloat(APFloat::HexFP32(), "0x.000001p-256"));
+  EXPECT_EQ(APFloat::getSmallest(APFloat::HexFP64()),
+            APFloat(APFloat::HexFP64(), "0x.000000"
+                                        "00000001p-256"));
+  EXPECT_EQ(APFloat::getSmallest(APFloat::HexFP128()),
+            APFloat(APFloat::HexFP128(), "0x.000000"
+                                         "00000000"
+                                         "000000"
+                                         "00000001p-256"));
 }
 
 TEST(APFloatTest, getSmallestNormalized) {
@@ -2505,6 +3228,13 @@ TEST(APFloatTest, getSmallestNormalized) {
   EXPECT_FALSE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
   EXPECT_TRUE(test.isSmallestNormalized());
+
+  EXPECT_EQ(APFloat::getSmallestNormalized(APFloat::HexFP32()),
+            APFloat(APFloat::HexFP32(), "0x.1p-256"));
+  EXPECT_EQ(APFloat::getSmallestNormalized(APFloat::HexFP64()),
+            APFloat(APFloat::HexFP64(), "0x.1p-256"));
+  EXPECT_EQ(APFloat::getSmallestNormalized(APFloat::HexFP128()),
+            APFloat(APFloat::HexFP128(), "0x.1p-256"));
 }
 
 TEST(APFloatTest, getZero) {
@@ -2548,7 +3278,19 @@ TEST(APFloatTest, getZero) {
       {&APFloat::Float6E2M3FN(), false, true, {0, 0}, 1},
       {&APFloat::Float6E2M3FN(), true, true, {0x20ULL, 0}, 1},
       {&APFloat::Float4E2M1FN(), false, true, {0, 0}, 1},
-      {&APFloat::Float4E2M1FN(), true, true, {0x8ULL, 0}, 1}};
+      {&APFloat::Float4E2M1FN(), true, true, {0x8ULL, 0}, 1},
+      {&APFloat::HexFP32(), false, true, {0, 0}, 1},
+      {&APFloat::HexFP32(), true, true, {0x80000000, 0}, 1},
+      {&APFloat::HexFP64(), false, true, {0, 0}, 1},
+      {&APFloat::HexFP64(), true, true, {0x8000000000000000, 0}, 1},
+      {&APFloat::HexFP128(), false, true, {0, 0}, 2},
+      // negative HFP128: sign bit is MSB,
+      // however note that APInt seems to store in little endian order
+      {&APFloat::HexFP128(),
+       true,
+       true,
+       {0x0000000000000000, 0x8000000000000000},
+       2}};
   const unsigned NumGetZeroTests = std::size(GetZeroTest);
   for (unsigned i = 0; i < NumGetZeroTests; ++i) {
     APFloat test = APFloat::getZero(*GetZeroTest[i].semantics,
@@ -2564,7 +3306,8 @@ TEST(APFloatTest, getZero) {
     EXPECT_TRUE(test.bitwiseIsEqual(expected));
     for (unsigned j = 0, je = GetZeroTest[i].bitPatternLength; j < je; ++j) {
       EXPECT_EQ(GetZeroTest[i].bitPattern[j],
-                test.bitcastToAPInt().getRawData()[j]);
+                test.bitcastToAPInt().getRawData()[j])
+          << " i == " << i << " j == " << j;
     }
   }
 }
@@ -2586,6 +3329,21 @@ TEST(APFloatTest, copySign) {
         APFloat::copySign(APFloat::getZero(Sem), APFloat(-1.0))));
     EXPECT_TRUE(APFloat::getNaN(Sem, true).bitwiseIsEqual(
         APFloat::copySign(APFloat::getNaN(Sem, true), APFloat(1.0))));
+  }
+  for (const auto *S : HexFloatSemantics) {
+    const APFloat FortyTwo(*S, "42.0");
+    const APFloat MinusFortyTwo(*S, "-42.0");
+    const APFloat One(APFloat::getOne(*S, /*Negatove == */ false));
+    const APFloat MinusOne(APFloat::getOne(*S, /*Negatove == */ true));
+
+    EXPECT_TRUE(MinusFortyTwo.bitwiseIsEqual(
+        APFloat::copySign(APFloat(FortyTwo), MinusOne)));
+    EXPECT_TRUE(FortyTwo.bitwiseIsEqual(
+        APFloat::copySign(APFloat(MinusFortyTwo), One)));
+    EXPECT_TRUE(MinusFortyTwo.bitwiseIsEqual(
+        APFloat::copySign(APFloat(MinusFortyTwo), MinusOne)));
+    EXPECT_TRUE(
+        FortyTwo.bitwiseIsEqual(APFloat::copySign(APFloat(FortyTwo), One)));
   }
 }
 
@@ -2697,6 +3455,37 @@ TEST(APFloatTest, convert) {
   test.convert(APFloat::BFloat(), APFloat::rmNearestTiesToAway, &losesInfo);
   EXPECT_EQ(0x01, test.bitcastToAPInt());
   EXPECT_TRUE(losesInfo);
+
+  // HexFloat
+  test = APFloat(APFloat::HexFP64(), "1.0");
+  test.convert(APFloat::HexFP32(), APFloat::rmNearestTiesToEven, &losesInfo);
+  EXPECT_EQ(APFloat::getOne(APFloat::HexFP32()), test);
+  EXPECT_FALSE(losesInfo);
+
+  test = APFloat(APFloat::HexFP128(), "1.0");
+  test.convert(APFloat::HexFP32(), APFloat::rmNearestTiesToEven, &losesInfo);
+  EXPECT_EQ(APFloat::getOne(APFloat::HexFP32()), test);
+  EXPECT_FALSE(losesInfo);
+
+  test = APFloat(APFloat::HexFP128(), "1.0");
+  test.convert(APFloat::HexFP64(), APFloat::rmNearestTiesToEven, &losesInfo);
+  EXPECT_EQ(APFloat::getOne(APFloat::HexFP64()), test);
+  EXPECT_FALSE(losesInfo);
+
+  test = APFloat::getSmallest(APFloat::HexFP64());
+  test.convert(APFloat::HexFP32(), APFloat::rmNearestTiesToEven, &losesInfo);
+  EXPECT_TRUE(losesInfo);
+  EXPECT_EQ(APFloat::getZero(APFloat::HexFP32()), test);
+
+  test = APFloat::getSmallest(APFloat::HexFP128());
+  test.convert(APFloat::HexFP32(), APFloat::rmNearestTiesToEven, &losesInfo);
+  EXPECT_TRUE(losesInfo);
+  EXPECT_EQ(APFloat::getZero(APFloat::HexFP32()), test);
+
+  test = APFloat::getSmallest(APFloat::HexFP128());
+  test.convert(APFloat::HexFP64(), APFloat::rmNearestTiesToEven, &losesInfo);
+  EXPECT_TRUE(losesInfo);
+  EXPECT_EQ(APFloat::getZero(APFloat::HexFP64()), test);
 }
 
 TEST(APFloatTest, Float8UZConvert) {
@@ -2850,6 +3639,13 @@ TEST(APFloatTest, isNegative) {
 
   EXPECT_FALSE(APFloat::getSNaN(APFloat::IEEEsingle(), false).isNegative());
   EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle(), true).isNegative());
+
+  for (const auto *S : HexFloatSemantics) {
+    APFloat t(*S, "0x1p+0");
+    EXPECT_FALSE(t.isNegative());
+    t = APFloat(*S, "-0x1p+0");
+    EXPECT_TRUE(t.isNegative());
+  }
 }
 
 TEST(APFloatTest, isNormal) {
@@ -2858,9 +3654,21 @@ TEST(APFloatTest, isNormal) {
 
   EXPECT_FALSE(APFloat::getInf(APFloat::IEEEsingle(), false).isNormal());
   EXPECT_FALSE(APFloat::getZero(APFloat::IEEEsingle(), false).isNormal());
+  for (const auto *S : HexFloatSemantics) {
+    EXPECT_FALSE(APFloat::getZero(*S, false).isNormal());
+  }
   EXPECT_FALSE(APFloat::getNaN(APFloat::IEEEsingle(), false).isNormal());
   EXPECT_FALSE(APFloat::getSNaN(APFloat::IEEEsingle(), false).isNormal());
   EXPECT_FALSE(APFloat(APFloat::IEEEsingle(), "0x1p-149").isNormal());
+
+  for (const auto *S : HexFloatSemantics) {
+    APFloat F(APFloat::getSmallestNormalized(*S));
+    EXPECT_TRUE(F.isNormal());
+    EXPECT_FALSE(F.isDenormal());
+    F.next(/* down == */ true);
+    EXPECT_FALSE(F.isNormal());
+    EXPECT_TRUE(F.isDenormal());
+  }
 }
 
 TEST(APFloatTest, isFinite) {
@@ -2926,10 +3734,28 @@ TEST(APFloatTest, isFiniteNonZero) {
   // Test positive/negative normal value.
   EXPECT_TRUE(APFloat(APFloat::IEEEsingle(), "0x1p+0").isFiniteNonZero());
   EXPECT_TRUE(APFloat(APFloat::IEEEsingle(), "-0x1p+0").isFiniteNonZero());
+  EXPECT_TRUE(APFloat(APFloat::HexFP32(), "0x0.100000p-256").isFiniteNonZero());
+  EXPECT_TRUE(APFloat(APFloat::HexFP64(), "0x0.100000"
+                                          "00000000p-256")
+                  .isFiniteNonZero());
+  EXPECT_TRUE(APFloat(APFloat::HexFP128(), "0x0.100000"
+                                           "00000000"
+                                           "000000"
+                                           "00000000p-256")
+                  .isFiniteNonZero());
 
   // Test positive/negative denormal value.
   EXPECT_TRUE(APFloat(APFloat::IEEEsingle(), "0x1p-149").isFiniteNonZero());
   EXPECT_TRUE(APFloat(APFloat::IEEEsingle(), "-0x1p-149").isFiniteNonZero());
+  EXPECT_TRUE(APFloat(APFloat::HexFP32(), "0x0.000001p-256").isFiniteNonZero());
+  EXPECT_TRUE(APFloat(APFloat::HexFP64(), "0x0.000000"
+                                          "00000001p-256")
+                  .isFiniteNonZero());
+  EXPECT_TRUE(APFloat(APFloat::HexFP128(), "0x0.000000"
+                                           "00000000"
+                                           "000000"
+                                           "00000001p-256")
+                  .isFiniteNonZero());
 
   // Test +/- Infinity.
   EXPECT_FALSE(APFloat::getInf(APFloat::IEEEsingle(), false).isFiniteNonZero());
@@ -4091,6 +4917,56 @@ TEST(APFloatTest, Comparisons) {
       Relations[I][J](Vals[I], Vals[J]);
 }
 
+TEST(APFloatTest, ComparisonsHexFloat) {
+  enum { MBig, MOne, MZer, PZer, POne, PBig, NumVals };
+  using Relation = void (*)(const APFloat &, const APFloat &);
+  Relation LT = [](const APFloat &LHS, const APFloat &RHS) {
+    EXPECT_FALSE(LHS == RHS);
+    EXPECT_TRUE(LHS != RHS);
+    EXPECT_TRUE(LHS < RHS);
+    EXPECT_FALSE(LHS > RHS);
+    EXPECT_TRUE(LHS <= RHS);
+    EXPECT_FALSE(LHS >= RHS);
+  };
+  Relation EQ = [](const APFloat &LHS, const APFloat &RHS) {
+    EXPECT_TRUE(LHS == RHS);
+    EXPECT_FALSE(LHS != RHS);
+    EXPECT_FALSE(LHS < RHS);
+    EXPECT_FALSE(LHS > RHS);
+    EXPECT_TRUE(LHS <= RHS);
+    EXPECT_TRUE(LHS >= RHS);
+  };
+  Relation GT = [](const APFloat &LHS, const APFloat &RHS) {
+    EXPECT_FALSE(LHS == RHS);
+    EXPECT_TRUE(LHS != RHS);
+    EXPECT_FALSE(LHS < RHS);
+    EXPECT_TRUE(LHS > RHS);
+    EXPECT_FALSE(LHS <= RHS);
+    EXPECT_TRUE(LHS >= RHS);
+  };
+  Relation Relations[NumVals][NumVals] = {
+      //          -B  -1  -0  +0  +1  +B
+      /* MBig */ {EQ, LT, LT, LT, LT, LT},
+      /* MOne */ {GT, EQ, LT, LT, LT, LT},
+      /* MZer */ {GT, GT, EQ, EQ, LT, LT},
+      /* PZer */ {GT, GT, EQ, EQ, LT, LT},
+      /* POne */ {GT, GT, GT, GT, EQ, LT},
+      /* PBig */ {GT, GT, GT, GT, GT, EQ},
+  };
+  for (const auto *S : HexFloatSemantics) {
+    APFloat Vals[NumVals] = {APFloat::getLargest(*S, /* Negative == */ true),
+                             APFloat::getOne(*S, /* Negative == */ true),
+                             APFloat::getZero(*S, /* Negative == */ true),
+                             APFloat::getZero(*S, /* Negative == */ false),
+                             APFloat::getOne(*S, /* Negative == */ false),
+                             APFloat::getLargest(*S, /* Negative == */ false)};
+
+    for (unsigned I = 0; I < NumVals; ++I)
+      for (unsigned J = 0; J < NumVals; ++J)
+        Relations[I][J](Vals[I], Vals[J]);
+  }
+}
+
 TEST(APFloatTest, abs) {
   APFloat PInf = APFloat::getInf(APFloat::IEEEsingle(), false);
   APFloat MInf = APFloat::getInf(APFloat::IEEEsingle(), true);
@@ -4129,6 +5005,32 @@ TEST(APFloatTest, abs) {
   EXPECT_TRUE(PSmallestNormalized.bitwiseIsEqual(abs(MSmallestNormalized)));
 }
 
+TEST(APFloatTest, absHexFloat) {
+  for (const auto *S : HexFloatSemantics) {
+    APFloat PZero = APFloat::getZero(*S, false);
+    APFloat MZero = APFloat::getZero(*S, true);
+    APFloat PNormalValue = APFloat(*S, "0x1p+0");
+    APFloat MNormalValue = APFloat(*S, "-0x1p+0");
+    APFloat PLargestValue = APFloat::getLargest(*S, false);
+    APFloat MLargestValue = APFloat::getLargest(*S, true);
+    APFloat PSmallestValue = APFloat::getSmallest(*S, false);
+    APFloat MSmallestValue = APFloat::getSmallest(*S, true);
+    APFloat PSmallestNormalized = APFloat::getSmallestNormalized(*S, false);
+    APFloat MSmallestNormalized = APFloat::getSmallestNormalized(*S, true);
+
+    EXPECT_TRUE(PZero.bitwiseIsEqual(abs(PZero)));
+    EXPECT_TRUE(PZero.bitwiseIsEqual(abs(MZero)));
+    EXPECT_TRUE(PNormalValue.bitwiseIsEqual(abs(PNormalValue)));
+    EXPECT_TRUE(PNormalValue.bitwiseIsEqual(abs(MNormalValue)));
+    EXPECT_TRUE(PLargestValue.bitwiseIsEqual(abs(PLargestValue)));
+    EXPECT_TRUE(PLargestValue.bitwiseIsEqual(abs(MLargestValue)));
+    EXPECT_TRUE(PSmallestValue.bitwiseIsEqual(abs(PSmallestValue)));
+    EXPECT_TRUE(PSmallestValue.bitwiseIsEqual(abs(MSmallestValue)));
+    EXPECT_TRUE(PSmallestNormalized.bitwiseIsEqual(abs(PSmallestNormalized)));
+    EXPECT_TRUE(PSmallestNormalized.bitwiseIsEqual(abs(MSmallestNormalized)));
+  }
+}
+
 TEST(APFloatTest, neg) {
   APFloat One = APFloat(APFloat::IEEEsingle(), "1.0");
   APFloat NegOne = APFloat(APFloat::IEEEsingle(), "-1.0");
@@ -4160,6 +5062,25 @@ TEST(APFloatTest, neg) {
   EXPECT_TRUE(Inf.bitwiseIsEqual(-NegInf));
   EXPECT_TRUE(NegQNaN.bitwiseIsEqual(-QNaN));
   EXPECT_TRUE(QNaN.bitwiseIsEqual(-NegQNaN));
+}
+
+TEST(APFloatTest, negHexFloat) {
+  for (const auto *S : HexFloatSemantics) {
+    APFloat One = APFloat(*S, "1.0");
+    APFloat NegOne = APFloat(*S, "-1.0");
+    APFloat Zero = APFloat::getZero(*S, false);
+    APFloat NegZero = APFloat::getZero(*S, true);
+
+    EXPECT_TRUE(NegOne.bitwiseIsEqual(neg(One)));
+    EXPECT_TRUE(One.bitwiseIsEqual(neg(NegOne)));
+    EXPECT_TRUE(NegZero.bitwiseIsEqual(neg(Zero)));
+    EXPECT_TRUE(Zero.bitwiseIsEqual(neg(NegZero)));
+
+    EXPECT_TRUE(NegOne.bitwiseIsEqual(-One));
+    EXPECT_TRUE(One.bitwiseIsEqual(-NegOne));
+    EXPECT_TRUE(NegZero.bitwiseIsEqual(-Zero));
+    EXPECT_TRUE(Zero.bitwiseIsEqual(-NegZero));
+  }
 }
 
 TEST(APFloatTest, ilogb) {
@@ -4203,6 +5124,45 @@ TEST(APFloatTest, ilogb) {
             ilogb(APFloat::getSmallestNormalized(APFloat::IEEEsingle(), false)));
   EXPECT_EQ(-126,
             ilogb(APFloat::getSmallestNormalized(APFloat::IEEEsingle(), true)));
+}
+
+TEST(APFloatTest, ilogbHexFloat) {
+  struct test_t {
+    const char *value;
+    int expected;
+  };
+  for (bool PosNeg : {false, true}) {
+    EXPECT_EQ(-70, ilogb(APFloat::getSmallest(APFloat::HexFP32(), PosNeg)));
+    EXPECT_EQ(-78, ilogb(APFloat::getSmallest(APFloat::HexFP64(), PosNeg)));
+    EXPECT_EQ(-92, ilogb(APFloat::getSmallest(APFloat::HexFP128(), PosNeg)));
+    EXPECT_EQ(
+        -65, ilogb(APFloat::getSmallestNormalized(APFloat::HexFP32(), PosNeg)));
+    EXPECT_EQ(
+        -65, ilogb(APFloat::getSmallestNormalized(APFloat::HexFP64(), PosNeg)));
+    EXPECT_EQ(-65, ilogb(APFloat::getSmallestNormalized(APFloat::HexFP128(),
+                                                        PosNeg)));
+
+    test_t tests[] = {
+        // clang-format off
+        { "0x1.fffffp-256",     -64 },
+        { "0x1.00000p-256",     -64 },
+        { "0x0",                APFloat::IEK_Zero },
+        { "0x1",                0 },
+        // clang-format on
+    };
+    for (const auto *S : HexFloatSemantics) {
+      for (const auto &T : tests) {
+        APFloat F(*S, T.value);
+        if (F.isNegative() != PosNeg)
+          F.changeSign();
+        EXPECT_EQ(T.expected, ilogb(F))
+            << " F == " << T.value << " isNegative() == " << F.isNegative();
+      }
+    }
+    EXPECT_EQ(62, ilogb(APFloat::getLargest(APFloat::HexFP32(), PosNeg)));
+    EXPECT_EQ(62, ilogb(APFloat::getLargest(APFloat::HexFP64(), PosNeg)));
+    EXPECT_EQ(62, ilogb(APFloat::getLargest(APFloat::HexFP128(), PosNeg)));
+  }
 }
 
 TEST(APFloatTest, scalbn) {
@@ -4376,6 +5336,58 @@ TEST(APFloatTest, scalbn) {
     .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEdouble(), "0x1p-51"), -52, RM)));
 }
 
+TEST(APFloatTest, scalbnHexFloat) {
+  const APFloat::roundingMode RM = APFloat::rmNearestTiesToEven;
+
+  for (const auto *S : HexFloatSemantics) {
+    EXPECT_TRUE(
+        scalbn(APFloat(*S, "8"), -1, RM).bitwiseIsEqual(APFloat(*S, "0.5")));
+    EXPECT_TRUE(
+        scalbn(APFloat(*S, "8"), 0, RM).bitwiseIsEqual(APFloat(*S, "8")));
+    EXPECT_TRUE(
+        scalbn(APFloat(*S, "8"), 1, RM).bitwiseIsEqual(APFloat(*S, "128")));
+
+    EXPECT_TRUE(
+        scalbn(APFloat(*S, "0"), -10000, RM).bitwiseIsEqual(APFloat(*S, "0")));
+    EXPECT_TRUE(
+        scalbn(APFloat(*S, "0"), -1, RM).bitwiseIsEqual(APFloat(*S, "0")));
+    EXPECT_TRUE(
+        scalbn(APFloat(*S, "0"), 0, RM).bitwiseIsEqual(APFloat(*S, "0")));
+    EXPECT_TRUE(
+        scalbn(APFloat(*S, "0"), 1, RM).bitwiseIsEqual(APFloat(*S, "0")));
+    EXPECT_TRUE(
+        scalbn(APFloat(*S, "0"), 10000, RM).bitwiseIsEqual(APFloat(*S, "0")));
+
+    EXPECT_TRUE(scalbn(APFloat::getSmallest(*S), -1, RM)
+                    .bitwiseIsEqual(APFloat(*S, "0")));
+    EXPECT_TRUE(scalbn(APFloat(*S, "0x.1p252"), 1, RM)
+                    .bitwiseIsEqual(APFloat::getLargest(*S)));
+    EXPECT_TRUE(scalbn(APFloat::getLargest(*S), 1, RM)
+                    .bitwiseIsEqual(APFloat::getLargest(*S)));
+  }
+
+  EXPECT_TRUE(APFloat(APFloat::HexFP32(), "0x.1p252")
+                  .bitwiseIsEqual(scalbn(
+                      APFloat::getSmallest(APFloat::HexFP32()), 132, RM)));
+  EXPECT_TRUE(APFloat::getLargest(APFloat::HexFP32())
+                  .bitwiseIsEqual(scalbn(
+                      APFloat::getSmallest(APFloat::HexFP32()), 133, RM)));
+
+  EXPECT_TRUE(APFloat(APFloat::HexFP64(), "0x.1p252")
+                  .bitwiseIsEqual(scalbn(
+                      APFloat::getSmallest(APFloat::HexFP64()), 140, RM)));
+  EXPECT_TRUE(APFloat::getLargest(APFloat::HexFP64())
+                  .bitwiseIsEqual(scalbn(
+                      APFloat::getSmallest(APFloat::HexFP64()), 141, RM)));
+
+  EXPECT_TRUE(APFloat(APFloat::HexFP128(), "0x.1p252")
+                  .bitwiseIsEqual(scalbn(
+                      APFloat::getSmallest(APFloat::HexFP128()), 154, RM)));
+  EXPECT_TRUE(APFloat::getLargest(APFloat::HexFP128())
+                  .bitwiseIsEqual(scalbn(
+                      APFloat::getSmallest(APFloat::HexFP128()), 155, RM)));
+}
+
 TEST(APFloatTest, frexp) {
   const APFloat::roundingMode RM = APFloat::rmNearestTiesToEven;
 
@@ -4500,6 +5512,108 @@ TEST(APFloatTest, frexp) {
   Frac = frexp(APFloat(APFloat::IEEEdouble(), "0x1.c60f120d9f87cp+51"), Exp, RM);
   EXPECT_EQ(52, Exp);
   EXPECT_TRUE(APFloat(APFloat::IEEEdouble(), "0x1.c60f120d9f87cp-1").bitwiseIsEqual(Frac));
+}
+
+TEST(APFloatTest, frexpHexFloat) {
+  const APFloat::roundingMode RM = APFloat::rmNearestTiesToEven;
+
+  for (const auto *S : HexFloatSemantics) {
+    auto SemanticsName = APFloat::semanticsName(*S);
+    APFloat PZero(APFloat::getZero(*S, false));
+    APFloat MZero(APFloat::getZero(*S, true));
+    APFloat One(APFloat::getOne(*S, false));
+    APFloat MOne(APFloat::getOne(*S, true));
+    APFloat Two(*S, "2.0");
+    APFloat MTwo(*S, "-2.0");
+
+    APFloat SmallestNormalized(APFloat::getSmallestNormalized(*S, false));
+    APFloat NegSmallestNormalized(APFloat::getSmallestNormalized(*S, true));
+    APFloat LargestDenormal(SmallestNormalized);
+    LargestDenormal.next(true);
+    APFloat NegLargestDenormal(LargestDenormal);
+    NegLargestDenormal.changeSign();
+
+    APFloat Smallest = APFloat::getSmallest(*S, false);
+    APFloat NegSmallest = APFloat::getSmallest(*S, true);
+
+    APFloat Largest = APFloat::getLargest(*S, false);
+    APFloat NegLargest = APFloat::getLargest(*S, true);
+
+    int Exp;
+    std::string Expected;
+    APFloat Frac(*S);
+
+    Frac = frexp(PZero, Exp, RM);
+    EXPECT_EQ(0, Exp);
+    EXPECT_TRUE(Frac.isPosZero());
+
+    Frac = frexp(MZero, Exp, RM);
+    EXPECT_EQ(0, Exp);
+    EXPECT_TRUE(Frac.isNegZero());
+
+    // we use a subtraction and the isZero() perdicate to avoid
+    // having to deal with the exact encoding, which is tricky
+    // for the low exponent in the 128 case.
+    Frac = frexp(One, Exp, RM);
+    EXPECT_EQ(1, Exp) << " Semantics: " << SemanticsName;
+    EXPECT_EQ(APFloat::opOK, Frac.subtract(APFloat(*S, "0.5"), RM))
+        << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(Frac.isZero()) << " Semantics: " << SemanticsName;
+
+    Frac = frexp(MOne, Exp, RM);
+    EXPECT_EQ(1, Exp) << " Semantics: " << SemanticsName;
+    EXPECT_EQ(APFloat::opOK, Frac.add(APFloat(*S, "0.5"), RM))
+        << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(Frac.isZero()) << " Semantics: " << SemanticsName;
+
+    Frac = frexp(LargestDenormal, Exp, RM);
+    EXPECT_EQ(-260, Exp) << " Semantics: " << SemanticsName;
+    Expected = "0x.";
+    Expected.append(APFloat::semanticsPrecision(*S) - 1, 'f');
+    Expected.push_back('0');
+    EXPECT_EQ(APFloat::opOK, Frac.subtract(APFloat(*S, Expected), RM))
+        << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(Frac.isZero()) << " Semantics: " << SemanticsName;
+
+    Frac = frexp(NegLargestDenormal, Exp, RM);
+    EXPECT_EQ(-260, Exp) << " Semantics: " << SemanticsName;
+    Expected = "0x.";
+    Expected.append(APFloat::semanticsPrecision(*S) - 1, 'f');
+    Expected.push_back('0');
+    EXPECT_EQ(APFloat::opOK, Frac.add(APFloat(*S, Expected), RM))
+        << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(Frac.isZero()) << " Semantics: " << SemanticsName;
+
+    Frac = frexp(Smallest, Exp, RM);
+    EXPECT_EQ(-256 - 4 * ((int)APFloat::semanticsPrecision(*S) - 1) - 3, Exp)
+        << " Semantics: " << APFloat::semanticsName(*S);
+    EXPECT_EQ(APFloat::opOK, Frac.subtract(APFloat(*S, "0.5"), RM))
+        << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(Frac.isZero()) << " Semantics: " << SemanticsName;
+
+    Frac = frexp(NegSmallest, Exp, RM);
+    EXPECT_EQ(-256 - 4 * ((int)APFloat::semanticsPrecision(*S) - 1) - 3, Exp)
+        << " Semantics: " << SemanticsName;
+    EXPECT_EQ(APFloat::opOK, Frac.add(APFloat(*S, "0.5"), RM))
+        << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(Frac.isZero()) << " Semantics: " << SemanticsName;
+
+    Frac = frexp(Largest, Exp, RM);
+    EXPECT_EQ(252, Exp) << " Semantics: " << SemanticsName;
+    Expected = "0x.";
+    Expected.append(APFloat::semanticsPrecision(*S), 'f');
+    EXPECT_EQ(APFloat::opOK, Frac.subtract(APFloat(*S, Expected), RM))
+        << " Semantics: " << APFloat::semanticsName(*S);
+    EXPECT_TRUE(Frac.isZero()) << " Semantics: " << SemanticsName;
+
+    Frac = frexp(NegLargest, Exp, RM);
+    EXPECT_EQ(252, Exp) << " Semantics: " << SemanticsName;
+    Expected = "0x.";
+    Expected.append(APFloat::semanticsPrecision(*S), 'f');
+    EXPECT_EQ(APFloat::opOK, Frac.add(APFloat(*S, Expected), RM))
+        << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(Frac.isZero()) << " Semantics: " << SemanticsName;
+  }
 }
 
 TEST(APFloatTest, mod) {
@@ -7365,6 +8479,244 @@ TEST(APFloatTest, PPCDoubleDoubleConvertFromAPIntEnormous) {
   }
 }
 
+TEST(APFloatTest, HexFloatRoundToIntegral) {
+  const auto cmpEqual = llvm::APFloatBase::cmpEqual;
+
+  auto toString = [](llvm::RoundingMode rm) {
+    const char *s;
+    switch (rm) {
+    case APFloat::rmTowardZero:
+      s = "APFloat::rmTowardZero";
+      break;
+    case APFloat::rmTowardPositive:
+      s = "APFloat::rmTowardPositive";
+      break;
+    case APFloat::rmTowardNegative:
+      s = "APFloat::rmTowardNegative";
+      break;
+    case APFloat::rmNearestTiesToEven:
+      s = "APFloat::rmNearestTiesToEven";
+      break;
+    case APFloat::rmNearestTiesToAway:
+      s = "APFloat::rmNearestTiesToAway";
+      break;
+    default:
+      s = "unknown";
+    }
+    return s;
+  };
+
+  // instances of test_t describe a single test: the value to be rounded,
+  // the expected value, and the rounding mode.
+  struct test_t {
+    const char *value;
+    const char *expected_after_rounding;
+    llvm::RoundingMode rm;
+  };
+
+  // do a singke test
+  auto test_it = [&](const test_t t, const fltSemantics &S) {
+    APFloat hf(S, t.value);
+    APFloat expected(S, t.expected_after_rounding);
+    hf.roundToIntegral(t.rm);
+    EXPECT_EQ(cmpEqual, expected.compare(hf))
+        << "Semantics: " << APFloat::semanticsName(S) << "\n"
+        << "value == " << t.value
+        << ", expected == " << t.expected_after_rounding
+        << ", mode == " << toString(t.rm);
+  };
+
+  // these are the tessts
+  // Note tha fraction 0.25, 0,5, and 0.75 are losslessly expressable
+  // in HexFloat
+  const test_t tests[] = {
+      // clang-format off
+      { "0", "0", APFloat::rmTowardZero },
+      { "0", "0", APFloat::rmTowardPositive },
+      { "0", "0", APFloat::rmTowardNegative },
+      { "0", "0", APFloat::rmNearestTiesToEven },
+      { "0", "0", APFloat::rmNearestTiesToAway },
+
+      // The values with abosule value less than one have exponent < 1
+      { "0.25", "0", APFloat::rmTowardZero },
+      { "0.25", "1", APFloat::rmTowardPositive },
+      { "0.25", "0", APFloat::rmTowardNegative },
+      { "0.25", "0", APFloat::rmNearestTiesToEven },
+      { "0.25", "0", APFloat::rmNearestTiesToAway },
+
+      { "-0.25", "0", APFloat::rmTowardZero },
+      { "-0.25", "0", APFloat::rmTowardPositive },
+      { "-0.25", "-1", APFloat::rmTowardNegative },
+      { "-0.25", "0", APFloat::rmNearestTiesToEven },
+      { "-0.25", "0", APFloat::rmNearestTiesToAway },
+
+      { "0.5", "0", APFloat::rmTowardZero },
+      { "0.5", "1", APFloat::rmTowardPositive },
+      { "0.5", "0", APFloat::rmTowardNegative },
+      { "0.5", "0", APFloat::rmNearestTiesToEven },
+      { "0.5", "1", APFloat::rmNearestTiesToAway },
+
+      { "-0.5", "0", APFloat::rmTowardZero },
+      { "-0.5", "0", APFloat::rmTowardPositive },
+      { "-0.5", "-1", APFloat::rmTowardNegative },
+      { "-0.5", "0", APFloat::rmNearestTiesToEven },
+      { "-0.5", "-1", APFloat::rmNearestTiesToAway },
+
+      { "0.75", "0", APFloat::rmTowardZero },
+      { "0.75", "1", APFloat::rmTowardPositive },
+      { "0.75", "0", APFloat::rmTowardNegative },
+      { "0.75", "1", APFloat::rmNearestTiesToEven },
+      { "0.75", "1", APFloat::rmNearestTiesToAway },
+
+      { "-0.75", "0", APFloat::rmTowardZero },
+      { "-0.75", "0", APFloat::rmTowardPositive },
+      { "-0.75", "-1", APFloat::rmTowardNegative },
+      { "-0.75", "-1", APFloat::rmNearestTiesToEven },
+      { "-0.75", "-1", APFloat::rmNearestTiesToAway },
+
+      // exponent >= 1
+      // check how a value with an odd integer component rounds
+      { "1", "1", APFloat::rmTowardZero },
+      { "1", "1", APFloat::rmTowardPositive },
+      { "1", "1", APFloat::rmTowardNegative },
+      { "1", "1", APFloat::rmNearestTiesToEven },
+      { "1", "1", APFloat::rmNearestTiesToAway },
+
+      { "-1", "-1", APFloat::rmTowardZero },
+      { "-1", "-1", APFloat::rmTowardPositive },
+      { "-1", "-1", APFloat::rmTowardNegative },
+      { "-1", "-1", APFloat::rmNearestTiesToEven },
+      { "-1", "-1", APFloat::rmNearestTiesToAway },
+
+      { "1.25", "1", APFloat::rmTowardZero },
+      { "1.25", "2", APFloat::rmTowardPositive },
+      { "1.25", "1", APFloat::rmTowardNegative },
+      { "1.25", "1", APFloat::rmNearestTiesToEven },
+      { "1.25", "1", APFloat::rmNearestTiesToAway },
+
+      { "-1.25", "-1", APFloat::rmTowardZero },
+      { "-1.25", "-1", APFloat::rmTowardPositive },
+      { "-1.25", "-2", APFloat::rmTowardNegative },
+      { "-1.25", "-1", APFloat::rmNearestTiesToEven },
+      { "-1.25", "-1", APFloat::rmNearestTiesToAway },
+
+      { "1.5", "1", APFloat::rmTowardZero },
+      { "1.5", "2", APFloat::rmTowardPositive },
+      { "1.5", "1", APFloat::rmTowardNegative },
+      { "1.5", "2", APFloat::rmNearestTiesToEven },
+      { "1.5", "2", APFloat::rmNearestTiesToAway },
+
+      { "-1.5", "-1", APFloat::rmTowardZero },
+      { "-1.5", "-1", APFloat::rmTowardPositive },
+      { "-1.5", "-2", APFloat::rmTowardNegative },
+      { "-1.5", "-2", APFloat::rmNearestTiesToEven },
+      { "-1.5", "-2", APFloat::rmNearestTiesToAway },
+
+      { "1.75", "1", APFloat::rmTowardZero },
+      { "1.75", "2", APFloat::rmTowardPositive },
+      { "1.75", "1", APFloat::rmTowardNegative },
+      { "1.75", "2", APFloat::rmNearestTiesToEven },
+      { "1.75", "2", APFloat::rmNearestTiesToAway },
+
+      { "-1.75", "-1", APFloat::rmTowardZero },
+      { "-1.75", "-1", APFloat::rmTowardPositive },
+      { "-1.75", "-2", APFloat::rmTowardNegative },
+      { "-1.75", "-2", APFloat::rmNearestTiesToEven },
+      { "-1.75", "-2", APFloat::rmNearestTiesToAway },
+
+      // check how a value with an even integer component rounds
+      { "2", "2", APFloat::rmTowardZero },
+      { "2", "2", APFloat::rmTowardPositive },
+      { "2", "2", APFloat::rmTowardNegative },
+      { "2", "2", APFloat::rmNearestTiesToEven },
+      { "2", "2", APFloat::rmNearestTiesToAway },
+
+      { "-2", "-2", APFloat::rmTowardZero },
+      { "-2", "-2", APFloat::rmTowardPositive },
+      { "-2", "-2", APFloat::rmTowardNegative },
+      { "-2", "-2", APFloat::rmNearestTiesToEven },
+      { "-2", "-2", APFloat::rmNearestTiesToAway },
+
+      { "2.25", "2", APFloat::rmTowardZero },
+      { "2.25", "3", APFloat::rmTowardPositive },
+      { "2.25", "2", APFloat::rmTowardNegative },
+      { "2.25", "2", APFloat::rmNearestTiesToEven },
+      { "2.25", "2", APFloat::rmNearestTiesToAway },
+
+      { "-2.25", "-2", APFloat::rmTowardZero },
+      { "-2.25", "-2", APFloat::rmTowardPositive },
+      { "-2.25", "-3", APFloat::rmTowardNegative },
+      { "-2.25", "-2", APFloat::rmNearestTiesToEven },
+      { "-2.25", "-2", APFloat::rmNearestTiesToAway },
+
+      { "2.5", "2", APFloat::rmTowardZero },
+      { "2.5", "3", APFloat::rmTowardPositive },
+      { "2.5", "2", APFloat::rmTowardNegative },
+      { "2.5", "2", APFloat::rmNearestTiesToEven },
+      { "2.5", "3", APFloat::rmNearestTiesToAway },
+
+      { "-2.5", "-2", APFloat::rmTowardZero },
+      { "-2.5", "-2", APFloat::rmTowardPositive },
+      { "-2.5", "-3", APFloat::rmTowardNegative },
+      { "-2.5", "-2", APFloat::rmNearestTiesToEven },
+      { "-2.5", "-3", APFloat::rmNearestTiesToAway },
+
+      { "2.75", "2", APFloat::rmTowardZero },
+      { "2.75", "3", APFloat::rmTowardPositive },
+      { "2.75", "2", APFloat::rmTowardNegative },
+      { "2.75", "3", APFloat::rmNearestTiesToEven },
+      { "2.75", "3", APFloat::rmNearestTiesToAway },
+
+      { "-2.75", "-2", APFloat::rmTowardZero },
+      { "-2.75", "-2", APFloat::rmTowardPositive },
+      { "-2.75", "-3", APFloat::rmTowardNegative },
+      { "-2.75", "-3", APFloat::rmNearestTiesToEven },
+      { "-2.75", "-3", APFloat::rmNearestTiesToAway },
+      // clang-format on
+  };
+
+  // do the tests
+  for (const auto &t : tests) {
+    for (const auto *S : HexFloatSemantics)
+      test_it(t, *S);
+  }
+}
+TEST(APFloatTest, CompareHexFloat) {
+  const APFloat::cmpResult LT = APFloat::cmpLessThan;
+  const APFloat::cmpResult EQ = APFloat::cmpEqual;
+  const APFloat::cmpResult GT = APFloat::cmpGreaterThan;
+
+  const std::array Values{"2.0", "3.0", "-2.31", "2.4", "-1.42", "-1.4"};
+
+  /* expected results */
+  APFloat::cmpResult Expected[][Values.size()] = {
+      // clang-format off
+                    /*  2.0      3.0      -2.31    2.4   -1.42   -1.4   */
+      /*  2.0  */   {   EQ,      LT,       GT,     LT,    GT,     GT     },
+      /*  3.0  */   {   GT,      EQ,       GT,     GT,    GT,     GT     },
+      /* -2.31 */   {   LT,      LT,       EQ,     LT,    LT,     LT     },
+      /*  2.4  */   {   GT,      LT,       GT,     EQ,    GT,     GT     },
+      /* -1.42 */   {   LT,      LT,       GT,     LT,    EQ,     LT     },
+      /* -1.4  */   {   LT,      LT,       GT,     LT,    GT,     EQ     },
+      // clang-format on
+  };
+
+  for (const auto *S : HexFloatSemantics) {
+    for (auto i = 0; i != Values.size(); i++) {
+      const APFloat LHS(*S, Values[i]);
+      for (auto j = 0; j != Values.size(); j++) {
+        const APFloat RHS(*S, Values[j]);
+        // clang-format off
+        EXPECT_EQ(Expected[i][j], LHS.compare(RHS))
+          << " Semantics: " << APFloat::semanticsName(*S) << "\n"
+          << " (i, LHS) == (" << i << ", " << LHS << ")\n"
+          << " (j, RHS) == (" << j << ", " << RHS << ")\n";
+        // clang-format on
+      }
+    }
+  }
+}
+
 TEST(APFloatTest, x87Largest) {
   APFloat MaxX87Val = APFloat::getLargest(APFloat::x87DoubleExtended());
   EXPECT_TRUE(MaxX87Val.isLargest());
@@ -9414,8 +10766,28 @@ TEST(APFloatTest, getExactLog2) {
     EXPECT_EQ(INT_MIN,
               scalbn(Largest, 1, APFloat::rmNearestTiesToEven).getExactLog2());
 
-    for (int i = MinExp - Precision + 1; i <= MaxExp; ++i) {
-      EXPECT_EQ(i, scalbn(One, i, APFloat::rmNearestTiesToEven).getExactLog2());
+    int Log2OfRadix = llvm::countr_zero(APFloat::semanticsRadix(Semantics));
+
+    // HexFloat (effectively) has an implicit bit of zero.  Therefore, 1 is
+    // is represented by 1/16 * 16^1.  It follows that if the maximum
+    // allowed expoennt by the represntaion is MaxExp, the highest value x
+    // we can give scalbn(1, x) is x == (MaxExp - 1).
+    // (If x > MaxExp, then the representation is 1/16 * 16^1 * 16 ^ MaxExp,
+    // which is 1/16 * 16^(MaxExp + 1), which is out of range.)
+    int MaxExpBound = One.isHexFloat() ? MaxExp - 1 : MaxExp;
+    for (int i = MinExp - Precision + 1; i <= MaxExpBound; ++i) {
+      // We need to divide the value returned by scalbn by the log2 of the
+      // radix.
+      // (Note: that getExactLog2 requires a radix that is a power of 2.)
+      // Let R be the radix, and r be log2(R)
+      // scalbn(1, i) returns 1 * R^i == 1 * 2 ^ (r * i) == 2 ^ (r * i)
+      // log2(1 * R^i) == log2(2 ^ (r * i))
+      //               == r * log2(2^i)
+      //               == r * i
+      // Therefore log2(scalbn(1, i)) == r * i
+      // Hence the division by Log2OfRadix
+      EXPECT_EQ(i, scalbn(One, i, APFloat::rmNearestTiesToEven).getExactLog2() /
+                       Log2OfRadix);
     }
   }
 }
@@ -10173,6 +11545,9 @@ TEST(APFloatTest, hasSignBitInMSB) {
   EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::PPCDoubleDouble()));
   EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::IEEEquad()));
   EXPECT_FALSE(APFloat::hasSignBitInMSB(APFloat::Float8E8M0FNU()));
+  EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::HexFP32()));
+  EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::HexFP64()));
+  EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::HexFP128()));
 }
 
 TEST(APFloatTest, FrexpQuietSNaN) {

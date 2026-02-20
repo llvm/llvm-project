@@ -29,6 +29,8 @@
       return U.IEEE.METHOD_CALL;                                               \
     if (usesLayout<DoubleAPFloat>(getSemantics()))                             \
       return U.Double.METHOD_CALL;                                             \
+    if (usesLayout<HexFloat>(getSemantics()))                                  \
+      return U.Hex.METHOD_CALL;                                                \
     llvm_unreachable("Unexpected semantics");                                  \
   } while (false)
 
@@ -257,7 +259,13 @@ public:
     S_Float4E2M1FN,
     // TODO: Documentation is missing.
     S_x87DoubleExtended,
-    S_MaxSemantics = S_x87DoubleExtended,
+
+    // HexFloat
+    S_HexFP32,
+    S_HexFP64,
+    S_HexFP128,
+
+    S_MaxSemantics = S_HexFP128,
   };
 
   LLVM_ABI static const llvm::fltSemantics &EnumToSemantics(Semantics S);
@@ -285,6 +293,9 @@ private:
   LLVM_ABI static const fltSemantics semBogus;
   LLVM_ABI static const fltSemantics semPPCDoubleDouble;
   LLVM_ABI static const fltSemantics semPPCDoubleDoubleLegacy;
+  LLVM_ABI static const fltSemantics semHex_FP32;
+  LLVM_ABI static const fltSemantics semHex_FP64;
+  LLVM_ABI static const fltSemantics semHex_FP128;
 
   friend class detail::IEEEFloat;
   friend class detail::DoubleAPFloat;
@@ -317,6 +328,9 @@ public:
   static const fltSemantics &x87DoubleExtended() {
     return semX87DoubleExtended;
   }
+  static const fltSemantics &HexFP32() { return semHex_FP32; }
+  static const fltSemantics &HexFP64() { return semHex_FP64; }
+  static const fltSemantics &HexFP128() { return semHex_FP128; }
 
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
   /// anything real.
@@ -386,12 +400,14 @@ public:
     IEK_Inf = INT_MAX
   };
 
+  LLVM_ABI static const char *semanticsName(const fltSemantics &);
   LLVM_ABI static unsigned int semanticsPrecision(const fltSemantics &);
   LLVM_ABI static ExponentType semanticsMinExponent(const fltSemantics &);
   LLVM_ABI static ExponentType semanticsMaxExponent(const fltSemantics &);
   LLVM_ABI static unsigned int semanticsSizeInBits(const fltSemantics &);
   LLVM_ABI static unsigned int semanticsIntSizeInBits(const fltSemantics &,
                                                       bool);
+  LLVM_ABI static unsigned int semanticsRadix(const fltSemantics &);
   LLVM_ABI static bool semanticsHasZero(const fltSemantics &);
   LLVM_ABI static bool semanticsHasSignedRepr(const fltSemantics &);
   LLVM_ABI static bool semanticsHasInf(const fltSemantics &);
@@ -673,6 +689,12 @@ public:
 
   LLVM_ABI cmpResult compareAbsoluteValue(const IEEEFloat &) const;
 
+  /// returns the exponent
+  LLVM_ABI ExponentType getExponent() const;
+
+  /// returns the significand
+  LLVM_ABI APInt getSignificand() const;
+
 private:
   /// \name Simple Queries
   /// @{
@@ -938,6 +960,171 @@ LLVM_ABI DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp,
                               roundingMode RM);
 LLVM_ABI DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, roundingMode);
 
+class HexFloat final {
+  friend class HexFloatArith;
+
+  /// Note: this must be the first data member.
+  /// The semantics that this value obeys.
+  const fltSemantics *semantics;
+
+  /// A binary fraction with an explicit integer bit.
+  APInt significand;
+
+  /// The signed unbiased exponent of the value.
+  ExponentType exponent;
+
+  /// The exponent in the low-order part of a HexFloat 128.
+  /// This is ignored during computation, but must be preserved so that a
+  /// bitcast to APInt and back is an identity operation.
+  ExponentType low_exponent;
+
+  /// What kind of floating point number this is.
+  ///
+  /// Only 2 bits are required, but VisualStudio incorrectly sign extends it.
+  /// Using the extra bit keeps it from failing under VisualStudio.
+  fltCategory category : 3;
+
+  /// Sign bit of the number.
+  unsigned int sign : 1;
+
+  /// The sign bit in the low-order part of a HexFloat 128.
+  /// This is ignored; see comment for low_exponent.
+  unsigned int low_sign : 1;
+
+  void initialize(const fltSemantics *);
+  void assign(const HexFloat &);
+  void copySignificand(const HexFloat &);
+  void freeSignificand();
+
+  opStatus convertToSignExtendedInteger(MutableArrayRef<integerPart> Input,
+                                        unsigned int Width, bool IsSigned,
+                                        roundingMode RM, bool *IsExact) const;
+
+  static bool roundAwayFromZero(int sign, const APInt &fraction,
+                                roundingMode RM, lostFraction loast_fraction,
+                                int truncatedBits);
+
+public:
+  HexFloat(const fltSemantics &); // Default construct to +0.0
+  HexFloat(const fltSemantics &, integerPart);
+  HexFloat(const fltSemantics &, uninitializedTag);
+  HexFloat(const fltSemantics &, const APInt &);
+  explicit HexFloat(double d);
+  explicit HexFloat(float f);
+  HexFloat(const HexFloat &);
+  HexFloat(HexFloat &&);
+  ~HexFloat();
+
+  HexFloat &operator=(const HexFloat &);
+  HexFloat &operator=(HexFloat &&);
+
+  fltCategory getCategory() const;
+
+  void makeZero(bool Neg);
+  void makeInf(bool Neg);
+  void makeNaN(bool SNan = false, bool Neg = false,
+               const APInt *fill = nullptr);
+  void makeLargest(bool Neg = false);
+  void makeSmallest(bool Neg = false);
+  void makeSmallestNormalized(bool Neg = false);
+
+  bool needsCleanup() const;
+
+  opStatus add(const HexFloat &RHS, roundingMode RM);
+  opStatus subtract(const HexFloat &RHS, roundingMode RM);
+  opStatus multiply(const HexFloat &RHS, roundingMode RM);
+  opStatus divide(const HexFloat &RHS, roundingMode RM);
+  opStatus remainder(const HexFloat &RHS);
+  opStatus mod(const HexFloat &RHS);
+  opStatus fusedMultiplyAdd(const HexFloat &Multiplicand,
+                            const HexFloat &Addend, roundingMode RM);
+  opStatus roundToIntegral(roundingMode RM);
+  opStatus next(bool nextDown);
+
+  void changeSign();
+
+  opStatus convertToInteger(MutableArrayRef<integerPart> Input,
+                            unsigned int Width, bool IsSigned, roundingMode RM,
+                            bool *IsExact) const;
+  opStatus convertFromAPInt(const APInt &Input, bool isSigned, roundingMode RM);
+  opStatus convertFromSignExtendedInteger(const integerPart *Input,
+                                          unsigned int InputSize, bool IsSigned,
+                                          roundingMode RM);
+  opStatus convertFromZeroExtendedInteger(const integerPart *Input,
+                                          unsigned int InputSize, bool IsSigned,
+                                          roundingMode RM);
+  Expected<opStatus> convertFromString(StringRef, roundingMode);
+  APInt bitcastToAPInt() const;
+
+  opStatus convert(const fltSemantics &, roundingMode, bool *);
+
+  opStatus convertFrom(const IEEEFloat &ieee, roundingMode RM, bool *losesInfo);
+
+  opStatus convertTo(const fltSemantics &toSemantics, roundingMode RM,
+                     APInt &encoding, bool *losesInfo) const;
+
+  unsigned int convertToHexString(char *DST, unsigned int HexDigits,
+                                  bool UpperCase, roundingMode RM) const;
+
+  cmpResult compare(const HexFloat &) const;
+  cmpResult compareAbsoluteValue(const HexFloat &) const;
+
+  bool bitwiseIsEqual(const HexFloat &other) const;
+
+  bool isZero() const;
+  bool isNegative() const;
+  bool isDenormal() const;
+  bool isSmallest() const;
+  bool isLargest() const;
+  bool isInteger() const;
+
+  bool isSmallestNormalized() const;
+
+  void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision = 0,
+                unsigned FormatMaxPadding = 3, bool TruncateZero = true) const;
+
+  bool getExactInverse(APFloat *inv) const;
+
+  // If this is an exact power of two, return the exponent. If it's not an exact
+  // power of 2, return INT_MIN
+  LLVM_READONLY
+  int getExactLog2() const {
+    return isNegative() ? INT_MIN : getExactLog2Abs();
+  }
+
+  // If this is an exact power of two, return the exponent while ignoring the
+  // sign bit. If it's not an exact power of 2, return INT_MIN
+  LLVM_READONLY
+  int getExactLog2Abs() const;
+
+  int getRadix() const { return 16; }
+  ExponentType getExponent() const { return exponent; }
+  APInt getSignificand() const { return significand; }
+  bool decompose(APInt &, int &) const;
+
+  hash_code hash_value() const;
+
+  void dump() const;
+
+  friend int ilogb(const HexFloat &);
+  friend HexFloat scalbn(HexFloat X, int Exp, roundingMode);
+  friend HexFloat frexp(HexFloat X, int &Exp, roundingMode);
+
+private:
+  static unsigned int getNumPrecisionBits(const fltSemantics *semantics);
+  unsigned int getNumPrecisionBits() const {
+    return getNumPrecisionBits(semantics);
+  }
+  Expected<opStatus> convertFromDecimalString(StringRef, roundingMode);
+  Expected<opStatus> convertFromHexadecimalString(StringRef, roundingMode);
+  opStatus handleOverflow(bool isNeg = false);
+  opStatus handleUnderflow(bool isNeg = false);
+  opStatus handleDenorm(APInt &significand, int &exponent);
+};
+int ilogb(const HexFloat &Arg);
+HexFloat scalbn(HexFloat X, int Exp, roundingMode);
+HexFloat frexp(HexFloat X, int &Exp, roundingMode);
+
 } // End detail namespace
 
 // How the nonfinite values Inf and NaN are represented.
@@ -987,6 +1174,9 @@ enum class fltNanEncoding {
 };
 /* Represents floating point arithmetic semantics.  */
 struct fltSemantics {
+  /* Human readable name that identifies what these semantics represent */
+  const char *name;
+
   /* The largest E such that 2^E is representable; this matches the
      definition of IEEE 754.  */
   APFloatBase::ExponentType maxExponent;
@@ -1001,6 +1191,9 @@ struct fltSemantics {
 
   /* Number of bits actually used in the semantics. */
   unsigned int sizeInBits;
+
+  /* Radix this format uses: binary by default */
+  unsigned int radix = 2;
 
   fltNonfiniteBehavior nonFiniteBehavior = fltNonfiniteBehavior::IEEE754;
 
@@ -1021,6 +1214,7 @@ struct fltSemantics {
 class APFloat : public APFloatBase {
   using IEEEFloat = detail::IEEEFloat;
   using DoubleAPFloat = detail::DoubleAPFloat;
+  using HexFloat = detail::HexFloat;
 
   static_assert(std::is_standard_layout<IEEEFloat>::value);
 
@@ -1028,11 +1222,19 @@ class APFloat : public APFloatBase {
     const fltSemantics *semantics;
     IEEEFloat IEEE;
     DoubleAPFloat Double;
+    HexFloat Hex;
 
     LLVM_ABI explicit Storage(IEEEFloat F, const fltSemantics &S);
     explicit Storage(DoubleAPFloat F, const fltSemantics &S)
         : Double(std::move(F)) {
       assert(&S == &PPCDoubleDouble());
+    }
+    explicit Storage(HexFloat F, const fltSemantics &Semantics) {
+      if (usesLayout<HexFloat>(Semantics)) {
+        new (&Hex) HexFloat(std::move(F));
+        return;
+      }
+      llvm_unreachable("Unexpected semantics");
     }
 
     template <typename... ArgTypes>
@@ -1043,6 +1245,10 @@ class APFloat : public APFloatBase {
       }
       if (usesLayout<DoubleAPFloat>(Semantics)) {
         new (&Double) DoubleAPFloat(Semantics, std::forward<ArgTypes>(Args)...);
+        return;
+      }
+      if (usesLayout<HexFloat>(Semantics)) {
+        new (&Hex) HexFloat(Semantics, std::forward<ArgTypes>(Args)...);
         return;
       }
       llvm_unreachable("Unexpected semantics");
@@ -1057,11 +1263,17 @@ class APFloat : public APFloatBase {
 
   template <typename T> static bool usesLayout(const fltSemantics &Semantics) {
     static_assert(std::is_same<T, IEEEFloat>::value ||
-                  std::is_same<T, DoubleAPFloat>::value);
+                  std::is_same<T, DoubleAPFloat>::value ||
+                  std::is_same<T, HexFloat>::value);
     if (std::is_same<T, DoubleAPFloat>::value) {
       return &Semantics == &PPCDoubleDouble();
     }
-    return &Semantics != &PPCDoubleDouble();
+    const bool is_hex = &Semantics == &HexFP32() || &Semantics == &HexFP64() ||
+                        &Semantics == &HexFP128();
+    if (std::is_same_v<T, HexFloat>) {
+      return is_hex;
+    }
+    return !is_hex && &Semantics != &PPCDoubleDouble();
   }
 
   IEEEFloat &getIEEE() {
@@ -1077,6 +1289,18 @@ class APFloat : public APFloatBase {
       return U.IEEE;
     if (usesLayout<DoubleAPFloat>(*U.semantics))
       return U.Double.getFirst().U.IEEE;
+    llvm_unreachable("Unexpected semantics");
+  }
+
+  HexFloat &getHex() {
+    if (usesLayout<HexFloat>(*U.semantics))
+      return U.Hex;
+    llvm_unreachable("Unexpected semantics");
+  }
+
+  const HexFloat &getHex() const {
+    if (usesLayout<HexFloat>(*U.semantics))
+      return U.Hex;
     llvm_unreachable("Unexpected semantics");
   }
 
@@ -1103,6 +1327,7 @@ class APFloat : public APFloatBase {
   explicit APFloat(IEEEFloat F, const fltSemantics &S) : U(std::move(F), S) {}
   explicit APFloat(DoubleAPFloat F, const fltSemantics &S)
       : U(std::move(F), S) {}
+  explicit APFloat(HexFloat F, const fltSemantics &S) : U(std::move(F), S) {}
 
   // Compares the absolute value of this APFloat with another.  Both operands
   // must be finite non-zero.
@@ -1248,6 +1473,8 @@ public:
       return U.IEEE.add(RHS.U.IEEE, RM);
     if (usesLayout<DoubleAPFloat>(getSemantics()))
       return U.Double.add(RHS.U.Double, RM);
+    if (usesLayout<HexFloat>(getSemantics()))
+      return U.Hex.add(RHS.U.Hex, RM);
     llvm_unreachable("Unexpected semantics");
   }
   opStatus subtract(const APFloat &RHS, roundingMode RM) {
@@ -1257,6 +1484,8 @@ public:
       return U.IEEE.subtract(RHS.U.IEEE, RM);
     if (usesLayout<DoubleAPFloat>(getSemantics()))
       return U.Double.subtract(RHS.U.Double, RM);
+    if (usesLayout<HexFloat>(getSemantics()))
+      return U.Hex.subtract(RHS.U.Hex, RM);
     llvm_unreachable("Unexpected semantics");
   }
   opStatus multiply(const APFloat &RHS, roundingMode RM) {
@@ -1266,6 +1495,8 @@ public:
       return U.IEEE.multiply(RHS.U.IEEE, RM);
     if (usesLayout<DoubleAPFloat>(getSemantics()))
       return U.Double.multiply(RHS.U.Double, RM);
+    if (usesLayout<HexFloat>(getSemantics()))
+      return U.Hex.multiply(RHS.U.Hex, RM);
     llvm_unreachable("Unexpected semantics");
   }
   opStatus divide(const APFloat &RHS, roundingMode RM) {
@@ -1275,6 +1506,8 @@ public:
       return U.IEEE.divide(RHS.U.IEEE, RM);
     if (usesLayout<DoubleAPFloat>(getSemantics()))
       return U.Double.divide(RHS.U.Double, RM);
+    if (usesLayout<HexFloat>(getSemantics()))
+      return U.Hex.divide(RHS.U.Hex, RM);
     llvm_unreachable("Unexpected semantics");
   }
   opStatus remainder(const APFloat &RHS) {
@@ -1284,6 +1517,8 @@ public:
       return U.IEEE.remainder(RHS.U.IEEE);
     if (usesLayout<DoubleAPFloat>(getSemantics()))
       return U.Double.remainder(RHS.U.Double);
+    if (usesLayout<HexFloat>(getSemantics()))
+      return U.Hex.remainder(RHS.U.Hex);
     llvm_unreachable("Unexpected semantics");
   }
   opStatus mod(const APFloat &RHS) {
@@ -1293,6 +1528,8 @@ public:
       return U.IEEE.mod(RHS.U.IEEE);
     if (usesLayout<DoubleAPFloat>(getSemantics()))
       return U.Double.mod(RHS.U.Double);
+    if (usesLayout<HexFloat>(getSemantics()))
+      return U.Hex.mod(RHS.U.Hex);
     llvm_unreachable("Unexpected semantics");
   }
   opStatus fusedMultiplyAdd(const APFloat &Multiplicand, const APFloat &Addend,
@@ -1306,6 +1543,8 @@ public:
     if (usesLayout<DoubleAPFloat>(getSemantics()))
       return U.Double.fusedMultiplyAdd(Multiplicand.U.Double, Addend.U.Double,
                                        RM);
+    if (usesLayout<HexFloat>(getSemantics()))
+      return U.Hex.fusedMultiplyAdd(Multiplicand.U.Hex, Addend.U.Hex, RM);
     llvm_unreachable("Unexpected semantics");
   }
   opStatus roundToIntegral(roundingMode RM) {
@@ -1471,6 +1710,8 @@ public:
       return U.IEEE.compare(RHS.U.IEEE);
     if (usesLayout<DoubleAPFloat>(getSemantics()))
       return U.Double.compare(RHS.U.Double);
+    if (usesLayout<HexFloat>(getSemantics()))
+      return U.Hex.compare(RHS.U.Hex);
     llvm_unreachable("Unexpected semantics");
   }
 
@@ -1481,6 +1722,8 @@ public:
       return U.IEEE.bitwiseIsEqual(RHS.U.IEEE);
     if (usesLayout<DoubleAPFloat>(getSemantics()))
       return U.Double.bitwiseIsEqual(RHS.U.Double);
+    if (usesLayout<HexFloat>(getSemantics()))
+      return U.Hex.bitwiseIsEqual(RHS.U.Hex);
     llvm_unreachable("Unexpected semantics");
   }
 
@@ -1509,14 +1752,20 @@ public:
   bool isInfinity() const { return getCategory() == fcInfinity; }
   bool isNaN() const { return getCategory() == fcNaN; }
 
-  bool isNegative() const { return getIEEE().isNegative(); }
+  bool isNegative() const {
+    return isHexFloat() ? getHex().isNegative() : getIEEE().isNegative();
+  }
   bool isDenormal() const { APFLOAT_DISPATCH_ON_SEMANTICS(isDenormal()); }
-  bool isSignaling() const { return getIEEE().isSignaling(); }
+  bool isSignaling() const {
+    return (!isHexFloat()) && getIEEE().isSignaling();
+  }
 
   bool isNormal() const { return !isDenormal() && isFiniteNonZero(); }
   bool isFinite() const { return !isNaN() && !isInfinity(); }
 
-  fltCategory getCategory() const { return getIEEE().getCategory(); }
+  fltCategory getCategory() const {
+    return isHexFloat() ? getHex().getCategory() : getIEEE().getCategory();
+  }
   const fltSemantics &getSemantics() const { return *U.semantics; }
   bool isNonZero() const { return !isZero(); }
   bool isFiniteNonZero() const { return isFinite() && !isZero(); }
@@ -1527,6 +1776,7 @@ public:
   bool isSmallest() const { APFLOAT_DISPATCH_ON_SEMANTICS(isSmallest()); }
   bool isLargest() const { APFLOAT_DISPATCH_ON_SEMANTICS(isLargest()); }
   bool isInteger() const { APFLOAT_DISPATCH_ON_SEMANTICS(isInteger()); }
+  bool isHexFloat() const { return usesLayout<HexFloat>(getSemantics()); }
 
   bool isSmallestNormalized() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(isSmallestNormalized());
@@ -1574,10 +1824,8 @@ public:
   friend APFloat frexp(const APFloat &X, int &Exp, roundingMode RM);
   friend IEEEFloat;
   friend DoubleAPFloat;
+  friend HexFloat;
 };
-
-static_assert(sizeof(APFloat) == sizeof(detail::IEEEFloat),
-              "Empty base class optimization is not performed.");
 
 /// See friend declarations above.
 ///
@@ -1595,10 +1843,15 @@ LLVM_ABI hash_code hash_value(const APFloat &Arg);
 ///   Inf -> \c IEK_Inf
 ///
 inline int ilogb(const APFloat &Arg) {
+  static_assert(sizeof(APFloat) == sizeof(APFloat::Storage),
+                "Empty base class optimization is not performed.");
+
   if (APFloat::usesLayout<detail::IEEEFloat>(Arg.getSemantics()))
     return ilogb(Arg.U.IEEE);
   if (APFloat::usesLayout<detail::DoubleAPFloat>(Arg.getSemantics()))
     return ilogb(Arg.U.Double);
+  if (Arg.isHexFloat())
+    return ilogb(Arg.getHex());
   llvm_unreachable("Unexpected semantics");
 }
 
@@ -1608,6 +1861,8 @@ inline APFloat scalbn(APFloat X, int Exp, APFloat::roundingMode RM) {
     return APFloat(scalbn(X.U.IEEE, Exp, RM), X.getSemantics());
   if (APFloat::usesLayout<detail::DoubleAPFloat>(X.getSemantics()))
     return APFloat(scalbn(X.U.Double, Exp, RM), X.getSemantics());
+  if (APFloat::usesLayout<detail::HexFloat>(X.getSemantics()))
+    return APFloat(scalbn(X.U.Hex, Exp, RM), X.getSemantics());
   llvm_unreachable("Unexpected semantics");
 }
 
@@ -1620,6 +1875,8 @@ inline APFloat frexp(const APFloat &X, int &Exp, APFloat::roundingMode RM) {
     return APFloat(frexp(X.U.IEEE, Exp, RM), X.getSemantics());
   if (APFloat::usesLayout<detail::DoubleAPFloat>(X.getSemantics()))
     return APFloat(frexp(X.U.Double, Exp, RM), X.getSemantics());
+  if (APFloat::usesLayout<detail::HexFloat>(X.getSemantics()))
+    return APFloat(frexp(X.U.Hex, Exp, RM), X.getSemantics());
   llvm_unreachable("Unexpected semantics");
 }
 /// Returns the absolute value of the argument.
