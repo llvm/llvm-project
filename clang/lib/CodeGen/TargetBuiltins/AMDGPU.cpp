@@ -78,66 +78,28 @@ Value *EmitAMDGPUImplicitArgPtr(CodeGenFunction &CGF) {
 }
 
 // \p Index is 0, 1, and 2 for x, y, and z dimension, respectively.
-/// Emit code based on Code Object ABI version.
-/// COV_4    : Emit code to use dispatch ptr
-/// COV_5+   : Emit code to use implicitarg ptr
-/// COV_NONE : Emit code to load a global variable "__oclc_ABI_version"
-///            and use its value for COV_4 or COV_5+ approach. It is used for
-///            compiling device libraries in an ABI-agnostic way.
 Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
   llvm::LoadInst *LD;
 
   auto Cov = CGF.getTarget().getTargetOpts().CodeObjectVersion;
 
-  if (Cov == CodeObjectVersionKind::COV_None) {
-    StringRef Name = "__oclc_ABI_version";
-    auto *ABIVersionC = CGF.CGM.getModule().getNamedGlobal(Name);
-    if (!ABIVersionC)
-      ABIVersionC = new llvm::GlobalVariable(
-          CGF.CGM.getModule(), CGF.Int32Ty, false,
-          llvm::GlobalValue::ExternalLinkage, nullptr, Name, nullptr,
-          llvm::GlobalVariable::NotThreadLocal,
-          CGF.CGM.getContext().getTargetAddressSpace(LangAS::opencl_constant));
-
-    // This load will be eliminated by the IPSCCP because it is constant
-    // weak_odr without externally_initialized. Either changing it to weak or
-    // adding externally_initialized will keep the load.
-    Value *ABIVersion = CGF.Builder.CreateAlignedLoad(CGF.Int32Ty, ABIVersionC,
-                                                      CGF.CGM.getIntAlign());
-
-    Value *IsCOV5 = CGF.Builder.CreateICmpSGE(
-        ABIVersion,
-        llvm::ConstantInt::get(CGF.Int32Ty, CodeObjectVersionKind::COV_5));
-
+  Value *GEP = nullptr;
+  if (Cov >= CodeObjectVersionKind::COV_5 ||
+      Cov == CodeObjectVersionKind::COV_None) {
     // Indexing the implicit kernarg segment.
-    Value *ImplicitGEP = CGF.Builder.CreateConstGEP1_32(
+    GEP = CGF.Builder.CreateConstGEP1_32(
         CGF.Int8Ty, EmitAMDGPUImplicitArgPtr(CGF), 12 + Index * 2);
-
-    // Indexing the HSA kernel_dispatch_packet struct.
-    Value *DispatchGEP = CGF.Builder.CreateConstGEP1_32(
-        CGF.Int8Ty, EmitAMDGPUDispatchPtr(CGF), 4 + Index * 2);
-
-    auto Result = CGF.Builder.CreateSelect(IsCOV5, ImplicitGEP, DispatchGEP);
-    LD = CGF.Builder.CreateLoad(
-        Address(Result, CGF.Int16Ty, CharUnits::fromQuantity(2)));
   } else {
-    Value *GEP = nullptr;
-    if (Cov >= CodeObjectVersionKind::COV_5) {
-      // Indexing the implicit kernarg segment.
-      GEP = CGF.Builder.CreateConstGEP1_32(
-          CGF.Int8Ty, EmitAMDGPUImplicitArgPtr(CGF), 12 + Index * 2);
-    } else {
-      // Indexing the HSA kernel_dispatch_packet struct.
-      GEP = CGF.Builder.CreateConstGEP1_32(
-          CGF.Int8Ty, EmitAMDGPUDispatchPtr(CGF), 4 + Index * 2);
-    }
-    LD = CGF.Builder.CreateLoad(
-        Address(GEP, CGF.Int16Ty, CharUnits::fromQuantity(2)));
+    // Indexing the HSA kernel_dispatch_packet struct.
+    GEP = CGF.Builder.CreateConstGEP1_32(CGF.Int8Ty, EmitAMDGPUDispatchPtr(CGF),
+                                         4 + Index * 2);
   }
+  LD = CGF.Builder.CreateLoad(
+      Address(GEP, CGF.Int16Ty, CharUnits::fromQuantity(2)));
 
   llvm::MDBuilder MDHelper(CGF.getLLVMContext());
-  llvm::MDNode *RNode = MDHelper.createRange(APInt(16, 1),
-      APInt(16, CGF.getTarget().getMaxOpenCLWorkGroupSize() + 1));
+  llvm::MDNode *RNode = MDHelper.createRange(
+      APInt(16, 1), APInt(16, CGF.getTarget().getMaxOpenCLWorkGroupSize() + 1));
   LD->setMetadata(llvm::LLVMContext::MD_range, RNode);
   LD->setMetadata(llvm::LLVMContext::MD_noundef,
                   llvm::MDNode::get(CGF.getLLVMContext(), {}));
