@@ -36,6 +36,10 @@ static llvm::cl::opt<bool> forceMatmulAsElemental(
     llvm::cl::desc("Expand hlfir.matmul as elemental operation"),
     llvm::cl::init(false));
 
+static llvm::cl::opt<bool> forceComplexDivAsArithmetic(
+    "flang-complex-div-converter", llvm::cl::init(false), llvm::cl::Hidden,
+    llvm::cl::desc("Force complex div as arithmetic calculation."));
+
 namespace {
 
 // Helper class to generate operations related to computing
@@ -3184,6 +3188,98 @@ private:
   }
 };
 
+/// This rewrite pattern class performs a custom transformation on FIR
+/// 'fir.call' operation that invoke the '__divdc3' runtime function, which is
+/// typically used to perform double-precision complex division.
+///
+/// If the 'forceComplexDivAsArithmetic' flag option is true, this pattern
+/// matches call to '__divdc3', extracts the real and imaginary components of
+/// the numerator and denominator, and replaces the function call with an
+/// explicit computation using MLIR's arithmetic operations.
+/// Specifically, it replaces the call to '__divdc3(x0, y0, x1, y1)' —where
+/// (x0 + y0i) / (x1 + y1i) is the intended operation—with the mathematically
+/// equivalent expression:
+///     real_part = (x0*x1 + y0*y1) / (x1^2 + y1^2)
+///     imag_part = (y0*x1 - x0*y1) / (x1^2 + y1^2)
+/// The result is then reassembled into a 'complex<f64>' value using FIR's
+/// 'InsertValueOp' instructions.
+class ComplexDivisionConversion : public mlir::OpRewritePattern<fir::CallOp> {
+  using OpRewritePattern::OpRewritePattern;
+  llvm::LogicalResult
+  matchAndRewrite(fir::CallOp callOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (!forceComplexDivAsArithmetic) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Complex division with arithmetic calculation support is "
+                    "currently disabled \n");
+      return mlir::failure();
+    }
+    fir::FirOpBuilder builder{rewriter, callOp.getOperation()};
+    const mlir::Location &loc = callOp.getLoc();
+    if (!callOp.getCallee()) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "No callee found for CallOp at " << loc << "\n");
+      return mlir::failure();
+    }
+
+    const mlir::SymbolRefAttr &callee = *callOp.getCallee();
+    const auto &fctName = callee.getRootReference().getValue();
+    if (fctName != "__divdc3")
+      return mlir::failure();
+
+    const mlir::Type &eleTy = callOp.getOperands()[0].getType();
+    const mlir::Type &resTy = callOp.getResult(0).getType();
+
+    auto x0 = callOp.getOperands()[0]; // real part of numerator
+    auto y0 = callOp.getOperands()[1]; // imaginary part of numerator
+    auto x1 = callOp.getOperands()[2]; // real part of denominator
+    auto y1 = callOp.getOperands()[3]; // imaginary part of denominator
+
+    // standard complex division formula:
+    // (x0 + y0i)/(x1 + y1i) = ((x0*x1 + y0*y1)/(x1^2 + y1^2)) + ((y0*x1 -
+    // x0*y1)/(x1^2 + y1^2))i
+    auto x0x1 =
+        rewriter.create<mlir::arith::MulFOp>(loc, eleTy, x0, x1); // x0 * x1
+    auto x1Squared =
+        rewriter.create<mlir::arith::MulFOp>(loc, eleTy, x1, x1); // x1^2
+    auto y0x1 =
+        rewriter.create<mlir::arith::MulFOp>(loc, eleTy, y0, x1); // y0 * x1
+    auto x0y1 =
+        rewriter.create<mlir::arith::MulFOp>(loc, eleTy, x0, y1); // x0 * y1
+    auto y0y1 =
+        rewriter.create<mlir::arith::MulFOp>(loc, eleTy, y0, y1); // y0 * y1
+    auto y1Squared =
+        rewriter.create<mlir::arith::MulFOp>(loc, eleTy, y1, y1); // y1^2
+
+    auto denom = rewriter.create<mlir::arith::AddFOp>(loc, eleTy, x1Squared,
+                                                      y1Squared); // x1^2 + y1^2
+    auto realNumerator = rewriter.create<mlir::arith::AddFOp>(
+        loc, eleTy, x0x1, y0y1); // x0*x1 + y0*y1
+    auto imagNumerator = rewriter.create<mlir::arith::SubFOp>(
+        loc, eleTy, y0x1, x0y1); // y0*x1 - x0*y1
+
+    // compute final real and imaginary parts
+    auto realResult =
+        rewriter.create<mlir::arith::DivFOp>(loc, eleTy, realNumerator, denom);
+    auto imagResult =
+        rewriter.create<mlir::arith::DivFOp>(loc, eleTy, imagNumerator, denom);
+
+    // construct the result complex number
+    auto undefComplex = rewriter.create<fir::UndefOp>(loc, resTy);
+    auto index0 = builder.getArrayAttr(
+        {builder.getI32IntegerAttr(0)}); // index for real part
+    auto index1 = builder.getArrayAttr(
+        {builder.getI32IntegerAttr(1)}); // index for imag part
+    auto complexWithReal = rewriter.create<fir::InsertValueOp>(
+        loc, resTy, undefComplex, realResult, index0); // Insert real part
+    auto resComplex = rewriter.create<fir::InsertValueOp>(
+        loc, resTy, complexWithReal, imagResult,
+        index1); // Insert imaginary part
+    rewriter.replaceOp(callOp, resComplex.getResult());
+    return mlir::success();
+  }
+};
+
 class SimplifyHLFIRIntrinsics
     : public hlfir::impl::SimplifyHLFIRIntrinsicsBase<SimplifyHLFIRIntrinsics> {
 public:
@@ -3232,6 +3328,13 @@ public:
 
     patterns.insert<DotProductConversion>(context);
     patterns.insert<ReshapeAsElementalConversion>(context);
+
+    /// If the 'forceComplexDivAsArithmetic' flag option is true, this pattern
+    /// matches call to '__divdc3', extracts the real and imaginary components
+    /// of the numerator and denominator, and replaces the function call with an
+    /// explicit computation using MLIR's arithmetic operations.
+    if (forceComplexDivAsArithmetic)
+      patterns.insert<ComplexDivisionConversion>(context);
 
     if (mlir::failed(mlir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {
