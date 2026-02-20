@@ -3,8 +3,10 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -O0 -run-pass=legalizer  %s -o - | FileCheck -check-prefix=VI %s
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -O0 -run-pass=legalizer  %s -o - | FileCheck -check-prefix=GFX9PLUS %s
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -O0 -run-pass=legalizer  %s -o - | FileCheck -check-prefix=GFX9PLUS %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -O0 -run-pass=legalizer  %s -o - | FileCheck -check-prefixes=GFX11PLUS %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=-real-true16 -O0 -run-pass=legalizer  %s -o - | FileCheck -check-prefixes=GFX12 %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -O0 -run-pass=legalizer  %s -o - | FileCheck -check-prefixes=GFX11PLUS,GFX11PLUS-TRUE16 %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -O0 -run-pass=legalizer  %s -o - | FileCheck -check-prefixes=GFX11PLUS,GFX11PLUS-FAKE16 %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+real-true16 -O0 -run-pass=legalizer  %s -o - | FileCheck -check-prefixes=GFX12,GFX12-TRUE16 %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=-real-true16 -O0 -run-pass=legalizer  %s -o - | FileCheck -check-prefixes=GFX12,GFX12-FAKE16 %s
 
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=bonaire -mattr=-unaligned-access-mode -O0 -run-pass=legalizer  %s -o - | FileCheck -check-prefixes=CI %s
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-unaligned-access-mode -O0 -run-pass=legalizer  %s -o - | FileCheck -check-prefixes=VI %s
@@ -340,19 +342,35 @@ body: |
     ; GFX9PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
     ; GFX9PLUS-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ;
-    ; GFX11PLUS-LABEL: name: test_load_flat_s16_align4
-    ; GFX11PLUS: liveins: $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: {{  $}}
-    ; GFX11PLUS-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
-    ; GFX11PLUS-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; GFX11PLUS-TRUE16-LABEL: name: test_load_flat_s16_align4
+    ; GFX11PLUS-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: {{  $}}
+    ; GFX11PLUS-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX11PLUS-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ;
-    ; GFX12-LABEL: name: test_load_flat_s16_align4
-    ; GFX12: liveins: $vgpr0_vgpr1
-    ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
-    ; GFX12-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; GFX11PLUS-FAKE16-LABEL: name: test_load_flat_s16_align4
+    ; GFX11PLUS-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: {{  $}}
+    ; GFX11PLUS-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX11PLUS-FAKE16-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ;
+    ; GFX12-TRUE16-LABEL: name: test_load_flat_s16_align4
+    ; GFX12-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: {{  $}}
+    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX12-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s16)
+    ; GFX12-TRUE16-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ;
+    ; GFX12-FAKE16-LABEL: name: test_load_flat_s16_align4
+    ; GFX12-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: {{  $}}
+    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX12-FAKE16-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ;
     ; UNALIGNED_GFX9PLUS-LABEL: name: test_load_flat_s16_align4
     ; UNALIGNED_GFX9PLUS: liveins: $vgpr0_vgpr1
@@ -407,19 +425,35 @@ body: |
     ; GFX9PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
     ; GFX9PLUS-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ;
-    ; GFX11PLUS-LABEL: name: test_load_flat_s16_align2
-    ; GFX11PLUS: liveins: $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: {{  $}}
-    ; GFX11PLUS-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
-    ; GFX11PLUS-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; GFX11PLUS-TRUE16-LABEL: name: test_load_flat_s16_align2
+    ; GFX11PLUS-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: {{  $}}
+    ; GFX11PLUS-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16))
+    ; GFX11PLUS-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ;
-    ; GFX12-LABEL: name: test_load_flat_s16_align2
-    ; GFX12: liveins: $vgpr0_vgpr1
-    ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
-    ; GFX12-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; GFX11PLUS-FAKE16-LABEL: name: test_load_flat_s16_align2
+    ; GFX11PLUS-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: {{  $}}
+    ; GFX11PLUS-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
+    ; GFX11PLUS-FAKE16-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ;
+    ; GFX12-TRUE16-LABEL: name: test_load_flat_s16_align2
+    ; GFX12-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: {{  $}}
+    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16))
+    ; GFX12-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s16)
+    ; GFX12-TRUE16-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ;
+    ; GFX12-FAKE16-LABEL: name: test_load_flat_s16_align2
+    ; GFX12-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: {{  $}}
+    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
+    ; GFX12-FAKE16-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ;
     ; UNALIGNED_GFX9PLUS-LABEL: name: test_load_flat_s16_align2
     ; UNALIGNED_GFX9PLUS: liveins: $vgpr0_vgpr1
@@ -486,19 +520,35 @@ body: |
     ; GFX9PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
     ; GFX9PLUS-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ;
-    ; GFX11PLUS-LABEL: name: test_load_flat_s16_align1
-    ; GFX11PLUS: liveins: $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: {{  $}}
-    ; GFX11PLUS-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
-    ; GFX11PLUS-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; GFX11PLUS-TRUE16-LABEL: name: test_load_flat_s16_align1
+    ; GFX11PLUS-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: {{  $}}
+    ; GFX11PLUS-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
+    ; GFX11PLUS-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ;
-    ; GFX12-LABEL: name: test_load_flat_s16_align1
-    ; GFX12: liveins: $vgpr0_vgpr1
-    ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
-    ; GFX12-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; GFX11PLUS-FAKE16-LABEL: name: test_load_flat_s16_align1
+    ; GFX11PLUS-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: {{  $}}
+    ; GFX11PLUS-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
+    ; GFX11PLUS-FAKE16-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ;
+    ; GFX12-TRUE16-LABEL: name: test_load_flat_s16_align1
+    ; GFX12-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: {{  $}}
+    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
+    ; GFX12-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s16)
+    ; GFX12-TRUE16-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ;
+    ; GFX12-FAKE16-LABEL: name: test_load_flat_s16_align1
+    ; GFX12-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: {{  $}}
+    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
+    ; GFX12-FAKE16-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ;
     ; UNALIGNED_GFX9PLUS-LABEL: name: test_load_flat_s16_align1
     ; UNALIGNED_GFX9PLUS: liveins: $vgpr0_vgpr1
@@ -4600,19 +4650,35 @@ body: |
     ; GFX9PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
     ; GFX9PLUS-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ;
-    ; GFX11PLUS-LABEL: name: test_load_flat_v2s8_align4
-    ; GFX11PLUS: liveins: $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: {{  $}}
-    ; GFX11PLUS-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
-    ; GFX11PLUS-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; GFX11PLUS-TRUE16-LABEL: name: test_load_flat_v2s8_align4
+    ; GFX11PLUS-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: {{  $}}
+    ; GFX11PLUS-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX11PLUS-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ;
-    ; GFX12-LABEL: name: test_load_flat_v2s8_align4
-    ; GFX12: liveins: $vgpr0_vgpr1
-    ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
-    ; GFX12-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; GFX11PLUS-FAKE16-LABEL: name: test_load_flat_v2s8_align4
+    ; GFX11PLUS-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: {{  $}}
+    ; GFX11PLUS-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX11PLUS-FAKE16-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ;
+    ; GFX12-TRUE16-LABEL: name: test_load_flat_v2s8_align4
+    ; GFX12-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: {{  $}}
+    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX12-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s16)
+    ; GFX12-TRUE16-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ;
+    ; GFX12-FAKE16-LABEL: name: test_load_flat_v2s8_align4
+    ; GFX12-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: {{  $}}
+    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX12-FAKE16-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ;
     ; UNALIGNED_GFX9PLUS-LABEL: name: test_load_flat_v2s8_align4
     ; UNALIGNED_GFX9PLUS: liveins: $vgpr0_vgpr1
@@ -4668,19 +4734,35 @@ body: |
     ; GFX9PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
     ; GFX9PLUS-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ;
-    ; GFX11PLUS-LABEL: name: test_load_flat_v2s8_align2
-    ; GFX11PLUS: liveins: $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: {{  $}}
-    ; GFX11PLUS-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
-    ; GFX11PLUS-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; GFX11PLUS-TRUE16-LABEL: name: test_load_flat_v2s8_align2
+    ; GFX11PLUS-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: {{  $}}
+    ; GFX11PLUS-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16))
+    ; GFX11PLUS-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ;
-    ; GFX12-LABEL: name: test_load_flat_v2s8_align2
-    ; GFX12: liveins: $vgpr0_vgpr1
-    ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
-    ; GFX12-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; GFX11PLUS-FAKE16-LABEL: name: test_load_flat_v2s8_align2
+    ; GFX11PLUS-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: {{  $}}
+    ; GFX11PLUS-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
+    ; GFX11PLUS-FAKE16-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ;
+    ; GFX12-TRUE16-LABEL: name: test_load_flat_v2s8_align2
+    ; GFX12-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: {{  $}}
+    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16))
+    ; GFX12-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s16)
+    ; GFX12-TRUE16-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ;
+    ; GFX12-FAKE16-LABEL: name: test_load_flat_v2s8_align2
+    ; GFX12-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: {{  $}}
+    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
+    ; GFX12-FAKE16-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ;
     ; UNALIGNED_GFX9PLUS-LABEL: name: test_load_flat_v2s8_align2
     ; UNALIGNED_GFX9PLUS: liveins: $vgpr0_vgpr1
@@ -4748,19 +4830,35 @@ body: |
     ; GFX9PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
     ; GFX9PLUS-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ;
-    ; GFX11PLUS-LABEL: name: test_load_flat_v2s8_align1
-    ; GFX11PLUS: liveins: $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: {{  $}}
-    ; GFX11PLUS-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
-    ; GFX11PLUS-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; GFX11PLUS-TRUE16-LABEL: name: test_load_flat_v2s8_align1
+    ; GFX11PLUS-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: {{  $}}
+    ; GFX11PLUS-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
+    ; GFX11PLUS-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ;
-    ; GFX12-LABEL: name: test_load_flat_v2s8_align1
-    ; GFX12: liveins: $vgpr0_vgpr1
-    ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
-    ; GFX12-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; GFX11PLUS-FAKE16-LABEL: name: test_load_flat_v2s8_align1
+    ; GFX11PLUS-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: {{  $}}
+    ; GFX11PLUS-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
+    ; GFX11PLUS-FAKE16-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ;
+    ; GFX12-TRUE16-LABEL: name: test_load_flat_v2s8_align1
+    ; GFX12-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: {{  $}}
+    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
+    ; GFX12-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD]](s16)
+    ; GFX12-TRUE16-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ;
+    ; GFX12-FAKE16-LABEL: name: test_load_flat_v2s8_align1
+    ; GFX12-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: {{  $}}
+    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
+    ; GFX12-FAKE16-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ;
     ; UNALIGNED_GFX9PLUS-LABEL: name: test_load_flat_v2s8_align1
     ; UNALIGNED_GFX9PLUS: liveins: $vgpr0_vgpr1
@@ -4905,65 +5003,119 @@ body: |
     ; GFX9PLUS-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL2]]
     ; GFX9PLUS-NEXT: $vgpr0 = COPY [[OR2]](s32)
     ;
-    ; GFX11PLUS-LABEL: name: test_load_flat_v3s8_align4
-    ; GFX11PLUS: liveins: $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: {{  $}}
-    ; GFX11PLUS-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
-    ; GFX11PLUS-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GFX11PLUS-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; GFX11PLUS-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX11PLUS-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C1]](s32)
-    ; GFX11PLUS-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; GFX11PLUS-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; GFX11PLUS-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; GFX11PLUS-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C2]]
-    ; GFX11PLUS-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX11PLUS-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C2]]
-    ; GFX11PLUS-NEXT: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; GFX11PLUS-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C3]](s16)
-    ; GFX11PLUS-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
-    ; GFX11PLUS-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
-    ; GFX11PLUS-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C2]]
-    ; GFX11PLUS-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[DEF]](s32)
-    ; GFX11PLUS-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC3]], [[C2]]
-    ; GFX11PLUS-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[AND3]], [[C3]](s16)
-    ; GFX11PLUS-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[SHL1]]
-    ; GFX11PLUS-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[OR]](s16)
-    ; GFX11PLUS-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[OR1]](s16)
-    ; GFX11PLUS-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C1]](s32)
-    ; GFX11PLUS-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL2]]
-    ; GFX11PLUS-NEXT: $vgpr0 = COPY [[OR2]](s32)
+    ; GFX11PLUS-TRUE16-LABEL: name: test_load_flat_v3s8_align4
+    ; GFX11PLUS-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: {{  $}}
+    ; GFX11PLUS-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
+    ; GFX11PLUS-TRUE16-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GFX11PLUS-TRUE16-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
+    ; GFX11PLUS-TRUE16-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX11PLUS-TRUE16-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C1]](s32)
+    ; GFX11PLUS-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX11PLUS-TRUE16-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
+    ; GFX11PLUS-TRUE16-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
+    ; GFX11PLUS-TRUE16-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C2]]
+    ; GFX11PLUS-TRUE16-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; GFX11PLUS-TRUE16-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C2]]
+    ; GFX11PLUS-TRUE16-NEXT: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
+    ; GFX11PLUS-TRUE16-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C3]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
+    ; GFX11PLUS-TRUE16-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
+    ; GFX11PLUS-TRUE16-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C2]]
+    ; GFX11PLUS-TRUE16-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[DEF]](s32)
+    ; GFX11PLUS-TRUE16-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC3]], [[C2]]
+    ; GFX11PLUS-TRUE16-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[AND3]], [[C3]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[SHL1]]
+    ; GFX11PLUS-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[OR]](s16), [[OR1]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: $vgpr0 = COPY [[MV]](s32)
     ;
-    ; GFX12-LABEL: name: test_load_flat_v3s8_align4
-    ; GFX12: liveins: $vgpr0_vgpr1
-    ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
-    ; GFX12-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GFX12-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; GFX12-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX12-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C1]](s32)
-    ; GFX12-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; GFX12-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; GFX12-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; GFX12-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C2]]
-    ; GFX12-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX12-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C2]]
-    ; GFX12-NEXT: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; GFX12-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C3]](s16)
-    ; GFX12-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
-    ; GFX12-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
-    ; GFX12-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C2]]
-    ; GFX12-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[DEF]](s32)
-    ; GFX12-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC3]], [[C2]]
-    ; GFX12-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[AND3]], [[C3]](s16)
-    ; GFX12-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[SHL1]]
-    ; GFX12-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[OR]](s16)
-    ; GFX12-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[OR1]](s16)
-    ; GFX12-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C1]](s32)
-    ; GFX12-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL2]]
-    ; GFX12-NEXT: $vgpr0 = COPY [[OR2]](s32)
+    ; GFX11PLUS-FAKE16-LABEL: name: test_load_flat_v3s8_align4
+    ; GFX11PLUS-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: {{  $}}
+    ; GFX11PLUS-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
+    ; GFX11PLUS-FAKE16-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GFX11PLUS-FAKE16-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX11PLUS-FAKE16-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C1]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX11PLUS-FAKE16-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
+    ; GFX11PLUS-FAKE16-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C2]]
+    ; GFX11PLUS-FAKE16-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C2]]
+    ; GFX11PLUS-FAKE16-NEXT: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
+    ; GFX11PLUS-FAKE16-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C3]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
+    ; GFX11PLUS-FAKE16-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C2]]
+    ; GFX11PLUS-FAKE16-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[DEF]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC3]], [[C2]]
+    ; GFX11PLUS-FAKE16-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[AND3]], [[C3]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[SHL1]]
+    ; GFX11PLUS-FAKE16-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[OR]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[OR1]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C1]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL2]]
+    ; GFX11PLUS-FAKE16-NEXT: $vgpr0 = COPY [[OR2]](s32)
+    ;
+    ; GFX12-TRUE16-LABEL: name: test_load_flat_v3s8_align4
+    ; GFX12-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: {{  $}}
+    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
+    ; GFX12-TRUE16-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GFX12-TRUE16-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
+    ; GFX12-TRUE16-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX12-TRUE16-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C1]](s32)
+    ; GFX12-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX12-TRUE16-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
+    ; GFX12-TRUE16-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
+    ; GFX12-TRUE16-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C2]]
+    ; GFX12-TRUE16-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; GFX12-TRUE16-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C2]]
+    ; GFX12-TRUE16-NEXT: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
+    ; GFX12-TRUE16-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C3]](s16)
+    ; GFX12-TRUE16-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
+    ; GFX12-TRUE16-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
+    ; GFX12-TRUE16-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C2]]
+    ; GFX12-TRUE16-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[DEF]](s32)
+    ; GFX12-TRUE16-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC3]], [[C2]]
+    ; GFX12-TRUE16-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[AND3]], [[C3]](s16)
+    ; GFX12-TRUE16-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[SHL1]]
+    ; GFX12-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[OR]](s16), [[OR1]](s16)
+    ; GFX12-TRUE16-NEXT: $vgpr0 = COPY [[MV]](s32)
+    ;
+    ; GFX12-FAKE16-LABEL: name: test_load_flat_v3s8_align4
+    ; GFX12-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: {{  $}}
+    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
+    ; GFX12-FAKE16-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GFX12-FAKE16-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
+    ; GFX12-FAKE16-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX12-FAKE16-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C1]](s32)
+    ; GFX12-FAKE16-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX12-FAKE16-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
+    ; GFX12-FAKE16-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
+    ; GFX12-FAKE16-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C2]]
+    ; GFX12-FAKE16-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; GFX12-FAKE16-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C2]]
+    ; GFX12-FAKE16-NEXT: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
+    ; GFX12-FAKE16-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C3]](s16)
+    ; GFX12-FAKE16-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
+    ; GFX12-FAKE16-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
+    ; GFX12-FAKE16-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C2]]
+    ; GFX12-FAKE16-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[DEF]](s32)
+    ; GFX12-FAKE16-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC3]], [[C2]]
+    ; GFX12-FAKE16-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[AND3]], [[C3]](s16)
+    ; GFX12-FAKE16-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[SHL1]]
+    ; GFX12-FAKE16-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[OR]](s16)
+    ; GFX12-FAKE16-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[OR1]](s16)
+    ; GFX12-FAKE16-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C1]](s32)
+    ; GFX12-FAKE16-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL2]]
+    ; GFX12-FAKE16-NEXT: $vgpr0 = COPY [[OR2]](s32)
     ;
     ; UNALIGNED_GFX9PLUS-LABEL: name: test_load_flat_v3s8_align4
     ; UNALIGNED_GFX9PLUS: liveins: $vgpr0_vgpr1
@@ -5184,75 +5336,139 @@ body: |
     ; GFX9PLUS-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL3]]
     ; GFX9PLUS-NEXT: $vgpr0 = COPY [[OR3]](s32)
     ;
-    ; GFX11PLUS-LABEL: name: test_load_flat_v3s8_align1
-    ; GFX11PLUS: liveins: $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: {{  $}}
-    ; GFX11PLUS-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s16), align 1)
-    ; GFX11PLUS-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; GFX11PLUS-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX11PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s8) from unknown-address + 2)
-    ; GFX11PLUS-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX11PLUS-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD]], [[C1]](s32)
-    ; GFX11PLUS-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
-    ; GFX11PLUS-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GFX11PLUS-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[OR]], [[C2]](s32)
-    ; GFX11PLUS-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[OR]], [[C1]](s32)
-    ; GFX11PLUS-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; GFX11PLUS-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[OR]](s32)
-    ; GFX11PLUS-NEXT: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; GFX11PLUS-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C3]]
-    ; GFX11PLUS-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX11PLUS-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C3]]
-    ; GFX11PLUS-NEXT: [[C4:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; GFX11PLUS-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C4]](s16)
-    ; GFX11PLUS-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL1]]
-    ; GFX11PLUS-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
-    ; GFX11PLUS-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C3]]
-    ; GFX11PLUS-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[DEF]](s32)
-    ; GFX11PLUS-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC3]], [[C3]]
-    ; GFX11PLUS-NEXT: [[SHL2:%[0-9]+]]:_(s16) = G_SHL [[AND3]], [[C4]](s16)
-    ; GFX11PLUS-NEXT: [[OR2:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[SHL2]]
-    ; GFX11PLUS-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[OR1]](s16)
-    ; GFX11PLUS-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[OR2]](s16)
-    ; GFX11PLUS-NEXT: [[SHL3:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C1]](s32)
-    ; GFX11PLUS-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL3]]
-    ; GFX11PLUS-NEXT: $vgpr0 = COPY [[OR3]](s32)
+    ; GFX11PLUS-TRUE16-LABEL: name: test_load_flat_v3s8_align1
+    ; GFX11PLUS-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: {{  $}}
+    ; GFX11PLUS-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s16), align 1)
+    ; GFX11PLUS-TRUE16-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX11PLUS-TRUE16-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s8) from unknown-address + 2)
+    ; GFX11PLUS-TRUE16-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX11PLUS-TRUE16-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD]], [[C1]](s32)
+    ; GFX11PLUS-TRUE16-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
+    ; GFX11PLUS-TRUE16-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GFX11PLUS-TRUE16-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[OR]], [[C2]](s32)
+    ; GFX11PLUS-TRUE16-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[OR]], [[C1]](s32)
+    ; GFX11PLUS-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX11PLUS-TRUE16-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[OR]](s32)
+    ; GFX11PLUS-TRUE16-NEXT: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
+    ; GFX11PLUS-TRUE16-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C3]]
+    ; GFX11PLUS-TRUE16-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; GFX11PLUS-TRUE16-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C3]]
+    ; GFX11PLUS-TRUE16-NEXT: [[C4:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
+    ; GFX11PLUS-TRUE16-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C4]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL1]]
+    ; GFX11PLUS-TRUE16-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
+    ; GFX11PLUS-TRUE16-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C3]]
+    ; GFX11PLUS-TRUE16-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[DEF]](s32)
+    ; GFX11PLUS-TRUE16-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC3]], [[C3]]
+    ; GFX11PLUS-TRUE16-NEXT: [[SHL2:%[0-9]+]]:_(s16) = G_SHL [[AND3]], [[C4]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: [[OR2:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[SHL2]]
+    ; GFX11PLUS-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[OR1]](s16), [[OR2]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: $vgpr0 = COPY [[MV]](s32)
     ;
-    ; GFX12-LABEL: name: test_load_flat_v3s8_align1
-    ; GFX12: liveins: $vgpr0_vgpr1
-    ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s16), align 1)
-    ; GFX12-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; GFX12-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s8) from unknown-address + 2)
-    ; GFX12-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX12-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD]], [[C1]](s32)
-    ; GFX12-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
-    ; GFX12-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GFX12-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[OR]], [[C2]](s32)
-    ; GFX12-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[OR]], [[C1]](s32)
-    ; GFX12-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; GFX12-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[OR]](s32)
-    ; GFX12-NEXT: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; GFX12-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C3]]
-    ; GFX12-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX12-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C3]]
-    ; GFX12-NEXT: [[C4:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; GFX12-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C4]](s16)
-    ; GFX12-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL1]]
-    ; GFX12-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
-    ; GFX12-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C3]]
-    ; GFX12-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[DEF]](s32)
-    ; GFX12-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC3]], [[C3]]
-    ; GFX12-NEXT: [[SHL2:%[0-9]+]]:_(s16) = G_SHL [[AND3]], [[C4]](s16)
-    ; GFX12-NEXT: [[OR2:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[SHL2]]
-    ; GFX12-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[OR1]](s16)
-    ; GFX12-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[OR2]](s16)
-    ; GFX12-NEXT: [[SHL3:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C1]](s32)
-    ; GFX12-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL3]]
-    ; GFX12-NEXT: $vgpr0 = COPY [[OR3]](s32)
+    ; GFX11PLUS-FAKE16-LABEL: name: test_load_flat_v3s8_align1
+    ; GFX11PLUS-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: {{  $}}
+    ; GFX11PLUS-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s16), align 1)
+    ; GFX11PLUS-FAKE16-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX11PLUS-FAKE16-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s8) from unknown-address + 2)
+    ; GFX11PLUS-FAKE16-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX11PLUS-FAKE16-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD]], [[C1]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
+    ; GFX11PLUS-FAKE16-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GFX11PLUS-FAKE16-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[OR]], [[C2]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[OR]], [[C1]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX11PLUS-FAKE16-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[OR]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
+    ; GFX11PLUS-FAKE16-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C3]]
+    ; GFX11PLUS-FAKE16-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C3]]
+    ; GFX11PLUS-FAKE16-NEXT: [[C4:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
+    ; GFX11PLUS-FAKE16-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C4]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL1]]
+    ; GFX11PLUS-FAKE16-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C3]]
+    ; GFX11PLUS-FAKE16-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[DEF]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC3]], [[C3]]
+    ; GFX11PLUS-FAKE16-NEXT: [[SHL2:%[0-9]+]]:_(s16) = G_SHL [[AND3]], [[C4]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[OR2:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[SHL2]]
+    ; GFX11PLUS-FAKE16-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[OR1]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[OR2]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[SHL3:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C1]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL3]]
+    ; GFX11PLUS-FAKE16-NEXT: $vgpr0 = COPY [[OR3]](s32)
+    ;
+    ; GFX12-TRUE16-LABEL: name: test_load_flat_v3s8_align1
+    ; GFX12-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: {{  $}}
+    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s16), align 1)
+    ; GFX12-TRUE16-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX12-TRUE16-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX12-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s8) from unknown-address + 2)
+    ; GFX12-TRUE16-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX12-TRUE16-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD]], [[C1]](s32)
+    ; GFX12-TRUE16-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
+    ; GFX12-TRUE16-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GFX12-TRUE16-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[OR]], [[C2]](s32)
+    ; GFX12-TRUE16-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[OR]], [[C1]](s32)
+    ; GFX12-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX12-TRUE16-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[OR]](s32)
+    ; GFX12-TRUE16-NEXT: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
+    ; GFX12-TRUE16-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C3]]
+    ; GFX12-TRUE16-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; GFX12-TRUE16-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C3]]
+    ; GFX12-TRUE16-NEXT: [[C4:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
+    ; GFX12-TRUE16-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C4]](s16)
+    ; GFX12-TRUE16-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL1]]
+    ; GFX12-TRUE16-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
+    ; GFX12-TRUE16-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C3]]
+    ; GFX12-TRUE16-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[DEF]](s32)
+    ; GFX12-TRUE16-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC3]], [[C3]]
+    ; GFX12-TRUE16-NEXT: [[SHL2:%[0-9]+]]:_(s16) = G_SHL [[AND3]], [[C4]](s16)
+    ; GFX12-TRUE16-NEXT: [[OR2:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[SHL2]]
+    ; GFX12-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[OR1]](s16), [[OR2]](s16)
+    ; GFX12-TRUE16-NEXT: $vgpr0 = COPY [[MV]](s32)
+    ;
+    ; GFX12-FAKE16-LABEL: name: test_load_flat_v3s8_align1
+    ; GFX12-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: {{  $}}
+    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s16), align 1)
+    ; GFX12-FAKE16-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX12-FAKE16-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX12-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s8) from unknown-address + 2)
+    ; GFX12-FAKE16-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX12-FAKE16-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD]], [[C1]](s32)
+    ; GFX12-FAKE16-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
+    ; GFX12-FAKE16-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GFX12-FAKE16-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[OR]], [[C2]](s32)
+    ; GFX12-FAKE16-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[OR]], [[C1]](s32)
+    ; GFX12-FAKE16-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX12-FAKE16-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[OR]](s32)
+    ; GFX12-FAKE16-NEXT: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
+    ; GFX12-FAKE16-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C3]]
+    ; GFX12-FAKE16-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; GFX12-FAKE16-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C3]]
+    ; GFX12-FAKE16-NEXT: [[C4:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
+    ; GFX12-FAKE16-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C4]](s16)
+    ; GFX12-FAKE16-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL1]]
+    ; GFX12-FAKE16-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
+    ; GFX12-FAKE16-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C3]]
+    ; GFX12-FAKE16-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[DEF]](s32)
+    ; GFX12-FAKE16-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC3]], [[C3]]
+    ; GFX12-FAKE16-NEXT: [[SHL2:%[0-9]+]]:_(s16) = G_SHL [[AND3]], [[C4]](s16)
+    ; GFX12-FAKE16-NEXT: [[OR2:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[SHL2]]
+    ; GFX12-FAKE16-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[OR1]](s16)
+    ; GFX12-FAKE16-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[OR2]](s16)
+    ; GFX12-FAKE16-NEXT: [[SHL3:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C1]](s32)
+    ; GFX12-FAKE16-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL3]]
+    ; GFX12-FAKE16-NEXT: $vgpr0 = COPY [[OR3]](s32)
     ;
     ; UNALIGNED_GFX9PLUS-LABEL: name: test_load_flat_v3s8_align1
     ; UNALIGNED_GFX9PLUS: liveins: $vgpr0_vgpr1
@@ -6384,27 +6600,53 @@ body: |
     ; GFX9PLUS-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[UV]](<2 x s16>), [[UV1]](<2 x s16>), [[BUILD_VECTOR]](<2 x s16>)
     ; GFX9PLUS-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
     ;
-    ; GFX11PLUS-LABEL: name: test_load_flat_v3s16_align8
-    ; GFX11PLUS: liveins: $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: {{  $}}
-    ; GFX11PLUS-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<4 x s16>))
-    ; GFX11PLUS-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<4 x s16>)
-    ; GFX11PLUS-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; GFX11PLUS-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
-    ; GFX11PLUS-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[UV]](<2 x s16>), [[UV1]](<2 x s16>), [[BUILD_VECTOR]](<2 x s16>)
-    ; GFX11PLUS-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
+    ; GFX11PLUS-TRUE16-LABEL: name: test_load_flat_v3s16_align8
+    ; GFX11PLUS-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: {{  $}}
+    ; GFX11PLUS-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<4 x s16>))
+    ; GFX11PLUS-TRUE16-NEXT: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[LOAD]](<4 x s16>)
+    ; GFX11PLUS-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX11PLUS-TRUE16-NEXT: [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<4 x s16>)
+    ; GFX11PLUS-TRUE16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[UV2]](s16), [[DEF]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[UV4]](<2 x s16>), [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; GFX11PLUS-TRUE16-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
     ;
-    ; GFX12-LABEL: name: test_load_flat_v3s16_align8
-    ; GFX12: liveins: $vgpr0_vgpr1
-    ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<4 x s16>))
-    ; GFX12-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<4 x s16>)
-    ; GFX12-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; GFX12-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
-    ; GFX12-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[UV]](<2 x s16>), [[UV1]](<2 x s16>), [[BUILD_VECTOR]](<2 x s16>)
-    ; GFX12-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
+    ; GFX11PLUS-FAKE16-LABEL: name: test_load_flat_v3s16_align8
+    ; GFX11PLUS-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: {{  $}}
+    ; GFX11PLUS-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<4 x s16>))
+    ; GFX11PLUS-FAKE16-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<4 x s16>)
+    ; GFX11PLUS-FAKE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX11PLUS-FAKE16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[UV]](<2 x s16>), [[UV1]](<2 x s16>), [[BUILD_VECTOR]](<2 x s16>)
+    ; GFX11PLUS-FAKE16-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
+    ;
+    ; GFX12-TRUE16-LABEL: name: test_load_flat_v3s16_align8
+    ; GFX12-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: {{  $}}
+    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<4 x s16>))
+    ; GFX12-TRUE16-NEXT: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[LOAD]](<4 x s16>)
+    ; GFX12-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX12-TRUE16-NEXT: [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<4 x s16>)
+    ; GFX12-TRUE16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[UV2]](s16), [[DEF]](s16)
+    ; GFX12-TRUE16-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
+    ; GFX12-TRUE16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[UV4]](<2 x s16>), [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; GFX12-TRUE16-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
+    ;
+    ; GFX12-FAKE16-LABEL: name: test_load_flat_v3s16_align8
+    ; GFX12-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: {{  $}}
+    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[COPY]](p0) :: (load (<4 x s16>))
+    ; GFX12-FAKE16-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<4 x s16>)
+    ; GFX12-FAKE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX12-FAKE16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
+    ; GFX12-FAKE16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[UV]](<2 x s16>), [[UV1]](<2 x s16>), [[BUILD_VECTOR]](<2 x s16>)
+    ; GFX12-FAKE16-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
     ;
     ; UNALIGNED_GFX9PLUS-LABEL: name: test_load_flat_v3s16_align8
     ; UNALIGNED_GFX9PLUS: liveins: $vgpr0_vgpr1
@@ -6526,47 +6768,83 @@ body: |
     ; GFX9PLUS-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
     ; GFX9PLUS-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
     ;
-    ; GFX11PLUS-LABEL: name: test_load_flat_v3s16_align4
-    ; GFX11PLUS: liveins: $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: {{  $}}
-    ; GFX11PLUS-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
-    ; GFX11PLUS-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; GFX11PLUS-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; GFX11PLUS-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX11PLUS-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2)
-    ; GFX11PLUS-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD1]](s32)
-    ; GFX11PLUS-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-    ; GFX11PLUS-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; GFX11PLUS-NEXT: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4, align 4)
-    ; GFX11PLUS-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD2]](s32)
-    ; GFX11PLUS-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; GFX11PLUS-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-    ; GFX11PLUS-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
-    ; GFX11PLUS-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
-    ; GFX11PLUS-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
-    ; GFX11PLUS-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
+    ; GFX11PLUS-TRUE16-LABEL: name: test_load_flat_v3s16_align4
+    ; GFX11PLUS-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: {{  $}}
+    ; GFX11PLUS-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX11PLUS-TRUE16-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX11PLUS-TRUE16-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2)
+    ; GFX11PLUS-TRUE16-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; GFX11PLUS-TRUE16-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD2:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4, align 4)
+    ; GFX11PLUS-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX11PLUS-TRUE16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[LOAD]](s16), [[LOAD1]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[LOAD2]](s16), [[DEF]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
+    ; GFX11PLUS-TRUE16-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
     ;
-    ; GFX12-LABEL: name: test_load_flat_v3s16_align4
-    ; GFX12: liveins: $vgpr0_vgpr1
-    ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
-    ; GFX12-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; GFX12-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; GFX12-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX12-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2)
-    ; GFX12-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD1]](s32)
-    ; GFX12-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-    ; GFX12-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; GFX12-NEXT: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4, align 4)
-    ; GFX12-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD2]](s32)
-    ; GFX12-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; GFX12-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-    ; GFX12-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
-    ; GFX12-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
-    ; GFX12-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
-    ; GFX12-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
+    ; GFX11PLUS-FAKE16-LABEL: name: test_load_flat_v3s16_align4
+    ; GFX11PLUS-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: {{  $}}
+    ; GFX11PLUS-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX11PLUS-FAKE16-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX11PLUS-FAKE16-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2)
+    ; GFX11PLUS-FAKE16-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD1]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; GFX11PLUS-FAKE16-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4, align 4)
+    ; GFX11PLUS-FAKE16-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD2]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX11PLUS-FAKE16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
+    ; GFX11PLUS-FAKE16-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
+    ;
+    ; GFX12-TRUE16-LABEL: name: test_load_flat_v3s16_align4
+    ; GFX12-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: {{  $}}
+    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX12-TRUE16-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX12-TRUE16-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX12-TRUE16-NEXT: [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2)
+    ; GFX12-TRUE16-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; GFX12-TRUE16-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; GFX12-TRUE16-NEXT: [[LOAD2:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4, align 4)
+    ; GFX12-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX12-TRUE16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[LOAD]](s16), [[LOAD1]](s16)
+    ; GFX12-TRUE16-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[LOAD2]](s16), [[DEF]](s16)
+    ; GFX12-TRUE16-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
+    ; GFX12-TRUE16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
+    ; GFX12-TRUE16-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
+    ;
+    ; GFX12-FAKE16-LABEL: name: test_load_flat_v3s16_align4
+    ; GFX12-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: {{  $}}
+    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX12-FAKE16-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
+    ; GFX12-FAKE16-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX12-FAKE16-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX12-FAKE16-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2)
+    ; GFX12-FAKE16-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD1]](s32)
+    ; GFX12-FAKE16-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; GFX12-FAKE16-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; GFX12-FAKE16-NEXT: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4, align 4)
+    ; GFX12-FAKE16-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD2]](s32)
+    ; GFX12-FAKE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX12-FAKE16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; GFX12-FAKE16-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
+    ; GFX12-FAKE16-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
+    ; GFX12-FAKE16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
+    ; GFX12-FAKE16-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
     ;
     ; UNALIGNED_GFX9PLUS-LABEL: name: test_load_flat_v3s16_align4
     ; UNALIGNED_GFX9PLUS: liveins: $vgpr0_vgpr1
@@ -6722,47 +7000,83 @@ body: |
     ; GFX9PLUS-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
     ; GFX9PLUS-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
     ;
-    ; GFX11PLUS-LABEL: name: test_load_flat_v3s16_align2
-    ; GFX11PLUS: liveins: $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: {{  $}}
-    ; GFX11PLUS-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
-    ; GFX11PLUS-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; GFX11PLUS-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; GFX11PLUS-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX11PLUS-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2)
-    ; GFX11PLUS-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD1]](s32)
-    ; GFX11PLUS-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-    ; GFX11PLUS-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; GFX11PLUS-NEXT: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4)
-    ; GFX11PLUS-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD2]](s32)
-    ; GFX11PLUS-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; GFX11PLUS-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-    ; GFX11PLUS-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
-    ; GFX11PLUS-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
-    ; GFX11PLUS-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
-    ; GFX11PLUS-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
+    ; GFX11PLUS-TRUE16-LABEL: name: test_load_flat_v3s16_align2
+    ; GFX11PLUS-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: {{  $}}
+    ; GFX11PLUS-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16))
+    ; GFX11PLUS-TRUE16-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX11PLUS-TRUE16-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2)
+    ; GFX11PLUS-TRUE16-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; GFX11PLUS-TRUE16-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD2:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4)
+    ; GFX11PLUS-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX11PLUS-TRUE16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[LOAD]](s16), [[LOAD1]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[LOAD2]](s16), [[DEF]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
+    ; GFX11PLUS-TRUE16-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
     ;
-    ; GFX12-LABEL: name: test_load_flat_v3s16_align2
-    ; GFX12: liveins: $vgpr0_vgpr1
-    ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
-    ; GFX12-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; GFX12-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; GFX12-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX12-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2)
-    ; GFX12-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD1]](s32)
-    ; GFX12-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-    ; GFX12-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; GFX12-NEXT: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4)
-    ; GFX12-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD2]](s32)
-    ; GFX12-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; GFX12-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-    ; GFX12-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
-    ; GFX12-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
-    ; GFX12-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
-    ; GFX12-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
+    ; GFX11PLUS-FAKE16-LABEL: name: test_load_flat_v3s16_align2
+    ; GFX11PLUS-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: {{  $}}
+    ; GFX11PLUS-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
+    ; GFX11PLUS-FAKE16-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX11PLUS-FAKE16-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2)
+    ; GFX11PLUS-FAKE16-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD1]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; GFX11PLUS-FAKE16-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4)
+    ; GFX11PLUS-FAKE16-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD2]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX11PLUS-FAKE16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
+    ; GFX11PLUS-FAKE16-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
+    ;
+    ; GFX12-TRUE16-LABEL: name: test_load_flat_v3s16_align2
+    ; GFX12-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: {{  $}}
+    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16))
+    ; GFX12-TRUE16-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX12-TRUE16-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX12-TRUE16-NEXT: [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2)
+    ; GFX12-TRUE16-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; GFX12-TRUE16-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; GFX12-TRUE16-NEXT: [[LOAD2:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4)
+    ; GFX12-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX12-TRUE16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[LOAD]](s16), [[LOAD1]](s16)
+    ; GFX12-TRUE16-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[LOAD2]](s16), [[DEF]](s16)
+    ; GFX12-TRUE16-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
+    ; GFX12-TRUE16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
+    ; GFX12-TRUE16-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
+    ;
+    ; GFX12-FAKE16-LABEL: name: test_load_flat_v3s16_align2
+    ; GFX12-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: {{  $}}
+    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
+    ; GFX12-FAKE16-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
+    ; GFX12-FAKE16-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX12-FAKE16-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX12-FAKE16-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2)
+    ; GFX12-FAKE16-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD1]](s32)
+    ; GFX12-FAKE16-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; GFX12-FAKE16-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; GFX12-FAKE16-NEXT: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4)
+    ; GFX12-FAKE16-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD2]](s32)
+    ; GFX12-FAKE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX12-FAKE16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; GFX12-FAKE16-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
+    ; GFX12-FAKE16-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
+    ; GFX12-FAKE16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
+    ; GFX12-FAKE16-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
     ;
     ; UNALIGNED_GFX9PLUS-LABEL: name: test_load_flat_v3s16_align2
     ; UNALIGNED_GFX9PLUS: liveins: $vgpr0_vgpr1
@@ -6946,47 +7260,83 @@ body: |
     ; GFX9PLUS-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
     ; GFX9PLUS-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
     ;
-    ; GFX11PLUS-LABEL: name: test_load_flat_v3s16_align1
-    ; GFX11PLUS: liveins: $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: {{  $}}
-    ; GFX11PLUS-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
-    ; GFX11PLUS-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; GFX11PLUS-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; GFX11PLUS-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX11PLUS-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2, align 1)
-    ; GFX11PLUS-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD1]](s32)
-    ; GFX11PLUS-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-    ; GFX11PLUS-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; GFX11PLUS-NEXT: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4, align 1)
-    ; GFX11PLUS-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD2]](s32)
-    ; GFX11PLUS-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; GFX11PLUS-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-    ; GFX11PLUS-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
-    ; GFX11PLUS-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
-    ; GFX11PLUS-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
-    ; GFX11PLUS-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
+    ; GFX11PLUS-TRUE16-LABEL: name: test_load_flat_v3s16_align1
+    ; GFX11PLUS-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: {{  $}}
+    ; GFX11PLUS-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
+    ; GFX11PLUS-TRUE16-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX11PLUS-TRUE16-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2, align 1)
+    ; GFX11PLUS-TRUE16-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; GFX11PLUS-TRUE16-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD2:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4, align 1)
+    ; GFX11PLUS-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX11PLUS-TRUE16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[LOAD]](s16), [[LOAD1]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[LOAD2]](s16), [[DEF]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
+    ; GFX11PLUS-TRUE16-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
     ;
-    ; GFX12-LABEL: name: test_load_flat_v3s16_align1
-    ; GFX12: liveins: $vgpr0_vgpr1
-    ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
-    ; GFX12-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; GFX12-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; GFX12-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX12-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2, align 1)
-    ; GFX12-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD1]](s32)
-    ; GFX12-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-    ; GFX12-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; GFX12-NEXT: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4, align 1)
-    ; GFX12-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD2]](s32)
-    ; GFX12-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; GFX12-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-    ; GFX12-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
-    ; GFX12-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
-    ; GFX12-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
-    ; GFX12-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
+    ; GFX11PLUS-FAKE16-LABEL: name: test_load_flat_v3s16_align1
+    ; GFX11PLUS-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: {{  $}}
+    ; GFX11PLUS-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
+    ; GFX11PLUS-FAKE16-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX11PLUS-FAKE16-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2, align 1)
+    ; GFX11PLUS-FAKE16-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD1]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; GFX11PLUS-FAKE16-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4, align 1)
+    ; GFX11PLUS-FAKE16-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD2]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX11PLUS-FAKE16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
+    ; GFX11PLUS-FAKE16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
+    ; GFX11PLUS-FAKE16-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
+    ;
+    ; GFX12-TRUE16-LABEL: name: test_load_flat_v3s16_align1
+    ; GFX12-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: {{  $}}
+    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
+    ; GFX12-TRUE16-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX12-TRUE16-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX12-TRUE16-NEXT: [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2, align 1)
+    ; GFX12-TRUE16-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; GFX12-TRUE16-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; GFX12-TRUE16-NEXT: [[LOAD2:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4, align 1)
+    ; GFX12-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX12-TRUE16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[LOAD]](s16), [[LOAD1]](s16)
+    ; GFX12-TRUE16-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[LOAD2]](s16), [[DEF]](s16)
+    ; GFX12-TRUE16-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
+    ; GFX12-TRUE16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
+    ; GFX12-TRUE16-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
+    ;
+    ; GFX12-FAKE16-LABEL: name: test_load_flat_v3s16_align1
+    ; GFX12-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: {{  $}}
+    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 1)
+    ; GFX12-FAKE16-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
+    ; GFX12-FAKE16-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX12-FAKE16-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX12-FAKE16-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from unknown-address + 2, align 1)
+    ; GFX12-FAKE16-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD1]](s32)
+    ; GFX12-FAKE16-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; GFX12-FAKE16-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; GFX12-FAKE16-NEXT: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s16) from unknown-address + 4, align 1)
+    ; GFX12-FAKE16-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD2]](s32)
+    ; GFX12-FAKE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX12-FAKE16-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; GFX12-FAKE16-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
+    ; GFX12-FAKE16-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16)
+    ; GFX12-FAKE16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
+    ; GFX12-FAKE16-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
     ;
     ; UNALIGNED_GFX9PLUS-LABEL: name: test_load_flat_v3s16_align1
     ; UNALIGNED_GFX9PLUS: liveins: $vgpr0_vgpr1
@@ -12973,21 +13323,37 @@ body: |
     ; GFX9PLUS-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s32)
     ; GFX9PLUS-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
     ;
-    ; GFX11PLUS-LABEL: name: test_ext_load_flat_s64_from_2_align4
-    ; GFX11PLUS: liveins: $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: {{  $}}
-    ; GFX11PLUS-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
-    ; GFX11PLUS-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s32)
-    ; GFX11PLUS-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX11PLUS-TRUE16-LABEL: name: test_ext_load_flat_s64_from_2_align4
+    ; GFX11PLUS-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: {{  $}}
+    ; GFX11PLUS-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX11PLUS-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
     ;
-    ; GFX12-LABEL: name: test_ext_load_flat_s64_from_2_align4
-    ; GFX12: liveins: $vgpr0_vgpr1
-    ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
-    ; GFX12-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s32)
-    ; GFX12-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX11PLUS-FAKE16-LABEL: name: test_ext_load_flat_s64_from_2_align4
+    ; GFX11PLUS-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: {{  $}}
+    ; GFX11PLUS-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX11PLUS-FAKE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ;
+    ; GFX12-TRUE16-LABEL: name: test_ext_load_flat_s64_from_2_align4
+    ; GFX12-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: {{  $}}
+    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX12-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
+    ; GFX12-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ;
+    ; GFX12-FAKE16-LABEL: name: test_ext_load_flat_s64_from_2_align4
+    ; GFX12-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: {{  $}}
+    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX12-FAKE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s32)
+    ; GFX12-FAKE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
     ;
     ; UNALIGNED_GFX9PLUS-LABEL: name: test_ext_load_flat_s64_from_2_align4
     ; UNALIGNED_GFX9PLUS: liveins: $vgpr0_vgpr1
@@ -13219,21 +13585,37 @@ body: |
     ; GFX9PLUS-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s32)
     ; GFX9PLUS-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
     ;
-    ; GFX11PLUS-LABEL: name: test_ext_load_flat_s64_from_2_align2
-    ; GFX11PLUS: liveins: $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: {{  $}}
-    ; GFX11PLUS-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX11PLUS-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
-    ; GFX11PLUS-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s32)
-    ; GFX11PLUS-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX11PLUS-TRUE16-LABEL: name: test_ext_load_flat_s64_from_2_align2
+    ; GFX11PLUS-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: {{  $}}
+    ; GFX11PLUS-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX11PLUS-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
+    ; GFX11PLUS-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
     ;
-    ; GFX12-LABEL: name: test_ext_load_flat_s64_from_2_align2
-    ; GFX12: liveins: $vgpr0_vgpr1
-    ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
-    ; GFX12-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s32)
-    ; GFX12-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX11PLUS-FAKE16-LABEL: name: test_ext_load_flat_s64_from_2_align2
+    ; GFX11PLUS-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: {{  $}}
+    ; GFX11PLUS-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX11PLUS-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX11PLUS-FAKE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s32)
+    ; GFX11PLUS-FAKE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ;
+    ; GFX12-TRUE16-LABEL: name: test_ext_load_flat_s64_from_2_align2
+    ; GFX12-TRUE16: liveins: $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: {{  $}}
+    ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX12-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
+    ; GFX12-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ;
+    ; GFX12-FAKE16-LABEL: name: test_ext_load_flat_s64_from_2_align2
+    ; GFX12-FAKE16: liveins: $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: {{  $}}
+    ; GFX12-FAKE16-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX12-FAKE16-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
+    ; GFX12-FAKE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s32)
+    ; GFX12-FAKE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
     ;
     ; UNALIGNED_GFX9PLUS-LABEL: name: test_ext_load_flat_s64_from_2_align2
     ; UNALIGNED_GFX9PLUS: liveins: $vgpr0_vgpr1
