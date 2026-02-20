@@ -1057,7 +1057,8 @@ void llvm::getMetadataToPropagate(
       LLVMContext::MD_tbaa,         LLVMContext::MD_alias_scope,
       LLVMContext::MD_noalias,      LLVMContext::MD_fpmath,
       LLVMContext::MD_nontemporal,  LLVMContext::MD_invariant_load,
-      LLVMContext::MD_access_group, LLVMContext::MD_mmra};
+      LLVMContext::MD_access_group, LLVMContext::MD_mmra,
+      LLVMContext::MD_prof};
 
   // Remove any unsupported metadata kinds from Metadata.
   for (unsigned Idx = 0; Idx != Metadata.size();) {
@@ -1108,6 +1109,8 @@ Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
         break;
       case LLVMContext::MD_access_group:
         MD = intersectAccessGroups(Inst, IJ);
+        break;
+      case LLVMContext::MD_prof:
         break;
       default:
         llvm_unreachable("unhandled metadata");

@@ -29,6 +29,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -3652,8 +3653,10 @@ void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
   auto *CurrentTerminator = State.CFG.PrevBB->getTerminator();
   assert(isa<UnreachableInst>(CurrentTerminator) &&
          "Expected to replace unreachable terminator with conditional branch.");
-  auto CondBr =
+  auto *CondBr =
       State.Builder.CreateCondBr(ConditionBit, State.CFG.PrevBB, nullptr);
+  if (auto *W = dyn_cast<VPWidenRecipe>(BlockInMask))
+    CondBr->setMetadata(LLVMContext::MD_prof, W->getMetadata(1000));
   CondBr->setSuccessor(0, nullptr);
   CurrentTerminator->eraseFromParent();
 }
