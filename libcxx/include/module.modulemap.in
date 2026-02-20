@@ -2477,6 +2477,9 @@ module std_uchar_h [system] {
 module std_wchar_h [system] {
   // <wchar.h> supports being included multiple times with different pre-defined macros
   textual header "wchar.h"
+  // Parts of wchar.h contain function definitions, so cannot be included
+  // multiple times.
+  header "__wchar.h"
 }
 module std_wctype_h [system] {
   header "wctype.h"
