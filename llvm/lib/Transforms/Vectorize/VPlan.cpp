@@ -1824,6 +1824,8 @@ bool VPCostContext::useEmulatedMaskMemRefHack(const VPReplicateRecipe *R,
 
   if (!NumPredStores) {
     // Count the number of predicated stores in the VPlan, caching the result.
+    // Only stores where scatter is not legal are counted, matching the legacy
+    // cost model behavior.
     const VPlan &Plan = *R->getParent()->getPlan();
     NumPredStores = 0;
     for (const VPRegionBlock *VPRB :
@@ -1833,10 +1835,20 @@ bool VPCostContext::useEmulatedMaskMemRefHack(const VPReplicateRecipe *R,
       for (const VPBasicBlock *VPBB :
            VPBlockUtils::blocksOnly<const VPBasicBlock>(
                vp_depth_first_shallow(VPRB->getEntry()))) {
-        *NumPredStores += count_if(*VPBB, [](const VPRecipeBase &R) {
-          auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-          return RepR && isa<StoreInst>(RepR->getUnderlyingInstr());
-        });
+        for (const VPRecipeBase &Recipe : *VPBB) {
+          auto *RepR = dyn_cast<VPReplicateRecipe>(&Recipe);
+          if (!RepR)
+            continue;
+          if (!isa<StoreInst>(RepR->getUnderlyingInstr()))
+            continue;
+          // Check if scatter is legal for this store. If so, don't count it.
+          Type *Ty = Types.inferScalarType(RepR->getOperand(0));
+          auto *VTy = VectorType::get(Ty, VF);
+          const Align Alignment =
+              getLoadStoreAlignment(RepR->getUnderlyingInstr());
+          if (!TTI.isLegalMaskedScatter(VTy, Alignment))
+            ++(*NumPredStores);
+        }
       }
     }
   }

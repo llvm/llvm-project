@@ -314,46 +314,11 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
   Status err;
 
   if (CheckLocalSharedCache()) {
-    // When debugging on the host, we are most likely using the same shared
-    // cache as our inferior. The dylibs from the shared cache might not
-    // exist on the filesystem, so let's use the images in our own memory
-    // to create the modules.
-
-    SymbolSharedCacheUse sc_mode = ModuleList::GetGlobalModuleListProperties()
-                                       .GetSharedCacheBinaryLoading();
-    SharedCacheImageInfo image_info;
-    if (process && process->GetDynamicLoader()) {
-      addr_t sc_base_addr;
-      UUID sc_uuid;
-      LazyBool using_sc, private_sc;
-      FileSpec sc_path;
-      if (process->GetDynamicLoader()->GetSharedCacheInformation(
-              sc_base_addr, sc_uuid, using_sc, private_sc, sc_path))
-        image_info = HostInfo::GetSharedCacheImageInfo(
-            module_spec.GetFileSpec().GetPath(), sc_uuid, sc_mode);
-    }
-
-    if (!image_info.GetUUID())
-      image_info = HostInfo::GetSharedCacheImageInfo(
-          module_spec.GetFileSpec().GetPath(), sc_mode);
-
-    // If we found it and it has the correct UUID, let's proceed with
-    // creating a module from the memory contents.
-    if (image_info.GetUUID() &&
-        (!module_spec.GetUUID() ||
-         module_spec.GetUUID() == image_info.GetUUID())) {
-      ModuleSpec shared_cache_spec(module_spec.GetFileSpec(),
-                                   image_info.GetUUID(),
-                                   image_info.GetExtractor());
-      err = ModuleList::GetSharedModule(shared_cache_spec, module_sp,
-                                        old_modules, did_create_ptr);
-      if (module_sp) {
-        LLDB_LOGF(log, "[%s] module %s was found in the in-memory shared cache",
-                  (IsHost() ? "host" : "remote"),
-                  module_spec.GetFileSpec().GetPath().c_str());
-        return err;
-      }
-    }
+    err = GetModuleFromSharedCaches(module_spec, process, module_sp,
+                                    old_modules, did_create_ptr);
+    if (module_sp)
+      return err;
+  }
 
     // We failed to find the module in our shared cache. Let's see if we have a
     // copy in our device support directory.
@@ -375,7 +340,6 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
                   local_spec.GetFileSpec().GetPath().c_str());
         return err;
       }
-    }
   }
 
   err = ModuleList::GetSharedModule(module_spec, module_sp, old_modules,

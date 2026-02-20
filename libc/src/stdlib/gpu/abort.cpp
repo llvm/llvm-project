@@ -21,7 +21,6 @@ LLVM_LIBC_FUNCTION(void, abort, ()) {
   port.send_and_recv([](rpc::Buffer *, uint32_t) {},
                      [](rpc::Buffer *, uint32_t) {});
   port.send([&](rpc::Buffer *, uint32_t) {});
-  port.close();
 
   gpu::end_program();
 }

@@ -11,7 +11,7 @@
 
 ; The target does not support predicated vectorization.
 define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
-; NO-VP-NOT: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
+; NO-VP-NOT: CURRENT-ITERATION-PHI
 
 entry:
   br label %for.body

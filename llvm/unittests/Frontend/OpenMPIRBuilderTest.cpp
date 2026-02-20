@@ -77,10 +77,6 @@ static CallInst *createPrintfCall(IRBuilder<> &Builder, StringRef FormatStr,
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
 
   GlobalVariable *GV = Builder.CreateGlobalString(FormatStr, "", 0, M);
-  Constant *Zero = ConstantInt::get(Type::getInt32Ty(M->getContext()), 0);
-  Constant *Indices[] = {Zero, Zero};
-  Constant *FormatStrConst =
-      ConstantExpr::getInBoundsGetElementPtr(GV->getValueType(), GV, Indices);
 
   Function *PrintfDecl = M->getFunction("printf");
   if (!PrintfDecl) {
@@ -90,7 +86,7 @@ static CallInst *createPrintfCall(IRBuilder<> &Builder, StringRef FormatStr,
   }
 
   SmallVector<Value *, 4> Args;
-  Args.push_back(FormatStrConst);
+  Args.push_back(GV);
   Args.append(Values.begin(), Values.end());
   return Builder.CreateCall(PrintfDecl, Args);
 }

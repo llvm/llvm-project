@@ -670,10 +670,6 @@ uint32_t ArchSpec::GetMachOCPUSubType() const {
   return LLDB_INVALID_CPUTYPE;
 }
 
-uint32_t ArchSpec::GetDataByteSize() const { return 1; }
-
-uint32_t ArchSpec::GetCodeByteSize() const { return 1; }
-
 llvm::Triple::ArchType ArchSpec::GetMachine() const {
   const CoreDefinition *core_def = FindCoreDefinition(m_core);
   if (core_def)

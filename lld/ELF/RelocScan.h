@@ -103,16 +103,18 @@ public:
   }
 
   // Handle TLS Initial-Exec relocation.
+  template <bool enableIeToLe = true>
   void handleTlsIe(RelExpr ieExpr, RelType type, uint64_t offset,
                    int64_t addend, Symbol &sym) {
-    if (!ctx.arg.shared && !sym.isPreemptible) {
+    if (enableIeToLe && !ctx.arg.shared && !sym.isPreemptible) {
       // Optimize to Local Exec.
       sec->addReloc({R_TPREL, type, offset, addend, &sym});
     } else {
       sym.setFlags(NEEDS_TLSIE);
       // R_GOT (absolute GOT address) needs a RELATIVE dynamic relocation in
-      // PIC. This is used by R_386_TLS_IE.
-      if (ieExpr == R_GOT && ctx.arg.isPic)
+      // PIC when the relocation uses the full address (not just low page bits).
+      if (ieExpr == R_GOT && ctx.arg.isPic &&
+          !ctx.target->usesOnlyLowPageBits(type))
         sec->getPartition(ctx).relaDyn->addRelativeReloc(
             ctx.target->relativeRel, *sec, offset, sym, addend, type, ieExpr);
       else
@@ -158,7 +160,9 @@ public:
   void handleTlsDesc(RelExpr sharedExpr, RelExpr ieExpr, RelType type,
                      uint64_t offset, int64_t addend, Symbol &sym) {
     if (ctx.arg.shared) {
-      sym.setFlags(NEEDS_TLSDESC);
+      // NEEDS_TLSDESC_NONAUTH is a no-op for non-AArch64 targets and detects
+      // incompatibility with NEEDS_TLSDESC_AUTH.
+      sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_NONAUTH);
       sec->addReloc({sharedExpr, type, offset, addend, &sym});
     } else if (sym.isPreemptible) {
       // Optimize to Initial Exec.
