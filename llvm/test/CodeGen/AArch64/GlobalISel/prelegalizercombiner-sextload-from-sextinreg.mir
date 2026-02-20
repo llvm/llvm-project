@@ -134,3 +134,40 @@ body:             |
     RET_ReallyLR implicit $w0
 
 ...
+
+---
+name:            test_multi_use_load
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_multi_use_load
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
+    ; CHECK-NEXT: G_STORE [[SEXTLOAD]](s32), [[COPY1]](p0) :: (store (s8))
+    ; CHECK-NEXT: $w0 = COPY [[SEXTLOAD]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(p0) = COPY $x1
+    %2:_(s32) = G_LOAD %0 :: (load (s8))
+    G_STORE %2, %1 :: (store (s8))
+    %3:_(s32) = G_SEXT_INREG %2, 8
+    $w0 = COPY %3
+...
+
+---
+name:            test_multi_use_load_large_memsize
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_multi_use_load_large_memsize
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
+    ; CHECK-NEXT: G_STORE [[LOAD]](s32), [[COPY1]](p0) :: (store (s16))
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 8
+    ; CHECK-NEXT: $w0 = COPY [[SEXT_INREG]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(p0) = COPY $x1
+    %2:_(s32) = G_LOAD %0 :: (load (s16))
+    G_STORE %2, %1 :: (store (s16))
+    %3:_(s32) = G_SEXT_INREG %2, 8
+    $w0 = COPY %3
+...

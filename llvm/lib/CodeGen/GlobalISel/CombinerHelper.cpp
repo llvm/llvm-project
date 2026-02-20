@@ -931,7 +931,7 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
   // Don't use getOpcodeDef() here since intermediate instructions may have
   // multiple users.
   GAnyLoad *LoadMI = dyn_cast<GAnyLoad>(MRI.getVRegDef(SrcReg));
-  if (!LoadMI || !MRI.hasOneNonDBGUse(LoadMI->getDstReg()))
+  if (!LoadMI)
     return false;
 
   Register LoadReg = LoadMI->getDstReg();
@@ -940,6 +940,10 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
   unsigned RegSize = RegTy.getSizeInBits();
   LocationSize LoadSizeBits = LoadMI->getMemSizeInBits();
   unsigned MaskSizeBits = MaskVal.countr_one();
+
+  if (!MRI.hasOneNonDBGUse(LoadReg) &&
+      (isa<GSExtLoad>(LoadMI) || MaskSizeBits < LoadSizeBits.getValue()))
+    return false;
 
   // The mask may not be larger than the in-memory type, as it might cover sign
   // extended bits
@@ -978,6 +982,7 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
     auto PtrInfo = MMO.getPointerInfo();
     auto *NewMMO = MF.getMachineMemOperand(&MMO, PtrInfo, MemDesc.MemoryTy);
     B.buildLoadInstr(TargetOpcode::G_ZEXTLOAD, Dst, PtrReg, *NewMMO);
+    replaceRegWith(MRI, LoadReg, Dst);
     LoadMI->eraseFromParent();
   };
   return true;
@@ -1057,15 +1062,19 @@ bool CombinerHelper::matchSextInRegOfLoad(
 
   Register SrcReg = MI.getOperand(1).getReg();
   auto *LoadDef = getOpcodeDef<GLoad>(SrcReg, MRI);
-  if (!LoadDef || !MRI.hasOneNonDBGUse(SrcReg))
+  if (!LoadDef)
     return false;
 
   uint64_t MemBits = LoadDef->getMemSizeInBits().getValue();
+  uint64_t ExtFrom = MI.getOperand(2).getImm();
+
+  if (!MRI.hasOneNonDBGUse(SrcReg) && MemBits > ExtFrom)
+    return false;
 
   // If the sign extend extends from a narrower width than the load's width,
   // then we can narrow the load width when we combine to a G_SEXTLOAD.
   // Avoid widening the load at all.
-  unsigned NewSizeBits = std::min((uint64_t)MI.getOperand(2).getImm(), MemBits);
+  unsigned NewSizeBits = std::min(ExtFrom, MemBits);
 
   // Don't generate G_SEXTLOADs with a < 1 byte width.
   if (NewSizeBits < 8)
@@ -1117,6 +1126,7 @@ void CombinerHelper::applySextInRegOfLoad(
   auto *NewMMO = MF.getMachineMemOperand(&MMO, PtrInfo, ScalarSizeBits / 8);
   Builder.buildLoadInstr(TargetOpcode::G_SEXTLOAD, MI.getOperand(0).getReg(),
                          LoadDef->getPointerReg(), *NewMMO);
+  replaceRegWith(MRI, LoadReg, MI.getOperand(0).getReg());
   MI.eraseFromParent();
 
   // Not all loads can be deleted, so make sure the old one is removed.
