@@ -254,6 +254,14 @@ static bool RestoreMemoryProtection(
 
 static bool IsMemoryPadding(uptr address, uptr size) {
   u8* function = (u8*)address;
+    if (function[-1] == 0xEB) {
+    // Check for short jump instruction.
+    // There is a rare instance of a short jump (i.e. 0xEB) containing a 0xCC offset placed
+    // right before 4 bytes of 0xCC padding. This conditional will prevent an 
+    // erroneous detour function override by falling through to use 
+    // another interception technique.
+    return false;
+  }
   for (size_t i = 0; i < size; ++i)
     if (function[i] != 0x90 && function[i] != 0xCC)
       return false;
