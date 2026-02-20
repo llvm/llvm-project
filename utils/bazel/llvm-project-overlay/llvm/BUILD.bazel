@@ -5359,13 +5359,19 @@ llvm_driver_cc_binary(
     deps = [":llvm-libtool-darwin-lib"],
 )
 
-cc_binary(
-    name = "llvm-link",
-    srcs = glob([
-        "tools/llvm-link/*.cpp",
-    ]),
+gentbl_cc_library(
+    name = "LinkOptsTableGen",
+    strip_include_prefix = "tools/llvm-link",
+    tbl_outs = {"tools/llvm-link/LinkOpts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-link/LinkOpts.td",
+    deps = [":OptParserTdFiles"],
+)
+
+cc_library(
+    name = "llvm-link-lib",
+    srcs = ["tools/llvm-link/llvm-link.cpp"],
     copts = llvm_copts,
-    stamp = 0,
     deps = [
         ":AsmParser",
         ":BinaryFormat",
@@ -5375,11 +5381,20 @@ cc_binary(
         ":IPO",
         ":IRPrinter",
         ":IRReader",
+        ":LinkOptsTableGen",
         ":Linker",
         ":Object",
+        ":Option",
         ":Support",
+        ":TargetParser",
         ":TransformUtils",
     ],
+)
+
+llvm_driver_cc_binary(
+    name = "llvm-link",
+    stamp = 0,
+    deps = [":llvm-link-lib"],
 )
 
 gentbl_cc_library(
