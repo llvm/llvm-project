@@ -481,10 +481,8 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     const T &RHSR = RHS.elem<T>(0);
     const T &RHSI = RHS.elem<T>(1);
     unsigned Bits = LHSR.bitWidth();
-    const T Zero = T::from(0, Bits);
 
-    if (Compare(RHSR, Zero) == ComparisonCategoryResult::Equal &&
-        Compare(RHSI, Zero) == ComparisonCategoryResult::Equal) {
+    if (RHSR.isZero() && RHSI.isZero()) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.FFDiag(E, diag::note_expr_divide_by_zero);
       return false;
@@ -507,7 +505,7 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     if (T::add(A, B, Bits, &Den))
       return false;
 
-    if (Compare(Den, Zero) == ComparisonCategoryResult::Equal) {
+    if (Den.isZero()) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.FFDiag(E, diag::note_expr_divide_by_zero);
       return false;

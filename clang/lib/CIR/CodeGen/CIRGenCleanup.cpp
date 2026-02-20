@@ -214,14 +214,6 @@ bool EHScopeStack::requiresCatchOrCleanup() const {
   return false;
 }
 
-EHCatchScope *EHScopeStack::pushCatch(unsigned numHandlers) {
-  char *buffer = allocate(EHCatchScope::getSizeForNumHandlers(numHandlers));
-  EHCatchScope *scope =
-      new (buffer) EHCatchScope(numHandlers, innermostEHScope);
-  innermostEHScope = stable_begin();
-  return scope;
-}
-
 static void emitCleanup(CIRGenFunction &cgf, EHScopeStack::Cleanup *cleanup,
                         EHScopeStack::Cleanup::Flags flags) {
   // Ask the cleanup to emit itself.

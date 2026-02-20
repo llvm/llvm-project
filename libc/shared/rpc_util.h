@@ -12,7 +12,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#if (defined(__NVPTX__) || defined(__AMDGPU__)) &&                             \
+#if (defined(__NVPTX__) || defined(__AMDGPU__) || defined(__SPIRV__)) &&       \
     !((defined(__CUDA__) && !defined(__CUDA_ARCH__)) ||                        \
       (defined(__HIP__) && !defined(__HIP_DEVICE_COMPILE__)))
 #include <gpuintrin.h>
@@ -179,7 +179,9 @@ template <typename T> struct optional {
 
     template <typename... Args>
     RPC_ATTRS constexpr explicit OptionalStorage(in_place_t, Args &&...args)
-        : stored_value(forward<Args>(args)...) {}
+        : stored_value(forward<Args>(args)...) {
+      in_use = true;
+    }
 
     RPC_ATTRS constexpr void reset() {
       if (in_use)
@@ -194,15 +196,15 @@ public:
   RPC_ATTRS constexpr optional() = default;
   RPC_ATTRS constexpr optional(nullopt_t) {}
 
-  RPC_ATTRS constexpr optional(const T &t) : storage(in_place, t) {
-    storage.in_use = true;
-  }
+  RPC_ATTRS constexpr optional(const T &t) : storage(in_place, t) {}
   RPC_ATTRS constexpr optional(const optional &) = default;
 
-  RPC_ATTRS constexpr optional(T &&t) : storage(in_place, move(t)) {
-    storage.in_use = true;
-  }
+  RPC_ATTRS constexpr optional(T &&t) : storage(in_place, move(t)) {}
   RPC_ATTRS constexpr optional(optional &&O) = default;
+
+  template <typename... Args>
+  RPC_ATTRS constexpr optional(in_place_t, Args &&...args)
+      : storage(in_place, forward<Args>(args)...) {}
 
   RPC_ATTRS constexpr optional &operator=(T &&t) {
     storage = move(t);
@@ -366,7 +368,7 @@ RPC_ATTRS uint32_t get_num_lanes() {
 #endif
 }
 
-/// Returns the id of the thread inside of an AMD wavefront executing together.
+/// Returns a bitmask of the currently active lanes.
 RPC_ATTRS uint64_t get_lane_mask() {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_lane_mask();

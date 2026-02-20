@@ -1493,6 +1493,17 @@ def riscv_addd : RVSDNode<"ADDD", SDT_RISCVIntBinOpD,
                           [SDNPCommutative, SDNPAssociative]>;
 def riscv_subd : RVSDNode<"SUBD", SDT_RISCVIntBinOpD>;
 
+def SDT_RISCVWideningAddSubAccumulate : SDTypeProfile<2, 4, [SDTCisVT<0, i32>,
+                                                             SDTCisVT<1, i32>,
+                                                             SDTCisSameAs<0, 2>,
+                                                             SDTCisSameAs<1, 3>,
+                                                             SDTCisSameAs<0, 4>,
+                                                             SDTCisSameAs<0, 5>]>;
+// Widening add accumulate unsigned: rd = rd + zext(rs1) + zext(rs2)
+def riscv_waddau : RVSDNode<"WADDAU", SDT_RISCVWideningAddSubAccumulate>;
+// Widening sub accumulate unsigned: rd = rd + zext(rs1) - zext(rs2)
+def riscv_wsubau : RVSDNode<"WSUBAU", SDT_RISCVWideningAddSubAccumulate>;
+
 def riscv_wmulsu : RVSDNode<"WMULSU", SDTIntBinHiLoOp>;
 
 // Narrowing shift: res = nsrl(lo, hi, shamt) is equivalent to
@@ -1514,19 +1525,6 @@ def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
 // Averaging subtraction, (a - b) >> 2
 def riscv_asub : RVSDNode<"ASUB", SDTIntBinOp>;
 def riscv_asubu : RVSDNode<"ASUBU", SDTIntBinOp>;
-
-// Widening multiply add (lo, hi) = wmacc(m1, m2, addlo, addhi)
-def SDT_RISCVWideningMAccW : SDTypeProfile<2, 4, [SDTCisVT<0, i32>,
-                                                  SDTCisVT<1, i32>,
-                                                  SDTCisVT<2, i32>,
-                                                  SDTCisVT<3, i32>,
-                                                  SDTCisSameAs<0, 4>,
-                                                  SDTCisSameAs<0, 5>]>;
-def riscv_wmacc  : RVSDNode<"WMACC", SDT_RISCVWideningMAccW,
-                            [SDNPCommutative]>;
-def riscv_wmaccu : RVSDNode<"WMACCU", SDT_RISCVWideningMAccW,
-                            [SDNPCommutative]>;
-def riscv_wmaccsu : RVSDNode<"WMACCSU", SDT_RISCVWideningMAccW>;
 
 // MULH/MULHU/MULHSU with rounding.
 def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp>;

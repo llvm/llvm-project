@@ -42,6 +42,7 @@
 #include "test_execution_policies.h"
 #include "test_iterators.h"
 #include "test_macros.h"
+#include "type_algorithms.h"
 
 template <class It1, class It2>
 struct Test {

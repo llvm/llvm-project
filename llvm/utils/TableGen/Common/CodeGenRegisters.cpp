@@ -755,8 +755,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
   GlobalPriority = R->getValueAsBit("GlobalPriority");
 
   const BitsInit *TSF = R->getValueAsBitsInit("TSFlags");
-  for (auto [Idx, Bit] : enumerate(TSF->getBits()))
-    TSFlags |= uint8_t(cast<BitInit>(Bit)->getValue()) << Idx;
+  TSFlags = uint8_t(*TSF->convertInitializerToInt());
 
   // Saturate negative costs to the maximum
   if (CopyCostParsed < 0)
@@ -2649,6 +2648,37 @@ CodeGenRegBank::getRegClassForRegister(const Record *R) {
     return nullptr;
   }
   return FoundRC;
+}
+
+bool CodeGenRegBank::regClassContainsReg(const Record *RegClassDef,
+                                         const Record *RegDef,
+                                         ArrayRef<SMLoc> Loc) {
+  // Check all four combinations of Register[ByHwMode] X RegClass[ByHwMode],
+  // starting with the two RegClassByHwMode cases.
+  unsigned NumModes = CGH.getNumModeIds();
+  std::optional<RegisterByHwMode> RegByMode;
+  CodeGenRegister *Reg = nullptr;
+  if (RegDef->isSubClassOf("RegisterByHwMode"))
+    RegByMode = RegisterByHwMode(RegDef, *this);
+  else
+    Reg = getReg(RegDef);
+  if (RegClassDef->isSubClassOf("RegClassByHwMode")) {
+    RegClassByHwMode RC(RegClassDef, *this);
+    for (unsigned M = 0; M < NumModes; ++M) {
+      if (RC.hasMode(M) && !RC.get(M)->contains(Reg ? Reg : RegByMode->get(M)))
+        return false;
+    }
+    return true;
+  }
+  // Otherwise we have a plain register class, check Register[ByHwMode]
+  CodeGenRegisterClass *RC = getRegClass(RegClassDef, Loc);
+  if (Reg)
+    return RC->contains(Reg);
+  for (unsigned M = 0; M < NumModes; ++M) {
+    if (RegByMode->hasMode(M) && !RC->contains(RegByMode->get(M)))
+      return false;
+  }
+  return true; // RegByMode contained for all possible modes.
 }
 
 const CodeGenRegisterClass *

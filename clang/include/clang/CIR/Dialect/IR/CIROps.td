@@ -2386,9 +2386,10 @@ def CIR_GlobalOp : CIR_Op<"global", [
     Symbol visibility in `sym_visibility` is defined in terms of MLIR's visibility
     and verified to be in accordance to `linkage`.
 
-    The `static_local` attribute indicates that this global represents a
+    The `static_local_guard` attribute indicates that this global represents a
     function-local static variable that requires guarded initialization
     (e.g., C++ static local variables with non-constant initializers).
+    It contains the mangled name of the guard variable.
   }];
 
   // Note that both sym_name and sym_visibility are tied to Symbol trait.
@@ -2407,7 +2408,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        UnitAttr:$comdat,
                        UnitAttr:$constant,
                        UnitAttr:$dso_local,
-                       UnitAttr:$static_local,
+                       OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast);
 
@@ -2422,7 +2423,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     (`comdat` $comdat^)?
     ($tls_model^)?
     (`dso_local` $dso_local^)?
-    (`static_local` $static_local^)?
+    (`static_local_guard` `` $static_local_guard^)?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
                                         $ctorRegion, $dtorRegion)
@@ -3332,6 +3333,7 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
 
 class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     : CIR_Op<mnemonic, !listconcat(extra_traits, [
+        DeclareOpInterfaceMethods<ArgAndResultAttrsOpInterface>,
         DeclareOpInterfaceMethods<CIRCallOpInterface>,
         DeclareOpInterfaceMethods<SymbolUserOpInterface>
       ])> {
@@ -3350,15 +3352,6 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
       (*this)->setAttr(getCalleeAttrName(),
                        mlir::cast<mlir::SymbolRefAttr>(callee));
     }
-
-    mlir::ArrayAttr getArgAttrsAttr() { return {}; }
-    ::mlir::ArrayAttr getResAttrsAttr() { return {}; }
-
-    void setResAttrsAttr(::mlir::ArrayAttr attrs) {}
-    void setArgAttrsAttr(::mlir::ArrayAttr attrs) {}
-
-    ::mlir::Attribute removeArgAttrsAttr() { return {}; }
-    ::mlir::Attribute removeResAttrsAttr() { return {}; }
 
     bool isIndirect() { return !getCallee(); }
     mlir::Value getIndirectCall();
@@ -3385,7 +3378,10 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   dag commonArgs = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
       Variadic<CIR_AnyType>:$args,
       UnitAttr:$nothrow,
-      DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect);
+      DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect,
+      OptionalAttr<DictArrayAttr>:$arg_attrs,
+      OptionalAttr<DictArrayAttr>:$res_attrs
+      );
 }
 
 def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
@@ -5803,6 +5799,35 @@ def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
   }];
 }
 
+def CIR_AbsOp : CIR_Op<"abs", [Pure, SameOperandsAndResultType]> {
+  let summary = "Computes the absolute value of a signed integer";
+  let description = [{
+    `cir.abs` computes the absolute value of a signed integer or vector
+    of signed integers.
+
+    The `min_is_poison` attribute indicates whether the result value is a
+    poison value if the argument is statically or dynamically the minimum
+    value for the type.
+
+    Example:
+
+    ```mlir
+      %0 = cir.const #cir.int<-42> : s32i
+      %1 = cir.abs %0 min_is_poison : s32i
+      %2 = cir.abs %3 : !cir.vector<!s32i x 4>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_AnySIntOrVecOfSIntType:$src,
+    UnitAttr:$min_is_poison
+  );
+
+  let results = (outs CIR_AnySIntOrVecOfSIntType:$result);
+
+  let assemblyFormat = "$src ( `min_is_poison` $min_is_poison^ )? `:` type($src) attr-dict";
+}
+
 def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FloorOp"> {
   let summary = "Computes the floating-point floor value";
   let description = [{
@@ -6215,12 +6240,6 @@ def CIR_TryOp : CIR_Op<"try",[
     Holds the lexical scope of `try {}`. Note that resources used on catch
     clauses are usually allocated in the same parent as `cir.try`.
 
-    `synthetic`: use `cir.try` to represent try/catches not originally
-    present in the source code. For example, a synthetic `cir.try` region
-    is created around the constructor call when `operator new` is used
-    so that the memory allocated will be freed if the constructor throws
-    an exception.
-
     `cleanup`: indicates that there are cleanups that must be performed
     when exiting the try region via exception, even if the exception is not
     caught.
@@ -6232,6 +6251,7 @@ def CIR_TryOp : CIR_Op<"try",[
       cir.call exception @function() : () -> ()
       cir.yield
     } catch [type #cir.global_view<@_ZTIPf> : !cir.ptr<!u8i>] {
+      %1 = cir.catch_param : !cir.ptr<!cir.float>
       ...
       cir.yield
     } unwind {
@@ -6241,7 +6261,6 @@ def CIR_TryOp : CIR_Op<"try",[
   }];
 
   let arguments = (ins
-    UnitAttr:$synthetic,
     UnitAttr:$cleanup,
     DefaultValuedAttr<CIR_TryHandlerArrayAttr, "{}">:$handler_types
   );
@@ -6252,7 +6271,6 @@ def CIR_TryOp : CIR_Op<"try",[
   );
 
   let assemblyFormat = [{
-    (`synthetic` $synthetic^)?
     (`cleanup` $cleanup^)?
     $try_region
     custom<TryHandlerRegions>($handler_regions, $handler_types)
@@ -6282,6 +6300,7 @@ def CIR_TryOp : CIR_Op<"try",[
     }]>
   ];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -6292,7 +6311,7 @@ def CIR_TryOp : CIR_Op<"try",[
 def CIR_CatchParamOp : CIR_Op<"catch_param", [HasParent<"cir::TryOp">]> {
   let summary = "Represents the catch clause formal parameter";
   let description = [{
-    The `cir.catch_param` is used to retrieves the exception object inside
+    The `cir.catch_param` is used to retrieve the exception object inside
     the handler regions of `cir.try`.
 
     This operation is used only before the CFG flatterning pass.
@@ -6372,6 +6391,57 @@ def CIR_EhTypeIdOp : CIR_Op<"eh.typeid",
   let results = (outs CIR_UInt32:$type_id);
   let assemblyFormat = [{
     $type_sym attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Exception related: EhSetjmpOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhSetjmpOp : CIR_Op<"eh.setjmp"> {
+  let summary = "CIR setjmp operation";
+  let description = [{
+    Saves call-site information (e.g., stack pointer, instruction pointer, 
+    signal mask, and other registers) in memory at `env` for use by longjmp(). 
+    In this case, setjmp() returns 0. Following a successful longjmp(),
+    execution proceeds from cir.eh.setjmp with the operation yielding a 
+    non-zero value.
+
+    Examples:
+    ```mlir
+      %0 = cir.eh.setjmp %arg0 : (!cir.ptr<!cir.void>) -> !s32i
+    ```
+  }];
+  let arguments = (ins CIR_PointerType:$env);
+
+  let results = (outs CIR_SInt32:$res);
+
+  let assemblyFormat = [{
+      $env `:` functional-type($env, results) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Exception related: EhLongjmpOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhLongjmpOp : CIR_Op<"eh.longjmp"> {
+  let summary = "CIR longjmp operation";
+  let description = [{
+    Restore the environment (e.g., stack pointer, instruction pointer,
+    signal mask, and other registers) at the time of setjmp() call, by using
+    the information saved in `env` by setjmp().
+
+    Examples:
+    ```mlir
+      cir.eh.longjmp %arg0 : !cir.ptr<!cir.void>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$env);
+
+  let assemblyFormat = [{
+      $env `:` qualified(type($env)) attr-dict
   }];
 }
 

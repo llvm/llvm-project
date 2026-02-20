@@ -134,6 +134,7 @@ class SetOpLayoutAttrOp(SetOpLayoutAttrOp):
         slice_dims: Optional[MixedInt] = None,
         index: Optional[Union[int, Attribute]] = None,
         result: Optional[Union[bool, Attribute]] = None,
+        operand: Optional[Union[bool, Attribute]] = None,
         loc=None,
         ip=None,
     ):
@@ -164,6 +165,7 @@ class SetOpLayoutAttrOp(SetOpLayoutAttrOp):
             slice_dims=slice_dims,
             index=index,
             result=result,
+            operand=operand,
             loc=loc,
             ip=ip,
         )
@@ -178,6 +180,7 @@ def set_op_layout_attr(
     slice_dims: Optional[MixedInt] = None,
     index: Optional[Union[int, Attribute]] = None,
     result: Optional[Union[bool, Attribute]] = None,
+    operand: Optional[Union[bool, Attribute]] = None,
     loc=None,
     ip=None,
 ) -> SetOpLayoutAttrOp:
@@ -189,6 +192,7 @@ def set_op_layout_attr(
         slice_dims=slice_dims,
         index=index,
         result=result,
+        operand=operand,
         loc=loc,
         ip=ip,
     )

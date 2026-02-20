@@ -180,9 +180,10 @@ void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
   OS << '}';
 }
 
-RegClassByHwMode::RegClassByHwMode(const Record *R, const CodeGenHwModes &CGH,
+RegClassByHwMode::RegClassByHwMode(const Record *R,
                                    const CodeGenRegBank &RegBank)
     : InfoByHwMode<const llvm::CodeGenRegisterClass *>(R) {
+  const CodeGenHwModes &CGH = RegBank.getHwModes();
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
 
   for (auto [ModeID, RegClassRec] : MS.Items) {
@@ -227,6 +228,41 @@ EncodingInfoByHwMode::EncodingInfoByHwMode(const Record *R,
                           CGH.getModeName(ModeID, true) + ": " +
                           Encoding->getName());
   }
+}
+
+RegisterByHwMode::RegisterByHwMode(const Record *R, CodeGenRegBank &RegBank)
+    : InfoByHwMode<const llvm::CodeGenRegister *>(R) {
+  const CodeGenHwModes &CGH = RegBank.getHwModes();
+  const HwModeSelect &MS = CGH.getHwModeSelect(R);
+  const Record *RCDef = R->getValueAsDef("RegClass");
+  Namespace = RegBank.getRegClasses().front().Namespace;
+  std::optional<RegClassByHwMode> RegClassByMode;
+  if (RCDef->isSubClassOf("RegClassByHwMode"))
+    RegClassByMode = RegClassByHwMode(RCDef, RegBank);
+  for (auto [ModeID, RegRecord] : MS.Items) {
+    assert(RegRecord && RegRecord->isSubClassOf("Register") &&
+           "Register value must subclass Register");
+    CodeGenRegister *Reg = RegBank.getReg(RegRecord);
+    const CodeGenRegisterClass *RC =
+        RegClassByMode ? RegClassByMode->get(ModeID)
+                       : RegBank.getRegClass(RCDef, R->getLoc());
+    if (!RC->contains(Reg))
+      PrintFatalError(R->getLoc(), "Register " + Reg->getName() +
+                                       " for HwMode " +
+                                       CGH.getModeName(ModeID, true) +
+                                       " is not a member of register class " +
+                                       RC->getName());
+    if (!Map.try_emplace(ModeID, Reg).second)
+      PrintFatalError(R->getLoc(), "duplicate Register for HwMode " +
+                                       CGH.getModeName(ModeID, true) + ": " +
+                                       Reg->getName());
+  }
+}
+
+void RegisterByHwMode::emitResolverCall(raw_ostream &OS,
+                                        const Twine &HwMode) const {
+  OS << Namespace << "::RegisterByHwMode::get" << Def->getName() << "("
+     << HwMode << ")";
 }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const ValueTypeByHwMode &T) {

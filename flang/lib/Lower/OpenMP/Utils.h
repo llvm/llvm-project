@@ -171,13 +171,15 @@ pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval);
 
 int64_t collectLoopRelatedInfo(
     lower::AbstractConverter &converter, mlir::Location currentLocation,
-    lower::pft::Evaluation &eval, const omp::List<omp::Clause> &clauses,
+    lower::pft::Evaluation &eval, lower::pft::Evaluation *nestedEval,
+    const omp::List<omp::Clause> &clauses,
     mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv);
 
 void collectLoopRelatedInfo(
     lower::AbstractConverter &converter, mlir::Location currentLocation,
-    lower::pft::Evaluation &eval, std::int64_t collapseValue,
+    lower::pft::Evaluation &eval, lower::pft::Evaluation *nestedEval,
+    std::int64_t collapseValue,
     // const omp::List<omp::Clause> &clauses,
     mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv);

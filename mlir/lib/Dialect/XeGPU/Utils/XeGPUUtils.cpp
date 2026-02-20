@@ -651,6 +651,82 @@ int xegpu::getLargestDivisor(T dim, ArrayRef<T> candidates,
   return largest;
 }
 
+Value xegpu::subgroupReduction(Location loc, OpBuilder &builder, Value input,
+                               vector::CombiningKind kind, uint32_t size) {
+  // First reduce on a single thread to get per lane reduction value.
+  Value laneVal = vector::ReductionOp::create(builder, loc, kind, input);
+  // Parallel reduction using butterfly shuffles.
+  for (uint64_t i = 1; i < size; i <<= 1) {
+    Value shuffled =
+        gpu::ShuffleOp::create(builder, loc, laneVal, i, /**  width = **/ size,
+                               /**  mode = **/ gpu::ShuffleMode::XOR)
+            .getShuffleResult();
+    laneVal = makeArithReduction(builder, loc, kind, laneVal, shuffled);
+  }
+  return laneVal;
+}
+
+Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
+                                     TypedValue<VectorType> acc,
+                                     vector::CombiningKind kind,
+                                     int64_t reductionDim, Location loc,
+                                     PatternRewriter &rewriter) {
+  // Expecting a 2D source vector.
+  assert(src.getType().getRank() == 2 && "expected a 2D source vector");
+  VectorType sourceType = src.getType();
+  int64_t sourceH = sourceType.getShape()[0];
+  int64_t sourceW = sourceType.getShape()[1];
+  int nSlices = (reductionDim == 0) ? sourceW : sourceH;
+  // Create a constant vector to hold the result of the reduction.
+  TypedAttr zeroAttr = rewriter.getZeroAttr(sourceType.getElementType());
+  Value reductionResult = arith::ConstantOp::create(
+      rewriter, loc, acc.getType(),
+      DenseElementsAttr::get(acc.getType(), zeroAttr));
+  auto srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
+  auto accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
+  // Reduction result should have the same layout as the accumulator.
+  xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
+  // For each slice of the source, extract the slice vector, do a reduction
+  // and, insert the reduced value back to the result vector.
+  for (int i = 0; i < nSlices; ++i) {
+    SmallVector<int64_t, 2> sliceOffsets, sliceSizes;
+    if (reductionDim == 1) {
+      sliceOffsets = {i, 0};
+      sliceSizes = {1, sourceW};
+    } else {
+      sliceOffsets = {0, i};
+      sliceSizes = {sourceH, 1};
+    }
+
+    vector::ExtractStridedSliceOp extractOp =
+        vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
+                                              sliceSizes, {1, 1});
+    // Extract strided slice has the same layout as src.
+    xegpu::setTemporaryLayout(extractOp->getOpResult(0), srcLayout);
+
+    int64_t nSliceElements = extractOp.getResult().getType().getNumElements();
+
+    vector::ShapeCastOp slice = vector::ShapeCastOp::create(
+        rewriter, loc,
+        VectorType::get({nSliceElements}, sourceType.getElementType()),
+        extractOp.getResult());
+
+    // Shape cast output has the same layout as the accumulator. Shape cast
+    // source has the same layout as the original reduction source.
+    xegpu::setTemporaryLayout(slice->getOpOperand(0), srcLayout);
+    xegpu::setTemporaryLayout(slice->getOpResult(0), accLayout);
+    // Extract and reduction results in scalars, so no result layout is needed.
+    Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, i);
+    Value reduction = vector::ReductionOp::create(
+        rewriter, loc, kind, slice.getResult(), accExtract);
+    reductionResult =
+        vector::InsertOp::create(rewriter, loc, reduction, reductionResult, i);
+    // Insert op should have the same layout as the accumulator.
+    xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
+  }
+  return reductionResult;
+}
+
 /// Explicit instantiations
 template int xegpu::getLargestDivisor<int>(int dim, ArrayRef<int> candidates,
                                            ArrayRef<int> candidateMultiples);
