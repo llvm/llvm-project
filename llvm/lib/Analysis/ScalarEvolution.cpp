@@ -14660,6 +14660,16 @@ void ScalarEvolution::verify() const {
                << "Delta: " << *Delta << "\n";
         std::abort();
       }
+
+      if (isa<PHINode>(I))
+        for (const Loop *L : ValidLoops)
+          if (SE.isAvailableAtLoopEntry(KV.second, L) !=
+              SE2.isAvailableAtLoopEntry(NewSCEV, L)) {
+            dbgs() << "Incorrect SCEV availability at loop entry\n"
+                   << "Old: " << *OldSCEV << "\n"
+                   << "New: " << *NewSCEV << "\n";
+            std::abort();
+          }
     }
   }
 
