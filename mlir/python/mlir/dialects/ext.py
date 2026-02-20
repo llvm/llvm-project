@@ -204,8 +204,14 @@ class Operation(ir.OpView):
     """
     Base class of Python-defined operation.
 
-    NOTE: Usually you don't need to use it directly.
-    Use `Dialect` and `.Operation` of `Dialect` subclasses instead.
+    The following example shows two ways to define operations via this class:
+    ```python
+    class MyOp(MyDialect.Operation, name=..):
+      ...
+
+    class MyOp(Operation, dialect=MyDialect, name=..):
+      ...
+    ```
     """
 
     def __init__(*args, **kwargs):
