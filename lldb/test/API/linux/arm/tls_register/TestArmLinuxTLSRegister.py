@@ -13,7 +13,7 @@ from lldbsuite.test import lldbutil
 class ArmLinuxTLSRegister(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    def test_tls_reg_read(self):
+    def test_tls_reg_access(self):
         self.build()
         (_, _, thread, _) = lldbutil.run_to_source_breakpoint(
             self, "// Set breakpoint here.", lldb.SBFileSpec("main.c")
@@ -33,11 +33,6 @@ class ArmLinuxTLSRegister(TestBase):
         self.assertEqual(tpidruro_reg.GetValueAsUnsigned(), val)
         self.expect("reg read tp", substrs=[hex(val)])
 
-    def test_tls_reg_write(self):
-        self.build()
-        lldbutil.run_to_source_breakpoint(
-            self, "// Set breakpoint here.", lldb.SBFileSpec("main.c")
-        )
         self.expect(
             "register write tpidruro 0x1234",
             error=True,
