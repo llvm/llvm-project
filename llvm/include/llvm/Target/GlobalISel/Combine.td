@@ -823,16 +823,28 @@ def redundant_sext_inreg: GICombineRule <
   (defs root:$root),
   (match (wip_match_opcode G_SEXT_INREG):$root,
          [{ return Helper.matchRedundantSExtInReg(*${root}); }]),
-     (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
+  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
 >;
 
-// Fold (anyext (trunc x)) -> x if the source type is same as
-// the destination type.
+// Fold (anyext (trunc x)) -> x if the source type is same as the destination
+// type.
 def anyext_trunc_fold: GICombineRule <
-  (defs root:$root, register_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_ANYEXT):$root,
-         [{ return Helper.matchCombineAnyExtTrunc(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
+  (defs root:$root),
+  (match (G_TRUNC $x, $src),
+         (G_ANYEXT $dst, $x):$root,
+         [{ return MRI.getType(${dst}.getReg()) == MRI.getType(${src}.getReg()); }]),
+  (apply (GIReplaceReg $dst, $src))
+>;
+
+// Fold (anyext (freeze (trunc x))) -> (freeze x) if the source type is same as
+// the destination type.
+def anyext_freeze_trunc_fold: GICombineRule <
+  (defs root:$root),
+  (match (G_TRUNC $x, $src),
+         (G_FREEZE $y, $x),
+         (G_ANYEXT $dst, $y):$root,
+         [{ return MRI.getType(${dst}.getReg()) == MRI.getType(${src}.getReg()); }]),
+  (apply (G_FREEZE $dst, $src))
 >;
 
 // Fold (zext (trunc x)) -> x if the source type is same as the destination type
@@ -2233,7 +2245,7 @@ def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
 def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         binop_same_val, binop_left_to_zero,
                                         binop_right_to_zero, p2i_to_i2p,
-                                        i2p_to_p2i, anyext_trunc_fold,
+                                        i2p_to_p2i, anyext_trunc_fold, anyext_freeze_trunc_fold,
                                         fneg_fneg_fold, right_identity_one,
                                         add_sub_reg, buildvector_identity_fold,
                                         trunc_buildvector_fold,
