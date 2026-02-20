@@ -1,6 +1,4 @@
-//===-
-// unittests/Analysis/Scalable/Serialization/JSONFormatTest/TUSummaryTest.cpp
-//===//
+//===- TUSummaryTest.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -94,7 +92,7 @@ static llvm::Registry<JSONFormat::FormatInfo>::Add<
         "PairsEntitySummaryForJSONFormatTest",
         "Format info for PairsArrayEntitySummary");
 
-class TUSummaryTest : public JSONFormatTest {
+class JSONFormatTUSummaryTest final : public JSONFormatTest {
 protected:
   llvm::Expected<TUSummary> readTUSummaryFromFile(StringRef FileName) const {
     PathString FilePath = makePath(FileName);
@@ -239,7 +237,7 @@ protected:
 // readJSON() Error Tests
 // ============================================================================
 
-TEST_F(TUSummaryTest, NonexistentFile) {
+TEST_F(JSONFormatTUSummaryTest, NonexistentFile) {
   auto Result = readTUSummaryFromFile("nonexistent.json");
 
   EXPECT_THAT_EXPECTED(
@@ -247,7 +245,7 @@ TEST_F(TUSummaryTest, NonexistentFile) {
                                       HasSubstr("file does not exist"))));
 }
 
-TEST_F(TUSummaryTest, PathIsDirectory) {
+TEST_F(JSONFormatTUSummaryTest, PathIsDirectory) {
   PathString DirName("test_directory.json");
 
   auto ExpectedDirPath = makeDirectory(DirName);
@@ -261,7 +259,7 @@ TEST_F(TUSummaryTest, PathIsDirectory) {
                               HasSubstr("path is a directory, not a file"))));
 }
 
-TEST_F(TUSummaryTest, NotJsonExtension) {
+TEST_F(JSONFormatTUSummaryTest, NotJsonExtension) {
   PathString FileName("test.txt");
 
   auto ExpectedFilePath = writeJSON("{}", FileName);
@@ -276,7 +274,7 @@ TEST_F(TUSummaryTest, NotJsonExtension) {
                   HasSubstr("file does not end with '.json' extension"))));
 }
 
-TEST_F(TUSummaryTest, BrokenSymlink) {
+TEST_F(JSONFormatTUSummaryTest, BrokenSymlink) {
 #ifdef _WIN32
   GTEST_SKIP() << "Symlink model differs on Windows";
 #endif
@@ -293,7 +291,7 @@ TEST_F(TUSummaryTest, BrokenSymlink) {
                                       HasSubstr("failed to read file"))));
 }
 
-TEST_F(TUSummaryTest, NoReadPermission) {
+TEST_F(JSONFormatTUSummaryTest, NoReadPermission) {
 #ifdef _WIN32
   GTEST_SKIP() << "Permission model differs on Windows";
 #endif
@@ -326,7 +324,7 @@ TEST_F(TUSummaryTest, NoReadPermission) {
   EXPECT_THAT_ERROR(std::move(RestoreError), Succeeded());
 }
 
-TEST_F(TUSummaryTest, InvalidSyntax) {
+TEST_F(JSONFormatTUSummaryTest, InvalidSyntax) {
   auto Result = readTUSummaryFromString("{ invalid json }");
 
   EXPECT_THAT_EXPECTED(
@@ -334,7 +332,7 @@ TEST_F(TUSummaryTest, InvalidSyntax) {
                                       HasSubstr("Expected object key"))));
 }
 
-TEST_F(TUSummaryTest, NotObject) {
+TEST_F(JSONFormatTUSummaryTest, NotObject) {
   auto Result = readTUSummaryFromString("[]");
 
   EXPECT_THAT_EXPECTED(
@@ -347,7 +345,7 @@ TEST_F(TUSummaryTest, NotObject) {
 // JSONFormat::buildNamespaceKindFromJSON() Error Tests
 // ============================================================================
 
-TEST_F(TUSummaryTest, InvalidKind) {
+TEST_F(JSONFormatTUSummaryTest, InvalidKind) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "invalid_kind",
@@ -371,7 +369,7 @@ TEST_F(TUSummaryTest, InvalidKind) {
 // JSONFormat::buildNamespaceFromJSON() Error Tests
 // ============================================================================
 
-TEST_F(TUSummaryTest, MissingKind) {
+TEST_F(JSONFormatTUSummaryTest, MissingKind) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "name": "test.cpp"
@@ -389,7 +387,7 @@ TEST_F(TUSummaryTest, MissingKind) {
           HasSubstr("expected JSON string"))));
 }
 
-TEST_F(TUSummaryTest, MissingName) {
+TEST_F(JSONFormatTUSummaryTest, MissingName) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit"
@@ -411,7 +409,7 @@ TEST_F(TUSummaryTest, MissingName) {
 // JSONFormat::nestedBuildNamespaceFromJSON() Error Tests
 // ============================================================================
 
-TEST_F(TUSummaryTest, NamespaceElementNotObject) {
+TEST_F(JSONFormatTUSummaryTest, NamespaceElementNotObject) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -442,7 +440,7 @@ TEST_F(TUSummaryTest, NamespaceElementNotObject) {
           HasSubstr("expected JSON object"))));
 }
 
-TEST_F(TUSummaryTest, NamespaceElementMissingKind) {
+TEST_F(JSONFormatTUSummaryTest, NamespaceElementMissingKind) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -478,7 +476,7 @@ TEST_F(TUSummaryTest, NamespaceElementMissingKind) {
           HasSubstr("expected JSON string"))));
 }
 
-TEST_F(TUSummaryTest, NamespaceElementInvalidKind) {
+TEST_F(JSONFormatTUSummaryTest, NamespaceElementInvalidKind) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -516,7 +514,7 @@ TEST_F(TUSummaryTest, NamespaceElementInvalidKind) {
               "invalid 'kind' BuildNamespaceKind value 'invalid_kind'"))));
 }
 
-TEST_F(TUSummaryTest, NamespaceElementMissingName) {
+TEST_F(JSONFormatTUSummaryTest, NamespaceElementMissingName) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -556,7 +554,7 @@ TEST_F(TUSummaryTest, NamespaceElementMissingName) {
 // JSONFormat::entityNameFromJSON() Error Tests
 // ============================================================================
 
-TEST_F(TUSummaryTest, EntityNameMissingUSR) {
+TEST_F(JSONFormatTUSummaryTest, EntityNameMissingUSR) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -584,7 +582,7 @@ TEST_F(TUSummaryTest, EntityNameMissingUSR) {
                         HasSubstr("expected JSON string"))));
 }
 
-TEST_F(TUSummaryTest, EntityNameMissingSuffix) {
+TEST_F(JSONFormatTUSummaryTest, EntityNameMissingSuffix) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -612,7 +610,7 @@ TEST_F(TUSummaryTest, EntityNameMissingSuffix) {
                         HasSubstr("expected JSON string"))));
 }
 
-TEST_F(TUSummaryTest, EntityNameMissingNamespace) {
+TEST_F(JSONFormatTUSummaryTest, EntityNameMissingNamespace) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -646,7 +644,7 @@ TEST_F(TUSummaryTest, EntityNameMissingNamespace) {
 // JSONFormat::entityIdTableEntryFromJSON() Error Tests
 // ============================================================================
 
-TEST_F(TUSummaryTest, IDTableEntryMissingID) {
+TEST_F(JSONFormatTUSummaryTest, IDTableEntryMissingID) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -674,7 +672,7 @@ TEST_F(TUSummaryTest, IDTableEntryMissingID) {
                 HasSubstr("expected JSON number (unsigned 64-bit integer)"))));
 }
 
-TEST_F(TUSummaryTest, IDTableEntryMissingName) {
+TEST_F(JSONFormatTUSummaryTest, IDTableEntryMissingName) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -697,7 +695,7 @@ TEST_F(TUSummaryTest, IDTableEntryMissingName) {
                   HasSubstr("expected JSON object"))));
 }
 
-TEST_F(TUSummaryTest, IDTableEntryIDNotUInt64) {
+TEST_F(JSONFormatTUSummaryTest, IDTableEntryIDNotUInt64) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -730,7 +728,7 @@ TEST_F(TUSummaryTest, IDTableEntryIDNotUInt64) {
 // JSONFormat::entityIdTableFromJSON() Error Tests
 // ============================================================================
 
-TEST_F(TUSummaryTest, IDTableNotArray) {
+TEST_F(JSONFormatTUSummaryTest, IDTableNotArray) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -747,7 +745,7 @@ TEST_F(TUSummaryTest, IDTableNotArray) {
                   HasSubstr("expected JSON array"))));
 }
 
-TEST_F(TUSummaryTest, IDTableElementNotObject) {
+TEST_F(JSONFormatTUSummaryTest, IDTableElementNotObject) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -766,7 +764,7 @@ TEST_F(TUSummaryTest, IDTableElementNotObject) {
                 HasSubstr("expected JSON object"))));
 }
 
-TEST_F(TUSummaryTest, DuplicateEntity) {
+TEST_F(JSONFormatTUSummaryTest, DuplicateEntity) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -816,7 +814,7 @@ TEST_F(TUSummaryTest, DuplicateEntity) {
 // JSONFormat::entitySummaryFromJSON() Error Tests
 // ============================================================================
 
-TEST_F(TUSummaryTest, EntitySummaryNoFormatInfo) {
+TEST_F(JSONFormatTUSummaryTest, EntitySummaryNoFormatInfo) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -854,7 +852,8 @@ TEST_F(TUSummaryTest, EntitySummaryNoFormatInfo) {
 // PairsEntitySummaryForJSONFormatTest Deserialization Error Tests
 // ============================================================================
 
-TEST_F(TUSummaryTest, PairsEntitySummaryForJSONFormatTestMissingPairsField) {
+TEST_F(JSONFormatTUSummaryTest,
+       PairsEntitySummaryForJSONFormatTestMissingPairsField) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -886,7 +885,7 @@ TEST_F(TUSummaryTest, PairsEntitySummaryForJSONFormatTestMissingPairsField) {
           HasSubstr("missing or invalid field 'pairs'"))));
 }
 
-TEST_F(TUSummaryTest,
+TEST_F(JSONFormatTUSummaryTest,
        PairsEntitySummaryForJSONFormatTestInvalidPairsFieldType) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
@@ -921,7 +920,7 @@ TEST_F(TUSummaryTest,
           HasSubstr("missing or invalid field 'pairs'"))));
 }
 
-TEST_F(TUSummaryTest,
+TEST_F(JSONFormatTUSummaryTest,
        PairsEntitySummaryForJSONFormatTestPairsElementNotObject) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
@@ -956,7 +955,8 @@ TEST_F(TUSummaryTest,
           HasSubstr("pairs element at index 0 is not a JSON object"))));
 }
 
-TEST_F(TUSummaryTest, PairsEntitySummaryForJSONFormatTestMissingFirstField) {
+TEST_F(JSONFormatTUSummaryTest,
+       PairsEntitySummaryForJSONFormatTestMissingFirstField) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -994,7 +994,8 @@ TEST_F(TUSummaryTest, PairsEntitySummaryForJSONFormatTestMissingFirstField) {
           HasSubstr("missing or invalid 'first' field at index '0'"))));
 }
 
-TEST_F(TUSummaryTest, PairsEntitySummaryForJSONFormatTestInvalidFirstField) {
+TEST_F(JSONFormatTUSummaryTest,
+       PairsEntitySummaryForJSONFormatTestInvalidFirstField) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1033,7 +1034,8 @@ TEST_F(TUSummaryTest, PairsEntitySummaryForJSONFormatTestInvalidFirstField) {
           HasSubstr("missing or invalid 'first' field at index '0'"))));
 }
 
-TEST_F(TUSummaryTest, PairsEntitySummaryForJSONFormatTestMissingSecondField) {
+TEST_F(JSONFormatTUSummaryTest,
+       PairsEntitySummaryForJSONFormatTestMissingSecondField) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1071,7 +1073,8 @@ TEST_F(TUSummaryTest, PairsEntitySummaryForJSONFormatTestMissingSecondField) {
           HasSubstr("missing or invalid 'second' field at index '0'"))));
 }
 
-TEST_F(TUSummaryTest, PairsEntitySummaryForJSONFormatTestInvalidSecondField) {
+TEST_F(JSONFormatTUSummaryTest,
+       PairsEntitySummaryForJSONFormatTestInvalidSecondField) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1114,7 +1117,7 @@ TEST_F(TUSummaryTest, PairsEntitySummaryForJSONFormatTestInvalidSecondField) {
 // JSONFormat::entityDataMapEntryFromJSON() Error Tests
 // ============================================================================
 
-TEST_F(TUSummaryTest, EntityDataMissingEntityID) {
+TEST_F(JSONFormatTUSummaryTest, EntityDataMissingEntityID) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1145,7 +1148,7 @@ TEST_F(TUSummaryTest, EntityDataMissingEntityID) {
           HasSubstr("expected JSON number (unsigned 64-bit integer)"))));
 }
 
-TEST_F(TUSummaryTest, EntityDataMissingEntitySummary) {
+TEST_F(JSONFormatTUSummaryTest, EntityDataMissingEntitySummary) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1176,7 +1179,7 @@ TEST_F(TUSummaryTest, EntityDataMissingEntitySummary) {
           HasSubstr("expected JSON object"))));
 }
 
-TEST_F(TUSummaryTest, EntityIDNotUInt64) {
+TEST_F(JSONFormatTUSummaryTest, EntityIDNotUInt64) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1212,7 +1215,7 @@ TEST_F(TUSummaryTest, EntityIDNotUInt64) {
 // JSONFormat::entityDataMapFromJSON() Error Tests
 // ============================================================================
 
-TEST_F(TUSummaryTest, EntityDataElementNotObject) {
+TEST_F(JSONFormatTUSummaryTest, EntityDataElementNotObject) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1238,7 +1241,7 @@ TEST_F(TUSummaryTest, EntityDataElementNotObject) {
           HasSubstr("expected JSON object"))));
 }
 
-TEST_F(TUSummaryTest, DuplicateEntityIdInDataMap) {
+TEST_F(JSONFormatTUSummaryTest, DuplicateEntityIdInDataMap) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1290,7 +1293,7 @@ TEST_F(TUSummaryTest, DuplicateEntityIdInDataMap) {
 // JSONFormat::summaryDataMapEntryFromJSON() Error Tests
 // ============================================================================
 
-TEST_F(TUSummaryTest, DataEntryMissingSummaryName) {
+TEST_F(JSONFormatTUSummaryTest, DataEntryMissingSummaryName) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1314,7 +1317,7 @@ TEST_F(TUSummaryTest, DataEntryMissingSummaryName) {
           HasSubstr("expected JSON string"))));
 }
 
-TEST_F(TUSummaryTest, DataEntryMissingData) {
+TEST_F(JSONFormatTUSummaryTest, DataEntryMissingData) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1343,7 +1346,7 @@ TEST_F(TUSummaryTest, DataEntryMissingData) {
 // JSONFormat::summaryDataMapFromJSON() Error Tests
 // ============================================================================
 
-TEST_F(TUSummaryTest, DataNotArray) {
+TEST_F(JSONFormatTUSummaryTest, DataNotArray) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1361,7 +1364,7 @@ TEST_F(TUSummaryTest, DataNotArray) {
           HasSubstr("expected JSON array"))));
 }
 
-TEST_F(TUSummaryTest, DataElementNotObject) {
+TEST_F(JSONFormatTUSummaryTest, DataElementNotObject) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1379,7 +1382,7 @@ TEST_F(TUSummaryTest, DataElementNotObject) {
                   HasSubstr("expected JSON object"))));
 }
 
-TEST_F(TUSummaryTest, DuplicateSummaryName) {
+TEST_F(JSONFormatTUSummaryTest, DuplicateSummaryName) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1411,7 +1414,7 @@ TEST_F(TUSummaryTest, DuplicateSummaryName) {
 // JSONFormat::readTUSummary() Error Tests
 // ============================================================================
 
-TEST_F(TUSummaryTest, MissingTUNamespace) {
+TEST_F(JSONFormatTUSummaryTest, MissingTUNamespace) {
   auto Result = readTUSummaryFromString(R"({
     "id_table": [],
     "data": []
@@ -1425,7 +1428,7 @@ TEST_F(TUSummaryTest, MissingTUNamespace) {
           HasSubstr("expected JSON object"))));
 }
 
-TEST_F(TUSummaryTest, MissingIDTable) {
+TEST_F(JSONFormatTUSummaryTest, MissingIDTable) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1441,7 +1444,7 @@ TEST_F(TUSummaryTest, MissingIDTable) {
                   HasSubstr("expected JSON array"))));
 }
 
-TEST_F(TUSummaryTest, MissingData) {
+TEST_F(JSONFormatTUSummaryTest, MissingData) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1462,7 +1465,7 @@ TEST_F(TUSummaryTest, MissingData) {
 // JSONFormat::writeJSON() Error Tests
 // ============================================================================
 
-TEST_F(TUSummaryTest, WriteFileAlreadyExists) {
+TEST_F(JSONFormatTUSummaryTest, WriteFileAlreadyExists) {
   PathString FileName("existing.json");
 
   auto ExpectedFilePath = writeJSON("{}", FileName);
@@ -1481,7 +1484,7 @@ TEST_F(TUSummaryTest, WriteFileAlreadyExists) {
                               HasSubstr("file already exists"))));
 }
 
-TEST_F(TUSummaryTest, WriteParentDirectoryNotFound) {
+TEST_F(JSONFormatTUSummaryTest, WriteParentDirectoryNotFound) {
   PathString FilePath = makePath("nonexistent-dir", "test.json");
 
   TUSummary Summary(
@@ -1496,7 +1499,7 @@ TEST_F(TUSummaryTest, WriteParentDirectoryNotFound) {
                               HasSubstr("parent directory does not exist"))));
 }
 
-TEST_F(TUSummaryTest, WriteNotJsonExtension) {
+TEST_F(JSONFormatTUSummaryTest, WriteNotJsonExtension) {
   TUSummary Summary(
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
 
@@ -1510,7 +1513,7 @@ TEST_F(TUSummaryTest, WriteNotJsonExtension) {
                 HasSubstr("file does not end with '.json' extension"))));
 }
 
-TEST_F(TUSummaryTest, WriteStreamOpenFailure) {
+TEST_F(JSONFormatTUSummaryTest, WriteStreamOpenFailure) {
 #ifdef _WIN32
   GTEST_SKIP() << "Permission model differs on Windows";
 #endif
@@ -1545,7 +1548,7 @@ TEST_F(TUSummaryTest, WriteStreamOpenFailure) {
 // Round-Trip Tests - Serialization Verification
 // ============================================================================
 
-TEST_F(TUSummaryTest, Empty) {
+TEST_F(JSONFormatTUSummaryTest, Empty) {
   readWriteCompareTUSummary(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1556,7 +1559,7 @@ TEST_F(TUSummaryTest, Empty) {
   })");
 }
 
-TEST_F(TUSummaryTest, LinkUnit) {
+TEST_F(JSONFormatTUSummaryTest, LinkUnit) {
   readWriteCompareTUSummary(R"({
     "tu_namespace": {
       "kind": "link_unit",
@@ -1567,7 +1570,7 @@ TEST_F(TUSummaryTest, LinkUnit) {
   })");
 }
 
-TEST_F(TUSummaryTest, WithIDTable) {
+TEST_F(JSONFormatTUSummaryTest, WithIDTable) {
   readWriteCompareTUSummary(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1609,7 +1612,7 @@ TEST_F(TUSummaryTest, WithIDTable) {
   })");
 }
 
-TEST_F(TUSummaryTest, WithEmptyDataEntry) {
+TEST_F(JSONFormatTUSummaryTest, WithEmptyDataEntry) {
   readWriteCompareTUSummary(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1625,7 +1628,7 @@ TEST_F(TUSummaryTest, WithEmptyDataEntry) {
   })");
 }
 
-TEST_F(TUSummaryTest, RoundTripWithIDTable) {
+TEST_F(JSONFormatTUSummaryTest, RoundTripWithIDTable) {
   readWriteCompareTUSummary(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1650,7 +1653,7 @@ TEST_F(TUSummaryTest, RoundTripWithIDTable) {
   })");
 }
 
-TEST_F(TUSummaryTest, RoundTripPairsEntitySummaryForJSONFormatTest) {
+TEST_F(JSONFormatTUSummaryTest, RoundTripPairsEntitySummaryForJSONFormatTest) {
   readWriteCompareTUSummary(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
