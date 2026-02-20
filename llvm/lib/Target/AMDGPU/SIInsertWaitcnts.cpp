@@ -99,21 +99,6 @@ static unsigned getWaitCountMax(const AMDGPU::HardwareLimits &Limits,
   }
 }
 
-static bool isSoftXcnt(MachineInstr &MI) {
-  return MI.getOpcode() == AMDGPU::S_WAIT_XCNT_soft;
-}
-
-static bool isAtomicRMW(MachineInstr &MI) {
-  return (MI.getDesc().TSFlags & SIInstrFlags::maybeAtomic) && MI.mayLoad() &&
-         MI.mayStore();
-}
-
-enum class AtomicRMWState {
-  NewBlock,    // Start of a new atomic RMW block
-  InsideBlock, // Middle of an existing block
-  NotInBlock   // Not in an atomic RMW block
-};
-
 /// Integer IDs used to track vector memory locations we may have to wait on.
 /// Encoded as u16 chunks:
 ///
@@ -676,10 +661,11 @@ public:
                              WaitcntBrackets &ScoreBrackets);
   bool insertWaitcntInBlock(MachineFunction &MF, MachineBasicBlock &Block,
                             WaitcntBrackets &ScoreBrackets);
+  /// Removes redundant Soft Xcnt Waitcnts in \p Block emitted by the Memory
+  /// Legalizer. Returns true if block was modified.
+  bool removeRedundantSoftXcnts(MachineBasicBlock &Block);
   void setSchedulingMode(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                          bool ExpertMode) const;
-  AtomicRMWState getAtomicRMWState(MachineInstr &MI,
-                                   AtomicRMWState PrevState) const;
   const WaitEventSet &getWaitEvents(InstCounterType T) const {
     return WCG->getWaitEvents(T);
   }
@@ -1002,6 +988,11 @@ private:
 
   // State of all counters at each async mark encountered so far.
   SmallVector<CounterValueArray> AsyncMarks;
+
+  // But in the rare pathological case, a nest of loops that pushes marks
+  // without waiting on any mark can cause AsyncMarks to grow very large. We cap
+  // it to a reasonable limit. We can tune this later or potentially introduce a
+  // user option to control the value.
   static constexpr unsigned MaxAsyncMarks = 16;
 
   // Track the upper bound score for async operations that are not part of a
@@ -1256,7 +1247,8 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
     // counters too, so will need a map from instruction or event types to
     // counter types.
     if (Context->isAsyncLdsDmaWrite(Inst) && T == LOAD_CNT) {
-      assert(!SIInstrInfo::usesASYNC_CNT(Inst));
+      assert(!SIInstrInfo::usesASYNC_CNT(Inst) &&
+             "unexpected GFX1250 instruction");
       AsyncScore[T] = CurrScore;
     }
 
@@ -1539,7 +1531,6 @@ AMDGPU::Waitcnt WaitcntBrackets::determineAsyncWait(unsigned N) {
     }
   });
 
-  AMDGPU::Waitcnt Wait;
   if (AsyncMarks.size() == MaxAsyncMarks) {
     // Enforcing MaxAsyncMarks here is unnecessary work because the size of
     // MaxAsyncMarks is linear when traversing straightline code. But we do
@@ -1549,6 +1540,7 @@ AMDGPU::Waitcnt WaitcntBrackets::determineAsyncWait(unsigned N) {
     N = std::min(N, (unsigned)MaxAsyncMarks - 1);
   }
 
+  AMDGPU::Waitcnt Wait;
   if (AsyncMarks.size() <= N) {
     LLVM_DEBUG(dbgs() << "No additional wait for async mark.\n");
     return Wait;
@@ -2952,15 +2944,6 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
 
   // Determine maximum length needed after merging
   auto MaxSize = (unsigned)std::max(AsyncMarks.size(), OtherMarks.size());
-
-  // For each backedge in isolation, the algorithm reachs a fixed point after
-  // the first call to merge(). This is unchanged even with the AsyncMarks
-  // array because we call mergeScore just like the other cases.
-  //
-  // But in the rare pathological case, a nest of loops that pushes marks
-  // without waiting on any mark can cause AsyncMarks to grow very large. We cap
-  // it to a reasonable limit. We can tune this later or potentially introduce a
-  // user option to control the value.
   MaxSize = std::min(MaxSize, MaxAsyncMarks);
 
   // Keep only the most recent marks within our limit.
@@ -2972,7 +2955,7 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   // pending async operations at this checkpoint" and acts as the identity
   // element for max() during merging. We pad at the beginning since the marks
   // need to be aligned in most-recent order.
-  CounterValueArray ZeroMark{};
+  constexpr CounterValueArray ZeroMark{};
   AsyncMarks.insert(AsyncMarks.begin(), MaxSize - AsyncMarks.size(), ZeroMark);
 
   LLVM_DEBUG({
@@ -2981,9 +2964,6 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
       llvm::interleaveComma(Mark, dbgs());
       dbgs() << '\n';
     }
-  });
-
-  LLVM_DEBUG({
     dbgs() << "Other marks:\n";
     for (const auto &Mark : OtherMarks) {
       llvm::interleaveComma(Mark, dbgs());
@@ -2997,8 +2977,7 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   unsigned OtherSize = OtherMarks.size();
   unsigned OurSize = AsyncMarks.size();
   unsigned MergeCount = std::min(OtherSize, OurSize);
-  assert(OurSize == MaxSize);
-  for (unsigned Idx = 1; Idx <= MergeCount; ++Idx) {
+  for (auto Idx : seq_inclusive<unsigned>(1, MergeCount)) {
     for (auto T : inst_counter_types(Context->MaxCounter)) {
       StrictDom |= mergeScore(MergeInfos[T], AsyncMarks[OurSize - Idx][T],
                               OtherMarks[OtherSize - Idx][T]);
@@ -3126,39 +3105,6 @@ void SIInsertWaitcnts::setSchedulingMode(MachineBasicBlock &MBB,
       .addImm(EncodedReg);
 }
 
-// Track back-to-back atomic RMW instructions, referred to as a block.
-//
-// Determines whether \p MI starts a new atomic RMW block, is inside
-// an existing block, or is outside of a block. A block is broken when a
-// CU-scoped memory op or an atomic store is encountered. ALU ops
-// and non-memory instructions don't break a block. The function returns
-// the new state after processing the current instruction based on
-// \p PrevState, the previously captured state.
-AtomicRMWState
-SIInsertWaitcnts::getAtomicRMWState(MachineInstr &MI,
-                                    AtomicRMWState PrevState) const {
-  if (isAtomicRMW(MI)) {
-    // Transition from NotInBlock -> NewBlock -> InsideBlock.
-    if (PrevState == AtomicRMWState::NotInBlock)
-      return AtomicRMWState::NewBlock;
-    if (PrevState == AtomicRMWState::NewBlock)
-      return AtomicRMWState::InsideBlock;
-
-    return PrevState;
-  }
-
-  // LDS memory operations don't break the block.
-  if (TII->isDS(MI) || (TII->isFLAT(MI) && TII->mayAccessLDSThroughFlat(MI)))
-    return PrevState;
-
-  // Reset the atomic RMW block state when found other VMEM and SMEM operations.
-  if (MI.mayLoad() ^ MI.mayStore())
-    return AtomicRMWState::NotInBlock;
-
-  // Return the previous state otherwise.
-  return PrevState;
-}
-
 // Generate s_waitcnt instructions where needed.
 bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
                                             MachineBasicBlock &Block,
@@ -3187,7 +3133,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
   // Walk over the instructions.
   MachineInstr *OldWaitcntInstr = nullptr;
-  AtomicRMWState RMWState = AtomicRMWState::NotInBlock;
 
   for (MachineBasicBlock::instr_iterator Iter = Block.instr_begin(),
                                          E = Block.instr_end();
@@ -3197,32 +3142,13 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       ++Iter;
       continue;
     }
-    // Get the atomic RMW block state for current instruction.
-    RMWState = getAtomicRMWState(Inst, RMWState);
-
     // Track pre-existing waitcnts that were added in earlier iterations or by
     // the memory legalizer.
     if (isWaitInstr(Inst) ||
         (IsExpertMode && Inst.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR)) {
-      ++Iter;
-      bool IsSoftXcnt = isSoftXcnt(Inst);
-      // The Memory Legalizer conservatively inserts a soft xcnt before each
-      // atomic RMW operation. However, for sequences of back-to-back atomic
-      // RMWs, only the first s_wait_xcnt insertion is necessary. Optimize away
-      // the redundant soft xcnts when we're inside an atomic RMW block.
-      if (Iter != E && IsSoftXcnt) {
-        // Check if the next instruction can potentially change the atomic RMW
-        // state.
-        RMWState = getAtomicRMWState(*Iter, RMWState);
-      }
-
-      if (IsSoftXcnt && RMWState == AtomicRMWState::InsideBlock) {
-        // Delete this soft xcnt.
-        Inst.eraseFromParent();
-        Modified = true;
-      } else if (!OldWaitcntInstr) {
+      if (!OldWaitcntInstr)
         OldWaitcntInstr = &Inst;
-      }
+      ++Iter;
       continue;
     }
 
@@ -3344,6 +3270,41 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
   return Modified;
 }
 
+bool SIInsertWaitcnts::removeRedundantSoftXcnts(MachineBasicBlock &Block) {
+  if (Block.size() <= 1)
+    return false;
+  // The Memory Legalizer conservatively inserts a soft xcnt before each
+  // atomic RMW operation. However, for sequences of back-to-back atomic
+  // RMWs, only the first s_wait_xcnt insertion is necessary. Optimize away
+  // the redundant soft xcnts.
+  bool Modified = false;
+  // Remember the last atomic with a soft xcnt right before it.
+  MachineInstr *LastAtomicWithSoftXcnt = nullptr;
+
+  for (MachineInstr &MI : drop_begin(Block)) {
+    // Ignore last atomic if non-LDS VMEM and SMEM.
+    bool IsLDS =
+        TII->isDS(MI) || (TII->isFLAT(MI) && TII->mayAccessLDSThroughFlat(MI));
+    if (!IsLDS && (MI.mayLoad() ^ MI.mayStore()))
+      LastAtomicWithSoftXcnt = nullptr;
+
+    bool IsAtomicRMW = (MI.getDesc().TSFlags & SIInstrFlags::maybeAtomic) &&
+                       MI.mayLoad() && MI.mayStore();
+    MachineInstr &PrevMI = *MI.getPrevNode();
+    // This is an atomic with a soft xcnt.
+    if (PrevMI.getOpcode() == AMDGPU::S_WAIT_XCNT_soft && IsAtomicRMW) {
+      // If we have already found an atomic with a soft xcnt, remove this soft
+      // xcnt as it's redundant.
+      if (LastAtomicWithSoftXcnt) {
+        PrevMI.eraseFromParent();
+        Modified = true;
+      }
+      LastAtomicWithSoftXcnt = &MI;
+    }
+  }
+  return Modified;
+}
+
 // Return flags indicating which counters should be flushed in the preheader.
 PreheaderFlushFlags
 SIInsertWaitcnts::isPreheaderToFlush(MachineBasicBlock &MBB,
@@ -3412,7 +3373,6 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   PreheaderFlushFlags Flags;
   bool HasVMemLoad = false;
   bool HasVMemStore = false;
-  bool SeenDSStoreInLoop = false;
   bool UsesVgprLoadedOutsideVMEM = false;
   bool UsesVgprLoadedOutsideDS = false;
   bool VMemInvalidated = false;
@@ -3423,20 +3383,20 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   DenseSet<MCRegUnit> VgprDefDS;
 
   for (MachineBasicBlock *MBB : ML->blocks()) {
-    bool SeenDSStoreInCurrMBB = false;
     for (MachineInstr &MI : *MBB) {
       if (isVMEMOrFlatVMEM(MI)) {
         HasVMemLoad |= MI.mayLoad();
         HasVMemStore |= MI.mayStore();
       }
-      if (mayStoreIncrementingDSCNT(MI))
-        SeenDSStoreInCurrMBB = true;
-      // Stores postdominated by a barrier will have a wait at the barrier
-      // and thus no need to be waited at the loop header. Barrier found
-      // later in the same MBB during in-order traversal is used here as a
-      // cheaper alternative to postdomination check.
-      if (MI.getOpcode() == AMDGPU::S_BARRIER)
-        SeenDSStoreInCurrMBB = false;
+      // TODO: Can we relax DSStore check? There may be cases where
+      // these DS stores are drained prior to the end of MBB (or loop).
+      if (mayStoreIncrementingDSCNT(MI)) {
+        // Early exit if both optimizations are invalidated.
+        // Otherwise, set invalid status and continue.
+        if (VMemInvalidated)
+          return Flags;
+        DSInvalidated = true;
+      }
       for (const MachineOperand &Op : MI.all_uses()) {
         if (Op.isDebug() || !TRI->isVectorRegister(*MRI, Op.getReg()))
           continue;
@@ -3502,8 +3462,6 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
         }
       }
     }
-    // Accumulate unprotected DS stores from this MBB
-    SeenDSStoreInLoop |= SeenDSStoreInCurrMBB;
   }
 
   // VMEM flush decision
@@ -3517,7 +3475,7 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   // are not used in the loop.
   // DSInvalidated is pre-set to true on non-GFX12+ targets where DS_CNT
   // is LGKM_CNT which also tracks FLAT/SMEM.
-  if (!DSInvalidated && !SeenDSStoreInLoop && UsesVgprLoadedOutsideDS)
+  if (!DSInvalidated && UsesVgprLoadedOutsideDS)
     Flags.FlushDsCnt = true;
 
   return Flags;
@@ -3668,6 +3626,8 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
         }
       }
 
+      if (ST->hasWaitXcnt())
+        Modified |= removeRedundantSoftXcnts(*MBB);
       Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets);
       BI.Dirty = false;
 

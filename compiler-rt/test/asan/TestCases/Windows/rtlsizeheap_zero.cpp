@@ -1,6 +1,6 @@
 // RUN: %clang_cl_asan %s %Fe%t
 // RUN: %env_asan_opts=windows_hook_rtl_allocators=true %run %t 2>&1 | FileCheck %s
-// RUN: %clang_cl_asan %s %Fe%t /DFAIL_CHECK
+// RUN: %clang_cl_asan %s %Fe%t -DFAIL_CHECK
 // RUN: %env_asan_opts=windows_hook_rtl_allocators=true not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-FAIL
 //
 // Verify that zero-size heap allocations report size 0 through Windows heap

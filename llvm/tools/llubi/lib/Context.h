@@ -68,6 +68,10 @@ public:
   bool isConstant() const { return IsConstant; }
   void setIsConstant(bool C) { IsConstant = C; }
 
+  bool inBounds(const APInt &NewAddr) const {
+    return NewAddr.uge(Address) && NewAddr.ule(Address + Size);
+  }
+
   Byte &operator[](uint64_t Offset) {
     assert(Offset < Size && "Offset out of bounds");
     return Bytes[Offset];
@@ -90,6 +94,7 @@ public:
   virtual bool onInstructionExecuted(Instruction &I, const AnyValue &Result) {
     return true;
   }
+  virtual void onError(StringRef Msg) {}
   virtual void onUnrecognizedInstruction(Instruction &I) {}
   virtual void onImmediateUB(StringRef Msg) {}
   virtual bool onBBJump(Instruction &I, BasicBlock &To) { return true; }
@@ -128,11 +133,24 @@ class Context {
   // For now we don't model the behavior of address reuse, which is common
   // with stack coloring.
   uint64_t AllocationBase = 8;
+  // Maintains a global list of 'exposed' provenances. This is used to form a
+  // pointer with an exposed provenance.
+  // FIXME: Currently all the allocations are considered exposed, regardless of
+  // their interaction with ptrtoint. That is, ptrtoint is allowed to recover
+  // the provenance of any allocation. We may track the exposed provenances more
+  // precisely after we make ptrtoint have the implicit side-effect of exposing
+  // the provenance.
   std::map<uint64_t, IntrusiveRefCntPtr<MemoryObject>> MemoryObjects;
 
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
   std::map<Constant *, AnyValue> ConstCache;
+  DenseMap<Function *, Pointer> FuncAddrMap;
+  DenseMap<BasicBlock *, Pointer> BlockAddrMap;
+  DenseMap<uint64_t, std::pair<Function *, IntrusiveRefCntPtr<MemoryObject>>>
+      ValidFuncTargets;
+  DenseMap<uint64_t, std::pair<BasicBlock *, IntrusiveRefCntPtr<MemoryObject>>>
+      ValidBlockTargets;
   AnyValue getConstantValueImpl(Constant *C);
 
   // TODO: errno and fpenv
@@ -168,10 +186,18 @@ public:
                                             StringRef Name, unsigned AS,
                                             MemInitKind InitKind);
   bool free(uint64_t Address);
-  // Derive a pointer from a memory object with offset 0.
-  // Please use Pointer's interface for further manipulations.
+  /// Derive a pointer from a memory object with offset 0.
+  /// Please use Pointer's interface for further manipulations.
   Pointer deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj);
 
+  Function *getTargetFunction(const Pointer &Ptr);
+  BasicBlock *getTargetBlock(const Pointer &Ptr);
+
+  /// Initialize global variables and function/block objects. This function
+  /// should be called before executing any function. Returns false if the
+  /// initialization fails (e.g., the memory limit is exceeded during
+  /// initialization).
+  bool initGlobalValues();
   /// Execute the function \p F with arguments \p Args, and store the return
   /// value in \p RetVal if the function is not void.
   /// Returns true if the function executed successfully. False indicates an

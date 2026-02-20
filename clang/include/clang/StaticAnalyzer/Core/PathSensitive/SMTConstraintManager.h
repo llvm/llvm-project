@@ -53,7 +53,7 @@ public:
     bool hasComparison;
 
     llvm::SMTExprRef Exp =
-        SMTConv::getExpr(Solver, Ctx, Sym, &RetTy, &hasComparison);
+        SMTConv::getExpr(Solver, Ctx, Sym, RetTy, &hasComparison);
 
     // Create zero comparison for implicit boolean cast, with reversed
     // assumption
@@ -89,7 +89,7 @@ public:
 
     QualType RetTy;
     // The expression may be casted, so we cannot call getZ3DataExpr() directly
-    llvm::SMTExprRef VarExp = SMTConv::getExpr(Solver, Ctx, Sym, &RetTy);
+    llvm::SMTExprRef VarExp = SMTConv::getExpr(Solver, Ctx, Sym, RetTy);
     llvm::SMTExprRef Exp =
         SMTConv::getZeroExpr(Solver, Ctx, VarExp, RetTy, /*Assumption=*/true);
 

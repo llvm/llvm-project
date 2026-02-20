@@ -1,7 +1,5 @@
-add_object_library(
+add_header_library(
   file_internal
-  SRCS
-    file_internal.cpp
   HDRS
     file_internal.h
   DEPENDS
@@ -33,7 +31,6 @@ add_header_library(
   HDRS
     vfscanf_internal.h
   DEPENDS
-    .file_internal
     libc.hdr.types.FILE
     libc.hdr.stdio_macros
     libc.src.__support.arg_list
@@ -77,27 +74,6 @@ add_entrypoint_object(
     libc.hdr.stdio_macros
     libc.hdr.types.FILE
     libc.src.errno.errno
-)
-
-add_entrypoint_object(
-  getc
-  SRCS
-    getc.cpp
-  HDRS
-    ../getc.h
-  DEPENDS
-    libc.hdr.types.FILE
-    libc.src.stdio.baremetal.fgetc
-)
-
-add_entrypoint_object(
-  fflush
-  SRCS
-    fflush.cpp
-  HDRS
-    ../fflush.h
-  DEPENDS
-    .file_internal
 )
 
 add_entrypoint_object(
@@ -245,18 +221,6 @@ add_entrypoint_object(
     libc.hdr.stdio_macros
     libc.hdr.types.FILE
     libc.src.errno.errno
-)
-
-add_entrypoint_object(
-  ungetc
-  SRCS
-    ungetc.cpp
-  HDRS
-    ../ungetc.h
-  DEPENDS
-    .file_internal
-    libc.hdr.stdio_macros
-    libc.hdr.types.FILE
 )
 
 add_entrypoint_object(

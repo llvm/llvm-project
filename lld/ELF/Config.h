@@ -486,11 +486,6 @@ struct Config {
   // if that's true.)
   bool isMips64EL;
 
-  // True if we need to set the DF_STATIC_TLS flag to an output file, which
-  // works as a hint to the dynamic loader that the shared object contains code
-  // compiled with the initial-exec TLS model.
-  bool hasTlsIe = false;
-
   // Holds set of ELF header flags for the target.
   uint32_t eflags = 0;
 

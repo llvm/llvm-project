@@ -94,8 +94,8 @@ define void @test_simplify6(ptr %dst) {
 define i32 @test_simplify7(ptr %dst, ptr %str) {
 ; WITHSTPCPY-LABEL: @test_simplify7(
 ; WITHSTPCPY-NEXT:    [[STPCPY:%.*]] = call ptr @stpcpy(ptr [[DST:%.*]], ptr [[STR:%.*]])
-; WITHSTPCPY-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[STPCPY]] to i32
-; WITHSTPCPY-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[DST]] to i32
+; WITHSTPCPY-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[STPCPY]] to i32
+; WITHSTPCPY-NEXT:    [[TMP2:%.*]] = ptrtoaddr ptr [[DST]] to i32
 ; WITHSTPCPY-NEXT:    [[R:%.*]] = sub i32 [[TMP1]], [[TMP2]]
 ; WITHSTPCPY-NEXT:    ret i32 [[R]]
 ;
@@ -124,8 +124,8 @@ define i32 @test_simplify8(ptr %dst) {
 define i32 @test_simplify9(ptr %dst, ptr %str) {
 ; WITHSTPCPY-LABEL: @test_simplify9(
 ; WITHSTPCPY-NEXT:    [[STPCPY:%.*]] = call ptr @stpcpy(ptr [[DST:%.*]], ptr [[STR:%.*]])
-; WITHSTPCPY-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[STPCPY]] to i32
-; WITHSTPCPY-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[DST]] to i32
+; WITHSTPCPY-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[STPCPY]] to i32
+; WITHSTPCPY-NEXT:    [[TMP2:%.*]] = ptrtoaddr ptr [[DST]] to i32
 ; WITHSTPCPY-NEXT:    [[R:%.*]] = sub i32 [[TMP1]], [[TMP2]]
 ; WITHSTPCPY-NEXT:    ret i32 [[R]]
 ;
@@ -160,8 +160,8 @@ define void @test_no_simplify2(ptr %dst, ptr %fmt, double %d) {
 define i32 @test_no_simplify3(ptr %dst, ptr %str) minsize {
 ; WITHSTPCPY-LABEL: @test_no_simplify3(
 ; WITHSTPCPY-NEXT:    [[STPCPY:%.*]] = call ptr @stpcpy(ptr [[DST:%.*]], ptr [[STR:%.*]])
-; WITHSTPCPY-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[STPCPY]] to i32
-; WITHSTPCPY-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[DST]] to i32
+; WITHSTPCPY-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[STPCPY]] to i32
+; WITHSTPCPY-NEXT:    [[TMP2:%.*]] = ptrtoaddr ptr [[DST]] to i32
 ; WITHSTPCPY-NEXT:    [[R:%.*]] = sub i32 [[TMP1]], [[TMP2]]
 ; WITHSTPCPY-NEXT:    ret i32 [[R]]
 ;

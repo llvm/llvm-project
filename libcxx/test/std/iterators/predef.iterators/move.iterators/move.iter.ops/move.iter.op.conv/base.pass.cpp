@@ -12,9 +12,12 @@
 // constexpr const Iterator& base() const & noexcept; // From C++20
 // constexpr Iterator base() &&; // From C++20
 
+#include <cassert>
+#include <cstddef>
 #include <iterator>
-
+#include <type_traits>
 #include <utility>
+
 #include "test_iterators.h"
 #include "test_macros.h"
 

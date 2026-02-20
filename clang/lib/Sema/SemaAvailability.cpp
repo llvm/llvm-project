@@ -676,10 +676,11 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
   struct AllowWarningInSystemHeaders {
     AllowWarningInSystemHeaders(DiagnosticsEngine &E,
                                 bool AllowWarningInSystemHeaders)
-        : Engine(E), Prev(E.getSuppressSystemWarnings()) {
-      E.setSuppressSystemWarnings(!AllowWarningInSystemHeaders);
+        : Engine(E), Prev(E.getForceSystemWarnings()) {
+      if (AllowWarningInSystemHeaders)
+        Engine.setForceSystemWarnings(true);
     }
-    ~AllowWarningInSystemHeaders() { Engine.setSuppressSystemWarnings(Prev); }
+    ~AllowWarningInSystemHeaders() { Engine.setForceSystemWarnings(Prev); }
 
   private:
     DiagnosticsEngine &Engine;

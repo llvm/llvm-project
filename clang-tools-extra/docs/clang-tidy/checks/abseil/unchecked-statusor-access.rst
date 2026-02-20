@@ -93,7 +93,7 @@ known to have ok status. For example:
 Ensuring that the status is ok using common macros
 --------------------------------------------------
 
-The check is aware of common macros like ``ABSL_CHECK`` and ``ASSERT_THAT``.
+The check is aware of common macros like ``ABSL_CHECK`` or ``ABSL_CHECK_OK``.
 Those can be used to ensure that the status of a ``StatusOr<T>`` object
 is ok. For example:
 
@@ -103,6 +103,46 @@ is ok. For example:
      ABSL_CHECK_OK(x);
      use(*x);
    }
+
+Ensuring that the status is ok using googletest macros
+------------------------------------------------------
+
+The check is aware of ``googletest`` (or ``gtest``) macros and matchers.
+Accessing the value of a ``StatusOr<T>`` object is considered safe if it
+is preceded by an ``ASSERT_`` macro that ensures the status is ok.
+For example:
+
+.. code:: cpp
+
+   TEST(MySuite, MyTest) {
+     absl::StatusOr<int> x = foo();
+     ASSERT_OK(x);
+     use(*x);
+   }
+
+   TEST(MySuite, MyOtherTest) {
+     absl::StatusOr<int> x = foo();
+     ASSERT_THAT(x, absl_testing::IsOk());
+     use(*x);
+   }
+
+The following ``googletest`` macros are supported:
+
+- ``ASSERT_OK(...)``
+- ``ASSERT_TRUE(...)``
+- ``ASSERT_FALSE(...)``
+- ``ASSERT_THAT(...)``
+
+The following matchers are supported:
+
+- ``IsOk()``
+- ``StatusIs(...)``
+- ``IsOkAndHolds(...)``
+- ``CanonicalStatusIs(...)``
+
+**Note**: ``EXPECT_`` macros (like ``EXPECT_OK`` or ``EXPECT_TRUE(x.ok())``)
+do **not** make subsequent accesses safe because they do not terminate the
+test execution.
 
 Ensuring that the status is ok, then accessing the value in a correlated branch
 -------------------------------------------------------------------------------
