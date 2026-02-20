@@ -3466,6 +3466,10 @@ def : Pat<(PPCtc_return CTRRC:$dst, imm:$imm),
           (TCRETURNri CTRRC:$dst, imm:$imm)>;
 
 def : Pat<(int_ppc_fence), (FENCE)>;
+
+def : Pat<(PPCtc_return (i32 mcsym:$dst), imm:$imm),
+          (TCRETURNdi mcsym:$dst, imm:$imm)>;
+
 def : Pat<(int_ppc_readflm), (MFFS)>;
 def : Pat<(int_ppc_mffsl), (MFFSL)>;
 

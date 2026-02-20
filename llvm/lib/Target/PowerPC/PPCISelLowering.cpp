@@ -4929,9 +4929,8 @@ static bool hasSameArgumentList(const Function *CallerFn, const CallBase &CB) {
 
 // Returns true if TCO is possible between the callers and callees
 // calling conventions.
-static bool
-areCallingConvEligibleForTCO_64SVR4(CallingConv::ID CallerCC,
-                                    CallingConv::ID CalleeCC) {
+static bool areCallingConvEligibleForTCO(CallingConv::ID CallerCC,
+                                         CallingConv::ID CalleeCC) {
   // Tail calls are possible with fastcc and ccc.
   auto isTailCallableCC  = [] (CallingConv::ID CC){
       return  CC == CallingConv::C || CC == CallingConv::Fast;
@@ -4960,7 +4959,7 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
   if (isVarArg) return false;
 
   // Check that the calling conventions are compatible for tco.
-  if (!areCallingConvEligibleForTCO_64SVR4(CallerCC, CalleeCC))
+  if (!areCallingConvEligibleForTCO(CallerCC, CalleeCC))
     return false;
 
   // Caller contains any byval parameter is not supported.
@@ -5030,6 +5029,114 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
   return true;
 }
 
+static void calculateStackSlotSizeForParameter_AIX(
+    const PPCSubtarget &Subtarget, MVT ArgVT, ISD::ArgFlagsTy ArgFlags,
+    unsigned &StackSize, Align &MaxStackArgAlign) {
+  const bool IsPPC64 = Subtarget.isPPC64();
+  const Align PtrAlign = IsPPC64 ? Align(8) : Align(4);
+  unsigned Size = 0;
+  Align Alignment = PtrAlign;
+
+  if (ArgFlags.isByVal()) {
+    Size = ArgFlags.getByValSize();
+    const Align ByValAlign(ArgFlags.getNonZeroByValAlign());
+    Alignment = ByValAlign > PtrAlign ? ByValAlign : PtrAlign;
+  } else {
+    switch (ArgVT.SimpleTy) {
+    default:
+      llvm_unreachable("Unhandled value type for argument.");
+    case MVT::i64:
+      // i64 arguments should have been split to i32 for PPC32.
+      assert(IsPPC64 && "PPC32 should have split i64 values.");
+      [[fallthrough]];
+    case MVT::i1:
+    case MVT::i32:
+      Size = PtrAlign.value();
+      break;
+    case MVT::f32:
+    case MVT::f64:
+      // According the comment in the function CC_AIX,
+      // Floats are always 4-byte aligned in the PSA on AIX.
+      // This includes f64 in 64-bit mode for ABI compatibility.
+      Size = IsPPC64 ? 8 : ArgVT.getStoreSize();
+      Alignment = Align(4);
+      break;
+    case MVT::v4f32:
+    case MVT::v4i32:
+    case MVT::v8i16:
+    case MVT::v16i8:
+    case MVT::v2i64:
+    case MVT::v2f64:
+    case MVT::v1i128:
+      Size = 16;
+      Alignment = Align(16);
+    }
+  }
+  StackSize = alignTo(StackSize, Alignment) + Size;
+  MaxStackArgAlign = std::max(Alignment, MaxStackArgAlign);
+}
+
+bool PPCTargetLowering::IsEligibleForTailCallOptimization_AIX(
+    const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
+    CallingConv::ID CallerCC, const CallBase *CB, bool isVarArg,
+    const SmallVectorImpl<ISD::OutputArg> &Outs, const Function *CallerFunc,
+    bool isCalleeExternalSymbol) const {
+  bool TailCallOpt = getTargetMachine().Options.GuaranteedTailCallOpt;
+
+  if (DisableSCO && !TailCallOpt)
+    return false;
+
+  // Variadic argument functions are not supported.
+  if (isVarArg)
+    return false;
+
+  // Check that the calling conventions are compatible for tco.
+  if (!areCallingConvEligibleForTCO(CallerCC, CalleeCC))
+    return false;
+
+  if (!Subtarget.isUsingPCRelativeCalls() &&
+      !isFunctionGlobalAddress(CalleeGV) && !isCalleeExternalSymbol)
+    return false;
+
+  // TCO allows altering callee ABI, so we don't have to check further.
+  if (CalleeCC == CallingConv::Fast && TailCallOpt)
+    return true;
+
+  // Check if we share the TOC base.
+  if (!Subtarget.isUsingPCRelativeCalls() &&
+      !callsShareTOCBase(CallerFunc, CalleeGV, getTargetMachine()))
+    return false;
+
+  if (DisableSCO)
+    return false;
+
+  unsigned CalleeArgSize = 0;
+  Align MaxAligment = Align(1);
+  for (auto OutArg : Outs)
+    calculateStackSlotSizeForParameter_AIX(Subtarget, OutArg.VT, OutArg.Flags,
+                                           CalleeArgSize, MaxAligment);
+  CalleeArgSize = alignTo(CalleeArgSize, MaxAligment);
+
+  // TODO: In the future, calculate the actual caller argument size
+  // instead of using the minimum parameter save area.
+  unsigned MinPSA = 8 * (Subtarget.isPPC64() ? 8 : 4);
+
+  if (CallerCC != CalleeCC && CalleeArgSize > MinPSA)
+    return false;
+
+  // If callee use the same argument list that caller is using, then we can
+  // apply SCO on this case. If it is not, then we need to check if callee
+  // needs stack for passing arguments. PC Relative tail calls may not have
+  // a CallBase. If there is no CallBase we cannot verify if we have the
+  // same argument list so assume that we don't have the same argument list.
+  if (CB && !hasSameArgumentList(CallerFunc, *CB) && CalleeArgSize > MinPSA)
+    return false;
+  else if (!CB && CalleeArgSize > MinPSA)
+    return false;
+
+  return true;
+}
+
 /// IsEligibleForTailCallOptimization - Check whether the call is eligible
 /// for tail call optimization. Targets which want to do tail call
 /// optimization should implement this function.
@@ -5037,7 +5144,13 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization(
     const GlobalValue *CalleeGV, CallingConv::ID CalleeCC,
     CallingConv::ID CallerCC, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins) const {
-  if (!getTargetMachine().Options.GuaranteedTailCallOpt)
+  bool TailCallOpt = getTargetMachine().Options.GuaranteedTailCallOpt;
+
+  // Enable SCO on AIX.
+  if (!TailCallOpt && !Subtarget.isAIXABI())
+    return false;
+
+  if (DisableSCO)
     return false;
 
   // Variable argument functions are not supported.
@@ -5715,6 +5828,7 @@ SDValue PPCTargetLowering::FinishCall(
             Callee.getOpcode() == ISD::TargetExternalSymbol ||
             Callee.getOpcode() == ISD::TargetGlobalAddress ||
             isa<ConstantSDNode>(Callee) ||
+            (Subtarget.isAIXABI() && Callee.getOpcode() == ISD::MCSymbol) ||
             (CFlags.IsIndirect && Subtarget.isUsingPCRelativeCalls())) &&
            "Expecting a global address, external symbol, absolute value, "
            "register or an indirect tail call when PC Relative calls are "
@@ -5782,9 +5896,14 @@ bool PPCTargetLowering::isEligibleForTCO(
     return IsEligibleForTailCallOptimization_64SVR4(
         CalleeGV, CalleeCC, CallerCC, CB, isVarArg, Outs, Ins, CallerFunc,
         isCalleeExternalSymbol);
-  else
-    return IsEligibleForTailCallOptimization(CalleeGV, CalleeCC, CallerCC,
-                                             isVarArg, Ins);
+
+  else if (Subtarget.isAIXABI())
+    return IsEligibleForTailCallOptimization_AIX(CalleeGV, CalleeCC, CallerCC,
+                                                 CB, isVarArg, Outs, CallerFunc,
+                                                 isCalleeExternalSymbol);
+
+  return IsEligibleForTailCallOptimization(CalleeGV, CalleeCC, CallerCC,
+                                           isVarArg, Ins);
 }
 
 SDValue
@@ -7090,9 +7209,6 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
           CallConv == CallingConv::Fast) &&
          "Unexpected calling convention!");
 
-  if (getTargetMachine().Options.GuaranteedTailCallOpt)
-    report_fatal_error("Tail call support is unimplemented on AIX.");
-
   if (useSoftFloat())
     report_fatal_error("Soft float support is unimplemented on AIX.");
 
@@ -7482,6 +7598,8 @@ SDValue PPCTargetLowering::LowerCall_AIX(
   // The LSA is 24 bytes (6x4) in PPC32 and 48 bytes (6x8) in PPC64.
   const unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
   const bool IsPPC64 = Subtarget.isPPC64();
+  bool IsSibCall =
+      CFlags.IsTailCall && !getTargetMachine().Options.GuaranteedTailCallOpt;
   const EVT PtrVT = getPointerTy(DAG.getDataLayout());
   const unsigned PtrByteSize = IsPPC64 ? 8 : 4;
   CCInfo.AllocateStack(LinkageSize, Align(PtrByteSize));
@@ -7497,9 +7615,15 @@ SDValue PPCTargetLowering::LowerCall_AIX(
   const unsigned NumBytes = std::max<unsigned>(
       LinkageSize + MinParameterSaveAreaSize, CCInfo.getStackSize());
 
+  // To protect arguments on the stack from being clobbered in a tail call,
+  // force all the loads to happen before doing any other lowering.
+  if (CFlags.IsTailCall)
+    Chain = DAG.getStackArgumentTokenFactor(Chain);
+
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass.
-  Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
+  if (!IsSibCall)
+    Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
   SDValue CallSeqStart = Chain;
 
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
@@ -7687,7 +7811,6 @@ SDValue PPCTargetLowering::LowerCall_AIX(
           DAG.getStore(Chain, dl, Arg, PtrOff,
                        MachinePointerInfo::getStack(MF, VA.getLocMemOffset()),
                        Subtarget.getFrameLowering()->getStackAlign()));
-
       continue;
     }
 
@@ -7766,6 +7889,12 @@ SDValue PPCTargetLowering::LowerCall_AIX(
   SDValue InGlue;
   for (auto Reg : RegsToPass) {
     Chain = DAG.getCopyToReg(Chain, dl, Reg.first, Reg.second, InGlue);
+    InGlue = Chain.getValue(1);
+  }
+
+  if (CFlags.IsTailCall && !IsSibCall) {
+    // Emit callseq_end just before tailcall node.
+    Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InGlue, dl);
     InGlue = Chain.getValue(1);
   }
 
@@ -19726,9 +19855,9 @@ bool PPCTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
 
   // Make sure the callee and caller calling conventions are eligible for tco.
   const Function *Caller = CI->getParent()->getParent();
-  if (!areCallingConvEligibleForTCO_64SVR4(Caller->getCallingConv(),
-                                           CI->getCallingConv()))
-      return false;
+  if (!areCallingConvEligibleForTCO(Caller->getCallingConv(),
+                                    CI->getCallingConv()))
+    return false;
 
   // If the function is local then we have a good chance at tail-calling it
   return getTargetMachine().shouldAssumeDSOLocal(Callee);
