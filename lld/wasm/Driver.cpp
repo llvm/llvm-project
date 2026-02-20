@@ -985,7 +985,7 @@ static void createPostLTOSymbols() {
     ctx.sym.tableBase->markLive();
   } else {
     // For non-PIC code
-    ctx.sym.stackPointer = createGlobalVariable(stack_pointer_name, true);
+    ctx.sym.stackPointer = createGlobalVariable(stack_pointer_name, !ctx.componentModelThreadContext);
     ctx.sym.stackPointer->markLive();
   }
 

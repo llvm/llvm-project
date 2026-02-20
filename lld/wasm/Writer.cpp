@@ -1181,8 +1181,10 @@ void Writer::createSyntheticInitFunctions() {
           make<SyntheticFunction>(nullSignature,
                                   "__wasm_apply_global_tls_relocs"));
       ctx.sym.applyGlobalTLSRelocs->markLive();
-      // TLS relocations depend on  the __tls_base symbols
-      ctx.sym.tlsBase->markLive();
+      // Shared memory TLS relocations depend on  the __tls_base symbols
+      if (ctx.arg.sharedMemory) {
+        ctx.sym.tlsBase->markLive();
+      }
     }
 
     auto hasTLSRelocs = [](const OutputSegment *segment) {
