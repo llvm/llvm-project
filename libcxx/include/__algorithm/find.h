@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___ALGORITHM_FIND_H
 #define _LIBCPP___ALGORITHM_FIND_H
 
+#include <__algorithm/find_if.h>
 #include <__algorithm/find_segment_if.h>
 #include <__algorithm/min.h>
 #include <__algorithm/simd_utils.h>
@@ -48,10 +49,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Iter, class _Sent, class _Tp, class _Proj>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iter
 __find_loop(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
-  for (; __first != __last; ++__first)
-    if (std::__invoke(__proj, *__first) == __value)
-      break;
-  return __first;
+  return std::__find_if(
+      std::move(__first),
+      std::move(__last),
+      [&]<class _ValT>(_ValT&& __val) -> bool { return __val == __value; },
+      __proj);
 }
 
 template <class _Iter, class _Sent, class _Tp, class _Proj>
