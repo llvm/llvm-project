@@ -4381,10 +4381,9 @@ static bool hasUnsupportedHeaderPhiRecipe(VPlan &Plan) {
         if (auto *WidenInd = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
           return !WidenInd->getPHINode();
         auto *RedPhi = dyn_cast<VPReductionPHIRecipe>(&R);
-        return RedPhi &&
-               (RecurrenceDescriptor::isFindLastRecurrenceKind(
-                    RedPhi->getRecurrenceKind()) ||
-                !RedPhi->getUnderlyingValue());
+        return RedPhi && (RecurrenceDescriptor::isFindLastRecurrenceKind(
+                              RedPhi->getRecurrenceKind()) ||
+                          !RedPhi->getUnderlyingValue());
       });
 }
 
