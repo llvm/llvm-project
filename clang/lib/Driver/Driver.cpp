@@ -2607,7 +2607,8 @@ bool Driver::HandleImmediateArgs(Compilation &C) {
 
     // Null program name cannot have a path.
     if (! ProgName.empty())
-      llvm::outs() << GetProgramPath(ProgName, TC);
+      llvm::outs() << (ProgName == "ld" ? TC.GetLinkerPath()
+                                        : GetProgramPath(ProgName, TC));
 
     llvm::outs() << "\n";
     return false;
