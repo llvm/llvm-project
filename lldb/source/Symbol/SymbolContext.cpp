@@ -28,8 +28,6 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-enumerations.h"
-#include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/Hashing.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1192,50 +1190,6 @@ void SymbolContextSpecifier::GetDescription(
 //
 //  SymbolContextList
 //
-
-// SymbolContextInfo implementations for DenseSet
-SymbolContext SymbolContextList::SymbolContextInfo::getEmptyKey() {
-  SymbolContext sc;
-  sc.function = llvm::DenseMapInfo<Function *>::getEmptyKey();
-  return sc;
-}
-
-SymbolContext SymbolContextList::SymbolContextInfo::getTombstoneKey() {
-  SymbolContext sc;
-  sc.function = llvm::DenseMapInfo<Function *>::getTombstoneKey();
-  return sc;
-}
-
-unsigned
-SymbolContextList::SymbolContextInfo::getHashValue(const SymbolContext &sc) {
-  // Hash all fields EXCEPT symbol, since CompareConsideringPossiblyNullSymbol
-  // ignores them.
-  auto line_entry_hash =
-      sc.line_entry.IsValid()
-          ? llvm::hash_combine(
-                sc.line_entry.range.GetBaseAddress().GetFileAddress(),
-                sc.line_entry.range.GetByteSize(),
-                sc.line_entry.is_terminal_entry, sc.line_entry.line,
-                sc.line_entry.column)
-          : llvm::hash_value(0);
-  return static_cast<unsigned>(llvm::hash_combine(
-      sc.function, sc.module_sp.get(), sc.comp_unit, sc.target_sp.get(),
-      line_entry_hash, sc.variable, sc.block));
-}
-
-bool SymbolContextList::SymbolContextInfo::isEqual(const SymbolContext &lhs,
-                                                   const SymbolContext &rhs) {
-  // Check for empty/tombstone keys first, since these are invalid pointers we
-  // don't want to accidentally dereference them in
-  // CompareConsideringPossiblyNullSymbol.
-  if (lhs.function == llvm::DenseMapInfo<Function *>::getEmptyKey() ||
-      rhs.function == llvm::DenseMapInfo<Function *>::getEmptyKey() ||
-      lhs.function == llvm::DenseMapInfo<Function *>::getTombstoneKey() ||
-      rhs.function == llvm::DenseMapInfo<Function *>::getTombstoneKey())
-    return lhs.function == rhs.function;
-
-  return SymbolContext::CompareConsideringPossiblyNullSymbol(lhs, rhs);
-}
 
 SymbolContextList::SymbolContextList() : m_symbol_contexts() {}
 
