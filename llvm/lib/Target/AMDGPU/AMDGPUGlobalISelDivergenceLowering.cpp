@@ -177,9 +177,9 @@ void DivergenceLoweringHelper::buildMergeLaneMasks(
   Register CurMaskedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
 
   B.setInsertPt(MBB, I);
-  B.buildInstr(AndN2Op, {PrevMaskedReg}, {PrevRegCopy, ExecReg});
-  B.buildInstr(AndOp, {CurMaskedReg}, {ExecReg, CurRegCopy});
-  B.buildInstr(OrOp, {DstReg}, {PrevMaskedReg, CurMaskedReg});
+  B.buildInstr(LMC.AndN2Opc, {PrevMaskedReg}, {PrevRegCopy, LMC.ExecReg});
+  B.buildInstr(LMC.AndOpc, {CurMaskedReg}, {LMC.ExecReg, CurRegCopy});
+  B.buildInstr(LMC.OrOpc, {DstReg}, {PrevMaskedReg, CurMaskedReg});
 }
 
 // GlobalISel has to constrain S1 incoming taken as-is with lane mask register
@@ -222,7 +222,7 @@ bool DivergenceLoweringHelper::lowerTemporalDivergence() {
 
     Register VgprReg = MRI->createGenericVirtualRegister(MRI->getType(Reg));
     B.buildInstr(AMDGPU::COPY, {VgprReg}, {Reg})
-        .addUse(ExecReg, RegState::Implicit);
+        .addUse(LMC.ExecReg, RegState::Implicit);
 
     replaceUsesOfRegInInstWith(Reg, UseInst, VgprReg);
     TDCache[Reg] = VgprReg;
