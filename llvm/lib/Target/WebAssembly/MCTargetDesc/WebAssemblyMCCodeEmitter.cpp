@@ -111,9 +111,18 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           break;
         case WebAssembly::OPERAND_SIGNATURE:
         case WebAssembly::OPERAND_VEC_I8IMM:
-        case WebAssembly::OPERAND_MEMORDER:
           support::endian::write<uint8_t>(OS, MO.getImm(),
                                           llvm::endianness::little);
+          break;
+        case WebAssembly::OPERAND_MEMORDER:
+          if (STI.getFeatureBits()[WebAssembly::FeatureSharedEverything]) {
+            support::endian::write<uint8_t>(OS, MO.getImm(),
+                                            llvm::endianness::little);
+          } else if (Opcode == WebAssembly::ATOMIC_FENCE ||
+                     Opcode == WebAssembly::ATOMIC_FENCE_S) {
+            support::endian::write<uint8_t>(OS, 0,
+                                            llvm::endianness::little);
+          }
           break;
         case WebAssembly::OPERAND_VEC_I16IMM:
           support::endian::write<uint16_t>(OS, MO.getImm(),

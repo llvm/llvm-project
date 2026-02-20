@@ -81,6 +81,10 @@ def FeatureSignExt :
       SubtargetFeature<"sign-ext", "HasSignExt", "true",
                        "Enable sign extension operators">;
 
+def FeatureSharedEverything :
+      SubtargetFeature<"shared-everything", "HasSharedEverything", "true",
+                       "Enable shared-everything-threads proposal">;
+
 def FeatureSIMD128 : SubtargetFeature<"simd128", "SIMDLevel", "SIMD128",
                                       "Enable 128-bit SIMD">;
 

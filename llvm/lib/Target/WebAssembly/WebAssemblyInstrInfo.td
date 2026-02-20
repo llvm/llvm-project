@@ -87,6 +87,14 @@ def HasSignExt :
     Predicate<"Subtarget->hasSignExt()">,
     AssemblerPredicate<(all_of FeatureSignExt), "sign-ext">;
 
+def HasSharedEverything :
+    Predicate<"Subtarget->hasSharedEverything()">,
+    AssemblerPredicate<(all_of FeatureSharedEverything), "shared-everything">;
+
+def NotHasSharedEverything :
+    Predicate<"!Subtarget->hasSharedEverything()">,
+    AssemblerPredicate<(all_of (not FeatureSharedEverything)), "shared-everything">;
+
 def HasSIMD128 :
     Predicate<"Subtarget->hasSIMD128()">,
     AssemblerPredicate<(any_of FeatureSIMD128, FeatureRelaxedSIMD), "simd128">;

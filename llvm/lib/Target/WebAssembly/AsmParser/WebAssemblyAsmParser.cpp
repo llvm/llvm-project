@@ -485,6 +485,8 @@ public:
                         .Default(-1);
     if (Order == -1)
       return false;
+    if (!STI->checkFeatures("+shared-everything"))
+      return error("memory ordering requires shared-everything feature: ", Tok);
     Operands.push_back(std::make_unique<WebAssemblyOperand>(
         Tok.getLoc(), Tok.getEndLoc(), WebAssemblyOperand::IntOp{Order}));
     Parser.Lex();

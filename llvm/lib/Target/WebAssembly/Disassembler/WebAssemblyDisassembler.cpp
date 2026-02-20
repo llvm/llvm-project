@@ -255,8 +255,9 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
         return MCDisassembler::Fail;
       break;
     }
-    // Vector lane operands (not LEB encoded).
-    case WebAssembly::OPERAND_VEC_I8IMM: {
+    // Vector lane operands and memory ordering (not LEB encoded).
+    case WebAssembly::OPERAND_VEC_I8IMM:
+    case WebAssembly::OPERAND_MEMORDER: {
       if (!parseImmediate<uint8_t>(MI, Size, Bytes))
         return MCDisassembler::Fail;
       break;

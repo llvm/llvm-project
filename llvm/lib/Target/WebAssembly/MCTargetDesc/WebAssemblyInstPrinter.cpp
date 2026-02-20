@@ -48,6 +48,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                        StringRef Annot,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &OS) {
+  this->STI = &STI;
   switch (MI->getOpcode()) {
   case WebAssembly::CALL_INDIRECT_S:
   case WebAssembly::RET_CALL_INDIRECT_S: {
@@ -374,6 +375,10 @@ void WebAssemblyInstPrinter::printWebAssemblyMemOrderOperand(const MCInst *MI,
                                                              unsigned OpNo,
                                                              raw_ostream &O) {
   int64_t Imm = MI->getOperand(OpNo).getImm();
+  if (Imm == WebAssembly::MEM_ORDER_SEQ_CST &&
+      (!STI || !STI->getFeatureBits()[WebAssembly::FeatureSharedEverything]))
+    return;
+
   switch (Imm) {
   case WebAssembly::MEM_ORDER_NONE:
     // none is the default, print nothing
