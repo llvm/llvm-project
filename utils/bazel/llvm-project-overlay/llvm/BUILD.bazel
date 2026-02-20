@@ -4914,14 +4914,13 @@ cc_binary(
     ],
 )
 
-cc_binary(
-    name = "llvm-cov",
+cc_library(
+    name = "llvm-cov-lib",
     srcs = glob([
         "tools/llvm-cov/*.cpp",
         "tools/llvm-cov/*.h",
     ]),
     copts = llvm_copts,
-    stamp = 0,
     deps = [
         ":Coverage",
         ":Debuginfod",
@@ -4932,6 +4931,12 @@ cc_binary(
         ":TargetParser",
         ":config",
     ],
+)
+
+llvm_driver_cc_binary(
+    name = "llvm-cov",
+    stamp = 0,
+    deps = [":llvm-cov-lib"],
 )
 
 gentbl_cc_library(
