@@ -16654,7 +16654,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       unsigned SizeRatio = ExTy.getSizeInBits() / TrTy.getSizeInBits();
       auto NewEltCnt = EltCnt * SizeRatio;
 
-      EVT NVT = TrTy.changeVectorElementCount(NewEltCnt);
+      EVT NVT = TrTy.changeVectorElementCount(*DAG.getContext(), NewEltCnt);
       assert(NVT.getSizeInBits() == VecTy.getSizeInBits() && "Invalid Size");
 
       SDValue EltNo = Src->getOperand(1);
@@ -26145,7 +26145,8 @@ static SDValue combineConcatVectorOfCasts(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   EVT SrcEltVT = SrcVT.getVectorElementType();
   ElementCount NumElts = SrcVT.getVectorElementCount() * N->getNumOperands();
-  EVT ConcatSrcVT = EVT::getVectorVT(*DAG.getContext(), SrcEltVT, NumElts);
+  EVT ConcatSrcVT =
+      SrcEltVT.changeVectorElementCount(*DAG.getContext(), NumElts);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   switch (CastOpcode) {
   case ISD::SINT_TO_FP:
@@ -26962,7 +26963,7 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
         if ((ExtIdx % DestSrcRatio) == 0) {
           unsigned IndexValScaled = ExtIdx / DestSrcRatio;
           EVT NewExtVT =
-              EVT::getVectorVT(*DAG.getContext(), ScalarVT, NewExtEC);
+              ScalarVT.changeVectorElementCount(*DAG.getContext(), NewExtEC);
           if (TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NewExtVT)) {
             SDValue NewIndex = DAG.getVectorIdxConstant(IndexValScaled, DL);
             SDValue NewExtract =

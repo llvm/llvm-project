@@ -108,8 +108,8 @@ namespace llvm {
       return getVectorVT(Context, EltVT, getVectorElementCount());
     }
 
-    /// Return a VT for a vector type whose attributes match ourselves with
-    /// the exception of the element count that is chosen by the caller.
+    /// Return a VT for a vector type whose attributes match ourselves
+    /// with the exception of the element count that is chosen by the caller.
     EVT changeVectorElementCount(LLVMContext &Context, ElementCount EC) const {
       if (isSimple()) {
         MVT M = MVT::getVectorVT(getSimpleVT(), EC);
@@ -117,18 +117,6 @@ namespace llvm {
           return M;
       }
       return getVectorVT(Context, getVectorElementType(), EC);
-    }
-
-    /// Return a VT for a vector type whose attributes match ourselves with
-    /// the exception of the number of elements that is chosen by the caller.
-    EVT changeVectorNumElements(LLVMContext &Context, unsigned NumElements,
-                                bool IsScalable = false) const {
-      if (isSimple()) {
-        MVT M = MVT::getVectorVT(getSimpleVT(), NumElements, IsScalable);
-        if (M != MVT::INVALID_SIMPLE_VALUE_TYPE)
-          return M;
-      }
-      return getVectorVT(Context, getVectorElementType(), NumElements, IsScalable);
     }
 
     /// Return a VT for a type whose attributes match ourselves with the
