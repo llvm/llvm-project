@@ -176,9 +176,17 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
     goto finish;
   }
 
+  if (m_read_pending) {
+    if (::GetOverlappedResult(m_file, &m_overlapped, &bytes_read, FALSE)) {
+      m_read_pending = false;
+      return bytes_read;
+    }
+  }
+
   m_overlapped.hEvent = m_event_handles[kBytesAvailableEvent];
 
   result = ::ReadFile(m_file, dst, dst_len, NULL, &m_overlapped);
+  m_read_pending = true;
   if (result || ::GetLastError() == ERROR_IO_PENDING) {
     if (!result) {
       // The expected return path.  The operation is pending.  Wait for the
@@ -234,6 +242,8 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
   goto finish;
 
 finish:
+  if (return_info.GetStatus() != eConnectionStatusInterrupted)
+    m_read_pending = false;
   status = return_info.GetStatus();
   if (error_ptr)
     *error_ptr = return_info.GetError().Clone();
