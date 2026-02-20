@@ -142,6 +142,13 @@ public:
         fir::runtime::genAssignTemporary(builder, loc, toMutableBox, from);
       else
         fir::runtime::genAssign(builder, loc, toMutableBox, from);
+    } else if (lhs.isPolymorphic() && rhs.isPolymorphic()) {
+      if (fir::isNoneOrSeqNone(fir::getElementTypeOf(lhsExv)) &&
+          fir::isNoneOrSeqNone(fir::getElementTypeOf(rhsExv))) {
+        mlir::Value to = fir::getBase(builder.createBox(loc, lhsExv));
+        mlir::Value from = fir::getBase(builder.createBox(loc, rhsExv));
+        fir::runtime::genAssignPolymorphic(builder, loc, to, from);
+      }
     } else {
       // TODO: use the type specification to see if IsFinalizable is set,
       // or propagate IsFinalizable attribute from lowering.
