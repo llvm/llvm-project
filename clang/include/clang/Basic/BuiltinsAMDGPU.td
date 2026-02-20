@@ -255,17 +255,17 @@ def __builtin_amdgcn_interp_mov : AMDGPUBuiltin<"float(unsigned int, unsigned in
 // VI+ only builtins.
 //===----------------------------------------------------------------------===//
 
-def __builtin_amdgcn_div_fixuph : AMDGPUBuiltin<"__fp16(__fp16, __fp16, __fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_rcph : AMDGPUBuiltin<"__fp16(__fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_sqrth : AMDGPUBuiltin<"__fp16(__fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_rsqh : AMDGPUBuiltin<"__fp16(__fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_sinh : AMDGPUBuiltin<"__fp16(__fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_cosh : AMDGPUBuiltin<"__fp16(__fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_ldexph : AMDGPUBuiltin<"__fp16(__fp16, int)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_frexp_manth : AMDGPUBuiltin<"__fp16(__fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_frexp_exph : AMDGPUBuiltin<"short(__fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_fracth : AMDGPUBuiltin<"__fp16(__fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_classh : AMDGPUBuiltin<"bool(__fp16, int)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_div_fixuph : AMDGPUBuiltin<"_Float16(_Float16, _Float16, _Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_rcph : AMDGPUBuiltin<"_Float16(_Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_sqrth : AMDGPUBuiltin<"_Float16(_Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_rsqh : AMDGPUBuiltin<"_Float16(_Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_sinh : AMDGPUBuiltin<"_Float16(_Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_cosh : AMDGPUBuiltin<"_Float16(_Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_ldexph : AMDGPUBuiltin<"_Float16(_Float16, int)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_frexp_manth : AMDGPUBuiltin<"_Float16(_Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_frexp_exph : AMDGPUBuiltin<"short(_Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_fracth : AMDGPUBuiltin<"_Float16(_Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_classh : AMDGPUBuiltin<"bool(_Float16, int)", [Const], "16-bit-insts">;
 def __builtin_amdgcn_s_memrealtime : AMDGPUBuiltin<"uint64_t()", [], "s-memrealtime">;
 def __builtin_amdgcn_mov_dpp : AMDGPUBuiltin<"int(int, _Constant int, _Constant int, _Constant int, _Constant bool)", [Const, CustomTypeChecking], "dpp">;
 def __builtin_amdgcn_update_dpp : AMDGPUBuiltin<"int(int, int, _Constant int, _Constant int, _Constant int, _Constant bool)", [Const, CustomTypeChecking], "dpp">;
