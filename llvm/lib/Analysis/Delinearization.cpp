@@ -880,3 +880,143 @@ PreservedAnalyses DelinearizationPrinterPass::run(Function &F,
                        &AM.getResult<ScalarEvolutionAnalysis>(F));
   return PreservedAnalyses::all();
 }
+
+/// Return true for a Load or Store instruction.
+static bool isLoadOrStore(const Instruction *I) {
+  return isa<LoadInst>(I) || isa<StoreInst>(I);
+}
+
+BatchDelinearization::BatchDelinearization(ScalarEvolution &SE, LoopInfo &LI,
+                                           Loop &L)
+    : SE(SE), LI(LI) {
+  processLoop(L);
+}
+
+void BatchDelinearization::processLoop(Loop &L) {
+  // Collect all memory accesses and group them by their base pointers.
+  SmallDenseMap<const SCEV *, SmallVector<Instruction *, 8>, 8> BasePtr2Insts;
+
+  for (BasicBlock *BB : L.blocks()) {
+    for (Instruction &I : *BB) {
+      if (!isLoadOrStore(&I))
+        continue;
+
+      Value *Ptr = getLoadStorePointerOperand(&I);
+      const SCEV *AccessFn = SE.getSCEVAtScope(Ptr, &L);
+      const SCEV *Base = SE.getPointerBase(AccessFn);
+      BasePtr2Insts[Base].push_back(&I);
+    }
+  }
+
+  // For each base pointer, compute unified sizes and then subscripts.
+  for (auto &[Base, Insts] : BasePtr2Insts) {
+    SmallVector<const SCEV *, 4> Sizes;
+    if (!computeUnifiedSizes(Base, Insts, Sizes))
+      continue;
+
+    // Store the sizes for this base.
+    BaseSizes[Base] = Sizes;
+
+    // Compute subscripts for each access using the unified sizes.
+    for (Instruction *I : Insts) {
+      SmallVector<const SCEV *, 4> Subs;
+      if (computeSubscripts(I, Sizes, Subs))
+        Subscripts[I] = std::move(Subs);
+    }
+  }
+}
+
+bool BatchDelinearization::computeUnifiedSizes(
+    const SCEV *Base, ArrayRef<Instruction *> Accesses,
+    SmallVectorImpl<const SCEV *> &Sizes) {
+  if (Accesses.empty())
+    return false;
+
+  // Collect estimated sizes from each access.
+  SmallVector<SmallVector<uint64_t, 4>, 8> AllEstimatedSizes;
+  size_t MaxDims = 0;
+
+  for (Instruction *I : Accesses) {
+    Value *Ptr = getLoadStorePointerOperand(I);
+    Loop *L = LI.getLoopFor(I->getParent());
+    const SCEV *AccessFn = SE.getSCEVAtScope(Ptr, L);
+    const SCEV *ElemSize = SE.getElementSize(I);
+
+    SmallVector<uint64_t, 4> EstSizes;
+    if (!findFixedSizeArrayDimensions(SE, SE.removePointerBase(AccessFn),
+                                      EstSizes, ElemSize))
+      continue;
+
+    if (!EstSizes.empty()) {
+      AllEstimatedSizes.push_back(std::move(EstSizes));
+      MaxDims = std::max(MaxDims, AllEstimatedSizes.back().size());
+    }
+  }
+
+  if (AllEstimatedSizes.empty())
+    return false;
+
+  // Generalize the estimated sizes by taking the maximum for each dimension.
+  // This ensures that all accesses fit within the computed array bounds.
+  // Initialize with 0 to detect unset dimensions (0 is invalid for array
+  // sizes).
+  SmallVector<uint64_t, 4> UnifiedSizes(MaxDims, 0);
+
+  for (const auto &EstSizes : AllEstimatedSizes) {
+    // Align sizes from the innermost dimension (rightmost).
+    size_t Offset = MaxDims - EstSizes.size();
+    for (size_t i = 0; i < EstSizes.size(); ++i) {
+      // For the element size (last dimension), all should match.
+      // For other dimensions, take the maximum.
+      if (i == EstSizes.size() - 1) {
+        // Element size should be consistent.
+        if (UnifiedSizes[Offset + i] == 0)
+          UnifiedSizes[Offset + i] = EstSizes[i];
+        else if (UnifiedSizes[Offset + i] != EstSizes[i])
+          return false; // Incompatible element sizes.
+      } else {
+        UnifiedSizes[Offset + i] =
+            std::max(UnifiedSizes[Offset + i], EstSizes[i]);
+      }
+    }
+  }
+
+  // Convert to SCEVs. Use the pointer type for the index type.
+  Value *Ptr = getLoadStorePointerOperand(Accesses[0]);
+  Type *IndexTy = SE.getEffectiveSCEVType(Ptr->getType());
+
+  for (uint64_t Size : UnifiedSizes)
+    Sizes.push_back(SE.getConstant(IndexTy, Size));
+
+  return !Sizes.empty();
+}
+
+bool BatchDelinearization::computeSubscripts(
+    Instruction *I, ArrayRef<const SCEV *> Sizes,
+    SmallVectorImpl<const SCEV *> &Subs) {
+  Value *Ptr = getLoadStorePointerOperand(I);
+  Loop *L = LI.getLoopFor(I->getParent());
+  const SCEV *AccessFn = SE.getSCEVAtScope(Ptr, L);
+  const SCEV *Expr = SE.removePointerBase(AccessFn);
+
+  SmallVector<const SCEV *, 4> LocalSizes(Sizes.begin(), Sizes.end());
+  computeAccessFunctions(SE, Expr, Subs, LocalSizes);
+
+  return !Subs.empty();
+}
+
+const SmallVector<const SCEV *, 4> *
+BatchDelinearization::getSubscripts(Instruction *I) const {
+  auto It = Subscripts.find(I);
+  if (It != Subscripts.end())
+    return &It->second;
+  return nullptr;
+}
+
+const SmallVector<const SCEV *, 4> *
+BatchDelinearization::getSizes(const SCEV *Base) const {
+  auto It = BaseSizes.find(Base);
+  if (It != BaseSizes.end())
+    return &It->second;
+  return nullptr;
+}

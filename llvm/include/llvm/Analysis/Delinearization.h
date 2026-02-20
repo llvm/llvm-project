@@ -16,35 +16,42 @@
 #ifndef LLVM_ANALYSIS_DELINEARIZATION_H
 #define LLVM_ANALYSIS_DELINEARIZATION_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
+class Function;
 class raw_ostream;
 template <typename T> class SmallVectorImpl;
 class GetElementPtrInst;
 class Instruction;
+class Loop;
+class LoopInfo;
 class ScalarEvolution;
 class SCEV;
 
 /// Compute the array dimensions Sizes from the set of Terms extracted from
 /// the memory access function of this SCEVAddRecExpr (second step of
 /// delinearization).
-void findArrayDimensions(ScalarEvolution &SE,
-                         SmallVectorImpl<const SCEV *> &Terms,
-                         SmallVectorImpl<const SCEV *> &Sizes,
-                         const SCEV *ElementSize);
+LLVM_ABI void findArrayDimensions(ScalarEvolution &SE,
+                                  SmallVectorImpl<const SCEV *> &Terms,
+                                  SmallVectorImpl<const SCEV *> &Sizes,
+                                  const SCEV *ElementSize);
 
 /// Collect parametric terms occurring in step expressions (first step of
 /// delinearization).
-void collectParametricTerms(ScalarEvolution &SE, const SCEV *Expr,
-                            SmallVectorImpl<const SCEV *> &Terms);
+LLVM_ABI void collectParametricTerms(ScalarEvolution &SE, const SCEV *Expr,
+                                     SmallVectorImpl<const SCEV *> &Terms);
 
 /// Return in Subscripts the access functions for each dimension in Sizes
 /// (third step of delinearization).
-void computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
-                            SmallVectorImpl<const SCEV *> &Subscripts,
-                            SmallVectorImpl<const SCEV *> &Sizes);
+LLVM_ABI void computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
+                                     SmallVectorImpl<const SCEV *> &Subscripts,
+                                     SmallVectorImpl<const SCEV *> &Sizes);
 /// Split this SCEVAddRecExpr into two vectors of SCEVs representing the
 /// subscripts and sizes of an array access.
 ///
@@ -109,15 +116,17 @@ void computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
 /// The subscript of the outermost dimension is the Quotient: [j+k].
 ///
 /// Overall, we have: A[][n][m], and the access function: A[j+k][2i][5i].
-void delinearize(ScalarEvolution &SE, const SCEV *Expr,
-                 SmallVectorImpl<const SCEV *> &Subscripts,
-                 SmallVectorImpl<const SCEV *> &Sizes, const SCEV *ElementSize);
+LLVM_ABI void delinearize(ScalarEvolution &SE, const SCEV *Expr,
+                          SmallVectorImpl<const SCEV *> &Subscripts,
+                          SmallVectorImpl<const SCEV *> &Sizes,
+                          const SCEV *ElementSize);
 
 /// Compute the dimensions of fixed size array from \Expr and save the results
 /// in \p Sizes.
-bool findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
-                                  SmallVectorImpl<uint64_t> &Sizes,
-                                  const SCEV *ElementSize);
+LLVM_ABI bool findFixedSizeArrayDimensions(ScalarEvolution &SE,
+                                           const SCEV *Expr,
+                                           SmallVectorImpl<uint64_t> &Sizes,
+                                           const SCEV *ElementSize);
 
 /// Split this SCEVAddRecExpr into two vectors of SCEVs representing the
 /// subscripts and sizes of an access to a fixed size array. This is a special
@@ -136,17 +145,18 @@ bool findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
 ///
 /// This function is intended to replace getIndexExpressionsFromGEP. They rely
 /// on the GEP source element type so that will be removed in the future.
-bool delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
-                               SmallVectorImpl<const SCEV *> &Subscripts,
-                               SmallVectorImpl<const SCEV *> &Sizes,
-                               const SCEV *ElementSize);
+LLVM_ABI bool
+delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
+                          SmallVectorImpl<const SCEV *> &Subscripts,
+                          SmallVectorImpl<const SCEV *> &Sizes,
+                          const SCEV *ElementSize);
 
 /// Check that each subscript in \p Subscripts is within the corresponding size
 /// in \p Sizes. For the outermost dimension, the subscript being negative is
 /// allowed.
-bool validateDelinearizationResult(ScalarEvolution &SE,
-                                   ArrayRef<const SCEV *> Sizes,
-                                   ArrayRef<const SCEV *> Subscripts);
+LLVM_ABI bool validateDelinearizationResult(ScalarEvolution &SE,
+                                            ArrayRef<const SCEV *> Sizes,
+                                            ArrayRef<const SCEV *> Subscripts);
 
 /// Gathers the individual index expressions from a GEP instruction.
 ///
@@ -157,15 +167,65 @@ bool validateDelinearizationResult(ScalarEvolution &SE,
 /// lists have either equal length or the size list is one element shorter in
 /// case there is no known size available for the outermost array dimension.
 /// Returns true if successful and false otherwise.
-bool getIndexExpressionsFromGEP(ScalarEvolution &SE,
-                                const GetElementPtrInst *GEP,
-                                SmallVectorImpl<const SCEV *> &Subscripts,
-                                SmallVectorImpl<const SCEV *> &Sizes);
+LLVM_ABI bool
+getIndexExpressionsFromGEP(ScalarEvolution &SE, const GetElementPtrInst *GEP,
+                           SmallVectorImpl<const SCEV *> &Subscripts,
+                           SmallVectorImpl<const SCEV *> &Sizes);
+
+/// BatchDelinearization - A utility class for batch delinearization of all
+/// memory accesses in a loop. This class processes all memory accesses upfront
+/// in the constructor, groups them by base pointer, and computes unified array
+/// dimensions for each base.
+///
+/// Usage:
+///   BatchDelinearization BD(SE, LI, TargetLoop);
+///   const auto *Subs = BD.getSubscripts(LoadOrStoreInst);
+///
+/// The delinearization results are computed once during construction and cached
+/// for efficient lookups. All accesses to the same base pointer will use the
+/// same array dimensions, ensuring consistency.
+class LLVM_ABI BatchDelinearization {
+public:
+  /// Construct and compute delinearization for all memory accesses in the loop.
+  /// This processes all load/store instructions in the loop, groups them by
+  /// base pointer, and computes unified array dimensions for each base.
+  BatchDelinearization(ScalarEvolution &SE, LoopInfo &LI, Loop &L);
+
+  /// Get the cached subscripts for an instruction.
+  /// Returns nullptr if delinearization failed or is not applicable.
+  const SmallVector<const SCEV *, 4> *getSubscripts(Instruction *I) const;
+
+  /// Get the array sizes for a base pointer.
+  /// Returns nullptr if no accesses to this base were delinearized.
+  const SmallVector<const SCEV *, 4> *getSizes(const SCEV *Base) const;
+
+private:
+  ScalarEvolution &SE;
+  LoopInfo &LI;
+
+  /// Map from base pointer SCEV to unified array sizes.
+  SmallDenseMap<const SCEV *, SmallVector<const SCEV *, 4>, 8> BaseSizes;
+
+  /// Map from instruction to computed subscripts.
+  SmallDenseMap<Instruction *, SmallVector<const SCEV *, 4>, 16> Subscripts;
+
+  /// Process all memory accesses in the loop and compute delinearization.
+  void processLoop(Loop &L);
+
+  /// Compute unified sizes for all accesses to the same base pointer.
+  /// Returns true if a consistent set of sizes was found.
+  bool computeUnifiedSizes(const SCEV *Base, ArrayRef<Instruction *> Accesses,
+                           SmallVectorImpl<const SCEV *> &Sizes);
+
+  /// Compute subscripts for an access using the given sizes.
+  bool computeSubscripts(Instruction *I, ArrayRef<const SCEV *> Sizes,
+                         SmallVectorImpl<const SCEV *> &Subs);
+};
 
 struct DelinearizationPrinterPass
     : public PassInfoMixin<DelinearizationPrinterPass> {
-  explicit DelinearizationPrinterPass(raw_ostream &OS);
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI explicit DelinearizationPrinterPass(raw_ostream &OS);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 
 private:

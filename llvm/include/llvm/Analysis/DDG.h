@@ -255,8 +255,9 @@ public:
 
   DependenceGraphInfo() = delete;
   DependenceGraphInfo(const DependenceGraphInfo &G) = delete;
-  DependenceGraphInfo(const std::string &N, const DependenceInfo &DepInfo)
-      : Name(N), DI(DepInfo), Root(nullptr) {}
+  DependenceGraphInfo(const std::string &N,
+                      std::unique_ptr<DependenceInfo> DepInfo)
+      : Name(N), DI(std::move(DepInfo)), Root(nullptr) {}
   DependenceGraphInfo(DependenceGraphInfo &&G)
       : Name(std::move(G.Name)), DI(std::move(G.DI)), Root(G.Root) {}
   virtual ~DependenceGraphInfo() = default;
@@ -287,13 +288,12 @@ protected:
   // Name of the graph.
   std::string Name;
 
-  // Store a copy of DependenceInfo in the graph, so that individual memory
-  // dependencies don't need to be stored. Instead when the dependence is
-  // queried it is recomputed using @DI.
-  const DependenceInfo DI;
+  // DependenceInfo for computing memory dependencies on demand.
+  // Owned by this graph to ensure proper lifetime.
+  std::unique_ptr<DependenceInfo> DI;
 
-  // A special node in the graph that has an edge to every connected component of
-  // the graph, to ensure all nodes are reachable in a graph walk.
+  // A special node in the graph that has an edge to every connected component
+  // of the graph, to ensure all nodes are reachable in a graph walk.
   NodeType *Root = nullptr;
 };
 
@@ -312,8 +312,9 @@ public:
   DataDependenceGraph(const DataDependenceGraph &G) = delete;
   DataDependenceGraph(DataDependenceGraph &&G)
       : DDGBase(std::move(G)), DDGInfo(std::move(G)) {}
-  DataDependenceGraph(Function &F, DependenceInfo &DI);
-  DataDependenceGraph(Loop &L, LoopInfo &LI, DependenceInfo &DI);
+  DataDependenceGraph(Function &F, std::unique_ptr<DependenceInfo> DI);
+  DataDependenceGraph(Loop &L, LoopInfo &LI,
+                      std::unique_ptr<DependenceInfo> DI);
   ~DataDependenceGraph() override;
 
   /// If node \p N belongs to a pi-block return a pointer to the pi-block,
@@ -452,8 +453,7 @@ bool DependenceGraphInfo<NodeType>::getDependencies(
 
   for (auto *SrcI : SrcIList)
     for (auto *DstI : DstIList)
-      if (auto Dep =
-              const_cast<DependenceInfo *>(&DI)->depends(SrcI, DstI))
+      if (auto Dep = DI->depends(SrcI, DstI))
         Deps.push_back(std::move(Dep));
 
   return !Deps.empty();

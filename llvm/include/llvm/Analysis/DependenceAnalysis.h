@@ -49,6 +49,7 @@
 namespace llvm {
 class AAResults;
 template <typename T> class ArrayRef;
+class BatchDelinearization;
 class Loop;
 class LoopInfo;
 class SCEVConstant;
@@ -333,10 +334,21 @@ private:
 };
 
 /// DependenceInfo - This class is the main dependence-analysis driver.
+///
+/// Batch delinearization is performed lazily when depends() is called. For each
+/// outermost loop, the first call to depends() with instructions in that loop
+/// will trigger batch delinearization for all memory accesses in the loop,
+/// ensuring consistent array dimensions across all accesses to the same base.
 class DependenceInfo {
 public:
-  DependenceInfo(Function *F, AAResults *AA, ScalarEvolution *SE, LoopInfo *LI)
-      : AA(AA), SE(SE), LI(LI), F(F) {}
+  LLVM_ABI DependenceInfo(Function *F, AAResults *AA, ScalarEvolution *SE,
+                          LoopInfo *LI);
+
+  LLVM_ABI ~DependenceInfo();
+
+  // Move operations needed for pass manager; copy is implicitly deleted.
+  DependenceInfo(DependenceInfo &&) = default;
+  DependenceInfo &operator=(DependenceInfo &&) = default;
 
   /// Handle transitive invalidation when the cached analysis results go away.
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
@@ -360,6 +372,14 @@ private:
   ScalarEvolution *SE;
   LoopInfo *LI;
   Function *F;
+
+  /// Cache of BatchDelinearization objects, one per outermost loop.
+  /// Lazily populated when depends() is called with instructions in a loop.
+  mutable SmallDenseMap<const Loop *, std::unique_ptr<BatchDelinearization>, 4>
+      BatchDelinCache;
+
+  /// Get or create BatchDelinearization for the given outermost loop.
+  BatchDelinearization *getOrCreateBatchDelin(Loop *L) const;
 
   /// Subscript - This private struct represents a pair of subscripts from
   /// a pair of potentially multi-dimensional array references. We use a

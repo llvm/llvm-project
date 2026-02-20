@@ -16,7 +16,7 @@ define void @prop0(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx5, align 4 --> Dst: store i32 %conv, ptr %arrayidx5, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx5, align 4 --> Dst: %0 = load i32, ptr %arrayidx8, align 4
-; CHECK-NEXT:    da analyze - flow [< >]!
+; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx5, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx8, align 4 --> Dst: %0 = load i32, ptr %arrayidx8, align 4
@@ -143,7 +143,7 @@ define void @prop2(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx4, align 4 --> Dst: store i32 %conv, ptr %arrayidx4, align 4
 ; CHECK-NEXT:    da analyze - consistent output [0 S]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx4, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
-; CHECK-NEXT:    da analyze - flow [> *]!
+; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx4, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
@@ -198,9 +198,9 @@ for.end10:                                        ; preds = %for.inc8
 define void @prop3(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'prop3'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx4, align 4 --> Dst: store i32 %conv, ptr %arrayidx4, align 4
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx4, align 4 --> Dst: %0 = load i32, ptr %arrayidx8, align 4
-; CHECK-NEXT:    da analyze - flow [<> *]!
+; CHECK-NEXT:    da analyze - flow [p<= >]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx4, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx8, align 4 --> Dst: %0 = load i32, ptr %arrayidx8, align 4
@@ -258,7 +258,7 @@ define void @prop4(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx6, align 4 --> Dst: store i32 %conv, ptr %arrayidx6, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx6, align 4 --> Dst: %0 = load i32, ptr %arrayidx10, align 4
-; CHECK-NEXT:    da analyze - flow [< <>]!
+; CHECK-NEXT:    da analyze - consistent flow [1 99]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx6, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx10, align 4 --> Dst: %0 = load i32, ptr %arrayidx10, align 4
@@ -317,7 +317,7 @@ define void @prop5(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx7, align 4 --> Dst: store i32 %conv, ptr %arrayidx7, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx7, align 4 --> Dst: %0 = load i32, ptr %arrayidx12, align 4
-; CHECK-NEXT:    da analyze - flow [* *|<]!
+; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx7, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx12, align 4 --> Dst: %0 = load i32, ptr %arrayidx12, align 4
@@ -377,7 +377,7 @@ define void @prop6(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx6, align 4 --> Dst: store i32 %conv, ptr %arrayidx6, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx6, align 4 --> Dst: %0 = load i32, ptr %arrayidx11, align 4
-; CHECK-NEXT:    da analyze - flow [=> <>]!
+; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx6, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx11, align 4 --> Dst: %0 = load i32, ptr %arrayidx11, align 4
@@ -499,7 +499,7 @@ define void @prop8(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx4, align 4 --> Dst: store i32 %conv, ptr %arrayidx4, align 4
 ; CHECK-NEXT:    da analyze - consistent output [S 0]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx4, align 4 --> Dst: %0 = load i32, ptr %arrayidx9, align 4
-; CHECK-NEXT:    da analyze - flow [=> <]!
+; CHECK-NEXT:    da analyze - flow [p=> 2]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx4, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx9, align 4 --> Dst: %0 = load i32, ptr %arrayidx9, align 4
@@ -557,7 +557,7 @@ define void @prop9(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx7, align 4 --> Dst: store i32 %conv, ptr %arrayidx7, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx7, align 4 --> Dst: %0 = load i32, ptr %arrayidx9, align 4
-; CHECK-NEXT:    da analyze - flow [<= <]!
+; CHECK-NEXT:    da analyze - flow [p<= 2]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx7, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx9, align 4 --> Dst: %0 = load i32, ptr %arrayidx9, align 4

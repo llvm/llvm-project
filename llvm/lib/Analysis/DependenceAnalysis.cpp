@@ -178,6 +178,31 @@ DependenceAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
   return DependenceInfo(&F, &AA, &SE, &LI);
 }
 
+DependenceInfo::DependenceInfo(Function *F, AAResults *AA, ScalarEvolution *SE,
+                               LoopInfo *LI)
+    : AA(AA), SE(SE), LI(LI), F(F) {}
+
+DependenceInfo::~DependenceInfo() = default;
+
+BatchDelinearization *DependenceInfo::getOrCreateBatchDelin(Loop *L) const {
+  if (!L)
+    return nullptr;
+
+  // Use the outermost loop for batch delinearization to ensure consistent
+  // array dimensions across all nested loops.
+  Loop *OutermostLoop = L->getOutermostLoop();
+
+  auto It = BatchDelinCache.find(OutermostLoop);
+  if (It != BatchDelinCache.end())
+    return It->second.get();
+
+  // Create and cache BatchDelinearization for this outermost loop.
+  auto BD = std::make_unique<BatchDelinearization>(*SE, *LI, *OutermostLoop);
+  auto *Result = BD.get();
+  BatchDelinCache[OutermostLoop] = std::move(BD);
+  return Result;
+}
+
 AnalysisKey DependenceAnalysis::Key;
 
 INITIALIZE_PASS_BEGIN(DependenceAnalysisWrapperPass, "da",
@@ -3241,6 +3266,27 @@ bool DependenceInfo::tryDelinearizeFixedSize(
     assert(SrcBase && DstBase && SrcBase == DstBase &&
            "expected src and dst scev unknowns to be equal");
   });
+
+  // Try to use cached subscripts from BatchDelinearization.
+  // This provides consistent array dimensions across all accesses in the loop.
+  // Only use batch delinearization when both Src and Dst are in the same
+  // outermost loop to ensure consistent array dimensions.
+  Loop *SrcLoop = LI->getLoopFor(Src->getParent());
+  Loop *DstLoop = LI->getLoopFor(Dst->getParent());
+  if (SrcLoop && DstLoop &&
+      SrcLoop->getOutermostLoop() == DstLoop->getOutermostLoop()) {
+    if (BatchDelinearization *BD = getOrCreateBatchDelin(SrcLoop)) {
+      const auto *SrcSubs = BD->getSubscripts(Src);
+      const auto *DstSubs = BD->getSubscripts(Dst);
+      if (SrcSubs && DstSubs && !SrcSubs->empty() && !DstSubs->empty() &&
+          SrcSubs->size() == DstSubs->size()) {
+        SrcSubscripts.assign(SrcSubs->begin(), SrcSubs->end());
+        DstSubscripts.assign(DstSubs->begin(), DstSubs->end());
+        LLVM_DEBUG(dbgs() << "Using cached batch delinearization results\n");
+        return true;
+      }
+    }
+  }
 
   const SCEV *ElemSize = SE->getElementSize(Src);
   assert(ElemSize == SE->getElementSize(Dst) && "Different element sizes");
