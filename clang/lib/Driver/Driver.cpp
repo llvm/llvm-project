@@ -5858,22 +5858,67 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
       Args.getLastArg(options::OPT_ftime_trace, options::OPT_ftime_trace_EQ);
   if (!A)
     return;
+
+  std::string OffloadingPrefix;
+  if (JA->getOffloadingDeviceKind() != Action::OFK_None) {
+    const ToolChain *TC = JA->getOffloadingToolChain();
+    OffloadingPrefix = Action::GetOffloadingFileNamePrefix(
+        JA->getOffloadingDeviceKind(),
+        TC ? TC->getTriple().normalize() : "",
+        /*CreatePrefixForHost=*/false);
+    if (const char *Arch = JA->getOffloadingArch()) {
+      OffloadingPrefix += "-";
+      OffloadingPrefix += Arch;
+    }
+  } else if (JA->getOffloadingHostActiveKinds() != Action::OFK_None &&
+             C.getDriver().isSaveTempsEnabled()) {
+    OffloadingPrefix = Action::GetOffloadingFileNamePrefix(
+        Action::OFK_None,
+        C.getDefaultToolChain().getTriple().normalize(),
+        /*CreatePrefixForHost=*/true);
+  }
+
   SmallString<128> Path;
   if (A->getOption().matches(options::OPT_ftime_trace_EQ)) {
     Path = A->getValue();
     if (llvm::sys::fs::is_directory(Path)) {
-      SmallString<128> Tmp(Result.getFilename());
-      llvm::sys::path::replace_extension(Tmp, "json");
-      llvm::sys::path::append(Path, llvm::sys::path::filename(Tmp));
+      // When -ftime-trace=<dir> and it's a directory:
+      // - For host/non-offload: use the output filename stem
+      // - For offload: use input filename stem + offloading prefix
+      SmallString<128> Tmp;
+      if (OffloadingPrefix.empty()) {
+        Tmp = llvm::sys::path::stem(Result.getFilename());
+      } else {
+        Tmp = llvm::sys::path::stem(BaseInput);
+        Tmp += OffloadingPrefix;
+      }
+      Tmp += ".json";
+      llvm::sys::path::append(Path, Tmp);
     }
   } else {
     if (Arg *DumpDir = Args.getLastArgNoClaim(options::OPT_dumpdir)) {
-      // The trace file is ${dumpdir}${basename}.json. Note that dumpdir may not
-      // end with a path separator.
+      // The trace file is ${dumpdir}${basename}${offloadprefix}.json. Note
+      // that dumpdir may not end with a path separator.
       Path = DumpDir->getValue();
-      Path += llvm::sys::path::filename(BaseInput);
+      Path += llvm::sys::path::stem(BaseInput);
+      Path += OffloadingPrefix;
+    } else if (!OffloadingPrefix.empty()) {
+      // For offloading, derive path from -o option or use current directory.
+      // The Result filename may be a temp file, so we use the -o output
+      // directory combined with the input filename and offload prefix.
+      if (Arg *FinalOutput = Args.getLastArg(options::OPT_o)) {
+        Path = llvm::sys::path::parent_path(FinalOutput->getValue());
+        if (!Path.empty())
+          Path += llvm::sys::path::get_separator();
+      }
+      Path += llvm::sys::path::stem(BaseInput);
+      Path += OffloadingPrefix;
     } else {
-      Path = Result.getFilename();
+      // Use the output filename stem for the trace file.
+      Path = llvm::sys::path::parent_path(Result.getFilename());
+      if (!Path.empty())
+        Path += llvm::sys::path::get_separator();
+      Path += llvm::sys::path::stem(Result.getFilename());
     }
     llvm::sys::path::replace_extension(Path, "json");
   }
@@ -6132,7 +6177,7 @@ InputInfoList Driver::BuildJobsForActionNoCache(
                                              AtTopLevel, MultipleArchs,
                                              OffloadingPrefix),
                        BaseInput);
-    if (T->canEmitIR() && OffloadingPrefix.empty())
+    if (T->canEmitIR())
       handleTimeTrace(C, Args, JA, BaseInput, Result);
   }
 
