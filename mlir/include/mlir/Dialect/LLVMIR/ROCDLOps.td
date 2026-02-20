@@ -286,15 +286,28 @@ class ROCDL_MbcntOp<string mnemonic> :
     $in0 `,` $in1  attr-dict `:` `(` type($in0) `,` type($in1) `)` `->` type($res)
    }];
   let description = [{
-    Masked bit count of active threads in a wavefront.
+    Masked bit count of threads below the current lane in a wavefront.
+
+    `in0` is a 32-bit mask that is AND-ed with the relevant half of the
+    execution mask and the bits below the current lane; `in1` is added
+    to the resulting popcount:
+
+    - **lo**: `in1 + popcount(in0 & exec_lo & ((1 << min(lane_id, 32)) - 1))`
+    - **hi**: `in1 + popcount(in0 & exec_hi & ((1 << saturating_usub(lane_id, 32)) - 1))`
+
+    To obtain a unique thread index within a wave64, chain the two ops
+    with `in0 = -1` (all bits set):
 
     Example:
     ```mlir
-    // Count active threads in the low 32 lanes.
-    %lo = rocdl.mbcnt.lo %mask, %base : (i32, i32) -> i32
+    %all_ones = arith.constant -1 : i32
+    %zero = arith.constant 0 : i32
 
-    // Count active threads in the high 32 lanes.
-    %hi = rocdl.mbcnt.hi %mask, %lo : (i32, i32) -> i32
+    // Count active threads below this lane in the low 32 lanes.
+    %lo = rocdl.mbcnt.lo %all_ones, %zero : (i32, i32) -> i32
+
+    // Add the count from the high 32 lanes to get the full lane index.
+    %hi = rocdl.mbcnt.hi %all_ones, %lo : (i32, i32) -> i32
     ```
   }];
 }
@@ -312,6 +325,11 @@ def ROCDL_DsSwizzleOp : ROCDL_ConcreteNonMemIntrOp<"ds_swizzle", [], 1>,
   let description = [{
     Perform a data-sharing swizzle operation within a wavefront.
 
+    The `offset` operand encodes the *swizzle pattern* that will be placed in the
+    instruction's `offset` field (i.e., the pattern used by `ds_swizzle_b32`).
+    See https://llvm.org/docs/AMDGPUModifierSyntax.html#swizzle-pattern for
+    how this 16-bit pattern is constructed.
+
     Example:
     ```mlir
     // Swizzle data within a wavefront.
@@ -328,11 +346,17 @@ def ROCDL_DsBpermuteOp : ROCDL_ConcreteNonMemIntrOp<"ds_bpermute", [], 1>,
     $index `,` $src  attr-dict `:` `(` type($index) `,` type($src) `)` `->` type($res)
    }];
   let description = [{
-    Perform a backward permute operation across lanes using LDS hardware.
+    Perform a backward permute (pull) operation across lanes using DS/LDS permute hardware.
+
+    Each lane reads the value of `src` from the lane whose byte address is
+    given by `index` (i.e. lane id = `index / 4`).
+    
+    This is “backward” (pull) in contrast to `ds_permute_b32`, which is
+    “forward” (push/scatter).
 
     Example:
     ```mlir
-    // Backward permute across lanes.
+    // Backward permute across lanes (pull from selected lane).
     %0 = rocdl.ds_bpermute %index, %src : (i32, i32) -> i32
     ```
   }];
@@ -503,6 +527,9 @@ def ROCDL_SBarrierOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier", [], 0> {
   let description = [{
     Insert a workgroup barrier without memory fences.
 
+    Available on gfx9 and later but deprecated on gfx12+; see
+    `rocdl.s.barrier.signal` and `rocdl.s.barrier.wait` instead.
+
     Example:
     ```mlir
     // Synchronize threads within a workgroup.
@@ -575,7 +602,7 @@ def ROCDL_BarrierSignalVarOp : ROCDL_IntrOp<"s.barrier.signal.var", [], [], [], 
 
     Example:
     ```mlir
-    // Signal a named barrier with variable member count.
+    // Signal a named barrier with variable ID.
     rocdl.s.barrier.signal.var %ptr member_cnt = 1 : !llvm.ptr<3>
     ```
   }];
@@ -618,7 +645,7 @@ def ROCDL_BarrierWaitOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.wait", [], 0, [0
   let results = (outs);
   let assemblyFormat = "`id` `=` $id attr-dict";
   let description = [{
-    Wait on a barrier by id. Available on gfx1250+.
+    Wait on a barrier by id. Available on gfx1200+.
 
     Example:
     ```mlir
@@ -631,7 +658,7 @@ def ROCDL_BarrierWaitOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.wait", [], 0, [0
 def ROCDL_BarrierSignalIsfirstOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.signal.isfirst", [], 1, [0], ["id"]>,
   Arguments<(ins I32Attr:$id)> {
   let description = [{
-    Available on gfx1250+.
+    Available on gfx1200+.
 
     Example:
     ```mlir
@@ -646,7 +673,7 @@ def ROCDL_BarrierSignalIsfirstOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.signal.
 def ROCDL_GetBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.barrier.state", [], 1, [0], ["id"]>,
   Arguments<(ins I32Attr:$id)> {
   let description = [{
-    Available on gfx1250+.
+    Available on gfx1200+.
 
     Example:
     ```mlir
@@ -889,7 +916,12 @@ def ROCDL_SchedBarrier : ROCDL_ConcreteNonMemIntrOp<"sched.barrier", [], 0, [0],
   Arguments<(ins I32Attr:$mask)> {
   let assemblyFormat = "$mask attr-dict";
   let description = [{
-    Insert a scheduling barrier with the given mask.
+    Insert a scheduling barrier with the given mask. The mask is a
+    bitfield that controls which instruction types may be scheduled
+    across the barrier (e.g. `0x0000` = no instructions may cross,
+    `0x0001` = ALU only, `0x0010` = all VMEM, etc.). See
+    https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/IR/IntrinsicsAMDGPU.td#L349
+    for the full list of mask values.
 
     Example:
     ```mlir
@@ -2908,8 +2940,7 @@ class ROCDL_Math_IntrOp<string mnemonic, list<Trait> traits = [Pure]> :
 
     Example:
     ```mlir
-    // Scalar math operation.
-    %0 = rocdl.tanh %a f32 -> f32
+    %0 = rocdl.}] # mnemonic # [{ %a f32 -> f32
     ```
   }];
   let assemblyFormat =
