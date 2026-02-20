@@ -168,6 +168,9 @@ __m128 test_mm_cmpgt_ps(__m128 __a, __m128 __b) {
 TEST_CONSTEXPR(match_m128(_mm_cmpgt_ps((__m128){+3.0f, +5.0f, +1.0f, +9.0f}, (__m128){+1.0f, +5.0f, +2.0f, +4.0f}), ALL_ONES_F, +0.0f, +0.0f, ALL_ONES_F));
 TEST_CONSTEXPR(match_m128(_mm_cmpgt_ps((__m128){-3.0f, +2.0f, +7.0f, +0.0f}, (__m128){-4.0f, +3.0f, +7.0f, -1.0f}), ALL_ONES_F, +0.0f, +0.0f, ALL_ONES_F));
 TEST_CONSTEXPR(match_m128(_mm_cmpgt_ps((__m128){__builtin_nanf(""), +4.0f, +6.0f, +8.0f}, (__m128){+1.0f, +3.0f, +5.0f, +7.0f}), +0.0f, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128((__m128)__builtin_ia32_cmpgtps((__v4sf)((__m128){+3.0f, +5.0f, +1.0f, __builtin_nanf("")}),
+                                                         (__v4sf)((__m128){+1.0f, +5.0f, +2.0f, +0.0f})),
+                           ALL_ONES_F, +0.0f, +0.0f, +0.0f));
 
 __m128 test_mm_cmpgt_ss(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpgt_ss
@@ -178,6 +181,9 @@ __m128 test_mm_cmpgt_ss(__m128 __a, __m128 __b) {
 TEST_CONSTEXPR(match_m128(_mm_cmpgt_ss((__m128){+3.0f, +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +9.0f, +8.0f, +7.0f}), ALL_ONES_F, +2.0f, +3.0f, +4.0f));
 TEST_CONSTEXPR(match_m128(_mm_cmpgt_ss((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+3.0f, +9.0f, +8.0f, +7.0f}), +0.0f, +2.0f, +3.0f, +4.0f));
 TEST_CONSTEXPR(match_m128(_mm_cmpgt_ss((__m128){__builtin_nanf(""), +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +9.0f, +8.0f, +7.0f}), +0.0f, +2.0f, +3.0f, +4.0f));
+TEST_CONSTEXPR(match_m128((__m128)__builtin_ia32_cmpgtss((__v4sf)((__m128){+3.0f, +2.0f, +3.0f, +4.0f}),
+                                                         (__v4sf)((__m128){+1.0f, +9.0f, +8.0f, +7.0f})),
+                           ALL_ONES_F, +2.0f, +3.0f, +4.0f));
 
 __m128 test_mm_cmple_ps(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmple_ps
@@ -231,12 +237,14 @@ __m128 test_mm_cmpneq_ps(__m128 __a, __m128 __b) {
   // CHECK-NEXT:    ret <4 x float> [[BC]]
   return _mm_cmpneq_ps(__a, __b);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmpneq_ps((__m128){+1.0f, +2.0f, +3.0f, __builtin_nanf("")}, (__m128){+1.0f, +9.0f, +3.0f, +4.0f}), +0.0f, ALL_ONES_F, +0.0f, ALL_ONES_F));
 
 __m128 test_mm_cmpneq_ss(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpneq_ss
   // CHECK: @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 4)
   return _mm_cmpneq_ss(__a, __b);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmpneq_ss((__m128){__builtin_nanf(""), +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +8.0f, +7.0f, +6.0f}), ALL_ONES_F, +2.0f, +3.0f, +4.0f));
 
 __m128 test_mm_cmpnge_ps(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpnge_ps
@@ -246,6 +254,7 @@ __m128 test_mm_cmpnge_ps(__m128 __a, __m128 __b) {
   // CHECK-NEXT:    ret <4 x float> [[BC]]
   return _mm_cmpnge_ps(__a, __b);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmpnge_ps((__m128){+1.0f, +4.0f, __builtin_nanf(""), +5.0f}, (__m128){+1.0f, +3.0f, +2.0f, +7.0f}), +0.0f, +0.0f, ALL_ONES_F, ALL_ONES_F));
 
 __m128 test_mm_cmpnge_ss(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpnge_ss
@@ -253,6 +262,7 @@ __m128 test_mm_cmpnge_ss(__m128 __a, __m128 __b) {
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
   return _mm_cmpnge_ss(__a, __b);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmpnge_ss((__m128){+4.0f, +2.0f, +3.0f, +4.0f}, (__m128){+3.0f, +9.0f, +8.0f, +7.0f}), +0.0f, +2.0f, +3.0f, +4.0f));
 
 __m128 test_mm_cmpngt_ps(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpngt_ps
@@ -262,6 +272,7 @@ __m128 test_mm_cmpngt_ps(__m128 __a, __m128 __b) {
   // CHECK-NEXT:    ret <4 x float> [[BC]]
   return _mm_cmpngt_ps(__a, __b);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmpngt_ps((__m128){+1.0f, +4.0f, __builtin_nanf(""), +7.0f}, (__m128){+1.0f, +5.0f, +2.0f, +7.0f}), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
 
 __m128 test_mm_cmpngt_ss(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpngt_ss
@@ -269,6 +280,7 @@ __m128 test_mm_cmpngt_ss(__m128 __a, __m128 __b) {
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
   return _mm_cmpngt_ss(__a, __b);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmpngt_ss((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +9.0f, +8.0f, +7.0f}), ALL_ONES_F, +2.0f, +3.0f, +4.0f));
 
 __m128 test_mm_cmpnle_ps(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpnle_ps
@@ -278,12 +290,14 @@ __m128 test_mm_cmpnle_ps(__m128 __a, __m128 __b) {
   // CHECK-NEXT:    ret <4 x float> [[BC]]
   return _mm_cmpnle_ps(__a, __b);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmpnle_ps((__m128){+1.0f, +4.0f, __builtin_nanf(""), +5.0f}, (__m128){+1.0f, +3.0f, +2.0f, +7.0f}), +0.0f, ALL_ONES_F, ALL_ONES_F, +0.0f));
 
 __m128 test_mm_cmpnle_ss(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpnle_ss
   // CHECK: @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 6)
   return _mm_cmpnle_ss(__a, __b);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmpnle_ss((__m128){+2.0f, +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +9.0f, +8.0f, +7.0f}), ALL_ONES_F, +2.0f, +3.0f, +4.0f));
 
 __m128 test_mm_cmpnlt_ps(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpnlt_ps
@@ -293,12 +307,14 @@ __m128 test_mm_cmpnlt_ps(__m128 __a, __m128 __b) {
   // CHECK-NEXT:    ret <4 x float> [[BC]]
   return _mm_cmpnlt_ps(__a, __b);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmpnlt_ps((__m128){+1.0f, +4.0f, __builtin_nanf(""), +7.0f}, (__m128){+1.0f, +5.0f, +2.0f, +7.0f}), ALL_ONES_F, +0.0f, ALL_ONES_F, ALL_ONES_F));
 
 __m128 test_mm_cmpnlt_ss(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpnlt_ss
   // CHECK: @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 5)
   return _mm_cmpnlt_ss(__a, __b);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmpnlt_ss((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +9.0f, +8.0f, +7.0f}), ALL_ONES_F, +2.0f, +3.0f, +4.0f));
 
 __m128 test_mm_cmpord_ps(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpord_ps
@@ -308,12 +324,14 @@ __m128 test_mm_cmpord_ps(__m128 __a, __m128 __b) {
   // CHECK-NEXT:    ret <4 x float> [[BC]]
   return _mm_cmpord_ps(__a, __b);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmpord_ps((__m128){+1.0f, __builtin_nanf(""), +3.0f, +4.0f}, (__m128){+5.0f, +6.0f, +7.0f, +8.0f}), ALL_ONES_F, +0.0f, ALL_ONES_F, ALL_ONES_F));
 
 __m128 test_mm_cmpord_ss(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpord_ss
   // CHECK: @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 7)
   return _mm_cmpord_ss(__a, __b);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmpord_ss((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+5.0f, +9.0f, +8.0f, +7.0f}), ALL_ONES_F, +2.0f, +3.0f, +4.0f));
 
 __m128 test_mm_cmpunord_ps(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpunord_ps
@@ -323,12 +341,14 @@ __m128 test_mm_cmpunord_ps(__m128 __a, __m128 __b) {
   // CHECK-NEXT:    ret <4 x float> [[BC]]
   return _mm_cmpunord_ps(__a, __b);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmpunord_ps((__m128){+1.0f, __builtin_nanf(""), +3.0f, __builtin_nanf("")}, (__m128){+5.0f, +6.0f, +7.0f, +8.0f}), +0.0f, ALL_ONES_F, +0.0f, ALL_ONES_F));
 
 __m128 test_mm_cmpunord_ss(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpunord_ss
   // CHECK: @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 3)
   return _mm_cmpunord_ss(__a, __b);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmpunord_ss((__m128){__builtin_nanf(""), +2.0f, +3.0f, +4.0f}, (__m128){+5.0f, +9.0f, +8.0f, +7.0f}), ALL_ONES_F, +2.0f, +3.0f, +4.0f));
 
 int test_mm_comieq_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comieq_ss
