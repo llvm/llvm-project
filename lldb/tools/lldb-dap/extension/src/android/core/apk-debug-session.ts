@@ -216,9 +216,15 @@ export class ApkDebugSession {
       componentName = parts[0] + "/.MainActivity";
     }
 
-    await adb.shellCommand(
+    let result = await adb.shellCommandToString(
       `am start -n ${componentName} -a android.intent.action.MAIN -c android.intent.category.LAUNCHER ${wfd ? "-D" : ""}`,
     );
+    if (result.includes("Error")) {
+      const errorMessage = result
+        .split("\n")
+        .find((line) => line.startsWith("Error:"));
+      throw new Error(`Failed to start the app.\n${errorMessage ?? result}`);
+    }
 
     const t1 = Date.now();
     for (;;) {
