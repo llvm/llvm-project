@@ -115,6 +115,7 @@ namespace {
 
 /// Types of dependence test routines.
 enum class DependenceTestType {
+  Default, /// All tests except BanerjeeMIV
   All,
   StrongSIV,
   WeakCrossingSIV,
@@ -129,13 +130,16 @@ enum class DependenceTestType {
 } // anonymous namespace
 
 static cl::opt<DependenceTestType> EnableDependenceTest(
-    "da-enable-dependence-test", cl::init(DependenceTestType::All),
+    "da-enable-dependence-test", cl::init(DependenceTestType::Default),
     cl::ReallyHidden,
     cl::desc("Run only specified dependence test routine and disable others. "
              "The purpose is mainly to exclude the influence of other "
              "dependence test routines in regression tests. If set to All, all "
              "dependence test routines are enabled."),
-    cl::values(clEnumValN(DependenceTestType::All, "all",
+    cl::values(clEnumValN(DependenceTestType::Default, "default",
+                          "Enable all dependence test routines except "
+                          "Banerjee MIV (default)."),
+               clEnumValN(DependenceTestType::All, "all",
                           "Enable all dependence test routines."),
                clEnumValN(DependenceTestType::StrongSIV, "strong-siv",
                           "Enable only Strong SIV test."),
@@ -1203,6 +1207,11 @@ static const SCEV *absSCEVNoSignedOverflow(const SCEV *A, ScalarEvolution &SE) {
 static bool isDependenceTestEnabled(DependenceTestType Test) {
   if (EnableDependenceTest == DependenceTestType::All)
     return true;
+  // The Banerjee test is disabled by default because of correctness issues,
+  // but can be enabled with -da-enable-dependence-test=banerjee-miv or
+  // -da-enable-dependence-test=all.
+  if (EnableDependenceTest == DependenceTestType::Default)
+    return Test != DependenceTestType::BanerjeeMIV;
   return EnableDependenceTest == Test;
 }
 
