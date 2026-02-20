@@ -8369,7 +8369,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     return nullptr;
 
   // Create whole-vector selects for find-last recurrences.
-  if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan))
+  if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan,
+                      CM.foldTailByMasking()))
     return nullptr;
 
   // Create partial reduction recipes for scaled reductions and transform
@@ -8486,6 +8487,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     if (!PhiR || isa<VPIRValue>(PhiR->getOperand(1)))
       continue;
 
+    RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
     const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(
         cast<PHINode>(PhiR->getUnderlyingInstr()));
     Type *PhiTy = TypeInfo.inferScalarType(PhiR);
@@ -8510,7 +8512,12 @@ void LoopVectorizationPlanner::addReductionResultComputation(
                     m_VPInstruction<VPInstruction::ComputeAnyOfResult>(),
                     m_VPInstruction<VPInstruction::ComputeReductionResult>()));
       });
-      if (CM.usePredicatedReductionSelect())
+
+      // Note: For FindLast recurrences we prefer a predicated select to
+      // simplify matching in handleFindLastReductions(), rather than handle
+      // multiple cases.
+      if (CM.usePredicatedReductionSelect() ||
+          RecurrenceDescriptor::isFindLastRecurrenceKind(RecurrenceKind))
         PhiR->setOperand(1, NewExitingVPV);
     }
 
@@ -8530,7 +8537,6 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     VPInstruction *FinalReductionResult;
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(MiddleVPBB, IP);
-    RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
     // For AnyOf reductions, find the select among PhiR's users. This is used
     // both to find NewVal for ComputeAnyOfResult and to adjust the reduction.
     VPRecipeBase *AnyOfSelect = nullptr;
