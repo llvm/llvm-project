@@ -3791,7 +3791,8 @@ bool SIRegisterInfo::isAGPR(const MachineRegisterInfo &MRI,
 
 unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
                                              MachineFunction &MF) const {
-  unsigned MinOcc = ST.getOccupancyWithWorkGroupSizes(MF).first;
+  unsigned MinOcc = ST.getWavesPerEU(MF.getFunction()).first;
+
   switch (RC->getID()) {
   default:
     return AMDGPUGenRegisterInfo::getRegPressureLimit(RC, MF);
