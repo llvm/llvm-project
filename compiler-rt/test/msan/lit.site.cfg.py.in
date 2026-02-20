@@ -6,6 +6,7 @@ config.target_cflags = "@MSAN_TEST_TARGET_CFLAGS@"
 config.target_arch = "@MSAN_TEST_TARGET_ARCH@"
 config.use_lld = @MSAN_TEST_USE_LLD@
 config.use_thinlto = @MSAN_TEST_USE_THINLTO@
+config.cmake_sysroot = "@CMAKE_SYSROOT@"
 
 # Load common config for all compiler-rt lit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
