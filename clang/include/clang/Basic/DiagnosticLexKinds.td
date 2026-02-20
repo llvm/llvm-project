@@ -489,6 +489,8 @@ def err_pp_missing_lparen_in_vaopt_use : Error<
 def err_pp_vaopt_nested_use : Error<
   "__VA_OPT__ cannot be nested within its own replacement tokens">;
 
+def err_pp_macro_recursion_depth_limit_exceeded : Error<
+  "macro recursion depth limit exceeded">;
 def err_vaopt_paste_at_start : Error<
   "'##' cannot appear at start of __VA_OPT__ argument">;
 

@@ -55,7 +55,7 @@ class MacroInfo {
   IdentifierInfo **ParameterList = nullptr;
 
   /// This is the list of tokens that the macro is defined to.
-  const Token *ReplacementTokens = nullptr;
+  Token *ReplacementTokens = nullptr;
 
   /// \see ParameterList
   unsigned NumParameters = 0;
@@ -65,6 +65,10 @@ class MacroInfo {
 
   /// Length in characters of the macro definition.
   mutable unsigned DefinitionLength;
+
+  /// True only for inner-impl '__THIS_MACRO__', enables expansion anyway
+  bool AllowRecurse : 1;
+
   mutable bool IsDefinitionLengthCached : 1;
 
   /// True if this macro is function-like, false if it is object-like.
@@ -96,12 +100,6 @@ class MacroInfo {
   //===--------------------------------------------------------------------===//
   // State that changes as the macro is used.
 
-  /// True if we have started an expansion of this macro already.
-  ///
-  /// This disables recursive expansion, which would be quite bad for things
-  /// like \#define A A.
-  bool IsDisabled : 1;
-
   /// True if this macro is either defined in the main file and has
   /// been used, or if it is not defined in the main file.
   ///
@@ -116,6 +114,12 @@ class MacroInfo {
 
   /// Whether this macro was used as header guard.
   bool UsedForHeaderGuard : 1;
+
+  enum : uint16_t { macro_recursion_depth_limit = 16'000 };
+  /// recursion depth,
+  /// > 0 if we have started an expansion of this macro already.
+  /// if !AllowRecurse max is 1, else max is recursion depth limit
+  uint16_t Depth = 0;
 
   // Only the Preprocessor gets to create these.
   MacroInfo(SourceLocation DefLoc);
@@ -182,8 +186,11 @@ public:
   param_iterator param_begin() const { return ParameterList; }
   param_iterator param_end() const { return ParameterList + NumParameters; }
   unsigned getNumParams() const { return NumParameters; }
+  ArrayRef<IdentifierInfo *> params() {
+    return ArrayRef<IdentifierInfo *>(ParameterList, NumParameters);
+  }
   ArrayRef<const IdentifierInfo *> params() const {
-    return ArrayRef<const IdentifierInfo *>(ParameterList, NumParameters);
+    return const_cast<MacroInfo *>(this)->params();
   }
 
   /// Return the parameter number of the specified identifier,
@@ -246,6 +253,9 @@ public:
     return ReplacementTokens + NumReplacementTokens;
   }
   bool tokens_empty() const { return NumReplacementTokens == 0; }
+  MutableArrayRef<Token> tokens() {
+    return llvm::MutableArrayRef(ReplacementTokens, NumReplacementTokens);
+  }
   ArrayRef<Token> tokens() const {
     return llvm::ArrayRef(ReplacementTokens, NumReplacementTokens);
   }
@@ -278,16 +288,22 @@ public:
   /// Return true if this macro is enabled.
   ///
   /// In other words, that we are not currently in an expansion of this macro.
-  bool isEnabled() const { return !IsDisabled; }
+  bool isEnabled() const {
+    // macro disabled if depth exceeds and stops infinite recursion
+    return AllowRecurse ? Depth < macro_recursion_depth_limit : Depth == 0;
+  }
+  void setAllowRecursive(bool Allow) { AllowRecurse = Allow; }
+  bool isAllowRecurse() const { return AllowRecurse; }
 
   void EnableMacro() {
-    assert(IsDisabled && "Cannot enable an already-enabled macro!");
-    IsDisabled = false;
+    assert(Depth != 0 && "Cannot enable not disabled macro");
+    --Depth;
   }
 
-  void DisableMacro() {
-    assert(!IsDisabled && "Cannot disable an already-disabled macro!");
-    IsDisabled = true;
+  [[nodiscard("infinite recursion check ignored")]] bool TryDisableMacro() {
+    assert((AllowRecurse || Depth == 0) &&
+           "Cannot disable an already-disabled macro!");
+    return ++Depth < macro_recursion_depth_limit;
   }
 
   /// Determine whether this macro was used for a header guard.

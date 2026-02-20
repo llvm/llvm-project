@@ -47,7 +47,7 @@ static_assert(MacroInfoSizeChecker<sizeof(void *)>::AsExpected,
 MacroInfo::MacroInfo(SourceLocation DefLoc)
     : Location(DefLoc), IsDefinitionLengthCached(false), IsFunctionLike(false),
       IsC99Varargs(false), IsGNUVarargs(false), IsBuiltinMacro(false),
-      HasCommaPasting(false), IsDisabled(false), IsUsed(false),
+      HasCommaPasting(false), AllowRecurse(false), IsUsed(false),
       IsAllowRedefinitionsWithoutWarning(false), IsWarnIfUnused(false),
       UsedForHeaderGuard(false) {}
 
@@ -150,8 +150,11 @@ LLVM_DUMP_METHOD void MacroInfo::dump() const {
   // FIXME: Dump locations.
   Out << "MacroInfo " << this;
   if (IsBuiltinMacro) Out << " builtin";
-  if (IsDisabled) Out << " disabled";
+  if (!isEnabled())
+    Out << " disabled";
   if (IsUsed) Out << " used";
+  if (AllowRecurse)
+    Out << " allow_recurse";
   if (IsAllowRedefinitionsWithoutWarning)
     Out << " allow_redefinitions_without_warning";
   if (IsWarnIfUnused) Out << " warn_if_unused";
