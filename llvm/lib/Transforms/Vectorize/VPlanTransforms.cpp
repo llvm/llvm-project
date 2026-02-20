@@ -997,12 +997,14 @@ static VPValue *optimizeLatchExitInductionUser(
     DenseMap<VPValue *, VPValue *> &EndValues, PredicatedScalarEvolution &PSE) {
   VPValue *Incoming;
   VPWidenInductionRecipe *WideIV = nullptr;
-  if (match(Op, m_ExitingIVValue(m_VPValue(), m_VPValue(Incoming)))) {
-    WideIV = getOptimizableIVOf(Op->getDefiningRecipe()->getOperand(0), PSE);
-    assert(WideIV && "must have an optimizable IV");
-  } else if (match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming)))) {
+  if (match(Op, m_ExitingIVValue(m_VPValue(Incoming)))) {
     WideIV = getOptimizableIVOf(Incoming, PSE);
+    assert(WideIV && "must have an optimizable IV");
+    return EndValues.lookup(WideIV);
   }
+
+  if (match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))
+    WideIV = getOptimizableIVOf(Incoming, PSE);
 
   if (!WideIV)
     return nullptr;
@@ -5509,7 +5511,7 @@ static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
 }
 
 void VPlanTransforms::updateScalarResumePhis(
-    VPlan &Plan, DenseMap<VPValue *, VPValue *> &IVEndValues) {
+    VPlan &Plan, DenseMap<VPValue *, VPValue *> &IVEndValues, bool FoldTail) {
   VPTypeAnalysis TypeInfo(Plan);
   auto *ScalarPH = Plan.getScalarPreheader();
   auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPH->getPredecessors()[0]);
@@ -5524,8 +5526,11 @@ void VPlanTransforms::updateScalarResumePhis(
     // pre-computed end value together in optimizeInductionExitUsers.
     auto *VectorPhiR = cast<VPHeaderPHIRecipe>(ResumePhiR->getOperand(0));
     if (auto *WideIVR = dyn_cast<VPWidenInductionRecipe>(VectorPhiR)) {
+      VPValue *TC = !FoldTail
+                        ? static_cast<VPValue *>(&Plan.getVectorTripCount())
+                        : Plan.getTripCount();
       if (VPValue *EndValue = tryToComputeEndValueForInduction(
-              WideIVR, VectorPHBuilder, TypeInfo, &Plan.getVectorTripCount())) {
+              WideIVR, VectorPHBuilder, TypeInfo, TC)) {
         IVEndValues[WideIVR] = EndValue;
         ResumePhiR->setOperand(0, EndValue);
         ResumePhiR->setName("bc.resume.val");
