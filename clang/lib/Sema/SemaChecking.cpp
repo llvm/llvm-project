@@ -2819,6 +2819,14 @@ static ExprResult BuiltinVectorMathConversions(Sema &S, Expr *E) {
   return S.UsualUnaryFPConversions(Res.get());
 }
 
+static QualType getVectorElementType(ASTContext &Context, QualType VecTy) {
+  if (const auto *TyA = VecTy->getAs<VectorType>())
+    return TyA->getElementType();
+  if (VecTy->isSizelessVectorType())
+    return VecTy->getSizelessVectorEltType(Context);
+  return QualType();
+}
+
 ExprResult
 Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                CallExpr *TheCall) {
@@ -3669,19 +3677,53 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
 
     const Expr *Arg = TheCall->getArg(0);
-    const auto *TyA = Arg->getType()->getAs<VectorType>();
 
-    QualType ElTy;
-    if (TyA)
-      ElTy = TyA->getElementType();
-    else if (Arg->getType()->isSizelessVectorType())
-      ElTy = Arg->getType()->getSizelessVectorEltType(Context);
-
+    QualType ElTy = getVectorElementType(Context, Arg->getType());
     if (ElTy.isNull() || !ElTy->isIntegerType()) {
       Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
           << 1 << /* vector of */ 4 << /* int */ 1 << /* no fp */ 0
           << Arg->getType();
       return ExprError();
+    }
+
+    TheCall->setType(ElTy);
+    break;
+  }
+
+  case Builtin::BI__builtin_reduce_assoc_fadd:
+  case Builtin::BI__builtin_reduce_in_order_fadd: {
+    // For in-order reductions require the user to specify the start value.
+    bool InOrder = BuiltinID == Builtin::BI__builtin_reduce_in_order_fadd;
+    if (InOrder ? checkArgCount(TheCall, 2) : checkArgCountRange(TheCall, 1, 2))
+      return ExprError();
+
+    ExprResult Vec = UsualUnaryConversions(TheCall->getArg(0));
+    if (Vec.isInvalid())
+      return ExprError();
+
+    TheCall->setArg(0, Vec.get());
+
+    QualType ElTy = getVectorElementType(Context, Vec.get()->getType());
+    if (ElTy.isNull() || !ElTy->isRealFloatingType()) {
+      Diag(Vec.get()->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << 1 << /* vector of */ 4 << /* no int */ 0 << /* fp */ 1
+          << Vec.get()->getType();
+      return ExprError();
+    }
+
+    if (TheCall->getNumArgs() == 2) {
+      ExprResult StartValue = UsualUnaryConversions(TheCall->getArg(1));
+      if (StartValue.isInvalid())
+        return ExprError();
+
+      if (!StartValue.get()->getType()->isRealFloatingType()) {
+        Diag(StartValue.get()->getBeginLoc(),
+             diag::err_builtin_invalid_arg_type)
+            << 2 << /* scalar */ 1 << /* no int */ 0 << /* fp */ 1
+            << StartValue.get()->getType();
+        return ExprError();
+      }
+      TheCall->setArg(1, StartValue.get());
     }
 
     TheCall->setType(ElTy);

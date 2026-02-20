@@ -926,27 +926,31 @@ Example:
 
 Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
 
-======================================= ====================================================================== ==================================
-         Name                            Operation                                                              Supported element types
-======================================= ====================================================================== ==================================
- ET __builtin_reduce_max(VT a)           return the largest element of the vector. The floating point result    integer and floating point types
-                                         will always be a number unless all elements of the vector are NaN.
- ET __builtin_reduce_min(VT a)           return the smallest element of the vector. The floating point result   integer and floating point types
-                                         will always be a number unless all elements of the vector are NaN.
- ET __builtin_reduce_add(VT a)           \+                                                                     integer types
- ET __builtin_reduce_mul(VT a)           \*                                                                     integer types
- ET __builtin_reduce_and(VT a)           &                                                                      integer types
- ET __builtin_reduce_or(VT a)            \|                                                                     integer types
- ET __builtin_reduce_xor(VT a)           ^                                                                      integer types
- ET __builtin_reduce_maximum(VT a)       return the largest element of the vector. Follows IEEE 754-2019        floating point types
-                                         semantics, see `LangRef
-                                         <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
-                                         for the comparison.
- ET __builtin_reduce_minimum(VT a)       return the smallest element of the vector. Follows IEEE 754-2019       floating point types
-                                         semantics, see `LangRef
-                                         <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
-                                         for the comparison.
-======================================= ====================================================================== ==================================
+============================================== ====================================================================== ==================================
+         Name                                   Operation                                                              Supported element types
+============================================== ====================================================================== ==================================
+ ET __builtin_reduce_max(VT a)                  return the largest element of the vector. The floating point result    integer and floating point types
+                                                will always be a number unless all elements of the vector are NaN.
+ ET __builtin_reduce_min(VT a)                  return the smallest element of the vector. The floating point result   integer and floating point types
+                                                will always be a number unless all elements of the vector are NaN.
+ ET __builtin_reduce_add(VT a)                  \+                                                                     integer types
+ ET __builtin_reduce_mul(VT a)                  \*                                                                     integer types
+ ET __builtin_reduce_and(VT a)                  &                                                                      integer types
+ ET __builtin_reduce_or(VT a)                   \|                                                                     integer types
+ ET __builtin_reduce_xor(VT a)                  ^                                                                      integer types
+ ET __builtin_reduce_maximum(VT a)              return the largest element of the vector. Follows IEEE 754-2019        floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
+                                                for the comparison.
+ ET __builtin_reduce_minimum(VT a)              return the smallest element of the vector. Follows IEEE 754-2019       floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
+                                                for the comparison.
+ ET __builtin_reduce_assoc_fadd(VT a)           floating-point associative fadd reduction.                              floating point types
+ ET __builtin_reduce_in_order_fadd(VT a, ET s)  in order floating-point fadd reduction, initializing the accumulator    floating point types
+                                                with `(ET)s`, then adding each lane of the `a` in-order, starting
+                                                from lane 0.
+============================================== ====================================================================== ==================================
 
 *Masked Builtins*
 
@@ -975,15 +979,15 @@ Example:
     using v8i = int [[clang::ext_vector_type(8)]];
 
     v8i load(v8b mask, int *ptr) { return __builtin_masked_load(mask, ptr); }
-    
+
     v8i load_expand(v8b mask, int *ptr) {
       return __builtin_masked_expand_load(mask, ptr);
     }
-    
+
     void store(v8b mask, v8i val, int *ptr) {
       __builtin_masked_store(mask, val, ptr);
     }
-    
+
     void store_compress(v8b mask, v8i val, int *ptr) {
       __builtin_masked_compress_store(mask, val, ptr);
     }
@@ -1075,7 +1079,7 @@ The matrix type extension supports explicit casts. Implicit type conversion betw
 
 The matrix type extension supports column and row major memory layouts, but not
 all builtins are supported with row-major layout. The layout defaults to column
-major and can be specified using `-fmatrix-memory-layout`. To enable column 
+major and can be specified using `-fmatrix-memory-layout`. To enable column
 major layout, use `-fmatrix-memory-layout=column-major`, and for row major
 layout use `-fmatrix-memory-layout=row-major`
 

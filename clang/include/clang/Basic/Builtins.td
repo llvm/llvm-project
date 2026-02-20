@@ -1664,6 +1664,18 @@ def ReduceAdd : Builtin {
   let Prototype = "void(...)";
 }
 
+def ReduceInOrderFAdd : Builtin {
+  let Spellings = ["__builtin_reduce_in_order_fadd"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ReduceAnyOrderFAdd : Builtin {
+  let Spellings = ["__builtin_reduce_assoc_fadd"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ReduceMul : Builtin {
   let Spellings = ["__builtin_reduce_mul"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
