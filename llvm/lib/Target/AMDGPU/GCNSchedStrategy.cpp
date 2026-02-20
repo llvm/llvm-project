@@ -2233,11 +2233,17 @@ bool RewriteMFMAFormStage::initHeuristics(
       }
 
       // Do the rewrite to allow for updated RP calculation.
-      const TargetRegisterClass *VGPRRC = DAG.MRI.getRegClass(Dst.getReg());
-      const TargetRegisterClass *AGPRRC = SRI->getEquivalentAGPRClass(VGPRRC);
-      DAG.MRI.setRegClass(Dst.getReg(), AGPRRC);
-      if (Src2->isReg())
-        DAG.MRI.setRegClass(Src2->getReg(), AGPRRC);
+      const TargetRegisterClass *VDefRC = DAG.MRI.getRegClass(Dst.getReg());
+      const TargetRegisterClass *ADefRC = SRI->getEquivalentAGPRClass(VDefRC);
+      DAG.MRI.setRegClass(Dst.getReg(), ADefRC);
+      if (Src2->isReg()) {
+        // Have to get src types separately since subregs may cause C and D
+        // registers to be different types even though the actual operand is
+        // the same size.
+        const TargetRegisterClass *VUseRC = DAG.MRI.getRegClass(Src2->getReg());
+        const TargetRegisterClass *AUseRC = SRI->getEquivalentAGPRClass(VUseRC);
+        DAG.MRI.setRegClass(Src2->getReg(), AUseRC);
+      }
       Changed = true;
     }
   }
@@ -2342,17 +2348,23 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
   // rewrite then these need to be restored anyway.
   for (auto &[MI, OriginalOpcode] : RewriteCands) {
     assert(TII->isMAI(*MI));
-    const TargetRegisterClass *AGPRRC =
+    const TargetRegisterClass *ADefRC =
         DAG.MRI.getRegClass(MI->getOperand(0).getReg());
-    const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(AGPRRC);
+    const TargetRegisterClass *VDefRC = SRI->getEquivalentVGPRClass(ADefRC);
+    DAG.MRI.setRegClass(MI->getOperand(0).getReg(), VDefRC);
+    MI->setDesc(TII->get(OriginalOpcode));
 
     MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
     assert(Src2);
+    if (!Src2->isReg())
+      continue;
 
-    if (Src2->isReg())
-      DAG.MRI.setRegClass(Src2->getReg(), VGPRRC);
-    DAG.MRI.setRegClass(MI->getOperand(0).getReg(), VGPRRC);
-    MI->setDesc(TII->get(OriginalOpcode));
+    // Have to get src types separately since subregs may cause C and D
+    // registers to be different types even though the actual operand is
+    // the same size.
+    const TargetRegisterClass *AUseRC = DAG.MRI.getRegClass(Src2->getReg());
+    const TargetRegisterClass *VUseRC = SRI->getEquivalentVGPRClass(AUseRC);
+    DAG.MRI.setRegClass(Src2->getReg(), VUseRC);
   }
 
   return Cost + CopyCost;
