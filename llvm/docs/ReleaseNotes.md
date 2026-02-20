@@ -195,6 +195,10 @@ Changes to LLDB
 * The crashed thread is now automatically selected on start.
 * Threads are listed in incrmental order by pid then by tid.
 
+### Linux
+
+* Thread local variables are now supported on Arm Linux if the program being debugged is using glibc.
+
 Changes to BOLT
 ---------------
 
