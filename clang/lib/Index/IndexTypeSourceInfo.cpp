@@ -10,6 +10,7 @@
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -191,6 +192,22 @@ public:
     }
 
     return true;
+  }
+
+  bool TraverseSubstTemplateTypeParmTypeLoc(SubstTemplateTypeParmTypeLoc TL,
+                                            bool TraverseQualifier) {
+    const auto *T = TL.getTypePtr();
+    if (!T)
+      return true;
+    auto QT = T->getReplacementType();
+    if (QT.isNull())
+      return true;
+    auto *CXXRD = QT->getAsCXXRecordDecl();
+    if (!CXXRD)
+      return true;
+
+    return IndexCtx.handleReference(CXXRD, TL.getNameLoc(), Parent, ParentDC,
+                                    SymbolRoleSet(), Relations);
   }
 
   bool VisitDeducedTemplateSpecializationTypeLoc(DeducedTemplateSpecializationTypeLoc TL) {
