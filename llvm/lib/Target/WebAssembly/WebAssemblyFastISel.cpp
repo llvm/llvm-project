@@ -1283,7 +1283,7 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
   // TODO: Fold a following sign-/zero-extend into the load instruction.
   // Fold sext(load)
   const Value *Ext = nullptr;
-  MVT::SimpleValueType ExtVT = MVT::Other;
+  MVT::SimpleValueType ExtVT = MVT::INVALID_SIMPLE_VALUE_TYPE;
   bool FoldExt = false;
   if (Subtarget->hasSignExt() && Load->hasOneUse()) {
     if ((Ext = dyn_cast<SExtInst>(*Load->user_begin()))) {
