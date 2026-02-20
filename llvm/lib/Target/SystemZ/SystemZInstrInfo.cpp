@@ -2380,6 +2380,14 @@ SystemZInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   return ArrayRef(TargetFlags);
 }
 
+bool SystemZInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                            const MachineBasicBlock *MBB,
+                                            const MachineFunction &MF) const {
+  if (TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF))
+    return true;
+  return MI.getOpcode() == SystemZ::FENCE;
+}
+
 MCInst SystemZInstrInfo::getNop() const {
   return MCInstBuilder(SystemZ::NOPR).addReg(0);
 }

@@ -93,6 +93,7 @@ public:
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
 
+  void emitRawComment(const Twine &T, bool TabPrefix = false) override;
   /// Return true if this streamer supports verbose assembly at all.
   bool isVerboseAsm() const override { return IsVerboseAsm; }
 

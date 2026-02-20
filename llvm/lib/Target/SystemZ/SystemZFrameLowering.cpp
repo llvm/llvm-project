@@ -1240,6 +1240,7 @@ bool SystemZXPLINKFrameLowering::restoreCalleeSavedRegisters(
 void SystemZXPLINKFrameLowering::emitPrologue(MachineFunction &MF,
                                               MachineBasicBlock &MBB) const {
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
+  unsigned InstCount = MBB.size();
   const SystemZSubtarget &Subtarget = MF.getSubtarget<SystemZSubtarget>();
   SystemZMachineFunctionInfo *ZFI = MF.getInfo<SystemZMachineFunctionInfo>();
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -1349,6 +1350,16 @@ void SystemZXPLINKFrameLowering::emitPrologue(MachineFunction &MF,
       if (!MBB.isLiveIn(Reg))
         MBB.addLiveIn(Reg);
     }
+  }
+
+  // Check if any new instructions were inserted. If not, it means no there is no
+  // prologue and thus no need for a fence.
+  // The fence is required because moving instructions inside the prologue might
+  // violate some of the rules required to hold for prologues, for example the
+  // maximum lengths of the prologue code. See all rules at
+  // https://www.ibm.com/docs/en/zos/3.1.0?topic=SSLTBW_3.1.0/com.ibm.zos.v3r1.ceev100/cee1v2319.html
+  if (InstCount < MBB.size()) {
+    BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::FENCE));
   }
 }
 

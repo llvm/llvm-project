@@ -3,7 +3,10 @@
 ; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z14 | FileCheck %s -check-prefix=ARCH12
 ; CHECK-LABEL: call_vararg_double0 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
+; CHECK-NEXT:  @@stack_update0:
 ; CHECK-NEXT:    aghi 4,-192
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:  @@end_of_prologue0:
 ; CHECK-NEXT:    lg 6,8(5)
 ; CHECK-NEXT:    lg 5,0(5)
 ; CHECK-NEXT:    llihf 3,1074118262
@@ -23,7 +26,10 @@ entry:
 
 ; CHECK-LABEL: call_vararg_double1  DS 0H
 ; CHECK:         stmg 6,7,1872(4)
+; CHECK-NEXT:  @@stack_update1:
 ; CHECK-NEXT:    aghi 4,-192
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:  @@end_of_prologue1:
 ; CHECK-NEXT:    llihf 0,1074118262
 ; CHECK-NEXT:    oilf 0,3367254360
 ; CHECK-NEXT:    lg 6,8(5)
@@ -46,7 +52,10 @@ entry:
 
 ; CHECK-LABEL: call_vararg_double2  DS 0H
 ; CHECK:         stmg 6,7,1872(4)
+; CHECK-NEXT:  @@stack_update2:
 ; CHECK-NEXT:    aghi 4,-192
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:  @@end_of_prologue2:
 ; CHECK-NEXT:    lg 6,24(5)
 ; CHECK-NEXT:    lg 5,16(5)
 ; CHECK-NEXT:    llihf 2,1074118262
@@ -65,7 +74,10 @@ entry:
 
 ; CHECK-LABEL: call_vararg_double3 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
+; CHECK-NEXT:  @@stack_update3:
 ; CHECK-NEXT:    aghi 4,-192
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:  @@end_of_prologue3:
 ; CHECK-NEXT:    llihf 0,1072703839
 ; CHECK-NEXT:    oilf 0,2861204133
 ; CHECK-NEXT:    lg 6,40(5)
@@ -91,7 +103,10 @@ entry:
 ;; TODO: The extra COPY after LGDR is unnecessary (machine-scheduler introduces the overlap).
 ; CHECK-LABEL: call_vararg_both0 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
+; CHECK-NEXT:  @@stack_update4:
 ; CHECK-NEXT:    aghi 4,-192
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:  @@end_of_prologue4:
 ; CHECK-NEXT:    lg 6,40(5)
 ; CHECK-NEXT:    lg 5,32(5)
 ; CHECK-NEXT:    lgdr 0,0
@@ -109,7 +124,10 @@ define i64 @call_vararg_both0(i64 %arg0, double %arg1) {
 
 ; CHECK-LABEL: call_vararg_long_double0 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
+; CHECK-NEXT:  @@stack_update5:
 ; CHECK-NEXT:    aghi 4,-192
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:  @@end_of_prologue5:
 ; CHECK-NEXT:    larl 1,L#CPI5_0
 ; CHECK-NEXT:    ld 0,0(1)
 ; CHECK-NEXT:    ld 2,8(1)
@@ -133,7 +151,10 @@ entry:
 
 ; CHECK-LABEL: call_vararg_long_double1 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
+; CHECK-NEXT:  @@stack_update6:
 ; CHECK-NEXT:    aghi 4,-192
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:  @@end_of_prologue6:
 ; CHECK-NEXT:    lg 6,8(5)
 ; CHECK-NEXT:    lg 5,0(5)
 ; CHECK-NEXT:    lgdr 3,0
@@ -154,7 +175,10 @@ entry:
 
 ; CHECK-LABEL: call_vararg_long_double2 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
+; CHECK-NEXT:  @@stack_update7:
 ; CHECK-NEXT:    aghi 4,-192
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:  @@end_of_prologue7:
 ; CHECK-NEXT:    std 4,2208(4)
 ; CHECK-NEXT:    std 6,2216(4)
 ; CHECK-NEXT:    lg 6,8(5)
@@ -177,7 +201,10 @@ entry:
 
 ; CHECK-LABEL: call_vararg_long_double3 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
+; CHECK-NEXT:  @@stack_update8:
 ; CHECK-NEXT:    aghi 4,-192
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:  @@end_of_prologue8:
 ; CHECK-NEXT:    lg 6,40(5)
 ; CHECK-NEXT:    lg 5,32(5)
 ; CHECK-NEXT:    lgdr 3,2
@@ -256,7 +283,10 @@ define void @call_vec_double_vararg_straddle(<2 x double> %v) {
 
 ; CHECK-LABEL: call_vararg_integral0 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
+; CHECK-NEXT:  @@stack_update15:
 ; CHECK-NEXT:    aghi 4,-192
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:  @@end_of_prologue15:
 ; CHECK-NEXT:    lg 0,2392(4)
 ; CHECK-NEXT:    lg 6,40(5)
 ; CHECK-NEXT:    lg 5,32(5)
@@ -274,7 +304,10 @@ entry:
 
 ; CHECK-LABEL: call_vararg_float0 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
+; CHECK-NEXT:  @@stack_update16:
 ; CHECK-NEXT:    aghi 4,-192
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:  @@end_of_prologue16:
 ; CHECK-NEXT:    lg 6,24(5)
 ; CHECK-NEXT:    lg 5,16(5)
 ; CHECK-NEXT:    lghi 1,1
@@ -292,7 +325,10 @@ entry:
 
 ; CHECK-LABEL: call_vararg_float1 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
+; CHECK-NEXT:  @@stack_update17:
 ; CHECK-NEXT:    aghi 4,-192
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:  @@end_of_prologue17:
 ; CHECK-NEXT:    lg 6,72(5)
 ; CHECK-NEXT:    lg 5,64(5)
 ; CHECK-NEXT:    larl 1,L#CPI17_0
@@ -326,9 +362,12 @@ entry:
 ;
 ; CHECK-LABEL: pass_vararg DS 0H
 ; CHECK:         stmg 6,7,1904(4)
+; CHECK-NEXT:  @@stack_update18:
 ; CHECK-NEXT:    aghi 4,-160
 ; CHECK-NEXT:    stg 2,2344(4)
 ; CHECK-NEXT:    stg 3,2352(4)
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:  @@end_of_prologue18:
 ; CHECK-NEXT:    la 0,2352(4)
 ; CHECK-NEXT:    stg 0,2200(4)
 ; CHECK-NEXT:    lg 3,2344(4)
