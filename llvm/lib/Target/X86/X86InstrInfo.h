@@ -480,7 +480,7 @@ public:
                         unsigned Opc, Register Reg, int FrameIdx,
                         bool isKill = false) const;
 
-  bool expandPostRAPseudo(MachineInstr &MI) const override;
+  bool expandPostRAPseudo(MachineInstr &MI, RegScavenger &RS) const override;
 
   /// Check whether the target can fold a load that feeds a subreg operand
   /// (or a subreg operand that feeds a store).

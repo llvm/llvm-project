@@ -3478,22 +3478,24 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
   }
 
   const std::string &TripleStr = EffectiveTriple.getTriple();
+  StringRef GuardValue;
   if (Arg *A = Args.getLastArg(options::OPT_mstack_protector_guard_EQ)) {
-    StringRef Value = A->getValue();
+    GuardValue = A->getValue();
     if (!EffectiveTriple.isX86() && !EffectiveTriple.isAArch64() &&
         !EffectiveTriple.isARM() && !EffectiveTriple.isThumb() &&
-        !EffectiveTriple.isRISCV() && !EffectiveTriple.isPPC())
+        !EffectiveTriple.isRISCV() && !EffectiveTriple.isPPC() &&
+        !EffectiveTriple.isSystemZ())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     if ((EffectiveTriple.isX86() || EffectiveTriple.isARM() ||
-         EffectiveTriple.isThumb()) &&
-        Value != "tls" && Value != "global") {
+         EffectiveTriple.isThumb() || EffectiveTriple.isSystemZ()) &&
+        GuardValue != "tls" && GuardValue != "global") {
       D.Diag(diag::err_drv_invalid_value_with_suggestion)
-          << A->getOption().getName() << Value << "tls global";
+          << A->getOption().getName() << GuardValue << "tls global";
       return;
     }
     if ((EffectiveTriple.isARM() || EffectiveTriple.isThumb()) &&
-        Value == "tls") {
+        GuardValue == "tls") {
       if (!Args.hasArg(options::OPT_mstack_protector_guard_offset_EQ)) {
         D.Diag(diag::err_drv_ssp_missing_offset_argument)
             << A->getAsString(Args);
@@ -3517,18 +3519,19 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
       CmdArgs.push_back("-target-feature");
       CmdArgs.push_back("+read-tp-tpidruro");
     }
-    if (EffectiveTriple.isAArch64() && Value != "sysreg" && Value != "global") {
+    if (EffectiveTriple.isAArch64() && GuardValue != "sysreg" &&
+        GuardValue != "global") {
       D.Diag(diag::err_drv_invalid_value_with_suggestion)
-          << A->getOption().getName() << Value << "sysreg global";
+          << A->getOption().getName() << GuardValue << "sysreg global";
       return;
     }
     if (EffectiveTriple.isRISCV() || EffectiveTriple.isPPC()) {
-      if (Value != "tls" && Value != "global") {
+      if (GuardValue != "tls" && GuardValue != "global") {
         D.Diag(diag::err_drv_invalid_value_with_suggestion)
-            << A->getOption().getName() << Value << "tls global";
+            << A->getOption().getName() << GuardValue << "tls global";
         return;
       }
-      if (Value == "tls") {
+      if (GuardValue == "tls") {
         if (!Args.hasArg(options::OPT_mstack_protector_guard_offset_EQ)) {
           D.Diag(diag::err_drv_ssp_missing_offset_argument)
               << A->getAsString(Args);
@@ -3598,6 +3601,21 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
     if (!isValidSymbolName(Value)) {
       D.Diag(diag::err_drv_argument_only_allowed_with)
           << A->getOption().getName() << "legal symbol name";
+      return;
+    }
+    A->render(Args, CmdArgs);
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mstackprotector_guard_record)) {
+    if (!EffectiveTriple.isSystemZ()) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << TripleStr;
+      return;
+    }
+    if (GuardValue != "global") {
+      D.Diag(diag::err_drv_argument_only_allowed_with)
+          << "-mstack-protector-guard-record"
+          << "-mstack-protector-guard=global";
       return;
     }
     A->render(Args, CmdArgs);

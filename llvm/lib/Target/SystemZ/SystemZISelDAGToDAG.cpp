@@ -10,10 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SystemZTargetMachine.h"
 #include "SystemZISelLowering.h"
+#include "SystemZTargetMachine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -369,7 +370,11 @@ public:
       if (F.hasFnAttribute("mrecord-mcount"))
         report_fatal_error("mrecord-mcount only supported with fentry-call");
     }
-
+    if (F.getParent()->getStackProtectorGuard() != "global") {
+      if (F.getParent()->hasStackProtectorGuardRecord())
+        report_fatal_error("mstack-protector-guard-record only supported with "
+                           "mstack-protector-guard=global");
+    }
     Subtarget = &MF.getSubtarget<SystemZSubtarget>();
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
@@ -1801,6 +1806,17 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
     SelectCode(St);
     return;
   }
+  case SystemZISD::COMPARE_SG_DAG:
+    auto *FINode = cast<FrameIndexSDNode>(Node->getOperand(0)->getOperand(1));
+    assert(FINode && "Operand of COMPARE_SG_DAG was not load of stack slot");
+    int FI = FINode->getIndex();
+    auto DL = SDLoc(Node);
+    auto CompOps = {CurDAG->getTargetFrameIndex(FI, MVT::i64),
+                    CurDAG->getTargetConstant(0, DL, MVT::i64)};
+    MachineSDNode *Pseudo = CurDAG->getMachineNode(
+        SystemZ::COMPARE_SG_BRIDGE, SDLoc(Node), MVT::i32, CompOps);
+    ReplaceNode(Node, Pseudo);
+    return;
   }
 
   SelectCode(Node);

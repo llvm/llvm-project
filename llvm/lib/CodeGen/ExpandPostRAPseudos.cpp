@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -134,14 +135,21 @@ bool ExpandPostRA::run(MachineFunction &MF) {
 
   bool MadeChange = false;
 
+  RegScavenger RS;
+
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+      // MI iteration goes forward, but the RegScavenger needs to calculate
+      // register availability from the back. Re-enter the block for each MI
+      // to make that work.
+      RS.enterBasicBlockEnd(MBB);
+      RS.backward(MI);
       // Only expand pseudos.
       if (!MI.isPseudo())
         continue;
 
       // Give targets a chance to expand even standard pseudos.
-      if (TII->expandPostRAPseudo(MI)) {
+      if (TII->expandPostRAPseudo(MI, RS)) {
         MadeChange = true;
         continue;
       }

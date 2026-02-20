@@ -1202,7 +1202,9 @@ public:
   /// into real instructions. The target can edit MI in place, or it can insert
   /// new instructions and erase MI. The function should return true if
   /// anything was changed.
-  virtual bool expandPostRAPseudo(MachineInstr &MI) const { return false; }
+  virtual bool expandPostRAPseudo(MachineInstr &MI, RegScavenger &RS) const {
+    return false;
+  }
 
   /// Check whether the target can fold a load that feeds a subreg operand
   /// (or a subreg operand that feeds a store).

@@ -6155,7 +6155,8 @@ static bool expandMOVSHP(MachineInstrBuilder &MIB, MachineInstr &MI,
   return true;
 }
 
-bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI,
+                                      RegScavenger &RS) const {
   bool HasAVX = Subtarget.hasAVX();
   MachineInstrBuilder MIB(*MI.getParent()->getParent(), MI);
   switch (MI.getOpcode()) {

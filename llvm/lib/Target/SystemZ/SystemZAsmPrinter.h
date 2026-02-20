@@ -148,6 +148,8 @@ private:
   void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
                                      SystemZMCInstLower &Lower);
   void LowerPATCHABLE_RET(const MachineInstr &MI, SystemZMCInstLower &Lower);
+  void lowerLOAD_TSGA(const MachineInstr &MI, SystemZMCInstLower &Lower);
+  void lowerLOAD_GSGA(const MachineInstr &MI, SystemZMCInstLower &Lower);
   void emitAttributes(Module &M);
 };
 } // end namespace llvm

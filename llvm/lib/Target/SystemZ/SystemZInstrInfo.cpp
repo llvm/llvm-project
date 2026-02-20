@@ -27,12 +27,15 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -227,35 +230,6 @@ void SystemZInstrInfo::expandZExtPseudo(MachineInstr &MI, unsigned LowOpcode,
     MIB.add(MO);
 
   MI.eraseFromParent();
-}
-
-void SystemZInstrInfo::expandLoadStackGuard(MachineInstr *MI) const {
-  MachineBasicBlock *MBB = MI->getParent();
-  MachineFunction &MF = *MBB->getParent();
-  const Register Reg64 = MI->getOperand(0).getReg();
-  const Register Reg32 = RI.getSubReg(Reg64, SystemZ::subreg_l32);
-
-  // EAR can only load the low subregister so us a shift for %a0 to produce
-  // the GR containing %a0 and %a1.
-
-  // ear <reg>, %a0
-  BuildMI(*MBB, MI, MI->getDebugLoc(), get(SystemZ::EAR), Reg32)
-    .addReg(SystemZ::A0)
-    .addReg(Reg64, RegState::ImplicitDefine);
-
-  // sllg <reg>, <reg>, 32
-  BuildMI(*MBB, MI, MI->getDebugLoc(), get(SystemZ::SLLG), Reg64)
-    .addReg(Reg64)
-    .addReg(0)
-    .addImm(32);
-
-  // ear <reg>, %a1
-  BuildMI(*MBB, MI, MI->getDebugLoc(), get(SystemZ::EAR), Reg32)
-    .addReg(SystemZ::A1);
-
-  // lg <reg>, 40(<reg>)
-  MI->setDesc(get(SystemZ::LG));
-  MachineInstrBuilder(MF, MI).addReg(Reg64).addImm(40).addReg(0);
 }
 
 // Emit a zero-extending move from 32-bit GPR SrcReg to 32-bit GPR
@@ -1638,7 +1612,8 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   return MIB;
 }
 
-bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI,
+                                          RegScavenger &RS) const {
   switch (MI.getOpcode()) {
   case SystemZ::L128:
     splitMove(MI, SystemZ::LG);
@@ -1808,13 +1783,88 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     splitAdjDynAlloc(MI);
     return true;
 
-  case TargetOpcode::LOAD_STACK_GUARD:
-    expandLoadStackGuard(&MI);
+  case SystemZ::MOVE_SG:
+    expandStackGuardPseudo(MI, RS, SystemZ::MVC);
+    return true;
+
+  case SystemZ::COMPARE_SG:
+    expandStackGuardPseudo(MI, RS, SystemZ::CLC);
     return true;
 
   default:
     return false;
   }
+}
+
+namespace {
+// This is a workaround for https://github.com/llvm/llvm-project/issues/172511
+// and should be removed once that issue is resolved.
+Register scavengeAddrReg(MachineInstr &MI, RegScavenger &RS) {
+  // Attempt to find a free register.
+  Register Scratch = RS.FindUnusedReg(&SystemZ::ADDR64BitRegClass);
+  // If not found, scavenge one, i.e. evict something to a stack spill slot.
+  if (!Scratch) {
+    Scratch =
+        RS.scavengeRegisterBackwards(SystemZ::ADDR64BitRegClass,
+                                     MI,   // Scavenge back to this position.
+                                     true, // Scope must include MI.
+                                     0,
+                                     true // Spills are allowed.
+        );
+  }
+  return Scratch;
+}
+} // namespace
+
+void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
+                                              RegScavenger &RS,
+                                              unsigned Opcode) const {
+  MachineBasicBlock &MBB = *(MI.getParent());
+  const MachineFunction &MF = *(MBB.getParent());
+  const auto DL = MI.getDebugLoc();
+  const Module *M = MF.getFunction().getParent();
+  StringRef GuardType = M->getStackProtectorGuard();
+  unsigned int Offset = 0;
+
+  // Check MI (which should be either MOVE_SG or COMPARE_SG)
+  // to see if the early-clobber flag on the def reg was honored. If so,
+  // return that register. If not, scavenge a new register and return that.
+  // This is a workaround for https://github.com/llvm/llvm-project/issues/172511
+  // and should be removed once that issue is resolved.
+  // After this, AddrReg is set to a usable scratch register.
+  Register AddrReg = MI.getOperand(0).getReg();
+  Register OpReg = MI.getOperand(1).getReg();
+  // if we can't use AddrReg, scavenge a new one.
+  if (AddrReg == OpReg)
+    AddrReg = scavengeAddrReg(MI, RS);
+
+  // emit an appropriate pseudo for the guard type, which loads the address of said
+  // guard into the scratch register AddrReg.
+  if (GuardType.empty() || (GuardType == "tls")) {
+    // emit a load of the TLS stack guard's address
+    BuildMI(MBB, MI, DL, get(SystemZ::LOAD_TSGA), AddrReg);
+    // record the appropriate stack guard offset (40 in the tls case).
+    Offset = 40;
+  }
+  else if (GuardType == "global") {
+    // emit a load of the global stack guard's address
+    BuildMI(MBB, MI, DL, get(SystemZ::LOAD_GSGA), AddrReg);
+  } else {
+    llvm_unreachable((Twine("Unknown stack protector type \"") + GuardType + "\"")
+                      .str()
+                      .c_str());
+  }
+
+  // Construct the appropriate move or compare instruction using the
+  // scratch register.
+  BuildMI(*(MI.getParent()), MI, MI.getDebugLoc(), get(Opcode))
+      .addReg(MI.getOperand(1).getReg())
+      .addImm(MI.getOperand(2).getImm())
+      .addImm(8)
+      .addReg(AddrReg)
+      .addImm(Offset);
+
+  MI.removeFromParent();
 }
 
 unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
@@ -1833,6 +1883,13 @@ unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 18;
   if (MI.getOpcode() == TargetOpcode::PATCHABLE_RET)
     return 18 + (MI.getOperand(0).getImm() == SystemZ::CondReturn ? 4 : 0);
+  if (MI.getOpcode() == SystemZ::LOAD_TSGA)
+    // ear (4), sllg (6), ear (4) = 14 bytes
+    return 14;
+  if (MI.getOpcode() == SystemZ::LOAD_GSGA) {
+    // both larl and lgrl are 6 bytes long.
+    return 6;
+  }
 
   return MI.getDesc().getSize();
 }

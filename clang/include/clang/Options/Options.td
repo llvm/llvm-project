@@ -5950,6 +5950,14 @@ def mstack_protector_guard_reg_EQ : Joined<["-"], "mstack-protector-guard-reg=">
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Use the given reg for addressing the stack-protector guard">,
   MarshallingInfoString<CodeGenOpts<"StackProtectorGuardReg">>;
+def mstackprotector_guard_record
+    : Flag<["-"], "mstack-protector-guard-record">,
+      HelpText<
+          "Generate a __stack_protector_loc section entry for each load of "
+          "the stack-protector guard address.">,
+      Visibility<[ClangOption, CC1Option]>,
+      Group<m_Group>,
+      MarshallingInfoFlag<CodeGenOpts<"StackProtectorGuardRecord">>;
 def mfentry : Flag<["-"], "mfentry">, HelpText<"Insert calls to fentry at function entry (x86/SystemZ only)">,
   Visibility<[ClangOption, CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"CallFEntry">>;

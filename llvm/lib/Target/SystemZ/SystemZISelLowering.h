@@ -227,9 +227,6 @@ public:
 
   /// Override to support customized stack guard loading.
   bool useLoadStackGuardNode(const Module &M) const override { return true; }
-  void
-  insertSSPDeclarations(Module &M,
-                        const LibcallLoweringInfo &Libcalls) const override {}
 
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
@@ -473,7 +470,8 @@ private:
                                          unsigned Opcode) const;
   MachineBasicBlock *emitProbedAlloca(MachineInstr &MI,
                                       MachineBasicBlock *MBB) const;
-
+  MachineBasicBlock *emitStackGuardPseudo(MachineInstr &MI,
+                                   MachineBasicBlock *MBB, unsigned PseudoOp) const;
   SDValue getBackchainAddress(SDValue SP, SelectionDAG &DAG) const;
 
   MachineMemOperand::Flags
