@@ -258,6 +258,10 @@ Improvements to Clang's diagnostics
 - The ``-Wloop-analysis`` warning has been extended to catch more cases of
   variable modification inside lambda expressions (#GH132038).
 
+- Improved the diagnostic for structured binding declarations missing an
+  initializer to tell the user what is expected (``=``, ``(``, or a braced
+  initializer list). (#GH90107)
+
 Improvements to Clang's time-trace
 ----------------------------------
 

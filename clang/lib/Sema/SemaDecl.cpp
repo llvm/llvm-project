@@ -14382,9 +14382,9 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     QualType Type = Var->getType();
 
     // C++1z [dcl.dcl]p1 grammar implies that an initializer is mandatory.
-    if (isa<DecompositionDecl>(RealDecl)) {
-      Diag(Var->getLocation(), diag::err_decomp_decl_requires_init) << Var;
-      Var->setInvalidDecl();
+    if (auto *DD = dyn_cast<DecompositionDecl>(RealDecl)) {
+      Diag(DD->getLocation(), diag::err_decomp_decl_requires_init) << DD;
+      DD->setInvalidDecl();
       return;
     }
 

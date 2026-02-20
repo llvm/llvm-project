@@ -152,7 +152,7 @@ namespace Init {
   void f() {
     int arr[1];
     struct S { int n; };
-    auto &[bad1]; // expected-error {{structured binding declaration '[bad1]' requires an initializer}}
+    auto &[bad1]; // expected-error {{structured binding declaration '[bad1]' requires an initializer; expected '=', '(', or a braced initializer list}}
     const auto &[bad2](S{}, S{}); // expected-error {{initializer for variable '[bad2]' with type 'const auto &' contains multiple expressions}}
     const auto &[bad3](); // expected-error {{expected expression}}
     auto &[good1] = arr;
