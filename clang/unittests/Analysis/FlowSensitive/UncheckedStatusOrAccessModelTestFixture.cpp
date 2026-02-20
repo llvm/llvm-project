@@ -4516,6 +4516,47 @@ TEST_P(UncheckedStatusOrAccessModelTest, NestedStatusOrInOptional) {
       )cc");
 }
 
+// TODO: this crashes with "Assertion `Children.size() == 1' failed." in
+// ResultObjectVisitor::PropagateResultObject.
+TEST_P(UncheckedStatusOrAccessModelTest, DISABLED_Coroutine) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+#include "std_coroutine.h"
+
+  template<typename T>
+  struct Task {
+    struct promise_type {
+        Task get_return_object();
+        std::suspend_never initial_suspend() noexcept;
+        std::suspend_always final_suspend() noexcept;
+        void return_value(T v);
+        void unhandled_exception();
+    };
+    bool await_ready() const noexcept;
+    T await_resume() noexcept;
+    void await_suspend(std::coroutine_handle<> handle) noexcept;
+  };
+
+  Task<STATUSOR_INT> call(STATUSOR_INT sor) {
+    if (sor.ok()) {
+      sor.value();
+    } else {
+      sor.value();  // [[unsafe]]
+    }
+    co_return sor;
+  }
+  Task<int> target() {
+    auto x = co_await call(Make<STATUSOR_INT>());
+    if (x.ok()) {
+      co_return x.value();
+    } else {
+      x.value();  // [[unsafe]]
+      co_return 0;
+    }
+  }
+  )cc");
+}
+
 } // namespace
 
 std::string
