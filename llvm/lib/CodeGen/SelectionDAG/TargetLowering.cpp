@@ -6009,6 +6009,16 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
 
     OpInfo.ConstraintVT = MVT::Other;
 
+    // Special treatment for all platforms that can fold a register into a
+    // spill. This is used for the "rm" constraint, where we would vastly
+    // prefer to use 'r' over 'm'. The non-fast register allocators are able to
+    // handle the 'r' default by folding. The fast register allocator needs
+    // special handling to convert the instruction to use 'm' instead.
+    if (!OpInfo.hasMatchingInput() && OpInfo.Codes.size() == 2 &&
+        llvm::is_contained(OpInfo.Codes, "r") &&
+        llvm::is_contained(OpInfo.Codes, "m"))
+      OpInfo.MayFoldRegister = true;
+
     // Compute the value type for each operand.
     switch (OpInfo.Type) {
     case InlineAsm::isOutput: {
@@ -6289,7 +6299,12 @@ TargetLowering::ConstraintWeight
 ///  1) If there is an 'other' constraint, and if the operand is valid for
 ///     that constraint, use it.  This makes us take advantage of 'i'
 ///     constraints when available.
-///  2) Otherwise, pick the most general constraint present.  This prefers
+///  2) Special processing is done for the "rm" constraint. If specified, we
+///     opt for the 'r' constraint, but mark the operand as being "foldable."
+///     In the face of register exhaustion, the register allocator is free to
+///     choose to use a stack slot. The fast register allocator is handled
+///     separately via the InlineAsmPrepare pass.
+///  3) Otherwise, pick the most general constraint present.  This prefers
 ///     'm' over 'r', for example.
 ///
 TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
@@ -6297,6 +6312,20 @@ TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
   ConstraintGroup Ret;
 
   Ret.reserve(OpInfo.Codes.size());
+
+  // If we can fold the register (i.e. it has an "rm" constraint), opt for the
+  // 'r' constraint, and allow the register allocator to spill if need be.
+  //
+  // Note: This code is a holdover from when the Clang front-end defaulted to
+  // using the memory constriaint. This should be reviewed at some point to
+  // remove that assumption from the back-end.
+  const TargetMachine &TM = getTargetMachine();
+  if (TM.getOptLevel() != CodeGenOptLevel::None && OpInfo.MayFoldRegister) {
+    Ret.emplace_back(ConstraintPair("r", getConstraintType("r")));
+    Ret.emplace_back(ConstraintPair("m", getConstraintType("m")));
+    return Ret;
+  }
+
   for (StringRef Code : OpInfo.Codes) {
     TargetLowering::ConstraintType CType = getConstraintType(Code);
 
