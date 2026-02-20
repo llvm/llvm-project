@@ -805,6 +805,11 @@ FormatToken *UnwrappedLineParser::parseBlock(bool MustBeDeclaration,
   if (AddLevels > 0u && Style.BreakBeforeBraces != FormatStyle::BS_Whitesmiths)
     Line->Level += AddLevels;
 
+  // One level has already been added for Whitesmiths at this point,
+  // this adds the second level if needed
+  if (AddLevels > 0u && Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths)
+    Line->Level += AddLevels - 1;
+
   FormatToken *IfLBrace = nullptr;
   const bool SimpleBlock = parseLevel(Tok, IfKind, &IfLBrace);
 
