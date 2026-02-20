@@ -60,8 +60,10 @@ private:
   void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
 
   void handleCXXCtorInitializer(const CXXCtorInitializer *CII);
+
   void handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds);
-  void handleTemporaryDtor(const CFGTemporaryDtor &TemporaryDtor);
+
+  void handleFullExprCleanup(const CFGFullExprCleanup &FullExprCleanup);
 
   void handleExitBlock();
 
