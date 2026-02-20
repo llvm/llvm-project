@@ -141,7 +141,8 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
 
 static bool isKnownMonotonic(VPValue *V) {
   VPValue *X, *Y;
-  if (match(V, m_Add(m_VPValue(X), m_VPValue(Y))))
+  if (match(V, m_Add(m_VPValue(X), m_VPValue(Y))) &&
+      cast<VPRecipeWithIRFlags>(V)->hasNoUnsignedWrap())
     return isKnownMonotonic(X) && isKnownMonotonic(Y);
   if (match(V, m_StepVector()))
     return true;
