@@ -630,18 +630,8 @@ bool RISCVMergeBaseOffsetOpt::foldShxaddIntoScaledMemory(MachineInstr &Hi,
 
   MachineInstr &TailMem = *MRI->use_instr_begin(ScaledReg);
   unsigned Opc = TailMem.getOpcode();
-
-  if (!TailMem.getOperand(1).isReg() ||
-      TailMem.getOperand(1).getReg() != ScaledReg)
-    return false;
-  if (!TailMem.getOperand(2).isImm())
-    return false;
-  int64_t Imm = TailMem.getOperand(2).getImm();
-
-  // Update QC_E_LI offset.
-  int64_t NewOffset = SignExtend64<32>(Hi.getOperand(1).getOffset() + Imm);
-
   unsigned NewOpc = 0;
+
   switch (Opc) {
   case RISCV::LB:
     NewOpc = RISCV::QC_LRB;
@@ -670,6 +660,16 @@ bool RISCVMergeBaseOffsetOpt::foldShxaddIntoScaledMemory(MachineInstr &Hi,
   default:
     return false;
   }
+
+  if (!TailMem.getOperand(1).isReg() ||
+      TailMem.getOperand(1).getReg() != ScaledReg)
+    return false;
+  if (!TailMem.getOperand(2).isImm())
+    return false;
+  int64_t Imm = TailMem.getOperand(2).getImm();
+
+  // Update QC_E_LI offset.
+  int64_t NewOffset = SignExtend64<32>(Hi.getOperand(1).getOffset() + Imm);
 
   Hi.getOperand(1).setOffset(NewOffset);
 
