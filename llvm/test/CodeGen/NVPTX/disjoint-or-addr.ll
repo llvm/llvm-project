@@ -9,12 +9,14 @@ define i32  @test_disjoint_or_addr(i16 %a) {
 ; CHECK-LABEL: test_disjoint_or_addr(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %rd1, a;
 ; CHECK-NEXT:    cvta.global.u64 %rd2, %rd1;
-; CHECK-NEXT:    ld.b32 %r1, [%rd2+8];
+; CHECK-NEXT:    or.b64 %rd3, %rd2, 8;
+; CHECK-NEXT:    cvta.to.global.u64 %rd4, %rd3;
+; CHECK-NEXT:    ld.global.b32 %r1, [%rd4];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %a1 = ptrtoint ptr @a to i64

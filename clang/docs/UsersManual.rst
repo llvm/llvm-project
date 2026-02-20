@@ -2699,32 +2699,6 @@ are listed below.
 
     $ clang -fuse-ld=lld -Oz -Wl,--icf=safe -fcodegen-data-use code.cc
 
-.. option:: -falign-functions=<value>
-
-   Use at least the specified value as the alignment for emitted
-   functions. This value must be a power of 2. The compiler may further
-   increase the alignment of a specific function, or of all functions,
-   if required by the target or the ABI.
-
-   This option is overridden by the ``aligned`` function attribute. If
-   this option is specified, ``-fpreferred-function-alignment``
-   is ignored.
-
-.. option:: -fpreferred-function-alignment=<value>
-
-   Use the specified value as the preferred alignment for emitted
-   functions. This value must be a power of 2. If this option is not
-   specified, the preferred alignment is determined in a target-specific
-   way.
-
-   The preferred alignment, if provided, is treated as a hint; the
-   final alignment of the function will generally be set to a value
-   somewhere between the target-determined minimum alignment and the
-   preferred alignment.
-
-   If ``-falign-functions`` is specified, or if the function has an
-   ``aligned`` attribute, this option is ignored.
-
 .. _strict_aliasing:
 
 Strict Aliasing

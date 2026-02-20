@@ -49,7 +49,6 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/YAMLParser.h"
@@ -4350,6 +4349,22 @@ static void renderDwarfFormat(const Driver &D, const llvm::Triple &T,
   DwarfFormatArg->render(Args, CmdArgs);
 }
 
+static bool getDebugSimpleTemplateNames(const ToolChain &TC, const Driver &D,
+                                        const ArgList &Args) {
+  bool NeedsSimpleTemplateNames =
+      Args.hasFlag(options::OPT_gsimple_template_names,
+                   options::OPT_gno_simple_template_names,
+                   TC.getDefaultDebugSimpleTemplateNames());
+  if (!NeedsSimpleTemplateNames)
+    return false;
+
+  if (const Arg *A = Args.getLastArg(options::OPT_gsimple_template_names))
+    if (!checkDebugInfoOption(A, Args, D, TC))
+      return false;
+
+  return true;
+}
+
 static void
 renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                    const ArgList &Args, types::ID InputType,
@@ -4634,17 +4649,11 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                             ? "-gpubnames"
                             : "-ggnu-pubnames");
   }
-  const auto *SimpleTemplateNamesArg =
-      Args.getLastArg(options::OPT_gsimple_template_names,
-                      options::OPT_gno_simple_template_names);
+
   bool ForwardTemplateParams = DebuggerTuning == llvm::DebuggerKind::SCE;
-  if (SimpleTemplateNamesArg &&
-      checkDebugInfoOption(SimpleTemplateNamesArg, Args, D, TC)) {
-    const auto &Opt = SimpleTemplateNamesArg->getOption();
-    if (Opt.matches(options::OPT_gsimple_template_names)) {
-      ForwardTemplateParams = true;
-      CmdArgs.push_back("-gsimple-template-names=simple");
-    }
+  if (getDebugSimpleTemplateNames(TC, D, Args)) {
+    ForwardTemplateParams = true;
+    CmdArgs.push_back("-gsimple-template-names=simple");
   }
 
   // Emit DW_TAG_template_alias for template aliases? True by default for SCE.
@@ -5489,20 +5498,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (FunctionAlignment) {
     CmdArgs.push_back("-function-alignment");
     CmdArgs.push_back(Args.MakeArgString(std::to_string(FunctionAlignment)));
-  }
-
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_fpreferred_function_alignment_EQ)) {
-    unsigned Value = 0;
-    if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 65536)
-      TC.getDriver().Diag(diag::err_drv_invalid_int_value)
-          << A->getAsString(Args) << A->getValue();
-    else if (!llvm::isPowerOf2_32(Value))
-      TC.getDriver().Diag(diag::err_drv_alignment_not_power_of_two)
-          << A->getAsString(Args) << A->getValue();
-
-    CmdArgs.push_back(Args.MakeArgString("-fpreferred-function-alignment=" +
-                                         Twine(std::min(Value, 65536u))));
   }
 
   // We support -falign-loops=N where N is a power of 2. GCC supports more
@@ -7751,6 +7746,24 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     else
       CmdArgs.push_back(Args.MakeArgString(
           Twine("-funique-source-file-identifier=") + Input.getBaseInput()));
+  }
+
+  if (Args.hasFlag(
+          options::OPT_fexperimental_allow_pointer_field_protection_attr,
+          options::OPT_fno_experimental_allow_pointer_field_protection_attr,
+          false) ||
+      Args.hasFlag(options::OPT_fexperimental_pointer_field_protection_abi,
+                   options::OPT_fno_experimental_pointer_field_protection_abi,
+                   false))
+    CmdArgs.push_back("-fexperimental-allow-pointer-field-protection-attr");
+
+  if (!IsCudaDevice) {
+    Args.addOptInFlag(
+        CmdArgs, options::OPT_fexperimental_pointer_field_protection_abi,
+        options::OPT_fno_experimental_pointer_field_protection_abi);
+    Args.addOptInFlag(
+        CmdArgs, options::OPT_fexperimental_pointer_field_protection_tagged,
+        options::OPT_fno_experimental_pointer_field_protection_tagged);
   }
 
   // Setup statistics file output.

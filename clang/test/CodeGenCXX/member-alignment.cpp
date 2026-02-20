@@ -31,9 +31,9 @@ public:
 [[gnu::aligned(16)]]
 void
 t::baz(void) {
-// CHECK-NOEXTRAALIGN: @_ZN1t3bazEv({{.*}}) #0 align 16 prefalign(16) {
-// CHECK-EXTRAALIGN: @_ZN1t3bazEv({{.*}}) #0 align 16 prefalign(16) {
-// CHECK-MSVC: @"?baz@t@@QEAAXXZ"({{.*}}) #0 align 16 prefalign(16) {
+// CHECK-NOEXTRAALIGN: @_ZN1t3bazEv({{.*}}) #0 align 16 {
+// CHECK-EXTRAALIGN: @_ZN1t3bazEv({{.*}}) #0 align 16 {
+// CHECK-MSVC: @"?baz@t@@QEAAXXZ"({{.*}}) #0 align 16 {
 }
 
 void
