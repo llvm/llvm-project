@@ -677,7 +677,12 @@ static void addSanitizers(const Triple &TargetTriple,
                           const CodeGenOptions &CodeGenOpts,
                           const LangOptions &LangOpts, PassBuilder &PB) {
   auto SanitizersCallback = [&](ModulePassManager &MPM, OptimizationLevel Level,
-                                ThinOrFullLTOPhase) {
+                                ThinOrFullLTOPhase phase) {
+    // FatLTO pipelines already added these to the prelink pipeline.
+    if (CodeGenOpts.FatLTO &&
+        (CodeGenOpts.PrepareForThinLTO || CodeGenOpts.PrepareForLTO) &&
+        ThinOrFullLTOPhase::None != phase)
+      return;
     if (CodeGenOpts.hasSanitizeCoverage()) {
       auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
       MPM.addPass(
