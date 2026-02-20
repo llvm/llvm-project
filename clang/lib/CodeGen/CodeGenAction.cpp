@@ -732,6 +732,44 @@ void BackendConsumer::DontCallDiagHandler(const DiagnosticInfoDontCall &D) {
                               ? diag::err_fe_backend_error_attr
                               : diag::warn_fe_backend_warning_attr)
       << llvm::demangle(D.getFunctionName()) << D.getNote();
+
+  auto EmitNote = [&](SourceLocation Loc, StringRef FuncName, bool IsFirst) {
+    if (!Loc.isValid())
+      Loc = LocCookie;
+    unsigned DiagID =
+        IsFirst ? diag::note_fe_backend_in : diag::note_fe_backend_inlined;
+    Diags.Report(Loc, DiagID) << llvm::demangle(FuncName.str());
+  };
+
+  // Try debug info first for accurate source locations.
+  if (!D.getDebugInlineChain().empty()) {
+    SourceManager &SM = Context->getSourceManager();
+    FileManager &FM = SM.getFileManager();
+    for (const auto &[I, Info] : llvm::enumerate(D.getDebugInlineChain())) {
+      SourceLocation Loc;
+      if (Info.Line > 0)
+        if (auto FE = FM.getOptionalFileRef(Info.Filename))
+          Loc = SM.translateFileLineCol(*FE, Info.Line,
+                                        Info.Column ? Info.Column : 1);
+      EmitNote(Loc, Info.FuncName, I == 0);
+    }
+    return;
+  }
+
+  // Fall back to heuristic (srcloc metadata) when debug info is unavailable.
+  auto InliningDecisions = D.getInliningDecisions();
+  if (InliningDecisions.empty())
+    return;
+
+  for (const auto &[I, Entry] : llvm::enumerate(InliningDecisions)) {
+    SourceLocation Loc =
+        I == 0 ? LocCookie : SourceLocation::getFromRawEncoding(Entry.second);
+    EmitNote(Loc, Entry.first, I == 0);
+  }
+
+  // Suggest enabling debug info (at least -gline-directives-only) for more
+  // accurate locations.
+  Diags.Report(LocCookie, diag::note_fe_backend_inlining_debug_info);
 }
 
 void BackendConsumer::MisExpectDiagHandler(

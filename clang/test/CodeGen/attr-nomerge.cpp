@@ -92,10 +92,10 @@ void something_else_again() {
 // CHECK: call void @_ZN1AC1Ev({{.*}}) #[[ATTR0]]
 // CHECK: call void @_ZN1A1fEv({{.*}}) #[[ATTR0]]
 // CHECK: call void @_ZN1A1gEv({{.*}}) #[[ATTR0]]
-// CHECK: call void @_ZN1A2f1Ev() #[[ATTR0]]
-// CHECK: call void @_ZN1BC1Ev({{.*}}){{$}}
+// CHECK: call void @_ZN1A2f1Ev(){{.*}}#[[ATTR0]]
+// CHECK: call void @_ZN1BC1Ev({{.*}}){{.*}}{{$}}
 // CHECK: call void @_ZN1B1gEv({{.*}}){{$}}
-// CHECK: call void @_ZN1BC1Ev({{.*}}){{$}}
+// CHECK: call void @_ZN1BC1Ev({{.*}}){{.*}}{{$}}
 // CHECK: load ptr, ptr
 // CHECK: load ptr, ptr
 // CHECK: %[[AG:.*]] = load ptr, ptr

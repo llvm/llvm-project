@@ -8518,6 +8518,15 @@ pointing to precise locations of the call site in the source.
       dontcall(); // No Warning
     sizeof(dontcall()); // No Warning
   }
+
+When the call occurs through inlined functions, the inlining chain that led to
+the call is shown. This helps identify which call site triggered the diagnostic
+when the attributed function is called from multiple locations through inline
+functions.
+
+The most accurate source location information for inline notes can be obtained
+when ``-gline-directives-only`` (implied by ``-g1`` or higher) is enabled.
+Otherwise, a heuristic approach is used to track source locations.
   }];
 }
 

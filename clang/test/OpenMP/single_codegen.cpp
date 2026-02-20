@@ -170,7 +170,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK1:       arrayctor.loop:
 // CHECK1-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi ptr [ [[ARRAY_BEGIN]], [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[INVOKE_CONT:%.*]] ]
 // CHECK1-NEXT:    invoke void @_ZN9TestClassC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYCTOR_CUR]])
-// CHECK1-NEXT:            to label [[INVOKE_CONT]] unwind label [[LPAD:%.*]]
+// CHECK1-NEXT:            to label [[INVOKE_CONT]] unwind label [[LPAD:%.*]], !srcloc
 // CHECK1:       invoke.cont:
 // CHECK1-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[CLASS_TESTCLASS]], ptr [[ARRAYCTOR_CUR]], i64 1
 // CHECK1-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]
@@ -246,7 +246,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK1:       arrayctor.loop:
 // CHECK1-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi ptr [ @tc2, [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[INVOKE_CONT:%.*]] ]
 // CHECK1-NEXT:    invoke void @_ZN9TestClassC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYCTOR_CUR]])
-// CHECK1-NEXT:            to label [[INVOKE_CONT]] unwind label [[LPAD:%.*]]
+// CHECK1-NEXT:            to label [[INVOKE_CONT]] unwind label [[LPAD:%.*]], !srcloc
 // CHECK1:       invoke.cont:
 // CHECK1-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[CLASS_TESTCLASS:%.*]], ptr [[ARRAYCTOR_CUR]], i64 1
 // CHECK1-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], getelementptr inbounds ([[CLASS_TESTCLASS]], ptr @tc2, i64 2)
@@ -1048,7 +1048,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK2:       arrayctor.loop:
 // CHECK2-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi ptr [ @tc2, [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[INVOKE_CONT:%.*]] ]
 // CHECK2-NEXT:    invoke void @_ZN9TestClassC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYCTOR_CUR]])
-// CHECK2-NEXT:            to label [[INVOKE_CONT]] unwind label [[LPAD:%.*]]
+// CHECK2-NEXT:            to label [[INVOKE_CONT]] unwind label [[LPAD:%.*]], !srcloc
 // CHECK2:       invoke.cont:
 // CHECK2-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[CLASS_TESTCLASS:%.*]], ptr [[ARRAYCTOR_CUR]], i64 1
 // CHECK2-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], getelementptr inbounds ([[CLASS_TESTCLASS]], ptr @tc2, i64 2)
@@ -1140,7 +1140,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK2:       arrayctor.loop:
 // CHECK2-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi ptr [ [[ARRAY_BEGIN]], [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[INVOKE_CONT:%.*]] ]
 // CHECK2-NEXT:    invoke void @_ZN9TestClassC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYCTOR_CUR]])
-// CHECK2-NEXT:            to label [[INVOKE_CONT]] unwind label [[LPAD:%.*]]
+// CHECK2-NEXT:            to label [[INVOKE_CONT]] unwind label [[LPAD:%.*]], !srcloc
 // CHECK2:       invoke.cont:
 // CHECK2-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[CLASS_TESTCLASS]], ptr [[ARRAYCTOR_CUR]], i64 1
 // CHECK2-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]
@@ -1977,7 +1977,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK4:       arrayctor.loop:
 // CHECK4-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi ptr [ @tc2, [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[INVOKE_CONT:%.*]] ]
 // CHECK4-NEXT:    invoke void @_ZN9TestClassC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYCTOR_CUR]])
-// CHECK4-NEXT:            to label [[INVOKE_CONT]] unwind label [[LPAD:%.*]]
+// CHECK4-NEXT:            to label [[INVOKE_CONT]] unwind label [[LPAD:%.*]], !srcloc
 // CHECK4:       invoke.cont:
 // CHECK4-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[CLASS_TESTCLASS:%.*]], ptr [[ARRAYCTOR_CUR]], i64 1
 // CHECK4-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], getelementptr inbounds ([[CLASS_TESTCLASS]], ptr @tc2, i64 2)
@@ -2024,7 +2024,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK4:       arrayctor.loop:
 // CHECK4-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi ptr [ [[ARRAY_BEGIN]], [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[INVOKE_CONT:%.*]] ]
 // CHECK4-NEXT:    invoke void @_ZN9TestClassC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYCTOR_CUR]])
-// CHECK4-NEXT:            to label [[INVOKE_CONT]] unwind label [[LPAD:%.*]]
+// CHECK4-NEXT:            to label [[INVOKE_CONT]] unwind label [[LPAD:%.*]], !srcloc
 // CHECK4:       invoke.cont:
 // CHECK4-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[CLASS_TESTCLASS]], ptr [[ARRAYCTOR_CUR]], i64 1
 // CHECK4-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]

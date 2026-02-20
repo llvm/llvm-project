@@ -42,7 +42,7 @@ void trivial_copy(ClassWithTrivialCopy *s1) {
 // CHECK-NEXT: %a = getelementptr inbounds nuw %struct.ClassWithTrivialCopy, ptr %this1, i32 0, i32 0
 // CHECK-NEXT: %1 = ptrtoint ptr %this1 to i64
 // CHECK-NEXT: %2 = call ptr @llvm.protected.field.ptr.p0(ptr %a, i64 %1, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS20ClassWithTrivialCopy.a) ]
-// CHECK-NEXT: %3 = load ptr, ptr %.addr, align 8, !nonnull !2, !align !3
+// CHECK-NEXT: %3 = load ptr, ptr %.addr, align 8, !nonnull !4, !align !5
 // CHECK-NEXT: %a2 = getelementptr inbounds nuw %struct.ClassWithTrivialCopy, ptr %3, i32 0, i32 0
 // CHECK-NEXT: %4 = ptrtoint ptr %3 to i64
 // CHECK-NEXT: %5 = call ptr @llvm.protected.field.ptr.p0(ptr %a2, i64 %4, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS20ClassWithTrivialCopy.a) ]
@@ -51,7 +51,7 @@ void trivial_copy(ClassWithTrivialCopy *s1) {
 // CHECK-NEXT: %c = getelementptr inbounds nuw %struct.ClassWithTrivialCopy, ptr %this1, i32 0, i32 1
 // CHECK-NEXT: %7 = ptrtoint ptr %this1 to i64
 // CHECK-NEXT: %8 = call ptr @llvm.protected.field.ptr.p0(ptr %c, i64 %7, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS20ClassWithTrivialCopy.c) ]
-// CHECK-NEXT: %9 = load ptr, ptr %.addr, align 8, !nonnull !2, !align !3
+// CHECK-NEXT: %9 = load ptr, ptr %.addr, align 8, !nonnull !4, !align !5
 // CHECK-NEXT: %c3 = getelementptr inbounds nuw %struct.ClassWithTrivialCopy, ptr %9, i32 0, i32 1
 // CHECK-NEXT: %10 = ptrtoint ptr %9 to i64
 // CHECK-NEXT: %11 = call ptr @llvm.protected.field.ptr.p0(ptr %c3, i64 %10, i1 true) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS20ClassWithTrivialCopy.c) ]
