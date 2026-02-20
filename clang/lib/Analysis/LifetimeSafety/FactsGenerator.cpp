@@ -18,6 +18,9 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
+#include "clang/Analysis/CFG.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -84,17 +87,6 @@ static const PathLoan *createLoan(FactManager &FactMgr,
   return FactMgr.getLoanMgr().createLoan<PathLoan>(Path, MTE);
 }
 
-/// Try to find a CXXBindTemporaryExpr that descends from MTE, stripping away
-/// any implicit casts.
-/// \param MTE MaterializeTemporaryExpr whose descendants we are interested in.
-/// \return Pointer to descendant CXXBindTemporaryExpr or nullptr when not
-/// found.
-static const CXXBindTemporaryExpr *
-getChildBinding(const MaterializeTemporaryExpr *MTE) {
-  const Expr *Child = MTE->getSubExpr()->IgnoreImpCasts();
-  return dyn_cast<CXXBindTemporaryExpr>(Child);
-}
-
 void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
   const CFG &Cfg = *AC.getCFG();
@@ -117,9 +109,10 @@ void FactsGenerator::run() {
       else if (std::optional<CFGLifetimeEnds> LifetimeEnds =
                    Element.getAs<CFGLifetimeEnds>())
         handleLifetimeEnds(*LifetimeEnds);
-      else if (std::optional<CFGTemporaryDtor> TemporaryDtor =
-                   Element.getAs<CFGTemporaryDtor>())
-        handleTemporaryDtor(*TemporaryDtor);
+      else if (std::optional<CFGFullExprCleanup> FullExprCleanup =
+                   Element.getAs<CFGFullExprCleanup>()) {
+        handleFullExprCleanup(*FullExprCleanup);
+      }
     }
     if (Block == &Cfg.getExit())
       handleExitBlock();
@@ -366,6 +359,7 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
   // result should have the same loans as the pointer operand.
   if (BO->isCompoundAssignmentOp())
     return;
+  handleUse(BO->getRHS());
   if (BO->isAssignmentOp())
     handleAssignment(BO->getLHS(), BO->getRHS());
   // TODO: Handle assignments involving dereference like `*p = q`.
@@ -429,7 +423,7 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
   OriginList *RValMTEList = getRValueOrigins(MTE, MTEList);
   flow(RValMTEList, SubExprList, /*Kill=*/true);
   OriginID OuterMTEID = MTEList->getOuterOriginID();
-  if (getChildBinding(MTE)) {
+  if (MTE->getStorageDuration() == SD_FullExpression) {
     // Issue a loan to MTE for the storage location represented by MTE.
     const Loan *L = createLoan(FactMgr, MTE);
     CurrentBlockFacts.push_back(
@@ -438,7 +432,6 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
 }
 
 void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
-  /// TODO: Handle loans to temporaries.
   const VarDecl *LifetimeEndsVD = LifetimeEnds.getVarDecl();
   if (!LifetimeEndsVD)
     return;
@@ -456,12 +449,8 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   }
 }
 
-void FactsGenerator::handleTemporaryDtor(
-    const CFGTemporaryDtor &TemporaryDtor) {
-  const CXXBindTemporaryExpr *ExpiringBTE =
-      TemporaryDtor.getBindTemporaryExpr();
-  if (!ExpiringBTE)
-    return;
+void FactsGenerator::handleFullExprCleanup(
+    const CFGFullExprCleanup &FullExprCleanup) {
   // Iterate through all loans to see if any expire.
   for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
     if (const auto *PL = dyn_cast<PathLoan>(Loan)) {
@@ -471,9 +460,9 @@ void FactsGenerator::handleTemporaryDtor(
       const MaterializeTemporaryExpr *Path = AP.getAsMaterializeTemporaryExpr();
       if (!Path)
         continue;
-      if (ExpiringBTE == getChildBinding(Path)) {
-        CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
-            PL->getID(), TemporaryDtor.getBindTemporaryExpr()->getEndLoc()));
+      if (llvm::is_contained(FullExprCleanup.getExpiringMTEs(), Path)) {
+        CurrentBlockFacts.push_back(
+            FactMgr.createFact<ExpireFact>(PL->getID(), Path->getEndLoc()));
       }
     }
   }
@@ -583,7 +572,9 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   if (!FD)
     return;
-
+  // All arguments to a function are a use of the corresponding expressions.
+  for (const Expr *Arg : Args)
+    handleUse(Arg);
   handleInvalidatingCall(Call, FD, Args);
   handleMovedArgsInCall(FD, Args);
   if (!CallList)
@@ -678,24 +669,24 @@ bool FactsGenerator::handleTestPoint(const CXXFunctionalCastExpr *FCE) {
   return false;
 }
 
-// A DeclRefExpr will be treated as a use of the referenced decl. It will be
-// checked for use-after-free unless it is later marked as being written to
-// (e.g. on the left-hand side of an assignment).
-void FactsGenerator::handleUse(const DeclRefExpr *DRE) {
-  OriginList *List = getOriginsList(*DRE);
+void FactsGenerator::handleUse(const Expr *E) {
+  OriginList *List = getOriginsList(*E);
   if (!List)
     return;
-  // Remove the outer layer of origin which borrows from the decl directly
-  // (e.g., when this is not a reference). This is a use of the underlying decl.
-  if (!DRE->getDecl()->getType()->isReferenceType())
+  // For DeclRefExpr: Remove the outer layer of origin which borrows from the
+  // decl directly (e.g., when this is not a reference). This is a use of the
+  // underlying decl.
+  if (auto *DRE = dyn_cast<DeclRefExpr>(E);
+      DRE && !DRE->getDecl()->getType()->isReferenceType())
     List = getRValueOrigins(DRE, List);
   // Skip if there is no inner origin (e.g., when it is not a pointer type).
   if (!List)
     return;
-  UseFact *UF = FactMgr.createFact<UseFact>(DRE, List);
-  CurrentBlockFacts.push_back(UF);
-  assert(!UseFacts.contains(DRE));
-  UseFacts[DRE] = UF;
+  if (!UseFacts.contains(E)) {
+    UseFact *UF = FactMgr.createFact<UseFact>(E, List);
+    CurrentBlockFacts.push_back(UF);
+    UseFacts[E] = UF;
+  }
 }
 
 void FactsGenerator::markUseAsWrite(const DeclRefExpr *DRE) {
