@@ -1009,8 +1009,7 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
 
   case Type::ObjCObjectPointer:
   case Type::Pointer:
-    cgm.errorNYI("VTableClassNameForType: __pointer_type_info");
-    break;
+    return "_ZTVN10__cxxabiv119__pointer_type_infoE";
 
   case Type::MemberPointer:
     cgm.errorNYI("VTableClassNameForType: __pointer_to_member_type_info");
