@@ -259,11 +259,6 @@ protected:
   /// the builder dies.
   ExplodedNodeSet &Frontier;
 
-  ExplodedNode *generateNodeImpl(const ProgramPoint &PP,
-                                 ProgramStateRef State,
-                                 ExplodedNode *Pred,
-                                 bool MarkAsSink = false);
-
 public:
   NodeBuilder(ExplodedNodeSet &DstSet, const NodeBuilderContext &Ctx)
       : C(Ctx), Frontier(DstSet) {}
@@ -281,13 +276,8 @@ public:
   }
 
   /// Generates a node in the ExplodedGraph.
-  /// TODO: This is a useless wrapper layer, rename `generateNodeImpl` to
-  /// `generateNode`.
-  ExplodedNode *generateNode(const ProgramPoint &PP,
-                             ProgramStateRef State,
-                             ExplodedNode *Pred) {
-    return generateNodeImpl(PP, State, Pred);
-  }
+  ExplodedNode *generateNode(const ProgramPoint &PP, ProgramStateRef State,
+                             ExplodedNode *Pred, bool MarkAsSink = false);
 
   /// Generates a sink in the ExplodedGraph.
   ///
@@ -297,7 +287,7 @@ public:
   ExplodedNode *generateSink(const ProgramPoint &PP,
                              ProgramStateRef State,
                              ExplodedNode *Pred) {
-    return generateNodeImpl(PP, State, Pred, true);
+    return generateNode(PP, State, Pred, true);
   }
 
   ExplodedNode *generateNode(const Stmt *S,

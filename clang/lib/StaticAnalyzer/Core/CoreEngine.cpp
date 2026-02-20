@@ -706,10 +706,9 @@ void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS
   }
 }
 
-ExplodedNode* NodeBuilder::generateNodeImpl(const ProgramPoint &Loc,
-                                            ProgramStateRef State,
-                                            ExplodedNode *FromN,
-                                            bool MarkAsSink) {
+ExplodedNode *NodeBuilder::generateNode(const ProgramPoint &Loc,
+                                        ProgramStateRef State,
+                                        ExplodedNode *FromN, bool MarkAsSink) {
   HasGeneratedNodes = true;
   Frontier.erase(FromN);
   ExplodedNode *N = C.getEngine().makeNode(Loc, State, FromN, MarkAsSink);
@@ -729,7 +728,7 @@ ExplodedNode *BranchNodeBuilder::generateNode(ProgramStateRef State,
 
   ProgramPoint Loc =
       BlockEdge(C.getBlock(), Dst, NodePred->getLocationContext());
-  ExplodedNode *Succ = generateNodeImpl(Loc, State, NodePred);
+  ExplodedNode *Succ = NodeBuilder::generateNode(Loc, State, NodePred);
   return Succ;
 }
 
