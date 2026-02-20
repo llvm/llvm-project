@@ -2460,7 +2460,7 @@ buildTaskAffinityIteratorLoop(mlir::omp::IteratorsOp itersOp,
 
   auto *cli = ompBuilder.createLoopSkeleton(
       builder.getCurrentDebugLocation(), iterInfo.getTotalTrips(),
-      builder.GetInsertBlock()->getParent(), contBB, contBB);
+      builder.GetInsertBlock()->getParent(), contBB, contBB, "iterator");
   builder.SetInsertPoint(curBB);
   builder.CreateBr(cli->getPreheader());
 
@@ -2515,6 +2515,30 @@ buildTaskAffinityIteratorLoop(mlir::omp::IteratorsOp itersOp,
   ad.Info = list;
   ad.Count =
       builder.CreateTrunc(iterInfo.getTotalTrips(), builder.getInt32Ty());
+  return mlir::success();
+}
+
+static mlir::LogicalResult buildAffinityData(
+    mlir::omp::TaskOp &taskOp, llvm::IRBuilderBase &builder,
+    mlir::LLVM::ModuleTranslation &moduleTranslation,
+    llvm::SmallVectorImpl<llvm::OpenMPIRBuilder::AffinityData> &ads) {
+  using AffinityData = llvm::OpenMPIRBuilder::AffinityData;
+
+  if (!taskOp.getAffinityVars().empty()) {
+    AffinityData ad;
+    buildTaskAffinityList(taskOp, builder, moduleTranslation, ad);
+    ads.emplace_back(ad);
+  }
+  if (!taskOp.getIterated().empty()) {
+    for (size_t i = 0; i < taskOp.getIterated().size(); ++i) {
+      auto iterOp = taskOp.getIterated()[i].getDefiningOp<omp::IteratorsOp>();
+      AffinityData ad;
+      if (failed(buildTaskAffinityIteratorLoop(iterOp, builder,
+                                               moduleTranslation, ad)))
+        return llvm::failure();
+      ads.emplace_back(ad);
+    }
+  }
   return mlir::success();
 }
 
@@ -2632,17 +2656,9 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
           taskOp.getPrivateNeedsBarrier())))
     return llvm::failure();
 
-  llvm::OpenMPIRBuilder::AffinityData ad = {nullptr, nullptr};
-  if (!taskOp.getAffinityVars().empty())
-    buildTaskAffinityList(taskOp, builder, moduleTranslation, ad);
-  else if (!taskOp.getIterated().empty()) {
-    for (size_t i = 0; i < taskOp.getIterated().size(); ++i) {
-      auto iterOp = taskOp.getIterated()[i].getDefiningOp<omp::IteratorsOp>();
-      if (failed(buildTaskAffinityIteratorLoop(iterOp, builder,
-                                               moduleTranslation, ad)))
-        return llvm::failure();
-    }
-  }
+  llvm::SmallVector<llvm::OpenMPIRBuilder::AffinityData> ads;
+  if (failed(buildAffinityData(taskOp, builder, moduleTranslation, ads)))
+    return llvm::failure();
 
   // Set up for call to createTask()
   builder.SetInsertPoint(taskStartBlock);
@@ -2747,7 +2763,7 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
       moduleTranslation.getOpenMPBuilder()->createTask(
           ompLoc, allocaIP, bodyCB, !taskOp.getUntied(),
           moduleTranslation.lookupValue(taskOp.getFinal()),
-          moduleTranslation.lookupValue(taskOp.getIfExpr()), dds, ad,
+          moduleTranslation.lookupValue(taskOp.getIfExpr()), dds, ads,
           taskOp.getMergeable(),
           moduleTranslation.lookupValue(taskOp.getEventHandle()),
           moduleTranslation.lookupValue(taskOp.getPriority()));

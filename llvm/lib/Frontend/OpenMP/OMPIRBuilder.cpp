@@ -2433,8 +2433,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     BodyGenCallbackTy BodyGenCB, bool Tied, Value *Final, Value *IfCondition,
-    SmallVector<DependData> Dependencies, AffinityData Affinity, bool Mergeable,
-    Value *EventHandle, Value *Priority) {
+    SmallVector<DependData> Dependencies, SmallVector<AffinityData> Affinities,
+    bool Mergeable, Value *EventHandle, Value *Priority) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -2480,8 +2480,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       Builder, AllocaIP, ToBeDeleted, TaskAllocaIP, "global.tid", false));
 
   OI.PostOutlineCB = [this, Ident, Tied, Final, IfCondition, Dependencies,
-                      Affinity, Mergeable, Priority, EventHandle, TaskAllocaBB,
-                      ToBeDeleted](Function &OutlinedFn) mutable {
+                      Affinities, Mergeable, Priority, EventHandle,
+                      TaskAllocaBB, ToBeDeleted](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
@@ -2555,20 +2555,16 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
                       /*sizeof_task=*/TaskSize, /*sizeof_shared=*/SharedsSize,
                       /*task_func=*/&OutlinedFn});
 
-    if (Affinity.Count && Affinity.Info) {
+    if (!Affinities.empty()) {
       Function *RegAffFn = getOrCreateRuntimeFunctionPtr(
           OMPRTL___kmpc_omp_reg_task_with_affinity);
-
-      // bitcast to i8*
-      Value *AffPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-          Affinity.Info, Builder.getPtrTy(0));
-
-      if (!Affinity.Count->getType()->isIntegerTy(32))
-        Affinity.Count =
-            Builder.CreateTruncOrBitCast(Affinity.Count, Builder.getInt32Ty());
-
-      createRuntimeFunctionCall(
-          RegAffFn, {Ident, ThreadID, TaskData, Affinity.Count, AffPtr});
+      for (const auto &Affinity : Affinities) {
+        // bitcast to i8*
+        Value *AffPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+            Affinity.Info, Builder.getPtrTy(0));
+        createRuntimeFunctionCall(
+            RegAffFn, {Ident, ThreadID, TaskData, Affinity.Count, AffPtr});
+      }
     }
 
     // Emit detach clause initialization.

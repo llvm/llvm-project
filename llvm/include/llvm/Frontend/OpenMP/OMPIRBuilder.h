@@ -1583,7 +1583,7 @@ public:
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       BodyGenCallbackTy BodyGenCB, bool Tied = true, Value *Final = nullptr,
       Value *IfCondition = nullptr, SmallVector<DependData> Dependencies = {},
-      AffinityData Affinity = {}, bool Mergeable = false,
+      SmallVector<AffinityData> Affinities = {}, bool Mergeable = false,
       Value *EventHandle = nullptr, Value *Priority = nullptr);
 
   /// Generator for the taskgroup construct
