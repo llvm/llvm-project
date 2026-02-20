@@ -69,13 +69,15 @@
 # PACPLT-NEXT:     ret
 # PACPLT: Disassembly of section .plt:
 # PACPLT:      <.plt>:
+# PACPLT-NEXT:     pacibsp
 # PACPLT-NEXT:     stp     x16, x30, [sp, #-0x10]!
 # PACPLT-NEXT:     adrp    x16, 0x30000 <func3+0x30000>
 # PACPLT-NEXT:     ldr     x17, [x16, #0x[[B]]]
 # PACPLT-NEXT:     add     x16, x16, #0x[[B]]
-# PACPLT-NEXT:     br      x17
-# PACPLT-NEXT:     nop
-# PACPLT-NEXT:     nop
+# NOHINT-NEXT:     braa    x17, x16
+# NOHINT-NEXT:     nop
+# HINT-NEXT:       autia1716
+# HINT-NEXT:       br      x17
 # PACPLT-NEXT:     nop
 # PACPLT:      <func3@plt>:
 # PACPLT-NEXT:     adrp    x16, 0x30000 <func3+0x30000>
