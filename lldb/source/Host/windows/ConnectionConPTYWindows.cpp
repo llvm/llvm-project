@@ -31,14 +31,14 @@ using namespace lldb_private;
 static bool StripConPTYInitSequences(void *dst, size_t dst_len, size_t &len) {
   static const char sequences[] = "\x1b[?9001l\x1b[?1004l";
   static const size_t sequences_len = sizeof(sequences) - 1;
-
-  assert(dst_len >= len - sequences_len);
-
   char *buf = static_cast<char *>(dst);
-  if (len >= sequences_len && memcmp(buf, sequences, sequences_len) == 0) {
-    memmove(buf, buf + sequences_len, len - sequences_len);
-    len -= sequences_len;
-    return true;
+  if (len >= sequences_len) {
+    assert(dst_len >= len - sequences_len);
+    if (memcmp(buf, sequences, sequences_len) == 0) {
+      memmove(buf, buf + sequences_len, len - sequences_len);
+      len -= sequences_len;
+      return true;
+    }
   }
   return false;
 }
