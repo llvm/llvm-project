@@ -779,7 +779,8 @@ MapAllocator<Config>::tryAllocateFromCache(const Options &Options, uptr Size,
   if (useMemoryTagging<Config>(Options)) {
     uptr NewBlockBegin = reinterpret_cast<uptr>(H + 1);
     if (Zeroed) {
-      storeTags(LargeBlock::addHeaderTag<Config>(Entry.CommitBase),
+      storeTags(LargeBlock::addHeaderTag<Config>(roundDown(
+                    reinterpret_cast<uptr>(H), archMemoryTagGranuleSize())),
                 NewBlockBegin);
     } else if (Entry.BlockBegin < NewBlockBegin) {
       storeTags(Entry.BlockBegin, NewBlockBegin);
@@ -906,7 +907,8 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
   LargeBlock::Header *H = reinterpret_cast<LargeBlock::Header *>(
       LargeBlock::addHeaderTag<Config>(HeaderPos));
   if (useMemoryTagging<Config>(Options))
-    storeTags(LargeBlock::addHeaderTag<Config>(CommitBase),
+    storeTags(LargeBlock::addHeaderTag<Config>(roundDown(
+                  reinterpret_cast<uptr>(H), archMemoryTagGranuleSize())),
               reinterpret_cast<uptr>(H + 1));
   H->CommitBase = CommitBase;
   H->CommitSize = CommitSize;
