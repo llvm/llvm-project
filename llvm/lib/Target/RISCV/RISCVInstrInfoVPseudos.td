@@ -1489,7 +1489,7 @@ class VPseudoBinaryCarry<VReg RetClass,
       RISCVVPseudo<(outs RetClass:$rd),
                    !if(CarryIn,
                       (ins Op1Class:$rs2, Op2Class:$rs1,
-                           VMV0:$carry, AVL:$vl, sew:$sew),
+                           VMV0:$vm, AVL:$vl, sew:$sew),
                       (ins Op1Class:$rs2, Op2Class:$rs1,
                            AVL:$vl, sew:$sew))> {
   let mayLoad = 0;
@@ -1509,7 +1509,7 @@ class VPseudoTiedBinaryCarryIn<VReg RetClass,
                                bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs RetClass:$rd),
                    (ins RetClass:$passthru, Op1Class:$rs2, Op2Class:$rs1,
-                        VMV0:$carry, AVL:$vl, sew:$sew)> {
+                        VMV0:$vm, AVL:$vl, sew:$sew)> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
