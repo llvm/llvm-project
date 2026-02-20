@@ -1,0 +1,67 @@
+# RUN: llc -mtriple=hexagon -run-pass branch-folder \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s
+
+# LivePhysRegs::removeDefs() has the same super-register implicit def
+# issue as LiveRegUnits::stepBackward() and ScheduleDAGInstrs::fixupKills():
+# when an instruction defines a sub-register ($r1) and has an implicit-def
+# of its super-register ($d0), removeReg($d0) clears the register units of
+# all sub-registers — including siblings like $r0 that may still be live.
+#
+# This test has two blocks (bb.1 and bb.2) with a common tail. The common
+# tail includes "$r1 = A2_tfrsi 42, implicit-def $d0" followed by a call
+# that uses both $r0 and $r1. The branch folder merges the common tails.
+# After merging, the common tail block's live-in computation must include
+# $r0, because it is used by the call instruction.
+#
+# Without the fix to LivePhysRegs::removeDefs(), stepBackward over
+# "$r1 = A2_tfrsi 42, implicit-def $d0" incorrectly removes $r0 from the
+# live set, so $r0 would not appear in the merged block's live-ins.
+
+# CHECK-LABEL: name: test_livephysregs_superreg
+
+# The common tail block (merged from bb.1/bb.2 tails) must have
+# $r0 in its live-ins since J2_call uses it.
+# CHECK: liveins: $r0
+# CHECK: $r1 = A2_tfrsi 42, implicit-def $d0
+# CHECK-NEXT: J2_call @foo
+
+--- |
+  @g = external global i32
+  define void @test_livephysregs_superreg() {
+    ret void
+  }
+  declare void @foo(ptr, i32)
+...
+
+---
+name: test_livephysregs_superreg
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r31
+    successors: %bb.1, %bb.2
+    J2_jumpt undef $p0, %bb.2, implicit-def $pc
+    J2_jump %bb.1, implicit-def $pc
+
+  bb.1:
+    liveins: $r0, $r31
+    successors: %bb.3
+    $r2 = A2_tfrsi 1
+    $r1 = A2_tfrsi 42, implicit-def $d0
+    J2_call @foo, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1, implicit-def $d0
+    $r0 = A2_tfrsi 0
+    J2_jump %bb.3, implicit-def $pc
+
+  bb.2:
+    liveins: $r0, $r31
+    successors: %bb.3
+    $r2 = A2_tfrsi 2
+    $r1 = A2_tfrsi 42, implicit-def $d0
+    J2_call @foo, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1, implicit-def $d0
+    $r0 = A2_tfrsi 0
+    J2_jump %bb.3, implicit-def $pc
+
+  bb.3:
+    liveins: $r0, $r31
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...

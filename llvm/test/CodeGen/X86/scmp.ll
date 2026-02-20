@@ -2830,7 +2830,7 @@ define <7 x i117> @scmp_uncommon_vectors(<7 x i7> %x, <7 x i7> %y) nounwind {
 ; AVX-NEXT:    movq %rdi, %rax
 ; AVX-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
 ; AVX-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
-; AVX-NEXT:    movzbl {{[0-9]+}}(%rsp), %r11d
+; AVX-NEXT:    movb {{[0-9]+}}(%rsp), %r11b
 ; AVX-NEXT:    movzbl {{[0-9]+}}(%rsp), %ebx
 ; AVX-NEXT:    movzbl {{[0-9]+}}(%rsp), %ebp
 ; AVX-NEXT:    movzbl {{[0-9]+}}(%rsp), %r15d
@@ -2904,7 +2904,7 @@ define <7 x i117> @scmp_uncommon_vectors(<7 x i7> %x, <7 x i7> %y) nounwind {
 ; AVX-NEXT:    sarq $63, %r10
 ; AVX-NEXT:    addb %dil, %dil
 ; AVX-NEXT:    sarb %dil
-; AVX-NEXT:    movzbl {{[0-9]+}}(%rsp), %r11d
+; AVX-NEXT:    movb {{[0-9]+}}(%rsp), %r11b
 ; AVX-NEXT:    addb %r11b, %r11b
 ; AVX-NEXT:    sarb %r11b
 ; AVX-NEXT:    cmpb %dil, %r11b

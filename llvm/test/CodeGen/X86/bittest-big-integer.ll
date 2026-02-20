@@ -1413,7 +1413,7 @@ define i1 @sequence_i128(ptr %word, i32 %pos0, i32 %pos1, i32 %pos2) nounwind {
 ; AVX2-NEXT:    cmovneq %r8, %rsi
 ; AVX2-NEXT:    cmovneq %r9, %r8
 ; AVX2-NEXT:    xorl %r11d, %r11d
-; AVX2-NEXT:    movl %eax, %ecx
+; AVX2-NEXT:    movb %al, %cl
 ; AVX2-NEXT:    shldq %cl, %r10, %r11
 ; AVX2-NEXT:    shlxq %rax, %r10, %rcx
 ; AVX2-NEXT:    testb $64, %al
@@ -1448,7 +1448,7 @@ define i1 @sequence_i128(ptr %word, i32 %pos0, i32 %pos1, i32 %pos2) nounwind {
 ; AVX512-NEXT:    cmovneq %r8, %rsi
 ; AVX512-NEXT:    cmovneq %r10, %r8
 ; AVX512-NEXT:    xorl %r11d, %r11d
-; AVX512-NEXT:    movl %eax, %ecx
+; AVX512-NEXT:    movb %al, %cl
 ; AVX512-NEXT:    shldq %cl, %r9, %r11
 ; AVX512-NEXT:    shlxq %rax, %r9, %rcx
 ; AVX512-NEXT:    testb $64, %al

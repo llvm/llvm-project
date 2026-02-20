@@ -49,8 +49,30 @@ void LivePhysRegs::removeDefs(const MachineInstr &MI) {
       continue;
     }
 
-    if (MOP.isDef())
+    if (MOP.isDef()) {
+      // Skip implicit defs of super-registers when a sub-register is
+      // also defined by this instruction. The implicit def is an
+      // annotation of partial modification, not a full redefinition of
+      // the super-register. Removing the super-register from the live
+      // set would incorrectly clear the liveness of sibling
+      // sub-registers that may still be live.
+      if (MOP.isImplicit()) {
+        MCRegister Reg = MOP.getReg().asMCReg();
+        bool HasSubRegDef = false;
+        for (const MachineOperand &MOP2 : phys_regs_and_masks(MI)) {
+          if (!MOP2.isReg() || !MOP2.isDef())
+            continue;
+          MCRegister Reg2 = MOP2.getReg().asMCReg();
+          if (Reg2 != Reg && TRI->isSubRegister(Reg, Reg2)) {
+            HasSubRegDef = true;
+            break;
+          }
+        }
+        if (HasSubRegDef)
+          continue;
+      }
       removeReg(MOP.getReg());
+    }
   }
 }
 

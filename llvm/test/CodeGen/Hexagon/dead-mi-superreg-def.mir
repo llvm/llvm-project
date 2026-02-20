@@ -1,0 +1,39 @@
+# RUN: llc -mtriple=hexagon -run-pass dead-mi-elimination \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s
+
+# LiveRegUnits::stepBackward() walks backward through instructions,
+# removing defined registers from a LiveRegUnits set. When an
+# instruction defines a sub-register ($r1) and has an implicit-def of
+# its super-register ($d0), removeReg($d0) clears the register units
+# of all sub-registers of $d0 — including siblings like $r0 that may
+# still be live. This causes available($r0) to incorrectly return
+# true, and dead MI elimination deletes the instruction defining $r0.
+#
+# In this test, A2_tfrsi defines $r1 with an implicit-def of $d0. The
+# subsequent J2_call uses both $r0 and $r1 as implicit operands, so
+# $r0 must remain live and "$r0 = A2_tfrsi @g" must not be deleted.
+
+# CHECK-LABEL: name: test_dead_mi_superreg
+# CHECK: $r0 = A2_tfrsi @g
+# CHECK: $r1 = A2_tfrsi 42, implicit-def $d0
+# CHECK: J2_call @foo
+
+--- |
+  @g = external global i32
+  define void @test_dead_mi_superreg() {
+    ret void
+  }
+  declare void @foo(ptr, i32)
+...
+
+---
+name: test_dead_mi_superreg
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $r0 = A2_tfrsi @g
+    $r1 = A2_tfrsi 42, implicit-def $d0
+    J2_call @foo, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1, implicit-def $d0
+    $r0 = A2_tfrsi 0
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...

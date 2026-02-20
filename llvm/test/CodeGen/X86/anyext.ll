@@ -30,7 +30,7 @@ define i32 @foo(i32 %p, i8 zeroext %x) nounwind {
 define i32 @bar(i32 %p, i16 zeroext %x) nounwind {
 ; X86-LABEL: bar:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movw {{[0-9]+}}(%esp), %ax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    divw {{[0-9]+}}(%esp)
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
