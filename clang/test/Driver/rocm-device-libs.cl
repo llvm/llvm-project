@@ -158,7 +158,7 @@
 
 // COMMON: "-triple" "amdgcn-amd-amdhsa"
 // COMMON-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/opencl.bc"
-// ASAN-SAME: "-mlink-bitcode-file" "{{.*}}/amdgcn/bitcode/asanrtl.bc"
+// ASAN-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/asanrtl.bc"
 // COMMON-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/ocml.bc"
 // COMMON-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/ockl.bc"
 

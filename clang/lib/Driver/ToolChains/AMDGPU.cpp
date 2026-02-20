@@ -323,7 +323,8 @@ RocmInstallationDetector::getInstallationPathCandidates() {
 
 RocmInstallationDetector::RocmInstallationDetector(
     const Driver &D, const llvm::Triple &HostTriple,
-    const llvm::opt::ArgList &Args, bool DetectHIPRuntime)
+    const llvm::opt::ArgList &Args, bool DetectHIPRuntime,
+    bool DetectOpenMPRuntime)
     : D(D) {
   Verbose = Args.hasArg(options::OPT_v);
   RocmPathArg = Args.getLastArgValue(options::OPT_rocm_path_EQ);
@@ -377,6 +378,25 @@ RocmInstallationDetector::RocmInstallationDetector(
 
   if (DetectHIPRuntime)
     detectHIPRuntime();
+  if (DetectOpenMPRuntime)
+    detectOpenMPRuntime();
+}
+
+void RocmInstallationDetector::detectOpenMPRuntime() {
+  assert(OpenMPASanRTLPath.empty());
+  // Set OpenMP ASan library directory path for pre-instrumented device
+  // libraries (e.g., libompdevice.a). This path is used when linking with
+  // -fsanitize=address for OpenMP offloading.
+  OpenMPASanRTLPath = llvm::sys::path::parent_path(D.Dir);
+  llvm::sys::path::append(OpenMPASanRTLPath, "lib", "asan");
+  if (D.getVFS().exists(OpenMPASanRTLPath))
+    return;
+  // Fallback: Search ASan libs in the ROCm tree (e.g. /opt/rocm/llvm/lib/asan).
+  const auto &Candidates = getInstallationPathCandidates();
+  if (Candidates.empty())
+    return;
+  OpenMPASanRTLPath = Candidates.front().Path;
+  llvm::sys::path::append(OpenMPASanRTLPath, "lib", "llvm", "lib", "asan");
 }
 
 void RocmInstallationDetector::detectDeviceLibrary() {
@@ -629,6 +649,7 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                  Args.getLastArgValue(options::OPT_mcpu_EQ))));
   }
   addLinkerCompressDebugSectionsOption(getToolChain(), Args, CmdArgs);
+
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
@@ -713,10 +734,24 @@ AMDGPUToolChain::AMDGPUToolChain(const Driver &D, const llvm::Triple &Triple,
   // It is done here to avoid repeated warning or error messages for
   // each tool invocation.
   checkAMDGPUCodeObjectVersion(D, Args);
+  // When ASan is enabled, setup ASan library path configuration early so that
+  // the linker finds ASan-instrumented libraries.
+  checkAndAddAMDGPUSanLibPaths(Args);
 }
 
 Tool *AMDGPUToolChain::buildLinker() const {
   return new tools::amdgpu::Linker(*this);
+}
+
+// Common function to check and add ASan library paths.
+void AMDGPUToolChain::checkAndAddAMDGPUSanLibPaths(const ArgList &Args) {
+  // For OpenMP: when ASan is enabled, prepend the OpenMP ASan library path so
+  // the linker finds ASan-instrumented libraries.
+  if (getSanitizerArgs(Args).needsAsanRt()) {
+    StringRef OmpASanPath = RocmInstallation->getOpenMPASanRTLPath();
+    if (!OmpASanPath.empty() && getVFS().exists(OmpASanPath))
+      getFilePaths().insert(getFilePaths().begin(), OmpASanPath.str());
+  }
 }
 
 DerivedArgList *
@@ -1041,17 +1076,18 @@ RocmInstallationDetector::getCommonBitcodeLibs(
     BCLib.ShouldInternalize = Internalize;
     BCLibs.emplace_back(BCLib);
   };
-  auto AddSanBCLibs = [&]() {
-    if (Pref.GPUSan)
-      AddBCLib(getAsanRTLPath(), false);
-  };
 
-  AddSanBCLibs();
+  // For OpenMP, openmp-devicertl(libompdevice.a) already contains ASan GPU
+  // runtime and Ockl functions (via POST_BUILD). Don't add it again at driver
+  // level to avoid duplicates as most of the symbols have USED attribute and
+  // duplicates entries in llvm.compiler.used & llvm.used makes their
+  // duplicate definitions persist even with internalization enabled
+  if (Pref.GPUSan && !Pref.IsOpenMP)
+    // Add Gpu Sanitizer RTL bitcode lib required for AMDGPU Sanitizer
+    AddBCLib(getAsanRTLPath());
   AddBCLib(getOCMLPath());
   if (!Pref.IsOpenMP)
     AddBCLib(getOCKLPath());
-  else if (Pref.GPUSan && Pref.IsOpenMP)
-    AddBCLib(getOCKLPath(), false);
   AddBCLib(getUnsafeMathPath(Pref.UnsafeMathOpt || Pref.FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(Pref.FiniteOnly || Pref.FastRelaxedMath));
   AddBCLib(getCorrectlyRoundedSqrtPath(Pref.CorrectSqrt));
