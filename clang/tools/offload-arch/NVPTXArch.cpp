@@ -41,7 +41,11 @@ CUresult (*cuGetErrorString)(CUresult, const char **);
 CUresult (*cuDeviceGet)(CUdevice *, int);
 CUresult (*cuDeviceGetAttribute)(int *, CUdevice_attribute, CUdevice);
 
+#if defined(_WIN32)
+constexpr const char *DynamicCudaPath = "nvcuda.dll";
+#else
 constexpr const char *DynamicCudaPath = "libcuda.so.1";
+#endif
 
 llvm::Error loadCUDA() {
   std::string ErrMsg;
