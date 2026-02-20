@@ -105,7 +105,8 @@ New checks
 - New :doc:`bugprone-missing-end-comparison
   <clang-tidy/checks/bugprone/missing-end-comparison>` check.
 
-  FIXME: Write a short description.
+  Finds instances where the result of a standard algorithm is used in a boolean
+  context without being compared to the end iterator.
 
 - New :doc:`bugprone-unsafe-to-allow-exceptions
   <clang-tidy/checks/bugprone/unsafe-to-allow-exceptions>` check.
