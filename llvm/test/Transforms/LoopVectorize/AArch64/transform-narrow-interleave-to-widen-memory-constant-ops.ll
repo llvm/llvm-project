@@ -28,8 +28,9 @@ define void @test_add_double_same_const_args_1(ptr %res, ptr noalias %A, ptr noa
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -76,10 +77,11 @@ define void @test_add_double_same_const_args_2(ptr %res, ptr noalias %A, ptr noa
 ; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -136,10 +138,11 @@ define void @test_add_double_mixed_const_args(ptr %res, ptr noalias %A, ptr noal
 ; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC5]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -175,33 +178,24 @@ define void @test_add_double_same_var_args_1(ptr %res, ptr noalias %A, ptr noali
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x double>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x double> [[WIDE_VEC]], <4 x double> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <4 x double> [[WIDE_VEC]], <4 x double> poison, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[WIDE_VEC2:%.*]] = load <4 x double>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <4 x double> [[WIDE_VEC2]], <4 x double> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <4 x double> [[WIDE_VEC2]], <4 x double> poison, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[STRIDED_VEC3]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = load <2 x double>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = load <2 x double>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[STRIDED_VEC1]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[STRIDED_VEC4]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP9]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC]], ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[INTERLEAVED_VEC5:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC5]], ptr [[TMP8]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[TMP7]], align 4
+; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -237,33 +231,24 @@ define void @test_add_double_same_var_args_2(ptr %res, ptr noalias %A, ptr noali
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x double>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x double> [[WIDE_VEC]], <4 x double> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <4 x double> [[WIDE_VEC]], <4 x double> poison, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[WIDE_VEC2:%.*]] = load <4 x double>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <4 x double> [[WIDE_VEC2]], <4 x double> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <4 x double> [[WIDE_VEC2]], <4 x double> poison, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[BROADCAST_SPLAT]], [[STRIDED_VEC]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[BROADCAST_SPLAT]], [[STRIDED_VEC3]]
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = load <2 x double>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = load <2 x double>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[BROADCAST_SPLAT]], [[STRIDED_VEC1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[BROADCAST_SPLAT]], [[STRIDED_VEC4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP9]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC]], ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[INTERLEAVED_VEC5:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC5]], ptr [[TMP8]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[TMP7]], align 4
+; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -322,10 +307,11 @@ define void @test_add_double_same_var_args_at_different_positions(ptr %res, ptr 
 ; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC5]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -386,10 +372,11 @@ define void @test_add_double_different_var_args_1(ptr %res, ptr noalias %A, ptr 
 ; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC7]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -450,10 +437,11 @@ define void @test_add_double_different_var_args_2(ptr %res, ptr noalias %A, ptr 
 ; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC7]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop

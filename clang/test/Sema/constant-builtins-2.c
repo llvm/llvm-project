@@ -502,6 +502,33 @@ int h21 = __builtin_bswapg((_BitInt(64))0x0000000000001234) == (_BitInt(64))0x34
 int h22 = __builtin_bswapg(~(_BitInt(128))0) == (~(_BitInt(128))0) ? 1 : f();
 int h23 = __builtin_bswapg((_BitInt(24))0x1234) == (_BitInt(24))0x3412 ? 1 : f();
 // expected-error@-1 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
+
+char h24[__builtin_bitreverseg((char)0x01) == (char)0x80 ? 1 : -1];
+char h25[__builtin_bitreverseg((short)0x3C48) == (short)0x123C ? 1 : -1];
+char h26[__builtin_bitreverseg(0x12345678) == 0x1E6A2C48 ? 1 : -1];
+char h27[__builtin_bitreverseg(0x0123456789ABCDEFULL) == 0xF7B3D591E6A2C480 ? 1 : -1];
+int h28 = __builtin_bitreverseg((char)(0x12)) == (char)0x48 ? 1 : f();
+int h29 = __builtin_bitreverseg((short)(0x1234)) == (short)0x2C48 ? 1 : f();
+int h30 = __builtin_bitreverseg((__UINT32_TYPE__)0x1234) == (__UINT32_TYPE__)0x2C480000 ? 1 : f();
+int h31 = __builtin_bitreverseg(0x0000000000001234ULL) == 0x2C48000000000000 ? 1 : f();
+float h32 = __builtin_bitreverseg(1.0f); // expected-error {{1st argument must be a scalar integer type (was 'float')}}
+double h33 = __builtin_bitreverseg(1.0L); // expected-error {{1st argument must be a scalar integer type (was 'long double')}}
+char *h34 = __builtin_bitreverseg("hello"); // expected-error {{1st argument must be a scalar integer type (was 'char[6]')}}
+int h35 = __builtin_bitreverseg(1, 2); // expected-error {{too many arguments to function call, expected 1, have 2}}
+int *h36 = __builtin_bitreverseg(&h31); // expected-error {{1st argument must be a scalar integer type (was 'int *')}}
+int arr2[4] = {0x12, 0x34, 0x56, 0x78};
+int h37 = __builtin_bitreverseg(arr2); // expected-error {{1st argument must be a scalar integer type (was 'int[4]')}}
+enum BitreverseEnum {
+  BITREVERSE_ENUM_VALUE1 = 0x1234,
+};
+int h38 = __builtin_bitreverseg(BITREVERSE_ENUM_VALUE1) == 0x2C480000 ? 1 : f();
+int h39 = __builtin_bitreverseg((_BitInt(8))0x12) == (_BitInt(8))0x48 ? 1 : f();
+int h40 = __builtin_bitreverseg((_BitInt(16))0x1234) == (_BitInt(16))0x2C48 ? 1 : f();
+int h41 = __builtin_bitreverseg((_BitInt(32))0x00001234) == (_BitInt(32))0x2C480000 ? 1 : f();
+int h42 = __builtin_bitreverseg((_BitInt(64))0x0000000000001234) == (_BitInt(64))0x2C48000000000000 ? 1 : f();
+int h43 = __builtin_bitreverseg(~(_BitInt(128))0) == (~(_BitInt(128))0) ? 1 : f();
+
+
 extern long int bi0;
 extern __typeof__(__builtin_expect(0, 0)) bi0;
 

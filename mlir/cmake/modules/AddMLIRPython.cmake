@@ -474,7 +474,10 @@ function(add_mlir_python_modules name)
         MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
         _PRIVATE_SUPPORT_LIB
         LINK_LIBS PRIVATE
-          LLVMSupport
+        # LLVMSupport is intentionally removed to avoid introducing an LLVM dependency
+        # for the mlir-python bindings. Do not add new dependencies on the C++ LLVM/MLIR
+        # libraries; use the C++ standard library instead, or wrap LLVM functionality in
+        # the C API first.
           ${sources_target}
           ${ARG_COMMON_CAPI_LINK_LIBS}
       )

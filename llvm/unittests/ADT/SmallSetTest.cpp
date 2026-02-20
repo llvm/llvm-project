@@ -15,6 +15,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <string>
+#include <type_traits>
 
 using namespace llvm;
 
@@ -251,6 +252,22 @@ TEST(SmallSetTest, IteratorIncMoveCopy) {
   EXPECT_EQ("str 0", *Iter);
 }
 
+template <typename T>
+constexpr bool is_const_ref = std::is_const_v<std::remove_reference_t<T>>;
+
+TEST(SmallSetTest, IteratorDerefConst) {
+  // Verify that dereference of SmallSet's iterator gives const-reference.
+  SmallSet<int, 4> sint;
+  EXPECT_TRUE(is_const_ref<decltype(sint)::const_iterator::reference>);
+  EXPECT_TRUE(is_const_ref<decltype(*sint.begin())> &&
+              is_const_ref<decltype(*sint.end())>);
+
+  SmallSet<std::string, 4> sstr;
+  EXPECT_TRUE(is_const_ref<decltype(sstr)::const_iterator::reference>);
+  EXPECT_TRUE(is_const_ref<decltype(*sstr.begin())> &&
+              is_const_ref<decltype(*sstr.end())>);
+}
+
 TEST(SmallSetTest, EqualityComparisonTest) {
   SmallSet<int, 8> s1small;
   SmallSet<int, 10> s2small;
@@ -299,4 +316,15 @@ TEST(SmallSetTest, Contains) {
   EXPECT_TRUE(Set.contains(0));
   EXPECT_TRUE(Set.contains(1));
   EXPECT_TRUE(Set.contains(2));
+}
+
+TEST(SmallSetTest, FilterPositive) {
+  SmallSet<int, 4> Set({3, -1, 2, -4});
+  auto PositiveRange = make_filter_range(Set, [](int V) { return V > 0; });
+  auto PositiveIt = PositiveRange.begin();
+  EXPECT_EQ(*PositiveIt, 3);
+  ++PositiveIt;
+  EXPECT_EQ(*PositiveIt, 2);
+  ++PositiveIt;
+  EXPECT_EQ(PositiveIt, PositiveRange.end());
 }

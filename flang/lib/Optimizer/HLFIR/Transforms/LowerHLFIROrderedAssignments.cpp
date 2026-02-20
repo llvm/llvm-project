@@ -96,7 +96,7 @@ struct MaskedArrayExpr {
   /// hlfir.elemental_addr that form the elemental tree producing
   /// the expression value. hlfir.elemental that produce values
   /// used inside transformational operations are not part of this set.
-  llvm::SmallPtrSet<mlir::Operation *, 4> elementalParts{};
+  hlfir::ElementalTree elementalParts;
   /// Was generateNoneElementalPart called?
   bool noneElementalPartWasGenerated = false;
   /// Is this expression the mask expression of the outer where statement?
@@ -900,62 +900,11 @@ bool OrderedAssignmentRewriter::isRequiredInCurrentRun(
   return false;
 }
 
-/// Is the apply using all the elemental indices in order?
-static bool isInOrderApply(hlfir::ApplyOp apply,
-                           hlfir::ElementalOpInterface elemental) {
-  mlir::Region::BlockArgListType elementalIndices = elemental.getIndices();
-  if (elementalIndices.size() != apply.getIndices().size())
-    return false;
-  for (auto [elementalIdx, applyIdx] :
-       llvm::zip(elementalIndices, apply.getIndices()))
-    if (elementalIdx != applyIdx)
-      return false;
-  return true;
-}
-
-/// Gather the tree of hlfir::ElementalOpInterface use-def, if any, starting
-/// from \p elemental, which may be a nullptr.
-static void
-gatherElementalTree(hlfir::ElementalOpInterface elemental,
-                    llvm::SmallPtrSetImpl<mlir::Operation *> &elementalOps,
-                    bool isOutOfOrder) {
-  if (elemental) {
-    // Only inline an applied elemental that must be executed in order if the
-    // applying indices are in order. An hlfir::Elemental may have been created
-    // for a transformational like transpose, and Fortran 2018 standard
-    // section 10.2.3.2, point 10 imply that impure elemental sub-expression
-    // evaluations should not be masked if they are the arguments of
-    // transformational expressions.
-    if (isOutOfOrder && elemental.isOrdered())
-      return;
-    elementalOps.insert(elemental.getOperation());
-    for (mlir::Operation &op : elemental.getElementalRegion().getOps())
-      if (auto apply = mlir::dyn_cast<hlfir::ApplyOp>(op)) {
-        bool isUnorderedApply =
-            isOutOfOrder || !isInOrderApply(apply, elemental);
-        auto maybeElemental =
-            mlir::dyn_cast_or_null<hlfir::ElementalOpInterface>(
-                apply.getExpr().getDefiningOp());
-        gatherElementalTree(maybeElemental, elementalOps, isUnorderedApply);
-      }
-  }
-}
-
 MaskedArrayExpr::MaskedArrayExpr(mlir::Location loc, mlir::Region &region,
                                  bool isOuterMaskExpr)
     : loc{loc}, region{region}, isOuterMaskExpr{isOuterMaskExpr} {
   mlir::Operation &terminator = region.back().back();
-  if (auto elementalAddr =
-          mlir::dyn_cast<hlfir::ElementalOpInterface>(terminator)) {
-    // Vector subscripted designator (hlfir.elemental_addr terminator).
-    gatherElementalTree(elementalAddr, elementalParts, /*isOutOfOrder=*/false);
-    return;
-  }
-  // Try if elemental expression.
-  mlir::Value entity = mlir::cast<hlfir::YieldOp>(terminator).getEntity();
-  auto maybeElemental = mlir::dyn_cast_or_null<hlfir::ElementalOpInterface>(
-      entity.getDefiningOp());
-  gatherElementalTree(maybeElemental, elementalParts, /*isOutOfOrder=*/false);
+  elementalParts = hlfir::ElementalTree::buildElementalTree(terminator);
 }
 
 void MaskedArrayExpr::generateNoneElementalPart(fir::FirOpBuilder &builder,

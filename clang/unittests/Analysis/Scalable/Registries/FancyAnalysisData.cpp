@@ -8,6 +8,7 @@
 
 #include "Registries/MockSerializationFormat.h"
 #include "clang/Analysis/Scalable/TUSummary/EntitySummary.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Registry.h"
 
 using namespace clang;
@@ -17,8 +18,10 @@ using SpecialFileRepresentation =
     MockSerializationFormat::SpecialFileRepresentation;
 
 namespace {
-struct FancyAnalysisData : EntitySummary {
-  FancyAnalysisData() : EntitySummary(SummaryName("FancyAnalysis")) {}
+struct FancyAnalysisData final : EntitySummary {
+  SummaryName getSummaryName() const override {
+    return SummaryName("FancyAnalysis");
+  }
 
   std::string Text;
 };
@@ -41,7 +44,7 @@ deserializeFancyAnalysis(const SpecialFileRepresentation &File,
 
 namespace {
 using FormatInfo = MockSerializationFormat::FormatInfo;
-struct FancyAnalysisFormatInfo : FormatInfo {
+struct FancyAnalysisFormatInfo final : FormatInfo {
   FancyAnalysisFormatInfo()
       : FormatInfo{
             SummaryName("FancyAnalysis"),

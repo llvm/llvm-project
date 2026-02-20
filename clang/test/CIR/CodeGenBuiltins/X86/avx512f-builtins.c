@@ -1092,7 +1092,7 @@ __m256i test_mm512_mask_cvtepi64_epi32(__m256i __O, __mmask8 __M, __m512i __A) {
 
 __m256i test_mm512_maskz_cvtepi64_epi32(__mmask8 __M, __m512i __A) {
   // CIR-LABEL: test_mm512_maskz_cvtepi64_epi32
-  // CIR: %[[CALL:.*]] = cir.call {{.*}} : (!u8i, !cir.vector<8 x !s64i>) -> !cir.vector<4 x !s64i>
+  // CIR: %[[CALL:.*]] = cir.call {{.*}} : (!u8i, !cir.vector<8 x !s64i>) -> {{\(?}}!cir.vector<4 x !s64i>{{.*\)?}}
   // CIR: cir.store %[[CALL]], %[[RETPTR:.*]] : !cir.vector<4 x !s64i>, !cir.ptr<!cir.vector<4 x !s64i>>
   // CIR: %[[RETLOAD:.*]] = cir.load %[[RETPTR]] : !cir.ptr<!cir.vector<4 x !s64i>>, !cir.vector<4 x !s64i>
   // CIR: cir.return %[[RETLOAD]] : !cir.vector<4 x !s64i>

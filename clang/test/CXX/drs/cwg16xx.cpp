@@ -119,7 +119,7 @@ namespace cwg1638 { // cwg1638: 3.1
     friend enum class A<unsigned>::E;
     // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
     // since-cxx11-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
-    // since-cxx11-note@-3 {{remove 'enum class' to befriend an enum}}
+    //   since-cxx11-note@-3 {{remove 'enum class' to befriend an enum}}
   };
 #endif
 } // namespace cwg1638
@@ -266,12 +266,14 @@ namespace cwg1658 { // cwg1658: 5
     struct A { A(A&); };
     struct B : virtual A { virtual void f() = 0; };
     struct C : virtual A { virtual void f(); };
-    struct D : A { virtual void f() = 0; }; // since-cxx23-note {{previous declaration is here}}
+    struct D : A { virtual void f() = 0; }; // #cwg1658-D
 
     struct X {
       friend B::B(const B&) throw();
       friend C::C(C&);
-      friend D::D(D&); // since-cxx23-error {{non-constexpr declaration of 'D' follows constexpr declaration}}
+      friend D::D(D&);
+      // since-cxx23-error@-1 {{non-constexpr declaration of 'D' follows constexpr declaration}}
+      //   since-cxx23-note@#cwg1658-D {{previous declaration is here}}
     };
   }
 
@@ -373,7 +375,6 @@ namespace cwg1687 { // cwg1687: 7
   int *a = To<int*>() + 100.0;
   // expected-error@-1 {{invalid operands to binary expression ('To<int *>' and 'double')}}
   //   expected-note@#cwg1687-op-T {{first operand was implicitly converted to type 'int *'}}
-  //   since-cxx20-note@#cwg1687-op-T {{second operand was implicitly converted to type 'cwg1687::E2'}}
   int *b = To<int*>() + To<double>();
   // expected-error@-1 {{invalid operands to binary expression ('To<int *>' and 'To<double>')}}
   //   expected-note@#cwg1687-op-T {{first operand was implicitly converted to type 'int *'}}
@@ -384,7 +385,8 @@ namespace cwg1687 { // cwg1687: 7
   enum E2 {};
   auto c = To<E1>() <=> To<E2>();
   // since-cxx20-error@-1 {{invalid operands to binary expression ('To<E1>' and 'To<E2>')}}
-  //   since-cxx20-note@#cwg1687-op-T {{operand was implicitly converted to type 'cwg1687::E}}
+  //   since-cxx20-note@#cwg1687-op-T {{first operand was implicitly converted to type 'cwg1687::E1'}}
+  //   since-cxx20-note@#cwg1687-op-T {{second operand was implicitly converted to type 'cwg1687::E2'}}
 #endif
 } // namespace cwg1687
 
@@ -458,13 +460,13 @@ namespace cwg1696 { // cwg1696: 7
     };
 
     struct A2 {
-      A2() = default;
-      // since-cxx14-error@-1 {{reference member 'v' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
-      // since-cxx14-note-re@#cwg1696-A2-b {{in defaulted default constructor for {{.*}} first required here}}
-      // since-cxx14-note@#cwg1696-A2-a {{initializing field 'v' with default member initializer}}
       A2(int v) : v(v) {}
       // since-cxx14-warning@-1 {{binding reference member 'v' to stack allocated parameter 'v'}}
-      // since-cxx14-note@#cwg1696-A2-a {{reference member declared here}}
+      //   since-cxx14-note@#cwg1696-A2-a {{reference member declared here}}
+      A2() = default;
+      // since-cxx14-error@-1 {{reference member 'v' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+      //   since-cxx14-note-re@#cwg1696-A2-b {{in defaulted default constructor for {{.*}} first required here}}
+      //   since-cxx14-note@#cwg1696-A2-a {{initializing field 'v' with default member initializer}}
       const int &v = 42;  // #cwg1696-A2-a
     };
     A2 a1;    // #cwg1696-A2-b

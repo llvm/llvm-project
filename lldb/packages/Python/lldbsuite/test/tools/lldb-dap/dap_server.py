@@ -125,48 +125,6 @@ class Breakpoint(TypedDict, total=False):
     def is_verified(src: "Breakpoint") -> bool:
         return src.get("verified", False)
 
-
-def dump_memory(base_addr, data, num_per_line, outfile):
-    data_len = len(data)
-    hex_string = binascii.hexlify(data)
-    addr = base_addr
-    ascii_str = ""
-    i = 0
-    while i < data_len:
-        outfile.write("0x%8.8x: " % (addr + i))
-        bytes_left = data_len - i
-        if bytes_left >= num_per_line:
-            curr_data_len = num_per_line
-        else:
-            curr_data_len = bytes_left
-        hex_start_idx = i * 2
-        hex_end_idx = hex_start_idx + curr_data_len * 2
-        curr_hex_str = hex_string[hex_start_idx:hex_end_idx]
-        # 'curr_hex_str' now contains the hex byte string for the
-        # current line with no spaces between bytes
-        t = iter(curr_hex_str)
-        # Print hex bytes separated by space
-        outfile.write(" ".join(a + b for a, b in zip(t, t)))
-        # Print two spaces
-        outfile.write("  ")
-        # Calculate ASCII string for bytes into 'ascii_str'
-        ascii_str = ""
-        for j in range(i, i + curr_data_len):
-            ch = data[j]
-            if ch in string.printable and ch not in string.whitespace:
-                ascii_str += "%c" % (ch)
-            else:
-                ascii_str += "."
-        # Print ASCII representation and newline
-        outfile.write(ascii_str)
-        i = i + curr_data_len
-        outfile.write("\n")
-
-
-def packet_type_is(packet, packet_type):
-    return "type" in packet and packet["type"] == packet_type
-
-
 def dump_dap_log(log_file: Optional[str]) -> None:
     print("========= DEBUG ADAPTER PROTOCOL LOGS =========", file=sys.stderr)
     if log_file is None:
@@ -287,10 +245,7 @@ class DebugCommunication(object):
         self.terminated: bool = False
         self.events: List[Event] = []
         self.progress_events: List[Event] = []
-        self.invalidated_event: Optional[Event] = None
-        self.memory_event: Optional[Event] = None
         self.reverse_requests: List[Request] = []
-        self.module_events: List[Dict] = []
         self.sequence: int = 1
         self.output: Dict[str, str] = {}
         self.reverse_process: Optional[subprocess.Popen] = None
@@ -555,10 +510,6 @@ class DebugCommunication(object):
         elif event == "capabilities" and body:
             # Update the capabilities with new ones from the event.
             self.capabilities.update(body["capabilities"])
-        elif event == "invalidated":
-            self.invalidated_event = packet
-        elif event == "memory":
-            self.memory_event = packet
 
     def _handle_reverse_request(self, request: Request) -> None:
         if request in self.reverse_requests:
@@ -744,6 +695,18 @@ class DebugCommunication(object):
         event_dict = self.wait_for_event(["terminated"])
         if event_dict is None:
             raise ValueError("didn't get terminated event")
+        return event_dict
+
+    def wait_for_invalidated(self):
+        event_dict = self.wait_for_event(["invalidated"])
+        if event_dict is None:
+            raise ValueError("didn't get invalidated event")
+        return event_dict
+
+    def wait_for_memory(self):
+        event_dict = self.wait_for_event(["memory"])
+        if event_dict is None:
+            raise ValueError("didn't get memory event")
         return event_dict
 
     def get_capability(self, key: str):
@@ -1183,7 +1146,9 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
-    def request_initialize(self, sourceInitFile=False):
+    def request_initialize(
+        self, client_features: Optional[dict[str, bool]] = None, sourceInitFile=False
+    ):
         command_dict = {
             "command": "initialize",
             "type": "request",
@@ -1204,6 +1169,13 @@ class DebugCommunication(object):
                 "$__lldb_sourceInitFile": sourceInitFile,
             },
         }
+
+        if client_features is not None:
+            arguments = command_dict["arguments"]
+            # replace the default client features.
+            for key, value in client_features.items():
+                arguments[key] = value
+
         response = self._send_recv(command_dict)
         if response:
             if "body" in response:
@@ -1614,7 +1586,7 @@ class DebugCommunication(object):
         return response
 
     def request_variables(
-        self, variablesReference, start=None, count=None, is_hex=None
+        self, variablesReference, start=None, count=None, is_hex: Optional[bool] = None
     ):
         args_dict = {"variablesReference": variablesReference}
         if start is not None:
@@ -1630,7 +1602,7 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
-    def request_setVariable(self, containingVarRef, name, value, id=None):
+    def request_setVariable(self, containingVarRef, name, value, id=None, is_hex=None):
         args_dict = {
             "variablesReference": containingVarRef,
             "name": name,
@@ -1638,6 +1610,8 @@ class DebugCommunication(object):
         }
         if id is not None:
             args_dict["id"] = id
+        if is_hex is not None:
+            args_dict["format"] = {"hex": is_hex}
         command_dict = {
             "command": "setVariable",
             "type": "request",
@@ -1665,6 +1639,14 @@ class DebugCommunication(object):
             "command": "_testGetTargetBreakpoints",
             "type": "request",
             "arguments": {},
+        }
+        return self._send_recv(command_dict)
+
+    def request_custom(self, command: str, arguments: Optional[dict[str, Any]] = None):
+        command_dict = {
+            "command": command,
+            "type": "request",
+            "arguments": {} if arguments is None else arguments,
         }
         return self._send_recv(command_dict)
 
@@ -1866,7 +1848,7 @@ def attach_options_specified(opts):
 
 
 def run_adapter(dbg: DebugCommunication, opts: argparse.Namespace) -> None:
-    dbg.request_initialize(opts.source_init_file)
+    dbg.request_initialize(sourceInitFile=opts.source_init_file)
 
     source_to_lines: Dict[str, List[int]] = {}
     for sbp in cast(List[str], opts.source_bp):

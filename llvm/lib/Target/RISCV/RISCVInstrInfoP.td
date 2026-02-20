@@ -856,8 +856,14 @@ let Predicates = [HasStdExtP] in {
   def PPAIRO_B    : RVPBinary_rr<0b0110, 0b00, 0b100, "ppairo.b">;
   def PPAIRO_H    : RVPBinary_rr<0b0110, 0b01, 0b100, "ppairo.h">;
 } // Predicates = [HasStdExtP]
+let Predicates = [HasStdExtP, IsRV32] in {
+  // This should be a MnemonicAlias, but InstAlias produces better errors.
+  def : InstAlias<"ppaire.h $rd, $rs1, $rs2", (PACK GPR:$rd, GPR:$rs1, GPR:$rs2), 0>;
+}
 let Predicates = [HasStdExtP, IsRV64] in {
   def PPAIRE_H    : RVPBinary_rr<0b0000, 0b01, 0b100, "ppaire.h">;
+  // This should be a MnemonicAlias, but InstAlias produces better errors.
+  def : InstAlias<"ppaire.w $rd, $rs1, $rs2", (PACK GPR:$rd, GPR:$rs1, GPR:$rs2), 0>;
 
   def PPAIREO_W   : RVPBinary_rr<0b0010, 0b11, 0b100, "ppaireo.w">;
 
@@ -1477,6 +1483,45 @@ let Predicates = [HasStdExtP, IsRV32] in {
 def riscv_absw : RVSDNode<"ABSW", SDT_RISCVIntUnaryOpW>;
 def riscv_clsw : RVSDNode<"CLSW", SDT_RISCVIntUnaryOpW>;
 
+def SDT_RISCVIntBinOpD : SDTypeProfile<2, 4, [SDTCisVT<0, i32>,
+                                              SDTCisVT<1, i32>,
+                                              SDTCisSameAs<0, 2>,
+                                              SDTCisSameAs<1, 3>,
+                                              SDTCisSameAs<0, 4>,
+                                              SDTCisSameAs<1, 5>]>;
+def riscv_addd : RVSDNode<"ADDD", SDT_RISCVIntBinOpD,
+                          [SDNPCommutative, SDNPAssociative]>;
+def riscv_subd : RVSDNode<"SUBD", SDT_RISCVIntBinOpD>;
+
+def SDT_RISCVWideningAddSubAccumulate : SDTypeProfile<2, 4, [SDTCisVT<0, i32>,
+                                                             SDTCisVT<1, i32>,
+                                                             SDTCisSameAs<0, 2>,
+                                                             SDTCisSameAs<1, 3>,
+                                                             SDTCisSameAs<0, 4>,
+                                                             SDTCisSameAs<0, 5>]>;
+// Widening add accumulate unsigned: rd = rd + zext(rs1) + zext(rs2)
+def riscv_waddau : RVSDNode<"WADDAU", SDT_RISCVWideningAddSubAccumulate>;
+// Widening sub accumulate unsigned: rd = rd + zext(rs1) - zext(rs2)
+def riscv_wsubau : RVSDNode<"WSUBAU", SDT_RISCVWideningAddSubAccumulate>;
+
+def riscv_wmulsu : RVSDNode<"WMULSU", SDTIntBinHiLoOp>;
+
+// Narrowing shift: res = nsrl(lo, hi, shamt) is equivalent to
+// res = truncate (srl (build_pair lo, hi), shamt), XLenVT
+def SDT_RISCVNarrowingShift : SDTypeProfile<1, 3, [SDTCisVT<0, i32>,
+                                                   SDTCisVT<1, i32>,
+                                                   SDTCisVT<2, i32>,
+                                                   SDTCisVT<3, i32>]>;
+def riscv_nsrl : RVSDNode<"NSRL", SDT_RISCVNarrowingShift>;
+def riscv_nsra : RVSDNode<"NSRA", SDT_RISCVNarrowingShift>;
+
+// ComplexPattern for 64-bit shift mask (NSRL/NSRA only read 6 bits).
+def shiftMask64 : ComplexPattern<i32, 1, "selectShiftMask64", [], [], 0>;
+
+// Build a GPRPair from two GPR registers for narrowing shift instructions.
+def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
+  (REG_SEQUENCE GPRPair, $lo, sub_gpr_even, $hi, sub_gpr_odd)>;
+
 // Averaging subtraction, (a - b) >> 2
 def riscv_asub : RVSDNode<"ASUB", SDTIntBinOp>;
 def riscv_asubu : RVSDNode<"ASUBU", SDTIntBinOp>;
@@ -1486,13 +1531,15 @@ def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp>;
 def riscv_mulhru : RVSDNode<"MULHRU", SDTIntBinOp>;
 def riscv_mulhrsu : RVSDNode<"MULHRSU", SDTIntBinOp>;
 
-def SDT_RISCVMVM : SDTypeProfile<1, 3, [SDTCisInt<0>,
-                                        SDTCisSameAs<0, 1>,
-                                        SDTCisSameAs<0, 2>,
-                                        SDTCisSameAs<0, 3>]>;
-def riscv_mvm : RVSDNode<"MVM", SDT_RISCVMVM>;
+// Bitwise merge: res = (~op0 & op1) | (op0 & op2)
+def SDT_RISCVMERGE : SDTypeProfile<1, 3, [SDTCisInt<0>,
+                                          SDTCisSameAs<0, 1>,
+                                          SDTCisSameAs<0, 2>,
+                                          SDTCisSameAs<0, 3>]>;
+def riscv_merge : RVSDNode<"MERGE", SDT_RISCVMERGE>;
 
 let Predicates = [HasStdExtP] in {
+
   def : PatGpr<abs, ABS>;
   def : PatGpr<ctls, CLS>;
 
@@ -1501,9 +1548,17 @@ let Predicates = [HasStdExtP] in {
   def : Pat<(XLenVT (fshr GPR:$rs1, GPR:$rd, shiftMaskXLen:$rs2)),
             (SRX GPR:$rd, GPR:$rs1, shiftMaskXLen:$rs2)>;
 
+  // Pseudo version of MERGE without the tied constraint. Will be expanded to
+  // MERGE, MVM, or MVMN after register allocation.
+  // dst = (~rd & rs1) | (rd & rs2)
+  def PseudoMERGE : Pseudo<(outs GPR:$dst), (ins GPR:$rd, GPR:$rs1, GPR:$rs2),
+                           []>;
+  def : Pat<(XLenVT (or (and GPR:$rd, GPR:$rs2), (and (not GPR:$rd), GPR:$rs1))),
+            (PseudoMERGE GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
   // Pattern for insert_vector_elt
-  def : Pat<(XLenVT (riscv_mvm GPR:$rd, GPR:$rs1, GPR:$rs2)),
-            (MVM GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVT (riscv_merge GPR:$rd, GPR:$rs1, GPR:$rs2)),
+            (PseudoMERGE GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Basic 8-bit arithmetic patterns
   def: Pat<(XLenVecI8VT (add GPR:$rs1, GPR:$rs2)), (PADD_B GPR:$rs1, GPR:$rs2)>;
@@ -1675,6 +1730,18 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def : PatGprGpr<uaddsat, SADDU>;
   def : PatGprGpr<usubsat, SSUBU>;
   def : PatGprGpr<sshlsat, SSHA>;
+
+  // Narrowing shift patterns (NSRL/NSRA)
+  // Immediate shift amount patterns
+  def : Pat<(i32 (riscv_nsrl GPR:$lo, GPR:$hi, uimm6:$shamt)),
+            (NSRLI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$shamt)>;
+  def : Pat<(i32 (riscv_nsra GPR:$lo, GPR:$hi, uimm6:$shamt)),
+            (NSRAI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$shamt)>;
+  // Register shift amount patterns
+  def : Pat<(i32 (riscv_nsrl GPR:$lo, GPR:$hi, shiftMask64:$shamt)),
+            (NSRL (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
+  def : Pat<(i32 (riscv_nsra GPR:$lo, GPR:$hi, shiftMask64:$shamt)),
+            (NSRA (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
 
   // 8/16-bit multiply low patterns
   def: Pat<(v4i8 (mul GPR:$rs1, GPR:$rs2)),

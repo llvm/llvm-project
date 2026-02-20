@@ -11,6 +11,7 @@
 #include <mutex>
 
 #include "lldb/Host/windows/PipeWindows.h"
+#include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Host/windows/windows.h"
 #include "lldb/Utility/LLDBLog.h"
 
@@ -71,8 +72,8 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
     return llvm::make_error<llvm::StringError>("ConPTY is not available",
                                                llvm::errc::io_error);
 
-  // close any previously opened handles
-  Close();
+  assert(m_conpty_handle == INVALID_HANDLE_VALUE &&
+         "ConPTY has already been opened");
 
   HRESULT hr;
   HANDLE hInputRead = INVALID_HANDLE_VALUE;
@@ -118,10 +119,20 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
   m_conpty_output = hOutputRead;
   m_conpty_input = hInputWrite;
 
+  if (auto error = DrainInitSequences()) {
+    Log *log = GetLog(LLDBLog::Host);
+    LLDB_LOG_ERROR(log, std::move(error),
+                   "failed to finalize ConPTY's setup: {0}");
+  }
+
   return llvm::Error::success();
 }
 
 void PseudoConsole::Close() {
+  Sleep(50); // FIXME: This mitigates a race condition when closing the
+             // PseudoConsole. It's possible that there is still data in the
+             // pipe when we try to close it. We should wait until the data has
+             // been consumed.
   if (m_conpty_handle != INVALID_HANDLE_VALUE)
     kernel32.ClosePseudoConsole(m_conpty_handle);
   if (m_conpty_input != INVALID_HANDLE_VALUE)
@@ -132,4 +143,63 @@ void PseudoConsole::Close() {
   m_conpty_handle = INVALID_HANDLE_VALUE;
   m_conpty_input = INVALID_HANDLE_VALUE;
   m_conpty_output = INVALID_HANDLE_VALUE;
+}
+
+llvm::Error PseudoConsole::DrainInitSequences() {
+  STARTUPINFOEXW startupinfoex = {};
+  startupinfoex.StartupInfo.cb = sizeof(STARTUPINFOEXW);
+  startupinfoex.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
+
+  auto attributelist_or_err = ProcThreadAttributeList::Create(startupinfoex);
+  if (!attributelist_or_err)
+    return llvm::errorCodeToError(attributelist_or_err.getError());
+  ProcThreadAttributeList attributelist = std::move(*attributelist_or_err);
+  if (auto error = attributelist.SetupPseudoConsole(m_conpty_handle))
+    return error;
+
+  PROCESS_INFORMATION pi = {};
+
+  wchar_t comspec[MAX_PATH];
+  DWORD comspecLen = GetEnvironmentVariableW(L"COMSPEC", comspec, MAX_PATH);
+  if (comspecLen == 0 || comspecLen >= MAX_PATH)
+    return llvm::createStringError(
+        std::error_code(GetLastError(), std::system_category()),
+        "Failed to get the 'COMSPEC' environment variable");
+
+  std::wstring cmdline_str = std::wstring(comspec) + L" /c 'echo foo && exit'";
+  std::vector<wchar_t> cmdline(cmdline_str.begin(), cmdline_str.end());
+  cmdline.push_back(L'\0');
+
+  if (!CreateProcessW(/*lpApplicationName=*/comspec, cmdline.data(),
+                      /*lpProcessAttributes=*/NULL, /*lpThreadAttributes=*/NULL,
+                      /*bInheritHandles=*/TRUE,
+                      /*dwCreationFlags=*/EXTENDED_STARTUPINFO_PRESENT |
+                          CREATE_UNICODE_ENVIRONMENT,
+                      /*lpEnvironment=*/NULL, /*lpCurrentDirectory=*/NULL,
+                      /*lpStartupInfo=*/
+                      reinterpret_cast<STARTUPINFOW *>(&startupinfoex),
+                      /*lpProcessInformation=*/&pi))
+    return llvm::errorCodeToError(
+        std::error_code(GetLastError(), std::system_category()));
+
+  char buf[4096];
+  OVERLAPPED ov = {};
+  ov.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+
+  DWORD read;
+  ReadFile(m_conpty_output, buf, sizeof(buf), &read, &ov);
+
+  WaitForSingleObject(pi.hProcess, INFINITE);
+
+  if (GetOverlappedResult(m_conpty_output, &ov, &read, FALSE) && read > 0) {
+    ResetEvent(ov.hEvent);
+    ReadFile(m_conpty_output, buf, sizeof(buf), &read, &ov);
+  }
+
+  CancelIo(m_conpty_output);
+  CloseHandle(ov.hEvent);
+  CloseHandle(pi.hProcess);
+  CloseHandle(pi.hThread);
+
+  return llvm::Error::success();
 }

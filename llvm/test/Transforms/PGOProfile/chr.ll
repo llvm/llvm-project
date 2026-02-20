@@ -1119,7 +1119,7 @@ define void @test_chr_11(ptr %i, i32 %x) !prof !14 {
 ; CHECK-NEXT:    [[DOTFR1:%.*]] = freeze i32 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[DOTFR1]] to i1
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[DOTFR1]] to double
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv double 1.000000e+00, [[CONV]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan double 1.000000e+00, [[CONV]]
 ; CHECK-NEXT:    [[MUL16:%.*]] = fmul double [[DIV]], [[CONV]]
 ; CHECK-NEXT:    [[CONV717:%.*]] = fptosi double [[MUL16]] to i32
 ; CHECK-NEXT:    [[CONV717_FR:%.*]] = freeze i32 [[CONV717]]
@@ -1137,7 +1137,7 @@ define void @test_chr_11(ptr %i, i32 %x) !prof !14 {
 ; CHECK-NEXT:    br label [[BB1_NONCHR]]
 ; CHECK:       bb1.nonchr:
 ; CHECK-NEXT:    [[CONV_NONCHR:%.*]] = sitofp i32 [[DOTFR1]] to double
-; CHECK-NEXT:    [[DIV_NONCHR:%.*]] = fdiv double 1.000000e+00, [[CONV_NONCHR]]
+; CHECK-NEXT:    [[DIV_NONCHR:%.*]] = fdiv nnan double 1.000000e+00, [[CONV_NONCHR]]
 ; CHECK-NEXT:    [[MUL16_NONCHR:%.*]] = fmul double [[DIV_NONCHR]], [[CONV_NONCHR]]
 ; CHECK-NEXT:    [[CONV717_NONCHR:%.*]] = fptosi double [[MUL16_NONCHR]] to i32
 ; CHECK-NEXT:    [[CMP18_NONCHR:%.*]] = icmp slt i32 [[CONV717_NONCHR]], 1

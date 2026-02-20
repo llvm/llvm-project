@@ -79,10 +79,10 @@ TargetExtType *parseBuiltinTypeNameToTargetExtType(std::string TypeName,
 /// \return A machine instruction representing the OpType<...> SPIR-V type.
 ///
 /// \p Type is the special opaque/builtin type to be lowered.
-SPIRVType *lowerBuiltinType(const Type *Type,
-                            AccessQualifier::AccessQualifier AccessQual,
-                            MachineIRBuilder &MIRBuilder,
-                            SPIRVGlobalRegistry *GR);
+SPIRVTypeInst lowerBuiltinType(const Type *Type,
+                               AccessQualifier::AccessQualifier AccessQual,
+                               MachineIRBuilder &MIRBuilder,
+                               SPIRVGlobalRegistry *GR);
 } // namespace SPIRV
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVBUILTINS_H

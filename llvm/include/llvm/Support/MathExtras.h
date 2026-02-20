@@ -786,6 +786,9 @@ using stack_float_t = volatile float;
 using stack_float_t = float;
 #endif
 
+/// Returns the number of digits in the given integer.
+int NumDigitsBase10(uint64_t X);
+
 } // namespace llvm
 
 #endif

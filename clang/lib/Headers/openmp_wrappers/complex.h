@@ -29,6 +29,12 @@
 #undef __OPENMP_AMDGCN__
 #endif
 
+#ifdef __SPIRV__
+#define __OPENMP_SPIRV__
+#include <__clang_cuda_complex_builtins.h>
+#undef __OPENMP_SPIRV__
+#endif // __SPIRV__
+
 #endif
 
 // Grab the host header too.

@@ -3834,14 +3834,6 @@ static void handleInitPriorityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     AL.setInvalid();
     return;
   }
-  QualType T = cast<VarDecl>(D)->getType();
-  if (S.Context.getAsArrayType(T))
-    T = S.Context.getBaseElementType(T);
-  if (!T->isRecordType()) {
-    S.Diag(AL.getLoc(), diag::err_init_priority_object_attr);
-    AL.setInvalid();
-    return;
-  }
 
   Expr *E = AL.getArgAsExpr(0);
   uint32_t prioritynum;
@@ -5140,6 +5132,8 @@ static void handleConstantAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     S.Diag(AL.getLoc(), diag::err_cuda_nonstatic_constdev);
     return;
   }
+  if (!S.CheckVarDeclSizeAddressSpace(VD, LangAS::cuda_constant))
+    return;
   // constexpr variable may already get an implicit constant attr, which should
   // be replaced by the explicit constant attr.
   if (auto *A = D->getAttr<CUDAConstantAttr>()) {
@@ -5159,6 +5153,8 @@ static void handleSharedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     S.Diag(AL.getLoc(), diag::err_cuda_extern_shared) << VD;
     return;
   }
+  if (!S.CheckVarDeclSizeAddressSpace(VD, LangAS::cuda_shared))
+    return;
   if (S.getLangOpts().CUDA && VD->hasLocalStorage() &&
       S.CUDA().DiagIfHostCode(AL.getLoc(), diag::err_cuda_host_shared)
           << S.CUDA().CurrentTarget())
@@ -5208,6 +5204,8 @@ static void handleDeviceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       S.Diag(AL.getLoc(), diag::err_cuda_nonstatic_constdev);
       return;
     }
+    if (!S.CheckVarDeclSizeAddressSpace(VD, LangAS::cuda_device))
+      return;
   }
 
   if (auto *A = D->getAttr<CUDADeviceAttr>()) {
@@ -5224,6 +5222,8 @@ static void handleManagedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       S.Diag(AL.getLoc(), diag::err_cuda_nonstatic_constdev);
       return;
     }
+    if (!S.CheckVarDeclSizeAddressSpace(VD, LangAS::cuda_device))
+      return;
   }
   if (!D->hasAttr<HIPManagedAttr>())
     D->addAttr(::new (S.Context) HIPManagedAttr(S.Context, AL));
@@ -6748,6 +6748,10 @@ static void handleZeroCallUsedRegsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(ZeroCallUsedRegsAttr::Create(S.Context, Kind, AL));
 }
 
+static void handleNoPFPAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
+  D->addAttr(NoFieldProtectionAttr::Create(S.Context, AL));
+}
+
 static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
   auto *FD = dyn_cast<FieldDecl>(D);
   assert(FD);
@@ -7855,6 +7859,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleCountedByAttrField(S, D, AL);
     break;
 
+  case ParsedAttr::AT_NoFieldProtection:
+    handleNoPFPAttrField(S, D, AL);
+    break;
+
   // Microsoft attributes:
   case ParsedAttr::AT_LayoutVersion:
     handleLayoutVersion(S, D, AL);
@@ -8136,6 +8144,14 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_GCCStruct:
     handleGCCStructAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_PointerFieldProtection:
+    if (!S.getLangOpts().PointerFieldProtectionAttr)
+      S.Diag(AL.getLoc(),
+             diag::err_attribute_pointer_field_protection_experimental)
+          << AL << AL.isRegularKeywordAttribute() << D->getLocation();
+    handleSimpleAttribute<PointerFieldProtectionAttr>(S, D, AL);
     break;
   }
 }
@@ -8650,5 +8666,15 @@ void Sema::ActOnCleanupAttr(Decl *D, const Attr *A) {
         << NI.getName() << ParamTy << Ty;
     D->dropAttr<CleanupAttr>();
     return;
+  }
+}
+
+void Sema::ActOnInitPriorityAttr(Decl *D, const Attr *A) {
+  QualType T = cast<VarDecl>(D)->getType();
+  if (this->Context.getAsArrayType(T))
+    T = this->Context.getBaseElementType(T);
+  if (!T->isRecordType()) {
+    this->Diag(A->getLoc(), diag::err_init_priority_object_attr);
+    D->dropAttr<InitPriorityAttr>();
   }
 }

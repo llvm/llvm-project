@@ -26,6 +26,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
@@ -156,8 +157,8 @@ static mlir::Value makeBinaryAtomicValue(
 
   auto rmwi = cir::AtomicFetchOp::create(
       builder, cgf.getLoc(expr->getSourceRange()), destValue, val, kind,
-      ordering, false, /* is volatile */
-      true);           /* fetch first */
+      ordering, cir::SyncScopeKind::System, false, /* is volatile */
+      true);                                       /* fetch first */
   return rmwi->getResult(0);
 }
 
@@ -270,6 +271,45 @@ static RValue emitUnaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
   auto call =
       Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(), arg);
   return RValue::get(call->getResult(0));
+}
+
+template <typename Op>
+static RValue emitUnaryMaybeConstrainedFPToIntBuiltin(CIRGenFunction &cgf,
+                                                      const CallExpr &e) {
+  mlir::Type resultType = cgf.convertType(e.getType());
+  mlir::Value src = cgf.emitScalarExpr(e.getArg(0));
+
+  assert(!cir::MissingFeatures::fpConstraints());
+
+  auto call = Op::create(cgf.getBuilder(), src.getLoc(), resultType, src);
+  return RValue::get(call->getResult(0));
+}
+
+template <typename Op>
+static RValue emitBinaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
+  mlir::Value arg0 = cgf.emitScalarExpr(e.getArg(0));
+  mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
+
+  mlir::Location loc = cgf.getLoc(e.getExprLoc());
+  mlir::Type ty = cgf.convertType(e.getType());
+  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1);
+
+  return RValue::get(call->getResult(0));
+}
+
+template <typename Op>
+static mlir::Value emitBinaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
+                                                       const CallExpr &e) {
+  mlir::Value arg0 = cgf.emitScalarExpr(e.getArg(0));
+  mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
+
+  mlir::Location loc = cgf.getLoc(e.getExprLoc());
+  mlir::Type ty = cgf.convertType(e.getType());
+
+  assert(!cir::MissingFeatures::fpConstraints());
+
+  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1);
+  return call->getResult(0);
 }
 
 static RValue errorBuiltinNYI(CIRGenFunction &cgf, const CallExpr *e,
@@ -385,6 +425,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_acosl:
   case Builtin::BI__builtin_acosf128:
   case Builtin::BI__builtin_elementwise_acos:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ACosOp>(cgf, *e);
   case Builtin::BIasin:
   case Builtin::BIasinf:
   case Builtin::BIasinl:
@@ -394,6 +435,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_asinl:
   case Builtin::BI__builtin_asinf128:
   case Builtin::BI__builtin_elementwise_asin:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ASinOp>(cgf, *e);
   case Builtin::BIatan:
   case Builtin::BIatanf:
   case Builtin::BIatanl:
@@ -403,6 +445,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_atanl:
   case Builtin::BI__builtin_atanf128:
   case Builtin::BI__builtin_elementwise_atan:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ATanOp>(cgf, *e);
   case Builtin::BIatan2:
   case Builtin::BIatan2f:
   case Builtin::BIatan2l:
@@ -412,7 +455,8 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_atan2l:
   case Builtin::BI__builtin_atan2f128:
   case Builtin::BI__builtin_elementwise_atan2:
-    return RValue::getIgnored();
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::ATan2Op>(cgf, *e));
   case Builtin::BIceil:
   case Builtin::BIceilf:
   case Builtin::BIceill:
@@ -423,6 +467,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_ceilf128:
     return emitUnaryMaybeConstrainedFPBuiltin<cir::CeilOp>(cgf, *e);
   case Builtin::BI__builtin_elementwise_ceil:
+    return RValue::getIgnored();
   case Builtin::BIcopysign:
   case Builtin::BIcopysignf:
   case Builtin::BIcopysignl:
@@ -431,7 +476,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_copysignf16:
   case Builtin::BI__builtin_copysignl:
   case Builtin::BI__builtin_copysignf128:
-    return RValue::getIgnored();
+    return emitBinaryFPBuiltin<cir::CopysignOp>(cgf, *e);
   case Builtin::BIcos:
   case Builtin::BIcosf:
   case Builtin::BIcosl:
@@ -508,6 +553,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_fmal:
   case Builtin::BI__builtin_fmaf128:
   case Builtin::BI__builtin_elementwise_fma:
+    return RValue::getIgnored();
   case Builtin::BIfmax:
   case Builtin::BIfmaxf:
   case Builtin::BIfmaxl:
@@ -516,6 +562,8 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_fmaxf16:
   case Builtin::BI__builtin_fmaxl:
   case Builtin::BI__builtin_fmaxf128:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FMaxNumOp>(cgf, *e));
   case Builtin::BIfmin:
   case Builtin::BIfminf:
   case Builtin::BIfminl:
@@ -524,6 +572,8 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_fminf16:
   case Builtin::BI__builtin_fminl:
   case Builtin::BI__builtin_fminf128:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FMinNumOp>(cgf, *e));
   case Builtin::BIfmaximum_num:
   case Builtin::BIfmaximum_numf:
   case Builtin::BIfmaximum_numl:
@@ -540,6 +590,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_fminimum_numf16:
   case Builtin::BI__builtin_fminimum_numl:
   case Builtin::BI__builtin_fminimum_numf128:
+    return RValue::getIgnored();
   case Builtin::BIfmod:
   case Builtin::BIfmodf:
   case Builtin::BIfmodl:
@@ -549,6 +600,8 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_fmodl:
   case Builtin::BI__builtin_fmodf128:
   case Builtin::BI__builtin_elementwise_fmod:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FModOp>(cgf, *e));
   case Builtin::BIlog:
   case Builtin::BIlogf:
   case Builtin::BIlogl:
@@ -558,6 +611,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_logl:
   case Builtin::BI__builtin_logf128:
   case Builtin::BI__builtin_elementwise_log:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::LogOp>(cgf, *e);
   case Builtin::BIlog10:
   case Builtin::BIlog10f:
   case Builtin::BIlog10l:
@@ -567,6 +621,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_log10l:
   case Builtin::BI__builtin_log10f128:
   case Builtin::BI__builtin_elementwise_log10:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::Log10Op>(cgf, *e);
   case Builtin::BIlog2:
   case Builtin::BIlog2f:
   case Builtin::BIlog2l:
@@ -576,6 +631,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_log2l:
   case Builtin::BI__builtin_log2f128:
   case Builtin::BI__builtin_elementwise_log2:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::Log2Op>(cgf, *e);
   case Builtin::BInearbyint:
   case Builtin::BInearbyintf:
   case Builtin::BInearbyintl:
@@ -584,6 +640,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_nearbyintl:
   case Builtin::BI__builtin_nearbyintf128:
   case Builtin::BI__builtin_elementwise_nearbyint:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::NearbyintOp>(cgf, *e);
   case Builtin::BIpow:
   case Builtin::BIpowf:
   case Builtin::BIpowl:
@@ -592,7 +649,10 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_powf16:
   case Builtin::BI__builtin_powl:
   case Builtin::BI__builtin_powf128:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::PowOp>(cgf, *e));
   case Builtin::BI__builtin_elementwise_pow:
+    return RValue::getIgnored();
   case Builtin::BIrint:
   case Builtin::BIrintf:
   case Builtin::BIrintl:
@@ -602,6 +662,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_rintl:
   case Builtin::BI__builtin_rintf128:
   case Builtin::BI__builtin_elementwise_rint:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::RintOp>(cgf, *e);
   case Builtin::BIround:
   case Builtin::BIroundf:
   case Builtin::BIroundl:
@@ -611,6 +672,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_roundl:
   case Builtin::BI__builtin_roundf128:
   case Builtin::BI__builtin_elementwise_round:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::RoundOp>(cgf, *e);
   case Builtin::BIroundeven:
   case Builtin::BIroundevenf:
   case Builtin::BIroundevenl:
@@ -620,6 +682,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_roundevenl:
   case Builtin::BI__builtin_roundevenf128:
   case Builtin::BI__builtin_elementwise_roundeven:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::RoundEvenOp>(cgf, *e);
   case Builtin::BIsin:
   case Builtin::BIsinf:
   case Builtin::BIsinl:
@@ -629,6 +692,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_sinl:
   case Builtin::BI__builtin_sinf128:
   case Builtin::BI__builtin_elementwise_sin:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::SinOp>(cgf, *e);
   case Builtin::BIsinh:
   case Builtin::BIsinhf:
   case Builtin::BIsinhl:
@@ -649,6 +713,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_sincosf16:
   case Builtin::BI__builtin_sincosl:
   case Builtin::BI__builtin_sincosf128:
+    return RValue::getIgnored();
   case Builtin::BIsqrt:
   case Builtin::BIsqrtf:
   case Builtin::BIsqrtl:
@@ -658,6 +723,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_sqrtl:
   case Builtin::BI__builtin_sqrtf128:
   case Builtin::BI__builtin_elementwise_sqrt:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::SqrtOp>(cgf, *e);
   case Builtin::BItan:
   case Builtin::BItanf:
   case Builtin::BItanl:
@@ -667,6 +733,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_tanl:
   case Builtin::BI__builtin_tanf128:
   case Builtin::BI__builtin_elementwise_tan:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::TanOp>(cgf, *e);
   case Builtin::BItanh:
   case Builtin::BItanhf:
   case Builtin::BItanhl:
@@ -676,6 +743,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_tanhl:
   case Builtin::BI__builtin_tanhf128:
   case Builtin::BI__builtin_elementwise_tanh:
+    return RValue::getIgnored();
   case Builtin::BItrunc:
   case Builtin::BItruncf:
   case Builtin::BItruncl:
@@ -685,6 +753,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_truncl:
   case Builtin::BI__builtin_truncf128:
   case Builtin::BI__builtin_elementwise_trunc:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::TruncOp>(cgf, *e);
   case Builtin::BIlround:
   case Builtin::BIlroundf:
   case Builtin::BIlroundl:
@@ -692,6 +761,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_lroundf:
   case Builtin::BI__builtin_lroundl:
   case Builtin::BI__builtin_lroundf128:
+    return emitUnaryMaybeConstrainedFPToIntBuiltin<cir::LroundOp>(cgf, *e);
   case Builtin::BIllround:
   case Builtin::BIllroundf:
   case Builtin::BIllroundl:
@@ -699,6 +769,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_llroundf:
   case Builtin::BI__builtin_llroundl:
   case Builtin::BI__builtin_llroundf128:
+    return emitUnaryMaybeConstrainedFPToIntBuiltin<cir::LlroundOp>(cgf, *e);
   case Builtin::BIlrint:
   case Builtin::BIlrintf:
   case Builtin::BIlrintl:
@@ -706,6 +777,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_lrintf:
   case Builtin::BI__builtin_lrintl:
   case Builtin::BI__builtin_lrintf128:
+    return emitUnaryMaybeConstrainedFPToIntBuiltin<cir::LrintOp>(cgf, *e);
   case Builtin::BIllrint:
   case Builtin::BIllrintf:
   case Builtin::BIllrintl:
@@ -713,6 +785,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_llrintf:
   case Builtin::BI__builtin_llrintl:
   case Builtin::BI__builtin_llrintf128:
+    return emitUnaryMaybeConstrainedFPToIntBuiltin<cir::LlrintOp>(cgf, *e);
   case Builtin::BI__builtin_ldexp:
   case Builtin::BI__builtin_ldexpf:
   case Builtin::BI__builtin_ldexpl:
@@ -726,6 +799,105 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   return RValue::getIgnored();
 }
 
+// FIXME: Remove cgf parameter when all descriptor kinds are implemented
+static mlir::Type
+decodeFixedType(CIRGenFunction &cgf,
+                ArrayRef<llvm::Intrinsic::IITDescriptor> &infos,
+                mlir::MLIRContext *context) {
+  using namespace llvm::Intrinsic;
+
+  IITDescriptor descriptor = infos.front();
+  infos = infos.slice(1);
+
+  switch (descriptor.Kind) {
+  case IITDescriptor::Void:
+    return cir::VoidType::get(context);
+  // If the intrinsic expects unsigned integers, the signedness is corrected in
+  // correctIntegerSignedness()
+  case IITDescriptor::Integer:
+    return cir::IntType::get(context, descriptor.Integer_Width,
+                             /*isSigned=*/true);
+  case IITDescriptor::Vector: {
+    mlir::Type elementType = decodeFixedType(cgf, infos, context);
+    unsigned numElements = descriptor.Vector_Width.getFixedValue();
+    return cir::VectorType::get(elementType, numElements);
+  }
+  case IITDescriptor::Pointer: {
+    mlir::Builder builder(context);
+    auto addrSpace = cir::TargetAddressSpaceAttr::get(
+        context, builder.getUI32IntegerAttr(descriptor.Pointer_AddressSpace));
+    return cir::PointerType::get(cir::VoidType::get(context), addrSpace);
+  }
+  default:
+    cgf.cgm.errorNYI("Unimplemented intrinsic type descriptor");
+    return cir::VoidType::get(context);
+  }
+}
+
+/// Helper function to correct integer signedness for intrinsic arguments and
+/// return type. IIT always returns signed integers, but the actual intrinsic
+/// may expect unsigned integers based on the AST FunctionDecl parameter types.
+static mlir::Type correctIntegerSignedness(mlir::Type iitType, QualType astType,
+                                           mlir::MLIRContext *context) {
+  auto intTy = dyn_cast<cir::IntType>(iitType);
+  if (!intTy)
+    return iitType;
+
+  if (astType->isUnsignedIntegerType())
+    return cir::IntType::get(context, intTy.getWidth(), /*isSigned=*/false);
+
+  return iitType;
+}
+
+static mlir::Value getCorrectedPtr(mlir::Value argValue, mlir::Type expectedTy,
+                                   CIRGenBuilderTy &builder) {
+  auto ptrType = mlir::cast<cir::PointerType>(argValue.getType());
+
+  auto expectedPtrType = mlir::cast<cir::PointerType>(expectedTy);
+  assert(ptrType != expectedPtrType && "types should not match");
+
+  if (ptrType.getAddrSpace() != expectedPtrType.getAddrSpace()) {
+    assert(!cir::MissingFeatures::addressSpace() &&
+           "address space handling not yet implemented");
+    auto newPtrType = cir::PointerType::get(ptrType.getPointee(),
+                                            expectedPtrType.getAddrSpace());
+    return builder.createAddrSpaceCast(argValue, newPtrType);
+  }
+
+  return builder.createBitcast(argValue, expectedTy);
+}
+
+static cir::FuncType getIntrinsicType(CIRGenFunction &cgf,
+                                      mlir::MLIRContext *context,
+                                      llvm::Intrinsic::ID id) {
+  using namespace llvm::Intrinsic;
+
+  SmallVector<IITDescriptor, 8> table;
+  getIntrinsicInfoTableEntries(id, table);
+
+  ArrayRef<IITDescriptor> tableRef = table;
+  mlir::Type resultTy = decodeFixedType(cgf, tableRef, context);
+
+  SmallVector<mlir::Type, 8> argTypes;
+  bool isVarArg = false;
+  while (!tableRef.empty()) {
+    llvm::Intrinsic::IITDescriptor::IITDescriptorKind kind =
+        tableRef.front().Kind;
+    if (kind == IITDescriptor::VarArg) {
+      isVarArg = true;
+      break; // VarArg is last
+    }
+    argTypes.push_back(decodeFixedType(cgf, tableRef, context));
+  }
+
+  // CIR convention: no explicit void return type
+  if (isa<cir::VoidType>(resultTy))
+    return cir::FuncType::get(context, argTypes, /*optionalReturnType=*/nullptr,
+                              isVarArg);
+
+  return cir::FuncType::get(context, argTypes, resultTy, isVarArg);
+}
+
 RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                        const CallExpr *e,
                                        ReturnValueSlot returnValue) {
@@ -733,11 +905,20 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
   // See if we can constant fold this builtin.  If so, don't emit it at all.
   // TODO: Extend this handling to all builtin calls that we can constant-fold.
+  // Do not constant-fold immediate (target-specific) builtins; their ASTs can
+  // trigger the constant evaluator in cases it cannot safely handle.
+  // Skip EvaluateAsRValue for those.
   Expr::EvalResult result;
-  if (e->isPRValue() && e->EvaluateAsRValue(result, cgm.getASTContext()) &&
+  if (e->isPRValue() && !getContext().BuiltinInfo.isImmediate(builtinID) &&
+      e->EvaluateAsRValue(result, cgm.getASTContext()) &&
       !result.hasSideEffects()) {
-    if (result.Val.isInt())
+    if (result.Val.isInt()) {
+      QualType type = e->getType();
+      if (type->isBooleanType())
+        return RValue::get(
+            builder.getBool(result.Val.getInt().getBoolValue(), loc));
       return RValue::get(builder.getConstInt(loc, result.Val.getInt()));
+    }
     if (result.Val.isFloat()) {
       // Note: we are using result type of CallExpr to determine the type of
       // the constant. Classic codegen uses the result value to determine the
@@ -799,6 +980,35 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     cir::VACopyOp::create(builder, dstPtr.getLoc(), dstPtr, srcPtr);
     return {};
   }
+
+  case Builtin::BIabs:
+  case Builtin::BIlabs:
+  case Builtin::BIllabs:
+  case Builtin::BI__builtin_abs:
+  case Builtin::BI__builtin_labs:
+  case Builtin::BI__builtin_llabs: {
+    bool sanitizeOverflow = sanOpts.has(SanitizerKind::SignedIntegerOverflow);
+    mlir::Value arg = emitScalarExpr(e->getArg(0));
+    mlir::Value result;
+    switch (getLangOpts().getSignedOverflowBehavior()) {
+    case LangOptions::SOB_Defined:
+      result = cir::AbsOp::create(builder, loc, arg.getType(), arg,
+                                  /*minIsPoison=*/false);
+      break;
+    case LangOptions::SOB_Undefined:
+      if (!sanitizeOverflow) {
+        result = cir::AbsOp::create(builder, loc, arg.getType(), arg,
+                                    /*minIsPoison=*/true);
+        break;
+      }
+      [[fallthrough]];
+    case LangOptions::SOB_Trapping:
+      cgm.errorNYI(e->getSourceRange(), "abs with overflow handling");
+      return RValue::get(nullptr);
+    }
+    return RValue::get(result);
+  }
+
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume: {
     if (e->getArg(0)->HasSideEffects(getContext()))
@@ -921,9 +1131,20 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_popcountg:
     return emitBuiltinBitOp<cir::BitPopcountOp>(*this, e);
 
+  // Always return the argument of __builtin_unpredictable.  LLVM does not
+  // have an intrinsic corresponding to this builtin.  Metadata for this
+  // builtin should be added directly to instructions such as branches or
+  // switches that use it.
+  case Builtin::BI__builtin_unpredictable: {
+    return RValue::get(emitScalarExpr(e->getArg(0)));
+  }
+
   case Builtin::BI__builtin_expect:
   case Builtin::BI__builtin_expect_with_probability: {
     mlir::Value argValue = emitScalarExpr(e->getArg(0));
+    if (cgm.getCodeGenOpts().OptimizationLevel == 0)
+      return RValue::get(argValue);
+
     mlir::Value expectedValue = emitScalarExpr(e->getArg(1));
 
     mlir::FloatAttr probAttr;
@@ -1209,45 +1430,87 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         convertType(e->getType())));
   }
   case Builtin::BI__builtin_nondeterministic_value:
-  case Builtin::BI__builtin_elementwise_abs:
     return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_elementwise_abs: {
+    mlir::Type cirTy = convertType(e->getArg(0)->getType());
+    bool isIntTy = cir::isIntOrVectorOfIntType(cirTy);
+    if (!isIntTy)
+      return emitUnaryFPBuiltin<cir::FAbsOp>(*this, *e);
+    mlir::Value arg = emitScalarExpr(e->getArg(0));
+    mlir::Value result = cir::AbsOp::create(builder, getLoc(e->getExprLoc()),
+                                            arg.getType(), arg, false);
+    return RValue::get(result);
+  }
   case Builtin::BI__builtin_elementwise_acos:
-    return emitUnaryFPBuiltin<cir::ACosOp>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ACosOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_asin:
-    return emitUnaryFPBuiltin<cir::ASinOp>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ASinOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_atan:
-    return emitUnaryFPBuiltin<cir::ATanOp>(*this, *e);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ATanOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_atan2:
-  case Builtin::BI__builtin_elementwise_ceil:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::ATan2Op>(*this, *e));
   case Builtin::BI__builtin_elementwise_exp:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::ExpOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_exp2:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::Exp2Op>(*this, *e);
+  case Builtin::BI__builtin_elementwise_log:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::LogOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_log2:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::Log2Op>(*this, *e);
+  case Builtin::BI__builtin_elementwise_log10:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::Log10Op>(*this, *e);
+  case Builtin::BI__builtin_elementwise_cos:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::CosOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_floor:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::FloorOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_round:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::RoundOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_rint:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::RintOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_nearbyint:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::NearbyintOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_sin:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::SinOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_sqrt:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::SqrtOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_tan:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::TanOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_trunc:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::TruncOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_fmod:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FModOp>(*this, *e));
+  case Builtin::BI__builtin_elementwise_ceil:
   case Builtin::BI__builtin_elementwise_exp10:
   case Builtin::BI__builtin_elementwise_ldexp:
-  case Builtin::BI__builtin_elementwise_log:
-  case Builtin::BI__builtin_elementwise_log2:
-  case Builtin::BI__builtin_elementwise_log10:
   case Builtin::BI__builtin_elementwise_pow:
   case Builtin::BI__builtin_elementwise_bitreverse:
-    return errorBuiltinNYI(*this, e, builtinID);
-  case Builtin::BI__builtin_elementwise_cos:
-    return emitUnaryFPBuiltin<cir::CosOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_cosh:
-  case Builtin::BI__builtin_elementwise_floor:
   case Builtin::BI__builtin_elementwise_popcount:
   case Builtin::BI__builtin_elementwise_roundeven:
-  case Builtin::BI__builtin_elementwise_round:
-  case Builtin::BI__builtin_elementwise_rint:
-  case Builtin::BI__builtin_elementwise_nearbyint:
-  case Builtin::BI__builtin_elementwise_sin:
   case Builtin::BI__builtin_elementwise_sinh:
-  case Builtin::BI__builtin_elementwise_tan:
   case Builtin::BI__builtin_elementwise_tanh:
-  case Builtin::BI__builtin_elementwise_trunc:
   case Builtin::BI__builtin_elementwise_canonicalize:
   case Builtin::BI__builtin_elementwise_copysign:
   case Builtin::BI__builtin_elementwise_fma:
-  case Builtin::BI__builtin_elementwise_fshl:
-  case Builtin::BI__builtin_elementwise_fshr:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_elementwise_fshl: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    mlir::Value a = emitScalarExpr(e->getArg(0));
+    mlir::Value b = emitScalarExpr(e->getArg(1));
+    mlir::Value c = emitScalarExpr(e->getArg(2));
+    return RValue::get(builder.emitIntrinsicCallOp(loc, "fshl", a.getType(),
+                                                   mlir::ValueRange{a, b, c}));
+  }
+  case Builtin::BI__builtin_elementwise_fshr: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    mlir::Value a = emitScalarExpr(e->getArg(0));
+    mlir::Value b = emitScalarExpr(e->getArg(1));
+    mlir::Value c = emitScalarExpr(e->getArg(2));
+    return RValue::get(builder.emitIntrinsicCallOp(loc, "fshr", a.getType(),
+                                                   mlir::ValueRange{a, b, c}));
+  }
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat:
   case Builtin::BI__builtin_elementwise_max:
@@ -1352,8 +1615,49 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_eh_return:
   case Builtin::BI__builtin_unwind_init:
   case Builtin::BI__builtin_extend_pointer:
-  case Builtin::BI__builtin_setjmp:
-  case Builtin::BI__builtin_longjmp:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_setjmp: {
+    Address buf = emitPointerWithAlignment(e->getArg(0));
+    mlir::Location loc = getLoc(e->getExprLoc());
+
+    cir::PointerType voidPtrTy = builder.getVoidPtrTy();
+    cir::PointerType ppTy = builder.getPointerTo(voidPtrTy);
+    Address castBuf = buf.withElementType(builder, voidPtrTy);
+
+    assert(!cir::MissingFeatures::emitCheckedInBoundsGEP());
+    if (getTarget().getTriple().isSystemZ()) {
+      cgm.errorNYI(e->getExprLoc(), "setjmp on SystemZ");
+      return {};
+    }
+
+    mlir::Value frameAddress =
+        cir::FrameAddrOp::create(builder, loc, voidPtrTy,
+                                 mlir::ValueRange{builder.getUInt32(0, loc)})
+            .getResult();
+
+    builder.createStore(loc, frameAddress, castBuf);
+
+    mlir::Value stacksave =
+        cir::StackSaveOp::create(builder, loc, voidPtrTy).getResult();
+    cir::PtrStrideOp stackSaveSlot = cir::PtrStrideOp::create(
+        builder, loc, ppTy, castBuf.getPointer(), builder.getSInt32(2, loc));
+    llvm::TypeSize voidPtrTySize =
+        cgm.getDataLayout().getTypeAllocSize(voidPtrTy);
+    CharUnits slotAlign = castBuf.getAlignment().alignmentAtOffset(
+        CharUnits().fromQuantity(2 * voidPtrTySize));
+    Address slotAddr = Address(stackSaveSlot, voidPtrTy, slotAlign);
+    builder.createStore(loc, stacksave, slotAddr);
+    auto op = cir::EhSetjmpOp::create(builder, loc, castBuf.getPointer());
+    return RValue::get(op);
+  }
+  case Builtin::BI__builtin_longjmp: {
+    mlir::Value buf = emitScalarExpr(e->getArg(0));
+    mlir::Location loc = getLoc(e->getExprLoc());
+
+    cir::EhLongjmpOp::create(builder, loc, buf);
+    cir::UnreachableOp::create(builder, loc);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_launder:
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_sub:
@@ -1755,11 +2059,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI_abnormal_termination:
   case Builtin::BI_setjmpex:
   case Builtin::BI_setjmp:
+    return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
   case Builtin::BIforward:
   case Builtin::BIforward_like:
   case Builtin::BIas_const:
+    return RValue::get(emitLValue(e->getArg(0)).getPointer());
   case Builtin::BI__GetExceptionInfo:
   case Builtin::BI__fastfail:
   case Builtin::BIread_pipe:
@@ -1815,6 +2121,107 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   if (getContext().BuiltinInfo.isLibFunction(builtinID))
     return emitLibraryCall(*this, fd, e,
                            cgm.getBuiltinLibFunction(fd, builtinID));
+
+  // If this is a predefined lib function (e.g. malloc), emit the call
+  // using exactly the normal call path.
+  if (getContext().BuiltinInfo.isPredefinedLibFunction(builtinID))
+    return emitLibraryCall(*this, fd, e,
+                           emitScalarExpr(e->getCallee()).getDefiningOp());
+
+  // See if we have a target specific intrinsic.
+  std::string name = getContext().BuiltinInfo.getName(builtinID);
+  Intrinsic::ID intrinsicID = Intrinsic::not_intrinsic;
+  StringRef prefix =
+      llvm::Triple::getArchTypePrefix(getTarget().getTriple().getArch());
+  if (!prefix.empty()) {
+    intrinsicID = Intrinsic::getIntrinsicForClangBuiltin(prefix.data(), name);
+    // NOTE we don't need to perform a compatibility flag check here since the
+    // intrinsics are declared in Builtins*.def via LANGBUILTIN which filter the
+    // MS builtins via ALL_MS_LANGUAGES and are filtered earlier.
+    if (intrinsicID == Intrinsic::not_intrinsic)
+      intrinsicID = Intrinsic::getIntrinsicForMSBuiltin(prefix.data(), name);
+  }
+
+  if (intrinsicID != Intrinsic::not_intrinsic) {
+    unsigned iceArguments = 0;
+    ASTContext::GetBuiltinTypeError error;
+    getContext().GetBuiltinType(builtinID, error, &iceArguments);
+    assert(error == ASTContext::GE_None && "Should not codegen an error");
+
+    llvm::StringRef name = llvm::Intrinsic::getName(intrinsicID);
+    // cir::LLVMIntrinsicCallOp expects intrinsic name to not have prefix
+    // "llvm." For example, `llvm.nvvm.barrier0` should be passed as
+    // `nvvm.barrier0`.
+    assert(name.starts_with("llvm.") && "expected llvm. prefix");
+    name = name.drop_front(/*strlen("llvm.")=*/5);
+
+    cir::FuncType intrinsicType =
+        getIntrinsicType(*this, &getMLIRContext(), intrinsicID);
+
+    SmallVector<mlir::Value> args;
+    const FunctionDecl *fd = e->getDirectCallee();
+    for (unsigned i = 0; i < e->getNumArgs(); i++) {
+      mlir::Value argValue =
+          emitScalarOrConstFoldImmArg(iceArguments, i, e->getArg(i));
+      // If the intrinsic arg type is different from the builtin arg type
+      // we need to do a bit cast.
+      mlir::Type argType = argValue.getType();
+      mlir::Type expectedTy = intrinsicType.getInput(i);
+
+      // Correct integer signedness based on AST parameter type
+      mlir::Type correctedExpectedTy = expectedTy;
+      if (fd && i < fd->getNumParams()) {
+        correctedExpectedTy = correctIntegerSignedness(
+            expectedTy, fd->getParamDecl(i)->getType(), &getMLIRContext());
+      }
+
+      if (mlir::isa<cir::PointerType>(expectedTy)) {
+        bool argIsPointer = mlir::isa<cir::PointerType>(argType);
+        bool argIsVectorOfPointer = false;
+        if (auto vecTy = dyn_cast<mlir::VectorType>(argType))
+          argIsVectorOfPointer =
+              mlir::isa<cir::PointerType>(vecTy.getElementType());
+
+        if (!argIsPointer && !argIsVectorOfPointer) {
+          cgm.errorNYI(
+              e->getSourceRange(),
+              "intrinsic expects a pointer type (NYI for non-pointer)");
+          return getUndefRValue(e->getType());
+        }
+
+        // Pointer handling (address-space cast / bitcast fallback).
+        if (argType != expectedTy)
+          argValue = getCorrectedPtr(argValue, expectedTy, builder);
+      } else {
+        // Non-pointer expected type: if needed, bitcast to the corrected
+        // expected type to match signedness/representation.
+        if (argType != correctedExpectedTy)
+          argValue = builder.createBitcast(argValue, correctedExpectedTy);
+      }
+
+      args.push_back(argValue);
+    }
+
+    // Correct return type signedness based on AST return type before creating
+    // the call, avoiding unnecessary casts in the IR.
+    mlir::Type correctedReturnType = intrinsicType.getReturnType();
+    if (fd) {
+      correctedReturnType =
+          correctIntegerSignedness(intrinsicType.getReturnType(),
+                                   fd->getReturnType(), &getMLIRContext());
+    }
+
+    cir::LLVMIntrinsicCallOp intrinsicCall = cir::LLVMIntrinsicCallOp::create(
+        builder, getLoc(e->getExprLoc()), builder.getStringAttr(name),
+        correctedReturnType, args);
+
+    mlir::Value intrinsicRes = intrinsicCall.getResult();
+
+    if (isa<cir::VoidType>(correctedReturnType))
+      return RValue::get(nullptr);
+
+    return RValue::get(intrinsicRes);
+  }
 
   // Some target-specific builtins can have aggregate return values, e.g.
   // __builtin_arm_mve_vld2q_u32. So if the result is an aggregate, force
@@ -2037,8 +2444,9 @@ mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
 mlir::Value CIRGenFunction::evaluateOrEmitBuiltinObjectSize(
     const Expr *e, unsigned type, cir::IntType resType, mlir::Value emittedE,
     bool isDynamic) {
-  uint64_t objectSize;
-  if (!e->tryEvaluateObjectSize(objectSize, getContext(), type))
-    return emitBuiltinObjectSize(e, type, resType, emittedE, isDynamic);
-  return builder.getConstInt(getLoc(e->getSourceRange()), resType, objectSize);
+  if (std::optional<uint64_t> objectSize =
+          e->tryEvaluateObjectSize(getContext(), type))
+    return builder.getConstInt(getLoc(e->getSourceRange()), resType,
+                               *objectSize);
+  return emitBuiltinObjectSize(e, type, resType, emittedE, isDynamic);
 }

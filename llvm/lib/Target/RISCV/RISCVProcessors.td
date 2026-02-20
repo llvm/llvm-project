@@ -89,7 +89,8 @@ class RISCVTuneProcessorModel<string n, SchedMachineModel m,
   list<RISCVTuneFeature> ConfigurableTuneFeatures = [];
 }
 
-defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore];
+defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore,
+                              TuneEnableSelectOptimize];
 
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
                                        NoSchedModel,
@@ -425,6 +426,7 @@ def SIFIVE_P470 : RISCVProcessorModel<"sifive-p470", SiFiveP400Model,
                                                    TuneVXRMPipelineFlush])>;
 
 defvar SiFiveP500TuneFeatures = [TuneNoDefaultUnroll,
+                                 TuneEnableSelectOptimize,
                                  TuneConditionalCompressedMoveFusion,
                                  TuneLUIADDIFusion,
                                  TuneAUIPCADDIFusion,
@@ -748,6 +750,38 @@ def XIANGSHAN_KUNMINGHU : RISCVProcessorModel<"xiangshan-kunminghu",
                                                TuneZExtWFusion,
                                                TuneShiftedZExtWFusion]>;
 
+def SPACEMIT_A100 : RISCVProcessorModel<"spacemit-a100",
+                                        SpacemitX60Model,
+                                        !listconcat(
+                                        !listremove(RVA23S64Features,
+                                        [FeatureStdExtSha]),
+                                        [FeatureStdExtSmepmp,
+                                         FeatureStdExtSmnpm,
+                                         FeatureStdExtSmstateen,
+                                         FeatureStdExtSspm,
+                                         FeatureStdExtZbc,
+                                         FeatureStdExtZbkc,
+                                         FeatureStdExtZfbfmin,
+                                         FeatureStdExtZfh,
+                                         FeatureStdExtZvbc,
+                                         FeatureStdExtZvfbfwma,
+                                         FeatureStdExtZvfh,
+                                         FeatureStdExtZvkng,
+                                         FeatureStdExtZvknha,
+                                         FeatureStdExtZvksc,
+                                         FeatureStdExtZvksg,
+                                         FeatureStdExtZvl1024b,
+                                         FeatureUnalignedScalarMem]),
+                                        [TuneDLenFactor2,
+                                         TuneOptimizedNF2SegmentLoadStore,
+                                         TuneOptimizedNF3SegmentLoadStore,
+                                         TuneOptimizedNF4SegmentLoadStore,
+                                         TuneVXRMPipelineFlush]> {
+  let MVendorID = 0x710;
+  let MArchID = 0x8000000041000002;
+  let MImpID =  0x10000000d5686200;
+}
+
 def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                        SpacemitX60Model,
                                        !listconcat(RVA22S64Features,
@@ -768,6 +802,7 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                         TuneOptimizedNF2SegmentLoadStore,
                                         TuneOptimizedNF3SegmentLoadStore,
                                         TuneOptimizedNF4SegmentLoadStore,
+                                        TuneEnableSelectOptimize,
                                         TuneVXRMPipelineFlush]> {
   let MVendorID = 0x710;
   let MArchID = 0x8000000058000001;
@@ -775,7 +810,7 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
 }
 
 def SPACEMIT_X100 : RISCVProcessorModel<"spacemit-x100",
-                                        NoSchedModel,
+                                        SpacemitX100Model,
                                         !listconcat(RVA23U64Features,
                                         [FeatureStdExtZbc,
                                          FeatureStdExtZbkc,

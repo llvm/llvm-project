@@ -215,14 +215,10 @@ def HasSVEBFSCALE    : Predicate<"Subtarget->isNonStreamingSVEorSME2Available() 
                                  AssemblerPredicateWithAll<(all_of FeatureSVEBFSCALE), "sve-bfscale">;
 def HasSVE_F16F32MM  : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_F16F32MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_F16F32MM), "sve-f16f32mm">;
-def HasPCDPHINT      : Predicate<"Subtarget->hasPCDPHINT()">,
-                                 AssemblerPredicateWithAll<(all_of FeaturePCDPHINT), "pcdphint">;
 def HasLSUI          : Predicate<"Subtarget->hasLSUI()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSUI), "lsui">;
 def HasOCCMO         : Predicate<"Subtarget->hasOCCMO()">,
                                  AssemblerPredicateWithAll<(all_of FeatureOCCMO), "occmo">;
-def HasCMH           : Predicate<"Subtarget->hasCMH()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureCMH), "cmh">;
 def HasLSCP          : Predicate<"Subtarget->hasLSCP()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSCP), "lscp">;
 def HasSVE2p2        : Predicate<"Subtarget->hasSVE2p2()">,
@@ -1224,8 +1220,9 @@ def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
                             [(AArch64rshrnb node:$rs, node:$i),
                             (int_aarch64_sve_rshrnb node:$rs, node:$i)]>;
 
+// res = cttz.elts(pg, op)
 def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 2,
-                             [SDTCisInt<0>, SDTCisVec<1>, SDTCisInt<2>]>, []>;
+                             [SDTCisInt<0>, SDTCVecEltisVT<1,i1>, SDTCisSameAs<1,2>]>, []>;
 
 // NEON Load/Store with post-increment base updates.
 // TODO: Complete SDTypeProfile constraints.
@@ -1578,9 +1575,7 @@ def NOP : SystemNoOperands<0b000, "hint\t#0">;
 
 def : InstAlias<"nop", (NOP)>;
 
-let Predicates = [HasPCDPHINT] in {
-    def STSHH: STSHHI;
-}
+def STSHH: STSHHI;
 
 // In order to be able to write readable assembly, LLVM should accept assembly
 // inputs that use Branch Target Identification mnemonics, even with BTI disabled.
@@ -5359,7 +5354,7 @@ defm FCVTZU : FPToIntegerUnscaled<0b11, 0b001, "fcvtzu", any_fp_to_uint>;
 defm FCVTZS : FPToIntegerScaled<0b11, 0b000, "fcvtzs", any_fp_to_sint>;
 defm FCVTZU : FPToIntegerScaled<0b11, 0b001, "fcvtzu", any_fp_to_uint>;
 
-let Predicates = [HasNEON, HasFPRCVT] in{
+let Predicates = [HasFPRCVT] in{
   defm FCVTAS : FPToIntegerSIMDScalar<0b11, 0b010, "fcvtas", int_aarch64_neon_fcvtas>;
   defm FCVTAU : FPToIntegerSIMDScalar<0b11, 0b011, "fcvtau", int_aarch64_neon_fcvtau>;
   defm FCVTMS : FPToIntegerSIMDScalar<0b10, 0b100, "fcvtms", int_aarch64_neon_fcvtms>;
@@ -5402,7 +5397,7 @@ def : Pat<(i64 (any_llround f64:$Rn)),
 defm SCVTF : IntegerToFP<0b00, 0b010, "scvtf", any_sint_to_fp>;
 defm UCVTF : IntegerToFP<0b00, 0b011, "ucvtf", any_uint_to_fp>;
 
-let Predicates = [HasNEON, HasFPRCVT] in {
+let Predicates = [HasFPRCVT] in {
   defm SCVTF : IntegerToFPSIMDScalar<0b11, 0b100, "scvtf", any_sint_to_fp>;
   defm UCVTF : IntegerToFPSIMDScalar<0b11, 0b101, "ucvtf", any_uint_to_fp>;
 
@@ -7901,6 +7896,19 @@ def : Pat<(i64 (and (i64 (anyext (i32 (vector_extract (v8i16 V128:$Rn),
 
 defm INS : SIMDIns;
 
+// Patterns for v2i64/v1i64 clmul->pmull
+let Predicates = [HasAES] in {
+  def : Pat<(clmul v1i64:$Rn, v1i64:$Rm),
+            (v1i64 (EXTRACT_SUBREG (v2i64 (PMULLv1i64 $Rn, $Rm)),
+                                           dsub))>;
+  def : Pat<(clmul v2i64:$Rn, v2i64:$Rm),
+            (v2i64 (INSvi64lane (v2i64 (PMULLv1i64 (v1i64 (EXTRACT_SUBREG $Rn, dsub)),
+                                                   (v1i64 (EXTRACT_SUBREG $Rm, dsub)))),
+                                (i64 1),
+                                (v2i64 (PMULLv2i64 $Rn, $Rm)),
+                                (i64 0)))>;
+}
+
 def : Pat<(v16i8 (vec_ins_or_scal_vec GPR32:$Rn)),
           (SUBREG_TO_REG (f32 (COPY_TO_REGCLASS GPR32:$Rn, FPR32)), ssub)>;
 def : Pat<(v8i8 (vec_ins_or_scal_vec GPR32:$Rn)),
@@ -10004,7 +10012,7 @@ def SHA256SU0rr : SHATiedInstVV<0b0010, "sha256su0",int_aarch64_crypto_sha256su0
 // FIXME: Like for X86, these should go in their own separate .td file.
 
 // For an anyext, we don't care what the high bits are, so we can perform an
-// INSERT_SUBREF into an IMPLICIT_DEF.
+// INSERT_SUBREG into an IMPLICIT_DEF.
 def : Pat<(i64 (anyext GPR32:$src)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$src, sub_32)>;
 
@@ -10853,12 +10861,21 @@ def : Pat<(AArch64faddp (v4f16 (extract_subvector (v8f16 FPR128:$Rn), (i64 0))),
 def : Pat<(v2i64 (add (AArch64zip1 (v2i64 FPR128:$Rn), (v2i64 FPR128:$Rm)),
                       (AArch64zip2 (v2i64 FPR128:$Rn), (v2i64 FPR128:$Rm)))),
           (v2i64 (ADDPv2i64 $Rn, $Rm))>;
+def : Pat<(v2i32 (add (AArch64zip1 (v2i32 FPR64:$Rn), (v2i32 FPR64:$Rm)),
+                      (AArch64zip2 (v2i32 FPR64:$Rn), (v2i32 FPR64:$Rm)))),
+          (v2i32 (ADDPv2i32 $Rn, $Rm))>;
 def : Pat<(v4i32 (add (AArch64uzp1 (v4i32 FPR128:$Rn), (v4i32 FPR128:$Rm)),
                       (AArch64uzp2 (v4i32 FPR128:$Rn), (v4i32 FPR128:$Rm)))),
           (v4i32 (ADDPv4i32 $Rn, $Rm))>;
+def : Pat<(v4i16 (add (AArch64uzp1 (v4i16 FPR64:$Rn), (v4i16 FPR64:$Rm)),
+                      (AArch64uzp2 (v4i16 FPR64:$Rn), (v4i16 FPR64:$Rm)))),
+          (v4i16 (ADDPv4i16 $Rn, $Rm))>;
 def : Pat<(v8i16 (add (AArch64uzp1 (v8i16 FPR128:$Rn), (v8i16 FPR128:$Rm)),
                       (AArch64uzp2 (v8i16 FPR128:$Rn), (v8i16 FPR128:$Rm)))),
           (v8i16 (ADDPv8i16 $Rn, $Rm))>;
+def : Pat<(v8i8 (add (AArch64uzp1 (v8i8 FPR64:$Rn), (v8i8 FPR64:$Rm)),
+                     (AArch64uzp2 (v8i8 FPR64:$Rn), (v8i8 FPR64:$Rm)))),
+          (v8i8 (ADDPv8i8 $Rn, $Rm))>;
 def : Pat<(v16i8 (add (AArch64uzp1 (v16i8 FPR128:$Rn), (v16i8 FPR128:$Rm)),
                       (AArch64uzp2 (v16i8 FPR128:$Rn), (v16i8 FPR128:$Rm)))),
           (v16i8 (ADDPv16i8 $Rn, $Rm))>;
@@ -10878,13 +10895,20 @@ def : Pat<(v8i8  (add (trunc (v8i16 (bitconvert FPR128:$Rn))),
 def : Pat<(v2f64 (fadd (AArch64zip1 (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm)),
                        (AArch64zip2 (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm)))),
           (v2f64 (FADDPv2f64 $Rn, $Rm))>;
+def : Pat<(v2f32 (fadd (AArch64zip1 (v2f32 FPR64:$Rn), (v2f32 FPR64:$Rm)),
+                       (AArch64zip2 (v2f32 FPR64:$Rn), (v2f32 FPR64:$Rm)))),
+          (v2f32 (FADDPv2f32 $Rn, $Rm))>;
 def : Pat<(v4f32 (fadd (AArch64uzp1 (v4f32 FPR128:$Rn), (v4f32 FPR128:$Rm)),
                        (AArch64uzp2 (v4f32 FPR128:$Rn), (v4f32 FPR128:$Rm)))),
           (v4f32 (FADDPv4f32 $Rn, $Rm))>;
-let Predicates = [HasFullFP16] in
+let Predicates = [HasFullFP16] in {
+def : Pat<(v4f16 (fadd (AArch64uzp1 (v4f16 FPR64:$Rn), (v4f16 FPR64:$Rm)),
+                       (AArch64uzp2 (v4f16 FPR64:$Rn), (v4f16 FPR64:$Rm)))),
+          (v4f16 (FADDPv4f16 $Rn, $Rm))>;
 def : Pat<(v8f16 (fadd (AArch64uzp1 (v8f16 FPR128:$Rn), (v8f16 FPR128:$Rm)),
                        (AArch64uzp2 (v8f16 FPR128:$Rn), (v8f16 FPR128:$Rm)))),
           (v8f16 (FADDPv8f16 $Rn, $Rm))>;
+}
 
 // Scalar 64-bit shifts in FPR64 registers.
 def : Pat<(i64 (int_aarch64_neon_sshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
@@ -10902,8 +10926,8 @@ def : Pat<(i64 (int_aarch64_neon_urshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
 //
 // Currently we only support NT stores lowering for little-endian targets.
 //
-// Coordinated with STNP constraints in `AArch64TargetLowering::LowerNTStore`
-// and `AArch64TTIImpl::isLegalNTStore`.
+// Coordinated with STNP constraints in `LowerNTStore`
+// and `isLegalNTStore` from `AArch64ISelLowering.cpp`.
 //
 // Currently, STNP lowering can only either keep or increase code size, thus
 // we predicate it to not apply when optimizing for code size.
@@ -11360,39 +11384,37 @@ let Predicates = [HasRCPC3, HasNEON] in {
 //===----------------------------------------------------------------------===//
 // 128-bit System Instructions (FEAT_SYSINSTR128)
 //===----------------------------------------------------------------------===//
-let Predicates = [HasD128] in {
-  def SYSPxt  : SystemPXtI<0, "sysp">;
+def SYSPxt  : SystemPXtI<0, "sysp">;
 
-  def SYSPxt_XZR
-    : BaseSystemI<0, (outs),
-        (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, SyspXzrPairOperand:$xzr_pair),
-        "sysp", "\t$op1, $Cn, $Cm, $op2, $xzr_pair">,
-      Sched<[WriteSys]>
-  {
-    // Had to use a custom decoder because tablegen interprets this as having 4 fields (why?)
-    // and therefore autogenerates a decoder that builds an MC representation that has 4 fields
-    // (decodeToMCInst), but when printing we expect the MC representation to have 5 fields (one
-    // extra for the XZR) because AArch64InstPrinter::printInstruction in AArch64GenAsmWriter.inc
-    // is based off of the asm template (maybe) and therefore wants to print 5 operands.
-    // I could add a bits<5> xzr_pair. But without a way to constrain it to 0b11111 here it would
-    // overlap with the main SYSP instruction.
-    let DecoderMethod = "DecodeSyspXzrInstruction";
-    bits<3> op1;
-    bits<4> Cn;
-    bits<4> Cm;
-    bits<3> op2;
-    let Inst{22}    = 0b1; // override BaseSystemI
-    let Inst{20-19} = 0b01;
-    let Inst{18-16} = op1;
-    let Inst{15-12} = Cn;
-    let Inst{11-8}  = Cm;
-    let Inst{7-5}   = op2;
-    let Inst{4-0}   = 0b11111;
-  }
-
-  def : InstAlias<"sysp $op1, $Cn, $Cm, $op2",
-                  (SYSPxt_XZR imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, XZR)>;
+def SYSPxt_XZR
+  : BaseSystemI<0, (outs),
+      (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, SyspXzrPairOperand:$xzr_pair),
+      "sysp", "\t$op1, $Cn, $Cm, $op2, $xzr_pair">,
+    Sched<[WriteSys]>
+{
+  // Had to use a custom decoder because tablegen interprets this as having 4 fields (why?)
+  // and therefore autogenerates a decoder that builds an MC representation that has 4 fields
+  // (decodeToMCInst), but when printing we expect the MC representation to have 5 fields (one
+  // extra for the XZR) because AArch64InstPrinter::printInstruction in AArch64GenAsmWriter.inc
+  // is based off of the asm template (maybe) and therefore wants to print 5 operands.
+  // I could add a bits<5> xzr_pair. But without a way to constrain it to 0b11111 here it would
+  // overlap with the main SYSP instruction.
+  let DecoderMethod = "DecodeSyspXzrInstruction";
+  bits<3> op1;
+  bits<4> Cn;
+  bits<4> Cm;
+  bits<3> op2;
+  let Inst{22}    = 0b1; // override BaseSystemI
+  let Inst{20-19} = 0b01;
+  let Inst{18-16} = op1;
+  let Inst{15-12} = Cn;
+  let Inst{11-8}  = Cm;
+  let Inst{7-5}   = op2;
+  let Inst{4-0}   = 0b11111;
 }
+
+def : InstAlias<"sysp $op1, $Cn, $Cm, $op2",
+                (SYSPxt_XZR imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, XZR)>;
 
 //---
 // 128-bit System Registers (FEAT_SYSREG128)
@@ -11411,22 +11433,20 @@ let Predicates = [HasD128] in {
 //
 // ...where t is even (X0, X2, etc).
 
-let Predicates = [HasD128] in {
-  def MRRS : RtSystemI128<1,
-    (outs MrrsMssrPairClassOperand:$Rt), (ins mrs_sysreg_op:$systemreg),
-    "mrrs", "\t$Rt, $systemreg">
-  {
-    bits<16> systemreg;
-    let Inst{20-5} = systemreg;
-  }
+def MRRS : RtSystemI128<1,
+  (outs MrrsMssrPairClassOperand:$Rt), (ins mrs_sysreg_op:$systemreg),
+  "mrrs", "\t$Rt, $systemreg">
+{
+  bits<16> systemreg;
+  let Inst{20-5} = systemreg;
+}
 
-  def MSRR : RtSystemI128<0,
-    (outs),  (ins msr_sysreg_op:$systemreg, MrrsMssrPairClassOperand:$Rt),
-    "msrr", "\t$systemreg, $Rt">
-  {
-    bits<16> systemreg;
-    let Inst{20-5} = systemreg;
-  }
+def MSRR : RtSystemI128<0,
+  (outs),  (ins msr_sysreg_op:$systemreg, MrrsMssrPairClassOperand:$Rt),
+  "msrr", "\t$systemreg, $Rt">
+{
+  bits<16> systemreg;
+  let Inst{20-5} = systemreg;
 }
 
 //===----------------------------===//
@@ -11787,10 +11807,8 @@ let Uses = [FPMR, FPCR] in
 // Contention Management Hints (FEAT_CMH)
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasCMH] in {
-  defm SHUH  : SHUH<"shuh">;       // Shared Update Hint instruction
-  def STCPH  : STCPHInst<"stcph">; // Store Concurrent Priority Hint instruction
-}
+defm SHUH  : SHUH<"shuh">;       // Shared Update Hint instruction
+def STCPH  : STCPHInst<"stcph">; // Store Concurrent Priority Hint instruction
 
 //===----------------------------------------------------------------------===//
 // Permission Overlays Extension 2 (FEAT_S1POE2)

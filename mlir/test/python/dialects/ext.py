@@ -345,27 +345,65 @@ def testExtDialect():
 # CHECK: TEST: testExtDialectWithRegion
 @run
 def testExtDialectWithRegion():
+    class ParentIsIfTrait(DynamicOpTrait):
+        @staticmethod
+        def verify_invariants(op) -> bool:
+            if not isinstance(op.parent.opview, IfOp):
+                op.location.emit_error(
+                    f"{op.name} should be put inside {IfOp.OPERATION_NAME}"
+                )
+                return False
+            return True
+
     class TestRegion(Dialect, name="ext_region"):
         pass
 
     class IfOp(TestRegion.Operation, name="if"):
         cond: Operand[IntegerType[1]]
+        result: Result[Any]
         then: Region
         else_: Region
+
+    class YieldOp(
+        TestRegion.Operation, name="yield", traits=[IsTerminatorTrait, ParentIsIfTrait]
+    ):
+        value: Operand[Any]
+
+        def verify_invariants(self) -> bool:
+            if self.parent.results[0].type != self.value.type:
+                self.location.emit_error(
+                    "result type mismatch between YieldOp and its parent IfOp"
+                )
+                return False
+            return True
+
+    class NoTermOp(TestRegion.Operation, name="no_term", traits=[NoTerminatorTrait]):
+        body: Region
 
     with Context(), Location.unknown():
         TestRegion.load()
         # CHECK: irdl.dialect @ext_region {
-        # CHECK:     irdl.operation @if {
+        # CHECK:   irdl.operation @if {
         # CHECK:     %0 = irdl.is i1
         # CHECK:     irdl.operands(cond: %0)
-        # CHECK:     %1 = irdl.region
+        # CHECK:     %1 = irdl.any
+        # CHECK:     irdl.results(result: %1)
         # CHECK:     %2 = irdl.region
-        # CHECK:     irdl.regions(then: %1, else_: %2)
+        # CHECK:     %3 = irdl.region
+        # CHECK:     irdl.regions(then: %2, else_: %3)
+        # CHECK:   }
+        # CHECK:   irdl.operation @yield {
+        # CHECK:     %0 = irdl.any
+        # CHECK:     irdl.operands(value: %0)
+        # CHECK:   }
+        # CHECK:   irdl.operation @no_term {
+        # CHECK:     %0 = irdl.region
+        # CHECK:     irdl.regions(body: %0)
+        # CHECK:   }
         # CHECK: }
         print(TestRegion._mlir_module)
 
-        # CHECK: (self, /, cond, *, loc=None, ip=None)
+        # CHECK: (self, /, result, cond, *, loc=None, ip=None)
         print(IfOp.__init__.__signature__)
 
         # CHECK: None None
@@ -373,36 +411,44 @@ def testExtDialectWithRegion():
         # CHECK: (2, True)
         print(IfOp._ODS_REGIONS)
 
-        from mlir.dialects import llvm
-
         module = Module.create()
         with InsertionPoint(module.body):
             i1 = IntegerType.get_signless(1)
             i32 = IntegerType.get_signless(32)
             cond = arith.constant(i1, 1)
 
-            if_ = IfOp(cond)
+            if_ = IfOp(i32, cond)
             if_.then.blocks.append()
             if_.else_.blocks.append()
 
             with InsertionPoint(if_.then.blocks[0]):
                 v = arith.constant(i32, 2)
-                llvm.unreachable()
+                YieldOp(v)
 
             with InsertionPoint(if_.else_.blocks[0]):
                 v = arith.constant(i32, 3)
-                llvm.unreachable()
+                YieldOp(v)
+
+            nt = NoTermOp()
+            nt.body.blocks.append()
+
+            with InsertionPoint(nt.body.blocks[0]):
+                arith.constant(i32, 4)
+                # No terminator here
 
         assert module.operation.verify()
         # CHECK: module {
         # CHECK:     %true = arith.constant true
-        # CHECK:     "ext_region.if"(%true) ({
+        # CHECK:     %0 = "ext_region.if"(%true) ({
         # CHECK:         %c2_i32 = arith.constant 2 : i32
-        # CHECK:         llvm.unreachable
+        # CHECK:         "ext_region.yield"(%c2_i32) : (i32) -> ()
         # CHECK:     }, {
         # CHECK:         %c3_i32 = arith.constant 3 : i32
-        # CHECK:         llvm.unreachable
-        # CHECK:     }) : (i1) -> ()
+        # CHECK:         "ext_region.yield"(%c3_i32) : (i32) -> ()
+        # CHECK:     }) : (i1) -> i32
+        # CHECK:     "ext_region.no_term"() ({
+        # CHECK:       %c4_i32 = arith.constant 4 : i32
+        # CHECK:     }) : () -> ()
         # CHECK: }
         print(module)
 
@@ -410,3 +456,66 @@ def testExtDialectWithRegion():
         print(if_.then.blocks[0])
         # CHECK: %c3_i32 = arith.constant 3 : i32
         print(if_.else_.blocks[0])
+
+        # CHECK-LABEL: Testing violation cases
+        print("Testing violation cases:")
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            i1 = IntegerType.get_signless(1)
+            i32 = IntegerType.get_signless(32)
+            cond = arith.constant(i1, 1)
+
+            if_ = IfOp(i32, cond)
+            if_.then.blocks.append()
+            if_.else_.blocks.append()
+
+            with InsertionPoint(if_.then.blocks[0]):
+                v = arith.constant(i32, 2)
+
+            with InsertionPoint(if_.else_.blocks[0]):
+                v = arith.constant(i32, 3)
+
+        try:
+            module.operation.verify()
+        except Exception as e:
+            # CHECK: Verification failed:
+            # CHECK: block with no terminator
+            print(e)
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            v = arith.constant(i32, 2)
+            YieldOp(v)
+
+        try:
+            module.operation.verify()
+        except Exception as e:
+            # CHECK: Verification failed:
+            # CHECK: ext_region.yield should be put inside ext_region.if
+            print(e)
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            i1 = IntegerType.get_signless(1)
+            i32 = IntegerType.get_signless(32)
+            cond = arith.constant(i1, 1)
+
+            if_ = IfOp(i1, cond)
+            if_.then.blocks.append()
+            if_.else_.blocks.append()
+
+            with InsertionPoint(if_.then.blocks[0]):
+                v = arith.constant(i32, 2)
+                YieldOp(v)
+
+            with InsertionPoint(if_.else_.blocks[0]):
+                v = arith.constant(i32, 3)
+                YieldOp(v)
+
+        try:
+            module.operation.verify()
+        except Exception as e:
+            # CHECK: Verification failed:
+            # CHECK: result type mismatch
+            print(e)

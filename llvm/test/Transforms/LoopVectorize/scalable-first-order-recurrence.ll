@@ -11,8 +11,8 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF1-LABEL: define i32 @recurrence_1(
 ; CHECK-VF4UF1-SAME: ptr readonly captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], i32 [[N:%.*]]) {
 ; CHECK-VF4UF1-NEXT:  [[ENTRY:.*:]]
-; CHECK-VF4UF1-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-VF4UF1-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i64
+; CHECK-VF4UF1-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-VF4UF1-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; CHECK-VF4UF1-NEXT:    br label %[[FOR_PREHEADER:.*]]
 ; CHECK-VF4UF1:       [[FOR_PREHEADER]]:
 ; CHECK-VF4UF1-NEXT:    [[PRE_LOAD:%.*]] = load i32, ptr [[A]], align 4
@@ -74,8 +74,8 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF2-LABEL: define i32 @recurrence_1(
 ; CHECK-VF4UF2-SAME: ptr readonly captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], i32 [[N:%.*]]) {
 ; CHECK-VF4UF2-NEXT:  [[ENTRY:.*:]]
-; CHECK-VF4UF2-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-VF4UF2-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i64
+; CHECK-VF4UF2-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-VF4UF2-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; CHECK-VF4UF2-NEXT:    br label %[[FOR_PREHEADER:.*]]
 ; CHECK-VF4UF2:       [[FOR_PREHEADER]]:
 ; CHECK-VF4UF2-NEXT:    [[PRE_LOAD:%.*]] = load i32, ptr [[A]], align 4

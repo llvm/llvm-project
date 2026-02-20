@@ -289,6 +289,18 @@ void llvm::setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I,
     setExplicitlyUnknownBranchWeights(I, PassName);
 }
 
+MDNode *llvm::getExplicitlyUnknownBranchWeightsIfProfiled(Function &F,
+                                                          StringRef PassName) {
+  if (std::optional<Function::ProfileCount> EC = F.getEntryCount();
+      !EC || EC->getCount() == 0)
+    return nullptr;
+  MDBuilder MDB(F.getContext());
+  return MDNode::get(
+      F.getContext(),
+      {MDB.createString(MDProfLabels::UnknownBranchWeightsMarker),
+       MDB.createString(PassName)});
+}
+
 void llvm::setExplicitlyUnknownFunctionEntryCount(Function &F,
                                                   StringRef PassName) {
   MDBuilder MDB(F.getContext());

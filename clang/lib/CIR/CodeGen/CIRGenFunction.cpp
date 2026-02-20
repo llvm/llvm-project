@@ -20,6 +20,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/IR/FPEnv.h"
 
 #include <cassert>
 
@@ -66,6 +67,7 @@ cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::Pipe:
     case Type::BitInt:
+    case Type::OverflowBehavior:
     case Type::HLSLAttributedResource:
     case Type::HLSLInlineSpirv:
       return cir::TEK_Scalar;
@@ -956,6 +958,23 @@ LValue CIRGenFunction::makeNaturalAlignAddrLValue(mlir::Value val,
   return makeAddrLValue(addr, ty, baseInfo);
 }
 
+// Map the LangOption for exception behavior into the corresponding enum in
+// the IR.
+static llvm::fp::ExceptionBehavior
+toConstrainedExceptMd(LangOptions::FPExceptionModeKind kind) {
+  switch (kind) {
+  case LangOptions::FPE_Ignore:
+    return llvm::fp::ebIgnore;
+  case LangOptions::FPE_MayTrap:
+    return llvm::fp::ebMayTrap;
+  case LangOptions::FPE_Strict:
+    return llvm::fp::ebStrict;
+  case LangOptions::FPE_Default:
+    llvm_unreachable("expected explicitly initialized exception behavior");
+  }
+  llvm_unreachable("unsupported FP exception behavior");
+}
+
 clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
                                                      FunctionArgList &args) {
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
@@ -1117,6 +1136,59 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
   const mlir::Value zeroValue = builder.getNullValue(convertType(ty), loc);
   builder.createStore(loc, zeroValue, destPtr);
+}
+
+CIRGenFunction::CIRGenFPOptionsRAII::CIRGenFPOptionsRAII(CIRGenFunction &cgf,
+                                                         const clang::Expr *e)
+    : cgf(cgf) {
+  ConstructorHelper(e->getFPFeaturesInEffect(cgf.getLangOpts()));
+}
+
+CIRGenFunction::CIRGenFPOptionsRAII::CIRGenFPOptionsRAII(CIRGenFunction &cgf,
+                                                         FPOptions fpFeatures)
+    : cgf(cgf) {
+  ConstructorHelper(fpFeatures);
+}
+
+void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
+    FPOptions fpFeatures) {
+  oldFPFeatures = cgf.curFPFeatures;
+  cgf.curFPFeatures = fpFeatures;
+
+  oldExcept = cgf.builder.getDefaultConstrainedExcept();
+  oldRounding = cgf.builder.getDefaultConstrainedRounding();
+
+  if (oldFPFeatures == fpFeatures)
+    return;
+
+  // TODO(cir): create guard to restore fast math configurations.
+  assert(!cir::MissingFeatures::fastMathGuard());
+
+  llvm::RoundingMode newRoundingBehavior = fpFeatures.getRoundingMode();
+  // TODO(cir): override rounding behaviour once FM configs are guarded.
+  llvm::fp::ExceptionBehavior newExceptionBehavior =
+      toConstrainedExceptMd(static_cast<LangOptions::FPExceptionModeKind>(
+          fpFeatures.getExceptionMode()));
+  // TODO(cir): override exception behaviour once FM configs are guarded.
+
+  // TODO(cir): override FP flags once FM configs are guarded.
+  assert(!cir::MissingFeatures::fastMathFlags());
+
+  assert((cgf.curFuncDecl == nullptr || cgf.builder.getIsFPConstrained() ||
+          isa<CXXConstructorDecl>(cgf.curFuncDecl) ||
+          isa<CXXDestructorDecl>(cgf.curFuncDecl) ||
+          (newExceptionBehavior == llvm::fp::ebIgnore &&
+           newRoundingBehavior == llvm::RoundingMode::NearestTiesToEven)) &&
+         "FPConstrained should be enabled on entire function");
+
+  // TODO(cir): mark CIR function with fast math attributes.
+  assert(!cir::MissingFeatures::fastMathFuncAttributes());
+}
+
+CIRGenFunction::CIRGenFPOptionsRAII::~CIRGenFPOptionsRAII() {
+  cgf.curFPFeatures = oldFPFeatures;
+  cgf.builder.setDefaultConstrainedExcept(oldExcept);
+  cgf.builder.setDefaultConstrainedRounding(oldRounding);
 }
 
 // TODO(cir): should be shared with LLVM codegen.
@@ -1301,6 +1373,7 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
     case Type::ObjCInterface:
     case Type::ObjCObjectPointer:
     case Type::BitInt:
+    case Type::OverflowBehavior:
       llvm_unreachable("type class is never variably-modified!");
 
     case Type::Adjusted:

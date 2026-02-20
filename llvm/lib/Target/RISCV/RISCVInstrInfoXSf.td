@@ -17,14 +17,37 @@
 def VCIXVS2    : RISCVVConstraint<VS2 = 1>;
 def VCIXVS2VS1 : RISCVVConstraint<VS2 = 1, VS1 = 1>;
 
-class VCIXType<bits<4> val> {
+class VCIXType<bits<4> val, string suffix> {
   bits<4> Val = val;
+  string Suffix = suffix;
+  bit Vs2IsSource = 1;      // Whether vs2 is a register source
+  bit VdIsSource = 0;       // Whether vd appears in ins as a source operand
+  bit IsWidening = 0;       // Whether this is a widening instruction (XVW)
 }
 
-def VCIX_X   : VCIXType<0b0000>;
-def VCIX_XV  : VCIXType<0b0010>;
-def VCIX_XVV : VCIXType<0b1010>;
-def VCIX_XVW : VCIXType<0b1111>;
+def VCIX_Rs1   : VCIXType<0b0000, "">   { let Vs2IsSource = 0; }
+def VCIX_Rs1V  : VCIXType<0b0010, "v">;
+def VCIX_Rs1VV : VCIXType<0b1010, "vv"> { let VdIsSource = 1; }
+def VCIX_Rs1VW : VCIXType<0b1111, "vw"> { let VdIsSource = 1; let IsWidening = 1; }
+
+// Helper class to encapsulate Rs1-related properties
+class VCIXRs1Info<DAGOperand ty, bits<3> funct3, string prefix, string name,
+                  dag op> {
+  DAGOperand Ty = ty;
+  bits<3> Funct3 = funct3;
+  string Prefix = prefix;
+  string Name = name;
+  dag Op = op;
+  bit IsVR = !eq(ty, VR);
+  string Funct6Name = !if(!eq(ty, FPR32), "$funct6_lo1", "$funct6_lo2");
+  dag Funct6Op = !if(!eq(ty, FPR32), (ins uimm1:$funct6_lo1),
+                                     (ins uimm2:$funct6_lo2));
+}
+
+def VCIX_GPR   : VCIXRs1Info<GPR,   0b100, "x", "$rs1", (ins GPR:$rs1)>;
+def VCIX_FPR32 : VCIXRs1Info<FPR32, 0b101, "f", "$rs1", (ins FPR32:$rs1)>;
+def VCIX_VR    : VCIXRs1Info<VR,    0b000, "v", "$vs1", (ins VR:$vs1)>;
+def VCIX_simm5 : VCIXRs1Info<simm5, 0b011, "i", "$imm", (ins simm5:$imm)>;
 
 // The payload and tsimm5 operands are all marked as ImmArg in the IR
 // intrinsic and will be target constant, so use TImmLeaf rather than ImmLeaf.
@@ -49,124 +72,141 @@ def tsimm5 : RISCVOp, TImmLeaf<XLenVT, [{return isInt<5>(Imm);}]> {
   let OperandType = "OPERAND_SIMM5";
 }
 
-class SwapVCIXIns<dag funct6, dag rd, dag rs2, dag rs1, bit swap> {
-  dag Ins = !con(funct6, !if(swap, rs2, rd), !if(swap, rd, rs2), rs1);
+class VCIXInfo<VCIXType type, VCIXRs1Info rs1info, bit hasOutput> {
+  bit HasOutput = hasOutput;
+  VCIXRs1Info Rs1 = rs1info;
+  defvar Suffix = rs1info.Prefix # type.Suffix;
+
+  string OpcodeStr = !if(hasOutput, "sf.vc.v." # Suffix,
+                                    "sf.vc." # Suffix);
+  bits<4> Funct6_hi4 = type.Val;
+  bits<3> Funct3 = rs1info.Funct3;
+
+  // TyRd is VR when there's an output or vd is a source operand, otherwise uimm5
+  defvar TyRd = !if(!or(hasOutput, type.VdIsSource), VR, uimm5);
+
+  dag Outs = !cond(!not(hasOutput): (outs),
+                   type.VdIsSource: (outs TyRd:$vd_wb),
+                   true:            (outs TyRd:$vd));
+
+  // Vd operand: omitted from ins when hasOutput and not a source operand
+  defvar VdOp = !if(!and(hasOutput, !not(type.VdIsSource)),
+                    (ins), (ins TyRd:$vd));
+
+  // TyRs2 is uimm5 when vs2 is an immediate, otherwise VR
+  defvar TyRs2 = !if(type.Vs2IsSource, VR, uimm5);
+  defvar Vs2Op = (ins TyRs2:$vs2);
+
+  // Build Ins DAG: swap vd and vs2 order when vs2 is not a register source
+  dag Ins = !if(type.Vs2IsSource,
+                !con(rs1info.Funct6Op, VdOp, Vs2Op, rs1info.Op),
+                !con(rs1info.Funct6Op, Vs2Op, VdOp, rs1info.Op));
+
+  string ArgStr = !if(type.Vs2IsSource,
+                      rs1info.Funct6Name # ", $vd, $vs2, " # rs1info.Name,
+                      rs1info.Funct6Name # ", $vs2, $vd, " # rs1info.Name);
+
+  string Constraints = !if(!and(hasOutput, type.VdIsSource),
+                           "$vd = $vd_wb", "");
+
+  RISCVVConstraint RVVConstraint = !if(!and(hasOutput, type.IsWidening),
+                                       !if(rs1info.IsVR, VCIXVS2VS1, VCIXVS2),
+                                       NoConstraint);
 }
 
-class RVInstVCCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
-                      string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
-  bits<5> rs2;
-  bits<5> rs1;
-  bits<5> rd;
-  bits<2> funct6_lo2;
-  bit vm;
+// Common base class for VCIX instructions
+class RVInstVCCustom2Base<VCIXInfo info>
+    : RVInst<info.Outs, info.Ins, info.OpcodeStr, info.ArgStr, [], InstFormatR> {
+  bits<5> vs2;
+  bits<5> vd;
 
-  let Inst{31-28} = funct6_hi4;
-  let Inst{27-26} = funct6_lo2;
-  let Inst{25} = vm;
-  let Inst{24-20} = rs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = funct3;
-  let Inst{11-7} = rd;
+  let Inst{31-28} = info.Funct6_hi4;
+  let Inst{25} = !not(info.HasOutput);
+  let Inst{24-20} = vs2;
+  let Inst{14-12} = info.Funct3;
+  let Inst{11-7} = vd;
   let Inst{6-0} = OPC_CUSTOM_2.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = NoConstraint;
+  let Constraints = info.Constraints;
+  let RVVConstraint = info.RVVConstraint;
   let ElementsDependOn = EltDepsVLMask;
   let ReadsPastVL = 1;
+
+  let UseNamedOperandTable = true;
 }
 
-class RVInstVCFCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
-                       string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
-  bits<5> rs2;
+// VCIX instructions with GPR rs1 operand
+class RVInstVCCustom2_X<VCIXInfo info> : RVInstVCCustom2Base<info> {
   bits<5> rs1;
-  bits<5> rd;
-  bit funct6_lo1;
-  bit vm;
+  bits<2> funct6_lo2;
 
-  let Inst{31-28} = funct6_hi4;
+  let Inst{27-26} = funct6_lo2;
+  let Inst{19-15} = rs1;
+}
+
+// VCIX instructions with VR vs1 operand
+class RVInstVCCustom2_V<VCIXInfo info> : RVInstVCCustom2Base<info> {
+  bits<5> vs1;
+  bits<2> funct6_lo2;
+
+  let Inst{27-26} = funct6_lo2;
+  let Inst{19-15} = vs1;
+}
+
+// VCIX instructions with immediate operand
+class RVInstVCCustom2_I<VCIXInfo info> : RVInstVCCustom2Base<info> {
+  bits<5> imm;
+  bits<2> funct6_lo2;
+
+  let Inst{27-26} = funct6_lo2;
+  let Inst{19-15} = imm;
+}
+
+// VCIX instructions with FPR rs1 operand
+class RVInstVCFCustom2_F<VCIXInfo info> : RVInstVCCustom2Base<info> {
+  bits<5> rs1;
+  bit funct6_lo1;
+
   let Inst{27} = 1;
   let Inst{26} = funct6_lo1;
-  let Inst{25} = vm;
-  let Inst{24-20} = rs2;
   let Inst{19-15} = rs1;
-  let Inst{14-12} = funct3;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = OPC_CUSTOM_2.Value;
-
-  let Uses = [VL, VTYPE];
-  let RVVConstraint = NoConstraint;
-  let ElementsDependOn = EltDepsVLMask;
-  let ReadsPastVL = 1;
 }
 
-class VCIXInfo<string suffix, VCIXType type, DAGOperand TyRd,
-               DAGOperand TyRs2, DAGOperand TyRs1, bit HaveOutputDst> {
-  string OpcodeStr = !if(HaveOutputDst, "sf.vc.v." # suffix,
-                                        "sf.vc." # suffix);
-  bits<4> Funct6_hi4 = type.Val;
-  bits<3> Funct3 = !cond(!eq(TyRs1, VR):    0b000,
-                         !eq(TyRs1, GPR):   0b100,
-                         !eq(TyRs1, FPR32): 0b101,
-                         !eq(TyRs1, simm5): 0b011);
-  dag Outs = !if(!not(HaveOutputDst), (outs),
-                 !if(!or(!eq(type, VCIX_XVV), !eq(type, VCIX_XVW)),
-                     (outs TyRd:$rd_wb), (outs TyRd:$rd)));
-  dag Ins = SwapVCIXIns<!if(!ne(TyRs1, FPR32), (ins uimm2:$funct6_lo2),
-                                               (ins uimm1:$funct6_lo1)),
-                        !if(!and(HaveOutputDst, !or(!eq(type, VCIX_X),
-                                                    !eq(type, VCIX_XV))),
-                            (ins), (ins TyRd:$rd)),
-                        (ins TyRs2:$rs2),
-                        (ins TyRs1:$rs1),
-                        !if(!eq(type, VCIX_X), 1, 0)>.Ins;
-  string Prototype = !if(!eq(type, VCIX_X), "$funct6_lo2, $rs2, $rd, $rs1",
-                         !if(!ne(TyRs1, FPR32), "$funct6_lo2, $rd, $rs2, $rs1",
-                                                "$funct6_lo1, $rd, $rs2, $rs1"));
-  string Constraints = !if(!not(HaveOutputDst), "",
-                           !if(!or(!eq(type, VCIX_XVV),
-                                   !eq(type, VCIX_XVW)), "$rd = $rd_wb", ""));
-  RISCVVConstraint RVVConstraint = !if(!or(!not(HaveOutputDst),
-                                           !ne(type, VCIX_XVW)), NoConstraint,
-                                       !if(!eq(TyRs1, VR), VCIXVS2VS1, VCIXVS2));
-}
-
-class CustomSiFiveVCIX<VCIXInfo info>
-  : RVInstVCCustom2<info.Funct6_hi4, info.Funct3, info.Outs,
-                    info.Ins, info.OpcodeStr, info.Prototype> {
-  let Constraints = info.Constraints;
-  let RVVConstraint = info.RVVConstraint;
-}
-
-class CustomSiFiveVCIF<VCIXInfo info>
-  : RVInstVCFCustom2<info.Funct6_hi4, info.Funct3, info.Outs,
-                     info.Ins, info.OpcodeStr, info.Prototype> {
-  let Constraints = info.Constraints;
-  let RVVConstraint = info.RVVConstraint;
-}
-
-multiclass CustomSiFiveVCIXorVCIF<string suffix, VCIXType type,
-                                  DAGOperand TyRd, DAGOperand TyRs2,
-                                  DAGOperand TyRs1, bit HaveOutputDst> {
-  defvar info = VCIXInfo<suffix, type, TyRd, TyRs2, TyRs1, HaveOutputDst>;
+multiclass CustomSiFiveVCIXorVCIF<VCIXInfo info> {
+  defvar TyRs1 = info.Rs1.Ty;
   if !eq(TyRs1, FPR32) then {
-    def NAME : CustomSiFiveVCIF<info>;
+    def NAME : RVInstVCFCustom2_F<info>;
+  } else if !eq(TyRs1, GPR) then {
+    def NAME : RVInstVCCustom2_X<info>;
+  } else if !eq(TyRs1, VR) then {
+    def NAME : RVInstVCCustom2_V<info>;
   } else {
-    def NAME : CustomSiFiveVCIX<info>;
+    def NAME : RVInstVCCustom2_I<info>;
   }
 }
 
-multiclass CustomSiFiveVCIX<string suffix, VCIXType type,
-                            DAGOperand InTyRd, DAGOperand InTyRs2,
-                            DAGOperand InTyRs1> {
-  let vm = 1 in
-  defm SF_VC_ # NAME   : CustomSiFiveVCIXorVCIF<suffix, type, InTyRd, InTyRs2,
-                                             InTyRs1, 0>;
-  let vm = 0 in
-  defm SF_VC_V_ # NAME : CustomSiFiveVCIXorVCIF<suffix, type, VR, InTyRs2,
-                                             InTyRs1, 1>;
+multiclass CustomSiFiveVCIX<VCIXType type, VCIXRs1Info rs1> {
+  defm SF_VC_ # NAME   : CustomSiFiveVCIXorVCIF<VCIXInfo<type, rs1, hasOutput=0>>;
+  defm SF_VC_V_ # NAME : CustomSiFiveVCIXorVCIF<VCIXInfo<type, rs1, hasOutput=1>>;
+}
+
+let Predicates = [HasVendorXSfvcp], mayLoad = 0, mayStore = 0,
+    hasSideEffects = 1, hasNoSchedulingInfo = 1, DecoderNamespace = "XSfvector" in {
+  defm X   : CustomSiFiveVCIX<VCIX_Rs1,   VCIX_GPR>,   Sched<[]>;
+  defm I   : CustomSiFiveVCIX<VCIX_Rs1,   VCIX_simm5>, Sched<[]>;
+  defm XV  : CustomSiFiveVCIX<VCIX_Rs1V,  VCIX_GPR>,   Sched<[]>;
+  defm IV  : CustomSiFiveVCIX<VCIX_Rs1V,  VCIX_simm5>, Sched<[]>;
+  defm VV  : CustomSiFiveVCIX<VCIX_Rs1V,  VCIX_VR>,    Sched<[]>;
+  defm FV  : CustomSiFiveVCIX<VCIX_Rs1V,  VCIX_FPR32>, Sched<[]>;
+  defm XVV : CustomSiFiveVCIX<VCIX_Rs1VV, VCIX_GPR>,   Sched<[]>;
+  defm IVV : CustomSiFiveVCIX<VCIX_Rs1VV, VCIX_simm5>, Sched<[]>;
+  defm VVV : CustomSiFiveVCIX<VCIX_Rs1VV, VCIX_VR>,    Sched<[]>;
+  defm FVV : CustomSiFiveVCIX<VCIX_Rs1VV, VCIX_FPR32>, Sched<[]>;
+  defm XVW : CustomSiFiveVCIX<VCIX_Rs1VW, VCIX_GPR>,   Sched<[]>;
+  defm IVW : CustomSiFiveVCIX<VCIX_Rs1VW, VCIX_simm5>, Sched<[]>;
+  defm VVW : CustomSiFiveVCIX<VCIX_Rs1VW, VCIX_VR>,    Sched<[]>;
+  defm FVW : CustomSiFiveVCIX<VCIX_Rs1VW, VCIX_FPR32>, Sched<[]>;
 }
 
 // For XSfvqmaccdod/qoq and XSfvfwmaccqqq
@@ -193,7 +233,7 @@ class CustomSiFiveVMACC<bits<6> funct6, RISCVVFormat opv, string opcodestr>
   let Inst{6-0} = OPC_CUSTOM_2.Value;
 
   let Constraints = "$vd = $vd_wb";
-  let RVVConstraint = NoConstraint;
+  let VMConstraint = false;
   let ElementsDependOn = EltDepsVLMask;
   let ReadsPastVL = true;
 }
@@ -203,24 +243,6 @@ class CustomSiFiveVFNRCLIP<bits<6> funct6, RISCVVFormat opv, string opcodestr>
     : VALUVF<funct6, opv, opcodestr>,
       SchedBinaryMC<"WriteSF_VFNRClipV", "ReadSF_VFNRClipV", "ReadSF_VFNRClipF"> {
   let Inst{6-0} = OPC_CUSTOM_2.Value;
-}
-
-let Predicates = [HasVendorXSfvcp], mayLoad = 0, mayStore = 0,
-    hasSideEffects = 1, hasNoSchedulingInfo = 1, DecoderNamespace = "XSfvector" in {
-  defm X   : CustomSiFiveVCIX<"x",   VCIX_X,   uimm5, uimm5, GPR>,   Sched<[]>;
-  defm I   : CustomSiFiveVCIX<"i",   VCIX_X,   uimm5, uimm5, simm5>, Sched<[]>;
-  defm XV  : CustomSiFiveVCIX<"xv",  VCIX_XV,  uimm5, VR,    GPR>,   Sched<[]>;
-  defm IV  : CustomSiFiveVCIX<"iv",  VCIX_XV,  uimm5, VR,    simm5>, Sched<[]>;
-  defm VV  : CustomSiFiveVCIX<"vv",  VCIX_XV,  uimm5, VR,    VR>,    Sched<[]>;
-  defm FV  : CustomSiFiveVCIX<"fv",  VCIX_XV,  uimm5, VR,    FPR32>, Sched<[]>;
-  defm XVV : CustomSiFiveVCIX<"xvv", VCIX_XVV, VR,    VR,    GPR>,   Sched<[]>;
-  defm IVV : CustomSiFiveVCIX<"ivv", VCIX_XVV, VR,    VR,    simm5>, Sched<[]>;
-  defm VVV : CustomSiFiveVCIX<"vvv", VCIX_XVV, VR,    VR,    VR>,    Sched<[]>;
-  defm FVV : CustomSiFiveVCIX<"fvv", VCIX_XVV, VR,    VR,    FPR32>, Sched<[]>;
-  defm XVW : CustomSiFiveVCIX<"xvw", VCIX_XVW, VR,    VR,    GPR>,   Sched<[]>;
-  defm IVW : CustomSiFiveVCIX<"ivw", VCIX_XVW, VR,    VR,    simm5>, Sched<[]>;
-  defm VVW : CustomSiFiveVCIX<"vvw", VCIX_XVW, VR,    VR,    VR>,    Sched<[]>;
-  defm FVW : CustomSiFiveVCIX<"fvw", VCIX_XVW, VR,    VR,    FPR32>, Sched<[]>;
 }
 
 let Predicates = [HasVendorXSfvfexpAny], DecoderNamespace = "XSfvector" in {
@@ -234,7 +256,7 @@ let Predicates = [HasVendorXSfvfexpa], DecoderNamespace = "XSfvector" in {
 }
 
 let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvector",
-    DestEEW = EEWSEWx4, RVVConstraint=VS2Constraint in {
+    DestEEW = EEWSEWx4, RVVConstraint=VS1Constraint in {
   def SF_VQMACCU_2x8x2  : CustomSiFiveVMACC<0b101100, OPMVV, "sf.vqmaccu.2x8x2">;
   def SF_VQMACC_2x8x2   : CustomSiFiveVMACC<0b101101, OPMVV, "sf.vqmacc.2x8x2">;
   def SF_VQMACCUS_2x8x2 : CustomSiFiveVMACC<0b101110, OPMVV, "sf.vqmaccus.2x8x2">;
@@ -242,7 +264,7 @@ let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvector",
 }
 
 let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvector",
-    DestEEW = EEWSEWx4, RVVConstraint=WidenVNoMask in {
+    DestEEW = EEWSEWx4, RVVConstraint=WidenV in {
   def SF_VQMACCU_4x8x4  : CustomSiFiveVMACC<0b111100, OPMVV, "sf.vqmaccu.4x8x4">;
   def SF_VQMACC_4x8x4   : CustomSiFiveVMACC<0b111101, OPMVV, "sf.vqmacc.4x8x4">;
   def SF_VQMACCUS_4x8x4 : CustomSiFiveVMACC<0b111110, OPMVV, "sf.vqmaccus.4x8x4">;
@@ -250,7 +272,7 @@ let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvector",
 }
 
 let Predicates = [HasVendorXSfvfwmaccqqq], DecoderNamespace = "XSfvector",
-    DestEEW = EEWSEWx2, RVVConstraint=WidenVNoMask in {
+    DestEEW = EEWSEWx2, RVVConstraint=WidenV in {
   def SF_VFWMACC_4x4x4 : CustomSiFiveVMACC<0b111100, OPFVV, "sf.vfwmacc.4x4x4">;
 }
 
@@ -262,8 +284,8 @@ let Predicates = [HasVendorXSfvfnrclipxfqf], DecoderNamespace = "XSfvector",
 
 class VPseudoVC_X<Operand OpClass, DAGOperand RS1Class> :
       RISCVVPseudo<(outs),
-                   (ins OpClass:$op1, payload5:$rs2, payload5:$rd, RS1Class:$r1,
-                        AVL:$vl, sew:$sew), []> {
+                   (ins OpClass:$op1, payload5:$rs2, payload5:$rd,
+                        RS1Class:$rs1, AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasVLOp = 1;
@@ -273,8 +295,8 @@ class VPseudoVC_X<Operand OpClass, DAGOperand RS1Class> :
 
 class VPseudoVC_XV<Operand OpClass, VReg RS2Class, DAGOperand RS1Class> :
       RISCVVPseudo<(outs),
-                   (ins OpClass:$op1, payload5:$rd, RS2Class:$rs2, RS1Class:$r1,
-                        AVL:$vl, sew:$sew), []> {
+                   (ins OpClass:$op1, payload5:$rd, RS2Class:$rs2,
+                        RS1Class:$rs1, AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasVLOp = 1;
@@ -285,7 +307,7 @@ class VPseudoVC_XV<Operand OpClass, VReg RS2Class, DAGOperand RS1Class> :
 class VPseudoVC_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
                     DAGOperand RS1Class> :
       RISCVVPseudo<(outs),
-                   (ins OpClass:$op1, RDClass:$rd, RS2Class:$rs2, RS1Class:$r1,
+                   (ins OpClass:$op1, RDClass:$rd, RS2Class:$rs2, RS1Class:$rs1,
                         AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
@@ -296,7 +318,7 @@ class VPseudoVC_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
 
 class VPseudoVC_V_X<Operand OpClass, VReg RDClass, DAGOperand RS1Class> :
       RISCVVPseudo<(outs RDClass:$rd),
-                   (ins OpClass:$op1, payload5:$rs2, RS1Class:$r1,
+                   (ins OpClass:$op1, payload5:$rs2, RS1Class:$rs1,
                         AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
@@ -308,7 +330,7 @@ class VPseudoVC_V_X<Operand OpClass, VReg RDClass, DAGOperand RS1Class> :
 class VPseudoVC_V_XV<Operand OpClass, VReg RDClass, VReg RS2Class,
                      DAGOperand RS1Class> :
       RISCVVPseudo<(outs RDClass:$rd),
-                   (ins OpClass:$op1, RS2Class:$rs2, RS1Class:$r1,
+                   (ins OpClass:$op1, RS2Class:$rs2, RS1Class:$rs1,
                         AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
@@ -320,7 +342,7 @@ class VPseudoVC_V_XV<Operand OpClass, VReg RDClass, VReg RS2Class,
 class VPseudoVC_V_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
                       DAGOperand RS1Class> :
       RISCVVPseudo<(outs RDClass:$rd),
-                   (ins OpClass:$op1, RDClass:$rs3, RS2Class:$rs2, RS1Class:$r1,
+                   (ins OpClass:$op1, RDClass:$rs3, RS2Class:$rs2, RS1Class:$rs1,
                         AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;

@@ -190,7 +190,17 @@ def __builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f64 : AMDGPUBuiltin<"double(doub
 def __builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64 : AMDGPUBuiltin<"double(double, __amdgpu_buffer_rsrc_t, int, int, _Constant int)", [], "atomic-fmin-fmax-global-f64">;
 
 def __builtin_amdgcn_raw_ptr_buffer_load_lds : AMDGPUBuiltin<"void(__amdgpu_buffer_rsrc_t, void address_space<3> *, _Constant unsigned int, int, int, _Constant int, _Constant int)", [], "vmem-to-lds-load-insts">;
+def __builtin_amdgcn_raw_ptr_buffer_load_async_lds : AMDGPUBuiltin<"void(__amdgpu_buffer_rsrc_t, void address_space<3> *, _Constant unsigned int, int, int, _Constant int, _Constant int)", [], "vmem-to-lds-load-insts">;
 def __builtin_amdgcn_struct_ptr_buffer_load_lds : AMDGPUBuiltin<"void(__amdgpu_buffer_rsrc_t, void address_space<3> *, _Constant unsigned int, int, int, int, _Constant int, _Constant int)", [], "vmem-to-lds-load-insts">;
+def __builtin_amdgcn_struct_ptr_buffer_load_async_lds : AMDGPUBuiltin<"void(__amdgpu_buffer_rsrc_t, void address_space<3> *, _Constant unsigned int, int, int, int, _Constant int, _Constant int)", [], "vmem-to-lds-load-insts">;
+
+//===----------------------------------------------------------------------===//
+// Async mark builtins.
+//===----------------------------------------------------------------------===//
+
+// FIXME: Not supported on GFX12 yet. Will need a new feature when we do.
+def __builtin_amdgcn_asyncmark : AMDGPUBuiltin<"void()", [], "vmem-to-lds-load-insts">;
+def __builtin_amdgcn_wait_asyncmark : AMDGPUBuiltin<"void(_Constant unsigned short)", [], "vmem-to-lds-load-insts">;
 
 //===----------------------------------------------------------------------===//
 // Ballot builtins.
@@ -245,17 +255,17 @@ def __builtin_amdgcn_interp_mov : AMDGPUBuiltin<"float(unsigned int, unsigned in
 // VI+ only builtins.
 //===----------------------------------------------------------------------===//
 
-def __builtin_amdgcn_div_fixuph : AMDGPUBuiltin<"__fp16(__fp16, __fp16, __fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_rcph : AMDGPUBuiltin<"__fp16(__fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_sqrth : AMDGPUBuiltin<"__fp16(__fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_rsqh : AMDGPUBuiltin<"__fp16(__fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_sinh : AMDGPUBuiltin<"__fp16(__fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_cosh : AMDGPUBuiltin<"__fp16(__fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_ldexph : AMDGPUBuiltin<"__fp16(__fp16, int)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_frexp_manth : AMDGPUBuiltin<"__fp16(__fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_frexp_exph : AMDGPUBuiltin<"short(__fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_fracth : AMDGPUBuiltin<"__fp16(__fp16)", [Const], "16-bit-insts">;
-def __builtin_amdgcn_classh : AMDGPUBuiltin<"bool(__fp16, int)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_div_fixuph : AMDGPUBuiltin<"_Float16(_Float16, _Float16, _Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_rcph : AMDGPUBuiltin<"_Float16(_Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_sqrth : AMDGPUBuiltin<"_Float16(_Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_rsqh : AMDGPUBuiltin<"_Float16(_Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_sinh : AMDGPUBuiltin<"_Float16(_Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_cosh : AMDGPUBuiltin<"_Float16(_Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_ldexph : AMDGPUBuiltin<"_Float16(_Float16, int)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_frexp_manth : AMDGPUBuiltin<"_Float16(_Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_frexp_exph : AMDGPUBuiltin<"short(_Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_fracth : AMDGPUBuiltin<"_Float16(_Float16)", [Const], "16-bit-insts">;
+def __builtin_amdgcn_classh : AMDGPUBuiltin<"bool(_Float16, int)", [Const], "16-bit-insts">;
 def __builtin_amdgcn_s_memrealtime : AMDGPUBuiltin<"uint64_t()", [], "s-memrealtime">;
 def __builtin_amdgcn_mov_dpp : AMDGPUBuiltin<"int(int, _Constant int, _Constant int, _Constant int, _Constant bool)", [Const, CustomTypeChecking], "dpp">;
 def __builtin_amdgcn_update_dpp : AMDGPUBuiltin<"int(int, int, _Constant int, _Constant int, _Constant int, _Constant bool)", [Const, CustomTypeChecking], "dpp">;
@@ -288,7 +298,9 @@ def __builtin_amdgcn_global_atomic_fadd_v2bf16 : AMDGPUBuiltin<"_ExtVector<2, sh
 def __builtin_amdgcn_ds_atomic_fadd_v2bf16 : AMDGPUBuiltin<"_ExtVector<2, short>(_ExtVector<2, short> address_space<3> *, _ExtVector<2, short>)", [CustomTypeChecking], "atomic-ds-pk-add-16-insts">;
 def __builtin_amdgcn_ds_atomic_fadd_v2f16 : AMDGPUBuiltin<"_ExtVector<2, _Float16>(_ExtVector<2, _Float16> address_space<3> *, _ExtVector<2, _Float16>)", [CustomTypeChecking], "atomic-ds-pk-add-16-insts">;
 def __builtin_amdgcn_load_to_lds : AMDGPUBuiltin<"void(void *, void address_space<3> *, _Constant unsigned int, _Constant int, _Constant unsigned int)", [], "vmem-to-lds-load-insts">;
+def __builtin_amdgcn_load_async_to_lds : AMDGPUBuiltin<"void(void *, void address_space<3> *, _Constant unsigned int, _Constant int, _Constant unsigned int)", [], "vmem-to-lds-load-insts">;
 def __builtin_amdgcn_global_load_lds : AMDGPUBuiltin<"void(void address_space<1> *, void address_space<3> *, _Constant unsigned int, _Constant int, _Constant unsigned int)", [], "vmem-to-lds-load-insts">;
+def __builtin_amdgcn_global_load_async_lds : AMDGPUBuiltin<"void(void address_space<1> *, void address_space<3> *, _Constant unsigned int, _Constant int, _Constant unsigned int)", [], "vmem-to-lds-load-insts">;
 
 //===----------------------------------------------------------------------===//
 // Deep learning builtins.
@@ -339,29 +351,30 @@ def __builtin_amdgcn_image_bvh_intersect_ray_lh : AMDGPUBuiltin<"_ExtVector<4, u
 // TODO: This is a no-op in wave32. Should the builtin require wavefrontsize64?
 def __builtin_amdgcn_permlane64 : AMDGPUBuiltin<"unsigned int(unsigned int)", [Const], "gfx11-insts">;
 def __builtin_amdgcn_s_wait_event_export_ready : AMDGPUBuiltin<"void()", [], "gfx11-insts">;
+def __builtin_amdgcn_s_wait_event : AMDGPUBuiltin<"void(_Constant short)", [], "gfx11-insts">;
 
 //===----------------------------------------------------------------------===//
 // WMMA builtins.
 // Postfix w32 indicates the builtin requires wavefront size of 32.
 // Postfix w64 indicates the builtin requires wavefront size of 64.
 //===----------------------------------------------------------------------===//
-def __builtin_amdgcn_wmma_f32_16x16x16_f16_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<16, _Float16>, _ExtVector<16, _Float16>, _ExtVector<8, float>)", [Const], "gfx11-insts,wavefrontsize32">;
-def __builtin_amdgcn_wmma_f32_16x16x16_bf16_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<16, short>, _ExtVector<16, short>, _ExtVector<8, float>)", [Const], "gfx11-insts,wavefrontsize32">;
-def __builtin_amdgcn_wmma_f16_16x16x16_f16_w32 : AMDGPUBuiltin<"_ExtVector<16, _Float16>(_ExtVector<16, _Float16>, _ExtVector<16, _Float16>, _ExtVector<16, _Float16>, _Constant bool)", [Const], "gfx11-insts,wavefrontsize32">;
-def __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32 : AMDGPUBuiltin<"_ExtVector<16, short>(_ExtVector<16, short>, _ExtVector<16, short>, _ExtVector<16, short>, _Constant bool)", [Const], "gfx11-insts,wavefrontsize32">;
-def __builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w32 : AMDGPUBuiltin<"_ExtVector<16, _Float16>(_ExtVector<16, _Float16>, _ExtVector<16, _Float16>, _ExtVector<16, _Float16>, _Constant bool)", [Const], "gfx11-insts,wavefrontsize32">;
-def __builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w32 : AMDGPUBuiltin<"_ExtVector<16, short>(_ExtVector<16, short>, _ExtVector<16, short>, _ExtVector<16, short>, _Constant bool)", [Const], "gfx11-insts,wavefrontsize32">;
-def __builtin_amdgcn_wmma_i32_16x16x16_iu8_w32 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, _ExtVector<4, int>, _Constant bool, _ExtVector<4, int>, _ExtVector<8, int>, _Constant bool)", [Const], "gfx11-insts,wavefrontsize32">;
-def __builtin_amdgcn_wmma_i32_16x16x16_iu4_w32 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, _ExtVector<2, int>, _Constant bool, _ExtVector<2, int>, _ExtVector<8, int>, _Constant bool)", [Const], "gfx11-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_f32_16x16x16_f16_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<16, _Float16>, _ExtVector<16, _Float16>, _ExtVector<8, float>)", [Const], "wmma-256b-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_f32_16x16x16_bf16_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<16, short>, _ExtVector<16, short>, _ExtVector<8, float>)", [Const], "wmma-256b-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_f16_16x16x16_f16_w32 : AMDGPUBuiltin<"_ExtVector<16, _Float16>(_ExtVector<16, _Float16>, _ExtVector<16, _Float16>, _ExtVector<16, _Float16>, _Constant bool)", [Const], "wmma-256b-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32 : AMDGPUBuiltin<"_ExtVector<16, short>(_ExtVector<16, short>, _ExtVector<16, short>, _ExtVector<16, short>, _Constant bool)", [Const], "wmma-256b-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w32 : AMDGPUBuiltin<"_ExtVector<16, _Float16>(_ExtVector<16, _Float16>, _ExtVector<16, _Float16>, _ExtVector<16, _Float16>, _Constant bool)", [Const], "wmma-256b-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w32 : AMDGPUBuiltin<"_ExtVector<16, short>(_ExtVector<16, short>, _ExtVector<16, short>, _ExtVector<16, short>, _Constant bool)", [Const], "wmma-256b-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_i32_16x16x16_iu8_w32 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, _ExtVector<4, int>, _Constant bool, _ExtVector<4, int>, _ExtVector<8, int>, _Constant bool)", [Const], "wmma-256b-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_i32_16x16x16_iu4_w32 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, _ExtVector<2, int>, _Constant bool, _ExtVector<2, int>, _ExtVector<8, int>, _Constant bool)", [Const], "wmma-256b-insts,wavefrontsize32">;
 
-def __builtin_amdgcn_wmma_f32_16x16x16_f16_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<16, _Float16>, _ExtVector<16, _Float16>, _ExtVector<4, float>)", [Const], "gfx11-insts,wavefrontsize64">;
-def __builtin_amdgcn_wmma_f32_16x16x16_bf16_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<16, short>, _ExtVector<16, short>, _ExtVector<4, float>)", [Const], "gfx11-insts,wavefrontsize64">;
-def __builtin_amdgcn_wmma_f16_16x16x16_f16_w64 : AMDGPUBuiltin<"_ExtVector<8, _Float16>(_ExtVector<16, _Float16>, _ExtVector<16, _Float16>, _ExtVector<8, _Float16>, _Constant bool)", [Const], "gfx11-insts,wavefrontsize64">;
-def __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64 : AMDGPUBuiltin<"_ExtVector<8, short>(_ExtVector<16, short>, _ExtVector<16, short>, _ExtVector<8, short>, _Constant bool)", [Const], "gfx11-insts,wavefrontsize64">;
-def __builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w64 : AMDGPUBuiltin<"_ExtVector<8, _Float16>(_ExtVector<16, _Float16>, _ExtVector<16, _Float16>, _ExtVector<8, _Float16>, _Constant bool)", [Const], "gfx11-insts,wavefrontsize64">;
-def __builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w64 : AMDGPUBuiltin<"_ExtVector<8, short>(_ExtVector<16, short>, _ExtVector<16, short>, _ExtVector<8, short>, _Constant bool)", [Const], "gfx11-insts,wavefrontsize64">;
-def __builtin_amdgcn_wmma_i32_16x16x16_iu8_w64 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, _ExtVector<4, int>, _Constant bool, _ExtVector<4, int>, _ExtVector<4, int>, _Constant bool)", [Const], "gfx11-insts,wavefrontsize64">;
-def __builtin_amdgcn_wmma_i32_16x16x16_iu4_w64 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, _ExtVector<2, int>, _Constant bool, _ExtVector<2, int>, _ExtVector<4, int>, _Constant bool)", [Const], "gfx11-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_f32_16x16x16_f16_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<16, _Float16>, _ExtVector<16, _Float16>, _ExtVector<4, float>)", [Const], "wmma-256b-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_f32_16x16x16_bf16_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<16, short>, _ExtVector<16, short>, _ExtVector<4, float>)", [Const], "wmma-256b-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_f16_16x16x16_f16_w64 : AMDGPUBuiltin<"_ExtVector<8, _Float16>(_ExtVector<16, _Float16>, _ExtVector<16, _Float16>, _ExtVector<8, _Float16>, _Constant bool)", [Const], "wmma-256b-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64 : AMDGPUBuiltin<"_ExtVector<8, short>(_ExtVector<16, short>, _ExtVector<16, short>, _ExtVector<8, short>, _Constant bool)", [Const], "wmma-256b-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w64 : AMDGPUBuiltin<"_ExtVector<8, _Float16>(_ExtVector<16, _Float16>, _ExtVector<16, _Float16>, _ExtVector<8, _Float16>, _Constant bool)", [Const], "wmma-256b-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w64 : AMDGPUBuiltin<"_ExtVector<8, short>(_ExtVector<16, short>, _ExtVector<16, short>, _ExtVector<8, short>, _Constant bool)", [Const], "wmma-256b-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_i32_16x16x16_iu8_w64 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, _ExtVector<4, int>, _Constant bool, _ExtVector<4, int>, _ExtVector<4, int>, _Constant bool)", [Const], "wmma-256b-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_i32_16x16x16_iu4_w64 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, _ExtVector<2, int>, _Constant bool, _ExtVector<2, int>, _ExtVector<4, int>, _Constant bool)", [Const], "wmma-256b-insts,wavefrontsize64">;
 
 def __builtin_amdgcn_s_sendmsg_rtn : AMDGPUBuiltin<"unsigned int(_Constant unsigned int)", [], "gfx11-insts">;
 def __builtin_amdgcn_s_sendmsg_rtnl : AMDGPUBuiltin<"uint64_t(_Constant unsigned int)", [], "gfx11-insts">;
@@ -587,66 +600,70 @@ def __builtin_amdgcn_ds_bvh_stack_push8_pop1_rtn : AMDGPUBuiltin<"_ExtVector<2, 
 def __builtin_amdgcn_ds_bvh_stack_push8_pop2_rtn : AMDGPUBuiltin<"_ExtVector<2, uint64_t>(unsigned int, unsigned int, _ExtVector<8, unsigned int>, _Constant int)", [], "gfx12-insts">;
 
 //===----------------------------------------------------------------------===//
+// GFX1170, GFX12+ only builtins.
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
 // WMMA builtins.
 // Postfix w32 indicates the builtin requires wavefront size of 32.
 // Postfix w64 indicates the builtin requires wavefront size of 64.
 //
-// Some of these are very similar to their GFX11 counterparts, but they don't
-// require replication of the A,B matrices, so they use fewer vector elements.
-// Therefore, we add an "_gfx12" suffix to distinguish them from the existing
-// builtins.
+// Some of these are very similar to their base GFX11 counterparts, but they
+// don't require replication of the A,B matrices, so they use fewer vector
+// elements. Therefore, we add an "_gfx12" suffix to distinguish them from the
+// existing builtins.
 //===----------------------------------------------------------------------===//
-def __builtin_amdgcn_wmma_f32_16x16x16_f16_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, _Float16>, _ExtVector<8, _Float16>, _ExtVector<8, float>)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_wmma_f32_16x16x16_bf16_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, short>, _ExtVector<8, short>, _ExtVector<8, float>)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_wmma_f16_16x16x16_f16_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, _Float16>(_ExtVector<8, _Float16>, _ExtVector<8, _Float16>, _ExtVector<8, _Float16>)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, short>(_ExtVector<8, short>, _ExtVector<8, short>, _ExtVector<8, short>)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_wmma_i32_16x16x16_iu8_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, _ExtVector<2, int>, _Constant bool, _ExtVector<2, int>, _ExtVector<8, int>, _Constant bool)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_wmma_i32_16x16x16_iu4_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, int, _Constant bool, int, _ExtVector<8, int>, _Constant bool)", [Const], "gfx12-insts,wavefrontsize32">;
-// These are gfx12-only, but for consistency with the other WMMA variants we're
-// keeping the "_gfx12" suffix.
-def __builtin_amdgcn_wmma_f32_16x16x16_fp8_fp8_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<2, int>, _ExtVector<8, float>)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_wmma_f32_16x16x16_fp8_bf8_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<2, int>, _ExtVector<8, float>)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_wmma_f32_16x16x16_bf8_fp8_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<2, int>, _ExtVector<8, float>)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_wmma_f32_16x16x16_bf8_bf8_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<2, int>, _ExtVector<8, float>)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_wmma_i32_16x16x32_iu4_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, _ExtVector<2, int>, _Constant bool, _ExtVector<2, int>, _ExtVector<8, int>, _Constant bool)", [Const], "gfx12-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_f32_16x16x16_f16_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, _Float16>, _ExtVector<8, _Float16>, _ExtVector<8, float>)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_f32_16x16x16_bf16_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, short>, _ExtVector<8, short>, _ExtVector<8, float>)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_f16_16x16x16_f16_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, _Float16>(_ExtVector<8, _Float16>, _ExtVector<8, _Float16>, _ExtVector<8, _Float16>)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, short>(_ExtVector<8, short>, _ExtVector<8, short>, _ExtVector<8, short>)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_i32_16x16x16_iu8_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, _ExtVector<2, int>, _Constant bool, _ExtVector<2, int>, _ExtVector<8, int>, _Constant bool)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_i32_16x16x16_iu4_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, int, _Constant bool, int, _ExtVector<8, int>, _Constant bool)", [Const], "wmma-128b-insts,wavefrontsize32">;
+// These are gfx1170 and gfx12 only, but for consistency with the other WMMA
+// variants we're keeping the "_gfx12" suffix.
+def __builtin_amdgcn_wmma_f32_16x16x16_fp8_fp8_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<2, int>, _ExtVector<8, float>)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_f32_16x16x16_fp8_bf8_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<2, int>, _ExtVector<8, float>)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_f32_16x16x16_bf8_fp8_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<2, int>, _ExtVector<8, float>)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_f32_16x16x16_bf8_bf8_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<2, int>, _ExtVector<8, float>)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_wmma_i32_16x16x32_iu4_w32_gfx12 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, _ExtVector<2, int>, _Constant bool, _ExtVector<2, int>, _ExtVector<8, int>, _Constant bool)", [Const], "wmma-128b-insts,wavefrontsize32">;
 
-def __builtin_amdgcn_wmma_f32_16x16x16_f16_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<4, _Float16>, _ExtVector<4, _Float16>, _ExtVector<4, float>)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_wmma_f32_16x16x16_bf16_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<4, short>, _ExtVector<4, short>, _ExtVector<4, float>)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_wmma_f16_16x16x16_f16_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, _Float16>(_ExtVector<4, _Float16>, _ExtVector<4, _Float16>, _ExtVector<4, _Float16>)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, short>(_ExtVector<4, short>, _ExtVector<4, short>, _ExtVector<4, short>)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_wmma_i32_16x16x16_iu8_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, int, _Constant bool, int, _ExtVector<4, int>, _Constant bool)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_wmma_i32_16x16x16_iu4_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, int, _Constant bool, int, _ExtVector<4, int>, _Constant bool)", [Const], "gfx12-insts,wavefrontsize64">;
-// These are gfx12-only, but for consistency with the other WMMA variants we're
-// keeping the "_gfx12" suffix.
-def __builtin_amdgcn_wmma_f32_16x16x16_fp8_fp8_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, float>(int, int, _ExtVector<4, float>)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_wmma_f32_16x16x16_fp8_bf8_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, float>(int, int, _ExtVector<4, float>)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_wmma_f32_16x16x16_bf8_fp8_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, float>(int, int, _ExtVector<4, float>)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_wmma_f32_16x16x16_bf8_bf8_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, float>(int, int, _ExtVector<4, float>)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_wmma_i32_16x16x32_iu4_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, int, _Constant bool, int, _ExtVector<4, int>, _Constant bool)", [Const], "gfx12-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_f32_16x16x16_f16_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<4, _Float16>, _ExtVector<4, _Float16>, _ExtVector<4, float>)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_f32_16x16x16_bf16_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<4, short>, _ExtVector<4, short>, _ExtVector<4, float>)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_f16_16x16x16_f16_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, _Float16>(_ExtVector<4, _Float16>, _ExtVector<4, _Float16>, _ExtVector<4, _Float16>)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, short>(_ExtVector<4, short>, _ExtVector<4, short>, _ExtVector<4, short>)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_i32_16x16x16_iu8_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, int, _Constant bool, int, _ExtVector<4, int>, _Constant bool)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_i32_16x16x16_iu4_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, int, _Constant bool, int, _ExtVector<4, int>, _Constant bool)", [Const], "wmma-128b-insts,wavefrontsize64">;
+// These are gfx1170 and gfx12 only, but for consistency with the other WMMA
+// variants we're keeping the "_gfx12" suffix.
+def __builtin_amdgcn_wmma_f32_16x16x16_fp8_fp8_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, float>(int, int, _ExtVector<4, float>)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_f32_16x16x16_fp8_bf8_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, float>(int, int, _ExtVector<4, float>)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_f32_16x16x16_bf8_fp8_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, float>(int, int, _ExtVector<4, float>)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_f32_16x16x16_bf8_bf8_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, float>(int, int, _ExtVector<4, float>)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_wmma_i32_16x16x32_iu4_w64_gfx12 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, int, _Constant bool, int, _ExtVector<4, int>, _Constant bool)", [Const], "wmma-128b-insts,wavefrontsize64">;
 
-def __builtin_amdgcn_swmmac_f32_16x16x32_f16_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, __fp16>, _ExtVector<16, __fp16>, _ExtVector<8, float>, int)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_f32_16x16x32_bf16_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, short>, _ExtVector<16, short>, _ExtVector<8, float>, int)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_f16_16x16x32_f16_w32 : AMDGPUBuiltin<"_ExtVector<8, __fp16>(_ExtVector<8, __fp16>, _ExtVector<16, __fp16>, _ExtVector<8, __fp16>, int)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_bf16_16x16x32_bf16_w32 : AMDGPUBuiltin<"_ExtVector<8, short>(_ExtVector<8, short>, _ExtVector<16, short>, _ExtVector<8, short>, int)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_i32_16x16x32_iu8_w32 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, _ExtVector<2, int>, _Constant bool, _ExtVector<4, int>, _ExtVector<8, int>, int, _Constant bool)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_i32_16x16x32_iu4_w32 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, int, _Constant bool, _ExtVector<2, int>, _ExtVector<8, int>, int, _Constant bool)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_i32_16x16x64_iu4_w32 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, _ExtVector<2, int>, _Constant bool, _ExtVector<4, int>, _ExtVector<8, int>, int, _Constant bool)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_f32_16x16x32_fp8_fp8_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<4, int>, _ExtVector<8, float>, int)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_f32_16x16x32_fp8_bf8_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<4, int>, _ExtVector<8, float>, int)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_f32_16x16x32_bf8_fp8_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<4, int>, _ExtVector<8, float>, int)", [Const], "gfx12-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<4, int>, _ExtVector<8, float>, int)", [Const], "gfx12-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_f32_16x16x32_f16_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, __fp16>, _ExtVector<16, __fp16>, _ExtVector<8, float>, int)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_f32_16x16x32_bf16_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, short>, _ExtVector<16, short>, _ExtVector<8, float>, int)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_f16_16x16x32_f16_w32 : AMDGPUBuiltin<"_ExtVector<8, __fp16>(_ExtVector<8, __fp16>, _ExtVector<16, __fp16>, _ExtVector<8, __fp16>, int)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_bf16_16x16x32_bf16_w32 : AMDGPUBuiltin<"_ExtVector<8, short>(_ExtVector<8, short>, _ExtVector<16, short>, _ExtVector<8, short>, int)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_i32_16x16x32_iu8_w32 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, _ExtVector<2, int>, _Constant bool, _ExtVector<4, int>, _ExtVector<8, int>, int, _Constant bool)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_i32_16x16x32_iu4_w32 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, int, _Constant bool, _ExtVector<2, int>, _ExtVector<8, int>, int, _Constant bool)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_i32_16x16x64_iu4_w32 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, _ExtVector<2, int>, _Constant bool, _ExtVector<4, int>, _ExtVector<8, int>, int, _Constant bool)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_f32_16x16x32_fp8_fp8_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<4, int>, _ExtVector<8, float>, int)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_f32_16x16x32_fp8_bf8_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<4, int>, _ExtVector<8, float>, int)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_f32_16x16x32_bf8_fp8_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<4, int>, _ExtVector<8, float>, int)", [Const], "wmma-128b-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<4, int>, _ExtVector<8, float>, int)", [Const], "wmma-128b-insts,wavefrontsize32">;
 
-def __builtin_amdgcn_swmmac_f32_16x16x32_f16_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<4, __fp16>, _ExtVector<8, __fp16>, _ExtVector<4, float>, int)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_swmmac_f32_16x16x32_bf16_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<4, short>, _ExtVector<8, short>, _ExtVector<4, float>, int)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_swmmac_f16_16x16x32_f16_w64 : AMDGPUBuiltin<"_ExtVector<4, __fp16>(_ExtVector<4, __fp16>, _ExtVector<8, __fp16>, _ExtVector<4, __fp16>, int)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_swmmac_bf16_16x16x32_bf16_w64 : AMDGPUBuiltin<"_ExtVector<4, short>(_ExtVector<4, short>, _ExtVector<8, short>, _ExtVector<4, short>, int)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_swmmac_i32_16x16x32_iu8_w64 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, int, _Constant bool, _ExtVector<2, int>, _ExtVector<4, int>, int, _Constant bool)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_swmmac_i32_16x16x32_iu4_w64 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, int, _Constant bool, int, _ExtVector<4, int>, int, _Constant bool)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_swmmac_i32_16x16x64_iu4_w64 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, int, _Constant bool, _ExtVector<2, int>, _ExtVector<4, int>, int, _Constant bool)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_swmmac_f32_16x16x32_fp8_fp8_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(int, _ExtVector<2, int>, _ExtVector<4, float>, int)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_swmmac_f32_16x16x32_fp8_bf8_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(int, _ExtVector<2, int>, _ExtVector<4, float>, int)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_swmmac_f32_16x16x32_bf8_fp8_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(int, _ExtVector<2, int>, _ExtVector<4, float>, int)", [Const], "gfx12-insts,wavefrontsize64">;
-def __builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(int, _ExtVector<2, int>, _ExtVector<4, float>, int)", [Const], "gfx12-insts,wavefrontsize64">;
+def __builtin_amdgcn_swmmac_f32_16x16x32_f16_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<4, __fp16>, _ExtVector<8, __fp16>, _ExtVector<4, float>, int)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_swmmac_f32_16x16x32_bf16_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<4, short>, _ExtVector<8, short>, _ExtVector<4, float>, int)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_swmmac_f16_16x16x32_f16_w64 : AMDGPUBuiltin<"_ExtVector<4, __fp16>(_ExtVector<4, __fp16>, _ExtVector<8, __fp16>, _ExtVector<4, __fp16>, int)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_swmmac_bf16_16x16x32_bf16_w64 : AMDGPUBuiltin<"_ExtVector<4, short>(_ExtVector<4, short>, _ExtVector<8, short>, _ExtVector<4, short>, int)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_swmmac_i32_16x16x32_iu8_w64 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, int, _Constant bool, _ExtVector<2, int>, _ExtVector<4, int>, int, _Constant bool)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_swmmac_i32_16x16x32_iu4_w64 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, int, _Constant bool, int, _ExtVector<4, int>, int, _Constant bool)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_swmmac_i32_16x16x64_iu4_w64 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, int, _Constant bool, _ExtVector<2, int>, _ExtVector<4, int>, int, _Constant bool)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_swmmac_f32_16x16x32_fp8_fp8_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(int, _ExtVector<2, int>, _ExtVector<4, float>, int)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_swmmac_f32_16x16x32_fp8_bf8_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(int, _ExtVector<2, int>, _ExtVector<4, float>, int)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_swmmac_f32_16x16x32_bf8_fp8_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(int, _ExtVector<2, int>, _ExtVector<4, float>, int)", [Const], "wmma-128b-insts,wavefrontsize64">;
+def __builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(int, _ExtVector<2, int>, _ExtVector<4, float>, int)", [Const], "wmma-128b-insts,wavefrontsize64">;
 
 def __builtin_amdgcn_prng_b32 : AMDGPUBuiltin<"unsigned int(unsigned int)", [Const], "prng-inst">;
 def __builtin_amdgcn_cvt_scalef32_pk32_fp6_f16 : AMDGPUBuiltin<"_ExtVector<6, unsigned int>(_ExtVector<32, _Float16>, float)", [Const], "f16bf16-to-fp6bf6-cvt-scale-insts">;
@@ -711,12 +728,12 @@ def __builtin_amdgcn_s_cluster_barrier : AMDGPUBuiltin<"void()", [], "gfx1250-in
 def __builtin_amdgcn_flat_prefetch : AMDGPUBuiltin<"void(void const address_space<0> *, _Constant int)", [Const], "vmem-pref-insts">;
 def __builtin_amdgcn_global_prefetch : AMDGPUBuiltin<"void(void const address_space<1> *, _Constant int)", [Const], "vmem-pref-insts">;
 
-def __builtin_amdgcn_global_load_monitor_b32 : AMDGPUBuiltin<"int(int address_space<1> *, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_global_load_monitor_b64 : AMDGPUBuiltin<"_ExtVector<2, int>(_ExtVector<2, int> address_space<1> *, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_global_load_monitor_b128 : AMDGPUBuiltin<"_ExtVector<4, int>(_ExtVector<4, int> address_space<1> *, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_flat_load_monitor_b32 : AMDGPUBuiltin<"int(int address_space<0> *, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_flat_load_monitor_b64 : AMDGPUBuiltin<"_ExtVector<2, int>(_ExtVector<2, int> address_space<0> *, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_flat_load_monitor_b128 : AMDGPUBuiltin<"_ExtVector<4, int>(_ExtVector<4, int> address_space<0> *, _Constant int)", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_global_load_monitor_b32 : AMDGPUBuiltin<"int(int address_space<1> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_global_load_monitor_b64 : AMDGPUBuiltin<"_ExtVector<2, int>(_ExtVector<2, int> address_space<1> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_global_load_monitor_b128 : AMDGPUBuiltin<"_ExtVector<4, int>(_ExtVector<4, int> address_space<1> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_flat_load_monitor_b32 : AMDGPUBuiltin<"int(int address_space<0> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_flat_load_monitor_b64 : AMDGPUBuiltin<"_ExtVector<2, int>(_ExtVector<2, int> address_space<0> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_flat_load_monitor_b128 : AMDGPUBuiltin<"_ExtVector<4, int>(_ExtVector<4, int> address_space<0> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
 def __builtin_amdgcn_cluster_load_b32 : AMDGPUBuiltin<"int(int address_space<1> *, _Constant int, int)", [Const], "mcast-load-insts,wavefrontsize32">;
 def __builtin_amdgcn_cluster_load_b64 : AMDGPUBuiltin<"_ExtVector<2, int>(_ExtVector<2, int> address_space<1> *, _Constant int, int)", [Const], "mcast-load-insts,wavefrontsize32">;
 def __builtin_amdgcn_cluster_load_b128 : AMDGPUBuiltin<"_ExtVector<4, int>(_ExtVector<4, int> address_space<1> *, _Constant int, int)", [Const], "mcast-load-insts,wavefrontsize32">;
@@ -883,15 +900,15 @@ def __builtin_amdgcn_wmma_scale16_f32_32x16x128_f4 : AMDGPUBuiltin<"_ExtVector<1
 def __builtin_amdgcn_swmmac_f32_16x16x64_bf16 : AMDGPUBuiltin<"_ExtVector<8, float>(_Constant bool, _ExtVector<16, __bf16>, _Constant bool, _ExtVector<32, __bf16>, _ExtVector<8, float>, int, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
 def __builtin_amdgcn_swmmac_bf16_16x16x64_bf16 : AMDGPUBuiltin<"_ExtVector<8, __bf16>(_Constant bool, _ExtVector<16, __bf16>, _Constant bool, _ExtVector<32, __bf16>, _ExtVector<8, __bf16>, int, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
 def __builtin_amdgcn_swmmac_bf16f32_16x16x64_bf16 : AMDGPUBuiltin<"_ExtVector<8, float>(_Constant bool, _ExtVector<16, __bf16>, _Constant bool, _ExtVector<32, __bf16>, _ExtVector<8, float>, int, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_f32_16x16x128_fp8_fp8 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, int>, _ExtVector<16, int>, _ExtVector<8, float>, int, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_f32_16x16x128_fp8_bf8 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, int>, _ExtVector<16, int>, _ExtVector<8, float>, int, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_f32_16x16x128_bf8_fp8 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, int>, _ExtVector<16, int>, _ExtVector<8, float>, int, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_f32_16x16x128_bf8_bf8 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, int>, _ExtVector<16, int>, _ExtVector<8, float>, int, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_f16_16x16x128_fp8_fp8 : AMDGPUBuiltin<"_ExtVector<8, __fp16>(_ExtVector<8, int>, _ExtVector<16, int>, _ExtVector<8, __fp16>, int, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_f16_16x16x128_fp8_bf8 : AMDGPUBuiltin<"_ExtVector<8, __fp16>(_ExtVector<8, int>, _ExtVector<16, int>, _ExtVector<8, __fp16>, int, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_f16_16x16x128_bf8_fp8 : AMDGPUBuiltin<"_ExtVector<8, __fp16>(_ExtVector<8, int>, _ExtVector<16, int>, _ExtVector<8, __fp16>, int, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_f16_16x16x128_bf8_bf8 : AMDGPUBuiltin<"_ExtVector<8, __fp16>(_ExtVector<8, int>, _ExtVector<16, int>, _ExtVector<8, __fp16>, int, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_i32_16x16x128_iu8 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, _ExtVector<8, int>, _Constant bool, _ExtVector<16, int>, _ExtVector<8, int>, int, _Constant bool, _Constant bool, ...)", [Const], "gfx1250-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_f32_16x16x128_fp8_fp8 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, int>, _ExtVector<16, int>, _ExtVector<8, float>, _ExtVector<2, int>, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_f32_16x16x128_fp8_bf8 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, int>, _ExtVector<16, int>, _ExtVector<8, float>, _ExtVector<2, int>, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_f32_16x16x128_bf8_fp8 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, int>, _ExtVector<16, int>, _ExtVector<8, float>, _ExtVector<2, int>, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_f32_16x16x128_bf8_bf8 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, int>, _ExtVector<16, int>, _ExtVector<8, float>, _ExtVector<2, int>, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_f16_16x16x128_fp8_fp8 : AMDGPUBuiltin<"_ExtVector<8, __fp16>(_ExtVector<8, int>, _ExtVector<16, int>, _ExtVector<8, __fp16>, _ExtVector<2, int>, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_f16_16x16x128_fp8_bf8 : AMDGPUBuiltin<"_ExtVector<8, __fp16>(_ExtVector<8, int>, _ExtVector<16, int>, _ExtVector<8, __fp16>, _ExtVector<2, int>, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_f16_16x16x128_bf8_fp8 : AMDGPUBuiltin<"_ExtVector<8, __fp16>(_ExtVector<8, int>, _ExtVector<16, int>, _ExtVector<8, __fp16>, _ExtVector<2, int>, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_f16_16x16x128_bf8_bf8 : AMDGPUBuiltin<"_ExtVector<8, __fp16>(_ExtVector<8, int>, _ExtVector<16, int>, _ExtVector<8, __fp16>, _ExtVector<2, int>, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_i32_16x16x128_iu8 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, _ExtVector<8, int>, _Constant bool, _ExtVector<16, int>, _ExtVector<8, int>, _ExtVector<2, int>, _Constant bool, _Constant bool, ...)", [Const], "gfx1250-insts,wavefrontsize32">;
 def __builtin_amdgcn_swmmac_f32_16x16x64_f16 : AMDGPUBuiltin<"_ExtVector<8, float>(_Constant bool, _ExtVector<16, __fp16>, _Constant bool, _ExtVector<32, __fp16>, _ExtVector<8, float>, int, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
 def __builtin_amdgcn_swmmac_f16_16x16x64_f16 : AMDGPUBuiltin<"_ExtVector<8, __fp16>(_Constant bool, _ExtVector<16, __fp16>, _Constant bool, _ExtVector<32, __fp16>, _ExtVector<8, __fp16>, int, _Constant bool, _Constant bool)", [Const], "gfx1250-insts,wavefrontsize32">;
 

@@ -147,7 +147,7 @@ public:
 ProcessExperimentalProperties::ProcessExperimentalProperties()
     : Properties(OptionValuePropertiesSP(
           new ProcessExperimentalOptionValueProperties())) {
-  m_collection_sp->Initialize(g_process_experimental_properties);
+  m_collection_sp->Initialize(g_process_experimental_properties_def);
 }
 
 ProcessProperties::ProcessProperties(lldb_private::Process *process)
@@ -157,7 +157,7 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
   if (process == nullptr) {
     // Global process properties, set them up one time
     m_collection_sp = std::make_shared<ProcessOptionValueProperties>("process");
-    m_collection_sp->Initialize(g_process_properties);
+    m_collection_sp->Initialize(g_process_properties_def);
     m_collection_sp->AppendProperty(
         "thread", "Settings specific to threads.", true,
         Thread::GetGlobalProperties().GetValueProperties());
@@ -525,6 +525,8 @@ Process::~Process() {
   // explicitly clear the thread list here to ensure that the mutex is not
   // destroyed before the thread list.
   m_thread_list.Clear();
+  delete m_current_private_state_thread;
+  m_current_private_state_thread = nullptr;
 }
 
 ProcessProperties &Process::GetGlobalProperties() {
@@ -3914,10 +3916,7 @@ bool Process::ShouldBroadcastEvent(Event *event_ptr) {
 bool Process::PrivateStateThread::StartupThread() {
   llvm::Expected<HostThread> private_state_thread =
       ThreadLauncher::LaunchThread(
-          m_thread_name,
-          [this] {
-            return m_process.RunPrivateStateThread(m_is_secondary_thread);
-          },
+          m_thread_name, [this] { return m_process.RunPrivateStateThread(); },
           8 * 1024 * 1024);
   if (!private_state_thread) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Host), private_state_thread.takeError(),
@@ -4196,7 +4195,7 @@ Status Process::HaltPrivate() {
   return error;
 }
 
-thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
+thread_result_t Process::RunPrivateStateThread() {
   bool control_only = true;
 
   Log *log = GetLog(LLDBLog::Process);

@@ -13,7 +13,6 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
-#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
@@ -120,12 +119,6 @@ void MCStreamer::emitRawComment(const Twine &T, bool TabPrefix) {}
 
 void MCStreamer::addExplicitComment(const Twine &T) {}
 void MCStreamer::emitExplicitComments() {}
-
-void MCStreamer::generateCompactUnwindEncodings(MCAsmBackend *MAB) {
-  for (auto &FI : DwarfFrameInfos)
-    FI.CompactUnwindEncoding =
-        (MAB ? MAB->generateCompactUnwindEncoding(&FI, &Context) : 0);
-}
 
 /// EmitIntValue - Special case of EmitValue that avoids the client having to
 /// pass in a MCExpr for constant integers.
@@ -405,6 +398,9 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   assert(Symbol->isUndefined() && "Cannot define a symbol twice!");
 
   Symbol->setFragment(&getCurrentSectionOnly()->getDummyFragment());
+
+  if (LFIRewriter)
+    LFIRewriter->onLabel(Symbol);
 
   MCTargetStreamer *TS = getTargetStreamer();
   if (TS)

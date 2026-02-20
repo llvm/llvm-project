@@ -400,6 +400,11 @@ public:
 
   mlir::Value VisitExtVectorElementExpr(Expr *e) { return emitLoadOfLValue(e); }
 
+  mlir::Value VisitMatrixElementExpr(Expr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: matrix element");
+    return {};
+  }
+
   mlir::Value VisitMemberExpr(MemberExpr *e);
 
   mlir::Value VisitCompoundLiteralExpr(CompoundLiteralExpr *e) {
@@ -865,12 +870,21 @@ public:
     return {};
   }
   mlir::Value VisitTypeTraitExpr(const TypeTraitExpr *e) {
+    // We diverge slightly from classic codegen here because CIR has stricter
+    // typing. In LLVM IR, constant folding covers up some potential type
+    // mismatches such as bool-to-int conversions that would fail the verifier
+    // in CIR. To make things work, we need to be sure we only emit a bool value
+    // if the expression type is bool.
     mlir::Location loc = cgf.getLoc(e->getExprLoc());
-    if (e->isStoredAsBoolean())
-      return builder.getBool(e->getBoolValue(), loc);
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: TypeTraitExpr stored as int");
-    return {};
+    if (e->isStoredAsBoolean()) {
+      if (e->getType()->isBooleanType())
+        return builder.getBool(e->getBoolValue(), loc);
+      assert(e->getType()->isIntegerType() &&
+             "Expected int type for TypeTraitExpr");
+      return builder.getConstInt(loc, cgf.convertType(e->getType()),
+                                 (uint64_t)e->getBoolValue());
+    }
+    return builder.getConstInt(loc, e->getAPValue().getInt());
   }
   mlir::Value
   VisitConceptSpecializationExpr(const ConceptSpecializationExpr *e) {

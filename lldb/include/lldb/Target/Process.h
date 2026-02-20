@@ -2561,15 +2561,10 @@ void PruneThreadPlans();
   /// When data is successfully read from the ConPTY, it is stored in
   /// m_stdout_data. There is no differentiation between stdout and stderr.
   ///
-  /// \param[in] pty
-  ///     The ConPTY to use for process STDIO communication. It's
-  ///     assumed to be valid.
-  ///
   /// \see lldb_private::Process::STDIOReadThreadBytesReceived()
   /// \see lldb_private::IOHandlerProcessSTDIOWindows
   /// \see lldb_private::PseudoConsole
-  virtual void
-  SetPseudoConsoleHandle(const std::shared_ptr<PseudoConsole> &pty) {};
+  virtual void SetPseudoConsoleHandle() {};
 #endif
 
   /// Associates a file descriptor with the process' STDIO handling
@@ -3213,7 +3208,9 @@ protected:
         bool is_secondary_thread, // FIXME: Can I get rid of this?
         llvm::StringRef thread_name)
         : m_process(process), m_public_state(public_state),
-          m_private_state(private_state), m_thread_name(thread_name) {}
+          m_private_state(private_state),
+          m_is_secondary_thread(is_secondary_thread),
+          m_thread_name(thread_name) {}
     // This returns false if we couldn't start up the thread.  If that happens,
     // you won't be doing any debugging today.
     bool StartupThread();
@@ -3544,7 +3541,7 @@ private:
   // temporarily spin up a secondary state thread to handle events from a hand-
   // called function on the primary private state thread.
 
-  lldb::thread_result_t RunPrivateStateThread(bool is_secondary_thread);
+  lldb::thread_result_t RunPrivateStateThread();
 
 protected:
   void HandlePrivateEvent(lldb::EventSP &event_sp);

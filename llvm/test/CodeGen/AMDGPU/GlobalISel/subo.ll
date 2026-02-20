@@ -704,7 +704,6 @@ define amdgpu_ps i64 @s_ssubo_i64(i64 inreg %a, i64 inreg %b) {
 ; GFX7-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
 ; GFX7-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX7-NEXT:    s_xor_b32 s0, s0, s6
-; GFX7-NEXT:    s_and_b32 s0, s0, 1
 ; GFX7-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX7-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX7-NEXT:    s_sub_u32 s0, s4, s0
@@ -724,7 +723,6 @@ define amdgpu_ps i64 @s_ssubo_i64(i64 inreg %a, i64 inreg %b) {
 ; GFX8-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX8-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX8-NEXT:    s_xor_b32 s0, s0, s6
-; GFX8-NEXT:    s_and_b32 s0, s0, 1
 ; GFX8-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX8-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX8-NEXT:    s_sub_u32 s0, s4, s0
@@ -744,7 +742,6 @@ define amdgpu_ps i64 @s_ssubo_i64(i64 inreg %a, i64 inreg %b) {
 ; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX9-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX9-NEXT:    s_xor_b32 s0, s0, s6
-; GFX9-NEXT:    s_and_b32 s0, s0, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX9-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX9-NEXT:    s_sub_u32 s0, s4, s0

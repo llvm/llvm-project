@@ -337,6 +337,9 @@ maccsu.h11 s0, a2, s6
 # CHECK-ASM-AND-OBJ: ppaire.b t1, a2, t5
 # CHECK-ASM: encoding: [0x3b,0x43,0xe6,0x81]
 ppaire.b t1, a2, t5
+# CHECK-ASM-AND-OBJ: pack s0, s1, s2
+# CHECK-ASM: encoding: [0x33,0xc4,0x24,0x09]
+ppaire.h s0, s1, s2
 # CHECK-ASM-AND-OBJ: ppaireo.b t5, t3, s2
 # CHECK-ASM: encoding: [0x3b,0x4f,0x2e,0x91]
 ppaireo.b t5, t3, s2

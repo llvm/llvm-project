@@ -926,10 +926,10 @@ CodeGenFunction::evaluateOrEmitBuiltinObjectSize(const Expr *E, unsigned Type,
                                                  llvm::IntegerType *ResType,
                                                  llvm::Value *EmittedE,
                                                  bool IsDynamic) {
-  uint64_t ObjectSize;
-  if (!E->tryEvaluateObjectSize(ObjectSize, getContext(), Type))
-    return emitBuiltinObjectSize(E, Type, ResType, EmittedE, IsDynamic);
-  return ConstantInt::get(ResType, ObjectSize, /*isSigned=*/true);
+  if (std::optional<uint64_t> ObjectSize =
+          E->tryEvaluateObjectSize(getContext(), Type))
+    return ConstantInt::get(ResType, *ObjectSize, /*isSigned=*/true);
+  return emitBuiltinObjectSize(E, Type, ResType, EmittedE, IsDynamic);
 }
 
 namespace {
@@ -2877,10 +2877,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fmaxf:
     case Builtin::BI__builtin_fmaxf16:
     case Builtin::BI__builtin_fmaxl:
-    case Builtin::BI__builtin_fmaxf128:
-      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(*this, E,
-                                   Intrinsic::maxnum,
-                                   Intrinsic::experimental_constrained_maxnum));
+    case Builtin::BI__builtin_fmaxf128: {
+      IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+      Builder.getFastMathFlags().setNoSignedZeros();
+      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
+          *this, E, Intrinsic::maxnum,
+          Intrinsic::experimental_constrained_maxnum));
+    }
 
     case Builtin::BIfmin:
     case Builtin::BIfminf:
@@ -2889,10 +2892,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fminf:
     case Builtin::BI__builtin_fminf16:
     case Builtin::BI__builtin_fminl:
-    case Builtin::BI__builtin_fminf128:
-      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(*this, E,
-                                   Intrinsic::minnum,
-                                   Intrinsic::experimental_constrained_minnum));
+    case Builtin::BI__builtin_fminf128: {
+      IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+      Builder.getFastMathFlags().setNoSignedZeros();
+      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
+          *this, E, Intrinsic::minnum,
+          Intrinsic::experimental_constrained_minnum));
+    }
 
     case Builtin::BIfmaximum_num:
     case Builtin::BIfmaximum_numf:
@@ -3684,6 +3690,16 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI_byteswap_uint64: {
     return RValue::get(
         emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::bswap));
+  }
+  case Builtin::BI__builtin_bitreverseg: {
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    llvm::IntegerType *IntTy = cast<llvm::IntegerType>(ArgValue->getType());
+    assert(IntTy &&
+           "LLVM's __builtin_bitreverseg only support integer variants");
+    if (IntTy->getBitWidth() == 1)
+      return RValue::get(ArgValue);
+    return RValue::get(
+        emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::bitreverse));
   }
   case Builtin::BI__builtin_bitreverse8:
   case Builtin::BI__builtin_bitreverse16:
