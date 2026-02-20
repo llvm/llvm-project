@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0
+// RUN: %clang_cc1 -triple spir64-unknown-unknown -verify -pedantic -fsyntax-only -cl-std=CL3.0 %s
 
 // Check that returning a pointer to a local address space variable does not
 // trigger -Wreturn-stack-address.

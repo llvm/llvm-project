@@ -61,26 +61,20 @@ def InstFormatNDS_BRANCH_10 : InstFormat<27>;
 def InstFormatOther         : InstFormat<31>;
 
 
-// Indicates which operands cannot be the same as the Vd operand. This is used
+// Indicates whether Vs1/Vs2 can be the same as the Vd operand. This is used
 // by the assembler to provide some checking of the RVV overlap rules. We can't
 // check all overlap rules. Narrowing instructions allow overlap in the first
 // part of the register group, but not the later parts. We are not able to check
 // this in the assembler as we do not know how big the register group is since
 // that is controlled dynamically with vtype.
-class RISCVVConstraint<bit VS2 = 0, bit VS1 = 0, bit VM = 0> {
-  bits<3> Value = {VM, VS1, VS2};
+class RISCVVConstraint<bit VS2 = 0, bit VS1 = 0> {
+  bits<2> Value = {VS1, VS2};
 }
 def NoConstraint  : RISCVVConstraint<>;
 def VS2Constraint : RISCVVConstraint<VS2 = 1>;
 def VS1Constraint : RISCVVConstraint<VS1 = 1>;
-def VMConstraint  : RISCVVConstraint<VM = 1>;
 
 // Illegal instructions:
-//
-// * The destination vector register group for a masked vector instruction
-// cannot overlap the source mask register (v0), unless the destination vector
-// register is being written with a mask value (e.g., comparisons) or the
-// scalar result of a reduction.
 //
 // * Widening: The destination EEW is greater than the source EEW, the source
 // EMUL is at least 1. The destination vector register group cannot overlap
@@ -93,10 +87,9 @@ def VMConstraint  : RISCVVConstraint<VM = 1>;
 // group.
 //
 // * vmsbf.m/vmsif.m/vmsof.m: The destination register cannot overlap the
-// source register and, if masked, cannot overlap the mask register ('v0').
+// source register.
 //
-// * viota: The destination register cannot overlap the source register and,
-// if masked, cannot overlap the mask register ('v0').
+// * viota: The destination register cannot overlap the source register.
 //
 // * v[f]slide[1]up: The destination vector register group for vslideup cannot
 // overlap the source vector register group.
@@ -105,15 +98,14 @@ def VMConstraint  : RISCVVConstraint<VM = 1>;
 // source vector register groups.
 //
 // * vcompress: The destination vector register group cannot overlap the
-// source vector register group or the source mask register
-def WidenVNoMask : RISCVVConstraint<VS2 = 1, VS1 = 1>;
-def WidenV       : RISCVVConstraint<VS2 = 1, VS1 = 1, VM = 1>;
-def WidenW       : RISCVVConstraint<VS1 = 1, VM = 1>;
-def WidenCvt     : RISCVVConstraint<VS2 = 1, VM = 1>;
-def Iota         : RISCVVConstraint<VS2 = 1, VM = 1>;
-def SlideUp      : RISCVVConstraint<VS2 = 1, VM = 1>;
-def Vrgather     : RISCVVConstraint<VS2 = 1, VS1 = 1, VM = 1>;
-def Vcompress    : RISCVVConstraint<VS2 = 1, VS1 = 1>;
+// source vector register group.
+def WidenV         : RISCVVConstraint<VS2 = 1, VS1 = 1>;
+def WidenW         : RISCVVConstraint<VS1 = 1>;
+def WidenCvt       : RISCVVConstraint<VS2 = 1>;
+def Iota           : RISCVVConstraint<VS2 = 1>;
+def SlideUp        : RISCVVConstraint<VS2 = 1>;
+def Vrgather       : RISCVVConstraint<VS2 = 1, VS1 = 1>;
+def Vcompress      : RISCVVConstraint<VS2 = 1, VS1 = 1>;
 def Sha2Constraint : RISCVVConstraint<VS2 = 1, VS1 = 1>;
 
 // The following opcode names match those given in Table 19.1 in the
@@ -203,9 +195,13 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
 
   let TSFlags{4-0} = Format.Value;
 
-  // Defaults
+  // Indicates when Vd and Vs1/Vs2 cannot be the same register.
   RISCVVConstraint RVVConstraint = NoConstraint;
-  let TSFlags{7-5} = RVVConstraint.Value;
+  let TSFlags{6-5} = RVVConstraint.Value;
+
+  // Indicates that the destination and the VM operand cannot both be V0.
+  bit VMConstraint = 0;
+  let TSFlags{7} = VMConstraint;
 
   bits<3> VLMul = 0;
   let TSFlags{10-8} = VLMul;

@@ -782,23 +782,22 @@ bool SafeStack::run() {
     IRB.SetCurrentDebugLocation(
         DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP));
   if (SafeStackUsePointerAddress) {
-    RTLIB::LibcallImpl SafestackPointerAddressImpl =
-        Libcalls.getLibcallImpl(RTLIB::SAFESTACK_POINTER_ADDRESS);
-    if (SafestackPointerAddressImpl == RTLIB::Unsupported) {
-      F.getContext().emitError(
-          "no libcall available for safestack pointer address");
-      return false;
-    }
-
+    // FIXME: A more correct implementation of SafeStackUsePointerAddress would
+    // change the libcall availability in RuntimeLibcallsInfo
     StringRef SafestackPointerAddressName =
         RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
-            SafestackPointerAddressImpl);
+            RTLIB::impl___safestack_pointer_address);
 
     FunctionCallee Fn = F.getParent()->getOrInsertFunction(
         SafestackPointerAddressName, IRB.getPtrTy(0));
     UnsafeStackPtr = IRB.CreateCall(Fn);
   } else {
     UnsafeStackPtr = TL.getSafeStackPointerLocation(IRB, Libcalls);
+    if (!UnsafeStackPtr) {
+      F.getContext().emitError(
+          "no location available for safestack pointer address");
+      UnsafeStackPtr = PoisonValue::get(StackPtrTy);
+    }
   }
 
   // Load the current stack pointer (we'll also use it as a base pointer).
