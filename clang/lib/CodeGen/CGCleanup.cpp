@@ -701,12 +701,11 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
 
   // If this is a normal cleanup, then having a prebranched
   // fallthrough implies that the fallthrough source unconditionally
-  // jumps here, unless its for a lifetime marker.
+  // jumps here.
   assert(!Scope.isNormalCleanup() || !HasPrebranchedFallthrough ||
-         Scope.isLifetimeMarker() ||
          (Scope.getNormalBlock() &&
-          FallthroughSource->getTerminator()->getSuccessor(0) ==
-              Scope.getNormalBlock()));
+          FallthroughSource->getTerminator()->getSuccessor(0)
+            == Scope.getNormalBlock()));
 
   bool RequiresNormalCleanup = false;
   if (Scope.isNormalCleanup() &&
