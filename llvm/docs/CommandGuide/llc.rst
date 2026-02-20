@@ -140,6 +140,12 @@ End-user Options
  Record the amount of time needed for each pass and print a report to standard
  error.
 
+.. option:: --load=<dso_path>
+
+ Dynamically load ``dso_path`` (a path to a dynamically shared object) that
+ implements an LLVM target.  This will permit the target name to be used with
+ the :option:`-march` option so that code can be generated for that target.
+
 .. option:: -meabi=[default|gnu|4|5]
 
  Specify which EABI version should conform to.  Valid EABI versions are *gnu*,
