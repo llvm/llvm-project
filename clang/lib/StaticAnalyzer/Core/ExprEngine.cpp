@@ -995,6 +995,7 @@ void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
       return;
     case CFGElement::LifetimeEnds:
     case CFGElement::CleanupFunction:
+    case CFGElement::FullExprCleanup:
     case CFGElement::ScopeBegin:
     case CFGElement::ScopeEnd:
       return;

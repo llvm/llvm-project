@@ -142,6 +142,16 @@ if( LLVM_ENABLE_ASSERTIONS )
   else()
     set(LIBCXX_HARDENING_MODE "extensive")
   endif()
+
+  string(TOUPPER "_LIBCPP_HARDENING_MODE_${LIBCXX_HARDENING_MODE}" LIBCXX_HARDENING_MODE_SPELLING)
+  CHECK_CXX_SOURCE_COMPILES("
+  #define _LIBCPP_HARDENING_MODE ${LIBCXX_HARDENING_MODE_SPELLING}
+  #include <string>
+  int main() { return 0; }
+  " SUPPORTS_LIBCXX_HARDENING_MODE)
+  if(SUPPORTS_LIBCXX_HARDENING_MODE)
+    add_compile_definitions(_LIBCPP_HARDENING_MODE=${LIBCXX_HARDENING_MODE_SPELLING})
+  endif()
 endif()
 
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
@@ -764,14 +774,6 @@ if (MSVC)
           # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
       -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
       -wd4319 # Suppress ''operator' : zero extending 'type' to 'type' of greater size'
-          # C4709 is disabled because of a bug with Visual Studio 2017 as of
-          # v15.8.8. Re-evaluate the usefulness of this diagnostic when the bug
-          # is fixed.
-      -wd4709 # Suppress comma operator within array index expression
-
-      # We'd like this warning to be enabled, but it triggers from code in
-      # WinBase.h that we don't have control over.
-      -wd5105 # Suppress macro expansion producing 'defined' has undefined behavior
 
       # Ideally, we'd like this warning to be enabled, but even MSVC 2019 doesn't
       # support the 'aligned' attribute in the way that clang sources requires (for
