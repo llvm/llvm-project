@@ -1869,12 +1869,24 @@ public:
                     const MachineInstr &DefMI, unsigned DefIdx,
                     const MachineInstr &UseMI, unsigned UseIdx) const;
 
+  /// Compute the latency of a register data dependence (DefIdx -> UseIdx)
+  /// using the TargetSchedModel.
+  virtual std::optional<unsigned>
+  getOperandLatency(const TargetSchedModel &SchedModel,
+                    const MachineInstr *DefMI, unsigned DefIdx,
+                    const MachineInstr *UseMI, unsigned UseIdx) const;
+
   /// Compute the instruction latency of a given instruction.
   /// If the instruction has higher cost when predicated, it's returned via
   /// PredCost.
   virtual unsigned getInstrLatency(const InstrItineraryData *ItinData,
                                    const MachineInstr &MI,
                                    unsigned *PredCost = nullptr) const;
+
+  /// Compute the instruction latency using the TargetSchedModel.
+  virtual std::optional<unsigned>
+  getInstrLatency(const TargetSchedModel &TargetSchedModel,
+                  const MachineInstr &MI) const;
 
   virtual unsigned getPredicationCost(const MachineInstr &MI) const;
 

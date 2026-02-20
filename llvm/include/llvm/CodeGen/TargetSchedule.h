@@ -44,8 +44,6 @@ class TargetSchedModel {
   // Resource units per cycle. Latency normalization factor.
   unsigned ResourceLCM = 0;
 
-  unsigned computeInstrLatency(const MCSchedClassDesc &SCDesc) const;
-
   // EnableSchedModel and EnableSchedItins are used to control whether or not to
   // use the Target's {SchedMachineModel, InstrItins} for hardware infor based
   // Scheduling decisions. If both are enabled, as is the default, preference
@@ -203,6 +201,7 @@ public:
                                         bool UseDefaultDefLatency = true) const;
   LLVM_ABI unsigned computeInstrLatency(const MCInst &Inst) const;
   LLVM_ABI unsigned computeInstrLatency(unsigned Opcode) const;
+  LLVM_ABI unsigned computeInstrLatency(const MCSchedClassDesc &SCDesc) const;
 
   /// Output dependency latency of a pair of defs of the same register.
   ///

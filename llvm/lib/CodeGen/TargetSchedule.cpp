@@ -133,37 +133,6 @@ resolveSchedClass(const MachineInstr *MI) const {
   return SCDesc;
 }
 
-/// Find the def index of this operand. This index maps to the machine model and
-/// is independent of use operands. Def operands may be reordered with uses or
-/// merged with uses without affecting the def index (e.g. before/after
-/// regalloc). However, an instruction's def operands must never be reordered
-/// with respect to each other.
-static unsigned findDefIdx(const MachineInstr *MI, unsigned DefOperIdx) {
-  unsigned DefIdx = 0;
-  for (unsigned i = 0; i != DefOperIdx; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
-    if (MO.isReg() && MO.isDef())
-      ++DefIdx;
-  }
-  return DefIdx;
-}
-
-/// Find the use index of this operand. This is independent of the instruction's
-/// def operands.
-///
-/// Note that uses are not determined by the operand's isUse property, which
-/// is simply the inverse of isDef. Here we consider any readsReg operand to be
-/// a "use". The machine model allows an operand to be both a Def and Use.
-static unsigned findUseIdx(const MachineInstr *MI, unsigned UseOperIdx) {
-  unsigned UseIdx = 0;
-  for (unsigned i = 0; i != UseOperIdx; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
-    if (MO.isReg() && MO.readsReg() && !MO.isDef())
-      ++UseIdx;
-  }
-  return UseIdx;
-}
-
 // Top-level API for clients that know the operand indices. This doesn't need to
 // return std::optional<unsigned>, as it always returns a valid latency.
 unsigned TargetSchedModel::computeOperandLatency(
@@ -176,8 +145,8 @@ unsigned TargetSchedModel::computeOperandLatency(
   if (!hasInstrSchedModel() && !hasInstrItineraries())
     return DefaultDefLatency;
 
+  std::optional<unsigned> OperLatency;
   if (hasInstrItineraries()) {
-    std::optional<unsigned> OperLatency;
     if (UseMI) {
       OperLatency = TII->getOperandLatency(&InstrItins, *DefMI, DefOperIdx,
                                            *UseMI, UseOperIdx);
@@ -194,41 +163,11 @@ unsigned TargetSchedModel::computeOperandLatency(
   }
 
   // hasInstrSchedModel()
-  const MCSchedClassDesc *SCDesc = resolveSchedClass(DefMI);
-  unsigned DefIdx = findDefIdx(DefMI, DefOperIdx);
-  if (DefIdx < SCDesc->NumWriteLatencyEntries) {
-    // Lookup the definition's write latency in SubtargetInfo.
-    const MCWriteLatencyEntry *WLEntry =
-      STI->getWriteLatencyEntry(SCDesc, DefIdx);
-    unsigned WriteID = WLEntry->WriteResourceID;
-    unsigned Latency = capLatency(WLEntry->Cycles);
-    if (!UseMI)
-      return Latency;
+  OperLatency =
+      TII->getOperandLatency(*this, DefMI, DefOperIdx, UseMI, UseOperIdx);
+  if (OperLatency)
+    return *OperLatency;
 
-    // Lookup the use's latency adjustment in SubtargetInfo.
-    const MCSchedClassDesc *UseDesc = resolveSchedClass(UseMI);
-    if (UseDesc->NumReadAdvanceEntries == 0)
-      return Latency;
-    unsigned UseIdx = findUseIdx(UseMI, UseOperIdx);
-    int Advance = STI->getReadAdvanceCycles(UseDesc, UseIdx, WriteID);
-    if (Advance > 0 && (unsigned)Advance > Latency) // unsigned wrap
-      return 0;
-    return Latency - Advance;
-  }
-  // If DefIdx does not exist in the model (e.g. implicit defs), then return
-  // unit latency (defaultDefLatency may be too conservative).
-#ifndef NDEBUG
-  if (SCDesc->isValid() && !DefMI->getOperand(DefOperIdx).isImplicit() &&
-      !DefMI->getDesc().operands()[DefOperIdx].isOptionalDef() &&
-      SchedModel.isComplete()) {
-    errs() << "DefIdx " << DefIdx << " exceeds machine model writes for "
-           << *DefMI << " (Try with MCSchedModel.CompleteModel set to false)";
-    llvm_unreachable("incomplete machine model");
-  }
-#endif
-  // FIXME: Automatically giving all implicit defs defaultDefLatency is
-  // undesirable. We should only do it for defs that are known to the MC
-  // desc like flags. Truly implicit defs should get 1 cycle latency.
   return DefMI->isTransient() ? 0 : DefaultDefLatency;
 }
 
@@ -258,12 +197,11 @@ TargetSchedModel::computeInstrLatency(const MachineInstr *MI,
       (!hasInstrSchedModel() && !UseDefaultDefLatency))
     return TII->getInstrLatency(&InstrItins, *MI);
 
-  if (hasInstrSchedModel()) {
-    const MCSchedClassDesc *SCDesc = resolveSchedClass(MI);
-    if (SCDesc->isValid())
-      return computeInstrLatency(*SCDesc);
-  }
-  return TII->defaultDefLatency(SchedModel, *MI);
+  std::optional<unsigned> InstrLatency;
+  // This is used by subtargets that define an InstrSchedModel.
+  InstrLatency = TII->getInstrLatency(*this, *MI);
+
+  return InstrLatency ? *InstrLatency : TII->defaultDefLatency(SchedModel, *MI);
 }
 
 unsigned TargetSchedModel::
