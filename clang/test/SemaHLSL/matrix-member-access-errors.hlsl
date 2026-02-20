@@ -4,9 +4,9 @@ typedef vector<float, 5> float5;
 
 void foo() {
     float3x3 A;
-    float r = A._m00;      // read is ok
-    float good1 = A._11;    
-    float good2 = A._33;
+    float r = A._m00;      // expected-warning{{implicit conversion turns vector to scalar: 'vector<float, 1>' (vector of 1 'float' value) to 'float'}}
+    float good1 = A._11;    // expected-warning{{implicit conversion turns vector to scalar: 'vector<float, 1>' (vector of 1 'float' value) to 'float'}}
+    float good2 = A._33; // expected-warning{{implicit conversion turns vector to scalar: 'vector<float, 1>' (vector of 1 'float' value) to 'float'}}
 
     float bad0 = A._m44;      // expected-error {{matrix row element accessor is out of bounds of zero based indexing}} expected-error {{matrix column element accessor is out of bounds of zero based indexing}}
     float bad1 = A._m33;      // expected-error {{matrix row index 3 is out of bounds of rows size 3}} expected-error {{matrix column index 3 is out of bounds of columns size 3}}
