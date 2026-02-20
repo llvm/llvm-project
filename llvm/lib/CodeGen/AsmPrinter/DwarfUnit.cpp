@@ -2036,8 +2036,17 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
 
   if (const ConstantInt *CI = dyn_cast_or_null<ConstantInt>(DT->getConstant()))
     addConstantValue(StaticMemberDIE, CI, Ty);
-  if (const ConstantFP *CFP = dyn_cast_or_null<ConstantFP>(DT->getConstant()))
+  else if (const ConstantFP *CFP =
+               dyn_cast_or_null<ConstantFP>(DT->getConstant()))
     addConstantFPValue(StaticMemberDIE, CFP);
+  else if (auto *CDS =
+               dyn_cast_or_null<ConstantDataSequential>(DT->getConstant())) {
+    StringRef RawData = CDS->getRawDataValues();
+    auto *Block = new (DIEValueAllocator) DIEBlock;
+    for (unsigned char Byte : RawData)
+      addUInt(*Block, dwarf::DW_FORM_data1, Byte);
+    addBlock(StaticMemberDIE, dwarf::DW_AT_const_value, Block);
+  }
 
   if (uint32_t AlignInBytes = DT->getAlignInBytes())
     addUInt(StaticMemberDIE, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,

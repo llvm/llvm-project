@@ -2092,6 +2092,53 @@ CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
         C = llvm::ConstantInt::get(CGM.getLLVMContext(), Value->getInt());
       if (Value->isFloat())
         C = llvm::ConstantFP::get(CGM.getLLVMContext(), Value->getFloat());
+      if (Value->isArray()) {
+        // Handle constexpr array constants for debug info
+        // We handle arrays of integer types (char, short, int, long),
+        // which covers the most common and useful cases.
+        if (const auto *ArrayTy =
+                CGM.getContext().getAsArrayType(Var->getType())) {
+          QualType ElemQTy = ArrayTy->getElementType();
+          if (ElemQTy->isIntegerType()) {
+            unsigned ElemBitWidth = CGM.getContext().getTypeSize(ElemQTy);
+            unsigned NumElts = Value->getArraySize();
+            unsigned NumInits = Value->getArrayInitializedElts();
+            SmallVector<uint64_t, 64> Vals;
+            Vals.reserve(NumElts);
+            bool Success = true;
+            for (unsigned I = 0; I < NumInits && Success; ++I) {
+              const APValue &Elt = Value->getArrayInitializedElt(I);
+              if (Elt.isInt())
+                Vals.push_back(Elt.getInt().getZExtValue());
+              else
+                Success = false;
+            }
+            // Fill remaining elements with the filler value (e.g., the
+            // null terminator region for strings).
+            if (Success && NumInits < NumElts) {
+              const APValue &Filler = Value->getArrayFiller();
+              if (Filler.isInt())
+                Vals.resize(NumElts, Filler.getInt().getZExtValue());
+              else
+                Success = false;
+            }
+            if (Success && Vals.size() == NumElts) {
+              if (ElemBitWidth == 8) {
+                SmallVector<uint8_t, 64> Bytes(Vals.begin(), Vals.end());
+                C = llvm::ConstantDataArray::get(CGM.getLLVMContext(), Bytes);
+              } else if (ElemBitWidth == 16) {
+                SmallVector<uint16_t, 64> Elts(Vals.begin(), Vals.end());
+                C = llvm::ConstantDataArray::get(CGM.getLLVMContext(), Elts);
+              } else if (ElemBitWidth == 32) {
+                SmallVector<uint32_t, 32> Elts(Vals.begin(), Vals.end());
+                C = llvm::ConstantDataArray::get(CGM.getLLVMContext(), Elts);
+              } else if (ElemBitWidth == 64) {
+                C = llvm::ConstantDataArray::get(CGM.getLLVMContext(), Vals);
+              }
+            }
+          }
+        }
+      }
     }
   }
 
