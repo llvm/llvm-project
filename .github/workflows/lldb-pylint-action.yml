@@ -57,4 +57,5 @@ jobs:
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
+          [[ -z "$CHANGED_FILES" ]] && exit 0
           pylint --disable=all --enable=E0102 $CHANGED_FILES
