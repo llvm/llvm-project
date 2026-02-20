@@ -217,6 +217,13 @@ namespace llvm {
       return VecTy;
     }
 
+    /// Return a VT for a vector type whose attributes match ourselves with
+    /// the exception of the element count that is chosen by the caller.
+    MVT changeVectorElementCount(ElementCount EC) const {
+      assert(isVector() && "Not a vector MVT!");
+      return MVT::getVectorVT(getVectorElementType(), EC);
+    }
+
     /// Return the type converted to an equivalently sized integer or vector
     /// with integer element type. Similar to changeVectorElementTypeToInteger,
     /// but also handles scalars.
