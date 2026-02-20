@@ -61,6 +61,7 @@
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Conversion/PDLToPDLInterp/PDLToPDLInterp.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
+#include "mlir/Conversion/SCFToAffine/SCFToAffine.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Conversion/SCFToEmitC/SCFToEmitC.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
@@ -89,6 +90,9 @@
 #include "mlir/Conversion/XeVMToLLVM/XeVMToLLVM.h"
 
 namespace mlir {
+
+std::unique_ptr<Pass> replaceAffineCFGPass();
+std::unique_ptr<Pass> createRaiseSCFToAffinePass();
 
 /// Generate the code for registering conversion passes.
 #define GEN_PASS_REGISTRATION

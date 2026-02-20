@@ -1097,6 +1097,24 @@ def ReconcileUnrealizedCastsPass : Pass<"reconcile-unrealized-casts"> {
 }
 
 //===----------------------------------------------------------------------===//
+// SCFToAffine
+//===----------------------------------------------------------------------===//
+def AffineCFG : Pass<"affine-cfg"> {
+  let summary = "Replace scf.if and similar with affine.if";
+  let constructor = "mlir::replaceAffineCFGPass()";
+}
+
+def RaiseSCFToAffine : Pass<"raise-scf-to-affine"> {
+  let summary = "Raise SCF to affine";
+  let constructor = "mlir::createRaiseSCFToAffinePass()";
+  let dependentDialects = [
+    "affine::AffineDialect",
+    "scf::SCFDialect",
+  ];
+}
+
+
+//===----------------------------------------------------------------------===//
 // SCFToControlFlow
 //===----------------------------------------------------------------------===//
 
