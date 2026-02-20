@@ -283,6 +283,7 @@ def parseOptionsAndInitTestdirs():
         configuration.nm = shutil.which(
             "llvm-nm", path=args.llvm_tools_dir
         ) or shutil.which("nm", path=args.llvm_tools_dir)
+        configuration.objcopy = shutil.which("llvm-objcopy", path=args.llvm_tools_dir)
 
     if not configuration.get_filecheck_path():
         logging.warning("No valid FileCheck executable; some tests may fail...")

@@ -265,6 +265,25 @@ public:
                                   lldb::SymbolType symbol_type,
                                   SymbolContextList &sc_list);
 
+  /// Find all symbols at a given file address.
+  ///
+  /// This function searches for symbols of a specified type that contain
+  /// the provided file address within their address range.
+  ///
+  /// \param[in] addr
+  ///     The file address to search for within symbol ranges.
+  ///
+  /// \param[in] symbol_type
+  ///     The type of symbols to search for (e.g., code, data, trampoline).
+  ///     Use lldb::eSymbolTypeAny to search all symbol types.
+  ///
+  /// \return
+  ///     A SymbolContextList containing all matching symbols that contain
+  ///     the specified address. Returns an empty list if no symbols are found.
+  SymbolContextList
+  FindSymbolsContainingFileAddress(const Address &addr,
+                                   lldb::SymbolType symbol_type);
+
   void FindSymbolsMatchingRegExAndType(
       const RegularExpression &regex, lldb::SymbolType symbol_type,
       SymbolContextList &sc_list,

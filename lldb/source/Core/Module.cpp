@@ -1307,6 +1307,29 @@ void Module::FindSymbolsWithNameAndType(ConstString name,
   }
 }
 
+SymbolContextList
+Module::FindSymbolsContainingFileAddress(const Address &addr,
+                                         lldb::SymbolType symbol_type) {
+  Symtab *symtab = GetSymtab();
+  if (!symtab)
+    return {};
+
+  std::vector<uint32_t> symbol_indexes;
+  symtab->ForEachSymbolContainingFileAddress(
+      addr.GetFileAddress(), [&, symbol_type](Symbol *match_sym) {
+        if (const lldb::SymbolType match_sym_type = match_sym->GetType();
+            match_sym_type == lldb::eSymbolTypeAny ||
+            match_sym_type == symbol_type) {
+          symbol_indexes.push_back(symtab->GetIndexForSymbol(match_sym));
+        }
+        return true;
+      });
+
+  SymbolContextList sc_list;
+  SymbolIndicesToSymbolContextList(symtab, symbol_indexes, sc_list);
+  return sc_list;
+}
+
 void Module::FindSymbolsMatchingRegExAndType(
     const RegularExpression &regex, SymbolType symbol_type,
     SymbolContextList &sc_list, Mangled::NamePreference mangling_preference) {
