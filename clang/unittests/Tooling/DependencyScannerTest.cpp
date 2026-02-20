@@ -235,8 +235,9 @@ TEST(DependencyScanner, ScanDepsWithFS) {
   DependencyScanningTool ScanTool(Service);
 
   TextDiagnosticBuffer DiagConsumer;
-  std::optional<std::string> DepFile =
-      ScanTool.getDependencyFile(CommandLine, CWD, DiagConsumer);
+  std::optional<std::string> DepFile = ScanTool.getDependencyFile(
+      CommandLine, CWD, CallbackActionController::lookupUnreachableModuleOutput,
+      DiagConsumer);
   ASSERT_TRUE(DepFile.has_value());
   EXPECT_EQ(llvm::sys::path::convert_to_slash(*DepFile),
             "test.cpp.o: /root/test.cpp /root/header.h\n");
@@ -297,8 +298,9 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
   // matter, the point of the test is to check that files are not read
   // unnecessarily.
   TextDiagnosticBuffer DiagConsumer;
-  std::optional<std::string> DepFile =
-      ScanTool.getDependencyFile(CommandLine, CWD, DiagConsumer);
+  std::optional<std::string> DepFile = ScanTool.getDependencyFile(
+      CommandLine, CWD, CallbackActionController::lookupUnreachableModuleOutput,
+      DiagConsumer);
   ASSERT_FALSE(DepFile.has_value());
 
   EXPECT_TRUE(!llvm::is_contained(InterceptFS->StatPaths, OtherPath));

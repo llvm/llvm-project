@@ -40,7 +40,11 @@ public:
   // set of deps, and handleFileDependency handles enough for implicitly
   // built modules to work.
   void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {}
-  void handleModuleDependency(ModuleDeps MD) override {}
+  void handleModuleDependency(ModuleDeps MD) override {
+    MD.forEachFileDep([this](StringRef File) {
+      ModuleDependencies.push_back(std::string(File));
+    });
+  }
   void handleDirectModuleDependency(ModuleID ID) override {}
   void handleVisibleModule(std::string ModuleName) override {}
   void handleContextHash(std::string Hash) override {}
@@ -51,9 +55,12 @@ public:
     class DependencyPrinter : public DependencyFileGenerator {
     public:
       DependencyPrinter(DependencyOutputOptions &Opts,
-                        ArrayRef<std::string> Dependencies)
+                        ArrayRef<std::string> Dependencies,
+                        ArrayRef<std::string> ModuleDependencies)
           : DependencyFileGenerator(Opts) {
         for (const auto &Dep : Dependencies)
+          addDependency(Dep);
+        for (const auto &Dep : ModuleDependencies)
           addDependency(Dep);
       }
 
@@ -63,13 +70,14 @@ public:
       }
     };
 
-    DependencyPrinter Generator(*Opts, Dependencies);
+    DependencyPrinter Generator(*Opts, Dependencies, ModuleDependencies);
     Generator.printDependencies(S);
   }
 
 protected:
   std::unique_ptr<DependencyOutputOptions> Opts;
   std::vector<std::string> Dependencies;
+  std::vector<std::string> ModuleDependencies;
 };
 } // anonymous namespace
 
@@ -182,12 +190,12 @@ bool tooling::computeDependencies(
                           Controller, DiagConsumer, OverlayFS);
 }
 
-std::optional<std::string>
-DependencyScanningTool::getDependencyFile(ArrayRef<std::string> CommandLine,
-                                          StringRef CWD,
-                                          DiagnosticConsumer &DiagConsumer) {
+std::optional<std::string> DependencyScanningTool::getDependencyFile(
+    ArrayRef<std::string> CommandLine, StringRef CWD,
+    LookupModuleOutputCallback LookupModuleOutput,
+    DiagnosticConsumer &DiagConsumer) {
   MakeDependencyPrinterConsumer DepConsumer;
-  CallbackActionController Controller(nullptr);
+  CallbackActionController Controller(LookupModuleOutput);
   if (!computeDependencies(Worker, CWD, CommandLine, DepConsumer, Controller,
                            DiagConsumer))
     return std::nullopt;
