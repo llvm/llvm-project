@@ -3605,12 +3605,12 @@ multiclass MVE_VRINT_m<MVEVectorVTInfo VTI, string suffix, bits<3> opcode,
 }
 
 multiclass MVE_VRINT_ops<MVEVectorVTInfo VTI> {
-  defm N : MVE_VRINT_m<VTI, "n", 0b000, froundeven>;
-  defm X : MVE_VRINT_m<VTI, "x", 0b001, frint>;
-  defm A : MVE_VRINT_m<VTI, "a", 0b010, fround>;
-  defm Z : MVE_VRINT_m<VTI, "z", 0b011, ftrunc>;
-  defm M : MVE_VRINT_m<VTI, "m", 0b101, ffloor>;
-  defm P : MVE_VRINT_m<VTI, "p", 0b111, fceil>;
+  defm N : MVE_VRINT_m<VTI, "n", 0b000, any_froundeven>;
+  defm X : MVE_VRINT_m<VTI, "x", 0b001, any_frint>;
+  defm A : MVE_VRINT_m<VTI, "a", 0b010, any_fround>;
+  defm Z : MVE_VRINT_m<VTI, "z", 0b011, any_ftrunc>;
+  defm M : MVE_VRINT_m<VTI, "m", 0b101, any_ffloor>;
+  defm P : MVE_VRINT_m<VTI, "p", 0b111, any_fceil>;
 }
 
 defm MVE_VRINTf16 : MVE_VRINT_ops<MVE_v8f16>;
