@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Index/IndexDataStoreSymbolUtils.h"
 #include "IndexDataStoreUtils.h"
+#include "indexstore/indexstore.h"
+#include "clang/Index/IndexDataStoreSymbolUtils.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/Path.h"
@@ -391,6 +392,10 @@ indexstore_symbol_subkind_t index::getIndexStoreSubKind(SymbolSubKind K) {
     return INDEXSTORE_SYMBOL_SUBKIND_USINGVALUE;
   case SymbolSubKind::UsingEnum:
     return INDEXSTORE_SYMBOL_SUBKIND_USINGENUM;
+  case SymbolSubKind::UsingClass:
+    return INDEXSTORE_SYMBOL_SUBKIND_USINGCLASS;
+  case SymbolSubKind::UsingStruct:
+    return INDEXSTORE_SYMBOL_SUBKIND_USINGSTRUCT;
   case SymbolSubKind::SwiftAccessorWillSet:
     return INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORWILLSET;
   case SymbolSubKind::SwiftAccessorDidSet:

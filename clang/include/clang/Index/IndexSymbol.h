@@ -81,6 +81,8 @@ enum class SymbolSubKind : uint8_t {
   UsingTypename,
   UsingValue,
   UsingEnum,
+  UsingClass,
+  UsingStruct,
 
   // Swift sub-kinds
 
