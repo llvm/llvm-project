@@ -53,6 +53,7 @@ public:
   bool AppendCloseFileAction(int fd);
 
   bool AppendDuplicateFileAction(int fd, int dup_fd);
+  bool AppendDuplicateFileAction(void *fh, void *dup_fh);
 
   bool AppendOpenFileAction(int fd, const FileSpec &file_spec, bool read,
                             bool write);
