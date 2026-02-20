@@ -168,8 +168,12 @@ bool isSingleton(const NamedDecl *F);
 class TrivialFunctionAnalysis {
 public:
   /// \returns true if \p D is a "trivial" function.
-  bool isTrivial(const Decl *D) const { return isTrivialImpl(D, TheCache); }
-  bool isTrivial(const Stmt *S) const { return isTrivialImpl(S, TheCache); }
+  bool isTrivial(const Decl *D, const Stmt **OffendingStmt = nullptr) const {
+    return isTrivialImpl(D, TheCache, OffendingStmt);
+  }
+  bool isTrivial(const Stmt *S, const Stmt **OffendingStmt = nullptr) const {
+    return isTrivialImpl(S, TheCache, OffendingStmt);
+  }
   bool hasTrivialDtor(const VarDecl *VD) const {
     return hasTrivialDtorImpl(VD, TheCache);
   }
@@ -181,8 +185,8 @@ private:
       llvm::DenseMap<llvm::PointerUnion<const Decl *, const Stmt *>, bool>;
   mutable CacheTy TheCache{};
 
-  static bool isTrivialImpl(const Decl *D, CacheTy &Cache);
-  static bool isTrivialImpl(const Stmt *S, CacheTy &Cache);
+  static bool isTrivialImpl(const Decl *D, CacheTy &Cache, const Stmt**);
+  static bool isTrivialImpl(const Stmt *S, CacheTy &Cache, const Stmt**);
   static bool hasTrivialDtorImpl(const VarDecl *VD, CacheTy &Cache);
 };
 
