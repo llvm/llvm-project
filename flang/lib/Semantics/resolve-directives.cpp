@@ -2079,8 +2079,13 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
   // parallel or task
   if (auto *symbol{ResolveOmp(iv, Symbol::Flag::OmpPrivate, targetIt->scope)}) {
     targetIt++;
-    SetSymbolDSA(
-        *symbol, {Symbol::Flag::OmpPreDetermined, Symbol::Flag::OmpPrivate});
+    bool moduleSymbol{symbol->owner().IsModule() ||
+        symbol->GetUltimate().owner().IsModule() ||
+        symbol->detailsIf<semantics::UseDetails>()};
+    if (!moduleSymbol) {
+      SetSymbolDSA(
+          *symbol, {Symbol::Flag::OmpPreDetermined, Symbol::Flag::OmpPrivate});
+    }
     iv.symbol = symbol; // adjust the symbol within region
     for (auto it{dirContext_.rbegin()}; it != targetIt; ++it) {
       AddToContextObjectWithDSA(*symbol, Symbol::Flag::OmpPrivate, *it);
