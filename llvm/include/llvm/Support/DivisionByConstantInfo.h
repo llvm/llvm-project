@@ -35,7 +35,7 @@ struct UnsignedDivisionByConstantInfo {
   bool IsAdd;           ///< add indicator
   unsigned PostShift;   ///< post-shift amount
   unsigned PreShift;    ///< pre-shift amount
-  bool Widen;           ///< use widen optimization (Magic is 64-bit)
+  bool Widen;           ///< use widen optimization
 };
 
 } // namespace llvm

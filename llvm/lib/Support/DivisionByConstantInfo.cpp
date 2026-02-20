@@ -154,15 +154,16 @@ UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros,
   }
   Retval.PreShift = 0;
 
-  // For 32-bit IsAdd case with AllowWidenOptimization, compute widened magic.
+  // For IsAdd case with AllowWidenOptimization, compute widened magic.
   // This is for optimizing 32-bit division using 64-bit multiplication.
-  // The actual magic constant is 2^32 + Magic (33-bit).
-  // We pre-shift it left by (64 - OriginalShift) to avoid runtime shift.
+  // The actual magic constant is 2^W + Magic ((W+1)-bit).
+  // We pre-shift it left by (W*2 - OriginalShift) to avoid runtime shift.
   if (Retval.IsAdd && AllowWidenOptimization) {
-    unsigned OriginalShift = Retval.PostShift + 33;
-    // Since PostShift >= 1, shift amount is at most 30, so 64 bits suffice.
-    Retval.Magic =
-        (APInt(64, 1).shl(32) + Retval.Magic.zext(64)).shl(64 - OriginalShift);
+    unsigned W = D.getBitWidth();
+    unsigned OriginalShift = Retval.PostShift + W + 1;
+    // Since PostShift >= 1, shift amount is at most W-2, so W*2 bits suffice.
+    Retval.Magic = (APInt(W * 2, 1).shl(W) + Retval.Magic.zext(W * 2))
+                       .shl(W * 2 - OriginalShift);
     Retval.IsAdd = false;
     Retval.PostShift = 0;
     Retval.Widen = true;
