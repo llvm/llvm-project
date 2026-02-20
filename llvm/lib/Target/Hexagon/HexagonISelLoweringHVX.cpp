@@ -3635,6 +3635,41 @@ HexagonTargetLowering::WidenHvxSetCC(SDValue Op, SelectionDAG &DAG) const {
                      {SetCC, getZero(dl, MVT::i32, DAG)});
 }
 
+SDValue HexagonTargetLowering::WidenHvxTruncateToBool(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  // Handle truncation to boolean vector (e.g., v64i8 -> v64i1) by widening
+  // the input to HVX width, performing the truncate, then extracting the
+  // result.
+  const SDLoc &dl(Op);
+  SDValue Inp = Op.getOperand(0);
+  MVT InpTy = ty(Inp);
+  MVT ResTy = ty(Op);
+
+  assert(ResTy.getVectorElementType() == MVT::i1 &&
+         "Expected boolean result type");
+
+  MVT ElemTy = InpTy.getVectorElementType();
+  unsigned HwLen = Subtarget.getVectorLength();
+
+  // Calculate the widened input type that fills the HVX register.
+  unsigned WideLen = (8 * HwLen) / ElemTy.getSizeInBits();
+  MVT WideInpTy = MVT::getVectorVT(ElemTy, WideLen);
+  if (!Subtarget.isHVXVectorType(WideInpTy, true))
+    return SDValue();
+
+  // Widen the input.
+  SDValue WideInp = appendUndef(Inp, WideInpTy, DAG);
+
+  // Perform the truncate to widened boolean type.
+  MVT WideBoolTy = MVT::getVectorVT(MVT::i1, WideLen);
+  SDValue WideTrunc = DAG.getNode(ISD::TRUNCATE, dl, WideBoolTy, WideInp);
+
+  // Extract the result.
+  EVT RetTy = typeLegalize(ResTy, DAG);
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, RetTy,
+                     {WideTrunc, getZero(dl, MVT::i32, DAG)});
+}
+
 SDValue
 HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
@@ -3885,9 +3920,20 @@ HexagonTargetLowering::LowerHvxOperationWrapper(SDNode *N,
     case ISD::ANY_EXTEND:
     case ISD::SIGN_EXTEND:
     case ISD::ZERO_EXTEND:
-    case ISD::TRUNCATE:
       if (Subtarget.isHVXElementType(ty(Op)) &&
           Subtarget.isHVXElementType(ty(Inp0))) {
+        Results.push_back(CreateTLWrapper(Op, DAG));
+      }
+      break;
+    case ISD::TRUNCATE:
+      // Handle truncate to boolean vector that needs widening
+      // (e.g., v64i8 -> v64i1 in 128-byte HVX mode).
+      if (ty(Op).getVectorElementType() == MVT::i1 &&
+          shouldWidenToHvx(ty(Inp0), DAG)) {
+        if (SDValue T = WidenHvxTruncateToBool(Op, DAG))
+          Results.push_back(T);
+      } else if (Subtarget.isHVXElementType(ty(Op)) &&
+                 Subtarget.isHVXElementType(ty(Inp0))) {
         Results.push_back(CreateTLWrapper(Op, DAG));
       }
       break;
@@ -3951,9 +3997,20 @@ HexagonTargetLowering::ReplaceHvxNodeResults(SDNode *N,
     case ISD::ANY_EXTEND:
     case ISD::SIGN_EXTEND:
     case ISD::ZERO_EXTEND:
-    case ISD::TRUNCATE:
       if (Subtarget.isHVXElementType(ty(Op)) &&
           Subtarget.isHVXElementType(ty(Inp0))) {
+        Results.push_back(CreateTLWrapper(Op, DAG));
+      }
+      break;
+    case ISD::TRUNCATE:
+      // Handle truncate to boolean vector that needs widening
+      // (e.g., v64i8 -> v64i1 in 128-byte HVX mode).
+      if (ty(Op).getVectorElementType() == MVT::i1 &&
+          shouldWidenToHvx(ty(Inp0), DAG)) {
+        if (SDValue T = WidenHvxTruncateToBool(Op, DAG))
+          Results.push_back(T);
+      } else if (Subtarget.isHVXElementType(ty(Op)) &&
+                 Subtarget.isHVXElementType(ty(Inp0))) {
         Results.push_back(CreateTLWrapper(Op, DAG));
       }
       break;
