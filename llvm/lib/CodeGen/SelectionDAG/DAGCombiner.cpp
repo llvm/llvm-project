@@ -7090,6 +7090,9 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
                                     unsigned ShAmt) {
   if (!LDST)
     return false;
+  // Narrowing assumes a single memory operand; skip nodes with multiple MMOs.
+  if (!LDST->hasUniqueMemOperand())
+    return false;
 
   // Only allow byte offsets.
   if (ShAmt % 8)
@@ -29020,11 +29023,14 @@ SDValue DAGCombiner::visitVPOp(SDNode *N) {
     return DAG.getUNDEF(N->getValueType(0));
 
   // VP Memory operations can be replaced by either the chain (stores) or the
-  // chain + undef (loads).
+  // chain + undef (loads). Skip nodes with multiple memory operands (e.g.
+  // load-to-lds intrinsics); writeMem()/readMem() require a single MMO.
   if (const auto *MemSD = dyn_cast<MemSDNode>(N)) {
-    if (MemSD->writeMem())
-      return MemSD->getChain();
-    return CombineTo(N, DAG.getUNDEF(N->getValueType(0)), MemSD->getChain());
+    if (MemSD->hasUniqueMemOperand()) {
+      if (MemSD->writeMem())
+        return MemSD->getChain();
+      return CombineTo(N, DAG.getUNDEF(N->getValueType(0)), MemSD->getChain());
+    }
   }
 
   // Reduction operations return the start operand when no elements are active.

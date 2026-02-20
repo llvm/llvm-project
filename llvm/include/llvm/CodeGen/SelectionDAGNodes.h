@@ -1505,11 +1505,13 @@ public:
 
   /// Return the unique MachineMemOperand object describing the memory
   /// reference performed by operation.
-  /// Asserts if multiple MMOs are present - use memoperands() instead.
+  /// When multiple MMOs are present, returns the first (callers should prefer
+  /// memoperands() for multi-MMO nodes).
   MachineMemOperand *getMemOperand() const {
-    assert(!isa<MachineMemOperand **>(MemRefs) &&
-           "Use memoperands() for nodes with multiple memory operands");
-    return cast<MachineMemOperand *>(MemRefs);
+    if (isa<MachineMemOperand *>(MemRefs))
+      return cast<MachineMemOperand *>(MemRefs);
+    MachineMemOperand **Array = cast<MachineMemOperand **>(MemRefs);
+    return Array[0];
   }
 
   /// Return the number of memory operands.
