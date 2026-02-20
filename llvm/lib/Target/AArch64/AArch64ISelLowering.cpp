@@ -5625,10 +5625,16 @@ SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
   if (ArgVT == MVT::f16 || ArgVT == MVT::bf16)
     return Op;
 
-  assert(ArgVT == MVT::i16);
+  SDValue Src = Op.getOperand(0);
   SDLoc DL(Op);
+  if (ArgVT.isVector() && ArgVT.getSizeInBits() == 16) {
+    Src = DAG.getNode(ISD::BITCAST, DL, MVT::i16, Src);
+    ArgVT = MVT::i16;
+  }
 
-  Op = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op.getOperand(0));
+  assert(ArgVT == MVT::i16);
+
+  Op = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Src);
   Op = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Op);
   return DAG.getTargetExtractSubreg(AArch64::hsub, DL, OpVT, Op);
 }
