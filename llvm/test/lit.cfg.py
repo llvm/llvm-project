@@ -90,7 +90,7 @@ if config.enable_profcheck:
         ]
     )
     # Not aimed at being used for peak-optimized binaries. These will be
-    # addressed later. PhaseOrdering has a couple merge function tests.
+    # addressed later. PhaseOrdering has a couple of merge function tests.
     config.excludes.extend(["GCOVProfiling", "MergeFunc", "PhaseOrdering"])
 
 # test_source_root: The root path where tests are located.
