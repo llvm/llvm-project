@@ -1,6 +1,6 @@
 import { DebugProtocol } from "@vscode/debugprotocol";
 import * as vscode from "vscode";
-import { AndroidSessionTracker } from "./android/android-session-tracker";
+import { AndroidPlatform } from "./android/android-platform";
 
 export interface LLDBDapCapabilities extends DebugProtocol.Capabilities {
   /** The debug adapter supports the `moduleSymbols` request. */
@@ -106,13 +106,12 @@ export class DebugSessionTracker
 
   /** Clear information from the active session. */
   private onExit(session: vscode.DebugSession) {
-    const androidComponentTracker =
-      AndroidSessionTracker.getFromSession(session);
-    if (androidComponentTracker) {
+    const androidDebugSession = AndroidPlatform.getDebugSession(session);
+    if (androidDebugSession) {
       this.logger.info(
         `Stopping android APK "${session.configuration.androidComponent}"`,
       );
-      androidComponentTracker.stopDebugSession().catch();
+      androidDebugSession.stop().catch();
     }
     this.modules.delete(session);
     this.modulesChanged.fire(undefined);
@@ -143,13 +142,12 @@ export class DebugSessionTracker
     message: DebugProtocol.Request,
   ) {
     if (message.command === "configurationDone") {
-      const androidComponentTracker =
-        AndroidSessionTracker.getFromSession(session);
-      if (androidComponentTracker) {
+      const androidDebugSession = AndroidPlatform.getDebugSession(session);
+      if (androidDebugSession) {
         this.logger.info(
           `Dismissing Waiting-For-Debugger dialog on Android APK "${session.configuration.androidComponent}"`,
         );
-        androidComponentTracker.dismissWaitingForDebuggerDialog().catch();
+        androidDebugSession.dismissWaitingForDebuggerDialog().catch();
       }
     }
   }

@@ -4,6 +4,9 @@ import { AdbClient } from "./core/adb-client";
 import { ApkDebugSession } from "./core/apk-debug-session";
 import { Ndk } from "./core/ndk";
 
+/**
+ * This class provides utility functions for building the Android debug configuration.
+ */
 export class AndroidConfigurationBuilder {
   static async getDefaultNdkPath(): Promise<string> {
     const path = await Ndk.getDefaultPath();

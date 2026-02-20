@@ -1,7 +1,7 @@
 import * as child_process from "child_process";
 import * as util from "util";
 import * as vscode from "vscode";
-import { AndroidConfigurationBuilder } from "./android/android-configuration-builder";
+import { AndroidPlatform } from "./android/android-platform";
 import { createDebugAdapterExecutable } from "./debug-adapter-factory";
 import { LLDBDapServer } from "./lldb-dap-server";
 import { LogFilePathProvider } from "./logging";
@@ -237,58 +237,10 @@ export class LLDBDapConfigurationProvider
         }
       }
 
-      if (
-        debugConfiguration.androidComponent &&
-        debugConfiguration.request === "launch"
-      ) {
-        if (
-          !debugConfiguration.launchCommands ||
-          debugConfiguration.launchCommands.length === 0
-        ) {
-          if (!debugConfiguration.androidDeviceSerial) {
-            debugConfiguration.androidDeviceSerial =
-              await AndroidConfigurationBuilder.resolveDeviceSerial(
-                debugConfiguration.androidDevice,
-              );
-          }
-          this.logger.info(
-            `Android device serial number: ${debugConfiguration.androidDeviceSerial}`,
-          );
-          if (!debugConfiguration.androidTargetArch) {
-            debugConfiguration.androidTargetArch =
-              await AndroidConfigurationBuilder.getTargetArch(
-                debugConfiguration.androidDeviceSerial,
-              );
-          }
-          this.logger.info(
-            `Android target architecture: ${debugConfiguration.androidTargetArch}`,
-          );
-          if (!debugConfiguration.androidLldbServerPath) {
-            if (!debugConfiguration.androidNDKPath) {
-              debugConfiguration.androidNDKPath =
-                await AndroidConfigurationBuilder.getDefaultNdkPath();
-            }
-            const ndkVersion =
-              await AndroidConfigurationBuilder.checkNdkAndRetrieveVersion(
-                debugConfiguration.androidNDKPath,
-              );
-            this.logger.info(
-              `Android NDK path: ${debugConfiguration.androidNDKPath}`,
-            );
-            this.logger.info(`Android NDK version: ${ndkVersion}`);
-            debugConfiguration.androidLldbServerPath =
-              await AndroidConfigurationBuilder.getLldbServerPath(
-                debugConfiguration.androidNDKPath,
-                debugConfiguration.androidTargetArch,
-              );
-          }
-          debugConfiguration.launchCommands =
-            AndroidConfigurationBuilder.getLldbLaunchCommands(
-              debugConfiguration.androidDeviceSerial,
-              debugConfiguration.androidComponent,
-            );
-        }
-      }
+      await AndroidPlatform.resolveDebugConfiguration(
+        debugConfiguration,
+        this.logger,
+      );
 
       this.logger.info(
         "Resolved debug configuration:\n" +
