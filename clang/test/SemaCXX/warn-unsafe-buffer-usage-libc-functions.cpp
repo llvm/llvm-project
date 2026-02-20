@@ -132,9 +132,11 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
 
   char a[10], b[11];
   int c[10];
+  constexpr unsigned kOneTooBig = 11;
   std::wstring WS;
 
   snprintf(a, sizeof(b), "%s", __PRETTY_FUNCTION__);         // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
+  snprintf(a, kOneTooBig, "%s", __PRETTY_FUNCTION__);         // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
   snprintf((char*)c, sizeof(c), "%s", __PRETTY_FUNCTION__);  // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
   fprintf((FILE*)p, "%P%d%p%i hello world %32s", *p, *p, p, *p, "hello"); // no warn
   fprintf(fp, "%P%d%p%i hello world %32s", *p, *p, p, *p, "hello"); // no warn
