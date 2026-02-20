@@ -203,8 +203,8 @@ define i32 @test_ctselect_load(i1 %cond, ptr %p1, ptr %p2) {
   ret i32 %result
 }
 
-; Test nested CTSELECT pattern with AND merging on i1 values
-; Pattern: ctselect C0, (ctselect C1, X, Y), Y -> ctselect (C0 & C1), X, Y
+; Test nested CT_SELECT pattern with AND merging on i1 values
+; Pattern: ct_select C0, (ct_select C1, X, Y), Y -> ct_select (C0 & C1), X, Y
 define i32 @test_ctselect_nested_and_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
 ; RV64-LABEL: test_ctselect_nested_and_i1_to_i32:
 ; RV64:       # %bb.0:
@@ -231,8 +231,8 @@ define i32 @test_ctselect_nested_and_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
   ret i32 %result
 }
 
-; Test nested CTSELECT pattern with OR merging on i1 values
-; Pattern: ctselect C0, X, (ctselect C1, X, Y) -> ctselect (C0 | C1), X, Y
+; Test nested CT_SELECT pattern with OR merging on i1 values
+; Pattern: ct_select C0, X, (ct_select C1, X, Y) -> ct_select (C0 | C1), X, Y
 define i32 @test_ctselect_nested_or_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
 ; RV64-LABEL: test_ctselect_nested_or_i1_to_i32:
 ; RV64:       # %bb.0:
@@ -259,9 +259,9 @@ define i32 @test_ctselect_nested_or_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
   ret i32 %result
 }
 
-; Test double nested CTSELECT with recursive AND merging
-; Pattern: ctselect C0, (ctselect C1, (ctselect C2, X, Y), Y), Y
-;   -> ctselect (C0 & C1 & C2), X, Y
+; Test double nested CT_SELECT with recursive AND merging
+; Pattern: ct_select C0, (ct_select C1, (ct_select C2, X, Y), Y), Y
+;   -> ct_select (C0 & C1 & C2), X, Y
 define i32 @test_ctselect_double_nested_and_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i32 %y) {
 ; RV64-LABEL: test_ctselect_double_nested_and_i1:
 ; RV64:       # %bb.0:
@@ -291,7 +291,7 @@ define i32 @test_ctselect_double_nested_and_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i
   ret i32 %result
 }
 
-; Test double nested CTSELECT with mixed AND/OR patterns
+; Test double nested CT_SELECT with mixed AND/OR patterns
 define i32 @test_ctselect_double_nested_mixed_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i32 %y, i32 %z) {
 ; RV64-LABEL: test_ctselect_double_nested_mixed_i1:
 ; RV64:       # %bb.0:
@@ -329,7 +329,7 @@ define i32 @test_ctselect_double_nested_mixed_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x,
   ret i32 %result
 }
 
-; Test nested ctselect calls
+; Test nested ct_select calls
 define i32 @test_ctselect_nested(i1 %cond1, i1 %cond2, i32 %a, i32 %b, i32 %c) {
 ; RV64-LABEL: test_ctselect_nested:
 ; RV64:       # %bb.0:
