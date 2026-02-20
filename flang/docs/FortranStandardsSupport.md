@@ -88,7 +88,7 @@ the multi-image execution. The table entries are based on the document [The new 
 | Intrinsic function coshape                                 | N      | Multi-image/Coarray feature |
 
 ## Fortran 2008
-All features except those listed in the following table are supported.
+All features except those listed in the following table are supported. The new features available in Fortran 2008 are summarized in the document [The New Features in Fortran 2008](https://wg5-fortran.org/N1851-N1900/N1891.pdf)
 
 | Feature                                                    | Status | Comments                                                |
 |------------------------------------------------------------|--------|---------------------------------------------------------|
@@ -97,7 +97,7 @@ All features except those listed in the following table are supported.
 | Internal procedure as an actual argument or pointer target | Y      | Current implementation requires stack to be executable. See [FAQ](FAQ.md#why-do-i-get-a-warning-or-an-error-about-an-executable-stack) and [Proposal](InternalProcedureTrampolines.md) |
 
 ## Fortran 2003
-All features except those listed in the following table are supported.
+All features except those listed in the following table are supported. The new features available in Fortran 2003 are summarized in the document [The New Features of Fortran 2003](https://wg5-fortran.org/N1551-N1600/N1579.pdf)
 
 | Feature                                                    | Status | Comments                                                |
 |------------------------------------------------------------|--------|---------------------------------------------------------|
