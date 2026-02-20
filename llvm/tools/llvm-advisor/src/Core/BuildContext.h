@@ -48,6 +48,13 @@ enum class BuildTool {
   Archiver
 };
 
+struct CoverageProfileSite {
+  std::string rawProfile;
+  std::string indexedProfile;
+  std::string reportPath;
+  std::string instrumentedBinary;
+};
+
 struct BuildContext {
   BuildPhase phase;
   BuildTool tool;
@@ -56,6 +63,7 @@ struct BuildContext {
   llvm::SmallVector<std::string, 8> inputFiles;
   llvm::SmallVector<std::string, 8> outputFiles;
   llvm::SmallVector<std::string, 8> expectedGeneratedFiles;
+  llvm::SmallVector<CoverageProfileSite, 4> coverageSites;
   std::unordered_map<std::string, std::string> metadata;
   bool hasOffloading = false;
   bool hasDebugInfo = false;
