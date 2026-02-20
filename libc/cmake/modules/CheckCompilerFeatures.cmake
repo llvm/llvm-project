@@ -141,6 +141,12 @@ message(STATUS "Compiler features available: ${AVAILABLE_COMPILER_FEATURES}")
 
 ### Compiler Feature Detection ###
 
+# clang-8+
+check_cxx_compiler_flag("-Xclang -fapply-global-visibility-to-externs" LIBC_CC_SUPPORTS_APPLY_GLOBAL_VISIBILITY_TO_EXTERNS)
+
+# clang-12+
+check_cxx_compiler_flag("-fdirect-access-external-data" LIBC_CC_SUPPORTS_DIRECT_ACCESS_EXTERNAL_DATA)
+
 # clang-8+, gcc-12+
 check_cxx_compiler_flag("-ftrivial-auto-var-init=pattern" LIBC_CC_SUPPORTS_PATTERN_INIT)
 
