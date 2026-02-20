@@ -26,6 +26,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Frontend/Offloading/Utility.h"
+#include "llvm/Frontend/OpenMP/OMPDeclareSimd.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
