@@ -687,14 +687,32 @@ static const llvm::GlobalValue *getAliasedGlobal(const llvm::GlobalValue *GV) {
 }
 
 static bool checkAliasedGlobal(
-    const ASTContext &Context, DiagnosticsEngine &Diags, SourceLocation Location,
-    bool IsIFunc, const llvm::GlobalValue *Alias, const llvm::GlobalValue *&GV,
+    const CodeGenModule *CGM, const ASTContext &Context,
+    DiagnosticsEngine &Diags, SourceLocation Location, bool IsIFunc,
+    const llvm::GlobalValue *Alias, const llvm::GlobalValue *&GV,
     const llvm::MapVector<GlobalDecl, StringRef> &MangledDeclNames,
     SourceRange AliasRange) {
   GV = getAliasedGlobal(Alias);
   if (!GV) {
     Diags.Report(Location, diag::err_cyclic_alias) << IsIFunc;
     return false;
+  }
+
+  // Only resolve unique internal linkage symbols for C code
+  if (!CGM->getLangOpts().CPlusPlus) {
+    for (const auto &[Decl, Name] : MangledDeclNames) {
+      if (const auto *ND = dyn_cast<NamedDecl>(Decl.getDecl())) {
+        IdentifierInfo *II = ND->getIdentifier();
+        if (II && II->getName() == GV->getName() &&
+            Name.contains(llvm::FunctionSamples::UniqSuffix)) {
+          GlobalDecl GD;
+          if (CGM->lookupRepresentativeDecl(Name, GD)) {
+            GV = CGM->getModule().getNamedValue(Name);
+            break;
+          }
+        }
+      }
+    }
   }
 
   if (GV->hasCommonLinkage()) {
@@ -786,8 +804,8 @@ void CodeGenModule::checkAliases() {
     StringRef MangledName = getMangledName(GD);
     llvm::GlobalValue *Alias = GetGlobalValue(MangledName);
     const llvm::GlobalValue *GV = nullptr;
-    if (!checkAliasedGlobal(getContext(), Diags, Location, IsIFunc, Alias, GV,
-                            MangledDeclNames, Range)) {
+    if (!checkAliasedGlobal(this, getContext(), Diags, Location, IsIFunc, Alias,
+                            GV, MangledDeclNames, Range)) {
       Error = true;
       continue;
     }
@@ -4286,6 +4304,22 @@ bool CodeGenModule::shouldEmitCUDAGlobalVar(const VarDecl *Global) const {
          Global->getType()->isCUDADeviceBuiltinTextureType();
 }
 
+bool CodeGenModule::shouldEmitUniqLinkageName(GlobalDecl GD) {
+  const auto *ND = dyn_cast<FunctionDecl>(GD.getDecl());
+  if (!ND || !getCXXABI().getMangleContext().shouldMangleDeclName(ND))
+    return false;
+  StringRef MangledName = getMangledName(GD);
+  if (!MangledName.contains(llvm::FunctionSamples::UniqSuffix))
+    return false;
+  for (const GlobalDecl &AD : Aliases) {
+    const auto *D = cast<ValueDecl>(AD.getDecl());
+    const AliasAttr *AA = D->getAttr<AliasAttr>();
+    if (AA && AA->getAliasee() == ND->getName())
+      return true;
+  }
+  return false;
+}
+
 void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   const auto *Global = cast<ValueDecl>(GD.getDecl());
 
@@ -4450,6 +4484,10 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   } else if (MustBeEmitted(Global)) {
     // The value must be emitted, but cannot be emitted eagerly.
     assert(!MayBeEmittedEagerly(Global));
+    addDeferredDeclToEmit(GD);
+  } else if (!getLangOpts().CPlusPlus && shouldEmitUniqLinkageName(GD)) {
+    // Emit static C function that is mangled with
+    // -funique-internal-linkage-names.
     addDeferredDeclToEmit(GD);
   } else {
     // Otherwise, remember that we saw a deferred decl with this name.  The
@@ -6680,6 +6718,51 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
                                                    /*DontDefer=*/true,
                                                    ForDefinition));
 
+  auto *Fn = cast<llvm::Function>(GV);
+  llvm::Function *GA = nullptr;
+  if (!getLangOpts().CPlusPlus &&
+      getCXXABI().getMangleContext().shouldMangleDeclName(D)) {
+    // -funique-internal-linkage-names may change the symbol name of C function.
+    // Replace all uses of old symbol with the emitted global value.
+    if (IdentifierInfo *II = D->getIdentifier()) {
+      if (II->getName() != GV->getName() &&
+          GV->getName().contains(llvm::FunctionSamples::UniqSuffix)) {
+        if (llvm::GlobalValue *GVDef =
+                getModule().getNamedValue(II->getName())) {
+          GVDef->replaceAllUsesWith(GV);
+          GA = dyn_cast<llvm::Function>(GVDef);
+        } else {
+          GA = llvm::Function::Create(Fn->getFunctionType(),
+                                      llvm::GlobalValue::InternalLinkage,
+                                      II->getName(), &getModule());
+          GA->setAttributes(Fn->getAttributes());
+        }
+        if (D->hasAttr<GNUInlineAttr>() || D->hasAttr<AlwaysInlineAttr>()) {
+          GA->eraseFromParent();
+          GA = nullptr;
+        }
+        // Create a wrapper with the original symbol in case the mangled
+        // function is referenced in any hardcoded inline assembly
+        if (GA) {
+          if (!GA->isDeclaration())
+            GA->deleteBody();
+          GA->setLinkage(llvm::GlobalValue::InternalLinkage);
+          llvm::BasicBlock *BB =
+              llvm::BasicBlock::Create(GA->getContext(), "", GA);
+          llvm::SmallVector<llvm::Value *> Args;
+          for (auto &arg : GA->args())
+            Args.push_back(&arg);
+          llvm::CallInst *CI = llvm::CallInst::Create(Fn->getFunctionType(), GV,
+                                                      Args, "", BB->end());
+          if (Fn->getReturnType()->isVoidTy())
+            llvm::ReturnInst::Create(GA->getContext(), BB);
+          else
+            llvm::ReturnInst::Create(GA->getContext(), CI, BB->end());
+        }
+      }
+    }
+  }
+
   // Already emitted.
   if (!GV->isDeclaration())
     return;
@@ -6688,7 +6771,6 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   // generating code for it because various parts of IR generation
   // want to propagate this information down (e.g. to local static
   // declarations).
-  auto *Fn = cast<llvm::Function>(GV);
   setFunctionLinkage(GD, Fn);
 
   // FIXME: this is redundant with part of setFunctionDefinitionAttributes
@@ -6719,6 +6801,12 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
 
   SetLLVMFunctionAttributesForDefinition(D, Fn);
 
+  // Set Attributes to perserve the internal GlobalValues
+  if (GA) {
+    setNonAliasAttributes(GD, GA);
+    SetLLVMFunctionAttributesForDefinition(D, GA);
+  }
+
   auto GetPriority = [this](const auto *Attr) -> int {
     Expr *E = Attr->getPriority();
     if (E) {
@@ -6745,6 +6833,18 @@ void CodeGenModule::EmitAliasDefinition(GlobalDecl GD) {
   if (AA->getAliasee() == MangledName) {
     Diags.Report(AA->getLocation(), diag::err_cyclic_alias) << 0;
     return;
+  }
+
+  // Deferred emit for aliased C function when __attribute__((alias)) might be
+  // used after the definition of aliasee function
+  if (!getLangOpts().CPlusPlus) {
+    for (const auto &[Name, Decl] : DeferredDecls) {
+      const auto *FD = dyn_cast<FunctionDecl>(Decl.getDecl());
+      if (FD && FD->getName() == AA->getAliasee() &&
+          Name.contains(llvm::FunctionSamples::UniqSuffix)) {
+        addDeferredDeclToEmit(Decl);
+      }
+    }
   }
 
   // If there is a definition in the module, then it wins over the alias.

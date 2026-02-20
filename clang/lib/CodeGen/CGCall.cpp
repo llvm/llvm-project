@@ -5925,6 +5925,24 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     IRFuncTy = OrigFn->getFunctionType();
   }
 
+  // Propogate Error Attribute if Callee is declared within the function body
+  // e.g.
+  // void foo() {
+  //   __extern__ void nocall(void) __attribute__((__error__(msg)));
+  //   if (nobranch)
+  //     nocall();
+  // }
+  if (CalleePtr && CalleeDecl) {
+    if (const auto *EA = CalleeDecl->getAttr<ErrorAttr>()) {
+      if (EA->isError())
+        dyn_cast<llvm::Function>(CalleePtr)->addFnAttr("dontcall-error",
+                                                       EA->getUserDiagnostic());
+      else if (EA->isWarning())
+        dyn_cast<llvm::Function>(CalleePtr)->addFnAttr("dontcall-warn",
+                                                       EA->getUserDiagnostic());
+    }
+  }
+
   // 3. Perform the actual call.
 
   // Deactivate any cleanups that we're supposed to do immediately before
