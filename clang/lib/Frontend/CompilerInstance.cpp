@@ -1583,7 +1583,9 @@ static void checkConfigMacro(Preprocessor &PP, StringRef ConfigMacro,
   for (auto *MD = LatestLocalMD; MD; MD = MD->getPrevious()) {
     // We only care about the predefines buffer.
     FileID FID = SourceMgr.getFileID(MD->getLocation());
-    if (FID.isInvalid() || FID != PP.getPredefinesFileID())
+    if (FID.isInvalid())
+      continue;
+    if (FID != PP.getPredefinesFileID() && FID != PP.getPCHPredefinesFileID())
       continue;
     if (auto *DMD = dyn_cast<DefMacroDirective>(MD))
       CmdLineDefinition = DMD->getMacroInfo();
