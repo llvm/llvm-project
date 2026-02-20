@@ -282,7 +282,7 @@ classification logic in the next step.
 ```
 Input: func @foo(%arg0: !cir.int<u, 32>,
        %arg1: !cir.struct<{!cir.int<u, 64>,
-                          !cir.int<u, 64>}>) -> !cir.int<u, 32>
+                            !cir.int<u, 64>}>) -> !cir.int<u, 32>
 ```
 
 #### Step 2: Type Mapping via MLIRTypeMapper
