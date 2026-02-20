@@ -27,9 +27,13 @@ def err_fe_pch_file_overridden : Error<
     "file '%0' from the precompiled header has been overridden">;
 def note_ast_file_required_by : Note<"'%0' required by '%1'">;
 def note_ast_file_rebuild_required
-    : Note<"please rebuild precompiled file '%0'">;
+    : Note<"precompiled file '%0' needs to be rebuilt">;
 def note_module_cache_path : Note<
     "after modifying system headers, please delete the module cache at '%0'">;
+def note_ast_file_input_files_validation_status : Note<"earlier input file validation "
+    "%select{was not performed|was disabled for this kind of precompiled file|"
+    "was skipped for the current build session|"
+    "has covered only user files|has covered all files}0">;
 
 def err_ast_file_targetopt_mismatch : Error<
     "precompiled file '%0' was compiled for the %1 '%2' but the current translation "
