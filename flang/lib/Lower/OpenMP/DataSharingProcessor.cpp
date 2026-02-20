@@ -616,17 +616,6 @@ void DataSharingProcessor::privatizeSymbol(
     copyFirstPrivateSymbol(symToPrivatize);
     return;
   }
-  // Module variables accessed via USE inside nested BLOCKs may not yet
-  // be instantiated when the enclosing OpenMP construct's privatization
-  // runs. Instantiate them now so the host symbol box will be available.
-  const auto &ultimate = symToPrivatize->GetUltimate();
-  if (ultimate.owner().kind() == semantics::Scope::Kind::Module &&
-      !symTable.lookupSymbol(ultimate)) {
-    Fortran::lower::AggregateStoreMap storeMap;
-    Fortran::lower::instantiateVariable(
-        converter, Fortran::lower::pft::Variable{ultimate, /*global=*/true},
-        symTable, storeMap);
-  }
 
   Fortran::lower::privatizeSymbol<mlir::omp::PrivateClauseOp,
                                   mlir::omp::PrivateClauseOps>(

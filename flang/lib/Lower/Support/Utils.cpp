@@ -685,9 +685,18 @@ void privatizeSymbol(
 
   const semantics::Symbol *sym =
       isDoConcurrent ? &symToPrivatize->GetUltimate() : symToPrivatize;
-  lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
-  if (!hsb)
-    hsb = symTable.lookupSymbol(*sym);
+  // Module variables accessed via USE inside nested BLOCKs may not be
+  // instantiated yet. Ensure they are bound before looking up the host box.
+  const auto &ultimate = sym->GetUltimate();
+  if (ultimate.owner().kind() == semantics::Scope::Kind::Module &&
+      !symTable.lookupSymbol(ultimate)) {
+    Fortran::lower::AggregateStoreMap storeMap;
+    Fortran::lower::instantiateVariable(
+        converter,
+        Fortran::lower::pft::Variable{ultimate, /*global=*/true},
+        symTable, storeMap);
+  }
+  lower::SymbolBox hsb = symTable.lookupSymbol(*sym);
   assert(hsb && "Host symbol box not found");
 
   mlir::Location symLoc = hsb.getAddr().getLoc();
@@ -780,11 +789,8 @@ void privatizeSymbol(
         mlir::isa<fir::BaseBoxType>(allocType) ||
         mlir::isa<fir::BoxCharType>(allocType);
     if (needsInitialization) {
-      lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(
+      lower::SymbolBox hsb = symTable.lookupSymbol(
           isDoConcurrent ? symToPrivatize->GetUltimate() : *symToPrivatize);
-      if (!hsb)
-        hsb = symTable.lookupSymbol(
-            isDoConcurrent ? symToPrivatize->GetUltimate() : *symToPrivatize);
 
       assert(hsb && "Host symbol box not found");
       hlfir::Entity entity{hsb.getAddr()};
