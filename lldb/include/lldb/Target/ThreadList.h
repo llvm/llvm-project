@@ -18,9 +18,6 @@
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-
 namespace lldb_private {
 
 // This is a thread list with lots of functionality for use only by the process
@@ -144,19 +141,6 @@ public:
   /// Precondition: both thread lists must be belong to the same process.
   void Update(ThreadList &rhs);
 
-  /// Called by ThreadPlanStepOverBreakpoint when a thread finishes stepping
-  /// over a breakpoint. This tracks which threads are still stepping over
-  /// each breakpoint address, and only re-enables the breakpoint when ALL
-  /// threads have finished stepping over it.
-  void ThreadFinishedSteppingOverBreakpoint(lldb::addr_t breakpoint_addr,
-                                            lldb::tid_t tid);
-
-  /// Register a thread that is about to step over a breakpoint.
-  /// The breakpoint will be re-enabled only after all registered threads
-  /// have called ThreadFinishedSteppingOverBreakpoint.
-  void RegisterThreadSteppingOverBreakpoint(lldb::addr_t breakpoint_addr,
-                                            lldb::tid_t tid);
-
 protected:
   void SetShouldReportStop(Vote vote);
 
@@ -169,13 +153,6 @@ protected:
   lldb::tid_t
       m_selected_tid; ///< For targets that need the notion of a current thread.
   std::vector<lldb::tid_t> m_expression_tid_stack;
-
-  /// Tracks which threads are currently stepping over each breakpoint address.
-  /// Key: breakpoint address, Value: set of thread IDs stepping over it.
-  /// When a thread finishes stepping, it's removed from the set. When the set
-  /// becomes empty, the breakpoint is re-enabled.
-  llvm::DenseMap<lldb::addr_t, llvm::DenseSet<lldb::tid_t>>
-      m_threads_stepping_over_bp;
 
 private:
   ThreadList() = delete;
