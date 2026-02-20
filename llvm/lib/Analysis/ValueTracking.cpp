@@ -5929,39 +5929,35 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // This will propagate sign information out of such loops.
     if (P->getNumIncomingValues() != 2)
       break;
-    else {
-      for (int i = 0; i < 2; i++) {
-        Value *RecurValue = P->getIncomingValue(1 - i);
-        IntrinsicInst *I = dyn_cast<IntrinsicInst>(RecurValue);
-        if (!I)
-          continue;
-        else {
-          Value *R, *L;
-          Value *Init;
-          PHINode *PN;
-          const Function *F = I->getFunction();
-          const fltSemantics &FltSem =
-              I->getType()->getScalarType()->getFltSemantics();
-          DenormalMode Mode =
-              F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
-          if (matchSimpleTernaryIntrinsicRecurrence(I, PN, Init, L, R)) {
-            switch (I->getIntrinsicID()) {
-            case Intrinsic::fma:
-            case Intrinsic::fmuladd: {
-              KnownFPClass KnownStart, KnownL;
-              computeKnownFPClass(Init, DemandedElts, InterestedClasses,
-                                  KnownStart, Q, Depth + 1);
-              if (KnownStart.isUnknown())
-                break;
-              computeKnownFPClass(L, DemandedElts, InterestedClasses, KnownL, Q,
-                                  Depth + 1);
-              if (L == R &&
-                  isGuaranteedNotToBeUndef(L, Q.AC, Q.CxtI, Q.DT, Depth + 1))
-                Known = KnownFPClass::fma_square(KnownL, KnownStart, Mode);
-              break;
-            }
-            }
-          }
+    for (unsigned i = 0; i < 2; i++) {
+      Value *RecurValue = P->getIncomingValue(1 - i);
+      IntrinsicInst *I = dyn_cast<IntrinsicInst>(RecurValue);
+      if (!I)
+        continue;
+      Value *R, *L;
+      Value *Init;
+      PHINode *PN;
+      const Function *F = I->getFunction();
+      const fltSemantics &FltSem =
+          I->getType()->getScalarType()->getFltSemantics();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
+      if (matchSimpleTernaryIntrinsicRecurrence(I, PN, Init, L, R)) {
+        switch (I->getIntrinsicID()) {
+        case Intrinsic::fma:
+        case Intrinsic::fmuladd: {
+          KnownFPClass KnownStart, KnownL;
+          computeKnownFPClass(Init, DemandedElts, InterestedClasses,
+                              KnownStart, Q, Depth + 1);
+          if (KnownStart.isUnknown())
+            break;
+          computeKnownFPClass(L, DemandedElts, InterestedClasses, KnownL, Q,
+                              Depth + 1);
+          if (L == R &&
+              isGuaranteedNotToBeUndef(L, Q.AC, Q.CxtI, Q.DT, Depth + 1))
+            Known = KnownFPClass::fma_square(KnownL, KnownStart, Mode);
+          break;
+        }
         }
       }
     }
@@ -9299,6 +9295,9 @@ static bool matchThreeInputRecurrence(const PHINode *PN, InstTy *&Inst,
   for (unsigned I = 0; I != 2; ++I) {
     if (auto *Operation = dyn_cast<InstTy>(PN->getIncomingValue(I));
         Operation) {
+      if (Operation->getNumOperands() < 3)
+          continue;
+
       Value *Op0 = Operation->getOperand(0);
       Value *Op1 = Operation->getOperand(1);
       Value *Op2 = Operation->getOperand(2);
