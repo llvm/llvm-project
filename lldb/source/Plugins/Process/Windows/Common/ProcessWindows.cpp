@@ -10,6 +10,7 @@
 
 // Windows includes
 #include "lldb/Host/windows/windows.h"
+#include <TlHelp32.h>
 #include <psapi.h>
 
 #include "lldb/Breakpoint/Watchpoint.h"
@@ -31,10 +32,12 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Threading.h"
@@ -226,6 +229,58 @@ ProcessWindows::DoAttachToProcessWithID(lldb::pid_t pid,
   if (error.Success())
     SetID(GetDebuggedProcessId());
   return error;
+}
+
+Status ProcessWindows::DoAttachToProcessWithName(
+    const char *process_name, const ProcessAttachInfo &attach_info) {
+  Status error;
+  Clear();
+
+  if (!process_name || process_name[0] == '\0') {
+    error = Status::FromErrorString("Invalid process name");
+    return error;
+  }
+
+  ProcessInstanceInfoMatch match_info;
+  match_info.SetNameMatchType(NameMatch::Equals);
+  match_info.GetProcessInfo().GetExecutableFile().SetFile(
+      process_name, FileSpec::Style::native);
+
+  Log *log = GetLog(LLDBLog::Process);
+  LLDB_LOGF(log, "ProcessWindows::%s waiting for process '%s' to launch",
+            __FUNCTION__, process_name);
+
+  lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
+  while (pid == LLDB_INVALID_PROCESS_ID) {
+    ProcessInstanceInfoList process_infos;
+    uint32_t num_matches = Host::FindProcesses(match_info, process_infos);
+
+    if (num_matches == 1) {
+      pid = process_infos[0].GetProcessID();
+      break;
+    }
+    if (num_matches > 1) {
+      StreamString s;
+      ProcessInstanceInfo::DumpTableHeader(s, true, false);
+      for (size_t i = 0; i < num_matches; i++) {
+        process_infos[i].DumpAsTableRow(
+            s, lldb_private::HostInfoWindows::GetUserIDResolver(), true, false);
+      }
+      error = Status::FromErrorStringWithFormat(
+          "more than one process named %s:\n%s", process_name, s.GetData());
+      break;
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+
+  if (pid == LLDB_INVALID_PROCESS_ID) {
+    error = Status::FromErrorStringWithFormatv(
+        "unable to find process named '%s'", process_name);
+    return error;
+  }
+
+  return DoAttachToProcessWithID(pid, attach_info);
 }
 
 Status ProcessWindows::DoResume(RunDirection direction) {
