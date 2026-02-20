@@ -4205,6 +4205,42 @@ void DAGTypeLegalizer::ExpandIntRes_CTPOP(SDNode *N, SDValue &Lo, SDValue &Hi) {
     // If the function is not available, fall back on the expansion.
   }
 
+  // Optimization: if the integer fits in a legal vector type and the target
+  // has efficient vector CTPOP, use bitcast -> vector ctpop -> horizontal sum.
+  // This avoids extracting to scalar for each word (e.g. on x86, this enables
+  // PSHUFB+PSADBW or VPOPCNTDQ instead of 4x scalar popcntq).
+  unsigned BitWidth = VT.getSizeInBits();
+  if (BitWidth >= 128 && isPowerOf2_32(BitWidth)) {
+    MVT EltVT = MVT::i64;
+    unsigned NumElts = BitWidth / 64;
+    MVT VecVT = MVT::getVectorVT(EltVT, NumElts);
+    if (VecVT != MVT::INVALID_SIMPLE_VALUE_TYPE && TLI.isTypeLegal(VecVT) &&
+        TLI.isOperationLegal(ISD::CTPOP, VecVT)) {
+      // Bitcast integer to vector (free at register level).
+      SDValue Vec = DAG.getBitcast(VecVT, Op);
+      // Per-element popcount (target lowers to PSHUFB+PSADBW or VPOPCNTDQ).
+      SDValue PopVec = DAG.getNode(ISD::CTPOP, DL, VecVT, Vec);
+      // Sum all elements via pairwise reduction.
+      while (NumElts > 1) {
+        NumElts /= 2;
+        MVT HalfVT = MVT::getVectorVT(EltVT, NumElts);
+        SDValue HiVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, PopVec,
+                                    DAG.getVectorIdxConstant(NumElts, DL));
+        SDValue LoVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, PopVec,
+                                    DAG.getVectorIdxConstant(0, DL));
+        PopVec = DAG.getNode(ISD::ADD, DL, HalfVT, HiVec, LoVec);
+      }
+      // Extract scalar i64 result.
+      SDValue Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64,
+                                   PopVec, DAG.getVectorIdxConstant(0, DL));
+      // Split into Lo/Hi for type legalization.
+      EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+      Lo = DAG.getNode(ISD::ZERO_EXTEND, DL, NVT, Result);
+      Hi = DAG.getConstant(0, DL, NVT);
+      return;
+    }
+  }
+
   // ctpop(HiLo) -> ctpop(Hi)+ctpop(Lo)
   GetExpandedInteger(Op, Lo, Hi);
   EVT NVT = Lo.getValueType();
