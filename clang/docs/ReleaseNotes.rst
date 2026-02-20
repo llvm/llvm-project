@@ -154,6 +154,10 @@ New Compiler Flags
   can only generate the reduced BMI as a by-product, e.g, an object files or
   a full BMI.
 
+- New ``-cc1`` option ``-fexperimental-overflow-behavior-types`` added to
+  enable parsing of the experimental ``overflow_behavior`` type attribute and
+  type specifiers.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -176,6 +180,11 @@ Attribute Changes in Clang
 
 - Added a new attribute, ``[[clang::no_outline]]`` to suppress outlining from
   annotated functions. This uses the LLVM `nooutline` attribute.
+
+- Introduced a new type attribute ``__attribute__((overflow_behavior))`` which
+  currently accepts either ``wrap`` or ``trap`` as an argument, enabling
+  type-level control over overflow behavior. There is also an accompanying type
+  specifier for each behavior kind via `__ob_wrap` and `__ob_trap`.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -272,6 +281,7 @@ Bug Fixes in This Version
 - Clang now outputs relative paths of embeds for dependency output. (#GH161950)
 - Fixed an assertion failure when evaluating ``_Countof`` on invalid ``void``-typed operands. (#GH180893)
 - Fixed a ``-Winvalid-noreturn`` false positive for unreachable ``try`` blocks following an unconditional ``throw``. (#GH174822)
+- Fixed an assertion failure caused by error recovery while extending a nested name specifier with results from ordinary lookup. (#GH181470)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -279,6 +289,7 @@ Bug Fixes to Compiler Builtins
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a behavioral discrepancy between deleted functions and private members when checking the ``enable_if`` attribute. (#GH175895)
+- Fixed ``init_priority`` attribute by delaying type checks until after the type is deduced.
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -386,6 +397,7 @@ Fixed Point Support in Clang
 AST Matchers
 ------------
 - Add ``functionTypeLoc`` matcher for matching ``FunctionTypeLoc``.
+- Add missing support for ``TraversalKind`` in some ``addMatcher()`` overloads.
 
 clang-format
 ------------
@@ -396,6 +408,7 @@ clang-format
 
 libclang
 --------
+- Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
 
 Code Completion
 ---------------

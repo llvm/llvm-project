@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
-
 #include "PythonDataObjects.h"
 #include "ScriptInterpreterPython.h"
 
@@ -1488,4 +1484,3 @@ int lldb_private::python::RunSimpleString(const char *str) {
 
   return 0;
 }
-#endif

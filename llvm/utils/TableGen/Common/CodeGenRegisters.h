@@ -837,6 +837,13 @@ public:
   /// return the superclass.  Otherwise return null.
   const CodeGenRegisterClass *getRegClassForRegister(const Record *R);
 
+  /// Returns whether \p RegClass contains register \p Reg, handling
+  /// RegClassByHwMode and RegisterByHwMode correctly.
+  /// This should be preferred instead of
+  /// `RegBank.getRegClass(RC).contains(RegBank.getReg(R))`.
+  bool regClassContainsReg(const Record *RegClass, const Record *RegDef,
+                           ArrayRef<SMLoc> Loc = {});
+
   // Analog of TargetRegisterInfo::getMinimalPhysRegClass. Unlike
   // getRegClassForRegister, this tries to find the smallest class containing
   // the physical register. If \p VT is specified, it will only find classes
