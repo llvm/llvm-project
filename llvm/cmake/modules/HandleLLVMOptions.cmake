@@ -757,10 +757,6 @@ if (MSVC)
           # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
       -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
       -wd4319 # Suppress ''operator' : zero extending 'type' to 'type' of greater size'
-          # C4709 is disabled because of a bug with Visual Studio 2017 as of
-          # v15.8.8. Re-evaluate the usefulness of this diagnostic when the bug
-          # is fixed.
-      -wd4709 # Suppress comma operator within array index expression
 
       # We'd like this warning to be enabled, but it triggers from code in
       # WinBase.h that we don't have control over.
