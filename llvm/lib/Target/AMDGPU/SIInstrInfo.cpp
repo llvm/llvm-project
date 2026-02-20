@@ -2069,6 +2069,16 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
   switch (MI.getOpcode()) {
   default: return TargetInstrInfo::expandPostRAPseudo(MI);
+  case AMDGPU::V_DOT2ACC_F32_F16_PSEUDO:
+    MI.setDesc(get(AMDGPU::V_DOT2_F32_F16));
+    MI.untieRegOperand(6);
+    break;
+
+  case AMDGPU::V_DOT2ACC_F32_BF16_PSEUDO:
+    MI.setDesc(get(AMDGPU::V_DOT2_F32_BF16));
+    MI.untieRegOperand(6);
+    break;
+
   case AMDGPU::S_MOV_B64_term:
     // This is only a terminator to get the correct spill code placement during
     // register allocation.

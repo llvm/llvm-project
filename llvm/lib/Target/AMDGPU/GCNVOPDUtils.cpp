@@ -44,7 +44,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
 
   if (IsVOPD3 && !ST.hasVOPD3())
     return false;
-  if (!IsVOPD3 && (TII.isVOP3(MIX) || TII.isVOP3(MIY)))
+  if (!IsVOPD3 && (TII.isVOP3WithoutVOPD(MIX) || TII.isVOP3WithoutVOPD(MIY)))
     return false;
   if (TII.isDPP(MIX) || TII.isDPP(MIY))
     return false;
