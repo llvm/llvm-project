@@ -1,0 +1,47 @@
+# REQUIRES: target=riscv32-{{.*}}
+
+# RUN: yaml2obj %s -o %t
+
+# Test 1: Explicitly Enable via -Y (+xqci)
+# RUN: %lldb -b -o "disassemble -b -n main -Y +xqci" %t | FileCheck %s --check-prefix=CHECK-XQCI
+
+# Test 2: Explicitly Disable via -Y (-xqci)
+# RUN: %lldb -b -o "disassemble -b -n main -Y -xqci" %t | FileCheck %s --check-prefix=CHECK-NOXQCI
+
+# Test 3: Verify target.disassembly-features setting works
+# RUN: %lldb -b -o "settings set target.disassembly-features +xqci" -o "disassemble -b -n main" %t | FileCheck %s --check-prefix=CHECK-XQCI
+
+# Test 4: Ensure that the feature is implicitly enabled by reading the ELF
+# attribute, even when no explicit enable flag is provided.
+# RUN: %lldb -b -o "disassemble -b -n main" %t | FileCheck %s --check-prefix=CHECK-XQCI
+
+# CHECK-XQCI:      051f 0058 0000    qc.e.li a0, 0x58
+# CHECK-XQCI-NEXT: 1516              qc.extu a0, a0, 0x6, 0x0
+
+# CHECK-NOXQCI:     <unknown>
+# CHECK-NOXQCI-NOT: qc.e.li
+# CHECK-NOXQCI-NOT: qc.extu
+
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_RISCV
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x4
+    Content:         1F05580000001615
+  - Name:            .riscv.attributes
+    Type:            SHT_RISCV_ATTRIBUTES
+    # This hex encodes: Format=A, Section Length =35 Vendor="riscv", Tag_File=1, Size=24, Tag_Arch=riscv Arch String="rv32i2p1_xqci0p13"
+    # 41 23000000 726973637600 01 18000000 05 72763332693270315F787163693070313300
+    Content:         412300000072697363760001180000000572763332693270315F787163693070313300
+Symbols:
+  - Name:            main
+    Section:         .text
+    Value:           0x0
+    Size:            0x8

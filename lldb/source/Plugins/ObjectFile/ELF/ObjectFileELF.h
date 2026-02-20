@@ -271,6 +271,14 @@ private:
 
   lldb::SectionType GetSectionType(const ELFSectionHeaderInfo &H) const;
 
+  // Parse the ELF attributes to detect RISC-V extensions.
+  // This function traverses the attributes of the ELF object file to
+  // verify the presence of supported extensions. If a supported extension
+  // is found, it updates the architecture's feature string.
+  static void ParseRISCVAttributes(const lldb_private::DataExtractor &data,
+                                   uint64_t length,
+                                   lldb_private::ArchSpec &arch_spec);
+
   static void ParseARMAttributes(lldb_private::DataExtractor &data,
                                  uint64_t length,
                                  lldb_private::ArchSpec &arch_spec);

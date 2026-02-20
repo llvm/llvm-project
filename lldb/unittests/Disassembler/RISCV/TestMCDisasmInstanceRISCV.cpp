@@ -16,6 +16,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/StreamString.h"
 
+#include "../../../source/Plugins/Disassembler/LLVMC/DisassemblerLLVMC.cpp"
 #include "Plugins/Disassembler/LLVMC/DisassemblerLLVMC.h"
 
 using namespace lldb;
@@ -28,6 +29,14 @@ public:
   static void TearDownTestCase();
 
 protected:
+  // Helper wrapper to call the UpdateSubtargetFeatures function under test
+  void CheckFeatures(llvm::StringRef defaults, std::string user_input,
+                     llvm::StringRef expected) {
+    std::string features = user_input;
+    llvm::SubtargetFeatures defaults_target_feature(defaults);
+    UpdateSubtargetFeatures(defaults_target_feature, features);
+    EXPECT_EQ(features, expected.str());
+  }
 };
 
 void TestMCDisasmInstanceRISCV::SetUpTestCase() {
@@ -139,4 +148,43 @@ TEST_F(TestMCDisasmInstanceRISCV, TestOpcodeBytePrinter) {
     inst_sp->GetOpcode().Dump(&s, 1);
     ASSERT_STREQ(s.GetString().str().c_str(), expected_outputs[i]);
   }
+}
+
+// Unit test cases to validate UpdateSubtargetFeatures.
+TEST_F(TestMCDisasmInstanceRISCV, IgnoresInvalidFlagsWithoutStopping) {
+  // "bad" is invalid (no +/-).
+  // It should be ignored, but "+valid" should still be processed.
+  // Console output should show: Warning: Malformed feature 'bad'...
+  CheckFeatures("", "+valid,bad", "+valid");
+}
+
+TEST_F(TestMCDisasmInstanceRISCV, IgnoresShortFlags) {
+  // "+" is too short. "+a" is valid.
+  CheckFeatures("", "+, +a", "+a");
+}
+
+TEST_F(TestMCDisasmInstanceRISCV, KeepsValidOverridesAmidstGarbage) {
+  // Defaults: +m
+  // User: garbage (ignored), -m (valid disable), +c (valid enable)
+  // Result: -m,+c  (default +m is removed by user -m)
+  CheckFeatures("+m", "garbage,-m,+c", "-m,+c");
+}
+
+TEST_F(TestMCDisasmInstanceRISCV, MergesDefaults) {
+  // Ensure normal functionality still works
+  CheckFeatures("+m,+c", "", "+m,+c");
+}
+
+TEST_F(TestMCDisasmInstanceRISCV, UpdateFeatureString_AddSingle) {
+  // Should keep valid flags
+  CheckFeatures("", "+a,-b", "+a,-b");
+
+  // Should drop invalid flags (no sign, too short, non-alpha)
+  CheckFeatures("", "a,+,+123,-,good",
+                ""); // "good" has no sign, others invalid
+}
+
+TEST_F(TestMCDisasmInstanceRISCV, FiltersGarbageUserFlags) {
+  // Mixed valid and invalid
+  CheckFeatures("", "+valid,garbage,-alsovalid,++", "+valid,-alsovalid");
 }

@@ -1489,8 +1489,8 @@ GetAttributeValueByTag(const DataExtractor &data, lldb::offset_t offset,
   return std::nullopt;
 }
 
-void ObjectFileELF::ParseRISCVAttributes(DataExtractor &data, uint64_t length,
-                                         ArchSpec &arch_spec) {
+void ObjectFileELF::ParseRISCVAttributes(const DataExtractor &data,
+                                         uint64_t length, ArchSpec &arch_spec) {
   Log *log = GetLog(LLDBLog::Modules);
 
   lldb::offset_t offset = 0;
