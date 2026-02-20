@@ -11948,22 +11948,27 @@ SDValue TargetLowering::expandFP_TO_INT_SAT(SDNode *Node,
   // If the integer bounds are exactly representable as floats and min/max are
   // legal, emit a min+max+fptoi sequence. Otherwise we have to use a sequence
   // of comparisons and selects.
-  bool MinMaxLegal = isOperationLegal(ISD::FMINNUM, SrcVT) &&
-                     isOperationLegal(ISD::FMAXNUM, SrcVT);
-  if (AreExactFloatBounds && MinMaxLegal) {
+  auto EmitMinMax = [&](unsigned MinOpcode, unsigned MaxOpcode,
+                        bool MayPropagateNaN) {
+    bool MinMaxLegal = isOperationLegalOrCustom(MinOpcode, SrcVT) &&
+                       isOperationLegalOrCustom(MaxOpcode, SrcVT);
+    if (!MinMaxLegal)
+      return SDValue();
+
     SDValue Clamped = Src;
 
-    // Clamp Src by MinFloat from below. If Src is NaN the result is MinFloat.
-    Clamped = DAG.getNode(ISD::FMAXNUM, dl, SrcVT, Clamped, MinFloatNode);
-    // Clamp by MaxFloat from above. NaN cannot occur.
-    Clamped = DAG.getNode(ISD::FMINNUM, dl, SrcVT, Clamped, MaxFloatNode);
+    // Clamp Src by MinFloat from below. If !MayPropagateNaN and Src is NaN
+    // then the result is MinFloat.
+    Clamped = DAG.getNode(MaxOpcode, dl, SrcVT, Clamped, MinFloatNode);
+    // Clamp by MaxFloat from above. If !MayPropagateNaN then NaN cannot occur.
+    Clamped = DAG.getNode(MinOpcode, dl, SrcVT, Clamped, MaxFloatNode);
     // Convert clamped value to integer.
     SDValue FpToInt = DAG.getNode(IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT,
                                   dl, DstVT, Clamped);
 
-    // In the unsigned case we're done, because we mapped NaN to MinFloat,
-    // which will cast to zero.
-    if (!IsSigned)
+    // If !MayPropagateNan and the conversion is unsigned case we're done,
+    // because we mapped NaN to MinFloat, which will cast to zero.
+    if (!MayPropagateNaN && !IsSigned)
       return FpToInt;
 
     // Otherwise, select 0 if Src is NaN.
@@ -11972,6 +11977,19 @@ SDValue TargetLowering::expandFP_TO_INT_SAT(SDNode *Node,
         getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
     SDValue IsNan = DAG.getSetCC(dl, SetCCVT, Src, Src, ISD::CondCode::SETUO);
     return DAG.getSelect(dl, DstVT, IsNan, ZeroInt, FpToInt);
+  };
+  if (AreExactFloatBounds) {
+    if (SDValue Res = EmitMinMax(ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM,
+                                 /*MayPropagateNaN=*/false))
+      return Res;
+    // These may propagate NaN for sNaN operands.
+    if (SDValue Res =
+            EmitMinMax(ISD::FMINNUM, ISD::FMAXNUM, /*MayPropagateNaN=*/true))
+      return Res;
+    // These always propagate NaN.
+    if (SDValue Res =
+            EmitMinMax(ISD::FMINIMUM, ISD::FMAXIMUM, /*MayPropagateNaN=*/true))
+      return Res;
   }
 
   SDValue MinIntNode = DAG.getConstant(MinInt, dl, DstVT);
