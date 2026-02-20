@@ -1359,7 +1359,8 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
     if (ExtReg) {
       if (MachineInstr *ExtMI = MRI.getUniqueVRegDef(ExtReg)) {
         MRI.replaceRegWith(ExtReg, ResultReg);
-        ExtMI->eraseFromParent();
+        MachineBasicBlock::iterator ExtIter = ExtMI->getIterator();
+        removeDeadCode(ExtIter, std::next(ExtIter));
       }
     }
     updateValueMap(Ext, ResultReg);
