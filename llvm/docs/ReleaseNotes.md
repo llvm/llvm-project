@@ -213,6 +213,10 @@ Changes to LLDB
 * The crashed thread is now automatically selected on start.
 * Threads are listed in incrmental order by pid then by tid.
 
+### Linux
+
+* On Arm Linux, the tpidruro register can now be read. Writing to this register is not supported.
+
 Changes to BOLT
 ---------------
 
