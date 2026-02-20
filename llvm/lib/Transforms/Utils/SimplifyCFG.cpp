@@ -1028,7 +1028,7 @@ bool SimplifyCFGOpt::simplifyEqualityComparisonWithOnlyPredecessor(
       return true;
     }
 
-    SwitchInstProfUpdateWrapper SI = *cast<SwitchInst>(TI);
+    SwitchInstProfUpdateWrapper SIW = *cast<SwitchInst>(TI);
     // Okay, TI has cases that are statically dead, prune them away.
     SmallPtrSet<Constant *, 16> DeadCases;
     for (const ValueEqualityComparisonCase &Case : PredCases)
@@ -1038,14 +1038,15 @@ bool SimplifyCFGOpt::simplifyEqualityComparisonWithOnlyPredecessor(
                       << "Through successor TI: " << *TI);
 
     SmallDenseMap<BasicBlock *, int, 8> NumPerSuccessorCases;
-    for (SwitchInst::CaseIt i = SI->case_end(), e = SI->case_begin(); i != e;) {
+    for (SwitchInst::CaseIt i = (*SIW).case_end(), e = (*SIW).case_begin();
+         i != e;) {
       --i;
       auto *Successor = i->getCaseSuccessor();
       if (DTU)
         ++NumPerSuccessorCases[Successor];
       if (DeadCases.count(i->getCaseValue())) {
         Successor->removePredecessor(PredDef);
-        SI.removeCase(i);
+        SIW.removeCase(i);
         if (DTU)
           --NumPerSuccessorCases[Successor];
       }
@@ -5762,15 +5763,15 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
       if (DTU)
         Updates.push_back({DominatorTree::Delete, Predecessor, BB});
     } else if (auto *SI = dyn_cast<SwitchInst>(TI)) {
-      SwitchInstProfUpdateWrapper SU(*SI);
-      for (auto i = SU->case_begin(), e = SU->case_end(); i != e;) {
+      SwitchInstProfUpdateWrapper SIW(*SI);
+      for (auto i = (*SIW).case_begin(), e = (*SIW).case_end(); i != e;) {
         if (i->getCaseSuccessor() != BB) {
           ++i;
           continue;
         }
-        BB->removePredecessor(SU->getParent());
-        i = SU.removeCase(i);
-        e = SU->case_end();
+        BB->removePredecessor((*SIW).getParent());
+        i = SIW.removeCase(i);
+        e = (*SIW).case_end();
         Changed = true;
       }
       // Note that the default destination can't be removed!
@@ -7712,7 +7713,7 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
 
   SmallVector<DominatorTree::UpdateType> Updates;
   SwitchInstProfUpdateWrapper SIW(*SI);
-  BasicBlock *BB = SIW->getParent();
+  BasicBlock *BB = (*SIW).getParent();
 
   // Dead cases are removed even when the simplification fails.
   // A case is dead when its value is higher than the Constant.
@@ -7725,7 +7726,7 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
     DeadCaseBB->removePredecessor(BB);
     Updates.push_back({DominatorTree::Delete, BB, DeadCaseBB});
     I = SIW.removeCase(I);
-    E = SIW->case_end();
+    E = (*SIW).case_end();
   }
 
   auto Case = SI->findCaseValue(Constant);
@@ -7742,7 +7743,7 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
   BasicBlock *Unreachable = SI->getDefaultDest();
   SIW.replaceDefaultDest(Case);
   SIW.removeCase(Case);
-  SIW->setCondition(A);
+  (*SIW).setCondition(A);
 
   Updates.push_back({DominatorTree::Delete, BB, Unreachable});
 
