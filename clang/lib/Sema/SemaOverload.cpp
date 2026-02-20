@@ -119,6 +119,11 @@ CompareQualificationConversions(Sema &S,
                                 const StandardConversionSequence& SCS2);
 
 static ImplicitConversionSequence::CompareKind
+CompareOverflowBehaviorConversions(Sema &S,
+                                   const StandardConversionSequence &SCS1,
+                                   const StandardConversionSequence &SCS2);
+
+static ImplicitConversionSequence::CompareKind
 CompareDerivedToBaseConversions(Sema &S, SourceLocation Loc,
                                 const StandardConversionSequence& SCS1,
                                 const StandardConversionSequence& SCS2);
@@ -2296,6 +2301,12 @@ static bool tryAtomicConversion(Sema &S, Expr *From, QualType ToType,
                                 StandardConversionSequence &SCS,
                                 bool CStyle);
 
+static bool tryOverflowBehaviorTypeConversion(Sema &S, Expr *From,
+                                              QualType ToType,
+                                              bool InOverloadResolution,
+                                              StandardConversionSequence &SCS,
+                                              bool CStyle);
+
 /// IsStandardConversion - Determines whether there is a standard
 /// conversion sequence (C++ [conv], C++ [over.ics.scs]) from the
 /// expression From to the type ToType. Standard conversion sequences
@@ -2486,9 +2497,16 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // Complex promotion (Clang extension)
     SCS.Second = ICK_Complex_Promotion;
     FromType = ToType.getUnqualifiedType();
+  } else if (S.IsOverflowBehaviorTypePromotion(FromType, ToType)) {
+    // OverflowBehaviorType promotions
+    SCS.Second = ICK_Integral_Promotion;
+    FromType = ToType.getUnqualifiedType();
+  } else if (S.IsOverflowBehaviorTypeConversion(FromType, ToType)) {
+    // OverflowBehaviorType conversions
+    SCS.Second = ICK_Integral_Conversion;
+    FromType = ToType.getUnqualifiedType();
   } else if (ToType->isBooleanType() &&
-             (FromType->isArithmeticType() ||
-              FromType->isAnyPointerType() ||
+             (FromType->isArithmeticType() || FromType->isAnyPointerType() ||
               FromType->isBlockPointerType() ||
               FromType->isMemberPointerType())) {
     // Boolean conversions (C++ 4.12).
@@ -2558,6 +2576,9 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
                                  CStyle)) {
     // tryAtomicConversion has updated the standard conversion sequence
     // appropriately.
+    return true;
+  } else if (tryOverflowBehaviorTypeConversion(
+                 S, From, ToType, InOverloadResolution, SCS, CStyle)) {
     return true;
   } else if (ToType->isEventT() &&
              From->isIntegerConstantExpr(S.getASTContext()) &&
@@ -2904,6 +2925,40 @@ bool Sema::IsComplexPromotion(QualType FromType, QualType ToType) {
                                   ToComplex->getElementType()) ||
     IsIntegralPromotion(nullptr, FromComplex->getElementType(),
                         ToComplex->getElementType());
+}
+
+bool Sema::IsOverflowBehaviorTypePromotion(QualType FromType, QualType ToType) {
+  if (!getLangOpts().OverflowBehaviorTypes)
+    return false;
+
+  if (!FromType->isOverflowBehaviorType() || !ToType->isOverflowBehaviorType())
+    return false;
+
+  return Context.getTypeSize(FromType) < Context.getTypeSize(ToType);
+}
+
+bool Sema::IsOverflowBehaviorTypeConversion(QualType FromType,
+                                            QualType ToType) {
+  if (!getLangOpts().OverflowBehaviorTypes)
+    return false;
+
+  if (FromType->isOverflowBehaviorType() && !ToType->isOverflowBehaviorType()) {
+    // Don't allow implicit conversion from OverflowBehaviorType to scoped enum
+    if (const EnumType *ToEnumType = ToType->getAs<EnumType>()) {
+      const EnumDecl *ToED = ToEnumType->getDecl()->getDefinitionOrSelf();
+      if (ToED->isScoped())
+        return false;
+    }
+    return true;
+  }
+
+  if (!FromType->isOverflowBehaviorType() && ToType->isOverflowBehaviorType())
+    return true;
+
+  if (FromType->isOverflowBehaviorType() && ToType->isOverflowBehaviorType())
+    return Context.getTypeSize(FromType) > Context.getTypeSize(ToType);
+
+  return false;
 }
 
 /// BuildSimilarlyQualifiedPointerType - In a pointer conversion from
@@ -3938,6 +3993,35 @@ static bool tryAtomicConversion(Sema &S, Expr *From, QualType ToType,
   return true;
 }
 
+static bool tryOverflowBehaviorTypeConversion(Sema &S, Expr *From,
+                                              QualType ToType,
+                                              bool InOverloadResolution,
+                                              StandardConversionSequence &SCS,
+                                              bool CStyle) {
+  const OverflowBehaviorType *ToOBT = ToType->getAs<OverflowBehaviorType>();
+  if (!ToOBT)
+    return false;
+
+  // Check for incompatible OBT kinds (e.g., trap vs wrap)
+  QualType FromType = From->getType();
+  if (!S.Context.areCompatibleOverflowBehaviorTypes(FromType, ToType))
+    return false;
+
+  StandardConversionSequence InnerSCS;
+  if (!IsStandardConversion(S, From, ToOBT->getUnderlyingType(),
+                            InOverloadResolution, InnerSCS, CStyle,
+                            /*AllowObjCWritebackConversion=*/false))
+    return false;
+
+  SCS.Second = InnerSCS.Second;
+  SCS.setToType(1, InnerSCS.getToType(1));
+  SCS.Third = InnerSCS.Third;
+  SCS.QualificationIncludesObjCLifetime =
+      InnerSCS.QualificationIncludesObjCLifetime;
+  SCS.setToType(2, InnerSCS.getToType(2));
+  return true;
+}
+
 static bool isFirstArgumentCompatibleWithType(ASTContext &Context,
                                               CXXConstructorDecl *Constructor,
                                               QualType Type) {
@@ -4732,6 +4816,10 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
         = CompareQualificationConversions(S, SCS1, SCS2))
     return QualCK;
 
+  if (ImplicitConversionSequence::CompareKind ObtCK =
+          CompareOverflowBehaviorConversions(S, SCS1, SCS2))
+    return ObtCK;
+
   if (SCS1.ReferenceBinding && SCS2.ReferenceBinding) {
     // C++ [over.ics.rank]p3b4:
     //   -- S1 and S2 are reference bindings (8.5.3), and the types to
@@ -4841,6 +4929,25 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
                  ? ImplicitConversionSequence::Better
                  : ImplicitConversionSequence::Worse;
   }
+  return ImplicitConversionSequence::Indistinguishable;
+}
+
+/// CompareOverflowBehaviorConversions - Compares two standard conversion
+/// sequences to determine whether they can be ranked based on their
+/// OverflowBehaviorType's underlying type.
+static ImplicitConversionSequence::CompareKind
+CompareOverflowBehaviorConversions(Sema &S,
+                                   const StandardConversionSequence &SCS1,
+                                   const StandardConversionSequence &SCS2) {
+
+  if (SCS1.getFromType()->isOverflowBehaviorType() &&
+      SCS1.getToType(2)->isOverflowBehaviorType())
+    return ImplicitConversionSequence::Better;
+
+  if (SCS2.getFromType()->isOverflowBehaviorType() &&
+      SCS2.getToType(2)->isOverflowBehaviorType())
+    return ImplicitConversionSequence::Worse;
+
   return ImplicitConversionSequence::Indistinguishable;
 }
 

@@ -742,11 +742,13 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
 
   // For NEON intrinsics which are overloaded on vector element type, validate
   // the immediate which specifies which variant to emit.
-  unsigned ImmArg = TheCall->getNumArgs() - 1;
   if (mask) {
+    unsigned ImmArg = TheCall->getNumArgs() - 1;
     if (SemaRef.BuiltinConstantArg(TheCall, ImmArg, Result))
       return true;
 
+    // FIXME: This is effectively dead code. Change the logic above so that the
+    // following check is actually run.
     TV = Result.getLimitedValue(64);
     if ((TV > 63) || (mask & (1ULL << TV)) == 0)
       return Diag(TheCall->getBeginLoc(), diag::err_invalid_neon_type_code)

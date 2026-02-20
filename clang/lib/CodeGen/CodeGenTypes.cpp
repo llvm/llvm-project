@@ -797,6 +797,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::HLSLInlineSpirv:
     ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
     break;
+  case Type::OverflowBehavior:
+    ResultType =
+        ConvertType(dyn_cast<OverflowBehaviorType>(Ty)->getUnderlyingType());
+    break;
   }
 
   assert(ResultType && "Didn't convert a type?");

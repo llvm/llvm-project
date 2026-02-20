@@ -40,6 +40,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/TypeSize.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
@@ -5698,12 +5699,12 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                      PhiR->getRecurrenceKind()))
       continue;
 
-    // Get the IV from the backedge value of the reduction phi.
+    // Get the IV and condition from the backedge value of the reduction phi.
     // The backedge value should be a select between the phi and the IV.
     VPValue *BackedgeVal = PhiR->getBackedgeValue();
-    VPValue *TrueVal, *FalseVal;
-    if (!match(BackedgeVal,
-               m_Select(m_VPValue(), m_VPValue(TrueVal), m_VPValue(FalseVal))))
+    VPValue *Cond, *TrueVal, *FalseVal;
+    if (!match(BackedgeVal, m_Select(m_VPValue(Cond), m_VPValue(TrueVal),
+                                     m_VPValue(FalseVal))))
       continue;
 
     // The non-phi operand of the select is the IV.
@@ -5727,36 +5728,78 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
         CheckSentinel(IVSCEV, UseMax, /*IsSigned=*/true);
     if (!SentinelVal) {
       SentinelVal = CheckSentinel(IVSCEV, UseMax, /*IsSigned=*/false);
-      if (!SentinelVal)
-        continue;
       UseSigned = false;
     }
 
-    auto *RdxResult = cast<VPInstruction>(vputils::findRecipe(
+    // If no sentinel was found, fall back to a boolean AnyOf reduction to track
+    // if the condition was ever true. Requires the IV to not wrap, otherwise we
+    // cannot use min/max.
+    if (!SentinelVal) {
+      auto *AR = cast<SCEVAddRecExpr>(IVSCEV);
+      if (AR->hasNoSignedWrap())
+        UseSigned = true;
+      else if (AR->hasNoUnsignedWrap())
+        UseSigned = false;
+      else
+        continue;
+    }
+
+    VPInstruction *RdxResult = cast<VPInstruction>(vputils::findRecipe(
         BackedgeVal,
         match_fn(m_VPInstruction<VPInstruction::ComputeReductionResult>())));
 
-    // Create the reduction result in the middle block using sentinel directly.
     RecurKind MinMaxKind =
         UseMax ? (UseSigned ? RecurKind::SMax : RecurKind::UMax)
                : (UseSigned ? RecurKind::SMin : RecurKind::UMin);
     VPIRFlags Flags(MinMaxKind, /*IsOrdered=*/false, /*IsInLoop=*/false,
                     FastMathFlags());
-    VPValue *Sentinel = Plan.getConstantInt(*SentinelVal);
     DebugLoc ExitDL = RdxResult->getDebugLoc();
     VPBuilder MiddleBuilder(RdxResult);
     VPValue *ReducedIV =
         MiddleBuilder.createNaryOp(VPInstruction::ComputeReductionResult,
                                    RdxResult->getOperand(0), Flags, ExitDL);
-    auto *Cmp =
-        MiddleBuilder.createICmp(CmpInst::ICMP_NE, ReducedIV, Sentinel, ExitDL);
-    VPInstruction *NewRdxResult = MiddleBuilder.createSelect(
-        Cmp, ReducedIV, PhiR->getStartValue(), ExitDL);
+
+    VPValue *NewRdxResult;
+    VPValue *StartVPV = PhiR->getStartValue();
+    if (SentinelVal) {
+      // Sentinel-based approach: reduce IVs with min/max, compare against
+      // sentinel to detect if condition was ever true, select accordingly.
+      VPValue *Sentinel = Plan.getConstantInt(*SentinelVal);
+      auto *Cmp = MiddleBuilder.createICmp(CmpInst::ICMP_NE, ReducedIV,
+                                           Sentinel, ExitDL);
+      NewRdxResult =
+          MiddleBuilder.createSelect(Cmp, ReducedIV, StartVPV, ExitDL);
+      StartVPV = Sentinel;
+    } else {
+      // Introduce a boolean AnyOf reduction to track if the condition was ever
+      // true in the loop. Use it to select the initial start value, if it was
+      // never true.
+      auto *AnyOfPhi = new VPReductionPHIRecipe(
+          /*Phi=*/nullptr, RecurKind::Or, *Plan.getFalse(), *Plan.getFalse(),
+          RdxUnordered{1}, {}, /*HasUsesOutsideReductionChain=*/false);
+      AnyOfPhi->insertAfter(PhiR);
+
+      VPBuilder LoopBuilder(BackedgeVal->getDefiningRecipe());
+      VPValue *AnyOfCond = Cond;
+      if (TrueVal == PhiR)
+        AnyOfCond = LoopBuilder.createNot(Cond);
+      VPValue *OrVal = LoopBuilder.createOr(AnyOfPhi, AnyOfCond);
+      AnyOfPhi->setOperand(1, OrVal);
+
+      NewRdxResult =
+          MiddleBuilder.createNaryOp(VPInstruction::ComputeAnyOfResult,
+                                     {StartVPV, ReducedIV, OrVal}, {}, ExitDL);
+
+      // Initialize the IV reduction phi with the neutral element, not the
+      // original start value, to ensure correct min/max reduction results.
+      StartVPV = Plan.getOrAddLiveIn(
+          getRecurrenceIdentity(MinMaxKind, IVSCEV->getType(), {}));
+    }
     RdxResult->replaceAllUsesWith(NewRdxResult);
     RdxResult->eraseFromParent();
 
     auto *NewPhiR = new VPReductionPHIRecipe(
-        cast<PHINode>(PhiR->getUnderlyingInstr()), RecurKind::FindIV, *Sentinel,
+        cast<PHINode>(PhiR->getUnderlyingInstr()), RecurKind::FindIV, *StartVPV,
         *BackedgeVal, RdxUnordered{1}, {},
         PhiR->hasUsesOutsideReductionChain());
     NewPhiR->insertBefore(PhiR);
@@ -5780,14 +5823,17 @@ struct VPPartialReductionChain {
   /// The user of the extends that is then reduced.
   VPWidenRecipe *BinOp;
   unsigned ScaleFactor;
+  /// The recurrence kind for the entire partial reduction chain.
+  /// This allows distinguishing between Sub and AddWithSub recurrences,
+  /// when the ReductionBinOp is a Instruction::Sub.
+  RecurKind RK;
 };
 
 // Helper to transform a partial reduction chain into a partial reduction
 // recipe. Assumes profitability has been checked.
 static void transformToPartialReduction(const VPPartialReductionChain &Chain,
                                         VPTypeAnalysis &TypeInfo, VPlan &Plan,
-                                        VPReductionPHIRecipe *RdxPhi,
-                                        RecurKind RK) {
+                                        VPReductionPHIRecipe *RdxPhi) {
   VPWidenRecipe *WidenRecipe = Chain.ReductionBinOp;
   assert(WidenRecipe->getNumOperands() == 2 && "Expected binary operation");
 
@@ -5812,7 +5858,8 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   // It's therefore better to choose option (2) such that the partial
   // reduction is always positive (starting at '0') and to do a final
   // subtract in the middle block.
-  if (WidenRecipe->getOpcode() == Instruction::Sub && RK != RecurKind::Sub) {
+  if (WidenRecipe->getOpcode() == Instruction::Sub &&
+      Chain.RK != RecurKind::Sub) {
     VPBuilder Builder(WidenRecipe);
     Type *ElemTy = TypeInfo.inferScalarType(BinOp);
     auto *Zero = Plan.getConstantInt(ElemTy, 0);
@@ -5868,7 +5915,7 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   // If this is the last value in a sub-reduction chain, then update the PHI
   // node to start at `0` and update the reduction-result to subtract from
   // the PHI's start value.
-  if (RK != RecurKind::Sub)
+  if (Chain.RK != RecurKind::Sub)
     return;
 
   VPValue *OldStartValue = StartInst->getOperand(0);
@@ -5948,7 +5995,7 @@ static bool isValidPartialReduction(const VPPartialReductionChain &Chain,
 /// Recursively calls itself to identify chained scaled reductions.
 /// Returns true if this invocation added an entry to Chains, otherwise false.
 static bool
-getScaledReductions(VPSingleDefRecipe *RedPhiR, VPValue *PrevValue,
+getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPValue *PrevValue,
                     SmallVectorImpl<VPPartialReductionChain> &Chains,
                     VPCostContext &CostCtx, VFRange &Range) {
   auto *UpdateR = dyn_cast<VPWidenRecipe>(PrevValue);
@@ -5980,14 +6027,21 @@ getScaledReductions(VPSingleDefRecipe *RedPhiR, VPValue *PrevValue,
   // If one is found, we use the discovered reduction instruction in
   // place of the accumulator for costing.
   if (getScaledReductions(RedPhiR, Op, Chains, CostCtx, Range)) {
-    RedPhiR = Chains.rbegin()->ReductionBinOp;
     Op = UpdateR->getOperand(0);
     PhiOp = UpdateR->getOperand(1);
-    if (Op == RedPhiR)
+    if (Op == Chains.rbegin()->ReductionBinOp)
       std::swap(Op, PhiOp);
-  }
-  if (RedPhiR != PhiOp)
+    assert(PhiOp == Chains.rbegin()->ReductionBinOp &&
+           "PhiOp must be the chain value");
+    assert(CostCtx.Types.inferScalarType(RedPhiR) ==
+               CostCtx.Types.inferScalarType(PhiOp) &&
+           "Unexpected type for chain values");
+  } else if (RedPhiR != PhiOp) {
+    // If neither operand of this instruction is the reduction PHI node or a
+    // link in the reduction chain, then this is just an operand to the chain
+    // and not a link in the chain itself.
     return false;
+  }
 
   // If the update is a binary op, check both of its operands to see if
   // they are extends. Otherwise, see if the update comes directly from an
@@ -6059,9 +6113,10 @@ getScaledReductions(VPSingleDefRecipe *RedPhiR, VPValue *PrevValue,
   if (!PHISize.hasKnownScalarFactor(ASize))
     return false;
 
+  RecurKind RK = cast<VPReductionPHIRecipe>(RedPhiR)->getRecurrenceKind();
   VPPartialReductionChain Chain(
       {UpdateR, CastRecipes[0], CastRecipes[1], BinOp,
-       static_cast<unsigned>(PHISize.getKnownScalarFactor(ASize))});
+       static_cast<unsigned>(PHISize.getKnownScalarFactor(ASize)), RK});
   if (!isValidPartialReduction(Chain, PhiType, CostCtx, Range))
     return false;
 
@@ -6159,9 +6214,7 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
     }
   }
 
-  for (auto &[Phi, Chains] : ChainsByPhi) {
-    RecurKind RK = cast<VPReductionPHIRecipe>(Phi)->getRecurrenceKind();
+  for (auto &[Phi, Chains] : ChainsByPhi)
     for (const VPPartialReductionChain &Chain : Chains)
-      transformToPartialReduction(Chain, CostCtx.Types, Plan, Phi, RK);
-  }
+      transformToPartialReduction(Chain, CostCtx.Types, Plan, Phi);
 }
