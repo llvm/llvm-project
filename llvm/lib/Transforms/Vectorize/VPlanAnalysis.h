@@ -30,6 +30,9 @@ class VPlan;
 class Value;
 class TargetTransformInfo;
 class Type;
+class InstructionCost;
+
+struct VPCostContext;
 
 /// An analysis for type-inference for VPValues.
 /// It infers the scalar type for a given VPValue by bottom-up traversing
@@ -78,12 +81,14 @@ struct VPRegisterUsage {
   /// Holds the maximum number of concurrent live intervals in the loop.
   /// The key is ClassID of target-provided register class.
   SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers;
+  /// Holds the largest type used in each register class.
+  SmallMapVector<unsigned, Type *, 4> LargestType;
 
-  /// Check if any of the tracked live intervals exceeds the number of
-  /// available registers for the target. If non-zero, OverrideMaxNumRegs
+  /// Calculate the estimated cost of any spills due to using more registers
+  /// than the number available for the target. If non-zero, OverrideMaxNumRegs
   /// is used in place of the target's number of registers.
-  bool exceedsMaxNumRegs(const TargetTransformInfo &TTI,
-                         unsigned OverrideMaxNumRegs = 0) const;
+  InstructionCost spillCost(VPCostContext &Ctx,
+                            unsigned OverrideMaxNumRegs = 0) const;
 };
 
 /// Estimate the register usage for \p Plan and vectorization factors in \p VFs

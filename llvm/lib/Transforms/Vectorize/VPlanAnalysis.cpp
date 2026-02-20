@@ -16,6 +16,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/PatternMatch.h"
 
@@ -406,13 +407,33 @@ bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
   return Base::properlyDominates(ParentA, ParentB);
 }
 
-bool VPRegisterUsage::exceedsMaxNumRegs(const TargetTransformInfo &TTI,
-                                        unsigned OverrideMaxNumRegs) const {
-  return any_of(MaxLocalUsers, [&TTI, &OverrideMaxNumRegs](auto &LU) {
-    return LU.second > (OverrideMaxNumRegs > 0
-                            ? OverrideMaxNumRegs
-                            : TTI.getNumberOfRegisters(LU.first));
-  });
+InstructionCost VPRegisterUsage::spillCost(VPCostContext &Ctx,
+                                           unsigned OverrideMaxNumRegs) const {
+  InstructionCost Cost;
+  DataLayout DL = Ctx.PSE.getSE()->getDataLayout();
+  for (const auto &[RegClass, MaxUsers] : MaxLocalUsers) {
+    unsigned AvailableRegs = OverrideMaxNumRegs > 0
+                                 ? OverrideMaxNumRegs
+                                 : Ctx.TTI.getNumberOfRegisters(RegClass);
+    if (MaxUsers > AvailableRegs) {
+      // Assume that for each register used past what's available we get one
+      // spill and reload of the largest type seen for that register class.
+      unsigned Spills = MaxUsers - AvailableRegs;
+      Type *SpillType = LargestType.at(RegClass);
+      Align Alignment = DL.getPrefTypeAlign(SpillType);
+      InstructionCost SpillCost =
+          Ctx.TTI.getMemoryOpCost(Instruction::Load, SpillType, Alignment, 0,
+                                  Ctx.CostKind) +
+          Ctx.TTI.getMemoryOpCost(Instruction::Store, SpillType, Alignment, 0,
+                                  Ctx.CostKind);
+      InstructionCost TotalCost = SpillCost * Spills;
+      LLVM_DEBUG(dbgs() << "LV(REG): Cost of " << TotalCost << " from "
+                        << Spills << " spills of "
+                        << Ctx.TTI.getRegisterClassName(RegClass) << "\n");
+      Cost += TotalCost;
+    }
+  }
+  return Cost;
 }
 
 SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
@@ -496,18 +517,29 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
   SmallPtrSet<VPValue *, 8> OpenIntervals;
   SmallVector<VPRegisterUsage, 8> RUs(VFs.size());
   SmallVector<SmallMapVector<unsigned, unsigned, 4>, 8> MaxUsages(VFs.size());
+  SmallVector<SmallMapVector<unsigned, Type *, 4>, 8> LargestTypes(VFs.size());
+  auto MaxType = [](Type *CurMax, Type *T) {
+    if (!CurMax)
+      return T;
+    assert(CurMax->isScalableTy() == T->isScalableTy() &&
+           "Expected either both or neither to be scalable");
+    if (TypeSize::isKnownGT(T->getPrimitiveSizeInBits(),
+                            CurMax->getPrimitiveSizeInBits()))
+      return T;
+    return CurMax;
+  };
 
   LLVM_DEBUG(dbgs() << "LV(REG): Calculating max register usage:\n");
 
   VPTypeAnalysis TypeInfo(Plan);
 
   const auto &TTICapture = TTI;
-  auto GetRegUsage = [&TTICapture](Type *Ty, ElementCount VF) -> unsigned {
+  auto GetVectorTy = [&TTICapture](Type *Ty, ElementCount VF) -> VectorType * {
     if (Ty->isTokenTy() || !VectorType::isValidElementType(Ty) ||
         (VF.isScalable() &&
          !TTICapture.isElementTypeLegalForScalableVector(Ty)))
-      return 0;
-    return TTICapture.getRegUsageForType(VectorType::get(Ty, VF));
+      return nullptr;
+    return VectorType::get(Ty, VF);
   };
 
   // We scan the instructions linearly and record each time that a new interval
@@ -557,17 +589,19 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
             match(VPV, m_ExtractLastPart(m_VPValue())))
           continue;
 
+        Type *ScalarTy = TypeInfo.inferScalarType(VPV);
         if (VFs[J].isScalar() ||
             isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
                 VPCurrentIterationPHIRecipe, VPScalarIVStepsRecipe>(VPV) ||
             (isa<VPInstruction>(VPV) && vputils::onlyScalarValuesUsed(VPV)) ||
             (isa<VPReductionPHIRecipe>(VPV) &&
              (cast<VPReductionPHIRecipe>(VPV))->isInLoop())) {
-          unsigned ClassID =
-              TTI.getRegisterClassForType(false, TypeInfo.inferScalarType(VPV));
+          unsigned ClassID = TTI.getRegisterClassForType(false, ScalarTy);
           // FIXME: The target might use more than one register for the type
           // even in the scalar case.
           RegUsage[ClassID] += 1;
+          LargestTypes[J][ClassID] =
+              MaxType(LargestTypes[J][ClassID], ScalarTy);
         } else {
           // The output from scaled phis and scaled reductions actually has
           // fewer lanes than the VF.
@@ -579,10 +613,11 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
             LLVM_DEBUG(dbgs() << "LV(REG): Scaled down VF from " << VFs[J]
                               << " to " << VF << " for " << *R << "\n";);
           }
-
-          Type *ScalarTy = TypeInfo.inferScalarType(VPV);
-          unsigned ClassID = TTI.getRegisterClassForType(true, ScalarTy);
-          RegUsage[ClassID] += GetRegUsage(ScalarTy, VF);
+          if (VectorType *VecTy = GetVectorTy(ScalarTy, VF)) {
+            unsigned ClassID = TTI.getRegisterClassForType(true, ScalarTy);
+            RegUsage[ClassID] += TTI.getRegUsageForType(VecTy);
+            LargestTypes[J][ClassID] = MaxType(LargestTypes[J][ClassID], VecTy);
+          }
         }
       }
 
@@ -619,9 +654,11 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
       bool IsScalar = vputils::onlyScalarValuesUsed(In);
 
       ElementCount VF = IsScalar ? ElementCount::getFixed(1) : VFs[Idx];
-      unsigned ClassID = TTI.getRegisterClassForType(
-          VF.isVector(), TypeInfo.inferScalarType(In));
-      Invariant[ClassID] += GetRegUsage(TypeInfo.inferScalarType(In), VF);
+      Type *ScalarTy = TypeInfo.inferScalarType(In);
+      unsigned ClassID = TTI.getRegisterClassForType(VF.isVector(), ScalarTy);
+      Type *SpillTy = IsScalar ? ScalarTy : VectorType::get(ScalarTy, VF);
+      Invariant[ClassID] += TTI.getRegUsageForType(SpillTy);
+      LargestTypes[Idx][ClassID] = MaxType(LargestTypes[Idx][ClassID], SpillTy);
     }
 
     LLVM_DEBUG({
@@ -640,10 +677,16 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
                << TTI.getRegisterClassName(pair.first) << ", " << pair.second
                << " registers\n";
       }
+      for (const auto &pair : LargestTypes[Idx]) {
+        dbgs() << "LV(REG): RegisterClass: "
+               << TTI.getRegisterClassName(pair.first) << ", " << *pair.second
+               << " is largest type potentially spilled\n";
+      }
     });
 
     RU.LoopInvariantRegs = Invariant;
     RU.MaxLocalUsers = MaxUsages[Idx];
+    RU.LargestType = LargestTypes[Idx];
     RUs[Idx] = RU;
   }
 
