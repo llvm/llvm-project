@@ -1018,7 +1018,8 @@ bool LoopIdiomVectorize::recognizeFindFirstByte() {
   // We exclude loops with trip counts > minimum page size via runtime checks,
   // so make sure that the minimum page size is something sensible such that
   // induction variables cannot overflow.
-  if (sizeof(*TTI->getMinPageSize()) >= sizeof(uint64_t))
+  if (uint64_t(*TTI->getMinPageSize()) >
+      (std::numeric_limits<uint64_t>::max() / 2))
     return false;
 
   // Define some constants we need throughout.
