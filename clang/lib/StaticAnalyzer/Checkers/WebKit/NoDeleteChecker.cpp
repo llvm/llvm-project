@@ -96,8 +96,8 @@ public:
     if (!Body)
       return;
 
-    NamedDecl* ParamDecl = nullptr;
-    for (auto* D : FD->parameters()) {
+    NamedDecl *ParamDecl = nullptr;
+    for (auto *D : FD->parameters()) {
       if (!TFA.hasTrivialDtor(D)) {
         ParamDecl = D;
         break;

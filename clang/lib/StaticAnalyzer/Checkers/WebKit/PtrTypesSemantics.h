@@ -185,8 +185,8 @@ private:
       llvm::DenseMap<llvm::PointerUnion<const Decl *, const Stmt *>, bool>;
   mutable CacheTy TheCache{};
 
-  static bool isTrivialImpl(const Decl *D, CacheTy &Cache, const Stmt**);
-  static bool isTrivialImpl(const Stmt *S, CacheTy &Cache, const Stmt**);
+  static bool isTrivialImpl(const Decl *D, CacheTy &Cache, const Stmt **);
+  static bool isTrivialImpl(const Stmt *S, CacheTy &Cache, const Stmt **);
   static bool hasTrivialDtorImpl(const VarDecl *VD, CacheTy &Cache);
 };
 

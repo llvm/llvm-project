@@ -558,10 +558,10 @@ public:
 
   TrivialFunctionAnalysisVisitor(CacheTy &Cache,
                                  const Stmt **OffendingStmt = nullptr)
-    : Cache(Cache), OffendingStmt(OffendingStmt) {}
+      : Cache(Cache), OffendingStmt(OffendingStmt) {}
 
   bool IsFunctionTrivial(const Decl *D) {
-    const Stmt** SavedOffendingStmt = std::exchange(OffendingStmt, nullptr);
+    const Stmt **SavedOffendingStmt = std::exchange(OffendingStmt, nullptr);
     auto Result = WithCachedResult(D, [&]() {
       if (auto *FnDecl = dyn_cast<FunctionDecl>(D)) {
         if (isNoDeleteFunction(FnDecl))
@@ -911,19 +911,19 @@ public:
 private:
   CacheTy &Cache;
   CacheTy RecursiveFn;
-  const Stmt** OffendingStmt;
+  const Stmt **OffendingStmt;
 };
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
     const Decl *D, TrivialFunctionAnalysis::CacheTy &Cache,
-    const Stmt** OffendingStmt) {
+    const Stmt **OffendingStmt) {
   TrivialFunctionAnalysisVisitor V(Cache, OffendingStmt);
   return V.IsFunctionTrivial(D);
 }
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
     const Stmt *S, TrivialFunctionAnalysis::CacheTy &Cache,
-    const Stmt** OffendingStmt) {
+    const Stmt **OffendingStmt) {
   TrivialFunctionAnalysisVisitor V(Cache, OffendingStmt);
   return V.IsStatementTrivial(S);
 }
