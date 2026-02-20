@@ -371,7 +371,7 @@ LIBC_INLINE constexpr bool isalnum(char ch) {
   }
 }
 
-#ifndef LIBC_COPT_SMALL_ASCII_CTYPE
+#ifndef LIBC_COPT_CTYPE_SMALLER_ASCII
 LIBC_INLINE constexpr int b36_char_to_int(char ch) {
   switch (ch) {
   case '0':
@@ -478,12 +478,14 @@ LIBC_INLINE constexpr int b36_char_to_int(char ch) {
 }
 #else  // LIBC_COPT_SMALL_ASCII_CTYPE
 // This version assumes ASCII for the tolower, but generates smaller code since
-// the switch version of this function ends up with a table.
+// the switch version of this function ends up with a table. This should only be
+// used when the target is known to be ASCII.
 LIBC_INLINE constexpr int b36_char_to_int(char ch) {
-  if (isdigit(input))
-    return input - '0';
-  if (isalpha(input))
-    return (input | 32) + 10 - 'a';
+  if (ch >= '0' && ch <= '9')
+    return ch - '0';
+  char ch_unsafe_lower = ch | 32;
+  if (ch_unsafe_lower >= 'a' && ch_unsafe_lower <= 'z')
+    return ch_unsafe_lower - 'a' + 10;
   return 0;
 }
 #endif // LIBC_COPT_SMALL_ASCII_CTYPE
