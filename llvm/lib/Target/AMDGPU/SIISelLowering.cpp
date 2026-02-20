@@ -13734,6 +13734,44 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
       return Split;
   }
 
+  // and (srl x, c), mask => bfe x, c, popcount(mask)
+  // where mask is a contiguous set of bits starting from bit 0
+  // This handles i8 and i16 types by promoting to i32 for BFE.
+  // Skip for True16 targets where native i16 ops are more efficient.
+  if (CRHS && (VT == MVT::i16 || VT == MVT::i8) && N->isDivergent() &&
+      !getSubtarget()->useRealTrue16Insts()) {
+    uint64_t Mask = CRHS->getZExtValue();
+    unsigned Bits = llvm::popcount(Mask);
+    // Mask > 1: skip single-bit extracts. Scalarized <N x i1> vectors produce
+    // adjacent 1-bit (srl + and) pairs that later combine into a single wider
+    // AND mask; converting individual bits to BFE prevents that fold.
+    if (LHS->getOpcode() == ISD::SRL && isMask_64(Mask) && Mask > 1) {
+      if (auto *CShift = dyn_cast<ConstantSDNode>(LHS->getOperand(1))) {
+        unsigned Shift = CShift->getZExtValue();
+        unsigned SrcBits = LHS->getOperand(0).getValueType().getSizeInBits();
+        if (Shift + Bits > SrcBits)
+          return SDValue();
+        // 8 or 16 bit fields starting at byte boundary are better handled
+        // by SDWA for GFX8+ in the SDWA peephole pass.
+        if (getSubtarget()->hasSDWA() && (Bits == 8 || Bits == 16))
+          return SDValue();
+        SDLoc SL(N);
+
+        SDValue Src = DAG.getZExtOrTrunc(LHS->getOperand(0), SL, MVT::i32);
+        DCI.AddToWorklist(Src.getNode());
+
+        SDValue BFE = DAG.getNode(AMDGPUISD::BFE_U32, SL, MVT::i32, Src,
+                                  DAG.getConstant(Shift, SL, MVT::i32),
+                                  DAG.getConstant(Bits, SL, MVT::i32));
+        DCI.AddToWorklist(BFE.getNode());
+
+        SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, VT, BFE);
+        DCI.AddToWorklist(Trunc.getNode());
+        return Trunc;
+      }
+    }
+  }
+
   if (CRHS && VT == MVT::i32) {
     // and (srl x, c), mask => shl (bfe x, nb + c, mask >> nb), nb
     // nb = number of trailing zeroes in mask
