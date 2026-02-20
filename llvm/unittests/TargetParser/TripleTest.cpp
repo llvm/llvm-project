@@ -121,6 +121,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::MuslX32, T.getEnvironment());
 
+  T = Triple("x86_64-pc-linux-x32");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::X32, T.getEnvironment());
+
   T = Triple("x86_64-pc-hurd-gnu");
   EXPECT_EQ(Triple::x86_64, T.getArch());
   EXPECT_EQ(Triple::PC, T.getVendor());
@@ -764,11 +770,23 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::MuslF32, T.getEnvironment());
 
+  T = Triple("loongarch32-unknown-linux-f32");
+  EXPECT_EQ(Triple::loongarch32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::F32, T.getEnvironment());
+
   T = Triple("loongarch32-unknown-linux-muslsf");
   EXPECT_EQ(Triple::loongarch32, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::MuslSF, T.getEnvironment());
+
+  T = Triple("loongarch32-unknown-linux-sf");
+  EXPECT_EQ(Triple::loongarch32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::SF, T.getEnvironment());
 
   T = Triple("loongarch64-unknown-linux");
   EXPECT_EQ(Triple::loongarch64, T.getArch());
@@ -960,6 +978,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::GNUABI64, T.getEnvironment());
   EXPECT_EQ(Triple::MipsSubArch_r6, T.getSubArch());
 
+  T = Triple("mips64-unknown-linux-abi64");
+  EXPECT_EQ(Triple::mips64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::ABI64, T.getEnvironment());
+
   T = Triple("mips64el-unknown-linux-gnuabin32");
   EXPECT_EQ(Triple::mips64el, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -1120,6 +1144,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::MuslABIN32, T.getEnvironment());
   EXPECT_EQ(Triple::MipsSubArch_r6, T.getSubArch());
+
+  T = Triple("mips64-unknown-linux-abin32");
+  EXPECT_EQ(Triple::mips64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::ABIN32, T.getEnvironment());
 
   T = Triple("mipsel-unknown-linux-musl");
   EXPECT_EQ(Triple::mipsel, T.getArch());

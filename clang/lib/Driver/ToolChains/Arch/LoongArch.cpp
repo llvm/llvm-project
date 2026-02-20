@@ -102,9 +102,11 @@ StringRef loongarch::getLoongArchABI(const Driver &D, const ArgList &Args,
   // Honor the explicit ABI modifier suffix in triple's environment part if
   // present, falling back to {ILP32,LP64}D otherwise.
   switch (Triple.getEnvironment()) {
+  case llvm::Triple::SF:
   case llvm::Triple::GNUSF:
   case llvm::Triple::MuslSF:
     return IsLA32 ? "ilp32s" : "lp64s";
+  case llvm::Triple::F32:
   case llvm::Triple::GNUF32:
   case llvm::Triple::MuslF32:
     return IsLA32 ? "ilp32f" : "lp64f";
