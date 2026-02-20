@@ -38,6 +38,8 @@ const std::vector<PlatformImplUPtr> &PlatformImpl::getPlatforms() {
   [[maybe_unused]] static auto InitPlatformsOnce = []() {
     discoverOffloadDevices();
 
+    registerStaticVarShutdownHandler();
+
     auto &PlatformCache = getPlatformCache();
     for (const auto &Topo : getOffloadTopologies()) {
       size_t PlatformIndex = 0;
