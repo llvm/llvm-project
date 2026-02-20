@@ -695,6 +695,16 @@ INTERCEPTOR(mode_t, umask, mode_t cmask) {
   return REAL(umask)(cmask);
 }
 
+INTERCEPTOR(long, pathconf, const char *path, int name) {
+  __rtsan_notify_intercepted_call("pathconf");
+  return REAL(pathconf)(path, name);
+}
+
+INTERCEPTOR(long, fpathconf, int fildes, int name) {
+  __rtsan_notify_intercepted_call("fpathconf");
+  return REAL(fpathconf)(fildes, name);
+}
+
 // Concurrency
 #if SANITIZER_APPLE
 #pragma clang diagnostic push
@@ -1643,6 +1653,8 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(mkdir);
   INTERCEPT_FUNCTION(rmdir);
   INTERCEPT_FUNCTION(umask);
+  INTERCEPT_FUNCTION(pathconf);
+  INTERCEPT_FUNCTION(fpathconf);
   INTERCEPT_FUNCTION(ioctl);
 
   RTSAN_MAYBE_INTERCEPT_OSSPINLOCKLOCK;
