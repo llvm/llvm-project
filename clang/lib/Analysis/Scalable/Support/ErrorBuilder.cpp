@@ -13,8 +13,8 @@
 
 namespace clang::ssaf {
 
-constexpr llvm::StringLiteral ErrorSeparator = " + ";
-constexpr llvm::StringLiteral ContextSeparator = "\n";
+static constexpr llvm::StringLiteral ErrorSeparator = " + ";
+static constexpr llvm::StringLiteral ContextSeparator = "\n";
 
 ErrorBuilder ErrorBuilder::wrap(llvm::Error E) {
   assert(

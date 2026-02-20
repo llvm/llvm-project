@@ -36,22 +36,22 @@ class TUSummaryEncoding {
   friend class SerializationFormat;
   friend class TestFixture;
 
-  /// The namespace identifying this translation unit.
+  // The namespace identifying this translation unit.
   BuildNamespace TUNamespace;
 
-  /// Maps entity names to their unique identifiers within this TU.
+  // Maps entity names to their unique identifiers within this TU.
   EntityIdTable IdTable;
 
-  /// Maps entity IDs to their linkage properties (None, Internal, External).
+  // Maps entity IDs to their linkage properties (None, Internal, External).
   std::map<EntityId, EntityLinkage> LinkageTable;
 
-  /// Encoded summary data organized by summary type and entity ID.
+  // Encoded summary data organized by summary type and entity ID.
   std::map<SummaryName,
            std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
       Data;
 
 public:
-  TUSummaryEncoding(BuildNamespace TUNamespace)
+  explicit TUSummaryEncoding(BuildNamespace TUNamespace)
       : TUNamespace(std::move(TUNamespace)) {}
 };
 

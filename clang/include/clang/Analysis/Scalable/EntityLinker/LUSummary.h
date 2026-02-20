@@ -45,7 +45,7 @@ class LUSummary {
       Data;
 
 public:
-  LUSummary(NestedBuildNamespace LUNamespace)
+  explicit LUSummary(NestedBuildNamespace LUNamespace)
       : LUNamespace(std::move(LUNamespace)) {}
 };
 

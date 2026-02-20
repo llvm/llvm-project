@@ -36,7 +36,6 @@ namespace clang::ssaf {
 ///       .context("reading configuration")
 ///       .build();
 class ErrorBuilder {
-private:
   std::error_code Code;
   std::vector<std::string> ContextStack;
 
@@ -161,6 +160,9 @@ public:
   ///          Even if no context was added (empty context stack), an error
   ///          with the stored error code is returned.
   ///
+  /// \pre The ErrorBuilder must have been created via \c create() or \c wrap().
+  ///      Constructing an ErrorBuilder directly is not supported.
+  ///
   /// Example output:
   /// \code
   ///   // ErrorBuilder::create(errc::invalid_argument, "value is 42")
@@ -183,6 +185,10 @@ public:
   ///
   /// \param Fmt Format string for the error message (using llvm::formatv).
   /// \param ArgVals Arguments for the format string.
+  ///
+  /// \pre \p Fmt must be a valid llvm::formatv format string with the correct
+  ///      number and types of arguments. An invalid format string is undefined
+  ///      behaviour.
   ///
   /// Example:
   /// \code

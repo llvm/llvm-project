@@ -23,11 +23,6 @@
 
 namespace clang::ssaf {
 
-class BuildNamespace;
-class EntityId;
-class EntityLinkage;
-class EntityName;
-class EntitySummaryEncoding;
 class TUSummaryEncoding;
 
 class EntityLinker {
@@ -38,7 +33,7 @@ public:
   /// Constructs an EntityLinker to link TU summaries into a LU summary.
   ///
   /// \param LUNamespace The namespace identifying this link unit.
-  EntityLinker(NestedBuildNamespace LUNamespace)
+  explicit EntityLinker(NestedBuildNamespace LUNamespace)
       : Output(std::move(LUNamespace)) {}
 
   /// Links a TU summary into a LU summary.
@@ -72,7 +67,7 @@ private:
   ///
   /// \param Summary The TU summary whose entities are being resolved.
   /// \returns A map from TU EntityIds to their corresponding LU EntityIds.
-  std::map<EntityId, EntityId> resolve(TUSummaryEncoding &Summary);
+  std::map<EntityId, EntityId> resolve(const TUSummaryEncoding &Summary);
 
   /// Merges all summary data from a TU summary into the LU Summary.
   ///

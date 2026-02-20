@@ -35,22 +35,22 @@ class LUSummaryEncoding {
   friend class SerializationFormat;
   friend class TestFixture;
 
-  /// The namespace identifying this link unit.
+  // The namespace identifying this link unit.
   NestedBuildNamespace LUNamespace;
 
-  /// Maps entity names to their unique identifiers within this link unit.
+  // Maps entity names to their unique identifiers within this link unit.
   EntityIdTable IdTable;
 
-  /// Maps entity IDs to their linkage properties (None, Internal, External).
+  // Maps entity IDs to their linkage properties.
   std::map<EntityId, EntityLinkage> LinkageTable;
 
-  /// Encoded summary data organized by summary type and entity ID.
+  // Encoded summary data organized by summary type and entity ID.
   std::map<SummaryName,
            std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
       Data;
 
 public:
-  LUSummaryEncoding(NestedBuildNamespace LUNamespace)
+  explicit LUSummaryEncoding(NestedBuildNamespace LUNamespace)
       : LUNamespace(std::move(LUNamespace)) {}
 };
 
