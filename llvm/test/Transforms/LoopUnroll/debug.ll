@@ -4,7 +4,7 @@
 
 ; CHECK-LABEL:Loop Unroll: F[pragma_full_unroll_unknown_tc] Loop %for.body
 ; CHECK-NEXT:Loop Size = 6
-; CHECK-NEXT:  will not try to unroll loop with runtime trip count -unroll-runtime not given
+; CHECK-NEXT:  Will not try to unroll loop with runtime trip count because -unroll-runtime not given.
 
 define i32 @pragma_full_unroll_unknown_tc(ptr %A, i32 %n) {
 entry:
@@ -28,7 +28,7 @@ exit:
 
 ; CHECK-LABEL:Loop Unroll: F[full_unroll_cost_exceeds] Loop %for.body
 ; CHECK-NEXT:Loop Size = 6
-; CHECK-NEXT:   will not try to unroll partially because -unroll-allow-partial not given
+; CHECK-NEXT:   Will not try to unroll partially because -unroll-allow-partial not given.
 
 define i32 @full_unroll_cost_exceeds(ptr %A) {
 entry:
