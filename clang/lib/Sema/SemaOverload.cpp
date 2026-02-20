@@ -5700,6 +5700,12 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
       return ICS;
     }
 
+    if (isRValRef && ICS.UserDefined.ConversionFunction->getReturnType()
+                         .isConstQualified()) {
+      ICS.setBad(BadConversionSequence::no_conversion, Init, DeclType);
+      return ICS;
+    }
+
     ICS.UserDefined.After.ReferenceBinding = true;
     ICS.UserDefined.After.IsLvalueReference = !isRValRef;
     ICS.UserDefined.After.BindsToFunctionLvalue = false;
