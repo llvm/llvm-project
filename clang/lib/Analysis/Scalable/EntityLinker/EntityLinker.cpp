@@ -12,6 +12,7 @@
 #include "clang/Analysis/Scalable/Model/EntityLinkage.h"
 #include "clang/Analysis/Scalable/Model/EntityName.h"
 #include "clang/Analysis/Scalable/Support/ErrorBuilder.h"
+#include "clang/Analysis/Scalable/Support/FormatProviders.h"
 #include <cassert>
 
 using namespace clang::ssaf;

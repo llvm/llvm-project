@@ -31,9 +31,9 @@ template <> struct format_provider<clang::ssaf::EntityId> {
   }
 };
 
-template <> struct format_provider<clang::ssaf::EntityLinkage::LinkageType> {
-  static void format(clang::ssaf::EntityLinkage::LinkageType Val,
-                     raw_ostream &OS, StringRef Style) {
+template <> struct format_provider<clang::ssaf::EntityLinkage> {
+  static void format(clang::ssaf::EntityLinkage Val, raw_ostream &OS,
+                     StringRef Style) {
     OS << Val;
   }
 };

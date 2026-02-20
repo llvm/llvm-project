@@ -616,10 +616,10 @@ TEST_F(EntityLinkerTest, RejectsDuplicateTUSummary) {
 
   auto TU2 = createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU");
 
-  ASSERT_THAT_ERROR(
-      Linker.link(std::move(TU2)),
-      llvm::FailedWithMessage(
-          HasSubstr("failed to link TU summary: duplicate namespace 'TU'")));
+  ASSERT_THAT_ERROR(Linker.link(std::move(TU2)),
+                    llvm::FailedWithMessage(
+                        HasSubstr("failed to link TU summary: duplicate "
+                                  "BuildNamespace(compilation_unit, TU)")));
 }
 
 } // namespace
