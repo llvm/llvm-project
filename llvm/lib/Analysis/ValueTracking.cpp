@@ -5947,8 +5947,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         case Intrinsic::fma:
         case Intrinsic::fmuladd: {
           KnownFPClass KnownStart, KnownL;
-          computeKnownFPClass(Init, DemandedElts, InterestedClasses,
-                              KnownStart, Q, Depth + 1);
+          computeKnownFPClass(Init, DemandedElts, InterestedClasses, KnownStart,
+                              Q, Depth + 1);
           if (KnownStart.isUnknown())
             break;
           computeKnownFPClass(L, DemandedElts, InterestedClasses, KnownL, Q,
@@ -9296,7 +9296,7 @@ static bool matchThreeInputRecurrence(const PHINode *PN, InstTy *&Inst,
     if (auto *Operation = dyn_cast<InstTy>(PN->getIncomingValue(I));
         Operation) {
       if (Operation->getNumOperands() < 3)
-          continue;
+        continue;
 
       Value *Op0 = Operation->getOperand(0);
       Value *Op1 = Operation->getOperand(1);
