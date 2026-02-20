@@ -1215,12 +1215,13 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
       break;
     case DeclaratorChunk::Function:
       for (unsigned i = 0, e = Chunk.Fun.NumParams; i != e; ++i) {
-        ParmVarDecl *Param = cast<ParmVarDecl>(Chunk.Fun.Params[i].Param);
+        auto *Param = dyn_cast_or_null<ParmVarDecl>(Chunk.Fun.Params[i].Param);
+        if (!Param)
+          continue;
         QualType ParamTy = Param->getType();
-        assert(!ParamTy.isNull() && "Couldn't parse type?");
-        if (ParamTy->containsUnexpandedParameterPack()) return true;
+        if (!ParamTy.isNull() && ParamTy->containsUnexpandedParameterPack())
+          return true;
       }
-
       if (Chunk.Fun.getExceptionSpecType() == EST_Dynamic) {
         for (unsigned i = 0; i != Chunk.Fun.getNumExceptions(); ++i) {
           if (Chunk.Fun.Exceptions[i]
