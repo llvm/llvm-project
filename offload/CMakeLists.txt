@@ -347,15 +347,17 @@ endmacro()
 
 # OMPT support for libomptarget
 # Follow host OMPT support and check if host support has been requested.
-# LIBOMP_HAVE_OMPT_SUPPORT indicates whether host OMPT support has been implemented.
 # LIBOMP_OMPT_SUPPORT indicates whether host OMPT support has been requested (default is ON).
-# LIBOMPTARGET_OMPT_SUPPORT indicates whether target OMPT support has been requested (default is ON).
 set(OMPT_TARGET_DEFAULT FALSE)
-if ((LIBOMP_HAVE_OMPT_SUPPORT) AND (LIBOMP_OMPT_SUPPORT) AND (NOT WIN32))
+if (LIBOMP_OMPT_SUPPORT AND (NOT WIN32))
   set (OMPT_TARGET_DEFAULT TRUE)
 endif()
+# LIBOMPTARGET_OMPT_SUPPORT indicates whether target OMPT support has been requested.
 set(LIBOMPTARGET_OMPT_SUPPORT ${OMPT_TARGET_DEFAULT} CACHE BOOL "OMPT-target-support?")
-if ((OMPT_TARGET_DEFAULT) AND (LIBOMPTARGET_OMPT_SUPPORT))
+if (LIBOMPTARGET_OMPT_SUPPORT)
+  if(NOT LIBOMP_OMPT_SUPPORT)
+    message(FATAL_ERROR "OMPT Target support requested but OMPT (host) support is not enabled")
+  endif()
   add_definitions(-DOMPT_SUPPORT=1)
   message(STATUS "OMPT target enabled")
 else()
