@@ -5579,6 +5579,11 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
   // Lookup the entry, lazily creating it if necessary.
   llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
   unsigned TargetAS = getContext().getTargetAddressSpace(AddrSpace);
+  if (D && D->hasAttr<OMPGroupPrivateDeclAttr>() && getLangOpts().OpenMP &&
+      getTarget().getTriple().isGPU()) {
+    Entry->setLinkage(llvm::GlobalValue::InternalLinkage);
+    AddrSpace = LangAS::cuda_shared;
+  }
   if (Entry) {
     if (WeakRefReferences.erase(Entry)) {
       if (D && !D->hasAttr<WeakAttr>())
@@ -5957,6 +5962,9 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
     LangAS AS;
     if (OpenMPRuntime->hasAllocateAttributeForGlobalVar(D, AS))
       return AS;
+    if (D && D->hasAttr<OMPGroupPrivateDeclAttr>()) {
+      return LangAS::cuda_shared; // maps to target addressspace 3 on NVPTX/AMD
+    }
   }
   return getTargetCodeGenInfo().getGlobalVarAddressSpace(*this, D);
 }
@@ -7846,6 +7854,9 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
 
   case Decl::OMPThreadPrivate:
     EmitOMPThreadPrivateDecl(cast<OMPThreadPrivateDecl>(D));
+    break;
+
+  case Decl::OMPGroupPrivate:
     break;
 
   case Decl::OMPAllocate:

@@ -3308,7 +3308,7 @@ SemaOpenMP::ActOnOpenMPGroupPrivateDirective(SourceLocation Loc,
                                              ArrayRef<Expr *> VarList) {
   if (!getLangOpts().OpenMP || getLangOpts().OpenMP < 60) {
     Diag(Loc, diag::err_omp_unexpected_directive)
-        << getOpenMPDirectiveName(OMPD_groupprivate, getLangOpts().OpenMP);
+        << 1 << getOpenMPDirectiveName(OMPD_groupprivate, getLangOpts().OpenMP);
     return nullptr;
   }
   if (OMPGroupPrivateDecl *D = CheckOMPGroupPrivateDecl(Loc, VarList)) {
