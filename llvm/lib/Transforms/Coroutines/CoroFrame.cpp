@@ -166,7 +166,6 @@ private:
   };
 
   const DataLayout &DL;
-  LLVMContext &Context;
   uint64_t StructSize = 0;
   Align StructAlign;
   bool IsFinished = false;
@@ -176,12 +175,9 @@ private:
   SmallVector<Field, 8> Fields;
   DenseMap<Value*, unsigned> FieldIndexByKey;
 
-  IntegerType *SwitchIndexType = nullptr;
-
 public:
-  FrameTypeBuilder(LLVMContext &Context, const DataLayout &DL,
-                   std::optional<Align> MaxFrameAlignment)
-      : DL(DL), Context(Context), MaxFrameAlignment(MaxFrameAlignment) {}
+  FrameTypeBuilder(const DataLayout &DL, std::optional<Align> MaxFrameAlignment)
+      : DL(DL), MaxFrameAlignment(MaxFrameAlignment) {}
 
   /// Add a field to this structure for the storage of an `alloca`
   /// instruction.
@@ -279,7 +275,7 @@ public:
   }
 
   /// Finish the layout and compute final size and alignment.
-  void finish(StringRef Name);
+  void finish();
 
   uint64_t getStructSize() const {
     assert(IsFinished && "not yet finished!");
@@ -295,10 +291,6 @@ public:
     assert(IsFinished && "not yet finished!");
     return Fields[Id];
   }
-
-  void setSwitchIndexType(IntegerType *Ty) { SwitchIndexType = Ty; }
-
-  IntegerType *getSwitchIndexType() const { return SwitchIndexType; }
 };
 } // namespace
 
@@ -449,7 +441,7 @@ void FrameTypeBuilder::addFieldForAllocas(const Function &F,
   });
 }
 
-void FrameTypeBuilder::finish(StringRef Name) {
+void FrameTypeBuilder::finish() {
   assert(!IsFinished && "already finished!");
 
   // Prepare the optimal-layout field array.
@@ -723,8 +715,7 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
         Layout.getPointerABIAlignment(FnPtrTy->getAddressSpace()).value() * 8;
     auto *DIPtr = DBuilder.createPointerType(nullptr, PtrSize,
                                              FnPtrTy->getAddressSpace());
-    addElement("__resume_fn", PtrSize, PtrAlign,
-               Shape.SwitchLowering.ResumeOffset, DIPtr);
+    addElement("__resume_fn", PtrSize, PtrAlign, 0, DIPtr);
     addElement("__destroy_fn", PtrSize, PtrAlign,
                Shape.SwitchLowering.DestroyOffset, DIPtr);
     uint64_t IndexSize =
@@ -781,17 +772,17 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
 //   - Spilled values and allocas
 static void buildFrameLayout(Function &F, coro::Shape &Shape,
                              FrameDataInfo &FrameData, bool OptimizeFrame) {
-  LLVMContext &C = F.getContext();
   const DataLayout &DL = F.getDataLayout();
 
   // We will use this value to cap the alignment of spilled values.
   std::optional<Align> MaxFrameAlignment;
   if (Shape.ABI == coro::ABI::Async)
     MaxFrameAlignment = Shape.AsyncLowering.getContextAlignment();
-  FrameTypeBuilder B(C, DL, MaxFrameAlignment);
+  FrameTypeBuilder B(DL, MaxFrameAlignment);
 
   AllocaInst *PromiseAlloca = Shape.getPromiseAlloca();
   std::optional<FieldIDType> SwitchIndexFieldId;
+  IntegerType *SwitchIndexType = nullptr;
 
   if (Shape.ABI == coro::ABI::Switch) {
     auto *FnPtrTy = Shape.getSwitchResumePointerType();
@@ -811,10 +802,9 @@ static void buildFrameLayout(Function &F, coro::Shape &Shape,
     // Add a field to store the suspend index.  This doesn't need to
     // be in the header.
     unsigned IndexBits = std::max(1U, Log2_64_Ceil(Shape.CoroSuspends.size()));
-    IntegerType *IndexType = Type::getIntNTy(C, IndexBits);
+    SwitchIndexType = Type::getIntNTy(F.getContext(), IndexBits);
 
-    SwitchIndexFieldId = B.addField(IndexType, MaybeAlign());
-    B.setSwitchIndexType(IndexType);
+    SwitchIndexFieldId = B.addField(SwitchIndexType, MaybeAlign());
   } else {
     assert(PromiseAlloca == nullptr && "lowering doesn't support promises");
   }
@@ -848,11 +838,7 @@ static void buildFrameLayout(Function &F, coro::Shape &Shape,
     FrameData.setFieldIndex(S.first, Id);
   }
 
-  {
-    SmallString<32> Name(F.getName());
-    Name.append(".Frame");
-    B.finish(Name);
-  }
+  B.finish();
 
   FrameData.updateLayoutInfo(B);
   Shape.FrameAlign = B.getStructAlign();
@@ -863,11 +849,10 @@ static void buildFrameLayout(Function &F, coro::Shape &Shape,
     // In the switch ABI, remember the function pointer and index field info.
     // Resume and Destroy function pointers are in the frame header.
     const DataLayout &DL = F.getDataLayout();
-    Shape.SwitchLowering.ResumeOffset = 0;
     Shape.SwitchLowering.DestroyOffset = DL.getPointerSize();
 
     auto IndexField = B.getLayoutField(*SwitchIndexFieldId);
-    Shape.SwitchLowering.IndexType = B.getSwitchIndexType();
+    Shape.SwitchLowering.IndexType = SwitchIndexType;
     Shape.SwitchLowering.IndexAlign = IndexField.Alignment.value();
     Shape.SwitchLowering.IndexOffset = IndexField.Offset;
 
@@ -1004,6 +989,19 @@ findDbgRecordsThroughLoads(Function &F, Value *Def) {
   }
 
   return Records;
+}
+
+// Helper function to handle allocas that may be accessed before CoroBegin.
+// This creates a memcpy from the original alloca to the coroutine frame after
+// CoroBegin, ensuring the frame has the correct initial values.
+static void handleAccessBeforeCoroBegin(const FrameDataInfo &FrameData,
+                                        coro::Shape &Shape,
+                                        IRBuilder<> &Builder,
+                                        AllocaInst *Alloca) {
+  Value *Size = Builder.CreateAllocationSize(Builder.getInt64Ty(), Alloca);
+  auto *G = createGEPToFramePointer(FrameData, Builder, Shape, Alloca);
+  Builder.CreateMemCpy(G, FrameData.getAlign(Alloca), Alloca,
+                       Alloca->getAlign(), Size);
 }
 
 // Replace all alloca and SSA values that are accessed across suspend points
@@ -1220,14 +1218,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     AllocaInst *Alloca = A.Alloca;
     if (A.MayWriteBeforeCoroBegin) {
       // isEscaped really means potentially modified before CoroBegin.
-      // TODO: use Builder.CreateAllocationSize here once that PR is merged
-      auto Size = Alloca->getAllocationSize(Alloca->getDataLayout());
-      assert(Size &&
-             "Coroutines cannot handle copying of dynamic allocas yet.\n");
-      assert(!Size->isScalable() && "Scalable vectors are not yet supported");
-      auto *G = createGEPToFramePointer(FrameData, Builder, Shape, Alloca);
-      Builder.CreateMemCpy(G, FrameData.getAlign(Alloca), Alloca,
-                           Alloca->getAlign(), Size->getFixedValue());
+      handleAccessBeforeCoroBegin(FrameData, Shape, Builder, Alloca);
     }
     // For each alias to Alloca created before CoroBegin but used after
     // CoroBegin, we recreate them after CoroBegin by applying the offset
@@ -1279,14 +1270,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     });
     if (HasAccessingPromiseBeforeCB) {
       Builder.SetInsertPoint(&*Shape.getInsertPtAfterFramePtr());
-      // TODO: use Builder.CreateAllocationSize here once that PR is merged
-      auto Size = PA->getAllocationSize(PA->getDataLayout());
-      assert(Size &&
-             "Coroutines cannot handle copying of dynamic allocas yet.\n");
-      assert(!Size->isScalable() && "Scalable vectors are not yet supported");
-      auto *G = createGEPToFramePointer(FrameData, Builder, Shape, PA);
-      Builder.CreateMemCpy(G, FrameData.getAlign(PA), PA, PA->getAlign(),
-                           Size->getFixedValue());
+      handleAccessBeforeCoroBegin(FrameData, Shape, Builder, PA);
     }
   }
 }

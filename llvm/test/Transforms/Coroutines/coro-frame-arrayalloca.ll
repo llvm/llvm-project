@@ -4,6 +4,7 @@
 ; and we use the correct index to access prefix, data, and suffix.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
+target datalayout = "e-m:e-p:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 declare void @consume.double.ptr(ptr)
 declare void @consume.i32.ptr(ptr)

@@ -84,8 +84,6 @@ void Lowerer::lowerCoroDone(IntrinsicInst *II) {
   Value *Operand = II->getArgOperand(0);
 
   // ResumeFnAddr is the first pointer sized element of the coroutine frame.
-  static_assert(coro::Shape::SwitchFieldIndex::Resume == 0,
-                "resume function not at offset zero");
   auto *FrameTy = Int8Ptr;
 
   Builder.SetInsertPoint(II);
