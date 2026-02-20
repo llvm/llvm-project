@@ -69,6 +69,11 @@ if (OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
 
 endif()
 
+if (TARGET flang_rt.runtime.static)
+  target_link_libraries(PluginCommon PRIVATE flang_rt.runtime.static)
+  target_compile_definitions(PluginCommon PRIVATE OFFLOAD_HAS_FLANG_RT)
+endif()
+
 # Define the TARGET_NAME and DEBUG_PREFIX.
 target_compile_definitions(PluginCommon PRIVATE
   TARGET_NAME=PluginInterface
