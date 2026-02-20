@@ -487,6 +487,7 @@ static hlsl::Binding getHandleIntrinsicBinding(IntrinsicInst *Handle,
 
   return hlsl::Binding(Class, Space, LowerBound, UpperBound, nullptr);
 }
+
 namespace {
 /// Helper for propagating the current handle and ptr indices.
 struct AccessIndices {
@@ -494,6 +495,7 @@ struct AccessIndices {
   Value *HandleIdx;
 
   bool hasGetPtrIdx() { return GetPtrIdx != nullptr; }
+  bool hasHandleIdx() { return HandleIdx != nullptr; }
 };
 } // namespace
 
@@ -581,6 +583,9 @@ static void
 replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
                          SmallSetVector<Instruction *, 16> &DeadInsts) {
   auto AccessIdx = getAccessIndices(Ptr, DeadInsts);
+  assert(AccessIdx.hasGetPtrIdx() && AccessIdx.hasHandleIdx() &&
+         "Couldn't retrieve indices. This should be guaranteed by "
+         "collectUsedHandles");
 
   IRBuilder<> Builder(Ptr);
   IntrinsicInst *Handle = cast<IntrinsicInst>(OldHandle->clone());
