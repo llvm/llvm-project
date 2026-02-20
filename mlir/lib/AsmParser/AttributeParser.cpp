@@ -144,6 +144,10 @@ Attribute Parser::parseAttribute(Type type) {
     return locAttr;
   }
 
+  // Parse a loaded URI elements attribute.
+  case Token::kw_luri:
+    return parseLoadedURIElementsAttr(type);
+
   // Parse a sparse elements attribute.
   case Token::kw_sparse:
     return parseSparseElementsAttr(type);
@@ -1033,6 +1037,110 @@ ShapedType Parser::parseElementsLiteralType(SMLoc loc, Type type) {
   }
 
   return sType;
+}
+
+/// Parse a sparse elements attribute.
+Attribute Parser::parseLoadedURIElementsAttr(Type attrType) {
+  SMLoc loc = getToken().getLoc();
+  consumeToken(Token::kw_luri);
+  if (parseToken(Token::less, "expected '<' after 'luri'"))
+    return nullptr;
+
+  auto fileName = getToken().getStringValue();
+  if (parseToken(Token::string, "expected URI"))
+    return nullptr;
+
+  // Parse any nested references.
+  std::vector<FlatSymbolRefAttr> nestedRefs;
+  while (consumeIf(Token::colon)) {
+    // Check for the '::' prefix.
+    if (parseToken(Token::colon, "ex[ected '::' for nested reference"))
+      return nullptr;
+    // Parse the reference itself.
+    auto curLoc = getToken().getLoc();
+    if (getToken().isNot(Token::at_identifier)) {
+      emitError(curLoc, "expected nested symbol reference identifier");
+      return nullptr;
+    }
+
+    std::string nameStr = getToken().getSymbolReference();
+    consumeToken(Token::at_identifier);
+    nestedRefs.push_back(SymbolRefAttr::get(getContext(), nameStr));
+  }
+
+  std::optional<int64_t> alignment;
+  std::optional<int64_t> byteOffset;
+  std::optional<int64_t> byteSize;
+
+  StringRef keyword;
+  for (auto curLoc = getToken().getLoc();
+       consumeIf(Token::comma) && !parseOptionalKeyword(&keyword);) {
+    curLoc = getToken().getLoc();
+
+    if (keyword == "alignment") {
+      if (alignment.has_value()) {
+        emitError("multiple alignment values provided");
+        return nullptr;
+      }
+      if (parseToken(Token::equal, "expected '=' after alignment"))
+        return nullptr;
+      APInt val;
+      if (auto res = parseOptionalInteger(val);
+          !res.has_value() || failed(*res)) {
+        emitError("missing or invalid alignment");
+        return nullptr;
+      }
+      alignment = val.getSExtValue();
+      continue;
+    }
+
+    if (keyword == "byte_offset") {
+      if (byteOffset.has_value()) {
+        emitError("multiple offset values provided");
+        return nullptr;
+      }
+      if (parseToken(Token::equal, "expected '=' after offset"))
+        return nullptr;
+      APInt val;
+      if (auto res = parseOptionalInteger(val);
+          !res.has_value() || failed(*res)) {
+        emitError("missing or invalid offset");
+        return nullptr;
+      }
+      byteOffset = val.getSExtValue();
+      continue;
+    }
+
+    if (keyword == "byte_size") {
+      if (byteSize.has_value()) {
+        emitError("multiple size values provided");
+        return nullptr;
+      }
+      if (parseToken(Token::equal, "expected '=' after size"))
+        return nullptr;
+      APInt val;
+      if (auto res = parseOptionalInteger(val);
+          !res.has_value() || failed(*res)) {
+        emitError("missing or invalid size");
+        return nullptr;
+      }
+      byteSize = val.getSExtValue();
+      continue;
+    }
+
+    emitError(curLoc, "unexpected keyword: ") << keyword;
+  }
+
+  if (parseToken(Token::greater, "expected '>'"))
+    return nullptr;
+
+  auto type = parseElementsLiteralType(attrType);
+  if (!type)
+    return nullptr;
+
+  // Build the sparse elements attribute by the indices and values.
+  return getChecked<LoadedURIDenseResourceAttr>(
+      loc, fileName, type, alignment, byteOffset, byteSize, nestedRefs);
 }
 
 /// Parse a sparse elements attribute.

@@ -2552,6 +2552,20 @@ void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
     os << ">";
   } else if (auto locAttr = llvm::dyn_cast<LocationAttr>(attr)) {
     printLocation(locAttr);
+  } else if (auto luriAttr = llvm::dyn_cast<LoadedURIDenseResourceAttr>(attr)) {
+    os << "luri<";
+    printEscapedString(luriAttr.getURI());
+    for (FlatSymbolRefAttr nestedRef : luriAttr.getNestedReferences()) {
+      os << "::";
+      printSymbolReference(nestedRef.getValue(), os);
+    }
+    if (auto alignment = luriAttr.getAlignment())
+      os << ", alignment = " << alignment;
+    if (auto offset = luriAttr.getByteOffset())
+      os << ", byte_offset = " << offset;
+    if (auto size = luriAttr.getByteSize())
+      os << ", byte_size = " << size;
+    os << ">";
   } else {
     llvm::report_fatal_error("Unknown builtin attribute");
   }

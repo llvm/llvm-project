@@ -21,6 +21,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/SourceMgr.h"
 #include <optional>
 
 #define DEBUG_TYPE "builtinattributes"
@@ -44,7 +45,7 @@ void BuiltinDialect::registerAttributes() {
 #define GET_ATTRDEF_LIST
 #include "mlir/IR/BuiltinAttributes.cpp.inc"
       >();
-  addAttributes<DistinctAttr>();
+  addAttributes<DistinctAttr, LoadedURIDenseResourceAttr>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1726,6 +1727,193 @@ DistinctAttr DistinctAttr::create(Attribute referencedAttr) {
 Attribute DistinctAttr::getReferencedAttr() const {
   return getImpl()->referencedAttr;
 }
+
+//===----------------------------------------------------------------------===//
+// LoadedURIDenseResourceAttr
+//===----------------------------------------------------------------------===//
+
+namespace mlir {
+namespace detail {
+struct LoadedURIDenseResourceAttrStorage : public ::mlir::AttributeStorage {
+  using KeyTy =
+      std::tuple<StringRef, Type, std::optional<int64_t>,
+                 std::optional<int64_t>, std::optional<int64_t>,
+                 ArrayRef<FlatSymbolRefAttr>,
+                 std::optional<FailureOr<DenseResourceElementsHandle>>>;
+  LoadedURIDenseResourceAttrStorage(
+      StringRef uri, Type type, std::optional<int64_t> alignment,
+      std::optional<int64_t> offset, std::optional<int64_t> size,
+      ArrayRef<FlatSymbolRefAttr> nestedReferences,
+      std::optional<FailureOr<DenseResourceElementsHandle>> rawHandle)
+      : uri(uri), type(type), nestedReferences(nestedReferences),
+        alignment(alignment), offset(offset), size(size), rawHandle(rawHandle) {
+  }
+
+  KeyTy getAsKey() const {
+    return KeyTy(uri, type, alignment, offset, size, nestedReferences,
+                 rawHandle);
+  }
+
+  bool operator==(const KeyTy &key) const {
+    return (uri == std::get<0>(key)) && (type == std::get<1>(key)) &&
+           (alignment == std::get<2>(key)) && (offset == std::get<3>(key)) &&
+           (size == std::get<4>(key)) && (nestedReferences == std::get<5>(key));
+  }
+
+  static llvm::hash_code hashKey(const KeyTy &key) {
+    return llvm::hash_combine(std::get<0>(key), std::get<1>(key),
+                              std::get<2>(key), std::get<3>(key),
+                              std::get<4>(key), std::get<5>(key));
+  }
+
+  static LoadedURIDenseResourceAttrStorage *
+  construct(AttributeStorageAllocator &allocator, const KeyTy &key) {
+    auto uri = std::get<0>(key);
+    auto type = std::get<1>(key);
+    auto alignment = std::get<2>(key);
+    auto offset = std::get<3>(key);
+    auto size = std::get<4>(key);
+    auto nestedReferences = std::get<5>(key);
+    auto rawHandle = std::get<6>(key);
+    uri = allocator.copyInto(uri);
+    nestedReferences = allocator.copyInto(nestedReferences);
+
+    return new (allocator.allocate<LoadedURIDenseResourceAttrStorage>())
+        LoadedURIDenseResourceAttrStorage(uri, type, alignment, offset, size,
+                                          nestedReferences, rawHandle);
+  }
+
+  void initialize(MLIRContext *context) {
+    // If a handle is provided, then skip initializing.
+    if (rawHandle.has_value())
+      return;
+
+    // Init to failure. initialize is called after verify when initially
+    // created, so can't use absense of handle as failure.
+    rawHandle = failure();
+
+    // TODO: Handling different URI types.
+
+    StringRef fname = uri;
+    (void)fname.consume_front("file://");
+
+    std::unique_ptr<llvm::MemoryBuffer> buffer;
+    if (size.has_value() || offset.has_value()) {
+      std::optional<llvm::Align> mbAlign;
+      if (alignment)
+        mbAlign = llvm::Align(*alignment);
+      auto bufferOr = llvm::MemoryBuffer::getFileSlice(
+          fname, size.value_or(uint64_t(-1)), offset.value_or(0),
+          /*IsVolatile=*/false, mbAlign);
+      if (!bufferOr) {
+        // TODO: Find way to flag on location.
+        emitError(UnknownLoc::get(context))
+            << "loading URI failed: " << bufferOr.getError().message();
+        return;
+      }
+      buffer.swap(*bufferOr);
+    } else {
+      std::optional<llvm::Align> mbAlign;
+      if (alignment)
+        mbAlign = llvm::Align(*alignment);
+      auto bufferOr = llvm::MemoryBuffer::getFile(
+          fname, /*IsText=*/false, /*RequiresNullTerminator=*/true,
+          /*IsVolatile=*/false, mbAlign);
+      if (!bufferOr) {
+        // TODO: Find way to flag on location.
+        emitError(UnknownLoc::get(context))
+            << "loading URI failed: " << bufferOr.getError().message();
+        return;
+      }
+      buffer.swap(*bufferOr);
+    }
+
+    // TODO: Handling of different file types.
+
+    auto *data = buffer.release();
+    auto deleter = [data](void *, unsigned long, unsigned long) {
+      delete data;
+    };
+
+    // Extract the builtin dialect resource manager from context and
+    // construct a handle by inserting a new resource using the
+    // provided blob.
+    auto &manager =
+        DenseResourceElementsHandle::getManagerInterface(type.getContext());
+    auto str = data->getBuffer();
+    auto blob = UnmanagedAsmResourceBlob::allocateWithAlign(
+        {str.data(), str.size()}, alignment.value_or(32), deleter);
+    rawHandle = manager.insert("luri", std::move(blob));
+  }
+
+  StringRef uri;
+  ShapedType type;
+  bool isSplat = false;
+  ArrayRef<FlatSymbolRefAttr> nestedReferences;
+  std::optional<int64_t> alignment;
+  std::optional<int64_t> offset;
+  std::optional<int64_t> size;
+  std::optional<FailureOr<DenseResourceElementsHandle>> rawHandle;
+};
+} // namespace detail
+
+LoadedURIDenseResourceAttr LoadedURIDenseResourceAttr::get(
+    StringRef uri, Type type, std::optional<int64_t> alignment,
+    std::optional<int64_t> offset, std::optional<int64_t> size,
+    ArrayRef<FlatSymbolRefAttr> nestedReferences) {
+  auto *ctxt = type.getContext();
+  return Base::get(ctxt, uri, type, alignment, offset, size, nestedReferences,
+                   std::nullopt);
+}
+
+LoadedURIDenseResourceAttr LoadedURIDenseResourceAttr::getChecked(
+    function_ref<::mlir::InFlightDiagnostic()> emitError, StringRef uri,
+    Type type, std::optional<int64_t> alignment, std::optional<int64_t> offset,
+    std::optional<int64_t> size, ArrayRef<FlatSymbolRefAttr> nestedReferences) {
+  auto *ctxt = type.getContext();
+  return Base::getChecked(emitError, ctxt, uri, type, alignment, offset, size,
+                          nestedReferences, std::nullopt);
+}
+
+LogicalResult LoadedURIDenseResourceAttr::verify(
+    function_ref<::mlir::InFlightDiagnostic()> emitError, StringRef uri,
+    Type type, std::optional<int64_t> alignment, std::optional<int64_t> offset,
+    std::optional<int64_t> size, ArrayRef<FlatSymbolRefAttr> nestedReferences,
+    std::optional<FailureOr<DenseResourceElementsHandle>> handle) {
+  if (handle.has_value() && failed(handle.value()))
+    return emitError() << "URI failed to load";
+  return success();
+}
+
+StringRef LoadedURIDenseResourceAttr::getURI() const { return getImpl()->uri; }
+
+ShapedType LoadedURIDenseResourceAttr::getType() const {
+  return getImpl()->type;
+}
+
+std::optional<int64_t> LoadedURIDenseResourceAttr::getAlignment() const {
+  return getImpl()->alignment;
+}
+
+std::optional<int64_t> LoadedURIDenseResourceAttr::getByteOffset() const {
+  return getImpl()->offset;
+}
+
+std::optional<int64_t> LoadedURIDenseResourceAttr::getByteSize() const {
+  return getImpl()->size;
+}
+
+ArrayRef<FlatSymbolRefAttr>
+LoadedURIDenseResourceAttr::getNestedReferences() const {
+  return getImpl()->nestedReferences;
+}
+
+ArrayRef<char> LoadedURIDenseResourceAttr::getRawData() const {
+  assert(getImpl()->rawHandle.has_value() && succeeded(*getImpl()->rawHandle));
+  return getImpl()->rawHandle->value().getBlob()->getData();
+}
+
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // Attribute Utilities

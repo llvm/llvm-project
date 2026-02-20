@@ -1038,6 +1038,92 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
+// LoadedURIDenseResourceAttr
+//===----------------------------------------------------------------------===//
+
+namespace detail {
+struct LoadedURIDenseResourceAttrStorage;
+} // namespace detail
+
+/// An attribute that parses/prints as a identifier (file & symbol) while in
+/// memory representing the loaded attribute.
+
+class LoadedURIDenseResourceAttr
+    : public Attribute::AttrBase<LoadedURIDenseResourceAttr, Attribute,
+                                 detail::LoadedURIDenseResourceAttrStorage,
+                                 TypedAttr::Trait, ElementsAttr::Trait> {
+public:
+  using Base::Base;
+  using Base::getChecked;
+
+  static LoadedURIDenseResourceAttr
+  get(StringRef uri, Type type, std::optional<int64_t> alignment,
+      std::optional<int64_t> offset, std::optional<int64_t> size,
+      ArrayRef<FlatSymbolRefAttr> nestedReferences = {});
+
+  static LoadedURIDenseResourceAttr
+  getChecked(function_ref<::mlir::InFlightDiagnostic()> emitError,
+             StringRef uri, Type type, std::optional<int64_t> alignment,
+             std::optional<int64_t> offset, std::optional<int64_t> size,
+             ArrayRef<FlatSymbolRefAttr> nestedReferences = {});
+
+  /// The set of data types that can be iterated by this attribute.
+  // TODO: Expand as needed; consider maybe reuse with DenseElementsAttr.
+  using ContiguousIterableTypesT = std::tuple<>;
+  using NonContiguousIterableTypesT = std::tuple<
+      // Float types.
+      APFloat>;
+
+  /// Returns the loaded value.
+  ArrayRef<char> getRawData() const;
+
+  /// Returns the underlying data as an array of the given type. This is an
+  /// inherently unsafe operation, and should only be used when the data is
+  /// known to be of the correct type.
+  template <typename T>
+  ArrayRef<T> getDataAs() const {
+    auto data = getRawData();
+    return llvm::ArrayRef<T>((const T *)data.data(), data.size() / sizeof(T));
+  }
+  /// Provide a `try_value_begin_impl` to enable iteration within
+  /// ElementsAttr.
+  auto try_value_begin_impl(OverloadToken<llvm::APFloat>) const {
+    auto it = llvm::map_range(getDataAs<float>(), [=](float value) {
+                return llvm::APFloat(value);
+              }).begin();
+    return FailureOr<decltype(it)>(std::move(it));
+  }
+
+  // TODO: Add member functions to register URI/file type handlers.
+
+  /// Return the URI loaded.
+  StringRef getURI() const;
+
+  /// Return the Type of the data.
+  ShapedType getType() const;
+
+  /// Return the nested references inside the URI loaded.
+  ArrayRef<FlatSymbolRefAttr> getNestedReferences() const;
+
+  /// Return the alignment the resource is stored with.
+  // TODO: Should this be exposed?
+  std::optional<int64_t> getAlignment() const;
+
+  /// Return the byte offset at which entry was in URI.
+  std::optional<int64_t> getByteOffset() const;
+
+  /// Return the byte size at which entry was in URI.
+  std::optional<int64_t> getByteSize() const;
+
+  static LogicalResult
+  verify(function_ref<::mlir::InFlightDiagnostic()> emitError, StringRef uri,
+         Type type, std::optional<int64_t> alignment,
+         std::optional<int64_t> offset, std::optional<int64_t> size,
+         ArrayRef<FlatSymbolRefAttr> nestedReferences,
+         std::optional<FailureOr<DenseResourceElementsHandle>> handle);
+};
+
+//===----------------------------------------------------------------------===//
 // StringAttr
 //===----------------------------------------------------------------------===//
 
