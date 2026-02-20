@@ -809,12 +809,20 @@ function(llvm_add_library name)
       set(library_name ${output_name}-${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX})
       set(api_name ${output_name}-${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX})
       set_target_properties(${name} PROPERTIES OUTPUT_NAME ${library_name})
-      if(UNIX AND NOT CYGWIN)
+      if(UNIX)
         llvm_install_library_symlink(${api_name} ${library_name} SHARED
           COMPONENT ${name})
         llvm_install_library_symlink(${output_name} ${library_name} SHARED
           COMPONENT ${name})
       endif()
+    elseif(CYGWIN)
+      get_target_property(output_name ${name} OUTPUT_NAME)
+      if(${output_name} STREQUAL "output_name-NOTFOUND")
+        set(output_name ${name})
+      endif()
+      set(library_name ${output_name}-${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX})
+      llvm_install_library_symlink(${output_name} ${library_name} SHARED
+        COMPONENT ${name})
     endif()
   endif()
 

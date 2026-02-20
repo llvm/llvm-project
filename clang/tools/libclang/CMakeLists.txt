@@ -159,15 +159,22 @@ if(ENABLE_STATIC)
 endif()
 
 if(ENABLE_SHARED)
-  if(WIN32)
+  if(WIN32 OR CYGWIN)
     set_target_properties(libclang
       PROPERTIES
       VERSION ${LIBCLANG_LIBRARY_VERSION}
       DEFINE_SYMBOL _CINDEX_LIB_)
-      # Avoid declaring clang c++ symbols that are statically linked into libclang as dllimport'ed.
-      # If llvm/libclang-cpp dll is also being built for windows clang c++ symbols will still be
-      # implicitly be exported from libclang.
-      target_compile_definitions(libclang PRIVATE CLANG_BUILD_STATIC)
+    if (CYGWIN)
+      # We need cygclang.dll in build-tree additional to installed-tree for testsuite of python bindings.
+      set(plain_name "$<TARGET_FILE_DIR:libclang>/$<TARGET_FILE_PREFIX:libclang>clang$<TARGET_FILE_SUFFIX:libclang>")
+      add_custom_command(TARGET libclang POST_BUILD
+                         COMMAND ${CMAKE_COMMAND} -E create_symlink "$<TARGET_FILE_NAME:libclang>" "${plain_name}")
+      install(FILES "${plain_name}" DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT libclang)
+    endif()
+    # Avoid declaring clang c++ symbols that are statically linked into libclang as dllimport'ed.
+    # If llvm/libclang-cpp dll is also being built for windows clang c++ symbols will still be
+    # implicitly be exported from libclang.
+    target_compile_definitions(libclang PRIVATE CLANG_BUILD_STATIC)
   elseif(APPLE)
     set(LIBCLANG_LINK_FLAGS " -Wl,-compatibility_version -Wl,1")
     set(LIBCLANG_LINK_FLAGS "${LIBCLANG_LINK_FLAGS} -Wl,-current_version -Wl,${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
