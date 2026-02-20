@@ -12,7 +12,7 @@ define amdgpu_gs void @_amdgpu_gs_main() {
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v0
 ; CHECK-NEXT:    s_mov_b32 s3, s0
-; CHECK-NEXT:    exp mrt0 off, off, off, off
+; CHECK-NEXT:    exp mrt0, off, off, off, off
 ; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v0, s[0:3], 0 idxen
 ; CHECK-NEXT:    s_endpgm
 entry:

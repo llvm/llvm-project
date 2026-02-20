@@ -91,7 +91,7 @@ for.body51:                                       ; preds = %if.end118, %for.bod
 
 if.then112:                                       ; preds = %for.body51
   %inc101 = add i32 %collision.0281, 3
-  store i32 %inc101, ptr addrspace(3) null, align 2147483648
+  store i32 %inc101, ptr addrspace(3) zeroinitializer, align 2147483648
   br label %if.end118
 
 if.end118:                                        ; preds = %if.then112, %for.body51

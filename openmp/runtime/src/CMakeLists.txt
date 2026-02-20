@@ -174,7 +174,7 @@ libomp_get_libflags(LIBOMP_CONFIGURED_LIBFLAGS)
 
 # Build libomp library. Add LLVMSupport dependency if building in-tree with
 # libomptarget profiling enabled.
-if(OPENMP_STANDALONE_BUILD OR (NOT OPENMP_ENABLE_LIBOMP_PROFILING))
+if(NOT OPENMP_ENABLE_LIBOMP_PROFILING)
   add_library(omp ${LIBOMP_LIBRARY_KIND} $<TARGET_OBJECTS:obj.omp>)
   set_property(TARGET omp PROPERTY FOLDER "OpenMP/Libraries")
   # Linking command will include libraries in LIBOMP_CONFIGURED_LIBFLAGS
@@ -395,10 +395,8 @@ add_dependencies(libomp-micro-tests libomp-test-deps)
 
 # `omp` needs to be exported if in-tree build.
 set(export_to_llvmexports)
-if (NOT OPENMP_STANDALONE_BUILD)
-  get_target_export_arg(omp LLVM export_to_llvmexports)
-  set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS omp)
-endif()
+get_target_export_arg(omp LLVM export_to_llvmexports)
+set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS omp)
 
 # Install rules
 # We want to install libomp in ${DESTDIR}/${CMAKE_INSTALL_FULL_LIBDIR}

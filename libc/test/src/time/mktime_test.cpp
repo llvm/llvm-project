@@ -36,7 +36,8 @@ TEST(LlvmLibcMkTime, FailureSetsErrno) {
                     .tm_wday = 0,
                     .tm_yday = 0,
                     .tm_isdst = 0};
-  EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails(EOVERFLOW));
+  EXPECT_THAT(static_cast<int>(LIBC_NAMESPACE::mktime(&tm_data)),
+              Fails(EOVERFLOW));
 }
 
 TEST(LlvmLibcMkTime, InvalidSeconds) {
@@ -51,7 +52,8 @@ TEST(LlvmLibcMkTime, InvalidSeconds) {
                       .tm_wday = 0,
                       .tm_yday = 0,
                       .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Succeeds(-1));
+    EXPECT_THAT(static_cast<int>(LIBC_NAMESPACE::mktime(&tm_data)),
+                Succeeds(-1));
     EXPECT_TM_EQ((tm{.tm_sec = 59,
                      .tm_min = 59,
                      .tm_hour = 23,

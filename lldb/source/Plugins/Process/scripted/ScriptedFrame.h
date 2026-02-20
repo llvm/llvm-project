@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SCRIPTED_FRAME_H
-#define LLDB_SOURCE_PLUGINS_SCRIPTED_FRAME_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_SCRIPTED_SCRIPTEDFRAME_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_SCRIPTED_SCRIPTEDFRAME_H
 
 #include "ScriptedThread.h"
 #include "lldb/Target/DynamicRegisterInfo.h"
@@ -76,7 +76,8 @@ public:
 
   lldb::ValueObjectSP GetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error) override;
+      uint32_t options, lldb::VariableSP &var_sp, Status &error,
+      lldb::DILMode mode = lldb::eDILModeFull) override;
 
   bool isA(const void *ClassID) const override {
     return ClassID == &ID || StackFrame::isA(ClassID);
@@ -109,4 +110,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_SCRIPTED_FRAME_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_SCRIPTED_SCRIPTEDFRAME_H

@@ -25,11 +25,11 @@ void fn1() { F f1; }
 // CIR: cir.func {{.*}} @_ZN1F1bEv
 // CIR:   %[[H_PTR:.*]] = cir.get_global @h : !cir.ptr<!s32i>
 // CIR:   %[[H_VAL:.*]] = cir.load{{.*}} %[[H_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR:   %[[RET:.*]] = cir.call @_ZN1A1bEi(%[[H_VAL]]) : (!s32i) -> !cir.ptr<!s8i>
+// CIR:   %[[RET:.*]] = cir.call @_ZN1A1bEi(%[[H_VAL]]) : (!s32i) -> (!cir.ptr<!s8i> {llvm.noundef})
 
 // LLVM: define {{.*}} ptr @_ZN1F1bEv
 // LLVM:   %[[VAR_H:.*]] = load i32, ptr @h
-// LLVM:   %[[RET:.*]] = call ptr @_ZN1A1bEi(i32 %[[VAR_H]])
+// LLVM:   %[[RET:.*]] = call noundef ptr @_ZN1A1bEi(i32 %[[VAR_H]])
 
 // OGCG: define {{.*}} ptr @_ZN1F1bEv
 // OGCG:   %[[VAR_H:.*]] = load i32, ptr @h
@@ -49,7 +49,7 @@ public:
 
 void fn2() { C c1; c1.call_indirect(2); }
 
-// CIR: cir.func {{.*}} @_ZN1C13call_indirectEi(%[[THIS_ARG:.*]]: !cir.ptr<!rec_C> {{.*}}, %[[V_ARG:.*]]: !s32i {{.*}}) -> !s32i
+// CIR: cir.func {{.*}} @_ZN1C13call_indirectEi(%[[THIS_ARG:.*]]: !cir.ptr<!rec_C> {{.*}}, %[[V_ARG:.*]]: !s32i {{.*}}) -> (!s32i {{.*}})
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>, ["this", init]
 // CIR:   %[[V_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["v", init]
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
@@ -71,7 +71,7 @@ void fn2() { C c1; c1.call_indirect(2); }
 // LLVM:   %[[INDIRECT_CALLEE_PTR:.*]] = getelementptr %class.B, ptr %[[INNER]], i32 0, i32 0
 // LLVM:   %[[INDIRECT_CALLEE:.*]] = load ptr, ptr %[[INDIRECT_CALLEE_PTR]]
 // LLVM:   %[[V:.*]] = load i32, ptr %[[V_ADDR]]
-// LLVM:   %[[RET:.*]] = call i32 %[[INDIRECT_CALLEE]](i32 %[[V]])
+// LLVM:   %[[RET:.*]] = call noundef i32 %[[INDIRECT_CALLEE]](i32 %[[V]])
 
 // OGCG: define {{.*}} i32 @_ZN1C13call_indirectEi(ptr {{.*}} %[[THIS_ARG:.*]], i32 {{.*}} %[[V_ARG:.*]])
 // OGCG:   %[[THIS_ADDR:.*]] = alloca ptr

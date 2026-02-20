@@ -81,10 +81,15 @@ EnableRescheduling("twoaddr-reschedule",
                    cl::desc("Coalesce copies by rescheduling (default=true)"),
                    cl::init(true), cl::Hidden);
 
+static cl::opt<bool> AnalyzeRevCopyTied(
+    "twoaddr-analyze-revcopy-tied",
+    cl::desc("Analyze tied operands when looking for reversed copy chain"),
+    cl::init(true), cl::Hidden);
+
 // Limit the number of dataflow edges to traverse when evaluating the benefit
 // of commuting operands.
 static cl::opt<unsigned> MaxDataFlowEdge(
-    "dataflow-edge-limit", cl::Hidden, cl::init(3),
+    "dataflow-edge-limit", cl::Hidden, cl::init(10),
     cl::desc("Maximum number of dataflow edges to traverse when evaluating "
              "the benefit of commuting operands"));
 
@@ -302,6 +307,14 @@ TwoAddressInstructionImpl::getSingleDef(Register Reg,
   return Ret;
 }
 
+static bool getTiedUse(Register DefReg, MachineInstr *MI,
+                       const TargetRegisterInfo *TRI, unsigned &TiedOpIdx) {
+  int DefRegIdx = MI->findRegisterDefOperandIdx(DefReg, TRI);
+  if (DefRegIdx < 0)
+    return false;
+  return MI->isRegTiedToUseOperand(DefRegIdx, &TiedOpIdx);
+}
+
 /// Check if there is a reversed copy chain from FromReg to ToReg:
 /// %Tmp1 = copy %Tmp2;
 /// %FromReg = copy %Tmp1;
@@ -314,10 +327,21 @@ bool TwoAddressInstructionImpl::isRevCopyChain(Register FromReg, Register ToReg,
   Register TmpReg = FromReg;
   for (int i = 0; i < Maxlen; i++) {
     MachineInstr *Def = getSingleDef(TmpReg, MBB);
-    if (!Def || !Def->isCopy())
+    if (!Def)
       return false;
 
-    TmpReg = Def->getOperand(1).getReg();
+    if (Def->isCopy())
+      TmpReg = Def->getOperand(1).getReg();
+    else if (unsigned TiedOpIdx;
+             AnalyzeRevCopyTied && getTiedUse(TmpReg, Def, TRI, TiedOpIdx)) {
+      Register TiedUseReg = Def->getOperand(TiedOpIdx).getReg();
+      // Tied use reg matches def reg. It's not a copy chain. We won't make any
+      // forward progress anymore, stop the traversal here.
+      if (TiedUseReg == TmpReg)
+        return false;
+      TmpReg = TiedUseReg;
+    } else
+      return false;
 
     if (TmpReg == ToReg)
       return true;
@@ -2014,6 +2038,16 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     }
   }
 
+  // If there are no live intervals information, we scan the use list once
+  // in order to find which subregisters are used.
+  LaneBitmask UsedLanes = LaneBitmask::getNone();
+  if (!LIS) {
+    for (MachineOperand &Use : MRI->use_nodbg_operands(DstReg)) {
+      if (unsigned SubReg = Use.getSubReg())
+        UsedLanes |= TRI->getSubRegIndexLaneMask(SubReg);
+    }
+  }
+
   LaneBitmask UndefLanes = LaneBitmask::getNone();
   bool DefEmitted = false;
   for (unsigned i = 1, e = MI.getNumOperands(); i < e; i += 2) {
@@ -2021,9 +2055,14 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     Register SrcReg = UseMO.getReg();
     unsigned SubIdx = MI.getOperand(i+1).getImm();
     // Nothing needs to be inserted for undef operands.
+    // Unless there are no live intervals, and they are used at a later
+    // instruction as operand.
     if (UseMO.isUndef()) {
-      UndefLanes |= TRI->getSubRegIndexLaneMask(SubIdx);
-      continue;
+      LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubIdx);
+      if (LIS || (UsedLanes & LaneMask).none()) {
+        UndefLanes |= LaneMask;
+        continue;
+      }
     }
 
     // Defer any kill flag to the last operand using SrcReg. Otherwise, we

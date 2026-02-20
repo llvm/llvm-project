@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++20 -x objective-c++ -fobjc-arc -fenable-matrix -triple i686-pc-win32
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++20 -x objective-c++ -fobjc-arc -fenable-matrix -fexperimental-overflow-behavior-types -triple i686-pc-win32
 
 enum class N {};
 
@@ -187,6 +187,45 @@ namespace arrays {
     // expected-error@-1 {{lvalue of type 'const volatile volatile B1[1]' (aka 'const volatile volatile int[1]')}}
   } // namespace balanced_qualifiers
 } // namespace arrays
+
+namespace overflow_behavior_types {
+  namespace same_canonical {
+    using WrapB1 = B1 __attribute__((overflow_behavior(wrap)));
+    using WrapB1_2 = B1 __attribute__((overflow_behavior(wrap)));
+    WrapB1 a = 0;
+    WrapB1_2 b = 0;
+    N ta = a;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'WrapB1' (aka '__ob_wrap B1')}}
+    N tb = b;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'WrapB1_2' (aka '__ob_wrap B1')}}
+    N tc = 0 ? a : b;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type '__ob_wrap B1'}}
+  } // namespace same_canonical
+  namespace same_underlying {
+    using WrapX1 = X1 __attribute__((overflow_behavior(wrap)));
+    using WrapY1 = Y1 __attribute__((overflow_behavior(wrap)));
+    WrapX1 a = 0;
+    WrapY1 b = 0;
+    N ta = a;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'WrapX1' (aka '__ob_wrap X1')}}
+    N tb = b;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'WrapY1' (aka '__ob_wrap Y1')}}
+    N tc = 0 ? a : b;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type '__ob_wrap B1'}}
+  } // namespace same_underlying
+  namespace balanced_qualifiers {
+    using ConstWrapX1 = const volatile X1 __attribute__((overflow_behavior(wrap)));
+    using WrapY1 = volatile Y1 __attribute__((overflow_behavior(wrap)));
+    volatile ConstWrapX1 a = 0;
+    const volatile WrapY1 b = 0;
+    N ta = a;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'volatile ConstWrapX1' (aka '__ob_wrap X1 const volatile')}}
+    N tb = b;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'const volatile WrapY1' (aka '__ob_wrap Y1 const volatile')}}
+    N tc = 0 ? a : b;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type '__ob_wrap B1 const volatile'}}
+  } // namespace balanced_qualifiers
+} // namespace overflow_behavior_types
 
 namespace member_pointers {
   template <class T> struct W {

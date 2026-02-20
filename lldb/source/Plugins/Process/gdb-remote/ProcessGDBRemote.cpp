@@ -4375,9 +4375,16 @@ StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
         FileSpec sc_path(
             dict->GetValueForKey("shared_cache_path")->GetStringValue());
 
-        // Attempt to open the shared cache at sc_path, and
-        // if the uuid matches, index all the files.
-        HostInfo::SharedCacheIndexFiles(sc_path, uuid);
+        SymbolSharedCacheUse sc_mode =
+            ModuleList::GetGlobalModuleListProperties()
+                .GetSharedCacheBinaryLoading();
+
+        if (sc_mode == eSymbolSharedCacheUseHostAndInferiorSharedCache ||
+            sc_mode == eSymbolSharedCacheUseInferiorSharedCacheOnly) {
+          // Attempt to open the shared cache at sc_path, and
+          // if the uuid matches, index all the files.
+          HostInfo::SharedCacheIndexFiles(sc_path, uuid, sc_mode);
+        }
       }
       m_shared_cache_info_sp = response_sp;
     }
