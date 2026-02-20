@@ -49,6 +49,8 @@ STATISTIC(
 STATISTIC(NumNoUnwind, "Number of functions inferred as nounwind");
 STATISTIC(NumNoCallback, "Number of functions inferred as nocallback");
 STATISTIC(NumNoCapture, "Number of arguments inferred as nocapture");
+STATISTIC(NumCapturesRetOnly,
+          "Number of arguments inferred as captures(ret: ...)");
 STATISTIC(NumWriteOnlyArg, "Number of arguments inferred as writeonly");
 STATISTIC(NumReadOnlyArg, "Number of arguments inferred as readonly");
 STATISTIC(NumNoAlias, "Number of function returns inferred as noalias");
@@ -171,6 +173,16 @@ static bool setDoesNotCapture(Function &F, unsigned ArgNo) {
   F.addParamAttr(ArgNo, Attribute::getWithCaptureInfo(F.getContext(),
                                                       CaptureInfo::none()));
   ++NumNoCapture;
+  return true;
+}
+
+static bool setCapturesRetOnly(Function &F, unsigned ArgNo) {
+  CaptureInfo OldCI = F.getCaptureInfo(ArgNo);
+  CaptureInfo NewCI = OldCI & CaptureInfo::retOnly();
+  if (OldCI == NewCI)
+    return false;
+  F.addParamAttr(ArgNo, Attribute::getWithCaptureInfo(F.getContext(), NewCI));
+  ++NumCapturesRetOnly;
   return true;
 }
 
@@ -343,6 +355,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCallback(F);
     Changed |= setWillReturn(F);
+    Changed |= setCapturesRetOnly(F, 0);
     break;
   case LibFunc_strtol:
   case LibFunc_strtod:
@@ -364,6 +377,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotCallback(F);
     Changed |= setWillReturn(F);
     Changed |= setReturnedArg(F, 0);
+    Changed |= setCapturesRetOnly(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     Changed |= setDoesNotAlias(F, 0);
@@ -379,6 +393,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCallback(F);
     Changed |= setWillReturn(F);
+    Changed |= setCapturesRetOnly(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyWritesMemory(F, 0);
     Changed |= setOnlyReadsMemory(F, 1);
@@ -424,6 +439,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCallback(F);
     Changed |= setWillReturn(F);
+    Changed |= setCapturesRetOnly(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     break;
   case LibFunc_strtok:
@@ -542,6 +558,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setOnlyReadsMemory(F);
     Changed |= setWillReturn(F);
+    Changed |= setCapturesRetOnly(F, 0);
     break;
   case LibFunc_modf:
   case LibFunc_modff:
@@ -560,6 +577,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setWillReturn(F);
     Changed |= setDoesNotAlias(F, 0);
     Changed |= setReturnedArg(F, 0);
+    Changed |= setCapturesRetOnly(F, 0);
     Changed |= setOnlyWritesMemory(F, 0);
     Changed |= setDoesNotAlias(F, 1);
     Changed |= setDoesNotCapture(F, 1);
@@ -571,6 +589,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setWillReturn(F);
     Changed |= setReturnedArg(F, 0);
+    Changed |= setCapturesRetOnly(F, 0);
     Changed |= setOnlyWritesMemory(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
@@ -585,6 +604,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setDoesNotAlias(F, 0);
     Changed |= setOnlyWritesMemory(F, 0);
+    Changed |= setCapturesRetOnly(F, 0);
     Changed |= setDoesNotAlias(F, 1);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
@@ -1182,6 +1202,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_memset_chk:
     Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setOnlyWritesMemory(F, 0);
+    Changed |= setCapturesRetOnly(F, 0);
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCallback(F);
     break;

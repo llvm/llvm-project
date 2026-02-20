@@ -70,7 +70,7 @@ define ptr @fun7(ptr %str) {
   ret ptr %ret
 }
 
-; CHECK: declare ptr @strchr(ptr, i32 signext)
+; CHECK: declare ptr @strchr(ptr captures(ret: address, provenance), i32 signext)
 
 @hello = constant [14 x i8] c"hello world\5Cn\00"
 @chp = global ptr zeroinitializer
@@ -86,7 +86,7 @@ define void @fun8(i32 %chr) {
 ; CHECK: declare double @ldexp(double, i32 signext)
 ; CHECK: declare float @ldexpf(float, i32 signext)
 ; CHECK: declare fp128 @ldexpl(fp128, i32 signext)
-; CHECK: declare ptr @memccpy(ptr noalias writeonly, ptr noalias readonly captures(none), i32 signext, i64)
+; CHECK: declare ptr @memccpy(ptr noalias writeonly captures(ret: address, provenance), ptr noalias readonly captures(none), i32 signext, i64)
 ; CHECK: declare noundef i32 @fputc(i32 noundef signext, ptr noundef captures(none))
 ; CHECK: declare noundef i32 @putchar(i32 noundef signext)
-; CHECK: declare ptr @memchr(ptr, i32 signext, i64)
+; CHECK: declare ptr @memchr(ptr captures(ret: address, provenance), i32 signext, i64)
