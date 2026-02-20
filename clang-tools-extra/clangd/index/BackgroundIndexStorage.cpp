@@ -30,11 +30,16 @@ namespace {
 std::optional<std::string> applyPathMapping(llvm::StringRef S,
                                             PathMapping::Direction Direction,
                                             const PathMappings &Mappings) {
-  // First, attempt URI mapping
-  if (auto Mapped = doPathMapping(S, Direction, Mappings))
-    return std::move(*Mapped);
-  // If that didn't match, attempt file path mapping. Paths processed here may
-  // be standalone or after a flag: -I, -isystem, and so on.
+  // URIs use the URI-aware mapper and don't fall through to raw paths
+  if (S.starts_with("file://"))
+    return doPathMapping(S, Direction, Mappings);
+
+  // For raw paths only match where the absolute path begins. This avoids over-
+  // matching midpath while allowing -I, -isystem, etc. paths to be remapped.
+  size_t FirstSlash = S.find('/');
+  if (FirstSlash == llvm::StringRef::npos)
+    return std::nullopt;
+
   for (const auto &Mapping : Mappings) {
     const std::string &From =
         Direction == PathMapping::Direction::ClientToServer
@@ -44,7 +49,7 @@ std::optional<std::string> applyPathMapping(llvm::StringRef S,
                                 ? Mapping.ServerPath
                                 : Mapping.ClientPath;
     size_t Pos = S.find(From);
-    if (Pos != llvm::StringRef::npos) {
+    if (Pos == FirstSlash) {
       llvm::StringRef After = S.substr(Pos + From.size());
       if (After.empty() || After.front() == '/')
         return (S.substr(0, Pos) + To + After).str();
