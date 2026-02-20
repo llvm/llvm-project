@@ -3154,19 +3154,6 @@ Check for cases where the dynamic and the static type of an object are unrelated
  NSNumber *number = date;
  [number doubleValue];
 
-.. _alpha-core-FixedAddr:
-
-alpha.core.FixedAddr (C)
-""""""""""""""""""""""""
-Check for assignment of a fixed address to a pointer.
-
-.. code-block:: c
-
- void test() {
-   int *p;
-   p = (int *) 0x10000; // warn
- }
-
 .. _alpha-core-PointerArithm:
 
 alpha.core.PointerArithm (C)
