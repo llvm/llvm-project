@@ -26,6 +26,8 @@
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
+#define DEBUG_TYPE "basic-block-utils-tests"
+
 using namespace llvm;
 
 static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
@@ -454,6 +456,48 @@ bb1:
   // entry block.
   SplitBlockPredecessors(&F->getEntryBlock(), {}, "split.entry", &DT);
   EXPECT_TRUE(DT.verify());
+}
+
+TEST(BasicBlockUtils, SplitLandingPadPredecessors) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+declare void @foo()
+
+define void @split-lp-predecessors-test() personality ptr null {
+entry:
+  invoke void @foo()
+          to label %loop unwind label %catch_dest
+
+loop:
+  invoke void @foo()
+          to label %latch unwind label %catch_dest
+
+latch:
+  br label %loop
+
+catch_dest:
+  %lp = landingpad i32
+          cleanup
+  invoke void @foo()
+          to label %exit unwind label %catch_dest
+
+exit:
+  ret void
+}
+)IR");
+  Function *F = M->getFunction("split-lp-predecessors-test");
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+
+  EXPECT_TRUE(DT.verify());
+  LI.verify(DT);
+  SplitBlockPredecessors(getBasicBlockByName(*F, "catch_dest"),
+                         {getBasicBlockByName(*F, "loop")}, "", &DT, &LI);
+
+  EXPECT_TRUE(DT.verify());
+  LLVM_DEBUG(F->dump(); LI.print(dbgs()));
+  LI.verify(DT);
+  EXPECT_EQ(LI.getLoopFor(getBasicBlockByName(*F, "catch_dest")), nullptr);
 }
 
 TEST(BasicBlockUtils, SplitCriticalEdge) {
