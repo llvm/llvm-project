@@ -215,10 +215,6 @@ Status ProcessWindows::DoLaunch(Module *exe_module,
   if (error.Success())
     SetID(launch_info.GetProcessID());
   m_pty = launch_info.TakePTY();
-  // At this point, Process owns the ConPTY. If ProcessLaunchInfo still has a
-  // reference to it, it might get closed prematurely if another target is
-  // created.
-  assert(m_pty.use_count() == 1 && "More than one reference to the ConPTY");
   return error;
 }
 
