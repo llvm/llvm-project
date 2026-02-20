@@ -2917,7 +2917,8 @@ bool AsmParser::parseIdentifier(StringRef &Res) {
     // Consume the prefix character, and check for a following identifier.
 
     AsmToken Buf[1];
-    Lexer.peekTokens(Buf, false);
+    if (Lexer.peekTokens(Buf, false) == 0)
+      return true;
 
     if (Buf[0].isNot(AsmToken::Identifier) && Buf[0].isNot(AsmToken::Integer))
       return true;
