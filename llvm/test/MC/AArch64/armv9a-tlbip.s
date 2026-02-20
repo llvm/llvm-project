@@ -1,20 +1,19 @@
-// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+d128,+tlb-rmi,+xs < %s \
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+d128,+tlb-rmi < %s \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
-// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+tlb-rmi,+xs < %s 2>&1 \
+// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+tlb-rmi < %s 2>&1 \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ERROR
-// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+d128,+tlb-rmi,+xs < %s \
-// RUN:        | llvm-objdump -d --mattr=+d128,+tlb-rmi,+xs --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-INST
-// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+d128,+tlb-rmi,+xs < %s \
-// RUN:   | llvm-objdump -d --mattr=-d128,+tlb-rmi,+xs --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+d128,+tlb-rmi < %s \
+// RUN:        | llvm-objdump -d --mattr=+d128,+tlb-rmi --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-INST
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+d128,+tlb-rmi < %s \
+// RUN:        | llvm-objdump -d --mattr=-d128,-tlb-rmi --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 // Disassemble encoding and check the re-encoding (-show-encoding) matches.
-// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+d128,+tlb-rmi,+xs < %s \
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+d128,+tlb-rmi < %s \
 // RUN:        | sed '/.text/d' | sed 's/.*encoding: //g' \
-// RUN:        | llvm-mc -triple=aarch64 -mattr=+d128,+tlb-rmi,+xs -disassemble -show-encoding \
+// RUN:        | llvm-mc -triple=aarch64 -mattr=+d128,+tlb-rmi -disassemble -show-encoding \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 
 // +d128 required for tlbip
 // +tbl-rmi required for RIPA*/RVA*
-// +xs required for *NXS
 
 tlbip IPAS2E1, x4, x5
 // CHECK-INST: tlbip ipas2e1, x4, x5
