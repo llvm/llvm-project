@@ -946,10 +946,10 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   if (Glue.getNode())
     RetOps.push_back(Glue);
 
-  X86ISD::NodeType opcode = X86ISD::RET_GLUE;
+  unsigned RetOpcode = X86ISD::RET_GLUE;
   if (CallConv == CallingConv::X86_INTR)
-    opcode = X86ISD::IRET;
-  return DAG.getNode(opcode, dl, MVT::Other, RetOps);
+    RetOpcode = X86ISD::IRET;
+  return DAG.getNode(RetOpcode, dl, MVT::Other, RetOps);
 }
 
 bool X86TargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {

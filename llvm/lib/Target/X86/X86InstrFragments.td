@@ -134,45 +134,86 @@ def SDTX86Cmpccxadd : SDTypeProfile<1, 4, [SDTCisSameAs<0, 2>,
                                            SDTCisPtrTy<1>, SDTCisSameAs<2, 3>,
                                            SDTCisVT<4, i8>]>;
 
+// Memory barriers.
 def X86MFence : SDNode<"X86ISD::MFENCE", SDTNone, [SDNPHasChain]>;
 
-
+// Bit scan forward.
 def X86bsf     : SDNode<"X86ISD::BSF",      SDTBinaryArithWithFlags>;
+
+// Bit scan reverse.
 def X86bsr     : SDNode<"X86ISD::BSR",      SDTBinaryArithWithFlags>;
+
+// X86 funnel/double shift i16 instructions. These correspond to
+// X86::SHLDW and X86::SHRDW instructions which have different amt
+// modulo rules to generic funnel shifts.
+// NOTE: The operand order matches ISD::FSHL/FSHR not SHLD/SHRD.
 def X86fshl    : SDNode<"X86ISD::FSHL",     SDTIntShiftDOp>;
 def X86fshr    : SDNode<"X86ISD::FSHR",     SDTIntShiftDOp>;
 
+// X86 compare and logical compare instructions.
 def X86cmp     : SDNode<"X86ISD::CMP" ,     SDTX86CmpTest>;
 def X86fcmp    : SDNode<"X86ISD::FCMP",     SDTX86FCmp>;
-def X86strict_fcmp : SDNode<"X86ISD::STRICT_FCMP", SDTX86FCmp, [SDNPHasChain]>;
-def X86strict_fcmps : SDNode<"X86ISD::STRICT_FCMPS", SDTX86FCmp, [SDNPHasChain]>;
+
+let IsStrictFP = true in {
+  /// X86 strict FP compare instructions.
+  def X86strict_fcmp
+      : SDNode<"X86ISD::STRICT_FCMP",  SDTX86FCmp, [SDNPHasChain]>;
+  def X86strict_fcmps
+      : SDNode<"X86ISD::STRICT_FCMPS", SDTX86FCmp, [SDNPHasChain]>;
+}
+
+// X86 bit-test instructions.
 def X86bt      : SDNode<"X86ISD::BT",       SDTX86CmpTest>;
 
+// Conditional compare instructions
 def X86ccmp    : SDNode<"X86ISD::CCMP",     SDTX86Ccmp>;
 def X86ctest   : SDNode<"X86ISD::CTEST",    SDTX86Ccmp>;
 
+// Conditional load/store instructions
 def X86cload    : SDNode<"X86ISD::CLOAD",   SDTX86Cload, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def X86cstore   : SDNode<"X86ISD::CSTORE",  SDTX86Cstore, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
+// X86 conditional moves. Operand 0 and operand 1 are the two values
+// to select from. Operand 2 is the condition code, and operand 3 is the
+// flag operand produced by a CMP or TEST instruction.
 def X86cmov    : SDNode<"X86ISD::CMOV",     SDTX86Cmov>;
+
+// X86 conditional branches. Operand 0 is the chain operand, operand 1
+// is the block to branch if condition is true, operand 2 is the
+// condition code, and operand 3 is the flag operand produced by a CMP
+// or TEST instruction.
 def X86brcond  : SDNode<"X86ISD::BRCOND",   SDTX86BrCond,
                         [SDNPHasChain]>;
 def X86brcond_self : SDNode<"X86ISD::BRCOND_SELF", SDTX86BrCondSelf,
                             [SDNPHasChain]>;
+
+// X86 SetCC. Operand 0 is condition code, and operand 1 is the EFLAGS
+// operand, usually produced by a CMP instruction.
 def X86setcc   : SDNode<"X86ISD::SETCC",    SDTX86SetCC>;
+
+// Same as SETCC except it's materialized with a sbb and the value is all
+// one's or all zero's.
 def X86setcc_c : SDNode<"X86ISD::SETCC_CARRY", SDTX86SetCC_C>;
 
+// Get a random integer and indicate whether it is valid in CF.
 def X86rdrand  : SDNode<"X86ISD::RDRAND",   SDTX86rdrand,
                         [SDNPHasChain, SDNPSideEffect]>;
 
+// Get a NIST SP800-90B & C compliant random integer and
+// indicate whether it is valid in CF.
 def X86rdseed  : SDNode<"X86ISD::RDSEED",   SDTX86rdrand,
                         [SDNPHasChain, SDNPSideEffect]>;
 
+// Protection keys
+// RDPKRU - Operand 0 is chain. Operand 1 is value for ECX.
+// WRPKRU - Operand 0 is chain. Operand 1 is value for EDX. Operand 2 is
+// value for ECX.
 def X86rdpkru : SDNode<"X86ISD::RDPKRU",    SDTX86rdpkru,
                        [SDNPHasChain, SDNPSideEffect]>;
 def X86wrpkru : SDNode<"X86ISD::WRPKRU",    SDTX86wrpkru,
                        [SDNPHasChain, SDNPSideEffect]>;
 
+// Compare and swap.
 def X86cas : SDNode<"X86ISD::LCMPXCHG_DAG", SDTX86cas,
                         [SDNPHasChain, SDNPInGlue, SDNPOutGlue, SDNPMayStore,
                          SDNPMayLoad, SDNPMemOperand]>;
@@ -183,15 +224,24 @@ def X86cas16 : SDNode<"X86ISD::LCMPXCHG16_DAG", SDTX86cas16pair,
                         [SDNPHasChain, SDNPInGlue, SDNPOutGlue, SDNPMayStore,
                          SDNPMayLoad, SDNPMemOperand]>;
 
+// Return with a glue operand. Operand 0 is the chain operand, operand
+// 1 is the number of bytes of stack to pop.
 def X86retglue : SDNode<"X86ISD::RET_GLUE", SDTX86Ret,
                         [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+// Return from interrupt. Operand 0 is the number of bytes to pop.
 def X86iret : SDNode<"X86ISD::IRET", SDTX86Ret,
                         [SDNPHasChain, SDNPOptInGlue]>;
 
+// Save xmm argument registers to the stack, according to %al. An operator
+// is needed so that this can be expanded with control flow.
 def X86vastart_save_xmm_regs :
                  SDNode<"X86ISD::VASTART_SAVE_XMM_REGS",
                         SDT_X86VASTART_SAVE_XMM_REGS,
                         [SDNPHasChain, SDNPMayStore, SDNPMemOperand, SDNPVariadic]>;
+
+// These instructions grab the address of the next argument
+// from a va_list. (reads and modifies the va_list in memory)
 def X86vaarg64 :
                  SDNode<"X86ISD::VAARG_64", SDT_X86VAARG,
                         [SDNPHasChain, SDNPMayLoad, SDNPMayStore,
@@ -200,6 +250,7 @@ def X86vaargx32 :
                  SDNode<"X86ISD::VAARG_X32", SDT_X86VAARG,
                         [SDNPHasChain, SDNPMayLoad, SDNPMayStore,
                          SDNPMemOperand]>;
+
 def X86callseq_start :
                  SDNode<"ISD::CALLSEQ_START", SDT_X86CallSeqStart,
                         [SDNPHasChain, SDNPOutGlue]>;
@@ -207,70 +258,122 @@ def X86callseq_end :
                  SDNode<"ISD::CALLSEQ_END",   SDT_X86CallSeqEnd,
                         [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
+// These operations represent an abstract X86 call
+// instruction, which includes a bunch of information.  In particular the
+// operands of these node are:
+//
+//     #0 - The incoming token chain
+//     #1 - The callee
+//     #2 - The number of arg bytes the caller pushes on the stack.
+//     #3 - The number of arg bytes the callee pops off the stack.
+//     #4 - The value to pass in AL/AX/EAX (optional)
+//     #5 - The value to pass in DL/DX/EDX (optional)
+//
+// The result values of these nodes are:
+//
+//     #0 - The outgoing token chain
+//     #1 - The first register result value (optional)
+//     #2 - The second register result value (optional)
+//
 def X86call    : SDNode<"X86ISD::CALL",     SDT_X86Call,
                         [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                          SDNPVariadic]>;
 
+// Pseudo for a OBJC call that gets emitted together with a special
+// marker instruction.
 def X86call_rvmarker  : SDNode<"X86ISD::CALL_RVMARKER",     SDT_X86Call,
                         [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                          SDNPVariadic]>;
 
+// Psuedo for a call to a global address that must be called via a memory
+// address (i.e., not loaded into a register then called).
 def X86call_globaladdr  : SDNode<"X86ISD::CALL_GLOBALADDR",     SDT_X86Call,
                         [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                          SDNPVariadic]>;
 
+// Pseudo for a call to an imported function to ensure the correct machine
+// instruction is emitted for Import Call Optimization.
 def X86imp_call  : SDNode<"X86ISD::IMP_CALL",     SDT_X86Call,
                         [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                          SDNPVariadic]>;
 
+// Same as call except it adds the NoTrack prefix.
 def X86NoTrackCall : SDNode<"X86ISD::NT_CALL", SDT_X86Call,
                             [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                              SDNPVariadic]>;
+
+// BRIND node with NoTrack prefix. Operand 0 is the chain operand and
+// operand 1 is the target address.
 def X86NoTrackBrind : SDNode<"X86ISD::NT_BRIND", SDT_X86NtBrind,
                              [SDNPHasChain]>;
 
+// Repeat fill, corresponds to X86::REP_STOSx.
 def X86rep_stos: SDNode<"X86ISD::REP_STOS", SDTX86RepStr,
                         [SDNPHasChain, SDNPInGlue, SDNPOutGlue, SDNPMayStore]>;
+
+// Repeat move, corresponds to X86::REP_MOVSx.
 def X86rep_movs: SDNode<"X86ISD::REP_MOVS", SDTX86RepStr,
                         [SDNPHasChain, SDNPInGlue, SDNPOutGlue, SDNPMayStore,
                          SDNPMayLoad]>;
 
+// A wrapper node for TargetConstantPool, TargetJumpTable,
+// TargetExternalSymbol, TargetGlobalAddress, TargetGlobalTLSAddress,
+// MCSymbol and TargetBlockAddress.
 def X86Wrapper    : SDNode<"X86ISD::Wrapper",     SDTX86Wrapper>;
+
+// Special wrapper used under X86-64 PIC mode for RIP
+// relative displacements.
 def X86WrapperRIP : SDNode<"X86ISD::WrapperRIP",  SDTX86Wrapper>;
 
 def X86RecoverFrameAlloc : SDNode<"ISD::LOCAL_RECOVER",
                                   SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                        SDTCisInt<1>]>>;
 
+// Thread Local Storage.
 def X86tlsaddr : SDNode<"X86ISD::TLSADDR", SDT_X86TLSADDR,
                         [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
+// Thread Local Storage. A call to get the start address
+// of the TLS block for the current module.
 def X86tlsbaseaddr : SDNode<"X86ISD::TLSBASEADDR", SDT_X86TLSBASEADDR,
                         [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
+// Thread Local Storage. A descriptor containing pointer to
+// code and to argument to get the TLS offset for the symbol.
 def X86tlsdesc : SDNode<"X86ISD::TLSDESC", SDT_X86TLSADDR,
                         [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
+// Exception Handling helpers.
 def X86ehret : SDNode<"X86ISD::EH_RETURN", SDT_X86EHRET,
                         [SDNPHasChain]>;
 
+// SjLj exception handling setjmp.
 def X86eh_sjlj_setjmp  : SDNode<"X86ISD::EH_SJLJ_SETJMP",
                                 SDTypeProfile<1, 1, [SDTCisInt<0>,
                                                      SDTCisPtrTy<1>]>,
                                 [SDNPHasChain, SDNPSideEffect]>;
+
+// SjLj exception handling longjmp.
 def X86eh_sjlj_longjmp : SDNode<"X86ISD::EH_SJLJ_LONGJMP",
                                 SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
                                 [SDNPHasChain, SDNPSideEffect]>;
+
+// SjLj exception handling dispatch.
 def X86eh_sjlj_setup_dispatch : SDNode<"X86ISD::EH_SJLJ_SETUP_DISPATCH",
                                        SDTypeProfile<0, 0, []>,
                                        [SDNPHasChain, SDNPSideEffect]>;
 
+// Tail call return. See X86TargetLowering::LowerCall for
+// the list of operands.
 def X86tcret : SDNode<"X86ISD::TC_RETURN", SDT_X86TCRET,
                         [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
 
+// Psuedo for a tail call return to a global address that must be called via
+// a memory address (i.e., not loaded into a register then called).
 def X86tcret_globaladdr : SDNode<"X86ISD::TC_RETURN_GLOBALADDR", SDT_X86TCRET,
                         [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
 
+// Arithmetic operations with FLAGS results.
 def X86add_flag  : SDNode<"X86ISD::ADD",  SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
 def X86sub_flag  : SDNode<"X86ISD::SUB",  SDTBinaryArithWithFlags>;
@@ -288,6 +391,8 @@ def X86xor_flag  : SDNode<"X86ISD::XOR",  SDTBinaryArithWithFlags,
 def X86and_flag  : SDNode<"X86ISD::AND",  SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
 
+/// LOCK-prefixed arithmetic read-modify-write instructions.
+/// EFLAGS, OUTCHAIN = LADD(INCHAIN, PTR, RHS)
 def X86lock_add  : SDNode<"X86ISD::LADD",  SDTLockBinaryArithWithFlags,
                           [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
                            SDNPMemOperand]>;
@@ -304,33 +409,47 @@ def X86lock_and  : SDNode<"X86ISD::LAND",  SDTLockBinaryArithWithFlags,
                           [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
                            SDNPMemOperand]>;
 
+// Bit field extract.
 def X86bextr  : SDNode<"X86ISD::BEXTR",  SDTIntBinOp>;
 def X86bextri : SDNode<"X86ISD::BEXTRI", SDTIntBinOp>;
 
+// Zero High Bits Starting with Specified Bit Position.
 def X86bzhi   : SDNode<"X86ISD::BZHI",   SDTIntBinOp>;
 
+// Parallel extract and deposit.
 def X86pdep   : SDNode<"X86ISD::PDEP",   SDTIntBinOp>;
 def X86pext   : SDNode<"X86ISD::PEXT",   SDTIntBinOp>;
 
+// X86-specific multiply by immediate.
 def X86mul_imm : SDNode<"X86ISD::MUL_IMM", SDTIntBinOp>;
 
+// A stack checking function call. On Windows it's _chkstk call.
 def X86DynAlloca : SDNode<"X86ISD::DYN_ALLOCA", SDT_X86DYN_ALLOCA,
                           [SDNPHasChain, SDNPOutGlue]>;
 
+// For allocating variable amounts of stack space when using
+// segmented stacks. Check if the current stacklet has enough space, and
+// falls back to heap allocation if not.
 def X86SegAlloca : SDNode<"X86ISD::SEG_ALLOCA", SDT_X86SEG_ALLOCA,
                           [SDNPHasChain]>;
 
+// For allocating stack space when using stack clash protector.
+// Allocation is performed by block, and each block is probed.
 def X86ProbedAlloca : SDNode<"X86ISD::PROBED_ALLOCA", SDT_X86PROBED_ALLOCA,
                           [SDNPHasChain]>;
 
+// Thread Local Storage.  When calling to an OS provided
+// thunk at the address from an earlier relocation.
 def X86TLSCall : SDNode<"X86ISD::TLSCALL", SDT_X86TLSCALL,
                         [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
+// LWP insert record.
 def X86lwpins : SDNode<"X86ISD::LWPINS",
                        SDTypeProfile<1, 3, [SDTCisVT<0, i32>, SDTCisInt<1>,
                                             SDTCisVT<2, i32>, SDTCisVT<3, i32>]>,
                        [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPSideEffect]>;
 
+// User level wait
 def X86umwait : SDNode<"X86ISD::UMWAIT",
                        SDTypeProfile<1, 3, [SDTCisVT<0, i32>, SDTCisInt<1>,
                                             SDTCisVT<2, i32>, SDTCisVT<3, i32>]>,
@@ -341,14 +460,18 @@ def X86tpause : SDNode<"X86ISD::TPAUSE",
                                             SDTCisVT<2, i32>, SDTCisVT<3, i32>]>,
                        [SDNPHasChain, SDNPSideEffect]>;
 
+// Enqueue Stores Instructions
 def X86enqcmd : SDNode<"X86ISD::ENQCMD", SDT_X86ENQCMD,
                        [SDNPHasChain, SDNPSideEffect]>;
 def X86enqcmds : SDNode<"X86ISD::ENQCMDS", SDT_X86ENQCMD,
                        [SDNPHasChain, SDNPSideEffect]>;
+
+// User level interrupts - testui
 def X86testui : SDNode<"X86ISD::TESTUI",
                        SDTypeProfile<1, 0, [SDTCisVT<0, i32>]>,
                        [SDNPHasChain, SDNPSideEffect]>;
 
+// Key locker nodes that produce flags.
 def X86aesenc128kl : SDNode<"X86ISD::AESENC128KL", SDT_X86AESENCDECKL,
                             [SDNPHasChain, SDNPMayLoad, SDNPSideEffect,
                              SDNPMemOperand]>;
@@ -362,6 +485,10 @@ def X86aesdec256kl : SDNode<"X86ISD::AESDEC256KL", SDT_X86AESENCDECKL,
                             [SDNPHasChain, SDNPMayLoad, SDNPSideEffect,
                              SDNPMemOperand]>;
 
+// Compare and Add if Condition is Met. Compare value in operand 2 with
+// value in memory of operand 1. If condition of operand 4 is met, add
+// value operand 3 to m32 and write new value in operand 1. Operand 2 is
+// always updated with the original value from operand 1.
 def X86cmpccxadd : SDNode<"X86ISD::CMPCCXADD", SDTX86Cmpccxadd,
                           [SDNPHasChain, SDNPMayLoad, SDNPMayStore,
                            SDNPMemOperand]>;
@@ -781,32 +908,71 @@ def SDTX86CwdStore  : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
 def SDTX86CwdLoad   : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
 def SDTX86FPEnv     : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
 
+// Perform an FP80 add after changing precision control in FPCW.
 def X86fp80_add     : SDNode<"X86ISD::FP80_ADD", SDTFPBinOp, [SDNPCommutative]>;
+
+// Perform an FP80 add after changing precision control in FPCW.
+let IsStrictFP = true in
 def X86strict_fp80_add : SDNode<"X86ISD::STRICT_FP80_ADD", SDTFPBinOp,
                         [SDNPHasChain,SDNPCommutative]>;
+
 def any_X86fp80_add : PatFrags<(ops node:$lhs, node:$rhs),
                                [(X86strict_fp80_add node:$lhs, node:$rhs),
                                 (X86fp80_add node:$lhs, node:$rhs)]>;
 
+// This instruction implements an extending load to FP stack slots.
+// This corresponds to the X86::FLD32m / X86::FLD64m. It takes a chain
+// operand, and ptr to load from. The memory VT specifies the type to
+// load from.
 def X86fld          : SDNode<"X86ISD::FLD", SDTX86Fld,
                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+// This instruction implements a truncating store from FP stack
+// slots. This corresponds to the X86::FST32m / X86::FST64m. It takes a
+// chain operand, value to store, address, and glue. The memory VT
+// specifies the type to store as.
 def X86fst          : SDNode<"X86ISD::FST", SDTX86Fst,
                              [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+// This instruction implements SINT_TO_FP with the
+// integer source in memory and FP reg result.  This corresponds to the
+// X86::FILD*m instructions. It has two inputs (token chain and address)
+// and two outputs (FP value and token chain). The integer source type is
+// specified by the memory VT.
 def X86fild         : SDNode<"X86ISD::FILD", SDTX86Fild,
                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+// This instruction implements a fp->int store from FP stack
+// slots. This corresponds to the fist instruction. It takes a
+// chain operand, value to store, address, and glue. The memory VT
+// specifies the type to store as.
 def X86fist         : SDNode<"X86ISD::FIST", SDTX86Fist,
                              [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+// This instruction implements FP_TO_SINT with the
+// integer destination in memory and a FP reg source.  This corresponds
+// to the X86::FIST*m instructions and the rounding mode change stuff. It
+// has two inputs (token chain and address) and two outputs (int value
+// and token chain). Memory VT specifies the type to store to.
 def X86fp_to_mem : SDNode<"X86ISD::FP_TO_INT_IN_MEM", SDTX86Fst,
                           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+// Store FP control word into i16 memory.
 def X86fp_cwd_get16 : SDNode<"X86ISD::FNSTCW16m",          SDTX86CwdStore,
                              [SDNPHasChain, SDNPMayStore, SDNPSideEffect,
                               SDNPMemOperand]>;
+
+// Load FP control word from i16 memory.
 def X86fp_cwd_set16 : SDNode<"X86ISD::FLDCW16m",           SDTX86CwdLoad,
                              [SDNPHasChain, SDNPMayLoad, SDNPSideEffect,
                               SDNPMemOperand]>;
+
+// Store x87 FPU environment into memory.
 def X86fpenv_get    : SDNode<"X86ISD::FNSTENVm",           SDTX86FPEnv,
                              [SDNPHasChain, SDNPMayStore, SDNPSideEffect,
                               SDNPMemOperand]>;
+
+// Load x87 FPU environment from memory.
 def X86fpenv_set    : SDNode<"X86ISD::FLDENVm",            SDTX86FPEnv,
                              [SDNPHasChain, SDNPMayLoad, SDNPSideEffect,
                               SDNPMemOperand]>;
