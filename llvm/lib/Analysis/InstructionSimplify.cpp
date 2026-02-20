@@ -5050,9 +5050,9 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
     if (isa<PoisonValue>(CondC))
       return PoisonValue::get(TrueVal->getType());
 
-    // select undef, X, Y -> X or Y
+    // select undef, X, Y -> undef
     if (Q.isUndefValue(CondC))
-      return isa<Constant>(FalseVal) ? FalseVal : TrueVal;
+      return UndefValue::get(TrueVal->getType());
 
     // select true,  X, Y --> X
     // select false, X, Y --> Y
