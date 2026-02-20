@@ -5122,6 +5122,16 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
   for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
     if (isa<VPIRInstruction, VPIRPhi>(&R))
       continue;
+    if (auto *ExpStrides = dyn_cast<VPExpandStridePredicatesRecipe>(&R)) {
+      Value *Res = Expander.expandCodeForPredicate(
+          ExpStrides->getSCEVPredicate(), EntryBB->getTerminator());
+      Res->setName("strides.mv.check");
+      VPValue *Exp = Plan.getOrAddLiveIn(Res);
+
+      ExpStrides->replaceAllUsesWith(Exp);
+      ExpStrides->eraseFromParent();
+      continue;
+    }
     auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpSCEV)
       break;
@@ -5135,9 +5145,10 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
       Plan.resetTripCount(Exp);
     ExpSCEV->eraseFromParent();
   }
-  assert(none_of(*Entry, IsaPred<VPExpandSCEVRecipe>) &&
-         "VPExpandSCEVRecipes must be at the beginning of the entry block, "
-         "before any VPIRInstructions");
+  assert(none_of(*Entry,
+                 IsaPred<VPExpandSCEVRecipe, VPExpandStridePredicatesRecipe>) &&
+         "VPExpandSCEVRecipes/VPExpandStridePredicatesRecipe must be at the "
+         "beginning of the entry block, before any VPIRInstructions");
   // Add IR instructions in the entry basic block but not in the VPIRBasicBlock
   // to the VPIRBasicBlock.
   auto EI = Entry->begin();

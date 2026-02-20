@@ -487,6 +487,12 @@ struct VPlanTransforms {
   static void makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                          VPRecipeBuilder &RecipeBuilder,
                                          VPCostContext &CostCtx);
+
+  /// \p MemOps must be updated to contain ones that haven't been processed by
+  /// the pass.
+  static void
+  multiversionForUnitStridedMemOps(VPlan &Plan, VPCostContext &CostCtx,
+                                   SmallVectorImpl<VPInstruction *> &MemOps);
 };
 
 } // namespace llvm
