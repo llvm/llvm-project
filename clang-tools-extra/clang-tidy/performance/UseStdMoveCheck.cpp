@@ -26,10 +26,18 @@ AST_MATCHER(CXXRecordDecl, hasNonTrivialMoveAssignment) {
   return Node.hasNonTrivialMoveAssignment();
 }
 
-AST_MATCHER(QualType, isScalarType) { return Node->isScalarType(); }
-
 AST_MATCHER(QualType, isLValueReferenceType) {
   return Node->isLValueReferenceType();
+}
+
+AST_MATCHER(DeclRefExpr, refersToEnclosingVariableOrCapture) {
+  return Node.refersToEnclosingVariableOrCapture();
+}
+
+AST_MATCHER(CXXOperatorCallExpr, isCopyAssignmentOperator) {
+  if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(Node.getDirectCallee()))
+    return MD->isCopyAssignmentOperator();
+  return false;
 }
 
 // Ignore nodes inside macros.
@@ -44,15 +52,17 @@ using utils::decl_ref_expr::allDeclRefExprs;
 void UseStdMoveCheck::registerMatchers(MatchFinder *Finder) {
   auto AssignOperatorExpr =
       cxxOperatorCallExpr(
-          hasOperatorName("="),
+          isCopyAssignmentOperator(),
           hasArgument(0, hasType(cxxRecordDecl(hasNonTrivialMoveAssignment()))),
           hasArgument(
               1, declRefExpr(
-                     to(varDecl(hasLocalStorage(),
-                                hasType(qualType(unless(anyOf(
-                                    isScalarType(), isLValueReferenceType(),
-                                    isConstQualified() // Not valid.
-                                    )))))))
+                     to(varDecl(
+                         hasLocalStorage(),
+                         hasType(qualType(unless(anyOf(
+                             isLValueReferenceType(),
+                             isConstQualified() // Not valid to move const obj.
+                             )))))),
+                     unless(refersToEnclosingVariableOrCapture()))
                      .bind("assign-value")),
           forCallable(functionDecl().bind("within-func")), unless(isInMacro()))
           .bind("assign");
@@ -79,16 +89,6 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *WithinFunctionDecl =
       Result.Nodes.getNodeAs<FunctionDecl>("within-func");
 
-  if (AssignValue->refersToEnclosingVariableOrCapture())
-    return;
-
-  const CXXRecordDecl *AssignValueRD =
-      AssignValue->getDecl()->getType()->getAsCXXRecordDecl();
-  const CXXRecordDecl *AssignExprRD =
-      AssignExpr->getType()->getAsCXXRecordDecl();
-  if (AssignValueRD && AssignValueRD != AssignExprRD)
-    return;
-
   const CFG *TheCFG = getCFG(WithinFunctionDecl, Result.Context);
   if (!TheCFG)
     return;
@@ -96,25 +96,25 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
   // Walk the CFG bottom-up, starting with the exit node.
   // TODO: traverse the whole CFG instead of only considering terminator
   // nodes.
-
   const CFGBlock &TheExit = TheCFG->getExit();
   for (auto &Pred : TheExit.preds()) {
     if (!Pred.isReachable())
       continue;
     for (const CFGElement &Elt : llvm::reverse(*Pred)) {
-      if (Elt.getKind() == CFGElement::Kind::Statement) {
-        const Stmt *EltStmt = Elt.castAs<CFGStmt>().getStmt();
-        if (EltStmt == AssignExpr) {
-          diag(AssignValue->getBeginLoc(), "'%0' could be moved here")
-              << AssignValue->getDecl()->getName();
-          break;
-        }
-        // The reference is being referenced after the assignment, bail out.
-        if (!allDeclRefExprs(*cast<VarDecl>(AssignValue->getDecl()), *EltStmt,
-                             *Result.Context)
-                 .empty())
-          break;
+      if (Elt.getKind() != CFGElement::Kind::Statement)
+        continue;
+
+      const Stmt *EltStmt = Elt.castAs<CFGStmt>().getStmt();
+      if (EltStmt == AssignExpr) {
+        diag(AssignValue->getBeginLoc(), "'%0' could be moved here")
+            << AssignValue->getDecl()->getName();
+        break;
       }
+      // The reference is being referenced after the assignment, bail out.
+      if (!allDeclRefExprs(*cast<VarDecl>(AssignValue->getDecl()), *EltStmt,
+                           *Result.Context)
+               .empty())
+        break;
     }
   }
 }
