@@ -15,16 +15,23 @@ static_library("BLAKE3") {
   ]
 }
 
-source_set("hack") {
-  sources = [
-    "blake3_avx2_x86-64_unix.S",
-    "blake3_avx2_x86-64_windows_gnu.S",
-    "blake3_avx512_x86-64_unix.S",
-    "blake3_avx512_x86-64_windows_gnu.S",
-    "blake3_neon.c",
-    "blake3_sse2_x86-64_unix.S",
-    "blake3_sse2_x86-64_windows_gnu.S",
-    "blake3_sse41_x86-64_unix.S",
-    "blake3_sse41_x86-64_windows_gnu.S",
-  ]
+if (current_cpu == "x64") {
+  source_set("hack") {
+    sources = [ "blake3_neon.c " ]
+    if (current_os == "linux") {
+      sources += [
+        "blake3_avx2_x86-64_unix.S",
+        "blake3_avx512_x86-64_unix.S",
+        "blake3_sse2_x86-64_unix.S",
+        "blake3_sse41_x86-64_unix.S",
+      ]
+    } else if (current_os == "win") {
+      sources += [
+        "blake3_avx2_x86-64_windows_gnu.S",
+        "blake3_avx512_x86-64_windows_gnu.S",
+        "blake3_sse2_x86-64_windows_gnu.S",
+        "blake3_sse41_x86-64_windows_gnu.S",
+      ]
+    }
+  }
 }
