@@ -61,10 +61,4 @@ jobs:
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
-          pylint --fail-on=E0102 --fail-under=0 $CHANGED_FILES | grep E0102
-          if [ $? != 0 ]; then
-            exit 0
-          fi
-
-          exit 1
-        shell: bash --noprofile --norc {0}
+          pylint --disable=all --enable=E0102 $CHANGED_FILES
