@@ -506,8 +506,14 @@ namespace llvm {
       int FunctionNumber;
 
     public:
-      PerFunctionState(LLParser &p, Function &f, int functionNumber,
-                       ArrayRef<unsigned> UnnamedArgNums);
+       PerFunctionState(LLParser &p, Function &f, int functionNumber, ArrayRef<unsigned> UnnamedArgNums)
+         : P(p), F(f), FunctionNumber(functionNumber) {
+        // Ensure buffers are properly initialized and bounded
+        if (UnnamedArgNums.size() > MAX_ALLOWED_ARGS) {
+         throw std::out_of_range("UnnamedArgNums exceeds maximum allowed size");
+         }
+      }
+
       ~PerFunctionState();
 
       Function &getFunction() const { return F; }
