@@ -48452,6 +48452,7 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
 static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI,
                              const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
   SDLoc DL(N);
   SDValue Cond = N->getOperand(0);
   SDValue LHS = N->getOperand(1);
@@ -48474,6 +48475,27 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   bool CondConstantVector = ISD::isBuildVectorOfConstantSDNodes(Cond.getNode());
   unsigned EltBitWidth = VT.getScalarSizeInBits();
+
+  // select in presence of fp_to_sint can be replaced with just fp_to_sint
+  // fold (SELECT (SETCC (FABS X), MAXFLOAT), (FP_TO_SINT X), INT_MIN)
+  // -> (FP_TO_SINT X)
+  SDValue X;
+  SDValue MaxFloat;
+  if (sd_match(Cond, m_SetCC(m_FAbs(m_Value(X)), m_Value(MaxFloat),
+                             m_SpecificCondCode(ISD::SETOLT)))) {
+    APInt MinSignedInt = APInt::getSignedMinValue(EltBitWidth);
+    if (sd_match(LHS, m_FPToSI(m_Specific(X))) &&
+        sd_match(RHS, m_SpecificInt(MinSignedInt))) {
+      MVT FPVT = X.getSimpleValueType();
+      APFloat MaxAbsFP(FPVT.getFltSemantics(),
+                       APInt::getZero(FPVT.getScalarSizeInBits()));
+      (void)MaxAbsFP.convertFromAPInt(MinSignedInt, false,
+                                      APFloat::rmNearestTiesToEven);
+      if (sd_match(MaxFloat, m_SpecificFP(MaxAbsFP))) {
+        return DAG.getNode(ISD::FP_TO_SINT, DL, VT, X);
+      }
+    }
+  }
 
   // Attempt to combine (select M, (sub 0, X), X) -> (sub (xor X, M), M).
   // Limit this to cases of non-constant masks that createShuffleMaskFromVSELECT
