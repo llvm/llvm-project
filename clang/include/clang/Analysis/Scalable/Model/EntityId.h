@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_ENTITY_ID_H
 #define LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_ENTITY_ID_H
 
+#include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 
 namespace clang::ssaf {
@@ -29,9 +30,10 @@ class EntityIdTable;
 /// \see EntityIdTable
 class EntityId {
   friend class EntityIdTable;
-  friend class EntityLinker;
   friend class SerializationFormat;
   friend class TestFixture;
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                       const EntityId &Id);
 
   size_t Index;
 
@@ -44,6 +46,8 @@ public:
   bool operator<(const EntityId &Other) const { return Index < Other.Index; }
   bool operator!=(const EntityId &Other) const { return !(*this == Other); }
 };
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const EntityId &Id);
 
 } // namespace clang::ssaf
 

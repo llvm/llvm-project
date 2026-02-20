@@ -55,6 +55,13 @@ size_t MockEntitySummaryEncoding::Index = 0;
 
 class EntityLinkerTest : public TestFixture {
 protected:
+  static constexpr EntityLinkage NoneLinkage =
+      EntityLinkage(EntityLinkage::LinkageType::None);
+  static constexpr EntityLinkage InternalLinkage =
+      EntityLinkage(EntityLinkage::LinkageType::Internal);
+  static constexpr EntityLinkage ExternalLinkage =
+      EntityLinkage(EntityLinkage::LinkageType::External);
+
   void SetUp() override {
     // This ensures that the MockEntitySummary id assignment does not
     // accidentally depend on test execution order.
@@ -76,10 +83,10 @@ protected:
   }
 
   EntityId addEntity(TUSummaryEncoding &TU, llvm::StringRef USR,
-                     EntityLinkage::LinkageType Linkage) {
+                     EntityLinkage Linkage) {
     EntityName Name(USR, "", NestedBuildNamespace(getTUNamespace(TU)));
     EntityId Id = getIdTable(TU).getId(Name);
-    getLinkageTable(TU).insert({Id, EntityLinkage(Linkage)});
+    getLinkageTable(TU).insert({Id, Linkage});
     return Id;
   }
 };
@@ -117,7 +124,7 @@ MATCHER_P2(EntityHasLinkage, EId, ExpectedLinkage,
     return false;
   }
 
-  auto ActualLinkage = It->second.getLinkage();
+  const EntityLinkage &ActualLinkage = It->second;
   if (ActualLinkage != ExpectedLinkage) {
     *result_listener << "entity " << PrintToString(EId) << " has linkage "
                      << PrintToString(ActualLinkage);
@@ -219,21 +226,18 @@ TEST_F(EntityLinkerTest, LinksOneTranslationUnit) {
 
   auto TU = createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU");
 
-  const auto TU_A_Id = addEntity(*TU, "A", EntityLinkage::LinkageType::None);
+  const auto TU_A_Id = addEntity(*TU, "A", NoneLinkage);
   const auto TU_A_S1_Data = addSummaryData(*TU, TU_A_Id, "S1");
   const auto TU_A_S2_Data = addSummaryData(*TU, TU_A_Id, "S2");
 
-  const auto TU_B_Id =
-      addEntity(*TU, "B", EntityLinkage::LinkageType::Internal);
+  const auto TU_B_Id = addEntity(*TU, "B", InternalLinkage);
   const auto TU_B_S1_Data = addSummaryData(*TU, TU_B_Id, "S1");
   const auto TU_B_S2_Data = addSummaryData(*TU, TU_B_Id, "S2");
 
-  const auto TU_C_Id =
-      addEntity(*TU, "C", EntityLinkage::LinkageType::External);
+  const auto TU_C_Id = addEntity(*TU, "C", ExternalLinkage);
   const auto TU_C_S1_Data = addSummaryData(*TU, TU_C_Id, "S1");
 
-  const auto TU_D_Id =
-      addEntity(*TU, "D", EntityLinkage::LinkageType::External);
+  const auto TU_D_Id = addEntity(*TU, "D", ExternalLinkage);
   const auto TU_D_S2_Data = addSummaryData(*TU, TU_D_Id, "S2");
 
   const BuildNamespace TUNamespace = getTUNamespace(*TU);
@@ -273,17 +277,10 @@ TEST_F(EntityLinkerTest, LinksOneTranslationUnit) {
   // LinkageTable Tests.
   {
     ASSERT_THAT(LinkageTable, LinkageTableHasSize(4u));
-    ASSERT_THAT(LinkageTable,
-                EntityHasLinkage(LU_A_Id, EntityLinkage::LinkageType::None));
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_B_Id, EntityLinkage::LinkageType::Internal));
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_C_Id, EntityLinkage::LinkageType::External));
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_D_Id, EntityLinkage::LinkageType::External));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_A_Id, NoneLinkage));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_B_Id, InternalLinkage));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_C_Id, ExternalLinkage));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_D_Id, ExternalLinkage));
   }
 
   std::map<EntityId, EntityId> Resolution = {{TU_A_Id, LU_A_Id},
@@ -331,41 +328,35 @@ TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
       createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU1");
 
   // None linkage entities in TU1
-  const auto TU1_X_Id = addEntity(*TU1, "X", EntityLinkage::LinkageType::None);
+  const auto TU1_X_Id = addEntity(*TU1, "X", NoneLinkage);
   const auto TU1_X_S1_Data = addSummaryData(*TU1, TU1_X_Id, "S1");
 
-  const auto TU1_Y_Id = addEntity(*TU1, "Y", EntityLinkage::LinkageType::None);
+  const auto TU1_Y_Id = addEntity(*TU1, "Y", NoneLinkage);
   const auto TU1_Y_S2_Data = addSummaryData(*TU1, TU1_Y_Id, "S2");
 
-  const auto TU1_Z_Id = addEntity(*TU1, "Z", EntityLinkage::LinkageType::None);
+  const auto TU1_Z_Id = addEntity(*TU1, "Z", NoneLinkage);
   const auto TU1_Z_S1_Data = addSummaryData(*TU1, TU1_Z_Id, "S1");
   const auto TU1_Z_S2_Data = addSummaryData(*TU1, TU1_Z_Id, "S2");
 
   // Internal linkage entities in TU1
-  const auto TU1_A_Id =
-      addEntity(*TU1, "A", EntityLinkage::LinkageType::Internal);
+  const auto TU1_A_Id = addEntity(*TU1, "A", InternalLinkage);
   const auto TU1_A_S1_Data = addSummaryData(*TU1, TU1_A_Id, "S1");
 
-  const auto TU1_B_Id =
-      addEntity(*TU1, "B", EntityLinkage::LinkageType::Internal);
+  const auto TU1_B_Id = addEntity(*TU1, "B", InternalLinkage);
   const auto TU1_B_S2_Data = addSummaryData(*TU1, TU1_B_Id, "S2");
 
-  const auto TU1_C_Id =
-      addEntity(*TU1, "C", EntityLinkage::LinkageType::Internal);
+  const auto TU1_C_Id = addEntity(*TU1, "C", InternalLinkage);
   const auto TU1_C_S1_Data = addSummaryData(*TU1, TU1_C_Id, "S1");
   const auto TU1_C_S2_Data = addSummaryData(*TU1, TU1_C_Id, "S2");
 
   // External linkage entities in TU1
-  const auto TU1_P_Id =
-      addEntity(*TU1, "P", EntityLinkage::LinkageType::External);
+  const auto TU1_P_Id = addEntity(*TU1, "P", ExternalLinkage);
   const auto TU1_P_S1_Data = addSummaryData(*TU1, TU1_P_Id, "S1");
 
-  const auto TU1_Q_Id =
-      addEntity(*TU1, "Q", EntityLinkage::LinkageType::External);
+  const auto TU1_Q_Id = addEntity(*TU1, "Q", ExternalLinkage);
   const auto TU1_Q_S2_Data = addSummaryData(*TU1, TU1_Q_Id, "S2");
 
-  const auto TU1_R_Id =
-      addEntity(*TU1, "R", EntityLinkage::LinkageType::External);
+  const auto TU1_R_Id = addEntity(*TU1, "R", ExternalLinkage);
   const auto TU1_R_S1_Data = addSummaryData(*TU1, TU1_R_Id, "S1");
   const auto TU1_R_S2_Data = addSummaryData(*TU1, TU1_R_Id, "S2");
 
@@ -377,42 +368,36 @@ TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
       createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU2");
 
   // None linkage entities in TU2 - includes duplicates and uniques
-  const auto TU2_X_Id = addEntity(*TU2, "X", EntityLinkage::LinkageType::None);
+  const auto TU2_X_Id = addEntity(*TU2, "X", NoneLinkage);
   const auto TU2_X_S2_Data = addSummaryData(*TU2, TU2_X_Id, "S2");
 
-  const auto TU2_Y_Id = addEntity(*TU2, "Y", EntityLinkage::LinkageType::None);
+  const auto TU2_Y_Id = addEntity(*TU2, "Y", NoneLinkage);
   const auto TU2_Y_S1_Data = addSummaryData(*TU2, TU2_Y_Id, "S1");
 
-  const auto TU2_W_Id = addEntity(*TU2, "W", EntityLinkage::LinkageType::None);
+  const auto TU2_W_Id = addEntity(*TU2, "W", NoneLinkage);
   const auto TU2_W_S1_Data = addSummaryData(*TU2, TU2_W_Id, "S1");
   const auto TU2_W_S2_Data = addSummaryData(*TU2, TU2_W_Id, "S2");
 
   // Internal linkage entities in TU2 - includes duplicates and unique
-  const auto TU2_A_Id =
-      addEntity(*TU2, "A", EntityLinkage::LinkageType::Internal);
+  const auto TU2_A_Id = addEntity(*TU2, "A", InternalLinkage);
   const auto TU2_A_S2_Data = addSummaryData(*TU2, TU2_A_Id, "S2");
 
-  const auto TU2_B_Id =
-      addEntity(*TU2, "B", EntityLinkage::LinkageType::Internal);
+  const auto TU2_B_Id = addEntity(*TU2, "B", InternalLinkage);
   const auto TU2_B_S1_Data = addSummaryData(*TU2, TU2_B_Id, "S1");
 
-  const auto TU2_D_Id =
-      addEntity(*TU2, "D", EntityLinkage::LinkageType::Internal);
+  const auto TU2_D_Id = addEntity(*TU2, "D", InternalLinkage);
   const auto TU2_D_S1_Data = addSummaryData(*TU2, TU2_D_Id, "S1");
   const auto TU2_D_S2_Data = addSummaryData(*TU2, TU2_D_Id, "S2");
 
   // External linkage entities in TU2 - includes duplicates (will be dropped)
   // and uniques
-  const auto TU2_P_Id =
-      addEntity(*TU2, "P", EntityLinkage::LinkageType::External);
+  const auto TU2_P_Id = addEntity(*TU2, "P", ExternalLinkage);
   const auto TU2_P_S2_Data = addSummaryData(*TU2, TU2_P_Id, "S2");
 
-  const auto TU2_Q_Id =
-      addEntity(*TU2, "Q", EntityLinkage::LinkageType::External);
+  const auto TU2_Q_Id = addEntity(*TU2, "Q", ExternalLinkage);
   const auto TU2_Q_S1_Data = addSummaryData(*TU2, TU2_Q_Id, "S1");
 
-  const auto TU2_S_Id =
-      addEntity(*TU2, "S", EntityLinkage::LinkageType::External);
+  const auto TU2_S_Id = addEntity(*TU2, "S", ExternalLinkage);
   const auto TU2_S_S1_Data = addSummaryData(*TU2, TU2_S_Id, "S1");
   const auto TU2_S_S2_Data = addSummaryData(*TU2, TU2_S_Id, "S2");
 
@@ -502,56 +487,24 @@ TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
   {
     ASSERT_THAT(LinkageTable, LinkageTableHasSize(16u));
 
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_TU1_X_Id, EntityLinkage::LinkageType::None));
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_TU1_Y_Id, EntityLinkage::LinkageType::None));
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_TU1_Z_Id, EntityLinkage::LinkageType::None));
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_TU2_X_Id, EntityLinkage::LinkageType::None));
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_TU2_Y_Id, EntityLinkage::LinkageType::None));
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_TU2_W_Id, EntityLinkage::LinkageType::None));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_TU1_X_Id, NoneLinkage));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_TU1_Y_Id, NoneLinkage));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_TU1_Z_Id, NoneLinkage));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_TU2_X_Id, NoneLinkage));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_TU2_Y_Id, NoneLinkage));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_TU2_W_Id, NoneLinkage));
 
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_TU1_A_Id, EntityLinkage::LinkageType::Internal));
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_TU1_B_Id, EntityLinkage::LinkageType::Internal));
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_TU1_C_Id, EntityLinkage::LinkageType::Internal));
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_TU2_A_Id, EntityLinkage::LinkageType::Internal));
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_TU2_B_Id, EntityLinkage::LinkageType::Internal));
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_TU2_D_Id, EntityLinkage::LinkageType::Internal));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_TU1_A_Id, InternalLinkage));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_TU1_B_Id, InternalLinkage));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_TU1_C_Id, InternalLinkage));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_TU2_A_Id, InternalLinkage));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_TU2_B_Id, InternalLinkage));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_TU2_D_Id, InternalLinkage));
 
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_P_Id, EntityLinkage::LinkageType::External));
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_Q_Id, EntityLinkage::LinkageType::External));
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_R_Id, EntityLinkage::LinkageType::External));
-    ASSERT_THAT(
-        LinkageTable,
-        EntityHasLinkage(LU_S_Id, EntityLinkage::LinkageType::External));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_P_Id, ExternalLinkage));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_Q_Id, ExternalLinkage));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_R_Id, ExternalLinkage));
+    ASSERT_THAT(LinkageTable, EntityHasLinkage(LU_S_Id, ExternalLinkage));
   }
 
   // Data Tests.

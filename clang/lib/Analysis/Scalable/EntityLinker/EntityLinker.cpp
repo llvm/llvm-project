@@ -26,23 +26,22 @@ static constexpr const char *EntityLinkerFatalErrorPrefix =
     "EntityLinker: Corrupted TUSummary or logic bug";
 
 static constexpr const char *EntityAlreadyExistsInLinkageTable =
-    "{0} - EntityId '{1}' with LinkageType '{2}' already exists in LUSummary";
+    "{0} - {1} with {2} already exists in LUSummary";
 
 static constexpr const char *MissingLinkageInformation =
-    "{0} - EntityId '{1}' missing linkage information in TUSummary";
+    "{0} - {1} missing linkage information in TUSummary";
 
 static constexpr const char *DuplicateEntityIdInTUSummary =
-    "{0} - Duplicate EntityID '{1}' in EntityResolutionTable";
+    "{0} - Duplicate {1} in EntityResolutionTable";
 
 static constexpr const char *EntityNotFoundInResolutionTable =
-    "{0} - EntityId '{1}' not found in EntityResolutionTable";
+    "{0} - {1} not found in EntityResolutionTable";
 
 static constexpr const char *FailedToInsertEntityIntoOutputSummary =
-    "{0} - Failed to insert data for EntityId '{1}' with LinkageType '{2}' "
-    "against SummaryName '{3}' to LUSummary";
+    "{0} - Failed to insert data for {1} with {2} against {3} to LUSummary";
 
 static constexpr const char *DuplicateTUNamespace =
-    "failed to link TU summary: duplicate namespace '{0}'";
+    "failed to link TU summary: duplicate {0}";
 
 } // namespace ErrorMessages
 
@@ -82,8 +81,8 @@ EntityId EntityLinker::resolveEntity(const EntityName &OldName,
     if (Linkage.getLinkage() == EntityLinkage::LinkageType::None ||
         Linkage.getLinkage() == EntityLinkage::LinkageType::Internal) {
       ErrorBuilder::fatal(ErrorMessages::EntityAlreadyExistsInLinkageTable,
-                          ErrorMessages::EntityLinkerFatalErrorPrefix,
-                          NewId.Index, toString(Linkage.getLinkage()));
+                          ErrorMessages::EntityLinkerFatalErrorPrefix, NewId,
+                          Linkage);
     }
   }
 
@@ -98,8 +97,7 @@ EntityLinker::resolve(const TUSummaryEncoding &Summary) {
     auto Iter = Summary.LinkageTable.find(OldId);
     if (Iter == Summary.LinkageTable.end()) {
       ErrorBuilder::fatal(ErrorMessages::MissingLinkageInformation,
-                          ErrorMessages::EntityLinkerFatalErrorPrefix,
-                          OldId.Index);
+                          ErrorMessages::EntityLinkerFatalErrorPrefix, OldId);
     }
 
     const EntityLinkage &Linkage = Iter->second;
@@ -109,8 +107,7 @@ EntityLinker::resolve(const TUSummaryEncoding &Summary) {
     auto [_, Inserted] = EntityResolutionTable.insert({OldId, NewId});
     if (!Inserted) {
       ErrorBuilder::fatal(ErrorMessages::DuplicateEntityIdInTUSummary,
-                          ErrorMessages::EntityLinkerFatalErrorPrefix,
-                          OldId.Index);
+                          ErrorMessages::EntityLinkerFatalErrorPrefix, OldId);
     }
   });
 
@@ -129,8 +126,7 @@ EntityLinker::merge(TUSummaryEncoding &Summary,
       auto Iter = EntityResolutionTable.find(OldId);
       if (Iter == EntityResolutionTable.end()) {
         ErrorBuilder::fatal(ErrorMessages::EntityNotFoundInResolutionTable,
-                            ErrorMessages::EntityLinkerFatalErrorPrefix,
-                            OldId.Index);
+                            ErrorMessages::EntityLinkerFatalErrorPrefix, OldId);
       }
 
       const auto NewId = Iter->second;
@@ -142,17 +138,16 @@ EntityLinker::merge(TUSummaryEncoding &Summary,
       } else {
         // Safe to retrieve linkage using .at since the resolve step ensures
         // linkage information is always present for every OldId.
-        auto Linkage = Summary.LinkageTable.at(OldId).getLinkage();
+        auto Linkage = Summary.LinkageTable.at(OldId);
 
         // Insertion should never fail for `None` and `Internal` linkage
         // entities because these entities will have different namespaces across
         // TUs even if their names match.
-        if (Linkage == EntityLinkage::LinkageType::None ||
-            Linkage == EntityLinkage::LinkageType::Internal) {
+        if (Linkage.getLinkage() == EntityLinkage::LinkageType::None ||
+            Linkage.getLinkage() == EntityLinkage::LinkageType::Internal) {
           ErrorBuilder::fatal(
               ErrorMessages::FailedToInsertEntityIntoOutputSummary,
-              ErrorMessages::EntityLinkerFatalErrorPrefix, NewId.Index,
-              toString(Linkage), SN.str());
+              ErrorMessages::EntityLinkerFatalErrorPrefix, NewId, Linkage, SN);
         }
 
         // Insertion is expected to fail for duplicate occurrences of `External`
@@ -179,7 +174,7 @@ llvm::Error EntityLinker::link(std::unique_ptr<TUSummaryEncoding> Summary) {
   if (!Inserted) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::DuplicateTUNamespace,
-                                Summary->TUNamespace.Name)
+                                Summary->TUNamespace)
         .build();
   }
 

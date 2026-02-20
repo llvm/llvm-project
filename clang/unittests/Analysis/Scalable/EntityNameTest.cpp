@@ -8,6 +8,7 @@
 
 #include "clang/Analysis/Scalable/Model/EntityName.h"
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 namespace clang::ssaf {
@@ -54,6 +55,28 @@ TEST(EntityNameTest, MakeQualified) {
   auto Qualified = EN.makeQualified(NBN2);
 
   EXPECT_NE(Qualified, EN);
+}
+
+TEST(EntityNameTest, StreamOutputNoSuffix) {
+  NestedBuildNamespace NBN(
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+  EntityName EN("c:@F@foo", "", NBN);
+  std::string S;
+  llvm::raw_string_ostream(S) << EN;
+  EXPECT_EQ(
+      S, "EntityName(c:@F@foo, , "
+         "NestedBuildNamespace([BuildNamespace(compilation_unit, test.cpp)]))");
+}
+
+TEST(EntityNameTest, StreamOutputWithSuffix) {
+  NestedBuildNamespace NBN(
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+  EntityName EN("c:@F@foo", "1", NBN);
+  std::string S;
+  llvm::raw_string_ostream(S) << EN;
+  EXPECT_EQ(
+      S, "EntityName(c:@F@foo, 1, "
+         "NestedBuildNamespace([BuildNamespace(compilation_unit, test.cpp)]))");
 }
 
 } // namespace

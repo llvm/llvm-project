@@ -9,10 +9,14 @@
 #include "clang/Analysis/Scalable/Model/EntityId.h"
 #include "clang/Analysis/Scalable/Model/EntityIdTable.h"
 #include "clang/Analysis/Scalable/Model/EntityName.h"
+#include "llvm/Support/raw_ostream.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang::ssaf {
 namespace {
+
+using ::testing::MatchesRegex;
 
 TEST(EntityIdTest, Equality) {
   EntityIdTable Table;
@@ -59,6 +63,16 @@ TEST(EntityIdTest, Transitivity) {
   std::sort(Ids, Ids + 3);
 
   EXPECT_TRUE(Ids[0] < Ids[1] && Ids[1] < Ids[2]);
+}
+
+TEST(EntityIdTest, StreamOutput) {
+  EntityIdTable Table;
+  EntityName Entity("c:@F@foo", "", {});
+  EntityId Id = Table.getId(Entity);
+
+  std::string S;
+  llvm::raw_string_ostream(S) << Id;
+  EXPECT_THAT(S, MatchesRegex("EntityId\\([0-9]+\\)"));
 }
 
 } // namespace

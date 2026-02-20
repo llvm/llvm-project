@@ -70,4 +70,21 @@ bool NestedBuildNamespace::operator<(const NestedBuildNamespace &Other) const {
   return Namespaces < Other.Namespaces;
 }
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const BuildNamespace &BN) {
+  OS << "BuildNamespace(" << toString(BN.Kind) << ", " << BN.Name << ")";
+  return OS;
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const NestedBuildNamespace &NBN) {
+  OS << "NestedBuildNamespace([";
+  for (size_t I = 0; I < NBN.Namespaces.size(); ++I) {
+    if (I > 0)
+      OS << ", ";
+    OS << NBN.Namespaces[I];
+  }
+  OS << "])";
+  return OS;
+}
+
 } // namespace clang::ssaf
