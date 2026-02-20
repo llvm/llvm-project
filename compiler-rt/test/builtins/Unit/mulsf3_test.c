@@ -16,7 +16,7 @@
 // 0x7fc00000. For the Arm optimized FP implementation, which commits to a more
 // detailed handling of NaNs, we tighten up the check and include some extra
 // test cases specific to that NaN policy.
-#if (__arm__ && !(__thumb__ && !__thumb2__)) && COMPILER_RT_ARM_OPTIMIZED_FP
+#if (__arm__ || __thumb__) && COMPILER_RT_ARM_OPTIMIZED_FP
 #  define EXPECT_EXACT_RESULTS
 #  define ARM_NAN_HANDLING
 #endif
@@ -24,22 +24,24 @@
 // Returns: a * b
 COMPILER_RT_ABI float __mulsf3(float a, float b);
 
-int test__mulsf3(uint32_t a_rep, uint32_t b_rep, uint32_t expected_rep) {
+int test__mulsf3(int line, uint32_t a_rep, uint32_t b_rep, uint32_t expected_rep) {
   float a = fromRep32(a_rep), b = fromRep32(b_rep);
   float x = __mulsf3(a, b);
 #ifdef EXPECT_EXACT_RESULTS
-  int ret = toRep32(x) == expected_rep;
+  int ret = toRep32(x) != expected_rep;
 #else
   int ret = compareResultF(x, expected_rep);
 #endif
 
   if (ret) {
-    printf("error in test__mulsf3(%08" PRIx32 ", %08" PRIx32 ") = %08" PRIx32
+    printf("error at line %d: __mulsf3(%08" PRIx32 ", %08" PRIx32 ") = %08" PRIx32
            ", expected %08" PRIx32 "\n",
-           a_rep, b_rep, toRep32(x), expected_rep);
+           line, a_rep, b_rep, toRep32(x), expected_rep);
   }
   return ret;
 }
+
+#define test__mulsf3(a,b,x) test__mulsf3(__LINE__,a,b,x)
 
 int main(void) {
   int status = 0;
