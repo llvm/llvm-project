@@ -792,9 +792,8 @@ SwiftExpressionParser::GetASTContext(DiagnosticManager &diagnostic_manager) {
     // Lazily get the clang importer if we can to make sure it exists in
     // case we need it.
     if (!m_swift_ast_ctx.GetClangImporter()) {
-      std::string swift_error =
-          m_swift_ast_ctx.GetFatalErrors().AsCString("error: unknown error.");
-      diagnostic_manager.PutString(eSeverityError, swift_error);
+      if (const char *diags = m_swift_ast_ctx.GetFatalErrors().AsCString())
+        diagnostic_manager.PutString(eSeverityError, diags);
       diagnostic_manager.PutString(eSeverityInfo,
                                    "Couldn't initialize Swift expression "
                                    "evaluator due to previous errors.");

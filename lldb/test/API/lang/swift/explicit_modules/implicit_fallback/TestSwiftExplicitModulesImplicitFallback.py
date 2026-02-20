@@ -28,7 +28,7 @@ class TestCase(lldbtest.TestBase):
 
         self.filecheck(f"platform shell cat {log}", __file__)
         # CHECK: Nonexistent explicit module file
-        # CHECK: Explicit modules : false
+        # CHECK: Explicit modules : false (downgraded
 
     @swiftTest
     def test_sanity(self):

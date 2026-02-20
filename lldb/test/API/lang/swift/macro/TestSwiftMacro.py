@@ -26,7 +26,6 @@ class TestSwiftMacro(lldbtest.TestBase):
             'settings set target.experimental.swift-plugin-server-for-path %s=%s'
             % (self.getBuildDir(), swift_plugin_server))
 
-
     @swiftTest
     # At the time of writing swift/test/Macros/macro_expand.swift is also disabled.
     @expectedFailureAll(oslist=["linux"])
@@ -109,6 +108,5 @@ class TestSwiftMacro(lldbtest.TestBase):
 #       CHECK: CacheUserImports(){{.*}}: Macro.
 #       CHECK: SwiftASTContextForExpressions{{.*}}::LoadOneModule(){{.*}}Imported module Macro from {kind = Serialized Swift AST, filename = "{{.*}}Macro.swiftmodule";}
 #       CHECK: CacheUserImports(){{.*}}Scanning for search paths in{{.*}}Macro.swiftmodule
-#       The bots have too old an Xcode for this.
-#       DISABLED: SwiftASTContextForExpressions{{.*}}::LogConfiguration(){{.*}} -external-plugin-path {{.*}}/Developer/Platforms/{{.*}}.platform/Developer/usr/local/lib/swift/host/plugins{{.*}}#{{.*}}/swift-plugin-server
-#       CHECK: SwiftASTContextForExpressions{{.*}}::LogConfiguration(){{.*}} -external-plugin-path {{.*}}/lang/swift/macro/{{.*}}#{{.*}}/swift-plugin-server
+#       CHECK-DAG: SwiftASTContextForExpressions{{.*}}::LogConfiguration(){{.*}} -external-plugin-path {{.*}}/Developer/Platforms/{{.*}}.platform/Developer/usr/{{.*}}lib/swift/host/plugins{{.*}}#{{.*}}/swift-plugin-server
+#       CHECK-DAG: SwiftASTContextForExpressions{{.*}}::LogConfiguration(){{.*}} -external-plugin-path {{.*}}/lang/swift/macro/{{.*}}#{{.*}}/swift-plugin-server

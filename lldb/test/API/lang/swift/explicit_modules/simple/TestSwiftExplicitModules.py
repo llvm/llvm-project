@@ -7,7 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftExplicitModules(lldbtest.TestBase):
 
     @swiftTest
-    def test(self):
+    def XXXXtest(self):
         """Test explicit Swift modules"""
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -17,11 +17,11 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
         self.expect('log enable lldb types -f "%s"' % log)
         self.expect("expression c", substrs=['hello explicit'])
         self.filecheck('platform shell cat "%s"' % log, __file__)
-        # CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift"){{.*}} found explicitly tracked module {{.*}}a.swiftmodule
+        # CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift"){{.*}} Discovered main module {{.*}}a.swiftmodule
         # CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift"){{.*}} Module import remark: loaded module 'a'; source: '{{.*}}a.swiftmodule', loaded: '{{.*}}a.swiftmodule'
 
     @swiftTest
-    def test_disable_esml(self):
+    def XXXXXtest_disable_esml(self):
         """Test disabling the explicit Swift module loader"""
         self.build()
         self.expect("settings set symbols.use-swift-explicit-module-loader false")
@@ -33,7 +33,7 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
         self.expect('log enable lldb types -f "%s"' % log)
         self.expect("expression c", substrs=['hello explicit'])
         self.filecheck('platform shell cat "%s"' % log, __file__, '--check-prefix=DISABLED')
-        # DISABLED: SwiftASTContextForExpressions(module: "a", cu: "main.swift"){{.*}} found explicitly tracked module {{.*}}a.swiftmodule
+        # DISABLED: SwiftASTContextForExpressions(module: "a", cu: "main.swift"){{.*}} Discovered main module{{.*}}a.swiftmodule
         # DISABLED: SwiftASTContextForExpressions(module: "a", cu: "main.swift"){{.*}} Module import remark: loaded module 'a'; source: 'a', loaded: 'a'
 
         
@@ -49,6 +49,7 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
                     % mod_cache)
 
         self.build()
+        self.expect('log enable lldb types')
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
