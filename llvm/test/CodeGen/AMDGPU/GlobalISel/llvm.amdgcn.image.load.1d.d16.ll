@@ -1064,9 +1064,12 @@ define amdgpu_ps float @load_1d_v4f16_tfe_dmask_xyzw(<8 x i32> inreg %rsrc, i32 
 ; GFX8-UNPACKED-NEXT:    s_mov_b32 s6, s8
 ; GFX8-UNPACKED-NEXT:    s_mov_b32 s7, s9
 ; GFX8-UNPACKED-NEXT:    v_mov_b32_e32 v2, v1
-; GFX8-UNPACKED-NEXT:    image_load v[1:2], v0, s[0:7] dmask:0x10 unorm tfe d16
+; GFX8-UNPACKED-NEXT:    v_mov_b32_e32 v3, v1
+; GFX8-UNPACKED-NEXT:    v_mov_b32_e32 v4, v1
+; GFX8-UNPACKED-NEXT:    v_mov_b32_e32 v5, v1
+; GFX8-UNPACKED-NEXT:    image_load v[1:5], v0, s[0:7] dmask:0xf unorm tfe d16
 ; GFX8-UNPACKED-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-UNPACKED-NEXT:    v_mov_b32_e32 v0, v2
+; GFX8-UNPACKED-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX8-UNPACKED-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-PACKED-LABEL: load_1d_v4f16_tfe_dmask_xyzw:
@@ -1081,9 +1084,10 @@ define amdgpu_ps float @load_1d_v4f16_tfe_dmask_xyzw(<8 x i32> inreg %rsrc, i32 
 ; GFX8-PACKED-NEXT:    s_mov_b32 s6, s8
 ; GFX8-PACKED-NEXT:    s_mov_b32 s7, s9
 ; GFX8-PACKED-NEXT:    v_mov_b32_e32 v2, v1
-; GFX8-PACKED-NEXT:    image_load v[1:2], v0, s[0:7] dmask:0x10 unorm tfe d16
+; GFX8-PACKED-NEXT:    v_mov_b32_e32 v3, v1
+; GFX8-PACKED-NEXT:    image_load v[1:3], v0, s[0:7] dmask:0xf unorm tfe d16
 ; GFX8-PACKED-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-PACKED-NEXT:    v_mov_b32_e32 v0, v2
+; GFX8-PACKED-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX8-PACKED-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: load_1d_v4f16_tfe_dmask_xyzw:
@@ -1098,9 +1102,10 @@ define amdgpu_ps float @load_1d_v4f16_tfe_dmask_xyzw(<8 x i32> inreg %rsrc, i32 
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v1
-; GFX9-NEXT:    image_load v[1:2], v0, s[0:7] dmask:0x10 unorm tfe d16
+; GFX9-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-NEXT:    image_load v[1:3], v0, s[0:7] dmask:0xf unorm tfe d16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: load_1d_v4f16_tfe_dmask_xyzw:
@@ -1115,9 +1120,10 @@ define amdgpu_ps float @load_1d_v4f16_tfe_dmask_xyzw(<8 x i32> inreg %rsrc, i32 
 ; GFX10PLUS-NEXT:    s_mov_b32 s6, s8
 ; GFX10PLUS-NEXT:    s_mov_b32 s7, s9
 ; GFX10PLUS-NEXT:    v_mov_b32_e32 v2, v1
-; GFX10PLUS-NEXT:    image_load v[1:2], v0, s[0:7] dmask:0x10 dim:SQ_RSRC_IMG_1D unorm tfe d16
+; GFX10PLUS-NEXT:    v_mov_b32_e32 v3, v1
+; GFX10PLUS-NEXT:    image_load v[1:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm tfe d16
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0)
-; GFX10PLUS-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10PLUS-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: load_1d_v4f16_tfe_dmask_xyzw:
@@ -1131,13 +1137,13 @@ define amdgpu_ps float @load_1d_v4f16_tfe_dmask_xyzw(<8 x i32> inreg %rsrc, i32 
 ; GFX12-NEXT:    s_mov_b32 s5, s7
 ; GFX12-NEXT:    s_mov_b32 s6, s8
 ; GFX12-NEXT:    s_mov_b32 s7, s9
-; GFX12-NEXT:    v_mov_b32_e32 v2, v1
-; GFX12-NEXT:    image_load v[1:2], v0, s[0:7] dmask:0x10 dim:SQ_RSRC_IMG_1D tfe d16
+; GFX12-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v3, v1
+; GFX12-NEXT:    image_load v[1:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D tfe d16
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_mov_b32_e32 v0, v2
+; GFX12-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX12-NEXT:    ; return to shader part epilog
-  %v = call { <4 x half>, i32 } @llvm.amdgcn.image.load.1d.sl_v4f16i32s.i32(i32 16, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
+  %v = call { <4 x half>, i32 } @llvm.amdgcn.image.load.1d.sl_v4f16i32s.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 1, i32 0)
   %v.err = extractvalue { <4 x half>, i32 } %v, 1
   %vv = bitcast i32 %v.err to float
   ret float %vv

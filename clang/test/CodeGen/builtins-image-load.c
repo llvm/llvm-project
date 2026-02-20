@@ -22,12 +22,12 @@ typedef half half4 __attribute__((ext_vector_type(4)));
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP2]], align 32
-// CHECK-NEXT:    [[TMP3:%.*]] = call float @llvm.amdgcn.image.load.2d.f32.i32.v8i32(i32 12, i32 [[TMP0]], i32 [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], i32 106, i32 103)
+// CHECK-NEXT:    [[TMP3:%.*]] = call float @llvm.amdgcn.image.load.2d.f32.i32.v8i32(i32 1, i32 [[TMP0]], i32 [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], i32 106, i32 103)
 // CHECK-NEXT:    ret float [[TMP3]]
 //
 float test_builtin_image_load_2d(float f32, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_2d_f32_i32(12, i32, i32, tex, 106, 103);
+  return __builtin_amdgcn_image_load_2d_f32_i32(1, i32, i32, tex, 106, 103);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_image_load_2d_1(
@@ -46,12 +46,12 @@ float test_builtin_image_load_2d(float f32, int i32, __amdgpu_texture_t tex) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP2]], align 32
-// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP3]]
 //
 float4 test_builtin_image_load_2d_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_2d_v4f32_i32(100, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_2d_v4f32_i32(15, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_image_load_2d_2(
@@ -70,12 +70,12 @@ float4 test_builtin_image_load_2d_1(float4 v4f32, int i32, __amdgpu_texture_t te
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP2]], align 32
-// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x half> @llvm.amdgcn.image.load.2d.v4f16.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x half> @llvm.amdgcn.image.load.2d.v4f16.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP3]]
 //
 half4 test_builtin_image_load_2d_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_2d_v4f16_i32(100, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_2d_v4f16_i32(15, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local float @test_builtin_image_load_2darray(
@@ -95,12 +95,12 @@ half4 test_builtin_image_load_2d_2(half4 v4f16, int i32, __amdgpu_texture_t tex)
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
-// CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.image.load.2darray.f32.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.image.load.2darray.f32.i32.v8i32(i32 1, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret float [[TMP4]]
 //
 float test_builtin_image_load_2darray(float f32, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_2darray_f32_i32(100, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_2darray_f32_i32(1, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_image_load_2darray_1(
@@ -120,12 +120,12 @@ float test_builtin_image_load_2darray(float f32, int i32, __amdgpu_texture_t tex
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
-// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.amdgcn.image.load.2darray.v4f32.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.amdgcn.image.load.2darray.v4f32.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP4]]
 //
 float4 test_builtin_image_load_2darray_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_2darray_v4f32_i32(100, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_2darray_v4f32_i32(15, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_image_load_2darray_2(
@@ -145,12 +145,12 @@ float4 test_builtin_image_load_2darray_1(float4 v4f32, int i32, __amdgpu_texture
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
-// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x half> @llvm.amdgcn.image.load.2darray.v4f16.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x half> @llvm.amdgcn.image.load.2darray.v4f16.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP4]]
 //
 half4 test_builtin_image_load_2darray_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_2darray_v4f16_i32(100, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_2darray_v4f16_i32(15, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_image_load_1d_1(
@@ -168,12 +168,12 @@ half4 test_builtin_image_load_2darray_2(half4 v4f16, int i32, __amdgpu_texture_t
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32.v8i32(i32 100, i32 [[TMP0]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32.v8i32(i32 15, i32 [[TMP0]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP2]]
 //
 float4 test_builtin_image_load_1d_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_1d_v4f32_i32(100, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_1d_v4f32_i32(15, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_image_load_1d_2(
@@ -191,12 +191,12 @@ float4 test_builtin_image_load_1d_1(float4 v4f32, int i32, __amdgpu_texture_t te
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x half> @llvm.amdgcn.image.load.1d.v4f16.i32.v8i32(i32 100, i32 [[TMP0]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x half> @llvm.amdgcn.image.load.1d.v4f16.i32.v8i32(i32 15, i32 [[TMP0]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP2]]
 //
 half4 test_builtin_image_load_1d_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_1d_v4f16_i32(100, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_1d_v4f16_i32(15, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_image_load_1darray_1(
@@ -215,12 +215,12 @@ half4 test_builtin_image_load_1d_2(half4 v4f16, int i32, __amdgpu_texture_t tex)
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP2]], align 32
-// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.amdgcn.image.load.1darray.v4f32.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.amdgcn.image.load.1darray.v4f32.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP3]]
 //
 float4 test_builtin_image_load_1darray_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_1darray_v4f32_i32(100, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_1darray_v4f32_i32(15, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_image_load_1darray_2(
@@ -239,12 +239,12 @@ float4 test_builtin_image_load_1darray_1(float4 v4f32, int i32, __amdgpu_texture
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP2]], align 32
-// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x half> @llvm.amdgcn.image.load.1darray.v4f16.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x half> @llvm.amdgcn.image.load.1darray.v4f16.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP3]]
 //
 half4 test_builtin_image_load_1darray_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_1darray_v4f16_i32(100, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_1darray_v4f16_i32(15, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_image_load_3d_1(
@@ -264,12 +264,12 @@ half4 test_builtin_image_load_1darray_2(half4 v4f16, int i32, __amdgpu_texture_t
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
-// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.amdgcn.image.load.3d.v4f32.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.amdgcn.image.load.3d.v4f32.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP4]]
 //
 float4 test_builtin_image_load_3d_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_3d_v4f32_i32(100, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_3d_v4f32_i32(15, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_image_load_3d_2(
@@ -289,12 +289,12 @@ float4 test_builtin_image_load_3d_1(float4 v4f32, int i32, __amdgpu_texture_t te
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
-// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x half> @llvm.amdgcn.image.load.3d.v4f16.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x half> @llvm.amdgcn.image.load.3d.v4f16.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP4]]
 //
 half4 test_builtin_image_load_3d_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_3d_v4f16_i32(100, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_3d_v4f16_i32(15, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_image_load_cube_1(
@@ -314,12 +314,12 @@ half4 test_builtin_image_load_3d_2(half4 v4f16, int i32, __amdgpu_texture_t tex)
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
-// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.amdgcn.image.load.cube.v4f32.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.amdgcn.image.load.cube.v4f32.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP4]]
 //
 float4 test_builtin_image_load_cube_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_cube_v4f32_i32(100, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_cube_v4f32_i32(15, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_image_load_cube_2(
@@ -339,12 +339,12 @@ float4 test_builtin_image_load_cube_1(float4 v4f32, int i32, __amdgpu_texture_t 
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
-// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x half> @llvm.amdgcn.image.load.cube.v4f16.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x half> @llvm.amdgcn.image.load.cube.v4f16.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP4]]
 //
 half4 test_builtin_image_load_cube_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_cube_v4f16_i32(100, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_cube_v4f16_i32(15, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_image_load_mip_1d_1(
@@ -363,12 +363,12 @@ half4 test_builtin_image_load_cube_2(half4 v4f16, int i32, __amdgpu_texture_t te
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP2]], align 32
-// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP3]]
 //
 float4 test_builtin_image_load_mip_1d_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_mip_1d_v4f32_i32(100, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_mip_1d_v4f32_i32(15, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_image_load_mip_1d_2(
@@ -387,12 +387,12 @@ float4 test_builtin_image_load_mip_1d_1(float4 v4f32, int i32, __amdgpu_texture_
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP2]], align 32
-// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x half> @llvm.amdgcn.image.load.mip.1d.v4f16.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x half> @llvm.amdgcn.image.load.mip.1d.v4f16.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP3]]
 //
 half4 test_builtin_image_load_mip_1d_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_mip_1d_v4f16_i32(100, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_mip_1d_v4f16_i32(15, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_image_load_mip_1darray_1(
@@ -412,12 +412,12 @@ half4 test_builtin_image_load_mip_1d_2(half4 v4f16, int i32, __amdgpu_texture_t 
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
-// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.amdgcn.image.load.mip.1darray.v4f32.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.amdgcn.image.load.mip.1darray.v4f32.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP4]]
 //
 float4 test_builtin_image_load_mip_1darray_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_mip_1darray_v4f32_i32(100, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_mip_1darray_v4f32_i32(15, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_image_load_mip_1darray_2(
@@ -437,12 +437,12 @@ float4 test_builtin_image_load_mip_1darray_1(float4 v4f32, int i32, __amdgpu_tex
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
-// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x half> @llvm.amdgcn.image.load.mip.1darray.v4f16.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x half> @llvm.amdgcn.image.load.mip.1darray.v4f16.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP4]]
 //
 half4 test_builtin_image_load_mip_1darray_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_mip_1darray_v4f16_i32(100, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_mip_1darray_v4f16_i32(15, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local float @test_builtin_image_load_mip_2d(
@@ -462,12 +462,12 @@ half4 test_builtin_image_load_mip_1darray_2(half4 v4f16, int i32, __amdgpu_textu
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
-// CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.image.load.mip.2d.f32.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.image.load.mip.2d.f32.i32.v8i32(i32 1, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret float [[TMP4]]
 //
 float test_builtin_image_load_mip_2d(float f32, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_mip_2d_f32_i32(100, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_mip_2d_f32_i32(1, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_image_load_mip_2d_1(
@@ -487,12 +487,12 @@ float test_builtin_image_load_mip_2d(float f32, int i32, __amdgpu_texture_t tex)
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
-// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP4]]
 //
 float4 test_builtin_image_load_mip_2d_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_mip_2d_v4f32_i32(100, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_mip_2d_v4f32_i32(15, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_image_load_mip_2d_2(
@@ -512,12 +512,12 @@ float4 test_builtin_image_load_mip_2d_1(float4 v4f32, int i32, __amdgpu_texture_
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
-// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x half> @llvm.amdgcn.image.load.mip.2d.v4f16.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x half> @llvm.amdgcn.image.load.mip.2d.v4f16.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP4]]
 //
 half4 test_builtin_image_load_mip_2d_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_mip_2d_v4f16_i32(100, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_mip_2d_v4f16_i32(15, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local float @test_builtin_image_load_mip_2darray(
@@ -538,12 +538,12 @@ half4 test_builtin_image_load_mip_2d_2(half4 v4f16, int i32, __amdgpu_texture_t 
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP4]], align 32
-// CHECK-NEXT:    [[TMP5:%.*]] = call float @llvm.amdgcn.image.load.mip.2darray.f32.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP5:%.*]] = call float @llvm.amdgcn.image.load.mip.2darray.f32.i32.v8i32(i32 1, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret float [[TMP5]]
 //
 float test_builtin_image_load_mip_2darray(float f32, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_mip_2darray_f32_i32(100, i32, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_mip_2darray_f32_i32(1, i32, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_image_load_mip_2darray_1(
@@ -564,12 +564,12 @@ float test_builtin_image_load_mip_2darray(float f32, int i32, __amdgpu_texture_t
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP4]], align 32
-// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.amdgcn.image.load.mip.2darray.v4f32.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.amdgcn.image.load.mip.2darray.v4f32.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP5]]
 //
 float4 test_builtin_image_load_mip_2darray_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_mip_2darray_v4f32_i32(100, i32, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_mip_2darray_v4f32_i32(15, i32, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_image_load_mip_2darray_2(
@@ -590,12 +590,12 @@ float4 test_builtin_image_load_mip_2darray_1(float4 v4f32, int i32, __amdgpu_tex
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP4]], align 32
-// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x half> @llvm.amdgcn.image.load.mip.2darray.v4f16.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x half> @llvm.amdgcn.image.load.mip.2darray.v4f16.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP5]]
 //
 half4 test_builtin_image_load_mip_2darray_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_mip_2darray_v4f16_i32(100, i32, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_mip_2darray_v4f16_i32(15, i32, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_image_load_mip_3d_1(
@@ -616,12 +616,12 @@ half4 test_builtin_image_load_mip_2darray_2(half4 v4f16, int i32, __amdgpu_textu
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP4]], align 32
-// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.amdgcn.image.load.mip.3d.v4f32.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.amdgcn.image.load.mip.3d.v4f32.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP5]]
 //
 float4 test_builtin_image_load_mip_3d_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_mip_3d_v4f32_i32(100, i32, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_mip_3d_v4f32_i32(15, i32, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_image_load_mip_3d_2(
@@ -642,12 +642,12 @@ float4 test_builtin_image_load_mip_3d_1(float4 v4f32, int i32, __amdgpu_texture_
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP4]], align 32
-// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x half> @llvm.amdgcn.image.load.mip.3d.v4f16.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x half> @llvm.amdgcn.image.load.mip.3d.v4f16.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP5]]
 //
 half4 test_builtin_image_load_mip_3d_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_mip_3d_v4f16_i32(100, i32, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_mip_3d_v4f16_i32(15, i32, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_image_load_mip_cube_1(
@@ -668,12 +668,12 @@ half4 test_builtin_image_load_mip_3d_2(half4 v4f16, int i32, __amdgpu_texture_t 
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP4]], align 32
-// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.amdgcn.image.load.mip.cube.v4f32.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.amdgcn.image.load.mip.cube.v4f32.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP5]]
 //
 float4 test_builtin_image_load_mip_cube_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_mip_cube_v4f32_i32(100, i32, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_mip_cube_v4f32_i32(15, i32, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_image_load_mip_cube_2(
@@ -694,12 +694,12 @@ float4 test_builtin_image_load_mip_cube_1(float4 v4f32, int i32, __amdgpu_textur
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP4]], align 32
-// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x half> @llvm.amdgcn.image.load.mip.cube.v4f16.i32.v8i32(i32 100, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x half> @llvm.amdgcn.image.load.mip.cube.v4f16.i32.v8i32(i32 15, i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP5]]
 //
 half4 test_builtin_image_load_mip_cube_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-  return __builtin_amdgcn_image_load_mip_cube_v4f16_i32(100, i32, i32, i32, i32, tex, 120, 110);
+  return __builtin_amdgcn_image_load_mip_cube_v4f16_i32(15, i32, i32, i32, i32, tex, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_amdgcn_image_sample_1d_v4f32_f32(
@@ -724,11 +724,11 @@ half4 test_builtin_image_load_mip_cube_2(half4 v4f16, int i32, __amdgpu_texture_
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
-// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 100, float [[TMP0]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP2]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 15, float [[TMP0]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP2]], i1 false, i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP3]]
 //
 float4 test_builtin_amdgcn_image_sample_1d_v4f32_f32(float4 v4f32, int i32, float f32, __amdgpu_texture_t tex, int4 vec4i32) {
-       return __builtin_amdgcn_image_sample_1d_v4f32_f32(100, f32, tex, vec4i32, 0, 120, 110);
+       return __builtin_amdgcn_image_sample_1d_v4f32_f32(15, f32, tex, vec4i32, 0, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_amdgcn_image_sample_1d_v4f16_f32(
@@ -753,11 +753,11 @@ float4 test_builtin_amdgcn_image_sample_1d_v4f32_f32(float4 v4f32, int i32, floa
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
-// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.1d.v4f16.f32.v8i32.v4i32(i32 100, float [[TMP0]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP2]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.1d.v4f16.f32.v8i32.v4i32(i32 15, float [[TMP0]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP2]], i1 false, i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP3]]
 //
 half4 test_builtin_amdgcn_image_sample_1d_v4f16_f32(half4 v4f16, int i32, float f32, __amdgpu_texture_t tex, int4 vec4i32) {
-       return __builtin_amdgcn_image_sample_1d_v4f16_f32(100, f32, tex, vec4i32, 0, 120, 110);
+       return __builtin_amdgcn_image_sample_1d_v4f16_f32(15, f32, tex, vec4i32, 0, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_amdgcn_image_sample_1darray_v4f32_f32(
@@ -780,11 +780,11 @@ half4 test_builtin_amdgcn_image_sample_1d_v4f16_f32(half4 v4f16, int i32, float 
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP2]], align 32
 // CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
-// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP3]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f32.v8i32.v4i32(i32 15, float [[TMP0]], float [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP3]], i1 false, i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP4]]
 //
 float4 test_builtin_amdgcn_image_sample_1darray_v4f32_f32(int i32, float f32, __amdgpu_texture_t tex, int4 vec4i32) {
-       return __builtin_amdgcn_image_sample_1darray_v4f32_f32(100, f32, f32, tex, vec4i32, 0, 120, 110);
+       return __builtin_amdgcn_image_sample_1darray_v4f32_f32(15, f32, f32, tex, vec4i32, 0, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_amdgcn_image_sample_1darray_v4f16_f32(
@@ -810,11 +810,11 @@ float4 test_builtin_amdgcn_image_sample_1darray_v4f32_f32(int i32, float f32, __
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP2]], align 32
 // CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
-// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.1darray.v4f16.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP3]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.1darray.v4f16.f32.v8i32.v4i32(i32 15, float [[TMP0]], float [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP3]], i1 false, i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP4]]
 //
 half4 test_builtin_amdgcn_image_sample_1darray_v4f16_f32(half4 v4f16, int i32, float f32, __amdgpu_texture_t tex, int4 vec4i32) {
-       return __builtin_amdgcn_image_sample_1darray_v4f16_f32(100, f32, f32, tex, vec4i32, 0, 120, 110);
+       return __builtin_amdgcn_image_sample_1darray_v4f16_f32(15, f32, f32, tex, vec4i32, 0, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local float @test_builtin_amdgcn_image_sample_2d_f32_f32(
@@ -837,11 +837,11 @@ half4 test_builtin_amdgcn_image_sample_1darray_v4f16_f32(half4 v4f16, int i32, f
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP2]], align 32
 // CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
-// CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.image.sample.2d.f32.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP3]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.image.sample.2d.f32.f32.v8i32.v4i32(i32 1, float [[TMP0]], float [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP3]], i1 false, i32 120, i32 110)
 // CHECK-NEXT:    ret float [[TMP4]]
 //
 float test_builtin_amdgcn_image_sample_2d_f32_f32(int i32, float f32, __amdgpu_texture_t tex, int4 vec4i32) {
-       return __builtin_amdgcn_image_sample_2d_f32_f32(100, f32, f32, tex, vec4i32, 0, 120, 110);
+       return __builtin_amdgcn_image_sample_2d_f32_f32(1, f32, f32, tex, vec4i32, 0, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_amdgcn_image_sample_2d_v4f32_f32(
@@ -867,11 +867,11 @@ float test_builtin_amdgcn_image_sample_2d_f32_f32(int i32, float f32, __amdgpu_t
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP2]], align 32
 // CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
-// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP3]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32.v8i32.v4i32(i32 15, float [[TMP0]], float [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP3]], i1 false, i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP4]]
 //
 float4 test_builtin_amdgcn_image_sample_2d_v4f32_f32(float4 v4f32, int i32, float f32, __amdgpu_texture_t tex, int4 vec4i32) {
-       return __builtin_amdgcn_image_sample_2d_v4f32_f32(100, f32, f32, tex, vec4i32, 0, 120, 110);
+       return __builtin_amdgcn_image_sample_2d_v4f32_f32(15, f32, f32, tex, vec4i32, 0, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_amdgcn_image_sample_2d_v4f16_f32(
@@ -897,11 +897,11 @@ float4 test_builtin_amdgcn_image_sample_2d_v4f32_f32(float4 v4f32, int i32, floa
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP2]], align 32
 // CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
-// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.2d.v4f16.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP3]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.2d.v4f16.f32.v8i32.v4i32(i32 15, float [[TMP0]], float [[TMP1]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP3]], i1 false, i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP4]]
 //
 half4 test_builtin_amdgcn_image_sample_2d_v4f16_f32(half4 v4f16, int i32, float f32, __amdgpu_texture_t tex, int4 vec4i32) {
-       return __builtin_amdgcn_image_sample_2d_v4f16_f32(100, f32, f32, tex, vec4i32, 0, 120, 110);
+       return __builtin_amdgcn_image_sample_2d_v4f16_f32(15, f32, f32, tex, vec4i32, 0, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local float @test_builtin_amdgcn_image_sample_2darray_f32_f32(
@@ -925,11 +925,11 @@ half4 test_builtin_amdgcn_image_sample_2d_v4f16_f32(half4 v4f16, int i32, float 
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
 // CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = call float @llvm.amdgcn.image.sample.2darray.f32.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    [[TMP5:%.*]] = call float @llvm.amdgcn.image.sample.2darray.f32.f32.v8i32.v4i32(i32 1, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
 // CHECK-NEXT:    ret float [[TMP5]]
 //
 float test_builtin_amdgcn_image_sample_2darray_f32_f32(int i32, float f32, __amdgpu_texture_t tex, int4 vec4i32) {
-       return __builtin_amdgcn_image_sample_2darray_f32_f32(100, f32, f32, f32, tex, vec4i32, 0, 120, 110);
+       return __builtin_amdgcn_image_sample_2darray_f32_f32(1, f32, f32, f32, tex, vec4i32, 0, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_amdgcn_image_sample_2darray_v4f32_f32(
@@ -956,11 +956,11 @@ float test_builtin_amdgcn_image_sample_2darray_f32_f32(int i32, float f32, __amd
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
 // CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.2darray.v4f32.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.2darray.v4f32.f32.v8i32.v4i32(i32 15, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP5]]
 //
 float4 test_builtin_amdgcn_image_sample_2darray_v4f32_f32(float4 v4f32, int i32, float f32, __amdgpu_texture_t tex, int4 vec4i32) {
-       return __builtin_amdgcn_image_sample_2darray_v4f32_f32(100, f32, f32, f32, tex, vec4i32, 0, 120, 110);
+       return __builtin_amdgcn_image_sample_2darray_v4f32_f32(15, f32, f32, f32, tex, vec4i32, 0, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_amdgcn_image_sample_2darray_v4f16_f32(
@@ -987,11 +987,11 @@ float4 test_builtin_amdgcn_image_sample_2darray_v4f32_f32(float4 v4f32, int i32,
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
 // CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.2darray.v4f16.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.2darray.v4f16.f32.v8i32.v4i32(i32 15, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP5]]
 //
 half4 test_builtin_amdgcn_image_sample_2darray_v4f16_f32(half4 v4f16, int i32, float f32, __amdgpu_texture_t tex, int4 vec4i32) {
-       return __builtin_amdgcn_image_sample_2darray_v4f16_f32(100, f32, f32, f32, tex, vec4i32, 0, 120, 110);
+       return __builtin_amdgcn_image_sample_2darray_v4f16_f32(15, f32, f32, f32, tex, vec4i32, 0, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_amdgcn_image_sample_3d_v4f32_f32(
@@ -1018,11 +1018,11 @@ half4 test_builtin_amdgcn_image_sample_2darray_v4f16_f32(half4 v4f16, int i32, f
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
 // CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32.v8i32.v4i32(i32 15, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP5]]
 //
 float4 test_builtin_amdgcn_image_sample_3d_v4f32_f32(float4 v4f32, int i32, float f32, __amdgpu_texture_t tex, int4 vec4i32) {
-       return __builtin_amdgcn_image_sample_3d_v4f32_f32(100, f32, f32, f32, tex, vec4i32, 0, 120, 110);
+       return __builtin_amdgcn_image_sample_3d_v4f32_f32(15, f32, f32, f32, tex, vec4i32, 0, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_amdgcn_image_sample_3d_v4f16_f32(
@@ -1049,11 +1049,11 @@ float4 test_builtin_amdgcn_image_sample_3d_v4f32_f32(float4 v4f32, int i32, floa
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
 // CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.3d.v4f16.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.3d.v4f16.f32.v8i32.v4i32(i32 15, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP5]]
 //
 half4 test_builtin_amdgcn_image_sample_3d_v4f16_f32(half4 v4f16, int i32, float f32, __amdgpu_texture_t tex, int4 vec4i32) {
-       return __builtin_amdgcn_image_sample_3d_v4f16_f32(100, f32, f32, f32, tex, vec4i32, 0, 120, 110);
+       return __builtin_amdgcn_image_sample_3d_v4f16_f32(15, f32, f32, f32, tex, vec4i32, 0, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x float> @test_builtin_amdgcn_image_sample_cube_v4f32_f32(
@@ -1080,11 +1080,11 @@ half4 test_builtin_amdgcn_image_sample_3d_v4f16_f32(half4 v4f16, int i32, float 
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
 // CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f32.v8i32.v4i32(i32 15, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x float> [[TMP5]]
 //
 float4 test_builtin_amdgcn_image_sample_cube_v4f32_f32(float4 v4f32, int i32, float f32, __amdgpu_texture_t tex, int4 vec4i32) {
-       return __builtin_amdgcn_image_sample_cube_v4f32_f32(100, f32, f32, f32, tex, vec4i32, 0, 120, 110);
+       return __builtin_amdgcn_image_sample_cube_v4f32_f32(15, f32, f32, f32, tex, vec4i32, 0, 120, 110);
 }
 
 // CHECK-LABEL: define dso_local <4 x half> @test_builtin_amdgcn_image_sample_cube_v4f16_f32(
@@ -1111,9 +1111,9 @@ float4 test_builtin_amdgcn_image_sample_cube_v4f32_f32(float4 v4f32, int i32, fl
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
 // CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[VEC4I32_ADDR_ASCAST]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.cube.v4f16.f32.v8i32.v4i32(i32 100, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
+// CHECK-NEXT:    [[TMP5:%.*]] = call <4 x half> @llvm.amdgcn.image.sample.cube.v4f16.f32.v8i32.v4i32(i32 15, float [[TMP0]], float [[TMP1]], float [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], <4 x i32> [[TMP4]], i1 false, i32 120, i32 110)
 // CHECK-NEXT:    ret <4 x half> [[TMP5]]
 //
 half4 test_builtin_amdgcn_image_sample_cube_v4f16_f32(half4 v4f16, int i32, float f32, __amdgpu_texture_t tex, int4 vec4i32) {
-       return __builtin_amdgcn_image_sample_cube_v4f16_f32(100, f32, f32, f32, tex, vec4i32, 0, 120, 110);
+       return __builtin_amdgcn_image_sample_cube_v4f16_f32(15, f32, f32, f32, tex, vec4i32, 0, 120, 110);
 }
