@@ -253,10 +253,12 @@ define <vscale x 1 x double> @unary_fneg_nan_2_scalable_vec_1() {
 }
 
 ; Repeat all tests with fast-math-flags. Alternate 'nnan' and 'fast' for more coverage.
+; Note: these cases used to result in poison values. Now that this isn't the case
+; anymore, these may be redundant.
 
 define float @fadd_nan_op0_nnan(float %x) {
 ; CHECK-LABEL: @fadd_nan_op0_nnan(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = fadd nnan float 0x7FF8000000000000, %x
   ret float %r
@@ -264,7 +266,7 @@ define float @fadd_nan_op0_nnan(float %x) {
 
 define float @fadd_nan_op1_fast(float %x) {
 ; CHECK-LABEL: @fadd_nan_op1_fast(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = fadd fast float %x, 0x7FF8000000000000
   ret float %r
@@ -272,7 +274,7 @@ define float @fadd_nan_op1_fast(float %x) {
 
 define float @fsub_nan_op0_fast(float %x) {
 ; CHECK-LABEL: @fsub_nan_op0_fast(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = fsub fast float 0x7FF8000000000000, %x
   ret float %r
@@ -280,7 +282,7 @@ define float @fsub_nan_op0_fast(float %x) {
 
 define float @fsub_nan_op1_nnan(float %x) {
 ; CHECK-LABEL: @fsub_nan_op1_nnan(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = fsub nnan float %x, 0x7FF8000000000000
   ret float %r
@@ -288,7 +290,7 @@ define float @fsub_nan_op1_nnan(float %x) {
 
 define float @fmul_nan_op0_nnan(float %x) {
 ; CHECK-LABEL: @fmul_nan_op0_nnan(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = fmul nnan float 0x7FF8000000000000, %x
   ret float %r
@@ -296,7 +298,7 @@ define float @fmul_nan_op0_nnan(float %x) {
 
 define float @fmul_nan_op1_fast(float %x) {
 ; CHECK-LABEL: @fmul_nan_op1_fast(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = fmul fast float %x, 0x7FF8000000000000
   ret float %r
@@ -304,7 +306,7 @@ define float @fmul_nan_op1_fast(float %x) {
 
 define float @fdiv_nan_op0_fast(float %x) {
 ; CHECK-LABEL: @fdiv_nan_op0_fast(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = fdiv fast float 0x7FF8000000000000, %x
   ret float %r
@@ -312,7 +314,7 @@ define float @fdiv_nan_op0_fast(float %x) {
 
 define float @fdiv_nan_op1_nnan(float %x) {
 ; CHECK-LABEL: @fdiv_nan_op1_nnan(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = fdiv nnan float %x, 0x7FF8000000000000
   ret float %r
@@ -320,7 +322,7 @@ define float @fdiv_nan_op1_nnan(float %x) {
 
 define float @frem_nan_op0_nnan(float %x) {
 ; CHECK-LABEL: @frem_nan_op0_nnan(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = frem nnan float 0x7FF8000000000000, %x
   ret float %r
@@ -328,7 +330,7 @@ define float @frem_nan_op0_nnan(float %x) {
 
 define float @frem_nan_op1_fast(float %x) {
 ; CHECK-LABEL: @frem_nan_op1_fast(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %r = frem fast float %x, 0x7FF8000000000000
   ret float %r

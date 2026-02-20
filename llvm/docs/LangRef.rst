@@ -4152,19 +4152,17 @@ following flags to enable otherwise unsafe floating-point transformations.
    imparts no additional semantics from using all of them.
 
 ``nnan``
-   No NaNs - Allow optimizations to assume the arguments and result are not
-   NaN. If an argument is a nan, or the result would be a nan, it produces
-   a :ref:`poison value <poisonvalues>` instead.
+   Neglect NaNs - Allow neglecting the case of NaN arguments and results
+   when determining if an optimization is legal.
 
 ``ninf``
-   No Infs - Allow optimizations to assume the arguments and result are not
-   +/-Inf. If an argument is +/-Inf, or the result would be +/-Inf, it
-   produces a :ref:`poison value <poisonvalues>` instead.
+   Neglect Infinities - Allow neglecting the case of +/- Inf arguments
+   and results when determining if an optimization is legal.
 
 ``nsz``
-   No Signed Zeros - Allow optimizations to treat the sign of a zero
-   argument or zero result as insignificant. This does not imply that -0.0
-   is poison and/or guaranteed to not exist in the operation.
+   Neglect Signed Zeros - Allow neglecting the difference between +0 and -0 in
+   arguments and results when determining if an optimization is legal.
+
 
 Note: For :ref:`phi <i_phi>`, :ref:`select <i_select>`, and :ref:`call <i_call>`
 instructions, the following return types are considered to be floating-point

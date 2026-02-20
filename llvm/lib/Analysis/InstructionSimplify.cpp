@@ -5152,17 +5152,27 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
       return ConstantInt::getFalse(Cond->getType());
   }
 
+  auto NegligiblePerFMF = [Q](Value *V) -> bool {
+    if (!isa_and_nonnull<FPMathOperator>(Q.CxtI)) {
+      return false;
+    }
+    FastMathFlags FMF = Q.CxtI->getFastMathFlags();
+    return (FMF.noNaNs() && match(V, m_NaN())) ||
+           (FMF.noInfs() && match(V, m_Inf()));
+  };
+
   // If the true or false value is poison, we can fold to the other value.
+  // Ditto for values that are negligible per FMF flags.
   // If the true or false value is undef, we can fold to the other value as
   // long as the other value isn't poison.
   // select ?, poison, X -> X
   // select ?, undef,  X -> X
-  if (isa<PoisonValue>(TrueVal) ||
+  if (isa<PoisonValue>(TrueVal) || NegligiblePerFMF(TrueVal) ||
       (Q.isUndefValue(TrueVal) && impliesPoison(FalseVal, Cond)))
     return FalseVal;
   // select ?, X, poison -> X
   // select ?, X, undef  -> X
-  if (isa<PoisonValue>(FalseVal) ||
+  if (isa<PoisonValue>(FalseVal) || NegligiblePerFMF(FalseVal) ||
       (Q.isUndefValue(FalseVal) && impliesPoison(TrueVal, Cond)))
     return TrueVal;
 
@@ -5885,17 +5895,7 @@ static Constant *simplifyFPOp(ArrayRef<Value *> Ops, FastMathFlags FMF,
 
   for (Value *V : Ops) {
     bool IsNan = match(V, m_NaN());
-    bool IsInf = match(V, m_Inf());
     bool IsUndef = Q.isUndefValue(V);
-
-    // If this operation has 'nnan' or 'ninf' and at least 1 disallowed operand
-    // (an undef operand can be chosen to be Nan/Inf), then the result of
-    // this operation is poison.
-    if (FMF.noNaNs() && (IsNan || IsUndef))
-      return PoisonValue::get(V->getType());
-    if (FMF.noInfs() && (IsInf || IsUndef))
-      return PoisonValue::get(V->getType());
-
     if (isDefaultFPEnvironment(ExBehavior, Rounding)) {
       // Undef does not propagate because undef means that all bits can take on
       // any value. If this is undef * NaN for example, then the result values
@@ -6185,10 +6185,6 @@ simplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
     if (match(Op0, m_FNegNSZ(m_Specific(Op1))) ||
         match(Op1, m_FNegNSZ(m_Specific(Op0))))
       return ConstantFP::get(Op0->getType(), -1.0);
-
-    // nnan ninf X / [-]0.0 -> poison
-    if (FMF.noInfs() && match(Op1, m_AnyZeroFP()))
-      return PoisonValue::get(Op1->getType());
   }
 
   return nullptr;
