@@ -302,6 +302,14 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
   BB->getTerminator()->eraseFromParent();
 }
 
+/// Create a pointer to the switch index field in the coroutine frame.
+static Value *createSwitchIndexPtr(const coro::Shape &Shape,
+                                   IRBuilder<> &Builder, Value *FramePtr) {
+  auto *Offset = ConstantInt::get(Type::getInt64Ty(FramePtr->getContext()),
+                                  Shape.SwitchLowering.IndexOffset);
+  return Builder.CreateInBoundsPtrAdd(FramePtr, Offset, "index.addr");
+}
+
 // Mark a coroutine as done, which implies that the coroutine is finished and
 // never gets resumed.
 //
@@ -315,15 +323,9 @@ static void markCoroutineAsDone(IRBuilder<> &Builder, const coro::Shape &Shape,
   assert(
       Shape.ABI == coro::ABI::Switch &&
       "markCoroutineAsDone is only supported for Switch-Resumed ABI for now.");
-  // Resume function pointer
-  Value *GepIndex = FramePtr;
-  if (Shape.SwitchLowering.ResumeOffset != 0) {
-    GepIndex = Builder.CreateInBoundsPtrAdd(
-        FramePtr, ConstantInt::get(Type::getInt64Ty(FramePtr->getContext()),
-                                   Shape.SwitchLowering.ResumeOffset));
-  }
+  // Resume function pointer is always first
   auto *NullPtr = ConstantPointerNull::get(Shape.getSwitchResumePointerType());
-  Builder.CreateStore(NullPtr, GepIndex);
+  Builder.CreateStore(NullPtr, FramePtr);
 
   // If the coroutine don't have unwind coro end, we could omit the store to
   // the final suspend point since we could infer the coroutine is suspended
@@ -339,10 +341,7 @@ static void markCoroutineAsDone(IRBuilder<> &Builder, const coro::Shape &Shape,
            "The final suspend should only live in the last position of "
            "CoroSuspends.");
     ConstantInt *IndexVal = Shape.getIndex(Shape.CoroSuspends.size() - 1);
-    auto *Offset = ConstantInt::get(Type::getInt64Ty(FramePtr->getContext()),
-                                    Shape.SwitchLowering.IndexOffset);
-    Value *FinalIndex =
-        Builder.CreateInBoundsPtrAdd(FramePtr, Offset, "index.addr");
+    Value *FinalIndex = createSwitchIndexPtr(Shape, Builder, FramePtr);
     Builder.CreateStore(IndexVal, FinalIndex);
   }
 }
@@ -424,16 +423,9 @@ void coro::BaseCloner::handleFinalSuspend() {
       // to generate code for other cases.
       Builder.CreateBr(ResumeBB);
     } else {
-      // Resume function pointer
-      Value *GepIndex = NewFramePtr;
-      if (Shape.SwitchLowering.ResumeOffset != 0) {
-        GepIndex = Builder.CreateInBoundsPtrAdd(
-            NewFramePtr,
-            ConstantInt::get(Type::getInt64Ty(NewFramePtr->getContext()),
-                             Shape.SwitchLowering.ResumeOffset));
-      }
+      // Resume function pointer is always first
       auto *Load =
-          Builder.CreateLoad(Shape.getSwitchResumePointerType(), GepIndex);
+          Builder.CreateLoad(Shape.getSwitchResumePointerType(), NewFramePtr);
       auto *Cond = Builder.CreateIsNull(Load);
       Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
     }
@@ -1129,10 +1121,6 @@ static void updateAsyncFuncPointerContextSize(coro::Shape &Shape) {
   Shape.AsyncLowering.AsyncFuncPointer->setInitializer(NewFuncPtrStruct);
 }
 
-static TypeSize getFrameSizeForShape(coro::Shape &Shape) {
-  return TypeSize::getFixed(Shape.FrameSize);
-}
-
 static void replaceFrameSizeAndAlignment(coro::Shape &Shape) {
   if (Shape.ABI == coro::ABI::Async)
     updateAsyncFuncPointerContextSize(Shape);
@@ -1148,8 +1136,8 @@ static void replaceFrameSizeAndAlignment(coro::Shape &Shape) {
 
   // In the same function all coro.sizes should have the same result type.
   auto *SizeIntrin = Shape.CoroSizes.back();
-  auto *SizeConstant =
-      ConstantInt::get(SizeIntrin->getType(), getFrameSizeForShape(Shape));
+  auto *SizeConstant = ConstantInt::get(SizeIntrin->getType(),
+                                        TypeSize::getFixed(Shape.FrameSize));
 
   for (CoroSizeInst *CS : Shape.CoroSizes) {
     CS->replaceAllUsesWith(SizeConstant);
@@ -1183,7 +1171,8 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
       // Create an alloca for a byte array of the frame size
       auto *FrameTy = ArrayType::get(Type::getInt8Ty(Builder.getContext()),
                                      Shape.FrameSize);
-      auto *Frame = Builder.CreateAlloca(FrameTy);
+      auto *Frame = Builder.CreateAlloca(
+          FrameTy, nullptr, AllocInst->getParent()->getName() + ".Frame");
       Frame->setAlignment(Shape.FrameAlign);
       AllocInst->replaceAllUsesWith(Builder.getFalse());
       AllocInst->eraseFromParent();
@@ -1512,10 +1501,7 @@ private:
 
     IRBuilder<> Builder(NewEntry);
     auto *FramePtr = Shape.FramePtr;
-    auto *Offset =
-        ConstantInt::get(Type::getInt64Ty(C), Shape.SwitchLowering.IndexOffset);
-    Value *GepIndex =
-        Builder.CreateInBoundsPtrAdd(FramePtr, Offset, "index.addr");
+    Value *GepIndex = createSwitchIndexPtr(Shape, Builder, FramePtr);
     auto *Index = Builder.CreateLoad(Shape.getIndexType(), GepIndex, "index");
     auto *Switch =
         Builder.CreateSwitch(Index, UnreachBB, Shape.CoroSuspends.size());
@@ -1537,10 +1523,7 @@ private:
         // point.
         markCoroutineAsDone(Builder, Shape, FramePtr);
       } else {
-        auto *Offset = ConstantInt::get(Type::getInt64Ty(C),
-                                        Shape.SwitchLowering.IndexOffset);
-        Value *GepIndex =
-            Builder.CreateInBoundsPtrAdd(FramePtr, Offset, "index.addr");
+        Value *GepIndex = createSwitchIndexPtr(Shape, Builder, FramePtr);
         Builder.CreateStore(IndexVal, GepIndex);
       }
 
@@ -1626,13 +1609,6 @@ private:
 
     // Resume function pointer
     Value *ResumeAddr = Shape.FramePtr;
-    if (Shape.SwitchLowering.ResumeOffset != 0) {
-      ResumeAddr = Builder.CreateInBoundsPtrAdd(
-          Shape.FramePtr,
-          ConstantInt::get(Type::getInt64Ty(C),
-                           Shape.SwitchLowering.ResumeOffset),
-          "resume.addr");
-    }
     Builder.CreateStore(ResumeFn, ResumeAddr);
 
     Value *DestroyOrCleanupFn = DestroyFn;

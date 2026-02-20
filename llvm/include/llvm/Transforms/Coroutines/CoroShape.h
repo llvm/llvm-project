@@ -95,21 +95,6 @@ struct Shape {
                                SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves,
                                CoroPromiseInst *CoroPromise);
 
-  // Field indexes for special fields in the switch lowering.
-  struct SwitchFieldIndex {
-    enum {
-      Resume,
-      Destroy
-
-      // The promise field is always at a fixed offset from the start of
-      // frame given its type, but the index isn't a constant for all
-      // possible frames.
-
-      // The switch-index field isn't at a fixed offset or index, either;
-      // we just work it in where it fits best.
-    };
-  };
-
   coro::ABI ABI;
 
   Align FrameAlign;
@@ -122,7 +107,7 @@ struct Shape {
     AllocaInst *PromiseAlloca;
     BasicBlock *ResumeEntryBlock;
     IntegerType *IndexType;
-    unsigned ResumeOffset;
+    // ResumeOffset always 0;
     unsigned DestroyOffset;
     unsigned IndexAlign;
     unsigned IndexOffset;
