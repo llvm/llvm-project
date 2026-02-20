@@ -12141,6 +12141,68 @@ static bool evalShiftWithCount(
   return true;
 }
 
+bool clang::MatchesPredicate(
+  const uint32_t Imm, const llvm::APFloatBase::cmpResult CompareResult) {
+  using CmpResult = llvm::APFloatBase::cmpResult;
+
+  bool IsUnordered = (CompareResult == llvm::APFloatBase::cmpUnordered);
+  bool IsEq = (CompareResult == CmpResult::cmpEqual);
+  bool IsGt = (CompareResult == CmpResult::cmpGreaterThan);
+  bool IsLt = (CompareResult == CmpResult::cmpLessThan);
+
+  switch (Imm & 0x1F) {
+  case X86CmpImm::CMP_EQ_OQ:
+  case X86CmpImm::CMP_EQ_OS:
+    return IsEq && !IsUnordered;
+  case X86CmpImm::CMP_LT_OS:
+  case X86CmpImm::CMP_LT_OQ:
+    return IsLt && !IsUnordered;
+  case X86CmpImm::CMP_LE_OS:
+  case X86CmpImm::CMP_LE_OQ:
+    return !IsGt && !IsUnordered;
+  case X86CmpImm::CMP_UNORD_Q:
+  case X86CmpImm::CMP_UNORD_S:
+    return IsUnordered;
+  case X86CmpImm::CMP_NEQ_UQ:
+  case X86CmpImm::CMP_NEQ_US:
+    return !IsEq || IsUnordered;
+  case X86CmpImm::CMP_NLT_US:
+  case X86CmpImm::CMP_NLT_UQ:
+    return !IsLt || IsUnordered;
+  case X86CmpImm::CMP_NLE_US:
+  case X86CmpImm::CMP_NLE_UQ:
+    return IsGt || IsUnordered;
+  case X86CmpImm::CMP_ORD_Q:
+  case X86CmpImm::CMP_ORD_S:
+    return !IsUnordered;
+  case X86CmpImm::CMP_EQ_UQ:
+  case X86CmpImm::CMP_EQ_US:
+    return IsEq || IsUnordered;
+  case X86CmpImm::CMP_NGE_US:
+  case X86CmpImm::CMP_NGE_UQ:
+    return IsLt || IsUnordered;
+  case X86CmpImm::CMP_NGT_US:
+  case X86CmpImm::CMP_NGT_UQ:
+    return !IsGt || IsUnordered;
+  case X86CmpImm::CMP_FALSE_OQ:
+  case X86CmpImm::CMP_FALSE_OS:
+    return false;
+  case X86CmpImm::CMP_NEQ_OQ:
+  case X86CmpImm::CMP_NEQ_OS:
+    return !IsEq && !IsUnordered;
+  case X86CmpImm::CMP_GE_OS:
+  case X86CmpImm::CMP_GE_OQ:
+    return !IsLt && !IsUnordered;
+  case X86CmpImm::CMP_GT_OS:
+  case X86CmpImm::CMP_GT_OQ:
+    return IsGt && !IsUnordered;
+  case X86CmpImm::CMP_TRUE_UQ:
+  case X86CmpImm::CMP_TRUE_US:
+    return true;
+  }
+  return false;
+}
+
 bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
