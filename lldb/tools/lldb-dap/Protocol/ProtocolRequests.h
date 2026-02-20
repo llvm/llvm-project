@@ -444,7 +444,7 @@ struct SetVariableArguments {
   std::string value;
 
   /// Specifies details on how to format the response value.
-  ValueFormat format;
+  std::optional<ValueFormat> format;
 };
 bool fromJSON(const llvm::json::Value &, SetVariableArguments &,
               llvm::json::Path);
