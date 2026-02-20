@@ -3256,6 +3256,20 @@ public:
     return false;
   }
 
+  virtual unsigned getLoadSliceCost(bool ForCodeSize, unsigned Loads,
+                                    unsigned CrossRegisterBanksCopies,
+                                    unsigned Truncates, unsigned ZExts,
+                                    unsigned Shifts) const {
+    // Assume cross register banks copies are as expensive as loads.
+    unsigned ExpensiveOps = Loads + CrossRegisterBanksCopies;
+
+    // Unless we are optimizing for code size, prioritize expensive operations.
+    if (!ForCodeSize)
+      ExpensiveOps = ExpensiveOps * 20;
+
+    return Truncates + ZExts + Shifts + ExpensiveOps;
+  }
+
   /// Return true if the target has a vector blend instruction.
   virtual bool hasVectorBlend() const { return false; }
 

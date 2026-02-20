@@ -68,6 +68,11 @@ public:
                              unsigned AS,
                              Instruction *I = nullptr) const override;
 
+  unsigned getLoadSliceCost(bool ForCodeSize, unsigned Loads,
+                            unsigned CrossRegisterBanksCopies,
+                            unsigned Truncates, unsigned ZExts,
+                            unsigned Shifts) const override;
+
   bool isTruncateFree(Type *SrcTy, Type *DstTy) const override {
     // Truncating 64-bit to 32-bit is free in SASS.
     if (!SrcTy->isIntegerTy() || !DstTy->isIntegerTy())

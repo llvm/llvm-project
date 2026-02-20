@@ -21099,32 +21099,10 @@ struct LoadedSlice {
       return *this;
     }
 
-    bool operator==(const Cost &RHS) const {
-      return Loads == RHS.Loads && Truncates == RHS.Truncates &&
-             CrossRegisterBanksCopies == RHS.CrossRegisterBanksCopies &&
-             ZExts == RHS.ZExts && Shift == RHS.Shift;
+    unsigned value(const TargetLowering &TLI) const {
+      return TLI.getLoadSliceCost(ForCodeSize, Loads, CrossRegisterBanksCopies,
+                                  Truncates, ZExts, Shift);
     }
-
-    bool operator!=(const Cost &RHS) const { return !(*this == RHS); }
-
-    bool operator<(const Cost &RHS) const {
-      // Assume cross register banks copies are as expensive as loads.
-      // FIXME: Do we want some more target hooks?
-      unsigned ExpensiveOpsLHS = Loads + CrossRegisterBanksCopies;
-      unsigned ExpensiveOpsRHS = RHS.Loads + RHS.CrossRegisterBanksCopies;
-      // Unless we are optimizing for code size, consider the
-      // expensive operation first.
-      if (!ForCodeSize && ExpensiveOpsLHS != ExpensiveOpsRHS)
-        return ExpensiveOpsLHS < ExpensiveOpsRHS;
-      return (Truncates + ZExts + Shift + ExpensiveOpsLHS) <
-             (RHS.Truncates + RHS.ZExts + RHS.Shift + ExpensiveOpsRHS);
-    }
-
-    bool operator>(const Cost &RHS) const { return RHS < *this; }
-
-    bool operator<=(const Cost &RHS) const { return !(RHS < *this); }
-
-    bool operator>=(const Cost &RHS) const { return !(*this < RHS); }
   };
 
   // The last instruction that represent the slice. This should be a
@@ -21445,7 +21423,8 @@ static void adjustCostForPairing(SmallVectorImpl<LoadedSlice> &LoadedSlices,
 /// FIXME: When the cost model will be mature enough, we can relax
 /// constraints (1) and (2).
 static bool isSlicingProfitable(SmallVectorImpl<LoadedSlice> &LoadedSlices,
-                                const APInt &UsedBits, bool ForCodeSize) {
+                                const APInt &UsedBits, bool ForCodeSize,
+                                const TargetLowering &TLI) {
   unsigned NumberOfSlices = LoadedSlices.size();
   if (StressLoadSlicing)
     return NumberOfSlices > 1;
@@ -21475,7 +21454,7 @@ static bool isSlicingProfitable(SmallVectorImpl<LoadedSlice> &LoadedSlices,
 
   // If the target supports paired load, adjust the cost accordingly.
   adjustCostForPairing(LoadedSlices, GlobalSlicingCost);
-  return OrigCost > GlobalSlicingCost;
+  return OrigCost.value(TLI) > GlobalSlicingCost.value(TLI);
 }
 
 /// If the given load, \p LI, is used only by trunc or trunc(lshr)
@@ -21555,7 +21534,8 @@ bool DAGCombiner::SliceUpLoad(SDNode *N) {
   }
 
   // Abort slicing if it does not seem to be profitable.
-  if (!isSlicingProfitable(LoadedSlices, UsedBits, ForCodeSize))
+  if (!isSlicingProfitable(LoadedSlices, UsedBits, ForCodeSize,
+                           DAG.getTargetLoweringInfo()))
     return false;
 
   ++SlicedLoads;

@@ -5668,6 +5668,23 @@ bool NVPTXTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   return true;
 }
 
+unsigned NVPTXTargetLowering::getLoadSliceCost(
+    bool ForCodeSize, unsigned Loads, unsigned CrossRegisterBanksCopies,
+    unsigned Truncates, unsigned ZExts, unsigned Shifts) const {
+
+  // Loads are much more expensive than other operations, and the cost of extra
+  // load is not offset by savings from shift/mask if the usage of the load is
+  // as split elements.
+  //
+  // Base TLI treats CrossRegisterBanksCopies as expensive, but these operations
+  // can be optimized in most cases for NVPTX.
+  //
+  CrossRegisterBanksCopies = 0;
+
+  return TargetLoweringBase::getLoadSliceCost(
+      ForCodeSize, Loads, CrossRegisterBanksCopies, Truncates, ZExts, Shifts);
+}
+
 //===----------------------------------------------------------------------===//
 //                         NVPTX Inline Assembly Support
 //===----------------------------------------------------------------------===//
