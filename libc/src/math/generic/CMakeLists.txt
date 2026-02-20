@@ -4223,7 +4223,9 @@ add_entrypoint_object(
   HDRS
     ../atan2l.h
   DEPENDS
+    libc.src.__support.FPUtil.cast
     libc.src.__support.math.atan2
+    libc.src.__support.math.atan2f128
 )
 
 add_entrypoint_object(
