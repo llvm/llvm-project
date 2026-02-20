@@ -728,6 +728,8 @@ void VPlanTransforms::createHeaderPhiRecipes(
         Phi, RdxDesc.getRecurrenceKind(), *Start, *BackedgeValue,
         getReductionStyle(InLoopReductions.contains(Phi), UseOrderedReductions,
                           ScaleFactor),
+        Phi->getType()->isFloatingPointTy() ? RdxDesc.getFastMathFlags()
+                                            : VPIRFlags(),
         RdxDesc.hasUsesOutsideReductionChain());
   };
 
