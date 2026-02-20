@@ -44,7 +44,6 @@ foreach i = 0...31 in {
   def ENVREG#i : NVPTXReg<"%envreg"#i>;
 }
 
-
 //===----------------------------------------------------------------------===//
 //  Register classes.
 //  NOTE: if you add new vector types for a register, you must update

@@ -4927,26 +4927,12 @@ def INT_PTX_SREG_PM2 : PTX_READ_SREG_R32<"pm2", int_nvvm_read_ptx_sreg_pm2>;
 def INT_PTX_SREG_PM3 : PTX_READ_SREG_R32<"pm3", int_nvvm_read_ptx_sreg_pm3>;
 
 // Reserved shared memory special register reads
-def INT_PTX_SREG_RESERVED_SMEM_OFFSET_BEGIN :
-    PTX_READ_SREG_R32<"reserved_smem_offset_begin",
-                      int_nvvm_read_ptx_sreg_reserved_smem_offset_begin,
-                      [hasPTX<76>, hasSM<80>]>;
-def INT_PTX_SREG_RESERVED_SMEM_OFFSET_END :
-    PTX_READ_SREG_R32<"reserved_smem_offset_end",
-                      int_nvvm_read_ptx_sreg_reserved_smem_offset_end,
-                      [hasPTX<76>, hasSM<80>]>;
-def INT_PTX_SREG_RESERVED_SMEM_OFFSET_CAP :
-    PTX_READ_SREG_R32<"reserved_smem_offset_cap",
-                      int_nvvm_read_ptx_sreg_reserved_smem_offset_cap,
-                      [hasPTX<76>, hasSM<80>]>;
-def INT_PTX_SREG_RESERVED_SMEM_OFFSET_0 :
-    PTX_READ_SREG_R32<"reserved_smem_offset_0",
-                      int_nvvm_read_ptx_sreg_reserved_smem_offset_0,
-                      [hasPTX<76>, hasSM<80>]>;
-def INT_PTX_SREG_RESERVED_SMEM_OFFSET_1 :
-    PTX_READ_SREG_R32<"reserved_smem_offset_1",
-                      int_nvvm_read_ptx_sreg_reserved_smem_offset_1,
-                      [hasPTX<76>, hasSM<80>]>;
+foreach suffix = ["begin", "end", "cap", "0", "1"] in {
+  defvar regname = "reserved_smem_offset_" # suffix;
+  defvar intr = !cast<Intrinsic>("int_nvvm_read_ptx_sreg_" # regname);
+  def "INT_PTX_SREG_RESERVED_SMEM_OFFSET_" # !toupper(suffix) :
+      PTX_READ_SREG_R32<regname, intr, [hasPTX<76>, hasSM<80>]>;
+}
 
 // TODO: It would be nice to use PTX_READ_SREG here, but it doesn't
 // handle the constant.
