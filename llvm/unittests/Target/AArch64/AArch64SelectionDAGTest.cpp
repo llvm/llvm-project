@@ -918,7 +918,7 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_Select) {
   SDLoc Loc;
   auto Cst0 = DAG->getConstant(0, Loc, MVT::i32);
   auto Cst3 = DAG->getConstant(3, Loc, MVT::i32);
-  auto Cst4 = DAG->getConstant(4, Loc, MVT::i32); 
+  auto Cst4 = DAG->getConstant(4, Loc, MVT::i32);
   auto CstBig = DAG->getConstant(2 << 17, Loc, MVT::i32);
 
   auto Cond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 1, MVT::i1);
@@ -978,7 +978,7 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_ISD_SRL) {
   auto Cst4 = DAG->getConstant(4, Loc, MVT::i32);
   auto Cst7 = DAG->getConstant(7, Loc, MVT::i32);
   auto CstBig = DAG->getConstant(2 << 17, Loc, MVT::i32);
-  
+
   auto SRL40 = DAG->getNode(ISD::SRL, Loc, MVT::i32, Cst4, Cst0);
   auto SRL41 = DAG->getNode(ISD::SRL, Loc, MVT::i32, Cst4, Cst1);
   auto SRL44 = DAG->getNode(ISD::SRL, Loc, MVT::i32, Cst4, Cst4);
@@ -988,7 +988,7 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_ISD_SRL) {
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRL40));
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRL41));
   EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(SRL44));
-  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRL44, /*OrZero=*/ true));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRL44, /*OrZero=*/true));
   EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(SRL71));
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRLBig4));
 
@@ -1022,7 +1022,8 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_ISD_SRL) {
 
   APInt DemandAll(2, 3);
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRL4Big04, DemandHi));
-  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRL4Big04, DemandHi, /*OrZero=*/true));
+  EXPECT_TRUE(
+      DAG->isKnownToBeAPowerOfTwo(SRL4Big04, DemandHi, /*OrZero=*/true));
 
   auto SplatVT = MVT::nxv2i16;
   auto Splat0 = DAG->getSplat(SplatVT, Loc, Cst0);
@@ -1043,7 +1044,6 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_ISD_SRL) {
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRLSplat40));
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRLSplat40, /*OrZero=*/true));
 }
-
 
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_BUILD_VECTOR) {
   TargetLowering TL(*TM, *STI);
