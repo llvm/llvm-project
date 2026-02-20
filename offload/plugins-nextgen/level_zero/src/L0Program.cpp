@@ -23,6 +23,8 @@
 #include "L0Plugin.h"
 #include "L0Program.h"
 
+using namespace llvm::omp::target::debug;
+
 namespace llvm::omp::target::plugin {
 
 Error L0GlobalHandlerTy::getGlobalMetadataFromDevice(GenericDeviceTy &Device,
@@ -80,8 +82,37 @@ Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
   ModuleDesc.pInputModule = Image;
   ModuleDesc.pBuildFlags = BuildOptions.c_str();
   ModuleDesc.pConstants = &SpecConstants;
-  CALL_ZE_RET_ERROR(zeModuleCreate, l0Device.getZeContext(),
-                    l0Device.getZeDevice(), &ModuleDesc, &Module, &BuildLog);
+
+  int32_t RC;
+  CALL_ZE(RC, zeModuleCreate, l0Device.getZeContext(), l0Device.getZeDevice(),
+          &ModuleDesc, &Module, &BuildLog);
+
+  const bool BuildFailed = (RC != ZE_RESULT_SUCCESS);
+  // Suppress build log if it is due to -library-compilation
+  const bool SuppressLog = !BuildFailed && IsLibModule;
+
+  if (!SuppressLog) {
+    ODBG(OLDT_Module) << "Error: module creation failed";
+    ODBG(OLDT_Module, ODL_Verbose) << "Target build log:";
+    size_t LogSize = 0;
+    CALL_ZE_RET_ERROR(zeModuleBuildLogGetString, BuildLog, &LogSize, nullptr);
+    if (LogSize > 1) {
+      std::vector<char> LogString(LogSize);
+      CALL_ZE_RET_ERROR(zeModuleBuildLogGetString, BuildLog, &LogSize,
+                        LogString.data());
+      std::stringstream Str(LogString.data());
+      std::string Line;
+      while (std::getline(Str, Line, '\n'))
+        ODBG(OLDT_Module, ODL_Verbose) << "  " << Line.c_str();
+
+    } else {
+      ODBG(OLDT_Module) << "  <empty>";
+    }
+  }
+  CALL_ZE_RET_ERROR(zeModuleBuildLogDestroy, BuildLog);
+
+  if (BuildFailed)
+    return Plugin::error(ErrorCode::UNKNOWN, "Module creation failed");
 
   // Check if module link is required. We do not need this check for
   // library module.
@@ -111,10 +142,33 @@ Error L0ProgramBuilderTy::linkModules() {
                          "Invalid number of modules when linking modules");
 
   ze_module_build_log_handle_t LinkLog = nullptr;
-  CALL_ZE_RET_ERROR(zeModuleDynamicLink,
-                    static_cast<uint32_t>(l0Device.getNumGlobalModules()),
-                    l0Device.getGlobalModulesArray(), &LinkLog);
-  return Plugin::success();
+  int32_t RC;
+  CALL_ZE(RC, zeModuleDynamicLink,
+          static_cast<uint32_t>(l0Device.getNumGlobalModules()),
+          l0Device.getGlobalModulesArray(), &LinkLog);
+  const bool LinkFailed = (RC != ZE_RESULT_SUCCESS);
+
+  if (LinkFailed) {
+    ODBG(OLDT_Module) << "Error: module link failed";
+
+    ODBG(OLDT_Module, ODL_Verbose) << "Target link log:";
+    size_t LogSize = 0;
+    CALL_ZE_RET_ERROR(zeModuleBuildLogGetString, LinkLog, &LogSize, nullptr);
+    if (LogSize > 1) {
+      std::vector<char> LogString(LogSize);
+      CALL_ZE_RET_ERROR(zeModuleBuildLogGetString, LinkLog, &LogSize,
+                        LogString.data());
+      std::stringstream Str(LogString.data());
+      std::string Line;
+      while (std::getline(Str, Line, '\n'))
+        ODBG(OLDT_Module, ODL_Verbose) << Line.c_str();
+    } else {
+      ODBG(OLDT_Module, ODL_Verbose) << "  <empty>";
+    }
+  }
+  CALL_ZE_RET_ERROR(zeModuleBuildLogDestroy, LinkLog);
+  return LinkFailed ? Plugin::error(ErrorCode::UNKNOWN, "Module link failed")
+                    : Plugin::success();
 }
 
 static void replaceDriverOptsWithBackendOpts(const L0DeviceTy &Device,
