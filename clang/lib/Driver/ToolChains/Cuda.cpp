@@ -157,6 +157,11 @@ CudaInstallationDetector::CudaInstallationDetector(
     Candidates.emplace_back(
         Args.getLastArgValue(options::OPT_cuda_path_EQ).str());
   } else if (HostTriple.isOSWindows()) {
+    if (std::optional<std::string> CudaPath =
+            llvm::sys::Process::GetEnv("CUDA_PATH")) {
+      if (!CudaPath->empty())
+        Candidates.emplace_back(std::move(*CudaPath));
+    }
     for (const char *Ver : Versions)
       Candidates.emplace_back(
           D.SysRoot + "/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v" +
