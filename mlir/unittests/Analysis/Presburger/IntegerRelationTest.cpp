@@ -741,6 +741,27 @@ TEST(IntegerRelationTest, simplify) {
   EXPECT_TRUE(rel.getNumEqualities() == 2);
 }
 
+TEST(IntegerRelationTest, simplify2) {
+  IntegerRelation rel(PresburgerSpace::getRelationSpace(0, 6));
+  rel.addEquality({-1, 0, 0, 0, 0, 3, 0});
+  rel.addEquality({0, 1, 0, -3, 0, 0, 0});
+  rel.addEquality({0, -1, 0, 0, 2, 0, 0});
+  rel.addInequality({0, 1, 0, 0, 0, 0, -6});
+  rel.addInequality({0, 0, 0, 0, 0, -1, 6});
+  rel.addInequality({0, 1, 0, -3, 0, 0, 0});
+  rel.addInequality({0, -1, 0, 3, 0, 0, 0});
+  rel.addInequality({0, -1, 3, 0, 0, 0, 2});
+  rel.addInequality({0, 1, -3, 0, 0, 0, 0});
+  rel.addInequality({0, 0, -1, 0, 0, 1, -1});
+  EXPECT_FALSE(rel.isIntegerEmpty());
+
+  auto simplified = rel;
+  simplified.simplify();
+  EXPECT_TRUE(rel.isEqual(simplified));
+  simplified.dump();
+  EXPECT_FALSE(simplified.isIntegerEmpty());
+}
+
 TEST(IntegerRelationTest, isFullDim) {
   IntegerRelation rel = parseRelationFromSet("(x): (1 >= 0)", 1);
   EXPECT_TRUE(rel.isFullDim());
