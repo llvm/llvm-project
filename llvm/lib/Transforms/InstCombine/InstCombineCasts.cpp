@@ -2853,20 +2853,35 @@ static Instruction *foldBitCastSelect(BitCastInst &BitCast,
   // A vector select must maintain the same number of elements in its operands.
   Type *CondTy = Cond->getType();
   Type *DestTy = BitCast.getType();
+
+  auto *DestVecTy = dyn_cast<VectorType>(DestTy);
+
   if (auto *CondVTy = dyn_cast<VectorType>(CondTy))
-    if (!DestTy->isVectorTy() ||
-        CondVTy->getElementCount() !=
-            cast<VectorType>(DestTy)->getElementCount())
+    if (!DestVecTy ||
+        CondVTy->getElementCount() != DestVecTy->getElementCount())
       return nullptr;
+
+  auto *Sel = cast<Instruction>(BitCast.getOperand(0));
+  auto *SrcVecTy = dyn_cast<VectorType>(TVal->getType());
+
+  if ((isa<Constant>(TVal) || isa<Constant>(FVal)) &&
+      (!DestVecTy ||
+       (SrcVecTy && ElementCount::isKnownLE(DestVecTy->getElementCount(),
+                                            SrcVecTy->getElementCount())))) {
+    // Avoid introducing select of vector (or select of vector with more
+    // elements) until the backend can undo this transformation.
+    Value *CastedTVal = Builder.CreateBitCast(TVal, DestTy);
+    Value *CastedFVal = Builder.CreateBitCast(FVal, DestTy);
+    return SelectInst::Create(Cond, CastedTVal, CastedFVal, "", nullptr, Sel);
+  }
 
   // FIXME: This transform is restricted from changing the select between
   // scalars and vectors to avoid backend problems caused by creating
   // potentially illegal operations. If a fix-up is added to handle that
   // situation, we can remove this check.
-  if (DestTy->isVectorTy() != TVal->getType()->isVectorTy())
+  if ((DestVecTy != nullptr) != (SrcVecTy != nullptr))
     return nullptr;
 
-  auto *Sel = cast<Instruction>(BitCast.getOperand(0));
   Value *X;
   if (match(TVal, m_OneUse(m_BitCast(m_Value(X)))) && X->getType() == DestTy &&
       !isa<Constant>(X)) {
