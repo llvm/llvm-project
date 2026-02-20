@@ -86,6 +86,7 @@ private:
   /// Returns true if the users of \p MI have compatible EEWs and SEWs.
   bool checkUsers(const MachineInstr &MI) const;
   bool tryReduceVL(MachineInstr &MI, MachineOperand VL) const;
+  bool isSupportedInstr(const MachineInstr &MI) const;
   bool isCandidate(const MachineInstr &MI) const;
   void transfer(const MachineInstr &MI);
 
@@ -888,415 +889,31 @@ static std::optional<OperandInfo> getOperandInfo(const MachineOperand &MO) {
 
 static bool isTupleInsertInstr(const MachineInstr &MI);
 
-/// Return true if this optimization should consider MI for VL reduction. This
-/// white-list approach simplifies this optimization for instructions that may
-/// have more complex semantics with relation to how it uses VL.
-static bool isSupportedInstr(const MachineInstr &MI) {
+/// Return true if we can reason about demanded VLs elementwise for \p MI.
+bool RISCVVLOptimizer::isSupportedInstr(const MachineInstr &MI) const {
   if (MI.isPHI() || MI.isFullCopy() || isTupleInsertInstr(MI))
     return true;
 
-  const RISCVVPseudosTable::PseudoInfo *RVV =
-      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
-
-  if (!RVV)
+  unsigned RVVOpc = RISCV::getRVVMCOpcode(MI.getOpcode());
+  if (!RVVOpc)
     return false;
 
-  switch (RVV->BaseInstr) {
-  // Vector Unit-Stride Instructions
-  // Vector Strided Instructions
-  case RISCV::VLM_V:
-  case RISCV::VLE8_V:
-  case RISCV::VLSE8_V:
-  case RISCV::VLE16_V:
-  case RISCV::VLSE16_V:
-  case RISCV::VLE32_V:
-  case RISCV::VLSE32_V:
-  case RISCV::VLE64_V:
-  case RISCV::VLSE64_V:
-  // Vector Indexed Instructions
-  case RISCV::VLUXEI8_V:
-  case RISCV::VLOXEI8_V:
-  case RISCV::VLUXEI16_V:
-  case RISCV::VLOXEI16_V:
-  case RISCV::VLUXEI32_V:
-  case RISCV::VLOXEI32_V:
-  case RISCV::VLUXEI64_V:
-  case RISCV::VLOXEI64_V:
-  // Vector Single-Width Integer Add and Subtract
-  case RISCV::VADD_VI:
-  case RISCV::VADD_VV:
-  case RISCV::VADD_VX:
-  case RISCV::VSUB_VV:
-  case RISCV::VSUB_VX:
-  case RISCV::VRSUB_VI:
-  case RISCV::VRSUB_VX:
-  // Vector Bitwise Logical Instructions
-  // Vector Single-Width Shift Instructions
-  case RISCV::VAND_VI:
-  case RISCV::VAND_VV:
-  case RISCV::VAND_VX:
-  case RISCV::VOR_VI:
-  case RISCV::VOR_VV:
-  case RISCV::VOR_VX:
-  case RISCV::VXOR_VI:
-  case RISCV::VXOR_VV:
-  case RISCV::VXOR_VX:
-  case RISCV::VSLL_VI:
-  case RISCV::VSLL_VV:
-  case RISCV::VSLL_VX:
-  case RISCV::VSRL_VI:
-  case RISCV::VSRL_VV:
-  case RISCV::VSRL_VX:
-  case RISCV::VSRA_VI:
-  case RISCV::VSRA_VV:
-  case RISCV::VSRA_VX:
-  // Vector Widening Integer Add/Subtract
-  case RISCV::VWADDU_VV:
-  case RISCV::VWADDU_VX:
-  case RISCV::VWSUBU_VV:
-  case RISCV::VWSUBU_VX:
-  case RISCV::VWADD_VV:
-  case RISCV::VWADD_VX:
-  case RISCV::VWSUB_VV:
-  case RISCV::VWSUB_VX:
-  case RISCV::VWADDU_WV:
-  case RISCV::VWADDU_WX:
-  case RISCV::VWSUBU_WV:
-  case RISCV::VWSUBU_WX:
-  case RISCV::VWADD_WV:
-  case RISCV::VWADD_WX:
-  case RISCV::VWSUB_WV:
-  case RISCV::VWSUB_WX:
-  // Vector Integer Extension
-  case RISCV::VZEXT_VF2:
-  case RISCV::VSEXT_VF2:
-  case RISCV::VZEXT_VF4:
-  case RISCV::VSEXT_VF4:
-  case RISCV::VZEXT_VF8:
-  case RISCV::VSEXT_VF8:
-  // Vector Narrowing Integer Right Shift Instructions
-  case RISCV::VNSRL_WX:
-  case RISCV::VNSRL_WI:
-  case RISCV::VNSRL_WV:
-  case RISCV::VNSRA_WI:
-  case RISCV::VNSRA_WV:
-  case RISCV::VNSRA_WX:
-  // Vector Integer Compare Instructions
-  case RISCV::VMSEQ_VI:
-  case RISCV::VMSEQ_VV:
-  case RISCV::VMSEQ_VX:
-  case RISCV::VMSNE_VI:
-  case RISCV::VMSNE_VV:
-  case RISCV::VMSNE_VX:
-  case RISCV::VMSLTU_VV:
-  case RISCV::VMSLTU_VX:
-  case RISCV::VMSLT_VV:
-  case RISCV::VMSLT_VX:
-  case RISCV::VMSLEU_VV:
-  case RISCV::VMSLEU_VI:
-  case RISCV::VMSLEU_VX:
-  case RISCV::VMSLE_VV:
-  case RISCV::VMSLE_VI:
-  case RISCV::VMSLE_VX:
-  case RISCV::VMSGTU_VI:
-  case RISCV::VMSGTU_VX:
-  case RISCV::VMSGT_VI:
-  case RISCV::VMSGT_VX:
-  // Vector Integer Min/Max Instructions
-  case RISCV::VMINU_VV:
-  case RISCV::VMINU_VX:
-  case RISCV::VMIN_VV:
-  case RISCV::VMIN_VX:
-  case RISCV::VMAXU_VV:
-  case RISCV::VMAXU_VX:
-  case RISCV::VMAX_VV:
-  case RISCV::VMAX_VX:
-  // Vector Single-Width Integer Multiply Instructions
-  case RISCV::VMUL_VV:
-  case RISCV::VMUL_VX:
-  case RISCV::VMULH_VV:
-  case RISCV::VMULH_VX:
-  case RISCV::VMULHU_VV:
-  case RISCV::VMULHU_VX:
-  case RISCV::VMULHSU_VV:
-  case RISCV::VMULHSU_VX:
-  // Vector Integer Divide Instructions
-  case RISCV::VDIVU_VV:
-  case RISCV::VDIVU_VX:
-  case RISCV::VDIV_VV:
-  case RISCV::VDIV_VX:
-  case RISCV::VREMU_VV:
-  case RISCV::VREMU_VX:
-  case RISCV::VREM_VV:
-  case RISCV::VREM_VX:
-  // Vector Widening Integer Multiply Instructions
-  case RISCV::VWMUL_VV:
-  case RISCV::VWMUL_VX:
-  case RISCV::VWMULSU_VV:
-  case RISCV::VWMULSU_VX:
-  case RISCV::VWMULU_VV:
-  case RISCV::VWMULU_VX:
-  // Vector Single-Width Integer Multiply-Add Instructions
-  case RISCV::VMACC_VV:
-  case RISCV::VMACC_VX:
-  case RISCV::VNMSAC_VV:
-  case RISCV::VNMSAC_VX:
-  case RISCV::VMADD_VV:
-  case RISCV::VMADD_VX:
-  case RISCV::VNMSUB_VV:
-  case RISCV::VNMSUB_VX:
-  // Vector Integer Merge Instructions
-  case RISCV::VMERGE_VIM:
-  case RISCV::VMERGE_VVM:
-  case RISCV::VMERGE_VXM:
-  // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
-  case RISCV::VADC_VIM:
-  case RISCV::VADC_VVM:
-  case RISCV::VADC_VXM:
-  case RISCV::VMADC_VIM:
-  case RISCV::VMADC_VVM:
-  case RISCV::VMADC_VXM:
-  case RISCV::VSBC_VVM:
-  case RISCV::VSBC_VXM:
-  case RISCV::VMSBC_VVM:
-  case RISCV::VMSBC_VXM:
-  case RISCV::VMADC_VV:
-  case RISCV::VMADC_VI:
-  case RISCV::VMADC_VX:
-  case RISCV::VMSBC_VV:
-  case RISCV::VMSBC_VX:
-  // Vector Widening Integer Multiply-Add Instructions
-  case RISCV::VWMACCU_VV:
-  case RISCV::VWMACCU_VX:
-  case RISCV::VWMACC_VV:
-  case RISCV::VWMACC_VX:
-  case RISCV::VWMACCSU_VV:
-  case RISCV::VWMACCSU_VX:
-  case RISCV::VWMACCUS_VX:
-  // Vector Integer Move Instructions
-  case RISCV::VMV_V_I:
-  case RISCV::VMV_V_X:
-  case RISCV::VMV_V_V:
-  // Vector Single-Width Saturating Add and Subtract
-  case RISCV::VSADDU_VV:
-  case RISCV::VSADDU_VX:
-  case RISCV::VSADDU_VI:
-  case RISCV::VSADD_VV:
-  case RISCV::VSADD_VX:
-  case RISCV::VSADD_VI:
-  case RISCV::VSSUBU_VV:
-  case RISCV::VSSUBU_VX:
-  case RISCV::VSSUB_VV:
-  case RISCV::VSSUB_VX:
-  // Vector Single-Width Averaging Add and Subtract
-  case RISCV::VAADDU_VV:
-  case RISCV::VAADDU_VX:
-  case RISCV::VAADD_VV:
-  case RISCV::VAADD_VX:
-  case RISCV::VASUBU_VV:
-  case RISCV::VASUBU_VX:
-  case RISCV::VASUB_VV:
-  case RISCV::VASUB_VX:
-  // Vector Single-Width Fractional Multiply with Rounding and Saturation
-  case RISCV::VSMUL_VV:
-  case RISCV::VSMUL_VX:
-  // Vector Single-Width Scaling Shift Instructions
-  case RISCV::VSSRL_VV:
-  case RISCV::VSSRL_VX:
-  case RISCV::VSSRL_VI:
-  case RISCV::VSSRA_VV:
-  case RISCV::VSSRA_VX:
-  case RISCV::VSSRA_VI:
-  // Vector Narrowing Fixed-Point Clip Instructions
-  case RISCV::VNCLIPU_WV:
-  case RISCV::VNCLIPU_WX:
-  case RISCV::VNCLIPU_WI:
-  case RISCV::VNCLIP_WV:
-  case RISCV::VNCLIP_WX:
-  case RISCV::VNCLIP_WI:
-  // Vector Bit-manipulation Instructions (Zvbb)
-  // Vector And-Not
-  case RISCV::VANDN_VV:
-  case RISCV::VANDN_VX:
-  // Vector Reverse Bits in Elements
-  case RISCV::VBREV_V:
-  // Vector Reverse Bits in Bytes
-  case RISCV::VBREV8_V:
-  // Vector Reverse Bytes
-  case RISCV::VREV8_V:
-  // Vector Count Leading Zeros
-  case RISCV::VCLZ_V:
-  // Vector Count Trailing Zeros
-  case RISCV::VCTZ_V:
-  // Vector Population Count
-  case RISCV::VCPOP_V:
-  // Vector Rotate Left
-  case RISCV::VROL_VV:
-  case RISCV::VROL_VX:
-  // Vector Rotate Right
-  case RISCV::VROR_VI:
-  case RISCV::VROR_VV:
-  case RISCV::VROR_VX:
-  // Vector Widening Shift Left Logical
-  case RISCV::VWSLL_VI:
-  case RISCV::VWSLL_VX:
-  case RISCV::VWSLL_VV:
-  // Vector Carry-less Multiplication Instructions (Zvbc)
-  // Vector Carry-less Multiply
-  case RISCV::VCLMUL_VV:
-  case RISCV::VCLMUL_VX:
-  // Vector Carry-less Multiply Return High Half
-  case RISCV::VCLMULH_VV:
-  case RISCV::VCLMULH_VX:
-  // Vector Mask Instructions
-  // Vector Mask-Register Logical Instructions
-  // vmsbf.m set-before-first mask bit
-  // vmsif.m set-including-first mask bit
-  // vmsof.m set-only-first mask bit
-  // Vector Iota Instruction
-  // Vector Element Index Instruction
-  case RISCV::VMAND_MM:
-  case RISCV::VMNAND_MM:
-  case RISCV::VMANDN_MM:
-  case RISCV::VMXOR_MM:
-  case RISCV::VMOR_MM:
-  case RISCV::VMNOR_MM:
-  case RISCV::VMORN_MM:
-  case RISCV::VMXNOR_MM:
-  case RISCV::VMSBF_M:
-  case RISCV::VMSIF_M:
-  case RISCV::VMSOF_M:
-  case RISCV::VIOTA_M:
-  case RISCV::VID_V:
-  // Vector Slide Instructions
-  case RISCV::VSLIDEUP_VX:
-  case RISCV::VSLIDEUP_VI:
-  case RISCV::VSLIDEDOWN_VX:
-  case RISCV::VSLIDEDOWN_VI:
-  case RISCV::VSLIDE1UP_VX:
-  case RISCV::VFSLIDE1UP_VF:
-  // Vector Register Gather Instructions
-  case RISCV::VRGATHER_VI:
-  case RISCV::VRGATHER_VV:
-  case RISCV::VRGATHER_VX:
-  case RISCV::VRGATHEREI16_VV:
-  // Vector Single-Width Floating-Point Add/Subtract Instructions
-  case RISCV::VFADD_VF:
-  case RISCV::VFADD_VV:
-  case RISCV::VFSUB_VF:
-  case RISCV::VFSUB_VV:
-  case RISCV::VFRSUB_VF:
-  // Vector Widening Floating-Point Add/Subtract Instructions
-  case RISCV::VFWADD_VV:
-  case RISCV::VFWADD_VF:
-  case RISCV::VFWSUB_VV:
-  case RISCV::VFWSUB_VF:
-  case RISCV::VFWADD_WF:
-  case RISCV::VFWADD_WV:
-  case RISCV::VFWSUB_WF:
-  case RISCV::VFWSUB_WV:
-  // Vector Single-Width Floating-Point Multiply/Divide Instructions
-  case RISCV::VFMUL_VF:
-  case RISCV::VFMUL_VV:
-  case RISCV::VFDIV_VF:
-  case RISCV::VFDIV_VV:
-  case RISCV::VFRDIV_VF:
-  // Vector Widening Floating-Point Multiply
-  case RISCV::VFWMUL_VF:
-  case RISCV::VFWMUL_VV:
-  // Vector Single-Width Floating-Point Fused Multiply-Add Instructions
-  case RISCV::VFMACC_VV:
-  case RISCV::VFMACC_VF:
-  case RISCV::VFNMACC_VV:
-  case RISCV::VFNMACC_VF:
-  case RISCV::VFMSAC_VV:
-  case RISCV::VFMSAC_VF:
-  case RISCV::VFNMSAC_VV:
-  case RISCV::VFNMSAC_VF:
-  case RISCV::VFMADD_VV:
-  case RISCV::VFMADD_VF:
-  case RISCV::VFNMADD_VV:
-  case RISCV::VFNMADD_VF:
-  case RISCV::VFMSUB_VV:
-  case RISCV::VFMSUB_VF:
-  case RISCV::VFNMSUB_VV:
-  case RISCV::VFNMSUB_VF:
-  // Vector Widening Floating-Point Fused Multiply-Add Instructions
-  case RISCV::VFWMACC_VV:
-  case RISCV::VFWMACC_VF:
-  case RISCV::VFWNMACC_VV:
-  case RISCV::VFWNMACC_VF:
-  case RISCV::VFWMSAC_VV:
-  case RISCV::VFWMSAC_VF:
-  case RISCV::VFWNMSAC_VV:
-  case RISCV::VFWNMSAC_VF:
-  case RISCV::VFWMACCBF16_VV:
-  case RISCV::VFWMACCBF16_VF:
-  // Vector Floating-Point Square-Root Instruction
-  case RISCV::VFSQRT_V:
-  // Vector Floating-Point Reciprocal Square-Root Estimate Instruction
-  case RISCV::VFRSQRT7_V:
-  // Vector Floating-Point Reciprocal Estimate Instruction
-  case RISCV::VFREC7_V:
-  // Vector Floating-Point MIN/MAX Instructions
-  case RISCV::VFMIN_VF:
-  case RISCV::VFMIN_VV:
-  case RISCV::VFMAX_VF:
-  case RISCV::VFMAX_VV:
-  // Vector Floating-Point Sign-Injection Instructions
-  case RISCV::VFSGNJ_VF:
-  case RISCV::VFSGNJ_VV:
-  case RISCV::VFSGNJN_VV:
-  case RISCV::VFSGNJN_VF:
-  case RISCV::VFSGNJX_VF:
-  case RISCV::VFSGNJX_VV:
-  // Vector Floating-Point Compare Instructions
-  case RISCV::VMFEQ_VF:
-  case RISCV::VMFEQ_VV:
-  case RISCV::VMFNE_VF:
-  case RISCV::VMFNE_VV:
-  case RISCV::VMFLT_VF:
-  case RISCV::VMFLT_VV:
-  case RISCV::VMFLE_VF:
-  case RISCV::VMFLE_VV:
-  case RISCV::VMFGT_VF:
-  case RISCV::VMFGE_VF:
-  // Vector Floating-Point Classify Instruction
-  case RISCV::VFCLASS_V:
-  // Vector Floating-Point Merge Instruction
-  case RISCV::VFMERGE_VFM:
-  // Vector Floating-Point Move Instruction
-  case RISCV::VFMV_V_F:
-  // Single-Width Floating-Point/Integer Type-Convert Instructions
-  case RISCV::VFCVT_XU_F_V:
-  case RISCV::VFCVT_X_F_V:
-  case RISCV::VFCVT_RTZ_XU_F_V:
-  case RISCV::VFCVT_RTZ_X_F_V:
-  case RISCV::VFCVT_F_XU_V:
-  case RISCV::VFCVT_F_X_V:
-  // Widening Floating-Point/Integer Type-Convert Instructions
-  case RISCV::VFWCVT_XU_F_V:
-  case RISCV::VFWCVT_X_F_V:
-  case RISCV::VFWCVT_RTZ_XU_F_V:
-  case RISCV::VFWCVT_RTZ_X_F_V:
-  case RISCV::VFWCVT_F_XU_V:
-  case RISCV::VFWCVT_F_X_V:
-  case RISCV::VFWCVT_F_F_V:
-  case RISCV::VFWCVTBF16_F_F_V:
-  // Narrowing Floating-Point/Integer Type-Convert Instructions
-  case RISCV::VFNCVT_XU_F_W:
-  case RISCV::VFNCVT_X_F_W:
-  case RISCV::VFNCVT_RTZ_XU_F_W:
-  case RISCV::VFNCVT_RTZ_X_F_W:
-  case RISCV::VFNCVT_F_XU_W:
-  case RISCV::VFNCVT_F_X_W:
-  case RISCV::VFNCVT_F_F_W:
-  case RISCV::VFNCVT_ROD_F_F_W:
-  case RISCV::VFNCVTBF16_F_F_W:
-    return true;
-  }
+  assert(!(MI.getNumExplicitDefs() == 0 && !MI.mayStore() &&
+           RISCVII::elementsDependOnVL(TII->get(RVVOpc).TSFlags)) &&
+         "No defs but elements depend on VL?");
 
-  return false;
+  // TODO: Reduce vl for vmv.s.x and vfmv.s.f. Currently this introduces more vl
+  // toggles, we need to extend PRE in RISCVInsertVSETVLI first.
+  if (RVVOpc == RISCV::VMV_S_X || RVVOpc == RISCV::VFMV_S_F)
+    return false;
+
+  if (RISCVII::elementsDependOnVL(TII->get(RVVOpc).TSFlags))
+    return false;
+
+  if (MI.mayStore())
+    return false;
+
+  return true;
 }
 
 /// Return true if MO is a vector operand but is used as a scalar operand.
@@ -1362,18 +979,6 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
     }
   }
 
-  // Some instructions that produce vectors have semantics that make it more
-  // difficult to determine whether the VL can be reduced. For example, some
-  // instructions, such as reductions, may write lanes past VL to a scalar
-  // register. Other instructions, such as some loads or stores, may write
-  // lower lanes using data from higher lanes. There may be other complex
-  // semantics not mentioned here that make it hard to determine whether
-  // the VL can be optimized. As a result, a white-list of supported
-  // instructions is used. Over time, more instructions can be supported
-  // upon careful examination of their semantics under the logic in this
-  // optimization.
-  // TODO: Use a better approach than a white-list, such as adding
-  // properties to instructions using something like TSFlags.
   if (!isSupportedInstr(MI)) {
     LLVM_DEBUG(dbgs() << "Not a candidate due to unsupported instruction: "
                       << MI);
