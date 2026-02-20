@@ -788,10 +788,10 @@ static void instantiateDependentHLSLParamModifierAttr(
   ParmVarDecl *NewParm = cast<ParmVarDecl>(New);
   NewParm->addAttr(Attr->clone(S.getASTContext()));
 
-  // we might have already produced an error
-  // just don't change the type here because it will assert
-  // also need to produce an error because of all the ways
-  // templates can be used
+  // If this is groupshared don't change the type because it will assert
+  // below. In this case we might have already produced an error but we
+  // must produce one here again because of all the ways templates can
+  // be used.
   if (const auto *RT = NewParm->getType()->getAs<LValueReferenceType>()) {
     if (RT->getPointeeType().getAddressSpace() == LangAS::hlsl_groupshared) {
       S.Diag(Attr->getLoc(), diag::err_hlsl_attr_incompatible)
