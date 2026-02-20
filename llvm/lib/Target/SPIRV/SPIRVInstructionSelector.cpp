@@ -1359,11 +1359,11 @@ bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
       continue;
     MachineBasicBlock &BB = *I.getParent();
     auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-                    .addDef(ResVReg)
-                    .addUse(GR.getSPIRVTypeID(ResType))
-                    .addImm(static_cast<uint32_t>(InstructionSet))
-                    .addImm(Opcode)
-                    .setMIFlags(I.getFlags());
+                   .addDef(ResVReg)
+                   .addUse(GR.getSPIRVTypeID(ResType))
+                   .addImm(static_cast<uint32_t>(InstructionSet))
+                   .addImm(Opcode)
+                   .setMIFlags(I.getFlags());
     const unsigned NumOps = I.getNumOperands();
     unsigned Index = 1;
     if (Index < NumOps &&
@@ -1386,11 +1386,11 @@ bool SPIRVInstructionSelector::selectExtInstWithSrcs(
       continue;
     MachineBasicBlock &BB = *I.getParent();
     auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-                    .addDef(ResVReg)
-                    .addUse(GR.getSPIRVTypeID(ResType))
-                    .addImm(static_cast<uint32_t>(InstructionSet))
-                    .addImm(Opcode)
-                    .setMIFlags(I.getFlags());
+                   .addDef(ResVReg)
+                   .addUse(GR.getSPIRVTypeID(ResType))
+                   .addImm(static_cast<uint32_t>(InstructionSet))
+                   .addImm(Opcode)
+                   .setMIFlags(I.getFlags());
     for (Register SReg : SrcRegs) {
       MIB.addUse(SReg);
     }
@@ -1416,10 +1416,10 @@ bool SPIRVInstructionSelector::selectExtInstForLRound(
       continue;
     MachineBasicBlock &BB = *I.getParent();
     auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-                    .addDef(ResVReg)
-                    .addUse(GR.getSPIRVTypeID(ResType))
-                    .addImm(static_cast<uint32_t>(InstructionSet))
-                    .addImm(Opcode);
+                   .addDef(ResVReg)
+                   .addUse(GR.getSPIRVTypeID(ResType))
+                   .addImm(static_cast<uint32_t>(InstructionSet))
+                   .addImm(Opcode);
     const unsigned NumOps = I.getNumOperands();
     unsigned Index = 1;
     if (Index < NumOps &&
@@ -3274,14 +3274,12 @@ bool SPIRVInstructionSelector::selectExp10(Register ResVReg,
                       ? SPIRV::OpVectorTimesScalar
                       : SPIRV::OpFMulS;
 
-    if (!selectOpWithSrcs(
-            ArgReg, ResType, I,
-           {ConstReg, I.getOperand(1).getReg()},
-            Opcode))
+    if (!selectOpWithSrcs(ArgReg, ResType, I,
+                          {ConstReg, I.getOperand(1).getReg()}, Opcode))
       return false;
-    return selectExtInstWithSrcs(ResVReg, ResType, I,
-                                 std::vector<Register>({ArgReg}),
-                                 {{SPIRV::InstructionSet::GLSL_std_450,GL::Exp2}});
+    return selectExtInstWithSrcs(
+        ResVReg, ResType, I, std::vector<Register>({ArgReg}),
+        {{SPIRV::InstructionSet::GLSL_std_450, GL::Exp2}});
   }
 
   return false;
