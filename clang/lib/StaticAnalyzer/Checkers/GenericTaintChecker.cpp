@@ -901,13 +901,13 @@ void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
         std::string Message = "";
         if (BR.isInteresting(ArgvSVal))
           Message += "'" + ArgvName.str() + "'";
-        if (BR.isInteresting(ArgcSVal)){
-          if (Message.size()>0)
+        if (BR.isInteresting(ArgcSVal)) {
+          if (Message.size() > 0)
             Message += ", ";
           Message += "'" + ArgcName.str() + "'";
         }
-        if (BR.isInteresting(EnvpSVal)){
-          if (Message.size()>0)
+        if (BR.isInteresting(EnvpSVal)) {
+          if (Message.size() > 0)
             Message += ", ";
           Message += "'" + EnvpName.str() + "'";
         }
