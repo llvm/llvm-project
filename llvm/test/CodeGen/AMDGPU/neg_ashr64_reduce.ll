@@ -48,19 +48,23 @@ define <3 x i64> @v3_ashr_metadata(ptr %arg0.ptr, ptr %arg1.ptr) {
 ; CHECK-LABEL: v3_ashr_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
-; CHECK-NEXT:    v_add_co_u32_e32 v0, vcc, 20, v0
-; CHECK-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; CHECK-NEXT:    v_add_co_u32_e32 v11, vcc, 20, v0
+; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[2:3]
+; CHECK-NEXT:    v_addc_co_u32_e32 v12, vcc, 0, v1, vcc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dword v4, v[2:3] offset:16
-; CHECK-NEXT:    flat_load_dwordx4 v[8:11], v[2:3]
-; CHECK-NEXT:    v_mov_b32_e32 v3, -1
-; CHECK-NEXT:    flat_load_dword v1, v[0:1]
+; CHECK-NEXT:    flat_load_dwordx4 v[7:10], v[0:1]
+; CHECK-NEXT:    flat_load_dword v5, v[11:12]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v8, v5
-; CHECK-NEXT:    v_ashrrev_i32_e32 v2, v10, v7
-; CHECK-NEXT:    v_ashrrev_i32_e32 v4, v4, v1
+; CHECK-NEXT:    flat_load_dword v7, v[2:3] offset:16
+; CHECK-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
+; CHECK-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
 ; CHECK-NEXT:    v_mov_b32_e32 v1, -1
+; CHECK-NEXT:    v_mov_b32_e32 v3, -1
+; CHECK-NEXT:    ; kill: killed $vgpr11 killed $vgpr12
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v4, v8
+; CHECK-NEXT:    v_ashrrev_i32_e32 v2, v6, v10
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_ashrrev_i32_e32 v4, v7, v5
 ; CHECK-NEXT:    v_mov_b32_e32 v5, -1
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %val = load <3 x i64>, ptr %arg0.ptr, !range !4, !noundef !{}

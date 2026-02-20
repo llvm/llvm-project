@@ -42,19 +42,19 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_rewrite_vgpr_mfma(ptr addrsp
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v4, 7, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v32, 1.0
 ; CHECK-NEXT:    v_mov_b32_e32 v33, 2.0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[28:31], v0, s[0:1] offset:112
-; CHECK-NEXT:    global_load_dwordx4 v[24:27], v0, s[0:1] offset:96
-; CHECK-NEXT:    global_load_dwordx4 v[20:23], v0, s[0:1] offset:80
-; CHECK-NEXT:    global_load_dwordx4 v[16:19], v0, s[0:1] offset:64
-; CHECK-NEXT:    global_load_dwordx4 v[12:15], v0, s[0:1] offset:48
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v0, s[0:1] offset:32
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v0, s[0:1] offset:16
+; CHECK-NEXT:    global_load_dwordx4 v[24:27], v4, s[0:1] offset:96
+; CHECK-NEXT:    global_load_dwordx4 v[28:31], v4, s[0:1] offset:112
+; CHECK-NEXT:    global_load_dwordx4 v[16:19], v4, s[0:1] offset:64
+; CHECK-NEXT:    global_load_dwordx4 v[20:23], v4, s[0:1] offset:80
+; CHECK-NEXT:    global_load_dwordx4 v[8:11], v4, s[0:1] offset:32
+; CHECK-NEXT:    global_load_dwordx4 v[12:15], v4, s[0:1] offset:48
+; CHECK-NEXT:    global_load_dwordx4 v[0:3], v4, s[0:1]
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v4, s[0:1] offset:16
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, 1.0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, 2.0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
@@ -123,19 +123,19 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_rewrite_vgpr_mfma_noshuffle(
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v4, 7, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v32, 1.0
 ; CHECK-NEXT:    v_mov_b32_e32 v33, 2.0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[28:31], v0, s[0:1] offset:112
-; CHECK-NEXT:    global_load_dwordx4 v[24:27], v0, s[0:1] offset:96
-; CHECK-NEXT:    global_load_dwordx4 v[20:23], v0, s[0:1] offset:80
-; CHECK-NEXT:    global_load_dwordx4 v[16:19], v0, s[0:1] offset:64
-; CHECK-NEXT:    global_load_dwordx4 v[12:15], v0, s[0:1] offset:48
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v0, s[0:1] offset:32
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v0, s[0:1] offset:16
+; CHECK-NEXT:    global_load_dwordx4 v[24:27], v4, s[0:1] offset:96
+; CHECK-NEXT:    global_load_dwordx4 v[28:31], v4, s[0:1] offset:112
+; CHECK-NEXT:    global_load_dwordx4 v[16:19], v4, s[0:1] offset:64
+; CHECK-NEXT:    global_load_dwordx4 v[20:23], v4, s[0:1] offset:80
+; CHECK-NEXT:    global_load_dwordx4 v[8:11], v4, s[0:1] offset:32
+; CHECK-NEXT:    global_load_dwordx4 v[12:15], v4, s[0:1] offset:48
+; CHECK-NEXT:    global_load_dwordx4 v[0:3], v4, s[0:1]
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v4, s[0:1] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v32, v33, v[0:31]
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v32, v33, v[0:31]
@@ -237,18 +237,18 @@ define amdgpu_kernel void @test_rewrite_mfma_direct_copy_to_agpr_class(ptr addrs
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v4, 7, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v32, 2.0
 ; CHECK-NEXT:    v_mov_b32_e32 v33, 4.0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[28:31], v0, s[0:1] offset:112
-; CHECK-NEXT:    global_load_dwordx4 a[24:27], v0, s[0:1] offset:96
-; CHECK-NEXT:    global_load_dwordx4 a[20:23], v0, s[0:1] offset:80
-; CHECK-NEXT:    global_load_dwordx4 a[16:19], v0, s[0:1] offset:64
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v0, s[0:1] offset:48
-; CHECK-NEXT:    global_load_dwordx4 a[8:11], v0, s[0:1] offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v0, s[0:1] offset:16
-; CHECK-NEXT:    global_load_dwordx4 a[0:3], v0, s[0:1]
+; CHECK-NEXT:    global_load_dwordx4 a[24:27], v4, s[0:1] offset:96
+; CHECK-NEXT:    global_load_dwordx4 a[28:31], v4, s[0:1] offset:112
+; CHECK-NEXT:    global_load_dwordx4 a[16:19], v4, s[0:1] offset:64
+; CHECK-NEXT:    global_load_dwordx4 a[20:23], v4, s[0:1] offset:80
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v4, s[0:1] offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v4, s[0:1] offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v4, s[0:1]
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v4, s[0:1] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 a[0:31], v32, v33, a[0:31]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -283,14 +283,14 @@ define void @test_rewrite_mfma_subreg_extract0(float %arg0, float %arg1, ptr add
 ; CHECK-LABEL: test_rewrite_mfma_subreg_extract0:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[2:3], off offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[24:27], v[2:3], off offset:96
-; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[2:3], off offset:80
+; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[2:3], off offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[16:19], v[2:3], off offset:64
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[2:3], off offset:80
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[2:3], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 a[0:31], v0, v1, a[0:31]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -309,14 +309,14 @@ define void @test_rewrite_mfma_subreg_extract1(float %arg0, float %arg1, ptr add
 ; CHECK-LABEL: test_rewrite_mfma_subreg_extract1:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[2:3], off offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[24:27], v[2:3], off offset:96
-; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[2:3], off offset:80
+; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[2:3], off offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[16:19], v[2:3], off offset:64
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[2:3], off offset:80
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[2:3], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 a[0:31], v0, v1, a[0:31]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -336,14 +336,14 @@ define void @test_rewrite_mfma_subreg_extract2(float %arg0, float %arg1, ptr add
 ; CHECK-LABEL: test_rewrite_mfma_subreg_extract2:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[2:3], off offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[24:27], v[2:3], off offset:96
-; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[2:3], off offset:80
+; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[2:3], off offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[16:19], v[2:3], off offset:64
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[2:3], off offset:80
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[2:3], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 a[0:31], v0, v1, a[0:31]
 ; CHECK-NEXT:    s_nop 15
@@ -832,14 +832,14 @@ define void @test_rewrite_mfma_f32_32x32x1f32(float %arg0, float %arg1, ptr addr
 ; CHECK-LABEL: test_rewrite_mfma_f32_32x32x1f32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[2:3], off offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[24:27], v[2:3], off offset:96
-; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[2:3], off offset:80
+; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[2:3], off offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[16:19], v[2:3], off offset:64
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[2:3], off offset:80
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[2:3], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 a[0:31], v0, v1, a[0:31]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -856,10 +856,10 @@ define void @test_rewrite_mfma_f32_16x16x1f32(float %arg0, float %arg1, ptr addr
 ; CHECK-LABEL: test_rewrite_mfma_f32_16x16x1f32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[2:3], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_16x16x1_4b_f32 a[0:15], v0, v1, a[0:15]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -893,10 +893,10 @@ define void @test_rewrite_mfma_f32_32x32x2f32(float %arg0, float %arg1, ptr addr
 ; CHECK-LABEL: test_rewrite_mfma_f32_32x32x2f32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[2:3], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x2_f32 a[0:15], v0, v1, a[0:15]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -930,14 +930,14 @@ define void @test_rewrite_mfma_f32_32x32x4f16(<4 x half> %arg0, <4 x half> %arg1
 ; CHECK-LABEL: test_rewrite_mfma_f32_32x32x4f16:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[4:5], off offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[24:27], v[4:5], off offset:96
-; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[4:5], off offset:80
+; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[4:5], off offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[16:19], v[4:5], off offset:64
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[4:5], off offset:80
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x4_2b_f16 a[0:31], v[0:1], v[2:3], a[0:31]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -954,10 +954,10 @@ define void @test_rewrite_mfma_f32_16x16x4f16(<4 x half> %arg0, <4 x half> %arg1
 ; CHECK-LABEL: test_rewrite_mfma_f32_16x16x4f16:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_16x16x4_4b_f16 a[0:15], v[0:1], v[2:3], a[0:15]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -991,10 +991,10 @@ define void @test_rewrite_mfma_f32_32x32x8f16(<4 x half> %arg0, <4 x half> %arg1
 ; CHECK-LABEL: test_rewrite_mfma_f32_32x32x8f16:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x8_f16 a[0:15], v[0:1], v[2:3], a[0:15]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1028,14 +1028,14 @@ define void @test_rewrite_mfma_i32_32x32x4i8(i32 %arg0, i32 %arg1, ptr addrspace
 ; CHECK-LABEL: test_rewrite_mfma_i32_32x32x4i8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[2:3], off offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[24:27], v[2:3], off offset:96
-; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[2:3], off offset:80
+; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[2:3], off offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[16:19], v[2:3], off offset:64
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[2:3], off offset:80
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[2:3], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_i32_32x32x4_2b_i8 a[0:31], v0, v1, a[0:31]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1052,10 +1052,10 @@ define void @test_rewrite_mfma_i32_16x16x4i8(i32 %arg0, i32 %arg1, ptr addrspace
 ; CHECK-LABEL: test_rewrite_mfma_i32_16x16x4i8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[2:3], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_i32_16x16x4_4b_i8 a[0:15], v0, v1, a[0:15]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1093,14 +1093,14 @@ define void @test_rewrite_mfma_f32_32x32x4bf16_1k(<4 x i16> %arg0, <4 x i16> %ar
 ; CHECK-LABEL: test_rewrite_mfma_f32_32x32x4bf16_1k:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[4:5], off offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[24:27], v[4:5], off offset:96
-; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[4:5], off offset:80
+; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[4:5], off offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[16:19], v[4:5], off offset:64
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[4:5], off offset:80
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x4_2b_bf16 a[0:31], v[0:1], v[2:3], a[0:31]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1117,10 +1117,10 @@ define void @test_rewrite_mfma_f32_16x16x4bf16_1k(<4 x i16> %arg0, <4 x i16> %ar
 ; CHECK-LABEL: test_rewrite_mfma_f32_16x16x4bf16_1k:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_16x16x4_4b_bf16 a[0:15], v[0:1], v[2:3], a[0:15]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1154,10 +1154,10 @@ define void @test_rewrite_mfma_f32_32x32x8bf16_1k(<4 x i16> %arg0, <4 x i16> %ar
 ; CHECK-LABEL: test_rewrite_mfma_f32_32x32x8bf16_1k:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x8_bf16 a[0:15], v[0:1], v[2:3], a[0:15]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1191,8 +1191,8 @@ define void @test_rewrite_mfma_f64_16x16x4f64(double %arg0, double %arg1, ptr ad
 ; CHECK-LABEL: test_rewrite_mfma_f64_16x16x4f64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f64_16x16x4_f64 a[0:7], v[0:1], v[2:3], a[0:7]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1247,10 +1247,10 @@ define void @test_rewrite_mfma_i32_32x32x16_i8(i64 %arg0, i64 %arg1, ptr addrspa
 ; CHECK-LABEL: test_rewrite_mfma_i32_32x32x16_i8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_i32_32x32x16_i8 a[0:15], v[0:1], v[2:3], a[0:15]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1284,10 +1284,10 @@ define void @test_rewrite_mfma_f32_32x32x4_xf32(<2 x float> %arg0, <2 x float> %
 ; CHECK-LABEL: test_rewrite_mfma_f32_32x32x4_xf32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x4_xf32 a[0:15], v[0:1], v[2:3], a[0:15]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1372,10 +1372,10 @@ define void @test_rewrite_mfma_f32_32x32x16_bf8_bf8(i64 %arg0, i64 %arg1, ptr ad
 ; CHECK-LABEL: test_rewrite_mfma_f32_32x32x16_bf8_bf8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x16_bf8_bf8 a[0:15], v[0:1], v[2:3], a[0:15]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1392,10 +1392,10 @@ define void @test_rewrite_mfma_f32_32x32x16_bf8_fp8(i64 %arg0, i64 %arg1, ptr ad
 ; CHECK-LABEL: test_rewrite_mfma_f32_32x32x16_bf8_fp8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x16_bf8_fp8 a[0:15], v[0:1], v[2:3], a[0:15]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1412,10 +1412,10 @@ define void @test_rewrite_mfma_f32_32x32x16_fp8_bf8(i64 %arg0, i64 %arg1, ptr ad
 ; CHECK-LABEL: test_rewrite_mfma_f32_32x32x16_fp8_bf8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x16_fp8_bf8 a[0:15], v[0:1], v[2:3], a[0:15]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1432,10 +1432,10 @@ define void @test_rewrite_mfma_f32_32x32x16_fp8_fp8(i64 %arg0, i64 %arg1, ptr ad
 ; CHECK-LABEL: test_rewrite_mfma_f32_32x32x16_fp8_fp8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x16_fp8_fp8 a[0:15], v[0:1], v[2:3], a[0:15]
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1473,10 +1473,10 @@ define void @test_rewrite_smfmac_f32_32x32x16_f16(<4 x half> %arg0, <8 x half> %
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v8
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v7
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[8:9], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_smfmac_f32_32x32x16_f16 a[0:15], v[0:1], v[2:5], v6
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1514,10 +1514,10 @@ define void @test_rewrite_smfmac_f32_32x32x16_bf16(<4 x i16> %arg0, <8 x i16> %a
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v8
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v7
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[8:9], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_smfmac_f32_32x32x16_bf16 a[0:15], v[0:1], v[2:5], v6
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1555,10 +1555,10 @@ define void @test_rewrite_smfmac_i32_32x32x32_i8(<2 x i32> %arg0, <4 x i32> %arg
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v8
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v7
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[8:9], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_smfmac_i32_32x32x32_i8 a[0:15], v[0:1], v[2:5], v6
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1653,10 +1653,10 @@ define void @test_rewrite_smfmac_32x32x32_bf8_bf8(<2 x i32> %arg0, <4 x i32> %ar
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v8
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v7
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[8:9], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_smfmac_f32_32x32x32_bf8_bf8 a[0:15], v[0:1], v[2:5], v6
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1675,10 +1675,10 @@ define void @test_rewrite_smfmac_32x32x32_bf8_fp8(<2 x i32> %arg0, <4 x i32> %ar
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v8
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v7
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[8:9], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_smfmac_f32_32x32x32_bf8_fp8 a[0:15], v[0:1], v[2:5], v6
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1697,10 +1697,10 @@ define void @test_rewrite_smfmac_32x32x32_fp8_bf8(<2 x i32> %arg0, <4 x i32> %ar
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v8
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v7
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[8:9], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_smfmac_f32_32x32x32_fp8_bf8 a[0:15], v[0:1], v[2:5], v6
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1719,10 +1719,10 @@ define void @test_rewrite_smfmac_32x32x32_fp8_fp8(<2 x i32> %arg0, <4 x i32> %ar
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v8
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v7
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[8:9], off offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_smfmac_f32_32x32x32_fp8_fp8 a[0:15], v[0:1], v[2:5], v6
 ; CHECK-NEXT:    ;;#ASMSTART

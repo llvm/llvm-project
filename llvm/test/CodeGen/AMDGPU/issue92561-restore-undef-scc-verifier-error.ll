@@ -12,9 +12,9 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG:       ; %bb.0: ; %bb
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_clause 0x1
-; SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:16
-; SDAG-NEXT:    global_load_b128 v[0:3], v[0:1], off
-; SDAG-NEXT:    v_mov_b32_e32 v8, 0
+; SDAG-NEXT:    global_load_b128 v[2:5], v[0:1], off
+; SDAG-NEXT:    global_load_b128 v[6:9], v[0:1], off offset:16
+; SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-NEXT:    s_mov_b32 s12, 0
 ; SDAG-NEXT:    s_mov_b32 s3, exec_lo
 ; SDAG-NEXT:    s_mov_b32 s13, s12
@@ -22,31 +22,31 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG-NEXT:    s_mov_b32 s15, s12
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
-; SDAG-NEXT:    v_readfirstlane_b32 s4, v0
-; SDAG-NEXT:    v_readfirstlane_b32 s5, v1
-; SDAG-NEXT:    v_readfirstlane_b32 s6, v2
-; SDAG-NEXT:    v_readfirstlane_b32 s7, v3
-; SDAG-NEXT:    v_readfirstlane_b32 s8, v4
-; SDAG-NEXT:    v_readfirstlane_b32 s9, v5
-; SDAG-NEXT:    v_readfirstlane_b32 s10, v6
-; SDAG-NEXT:    v_readfirstlane_b32 s11, v7
-; SDAG-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; SDAG-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; SDAG-NEXT:    v_cmp_eq_u64_e64 s1, s[8:9], v[4:5]
+; SDAG-NEXT:    v_readfirstlane_b32 s4, v2
+; SDAG-NEXT:    v_readfirstlane_b32 s5, v3
+; SDAG-NEXT:    v_readfirstlane_b32 s6, v4
+; SDAG-NEXT:    v_readfirstlane_b32 s7, v5
+; SDAG-NEXT:    v_readfirstlane_b32 s8, v6
+; SDAG-NEXT:    v_readfirstlane_b32 s9, v7
+; SDAG-NEXT:    v_readfirstlane_b32 s10, v8
+; SDAG-NEXT:    v_readfirstlane_b32 s11, v9
+; SDAG-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[2:3]
+; SDAG-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[4:5]
+; SDAG-NEXT:    v_cmp_eq_u64_e64 s1, s[8:9], v[6:7]
 ; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; SDAG-NEXT:    v_cmp_eq_u64_e64 s2, s[10:11], v[6:7]
+; SDAG-NEXT:    v_cmp_eq_u64_e64 s2, s[10:11], v[8:9]
 ; SDAG-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; SDAG-NEXT:    s_and_b32 s0, s0, s1
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; SDAG-NEXT:    s_and_b32 s0, s0, s2
 ; SDAG-NEXT:    s_and_saveexec_b32 s0, s0
-; SDAG-NEXT:    image_sample_c_lz v9, [v8, v8, v8, v8], s[4:11], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
-; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+; SDAG-NEXT:    image_sample_c_lz v0, [v1, v1, v1, v1], s[4:11], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
 ; SDAG-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; SDAG-NEXT:    s_cbranch_execnz .LBB0_1
 ; SDAG-NEXT:  ; %bb.2:
 ; SDAG-NEXT:    s_mov_b32 exec_lo, s3
-; SDAG-NEXT:    v_dual_mov_b32 v0, 0x7fc00000 :: v_dual_mov_b32 v1, 1.0
+; SDAG-NEXT:    v_dual_mov_b32 v2, 0x7fc00000 :: v_dual_mov_b32 v3, 1.0
 ; SDAG-NEXT:    s_mov_b32 s0, s12
 ; SDAG-NEXT:    s_mov_b32 s1, s12
 ; SDAG-NEXT:    s_mov_b32 s2, s12
@@ -56,18 +56,19 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG-NEXT:    s_mov_b32 s6, s12
 ; SDAG-NEXT:    s_mov_b32 s7, s12
 ; SDAG-NEXT:    s_clause 0x2
-; SDAG-NEXT:    image_sample_c_lz v0, [v8, v8, v0, v8], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
-; SDAG-NEXT:    image_sample_c_lz v2, [v8, v8, v8, v8], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
-; SDAG-NEXT:    image_sample_c_lz v1, [v8, v1, v8, v8], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; SDAG-NEXT:    image_sample_c_lz v2, [v1, v1, v2, v1], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; SDAG-NEXT:    image_sample_c_lz v4, [v1, v1, v1, v1], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; SDAG-NEXT:    image_sample_c_lz v3, [v1, v3, v1, v1], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; SDAG-NEXT:    s_waitcnt vmcnt(2)
-; SDAG-NEXT:    v_dual_add_f32 v0, v9, v0 :: v_dual_mov_b32 v9, v8
+; SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
+; SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-NEXT:    v_add_f32_e32 v0, v1, v0
-; SDAG-NEXT:    v_add_f32_e32 v0, v2, v0
+; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; SDAG-NEXT:    v_dual_add_f32 v0, v3, v0 :: v_dual_mov_b32 v3, 0
+; SDAG-NEXT:    v_add_f32_e32 v0, v4, v0
 ; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-NEXT:    v_dual_mul_f32 v7, 0x3e800000, v0 :: v_dual_mov_b32 v0, 0
-; SDAG-NEXT:    image_store v[7:9], [v0, v0], s[0:7] dim:SQ_RSRC_IMG_2D unorm
+; SDAG-NEXT:    v_mul_f32_e32 v0, 0x3e800000, v0
+; SDAG-NEXT:    image_store v[0:2], [v3, v3], s[0:7] dim:SQ_RSRC_IMG_2D unorm
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: issue92561:

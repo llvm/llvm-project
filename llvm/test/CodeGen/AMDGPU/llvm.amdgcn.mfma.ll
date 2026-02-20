@@ -5734,14 +5734,14 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_vecarg(ptr addrspace(1) %arg
 ; NOLIT-SRCC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; NOLIT-SRCC-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
 ; NOLIT-SRCC-NEXT:    s_waitcnt lgkmcnt(0)
-; NOLIT-SRCC-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
 ; NOLIT-SRCC-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:96
-; NOLIT-SRCC-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
+; NOLIT-SRCC-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
 ; NOLIT-SRCC-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:64
-; NOLIT-SRCC-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
+; NOLIT-SRCC-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
 ; NOLIT-SRCC-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:32
-; NOLIT-SRCC-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
+; NOLIT-SRCC-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
 ; NOLIT-SRCC-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
+; NOLIT-SRCC-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
 ; NOLIT-SRCC-NEXT:    s_waitcnt vmcnt(0)
 ; NOLIT-SRCC-NEXT:    v_accvgpr_write_b32 a0, v0
 ; NOLIT-SRCC-NEXT:    v_accvgpr_write_b32 a1, v1
@@ -5829,14 +5829,14 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_vecarg(ptr addrspace(1) %arg
 ; LIT-SRCC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; LIT-SRCC-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
 ; LIT-SRCC-NEXT:    s_waitcnt lgkmcnt(0)
-; LIT-SRCC-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
 ; LIT-SRCC-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:96
-; LIT-SRCC-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
+; LIT-SRCC-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
 ; LIT-SRCC-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:64
-; LIT-SRCC-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
+; LIT-SRCC-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
 ; LIT-SRCC-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:32
-; LIT-SRCC-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
+; LIT-SRCC-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
 ; LIT-SRCC-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
+; LIT-SRCC-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
 ; LIT-SRCC-NEXT:    s_waitcnt vmcnt(0)
 ; LIT-SRCC-NEXT:    v_accvgpr_write_b32 a0, v0
 ; LIT-SRCC-NEXT:    v_accvgpr_write_b32 a1, v1
@@ -5927,14 +5927,14 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_vecarg(ptr addrspace(1) %arg
 ; GFX90A-NEXT:    v_mov_b32_e32 v33, 1.0
 ; GFX90A-NEXT:    v_mov_b32_e32 v34, 2.0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
 ; GFX90A-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:96
-; GFX90A-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
+; GFX90A-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
 ; GFX90A-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:64
-; GFX90A-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
+; GFX90A-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
 ; GFX90A-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:32
-; GFX90A-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
+; GFX90A-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
 ; GFX90A-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
+; GFX90A-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_mfma_f32_32x32x1f32 v[0:31], v33, v34, v[0:31] cbsz:1 abid:2 blgp:3
 ; GFX90A-NEXT:    s_nop 15
@@ -5957,14 +5957,14 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_vecarg(ptr addrspace(1) %arg
 ; GFX942-NEXT:    v_mov_b32_e32 v33, 1.0
 ; GFX942-NEXT:    v_mov_b32_e32 v34, 2.0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
 ; GFX942-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:96
-; GFX942-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
+; GFX942-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
 ; GFX942-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:64
-; GFX942-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
+; GFX942-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
 ; GFX942-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:32
-; GFX942-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
+; GFX942-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
 ; GFX942-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
+; GFX942-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v33, v34, v[0:31] cbsz:1 abid:2 blgp:3
 ; GFX942-NEXT:    s_nop 15
@@ -5987,14 +5987,14 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_vecarg(ptr addrspace(1) %arg
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v33, 1.0
 ; GFX942-VGPR-NEXT:    v_mov_b32_e32 v34, 2.0
 ; GFX942-VGPR-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-VGPR-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
 ; GFX942-VGPR-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:96
-; GFX942-VGPR-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
+; GFX942-VGPR-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
 ; GFX942-VGPR-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:64
-; GFX942-VGPR-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
+; GFX942-VGPR-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
 ; GFX942-VGPR-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:32
-; GFX942-VGPR-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
+; GFX942-VGPR-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
 ; GFX942-VGPR-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
+; GFX942-VGPR-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
 ; GFX942-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-VGPR-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v33, v34, v[0:31] cbsz:1 abid:2 blgp:3
 ; GFX942-VGPR-NEXT:    s_nop 15

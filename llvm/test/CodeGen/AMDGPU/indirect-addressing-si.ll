@@ -6918,186 +6918,193 @@ define amdgpu_kernel void @insert_w_offset_multiple_in_block(ptr addrspace(1) %o
 ;
 ; VI-MOVREL-LABEL: insert_w_offset_multiple_in_block:
 ; VI-MOVREL:       ; %bb.0: ; %entry
-; VI-MOVREL-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; VI-MOVREL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v0, 1.0
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v1, 2.0
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v2, 0x40400000
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v3, 4.0
+; VI-MOVREL-NEXT:    s_load_dword s0, s[4:5], 0x2c
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v16, 1.0
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v17, 2.0
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v18, 0x40400000
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v19, 4.0
 ; VI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-MOVREL-NEXT:    s_add_i32 m0, s2, 1
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v4, 0x40a00000
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v5, 0x40c00000
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v6, 0x40e00000
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v7, 0x41000000
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v8, 0x41100000
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v9, 0x41200000
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v10, 0x41300000
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v11, 0x41400000
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v12, 0x41500000
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v13, 0x41600000
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v14, 0x41700000
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v15, 0x41800000
+; VI-MOVREL-NEXT:    s_add_i32 m0, s0, 1
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v20, 0x40a00000
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v21, 0x40c00000
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v22, 0x40e00000
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v23, 0x41000000
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v24, 0x41100000
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v25, 0x41200000
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v26, 0x41300000
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v27, 0x41400000
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v28, 0x41500000
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v29, 0x41600000
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v30, 0x41700000
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v31, 0x41800000
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v32, 0x41880000
-; VI-MOVREL-NEXT:    v_movreld_b32_e32 v0, v32
-; VI-MOVREL-NEXT:    s_add_i32 m0, s2, 2
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v31, v15
-; VI-MOVREL-NEXT:    s_add_u32 s2, s0, 48
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v30, v14
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v29, v13
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v28, v12
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v27, v11
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v26, v10
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v25, v9
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v24, v8
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v23, v7
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v22, v6
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v21, v5
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v20, v4
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v19, v3
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v18, v2
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v17, v1
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v16, v0
-; VI-MOVREL-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-MOVREL-NEXT:    v_movreld_b32_e32 v16, v32
+; VI-MOVREL-NEXT:    s_add_i32 m0, s0, 2
+; VI-MOVREL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v0, v16
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v1, v17
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v2, v18
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v3, v19
+; VI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-MOVREL-NEXT:    s_add_u32 s2, s0, 48
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v4, v20
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v5, v21
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v6, v22
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v7, v23
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v8, v24
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v9, v25
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v10, v26
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v11, v27
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v12, v28
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v13, v29
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v14, v30
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v15, v31
+; VI-MOVREL-NEXT:    s_addc_u32 s3, s1, 0
+; VI-MOVREL-NEXT:    v_movreld_b32_e32 v0, v32
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v33, s3
 ; VI-MOVREL-NEXT:    v_mov_b32_e32 v32, s2
 ; VI-MOVREL-NEXT:    s_add_u32 s2, s0, 32
 ; VI-MOVREL-NEXT:    s_addc_u32 s3, s1, 0
-; VI-MOVREL-NEXT:    flat_store_dwordx4 v[32:33], v[12:15]
+; VI-MOVREL-NEXT:    flat_store_dwordx4 v[32:33], v[28:31]
 ; VI-MOVREL-NEXT:    s_nop 0
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v13, s3
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v12, s2
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v29, s3
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v28, s2
 ; VI-MOVREL-NEXT:    s_add_u32 s2, s0, 16
 ; VI-MOVREL-NEXT:    s_addc_u32 s3, s1, 0
+; VI-MOVREL-NEXT:    flat_store_dwordx4 v[28:29], v[24:27]
+; VI-MOVREL-NEXT:    s_nop 0
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v25, s3
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v24, s2
+; VI-MOVREL-NEXT:    s_add_u32 s2, s0, 64
+; VI-MOVREL-NEXT:    s_addc_u32 s3, s1, 0
+; VI-MOVREL-NEXT:    flat_store_dwordx4 v[24:25], v[20:23]
+; VI-MOVREL-NEXT:    s_add_u32 s4, s0, 0x70
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v21, s1
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v20, s0
+; VI-MOVREL-NEXT:    s_addc_u32 s5, s1, 0
+; VI-MOVREL-NEXT:    flat_store_dwordx4 v[20:21], v[16:19]
+; VI-MOVREL-NEXT:    s_nop 0
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v17, s5
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v16, s4
+; VI-MOVREL-NEXT:    s_add_u32 s4, s0, 0x60
+; VI-MOVREL-NEXT:    s_addc_u32 s5, s1, 0
+; VI-MOVREL-NEXT:    flat_store_dwordx4 v[16:17], v[12:15]
+; VI-MOVREL-NEXT:    s_add_u32 s0, s0, 0x50
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v13, s5
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v12, s4
+; VI-MOVREL-NEXT:    s_addc_u32 s1, s1, 0
 ; VI-MOVREL-NEXT:    flat_store_dwordx4 v[12:13], v[8:11]
 ; VI-MOVREL-NEXT:    s_nop 0
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v9, s3
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v8, s2
-; VI-MOVREL-NEXT:    s_add_u32 s2, s0, 64
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v9, s1
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v8, s0
 ; VI-MOVREL-NEXT:    flat_store_dwordx4 v[8:9], v[4:7]
-; VI-MOVREL-NEXT:    s_addc_u32 s3, s1, 0
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v5, s1
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v4, s0
-; VI-MOVREL-NEXT:    s_add_u32 s4, s0, 0x70
+; VI-MOVREL-NEXT:    s_nop 0
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v5, s3
+; VI-MOVREL-NEXT:    v_mov_b32_e32 v4, s2
 ; VI-MOVREL-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; VI-MOVREL-NEXT:    s_addc_u32 s5, s1, 0
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v0, s4
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v1, s5
-; VI-MOVREL-NEXT:    s_add_u32 s4, s0, 0x60
-; VI-MOVREL-NEXT:    flat_store_dwordx4 v[0:1], v[28:31]
-; VI-MOVREL-NEXT:    s_addc_u32 s5, s1, 0
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v0, s4
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v1, s5
-; VI-MOVREL-NEXT:    s_add_u32 s0, s0, 0x50
-; VI-MOVREL-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
-; VI-MOVREL-NEXT:    s_addc_u32 s1, s1, 0
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v0, s0
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v1, s1
-; VI-MOVREL-NEXT:    flat_store_dwordx4 v[0:1], v[20:23]
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v0, s2
-; VI-MOVREL-NEXT:    v_mov_b32_e32 v1, s3
-; VI-MOVREL-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
 ; VI-MOVREL-NEXT:    s_endpgm
 ;
 ; VI-IDXMODE-LABEL: insert_w_offset_multiple_in_block:
 ; VI-IDXMODE:       ; %bb.0: ; %entry
-; VI-IDXMODE-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; VI-IDXMODE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, 1.0
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v1, 2.0
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v2, 0x40400000
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v3, 4.0
+; VI-IDXMODE-NEXT:    s_load_dword s0, s[4:5], 0x2c
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v16, 1.0
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v17, 2.0
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v18, 0x40400000
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v19, 4.0
 ; VI-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-IDXMODE-NEXT:    s_add_i32 s3, s2, 1
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v4, 0x40a00000
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v5, 0x40c00000
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v6, 0x40e00000
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v7, 0x41000000
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v8, 0x41100000
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v9, 0x41200000
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v10, 0x41300000
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v11, 0x41400000
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v12, 0x41500000
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v13, 0x41600000
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v14, 0x41700000
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v15, 0x41800000
+; VI-IDXMODE-NEXT:    s_add_i32 s1, s0, 1
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v20, 0x40a00000
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v21, 0x40c00000
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v22, 0x40e00000
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v23, 0x41000000
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v24, 0x41100000
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v25, 0x41200000
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v26, 0x41300000
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v27, 0x41400000
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v28, 0x41500000
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v29, 0x41600000
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v30, 0x41700000
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v31, 0x41800000
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v32, 0x41880000
-; VI-IDXMODE-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, v32
-; VI-IDXMODE-NEXT:    s_set_gpr_idx_off
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v31, v15
-; VI-IDXMODE-NEXT:    s_add_i32 s2, s2, 2
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v30, v14
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v29, v13
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v28, v12
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v27, v11
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v26, v10
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v25, v9
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v24, v8
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v23, v7
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v22, v6
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v21, v5
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v20, v4
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v19, v3
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v18, v2
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v17, v1
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v16, v0
-; VI-IDXMODE-NEXT:    s_set_gpr_idx_on s2, gpr_idx(DST)
+; VI-IDXMODE-NEXT:    s_set_gpr_idx_on s1, gpr_idx(DST)
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v16, v32
 ; VI-IDXMODE-NEXT:    s_set_gpr_idx_off
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, v16
+; VI-IDXMODE-NEXT:    s_add_i32 s0, s0, 2
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v1, v17
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v2, v18
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v3, v19
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v4, v20
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v5, v21
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v6, v22
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v7, v23
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v8, v24
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v9, v25
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v10, v26
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v11, v27
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v12, v28
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v13, v29
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v14, v30
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v15, v31
+; VI-IDXMODE-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, v32
+; VI-IDXMODE-NEXT:    s_set_gpr_idx_off
+; VI-IDXMODE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-IDXMODE-NEXT:    s_add_u32 s2, s0, 48
 ; VI-IDXMODE-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v33, s3
 ; VI-IDXMODE-NEXT:    v_mov_b32_e32 v32, s2
 ; VI-IDXMODE-NEXT:    s_add_u32 s2, s0, 32
 ; VI-IDXMODE-NEXT:    s_addc_u32 s3, s1, 0
-; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[32:33], v[12:15]
+; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[32:33], v[28:31]
 ; VI-IDXMODE-NEXT:    s_nop 0
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v13, s3
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v12, s2
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v29, s3
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v28, s2
 ; VI-IDXMODE-NEXT:    s_add_u32 s2, s0, 16
 ; VI-IDXMODE-NEXT:    s_addc_u32 s3, s1, 0
+; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[28:29], v[24:27]
+; VI-IDXMODE-NEXT:    s_nop 0
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v25, s3
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v24, s2
+; VI-IDXMODE-NEXT:    s_add_u32 s2, s0, 64
+; VI-IDXMODE-NEXT:    s_addc_u32 s3, s1, 0
+; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[24:25], v[20:23]
+; VI-IDXMODE-NEXT:    s_add_u32 s4, s0, 0x70
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v21, s1
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v20, s0
+; VI-IDXMODE-NEXT:    s_addc_u32 s5, s1, 0
+; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[20:21], v[16:19]
+; VI-IDXMODE-NEXT:    s_nop 0
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v17, s5
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v16, s4
+; VI-IDXMODE-NEXT:    s_add_u32 s4, s0, 0x60
+; VI-IDXMODE-NEXT:    s_addc_u32 s5, s1, 0
+; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[16:17], v[12:15]
+; VI-IDXMODE-NEXT:    s_add_u32 s0, s0, 0x50
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v13, s5
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v12, s4
+; VI-IDXMODE-NEXT:    s_addc_u32 s1, s1, 0
 ; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[12:13], v[8:11]
 ; VI-IDXMODE-NEXT:    s_nop 0
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v9, s3
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v8, s2
-; VI-IDXMODE-NEXT:    s_add_u32 s2, s0, 64
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v9, s1
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v8, s0
 ; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[8:9], v[4:7]
-; VI-IDXMODE-NEXT:    s_addc_u32 s3, s1, 0
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v5, s1
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v4, s0
-; VI-IDXMODE-NEXT:    s_add_u32 s4, s0, 0x70
+; VI-IDXMODE-NEXT:    s_nop 0
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v5, s3
+; VI-IDXMODE-NEXT:    v_mov_b32_e32 v4, s2
 ; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; VI-IDXMODE-NEXT:    s_addc_u32 s5, s1, 0
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, s4
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v1, s5
-; VI-IDXMODE-NEXT:    s_add_u32 s4, s0, 0x60
-; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[0:1], v[28:31]
-; VI-IDXMODE-NEXT:    s_addc_u32 s5, s1, 0
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, s4
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v1, s5
-; VI-IDXMODE-NEXT:    s_add_u32 s0, s0, 0x50
-; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[0:1], v[24:27]
-; VI-IDXMODE-NEXT:    s_addc_u32 s1, s1, 0
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, s0
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v1, s1
-; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[0:1], v[20:23]
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v0, s2
-; VI-IDXMODE-NEXT:    v_mov_b32_e32 v1, s3
-; VI-IDXMODE-NEXT:    flat_store_dwordx4 v[0:1], v[16:19]
 ; VI-IDXMODE-NEXT:    s_endpgm
 ;
 ; GFX9-IDXMODE-LABEL: insert_w_offset_multiple_in_block:
 ; GFX9-IDXMODE:       ; %bb.0: ; %entry
-; GFX9-IDXMODE-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX9-IDXMODE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-IDXMODE-NEXT:    s_load_dword s0, s[4:5], 0x2c
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v2, 0x40400000
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v3, 4.0
 ; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-IDXMODE-NEXT:    s_add_i32 s3, s2, 1
+; GFX9-IDXMODE-NEXT:    s_add_i32 s1, s0, 1
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v4, 0x40a00000
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v5, 0x40c00000
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v6, 0x40e00000
@@ -7111,11 +7118,11 @@ define amdgpu_kernel void @insert_w_offset_multiple_in_block(ptr addrspace(1) %o
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v14, 0x41700000
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v15, 0x41800000
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v32, 0x41880000
-; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
+; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_on s1, gpr_idx(DST)
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v0, v32
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_off
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v31, v15
-; GFX9-IDXMODE-NEXT:    s_add_i32 s2, s2, 2
+; GFX9-IDXMODE-NEXT:    s_add_i32 s0, s0, 2
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v30, v14
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v29, v13
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v28, v12
@@ -7131,10 +7138,12 @@ define amdgpu_kernel void @insert_w_offset_multiple_in_block(ptr addrspace(1) %o
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v18, v2
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v17, v1
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v16, v0
-; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_on s2, gpr_idx(DST)
+; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v16, v32
 ; GFX9-IDXMODE-NEXT:    s_set_gpr_idx_off
+; GFX9-IDXMODE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v32, 0
+; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v32, v[12:15], s[0:1] offset:48
 ; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v32, v[8:11], s[0:1] offset:32
 ; GFX9-IDXMODE-NEXT:    global_store_dwordx4 v32, v[4:7], s[0:1] offset:16
