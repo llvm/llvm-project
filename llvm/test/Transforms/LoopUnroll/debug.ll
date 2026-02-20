@@ -2,9 +2,9 @@
 
 ; REQUIRES: asserts
 
-; CHECK-LABEL:Loop Unroll: F[pragma_full_unroll_unknown_tc] Loop %for.body
+; CHECK-LABEL:Loop Unroll: F[pragma_full_unroll_unknown_tc] Loop %for.body (depth=1)
 ; CHECK-NEXT:Loop Size = 6
-; CHECK-NEXT:  will not try to unroll loop with runtime trip count -unroll-runtime not given
+; CHECK:  Will not try to unroll loop with runtime trip count because -unroll-runtime not given.
 
 define i32 @pragma_full_unroll_unknown_tc(ptr %A, i32 %n) {
 entry:
@@ -26,9 +26,9 @@ exit:
   ret i32 %result
 }
 
-; CHECK-LABEL:Loop Unroll: F[full_unroll_cost_exceeds] Loop %for.body
+; CHECK-LABEL:Loop Unroll: F[full_unroll_cost_exceeds] Loop %for.body (depth=1)
 ; CHECK-NEXT:Loop Size = 6
-; CHECK-NEXT:   will not try to unroll partially because -unroll-allow-partial not given
+; CHECK:   Will not try to unroll partially because -unroll-allow-partial not given.
 
 define i32 @full_unroll_cost_exceeds(ptr %A) {
 entry:
@@ -48,7 +48,7 @@ exit:
   ret i32 %add
 }
 
-; CHECK-LABEL:Loop Unroll: F[extended_convergence] Loop %for.body
+; CHECK-LABEL:Loop Unroll: F[extended_convergence] Loop %for.body (depth=1)
 ; CHECK-NEXT: Not unrolling: contains convergent operations.
 
 declare void @convergent_func() convergent
@@ -74,7 +74,7 @@ exit:
   ret i32 %add
 }
 
-; CHECK-LABEL:Loop Unroll: F[noduplicate_prevents_unroll] Loop %for.body
+; CHECK-LABEL:Loop Unroll: F[noduplicate_prevents_unroll] Loop %for.body (depth=1)
 ; CHECK-NEXT: Not unrolling: contains non-duplicatable instructions.
 
 declare void @noduplicate_func() noduplicate
@@ -98,7 +98,7 @@ exit:
   ret i32 %add
 }
 
-; CHECK-LABEL:Loop Unroll: F[indirectbr_loop] Loop %for.body
+; CHECK-LABEL:Loop Unroll: F[indirectbr_loop] Loop %for.body (depth=1)
 ; CHECK-NEXT: Not unrolling loop which is not in loop-simplify form.
 
 define i32 @indirectbr_loop(ptr %A, ptr %target) {
@@ -120,7 +120,7 @@ exit:
   ret i32 %result
 }
 
-; CHECK-LABEL:Loop Unroll: F[inline_prevents_unroll] Loop %for.body
+; CHECK-LABEL:Loop Unroll: F[inline_prevents_unroll] Loop %for.body (depth=1)
 ; CHECK-NEXT:Loop Size = 8
 ; CHECK-NEXT: Not unrolling loop with inlinable calls.
 
@@ -148,9 +148,9 @@ exit:
   ret i32 %add
 }
 
-; CHECK-LABEL:Loop Unroll: F[full_unroll_profitability_analysis] Loop %for.body
+; CHECK-LABEL:Loop Unroll: F[full_unroll_profitability_analysis] Loop %for.body (depth=1)
 ; CHECK-NEXT:Loop Size = {{[0-9]+}}
-; CHECK-NEXT:    Starting LoopUnroll profitability analysis...
+; CHECK:    Starting LoopUnroll profitability analysis...
 ; CHECK-NEXT:    Analyzing iteration 0
 ; CHECK-NEXT:    Analyzing iteration 1
 ; CHECK-NEXT:    Analyzing iteration 2
@@ -163,7 +163,7 @@ exit:
 ; CHECK-NEXT:    Analyzing iteration 9
 ; CHECK:    Analysis finished:
 ; CHECK-NEXT:    UnrolledCost: {{[0-9]+}}, RolledDynamicCost: {{[0-9]+}}
-; CHECK-NEXT:  Exiting block %for.body: TripCount=10, TripMultiple=0, BreakoutTrip=0
+; CHECK:  Exiting block %for.body: TripCount=10, TripMultiple=0, BreakoutTrip=0
 ; CHECK-NEXT:COMPLETELY UNROLLING loop %for.body with trip count 10!
 
 define i32 @full_unroll_profitability_analysis(ptr %A, ptr %B) {

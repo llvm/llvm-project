@@ -618,11 +618,15 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                << NV("UnrollCount", ULO.Count) << " iterations";
       });
   } else {
-    LLVM_DEBUG(dbgs() << "UNROLLING loop %" << Header->getName() << " by "
-                      << ULO.Count);
-    if (ULO.Runtime)
-      LLVM_DEBUG(dbgs() << " with run-time trip count");
-    LLVM_DEBUG(dbgs() << "!\n");
+    LLVM_DEBUG({
+      dbgs() << "UNROLLING loop %" << Header->getName() << " by " << ULO.Count;
+      if (ULO.Runtime) {
+        dbgs() << " with run-time trip count";
+        if (ULO.UnrollRemainder)
+          dbgs() << " (remainder unrolled)";
+      }
+      dbgs() << "!\n";
+    });
 
     if (ORE)
       ORE->emit([&]() {
@@ -630,7 +634,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                                 L->getHeader());
         Diag << "unrolled loop by a factor of " << NV("UnrollCount", ULO.Count);
         if (ULO.Runtime)
-          Diag << " with run-time trip count";
+          Diag << " with run-time trip count"
+               << (ULO.UnrollRemainder ? " (remainder unrolled)" : "");
         return Diag;
       });
   }

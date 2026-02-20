@@ -4,16 +4,16 @@
 define void @test() {
 ; CHECK-LABEL: Loop Unroll: F[test] Loop %loop3
 ; CHECK-NEXT:    Loop Size = 7
-; CHECK-NEXT:  PEELING loop %loop3 with iteration count 2!
+; CHECK:       PEELING loop %loop3 with iteration count 2!
 ; CHECK-NEXT:  Loop Unroll: F[test] Loop %loop2
 ; CHECK-NEXT:    Loop Size = 28
-; CHECK-NEXT:  PEELING loop %loop2 with iteration count 2!
+; CHECK:       PEELING loop %loop2 with iteration count 2!
 ; CHECK-NEXT:  Loop Unroll: F[test] Loop %loop4
 ; CHECK-NEXT:    Loop Size = 3
-; CHECK-NEXT:  PEELING loop %loop4 with iteration count 2!
+; CHECK:       PEELING loop %loop4 with iteration count 2!
 ; CHECK-NEXT:  Loop Unroll: F[test] Loop %loop1
 ; CHECK-NEXT:    Loop Size = 95
-; CHECK-NEXT:  PEELING loop %loop1 with iteration count 2!
+; CHECK:       PEELING loop %loop1 with iteration count 2!
 entry:
   br label %loop1
 

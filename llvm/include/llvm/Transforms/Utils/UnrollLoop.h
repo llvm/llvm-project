@@ -145,8 +145,10 @@ public:
                                const SmallPtrSetImpl<const Value *> &EphValues,
                                unsigned BEInsns);
 
-  /// Whether it is legal to unroll this loop.
-  LLVM_ABI bool canUnroll() const;
+  /// Whether it is legal to unroll this loop. If \p ORE and \p L are provided,
+  /// emit an optimization remark on failure.
+  LLVM_ABI bool canUnroll(OptimizationRemarkEmitter *ORE = nullptr,
+                          const Loop *L = nullptr) const;
 
   uint64_t getRolledLoopSize() const { return LoopSize.getValue(); }
 
