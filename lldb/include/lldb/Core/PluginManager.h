@@ -28,9 +28,14 @@
 #include <functional>
 #include <vector>
 
+// Match the PluginInitCallback and PluginTermCallback signature. The generated
+// initializer always succeeds.
 #define LLDB_PLUGIN_DEFINE_ADV(ClassName, PluginName)                          \
   extern "C" {                                                                 \
-  void lldb_initialize_##PluginName() { ClassName::Initialize(); }             \
+  bool lldb_initialize_##PluginName() {                                        \
+    ClassName::Initialize();                                                   \
+    return true;                                                               \
+  }                                                                            \
   void lldb_terminate_##PluginName() { ClassName::Terminate(); }               \
   }
 
@@ -40,7 +45,7 @@
 // FIXME: Generate me with CMake
 #define LLDB_PLUGIN_DECLARE(PluginName)                                        \
   extern "C" {                                                                 \
-  extern void lldb_initialize_##PluginName();                                  \
+  extern bool lldb_initialize_##PluginName();                                  \
   extern void lldb_terminate_##PluginName();                                   \
   }
 
