@@ -9099,9 +9099,22 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_OpenCLLocalAddressSpace:
     case ParsedAttr::AT_OpenCLConstantAddressSpace:
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
-    case ParsedAttr::AT_HLSLGroupSharedAddressSpace:
     case ParsedAttr::AT_AddressSpace:
       HandleAddressSpaceTypeAttribute(type, attr, state);
+      attr.setUsedAsTypeAttr();
+      break;
+    case ParsedAttr::AT_HLSLGroupSharedAddressSpace:
+      HandleAddressSpaceTypeAttribute(type, attr, state);
+      if (state.getDeclarator().getContext() == DeclaratorContext::Prototype) {
+        if (state.getSema().getLangOpts().getHLSLVersion() <
+            LangOptions::HLSL_202x)
+          state.getSema().Diag(attr.getLoc(), diag::warn_hlsl_groupshared_202x);
+
+        // Note: we don't check for the usage of HLSLParamModifiers in/out/inout
+        // here because the check in the AT_HLSLParamModifier case is sufficient
+        // regardless of the order of groupshared or in/out/inout specified in
+        // the parameter. And checking there produces a better error message.
+      }
       attr.setUsedAsTypeAttr();
       break;
     OBJC_POINTER_TYPE_ATTRS_CASELIST:
@@ -9192,6 +9205,12 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
 
     case ParsedAttr::AT_HLSLParamModifier: {
       HandleHLSLParamModifierAttr(state, type, attr, state.getSema());
+      if (attrs.hasAttribute(ParsedAttr::AT_HLSLGroupSharedAddressSpace)) {
+        state.getSema().Diag(attr.getLoc(), diag::err_hlsl_attr_incompatible)
+            << attr << "'groupshared'";
+        attr.setInvalid();
+        return;
+      }
       attr.setUsedAsTypeAttr();
       break;
     }

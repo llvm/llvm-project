@@ -7258,6 +7258,19 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     return;
   }
 
+  if (S.getLangOpts().HLSL && isa<FunctionDecl>(D) &&
+      AL.getKind() == ParsedAttr::AT_NoInline) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+      for (const ParmVarDecl *PVD : FD->parameters()) {
+        if (PVD->hasAttr<HLSLGroupSharedAddressSpaceAttr>()) {
+          S.Diag(AL.getLoc(), diag::err_hlsl_attr_incompatible)
+              << "'noinline'" << "'groupshared' parameter";
+          return;
+        }
+      }
+    }
+  }
+
   // Check if argument population must delayed to after template instantiation.
   bool MustDelayArgs = MustDelayAttributeArguments(AL);
 

@@ -15845,7 +15845,11 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
       // WebAssembly allows reference types as parameters. Funcref in particular
       // lives in a different address space.
       !(T->isFunctionPointerType() &&
-        T.getAddressSpace() == LangAS::wasm_funcref)) {
+        T.getAddressSpace() == LangAS::wasm_funcref) &&
+      // HLSL allows function arguments to be qualified with an address space
+      // if the groupshared annotation is used.
+      !(getLangOpts().HLSL &&
+        T.getAddressSpace() == LangAS::hlsl_groupshared)) {
     Diag(NameLoc, diag::err_arg_with_address_space);
     New->setInvalidDecl();
   }
