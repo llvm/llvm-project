@@ -626,7 +626,14 @@ if( MSVC )
   # PDBs without changing codegen.
   option(LLVM_ENABLE_PDB OFF)
   if (LLVM_ENABLE_PDB AND uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
-    append("/Zi" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    # Add /Zi to CMAKE_*_FLAGS_RELEASE instead of CMAKE_*_FLAGS, because CMake
+    # runs additional logic when PCH are enabled, but only extracts flags from
+    # these variables. See:
+    # https://gitlab.kitware.com/cmake/cmake/-/blob/315042dfd0d/Source/cmLocalGenerator.cxx#L2811-2813
+    #
+    # For CMake 3.25+, this should change according to:
+    # https://cmake.org/cmake/help/latest/policy/CMP0141.html
+    append("/Zi" CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE)
     # /DEBUG disables linker GC and ICF, but we want those in Release mode.
     append("/DEBUG /OPT:REF /OPT:ICF"
           CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS
@@ -737,14 +744,12 @@ if (MSVC)
       -wd4457 # Suppress 'declaration of 'var' hides function parameter'
       -wd4458 # Suppress 'declaration of 'var' hides class member'
       -wd4459 # Suppress 'declaration of 'var' hides global declaration'
-      -wd4503 # Suppress ''identifier' : decorated name length exceeded, name was truncated'
       -wd4624 # Suppress ''derived class' : destructor could not be generated because a base class destructor is inaccessible'
       -wd4722 # Suppress 'function' : destructor never returns, potential memory leak
       -wd4100 # Suppress 'unreferenced formal parameter'
       -wd4127 # Suppress 'conditional expression is constant'
       -wd4512 # Suppress 'assignment operator could not be generated'
       -wd4505 # Suppress 'unreferenced local function has been removed'
-      -wd4610 # Suppress '<class> can never be instantiated'
       -wd4510 # Suppress 'default constructor could not be generated'
       -wd4702 # Suppress 'unreachable code'
       -wd4245 # Suppress ''conversion' : conversion from 'type1' to 'type2', signed/unsigned mismatch'
@@ -754,9 +759,7 @@ if (MSVC)
       -wd4703 # Suppress 'potentially uninitialized local pointer variable'
       -wd4389 # Suppress 'signed/unsigned mismatch'
       -wd4805 # Suppress 'unsafe mix of type <type> and type <type> in operation'
-      -wd4204 # Suppress 'nonstandard extension used : non-constant aggregate initializer'
       -wd4577 # Suppress 'noexcept used with no exception handling mode specified; termination on exception is not guaranteed'
-      -wd4091 # Suppress 'typedef: ignored on left of '' when no variable is declared'
           # C4592 is disabled because of false positives in Visual Studio 2015
           # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
       -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
