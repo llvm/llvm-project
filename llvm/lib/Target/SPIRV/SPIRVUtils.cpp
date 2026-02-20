@@ -24,8 +24,17 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/Support/CommandLine.h"
 #include <queue>
 #include <vector>
+
+static llvm::cl::opt<bool> SPVEmitLinkageUserSemantic(
+    "spirv-use-user-semantic-for-linkage",
+    llvm::cl::desc("Emit UserSemantic decoration with \"linkage:<type>\" "
+                   "string on functions and globals whose linkage has no "
+                   "native SPIR-V representation (note: it's an experimental "
+                   "flag)."),
+    llvm::cl::Optional, llvm::cl::init(false));
 
 namespace llvm {
 namespace SPIRV {
@@ -1193,6 +1202,38 @@ Type *reconstitutePeeledArrayType(Type *Ty) {
     ResultTy = NewTy;
   }
   return ResultTy;
+}
+
+void emitLinkageAsUserSemantic(Register Reg, const GlobalValue &GV,
+                               MachineIRBuilder &MIRBuilder) {
+  if (!SPVEmitLinkageUserSemantic)
+    return;
+
+  const char *LinkageName = nullptr;
+  switch (GV.getLinkage()) {
+  case GlobalValue::WeakAnyLinkage:
+    LinkageName = "weak";
+    break;
+  case GlobalValue::WeakODRLinkage:
+    LinkageName = "weak_odr";
+    break;
+  case GlobalValue::LinkOnceAnyLinkage:
+    LinkageName = "linkonce";
+    break;
+  case GlobalValue::CommonLinkage:
+    LinkageName = "common";
+    break;
+  case GlobalValue::AppendingLinkage:
+    LinkageName = "appending";
+    break;
+  case GlobalValue::ExternalWeakLinkage:
+    LinkageName = "extern_weak";
+    break;
+  default:
+    return;
+  }
+  buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::UserSemantic, {},
+                  std::string("linkage:") + LinkageName);
 }
 
 std::optional<SPIRV::LinkageType::LinkageType>

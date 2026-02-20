@@ -585,6 +585,9 @@ unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
 MachineBasicBlock::iterator
 getFirstValidInstructionInsertPoint(MachineBasicBlock &BB);
 
+void emitLinkageAsUserSemantic(Register Reg, const GlobalValue &GV,
+                               MachineIRBuilder &MIRBuilder);
+
 std::optional<SPIRV::LinkageType::LinkageType>
 getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV);
 } // namespace llvm

@@ -5255,6 +5255,7 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   Register Reg = GR.buildGlobalVariable(
       ResVReg, ResType, GlobalIdent, GV, StorageClass, Init,
       GlobalVar->isConstant(), LnkType, MIRBuilder, true);
+  emitLinkageAsUserSemantic(Reg, *GV, MIRBuilder);
   // TODO: For AMDGCN, we pipe externally_initialized through via
   // HostAccessINTEL, with ReadWrite (3) access, which is we then handle during
   // reverse translation. We should remove this once SPIR-V gains the ability to
