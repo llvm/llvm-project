@@ -39,9 +39,8 @@ class SIShrinkInstructions {
   const SIRegisterInfo *TRI;
   bool IsPostRA;
 
-  using PendingSwapMap =
-      SmallDenseMap<std::pair<uint64_t, uint64_t>,
-                    std::pair<MachineInstr *, uint32_t>, 4>;
+  using PendingSwapMap = SmallDenseMap<std::pair<uint64_t, uint64_t>,
+                                       std::pair<MachineInstr *, uint32_t>, 4>;
 
   bool foldImmediates(MachineInstr &MI, bool TryToCommute = true) const;
   bool shouldShrinkTrue16(MachineInstr &MI) const;
@@ -851,8 +850,9 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   return nullptr;
 }
 
-MachineInstr *SIShrinkInstructions::matchSwapB16(
-    MachineInstr &Perm, PendingSwapMap &SwapCandidates) const {
+MachineInstr *
+SIShrinkInstructions::matchSwapB16(MachineInstr &Perm,
+                                   PendingSwapMap &SwapCandidates) const {
   assert(Perm.getOpcode() == AMDGPU::V_PERM_B32_e64);
   if (IsPostRA)
     return nullptr;
@@ -955,9 +955,9 @@ MachineInstr *SIShrinkInstructions::matchSwapB16(
   };
   // Allow for paired v_perms to have swapped src0 and src1 operands.
   std::pair<uint64_t, uint64_t> Key = {PackRegKey(Src0Reg, Src0Sub),
-                                        PackRegKey(Src1Reg, Src1Sub)};
+                                       PackRegKey(Src1Reg, Src1Sub)};
   std::pair<uint64_t, uint64_t> RevKey = {PackRegKey(Src1Reg, Src1Sub),
-                                           PackRegKey(Src0Reg, Src0Sub)};
+                                          PackRegKey(Src0Reg, Src0Sub)};
 
   // Current v_perm is now candidate. Search for another v_perm with same src0
   // and src1 operands or record current v_perm and continue.
