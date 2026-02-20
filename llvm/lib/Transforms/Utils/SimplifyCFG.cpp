@@ -1830,6 +1830,111 @@ static void hoistConditionalLoadsStores(
   }
 }
 
+static std::optional<bool>
+visitConditions(Value *V, const Value *BaseCond, const BasicBlock *ContextBB,
+                SmallVectorImpl<Instruction *> &ImpliedConditions,
+                const DataLayout &DL) {
+  if (!V)
+    return std::nullopt;
+
+  Instruction *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return std::nullopt;
+
+  // we only care about conditions in the same basic block
+  if (ContextBB != I->getParent())
+    return std::nullopt;
+
+  // isImpliedCondition only handles integer conditions.
+  if (!I->getType()->isIntOrIntVectorTy(1) ||
+      !BaseCond->getType()->isIntOrIntVectorTy(1))
+    return std::nullopt;
+
+  std::optional<bool> Imp = isImpliedCondition(V, BaseCond, DL);
+  std::optional<bool> LHS = visitConditions(I->getOperand(0), BaseCond,
+                                            ContextBB, ImpliedConditions, DL);
+  std::optional<bool> RHS =
+      visitConditions((I->getNumOperands() >= 2 ? I->getOperand(1) : nullptr),
+                      BaseCond, ContextBB, ImpliedConditions, DL);
+
+  // TODO: Handle negated condition case.
+  // Leaf condition node that implies the base condition.
+  if (Imp == true && !LHS.has_value() && !RHS.has_value()) {
+    ImpliedConditions.push_back(I);
+  }
+
+  return Imp;
+}
+
+static bool hoistImplyingConditions(BranchInst *BI, IRBuilder<> &Builder,
+                                    const DataLayout &DL) {
+  // Only look for CFG like
+  // A -> B, C
+  // B -> D, C
+  // or
+  // A -> B, C
+  // B -> C, D
+  // TODO: Handle the false branch case as well.
+  BasicBlock *ParentTrueBB = BI->getSuccessor(0);
+  BasicBlock *ParentFalseBB = BI->getSuccessor(1);
+
+  BranchInst *ChildBI = dyn_cast<BranchInst>(ParentTrueBB->getTerminator());
+  if (!ChildBI)
+    return false;
+
+  // TODO: Handle the unconditional branch case.
+  if (ChildBI->isUnconditional())
+    return false;
+
+  BasicBlock *ChildTrueBB = ChildBI->getSuccessor(0);
+  BasicBlock *ChildFalseBB = ChildBI->getSuccessor(1);
+  if (ParentFalseBB != ChildTrueBB && ParentFalseBB != ChildFalseBB)
+    return false;
+
+  // Avoid cases that have loops for simplicity.
+  if (ChildTrueBB == BI->getParent() || ChildFalseBB == BI->getParent())
+    return false;
+
+  auto NoSideEffects = [](BasicBlock &BB) {
+    return llvm::none_of(BB, [](const Instruction &I) {
+      return I.mayWriteToMemory() || I.mayHaveSideEffects();
+    });
+  };
+  // If the basic blocks have side effects, don't hoist conditions.
+  if (!NoSideEffects(*ParentTrueBB) || !NoSideEffects(*ParentFalseBB))
+    return false;
+
+  bool IsCommonBBonTruePath = (ParentFalseBB == ChildTrueBB);
+  // Check if parent branch condition is implied by the child branch
+  // condition. If so, we can hoist the child branch condition to the
+  // parent branch. For example:
+  // Parent branch condition: x > y
+  // Child branch condition: x == z (given z > y)
+  // We can hoist x == z to the parent branch and eliminate x > y
+  // condition check as x == z is a much stronger branch condition.
+  // So it will result in the true path being taken less often.
+  // Now that we know ChildBI condition implies parent BI condition,
+  // we need to find out which conditions to hoist out.
+  SmallVector<Instruction *, 2> HoistCandidates;
+  visitConditions(ChildBI->getCondition(), BI->getCondition(),
+                  (!IsCommonBBonTruePath ? ParentTrueBB : ParentFalseBB),
+                  HoistCandidates, DL);
+  // We don't handle multiple hoist candidates for now.
+  if (HoistCandidates.empty() || HoistCandidates.size() > 2)
+    return false;
+
+  // We can hoist the condition.
+  Instruction *ParentBranchCond = dyn_cast<Instruction>(BI->getCondition());
+  Builder.SetInsertPoint(BI);
+  Instruction *HoistedCondition = Builder.Insert(HoistCandidates[0]->clone());
+  ParentBranchCond->replaceAllUsesWith(HoistedCondition);
+  ParentBranchCond->eraseFromParent();
+  HoistCandidates[0]->replaceAllUsesWith(
+      ConstantInt::getTrue(ParentTrueBB->getContext()));
+
+  return true;
+}
+
 static bool isSafeCheapLoadStore(const Instruction *I,
                                  const TargetTransformInfo &TTI) {
   // Not handle volatile or atomic.
@@ -8563,6 +8668,9 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   // Try to turn "br (X == 0 | X == 1), T, F" into a switch instruction.
   if (simplifyBranchOnICmpChain(BI, Builder, DL))
     return true;
+
+  if (hoistImplyingConditions(BI, Builder, DL))
+    return requestResimplify();
 
   // If this basic block has dominating predecessor blocks and the dominating
   // blocks' conditions imply BI's condition, we know the direction of BI.
