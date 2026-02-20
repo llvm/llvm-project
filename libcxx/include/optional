@@ -830,70 +830,41 @@ private:
       is_lvalue_reference_v<_Tp> && reference_constructs_from_temporary_v<_Tp, _Up>;
 #    endif
 
-  // LWG2756: conditionally explicit conversion from _Up
-  struct _CheckOptionalArgsConstructor {
-    template <class _Up>
-    _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_implicit() {
-      return is_constructible_v<_Tp, _Up&&> && is_convertible_v<_Up&&, _Tp>;
-    }
+  template <class _Up, class _UnqualUp = __remove_cvref_t<_Up>>
+  static constexpr bool __enable_conversion_ctor =
+      !is_same_v<_UnqualUp, in_place_t> && !is_same_v<_UnqualUp, optional> &&
+      (!is_same_v<remove_cv_t<_Tp>, bool> || !__is_std_optional<_UnqualUp>::value);
 
-    template <class _Up>
-    _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_explicit() {
-      return is_constructible_v<_Tp, _Up&&> && !is_convertible_v<_Up&&, _Tp>;
-    }
-  };
-  template <class _Up>
-  using _CheckOptionalArgsCtor _LIBCPP_NODEBUG =
-      _If< _IsNotSame<__remove_cvref_t<_Up>, in_place_t>::value && _IsNotSame<__remove_cvref_t<_Up>, optional>::value &&
-               (!is_same_v<remove_cv_t<_Tp>, bool> || !__is_std_optional<__remove_cvref_t<_Up>>::value),
-           _CheckOptionalArgsConstructor,
-           __check_tuple_constructor_fail >;
-  template <class _QualUp>
-  struct _CheckOptionalLikeConstructor {
-    template <class _Up, class _Opt = optional<_Up>>
-    using __check_constructible_from_opt _LIBCPP_NODEBUG =
-        _Or< is_constructible<_Tp, _Opt&>,
-             is_constructible<_Tp, _Opt const&>,
-             is_constructible<_Tp, _Opt&&>,
-             is_constructible<_Tp, _Opt const&&>,
-             is_convertible<_Opt&, _Tp>,
-             is_convertible<_Opt const&, _Tp>,
-             is_convertible<_Opt&&, _Tp>,
-             is_convertible<_Opt const&&, _Tp> >;
-    template <class _Up, class _Opt = optional<_Up>>
-    using __check_assignable_from_opt _LIBCPP_NODEBUG =
-        _Or< is_assignable<_Tp&, _Opt&>,
-             is_assignable<_Tp&, _Opt const&>,
-             is_assignable<_Tp&, _Opt&&>,
-             is_assignable<_Tp&, _Opt const&&> >;
-    template <class _Up, class _QUp = _QualUp>
-    _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_implicit() {
-      return is_convertible<_QUp, _Tp>::value &&
-             (is_same_v<remove_cv_t<_Tp>, bool> || !__check_constructible_from_opt<_Up>::value);
-    }
-    template <class _Up, class _QUp = _QualUp>
-    _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_explicit() {
-      return !is_convertible<_QUp, _Tp>::value &&
-             (is_same_v<remove_cv_t<_Tp>, bool> || !__check_constructible_from_opt<_Up>::value);
-    }
-    template <class _Up, class _QUp = _QualUp>
-    _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_assign() {
-      // Construction and assignability of _QUp to _Tp has already been
-      // checked.
-      return !__check_constructible_from_opt<_Up>::value && !__check_assignable_from_opt<_Up>::value;
-    }
-  };
+  template <class _Up, class _Opt = optional<_Up>>
+  using __check_constructible_from_opt _LIBCPP_NODEBUG =
+      _Or<is_constructible<_Tp, _Opt&>,
+          is_constructible<_Tp, _Opt const&>,
+          is_constructible<_Tp, _Opt&&>,
+          is_constructible<_Tp, _Opt const&&>,
+          is_convertible<_Opt&, _Tp>,
+          is_convertible<_Opt const&, _Tp>,
+          is_convertible<_Opt&&, _Tp>,
+          is_convertible<_Opt const&&, _Tp>>;
+
+  template <class _Up, class _Opt = optional<_Up>>
+  using __check_assignable_from_opt _LIBCPP_NODEBUG =
+      _Or<is_assignable<_Tp&, _Opt&>,
+          is_assignable<_Tp&, _Opt const&>,
+          is_assignable<_Tp&, _Opt&&>,
+          is_assignable<_Tp&, _Opt const&&> >;
 
   template <class _Up, class _QualUp>
-  using _CheckOptionalLikeCtor _LIBCPP_NODEBUG =
-      _If< _And< _IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp> >::value,
-           _CheckOptionalLikeConstructor<_QualUp>,
-           __check_tuple_constructor_fail >;
+  static constexpr bool __enable_optional_like_ctor =
+      _And<_IsNotSame<_Up, _Tp>,
+           is_constructible<_Tp, _QualUp>,
+           _Or<is_same<remove_cv_t<_Tp>, bool>, _Not<__check_constructible_from_opt<_Up>>>>::value;
+
   template <class _Up, class _QualUp>
-  using _CheckOptionalLikeAssign _LIBCPP_NODEBUG =
-      _If< _And< _IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp>, is_assignable<_Tp&, _QualUp> >::value,
-           _CheckOptionalLikeConstructor<_QualUp>,
-           __check_tuple_constructor_fail >;
+  static constexpr bool __enable_optional_like_assign =
+      _And<_IsNotSame<_Up, _Tp>,
+           is_constructible<_Tp, _QualUp>,
+           _Not<__check_constructible_from_opt<_Up>>,
+           _Not<__check_assignable_from_opt<_Up>>>::value;
 
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr optional() noexcept {}
@@ -914,34 +885,26 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit optional(in_place_t, initializer_list<_Up> __il, _Args&&... __args)
       : __base(in_place, __il, std::forward<_Args>(__args)...) {}
 
-  template <class _Up = _Tp, enable_if_t<_CheckOptionalArgsCtor<_Up>::template __enable_implicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI constexpr optional(_Up&& __v)
+  template <class _Up                                                                         = remove_cv_t<_Tp>,
+            enable_if_t<__enable_conversion_ctor<_Up> && is_constructible_v<_Tp, _Up&&>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI explicit(!is_convertible_v<_Up&&, _Tp>) constexpr optional(_Up&& __v)
 #    if _LIBCPP_STD_VER >= 26
       noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp&, _Up>)
 #    endif
       : __base(in_place, std::forward<_Up>(__v)) {
   }
 
-  template <class _Up                                                                        = remove_cv_t<_Tp>,
-            enable_if_t<_CheckOptionalArgsCtor<_Up>::template __enable_explicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit optional(_Up&& __v)
 #    if _LIBCPP_STD_VER >= 26
-      noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp&, _Up>)
-#    endif
-      : __base(in_place, std::forward<_Up>(__v)) {
-  }
+  template <class _Up                                                                         = remove_cv_t<_Tp>,
+            enable_if_t<__enable_conversion_ctor<_Up> && is_constructible_v<_Tp, _Up&&>, int> = 0>
+    requires __libcpp_opt_ref_ctor_deleted<_Up>
+  optional(_Up&&) = delete;
+#    endif // _LIBCPP_STD_VER >= 26
 
   // LWG2756: conditionally explicit conversion from const optional<_Up>&
-  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::template __enable_implicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional(const optional<_Up>& __v)
-#    if _LIBCPP_STD_VER >= 26
-      noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp&, _Up&>)
-#    endif
-  {
-    this->__construct_from(__v);
-  }
-  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::template __enable_explicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit optional(const optional<_Up>& __v)
+  template <class _Up, enable_if_t<__enable_optional_like_ctor<_Up, const _Up&>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(!is_convertible_v<const _Up&, _Tp>) optional(const optional<_Up>& __v)
 #    if _LIBCPP_STD_VER >= 26
       noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp&, _Up&>)
 #    endif
@@ -949,36 +912,30 @@ public:
     this->__construct_from(__v);
   }
 
+#    if _LIBCPP_STD_VER >= 26
+  template <class _Up, enable_if_t<__enable_optional_like_ctor<_Up, const _Up&>, int> = 0>
+    requires __libcpp_opt_ref_ctor_deleted<_Up>
+  optional(const optional<_Up>&) = delete;
+#    endif // _LIBCPP_STD_VER >= 26
+
   // LWG2756: conditionally explicit conversion from optional<_Up>&&
-  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::template __enable_implicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional(optional<_Up>&& __v)
+  template <class _Up, enable_if_t<__enable_optional_like_ctor<_Up, _Up&&>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(!is_convertible_v<_Up&&, _Tp>) optional(optional<_Up>&& __v)
 #    if _LIBCPP_STD_VER >= 26
       noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp&, _Up>)
 #    endif
   {
     this->__construct_from(std::move(__v));
   }
-  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::template __enable_explicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit optional(optional<_Up>&& __v)
 #    if _LIBCPP_STD_VER >= 26
-      noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp&, _Up>)
-#    endif
-  {
-    this->__construct_from(std::move(__v));
-  }
+  template <class _Up, enable_if_t<__enable_optional_like_ctor<_Up, _Up&&>, int> = 0>
+    requires __libcpp_opt_ref_ctor_deleted<_Up>
+  optional(optional<_Up>&&) = delete;
+#    endif // _LIBCPP_STD_VER >= 26
 
   // deleted optional<T&> constructors and additional optional<T&> constructors
 #    if _LIBCPP_STD_VER >= 26
-  // optional(U&&)
-  template <class _Up = _Tp, enable_if_t<_CheckOptionalArgsCtor<_Up>::template __enable_implicit<_Up>(), int> = 0>
-    requires __libcpp_opt_ref_ctor_deleted<_Up>
-  optional(_Up&&) = delete;
-
-  template <class _Up                                                                        = remove_cv_t<_Tp>,
-            enable_if_t<_CheckOptionalArgsCtor<_Up>::template __enable_explicit<_Up>(), int> = 0>
-    requires __libcpp_opt_ref_ctor_deleted<_Up>
-  explicit optional(_Up&&) = delete;
-
   // optional(optional<U>& rhs)
   template <class _Up>
     requires(!__libcpp_opt_ref_ctor_deleted<_Up>) && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
@@ -992,24 +949,6 @@ public:
     requires __libcpp_opt_ref_ctor_deleted<_Up> && (!is_same_v<remove_cvref_t<_Tp>, optional<_Up>>) &&
                  (!is_same_v<_Tp&, _Up>) && is_constructible_v<_Tp&, _Up&>
   constexpr explicit optional(optional<_Up>& __rhs) noexcept = delete;
-
-  // optional(const optional<U>&)
-  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::template __enable_implicit<_Up>(), int> = 0>
-    requires __libcpp_opt_ref_ctor_deleted<_Up>
-  optional(const optional<_Up>&) = delete;
-
-  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::template __enable_explicit<_Up>(), int> = 0>
-    requires __libcpp_opt_ref_ctor_deleted<_Up>
-  explicit optional(const optional<_Up>&) = delete;
-
-  // optional(optional<U>&&)
-  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::template __enable_implicit<_Up>(), int> = 0>
-    requires __libcpp_opt_ref_ctor_deleted<_Up>
-  optional(optional<_Up>&&) = delete;
-
-  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::template __enable_explicit<_Up>(), int> = 0>
-    requires __libcpp_opt_ref_ctor_deleted<_Up>
-  explicit optional(optional<_Up>&&) = delete;
 
   // optional(const optional<U>&&)
   template <class _Up>
@@ -1060,14 +999,15 @@ public:
   }
 
   // LWG2756
-  template <class _Up, enable_if_t<_CheckOptionalLikeAssign<_Up, _Up const&>::template __enable_assign<_Up>(), int> = 0>
+  template <class _Up,
+            enable_if_t<__enable_optional_like_assign<_Up, const _Up&> && is_assignable_v<_Tp&, const _Up&>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional& operator=(const optional<_Up>& __v) {
     this->__assign_from(__v);
     return *this;
   }
 
   // LWG2756
-  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::template __enable_assign<_Up>(), int> = 0>
+  template <class _Up, enable_if_t<__enable_optional_like_assign<_Up, _Up&&>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional& operator=(optional<_Up>&& __v) {
     this->__assign_from(std::move(__v));
     return *this;
