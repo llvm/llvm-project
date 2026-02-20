@@ -87,7 +87,7 @@ namespace {
 // save off initial state at the beginning, and restore it at the end
 struct InitializePythonRAII {
 public:
-  InitializePythonRAII() {
+  void DoInitialize() {
     // The table of built-in modules can only be extended before Python is
     // initialized.
     if (!Py_IsInitialized()) {
@@ -116,14 +116,24 @@ public:
       return spec.GetPath();
     }();
     if (!g_python_home.empty()) {
-      PyConfig_SetBytesString(&config, &config.home, g_python_home.c_str());
+      PyStatus status =
+          PyConfig_SetBytesString(&config, &config.home, g_python_home.c_str());
+      if (PyStatus_Exception(status))
+        llvm::report_fatal_error(
+            llvm::Twine("failed to set the Python config: '") + status.err_msg +
+            "'");
     }
 
     config.install_signal_handlers = 0;
-    Py_InitializeFromConfig(&config);
+    PyStatus status = Py_InitializeFromConfig(&config);
     PyConfig_Clear(&config);
+    if (PyStatus_Exception(status))
+      llvm::report_fatal_error(llvm::Twine("Python failed to initialize: '") +
+                               status.err_msg + "'");
 #else
     Py_InitializeEx(/*install_sigs=*/0);
+    if (!Py_IsInitialized())
+      llvm::report_fatal_error("python failed to initialize");
 #endif
 
     // The only case we should go further and acquire the GIL: it is unlocked.
@@ -3020,6 +3030,7 @@ void ScriptInterpreterPythonImpl::Initialize() {
   // restoring various other pieces of state that can get mucked with during
   // initialization.
   InitializePythonRAII initialize_guard;
+  initialize_guard.DoInitialize();
 
   LLDBSwigPyInit();
 
