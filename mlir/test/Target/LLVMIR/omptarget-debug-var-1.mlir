@@ -57,7 +57,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 #loc5 = loc(fused<#sp1>[#loc2])
 
 // CHECK: ![[SP:[0-9]+]] = distinct !DISubprogram(name: "target"{{.*}})
-// CHECK: !DILocalVariable(name: "dyn_ptr", arg: 1, scope: ![[SP]]{{.*}}flags: DIFlagArtificial)
-// CHECK: !DILocalVariable(name: "x", arg: 2, scope: ![[SP]]{{.*}})
-// CHECK: !DILocalVariable(name: "arr", arg: 3, scope: ![[SP]]{{.*}})
-// CHECK: !DILocalVariable(name: "i", arg: 4, scope: ![[SP]]{{.*}})
+// CHECK-DAG: !DILocalVariable(name: "dyn_ptr", arg: 1, scope: ![[SP]]{{.*}}flags: DIFlagArtificial)
+// CHECK-DAG: !DILocalVariable(name: "x", arg: 2, scope: ![[SP]]{{.*}})
+// CHECK-DAG: !DILocalVariable(name: "arr", arg: 3, scope: ![[SP]]{{.*}})
+// CHECK-DAG: !DILocalVariable(name: "i", arg: 4, scope: ![[SP]]{{.*}})

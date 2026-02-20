@@ -8302,19 +8302,40 @@ static void FixupDebugInfoForOutlinedFunction(
         OldVar->getFlags(), OldVar->getAlignInBits(), OldVar->getAnnotations());
     return NewVar;
   };
-
-  auto UpdateDebugRecord = [&](auto *DR) {
+  auto UpdateDebugRecord = [&](DbgVariableRecord *DR) {
     DILocalVariable *OldVar = DR->getVariable();
     unsigned ArgNo = 0;
-    for (auto Loc : DR->location_ops()) {
-      auto Iter = ValueReplacementMap.find(Loc);
-      if (Iter != ValueReplacementMap.end()) {
-        DR->replaceVariableLocationOp(Loc, std::get<0>(Iter->second));
-        ArgNo = std::get<1>(Iter->second) + 1;
-      }
+    if (DR->getNumVariableLocationOps() != 1u)
+      return;
+    auto Loc = DR->getVariableLocationOp(0u);
+    auto Iter = ValueReplacementMap.find(Loc);
+    if (Iter != ValueReplacementMap.end()) {
+      DR->replaceVariableLocationOp(Loc, std::get<0>(Iter->second));
+      ArgNo = std::get<1>(Iter->second) + 1;
     }
     if (ArgNo != 0)
       DR->setVariable(GetUpdatedDIVariable(OldVar, ArgNo));
+  };
+
+  SmallVector<DbgVariableRecord *, 4> DVRsToDelete;
+  auto MoveDebugRecordToCorrectBlock = [&](DbgVariableRecord *DVR) {
+    if (DVR->getNumVariableLocationOps() != 1u)
+      return;
+    auto Loc = DVR->getVariableLocationOp(0u);
+    BasicBlock *CurBB = DVR->getParent();
+    BasicBlock *RequiredBB = nullptr;
+
+    if (Instruction *LocInst = dyn_cast<Instruction>(Loc))
+      RequiredBB = LocInst->getParent();
+    else if (isa<llvm::Argument>(Loc))
+      RequiredBB = &(DVR->getFunction()->getEntryBlock());
+
+    if (RequiredBB && RequiredBB != CurBB) {
+      assert(!RequiredBB->empty());
+      RequiredBB->insertDbgRecordBefore(DVR->clone(),
+                                        RequiredBB->back().getIterator());
+      DVRsToDelete.push_back(DVR);
+    }
   };
 
   // The location and scope of variable intrinsics and records still point to
@@ -8322,9 +8343,13 @@ static void FixupDebugInfoForOutlinedFunction(
   for (Instruction &I : instructions(Func)) {
     assert(!isa<llvm::DbgVariableIntrinsic>(&I) &&
            "Unexpected debug intrinsic");
-    for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
+    for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
       UpdateDebugRecord(&DVR);
+      MoveDebugRecordToCorrectBlock(&DVR);
+    }
   }
+  for (auto *DVR : DVRsToDelete)
+    DVR->getMarker()->MarkedInstr->dropOneDbgRecord(DVR);
   // An extra argument is passed to the device. Create the debug data for it.
   if (OMPBuilder.Config.isTargetDevice()) {
     DICompileUnit *CU = NewSP->getUnit();
