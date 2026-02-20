@@ -76,6 +76,12 @@ public:
                          llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                          bool *did_create_ptr) override;
 
+  Status
+  GetModuleFromSharedCaches(const ModuleSpec &module_spec, Process *process,
+                            lldb::ModuleSP &module_sp,
+                            llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
+                            bool *did_create_ptr);
+
   size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                          BreakpointSite *bp_site) override;
 
