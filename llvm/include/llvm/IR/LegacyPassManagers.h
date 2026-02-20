@@ -461,7 +461,7 @@ public:
 
   /// run - Execute all of the passes scheduled for execution.  Keep track of
   /// whether any of the passes modifies the module, and if so, return true.
-  bool runOnFunction(Function &F);
+  virtual bool runOnFunction(Function &F);
   bool runOnModule(Module &M) override;
 
   /// cleanup - After running all passes, clean up pass manager cache.
@@ -496,7 +496,7 @@ public:
   // Print passes managed by this manager
   void dumpPassStructure(unsigned Offset) override;
 
-  StringRef getPassName() const override { return "Function Pass Manager"; }
+  StringRef getPassName() const override { return "FunctionPass Manager"; }
 
   FunctionPass *getContainedPass(unsigned N) {
     assert ( N < PassVector.size() && "Pass number out of range!");
@@ -507,6 +507,10 @@ public:
   PassManagerType getPassManagerType() const override {
     return PMT_FunctionPassManager;
   }
+
+protected:
+  // So subclasses can pass their own ID.
+  explicit FPPassManager(char &ID) : ModulePass(ID) {}
 };
 }
 
