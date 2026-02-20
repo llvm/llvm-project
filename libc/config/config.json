@@ -97,7 +97,7 @@
   },
   "ctype": {
     "LIBC_CONF_CTYPE_SMALLER_ASCII": {
-      "value": true,
+      "value": false,
       "doc": "Shrinks b36_char_to_int by assuming the character encoding is ASCII."
     }
   },
