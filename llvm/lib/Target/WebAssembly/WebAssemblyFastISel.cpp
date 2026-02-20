@@ -1308,7 +1308,6 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
   if (!computeAddress(Load->getPointerOperand(), Addr))
     return false;
 
-  // TODO: Fold a following sign-/zero-extend into the load instruction.
   // Fold sext(load)
   const Value *Ext = nullptr;
   MVT::SimpleValueType ExtVT = MVT::INVALID_SIMPLE_VALUE_TYPE;
@@ -1320,6 +1319,7 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
     }
   }
 
+  // TODO: Fold a following zero-extend into the load instruction.
   unsigned Opc;
   const TargetRegisterClass *RC;
   bool A64 = Subtarget->hasAddr64();
