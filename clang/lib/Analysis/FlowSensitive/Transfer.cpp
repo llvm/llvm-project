@@ -482,7 +482,7 @@ public:
   }
 
   void VisitCXXThisExpr(const CXXThisExpr *S) {
-    auto *ThisPointeeLoc = Env.getThisPointeeStorageLocation();
+    auto *ThisPointeeLoc = Env.getThisPointeeStorageLocation(*S);
     if (ThisPointeeLoc == nullptr)
       // Unions are not supported yet, and will not have a location for the
       // `this` expression's pointee.

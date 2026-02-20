@@ -15,12 +15,14 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
+#include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -30,6 +32,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <memory>
+#include <stack>
 #include <utility>
 
 #define DEBUG_TYPE "dataflow"
@@ -486,6 +489,97 @@ private:
   DataflowAnalysisContext &DACtx;
 };
 
+/// A visitor that finds `CXXThisExpr` that can refer to an object other than
+/// the `this` of a member function.
+class ThisExprOverridesVisitor : public AnalysisASTVisitor {
+  using BaseVisitor = AnalysisASTVisitor;
+
+public:
+  ThisExprOverridesVisitor(
+      RecordStorageLocation *ThisPointeeLoc,
+      const llvm::DenseMap<const Expr *, RecordStorageLocation *>
+          &ResultObjectMap,
+      llvm::DenseMap<const CXXThisExpr *, RecordStorageLocation *>
+          &ThisExprOverrides)
+      : DefaultThisPointeeLoc(ThisPointeeLoc), ResultObjectMap(ResultObjectMap),
+        ThisExprOverrides(ThisExprOverrides) {
+    ThisLocations.push(DefaultThisPointeeLoc);
+  }
+
+  void traverseConstructorInits(const CXXConstructorDecl *Ctor) {
+    for (const CXXCtorInitializer *Init : Ctor->inits()) {
+      TraverseStmt(Init->getInit());
+    }
+  }
+
+  bool TraverseInitListExpr(InitListExpr *ILE) override {
+    if (!ILE->isSemanticForm() || ILE->isTransparent()) {
+      BaseVisitor::TraverseInitListExpr(ILE);
+      return true;
+    }
+    bool IsRecordType = ILE->getType()->isRecordType();
+    if (IsRecordType) {
+      auto It = ResultObjectMap.find(ILE);
+      if (It == ResultObjectMap.end()) {
+        llvm_unreachable("InitListExpr not found in ResultObjectMap");
+        return false;
+      }
+      InitListLocations.push(It->second);
+    }
+    BaseVisitor::TraverseInitListExpr(ILE);
+    if (IsRecordType)
+      InitListLocations.pop();
+    return true;
+  }
+
+  bool TraverseCXXParenListInitExpr(CXXParenListInitExpr *PLIE) override {
+    auto It = ResultObjectMap.find(PLIE);
+    if (It == ResultObjectMap.end()) {
+      llvm_unreachable("CXXParenListInitExpr not found in ResultObjectMap");
+      return false;
+    }
+    InitListLocations.push(It->second);
+    BaseVisitor::TraverseCXXParenListInitExpr(PLIE);
+    InitListLocations.pop();
+    return true;
+  }
+
+  bool TraverseCXXDefaultInitExpr(CXXDefaultInitExpr *CDIE) override {
+    bool HasInitListLocations = !InitListLocations.empty();
+    if (HasInitListLocations) {
+      auto *Loc = InitListLocations.top();
+      ThisLocations.push(Loc);
+    }
+    BaseVisitor::TraverseCXXDefaultInitExpr(CDIE);
+    if (HasInitListLocations)
+      ThisLocations.pop();
+    return true;
+  }
+
+  bool TraverseCXXThisExpr(CXXThisExpr *This) override {
+    assert(!ThisLocations.empty());
+    auto *Loc = ThisLocations.top();
+    if (Loc != DefaultThisPointeeLoc)
+      ThisExprOverrides[This] = Loc;
+    return true;
+  }
+
+  // The default `this` pointee location (null if not in a member function).
+  RecordStorageLocation *DefaultThisPointeeLoc;
+  // Locations to use for `this`, with the most recent scope on top.
+  std::stack<RecordStorageLocation *> ThisLocations;
+  // A stack of nested InitListExpr and CXXParenListInitExprs storage
+  // locations that may be used for `this` if we enter a CXXDefaultInitExpr.
+  std::stack<RecordStorageLocation *> InitListLocations;
+  // Map to look up a storage location, e.g., when encountering an
+  // InitListExpr.
+  const llvm::DenseMap<const Expr *, RecordStorageLocation *> &ResultObjectMap;
+  // The visitor will update this map with locations to use for `this`,
+  // if different from `DefaultThisPointeeLoc`.
+  llvm::DenseMap<const CXXThisExpr *, RecordStorageLocation *>
+      &ThisExprOverrides;
+};
+
 } // namespace
 
 void Environment::initialize() {
@@ -498,6 +592,11 @@ void Environment::initialize() {
         std::make_shared<PrValueToResultObject>(buildResultObjectMap(
             DACtx, InitialTargetStmt, getThisPointeeStorageLocation(),
             /*LocForRecordReturnValue=*/nullptr));
+
+    ThisExprOverrides =
+        std::make_shared<ThisExprOverridesMap>(buildThisExprOverridesMap(
+            InitialTargetStmt, getThisPointeeStorageLocation(),
+            *ResultObjectMap));
     return;
   }
 
@@ -561,6 +660,11 @@ void Environment::initialize() {
       std::make_shared<PrValueToResultObject>(buildResultObjectMap(
           DACtx, InitialTargetFunc, getThisPointeeStorageLocation(),
           LocForRecordReturnVal));
+
+  ThisExprOverrides =
+      std::make_shared<ThisExprOverridesMap>(buildThisExprOverridesMap(
+          InitialTargetFunc, getThisPointeeStorageLocation(),
+          *ResultObjectMap));
 }
 
 // FIXME: Add support for resetting globals after function calls to enable the
@@ -661,6 +765,9 @@ void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
   ResultObjectMap = std::make_shared<PrValueToResultObject>(
       buildResultObjectMap(DACtx, FuncDecl, getThisPointeeStorageLocation(),
                            LocForRecordReturnVal));
+  ThisExprOverrides =
+      std::make_shared<ThisExprOverridesMap>(buildThisExprOverridesMap(
+          FuncDecl, getThisPointeeStorageLocation(), *ResultObjectMap));
 }
 
 void Environment::popCall(const CallExpr *Call, const Environment &CalleeEnv) {
@@ -728,6 +835,7 @@ LatticeEffect Environment::widen(const Environment &PrevEnv,
   assert(ReturnLoc == PrevEnv.ReturnLoc);
   assert(LocForRecordReturnVal == PrevEnv.LocForRecordReturnVal);
   assert(ThisPointeeLoc == PrevEnv.ThisPointeeLoc);
+  assert(ThisExprOverrides == PrevEnv.ThisExprOverrides);
   assert(CallStack == PrevEnv.CallStack);
   assert(ResultObjectMap == PrevEnv.ResultObjectMap);
   assert(InitialTargetFunc == PrevEnv.InitialTargetFunc);
@@ -765,6 +873,7 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   assert(EnvA.DACtx == EnvB.DACtx);
   assert(EnvA.LocForRecordReturnVal == EnvB.LocForRecordReturnVal);
   assert(EnvA.ThisPointeeLoc == EnvB.ThisPointeeLoc);
+  assert(EnvA.ThisExprOverrides == EnvB.ThisExprOverrides);
   assert(EnvA.CallStack == EnvB.CallStack);
   assert(EnvA.ResultObjectMap == EnvB.ResultObjectMap);
   assert(EnvA.InitialTargetFunc == EnvB.InitialTargetFunc);
@@ -776,6 +885,7 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   JoinedEnv.ResultObjectMap = EnvA.ResultObjectMap;
   JoinedEnv.LocForRecordReturnVal = EnvA.LocForRecordReturnVal;
   JoinedEnv.ThisPointeeLoc = EnvA.ThisPointeeLoc;
+  JoinedEnv.ThisExprOverrides = EnvA.ThisExprOverrides;
   JoinedEnv.InitialTargetFunc = EnvA.InitialTargetFunc;
   JoinedEnv.InitialTargetStmt = EnvA.InitialTargetStmt;
 
@@ -1223,6 +1333,30 @@ Environment::PrValueToResultObject Environment::buildResultObjectMap(
     RecordStorageLocation *LocForRecordReturnVal) {
   PrValueToResultObject Map;
   ResultObjectVisitor Visitor(Map, LocForRecordReturnVal, *DACtx);
+  Visitor.TraverseStmt(S);
+  return Map;
+}
+
+Environment::ThisExprOverridesMap Environment::buildThisExprOverridesMap(
+    const FunctionDecl *FuncDecl, RecordStorageLocation *ThisPointeeLoc,
+    const PrValueToResultObject &ResultObjectMap) {
+  assert(FuncDecl->doesThisDeclarationHaveABody());
+
+  ThisExprOverridesMap Map = buildThisExprOverridesMap(
+      FuncDecl->getBody(), ThisPointeeLoc, ResultObjectMap);
+
+  ThisExprOverridesVisitor Visitor(ThisPointeeLoc, ResultObjectMap, Map);
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FuncDecl)) {
+    Visitor.traverseConstructorInits(Ctor);
+  }
+  return Map;
+}
+
+Environment::ThisExprOverridesMap Environment::buildThisExprOverridesMap(
+    Stmt *S, RecordStorageLocation *ThisPointeeLoc,
+    const PrValueToResultObject &ResultObjectMap) {
+  ThisExprOverridesMap Map;
+  ThisExprOverridesVisitor Visitor(ThisPointeeLoc, ResultObjectMap, Map);
   Visitor.TraverseStmt(S);
   return Map;
 }
