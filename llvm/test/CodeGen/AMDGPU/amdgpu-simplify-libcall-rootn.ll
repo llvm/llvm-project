@@ -1585,8 +1585,7 @@ define float @test_rootn_afn_ninf_nnan_f32__x_known_positive(float nofpclass(nin
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sitofp i32 [[Y]] to float
 ; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf afn float @llvm.amdgcn.rcp.f32(float [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call nnan ninf afn float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[TMP3:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[X]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul nnan ninf afn float [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call nnan ninf afn float @llvm.exp2.f32(float [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[Y]], 1
@@ -1691,8 +1690,7 @@ define float @test_fast_rootn_f32_known_positive_y_known_even(float nofpclass(ni
 ; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[Y_ARG]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = sitofp i32 [[Y]] to float
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.log2.f32(float [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.log2.f32(float [[X]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast float [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.exp2.f32(float [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp fast oeq float [[X]], 0.000000e+00
