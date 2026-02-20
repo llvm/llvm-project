@@ -1392,6 +1392,7 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
       }
     }
     updateValueMap(Ext, ResultReg);
+    return true;
   }
   updateValueMap(Load, ResultReg);
   return true;
