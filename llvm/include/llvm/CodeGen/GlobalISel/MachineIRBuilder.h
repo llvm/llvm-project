@@ -2238,6 +2238,12 @@ public:
     return buildInstr(TargetOpcode::G_FPTOSI_SAT, {Dst}, {Src0});
   }
 
+  /// Build and insert \p Dst = G_FRINT \p Src0
+  MachineInstrBuilder buildFRint(const DstOp &Dst, const SrcOp &Src0,
+                                 std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FRINT, {Dst}, {Src0}, Flags);
+  }
+
   /// Build and insert \p Dst = G_INTRINSIC_ROUNDEVEN \p Src0, \p Src1
   MachineInstrBuilder
   buildIntrinsicRoundeven(const DstOp &Dst, const SrcOp &Src0,
