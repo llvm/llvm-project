@@ -282,6 +282,7 @@ struct ScalarEnumerationTraits<FormatStyle::BreakConstructorInitializersStyle> {
     IO.enumCase(Value, "BeforeColon", FormatStyle::BCIS_BeforeColon);
     IO.enumCase(Value, "BeforeComma", FormatStyle::BCIS_BeforeComma);
     IO.enumCase(Value, "AfterColon", FormatStyle::BCIS_AfterColon);
+    IO.enumCase(Value, "AfterComma", FormatStyle::BCIS_AfterComma);
   }
 };
 
@@ -1914,6 +1915,11 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.IncludeStyle.IncludeIsMainRegex = "([-_](test|unittest))?$";
   GoogleStyle.IndentCaseLabels = true;
   GoogleStyle.KeepEmptyLines.AtStartOfBlock = false;
+
+  GoogleStyle.Macros.push_back("ASSIGN_OR_RETURN(a, b)=a = (b)");
+  GoogleStyle.Macros.push_back(
+      "ASSIGN_OR_RETURN(a, b, c)=a = (b); if (x) return c");
+
   GoogleStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Never;
   GoogleStyle.ObjCSpaceAfterProperty = false;
   GoogleStyle.ObjCSpaceBeforeProtocolList = true;

@@ -1725,7 +1725,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
       // Handle case when index is zero.
       Constant *CIndex = dyn_cast<Constant>(Index);
-      if (CIndex && CIndex->isZeroValue())
+      if (CIndex && CIndex->isNullValue())
         continue;
 
       if (StructType *STy = GTI.getStructTypeOrNull()) {

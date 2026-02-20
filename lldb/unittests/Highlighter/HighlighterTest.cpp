@@ -14,7 +14,13 @@
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/Language/ObjCPlusPlus/ObjCPlusPlusLanguage.h"
 #include "lldb/Core/Highlighter.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
+
+#if LLDB_ENABLE_TREESITTER
+#include "Plugins/Highlighter/TreeSitter/Rust/RustTreeSitterHighlighter.h"
+#include "Plugins/Highlighter/TreeSitter/Swift/SwiftTreeSitterHighlighter.h"
+#endif
 
 #include "TestingSupport/SubsystemRAII.h"
 #include <optional>
@@ -25,8 +31,12 @@ namespace {
 class HighlighterTest : public testing::Test {
   // We need the language plugins for detecting the language based on the
   // filename.
-  SubsystemRAII<FileSystem, ClangHighlighter, DefaultHighlighter,
-                CPlusPlusLanguage, ObjCLanguage, ObjCPlusPlusLanguage>
+  SubsystemRAII<FileSystem, ClangHighlighter,
+#if LLDB_ENABLE_TREESITTER
+                SwiftTreeSitterHighlighter, RustTreeSitterHighlighter,
+#endif
+                DefaultHighlighter, CPlusPlusLanguage, ObjCLanguage,
+                ObjCPlusPlusLanguage>
       subsystems;
 };
 } // namespace
@@ -48,6 +58,11 @@ TEST_F(HighlighterTest, HighlighterSelectionType) {
   EXPECT_EQ(getName(lldb::eLanguageTypeC_plus_plus_14), "clang");
   EXPECT_EQ(getName(lldb::eLanguageTypeObjC), "clang");
   EXPECT_EQ(getName(lldb::eLanguageTypeObjC_plus_plus), "clang");
+
+#if LLDB_ENABLE_TREESITTER
+  EXPECT_EQ(getName(lldb::eLanguageTypeSwift), "tree-sitter-swift");
+  EXPECT_EQ(getName(lldb::eLanguageTypeRust), "tree-sitter-rust");
+#endif
 
   EXPECT_EQ(getName(lldb::eLanguageTypeUnknown), "none");
   EXPECT_EQ(getName(lldb::eLanguageTypeJulia), "none");
@@ -322,3 +337,232 @@ TEST_F(HighlighterTest, ClangCursorPosInOtherToken) {
   EXPECT_EQ(" <id><c>foo</c></id> <id>c</id> = <id>bar</id>(); return 1;",
             highlightC(" foo c = bar(); return 1;", s, 3));
 }
+
+#if LLDB_ENABLE_TREESITTER
+static std::string
+highlightSwift(llvm::StringRef code, HighlightStyle style,
+               std::optional<size_t> cursor = std::optional<size_t>()) {
+  HighlighterManager mgr;
+  const Highlighter &h =
+      mgr.getHighlighterFor(lldb::eLanguageTypeSwift, "main.swift");
+  return h.Highlight(style, code, cursor);
+}
+
+TEST_F(HighlighterTest, SwiftComments) {
+  HighlightStyle s;
+  s.comment.Set("<cc>", "</cc>");
+
+  EXPECT_EQ(" <cc>// I'm feeling lucky today</cc>",
+            highlightSwift(" // I'm feeling lucky today", s));
+  EXPECT_EQ(" <cc>/* This is a\nmultiline comment */</cc>",
+            highlightSwift(" /* This is a\nmultiline comment */", s));
+  EXPECT_EQ(" <cc>/* nested /* comment */ works */</cc>",
+            highlightSwift(" /* nested /* comment */ works */", s));
+}
+
+TEST_F(HighlighterTest, SwiftKeywords) {
+  HighlightStyle s;
+  s.keyword.Set("<k>", "</k>");
+
+  EXPECT_EQ(" <k>let</k> x = 5;", highlightSwift(" let x = 5;", s));
+  EXPECT_EQ(" <k>var</k> y = 10;", highlightSwift(" var y = 10;", s));
+  EXPECT_EQ(" func foo() { return 42; }",
+            highlightSwift(" func foo() { return 42; }", s));
+  EXPECT_EQ(" class <k>MyClass</k> {}", highlightSwift(" class MyClass {}", s));
+  EXPECT_EQ(" struct <k>Point</k> {}", highlightSwift(" struct Point {}", s));
+  EXPECT_EQ(" enum <k>Color</k> {}", highlightSwift(" enum Color {}", s));
+  EXPECT_EQ(" if x { }", highlightSwift(" if x { }", s));
+  EXPECT_EQ(" for i in 0...10 { }", highlightSwift(" for i in 0...10 { }", s));
+  EXPECT_EQ(" guard <k>let</k> x = optional <k>else</k> { }",
+            highlightSwift(" guard let x = optional else { }", s));
+}
+
+TEST_F(HighlighterTest, SwiftStringLiterals) {
+  HighlightStyle s;
+  s.string_literal.Set("<str>", "</str>");
+
+  EXPECT_EQ(" let s = <str>\"</str><str>Hello, World!</str><str>\"</str>;",
+            highlightSwift(" let s = \"Hello, World!\";", s));
+  EXPECT_EQ(" let multi = <str>\"\"\"</str><str>\nLine 1\nLine "
+            "2\n</str><str>\"\"\"</str>;",
+            highlightSwift(" let multi = \"\"\"\nLine 1\nLine 2\n\"\"\";", s));
+}
+
+TEST_F(HighlighterTest, SwiftScalarLiterals) {
+  HighlightStyle s;
+  s.scalar_literal.Set("<scalar>", "</scalar>");
+
+  EXPECT_EQ(" let i = <scalar>42</scalar>;", highlightSwift(" let i = 42;", s));
+  EXPECT_EQ(" let hex = <scalar>0xFF</scalar>;",
+            highlightSwift(" let hex = 0xFF;", s));
+}
+
+TEST_F(HighlighterTest, SwiftIdentifiers) {
+  HighlightStyle s;
+  s.identifier.Set("<id>", "</id>");
+
+  EXPECT_EQ(" let <id>foo</id> = <id>bar</id>();",
+            highlightSwift(" let foo = bar();", s));
+  EXPECT_EQ(" <id>myVariable</id> = 10;",
+            highlightSwift(" myVariable = 10;", s));
+  EXPECT_EQ(" optional?.<id>property</id>",
+            highlightSwift(" optional?.property", s));
+  EXPECT_EQ(" @available(*, <id>deprecated</id>)",
+            highlightSwift(" @available(*, deprecated)", s));
+  EXPECT_EQ(" @objc func <id>foo</id>() { }",
+            highlightSwift(" @objc func foo() { }", s));
+  EXPECT_EQ(" let <id>x</id>: Int = 5", highlightSwift(" let x: Int = 5", s));
+  EXPECT_EQ(" func <id>foo</id>() -> String { }",
+            highlightSwift(" func foo() -> String { }", s));
+}
+
+TEST_F(HighlighterTest, SwiftOperators) {
+  HighlightStyle s;
+  s.operators.Set("[", "]");
+
+  EXPECT_EQ(" 1[+]2[-]3[*]4[/]5", highlightSwift(" 1+2-3*4/5", s));
+  EXPECT_EQ(" x [&&] y [||] z", highlightSwift(" x && y || z", s));
+  EXPECT_EQ(" a [==] b [!=] c", highlightSwift(" a == b != c", s));
+}
+
+TEST_F(HighlighterTest, SwiftCursorPosition) {
+  HighlightStyle s;
+  s.selected.Set("<c>", "</c>");
+
+  EXPECT_EQ("<c> </c>let x = 5;", highlightSwift(" let x = 5;", s, 0));
+  EXPECT_EQ(" <c>l</c>et x = 5;", highlightSwift(" let x = 5;", s, 1));
+  EXPECT_EQ(" l<c>e</c>t x = 5;", highlightSwift(" let x = 5;", s, 2));
+  EXPECT_EQ(" le<c>t</c> x = 5;", highlightSwift(" let x = 5;", s, 3));
+  EXPECT_EQ(" let<c> </c>x = 5;", highlightSwift(" let x = 5;", s, 4));
+}
+
+TEST_F(HighlighterTest, SwiftClosures) {
+  HighlightStyle s;
+  s.keyword.Set("<k>", "</k>");
+
+  EXPECT_EQ(" <k>let</k> closure = { (x: <k>Int</k>) in return x * 2 }",
+            highlightSwift(" let closure = { (x: Int) in return x * 2 }", s));
+}
+
+static std::string
+highlightRust(llvm::StringRef code, HighlightStyle style,
+              std::optional<size_t> cursor = std::optional<size_t>()) {
+  HighlighterManager mgr;
+  const Highlighter &h =
+      mgr.getHighlighterFor(lldb::eLanguageTypeRust, "main.rs");
+  return h.Highlight(style, code, cursor);
+}
+
+TEST_F(HighlighterTest, RustComments) {
+  HighlightStyle s;
+  s.comment.Set("<cc>", "</cc>");
+
+  EXPECT_EQ(" <cc>// I'm feeling lucky today</cc>",
+            highlightRust(" // I'm feeling lucky today", s));
+  EXPECT_EQ(" <cc>/* This is a\nmultiline comment */</cc>",
+            highlightRust(" /* This is a\nmultiline comment */", s));
+  EXPECT_EQ(" <cc>/* nested /* comment */ works */</cc>",
+            highlightRust(" /* nested /* comment */ works */", s));
+  EXPECT_EQ(" <cc>/// Documentation comment</cc>",
+            highlightRust(" /// Documentation comment", s));
+  EXPECT_EQ(" <cc>//! Inner doc comment</cc>",
+            highlightRust(" //! Inner doc comment", s));
+}
+
+TEST_F(HighlighterTest, RustKeywords) {
+  HighlightStyle s;
+  s.keyword.Set("<k>", "</k>");
+
+  EXPECT_EQ(" <k>let</k> x = 5;", highlightRust(" let x = 5;", s));
+  EXPECT_EQ(" <k>let</k> <k>mut</k> y = 10;",
+            highlightRust(" let mut y = 10;", s));
+  EXPECT_EQ(" <k>fn</k> foo() { <k>return</k> 42; }",
+            highlightRust(" fn foo() { return 42; }", s));
+  EXPECT_EQ(" <k>struct</k> <k>Point</k> {}",
+            highlightRust(" struct Point {}", s));
+  EXPECT_EQ(" <k>enum</k> <k>Color</k> {}", highlightRust(" enum Color {}", s));
+  EXPECT_EQ(" <k>impl</k> <k>MyStruct</k> {}",
+            highlightRust(" impl MyStruct {}", s));
+  EXPECT_EQ(" <k>trait</k> <k>MyTrait</k> {}",
+            highlightRust(" trait MyTrait {}", s));
+  EXPECT_EQ(" <k>if</k> x { }", highlightRust(" if x { }", s));
+  EXPECT_EQ(" <k>for</k> i <k>in</k> 0..10 { }",
+            highlightRust(" for i in 0..10 { }", s));
+  EXPECT_EQ(" <k>while</k> x { }", highlightRust(" while x { }", s));
+  EXPECT_EQ(" <k>match</k> x { _ => {} }",
+            highlightRust(" match x { _ => {} }", s));
+  EXPECT_EQ(" <k>pub</k> <k>fn</k> foo() {}",
+            highlightRust(" pub fn foo() {}", s));
+  EXPECT_EQ(" <k>const</k> MAX: u32 = 100;",
+            highlightRust(" const MAX: u32 = 100;", s));
+  EXPECT_EQ(" <k>static</k> GLOBAL: i32 = 0;",
+            highlightRust(" static GLOBAL: i32 = 0;", s));
+  EXPECT_EQ(" <k>if</k> <k>let</k> Some(foo) = foo_maybe {",
+            highlightRust(" if let Some(foo) = foo_maybe {", s, 0));
+}
+
+TEST_F(HighlighterTest, RustStringLiterals) {
+  HighlightStyle s;
+  s.string_literal.Set("<str>", "</str>");
+
+  EXPECT_EQ(" let s = <str>\"Hello, World!\"</str>;",
+            highlightRust(" let s = \"Hello, World!\";", s));
+  EXPECT_EQ(" let raw = <str>r\"C:\\\\path\"</str>;",
+            highlightRust(" let raw = r\"C:\\\\path\";", s));
+  EXPECT_EQ(" let raw2 = <str>r#\"He said \"hi\"\"#</str>;",
+            highlightRust(" let raw2 = r#\"He said \"hi\"\"#;", s));
+  EXPECT_EQ(" let byte_str = <str>b\"bytes\"</str>;",
+            highlightRust(" let byte_str = b\"bytes\";", s));
+}
+
+TEST_F(HighlighterTest, RustScalarLiterals) {
+  HighlightStyle s;
+  s.scalar_literal.Set("<scalar>", "</scalar>");
+
+  EXPECT_EQ(" let i = 42;", highlightRust(" let i = 42;", s));
+  EXPECT_EQ(" let hex = 0xFF;", highlightRust(" let hex = 0xFF;", s));
+  EXPECT_EQ(" let bin = 0b1010;", highlightRust(" let bin = 0b1010;", s));
+  EXPECT_EQ(" let oct = 0o77;", highlightRust(" let oct = 0o77;", s));
+  EXPECT_EQ(" let f = 3.14;", highlightRust(" let f = 3.14;", s));
+  EXPECT_EQ(" let typed = 42u32;", highlightRust(" let typed = 42u32;", s));
+  EXPECT_EQ(" let c = 'x';", highlightRust(" let c = 'x';", s));
+}
+
+TEST_F(HighlighterTest, RustIdentifiers) {
+  HighlightStyle s;
+  s.identifier.Set("<id>", "</id>");
+
+  EXPECT_EQ(" let foo = <id>bar</id>();",
+            highlightRust(" let foo = bar();", s));
+  EXPECT_EQ(" my_variable = 10;", highlightRust(" my_variable = 10;", s));
+  EXPECT_EQ(" let x: i32 = 5", highlightRust(" let x: i32 = 5", s));
+  EXPECT_EQ(" fn <id>foo</id>() -> String { }",
+            highlightRust(" fn foo() -> String { }", s));
+  EXPECT_EQ(" fn <id>foo</id><'a>(x: &'a str) {}",
+            highlightRust(" fn foo<'a>(x: &'a str) {}", s));
+  EXPECT_EQ(" struct Foo<'a> { x: &'a i32 }",
+            highlightRust(" struct Foo<'a> { x: &'a i32 }", s));
+}
+
+TEST_F(HighlighterTest, RustOperators) {
+  HighlightStyle s;
+  s.operators.Set("[", "]");
+
+  EXPECT_EQ(" 1+2-3[*]4/5", highlightRust(" 1+2-3*4/5", s));
+  EXPECT_EQ(" x && y || z", highlightRust(" x && y || z", s));
+  EXPECT_EQ(" a == b != c", highlightRust(" a == b != c", s));
+  EXPECT_EQ(" x [&]y", highlightRust(" x &y", s));
+  EXPECT_EQ(" [*]ptr", highlightRust(" *ptr", s));
+}
+
+TEST_F(HighlighterTest, RustCursorPosition) {
+  HighlightStyle s;
+  s.selected.Set("<c>", "</c>");
+
+  EXPECT_EQ("<c> </c>let x = 5;", highlightRust(" let x = 5;", s, 0));
+  EXPECT_EQ(" <c>l</c>et x = 5;", highlightRust(" let x = 5;", s, 1));
+  EXPECT_EQ(" l<c>e</c>t x = 5;", highlightRust(" let x = 5;", s, 2));
+  EXPECT_EQ(" le<c>t</c> x = 5;", highlightRust(" let x = 5;", s, 3));
+  EXPECT_EQ(" let<c> </c>x = 5;", highlightRust(" let x = 5;", s, 4));
+}
+#endif

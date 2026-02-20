@@ -699,8 +699,6 @@ FailureOr<SmallVector<SmallVector<Value>>>
 SliceAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
                                     Value linearId, ArrayRef<int64_t> shape) {
   assert(getRank() == static_cast<int64_t>(shape.size()) && "invalid shape.");
-  if (!isForWorkgroup())
-    return failure();
 
   SmallVector<int64_t> layout;
   SmallVector<int64_t> subShape;
@@ -755,6 +753,17 @@ bool SliceAttr::isSliceOf(const xegpu::DistributeLayoutAttr &other) {
                       [&](int64_t dim) { return thisDims.contains(dim); });
 }
 
+bool SliceAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
+  if (dyn_cast<xegpu::LayoutAttr>(other))
+    return false;
+
+  auto flattenedThis = flatten();
+  auto flattenedOther = dyn_cast<xegpu::SliceAttr>(other).flatten();
+
+  return ((flattenedThis.getParent() == flattenedOther.getParent()) &&
+          (flattenedThis.getDims() == flattenedOther.getDims()));
+}
+
 xegpu::SliceAttr SliceAttr::dropSliceDims(ArrayRef<int64_t> sliceDimsToDrop) {
   if (sliceDimsToDrop.empty())
     return *this;
@@ -771,17 +780,6 @@ xegpu::SliceAttr SliceAttr::dropSliceDims(ArrayRef<int64_t> sliceDimsToDrop) {
       DenseI64ArrayAttr::get(this->getContext(), sliceDims));
 
   return sliceWithoutDims;
-}
-
-bool SliceAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
-  if (dyn_cast<xegpu::LayoutAttr>(other))
-    return false;
-
-  auto flattenedThis = flatten();
-  auto flattenedOther = dyn_cast<xegpu::SliceAttr>(other).flatten();
-
-  return ((flattenedThis.getParent() == flattenedOther.getParent()) &&
-          (flattenedThis.getDims() == flattenedOther.getDims()));
 }
 
 // Helper function to adjust dimensions from sliced space to parent space

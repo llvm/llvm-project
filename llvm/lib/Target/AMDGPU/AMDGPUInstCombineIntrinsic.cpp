@@ -1454,7 +1454,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     auto *BC = cast<ConstantInt>(II.getArgOperand(5));
     auto *RM = cast<ConstantInt>(II.getArgOperand(3));
     auto *BM = cast<ConstantInt>(II.getArgOperand(4));
-    if (BC->isZeroValue() || RM->getZExtValue() != 0xF ||
+    if (BC->isNullValue() || RM->getZExtValue() != 0xF ||
         BM->getZExtValue() != 0xF || isa<PoisonValue>(Old))
       break;
 
@@ -1544,6 +1544,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     if (isa<UndefValue>(Segment))
       return IC.replaceInstUsesWith(II, ConstantFP::getZero(II.getType()));
+
+    // Sign bit is not used.
+    Value *StrippedSign = InstCombiner::stripSignOnlyFPOps(Src);
+    if (StrippedSign != Src)
+      return IC.replaceOperand(II, 0, StrippedSign);
 
     if (II.isStrictFP())
       break;

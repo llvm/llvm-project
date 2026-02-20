@@ -2126,9 +2126,25 @@ static std::string scalarConstantToHexString(const Constant *C) {
   if (isa<UndefValue>(C)) {
     return APIntToHexString(APInt::getZero(Ty->getPrimitiveSizeInBits()));
   } else if (const auto *CFP = dyn_cast<ConstantFP>(C)) {
-    return APIntToHexString(CFP->getValueAPF().bitcastToAPInt());
+    if (CFP->getType()->isFloatingPointTy())
+      return APIntToHexString(CFP->getValueAPF().bitcastToAPInt());
+
+    std::string HexString;
+    unsigned NumElements =
+        cast<FixedVectorType>(CFP->getType())->getNumElements();
+    for (unsigned I = 0; I < NumElements; ++I)
+      HexString += APIntToHexString(CFP->getValueAPF().bitcastToAPInt());
+    return HexString;
   } else if (const auto *CI = dyn_cast<ConstantInt>(C)) {
-    return APIntToHexString(CI->getValue());
+    if (CI->getType()->isIntegerTy())
+      return APIntToHexString(CI->getValue());
+
+    std::string HexString;
+    unsigned NumElements =
+        cast<FixedVectorType>(CI->getType())->getNumElements();
+    for (unsigned I = 0; I < NumElements; ++I)
+      HexString += APIntToHexString(CI->getValue());
+    return HexString;
   } else {
     unsigned NumElements;
     if (auto *VTy = dyn_cast<VectorType>(Ty))

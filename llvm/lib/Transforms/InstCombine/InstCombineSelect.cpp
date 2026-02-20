@@ -2765,12 +2765,34 @@ static Value *foldSelectCmpXchg(SelectInst &SI) {
   // to I. If such conditions are true, the helper returns the cmpxchg
   // instruction; otherwise, a nullptr is returned.
   auto isExtractFromCmpXchg = [](Value *V, unsigned I) -> AtomicCmpXchgInst * {
+    // When extracting the value loaded by a cmpxchg, allow peeking through a
+    // bitcast. These are inserted for floating-point cmpxchg, for example:
+    //   %bc = bitcast float %compare to i32
+    //   %cmpxchg = cmpxchg ptr %ptr, i32 %bc, i32 %new_value seq_cst seq_cst
+    //   %val = extractvalue { i32, i1 } %cmpxchg, 0
+    //   %success = extractvalue { i32, i1 } %cmpxchg, 1
+    //   %val.bc = bitcast i32 %val to float
+    //   %sel = select i1 %success, float %compare, float %val.bc
+    if (auto *BI = dyn_cast<BitCastInst>(V); BI && I == 0)
+      V = BI->getOperand(0);
     auto *Extract = dyn_cast<ExtractValueInst>(V);
     if (!Extract)
       return nullptr;
     if (Extract->getIndices()[0] != I)
       return nullptr;
     return dyn_cast<AtomicCmpXchgInst>(Extract->getAggregateOperand());
+  };
+
+  // Check if the compare value of a cmpxchg matches another value.
+  auto isCompareSameAsValue = [](Value *CmpVal, Value *SelVal) {
+    // The values match if they are the same or %CmpVal = bitcast %SelVal (see
+    // above).
+    if (CmpVal == SelVal || match(CmpVal, m_BitCast(m_Specific(SelVal))))
+      return true;
+    // For FP constants, the value may have been bitcast to Int directly.
+    auto *IntC = dyn_cast<ConstantInt>(CmpVal);
+    auto *FpC = dyn_cast<ConstantFP>(SelVal);
+    return IntC && FpC && IntC->getValue() == FpC->getValue().bitcastToAPInt();
   };
 
   // If the select has a single user, and this user is a select instruction that
@@ -2791,14 +2813,16 @@ static Value *foldSelectCmpXchg(SelectInst &SI) {
   // value of the same cmpxchg used by the condition, and the false value is the
   // cmpxchg instruction's compare operand.
   if (auto *X = isExtractFromCmpXchg(SI.getTrueValue(), 0))
-    if (X == CmpXchg && X->getCompareOperand() == SI.getFalseValue())
+    if (X == CmpXchg &&
+        isCompareSameAsValue(X->getCompareOperand(), SI.getFalseValue()))
       return SI.getFalseValue();
 
   // Check the false value case: The false value of the select is the returned
   // value of the same cmpxchg used by the condition, and the true value is the
   // cmpxchg instruction's compare operand.
   if (auto *X = isExtractFromCmpXchg(SI.getFalseValue(), 0))
-    if (X == CmpXchg && X->getCompareOperand() == SI.getTrueValue())
+    if (X == CmpXchg &&
+        isCompareSameAsValue(X->getCompareOperand(), SI.getTrueValue()))
       return SI.getFalseValue();
 
   return nullptr;
@@ -3765,67 +3789,9 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   }
 
   if (match(TrueVal, m_One())) {
-    Value *C;
-
-    // (C && A) || (!C && B) --> sel C, A, B
-    // (A && C) || (!C && B) --> sel C, A, B
-    // (C && A) || (B && !C) --> sel C, A, B
-    // (A && C) || (B && !C) --> sel C, A, B (may require freeze)
-    if (match(FalseVal, m_c_LogicalAnd(m_Not(m_Value(C)), m_Value(B))) &&
-        match(CondVal, m_c_LogicalAnd(m_Specific(C), m_Value(A)))) {
-      auto *SelCond = dyn_cast<SelectInst>(CondVal);
-      auto *SelFVal = dyn_cast<SelectInst>(FalseVal);
-      bool MayNeedFreeze = SelCond && SelFVal &&
-                           match(SelFVal->getTrueValue(),
-                                 m_Not(m_Specific(SelCond->getTrueValue())));
-      if (MayNeedFreeze)
-        C = Builder.CreateFreeze(C);
-      if (!ProfcheckDisableMetadataFixes) {
-        Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
-        if (match(CondVal, m_LogicalAnd(m_Specific(C), m_Value(A2))) &&
-            SelCond) {
-          return SelectInst::Create(C, A, B, "", nullptr, SelCond);
-        } else if (match(FalseVal,
-                         m_LogicalAnd(m_Not(m_Value(C2)), m_Value(B2))) &&
-                   SelFVal) {
-          SelectInst *NewSI = SelectInst::Create(C, A, B, "", nullptr, SelFVal);
-          NewSI->swapProfMetadata();
-          return NewSI;
-        } else {
-          return createSelectInstWithUnknownProfile(C, A, B);
-        }
-      }
-      return SelectInst::Create(C, A, B);
-    }
-
-    // (!C && A) || (C && B) --> sel C, B, A
-    // (A && !C) || (C && B) --> sel C, B, A
-    // (!C && A) || (B && C) --> sel C, B, A
-    // (A && !C) || (B && C) --> sel C, B, A (may require freeze)
-    if (match(CondVal, m_c_LogicalAnd(m_Not(m_Value(C)), m_Value(A))) &&
-        match(FalseVal, m_c_LogicalAnd(m_Specific(C), m_Value(B)))) {
-      auto *SelCond = dyn_cast<SelectInst>(CondVal);
-      auto *SelFVal = dyn_cast<SelectInst>(FalseVal);
-      bool MayNeedFreeze = SelCond && SelFVal &&
-                           match(SelCond->getTrueValue(),
-                                 m_Not(m_Specific(SelFVal->getTrueValue())));
-      if (MayNeedFreeze)
-        C = Builder.CreateFreeze(C);
-      if (!ProfcheckDisableMetadataFixes) {
-        Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
-        if (match(CondVal, m_LogicalAnd(m_Not(m_Value(C2)), m_Value(A2))) &&
-            SelCond) {
-          SelectInst *NewSI = SelectInst::Create(C, B, A, "", nullptr, SelCond);
-          NewSI->swapProfMetadata();
-          return NewSI;
-        } else if (match(FalseVal, m_LogicalAnd(m_Specific(C), m_Value(B2))) &&
-                   SelFVal) {
-          return SelectInst::Create(C, B, A, "", nullptr, SelFVal);
-        } else {
-          return createSelectInstWithUnknownProfile(C, B, A);
-        }
-      }
-      return SelectInst::Create(C, B, A);
+    // (C && A) || (!C && B) --> select C, A, B (and similar cases)
+    if (auto *V = FoldOrOfLogicalAnds(CondVal, FalseVal)) {
+      return V;
     }
   }
 
