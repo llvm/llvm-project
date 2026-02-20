@@ -3,6 +3,10 @@
 ; RUN: llvm-lto -exported-symbol=f -relocation-model=pic -o %t.o %t.bc
 ; RUN: llvm-readelf -r %t.o | FileCheck %s --check-prefix=FUCHSIA
 
+; RUN: opt -mtriple=x86_64-unknown-linux < %s > %t.linux.bc
+; RUN: llvm-lto -exported-symbol=f -relocation-model=pic -o %t.linux.o %t.linux.bc
+; RUN: llvm-readelf -r %t.linux.o | FileCheck %s --check-prefix=LINUX
+
 ; RUN: opt -mtriple=x86_64-unknown-fuchsia -module-summary -o %t.thin.bc %s
 ; RUN: llvm-lto2 run -r %t.thin.bc,f,plx -r %t.thin.bc,x, -relocation-model=pic -o %t.thin.o %t.thin.bc
 ; RUN: llvm-readelf -r %t.thin.o.1 | FileCheck %s --check-prefix=FUCHSIA
