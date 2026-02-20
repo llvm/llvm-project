@@ -2039,9 +2039,16 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
     assert(!cir::MissingFeatures::opCallChain());
     assert(!cir::MissingFeatures::addressSpace());
     cir::FuncType calleeTy = getTypes().getFunctionType(funcInfo);
-    // get non-variadic function type
-    calleeTy = cir::FuncType::get(calleeTy.getInputs(),
-                                  calleeTy.getReturnType(), false);
+
+    // For unprototyped functions, funcInfo was built with RequiredArgs(0) so
+    // calleeTy.getInputs() is empty. So we build the non-variadic callee type from
+    // the actual promoted argument types instead.
+    SmallVector<mlir::Type, 8> promotedArgTypes;
+    for (const CallArg &arg : args)
+      promotedArgTypes.push_back(convertType(arg.ty));
+    calleeTy = cir::FuncType::get(promotedArgTypes,
+                                calleeTy.getReturnType(), /*isVarArg=*/false);
+
     auto calleePtrTy = cir::PointerType::get(calleeTy);
 
     mlir::Operation *fn = callee.getFunctionPointer();
