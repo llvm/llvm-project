@@ -1210,6 +1210,14 @@ public:
 
   virtual bool allowVectorElementIndexingUsingGEP() const { return true; }
 
+  // Custom uniformity check for instructions marked as Custom
+  // Override this to provide complex divergence rules based on which operands
+  // are divergent
+  virtual bool isDivergent(const Instruction *I,
+                           const SmallBitVector &DivergentArgs) const {
+    return false; // Conservative: can't prove divergent
+  }
+
 protected:
   // Obtain the minimum required size to hold the value (without the sign)
   // In case of a vector it returns the min required size for one element.

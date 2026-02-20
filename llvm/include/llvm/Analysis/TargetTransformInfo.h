@@ -2083,6 +2083,17 @@ public:
   /// target.
   LLVM_ABI bool allowVectorElementIndexingUsingGEP() const;
 
+  /// Determine if an instruction can be proven divergent based on which
+  /// operands are divergent.
+  ///
+  /// \param I The instruction to check.
+  /// \param DivergentArgs A bitvector indicating which operands are known to be
+  ///                      divergent (bit N corresponds to operand N).
+  /// \returns true if the instruction result can be proven divergent given the
+  ///          divergent operands, false otherwise.
+  LLVM_ABI bool isDivergent(const Instruction *I,
+                            const SmallBitVector &DivergentArgs) const;
+
 private:
   std::unique_ptr<const TargetTransformInfoImplBase> TTIImpl;
 };

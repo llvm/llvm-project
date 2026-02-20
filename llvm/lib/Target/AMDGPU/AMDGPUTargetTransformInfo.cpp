@@ -18,6 +18,7 @@
 #include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIModeRegisterDefaults.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1673,8 +1674,22 @@ unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
   return BaseT::getNumberOfParts(Tp);
 }
 
+// New API that wraps the old isSourceOfDivergence and isAlwaysUniform APIs
+// with additional support for new uniformity classifications
 InstructionUniformity
 GCNTTIImpl::getInstructionUniformity(const Value *V) const {
+  // Check for special cases requiring custom uniformity analysis
+  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
+    switch (Intrinsic->getIntrinsicID()) {
+    case Intrinsic::amdgcn_permlane16:
+    case Intrinsic::amdgcn_permlanex16:
+      return InstructionUniformity::Custom;
+    default:
+      break;
+    }
+  }
+
+  // Delegate to old APIs for backward compatibility
   if (isAlwaysUniform(V))
     return InstructionUniformity::AlwaysUniform;
 
@@ -1682,4 +1697,28 @@ GCNTTIImpl::getInstructionUniformity(const Value *V) const {
     return InstructionUniformity::NeverUniform;
 
   return InstructionUniformity::Default;
+}
+
+bool GCNTTIImpl::isDivergent(const Instruction *I,
+                             const SmallBitVector &DivergentArgs) const {
+  // Custom divergence check for permlane16/permlanex16
+  if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(I)) {
+    switch (Intrinsic->getIntrinsicID()) {
+    case Intrinsic::amdgcn_permlane16:
+    case Intrinsic::amdgcn_permlanex16:
+      // For permlane16/permlanex16:
+      // Operand 0: old value (ignored for divergence)
+      // Operand 1: src0 (source value to permute)
+      // Operand 2: src1 (lane select within 16-lane group)
+      // Operand 3: src2 (which 16-lane group)
+      // Result is divergent if both src0 (op 1) and src1 (op 2) are divergent
+      if (DivergentArgs.size() > 2) {
+        return DivergentArgs[1] && DivergentArgs[2];
+      }
+      return false;
+    default:
+      break;
+    }
+  }
+  return false;
 }

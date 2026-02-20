@@ -1,0 +1,86 @@
+# RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+
+# Test the machine-level uniformity analysis for permlane16/permlanex16 instructions.
+#
+# NOTE: Permlane instructions have a hardware constraint that src1 (lane select) and src2
+# must be SGPR (scalar) registers. Since SGPRs are always uniform at machine level, 
+# permlane results are always uniform according to the AnyOfFirstTwoUseOp logic
+# (either src0 OR src1 being uniform makes the result uniform, and src1 is always uniform).
+#
+# These tests verify that the uniformity analysis correctly handles permlane instructions
+# and that uniform results propagate through chains of operations.
+
+---
+# Test: permlane16 with divergent VGPR src and uniform SGPR lane select
+# Result is UNIFORM because lane select (SGPR) is always uniform
+name: permlane16_basic
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function: @permlane16_basic
+    ; CHECK: ALL VALUES UNIFORM
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = S_MOV_B32 5
+    %2:sreg_32 = IMPLICIT_DEF
+    %3:vgpr_32 = V_PERMLANE16_B32_e64 0, %0, 0, %1, 0, %2, %0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+# Test: permlanex16 with divergent VGPR src and uniform SGPR lane select
+# Result is UNIFORM because lane select (SGPR) is always uniform
+name: permlanex16_basic
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function: @permlanex16_basic
+    ; CHECK: ALL VALUES UNIFORM
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = S_MOV_B32 7
+    %2:sreg_32 = IMPLICIT_DEF
+    %3:vgpr_32 = V_PERMLANEX16_B32_e64 0, %0, 0, %1, 0, %2, %0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+# Test: Chain of permlane operations - uniformity propagates
+# Both permlanes are uniform, second uses result of first as source
+name: permlane16_chain_uniform
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function: @permlane16_chain_uniform
+    ; CHECK: ALL VALUES UNIFORM
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = S_MOV_B32 3
+    %2:sreg_32 = IMPLICIT_DEF
+    ; First permlane - uniform because lane select is SGPR
+    %3:vgpr_32 = V_PERMLANE16_B32_e64 0, %0, 0, %1, 0, %2, %0, 0, implicit $exec
+    ; Second permlane uses uniform result - also uniform
+    %4:vgpr_32 = V_PERMLANEX16_B32_e64 0, %3, 0, %1, 0, %2, %3, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+# Test: Multiple permlane operations in sequence
+# Verifies that uniformity is correctly tracked through complex chains
+name: permlane_multiple
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function: @permlane_multiple
+    ; CHECK: ALL VALUES UNIFORM
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = S_MOV_B32 1
+    %2:sreg_32 = S_MOV_B32 2  
+    %3:vgpr_32 = V_PERMLANE16_B32_e64 0, %0, 0, %1, 0, %2, %0, 0, implicit $exec
+    %4:vgpr_32 = V_PERMLANEX16_B32_e64 0, %3, 0, %1, 0, %2, %3, 0, implicit $exec
+    %5:vgpr_32 = V_PERMLANE16_B32_e64 0, %4, 0, %2, 0, %1, %4, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+

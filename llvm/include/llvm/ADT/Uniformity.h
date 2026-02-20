@@ -23,7 +23,12 @@ enum class InstructionUniformity {
   AlwaysUniform,
 
   /// The result values can never be assumed to be uniform.
-  NeverUniform
+  NeverUniform,
+
+  /// If all operands are uniform, the result values are uniform. Otherwise,
+  /// the result values may be divergent, and a custom check may be used to
+  /// determine uniformity via a callback.
+  Custom
 };
 
 } // namespace llvm

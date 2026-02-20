@@ -2346,6 +2346,19 @@ public:
     return InstructionUniformity::Default;
   }
 
+  /// Determine if a machine instruction can be proven divergent based on which
+  /// operands are divergent.
+  ///
+  /// \param MI The machine instruction to check.
+  /// \param DivergentArgs A bitvector indicating which operands are known to be
+  ///                      divergent (bit N corresponds to operand N).
+  /// \returns true if the instruction result can be proven divergent given the
+  ///          divergent operands, false otherwise.
+  virtual bool isDivergent(const MachineInstr &MI,
+                           const SmallBitVector &DivergentArgs) const {
+    return false; // Conservative: can't prove divergent
+  }
+
   /// Returns true if the given \p MI defines a TargetIndex operand that can be
   /// tracked by their offset, can have values, and can have debug info
   /// associated with it. If so, sets \p Index and \p Offset of the target index

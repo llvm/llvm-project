@@ -311,6 +311,9 @@ public:
   unsigned getNumberOfParts(Type *Tp) const override;
 
   InstructionUniformity getInstructionUniformity(const Value *V) const override;
+
+  bool isDivergent(const Instruction *I,
+                   const SmallBitVector &DivergentArgs) const override;
 };
 
 } // end namespace llvm
