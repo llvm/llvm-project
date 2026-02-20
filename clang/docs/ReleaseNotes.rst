@@ -258,6 +258,8 @@ Improvements to Clang's diagnostics
 - The ``-Wloop-analysis`` warning has been extended to catch more cases of
   variable modification inside lambda expressions (#GH132038).
 
+- The `-Wnrvo` compiler flag is now ignored in C mode.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
