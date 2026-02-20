@@ -1725,7 +1725,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
       // Handle case when index is zero.
       Constant *CIndex = dyn_cast<Constant>(Index);
-      if (CIndex && CIndex->isZeroValue())
+      if (CIndex && CIndex->isNullValue())
         continue;
 
       if (StructType *STy = GTI.getStructTypeOrNull()) {
@@ -5924,6 +5924,47 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       }
     }
 
+    // Look for the case of a for loop which has a positive
+    // initial value and is incremented by a squared value.
+    // This will propagate sign information out of such loops.
+    if (P->getNumIncomingValues() != 2)
+      break;
+    else {
+      for (int i = 0; i < 2; i++) {
+        Value *RecurValue = P->getIncomingValue(1 - i);
+        IntrinsicInst *I = dyn_cast<IntrinsicInst>(RecurValue);
+        if (!I)
+          continue;
+        else {
+          Value *R, *L;
+          Value *Init;
+          PHINode *PN;
+          const Function *F = I->getFunction();
+          const fltSemantics &FltSem =
+              I->getType()->getScalarType()->getFltSemantics();
+          DenormalMode Mode =
+              F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
+          if (matchSimpleTernaryIntrinsicRecurrence(I, PN, Init, L, R)) {
+            switch (I->getIntrinsicID()) {
+            case Intrinsic::fma:
+            case Intrinsic::fmuladd: {
+              KnownFPClass KnownStart, KnownL;
+              computeKnownFPClass(Init, DemandedElts, InterestedClasses,
+                                  KnownStart, Q, Depth + 1);
+              if (KnownStart.isUnknown())
+                break;
+              computeKnownFPClass(L, DemandedElts, InterestedClasses, KnownL, Q,
+                                  Depth + 1);
+              if (L == R &&
+                  isGuaranteedNotToBeUndef(L, Q.AC, Q.CxtI, Q.DT, Depth + 1))
+                Known = KnownFPClass::fma_square(KnownL, KnownStart, Mode);
+              break;
+            }
+            }
+          }
+        }
+      }
+    }
     break;
   }
   case Instruction::BitCast: {
@@ -9248,6 +9289,40 @@ static bool matchTwoInputRecurrence(const PHINode *PN, InstTy *&Inst,
   return false;
 }
 
+template <typename InstTy>
+static bool matchThreeInputRecurrence(const PHINode *PN, InstTy *&Inst,
+                                      Value *&Init, Value *&OtherOp0,
+                                      Value *&OtherOp1) {
+  if (PN->getNumIncomingValues() != 2)
+    return false;
+
+  for (unsigned I = 0; I != 2; ++I) {
+    if (auto *Operation = dyn_cast<InstTy>(PN->getIncomingValue(I));
+        Operation) {
+      Value *Op0 = Operation->getOperand(0);
+      Value *Op1 = Operation->getOperand(1);
+      Value *Op2 = Operation->getOperand(2);
+
+      if (Op0 != PN && Op1 != PN && Op2 != PN)
+        continue;
+
+      Inst = Operation;
+      Init = PN->getIncomingValue(!I);
+      if (Op0 == PN) {
+        OtherOp0 = Op1;
+        OtherOp1 = Op2;
+      } else if (Op1 == PN) {
+        OtherOp0 = Op0;
+        OtherOp1 = Op2;
+      } else {
+        OtherOp0 = Op0;
+        OtherOp1 = Op1;
+      }
+      return true;
+    }
+  }
+  return false;
+}
 bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
                                  Value *&Start, Value *&Step) {
   // We try to match a recurrence of the form:
@@ -9282,6 +9357,25 @@ bool llvm::matchSimpleBinaryIntrinsicRecurrence(const IntrinsicInst *I,
     P = dyn_cast<PHINode>(I->getArgOperand(1));
 
   return P && matchTwoInputRecurrence(P, II, Init, OtherOp) && II == I;
+}
+
+bool llvm::matchSimpleTernaryIntrinsicRecurrence(const IntrinsicInst *I,
+                                                 PHINode *&P, Value *&Init,
+                                                 Value *&OtherOp0,
+                                                 Value *&OtherOp1) {
+  if (I->arg_size() != 3 || I->getType() != I->getArgOperand(0)->getType() ||
+      I->getType() != I->getArgOperand(1)->getType() ||
+      I->getType() != I->getArgOperand(2)->getType())
+    return false;
+  IntrinsicInst *II = nullptr;
+  P = dyn_cast<PHINode>(I->getArgOperand(0));
+  if (!P) {
+    P = dyn_cast<PHINode>(I->getArgOperand(1));
+    if (!P)
+      P = dyn_cast<PHINode>(I->getArgOperand(2));
+  }
+  return P && matchThreeInputRecurrence(P, II, Init, OtherOp0, OtherOp1) &&
+         II == I;
 }
 
 /// Return true if "icmp Pred LHS RHS" is always true.

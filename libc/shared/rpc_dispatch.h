@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_SHARED_RPC_DISPATCH_H
+#define LLVM_LIBC_SHARED_RPC_DISPATCH_H
+
 #include "rpc.h"
 #include "rpc_util.h"
 
@@ -52,7 +55,7 @@ template <typename... Ts>
 struct tuple_bytes<rpc::tuple<Ts...>> : tuple_bytes<Ts...> {};
 
 // Client-side dispatch of pointer values. We copy the memory associated with
-// the pointer to the server and recieve back a server-side pointer to replace
+// the pointer to the server and receive back a server-side pointer to replace
 // the client-side pointer in the argument list.
 template <uint64_t Idx, typename Tuple>
 RPC_ATTRS constexpr void prepare_arg(rpc::Client::Port &port, Tuple &t) {
@@ -73,7 +76,7 @@ RPC_ATTRS constexpr void prepare_arg(rpc::Client::Port &port, Tuple &t) {
   }
 }
 
-// Server-side handling of pointer arguments. We recieve the memory into a
+// Server-side handling of pointer arguments. We receive the memory into a
 // temporary buffer and pass a pointer to this new memory back to the client.
 template <uint32_t NUM_LANES, typename Tuple, uint64_t Idx>
 RPC_ATTRS constexpr void prepare_arg(rpc::Server::Port &port) {
@@ -208,22 +211,21 @@ dispatch(rpc::Client &client, FnTy, CallArgs... args) {
   using BufferTy = rpc::conditional_t<rpc::is_void_v<RetTy>, uint8_t, RetTy>;
   BufferTy ret{};
   port.recv_n(&ret);
-  port.close();
 
   if constexpr (!rpc::is_void_v<RetTy>)
     return ret;
 }
 
-// Invoke a function on the server on behalf of the client. Recieves the
+// Invoke a function on the server on behalf of the client. Receives the
 // arguments through the interface and forwards them to the function.
 template <uint32_t NUM_LANES, typename FnTy>
-RPC_ATTRS constexpr void invoke(FnTy fn, rpc::Server::Port &port) {
+RPC_ATTRS constexpr void invoke(rpc::Server::Port &port, FnTy fn) {
   using Traits = function_traits<FnTy>;
   using RetTy = typename Traits::return_type;
   using TupleTy = typename Traits::arg_types;
   using Bytes = tuple_bytes<TupleTy>;
 
-  // Recieve pointer data from the host and pack it in server-side memory.
+  // Receive pointer data from the host and pack it in server-side memory.
   rpc::prepare_args<NUM_LANES, TupleTy>(
       port, rpc::make_index_sequence<Traits::ARITY>{});
 
@@ -231,7 +233,7 @@ RPC_ATTRS constexpr void invoke(FnTy fn, rpc::Server::Port &port) {
   typename Bytes::array_type arg_buf[NUM_LANES]{};
   port.recv_n(arg_buf);
 
-  // Convert the recieved arguments into an invocable argument list.
+  // Convert the received arguments into an invocable argument list.
   TupleTy args[NUM_LANES];
   for (uint32_t id = 0; id < NUM_LANES; ++id) {
     if (port.get_lane_mask() & (uint64_t(1) << id))
@@ -260,3 +262,5 @@ RPC_ATTRS constexpr void invoke(FnTy fn, rpc::Server::Port &port) {
   port.send_n(rets);
 }
 } // namespace rpc
+
+#endif // LLVM_LIBC_SHARED_RPC_DISPATCH_H

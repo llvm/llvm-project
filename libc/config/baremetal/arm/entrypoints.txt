@@ -126,7 +126,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.asprintf
     libc.src.stdio.feof
     libc.src.stdio.ferror
-    libc.src.stdio.fflush
     libc.src.stdio.fgetc
     libc.src.stdio.fgets
     libc.src.stdio.fprintf
@@ -135,7 +134,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.fread
     libc.src.stdio.fscanf
     libc.src.stdio.fwrite
-    libc.src.stdio.getc
     libc.src.stdio.getchar
     libc.src.stdio.printf
     libc.src.stdio.putc
@@ -154,7 +152,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.vsnprintf
     libc.src.stdio.vsprintf
     libc.src.stdio.vsscanf
-    libc.src.stdio.ungetc
 
     # stdbit.h entrypoints
     libc.src.stdbit.stdc_bit_ceil_uc

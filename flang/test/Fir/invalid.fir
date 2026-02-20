@@ -1483,3 +1483,11 @@ func.func @fir_declare_bad_storage_offset(%arg0: !fir.ref<i8>, %arg1: !fir.ref<!
   %decl = fir.declare %arg0 storage (%arg1[2]) {uniq_name = "a"} : (!fir.ref<i8>, !fir.ref<!fir.array<1xi8>>) -> !fir.ref<i8>
   return
 }
+
+// -----
+
+func.func @bad_declare_value(%arg0: !fir.ref<i32>) {
+  // expected-error@+1 {{'fir.declare_value' op value must be a simple scalar (integer, real, complex, or logical)}}
+  fir.declare_value %arg0 {uniq_name = "test"} : !fir.ref<i32>
+  return
+}

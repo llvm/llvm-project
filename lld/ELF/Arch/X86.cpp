@@ -70,7 +70,7 @@ X86::X86(Ctx &ctx) : TargetInfo(ctx) {
   defaultImageBase = 0x400000;
 }
 
-// Only needed to support relocations used by relocateNonAlloc.
+// Only needed to support relocations used by relocateNonAlloc and relocateEh.
 RelExpr X86::getRelExpr(RelType type, const Symbol &s,
                         const uint8_t *loc) const {
   switch (type) {
@@ -80,8 +80,6 @@ RelExpr X86::getRelExpr(RelType type, const Symbol &s,
     return R_ABS;
   case R_386_TLS_LDO_32:
     return R_DTPREL;
-  case R_386_PLT32:
-    return R_PLT_PC;
   case R_386_PC8:
   case R_386_PC16:
   case R_386_PC32:
@@ -90,10 +88,6 @@ RelExpr X86::getRelExpr(RelType type, const Symbol &s,
     return R_GOTPLTONLY_PC;
   case R_386_GOTOFF:
     return R_GOTPLTREL;
-  case R_386_TLS_LE:
-    return R_TPREL;
-  case R_386_TLS_LE_32:
-    return R_TPREL_NEG;
   case R_386_NONE:
     return R_NONE;
   default:
@@ -227,8 +221,9 @@ void X86::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       // non-PIC, G + A => R_GOT) and register-relative GOT access
       // (foo@GOT(%ebx), PIC, G + A - GOT => R_GOTPLT). Both use the same
       // relocation type, so we check the ModRM byte to distinguish them.
-      expr =
-          (sec.content().data()[offset - 1] & 0xc7) == 0x5 ? R_GOT : R_GOTPLT;
+      expr = offset && (sec.content().data()[offset - 1] & 0xc7) == 0x5
+                 ? R_GOT
+                 : R_GOTPLT;
       if (expr == R_GOTPLT)
         ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
       break;

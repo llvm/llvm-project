@@ -3169,6 +3169,43 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       return simplifyDemandedFPClassResult(CI, FMF, DemandedMask, Known,
                                            {KnownSrc});
     }
+    case Intrinsic::ldexp: {
+      FPClassTest SrcDemandedMask = DemandedMask & fcInf;
+      if (DemandedMask & fcNan)
+        SrcDemandedMask |= fcNan;
+
+      if (DemandedMask & fcPosInf)
+        SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
+      if (DemandedMask & fcNegInf)
+        SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
+
+      if (DemandedMask & (fcPosNormal | fcPosSubnormal))
+        SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
+      if (DemandedMask & (fcNegNormal | fcNegSubnormal))
+        SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
+
+      if (DemandedMask & fcPosZero)
+        SrcDemandedMask |= fcPosFinite;
+      if (DemandedMask & fcNegZero)
+        SrcDemandedMask |= fcNegFinite;
+
+      KnownFPClass KnownSrc;
+      if (SimplifyDemandedFPClass(CI, 0, SrcDemandedMask, KnownSrc, Depth + 1))
+        return CI;
+
+      Type *EltTy = VTy->getScalarType();
+      const fltSemantics &FltSem = EltTy->getFltSemantics();
+      DenormalMode Mode = F.getDenormalMode(FltSem);
+
+      KnownBits KnownExpBits =
+          ::computeKnownBits(CI->getArgOperand(1), SQ, Depth + 1);
+
+      Known = KnownFPClass::ldexp(KnownSrc, KnownExpBits, FltSem, Mode);
+      Known.knownNot(~DemandedMask);
+
+      return simplifyDemandedFPClassResult(CI, FMF, DemandedMask, Known,
+                                           {KnownSrc});
+    }
     case Intrinsic::trunc:
     case Intrinsic::floor:
     case Intrinsic::ceil:

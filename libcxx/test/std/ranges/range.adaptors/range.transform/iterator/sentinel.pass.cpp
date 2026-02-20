@@ -10,6 +10,7 @@
 
 // class transform_view::<sentinel>;
 
+#include <cassert>
 #include <ranges>
 
 #include "test_macros.h"

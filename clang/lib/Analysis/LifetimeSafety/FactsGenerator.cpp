@@ -523,9 +523,20 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
 void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
                                            ArrayRef<const Expr *> Args) {
   unsigned IsInstance = 0;
-  if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD))
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+      MD && MD->isInstance() && !isa<CXXConstructorDecl>(FD)) {
     IsInstance = 1;
+    // std::unique_ptr::release() transfers ownership.
+    // Treat it as a move to prevent false-positive warnings when the unique_ptr
+    // destructor runs after ownership has been transferred.
+    if (isUniquePtrRelease(*MD)) {
+      const Expr *UniquePtrExpr = Args[0];
+      OriginList *MovedOrigins = getOriginsList(*UniquePtrExpr);
+      if (MovedOrigins)
+        CurrentBlockFacts.push_back(FactMgr.createFact<MovedOriginFact>(
+            UniquePtrExpr, MovedOrigins->getOuterOriginID()));
+    }
+  }
 
   // Skip 'this' arg as it cannot be moved.
   for (unsigned I = IsInstance;
@@ -549,16 +560,6 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
   const auto *MD = dyn_cast<CXXMethodDecl>(FD);
   if (!MD || !MD->isInstance())
     return;
-  // std::unique_ptr::release() transfers ownership.
-  // Treat it as a move to prevent false-positive warnings when the unique_ptr
-  // destructor runs after ownership has been transferred.
-  if (isUniquePtrRelease(*MD)) {
-    const Expr *UniquePtrExpr = Args[0];
-    OriginList *MovedOrigins = getOriginsList(*UniquePtrExpr);
-    if (MovedOrigins)
-      CurrentBlockFacts.push_back(FactMgr.createFact<MovedOriginFact>(
-          UniquePtrExpr, MovedOrigins->getOuterOriginID()));
-  }
 
   if (!isContainerInvalidationMethod(*MD))
     return;
@@ -710,10 +711,10 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
     return {};
 
   llvm::SmallVector<Fact *> PlaceholderLoanFacts;
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD); MD && MD->isInstance()) {
-    OriginList *List = *FactMgr.getOriginMgr().getThisOrigins();
-    const PlaceholderLoan *L =
-        FactMgr.getLoanMgr().createLoan<PlaceholderLoan>(MD);
+  if (auto ThisOrigins = FactMgr.getOriginMgr().getThisOrigins()) {
+    OriginList *List = *ThisOrigins;
+    const PlaceholderLoan *L = FactMgr.getLoanMgr().createLoan<PlaceholderLoan>(
+        cast<CXXMethodDecl>(FD));
     PlaceholderLoanFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
   }

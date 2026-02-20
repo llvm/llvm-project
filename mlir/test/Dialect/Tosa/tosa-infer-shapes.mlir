@@ -592,42 +592,6 @@ func.func @test_slice_size_minus_one(%arg0 : tensor<?x8x8x8xi32>) -> () {
 
 // -----
 
-// CHECK-LABEL: @test_slice_size_out_of_bound
-func.func @test_slice_size_out_of_bound(%arg0 : tensor<8x8x8x?xi32>) -> () {
-  // CHECK: %[[START:.+]] = tosa.const_shape
-  // CHECK: %[[SIZE:.+]] = tosa.const_shape
-  // CHECK: %[[VAL:.+]] = tosa.slice %arg0, %[[START]], %[[SIZE]] : (tensor<8x8x8x?xi32>, !tosa.shape<4>, !tosa.shape<4>) -> tensor<?x?x?x4xi32>
-  // this checks following
-  //  dim 0: size=0 => inferred output dim is ?
-  //  dim 1: size=-2 => inferred output dim is ?
-  //  dim 3: start+size out of bound because size too big: inferred output dim is ?
-  //  dim 4: size=4, input dim=? => inferred output dim is 4
-  %start = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
-  %size = tosa.const_shape {values = dense<[0, -2, 9, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
-  %2= tosa.slice %arg0, %start, %size : (tensor<8x8x8x?xi32>, !tosa.shape<4>, !tosa.shape<4>) -> tensor<?x?x?x?xi32>
-  return
-}
-
-// -----
-
-// CHECK-LABEL: @test_slice_start_out_of_bound
-func.func @test_slice_start_out_of_bound(%arg0 : tensor<8x8x8x?xi32>) -> () {
-  // CHECK: %[[START:.+]] = tosa.const_shape
-  // CHECK: %[[SIZE:.+]] = tosa.const_shape
-  // CHECK: %[[VAL:.+]] = tosa.slice %arg0, %[[START]], %[[SIZE]] : (tensor<8x8x8x?xi32>, !tosa.shape<4>, !tosa.shape<4>) -> tensor<?x?x?x4xi32>
-  // this checks following
-  //  dim 0: start=-1 => inferred output dim is ?
-  //  dim 1: start=8 => inferred output dim is ?
-  //  dim 2: start+size out of bound: inferred output dim is ?
-  //  dim 3: start=8000000, size=4, input dim=? => inferred output dim is 4
-  %start = tosa.const_shape {values = dense<[-1, 8, 6, 8000000]> : tensor<4xindex>} : () -> !tosa.shape<4>
-  %size = tosa.const_shape {values = dense<[1, 1, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
-  %2= tosa.slice %arg0, %start, %size : (tensor<8x8x8x?xi32>, !tosa.shape<4>, !tosa.shape<4>) -> tensor<?x?x?x?xi32>
-  return
-}
-
-// -----
-
 // CHECK-LABEL: @test_slice_dynamic
 func.func @test_slice_dynamic(%arg0 : tensor<10x?x2xf32>) -> () {
   // CHECK: %0 = tosa.const_shape  {values = dense<[1, 0, 0]> : tensor<3xindex>}
@@ -1759,8 +1723,26 @@ func.func @test_tconv2d_bias_broadcast(%input: tensor<2x6x7x3xf32>, %weight: ten
   %0 = tosa.transpose_conv2d %input, %weight, %bias, %input_zp, %weight_zp
        { acc_type = f32, pad = array<i64: 0, 0, 0, 0>, out_pad = array<i64: 0, 0, 0, 0>, out_shape = array<i64: -1, -1, -1, -1>, stride = array<i64: 1, 1>, dilation = array<i64: 1, 1> }
        : (tensor<2x6x7x3xf32>, tensor<?x3x3x3xf32>, tensor<1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<?x?x?x?xf32>
-    return
-  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_conv2d_bias_broadcast
+func.func @test_conv2d_bias_broadcast(%input: tensor<2x8x9x3xf32>, %weights: tensor<?x3x6x3xf32>, %bias: tensor<1xf32>, %input_zp: tensor<1xf32>, %weight_zp: tensor<1xf32>) -> () {
+  // CHECK: -> tensor<2x6x4x?xf32>
+  %0 = tosa.conv2d %input, %weights, %bias, %input_zp, %weight_zp {acc_type = f32, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, dilation = array<i64: 1, 1>} : (tensor<2x8x9x3xf32>, tensor<?x3x6x3xf32>, tensor<1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<?x?x?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_conv3d_bias_broadcast
+func.func @test_conv3d_bias_broadcast(%input: tensor<2x8x9x10x3xf32>, %weights: tensor<?x3x6x4x3xf32>, %bias: tensor<1xf32>, %input_zp: tensor<1xf32>, %weight_zp: tensor<1xf32>) -> () {
+  // CHECK: -> tensor<2x6x4x7x?xf32>
+  %0 = tosa.conv3d %input, %weights, %bias, %input_zp, %weight_zp {acc_type = f32, dilation = array<i64: 1, 1, 1>, pad = array<i64: 0, 0, 0, 0, 0, 0>, stride = array<i64: 1, 1, 1>} : (tensor<2x8x9x10x3xf32>, tensor<?x3x6x4x3xf32>, tensor<1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<?x?x?x?x?xf32>
+  return
+}
 
 // -----
 

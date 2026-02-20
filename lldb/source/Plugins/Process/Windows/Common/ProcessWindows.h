@@ -98,8 +98,7 @@ public:
   Status DisableWatchpoint(lldb::WatchpointSP wp_sp,
                            bool notify = true) override;
 
-  void
-  SetPseudoConsoleHandle(const std::shared_ptr<PseudoConsole> &pty) override;
+  void SetPseudoConsoleHandle() override;
 
 protected:
   ProcessWindows(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);

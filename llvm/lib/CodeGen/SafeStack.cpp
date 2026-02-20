@@ -112,7 +112,7 @@ class SafeStack {
   ScalarEvolution &SE;
 
   Type *StackPtrTy;
-  Type *IntPtrTy;
+  Type *AddrTy;
   Type *Int32Ty;
 
   Value *UnsafeStackPtr = nullptr;
@@ -189,7 +189,7 @@ public:
             DomTreeUpdater *DTU, ScalarEvolution &SE)
       : F(F), TL(TL), Libcalls(Libcalls), DL(DL), DTU(DTU), SE(SE),
         StackPtrTy(DL.getAllocaPtrType(F.getContext())),
-        IntPtrTy(DL.getIntPtrType(F.getContext())),
+        AddrTy(DL.getAddressType(StackPtrTy)),
         Int32Ty(Type::getInt32Ty(F.getContext())) {}
 
   // Run the transformation on the associated function.
@@ -544,11 +544,9 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   if (FrameAlignment > StackAlignment) {
     // Re-align the base pointer according to the max requested alignment.
     IRB.SetInsertPoint(BasePointer->getNextNode());
-    BasePointer = cast<Instruction>(IRB.CreateIntToPtr(
-        IRB.CreateAnd(
-            IRB.CreatePtrToInt(BasePointer, IntPtrTy),
-            ConstantInt::get(IntPtrTy, ~(FrameAlignment.value() - 1))),
-        StackPtrTy));
+    BasePointer = IRB.CreateIntrinsic(
+        StackPtrTy, Intrinsic::ptrmask,
+        {BasePointer, ConstantInt::get(AddrTy, ~(FrameAlignment.value() - 1))});
   }
 
   IRB.SetInsertPoint(BasePointer->getNextNode());
@@ -663,18 +661,16 @@ void SafeStack::moveDynamicAllocasToUnsafeStack(
     IRBuilder<> IRB(AI);
 
     // Compute the new SP value (after AI).
-    Value *Size = IRB.CreateAllocationSize(IntPtrTy, AI);
-    Value *SP = IRB.CreatePtrToInt(IRB.CreateLoad(StackPtrTy, UnsafeStackPtr),
-                                   IntPtrTy);
-    SP = IRB.CreateSub(SP, Size);
+    Value *Size = IRB.CreateAllocationSize(AddrTy, AI);
+    Value *SP = IRB.CreateLoad(StackPtrTy, UnsafeStackPtr);
+    SP = IRB.CreatePtrAdd(SP, IRB.CreateNeg(Size));
 
     // Align the SP value to satisfy the AllocaInst and stack alignments.
     auto Align = std::max(AI->getAlign(), StackAlignment);
 
-    Value *NewTop = IRB.CreateIntToPtr(
-        IRB.CreateAnd(
-            SP, ConstantInt::getSigned(IntPtrTy, ~uint64_t(Align.value() - 1))),
-        StackPtrTy);
+    Value *NewTop = IRB.CreateIntrinsic(
+        StackPtrTy, Intrinsic::ptrmask,
+        {SP, ConstantInt::getSigned(AddrTy, ~uint64_t(Align.value() - 1))});
 
     // Save the stack pointer.
     IRB.CreateStore(NewTop, UnsafeStackPtr);
@@ -786,23 +782,22 @@ bool SafeStack::run() {
     IRB.SetCurrentDebugLocation(
         DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP));
   if (SafeStackUsePointerAddress) {
-    RTLIB::LibcallImpl SafestackPointerAddressImpl =
-        Libcalls.getLibcallImpl(RTLIB::SAFESTACK_POINTER_ADDRESS);
-    if (SafestackPointerAddressImpl == RTLIB::Unsupported) {
-      F.getContext().emitError(
-          "no libcall available for safestack pointer address");
-      return false;
-    }
-
+    // FIXME: A more correct implementation of SafeStackUsePointerAddress would
+    // change the libcall availability in RuntimeLibcallsInfo
     StringRef SafestackPointerAddressName =
         RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
-            SafestackPointerAddressImpl);
+            RTLIB::impl___safestack_pointer_address);
 
     FunctionCallee Fn = F.getParent()->getOrInsertFunction(
         SafestackPointerAddressName, IRB.getPtrTy(0));
     UnsafeStackPtr = IRB.CreateCall(Fn);
   } else {
     UnsafeStackPtr = TL.getSafeStackPointerLocation(IRB, Libcalls);
+    if (!UnsafeStackPtr) {
+      F.getContext().emitError(
+          "no location available for safestack pointer address");
+      UnsafeStackPtr = PoisonValue::get(StackPtrTy);
+    }
   }
 
   // Load the current stack pointer (we'll also use it as a base pointer).
