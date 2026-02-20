@@ -200,7 +200,8 @@ private:
   friend class ModuleDepCollector;
   friend class ModuleDepCollectorPP;
 
-  /// The base directory for relative paths in \c FileDeps.
+  /// The absolute directory path that is the base for relative paths
+  /// in \c FileDeps.
   std::string FileDepsBaseDir;
 
   /// A collection of paths to files that this module directly depends on, not
