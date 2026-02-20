@@ -7958,23 +7958,43 @@ bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
   DenseMap<Instruction *, Instruction *> NewInstructions;
   for (Use *U : ToReplace) {
     auto *UI = cast<Instruction>(U->get());
-    Instruction *NI = UI->clone();
-
-    if (IsHugeFunc) {
-      // Now we clone an instruction, its operands' defs may sink to this BB
-      // now. So we put the operands defs' BBs into FreshBBs to do optimization.
-      for (Value *Op : NI->operands())
-        if (auto *OpDef = dyn_cast<Instruction>(Op))
-          FreshBBs.insert(OpDef->getParent());
+    // Before we clone the instruction, check if we already created an
+    // equivalent instruction in the BB and use that instead.
+    bool foundEquiv = false;
+    Instruction *NI = nullptr;
+    for (auto &IToCheck : *TargetBB) {
+      if (&IToCheck == I)
+        break;
+      if (UI->isIdenticalTo(&IToCheck)) {
+        // We found an equivalent instruction in this BB that dominates I, let's
+        // use it instead!
+        NI = &IToCheck;
+        LLVM_DEBUG(dbgs() << "Found an equivalent instruction for " << *UI
+                          << " in BB: " << *NI << "\n");
+        foundEquiv = true;
+        break;
+      }
     }
+    if (!foundEquiv) {
+      NI = UI->clone();
 
+      if (IsHugeFunc) {
+        // Now we clone an instruction, its operands' defs may sink to this BB
+        // now. So we put the operands defs' BBs into FreshBBs to do
+        // optimization.
+        for (Value *Op : NI->operands())
+          if (auto *OpDef = dyn_cast<Instruction>(Op))
+            FreshBBs.insert(OpDef->getParent());
+      }
+
+      LLVM_DEBUG(dbgs() << "Sinking " << *UI << " to user " << *I << "\n");
+      NI->insertBefore(InsertPoint->getIterator());
+      InsertPoint = NI;
+      InsertedInsts.insert(NI);
+    }
+    assert(NI && "Didn't find/create a valid sunk instruction!");
     NewInstructions[UI] = NI;
     MaybeDead.insert(UI);
-    LLVM_DEBUG(dbgs() << "Sinking " << *UI << " to user " << *I << "\n");
-    NI->insertBefore(InsertPoint->getIterator());
-    InsertPoint = NI;
-    InsertedInsts.insert(NI);
-
     // Update the use for the new instruction, making sure that we update the
     // sunk instruction uses, if it is part of a chain that has already been
     // sunk.
