@@ -189,6 +189,11 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------
 
+### Deprecated APIs
+
+* ``SBTarget::GetDataByteSize()``, ``SBTarget::GetCodeByteSize()``, and ``SBSection::GetTargetByteSize()``
+  have been deprecated. They always return 1, as before.
+
 ### FreeBSD
 
 #### Userspace Debugging
