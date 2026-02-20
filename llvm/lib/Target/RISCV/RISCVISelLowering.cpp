@@ -19436,13 +19436,11 @@ static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
 
   using namespace SDPatternMatch;
   SDValue Op, EVL;
-  if (!sd_match(N, m_ReverseEVL(m_OneUse(m_Value(Op)), m_Value(EVL))))
+  if (!sd_match(N, m_ReverseEVL(m_OneUse(m_Value(Op, m_Opc(ISD::VP_LOAD))), m_Value(EVL))))
     return SDValue();
 
   // Check if its first operand is a vp.load.
-  auto *VPLoad = dyn_cast<VPLoadSDNode>(Op);
-  if (!VPLoad)
-    return SDValue();
+  auto *VPLoad = cast<VPLoadSDNode>(Op);
 
   EVT LoadVT = VPLoad->getValueType(0);
   // We do not have a strided_load version for masks, and the evl of vp.reverse
@@ -19504,15 +19502,13 @@ static SDValue performVP_STORECombine(SDNode *N, SelectionDAG &DAG,
   using namespace SDPatternMatch;
   SDValue Val;
   if (!sd_match(VPStore->getValue(),
-                m_ReverseEVL(m_Value(Val), m_Specific(EVL))))
+                m_OneUse(m_ReverseEVL(m_Value(Val), m_Specific(EVL)))))
     return SDValue();
 
   EVT ReverseVT = VPStore->getValue()->getValueType(0);
 
-  // We do not have a strided_store version for masks, and the evl of vp.reverse
-  // and vp.store should always be the same.
-  if (!ReverseVT.getVectorElementType().isByteSized() ||
-      !VPStore->getValue().hasOneUse())
+  // We do not have a strided_store version for masks.
+  if (!ReverseVT.getVectorElementType().isByteSized())
     return SDValue();
 
   SDValue StoreMask = VPStore->getMask();
