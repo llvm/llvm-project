@@ -1040,8 +1040,10 @@ def GPU_LaunchOp : GPU_Op<"launch", [
 
     /// Returns the number of buffers located in the private memory.
     unsigned getNumPrivateAttributions() {
-      return getBody().getNumArguments() - getNumConfigRegionAttributes() -
-          getNumWorkgroupAttributions();
+      return getRegion().empty()
+                ? 0
+                : getBody().getNumArguments() - getNumConfigRegionAttributes() -
+                      getNumWorkgroupAttributions();
     }
 
     /// Returns a list of block arguments that correspond to buffers located in
@@ -1052,7 +1054,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [
       auto begin =
           std::next(getBody().args_begin(),
                     getNumConfigRegionAttributes() + getNumWorkgroupAttributions());
-      return {begin, getBody().args_end()};
+      auto end = std::next(begin, getNumPrivateAttributions());
+      return {begin, end};
     }
 
     /// Adds a new block argument that corresponds to buffers located in
