@@ -10981,6 +10981,10 @@ static SDValue combineShiftToMULH(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   SDValue LeftOp = ShiftOperand.getOperand(0);
   SDValue RightOp = ShiftOperand.getOperand(1);
 
+  if (LeftOp.getOpcode() != ISD::SIGN_EXTEND &&
+      LeftOp.getOpcode() != ISD::ZERO_EXTEND)
+    std::swap(LeftOp, RightOp);
+
   bool IsSignExt = LeftOp.getOpcode() == ISD::SIGN_EXTEND;
   bool IsZeroExt = LeftOp.getOpcode() == ISD::ZERO_EXTEND;
 
@@ -11013,18 +11017,17 @@ static SDValue combineShiftToMULH(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   }
 
   SDValue MulhRightOp;
-  if (ConstantSDNode *Constant = isConstOrConstSplat(RightOp)) {
-    unsigned ActiveBits = IsSignExt
-                              ? Constant->getAPIntValue().getSignificantBits()
-                              : Constant->getAPIntValue().getActiveBits();
-    if (ActiveBits > NarrowVTSize)
+  if (LeftOp.getOpcode() != RightOp.getOpcode()) {
+    if (IsZeroExt && ShiftOperand.hasOneUse() &&
+        DAG.computeKnownBits(RightOp).countMaxActiveBits() <= NarrowVTSize) {
+      MulhRightOp = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, RightOp);
+    } else if (IsSignExt && ShiftOperand.hasOneUse() &&
+               DAG.ComputeMaxSignificantBits(RightOp) <= NarrowVTSize) {
+      MulhRightOp = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, RightOp);
+    } else {
       return SDValue();
-    MulhRightOp = DAG.getConstant(
-        Constant->getAPIntValue().trunc(NarrowVT.getScalarSizeInBits()), DL,
-        NarrowVT);
+    }
   } else {
-    if (LeftOp.getOpcode() != RightOp.getOpcode())
-      return SDValue();
     // Check that the two extend nodes are the same type.
     if (NarrowVT != RightOp.getOperand(0).getValueType())
       return SDValue();
