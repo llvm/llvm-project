@@ -2043,6 +2043,45 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   return true;
 }
 
+/// Transform memcpy to memset when its source was just memset and temporary.
+/// In other words, turn:
+/// \code
+///   memset(dst1, c, size);
+///   memcpy(dst2, dst1, size);
+/// \endcode
+/// into:
+/// \code
+///   memset(dst2, c, size);
+/// \endcode
+/// When dst1 is temporary
+
+bool MemCpyOptPass::mergeOnmemsetcpy(Function &F) {
+  bool MadeChange = false;
+  for (BasicBlock &BB : F) {
+    for (BasicBlock::iterator BI = BB.begin(), BE = BB.end(); BI != BE;) {
+      Instruction *I = &*BI;
+      if(!I){
+        break;
+      }
+      Instruction *I1 = &*(++BI);
+      if (auto *M = dyn_cast<MemSetInst>(I))
+        if (auto *M1 = dyn_cast<MemCpyInst>(I1)){
+          auto Op = I->getOperand(0);
+          auto Op2 = I1->getOperand(1);
+          auto *CMemSetSize = dyn_cast<ConstantInt>(M->getLength());
+          auto *CMemCpySize = dyn_cast<ConstantInt>(M1->getLength());
+          if (Op == Op2 && Op->getNumUses() == 2 && CMemSetSize && CMemCpySize &&
+            CMemSetSize->getZExtValue() == CMemCpySize->getZExtValue() ) {
+            I->setOperand(0, I1->getOperand(0));
+            eraseInstruction(I1);
+            MadeChange |= true;
+          }
+        }
+     }
+  }
+  return MadeChange;
+}
+
 /// This is called on memcpy dest pointer arguments attributed as immutable
 /// during call. Try to use memcpy source directly if all of the following
 /// conditions are satisfied.
@@ -2191,7 +2230,7 @@ bool MemCpyOptPass::iterateOnFunction(Function &F) {
       }
     }
   }
-
+  MadeChange |= mergeOnmemsetcpy(F);
   return MadeChange;
 }
 
