@@ -426,7 +426,6 @@ ENUM_LANGOPT(ClangABICompat, ClangABI, 4, ClangABI::Latest, NotCompatible,
              "with")
 
 VALUE_LANGOPT(FunctionAlignment, 5, 0, Compatible, "Default alignment for functions")
-VALUE_LANGOPT(PreferredFunctionAlignment, 5, 0, Compatible, "Preferred alignment for functions")
 VALUE_LANGOPT(LoopAlignment, 32, 0, Compatible, "Default alignment for loops")
 
 LANGOPT(FixedPoint, 1, 0, NotCompatible, "fixed point types")
@@ -470,6 +469,13 @@ LANGOPT(RelativeCXXABIVTables, 1, 0, NotCompatible,
 
 LANGOPT(OmitVTableRTTI, 1, 0, NotCompatible,
         "Use an ABI-incompatible v-table layout that omits the RTTI component")
+
+LANGOPT(PointerFieldProtectionAttr, 1, 0, NotCompatible,
+        "Allow the use of the experimental [[clang::pointer_field_protection]] attribute")
+LANGOPT(PointerFieldProtectionABI, 1, 0, NotCompatible,
+        "Enable pointer field protection by default for all non-standard-layout types")
+LANGOPT(PointerFieldProtectionTagged, 1, 0, NotCompatible,
+        "Use pointer identity (tag) to discriminate pointers of non-trivially-copyable types")
 
 LANGOPT(VScaleMin, 32, 0, NotCompatible, "Minimum vscale value")
 LANGOPT(VScaleMax, 32, 0, NotCompatible, "Maximum vscale value")

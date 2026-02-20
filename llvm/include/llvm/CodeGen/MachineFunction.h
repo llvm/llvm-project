@@ -826,6 +826,8 @@ public:
       Alignment = A;
   }
 
+  /// Returns the preferred alignment which comes from the function attributes
+  /// (optsize, minsize, prefalign) and TargetLowering.
   Align getPreferredAlignment() const;
 
   /// exposesReturnsTwice - Returns true if the function calls setjmp or
