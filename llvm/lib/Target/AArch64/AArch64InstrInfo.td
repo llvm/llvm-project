@@ -2678,6 +2678,11 @@ return CurDAG->getTargetConstant(
   N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
 }]>;
 
+def gi_bitcast_fpimm_to_i32 : GICustomOperandRenderer<"renderBitcastFPImm">,
+  GISDNodeXFormEquiv<bitcast_fpimm_to_i32>;
+def gi_bitcast_fpimm_to_i64 : GICustomOperandRenderer<"renderBitcastFPImm">,
+  GISDNodeXFormEquiv<bitcast_fpimm_to_i64>;
+
 
 def : Pat<(f32 fpimm:$in),
   (COPY_TO_REGCLASS (MOVi32imm (bitcast_fpimm_to_i32 f32:$in)), FPR32)>;
@@ -8656,6 +8661,8 @@ def MOVIv2d_ns   : SIMDModifiedImmVectorNoShift<1, 1, 0, 0b1110, V128,
                    [(set (v2i64 V128:$Rd), (AArch64movi_edit imm0_255:$imm8))]>;
 
 let Predicates = [HasNEON] in {
+def : Pat<(f128 fpimm0), (f128 (MOVIv2d_ns (i32 0)))>;
+
 def : Pat<(v2i64 immAllZerosV), (MOVIv2d_ns (i32 0))>;
 def : Pat<(v4i32 immAllZerosV), (MOVIv2d_ns (i32 0))>;
 def : Pat<(v8i16 immAllZerosV), (MOVIv2d_ns (i32 0))>;

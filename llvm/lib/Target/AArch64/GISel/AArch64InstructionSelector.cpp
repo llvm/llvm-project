@@ -502,6 +502,8 @@ private:
                      int OpIdx = -1) const;
   void renderFPImm64(MachineInstrBuilder &MIB, const MachineInstr &MI,
                      int OpIdx = -1) const;
+  void renderBitcastFPImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                          int OpIdx = -1) const;
   void renderFPImm32SIMDModImmType4(MachineInstrBuilder &MIB,
                                     const MachineInstr &MI,
                                     int OpIdx = -1) const;
@@ -2131,6 +2133,18 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   switch (I.getOpcode()) {
+  case TargetOpcode::G_CONSTANT: {
+    Register DefReg = I.getOperand(0).getReg();
+    const LLT DefTy = MRI.getType(DefReg);
+    if (!DefTy.isPointer())
+      return false;
+    const unsigned PtrSize = DefTy.getSizeInBits();
+    if (PtrSize != 32 && PtrSize != 64)
+      return false;
+    // Convert pointer typed constants to integers so TableGen can select.
+    MRI.setType(DefReg, LLT::scalar(PtrSize));
+    return true;
+  }
   case TargetOpcode::G_STORE: {
     bool Changed = contractCrossBankCopyIntoStore(I, MRI);
     MachineOperand &SrcOp = I.getOperand(0);
@@ -2355,7 +2369,8 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     // Before selecting a DUP instruction, check if it is better selected as a
     // MOV or load from a constant pool.
     Register Src = I.getOperand(1).getReg();
-    auto ValAndVReg = getAnyConstantVRegValWithLookThrough(Src, MRI);
+    auto ValAndVReg = getAnyConstantVRegValWithLookThrough(
+        Src, MRI, /*LookThroughInstrs=*/true, /*LookThroughAnyExt=*/true);
     if (!ValAndVReg)
       return false;
     LLVMContext &Ctx = MF.getFunction().getContext();
@@ -2679,123 +2694,43 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return true;
   }
 
-  case TargetOpcode::G_FCONSTANT:
-  case TargetOpcode::G_CONSTANT: {
-    const bool isFP = Opcode == TargetOpcode::G_FCONSTANT;
-
-    const LLT s8 = LLT::scalar(8);
-    const LLT s16 = LLT::scalar(16);
-    const LLT s32 = LLT::scalar(32);
-    const LLT s64 = LLT::scalar(64);
-    const LLT s128 = LLT::scalar(128);
-    const LLT p0 = LLT::pointer(0, 64);
-
+  case TargetOpcode::G_FCONSTANT: {
     const Register DefReg = I.getOperand(0).getReg();
     const LLT DefTy = MRI.getType(DefReg);
     const unsigned DefSize = DefTy.getSizeInBits();
     const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
 
-    // FIXME: Redundant check, but even less readable when factored out.
-    if (isFP) {
-      if (Ty != s16 && Ty != s32 && Ty != s64 && Ty != s128) {
-        LLVM_DEBUG(dbgs() << "Unable to materialize FP " << Ty
-                          << " constant, expected: " << s16 << " or " << s32
-                          << " or " << s64 << " or " << s128 << '\n');
+    const TargetRegisterClass &FPRRC = *getRegClassForTypeOnBank(DefTy, RB);
+    // For 16, 64, and 128b values, emit a constant pool load.
+    switch (DefSize) {
+    default:
+      llvm_unreachable("Unexpected destination size for G_FCONSTANT?");
+    case 32:
+    case 64: {
+      bool OptForSize = shouldOptForSize(&MF);
+      const auto &TLI = MF.getSubtarget().getTargetLowering();
+      // If TLI says that this fpimm is illegal, then we'll expand to a
+      // constant pool load.
+      if (TLI->isFPImmLegal(I.getOperand(1).getFPImm()->getValueAPF(),
+                            EVT::getFloatingPointVT(DefSize), OptForSize))
+        break;
+      [[fallthrough]];
+    }
+    case 16:
+    case 128: {
+      auto *FPImm = I.getOperand(1).getFPImm();
+      auto *LoadMI = emitLoadFromConstantPool(FPImm, MIB);
+      if (!LoadMI) {
+        LLVM_DEBUG(dbgs() << "Failed to load double constant pool entry\n");
         return false;
       }
-
-      if (RB.getID() != AArch64::FPRRegBankID) {
-        LLVM_DEBUG(dbgs() << "Unable to materialize FP " << Ty
-                          << " constant on bank: " << RB
-                          << ", expected: FPR\n");
-        return false;
-      }
-
-      // The case when we have 0.0 is covered by tablegen. Reject it here so we
-      // can be sure tablegen works correctly and isn't rescued by this code.
-      // 0.0 is not covered by tablegen for FP128. So we will handle this
-      // scenario in the code here.
-      if (DefSize != 128 && I.getOperand(1).getFPImm()->isExactlyValue(0.0))
-        return false;
-    } else {
-      // s32 and s64 are covered by tablegen.
-      if (Ty != p0 && Ty != s8 && Ty != s16) {
-        LLVM_DEBUG(dbgs() << "Unable to materialize integer " << Ty
-                          << " constant, expected: " << s32 << ", " << s64
-                          << ", or " << p0 << '\n');
-        return false;
-      }
-
-      if (RB.getID() != AArch64::GPRRegBankID) {
-        LLVM_DEBUG(dbgs() << "Unable to materialize integer " << Ty
-                          << " constant on bank: " << RB
-                          << ", expected: GPR\n");
-        return false;
-      }
+      MIB.buildCopy({DefReg}, {LoadMI->getOperand(0).getReg()});
+      I.eraseFromParent();
+      return RBI.constrainGenericRegister(DefReg, FPRRC, MRI);
+    }
     }
 
-    if (isFP) {
-      const TargetRegisterClass &FPRRC = *getRegClassForTypeOnBank(DefTy, RB);
-      // For 16, 64, and 128b values, emit a constant pool load.
-      switch (DefSize) {
-      default:
-        llvm_unreachable("Unexpected destination size for G_FCONSTANT?");
-      case 32:
-      case 64: {
-        bool OptForSize = shouldOptForSize(&MF);
-        const auto &TLI = MF.getSubtarget().getTargetLowering();
-        // If TLI says that this fpimm is illegal, then we'll expand to a
-        // constant pool load.
-        if (TLI->isFPImmLegal(I.getOperand(1).getFPImm()->getValueAPF(),
-                              EVT::getFloatingPointVT(DefSize), OptForSize))
-          break;
-        [[fallthrough]];
-      }
-      case 16:
-      case 128: {
-        auto *FPImm = I.getOperand(1).getFPImm();
-        auto *LoadMI = emitLoadFromConstantPool(FPImm, MIB);
-        if (!LoadMI) {
-          LLVM_DEBUG(dbgs() << "Failed to load double constant pool entry\n");
-          return false;
-        }
-        MIB.buildCopy({DefReg}, {LoadMI->getOperand(0).getReg()});
-        I.eraseFromParent();
-        return RBI.constrainGenericRegister(DefReg, FPRRC, MRI);
-      }
-      }
-
-      assert((DefSize == 32 || DefSize == 64) && "Unexpected const def size");
-      // Either emit a FMOV, or emit a copy to emit a normal mov.
-      const Register DefGPRReg = MRI.createVirtualRegister(
-          DefSize == 32 ? &AArch64::GPR32RegClass : &AArch64::GPR64RegClass);
-      MachineOperand &RegOp = I.getOperand(0);
-      RegOp.setReg(DefGPRReg);
-      MIB.setInsertPt(MIB.getMBB(), std::next(I.getIterator()));
-      MIB.buildCopy({DefReg}, {DefGPRReg});
-
-      if (!RBI.constrainGenericRegister(DefReg, FPRRC, MRI)) {
-        LLVM_DEBUG(dbgs() << "Failed to constrain G_FCONSTANT def operand\n");
-        return false;
-      }
-
-      MachineOperand &ImmOp = I.getOperand(1);
-      // FIXME: Is going through int64_t always correct?
-      ImmOp.ChangeToImmediate(
-          ImmOp.getFPImm()->getValueAPF().bitcastToAPInt().getZExtValue());
-    } else if (I.getOperand(1).isCImm()) {
-      uint64_t Val = I.getOperand(1).getCImm()->getZExtValue();
-      I.getOperand(1).ChangeToImmediate(Val);
-    } else if (I.getOperand(1).isImm()) {
-      uint64_t Val = I.getOperand(1).getImm();
-      I.getOperand(1).ChangeToImmediate(Val);
-    }
-
-    const unsigned MovOpc =
-        DefSize == 64 ? AArch64::MOVi64imm : AArch64::MOVi32imm;
-    I.setDesc(TII.get(MovOpc));
-    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-    return true;
+    return false;
   }
   case TargetOpcode::G_EXTRACT: {
     Register DstReg = I.getOperand(0).getReg();
@@ -5819,18 +5754,26 @@ bool AArch64InstructionSelector::tryOptConstantBuildVec(
   // generate a constant pool load instead of a vector insert sequence.
   SmallVector<Constant *, 16> Csts;
   for (unsigned Idx = 1; Idx < I.getNumOperands(); ++Idx) {
-    // Try to find G_CONSTANT or G_FCONSTANT
-    auto *OpMI =
-        getOpcodeDef(TargetOpcode::G_CONSTANT, I.getOperand(Idx).getReg(), MRI);
-    if (OpMI)
-      Csts.emplace_back(
-          const_cast<ConstantInt *>(OpMI->getOperand(1).getCImm()));
-    else if ((OpMI = getOpcodeDef(TargetOpcode::G_FCONSTANT,
-                                  I.getOperand(Idx).getReg(), MRI)))
-      Csts.emplace_back(
-          const_cast<ConstantFP *>(OpMI->getOperand(1).getFPImm()));
-    else
-      return false;
+    Register OpReg = I.getOperand(Idx).getReg();
+    if (auto AnyConst = getAnyConstantVRegValWithLookThrough(
+            OpReg, MRI, /*LookThroughInstrs=*/true,
+            /*LookThroughAnyExt=*/true)) {
+      MachineInstr *DefMI = MRI.getVRegDef(AnyConst->VReg);
+
+      if (DefMI->getOpcode() == TargetOpcode::G_CONSTANT) {
+        Csts.emplace_back(
+            ConstantInt::get(MIB.getMF().getFunction().getContext(),
+                             std::move(AnyConst->Value)));
+        continue;
+      }
+
+      if (DefMI->getOpcode() == TargetOpcode::G_FCONSTANT) {
+        Csts.emplace_back(
+            const_cast<ConstantFP *>(DefMI->getOperand(1).getFPImm()));
+        continue;
+      }
+    }
+    return false;
   }
   Constant *CV = ConstantVector::get(Csts);
   if (!emitConstantVector(I.getOperand(0).getReg(), CV, MIB, MRI))
@@ -8018,6 +7961,16 @@ void AArch64InstructionSelector::renderFPImm64(MachineInstrBuilder &MIB,
          "Expected G_FCONSTANT");
   MIB.addImm(
       AArch64_AM::getFP64Imm(MI.getOperand(1).getFPImm()->getValueAPF()));
+}
+
+void AArch64InstructionSelector::renderBitcastFPImm(MachineInstrBuilder &MIB,
+                                                    const MachineInstr &MI,
+                                                    int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT && OpIdx == -1 &&
+         "Expected G_FCONSTANT");
+  const APInt Bits =
+      MI.getOperand(1).getFPImm()->getValueAPF().bitcastToAPInt();
+  MIB.addImm(Bits.getZExtValue());
 }
 
 void AArch64InstructionSelector::renderFPImm32SIMDModImmType4(

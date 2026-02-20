@@ -82,10 +82,9 @@ define half @add_v3HalfH(<3 x half> %bin.rdx)  {
 ;
 ; CHECK-GI-FP16-LABEL: add_v3HalfH:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    adrp x8, .LCPI2_0
 ; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-FP16-NEXT:    ldr h1, [x8, :lo12:.LCPI2_0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[3], v1.h[0]
+; CHECK-GI-FP16-NEXT:    mov w8, #32768 // =0x8000
+; CHECK-GI-FP16-NEXT:    mov v0.h[3], w8
 ; CHECK-GI-FP16-NEXT:    faddp v0.4h, v0.4h, v0.4h
 ; CHECK-GI-FP16-NEXT:    faddp h0, v0.2h
 ; CHECK-GI-FP16-NEXT:    ret

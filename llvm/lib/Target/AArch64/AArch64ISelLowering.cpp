@@ -13186,9 +13186,13 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   // FIXME: We should be able to handle f128 as well with a clever lowering.
   const APInt ImmInt = Imm.bitcastToAPInt();
   if (VT == MVT::f64)
-    IsLegal = AArch64_AM::getFP64Imm(ImmInt) != -1 || Imm.isPosZero();
+    IsLegal = AArch64_AM::getFP64Imm(ImmInt) != -1 ||
+              AArch64_AM::isAdvSIMDModImmType12(ImmInt.getZExtValue()) ||
+              Imm.isPosZero();
   else if (VT == MVT::f32)
-    IsLegal = AArch64_AM::getFP32Imm(ImmInt) != -1 || Imm.isPosZero();
+    IsLegal = AArch64_AM::getFP32Imm(ImmInt) != -1 ||
+              AArch64_AM::isAdvSIMDModImmType11(ImmInt.getZExtValue()) ||
+              Imm.isPosZero();
   else if (VT == MVT::f16 || VT == MVT::bf16)
     IsLegal =
         (Subtarget->hasFullFP16() && AArch64_AM::getFP16Imm(ImmInt) != -1) ||
@@ -13204,7 +13208,7 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     // however the mov+fmov sequence is always better because of the reduced
     // cache pressure. The timings are still the same if you consider
     // movw+movk+fmov vs. adrp+ldr (it's one instruction longer, but the
-    // movw+movk is fused). So we limit up to 2 instrdduction at most.
+    // movw+movk is fused). So we limit up to 4 instructions at most.
     SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
     AArch64_IMM::expandMOVImm(ImmInt.getZExtValue(), VT.getSizeInBits(), Insn);
     assert(Insn.size() <= 4 &&
