@@ -4137,6 +4137,22 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "__support_math_tanpif",
+    hdrs = ["src/__support/math/tanpif.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_cast",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_sincosf_utils",
+    ],
+)
+
 ############################### complex targets ################################
 
 libc_function(
@@ -5690,11 +5706,7 @@ libc_math_function(
 libc_math_function(
     name = "tanpif",
     additional_deps = [
-        ":__support_sincosf_utils",
-        ":hdr_fenv_macros",
-        ":__support_macros_config",
-        ":__support_macros_optimization",
-        ":__support_fputil_multiply_add",
+        ":__support_math_tanpif",
     ],
 )
 
