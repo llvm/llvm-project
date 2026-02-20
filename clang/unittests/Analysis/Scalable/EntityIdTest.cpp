@@ -10,13 +10,14 @@
 #include "clang/Analysis/Scalable/Model/EntityIdTable.h"
 #include "clang/Analysis/Scalable/Model/EntityName.h"
 #include "llvm/Support/raw_ostream.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang::ssaf {
 namespace {
 
-using ::testing::StartsWith;
+static bool isNonNegativeInteger(llvm::StringRef S) {
+  return !S.empty() && llvm::all_of(S, llvm::isDigit);
+}
 
 TEST(EntityIdTest, Equality) {
   EntityIdTable Table;
@@ -72,8 +73,11 @@ TEST(EntityIdTest, StreamOutput) {
 
   std::string S;
   llvm::raw_string_ostream(S) << Id;
-  EXPECT_THAT(S, StartsWith("EntityId("));
-  EXPECT_TRUE(S.back() == ')');
+
+  llvm::StringRef Ref(S);
+  ASSERT_TRUE(Ref.consume_front("EntityId("));
+  ASSERT_TRUE(Ref.consume_back(")"));
+  EXPECT_TRUE(isNonNegativeInteger(Ref));
 }
 
 } // namespace

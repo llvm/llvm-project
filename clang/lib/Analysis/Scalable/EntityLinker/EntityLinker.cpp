@@ -70,7 +70,7 @@ EntityId EntityLinker::resolveEntity(const EntityName &OldName,
 
   // NewId construction will always return a fresh id for `None` and `Internal`
   // linkage entities since their namespaces will be different even if their
-  // names clash. For `External` linkage entities with clashing names this
+  // names clash. For `External` linkage entities with identical names this
   // function will return the id assigned at the first insertion.
   EntityId NewId = Output.IdTable.getId(NewName);
 
