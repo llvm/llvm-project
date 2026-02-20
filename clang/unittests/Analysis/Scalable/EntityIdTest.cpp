@@ -72,7 +72,7 @@ TEST(EntityIdTest, StreamOutput) {
 
   std::string S;
   llvm::raw_string_ostream(S) << Id;
-  EXPECT_THAT(S, MatchesRegex("EntityId\\([0-9]+\\)"));
+  EXPECT_THAT(S, MatchesRegex("EntityId\\(\\d+\\)"));
 }
 
 } // namespace
