@@ -1198,6 +1198,11 @@ llvm::DIType *CGDebugInfo::CreateType(const BitIntType *Ty) {
                                   Ty->getNumBits());
 }
 
+llvm::DIType *CGDebugInfo::CreateType(const OverflowBehaviorType *Ty,
+                                      llvm::DIFile *U) {
+  return getOrCreateType(Ty->getUnderlyingType(), U);
+}
+
 llvm::DIType *CGDebugInfo::CreateType(const ComplexType *Ty) {
   // Bit size and offset of the type.
   llvm::dwarf::TypeKind Encoding = llvm::dwarf::DW_ATE_complex_float;
@@ -4201,6 +4206,8 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
 
   case Type::BitInt:
     return CreateType(cast<BitIntType>(Ty));
+  case Type::OverflowBehavior:
+    return CreateType(cast<OverflowBehaviorType>(Ty), Unit);
   case Type::Pipe:
     return CreateType(cast<PipeType>(Ty), Unit);
 
@@ -4976,23 +4983,6 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
 
   if (IsDeclForCallSite)
     Fn->setSubprogram(SP);
-}
-
-void CGDebugInfo::addCallTargetIfVirtual(const FunctionDecl *FD,
-                                         llvm::CallBase *CI) {
-  if (!shouldGenerateVirtualCallSite())
-    return;
-
-  if (!FD)
-    return;
-
-  assert(CI && "Invalid Call Instruction.");
-  if (!CI->isIndirectCall())
-    return;
-
-  // Always get the method declaration.
-  if (llvm::DISubprogram *MD = getFunctionDeclaration(FD))
-    CI->setMetadata(llvm::LLVMContext::MD_call_target, MD);
 }
 
 void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,

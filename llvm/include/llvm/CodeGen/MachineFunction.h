@@ -526,17 +526,11 @@ public:
     /// Callee type ids.
     SmallVector<ConstantInt *, 4> CalleeTypeIds;
 
-    /// 'call_target' metadata for the DISubprogram. It is the declaration
-    /// or definition of the target function and might be indirect.
-    MDNode *CallTarget = nullptr;
-
     CallSiteInfo() = default;
 
     /// Extracts the numeric type id from the CallBase's callee_type Metadata,
     /// and sets CalleeTypeIds. This is used as type id for the indirect call in
     /// the call graph section.
-    /// Extracts the MDNode from the CallBase's call_target Metadata to be used
-    /// during the construction of the debug info call site entries.
     LLVM_ABI CallSiteInfo(const CallBase &CB);
   };
 
@@ -831,6 +825,10 @@ public:
     if (Alignment < A)
       Alignment = A;
   }
+
+  /// Returns the preferred alignment which comes from the function attributes
+  /// (optsize, minsize, prefalign) and TargetLowering.
+  Align getPreferredAlignment() const;
 
   /// exposesReturnsTwice - Returns true if the function calls setjmp or
   /// any other similar functions with attribute "returns twice" without

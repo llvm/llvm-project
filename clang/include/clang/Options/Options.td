@@ -2387,6 +2387,13 @@ defm fixed_point : BoolFOption<"fixed-point",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
   BothFlags<[], [ClangOption], " fixed point types">>;
+defm experimental_overflow_behavior_types
+    : BoolFOption<"experimental-overflow-behavior-types",
+                  LangOpts<"OverflowBehaviorTypes">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+                  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+                  BothFlags<[], [CC1Option],
+                            " the experimental overflow behavior types">>;
 def cxx_static_destructors_EQ : Joined<["-"], "fc++-static-destructors=">, Group<f_Group>,
   HelpText<"Controls which variables C++ static destructors are registered for">,
   Values<"all,thread-local,none">,
@@ -3229,6 +3236,31 @@ defm experimental_omit_vtable_rtti : BoolFOption<"experimental-omit-vtable-rtti"
   PosFlag<SetTrue, [], [CC1Option], "Omit">,
   NegFlag<SetFalse, [], [CC1Option], "Do not omit">,
   BothFlags<[], [CC1Option], " the RTTI component from virtual tables">>;
+
+defm experimental_allow_pointer_field_protection_attr
+    : BoolFOption<"experimental-allow-pointer-field-protection-attr",
+                  LangOpts<"PointerFieldProtectionAttr">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Allow">,
+                  NegFlag<SetFalse, [], [], "Disallow">,
+                  BothFlags<[], [ClangOption],
+                            " the use of the "
+                            "[[clang::pointer_field_protection]] attribute">>;
+defm experimental_pointer_field_protection_abi
+    : BoolFOption<"experimental-pointer-field-protection-abi",
+                  LangOpts<"PointerFieldProtectionABI">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+                  NegFlag<SetFalse, [], [], "Do not enable">,
+                  BothFlags<[], [ClangOption],
+                            " pointer field protection on all non-standard "
+                            "layout struct types">>;
+defm experimental_pointer_field_protection_tagged
+    : BoolFOption<"experimental-pointer-field-protection-tagged",
+                  LangOpts<"PointerFieldProtectionTagged">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Use">,
+                  NegFlag<SetFalse, [], [], "Do not use">,
+                  BothFlags<[], [ClangOption],
+                            " pointer identity (tag) to discriminate pointers "
+                            "of non-trivially-copyable types">>;
 
 def fcxx_abi_EQ : Joined<["-"], "fc++-abi=">,
                   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,

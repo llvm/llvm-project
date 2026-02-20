@@ -4427,6 +4427,13 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
     Func->setPartition(StringRef(Strtab.data() + Record[17], Record[18]));
   }
 
+  if (Record.size() > 19) {
+    MaybeAlign PrefAlignment;
+    if (Error Err = parseAlignmentValue(Record[19], PrefAlignment))
+      return Err;
+    Func->setPreferredAlignment(PrefAlignment);
+  }
+
   ValueList.push_back(Func, getVirtualTypeID(Func->getType(), FTyID));
 
   if (OperandInfo.PersonalityFn || OperandInfo.Prefix || OperandInfo.Prologue)
