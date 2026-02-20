@@ -1561,53 +1561,76 @@ const DenseMap<const Loop *, unsigned> &CacheCostManager::getCostMap() {
   return CostMap;
 }
 
+/// If \S contains an affine addrec for \p L0, store the step recurrence of the
+/// addrec in \p Coeff0. Same for \p L1 and \p Coeff1. This function assumes \p
+/// S is an nested affine addrec, and it will recursively look through the start
+/// value of the addrec to find the coefficients. If the expression is in a
+/// complex form, e.g., (addrec + addrec), then the coefficients may not be
+/// found.
+/// TODO: Handle more complex cases. Maybe using SCEVTraversal is a good way to
+/// do that.
+static void getAddRecCoefficients(ScalarEvolution &SE, const SCEV *S,
+                                  const Loop *L0,
+                                  std::optional<const SCEV *> &Coeff0,
+                                  const Loop *L1,
+                                  std::optional<const SCEV *> &Coeff1) {
+  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S);
+  if (!AR)
+    return;
+  if (!AR->isAffine()) {
+    LLVM_DEBUG(dbgs() << "Unexpected non-affine addrec\n");
+    return;
+  }
+  if (AR->getLoop() == L0) {
+    assert(!Coeff0.has_value() &&
+           "Found more than one addrec for the same loop");
+    Coeff0 = AR->getStepRecurrence(SE);
+  }
+  if (AR->getLoop() == L1) {
+    assert(!Coeff1.has_value() &&
+           "Found more than one addrec for the same loop");
+    Coeff1 = AR->getStepRecurrence(SE);
+  }
+  getAddRecCoefficients(SE, AR->getStart(), L0, Coeff0, L1, Coeff1);
+}
+
 int LoopInterchangeProfitability::getInstrOrderCost() {
   unsigned GoodOrder, BadOrder;
   BadOrder = GoodOrder = 0;
   for (BasicBlock *BB : InnerLoop->blocks()) {
     for (Instruction &Ins : *BB) {
-      if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&Ins)) {
-        bool FoundInnerInduction = false;
-        bool FoundOuterInduction = false;
-        for (Value *Op : GEP->operands()) {
-          // Skip operands that are not SCEV-able.
-          if (!SE->isSCEVable(Op->getType()))
-            continue;
+      if (!isa<LoadInst, StoreInst>(&Ins))
+        continue;
+      const SCEV *Ptr = SE->getSCEV(getLoadStorePointerOperand(&Ins));
+      std::optional<const SCEV *> OuterCoeff, InnerCoeff;
+      getAddRecCoefficients(*SE, Ptr, OuterLoop, OuterCoeff, InnerLoop,
+                            InnerCoeff);
+      if (!InnerCoeff.has_value() || !OuterCoeff.has_value())
+        continue;
 
-          const SCEV *OperandVal = SE->getSCEV(Op);
-          const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(OperandVal);
-          if (!AR)
-            continue;
-
-          // If we find the inner induction after an outer induction e.g.
-          // for(int i=0;i<N;i++)
-          //   for(int j=0;j<N;j++)
-          //     A[i][j] = A[i-1][j-1]+k;
-          // then it is a good order.
-          if (AR->getLoop() == InnerLoop) {
-            // We found an InnerLoop induction after OuterLoop induction. It is
-            // a good order.
-            FoundInnerInduction = true;
-            if (FoundOuterInduction) {
-              GoodOrder++;
-              break;
-            }
-          }
-          // If we find the outer induction after an inner induction e.g.
-          // for(int i=0;i<N;i++)
-          //   for(int j=0;j<N;j++)
-          //     A[j][i] = A[j-1][i-1]+k;
-          // then it is a bad order.
-          if (AR->getLoop() == OuterLoop) {
-            // We found an OuterLoop induction after InnerLoop induction. It is
-            // a bad order.
-            FoundOuterInduction = true;
-            if (FoundInnerInduction) {
-              BadOrder++;
-              break;
-            }
-          }
-        }
+      // This heuristic assumes that a smaller step recurrence implies that the
+      // induction variable corresponding to the loop is used in the inner
+      // dimension of the array. Placing such a loop in the inner position would
+      // be beneficial in terms of locality. If the array access is of the form
+      // like `A[3*i + 2*j]`, this heuristic may lead to an unprofitable
+      // interchange, but we expect such cases to be rare.
+      const SCEV *OuterStep = SE->getAbsExpr(*OuterCoeff, /*IsNSW=*/false);
+      const SCEV *InnerStep = SE->getAbsExpr(*InnerCoeff, /*IsNSW=*/false);
+      if (SE->isKnownPredicate(ICmpInst::ICMP_SLT, InnerStep, OuterStep)) {
+        // If we find the inner induction after an outer induction e.g.
+        // for(int i=0;i<N;i++)
+        //   for(int j=0;j<N;j++)
+        //     A[i][j] = A[i-1][j-1]+k;
+        // then it is a good order.
+        GoodOrder++;
+      } else if (SE->isKnownPredicate(ICmpInst::ICMP_SLT, OuterStep,
+                                      InnerStep)) {
+        // If we find the outer induction after an inner induction e.g.
+        // for(int i=0;i<N;i++)
+        //   for(int j=0;j<N;j++)
+        //     A[j][i] = A[j-1][i-1]+k;
+        // then it is a bad order.
+        BadOrder++;
       }
     }
   }
