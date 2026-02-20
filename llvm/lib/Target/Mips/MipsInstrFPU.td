@@ -63,12 +63,6 @@ def MipsExtractElementF64 : SDNode<"MipsISD::ExtractElementF64",
 // Node used to generate an MTC1 i32 to f64 instruction
 def MipsMTC1_D64 : SDNode<"MipsISD::MTC1_D64", SDT_MipsMTC1_D64>;
 
-// R5900 hardware FP operations, lacking NaN or infinity support.
-def MipsR5900FAdd  : SDNode<"MipsISD::R5900_FADD",  SDTFPBinOp>;
-def MipsR5900FSub  : SDNode<"MipsISD::R5900_FSUB",  SDTFPBinOp>;
-def MipsR5900FMul  : SDNode<"MipsISD::R5900_FMUL",  SDTFPBinOp>;
-def MipsR5900FDiv  : SDNode<"MipsISD::R5900_FDIV",  SDTFPBinOp>;
-def MipsR5900FSqrt : SDNode<"MipsISD::R5900_FSQRT", SDTFPUnaryOp>;
 
 // Operand for printing out a condition code.
 let PrintMethod = "printFCCOperand", DecoderMethod = "DecodeCondCode" in
@@ -1003,11 +997,6 @@ def : MipsPat<(f32 (any_sint_to_fp GPR32Opnd:$src)),
 let Predicates = [IsR5900] in {
   def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
                 (CVT_W_S FGR32Opnd:$src)>, ISA_MIPS1;
-  def : Pat<(f32 (MipsR5900FAdd  FGR32Opnd:$fs, FGR32Opnd:$ft)), (FADD_S $fs, $ft)>;
-  def : Pat<(f32 (MipsR5900FSub  FGR32Opnd:$fs, FGR32Opnd:$ft)), (FSUB_S $fs, $ft)>;
-  def : Pat<(f32 (MipsR5900FMul  FGR32Opnd:$fs, FGR32Opnd:$ft)), (FMUL_S $fs, $ft)>;
-  def : Pat<(f32 (MipsR5900FDiv  FGR32Opnd:$fs, FGR32Opnd:$ft)), (FDIV_S $fs, $ft)>;
-  def : Pat<(f32 (MipsR5900FSqrt FGR32Opnd:$fs)),                 (FSQRT_S $fs)>;
 }
 def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
               (TRUNC_W_S FGR32Opnd:$src)>, ISA_MIPS1;

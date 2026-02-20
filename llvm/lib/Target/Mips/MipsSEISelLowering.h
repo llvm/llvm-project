@@ -74,7 +74,7 @@ class TargetRegisterClass;
                 bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
                 SDValue Chain) const override;
 
-    SDValue lowerR5900FPOp(SDValue Op, SelectionDAG &DAG, unsigned HWOpc,
+    SDValue lowerR5900FPOp(SDValue Op, SelectionDAG &DAG,
                            RTLIB::Libcall LC) const;
     SDValue lowerLOAD(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSTORE(SDValue Op, SelectionDAG &DAG) const;

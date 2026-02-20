@@ -564,37 +564,35 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::SELECT:             return lowerSELECT(Op, DAG);
   case ISD::BITCAST:            return lowerBITCAST(Op, DAG);
   case ISD::FADD:
-    return lowerR5900FPOp(Op, DAG, MipsISD::R5900_FADD, RTLIB::ADD_F32);
+    return lowerR5900FPOp(Op, DAG, RTLIB::ADD_F32);
   case ISD::FSUB:
-    return lowerR5900FPOp(Op, DAG, MipsISD::R5900_FSUB, RTLIB::SUB_F32);
+    return lowerR5900FPOp(Op, DAG, RTLIB::SUB_F32);
   case ISD::FMUL:
-    return lowerR5900FPOp(Op, DAG, MipsISD::R5900_FMUL, RTLIB::MUL_F32);
+    return lowerR5900FPOp(Op, DAG, RTLIB::MUL_F32);
   case ISD::FDIV:
-    return lowerR5900FPOp(Op, DAG, MipsISD::R5900_FDIV, RTLIB::DIV_F32);
+    return lowerR5900FPOp(Op, DAG, RTLIB::DIV_F32);
   case ISD::FSQRT:
-    return lowerR5900FPOp(Op, DAG, MipsISD::R5900_FSQRT, RTLIB::SQRT_F32);
+    return lowerR5900FPOp(Op, DAG, RTLIB::SQRT_F32);
   }
 
   return MipsTargetLowering::LowerOperation(Op, DAG);
 }
 
 SDValue MipsSETargetLowering::lowerR5900FPOp(SDValue Op, SelectionDAG &DAG,
-                                             unsigned HWOpc,
                                              RTLIB::Libcall LC) const {
   assert(Subtarget.isR5900());
-  SDLoc DL(Op);
-  MVT VT = Op.getSimpleValueType();
   SDNodeFlags Flags = Op->getFlags();
 
-  SmallVector<SDValue, 2> Ops(Op->op_begin(), Op->op_end());
-
   if (Flags.hasNoNaNs() && Flags.hasNoInfs()) {
-    // Use the hardware FPU instruction if the operation is guaranteed per-
-    // instruction to have no NaN or infinity inputs/outputs (nnan+ninf flags).
-    return DAG.getNode(HWOpc, DL, VT, Ops);
+    // Use the hardware FPU instruction if the operation is guaranteed to have
+    // no NaN or infinity inputs/outputs (nnan+ninf flags).
+    return Op;
   }
 
   // Fall back to a software libcall for IEEE correctness.
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  SmallVector<SDValue, 2> Ops(Op->op_begin(), Op->op_end());
   TargetLowering::MakeLibCallOptions CallOptions;
   auto [Result, Chain] = makeLibCall(DAG, LC, VT, Ops, CallOptions, DL);
   return Result;
