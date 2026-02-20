@@ -89,6 +89,11 @@ static bool defaultIsSmallAlloc(Value alloc, unsigned maximumSizeInBytes,
   auto type = dyn_cast<ShapedType>(alloc.getType());
   if (!type || !alloc.getDefiningOp<memref::AllocOp>())
     return false;
+  auto elementType = type.getElementType();
+  // Not support nested memref type.
+  if (isa<MemRefType>(elementType))
+    return false;
+
   if (!type.hasStaticShape()) {
     // Check if the dynamic shape dimension of the alloc is produced by
     // `memref.rank`. If this is the case, it is likely to be small.
@@ -104,7 +109,7 @@ static bool defaultIsSmallAlloc(Value alloc, unsigned maximumSizeInBytes,
     return false;
   }
   unsigned bitwidth = mlir::DataLayout::closest(alloc.getDefiningOp())
-                          .getTypeSizeInBits(type.getElementType());
+                          .getTypeSizeInBits(elementType);
   return type.getNumElements() * bitwidth <= maximumSizeInBytes * 8;
 }
 
