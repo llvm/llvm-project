@@ -965,7 +965,7 @@ static MachineOperand *lookUpCopyChain(const SIInstrInfo &TII,
   for (MachineInstr *SubDef = MRI.getVRegDef(SrcReg);
        SubDef && TII.isFoldableCopy(*SubDef);
        SubDef = MRI.getVRegDef(Sub->getReg())) {
-    unsigned SrcIdx = TII.getFoldableCopySrcIdx(*SubDef);
+    const int SrcIdx = SubDef->getOpcode() == AMDGPU::V_MOV_B16_t16_e64 ? 2 : 1;
     MachineOperand &SrcOp = SubDef->getOperand(SrcIdx);
 
     if (SrcOp.isImm())
