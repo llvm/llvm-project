@@ -83,6 +83,20 @@ code elimination and common subexpression elimination. It ensures that when the
 program is executed, all devices hit the same line of code at the same time
 during collectives and so avoid dead-locks.
 
+## Developer Usage
+
+Whilst the 'shard' dialect includes many operations for flexible use, only few
+are required for using it within a pipeline to generate SPMD-style programs.
+
+The general workflow is:
+1. Define a `shard.grid` symbol to define your units of execution
+2. Use that symbol to define a `shard.sharing` SSA value, using the `sharding` operation
+3. Annotate a set of tensors to define how they should be sharded, using `shard` operation
+4. Use the `sharding-propagation` pass to propagate annotations onto unannotated tensors, creating a "fully annotated IR"
+5. Use the `shard-partition` pass to create the SPMD code, leaving only collectives and the `shard.grid` operations
+
+This is the simple way to create SPMD programs from tensor programs.
+
 ## Operations
 
 [include "Dialects/ShardOps.md"]
