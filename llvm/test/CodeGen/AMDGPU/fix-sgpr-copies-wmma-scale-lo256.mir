@@ -19,12 +19,13 @@ body: |
     ; CHECK-LABEL: name: wmma_scale_copy_vgpr_to_sgpr
     ; CHECK: liveins: $vgpr0, $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32_lo256 = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF3:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
-    ; CHECK-NEXT: early-clobber %6:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, [[DEF2]], [[COPY]], [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32_lo256 = COPY [[COPY]]
+    ; CHECK-NEXT: early-clobber %6:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, [[DEF2]], [[COPY1]], [[DEF3]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %0:vgpr_32 = COPY $vgpr0
     %1:sreg_32 = COPY %0
@@ -47,12 +48,13 @@ body: |
     ; CHECK-LABEL: name: wmma_scale_copy_vgpr_to_sgpr_src1
     ; CHECK: liveins: $vgpr0, $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32_lo256 = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF3:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
-    ; CHECK-NEXT: early-clobber %6:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, [[DEF2]], [[DEF3]], [[COPY]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32_lo256 = COPY [[COPY]]
+    ; CHECK-NEXT: early-clobber %6:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, [[DEF2]], [[DEF3]], [[COPY1]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     %0:vgpr_32 = COPY $vgpr0
     %1:sreg_32 = COPY %0
