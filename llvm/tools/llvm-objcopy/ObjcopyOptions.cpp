@@ -333,6 +333,8 @@ static const StringMap<MachineInfo> TargetMap{
     {"elf64-loongarch", {ELF::EM_LOONGARCH, true, true}},
     // SystemZ
     {"elf64-s390", {ELF::EM_S390, true, false}},
+    // AMDGPU
+    {"elf64-amdgpu", {ELF::EM_AMDGPU, true, true}},
 };
 
 static Expected<TargetInfo>
