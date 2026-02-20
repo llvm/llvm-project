@@ -105,4 +105,12 @@ TODO for added SYCL classes
   * ``has_extension``: deprecated API, to implement on RT level with ``device::has``
 
 * device selection: to add compatibility with old SYCL 1.2.1 device selectors, still part of SYCL 2020 specification
+* ``context``: to implement get_info, properties & public constructors once context support is added to liboffload
+* ``queue``: to implement USM methods, to implement synchronization methods, to implement submit & copy with accessors (low priority), get_info & properties, ctors that accepts context (blocked by lack of liboffload support)
+* ``property_list``: to fully implement and integrate to existing SYCL runtime classes supporting it
+* usm allocations:
+
+  * add aligned functions (blocked by liboffload support)
+  * forward templated funcs to alignment methods (rewrite current impl)
+  * handle sub devices once they are implemented (blocked by liboffload support)
 

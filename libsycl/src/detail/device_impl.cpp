@@ -22,11 +22,16 @@ bool DeviceImpl::has(aspect Aspect) const {
   case (aspect::accelerator):
     return isAccelerator();
   case (aspect::custom):
-    return false;
   case (aspect::emulated):
-    return false;
   case (aspect::host_debuggable):
     return false;
+  case (aspect::usm_device_allocations):
+  case (aspect::usm_host_allocations):
+  case (aspect::usm_shared_allocations):
+    // liboffload works with USM only and has no query to check support. We
+    // assume that USM is always supported otherwise lifoffload won't be able to
+    // work with device at all.
+    return true;
   default:
     // Other aspects are not implemented yet
     return false;
@@ -49,7 +54,9 @@ bool DeviceImpl::isAccelerator() const {
   return getDeviceType() == info::device_type::accelerator;
 }
 
-backend DeviceImpl::getBackend() const { return MPlatform.getBackend(); }
+backend DeviceImpl::getBackend() const noexcept {
+  return MPlatform.getBackend();
+}
 
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL

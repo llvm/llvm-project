@@ -13,6 +13,7 @@
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/info/device_type.hpp>
+#include <sycl/__impl/usm_alloc_type.hpp>
 
 #include <OffloadAPI.h>
 
@@ -37,6 +38,10 @@ inline std::string formatCodeString(ol_result_t Result) {
          std::string(stringifyErrorCode(Result->Code)) + ") " + Result->Details;
 }
 
+inline bool isSuccess(const ol_result_t &Result) {
+  return Result == OL_SUCCESS;
+}
+
 /// Checks liboffload API call result.
 ///
 /// Used after calling the API without check.
@@ -48,7 +53,7 @@ inline std::string formatCodeString(ol_result_t Result) {
 /// \throw sycl::runtime_exception if the call was not successful.
 template <sycl::errc errc = sycl::errc::runtime>
 void checkAndThrow(ol_result_t Result) {
-  if (Result != OL_SUCCESS) {
+  if (!isSuccess(Result)) {
     throw sycl::exception(sycl::make_error_code(errc),
                           detail::formatCodeString(Result));
   }
@@ -99,6 +104,13 @@ ol_device_type_t convertDeviceTypeToOL(info::device_type DeviceType);
 ///
 /// \returns SYCL device type matching specified liboffload device type.
 info::device_type convertDeviceTypeToSYCL(ol_device_type_t DeviceType);
+
+/// Converts SYCL USM  type to liboffload type.
+///
+/// \param DeviceType SYCL USM type.
+///
+/// \returns ol_alloc_type_t matching specified SYCL USM type.
+ol_alloc_type_t convertUSMTypeToOL(usm::alloc USMType);
 
 /// Helper to map SYCL information descriptors to OL_<HANDLE>_INFO_<SMTH>.
 ///
