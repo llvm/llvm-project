@@ -1405,6 +1405,75 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     return nullptr;
   };
 
+  // Given:
+  //   (Cond ? TVal : FVal) op (MinMaxCand) [SelectIsLHS == true]
+  //   or
+  //   (MinMaxCand) op (Cond ? TVal : FVal) [SelectIsLHS == false]
+  //
+  // If MinMaxCand can be expressed as a select with the same Cond,
+  // then try to optimize it the same way as if it was a select.
+  // Such patterns may appear after foldSelectInstWithICmpConst().
+  auto foldWithMinMax = [&](Value *Cond, Value *TVal, Value *FVal,
+                            Value *MinMaxCand,
+                            bool SelectIsLHS = true) -> Value * {
+    if (True && False)
+      return nullptr;
+
+    const APInt *Cst;
+    Value *V;
+    bool FoundMatch = false;
+
+    // umax(V, UMIN+1) is equivalent to (V == UMIN) ? UMIN+1 : V
+    FoundMatch = match(MinMaxCand, m_UMax(m_Value(V), m_APInt(Cst))) &&
+                 !Cst->isMinValue() && (*Cst - 1).isMinValue() &&
+                 match(Cond, m_c_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(V),
+                                              m_SpecificInt(*Cst - 1)));
+
+    // umin(V, UMAX-1) is equivalent to (V == UMAX) ? UMAX-1 : V
+    if (!FoundMatch)
+      FoundMatch =
+          match(MinMaxCand, m_UMin(m_Value(V), m_APInt(Cst))) &&
+          !Cst->isMaxValue() && (*Cst + 1).isMaxValue() &&
+          match(Cond, m_c_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(V),
+                                       m_SpecificInt(*Cst + 1)));
+
+    // smax(V, SMIN+1) is equivalent to (V == SMIN) ? SMIN+1 : V
+    if (!FoundMatch)
+      FoundMatch =
+          match(MinMaxCand, m_SMax(m_Value(V), m_APInt(Cst))) &&
+          !Cst->isMinSignedValue() && (*Cst - 1).isMinSignedValue() &&
+          match(Cond, m_c_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(V),
+                                       m_SpecificInt(*Cst - 1)));
+
+    // smin(V, SMAX-1) is equivalent to (V == SMAX) ? SMAX-1 : V
+    if (!FoundMatch)
+      FoundMatch =
+          match(MinMaxCand, m_SMin(m_Value(V), m_APInt(Cst))) &&
+          !Cst->isMaxSignedValue() && (*Cst + 1).isMaxSignedValue() &&
+          match(Cond, m_c_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(V),
+                                       m_SpecificInt(*Cst + 1)));
+
+    if (!FoundMatch)
+      return nullptr;
+
+    Value *OtherTVal = ConstantInt::get(V->getType(), *Cst);
+    Value *OtherFVal = V;
+    if (SelectIsLHS) {
+      True = simplifyBinOp(Opcode, TVal, OtherTVal, FMF, Q);
+      False = simplifyBinOp(Opcode, FVal, OtherFVal, FMF, Q);
+    } else {
+      True = simplifyBinOp(Opcode, OtherTVal, TVal, FMF, Q);
+      False = simplifyBinOp(Opcode, OtherFVal, FVal, FMF, Q);
+    }
+
+    if (!True || !False)
+      return nullptr;
+
+    Value *SI = Builder.CreateSelect(Cond, True, False);
+    SI->takeName(&I);
+    return SI;
+  };
+
   if (LHSIsSelect && RHSIsSelect && A == D) {
     // (A ? B : C) op (A ? E : F) -> A ? (B op E) : (C op F)
     Cond = A;
@@ -1424,12 +1493,16 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     False = simplifyBinOp(Opcode, C, RHS, FMF, Q);
     if (Value *NewSel = foldAddNegate(B, C, RHS))
       return NewSel;
+    if (Value *NewSel = foldWithMinMax(Cond, B, C, RHS))
+      return NewSel;
   } else if (RHSIsSelect && RHS->hasOneUse()) {
     // X op (D ? E : F) -> D ? (X op E) : (X op F)
     Cond = D;
     True = simplifyBinOp(Opcode, LHS, E, FMF, Q);
     False = simplifyBinOp(Opcode, LHS, F, FMF, Q);
     if (Value *NewSel = foldAddNegate(E, F, LHS))
+      return NewSel;
+    if (Value *NewSel = foldWithMinMax(Cond, E, F, LHS, /*SelectIsLHS=*/false))
       return NewSel;
   }
 
