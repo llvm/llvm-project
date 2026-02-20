@@ -19436,7 +19436,8 @@ static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
 
   using namespace SDPatternMatch;
   SDValue Op, EVL;
-  if (!sd_match(N, m_ReverseEVL(m_OneUse(m_Value(Op, m_Opc(ISD::VP_LOAD))), m_Value(EVL))))
+  if (!sd_match(N, m_ReverseEVL(m_OneUse(m_Value(Op, m_Opc(ISD::VP_LOAD))),
+                                m_Value(EVL))))
     return SDValue();
 
   // Check if its first operand is a vp.load.
