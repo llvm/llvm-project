@@ -1111,10 +1111,9 @@ bool LoopIdiomVectorize::recognizeFindFirstByte() {
       !cast<LoadInst>(LoadNeedle)->isSimple())
     return false;
 
-  // Check we are loading valid characters (currently limited to i8).
-  // Other types could be accepted but require more precise trip count handling.
+  // Check we are loading valid characters.
   Type *CharTy = LoadSearch->getType();
-  if (!CharTy->isIntegerTy(8) || LoadNeedle->getType() != CharTy)
+  if (!CharTy->isIntegerTy() || LoadNeedle->getType() != CharTy)
     return false;
 
   // Pick the vectorisation factor based on CharTy, work out the cost of the
@@ -1298,14 +1297,18 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
       Builder.CreatePtrToInt(SearchEnd, I64Ty, "search_end_int");
   Value *SearchIdxInit = Constant::getNullValue(I64Ty);
   Value *SearchTripCount =
-      Builder.CreateSub(ISearchEnd, ISearchStart, "search_trip_count");
+      Builder.CreateZExt(Builder.CreatePtrDiff(CharTy, SearchEnd, SearchStart,
+                                               "search_trip_count"),
+                         I64Ty);
   Value *INeedleStart =
       Builder.CreatePtrToInt(NeedleStart, I64Ty, "needle_start_int");
   Value *INeedleEnd =
       Builder.CreatePtrToInt(NeedleEnd, I64Ty, "needle_end_int");
   Value *NeedleIdxInit = Constant::getNullValue(I64Ty);
   Value *NeedleTripCount =
-      Builder.CreateSub(INeedleEnd, INeedleStart, "needle_trip_count");
+      Builder.CreateZExt(Builder.CreatePtrDiff(CharTy, NeedleEnd, NeedleStart,
+                                               "needle_trip_count"),
+                         I64Ty);
   Value *PredVF =
       Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask, {PredVTy, I64Ty},
                               {ConstantInt::get(I64Ty, 0), ConstVF});
