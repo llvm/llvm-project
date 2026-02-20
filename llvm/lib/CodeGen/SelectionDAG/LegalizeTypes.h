@@ -273,27 +273,6 @@ private:
     return DAG.getZeroExtendInReg(Op, dl, OldVT);
   }
 
-  /// Get a promoted operand and zero extend it to the final size.
-  SDValue VPSExtPromotedInteger(SDValue Op, SDValue Mask, SDValue EVL) {
-    EVT OldVT = Op.getValueType();
-    SDLoc dl(Op);
-    Op = GetPromotedInteger(Op);
-    // FIXME: Add VP_SIGN_EXTEND_INREG.
-    EVT VT = Op.getValueType();
-    unsigned BitsDiff = VT.getScalarSizeInBits() - OldVT.getScalarSizeInBits();
-    SDValue ShiftCst = DAG.getShiftAmountConstant(BitsDiff, VT, dl);
-    SDValue Shl = DAG.getNode(ISD::VP_SHL, dl, VT, Op, ShiftCst, Mask, EVL);
-    return DAG.getNode(ISD::VP_SRA, dl, VT, Shl, ShiftCst, Mask, EVL);
-  }
-
-  /// Get a promoted operand and zero extend it to the final size.
-  SDValue VPZExtPromotedInteger(SDValue Op, SDValue Mask, SDValue EVL) {
-    EVT OldVT = Op.getValueType();
-    SDLoc dl(Op);
-    Op = GetPromotedInteger(Op);
-    return DAG.getVPZeroExtendInReg(Op, Mask, EVL, dl, OldVT);
-  }
-
   // Promote the given operand V (vector or scalar) according to N's specific
   // reduction kind. N must be an integer VECREDUCE_* or VP_REDUCE_*. Returns
   // the nominal extension opcode (ISD::(ANY|ZERO|SIGN)_EXTEND) and the
@@ -389,11 +368,13 @@ private:
   // Integer Operand Promotion.
   bool PromoteIntegerOperand(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_ANY_EXTEND(SDNode *N);
+  SDValue PromoteIntOp_ANY_EXTEND_VECTOR_INREG(SDNode *N);
   SDValue PromoteIntOp_ATOMIC_STORE(AtomicSDNode *N);
   SDValue PromoteIntOp_BITCAST(SDNode *N);
   SDValue PromoteIntOp_BUILD_PAIR(SDNode *N);
   SDValue PromoteIntOp_BR_CC(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_BRCOND(SDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_COND_LOOP(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_BUILD_VECTOR(SDNode *N);
   SDValue PromoteIntOp_INSERT_VECTOR_ELT(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_EXTRACT_VECTOR_ELT(SDNode *N);
@@ -466,6 +447,7 @@ private:
   void ExpandIntRes_ABS               (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_ABD               (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_CTLZ              (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_CTLS              (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_CTPOP             (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_CTTZ              (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_LOAD          (LoadSDNode *N, SDValue &Lo, SDValue &Hi);
@@ -894,6 +876,7 @@ private:
   SDValue ScalarizeVecOp_VECREDUCE_SEQ(SDNode *N);
   SDValue ScalarizeVecOp_CMP(SDNode *N);
   SDValue ScalarizeVecOp_FAKE_USE(SDNode *N);
+  SDValue ScalarizeVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
 
   //===--------------------------------------------------------------------===//
   // Vector Splitting Support: LegalizeVectorTypes.cpp
@@ -1003,6 +986,7 @@ private:
   SDValue SplitVecOp_VP_CttzElements(SDNode *N);
   SDValue SplitVecOp_VECTOR_HISTOGRAM(SDNode *N);
   SDValue SplitVecOp_PARTIAL_REDUCE_MLA(SDNode *N);
+  SDValue SplitVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
 
   //===--------------------------------------------------------------------===//
   // Vector Widening Support: LegalizeVectorTypes.cpp
@@ -1189,7 +1173,8 @@ private:
   // Generic Result Splitting.
   void SplitRes_MERGE_VALUES(SDNode *N, unsigned ResNo,
                              SDValue &Lo, SDValue &Hi);
-  void SplitVecRes_AssertZext  (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_AssertZext(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_AssertSext(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_ARITH_FENCE (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_Select      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_SELECT_CC   (SDNode *N, SDValue &Lo, SDValue &Hi);

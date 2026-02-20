@@ -1020,6 +1020,40 @@ BranchProbability llvm::getBranchProbability(BranchInst *B,
   return BranchProbability::getBranchProbability(Weight0, Denominator);
 }
 
+BranchProbability llvm::getBranchProbability(BasicBlock *Src, BasicBlock *Dst) {
+  assert(Src != Dst && "Passed in same source as destination");
+
+  Instruction *TI = Src->getTerminator();
+  if (!TI || TI->getNumSuccessors() == 0)
+    return BranchProbability::getZero();
+
+  SmallVector<uint32_t, 4> Weights;
+
+  if (!extractBranchWeights(*TI, Weights)) {
+    // No metadata
+    return BranchProbability::getUnknown();
+  }
+  assert(TI->getNumSuccessors() == Weights.size() &&
+         "Missing weights in branch_weights");
+
+  uint64_t Total = 0;
+  uint32_t Numerator = 0;
+  for (auto [i, Weight] : llvm::enumerate(Weights)) {
+    if (TI->getSuccessor(i) == Dst)
+      Numerator += Weight;
+    Total += Weight;
+  }
+
+  // Total of edges might be 0 if the metadata is incorrect/set by hand
+  // or missing. In such case return here to avoid division by 0 later on.
+  // There might also be a case where the value of Total cannot fit into
+  // uint32_t, in such case, just bail out.
+  if (Total == 0 || Total > std::numeric_limits<uint32_t>::max())
+    return BranchProbability::getUnknown();
+
+  return BranchProbability(Numerator, Total);
+}
+
 bool llvm::setBranchProbability(BranchInst *B, BranchProbability P,
                                 bool ForFirstTarget) {
   if (B->getNumSuccessors() != 2)
@@ -2139,6 +2173,24 @@ Value *llvm::addRuntimeChecks(
   return MemoryRuntimeCheck;
 }
 
+namespace {
+/// Rewriter to replace SCEVPtrToIntExpr with SCEVPtrToAddrExpr when the result
+/// type matches the pointer address type. This allows expressions mixing
+/// ptrtoint and ptrtoaddr to simplify properly.
+struct SCEVPtrToAddrRewriter : SCEVRewriteVisitor<SCEVPtrToAddrRewriter> {
+  const DataLayout &DL;
+  SCEVPtrToAddrRewriter(ScalarEvolution &SE, const DataLayout &DL)
+      : SCEVRewriteVisitor(SE), DL(DL) {}
+
+  const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
+    const SCEV *Op = visit(E->getOperand());
+    if (E->getType() == DL.getAddressType(E->getOperand()->getType()))
+      return SE.getPtrToAddrExpr(Op);
+    return Op == E->getOperand() ? E : SE.getPtrToIntExpr(Op, E->getType());
+  }
+};
+} // namespace
+
 Value *llvm::addDiffRuntimeChecks(
     Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
     function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC) {
@@ -2150,6 +2202,8 @@ Value *llvm::addDiffRuntimeChecks(
   Value *MemoryRuntimeCheck = nullptr;
 
   auto &SE = *Expander.getSE();
+  const DataLayout &DL = Loc->getDataLayout();
+  SCEVPtrToAddrRewriter Rewriter(SE, DL);
   // Map to keep track of created compares, The key is the pair of operands for
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
@@ -2159,8 +2213,10 @@ Value *llvm::addDiffRuntimeChecks(
     auto *VFTimesICTimesSize =
         ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
                              ConstantInt::get(Ty, IC * AccessSize));
-    Value *Diff =
-        Expander.expandCodeFor(SE.getMinusSCEV(SinkStart, SrcStart), Ty, Loc);
+    const SCEV *SinkStartRewritten = Rewriter.visit(SinkStart);
+    const SCEV *SrcStartRewritten = Rewriter.visit(SrcStart);
+    Value *Diff = Expander.expandCodeFor(
+        SE.getMinusSCEV(SinkStartRewritten, SrcStartRewritten), Ty, Loc);
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.

@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENMODULE_H
 
 #include "CIRGenBuilder.h"
+#include "CIRGenCUDARuntime.h"
 #include "CIRGenCall.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
@@ -90,11 +91,29 @@ private:
   /// Holds information about C++ vtables.
   CIRGenVTables vtables;
 
+  /// Holds the CUDA runtime
+  std::unique_ptr<CIRGenCUDARuntime> cudaRuntime;
+
   /// Per-function codegen information. Updated everytime emitCIR is called
   /// for FunctionDecls's.
   CIRGenFunction *curCGF = nullptr;
 
   llvm::SmallVector<mlir::Attribute> globalScopeAsm;
+
+  void createCUDARuntime();
+
+  /// A helper for constructAttributeList that handles return attributes.
+  void constructFunctionReturnAttributes(const CIRGenFunctionInfo &info,
+                                         const Decl *targetDecl, bool isThunk,
+                                         mlir::NamedAttrList &retAttrs);
+  /// A helper for constructAttributeList that handles argument attributes.
+  void constructFunctionArgumentAttributes();
+  /// A helper function for constructAttributeList that determines whether a
+  /// return value might have been discarded.
+  bool mayDropFunctionReturn(const ASTContext &context, QualType retTy);
+  /// A helper function for constructAttributeList that determines whether
+  /// `noundef` on a return is possible.
+  bool hasStrictReturn(QualType retTy, const Decl *targetDecl);
 
 public:
   mlir::ModuleOp getModule() const { return theModule; }
@@ -147,6 +166,7 @@ public:
   void handleCXXStaticMemberVarInstantiation(VarDecl *vd);
 
   llvm::DenseMap<const Decl *, cir::GlobalOp> staticLocalDeclMap;
+  llvm::DenseMap<const VarDecl *, cir::GlobalOp> initializerConstants;
 
   mlir::Operation *getGlobalValue(llvm::StringRef ref);
 
@@ -160,6 +180,9 @@ public:
 
   cir::GlobalOp getOrCreateStaticVarDecl(const VarDecl &d,
                                          cir::GlobalLinkageKind linkage);
+
+  Address createUnnamedGlobalFrom(const VarDecl &d, mlir::Attribute constAttr,
+                                  CharUnits align);
 
   /// If the specified mangled name is not in the module, create and return an
   /// mlir::GlobalOp value
@@ -266,13 +289,17 @@ public:
   /// attributes.
   /// \param attrOnCallSite - Whether or not the attributes are on a call site.
   /// \param isThunk - Whether the function is a thunk.
-  void constructAttributeList(llvm::StringRef name,
-                              const CIRGenFunctionInfo &info,
-                              CIRGenCalleeInfo calleeInfo,
-                              mlir::NamedAttrList &attrs,
-                              cir::CallingConv &callingConv,
-                              cir::SideEffect &sideEffect, bool attrOnCallSite,
-                              bool isThunk);
+  void constructAttributeList(
+      llvm::StringRef name, const CIRGenFunctionInfo &info,
+      CIRGenCalleeInfo calleeInfo, mlir::NamedAttrList &attrs,
+      mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
+      cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk);
+  /// Helper function for constructAttributeList/others.  Builds a set of
+  /// function attributes to add to a function based on language opts, codegen
+  /// opts, and some small properties.
+  void addDefaultFunctionAttributes(StringRef name, bool hasOptNoneAttr,
+                                    bool attrOnCallSite,
+                                    mlir::NamedAttrList &attrs);
 
   /// Will return a global variable of the given type. If a variable with a
   /// different type already exists then a new variable with the right type
@@ -352,7 +379,18 @@ public:
   /// FIXME: this could likely be a common helper and not necessarily related
   /// with codegen.
   clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
-                                           LValueBaseInfo *baseInfo);
+                                           LValueBaseInfo *baseInfo = nullptr);
+
+  /// Returns the minimum object size for an object of the given class type
+  /// (or a class derived from it).
+  CharUnits getMinimumClassObjectSize(const CXXRecordDecl *cd);
+
+  /// Returns the minimum object size for an object of the given type.
+  CharUnits getMinimumObjectSize(QualType ty) {
+    if (CXXRecordDecl *rd = ty->getAsCXXRecordDecl())
+      return getMinimumClassObjectSize(rd);
+    return getASTContext().getTypeSizeInChars(ty);
+  }
 
   /// TODO: Add TBAAAccessInfo
   CharUnits getDynamicOffsetAlignment(CharUnits actualBaseAlign,
@@ -557,6 +595,10 @@ public:
 
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
 
+  // Whether a global variable should be emitted by CUDA/HIP host/device
+  // related attributes.
+  bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
+
   void replaceUsesOfNonProtoTypeWithRealFunction(mlir::Operation *old,
                                                  cir::FuncOp newFn);
 
@@ -592,6 +634,11 @@ public:
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".
   cir::FuncOp getBuiltinLibFunction(const FunctionDecl *fd, unsigned builtinID);
+
+  CIRGenCUDARuntime &getCUDARuntime() {
+    assert(cudaRuntime != nullptr);
+    return *cudaRuntime;
+  }
 
   mlir::IntegerAttr getSize(CharUnits size) {
     return builder.getSizeFromCharUnits(size);
@@ -683,8 +730,7 @@ private:
   llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> manglings;
 
   // FIXME: should we use llvm::TrackingVH<mlir::Operation> here?
-  typedef llvm::StringMap<mlir::Operation *> ReplacementsTy;
-  ReplacementsTy replacements;
+  llvm::MapVector<StringRef, mlir::Operation *> replacements;
   /// Call replaceAllUsesWith on all pairs in replacements.
   void applyReplacements();
 

@@ -1039,14 +1039,14 @@ define <8 x i16> @complement_ne_i128_bitcast(ptr %word, i32 %position) nounwind 
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
-; SSE2-NEXT:    movq 8(%rdi), %rax
-; SSE2-NEXT:    movq %xmm0, %rdx
+; SSE2-NEXT:    movq %xmm0, %rax
+; SSE2-NEXT:    movq 8(%rdi), %rdx
 ; SSE2-NEXT:    movl %esi, %ecx
 ; SSE2-NEXT:    andb $32, %cl
-; SSE2-NEXT:    shrdq %cl, %rax, %rdx
+; SSE2-NEXT:    shrq %cl, %rdx
 ; SSE2-NEXT:    shrq %cl, %rax
 ; SSE2-NEXT:    testb $64, %sil
-; SSE2-NEXT:    cmoveq %rdx, %rax
+; SSE2-NEXT:    cmovneq %rdx, %rax
 ; SSE2-NEXT:    btcl %esi, %eax
 ; SSE2-NEXT:    andl $96, %esi
 ; SSE2-NEXT:    shrl $3, %esi
@@ -1057,14 +1057,14 @@ define <8 x i16> @complement_ne_i128_bitcast(ptr %word, i32 %position) nounwind 
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE4-NEXT:    movdqa (%rdi), %xmm0
-; SSE4-NEXT:    pextrq $1, %xmm0, %rax
-; SSE4-NEXT:    movq %xmm0, %rdx
+; SSE4-NEXT:    movq %xmm0, %rax
+; SSE4-NEXT:    pextrq $1, %xmm0, %rdx
 ; SSE4-NEXT:    movl %esi, %ecx
 ; SSE4-NEXT:    andb $32, %cl
-; SSE4-NEXT:    shrdq %cl, %rax, %rdx
+; SSE4-NEXT:    shrq %cl, %rdx
 ; SSE4-NEXT:    shrq %cl, %rax
 ; SSE4-NEXT:    testb $64, %sil
-; SSE4-NEXT:    cmoveq %rdx, %rax
+; SSE4-NEXT:    cmovneq %rdx, %rax
 ; SSE4-NEXT:    btcl %esi, %eax
 ; SSE4-NEXT:    andl $96, %esi
 ; SSE4-NEXT:    shrl $3, %esi
@@ -1075,14 +1075,14 @@ define <8 x i16> @complement_ne_i128_bitcast(ptr %word, i32 %position) nounwind 
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX-NEXT:    vmovq %xmm0, %rdx
-; AVX-NEXT:    movl %esi, %ecx
-; AVX-NEXT:    andb $32, %cl
-; AVX-NEXT:    shrdq %cl, %rax, %rdx
-; AVX-NEXT:    shrxq %rcx, %rax, %rax
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    vpextrq $1, %xmm0, %rcx
+; AVX-NEXT:    movl %esi, %edx
+; AVX-NEXT:    andb $32, %dl
+; AVX-NEXT:    shrxq %rdx, %rcx, %rcx
+; AVX-NEXT:    shrxq %rdx, %rax, %rax
 ; AVX-NEXT:    testb $64, %sil
-; AVX-NEXT:    cmoveq %rdx, %rax
+; AVX-NEXT:    cmovneq %rcx, %rax
 ; AVX-NEXT:    btcl %esi, %eax
 ; AVX-NEXT:    andl $96, %esi
 ; AVX-NEXT:    shrl $3, %esi
@@ -1386,12 +1386,12 @@ define i1 @sequence_i128(ptr %word, i32 %pos0, i32 %pos1, i32 %pos2) nounwind {
 ; SSE-NEXT:    xorq (%rdi), %r9
 ; SSE-NEXT:    movl %edx, %ecx
 ; SSE-NEXT:    andb $32, %cl
-; SSE-NEXT:    movq %r9, %rax
-; SSE-NEXT:    shrdq %cl, %rsi, %rax
-; SSE-NEXT:    movq %rsi, %r11
+; SSE-NEXT:    movq %rsi, %rax
+; SSE-NEXT:    shrq %cl, %rax
+; SSE-NEXT:    movq %r9, %r11
 ; SSE-NEXT:    shrq %cl, %r11
 ; SSE-NEXT:    testb $64, %dl
-; SSE-NEXT:    cmoveq %rax, %r11
+; SSE-NEXT:    cmovneq %rax, %r11
 ; SSE-NEXT:    btl %edx, %r11d
 ; SSE-NEXT:    setae %al
 ; SSE-NEXT:    orq %r10, %rsi
@@ -1415,23 +1415,22 @@ define i1 @sequence_i128(ptr %word, i32 %pos0, i32 %pos1, i32 %pos2) nounwind {
 ; AVX2-NEXT:    xorl %r11d, %r11d
 ; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    shldq %cl, %r10, %r11
-; AVX2-NEXT:    shlxq %rax, %r10, %r10
+; AVX2-NEXT:    shlxq %rax, %r10, %rcx
 ; AVX2-NEXT:    testb $64, %al
-; AVX2-NEXT:    cmovneq %r10, %r11
-; AVX2-NEXT:    cmovneq %r9, %r10
+; AVX2-NEXT:    cmovneq %rcx, %r11
+; AVX2-NEXT:    cmovneq %r9, %rcx
 ; AVX2-NEXT:    xorq 8(%rdi), %rsi
 ; AVX2-NEXT:    xorq (%rdi), %r8
-; AVX2-NEXT:    movl %edx, %ecx
-; AVX2-NEXT:    andb $32, %cl
-; AVX2-NEXT:    movq %r8, %rax
-; AVX2-NEXT:    shrdq %cl, %rsi, %rax
-; AVX2-NEXT:    shrxq %rcx, %rsi, %rcx
+; AVX2-NEXT:    movl %edx, %eax
+; AVX2-NEXT:    andb $32, %al
+; AVX2-NEXT:    shrxq %rax, %rsi, %r9
+; AVX2-NEXT:    shrxq %rax, %r8, %rax
 ; AVX2-NEXT:    testb $64, %dl
-; AVX2-NEXT:    cmoveq %rax, %rcx
-; AVX2-NEXT:    btl %edx, %ecx
+; AVX2-NEXT:    cmovneq %r9, %rax
+; AVX2-NEXT:    btl %edx, %eax
 ; AVX2-NEXT:    setae %al
 ; AVX2-NEXT:    orq %r11, %rsi
-; AVX2-NEXT:    orq %r10, %r8
+; AVX2-NEXT:    orq %rcx, %r8
 ; AVX2-NEXT:    movq %r8, (%rdi)
 ; AVX2-NEXT:    movq %rsi, 8(%rdi)
 ; AVX2-NEXT:    retq
@@ -1451,23 +1450,22 @@ define i1 @sequence_i128(ptr %word, i32 %pos0, i32 %pos1, i32 %pos2) nounwind {
 ; AVX512-NEXT:    xorl %r11d, %r11d
 ; AVX512-NEXT:    movl %eax, %ecx
 ; AVX512-NEXT:    shldq %cl, %r9, %r11
-; AVX512-NEXT:    shlxq %rax, %r9, %r9
+; AVX512-NEXT:    shlxq %rax, %r9, %rcx
 ; AVX512-NEXT:    testb $64, %al
-; AVX512-NEXT:    cmovneq %r9, %r11
-; AVX512-NEXT:    cmovneq %r10, %r9
+; AVX512-NEXT:    cmovneq %rcx, %r11
+; AVX512-NEXT:    cmovneq %r10, %rcx
 ; AVX512-NEXT:    xorq 8(%rdi), %rsi
 ; AVX512-NEXT:    xorq (%rdi), %r8
-; AVX512-NEXT:    movl %edx, %ecx
-; AVX512-NEXT:    andb $32, %cl
-; AVX512-NEXT:    movq %r8, %rax
-; AVX512-NEXT:    shrdq %cl, %rsi, %rax
-; AVX512-NEXT:    shrxq %rcx, %rsi, %rcx
+; AVX512-NEXT:    movl %edx, %eax
+; AVX512-NEXT:    andb $32, %al
+; AVX512-NEXT:    shrxq %rax, %rsi, %r9
+; AVX512-NEXT:    shrxq %rax, %r8, %rax
 ; AVX512-NEXT:    testb $64, %dl
-; AVX512-NEXT:    cmoveq %rax, %rcx
-; AVX512-NEXT:    btl %edx, %ecx
+; AVX512-NEXT:    cmovneq %r9, %rax
+; AVX512-NEXT:    btl %edx, %eax
 ; AVX512-NEXT:    setae %al
 ; AVX512-NEXT:    orq %r11, %rsi
-; AVX512-NEXT:    orq %r9, %r8
+; AVX512-NEXT:    orq %rcx, %r8
 ; AVX512-NEXT:    movq %r8, (%rdi)
 ; AVX512-NEXT:    movq %rsi, 8(%rdi)
 ; AVX512-NEXT:    retq

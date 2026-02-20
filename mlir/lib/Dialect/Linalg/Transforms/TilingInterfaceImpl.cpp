@@ -23,6 +23,7 @@
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -110,12 +111,11 @@ struct LinalgOpTilingInterface
         linalgOp.createFlatListOfOperandDims(b, loc);
     AffineMap map = linalgOp.getShapesToLoopsMap();
 
-    return llvm::to_vector(
-        llvm::map_range(map.getResults(), [&](AffineExpr loopExpr) {
-          OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
-              b, loc, loopExpr, allShapesSizes);
-          return Range{b.getIndexAttr(0), ofr, b.getIndexAttr(1)};
-        }));
+    return llvm::map_to_vector(map.getResults(), [&](AffineExpr loopExpr) {
+      OpFoldResult ofr = affine::makeComposedFoldedAffineApply(b, loc, loopExpr,
+                                                               allShapesSizes);
+      return Range{b.getIndexAttr(0), ofr, b.getIndexAttr(1)};
+    });
   }
 
   /// Instantiate the tiled implementation of the operation.
@@ -243,9 +243,9 @@ struct LinalgOpTilingInterface
     AffineExpr d0;
     bindDims(b.getContext(), d0);
     SmallVector<OpFoldResult> subShapeSizes =
-        llvm::to_vector(llvm::map_range(sizes, [&](OpFoldResult ofr) {
+        llvm::map_to_vector(sizes, [&](OpFoldResult ofr) {
           return affine::makeComposedFoldedAffineApply(b, loc, d0 - 1, ofr);
-        }));
+        });
 
     OpOperand *outOperand = linalgOp.getDpsInitOperand(resultNumber);
     SliceParameters sliceParams = computeSliceParameters(

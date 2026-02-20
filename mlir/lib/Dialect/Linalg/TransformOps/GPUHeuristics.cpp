@@ -11,6 +11,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/InterleavedRange.h"
@@ -68,12 +69,12 @@ transform::gpu::CopyMappingInfo::CopyMappingInfo(MLIRContext *ctx,
          "compute copy mapping expected same number of threads and copy sizes");
 
   // Compute the smallest bounding box.
-  this->smallestBoundingTileSizes = llvm::to_vector(
-      llvm::map_range(llvm::zip(copySizes, this->numThreads), [](auto &&pair) {
+  this->smallestBoundingTileSizes = llvm::map_to_vector(
+      llvm::zip(copySizes, this->numThreads), [](auto &&pair) {
         int64_t size, numThreads;
         std::tie(size, numThreads) = pair;
         return llvm::divideCeilSigned(size, numThreads);
-      }));
+      });
   SmallVector<Attribute> allThreadMappings{linearId2(ctx), linearId1(ctx),
                                            linearId0(ctx)};
 

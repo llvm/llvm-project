@@ -10,21 +10,8 @@ define void @pr154045(ptr %p, i1 %c, i64 %x) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_SREM_IF:.*]], label %[[PRED_SREM_CONTINUE:.*]]
-; CHECK:       [[PRED_SREM_IF]]:
-; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE]]
-; CHECK:       [[PRED_SREM_CONTINUE]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_SREM_IF1:.*]], label %[[PRED_SREM_CONTINUE2:.*]]
-; CHECK:       [[PRED_SREM_IF1]]:
-; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE2]]
-; CHECK:       [[PRED_SREM_CONTINUE2]]:
 ; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

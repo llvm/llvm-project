@@ -198,6 +198,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
@@ -716,8 +717,7 @@ void ACCImplicitData::generateImplicitDataOps(
   auto isCandidate{[&](Value val) -> bool {
     return isCandidateForImplicitData(val, accRegion, accSupport);
   }};
-  auto candidateVars(
-      llvm::to_vector(llvm::make_filter_range(liveInValues, isCandidate)));
+  auto candidateVars(llvm::filter_to_vector(liveInValues, isCandidate));
   if (candidateVars.empty())
     return;
 

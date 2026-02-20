@@ -27,13 +27,15 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         want_varref=False,
         want_memref=True,
         want_locref=False,
+        frame_index: Optional[int] = 0,
         is_hex=None,
     ):
         resp = self.dap_server.request_evaluate(
-            expression, context=self.context, is_hex=is_hex
+            expression, context=self.context, is_hex=is_hex, frameIndex=frame_index
         )
         self.assertTrue(
-            resp["success"], f"Failed to evaluate expression {expression!r}"
+            resp["success"],
+            f"Failed to evaluate expression {expression!r} in frame {frame_index}",
         )
         body: EvaluateResponseBody = resp["body"]
         self.assertRegex(
@@ -73,9 +75,14 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
             )
 
     def assertEvaluateFailure(self, expression):
+        response = self.dap_server.request_evaluate(expression, context=self.context)
+        self.assertFalse(
+            response["success"],
+            f"Expression:'{expression}' should fail in {self.context} context, got {response!r}",
+        )
         self.assertNotIn(
             "result",
-            self.dap_server.request_evaluate(expression, context=self.context)["body"],
+            response["body"],
         )
 
     def isResultExpandedDescription(self):
@@ -203,10 +210,15 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
                 "struct3", "0x.*0", want_varref=True, want_type="my_struct *"
             )
 
-        if context == "repl":
-            # In the repl context expressions may be interpreted as lldb
+        if context == "repl" or context is None:
+            # In repl or unknown context expressions may be interpreted as lldb
             # commands since no variables have the same name as the command.
             self.assertEvaluate("list", r".*", want_memref=False)
+            # Changing the frame index should not make a difference
+            self.assertEvaluate(
+                "version", r".*lldb.+", want_memref=False, frame_index=1
+            )
+
         else:
             self.assertEvaluateFailure("list")  # local variable of a_function
 
@@ -241,6 +253,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
             self.assertEvaluateFailure("a_function(1)")
             self.assertEvaluateFailure("var2 + struct1.foo")
             self.assertEvaluateFailure("foo_func")
+            self.assertEvaluateFailure("(float) var2")
             self.assertEvaluate("foo_var", "44")
 
         # Expressions at breakpoint 2, which is an anonymous block
@@ -302,6 +315,21 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         self.assertEvaluate("list", "42")
         self.assertEvaluate("static_int", "42")
         self.assertEvaluate("non_static_int", "43")
+        # variable from a different frame
+        self.assertEvaluate("var1", "20", frame_index=1)
+
+        if self.isExpressionParsedExpected():
+            # access global variable without a frame
+            # Run in variable mode to avoid interpreting it as a command
+            res = self.dap_server.request_evaluate(
+                "`lldb-dap repl-mode variable", context="repl"
+            )
+            self.assertTrue(res["success"])
+            self.assertEvaluate("static_int", "42", frame_index=None, want_memref=False)
+            res = self.dap_server.request_evaluate(
+                "`lldb-dap repl-mode auto", context="repl"
+            )
+            self.assertTrue(res["success"])
 
         self.assertEvaluateFailure("var1")
         self.assertEvaluateFailure("var2")

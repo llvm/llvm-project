@@ -259,18 +259,30 @@ template <unsigned N> inline NUses_match<N, Value_match> m_NUses() {
   return NUses_match<N, Value_match>(m_Value());
 }
 
-struct Value_bind {
+template <typename PredPattern> struct Value_bind {
   SDValue &BindVal;
+  PredPattern Pred;
 
-  explicit Value_bind(SDValue &N) : BindVal(N) {}
+  Value_bind(SDValue &N, const PredPattern &P) : BindVal(N), Pred(P) {}
 
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    if (!Pred.match(Ctx, N))
+      return false;
+
     BindVal = N;
     return true;
   }
 };
 
-inline Value_bind m_Value(SDValue &N) { return Value_bind(N); }
+inline auto m_Value(SDValue &N) {
+  return Value_bind<Value_match>(N, m_Value());
+}
+/// Conditionally bind an SDValue based on the predicate.
+template <typename PredPattern>
+inline auto m_Value(SDValue &N, const PredPattern &P) {
+  return Value_bind<PredPattern>(N, P);
+}
 
 template <typename Pattern, typename PredFuncT> struct TLI_pred_match {
   Pattern P;
@@ -764,13 +776,15 @@ struct umin_pred_ty {
 
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_BinOp(unsigned Opc, const LHS &L,
-                                         const RHS &R) {
-  return BinaryOpc_match<LHS, RHS>(Opc, L, R);
+                                         const RHS &R,
+                                         SDNodeFlags Flgs = SDNodeFlags()) {
+  return BinaryOpc_match<LHS, RHS>(Opc, L, R, Flgs);
 }
 template <typename LHS, typename RHS>
-inline BinaryOpc_match<LHS, RHS, true> m_c_BinOp(unsigned Opc, const LHS &L,
-                                                 const RHS &R) {
-  return BinaryOpc_match<LHS, RHS, true>(Opc, L, R);
+inline BinaryOpc_match<LHS, RHS, true>
+m_c_BinOp(unsigned Opc, const LHS &L, const RHS &R,
+          SDNodeFlags Flgs = SDNodeFlags()) {
+  return BinaryOpc_match<LHS, RHS, true>(Opc, L, R, Flgs);
 }
 
 template <typename LHS, typename RHS>
@@ -992,9 +1006,9 @@ inline BinaryOpc_match<LHS, RHS> m_ExtractSubvector(const LHS &Vec,
 template <typename Opnd_P, bool ExcludeChain = false> struct UnaryOpc_match {
   unsigned Opcode;
   Opnd_P Opnd;
-  std::optional<SDNodeFlags> Flags;
+  SDNodeFlags Flags;
   UnaryOpc_match(unsigned Opc, const Opnd_P &Op,
-                 std::optional<SDNodeFlags> Flgs = std::nullopt)
+                 SDNodeFlags Flgs = SDNodeFlags())
       : Opcode(Opc), Opnd(Op), Flags(Flgs) {}
 
   template <typename MatchContext>
@@ -1004,10 +1018,8 @@ template <typename Opnd_P, bool ExcludeChain = false> struct UnaryOpc_match {
       assert(EO.Size == 1);
       if (!Opnd.match(Ctx, N->getOperand(EO.FirstIndex)))
         return false;
-      if (!Flags.has_value())
-        return true;
 
-      return (*Flags & N->getFlags()) == *Flags;
+      return (Flags & N->getFlags()) == Flags;
     }
 
     return false;

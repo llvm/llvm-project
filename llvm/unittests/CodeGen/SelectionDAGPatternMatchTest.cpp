@@ -319,11 +319,19 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_TRUE(sd_match(Or, m_Or(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Or, m_BitwiseLogic(m_Value(), m_Value())));
   EXPECT_FALSE(sd_match(Or, m_DisjointOr(m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(
+      Or, m_BinOp(ISD::OR, m_Value(), m_Value(), SDNodeFlags::Disjoint)));
+  EXPECT_FALSE(sd_match(
+      Or, m_c_BinOp(ISD::OR, m_Value(), m_Value(), SDNodeFlags::Disjoint)));
 
   EXPECT_TRUE(sd_match(DisOr, m_Or(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(DisOr, m_DisjointOr(m_Value(), m_Value())));
   EXPECT_FALSE(sd_match(DisOr, m_Add(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(DisOr, m_AddLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(
+      DisOr, m_BinOp(ISD::OR, m_Value(), m_Value(), SDNodeFlags::Disjoint)));
+  EXPECT_TRUE(sd_match(
+      DisOr, m_c_BinOp(ISD::OR, m_Value(), m_Value(), SDNodeFlags::Disjoint)));
 
   EXPECT_TRUE(sd_match(Rotl, m_Rotl(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Rotr, m_Rotr(m_Value(), m_Value())));
@@ -438,6 +446,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_FALSE(sd_match(SMinDiffSign, DAG.get(),
                         m_UMinLike(m_Specific(Neg0), m_Specific(NonNeg1))));
 
+  SDValue BindVal;
   // By default, it matches any of the results.
   EXPECT_TRUE(
       sd_match(PartsDiff, m_Sub(m_Opc(ISD::SMUL_LOHI), m_Opc(ISD::SMUL_LOHI))));
@@ -447,11 +456,29 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_FALSE(sd_match(PartsDiff, m_Sub(m_Opc(ISD::SMUL_LOHI),
                                          m_Result<0>(m_Opc(ISD::SMUL_LOHI)))));
 
-  SDValue BindVal;
+  // Conditionally bind the value from a certain sub-pattern.
+  EXPECT_TRUE(sd_match(PartsDiff, m_Sub(m_Value(BindVal, m_Opc(ISD::SMUL_LOHI)),
+                                        m_Opc(ISD::SMUL_LOHI))));
+  EXPECT_EQ(BindVal, SMulLoHi);
+  BindVal = SDValue();
+  EXPECT_FALSE(sd_match(PartsDiff, m_Sub(m_Value(BindVal, m_Opc(ISD::ADD)),
+                                         m_Opc(ISD::SMUL_LOHI))));
+  EXPECT_NE(BindVal, SMulLoHi);
+
+  BindVal = SDValue();
   EXPECT_TRUE(sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD, m_Value(BindVal),
                                              m_Deferred(BindVal))));
   EXPECT_FALSE(sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD, m_OtherVT(),
                                               m_SpecificVT(Float32VT))));
+  BindVal = SDValue();
+  EXPECT_TRUE(
+      sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD,
+                                     m_Value(BindVal, m_SpecificVT(Float32VT)),
+                                     m_Deferred(BindVal))));
+  BindVal = SDValue();
+  EXPECT_FALSE(sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD,
+                                              m_Value(BindVal, m_OtherVT()),
+                                              m_Deferred(BindVal))));
 
   EXPECT_TRUE(sd_match(SubVec, m_ExtractSubvector(m_Value(), m_Value())));
   EXPECT_TRUE(

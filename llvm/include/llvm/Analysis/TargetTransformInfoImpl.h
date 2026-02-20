@@ -193,6 +193,11 @@ public:
     return FromPtrBits.anyextOrTrunc(ToASBitSize);
   }
 
+  virtual APInt getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
+                                                 unsigned DstAS) const {
+    return {DL.getPointerSizeInBits(SrcAS), 0};
+  }
+
   virtual bool
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const {
     return AS == 0;
@@ -704,7 +709,7 @@ public:
       unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
       ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
       TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-      TTI::TargetCostKind CostKind) const {
+      TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
     return InstructionCost::getInvalid();
   }
 
@@ -1063,6 +1068,13 @@ public:
   virtual unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
                                         unsigned DefaultCallPenalty) const {
     return DefaultCallPenalty;
+  }
+
+  virtual bool
+  shouldCopyAttributeWhenOutliningFrom(const Function *Caller,
+                                       const Attribute &Attr) const {
+    // Copy attributes by default
+    return true;
   }
 
   virtual bool areTypesABICompatible(const Function *Caller,

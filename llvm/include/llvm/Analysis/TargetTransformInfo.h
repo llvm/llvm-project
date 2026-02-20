@@ -277,7 +277,12 @@ class TargetTransformInfoImplBase;
 /// for IR-level transformations.
 class TargetTransformInfo {
 public:
-  enum PartialReductionExtendKind { PR_None, PR_SignExtend, PR_ZeroExtend };
+  enum PartialReductionExtendKind {
+    PR_None,
+    PR_SignExtend,
+    PR_ZeroExtend,
+    PR_FPExtend
+  };
 
   /// Get the kind of extension that an instruction represents.
   LLVM_ABI static PartialReductionExtendKind
@@ -566,6 +571,21 @@ public:
   // the source addrspace.
   LLVM_ABI KnownBits computeKnownBitsAddrSpaceCast(
       unsigned FromAS, unsigned ToAS, const KnownBits &FromPtrBits) const;
+
+  /// Return the preserved ptr bit mask that is safe to cast integer to pointer
+  /// with new address space. The returned APInt size is identical to the source
+  /// address space size. The address of integer form may only change in the
+  /// least significant bit (e.g. within a page). In that case target can
+  /// determine if it is safe to cast the generic address space to the original
+  /// address space. For below example, we can replace `%gp2 = inttoptr i64 %b
+  /// to ptr` with `%gp2 = inttoptr i64 %b to ptr addrspace(2)`
+  ///   %gp = addrspacecast ptr addrspace(2) %sp to ptr
+  ///   %a = ptrtoint ptr %gp to i64
+  ///   %b = xor i64 7, %a
+  ///   %gp2 = inttoptr i64 %b to ptr
+  ///   store i16 0, ptr %gp2, align 2
+  LLVM_ABI APInt getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
+                                                  unsigned DstAS) const;
 
   /// Return true if globals in this address space can have initializers other
   /// than `undef`.
@@ -1442,13 +1462,18 @@ public:
 
   /// \return The cost of a partial reduction, which is a reduction from a
   /// vector to another vector with fewer elements of larger size. They are
-  /// represented by the llvm.vector.partial.reduce.add intrinsic, which
-  /// takes an accumulator of type \p AccumType and a second vector operand to
-  /// be accumulated, whose element count is specified by \p VF. The type of
-  /// reduction is specified by \p Opcode. The second operand passed to the
-  /// intrinsic could be the result of an extend, such as sext or zext. In
-  /// this case \p BinOp is nullopt, \p InputTypeA represents the type being
-  /// extended and \p OpAExtend the operation, i.e. sign- or zero-extend.
+  /// represented by the llvm.vector.partial.reduce.add and
+  /// llvm.vector.partial.reduce.fadd intrinsics, which take an accumulator of
+  /// type \p AccumType and a second vector operand to be accumulated, whose
+  /// element count is specified by \p VF. The type of reduction is specified by
+  /// \p Opcode. The second operand passed to the intrinsic could be the result
+  /// of an extend, such as sext or zext. In this case \p BinOp is nullopt,
+  /// \p InputTypeA represents the type being extended and \p OpAExtend the
+  /// operation, i.e. sign- or zero-extend.
+  /// For floating-point partial reductions, any fast math flags (FMF) should be
+  /// provided to govern which reductions are valid to perform (depending on
+  /// reassoc or contract, for example), whereas this must be nullopt for
+  /// integer partial reductions.
   /// Also, \p InputTypeB should be nullptr and OpBExtend should be None.
   /// Alternatively, the second operand could be the result of a binary
   /// operation performed on two extends, i.e.
@@ -1463,7 +1488,7 @@ public:
       unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
       ElementCount VF, PartialReductionExtendKind OpAExtend,
       PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-      TTI::TargetCostKind CostKind) const;
+      TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const;
 
   /// \return The maximum interleave factor that any transform should try to
   /// perform for this target. This number depends on the level of parallelism
@@ -1831,6 +1856,12 @@ public:
   LLVM_ABI unsigned getInlineCallPenalty(const Function *F,
                                          const CallBase &Call,
                                          unsigned DefaultCallPenalty) const;
+
+  /// \returns true if `Caller`'s `Attr` should be added to the new function
+  /// created by outlining part of `Caller`.
+  LLVM_ABI bool
+  shouldCopyAttributeWhenOutliningFrom(const Function *Caller,
+                                       const Attribute &Attr) const;
 
   /// \returns True if the caller and callee agree on how \p Types will be
   /// passed to or returned from the callee.

@@ -49,10 +49,8 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
                           const SmallVectorImpl<Instruction *> &RetVec,
                           llvm::function_ref<void(Instruction *)> Callback);
 
-bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
-                        const SmallVectorImpl<IntrinsicInst *> &LifetimeEnd,
-                        const DominatorTree *DT, const LoopInfo *LI,
-                        size_t MaxLifetimes);
+bool isStandardLifetime(const AllocaInfo &AInfo, const DominatorTree *DT,
+                        const LoopInfo *LI, size_t MaxLifetimes);
 
 Instruction *getUntagLocationIfFunctionExit(Instruction &Inst);
 
@@ -93,10 +91,11 @@ Value *readRegister(IRBuilder<> &IRB, StringRef Name);
 Value *getFP(IRBuilder<> &IRB);
 Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB);
 Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot);
+Value *getDarwinSlotPtr(IRBuilder<> &IRB, int Slot);
 
 void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag);
 Value *incrementThreadLong(IRBuilder<> &IRB, Value *ThreadLong,
-                           unsigned int Inc);
+                           unsigned int Inc, bool IsMemtagDarwin = false);
 
 } // namespace memtag
 } // namespace llvm

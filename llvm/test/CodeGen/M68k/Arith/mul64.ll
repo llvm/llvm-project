@@ -7,10 +7,14 @@ define i64 @foo(i64 %t, i64 %u) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    suba.l #20, %sp
-; CHECK-NEXT:    move.l (36,%sp), (12,%sp)
-; CHECK-NEXT:    move.l (32,%sp), (8,%sp)
-; CHECK-NEXT:    move.l (28,%sp), (4,%sp)
-; CHECK-NEXT:    move.l (24,%sp), (%sp)
+; CHECK-NEXT:    move.l (36,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (12,%sp)
+; CHECK-NEXT:    move.l (32,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (8,%sp)
+; CHECK-NEXT:    move.l (28,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (4,%sp)
+; CHECK-NEXT:    move.l (24,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (%sp)
 ; CHECK-NEXT:    jsr __muldi3
 ; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts

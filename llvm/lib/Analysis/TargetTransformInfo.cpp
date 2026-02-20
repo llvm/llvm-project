@@ -339,6 +339,11 @@ KnownBits TargetTransformInfo::computeKnownBitsAddrSpaceCast(
   return TTIImpl->computeKnownBitsAddrSpaceCast(FromAS, ToAS, FromPtrBits);
 }
 
+APInt TargetTransformInfo::getAddrSpaceCastPreservedPtrMask(
+    unsigned SrcAS, unsigned DstAS) const {
+  return TTIImpl->getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
+}
+
 bool TargetTransformInfo::canHaveNonUndefGlobalInitializerInAddressSpace(
     unsigned AS) const {
   return TTIImpl->canHaveNonUndefGlobalInitializerInAddressSpace(AS);
@@ -909,10 +914,10 @@ InstructionCost TargetTransformInfo::getPartialReductionCost(
     unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
     ElementCount VF, PartialReductionExtendKind OpAExtend,
     PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-    TTI::TargetCostKind CostKind) const {
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
   return TTIImpl->getPartialReductionCost(Opcode, InputTypeA, InputTypeB,
                                           AccumType, VF, OpAExtend, OpBExtend,
-                                          BinOp, CostKind);
+                                          BinOp, CostKind, FMF);
 }
 
 unsigned TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF) const {
@@ -1057,6 +1062,8 @@ TargetTransformInfo::getPartialReductionExtendKind(
     return PR_ZeroExtend;
   case Instruction::CastOps::SExt:
     return PR_SignExtend;
+  case Instruction::CastOps::FPExt:
+    return PR_FPExtend;
   default:
     return PR_None;
   }
@@ -1367,6 +1374,10 @@ TargetTransformInfo::getInlineCallPenalty(const Function *F,
   return TTIImpl->getInlineCallPenalty(F, Call, DefaultCallPenalty);
 }
 
+bool TargetTransformInfo::shouldCopyAttributeWhenOutliningFrom(
+    const Function *Caller, const Attribute &Attr) const {
+  return TTIImpl->shouldCopyAttributeWhenOutliningFrom(Caller, Attr);
+}
 bool TargetTransformInfo::areTypesABICompatible(const Function *Caller,
                                                 const Function *Callee,
                                                 ArrayRef<Type *> Types) const {

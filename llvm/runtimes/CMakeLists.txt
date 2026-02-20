@@ -258,6 +258,17 @@ function(runtime_default_target)
     # The target libomp-mod is a dependee of check-flang needed to run its
     # OpenMP tests
     list(APPEND extra_targets "libomp-mod")
+
+    # Let the "doxygen" build target also build openmp's doxygen, just like
+    # "check" and "install" also apply to the runtimes builds.
+    # TODO: Generalize for all runtimes, but currently openmp is the only
+    #       runtime that has a doxygen target.
+    if (LLVM_ENABLE_DOXYGEN)
+      list(APPEND extra_targets "doxygen-openmp")
+      if (TARGET doxygen)
+        add_dependencies(doxygen doxygen-openmp)
+      endif ()
+    endif ()
   endif ()
 
   if(LLVM_INCLUDE_TESTS)
@@ -278,6 +289,7 @@ function(runtime_default_target)
                                       -DLLVM_ENABLE_PROJECTS_USED=${LLVM_ENABLE_PROJECTS_USED}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
                                       -DLLVM_BUILD_TOOLS=${LLVM_BUILD_TOOLS}
+                                      -DLLVM_ENABLE_DOXYGEN=${LLVM_ENABLE_DOXYGEN}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_CXX_COMPILER_WORKS=ON
                                       -DCMAKE_Fortran_COMPILER_WORKS=ON
@@ -688,13 +700,6 @@ if(build_runtimes)
     # We need to add the runtimes as a dependency because compiler-rt can be
     # built as part of runtimes and we need the profile runtime for PGO
     add_dependencies(clang-bootstrap-deps runtimes)
-    # The bootstrap build will attempt to configure the offload runtime
-    # before the openmp project which will error out due to failing to
-    # find libomp.so. We must add omp as a dependency before runtimes
-    # are configured.
-    if("openmp" IN_LIST LLVM_ENABLE_PROJECTS AND "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
-      add_dependencies(clang-bootstrap-deps omp)
-    endif()
   endif()
 
   if(LLVM_INCLUDE_TESTS)

@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "VPlanPatternMatch.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -113,9 +114,9 @@ inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
   for (unsigned I = 0; I != Worklist.size(); ++I) {
     VPValue *Cur = Worklist[I];
     auto *R = Cur->getDefiningRecipe();
-    // TODO: Skip live-ins once no degenerate reductions (ones with constant
-    // backedge values) are generated.
-    if (R && Pred(R))
+    if (!R)
+      continue;
+    if (Pred(R))
       return R;
     for (VPUser *U : Cur->users()) {
       for (VPValue *V : cast<VPRecipeBase>(U)->definedValues())
@@ -124,6 +125,31 @@ inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
   }
   return nullptr;
 }
+
+/// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
+/// return nullptr;
+template <typename MatchT>
+static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
+  auto It = find_if(V->users(), match_fn(P));
+  return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
+}
+
+/// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
+/// return nullptr.
+template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
+  using namespace llvm::VPlanPatternMatch;
+  return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
+}
+
+/// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
+/// inserted for predicated reductions or tail folding.
+VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
+
+/// Collect the header mask with the pattern:
+/// (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
+/// TODO: Introduce explicit recipe for header-mask instead of searching
+/// the header-mask pattern manually.
+VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
 
 } // namespace vputils
 

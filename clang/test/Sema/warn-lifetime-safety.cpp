@@ -10,10 +10,13 @@ struct [[gsl::Owner]] MyObj {
   MyObj();
   MyObj(int);
   MyObj(const MyObj&);
+  MyObj(MyObj&&);
+  MyObj& operator=(MyObj&&);
   ~MyObj() {}  // Non-trivial destructor
   MyObj operator+(MyObj);
   
   View getView() const [[clang::lifetimebound]];
+  const int* getData() const [[clang::lifetimebound]];
 };
 
 struct [[gsl::Owner]] MyTrivialObj {
@@ -25,6 +28,10 @@ struct [[gsl::Pointer()]] View {
   View(const MyTrivialObj &); // Borrows from MyTrivialObj
   View();
   void use() const;
+
+  const MyObj* data() const;
+  const MyObj& operator*() const;
+  const MyObj* operator->() const;
 };
 
 class TriviallyDestructedClass {
@@ -1399,39 +1406,69 @@ void add(int c, MyObj* node) {
 }
 } // namespace CppCoverage
 
-namespace do_not_warn_on_std_move {
-void silenced() {
+namespace strict_warn_on_move {
+void strict_warn_on_move() {
   MyObj b;
   View v;
   {
     MyObj a;
-    v = a;
-    b = std::move(a); // No warning for 'a' being moved.
-  }
-  (void)v;
+    v = a;            // expected-warning-re {{object whose reference {{.*}} may have been moved}}
+    b = std::move(a); // expected-note {{potentially moved here}}
+  }                   // expected-note {{destroyed here}}
+  (void)v;            // expected-note {{later used here}}
 }
 
-void silenced_flow_insensitive(bool c) {
-  MyObj a;
-  View v = a;
-  if (c) {
-    MyObj b = std::move(a);
-  }
-  (void)v;
+void flow_sensitive(bool c) {
+  View v;
+  {
+    MyObj a;
+    if (c) {
+      MyObj b = std::move(a);
+      return;
+    }
+    v = a;  // expected-warning {{object whose reference}}
+  }         // expected-note {{destroyed here}}
+  (void)v;  // expected-note {{later used here}}
 }
 
-// FIXME: Silence when move arg is not a declref.
 void take(MyObj&&);
-void not_silenced_via_conditional(bool cond) {
+void detect_conditional(bool cond) {
   View v;
   {
     MyObj a, b;
-    v = cond ? a : b; // expected-warning 2 {{object whose reference }}
-    take(std::move(cond ? a : b));
+    v = cond ? a : b; // expected-warning-re 2 {{object whose reference {{.*}} may have been moved}}
+    take(std::move(cond ? a : b)); // expected-note 2 {{potentially moved here}}
   }         // expected-note 2 {{destroyed here}}
   (void)v;  // expected-note 2 {{later used here}}
 }
-} // namespace do_not_warn_on_std_move
+
+void wrong_use_of_move_is_permissive() {
+  View v;
+  {
+    MyObj a;
+    v = std::move(a); // expected-warning {{object whose reference is captured does not live long enough}}
+  }         // expected-note {{destroyed here}}
+  (void)v;  // expected-note {{later used here}}
+  const int* p;
+  {
+    MyObj a;
+    p = std::move(a).getData(); // expected-warning {{object whose reference is captured does not live long enough}}
+  }         // expected-note {{destroyed here}}
+  (void)p;  // expected-note {{later used here}}
+}
+
+void take(int*);
+void test_release_no_uaf() {
+  int* r;
+  // Calling release() marks p as moved from, so its destruction doesn't invalidate r.
+  {
+    std::unique_ptr<int> p;
+    r = p.get();        // expected-warning-re {{object whose reference {{.*}} may have been moved}}
+    take(p.release());  // expected-note {{potentially moved here}}
+  }                     // expected-note {{destroyed here}}
+  (void)*r;             // expected-note {{later used here}}
+}
+} // namespace strict_warn_on_move
 
 // Implicit this annotations with redecls.
 namespace GH172013 {
@@ -1454,6 +1491,76 @@ void bar() {
     (void)x; // expected-note {{used here}}
 }
 }
+
+namespace DereferenceViews {
+const MyObj& testDeref(MyObj obj) {
+  View v = obj; // expected-warning {{address of stack memory is returned later}}
+  return *v;    // expected-note {{returned here}}
+}
+const MyObj* testDerefAddr(MyObj obj) {
+  View v = obj; // expected-warning {{address of stack memory is returned later}}
+  return &*v;   // expected-note {{returned here}}
+}
+const MyObj* testData(MyObj obj) {
+  View v = obj;     // expected-warning {{address of stack memory is returned later}}
+  return v.data();  // expected-note {{returned here}}
+}
+const int* testLifetimeboundAccessorOfMyObj(MyObj obj) {
+  View v = obj;           // expected-warning {{address of stack memory is returned later}}
+  const MyObj* ptr = v.data();
+  return ptr->getData();  // expected-note {{returned here}}
+}
+const int* testLifetimeboundAccessorOfMyObjThroughDeref(MyObj obj) {
+  View v = obj;         // expected-warning {{address of stack memory is returned later}}
+  return v->getData();  // expected-note {{returned here}}
+}
+} // namespace DereferenceViews
+
+namespace ViewsBeginEndIterators {
+template <typename T>
+struct [[gsl::Pointer]] Iterator {
+  Iterator operator++();
+  T& operator*() const;
+  T* operator->() const;
+  bool operator!=(const Iterator& other) const;
+};
+
+template <typename T>
+struct [[gsl::Owner]] Container {
+using It = Iterator<T>;
+It begin() const [[clang::lifetimebound]];
+It end() const [[clang::lifetimebound]];
+};
+
+MyObj Global;
+
+const MyObj& ContainerMyObjReturnRef(Container<MyObj> c) {
+  for (const MyObj& x : c) {  // expected-warning {{address of stack memory is returned later}}
+    return x;                 // expected-note {{returned here}}
+  }
+  return Global;
+}
+
+View ContainerMyObjReturnView(Container<MyObj> c) {
+  for (const MyObj& x : c) {  // expected-warning {{address of stack memory is returned later}}
+    return x;                 // expected-note {{returned here}}
+  }
+  for (View x : c) {  // expected-warning {{address of stack memory is returned later}}
+    return x;         // expected-note {{returned here}}
+  }
+  return Global;
+}
+
+View ContainerViewsOk(Container<View> c) {
+  for (View x : c) {
+    return x;
+  }
+  for (const View& x : c) {
+    return x;
+  }
+  return Global;
+}
+} // namespace ViewsBeginEndIterators
 
 namespace reference_type_decl_ref_expr {
 struct S {
@@ -1616,3 +1723,25 @@ void test() {
 }
 
 } // namespace attr_on_template_params
+
+namespace non_trivial_views {
+struct [[gsl::Pointer]] View {
+    View(const std::string&);
+    ~View(); // Forces a CXXBindTemporaryExpr.
+};
+
+View test1(std::string a) {
+  // Make sure we handle CXXBindTemporaryExpr of view types.
+  return View(a); // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
+}
+
+View test2(std::string a) {
+  View b = View(a); // expected-warning {{address of stack memory is returned later}}
+  return b;         // expected-note {{returned here}}
+}
+
+View test3(std::string a) {
+  const View& b = View(a);  // expected-warning {{address of stack memory is returned later}}
+  return b;                 // expected-note {{returned here}}
+}
+} // namespace non_trivial_views

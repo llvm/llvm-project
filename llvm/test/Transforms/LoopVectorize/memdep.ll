@@ -244,7 +244,7 @@ for.end:
 ; RIGHTVF-LABEL: @pr34283
 ; RIGHTVF: <4 x i64>
 
-; WRONGVF-LABLE: @pr34283
+; WRONGVF-LABEL: @pr34283
 ; WRONGVF-NOT: <8 x i64>
 
 @a = common local_unnamed_addr global [64 x i32] zeroinitializer, align 16

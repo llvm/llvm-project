@@ -20,7 +20,6 @@ import subprocess
 import sys
 import threading
 import time
-import warnings
 from typing import (
     Any,
     BinaryIO,
@@ -39,7 +38,14 @@ from typing import (
 
 # set timeout based on whether ASAN was enabled or not. Increase
 # timeout by a factor of 10 if ASAN is enabled.
-DEFAULT_TIMEOUT: Final[float] = 50 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
+DEFAULT_TIMEOUT: Final[float] = 50.0 * (10.0 if ("ASAN_OPTIONS" in os.environ) else 1.0)
+
+
+# A quiet period between events, used to determine if we're done receiving
+# events in a given window, otherwise 'wait_for_stopped' would need to wait
+# until the DEFAULT_TIMEOUT occurs, slows down tests significantly.
+EVENT_QUIET_PERIOD = 0.25 * (20.0 if ("ASAN_OPTIONS" in os.environ) else 1.0)
+
 
 # See lldbtest.Base.spawnSubprocess, which should help ensure any processes
 # created by the DAP client are terminated correctly when the test ends.
@@ -119,48 +125,6 @@ class Breakpoint(TypedDict, total=False):
     def is_verified(src: "Breakpoint") -> bool:
         return src.get("verified", False)
 
-
-def dump_memory(base_addr, data, num_per_line, outfile):
-    data_len = len(data)
-    hex_string = binascii.hexlify(data)
-    addr = base_addr
-    ascii_str = ""
-    i = 0
-    while i < data_len:
-        outfile.write("0x%8.8x: " % (addr + i))
-        bytes_left = data_len - i
-        if bytes_left >= num_per_line:
-            curr_data_len = num_per_line
-        else:
-            curr_data_len = bytes_left
-        hex_start_idx = i * 2
-        hex_end_idx = hex_start_idx + curr_data_len * 2
-        curr_hex_str = hex_string[hex_start_idx:hex_end_idx]
-        # 'curr_hex_str' now contains the hex byte string for the
-        # current line with no spaces between bytes
-        t = iter(curr_hex_str)
-        # Print hex bytes separated by space
-        outfile.write(" ".join(a + b for a, b in zip(t, t)))
-        # Print two spaces
-        outfile.write("  ")
-        # Calculate ASCII string for bytes into 'ascii_str'
-        ascii_str = ""
-        for j in range(i, i + curr_data_len):
-            ch = data[j]
-            if ch in string.printable and ch not in string.whitespace:
-                ascii_str += "%c" % (ch)
-            else:
-                ascii_str += "."
-        # Print ASCII representation and newline
-        outfile.write(ascii_str)
-        i = i + curr_data_len
-        outfile.write("\n")
-
-
-def packet_type_is(packet, packet_type):
-    return "type" in packet and packet["type"] == packet_type
-
-
 def dump_dap_log(log_file: Optional[str]) -> None:
     print("========= DEBUG ADAPTER PROTOCOL LOGS =========", file=sys.stderr)
     if log_file is None:
@@ -173,6 +137,21 @@ def dump_dap_log(log_file: Optional[str]) -> None:
 
 class NotSupportedError(KeyError):
     """Raised if a feature is not supported due to its capabilities."""
+
+
+class RequestError(Exception):
+    """Raised if a DAP request fails."""
+
+    def __init__(self, request: Request, response: Optional[Response] = None):
+        super().__init__()
+        self.request = request
+        self.response = response
+
+    def __str__(self) -> str:
+        desc = f"request failed request={self.request!r}"
+        if self.response:
+            desc += f" response={self.response!r}"
+        return desc
 
 
 class ReplayMods(TypedDict, total=False):
@@ -260,15 +239,13 @@ class DebugCommunication(object):
         self.exit_status: Optional[int] = None
         self.capabilities: Dict = {}
         self.initialized: bool = False
-        self.configuration_done_sent: bool = False
         self.process_event_body: Optional[Dict] = None
+        self.configuration_done_sent = False
+        self.launch_or_attach_sent = False
         self.terminated: bool = False
         self.events: List[Event] = []
         self.progress_events: List[Event] = []
-        self.invalidated_event: Optional[Event] = None
-        self.memory_event: Optional[Event] = None
         self.reverse_requests: List[Request] = []
-        self.module_events: List[Dict] = []
         self.sequence: int = 1
         self.output: Dict[str, str] = {}
         self.reverse_process: Optional[subprocess.Popen] = None
@@ -278,29 +255,31 @@ class DebugCommunication(object):
         self.stopped_thread: Optional[dict] = None
         self.thread_stacks: Optional[Dict[int, List[dict]]]
         self.thread_stop_reasons: Dict[str, Any] = {}
+        self.focused_tid: Optional[int] = None
         self.frame_scopes: Dict[str, Any] = {}
         # keyed by breakpoint id
-        self.resolved_breakpoints: dict[str, Breakpoint] = {}
+        self.resolved_breakpoints: dict[int, Breakpoint] = {}
 
         # Modifiers used when replaying a log file.
         self._mod = ReplayMods()
 
         # trigger enqueue thread
         self._recv_thread.start()
+        self.initialized_event = None
 
     @classmethod
     def encode_content(cls, s: str) -> bytes:
         return ("Content-Length: %u\r\n\r\n%s" % (len(s), s)).encode("utf-8")
 
     @classmethod
-    def validate_response(cls, command, response):
-        if command["command"] != response["command"]:
+    def validate_response(cls, request: Request, response: Response) -> None:
+        if request["command"] != response["command"]:
             raise ValueError(
-                f"command mismatch in response {command['command']} != {response['command']}"
+                f"command mismatch in response {request['command']} != {response['command']}"
             )
-        if command["seq"] != response["request_seq"]:
+        if request["seq"] != response["request_seq"]:
             raise ValueError(
-                f"seq mismatch in response {command['seq']} != {response['request_seq']}"
+                f"seq mismatch in response {request['seq']} != {response['request_seq']}"
             )
 
     def _read_packet(self) -> Optional[ProtocolMessage]:
@@ -410,23 +389,28 @@ class DebugCommunication(object):
         *,
         predicate: Optional[Callable[[ProtocolMessage], bool]] = None,
         timeout: float = DEFAULT_TIMEOUT,
-    ) -> Optional[ProtocolMessage]:
+    ) -> ProtocolMessage:
         """Processes received packets from the adapter.
         Updates the DebugCommunication stateful properties based on the received
         packets in the order they are received.
+
         NOTE: The only time the session state properties should be updated is
         during this call to ensure consistency during tests.
+
         Args:
             predicate:
                 Optional, if specified, returns the first packet that matches
                 the given predicate.
             timeout:
-                Optional, if specified, processes packets until either the
-                timeout occurs or the predicate matches a packet, whichever
-                occurs first.
+                Processes packets until either the timeout occurs or the
+                predicate matches a packet, whichever occurs first.
+
         Returns:
-            The first matching packet for the given predicate, if specified,
-            otherwise None.
+            The first matching packet for the given predicate.
+
+        Raises:
+            TimeoutError: Timeout while waiting for predicate.
+            EOFError: End of stream detected.
         """
         assert (
             threading.current_thread() != self._recv_thread
@@ -442,10 +426,15 @@ class DebugCommunication(object):
                 if predicate and predicate(packet):
                     self._pending_packets.pop(i)
                     return packet
+            return False
 
         with self._recv_condition:
             packet = self._recv_condition.wait_for(process_until_match, timeout)
-            return None if isinstance(packet, EOFError) else packet
+            if isinstance(packet, EOFError):
+                raise EOFError
+            if not packet:
+                raise TimeoutError
+            return cast(ProtocolMessage, packet)
 
     def _process_recv_packets(self) -> None:
         """Process received packets, updating the session state."""
@@ -483,6 +472,7 @@ class DebugCommunication(object):
                 self.output[category] = output
         elif event == "initialized":
             self.initialized = True
+            self.initialized_event = packet
         elif event == "process":
             # When a new process is attached or launched, remember the
             # details that are available in the body of the event
@@ -507,6 +497,8 @@ class DebugCommunication(object):
             self._process_stopped()
             tid = body["threadId"]
             self.thread_stop_reasons[tid] = body
+            if "preserveFocusHint" not in body or not body["preserveFocusHint"]:
+                self.focused_tid = tid
         elif event.startswith("progress"):
             # Progress events come in as 'progressStart', 'progressUpdate',
             # and 'progressEnd' events. Keep these around in case test
@@ -518,10 +510,6 @@ class DebugCommunication(object):
         elif event == "capabilities" and body:
             # Update the capabilities with new ones from the event.
             self.capabilities.update(body["capabilities"])
-        elif event == "invalidated":
-            self.invalidated_event = packet
-        elif event == "memory":
-            self.memory_event = packet
 
     def _handle_reverse_request(self, request: Request) -> None:
         if request in self.reverse_requests:
@@ -567,6 +555,7 @@ class DebugCommunication(object):
         self.frame_scopes = {}
         if all_threads_continued:
             self.thread_stop_reasons = {}
+            self.focused_tid = None
 
     def _update_verified_breakpoints(self, breakpoints: List[Breakpoint]):
         for bp in breakpoints:
@@ -575,7 +564,7 @@ class DebugCommunication(object):
             if "id" not in bp:
                 continue
 
-            self.resolved_breakpoints[str(bp["id"])] = bp
+            self.resolved_breakpoints[bp["id"]] = bp
 
     def send_packet(self, packet: ProtocolMessage) -> int:
         """Takes a dictionary representation of a DAP request and send the request to the debug adapter.
@@ -607,63 +596,80 @@ class DebugCommunication(object):
         response. Validates that the response is the correct sequence and
         command in the reply. Any events that are received are added to the
         events list in this object"""
-        seq = self.send_packet(request)
-        response = self.receive_response(seq)
-        if response is None:
-            raise ValueError(f"no response for {request!r}")
-        self.validate_response(request, response)
-        return response
+        response = None
+        try:
+            seq = self.send_packet(request)
+            response = self.receive_response(seq)
+            self.validate_response(request, response)
+            return response
+        except Exception as exc:
+            # Add additional context for the request and response.
+            raise RequestError(request, response) from exc
 
-    def receive_response(self, seq: int) -> Optional[Response]:
+    def receive_response(self, seq: int) -> Response:
         """Waits for a response with the associated request_sec."""
 
         def predicate(p: ProtocolMessage):
             return p["type"] == "response" and p["request_seq"] == seq
 
-        return cast(Optional[Response], self._recv_packet(predicate=predicate))
+        return cast(Response, self._recv_packet(predicate=predicate))
 
-    def wait_for_event(self, filter: List[str] = []) -> Optional[Event]:
+    def wait_for_event(self, filter: List[str]) -> Event:
         """Wait for the first event that matches the filter."""
 
         def predicate(p: ProtocolMessage):
             return p["type"] == "event" and p["event"] in filter
 
-        return cast(
-            Optional[Event],
-            self._recv_packet(predicate=predicate),
-        )
+        return cast(Event, self._recv_packet(predicate=predicate))
 
-    def wait_for_stopped(self) -> Optional[List[Event]]:
-        stopped_events = []
-        stopped_event = self.wait_for_event(filter=["stopped", "exited"])
-        while stopped_event:
-            stopped_events.append(stopped_event)
-            # If we exited, then we are done
-            if stopped_event["event"] == "exited":
+    def collect_events(self, filter: List[str]) -> List[Event]:
+        """Wait for the first event that matches the filter."""
+        events = []
+
+        def predicate(p: ProtocolMessage):
+            return p["type"] == "event" and p["event"] in filter
+
+        event = cast(Event, self._recv_packet(predicate=predicate))
+        while event:
+            events.append(event)
+            try:
+                event = cast(
+                    Event,
+                    self._recv_packet(predicate=predicate, timeout=EVENT_QUIET_PERIOD),
+                )
+            except TimeoutError:
                 break
+        return events
 
-            # Otherwise we stopped and there might be one or more 'stopped'
-            # events for each thread that stopped with a reason, so keep
-            # checking for more 'stopped' events and return all of them
-            # Use a shorter timeout for additional stopped events
-            def predicate(p: ProtocolMessage):
-                return p["type"] == "event" and p["event"] in ["stopped", "exited"]
+    def wait_for_initialized(self) -> None:
+        """Wait for the debugger to become initialized."""
+        if self.initialized:
+            return
+        self.wait_for_event(["initialized"])
 
-            stopped_event = cast(
-                Optional[Event], self._recv_packet(predicate=predicate, timeout=0.25)
-            )
-        return stopped_events
+    def ensure_initialized(self) -> None:
+        """Validates that we can wait for initialized."""
+        if self.initialized:
+            return
+        assert self.launch_or_attach_sent, "launch or attach request not yet sent"
+        assert (
+            not self.configuration_done_sent
+        ), "configuration done has already been sent, 'initialized' should have already occurred"
+        self.wait_for_initialized()
 
-    def wait_for_breakpoint_events(self):
-        breakpoint_events: list[Event] = []
-        while True:
-            event = self.wait_for_event(["breakpoint"])
-            if not event:
-                break
-            breakpoint_events.append(event)
-        return breakpoint_events
+    def wait_for_stopped(self) -> List[Event]:
+        """Wait for the next 'stopped' event to occur, coalescing all stopped events within a given quiet period."""
+        return self.collect_events(["stopped", "exited"])
 
-    def wait_for_breakpoints_to_be_verified(self, breakpoint_ids: List[str]):
+    def wait_for_module_events(self) -> List[Event]:
+        """Wait for the next 'module' event to occur, coalescing all module events within a given quiet period."""
+        return self.collect_events(["module"])
+
+    def wait_for_breakpoint_events(self) -> List[Event]:
+        """wait for the next 'breakpoint' event to occur, coalescing all breakpoint events within a given quiet period."""
+        return self.collect_events(["breakpoint"])
+
+    def wait_for_breakpoints_to_be_verified(self, breakpoint_ids: List[int]):
         """Wait for all breakpoints to be verified. Return all unverified breakpoints."""
         while any(id not in self.resolved_breakpoints for id in breakpoint_ids):
             breakpoint_event = self.wait_for_event(["breakpoint"])
@@ -689,6 +695,18 @@ class DebugCommunication(object):
         event_dict = self.wait_for_event(["terminated"])
         if event_dict is None:
             raise ValueError("didn't get terminated event")
+        return event_dict
+
+    def wait_for_invalidated(self):
+        event_dict = self.wait_for_event(["invalidated"])
+        if event_dict is None:
+            raise ValueError("didn't get invalidated event")
+        return event_dict
+
+    def wait_for_memory(self):
+        event_dict = self.wait_for_event(["memory"])
+        if event_dict is None:
+            raise ValueError("didn't get memory event")
         return event_dict
 
     def get_capability(self, key: str):
@@ -889,7 +907,7 @@ class DebugCommunication(object):
         gdbRemotePort: Optional[int] = None,
         gdbRemoteHostname: Optional[str] = None,
     ) -> int:
-        args_dict = {}
+        args_dict: Dict[str, Any] = {}
         if pid is not None:
             args_dict["pid"] = pid
         if program is not None:
@@ -923,7 +941,13 @@ class DebugCommunication(object):
             args_dict["gdb-remote-port"] = gdbRemotePort
         if gdbRemoteHostname is not None:
             args_dict["gdb-remote-hostname"] = gdbRemoteHostname
-        command_dict = {"command": "attach", "type": "request", "arguments": args_dict}
+        command_dict: Request = {
+            "seq": 0,
+            "command": "attach",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        self.launch_or_attach_sent = True
         return self.send_packet(command_dict)
 
     def request_breakpointLocations(
@@ -955,8 +979,8 @@ class DebugCommunication(object):
             "arguments": {},
         }
         response = self._send_recv(command_dict)
+        self.configuration_done_sent = True
         if response and response["success"]:
-            self.configuration_done_sent = True
             stopped_on_entry = self.is_stopped
             threads_response = self.request_threads()
             if not stopped_on_entry:
@@ -1082,18 +1106,24 @@ class DebugCommunication(object):
     def request_evaluate(
         self,
         expression,
-        frameIndex=0,
+        frameIndex: Optional[int] = 0,
         threadId=None,
         context=None,
         is_hex: Optional[bool] = None,
     ) -> Response:
-        stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
-        if stackFrame is None:
-            raise ValueError("invalid frameIndex")
         args_dict = {
             "expression": expression,
-            "frameId": stackFrame["id"],
         }
+
+        if frameIndex is not None:
+            if threadId is None:
+                threadId = self.get_thread_id()
+            stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
+
+            if stackFrame is None:
+                raise ValueError("invalid frameIndex")
+            args_dict["frameId"] = stackFrame["id"]
+
         if context:
             args_dict["context"] = context
         if is_hex is not None:
@@ -1116,7 +1146,9 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
-    def request_initialize(self, sourceInitFile=False):
+    def request_initialize(
+        self, client_features: Optional[dict[str, bool]] = None, sourceInitFile=False
+    ):
         command_dict = {
             "command": "initialize",
             "type": "request",
@@ -1137,6 +1169,13 @@ class DebugCommunication(object):
                 "$__lldb_sourceInitFile": sourceInitFile,
             },
         }
+
+        if client_features is not None:
+            arguments = command_dict["arguments"]
+            # replace the default client features.
+            for key, value in client_features.items():
+                arguments[key] = value
+
         response = self._send_recv(command_dict)
         if response:
             if "body" in response:
@@ -1173,7 +1212,7 @@ class DebugCommunication(object):
         customFrameFormat: Optional[str] = None,
         customThreadFormat: Optional[str] = None,
     ) -> int:
-        args_dict = {"program": program}
+        args_dict: Dict[str, Any] = {"program": program}
         if args:
             args_dict["args"] = args
         if cwd:
@@ -1222,7 +1261,13 @@ class DebugCommunication(object):
         args_dict["displayExtendedBacktrace"] = displayExtendedBacktrace
         if commandEscapePrefix is not None:
             args_dict["commandEscapePrefix"] = commandEscapePrefix
-        command_dict = {"command": "launch", "type": "request", "arguments": args_dict}
+        command_dict: Request = {
+            "seq": 0,
+            "command": "launch",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        self.launch_or_attach_sent = True
         return self.send_packet(command_dict)
 
     def request_next(self, threadId, granularity="statement"):
@@ -1283,7 +1328,7 @@ class DebugCommunication(object):
         Each parameter object is 1:1 mapping with entries in line_entry.
         It contains optional location/hitCondition/logMessage parameters.
         """
-        assert self.initialized, "cannot setBreakpoints before initialized"
+        self.ensure_initialized()
         args_dict = {
             "source": source,
             "sourceModified": False,
@@ -1321,7 +1366,7 @@ class DebugCommunication(object):
     def request_setExceptionBreakpoints(
         self, *, filters: list[str] = [], filter_options: list[dict] = []
     ):
-        assert self.initialized, "cannot setExceptionBreakpoints before initialized"
+        self.ensure_initialized()
         args_dict = {"filters": filters}
         if filter_options:
             args_dict["filterOptions"] = filter_options
@@ -1333,7 +1378,7 @@ class DebugCommunication(object):
         return self._send_recv(command_dict)
 
     def request_setFunctionBreakpoints(self, names, condition=None, hitCondition=None):
-        assert self.initialized, "cannot setFunctionBreakpoints before initialized"
+        self.ensure_initialized()
         breakpoints = []
         for name in names:
             bp = {"name": name}
@@ -1382,7 +1427,7 @@ class DebugCommunication(object):
             [hitCondition]: string
         }
         """
-        assert self.initialized, "cannot setDataBreakpoints before initialized"
+        self.ensure_initialized()
         args_dict = {"breakpoints": dataBreakpoints}
         command_dict = {
             "command": "setDataBreakpoints",
@@ -1532,7 +1577,7 @@ class DebugCommunication(object):
                 tid = thread["id"]
                 if tid in self.thread_stop_reasons:
                     thread_stop_info = self.thread_stop_reasons[tid]
-                    copy_keys = ["reason", "description", "text"]
+                    copy_keys = ["reason", "description", "text", "hitBreakpointIds"]
                     for key in copy_keys:
                         if key in thread_stop_info:
                             thread[key] = thread_stop_info[key]
@@ -1541,7 +1586,7 @@ class DebugCommunication(object):
         return response
 
     def request_variables(
-        self, variablesReference, start=None, count=None, is_hex=None
+        self, variablesReference, start=None, count=None, is_hex: Optional[bool] = None
     ):
         args_dict = {"variablesReference": variablesReference}
         if start is not None:
@@ -1557,7 +1602,7 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
-    def request_setVariable(self, containingVarRef, name, value, id=None):
+    def request_setVariable(self, containingVarRef, name, value, id=None, is_hex=None):
         args_dict = {
             "variablesReference": containingVarRef,
             "name": name,
@@ -1565,6 +1610,8 @@ class DebugCommunication(object):
         }
         if id is not None:
             args_dict["id"] = id
+        if is_hex is not None:
+            args_dict["format"] = {"hex": is_hex}
         command_dict = {
             "command": "setVariable",
             "type": "request",
@@ -1592,6 +1639,14 @@ class DebugCommunication(object):
             "command": "_testGetTargetBreakpoints",
             "type": "request",
             "arguments": {},
+        }
+        return self._send_recv(command_dict)
+
+    def request_custom(self, command: str, arguments: Optional[dict[str, Any]] = None):
+        command_dict = {
+            "command": command,
+            "type": "request",
+            "arguments": {} if arguments is None else arguments,
         }
         return self._send_recv(command_dict)
 
@@ -1793,7 +1848,7 @@ def attach_options_specified(opts):
 
 
 def run_adapter(dbg: DebugCommunication, opts: argparse.Namespace) -> None:
-    dbg.request_initialize(opts.source_init_file)
+    dbg.request_initialize(sourceInitFile=opts.source_init_file)
 
     source_to_lines: Dict[str, List[int]] = {}
     for sbp in cast(List[str], opts.source_bp):

@@ -1346,15 +1346,11 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
 
   // If needed, adjust the alloca's operand size to match the pointer indexing
   // size. Subsequent math operations expect the types to match.
-  Value *ArraySize = Builder.CreateZExtOrTrunc(
-      I.getArraySize(),
-      DL.getIndexType(I.getContext(), DL.getAllocaAddrSpace()));
-  assert(ArraySize->getType() == Zero->getType() &&
+  Type *IndexTy = DL.getIndexType(I.getContext(), DL.getAllocaAddrSpace());
+  assert(IndexTy == Zero->getType() &&
          "Expected zero constant to have pointer index type");
 
-  Value *Size = Builder.CreateTypeSize(
-      ArraySize->getType(), DL.getTypeAllocSize(I.getAllocatedType()));
-  Size = Builder.CreateMul(Size, ArraySize);
+  Value *Size = Builder.CreateAllocationSize(IndexTy, &I);
   return SizeOffsetValue(Size, Zero);
 }
 

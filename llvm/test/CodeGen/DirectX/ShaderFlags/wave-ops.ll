@@ -104,3 +104,38 @@ entry:
   %0 = call %dx.types.fouri32 @llvm.dx.wave.ballot(i1 %expr)
   ret void
 }
+
+define void @wave_prefix_bit_count(i1 %expr) {
+entry:
+  ; CHECK: Function wave_prefix_bit_count : [[WAVE_FLAG]]
+  %0 = call i32 @llvm.dx.wave.prefix.bit.count(i1 %expr)
+  ret void
+}
+
+define noundef i32 @wave_prefix_sum(i32 noundef %x) {
+entry:
+  ; CHECK: Function wave_prefix_sum : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.prefix.sum.i32(i32 %x)
+  ret i32 %ret
+}
+
+define noundef i32 @wave_prefix_usum(i32 noundef %x) {
+entry:
+  ; CHECK: Function wave_prefix_usum : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.prefix.usum.i32(i32 %x)
+  ret i32 %ret
+}
+
+define noundef i32 @wave_prefix_product(i32 noundef %x) {
+entry:
+  ; CHECK: Function wave_prefix_product : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.prefix.product.i32(i32 %x)
+  ret i32 %ret
+}
+
+define noundef i32 @wave_prefix_uproduct(i32 noundef %x) {
+entry:
+  ; CHECK: Function wave_prefix_uproduct : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.prefix.uproduct.i32(i32 %x)
+  ret i32 %ret
+}

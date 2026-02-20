@@ -106,6 +106,15 @@ ProcThreadAttributeList::Create(STARTUPINFOEXW &startupinfoex) {
   return ProcThreadAttributeList(startupinfoex.lpAttributeList);
 }
 
+llvm::Error ProcThreadAttributeList::SetupPseudoConsole(HPCON hPC) {
+  BOOL ok = UpdateProcThreadAttribute(lpAttributeList, 0,
+                                      PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, hPC,
+                                      sizeof(hPC), NULL, NULL);
+  if (!ok)
+    return llvm::errorCodeToError(llvm::mapWindowsError(GetLastError()));
+  return llvm::Error::success();
+}
+
 HostProcess
 ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
                                       Status &error) {
@@ -135,15 +144,12 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
     error = attributelist_or_err.getError();
     return HostProcess();
   }
-  llvm::scope_exit delete_attributelist(
-      [&] { DeleteProcThreadAttributeList(startupinfoex.lpAttributeList); });
+  ProcThreadAttributeList attributelist = std::move(*attributelist_or_err);
 
   std::vector<HANDLE> inherited_handles;
   if (use_pty) {
-    if (!UpdateProcThreadAttribute(startupinfoex.lpAttributeList, 0,
-                                   PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, hPC,
-                                   sizeof(hPC), NULL, NULL)) {
-      error = Status(::GetLastError(), eErrorTypeWin32);
+    if (auto err = attributelist.SetupPseudoConsole(hPC)) {
+      error = Status::FromError(std::move(err));
       return HostProcess();
     }
   } else {
@@ -197,7 +203,8 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
 
   BOOL result = ::CreateProcessW(
       wexecutable.c_str(), pwcommandLine, NULL, NULL,
-      /*bInheritHandles=*/!inherited_handles.empty(), flags, environment.data(),
+      /*bInheritHandles=*/!inherited_handles.empty() || use_pty, flags,
+      environment.data(),
       wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(),
       reinterpret_cast<STARTUPINFOW *>(&startupinfoex), &pi);
 
@@ -242,9 +249,8 @@ llvm::ErrorOr<std::vector<HANDLE>> ProcessLauncherWindows::GetInheritedHandles(
   for (size_t i = 0; i < launch_info.GetNumFileActions(); ++i) {
     const FileAction *act = launch_info.GetFileActionAtIndex(i);
     if (act->GetAction() == FileAction::eFileActionDuplicate &&
-        act->GetFD() == act->GetActionArgument()) {
-      inherited_handles.push_back(act->GetHandle());
-    }
+        act->GetFD() == act->GetActionArgument())
+      inherited_handles.push_back(reinterpret_cast<HANDLE>(act->GetFD()));
   }
 
   if (inherited_handles.empty())

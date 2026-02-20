@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/Matchers.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include <optional>
 
 using namespace mlir;
@@ -357,13 +358,13 @@ void AllocTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 LogicalResult AllocTensorOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  auto shapes = llvm::to_vector<4>(
-      llvm::map_range(llvm::seq<int64_t>(0, getType().getRank()),
-                      [&](int64_t dim) -> OpFoldResult {
-                        if (isDynamicDim(dim))
-                          return getDynamicSize(builder, dim);
-                        return builder.getIndexAttr(getStaticSize(dim));
-                      }));
+  auto shapes =
+      llvm::map_to_vector<4>(llvm::seq<int64_t>(0, getType().getRank()),
+                             [&](int64_t dim) -> OpFoldResult {
+                               if (isDynamicDim(dim))
+                                 return getDynamicSize(builder, dim);
+                               return builder.getIndexAttr(getStaticSize(dim));
+                             });
   reifiedReturnShapes.emplace_back(std::move(shapes));
   return success();
 }

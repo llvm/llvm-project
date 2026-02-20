@@ -71,10 +71,28 @@ using namespace object;
 
 #define DEBUG_TYPE "lto"
 
+Error LTO::setupOptimizationRemarks() {
+  // Setup the remark streamer according to the provided configuration.
+  auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
+      RegularLTO.Ctx, Conf.RemarksFilename, Conf.RemarksPasses,
+      Conf.RemarksFormat, Conf.RemarksWithHotness,
+      Conf.RemarksHotnessThreshold);
+  if (!DiagFileOrErr)
+    return DiagFileOrErr.takeError();
+
+  DiagnosticOutputFile = std::move(*DiagFileOrErr);
+  return Error::success();
+}
+
+void LTO::emitRemark(OptimizationRemark &Remark) {
+  const Function &F = Remark.getFunction();
+  OptimizationRemarkEmitter ORE(const_cast<Function *>(&F));
+  ORE.emit(Remark);
+}
+
 static cl::opt<bool>
     DumpThinCGSCCs("dump-thin-cg-sccs", cl::init(false), cl::Hidden,
                    cl::desc("Dump the SCCs in the ThinLTO index's callgraph"));
-
 namespace llvm {
 extern cl::opt<bool> CodeGenDataThinLTOTwoRounds;
 extern cl::opt<bool> ForceImportAll;
@@ -393,6 +411,9 @@ static void thinLTOResolvePrevailingGUID(
     // FIXME: We may want to split the compile time and correctness
     // aspects into separate routines.
     if (isPrevailing(VI.getGUID(), S.get())) {
+      assert(!S->wasPromoted() &&
+             "promoted symbols used to be internal linkage and shouldn't have "
+             "a prevailing variant");
       if (GlobalValue::isLinkOnceLinkage(OriginalLinkage)) {
         S->setLinkage(GlobalValue::getWeakLinkage(
             GlobalValue::isLinkOnceODRLinkage(OriginalLinkage)));
@@ -415,8 +436,11 @@ static void thinLTOResolvePrevailingGUID(
     // When force-import-all is used, it indicates that object linking is not
     // supported by the target. In this case, we can't change the linkage as
     // well in case the global is converted to declaration.
+    // Also, if the symbol was promoted, it wouldn't have a prevailing variant,
+    // but also its linkage is set correctly (to External) already.
     else if (!isa<AliasSummary>(S.get()) &&
-             !GlobalInvolvedWithAlias.count(S.get()) && !ForceImportAll)
+             !GlobalInvolvedWithAlias.count(S.get()) && !ForceImportAll &&
+             !S->wasPromoted())
       S->setLinkage(GlobalValue::AvailableExternallyLinkage);
 
     // For ELF, set visibility to the computed visibility from summaries. We
@@ -485,7 +509,7 @@ static void thinLTOInternalizeAndPromoteGUID(
     // exported.
     if (isExported(S->modulePath(), VI)) {
       if (GlobalValue::isLocalLinkage(S->linkage()))
-        S->setLinkage(GlobalValue::ExternalLinkage);
+        S->promote();
       continue;
     }
 
@@ -642,6 +666,10 @@ LTO::LTO(Config Conf, ThinBackend Backend,
 
 // Requires a destructor for MapVector<BitcodeModule>.
 LTO::~LTO() = default;
+
+void LTO::cleanup() {
+  consumeError(finalizeOptimizationRemarks(std::move(DiagnosticOutputFile)));
+}
 
 // Add the symbols in the given module to the GlobalResolutions map, and resolve
 // their partitions.
@@ -1068,10 +1096,9 @@ Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
         if (DiagnosticOutputFile) {
           if (Error Err = F->materialize())
             return Err;
-          OptimizationRemarkEmitter ORE(F, nullptr);
-          ORE.emit(OptimizationRemark(DEBUG_TYPE, "deadfunction", F)
-                   << ore::NV("Function", F)
-                   << " not added to the combined module ");
+          auto R = OptimizationRemark(DEBUG_TYPE, "deadfunction", F);
+          R << ore::NV("Function", F) << " not added to the combined module ";
+          emitRemark(R);
         }
       }
       continue;
@@ -1229,7 +1256,7 @@ Error LTO::checkPartiallySplit() {
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   llvm::scope_exit CleanUp([this]() { cleanup(); });
 
-  if (Error EC = handleArchiveInputs())
+  if (Error EC = serializeInputsForDistribution())
     return EC;
 
   // Compute "dead" symbols, we don't want to import/export these!
@@ -1269,6 +1296,9 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
     return StatsFileOrErr.takeError();
   std::unique_ptr<ToolOutputFile> StatsFile = std::move(StatsFileOrErr.get());
 
+  if (Error Err = setupOptimizationRemarks())
+    return Err;
+
   // TODO: Ideally this would be controlled automatically by detecting that we
   // are linking with an allocator that supports these interfaces, rather than
   // an internal option (which would still be needed for tests, however). For
@@ -1291,15 +1321,7 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
 
 Error LTO::runRegularLTO(AddStreamFn AddStream) {
   llvm::TimeTraceScope timeScope("Run regular LTO");
-  LLVMContext &CombinedCtx = RegularLTO.CombinedModule->getContext();
-  // Setup optimization remarks.
-  auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
-      CombinedCtx, Conf.RemarksFilename, Conf.RemarksPasses, Conf.RemarksFormat,
-      Conf.RemarksWithHotness, Conf.RemarksHotnessThreshold);
   LLVM_DEBUG(dbgs() << "Running regular LTO\n");
-  if (!DiagFileOrErr)
-    return DiagFileOrErr.takeError();
-  DiagnosticOutputFile = std::move(*DiagFileOrErr);
 
   // Finalize linking of regular LTO modules containing summaries now that
   // we have computed liveness information.
@@ -1371,7 +1393,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 
   if (Conf.PreOptModuleHook &&
       !Conf.PreOptModuleHook(0, *RegularLTO.CombinedModule))
-    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+    return Error::success();
 
   if (!Conf.CodeGenOnly) {
     for (const auto &R : *GlobalResolutions) {
@@ -1410,7 +1432,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 
     if (Conf.PostInternalizeModuleHook &&
         !Conf.PostInternalizeModuleHook(0, *RegularLTO.CombinedModule))
-      return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+      return Error::success();
   }
 
   if (!RegularLTO.EmptyCombinedModule || Conf.AlwaysEmitRegularLTOObj) {
@@ -1420,7 +1442,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       return Err;
   }
 
-  return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+  return Error::success();
 }
 
 SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {
