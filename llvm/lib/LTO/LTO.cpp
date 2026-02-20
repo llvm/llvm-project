@@ -85,8 +85,8 @@ Error LTO::setupOptimizationRemarks() {
   // Create a dummy function to serve as a context for LTO-link remarks.
   // This is required because OptimizationRemark requires a valid Function,
   // and in ThinLTO we may not have any IR functions available during the
-  // thin link.
-  // Host it in a private module to avoid interfering with the LTO process.
+  // thin link. Host it in a private module to avoid interfering with the LTO
+  // process.
   if (!LinkerRemarkFunction) {
     DummyModule = std::make_unique<Module>("remark_dummy", RegularLTO.Ctx);
     LinkerRemarkFunction = Function::Create(
