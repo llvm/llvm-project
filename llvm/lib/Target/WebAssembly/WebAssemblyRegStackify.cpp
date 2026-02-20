@@ -539,10 +539,11 @@ static unsigned getTeeOpcode(const TargetRegisterClass *RC) {
 
 // Shrink LI to its uses, cleaning up LI.
 static void shrinkToUses(LiveInterval &LI, LiveIntervals &LIS) {
-  if (LIS.shrinkToUses(&LI)) {
-    SmallVector<LiveInterval *, 4> SplitLIs;
-    LIS.splitSeparateComponents(LI, SplitLIs);
-  }
+  LIS.shrinkToUses(&LI);
+  // In case the register's live interval now has multiple unconnected
+  // components, split them into multiple registers.
+  SmallVector<LiveInterval *, 4> SplitLIs;
+  LIS.splitSeparateComponents(LI, SplitLIs);
 }
 
 /// A single-use def in the same block with no intervening memory or register
