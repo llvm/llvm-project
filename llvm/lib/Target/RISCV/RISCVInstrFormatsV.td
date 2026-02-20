@@ -102,6 +102,8 @@ class RVInstVBase<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
 
   let Uses = [VL, VTYPE];
   let RVVConstraint = VMConstraint;
+
+  let UseNamedOperandTable = true;
 }
 
 class RVInstVV<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
@@ -160,6 +162,8 @@ class RVInstVUnaryRd<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, dag outs,
 
   let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
+
+  let UseNamedOperandTable = true;
 }
 
 class RVInstVLoadBase<bits<3> nf, RISCVWidth width, RISCVMOP mop,
@@ -181,6 +185,8 @@ class RVInstVLoadBase<bits<3> nf, RISCVWidth width, RISCVMOP mop,
 
   let Uses = [VL, VTYPE];
   let RVVConstraint = VMConstraint;
+
+  let UseNamedOperandTable = true;
 }
 
 class RVInstVLU<bits<3> nf, RISCVWidth width, RISCVLUMOP lumop, dag outs,
@@ -224,6 +230,8 @@ class RVInstVStoreBase<bits<3> nf, RISCVWidth width, RISCVMOP mop, dag outs,
   let Inst{6-0} = OPC_STORE_FP.Value;
 
   let Uses = [VL, VTYPE];
+
+  let UseNamedOperandTable = true;
 }
 
 class RVInstVSU<bits<3> nf, RISCVWidth width, RISCVSUMOP sumop, dag outs,

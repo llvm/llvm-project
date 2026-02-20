@@ -132,6 +132,8 @@ class RVInstVCCustom2Base<VCIXInfo info>
   let RVVConstraint = info.RVVConstraint;
   let ElementsDependOn = EltDepsVLMask;
   let ReadsPastVL = 1;
+
+  let UseNamedOperandTable = true;
 }
 
 // VCIX instructions with GPR rs1 operand
@@ -254,7 +256,7 @@ let Predicates = [HasVendorXSfvfexpa], DecoderNamespace = "XSfvector" in {
 }
 
 let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvector",
-    DestEEW = EEWSEWx4, RVVConstraint=VS2Constraint in {
+    DestEEW = EEWSEWx4, RVVConstraint=VS1Constraint in {
   def SF_VQMACCU_2x8x2  : CustomSiFiveVMACC<0b101100, OPMVV, "sf.vqmaccu.2x8x2">;
   def SF_VQMACC_2x8x2   : CustomSiFiveVMACC<0b101101, OPMVV, "sf.vqmacc.2x8x2">;
   def SF_VQMACCUS_2x8x2 : CustomSiFiveVMACC<0b101110, OPMVV, "sf.vqmaccus.2x8x2">;
