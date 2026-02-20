@@ -6801,10 +6801,18 @@ multiclass FPToIntegerSatPats<SDNode to_int_sat, SDNode to_int_sat_gi, string IN
             (!cast<Instruction>(INST # DSr) f32:$Rn)>;
   def : Pat<(f32 (bitconvert (i32 (to_int_sat f64:$Rn, i32)))),
             (!cast<Instruction>(INST # SDr) f64:$Rn)>;
+
+  def : Pat<(v1i64 (scalar_to_vector (i64 (to_int_sat f16:$Rn, i64)))),
+            (!cast<Instruction>(INST # DHr) f16:$Rn)>;
+  def : Pat<(v1i64 (scalar_to_vector (i64 (to_int_sat f32:$Rn, i64)))),
+            (!cast<Instruction>(INST # DSr) f32:$Rn)>;
   }
   def : Pat<(f32 (bitconvert (i32 (to_int_sat f32:$Rn, i32)))),
             (!cast<Instruction>(INST # v1i32) f32:$Rn)>;
   def : Pat<(f64 (bitconvert (i64 (to_int_sat f64:$Rn, i64)))),
+            (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
+
+  def : Pat<(v1i64 (scalar_to_vector (i64 (to_int_sat f64:$Rn, i64)))),
             (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
 
   let Predicates = [HasFullFP16] in {
@@ -6869,10 +6877,16 @@ multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode to_int_sat_g
             (!cast<Instruction>(INST # DSr) f32:$Rn)>;
   def : Pat<(f32 (bitconvert (i32 (to_int (round f64:$Rn))))),
             (!cast<Instruction>(INST # SDr) f64:$Rn)>;
+
+  def : Pat<(v1i64 (scalar_to_vector (i64 (to_int (round f32:$Rn))))),
+            (!cast<Instruction>(INST # DSr) f32:$Rn)>;
   }
   def : Pat<(f32 (bitconvert (i32 (to_int (round f32:$Rn))))),
             (!cast<Instruction>(INST # v1i32) f32:$Rn)>;
   def : Pat<(f64 (bitconvert (i64 (to_int (round f64:$Rn))))),
+            (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
+
+  def : Pat<(v1i64 (scalar_to_vector (i64 (to_int (round f64:$Rn))))),
             (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
 
   // These instructions saturate like fp_to_[su]int_sat.
@@ -6932,10 +6946,18 @@ multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode to_int_sat_g
             (!cast<Instruction>(INST # DSr) f32:$Rn)>;
   def : Pat<(f32 (bitconvert (i32 (to_int_sat (round f64:$Rn), i32)))),
             (!cast<Instruction>(INST # SDr) f64:$Rn)>;
+
+  def : Pat<(v1i64 (scalar_to_vector (i64 (to_int_sat (round f16:$Rn), i64)))),
+            (!cast<Instruction>(INST # DHr) f16:$Rn)>;
+  def : Pat<(v1i64 (scalar_to_vector (i64 (to_int_sat (round f32:$Rn), i64)))),
+            (!cast<Instruction>(INST # DSr) f32:$Rn)>;
   }
   def : Pat<(f32 (bitconvert (i32 (to_int_sat (round f32:$Rn), i32)))),
             (!cast<Instruction>(INST # v1i32) f32:$Rn)>;
   def : Pat<(f64 (bitconvert (i64 (to_int_sat (round f64:$Rn), i64)))),
+            (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
+
+  def : Pat<(v1i64 (scalar_to_vector (i64 (to_int_sat (round f64:$Rn), i64)))),
             (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
 }
 
