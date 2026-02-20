@@ -330,10 +330,13 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
     case 'b':
       if (isFreeBSDKPrintf)
         k = ConversionSpecifier::FreeBSDbArg; // int followed by char *
-      else
+      else if (LangStandard::getLangStandardForKind(LO.LangStd).isC23())
         k = ConversionSpecifier::bArg;
       break;
-    case 'B': k = ConversionSpecifier::BArg; break;
+    case 'B':
+      if (LangStandard::getLangStandardForKind(LO.LangStd).isC23())
+        k = ConversionSpecifier::BArg;
+      break;
     // POSIX specific.
     case 'C': k = ConversionSpecifier::CArg; break;
     case 'S': k = ConversionSpecifier::SArg; break;

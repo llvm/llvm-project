@@ -1,7 +1,7 @@
 // RUN: cp %s %t
-// RUN: %clang_cc1 -pedantic -Wall -fixit %t
-// RUN: %clang_cc1 -fsyntax-only -pedantic -Wall -Werror %t
-// RUN: %clang_cc1 -E -o - %t | FileCheck %s
+// RUN: %clang_cc1 -std=c23 -pedantic -Wall -fixit %t
+// RUN: %clang_cc1 -std=c23 -fsyntax-only -pedantic -Wall -Werror %t
+// RUN: %clang_cc1 -std=c23 -E -o - %t | FileCheck %s
 
 /* This is a test of the various code modification hints that are
    provided as part of warning or extension diagnostics. All of the
