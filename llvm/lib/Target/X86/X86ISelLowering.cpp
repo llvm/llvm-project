@@ -27225,7 +27225,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     case CMP_MASK_CC: {
       MVT MaskVT = Op.getSimpleValueType();
-      SDValue CC = Op.getOperand(3);
+      SDValue CC =
+          DAG.getTargetConstant(Op.getConstantOperandVal(3), dl, MVT::i8);
       SDValue Mask = Op.getOperand(4);
       // We specify 2 possible opcodes for intrinsics with rounding modes.
       // First, we check if the intrinsic may have non-default rounding mode,
@@ -27245,7 +27246,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     case CMP_MASK_SCALAR_CC: {
       SDValue Src1 = Op.getOperand(1);
       SDValue Src2 = Op.getOperand(2);
-      SDValue CC = Op.getOperand(3);
+      SDValue CC =
+          DAG.getTargetConstant(Op.getConstantOperandVal(3), dl, MVT::i8);
       SDValue Mask = Op.getOperand(4);
 
       SDValue Cmp;
@@ -39312,6 +39314,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     }
     break;
   }
+  case X86ISD::FAND:
   case X86ISD::AND: {
     if (Op.getResNo() == 0) {
       KnownBits Known2;
@@ -39338,6 +39341,14 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known2 = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
 
     Known |= Known2;
+    break;
+  }
+  case X86ISD::FXOR: {
+    KnownBits Known2;
+    Known = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+
+    Known ^= Known2;
     break;
   }
   case X86ISD::PSADBW: {
@@ -49933,6 +49944,37 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Attempt to fold CMOV(LOAD(PTR0),LOAD(PTR1)) -> LOAD(CMOV(PTR0,PTR1))
+  // TODO: Allow matching extloads?
+  if (TrueOp.getResNo() == 0 && ISD::isNormalLoad(TrueOp.getNode()) &&
+      FalseOp.getResNo() == 0 && ISD::isNormalLoad(FalseOp.getNode()) &&
+      TrueOp.hasOneUse() && FalseOp.hasOneUse()) {
+    auto *TrueLd = cast<LoadSDNode>(TrueOp);
+    auto *FalseLd = cast<LoadSDNode>(FalseOp);
+    // Ensure the loads and pointers are as similar as possible.
+    EVT PtrVT = FalseLd->getBasePtr().getValueType();
+    if (TrueLd->getChain() == FalseLd->getChain() &&
+        TrueLd->getPointerInfo().getAddrSpace() ==
+            FalseLd->getPointerInfo().getAddrSpace() &&
+        TrueLd->getMemOperand()->getFlags() ==
+            FalseLd->getMemOperand()->getFlags() &&
+        TrueLd->isSimple() && FalseLd->isSimple() &&
+        !TrueLd->isPredecessorOf(Cond.getNode()) &&
+        !FalseLd->isPredecessorOf(Cond.getNode())) {
+      SDValue Ops[] = {FalseLd->getBasePtr(), TrueLd->getBasePtr(),
+                       DAG.getTargetConstant(CC, DL, MVT::i8), Cond};
+      SDValue NewPtr = DAG.getNode(X86ISD::CMOV, DL, PtrVT, Ops);
+      SDValue NewLd = DAG.getLoad(
+          VT, DL, FalseLd->getChain(), NewPtr,
+          MachinePointerInfo(FalseLd->getPointerInfo().getAddrSpace()),
+          std::min(FalseLd->getAlign(), TrueLd->getAlign()),
+          FalseLd->getMemOperand()->getFlags());
+      DAG.makeEquivalentMemoryOrdering(TrueLd, NewLd);
+      DAG.makeEquivalentMemoryOrdering(FalseLd, NewLd);
+      return NewLd;
+    }
+  }
+
   // If this is a select between two integer constants, try to do some
   // optimizations.  Note that the operands are ordered the opposite of SELECT
   // operands.
@@ -57556,23 +57598,18 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
       SDValue X, ShAmt;
       if (sd_match(LHS, m_OneUse(m_And(m_Value(X),
                                        m_Shl(m_One(), m_Value(ShAmt)))))) {
-        // Only attempt this if the shift amount is known to be in bounds.
-        KnownBits KnownAmt = DAG.computeKnownBits(ShAmt);
-        if (KnownAmt.getMaxValue().ult(OpVT.getScalarSizeInBits())) {
-          EVT AmtVT = ShAmt.getValueType();
-          SDValue AlignAmt =
-              DAG.getNode(ISD::AND, DL, AmtVT, ShAmt,
-                          DAG.getSignedConstant(-32LL, DL, AmtVT));
-          SDValue ModuloAmt = DAG.getNode(ISD::AND, DL, AmtVT, ShAmt,
-                                          DAG.getConstant(31, DL, AmtVT));
-          SDValue Mask = DAG.getNode(
-              ISD::SHL, DL, MVT::i32, DAG.getConstant(1, DL, MVT::i32),
-              DAG.getZExtOrTrunc(ModuloAmt, DL, MVT::i8));
-          X = DAG.getNode(ISD::SRL, DL, OpVT, X, AlignAmt);
-          X = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, X);
-          X = DAG.getNode(ISD::AND, DL, MVT::i32, X, Mask);
-          return DAG.getSetCC(DL, VT, X, DAG.getConstant(0, DL, MVT::i32), CC);
-        }
+        EVT AmtVT = ShAmt.getValueType();
+        SDValue AlignAmt = DAG.getNode(ISD::AND, DL, AmtVT, ShAmt,
+                                       DAG.getSignedConstant(-32LL, DL, AmtVT));
+        SDValue ModuloAmt = DAG.getNode(ISD::AND, DL, AmtVT, ShAmt,
+                                        DAG.getConstant(31, DL, AmtVT));
+        SDValue Mask = DAG.getNode(ISD::SHL, DL, MVT::i32,
+                                   DAG.getConstant(1, DL, MVT::i32),
+                                   DAG.getZExtOrTrunc(ModuloAmt, DL, MVT::i8));
+        X = DAG.getNode(ISD::SRL, DL, OpVT, X, AlignAmt);
+        X = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, X);
+        X = DAG.getNode(ISD::AND, DL, MVT::i32, X, Mask);
+        return DAG.getSetCC(DL, VT, X, DAG.getConstant(0, DL, MVT::i32), CC);
       }
     }
 
@@ -59503,7 +59540,7 @@ static SDValue combineSubSetcc(SDNode *N, SelectionDAG &DAG) {
     SDLoc DL(Op1);
     SDValue NewSetCC = getSETCC(NewCC, SetCC.getOperand(1), DL, DAG);
     NewSetCC = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, NewSetCC);
-    return DAG.getNode(X86ISD::ADD, DL, DAG.getVTList(VT, VT), NewSetCC,
+    return DAG.getNode(ISD::ADD, DL, VT, NewSetCC,
                        DAG.getConstant(NewImm, DL, VT));
   }
 
