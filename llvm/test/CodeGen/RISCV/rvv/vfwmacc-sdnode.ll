@@ -4,13 +4,13 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfh,+zfbfmin,+zvfbfmin,+v -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFMIN,ZVFH
 ; RUN: llc -mtriple=riscv32 -mattr=+d,+zfh,+zvfhmin,+zfbfmin,+zvfbfmin,+v -target-abi=ilp32d \
-; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFMIN,ZVFHMIN
+; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFBFMIN
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfhmin,+zfbfmin,+zvfbfmin,+v -target-abi=lp64d \
-; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFMIN,ZVFHMIN
+; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFBFMIN
 ; RUN: llc -mtriple=riscv32 -mattr=+d,+zfh,+zvfhmin,+experimental-zvfbfa,+v \
-; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFA,ZVFHMIN
+; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFBFA
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfhmin,+experimental-zvfbfa,+v \
-; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFA,ZVFHMIN
+; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFBFA
 
 define <vscale x 1 x float> @vfwmaccbf16_vv_nxv1f32(<vscale x 1 x float> %a, <vscale x 1 x bfloat> %b, <vscale x 1 x bfloat> %c) {
 ; ZVFBFMIN-LABEL: vfwmaccbf16_vv_nxv1f32:

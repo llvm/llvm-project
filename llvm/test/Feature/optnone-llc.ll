@@ -6,7 +6,8 @@
 ; RUN: llc -O1 -debug-only=isel -fast-isel=false %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=NOFAST
 
 ; REQUIRES: asserts, default_triple
-; UNSUPPORTED: target=nvptx{{.*}}
+; AArch64 uses GlobalISel for optnone functions meaning the output from 'isel' will be empty as it will not be run.
+; UNSUPPORTED: target=nvptx{{.*}}, target=aarch64{{.*}}, target=arm64{{.*}}
 
 ; This test verifies that we don't run Machine Function optimizations
 ; on optnone functions, and that we can turn off FastISel.

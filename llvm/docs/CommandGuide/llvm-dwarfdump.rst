@@ -193,6 +193,17 @@ OPTIONS
 
             The :option:`--debug-frame` and :option:`--eh-frame` options are aliases, in cases where both sections are present one command outputs both.
 
+.. option:: --show-variable-coverage
+
+            Show per-variable coverage metrics. The output format is described
+            in the section below (:ref:`variable-coverage-format`).
+
+.. option:: --combine-inline-variable-instances
+
+            Use with :option:`--show-variable-coverage` to average variable
+            coverage across inlined subroutine instances instead of printing
+            them separately.
+
 .. option:: @<FILE>
 
             Read command-line options from `<FILE>`.
@@ -242,6 +253,34 @@ The following is generated if there are no errors reported::
     "error-categories": {},
     "error-count": 0
   }
+
+.. _variable-coverage-format:
+
+FORMAT OF VARIABLE COVERAGE OUTPUT
+----------------------------------
+
+The :option:`--show-variable-coverage` option differs from
+:option:`--statistics` by printing per-variable debug info coverage metrics
+based on the number of source lines covered instead of the number of
+instruction bytes. Compared to counting instruction bytes, this is more stable
+across compilations and better reflects the debugging experience. The output is
+a tab-separated table containing the following columns:
+
+      - `Function` ==> Name of the function the variable was found in
+      - `InstanceCount` (when :option:`--combine-inline-variable-instances` is
+        specified) ==> Number of instances of the function; this is 1 for
+        functions that have not been inlined, and n+1 for functions that have
+        been inlined n times
+      - `InlChain` (when :option:`--combine-inline-variable-instances` is not
+        specified) ==> Chain of call sites (file and line number) that the
+        function has been inlined into; this will be empty if the function has
+        not been inlined
+      - `Variable` ==> Name of the variable
+      - `Decl` ==> Source location (file and line number) of the variable's
+        declaration
+      - `LinesCovered` ==> Number of source lines covered by the variable's
+        debug information in the input file
+
 
 EXIT STATUS
 -----------

@@ -49,7 +49,6 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PGOOptions.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -385,17 +384,14 @@ int main(int argc, char **argv) {
   initializeCore(*Registry);
   initializeCodeGen(*Registry);
   initializeLoopStrengthReducePass(*Registry);
-  initializeLowerIntrinsicsPass(*Registry);
   initializePostInlineEntryExitInstrumenterPass(*Registry);
   initializeUnreachableBlockElimLegacyPassPass(*Registry);
   initializeConstantHoistingLegacyPassPass(*Registry);
   initializeScalarOpts(*Registry);
+  initializeIPO(*Registry);
   initializeVectorization(*Registry);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(*Registry);
-  initializeExpandReductionsPass(*Registry);
-  initializeHardwareLoopsLegacyPass(*Registry);
   initializeTransformUtils(*Registry);
-  initializeReplaceWithVeclibLegacyPass(*Registry);
 
   // Initialize debugging passes.
   initializeScavengerTestPass(*Registry);
@@ -752,9 +748,9 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
   PM.add(new RuntimeLibraryInfoWrapper(
-      M->getTargetTriple(), Target->Options.ExceptionModel,
-      Target->Options.FloatABIType, Target->Options.EABIVersion,
-      Options.MCOptions.ABIName, Target->Options.VecLib));
+      TheTriple, Target->Options.ExceptionModel, Target->Options.FloatABIType,
+      Target->Options.EABIVersion, Options.MCOptions.ABIName,
+      Target->Options.VecLib));
 
   {
     raw_pwrite_stream *OS = &Out->os();

@@ -259,7 +259,7 @@ Status ProcessElfCore::DoLoadCore() {
   lldb::ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
   if (!exe_module_sp) {
     if (!m_nt_file_entries.empty()) {
-      llvm::StringRef executable_path = GetMainExecutablePath();
+      std::string executable_path = GetMainExecutablePath();
       ModuleSpec exe_module_spec;
       exe_module_spec.GetArchitecture() = arch;
       exe_module_spec.GetUUID() = FindModuleUUID(executable_path);
@@ -268,6 +268,29 @@ Status ProcessElfCore::DoLoadCore() {
       if (exe_module_spec.GetFileSpec()) {
         exe_module_sp =
             GetTarget().GetOrCreateModule(exe_module_spec, true /* notify */);
+        if (!exe_module_sp) {
+          // Create an ELF file from memory for the main executable. The dynamic
+          // loader requires the main executable so that it can extract the
+          // DT_DEBUG key/value pair from the dynamic section and get the list
+          // of shared libraries.
+          std::optional<lldb::addr_t> exe_header_addr;
+
+          // We need to find its load address
+          for (const NT_FILE_Entry &file_entry : m_nt_file_entries) {
+            if (file_entry.path == executable_path) {
+              exe_header_addr = file_entry.start;
+              break;
+            }
+          }
+          if (exe_header_addr) {
+            if (llvm::Expected<lldb::ModuleSP> module_sp_or_err =
+                    ReadModuleFromMemory(exe_module_spec.GetFileSpec(),
+                                         *exe_header_addr))
+              exe_module_sp = *module_sp_or_err;
+            else
+              llvm::consumeError(module_sp_or_err.takeError());
+          }
+        }
         if (exe_module_sp)
           GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
       }
@@ -293,12 +316,23 @@ void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
   }
 }
 
-llvm::StringRef ProcessElfCore::GetMainExecutablePath() {
+std::string ProcessElfCore::GetMainExecutablePath() {
+  // Always try to read the program name from core file memory first via the
+  // AUXV_AT_EXECFN entry. This value is the address of a null terminated C
+  // string that contains the program path.
+  AuxVector aux_vector(m_auxv);
+  std::string execfn_str;
+  if (auto execfn = aux_vector.GetAuxValue(AuxVector::AUXV_AT_EXECFN)) {
+    Status error;
+    if (ReadCStringFromMemory(*execfn, execfn_str, error))
+      return execfn_str;
+  }
+
   if (m_nt_file_entries.empty())
-    return "";
+    return {};
 
   // The first entry in the NT_FILE might be our executable
-  llvm::StringRef executable_path = m_nt_file_entries[0].path;
+  std::string executable_path = m_nt_file_entries[0].path;
   // Prefer the NT_FILE entry matching m_executable_name as main executable.
   for (const NT_FILE_Entry &file_entry : m_nt_file_entries)
     if (llvm::StringRef(file_entry.path).ends_with("/" + m_executable_name)) {
@@ -640,7 +674,6 @@ ProcessElfCore::parseSegment(const DataExtractor &segment) {
 llvm::Error ProcessElfCore::parseFreeBSDNotes(llvm::ArrayRef<CoreNote> notes) {
   ArchSpec arch = GetArchitecture();
   bool lp64 = (arch.GetMachine() == llvm::Triple::aarch64 ||
-               arch.GetMachine() == llvm::Triple::mips64 ||
                arch.GetMachine() == llvm::Triple::ppc64 ||
                arch.GetMachine() == llvm::Triple::x86_64);
   bool have_prstatus = false;

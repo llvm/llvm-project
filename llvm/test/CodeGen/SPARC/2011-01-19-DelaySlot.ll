@@ -246,10 +246,100 @@ entry:
   %1 = add nsw i32 %i0, 3
   tail call void asm sideeffect "", "r,r,~{l0},~{l1},~{l2},~{l3},~{l4},~{l5},~{l6},~{l7},~{i0},~{i1},~{i2},~{i3},~{i4},~{i5},~{i6},~{i7},~{o0},~{o1},~{o2},~{o3},~{o4},~{o6},~{g1},~{g2},~{g3},~{g4},~{g5},~{g6},~{g7}"(i32 %0, i32 %1)
   %2 = add nsw i32 %0, %1
+  %3 = call i32 @bar(i32 %2)
+  ret i32 %3
+}
+
+define i32 @prevent_o7_in_restore_add_in_call_delay_slot(i32 %i0) nounwind {
+; CHECK-LABEL: prevent_o7_in_restore_add_in_call_delay_slot:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    save %sp, -96, %sp
+; CHECK-NEXT:    add %i0, 2, %o5
+; CHECK-NEXT:    add %i0, 3, %o7
+; CHECK-NEXT:    !APP
+; CHECK-NEXT:    !NO_APP
+; CHECK-NEXT:    add %o5, %o7, %i0
+; CHECK-NEXT:    call bar
+; CHECK-NEXT:    restore
+;
+; UNOPT-LABEL: prevent_o7_in_restore_add_in_call_delay_slot:
+; UNOPT:       ! %bb.0: ! %entry
+; UNOPT-NEXT:    save %sp, -104, %sp
+; UNOPT-NEXT:    add %i0, 2, %o5
+; UNOPT-NEXT:    st %o5, [%fp+-4] ! 4-byte Folded Spill
+; UNOPT-NEXT:    add %i0, 3, %o7
+; UNOPT-NEXT:    st %o7, [%fp+-8] ! 4-byte Folded Spill
+; UNOPT-NEXT:    !APP
+; UNOPT-NEXT:    !NO_APP
+; UNOPT-NEXT:    ld [%fp+-8], %i1 ! 4-byte Folded Reload
+; UNOPT-NEXT:    ld [%fp+-4], %i0 ! 4-byte Folded Reload
+; UNOPT-NEXT:    call bar
+; UNOPT-NEXT:    restore %i0, %i1, %o0
+entry:
+  %0 = add nsw i32 %i0, 2
+  %1 = add nsw i32 %i0, 3
+  tail call void asm sideeffect "", "r,r,~{l0},~{l1},~{l2},~{l3},~{l4},~{l5},~{l6},~{l7},~{i0},~{i1},~{i2},~{i3},~{i4},~{i5},~{i6},~{i7},~{o0},~{o1},~{o2},~{o3},~{o4},~{o6},~{g1},~{g2},~{g3},~{g4},~{g5},~{g6},~{g7}"(i32 %0, i32 %1)
+  %2 = add nsw i32 %0, %1
   %3 = tail call i32 @bar(i32 %2)
   ret i32 %3
 }
 
+define i32 @prevent_o7_in_restore_add_ri_in_call_delay_slot(i32 %i0, i32 %i1) nounwind {
+; CHECK-LABEL: prevent_o7_in_restore_add_ri_in_call_delay_slot:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    save %sp, -96, %sp
+; CHECK-NEXT:    add %i0, %i1, %o7
+; CHECK-NEXT:    !APP
+; CHECK-NEXT:    !NO_APP
+; CHECK-NEXT:    add %o7, 1, %i0
+; CHECK-NEXT:    call bar
+; CHECK-NEXT:    restore
+;
+; UNOPT-LABEL: prevent_o7_in_restore_add_ri_in_call_delay_slot:
+; UNOPT:       ! %bb.0: ! %entry
+; UNOPT-NEXT:    save %sp, -96, %sp
+; UNOPT-NEXT:    add %i0, %i1, %o7
+; UNOPT-NEXT:    st %o7, [%fp+-4] ! 4-byte Folded Spill
+; UNOPT-NEXT:    !APP
+; UNOPT-NEXT:    !NO_APP
+; UNOPT-NEXT:    ld [%fp+-4], %i0 ! 4-byte Folded Reload
+; UNOPT-NEXT:    call bar
+; UNOPT-NEXT:    restore %i0, 1, %o0
+entry:
+  %0 = add nsw i32 %i0, %i1
+  tail call void asm sideeffect "", "r,~{l0},~{l1},~{l2},~{l3},~{l4},~{l5},~{l6},~{l7},~{i0},~{i1},~{i2},~{i3},~{i4},~{i5},~{i6},~{i7},~{o0},~{o1},~{o2},~{o3},~{o4},~{o5},~{o6},~{g1},~{g2},~{g3},~{g4},~{g5},~{g6},~{g7}"(i32 %0)
+  %2 = add nsw i32 %0, 1
+  %3 = tail call i32 @bar(i32 %2)
+  ret i32 %3
+}
+
+define i32 @prevent_o7_in_restore_or_in_call_delay_slot(i32 %i0) nounwind {
+; CHECK-LABEL: prevent_o7_in_restore_or_in_call_delay_slot:
+; CHECK:       ! %bb.0: ! %entry
+; CHECK-NEXT:    save %sp, -96, %sp
+; CHECK-NEXT:    add %i0, 2, %o7
+; CHECK-NEXT:    !APP
+; CHECK-NEXT:    !NO_APP
+; CHECK-NEXT:    mov %o7, %i0
+; CHECK-NEXT:    call bar
+; CHECK-NEXT:    restore
+;
+; UNOPT-LABEL: prevent_o7_in_restore_or_in_call_delay_slot:
+; UNOPT:       ! %bb.0: ! %entry
+; UNOPT-NEXT:    save %sp, -96, %sp
+; UNOPT-NEXT:    add %i0, 2, %o7
+; UNOPT-NEXT:    st %o7, [%fp+-4] ! 4-byte Folded Spill
+; UNOPT-NEXT:    !APP
+; UNOPT-NEXT:    !NO_APP
+; UNOPT-NEXT:    ld [%fp+-4], %i0 ! 4-byte Folded Reload
+; UNOPT-NEXT:    call bar
+; UNOPT-NEXT:    restore
+entry:
+  %0 = add nsw i32 %i0, 2
+  tail call void asm sideeffect "", "r,~{l0},~{l1},~{l2},~{l3},~{l4},~{l5},~{l6},~{l7},~{i0},~{i1},~{i2},~{i3},~{i4},~{i5},~{i6},~{i7},~{o0},~{o1},~{o2},~{o3},~{o4},~{o5},~{o6},~{g1},~{g2},~{g3},~{g4},~{g5},~{g6},~{g7}"(i32 %0)
+  %1 = tail call i32 @bar(i32 %0)
+  ret i32 %1
+}
 
 declare i32 @func(ptr)
 
@@ -379,12 +469,12 @@ define i32 @restore_sethi(i32 %a) {
 ; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    mov %i0, %o0
 ; CHECK-NEXT:    cmp %o0, 0
-; CHECK-NEXT:    bne .LBB10_2
+; CHECK-NEXT:    bne .LBB13_2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  ! %bb.1: ! %entry
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    restore %g0, %g0, %o0
-; CHECK-NEXT:  .LBB10_2:
+; CHECK-NEXT:  .LBB13_2:
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    restore %g0, 3072, %o0
 ;
@@ -401,12 +491,12 @@ define i32 @restore_sethi(i32 %a) {
 ; UNOPT-NEXT:    st %i0, [%fp+-8] ! 4-byte Folded Spill
 ; UNOPT-NEXT:    sethi 3, %i0
 ; UNOPT-NEXT:    cmp %o0, 0
-; UNOPT-NEXT:    bne .LBB10_2
+; UNOPT-NEXT:    bne .LBB13_2
 ; UNOPT-NEXT:    st %i0, [%fp+-4]
 ; UNOPT-NEXT:  ! %bb.1: ! %entry
 ; UNOPT-NEXT:    ld [%fp+-8], %i0 ! 4-byte Folded Reload
 ; UNOPT-NEXT:    st %i0, [%fp+-4] ! 4-byte Folded Spill
-; UNOPT-NEXT:  .LBB10_2: ! %entry
+; UNOPT-NEXT:  .LBB13_2: ! %entry
 ; UNOPT-NEXT:    ld [%fp+-4], %i0 ! 4-byte Folded Reload
 ; UNOPT-NEXT:    ret
 ; UNOPT-NEXT:    restore
@@ -428,12 +518,12 @@ define i32 @restore_sethi_3bit(i32 %a) {
 ; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    mov %i0, %o0
 ; CHECK-NEXT:    cmp %o0, 0
-; CHECK-NEXT:    bne .LBB11_2
+; CHECK-NEXT:    bne .LBB14_2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  ! %bb.1: ! %entry
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    restore %g0, %g0, %o0
-; CHECK-NEXT:  .LBB11_2:
+; CHECK-NEXT:  .LBB14_2:
 ; CHECK-NEXT:    sethi 6, %i0
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    restore
@@ -451,12 +541,12 @@ define i32 @restore_sethi_3bit(i32 %a) {
 ; UNOPT-NEXT:    st %i0, [%fp+-8] ! 4-byte Folded Spill
 ; UNOPT-NEXT:    sethi 6, %i0
 ; UNOPT-NEXT:    cmp %o0, 0
-; UNOPT-NEXT:    bne .LBB11_2
+; UNOPT-NEXT:    bne .LBB14_2
 ; UNOPT-NEXT:    st %i0, [%fp+-4]
 ; UNOPT-NEXT:  ! %bb.1: ! %entry
 ; UNOPT-NEXT:    ld [%fp+-8], %i0 ! 4-byte Folded Reload
 ; UNOPT-NEXT:    st %i0, [%fp+-4] ! 4-byte Folded Spill
-; UNOPT-NEXT:  .LBB11_2: ! %entry
+; UNOPT-NEXT:  .LBB14_2: ! %entry
 ; UNOPT-NEXT:    ld [%fp+-4], %i0 ! 4-byte Folded Reload
 ; UNOPT-NEXT:    ret
 ; UNOPT-NEXT:    restore
@@ -478,12 +568,12 @@ define i32 @restore_sethi_large(i32 %a) {
 ; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    mov %i0, %o0
 ; CHECK-NEXT:    cmp %o0, 0
-; CHECK-NEXT:    bne .LBB12_2
+; CHECK-NEXT:    bne .LBB15_2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  ! %bb.1: ! %entry
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    restore %g0, %g0, %o0
-; CHECK-NEXT:  .LBB12_2:
+; CHECK-NEXT:  .LBB15_2:
 ; CHECK-NEXT:    sethi 4000, %i0
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    restore
@@ -501,12 +591,12 @@ define i32 @restore_sethi_large(i32 %a) {
 ; UNOPT-NEXT:    st %i0, [%fp+-8] ! 4-byte Folded Spill
 ; UNOPT-NEXT:    sethi 4000, %i0
 ; UNOPT-NEXT:    cmp %o0, 0
-; UNOPT-NEXT:    bne .LBB12_2
+; UNOPT-NEXT:    bne .LBB15_2
 ; UNOPT-NEXT:    st %i0, [%fp+-4]
 ; UNOPT-NEXT:  ! %bb.1: ! %entry
 ; UNOPT-NEXT:    ld [%fp+-8], %i0 ! 4-byte Folded Reload
 ; UNOPT-NEXT:    st %i0, [%fp+-4] ! 4-byte Folded Spill
-; UNOPT-NEXT:  .LBB12_2: ! %entry
+; UNOPT-NEXT:  .LBB15_2: ! %entry
 ; UNOPT-NEXT:    ld [%fp+-4], %i0 ! 4-byte Folded Reload
 ; UNOPT-NEXT:    ret
 ; UNOPT-NEXT:    restore
@@ -525,14 +615,14 @@ define i32 @test_generic_inst(i32 %arg) #0 {
 ; CHECK-NEXT:    mov %i0, %o0
 ; CHECK-NEXT:    andcc %o0, 1, %g0
 ; CHECK-NEXT:    ! fake_use: $i0
-; CHECK-NEXT:    bne .LBB13_2
+; CHECK-NEXT:    bne .LBB16_2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  ! %bb.1: ! %true
 ; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    restore %g0, %o0, %o0
-; CHECK-NEXT:  .LBB13_2: ! %false
+; CHECK-NEXT:  .LBB16_2: ! %false
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    restore %o0, 1, %o0
 ;
@@ -547,21 +637,21 @@ define i32 @test_generic_inst(i32 %arg) #0 {
 ; UNOPT-NEXT:    and %o0, 1, %i0
 ; UNOPT-NEXT:    ! fake_use: $i1
 ; UNOPT-NEXT:    cmp %i0, 0
-; UNOPT-NEXT:    bne .LBB13_2
+; UNOPT-NEXT:    bne .LBB16_2
 ; UNOPT-NEXT:    nop
-; UNOPT-NEXT:    ba .LBB13_1
+; UNOPT-NEXT:    ba .LBB16_1
 ; UNOPT-NEXT:    nop
-; UNOPT-NEXT:  .LBB13_1: ! %true
+; UNOPT-NEXT:  .LBB16_1: ! %true
 ; UNOPT-NEXT:    call bar
 ; UNOPT-NEXT:    ld [%fp+-4], %o0
-; UNOPT-NEXT:    ba .LBB13_3
+; UNOPT-NEXT:    ba .LBB16_3
 ; UNOPT-NEXT:    st %o0, [%fp+-8]
-; UNOPT-NEXT:  .LBB13_2: ! %false
+; UNOPT-NEXT:  .LBB16_2: ! %false
 ; UNOPT-NEXT:    ld [%fp+-4], %i0 ! 4-byte Folded Reload
 ; UNOPT-NEXT:    add %i0, 1, %i0
-; UNOPT-NEXT:    ba .LBB13_3
+; UNOPT-NEXT:    ba .LBB16_3
 ; UNOPT-NEXT:    st %i0, [%fp+-8]
-; UNOPT-NEXT:  .LBB13_3: ! %cont
+; UNOPT-NEXT:  .LBB16_3: ! %cont
 ; UNOPT-NEXT:    ld [%fp+-8], %i0 ! 4-byte Folded Reload
 ; UNOPT-NEXT:    ret
 ; UNOPT-NEXT:    restore

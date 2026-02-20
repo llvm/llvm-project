@@ -361,7 +361,7 @@ func.func private @use_i64(i64)
 // CHECK-LABEL: func.func @loop_with_iter_arg
 func.func @loop_with_iter_arg() {
   %c0 = arith.constant 0 : index
-  %c1 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
   %c16 = arith.constant 16 : index
 
   %cst = arith.constant dense<0.000000e+00> : vector<4xf32>

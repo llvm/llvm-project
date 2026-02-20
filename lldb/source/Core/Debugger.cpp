@@ -202,6 +202,34 @@ enum {
 #include "CorePropertiesEnum.inc"
 };
 
+#ifndef NDEBUG
+#define LLDB_PROPERTIES_testing
+#include "CoreProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_testing
+#include "CorePropertiesEnum.inc"
+};
+#endif
+
+#ifndef NDEBUG
+TestingProperties::TestingProperties() {
+  m_collection_sp = std::make_shared<OptionValueProperties>("testing");
+  m_collection_sp->Initialize(g_testing_properties_def);
+}
+
+bool TestingProperties::GetInjectVarLocListError() const {
+  const uint32_t idx = ePropertyInjectVarLocListError;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_testing_properties[idx].default_uint_value != 0);
+}
+
+TestingProperties &TestingProperties::GetGlobalTestingProperties() {
+  static TestingProperties g_testing_properties;
+  return g_testing_properties;
+}
+#endif
+
 LoadPluginCallbackType Debugger::g_load_plugin_callback = nullptr;
 
 Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
@@ -584,6 +612,13 @@ bool Debugger::SetUseSourceCache(bool b) {
   }
   return ret;
 }
+
+bool Debugger::GetMarkHiddenFrames() const {
+  const uint32_t idx = ePropertyMarkHiddenFrames;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_debugger_properties[idx].default_uint_value != 0);
+}
+
 bool Debugger::GetHighlightSource() const {
   const uint32_t idx = ePropertyHighlightSource;
   return GetPropertyAtIndexAs<bool>(
@@ -988,7 +1023,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_forward_listener_sp(), m_clear_once() {
   // Initialize the debugger properties as early as possible as other parts of
   // LLDB will start querying them during construction.
-  m_collection_sp->Initialize(g_debugger_properties);
+  m_collection_sp->Initialize(g_debugger_properties_def);
   m_collection_sp->AppendProperty(
       "target", "Settings specify to debugging targets.", true,
       Target::GetGlobalProperties().GetValueProperties());

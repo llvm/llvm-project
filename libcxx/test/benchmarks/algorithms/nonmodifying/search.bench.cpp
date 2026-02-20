@@ -30,13 +30,6 @@ int main(int argc, char** argv) {
       return x == y;
     });
   };
-  auto ranges_search_pred = [](auto first1, auto last1, auto first2, auto last2) {
-    return std::ranges::search(first1, last1, first2, last2, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x == y;
-    });
-  };
 
   // Benchmark {std,ranges}::search where the needle is never found (worst case).
   {
@@ -67,17 +60,11 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::search(vector<int>) (no match)", std_search);
     bm.operator()<std::deque<int>>("std::search(deque<int>) (no match)", std_search);
     bm.operator()<std::list<int>>("std::search(list<int>) (no match)", std_search);
-    bm.operator()<std::vector<int>>("rng::search(vector<int>) (no match)", std::ranges::search);
-    bm.operator()<std::deque<int>>("rng::search(deque<int>) (no match)", std::ranges::search);
-    bm.operator()<std::list<int>>("rng::search(list<int>) (no match)", std::ranges::search);
 
     // {std,ranges}::search(pred)
     bm.operator()<std::vector<int>>("std::search(vector<int>, pred) (no match)", std_search_pred);
     bm.operator()<std::deque<int>>("std::search(deque<int>, pred) (no match)", std_search_pred);
     bm.operator()<std::list<int>>("std::search(list<int>, pred) (no match)", std_search_pred);
-    bm.operator()<std::vector<int>>("rng::search(vector<int>, pred) (no match)", ranges_search_pred);
-    bm.operator()<std::deque<int>>("rng::search(deque<int>, pred) (no match)", ranges_search_pred);
-    bm.operator()<std::list<int>>("rng::search(list<int>, pred) (no match)", ranges_search_pred);
   }
 
   // Benchmark {std,ranges}::search where we intersperse "near matches" inside the haystack.
@@ -119,17 +106,11 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::search(vector<int>) (near matches)", std_search);
     bm.operator()<std::deque<int>>("std::search(deque<int>) (near matches)", std_search);
     bm.operator()<std::list<int>>("std::search(list<int>) (near matches)", std_search);
-    bm.operator()<std::vector<int>>("rng::search(vector<int>) (near matches)", std::ranges::search);
-    bm.operator()<std::deque<int>>("rng::search(deque<int>) (near matches)", std::ranges::search);
-    bm.operator()<std::list<int>>("rng::search(list<int>) (near matches)", std::ranges::search);
 
     // {std,ranges}::search(pred)
     bm.operator()<std::vector<int>>("std::search(vector<int>, pred) (near matches)", std_search_pred);
     bm.operator()<std::deque<int>>("std::search(deque<int>, pred) (near matches)", std_search_pred);
     bm.operator()<std::list<int>>("std::search(list<int>, pred) (near matches)", std_search_pred);
-    bm.operator()<std::vector<int>>("rng::search(vector<int>, pred) (near matches)", ranges_search_pred);
-    bm.operator()<std::deque<int>>("rng::search(deque<int>, pred) (near matches)", ranges_search_pred);
-    bm.operator()<std::list<int>>("rng::search(list<int>, pred) (near matches)", ranges_search_pred);
   }
 
   // Special case: the two ranges are the same length (and they are equal, which is the worst case).
@@ -159,17 +140,11 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::search(vector<int>) (same length)", std_search);
     bm.operator()<std::deque<int>>("std::search(deque<int>) (same length)", std_search);
     bm.operator()<std::list<int>>("std::search(list<int>) (same length)", std_search);
-    bm.operator()<std::vector<int>>("rng::search(vector<int>) (same length)", std::ranges::search);
-    bm.operator()<std::deque<int>>("rng::search(deque<int>) (same length)", std::ranges::search);
-    bm.operator()<std::list<int>>("rng::search(list<int>) (same length)", std::ranges::search);
 
     // {std,ranges}::search(pred)
     bm.operator()<std::vector<int>>("std::search(vector<int>, pred) (same length)", std_search_pred);
     bm.operator()<std::deque<int>>("std::search(deque<int>, pred) (same length)", std_search_pred);
     bm.operator()<std::list<int>>("std::search(list<int>, pred) (same length)", std_search_pred);
-    bm.operator()<std::vector<int>>("rng::search(vector<int>, pred) (same length)", ranges_search_pred);
-    bm.operator()<std::deque<int>>("rng::search(deque<int>, pred) (same length)", ranges_search_pred);
-    bm.operator()<std::list<int>>("rng::search(list<int>, pred) (same length)", ranges_search_pred);
   }
 
   // Special case: the needle contains a single element (which we never find, i.e. the worst case).
@@ -200,17 +175,11 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::search(vector<int>) (single element)", std_search);
     bm.operator()<std::deque<int>>("std::search(deque<int>) (single element)", std_search);
     bm.operator()<std::list<int>>("std::search(list<int>) (single element)", std_search);
-    bm.operator()<std::vector<int>>("rng::search(vector<int>) (single element)", std::ranges::search);
-    bm.operator()<std::deque<int>>("rng::search(deque<int>) (single element)", std::ranges::search);
-    bm.operator()<std::list<int>>("rng::search(list<int>) (single element)", std::ranges::search);
 
     // {std,ranges}::search(pred)
     bm.operator()<std::vector<int>>("std::search(vector<int>, pred) (single element)", std_search_pred);
     bm.operator()<std::deque<int>>("std::search(deque<int>, pred) (single element)", std_search_pred);
     bm.operator()<std::list<int>>("std::search(list<int>, pred) (single element)", std_search_pred);
-    bm.operator()<std::vector<int>>("rng::search(vector<int>, pred) (single element)", ranges_search_pred);
-    bm.operator()<std::deque<int>>("rng::search(deque<int>, pred) (single element)", ranges_search_pred);
-    bm.operator()<std::list<int>>("rng::search(list<int>, pred) (single element)", ranges_search_pred);
   }
 
   benchmark::Initialize(&argc, argv);

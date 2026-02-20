@@ -27,7 +27,6 @@ MLIR_DYNAMIC = -9223372036854775808
 
 DEBUG = False
 
-
 class TmaDescriptorBuilder:
     """A class that builds a TMA descriptor."""
 
@@ -97,7 +96,8 @@ def debug_print(fmt, *args, predicate=None, threadNumber=-1, forcePrint=False):
         scf.yield_([])
     if_op = scf.IfOp(predicate)
     with ir.InsertionPoint(if_op.then_block):
-        gpu.printf(fmt.format(*type_formats) + "\n", args)
+        format_str = ir.StringAttr.get(fmt.format(*type_formats) + "\n")
+        gpu.printf(format_str, *args)
         scf.yield_([])
 
 
@@ -251,13 +251,13 @@ def generate_matmul_ws(
             smem_size = max(smem_size_input, smem_size_output)
 
             # Step 1. Allocate device memory and memcpy
-            t1 = gpu.wait(token_ty, [])
+            t1 = gpu.wait([])
             a_device, t2 = gpu.alloc(a_ty, token_ty, [t1], [], [])
             b_device, t3 = gpu.alloc(b_ty, token_ty, [t2], [], [])
             c_device, t4 = gpu.alloc(c_ty, token_ty, [t3], [], [])
             t5 = gpu.memcpy(token_ty, [t4], a_device, a_host)
             t6 = gpu.memcpy(token_ty, [t5], b_device, b_host)
-            t7 = gpu.wait(token_ty, [t6])
+            t7 = gpu.wait([t6])
 
             # Step 2. Create TMA Descriptors
             a_tma_desc = TmaDescriptorBuilder(
@@ -288,13 +288,11 @@ def generate_matmul_ws(
             grid = (cta_m, cta_n, 1)
             block = (WARP_GROUP_SIZE * 2, 1, 1)
             launch_op = gpu.LaunchOp(
-                token_ty,
-                [t7],
-                *map(c, grid),
-                *map(c, block),
-                dynamicSharedMemorySize=c(smem_size, ty=T.i32()),
+                tuple(map(c, grid)),
+                tuple(map(c, block)),
+                async_dependencies=[t7],
+                dynamic_shared_memory_size=c(smem_size, ty=T.i32()),
             )
-            launch_op.body.blocks.append(*([T.index()] * 12))
             with ir.InsertionPoint(launch_op.body.blocks[0]):
                 # GPU Step 0. This is need for vectorized ld/st
                 memref.assume_alignment(c_device, 16)
@@ -587,6 +585,9 @@ def generate_matmul_ws(
                         # Step 6.3.5. Yield
                         scf.yield_([new_acc, phaseParity])
 
+                    # Step 6.3. Wait All WGMMA
+                    nvvm.WgmmaWaitGroupSyncOp(0)
+
                     with ir.InsertionPoint(scf.IfOp(consumerPrimaryThread).then_block):
                         barId = c((K // BLOCK_K) % num_stages)
                         nvgpu.mbarrier_arrive(mbarDONE, barId)
@@ -640,11 +641,11 @@ def generate_matmul_ws(
                 gpu.terminator()
 
             # Step 4. Copy back to host
-            t8 = gpu.wait(token_ty, [launch_op])
+            t8 = gpu.wait([launch_op])
             t9 = gpu.memcpy(token_ty, [t8], c_host, c_device)
             gpu.dealloc(token_ty, [t8], a_device)
             gpu.dealloc(token_ty, [t8], b_device)
-            gpu.wait(token_ty, [t9])
+            gpu.wait([t9])
             gpu.dealloc(token_ty, [t8], c_device)
             func.ReturnOp([])
 
@@ -754,13 +755,13 @@ def generate_matmul_multistage(
             smem_size = max(smem_size_input, smem_size_output)
 
             # Step 1. Allocate device memory and memcpy
-            t1 = gpu.wait(token_ty, [])
+            t1 = gpu.wait([])
             a_device, t2 = gpu.alloc(a_ty, token_ty, [t1], [], [])
             b_device, t3 = gpu.alloc(b_ty, token_ty, [t2], [], [])
             c_device, t4 = gpu.alloc(c_ty, token_ty, [t3], [], [])
             t5 = gpu.memcpy(token_ty, [t4], a_device, a_host)
             t6 = gpu.memcpy(token_ty, [t5], b_device, b_host)
-            t7 = gpu.wait(token_ty, [t6])
+            t7 = gpu.wait([t6])
 
             # Step 2. Create TMA Descriptors
             a_tma_desc = TmaDescriptorBuilder(
@@ -791,13 +792,11 @@ def generate_matmul_multistage(
             grid = (cta_m, cta_n, 1)
             block = (WARP_GROUP_SIZE, 1, 1)
             launch_op = gpu.LaunchOp(
-                token_ty,
-                [t7],
-                *map(c, grid),
-                *map(c, block),
-                dynamicSharedMemorySize=c(smem_size, ty=T.i32()),
+                tuple(map(c, grid)),
+                tuple(map(c, block)),
+                async_dependencies=[t7],
+                dynamic_shared_memory_size=c(smem_size, ty=T.i32()),
             )
-            launch_op.body.blocks.append(*([T.index()] * 12))
             with ir.InsertionPoint(launch_op.body.blocks[0]):
                 # GPU Step 0. Bootstrapping
                 memref.assume_alignment(c_device, 16)
@@ -1144,11 +1143,11 @@ def generate_matmul_multistage(
                 gpu.terminator()
 
             # Step 4. Copy back to host
-            t8 = gpu.wait(token_ty, [launch_op])
+            t8 = gpu.wait([launch_op])
             t9 = gpu.memcpy(token_ty, [t8], c_host, c_device)
             gpu.dealloc(token_ty, [t8], a_device)
             gpu.dealloc(token_ty, [t8], b_device)
-            gpu.wait(token_ty, [t9])
+            gpu.wait([t9])
             gpu.dealloc(token_ty, [t8], c_device)
             func.ReturnOp([])
 

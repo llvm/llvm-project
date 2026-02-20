@@ -1,0 +1,44 @@
+# This test relies on locking files which is difficult to do in a way the keeps
+# a test robust on Linux, so it is restricted to Windows.
+REQUIRES: ld.lld,system-windows
+
+# Test that a warning is emitted for each DTLTO temporary file that cannot be
+# removed. This test uses archives because archive handling exercises a superset
+# of the temporary files used for object inputs.
+#
+# This scenario is logically related to the cases in savetemps.test; however, it
+# is placed here to maintain coverage, as this behavior can only be tested
+# effectively on Windows.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: %clang --target=x86_64-linux-gnu -O2 t1.c t2.c -flto=thin -c
+
+RUN: llvm-ar rcs t.a t1.o t2.o
+
+# Check that a warning is reported for each temporary file that cannot be
+# removed. Note that the use of the name "locked" for the output directory
+# triggers special behaviour in test_temps.py.
+RUN: mkdir locked && %python %S/test_temps.py locked lock \
+RUN:   %clang --target=x86_64-linux-gnu -nostdlib -O2 -flto=thin \
+RUN:     -fuse-ld=lld -Wl,--whole-archive t.a -o locked/t.elf -shared \
+RUN:     -fthinlto-distributor=%python \
+RUN:     -Xthinlto-distributor=%S/local_codegen_and_wait.py 2>&1 \
+RUN:       | FileCheck %s --implicit-check-not=warning
+
+# Sanity check for the expected test_temps.py behaviour.
+CHECK-DAG: Lock any files in the output directory.
+CHECK-DAG: warning: could not remove the file 'locked{{/|\\}}t.[[#PID:]].dist-file.json': {{.*}}
+# Filename composition: <archive>(<member> at <offset>).<task>.<pid>.<task>.<pid>.native.o.
+CHECK-DAG: warning: could not remove the file 'locked{{/|\\}}t.a(t1.o at [[#T1_OFFSET:]]).1.[[#%X,HEXPID:]].1.[[#PID]].native.o': {{.*}}
+CHECK-DAG: warning: could not remove the file 'locked{{/|\\}}t.a(t1.o at [[#T1_OFFSET]]).1.[[#%X,HEXPID]].1.[[#PID]].native.o.thinlto.bc': {{.*}}
+CHECK-DAG: warning: could not remove the file 'locked{{/|\\}}t.a(t2.o at [[#T2_OFFSET:]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o': {{.*}}
+CHECK-DAG: warning: could not remove the file 'locked{{/|\\}}t.a(t2.o at [[#T2_OFFSET]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o.thinlto.bc': {{.*}}
+CHECK-DAG: warning: could not remove temporary DTLTO input file 'locked{{/|\\}}t.a(t1.o at [[#T1_OFFSET]]).1.[[#%X,HEXPID]].o': {{.*}}
+CHECK-DAG: warning: could not remove temporary DTLTO input file 'locked{{/|\\}}t.a(t2.o at [[#T2_OFFSET]]).2.[[#%X,HEXPID]].o': {{.*}}
+
+#--- t1.c
+__attribute__((retain)) int t1(int x) { return x; }
+
+#--- t2.c
+__attribute__((retain)) int t2(int x) { return x; }

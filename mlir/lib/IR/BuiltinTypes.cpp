@@ -19,6 +19,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CheckedArithmetic.h"
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -875,8 +876,13 @@ AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
                             : getAffineConstantExpr(runningSize, context);
     expr = expr ? expr + dimExpr * stride : dimExpr * stride;
     if (size > 0) {
-      runningSize *= size;
-      assert(runningSize > 0 && "integer overflow in size computation");
+      auto result = llvm::checkedMul(runningSize, size);
+      if (!result) {
+        // Overflow occurred, treat as dynamic
+        dynamicPoisonBit = true;
+      } else {
+        runningSize = *result;
+      }
     } else {
       dynamicPoisonBit = true;
     }

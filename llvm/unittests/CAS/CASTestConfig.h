@@ -20,14 +20,21 @@
 #include "llvm/Support/Windows/WindowsSupport.h"
 #endif
 
+namespace llvm::cas::ondisk {
+class ObjectID;
+class OnDiskGraphDB;
+} // namespace llvm::cas::ondisk
+
 namespace llvm::unittest::cas {
+
+using namespace llvm::cas::ondisk;
+
 class MockEnv {
   void anchor();
 
 public:
   virtual ~MockEnv();
 };
-} // namespace llvm::unittest::cas
 
 struct CASTestingEnv {
   std::unique_ptr<llvm::cas::ObjectStore> CAS;
@@ -47,6 +54,36 @@ protected:
     // Use a smaller database size for testing to conserve disk space.
     setMaxOnDiskCASMappingSize();
   }
+};
+
+struct CustomHasherParam {
+  std::function<void(ArrayRef<ArrayRef<uint8_t>>, ArrayRef<char>,
+                     SmallVectorImpl<uint8_t> &)>
+      HashFn;
+  std::string HashName;
+  size_t HashSize;
+};
+
+// Test fixture for on-disk data base tests with custom hasher.
+class CustomHasherOnDiskCASTest
+    : public ::testing::TestWithParam<CustomHasherParam> {
+protected:
+  void SetUp() override {
+#if !LLVM_ENABLE_ONDISK_CAS
+    GTEST_SKIP() << "OnDiskCAS is not enabled";
+#endif
+    // Use a smaller database size for testing to conserve disk space.
+    setMaxOnDiskCASMappingSize();
+  }
+
+  using HashType = SmallVector<uint8_t, 32>;
+
+  Expected<ObjectID> store(OnDiskGraphDB &DB, StringRef Data,
+                           ArrayRef<ObjectID> Refs);
+
+  ObjectID digest(OnDiskGraphDB &DB, StringRef Data, ArrayRef<ObjectID> Refs);
+  HashType digest(StringRef Data, ArrayRef<ArrayRef<uint8_t>> RefHashes);
+  HashType digest(StringRef Data);
 };
 
 // Parametered test fixture for ObjectStore and ActionCache tests.
@@ -88,5 +125,7 @@ protected:
     Envs.clear();
   }
 };
+
+} // namespace llvm::unittest::cas
 
 #endif

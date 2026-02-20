@@ -501,15 +501,15 @@ llvm::Error IncrementalExecutorBuilder::UpdateOrcRuntimePath(
   std::string Joined;
   for (size_t i = 0; i < triedPaths.size(); ++i) {
     if (i > 0)
-      Joined += "\n  "; // Use newlines for better readability
+      Joined += "\n  ";
     Joined += triedPaths[i];
   }
 
   return llvm::make_error<llvm::StringError>(
-      llvm::formatv("OrcRuntime library not found. Checked:\n  {0}",
+      llvm::formatv("OrcRuntime library not found. Checked:  {0}",
                     Joined.empty() ? "<none>" : Joined)
           .str(),
-      llvm::inconvertibleErrorCode());
+      std::make_error_code(std::errc::no_such_file_or_directory));
 }
 
 } // end namespace clang

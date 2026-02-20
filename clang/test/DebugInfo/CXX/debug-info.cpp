@@ -4,7 +4,7 @@
 // CHECK: @_ZN6pr96081xE ={{.*}} global ptr null, align 8, !dbg [[X:![0-9]+]]
 
 // CHECK: define{{.*}} void @_ZN7pr147634funcENS_3fooE
-// CHECK-SAME: ptr dead_on_return noundef [[param:%.*]])
+// CHECK-SAME: ptr noundef dead_on_return [[param:%.*]])
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   alloca ptr, align 8
 // CHECK-NEXT:   [[param_addr_storage:%.*]] = alloca ptr, align 8

@@ -138,11 +138,11 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     `RegionBranchTerminatorOpInterface::getSuccessorOperands`.
 
     A "region successor" indicates the target of a branch. It can indicate:
-    1. A region of this op and a range of entry block arguments ("successor
-       inputs") to which the successor operands are forwarded to.
-    2. `RegionSuccessor::parent()` and a range of op results of this op
-       ("successor inputs") to which the successor operands are forwarded to.
-       The control flow leaves this op.
+    1. A region of this op.
+    2. `RegionSuccessor::parent()`, i.e., the control flow leaves this op.
+
+    The SSA values to which successor operands are forwarded are called
+    "successor inputs".
 
     By default, successor operands and successor block arguments/successor
     results must have the same type. `areTypesCompatible` can be implemented to
@@ -263,6 +263,19 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         }
       }]>,
     InterfaceMethod<[{
+        Return all successor inputs for the given region successor. If the
+        given region successor is a region, then the returned values are block
+        arguments. Otherwise, if the given region successor is the "parent",
+        the returned values are op results.
+      }],
+      "::mlir::ValueRange", "getSuccessorInputs",
+      (ins "::mlir::RegionSuccessor":$successor),
+      [{}],
+      /*defaultImplementation=*/[{
+        // Default implementation: No successor inputs.
+        return ::mlir::ValueRange();
+      }]>,
+    InterfaceMethod<[{
         Returns the potential branching points (predecessors) for a given
         region successor.
       }],
@@ -300,7 +313,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
             predecessorValues.push_back($_op.getEntrySuccessorOperands(successor)[index]);
             continue;
           }
-          auto terminator = cast<RegionBranchTerminatorOpInterface>(predecessor.getTerminatorPredecessorOrNull());
+          auto terminator = predecessor.getTerminatorPredecessorOrNull();
           predecessorValues.push_back(terminator.getSuccessorOperands(successor)[index]);
         }
       }]>,
@@ -365,6 +378,13 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     /// of the respective terminator.
     ::mlir::OperandRange getSuccessorOperands(
         ::mlir::RegionBranchPoint src, ::mlir::RegionSuccessor dest);
+
+    /// Return all successor inputs for the given region successor.
+    ///
+    /// If the "successor" is a region, it will return non-forwarded arguments,
+    /// if it is a "parent", it will return non-forwarded results.
+    ::llvm::SmallVector<Value> getNonSuccessorInputs(
+        ::mlir::RegionSuccessor successor);
 
     /// Build a mapping from successor operands to successor input. Each
     /// successor operand could be forwarded to multiple successor inputs.

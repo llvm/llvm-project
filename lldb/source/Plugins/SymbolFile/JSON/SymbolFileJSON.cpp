@@ -98,7 +98,7 @@ void SymbolFileJSON::AddSymbols(Symtab &symtab) {
   // Merge the two symbol tables.
   const size_t num_new_symbols = json_symtab->GetNumSymbols();
   for (size_t i = 0; i < num_new_symbols; ++i) {
-    Symbol *s = json_symtab->SymbolAtIndex(i);
+    const Symbol *s = json_symtab->SymbolAtIndex(i);
     symtab.AddSymbol(*s);
   }
   symtab.Finalize();

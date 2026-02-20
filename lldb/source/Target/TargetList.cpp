@@ -306,6 +306,10 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
     if (platform_sp) {
       ModuleSpec module_spec(file, arch);
       module_spec.SetTarget(target_sp);
+      // Set the platform so that GetSharedModule can use it for the locate
+      // module callback, even when Target is not yet available (during target
+      // creation for launch mode).
+      module_spec.SetPlatform(platform_sp);
       error = platform_sp->ResolveExecutable(module_spec, exe_module_sp);
     }
 

@@ -44,7 +44,7 @@ body:            |
     ; GCN-LABEL: name: hazard_enable
     ; GCN: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0, implicit $exec
     ; GCN-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65438
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0, implicit $exec
@@ -83,7 +83,7 @@ body:            |
   ; GCN-NEXT:   DS_NOP implicit $m0, implicit $exec
   ; GCN-NEXT:   DS_NOP implicit $m0, implicit $exec
   ; GCN-NEXT:   DS_NOP implicit $m0, implicit $exec
-  ; GCN-NEXT:   S_WAITCNT_DEPCTR 65438
+  ; GCN-NEXT:   S_WAITCNT_DEPCTR .SaSdst_0
   ; GCN-NEXT:   S_SETPC_B64 $sgpr0_sgpr1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
@@ -92,7 +92,7 @@ body:            |
   ; GCN-NEXT:   DS_NOP implicit $m0, implicit $exec
   ; GCN-NEXT:   DS_NOP implicit $m0, implicit $exec
   ; GCN-NEXT:   DS_NOP implicit $m0, implicit $exec
-  ; GCN-NEXT:   S_WAITCNT_DEPCTR 65438
+  ; GCN-NEXT:   S_WAITCNT_DEPCTR .SaSdst_0
   ; GCN-NEXT:   S_SETPC_B64_return $sgpr0_sgpr1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.4:
@@ -104,7 +104,7 @@ body:            |
   ; GCN-NEXT:   DS_NOP implicit $m0, implicit $exec
   ; GCN-NEXT:   DS_NOP implicit $m0, implicit $exec
   ; GCN-NEXT:   DS_NOP implicit $m0, implicit $exec
-  ; GCN-NEXT:   S_WAITCNT_DEPCTR 65438
+  ; GCN-NEXT:   S_WAITCNT_DEPCTR .SaSdst_0
   ; GCN-NEXT:   $sgpr4_sgpr5 = S_SWAPPC_B64 $sgpr2_sgpr3
   ; GCN-NEXT:   $sgpr4 = S_ADD_U32 $sgpr4, 0, implicit-def $scc
   ; GCN-NEXT: {{  $}}
@@ -172,7 +172,7 @@ body:            |
     ; GCN-LABEL: name: hazard_callee2
     ; GCN: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
     ; GCN-NEXT: $sgpr1 = S_CSELECT_B32 -1, 0, implicit $scc
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65438
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: $sgpr2 = S_ADD_U32 $sgpr1, 0, implicit-def $scc
     ; GCN-NEXT: DS_NOP implicit $m0, implicit $exec
     ; GCN-NEXT: DS_NOP implicit $m0, implicit $exec
@@ -292,7 +292,7 @@ body:            |
     ; GCN-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_WAIT_LOADCNT 0
     ; GCN-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65438
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
@@ -335,7 +335,7 @@ body:            |
     ; GCN-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_WAIT_LOADCNT 0
     ; GCN-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65438
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec

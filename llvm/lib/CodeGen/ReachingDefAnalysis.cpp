@@ -48,9 +48,7 @@ INITIALIZE_PASS(ReachingDefInfoWrapperPass, DEBUG_TYPE,
 char ReachingDefInfoWrapperPass::ID = 0;
 
 ReachingDefInfoWrapperPass::ReachingDefInfoWrapperPass()
-    : MachineFunctionPass(ID) {
-  initializeReachingDefInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 ReachingDefInfo::ReachingDefInfo() = default;
 ReachingDefInfo::ReachingDefInfo(ReachingDefInfo &&) = default;
@@ -128,7 +126,7 @@ void ReachingDefInfo::enterBasicBlock(MachineBasicBlock *MBB) {
     LiveRegs.assign(NumRegUnits, ReachingDefDefaultVal);
 
   // This is the entry block.
-  if (MBB->pred_empty()) {
+  if (MBB == &MBB->getParent()->front()) {
     for (const auto &LI : MBB->liveins()) {
       for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
         // Treat function live-ins as if they were defined just before the first
@@ -293,8 +291,18 @@ void ReachingDefInfo::run(MachineFunction &mf) {
 }
 
 void ReachingDefInfo::print(raw_ostream &OS) {
+  // Create a map from instruction to numerical ids.
+  // Since a reaching def can come after instruction,
+  // this map needs to be populated first.
   int Num = 0;
   DenseMap<MachineInstr *, int> InstToNumMap;
+  for (MachineBasicBlock &MBB : *MF) {
+    for (MachineInstr &MI : MBB) {
+      InstToNumMap[&MI] = Num;
+      ++Num;
+    }
+  }
+
   SmallPtrSet<MachineInstr *, 2> Defs;
   for (MachineBasicBlock &MBB : *MF) {
     OS << printMBBReference(MBB) << ":\n";
@@ -324,9 +332,7 @@ void ReachingDefInfo::print(raw_ostream &OS) {
           OS << Num << " ";
         OS << "}\n";
       }
-      OS << Num << ": " << MI << "\n";
-      InstToNumMap[&MI] = Num;
-      ++Num;
+      OS << InstToNumMap[&MI] << ": " << MI << "\n";
     }
   }
 }

@@ -33,9 +33,7 @@ program p
   use m
   type(foo) x
   x = foo(); print *, x       ! ok, not ambiguous
-  !PORTABILITY: Reference to generic function 'foo' (resolving to specific 'bar0') is ambiguous with a structure constructor of the same name [-Wambiguous-structure-constructor]
-  x = foo(2); print *, x      ! ambigous
-  !PORTABILITY: Reference to generic function 'foo' (resolving to specific 'bar2') is ambiguous with a structure constructor of the same name [-Wambiguous-structure-constructor]
-  x = foo(3.); print *, x     ! ambiguous due to data conversion
+  x = foo(2); print *, x      ! According to F23 C7108, not ambiguous
+  x = foo(3.); print *, x     ! According to F23 C7108, not ambiguous
   x = foo(.true.); print *, x ! ok, not ambigous
 end

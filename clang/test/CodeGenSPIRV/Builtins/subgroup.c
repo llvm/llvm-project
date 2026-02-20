@@ -9,7 +9,7 @@ typedef unsigned __attribute__((ext_vector_type(4))) int4;
 
 // CHECK: @{{.*}}test_subgroup_ballot{{.*}}(
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    tail call <4 x i32> @llvm.spv.wave.ballot(i1 %i)
+// CHECK-NEXT:    tail call <4 x i32> @llvm.spv.subgroup.ballot(i1 %i)
 [[clang::sycl_external]] int4 test_subgroup_ballot(_Bool i) {
     return __builtin_spirv_subgroup_ballot(i);
 }

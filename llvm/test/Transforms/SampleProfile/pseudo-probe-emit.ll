@@ -112,12 +112,14 @@ entry:
 ; CHECK-ASM-ELF-NEXT: .byte 4
 ; CHECK-ASM-ELF-NEXT: .ascii	"foo2"
 ; CHECK-ASM-COFF: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo
+; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_foo
 ; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo:
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH:]]
 ; CHECK-ASM-COFF-NEXT: .byte	3
 ; CHECK-ASM-COFF-NEXT: .ascii	"foo"
 ; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo2
+; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_foo2
 ; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo2:
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID2]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH2:]]

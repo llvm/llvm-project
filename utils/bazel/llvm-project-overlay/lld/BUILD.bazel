@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load(
     "//:vars.bzl",
@@ -19,17 +20,21 @@ package(
 licenses(["notice"])
 
 # TODO: Actually compute version info
-genrule(
+write_file(
     name = "config_version_gen",
-    outs = ["include/lld/Common/Version.inc"],
-    cmd = "echo '#define LLD_VERSION_STRING \"{}\"' > $@".format(LLVM_VERSION),
+    out = "include/lld/Common/Version.inc",
+    content = [
+        "#define LLD_VERSION_STRING \"{}\"".format(LLVM_VERSION),
+    ],
 )
 
-genrule(
+write_file(
     name = "vcs_version_gen",
-    outs = ["Common/VCSVersion.inc"],
-    cmd = "echo '#undef LLD_REVISION' >> $@\n" +
-          "echo '#undef LLD_REPOSITORY' >> $@\n",
+    out = "Common/VCSVersion.inc",
+    content = [
+        "#undef LLD_REVISION",
+        "#undef LLD_REPOSITORY",
+    ],
 )
 
 # See https://github.com/bazelbuild/bazel/issues/13803

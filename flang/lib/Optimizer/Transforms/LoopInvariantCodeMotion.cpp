@@ -13,11 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
+#include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -272,21 +272,29 @@ void LoopInvariantCodeMotion::runOnOperation() {
       };
 
   getOperation()->walk([&](LoopLikeOpInterface loopLike) {
-    if (isa<omp::OutlineableOpenMPOpInterface>(loopLike.getOperation())) {
-      LDBG() << "Skipping omp::OutlineableOpenMPOpInterface operation";
+    if (!fir::canMoveOutOf(loopLike, nullptr)) {
+      LDBG() << "Cannot hoist anything out of loop operation: ";
+      LDBG_OS([&](llvm::raw_ostream &os) {
+        loopLike->print(os, OpPrintingFlags().skipRegions());
+      });
       return;
     }
     // We always hoist operations to the parent operation of the loopLike.
     // Check that the parent operation allows the hoisting, e.g.
     // omp::LoopWrapperInterface operations assume tight nesting
     // of the inner maybe loop-like operations, so hoisting
-    // to such a parent would be invalid.
+    // to such a parent would be invalid. We rely on
+    // fir::canMoveFromDescendant() to identify whether the hoisting
+    // is allowed.
     Operation *parentOp = loopLike->getParentOp();
     if (!parentOp) {
       LDBG() << "Skipping top-level loop-like operation?";
       return;
-    } else if (isa<omp::LoopWrapperInterface>(parentOp)) {
-      LDBG() << "Skipping omp::LoopWrapperInterface operation";
+    } else if (!fir::canMoveFromDescendant(parentOp, loopLike, nullptr)) {
+      LDBG() << "Cannot hoist anything into operation: ";
+      LDBG_OS([&](llvm::raw_ostream &os) {
+        parentOp->print(os, OpPrintingFlags().skipRegions());
+      });
       return;
     }
     moveLoopInvariantCode(
@@ -297,6 +305,14 @@ void LoopInvariantCodeMotion::runOnOperation() {
         },
         /*shouldMoveOutOfRegion=*/
         [&](Operation *op, Region *) {
+          if (!fir::canMoveOutOf(loopLike, op)) {
+            LDBG() << "Cannot hoist " << *op << " out of the loop";
+            return false;
+          }
+          if (!fir::canMoveFromDescendant(parentOp, loopLike, op)) {
+            LDBG() << "Cannot hoist " << *op << " into the parent of the loop";
+            return false;
+          }
           return shouldMoveOutOfLoop(op, loopLike);
         },
         /*moveOutOfRegion=*/

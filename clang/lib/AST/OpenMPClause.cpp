@@ -1442,7 +1442,9 @@ OMPUseDevicePtrClause *OMPUseDevicePtrClause::Create(
     const ASTContext &C, const OMPVarListLocTy &Locs, ArrayRef<Expr *> Vars,
     ArrayRef<Expr *> PrivateVars, ArrayRef<Expr *> Inits,
     ArrayRef<ValueDecl *> Declarations,
-    MappableExprComponentListsRef ComponentLists) {
+    MappableExprComponentListsRef ComponentLists,
+    OpenMPUseDevicePtrFallbackModifier FallbackModifier,
+    SourceLocation FallbackModifierLoc) {
   OMPMappableExprListSizeTy Sizes;
   Sizes.NumVars = Vars.size();
   Sizes.NumUniqueDeclarations = getUniqueDeclarationsTotalNumber(Declarations);
@@ -1466,7 +1468,8 @@ OMPUseDevicePtrClause *OMPUseDevicePtrClause::Create(
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
 
-  OMPUseDevicePtrClause *Clause = new (Mem) OMPUseDevicePtrClause(Locs, Sizes);
+  OMPUseDevicePtrClause *Clause = new (Mem)
+      OMPUseDevicePtrClause(Locs, Sizes, FallbackModifier, FallbackModifierLoc);
 
   Clause->setVarRefs(Vars);
   Clause->setPrivateCopies(PrivateVars);
@@ -2054,7 +2057,10 @@ void OMPClausePrinter::VisitOMPThreadsetClause(OMPThreadsetClause *Node) {
 
 void OMPClausePrinter::VisitOMPTransparentClause(OMPTransparentClause *Node) {
   OS << "transparent(";
-  Node->getImpexType()->printPretty(OS, nullptr, Policy, 0);
+  if (Node->getImpexType())
+    Node->getImpexType()->printPretty(OS, nullptr, Policy, 0);
+  else
+    OS << "omp_impex";
   OS << ")";
 }
 
@@ -2760,7 +2766,15 @@ void OMPClausePrinter::VisitOMPDefaultmapClause(OMPDefaultmapClause *Node) {
 void OMPClausePrinter::VisitOMPUseDevicePtrClause(OMPUseDevicePtrClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "use_device_ptr";
-    VisitOMPClauseList(Node, '(');
+    if (Node->getFallbackModifier() != OMPC_USE_DEVICE_PTR_FALLBACK_unknown) {
+      OS << "("
+         << getOpenMPSimpleClauseTypeName(OMPC_use_device_ptr,
+                                          Node->getFallbackModifier())
+         << ":";
+      VisitOMPClauseList(Node, ' ');
+    } else {
+      VisitOMPClauseList(Node, '(');
+    }
     OS << ")";
   }
 }

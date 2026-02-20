@@ -334,7 +334,7 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
     // TODO: Verify this works fine when modulemap for module A is eagerly
     // loaded from A.pcm, and module map passed on the command line contains
     // definition of a submodule: "explicit module A.Private { ... }".
-    if (Service.shouldEagerLoadModules() &&
+    if (Service.getOpts().EagerLoadModules &&
         DepModuleMapFiles.contains(*ModuleMapEntry))
       continue;
 
@@ -385,7 +385,7 @@ llvm::DenseSet<const FileEntry *> ModuleDepCollector::collectModuleMapFiles(
 
 void ModuleDepCollector::addModuleMapFiles(
     CompilerInvocation &CI, ArrayRef<ModuleID> ClangModuleDeps) const {
-  if (Service.shouldEagerLoadModules())
+  if (Service.getOpts().EagerLoadModules)
     return; // Only pcm is needed for eager load.
 
   for (const ModuleID &MID : ClangModuleDeps) {
@@ -402,7 +402,7 @@ void ModuleDepCollector::addModuleFiles(
     std::string PCMPath =
         Controller.lookupModuleOutput(*MD, ModuleOutputKind::ModuleFile);
 
-    if (Service.shouldEagerLoadModules())
+    if (Service.getOpts().EagerLoadModules)
       CI.getFrontendOpts().ModuleFiles.push_back(std::move(PCMPath));
     else
       CI.getHeaderSearchOpts().PrebuiltModuleFiles.insert(
@@ -417,7 +417,7 @@ void ModuleDepCollector::addModuleFiles(
     std::string PCMPath =
         Controller.lookupModuleOutput(*MD, ModuleOutputKind::ModuleFile);
 
-    if (Service.shouldEagerLoadModules())
+    if (Service.getOpts().EagerLoadModules)
       CI.getMutFrontendOpts().ModuleFiles.push_back(std::move(PCMPath));
     else
       CI.getMutHeaderSearchOpts().PrebuiltModuleFiles.insert(
@@ -525,7 +525,7 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
 void ModuleDepCollector::associateWithContextHash(
     const CowCompilerInvocation &CI, bool IgnoreCWD, ModuleDeps &Deps) {
   Deps.ID.ContextHash =
-      getModuleContextHash(Deps, CI, Service.shouldEagerLoadModules(),
+      getModuleContextHash(Deps, CI, Service.getOpts().EagerLoadModules,
                            IgnoreCWD, ScanInstance.getVirtualFileSystem());
   bool Inserted = ModuleDepsByID.insert({Deps.ID, &Deps}).second;
   (void)Inserted;
@@ -565,7 +565,8 @@ void ModuleDepCollectorPP::InclusionDirective(
 void ModuleDepCollectorPP::moduleImport(SourceLocation ImportLoc,
                                         ModuleIdPath Path,
                                         const Module *Imported) {
-  if (MDC.ScanInstance.getPreprocessor().isInImportingCXXNamedModules()) {
+  auto &PP = MDC.ScanInstance.getPreprocessor();
+  if (PP.getLangOpts().CPlusPlusModules && PP.isImportingCXXNamedModules()) {
     P1689ModuleInfo RequiredModule;
     RequiredModule.ModuleName = Path[0].getIdentifierInfo()->getName().str();
     RequiredModule.Type = P1689ModuleInfo::ModuleType::NamedCXXModule;
@@ -751,21 +752,21 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   CowCompilerInvocation CI =
       MDC.getInvocationAdjustedForModuleBuildWithoutOutputs(
           MD, [&](CowCompilerInvocation &BuildInvocation) {
-            if (any(MDC.Service.getOptimizeArgs() &
+            if (any(MDC.Service.getOpts().OptimizeArgs &
                     (ScanningOptimizations::HeaderSearch |
                      ScanningOptimizations::VFS)))
               optimizeHeaderSearchOpts(BuildInvocation.getMutHeaderSearchOpts(),
                                        *MDC.ScanInstance.getASTReader(), *MF,
                                        MDC.PrebuiltModulesASTMap,
-                                       MDC.Service.getOptimizeArgs());
+                                       MDC.Service.getOpts().OptimizeArgs);
 
-            if (any(MDC.Service.getOptimizeArgs() &
+            if (any(MDC.Service.getOpts().OptimizeArgs &
                     ScanningOptimizations::SystemWarnings))
               optimizeDiagnosticOpts(
                   BuildInvocation.getMutDiagnosticOpts(),
                   BuildInvocation.getFrontendOpts().IsSystemModule);
 
-            IgnoreCWD = any(MDC.Service.getOptimizeArgs() &
+            IgnoreCWD = any(MDC.Service.getOpts().OptimizeArgs &
                             ScanningOptimizations::IgnoreCWD) &&
                         isSafeToIgnoreCWD(BuildInvocation);
             if (IgnoreCWD) {
@@ -959,9 +960,7 @@ static StringRef makeAbsoluteAndPreferred(CompilerInstance &CI, StringRef Path,
 }
 
 void ModuleDepCollector::addFileDep(StringRef Path) {
-  if (Service.getFormat() == ScanningOutputFormat::P1689) {
-    // Within P1689 format, we don't want all the paths to be absolute path
-    // since it may violate the traditional make style dependencies info.
+  if (!Service.getOpts().ReportAbsolutePaths) {
     FileDeps.emplace_back(Path);
     return;
   }

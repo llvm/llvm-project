@@ -103,16 +103,19 @@ static Type *getFloatTypeForLLT(LLVMContext &Ctx, LLT Ty) {
 
 LegalizerHelper::LegalizerHelper(MachineFunction &MF,
                                  GISelChangeObserver &Observer,
-                                 MachineIRBuilder &Builder)
+                                 MachineIRBuilder &Builder,
+                                 const LibcallLoweringInfo *Libcalls)
     : MIRBuilder(Builder), Observer(Observer), MRI(MF.getRegInfo()),
       LI(*MF.getSubtarget().getLegalizerInfo()),
-      TLI(*MF.getSubtarget().getTargetLowering()), VT(nullptr) {}
+      TLI(*MF.getSubtarget().getTargetLowering()), Libcalls(Libcalls) {}
 
 LegalizerHelper::LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
                                  GISelChangeObserver &Observer,
-                                 MachineIRBuilder &B, GISelValueTracking *VT)
+                                 MachineIRBuilder &B,
+                                 const LibcallLoweringInfo *Libcalls,
+                                 GISelValueTracking *VT)
     : MIRBuilder(B), Observer(Observer), MRI(MF.getRegInfo()), LI(LI),
-      TLI(*MF.getSubtarget().getTargetLowering()), VT(VT) {}
+      TLI(*MF.getSubtarget().getTargetLowering()), Libcalls(Libcalls), VT(VT) {}
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::legalizeInstrStep(MachineInstr &MI,
@@ -580,12 +583,10 @@ static bool isLibCallInTailPosition(const CallLowering::ArgInfo &Result,
   return true;
 }
 
-LegalizerHelper::LegalizeResult
-llvm::createLibcall(MachineIRBuilder &MIRBuilder, const char *Name,
-                    const CallLowering::ArgInfo &Result,
-                    ArrayRef<CallLowering::ArgInfo> Args,
-                    const CallingConv::ID CC, LostDebugLocObserver &LocObserver,
-                    MachineInstr *MI) {
+LegalizerHelper::LegalizeResult LegalizerHelper::createLibcall(
+    const char *Name, const CallLowering::ArgInfo &Result,
+    ArrayRef<CallLowering::ArgInfo> Args, const CallingConv::ID CC,
+    LostDebugLocObserver &LocObserver, MachineInstr *MI) const {
   auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
 
   CallLowering::CallLoweringInfo Info;
@@ -627,31 +628,34 @@ llvm::createLibcall(MachineIRBuilder &MIRBuilder, const char *Name,
   return LegalizerHelper::Legalized;
 }
 
-LegalizerHelper::LegalizeResult
-llvm::createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
-                    const CallLowering::ArgInfo &Result,
-                    ArrayRef<CallLowering::ArgInfo> Args,
-                    LostDebugLocObserver &LocObserver, MachineInstr *MI) {
-  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
-  const char *Name = TLI.getLibcallName(Libcall);
-  if (!Name)
+LegalizerHelper::LegalizeResult LegalizerHelper::createLibcall(
+    RTLIB::Libcall Libcall, const CallLowering::ArgInfo &Result,
+    ArrayRef<CallLowering::ArgInfo> Args, LostDebugLocObserver &LocObserver,
+    MachineInstr *MI) const {
+  if (!Libcalls)
     return LegalizerHelper::UnableToLegalize;
-  const CallingConv::ID CC = TLI.getLibcallCallingConv(Libcall);
-  return createLibcall(MIRBuilder, Name, Result, Args, CC, LocObserver, MI);
+
+  RTLIB::LibcallImpl LibcallImpl = Libcalls->getLibcallImpl(Libcall);
+  if (LibcallImpl == RTLIB::Unsupported)
+    return LegalizerHelper::UnableToLegalize;
+
+  StringRef Name = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpl);
+  const CallingConv::ID CC = Libcalls->getLibcallImplCallingConv(LibcallImpl);
+  return createLibcall(Name.data(), Result, Args, CC, LocObserver, MI);
 }
 
 // Useful for libcalls where all operands have the same type.
-static LegalizerHelper::LegalizeResult
-simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size,
-              Type *OpType, LostDebugLocObserver &LocObserver) {
+LegalizerHelper::LegalizeResult
+LegalizerHelper::simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+                               unsigned Size, Type *OpType,
+                               LostDebugLocObserver &LocObserver) const {
   auto Libcall = getRTLibDesc(MI.getOpcode(), Size);
 
   // FIXME: What does the original arg index mean here?
   SmallVector<CallLowering::ArgInfo, 3> Args;
   for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
     Args.push_back({MO.getReg(), OpType, 0});
-  return createLibcall(MIRBuilder, Libcall,
-                       {MI.getOperand(0).getReg(), OpType, 0}, Args,
+  return createLibcall(Libcall, {MI.getOperand(0).getReg(), OpType, 0}, Args,
                        LocObserver, &MI);
 }
 
@@ -680,13 +684,12 @@ LegalizerHelper::LegalizeResult LegalizerHelper::emitSincosLibcall(
           .getReg(0);
 
   auto &Ctx = MF.getFunction().getContext();
-  auto LibcallResult =
-      createLibcall(MIRBuilder, getRTLibDesc(MI.getOpcode(), Size),
-                    {{0}, Type::getVoidTy(Ctx), 0},
-                    {{Src, OpType, 0},
-                     {StackPtrSin, PointerType::get(Ctx, AddrSpace), 1},
-                     {StackPtrCos, PointerType::get(Ctx, AddrSpace), 2}},
-                    LocObserver, &MI);
+  auto LibcallResult = createLibcall(
+      getRTLibDesc(MI.getOpcode(), Size), {{0}, Type::getVoidTy(Ctx), 0},
+      {{Src, OpType, 0},
+       {StackPtrSin, PointerType::get(Ctx, AddrSpace), 1},
+       {StackPtrCos, PointerType::get(Ctx, AddrSpace), 2}},
+      LocObserver, &MI);
 
   if (LibcallResult != LegalizeResult::Legalized)
     return LegalizerHelper::UnableToLegalize;
@@ -727,7 +730,7 @@ LegalizerHelper::emitModfLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
 
   auto &Ctx = MF.getFunction().getContext();
   auto LibcallResult = createLibcall(
-      MIRBuilder, getRTLibDesc(MI.getOpcode(), Size), {DstFrac, OpType, 0},
+      getRTLibDesc(MI.getOpcode(), Size), {DstFrac, OpType, 0},
       {{Src, OpType, 0}, {StackPtrInt, PointerType::get(Ctx, AddrSpace), 1}},
       LocObserver, &MI);
 
@@ -743,9 +746,47 @@ LegalizerHelper::emitModfLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
   return LegalizerHelper::Legalized;
 }
 
+static RTLIB::Libcall getConvRTLibDesc(unsigned Opcode, Type *ToType,
+                                       Type *FromType) {
+  auto ToMVT = MVT::getVT(ToType);
+  auto FromMVT = MVT::getVT(FromType);
+
+  switch (Opcode) {
+  case TargetOpcode::G_FPEXT:
+    return RTLIB::getFPEXT(FromMVT, ToMVT);
+  case TargetOpcode::G_FPTRUNC:
+    return RTLIB::getFPROUND(FromMVT, ToMVT);
+  case TargetOpcode::G_FPTOSI:
+    return RTLIB::getFPTOSINT(FromMVT, ToMVT);
+  case TargetOpcode::G_FPTOUI:
+    return RTLIB::getFPTOUINT(FromMVT, ToMVT);
+  case TargetOpcode::G_SITOFP:
+    return RTLIB::getSINTTOFP(FromMVT, ToMVT);
+  case TargetOpcode::G_UITOFP:
+    return RTLIB::getUINTTOFP(FromMVT, ToMVT);
+  }
+  llvm_unreachable("Unsupported libcall function");
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::conversionLibcall(
+    MachineInstr &MI, Type *ToType, Type *FromType,
+    LostDebugLocObserver &LocObserver, bool IsSigned) const {
+  CallLowering::ArgInfo Arg = {MI.getOperand(1).getReg(), FromType, 0};
+  if (FromType->isIntegerTy()) {
+    if (TLI.shouldSignExtendTypeInLibCall(FromType, IsSigned))
+      Arg.Flags[0].setSExt();
+    else
+      Arg.Flags[0].setZExt();
+  }
+
+  RTLIB::Libcall Libcall = getConvRTLibDesc(MI.getOpcode(), ToType, FromType);
+  return createLibcall(Libcall, {MI.getOperand(0).getReg(), ToType, 0}, Arg,
+                       LocObserver, &MI);
+}
+
 LegalizerHelper::LegalizeResult
-llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                       MachineInstr &MI, LostDebugLocObserver &LocObserver) {
+LegalizerHelper::createMemLibcall(MachineRegisterInfo &MRI, MachineInstr &MI,
+                                  LostDebugLocObserver &LocObserver) const {
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
 
   SmallVector<CallLowering::ArgInfo, 3> Args;
@@ -764,44 +805,46 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
   }
 
   auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
-  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
   RTLIB::Libcall RTLibcall;
   unsigned Opc = MI.getOpcode();
-  const char *Name;
   switch (Opc) {
   case TargetOpcode::G_BZERO:
     RTLibcall = RTLIB::BZERO;
-    Name = TLI.getLibcallName(RTLibcall);
     break;
   case TargetOpcode::G_MEMCPY:
     RTLibcall = RTLIB::MEMCPY;
-    Name = TLI.getLibcallImplName(TLI.getMemcpyImpl()).data();
     Args[0].Flags[0].setReturned();
     break;
   case TargetOpcode::G_MEMMOVE:
     RTLibcall = RTLIB::MEMMOVE;
-    Name = TLI.getLibcallName(RTLibcall);
     Args[0].Flags[0].setReturned();
     break;
   case TargetOpcode::G_MEMSET:
     RTLibcall = RTLIB::MEMSET;
-    Name = TLI.getLibcallName(RTLibcall);
     Args[0].Flags[0].setReturned();
     break;
   default:
     llvm_unreachable("unsupported opcode");
   }
 
+  if (!Libcalls) // FIXME: Should be mandatory
+    return LegalizerHelper::UnableToLegalize;
+
+  RTLIB::LibcallImpl RTLibcallImpl = Libcalls->getLibcallImpl(RTLibcall);
+
   // Unsupported libcall on the target.
-  if (!Name) {
+  if (RTLibcallImpl == RTLIB::Unsupported) {
     LLVM_DEBUG(dbgs() << ".. .. Could not find libcall name for "
                       << MIRBuilder.getTII().getName(Opc) << "\n");
     return LegalizerHelper::UnableToLegalize;
   }
 
   CallLowering::CallLoweringInfo Info;
-  Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);
-  Info.Callee = MachineOperand::CreateES(Name);
+  Info.CallConv = Libcalls->getLibcallImplCallingConv(RTLibcallImpl);
+
+  StringRef LibcallName =
+      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(RTLibcallImpl);
+  Info.Callee = MachineOperand::CreateES(LibcallName.data());
   Info.OrigRet = CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0);
   Info.IsTailCall =
       MI.getOperand(MI.getNumOperands() - 1).getImm() &&
@@ -883,9 +926,9 @@ static RTLIB::Libcall getOutlineAtomicLibcall(MachineInstr &MI) {
 #undef LCALL5
 }
 
-static LegalizerHelper::LegalizeResult
-createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
-  auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
+LegalizerHelper::LegalizeResult
+LegalizerHelper::createAtomicLibcall(MachineInstr &MI) const {
+  auto &Ctx = MIRBuilder.getContext();
 
   Type *RetTy;
   SmallVector<Register> RetRegs;
@@ -937,21 +980,26 @@ createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
     llvm_unreachable("unsupported opcode");
   }
 
+  if (!Libcalls) // FIXME: Should be mandatory
+    return LegalizerHelper::UnableToLegalize;
+
   auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
-  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
   RTLIB::Libcall RTLibcall = getOutlineAtomicLibcall(MI);
-  const char *Name = TLI.getLibcallName(RTLibcall);
+  RTLIB::LibcallImpl RTLibcallImpl = Libcalls->getLibcallImpl(RTLibcall);
 
   // Unsupported libcall on the target.
-  if (!Name) {
+  if (RTLibcallImpl == RTLIB::Unsupported) {
     LLVM_DEBUG(dbgs() << ".. .. Could not find libcall name for "
                       << MIRBuilder.getTII().getName(Opc) << "\n");
     return LegalizerHelper::UnableToLegalize;
   }
 
   CallLowering::CallLoweringInfo Info;
-  Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);
-  Info.Callee = MachineOperand::CreateES(Name);
+  Info.CallConv = Libcalls->getLibcallImplCallingConv(RTLibcallImpl);
+
+  StringRef LibcallName =
+      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(RTLibcallImpl);
+  Info.Callee = MachineOperand::CreateES(LibcallName.data());
   Info.OrigRet = CallLowering::ArgInfo(RetRegs, RetTy, 0);
 
   llvm::append_range(Info.OrigArgs, Args);
@@ -959,46 +1007,6 @@ createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
     return LegalizerHelper::UnableToLegalize;
 
   return LegalizerHelper::Legalized;
-}
-
-static RTLIB::Libcall getConvRTLibDesc(unsigned Opcode, Type *ToType,
-                                       Type *FromType) {
-  auto ToMVT = MVT::getVT(ToType);
-  auto FromMVT = MVT::getVT(FromType);
-
-  switch (Opcode) {
-  case TargetOpcode::G_FPEXT:
-    return RTLIB::getFPEXT(FromMVT, ToMVT);
-  case TargetOpcode::G_FPTRUNC:
-    return RTLIB::getFPROUND(FromMVT, ToMVT);
-  case TargetOpcode::G_FPTOSI:
-    return RTLIB::getFPTOSINT(FromMVT, ToMVT);
-  case TargetOpcode::G_FPTOUI:
-    return RTLIB::getFPTOUINT(FromMVT, ToMVT);
-  case TargetOpcode::G_SITOFP:
-    return RTLIB::getSINTTOFP(FromMVT, ToMVT);
-  case TargetOpcode::G_UITOFP:
-    return RTLIB::getUINTTOFP(FromMVT, ToMVT);
-  }
-  llvm_unreachable("Unsupported libcall function");
-}
-
-static LegalizerHelper::LegalizeResult
-conversionLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, Type *ToType,
-                  Type *FromType, LostDebugLocObserver &LocObserver,
-                  const TargetLowering &TLI, bool IsSigned = false) {
-  CallLowering::ArgInfo Arg = {MI.getOperand(1).getReg(), FromType, 0};
-  if (FromType->isIntegerTy()) {
-    if (TLI.shouldSignExtendTypeInLibCall(FromType, IsSigned))
-      Arg.Flags[0].setSExt();
-    else
-      Arg.Flags[0].setZExt();
-  }
-
-  RTLIB::Libcall Libcall = getConvRTLibDesc(MI.getOpcode(), ToType, FromType);
-  return createLibcall(MIRBuilder, Libcall,
-                       {MI.getOperand(0).getReg(), ToType, 0}, Arg, LocObserver,
-                       &MI);
 }
 
 static RTLIB::Libcall
@@ -1040,8 +1048,7 @@ getStateLibraryFunctionFor(MachineInstr &MI, const TargetLowering &TLI) {
 //     %0:_(s32) = G_LOAD % 1
 //
 LegalizerHelper::LegalizeResult
-LegalizerHelper::createGetStateLibcall(MachineIRBuilder &MIRBuilder,
-                                       MachineInstr &MI,
+LegalizerHelper::createGetStateLibcall(MachineInstr &MI,
                                        LostDebugLocObserver &LocObserver) {
   const DataLayout &DL = MIRBuilder.getDataLayout();
   auto &MF = MIRBuilder.getMF();
@@ -1060,11 +1067,10 @@ LegalizerHelper::createGetStateLibcall(MachineIRBuilder &MIRBuilder,
   unsigned TempAddrSpace = DL.getAllocaAddrSpace();
   Type *StatePtrTy = PointerType::get(Ctx, TempAddrSpace);
   RTLIB::Libcall RTLibcall = getStateLibraryFunctionFor(MI, TLI);
-  auto Res =
-      createLibcall(MIRBuilder, RTLibcall,
-                    CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0),
-                    CallLowering::ArgInfo({Temp.getReg(0), StatePtrTy, 0}),
-                    LocObserver, nullptr);
+  auto Res = createLibcall(
+      RTLibcall, CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0),
+      CallLowering::ArgInfo({Temp.getReg(0), StatePtrTy, 0}), LocObserver,
+      nullptr);
   if (Res != LegalizerHelper::Legalized)
     return Res;
 
@@ -1080,8 +1086,7 @@ LegalizerHelper::createGetStateLibcall(MachineIRBuilder &MIRBuilder,
 // using transient space in stack. In this case the library function reads
 // content of memory region.
 LegalizerHelper::LegalizeResult
-LegalizerHelper::createSetStateLibcall(MachineIRBuilder &MIRBuilder,
-                                       MachineInstr &MI,
+LegalizerHelper::createSetStateLibcall(MachineInstr &MI,
                                        LostDebugLocObserver &LocObserver) {
   const DataLayout &DL = MIRBuilder.getDataLayout();
   auto &MF = MIRBuilder.getMF();
@@ -1105,7 +1110,7 @@ LegalizerHelper::createSetStateLibcall(MachineIRBuilder &MIRBuilder,
   unsigned TempAddrSpace = DL.getAllocaAddrSpace();
   Type *StatePtrTy = PointerType::get(Ctx, TempAddrSpace);
   RTLIB::Libcall RTLibcall = getStateLibraryFunctionFor(MI, TLI);
-  return createLibcall(MIRBuilder, RTLibcall,
+  return createLibcall(RTLibcall,
                        CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0),
                        CallLowering::ArgInfo({Temp.getReg(0), StatePtrTy, 0}),
                        LocObserver, nullptr);
@@ -1151,8 +1156,7 @@ getFCMPLibcallDesc(const CmpInst::Predicate Pred, unsigned Size) {
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
-                                   MachineInstr &MI,
+LegalizerHelper::createFCMPLibcall(MachineInstr &MI,
                                    LostDebugLocObserver &LocObserver) {
   auto &MF = MIRBuilder.getMF();
   auto &Ctx = MF.getFunction().getContext();
@@ -1182,7 +1186,7 @@ LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
     Register Temp = MRI.createGenericVirtualRegister(TempLLT);
     // Generate libcall, holding result in Temp
     const auto Status = createLibcall(
-        MIRBuilder, Libcall, {Temp, Type::getInt32Ty(Ctx), 0},
+        Libcall, {Temp, Type::getInt32Ty(Ctx), 0},
         {{Cmp->getLHSReg(), OpType, 0}, {Cmp->getRHSReg(), OpType, 1}},
         LocObserver, &MI);
     if (!Status)
@@ -1281,8 +1285,7 @@ LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
 // `((const femode_t *) -1)`. Such assumption is used here. If for some target
 // it is not true, the target must provide custom lowering.
 LegalizerHelper::LegalizeResult
-LegalizerHelper::createResetStateLibcall(MachineIRBuilder &MIRBuilder,
-                                         MachineInstr &MI,
+LegalizerHelper::createResetStateLibcall(MachineInstr &MI,
                                          LostDebugLocObserver &LocObserver) {
   const DataLayout &DL = MIRBuilder.getDataLayout();
   auto &MF = MIRBuilder.getMF();
@@ -1298,10 +1301,9 @@ LegalizerHelper::createResetStateLibcall(MachineIRBuilder &MIRBuilder,
   MIRBuilder.buildIntToPtr(Dest, DefValue);
 
   RTLIB::Libcall RTLibcall = getStateLibraryFunctionFor(MI, TLI);
-  return createLibcall(MIRBuilder, RTLibcall,
-                       CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0),
-                       CallLowering::ArgInfo({Dest.getReg(), StatePtrTy, 0}),
-                       LocObserver, &MI);
+  return createLibcall(
+      RTLibcall, CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0),
+      CallLowering::ArgInfo({Dest.getReg(), StatePtrTy, 0}), LocObserver, &MI);
 }
 
 LegalizerHelper::LegalizeResult
@@ -1407,7 +1409,7 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
     }
     auto Libcall = getRTLibDesc(MI.getOpcode(), Size);
     LegalizeResult Status =
-        createLibcall(MIRBuilder, Libcall, {MI.getOperand(0).getReg(), ITy, 0},
+        createLibcall(Libcall, {MI.getOperand(0).getReg(), ITy, 0},
                       {{MI.getOperand(1).getReg(), HLTy, 0}}, LocObserver, &MI);
     if (Status != Legalized)
       return Status;
@@ -1430,9 +1432,8 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
         {MI.getOperand(1).getReg(), HLTy, 0},
         {MI.getOperand(2).getReg(), ITy, 1}};
     Args[1].Flags[0].setSExt();
-    LegalizeResult Status =
-        createLibcall(MIRBuilder, Libcall, {MI.getOperand(0).getReg(), HLTy, 0},
-                      Args, LocObserver, &MI);
+    LegalizeResult Status = createLibcall(
+        Libcall, {MI.getOperand(0).getReg(), HLTy, 0}, Args, LocObserver, &MI);
     if (Status != Legalized)
       return Status;
     break;
@@ -1443,14 +1444,13 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
     Type *ToTy = getFloatTypeForLLT(Ctx, MRI.getType(MI.getOperand(0).getReg()));
     if (!FromTy || !ToTy)
       return UnableToLegalize;
-    LegalizeResult Status =
-        conversionLibcall(MI, MIRBuilder, ToTy, FromTy, LocObserver, TLI);
+    LegalizeResult Status = conversionLibcall(MI, ToTy, FromTy, LocObserver);
     if (Status != Legalized)
       return Status;
     break;
   }
   case TargetOpcode::G_FCMP: {
-    LegalizeResult Status = createFCMPLibcall(MIRBuilder, MI, LocObserver);
+    LegalizeResult Status = createFCMPLibcall(MI, LocObserver);
     if (Status != Legalized)
       return Status;
     MI.eraseFromParent();
@@ -1464,8 +1464,8 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
     unsigned ToSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     if ((ToSize != 32 && ToSize != 64 && ToSize != 128) || !FromTy)
       return UnableToLegalize;
-    LegalizeResult Status = conversionLibcall(
-        MI, MIRBuilder, Type::getIntNTy(Ctx, ToSize), FromTy, LocObserver, TLI);
+    LegalizeResult Status = conversionLibcall(MI, Type::getIntNTy(Ctx, ToSize),
+                                              FromTy, LocObserver);
     if (Status != Legalized)
       return Status;
     break;
@@ -1478,9 +1478,8 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
     if ((FromSize != 32 && FromSize != 64 && FromSize != 128) || !ToTy)
       return UnableToLegalize;
     bool IsSigned = MI.getOpcode() == TargetOpcode::G_SITOFP;
-    LegalizeResult Status =
-        conversionLibcall(MI, MIRBuilder, ToTy, Type::getIntNTy(Ctx, FromSize),
-                          LocObserver, TLI, IsSigned);
+    LegalizeResult Status = conversionLibcall(
+        MI, ToTy, Type::getIntNTy(Ctx, FromSize), LocObserver, IsSigned);
     if (Status != Legalized)
       return Status;
     break;
@@ -1493,7 +1492,7 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_ATOMICRMW_XOR:
   case TargetOpcode::G_ATOMIC_CMPXCHG:
   case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
-    auto Status = createAtomicLibcall(MIRBuilder, MI);
+    auto Status = createAtomicLibcall(MI);
     if (Status != Legalized)
       return Status;
     break;
@@ -1503,7 +1502,7 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_MEMMOVE:
   case TargetOpcode::G_MEMSET: {
     LegalizeResult Result =
-        createMemLibcall(MIRBuilder, *MIRBuilder.getMRI(), MI, LocObserver);
+        createMemLibcall(*MIRBuilder.getMRI(), MI, LocObserver);
     if (Result != Legalized)
       return Result;
     MI.eraseFromParent();
@@ -1511,22 +1510,21 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   }
   case TargetOpcode::G_GET_FPENV:
   case TargetOpcode::G_GET_FPMODE: {
-    LegalizeResult Result = createGetStateLibcall(MIRBuilder, MI, LocObserver);
+    LegalizeResult Result = createGetStateLibcall(MI, LocObserver);
     if (Result != Legalized)
       return Result;
     break;
   }
   case TargetOpcode::G_SET_FPENV:
   case TargetOpcode::G_SET_FPMODE: {
-    LegalizeResult Result = createSetStateLibcall(MIRBuilder, MI, LocObserver);
+    LegalizeResult Result = createSetStateLibcall(MI, LocObserver);
     if (Result != Legalized)
       return Result;
     break;
   }
   case TargetOpcode::G_RESET_FPENV:
   case TargetOpcode::G_RESET_FPMODE: {
-    LegalizeResult Result =
-        createResetStateLibcall(MIRBuilder, MI, LocObserver);
+    LegalizeResult Result = createResetStateLibcall(MI, LocObserver);
     if (Result != Legalized)
       return Result;
     break;
@@ -1761,6 +1759,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   case TargetOpcode::G_CTLZ_ZERO_UNDEF:
   case TargetOpcode::G_CTTZ:
   case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+  case TargetOpcode::G_CTLS:
   case TargetOpcode::G_CTPOP:
     if (TypeIdx == 1)
       switch (MI.getOpcode()) {
@@ -1772,6 +1771,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
         return narrowScalarCTTZ(MI, TypeIdx, NarrowTy);
       case TargetOpcode::G_CTPOP:
         return narrowScalarCTPOP(MI, TypeIdx, NarrowTy);
+      case TargetOpcode::G_CTLS:
+        return narrowScalarCTLS(MI, TypeIdx, NarrowTy);
       default:
         return UnableToLegalize;
       }
@@ -2799,6 +2800,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_CTTZ_ZERO_UNDEF:
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+  case TargetOpcode::G_CTLS:
   case TargetOpcode::G_CTPOP: {
     if (TypeIdx == 0) {
       Observer.changingInstr(MI);
@@ -2810,10 +2812,20 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Register SrcReg = MI.getOperand(1).getReg();
 
     // First extend the input.
-    unsigned ExtOpc = Opcode == TargetOpcode::G_CTTZ ||
-                              Opcode == TargetOpcode::G_CTTZ_ZERO_UNDEF
-                          ? TargetOpcode::G_ANYEXT
-                          : TargetOpcode::G_ZEXT;
+    unsigned ExtOpc;
+    switch (Opcode) {
+    case TargetOpcode::G_CTTZ:
+    case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+    case TargetOpcode::G_CTLZ_ZERO_UNDEF: // undef bits shifted out below
+      ExtOpc = TargetOpcode::G_ANYEXT;
+      break;
+    case TargetOpcode::G_CTLS:
+      ExtOpc = TargetOpcode::G_SEXT;
+      break;
+    default:
+      ExtOpc = TargetOpcode::G_ZEXT;
+    }
+
     auto MIBSrc = MIRBuilder.buildInstr(ExtOpc, {WideTy}, {SrcReg});
     LLT CurTy = MRI.getType(SrcReg);
     unsigned NewOpc = Opcode;
@@ -2843,7 +2855,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     // Perform the operation at the larger size.
     auto MIBNewOp = MIRBuilder.buildInstr(NewOpc, {WideTy}, {MIBSrc});
     // This is already the correct result for CTPOP and CTTZs
-    if (Opcode == TargetOpcode::G_CTLZ) {
+    if (Opcode == TargetOpcode::G_CTLZ || Opcode == TargetOpcode::G_CTLS) {
       // The correct result is NewOp - (Difference in widety and current ty).
       MIBNewOp = MIRBuilder.buildSub(
           WideTy, MIBNewOp, MIRBuilder.buildConstant(WideTy, SizeDiff));
@@ -4656,6 +4668,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTTZ:
   case TargetOpcode::G_CTPOP:
+  case TargetOpcode::G_CTLS:
     return lowerBitCount(MI);
   case G_UADDO: {
     auto [Res, CarryOut, LHS, RHS] = MI.getFirst4Regs();
@@ -4750,6 +4763,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerFPTRUNC(MI);
   case G_FPOWI:
     return lowerFPOWI(MI);
+  case G_FMODF:
+    return lowerFMODF(MI);
   case G_SMIN:
   case G_SMAX:
   case G_UMIN:
@@ -6312,8 +6327,9 @@ Register LegalizerHelper::buildVariableShiftPart(unsigned Opcode,
   // For G_ASHR, individual parts don't have their own sign bit, only the
   // complete value does. So we use LSHR for the main operand shift in ASHR
   // context.
-  unsigned MainOpcode =
-      (Opcode == TargetOpcode::G_ASHR) ? TargetOpcode::G_LSHR : Opcode;
+  unsigned MainOpcode = (Opcode == TargetOpcode::G_ASHR)
+                            ? static_cast<unsigned>(TargetOpcode::G_LSHR)
+                            : Opcode;
 
   // Perform the primary shift on the main operand
   Register MainShifted =
@@ -7548,6 +7564,48 @@ LegalizerHelper::narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx,
 }
 
 LegalizerHelper::LegalizeResult
+LegalizerHelper::narrowScalarCTLS(MachineInstr &MI, unsigned TypeIdx,
+                                  LLT NarrowTy) {
+  if (TypeIdx != 1)
+    return UnableToLegalize;
+
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  unsigned NarrowSize = NarrowTy.getSizeInBits();
+
+  if (!SrcTy.isScalar() || SrcTy.getSizeInBits() != 2 * NarrowSize)
+    return UnableToLegalize;
+
+  MachineIRBuilder &B = MIRBuilder;
+
+  auto UnmergeSrc = B.buildUnmerge(NarrowTy, SrcReg);
+  Register Lo = UnmergeSrc.getReg(0);
+  Register Hi = UnmergeSrc.getReg(1);
+
+  auto ShAmt = B.buildConstant(NarrowTy, NarrowSize - 1);
+  auto Sign = B.buildAShr(NarrowTy, Hi, ShAmt);
+
+  auto HiIsSign = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), Hi, Sign);
+
+  // Invert Lo if Hi is negative. Then count the leading zeros. If there are no
+  // leading zeros, then the MSB of Lo is different than the MSB of Hi.
+  // Otherwise the leading zeros represent additional sign bits of the original
+  // value.
+  auto LoInv = B.buildXor(DstTy, Lo, Sign);
+  auto LoCTLZ = B.buildCTLZ(DstTy, LoInv);
+
+  // Add NarrowSize-1 to LoCTLZ. This is the full CTLS if Hi is all sign bits.
+  auto C_NarrowSizeM1 = B.buildConstant(DstTy, NarrowSize - 1);
+  auto HiIsSignCTLS = B.buildAdd(DstTy, LoCTLZ, C_NarrowSizeM1);
+
+  auto HiCTLS = B.buildCTLS(DstTy, Hi);
+
+  B.buildSelect(DstReg, HiIsSign, HiIsSignCTLS, HiCTLS);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
 LegalizerHelper::narrowScalarCTPOP(MachineInstr &MI, unsigned TypeIdx,
                                    LLT NarrowTy) {
   if (TypeIdx != 1)
@@ -7742,7 +7800,19 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
     auto C_B8Mask4HiTo0 = B.buildConstant(Ty, B8Mask4HiTo0);
     auto B8Count = B.buildAnd(Ty, B8CountDirty4Hi, C_B8Mask4HiTo0);
 
-    assert(Size<=128 && "Scalar size is too large for CTPOP lower algorithm");
+    assert(Size <= 128 && "Scalar size is too large for CTPOP lower algorithm");
+
+    // Avoid the multiply when shift-add is cheaper.
+    if (Size == 16 && !Ty.isVector()) {
+      // v = (v + (v >> 8)) & 0xFF;
+      auto C_8 = B.buildConstant(Ty, 8);
+      auto HighSum = B.buildLShr(Ty, B8Count, C_8);
+      auto Res = B.buildAdd(Ty, B8Count, HighSum);
+      B.buildAnd(MI.getOperand(0).getReg(), Res, B.buildConstant(Ty, 0xFF));
+      MI.eraseFromParent();
+      return Legalized;
+    }
+
     // 8 bits can hold CTPOP result of 128 bit int or smaller. Mul with this
     // bitmask will set 8 msb in ResTmp to sum of all B8Counts in 8 bit blocks.
     auto MulMask = B.buildConstant(Ty, APInt::getSplat(Size, APInt(8, 0x01)));
@@ -7766,6 +7836,23 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
       }
       B.buildLShr(MI.getOperand(0).getReg(), ResTmp, C_SizeM8);
     }
+    MI.eraseFromParent();
+    return Legalized;
+  }
+  case TargetOpcode::G_CTLS: {
+    auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+
+    // ctls(x) -> ctlz(x ^ (x >> (N - 1))) - 1
+    auto SignIdxC =
+        MIRBuilder.buildConstant(SrcTy, SrcTy.getScalarSizeInBits() - 1);
+    auto OneC = MIRBuilder.buildConstant(DstTy, 1);
+
+    auto Shr = MIRBuilder.buildAShr(SrcTy, SrcReg, SignIdxC);
+
+    auto Xor = MIRBuilder.buildXor(SrcTy, SrcReg, Shr);
+    auto Ctlz = MIRBuilder.buildCTLZ(DstTy, Xor);
+
+    MIRBuilder.buildSub(DstReg, Ctlz, OneC);
     MI.eraseFromParent();
     return Legalized;
   }
@@ -8640,6 +8727,35 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPOWI(MachineInstr &MI) {
 
   auto CvtSrc1 = MIRBuilder.buildSITOFP(Ty, Src1);
   MIRBuilder.buildFPow(Dst, Src0, CvtSrc1, MI.getFlags());
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerFMODF(MachineInstr &MI) {
+  auto [DstFrac, DstInt, Src] = MI.getFirst3Regs();
+  LLT Ty = MRI.getType(Src);
+  auto Flags = MI.getFlags();
+
+  auto IntPart = MIRBuilder.buildIntrinsicTrunc(Ty, Src, Flags);
+  auto FracPart = MIRBuilder.buildFSub(Ty, Src, IntPart, Flags);
+
+  Register FracToUse;
+  if (MI.getFlag(MachineInstr::FmNoInfs)) {
+    FracToUse = FracPart.getReg(0);
+  } else {
+    auto Abs = MIRBuilder.buildFAbs(Ty, Src, Flags);
+    const fltSemantics &Semantics = getFltSemanticForLLT(Ty.getScalarType());
+    auto Inf = MIRBuilder.buildFConstant(Ty, APFloat::getInf(Semantics));
+    auto IsInf = MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ,
+                                      Ty.changeElementSize(1), Abs, Inf);
+    auto Zero = MIRBuilder.buildFConstant(Ty, 0.0);
+    auto Select = MIRBuilder.buildSelect(Ty, IsInf, Zero, FracPart);
+    FracToUse = Select.getReg(0);
+  }
+
+  MIRBuilder.buildFCopysign(DstFrac, FracToUse, Src, Flags);
+  MIRBuilder.buildCopy(DstInt, IntPart.getReg(0));
+
   MI.eraseFromParent();
   return Legalized;
 }

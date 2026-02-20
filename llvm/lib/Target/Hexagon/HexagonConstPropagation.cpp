@@ -1773,12 +1773,13 @@ bool MachineConstEvaluator::evaluateEXTRACTi(const APInt &A1, unsigned Bits,
     return true;
   }
   if (BW <= 64) {
-    int64_t V = A1.getZExtValue();
-    V <<= (64-Bits-Offset);
+    uint64_t U = A1.getZExtValue();
+    U <<= (64 - Bits - Offset);
+    int64_t V;
     if (Signed)
-      V >>= (64-Bits);
+      V = static_cast<int64_t>(U) >> (64 - Bits);
     else
-      V = static_cast<uint64_t>(V) >> (64-Bits);
+      V = static_cast<int64_t>(U >> (64 - Bits));
     Result = APInt(BW, V, Signed);
     return true;
   }
@@ -2247,7 +2248,8 @@ bool HexagonConstEvaluator::evaluate(const RegSubRegPair &R,
     int32_t V32;
     memcpy(&V32, &U32, sizeof V32);
     IntegerType *Ty = Type::getInt32Ty(CX);
-    const ConstantInt *C32 = ConstantInt::get(Ty, static_cast<int64_t>(V32));
+    const ConstantInt *C32 =
+        ConstantInt::getSigned(Ty, static_cast<int64_t>(V32));
     Result.add(C32);
   }
   return true;

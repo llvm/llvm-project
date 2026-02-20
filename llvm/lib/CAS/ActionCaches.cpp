@@ -13,6 +13,7 @@
 #include "BuiltinCAS.h"
 #include "llvm/ADT/TrieRawHashMap.h"
 #include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskKeyValueDB.h"
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Config/llvm-config.h"
@@ -153,10 +154,16 @@ OnDiskActionCache::OnDiskActionCache(
 
 Expected<std::unique_ptr<OnDiskActionCache>>
 OnDiskActionCache::create(StringRef AbsPath) {
+  std::shared_ptr<ondisk::OnDiskCASLogger> Logger;
+#ifndef _WIN32
+  if (Error E =
+          ondisk::OnDiskCASLogger::openIfEnabled(AbsPath).moveInto(Logger))
+    return std::move(E);
+#endif
   std::unique_ptr<ondisk::OnDiskKeyValueDB> DB;
-  if (Error E = ondisk::OnDiskKeyValueDB::open(AbsPath, getHashName(),
-                                               sizeof(HashType), getHashName(),
-                                               sizeof(DataT))
+  if (Error E = ondisk::OnDiskKeyValueDB::open(
+                    AbsPath, getHashName(), sizeof(HashType), getHashName(),
+                    sizeof(DataT), /*UnifiedCache=*/nullptr, std::move(Logger))
                     .moveInto(DB))
     return std::move(E);
   return std::unique_ptr<OnDiskActionCache>(
@@ -190,11 +197,7 @@ Error OnDiskActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result,
       ArrayRef((const uint8_t *)Observed.data(), Observed.size()));
 }
 
-Error OnDiskActionCache::validate() const {
-  // FIXME: without the matching CAS there is nothing we can check about the
-  // cached values. The hash size is already validated by the DB validator.
-  return DB->validate(nullptr);
-}
+Error OnDiskActionCache::validate() const { return DB->validate(); }
 
 UnifiedOnDiskActionCache::UnifiedOnDiskActionCache(
     std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB)
@@ -235,20 +238,7 @@ Error UnifiedOnDiskActionCache::putImpl(ArrayRef<uint8_t> Key,
 }
 
 Error UnifiedOnDiskActionCache::validate() const {
-  auto ValidateRef = [this](FileOffset Offset, ArrayRef<char> Value) -> Error {
-    auto ID = ondisk::UnifiedOnDiskCache::getObjectIDFromValue(Value);
-    auto formatError = [&](Twine Msg) {
-      return createStringError(
-          llvm::errc::illegal_byte_sequence,
-          "bad record at 0x" +
-              utohexstr((unsigned)Offset.get(), /*LowerCase=*/true) + ": " +
-              Msg.str());
-    };
-    if (Error E = UniDB->getGraphDB().validateObjectID(ID))
-      return formatError(llvm::toString(std::move(E)));
-    return Error::success();
-  };
-  return UniDB->getKeyValueDB().validate(ValidateRef);
+  return UniDB->validateActionCache();
 }
 
 Expected<std::unique_ptr<ActionCache>>

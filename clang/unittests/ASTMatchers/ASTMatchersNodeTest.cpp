@@ -193,7 +193,8 @@ TEST_P(ASTMatchersTest, ExportDecl) {
   if (!GetParam().isCXX20OrLater()) {
     return;
   }
-  const std::string moduleHeader = "module;export module ast_matcher_test;";
+  const std::string moduleHeader =
+      "module;\n export module ast_matcher_test;\n";
   EXPECT_TRUE(matches(moduleHeader + "export void foo();",
                       exportDecl(has(functionDecl()))));
   EXPECT_TRUE(matches(moduleHeader + "export { void foo(); int v; }",
@@ -2788,6 +2789,227 @@ void x() {
 ;
 })";
   EXPECT_TRUE(notMatchesWithOpenMP(Source2, Matcher));
+}
+
+TEST(ASTMatchersTestOpenMP, OMPTargetUpdateDirective_From) {
+  auto Matcher = stmt(ompTargetUpdateDirective());
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update from(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
+}
+
+TEST(ASTMatchersTestOpenMP, OMPTargetUpdateDirective_To) {
+  auto Matcher = stmt(ompTargetUpdateDirective());
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update to(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
+}
+
+TEST(ASTMatchersTestOpenMP, OMPFromClause) {
+  auto Matcher = ompTargetUpdateDirective(hasAnyClause(ompFromClause()));
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update from(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
+
+  auto astUnit =
+      tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp=libomp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPFromClause *FromClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((FromClause = dyn_cast<OMPFromClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(FromClause);
+
+  for (const auto *VarExpr : FromClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    // base (arr)
+    const Expr *Base = ArraySection->getBase();
+    ASSERT_TRUE(Base);
+
+    // lower bound (0)
+    const Expr *LowerBound = ArraySection->getLowerBound();
+    ASSERT_TRUE(LowerBound);
+    const auto *LowerBoundLiteral = dyn_cast<IntegerLiteral>(LowerBound);
+    ASSERT_TRUE(LowerBoundLiteral)
+        << "Expected lower bound to be an integer literal";
+    EXPECT_EQ(LowerBoundLiteral->getValue().getZExtValue(), 0u);
+
+    // length (8)
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+    const auto *LengthLiteral = dyn_cast<IntegerLiteral>(Length);
+    ASSERT_TRUE(LengthLiteral) << "Expected length to be an integer literal";
+    EXPECT_EQ(LengthLiteral->getValue().getZExtValue(), 8u);
+
+    // stride (2)
+    const Expr *Stride = ArraySection->getStride();
+    ASSERT_TRUE(Stride);
+    const auto *StrideLiteral = dyn_cast<IntegerLiteral>(Stride);
+    ASSERT_TRUE(StrideLiteral) << "Expected stride to be an integer literal";
+    EXPECT_EQ(StrideLiteral->getValue().getZExtValue(), 2u);
+  }
+}
+
+TEST(ASTMatchersTestOpenMP, OMPToClause) {
+  auto Matcher = ompTargetUpdateDirective(hasAnyClause(ompToClause()));
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update to(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
+
+  auto astUnit =
+      tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp=libomp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPToClause *ToClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((ToClause = dyn_cast<OMPToClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(ToClause);
+
+  for (const auto *VarExpr : ToClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    // base (arr)
+    const Expr *Base = ArraySection->getBase();
+    ASSERT_TRUE(Base);
+
+    // lower bound (0)
+    const Expr *LowerBound = ArraySection->getLowerBound();
+    ASSERT_TRUE(LowerBound);
+    const auto *LowerBoundLiteral = dyn_cast<IntegerLiteral>(LowerBound);
+    ASSERT_TRUE(LowerBoundLiteral)
+        << "Expected lower bound to be an integer literal";
+    EXPECT_EQ(LowerBoundLiteral->getValue().getZExtValue(), 0u);
+
+    // length (8)
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+    const auto *LengthLiteral = dyn_cast<IntegerLiteral>(Length);
+    ASSERT_TRUE(LengthLiteral) << "Expected length to be an integer literal";
+    EXPECT_EQ(LengthLiteral->getValue().getZExtValue(), 8u);
+
+    // stride (2)
+    const Expr *Stride = ArraySection->getStride();
+    ASSERT_TRUE(Stride);
+    const auto *StrideLiteral = dyn_cast<IntegerLiteral>(Stride);
+    ASSERT_TRUE(StrideLiteral) << "Expected stride to be an integer literal";
+    EXPECT_EQ(StrideLiteral->getValue().getZExtValue(), 2u);
+  }
+}
+
+TEST(ASTMatchersTestOpenMP, OMPFromClause_DoesNotMatchToClause) {
+  auto Matcher = ompTargetUpdateDirective(hasAnyClause(ompFromClause()));
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update to(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+}
+
+TEST(ASTMatchersTestOpenMP, OMPToClause_DoesNotMatchFromClause) {
+  auto Matcher = ompTargetUpdateDirective(hasAnyClause(ompToClause()));
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update from(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+}
+
+TEST(ASTMatchersTestOpenMP, OMPTargetUpdateDirective_DoesNotMatchTarget) {
+  auto Matcher = ompTargetUpdateDirective();
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target map(tofrom:arr)
+      { arr[0] = 1; }
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+}
+
+TEST(ASTMatchersTestOpenMP, OMPTargetUpdateDirective_DoesNotMatchTargetData) {
+  auto Matcher = ompTargetUpdateDirective();
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target data map(to:arr)
+      { }
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
+}
+
+TEST(ASTMatchersTestOpenMP, OMPFromClause_DoesNotMatchMapClause) {
+  auto Matcher = ompExecutableDirective(hasAnyClause(ompFromClause()));
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target map(from:arr)
+      { }
+    }
+  )";
+  EXPECT_TRUE(notMatchesWithOpenMP(Source0, Matcher));
 }
 
 TEST(ASTMatchersTestOpenMP, OMPDefaultClause) {

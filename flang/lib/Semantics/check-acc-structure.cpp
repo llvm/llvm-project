@@ -688,7 +688,8 @@ void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
                 if (const auto *arrayElem =
                         std::get_if<common::Indirection<parser::ArrayElement>>(
                             &dataRef->u)) {
-                  for (const auto &subscript : arrayElem->value().subscripts) {
+                  for (const auto &subscript :
+                      arrayElem->value().Subscripts()) {
                     if (const auto *triplet =
                             std::get_if<parser::SubscriptTriplet>(
                                 &subscript.u)) {

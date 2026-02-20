@@ -167,8 +167,8 @@ View the diff from {self.name} here.
             # Check if file matches any pattern
             matches_pattern = False
             for pattern in category["patterns"]:
-                # Simple pattern matching for /**/*.h style patterns
-                pattern_prefix = pattern.replace("/**/*.h", "")
+                # Simple pattern matching for **/*.h style patterns
+                pattern_prefix = pattern.replace("**/*.h", "")
                 if path.startswith(pattern_prefix) and path.endswith(".h"):
                     matches_pattern = True
                     break

@@ -20,6 +20,7 @@ declare nofpclass(inf sub norm pzero) float @returns_nzero_or_nan()
 declare nofpclass(inf sub norm nan nzero) float @returns_pzero()
 declare nofpclass(inf sub norm nzero) float @returns_pzero_or_nan()
 declare nofpclass(inf norm sub zero) float @returns_nan()
+declare nofpclass(qnan inf norm sub zero) float @returns_snan()
 
 declare nofpclass(ninf norm sub zero nan) float @returns_pinf()
 declare nofpclass(ninf norm sub zero) float @returns_pinf_or_nan()
@@ -67,8 +68,7 @@ define nofpclass(inf norm sub zero qnan) float @ret_only_snan(float %x, float %y
 define nofpclass(inf norm sub zero snan) float @ret_only_qnan(float %x, float %y) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) float @ret_only_qnan(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nsz float @llvm.minimum.f32(float [[X]], float [[Y]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %result = call float @llvm.minimum.f32(float %x, float %y)
   ret float %result
@@ -2091,7 +2091,7 @@ define nofpclass(snan) float @nsz_fold_negative_or_zero__positive_or_zero_0__mul
 ; CHECK-NEXT:    [[MUST_BE_POSITIVE_OR_ZERO:%.*]] = call float @returns_positive_or_zero()
 ; CHECK-NEXT:    [[RESULT:%.*]] = call nsz float @llvm.minimum.f32(float [[MUST_BE_NEGATIVE_OR_ZERO]], float [[MUST_BE_POSITIVE_OR_ZERO]])
 ; CHECK-NEXT:    store float [[RESULT]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[MUST_BE_NEGATIVE_OR_ZERO]]
+; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %must.be.negative.or.zero = call float @returns_negative_or_zero()
   %must.be.positive.or.zero = call float @returns_positive_or_zero()
@@ -2107,7 +2107,7 @@ define nofpclass(snan) float @nsz_fold_negative_or_zero__positive_or_zero_1__mul
 ; CHECK-NEXT:    [[MUST_BE_NEGATIVE_OR_ZERO:%.*]] = call float @returns_negative_or_zero()
 ; CHECK-NEXT:    [[RESULT:%.*]] = call nsz float @llvm.minimum.f32(float [[MUST_BE_POSITIVE_OR_ZERO]], float [[MUST_BE_NEGATIVE_OR_ZERO]])
 ; CHECK-NEXT:    store float [[RESULT]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[MUST_BE_NEGATIVE_OR_ZERO]]
+; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %must.be.positive.or.zero = call float @returns_positive_or_zero()
   %must.be.negative.or.zero = call float @returns_negative_or_zero()
@@ -2148,7 +2148,36 @@ define nofpclass(snan) float @cannot_fold_negative_or_zero__positive_or_zero_1__
   ret float %result
 }
 
+
+define nofpclass(snan) float @qnan_result_demands_snan_lhs(i1 %cond, float %unknown0, float %unknown1) {
+; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_lhs(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.minimum.f32(float [[SELECT]], float [[UNKNOWN1]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %snan = call float @returns_snan()
+  %select = select i1 %cond, float %snan, float %unknown0
+  %result = call float @llvm.minimum.f32(float %select, float %unknown1)
+  ret float %result
+}
+
+define nofpclass(snan) float @qnan_result_demands_snan_rhs(i1 %cond, float %unknown0, float %unknown1) {
+; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_rhs(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.minimum.f32(float [[UNKNOWN1]], float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %snan = call float @returns_snan()
+  %select = select i1 %cond, float %snan, float %unknown0
+  %result = call float @llvm.minimum.f32(float %unknown1, float %select)
+  ret float %result
+}
+
 !0 = !{}
 
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #1 = { "denormal-fp-math"="dynamic,dynamic" }
+attributes #0 = { denormal_fpenv(preservesign) }
+attributes #1 = { denormal_fpenv(dynamic) }

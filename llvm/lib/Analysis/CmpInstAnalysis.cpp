@@ -162,6 +162,14 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
       break;
     }
 
+    // Try to convert (trunc X) eq/ne C into (X & Mask) eq/ne C
+    if (LookThroughTrunc && isa<TruncInst>(LHS)) {
+      Result.Pred = Pred;
+      Result.Mask = APInt::getAllOnes(C.getBitWidth());
+      Result.C = C;
+      break;
+    }
+
     return std::nullopt;
   }
   }

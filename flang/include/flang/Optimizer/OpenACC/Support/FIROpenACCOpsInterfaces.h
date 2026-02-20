@@ -13,6 +13,7 @@
 #ifndef FLANG_OPTIMIZER_OPENACC_FIROPENACC_OPS_INTERFACES_H_
 #define FLANG_OPTIMIZER_OPENACC_FIROPENACC_OPS_INTERFACES_H_
 
+#include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 
 namespace fir {
@@ -93,7 +94,32 @@ struct OutlineRematerializationModel
 template <typename Op>
 struct OffloadRegionModel
     : public mlir::acc::OffloadRegionOpInterface::ExternalModel<
-          OffloadRegionModel<Op>, Op> {};
+          OffloadRegionModel<Op>, Op> {
+  mlir::Region &getOffloadRegion(mlir::Operation *op) const {
+    return mlir::cast<Op>(op).getRegion();
+  }
+};
+
+/// External model for fir::OperationMoveOpInterface.
+/// This interface provides methods to identify whether
+/// operations can be moved (e.g. by LICM, CSE, etc.) from/into
+/// OpenACC dialect operations.
+template <typename Op>
+struct OperationMoveModel : public fir::OperationMoveOpInterface::ExternalModel<
+                                OperationMoveModel<Op>, Op> {
+  // Returns true if it is allowed to move the given 'candidate'
+  // operation from the 'descendant' operation into 'op' operation.
+  // If 'candidate' is nullptr, then the caller is querying whether
+  // any operation from any descendant can be moved into 'op' operation.
+  bool canMoveFromDescendant(mlir::Operation *op, mlir::Operation *descendant,
+                             mlir::Operation *candidate) const;
+
+  // Returns true if it is allowed to move the given 'candidate'
+  // operation out of 'op' operation. If 'candidate' is nullptr,
+  // then the caller is querying whether any operation can be moved
+  // out of 'op' operation.
+  bool canMoveOutOf(mlir::Operation *op, mlir::Operation *candidate) const;
+};
 
 } // namespace fir::acc
 

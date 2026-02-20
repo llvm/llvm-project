@@ -158,8 +158,6 @@ void *User::allocateFixedOperandUser(size_t Size, unsigned Us,
   Obj->NumUserOperands = Us;
   Obj->HasHungOffUses = false;
   Obj->HasDescriptor = DescBytes != 0;
-  for (unsigned I = 0; I < Us; ++I)
-    new (&Operands[I]) Use(Obj);
 
   if (DescBytes != 0) {
     auto *DescInfo = reinterpret_cast<DescriptorInfo *>(Operands) - 1;
@@ -234,3 +232,26 @@ User::~User() {
 }
 
 void User::operator delete(void *Usr) { ::operator delete(((void **)Usr)[-1]); }
+
+void User::operator delete(void *Usr, HungOffOperandsAllocMarker) {
+  Use **HungOffOperandList = static_cast<Use **>(Usr) - 1;
+  ::operator delete(HungOffOperandList);
+}
+
+void User::operator delete(void *Usr,
+                           IntrusiveOperandsAndDescriptorAllocMarker Marker) {
+  unsigned NumOps = Marker.NumOps;
+  Use *UseBegin = static_cast<Use *>(Usr) - NumOps;
+  auto *DI = reinterpret_cast<DescriptorInfo *>(UseBegin) - 1;
+  uint8_t *Storage = reinterpret_cast<uint8_t *>(DI) - DI->SizeInBytes;
+  ::operator delete(Storage);
+}
+
+void User::operator delete(void *Usr, IntrusiveOperandsAllocMarker Marker) {
+  unsigned NumOps = Marker.NumOps;
+  size_t LeadingSize = sizeof(Use) * NumOps;
+  // Handle the edge case where there are no operands and no descriptor.
+  LeadingSize = std::max(LeadingSize, sizeof(void *));
+  uint8_t *Storage = static_cast<uint8_t *>(Usr) - LeadingSize;
+  ::operator delete(Storage);
+}

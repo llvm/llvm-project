@@ -66,6 +66,9 @@ static cl::opt<bool> DisableHexagonMask(
     "disable-mask", cl::Hidden,
     cl::desc("Disable Hexagon specific Mask generation pass"));
 
+static cl::opt<bool> DisableHexagonLiveVars(
+    "disable-hlv", cl::Hidden,
+    cl::desc("Disable Hexagon specific post-RA live-variable analysis"));
 static cl::opt<bool> DisableStoreWidening("disable-store-widen", cl::Hidden,
                                           cl::init(false),
                                           cl::desc("Disable store widening"));
@@ -192,6 +195,7 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonEarlyIfConversionPass(PR);
   initializeHexagonGenMemAbsolutePass(PR);
   initializeHexagonGenMuxPass(PR);
+  initializeHexagonLiveVariablesPass(PR);
   initializeHexagonHardwareLoopsPass(PR);
   initializeHexagonLoopIdiomRecognizeLegacyPassPass(PR);
   initializeHexagonNewValueJumpPass(PR);
@@ -272,11 +276,13 @@ void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        LPM.addPass(HexagonLoopIdiomRecognitionPass());
+        if (Level.getSpeedupLevel() > 0)
+          LPM.addPass(HexagonLoopIdiomRecognitionPass());
       });
   PB.registerLoopOptimizerEndEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        LPM.addPass(HexagonVectorLoopCarriedReusePass());
+        if (Level.getSpeedupLevel() > 0)
+          LPM.addPass(HexagonVectorLoopCarriedReusePass());
       });
 }
 
@@ -446,6 +452,10 @@ void HexagonPassConfig::addPreSched2() {
   addPass(createHexagonSplitConst32AndConst64());
   if (!NoOpt && !DisableHexagonMask)
     addPass(createHexagonMask());
+
+  if (!NoOpt && !DisableHexagonLiveVars) {
+    addPass(&HexagonLiveVariablesID);
+  }
 }
 
 void HexagonPassConfig::addPreEmitPass() {
@@ -462,6 +472,8 @@ void HexagonPassConfig::addPreEmitPass() {
     // Generate MUX from pairs of conditional transfers.
     if (EnableGenMux)
       addPass(createHexagonGenMux());
+    if (!DisableHexagonLiveVars)
+      addPass(&HexagonLiveVariablesID);
   }
 
   // Packetization is mandatory: it handles gather/scatter at all opt levels.

@@ -773,12 +773,17 @@ public:
   /// Is this a local declaration (that is, one that will be written to
   /// our AST file)? This is the case for declarations that are neither imported
   /// from another AST file nor predefined.
-  bool IsLocalDecl(const Decl *D) {
+  bool IsLocalDecl(const Decl *D) const {
     if (D->isFromASTFile())
       return false;
     auto I = DeclIDs.find(D);
     return (I == DeclIDs.end() || I->second >= clang::NUM_PREDEF_DECL_IDS);
   };
+
+  /// Collect the first declaration from each module file that provides a
+  /// declaration of D.
+  llvm::MapVector<serialization::ModuleFile *, const Decl *>
+  CollectFirstDeclFromEachModule(const Decl *D, bool IncludeLocal);
 
   void AddLookupOffsets(const LookupBlockOffsets &Offsets,
                         RecordDataImpl &Record);

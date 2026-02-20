@@ -4,6 +4,9 @@
 #include <assert.h>
 #include <sanitizer/dfsan_interface.h>
 
+// SystemZ identifies labels for struct elements precisely across all
+// optimization labels.
+
 typedef struct Pair {
   int i;
   char *ptr;
@@ -47,7 +50,7 @@ int main(void) {
 
   dfsan_label i1_label = dfsan_read_label(&i1, sizeof(i1));
   dfsan_label ptr1_label = dfsan_read_label(&ptr1, sizeof(ptr1));
-#if defined(O0)
+#if defined(O0) && !defined(__s390x__)
   assert(i1_label == (i_label | ptr_label));
   assert(ptr1_label == (i_label | ptr_label));
 #else
@@ -61,7 +64,7 @@ int main(void) {
 
   dfsan_label i2_label = dfsan_read_label(&i2, sizeof(i2));
   dfsan_label ptr2_label = dfsan_read_label(&ptr2, sizeof(ptr2));
-#if defined(O0)
+#if defined(O0) && !defined(__s390x__)
   assert(i2_label == (i_label | ptr_label));
   assert(ptr2_label == (i_label | ptr_label));
 #else
@@ -75,7 +78,7 @@ int main(void) {
 
   dfsan_label i3_label = dfsan_read_label(&i3, sizeof(i3));
   dfsan_label ptr3_label = dfsan_read_label(&ptr3, sizeof(ptr3));
-#if defined(O0)
+#if defined(O0) && !defined(__s390x__)
   assert(i3_label == (i_label | ptr_label));
   assert(ptr3_label == (i_label | ptr_label));
 #else

@@ -275,21 +275,21 @@
 # CHECK-NEXT:  1      2     0.50                        clz	z31.h, p7/m, z31.h
 # CHECK-NEXT:  1      2     0.50                        clz	z31.s, p7/m, z31.s
 # CHECK-NEXT:  1      4     1.00                        cmla	z0.b, z1.b, z2.b, #0
-# CHECK-NEXT:  2      5     2.00                        cmla	z0.d, z1.d, z2.d, #0
+# CHECK-NEXT:  1      5     2.00                        cmla	z0.d, z1.d, z2.d, #0
 # CHECK-NEXT:  1      4     1.00                        cmla	z0.h, z1.h, z2.h, #0
 # CHECK-NEXT:  1      4     1.00                        cmla	z0.h, z1.h, z2.h[0], #0
 # CHECK-NEXT:  1      4     1.00                        cmla	z0.s, z1.s, z2.s, #0
 # CHECK-NEXT:  1      4     1.00                        cmla	z0.s, z1.s, z2.s[0], #0
 # CHECK-NEXT:  1      4     1.00                        cmla	z15.b, z16.b, z17.b, #270
-# CHECK-NEXT:  2      5     2.00                        cmla	z15.d, z16.d, z17.d, #270
+# CHECK-NEXT:  1      5     2.00                        cmla	z15.d, z16.d, z17.d, #270
 # CHECK-NEXT:  1      4     1.00                        cmla	z15.h, z16.h, z17.h, #270
 # CHECK-NEXT:  1      4     1.00                        cmla	z15.s, z16.s, z17.s, #270
 # CHECK-NEXT:  1      4     1.00                        cmla	z29.b, z30.b, z31.b, #90
-# CHECK-NEXT:  2      5     2.00                        cmla	z29.d, z30.d, z31.d, #90
+# CHECK-NEXT:  1      5     2.00                        cmla	z29.d, z30.d, z31.d, #90
 # CHECK-NEXT:  1      4     1.00                        cmla	z29.h, z30.h, z31.h, #90
 # CHECK-NEXT:  1      4     1.00                        cmla	z29.s, z30.s, z31.s, #90
 # CHECK-NEXT:  1      4     1.00                        cmla	z31.b, z31.b, z31.b, #180
-# CHECK-NEXT:  2      5     2.00                        cmla	z31.d, z31.d, z31.d, #180
+# CHECK-NEXT:  1      5     2.00                        cmla	z31.d, z31.d, z31.d, #180
 # CHECK-NEXT:  1      4     1.00                        cmla	z31.h, z30.h, z7.h[0], #180
 # CHECK-NEXT:  1      4     1.00                        cmla	z31.h, z31.h, z31.h, #180
 # CHECK-NEXT:  1      4     1.00                        cmla	z31.s, z30.s, z7.s[0], #180
@@ -1528,7 +1528,7 @@
 # CHECK-NEXT:  1      2     1.00                        lsrr	z0.h, p0/m, z0.h, z0.h
 # CHECK-NEXT:  1      2     1.00                        lsrr	z0.s, p0/m, z0.s, z0.s
 # CHECK-NEXT:  1      4     1.00                        mad	z0.b, p7/m, z1.b, z31.b
-# CHECK-NEXT:  2      5     2.00                        mad	z0.d, p7/m, z1.d, z31.d
+# CHECK-NEXT:  1      5     2.00                        mad	z0.d, p7/m, z1.d, z31.d
 # CHECK-NEXT:  1      4     1.00                        mad	z0.h, p7/m, z1.h, z31.h
 # CHECK-NEXT:  1      4     1.00                        mad	z0.s, p7/m, z1.s, z31.s
 # CHECK-NEXT:  2      2     1.00                        match	p0.b, p0/z, z0.b, z0.b
@@ -1536,15 +1536,15 @@
 # CHECK-NEXT:  2      2     1.00                        match	p15.b, p7/z, z30.b, z31.b
 # CHECK-NEXT:  2      2     1.00                        match	p15.h, p7/z, z30.h, z31.h
 # CHECK-NEXT:  1      4     1.00                        mla	z0.b, p7/m, z1.b, z31.b
-# CHECK-NEXT:  2      5     2.00                        mla	z0.d, p7/m, z1.d, z31.d
-# CHECK-NEXT:  2      5     2.00                        mla	z0.d, z1.d, z7.d[1]
+# CHECK-NEXT:  1      5     2.00                        mla	z0.d, p7/m, z1.d, z31.d
+# CHECK-NEXT:  1      5     2.00                        mla	z0.d, z1.d, z7.d[1]
 # CHECK-NEXT:  1      4     1.00                        mla	z0.h, p7/m, z1.h, z31.h
 # CHECK-NEXT:  1      4     1.00                        mla	z0.h, z1.h, z7.h[7]
 # CHECK-NEXT:  1      4     1.00                        mla	z0.s, p7/m, z1.s, z31.s
 # CHECK-NEXT:  1      4     1.00                        mla	z0.s, z1.s, z7.s[3]
 # CHECK-NEXT:  1      4     1.00                        mls	z0.b, p7/m, z1.b, z31.b
-# CHECK-NEXT:  2      5     2.00                        mls	z0.d, p7/m, z1.d, z31.d
-# CHECK-NEXT:  2      5     2.00                        mls	z0.d, z1.d, z7.d[1]
+# CHECK-NEXT:  1      5     2.00                        mls	z0.d, p7/m, z1.d, z31.d
+# CHECK-NEXT:  1      5     2.00                        mls	z0.d, z1.d, z7.d[1]
 # CHECK-NEXT:  1      4     1.00                        mls	z0.h, p7/m, z1.h, z31.h
 # CHECK-NEXT:  1      4     1.00                        mls	z0.h, z1.h, z7.h[7]
 # CHECK-NEXT:  1      4     1.00                        mls	z0.s, p7/m, z1.s, z31.s
@@ -1662,7 +1662,7 @@
 # CHECK-NEXT:  1      1     0.20                  U     mrs	x3, ZCR_EL2
 # CHECK-NEXT:  1      1     0.20                  U     mrs	x3, ZCR_EL3
 # CHECK-NEXT:  1      4     1.00                        msb	z0.b, p7/m, z1.b, z31.b
-# CHECK-NEXT:  2      5     2.00                        msb	z0.d, p7/m, z1.d, z31.d
+# CHECK-NEXT:  1      5     2.00                        msb	z0.d, p7/m, z1.d, z31.d
 # CHECK-NEXT:  1      4     1.00                        msb	z0.h, p7/m, z1.h, z31.h
 # CHECK-NEXT:  1      4     1.00                        msb	z0.s, p7/m, z1.s, z31.s
 # CHECK-NEXT:  1      1     0.20                  U     msr	ZCR_EL1, x3
@@ -2385,35 +2385,35 @@
 # CHECK-NEXT:  1      2     0.50                        sqneg	z31.h, p7/m, z31.h
 # CHECK-NEXT:  1      2     0.50                        sqneg	z31.s, p7/m, z31.s
 # CHECK-NEXT:  1      4     1.00                        sqrdcmlah	z0.b, z1.b, z2.b, #0
-# CHECK-NEXT:  2      5     2.00                        sqrdcmlah	z0.d, z1.d, z2.d, #0
+# CHECK-NEXT:  1      5     2.00                        sqrdcmlah	z0.d, z1.d, z2.d, #0
 # CHECK-NEXT:  1      4     1.00                        sqrdcmlah	z0.h, z1.h, z2.h, #0
 # CHECK-NEXT:  1      4     1.00                        sqrdcmlah	z0.h, z1.h, z2.h[0], #0
 # CHECK-NEXT:  1      4     1.00                        sqrdcmlah	z0.s, z1.s, z2.s, #0
 # CHECK-NEXT:  1      4     1.00                        sqrdcmlah	z0.s, z1.s, z2.s[0], #0
 # CHECK-NEXT:  1      4     1.00                        sqrdcmlah	z15.b, z16.b, z17.b, #270
-# CHECK-NEXT:  2      5     2.00                        sqrdcmlah	z15.d, z16.d, z17.d, #270
+# CHECK-NEXT:  1      5     2.00                        sqrdcmlah	z15.d, z16.d, z17.d, #270
 # CHECK-NEXT:  1      4     1.00                        sqrdcmlah	z15.h, z16.h, z17.h, #270
 # CHECK-NEXT:  1      4     1.00                        sqrdcmlah	z15.s, z16.s, z17.s, #270
 # CHECK-NEXT:  1      4     1.00                        sqrdcmlah	z29.b, z30.b, z31.b, #90
-# CHECK-NEXT:  2      5     2.00                        sqrdcmlah	z29.d, z30.d, z31.d, #90
+# CHECK-NEXT:  1      5     2.00                        sqrdcmlah	z29.d, z30.d, z31.d, #90
 # CHECK-NEXT:  1      4     1.00                        sqrdcmlah	z29.h, z30.h, z31.h, #90
 # CHECK-NEXT:  1      4     1.00                        sqrdcmlah	z29.s, z30.s, z31.s, #90
 # CHECK-NEXT:  1      4     1.00                        sqrdcmlah	z31.b, z31.b, z31.b, #180
-# CHECK-NEXT:  2      5     2.00                        sqrdcmlah	z31.d, z31.d, z31.d, #180
+# CHECK-NEXT:  1      5     2.00                        sqrdcmlah	z31.d, z31.d, z31.d, #180
 # CHECK-NEXT:  1      4     1.00                        sqrdcmlah	z31.h, z30.h, z7.h[0], #180
 # CHECK-NEXT:  1      4     1.00                        sqrdcmlah	z31.h, z31.h, z31.h, #180
 # CHECK-NEXT:  1      4     1.00                        sqrdcmlah	z31.s, z30.s, z7.s[0], #180
 # CHECK-NEXT:  1      4     1.00                        sqrdcmlah	z31.s, z31.s, z31.s, #180
 # CHECK-NEXT:  1      4     1.00                        sqrdmlah	z0.b, z1.b, z31.b
-# CHECK-NEXT:  2      5     2.00                        sqrdmlah	z0.d, z1.d, z15.d[1]
-# CHECK-NEXT:  2      5     2.00                        sqrdmlah	z0.d, z1.d, z31.d
+# CHECK-NEXT:  1      5     2.00                        sqrdmlah	z0.d, z1.d, z15.d[1]
+# CHECK-NEXT:  1      5     2.00                        sqrdmlah	z0.d, z1.d, z31.d
 # CHECK-NEXT:  1      4     1.00                        sqrdmlah	z0.h, z1.h, z31.h
 # CHECK-NEXT:  1      4     1.00                        sqrdmlah	z0.h, z1.h, z7.h[7]
 # CHECK-NEXT:  1      4     1.00                        sqrdmlah	z0.s, z1.s, z31.s
 # CHECK-NEXT:  1      4     1.00                        sqrdmlah	z0.s, z1.s, z7.s[3]
 # CHECK-NEXT:  1      4     1.00                        sqrdmlsh	z0.b, z1.b, z31.b
-# CHECK-NEXT:  2      5     2.00                        sqrdmlsh	z0.d, z1.d, z15.d[1]
-# CHECK-NEXT:  2      5     2.00                        sqrdmlsh	z0.d, z1.d, z31.d
+# CHECK-NEXT:  1      5     2.00                        sqrdmlsh	z0.d, z1.d, z15.d[1]
+# CHECK-NEXT:  1      5     2.00                        sqrdmlsh	z0.d, z1.d, z31.d
 # CHECK-NEXT:  1      4     1.00                        sqrdmlsh	z0.h, z1.h, z31.h
 # CHECK-NEXT:  1      4     1.00                        sqrdmlsh	z0.h, z1.h, z7.h[7]
 # CHECK-NEXT:  1      4     1.00                        sqrdmlsh	z0.s, z1.s, z31.s

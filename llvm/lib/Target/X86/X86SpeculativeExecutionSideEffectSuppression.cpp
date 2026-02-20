@@ -87,7 +87,8 @@ static bool hasConstantAddressingMode(const MachineInstr &MI) {
   return true;
 }
 
-bool runX86SpeculativeExecutionSideEffectSuppression(MachineFunction &MF) {
+static bool
+runX86SpeculativeExecutionSideEffectSuppression(MachineFunction &MF) {
 
   const auto &OptLevel = MF.getTarget().getOptLevel();
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();

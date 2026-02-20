@@ -37,7 +37,7 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
                                             bool DestroyToplevelScope) {
   S.setEvalLocation(E->getExprLoc());
   this->ConvertResultToRValue = ConvertResultToRValue && !isa<ConstantExpr>(E);
-  this->CheckFullyInitialized = isa<ConstantExpr>(E);
+  this->CheckFullyInitialized = isa<ConstantExpr>(E) && !E->isGLValue();
   EvalResult.setSource(E);
 
   if (!this->visitExpr(E, DestroyToplevelScope)) {
@@ -193,12 +193,6 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
     return true;
 
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (Ptr.isFunctionPointer()) {
-    EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
-    return true;
-  }
-
   // If we're returning a raw pointer, call our callback.
   if (this->PtrCB)
     return (*this->PtrCB)(Ptr);
@@ -207,6 +201,12 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
+
+  // Function pointers are alway returned as lvalues.
+  if (Ptr.isFunctionPointer()) {
+    EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
+    return true;
+  }
 
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
@@ -293,7 +293,7 @@ bool EvalEmitter::emitGetLocal(uint32_t I, SourceInfo Info) {
   if (!CheckLocalLoad(S, OpPC, B))
     return false;
 
-  S.Stk.push<T>(*reinterpret_cast<T *>(B->data()));
+  S.Stk.push<T>(B->deref<T>());
   return true;
 }
 
@@ -305,7 +305,7 @@ bool EvalEmitter::emitSetLocal(uint32_t I, SourceInfo Info) {
   using T = typename PrimConv<OpType>::T;
 
   Block *B = getLocal(I);
-  *reinterpret_cast<T *>(B->data()) = S.Stk.pop<T>();
+  B->deref<T>() = S.Stk.pop<T>();
   auto &Desc = B->getBlockDesc<InlineDescriptor>();
   Desc.IsInitialized = true;
 

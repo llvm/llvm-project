@@ -61,8 +61,6 @@ protected:
   // Functions with the amdgpu_cs_chain or amdgpu_cs_chain_preserve CC.
   bool IsChainFunction = false;
 
-  bool NoSignedZerosFPMath = false;
-
   // Function may be memory bound.
   bool MemoryBound = false;
 
@@ -105,10 +103,6 @@ public:
   // The stack is empty upon entry to this function.
   bool isBottomOfStack() const {
     return isEntryFunction() || isChainFunction();
-  }
-
-  bool hasNoSignedZerosFPMath() const {
-    return NoSignedZerosFPMath;
   }
 
   bool isMemoryBound() const {

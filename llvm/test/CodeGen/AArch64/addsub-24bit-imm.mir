@@ -38,12 +38,12 @@ body: |
     ; CHECK-NEXT: [[ADDXri1:%[0-9]+]]:gpr64common = ADDXri [[ADDXri]], 3549, 0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[ADDXri1]].sub_32
     ; CHECK-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 28, 31
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[UBFMWri]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[UBFMWri]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr64 = COPY $x0
     %1:gpr32 = MOVi32imm 1121757
-    %2:gpr64 = SUBREG_TO_REG 0, %1, %subreg.sub_32
+    %2:gpr64 = SUBREG_TO_REG %1, %subreg.sub_32
     %3:gpr64 = ADDXrr %0, killed %2
     %4:gpr64 = UBFMXri %3, 28, 31
     $x0 = COPY %4
@@ -62,7 +62,7 @@ body: |
     ; CHECK-NEXT: [[SUBXri1:%[0-9]+]]:gpr64common = SUBXri [[SUBXri]], 3549, 0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[SUBXri1]].sub_32
     ; CHECK-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 28, 31
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[UBFMWri]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[UBFMWri]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr64 = COPY $x0

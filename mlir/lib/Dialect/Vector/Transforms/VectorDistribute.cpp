@@ -398,7 +398,8 @@ getInnerRegionEscapingValues(WarpExecuteOnLane0Op warpOp, Region &innerRegion,
       Type distType = operand->get().getType();
       if (auto vecType = dyn_cast<VectorType>(distType)) {
         AffineMap map = distributionMapFn(operand->get());
-        distType = getDistributedType(vecType, map, warpOp.getWarpSize());
+        distType = getDistributedType(vecType, map,
+                                      map.isEmpty() ? 1 : warpOp.getWarpSize());
       }
       escapingValueTypes.push_back(operand->get().getType());
       escapingValueDistTypes.push_back(distType);
@@ -1886,7 +1887,9 @@ struct WarpOpScfIfOp : public WarpDistributionPattern {
         // Fallback to affine map if the dist result was not previously recorded
         distType = ifResultDistTypes.count(i)
                        ? ifResultDistTypes[i]
-                       : getDistributedType(vecType, map, warpOp.getWarpSize());
+                       : getDistributedType(
+                             vecType, map,
+                             map.isEmpty() ? 1 : newWarpOp.getWarpSize());
       }
       newIfOpDistResTypes.push_back(distType);
     }
@@ -2075,9 +2078,11 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
         // we can get the distributed type from `forResultDistTypes` map.
         // Otherwise, we compute it using distributionMapFn.
         AffineMap map = distributionMapFn(initArg);
-        distType = forResultDistTypes.count(i)
-                       ? forResultDistTypes[i]
-                       : getDistributedType(vecType, map, warpOp.getWarpSize());
+        distType =
+            forResultDistTypes.count(i)
+                ? forResultDistTypes[i]
+                : getDistributedType(vecType, map,
+                                     map.isEmpty() ? 1 : warpOp.getWarpSize());
       }
       newWarpOpDistTypes.push_back(distType);
     }

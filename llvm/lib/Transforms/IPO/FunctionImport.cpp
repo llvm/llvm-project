@@ -435,14 +435,24 @@ class GlobalsImporter final {
 
       for (const auto &RefSummary : VI.getSummaryList()) {
         const auto *GVS = dyn_cast<GlobalVarSummary>(RefSummary.get());
+        // Stop looking if this is not a global variable, e.g. a function.
         // Functions could be referenced by global vars - e.g. a vtable; but we
         // don't currently imagine a reason those would be imported here, rather
         // than as part of the logic deciding which functions to import (i.e.
         // based on profile information). Should we decide to handle them here,
         // we can refactor accordingly at that time.
+        // Note that it is safe to stop looking because the one case where we
+        // might have to import (a read/write-only global variable) cannot occur
+        // if this GUID has a non-variable summary. The only case where we even
+        // might find another summary in the list that is a variable is in the
+        // case of same-named locals in different modules not compiled with
+        // enough path, and during attribute propagation we will mark all
+        // summaries for a GUID (ValueInfo) as non read/write-only if any is not
+        // a global variable.
+        if (!GVS)
+          break;
         bool CanImportDecl = false;
-        if (!GVS ||
-            shouldSkipLocalInAnotherModule(GVS, VI.getSummaryList().size(),
+        if (shouldSkipLocalInAnotherModule(GVS, VI.getSummaryList().size(),
                                            Summary.modulePath()) ||
             !Index.canImportGlobalVar(GVS, /* AnalyzeRefs */ true,
                                       CanImportDecl)) {
@@ -2096,7 +2106,7 @@ static bool doImportingForModuleForTest(
   for (auto &I : *Index) {
     for (auto &S : I.second.getSummaryList()) {
       if (GlobalValue::isLocalLinkage(S->linkage()))
-        S->setLinkage(GlobalValue::ExternalLinkage);
+        S->setExternalLinkageForTest();
     }
   }
 

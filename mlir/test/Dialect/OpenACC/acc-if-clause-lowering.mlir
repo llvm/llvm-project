@@ -222,3 +222,119 @@ func.func @test_acc_var_replacement(%arg0: memref<10xi32>, %cond: i1) {
   return
 }
 
+// -----
+
+// Test that acc variable uses in host path are replaced with host variables;
+// and the firstprivate operands are cloned
+// CHECK-LABEL: func.func @test_acc_firstprivate
+
+acc.firstprivate.recipe @memref_i32 : memref<i32> init {
+^bb0(%arg0: memref<i32>):
+  %0 = memref.alloca() : memref<i32>
+  acc.yield %0 : memref<i32>
+} copy {
+^bb0(%arg0: memref<i32>, %arg1: memref<i32>):
+  %0 = memref.load %arg0[] : memref<i32>
+  memref.store %0, %arg1[] : memref<i32>
+  acc.terminator
+}
+
+func.func @test_acc_firstprivate(%arg0: memref<10xi32>, %arg1: memref<i32>, %cond: i1) {
+  %c0_i32 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+
+  %copyin = acc.copyin varPtr(%arg0 : memref<10xi32>) -> memref<10xi32>
+  %firstprivate = acc.firstprivate varPtr(%arg1 : memref<i32>) recipe(@memref_i32) -> memref<i32>
+
+  // In the else branch, uses of %firstprivate should be replaced with %arg0
+  // CHECK: scf.if
+  // CHECK: [[FIRSTPRIVATE:%.*]] = acc.firstprivate varPtr(%arg1 : memref<i32>) recipe(@memref_i32) -> memref<i32>
+  // CHECK: acc.parallel {{.*}} firstprivate([[FIRSTPRIVATE]] : memref<i32>) {
+  // CHECK: } else {
+  // CHECK: [[LOAD:%.*]] = memref.load %arg1[] : memref<i32>
+  // CHECK: }
+
+  acc.parallel dataOperands(%copyin : memref<10xi32>) firstprivate(%firstprivate : memref<i32>) if(%cond) {
+    %load = memref.load %firstprivate[] : memref<i32>
+    %ub = arith.index_cast %load : i32 to index
+    scf.for %i = %c1 to %ub step %c1 {
+      // Use the acc ptr inside the region
+      memref.store %c0_i32, %copyin[%i] : memref<10xi32>
+    }
+    acc.yield
+  }
+
+  acc.copyout accPtr(%copyin : memref<10xi32>) to varPtr(%arg0 : memref<10xi32>)
+  return
+}
+
+// -----
+
+// Test that acc variable uses in host path are replaced with host variables;
+// and the reduction operands are cloned
+// CHECK-LABEL: func.func @test_acc_reduction
+
+acc.reduction.recipe @reduction_add_memref_i32 : memref<i32> reduction_operator <add> init {
+^bb0(%arg0: memref<i32>):
+  %c0_i32 = arith.constant 0 : i32
+  %0 = memref.alloca() : memref<i32>
+  memref.store %c0_i32, %0[] : memref<i32>
+  acc.yield %0 : memref<i32>
+} combiner {
+^bb0(%arg0: memref<i32>, %arg1: memref<i32>):
+  %0 = memref.load %arg1[] : memref<i32>
+  %1 = memref.load %arg0[] : memref<i32>
+  %2 = arith.addi %1, %0 : i32
+  memref.store %2, %arg0[] : memref<i32>
+  acc.yield %arg0 : memref<i32>
+}
+
+func.func @test_acc_reduction(%arg0: memref<i32>, %cond: i1) {
+
+  %c0_i32 = arith.constant 0 : i32
+  %reduction = acc.reduction varPtr(%arg0 : memref<i32>) recipe(@reduction_add_memref_i32) -> memref<i32>
+
+  // In the else branch, uses of %reduction should be replaced with %arg0
+  // CHECK: scf.if
+  // CHECK: [[REDUCTION:%.*]] = acc.reduction varPtr(%arg0 : memref<i32>) recipe(@reduction_add_memref_i32) -> memref<i32>
+  // CHECK: acc.parallel reduction([[REDUCTION]] : memref<i32>) {
+  // CHECK: } else {
+  // CHECK: [[LOAD:%.*]] = memref.load %arg0[] : memref<i32>
+  // CHECK: memref.store {{.*}}, %arg0[] : memref<i32>
+  // CHECK: }
+
+  acc.parallel reduction(%reduction : memref<i32>) if(%cond) {
+    %load = memref.load %reduction[] : memref<i32>
+    %add = arith.addi %load, %c0_i32 : i32
+    memref.store %add, %reduction[] : memref<i32>
+    acc.yield
+  }
+  return
+}
+
+acc.private.recipe @privatization_memref_i32 : memref<i32> init {
+^bb0(%arg0: memref<i32>):
+  %0 = memref.alloca() : memref<i32>
+  acc.yield %0 : memref<i32>
+}
+
+func.func @test_acc_private(%arg0: memref<i32>, %cond: i1) {
+
+  %c0_i32 = arith.constant 0 : i32
+  %private = acc.private varPtr(%arg0 : memref<i32>) recipe(@privatization_memref_i32) -> memref<i32>
+
+  // In the else branch, uses of %private should be replaced with %arg0
+  // CHECK: scf.if
+  // CHECK: [[PRIVATE:%.*]] = acc.private varPtr(%arg0 : memref<i32>) recipe(@privatization_memref_i32) -> memref<i32>
+  // CHECK: acc.parallel private([[PRIVATE]] : memref<i32>) {
+  // CHECK: } else {
+  // CHECK: memref.store {{.*}}, %arg0[] : memref<i32>
+  // CHECK: }
+
+  acc.parallel private(%private : memref<i32>) if(%cond) {
+    memref.store %c0_i32, %private[] : memref<i32>
+    acc.yield
+  }
+  return
+}

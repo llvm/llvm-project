@@ -1,14 +1,12 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-
-; CHECK-DAG: %[[#TyEvent:]] = OpTypeEvent
-; CHECK-DAG: %[[#TyStruct:]] = OpTypeStruct %[[#TyEvent]]
-; CHECK-DAG: %[[#ConstEvent:]] = OpConstantNull %[[#TyEvent]]
-; CHECK-DAG: %[[#TyEventPtr:]] = OpTypePointer Function %[[#TyEvent]]
-; CHECK-DAG: %[[#TyEventPtrGen:]] = OpTypePointer Generic %[[#TyEvent]]
+; CHECK-DAG: %[[#IntTy:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#EventTy:]] = OpTypeEvent
+; CHECK-DAG: %[[#ConstEvent:]] = OpConstantNull %[[#EventTy]]
+; CHECK-DAG: %[[#TyEventPtr:]] = OpTypePointer Function %[[#EventTy]]
+; CHECK-DAG: %[[#TyEventPtrGen:]] = OpTypePointer Generic %[[#EventTy]]
+; CHECK-DAG: %[[#TyStruct:]] = OpTypeStruct %[[#EventTy]]
 ; CHECK-DAG: %[[#TyStructPtr:]] = OpTypePointer Function %[[#TyStruct]]
 ; CHECK-DAG: %[[#TyChar:]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[#TyV4:]] = OpTypeVector %[[#TyChar]] 4
@@ -20,34 +18,38 @@
 ; CHECK-DAG: %[[#TyHalfV2:]] = OpTypeVector %[[#TyHalf]] 2
 ; CHECK-DAG: %[[#TyHalfV2_W:]] = OpTypePointer Workgroup %[[#TyHalfV2]]
 ; CHECK-DAG: %[[#TyHalfV2_CW:]] = OpTypePointer CrossWorkgroup %[[#TyHalfV2]]
+; CHECK-DAG: %[[#Scope:]] = OpConstant %[[#IntTy]] 2
+; CHECK-DAG: %[[#NumElem:]] = OpConstant %[[#IntTy]] 16
+; CHECK-DAG: %[[#Stride:]] = OpConstant %[[#IntTy]] 10
+; CHECK-DAG: %[[#NumEvents:]] = OpConstant %[[#IntTy]] 1
 
 ; Check correct translation of __spirv_GroupAsyncCopy and target("spirv.Event") zeroinitializer
-
-; CHECK: OpFunction
-; CHECK: %[[#HalfA1:]] = OpFunctionParameter %[[#TyHalfV2_W:]]
-; CHECK: %[[#HalfA2:]] = OpFunctionParameter %[[#TyHalfV2_CW:]]
-; CHECK: OpGroupAsyncCopy %[[#TyEvent]] %[[#]] %[[#HalfA1]] %[[#HalfA2]] %[[#]] %[[#]] %[[#ConstEvent]]
-; CHECK: OpFunctionEnd
 
 %StructEvent = type { target("spirv.Event") }
 
 @G_r = global target("spirv.Event") poison
 
+; CHECK: OpFunction
+; CHECK: %[[#HalfA1:]] = OpFunctionParameter %[[#TyHalfV2_W]]
+; CHECK: %[[#HalfA2:]] = OpFunctionParameter %[[#TyHalfV2_CW]]
+; CHECK: OpGroupAsyncCopy %[[#EventTy]] %[[#Scope]] %[[#HalfA1]] %[[#HalfA2]] %[[#NumElem]] %[[#Stride]] %[[#ConstEvent]]
+; CHECK: OpFunctionEnd
+
 define spir_kernel void @test_half(ptr addrspace(3) %_arg1, ptr addrspace(1) %_arg2) {
 entry:
-  %r = tail call spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU3AS3Dv2_DF16_PU3AS1KS_mm9ocl_event(i32 2, ptr addrspace(3) %_arg1, ptr addrspace(1) %_arg2, i64 16, i64 10, target("spirv.Event") zeroinitializer)
+  %r = tail call spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU3AS3Dv2_DF16_PU3AS1KS_jj9ocl_event(i32 2, ptr addrspace(3) %_arg1, ptr addrspace(1) %_arg2, i32 16, i32 10, target("spirv.Event") zeroinitializer)
   store target("spirv.Event") %r, ptr @G_r
   ret void
 }
 
-declare dso_local spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU3AS3Dv2_DF16_PU3AS1KS_mm9ocl_event(i32 noundef, ptr addrspace(3) noundef, ptr addrspace(1) noundef, i64 noundef, i64 noundef, target("spirv.Event"))
+declare dso_local spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU3AS3Dv2_DF16_PU3AS1KS_jj9ocl_event(i32 noundef, ptr addrspace(3) noundef, ptr addrspace(1) noundef, i32 noundef, i32 noundef, target("spirv.Event"))
 
 ; CHECK: OpFunction
 ; CHECK: OpFunctionParameter
 ; CHECK: %[[#Src:]] = OpFunctionParameter
 ; CHECK: %[[#EventVar:]] = OpVariable %[[#TyEventPtr]] Function
 ; CHECK: %[[#Dest:]] = OpInBoundsPtrAccessChain
-; CHECK: %[[#CopyRes:]] = OpGroupAsyncCopy %[[#TyEvent]] %[[#]] %[[#Dest]] %[[#Src]] %[[#]] %[[#]] %[[#ConstEvent]]
+; CHECK: %[[#CopyRes:]] = OpGroupAsyncCopy %[[#EventTy]] %[[#Scope]] %[[#Dest]] %[[#Src]] %[[#NumElem]] %[[#Stride]] %[[#ConstEvent]]
 ; CHECK: OpStore %[[#EventVar]] %[[#CopyRes]]
 ; CHECK: OpFunctionEnd
 
@@ -56,42 +58,43 @@ entry:
   %var = alloca %StructEvent
   %dev_event.i.sroa.0 = alloca target("spirv.Event")
   %add.ptr.i26 = getelementptr inbounds i32, ptr addrspace(1) %_arg_out_ptr, i64 0
-  %call3.i = tail call spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU3AS1iPU3AS3Kimm9ocl_event(i32 2, ptr addrspace(1) %add.ptr.i26, ptr addrspace(3) %_arg_local_acc, i64 16, i64 10, target("spirv.Event") zeroinitializer)
+  %call3.i = tail call spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU3AS1iPU3AS3Kijj9ocl_event(i32 2, ptr addrspace(1) %add.ptr.i26, ptr addrspace(3) %_arg_local_acc, i32 16, i32 10, target("spirv.Event") zeroinitializer)
   store target("spirv.Event") %call3.i, ptr %dev_event.i.sroa.0
   ret void
 }
 
-declare dso_local spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU3AS1iPU3AS3Kimm9ocl_event(i32, ptr addrspace(1), ptr addrspace(3), i64, i64, target("spirv.Event"))
+declare dso_local spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU3AS1iPU3AS3Kijj9ocl_event(i32, ptr addrspace(1), ptr addrspace(3), i32, i32, target("spirv.Event"))
 
 ; Check correct type inference when calling __spirv_GroupAsyncCopy:
 ; we expect that the Backend is able to deduce a type of the %_arg_Local
 ; given facts that it's possible to deduce a type of the %_arg
 ; and %_arg_Local and %_arg are source/destination arguments in OpGroupAsyncCopy
 
+%Vec4 = type { <4 x i8> }
+
 ; CHECK: OpFunction
 ; CHECK: %[[#BarArg1:]] = OpFunctionParameter %[[#TyPtrV4_W]]
 ; CHECK: %[[#BarArg2:]] = OpFunctionParameter %[[#TyPtrSV4_CW]]
 ; CHECK: %[[#EventVarBar:]] = OpVariable %[[#TyStructPtr]] Function
 ; CHECK: %[[#EventVarBarCasted2:]] = OpBitcast %[[#TyEventPtr]] %[[#EventVarBar]]
-; CHECK: %[[#ResBar:]] = OpGroupAsyncCopy %[[#TyEvent]] %[[#]] %[[#BarArg1]] %[[#]] %[[#]] %[[#]] %[[#ConstEvent]]
+; CHECK: %[[#ResBar:]] = OpGroupAsyncCopy %[[#EventTy]] %[[#Scope]] %[[#BarArg1]] %[[#]] %[[#NumElem]] %[[#Stride]] %[[#ConstEvent]]
 ; CHECK: %[[#EventVarBarCasted:]] = OpBitcast %[[#TyEventPtr]] %[[#EventVarBar]]
 ; CHECK: OpStore %[[#EventVarBarCasted]] %[[#ResBar]]
 ; CHECK: %[[#EventVarBarGen:]] = OpPtrCastToGeneric %[[#TyEventPtrGen]] %[[#EventVarBarCasted2]]
-; CHECK: OpGroupWaitEvents %[[#]] %[[#]] %[[#EventVarBarGen]]
+; CHECK: OpGroupWaitEvents %[[#Scope]] %[[#NumEvents]] %[[#EventVarBarGen]]
 ; CHECK: OpFunctionEnd
-
-%Vec4 = type { <4 x i8> }
 
 define spir_kernel void @bar(ptr addrspace(3) %_arg_Local, ptr addrspace(1) readonly %_arg) {
 entry:
   %E1 = alloca %StructEvent
   %srcptr = getelementptr inbounds %Vec4, ptr addrspace(1) %_arg, i64 0
-  %r1 = tail call spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU3AS3Dv4_aPU3AS1KS_mm9ocl_event(i32 2, ptr addrspace(3) %_arg_Local, ptr addrspace(1) %srcptr, i64 16, i64 10, target("spirv.Event") zeroinitializer)
+  %r1 = tail call spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU3AS3Dv4_aPU3AS1KS_jj9ocl_event(i32 2, ptr addrspace(3) %_arg_Local, ptr addrspace(1) %srcptr, i32 16, i32 10, target("spirv.Event") zeroinitializer)
   store target("spirv.Event") %r1, ptr %E1
   %E.ascast.i = addrspacecast ptr %E1 to ptr addrspace(4)
   call spir_func void @_Z23__spirv_GroupWaitEventsjiP9ocl_event(i32 2, i32 1, ptr addrspace(4) %E.ascast.i)
   ret void
 }
 
-declare dso_local spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU3AS3Dv4_aPU3AS1KS_mm9ocl_event(i32, ptr addrspace(3), ptr addrspace(1), i64, i64, target("spirv.Event"))
+declare dso_local spir_func target("spirv.Event") @_Z22__spirv_GroupAsyncCopyjPU3AS3Dv4_aPU3AS1KS_jj9ocl_event(i32, ptr addrspace(3), ptr addrspace(1), i32, i32, target("spirv.Event"))
 declare dso_local spir_func void @_Z23__spirv_GroupWaitEventsjiP9ocl_event(i32, i32, ptr addrspace(4))
+

@@ -1,0 +1,118 @@
+## Test that if we have a DW_AT_LLVM_stmt_sequence attribute on a function DIE
+## in DWARF that has a valid sequence offset, we can successfully convert
+## it to gsym with all valid line entries.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-gsymutil --convert %t -o %t.gsym  2>&1 | FileCheck %s --check-prefix=CONVERT
+# RUN: llvm-gsymutil %t.gsym 2>&1 | FileCheck %s --check-prefix=DUMP
+
+# Make sure there were no errors when parsing due to the
+# DW_AT_LLVM_stmt_sequence.
+# CONVERT-NOT: error:
+# CONVERT: Loaded 1 functions from DWARF.
+
+# Check that the line table got converted correctly for the function with
+# a valid DW_AT_LLVM_stmt_sequence.
+# DUMP:      FunctionInfo @ 0x0000005c: [0x0000000000001000 - 0x0000000000001100) "bar"
+# DUMP-NEXT: LineTable:
+# DUMP-NEXT:   0x0000000000001000 main.cpp:10
+# DUMP-NEXT:   0x0000000000001010 main.cpp:11
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x00000000004003E0
+DWARF:
+  debug_str:
+    - ''
+    - main.cpp
+    - bar
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_LLVM_stmt_sequence
+              Form:            DW_FORM_sec_offset
+  debug_info:
+    - Length:          0x2B
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x4
+            - Value:           0x0
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xA
+            - Value:           0x1000
+            - Value:           0x1100
+            - Value:           0x29
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          64
+      Version:         2
+      PrologueLength:  31
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      Files:
+        - Name:            main.cpp
+          DirIdx:          0
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            240
+        - Opcode:          DW_LNS_advance_line
+          SData:           2
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+...
