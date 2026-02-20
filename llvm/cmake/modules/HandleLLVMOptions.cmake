@@ -763,7 +763,6 @@ if (MSVC)
       -wd4510 # Suppress 'default constructor could not be generated'
       -wd4702 # Suppress 'unreachable code'
       -wd4245 # Suppress ''conversion' : conversion from 'type1' to 'type2', signed/unsigned mismatch'
-      -wd4706 # Suppress 'assignment within conditional expression'
       -wd4310 # Suppress 'cast truncates constant value'
       -wd4701 # Suppress 'potentially uninitialized local variable'
       -wd4703 # Suppress 'potentially uninitialized local pointer variable'
