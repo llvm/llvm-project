@@ -1570,37 +1570,36 @@ const DenseMap<const Loop *, unsigned> &CacheCostManager::getCostMap() {
   return CostMap;
 }
 
-/// If \S contains an affine addrec for \p L0, store the step recurrence of the
-/// addrec in \p Coeff0. Same for \p L1 and \p Coeff1. This function assumes \p
-/// S is an nested affine addrec, and it will recursively look through the start
-/// value of the addrec to find the coefficients. If the expression is in a
-/// complex form, e.g., (addrec + addrec), then the coefficients may not be
-/// found.
+/// If \S contains an affine addrec for \p L, return the step recurrence of it.
+/// If \S is loop invariant with respect to \p L, return nullptr. Otherwise,
+/// return std::nullopt, which indicates we cannot determine the coefficient of
+/// the addrec for \p L in \S.
 /// TODO: Handle more complex cases. Maybe using SCEVTraversal is a good way to
 /// do that.
-static void getAddRecCoefficients(ScalarEvolution &SE, const SCEV *S,
-                                  const Loop *L0,
-                                  std::optional<const SCEV *> &Coeff0,
-                                  const Loop *L1,
-                                  std::optional<const SCEV *> &Coeff1) {
+std::optional<const SCEV *> getAddRecCoefficient(ScalarEvolution &SE,
+                                                 const SCEV *S, const Loop *L) {
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S);
-  if (!AR)
-    return;
+  if (!AR) {
+    if (SE.isLoopInvariant(S, L))
+      return nullptr;
+    return std::nullopt;
+  }
+
   if (!AR->isAffine()) {
     LLVM_DEBUG(dbgs() << "Unexpected non-affine addrec\n");
-    return;
+    return std::nullopt;
   }
-  if (AR->getLoop() == L0) {
-    assert(!Coeff0.has_value() &&
-           "Found more than one addrec for the same loop");
-    Coeff0 = AR->getStepRecurrence(SE);
+
+  std::optional<const SCEV *> Coeff =
+      getAddRecCoefficient(SE, AR->getStart(), L);
+  if (!Coeff.has_value())
+    return std::nullopt;
+
+  if (AR->getLoop() == L) {
+    assert(!*Coeff && "Found more than one addrec for the same loop");
+    Coeff = AR->getStepRecurrence(SE);
   }
-  if (AR->getLoop() == L1) {
-    assert(!Coeff1.has_value() &&
-           "Found more than one addrec for the same loop");
-    Coeff1 = AR->getStepRecurrence(SE);
-  }
-  getAddRecCoefficients(SE, AR->getStart(), L0, Coeff0, L1, Coeff1);
+  return Coeff;
 }
 
 int LoopInterchangeProfitability::getInstrOrderCost() {
@@ -1611,10 +1610,13 @@ int LoopInterchangeProfitability::getInstrOrderCost() {
       if (!isa<LoadInst, StoreInst>(&Ins))
         continue;
       const SCEV *Ptr = SE->getSCEV(getLoadStorePointerOperand(&Ins));
-      std::optional<const SCEV *> OuterCoeff, InnerCoeff;
-      getAddRecCoefficients(*SE, Ptr, OuterLoop, OuterCoeff, InnerLoop,
-                            InnerCoeff);
-      if (!InnerCoeff.has_value() || !OuterCoeff.has_value())
+      std::optional<const SCEV *> OuterCoeff =
+          getAddRecCoefficient(*SE, Ptr, OuterLoop);
+      std::optional<const SCEV *> InnerCoeff =
+          getAddRecCoefficient(*SE, Ptr, InnerLoop);
+
+      if (!OuterCoeff.has_value() || !*OuterCoeff || !InnerCoeff.has_value() ||
+          !*InnerCoeff)
         continue;
 
       // This heuristic assumes that a smaller step recurrence implies that the
