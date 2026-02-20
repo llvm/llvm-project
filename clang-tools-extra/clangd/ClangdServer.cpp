@@ -909,12 +909,15 @@ void ClangdServer::prepareCallHierarchy(
 }
 
 void ClangdServer::incomingCalls(
-    const CallHierarchyItem &Item,
+    PathRef File, const CallHierarchyItem &Item,
     Callback<std::vector<CallHierarchyIncomingCall>> CB) {
-  WorkScheduler->run("Incoming Calls", "",
-                     [CB = std::move(CB), Item, this]() mutable {
-                       CB(clangd::incomingCalls(Item, Index));
-                     });
+  auto Action = [Item, CB = std::move(CB),
+                 this](llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::incomingCalls(Item, Index, InpAST->AST));
+  };
+  WorkScheduler->runWithAST("Incoming Calls", File, std::move(Action));
 }
 
 void ClangdServer::inlayHints(PathRef File, std::optional<Range> RestrictRange,

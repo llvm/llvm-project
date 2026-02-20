@@ -1389,7 +1389,7 @@ void ClangdLSPServer::onPrepareCallHierarchy(
 void ClangdLSPServer::onCallHierarchyIncomingCalls(
     const CallHierarchyIncomingCallsParams &Params,
     Callback<std::vector<CallHierarchyIncomingCall>> Reply) {
-  Server->incomingCalls(Params.item, std::move(Reply));
+  Server->incomingCalls(Params.item.uri.file(), Params.item, std::move(Reply));
 }
 
 void ClangdLSPServer::onClangdInlayHints(const InlayHintsParams &Params,
