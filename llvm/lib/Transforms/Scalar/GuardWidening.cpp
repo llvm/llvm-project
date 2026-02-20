@@ -75,20 +75,7 @@ static cl::opt<bool>
                                "expressed as branches by widenable conditions"),
                       cl::init(true));
 
-// Get the condition of \p I. It can either be a guard or a conditional branch.
-static Value *getCondition(Instruction *I) {
-  if (IntrinsicInst *GI = dyn_cast<IntrinsicInst>(I)) {
-    assert(GI->getIntrinsicID() == Intrinsic::experimental_guard &&
-           "Bad guard intrinsic?");
-    return GI->getArgOperand(0);
-  }
-  Value *Cond, *WC;
-  BasicBlock *IfTrueBB, *IfFalseBB;
-  if (parseWidenableBranch(I, Cond, WC, IfTrueBB, IfFalseBB))
-    return Cond;
-
-  return cast<BranchInst>(I)->getCondition();
-}
+namespace {
 
 // Set the condition for \p I to \p NewCond. \p I can either be a guard or a
 // conditional branch.
@@ -225,8 +212,9 @@ class GuardWideningImpl {
 
   /// Generate the logical AND of \p ChecksToHoist and \p OldCondition and make
   /// it available at InsertPt
-  Value *hoistChecks(SmallVectorImpl<Value *> &ChecksToHoist,
-                     Value *OldCondition, BasicBlock::iterator InsertPt);
+  void hoistChecks(SmallVectorImpl<Value *> &ChecksToHoist,
+                   SmallVectorImpl<Value *> &ChecksToWiden,
+                   Instruction *InsertPt);
 
   /// Adds freeze to Orig and push it as far as possible very aggressively.
   /// Also replaces all uses of frozen instruction with frozen version.
@@ -304,17 +292,11 @@ class GuardWideningImpl {
   void widenGuard(SmallVectorImpl<Value *> &ChecksToHoist,
                   SmallVectorImpl<Value *> &ChecksToWiden,
                   Instruction *ToWiden) {
-    auto InsertPt = findInsertionPointForWideCondition(ToWiden);
-    auto MergedCheck = mergeChecks(ChecksToHoist, ChecksToWiden, InsertPt);
-    Value *Result = MergedCheck ? *MergedCheck
-                                : hoistChecks(ChecksToHoist,
-                                              getCondition(ToWiden), *InsertPt);
-
-    if (isGuardAsWidenableBranch(ToWiden)) {
-      setWidenableBranchCond(cast<BranchInst>(ToWiden), Result);
-      return;
-    }
-    setCondition(ToWiden, Result);
+    Instruction *InsertPt = findInsertionPointForWideCondition(ToWiden);
+    if (auto MergedCheck = mergeChecks(ChecksToHoist, ChecksToWiden, InsertPt))
+      setCondition(ToWiden, *MergedCheck);
+    else
+      hoistChecks(ChecksToHoist, ChecksToWiden, InsertPt);
   }
 
 public:
@@ -360,7 +342,7 @@ bool GuardWideningImpl::run() {
   assert(EliminatedGuardsAndBranches.empty() || Changed);
   for (auto *I : EliminatedGuardsAndBranches)
     if (!WidenedGuards.count(I)) {
-      assert(isa<ConstantInt>(getCondition(I)) && "Should be!");
+      setCondition(I, ConstantInt::getTrue(I->getContext()));
       if (isSupportedGuardInstruction(I))
         eliminateGuard(I, MSSAU);
       else {
@@ -449,8 +431,6 @@ bool GuardWideningImpl::eliminateInstrViaWidening(
   SmallVector<Value *> ChecksToWiden;
   parseWidenableGuard(BestSoFar, ChecksToWiden);
   widenGuard(ChecksToHoist, ChecksToWiden, BestSoFar);
-  auto NewGuardCondition = ConstantInt::getTrue(Instr->getContext());
-  setCondition(Instr, NewGuardCondition);
   EliminatedGuardsAndBranches.push_back(Instr);
   WidenedGuards.insert(BestSoFar);
   return true;
@@ -476,10 +456,7 @@ GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
 
   if (!canBeHoistedTo(ChecksToHoist, WideningPoint))
     return WS_IllegalOrNegative;
-  // Further in the GuardWideningImpl::hoistChecks the entire condition might be
-  // widened, not the parsed list of checks. So we need to check the possibility
-  // of that condition hoisting.
-  if (!canBeHoistedTo(getCondition(ToWiden), WideningPoint))
+  if (!canBeHoistedTo(ChecksToWiden, WideningPoint))
     return WS_IllegalOrNegative;
 
   // If the guard was conditional executed, it may never be reached
@@ -788,18 +765,22 @@ GuardWideningImpl::mergeChecks(SmallVectorImpl<Value *> &ChecksToHoist,
   return std::nullopt;
 }
 
-Value *GuardWideningImpl::hoistChecks(SmallVectorImpl<Value *> &ChecksToHoist,
-                                      Value *OldCondition,
-                                      BasicBlock::iterator InsertPt) {
+void GuardWideningImpl::hoistChecks(SmallVectorImpl<Value *> &ChecksToHoist,
+                                    SmallVectorImpl<Value *> &ChecksToWiden,
+                                    Instruction *InsertPt) {
   assert(!ChecksToHoist.empty());
   IRBuilder<> Builder(InsertPt->getParent(), InsertPt);
   makeAvailableAt(ChecksToHoist, InsertPt);
-  makeAvailableAt(OldCondition, InsertPt);
   Value *Result = Builder.CreateAnd(ChecksToHoist);
   Result = freezeAndPush(Result, InsertPt);
-  Result = Builder.CreateAnd(OldCondition, Result);
-  Result->setName("wide.chk");
-  return Result;
+  if (isGuard(InsertPt)) {
+    makeAvailableAt(ChecksToWiden, InsertPt);
+    auto Result2 = Builder.CreateAnd(ChecksToWiden);
+    Result = Builder.CreateAnd(Result2, Result);
+    Result->setName("wide.chk");
+    setCondition(InsertPt, Result);
+  } else
+    widenWidenableCondition(InsertPt, Result);
 }
 
 bool GuardWideningImpl::parseRangeChecks(
