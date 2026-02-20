@@ -63,9 +63,13 @@ static int computeHostNumHardwareThreads();
 using namespace llvm;
 
 unsigned llvm::ThreadPoolStrategy::compute_thread_count() const {
-  if (UseJobserver)
-    if (auto JS = JobserverClient::getInstance())
-      return JS->getNumJobs();
+  if (UseJobserver) {
+    if (auto JS = JobserverClient::getInstance()) {
+      unsigned NumJobs = JS->getNumJobs();
+      if (NumJobs > 0)
+        return NumJobs;
+    }
+  }
 
   int MaxThreadCount =
       UseHyperThreads ? computeHostNumHardwareThreads() : get_physical_cores();

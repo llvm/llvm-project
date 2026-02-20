@@ -23,8 +23,12 @@ namespace llvm {
 JobserverClientImpl::JobserverClientImpl(const JobserverConfig &Config) {
   Semaphore = (void *)::OpenSemaphoreA(SEMAPHORE_MODIFY_STATE | SYNCHRONIZE,
                                        FALSE, Config.Path.c_str());
-  if (Semaphore != nullptr)
+  if (Semaphore != nullptr) {
     IsInitialized = true;
+
+    // Record -jN if present; otherwise leave NumJobs unknown (0).
+    NumJobs = Config.ParsedNumJobs;
+  }
 }
 
 /// The destructor closes the handle to the semaphore, releasing the resource.
