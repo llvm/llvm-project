@@ -5929,19 +5929,19 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // This will propagate sign information out of such loops.
     if (P->getNumIncomingValues() != 2)
       break;
-    for (unsigned i = 0; i < 2; i++) {
-      Value *RecurValue = P->getIncomingValue(1 - i);
-      IntrinsicInst *I = dyn_cast<IntrinsicInst>(RecurValue);
-      if (!I)
+    for (unsigned I = 0; I < 2; I++) {
+      Value *RecurValue = P->getIncomingValue(1 - I);
+      IntrinsicInst *II = dyn_cast<IntrinsicInst>(RecurValue);
+      if (!II)
         continue;
       Value *R, *L, *Init;
       PHINode *PN;
-      const Function *F = I->getFunction();
-      const auto &FltSem = I->getType()->getScalarType()->getFltSemantics();
+      const Function *F = II->getFunction();
+      const auto &FltSem = II->getType()->getScalarType()->getFltSemantics();
       DenormalMode Mode =
           F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
-      if (matchSimpleTernaryIntrinsicRecurrence(I, PN, Init, L, R)) {
-        switch (I->getIntrinsicID()) {
+      if (matchSimpleTernaryIntrinsicRecurrence(II, PN, Init, L, R)) {
+        switch (II->getIntrinsicID()) {
         case Intrinsic::fma:
         case Intrinsic::fmuladd: {
           KnownFPClass KnownStart, KnownL;
