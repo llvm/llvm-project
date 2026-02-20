@@ -530,6 +530,10 @@ public:
     OpGnuArgsSize,
     OpLabel,
     OpValOffset,
+    OpLLVMRegisterPair,
+    OpLLVMVectorRegisters,
+    OpLLVMVectorOffset,
+    OpLLVMVectorRegisterMask,
   };
 
   // Held in ExtraFields for most common OpTypes, exceptions follow.
@@ -558,10 +562,45 @@ public:
   struct LabelFields {
     MCSymbol *CfiLabel = nullptr;
   };
+  /// Held in ExtraFields when OpLLVMRegisterPair.
+  struct RegisterPairFields {
+    unsigned Register;
+    unsigned Reg1, Reg2;
+    unsigned Reg1SizeInBits, Reg2SizeInBits;
+  };
+  struct VectorRegisterWithLane {
+    unsigned Register;
+    unsigned Lane;
+    unsigned SizeInBits;
+  };
+  /// Held in ExtraFields when OpLLVMVectorRegisters.
+  struct VectorRegistersFields {
+    unsigned Register;
+    std::vector<VectorRegisterWithLane> VectorRegisters;
+  };
+  /// Held in ExtraFields when OpLLVMVectorOffset.
+  struct VectorOffsetFields {
+    unsigned Register;
+    unsigned RegisterSizeInBits;
+    int64_t Offset;
+    unsigned MaskRegister;
+    unsigned MaskRegisterSizeInBits;
+  };
+  /// Held in ExtraFields when OpLLVMVectorRegisterMask.
+  struct VectorRegisterMaskFields {
+    unsigned Register;
+    unsigned SpillRegister;
+    unsigned SpillRegisterLaneSizeInBits;
+    unsigned MaskRegister;
+    unsigned MaskRegisterSizeInBits;
+  };
 
 private:
   MCSymbol *Label;
-  std::variant<CommonFields, EscapeFields, LabelFields> ExtraFields;
+  std::variant<CommonFields, EscapeFields, LabelFields, RegisterPairFields,
+               VectorRegistersFields, VectorOffsetFields,
+               VectorRegisterMaskFields>
+      ExtraFields;
   OpType Operation;
   SMLoc Loc;
 
@@ -704,6 +743,57 @@ public:
     return {OpLabel, L, LabelFields{CfiLabel}, Loc};
   }
 
+  /// .cfi_llvm_register_pair Previous value of Register is saved in R1:R2.
+  static MCCFIInstruction
+  createLLVMRegisterPair(MCSymbol *L, unsigned Register, unsigned R1,
+                         unsigned R1SizeInBits, unsigned R2,
+                         unsigned R2SizeInBits, SMLoc Loc = {}) {
+    RegisterPairFields Extra{Register, R1, R2, R1SizeInBits, R2SizeInBits};
+    return {OpLLVMRegisterPair, L, Extra, Loc};
+  }
+
+  /// .cfi_llvm_vector_registers Previous value of Register is saved in lanes of
+  /// vector registers.
+  static MCCFIInstruction
+  createLLVMVectorRegisters(MCSymbol *L, unsigned Register,
+                            std::vector<VectorRegisterWithLane> VectorRegisters,
+                            SMLoc Loc = {}) {
+    VectorRegistersFields Extra{Register, std::move(VectorRegisters)};
+    return {OpLLVMVectorRegisters, L, std::move(Extra), Loc};
+  }
+
+  /// .cfi_llvm_vector_offset Previous value of Register is saved at Offset from
+  /// CFA. MaskRegister specifies the active lanes of register.
+  static MCCFIInstruction
+  createLLVMVectorOffset(MCSymbol *L, unsigned Register,
+                         unsigned RegisterSizeInBits, unsigned MaskRegister,
+                         unsigned MaskRegisterSizeInBits, int64_t Offset,
+                         SMLoc Loc = {}) {
+    VectorOffsetFields Extra{Register, RegisterSizeInBits, Offset, MaskRegister,
+                             MaskRegisterSizeInBits};
+    return MCCFIInstruction(OpLLVMVectorOffset, L, Extra, Loc);
+  }
+
+  /// .cfi_llvm_vector_register_mask Previous value of Register is saved in
+  /// SpillRegister, predicated on the value of MaskRegister.
+  static MCCFIInstruction createLLVMVectorRegisterMask(
+      MCSymbol *L, unsigned Register, unsigned SpillRegister,
+      unsigned SpillRegisterLaneSizeInBits, unsigned MaskRegister,
+      unsigned MaskRegisterSizeInBits, SMLoc Loc = {}) {
+    VectorRegisterMaskFields Extra{
+        Register,     SpillRegister,          SpillRegisterLaneSizeInBits,
+        MaskRegister, MaskRegisterSizeInBits,
+    };
+    return MCCFIInstruction(OpLLVMVectorRegisterMask, L, Extra, Loc);
+  }
+
+  template <class ExtraFieldsTy> ExtraFieldsTy &getExtraFields() {
+    return std::get<ExtraFieldsTy>(ExtraFields);
+  }
+
+  template <class ExtraFieldsTy> const ExtraFieldsTy &getExtraFields() const {
+    return std::get<ExtraFieldsTy>(ExtraFields);
+  }
   /// .cfi_val_offset Previous value of Register is offset Offset from the
   /// current CFA register.
   static MCCFIInstruction createValOffset(MCSymbol *L, unsigned Register,

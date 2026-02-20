@@ -1030,6 +1030,24 @@ public:
                                SMLoc Loc = {});
   virtual void emitCFIWindowSave(SMLoc Loc = {});
   virtual void emitCFINegateRAState(SMLoc Loc = {});
+  virtual void emitCFILLVMRegisterPair(int64_t Register, int64_t R1,
+                                       int64_t R1SizeInBits, int64_t R2,
+                                       int64_t R2SizeInBits, SMLoc Loc = {});
+  virtual void emitCFILLVMVectorRegisters(
+      int64_t Register,
+      std::vector<MCCFIInstruction::VectorRegisterWithLane> VRs,
+      SMLoc Loc = {});
+  virtual void emitCFILLVMVectorOffset(int64_t Register,
+                                       int64_t RegisterSizeInBits,
+                                       int64_t MaskRegister,
+                                       int64_t MaskRegisterSizeInBits,
+                                       int64_t Offset, SMLoc Loc = {});
+  virtual void
+  emitCFILLVMVectorRegisterMask(int64_t Register, int64_t SpillRegister,
+                                int64_t SpillRegisterLaneSizeInBits,
+                                int64_t MaskRegister,
+                                int64_t MaskRegisterSizeInBits, SMLoc Loc = {});
+
   virtual void emitCFINegateRAStateWithPC(SMLoc Loc = {});
   virtual void emitCFILabelDirective(SMLoc Loc, StringRef Name);
   virtual void emitCFIValOffset(int64_t Register, int64_t Offset,
