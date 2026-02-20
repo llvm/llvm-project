@@ -56,6 +56,8 @@ jobs:
       - name: Run Python test-name linter
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        # Only run pylint if we have any changed files at this point.
+        # Otherwise pylint errors out.
+        if: ${{ env.CHANGED_FILES != '' }}
         run: |
-          [[ -z "$CHANGED_FILES" ]] && exit 0
           pylint --disable=all --enable=E0102 $CHANGED_FILES
