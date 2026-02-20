@@ -753,7 +753,6 @@ if (MSVC)
       -wd4701 # Suppress 'potentially uninitialized local variable'
       -wd4703 # Suppress 'potentially uninitialized local pointer variable'
       -wd4389 # Suppress 'signed/unsigned mismatch'
-      -wd4611 # Suppress 'interaction between '_setjmp' and C++ object destruction is non-portable'
       -wd4805 # Suppress 'unsafe mix of type <type> and type <type> in operation'
       -wd4204 # Suppress 'nonstandard extension used : non-constant aggregate initializer'
       -wd4577 # Suppress 'noexcept used with no exception handling mode specified; termination on exception is not guaranteed'
