@@ -4168,6 +4168,94 @@ static bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
   return true;
 };
 
+// Helper for X86 floating point vector comparisons using immediate predicates.
+template <uint32_t Imm>
+static bool interp__builtin_x86_cmp_float_vector(InterpState &S, CodePtr OpPC,
+                                                  const InterpFrame *Frame,
+                                                  const CallExpr *Call,
+                                                  unsigned ID, bool IsScalar) {
+  const Pointer &VectorB = S.Stk.pop<Pointer>();
+  const Pointer &VectorA = S.Stk.pop<Pointer>();
+  Pointer &Dst = S.Stk.peek<Pointer>();
+
+  const auto NumLanes = VectorA.getNumElems();
+  if (NumLanes != VectorB.getNumElems())
+    return false;
+
+  for (unsigned int i = 0; i < NumLanes; ++i) {
+    // Handle scalar variants (ss/sd): only first element is compared,
+    // upper elements are copied from first operand
+    if (IsScalar && i > 0) {
+      Dst.elem<Floating>(i) = VectorA.elem<Floating>(i);
+      continue;
+    }
+
+    llvm::APFloat AElement = VectorA.elem<Floating>(i).getAPFloat();
+    llvm::APFloat BElement = VectorB.elem<Floating>(i).getAPFloat();
+
+    auto CompareResult = AElement.compare(BElement);
+    const bool Matches = MatchesPredicate(Imm, CompareResult);
+
+    // Create bit patterns for comparison results:
+    // True = all bits set (0xFFFFFFFF for float, 0xFFFFFFFFFFFFFFFF for double)
+    // False = all bits zero
+    const llvm::fltSemantics &Sem = AElement.getSemantics();
+    const unsigned BitWidth = llvm::APFloat::getSizeInBits(Sem);
+    const llvm::APFloat True(Sem, llvm::APInt::getAllOnes(BitWidth));
+    const llvm::APFloat False(Sem, llvm::APInt(BitWidth, 0));
+
+    Dst.elem<Floating>(i) = Floating(Matches ? True : False);
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
+static bool interp__builtin_x86_cmpeq(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const CallExpr *Call, unsigned ID) {
+  const bool IsScalar = (ID == X86::BI__builtin_ia32_cmpeqss) ||
+                        (ID == X86::BI__builtin_ia32_cmpeqsd);
+  return interp__builtin_x86_cmp_float_vector<X86CmpImm::CMP_EQ_OQ>(
+      S, OpPC, Frame, Call, ID, IsScalar);
+}
+
+static bool interp__builtin_x86_cmpge(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const CallExpr *Call, unsigned ID) {
+  const bool IsScalar = (ID == X86::BI__builtin_ia32_cmpgess) ||
+                        (ID == X86::BI__builtin_ia32_cmpgesd);
+  return interp__builtin_x86_cmp_float_vector<X86CmpImm::CMP_GE_OS>(
+      S, OpPC, Frame, Call, ID, IsScalar);
+};
+
+static bool interp__builtin_x86_cmpgt(InterpState &S, CodePtr OpPC,
+                    const InterpFrame *Frame,
+                    const CallExpr *Call, unsigned ID) {
+  const bool IsScalar = (ID == X86::BI__builtin_ia32_cmpgtss) ||
+            (ID == X86::BI__builtin_ia32_cmpgtsd);
+  return interp__builtin_x86_cmp_float_vector<X86CmpImm::CMP_GT_OS>(
+    S, OpPC, Frame, Call, ID, IsScalar);
+};
+
+static bool interp__builtin_x86_cmple(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const CallExpr *Call, unsigned ID) {
+  const bool IsScalar = (ID == X86::BI__builtin_ia32_cmpless) ||
+                        (ID == X86::BI__builtin_ia32_cmplesd);
+  return interp__builtin_x86_cmp_float_vector<X86CmpImm::CMP_LE_OS>(
+      S, OpPC, Frame, Call, ID, IsScalar);
+};
+
+static bool interp__builtin_x86_cmplt(InterpState &S, CodePtr OpPC,
+                    const InterpFrame *Frame,
+                    const CallExpr *Call, unsigned ID) {
+  const bool IsScalar = (ID == X86::BI__builtin_ia32_cmpltss) ||
+            (ID == X86::BI__builtin_ia32_cmpltsd);
+  return interp__builtin_x86_cmp_float_vector<X86CmpImm::CMP_LT_OS>(
+    S, OpPC, Frame, Call, ID, IsScalar);
+};
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -5935,6 +6023,36 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_cmpss:
   case X86::BI__builtin_ia32_cmpsd:
     return interp__builtin_x86_cmp(S, OpPC, Frame, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_cmpeqps:
+  case X86::BI__builtin_ia32_cmpeqpd:
+  case X86::BI__builtin_ia32_cmpeqss:
+  case X86::BI__builtin_ia32_cmpeqsd:
+    return interp__builtin_x86_cmpeq(S, OpPC, Frame, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_cmpgeps:
+  case X86::BI__builtin_ia32_cmpgepd:
+  case X86::BI__builtin_ia32_cmpgess:
+  case X86::BI__builtin_ia32_cmpgesd:
+    return interp__builtin_x86_cmpge(S, OpPC, Frame, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_cmpgtps:
+  case X86::BI__builtin_ia32_cmpgtpd:
+  case X86::BI__builtin_ia32_cmpgtss:
+  case X86::BI__builtin_ia32_cmpgtsd:
+    return interp__builtin_x86_cmpgt(S, OpPC, Frame, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_cmpleps:
+  case X86::BI__builtin_ia32_cmplepd:
+  case X86::BI__builtin_ia32_cmpless:
+  case X86::BI__builtin_ia32_cmplesd:
+    return interp__builtin_x86_cmple(S, OpPC, Frame, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_cmpltps:
+  case X86::BI__builtin_ia32_cmpltpd:
+  case X86::BI__builtin_ia32_cmpltss:
+  case X86::BI__builtin_ia32_cmpltsd:
+    return interp__builtin_x86_cmplt(S, OpPC, Frame, Call, BuiltinID);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),

@@ -437,8 +437,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_xor_pd(__m128d __a,
 /// \param __b
 ///    A 128-bit vector of [2 x double].
 /// \returns A 128-bit vector containing the comparison results.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmpeq_pd(__m128d __a,
-                                                          __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmpeq_pd(__m128d __a,
+                                                                    __m128d __b) {
   return (__m128d)__builtin_ia32_cmpeqpd((__v2df)__a, (__v2df)__b);
 }
 
@@ -458,8 +458,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmpeq_pd(__m128d __a,
 /// \param __b
 ///    A 128-bit vector of [2 x double].
 /// \returns A 128-bit vector containing the comparison results.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmplt_pd(__m128d __a,
-                                                          __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmplt_pd(__m128d __a,
+                                                                    __m128d __b) {
   return (__m128d)__builtin_ia32_cmpltpd((__v2df)__a, (__v2df)__b);
 }
 
@@ -479,8 +479,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmplt_pd(__m128d __a,
 /// \param __b
 ///    A 128-bit vector of [2 x double].
 /// \returns A 128-bit vector containing the comparison results.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmple_pd(__m128d __a,
-                                                          __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmple_pd(__m128d __a,
+                                                                    __m128d __b) {
   return (__m128d)__builtin_ia32_cmplepd((__v2df)__a, (__v2df)__b);
 }
 
@@ -500,8 +500,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmple_pd(__m128d __a,
 /// \param __b
 ///    A 128-bit vector of [2 x double].
 /// \returns A 128-bit vector containing the comparison results.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmpgt_pd(__m128d __a,
-                                                          __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmpgt_pd(__m128d __a,
+                                                                    __m128d __b) {
   return (__m128d)__builtin_ia32_cmpltpd((__v2df)__b, (__v2df)__a);
 }
 
@@ -521,8 +521,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmpgt_pd(__m128d __a,
 /// \param __b
 ///    A 128-bit vector of [2 x double].
 /// \returns A 128-bit vector containing the comparison results.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmpge_pd(__m128d __a,
-                                                          __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmpge_pd(__m128d __a,
+                                                                    __m128d __b) {
   return (__m128d)__builtin_ia32_cmplepd((__v2df)__b, (__v2df)__a);
 }
 
@@ -694,8 +694,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmpnge_pd(__m128d __a,
 ///    compared to the lower double-precision value of \a __a.
 /// \returns A 128-bit vector. The lower 64 bits contains the comparison
 ///    results. The upper 64 bits are copied from the upper 64 bits of \a __a.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmpeq_sd(__m128d __a,
-                                                          __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmpeq_sd(__m128d __a,
+                                                                    __m128d __b) {
   return (__m128d)__builtin_ia32_cmpeqsd((__v2df)__a, (__v2df)__b);
 }
 
@@ -719,8 +719,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmpeq_sd(__m128d __a,
 ///    compared to the lower double-precision value of \a __a.
 /// \returns A 128-bit vector. The lower 64 bits contains the comparison
 ///    results. The upper 64 bits are copied from the upper 64 bits of \a __a.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmplt_sd(__m128d __a,
-                                                          __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmplt_sd(__m128d __a,
+                                                                    __m128d __b) {
   return (__m128d)__builtin_ia32_cmpltsd((__v2df)__a, (__v2df)__b);
 }
 
@@ -744,8 +744,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmplt_sd(__m128d __a,
 ///    compared to the lower double-precision value of \a __a.
 /// \returns A 128-bit vector. The lower 64 bits contains the comparison
 ///    results. The upper 64 bits are copied from the upper 64 bits of \a __a.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmple_sd(__m128d __a,
-                                                          __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmple_sd(__m128d __a,
+                                                                    __m128d __b) {
   return (__m128d)__builtin_ia32_cmplesd((__v2df)__a, (__v2df)__b);
 }
 
@@ -769,8 +769,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmple_sd(__m128d __a,
 ///     compared to the lower double-precision value of \a __a.
 /// \returns A 128-bit vector. The lower 64 bits contains the comparison
 ///     results. The upper 64 bits are copied from the upper 64 bits of \a __a.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmpgt_sd(__m128d __a,
-                                                          __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmpgt_sd(__m128d __a,
+                                                                    __m128d __b) {
   __m128d __c = __builtin_ia32_cmpltsd((__v2df)__b, (__v2df)__a);
   return __extension__(__m128d){__c[0], __a[1]};
 }
@@ -795,8 +795,8 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmpgt_sd(__m128d __a,
 ///    compared to the lower double-precision value of \a __a.
 /// \returns A 128-bit vector. The lower 64 bits contains the comparison
 ///    results. The upper 64 bits are copied from the upper 64 bits of \a __a.
-static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_cmpge_sd(__m128d __a,
-                                                          __m128d __b) {
+static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmpge_sd(__m128d __a,
+                                                                    __m128d __b) {
   __m128d __c = __builtin_ia32_cmplesd((__v2df)__b, (__v2df)__a);
   return __extension__(__m128d){__c[0], __a[1]};
 }

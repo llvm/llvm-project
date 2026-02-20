@@ -14417,12 +14417,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
     return Success(R, E);
   }
+  case X86::BI__builtin_ia32_cmpss:
+  case X86::BI__builtin_ia32_cmpsd:
   case X86::BI__builtin_ia32_cmpps:
   case X86::BI__builtin_ia32_cmppd:
   case X86::BI__builtin_ia32_cmpps256:
-  case X86::BI__builtin_ia32_cmppd256:
-  case X86::BI__builtin_ia32_cmpss:
-  case X86::BI__builtin_ia32_cmpsd: {
+  case X86::BI__builtin_ia32_cmppd256: {
     const Expr *A = E->getArg(0);
     const Expr *B = E->getArg(1);
     const Expr *Imm = E->getArg(2);
@@ -14465,6 +14465,101 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
       const auto CompareResult = A0.compare(B0);
       const bool Matches = MatchesPredicate(ImmZExt, CompareResult);
+
+      // Create bit patterns for comparison results:
+      // True = all bits set (0xFFFFFFFF for float, 0xFFFFFFFFFFFFFFFF for double)
+      // False = all bits zero
+      const llvm::fltSemantics &Sem = A0.getSemantics();
+      const unsigned BitWidth = llvm::APFloat::getSizeInBits(Sem);
+      const llvm::APFloat True(Sem, llvm::APInt::getAllOnes(BitWidth));
+      const llvm::APFloat False(Sem, llvm::APInt(BitWidth, 0));
+
+      if (Matches)
+        ResultElements.push_back(APValue(True));
+      else
+        ResultElements.push_back(APValue(False));
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case X86::BI__builtin_ia32_cmpeqss:
+  case X86::BI__builtin_ia32_cmpeqsd:
+  case X86::BI__builtin_ia32_cmpeqps:
+  case X86::BI__builtin_ia32_cmpeqpd:
+  case X86::BI__builtin_ia32_cmpgess:
+  case X86::BI__builtin_ia32_cmpgesd:
+  case X86::BI__builtin_ia32_cmpgeps:
+  case X86::BI__builtin_ia32_cmpgepd:
+  case X86::BI__builtin_ia32_cmpltss:
+  case X86::BI__builtin_ia32_cmpltsd:
+  case X86::BI__builtin_ia32_cmpltps:
+  case X86::BI__builtin_ia32_cmpltpd:
+  case X86::BI__builtin_ia32_cmpless:
+  case X86::BI__builtin_ia32_cmplesd:
+  case X86::BI__builtin_ia32_cmpleps:
+  case X86::BI__builtin_ia32_cmplepd: {
+    const Expr *A = E->getArg(0);
+    const Expr *B = E->getArg(1);
+
+    APValue AV, BV;
+    if (!EvaluateVector(A, AV, Info) || !EvaluateVector(B, BV, Info))
+      return false;
+
+    const auto NumLanes = AV.getVectorLength();
+    if (NumLanes == 0 || BV.getVectorLength() != NumLanes)
+      return false;
+
+    const auto RetTy = E->getType();
+    const auto *VT = RetTy->getAs<VectorType>();
+    if (!VT)
+      return false;
+
+    const bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpeqss) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpeqsd) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpgess) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpgesd) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpltss) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpltsd) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpless) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmplesd);
+
+    // Select comparison predicate based on builtin
+    uint32_t Imm = X86CmpImm::CMP_EQ_OQ;
+    if ((BuiltinOp == X86::BI__builtin_ia32_cmpgess) ||
+        (BuiltinOp == X86::BI__builtin_ia32_cmpgesd) ||
+        (BuiltinOp == X86::BI__builtin_ia32_cmpgeps) ||
+        (BuiltinOp == X86::BI__builtin_ia32_cmpgepd)) {
+      Imm = X86CmpImm::CMP_GE_OS;
+    } else if ((BuiltinOp == X86::BI__builtin_ia32_cmpltss) ||
+               (BuiltinOp == X86::BI__builtin_ia32_cmpltsd) ||
+               (BuiltinOp == X86::BI__builtin_ia32_cmpltps) ||
+               (BuiltinOp == X86::BI__builtin_ia32_cmpltpd)) {
+      Imm = X86CmpImm::CMP_LT_OS;
+    } else if ((BuiltinOp == X86::BI__builtin_ia32_cmpless) ||
+               (BuiltinOp == X86::BI__builtin_ia32_cmplesd) ||
+               (BuiltinOp == X86::BI__builtin_ia32_cmpleps) ||
+               (BuiltinOp == X86::BI__builtin_ia32_cmplepd)) {
+      Imm = X86CmpImm::CMP_LE_OS;
+    }
+
+    SmallVector<APValue, 8> ResultElements;
+    ResultElements.reserve(NumLanes);
+    for (unsigned i = 0; i < NumLanes; ++i) {
+      // Handle scalar variants (ss/sd): only first element is compared,
+      // upper elements are copied from first operand
+      if (IsScalar && i > 0) {
+        ResultElements.push_back(AV.getVectorElt(i));
+        continue;
+      }
+
+      const auto AElem = AV.getVectorElt(i);
+      const auto BElem = BV.getVectorElt(i);
+
+      const auto A0 = AElem.getFloat();
+      const auto B0 = BElem.getFloat();
+
+      const auto CompareResult = A0.compare(B0);
+      const bool Matches = MatchesPredicate(Imm, CompareResult);
 
       // Create bit patterns for comparison results:
       // True = all bits set (0xFFFFFFFF for float, 0xFFFFFFFFFFFFFFFF for double)

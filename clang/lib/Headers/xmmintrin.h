@@ -500,7 +500,7 @@ _mm_xor_ps(__m128 __a, __m128 __b) {
 ///    32 bits of this operand are used in the comparison.
 /// \returns A 128-bit vector of [4 x float] containing the comparison results
 ///    in the low-order bits.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_cmpeq_ss(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpeqss((__v4sf)__a, (__v4sf)__b);
@@ -521,7 +521,7 @@ _mm_cmpeq_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_cmpeq_ps(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpeqps((__v4sf)__a, (__v4sf)__b);
@@ -547,7 +547,7 @@ _mm_cmpeq_ps(__m128 __a, __m128 __b)
 ///    32 bits of this operand are used in the comparison.
 /// \returns A 128-bit vector of [4 x float] containing the comparison results
 ///    in the low-order bits.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_cmplt_ss(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpltss((__v4sf)__a, (__v4sf)__b);
@@ -569,7 +569,7 @@ _mm_cmplt_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_cmplt_ps(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpltps((__v4sf)__a, (__v4sf)__b);
@@ -595,7 +595,7 @@ _mm_cmplt_ps(__m128 __a, __m128 __b)
 ///    32 bits of this operand are used in the comparison.
 /// \returns A 128-bit vector of [4 x float] containing the comparison results
 ///    in the low-order bits.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_cmple_ss(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpless((__v4sf)__a, (__v4sf)__b);
@@ -617,7 +617,7 @@ _mm_cmple_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_cmple_ps(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpleps((__v4sf)__a, (__v4sf)__b);
@@ -643,7 +643,7 @@ _mm_cmple_ps(__m128 __a, __m128 __b)
 ///    32 bits of this operand are used in the comparison.
 /// \returns A 128-bit vector of [4 x float] containing the comparison results
 ///    in the low-order bits.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_cmpgt_ss(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_shufflevector((__v4sf)__a,
@@ -667,7 +667,7 @@ _mm_cmpgt_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_cmpgt_ps(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpltps((__v4sf)__b, (__v4sf)__a);
@@ -693,7 +693,7 @@ _mm_cmpgt_ps(__m128 __a, __m128 __b)
 ///    32 bits of this operand are used in the comparison.
 /// \returns A 128-bit vector of [4 x float] containing the comparison results
 ///    in the low-order bits.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_cmpge_ss(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_shufflevector((__v4sf)__a,
@@ -717,7 +717,7 @@ _mm_cmpge_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_cmpge_ps(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpleps((__v4sf)__b, (__v4sf)__a);

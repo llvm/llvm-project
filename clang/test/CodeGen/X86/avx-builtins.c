@@ -24,9 +24,6 @@
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
-#define ALL_ONES_F __builtin_bit_cast(float, 0xFFFFFFFFU)
-#define ALL_ONES_D __builtin_bit_cast(double, 0xFFFFFFFFFFFFFFFFULL)
-
 // NOTE: This should match the tests in llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll
 
 __m256d test_mm256_add_pd(__m256d A, __m256d B) {
