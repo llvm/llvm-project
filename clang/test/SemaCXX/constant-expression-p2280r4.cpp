@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -std=c++23 -verify=expected,nointerpreter -Winvalid-constexpr %s
 // RUN: %clang_cc1 -std=c++23 -verify=expected,interpreter %s -fexperimental-new-constant-interpreter -Winvalid-constexpr
 
+// FIXME: P2280R4 should be backported. Run this in C++11 and later modes.
+
 using size_t = decltype(sizeof(0));
 
 namespace std {
