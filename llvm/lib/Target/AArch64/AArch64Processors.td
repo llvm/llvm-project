@@ -1485,7 +1485,7 @@ def : ProcessorModel<"cortex-x925", NeoverseV3Model, ProcessorFeatures.X925,
                      [TuneX925]>;
 def : ProcessorModel<"c1-premium", NeoverseV3Model,
                      ProcessorFeatures.C1Premium, [TuneC1Premium]>;
-def : ProcessorModel<"c1-ultra", NeoverseV3Model,
+def : ProcessorModel<"c1-ultra", C1UltraModel,
                      ProcessorFeatures.C1Ultra, [TuneC1Ultra]>;
 def : ProcessorModel<"gb10", NeoverseV3Model, ProcessorFeatures.GB10,
                      [TuneX925]>;
