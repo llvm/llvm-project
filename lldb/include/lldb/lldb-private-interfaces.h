@@ -87,6 +87,7 @@ typedef lldb::RegisterTypeBuilderSP (*RegisterTypeBuilderCreateInstance)(
     Target &target);
 typedef lldb::ScriptInterpreterSP (*ScriptInterpreterCreateInstance)(
     Debugger &debugger);
+typedef FileSpec (*ScriptInterpreterGetPath)();
 typedef llvm::Expected<lldb::SyntheticFrameProviderSP> (
     *ScriptedFrameProviderCreateInstance)(
     lldb::StackFrameListSP input_frames,
