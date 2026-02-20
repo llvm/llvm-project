@@ -173,6 +173,12 @@ Changes to the Python bindings
 Changes to the C API
 --------------------
 
+* `LLVMCreateTargetMachineWithOptions` now checks with target triple if the EmulatedTLS and
+  TLSDESC target options should be enabled by default.
+* The `LLVMTargetMachineOptionsSetEmulatedTLS` and `LLVMTargetMachineOptionsSetEnableTLSDESC`
+  functions have been added to explicitly enable or disable the EmulatedTLS and TLSDESC target
+  options.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
