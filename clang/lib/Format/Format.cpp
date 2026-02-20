@@ -681,6 +681,8 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ShortFunctionStyle> {
     IO.enumCase(Value, "Inline", FormatStyle::SFS_Inline);
     IO.enumCase(Value, "InlineOnly", FormatStyle::SFS_InlineOnly);
     IO.enumCase(Value, "Empty", FormatStyle::SFS_Empty);
+    IO.enumCase(Value, "StaticInlineOnly", FormatStyle::SFS_StaticInlineOnly);
+    IO.enumCase(Value, "StaticInline", FormatStyle::SFS_StaticInline);
   }
 };
 

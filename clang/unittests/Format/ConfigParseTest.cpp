@@ -650,6 +650,12 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               AllowShortFunctionsOnASingleLine, FormatStyle::SFS_Empty);
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: All",
               AllowShortFunctionsOnASingleLine, FormatStyle::SFS_All);
+  CHECK_PARSE("AllowShortFunctionsOnASingleLine: StaticInlineOnly",
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::SFS_StaticInlineOnly);
+  CHECK_PARSE("AllowShortFunctionsOnASingleLine: StaticInline",
+              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_StaticInline);
+
   // For backward compatibility:
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: false",
               AllowShortFunctionsOnASingleLine, FormatStyle::SFS_None);

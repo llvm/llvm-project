@@ -1918,6 +1918,15 @@ the configuration (without a prefix: ``Auto``).
       void f() {
       }
 
+  * ``SFS_StaticInlineOnly`` (in configuration: ``StaticInlineOnly``)
+    Only merge functions defined as static inline.
+
+    .. code-block:: c++
+
+      void f5(void) {
+      }
+      static inline int f6(int a, int b) { return a + b; }
+
   * ``SFS_Empty`` (in configuration: ``Empty``)
     Only merge empty functions.
 
@@ -1940,6 +1949,14 @@ the configuration (without a prefix: ``Auto``).
         foo();
       }
       void f() {}
+
+  * ``SFS_StaticInline`` (in configuration: ``StaticInline``)
+    Merge functions defined as static inline, also merge empty functions.
+
+    .. code-block:: c++
+
+      void f5(void) {}
+      static inline int f6(int a, int b) { return a + b; }
 
   * ``SFS_All`` (in configuration: ``All``)
     Merge all functions fitting on a single line.

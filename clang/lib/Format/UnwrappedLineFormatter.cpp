@@ -307,8 +307,9 @@ private:
         return true;
       }
 
-      if (Style.AllowShortFunctionsOnASingleLine &
-          FormatStyle::SFS_InlineOnly) {
+      if (Style.AllowShortFunctionsOnASingleLine ==
+              FormatStyle::SFS_InlineOnly ||
+          Style.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_Inline) {
         // Just checking TheLine->Level != 0 is not enough, because it
         // provokes treating functions inside indented namespaces as short.
         if (Style.isJavaScript() && TheLine->Last->is(TT_FunctionLBrace))
@@ -345,6 +346,33 @@ private:
           assert(LastNonComment);
           return isRecordLBrace(*LastNonComment);
         }
+      }
+
+      if (Style.AllowShortFunctionsOnASingleLine ==
+              FormatStyle::SFS_StaticInlineOnly ||
+          Style.AllowShortFunctionsOnASingleLine ==
+              FormatStyle::SFS_StaticInline) {
+        // Check if the current line belongs to a static inline function
+        const auto *FirstNonCommentToken =
+            TheLine ? TheLine->getFirstNonComment() : nullptr;
+
+        // Look for 'static' and 'inline' keywords in any order.
+        bool HasStatic = false;
+        bool HasInline = false;
+        const FormatToken *Tok = FirstNonCommentToken;
+
+        while (Tok && !Tok->is(TT_FunctionDeclarationName) &&
+               (!HasStatic || !HasInline)) {
+          if (Tok->is(tok::kw_static))
+            HasStatic = true;
+          if (Tok->is(tok::kw_inline))
+            HasInline = true;
+          Tok = Tok->Next;
+        }
+
+        // If we found both static and inline, allow merging.
+        if (HasStatic && HasInline)
+          return true;
       }
 
       return false;
