@@ -3247,6 +3247,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if ((Tmp1 = TLI.expandCTLZ(Node, DAG)))
       Results.push_back(Tmp1);
     break;
+  case ISD::CTLS:
+    if ((Tmp1 = TLI.expandCTLS(Node, DAG)))
+      Results.push_back(Tmp1);
+    break;
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
     if ((Tmp1 = TLI.expandCTTZ(Node, DAG)))
