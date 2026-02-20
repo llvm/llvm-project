@@ -4983,13 +4983,13 @@ class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "",
          !eq(kind, "mxf4nvf4"),
          !eq(stype, "ue8m0"),
          !eq(scale, ".scale_4x"))
-      : [callSubtarget<"hasMMABlockScaleNF4X4E8">],
+      : [callSubtarget<"hasMMAWithMXF4NVF4Scale4xE8M0">],
 
     !and(!eq(op, "mma.sp.block_scale"),
          !eq(kind, "mxf4nvf4"),
          !eq(stype, "ue8m0"),
          !eq(scale, ".scale_4x"))
-      : [callSubtarget<"hasMMASparseBlockScaleNF4X4E8">],
+      : [callSubtarget<"hasMMASparseWithMXF4NVF4Scale4xE8M0">],
 
     !and(!eq(op, "mma.sp.block_scale"),
         !eq(kind, "mxf4nvf4"),

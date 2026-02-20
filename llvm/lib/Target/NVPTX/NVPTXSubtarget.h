@@ -184,11 +184,11 @@ public:
     return hasPTXWithAccelSMs(87, {120, 121});
   }
 
-  bool hasMMABlockScaleNF4X4E8() const {
+  bool hasMMAWithMXF4NVF4Scale4xE8M0() const {
     return hasPTXWithFamilySMs(91, {120});
   }
 
-  bool hasMMASparseBlockScaleNF4X4E8() const {
+  bool hasMMASparseWithMXF4NVF4Scale4xE8M0() const {
     return hasPTXWithAccelSMs(91, {120, 121});
   }
 
