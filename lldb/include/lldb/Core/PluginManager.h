@@ -343,9 +343,11 @@ public:
   static lldb::RegisterTypeBuilderSP GetRegisterTypeBuilder(Target &target);
 
   // ScriptInterpreter
-  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
-                             lldb::ScriptLanguage script_lang,
-                             ScriptInterpreterCreateInstance create_callback);
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 lldb::ScriptLanguage script_lang,
+                 ScriptInterpreterCreateInstance create_callback,
+                 ScriptInterpreterGetPath get_path_callback = nullptr);
 
   static bool UnregisterPlugin(ScriptInterpreterCreateInstance create_callback);
 
@@ -355,6 +357,9 @@ public:
   static lldb::ScriptInterpreterSP
   GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
                                   Debugger &debugger);
+
+  static FileSpec
+  GetScriptInterpreterLibraryPath(lldb::ScriptLanguage script_lang);
 
   // SyntheticFrameProvider
   static bool
