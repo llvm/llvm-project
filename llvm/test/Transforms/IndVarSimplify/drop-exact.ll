@@ -13,7 +13,6 @@ define void @drop_exact(ptr %p, ptr %p1) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb12:
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ -47436, [[BB:%.*]] ], [ [[TMP15:%.*]], [[BB12]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = phi i32 [ 0, [[BB]] ], [ [[TMP42:%.*]], [[BB12]] ]
 ; CHECK-NEXT:    [[TMP15]] = add nsw i32 [[TMP13]], -1
 ; CHECK-NEXT:    [[TMP16:%.*]] = shl i32 [[TMP15]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = sub nsw i32 42831, [[TMP16]]
@@ -23,8 +22,7 @@ define void @drop_exact(ptr %p, ptr %p1) {
 ; CHECK-NEXT:    store i32 [[TMP22]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP26:%.*]] = zext i32 [[TMP20]] to i64
 ; CHECK-NEXT:    store i64 [[TMP26]], ptr [[P1:%.*]], align 4
-; CHECK-NEXT:    [[TMP42]] = add nuw nsw i32 [[TMP14]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[TMP42]], 719
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[TMP15]], -48155
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BB7:%.*]], label [[BB12]]
 ;
 bb:
@@ -60,7 +58,6 @@ define void @dont_drop_exact(ptr %p, ptr %p1) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb12:
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ -47436, [[BB:%.*]] ], [ [[TMP15:%.*]], [[BB12]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = phi i32 [ 0, [[BB]] ], [ [[TMP42:%.*]], [[BB12]] ]
 ; CHECK-NEXT:    [[TMP15]] = add nsw i32 [[TMP13]], -1
 ; CHECK-NEXT:    [[TMP16:%.*]] = shl i32 [[TMP15]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = sub nsw i32 42831, [[TMP16]]
@@ -70,8 +67,7 @@ define void @dont_drop_exact(ptr %p, ptr %p1) {
 ; CHECK-NEXT:    store i32 [[TMP22]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP26:%.*]] = zext i32 [[TMP20]] to i64
 ; CHECK-NEXT:    store i64 [[TMP26]], ptr [[P1:%.*]], align 4
-; CHECK-NEXT:    [[TMP42]] = add nuw nsw i32 [[TMP14]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[TMP42]], 719
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[TMP15]], -48155
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BB7:%.*]], label [[BB12]]
 ;
 bb:
