@@ -52,6 +52,7 @@ add_header(off_t HDR off_t.h)
 add_header(once_flag HDR once_flag.h DEPENDS .__futex_word)
 add_header(posix_spawn_file_actions_t HDR posix_spawn_file_actions_t.h)
 add_header(posix_spawnattr_t HDR posix_spawnattr_t.h)
+add_header(posix_tnode HDR posix_tnode.h)
 add_header(pthread_attr_t HDR pthread_attr_t.h DEPENDS .size_t)
 add_header(pthread_condattr_t HDR pthread_condattr_t.h DEPENDS .clockid_t)
 add_header(pthread_key_t HDR pthread_key_t.h)
@@ -551,3 +552,18 @@ add_header(EFI_SYSTEM_TABLE
     .EFI_TABLE_HEADER
     .char16_t
 )
+add_header(__action_closure_fn_t 
+  HDR 
+    __action_closure_fn_t.h 
+  DEPENDS 
+    .posix_tnode 
+    .VISIT
+)
+add_header(__action_fn_t 
+  HDR 
+    __action_fn_t.h 
+  DEPENDS 
+    .posix_tnode 
+    .VISIT
+)
+add_header(__free_fn_t HDR __free_fn_t.h)

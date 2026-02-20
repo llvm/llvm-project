@@ -125,3 +125,71 @@ add_entrypoint_object(
     libc.src.__support.memory_size
     libc.src.string.memory_utils.inline_memcpy
 )
+
+add_entrypoint_object(
+  tdelete
+  SRCS
+    tdelete.cpp
+  HDRS
+    tdelete.h
+  DEPENDS
+    libc.hdr.types.posix_tnode
+    libc.src.__support.weak_avl
+)
+
+add_entrypoint_object(
+  tfind
+  SRCS
+    tfind.cpp
+  HDRS
+    tfind.h
+  DEPENDS
+    libc.hdr.types.posix_tnode
+    libc.src.__support.weak_avl
+)
+
+add_entrypoint_object(
+  tsearch
+  SRCS
+    tsearch.cpp
+  HDRS
+    tsearch.h
+  DEPENDS
+    libc.hdr.types.posix_tnode
+    libc.src.__support.weak_avl
+)
+
+add_entrypoint_object(
+  twalk
+  SRCS
+    twalk.cpp
+  HDRS
+    twalk.h
+  DEPENDS
+    libc.hdr.types.posix_tnode
+    libc.hdr.types.VISIT
+    libc.src.__support.weak_avl
+)
+
+add_entrypoint_object(
+  twalk_r
+  SRCS
+    twalk_r.cpp
+  HDRS
+    twalk_r.h
+  DEPENDS
+    libc.hdr.types.posix_tnode
+    libc.hdr.types.VISIT
+    libc.src.__support.weak_avl
+)
+
+add_entrypoint_object(
+  tdestroy
+  SRCS
+    tdestroy.cpp
+  HDRS
+    tdestroy.h
+  DEPENDS
+    libc.hdr.types.posix_tnode
+    libc.src.__support.weak_avl
+)

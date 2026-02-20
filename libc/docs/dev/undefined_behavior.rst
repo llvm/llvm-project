@@ -161,3 +161,14 @@ The current implementation of the `inet_aton` function utilizes the same code
 as `strtol` to parse IPv4 numbers-and-dots notations. This approach may permit
 the use of binary integers (prefixed with 0b), which is not supported by the
 standard.
+
+`tdelete` on Non-existent Key
+------------------------------
+The return value of `tdelete` is unspecified if the key is not found in the tree.
+For LLVM-libc, `tdelete` returns bit-casted `uintptr_t`'s maximum value.
+
+`twalk/twalk_r/tdestroy` with Null Function Pointer
+------------------------------------------------------
+The standard requires that ``twalk``, ``twalk_r``, and ``tdestroy``
+to be used with a valid function pointer. LLVM-libc does not apply any
+checks for null function pointers and will likely to crash on null values.

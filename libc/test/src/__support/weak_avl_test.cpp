@@ -265,7 +265,7 @@ TEST(LlvmLibcTreeWalk, InOrderTraversal) {
   Tree tree = Tree::build([](int x) { return stride(x, 1007); }, TEST_SIZE);
   int data[TEST_SIZE];
   int counter = 0;
-  Node::walk(tree.root, [&](Node *node, Node::WalkType type) {
+  Node::walk(tree.root, [&](const Node *node, Node::WalkType type, int) {
     if (type == Node::WalkType::InOrder || type == Node::WalkType::Leaf)
       data[counter++] = node->get_data();
   });

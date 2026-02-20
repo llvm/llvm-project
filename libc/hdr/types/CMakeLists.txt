@@ -831,3 +831,21 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.Elf64_Versym
 )
+
+add_proxy_header_library(
+  posix_tnode
+  HDRS
+    posix_tnode.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.posix_tnode
+    libc.include.search
+)
+
+add_proxy_header_library(
+  VISIT
+  HDRS
+    VISIT.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.VISIT
+    libc.include.search
+)
