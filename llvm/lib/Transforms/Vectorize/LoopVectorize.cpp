@@ -211,6 +211,7 @@ namespace PreferPredicateTy {
   };
 } // namespace PreferPredicateTy
 
+// Don't say undef in a comment!
 static cl::opt<PreferPredicateTy::Option> PreferPredicateOverEpilogue(
     "prefer-predicate-over-epilogue",
     cl::init(PreferPredicateTy::ScalarEpilogue),
