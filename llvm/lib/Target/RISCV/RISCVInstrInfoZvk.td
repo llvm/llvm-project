@@ -65,7 +65,7 @@ class ZvkALUVVNoVmTernary<bits<6> funct6, RISCVVFormat opv, string opcodestr>
   let vm = 1;
   let Inst{6-0} = OPC_OP_VE.Value;
 
-  let RVVConstraint = NoConstraint;
+  let VMConstraint = false;
 }
 
 // op vd, vs2, imm
@@ -85,7 +85,7 @@ class ZvkALUVINoVmBinary<bits<6> funct6, string opcodestr, Operand optype>
   let Inst{6-0} = OPC_OP_VE.Value;
   let Inst{14-12} = OPMVV.Value;
 
-  let RVVConstraint = NoConstraint;
+  let VMConstraint = false;
 }
 
 // op vd, vs2 (use vs1 as instruction encoding) where vd is also a source
@@ -98,7 +98,7 @@ class ZvkALUVs2NoVmBinary<bits<6> funct6, bits<5> vs1, RISCVVFormat opv,
   let vm = 1;
   let Inst{6-0} = OPC_OP_VE.Value;
 
-  let RVVConstraint = NoConstraint;
+  let VMConstraint = false;
 }
 
 multiclass VAES_MV_V_S<bits<6> funct6_vv, bits<6> funct6_vs, bits<5> vs1,
