@@ -536,22 +536,6 @@ public:
     OpLLVMVectorRegisterMask,
   };
 
-  // Held in ExtraFields for most common OpTypes, exceptions follow.
-  struct CommonFields {
-    unsigned Register = std::numeric_limits<unsigned>::max();
-    int64_t Offset = 0;
-    unsigned Register2 = std::numeric_limits<unsigned>::max();
-    unsigned AddressSpace = 0;
-  };
-  // Held in ExtraFields when OpEscape.
-  struct EscapeFields {
-    std::vector<char> Values;
-    std::string Comment;
-  };
-  // Held in ExtraFields when OpLabel.
-  struct LabelFields {
-    MCSymbol *CfiLabel = nullptr;
-  };
   /// Held in ExtraFields when OpLLVMRegisterPair.
   struct RegisterPairFields {
     unsigned Register;
@@ -583,6 +567,23 @@ public:
     unsigned SpillRegisterLaneSizeInBits;
     unsigned MaskRegister;
     unsigned MaskRegisterSizeInBits;
+  };
+
+  // Held in ExtraFields for most common OpTypes, exceptions follow.
+  struct CommonFields {
+    unsigned Register = std::numeric_limits<unsigned>::max();
+    int64_t Offset = 0;
+    unsigned Register2 = std::numeric_limits<unsigned>::max();
+    unsigned AddressSpace = 0;
+  };
+  // Held in ExtraFields when OpEscape.
+  struct EscapeFields {
+    std::vector<char> Values;
+    std::string Comment;
+  };
+  // Held in ExtraFields when OpLabel.
+  struct LabelFields {
+    MCSymbol *CfiLabel = nullptr;
   };
 
 private:

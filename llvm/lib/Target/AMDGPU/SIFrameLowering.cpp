@@ -112,6 +112,10 @@ void SIFrameLowering::emitDefCFA(MachineBasicBlock &MBB,
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const MCRegisterInfo *MCRI = MF.getContext().getRegisterInfo();
 
+  // For MIR test cases without MFI we just skip emitting. These
+  // shouldn't be testing CFI anyway.
+  if (StackPtrReg == AMDGPU::SP_REG)
+    return;
   MCRegister DwarfStackPtrReg = MCRI->getDwarfRegNum(StackPtrReg, false);
   MCCFIInstruction CFIInst =
       ST.hasFlatScratchEnabled()

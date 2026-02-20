@@ -1869,7 +1869,6 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
   MCContext &context = Streamer.getContext();
   const MCRegisterInfo *MRI = context.getRegisterInfo();
   const MCObjectFileInfo *MOFI = context.getObjectFileInfo();
-  const MCAsmInfo *MAI = context.getAsmInfo();
 
   MCSymbol *sectionStart = context.createTempSymbol();
   Streamer.emitLabel(sectionStart);
@@ -1914,8 +1913,6 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
     if (Frame.IsMTETaggedFrame)
       Augmentation += "G";
   }
-  if (MAI->supportsHeterogeneousDebuggingExtensions())
-    Augmentation += "[llvm:v0.0]";
   Streamer.emitBytes(Augmentation);
   Streamer.emitInt8(0);
 
@@ -1980,6 +1977,7 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
 
   // Initial Instructions
 
+  const MCAsmInfo *MAI = context.getAsmInfo();
   if (!Frame.IsSimple) {
     const std::vector<MCCFIInstruction> &Instructions =
         MAI->getInitialFrameState();

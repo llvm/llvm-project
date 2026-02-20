@@ -1,10 +1,10 @@
 ; RUN: llc -mcpu=gfx900 -mtriple=amdgcn-amd-amdhsa -filetype=obj -o - %s | llvm-dwarfdump -debug-frame - | FileCheck %s
 
 ; CHECK: .debug_frame contents:
-; CHECK: 00000000 0000001c ffffffff CIE
+; CHECK: 00000000 0000000c ffffffff CIE
 ; CHECK-NEXT:   Format:                DWARF32
 ; CHECK-NEXT:   Version:               4
-; CHECK-NEXT:   Augmentation:          "[llvm:v0.0]"
+; CHECK-NEXT:   Augmentation:          ""
 ; CHECK-NEXT:   Address size:          8
 ; CHECK-NEXT:   Segment desc size:     0
 ; CHECK-NEXT:   Code alignment factor: 4

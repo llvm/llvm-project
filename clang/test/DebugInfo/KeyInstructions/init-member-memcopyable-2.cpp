@@ -4,6 +4,8 @@
 
 // XFAIL: *
 
+// XFAIL: *
+
 // g::h and i can be memcpy'd, check the assignment gets Key Instructions metadata.
 
 struct e {

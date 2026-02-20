@@ -393,11 +393,11 @@ DIDerivedType *DIBuilder::createTypedef(DIType *Ty, StringRef Name,
                                         DIScope *Context, uint32_t AlignInBits,
                                         DINode::DIFlags Flags,
                                         DINodeArray Annotations) {
-  auto *T = DIDerivedType::get(
-      VMContext, dwarf::DW_TAG_typedef, Name, File, LineNo,
-      getNonCompileUnitScope(Context), Ty, (uint64_t)0, AlignInBits,
-      (uint64_t)0, std::nullopt, dwarf::DW_MSPACE_LLVM_none,
-      std::nullopt, Flags, nullptr, Annotations);
+  auto *T = DIDerivedType::get(VMContext, dwarf::DW_TAG_typedef, Name, File,
+                               LineNo, getNonCompileUnitScope(Context), Ty,
+                               (uint64_t)0, AlignInBits, (uint64_t)0,
+                               std::nullopt, dwarf::DW_MSPACE_LLVM_none,
+                               std::nullopt, Flags, nullptr, Annotations);
   if (isa_and_nonnull<DILocalScope>(Context))
     getSubprogramNodesTrackingVector(Context).emplace_back(T);
   return T;
@@ -408,12 +408,11 @@ DIBuilder::createTemplateAlias(DIType *Ty, StringRef Name, DIFile *File,
                                unsigned LineNo, DIScope *Context,
                                DINodeArray TParams, uint32_t AlignInBits,
                                DINode::DIFlags Flags, DINodeArray Annotations) {
-  auto *T =
-      DIDerivedType::get(VMContext, dwarf::DW_TAG_template_alias, Name, File,
-                         LineNo, getNonCompileUnitScope(Context), Ty,
-                         (uint64_t)0, AlignInBits, (uint64_t)0, std::nullopt,
-                         dwarf::DW_MSPACE_LLVM_none,
-                         std::nullopt, Flags, TParams.get(), Annotations);
+  auto *T = DIDerivedType::get(VMContext, dwarf::DW_TAG_template_alias, Name,
+                               File, LineNo, getNonCompileUnitScope(Context),
+                               Ty, (uint64_t)0, AlignInBits, (uint64_t)0,
+                               std::nullopt, dwarf::DW_MSPACE_LLVM_none,
+                               std::nullopt, Flags, TParams.get(), Annotations);
   if (isa_and_nonnull<DILocalScope>(Context))
     getSubprogramNodesTrackingVector(Context).emplace_back(T);
   return T;

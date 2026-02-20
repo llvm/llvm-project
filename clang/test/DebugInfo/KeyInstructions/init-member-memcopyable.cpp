@@ -4,6 +4,8 @@
 
 // XFAIL: *
 
+// XFAIL: *
+
 // g::h can be memcpy'd (in this case emitted as load/stored), check the
 // assignment gets Key Instructions metadata.
 
