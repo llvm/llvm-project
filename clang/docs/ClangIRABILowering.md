@@ -4,7 +4,7 @@
 
 This design describes calling convention lowering that builds on the LLVM ABI
 Lowering Library in `llvm/lib/ABI/`: we use its `abi::Type*` and target ABI
-logic and add an MLIR integration layer (MLIRTypeMapper, ABI lowering pass, and
+logic and add an MLIR integration layer (ABITypeMapper, ABI lowering pass, and
 dialect rewriters).  The framework relies on the LLVM ABI library as the single
 source of truth for ABI classification.  MLIR dialects use it via an adapter
 layer.  The design provides a way to perform ABI-compliant calling convention
@@ -116,7 +116,7 @@ library being merged upstream or our contributions to it being accepted.
 AArch64, review feedback, tests) and add an **MLIR integration layer** so that
 MLIR dialects can use it:
 
-- **MLIRTypeMapper**: maps `mlir::Type` to `abi::Type*`, analogous to
+- **ABITypeMapper**: maps `mlir::Type` to `abi::Type*`, analogous to
   QualTypeMapper for Clang.
 
 - **MLIR ABI lowering pass**: uses the library's `ABIInfo` for classification,
@@ -148,7 +148,7 @@ architectures, and comprehensive testability and validation capabilities.
 where ABI rules are implemented.
 
 **MLIR side.** To use this library from MLIR dialects we add an integration
-layer: (1) **MLIRTypeMapper** maps `mlir::Type` to `abi::Type*` (analogous to
+layer: (1) **ABITypeMapper** maps `mlir::Type` to `abi::Type*` (analogous to
 QualTypeMapper for Clang).  (2) A **generic ABI lowering pass** invokes the
 library's `ABIInfo` for classification, then (3) performs **dialect-specific
 rewriting** via the `ABIRewriteContext` interface—each dialect (CIR, FIR, etc.)
@@ -158,7 +158,7 @@ dialect-specific.
 
 The following diagram shows the layering.  At the top, the ABI library holds
 the ABI logic.  In the middle, adapters connect frontends to it: Classic Clang
-CodeGen uses QualTypeMapper; MLIR uses MLIRTypeMapper and the ABI lowering pass.
+CodeGen uses QualTypeMapper; MLIR uses ABITypeMapper and the ABI lowering pass.
 At the bottom, each dialect implements `ABIRewriteContext` only; FIR is shown as
 a consumer for cdecl/C interop (e.g. calling C from Fortran).
 
@@ -173,7 +173,7 @@ a consumer for cdecl/C interop (e.g. calling C from Fortran).
             ▼                                   ▼
 ┌───────────────────────┐         ┌───────────────────────────────┐
 │  Classic CodeGen      │         │  MLIR adapter                 │
-│  QualTypeMapper       │         │  MLIRTypeMapper + ABI pass    │
+│  QualTypeMapper       │         │  ABITypeMapper + ABI pass     │
 └───────────────────────┘         └───────────────────────────────┘
                                                 │
                                ┌────────────────┼────────────────┐
@@ -192,7 +192,7 @@ a consumer for cdecl/C interop (e.g. calling C from Fortran).
 
 The following diagram shows how the design builds on the ABI library (Section
 3).  At the top, the ABI library holds the classification logic.  The middle
-layer adapts MLIR to the ABI library: MLIRTypeMapper converts `mlir::Type` to
+layer adapts MLIR to the ABI library: ABITypeMapper converts `mlir::Type` to
 `abi::Type*`, and the MLIR ABI lowering pass invokes the library's `ABIInfo` and
 uses the classification
 to drive rewriting.  At the bottom, each dialect implements only
@@ -209,7 +209,7 @@ abstraction layer in MLIR for classification—that lives in the ABI library.
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  MLIR adapter                                                           │
-│  MLIRTypeMapper (mlir::Type → abi::Type*)  +  MLIR ABI lowering pass    │
+│  ABITypeMapper (mlir::Type → abi::Type*)  +  MLIR ABI lowering pass     │
 │  (1) Map types  (2) Call ABIInfo  (3) Drive rewriting from              │
 │  classification result                                                  │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -231,7 +231,7 @@ The architecture has three parts.  **The ABI library** (`llvm/lib/ABI/`) is the
 single source of truth for ABI classification: it operates on `abi::Type*` and
 produces classification results (e.g.  ABIArgInfo, ABIFunctionInfo).
 Target-specific `ABIInfo` implementations (X86_64, AArch64, etc.) live there.
-The **adapter layer** is MLIR-specific: MLIRTypeMapper maps `mlir::Type` to
+The **adapter layer** is MLIR-specific: ABITypeMapper maps `mlir::Type` to
 `abi::Type*`, and the MLIR ABI lowering pass (1) maps types, (2) calls the
 library's ABIInfo, and (3) uses the classification to drive rewriting.  The
 **dialect layer** is only ABIRewriteContext: each dialect (CIR, FIR) implements
@@ -245,9 +245,13 @@ The framework is built from the following components.  **The ABI library**
 (`llvm/lib/ABI/`) provides the single source of truth for ABI classification:
 the `abi::Type*` type system, the `ABIInfo` base and target-specific
 implementations (e.g.  X86_64, AArch64), and the classification result types
-(e.g.  ABIArgInfo, ABIFunctionInfo).  **MLIRTypeMapper** maps `mlir::Type` to
+(e.g.  ABIArgInfo, ABIFunctionInfo).  **ABITypeMapper** maps `mlir::Type` to
 `abi::Type*` so that MLIR dialect types can be classified by the ABI library.
-The **MLIR ABI lowering pass** orchestrates the flow: it uses MLIRTypeMapper,
+Dialects with custom types do not need a new interface for this: the mapper
+relies on existing MLIR type interfaces (e.g.  `DataLayoutTypeInterface`) for
+size and alignment, and pattern-matches on standard type categories (integers,
+floats, pointers, structs, arrays, vectors) to build `abi::Type*`.
+The **MLIR ABI lowering pass** orchestrates the flow: it uses ABITypeMapper,
 calls the library's ABIInfo, and drives rewriting from the classification
 result.  **ABIRewriteContext** is the dialect-specific interface for operation
 creation (each dialect implements it to produce e.g.  cir.call, fir.call).  A
@@ -262,9 +266,11 @@ interfaces and components work together.
 
 #### Step 1: Function Signature Analysis
 
-The ABI lowering pass begins by analyzing the function signature.  When it
-encounters a function operation, it extracts the parameter types and return type
-to prepare them for classification.  At this stage, the types are still in their
+The ABI lowering pass begins by analyzing the function signature.  Function
+operations are identified via MLIR's `FunctionOpInterface`, which provides
+access to the function type, argument types, and return types.  The pass
+extracts the parameter types and return type to prepare them for
+classification.  At this stage, the types are still in their
 high-level, dialect-specific form (e.g., `!cir.struct` for CIR, or `!fir.type`
 for FIR).  The pass collects these types into a list that will be fed to the
 classification logic in the next step.
@@ -275,22 +281,22 @@ Input: func @foo(%arg0: !cir.int<u, 32>,
                             !cir.int<u, 64>}>) -> !cir.int<u, 32>
 ```
 
-#### Step 2: Type Mapping via MLIRTypeMapper
+#### Step 2: Type Mapping via ABITypeMapper
 
 For each argument and the return type, the pass maps `mlir::Type` to
-`abi::Type*` using MLIRTypeMapper.  The mapper produces the representation that
+`abi::Type*` using ABITypeMapper.  The mapper produces the representation that
 the library's ABIInfo expects; optionally, it can map back to MLIR types for coercion
 types when needed.
 
 ```cpp
 // Map dialect types to the library's type system
-MLIRTypeMapper mlirTypeMapper(module.getDataLayout());
-abi::Type *arg0Abi = mlirTypeMapper.map(arg0Type);   // i32 -> IntegerType
-abi::Type *arg1Abi = mlirTypeMapper.map(arg1Type);   // struct -> RecordType
-abi::Type *retAbi = mlirTypeMapper.map(returnType);
+ABITypeMapper abiTypeMapper(module.getDataLayout());
+abi::Type *arg0Abi = abiTypeMapper.map(arg0Type);   // i32 -> IntegerType
+abi::Type *arg1Abi = abiTypeMapper.map(arg1Type);   // struct -> RecordType
+abi::Type *retAbi = abiTypeMapper.map(returnType);
 ```
 
-**Key Point**: Classification runs in the ABI library on `abi::Type*`; MLIRTypeMapper is
+**Key Point**: Classification runs in the ABI library on `abi::Type*`; ABITypeMapper is
 the only bridge from dialect types to that representation.
 
 #### Step 3: ABI Classification
@@ -300,7 +306,8 @@ The library's target-specific `ABIInfo` (e.g.  X86_64) performs classification o
 and ABIArgInfo as defined in `llvm/lib/ABI/`):
 
 ```cpp
-// Pass holds an ABIInfo (from target registry or module target)
+// The MLIR ABI lowering pass obtains the ABIInfo from the target
+// registry based on the module's target triple (see Section 5.2).
 llvm::abi::ABIInfo *abiInfo = getABIInfo();  // e.g. X86_64
 llvm::abi::ABIFunctionInfo abiFI;
 abiInfo->computeInfo(abiFI, arg0Abi, arg1Abi, retAbi);
@@ -384,8 +391,8 @@ Value result = ctx.createLoad(loc, sretPtr);
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│ Step 2: Map Types (MLIRTypeMapper → abi::Type*)                 │
-│   mlirTypeMapper.map(argType) → abi::Type*                      │
+│ Step 2: Map Types (ABITypeMapper → abi::Type*)                  │
+│   abiTypeMapper.map(argType) → abi::Type*                       │
 │   └─> Dialect types converted for ABI library                   │
 └────────────────────────┬────────────────────────────────────────┘
                          │
@@ -422,8 +429,8 @@ Value result = ctx.createLoad(loc, sretPtr);
 
 Classification lives in the ABI library: `ABIInfo` operates on `abi::Type*` and produces
 classification results (e.g.  ABIArgInfo, ABIFunctionInfo).  MLIR types reach
-the ABI library only via MLIRTypeMapper, which converts `mlir::Type` to `abi::Type*`.  The
-lowering pass (1) maps types with MLIRTypeMapper, (2) calls the library's ABIInfo to
+the ABI library only via ABITypeMapper, which converts `mlir::Type` to `abi::Type*`.  The
+lowering pass (1) maps types with ABITypeMapper, (2) calls the library's ABIInfo to
 get classification, and (3) uses that result to drive rewriting through the
 dialect's ABIRewriteContext.
 
@@ -434,77 +441,22 @@ ABIRewriteContext to produce its own operations (e.g.  cir.call, fir.call).
 This keeps classification in one place (the ABI library) and limits dialect code to
 operation creation.
 
-## 5. Detailed Component Design
+## 5. ABIRewriteContext and Target Registry
 
-### 5.1 ABIArgInfo
+### 5.1 ABIRewriteContext Interface
 
-ABIArgInfo is defined in the ABI library (in `llvm/include/llvm/ABI/`) and captures
-the result of ABI classification for a single argument or return value: whether
-the value should be passed directly, indirectly, expanded, or via other
-mechanisms (with kinds such as Direct, Indirect, Expand, plus edge cases for
-sign/zero extension or platform-specific conventions).  We use the library's ABIArgInfo
-as-is for classification results; the MLIR pass does not define a parallel
-MLIR-native ABIArgInfo.  Classification is produced by the library's ABIInfo operating
-on `abi::Type*`; rewriting consumes these results via ABIRewriteContext.
-
-### 5.2 LowerFunctionInfo / ABIFunctionInfo
-
-The fully classified function signature (e.g.  ABIFunctionInfo or equivalent in
-the ABI library) associates each argument and the return value with its ABI classification
-(ABIArgInfo).  This is defined in the ABI library; we use its structures as-is.  The
-MLIR pass obtains this classification by calling the library's ABIInfo after mapping
-MLIR types to `abi::Type*` with MLIRTypeMapper.  The dialect rewriter then
-consumes this result (e.g.  from the library's ABIFunctionInfo) to drive
-ABIRewriteContext operations.  We do not define a separate MLIR-native
-LowerFunctionInfo that replaces the library's; we use or wrap the library's structures as needed.
-
-### 5.3 MLIRTypeMapper
-
-MLIRTypeMapper maps `mlir::Type` to `abi::Type*` (and optionally back to MLIR
-types for coercion types when needed).  It is the only bridge from dialect types
-to the library's classification: type queries for ABI are performed on `abi::Type*`
-inside the ABI library, not via a separate MLIR type interface.  When building `abi::Type*`
-from MLIR types, the mapper uses MLIR's existing layout mechanisms (e.g.
-DataLayoutInterface or equivalent) for size and alignment so reviewers see we
-rely on existing interfaces rather than a new type abstraction for
-classification.  We do not add a thin MLIR type interface wrapping `abi::Type*`
-so as to avoid two sources of truth and extra maintenance; classification stays
-in the ABI library.
-
-MLIRTypeMapper and the MLIR ABI lowering pass will live in a location to be
-decided (e.g.  `mlir/lib/Interfaces/ABILowering/` or alongside the pass).  The
-mapper is implemented once; all MLIR dialects that use the ABI library for lowering go
-through it.
-
-### 5.4 ABIInfo Base Class
-
-ABIInfo lives in the ABI library (`llvm/lib/ABI/`).  We do not re-implement it in MLIR.
-The abstract base and target-specific subclasses (x86_64, AArch64, etc.) encode
-calling convention rules and implement classification on `abi::Type*`.  The MLIR
-ABI lowering pass calls into the library's ABIInfo only after mapping dialect types to
-`abi::Type*` with MLIRTypeMapper.  Classification logic thus operates entirely
-on the library's type system; there is no ABITypeInterface or MLIR-side type queries
-for classification.
-
-### 5.5 Target-Specific ABIInfo Implementations
-
-Target-specific ABIInfo implementations (X86_64, AArch64, etc.) live in the ABI library.
-x86_64 is largely complete there; AArch64 and other targets will be contributed
-to the ABI library as needed.  The CIR incubator can be used as a reference for
-algorithms (e.g.  AArch64 classification) when implementing or extending targets
-in the ABI library.  We do not duplicate these implementations in MLIR; the MLIR
-pass uses the library's
-ABIInfo after type mapping.
-
-### 5.6 ABIRewriteContext Interface
-
-ABIRewriteContext is the only dialect-specific layer: CIR and FIR implement it
-to create dialect operations (e.g.  cir.call, fir.call).  Classification is
+ABIRewriteContext is the only dialect-specific layer: CIR and FIR each
+implement it to create their own dialect operations (e.g.  cir.call, fir.call).
+In a module with mixed dialect content, the pass selects the appropriate
+ABIRewriteContext for each function based on the dialect of its operations.  Classification is
 performed by the library's ABIInfo and produces the library's result (e.g.  ABIFunctionInfo,
 ABIArgInfo); ABIRewriteContext consumes that classification to perform the
 actual IR rewriting.  The interface defines the operations needed for lowering
 (createFunction, createCall, createExtractValue, createLoad, etc.); each dialect
-implements these to produce its own operations.
+implements these to produce its own operations.  ABIRewriteContext is also
+responsible for updating ABI-related attributes (e.g.  sret, byval, signext,
+zeroext, inreg) on the rewritten function signatures and call sites as
+indicated by the classification result.
 
 The interface defines approximately 15-20 methods covering function operations
 (`createFunction`, `createCall`), value manipulation (`createCast`,
@@ -528,7 +480,7 @@ supporting infrastructure), introduce divergent behavior across dialects, and
 create a maintenance burden where ABI bug fixes must be propagated to every
 dialect independently.
 
-### 5.7 Target Registry
+### 5.2 Target Registry
 
 We use the library's target selection or registry to obtain the appropriate ABIInfo for
 the compilation target (e.g.  X86_64, AArch64).  We do not introduce a separate
