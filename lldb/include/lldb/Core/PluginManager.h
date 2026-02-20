@@ -29,7 +29,7 @@
 #include <vector>
 
 #define LLDB_PLUGIN_DEFINE_ADV(ClassName, PluginName)                          \
-  namespace lldb_private {                                                     \
+  extern "C" {                                                                 \
   void lldb_initialize_##PluginName() { ClassName::Initialize(); }             \
   void lldb_terminate_##PluginName() { ClassName::Terminate(); }               \
   }
@@ -39,7 +39,7 @@
 
 // FIXME: Generate me with CMake
 #define LLDB_PLUGIN_DECLARE(PluginName)                                        \
-  namespace lldb_private {                                                     \
+  extern "C" {                                                                 \
   extern void lldb_initialize_##PluginName();                                  \
   extern void lldb_terminate_##PluginName();                                   \
   }
@@ -487,8 +487,7 @@ public:
       llvm::StringRef schema,
       DebuggerInitializeCallback debugger_init_callback);
 
-  static bool
-  UnregisterPlugin(TraceCreateInstanceFromBundle create_callback);
+  static bool UnregisterPlugin(TraceCreateInstanceFromBundle create_callback);
 
   static TraceCreateInstanceFromBundle
   GetTraceCreateCallback(llvm::StringRef plugin_name);
