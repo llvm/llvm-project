@@ -188,6 +188,11 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Clang's template type diffing has been improved to accurately display type 
+  qualifiers. Diagnostics will now explicitly show ``const`` and ``volatile`` 
+  qualifiers when comparing template arguments, preventing confusion in cases 
+  where these qualifiers were previously omitted from the error output. (#GH180046)
+
 - Added ``-Wlifetime-safety`` to enable lifetime safety analysis,
   a CFG-based intra-procedural analysis that detects use-after-free and related
   temporal safety bugs. See the
