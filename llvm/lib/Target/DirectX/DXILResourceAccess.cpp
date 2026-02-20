@@ -428,7 +428,7 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI,
   llvm_unreachable("Unhandled case in switch");
 }
 
-static Instruction *getPointerOperand(Instruction *AI) {
+static Instruction *getStoreLoadPointerOperand(Instruction *AI) {
   if (auto *LI = dyn_cast<LoadInst>(AI))
     return dyn_cast<Instruction>(LI->getPointerOperand());
   if (auto *SI = dyn_cast<StoreInst>(AI))
@@ -607,9 +607,9 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
 // Returns true if any changes are made.
 static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
   SmallSetVector<Instruction *, 16> DeadInsts;
-  for (BasicBlock &BB : make_early_inc_range(F))
-    for (Instruction &I : BB)
-      if (auto *PtrOp = getPointerOperand(&I)) {
+  for (BasicBlock &BB : make_early_inc_range(F)) {
+    for (Instruction &I : BB) {
+      if (auto *PtrOp = getStoreLoadPointerOperand(&I)) {
         SmallVector<IntrinsicInst *> Handles = collectUsedHandles(PtrOp);
         unsigned NumHandles = Handles.size();
         if (NumHandles <= 1)
@@ -617,9 +617,9 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
 
         bool SameGlobalBinding = true;
         hlsl::Binding B = getHandleIntrinsicBinding(Handles[0], DRTM);
-        for (unsigned I = 1; I < NumHandles; I++)
+        for (unsigned Idx = 1; Idx < NumHandles; Idx++)
           SameGlobalBinding &=
-              (B == getHandleIntrinsicBinding(Handles[I], DRTM));
+              (B == getHandleIntrinsicBinding(Handles[Idx], DRTM));
 
         if (!SameGlobalBinding) {
           diagnoseNonUniqueResourceAccess(&I, Handles);
@@ -628,6 +628,8 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
 
         replaceHandleWithIndices(PtrOp, Handles[0], DeadInsts);
       }
+    }
+  }
 
   bool MadeChanges = DeadInsts.size() > 0;
 
