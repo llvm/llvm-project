@@ -955,8 +955,11 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
       return 1;
     }
     Opts.BackgroundIndexPathMappings = std::move(*Mappings);
-    for (const auto &M : Opts.BackgroundIndexPathMappings)
-      log("Background index path mapping: {0}", M);
+    for (const auto &M : Opts.BackgroundIndexPathMappings) {
+      if (!llvm::sys::fs::exists(M.ClientPath))
+        log("BackgroundIndex: local mapping path does not exist: {0}",
+            M.ClientPath);
+    }
   }
   Opts.ReferencesLimit = ReferencesLimit;
   Opts.Rename.LimitFiles = RenameFileLimit;

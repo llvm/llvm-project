@@ -151,6 +151,9 @@ public:
     // Whether the index needs to support the containedRefs() operation.
     // May use extra memory.
     bool SupportContainedRefs = true;
+    // Whether background index path mappings are active. Used to surface
+    // a diagnostic when no cached shards are found.
+    bool HasPathMappings = false;
   };
 
   /// Creates a new background index and starts its threads.
@@ -205,6 +208,7 @@ private:
   const GlobalCompilationDatabase &CDB;
   llvm::ThreadPriority IndexingPriority;
   std::function<Context(PathRef)> ContextProvider;
+  bool HasPathMappings;
 
   llvm::Error index(tooling::CompileCommand);
 
