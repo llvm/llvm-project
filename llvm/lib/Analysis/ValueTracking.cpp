@@ -704,22 +704,36 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
 
 bool llvm::willNotFreeBetween(const Instruction *Assume,
                               const Instruction *CtxI) {
-  // Helper to check if there are any calls in the range that may free memory.
-  auto hasNoFreeCalls = [](auto Range) {
+  // Helper to make sure the current function cannot arrange for
+  // another thread to free on its behalf and to check if there
+  // are any calls in the range that may free memory.
+  auto hasNoSyncOrFreeCall = [](auto Range) {
     for (const auto &[Idx, I] : enumerate(Range)) {
       if (Idx > MaxInstrsToCheckForFree)
         return false;
-      if (const auto *CB = dyn_cast<CallBase>(&I))
-        if (!CB->hasFnAttr(Attribute::NoFree))
+      if (I.isVolatile()) {
+        return false;
+      }
+
+      // An ordered atomic may synchronize.
+      if (llvm::isOrderedAtomic(&I))
+        return false;
+
+      auto *CB = dyn_cast<CallBase>(&I);
+      if (CB) {
+        // Non call site cases covered by the two checks above
+        if (!CB->hasFnAttr(Attribute::NoSync) ||
+            !CB->hasFnAttr(Attribute::NoFree))
+          return false;
+      }
+
+      // Non volatile memset/memcpy/memmoves are nosync
+      if (auto *MI = dyn_cast<MemIntrinsic>(&I))
+        if (MI->isVolatile())
           return false;
     }
     return true;
   };
-
-  // Make sure the current function cannot arrange for another thread to free on
-  // its behalf.
-  if (!CtxI->getFunction()->hasNoSync())
-    return false;
 
   // Handle cross-block case: CtxI in a successor of Assume's block.
   const BasicBlock *CtxBB = CtxI->getParent();
@@ -729,7 +743,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     if (CtxBB->getSinglePredecessor() != AssumeBB)
       return false;
 
-    if (!hasNoFreeCalls(make_range(CtxBB->begin(), CtxIter)))
+    if (!hasNoSyncOrFreeCall(make_range(CtxBB->begin(), CtxIter)))
       return false;
 
     CtxIter = AssumeBB->end();
@@ -738,10 +752,9 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     if (!Assume->comesBefore(CtxI))
       return false;
   }
-
   // Check if there are any calls between Assume and CtxIter that may free
   // memory.
-  return hasNoFreeCalls(make_range(Assume->getIterator(), CtxIter));
+  return hasNoSyncOrFreeCall(make_range(Assume->getIterator(), CtxIter));
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
@@ -7845,6 +7858,29 @@ bool llvm::isGuaranteedNotToBeUndef(const Value *V, AssumptionCache *AC,
                                     const DominatorTree *DT, unsigned Depth) {
   return ::isGuaranteedNotToBeUndefOrPoison(V, AC, CtxI, DT, Depth,
                                             UndefPoisonKind::UndefOnly);
+}
+
+// Return true if this is an atomic which has an ordering stronger than
+// unordered.  Note that this is different than the predicate we use in
+// Attributor.  Here we chose to be conservative and consider monotonic
+// operations potentially synchronizing.  We generally don't do much with
+// monotonic operations, so this is simply risk reduction.
+bool llvm::isOrderedAtomic(const Instruction *I) {
+  if (!I->isAtomic())
+    return false;
+
+  if (auto *FI = dyn_cast<FenceInst>(I))
+    // All legal orderings for fence are stronger than monotonic.
+    return FI->getSyncScopeID() != SyncScope::SingleThread;
+  else if (isa<AtomicCmpXchgInst>(I) || isa<AtomicRMWInst>(I))
+    return true;
+  else if (auto *SI = dyn_cast<StoreInst>(I))
+    return !SI->isUnordered();
+  else if (auto *LI = dyn_cast<LoadInst>(I))
+    return !LI->isUnordered();
+  else {
+    llvm_unreachable("unknown atomic instruction?");
+  }
 }
 
 /// Return true if undefined behavior would provably be executed on the path to

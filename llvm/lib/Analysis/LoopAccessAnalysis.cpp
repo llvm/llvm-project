@@ -250,10 +250,14 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
                          return true;
                        });
   if (DerefRK) {
-    DerefBytesSCEV =
-        SE.getUMaxExpr(DerefBytesSCEV, SE.getSCEV(DerefRK.IRArgValue));
+    const SCEV *DerefRKSCEV = SE.getSCEV(DerefRK.IRArgValue);
+    // Ensure both operands have the same type
+    Type *CommonTy =
+        SE.getWiderType(DerefBytesSCEV->getType(), DerefRKSCEV->getType());
+    DerefBytesSCEV = SE.getNoopOrAnyExtend(DerefBytesSCEV, CommonTy);
+    DerefRKSCEV = SE.getNoopOrAnyExtend(DerefRKSCEV, CommonTy);
+    DerefBytesSCEV = SE.getUMaxExpr(DerefBytesSCEV, DerefRKSCEV);
   }
-
   if (DerefBytesSCEV->isZero())
     return false;
 
