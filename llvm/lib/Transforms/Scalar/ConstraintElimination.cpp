@@ -1703,6 +1703,30 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
                              unsigned NumIn, unsigned NumOut,
                              SmallVectorImpl<StackEntry> &DFSInStack) {
   addFactImpl(Pred, A, B, NumIn, NumOut, DFSInStack, false);
+
+  Value *LHS;
+  Value *RHS;
+  if (match(A, m_Or(m_Value(LHS), m_Value(RHS)))) {
+    // (LHS | RHS >= 0) =>  LHS >= 0 && RHS >= 0
+    // (LHS | RHS > -1) =>  LHS >= 0 && RHS >= 0
+    if ((match(B, m_Zero()) && Pred == CmpInst::ICMP_SGE) ||
+        (match(B, m_AllOnes()) && Pred == CmpInst::ICMP_SGT)) {
+      addFact(CmpInst::ICMP_SGE, LHS, ConstantInt::get(LHS->getType(), 0),
+              NumIn, NumOut, DFSInStack);
+      addFact(CmpInst::ICMP_SGE, RHS, ConstantInt::get(RHS->getType(), 0),
+              NumIn, NumOut, DFSInStack);
+    }
+  } else if (match(A, m_And(m_Value(LHS), m_Value(RHS)))) {
+    // (LHS & RHS < 0)   =>  LHS < 0 && RHS < 0
+    // (LHS & RHS <= -1) =>  LHS < 0 && RHS < 0
+    if ((match(B, m_Zero()) && Pred == CmpInst::ICMP_SLT) ||
+        (match(B, m_AllOnes()) && Pred == CmpInst::ICMP_SLE)) {
+      addFact(CmpInst::ICMP_SLT, LHS, ConstantInt::get(LHS->getType(), 0),
+              NumIn, NumOut, DFSInStack);
+      addFact(CmpInst::ICMP_SLT, RHS, ConstantInt::get(RHS->getType(), 0),
+              NumIn, NumOut, DFSInStack);
+    }
+  }
   // If the Pred is eq/ne, also add the fact to signed system.
   if (CmpInst::isEquality(Pred))
     addFactImpl(Pred, A, B, NumIn, NumOut, DFSInStack, true);
