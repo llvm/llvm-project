@@ -15374,9 +15374,27 @@ bool ASTContext::mayExternalize(const Decl *D) const {
 }
 
 bool ASTContext::shouldExternalize(const Decl *D) const {
-  return mayExternalize(D) &&
-         (D->hasAttr<HIPManagedAttr>() || D->hasAttr<CUDAGlobalAttr>() ||
-          CUDADeviceVarODRUsedByHost.count(cast<VarDecl>(D)));
+  if (!mayExternalize(D))
+    return false;
+
+  if (D->hasAttr<HIPManagedAttr>() || D->hasAttr<CUDAGlobalAttr>() ||
+      CUDADeviceVarODRUsedByHost.count(cast<VarDecl>(D)))
+    return true;
+
+  // For CUDA/HIP compatibility: __device__ variables with const type qualifier
+  // at namespace scope should be externalized so they can be accessed via
+  // cudaGetSymbolAddress/hipGetSymbolAddress. In standard C++, const variables
+  // at namespace scope have internal linkage, but CUDA treats __device__ const
+  // variables as externally visible symbols.
+  // Note: Function-scope static __device__ const variables should NOT be
+  // externalized as they are not meant to be accessed by host.
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (VD->hasAttr<CUDADeviceAttr>() && VD->getType().isConstQualified() &&
+        !VD->isStaticLocal())
+      return true;
+  }
+
+  return false;
 }
 
 StringRef ASTContext::getCUIDHash() const {

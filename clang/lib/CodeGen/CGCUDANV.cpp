@@ -1273,8 +1273,13 @@ llvm::Function *CGNVCUDARuntime::finalizeModule() {
           (Kind == DeviceVarFlags::Variable ||
            Kind == DeviceVarFlags::Surface ||
            Kind == DeviceVarFlags::Texture) &&
-          Info.D->isUsed() && !Info.D->hasAttr<UsedAttr>()) {
-        CGM.addCompilerUsedGlobal(Info.Var);
+          !Info.D->hasAttr<UsedAttr>()) {
+        // Add to compiler.used if:
+        // 1. The variable is used (ODR-used), OR
+        // 2. The variable should be externalized (e.g., __device__ const
+        //    variables that need to be accessible via hipGetSymbolAddress)
+        if (Info.D->isUsed() || CGM.getContext().shouldExternalize(Info.D))
+          CGM.addCompilerUsedGlobal(Info.Var);
       }
     }
     return nullptr;
