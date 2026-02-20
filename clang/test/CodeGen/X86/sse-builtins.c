@@ -51,54 +51,172 @@ __m128 test_mm_cmp_ps_eq_oq(__m128 a, __m128 b) {
   // CHECK: fcmp oeq <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_EQ_OQ);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+1.0f, +2.0f, +3.0f, +4.0f}), ((__m128){+1.0f, +2.0f, +3.0f, +4.0f}), _CMP_EQ_OQ),
+                           ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+1.0f, +2.0f, __builtin_nanf(""), +4.0f}), ((__m128){+1.0f, +3.0f, +5.0f, __builtin_nanf("")}), _CMP_EQ_OQ),
+                           ALL_ONES_F, +0.0f, +0.0f, +0.0f));
 
 __m128 test_mm_cmp_ps_lt_os(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_lt_os
   // CHECK: fcmp olt <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_LT_OS);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+1.0f, +2.0f, +3.0f, +4.0f}), ((__m128){+2.0f, +3.0f, +4.0f, +5.0f}), _CMP_LT_OS),
+                           ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+3.0f, +4.0f, +5.0f, +6.0f}), ((__m128){+2.0f, +3.0f, +4.0f, +5.0f}), _CMP_LT_OS),
+                           +0.0f, +0.0f, +0.0f, +0.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+1.0f, +2.0f, __builtin_nanf(""), +4.0f}), ((__m128){+1.0f, +3.0f, +5.0f, __builtin_nanf("")}), _CMP_LT_OS),
+                           +0.0f, ALL_ONES_F, +0.0f, +0.0f));
 
 __m128 test_mm_cmp_ps_le_os(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_le_os
   // CHECK: fcmp ole <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_LE_OS);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+1.0f, +2.0f, +3.0f, +4.0f}), ((__m128){+1.0f, +3.0f, +3.0f, +5.0f}), _CMP_LE_OS),
+                           ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+3.0f, +4.0f, +5.0f, +6.0f}), ((__m128){+2.0f, +3.0f, +4.0f, +5.0f}), _CMP_LE_OS),
+                           +0.0f, +0.0f, +0.0f, +0.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+1.0f, +2.0f, __builtin_nanf(""), +4.0f}), ((__m128){+1.0f, +3.0f, +5.0f, __builtin_nanf("")}), _CMP_LE_OS),
+                           ALL_ONES_F, ALL_ONES_F, +0.0f, +0.0f));
 
 __m128 test_mm_cmp_ps_unord_q(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_unord_q
   // CHECK: fcmp uno <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_UNORD_Q);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+1.0f, +2.0f, +3.0f, +4.0f}), ((__m128){+2.0f, +3.0f, +4.0f, +5.0f}), _CMP_UNORD_Q),
+                           +0.0f, +0.0f, +0.0f, +0.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){__builtin_nanf(""), __builtin_nanf(""), __builtin_nanf(""), __builtin_nanf("")}),
+                                     ((__m128){+2.0f, +3.0f, +4.0f, +5.0f}), _CMP_UNORD_Q),
+                           ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+1.0f, +2.0f, __builtin_nanf(""), +4.0f}), ((__m128){+1.0f, +3.0f, +5.0f, __builtin_nanf("")}), _CMP_UNORD_Q),
+                           +0.0f, +0.0f, ALL_ONES_F, ALL_ONES_F));
 
 __m128 test_mm_cmp_ps_neq_uq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_neq_uq
   // CHECK: fcmp une <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_NEQ_UQ);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+1.0f, +2.0f, +3.0f, +4.0f}), ((__m128){+2.0f, +2.0f, +4.0f, +4.0f}), _CMP_NEQ_UQ),
+                           ALL_ONES_F, +0.0f, ALL_ONES_F, +0.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+1.0f, +2.0f, +3.0f, +4.0f}), ((__m128){+1.0f, +2.0f, +3.0f, +4.0f}), _CMP_NEQ_UQ),
+                           +0.0f, +0.0f, +0.0f, +0.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+1.0f, +2.0f, __builtin_nanf(""), +4.0f}), ((__m128){+1.0f, +3.0f, +5.0f, __builtin_nanf("")}), _CMP_NEQ_UQ),
+                           +0.0f, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
 
 __m128 test_mm_cmp_ps_nlt_us(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_nlt_us
   // CHECK: fcmp uge <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_NLT_US);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+3.0f, +2.0f, +5.0f, +4.0f}), ((__m128){+2.0f, +2.0f, +4.0f, +5.0f}), _CMP_NLT_US),
+                           ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, +0.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+1.0f, +2.0f, +3.0f, +4.0f}), ((__m128){+2.0f, +3.0f, +4.0f, +5.0f}), _CMP_NLT_US),
+                           +0.0f, +0.0f, +0.0f, +0.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+1.0f, +2.0f, __builtin_nanf(""), +4.0f}), ((__m128){+1.0f, +3.0f, +5.0f, __builtin_nanf("")}), _CMP_NLT_US),
+                           ALL_ONES_F, +0.0f, ALL_ONES_F, ALL_ONES_F));
 
 __m128 test_mm_cmp_ps_nle_us(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_nle_us
   // CHECK: fcmp ugt <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_NLE_US);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+3.0f, +2.0f, +5.0f, +4.0f}), ((__m128){+2.0f, +2.0f, +4.0f, +5.0f}), _CMP_NLE_US),
+                           ALL_ONES_F, +0.0f, ALL_ONES_F, +0.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+1.0f, +2.0f, +3.0f, +4.0f}), ((__m128){+2.0f, +3.0f, +4.0f, +5.0f}), _CMP_NLE_US),
+                           +0.0f, +0.0f, +0.0f, +0.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+1.0f, +2.0f, __builtin_nanf(""), +4.0f}), ((__m128){+1.0f, +3.0f, +5.0f, __builtin_nanf("")}), _CMP_NLE_US),
+                           +0.0f, +0.0f, ALL_ONES_F, ALL_ONES_F));
 
 __m128 test_mm_cmp_ps_ord_q(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_ord_q
   // CHECK: fcmp ord <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_ORD_Q);
 }
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+1.0f, +2.0f, +3.0f, +4.0f}), ((__m128){+2.0f, +3.0f, +4.0f, +5.0f}), _CMP_ORD_Q),
+                           ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){__builtin_nanf(""), +2.0f, +3.0f, +4.0f}), ((__m128){+2.0f, +3.0f, +4.0f, +5.0f}), _CMP_ORD_Q),
+                           +0.0f, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmp_ps(((__m128){+1.0f, +2.0f, __builtin_nanf(""), +4.0f}), ((__m128){+1.0f, +3.0f, +5.0f, __builtin_nanf("")}), _CMP_ORD_Q),
+                           ALL_ONES_F, ALL_ONES_F, +0.0f, +0.0f));
 
 __m128 test_mm_cmp_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_cmp_ss
   // CHECK: call {{.*}}<4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 7)
   return _mm_cmp_ss(A, B, _CMP_ORD_Q);
 }
+
+#define CMP_SS_CASE(A0, B0, PRED, RES0)                                           \
+  TEST_CONSTEXPR(match_m128(_mm_cmp_ss(((__m128){A0, +9.0f, +8.0f, +7.0f}),       \
+                                       ((__m128){B0, +6.0f, +5.0f, +4.0f}), PRED), \
+                                       RES0, +9.0f, +8.0f, +7.0f));
+
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_EQ_OQ, +0.0f)
+CMP_SS_CASE(+2.0f, +2.0f, _CMP_EQ_OQ, ALL_ONES_F)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_LT_OS, ALL_ONES_F)
+CMP_SS_CASE(+3.0f, +2.0f, _CMP_LT_OS, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_LE_OS, ALL_ONES_F)
+CMP_SS_CASE(+3.0f, +2.0f, _CMP_LE_OS, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_UNORD_Q, +0.0f)
+CMP_SS_CASE(__builtin_nanf(""), +2.0f, _CMP_UNORD_Q, ALL_ONES_F)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_NEQ_UQ, ALL_ONES_F)
+CMP_SS_CASE(+2.0f, +2.0f, _CMP_NEQ_UQ, +0.0f)
+CMP_SS_CASE(+3.0f, +2.0f, _CMP_NLT_US, ALL_ONES_F)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_NLT_US, +0.0f)
+CMP_SS_CASE(+3.0f, +2.0f, _CMP_NLE_US, ALL_ONES_F)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_NLE_US, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_ORD_Q, ALL_ONES_F)
+CMP_SS_CASE(__builtin_nanf(""), +2.0f, _CMP_ORD_Q, +0.0f)
+
+CMP_SS_CASE(+2.0f, +2.0f, _CMP_EQ_UQ, ALL_ONES_F)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_EQ_UQ, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_NGE_US, ALL_ONES_F)
+CMP_SS_CASE(+3.0f, +2.0f, _CMP_NGE_US, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_NGT_US, ALL_ONES_F)
+CMP_SS_CASE(+3.0f, +2.0f, _CMP_NGT_US, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_FALSE_OQ, +0.0f)
+CMP_SS_CASE(+1.0f, +1.0f, _CMP_FALSE_OQ, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_NEQ_OQ, ALL_ONES_F)
+CMP_SS_CASE(+2.0f, +2.0f, _CMP_NEQ_OQ, +0.0f)
+CMP_SS_CASE(+3.0f, +2.0f, _CMP_GE_OS, ALL_ONES_F)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_GE_OS, +0.0f)
+CMP_SS_CASE(+3.0f, +2.0f, _CMP_GT_OS, ALL_ONES_F)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_GT_OS, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_TRUE_UQ, ALL_ONES_F)
+CMP_SS_CASE(+1.0f, +1.0f, _CMP_TRUE_UQ, ALL_ONES_F)
+CMP_SS_CASE(+2.0f, +2.0f, _CMP_EQ_OS, ALL_ONES_F)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_EQ_OS, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_LT_OQ, ALL_ONES_F)
+CMP_SS_CASE(+3.0f, +2.0f, _CMP_LT_OQ, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_LE_OQ, ALL_ONES_F)
+CMP_SS_CASE(+3.0f, +2.0f, _CMP_LE_OQ, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_UNORD_S, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_NEQ_US, ALL_ONES_F)
+CMP_SS_CASE(+2.0f, +2.0f, _CMP_NEQ_US, +0.0f)
+CMP_SS_CASE(+3.0f, +2.0f, _CMP_NLT_UQ, ALL_ONES_F)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_NLT_UQ, +0.0f)
+CMP_SS_CASE(+3.0f, +2.0f, _CMP_NLE_UQ, ALL_ONES_F)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_NLE_UQ, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_ORD_S, ALL_ONES_F)
+CMP_SS_CASE(+2.0f, +2.0f, _CMP_EQ_US, ALL_ONES_F)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_EQ_US, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_NGE_UQ, ALL_ONES_F)
+CMP_SS_CASE(+3.0f, +2.0f, _CMP_NGE_UQ, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_NGT_UQ, ALL_ONES_F)
+CMP_SS_CASE(+3.0f, +2.0f, _CMP_NGT_UQ, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_FALSE_OS, +0.0f)
+CMP_SS_CASE(+1.0f, +1.0f, _CMP_FALSE_OS, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_NEQ_OS, ALL_ONES_F)
+CMP_SS_CASE(+2.0f, +2.0f, _CMP_NEQ_OS, +0.0f)
+CMP_SS_CASE(+3.0f, +2.0f, _CMP_GE_OQ, ALL_ONES_F)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_GE_OQ, +0.0f)
+CMP_SS_CASE(+3.0f, +2.0f, _CMP_GT_OQ, ALL_ONES_F)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_GT_OQ, +0.0f)
+CMP_SS_CASE(+1.0f, +2.0f, _CMP_TRUE_US, ALL_ONES_F)
+CMP_SS_CASE(+1.0f, +1.0f, _CMP_TRUE_US, ALL_ONES_F)
+
+#undef CMP_SS_CASE
 
 __m128 test_mm_cmpeq_ps(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpeq_ps
@@ -109,13 +227,11 @@ __m128 test_mm_cmpeq_ps(__m128 __a, __m128 __b) {
   return _mm_cmpeq_ps(__a, __b);
 }
 // Test all elements equal - returns 0xFFFFFFFF per element (constexpr executable)
-#ifdef __cplusplus
 TEST_CONSTEXPR(match_m128(_mm_cmpeq_ps((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +2.0f, +3.0f, +4.0f}), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
 TEST_CONSTEXPR(match_m128(_mm_cmpeq_ps((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+5.0f, +6.0f, +7.0f, +8.0f}), +0.0f, +0.0f, +0.0f, +0.0f));
 TEST_CONSTEXPR(match_m128(_mm_cmpeq_ps((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){-1.0f, -2.0f, -3.0f, -4.0f}), +0.0f, +0.0f, +0.0f, +0.0f));
 TEST_CONSTEXPR(match_m128(_mm_cmpeq_ps((__m128){-1.0f, -2.0f, -3.0f, -4.0f}, (__m128){+1.0f, +2.0f, +3.0f, +4.0f}), +0.0f, +0.0f, +0.0f, +0.0f));
 TEST_CONSTEXPR(match_m128(_mm_cmpeq_ps((__m128){__builtin_nanf(""), +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +2.0f, +3.0f, +4.0f}), +0.0f, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
-#endif
 
 __m128 test_mm_cmpeq_ss(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpeq_ss
@@ -123,13 +239,11 @@ __m128 test_mm_cmpeq_ss(__m128 __a, __m128 __b) {
   return _mm_cmpeq_ss(__a, __b);
 }
 // Test scalar comparisons - only affects lowest element
-#ifdef __cplusplus
 TEST_CONSTEXPR(match_m128(_mm_cmpeq_ss((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +5.0f, +6.0f, +7.0f}), ALL_ONES_F, +2.0f, +3.0f, +4.0f));
 TEST_CONSTEXPR(match_m128(_mm_cmpeq_ss((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+5.0f, +6.0f, +7.0f, +8.0f}), +0.0f, +2.0f, +3.0f, +4.0f));
 TEST_CONSTEXPR(match_m128(_mm_cmpeq_ss((__m128){-1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +5.0f, +6.0f, +7.0f}), +0.0f, +2.0f, +3.0f, +4.0f));
 TEST_CONSTEXPR(match_m128(_mm_cmpeq_ss((__m128){-1.0f, -2.0f, -3.0f, -4.0f}, (__m128){-1.0f, +5.0f, +6.0f, +7.0f}), ALL_ONES_F, -2.0f, -3.0f, -4.0f));
 TEST_CONSTEXPR(match_m128(_mm_cmpeq_ss((__m128){__builtin_nanf(""), +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +9.0f, +8.0f, +7.0f}), +0.0f, +2.0f, +3.0f, +4.0f));
-#endif
 
 __m128 test_mm_cmpge_ps(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpge_ps
@@ -238,6 +352,7 @@ __m128 test_mm_cmpneq_ps(__m128 __a, __m128 __b) {
   return _mm_cmpneq_ps(__a, __b);
 }
 TEST_CONSTEXPR(match_m128(_mm_cmpneq_ps((__m128){+1.0f, +2.0f, +3.0f, __builtin_nanf("")}, (__m128){+1.0f, +9.0f, +3.0f, +4.0f}), +0.0f, ALL_ONES_F, +0.0f, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmpneq_ps((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +9.0f, +3.0f, +8.0f}), +0.0f, ALL_ONES_F, +0.0f, ALL_ONES_F));
 
 __m128 test_mm_cmpneq_ss(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpneq_ss
@@ -245,6 +360,7 @@ __m128 test_mm_cmpneq_ss(__m128 __a, __m128 __b) {
   return _mm_cmpneq_ss(__a, __b);
 }
 TEST_CONSTEXPR(match_m128(_mm_cmpneq_ss((__m128){__builtin_nanf(""), +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +8.0f, +7.0f, +6.0f}), ALL_ONES_F, +2.0f, +3.0f, +4.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmpneq_ss((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +8.0f, +7.0f, +6.0f}), +0.0f, +2.0f, +3.0f, +4.0f));
 
 __m128 test_mm_cmpnge_ps(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpnge_ps
@@ -255,6 +371,7 @@ __m128 test_mm_cmpnge_ps(__m128 __a, __m128 __b) {
   return _mm_cmpnge_ps(__a, __b);
 }
 TEST_CONSTEXPR(match_m128(_mm_cmpnge_ps((__m128){+1.0f, +4.0f, __builtin_nanf(""), +5.0f}, (__m128){+1.0f, +3.0f, +2.0f, +7.0f}), +0.0f, +0.0f, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmpnge_ps((__m128){+1.0f, +4.0f, +6.0f, +5.0f}, (__m128){+1.0f, +3.0f, +2.0f, +7.0f}), +0.0f, +0.0f, +0.0f, ALL_ONES_F));
 
 __m128 test_mm_cmpnge_ss(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpnge_ss
@@ -263,6 +380,7 @@ __m128 test_mm_cmpnge_ss(__m128 __a, __m128 __b) {
   return _mm_cmpnge_ss(__a, __b);
 }
 TEST_CONSTEXPR(match_m128(_mm_cmpnge_ss((__m128){+4.0f, +2.0f, +3.0f, +4.0f}, (__m128){+3.0f, +9.0f, +8.0f, +7.0f}), +0.0f, +2.0f, +3.0f, +4.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmpnge_ss((__m128){+2.0f, +2.0f, +3.0f, +4.0f}, (__m128){+3.0f, +9.0f, +8.0f, +7.0f}), ALL_ONES_F, +2.0f, +3.0f, +4.0f));
 
 __m128 test_mm_cmpngt_ps(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpngt_ps
@@ -273,6 +391,7 @@ __m128 test_mm_cmpngt_ps(__m128 __a, __m128 __b) {
   return _mm_cmpngt_ps(__a, __b);
 }
 TEST_CONSTEXPR(match_m128(_mm_cmpngt_ps((__m128){+1.0f, +4.0f, __builtin_nanf(""), +7.0f}, (__m128){+1.0f, +5.0f, +2.0f, +7.0f}), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmpngt_ps((__m128){+1.0f, +4.0f, +6.0f, +7.0f}, (__m128){+1.0f, +5.0f, +2.0f, +7.0f}), ALL_ONES_F, ALL_ONES_F, +0.0f, ALL_ONES_F));
 
 __m128 test_mm_cmpngt_ss(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpngt_ss
@@ -281,6 +400,7 @@ __m128 test_mm_cmpngt_ss(__m128 __a, __m128 __b) {
   return _mm_cmpngt_ss(__a, __b);
 }
 TEST_CONSTEXPR(match_m128(_mm_cmpngt_ss((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +9.0f, +8.0f, +7.0f}), ALL_ONES_F, +2.0f, +3.0f, +4.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmpngt_ss((__m128){+4.0f, +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +9.0f, +8.0f, +7.0f}), +0.0f, +2.0f, +3.0f, +4.0f));
 
 __m128 test_mm_cmpnle_ps(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpnle_ps
@@ -291,6 +411,7 @@ __m128 test_mm_cmpnle_ps(__m128 __a, __m128 __b) {
   return _mm_cmpnle_ps(__a, __b);
 }
 TEST_CONSTEXPR(match_m128(_mm_cmpnle_ps((__m128){+1.0f, +4.0f, __builtin_nanf(""), +5.0f}, (__m128){+1.0f, +3.0f, +2.0f, +7.0f}), +0.0f, ALL_ONES_F, ALL_ONES_F, +0.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmpnle_ps((__m128){+1.0f, +4.0f, +6.0f, +5.0f}, (__m128){+1.0f, +3.0f, +2.0f, +7.0f}), +0.0f, ALL_ONES_F, ALL_ONES_F, +0.0f));
 
 __m128 test_mm_cmpnle_ss(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpnle_ss
@@ -298,6 +419,7 @@ __m128 test_mm_cmpnle_ss(__m128 __a, __m128 __b) {
   return _mm_cmpnle_ss(__a, __b);
 }
 TEST_CONSTEXPR(match_m128(_mm_cmpnle_ss((__m128){+2.0f, +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +9.0f, +8.0f, +7.0f}), ALL_ONES_F, +2.0f, +3.0f, +4.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmpnle_ss((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+2.0f, +9.0f, +8.0f, +7.0f}), +0.0f, +2.0f, +3.0f, +4.0f));
 
 __m128 test_mm_cmpnlt_ps(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpnlt_ps
@@ -308,6 +430,7 @@ __m128 test_mm_cmpnlt_ps(__m128 __a, __m128 __b) {
   return _mm_cmpnlt_ps(__a, __b);
 }
 TEST_CONSTEXPR(match_m128(_mm_cmpnlt_ps((__m128){+1.0f, +4.0f, __builtin_nanf(""), +7.0f}, (__m128){+1.0f, +5.0f, +2.0f, +7.0f}), ALL_ONES_F, +0.0f, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmpnlt_ps((__m128){+1.0f, +4.0f, +6.0f, +7.0f}, (__m128){+1.0f, +5.0f, +2.0f, +7.0f}), ALL_ONES_F, +0.0f, ALL_ONES_F, ALL_ONES_F));
 
 __m128 test_mm_cmpnlt_ss(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpnlt_ss
@@ -315,6 +438,7 @@ __m128 test_mm_cmpnlt_ss(__m128 __a, __m128 __b) {
   return _mm_cmpnlt_ss(__a, __b);
 }
 TEST_CONSTEXPR(match_m128(_mm_cmpnlt_ss((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+1.0f, +9.0f, +8.0f, +7.0f}), ALL_ONES_F, +2.0f, +3.0f, +4.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmpnlt_ss((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+2.0f, +9.0f, +8.0f, +7.0f}), +0.0f, +2.0f, +3.0f, +4.0f));
 
 __m128 test_mm_cmpord_ps(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpord_ps
@@ -325,6 +449,7 @@ __m128 test_mm_cmpord_ps(__m128 __a, __m128 __b) {
   return _mm_cmpord_ps(__a, __b);
 }
 TEST_CONSTEXPR(match_m128(_mm_cmpord_ps((__m128){+1.0f, __builtin_nanf(""), +3.0f, +4.0f}, (__m128){+5.0f, +6.0f, +7.0f, +8.0f}), ALL_ONES_F, +0.0f, ALL_ONES_F, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmpord_ps((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+5.0f, +6.0f, +7.0f, +8.0f}), ALL_ONES_F, ALL_ONES_F, ALL_ONES_F, ALL_ONES_F));
 
 __m128 test_mm_cmpord_ss(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpord_ss
@@ -342,6 +467,7 @@ __m128 test_mm_cmpunord_ps(__m128 __a, __m128 __b) {
   return _mm_cmpunord_ps(__a, __b);
 }
 TEST_CONSTEXPR(match_m128(_mm_cmpunord_ps((__m128){+1.0f, __builtin_nanf(""), +3.0f, __builtin_nanf("")}, (__m128){+5.0f, +6.0f, +7.0f, +8.0f}), +0.0f, ALL_ONES_F, +0.0f, ALL_ONES_F));
+TEST_CONSTEXPR(match_m128(_mm_cmpunord_ps((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+5.0f, +6.0f, +7.0f, +8.0f}), +0.0f, +0.0f, +0.0f, +0.0f));
 
 __m128 test_mm_cmpunord_ss(__m128 __a, __m128 __b) {
   // CHECK-LABEL: test_mm_cmpunord_ss
@@ -349,6 +475,7 @@ __m128 test_mm_cmpunord_ss(__m128 __a, __m128 __b) {
   return _mm_cmpunord_ss(__a, __b);
 }
 TEST_CONSTEXPR(match_m128(_mm_cmpunord_ss((__m128){__builtin_nanf(""), +2.0f, +3.0f, +4.0f}, (__m128){+5.0f, +9.0f, +8.0f, +7.0f}), ALL_ONES_F, +2.0f, +3.0f, +4.0f));
+TEST_CONSTEXPR(match_m128(_mm_cmpunord_ss((__m128){+1.0f, +2.0f, +3.0f, +4.0f}, (__m128){+5.0f, +9.0f, +8.0f, +7.0f}), +0.0f, +2.0f, +3.0f, +4.0f));
 
 int test_mm_comieq_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comieq_ss
