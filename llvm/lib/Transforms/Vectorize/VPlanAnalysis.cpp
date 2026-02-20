@@ -129,6 +129,9 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
            inferScalarType(R->getOperand(1))->isIntegerTy(1) &&
            "LogicalAnd/Or operands should be bool");
     return IntegerType::get(Ctx, 1);
+  case VPInstruction::MaskedCond:
+    assert(inferScalarType(R->getOperand(0))->isIntegerTy(1));
+    return IntegerType::get(Ctx, 1);
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
