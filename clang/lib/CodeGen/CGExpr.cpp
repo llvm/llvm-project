@@ -1192,7 +1192,18 @@ static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
 
 llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
-  const RecordDecl *RD = CountDecl->getParent()->getOuterLexicalRecordContext();
+  // Find the record containing the count field. Walk up through anonymous
+  // structs/unions (which are transparent in C) but stop at named records.
+  // Using getOuterLexicalRecordContext() here would be wrong because it walks
+  // past named nested structs to the outermost record, causing a crash when a
+  // struct with a counted_by FAM is defined nested inside another struct.
+  const RecordDecl *RD = CountDecl->getParent();
+  while (RD->isAnonymousStructOrUnion()) {
+    const auto *Parent = dyn_cast<RecordDecl>(RD->getLexicalParent());
+    if (!Parent)
+      break;
+    RD = Parent;
+  }
 
   // Find the base struct expr (i.e. p in p->a.b.c.d).
   const Expr *StructBase = StructAccessBase(RD).Visit(Base);
