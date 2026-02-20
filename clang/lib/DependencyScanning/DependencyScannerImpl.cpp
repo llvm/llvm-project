@@ -21,6 +21,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 
+#include <mutex>
 #include <thread>
 
 using namespace clang;
@@ -554,11 +555,42 @@ dependencies::initializeScanInstanceDependencyCollector(
   return MDC;
 }
 
+/// Manages (and terminates) the asynchronous compilation of modules.
+class AsyncModuleCompiles {
+  std::mutex Mutex;
+  bool Stop = false;
+  // FIXME: Have the service own a thread pool and use that instead.
+  std::vector<std::thread> Compiles;
+
+public:
+  /// Registers the module compilation, unless this instance is about to be
+  /// destroyed.
+  void add(llvm::unique_function<void()> Compile) {
+    std::lock_guard<std::mutex> Lock(Mutex);
+    if (!Stop)
+      Compiles.emplace_back(std::move(Compile));
+  }
+
+  ~AsyncModuleCompiles() {
+    {
+      // Prevent registration of further module compiles.
+      std::lock_guard<std::mutex> Lock(Mutex);
+      Stop = true;
+    }
+
+    // Wait for outstanding module compiles to finish.
+    for (std::thread &Compile : Compiles)
+      Compile.join();
+  }
+};
+
 struct SingleModuleWithAsyncModuleCompiles : PreprocessOnlyAction {
   DependencyScanningService &Service;
+  AsyncModuleCompiles &Compiles;
 
-  SingleModuleWithAsyncModuleCompiles(DependencyScanningService &Service)
-      : Service(Service) {}
+  SingleModuleWithAsyncModuleCompiles(DependencyScanningService &Service,
+                                      AsyncModuleCompiles &Compiles)
+      : Service(Service), Compiles(Compiles) {}
 
   bool BeginSourceFileAction(CompilerInstance &CI) override;
 };
@@ -568,9 +600,11 @@ struct SingleModuleWithAsyncModuleCompiles : PreprocessOnlyAction {
 struct AsyncModuleCompile : PPCallbacks {
   CompilerInstance &CI;
   DependencyScanningService &Service;
+  AsyncModuleCompiles &Compiles;
 
-  AsyncModuleCompile(CompilerInstance &CI, DependencyScanningService &Service)
-      : CI(CI), Service(Service) {}
+  AsyncModuleCompile(CompilerInstance &CI, DependencyScanningService &Service,
+                     AsyncModuleCompiles &Compiles)
+      : CI(CI), Service(Service), Compiles(Compiles) {}
 
   void moduleLoadSkipped(Module *M) override {
     M = M->getTopLevelModule();
@@ -620,10 +654,9 @@ struct AsyncModuleCompile : PPCallbacks {
     if (!LockErr && !Owned)
       return;
     // We should build the PCM.
-    // FIXME: Pass the correct BaseFS to the worker FS.
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
         llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
-            Service.getSharedCache(), llvm::vfs::getRealFileSystem());
+            Service.getSharedCache(), Service.getOpts().MakeVFS());
     VFS = createVFSFromCompilerInvocation(CI.getInvocation(),
                                           CI.getDiagnostics(), std::move(VFS));
     auto DC = std::make_unique<DiagnosticConsumer>();
@@ -635,25 +668,23 @@ struct AsyncModuleCompile : PPCallbacks {
     auto ModCI2 = CI.cloneForModuleCompile(SourceLocation(), M, ModuleFileName,
                                            CloneConfig);
 
-    // FIXME: Have the service own a thread pool and use that instead.
-    // FIXME: This lock belongs to a module cache that might not outlive the
-    // thread. (This should work for now, because the in-process lock only
-    // refers to an object managed by the service, which should outlive this
-    // thread.)
-    std::thread([Lock = std::move(Lock), ModCI1 = std::move(ModCI1),
-                 ModCI2 = std::move(ModCI2), DC = std::move(DC),
-                 Service = &Service] {
+    // Note: This lock belongs to a module cache that might not outlive the
+    // thread. This works, because the in-process lock only refers to an object
+    // managed by the service, which does outlive the thread.
+    Compiles.add([Lock = std::move(Lock), ModCI1 = std::move(ModCI1),
+                  ModCI2 = std::move(ModCI2), DC = std::move(DC),
+                  Service = &Service, Compiles = &Compiles] {
       llvm::CrashRecoveryContext CRC;
       (void)CRC.RunSafely([&] {
         // Quickly discovers and compiles modules for the real scan below.
-        SingleModuleWithAsyncModuleCompiles Action1(*Service);
+        SingleModuleWithAsyncModuleCompiles Action1(*Service, *Compiles);
         (void)ModCI1->ExecuteAction(Action1);
         // The real scan below.
         ModCI2->getPreprocessorOpts().SingleModuleParseMode = false;
         GenerateModuleFromModuleMapAction Action2;
         (void)ModCI2->ExecuteAction(Action2);
       });
-    }).detach();
+    });
   }
 };
 
@@ -661,14 +692,16 @@ struct AsyncModuleCompile : PPCallbacks {
 /// modules asynchronously without blocking or importing them.
 struct SingleTUWithAsyncModuleCompiles : PreprocessOnlyAction {
   DependencyScanningService &Service;
+  AsyncModuleCompiles &Compiles;
 
-  SingleTUWithAsyncModuleCompiles(DependencyScanningService &Service)
-      : Service(Service) {}
+  SingleTUWithAsyncModuleCompiles(DependencyScanningService &Service,
+                                  AsyncModuleCompiles &Compiles)
+      : Service(Service), Compiles(Compiles) {}
 
   bool BeginSourceFileAction(CompilerInstance &CI) override {
     CI.getInvocation().getPreprocessorOpts().SingleModuleParseMode = true;
     CI.getPreprocessor().addPPCallbacks(
-        std::make_unique<AsyncModuleCompile>(CI, Service));
+        std::make_unique<AsyncModuleCompile>(CI, Service, Compiles));
     return true;
   }
 };
@@ -677,7 +710,7 @@ bool SingleModuleWithAsyncModuleCompiles::BeginSourceFileAction(
     CompilerInstance &CI) {
   CI.getInvocation().getPreprocessorOpts().SingleModuleParseMode = true;
   CI.getPreprocessor().addPPCallbacks(
-      std::make_unique<AsyncModuleCompile>(CI, Service));
+      std::make_unique<AsyncModuleCompile>(CI, Service, Compiles));
   return true;
 }
 
@@ -711,6 +744,7 @@ bool DependencyScanningAction::runInvocation(
       createScanCompilerInvocation(*OriginalInvocation, Service);
 
   // Quickly discovers and compiles modules for the real scan below.
+  std::optional<AsyncModuleCompiles> AsyncCompiles;
   if (Service.getOpts().AsyncScanModules) {
     auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
     auto ScanInstanceStorage = std::make_unique<CompilerInstance>(
@@ -733,7 +767,8 @@ bool DependencyScanningAction::runInvocation(
     if (ScanInstance.getFrontendOpts().ProgramAction == frontend::GeneratePCH)
       ScanInstance.getLangOpts().CompilingPCH = true;
 
-    SingleTUWithAsyncModuleCompiles Action(Service);
+    AsyncCompiles.emplace();
+    SingleTUWithAsyncModuleCompiles Action(Service, *AsyncCompiles);
     (void)ScanInstance.ExecuteAction(Action);
   }
 
@@ -759,17 +794,11 @@ bool DependencyScanningAction::runInvocation(
       Service, *OriginalInvocation, Controller, *MaybePrebuiltModulesASTMap,
       StableDirs);
 
-  std::unique_ptr<FrontendAction> Action;
-
-  if (Service.getOpts().Format == ScanningOutputFormat::P1689)
-    Action = std::make_unique<PreprocessOnlyAction>();
-  else
-    Action = std::make_unique<ReadPCHAndPreprocessAction>();
-
   if (ScanInstance.getDiagnostics().hasErrorOccurred())
     return false;
 
-  const bool Result = ScanInstance.ExecuteAction(*Action);
+  ReadPCHAndPreprocessAction Action;
+  const bool Result = ScanInstance.ExecuteAction(Action);
 
   // ExecuteAction is responsible for calling finish.
   DiagConsumerFinished = true;

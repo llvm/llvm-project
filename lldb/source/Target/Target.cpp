@@ -5380,13 +5380,13 @@ llvm::Error
 EvaluateExpressionOptions::SetBooleanLanguageOption(llvm::StringRef option_name,
                                                     bool value) {
   if (option_name.empty())
-    return llvm::createStringError("Can't set an option with an empty name.");
+    return llvm::createStringError("can't set an option with an empty name");
 
   if (StructuredData::ObjectSP existing_sp =
           GetLanguageOptions().GetValueForKey(option_name);
       existing_sp && existing_sp->GetType() != eStructuredDataTypeBoolean)
-    return llvm::createStringErrorV("Trying to override existing option '{0}' "
-                                    "of type '{1}' with a boolean value.",
+    return llvm::createStringErrorV("trying to override existing option '{0}' "
+                                    "of type '{1}' with a boolean value",
                                     option_name, existing_sp->GetType());
 
   GetLanguageOptions().AddBooleanItem(option_name, value);
@@ -5399,12 +5399,11 @@ llvm::Expected<bool> EvaluateExpressionOptions::GetBooleanLanguageOption(
   const StructuredData::Dictionary &opts = GetLanguageOptions();
 
   if (!opts.HasKey(option_name))
-    return llvm::createStringErrorV("Option '{0}' does not exist.",
-                                    option_name);
+    return llvm::createStringErrorV("option '{0}' does not exist", option_name);
 
   bool result;
   if (!opts.GetValueForKeyAsBoolean(option_name, result))
-    return llvm::createStringErrorV("Failed to get option '{0}' as boolean.",
+    return llvm::createStringErrorV("failed to get option '{0}' as boolean",
                                     option_name);
 
   return result;

@@ -2,6 +2,9 @@ import subprocess
 import sys
 import os
 import logging
+import zipfile
+import io
+import urllib.request
 
 import github
 
@@ -84,7 +87,9 @@ def get_branches_from_open_prs(github_token) -> list[str]:
 
 
 def get_user_branches_to_remove(
-    user_branches: list[str], user_branches_from_prs: list[str]
+    user_branches: list[str],
+    user_branches_from_prs: list[str],
+    previous_run_branches: list[str],
 ) -> list[str]:
     user_branches_to_remove = set(user_branches)
     for pr_user_branch in set(user_branches_from_prs):
@@ -96,6 +101,9 @@ def get_user_branches_to_remove(
             )
             continue
         user_branches_to_remove.remove(pr_user_branch)
+    for branch in list(user_branches_to_remove):
+        if branch not in previous_run_branches:
+            user_branches_to_remove.remove(branch)
     return list(user_branches_to_remove)
 
 
@@ -151,6 +159,33 @@ def delete_branches(branches_to_remove: list[str]):
         print(f"Deleted branch {branch}")
 
 
+def get_branches_found_in_previous_run(github_token: str) -> list[str]:
+    gh = github.Github(auth=github.Auth.Token(github_token))
+    repo = gh.get_repo("llvm/llvm-project")
+    workflow_run = None
+    for workflow_run in iter(
+        repo.get_workflow("prune-branches.yml").get_runs(branch="main")
+    ):
+        if workflow_run.status == "completed":
+            break
+    assert workflow_run
+    workflow_artifact = None
+    for workflow_artifact in iter(workflow_run.get_artifacts()):
+        if workflow_artifact.name == "BranchList":
+            break
+    assert workflow_artifact
+    status, headers, response = workflow_artifact._requester.requestJson(
+        "GET", workflow_artifact.archive_download_url
+    )
+    # Github will always send a redirect to where the file actuall lives.
+    assert status == 302
+    with urllib.request.urlopen(headers["location"]) as response:
+        raw_bytes = response.read()
+    with zipfile.ZipFile(io.BytesIO(raw_bytes)) as zip_file:
+        branch_names = zip_file.read("branches.txt").decode("utf-8").split("\n")[:-1]
+        return branch_names
+
+
 def main(github_token):
     if len(sys.argv) != 2:
         print(
@@ -158,6 +193,10 @@ def main(github_token):
         )
         sys.exit(1)
 
+    previous_run_branches = get_branches_found_in_previous_run(github_token)
+    print(
+        f"{len(previous_run_branches)} branches existed the last time the workflow ran."
+    )
     user_branches = get_branches()
     output_dir = sys.argv[1]
     with open(os.path.join(output_dir, "branches.txt"), "w") as branches_file:
@@ -166,7 +205,7 @@ def main(github_token):
     print(f"Found {len(user_branches)} user branches in the repository")
     print(f"Found {len(user_branches_from_prs)} user branches associated with PRs")
     user_branches_to_remove = get_user_branches_to_remove(
-        user_branches, user_branches_from_prs
+        user_branches, user_branches_from_prs, previous_run_branches
     )
     print(f"Deleting {len(user_branches_to_remove)} user branches.")
     generate_patches_for_all_branches(

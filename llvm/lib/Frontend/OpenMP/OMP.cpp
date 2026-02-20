@@ -83,7 +83,7 @@ collectPrivatizingConstructs(llvm::SmallSet<Directive, 16> &Constructs,
   llvm::SmallSet<Clause, 16> Privatizing;
   for (auto C :
        llvm::enum_seq_inclusive<Clause>(Clause::First_, Clause::Last_)) {
-    if (isPrivatizingClause(C))
+    if (isPrivatizingClause(C, Version))
       Privatizing.insert(C);
   }
 
