@@ -570,9 +570,7 @@ public:
         return ConcreteOp::getInherentAttr(concreteOp->getContext(),
                                            concreteOp.getProperties(), name);
       }
-      // If the op does not have support for properties, we dispatch back to the
-      // dictionnary of discardable attributes for now.
-      return cast<ConcreteOp>(op)->getDiscardableAttr(name);
+      return std::nullopt;
     }
     void setInherentAttr(Operation *op, StringAttr name,
                          Attribute value) final {
@@ -581,9 +579,8 @@ public:
         return ConcreteOp::setInherentAttr(concreteOp.getProperties(), name,
                                            value);
       }
-      // If the op does not have support for properties, we dispatch back to the
-      // dictionnary of discardable attributes for now.
-      return cast<ConcreteOp>(op)->setDiscardableAttr(name, value);
+      llvm_unreachable(
+          "Can't call setInherentAttr on operation with empty properties");
     }
     void populateInherentAttrs(Operation *op, NamedAttrList &attrs) final {
       if constexpr (hasProperties) {
@@ -639,7 +636,7 @@ public:
         auto p = properties.as<Properties *>();
         return ConcreteOp::setPropertiesFromAttr(*p, attr, emitError);
       }
-      emitError() << "this operation does not support properties";
+      emitError() << "this operation has empty properties";
       return failure();
     }
     Attribute getPropertiesAsAttr(Operation *op) final {
@@ -651,11 +648,9 @@ public:
       return {};
     }
     bool compareProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {
-      if constexpr (hasProperties) {
+      if constexpr (hasProperties)
         return *lhs.as<Properties *>() == *rhs.as<Properties *>();
-      } else {
-        return true;
-      }
+      return true;
     }
     void copyProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {
       *lhs.as<Properties *>() = *rhs.as<Properties *>();
@@ -971,6 +966,12 @@ private:
   llvm::function_ref<void(OpaqueProperties)> propertiesDeleter;
   llvm::function_ref<void(OpaqueProperties, const OpaqueProperties)>
       propertiesSetter;
+  /// Number of nested region levels this operation exits as a RegionTerminator.
+  /// 0 means it is not a RegionTerminator. Values > 0 cause the Operation to
+  /// store this integer in its trailing OpProperties storage and set the
+  /// isBreakingControlFlowFlag bit. See
+  /// Operation::getNumBreakingControlRegions.
+  int numBreakingControlRegions = 0;
   friend class Operation;
 
 public:
@@ -1095,6 +1096,14 @@ public:
     successors.push_back(successor);
   }
   void addSuccessors(BlockRange newSuccessors);
+
+  /// Set the num-breaking-regions count for this operation state, marking the
+  /// resulting Operation as a RegionTerminator that exits `n` region levels.
+  /// Must be called from an op builder before the Operation is created; the
+  /// value is forwarded to Operation::create as numBreakingControlRegions.
+  void setNumBreakingControlRegions(int numBreakingControlRegions) {
+    this->numBreakingControlRegions = numBreakingControlRegions;
+  }
 
   /// Create a region that should be attached to the operation.  These regions
   /// can be filled in immediately without waiting for Operation to be

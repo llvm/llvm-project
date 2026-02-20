@@ -286,6 +286,13 @@ static LogicalResult inlineRegionImpl(
                    [&](BlockArgument arg) { return !mapper.contains(arg); }))
     return failure();
 
+  // Check that the region has no nested successors, e.g. a nested return inside
+  // a function.
+  if (auto opWithBreakingControlPredecessor =
+          dyn_cast<HasBreakingControlFlowOpInterface>(src->getParentOp()))
+    if (opWithBreakingControlPredecessor.hasNestedPredecessors())
+      return failure();
+
   // Check that the operations within the source region are valid to inline.
   Region *insertRegion = inlineBlock->getParent();
   if (!interface.isLegalToInline(insertRegion, src, shouldCloneInlinedRegion,

@@ -111,7 +111,8 @@ private:
     auto *newOp = Operation::create(
         op->getLoc(), op->getName(), resultTypes, op->getOperands(),
         op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
-        op->getSuccessors(), op->getNumRegions());
+        op->getSuccessors(), op->getNumRegions(),
+        op->getNumBreakingControlRegions());
 
     // Clone regions into new op.
     IRMapping mapping;

@@ -72,6 +72,7 @@ public:
     kw_struct,
     kw_successors,
     kw_type,
+    kw_num_breaking_regions,
     keyword_end,
 
     // String valued tokens.
@@ -305,6 +306,7 @@ public:
     Results,
     Successors,
     Type,
+    NumBreakingRegions,
     Params,
     Struct
   };

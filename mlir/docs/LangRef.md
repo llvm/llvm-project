@@ -296,7 +296,9 @@ generic-operation     ::= string-literal `(` value-use-list? `)`  successor-list
 custom-operation      ::= bare-id custom-operation-format
 op-result-list        ::= op-result (`,` op-result)* `=`
 op-result             ::= value-id (`:` integer-literal)?
-successor-list        ::= `[` successor (`,` successor)* `]`
+successor-list        ::= `[` successor-list-inner `]`
+successor-list-inner  ::= successor (`,` successor)* | num-breaking-regions
+num-breaking-regions  ::= integer-literal
 successor             ::= caret-id (`:` block-arg-list)?
 dictionary-properties ::= `<` dictionary-attribute `>`
 region-list           ::= `(` region (`,` region)* `)`
@@ -504,10 +506,20 @@ In MLIR, control flow semantics of a region is indicated by
 regions support semantics where operations in a region 'execute sequentially'.
 Before an operation executes, its operands have well-defined values. After an
 operation executes, the operands have the same values and results also have
-well-defined values. After an operation executes, the next operation in the
-block executes until the operation is the terminator operation at the end of a
-block, in which case some other operation will execute. The determination of the
-next instruction to execute is the 'passing of control flow'.
+well-defined values.
+
+Usually, after an operation executes, the next operation in the block executes
+until the operation is the terminator operation at the end of a block, in which
+case the control will be transfered to another block or one of the parent
+operations. The determination of the next instruction to execute is the 'passing
+of control flow'. The control-flow can be interrupted by an operation if it
+defines the `PropagateControlFlowBreak` trait. Such an operation does not handle
+the break itself; it transparently propagates it outward to an ancestor
+operation that implements `HasBreakingControlFlowOpInterface`. The actual break
+is initiated by a nested [Region Terminator](#region-terminator). Every
+operation between the `RegionTerminator` and the receiving
+`HasBreakingControlFlowOpInterface` operation must define
+`PropagateControlFlowBreak`.
 
 In general, when control flow is passed to an operation, MLIR does not restrict
 when control flow enters or exits the regions contained in that operation.
@@ -515,22 +527,23 @@ However, when control flow enters a region, it always begins in the first block
 of the region, called the *entry* block. Terminator operations ending each block
 represent control flow by explicitly specifying the successor blocks of the
 block. Control flow can only pass to one of the specified successor blocks as in
-a `branch` operation, or back to the containing operation as in a `return`
-operation. Terminator operations without successors can only pass control back
-to the containing operation. Within these restrictions, the particular semantics
-of terminator operations is determined by the specific dialect operations
-involved. Blocks (other than the entry block) that are not listed as a successor
-of a terminator operation are defined to be unreachable and can be removed
-without affecting the semantics of the containing operation.
+a `branch` operation, or back to one of the enclosing parent operations, as in a
+`return` operation. Terminator operations without block successors can only pass
+control back to one of the enclosing parent operations, in this case an integer
+defines the number of parent region to break through. Within these restrictions,
+the particular semantics of terminator operations is determined by the specific
+dialect operations involved. Blocks (other than the entry block) that are not
+listed as a successor of a terminator operation are defined to be unreachable
+and can be removed without affecting the semantics of the containing operation.
 
 Although control flow always enters a region through the entry block, control
 flow may exit a region through any block with an appropriate terminator. The
-standard dialect leverages this capability to define operations with
+LLVM dialect for example leverages this capability to define operations with
 Single-Entry-Multiple-Exit (SEME) regions, possibly flowing through different
 blocks in the region and exiting through any block with a `return` operation.
-This behavior is similar to that of a function body in most programming
-languages. In addition, control flow may also not reach the end of a block or
-region, for example if a function call does not return.
+This behavior can model that of a function body in most programming languages.
+In addition, control flow may also not reach the end of a block or region, for
+example if a function call does not return.
 
 Example:
 
@@ -555,6 +568,89 @@ func.func @accelerator_compute(i64, i1) -> i64 { // An SSACFG region
 
 ^bb3:
   ...
+}
+```
+
+#### Region Terminator
+
+A `RegionTerminator` is a specialization of a block terminator (the `Terminator`
+trait) that transfers the control back to a parent operation. It can exit
+multiple nested regions in a single step, bypassing the normal
+`RegionBranchOpInterface` exit path for every intermediate level. In the generic
+operation format, the exit count appears in the successor-list brackets as a
+plain integer rather than a block label (see `num-breaking-regions` in the
+grammar above). Custom assembly formats may surface this as a literal integer
+argument (e.g. `scf.break 2`).
+
+`num-breaking-regions = N` means the operation exits **N region levels** in
+total, counting its own immediately enclosing region as 1:
+
+- `N = 1`: normal region exit — control is returned to the immediate parent
+  operation (e.g. `scf.yield` in `scf.if`, or `scf.break 1` in `scf.loop`).
+- `N = 2`: exits the current region and the immediate ancestor region; the
+  parent op must define `PropagateControlFlowBreak`.
+- `N = K`: exits K region levels; the N=0...K−1 intermediate parent operations
+  must all define `PropagateControlFlowBreak`.
+
+If the outermost operation *receives* a break from a `RegionTerminator` that
+isn't in a immediate region (N==1 above), then it must implement
+`HasBreakingControlFlowOpInterface`. It is distinct from intermediate ops that
+merely propagate the break (`PropagateControlFlowBreak`). For example, a loop
+operation nested inside another loop operation body may carries both traits
+simultaneously: it handles breaks targeting itself, and propagates breaks that
+target an outer loop through it.
+
+Region terminators may carry values, which are propagated to the target
+operation. For example, when breaking out of a loop that produces results, the
+terminator supplies those result values directly.
+
+Examples:
+
+```mlir
+// scf.yield is the standard region terminator (num-breaking-regions = 1).
+// It exits only its own immediately enclosing region.
+scf.if %cond {
+  scf.yield  // returns control to the immediate parent of scf.if
+}
+```
+
+```mlir
+// Trait legend:
+//   [H]    = HasBreakingControlFlowOpInterface (receives/catches the break)
+//   [P]    = PropagateControlFlowBreak (passes the break upward unchanged)
+//   [H][P] = both: handles breaks targeting it, and propagates breaks that
+//            target an outer loop through it
+scf.loop {                           // [H]
+  scf.loop {                         // [H][P]
+    scf.if %cond1 {                  // [P]
+      // Exits if-region (1) + inner-loop-region (2) → breaks inner loop.
+      scf.break 2
+    }
+    scf.if %cond2 {                  // [P]
+      // Exits if-region (1) + inner-loop-region (2) + outer-loop-region (3)
+      // → breaks outer loop.
+      scf.break 3
+    }
+    scf.if %cond3 {                  // [P]
+      // Exits if-region (1) + inner-loop-region (2), re-entering inner loop.
+      scf.continue 2
+    }
+  }
+}
+return
+```
+
+```mlir
+// A loop that yields a result value on early exit.
+// scf.break N carries operands that become the loop's results.
+// scf.continue N carries operands that become the next iter_args.
+%result = scf.loop -> f32 {          // [H]
+  scf.if %found {                    // [P]
+    // Exits if-region + loop-region; %value becomes the loop result.
+    scf.break 2 %value : f32
+  }
+  // Re-enter the loop for the next iteration (no iter_args here).
+  scf.continue 1
 }
 ```
 

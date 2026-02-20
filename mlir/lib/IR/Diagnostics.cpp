@@ -138,8 +138,8 @@ Diagnostic &Diagnostic::operator<<(Operation &op) {
   return appendOp(op, OpPrintingFlags());
 }
 
-Diagnostic &Diagnostic::operator<<(OpWithFlags op) {
-  return appendOp(*op.getOperation(), op.flags());
+Diagnostic &Diagnostic::operator<<(const OpWithFlags &opWithFlags) {
+  return appendOp(*opWithFlags.getOperation(), opWithFlags.flags());
 }
 
 Diagnostic &Diagnostic::appendOp(Operation &op, const OpPrintingFlags &flags) {

@@ -125,7 +125,8 @@ public:
 
     auto *newOp = Operation::create(
         op->getLoc(), op->getName(), resultTypes, operands, op->getAttrs(),
-        op->getPropertiesStorage(), op->getSuccessors(), op->getNumRegions());
+        op->getPropertiesStorage(), op->getSuccessors(), op->getNumRegions(),
+        op->getNumBreakingControlRegions());
     for (auto regions : llvm::zip(op->getRegions(), newOp->getRegions())) {
       Region &before = std::get<0>(regions);
       Region &parent = std::get<1>(regions);
