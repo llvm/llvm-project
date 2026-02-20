@@ -60,6 +60,8 @@ public:
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
 
+  void PreprocessISelDAG() override;
+
   void Select(SDNode *Node) override;
 
   /// SelectInlineAsmMemoryOperand - Implement addressing mode selection for
@@ -536,6 +538,72 @@ public:
 char AArch64DAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(AArch64DAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
+
+void AArch64DAGToDAGISel::PreprocessISelDAG() {
+  bool MadeChange = false;
+  for (SelectionDAG::allnodes_iterator I = CurDAG->allnodes_begin(),
+                                       E = CurDAG->allnodes_end();
+       I != E;) {
+    SDNode *N = &*I++; // Preincrement iterator to avoid invalidation issues.
+
+    switch (N->getOpcode()) {
+    case ISD::BITCAST: {
+      // Canonicalize bitcast(extload) or bitcast(zextload) into
+      // scalar_to_vector(load) or insert(zero, load), to help generate the
+      // canonical patterns that tablegen expects. This helps generate extending
+      // loads that zero the top data implicitly.
+      EVT VT = N->getValueType(0);
+      if (Subtarget->isLittleEndian() &&
+          (/*VT == MVT::f32 || VT == MVT::f64 ||*/ VT.isVector())) {
+        auto *Ld = dyn_cast<LoadSDNode>(N->getOperand(0));
+        if (Ld && Ld->isSimple() && !Ld->isIndexed() &&
+            (Ld->getExtensionType() == ISD::EXTLOAD ||
+             Ld->getExtensionType() == ISD::ZEXTLOAD)) {
+          LLVM_DEBUG({
+            dbgs() << "Found an extending load ";
+            Ld->dump();
+          });
+
+          EVT MemVT = Ld->getMemoryVT();
+          assert(VT.is64BitVector() || VT.is128BitVector() || VT == MVT::f32 ||
+                 VT == MVT::f64);
+          assert(
+              VT.getScalarSizeInBits() == 8 || VT.getScalarSizeInBits() == 16 ||
+              VT.getScalarSizeInBits() == 32 || VT.getScalarSizeInBits() == 64);
+          assert(MemVT == MVT::i8 || MemVT == MVT::i16 || MemVT == MVT::i32);
+          EVT ScalarVT = MemVT.getSizeInBits() < 32 ? MVT::i32 : MemVT;
+          EVT ExtVT =
+              EVT::getVectorVT(*CurDAG->getContext(), MemVT,
+                               VT.getSizeInBits() / MemVT.getSizeInBits());
+
+          SDLoc DL(N);
+          SDValue NewLd =
+              CurDAG->getExtLoad(ISD::EXTLOAD, DL, ScalarVT, Ld->getChain(),
+                                 Ld->getBasePtr(), MemVT, Ld->getMemOperand());
+          SDValue Ext;
+          if (Ld->getExtensionType() == ISD::EXTLOAD)
+            Ext = CurDAG->getNode(ISD::SCALAR_TO_VECTOR, DL, ExtVT, NewLd);
+          else
+            Ext = CurDAG->getNode(ISD::INSERT_VECTOR_ELT, DL, ExtVT,
+                                  CurDAG->getConstant(0, DL, ExtVT), NewLd,
+                                  CurDAG->getConstant(0, DL, MVT::i64));
+          Ext = CurDAG->getBitcast(VT, Ext);
+
+          --I;
+          CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Ext);
+          CurDAG->ReplaceAllUsesOfValueWith(SDValue(Ld, 1), NewLd.getValue(1));
+          ++I;
+          MadeChange = true;
+        }
+      }
+      break;
+    }
+    }
+  }
+
+  if (MadeChange)
+    CurDAG->RemoveDeadNodes();
+}
 
 /// isIntImmediate - This method tests to see if the node is a constant
 /// operand. If so Imm will receive the 32-bit value.
