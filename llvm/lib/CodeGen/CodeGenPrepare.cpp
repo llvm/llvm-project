@@ -86,6 +86,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -274,6 +275,14 @@ static cl::opt<unsigned>
 static cl::opt<bool>
     DisableDeletePHIs("disable-cgp-delete-phis", cl::Hidden, cl::init(false),
                       cl::desc("Disable elimination of dead PHI nodes."));
+
+cl::opt<std::string>
+    BoltFunctionListFile("bolt-function-list-file", cl::Hidden,
+                         cl::desc("Specify BOLT function list file"));
+
+cl::opt<std::string> BoltKeepAddressFunctionListFile(
+    "bolt-keep-address-function-list-file", cl::Hidden,
+    cl::desc("Specify BOLT KeepAddress function list file"));
 
 namespace {
 
@@ -506,7 +515,43 @@ public:
 
 char CodeGenPrepareLegacyPass::ID = 0;
 
+template <typename T> void GatherForBoltKA(raw_fd_ostream &OS, T &I) {
+  switch (I.getOpcode()) {
+  case Instruction::ICmp:
+  case Instruction::PtrToInt:
+    for (Use &U : I.operands())
+      if (auto *FF = dyn_cast<Function>(U.get()))
+        OS << FF->getName() << "\n";
+    break;
+  default:;
+  }
+  for (Use &U : I.operands())
+    if (auto *CE = dyn_cast<ConstantExpr>(U.get()))
+      GatherForBoltKA(OS, *CE);
+}
+
 bool CodeGenPrepareLegacyPass::runOnFunction(Function &F) {
+  if (!BoltFunctionListFile.empty()) {
+    std::error_code EC;
+    raw_fd_ostream OS(BoltFunctionListFile, EC, sys::fs::OpenFlags::OF_Append);
+    if (EC)
+      report_fatal_error(Twine(BoltFunctionListFile) + ": " + EC.message());
+    OS << F.getName() << "\n";
+  }
+
+  if (!BoltKeepAddressFunctionListFile.empty()) {
+    std::error_code EC;
+    raw_fd_ostream OS(BoltKeepAddressFunctionListFile, EC,
+                      sys::fs::OpenFlags::OF_Append);
+    if (EC)
+      report_fatal_error(Twine(BoltKeepAddressFunctionListFile) + ": " +
+                         EC.message());
+
+    for (BasicBlock &BB : F)
+      for (Instruction &I : BB)
+        GatherForBoltKA(OS, I);
+  }
+
   if (skipFunction(F))
     return false;
   auto TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();

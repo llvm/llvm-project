@@ -171,6 +171,16 @@ static cl::opt<std::string> FunctionNamesFileNR(
     cl::desc("file with list of functions to optimize (non-regex)"), cl::Hidden,
     cl::cat(BoltCategory));
 
+static cl::list<std::string> KeepAddressFunctionNamesNR(
+    "keep-address-funcs-no-regex", cl::CommaSeparated,
+    cl::desc("KeepAddress functions from the list (non-regex)"),
+    cl::value_desc("func1,func2,func3,..."), cl::Hidden, cl::cat(BoltCategory));
+
+static cl::opt<std::string> KeepAddressFunctionNamesFileNR(
+    "keep-address-funcs-file-no-regex",
+    cl::desc("file with list of KeepAddress functions to optimize (non-regex)"),
+    cl::Hidden, cl::cat(BoltCategory));
+
 cl::opt<bool>
 KeepTmp("keep-tmp",
   cl::desc("preserve intermediate .o file"),
@@ -3313,6 +3323,8 @@ void RewriteInstance::selectFunctionsToProcess() {
   populateFunctionNames(opts::FunctionNamesFile, opts::ForceFunctionNames);
   populateFunctionNames(opts::SkipFunctionNamesFile, opts::SkipFunctionNames);
   populateFunctionNames(opts::FunctionNamesFileNR, opts::ForceFunctionNamesNR);
+  populateFunctionNames(opts::KeepAddressFunctionNamesFileNR,
+                        opts::KeepAddressFunctionNamesNR);
 
   // Make a set of functions to process to speed up lookups.
   std::unordered_set<std::string> ForceFunctionsNR(
@@ -3326,6 +3338,10 @@ void RewriteInstance::selectFunctionsToProcess() {
            "same time. Please use only one type of selection.\n";
     exit(1);
   }
+
+  std::unordered_set<std::string> KeepAddressFunctionsNR(
+      opts::KeepAddressFunctionNamesNR.begin(),
+      opts::KeepAddressFunctionNamesNR.end());
 
   uint64_t LiteThresholdExecCount = 0;
   if (opts::LiteThresholdPct) {
@@ -3374,7 +3390,8 @@ void RewriteInstance::selectFunctionsToProcess() {
     for (std::string &Name : opts::SkipFunctionNames)
       if (Function.hasNameRegex(Name))
         return true;
-
+    if (BC->HasRelocations && Function.mustKeepAddress())
+      return true;
     return false;
   };
 
@@ -3429,6 +3446,10 @@ void RewriteInstance::selectFunctionsToProcess() {
 
   for (auto &BFI : BC->getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;
+
+    for (const StringRef Name : Function.getNames())
+      if (KeepAddressFunctionsNR.count(Name.str()))
+        Function.KeepAddress = true;
 
     // Pseudo functions are explicitly marked by us not to be processed.
     if (Function.isPseudo()) {

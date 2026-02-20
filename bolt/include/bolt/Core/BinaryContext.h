@@ -455,6 +455,13 @@ public:
         Address);
   }
 
+  bool isInRange(StringRef NameStart, StringRef NameEnd,
+                 uint64_t Address) const {
+    ErrorOr<uint64_t> Start = getSymbolValue(NameStart);
+    ErrorOr<uint64_t> End = getSymbolValue(NameEnd);
+    return Start && End && *Start <= Address && Address < *End;
+  }
+
   /// Return size of an entry for the given jump table \p Type.
   uint64_t getJumpTableEntrySize(JumpTable::JumpTableType Type) const {
     return Type == JumpTable::JTT_PIC ? 4 : AsmInfo->getCodePointerSize();
@@ -965,7 +972,11 @@ public:
   /// Return a value of the global \p Symbol or an error if the value
   /// was not set.
   ErrorOr<uint64_t> getSymbolValue(const MCSymbol &Symbol) const {
-    const BinaryData *BD = getBinaryDataByName(Symbol.getName());
+    return getSymbolValue(Symbol.getName());
+  }
+
+  ErrorOr<uint64_t> getSymbolValue(StringRef Name) const {
+    const BinaryData *BD = getBinaryDataByName(Name);
     if (!BD)
       return std::make_error_code(std::errc::bad_address);
     return BD->getAddress();

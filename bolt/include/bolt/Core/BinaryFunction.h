@@ -311,6 +311,9 @@ private:
   /// Pseudo functions should not be disassembled or emitted.
   bool IsPseudo{false};
 
+  // True if address of this function can not be changed
+  bool KeepAddress{false};
+
   /// True if the original function code has all necessary relocations to track
   /// addresses of functions emitted to new locations. Typically set for
   /// functions that we are not going to emit.
@@ -1387,6 +1390,9 @@ public:
   /// Return true if the function should not be disassembled, emitted, or
   /// otherwise processed.
   bool isPseudo() const { return IsPseudo; }
+
+  /// Return true if address of this function can not be changed
+  bool mustKeepAddress() const { return KeepAddress; }
 
   /// Return true if the function contains explicit or implicit indirect branch
   /// to its split fragments, e.g., split jump table, landing pad in split
