@@ -331,6 +331,31 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     }
     return false;
   }
+  case AMDGPU::BI__builtin_amdgcn_wave_shuffle: {
+    Expr *Val = TheCall->getArg(0);
+    QualType ValTy = Val->getType();
+
+    if ((!ValTy->isIntegerType() && !ValTy->isFloatingType()) ||
+        SemaRef.getASTContext().getTypeSize(ValTy) > 32)
+      return Diag(Val->getExprLoc(), diag::err_builtin_invalid_arg_type)
+             << Val << /*scalar=*/1 << /*'int'=*/4 << /*floating point=*/2
+             << ValTy;
+
+    Expr *Idx = TheCall->getArg(1);
+    QualType IdxTy = Idx->getType();
+    if (!IdxTy->isIntegerType())
+      return Diag(Idx->getExprLoc(), diag::err_typecheck_expect_int) << IdxTy;
+    if (SemaRef.getASTContext().getTypeSize(IdxTy) > 32)
+      return Diag(Idx->getExprLoc(), diag::err_builtin_invalid_arg_type)
+             << Idx << /*scalar=*/1 << /*'int'=*/4 << /*floating point=*/0
+             << IdxTy;
+
+    // Resolve the overload here, now that we know that the invocation is
+    // correct: the intrinsic returns the type of the value argument.
+    TheCall->setType(ValTy);
+
+    return false;
+  }
   default:
     return false;
   }

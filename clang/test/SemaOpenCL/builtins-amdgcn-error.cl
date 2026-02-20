@@ -229,3 +229,10 @@ void test_atomic_dec64() {
   __INT64_TYPE__ signedVal = 15;
   signedVal = __builtin_amdgcn_atomic_dec64(&signedVal, signedVal, __ATOMIC_ACQUIRE, ""); // expected-warning {{passing '__private long *' to parameter of type 'volatile __private unsigned long *' converts between pointers to integer types with different sign}}
 }
+
+void test_wave_shuffle(double d, int i, long long lli) {
+  struct S { int x; } s;
+  int x = __builtin_amdgcn_wave_shuffle(lli, i); // expected-error {{'lli' argument must be a scalar 'int' or 16 or 32 bit floating-point type (was '__private long long')}}
+  int y = __builtin_amdgcn_wave_shuffle(i, lli); // expected-error {{'lli' argument must be a scalar 'int' type (was '__private long long')}}
+  float z = __builtin_amdgcn_wave_shuffle(s, i); // expected-error {{'s' argument must be a scalar 'int' or 16 or 32 bit floating-point type (was '__private struct S')}}
+}

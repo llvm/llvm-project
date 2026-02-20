@@ -67,6 +67,8 @@ def __builtin_amdgcn_mbcnt_lo : AMDGPUBuiltin<"unsigned int(unsigned int, unsign
 
 def __builtin_amdgcn_s_memtime : AMDGPUBuiltin<"uint64_t()", [], "s-memtime-inst">;
 
+def __builtin_amdgcn_wave_id : AMDGPUBuiltin<"int32_t()", [Const], "architected-sgprs">;
+
 //===----------------------------------------------------------------------===//
 // Instruction builtins.
 //===----------------------------------------------------------------------===//
@@ -425,6 +427,13 @@ def __builtin_amdgcn_wave_reduce_fadd_f64 : AMDGPUBuiltin<"double(double, _Const
 def __builtin_amdgcn_wave_reduce_fsub_f64 : AMDGPUBuiltin<"double(double, _Constant int32_t)", [Const]>;
 def __builtin_amdgcn_wave_reduce_fmin_f64 : AMDGPUBuiltin<"double(double, _Constant int32_t)", [Const]>;
 def __builtin_amdgcn_wave_reduce_fmax_f64 : AMDGPUBuiltin<"double(double, _Constant int32_t)", [Const]>;
+
+//===----------------------------------------------------------------------===//
+// Wave Shuffle builtins.
+//===----------------------------------------------------------------------===//
+
+// This is an overloaded builtin modelled after the atomic ones
+def __builtin_amdgcn_wave_shuffle : AMDGPUBuiltin<"void(...)", [Const, CustomTypeChecking]>;
 
 //===----------------------------------------------------------------------===//
 // R600-NI only builtins.
