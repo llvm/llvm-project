@@ -1,5 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 <%s | FileCheck %s --check-prefixes=CHECK,GFX11
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 <%s | FileCheck %s --check-prefixes=CHECK
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 <%s | FileCheck %s --check-prefixes=CHECK,GFX11,FWD
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 <%s | FileCheck %s --check-prefixes=CHECK,FWD
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -mattr=-fwdprogress <%s | FileCheck %s --check-prefixes=CHECK,NOFWD
 
 ; CHECK-LABEL: {{^}}_amdgpu_cs_main:
 ; CHECK: ; TotalNumSgprs: 4
@@ -58,7 +59,8 @@
 ; CHECK-NEXT:        .entry_point_symbol:    _amdgpu_cs_main
 ; CHECK-NEXT:        .excp_en:        0
 ; CHECK-NEXT:        .float_mode:     0xc0
-; CHECK-NEXT:        .forward_progress: true
+; FWD-NEXT:          .forward_progress: true
+; NOFWD-NEXT:        .forward_progress: false
 ; GFX11-NEXT:        .ieee_mode:      false
 ; CHECK-NEXT:        .image_op:       false
 ; CHECK-NEXT:        .lds_size:       0
@@ -114,7 +116,8 @@
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    _amdgpu_gs_main
 ; CHECK-NEXT:        .entry_point_symbol:    gs_shader
-; CHECK-NEXT:        .forward_progress: true
+; FWD-NEXT:          .forward_progress: true
+; NOFWD-NEXT:        .forward_progress: false
 ; GFX11-NEXT:        .ieee_mode:      false
 ; CHECK-NEXT:        .lds_size:       0x200
 ; CHECK-NEXT:        .mem_ordered:    true
@@ -127,7 +130,8 @@
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    _amdgpu_hs_main
 ; CHECK-NEXT:        .entry_point_symbol:    hs_shader
-; CHECK-NEXT:        .forward_progress: true
+; FWD-NEXT:          .forward_progress: true
+; NOFWD-NEXT:        .forward_progress: false
 ; GFX11-NEXT:        .ieee_mode:      false
 ; CHECK-NEXT:        .lds_size:       0x1000
 ; CHECK-NEXT:        .mem_ordered:    true
@@ -140,7 +144,8 @@
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    _amdgpu_ps_main
 ; CHECK-NEXT:        .entry_point_symbol:    ps_shader
-; CHECK-NEXT:        .forward_progress: true
+; FWD-NEXT:          .forward_progress: true
+; NOFWD-NEXT:        .forward_progress: false
 ; GFX11-NEXT:        .ieee_mode:      false
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .mem_ordered:    true
