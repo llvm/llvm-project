@@ -82,9 +82,8 @@ bool isSupportedLifetime(const AllocaInfo &AInfo, const DominatorTree *DT,
           LastEndBlocks.append(succ_begin(BB), succ_end(BB));
         else
           StartBlocks.insert(BB);
-        if (BBI.First == Intrinsic::lifetime_end) {
+        if (BBI.First == Intrinsic::lifetime_end)
           FirstEndBlocks.insert(BB);
-        }
         return BBI.DoubleEnd;
       }))
     return false;
