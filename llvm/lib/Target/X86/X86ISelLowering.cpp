@@ -38909,7 +38909,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTCVTROWPS2PHHrri:
   case X86::PTCVTROWPS2PHLrri:
   case X86::PTCVTROWD2PSrri:
-  case X86::PTILEMOVROWrri: {
+  case X86::PTILEMOVROWrti: {
     const DebugLoc &DL = MI.getDebugLoc();
     unsigned Opc;
     switch (MI.getOpcode()) {
@@ -38930,7 +38930,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTCVTROWPS2PHLrri:
       Opc = X86::TCVTROWPS2PHLrti;
       break;
-    case X86::PTILEMOVROWrri:
+    case X86::PTILEMOVROWrti:
       Opc = X86::TILEMOVROWrti;
       break;
     }
@@ -38947,7 +38947,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTCVTROWPS2PHHrre:
   case X86::PTCVTROWPS2PHLrre:
   case X86::PTCVTROWD2PSrre:
-  case X86::PTILEMOVROWrre: {
+  case X86::PTILEMOVROWrte: {
     const DebugLoc &DL = MI.getDebugLoc();
     unsigned Opc;
     switch (MI.getOpcode()) {
@@ -38968,7 +38968,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTCVTROWPS2PHLrre:
       Opc = X86::TCVTROWPS2PHLrte;
       break;
-    case X86::PTILEMOVROWrre:
+    case X86::PTILEMOVROWrte:
       Opc = X86::TILEMOVROWrte;
       break;
     }

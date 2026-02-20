@@ -604,8 +604,8 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
   case X86::PTCVTROWPS2PHHrriV:
   case X86::PTCVTROWPS2PHLrreV:
   case X86::PTCVTROWPS2PHLrriV:
-  case X86::PTILEMOVROWrreV:
-  case X86::PTILEMOVROWrriV: {
+  case X86::PTILEMOVROWrteV:
+  case X86::PTILEMOVROWrtiV: {
     for (unsigned i = 2; i > 0; --i)
       MI.removeOperand(i);
     unsigned Opc;
@@ -652,10 +652,10 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     case X86::PTCVTROWPS2PHLrriV:
       Opc = X86::TCVTROWPS2PHLrti;
       break;
-    case X86::PTILEMOVROWrreV:
+    case X86::PTILEMOVROWrteV:
       Opc = X86::TILEMOVROWrte;
       break;
-    case X86::PTILEMOVROWrriV:
+    case X86::PTILEMOVROWrtiV:
       Opc = X86::TILEMOVROWrti;
       break;
     default:

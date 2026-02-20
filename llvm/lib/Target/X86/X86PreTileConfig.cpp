@@ -132,8 +132,8 @@ class X86PreTileConfigImpl {
     case X86::PTCVTROWPS2PHHrriV:
     case X86::PTCVTROWPS2PHLrreV:
     case X86::PTCVTROWPS2PHLrriV:
-    case X86::PTILEMOVROWrreV:
-    case X86::PTILEMOVROWrriV:
+    case X86::PTILEMOVROWrteV:
+    case X86::PTILEMOVROWrtiV:
       return true;
     }
 
