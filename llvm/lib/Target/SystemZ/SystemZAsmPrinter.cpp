@@ -1628,8 +1628,9 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
 
   OutStreamer->AddComment("Length/2 of Prolog ");
   if (EndOfPrologSym)
-    OutStreamer->emitValue(
-        getTargetStreamer()->createWordDiffExpr(OutContext, EndOfPrologSym, CurrentFnSym), 1);
+    OutStreamer->emitValue(getTargetStreamer()->createWordDiffExpr(
+                               OutContext, EndOfPrologSym, CurrentFnSym),
+                           1);
   else
     OutStreamer->emitInt8(0);
 
@@ -1641,9 +1642,9 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
       MCConstantExpr::create(AllocaReg << 4, OutContext);
   if (StackUpdateSym)
     OutStreamer->emitValue(
-        MCBinaryExpr::createOr(
-            getTargetStreamer()->createWordDiffExpr(OutContext, StackUpdateSym, CurrentFnSym),
-            AllocaRegExpr, OutContext),
+        MCBinaryExpr::createOr(getTargetStreamer()->createWordDiffExpr(
+                                   OutContext, StackUpdateSym, CurrentFnSym),
+                               AllocaRegExpr, OutContext),
         1);
   else
     OutStreamer->emitValue(AllocaRegExpr, 1);
@@ -1901,8 +1902,7 @@ static void determinePrologueStackUpdateSym(MachineFunction *MF,
   EndOfPrologSym = nullptr;
   StackUpdateSym = nullptr;
 
-  
-  // Scan the basic block for the FENCE instruction which marks the end 
+  // Scan the basic block for the FENCE instruction which marks the end
   // of the prologue. We know
   // the prologue is spread at most across the first 3 basic blocks. Also record
   // the first instruction updating the stack pointer.
@@ -1953,7 +1953,8 @@ static void determinePrologueStackUpdateSym(MachineFunction *MF,
       break;
   }
   if (Size > 128)
-    report_fatal_error(Twine(MF->getName()).concat(": Prolog exceeds 128 bytes"));
+    report_fatal_error(
+        Twine(MF->getName()).concat(": Prolog exceeds 128 bytes"));
 #endif
 
   // Attach a temporary symbol to mark the end of the prolog.

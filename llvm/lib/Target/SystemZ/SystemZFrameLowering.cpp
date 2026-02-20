@@ -1352,11 +1352,11 @@ void SystemZXPLINKFrameLowering::emitPrologue(MachineFunction &MF,
     }
   }
 
-  // Check if any new instructions were inserted. If not, it means no there is no
-  // prologue and thus no need for a fence.
-  // The fence is required because moving instructions inside the prologue might
-  // violate some of the rules required to hold for prologues, for example the
-  // maximum lengths of the prologue code. See all rules at
+  // Check if any new instructions were inserted. If not, it means no there is
+  // no prologue and thus no need for a fence. The fence is required because
+  // moving instructions inside the prologue might violate some of the rules
+  // required to hold for prologues, for example the maximum lengths of the
+  // prologue code. See all rules at
   // https://www.ibm.com/docs/en/zos/3.1.0?topic=SSLTBW_3.1.0/com.ibm.zos.v3r1.ceev100/cee1v2319.html
   if (InstCount < MBB.size()) {
     BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::FENCE));
