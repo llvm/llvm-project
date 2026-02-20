@@ -92,6 +92,19 @@ private:
   ISO::CFI_dim_t raw_;
 };
 
+// Flexible Array hack for C++; PDT LEN type paramter storage.
+// The storage for additional elements must be allocated immediately
+// following this struct. NOTE: access via operator[] uses pointer arithmetic.
+template <typename T> struct FlexibleArray {
+  T len_ntry_;
+  RT_API_ATTRS T &operator[](int index) { return (&len_ntry_)[index]; }
+  RT_API_ATTRS const T &operator[](int index) const {
+    return (&len_ntry_)[index];
+  }
+  RT_API_ATTRS operator T *() { return &len_ntry_; }
+  RT_API_ATTRS operator const T *() const { return &len_ntry_; }
+};
+
 // The storage for this object follows the last used dim[] entry in a
 // Descriptor (CFI_cdesc_t) generic descriptor.  Space matters here, since
 // descriptors serve as POINTER and ALLOCATABLE components of derived type
@@ -138,11 +151,8 @@ public:
 
 private:
   const typeInfo::DerivedType *derivedType_;
-  typeInfo::TypeParameterValue len_[1]; // must be the last component
-  // The LEN type parameter values can also include captured values of
-  // specification expressions that were used for bounds and for LEN type
-  // parameters of components.  The values have been truncated to the LEN
-  // type parameter's type, if shorter than 64 bits, then sign-extended.
+  FlexibleArray<typeInfo::TypeParameterValue> len_;
+  // len_ MUST be the last component of the class.
 };
 
 // A C++ view of a standard descriptor object.

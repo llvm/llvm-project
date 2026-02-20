@@ -9,6 +9,7 @@
 #include "flang-rt/runtime/type-info.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
+#include "flang-rt/runtime/type-info-cache.h"
 #include <cstdio>
 
 namespace Fortran::runtime::typeInfo {
@@ -30,6 +31,34 @@ RT_API_ATTRS common::optional<TypeParameterValue> Value::GetValue(
   default:
     return common::nullopt;
   }
+}
+
+static const DerivedType *ResolveDerivedTypeForComponent(const Component &comp,
+    const Descriptor &container, Terminator &terminator) {
+  if (comp.category() != TypeCategory::Derived) {
+    return nullptr;
+  }
+  const DerivedType *generic{comp.derivedType()};
+  if (!generic || generic->LenParameters() == 0) {
+    return generic;
+  }
+
+  const Value *lenValues{comp.lenValue()};
+  RUNTIME_CHECK(terminator, lenValues != nullptr);
+
+  OwningPtr<Descriptor> tempDesc{
+      Descriptor::Create(*generic, nullptr, 0, nullptr, CFI_attribute_other)};
+  DescriptorAddendum *tempAddendum{tempDesc->Addendum()};
+  RUNTIME_CHECK(terminator, tempAddendum != nullptr);
+
+  std::size_t lenParams{generic->LenParameters()};
+  for (std::size_t i{0}; i < lenParams; ++i) {
+    auto value{lenValues[i].GetValue(&container)};
+    RUNTIME_CHECK(terminator, value.has_value());
+    tempAddendum->SetLenParameterValue(i, *value);
+  }
+
+  return GetConcreteType(*generic, *tempDesc, terminator);
 }
 
 RT_API_ATTRS std::size_t Component::GetElementByteSize(
@@ -118,7 +147,8 @@ RT_API_ATTRS void Component::EstablishDescriptor(Descriptor &descriptor,
     descriptor.Establish(kind_, lengthInChars, nullptr, rank_, nullptr,
         attribute, false, allocatorIdx);
   } else if (cat == TypeCategory::Derived) {
-    if (const DerivedType * type{derivedType()}) {
+    if (const DerivedType *type{
+            ResolveDerivedTypeForComponent(*this, container, terminator)}) {
       descriptor.Establish(
           *type, nullptr, rank_, nullptr, attribute, allocatorIdx);
     } else { // unlimited polymorphic

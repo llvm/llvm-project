@@ -67,6 +67,7 @@ set(supported_sources
   transformational.cpp
   type-code.cpp
   type-info.cpp
+  type-info-cache.cpp
   unit.cpp
   utf.cpp
   work-queue.cpp

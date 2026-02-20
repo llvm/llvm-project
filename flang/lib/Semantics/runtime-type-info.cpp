@@ -917,6 +917,13 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   } else {
     AddValue(values, componentSchema_, "memoryspace"s, GetEnumValue("host"));
   }
+  // Store log2 of target-specific alignment for runtime offset computation
+  auto alignment{dyType.GetAlignment(foldingContext.targetCharacteristics())};
+  int log2Alignment{0};
+  while ((std::size_t{1} << log2Alignment) < alignment) {
+    ++log2Alignment;
+  }
+  AddValue(values, componentSchema_, "alignment"s, IntExpr<1>(log2Alignment));
   if (!hasDataInit) {
     AddValue(values, componentSchema_, "initialization"s,
         SomeExpr{evaluate::NullPointer{}});

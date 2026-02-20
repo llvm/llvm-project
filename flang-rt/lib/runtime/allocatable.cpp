@@ -12,6 +12,7 @@
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
+#include "flang-rt/runtime/type-info-cache.h"
 #include "flang-rt/runtime/type-info.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/assign.h"
@@ -40,6 +41,15 @@ void RTDEF(AllocatableInitDerived)(Descriptor &descriptor,
   INTERNAL_CHECK(corank == 0);
   descriptor.Establish(
       derivedType, nullptr, rank, nullptr, CFI_attribute_allocatable);
+  if (DescriptorAddendum * addendum{descriptor.Addendum()}) {
+    if (derivedType.LenParameters() > 0) {
+      Terminator terminator{__FILE__, __LINE__};
+      const typeInfo::DerivedType *concrete{
+          typeInfo::GetConcreteType(derivedType, descriptor, terminator)};
+      addendum->set_derivedType(concrete);
+      descriptor.raw().elem_len = concrete->sizeInBytes();
+    }
+  }
 }
 
 void RTDEF(AllocatableInitIntrinsicForAllocate)(Descriptor &descriptor,
@@ -142,6 +152,16 @@ int RTDEF(AllocatableAllocate)(Descriptor &descriptor,
   } else if (descriptor.IsAllocated()) {
     return ReturnError(terminator, StatBaseNotNull, errMsg, hasStat);
   } else {
+    if (DescriptorAddendum * addendum{descriptor.Addendum()}) {
+      if (const auto *derived{addendum->derivedType()}) {
+        if (derived->LenParameters() > 0) {
+          const typeInfo::DerivedType *concrete{
+              typeInfo::GetConcreteType(*derived, descriptor, terminator)};
+          addendum->set_derivedType(concrete);
+          descriptor.raw().elem_len = concrete->sizeInBytes();
+        }
+      }
+    }
     int stat{ReturnError(
         terminator, descriptor.Allocate(asyncObject), errMsg, hasStat)};
     if (stat == StatOk) {
