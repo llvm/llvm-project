@@ -92,8 +92,6 @@ entry:
 }
 
 define ptr addrspace(1) @test4(ptr addrspace(1) %ptr) gc "statepoint-example" {
-; When we can optimize an extractelement from a known
-; index and avoid introducing new base pointer instructions
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DERIVED:%.*]] = getelementptr i64, ptr addrspace(1) [[PTR:%.*]], i64 16
@@ -120,8 +118,9 @@ entry:
 declare void @use(ptr addrspace(1)) "gc-leaf-function"
 declare void @use_vec(<4 x ptr addrspace(1)>) "gc-leaf-function"
 
+; When we can optimize an extractelement from a known
+; index and avoid introducing new base pointer instructions
 define void @test5(i1 %cnd, ptr addrspace(1) %obj) gc "statepoint-example" {
-; When we fundementally have to duplicate
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr addrspace(1) [[OBJ:%.*]], i64 1
@@ -144,9 +143,8 @@ entry:
   ret void
 }
 
+; When we fundementally have to duplicate
 define void @test6(i1 %cnd, ptr addrspace(1) %obj, i64 %idx) gc "statepoint-example" {
-; A more complicated example involving vector and scalar bases.
-; This is derived from a failing test case when we didn't have correct
 ; insertelement handling.
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
@@ -170,6 +168,8 @@ entry:
   ret void
 }
 
+; A more complicated example involving vector and scalar bases.
+; This is derived from a failing test case when we didn't have correct
 define ptr addrspace(1) @test7(i1 %cnd, ptr addrspace(1) %obj, ptr addrspace(1) %obj2) gc "statepoint-example" {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
