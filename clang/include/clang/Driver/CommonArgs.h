@@ -93,6 +93,8 @@ bool getStaticPIE(const llvm::opt::ArgList &Args, const ToolChain &TC);
 unsigned ParseFunctionAlignment(const ToolChain &TC,
                                 const llvm::opt::ArgList &Args);
 
+unsigned ParseLoopAlignment(const Driver &D, const llvm::opt::ArgList &Args);
+
 void addDebugInfoKind(llvm::opt::ArgStringList &CmdArgs,
                       llvm::codegenoptions::DebugInfoKind DebugInfoKind);
 
