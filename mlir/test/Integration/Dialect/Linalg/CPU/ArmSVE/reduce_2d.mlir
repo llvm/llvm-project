@@ -155,7 +155,9 @@ module attributes {transform.with_named_sequence} {
     // Step 3: Lower vector.multi_reduction
     transform.apply_patterns to %func {
       transform.apply_patterns.vector.lower_masked_transfers
-      transform.apply_patterns.vector.lower_multi_reduction lowering_strategy = "innerreduction"
+      transform.apply_patterns.vector.reorder_and_expand_multi_reduction_dims lowering_strategy = "innerreduction"
+      transform.apply_patterns.vector.multi_reduction_flattening lowering_strategy = "innerreduction"
+      transform.apply_patterns.vector.multi_reduction_unrolling lowering_strategy = "innerreduction"
     } : !transform.op<"func.func">
 
     transform.yield
