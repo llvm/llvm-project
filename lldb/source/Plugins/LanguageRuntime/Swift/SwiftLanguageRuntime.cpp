@@ -1328,7 +1328,8 @@ ValueObjectSP SwiftLanguageRuntime::CalculateErrorValueObjectFromValue(
   if (!ast_context)
     return error_valobj_sp;
 
-  CompilerType swift_error_proto_type = ast_context->GetErrorType();
+  CompilerType swift_error_proto_type =
+      ast_context->GetErrorType(swift::Mangle::ManglingFlavor::Default);
   value.SetCompilerType(swift_error_proto_type);
 
   error_valobj_sp = ValueObjectConstResult::Create(&GetProcess(), value, name);
@@ -1412,7 +1413,8 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
   arg0->GetScalar().GetBytes(buffer_up->GetData());
   lldb::DataBufferSP buffer(std::move(buffer_up));
 
-  CompilerType swift_error_proto_type = scratch_ctx->GetErrorType();
+  CompilerType swift_error_proto_type =
+      scratch_ctx->GetErrorType(swift::Mangle::ManglingFlavor::Default);
   if (!swift_error_proto_type.IsValid())
     return error_valobj_sp;
 
@@ -1462,7 +1464,8 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
                      module_decl);
   var_decl->setInterfaceType(
       llvm::expectedToStdOptional(
-          swift_ast_ctx->GetSwiftType(swift_ast_ctx->GetErrorType()))
+          swift_ast_ctx->GetSwiftType(
+              swift_ast_ctx->GetErrorType(swift_ast_ctx->GetManglingFlavor())))
           .value_or(swift::Type()));
   var_decl->setDebuggerVar(true);
 

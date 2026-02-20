@@ -146,7 +146,7 @@ public:
                               CompilerType *original_type) = 0;
   virtual bool IsErrorType(lldb::opaque_compiler_type_t type,
                            const ExecutionContext *exe_ctx) = 0;
-  virtual CompilerType GetErrorType() = 0;
+  virtual CompilerType GetErrorType(swift::Mangle::ManglingFlavor flavor) = 0;
   virtual CompilerType GetWeakReferent(lldb::opaque_compiler_type_t type) {
     return {};
   }
@@ -167,7 +167,8 @@ public:
         : element_name(name), element_type(type) {}
   };
   virtual CompilerType
-  CreateTupleType(const std::vector<TupleElement> &elements) = 0;
+  CreateTupleType(const std::vector<TupleElement> &elements,
+                  swift::Mangle::ManglingFlavor flavor) = 0;
   virtual bool IsTupleType(lldb::opaque_compiler_type_t type) = 0;
 
   enum class NonTriviallyManagedReferenceKind : uint8_t {
@@ -211,7 +212,9 @@ public:
 
   /// Attempts to convert a Clang type into a Swift type.
   /// For example, int is converted to Int32.
-  virtual CompilerType ConvertClangTypeToSwiftType(CompilerType clang_type) = 0;
+  virtual CompilerType
+  ConvertClangTypeToSwiftType(CompilerType clang_type,
+                              swift::Mangle::ManglingFlavor flavor) = 0;
 
   /// \see lldb_private::TypeSystem::Dump
   void Dump(llvm::raw_ostream &output, llvm::StringRef filter) override;

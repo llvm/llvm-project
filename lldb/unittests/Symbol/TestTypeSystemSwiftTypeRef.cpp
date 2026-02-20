@@ -483,12 +483,12 @@ TEST_F(TestTypeSystemSwiftTypeRef, Tuple) {
     // Test unnamed tuple elements.
     auto int_element = makeElement(b.IntType());
     auto float_element = makeElement(b.FloatType());
-    auto int_float_tuple =
-        m_swift_ts->CreateTupleType({int_element, float_element});
+    auto int_float_tuple = m_swift_ts->CreateTupleType(
+        {int_element, float_element}, swift::Mangle::ManglingFlavor::Default);
     ASSERT_EQ(int_float_tuple.GetMangledTypeName(),
               "$ss0016BuiltinInt_gCJAcV_s0019BuiltinFPIEEE_CJEEdVtD");
-    auto float_int_tuple =
-        m_swift_ts->CreateTupleType({float_element, int_element});
+    auto float_int_tuple = m_swift_ts->CreateTupleType(
+        {float_element, int_element}, swift::Mangle::ManglingFlavor::Default);
     ASSERT_EQ(float_int_tuple.GetMangledTypeName(),
               "$ss0019BuiltinFPIEEE_CJEEdV_s0016BuiltinInt_gCJAcVtD");
   }
@@ -496,12 +496,12 @@ TEST_F(TestTypeSystemSwiftTypeRef, Tuple) {
     // Test named tuple elements.
     auto int_element = makeElement(b.IntType(), "i");
     auto float_element = makeElement(b.FloatType(), "f");
-    auto int_float_tuple =
-        m_swift_ts->CreateTupleType({int_element, float_element});
+    auto int_float_tuple = m_swift_ts->CreateTupleType(
+        {int_element, float_element}, swift::Mangle::ManglingFlavor::Default);
     ASSERT_EQ(int_float_tuple.GetMangledTypeName(),
               "$ss0016BuiltinInt_gCJAcV1i_s0019BuiltinFPIEEE_CJEEdV1ftD");
-    auto float_int_tuple =
-        m_swift_ts->CreateTupleType({float_element, int_element});
+    auto float_int_tuple = m_swift_ts->CreateTupleType(
+        {float_element, int_element}, swift::Mangle::ManglingFlavor::Default);
     ASSERT_EQ(float_int_tuple.GetMangledTypeName(),
               "$ss0019BuiltinFPIEEE_CJEEdV1f_s0016BuiltinInt_gCJAcV1itD");
   }
@@ -606,7 +606,9 @@ TEST_F(TestTypeSystemSwiftTypeRef, TypeClass) {
 }
 
 TEST_F(TestTypeSystemSwiftTypeRef, MangledTypeName) {
-  ASSERT_EQ(m_swift_ts->GetErrorType().GetMangledTypeName(), "$ss5Error_pD");
+  ASSERT_EQ(m_swift_ts->GetErrorType(swift::Mangle::ManglingFlavor::Default)
+                .GetMangledTypeName(),
+            "$ss5Error_pD");
 }
 
 TEST_F(TestTypeSystemSwiftTypeRef, ImportedType) {
@@ -629,7 +631,10 @@ TEST_F(TestTypeSystemSwiftTypeRef, ImportedType) {
 }
 
 TEST_F(TestTypeSystemSwiftTypeRef, RawPointer) {
-  ASSERT_EQ(m_swift_ts->GetRawPointerType().GetMangledTypeName(), "$sBpD");
+  ASSERT_EQ(
+      m_swift_ts->GetRawPointerType(swift::Mangle::ManglingFlavor::Default)
+          .GetMangledTypeName(),
+      "$sBpD");
 }
 
 TEST_F(TestTypeSystemSwiftTypeRef, GetNumTemplateArguments) {

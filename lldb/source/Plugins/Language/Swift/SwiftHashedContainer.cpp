@@ -461,7 +461,9 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
         return;
       std::vector<TypeSystemSwift::TupleElement> tuple_elements{
           {g_key, key_type}, {g_value, value_type}};
-      m_element_type = type_system->CreateTupleType(tuple_elements);
+      m_element_type = type_system->CreateTupleType(
+          tuple_elements, SwiftLanguageRuntime::GetManglingFlavor(
+                              key_type.GetMangledTypeName()));
       if (auto result = runtime->GetMemberVariableOffset(
               m_element_type, nativeStorage_sp.get(), "1"))
         m_key_stride_padded = *result;

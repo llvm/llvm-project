@@ -926,7 +926,9 @@ static CompilerType ExtractSwiftTypeFromCxxInteropTypeName(
         // convertible to Swift (for example, int -> Int32). Attempt to
         // convert it to a Swift type.
         if (!substituted_type)
-          substituted_type = ts.ConvertClangTypeToSwiftType(templated_type);
+          substituted_type = ts.ConvertClangTypeToSwiftType(
+              templated_type, SwiftLanguageRuntime::GetManglingFlavor(
+                                  swift_type.GetMangledTypeName()));
         return substituted_type;
       });
   return bound_type;
