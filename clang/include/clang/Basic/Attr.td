@@ -2693,6 +2693,19 @@ def CountedByOrNull : DeclOrTypeAttr {
   // TO_UPSTREAM(BoundsSafety) OFF
 }
 
+def NoFieldProtection : DeclOrTypeAttr {
+  let Spellings = [Clang<"no_field_protection">];
+  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
+def PointerFieldProtection : DeclOrTypeAttr {
+  let Spellings = [Clang<"pointer_field_protection">];
+  let Subjects = SubjectList<[CXXRecord], ErrorDiag>;
+  let Documentation = [Undocumented];
+  let SimpleHandler = 1;
+}
+
 def SizedBy : DeclOrTypeAttr {
   // TO_UPSTREAM(BoundsSafety) ON
   // `Subjects` which is present upstream is commented out because internally
