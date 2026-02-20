@@ -559,8 +559,26 @@ void CoreEngine::HandleVirtualBaseBranch(const CFGBlock *B,
   HandleBlockEdge(Loc, Pred);
 }
 
+ExplodedNode *CoreEngine::makeNode(const ProgramPoint &Loc,
+                                   ProgramStateRef State, ExplodedNode *Pred,
+                                   bool MarkAsSink) const {
+  MarkAsSink = MarkAsSink || State->isPosteriorlyOverconstrained();
+
+  bool IsNew;
+  ExplodedNode *N = G.getNode(Loc, State, MarkAsSink, &IsNew);
+  N->addPredecessor(Pred, G);
+
+  if (!IsNew)
+    return nullptr;
+
+  return N;
+}
+
 /// generateNode - Utility method to generate nodes, hook up successors,
 ///  and add nodes to the worklist.
+/// TODO: This and other similar methods should call CoreEngine::makeNode()
+/// instead of duplicating its logic. This would also fix that currently these
+/// can generate non-sink nodes with PosteriorlyOverconstrained state.
 void CoreEngine::generateNode(const ProgramPoint &Loc,
                               ProgramStateRef State,
                               ExplodedNode *Pred) {
@@ -688,21 +706,14 @@ void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS
   }
 }
 
-ExplodedNode* NodeBuilder::generateNodeImpl(const ProgramPoint &Loc,
-                                            ProgramStateRef State,
-                                            ExplodedNode *FromN,
-                                            bool MarkAsSink) {
+ExplodedNode *NodeBuilder::generateNode(const ProgramPoint &Loc,
+                                        ProgramStateRef State,
+                                        ExplodedNode *FromN, bool MarkAsSink) {
   HasGeneratedNodes = true;
-  bool IsNew;
-  ExplodedNode *N = C.getEngine().G.getNode(Loc, State, MarkAsSink, &IsNew);
-  N->addPredecessor(FromN, C.getEngine().G);
   Frontier.erase(FromN);
+  ExplodedNode *N = C.getEngine().makeNode(Loc, State, FromN, MarkAsSink);
 
-  if (!IsNew)
-    return nullptr;
-
-  if (!MarkAsSink)
-    Frontier.Add(N);
+  Frontier.Add(N);
 
   return N;
 }
@@ -717,7 +728,7 @@ ExplodedNode *BranchNodeBuilder::generateNode(ProgramStateRef State,
 
   ProgramPoint Loc =
       BlockEdge(C.getBlock(), Dst, NodePred->getLocationContext());
-  ExplodedNode *Succ = generateNodeImpl(Loc, State, NodePred);
+  ExplodedNode *Succ = NodeBuilder::generateNode(Loc, State, NodePred);
   return Succ;
 }
 
