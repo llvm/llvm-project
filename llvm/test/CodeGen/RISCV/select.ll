@@ -3030,8 +3030,7 @@ define i64 @single_bit_condition(i64 %x) {
 ;
 ; RV64IMXVTCONDOPS-LABEL: single_bit_condition:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
-; RV64IMXVTCONDOPS-NEXT:    slli a1, a0, 53
-; RV64IMXVTCONDOPS-NEXT:    srli a1, a1, 63
+; RV64IMXVTCONDOPS-NEXT:    andi a1, a0, 1024
 ; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a0, a0, a1
 ; RV64IMXVTCONDOPS-NEXT:    ret
 ;
@@ -3045,8 +3044,7 @@ define i64 @single_bit_condition(i64 %x) {
 ;
 ; RV64IMZICOND-LABEL: single_bit_condition:
 ; RV64IMZICOND:       # %bb.0: # %entry
-; RV64IMZICOND-NEXT:    slli a1, a0, 53
-; RV64IMZICOND-NEXT:    srli a1, a1, 63
+; RV64IMZICOND-NEXT:    andi a1, a0, 1024
 ; RV64IMZICOND-NEXT:    czero.nez a0, a0, a1
 ; RV64IMZICOND-NEXT:    ret
 ;
