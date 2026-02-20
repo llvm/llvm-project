@@ -60,7 +60,7 @@ public:
 
   virtual const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                            const MCSymbol *Lo) {
-    return nullptr;
+    return MCConstantExpr::create(0, Ctx);
   }
 };
 

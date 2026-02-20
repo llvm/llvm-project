@@ -768,6 +768,9 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
 
+  case SystemZ::FENCE:
+    OutStreamer->emitRawComment("FENCE");
+    [[fallthrough]];
   // EH_SjLj_Setup is a dummy terminator instruction of size 0.
   // It is used to handle the clobber register for builtin setjmp.
   case SystemZ::EH_SjLj_Setup:
@@ -1378,6 +1381,8 @@ void SystemZAsmPrinter::emitFunctionBodyEnd() {
 
     CurrentFnPPA1Sym = nullptr;
     CurrentFnEPMarkerSym = nullptr;
+    EndOfPrologSym = nullptr;
+    StackUpdateSym = nullptr;
   }
 }
 
@@ -1561,7 +1566,6 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
   uint8_t FrameReg = TRI->getEncodingValue(TRI->getFrameRegister(*MF));
   uint8_t AllocaReg = ZFL->hasFP(*MF) ? FrameReg : 0;
   assert(AllocaReg < 16 && "Can't have alloca register larger than 15");
-  (void)AllocaReg;
 
   // Build FPR save area offset.
   uint32_t FrameAndFPROffset = 0;
@@ -1621,6 +1625,30 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
   OutStreamer->AddComment("Length/4 of Parms");
   OutStreamer->emitInt16(
       static_cast<uint16_t>(ZFI->getSizeOfFnParams() / 4)); // Parms/4.
+
+  OutStreamer->AddComment("Length/2 of Prolog ");
+  if (EndOfPrologSym)
+    OutStreamer->emitValue(getTargetStreamer()->createWordDiffExpr(
+                               OutContext, EndOfPrologSym, CurrentFnSym),
+                           1);
+  else
+    OutStreamer->emitInt8(0);
+
+  OutStreamer->AddComment("Alloca Reg + Offset/2 to SP Update");
+  OutStreamer->AddComment(
+      Twine("  Bit 0-3: Register R").concat(utostr(AllocaReg)).str());
+  OutStreamer->AddComment("  Bit 4-8: Offset ");
+  const MCExpr *AllocaRegExpr =
+      MCConstantExpr::create(AllocaReg << 4, OutContext);
+  if (StackUpdateSym)
+    OutStreamer->emitValue(
+        MCBinaryExpr::createOr(getTargetStreamer()->createWordDiffExpr(
+                                   OutContext, StackUpdateSym, CurrentFnSym),
+                               AllocaRegExpr, OutContext),
+        1);
+  else
+    OutStreamer->emitValue(AllocaRegExpr, 1);
+
   OutStreamer->AddComment("Length of Code");
   OutStreamer->emitAbsoluteSymbolDiff(FnEndSym, CurrentFnEPMarkerSym, 4);
 
@@ -1866,11 +1894,87 @@ const MCExpr *SystemZAsmPrinter::lowerConstant(const Constant *CV,
   return AsmPrinter::lowerConstant(CV);
 }
 
+// Determine the end of the prolog and the instructions which updates the stack
+// register, and attach symbols to those instructions.
+static void determinePrologueStackUpdateSym(MachineFunction *MF,
+                                            MCSymbol *&EndOfPrologSym,
+                                            MCSymbol *&StackUpdateSym) {
+  EndOfPrologSym = nullptr;
+  StackUpdateSym = nullptr;
+
+  // Scan the basic block for the FENCE instruction which marks the end
+  // of the prologue. We know
+  // the prologue is spread at most across the first 3 basic blocks. Also record
+  // the first instruction updating the stack pointer.
+  const SystemZSubtarget &STI = MF->getSubtarget<SystemZSubtarget>();
+  auto &Regs = STI.getSpecialRegisters<SystemZXPLINK64Registers>();
+  MachineInstr *EndOfPrologMI = nullptr;
+  MachineInstr *StackUpdateMI = nullptr;
+  unsigned BBCount = 1;
+
+  for (auto &MBB : *MF) {
+    for (auto &I : MBB) {
+      if (I.getOpcode() == SystemZ::FENCE)
+        EndOfPrologMI = &I;
+      else if (!StackUpdateMI) {
+        unsigned Opcode = I.getOpcode();
+        if ((Opcode == SystemZ::AGHI || Opcode == SystemZ::AGFI) &&
+            I.getOperand(0).getReg() == Regs.getStackPointerRegister())
+          StackUpdateMI = &I;
+      }
+    }
+
+    // Prologue can be a max of 3 BBs if we need to call stack extension code
+    if (EndOfPrologMI || BBCount == 3)
+      break;
+
+    ++BBCount;
+  }
+
+  // Leaf functions do not have a prologue.
+  if (EndOfPrologMI == nullptr)
+    return;
+
+#ifdef EXPENSIVE_CHECKS
+  // Check that the prolog length is valid.
+  auto *TII = STI.getInstrInfo();
+  size_t Size = 0;
+
+  for (auto &MBB : *MF) {
+    bool TerminateLoop = false;
+    for (auto &I : MBB) {
+      Size += TII->getInstSizeInBytes(I);
+      if (&I == EndOfPrologMI) {
+        TerminateLoop = true;
+        break;
+      }
+    }
+    if (TerminateLoop)
+      break;
+  }
+  if (Size > 128)
+    report_fatal_error(
+        Twine(MF->getName()).concat(": Prolog exceeds 128 bytes"));
+#endif
+
+  // Attach a temporary symbol to mark the end of the prolog.
+  EndOfPrologSym = MF->getContext().createTempSymbol("end_of_prologue");
+  EndOfPrologMI->setPostInstrSymbol(*MF, EndOfPrologSym);
+
+  if (StackUpdateMI) {
+    StackUpdateSym = MF->getContext().createTempSymbol("stack_update");
+    StackUpdateMI->setPreInstrSymbol(*MF, StackUpdateSym);
+  }
+}
+
 void SystemZAsmPrinter::emitFunctionEntryLabel() {
   const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
 
   if (Subtarget.getTargetTriple().isOSzOS()) {
     MCContext &OutContext = OutStreamer->getContext();
+
+    // Add symbols to mark the end of the prolog and the stack updating instr.
+    determinePrologueStackUpdateSym(MF, EndOfPrologSym, StackUpdateSym);
 
     // Save information for later use.
     std::string N(MF->getFunction().hasName()
