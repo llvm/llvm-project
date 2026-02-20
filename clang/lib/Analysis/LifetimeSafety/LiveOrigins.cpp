@@ -159,9 +159,15 @@ public:
   /// An OriginFlow kills the liveness of the destination origin if `KillDest`
   /// is true. Otherwise, it propagates liveness from destination to source.
   Lattice transfer(Lattice In, const OriginFlowFact &OF) {
-    if (!OF.getKillDest())
-      return In;
-    return Lattice(Factory.remove(In.LiveOrigins, OF.getDestOriginID()));
+    // if (!OF.getKillDest())
+    //   return In;
+    Lattice Out = In;
+    if (auto *DestLiveness = Out.LiveOrigins.lookup(OF.getDestOriginID()))
+      Out = Lattice(
+          Factory.add(Out.LiveOrigins, OF.getSrcOriginID(), *DestLiveness));
+    if (OF.getKillDest())
+      Out = Lattice(Factory.remove(Out.LiveOrigins, OF.getDestOriginID()));
+    return Out;
   }
 
   LivenessMap getLiveOriginsAt(ProgramPoint P) const {
