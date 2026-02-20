@@ -569,9 +569,9 @@ void DAGTypeLegalizer::SplitRes_Select(SDNode *N, SDValue &Lo, SDValue &Hi) {
   Hi = DAG.getNode(Opcode, dl, LH.getValueType(), CH, LH, RH, EVLHi);
 }
 
-void DAGTypeLegalizer::SplitRes_CTSELECT(SDNode *N, SDValue &Lo, SDValue &Hi) {
+void DAGTypeLegalizer::SplitRes_CT_SELECT(SDNode *N, SDValue &Lo, SDValue &Hi) {
   // Reuse generic select splitting to support scalar and vector conditions.
-  // SplitRes_Select rebuilds with N->getOpcode(), so CTSELECT is preserved.
+  // SplitRes_Select rebuilds with N->getOpcode(), so CT_SELECT is preserved.
   SplitRes_Select(N, Lo, Hi);
 }
 

@@ -119,8 +119,6 @@ class VectorType;
       return (Kind != ScalarCondVectorVal);
     }
 
-    bool isCtSelectSupported(EVT VT) const override { return false; }
-
     bool isReadOnly(const GlobalValue *GV) const;
 
     /// getSetCCResultType - Return the value type to use for ISD::SETCC.
