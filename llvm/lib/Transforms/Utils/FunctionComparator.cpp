@@ -185,21 +185,21 @@ int FunctionComparator::cmpAttrs(const AttributeList L,
   return 0;
 }
 
-int FunctionComparator::cmpMetadata(const Metadata *L,
-                                    const Metadata *R) const {
+int FunctionComparator::cmpMetadata(const Metadata *L, const Metadata *R,
+                                    bool InValueContext) const {
   // TODO: the following routine coerce the metadata contents into constants
   // or MDStrings before comparison.
   // It ignores any other cases, so that the metadata nodes are considered
   // equal even though this is not correct.
   // We should structurally compare the metadata nodes to be perfect here.
 
+  if (L == R)
+    return 0;
+
   auto *MDStringL = dyn_cast<MDString>(L);
   auto *MDStringR = dyn_cast<MDString>(R);
-  if (MDStringL && MDStringR) {
-    if (MDStringL == MDStringR)
-      return 0;
+  if (MDStringL && MDStringR)
     return MDStringL->getString().compare(MDStringR->getString());
-  }
   if (MDStringR)
     return -1;
   if (MDStringL)
@@ -207,16 +207,31 @@ int FunctionComparator::cmpMetadata(const Metadata *L,
 
   auto *CL = dyn_cast<ConstantAsMetadata>(L);
   auto *CR = dyn_cast<ConstantAsMetadata>(R);
-  if (CL == CR)
-    return 0;
-  if (!CL)
+  if (CL && CR)
+    return cmpConstants(CL->getValue(), CR->getValue());
+  if (CR)
     return -1;
-  if (!CR)
+  if (CL)
     return 1;
-  return cmpConstants(CL->getValue(), CR->getValue());
+
+  auto *NodeL = dyn_cast<MDNode>(L);
+  auto *NodeR = dyn_cast<MDNode>(R);
+  if (NodeL && NodeR) {
+    if (InValueContext)
+      return cmpMDNode(NodeL, NodeR, InValueContext);
+  } else {
+    if (NodeR)
+      return -1;
+    if (NodeL)
+      return 1;
+  }
+  assert(!InValueContext &&
+         "all cases must be handled when comparing metadata arguments");
+  return 0;
 }
 
-int FunctionComparator::cmpMDNode(const MDNode *L, const MDNode *R) const {
+int FunctionComparator::cmpMDNode(const MDNode *L, const MDNode *R,
+                                  bool InValueContext) const {
   if (L == R)
     return 0;
   if (!L)
@@ -231,8 +246,20 @@ int FunctionComparator::cmpMDNode(const MDNode *L, const MDNode *R) const {
   // function semantically.
   if (int Res = cmpNumbers(L->getNumOperands(), R->getNumOperands()))
     return Res;
-  for (size_t I = 0; I < L->getNumOperands(); ++I)
-    if (int Res = cmpMetadata(L->getOperand(I), R->getOperand(I)))
+
+  size_t StartIdx = 0;
+  if (L->getNumOperands() > 0) {
+    if (L->getOperand(0) == L) {
+      if (R->getOperand(0) != R)
+        return -1;
+      StartIdx = 1;
+    } else if (R->getOperand(0) == R)
+      return 1;
+  }
+
+  for (size_t I = StartIdx; I < L->getNumOperands(); ++I)
+    if (int Res =
+            cmpMetadata(L->getOperand(I), R->getOperand(I), InValueContext))
       return Res;
   return 0;
 }
@@ -254,7 +281,7 @@ int FunctionComparator::cmpInstMetadata(Instruction const *L,
     auto const [KeyR, MR] = MDR[I];
     if (int Res = cmpNumbers(KeyL, KeyR))
       return Res;
-    if (int Res = cmpMDNode(ML, MR))
+    if (int Res = cmpMDNode(ML, MR, false))
       return Res;
   }
   return 0;
@@ -736,7 +763,7 @@ int FunctionComparator::cmpOperations(const Instruction *L,
                                cast<CallInst>(R)->getTailCallKind()))
         return Res;
     return cmpMDNode(L->getMetadata(LLVMContext::MD_range),
-                     R->getMetadata(LLVMContext::MD_range));
+                     R->getMetadata(LLVMContext::MD_range), false);
   }
   if (const SwitchInst *SI = dyn_cast<SwitchInst>(L)) {
     for (auto [LCase, RCase] : zip(SI->cases(), cast<SwitchInst>(R)->cases()))
@@ -919,7 +946,7 @@ int FunctionComparator::cmpValues(const Value *L, const Value *R) const {
       return 0;
 
     return cmpMetadata(MetadataValueL->getMetadata(),
-                       MetadataValueR->getMetadata());
+                       MetadataValueR->getMetadata(), true);
   }
 
   if (MetadataValueL)

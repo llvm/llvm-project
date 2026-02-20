@@ -3838,6 +3838,31 @@ void Verifier::visitPHINode(PHINode &PN) {
   visitInstruction(PN);
 }
 
+/// Returns true of \p MD is valid for as a metadata argument. It must be on of
+/// the following
+/// * a MDNode without cycles (expect self-reference in the first operand),
+/// * MDString,
+/// * ValueAsMetadata.
+static bool isValidMetadataArgument(const Metadata *MD,
+                                    SmallPtrSetImpl<const Metadata *> &Seen) {
+  // Potential cycles are not allowed.
+  if (!Seen.insert(MD).second)
+    return false;
+
+  if (auto *Node = dyn_cast<MDNode>(MD)) {
+    if (Node->getNumOperands() == 0)
+      return true;
+    ArrayRef<MDOperand> Ops = Node->operands();
+    if (Node->getOperand(0) == Node)
+      Ops = Ops.drop_front();
+    return all_of(Ops, [&](const Metadata *MD) {
+      return MD && isValidMetadataArgument(MD, Seen);
+    });
+  }
+
+  return isa<MDString>(MD) || isa<ValueAsMetadata>(MD);
+}
+
 void Verifier::visitCallBase(CallBase &Call) {
   Check(Call.getCalledOperand()->getType()->isPointerTy(),
         "Called function must be a pointer!", Call);
@@ -3856,6 +3881,19 @@ void Verifier::visitCallBase(CallBase &Call) {
     Check(Call.getArgOperand(i)->getType() == FTy->getParamType(i),
           "Call parameter type does not match function signature!",
           Call.getArgOperand(i), FTy->getParamType(i), Call);
+
+  // Verify metadata arguments.
+  for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i) {
+    auto Arg = Call.getArgOperand(i);
+    if (!Arg->getType()->isMetadataTy() || isa<DbgInfoIntrinsic>(Call))
+      continue;
+    SmallPtrSet<const Metadata *, 4> Seen;
+    Check(isValidMetadataArgument(cast<MetadataAsValue>(Arg)->getMetadata(),
+                                  Seen),
+          "Function arguments must be string metadata, value-as-metadata or an "
+          "MDNode!",
+          Call);
+  }
 
   AttributeList Attrs = Call.getAttributes();
 
