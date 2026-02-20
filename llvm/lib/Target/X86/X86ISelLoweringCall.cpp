@@ -2078,7 +2078,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     report_fatal_error("X86 interrupts may not be called directly");
 
   // Set type id for call site info.
-  setTypeIdForCallsiteInfo(CB, MF, CSInfo);
+  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
+    CSInfo = MachineFunction::CallSiteInfo(*CB);
 
   if (IsIndirectCall && !IsWin64 &&
       M->getModuleFlag("import-call-optimization"))
