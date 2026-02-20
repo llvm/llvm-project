@@ -633,12 +633,18 @@ static bool X86SelectAddress(MachineInstr &I, const X86TargetMachine &TM,
     // Can't handle alternate code models yet.
     if (TM.getCodeModel() != CodeModel::Small)
       return false;
-    AM.GV = GV;
-    AM.GVOpFlags = STI.classifyGlobalReference(GV);
 
-    // TODO: The ABI requires an extra load. not supported yet.
-    if (isGlobalStubReference(AM.GVOpFlags))
-      return false;
+    unsigned int GVOpFlags = STI.classifyGlobalReference(GV);
+
+    // If it's a stub, we need to do a load to find the real address, and we
+    // can't fold that into just an AM. The load will come from lowering this
+    // G_GLOBAL_VALUE later.
+    if (isGlobalStubReference(GVOpFlags))
+      break;
+
+    // If it's not a stub, point AM directly at the global.
+    AM.GV = GV;
+    AM.GVOpFlags = GVOpFlags;
 
     // TODO: This reference is relative to the pic base. not supported yet.
     if (isGlobalRelativeToPICBase(AM.GVOpFlags))
@@ -773,12 +779,29 @@ bool X86InstructionSelector::selectGlobalValue(MachineInstr &I,
          "unexpected instruction");
 
   X86AddressMode AM;
-  if (!X86SelectAddress(I, TM, MRI, STI, AM))
-    return false;
+  unsigned NewOpc;
 
-  const Register DefReg = I.getOperand(0).getReg();
-  LLT Ty = MRI.getType(DefReg);
-  unsigned NewOpc = getLeaOP(Ty, STI);
+  const GlobalValue *GV = I.getOperand(1).getGlobal();
+  const auto GVOpFlags = STI.classifyGlobalReference(GV);
+  if (isGlobalStubReference(GVOpFlags)) {
+    // If it's a stub, we need a load from the GOT instead of lea.
+    AM.GV = GV;
+    AM.GVOpFlags = GVOpFlags;
+    if (STI.isPICStyleRIPRel() || AM.GVOpFlags == X86II::MO_GOTPCREL ||
+        AM.GVOpFlags == X86II::MO_GOTPCREL_NORELAX)
+      AM.Base.Reg = X86::RIP;
+
+    auto Is64Bit = STI.getTargetLowering()->getPointerTy(
+                       I.getMF()->getDataLayout()) == MVT::i64;
+    NewOpc = Is64Bit ? X86::MOV64rm : X86::MOV32rm;
+  } else {
+    if (!X86SelectAddress(I, TM, MRI, STI, AM))
+      return false;
+
+    const Register DefReg = I.getOperand(0).getReg();
+    LLT Ty = MRI.getType(DefReg);
+    NewOpc = getLeaOP(Ty, STI);
+  }
 
   I.setDesc(TII.get(NewOpc));
   MachineInstrBuilder MIB(MF, I);
