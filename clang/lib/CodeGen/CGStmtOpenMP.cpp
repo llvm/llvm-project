@@ -745,6 +745,24 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
   (void)LocalScope.Privatize();
   for (const auto &VLASizePair : WrapperVLASizes)
     VLASizeMap[VLASizePair.second.first] = VLASizePair.second.second;
+
+  for (const CapturedStmt::Capture &Cap : S.captures()) {
+    if (!Cap.capturesVariable())
+      continue;
+
+    const VarDecl *VD = Cap.getCapturedVar();
+    QualType Ty = VD->getType();
+
+    if (Ty->isReferenceType())
+      Ty = Ty->getPointeeType();
+
+    if (const PointerType *PT = Ty->getAs<PointerType>()) {
+      QualType PointeeTy = PT->getPointeeType();
+      if (PointeeTy->isVariablyModifiedType())
+        EmitVariablyModifiedType(PointeeTy);
+    }
+  }
+
   PGO->assignRegionCounters(GlobalDecl(CD), F);
   CapturedStmtInfo->EmitBody(*this, CD->getBody());
   LocalScope.ForceCleanup();
