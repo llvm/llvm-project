@@ -1075,16 +1075,20 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   }
   using namespace llvm::PatternMatch;
   uint64_t C;
-  if (match(V, m_LShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
-                      m_ConstantInt(C))) ||
-      match(V, m_AShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
-                      m_ConstantInt(C)))) {
+  auto MatchTidXCall = m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>();
+  auto MaybeMaskedTidX =
+      m_CombineOr(m_c_And(MatchTidXCall, m_Value()), MatchTidXCall);
+  auto MaybeCastTidX = m_CastOrSelf(MaybeMaskedTidX);
+  auto MaybeMaskedCastTidX =
+      m_CombineOr(m_c_And(MaybeCastTidX, m_Value()), MaybeCastTidX);
+  if (match(V, m_LShr(MaybeMaskedCastTidX, m_ConstantInt(C)))) {
     return C >= ST->getWavefrontSizeLog2() && XDimDoesntResetWithinWaves;
   }
 
   Value *Mask;
-  if (match(V, m_c_And(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
-                       m_Value(Mask)))) {
+  if (match(V, m_c_And(
+                   m_CastOrSelf(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>()),
+                   m_Value(Mask)))) {
     return computeKnownBits(Mask, DL).countMinTrailingZeros() >=
                ST->getWavefrontSizeLog2() &&
            XDimDoesntResetWithinWaves;
