@@ -289,7 +289,7 @@ private:
     return Idx - 1;
   }
 
-  unsigned emitValueTypeByHwMode(const ValueTypeByHwMode &VTBH,
+  unsigned emitValueTypeByHwMode(const ValueTypeByHwMode &VTBH, unsigned Index,
                                  raw_ostream &OS);
 };
 } // end anonymous namespace.
@@ -515,10 +515,10 @@ static unsigned emitMVT(MVT VT, raw_ostream &OS) {
 
 unsigned
 MatcherTableEmitter::emitValueTypeByHwMode(const ValueTypeByHwMode &VTBH,
-                                           raw_ostream &OS) {
+                                           unsigned Index, raw_ostream &OS) {
   if (!OmitComments)
     OS << "/*" << VTBH << "*/";
-  OS << getValueTypeID(VTBH) << ',';
+  OS << Index << ',';
   return 1;
 }
 /// EmitMatcher - Emit bytes for the specified matcher and return
@@ -778,23 +778,24 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       return NumBytes + 2;
     }
 
-    unsigned Idx = getValueTypeID(VTBH);
     unsigned OpSize;
     if (cast<CheckTypeMatcher>(N)->getResNo() == 0) {
-      if (Idx == 0) {
-        OS << "OPC_CheckTypeByHwMode0,";
+      unsigned Index = getValueTypeID(VTBH);
+      if (Index == 0) {
+        OS << "OPC_CheckTypeByHwMode0";
+        if (!OmitComments)
+          OS << "/*" << VTBH << "*/";
+        OS << ',';
         OpSize = 1;
       } else {
-        OS << "OPC_CheckTypeByHwMode, " << Idx << ",";
-        OpSize = 2;
+        OS << "OPC_CheckTypeByHwMode, ";
+        OpSize = 1 + emitValueTypeByHwMode(VTBH, Index, OS);
       }
     } else {
       OS << "OPC_CheckTypeResByHwMode, "
-         << cast<CheckTypeMatcher>(N)->getResNo() << ", " << Idx << ",";
-      OpSize = 3;
+         << cast<CheckTypeMatcher>(N)->getResNo() << ", ";
+      OpSize = 2 + emitValueTypeByHwMode(VTBH, getValueTypeID(VTBH), OS);
     }
-    if (!OmitComments)
-      OS << "/*" << VTBH << "*/";
     OS << '\n';
     return OpSize;
   }
@@ -807,7 +808,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       case MVT::i32:
       case MVT::i64:
         OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
-           << "TypeI" << MVT(VT).getSizeInBits() << ",\n";
+           << "TypeI" << VT.getSizeInBits() << ",\n";
         return 1;
       default:
         OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
@@ -817,9 +818,18 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
         return NumBytes + 1;
       }
     } else {
+      unsigned Index = getValueTypeID(VTBH);
+      if (Index == 0) {
+        OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
+           << "TypeByHwMode0";
+        if (!OmitComments)
+          OS << "/*" << VTBH << "*/";
+        OS << ",\n";
+        return 1;
+      }
       OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
          << "TypeByHwMode, ";
-      unsigned NumBytes = emitValueTypeByHwMode(VTBH, OS);
+      unsigned NumBytes = emitValueTypeByHwMode(VTBH, Index, OS);
       OS << '\n';
       return NumBytes + 1;
     }
@@ -931,9 +941,18 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
         break;
       }
     } else {
-      OS << "OPC_EmitIntegerByHwMode, ";
-      TypeBytes = emitValueTypeByHwMode(VTBH, OS);
-      OS << ' ';
+      unsigned Index = getValueTypeID(VTBH);
+      if (Index == 0) {
+        OS << "OPC_EmitIntegerByHwMode0";
+        if (!OmitComments)
+          OS << "/*" << VTBH << "*/";
+        OS << ", ";
+        TypeBytes = 0;
+      } else {
+        OS << "OPC_EmitIntegerByHwMode, ";
+        TypeBytes = emitValueTypeByHwMode(VTBH, Index, OS);
+        OS << ' ';
+      }
     }
     // If the value is 63 or smaller, use the string directly. Otherwise, use
     // a VBR.
@@ -983,13 +1002,13 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     } else {
       if (Reg && Reg->EnumValue > 255) {
         OS << "OPC_EmitRegisterByHwMode2, ";
-        OpBytes = emitValueTypeByHwMode(VTBH, OS);
+        OpBytes = emitValueTypeByHwMode(VTBH, getValueTypeID(VTBH), OS);
         OS << " TARGET_VAL(" << getQualifiedName(Reg->TheDef) << "),\n";
         return OpBytes + 3;
       }
 
       OS << "OPC_EmitRegisterByHwMode, ";
-      OpBytes = emitValueTypeByHwMode(VTBH, OS) + 1;
+      OpBytes = emitValueTypeByHwMode(VTBH, getValueTypeID(VTBH), OS) + 1;
       OS << ' ';
     }
     if (Reg)
@@ -1169,7 +1188,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       for (unsigned i = 0, e = EN->getNumVTs(); i != e; ++i) {
         OS << ' ';
         const ValueTypeByHwMode &VTBH = EN->getVT(i);
-        NumTypeBytes += emitValueTypeByHwMode(VTBH, OS);
+        NumTypeBytes += emitValueTypeByHwMode(VTBH, getValueTypeID(VTBH), OS);
       }
     } else {
       for (unsigned i = 0, e = EN->getNumVTs(); i != e; ++i) {

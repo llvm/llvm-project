@@ -207,7 +207,7 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-SDAG-NEXT: OPC_RecordChild1, // #1 = $val
 // ISEL-SDAG-NEXT: OPC_CheckChild1TypeByHwMode, /*{(*:i64),(m1:i64),(m2:i64)}*/1,
 // ISEL-SDAG-NEXT: OPC_RecordChild2, // #2 = $src
-// ISEL-SDAG-NEXT: OPC_CheckChild2TypeByHwMode, /*{(*:i32),(m3:i64)}*/0,
+// ISEL-SDAG-NEXT: OPC_CheckChild2TypeByHwMode0/*{(*:i32),(m3:i64)}*/,
 // ISEL-SDAG-NEXT: OPC_CheckPredicate0,  // Predicate_unindexedstore
 // ISEL-SDAG-NEXT: OPC_CheckPredicate1,  // Predicate_store
 // ISEL-SDAG-NEXT: OPC_EmitMergeInputChains1_0,
@@ -218,7 +218,7 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-SDAG-NEXT: OPC_RecordMemRef,
 // ISEL-SDAG-NEXT: OPC_RecordNode, // #0 = 'ld' chained node
 // ISEL-SDAG-NEXT: OPC_RecordChild1, // #1 = $src
-// ISEL-SDAG-NEXT: OPC_CheckChild1TypeByHwMode, /*{(*:i32),(m3:i64)}*/0,
+// ISEL-SDAG-NEXT: OPC_CheckChild1TypeByHwMode0/*{(*:i32),(m3:i64)}*/,
 // ISEL-SDAG-NEXT: OPC_CheckPredicate2,  // Predicate_unindexedload
 // ISEL-SDAG-NEXT: OPC_CheckPredicate3,  // Predicate_load
 // ISEL-SDAG-NEXT: OPC_CheckTypeI64,
