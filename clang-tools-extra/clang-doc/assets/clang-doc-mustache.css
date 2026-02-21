@@ -520,3 +520,22 @@ a, a:visited, a:hover, a:active {
   overflow: hidden;
   padding: 10px;
 }
+
+.params-vertical {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.param {
+    display: block;
+    margin-right: 5px;
+}
+
+.format-text {
+    color: #800;    
+}
+
+.format-title {
+    color: #800;
+    font-weight: bold;
+}

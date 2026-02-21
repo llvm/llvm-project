@@ -452,8 +452,7 @@ static void serializeArray(const Container &Records, Object &Obj,
     json::Value ItemVal = Object();
     auto &ItemObj = *ItemVal.getAsObject();
     SerializeInfo(Records[Index], ItemObj);
-    if (Index == Records.size() - 1)
-      ItemObj["End"] = true;
+    ItemObj["End"] = (Index == Records.size() - 1);
     RecordsArrayRef.push_back(ItemVal);
   }
   Obj[Key] = RecordsArray;
@@ -474,8 +473,7 @@ static void serializeInfo(const ArrayRef<TemplateParamInfo> &Params,
     Object &ParamObj = *ParamObjVal.getAsObject();
 
     ParamObj["Param"] = Params[Idx].Contents;
-    if (Idx == Params.size() - 1)
-      ParamObj["End"] = true;
+    ParamObj["End"] = (Idx == Params.size() - 1);
     ParamsArrayRef.push_back(ParamObjVal);
   }
   Obj["Parameters"] = ParamsArray;
@@ -536,10 +534,16 @@ static void serializeInfo(const FunctionInfo &F, json::Object &Obj,
                           const std::optional<StringRef> RepositoryLine) {
   serializeCommonAttributes(F, Obj, RepositoryURL, RepositoryLine);
   Obj["IsStatic"] = F.IsStatic;
+  size_t ParamLen = F.Name.size() + 1;
 
   auto ReturnTypeObj = Object();
   serializeInfo(F.ReturnType, ReturnTypeObj);
   Obj["ReturnType"] = std::move(ReturnTypeObj);
+  ParamLen += F.ReturnType.Type.Name.size();
+  ParamLen += 2;
+  Obj["ParamLength"] = ParamLen;
+  if(ParamLen >= 40)
+    Obj["ParamLength"] = 35;
 
   if (!F.Params.empty())
     serializeArray(F.Params, Obj, "Params", SerializeInfoLambda);
