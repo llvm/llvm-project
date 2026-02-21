@@ -1124,6 +1124,11 @@ bool MicrosoftCXXABI::hasMostDerivedReturn(GlobalDecl GD) const {
 
 static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
                              CodeGenModule &CGM) {
+  // If the record is marked with the trivial_abi attribute, we don't
+  // have to conform to the standard MSVC ABI.
+  if (RD->hasAttr<TrivialABIAttr>())
+    return true;
+
   // On AArch64, HVAs that can be passed in registers can also be returned
   // in registers. (Note this is using the MSVC definition of an HVA; see
   // isPermittedToBeHomogeneousAggregate().)
