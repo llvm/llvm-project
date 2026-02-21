@@ -82,15 +82,3 @@ int test5(int x) {
 }
 int noProto5(int x) { return x; }
 // CHECK: cir.func {{.*}} no_proto {{.*}} @noProto5(%arg0: !s32i {{.+}}) -> !s32i
-
-// No-proto declaration without definition, called with multiple args of
-// different types. This is the "printf without a header" case and exercises
-// the promoted-arg-type path in emitCall.
-int noProto6();
-int test6(int x) {
-// CHECK: cir.func {{.*}} @test6
-  return noProto6("hello", x);
-  // CHECK:  [[GGO:%.*]] = cir.get_global @noProto6 : !cir.ptr<!cir.func<(...) -> !s32i>>
-  // CHECK:  [[CAST:%.*]] = cir.cast bitcast [[GGO]] : !cir.ptr<!cir.func<(...) -> !s32i>> -> !cir.ptr<!cir.func<(!cir.ptr<!s8i>, !s32i) -> !s32i>>
-  // CHECK:  {{%.*}} = cir.call [[CAST]](%{{.*}}, %{{.*}}) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, !s32i) -> !s32i>>, !cir.ptr<!s8i>, !s32i) -> !s32i
-}

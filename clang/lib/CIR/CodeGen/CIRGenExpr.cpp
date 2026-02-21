@@ -796,21 +796,31 @@ static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
   assert(!cir::MissingFeatures::sanitizers());
 
+  // Use funcOp's type as it may have been upgraded to variadic
+  // (e.g. after seeing printf called with multiple arguments before
+  // any explicit declaration). convertType(fd->getType()) would return the
+  // stale non-variadic AST type in that case.
   mlir::Type fnTy = funcOp.getFunctionType();
   mlir::Type ptrTy = cir::PointerType::get(fnTy);
   mlir::Value addr = cir::GetGlobalOp::create(cgf.getBuilder(), loc, ptrTy,
                                               funcOp.getSymName());
 
-  if (funcOp.getFunctionType() != cgf.convertType(fd->getType())) {
-    fnTy = cgf.convertType(fd->getType());
-    ptrTy = cir::PointerType::get(fnTy);
-
-    addr = cir::CastOp::create(cgf.getBuilder(), addr.getLoc(), ptrTy,
-                               cir::CastKind::bitcast, addr);
+  mlir::Type astFnTy = cgf.convertType(fd->getType());
+  if (funcOp.getFunctionType() != astFnTy) {
+    // Only bitcast when the funcOp type differs from the AST type for a
+    // reason other than a variadic upgrade. If funcOp is variadic and the
+    // AST type is not, the funcOp is correct and no bitcast is needed.
+    auto funcOpTy = mlir::cast<cir::FuncType>(funcOp.getFunctionType());
+    auto astTy = mlir::cast<cir::FuncType>(astFnTy);
+    if (!(funcOpTy.isVarArg() && !astTy.isVarArg())) {
+      fnTy = astFnTy;
+      ptrTy = cir::PointerType::get(fnTy);
+      addr = cir::CastOp::create(cgf.getBuilder(), addr.getLoc(), ptrTy,
+                                 cir::CastKind::bitcast, addr);
+    }
   }
 
-  return cgf.makeAddrLValue(Address(addr, fnTy, align), e->getType(),
-                            AlignmentSource::Decl);
+  return cgf.makeAddrLValue(Address(addr, fnTy, align), e->getType());
 }
 
 /// Determine whether we can emit a reference to \p vd from the current
