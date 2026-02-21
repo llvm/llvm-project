@@ -19,6 +19,9 @@ namespace clang::tidy::readability {
 ///
 ///   * `Threshold` - flag functions with Cognitive Complexity exceeding
 ///     this number. The default is `25`.
+///   * `IgnoreAboveThreshold` - do not flag functions with Cognitive Complexity
+///     at or above this number. This can be used to skip "hopelessly" complex
+///     functions. The default is none (option disabled).
 ///   * `DescribeBasicIncrements`- if set to `true`, then for each function
 ///     exceeding the complexity threshold the check will issue additional
 ///     diagnostics on every piece of code (loop, `if` statement, etc.) which
@@ -42,6 +45,7 @@ public:
 
 private:
   const unsigned Threshold;
+  const std::optional<unsigned> IgnoreAboveThreshold;
   const bool DescribeBasicIncrements;
   const bool IgnoreMacros;
 };
