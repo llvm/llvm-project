@@ -223,7 +223,6 @@ struct MissingFeatures {
   static bool lowerModuleCodeGenOpts() { return false; }
   static bool lowerModuleLangOpts() { return false; }
   static bool targetLoweringInfo() { return false; }
-  static bool extParamInfo() { return false; }
   static bool qualifiedTypes() { return false; }
   static bool swift() { return false; }
 
