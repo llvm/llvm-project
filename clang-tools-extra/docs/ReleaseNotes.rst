@@ -121,6 +121,14 @@ New checks
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
+- New :doc:`modernize-use-size-type
+  <clang-tidy/checks/modernize/use-size-type>` check.
+
+  Finds local variables declared as signed integer types that are
+  initialized from an unsigned/``size_t`` source (e.g. ``container.size()``)
+  and only used in contexts expecting unsigned types, and suggests
+  changing the type to ``size_t``.
+
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 

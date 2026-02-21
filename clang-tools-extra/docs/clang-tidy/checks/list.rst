@@ -326,6 +326,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-override <modernize/use-override>`, "Yes"
    :doc:`modernize-use-ranges <modernize/use-ranges>`, "Yes"
    :doc:`modernize-use-scoped-lock <modernize/use-scoped-lock>`, "Yes"
+   :doc:`modernize-use-size-type <modernize/use-size-type>`, "Yes"
    :doc:`modernize-use-starts-ends-with <modernize/use-starts-ends-with>`, "Yes"
    :doc:`modernize-use-std-format <modernize/use-std-format>`, "Yes"
    :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"
