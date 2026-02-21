@@ -3732,3 +3732,27 @@ TEST(TracingFileSystemTest, PrintOutput) {
             "  InMemoryFileSystem\n",
             Output);
 }
+
+TEST(VirtualFileSystemTest, RecursiveDirectoryIteratorEmpty) {
+  TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+      vfs::getRealFileSystem());
+
+  // An empty directory should not fail
+  {
+    std::error_code EC;
+    vfs::recursive_directory_iterator I =
+        vfs::recursive_directory_iterator(*FS, TestDirectory.path(), EC);
+    ASSERT_FALSE(EC);
+    EXPECT_EQ(vfs::recursive_directory_iterator(), I);
+  }
+
+  // But a non-existent directory should fail
+  {
+    std::error_code EC;
+    vfs::recursive_directory_iterator I =
+        vfs::recursive_directory_iterator(*FS, "/non-existent", EC);
+    ASSERT_EQ(EC, std::errc::no_such_file_or_directory);
+    EXPECT_EQ(vfs::recursive_directory_iterator(), I);
+  }
+}
