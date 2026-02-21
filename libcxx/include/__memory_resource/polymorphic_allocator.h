@@ -14,9 +14,12 @@
 #include <__cstddef/byte.h>
 #include <__cstddef/max_align_t.h>
 #include <__fwd/pair.h>
+#include <__memory/construct_at.h>
+#include <__memory/uses_allocator_construction.h>
 #include <__memory_resource/memory_resource.h>
 #include <__new/exceptions.h>
 #include <__new/placement_new_delete.h>
+#include <__type_traits/remove_cv.h>
 #include <__utility/exception_guard.h>
 #include <__utility/piecewise_construct.h>
 #include <limits>
@@ -34,6 +37,16 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace pmr {
+
+template <class _Type, class _Alloc, class... _Args>
+_LIBCPP_HIDE_FROM_ABI _Type*
+__uninitialized_construct_using_allocator_nocv(_Type* __ptr, const _Alloc& __alloc, _Args&&... __args) {
+  return std::apply(
+      [__ptr_nocv = const_cast<remove_cv_t<_Type>*>(__ptr)](auto&&... __xs) {
+        return std::__construct_at(__ptr_nocv, std::forward<decltype(__xs)>(__xs)...);
+      },
+      __uses_allocator_construction_args<_Type>::__apply(__alloc, std::forward<_Args>(__args)...));
+}
 
 // [mem.poly.allocator.class]
 
@@ -122,24 +135,14 @@ public:
 
   template <class _Tp, class... _Ts>
   _LIBCPP_HIDE_FROM_ABI void construct(_Tp* __p, _Ts&&... __args) {
-    std::__user_alloc_construct_impl(
-        typename __uses_alloc_ctor<_Tp, polymorphic_allocator&, _Ts...>::type(),
-        __p,
-        *this,
-        std::forward<_Ts>(__args)...);
+    std::pmr::__uninitialized_construct_using_allocator_nocv(__p, *this, std::forward<_Ts>(__args)...);
   }
 
   template <class _T1, class _T2, class... _Args1, class... _Args2>
   _LIBCPP_HIDE_FROM_ABI void
   construct(pair<_T1, _T2>* __p, piecewise_construct_t, tuple<_Args1...> __x, tuple<_Args2...> __y) {
-    ::new ((void*)__p) pair<_T1, _T2>(
-        piecewise_construct,
-        __transform_tuple(typename __uses_alloc_ctor< _T1, polymorphic_allocator&, _Args1... >::type(),
-                          std::move(__x),
-                          make_index_sequence<sizeof...(_Args1)>()),
-        __transform_tuple(typename __uses_alloc_ctor< _T2, polymorphic_allocator&, _Args2... >::type(),
-                          std::move(__y),
-                          make_index_sequence<sizeof...(_Args2)>()));
+    std::pmr::__uninitialized_construct_using_allocator_nocv(
+        __p, *this, piecewise_construct, tuple<_Args1&&...>(std::move(__x)), tuple<_Args2&&...>(std::move(__y)));
   }
 
   template <class _T1, class _T2>
@@ -195,26 +198,6 @@ public:
 #  endif
 
 private:
-  template <class... _Args, size_t... _Is>
-  _LIBCPP_HIDE_FROM_ABI tuple<_Args&&...>
-  __transform_tuple(integral_constant<int, 0>, tuple<_Args...>&& __t, index_sequence<_Is...>) {
-    return std::forward_as_tuple(std::get<_Is>(std::move(__t))...);
-  }
-
-  template <class... _Args, size_t... _Is>
-  _LIBCPP_HIDE_FROM_ABI tuple<allocator_arg_t const&, polymorphic_allocator&, _Args&&...>
-  __transform_tuple(integral_constant<int, 1>, tuple<_Args...>&& __t, index_sequence<_Is...>) {
-    using _Tup = tuple<allocator_arg_t const&, polymorphic_allocator&, _Args&&...>;
-    return _Tup(allocator_arg, *this, std::get<_Is>(std::move(__t))...);
-  }
-
-  template <class... _Args, size_t... _Is>
-  _LIBCPP_HIDE_FROM_ABI tuple<_Args&&..., polymorphic_allocator&>
-  __transform_tuple(integral_constant<int, 2>, tuple<_Args...>&& __t, index_sequence<_Is...>) {
-    using _Tup = tuple<_Args&&..., polymorphic_allocator&>;
-    return _Tup(std::get<_Is>(std::move(__t))..., *this);
-  }
-
   _LIBCPP_HIDE_FROM_ABI size_t __max_size() const noexcept {
     return numeric_limits<size_t>::max() / sizeof(value_type);
   }

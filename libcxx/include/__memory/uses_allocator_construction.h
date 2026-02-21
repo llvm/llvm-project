@@ -34,23 +34,27 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 inline constexpr bool __is_cv_std_pair = __is_pair_v<remove_cv_t<_Tp>>;
 
-template <class _Tp, class = void>
+template <class _Tp, bool _IsCvStdPair = __is_cv_std_pair<_Tp>>
 struct __uses_allocator_construction_args;
+
+#  if _LIBCPP_STD_VER >= 20
+template <class _Tp>
+using __uses_allocator_construction_args_recursive _LIBCPP_NODEBUG = __uses_allocator_construction_args<_Tp>;
+#  else
+template <class _Tp>
+using __uses_allocator_construction_args_recursive _LIBCPP_NODEBUG = __uses_allocator_construction_args<_Tp, false>;
+#  endif
 
 namespace __uses_allocator_detail {
 
 template <class _Ap, class _Bp>
 void __fun(const pair<_Ap, _Bp>&);
 
+template <class, class = void>
+inline constexpr bool __convertible_to_const_pair_ref = false;
 template <class _Tp>
-decltype(__uses_allocator_detail::__fun(std::declval<_Tp>()), true_type()) __convertible_to_const_pair_ref_impl(int);
-
-template <class>
-false_type __convertible_to_const_pair_ref_impl(...);
-
-template <class _Tp>
-inline constexpr bool __convertible_to_const_pair_ref =
-    decltype(__uses_allocator_detail::__convertible_to_const_pair_ref_impl<_Tp>(0))::value;
+inline constexpr bool
+    __convertible_to_const_pair_ref<_Tp, decltype(__uses_allocator_detail::__fun(std::declval<_Tp>()))> = true;
 
 #  if _LIBCPP_STD_VER >= 23
 template <class _Tp, class _Up>
@@ -67,7 +71,7 @@ template <class _Type, class _Alloc, class... _Args>
 _LIBCPP_HIDE_FROM_ABI constexpr _Type __make_obj_using_allocator(const _Alloc& __alloc, _Args&&... __args);
 
 template <class _Pair>
-struct __uses_allocator_construction_args<_Pair, __enable_if_t<__is_cv_std_pair<_Pair>>> {
+struct __uses_allocator_construction_args<_Pair, true> {
   template <class _Alloc, class _Tuple1, class _Tuple2>
   static _LIBCPP_HIDE_FROM_ABI constexpr auto
   __apply(const _Alloc& __alloc, piecewise_construct_t, _Tuple1&& __x, _Tuple2&& __y) noexcept {
@@ -75,13 +79,13 @@ struct __uses_allocator_construction_args<_Pair, __enable_if_t<__is_cv_std_pair<
         piecewise_construct,
         std::apply(
             [&__alloc](auto&&... __args1) {
-              return __uses_allocator_construction_args<typename _Pair::first_type>::__apply(
+              return __uses_allocator_construction_args_recursive<typename _Pair::first_type>::__apply(
                   __alloc, std::forward<decltype(__args1)>(__args1)...);
             },
             std::forward<_Tuple1>(__x)),
         std::apply(
             [&__alloc](auto&&... __args2) {
-              return __uses_allocator_construction_args<typename _Pair::second_type>::__apply(
+              return __uses_allocator_construction_args_recursive<typename _Pair::second_type>::__apply(
                   __alloc, std::forward<decltype(__args2)>(__args2)...);
             },
             std::forward<_Tuple2>(__y)));
@@ -170,7 +174,7 @@ struct __uses_allocator_construction_args<_Pair, __enable_if_t<__is_cv_std_pair<
 };
 
 template <class _Type>
-struct __uses_allocator_construction_args<_Type, __enable_if_t<!__is_cv_std_pair<_Type>>> {
+struct __uses_allocator_construction_args<_Type, false> {
   template <class _Alloc, class... _Args>
   static _LIBCPP_HIDE_FROM_ABI constexpr auto __apply(const _Alloc& __alloc, _Args&&... __args) noexcept {
     if constexpr (!uses_allocator_v<remove_cv_t<_Type>, _Alloc> && is_constructible_v<_Type, _Args...>) {
