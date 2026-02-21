@@ -233,6 +233,15 @@ public:
         return;
       }
 
+      // Keep using declarations at the front of the list.
+      if (D->getIdentifierNamespace() & Decl::IDNS_Using) {
+        ASTContext &C = D->getASTContext();
+        DeclListNode *Node = C.AllocateDeclListNode(D);
+        Node->Rest = Data.getPointer();
+        Data.setPointer(Node);
+        return;
+      }
+
       // Add D after OldD.
       ASTContext &C = D->getASTContext();
       DeclListNode *Node = C.AllocateDeclListNode(OldD);
@@ -244,27 +253,50 @@ public:
     // FIXME: Move the assert before the single decl case when we fix the
     // duplication coming from the ASTReader reading builtin types.
     assert(!llvm::is_contained(getLookupResult(), D) && "Already exists!");
-    // Determine if this declaration is actually a redeclaration.
-    for (DeclListNode *N = getAsList(); /*return in loop*/;
-         N = N->Rest.dyn_cast<DeclListNode *>()) {
+
+    DeclListNode *Prev = nullptr;
+    for (DeclListNode *N = getAsList(); N;
+         Prev = N, N = N->Rest.dyn_cast<DeclListNode *>()) {
       if (D->declarationReplaces(N->D, IsKnownNewer)) {
         N->D = D;
         return;
       }
-      if (auto *ND = N->Rest.dyn_cast<NamedDecl *>()) {
-        if (D->declarationReplaces(ND, IsKnownNewer)) {
-          N->Rest = D;
-          return;
-        }
 
-        // Add D after ND.
+      // Keep using declarations at the front of the list.
+      if ((D->getIdentifierNamespace() & Decl::IDNS_Using) &&
+          N->D->getIdentifierNamespace() != Decl::IDNS_Using) {
         ASTContext &C = D->getASTContext();
-        DeclListNode *Node = C.AllocateDeclListNode(ND);
-        N->Rest = Node;
-        Node->Rest = D;
+        DeclListNode *Node = C.AllocateDeclListNode(D);
+        Node->Rest = N;
+        if (Prev)
+          Prev->Rest = Node;
+        else
+          Data.setPointer(Node);
         return;
       }
     }
+
+    // P->Rest must be the tail NamedDecl* at this point.
+    NamedDecl *N = Prev->Rest.get<NamedDecl *>();
+    if (D->declarationReplaces(N, IsKnownNewer)) {
+      Prev->Rest = D;
+      return;
+    }
+
+    // Keep using declarations at the front of the list.
+    if (D->getIdentifierNamespace() & Decl::IDNS_Using) {
+      ASTContext &C = D->getASTContext();
+      DeclListNode *Node = C.AllocateDeclListNode(D);
+      Node->Rest = Data.getPointer();
+      Data.setPointer(Node);
+      return;
+    }
+
+    // Add D after N.
+    ASTContext &C = D->getASTContext();
+    DeclListNode *Node = C.AllocateDeclListNode(N);
+    Prev->Rest = Node;
+    Node->Rest = D;
   }
 
   /// Add a declaration to the list without checking if it replaces anything.
