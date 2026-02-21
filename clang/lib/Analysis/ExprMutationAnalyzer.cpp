@@ -449,7 +449,13 @@ ExprMutationAnalyzer::Analyzer::findDirectMutation(const Expr *Exp) {
   const auto AsOperatorArrowThis = cxxOperatorCallExpr(
       hasOverloadedOperatorName("->"),
       callee(
-          cxxMethodDecl(ofClass(isMoveOnly()), returns(nonConstPointerType()))),
+          cxxMethodDecl(
+             anyOf(
+              ofClass(isMoveOnly()),
+              ofClass(hasAnyName("std::shared_ptr", "std::weak_ptr"))
+            ),
+            returns(nonConstPointerType())
+          )),
       argumentCountIs(1), hasArgument(0, canResolveToExpr(Exp)));
 
   // Used as non-const-ref argument when calling a function.
