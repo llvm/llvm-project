@@ -18,7 +18,7 @@ bazel_dep(name = "rules_shell", version = "0.6.1")
 bazel_dep(name = "zlib-ng", version = "2.0.7", repo_name = "llvm_zlib")
 bazel_dep(name = "zstd", version = "1.5.7", repo_name = "llvm_zstd")
 
-llvm_repos_extension = use_extension(":extensions.bzl", "llvm_repos_extension")
+llvm_repos_extension = use_extension("@llvm-raw//utils/bazel:extensions.bzl", "llvm_repos_extension")
 use_repo(
     llvm_repos_extension,
     "gmp",
@@ -34,6 +34,5 @@ use_repo(
     "vulkan_sdk",
 )
 
-llvm_configure = use_repo_rule("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure")
-
-llvm_configure(name = "llvm-project")
+llvm = use_extension("@llvm-raw//utils/bazel:configure.bzl", "llvm")
+use_repo(llvm, "llvm-project")

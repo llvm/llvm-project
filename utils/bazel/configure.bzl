@@ -206,3 +206,37 @@ llvm_configure = repository_rule(
         "targets": attr.string_list(default = DEFAULT_TARGETS),
     },
 )
+
+def _llvm_impl(mctx):
+    targets = {t: True for t in DEFAULT_TARGETS}
+    for mod in mctx.modules:
+        if not mod.is_root:
+            continue
+        if mod.tags.configure:
+            targets = {}
+        for conf in mod.tags.configure:
+            for target in conf.targets:
+                targets[target] = True
+        break
+
+    llvm_configure(
+        name = "llvm-project",
+        targets = targets.keys(),
+    )
+
+    return mctx.extension_metadata(
+        reproducible = True,
+        root_module_direct_deps = "all",
+        root_module_direct_dev_deps = [],
+    )
+
+llvm = module_extension(
+    implementation = _llvm_impl,
+    tag_classes = {
+        "configure": tag_class(
+            attrs = {
+                "targets": attr.string_list(mandatory = True),
+            },
+        ),
+    },
+)
