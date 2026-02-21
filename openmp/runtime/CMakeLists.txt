@@ -378,8 +378,15 @@ endif()
 set(LIBOMP_OMPX_TASKGRAPH FALSE CACHE BOOL "OMPX-taskgraph (task record & replay)?")
 
 # Error check hwloc support after config-ix has run
-if(LIBOMP_USE_HWLOC AND (NOT LIBOMP_HAVE_HWLOC))
-  libomp_error_say("Hwloc requested but not available")
+if(${LIBOMP_USE_HWLOC})
+  set(CMAKE_REQUIRED_INCLUDES ${LIBOMP_HWLOC_INSTALL_DIR}/include)
+  check_include_file(hwloc.h LIBOMP_HAVE_HWLOC_H)
+  set(CMAKE_REQUIRED_INCLUDES)
+  if(NOT LIBOMP_HAVE_HWLOC_H)
+    libomp_error_say("Hwloc requested but not available")
+  else()
+    include_directories(${LIBOMP_HWLOC_INSTALL_DIR}/include)
+  endif()
 endif()
 
 # Hierarchical scheduling support
