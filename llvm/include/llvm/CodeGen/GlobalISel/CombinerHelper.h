@@ -534,6 +534,9 @@ public:
   void applySimplifyAddToSub(MachineInstr &MI,
                              std::tuple<Register, Register> &MatchInfo) const;
 
+  /// Fold `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`
+  bool matchBinopWithNeg(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+
   /// Match (logic_op (op x...), (op y...)) -> (op (logic_op x, y))
   bool matchHoistLogicOpWithSameOpcodeHands(
       MachineInstr &MI, InstructionStepsMatchInfo &MatchInfo) const;
@@ -1050,6 +1053,11 @@ public:
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
+
+  /// Helper function for matchBinopWithNeg: tries to match one commuted form
+  /// of `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`.
+  bool matchBinopWithNegInner(Register MInner, Register Other, unsigned RootOpc,
+                              Register Dst, LLT Ty, BuildFnTy &MatchInfo) const;
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a post-indexing operation.
   ///
