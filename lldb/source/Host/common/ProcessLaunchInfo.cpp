@@ -33,7 +33,11 @@ using namespace lldb_private;
 
 ProcessLaunchInfo::ProcessLaunchInfo()
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(0),
-      m_file_actions(), m_pty(new PTY), m_monitor_callback(nullptr) {}
+      m_file_actions(), m_monitor_callback(nullptr) {
+#ifndef _WIN32
+  m_pty = std::make_shared<PTY>();
+#endif
+}
 
 ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
                                      const FileSpec &stdout_file_spec,
@@ -41,7 +45,10 @@ ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
                                      const FileSpec &working_directory,
                                      uint32_t launch_flags)
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(launch_flags),
-      m_file_actions(), m_pty(new PTY) {
+      m_file_actions() {
+#ifndef _WIN32
+  m_pty = std::make_shared<PTY>();
+#endif
   if (stdin_file_spec) {
     FileAction file_action;
     const bool read = true;

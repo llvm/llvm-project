@@ -24,7 +24,7 @@
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/PseudoTerminal.h"
-#include "lldb/Host/windows/ConnectionGenericFileWindows.h"
+#include "lldb/Host/windows/ConnectionConPTYWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -651,8 +651,11 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   Log *log = GetLog(WindowsLog::Process);
   LLDB_LOG(log, "Process {0} exited with code {1}", GetID(), exit_code);
 
-  if (m_pty)
+  if (m_pty) {
+    m_pty->SetStopping(true);
+    m_stdio_communication.InterruptRead();
     m_pty->Close();
+  }
 
   TargetSP target = CalculateTarget();
   if (target) {
@@ -1134,7 +1137,7 @@ void ProcessWindows::SetPseudoConsoleHandle() {
   if (m_pty == nullptr)
     return;
   m_stdio_communication.SetConnection(
-      std::make_unique<ConnectionGenericFile>(m_pty->GetSTDOUTHandle(), false));
+      std::make_unique<ConnectionConPTY>(m_pty));
   if (m_stdio_communication.IsConnected()) {
     m_stdio_communication.SetReadThreadBytesReceivedCallback(
         STDIOReadThreadBytesReceived, this);
