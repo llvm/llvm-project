@@ -1,0 +1,92 @@
+// RUN: cir-opt %s -cir-flatten-cfg -verify-diagnostics -o -
+
+!s32i = !cir.int<s, 32>
+!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
+
+// Test that we issue a diagnostic for EH-only cleanup scopes.
+cir.func @test_eh_only_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  // expected-error @below {{EH cleanup flattening is not yet implemented}}
+  cir.cleanup.scope {
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  } cleanup eh {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// Test that we issue a diagnostic for Normal+EH cleanup scopes.
+cir.func @test_all_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  // expected-error @below {{EH cleanup flattening is not yet implemented}}
+  cir.cleanup.scope {
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  } cleanup all {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// Test that we issue a diagnostic for a single goto out of a cleanup scope.
+// Strictly speaking, we could handle this case, but it's left unimplemented
+// because when we handle multiple exits we'll need to do something to determine
+// whether gotos branch out of the cleanup scope or stay within it.
+cir.func @test_goto_out_of_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    // expected-error @below {{goto in cleanup scope is not yet implemented}}
+    cir.goto "exit"
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.br ^bb1
+^bb1:
+  cir.label "exit"
+  cir.return
+}
+
+// Test goto inside nested cleanup scopes.
+cir.func @test_goto_in_nested_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c1", init] {alignment = 4 : i64}
+  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.cleanup.scope {
+      %cond = cir.call @shouldGoto() : () -> !cir.bool
+      cir.brcond %cond ^bb_goto, ^bb_normal
+    ^bb_goto:
+      // expected-error @below {{goto in cleanup scope is not yet implemented}}
+      cir.goto "target"
+    ^bb_normal:
+      cir.yield
+    } cleanup normal {
+      cir.call @dtor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.br ^bb_end
+^bb_goto_target:
+  cir.label "target"
+  cir.br ^bb_end
+^bb_end:
+  cir.return
+}
+
+cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
+cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
+cir.func private @doSomething(!cir.ptr<!rec_SomeClass>)
+cir.func private @shouldGoto() -> !cir.bool

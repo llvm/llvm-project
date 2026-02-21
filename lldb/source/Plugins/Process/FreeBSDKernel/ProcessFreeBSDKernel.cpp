@@ -14,62 +14,20 @@
 #include "ProcessFreeBSDKernel.h"
 #include "ThreadFreeBSDKernel.h"
 
-#if LLDB_ENABLE_FBSDVMCORE
-#include <fvc.h>
-#endif
-#if defined(__FreeBSD__)
-#include <kvm.h>
-#endif
-
 using namespace lldb;
 using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(ProcessFreeBSDKernel)
 
-namespace {
-
-#if LLDB_ENABLE_FBSDVMCORE
-class ProcessFreeBSDKernelFVC : public ProcessFreeBSDKernel {
-public:
-  ProcessFreeBSDKernelFVC(lldb::TargetSP target_sp, lldb::ListenerSP listener,
-                          fvc_t *fvc, const FileSpec &core_file);
-
-  ~ProcessFreeBSDKernelFVC();
-
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      lldb_private::Status &error) override;
-
-private:
-  fvc_t *m_fvc;
-
-  const char *GetError();
-};
-#endif // LLDB_ENABLE_FBSDVMCORE
-
-#if defined(__FreeBSD__)
-class ProcessFreeBSDKernelKVM : public ProcessFreeBSDKernel {
-public:
-  ProcessFreeBSDKernelKVM(lldb::TargetSP target_sp, lldb::ListenerSP listener,
-                          kvm_t *fvc, const FileSpec &core_file);
-
-  ~ProcessFreeBSDKernelKVM();
-
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      lldb_private::Status &error) override;
-
-private:
-  kvm_t *m_kvm;
-
-  const char *GetError();
-};
-#endif // defined(__FreeBSD__)
-
-} // namespace
-
 ProcessFreeBSDKernel::ProcessFreeBSDKernel(lldb::TargetSP target_sp,
-                                           ListenerSP listener_sp,
+                                           ListenerSP listener_sp, kvm_t *kvm,
                                            const FileSpec &core_file)
-    : PostMortemProcess(target_sp, listener_sp, core_file) {}
+    : PostMortemProcess(target_sp, listener_sp, core_file), m_kvm(kvm) {}
+
+ProcessFreeBSDKernel::~ProcessFreeBSDKernel() {
+  if (m_kvm)
+    kvm_close(m_kvm);
+}
 
 lldb::ProcessSP ProcessFreeBSDKernel::CreateInstance(lldb::TargetSP target_sp,
                                                      ListenerSP listener_sp,
@@ -77,23 +35,12 @@ lldb::ProcessSP ProcessFreeBSDKernel::CreateInstance(lldb::TargetSP target_sp,
                                                      bool can_connect) {
   ModuleSP executable = target_sp->GetExecutableModule();
   if (crash_file && !can_connect && executable) {
-#if LLDB_ENABLE_FBSDVMCORE
-    fvc_t *fvc =
-        fvc_open(executable->GetFileSpec().GetPath().c_str(),
-                 crash_file->GetPath().c_str(), nullptr, nullptr, nullptr);
-    if (fvc)
-      return std::make_shared<ProcessFreeBSDKernelFVC>(target_sp, listener_sp,
-                                                       fvc, *crash_file);
-#endif
-
-#if defined(__FreeBSD__)
     kvm_t *kvm =
         kvm_open2(executable->GetFileSpec().GetPath().c_str(),
                   crash_file->GetPath().c_str(), O_RDONLY, nullptr, nullptr);
     if (kvm)
-      return std::make_shared<ProcessFreeBSDKernelKVM>(target_sp, listener_sp,
-                                                       kvm, *crash_file);
-#endif
+      return std::make_shared<ProcessFreeBSDKernel>(target_sp, listener_sp, kvm,
+                                                    *crash_file);
   }
   return nullptr;
 }
@@ -162,7 +109,7 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
     int32_t offset_td_name = ReadSignedIntegerFromMemory(
         FindSymbol("thread_off_td_name"), 4, -1, error);
 
-    // fail if we were not able to read any of the offsets
+    // Fail if we were not able to read any of the offsets.
     if (offset_p_list == -1 || offset_p_pid == -1 || offset_p_threads == -1 ||
         offset_p_comm == -1 || offset_td_tid == -1 || offset_td_plist == -1 ||
         offset_td_pcb == -1 || offset_td_oncpu == -1 || offset_td_name == -1)
@@ -174,8 +121,8 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
         ReadSignedIntegerFromMemory(FindSymbol("dumptid"), 4, -1, error);
     lldb::addr_t dumppcb = FindSymbol("dumppcb");
 
-    // stoppcbs is an array of PCBs on all CPUs
-    // each element is of size pcb_size
+    // stoppcbs is an array of PCBs on all CPUs.
+    // Each element is of size pcb_size.
     int32_t pcbsize =
         ReadSignedIntegerFromMemory(FindSymbol("pcb_size"), 4, -1, error);
     lldb::addr_t stoppcbs = FindSymbol("stoppcbs");
@@ -183,20 +130,30 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
     // from FreeBSD sys/param.h
     constexpr size_t fbsd_maxcomlen = 19;
 
-    // iterate through a linked list of all processes
-    // allproc is a pointer to the first list element, p_list field
-    // (found at offset_p_list) specifies the next element
+    // Iterate through a linked list of all processes. New processes are added
+    // to the head of this list. Which means that earlier PIDs are actually at
+    // the end of the list, so we have to walk it backwards. First collect all
+    // the processes in the list order.
+    std::vector<lldb::addr_t> process_addrs;
     for (lldb::addr_t proc =
              ReadPointerFromMemory(FindSymbol("allproc"), error);
          proc != 0 && proc != LLDB_INVALID_ADDRESS;
          proc = ReadPointerFromMemory(proc + offset_p_list, error)) {
+      process_addrs.push_back(proc);
+    }
+
+    // Processes are in the linked list in descending PID order, so we must walk
+    // them in reverse to get ascending PID order.
+    for (auto proc_it = process_addrs.rbegin(); proc_it != process_addrs.rend();
+         ++proc_it) {
+      lldb::addr_t proc = *proc_it;
       int32_t pid =
           ReadSignedIntegerFromMemory(proc + offset_p_pid, 4, -1, error);
       // process' command-line string
       char comm[fbsd_maxcomlen + 1];
       ReadCStringFromMemory(proc + offset_p_comm, comm, sizeof(comm), error);
 
-      // iterate through a linked list of all process' threads
+      // Iterate through a linked list of all process' threads
       // the initial thread is found in process' p_threads, subsequent
       // elements are linked via td_plist field
       for (lldb::addr_t td =
@@ -214,7 +171,7 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
         ReadCStringFromMemory(td + offset_td_name, thread_name,
                               sizeof(thread_name), error);
 
-        // if we failed to read TID, ignore this thread
+        // If we failed to read TID, ignore this thread.
         if (tid == -1)
           continue;
 
@@ -224,7 +181,7 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
           thread_desc += thread_name;
         }
 
-        // roughly:
+        // Roughly:
         // 1. if the thread crashed, its PCB is going to be at "dumppcb"
         // 2. if the thread was on CPU, its PCB is going to be on the CPU
         // 3. otherwise, its PCB is in the thread struct
@@ -233,8 +190,8 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
           pcb_addr = dumppcb;
           thread_desc += " (crashed)";
         } else if (oncpu != -1) {
-          // if we managed to read stoppcbs and pcb_size, use them to find
-          // the correct PCB
+          // If we managed to read stoppcbs and pcb_size, use them to find
+          // the correct PCB.
           if (stoppcbs != LLDB_INVALID_ADDRESS && pcbsize > 0)
             pcb_addr = stoppcbs + oncpu * pcbsize;
           else
@@ -242,9 +199,13 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
           thread_desc += llvm::formatv(" (on CPU {0})", oncpu);
         }
 
-        ThreadSP thread_sp{
-            new ThreadFreeBSDKernel(*this, tid, pcb_addr, thread_desc)};
-        new_thread_list.AddThread(thread_sp);
+        auto thread =
+            new ThreadFreeBSDKernel(*this, tid, pcb_addr, thread_desc);
+
+        if (tid == dumptid)
+          thread->SetIsCrashedThread(true);
+
+        new_thread_list.AddThread(static_cast<ThreadSP>(thread));
       }
     }
   } else {
@@ -273,50 +234,8 @@ lldb::addr_t ProcessFreeBSDKernel::FindSymbol(const char *name) {
   return sym ? sym->GetLoadAddress(&GetTarget()) : LLDB_INVALID_ADDRESS;
 }
 
-#if LLDB_ENABLE_FBSDVMCORE
-
-ProcessFreeBSDKernelFVC::ProcessFreeBSDKernelFVC(lldb::TargetSP target_sp,
-                                                 ListenerSP listener_sp,
-                                                 fvc_t *fvc,
-                                                 const FileSpec &core_file)
-    : ProcessFreeBSDKernel(target_sp, listener_sp, crash_file), m_fvc(fvc) {}
-
-ProcessFreeBSDKernelFVC::~ProcessFreeBSDKernelFVC() {
-  if (m_fvc)
-    fvc_close(m_fvc);
-}
-
-size_t ProcessFreeBSDKernelFVC::DoReadMemory(lldb::addr_t addr, void *buf,
-                                             size_t size, Status &error) {
-  ssize_t rd = 0;
-  rd = fvc_read(m_fvc, addr, buf, size);
-  if (rd < 0 || static_cast<size_t>(rd) != size) {
-    error = Status::FromErrorStringWithFormat("Reading memory failed: %s",
-                                              GetError());
-    return rd > 0 ? rd : 0;
-  }
-  return rd;
-}
-
-const char *ProcessFreeBSDKernelFVC::GetError() { return fvc_geterr(m_fvc); }
-
-#endif // LLDB_ENABLE_FBSDVMCORE
-
-#if defined(__FreeBSD__)
-
-ProcessFreeBSDKernelKVM::ProcessFreeBSDKernelKVM(lldb::TargetSP target_sp,
-                                                 ListenerSP listener_sp,
-                                                 kvm_t *fvc,
-                                                 const FileSpec &core_file)
-    : ProcessFreeBSDKernel(target_sp, listener_sp, core_file), m_kvm(fvc) {}
-
-ProcessFreeBSDKernelKVM::~ProcessFreeBSDKernelKVM() {
-  if (m_kvm)
-    kvm_close(m_kvm);
-}
-
-size_t ProcessFreeBSDKernelKVM::DoReadMemory(lldb::addr_t addr, void *buf,
-                                             size_t size, Status &error) {
+size_t ProcessFreeBSDKernel::DoReadMemory(lldb::addr_t addr, void *buf,
+                                          size_t size, Status &error) {
   ssize_t rd = 0;
   rd = kvm_read2(m_kvm, addr, buf, size);
   if (rd < 0 || static_cast<size_t>(rd) != size) {
@@ -327,6 +246,4 @@ size_t ProcessFreeBSDKernelKVM::DoReadMemory(lldb::addr_t addr, void *buf,
   return rd;
 }
 
-const char *ProcessFreeBSDKernelKVM::GetError() { return kvm_geterr(m_kvm); }
-
-#endif // defined(__FreeBSD__)
+const char *ProcessFreeBSDKernel::GetError() { return kvm_geterr(m_kvm); }

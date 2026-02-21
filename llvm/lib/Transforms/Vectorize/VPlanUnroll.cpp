@@ -210,22 +210,28 @@ void UnrollState::unrollWidenInductionByUF(
   VPValue *Prev = IV;
   Builder.setInsertPoint(IV->getParent(), InsertPtForPhi);
   unsigned AddOpc;
-  if (IVTy->isPointerTy())
+  VPIRFlags AddFlags;
+  if (IVTy->isPointerTy()) {
     AddOpc = VPInstruction::WidePtrAdd;
-  else if (IVTy->isFloatingPointTy())
+    AddFlags = GEPNoWrapFlags::none();
+  } else if (IVTy->isFloatingPointTy()) {
     AddOpc = ID.getInductionOpcode();
-  else
+    AddFlags = Flags; // FMF flags
+  } else {
     AddOpc = Instruction::Add;
+    AddFlags = VPIRFlags::getDefaultFlags(AddOpc);
+  }
   for (unsigned Part = 1; Part != UF; ++Part) {
     std::string Name =
         Part > 1 ? "step.add." + std::to_string(Part) : "step.add";
 
-    VPInstruction *Add = Builder.createNaryOp(AddOpc,
-                                              {
-                                                  Prev,
-                                                  VectorStep,
-                                              },
-                                              Flags, IV->getDebugLoc(), Name);
+    VPInstruction *Add =
+        Builder.createNaryOp(AddOpc,
+                             {
+                                 Prev,
+                                 VectorStep,
+                             },
+                             AddFlags, IV->getDebugLoc(), Name);
     ToSkip.insert(Add);
     addRecipeForPart(IV, Add, Part);
     Prev = Add;
@@ -278,7 +284,6 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
         for (unsigned Part = 1; Part != UF; ++Part)
           VPV2Parts[VPI][Part - 1] = StartV;
       }
-      Copy->addOperand(getConstantInt(Part));
     } else {
       assert(isa<VPActiveLaneMaskPHIRecipe>(R) &&
              "unexpected header phi recipe not needing unrolled part");
@@ -354,6 +359,14 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
         Phi->setOperand(1, Copy->getVPSingleValue());
       }
     }
+    if (auto *VEPR = dyn_cast<VPVectorEndPointerRecipe>(Copy)) {
+      // Materialize PartN offset for VectorEndPointer.
+      VEPR->setOperand(0, R.getOperand(0));
+      VEPR->setOperand(1, R.getOperand(1));
+      VEPR->materializeOffset(Part);
+      continue;
+    }
+
     remapOperands(Copy, Part);
 
     if (auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Copy))
@@ -361,13 +374,20 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
 
     // Add operand indicating the part to generate code for, to recipes still
     // requiring it.
-    if (isa<VPWidenCanonicalIVRecipe, VPVectorEndPointerRecipe>(Copy) ||
-        match(Copy,
-              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
+    if (isa<VPWidenCanonicalIVRecipe>(Copy))
       Copy->addOperand(getConstantInt(Part));
 
-    if (isa<VPVectorEndPointerRecipe>(R))
-      Copy->setOperand(0, R.getOperand(0));
+    if (match(Copy,
+              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>())) {
+      VPBuilder Builder(Copy);
+      VPValue *ScaledByPart = Builder.createOverflowingOp(
+          Instruction::Mul, {Copy->getOperand(1), getConstantInt(Part)});
+      Copy->setOperand(1, ScaledByPart);
+    }
+  }
+  if (auto *VEPR = dyn_cast<VPVectorEndPointerRecipe>(&R)) {
+    // Materialize Part0 offset for VectorEndPointer.
+    VEPR->materializeOffset();
   }
 }
 
@@ -461,7 +481,7 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
         auto *VPI = dyn_cast<VPInstruction>(&R);
         if (VPI &&
             VPI->getOpcode() == VPInstruction::CanonicalIVIncrementForPart &&
-            VPI->getNumOperands() == 1) {
+            VPI->getOperand(1) == &Plan.getVF()) {
           VPI->replaceAllUsesWith(VPI->getOperand(0));
           VPI->eraseFromParent();
         }
@@ -581,6 +601,9 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
 }
 
 void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
   Type *IdxTy = IntegerType::get(
       Plan.getScalarHeader()->getIRBasicBlock()->getContext(), 32);
 

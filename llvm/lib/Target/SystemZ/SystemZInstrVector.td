@@ -14,6 +14,7 @@ let Predicates = [FeatureVector] in {
   // Register move.
   let isMoveReg = 1 in {
     def VLR : UnaryVRRa<"vlr", 0xE756, null_frag, v128any, v128any>;
+    def VLR16 : UnaryAliasVRR<null_frag, v16hb, v16hb>;
     def VLR32 : UnaryAliasVRR<null_frag, v32sb, v32sb>;
     def VLR64 : UnaryAliasVRR<null_frag, v64db, v64db>;
   }
@@ -144,7 +145,8 @@ let Predicates = [FeatureVector] in {
   // LEY and LDY offer full 20-bit displacement fields.  It's often better
   // to use those instructions rather than force a 20-bit displacement
   // into a GPR temporary.
-  let mayLoad = 1, SimpleBDXLoad = 1, canFoldAsLoad = 1 in {
+  let mayLoad = 1, SimpleBDXLoad = 1, canFoldAsLoad = 1,
+      isReMaterializable = 1 in {
     def VL16 : UnaryAliasVRX<z_load, v16hb, bdxaddr12pair>;
     def VL32 : UnaryAliasVRX<z_load, v32sb, bdxaddr12pair>;
     def VL64 : UnaryAliasVRX<z_load, v64db, bdxaddr12pair>;

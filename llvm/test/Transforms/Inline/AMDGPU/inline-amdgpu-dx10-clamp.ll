@@ -1,5 +1,4 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -passes=inline < %s | FileCheck %s
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -passes='cgscc(inline)' < %s | FileCheck %s
 
 define i32 @func_default() #0 {
   ret i32 0
