@@ -76,6 +76,17 @@ public:
            DstTy->getPrimitiveSizeInBits() == 32;
   }
 
+  bool isTruncateFree(EVT FromVT, EVT ToVT) const override {
+    if (!FromVT.isScalarInteger() || !ToVT.isScalarInteger()) {
+      return false;
+    }
+    return FromVT.getSizeInBits() == 64 && ToVT.getSizeInBits() == 32;
+  }
+
+  bool isZExtFree(EVT FromVT, EVT ToVT) const override { return false; }
+
+  bool isZExtFree(Type *SrcTy, Type *DstTy) const override { return false; }
+
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Ctx,
                          EVT VT) const override {
     if (VT.isVector())
