@@ -2566,7 +2566,8 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
   unsigned SelOpNo = 0;
   SDValue Sel = BO->getOperand(0);
   auto BinOpcode = BO->getOpcode();
-  if (Sel.getOpcode() != ISD::SELECT || !Sel.hasOneUse()) {
+  if ((Sel.getOpcode() != ISD::SELECT && Sel.getOpcode() != ISD::VSELECT) ||
+      !Sel.hasOneUse()) {
     SelOpNo = 1;
     Sel = BO->getOperand(1);
 
@@ -2582,7 +2583,8 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
     }
   }
 
-  if (Sel.getOpcode() != ISD::SELECT || !Sel.hasOneUse())
+  if ((Sel.getOpcode() != ISD::SELECT && Sel.getOpcode() != ISD::VSELECT) ||
+      !Sel.hasOneUse())
     return SDValue();
 
   SDValue CT = Sel.getOperand(1);
@@ -10513,7 +10515,8 @@ SDValue DAGCombiner::visitShiftByConstant(SDNode *N) {
                             BinOpLHSVal.getOpcode() == ISD::SRL) &&
                            isa<ConstantSDNode>(BinOpLHSVal.getOperand(1));
   bool IsCopyOrSelect = BinOpLHSVal.getOpcode() == ISD::CopyFromReg ||
-                        BinOpLHSVal.getOpcode() == ISD::SELECT;
+                        BinOpLHSVal.getOpcode() == ISD::SELECT ||
+                        BinOpLHSVal.getOpcode() == ISD::VSELECT;
 
   if (!IsShiftByConstant && !IsCopyOrSelect)
     return SDValue();
@@ -14319,7 +14322,7 @@ static SDValue tryToFoldExtendOfConstant(SDNode *N, const SDLoc &DL,
   // fold (sext (select cond, c1, c2)) -> (select cond, sext c1, sext c2)
   // fold (zext (select cond, c1, c2)) -> (select cond, zext c1, zext c2)
   // fold (aext (select cond, c1, c2)) -> (select cond, sext c1, sext c2)
-  if (N0->getOpcode() == ISD::SELECT) {
+  if (N0->getOpcode() == ISD::SELECT || N0->getOpcode() == ISD::VSELECT) {
     SDValue Op1 = N0->getOperand(1);
     SDValue Op2 = N0->getOperand(2);
     if (isa<ConstantSDNode>(Op1) && isa<ConstantSDNode>(Op2) &&
@@ -18727,10 +18730,11 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
   // fold (fmul X, (select (fcmp X > 0.0), -1.0, 1.0)) -> (fneg (fabs X))
   // fold (fmul X, (select (fcmp X > 0.0), 1.0, -1.0)) -> (fabs X)
   if (Flags.hasNoNaNs() && Flags.hasNoSignedZeros() &&
-      (N0.getOpcode() == ISD::SELECT || N1.getOpcode() == ISD::SELECT) &&
+      (N0.getOpcode() == ISD::SELECT || N0.getOpcode() == ISD::VSELECT ||
+       N1.getOpcode() == ISD::SELECT || N1.getOpcode() == ISD::VSELECT) &&
       TLI.isOperationLegal(ISD::FABS, VT)) {
     SDValue Select = N0, X = N1;
-    if (Select.getOpcode() != ISD::SELECT)
+    if (Select.getOpcode() != ISD::SELECT && Select.getOpcode() != ISD::VSELECT)
       std::swap(Select, X);
 
     SDValue Cond = Select.getOperand(0);
