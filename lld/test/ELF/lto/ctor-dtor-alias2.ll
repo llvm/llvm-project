@@ -7,7 +7,7 @@
 ; RUN: opt -module-summary a.ll -o a.bc
 ; RUN: opt -module-summary b.ll -o b.bc
 ; RUN: ld.lld -shared a.bc b.bc -o out.so
-; RUN: llvm-nm -D out.so
+; RUN: llvm-nm -D out.so | FileCheck %s
 
 ;; Although D0/D2 in b.bc is non-prevailing, keep D1/D2 as definitions, otherwise
 ;; the output may have an undefined and unsatisfied D1.

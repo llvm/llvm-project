@@ -18,4 +18,4 @@ CHECK-NEXT:           type = 0x1002 (const int), value = 321
 
 CHECK:                          Symbols
 CHECK:           220 | S_CONSTANT [size = 12] `i`
-CHECK-NEXT            type = 0x0074 (int), value = 123
+CHECK-NEXT:           type = 0x0074 (int), value = 123

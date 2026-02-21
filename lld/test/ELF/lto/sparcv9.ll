@@ -5,7 +5,7 @@
 ; RUN: ld.lld %t.bc -o %t
 ; RUN: llvm-readobj -h %t | FileCheck %s
 
-; CHECK    Class: 64-bit
+; CHECK:   Class: 64-bit
 ; CHECK:   DataEncoding: BigEndian
 ; CHECK: Machine: EM_SPARCV9
 
