@@ -984,10 +984,10 @@ multiclasses. Those record definitions are specified by ``def``
 statements in the multiclasses, and indirectly by ``defm`` statements.
 
 .. productionlist::
-   Defm: "defm" [`NameValue`] `ParentClassList` ";"
+   Defm: "defm" [`NameValue`] `ParentClassListNE` ";"
 
 The optional :token:`NameValue` is formed in the same way as the name of a
-``def``. The :token:`ParentClassList` is a colon followed by a list of at
+``def``. The :token:`ParentClassListNE` is a colon followed by a list of at
 least one multiclass and any number of regular classes. The multiclasses
 must precede the regular classes. Note that the ``defm`` does not have a
 body.
