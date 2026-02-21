@@ -6,6 +6,14 @@
 // RUN: env PATH="" %clang_dxc -T cs_6_0 %s --dxv-path=%t.dir -metal -Vd -Fo %t.mtl -### 2>&1 | FileCheck --check-prefix=NO_DXV %s
 // NO_DXV: "{{.*}}metal-shaderconverter{{(.exe)?}}" "{{.*}}.obj" "-o" "{{.*}}.mtl"
 
+// RUN: env PATH="" %clang_dxc -T cs_6_0 %s -metal -Fre blah.json -Vd -Fo %t.mtl -### 2>&1 | FileCheck --check-prefix=FRE %s
+// FRE: "{{.*}}metal-shaderconverter{{(.exe)?}}" "{{.*}}.obj" "-o" "{{.*}}.mtl" "--output-reflection-file=blah.json"
+
+// RUN: env PATH="" not %clang_dxc -T cs_6_0 %s -metal -Fre blah.json -Vd -### 2>&1 | FileCheck --check-prefix=FRE_ERR %s
+// FRE_ERR: error: -Fre option requires -Fo option when targeting Metal
+
+// Does not generate the metal IR when the output file is not specified since we
+// cannot disassemble the metal IR reliably.
 // RUN: %clang_dxc -T cs_6_0 %s -metal -### 2>&1 | FileCheck --check-prefix=NO_MTL %s
 // NO_MTL-NOT: metal-shaderconverter
 
