@@ -506,11 +506,11 @@ public:
   //
   /// Returns an integer (vector of integer) type with the same size of a byte
   /// of the given byte (vector of byte) type.
-  LLVM_ABI static Type *getIntByteType(Type *);
+  LLVM_ABI static Type *getIntFromByteType(Type *);
 
   /// Returns a byte (vector of byte) type with the same size of an integer of
   /// the given integer (vector of integer) type.
-  LLVM_ABI static Type *getByteIntType(Type *);
+  LLVM_ABI static Type *getByteFromIntType(Type *);
 
   //===--------------------------------------------------------------------===//
   // Convenience methods for getting pointer types.

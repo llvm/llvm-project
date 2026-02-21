@@ -128,17 +128,8 @@ public:
   /// Get or create a ByteType instance.
   LLVM_ABI static ByteType *get(LLVMContext &C, unsigned NumBits);
 
-  /// Returns type twice as wide the input type.
-  ByteType *getExtendedType() const {
-    return Type::getByteNTy(getContext(), 2 * getScalarSizeInBits());
-  }
-
   /// Get the number of bits in this ByteType
   unsigned getBitWidth() const { return getSubclassData(); }
-
-  /// Return a bitmask with ones set for all of the bits. This is 0xFF for i8,
-  /// 0xFFFF for i16, etc.
-  uint64_t getBitMask() const { return ~uint64_t(0UL) >> (64 - getBitWidth()); }
 
   /// For example, this is 0xFF for an 8 bit byte, 0xFFFF for b16, etc.
   /// @returns a bit mask with ones set for all the bits of this type.
