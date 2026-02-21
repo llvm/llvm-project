@@ -104,9 +104,14 @@ from typing import (
 
 if TYPE_CHECKING:
     from ctypes import _Pointer
+    from io import TextIOWrapper
     from typing_extensions import Protocol, TypeAlias
 
     StrPath: TypeAlias = TUnion[str, os.PathLike[str]]
+    # The type that is compatible with os.fspath:
+    # str, bytes, or os.PathLikes that return either of these two
+    StrBytesPath: TypeAlias = TUnion[StrPath, bytes, os.PathLike[bytes]]
+    InMemoryFile: TypeAlias = "tuple[StrBytesPath, TUnion[str, bytes, TextIOWrapper]]"
     LibFunc: TypeAlias = TUnion[
         "tuple[str, Optional[list[Any]]]",
         "tuple[str, Optional[list[Any]], Any]",
@@ -3457,7 +3462,9 @@ class TranslationUnit(ClangObject):
     PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION = 128
 
     @staticmethod
-    def process_unsaved_files(unsaved_files) -> Array[_CXUnsavedFile] | None:
+    def process_unsaved_files(
+        unsaved_files: list[InMemoryFile],
+    ) -> Array[_CXUnsavedFile] | None:
         unsaved_array = None
         if len(unsaved_files):
             unsaved_array = (_CXUnsavedFile * len(unsaved_files))()
@@ -3472,8 +3479,13 @@ class TranslationUnit(ClangObject):
 
     @classmethod
     def from_source(
-        cls, filename, args=None, unsaved_files=None, options=0, index=None
-    ):
+        cls,
+        filename: StrBytesPath | None,
+        args: list[TUnion[str, bytes]] | None = None,
+        unsaved_files: list[InMemoryFile] | None = None,
+        options: int = 0,
+        index: Index | None = None,
+    ) -> TranslationUnit:
         """Create a TranslationUnit by parsing source.
 
         This is capable of processing source code both from files on the
@@ -3484,11 +3496,12 @@ class TranslationUnit(ClangObject):
         etc. e.g. ["-Wall", "-I/path/to/include"].
 
         In-memory file content can be provided via unsaved_files. This is a
-        list of 2-tuples. The first element is the filename (str or
+        list of 2-tuples. The first element is the filename (str, bytes or
         PathLike). The second element defines the content. Content can be
-        provided as str source code or as file objects (anything with a read()
-        method). If a file object is being used, content will be read until EOF
-        and the read cursor will not be reset to its original position.
+        provided as str or bytes source code, or as file objects (anything with
+        a read() method). If a file object is being used, content will be read
+        until EOF and the read cursor will not be reset to its original
+        position.
 
         options is a bitwise or of TranslationUnit.PARSE_XXX flags which will
         control parsing behavior.
@@ -3544,7 +3557,9 @@ class TranslationUnit(ClangObject):
         return cls(ptr, index=index)
 
     @classmethod
-    def from_ast_file(cls, filename, index=None):
+    def from_ast_file(
+        cls, filename: StrPath, index: Index | None = None
+    ) -> TranslationUnit:
         """Create a TranslationUnit instance from a saved AST file.
 
         A previously-saved AST file (provided with -emit-ast or
@@ -3567,7 +3582,7 @@ class TranslationUnit(ClangObject):
 
         return cls(ptr=ptr, index=index)
 
-    def __init__(self, ptr, index):
+    def __init__(self, ptr: CObjP, index: Index) -> None:
         """Create a TranslationUnit instance.
 
         TranslationUnits should be created using one of the from_* @classmethod
@@ -3577,20 +3592,20 @@ class TranslationUnit(ClangObject):
         self.index = index
         ClangObject.__init__(self, ptr)
 
-    def __del__(self):
+    def __del__(self) -> None:
         conf.lib.clang_disposeTranslationUnit(self)
 
     @property
-    def cursor(self):
+    def cursor(self) -> Cursor | None:
         """Retrieve the cursor that represents the given translation unit."""
         return Cursor.from_result(conf.lib.clang_getTranslationUnitCursor(self), self)
 
     @property
-    def spelling(self):
+    def spelling(self) -> str:
         """Get the original translation unit source file name."""
         return _CXString.from_result(conf.lib.clang_getTranslationUnitSpelling(self))
 
-    def get_includes(self):
+    def get_includes(self) -> Iterator[FileInclusion]:
         """
         Return an iterable sequence of FileInclusion objects that describe the
         sequence of inclusions in a translation unit. The first object in
@@ -3599,25 +3614,32 @@ class TranslationUnit(ClangObject):
         headers.
         """
 
-        def visitor(fobj, lptr, depth, includes):
+        def visitor(
+            fobj: CObjP,
+            lptr: _Pointer[SourceLocation],
+            depth: int,
+            includes: list[FileInclusion],
+        ) -> None:
             if depth > 0:
                 loc = lptr.contents
                 includes.append(FileInclusion(loc.file, File(fobj), loc, depth))
 
         # Automatically adapt CIndex/ctype pointers to python objects
-        includes = []
+        includes: list[FileInclusion] = []
         conf.lib.clang_getInclusions(
             self, translation_unit_includes_callback(visitor), includes
         )
 
         return iter(includes)
 
-    def get_file(self, filename):
+    def get_file(self, filename: StrBytesPath) -> File:
         """Obtain a File from this translation unit."""
 
         return File.from_name(self, filename)
 
-    def get_location(self, filename, position):
+    def get_location(
+        self, filename: StrBytesPath, position: int | tuple[int, int]
+    ) -> SourceLocation:
         """Obtain a SourceLocation for a file in this translation unit.
 
         The position can be specified by passing:
@@ -3633,7 +3655,11 @@ class TranslationUnit(ClangObject):
 
         return SourceLocation.from_position(self, f, position[0], position[1])
 
-    def get_extent(self, filename, locations):
+    def get_extent(
+        self,
+        filename: StrBytesPath,
+        locations: Sequence[SourceLocation] | Sequence[int] | Sequence[Sequence[int]],
+    ) -> SourceRange:
         """Obtain a SourceRange from this translation unit.
 
         The bounds of the SourceRange must ultimately be defined by a start and
@@ -3697,7 +3723,9 @@ class TranslationUnit(ClangObject):
 
         return DiagIterator(self)
 
-    def reparse(self, unsaved_files=None, options=0):
+    def reparse(
+        self, unsaved_files: list[InMemoryFile] | None = None, options: int = 0
+    ) -> None:
         """
         Reparse an already parsed translation unit.
 
@@ -3719,7 +3747,7 @@ class TranslationUnit(ClangObject):
             msg = "Error reparsing translation unit. Error code: {}".format(result)
             raise TranslationUnitLoadError(msg)
 
-    def save(self, filename):
+    def save(self, filename: StrBytesPath) -> None:
         """Saves the TranslationUnit to a file.
 
         This is equivalent to passing -emit-ast to the clang frontend. The
@@ -3747,14 +3775,14 @@ class TranslationUnit(ClangObject):
 
     def codeComplete(
         self,
-        path,
-        line,
-        column,
-        unsaved_files=None,
-        include_macros=False,
-        include_code_patterns=False,
-        include_brief_comments=False,
-    ):
+        path: StrBytesPath,
+        line: int,
+        column: int,
+        unsaved_files: list[InMemoryFile] | None = None,
+        include_macros: bool = False,
+        include_code_patterns: bool = False,
+        include_brief_comments: bool = False,
+    ) -> CodeCompletionResults | None:
         """
         Code complete in this translation unit.
 
@@ -3791,7 +3819,11 @@ class TranslationUnit(ClangObject):
             return CodeCompletionResults(ptr)
         return None
 
-    def get_tokens(self, locations=None, extent=None):
+    def get_tokens(
+        self,
+        locations: tuple[SourceLocation, SourceLocation] | None = None,
+        extent: SourceRange | None = None,
+    ) -> Iterator[Token]:
         """Obtain tokens in this translation unit.
 
         This is a generator for Token instances. The caller specifies a range
@@ -3799,10 +3831,14 @@ class TranslationUnit(ClangObject):
         2-tuple of SourceLocation or as a SourceRange. If both are defined,
         behavior is undefined.
         """
-        if locations is None and extent is None:
-            raise TypeError("get_tokens() requires at least one argument")
+        if locations is not None and extent is not None:
+            raise TypeError("get_tokens() requires exactly one argument (two provided)")
         if locations is not None:
             extent = SourceRange(start=locations[0], end=locations[1])
+        if extent is None:
+            raise TypeError(
+                "get_tokens() requires exactly one argument (none provided)"
+            )
 
         return TokenGroup.get_tokens(self, extent)
 

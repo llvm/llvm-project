@@ -96,6 +96,8 @@ Clang Python Bindings Potentially Breaking Changes
   equality checks (``__eq__``) to the other object they are compared with when
   they are of different classes. They previously returned ``False`` when compared
   with objects of other classes.
+- ``TranslationUnit.get_tokens`` now throws an error if both the ``extent`` and
+  ``locations`` argument are passed. Previousy, ``locations`` took precedence.
 
 What's New in Clang |release|?
 ==============================
