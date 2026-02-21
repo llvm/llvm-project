@@ -1793,6 +1793,20 @@ bool CursorVisitor::VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
   return Visit(TL.getOriginalLoc());
 }
 
+bool CursorVisitor::VisitAutoTypeLoc(AutoTypeLoc TL) {
+
+  if (TL.isConstrained()) {
+    if (auto *CR = TL.getConceptReference()) {
+      if (CR->getNamedConcept()) {
+        return Visit(MakeCursorTemplateRef(CR->getNamedConcept(),
+                                           CR->getConceptNameLoc(), TU));
+      }
+    }
+  }
+
+  return false;
+}
+
 bool CursorVisitor::VisitDeducedTemplateSpecializationTypeLoc(
     DeducedTemplateSpecializationTypeLoc TL) {
   if (VisitTemplateName(TL.getTypePtr()->getTemplateName(),
@@ -1893,7 +1907,6 @@ DEFAULT_TYPELOC_IMPL(Enum, TagType)
 DEFAULT_TYPELOC_IMPL(SubstTemplateTypeParm, Type)
 DEFAULT_TYPELOC_IMPL(SubstTemplateTypeParmPack, Type)
 DEFAULT_TYPELOC_IMPL(SubstBuiltinTemplatePack, Type)
-DEFAULT_TYPELOC_IMPL(Auto, Type)
 DEFAULT_TYPELOC_IMPL(BitInt, Type)
 DEFAULT_TYPELOC_IMPL(DependentBitInt, Type)
 

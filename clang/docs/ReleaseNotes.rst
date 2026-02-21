@@ -411,6 +411,7 @@ clang-format
 
 libclang
 --------
+- Visit constraints of `auto` type to properly visit concept usages (#GH166580)
 - Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
 
 Code Completion
