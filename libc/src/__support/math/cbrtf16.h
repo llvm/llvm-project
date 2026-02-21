@@ -24,7 +24,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr float16 cbrtf16(float16 x) {
+LIBC_INLINE constexpr float16 cbrtf16(float16 x) {
   // look up table for 2^(i/3) for i = 0, 1, 2 in single precision
   constexpr float CBRT2[3] = {0x1p0f, 0x1.428a3p0f, 0x1.965feap0f};
 
