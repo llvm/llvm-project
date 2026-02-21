@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_CHECKERCONTEXT_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_CHECKERCONTEXT_H
 
+#include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include <optional>
@@ -67,6 +68,14 @@ public:
   }
   const ConstraintManager &getConstraintManager() const {
     return Eng.getConstraintManager();
+  }
+
+  cross_tu::CrossTranslationUnitContext *getCrossTranslationUnitContext() {
+    return Eng.getCrossTranslationUnitContext();
+  }
+  const cross_tu::CrossTranslationUnitContext *
+  getCrossTranslationUnitContext() const {
+    return Eng.getCrossTranslationUnitContext();
   }
 
   StoreManager &getStoreManager() {
