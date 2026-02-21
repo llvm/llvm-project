@@ -546,6 +546,7 @@ private:
   void visitAccessGroupMetadata(const MDNode *MD);
   void visitCapturesMetadata(Instruction &I, const MDNode *Captures);
   void visitAllocTokenMetadata(Instruction &I, MDNode *MD);
+  void visitMemCacheHintMetadata(Instruction &I, MDNode *MD);
 
   template <class Ty> bool isValidMetadataArray(const MDTuple &N);
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS) void visit##CLASS(const CLASS &N);
@@ -5576,6 +5577,72 @@ void Verifier::visitAllocTokenMetadata(Instruction &I, MDNode *MD) {
         "expected integer constant", MD);
 }
 
+void Verifier::visitMemCacheHintMetadata(Instruction &I, MDNode *MD) {
+  Check(I.mayReadOrWriteMemory(),
+        "!mem.cache_hint is only valid on memory operations", &I);
+
+  Check(MD->getNumOperands() % 2 == 0,
+        "!mem.cache_hint must have even number of operands "
+        "(operand_no, hint_node pairs)",
+        MD);
+
+  auto IsMemoryObjectOperand = [](const Value *V) {
+    return V->getType()->isPtrOrPtrVectorTy();
+  };
+
+  unsigned NumMemoryObjectOperands = 0;
+  if (const auto *CB = dyn_cast<CallBase>(&I))
+    NumMemoryObjectOperands = count_if(CB->args(), [&](const Use &Arg) {
+      return IsMemoryObjectOperand(Arg.get());
+    });
+  else
+    NumMemoryObjectOperands = count_if(I.operands(), [&](const Use &Op) {
+      return IsMemoryObjectOperand(Op.get());
+    });
+
+  SmallVector<unsigned, 4> SeenOperandNos;
+
+  // Top-level metadata alternates: i32 operand_no, MDNode hint_node.
+  for (unsigned i = 0; i + 1 < MD->getNumOperands(); i += 2) {
+    auto *OpNoCI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(i));
+    Check(OpNoCI,
+          "!mem.cache_hint operand_no must be an integer constant in pair", MD);
+
+    Check(OpNoCI->getValue().isNonNegative(),
+          "!mem.cache_hint operand_no must be non-negative", MD);
+
+    uint64_t OperandNo = OpNoCI->getZExtValue();
+    Check(OperandNo < NumMemoryObjectOperands,
+          "!mem.cache_hint operand_no must refer to a valid memory object "
+          "operand",
+          &I);
+
+    Check(!is_contained(SeenOperandNos, OperandNo),
+          "!mem.cache_hint contains duplicate operand_no", MD);
+    SeenOperandNos.push_back(OperandNo);
+
+    const auto *Node = dyn_cast<MDNode>(MD->getOperand(i + 1));
+    Check(Node, "!mem.cache_hint hint node must be a metadata node", MD);
+
+    Check(Node->getNumOperands() % 2 == 0,
+          "!mem.cache_hint hint node must have even number of operands "
+          "(key-value pairs)",
+          Node);
+
+    SmallVector<StringRef, 8> SeenKeys;
+    for (unsigned j = 0; j + 1 < Node->getNumOperands(); j += 2) {
+      const auto *Key = dyn_cast<MDString>(Node->getOperand(j));
+      Check(Key, "!mem.cache_hint key must be a string", Node);
+
+      StringRef KeyStr = Key->getString();
+      Check(!is_contained(SeenKeys, KeyStr),
+            "!mem.cache_hint hint node contains duplicate key", Node);
+      SeenKeys.push_back(KeyStr);
+      // Values are target-specific and not validated here.
+    }
+  }
+}
+
 /// verifyInstruction - Verify that an instruction is well formed.
 ///
 void Verifier::visitInstruction(Instruction &I) {
@@ -5807,6 +5874,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_alloc_token))
     visitAllocTokenMetadata(I, MD);
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_mem_cache_hint))
+    visitMemCacheHintMetadata(I, MD);
 
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
     CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);
