@@ -301,7 +301,7 @@ void Generator::emitPrint(StringRef kind, StringRef type,
     return;
 
   char const *head =
-      R"(static void write({0} {1}, DialectBytecodeWriter &writer) )";
+      R"(static LogicalResult write({0} {1}, DialectBytecodeWriter &writer) )";
   mlir::raw_indented_ostream os(output);
   os << formatv(head, type, kind);
   auto funScope = os.scope("{\n", "}\n\n");
@@ -341,10 +341,14 @@ void Generator::emitPrint(StringRef kind, StringRef type,
     }
 
     if (!pred.empty()) {
+      os << "return success();\n";
       os.unindent();
       os << "}\n";
+    } else {
+      os << "return success();\n";
     }
   }
+  os << "return failure();\n";
 }
 
 void Generator::emitPrintHelper(const Record *memberRec, StringRef kind,
@@ -418,7 +422,7 @@ void Generator::emitPrintDispatch(StringRef kind, ArrayRef<std::string> vec) {
 
     os << "\n.Case([&](" << type << " t)";
     auto caseScope = os.scope(" {\n", "})");
-    os << "return write(t, writer), success();\n";
+    os << "return write(t, writer);\n";
   }
   os << "\n.Default([&](" << capitalize(kind) << ") { return failure(); });\n";
 }
@@ -475,9 +479,8 @@ static bool emitBCRW(const RecordKeeper &records, raw_ostream &os) {
     gen.emitParseDispatch(kind, *vec);
 
     SmallVector<std::string> types;
-    for (const auto &it : perType) {
+    for (const auto &it : perType)
       types.push_back(it.first);
-    }
     gen.emitPrintDispatch(kind, types);
   }
 
