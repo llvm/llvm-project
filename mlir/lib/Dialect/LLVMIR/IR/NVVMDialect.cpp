@@ -3072,6 +3072,52 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::AddFOp::verify() {
+  mlir::NVVM::FPRoundingMode rndMode = getRnd();
+  mlir::NVVM::SaturationMode satMode = getSat();
+  bool isFTZ = getFtz();
+
+  mlir::Type opType = getRes().getType();
+  mlir::Type opBaseType = isa<VectorType>(opType)
+                              ? cast<VectorType>(opType).getElementType()
+                              : opType;
+
+  if (satMode == NVVM::SaturationMode::SATFINITE)
+    return emitOpError("SATFINITE saturation mode is not supported for "
+                       "floating point addition operation");
+
+  if (opBaseType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
+    return emitOpError("FTZ and saturation are not supported for additions "
+                       "involving f64 type");
+
+  if (opBaseType.isF16()) {
+    if (!(rndMode == NVVM::FPRoundingMode::RN ||
+          rndMode == NVVM::FPRoundingMode::NONE))
+      return emitOpError("only RN rounding mode is supported for f16 and "
+                         "vector<2xf16> additions");
+  }
+
+  if (opBaseType.isBF16()) {
+    if (rndMode != NVVM::FPRoundingMode::RN &&
+        rndMode != NVVM::FPRoundingMode::NONE)
+      return emitOpError("only RN rounding mode is supported for bf16 and "
+                         "vector<2xbf16> additions");
+    if (satMode != NVVM::SaturationMode::NONE || isFTZ)
+      return emitOpError("FTZ and saturation are not supported for bf16 and "
+                         "vector<2xbf16> additions");
+  }
+
+  // FIXME: This is a temporary check disallowing lowering to add.rn.ftz.f16(x2)
+  // PTX instructions since the corresponding LLVM intrinsic is missing. This
+  // should be removed once the intrinsics for f16 addition (with FTZ only) are
+  // available.
+  if (opBaseType.isF16() && isFTZ && satMode == NVVM::SaturationMode::NONE)
+    return emitOpError(
+        "FTZ with no saturation is not supported for f16 result type");
+
+  return success();
+}
+
 /// Packs the given `field` into the `result`.
 /// The `result` is 64-bits and each `field` can be 32-bits or narrower.
 static llvm::Value *
@@ -3146,6 +3192,32 @@ std::string NVVM::MBarrierTryWaitParityOp::getPtx() {
                        "DONE: \n\t"
                        "}",
                        space);
+}
+
+//===----------------------------------------------------------------------===//
+// Canonicalization patterns
+//===----------------------------------------------------------------------===//
+
+struct ConvertFsubToFnegFadd : public OpRewritePattern<SubFOp> {
+  using OpRewritePattern<SubFOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SubFOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    Value negRhs =
+        LLVM::FNegOp::create(rewriter, loc, op.getRhs().getType(), op.getRhs());
+
+    rewriter.replaceOpWithNewOp<AddFOp>(op, op.getType(), op.getLhs(), negRhs,
+                                        op.getRnd(), op.getSat(), op.getFtz());
+
+    return success();
+  }
+};
+
+void SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                         MLIRContext *context) {
+  patterns.add<ConvertFsubToFnegFadd>(context);
 }
 
 //===----------------------------------------------------------------------===//

@@ -18,6 +18,7 @@ include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"
 include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
@@ -1865,14 +1866,35 @@ def FPRoundingModeAttr : EnumAttr<NVVM_Dialect, FPRoundingMode, "fp_rnd_mode"> {
 
 def SaturationModeNone   : I32EnumAttrCase<"NONE", 0, "none">;
 def SaturationModeFinite : I32EnumAttrCase<"SATFINITE", 1, "satfinite">;
+def SaturationModeSat    : I32EnumAttrCase<"SAT", 2, "sat">;
 
 def SaturationMode : I32EnumAttr<"SaturationMode", "NVVM SaturationMode kind",
-  [SaturationModeNone, SaturationModeFinite]> {
+  [SaturationModeNone, SaturationModeFinite, SaturationModeSat]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
 def SaturationModeAttr : EnumAttr<NVVM_Dialect, SaturationMode, "sat_mode"> {
-  let assemblyFormat = "`<` $value `>`";
+  let summary = "Describes the saturation mode";
+  let description = [{
+    A `nvvm.sat_mode` attribute specifies the saturation mode for instructions 
+    involving floating points or integers. It can be one of the following 
+    values:
+    - `none`: No saturation is applied.
+    - `satfinite`: If the absolute value of input (ignoring sign) is greater 
+      than the `MAX_NORM` of the specified destination format, then the result 
+      is the sign-preserved `MAX_NORM` of the destination format and a positive 
+      `MAX_NORM` in unsigned datatypes for which the destination sign is not 
+      supported. If the input is `NaN`, then the result can be `NaN` or th 
+      `MAX_NORM` of the destination format, depending on the format.
+    - `sat`: For integer destination types, this limits the value to `MININT..
+      MAXINT` and applies to both signed and unsigned integer datatypes. For 
+      floating point destination types (applies to only `F16`, `F32`, and `F64` 
+      types), this limits the value to the range `[0.0, 1.0]` and flushes NaN 
+      results to positive zero.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt)
+}];
+ let assemblyFormat = "`<` $value `>`";
 }
 
 def NVVM_ConvertFloatToTF32Op : NVVM_Op<"convert.float.to.tf32"> {
@@ -6245,6 +6267,64 @@ def NVVM_Tcgen05MMAWsSparseOp : NVVM_Op<"tcgen05.mma.ws.sp",
           *op, moduleTranslation, builder);
       createIntrinsicCall(builder, ID, args);
   }];
+}
+
+def SIMTFloatType : AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16, F32, F64]>]>;
+
+class NVVM_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
+    NVVM_Op<mnemonic, traits # [Pure, SameOperandsAndResultType]>,
+    Arguments<(ins SIMTFloatType:$lhs, SIMTFloatType:$rhs,
+      DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
+      DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
+      DefaultValuedAttr<BoolAttr, "false">:$ftz)>,
+    Results<(outs SIMTFloatType:$res)> {
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($res)";
+}
+
+def NVVM_AddFOp : NVVM_FloatBinaryOp<"addf", [Commutative]> {
+  let summary = [{
+    Performs floating point addition operation
+  }];
+  let description = [{
+    The `nvvm.addf` operation performs floating point addition of two floating 
+    point operands of the same type.
+
+    The rounding mode is specified by the `rnd` attribute, saturation mode by 
+    the `sat` attribute, and flush-to-zero by the `ftz` attribute.
+
+    For more information, see PTX ISA:
+    - [floating point addition](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-add)
+    - [half-precision floating point addition](https://docs.nvidia.com/cuda/parallel-thread-execution/#half-precision-floating-point-instructions-add)
+  }];
+  let hasVerifier = 1;
+  
+  let extraClassDeclaration = [{
+    static void lowerAddFToLLVMIR(
+        Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
+  let llvmBuilder = [{
+    NVVM::AddFOp::lowerAddFToLLVMIR(*op, moduleTranslation, builder);
+  }];
+}
+
+def NVVM_SubFOp : NVVM_FloatBinaryOp<"subf"> {
+  let summary = [{
+    Performs floating point subtraction operation with support for mixed 
+    precision operands
+  }];
+  let description = [{
+    The `nvvm.subf` operation performs floating point subtraction of two 
+    operands.
+
+    It supports the same type combinations and modifiers as `nvvm.addf`.
+    This is equivalent to `nvvm.addf(lhs, -rhs)`.
+    
+    For more information, see PTX ISA:
+    - [floating point subtraction](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sub) 
+    - [half-precision floating point subtraction](https://docs.nvidia.com/cuda/parallel-thread-execution/#half-precision-floating-point-instructions-sub)
+ 
+  }];
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

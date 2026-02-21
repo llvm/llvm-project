@@ -446,6 +446,137 @@ getFenceProxySyncRestrictID(NVVM::MemOrderKind order) {
                    nvvm_fence_proxy_async_generic_release_sync_restrict_space_cta_scope_cluster;
 }
 
+void NVVM::AddFOp::lowerAddFToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
+                                     llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::AddFOp>(op);
+  NVVM::FPRoundingMode rndMode = thisOp.getRnd();
+  NVVM::SaturationMode satMode = thisOp.getSat();
+  bool isFTZ = thisOp.getFtz();
+  bool isSat = satMode != NVVM::SaturationMode::NONE;
+
+  llvm::Value *argLHS = mt.lookupValue(thisOp.getLhs());
+  llvm::Value *argRHS = mt.lookupValue(thisOp.getRhs());
+
+  mlir::Type opType = thisOp.getLhs().getType();
+
+  // FIXME: Add intrinsics for add.rn.ftz.f16x2 and add.rn.ftz.f16 here when
+  // they are available.
+  static constexpr llvm::Intrinsic::ID f16IDs[] = {
+      llvm::Intrinsic::nvvm_add_rn_sat_f16,
+      llvm::Intrinsic::nvvm_add_rn_ftz_sat_f16,
+      llvm::Intrinsic::nvvm_add_rn_sat_v2f16,
+      llvm::Intrinsic::nvvm_add_rn_ftz_sat_v2f16,
+  };
+
+  static constexpr llvm::Intrinsic::ID f32IDs[] = {
+      llvm::Intrinsic::nvvm_add_rn_f, // default rounding mode RN
+      llvm::Intrinsic::nvvm_add_rn_f,
+      llvm::Intrinsic::nvvm_add_rm_f,
+      llvm::Intrinsic::nvvm_add_rp_f,
+      llvm::Intrinsic::nvvm_add_rz_f,
+      llvm::Intrinsic::nvvm_add_rn_sat_f, // default rounding mode RN
+      llvm::Intrinsic::nvvm_add_rn_sat_f,
+      llvm::Intrinsic::nvvm_add_rm_sat_f,
+      llvm::Intrinsic::nvvm_add_rp_sat_f,
+      llvm::Intrinsic::nvvm_add_rz_sat_f,
+      llvm::Intrinsic::nvvm_add_rn_ftz_f, // default rounding mode RN
+      llvm::Intrinsic::nvvm_add_rn_ftz_f,
+      llvm::Intrinsic::nvvm_add_rm_ftz_f,
+      llvm::Intrinsic::nvvm_add_rp_ftz_f,
+      llvm::Intrinsic::nvvm_add_rz_ftz_f,
+      llvm::Intrinsic::nvvm_add_rn_ftz_sat_f, // default rounding mode RN
+      llvm::Intrinsic::nvvm_add_rn_ftz_sat_f,
+      llvm::Intrinsic::nvvm_add_rm_ftz_sat_f,
+      llvm::Intrinsic::nvvm_add_rp_ftz_sat_f,
+      llvm::Intrinsic::nvvm_add_rz_ftz_sat_f,
+  };
+
+  static constexpr llvm::Intrinsic::ID f64IDs[] = {
+      llvm::Intrinsic::nvvm_add_rn_d, // default rounding mode RN
+      llvm::Intrinsic::nvvm_add_rn_d, llvm::Intrinsic::nvvm_add_rm_d,
+      llvm::Intrinsic::nvvm_add_rp_d, llvm::Intrinsic::nvvm_add_rz_d};
+
+  auto addIntrinsic = [&](llvm::Intrinsic::ID IID, llvm::Value *LHS = nullptr,
+                          llvm::Value *RHS = nullptr) -> llvm::CallInst * {
+    llvm::SmallVector<llvm::Value *, 2> callArgs;
+    callArgs.push_back(LHS ? LHS : argLHS);
+    callArgs.push_back(RHS ? RHS : argRHS);
+    return createIntrinsicCall(builder, IID, callArgs);
+  };
+
+  // f16 + f16 -> f16 / vector<2xf16> + vector<2xf16> -> vector<2xf16>
+  // FIXME: Allow lowering to add.rn.ftz.f16x2 and add.rn.ftz.f16 here when the
+  // intrinsics are available.
+  bool isVectorF16Add = isa<VectorType>(opType) &&
+                        cast<VectorType>(opType).getElementType().isF16();
+  if (opType.isF16() || isVectorF16Add) {
+    if (isSat) {
+      unsigned index = (isVectorF16Add << 1) | isFTZ;
+      mt.mapValue(thisOp.getRes(), addIntrinsic(f16IDs[index]));
+      return;
+    } else {
+      mt.mapValue(thisOp.getRes(), builder.CreateFAdd(argLHS, argRHS));
+      return;
+    }
+  }
+
+  // bf16 + bf16 -> bf16 / vector<2xbf16> + vector<2xbf16> -> vector<2xbf16>
+  bool isVectorBF16Add = isa<VectorType>(opType) &&
+                         cast<VectorType>(opType).getElementType().isBF16();
+  if (opType.isBF16() || isVectorBF16Add) {
+    mt.mapValue(thisOp.getRes(), builder.CreateFAdd(argLHS, argRHS));
+    return;
+  }
+
+  // Helper function for adding vectors
+  auto addVector = [&](llvm::Type *targetType, llvm::Intrinsic::ID intrinsicID,
+                       llvm::Value *result) -> llvm::Value * {
+    for (int64_t i = 0; i < 2; ++i) {
+      llvm::Value *lhsElemi =
+          builder.CreateExtractElement(argLHS, builder.getInt32(i));
+      llvm::Value *rhsElemi =
+          builder.CreateExtractElement(argRHS, builder.getInt32(i));
+      llvm::Value *sum = addIntrinsic(intrinsicID, lhsElemi, rhsElemi);
+      result = builder.CreateInsertElement(result, sum, builder.getInt32(i));
+    };
+    return result;
+  };
+
+  // f64 + f64 -> f64 / vector<2xf64> + vector<2xf64> -> vector<2xf64>
+  bool isVectorF64Add = isa<VectorType>(opType) &&
+                        cast<VectorType>(opType).getElementType().isF64();
+  if (opType.isF64()) {
+    unsigned index = static_cast<unsigned>(rndMode);
+    mt.mapValue(thisOp.getRes(), addIntrinsic(f64IDs[index], argLHS, argRHS));
+    return;
+  } else if (isVectorF64Add) {
+    llvm::Value *result = llvm::PoisonValue::get(
+        llvm::FixedVectorType::get(builder.getDoubleTy(), 2));
+    unsigned index = static_cast<unsigned>(rndMode);
+    result = addVector(builder.getDoubleTy(), f64IDs[index], result);
+    mt.mapValue(thisOp.getRes(), result);
+    return;
+  }
+
+  // f32 + f32 -> f32 / vector<2xf32> + vector<2xf32> -> vector<2xf32>
+  bool isVectorF32Add = isa<VectorType>(opType) &&
+                        cast<VectorType>(opType).getElementType().isF32();
+  if (opType.isF32()) {
+    unsigned index =
+        ((isFTZ << 1) | isSat) * 5 + static_cast<unsigned>(rndMode);
+    mt.mapValue(thisOp.getRes(), addIntrinsic(f32IDs[index], argLHS, argRHS));
+    return;
+  } else if (isVectorF32Add) {
+    llvm::Value *result = llvm::PoisonValue::get(
+        llvm::FixedVectorType::get(builder.getFloatTy(), 2));
+    unsigned index =
+        ((isFTZ << 1) | isSat) * 5 + static_cast<unsigned>(rndMode);
+    result = addVector(builder.getFloatTy(), f32IDs[index], result);
+    mt.mapValue(thisOp.getRes(), result);
+    return;
+  }
+}
+
 namespace {
 /// Implementation of the dialect interface that converts operations belonging
 /// to the NVVM dialect to LLVM IR.
