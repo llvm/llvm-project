@@ -1,12 +1,13 @@
-; RUN: opt -passes='sroa' < %s -S -o - | FileCheck %s
+; RUN: opt -passes=sroa < %s -S -o - | FileCheck %s
 ;
 ; Test that recursively splitting an alloca updates the debug info correctly.
 ; CHECK: %[[T:.*]] = load i64, ptr @t, align 8
-; CHECK: #dbg_value(i64 %[[T]], ![[Y:.*]], !DIExpression(DW_OP_LLVM_fragment, 0, 64),
+; CHECK: %[[VI:.*]] = insertelement <2 x i64> undef, i64 %[[T]], i32 0
+; CHECK: #dbg_value(<2 x i64> %[[VI]], ![[Y:.*]], !DIExpression(),
 ; CHECK: %[[T1:.*]] = load i64, ptr @t, align 8
-; CHECK: #dbg_value(i64 %[[T1]], ![[Y]], !DIExpression(DW_OP_LLVM_fragment, 64, 64),
-; CHECK: #dbg_value(i64 %[[T]], ![[R:.*]], !DIExpression(DW_OP_LLVM_fragment, 192, 64),
-; CHECK: #dbg_value(i64 %[[T1]], ![[R]], !DIExpression(DW_OP_LLVM_fragment, 256, 64),
+; CHECK: %[[VI2:.*]] = insertelement <2 x i64> %[[VI]], i64 %[[T1]], i32 1
+; CHECK: #dbg_value(<2 x i64> %[[VI2]], ![[Y]], !DIExpression(),
+; CHECK: #dbg_value(<2 x i64> %[[VI2]], ![[R:.*]], !DIExpression(DW_OP_LLVM_fragment, 192, 128),
 ;
 ; struct p {
 ;   __SIZE_TYPE__ s;

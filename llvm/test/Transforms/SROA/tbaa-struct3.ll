@@ -73,12 +73,13 @@ define void @load_store_transfer_split_struct_tbaa_2_i31(ptr dereferenceable(24)
 ; CHECK-LABEL: define void @load_store_transfer_split_struct_tbaa_2_i31(
 ; CHECK-SAME: ptr dereferenceable(24) [[RES:%.*]], i31 [[A:%.*]], i31 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP:%.*]] = alloca { i31, i31 }, align 4
-; CHECK-NEXT:    store i31 [[A]], ptr [[TMP]], align 4
+; CHECK-NEXT:    [[TMP:%.*]] = alloca <2 x i31>, align 8
+; CHECK-NEXT:    store i31 [[A]], ptr [[TMP]], align 8
 ; CHECK-NEXT:    [[TMP_4_TMP_4_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[TMP]], i64 4
 ; CHECK-NEXT:    store i31 [[B]], ptr [[TMP_4_TMP_4_SROA_IDX]], align 4
-; CHECK-NEXT:    [[TMP_0_L1:%.*]] = load i62, ptr [[TMP]], align 4, !tbaa.struct [[TBAA_STRUCT4:![0-9]+]]
-; CHECK-NEXT:    store i62 [[TMP_0_L1]], ptr [[RES]], align 4, !tbaa.struct [[TBAA_STRUCT4]]
+; CHECK-NEXT:    [[TMP_SROA_0_0_TMP_SROA_0_0_L1:%.*]] = load <2 x i31>, ptr [[TMP]], align 8, !tbaa.struct [[TBAA_STRUCT4:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i31> [[TMP_SROA_0_0_TMP_SROA_0_0_L1]] to i62
+; CHECK-NEXT:    store i62 [[TMP0]], ptr [[RES]], align 4, !tbaa.struct [[TBAA_STRUCT4]]
 ; CHECK-NEXT:    ret void
 ;
 entry:

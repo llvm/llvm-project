@@ -1,5 +1,5 @@
 ; RUN: opt %s -passes=sroa -S | FileCheck %s --check-prefixes=COMMON,OLD
-; RUN: opt %s -passes=declare-to-assign,sroa -S | FileCheck %s --check-prefixes=COMMON,NEW
+; RUN: opt %s -passes='declare-to-assign,sroa' -S | FileCheck %s --check-prefixes=COMMON,NEW
 
 ;; C++17 source:
 ;; struct two { int a, b; } gt;
@@ -140,9 +140,7 @@ entry:
 ;; 16 bit variable f (!62): value vgf (lower bits)
 ;; 16 bit variable g (!63): value vgf (upper bits)
 ;;
-;; 16 bit variable h (!64): deref dead_64_128
-; COMMON-NEXT: %[[dead_64_128:.*]] = alloca %struct.two
-; COMMON-NEXT: #dbg_declare(ptr %[[dead_64_128]], ![[h:[0-9]+]], !DIExpression(),
+;; 16 bit variable h (!64): promoted to <2 x i32> vector
 ; COMMON-NEXT: %[[ve:.*]] = load i32, ptr @gf
 ;; FIXME: mem2reg bug - offset is incorrect - see comment above.
 ; COMMON-NEXT: #dbg_value(i32 %[[ve]], ![[e:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 2),
@@ -150,6 +148,8 @@ entry:
 ; COMMON-NEXT: #dbg_value(i32 %[[vfg]], ![[f:[0-9]+]], !DIExpression(),
 ;; FIXME: mem2reg bug - offset is incorrect - see comment above.
 ; COMMON-NEXT: #dbg_value(i32 %[[vfg]], ![[g:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 2),
+; COMMON-NEXT: %[[vh:.*]] = load <2 x i32>, ptr getelementptr inbounds (i8, ptr @gf, i64 8)
+; COMMON-NEXT: #dbg_value(<2 x i32> %[[vh]], ![[h:[0-9]+]], !DIExpression(),
 define dso_local noundef i32 @_Z4fun3v() #0 !dbg !55 {
 entry:
   %0 = alloca %struct.four, align 4
