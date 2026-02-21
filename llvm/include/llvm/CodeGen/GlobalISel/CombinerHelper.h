@@ -1053,6 +1053,12 @@ public:
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
+
+  /// Helper function for matchBinopWithNeg: tries to match one commuted form
+  /// of `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`.
+  bool matchBinopWithNegInner(Register MaybeInner, Register Other,
+                               unsigned RootOpc, Register Dst, LLT Ty,
+                               BuildFnTy &MatchInfo) const;
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a post-indexing operation.
   ///

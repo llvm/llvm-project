@@ -203,3 +203,35 @@ body: |
     %dst:_(s64) = G_AND %a, %add
     $x0 = COPY %dst
     RET_ReallyLR implicit $x0
+...
+---
+name:            binop_with_neg_and_one_use
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0, $x1, $x2, $x3
+
+    ; CHECK-LABEL: name: binop_with_neg_and_one_use
+    ; CHECK: liveins: $x0, $x1, $x2, $x3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = COPY $x0
+    ; CHECK-NEXT: %b:_(s64) = COPY $x1
+    ; CHECK-NEXT: %c:_(s64) = COPY $x2
+    ; CHECK-NEXT: %mone:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: %neg_y:_(s64) = G_XOR %b, %mone
+    ; CHECK-NEXT: %add:_(s64) = G_ADD %neg_y, %c
+    ; CHECK-NEXT: %dst:_(s64) = G_AND %a, %add
+    ; CHECK-NEXT: %and2:_(s64) = G_AND %neg_y, %dst
+    ; CHECK-NEXT: $x0 = COPY %and2(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(s64) = COPY $x0
+    %b:_(s64) = COPY $x1
+    %c:_(s64) = COPY $x2
+    %mone:_(s64) = G_CONSTANT i64 -1
+    %neg_y:_(s64) = G_XOR %mone, %b
+    %add:_(s64) = G_ADD %neg_y, %c
+    %dst:_(s64) = G_AND %a, %add
+    %and2:_(s64) = G_AND %neg_y, %dst
+    $x0 = COPY %and2
+    RET_ReallyLR implicit $x0
+...
