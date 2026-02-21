@@ -121,6 +121,12 @@ New checks
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
+- New :doc:`modernize-use-span-param
+  <clang-tidy/checks/modernize/use-span-param>` check.
+
+  Finds ``const std::vector<T>&`` parameters that are only used for
+  read-only access and suggests using ``std::span<const T>``.
+
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 

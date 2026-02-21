@@ -46,6 +46,7 @@ add_clang_library(clangTidyModernizeModule STATIC
   UseOverrideCheck.cpp
   UseRangesCheck.cpp
   UseScopedLockCheck.cpp
+  UseSpanParamCheck.cpp
   UseStartsEndsWithCheck.cpp
   UseStdFormatCheck.cpp
   UseStdNumbersCheck.cpp
