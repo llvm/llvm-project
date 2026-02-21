@@ -4194,41 +4194,24 @@ def int_amdgcn_swmmac_f16_16x16x128_bf8_bf8 : AMDGPUSWmmacIntrinsicIdxReuse<llvm
 def int_amdgcn_swmmac_i32_16x16x128_iu8     : AMDGPUSWmmacIntrinsicABIdxClamp<llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty>;
 }
 
-
 class AMDGPUTensorLoadStore:
   Intrinsic<
     [],
     [llvm_v4i32_ty, // D# group 0
      llvm_v8i32_ty, // D# group 1
-     llvm_v4i32_ty, // D# group 2
-     llvm_v4i32_ty, // D# group 3
+     llvm_v4i32_ty, // D# group 2: group 2 and 3 should be zero-initialized for D# up to 2D.
+     llvm_v4i32_ty, // D# group 3:
+     llvm_v8i32_ty, // D# group 4: reserved for future targets, use <8 x i32> zeroinitializer for now.
+                    //   This argument will be silently ignored.
      llvm_i32_ty],  // cachepolicy:
                     //   bits [0-2] = th
                     //   bits [3-4] = scope
-    [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrConvergent, IntrNoCallback, IntrNoFree],
+    [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<5>>, IntrWillReturn, IntrConvergent, IntrNoCallback, IntrNoFree],
     "", [SDNPMemOperand]
   >;
 
-class AMDGPUTensorLoadStoreD2:
-  Intrinsic<
-    [],
-    [llvm_v4i32_ty,  // D# group 0
-     llvm_v8i32_ty,  // D# group 1
-     llvm_i32_ty],   // cachepolicy:
-                     //   bits [0-2] = th
-                     //   bits [3-4] = scope
-    [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<2>>, IntrWillReturn, IntrConvergent, IntrNoCallback, IntrNoFree],
-    "", [SDNPMemOperand]
-  >;
-
-def int_amdgcn_tensor_load_to_lds :
-  ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds">, AMDGPUTensorLoadStore;
-def int_amdgcn_tensor_store_from_lds :
-  ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds">, AMDGPUTensorLoadStore;
-def int_amdgcn_tensor_load_to_lds_d2 :
-  ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds_d2">, AMDGPUTensorLoadStoreD2;
-def int_amdgcn_tensor_store_from_lds_d2 :
-  ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds_d2">, AMDGPUTensorLoadStoreD2;
+def int_amdgcn_tensor_load_to_lds    : ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds">, AMDGPUTensorLoadStore;
+def int_amdgcn_tensor_store_from_lds : ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds">, AMDGPUTensorLoadStore;
 
 class AMDGPUClusterLoad<LLVMType ptr_ty>:
   Intrinsic<
