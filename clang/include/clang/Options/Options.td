@@ -4791,6 +4791,17 @@ defm strict_return : BoolFOption<"strict-return",
             " of a non-void function as unreachable">,
   PosFlag<SetTrue>>;
 
+def ftrap_unreachable
+    : Joined<["-"], "ftrap-unreachable=">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Replace ``llvm.unreachable`` instructions with traps, when it "
+               "is supported and profitable">,
+      Values<"all,except-noreturn,none">,
+      NormalizedValues<["All", "ExceptNoreturn", "None"]>,
+      NormalizedValuesScope<"CodeGenOptions::TrapUnreachableKind">,
+      MarshallingInfoEnum<CodeGenOpts<"TrapUnreachable">, "None">;
+
 let Flags = [TargetSpecific] in {
 defm ptrauth_intrinsics : OptInCC1FFlag<"ptrauth-intrinsics", "Enable pointer authentication intrinsics">;
 defm ptrauth_calls : OptInCC1FFlag<"ptrauth-calls", "Enable signing and authentication of all indirect calls">;

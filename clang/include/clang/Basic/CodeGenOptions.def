@@ -417,6 +417,9 @@ VALUE_CODEGENOPT(TLSSize, 8, 0, Benign)
 /// The types of variables that we will extend the live ranges of.
 ENUM_CODEGENOPT(ExtendVariableLiveness, ExtendVariableLivenessKind, 2, ExtendVariableLivenessKind::None, Benign)
 
+/// Whether we should use make unreachable trap or not.
+ENUM_CODEGENOPT(TrapUnreachable, TrapUnreachableKind, 2, TrapUnreachableKind::None, Benign)
+
 /// The default stack protector guard offset to use.
 VALUE_CODEGENOPT(StackProtectorGuardOffset, 32, INT_MAX, Benign)
 

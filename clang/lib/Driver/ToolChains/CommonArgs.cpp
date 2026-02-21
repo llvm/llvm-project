@@ -847,6 +847,20 @@ static void getWebAssemblyTargetFeatures(const Driver &D,
                             options::OPT_m_wasm_Features_Group);
 }
 
+static clang::CodeGenOptions::TrapUnreachableKind
+getTrapUnreachable(const llvm::opt::ArgList &Args) {
+  if (const Arg *A = Args.getLastArg(options::OPT_ftrap_unreachable)) {
+    StringRef V = A->getValue();
+    if (V == "none")
+      return CodeGenOptions::TrapUnreachableKind::None;
+    if (V == "except-noreturn")
+      return CodeGenOptions::TrapUnreachableKind::ExceptNoreturn;
+    if (V == "all")
+      return CodeGenOptions::TrapUnreachableKind::All;
+  }
+  return CodeGenOptions::TrapUnreachableKind::None;
+}
+
 void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                               const ArgList &Args, ArgStringList &CmdArgs,
                               bool ForAS, bool IsAux) {
@@ -1391,6 +1405,21 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (Args.hasArg(options::OPT_ftime_report))
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-time-passes"));
+
+  if (Args.hasArg(options::OPT_ftrap_unreachable)) {
+    switch (getTrapUnreachable(Args)) {
+    case clang::CodeGenOptions::TrapUnreachableKind::None:
+      break;
+    case clang::CodeGenOptions::TrapUnreachableKind::ExceptNoreturn:
+      CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
+                                           "--no-trap-after-noreturn"));
+      LLVM_FALLTHROUGH;
+    case clang::CodeGenOptions::TrapUnreachableKind::All:
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine(PluginOptPrefix) + "--trap-unreachable"));
+      break;
+    }
+  }
 
   addDTLTOOptions(ToolChain, Args, CmdArgs);
 }

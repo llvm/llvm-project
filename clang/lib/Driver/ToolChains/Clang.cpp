@@ -5873,6 +5873,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptInFlag(CmdArgs, options::OPT_fatomic_ignore_denormal_mode,
                     options::OPT_fno_atomic_ignore_denormal_mode);
 
+  Args.addLastArg(CmdArgs, options::OPT_ftrap_unreachable);
+
   if (Arg *A = Args.getLastArg(options::OPT_fextend_args_EQ)) {
     const llvm::Triple::ArchType Arch = TC.getArch();
     if (Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64) {

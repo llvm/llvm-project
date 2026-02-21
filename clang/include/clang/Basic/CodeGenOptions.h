@@ -126,6 +126,12 @@ public:
     All,
   };
 
+  enum class TrapUnreachableKind {
+    None,
+    ExceptNoreturn,
+    All,
+  };
+
   enum InlineAsmDialectKind {
     IAD_ATT,
     IAD_Intel,
