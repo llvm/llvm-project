@@ -25,6 +25,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -62,6 +63,11 @@ static cl::opt<unsigned>
 static cl::opt<bool> DumpReproducers(
     "constraint-elimination-dump-reproducers", cl::init(false), cl::Hidden,
     cl::desc("Dump IR to reproduce successful transformations."));
+
+static cl::opt<bool> UseConstantRangeFacts(
+    "constraint-elimination-use-constant-range-facts", cl::init(true),
+    cl::Hidden,
+    cl::desc("Use constant range facts from computeConstantRange."));
 
 static int64_t MaxConstraintValue = std::numeric_limits<int64_t>::max();
 static int64_t MinSignedConstraintValue = std::numeric_limits<int64_t>::min();
@@ -174,6 +180,7 @@ struct State {
   ScalarEvolution &SE;
   TargetLibraryInfo &TLI;
   SmallVector<FactOrCheck, 64> WorkList;
+  SmallPtrSet<Value *, 16> RangeFactsComputed;
 
   State(DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE,
         TargetLibraryInfo &TLI)
@@ -181,6 +188,10 @@ struct State {
 
   /// Process block \p BB and add known facts to work-list.
   void addInfoFor(BasicBlock &BB);
+
+  /// Add constant range facts for \p V at \p DTN. Deduplicates using
+  /// RangeFactsComputed.
+  void addConstantRangeFact(Value *V, DomTreeNode *DTN);
 
   /// Try to add facts for loop inductions (AddRecs) in EQ/NE compares
   /// controlling the loop header.
@@ -1125,6 +1136,28 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
   return true;
 }
 
+void State::addConstantRangeFact(Value *V, DomTreeNode *DTN) {
+  if (!RangeFactsComputed.insert(V).second)
+    return;
+  Type *Ty = V->getType();
+  if (!Ty->isIntegerTy() || Ty->getIntegerBitWidth() > 64)
+    return;
+
+  ConstantRange CR =
+      computeConstantRange(V, /*ForSigned=*/false, /*UseInstrInfo=*/true);
+  if (CR.isFullSet() || CR.isEmptySet())
+    return;
+
+  APInt UMin = CR.getUnsignedMin();
+  APInt UMax = CR.getUnsignedMax();
+  if (!UMin.isZero())
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_UGE, V, ConstantInt::get(Ty, UMin)));
+  if (!UMax.isAllOnes())
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_ULE, V, ConstantInt::get(Ty, UMax)));
+}
+
 void State::addInfoFor(BasicBlock &BB) {
   addInfoForInductions(BB);
   auto &DL = BB.getDataLayout();
@@ -1140,6 +1173,19 @@ void State::addInfoFor(BasicBlock &BB) {
         if (!DTN)
           continue;
         WorkList.push_back(FactOrCheck::getCheck(DTN, &U));
+      }
+      // Target operands feeding into comparisons for computeConstantRange.
+      // Only explore two levels deep, and exclude eq and ne because of
+      // outsized compile time impact and marginal benefit.
+      if (UseConstantRangeFacts && !Cmp->isEquality()) {
+        for (Value *Op : Cmp->operands()) {
+          if (auto *OpI = dyn_cast<Instruction>(Op)) {
+            addConstantRangeFact(OpI, DT.getNode(OpI->getParent()));
+            for (Value *SubOp : OpI->operands())
+              if (auto *SubI = dyn_cast<Instruction>(SubOp))
+                addConstantRangeFact(SubI, DT.getNode(SubI->getParent()));
+          }
+        }
       }
       continue;
     }
@@ -1843,7 +1889,15 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
   std::unique_ptr<Module> ReproducerModule(
       DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);
 
-  // First, collect conditions implied by branches and blocks with their
+  // Add range facts for function parameters.
+  if (UseConstantRangeFacts) {
+    DomTreeNode *EntryDTN = DT.getNode(&F.getEntryBlock());
+    if (EntryDTN)
+      for (Argument &Arg : F.args())
+        S.addConstantRangeFact(&Arg, EntryDTN);
+  }
+
+  // Collect conditions implied by branches and blocks with their
   // Dominator DFS in and out numbers.
   for (BasicBlock &BB : F) {
     if (!DT.getNode(&BB))

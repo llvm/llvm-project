@@ -372,8 +372,7 @@ define i1 @sub_nuw_i64_signed_min_const(i64 %a) {
 ; CHECK-LABEL: @sub_nuw_i64_signed_min_const(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NEG2:%.*]] = sub nuw i64 0, -9223372036854775808
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[NEG2]], 0
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %neg2 = sub nuw i64 0, -9223372036854775808

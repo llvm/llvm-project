@@ -26,11 +26,13 @@ entry:
 define void @test_one_known_fact_true_branch(i8 %start, i8 %high) {
 ; CHECK: remark: <unknown>:0:0: module; ModuleID = 'test_one_known_fact_true_branch'
 
-; CHECK-LABEL: define i1 @"{{.*}}test_one_known_fact_true_branchrepro"(i8 %high, i8 %start) {
+; CHECK-LABEL: define i1 @"{{.*}}test_one_known_fact_true_branchrepro"(i8 %start, i8 %high) {
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   %add.ptr.i = add nuw i8 %start, 3
-; CHECK-NEXT:   %0 = icmp ult i8 %add.ptr.i, %high
+; CHECK-NEXT:   %0 = icmp uge i8 %add.ptr.i, 3
 ; CHECK-NEXT:   call void @llvm.assume(i1 %0)
+; CHECK-NEXT:   %1 = icmp ult i8 %add.ptr.i, %high
+; CHECK-NEXT:   call void @llvm.assume(i1 %1)
 ; CHECK-NEXT:   %t.0 = icmp ult i8 %start, %high
 ; CHECK-NEXT:   ret i1 %t.0
 ; CHECK-NEXT: }
@@ -52,11 +54,13 @@ if.end:
 define void @test_one_known_fact_false_branch(i8 %start, i8 %high) {
 ; CHECK: remark: <unknown>:0:0: module; ModuleID = 'test_one_known_fact_false_branch'
 ;
-; CHECK-LABEL:define i1 @"{{.*}}test_one_known_fact_false_branchrepro"(i8 %high, i8 %start) {
+; CHECK-LABEL:define i1 @"{{.*}}test_one_known_fact_false_branchrepro"(i8 %start, i8 %high) {
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   %add.ptr.i = add nuw i8 %start, 3
-; CHECK-NEXT:   %0 = icmp ult i8 %add.ptr.i, %high
+; CHECK-NEXT:   %0 = icmp uge i8 %add.ptr.i, 3
 ; CHECK-NEXT:   call void @llvm.assume(i1 %0)
+; CHECK-NEXT:   %1 = icmp ult i8 %add.ptr.i, %high
+; CHECK-NEXT:   call void @llvm.assume(i1 %1)
 ; CHECK-NEXT:   %t.0 = icmp ult i8 %start, %high
 ; CHECK-NEXT:   ret i1 %t.0
 ; CHECK-NEXT: }
