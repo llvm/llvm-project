@@ -518,8 +518,7 @@ bool AMDGPURegBankCombinerImpl::matchCopySccVcc(
   MachineInstr *CondDef;
   Register TrueReg, FalseReg;
   if (!mi_match(SgprSrc, MRI,
-                m_GISelect(m_MInstr(CondDef), m_Reg(TrueReg),
-                           m_Reg(FalseReg))))
+                m_GISelect(m_MInstr(CondDef), m_Reg(TrueReg), m_Reg(FalseReg))))
     return false;
 
   if (CondDef->getOpcode() != AMDGPU::G_AMDGPU_COPY_SCC_VCC)
