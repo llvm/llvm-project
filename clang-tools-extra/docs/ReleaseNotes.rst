@@ -121,6 +121,12 @@ New checks
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
+- New :doc:`modernize-pointer-to-span
+  <clang-tidy/checks/modernize/pointer-to-span>` check.
+
+  Finds function parameter pairs of (pointer, size) that could be replaced with
+  ``std::span``.
+
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 
