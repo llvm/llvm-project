@@ -1104,15 +1104,26 @@ define <4 x i32> @mul_v4i64_zero_lower(<4 x i32> %val1, <4 x i64> %val2) {
 ; SSE41-NEXT:    movaps %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: mul_v4i64_zero_lower:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; AVX-NEXT:    vpsrlq $32, %ymm1, %ymm1
-; AVX-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
-; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; AVX-NEXT:    vzeroupper
-; AVX-NEXT:    retq
+; AVX2-LABEL: mul_v4i64_zero_lower:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-NEXT:    vpsrlq $32, %ymm1, %ymm1
+; AVX2-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,2,4,6]
+; AVX2-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: mul_v4i64_zero_lower:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX512-NEXT:    vpsrlq $32, %ymm1, %ymm1
+; AVX512-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
 entry:
   %val1a = zext <4 x i32> %val1 to <4 x i64>
   %val2a = and <4 x i64> %val2, <i64 -4294967296, i64 -4294967296, i64 -4294967296, i64 -4294967296>
@@ -1178,9 +1189,9 @@ define <8 x i32> @mul_v8i64_zero_upper(<8 x i32> %val1, <8 x i32> %val2) {
 ; AVX512-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
 ; AVX512-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero
 ; AVX512-NEXT:    vpmuludq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm1[1,3],ymm0[5,7],ymm1[5,7]
-; AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [1,3,5,7,9,11,13,15]
+; AVX512-NEXT:    vpermd %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NEXT:    retq
 entry:
   %val1a = zext <8 x i32> %val1 to <8 x i64>

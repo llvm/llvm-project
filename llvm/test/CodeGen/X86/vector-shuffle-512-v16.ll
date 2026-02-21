@@ -412,40 +412,25 @@ define <16 x i32> @shuffle_v16i32_0_1_2_19_u_u_u_u_u_u_u_u_u_u_u_u(<16 x i32> %a
 
 ;FIXME: can do better with vpcompress
 define <8 x i32> @test_v16i32_1_3_5_7_9_11_13_15(<16 x i32> %v) {
-; SLOW-LABEL: test_v16i32_1_3_5_7_9_11_13_15:
-; SLOW:       # %bb.0:
-; SLOW-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
-; SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm1[1,3],ymm0[5,7],ymm1[5,7]
-; SLOW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; SLOW-NEXT:    retq
-;
-; FAST-LABEL: test_v16i32_1_3_5_7_9_11_13_15:
-; FAST:       # %bb.0:
-; FAST-NEXT:    vmovaps {{.*#+}} ymm1 = [1,3,5,7,9,11,13,15]
-; FAST-NEXT:    vpermps %zmm0, %zmm1, %zmm0
-; FAST-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; FAST-NEXT:    retq
+; ALL-LABEL: test_v16i32_1_3_5_7_9_11_13_15:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vmovaps {{.*#+}} ymm1 = [1,3,5,7,9,11,13,15]
+; ALL-NEXT:    vpermps %zmm0, %zmm1, %zmm0
+; ALL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; ALL-NEXT:    retq
   %res = shufflevector <16 x i32> %v, <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   ret <8 x i32> %res
 }
 
 ;FIXME: can do better with vpcompress
 define <4 x i32> @test_v16i32_0_1_2_12 (<16 x i32> %v) {
-; SLOW-LABEL: test_v16i32_0_1_2_12:
-; SLOW:       # %bb.0:
-; SLOW-NEXT:    vextractf32x4 $3, %zmm0, %xmm1
-; SLOW-NEXT:    vbroadcastss %xmm1, %xmm1
-; SLOW-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
-; SLOW-NEXT:    vzeroupper
-; SLOW-NEXT:    retq
-;
-; FAST-LABEL: test_v16i32_0_1_2_12:
-; FAST:       # %bb.0:
-; FAST-NEXT:    vmovaps {{.*#+}} xmm1 = [0,1,2,12]
-; FAST-NEXT:    vpermps %zmm0, %zmm1, %zmm0
-; FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; FAST-NEXT:    vzeroupper
-; FAST-NEXT:    retq
+; ALL-LABEL: test_v16i32_0_1_2_12:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vmovaps {{.*#+}} xmm1 = [0,1,2,12]
+; ALL-NEXT:    vpermps %zmm0, %zmm1, %zmm0
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; ALL-NEXT:    vzeroupper
+; ALL-NEXT:    retq
   %res = shufflevector <16 x i32> %v, <16 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 12>
   ret <4 x i32> %res
 }

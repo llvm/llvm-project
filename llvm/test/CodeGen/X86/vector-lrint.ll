@@ -1213,11 +1213,11 @@ define <4 x iXLen> @lrint_v4f64(<4 x double> %x) nounwind {
 ; AVX512-i64:       # %bb.0:
 ; AVX512-i64-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX512-i64-NEXT:    vcvtsd2si %xmm1, %rax
-; AVX512-i64-NEXT:    vmovq %rax, %xmm2
-; AVX512-i64-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
-; AVX512-i64-NEXT:    vcvtsd2si %xmm1, %rax
 ; AVX512-i64-NEXT:    vmovq %rax, %xmm1
-; AVX512-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX512-i64-NEXT:    vpermpd {{.*#+}} ymm2 = ymm0[3,2,2,3]
+; AVX512-i64-NEXT:    vcvtsd2si %xmm2, %rax
+; AVX512-i64-NEXT:    vmovq %rax, %xmm2
+; AVX512-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; AVX512-i64-NEXT:    vcvtsd2si %xmm0, %rax
 ; AVX512-i64-NEXT:    vmovq %rax, %xmm2
 ; AVX512-i64-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
@@ -1623,11 +1623,11 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) nounwind {
 ; AVX512-i64-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
 ; AVX512-i64-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX512-i64-NEXT:    vcvtsd2si %xmm2, %rax
-; AVX512-i64-NEXT:    vmovq %rax, %xmm3
-; AVX512-i64-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
-; AVX512-i64-NEXT:    vcvtsd2si %xmm2, %rax
 ; AVX512-i64-NEXT:    vmovq %rax, %xmm2
-; AVX512-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; AVX512-i64-NEXT:    vpermpd {{.*#+}} ymm3 = ymm0[3,2,2,3]
+; AVX512-i64-NEXT:    vcvtsd2si %xmm3, %rax
+; AVX512-i64-NEXT:    vmovq %rax, %xmm3
+; AVX512-i64-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
 ; AVX512-i64-NEXT:    vcvtsd2si %xmm0, %rax
 ; AVX512-i64-NEXT:    vmovq %rax, %xmm3
 ; AVX512-i64-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]

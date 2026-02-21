@@ -253,13 +253,12 @@ define i8 @concat_fcmp_v8f64_v4f64(<4 x double> %a0, <4 x double> %a1) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vcmpneq_oqpd %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm3[0,2]
+; AVX2-NEXT:    vmovapd {{.*#+}} xmm3 = [0,2,4,6]
+; AVX2-NEXT:    vpermps %ymm0, %ymm3, %ymm0
 ; AVX2-NEXT:    vcmpneq_oqpd %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
+; AVX2-NEXT:    vpermps %ymm1, %ymm3, %ymm1
 ; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,3,5,7,9,11,13,15,u,u,u,u,u,u,u,u]
+; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX2-NEXT:    vzeroupper

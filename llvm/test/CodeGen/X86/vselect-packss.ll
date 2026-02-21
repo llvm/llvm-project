@@ -422,8 +422,7 @@ define <16 x i8> @vselect_packss(<16 x i16> %a0, <16 x i16> %a1, <16 x i8> %a2, 
 ; AVX512BWNOVL-LABEL: vselect_packss:
 ; AVX512BWNOVL:       # %bb.0:
 ; AVX512BWNOVL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
-; AVX512BWNOVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BWNOVL-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX512BWNOVL-NEXT:    vpmovwb %zmm0, %ymm0
 ; AVX512BWNOVL-NEXT:    vpblendvb %xmm0, %xmm2, %xmm3, %xmm0
 ; AVX512BWNOVL-NEXT:    vzeroupper
 ; AVX512BWNOVL-NEXT:    retq
@@ -431,8 +430,7 @@ define <16 x i8> @vselect_packss(<16 x i16> %a0, <16 x i16> %a1, <16 x i8> %a2, 
 ; AVX512BWVL-LABEL: vselect_packss:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
-; AVX512BWVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BWVL-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX512BWVL-NEXT:    vpmovwb %ymm0, %xmm0
 ; AVX512BWVL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm3 ^ (xmm0 & (xmm2 ^ xmm3))
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq

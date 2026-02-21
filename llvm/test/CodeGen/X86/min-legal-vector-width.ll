@@ -1264,17 +1264,17 @@ define dso_local void @zext_v16i8_v16i64(<16 x i8> %x, ptr %y) nounwind "min-leg
 ; CHECK-LABEL: zext_v16i8_v16i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
 ; CHECK-NEXT:    vpmovzxwq {{.*#+}} ymm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero
-; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
-; CHECK-NEXT:    vpmovzxwq {{.*#+}} ymm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero
 ; CHECK-NEXT:    vpmovzxwq {{.*#+}} ymm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm3 = xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; CHECK-NEXT:    vpmovzxwq {{.*#+}} ymm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero
 ; CHECK-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vmovdqa %ymm0, (%rdi)
+; CHECK-NEXT:    vmovdqa %ymm3, 32(%rdi)
 ; CHECK-NEXT:    vmovdqa %ymm1, 64(%rdi)
-; CHECK-NEXT:    vmovdqa %ymm3, 96(%rdi)
-; CHECK-NEXT:    vmovdqa %ymm2, 32(%rdi)
+; CHECK-NEXT:    vmovdqa %ymm2, 96(%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %a = zext <16 x i8> %x to <16 x i64>

@@ -248,36 +248,11 @@ define float @signbits_ashr_insert_ashr_extract_sitofp(i64 %a0, i64 %a1) nounwin
 }
 
 define <4 x double> @signbits_sext_shuffle_sitofp(<4 x i32> %a0, <4 x i64> %a1) nounwind {
-; X86-LABEL: signbits_sext_shuffle_sitofp:
-; X86:       # %bb.0:
-; X86-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero
-; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
-; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X86-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
-; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; X86-NEXT:    vcvtdq2pd %xmm0, %ymm0
-; X86-NEXT:    retl
-;
-; X64-AVX1-LABEL: signbits_sext_shuffle_sitofp:
-; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero
-; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X64-AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
-; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; X64-AVX1-NEXT:    vcvtdq2pd %xmm0, %ymm0
-; X64-AVX1-NEXT:    retq
-;
-; X64-AVX2-LABEL: signbits_sext_shuffle_sitofp:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; X64-AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
-; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X64-AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; X64-AVX2-NEXT:    vcvtdq2pd %xmm0, %ymm0
-; X64-AVX2-NEXT:    retq
+; CHECK-LABEL: signbits_sext_shuffle_sitofp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,2,1,0]
+; CHECK-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
   %1 = sext <4 x i32> %a0 to <4 x i64>
   %2 = shufflevector <4 x i64> %1, <4 x i64>%a1, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %3 = sitofp <4 x i64> %2 to <4 x double>
@@ -405,15 +380,11 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    vmovapd 8(%ebp), %xmm3
-; X86-NEXT:    vpsrad $31, %xmm2, %xmm4
-; X86-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[1,1,3,3]
-; X86-NEXT:    vpsrad $1, %xmm5, %xmm5
-; X86-NEXT:    vpblendw {{.*#+}} xmm4 = xmm5[0,1],xmm4[2,3],xmm5[4,5],xmm4[6,7]
+; X86-NEXT:    vpshufd {{.*#+}} xmm4 = xmm2[1,1,3,3]
+; X86-NEXT:    vpsrad $1, %xmm4, %xmm4
 ; X86-NEXT:    vextractf128 $1, %ymm2, %xmm2
-; X86-NEXT:    vpsrad $31, %xmm2, %xmm5
 ; X86-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; X86-NEXT:    vpsrad $1, %xmm2, %xmm2
-; X86-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm5[2,3],xmm2[4,5],xmm5[6,7]
 ; X86-NEXT:    vshufps {{.*#+}} xmm5 = xmm3[2,2,3,3]
 ; X86-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm6
 ; X86-NEXT:    vextractf128 $1, %ymm1, %xmm1
@@ -421,10 +392,7 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ; X86-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vblendvpd %xmm0, %xmm2, %xmm5, %xmm0
 ; X86-NEXT:    vblendvpd %xmm6, %xmm4, %xmm3, %xmm1
-; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; X86-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
-; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,0],xmm0[0,0]
 ; X86-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -433,15 +401,11 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ;
 ; X64-AVX1-LABEL: signbits_ashr_sext_select_shuffle_sitofp:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpsrad $31, %xmm2, %xmm4
-; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[1,1,3,3]
-; X64-AVX1-NEXT:    vpsrad $1, %xmm5, %xmm5
-; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm5[0,1],xmm4[2,3],xmm5[4,5],xmm4[6,7]
+; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm2[1,1,3,3]
+; X64-AVX1-NEXT:    vpsrad $1, %xmm4, %xmm4
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm2
-; X64-AVX1-NEXT:    vpsrad $31, %xmm2, %xmm5
 ; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; X64-AVX1-NEXT:    vpsrad $1, %xmm2, %xmm2
-; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm5[2,3],xmm2[4,5],xmm5[6,7]
 ; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm5 = xmm3[2,2,3,3]
 ; X64-AVX1-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm6
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
@@ -449,10 +413,7 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ; X64-AVX1-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vblendvpd %xmm0, %xmm2, %xmm5, %xmm0
 ; X64-AVX1-NEXT:    vblendvpd %xmm6, %xmm4, %xmm3, %xmm1
-; X64-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; X64-AVX1-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
-; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,0],xmm0[0,0]
 ; X64-AVX1-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
@@ -464,9 +425,8 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ; X64-AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero
 ; X64-AVX2-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vblendvpd %ymm0, %ymm2, %ymm3, %ymm0
-; X64-AVX2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,1,0,1,4,5,4,5]
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X64-AVX2-NEXT:    vmovapd {{.*#+}} xmm1 = [0,0,4,4]
+; X64-AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; X64-AVX2-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq

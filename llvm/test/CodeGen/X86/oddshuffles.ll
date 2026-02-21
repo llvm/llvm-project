@@ -1464,8 +1464,8 @@ define void @interleave_24i32_out(ptr %p, ptr %q1, ptr %q2, ptr %q3) nounwind {
 ; AVX1-NEXT:    vmovups 32(%rdi), %ymm1
 ; AVX1-NEXT:    vmovups (%rdi), %ymm2
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm3 = ymm2[0],ymm1[1],ymm2[2,3],ymm1[4],ymm2[5,6],ymm1[7]
-; AVX1-NEXT:    vmovups 16(%rdi), %xmm4
-; AVX1-NEXT:    vshufps {{.*#+}} ymm4 = ymm4[2,1],ymm1[1,3],ymm4[6,5],ymm1[5,7]
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm4
+; AVX1-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[2,0],mem[1,0]
 ; AVX1-NEXT:    vshufps {{.*#+}} ymm3 = ymm3[0,3],ymm4[0,2],ymm3[4,7],ymm4[4,6]
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm0[2,3,0,1]
 ; AVX1-NEXT:    vshufps {{.*#+}} ymm5 = ymm0[1,0],ymm4[2,0],ymm0[5,4],ymm4[6,4]
@@ -1568,8 +1568,8 @@ define void @interleave_24i32_out(ptr %p, ptr %q1, ptr %q2, ptr %q3) nounwind {
 ; XOP-NEXT:    vmovups 32(%rdi), %ymm1
 ; XOP-NEXT:    vmovups (%rdi), %ymm2
 ; XOP-NEXT:    vblendps {{.*#+}} ymm3 = ymm2[0],ymm1[1],ymm2[2,3],ymm1[4],ymm2[5,6],ymm1[7]
-; XOP-NEXT:    vmovups 16(%rdi), %xmm4
-; XOP-NEXT:    vshufps {{.*#+}} ymm4 = ymm4[2,1],ymm1[1,3],ymm4[6,5],ymm1[5,7]
+; XOP-NEXT:    vextractf128 $1, %ymm3, %xmm4
+; XOP-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[2,0],mem[1,0]
 ; XOP-NEXT:    vshufps {{.*#+}} ymm3 = ymm3[0,3],ymm4[0,2],ymm3[4,7],ymm4[4,6]
 ; XOP-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm0[2,3,0,1]
 ; XOP-NEXT:    vshufps {{.*#+}} ymm5 = ymm0[1,0],ymm4[2,0],ymm0[5,4],ymm4[6,4]

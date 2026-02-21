@@ -40586,13 +40586,6 @@ static bool matchBinaryPermuteShuffle(
   return false;
 }
 
-static SDValue combineX86ShuffleChainWithExtract(
-    ArrayRef<SDValue> Inputs, unsigned RootOpcode, MVT RootVT,
-    ArrayRef<int> BaseMask, int Depth, ArrayRef<const SDNode *> SrcNodes,
-    bool AllowVariableCrossLaneMask, bool AllowVariablePerLaneMask,
-    bool IsMaskedShuffle, SelectionDAG &DAG, const SDLoc &DL,
-    const X86Subtarget &Subtarget);
-
 /// Combine an arbitrary chain of shuffles into a single instruction if
 /// possible.
 ///
@@ -41137,14 +41130,6 @@ static SDValue combineX86ShuffleChain(
       return DAG.getBitcast(RootVT, Res);
     }
 
-    // If that failed and either input is extracted then try to combine as a
-    // shuffle with the larger type.
-    if (SDValue WideShuffle = combineX86ShuffleChainWithExtract(
-            Inputs, RootOpc, RootVT, BaseMask, Depth, SrcNodes,
-            AllowVariableCrossLaneMask, AllowVariablePerLaneMask,
-            IsMaskedShuffle, DAG, DL, Subtarget))
-      return WideShuffle;
-
     // If we have a dual input lane-crossing shuffle then lower to VPERMV3,
     // (non-VLX will pad to 512-bit shuffles).
     if (AllowVariableCrossLaneMask && !MaskContainsZeros &&
@@ -41310,14 +41295,6 @@ static SDValue combineX86ShuffleChain(
     return DAG.getBitcast(RootVT, Res);
   }
 
-  // If that failed and either input is extracted then try to combine as a
-  // shuffle with the larger type.
-  if (SDValue WideShuffle = combineX86ShuffleChainWithExtract(
-          Inputs, RootOpc, RootVT, BaseMask, Depth, SrcNodes,
-          AllowVariableCrossLaneMask, AllowVariablePerLaneMask, IsMaskedShuffle,
-          DAG, DL, Subtarget))
-    return WideShuffle;
-
   // If we have a dual input shuffle then lower to VPERMV3,
   // (non-VLX will pad to 512-bit shuffles)
   if (!UnaryShuffle && AllowVariablePerLaneMask && !MaskContainsZeros &&
@@ -41340,152 +41317,6 @@ static SDValue combineX86ShuffleChain(
   }
 
   // Failed to find any combines.
-  return SDValue();
-}
-
-// Combine an arbitrary chain of shuffles + extract_subvectors into a single
-// instruction if possible.
-//
-// Wrapper for combineX86ShuffleChain that extends the shuffle mask to a larger
-// type size to attempt to combine:
-// shuffle(extract_subvector(x,c1),extract_subvector(y,c2),m1)
-// -->
-// extract_subvector(shuffle(x,y,m2),0)
-static SDValue combineX86ShuffleChainWithExtract(
-    ArrayRef<SDValue> Inputs, unsigned RootOpcode, MVT RootVT,
-    ArrayRef<int> BaseMask, int Depth, ArrayRef<const SDNode *> SrcNodes,
-    bool AllowVariableCrossLaneMask, bool AllowVariablePerLaneMask,
-    bool IsMaskedShuffle, SelectionDAG &DAG, const SDLoc &DL,
-    const X86Subtarget &Subtarget) {
-  unsigned NumMaskElts = BaseMask.size();
-  unsigned NumInputs = Inputs.size();
-  if (NumInputs == 0)
-    return SDValue();
-
-  unsigned RootSizeInBits = RootVT.getSizeInBits();
-  unsigned RootEltSizeInBits = RootSizeInBits / NumMaskElts;
-  assert((RootSizeInBits % NumMaskElts) == 0 && "Unexpected root shuffle mask");
-
-  // Peek through subvectors to find widest legal vector.
-  // TODO: Handle ISD::TRUNCATE
-  unsigned WideSizeInBits = RootSizeInBits;
-  for (SDValue Input : Inputs) {
-    Input = peekThroughBitcasts(Input);
-    while (1) {
-      if (Input.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
-        Input = peekThroughBitcasts(Input.getOperand(0));
-        continue;
-      }
-      if (Input.getOpcode() == ISD::INSERT_SUBVECTOR &&
-          Input.getOperand(0).isUndef() &&
-          isNullConstant(Input.getOperand(2))) {
-        Input = peekThroughBitcasts(Input.getOperand(1));
-        continue;
-      }
-      break;
-    }
-    if (DAG.getTargetLoweringInfo().isTypeLegal(Input.getValueType()) &&
-        WideSizeInBits < Input.getValueSizeInBits())
-      WideSizeInBits = Input.getValueSizeInBits();
-  }
-
-  // Bail if we fail to find a source larger than the existing root.
-  if (WideSizeInBits <= RootSizeInBits ||
-      (WideSizeInBits % RootSizeInBits) != 0)
-    return SDValue();
-
-  // Create new mask for larger type.
-  SmallVector<int, 64> WideMask;
-  growShuffleMask(BaseMask, WideMask, RootSizeInBits, WideSizeInBits);
-
-  // Attempt to peek through inputs and adjust mask when we extract from an
-  // upper subvector.
-  int AdjustedMasks = 0;
-  SmallVector<SDValue, 4> WideInputs(Inputs);
-  for (unsigned I = 0; I != NumInputs; ++I) {
-    SDValue &Input = WideInputs[I];
-    Input = peekThroughBitcasts(Input);
-    while (1) {
-      if (Input.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-          Input.getOperand(0).getValueSizeInBits() <= WideSizeInBits) {
-        uint64_t Idx = Input.getConstantOperandVal(1);
-        if (Idx != 0) {
-          ++AdjustedMasks;
-          unsigned InputEltSizeInBits = Input.getScalarValueSizeInBits();
-          Idx = (Idx * InputEltSizeInBits) / RootEltSizeInBits;
-
-          int lo = I * WideMask.size();
-          int hi = (I + 1) * WideMask.size();
-          for (int &M : WideMask)
-            if (lo <= M && M < hi)
-              M += Idx;
-        }
-        Input = peekThroughBitcasts(Input.getOperand(0));
-        continue;
-      }
-      // TODO: Handle insertions into upper subvectors.
-      if (Input.getOpcode() == ISD::INSERT_SUBVECTOR &&
-          Input.getOperand(0).isUndef() &&
-          isNullConstant(Input.getOperand(2))) {
-        Input = peekThroughBitcasts(Input.getOperand(1));
-        continue;
-      }
-      break;
-    }
-  }
-
-  // Remove unused/repeated shuffle source ops.
-  resolveTargetShuffleInputsAndMask(WideInputs, WideMask);
-  if (WideInputs.empty() || all_of(WideInputs, [WideSizeInBits](SDValue V) {
-        return V.getValueSizeInBits() < WideSizeInBits;
-      }))
-    return SDValue();
-
-  // Bail if we're always extracting from the lowest subvectors,
-  // combineX86ShuffleChain should match this for the current width, or the
-  // shuffle still references too many inputs.
-  if (AdjustedMasks == 0 || WideInputs.size() > 2)
-    return SDValue();
-
-  // Minor canonicalization of the accumulated shuffle mask to make it easier
-  // to match below. All this does is detect masks with sequential pairs of
-  // elements, and shrink them to the half-width mask. It does this in a loop
-  // so it will reduce the size of the mask to the minimal width mask which
-  // performs an equivalent shuffle.
-  while (WideMask.size() > 1) {
-    SmallVector<int, 64> WidenedMask;
-    if (!canWidenShuffleElements(WideMask, WidenedMask))
-      break;
-    WideMask = std::move(WidenedMask);
-  }
-
-  // Canonicalization of binary shuffle masks to improve pattern matching by
-  // commuting the inputs.
-  if (WideInputs.size() == 2 && canonicalizeShuffleMaskWithCommute(WideMask)) {
-    ShuffleVectorSDNode::commuteMask(WideMask);
-    std::swap(WideInputs[0], WideInputs[1]);
-  }
-
-  // Increase depth for every upper subvector we've peeked through.
-  Depth += AdjustedMasks;
-
-  // Attempt to combine wider chain.
-  // TODO: Can we use a better Root?
-  SDValue WideRoot = WideInputs.front().getValueSizeInBits() >
-                             WideInputs.back().getValueSizeInBits()
-                         ? WideInputs.front()
-                         : WideInputs.back();
-  assert(WideRoot.getValueSizeInBits() == WideSizeInBits &&
-         "WideRootSize mismatch");
-
-  if (SDValue WideShuffle = combineX86ShuffleChain(
-          WideInputs, RootOpcode, WideRoot.getSimpleValueType(), WideMask,
-          Depth, SrcNodes, AllowVariableCrossLaneMask, AllowVariablePerLaneMask,
-          IsMaskedShuffle, DAG, SDLoc(WideRoot), Subtarget)) {
-    WideShuffle = extractSubVector(WideShuffle, 0, DAG, DL, RootSizeInBits);
-    return DAG.getBitcast(RootVT, WideShuffle);
-  }
-
   return SDValue();
 }
 
@@ -41902,6 +41733,54 @@ static SDValue combineX86ShufflesRecursively(
     OpMask.assign(NumElts, SM_SentinelUndef);
     std::iota(OpMask.begin(), OpMask.end(), ExtractIdx);
     OpZero = OpUndef = APInt::getZero(NumElts);
+  } else if (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+             TLI.isTypeLegal(Op.getOperand(0).getValueType()) &&
+             Op.getOperand(0).getValueSizeInBits() > RootSizeInBits &&
+             (Op.getOperand(0).getValueSizeInBits() % RootSizeInBits) == 0) {
+    // Extracting from vector larger than RootVT - scale the mask and attempt to
+    // fold the shuffle with the larger root type, then extract the lower
+    // elements.
+    unsigned NewRootSizeInBits = Op.getOperand(0).getValueSizeInBits();
+    unsigned Scale = NewRootSizeInBits / RootSizeInBits;
+    MVT NewRootVT = MVT::getVectorVT(RootVT.getScalarType(),
+                                     Scale * RootVT.getVectorNumElements());
+    SmallVector<int, 64> NewRootMask;
+    growShuffleMask(RootMask, NewRootMask, RootSizeInBits, NewRootSizeInBits);
+    // If we're using the lowest subvector, just replace it directly in the src
+    // ops/nodes.
+    SmallVector<SDValue, 16> NewSrcOps(SrcOps);
+    SmallVector<const SDNode *, 16> NewSrcNodes(SrcNodes);
+    if (isNullConstant(Op.getOperand(1))) {
+      NewSrcOps[SrcOpIndex] = Op.getOperand(0);
+      NewSrcNodes.push_back(Op.getNode());
+    }
+    // Don't increase the combine depth - we're effectively working on the same
+    // nodes, just with a wider type.
+    if (SDValue WideShuffle = combineX86ShufflesRecursively(
+            NewSrcOps, SrcOpIndex, RootOpc, NewRootVT, NewRootMask, NewSrcNodes,
+            Depth, MaxDepth, AllowVariableCrossLaneMask,
+            AllowVariablePerLaneMask, IsMaskedShuffle, DAG, DL, Subtarget))
+      return DAG.getBitcast(
+          RootVT, extractSubVector(WideShuffle, 0, DAG, DL, RootSizeInBits));
+    return SDValue();
+  } else if (Op.getOpcode() == ISD::INSERT_SUBVECTOR &&
+             Op.getOperand(1).getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+             Op.getOperand(1).getOperand(0).getValueSizeInBits() >
+                 RootSizeInBits) {
+    // If we're inserting an subvector extracted from a vector larger than
+    // RootVT, then combine the insert_subvector as a shuffle, the
+    // extract_subvector will be folded in a later recursion.
+    SDValue BaseVec = Op.getOperand(0);
+    SDValue SubVec = Op.getOperand(1);
+    int InsertIdx = Op.getConstantOperandVal(2);
+    unsigned NumBaseElts = VT.getVectorNumElements();
+    unsigned NumSubElts = SubVec.getValueType().getVectorNumElements();
+    OpInputs.assign({BaseVec, SubVec});
+    OpMask.resize(NumBaseElts);
+    std::iota(OpMask.begin(), OpMask.end(), 0);
+    std::iota(OpMask.begin() + InsertIdx,
+              OpMask.begin() + InsertIdx + NumSubElts, NumBaseElts);
+    OpZero = OpUndef = APInt::getZero(NumBaseElts);
   } else {
     return SDValue();
   }
@@ -42259,25 +42138,9 @@ static SDValue combineX86ShufflesRecursively(
             AllowVariableCrossLaneMask, AllowVariablePerLaneMask,
             IsMaskedShuffle, DAG, DL, Subtarget))
       return Shuffle;
-
-    // If all the operands come from the same larger vector, fallthrough and try
-    // to use combineX86ShuffleChainWithExtract.
-    SDValue LHS = peekThroughBitcasts(Ops.front());
-    SDValue RHS = peekThroughBitcasts(Ops.back());
-    if (Ops.size() != 2 || !Subtarget.hasAVX2() || RootSizeInBits != 128 ||
-        (RootSizeInBits / Mask.size()) != 64 ||
-        LHS.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-        RHS.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-        LHS.getOperand(0) != RHS.getOperand(0))
-      return SDValue();
   }
 
-  // If that failed and any input is extracted then try to combine as a
-  // shuffle with the larger type.
-  return combineX86ShuffleChainWithExtract(
-      Ops, RootOpc, RootVT, Mask, Depth, CombinedNodes,
-      AllowVariableCrossLaneMask, AllowVariablePerLaneMask, IsMaskedShuffle,
-      DAG, DL, Subtarget);
+  return SDValue();
 }
 
 /// Helper entry wrapper to combineX86ShufflesRecursively.
@@ -44990,6 +44853,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     case X86ISD::UNPCKL:
     case X86ISD::UNPCKH:
     case X86ISD::BLENDI:
+    case X86ISD::SHUFP:
       // Integer ops.
     case X86ISD::PACKSS:
     case X86ISD::PACKUS:

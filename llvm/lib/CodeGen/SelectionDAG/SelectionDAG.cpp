@@ -5208,7 +5208,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::TRUNCATE: {
     // Check if the sign bits of source go down as far as the truncated value.
     unsigned NumSrcBits = Op.getOperand(0).getScalarValueSizeInBits();
-    unsigned NumSrcSignBits = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    unsigned NumSrcSignBits =
+        ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (NumSrcSignBits > (NumSrcBits - VTBits))
       return NumSrcSignBits - (NumSrcBits - VTBits);
     break;

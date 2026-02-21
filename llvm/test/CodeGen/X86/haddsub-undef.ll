@@ -1110,17 +1110,17 @@ define <4 x double> @PR34724_add_v4f64_u123(<4 x double> %0, <4 x double> %1) {
 ; SSE-FAST-NEXT:    movapd %xmm2, %xmm1
 ; SSE-FAST-NEXT:    retq
 ;
-; AVX-SLOW-LABEL: PR34724_add_v4f64_u123:
-; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX-SLOW-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
-; AVX-SLOW-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
-; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1],xmm1[0]
-; AVX-SLOW-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; AVX-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX-SLOW-NEXT:    retq
+; AVX1-SLOW-LABEL: PR34724_add_v4f64_u123:
+; AVX1-SLOW:       # %bb.0:
+; AVX1-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-SLOW-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0
+; AVX1-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-SLOW-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX1-SLOW-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
+; AVX1-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1],xmm1[0]
+; AVX1-SLOW-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX1-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-SLOW-NEXT:    retq
 ;
 ; AVX-FAST-LABEL: PR34724_add_v4f64_u123:
 ; AVX-FAST:       # %bb.0:
@@ -1129,6 +1129,18 @@ define <4 x double> @PR34724_add_v4f64_u123(<4 x double> %0, <4 x double> %1) {
 ; AVX-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; AVX-FAST-NEXT:    vhaddpd %ymm0, %ymm1, %ymm0
 ; AVX-FAST-NEXT:    retq
+;
+; AVX512-SLOW-LABEL: PR34724_add_v4f64_u123:
+; AVX512-SLOW:       # %bb.0:
+; AVX512-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX512-SLOW-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0
+; AVX512-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX512-SLOW-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[3,2,2,3]
+; AVX512-SLOW-NEXT:    vaddsd %xmm1, %xmm2, %xmm1
+; AVX512-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1],xmm1[0]
+; AVX512-SLOW-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX512-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-SLOW-NEXT:    retq
   %3 = shufflevector <4 x double> %0, <4 x double> %1, <2 x i32> <i32 2, i32 4>
   %4 = shufflevector <4 x double> %0, <4 x double> %1, <2 x i32> <i32 3, i32 5>
   %5 = fadd <2 x double> %3, %4
@@ -1161,21 +1173,31 @@ define <4 x double> @PR34724_add_v4f64_0u23(<4 x double> %0, <4 x double> %1) {
 ; SSE-FAST-NEXT:    haddpd %xmm3, %xmm1
 ; SSE-FAST-NEXT:    retq
 ;
-; AVX-SLOW-LABEL: PR34724_add_v4f64_0u23:
-; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
-; AVX-SLOW-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
-; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1],xmm1[0]
-; AVX-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX-SLOW-NEXT:    retq
+; AVX1-SLOW-LABEL: PR34724_add_v4f64_0u23:
+; AVX1-SLOW:       # %bb.0:
+; AVX1-SLOW-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0
+; AVX1-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-SLOW-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX1-SLOW-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
+; AVX1-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1],xmm1[0]
+; AVX1-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-SLOW-NEXT:    retq
 ;
 ; AVX-FAST-LABEL: PR34724_add_v4f64_0u23:
 ; AVX-FAST:       # %bb.0:
 ; AVX-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-FAST-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
 ; AVX-FAST-NEXT:    retq
+;
+; AVX512-SLOW-LABEL: PR34724_add_v4f64_0u23:
+; AVX512-SLOW:       # %bb.0:
+; AVX512-SLOW-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0
+; AVX512-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX512-SLOW-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[3,2,2,3]
+; AVX512-SLOW-NEXT:    vaddsd %xmm1, %xmm2, %xmm1
+; AVX512-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1],xmm1[0]
+; AVX512-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-SLOW-NEXT:    retq
   %3 = shufflevector <4 x double> %0, <4 x double> %1, <2 x i32> <i32 0, i32 4>
   %4 = shufflevector <4 x double> %0, <4 x double> %1, <2 x i32> <i32 1, i32 5>
   %5 = fadd <2 x double> %3, %4
@@ -1207,16 +1229,16 @@ define <4 x double> @PR34724_add_v4f64_01u3(<4 x double> %0, <4 x double> %1) {
 ; SSE-FAST-NEXT:    movapd %xmm3, %xmm1
 ; SSE-FAST-NEXT:    retq
 ;
-; AVX-SLOW-LABEL: PR34724_add_v4f64_01u3:
-; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX-SLOW-NEXT:    vhaddpd %xmm2, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
-; AVX-SLOW-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
-; AVX-SLOW-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
-; AVX-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX-SLOW-NEXT:    retq
+; AVX1-SLOW-LABEL: PR34724_add_v4f64_01u3:
+; AVX1-SLOW:       # %bb.0:
+; AVX1-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-SLOW-NEXT:    vhaddpd %xmm2, %xmm0, %xmm0
+; AVX1-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-SLOW-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX1-SLOW-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
+; AVX1-SLOW-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
+; AVX1-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-SLOW-NEXT:    retq
 ;
 ; AVX1-FAST-LABEL: PR34724_add_v4f64_01u3:
 ; AVX1-FAST:       # %bb.0:
@@ -1224,6 +1246,17 @@ define <4 x double> @PR34724_add_v4f64_01u3(<4 x double> %0, <4 x double> %1) {
 ; AVX1-FAST-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
 ; AVX1-FAST-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
 ; AVX1-FAST-NEXT:    retq
+;
+; AVX512-SLOW-LABEL: PR34724_add_v4f64_01u3:
+; AVX512-SLOW:       # %bb.0:
+; AVX512-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX512-SLOW-NEXT:    vhaddpd %xmm2, %xmm0, %xmm0
+; AVX512-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX512-SLOW-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[3,2,2,3]
+; AVX512-SLOW-NEXT:    vaddsd %xmm1, %xmm2, %xmm1
+; AVX512-SLOW-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
+; AVX512-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-SLOW-NEXT:    retq
 ;
 ; AVX512-FAST-LABEL: PR34724_add_v4f64_01u3:
 ; AVX512-FAST:       # %bb.0:
