@@ -7562,9 +7562,15 @@ static bool diagnoseOpenCLTypes(Sema &Se, VarDecl *NewVD) {
 
   if (!Se.getOpenCLOptions().isAvailableOption("cl_khr_fp16",
                                                Se.getLangOpts())) {
-    // OpenCL v1.2 s6.1.1.1: reject declaring variables of the half and
-    // half array type (unless the cl_khr_fp16 extension is enabled).
-    if (Se.Context.getBaseElementType(R)->isHalfType()) {
+    // OpenCL v1.2 s6.1.1.1: reject declaring variables of the half/halfn and
+    // half/halfn array type (unless the cl_khr_fp16 extension is enabled).
+    auto HasHalfTy = [](QualType T) {
+      if (const auto *EVTy = T->getAs<ExtVectorType>()) {
+        return EVTy->getElementType()->isHalfType();
+      }
+      return T->isHalfType();
+    };
+    if (HasHalfTy(R) || HasHalfTy(Se.Context.getBaseElementType(R))) {
       Se.Diag(NewVD->getLocation(), diag::err_opencl_half_declaration) << R;
       NewVD->setInvalidDecl();
       return false;
