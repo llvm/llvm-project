@@ -201,6 +201,9 @@ struct FunctionInfo {
          uint64_t Addr,
          std::optional<DataExtractor> *MergedFuncsData = nullptr);
 
+  llvm::Expected<LookupResult> lookup(const GsymReader &GR,
+                                      uint64_t Addr) const;
+
   uint64_t startAddress() const { return Range.start(); }
   uint64_t endAddress() const { return Range.end(); }
   uint64_t size() const { return Range.size(); }

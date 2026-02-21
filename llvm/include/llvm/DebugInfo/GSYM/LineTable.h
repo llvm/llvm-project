@@ -140,6 +140,8 @@ public:
   LLVM_ABI static Expected<LineEntry> lookup(DataExtractor &Data,
                                              uint64_t BaseAddr, uint64_t Addr);
 
+  Expected<LineEntry> lookup(uint64_t Addr) const;
+
   /// Decode an LineTable object from a binary data stream.
   ///
   /// \param Data The binary stream to read the data from. This object must
