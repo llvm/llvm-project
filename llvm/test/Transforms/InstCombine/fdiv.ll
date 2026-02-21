@@ -159,7 +159,7 @@ define float @div_with_div_numerator(float %x, float %y, float %z) {
 ; CHECK-NEXT:    [[DIV2:%.*]] = fdiv reassoc arcp float [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[DIV2]]
 ;
-  %div1 = fdiv ninf float %x, %y
+  %div1 = fdiv arcp reassoc ninf float %x, %y
   %div2 = fdiv arcp reassoc float %div1, %z
   ret float %div2
 }
@@ -172,7 +172,7 @@ define <2 x float> @div_with_div_denominator(<2 x float> %x, <2 x float> %y, <2 
 ; CHECK-NEXT:    [[DIV2:%.*]] = fdiv reassoc arcp <2 x float> [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[DIV2]]
 ;
-  %div1 = fdiv nnan <2 x float> %x, %y
+  %div1 = fdiv arcp reassoc nnan <2 x float> %x, %y
   %div2 = fdiv arcp reassoc <2 x float> %z, %div1
   ret <2 x float> %div2
 }
@@ -211,13 +211,13 @@ define float @div_with_div_denominator_extra_use(float %x, float %y, float %z) {
 
 define float @div_with_div_denominator_with_one_as_numerator_extra_use(float %x, float %y, float %z) {
 ; CHECK-LABEL: @div_with_div_denominator_with_one_as_numerator_extra_use(
-; CHECK-NEXT:    [[DIV1:%.*]] = fdiv float 1.000000e+00, [[Y:%.*]]
-; CHECK-NEXT:    [[DIV2:%.*]] = fmul reassoc arcp float [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[DIV1:%.*]] = fdiv arcp float 1.000000e+00, [[Y:%.*]]
+; CHECK-NEXT:    [[DIV2:%.*]] = fmul arcp float [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use_f32(float [[DIV1]])
 ; CHECK-NEXT:    ret float [[DIV2]]
 ;
-  %div1 = fdiv float 1.0, %y
-  %div2 = fdiv reassoc arcp float %z, %div1
+  %div1 = fdiv arcp float 1.0, %y
+  %div2 = fdiv arcp float %z, %div1
   call void @use_f32(float %div1)
   ret float %div2
 }
@@ -443,7 +443,7 @@ define float @div_factor(float %x, float %y) {
 ; CHECK-NEXT:    [[D:%.*]] = fdiv reassoc nnan float 1.000000e+00, [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[D]]
 ;
-  %m = fmul float %x, %y
+  %m = fmul reassoc float %x, %y
   %d = fdiv nnan reassoc float %x, %m
   ret float %d;
 }
@@ -469,19 +469,19 @@ define <2 x float> @div_factor_commute(<2 x float> %x, <2 x float> %y) {
 ; CHECK-NEXT:    [[D:%.*]] = fdiv reassoc nnan ninf nsz <2 x float> splat (float 1.000000e+00), [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[D]]
 ;
-  %m = fmul <2 x float> %y, %x
+  %m = fmul reassoc <2 x float> %y, %x
   %d = fdiv nnan ninf nsz reassoc <2 x float> %x, %m
   ret <2 x float> %d
 }
 
-; C1/(X*C2) => (C1/C2) / X
+; C1 / (X * C2) => (C1 / C2) / X
 
 define <2 x float> @div_constant_dividend1(<2 x float> %x) {
 ; CHECK-LABEL: @div_constant_dividend1(
 ; CHECK-NEXT:    [[T2:%.*]] = fdiv reassoc arcp <2 x float> <float 5.000000e+00, float 1.000000e+00>, [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[T2]]
 ;
-  %t1 = fmul <2 x float> %x, <float 3.0e0, float 7.0e0>
+  %t1 = fmul reassoc <2 x float> %x, <float 3.0e0, float 7.0e0>
   %t2 = fdiv arcp reassoc <2 x float> <float 15.0e0, float 7.0e0>, %t1
   ret <2 x float> %t2
 }
@@ -497,14 +497,14 @@ define <2 x float> @div_constant_dividend1_arcp_only(<2 x float> %x) {
   ret <2 x float> %t2
 }
 
-; C1/(X/C2) => (C1*C2) / X
+; C1 / (X / C2) => (C1 * C2) / X
 
 define <2 x float> @div_constant_dividend2(<2 x float> %x) {
 ; CHECK-LABEL: @div_constant_dividend2(
-; CHECK-NEXT:    [[T2:%.*]] = fdiv reassoc arcp <2 x float> <float 4.500000e+01, float 4.900000e+01>, [[X:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fdiv reassoc arcp <2 x float> <float 4.500000e+01, float 0x40487FFFE0000000>, [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[T2]]
 ;
-  %t1 = fdiv <2 x float> %x, <float 3.0e0, float -7.0e0>
+  %t1 = fdiv arcp reassoc <2 x float> %x, <float 3.0e0, float -7.0e0>
   %t2 = fdiv arcp reassoc <2 x float> <float 15.0e0, float -7.0e0>, %t1
   ret <2 x float> %t2
 }
@@ -520,7 +520,7 @@ define <2 x float> @div_constant_dividend2_reassoc_only(<2 x float> %x) {
   ret <2 x float> %t2
 }
 
-; C1/(C2/X) => (C1/C2) * X
+; C1 / (C2 / X) => (C1 / C2) * X
 ; This tests the combination of 2 folds: (C1 * X) / C2 --> (C1 / C2) * X
 
 define <2 x float> @div_constant_dividend3(<2 x float> %x) {
@@ -528,7 +528,7 @@ define <2 x float> @div_constant_dividend3(<2 x float> %x) {
 ; CHECK-NEXT:    [[T2:%.*]] = fmul reassoc arcp <2 x float> [[X:%.*]], <float 5.000000e+00, float -1.000000e+00>
 ; CHECK-NEXT:    ret <2 x float> [[T2]]
 ;
-  %t1 = fdiv <2 x float> <float 3.0e0, float 7.0e0>, %x
+  %t1 = fdiv arcp reassoc <2 x float> <float 3.0e0, float 7.0e0>, %x
   %t2 = fdiv arcp reassoc <2 x float> <float 15.0e0, float -7.0e0>, %t1
   ret <2 x float> %t2
 }
@@ -681,7 +681,7 @@ define float @pow_divisor(float %x, float %y, float %z) {
 ; CHECK-NEXT:    [[R:%.*]] = fmul reassoc arcp float [[Z:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %p = call float @llvm.pow.f32(float %x, float %y)
+  %p = call reassoc float @llvm.pow.f32(float %x, float %y)
   %r = fdiv reassoc arcp float %z, %p
   ret float %r
 }
@@ -735,7 +735,7 @@ define <2 x half> @pow_recip(<2 x half> %x, <2 x half> %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc ninf arcp <2 x half> @llvm.pow.v2f16(<2 x half> [[X:%.*]], <2 x half> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x half> [[TMP2]]
 ;
-  %p = call <2 x half> @llvm.pow.v2f16(<2 x half> %x, <2 x half> %y)
+  %p = call reassoc <2 x half> @llvm.pow.v2f16(<2 x half> %x, <2 x half> %y)
   %r = fdiv reassoc arcp ninf <2 x half> <half 1.0, half 1.0>, %p
   ret <2 x half> %r
 }
@@ -747,7 +747,7 @@ define float @exp_divisor(float %y, float %z) {
 ; CHECK-NEXT:    [[R:%.*]] = fmul reassoc arcp float [[Z:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %p = call float @llvm.exp.f32(float %y)
+  %p = call reassoc float @llvm.exp.f32(float %y)
   %r = fdiv reassoc arcp float %z, %p
   ret float %r
 }
@@ -801,7 +801,7 @@ define <2 x half> @exp_recip(<2 x half> %x, <2 x half> %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc ninf arcp <2 x half> @llvm.exp.v2f16(<2 x half> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x half> [[TMP2]]
 ;
-  %p = call <2 x half> @llvm.exp.v2f16(<2 x half> %y)
+  %p = call reassoc <2 x half> @llvm.exp.v2f16(<2 x half> %y)
   %r = fdiv reassoc arcp ninf <2 x half> <half 1.0, half 1.0>, %p
   ret <2 x half> %r
 }
@@ -813,7 +813,7 @@ define float @exp2_divisor(float %y, float %z) {
 ; CHECK-NEXT:    [[R:%.*]] = fmul reassoc arcp float [[Z:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %p = call float @llvm.exp2.f32(float %y)
+  %p = call reassoc float @llvm.exp2.f32(float %y)
   %r = fdiv reassoc arcp float %z, %p
   ret float %r
 }
@@ -867,7 +867,7 @@ define <2 x half> @exp2_recip(<2 x half> %x, <2 x half> %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc ninf arcp <2 x half> @llvm.exp2.v2f16(<2 x half> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x half> [[TMP2]]
 ;
-  %p = call <2 x half> @llvm.exp2.v2f16(<2 x half> %y)
+  %p = call reassoc <2 x half> @llvm.exp2.v2f16(<2 x half> %y)
   %r = fdiv reassoc arcp ninf <2 x half> <half 1.0, half 1.0>, %p
   ret <2 x half> %r
 }
@@ -879,7 +879,7 @@ define float @powi_divisor(float %x, i32 %y, float %z) {
 ; CHECK-NEXT:    [[R:%.*]] = fmul reassoc ninf arcp float [[Z:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %p = call float @llvm.powi.f32.i32(float %x, i32 %y)
+  %p = call reassoc float @llvm.powi.f32.i32(float %x, i32 %y)
   %r = fdiv reassoc arcp ninf float %z, %p
   ret float %r
 }
@@ -933,7 +933,7 @@ define <2 x half> @powi_recip(<2 x half> %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc nnan ninf arcp <2 x half> @llvm.powi.v2f16.i32(<2 x half> [[X:%.*]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret <2 x half> [[TMP2]]
 ;
-  %p = call <2 x half> @llvm.powi.v2f16.i32(<2 x half> %x, i32 %y)
+  %p = call reassoc <2 x half> @llvm.powi.v2f16.i32(<2 x half> %x, i32 %y)
   %r = fdiv reassoc arcp nnan ninf <2 x half> <half 1.0, half 1.0>, %p
   ret <2 x half> %r
 }

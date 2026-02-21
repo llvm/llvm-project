@@ -27,27 +27,27 @@ define double @fdiv_strict_cos_strict_sin_reassoc(double %a) {
   ret double %div
 }
 
-define double @fdiv_reassoc_cos_strict_sin_strict(double %a, ptr dereferenceable(2) %dummy) {
-; CHECK-LABEL: @fdiv_reassoc_cos_strict_sin_strict(
-; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]]) #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc double 1.000000e+00, [[TAN]]
+define double @fdiv_contract_cos_strict_sin_strict(double %a, ptr dereferenceable(2) %dummy) {
+; CHECK-LABEL: @fdiv_contract_cos_strict_sin_strict(
+; CHECK-NEXT:    [[TAN:%.*]] = call contract double @tan(double [[A:%.*]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv contract double 1.000000e+00, [[TAN]]
 ; CHECK-NEXT:    ret double [[DIV]]
 ;
-  %1 = call double @llvm.cos.f64(double %a)
-  %2 = call double @llvm.sin.f64(double %a)
-  %div = fdiv reassoc double %1, %2
+  %1 = call contract double @llvm.cos.f64(double %a)
+  %2 = call contract double @llvm.sin.f64(double %a)
+  %div = fdiv contract double %1, %2
   ret double %div
 }
 
-define double @fdiv_reassoc_cos_reassoc_sin_strict(double %a) {
-; CHECK-LABEL: @fdiv_reassoc_cos_reassoc_sin_strict(
-; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]]) #[[ATTR1]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc double 1.000000e+00, [[TAN]]
+define double @fdiv_contract_cos_contract_sin_strict(double %a) {
+; CHECK-LABEL: @fdiv_contract_cos_contract_sin_strict(
+; CHECK-NEXT:    [[TAN:%.*]] = call contract double @tan(double [[A:%.*]]) #[[ATTR1]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv contract double 1.000000e+00, [[TAN]]
 ; CHECK-NEXT:    ret double [[DIV]]
 ;
-  %1 = call reassoc double @llvm.cos.f64(double %a)
-  %2 = call double @llvm.sin.f64(double %a)
-  %div = fdiv reassoc double %1, %2
+  %1 = call contract double @llvm.cos.f64(double %a)
+  %2 = call contract double @llvm.sin.f64(double %a)
+  %div = fdiv contract double %1, %2
   ret double %div
 }
 
@@ -66,15 +66,15 @@ define double @fdiv_cos_sin_reassoc_multiple_uses(double %a) {
   ret double %div
 }
 
-define double @fdiv_cos_sin_reassoc(double %a) {
-; CHECK-LABEL: @fdiv_cos_sin_reassoc(
-; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]]) #[[ATTR1]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc double 1.000000e+00, [[TAN]]
+define double @fdiv_cos_sin_contract(double %a) {
+; CHECK-LABEL: @fdiv_cos_sin_contract(
+; CHECK-NEXT:    [[TAN:%.*]] = call contract double @tan(double [[A:%.*]]) #[[ATTR1]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv contract double 1.000000e+00, [[TAN]]
 ; CHECK-NEXT:    ret double [[DIV]]
 ;
-  %1 = call reassoc double @llvm.cos.f64(double %a)
-  %2 = call reassoc double @llvm.sin.f64(double %a)
-  %div = fdiv reassoc double %1, %2
+  %1 = call contract double @llvm.cos.f64(double %a)
+  %2 = call contract double @llvm.sin.f64(double %a)
+  %div = fdiv contract double %1, %2
   ret double %div
 }
 
@@ -91,27 +91,27 @@ define half @fdiv_cosf16_sinf16_reassoc(half %a) {
   ret half %div
 }
 
-define float @fdiv_cosf_sinf_reassoc(float %a) {
-; CHECK-LABEL: @fdiv_cosf_sinf_reassoc(
-; CHECK-NEXT:    [[TANF:%.*]] = call reassoc float @tanf(float [[A:%.*]]) #[[ATTR1]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc float 1.000000e+00, [[TANF]]
+define float @fdiv_cosf_sinf_contract(float %a) {
+; CHECK-LABEL: @fdiv_cosf_sinf_contract(
+; CHECK-NEXT:    [[TANF:%.*]] = call contract float @tanf(float [[A:%.*]]) #[[ATTR1]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv contract float 1.000000e+00, [[TANF]]
 ; CHECK-NEXT:    ret float [[DIV]]
 ;
-  %1 = call reassoc float @llvm.cos.f32(float %a)
-  %2 = call reassoc float @llvm.sin.f32(float %a)
-  %div = fdiv reassoc float %1, %2
+  %1 = call contract float @llvm.cos.f32(float %a)
+  %2 = call contract float @llvm.sin.f32(float %a)
+  %div = fdiv contract float %1, %2
   ret float %div
 }
 
 define fp128 @fdiv_cosfp128_sinfp128_reassoc(fp128 %a) {
 ; CHECK-LABEL: @fdiv_cosfp128_sinfp128_reassoc(
-; CHECK-NEXT:    [[TANL:%.*]] = call reassoc fp128 @tanl(fp128 [[A:%.*]]) #[[ATTR1]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc fp128 0xL00000000000000003FFF000000000000, [[TANL]]
+; CHECK-NEXT:    [[TANL:%.*]] = call contract fp128 @tanl(fp128 [[A:%.*]]) #[[ATTR1]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv contract fp128 0xL00000000000000003FFF000000000000, [[TANL]]
 ; CHECK-NEXT:    ret fp128 [[DIV]]
 ;
-  %1 = call reassoc fp128 @llvm.cos.fp128(fp128 %a)
-  %2 = call reassoc fp128 @llvm.sin.fp128(fp128 %a)
-  %div = fdiv reassoc fp128 %1, %2
+  %1 = call contract fp128 @llvm.cos.fp128(fp128 %a)
+  %2 = call contract fp128 @llvm.sin.fp128(fp128 %a)
+  %div = fdiv contract fp128 %1, %2
   ret fp128 %div
 }
 

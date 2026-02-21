@@ -37,7 +37,7 @@ define double @sqrt_a_sqrt_b_multiple_uses(double %a, double %b) {
   ret double %mul
 }
 
-; sqrt(a) * sqrt(b) => sqrt(a*b) with fast-math
+; sqrt(a) * sqrt(b) => sqrt(a*b) with reassoc flag
 
 define double @sqrt_a_sqrt_b_reassoc_nnan(double %a, double %b) {
 ; CHECK-LABEL: @sqrt_a_sqrt_b_reassoc_nnan(
@@ -45,8 +45,8 @@ define double @sqrt_a_sqrt_b_reassoc_nnan(double %a, double %b) {
 ; CHECK-NEXT:    [[MUL:%.*]] = call reassoc nnan double @llvm.sqrt.f64(double [[TMP1]])
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
-  %1 = call double @llvm.sqrt.f64(double %a)
-  %2 = call double @llvm.sqrt.f64(double %b)
+  %1 = call reassoc double @llvm.sqrt.f64(double %a)
+  %2 = call reassoc double @llvm.sqrt.f64(double %b)
   %mul = fmul reassoc nnan double %1, %2
   ret double %mul
 }
@@ -67,8 +67,7 @@ define double @sqrt_a_sqrt_b_reassoc(double %a, double %b) {
   ret double %mul
 }
 
-; sqrt(a) * sqrt(b) * sqrt(c) * sqrt(d) => sqrt(a*b*c*d) with fast-math
-; 'reassoc nnan' on the fmuls is all that is required, but check propagation of other FMF.
+; sqrt(a) * sqrt(b) * sqrt(c) * sqrt(d) => sqrt(a*b*c*d)
 
 define double @sqrt_a_sqrt_b_sqrt_c_sqrt_d_reassoc(double %a, double %b, double %c, double %d) {
 ; CHECK-LABEL: @sqrt_a_sqrt_b_sqrt_c_sqrt_d_reassoc(
@@ -78,10 +77,10 @@ define double @sqrt_a_sqrt_b_sqrt_c_sqrt_d_reassoc(double %a, double %b, double 
 ; CHECK-NEXT:    [[MUL2:%.*]] = call reassoc nnan ninf double @llvm.sqrt.f64(double [[TMP4]])
 ; CHECK-NEXT:    ret double [[MUL2]]
 ;
-  %1 = call double @llvm.sqrt.f64(double %a)
-  %2 = call double @llvm.sqrt.f64(double %b)
-  %3 = call double @llvm.sqrt.f64(double %c)
-  %4 = call double @llvm.sqrt.f64(double %d)
+  %1 = call reassoc double @llvm.sqrt.f64(double %a)
+  %2 = call reassoc double @llvm.sqrt.f64(double %b)
+  %3 = call reassoc double @llvm.sqrt.f64(double %c)
+  %4 = call reassoc double @llvm.sqrt.f64(double %d)
   %mul = fmul reassoc nnan arcp double %1, %2
   %mul1 = fmul reassoc nnan double %mul, %3
   %mul2 = fmul reassoc nnan ninf double %mul1, %4
@@ -102,14 +101,14 @@ define double @rsqrt_squared(double %x) {
 define double @rsqrt_x_reassociate_extra_use(double %x, ptr %p) {
 ; CHECK-LABEL: @rsqrt_x_reassociate_extra_use(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[RSQRT:%.*]] = fdiv double 1.000000e+00, [[SQRT]]
-; CHECK-NEXT:    [[RES:%.*]] = fdiv reassoc nsz double [[X]], [[SQRT]]
+; CHECK-NEXT:    [[RSQRT:%.*]] = fdiv arcp double 1.000000e+00, [[SQRT]]
+; CHECK-NEXT:    [[RES:%.*]] = fdiv nsz arcp double [[X]], [[SQRT]]
 ; CHECK-NEXT:    store double [[RSQRT]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %sqrt = call double @llvm.sqrt.f64(double %x)
-  %rsqrt = fdiv double 1.0, %sqrt
-  %res = fmul reassoc nsz double %rsqrt, %x
+  %rsqrt = fdiv arcp double 1.0, %sqrt
+  %res = fmul arcp nsz double %rsqrt, %x
   store double %rsqrt, ptr %p
   ret double %res
 }
@@ -137,8 +136,8 @@ define double @sqrt_divisor_squared(double %x, double %y) {
 ; CHECK-NEXT:    [[SQUARED:%.*]] = fdiv reassoc nnan nsz double [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret double [[SQUARED]]
 ;
-  %sqrt = call double @llvm.sqrt.f64(double %x)
-  %div = fdiv double %y, %sqrt
+  %sqrt = call reassoc double @llvm.sqrt.f64(double %x)
+  %div = fdiv reassoc double %y, %sqrt
   %squared = fmul reassoc nnan nsz double %div, %div
   ret double %squared
 }
@@ -149,7 +148,7 @@ define <2 x float> @sqrt_dividend_squared(<2 x float> %x, <2 x float> %y) {
 ; CHECK-NEXT:    [[SQUARED:%.*]] = fdiv fast <2 x float> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[SQUARED]]
 ;
-  %sqrt = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %x)
+  %sqrt = call reassoc <2 x float> @llvm.sqrt.v2f32(<2 x float> %x)
   %div = fdiv fast <2 x float> %sqrt, %y
   %squared = fmul fast <2 x float> %div, %div
   ret <2 x float> %squared
@@ -175,13 +174,13 @@ define double @sqrt_divisor_squared_extra_use(double %x, double %y) {
 
 define double @sqrt_dividend_squared_extra_use(double %x, double %y) {
 ; CHECK-LABEL: @sqrt_dividend_squared_extra_use(
-; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[SQRT:%.*]] = call reassoc double @llvm.sqrt.f64(double [[X:%.*]])
 ; CHECK-NEXT:    call void @use(double [[SQRT]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast double [[Y:%.*]], [[Y]]
 ; CHECK-NEXT:    [[SQUARED:%.*]] = fdiv fast double [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret double [[SQUARED]]
 ;
-  %sqrt = call double @llvm.sqrt.f64(double %x)
+  %sqrt = call reassoc double @llvm.sqrt.f64(double %x)
   call void @use(double %sqrt)
   %div = fdiv fast double %sqrt, %y
   %squared = fmul fast double %div, %div
