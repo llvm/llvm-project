@@ -51,6 +51,7 @@
 #include "MisplacedOperatorInStrlenInAllocCheck.h"
 #include "MisplacedPointerArithmeticInAllocCheck.h"
 #include "MisplacedWideningCastCheck.h"
+#include "MissingEndComparisonCheck.h"
 #include "MoveForwardingReferenceCheck.h"
 #include "MultiLevelImplicitPointerConversionCheck.h"
 #include "MultipleNewInOneExpressionCheck.h"
@@ -177,6 +178,8 @@ public:
         "bugprone-incorrect-enable-if");
     CheckFactories.registerCheck<IncorrectEnableSharedFromThisCheck>(
         "bugprone-incorrect-enable-shared-from-this");
+    CheckFactories.registerCheck<MissingEndComparisonCheck>(
+        "bugprone-missing-end-comparison");
     CheckFactories.registerCheck<UnintendedCharOstreamOutputCheck>(
         "bugprone-unintended-char-ostream-output");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
