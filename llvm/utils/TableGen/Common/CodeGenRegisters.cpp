@@ -2455,6 +2455,23 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
     if (ImpliedSubRegIndices.contains(SubIdx))
       continue;
 
+    // We can skip checking subregister indices that can be composed from
+    // the current SubIdx.
+    //
+    // Proof sketch: Let SubRC' be another register class and SubSubIdx
+    // a subregister index that can be composed from SubIdx.
+    //
+    // Calling this function with SubRC in place of RC ensures the existence
+    // of a subclass X of SubRC with the registers that have subregisters in
+    // SubRC'.
+    //
+    // The set of registers in RC with SubSubIdx in SubRC' is equal to the
+    // set of registers in RC with SubIdx in X (because every register in
+    // RC has a corresponding subregister in SubRC), and so checking the
+    // pair (SubSubIdx, SubRC') is redundant with checking (SubIdx, X).
+    for (const auto &SubSubIdx : SubIdx->getComposites())
+      ImpliedSubRegIndices.insert(SubSubIdx.second);
+
     // Build list of (Sub, Super) pairs for this SubIdx, sorted by Sub. Note
     // that the list may contain entries with the same Sub but different Supers.
     SubRegs.clear();
@@ -2492,23 +2509,6 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
       // RC injects completely into SubRC.
       if (SubSetVec.size() == RC->getMembers().size()) {
         SubRC.addSuperRegClass(SubIdx, RC);
-
-        // We can skip checking subregister indices that can be composed from
-        // the current SubIdx.
-        //
-        // Proof sketch: Let SubRC' be another register class and SubSubIdx
-        // a subregister index that can be composed from SubIdx.
-        //
-        // Calling this function with SubRC in place of RC ensures the existence
-        // of a subclass X of SubRC with the registers that have subregisters in
-        // SubRC'.
-        //
-        // The set of registers in RC with SubSubIdx in SubRC' is equal to the
-        // set of registers in RC with SubIdx in X (because every register in
-        // RC has a corresponding subregister in SubRC), and so checking the
-        // pair (SubSubIdx, SubRC') is redundant with checking (SubIdx, X).
-        for (const auto &SubSubIdx : SubIdx->getComposites())
-          ImpliedSubRegIndices.insert(SubSubIdx.second);
 
         continue;
       }
