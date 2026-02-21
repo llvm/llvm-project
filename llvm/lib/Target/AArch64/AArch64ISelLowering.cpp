@@ -24308,7 +24308,8 @@ static SDValue performExtendDuplaneTruncCombine(SDNode *N, SelectionDAG &DAG) {
 
 static SDValue performExtendCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
-                                    SelectionDAG &DAG, const AArch64Subtarget *Subtarget) {
+                                    SelectionDAG &DAG,
+                                    const AArch64Subtarget *Subtarget) {
   // If we see something like (zext (sabd (extract_high ...), (DUP ...))) then
   // we can convert that DUP into another extract_high (of a bigger DUP), which
   // helps the backend to decide that an sabdl2 would be useful, saving a real
@@ -27589,7 +27590,6 @@ static SDValue trySwapVSelectOperands(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::VSELECT, SDLoc(N), NTy,
                      {InverseSetCC, SelectB, SelectA});
 }
-
 
 // vselect (v1i1 setcc) ->
 //     vselect (v1iXX setcc)  (XX is the size of the compared operand type)
