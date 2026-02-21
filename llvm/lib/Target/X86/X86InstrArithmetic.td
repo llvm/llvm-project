@@ -1093,8 +1093,11 @@ defm OR  : ArithBinOp_RF<0x09, 0x0B, 0x0D, "or", MRM1r, MRM1m,
                          X86or_flag, or, 1, 0, 0>;
 defm XOR : ArithBinOp_RF<0x31, 0x33, 0x35, "xor", MRM6r, MRM6m,
                          X86xor_flag, xor, 1, 0, 0>;
-defm ADD : ArithBinOp_RF<0x01, 0x03, 0x05, "add", MRM0r, MRM0m,
-                         X86add_flag, add, 1, 1, 1>;
+let isAdd = 1 in {
+  defm ADD : ArithBinOp_RF<0x01, 0x03, 0x05, "add", MRM0r, MRM0m,
+                           X86add_flag, add, 1, 1, 1>;
+}
+
 let isCompare = 1 in {
   defm SUB : ArithBinOp_RF<0x29, 0x2B, 0x2D, "sub", MRM5r, MRM5m,
                            X86sub_flag, sub, 0, 1, 0>;
@@ -1110,8 +1113,10 @@ let isCodeGenOnly = 1, hasSideEffects = 0, Constraints = "$src1 = $dst",
                        Sched<[WriteALU]>;
 
 // Arithmetic.
-defm ADC : ArithBinOp_RFF<0x11, 0x13, 0x15, "adc", MRM2r, MRM2m, X86adc_flag,
-                          1, 0>;
+let isAdd = 1 in {
+  defm ADC : ArithBinOp_RFF<0x11, 0x13, 0x15, "adc", MRM2r, MRM2m, X86adc_flag,
+                            1, 0>;
+}
 defm SBB : ArithBinOp_RFF<0x19, 0x1B, 0x1D, "sbb", MRM3r, MRM3m, X86sbb_flag,
                           0, 0>;
 
