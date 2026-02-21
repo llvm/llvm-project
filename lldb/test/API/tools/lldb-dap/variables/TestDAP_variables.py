@@ -17,6 +17,8 @@ def make_buffer_verify_dict(start_idx, count, offset=0):
 
 
 class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
     def verify_values(self, verify_dict, actual, varref_dict=None, expression=None):
         if "equals" in verify_dict:
             verify = verify_dict["equals"]
