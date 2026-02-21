@@ -2924,107 +2924,107 @@ SDValue AMDGPUTargetLowering::LowerFLOGUnsafe(SDValue Src, const SDLoc &SL,
 SDValue AMDGPUTargetLowering::lowerFEXPF64(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDLoc dl(Op);
-  SDValue x = Op.getOperand(0);
+  SDValue X = Op.getOperand(0);
 
   // TODO: Check if reassoc is safe. There is an output change in exp2 and
   // exp10, which slightly increases ulp.
   SDNodeFlags Flags = Op->getFlags() & ~SDNodeFlags::AllowReassociation;
 
-  SDValue dn, f, t;
+  SDValue DN, F, T;
 
   if (Op.getOpcode() == ISD::FEXP2) {
     // dn = rint(x)
-    dn = DAG.getNode(ISD::FRINT, dl, MVT::f64, x, Flags);
+    DN = DAG.getNode(ISD::FRINT, dl, MVT::f64, X, Flags);
     // f = x - dn
-    f = DAG.getNode(ISD::FSUB, dl, MVT::f64, x, dn, Flags);
+    F = DAG.getNode(ISD::FSUB, dl, MVT::f64, X, DN, Flags);
     // t = f*C1 + f*C2
     SDValue C1 = DAG.getConstantFP(0x1.62e42fefa39efp-1, dl, MVT::f64);
     SDValue C2 = DAG.getConstantFP(0x1.abc9e3b39803fp-56, dl, MVT::f64);
-    SDValue mul2 = DAG.getNode(ISD::FMUL, dl, MVT::f64, f, C2, Flags);
-    t = DAG.getNode(ISD::FMA, dl, MVT::f64, f, C1, mul2, Flags);
+    SDValue Mul2 = DAG.getNode(ISD::FMUL, dl, MVT::f64, F, C2, Flags);
+    T = DAG.getNode(ISD::FMA, dl, MVT::f64, F, C1, Mul2, Flags);
   } else if (Op.getOpcode() == ISD::FEXP10) {
     // dn = rint(x * C1)
     SDValue C1 = DAG.getConstantFP(0x1.a934f0979a371p+1, dl, MVT::f64);
-    SDValue mul = DAG.getNode(ISD::FMUL, dl, MVT::f64, x, C1, Flags);
-    dn = DAG.getNode(ISD::FRINT, dl, MVT::f64, mul, Flags);
+    SDValue Mul = DAG.getNode(ISD::FMUL, dl, MVT::f64, X, C1, Flags);
+    DN = DAG.getNode(ISD::FRINT, dl, MVT::f64, Mul, Flags);
 
     // f = FMA(-dn, C2, FMA(-dn, C3, x))
-    SDValue negdn = DAG.getNode(ISD::FNEG, dl, MVT::f64, dn, Flags);
+    SDValue NegDN = DAG.getNode(ISD::FNEG, dl, MVT::f64, DN, Flags);
     SDValue C2 = DAG.getConstantFP(-0x1.9dc1da994fd21p-59, dl, MVT::f64);
     SDValue C3 = DAG.getConstantFP(0x1.34413509f79ffp-2, dl, MVT::f64);
-    SDValue inner = DAG.getNode(ISD::FMA, dl, MVT::f64, negdn, C3, x, Flags);
-    f = DAG.getNode(ISD::FMA, dl, MVT::f64, negdn, C2, inner, Flags);
+    SDValue Inner = DAG.getNode(ISD::FMA, dl, MVT::f64, NegDN, C3, X, Flags);
+    F = DAG.getNode(ISD::FMA, dl, MVT::f64, NegDN, C2, Inner, Flags);
 
     // t = FMA(f, C4, f*C5)
     SDValue C4 = DAG.getConstantFP(0x1.26bb1bbb55516p+1, dl, MVT::f64);
     SDValue C5 = DAG.getConstantFP(-0x1.f48ad494ea3e9p-53, dl, MVT::f64);
-    SDValue mulf = DAG.getNode(ISD::FMUL, dl, MVT::f64, f, C5, Flags);
-    t = DAG.getNode(ISD::FMA, dl, MVT::f64, f, C4, mulf, Flags);
+    SDValue MulF = DAG.getNode(ISD::FMUL, dl, MVT::f64, F, C5, Flags);
+    T = DAG.getNode(ISD::FMA, dl, MVT::f64, F, C4, MulF, Flags);
   } else { // ISD::FEXP
     // dn = rint(x * C1)
     SDValue C1 = DAG.getConstantFP(0x1.71547652b82fep+0, dl, MVT::f64);
-    SDValue mul = DAG.getNode(ISD::FMUL, dl, MVT::f64, x, C1, Flags);
-    dn = DAG.getNode(ISD::FRINT, dl, MVT::f64, mul, Flags);
+    SDValue Mul = DAG.getNode(ISD::FMUL, dl, MVT::f64, X, C1, Flags);
+    DN = DAG.getNode(ISD::FRINT, dl, MVT::f64, Mul, Flags);
 
     // t = FMA(-dn, C2, FMA(-dn, C3, x))
-    SDValue negdn = DAG.getNode(ISD::FNEG, dl, MVT::f64, dn, Flags);
+    SDValue NegDN = DAG.getNode(ISD::FNEG, dl, MVT::f64, DN, Flags);
     SDValue C2 = DAG.getConstantFP(0x1.abc9e3b39803fp-56, dl, MVT::f64);
     SDValue C3 = DAG.getConstantFP(0x1.62e42fefa39efp-1, dl, MVT::f64);
-    SDValue inner = DAG.getNode(ISD::FMA, dl, MVT::f64, negdn, C3, x, Flags);
-    t = DAG.getNode(ISD::FMA, dl, MVT::f64, negdn, C2, inner, Flags);
+    SDValue Inner = DAG.getNode(ISD::FMA, dl, MVT::f64, NegDN, C3, X, Flags);
+    T = DAG.getNode(ISD::FMA, dl, MVT::f64, NegDN, C2, Inner, Flags);
   }
 
   // Polynomial expansion for p
-  SDValue p = DAG.getConstantFP(0x1.ade156a5dcb37p-26, dl, MVT::f64);
-  p = DAG.getNode(ISD::FMA, dl, MVT::f64, t, p,
+  SDValue P = DAG.getConstantFP(0x1.ade156a5dcb37p-26, dl, MVT::f64);
+  P = DAG.getNode(ISD::FMA, dl, MVT::f64, T, P,
                   DAG.getConstantFP(0x1.28af3fca7ab0cp-22, dl, MVT::f64),
                   Flags);
-  p = DAG.getNode(ISD::FMA, dl, MVT::f64, t, p,
+  P = DAG.getNode(ISD::FMA, dl, MVT::f64, T, P,
                   DAG.getConstantFP(0x1.71dee623fde64p-19, dl, MVT::f64),
                   Flags);
-  p = DAG.getNode(ISD::FMA, dl, MVT::f64, t, p,
+  P = DAG.getNode(ISD::FMA, dl, MVT::f64, T, P,
                   DAG.getConstantFP(0x1.a01997c89e6b0p-16, dl, MVT::f64),
                   Flags);
-  p = DAG.getNode(ISD::FMA, dl, MVT::f64, t, p,
+  P = DAG.getNode(ISD::FMA, dl, MVT::f64, T, P,
                   DAG.getConstantFP(0x1.a01a014761f6ep-13, dl, MVT::f64),
                   Flags);
-  p = DAG.getNode(ISD::FMA, dl, MVT::f64, t, p,
+  P = DAG.getNode(ISD::FMA, dl, MVT::f64, T, P,
                   DAG.getConstantFP(0x1.6c16c1852b7b0p-10, dl, MVT::f64),
                   Flags);
-  p = DAG.getNode(ISD::FMA, dl, MVT::f64, t, p,
+  P = DAG.getNode(ISD::FMA, dl, MVT::f64, T, P,
                   DAG.getConstantFP(0x1.1111111122322p-7, dl, MVT::f64), Flags);
-  p = DAG.getNode(ISD::FMA, dl, MVT::f64, t, p,
+  P = DAG.getNode(ISD::FMA, dl, MVT::f64, T, P,
                   DAG.getConstantFP(0x1.55555555502a1p-5, dl, MVT::f64), Flags);
-  p = DAG.getNode(ISD::FMA, dl, MVT::f64, t, p,
+  P = DAG.getNode(ISD::FMA, dl, MVT::f64, T, P,
                   DAG.getConstantFP(0x1.5555555555511p-3, dl, MVT::f64), Flags);
-  p = DAG.getNode(ISD::FMA, dl, MVT::f64, t, p,
+  P = DAG.getNode(ISD::FMA, dl, MVT::f64, T, P,
                   DAG.getConstantFP(0x1.000000000000bp-1, dl, MVT::f64), Flags);
 
   SDValue One = DAG.getConstantFP(1.0, dl, MVT::f64);
 
-  p = DAG.getNode(ISD::FMA, dl, MVT::f64, t, p, One, Flags);
-  p = DAG.getNode(ISD::FMA, dl, MVT::f64, t, p, One, Flags);
+  P = DAG.getNode(ISD::FMA, dl, MVT::f64, T, P, One, Flags);
+  P = DAG.getNode(ISD::FMA, dl, MVT::f64, T, P, One, Flags);
 
   // z = ldexp(p, (int)dn)
-  SDValue dn_int = DAG.getNode(ISD::FP_TO_SINT, dl, MVT::i32, dn);
-  SDValue z = DAG.getNode(ISD::FLDEXP, dl, MVT::f64, p, dn_int, Flags);
+  SDValue DNInt = DAG.getNode(ISD::FP_TO_SINT, dl, MVT::i32, DN);
+  SDValue Z = DAG.getNode(ISD::FLDEXP, dl, MVT::f64, P, DNInt, Flags);
 
   // Overflow/underflow guards
-  SDValue cond_hi = DAG.getSetCC(
-      dl, MVT::i1, x, DAG.getConstantFP(1024.0, dl, MVT::f64), ISD::SETULE);
+  SDValue CondHi = DAG.getSetCC(
+      dl, MVT::i1, X, DAG.getConstantFP(1024.0, dl, MVT::f64), ISD::SETULE);
 
   if (!Flags.hasNoInfs()) {
-    SDValue pinf = DAG.getConstantFP(std::numeric_limits<double>::infinity(),
+    SDValue PInf = DAG.getConstantFP(std::numeric_limits<double>::infinity(),
                                      dl, MVT::f64);
-    z = DAG.getSelect(dl, MVT::f64, cond_hi, z, pinf, Flags);
+    Z = DAG.getSelect(dl, MVT::f64, CondHi, Z, PInf, Flags);
   }
 
-  SDValue cond_lo = DAG.getSetCC(
-      dl, MVT::i1, x, DAG.getConstantFP(-1075.0, dl, MVT::f64), ISD::SETUGE);
-  SDValue zero = DAG.getConstantFP(0.0, dl, MVT::f64);
-  z = DAG.getSelect(dl, MVT::f64, cond_lo, z, zero, Flags);
+  SDValue CondLo = DAG.getSetCC(
+      dl, MVT::i1, X, DAG.getConstantFP(-1075.0, dl, MVT::f64), ISD::SETUGE);
+  SDValue Zero = DAG.getConstantFP(0.0, dl, MVT::f64);
+  Z = DAG.getSelect(dl, MVT::f64, CondLo, Z, Zero, Flags);
 
-  return z;
+  return Z;
 }
 
 SDValue AMDGPUTargetLowering::lowerFEXP2(SDValue Op, SelectionDAG &DAG) const {
