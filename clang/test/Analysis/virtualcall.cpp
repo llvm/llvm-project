@@ -84,6 +84,71 @@ public:
   int foo() override;
 };
 
+// GH#178643: Virtual calls in destructor of a final class should not warn.
+class GH178643Base {
+public:
+  virtual void virtualMethod() {}
+  virtual ~GH178643Base() {
+    // Base class destructor should still warn even when destructing a final
+    // derived class, because the vtable points to the base class at this point.
+    virtualMethod(); // impure-warning {{Call to virtual method 'GH178643Base::virtualMethod' during destruction bypasses virtual dispatch}}
+  }
+};
+
+class GH178643Derived final : public GH178643Base {
+public:
+  ~GH178643Derived() {
+    virtualMethod(); // no-warning: class is final, no derived classes exist
+  }
+};
+
+// Test constructor case for final class.
+class GH178643CtorBase {
+public:
+  virtual void virtualMethod() {}
+  GH178643CtorBase() {
+    virtualMethod(); // impure-warning {{Call to virtual method 'GH178643CtorBase::virtualMethod' during construction bypasses virtual dispatch}}
+  }
+};
+
+class GH178643CtorDerived final : public GH178643CtorBase {
+public:
+  GH178643CtorDerived() {
+    virtualMethod(); // no-warning: class is final
+  }
+};
+
+// Test nested calls from destructor - destructor calls helper which makes
+// virtual call. This tests that we still warn for non-final classes even
+// when the virtual call happens through a helper function.
+class GH178643NestedNonFinal {
+public:
+  virtual void virtualMethod() {}
+  void helper() {
+    // Called from destructor via nested call - should warn because
+    // this class is not final and could have derived classes.
+    virtualMethod(); // impure-warning {{Call to virtual method 'GH178643NestedNonFinal::virtualMethod' during destruction bypasses virtual dispatch}}
+  }
+  virtual ~GH178643NestedNonFinal() {
+    helper(); // Calls helper() which calls virtualMethod()
+  }
+};
+
+// Test: final class with method overridden - should not warn.
+class GH178643OverrideBase {
+public:
+  virtual void virtualMethod() {}
+  virtual ~GH178643OverrideBase() = default;
+};
+
+class GH178643OverrideDerived final : public GH178643OverrideBase {
+public:
+  void virtualMethod() override {}
+  ~GH178643OverrideDerived() {
+    virtualMethod(); // no-warning: method is in final class
+  }
+};
+
 class F {
 public:
   F() {
@@ -175,12 +240,16 @@ int main() {
   G g;
   H h;
   H h1(1);
-  X x; 
+  X x;
   X x1(1);
   M m;
   Y *y = new Y;
   delete y;
   header::Z z;
+  GH178643Derived gh178643;
+  GH178643CtorDerived gh178643ctor;
+  GH178643NestedNonFinal gh178643nested;
+  GH178643OverrideDerived gh178643override;
 }
 
 namespace PR34451 {
