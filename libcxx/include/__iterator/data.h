@@ -22,22 +22,24 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 17
 
 template <class _Cont>
-constexpr _LIBCPP_HIDE_FROM_ABI auto data(_Cont& __c) noexcept(noexcept(__c.data())) -> decltype(__c.data()) {
+[[nodiscard]] constexpr _LIBCPP_HIDE_FROM_ABI auto data(_Cont& __c) noexcept(noexcept(__c.data()))
+    -> decltype(__c.data()) {
   return __c.data();
 }
 
 template <class _Cont>
-constexpr _LIBCPP_HIDE_FROM_ABI auto data(const _Cont& __c) noexcept(noexcept(__c.data())) -> decltype(__c.data()) {
+[[nodiscard]] constexpr _LIBCPP_HIDE_FROM_ABI auto data(const _Cont& __c) noexcept(noexcept(__c.data()))
+    -> decltype(__c.data()) {
   return __c.data();
 }
 
 template <class _Tp, size_t _Sz>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp* data(_Tp (&__array)[_Sz]) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp* data(_Tp (&__array)[_Sz]) noexcept {
   return __array;
 }
 
 template <class _Ep>
-_LIBCPP_HIDE_FROM_ABI constexpr const _Ep* data(initializer_list<_Ep> __il) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Ep* data(initializer_list<_Ep> __il) noexcept {
   return __il.begin();
 }
 
