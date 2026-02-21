@@ -6831,6 +6831,10 @@ static bool canPassInRegisters(Sema &S, CXXRecordDecl *D,
   if (D->isDependentType() || D->isInvalidDecl())
     return false;
 
+  for (const CXXMethodDecl *MD : D->methods()) {
+    if (MD->isInvalidDecl())
+      return false;
+  }
   // Clang <= 4 used the pre-C++11 rule, which ignores move operations.
   // The PS4 platform ABI follows the behavior of Clang 3.2.
   if (CCK == TargetInfo::CCK_ClangABI4OrPS4)
