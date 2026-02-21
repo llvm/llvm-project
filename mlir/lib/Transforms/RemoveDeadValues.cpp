@@ -20,6 +20,8 @@
 // terminator operands of region branch ops, and,
 // (D) Removes simple and region branch ops that have all non-live results and
 // don't affect memory in any way,
+// (E) Replaces dead operands of branch ops with `ub.poison`, relying on the
+//     canonicalizer to remove the corresponding block arguments.
 //
 // iff
 //
@@ -101,24 +103,11 @@ struct OperandsToCleanup {
   bool replaceWithPoison = false;
 };
 
-struct BlockArgsToCleanup {
-  Block *b;
-  BitVector nonLiveArgs;
-};
-
-struct SuccessorOperandsToCleanup {
-  BranchOpInterface branch;
-  unsigned successorIndex;
-  BitVector nonLiveOperands;
-};
-
 struct RDVFinalCleanupList {
   SmallVector<Operation *> operations;
   SmallVector<FunctionToCleanUp> functions;
   SmallVector<OperandsToCleanup> operands;
   SmallVector<ResultsToCleanup> results;
-  SmallVector<BlockArgsToCleanup> blocks;
-  SmallVector<SuccessorOperandsToCleanup> successorOperands;
 };
 
 // Some helper functions...
@@ -476,11 +465,10 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 ///
 /// Otherwise, iterate through each successor block of `branchOp`.
 /// (1) For each successor block, gather all operands from all successors.
-/// (2) Fetch their associated liveness analysis data and collect for future
-///     removal.
-/// (3) Identify and collect the dead operands from the successor block
-///     as well as their corresponding arguments.
-
+/// (2) Determine which operands are dead using liveness analysis.
+/// (3) Replace dead successor operands with ub.poison instead of erasing them.
+///     Block arguments are left intact — the canonicalizer will remove them
+///     once it sees all incoming operands are poison.
 static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
                             RDVFinalCleanupList &cl) {
@@ -490,7 +478,8 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
   BitVector deadNonForwardedOperands =
       markLives(branchOp->getOperands(), nonLiveSet, la).flip();
   unsigned numSuccessors = branchOp->getNumSuccessors();
-  for (unsigned succIdx = 0; succIdx < numSuccessors; ++succIdx) {
+
+  for (unsigned succIdx : llvm::seq<unsigned>(0, numSuccessors)) {
     SuccessorOperands successorOperands =
         branchOp.getSuccessorOperands(succIdx);
     // Remove all non-forwarded operands from the bit vector.
@@ -502,28 +491,20 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
     return;
   }
 
-  for (unsigned succIdx = 0; succIdx < numSuccessors; ++succIdx) {
-    Block *successorBlock = branchOp->getSuccessor(succIdx);
-
-    // Do (1)
-    SuccessorOperands successorOperands =
-        branchOp.getSuccessorOperands(succIdx);
-    SmallVector<Value> operandValues;
-    for (unsigned operandIdx = 0; operandIdx < successorOperands.size();
-         ++operandIdx) {
-      operandValues.push_back(successorOperands[operandIdx]);
+  // For each successor, find dead forwarded operands and
+  // schedule them for replacement with ub.poison.
+  BitVector opNonLive(branchOp->getNumOperands(), false);
+  for (unsigned succIdx : llvm::seq<unsigned>(0, numSuccessors)) {
+    for (OpOperand &opOperand :
+         branchOp.getSuccessorOperands(succIdx).getMutableForwardedOperands()) {
+      if (!hasLive(opOperand.get(), nonLiveSet, la))
+        opNonLive.set(opOperand.getOperandNumber());
     }
-
-    // Do (2)
-    BitVector successorNonLive =
-        markLives(operandValues, nonLiveSet, la).flip();
-    collectNonLiveValues(nonLiveSet, successorBlock->getArguments(),
-                         successorNonLive);
-
-    // Do (3)
-    cl.blocks.push_back({successorBlock, successorNonLive});
-    cl.successorOperands.push_back({branchOp, succIdx, successorNonLive});
   }
+
+  if (opNonLive.any())
+    cl.operands.push_back({branchOp.getOperation(), opNonLive,
+                           /*callee=*/nullptr, /*replaceWithPoison=*/true});
 }
 
 /// Create ub.poison ops for the given values. If a value has no uses, return
@@ -564,56 +545,7 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
   TrackingListener listener;
   IRRewriter rewriter(ctx, &listener);
 
-  // 1. Blocks, We must remove the block arguments and successor operands before
-  // deleting the operation, as they may reside in the region operation.
-  LDBG() << "Cleaning up " << list.blocks.size() << " block argument lists";
-  for (auto &b : list.blocks) {
-    // blocks that are accessed via multiple codepaths processed once
-    if (b.b->getNumArguments() != b.nonLiveArgs.size())
-      continue;
-    LDBG_OS([&](raw_ostream &os) {
-      os << "Erasing non-live arguments [";
-      llvm::interleaveComma(b.nonLiveArgs.set_bits(), os);
-      os << "] from block #" << b.b->computeBlockNumber() << " in region #"
-         << b.b->getParent()->getRegionNumber() << " of operation "
-         << OpWithFlags(b.b->getParent()->getParentOp(),
-                        OpPrintingFlags().skipRegions().printGenericOpForm());
-    });
-    // Note: Iterate from the end to make sure that that indices of not yet
-    // processes arguments do not change.
-    for (int i = b.nonLiveArgs.size() - 1; i >= 0; --i) {
-      if (!b.nonLiveArgs[i])
-        continue;
-      b.b->getArgument(i).dropAllUses();
-      b.b->eraseArgument(i);
-    }
-  }
-
-  // 2. Successor Operands
-  LDBG() << "Cleaning up " << list.successorOperands.size()
-         << " successor operand lists";
-  for (auto &op : list.successorOperands) {
-    SuccessorOperands successorOperands =
-        op.branch.getSuccessorOperands(op.successorIndex);
-    // blocks that are accessed via multiple codepaths processed once
-    if (successorOperands.size() != op.nonLiveOperands.size())
-      continue;
-    LDBG_OS([&](raw_ostream &os) {
-      os << "Erasing non-live successor operands [";
-      llvm::interleaveComma(op.nonLiveOperands.set_bits(), os);
-      os << "] from successor " << op.successorIndex << " of branch: "
-         << OpWithFlags(op.branch.getOperation(),
-                        OpPrintingFlags().skipRegions().printGenericOpForm());
-    });
-    // it iterates backwards because erase invalidates all successor indexes
-    for (int i = successorOperands.size() - 1; i >= 0; --i) {
-      if (!op.nonLiveOperands[i])
-        continue;
-      successorOperands.erase(i);
-    }
-  }
-
-  // 3. Functions
+  // 1. Functions
   LDBG() << "Cleaning up " << list.functions.size() << " functions";
   // Record which function arguments were erased so we can shrink call-site
   // argument segments for CallOpInterface operations (e.g. ops using
@@ -647,7 +579,7 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
     (void)f.funcOp.eraseResults(f.nonLiveRets);
   }
 
-  // 4. Operands
+  // 2. Operands
   LDBG() << "Cleaning up " << list.operands.size() << " operand lists";
   for (OperandsToCleanup &o : list.operands) {
     // Handle call-specific cleanup only when we have a cached callee reference.
@@ -705,7 +637,7 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
     }
   }
 
-  // 5. Results
+  // 3. Results
   LDBG() << "Cleaning up " << list.results.size() << " result lists";
   for (auto &r : list.results) {
     LDBG_OS([&](raw_ostream &os) {
@@ -718,7 +650,7 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
     dropUsesAndEraseResults(rewriter, r.op, r.nonLive);
   }
 
-  // 6. Operations
+  // 4. Operations
   LDBG() << "Cleaning up " << list.operations.size() << " operations";
   for (Operation *op : list.operations) {
     LDBG() << "Erasing operation: "
@@ -755,7 +687,7 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
     rewriter.eraseOp(op);
   }
 
-  // 7. Remove all dead poison ops.
+  // 5. Remove all dead poison ops.
   for (ub::PoisonOp poisonOp : listener.poisonOps) {
     if (poisonOp.use_empty())
       poisonOp.erase();
@@ -808,20 +740,17 @@ void RemoveDeadValues::runOnOperation() {
   if (!canonicalize)
     return;
 
-  // Canonicalize all region branch ops.
-  SmallVector<Operation *> opsToCanonicalize;
-  module->walk([&](RegionBranchOpInterface regionBranchOp) {
-    opsToCanonicalize.push_back(regionBranchOp.getOperation());
-  });
-  // Collect all canonicalization patterns for region branch ops.
+  // Canonicalize all region branch ops and branch ops.
   RewritePatternSet owningPatterns(context);
   DenseSet<RegisteredOperationName> populatedPatterns;
-  for (Operation *op : opsToCanonicalize)
+  module->walk([&](Operation *op) {
+    if (!isa<RegionBranchOpInterface, BranchOpInterface>(op))
+      return;
     if (std::optional<RegisteredOperationName> info = op->getRegisteredInfo())
       if (populatedPatterns.insert(*info).second)
         info->getCanonicalizationPatterns(owningPatterns, context);
-  if (failed(applyOpPatternsGreedily(opsToCanonicalize,
-                                     std::move(owningPatterns)))) {
+  });
+  if (failed(applyPatternsGreedily(module, std::move(owningPatterns)))) {
     module->emitError("greedy pattern rewrite failed to converge");
     signalPassFailure();
   }
