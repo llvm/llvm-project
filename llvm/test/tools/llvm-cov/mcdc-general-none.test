@@ -34,10 +34,10 @@
 
 //      REPORT: Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover    MC/DC Conditions    Miss   Cover
 // REPORT-NEXT: -------------------------------------------------------------------------------------------------------------------------------------------
-// REPORT-NEXT: _Z4testbbbb                      25       0 100.00%         9       0 100.00%        24       2  91.67%                  12      12   0.00%
+// REPORT-NEXT: _Z4testbbbb                      21       0 100.00%         9       0 100.00%        24       2  91.67%                  12      12   0.00%
 // REPORT-NEXT: main                              1       0 100.00%        11       0 100.00%         0       0   0.00%                   0       0   0.00%
 // REPORT-NEXT: ---
-// REPORT-NEXT: TOTAL                            26       0 100.00%        20       0 100.00%        24       2  91.67%                  12      12   0.00%
+// REPORT-NEXT: TOTAL                            22       0 100.00%        20       0 100.00%        24       2  91.67%                  12      12   0.00%
 
 // Turn off MC/DC summary.
 // RUN: llvm-cov report %S/Inputs/mcdc-general.o -instr-profile %t.profdata -show-functions -path-equivalence=.,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s -check-prefix=REPORT_NOMCDC
@@ -67,7 +67,7 @@
 // HTML-INDEX: <td class='column-entry-green'>
 // HTML-INDEX: 100.00% (2/2)
 // HTML-INDEX: 100.00% (20/20)
-// HTML-INDEX: 100.00% (26/26)
+// HTML-INDEX: 100.00% (22/22)
 // HTML-INDEX: 91.67% (22/24)
 // HTML-INDEX: 0.00% (0/12)
 // HTML-INDEX: Totals

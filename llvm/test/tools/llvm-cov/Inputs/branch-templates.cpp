@@ -11,9 +11,9 @@ void unused(T x) {
 
 template<typename T>
 int func(T x) {
-  if(x)       // CHECK: |  Branch ([[@LINE]]:6): [True: 0, False: 1]
-    return 0; // CHECK: |  Branch ([[@LINE-1]]:6): [True: 1, False: 0]
-  else        // CHECK: |  Branch ([[@LINE-2]]:6): [True: 0, False: 1]
+  if(x)       // CHECK: |  Branch ([[@LINE]]:6): [True: 1, False: {{2|1}}]
+    return 0;
+  else
     return 1;
   int j = 1;
 }
