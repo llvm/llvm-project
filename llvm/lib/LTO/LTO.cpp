@@ -81,6 +81,20 @@ Error LTO::setupOptimizationRemarks() {
     return DiagFileOrErr.takeError();
 
   DiagnosticOutputFile = std::move(*DiagFileOrErr);
+
+  // Create a dummy function to serve as a context for LTO-link remarks.
+  // This is required because OptimizationRemark requires a valid Function,
+  // and in ThinLTO we may not have any IR functions available during the
+  // thin link. Host it in a private module to avoid interfering with the LTO
+  // process.
+  if (!LinkerRemarkFunction) {
+    DummyModule = std::make_unique<Module>("remark_dummy", RegularLTO.Ctx);
+    LinkerRemarkFunction = Function::Create(
+        FunctionType::get(Type::getVoidTy(RegularLTO.Ctx), false),
+        GlobalValue::ExternalLinkage, "thinlto_remark_dummy",
+        DummyModule.get());
+  }
+
   return Error::success();
 }
 
@@ -668,6 +682,8 @@ LTO::LTO(Config Conf, ThinBackend Backend,
 LTO::~LTO() = default;
 
 void LTO::cleanup() {
+  DummyModule.reset();
+  LinkerRemarkFunction = nullptr;
   consumeError(finalizeOptimizationRemarks(std::move(DiagnosticOutputFile)));
 }
 
@@ -2039,7 +2055,14 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   };
   if (EnableMemProfContextDisambiguation) {
     MemProfContextDisambiguation ContextDisambiguation;
-    ContextDisambiguation.run(ThinLTO.CombinedIndex, isPrevailing);
+    ContextDisambiguation.run(
+        ThinLTO.CombinedIndex, isPrevailing,
+        [&](StringRef PassName, StringRef RemarkName, const Twine &Msg) {
+          auto R = OptimizationRemark(PassName.data(), RemarkName,
+                                      LinkerRemarkFunction);
+          R << Msg.str();
+          emitRemark(R);
+        });
   }
 
   // Figure out which symbols need to be internalized. This also needs to happen
