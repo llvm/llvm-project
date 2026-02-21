@@ -20,6 +20,7 @@
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
+#include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -38,10 +39,9 @@ struct __upper_bound {
             indirect_strict_weak_order<const _Type*, projected<_Iter, _Proj>> _Comp = ranges::less>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Iter
   operator()(_Iter __first, _Sent __last, const _Type& __value, _Comp __comp = {}, _Proj __proj = {}) const {
-    auto __comp_lhs_rhs_swapped = [&](const auto& __lhs, const auto& __rhs) -> bool {
-      return !std::invoke(__comp, __rhs, __lhs);
+    auto __comp_lhs_rhs_swapped = [&]<class _Lhs, class _Rhs>(_Lhs&& __lhs, _Rhs&& __rhs) -> bool {
+      return !std::invoke(__comp, std::forward<_Rhs>(__rhs), std::forward<_Lhs>(__lhs));
     };
-
     return std::__lower_bound<_RangeAlgPolicy>(__first, __last, __value, __comp_lhs_rhs_swapped, __proj);
   }
 
@@ -51,10 +51,9 @@ struct __upper_bound {
             indirect_strict_weak_order<const _Type*, projected<iterator_t<_Range>, _Proj>> _Comp = ranges::less>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr borrowed_iterator_t<_Range>
   operator()(_Range&& __r, const _Type& __value, _Comp __comp = {}, _Proj __proj = {}) const {
-    auto __comp_lhs_rhs_swapped = [&](const auto& __lhs, const auto& __rhs) -> bool {
-      return !std::invoke(__comp, __rhs, __lhs);
+    auto __comp_lhs_rhs_swapped = [&]<class _Lhs, class _Rhs>(_Lhs&& __lhs, _Rhs&& __rhs) -> bool {
+      return !std::invoke(__comp, std::forward<_Rhs>(__rhs), std::forward<_Lhs>(__lhs));
     };
-
     return std::__lower_bound<_RangeAlgPolicy>(
         ranges::begin(__r), ranges::end(__r), __value, __comp_lhs_rhs_swapped, __proj);
   }

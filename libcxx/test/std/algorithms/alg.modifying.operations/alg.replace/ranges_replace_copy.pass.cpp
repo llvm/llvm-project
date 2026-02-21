@@ -244,6 +244,43 @@ constexpr bool test() {
     }
   }
 
+  { // check that we don't overconstrain the algorithm (see https://github.com/llvm/llvm-project/issues/100726)
+    struct Bad {
+      int value;
+      constexpr operator int() const { return value; } // ensure a common type with Stored
+    };
+
+    struct Stored {
+      int value;
+      constexpr Stored& operator=(int v) {
+        value = v;
+        return *this;
+      }
+
+      constexpr bool operator==(Bad const&) const; // purposefully not defined to make the program fail
+      constexpr bool operator==(Bad const& v) /* non const */ { return value == v.value; }
+      constexpr operator int() const { return value; } // ensure a common type with Bad
+    };
+
+    std::array<Stored, 3> a = {Stored{0}, Stored{1}, Stored{2}};
+    Bad old_val             = {1};
+    int new_val             = {99};
+    {
+      std::array<Stored, 3> result;
+      std::ranges::replace_copy(a.begin(), a.end(), result.begin(), old_val, new_val);
+      assert(result[0].value == 0);
+      assert(result[1].value == 99);
+      assert(result[2].value == 2);
+    }
+    {
+      std::array<Stored, 3> result;
+      std::ranges::replace_copy(a, result.begin(), old_val, new_val);
+      assert(result[0].value == 0);
+      assert(result[1].value == 99);
+      assert(result[2].value == 2);
+    }
+  }
+
   return true;
 }
 
