@@ -3223,9 +3223,8 @@ bool CombinerHelper::matchBinopWithNegInner(Register MInner, Register Other,
     return false;
 
   // Flip add/sub
-  unsigned FlippedOpc = (InnerOpc == TargetOpcode::G_ADD)
-                            ? TargetOpcode::G_SUB
-                            : TargetOpcode::G_ADD;
+  unsigned FlippedOpc = (InnerOpc == TargetOpcode::G_ADD) ? TargetOpcode::G_SUB
+                                                          : TargetOpcode::G_ADD;
 
   Register A = Other;
   MatchInfo = [=](MachineIRBuilder &Builder) {
@@ -3240,7 +3239,7 @@ bool CombinerHelper::matchBinopWithNeg(MachineInstr &MI,
                                        BuildFnTy &MatchInfo) const {
   // Fold `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`
   // Root MI is one of G_AND, G_OR, G_XOR.
-  // We also look for commuted forms of operations. Pattern shouldn't apply 
+  // We also look for commuted forms of operations. Pattern shouldn't apply
   // if there are multiple reasons of inner operations.
 
   unsigned RootOpc = MI.getOpcode();
