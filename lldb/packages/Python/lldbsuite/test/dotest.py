@@ -428,6 +428,9 @@ def parseOptionsAndInitTestdirs():
     if args.sharp:
         configuration.count = args.sharp
 
+    if args.failfast:
+        configuration.failfast = args.failfast
+
     if sys.platform.startswith("win32"):
         os.environ["LLDB_DISABLE_CRASH_DIALOG"] = str(args.disable_crash_dialog)
         os.environ["LLDB_LAUNCH_INFERIORS_WITHOUT_CONSOLE"] = str(True)
@@ -690,17 +693,23 @@ def visit_file(dir, name):
         filtered = True
         print("adding filter spec %s to module %s" % (filterspec, repr(module)))
         tests = unittest.defaultTestLoader.loadTestsFromName(filterspec, module)
-        configuration.suite.addTests(tests)
+        # Add the test -# times.
+        for _ in range(configuration.count):
+            configuration.suite.addTests(tests)
 
     # Forgo this module if the (base, filterspec) combo is invalid
     if configuration.filters and not filtered:
         return
 
     if not filtered:
-        # Add the entire file's worth of tests since we're not filtered.
-        # Also the fail-over case when the filterspec branch
-        # (base, filterspec) combo doesn't make sense.
-        configuration.suite.addTests(unittest.defaultTestLoader.loadTestsFromName(base))
+        # Add the test -# times.
+        for _ in range(configuration.count):
+            # Add the entire file's worth of tests since we're not filtered.
+            # Also the fail-over case when the filterspec branch
+            # (base, filterspec) combo doesn't make sense.
+            configuration.suite.addTests(
+                unittest.defaultTestLoader.loadTestsFromName(base)
+            )
 
 
 def visit(prefix, dir, names):
@@ -1167,23 +1176,12 @@ def run_suite():
         exitTestSuite(1)
 
     # Invoke the test runner.
-    if configuration.count == 1:
-        result = unittest.TextTestRunner(
-            stream=sys.stderr,
-            verbosity=configuration.verbose,
-            resultclass=test_result.LLDBTestResult,
-        ).run(configuration.suite)
-    else:
-        # We are invoking the same test suite more than once.  In this case,
-        # mark __ignore_singleton__ flag as True so the signleton pattern is
-        # not enforced.
-        test_result.LLDBTestResult.__ignore_singleton__ = True
-        for i in range(configuration.count):
-            result = unittest.TextTestRunner(
-                stream=sys.stderr,
-                verbosity=configuration.verbose,
-                resultclass=test_result.LLDBTestResult,
-            ).run(configuration.suite)
+    result = unittest.TextTestRunner(
+        stream=sys.stderr,
+        verbosity=configuration.verbose,
+        resultclass=test_result.LLDBTestResult,
+        failfast=configuration.failed,
+    ).run(configuration.suite)
 
     configuration.failed = not result.wasSuccessful()
 
