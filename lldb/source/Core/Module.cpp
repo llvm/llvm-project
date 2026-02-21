@@ -1203,9 +1203,7 @@ ObjectFile *Module::GetObjectFile() {
         m_did_load_objfile = true;
         // FindPlugin will modify its extractor_sp argument. Do not let it
         // modify our m_extractor_sp member.
-        DataExtractorSP extractor_sp;
-        if (m_extractor_sp)
-          extractor_sp = m_extractor_sp;
+        DataExtractorSP extractor_sp = m_extractor_sp;
         m_objfile_sp = ObjectFile::FindPlugin(
             shared_from_this(), &m_file, m_object_offset,
             file_size - m_object_offset, extractor_sp, data_offset);
