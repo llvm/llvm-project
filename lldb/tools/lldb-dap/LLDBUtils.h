@@ -10,6 +10,7 @@
 #define LLDB_TOOLS_LLDB_DAP_LLDBUTILS_H
 
 #include "DAPForward.h"
+#include "Protocol/ProtocolBase.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
@@ -63,7 +64,7 @@ namespace lldb_dap {
 ///     \b true, unless a command prefixed with \b ! fails and parsing of
 ///     command directives is enabled.
 bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
-                     const llvm::ArrayRef<std::string> &commands,
+                     const llvm::ArrayRef<protocol::String> &commands,
                      llvm::raw_ostream &strm, bool parse_command_directives,
                      bool echo_commands);
 
@@ -97,7 +98,7 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
 ///     A std::string that contains the prefix and all commands and
 ///     command output.
 std::string RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
-                            const llvm::ArrayRef<std::string> &commands,
+                            const llvm::ArrayRef<protocol::String> &commands,
                             bool &required_command_failed,
                             bool parse_command_directives = true,
                             bool echo_commands = false);
