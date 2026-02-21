@@ -1178,7 +1178,7 @@ void foo21() {
 // OGCG: %[[SIZE:.*]] = alloca i64, align 8
 // OGCG: store i64 4, ptr %[[SIZE]], align 8
 
-void foo22() {
+void logical_or_vi4() {
   vi4 a;
   vi4 b;
   vi4 c = a || b;
@@ -1187,7 +1187,7 @@ void foo22() {
 // CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
 // CIR: %[[B_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["b"]
 // CIR: %[[C_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["c", init]
-// CIR: %[[ZERO_VEC:.*]] = cir.const #cir.const_vector<[#cir.int<0> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i]> : !cir.vector<4 x !s32i>
+// CIR: %[[ZERO_VEC:.*]] = cir.const #cir.zero : !cir.vector<4 x !s32i>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[NE_A_ZERO:.*]] = cir.vec.cmp(ne, %[[TMP_A]], %[[ZERO_VEC]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
@@ -1257,7 +1257,7 @@ void foo24() {
 // OGCG: %[[RESULT_VF16:.*]] = fptrunc <4 x float> %[[RESULT]] to <4 x half>
 // OGCG: store <4 x half> %[[RESULT_VF16]], ptr %[[C_ADDR]], align 8
 
-void foo23() {
+void logical_and_vi4() {
   vi4 a;
   vi4 b;
   vi4 c = a && b;
@@ -1266,7 +1266,7 @@ void foo23() {
 // CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
 // CIR: %[[B_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["b"]
 // CIR: %[[C_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["c", init]
-// CIR: %[[ZERO_VEC:.*]] = cir.const #cir.const_vector<[#cir.int<0> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i]> : !cir.vector<4 x !s32i>
+// CIR: %[[ZERO_VEC:.*]] = cir.const #cir.zero : !cir.vector<4 x !s32i>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[NE_A_ZERO:.*]] = cir.vec.cmp(ne, %[[TMP_A]], %[[ZERO_VEC]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
