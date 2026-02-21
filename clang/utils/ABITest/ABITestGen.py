@@ -306,7 +306,7 @@ class TypePrinter(object):
 
     def printAlignOfType(self, prefix, name, t, output=None, indent=2):
         print(
-            '%*sprintf("%s: __alignof__(%s) = %%ld\\n", (long)__alignof__(%s));'
+            '%*sprintf("%s: _Alignof(%s) = %%ld\\n", (long)_Alignof(%s));'
             % (indent, "", prefix, name, name),
             file=output,
         )
