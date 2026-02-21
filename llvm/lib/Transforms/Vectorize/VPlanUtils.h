@@ -151,6 +151,11 @@ VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 /// the header-mask pattern manually.
 VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
 
+/// Return VPCurrentIterationPHIRecipe if present, otherwise nullptr.
+VPCurrentIterationPHIRecipe *getCurrentIterationPhi(VPlan &Plan);
+/// Return the loop index PHI: VPCurrentIterationPHIRecipe for variable-length
+/// stepping loops, or VPCanonicalIVPHIRecipe otherwise.
+VPHeaderPHIRecipe *getLoopIndex(VPlan &Plan);
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//

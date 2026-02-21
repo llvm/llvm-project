@@ -570,13 +570,12 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
 VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   SmallVector<VPValue *> WideCanonicalIVs;
-  auto *FoundWidenCanonicalIVUser = find_if(
-      LoopRegion->getCanonicalIV()->users(), IsaPred<VPWidenCanonicalIVRecipe>);
-  assert(count_if(LoopRegion->getCanonicalIV()->users(),
-                  IsaPred<VPWidenCanonicalIVRecipe>) <= 1 &&
+  VPHeaderPHIRecipe *LoopIndex = getLoopIndex(Plan);
+  auto *FoundWidenCanonicalIVUser =
+      find_if(LoopIndex->users(), IsaPred<VPWidenCanonicalIVRecipe>);
+  assert(count_if(LoopIndex->users(), IsaPred<VPWidenCanonicalIVRecipe>) <= 1 &&
          "Must have at most one VPWideCanonicalIVRecipe");
-  if (FoundWidenCanonicalIVUser !=
-      LoopRegion->getCanonicalIV()->users().end()) {
+  if (FoundWidenCanonicalIVUser != LoopIndex->users().end()) {
     auto *WideCanonicalIV =
         cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
     WideCanonicalIVs.push_back(WideCanonicalIV);
@@ -664,4 +663,37 @@ VPInstruction *vputils::findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
     return nullptr;
   return vputils::findUserOf<VPInstruction::ComputeReductionResult>(
       cast<VPSingleDefRecipe>(SelR));
+}
+
+VPCurrentIterationPHIRecipe *vputils::getCurrentIterationPhi(VPlan &Plan) {
+  VPCurrentIterationPHIRecipe *CurrentIteration = nullptr;
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  if (LoopRegion) {
+    VPCanonicalIVPHIRecipe *CanIV = LoopRegion->getCanonicalIV();
+    if (std::next(CanIV->getIterator()) != CanIV->getParent()->end())
+      CurrentIteration = dyn_cast_or_null<VPCurrentIterationPHIRecipe>(
+          std::next(CanIV->getIterator()));
+    return CurrentIteration;
+  }
+
+  // Find the vector loop entry by locating VPCurrentIterationPHIRecipe.
+  // There should be only one VPCurrentIteration in the entire plan.
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getEntry())))
+    for (VPRecipeBase &R : VPBB->phis())
+      if (auto *PhiR = dyn_cast<VPCurrentIterationPHIRecipe>(&R)) {
+        assert(!CurrentIteration &&
+               "Found multiple CurrentIteration. Only one expected");
+        CurrentIteration = PhiR;
+      }
+
+  return CurrentIteration;
+}
+
+VPHeaderPHIRecipe *vputils::getLoopIndex(VPlan &Plan) {
+  VPCurrentIterationPHIRecipe *CurrentIteration =
+      vputils::getCurrentIterationPhi(Plan);
+  if (CurrentIteration)
+    return CurrentIteration;
+  return Plan.getVectorLoopRegion()->getCanonicalIV();
 }

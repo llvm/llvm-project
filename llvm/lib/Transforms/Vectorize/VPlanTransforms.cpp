@@ -3214,15 +3214,40 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   HeaderMask->replaceAllUsesWith(EVLMask);
 }
 
+/// Add a VPCurrentIterationPHIRecipe to \p Plan and replaces all uses of
+/// VPCanonicalIVPHIRecipe with VPCurrentIterationPHIRecipe, except for the
+/// canonical IV increment. After this transfomration, VPCanonicalIVPHIRecipe
+/// is used only for loop iterations counting.
+void VPlanTransforms::addCurrentIterationPhi(VPlan &Plan) {
+  if (Plan.hasScalarVFOnly())
+    return;
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+
+  auto *CanonicalIVPHI = LoopRegion->getCanonicalIV();
+  auto *CanonicalIVIncrement =
+      cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
+  VPValue *StartV = CanonicalIVPHI->getStartValue();
+  // Create the CurrentIteration recipe in the vector loop.
+  auto *CurrentIteration =
+      new VPCurrentIterationPHIRecipe(StartV, DebugLoc::getUnknown());
+  CurrentIteration->insertAfter(CanonicalIVPHI);
+  VPBuilder Builder(CanonicalIVIncrement);
+  auto *NextIter = Builder.createAdd(
+      CanonicalIVIncrement->getOperand(1), CurrentIteration,
+      CanonicalIVIncrement->getDebugLoc(), "current.iteration.next",
+      {CanonicalIVIncrement->hasNoUnsignedWrap(),
+       CanonicalIVIncrement->hasNoSignedWrap()});
+  CurrentIteration->addOperand(NextIter);
+
+  // Replace all uses of VPCanonicalIVPHIRecipe by
+  // VPCurrentIterationPHIRecipe except for the canonical IV increment.
+  CanonicalIVPHI->replaceAllUsesWith(CurrentIteration);
+  CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
+}
+
 /// Converts a tail folded vector loop region to step by
 /// VPInstruction::ExplicitVectorLength elements instead of VF elements each
 /// iteration.
-///
-/// - Add a VPCurrentIterationPHIRecipe and related recipes to \p Plan and
-///   replaces all uses except the canonical IV increment of
-///   VPCanonicalIVPHIRecipe with a VPCurrentIterationPHIRecipe.
-///   VPCanonicalIVPHIRecipe is used only for loop iterations counting after
-///   this transformation.
 ///
 /// - The header mask is replaced with a header mask based on the EVL.
 ///
@@ -3277,12 +3302,9 @@ void VPlanTransforms::addExplicitVectorLength(
 
   auto *CanonicalIVPHI = LoopRegion->getCanonicalIV();
   auto *CanIVTy = LoopRegion->getCanonicalIVType();
-  VPValue *StartV = CanonicalIVPHI->getStartValue();
 
-  // Create the CurrentIteration recipe in the vector loop.
-  auto *CurrentIteration =
-      new VPCurrentIterationPHIRecipe(StartV, DebugLoc::getUnknown());
-  CurrentIteration->insertAfter(CanonicalIVPHI);
+  auto *CurrentIteration = vputils::getCurrentIterationPhi(Plan);
+  assert(CurrentIteration && "must have CurrentIteration");
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   // Create the AVL (application vector length), starting from TC -> 0 in steps
   // of EVL.
@@ -3300,22 +3322,21 @@ void VPlanTransforms::addExplicitVectorLength(
   auto *VPEVL = Builder.createNaryOp(VPInstruction::ExplicitVectorLength, AVL,
                                      DebugLoc::getUnknown(), "evl");
 
-  auto *CanonicalIVIncrement =
-      cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
-  Builder.setInsertPoint(CanonicalIVIncrement);
+  auto *NextIter = cast<VPInstruction>(CurrentIteration->getBackedgeValue());
+  assert(NextIter->getOperand(0) == &Plan.getVFxUF() &&
+         "CurrentIteration increment should be VFxUF");
+  Builder.setInsertPoint(NextIter);
   VPValue *OpVPEVL = VPEVL;
 
   auto *I32Ty = Type::getInt32Ty(Plan.getContext());
-  OpVPEVL = Builder.createScalarZExtOrTrunc(
-      OpVPEVL, CanIVTy, I32Ty, CanonicalIVIncrement->getDebugLoc());
+  OpVPEVL = Builder.createScalarZExtOrTrunc(OpVPEVL, CanIVTy, I32Ty,
+                                            NextIter->getDebugLoc());
 
-  auto *NextIter = Builder.createAdd(OpVPEVL, CurrentIteration,
-                                     CanonicalIVIncrement->getDebugLoc(),
-                                     "current.iteration.next",
-                                     {CanonicalIVIncrement->hasNoUnsignedWrap(),
-                                      CanonicalIVIncrement->hasNoSignedWrap()});
-  CurrentIteration->addOperand(NextIter);
+  NextIter->setOperand(0, OpVPEVL);
 
+  auto *CanonicalIVIncrement =
+      cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
+  Builder.setInsertPoint(CanonicalIVIncrement);
   VPValue *NextAVL =
       Builder.createSub(AVLPhi, OpVPEVL, DebugLoc::getCompilerGenerated(),
                         "avl.next", {/*NUW=*/true, /*NSW=*/false});
@@ -3324,27 +3345,13 @@ void VPlanTransforms::addExplicitVectorLength(
   fixupVFUsersForEVL(Plan, *VPEVL);
   removeDeadRecipes(Plan);
 
-  // Replace all uses of VPCanonicalIVPHIRecipe by
-  // VPCurrentIterationPHIRecipe except for the canonical IV increment.
-  CanonicalIVPHI->replaceAllUsesWith(CurrentIteration);
-  CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
 }
 
 void VPlanTransforms::convertToVariableLengthStep(VPlan &Plan) {
-  // Find the vector loop entry by locating VPCurrentIterationPHIRecipe.
-  // There should be only one VPCurrentIteration in the entire plan.
-  VPCurrentIterationPHIRecipe *CurrentIteration = nullptr;
-
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_shallow(Plan.getEntry())))
-    for (VPRecipeBase &R : VPBB->phis())
-      if (auto *PhiR = dyn_cast<VPCurrentIterationPHIRecipe>(&R)) {
-        assert(!CurrentIteration &&
-               "Found multiple CurrentIteration. Only one expected");
-        CurrentIteration = PhiR;
-      }
+  VPCurrentIterationPHIRecipe *CurrentIteration =
+      vputils::getCurrentIterationPhi(Plan);
 
   // Early return if it is not variable-length stepping.
   if (!CurrentIteration)
