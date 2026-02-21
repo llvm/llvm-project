@@ -42,6 +42,7 @@ add_llvm_component_library(LLVMTransformUtils
   IRNormalizer.cpp
   LCSSA.cpp
   LibCallsShrinkWrap.cpp
+  LifetimeMove.cpp
   Local.cpp
   LoopConstrainer.cpp
   LoopPeel.cpp

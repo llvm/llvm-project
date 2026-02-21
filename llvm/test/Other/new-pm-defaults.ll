@@ -224,6 +224,7 @@
 ; CHECK-O23SZ-NEXT: Running pass: CoroElidePass
 ; CHECK-EP-SCALAR-LATE-NEXT: Running pass: NoOpFunctionPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
+; CHECK-O-NEXT: Running pass: LifetimeMovePass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-EP-PEEPHOLE-NEXT: Running pass: NoOpFunctionPass
 ; CHECK-O-NEXT: Running pass: PostOrderFunctionAttrsPass
