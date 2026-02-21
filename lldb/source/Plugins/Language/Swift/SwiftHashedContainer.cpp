@@ -281,10 +281,9 @@ HashedCollectionConfig::CreateEmptyHandler(CompilerType elem_type) const {
   return HashedStorageHandlerUP(new EmptyHashedStorageHandler(elem_type));
 }
 
-ValueObjectSP
-HashedCollectionConfig::StorageObjectAtAddress(
-    const ExecutionContext &exe_ctx,
-    lldb::addr_t address) const {
+ValueObjectSP HashedCollectionConfig::StorageObjectAtAddress(
+    const ExecutionContext &exe_ctx, lldb::addr_t address,
+    ::swift::Mangle::ManglingFlavor flavor) const {
 
   if (address == LLDB_INVALID_ADDRESS)
     return nullptr;
@@ -304,8 +303,11 @@ HashedCollectionConfig::StorageObjectAtAddress(
     return nullptr;
   if (error.Fail())
     return nullptr;
+  // Add the right mangling flavor on the type's mangled name.
+  std::string mangled_name = SwiftLanguageRuntime::MakeMangledName(
+      m_nativeStorageRoot_mangledSuffix.GetStringRef(), flavor);
   CompilerType rawStorage_type =
-      scratch_ctx->GetTypeFromMangledTypename(m_nativeStorageRoot_mangled);
+      scratch_ctx->GetTypeFromMangledTypename(ConstString(mangled_name));
   if (!rawStorage_type.IsValid())
     return nullptr;
 
@@ -638,7 +640,11 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
   if (valobj_sp->GetObjectRuntimeLanguage() != eLanguageTypeSwift &&
       valobj_sp->IsPointerType()) {
     lldb::addr_t address = valobj_sp->GetPointerValue().address;
-    if (auto swiftval_sp = StorageObjectAtAddress(exe_ctx, address))
+    // Since we're creating a formatter for a dictionary, this is ObjC, which
+    // embedded swift doesn't have access to, so this definitely uses the
+    // default mangling.
+    if (auto swiftval_sp = StorageObjectAtAddress(
+            exe_ctx, address, ::swift::Mangle::ManglingFlavor::Default))
       valobj_sp = swiftval_sp;
   }
   valobj_sp = valobj_sp->GetQualifiedRepresentationIfAvailable(
@@ -687,8 +693,10 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
     swift_runtime->MaskMaybeBridgedPointer(storage_location);
 
   if (masked_storage_location == storage_location) {
-    // Native storage
-    auto storage_sp = StorageObjectAtAddress(exe_ctx, storage_location);
+    // Native storage.
+    auto flavor = SwiftLanguageRuntime::GetManglingFlavor(
+        valobj.GetCompilerType().GetMangledTypeName());
+    auto storage_sp = StorageObjectAtAddress(exe_ctx, storage_location, flavor);
     if (!storage_sp)
       return nullptr;
     return CreateNativeHandler(valobj_sp, storage_sp);

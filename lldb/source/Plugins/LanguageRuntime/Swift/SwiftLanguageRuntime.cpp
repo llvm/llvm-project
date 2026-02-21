@@ -2458,6 +2458,7 @@ private:
     }
 
     // TypeMangling for "Swift.UnsafeCurrentTask"
+    // TODO: figure out if this need to be updated to support embedded swift.
     CompilerType task_type =
         ts->GetTypeFromMangledTypename(ConstString("$sSctD"));
     auto task_sp = ValueObject::CreateValueObjectFromAddress(

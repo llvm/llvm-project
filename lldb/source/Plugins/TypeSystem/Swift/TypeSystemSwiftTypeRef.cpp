@@ -2984,10 +2984,20 @@ template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
 
   ConstString lhs = l.GetMangledTypeName();
   ConstString rhs = r.GetMangledTypeName();
-  if (lhs == ConstString("$sSiD") && rhs == ConstString("$sSuD"))
+
+  // Strip the mangling flavor prefix ($s or $e) for comparisons.
+  auto strip_flavor = [](llvm::StringRef s) -> llvm::StringRef {
+    if (s.starts_with("$s") || s.starts_with("$e"))
+      return s.drop_front(2);
+    return s;
+  };
+
+  if (strip_flavor(lhs.GetStringRef()) == "SiD" &&
+      strip_flavor(rhs.GetStringRef()) == "SuD")
     return true;
-  if (lhs.GetStringRef() == "$sSPySo0023unnamedstruct_hEEEdhdEaVGSgD" &&
-      rhs.GetStringRef() == "$ss13OpaquePointerVSgD")
+  if (strip_flavor(lhs.GetStringRef()) ==
+          "SPySo0023unnamedstruct_hEEEdhdEaVGSgD" &&
+      strip_flavor(rhs.GetStringRef()) == "s13OpaquePointerVSgD")
     return true;
   // Ignore missing sugar.
   swift::Demangle::Demangler dem;
@@ -3013,7 +3023,7 @@ template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
     return true;
 
   // SwiftASTContext hardcodes some less-precise types.
-  if (rhs.GetStringRef() == "$sBpD")
+  if (strip_flavor(rhs.GetStringRef()) == "BpD")
     return true;
 
   // If the type is a Clang-imported type ignore mismatches. Since we

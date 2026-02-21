@@ -448,7 +448,7 @@ public:
   std::string GetSwiftName(const clang::Decl *clang_decl,
                            TypeSystemClang &clang_typesystem) override;
 
-  CompilerType GetBuiltinIntType();
+  CompilerType GetBuiltinIntType(swift::Mangle::ManglingFlavor flavor);
 
   /// Attempts to convert a Clang type into a Swift type.
   /// For example, int is converted to Int32.

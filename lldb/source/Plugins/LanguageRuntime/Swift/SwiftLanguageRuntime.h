@@ -160,6 +160,14 @@ public:
       return swift::Mangle::ManglingFlavor::Embedded;
     return swift::Mangle::ManglingFlavor::Default;
   }
+
+  /// Construct a full mangled name from a suffix (without "$s"/"$e" prefix)
+  /// and a mangling flavor.
+  static std::string MakeMangledName(llvm::StringRef suffix,
+                                     swift::Mangle::ManglingFlavor flavor) {
+    return ((flavor == swift::Mangle::ManglingFlavor::Embedded) ? "$e" : "$s") +
+           suffix.str();
+  }
   enum class FuncletComparisonResult {
     NotBothFunclets,
     DifferentAsyncFunctions,

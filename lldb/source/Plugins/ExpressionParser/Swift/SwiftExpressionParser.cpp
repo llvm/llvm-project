@@ -551,13 +551,15 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
                    lldb::DynamicValueType use_dynamic,
                    lldb::BindGenericTypes bind_generic_types) {
   // Alias builtin types, since we can't use them directly in source code.
-  auto builtin_ptr_t = swift_ast_context.GetBuiltinRawPointerType();
-  auto alias = manipulator.MakeTypealias(
+  CompilerType builtin_ptr_t = swift_ast_context.GetBuiltinRawPointerType(
+      swift_ast_context.GetManglingFlavor());
+  llvm::Expected<swift::TypeAliasDecl *> alias = manipulator.MakeTypealias(
       swift_ast_context.GetASTContext()->getIdentifier("$__lldb_builtin_ptr_t"),
       builtin_ptr_t, false);
   if (!alias)
     return alias.takeError();
-  auto builtin_int_t = swift_ast_context.GetBuiltinIntType();
+  CompilerType builtin_int_t = swift_ast_context.GetBuiltinIntType(
+      swift_ast_context.GetManglingFlavor());
   alias = manipulator.MakeTypealias(
       swift_ast_context.GetASTContext()->getIdentifier("$__lldb_builtin_int_t"),
       builtin_int_t, false);

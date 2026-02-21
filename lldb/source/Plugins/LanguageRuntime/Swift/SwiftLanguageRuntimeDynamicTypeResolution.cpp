@@ -669,8 +669,10 @@ GetExistentialSyntheticChildren(TypeSystemSwiftTypeRef &ts,
                             return GetTypeFromTypeRef(*ts_sp, super_class_tr,
                                                       flavor);
                           else
-                            return rti ? ts_sp->GetBuiltinUnknownObjectType()
-                                       : ts_sp->GetBuiltinRawPointerType();
+                            return rti ? ts_sp->GetBuiltinUnknownObjectType(
+                                             flavor)
+                                       : ts_sp->GetBuiltinRawPointerType(
+                                             flavor);
                         }});
     if (rti) {
       auto &fields = rti->getFields();
@@ -1679,7 +1681,7 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
             "unexpected kind of indirect record enum");
       }
     } else {
-      payload_type = ts.GetBuiltinRawPointerType();
+      payload_type = ts.GetBuiltinRawPointerType(flavor);
     }
 
     return ValueObjectMemory::Create(exe_ctx.GetBestExecutionContextScope(),
