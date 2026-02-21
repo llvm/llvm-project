@@ -19,7 +19,6 @@
 #include "CIRGenCleanup.h"
 #include "CIRGenFunction.h"
 
-#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
