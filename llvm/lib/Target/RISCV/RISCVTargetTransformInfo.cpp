@@ -3566,19 +3566,19 @@ RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   // all users are bitcasts, to avoid introducing new bitcasts. The rationale
   // for this is to optimize the number of inserted vsetvli instructions, by
   // RISCVInsertVSETVLI.
+  const DataLayout &DL = IC.getDataLayout();
   const APInt *Scalar;
   uint64_t VL;
   if (!match(&II, m_Intrinsic<Intrinsic::riscv_vmv_v_x>(
                       m_Poison(), m_APInt(Scalar), m_ConstantInt(VL))) ||
-      VL == 1 || Scalar->getBitWidth() > ST->getXLen() ||
-      !all_of(II.users(), match_fn(m_BitCast(m_Value()))))
+      VL == 1 || !all_of(II.users(), match_fn(m_BitCast(m_Value()))))
     return {};
   auto *VecTy = cast<ScalableVectorType>(II.getType());
   ElementCount EC = VecTy->getElementCount();
   ElementCount ScaleFactor = ElementCount::getScalable(VL);
   auto *EltTy = cast<IntegerType>(VecTy->getElementType());
-  unsigned NewEltBW = EltTy->getScalarSizeInBits() * VL;
-  if (!EC.hasKnownScalarFactor(ScaleFactor) || NewEltBW > ST->getXLen())
+  unsigned NewEltBW = DL.getTypeSizeInBits(EltTy) * VL;
+  if (!EC.hasKnownScalarFactor(ScaleFactor) || !DL.fitsInLegalInteger(NewEltBW))
     return {};
   auto *NewEltTy = IntegerType::get(II.getContext(), NewEltBW);
   if (!TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, NewEltTy)))
