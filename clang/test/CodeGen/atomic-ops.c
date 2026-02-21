@@ -720,7 +720,7 @@ void test_underaligned(void) {
   __atomic_compare_exchange(&aligned_a, &aligned_b, &aligned_c, 1, memory_order_seq_cst, memory_order_seq_cst);
 }
 
-void test_c11_minmax(_Atomic(int) * si, _Atomic(unsigned) * ui, _Atomic(short) * ss, _Atomic(unsigned char) * uc, _Atomic(long long) * sll) {
+void test_c11_minmax(_Atomic(int) * si, _Atomic(unsigned) * ui, _Atomic(short) * ss, _Atomic(unsigned char) * uc, _Atomic(long long) * sll, _Atomic(int*) * aip, int* ip) {
   // CHECK-LABEL: @test_c11_minmax
 
   // CHECK: atomicrmw max ptr {{.*}} acquire, align 4
@@ -747,9 +747,13 @@ void test_c11_minmax(_Atomic(int) * si, _Atomic(unsigned) * ui, _Atomic(short) *
   // CHECK: atomicrmw min ptr {{.*}} acquire, align 8
   *sll = __c11_atomic_fetch_min(sll, 42, memory_order_acquire);
 
+  // CHECK: atomicrmw umax ptr {{.*}} acquire, align 4
+  __c11_atomic_fetch_max(aip, ip, memory_order_acquire);
+  // CHECK: atomicrmw umin ptr {{.*}} acquire, align 4
+  __c11_atomic_fetch_min(aip, ip, memory_order_acquire);
 }
 
-void test_minmax_postop(int *si, unsigned *ui, unsigned short *us, signed char *sc, unsigned long long *ull) {
+void test_minmax_postop(int *si, unsigned *ui, unsigned short *us, signed char *sc, unsigned long long *ull, int **ip) {
   int val = 42;
   // CHECK-LABEL: @test_minmax_postop
 
@@ -794,6 +798,18 @@ void test_minmax_postop(int *si, unsigned *ui, unsigned short *us, signed char *
   // CHECK: [[NEW:%.*]] = select i1 [[TST]], i64 [[OLD]], i64 [[RHS]]
   // CHECK: store i64 [[NEW]], ptr
   *ull = __atomic_min_fetch(ull, 42, memory_order_release);
+
+  // CHECK: [[OLD:%.*]] = atomicrmw umax ptr [[PTR:%.*]], i32 [[RHS:%.*]] release, align 4
+  // CHECK: [[TST:%.*]] = icmp ugt i32 [[OLD]], [[RHS]]
+  // CHECK: [[NEW:%.*]] = select i1 [[TST]], i32 [[OLD]], i32 [[RHS]]
+  // CHECK: store i32 [[NEW]], ptr
+  *ip = __atomic_max_fetch(ip, si, memory_order_release);
+
+  // CHECK: [[OLD:%.*]] = atomicrmw umin ptr [[PTR:%.*]], i32 [[RHS:%.*]] release, align 4
+  // CHECK: [[TST:%.*]] = icmp ult i32 [[OLD]], [[RHS]]
+  // CHECK: [[NEW:%.*]] = select i1 [[TST]], i32 [[OLD]], i32 [[RHS]]
+  // CHECK: store i32 [[NEW]], ptr
+  *ip = __atomic_min_fetch(ip, si, memory_order_release);
 
 }
 
