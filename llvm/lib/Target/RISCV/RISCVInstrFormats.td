@@ -196,10 +196,14 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   let TSFlags{4-0} = Format.Value;
 
   // Indicates when Vd and Vs1/Vs2 cannot be the same register.
+  // We require the at the Vd operand be named $vd, the Vs1 operand be named
+  // $vs1, and the Vs2 operand be named $vs2.
   RISCVVConstraint RVVConstraint = NoConstraint;
   let TSFlags{6-5} = RVVConstraint.Value;
 
   // Indicates that the destination and the VM operand cannot both be V0.
+  // We require the the VM operand to be named $vm and the destination
+  // operand to be named $vd.
   bit VMConstraint = 0;
   let TSFlags{7} = VMConstraint;
 
