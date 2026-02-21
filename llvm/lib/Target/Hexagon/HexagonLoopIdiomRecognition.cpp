@@ -1719,6 +1719,29 @@ void PolynomialMultiplyRecognize::setupPreSimplifier(Simplifier &S) {
       return B.CreateBinOp(BitOp2->getOpcode(), X,
                 B.CreateBinOp(BitOp1->getOpcode(), CA, CB));
     });
+  S.addRule("select with trunc cond to select with icmp cond",
+            // select (trunc x to i1) -> select (icmp ne (and x, 1), 0)
+            // select (xor (trunc x to i1) 1) -> select (icmp eq (and x, 1), 0)
+            [](Instruction *I, LLVMContext &Ctx) -> Value * {
+              SelectInst *Sel = dyn_cast<SelectInst>(I);
+              if (!Sel)
+                return nullptr;
+              Value *C = Sel->getCondition();
+              Value *X;
+              using namespace PatternMatch;
+              if (!(match(C, m_Trunc(m_Value(X))) ||
+                    match(C, m_Not(m_Trunc(m_Value(X))))))
+                return nullptr;
+
+              IRBuilder<> B(Ctx);
+              Type *Ty = X->getType();
+              Value *And = B.CreateAnd(X, ConstantInt::get(Ty, 1));
+              Value *Icmp = B.CreateICmp(isa<TruncInst>(C) ? ICmpInst::ICMP_NE
+                                                           : ICmpInst::ICMP_EQ,
+                                         And, ConstantInt::get(Ty, 0));
+              return B.CreateSelect(Icmp, Sel->getTrueValue(),
+                                    Sel->getFalseValue());
+            });
 }
 
 void PolynomialMultiplyRecognize::setupPostSimplifier(Simplifier &S) {
