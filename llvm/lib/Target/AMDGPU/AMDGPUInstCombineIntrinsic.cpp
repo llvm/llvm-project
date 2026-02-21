@@ -1876,10 +1876,13 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
     // and update offset.
     DemandedElts = (1 << ActiveBits) - 1;
 
+    unsigned OffsetAdd = 0;
+    unsigned OffsetIdx;
+    unsigned SingleComponentSizeInBits =
+        IC.getDataLayout().getTypeSizeInBits(EltTy);
     if (UnusedComponentsAtFront > 0) {
       static const unsigned InvalidOffsetIdx = 0xf;
 
-      unsigned OffsetIdx;
       switch (II.getIntrinsicID()) {
       case Intrinsic::amdgcn_raw_buffer_load:
       case Intrinsic::amdgcn_raw_ptr_buffer_load:
@@ -1907,14 +1910,36 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       if (OffsetIdx != InvalidOffsetIdx) {
         // Clear demanded bits and update the offset.
         DemandedElts &= ~((1 << UnusedComponentsAtFront) - 1);
-        auto *Offset = Args[OffsetIdx];
-        unsigned SingleComponentSizeInBits =
-            IC.getDataLayout().getTypeSizeInBits(EltTy);
-        unsigned OffsetAdd =
-            UnusedComponentsAtFront * SingleComponentSizeInBits / 8;
-        auto *OffsetAddVal = ConstantInt::get(Offset->getType(), OffsetAdd);
-        Args[OffsetIdx] = IC.Builder.CreateAdd(Offset, OffsetAddVal);
+        OffsetAdd = UnusedComponentsAtFront * SingleComponentSizeInBits / 8;
       }
+    }
+
+    unsigned NewLoadWidthInBits =
+        SingleComponentSizeInBits * DemandedElts.popcount();
+    if (II.getIntrinsicID() == Intrinsic::amdgcn_s_buffer_load &&
+        NewLoadWidthInBits < 32) {
+      // From the GCN gen3 manual, section 7.4 (Scalar Memory Operations /
+      // Alignment and Bounds Checking) Memory Address - If the memory
+      // address is out-of-range (clamped), the operation is not performed
+      // for any dwords that are out-of-range.
+      //
+      // If we narrow a partially out-of-range <2 x i16> load to i16; the i16
+      // load would read the memory values instead of 0.
+      //
+      // Orthogonally, due to a HW-bug on gfx12 we should not narrow
+      // s_buffer_loads to their 16/8-bit variants for this platform. These
+      // instructions are still supported but the user must ensure some
+      // alignment restrictions on the buffer's stride and num-records.
+      // This case is also covered by this condition.
+      return nullptr;
+    }
+
+    if (OffsetAdd) {
+      // Modify the IR after the previous condition, otherwise inst-combine
+      // would never reach a fixed-point due to the CreateAdd
+      Value *Offset = Args[OffsetIdx];
+      Constant *OffsetAddVal = ConstantInt::get(Offset->getType(), OffsetAdd);
+      Args[OffsetIdx] = IC.Builder.CreateAdd(Offset, OffsetAddVal);
     }
   } else {
     // Image case.
