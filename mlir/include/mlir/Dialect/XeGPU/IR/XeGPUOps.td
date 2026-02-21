@@ -1717,4 +1717,142 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
   let hasVerifier = 1;
 }
 
+def XeGPU_TruncfOp
+    : XeGPU_Op<"truncf", [AllRanksMatch<["source", "result"]>,
+                          AllShapesMatch<["source", "result"]>, Pure]> {
+  let summary = "It performs floating point truncation from higher precision "
+                "to lower precision.";
+
+  let description =
+      [{The `xegpu.truncf` operation truncates floating point values from a higher
+    precision type to a lower precision type.
+    Converts `f16` and `bf16` to microscaling float types.
+    Rounding mode defaults to round to nearest even.
+
+    Example:
+    ```mlir
+      %res = xegpu.truncf %src : vector<16xf16> -> vector<16xf8E5M2>
+    ```
+
+  }];
+
+  let arguments = (ins FixedVectorOfNonZeroRankOf<[XeGPU_FloatType]>:$source);
+  let results = (outs FixedVectorOfNonZeroRankOf<[XeGPU_FloatType]>:$result);
+
+  let extraClassDeclaration = [{
+
+    Type getSourceType() {
+      return getSource().getType();
+    }
+
+    Type getResultType() {
+      return getResult().getType();
+    }
+
+  }];
+
+  let assemblyFormat = [{
+    $source attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
+                                          AllElementTypesMatch<["a", "b"]>,
+                                          AnchorLayoutInterface]> {
+  let summary = "It performs scaled mma computation";
+
+  let description =
+      [{DPAS MX performs matrix multiplication on matrix A and Matrix B
+    of low precision data type. A is of size`mxk`
+    size, B is of size `kxn`, and accumulate on matrix C of size `mxn` to the same size
+    matrix.
+
+    In lane level code, each lane from a subgroup holds a data fragment for A, B, Acc and the result,
+    which are represented as 1D vectors.
+
+    This operation serves as an anchor through which users assign a layout attribute
+    to govern computation distribution.
+
+    Arguments:
+
+    - `a`: A vector value representing the left-hand-side matrix tile (A) participating in the
+      matrix multiply.
+
+    - `b`: A vector value representing the right-hand-side matrix tile (B).
+
+    - `acc`: A vector value representing the accumulator matrix tile (C). The
+      result is computed as `a * b + acc`.
+
+    - `scale_a`: A floating point vector/scalar value used to scale `a` for
+      matrix multiplication.
+
+    - `scale_b`: A floating point vector/scalar value used to scale `b` for
+      matrix multiplication.
+
+    - `layout_a`, `layout_b`, `layout_cd`: [optional] Attributes that identify this
+      operation as anchor for operands A, B, and the accumulator/result, enabling users to assign layouts
+      that govern distribution at the subgroup and/or lane level. Only valid at workgroup and subgroup
+      level.
+
+  }];
+
+  let arguments = (ins XeGPU_DpasOprType:$a, XeGPU_DpasOprType:$b,
+      Optional<XeGPU_DpasResType>:$acc,
+      Optional<AnyTypeOf<[F8E8M0FNU,
+                          VectorOfRankAndType<[1, 2], [F8E8M0FNU]>]>>:$scale_a,
+      Optional<AnyTypeOf<[F8E8M0FNU,
+                          VectorOfRankAndType<[1, 2], [F8E8M0FNU]>]>>:$scale_b,
+      OptionalAttr<DistributeLayoutAttr>:$layout_a,
+      OptionalAttr<DistributeLayoutAttr>:$layout_b,
+      OptionalAttr<DistributeLayoutAttr>:$layout_cd);
+  let results = (outs XeGPU_DpasResType:$result);
+  let extraClassDeclaration = [{
+
+    xegpu::DistributeLayoutAttr getAnchorLayout() {
+      return getLayoutCd().value_or(nullptr);
+    }
+
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      setLayoutCdAttr(anchorLayout);
+    }
+
+    VectorType getAType() {
+      return getA().getType();
+    }
+
+    VectorType getBType() {
+      return getB().getType();
+    }
+
+    VectorType getAccType() {
+      return getAcc().getType();
+    }
+
+    Type getScaleAType() {
+      return getScaleA().getType();
+    }
+
+    Type getScaleBType() {
+      return getScaleB().getType();
+    }
+
+    VectorType getResultType() {
+      return getResult().getType();
+    }
+
+  }];
+  let assemblyFormat = [{
+    $a `,` $b (`,` $acc^)?
+    (`scale_a` `=` $scale_a^)?
+    (`scale_b` `=` $scale_b^)?
+    attr-dict `:` type($a)`,` type($b)
+    (`,` type($acc)^)?
+    (`,` type($scale_a)^)?
+    (`,` type($scale_b)^)? `->` type($result)
+  }];
+  let hasVerifier = 1;
+}
+
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD
