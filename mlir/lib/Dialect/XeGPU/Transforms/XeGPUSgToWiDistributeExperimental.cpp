@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -628,6 +629,14 @@ void XeGPUSgToWiDistributeExperimentalPass::runOnOperation() {
       }
     });
   }
+  // iterate the IR and attach each function op with sub_group_size attribute to
+  // support shuffle lowering in later stages.
+  root->walk([&](gpu::GPUFuncOp funcOp) {
+    auto uArch = getUArch(xegpu::getChipStr(funcOp).value_or(""));
+    funcOp->setAttr("intel_reqd_sub_group_size",
+                    IntegerAttr::get(IntegerType::get(funcOp.getContext(), 32),
+                                     uArch->getSubgroupSize()));
+  });
 }
 
 void xegpu::populateXeGPUSgToWiDistributeTypeConversions(

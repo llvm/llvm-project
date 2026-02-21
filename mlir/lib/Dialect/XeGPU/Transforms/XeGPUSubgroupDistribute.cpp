@@ -2232,4 +2232,13 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       op->erase();
     return WalkResult::advance();
   });
+
+  // iterate the IR and attach each function op with sub_group_size attribute to
+  // support shuffle lowering in later stages.
+  getOperation()->walk([&](gpu::GPUFuncOp funcOp) {
+    auto uArch = getUArch(xegpu::getChipStr(funcOp).value_or(""));
+    funcOp->setAttr("intel_reqd_sub_group_size",
+                    IntegerAttr::get(IntegerType::get(funcOp.getContext(), 32),
+                                     uArch->getSubgroupSize()));
+  });
 }

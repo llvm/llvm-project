@@ -216,4 +216,11 @@ gpu.func @gemm_with_postop(%arg0: memref<1024x1024xbf16>, %arg1: memref<1024x102
   gpu.return
 }
 
+// CHECK-LABEL: gpu.func @dummy_func()
+// CHECK-SAME: attributes {intel_reqd_sub_group_size = 16 : i32}
+// CHECK      : gpu.return
+gpu.func @dummy_func(){
+  gpu.return
+}
+
 }
