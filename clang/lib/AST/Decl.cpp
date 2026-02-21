@@ -1711,12 +1711,14 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
   }
 }
 
-void NamedDecl::printNestedNameSpecifier(raw_ostream &OS) const {
+void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
+                                         bool AllowFunctionContext) const {
   printNestedNameSpecifier(OS, getASTContext().getPrintingPolicy());
 }
 
 void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
-                                         const PrintingPolicy &P) const {
+                                         const PrintingPolicy &P,
+                                         bool AllowFunctionContext) const {
   const DeclContext *Ctx = getDeclContext();
 
   // For ObjC methods and properties, look through categories and use the
@@ -1733,7 +1735,7 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       Ctx = CI;
   }
 
-  if (Ctx->isFunctionOrMethod())
+  if (Ctx->isFunctionOrMethod() && !AllowFunctionContext)
     return;
 
   using ContextsTy = SmallVector<const DeclContext *, 8>;
@@ -4961,6 +4963,30 @@ void TagDecl::setQualifierInfo(NestedNameSpecifierLoc QualifierLoc) {
   }
 }
 
+void TagDecl::printAnonymousTagDeclLocation(
+    llvm::raw_ostream &OS, const PrintingPolicy &Policy) const {
+  PresumedLoc PLoc =
+      getASTContext().getSourceManager().getPresumedLoc(getLocation());
+  if (!PLoc.isValid())
+    return;
+
+  OS << " at ";
+  StringRef File = PLoc.getFilename();
+  llvm::SmallString<1024> WrittenFile(File);
+  if (auto *Callbacks = Policy.Callbacks)
+    WrittenFile = Callbacks->remapPath(File);
+  // Fix inconsistent path separator created by
+  // clang::DirectoryLookup::LookupFile when the file path is relative
+  // path.
+  llvm::sys::path::Style Style =
+      llvm::sys::path::is_absolute(WrittenFile)
+          ? llvm::sys::path::Style::native
+          : (Policy.MSVCFormatting ? llvm::sys::path::Style::windows_backslash
+                                   : llvm::sys::path::Style::posix);
+  llvm::sys::path::native(WrittenFile, Style);
+  OS << WrittenFile << ':' << PLoc.getLine() << ':' << PLoc.getColumn();
+}
+
 void TagDecl::printAnonymousTagDecl(llvm::raw_ostream &OS,
                                     const PrintingPolicy &Policy) const {
   if (TypedefNameDecl *Typedef = getTypedefNameForAnonDecl()) {
@@ -4992,32 +5018,16 @@ void TagDecl::printAnonymousTagDecl(llvm::raw_ostream &OS,
     OS << "unnamed";
   }
 
+  if (Policy.AnonymousTagNameStyle ==
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::CanonicalName))
+    OS << getASTContext().getManglingNumber(this);
+
   if (!SuppressTagKeywordInName)
     OS << ' ' << getKindName();
 
   if (Policy.AnonymousTagNameStyle ==
-      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::SourceLocation)) {
-    PresumedLoc PLoc =
-        getASTContext().getSourceManager().getPresumedLoc(getLocation());
-    if (PLoc.isValid()) {
-      OS << " at ";
-      StringRef File = PLoc.getFilename();
-      llvm::SmallString<1024> WrittenFile(File);
-      if (auto *Callbacks = Policy.Callbacks)
-        WrittenFile = Callbacks->remapPath(File);
-      // Fix inconsistent path separator created by
-      // clang::DirectoryLookup::LookupFile when the file path is relative
-      // path.
-      llvm::sys::path::Style Style =
-          llvm::sys::path::is_absolute(WrittenFile)
-              ? llvm::sys::path::Style::native
-              : (Policy.MSVCFormatting
-                     ? llvm::sys::path::Style::windows_backslash
-                     : llvm::sys::path::Style::posix);
-      llvm::sys::path::native(WrittenFile, Style);
-      OS << WrittenFile << ':' << PLoc.getLine() << ':' << PLoc.getColumn();
-    }
-  }
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::SourceLocation))
+    printAnonymousTagDeclLocation(OS, Policy);
 
   OS << (Policy.MSVCFormatting ? '\'' : ')');
 }
