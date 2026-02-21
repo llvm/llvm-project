@@ -8448,6 +8448,84 @@ SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, const SDLoc &DL) {
   return SDValue();
 }
 
+/* TMP coment
+
+   it should combine for example this pattern into
+
+   (or (icmp ult B0 B1)
+   (and (icmp ult A0 A1)
+   (icmp eq B0 B1)))
+
+   -->
+
+   (usubo_carry B0 B1 (usubo_carry A0 A1 0):1):1
+*/
+static SDValue foldLogicOfICmpsToSubCarry(SelectionDAG &DAG, SDValue N0,
+                                          SDValue N1, SDNode *N) {
+  SDLoc DL(N);
+
+  SDValue B0;
+  SDValue B1;
+  ISD::CondCode BCondCode;
+  if (!(sd_match(N0,
+                 m_SetCC(m_Value(B0), m_Value(B1), m_CondCode(BCondCode))) &&
+        !isTrueWhenEqual(BCondCode)))
+    return SDValue();
+
+  SDValue A0;
+  SDValue A1;
+  SDValue BEq;
+  ISD::CondCode ACondCode;
+
+  if (!(sd_match(N1,
+                 m_And(m_SetCC(m_Value(A0), m_Value(A1), m_CondCode(ACondCode)),
+                       m_Value(BEq))) &&
+        !isTrueWhenEqual(ACondCode) &&
+        isSignedIntSetCC(BCondCode) == isSignedIntSetCC(ACondCode)))
+    return SDValue();
+
+  auto SwapIfNotLT = [](SDValue &Op0, SDValue &Op1, ISD::CondCode CondCode) {
+    if (CondCode == ISD::CondCode::SETUGT || CondCode == ISD::CondCode::SETGT)
+      std::swap(Op0, Op1);
+  };
+
+  SwapIfNotLT(B0, B1, BCondCode);
+
+  ISD::CondCode LECondCode = isSignedIntSetCC(BCondCode)
+                                 ? ISD::CondCode::SETLE
+                                 : ISD::CondCode::SETULE;
+  ISD::CondCode GECondCode = isSignedIntSetCC(BCondCode)
+                                 ? ISD::CondCode::SETGE
+                                 : ISD::CondCode::SETUGE;
+
+  // much simpler to use a big Any than to try to do it programatically
+  if (!(sd_match(BEq,
+                 m_AnyOf(m_c_SetCC(m_Specific(B0), m_Specific(B1),
+                                   m_SpecificCondCode(ISD::CondCode::SETEQ)),
+                         m_SetCC(m_Specific(B0), m_Specific(B1),
+                                 m_SpecificCondCode(LECondCode)),
+                         m_SetCC(m_Specific(B1), m_Specific(B0),
+                                 m_SpecificCondCode(GECondCode))))))
+    return SDValue();
+
+  SwapIfNotLT(A0, A1, ACondCode);
+
+  unsigned OpCode =
+      isSignedIntSetCC(BCondCode) ? ISD::SSUBO_CARRY : ISD::USUBO_CARRY;
+  EVT AVT = A0.getValueType();
+  SDVTList AOverflowOpVT = DAG.getVTList(AVT, MVT::i1);
+  SDValue ACarry = DAG.getNode(OpCode, DL, AOverflowOpVT, A0, A1,
+                               DAG.getConstant(0, DL, MVT::i1))
+                       .getValue(1);
+
+  EVT BVT = B0.getValueType();
+  SDVTList BOverflowOpVT = DAG.getVTList(BVT, MVT::i1);
+  SDValue BCarry =
+      DAG.getNode(OpCode, DL, BOverflowOpVT, B0, B1, ACarry).getValue(1);
+
+  return BCarry;
+}
+
 /// OR combines for which the commuted variant will be tried as well.
 static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
                                   SDNode *N) {
@@ -8559,6 +8637,9 @@ static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
       return DAG.getNOT(DL, DAG.getNode(ISD::OR, DL, VT, Lo, Hi), VT);
     }
   }
+
+  if (SDValue R = foldLogicOfICmpsToSubCarry(DAG, N0, N1, N))
+    return R;
 
   return SDValue();
 }
