@@ -3330,6 +3330,32 @@ static SDValue performBitcastCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue performBitmaskCombine(SDNode *N, SelectionDAG &DAG) {
+  // bitmask (setcc <X>, 0, setlt) => bitmask X
+  assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN);
+  using namespace llvm::SDPatternMatch;
+
+  SDValue LHS;
+  if (N->getNumOperands() < 2 ||
+      N->getConstantOperandVal(0) != Intrinsic::wasm_bitmask ||
+      !sd_match(N->getOperand(1),
+                m_c_SetCC(m_Value(LHS), m_Zero(), m_CondCode())))
+    return SDValue();
+
+  EVT LT = LHS.getValueType();
+  if (LT.getScalarSizeInBits() > 128 / LT.getVectorNumElements())
+    return SDValue();
+
+  if (!sd_match(N->getOperand(1), m_c_SetCC(m_Value(LHS), m_Zero(),
+                                            m_SpecificCondCode(ISD::SETLT))))
+    return SDValue();
+
+  SDLoc DL(N);
+  return DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0),
+      {DAG.getConstant(Intrinsic::wasm_bitmask, DL, MVT::i32), LHS});
+}
+
 static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
   // any_true (setcc <X>, 0, eq) => (not (all_true X))
   // all_true (setcc <X>, 0, eq) => (not (any_true X))
@@ -3745,8 +3771,11 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performConvertFPCombine(N, DCI.DAG);
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DCI);
-  case ISD::INTRINSIC_WO_CHAIN:
+  case ISD::INTRINSIC_WO_CHAIN: {
+    if (SDValue V = performBitmaskCombine(N, DCI.DAG))
+      return V;
     return performAnyAllCombine(N, DCI.DAG);
+  }
   case ISD::MUL:
     return performMulCombine(N, DCI);
   }
