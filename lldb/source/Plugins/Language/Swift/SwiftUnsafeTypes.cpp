@@ -324,8 +324,9 @@ lldb::ChildCacheState SwiftUnsafeRawBufferPointer::Update() {
   auto opt_type_size = m_elem_type.GetByteSize(m_valobj.GetTargetSP().get());
 
   if (!opt_type_size) {
-    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
-             "{0}: Couldn't get element byte size.", __FUNCTION__);
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), opt_type_size.takeError(),
+                   "{1}: Couldn't get element byte size. Error: {0}",
+                   __FUNCTION__);
     return ChildCacheState::eRefetch;
   }
   m_count = (m_end_addr - m_start_addr) / *opt_type_size;
