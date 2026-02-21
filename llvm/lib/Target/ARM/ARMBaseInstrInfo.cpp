@@ -2777,25 +2777,40 @@ static bool isOptimizeCompareCandidate(MachineInstr *MI, bool &IsThumb1) {
     [[fallthrough]];
   case ARM::RSBrr:
   case ARM::RSBri:
+  case ARM::RSBrsi:
+  case ARM::RSBrsr:
   case ARM::RSCrr:
   case ARM::RSCri:
+  case ARM::RSCrsr:
+  case ARM::RSCrsi:
   case ARM::ADDrr:
   case ARM::ADDri:
+  case ARM::ADDrsi:
+  case ARM::ADDrsr:
   case ARM::ADCrr:
   case ARM::ADCri:
   case ARM::SUBrr:
   case ARM::SUBri:
+  case ARM::SUBrsr:
+  case ARM::SUBrsi:
   case ARM::SBCrr:
   case ARM::SBCri:
+  case ARM::SBCrsi:
+  case ARM::SBCrsr:
   case ARM::t2RSBri:
+  case ARM::t2RSBrr:
+  case ARM::t2RSBrs:
   case ARM::t2ADDrr:
   case ARM::t2ADDri:
+  case ARM::t2ADDrs:
   case ARM::t2ADCrr:
   case ARM::t2ADCri:
   case ARM::t2SUBrr:
   case ARM::t2SUBri:
+  case ARM::t2SUBrs:
   case ARM::t2SBCrr:
   case ARM::t2SBCri:
+  case ARM::t2SBCrs:
   case ARM::ANDrr:
   case ARM::ANDri:
   case ARM::ANDrsr:
