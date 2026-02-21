@@ -2455,15 +2455,22 @@ MCSection *TargetLoweringObjectFileXCOFF::getExplicitSectionGlobal(
   if (!GO->hasSection())
     report_fatal_error("#pragma clang section is not yet supported");
 
-  StringRef SectionName = GO->getSection();
+  std::string SectionName(GO->getSection());
 
-  // Handle the XCOFF::TD case first, then deal with the rest.
-  if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GO))
+  // Have to check for either attributes or metadata that can affect the
+  // section type or section name.
+  if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GO)) {
     if (GVar->hasAttribute("toc-data"))
       return getContext().getXCOFFSection(
           SectionName, Kind,
           XCOFF::CsectProperties(/*MappingClass*/ XCOFF::XMC_TD, XCOFF::XTY_SD),
           /* MultiSymbolsAllowed*/ true);
+
+    if (TM.getFunctionSections() && GVar->hasMetadata(LLVMContext::MD_rename)) {
+      SectionName += ".";
+      SectionName += GO->getName();
+    }
+  }
 
   XCOFF::StorageMappingClass MappingClass;
   if (Kind.isText())
