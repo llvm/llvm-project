@@ -500,9 +500,8 @@ _mm_xor_ps(__m128 __a, __m128 __b) {
 ///    32 bits of this operand are used in the comparison.
 /// \returns A 128-bit vector of [4 x float] containing the comparison results
 ///    in the low-order bits.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpeq_ss(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmpeq_ss(__m128 __a,
+                                                                   __m128 __b) {
   return (__m128)__builtin_ia32_cmpeqss((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -521,9 +520,8 @@ _mm_cmpeq_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpeq_ps(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmpeq_ps(__m128 __a,
+                                                                   __m128 __b) {
   return (__m128)__builtin_ia32_cmpeqps((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -547,9 +545,8 @@ _mm_cmpeq_ps(__m128 __a, __m128 __b)
 ///    32 bits of this operand are used in the comparison.
 /// \returns A 128-bit vector of [4 x float] containing the comparison results
 ///    in the low-order bits.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmplt_ss(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmplt_ss(__m128 __a,
+                                                                   __m128 __b) {
   return (__m128)__builtin_ia32_cmpltss((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -569,9 +566,8 @@ _mm_cmplt_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmplt_ps(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmplt_ps(__m128 __a,
+                                                                   __m128 __b) {
   return (__m128)__builtin_ia32_cmpltps((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -595,9 +591,8 @@ _mm_cmplt_ps(__m128 __a, __m128 __b)
 ///    32 bits of this operand are used in the comparison.
 /// \returns A 128-bit vector of [4 x float] containing the comparison results
 ///    in the low-order bits.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmple_ss(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmple_ss(__m128 __a,
+                                                                   __m128 __b) {
   return (__m128)__builtin_ia32_cmpless((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -617,9 +612,8 @@ _mm_cmple_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmple_ps(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmple_ps(__m128 __a,
+                                                                   __m128 __b) {
   return (__m128)__builtin_ia32_cmpleps((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -643,9 +637,8 @@ _mm_cmple_ps(__m128 __a, __m128 __b)
 ///    32 bits of this operand are used in the comparison.
 /// \returns A 128-bit vector of [4 x float] containing the comparison results
 ///    in the low-order bits.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpgt_ss(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmpgt_ss(__m128 __a,
+                                                                   __m128 __b) {
   return (__m128)__builtin_shufflevector((__v4sf)__a,
                                          (__v4sf)__builtin_ia32_cmpltss((__v4sf)__b, (__v4sf)__a),
                                          4, 1, 2, 3);
@@ -667,9 +660,8 @@ _mm_cmpgt_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpgt_ps(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmpgt_ps(__m128 __a,
+                                                                   __m128 __b) {
   return (__m128)__builtin_ia32_cmpltps((__v4sf)__b, (__v4sf)__a);
 }
 
@@ -693,9 +685,8 @@ _mm_cmpgt_ps(__m128 __a, __m128 __b)
 ///    32 bits of this operand are used in the comparison.
 /// \returns A 128-bit vector of [4 x float] containing the comparison results
 ///    in the low-order bits.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpge_ss(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmpge_ss(__m128 __a,
+                                                                   __m128 __b) {
   return (__m128)__builtin_shufflevector((__v4sf)__a,
                                          (__v4sf)__builtin_ia32_cmpless((__v4sf)__b, (__v4sf)__a),
                                          4, 1, 2, 3);
@@ -717,9 +708,8 @@ _mm_cmpge_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpge_ps(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cmpge_ps(__m128 __a,
+                                                                   __m128 __b) {
   return (__m128)__builtin_ia32_cmpleps((__v4sf)__b, (__v4sf)__a);
 }
 
@@ -743,9 +733,8 @@ _mm_cmpge_ps(__m128 __a, __m128 __b)
 ///    32 bits of this operand are used in the comparison.
 /// \returns A 128-bit vector of [4 x float] containing the comparison results
 ///    in the low-order bits.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpneq_ss(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpneq_ss(__m128 __a, __m128 __b) {
   return (__m128)__builtin_ia32_cmpneqss((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -765,9 +754,8 @@ _mm_cmpneq_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpneq_ps(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpneq_ps(__m128 __a, __m128 __b) {
   return (__m128)__builtin_ia32_cmpneqps((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -792,9 +780,8 @@ _mm_cmpneq_ps(__m128 __a, __m128 __b)
 ///    32 bits of this operand are used in the comparison.
 /// \returns A 128-bit vector of [4 x float] containing the comparison results
 ///    in the low-order bits.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpnlt_ss(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpnlt_ss(__m128 __a, __m128 __b) {
   return (__m128)__builtin_ia32_cmpnltss((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -815,9 +802,8 @@ _mm_cmpnlt_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpnlt_ps(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpnlt_ps(__m128 __a, __m128 __b) {
   return (__m128)__builtin_ia32_cmpnltps((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -842,9 +828,8 @@ _mm_cmpnlt_ps(__m128 __a, __m128 __b)
 ///    32 bits of this operand are used in the comparison.
 /// \returns A 128-bit vector of [4 x float] containing the comparison results
 ///    in the low-order bits.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpnle_ss(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpnle_ss(__m128 __a, __m128 __b) {
   return (__m128)__builtin_ia32_cmpnless((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -865,9 +850,8 @@ _mm_cmpnle_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpnle_ps(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpnle_ps(__m128 __a, __m128 __b) {
   return (__m128)__builtin_ia32_cmpnleps((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -892,9 +876,8 @@ _mm_cmpnle_ps(__m128 __a, __m128 __b)
 ///    32 bits of this operand are used in the comparison.
 /// \returns A 128-bit vector of [4 x float] containing the comparison results
 ///    in the low-order bits.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpngt_ss(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpngt_ss(__m128 __a, __m128 __b) {
   return (__m128)__builtin_shufflevector((__v4sf)__a,
                                          (__v4sf)__builtin_ia32_cmpnltss((__v4sf)__b, (__v4sf)__a),
                                          4, 1, 2, 3);
@@ -917,9 +900,8 @@ _mm_cmpngt_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpngt_ps(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpngt_ps(__m128 __a, __m128 __b) {
   return (__m128)__builtin_ia32_cmpnltps((__v4sf)__b, (__v4sf)__a);
 }
 
@@ -944,9 +926,8 @@ _mm_cmpngt_ps(__m128 __a, __m128 __b)
 ///    32 bits of this operand are used in the comparison.
 /// \returns A 128-bit vector of [4 x float] containing the comparison results
 ///    in the low-order bits.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpnge_ss(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpnge_ss(__m128 __a, __m128 __b) {
   return (__m128)__builtin_shufflevector((__v4sf)__a,
                                          (__v4sf)__builtin_ia32_cmpnless((__v4sf)__b, (__v4sf)__a),
                                          4, 1, 2, 3);
@@ -969,9 +950,8 @@ _mm_cmpnge_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpnge_ps(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpnge_ps(__m128 __a, __m128 __b) {
   return (__m128)__builtin_ia32_cmpnleps((__v4sf)__b, (__v4sf)__a);
 }
 
@@ -996,9 +976,8 @@ _mm_cmpnge_ps(__m128 __a, __m128 __b)
 ///    32 bits of this operand are used in the comparison.
 /// \returns A 128-bit vector of [4 x float] containing the comparison results
 ///    in the low-order bits.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpord_ss(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpord_ss(__m128 __a, __m128 __b) {
   return (__m128)__builtin_ia32_cmpordss((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -1020,9 +999,8 @@ _mm_cmpord_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpord_ps(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpord_ps(__m128 __a, __m128 __b) {
   return (__m128)__builtin_ia32_cmpordps((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -1047,9 +1025,8 @@ _mm_cmpord_ps(__m128 __a, __m128 __b)
 ///    32 bits of this operand are used in the comparison.
 /// \returns A 128-bit vector of [4 x float] containing the comparison results
 ///    in the low-order bits.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpunord_ss(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpunord_ss(__m128 __a, __m128 __b) {
   return (__m128)__builtin_ia32_cmpunordss((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -1071,9 +1048,8 @@ _mm_cmpunord_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-static __inline__ __m128 __DEFAULT_FN_ATTRS
-_mm_cmpunord_ps(__m128 __a, __m128 __b)
-{
+static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cmpunord_ps(__m128 __a, __m128 __b) {
   return (__m128)__builtin_ia32_cmpunordps((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -1095,9 +1071,8 @@ _mm_cmpunord_ps(__m128 __a, __m128 __b)
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
 /// \returns An integer containing the comparison results.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_comieq_ss(__m128 __a, __m128 __b)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_comieq_ss(__m128 __a,
+                                                                 __m128 __b) {
   return __builtin_ia32_comieq((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -1120,9 +1095,8 @@ _mm_comieq_ss(__m128 __a, __m128 __b)
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
 /// \returns An integer containing the comparison results.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_comilt_ss(__m128 __a, __m128 __b)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_comilt_ss(__m128 __a,
+                                                                 __m128 __b) {
   return __builtin_ia32_comilt((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -1144,9 +1118,8 @@ _mm_comilt_ss(__m128 __a, __m128 __b)
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
 /// \returns An integer containing the comparison results.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_comile_ss(__m128 __a, __m128 __b)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_comile_ss(__m128 __a,
+                                                                 __m128 __b) {
   return __builtin_ia32_comile((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -1168,9 +1141,8 @@ _mm_comile_ss(__m128 __a, __m128 __b)
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
 /// \returns An integer containing the comparison results.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_comigt_ss(__m128 __a, __m128 __b)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_comigt_ss(__m128 __a,
+                                                                 __m128 __b) {
   return __builtin_ia32_comigt((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -1192,9 +1164,8 @@ _mm_comigt_ss(__m128 __a, __m128 __b)
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
 /// \returns An integer containing the comparison results.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_comige_ss(__m128 __a, __m128 __b)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_comige_ss(__m128 __a,
+                                                                 __m128 __b) {
   return __builtin_ia32_comige((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -1216,9 +1187,8 @@ _mm_comige_ss(__m128 __a, __m128 __b)
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
 /// \returns An integer containing the comparison results.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_comineq_ss(__m128 __a, __m128 __b)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_comineq_ss(__m128 __a,
+                                                                  __m128 __b) {
   return __builtin_ia32_comineq((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -1239,9 +1209,8 @@ _mm_comineq_ss(__m128 __a, __m128 __b)
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
 /// \returns An integer containing the comparison results.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_ucomieq_ss(__m128 __a, __m128 __b)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_ucomieq_ss(__m128 __a,
+                                                                  __m128 __b) {
   return __builtin_ia32_ucomieq((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -1263,9 +1232,8 @@ _mm_ucomieq_ss(__m128 __a, __m128 __b)
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
 /// \returns An integer containing the comparison results.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_ucomilt_ss(__m128 __a, __m128 __b)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_ucomilt_ss(__m128 __a,
+                                                                  __m128 __b) {
   return __builtin_ia32_ucomilt((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -1287,9 +1255,8 @@ _mm_ucomilt_ss(__m128 __a, __m128 __b)
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
 /// \returns An integer containing the comparison results.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_ucomile_ss(__m128 __a, __m128 __b)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_ucomile_ss(__m128 __a,
+                                                                  __m128 __b) {
   return __builtin_ia32_ucomile((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -1311,9 +1278,8 @@ _mm_ucomile_ss(__m128 __a, __m128 __b)
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
 /// \returns An integer containing the comparison results.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_ucomigt_ss(__m128 __a, __m128 __b)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_ucomigt_ss(__m128 __a,
+                                                                  __m128 __b) {
   return __builtin_ia32_ucomigt((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -1335,9 +1301,8 @@ _mm_ucomigt_ss(__m128 __a, __m128 __b)
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
 /// \returns An integer containing the comparison results.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_ucomige_ss(__m128 __a, __m128 __b)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_ucomige_ss(__m128 __a,
+                                                                  __m128 __b) {
   return __builtin_ia32_ucomige((__v4sf)__a, (__v4sf)__b);
 }
 
@@ -1358,9 +1323,8 @@ _mm_ucomige_ss(__m128 __a, __m128 __b)
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
 /// \returns An integer containing the comparison results.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_ucomineq_ss(__m128 __a, __m128 __b)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_ucomineq_ss(__m128 __a,
+                                                                   __m128 __b) {
   return __builtin_ia32_ucomineq((__v4sf)__a, (__v4sf)__b);
 }
 

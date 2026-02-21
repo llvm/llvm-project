@@ -208,54 +208,139 @@ __m128d test_mm_cmp_pd_eq_oq(__m128d a, __m128d b) {
   // CHECK: fcmp oeq <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_EQ_OQ);
 }
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_EQ_OQ), 0.0, 0.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+2.0, +3.0}), ((__m128d){+2.0, +3.0}), _CMP_EQ_OQ), ALL_ONES_D, ALL_ONES_D));
 
 __m128d test_mm_cmp_pd_lt_os(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_lt_os
   // CHECK: fcmp olt <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_LT_OS);
 }
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_LT_OS), ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +5.0}), ((__m128d){+2.0, +3.0}), _CMP_LT_OS), ALL_ONES_D, 0.0));
 
 __m128d test_mm_cmp_pd_le_os(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_le_os
   // CHECK: fcmp ole <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_LE_OS);
 }
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +5.0}), ((__m128d){+2.0, +3.0}), _CMP_LE_OS), ALL_ONES_D, 0.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+2.0, +3.0}), ((__m128d){+2.0, +3.0}), _CMP_LE_OS), ALL_ONES_D, ALL_ONES_D));
 
 __m128d test_mm_cmp_pd_unord_q(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_unord_q
   // CHECK: fcmp uno <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_UNORD_Q);
 }
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_UNORD_Q), 0.0, 0.0));
 
 __m128d test_mm_cmp_pd_neq_uq(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_neq_uq
   // CHECK: fcmp une <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_NEQ_UQ);
 }
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +3.0}), ((__m128d){+2.0, +3.0}), _CMP_NEQ_UQ), ALL_ONES_D, 0.0));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_NEQ_UQ), ALL_ONES_D, ALL_ONES_D));
 
 __m128d test_mm_cmp_pd_nlt_us(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_nlt_us
   // CHECK: fcmp uge <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_NLT_US);
 }
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+3.0, +4.0}), ((__m128d){+2.0, +3.0}), _CMP_NLT_US), ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_NLT_US), 0.0, 0.0));
 
 __m128d test_mm_cmp_pd_nle_us(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_nle_us
   // CHECK: fcmp ugt <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_NLE_US);
 }
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+3.0, +4.0}), ((__m128d){+2.0, +3.0}), _CMP_NLE_US), ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_NLE_US), 0.0, 0.0));
 
 __m128d test_mm_cmp_pd_ord_q(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_ord_q
   // CHECK: fcmp ord <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_ORD_Q);
 }
+TEST_CONSTEXPR(match_m128d((__m128d)_mm_cmp_pd(((__m128d){+1.0, +2.0}), ((__m128d){+2.0, +3.0}), _CMP_ORD_Q), ALL_ONES_D, ALL_ONES_D));
 
 __m128d test_mm_cmp_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmp_sd
   // CHECK: call {{.*}}<2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 7)
   return _mm_cmp_sd(A, B, _CMP_ORD_Q);
 }
+
+#define CMP_SD_CASE(A0, B0, PRED, RES0)                                            \
+  TEST_CONSTEXPR(match_m128d(_mm_cmp_sd(((__m128d){A0, +9.0}),                     \
+                                         ((__m128d){B0, +7.0}), PRED),              \
+                            RES0, +9.0));
+
+CMP_SD_CASE(+1.0, +2.0, _CMP_EQ_OQ, +0.0)
+CMP_SD_CASE(+2.0, +2.0, _CMP_EQ_OQ, ALL_ONES_D)
+CMP_SD_CASE(+1.0, +2.0, _CMP_LT_OS, ALL_ONES_D)
+CMP_SD_CASE(+3.0, +2.0, _CMP_LT_OS, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_LE_OS, ALL_ONES_D)
+CMP_SD_CASE(+3.0, +2.0, _CMP_LE_OS, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_UNORD_Q, +0.0)
+CMP_SD_CASE(__builtin_nan(""), +2.0, _CMP_UNORD_Q, ALL_ONES_D)
+CMP_SD_CASE(+1.0, +2.0, _CMP_NEQ_UQ, ALL_ONES_D)
+CMP_SD_CASE(+2.0, +2.0, _CMP_NEQ_UQ, +0.0)
+CMP_SD_CASE(+3.0, +2.0, _CMP_NLT_US, ALL_ONES_D)
+CMP_SD_CASE(+1.0, +2.0, _CMP_NLT_US, +0.0)
+CMP_SD_CASE(+3.0, +2.0, _CMP_NLE_US, ALL_ONES_D)
+CMP_SD_CASE(+1.0, +2.0, _CMP_NLE_US, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_ORD_Q, ALL_ONES_D)
+CMP_SD_CASE(__builtin_nan(""), +2.0, _CMP_ORD_Q, +0.0)
+
+CMP_SD_CASE(+2.0, +2.0, _CMP_EQ_UQ, ALL_ONES_D)
+CMP_SD_CASE(+1.0, +2.0, _CMP_EQ_UQ, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_NGE_US, ALL_ONES_D)
+CMP_SD_CASE(+3.0, +2.0, _CMP_NGE_US, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_NGT_US, ALL_ONES_D)
+CMP_SD_CASE(+3.0, +2.0, _CMP_NGT_US, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_FALSE_OQ, +0.0)
+CMP_SD_CASE(+1.0, +1.0, _CMP_FALSE_OQ, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_NEQ_OQ, ALL_ONES_D)
+CMP_SD_CASE(+2.0, +2.0, _CMP_NEQ_OQ, +0.0)
+CMP_SD_CASE(+3.0, +2.0, _CMP_GE_OS, ALL_ONES_D)
+CMP_SD_CASE(+1.0, +2.0, _CMP_GE_OS, +0.0)
+CMP_SD_CASE(+3.0, +2.0, _CMP_GT_OS, ALL_ONES_D)
+CMP_SD_CASE(+1.0, +2.0, _CMP_GT_OS, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_TRUE_UQ, ALL_ONES_D)
+CMP_SD_CASE(+1.0, +1.0, _CMP_TRUE_UQ, ALL_ONES_D)
+CMP_SD_CASE(+2.0, +2.0, _CMP_EQ_OS, ALL_ONES_D)
+CMP_SD_CASE(+1.0, +2.0, _CMP_EQ_OS, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_LT_OQ, ALL_ONES_D)
+CMP_SD_CASE(+3.0, +2.0, _CMP_LT_OQ, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_LE_OQ, ALL_ONES_D)
+CMP_SD_CASE(+3.0, +2.0, _CMP_LE_OQ, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_UNORD_S, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_NEQ_US, ALL_ONES_D)
+CMP_SD_CASE(+2.0, +2.0, _CMP_NEQ_US, +0.0)
+CMP_SD_CASE(+3.0, +2.0, _CMP_NLT_UQ, ALL_ONES_D)
+CMP_SD_CASE(+1.0, +2.0, _CMP_NLT_UQ, +0.0)
+CMP_SD_CASE(+3.0, +2.0, _CMP_NLE_UQ, ALL_ONES_D)
+CMP_SD_CASE(+1.0, +2.0, _CMP_NLE_UQ, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_ORD_S, ALL_ONES_D)
+CMP_SD_CASE(+2.0, +2.0, _CMP_EQ_US, ALL_ONES_D)
+CMP_SD_CASE(+1.0, +2.0, _CMP_EQ_US, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_NGE_UQ, ALL_ONES_D)
+CMP_SD_CASE(+3.0, +2.0, _CMP_NGE_UQ, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_NGT_UQ, ALL_ONES_D)
+CMP_SD_CASE(+3.0, +2.0, _CMP_NGT_UQ, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_FALSE_OS, +0.0)
+CMP_SD_CASE(+1.0, +1.0, _CMP_FALSE_OS, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_NEQ_OS, ALL_ONES_D)
+CMP_SD_CASE(+2.0, +2.0, _CMP_NEQ_OS, +0.0)
+CMP_SD_CASE(+3.0, +2.0, _CMP_GE_OQ, ALL_ONES_D)
+CMP_SD_CASE(+1.0, +2.0, _CMP_GE_OQ, +0.0)
+CMP_SD_CASE(+3.0, +2.0, _CMP_GT_OQ, ALL_ONES_D)
+CMP_SD_CASE(+1.0, +2.0, _CMP_GT_OQ, +0.0)
+CMP_SD_CASE(+1.0, +2.0, _CMP_TRUE_US, ALL_ONES_D)
+CMP_SD_CASE(+1.0, +1.0, _CMP_TRUE_US, ALL_ONES_D)
+
+#undef CMP_SD_CASE
 
 __m128i test_mm_cmpeq_epi8(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_cmpeq_epi8
@@ -285,12 +370,24 @@ __m128d test_mm_cmpeq_pd(__m128d A, __m128d B) {
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
   return _mm_cmpeq_pd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpeq_pd((__m128d){+1.0, +2.0}, (__m128d){+1.0, +2.0}), ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m128d(_mm_cmpeq_pd((__m128d){+1.0, +2.0}, (__m128d){+3.0, +4.0}), +0.0, +0.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpeq_pd((__m128d){+1.0, +2.0}, (__m128d){+1.0, +3.0}), ALL_ONES_D, +0.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpeq_pd((__m128d){-1.5, -2.5}, (__m128d){+1.5, +2.5}), +0.0, +0.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpeq_pd((__m128d){+0.0, -0.0}, (__m128d){+1.0, -0.0}), +0.0, ALL_ONES_D));
+TEST_CONSTEXPR(match_m128d(_mm_cmpeq_pd((__m128d){__builtin_nan(""), +2.0}, (__m128d){+1.0, +2.0}), +0.0, ALL_ONES_D));
 
 __m128d test_mm_cmpeq_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpeq_sd
   // CHECK: call {{.*}}<2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 0)
   return _mm_cmpeq_sd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpeq_sd((__m128d){+1.0, +2.0}, (__m128d){+1.0, +3.0}), ALL_ONES_D, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpeq_sd((__m128d){+1.0, +2.0}, (__m128d){+3.0, +4.0}), +0.0, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpeq_sd((__m128d){+1.0, +2.0}, (__m128d){+5.0, +3.0}), +0.0, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpeq_sd((__m128d){-1.5, -2.5}, (__m128d){+1.5, -3.5}), +0.0, -2.5));
+TEST_CONSTEXPR(match_m128d(_mm_cmpeq_sd((__m128d){+0.0, +2.0}, (__m128d){+1.0, +3.0}), +0.0, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpeq_sd((__m128d){__builtin_nan(""), +2.0}, (__m128d){+1.0, +3.0}), +0.0, +2.0));
 
 __m128d test_mm_cmpge_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpge_pd
@@ -299,6 +396,13 @@ __m128d test_mm_cmpge_pd(__m128d A, __m128d B) {
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
   return _mm_cmpge_pd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpge_pd((__m128d){+1.0, +2.0}, (__m128d){+1.0, +2.0}), ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m128d(_mm_cmpge_pd((__m128d){+3.0, +4.0}, (__m128d){+1.0, +2.0}), ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m128d(_mm_cmpge_pd((__m128d){+1.0, +2.0}, (__m128d){+3.0, +4.0}), +0.0, +0.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpge_pd((__m128d){+3.0, +2.0}, (__m128d){+1.0, +4.0}), ALL_ONES_D, +0.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpge_pd((__m128d){-1.5, -2.5}, (__m128d){+1.5, +2.5}), +0.0, +0.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpge_pd((__m128d){+0.0, -0.0}, (__m128d){+1.0, -0.0}), +0.0, ALL_ONES_D));
+TEST_CONSTEXPR(match_m128d(_mm_cmpge_pd((__m128d){__builtin_nan(""), +5.0}, (__m128d){+1.0, +4.0}), +0.0, ALL_ONES_D));
 
 __m128d test_mm_cmpge_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpge_sd
@@ -309,6 +413,12 @@ __m128d test_mm_cmpge_sd(__m128d A, __m128d B) {
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
   return _mm_cmpge_sd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpge_sd((__m128d){+1.0, +2.0}, (__m128d){+1.0, +3.0}), ALL_ONES_D, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpge_sd((__m128d){+3.0, +2.0}, (__m128d){+1.0, +4.0}), ALL_ONES_D, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpge_sd((__m128d){+1.0, +2.0}, (__m128d){+3.0, +4.0}), +0.0, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpge_sd((__m128d){-1.5, -2.5}, (__m128d){+1.5, -3.5}), +0.0, -2.5));
+TEST_CONSTEXPR(match_m128d(_mm_cmpge_sd((__m128d){+0.0, +2.0}, (__m128d){+1.0, +3.0}), +0.0, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpge_sd((__m128d){__builtin_nan(""), +2.0}, (__m128d){+1.0, +3.0}), +0.0, +2.0));
 
 __m128i test_mm_cmpgt_epi8(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_cmpgt_epi8
@@ -341,6 +451,11 @@ __m128d test_mm_cmpgt_pd(__m128d A, __m128d B) {
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
   return _mm_cmpgt_pd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpgt_pd((__m128d){+3.0, +5.0}, (__m128d){+1.0, +5.0}), ALL_ONES_D, +0.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpgt_pd((__m128d){-3.0, +7.0}, (__m128d){-4.0, +8.0}), ALL_ONES_D, +0.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpgt_pd((__m128d){__builtin_nan(""), +6.0}, (__m128d){+1.0, +5.0}), +0.0, ALL_ONES_D));
+TEST_CONSTEXPR(match_m128d((__m128d)__builtin_ia32_cmpgtpd((__v2df)((__m128d){+3.0, __builtin_nan("")}),
+                                                           (__v2df)((__m128d){+1.0, +2.0})), ALL_ONES_D, +0.0));
 
 __m128d test_mm_cmpgt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpgt_sd
@@ -351,6 +466,11 @@ __m128d test_mm_cmpgt_sd(__m128d A, __m128d B) {
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
   return _mm_cmpgt_sd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpgt_sd((__m128d){+3.0, +2.0}, (__m128d){+1.0, +9.0}), ALL_ONES_D, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpgt_sd((__m128d){+1.0, +2.0}, (__m128d){+3.0, +9.0}), +0.0, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpgt_sd((__m128d){__builtin_nan(""), +2.0}, (__m128d){+1.0, +9.0}), +0.0, +2.0));
+TEST_CONSTEXPR(match_m128d((__m128d)__builtin_ia32_cmpgtsd((__v2df)((__m128d){+3.0, +2.0}),
+                                                           (__v2df)((__m128d){+1.0, +9.0})), ALL_ONES_D, +2.0));
 
 __m128d test_mm_cmple_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmple_pd
@@ -359,12 +479,19 @@ __m128d test_mm_cmple_pd(__m128d A, __m128d B) {
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
   return _mm_cmple_pd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmple_pd((__m128d){+1.0, +2.0}, (__m128d){+1.0, +2.0}), ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m128d(_mm_cmple_pd((__m128d){+1.0, +2.0}, (__m128d){+3.0, +4.0}), ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m128d(_mm_cmple_pd((__m128d){+3.0, +5.0}, (__m128d){+1.0, +4.0}), +0.0, +0.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmple_pd((__m128d){__builtin_nan(""), +2.0}, (__m128d){+1.0, +2.0}), +0.0, ALL_ONES_D));
 
 __m128d test_mm_cmple_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmple_sd
   // CHECK: call {{.*}}<2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 2)
   return _mm_cmple_sd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmple_sd((__m128d){+1.0, +2.0}, (__m128d){+1.0, +9.0}), ALL_ONES_D, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmple_sd((__m128d){+5.0, +2.0}, (__m128d){+1.0, +9.0}), +0.0, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmple_sd((__m128d){__builtin_nan(""), +2.0}, (__m128d){+1.0, +9.0}), +0.0, +2.0));
 
 __m128i test_mm_cmplt_epi8(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_cmplt_epi8
@@ -397,12 +524,19 @@ __m128d test_mm_cmplt_pd(__m128d A, __m128d B) {
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
   return _mm_cmplt_pd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmplt_pd((__m128d){+1.0, +2.0}, (__m128d){+3.0, +4.0}), ALL_ONES_D, ALL_ONES_D));
+TEST_CONSTEXPR(match_m128d(_mm_cmplt_pd((__m128d){+3.0, +4.0}, (__m128d){+1.0, +2.0}), +0.0, +0.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmplt_pd((__m128d){+1.0, +5.0}, (__m128d){+3.0, +2.0}), ALL_ONES_D, +0.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmplt_pd((__m128d){__builtin_nan(""), +1.0}, (__m128d){+3.0, +2.0}), +0.0, ALL_ONES_D));
 
 __m128d test_mm_cmplt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmplt_sd
   // CHECK: call {{.*}}<2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 1)
   return _mm_cmplt_sd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmplt_sd((__m128d){+1.0, +2.0}, (__m128d){+3.0, +9.0}), ALL_ONES_D, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmplt_sd((__m128d){+3.0, +2.0}, (__m128d){+1.0, +9.0}), +0.0, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmplt_sd((__m128d){__builtin_nan(""), +2.0}, (__m128d){+3.0, +9.0}), +0.0, +2.0));
 
 __m128d test_mm_cmpneq_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpneq_pd
@@ -411,12 +545,14 @@ __m128d test_mm_cmpneq_pd(__m128d A, __m128d B) {
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
   return _mm_cmpneq_pd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpneq_pd((__m128d){+1.0, __builtin_nan("")}, (__m128d){+1.0, +4.0}), +0.0, ALL_ONES_D));
 
 __m128d test_mm_cmpneq_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpneq_sd
   // CHECK: call {{.*}}<2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 4)
   return _mm_cmpneq_sd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpneq_sd((__m128d){__builtin_nan(""), +2.0}, (__m128d){+1.0, +9.0}), ALL_ONES_D, +2.0));
 
 __m128d test_mm_cmpnge_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpnge_pd
@@ -425,6 +561,7 @@ __m128d test_mm_cmpnge_pd(__m128d A, __m128d B) {
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
   return _mm_cmpnge_pd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpnge_pd((__m128d){+1.0, __builtin_nan("")}, (__m128d){+1.0, +2.0}), +0.0, ALL_ONES_D));
 
 __m128d test_mm_cmpnge_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpnge_sd
@@ -435,6 +572,8 @@ __m128d test_mm_cmpnge_sd(__m128d A, __m128d B) {
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
   return _mm_cmpnge_sd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpnge_sd((__m128d){+4.0, +2.0}, (__m128d){+3.0, +9.0}), +0.0, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpnge_sd((__m128d){__builtin_nan(""), +2.0}, (__m128d){+3.0, +9.0}), ALL_ONES_D, +2.0));
 
 __m128d test_mm_cmpngt_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpngt_pd
@@ -443,6 +582,7 @@ __m128d test_mm_cmpngt_pd(__m128d A, __m128d B) {
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
   return _mm_cmpngt_pd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpngt_pd((__m128d){+1.0, __builtin_nan("")}, (__m128d){+1.0, +2.0}), ALL_ONES_D, ALL_ONES_D));
 
 __m128d test_mm_cmpngt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpngt_sd
@@ -453,6 +593,8 @@ __m128d test_mm_cmpngt_sd(__m128d A, __m128d B) {
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
   return _mm_cmpngt_sd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpngt_sd((__m128d){+1.0, +2.0}, (__m128d){+1.0, +9.0}), ALL_ONES_D, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpngt_sd((__m128d){__builtin_nan(""), +2.0}, (__m128d){+1.0, +9.0}), ALL_ONES_D, +2.0));
 
 __m128d test_mm_cmpnle_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpnle_pd
@@ -461,12 +603,15 @@ __m128d test_mm_cmpnle_pd(__m128d A, __m128d B) {
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
   return _mm_cmpnle_pd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpnle_pd((__m128d){+1.0, __builtin_nan("")}, (__m128d){+1.0, +2.0}), +0.0, ALL_ONES_D));
 
 __m128d test_mm_cmpnle_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpnle_sd
   // CHECK: call {{.*}}<2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 6)
   return _mm_cmpnle_sd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpnle_sd((__m128d){+2.0, +2.0}, (__m128d){+1.0, +9.0}), ALL_ONES_D, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpnle_sd((__m128d){__builtin_nan(""), +2.0}, (__m128d){+1.0, +9.0}), ALL_ONES_D, +2.0));
 
 __m128d test_mm_cmpnlt_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpnlt_pd
@@ -475,12 +620,15 @@ __m128d test_mm_cmpnlt_pd(__m128d A, __m128d B) {
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
   return _mm_cmpnlt_pd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpnlt_pd((__m128d){+1.0, __builtin_nan("")}, (__m128d){+1.0, +2.0}), ALL_ONES_D, ALL_ONES_D));
 
 __m128d test_mm_cmpnlt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpnlt_sd
   // CHECK: call {{.*}}<2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 5)
   return _mm_cmpnlt_sd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpnlt_sd((__m128d){+1.0, +2.0}, (__m128d){+1.0, +9.0}), ALL_ONES_D, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpnlt_sd((__m128d){__builtin_nan(""), +2.0}, (__m128d){+1.0, +9.0}), ALL_ONES_D, +2.0));
 
 __m128d test_mm_cmpord_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpord_pd
@@ -489,12 +637,15 @@ __m128d test_mm_cmpord_pd(__m128d A, __m128d B) {
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
   return _mm_cmpord_pd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpord_pd((__m128d){+1.0, __builtin_nan("")}, (__m128d){+5.0, +6.0}), ALL_ONES_D, +0.0));
 
 __m128d test_mm_cmpord_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpord_sd
   // CHECK: call {{.*}}<2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 7)
   return _mm_cmpord_sd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpord_sd((__m128d){+1.0, +2.0}, (__m128d){+5.0, +9.0}), ALL_ONES_D, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_cmpord_sd((__m128d){__builtin_nan(""), +2.0}, (__m128d){+5.0, +9.0}), +0.0, +2.0));
 
 __m128d test_mm_cmpunord_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpunord_pd
@@ -503,48 +654,71 @@ __m128d test_mm_cmpunord_pd(__m128d A, __m128d B) {
   // CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <2 x double>
   return _mm_cmpunord_pd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpunord_pd((__m128d){+1.0, __builtin_nan("")}, (__m128d){+5.0, +6.0}), +0.0, ALL_ONES_D));
 
 __m128d test_mm_cmpunord_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_cmpunord_sd
   // CHECK: call {{.*}}<2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 3)
   return _mm_cmpunord_sd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cmpunord_sd((__m128d){__builtin_nan(""), +2.0}, (__m128d){+5.0, +9.0}), ALL_ONES_D, +2.0));
+
+#define COMI_SD_CASE(FN, A0, B0, EXPECT)                                          \
+  TEST_CONSTEXPR(FN((__m128d){A0, +0.0}, (__m128d){B0, +1.0}) == (EXPECT));
 
 int test_mm_comieq_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_comieq_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comieq.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comieq_sd(A, B);
 }
+COMI_SD_CASE(_mm_comieq_sd, +2.0, +2.0, 1)
+COMI_SD_CASE(_mm_comieq_sd, +1.0, +2.0, 0)
+COMI_SD_CASE(_mm_comieq_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_comige_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_comige_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comige.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comige_sd(A, B);
 }
+COMI_SD_CASE(_mm_comige_sd, +3.0, +2.0, 1)
+COMI_SD_CASE(_mm_comige_sd, +1.0, +2.0, 0)
+COMI_SD_CASE(_mm_comige_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_comigt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_comigt_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comigt.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comigt_sd(A, B);
 }
+COMI_SD_CASE(_mm_comigt_sd, +3.0, +2.0, 1)
+COMI_SD_CASE(_mm_comigt_sd, +2.0, +2.0, 0)
+COMI_SD_CASE(_mm_comigt_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_comile_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_comile_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comile.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comile_sd(A, B);
 }
+COMI_SD_CASE(_mm_comile_sd, +2.0, +2.0, 1)
+COMI_SD_CASE(_mm_comile_sd, +3.0, +2.0, 0)
+COMI_SD_CASE(_mm_comile_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_comilt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_comilt_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comilt.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comilt_sd(A, B);
 }
+COMI_SD_CASE(_mm_comilt_sd, +1.0, +2.0, 1)
+COMI_SD_CASE(_mm_comilt_sd, +2.0, +2.0, 0)
+COMI_SD_CASE(_mm_comilt_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_comineq_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_comineq_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.comineq.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_comineq_sd(A, B);
 }
+COMI_SD_CASE(_mm_comineq_sd, +1.0, +2.0, 1)
+COMI_SD_CASE(_mm_comineq_sd, +2.0, +2.0, 0)
+COMI_SD_CASE(_mm_comineq_sd, __builtin_nan(""), +2.0, 1)
 
 __m128d test_mm_cvtepi32_pd(__m128i A) {
   // CHECK-LABEL: test_mm_cvtepi32_pd
@@ -1866,36 +2040,56 @@ int test_mm_ucomieq_sd(__m128d A, __m128d B) {
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomieq.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomieq_sd(A, B);
 }
+COMI_SD_CASE(_mm_ucomieq_sd, +2.0, +2.0, 1)
+COMI_SD_CASE(_mm_ucomieq_sd, +1.0, +2.0, 0)
+COMI_SD_CASE(_mm_ucomieq_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_ucomige_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_ucomige_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomige.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomige_sd(A, B);
 }
+COMI_SD_CASE(_mm_ucomige_sd, +3.0, +2.0, 1)
+COMI_SD_CASE(_mm_ucomige_sd, +1.0, +2.0, 0)
+COMI_SD_CASE(_mm_ucomige_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_ucomigt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_ucomigt_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomigt.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomigt_sd(A, B);
 }
+COMI_SD_CASE(_mm_ucomigt_sd, +3.0, +2.0, 1)
+COMI_SD_CASE(_mm_ucomigt_sd, +2.0, +2.0, 0)
+COMI_SD_CASE(_mm_ucomigt_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_ucomile_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_ucomile_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomile.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomile_sd(A, B);
 }
+COMI_SD_CASE(_mm_ucomile_sd, +2.0, +2.0, 1)
+COMI_SD_CASE(_mm_ucomile_sd, +3.0, +2.0, 0)
+COMI_SD_CASE(_mm_ucomile_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_ucomilt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_ucomilt_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomilt.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomilt_sd(A, B);
 }
+COMI_SD_CASE(_mm_ucomilt_sd, +1.0, +2.0, 1)
+COMI_SD_CASE(_mm_ucomilt_sd, +2.0, +2.0, 0)
+COMI_SD_CASE(_mm_ucomilt_sd, __builtin_nan(""), +2.0, 0)
 
 int test_mm_ucomineq_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_ucomineq_sd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.ucomineq.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_ucomineq_sd(A, B);
 }
+COMI_SD_CASE(_mm_ucomineq_sd, +1.0, +2.0, 1)
+COMI_SD_CASE(_mm_ucomineq_sd, +2.0, +2.0, 0)
+COMI_SD_CASE(_mm_ucomineq_sd, __builtin_nan(""), +2.0, 1)
+
+#undef COMI_SD_CASE
 
 __m128d test_mm_undefined_pd(void) {
   // X64-LABEL: test_mm_undefined_pd

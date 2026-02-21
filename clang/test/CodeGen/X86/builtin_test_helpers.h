@@ -4,6 +4,10 @@
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 
+// All-ones bit patterns for comparison results
+#define ALL_ONES_F __builtin_bit_cast(float, 0xFFFFFFFFU)
+#define ALL_ONES_D __builtin_bit_cast(double, 0xFFFFFFFFFFFFFFFFULL)
+
 constexpr bool match_m64(__m64 _v, unsigned long long a) {
   __v1du v = (__v1du)_v;
   return v[0] == a;
