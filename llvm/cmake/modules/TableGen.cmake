@@ -246,7 +246,8 @@ macro(add_tablegen target project)
       STRING "Native TableGen executable. Saves building one when cross-compiling.")
   else()
     # Internal tablegen
-    set(${project}_TABLEGEN "${${project}_TABLEGEN_DEFAULT}")
+    set(${project}_TABLEGEN "${${project}_TABLEGEN_DEFAULT}" CACHE
+      STRING "Native TableGen executable. Saves building one when cross-compiling.")
     set_target_properties(${target} PROPERTIES EXCLUDE_FROM_ALL ON)
   endif()
 
