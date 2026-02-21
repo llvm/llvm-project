@@ -1159,11 +1159,60 @@ struct ConstantInt_match {
                                       BindVal ? *BindVal : Discard);
   }
 };
+
+struct ConstantUnsigned64_match {
+  uint64_t &BindVal;
+
+  explicit ConstantUnsigned64_match(uint64_t &V) : BindVal(V) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    APInt V;
+    if (!ConstantInt_match(&V).match(Ctx, N))
+      return false;
+    if (V.getActiveBits() > 64)
+      return false;
+
+    BindVal = V.getZExtValue();
+    return true;
+  }
+};
+
+struct ConstantSigned64_match {
+  int64_t &BindVal;
+
+  explicit ConstantSigned64_match(int64_t &V) : BindVal(V) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    APInt V;
+    if (!ConstantInt_match(&V).match(Ctx, N))
+      return false;
+    if (V.getActiveBits() > 64)
+      return false;
+
+    BindVal = V.getSExtValue();
+    return true;
+  }
+};
+
 /// Match any integer constants or splat of an integer constant.
 inline ConstantInt_match m_ConstInt() { return ConstantInt_match(nullptr); }
 /// Match any integer constants or splat of an integer constant; return the
 /// specific constant or constant splat value.
 inline ConstantInt_match m_ConstInt(APInt &V) { return ConstantInt_match(&V); }
+/// Match any integer constants or splat of an integer constant that can fit in
+/// 64 bits; return the specific constant or constant splat value, zero-extended
+/// to 64 bits.
+inline ConstantUnsigned64_match m_ConstInt(uint64_t &V) {
+  return ConstantUnsigned64_match(V);
+}
+/// Match any integer constants or splat of an integer constant that can fit in
+/// 64 bits; return the specific constant or constant splat value, sign-extended
+/// to 64 bits.
+inline ConstantSigned64_match m_ConstInt(int64_t &V) {
+  return ConstantSigned64_match(V);
+}
 
 struct SpecificInt_match {
   APInt IntVal;

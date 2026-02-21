@@ -616,7 +616,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
 
   SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
   SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int64VT);
-  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, FloatVT);  
+  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, FloatVT);
   SDValue Op3 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 3, Int32VT);
 
   SDValue ZExt = DAG->getNode(ISD::ZERO_EXTEND, DL, Int64VT, Op0);
@@ -775,6 +775,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
 
   SDValue Const3 = DAG->getConstant(3, DL, Int32VT);
   SDValue Const87 = DAG->getConstant(87, DL, Int32VT);
+  SDValue ConstNeg1 = DAG->getConstant(4294967295, DL, Int32VT);
   SDValue Splat = DAG->getSplat(VInt32VT, DL, Arg0);
   SDValue ConstSplat = DAG->getSplat(VInt32VT, DL, Const3);
   SDValue Zero = DAG->getConstant(0, DL, Int32VT);
@@ -790,6 +791,12 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   APInt ConstVal;
   EXPECT_TRUE(sd_match(ConstSplat, m_ConstInt(ConstVal)));
   EXPECT_EQ(ConstVal, 3);
+  uint64_t ConstUnsignedInt64Val;
+  EXPECT_TRUE(sd_match(ConstNeg1, m_ConstInt(ConstUnsignedInt64Val)));
+  EXPECT_EQ(ConstUnsignedInt64Val, 4294967295);
+  int64_t ConstSignedInt64Val;
+  EXPECT_TRUE(sd_match(ConstNeg1, m_ConstInt(ConstSignedInt64Val)));
+  EXPECT_EQ(ConstSignedInt64Val, -1);
   EXPECT_FALSE(sd_match(Splat, m_ConstInt()));
 
   EXPECT_TRUE(sd_match(Const87, m_SpecificInt(87)));
