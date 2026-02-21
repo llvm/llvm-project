@@ -595,9 +595,11 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Index = EmitScalarExpr(E->getArg(1));
     Function *Callee;
     if (E->getType().isWebAssemblyExternrefType())
-      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_get_externref);
+      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_get_externref,
+                                Index->getType());
     else if (E->getType().isWebAssemblyFuncrefType())
-      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_get_funcref);
+      Callee =
+          CGM.getIntrinsic(Intrinsic::wasm_table_get_funcref, Index->getType());
     else
       llvm_unreachable(
           "Unexpected reference type for __builtin_wasm_table_get");
@@ -610,9 +612,11 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Val = EmitScalarExpr(E->getArg(2));
     Function *Callee;
     if (E->getArg(2)->getType().isWebAssemblyExternrefType())
-      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_set_externref);
+      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_set_externref,
+                                Index->getType());
     else if (E->getArg(2)->getType().isWebAssemblyFuncrefType())
-      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_set_funcref);
+      Callee =
+          CGM.getIntrinsic(Intrinsic::wasm_table_set_funcref, Index->getType());
     else
       llvm_unreachable(
           "Unexpected reference type for __builtin_wasm_table_set");
@@ -620,8 +624,9 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_table_size: {
     assert(E->getArg(0)->getType()->isArrayType());
+    llvm::Type *ResultType = ConvertType(E->getType());
     Value *Value = EmitArrayToPointerDecay(E->getArg(0)).emitRawPointer(*this);
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_table_size);
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_table_size, ResultType);
     return Builder.CreateCall(Callee, Value);
   }
   case WebAssembly::BI__builtin_wasm_table_grow: {
@@ -632,9 +637,11 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
 
     Function *Callee;
     if (E->getArg(1)->getType().isWebAssemblyExternrefType())
-      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_grow_externref);
+      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_grow_externref,
+                                NElems->getType());
     else if (E->getArg(1)->getType().isWebAssemblyFuncrefType())
-      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_grow_funcref);
+      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_grow_funcref,
+                                NElems->getType());
     else
       llvm_unreachable(
           "Unexpected reference type for __builtin_wasm_table_grow");
@@ -650,9 +657,11 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
 
     Function *Callee;
     if (E->getArg(2)->getType().isWebAssemblyExternrefType())
-      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_fill_externref);
+      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_fill_externref,
+                                Index->getType());
     else if (E->getArg(2)->getType().isWebAssemblyFuncrefType())
-      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_fill_funcref);
+      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_fill_funcref,
+                                Index->getType());
     else
       llvm_unreachable(
           "Unexpected reference type for __builtin_wasm_table_fill");
@@ -667,7 +676,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *SrcIdx = EmitScalarExpr(E->getArg(3));
     Value *NElems = EmitScalarExpr(E->getArg(4));
 
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_table_copy);
+    Function *Callee =
+        CGM.getIntrinsic(Intrinsic::wasm_table_copy, DstIdx->getType());
 
     return Builder.CreateCall(Callee, {TableX, TableY, SrcIdx, DstIdx, NElems});
   }

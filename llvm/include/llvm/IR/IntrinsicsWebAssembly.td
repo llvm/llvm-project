@@ -51,53 +51,53 @@ def int_wasm_ref_test_func
 // Table intrinsics
 //===----------------------------------------------------------------------===//
 def int_wasm_table_set_externref :
-  DefaultAttrsIntrinsic<[], [llvm_table_ty, llvm_i32_ty, llvm_externref_ty],
+  DefaultAttrsIntrinsic<[], [llvm_table_ty, llvm_anyint_ty, llvm_externref_ty],
                         [IntrWriteMem]>;
 def int_wasm_table_set_funcref :
-  DefaultAttrsIntrinsic<[], [llvm_table_ty, llvm_i32_ty, llvm_funcref_ty],
+  DefaultAttrsIntrinsic<[], [llvm_table_ty, llvm_anyint_ty, llvm_funcref_ty],
                         [IntrWriteMem]>;
 def int_wasm_table_set_exnref :
-  DefaultAttrsIntrinsic<[], [llvm_table_ty, llvm_i32_ty, llvm_exnref_ty],
+  DefaultAttrsIntrinsic<[], [llvm_table_ty, llvm_anyint_ty, llvm_exnref_ty],
                         [IntrWriteMem]>;
 
 def int_wasm_table_get_externref :
-  DefaultAttrsIntrinsic<[llvm_externref_ty], [llvm_table_ty, llvm_i32_ty],
+  DefaultAttrsIntrinsic<[llvm_externref_ty], [llvm_table_ty, llvm_anyint_ty],
                         [IntrReadMem]>;
 def int_wasm_table_get_funcref :
-  DefaultAttrsIntrinsic<[llvm_funcref_ty], [llvm_table_ty, llvm_i32_ty],
+  DefaultAttrsIntrinsic<[llvm_funcref_ty], [llvm_table_ty, llvm_anyint_ty],
                         [IntrReadMem]>;
 def int_wasm_table_get_exnref :
-  DefaultAttrsIntrinsic<[llvm_exnref_ty], [llvm_table_ty, llvm_i32_ty],
+  DefaultAttrsIntrinsic<[llvm_exnref_ty], [llvm_table_ty, llvm_anyint_ty],
                         [IntrReadMem]>;
 
 // Query the current table size, and increase the current table size.
 def int_wasm_table_size :
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_table_ty], [IntrReadMem]>;
+  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_table_ty], [IntrReadMem]>;
 def int_wasm_table_copy :
   DefaultAttrsIntrinsic<[],
-                        [llvm_table_ty, llvm_table_ty, llvm_i32_ty, llvm_i32_ty,
-                         llvm_i32_ty], []>;
+                        [llvm_table_ty, llvm_table_ty, llvm_anyint_ty, LLVMMatchType<0>,
+                         LLVMMatchType<0>], []>;
 def int_wasm_table_grow_externref :
   DefaultAttrsIntrinsic<[llvm_i32_ty],
-                        [llvm_table_ty, llvm_externref_ty, llvm_i32_ty], []>;
+                        [llvm_table_ty, llvm_externref_ty, llvm_anyint_ty], []>;
 def int_wasm_table_grow_funcref :
   DefaultAttrsIntrinsic<[llvm_i32_ty],
-                        [llvm_table_ty, llvm_funcref_ty, llvm_i32_ty], []>;
+                        [llvm_table_ty, llvm_funcref_ty, llvm_anyint_ty], []>;
 def int_wasm_table_grow_exnref :
   DefaultAttrsIntrinsic<[llvm_i32_ty],
-                        [llvm_table_ty, llvm_exnref_ty, llvm_i32_ty], []>;
+                        [llvm_table_ty, llvm_exnref_ty, llvm_anyint_ty], []>;
 def int_wasm_table_fill_externref :
   DefaultAttrsIntrinsic<[],
-                        [llvm_table_ty, llvm_i32_ty, llvm_externref_ty,
-                         llvm_i32_ty], []>;
+                        [llvm_table_ty, llvm_anyint_ty, llvm_externref_ty,
+                         LLVMMatchType<0>], []>;
 def int_wasm_table_fill_funcref :
   DefaultAttrsIntrinsic<[],
-                        [llvm_table_ty, llvm_i32_ty, llvm_funcref_ty,
-                         llvm_i32_ty], []>;
+                        [llvm_table_ty, llvm_anyint_ty, llvm_funcref_ty,
+                         LLVMMatchType<0>], []>;
 def int_wasm_table_fill_exnref :
   DefaultAttrsIntrinsic<[],
-                        [llvm_table_ty, llvm_i32_ty, llvm_exnref_ty,
-                         llvm_i32_ty], []>;
+                        [llvm_table_ty, llvm_anyint_ty, llvm_exnref_ty,
+                         LLVMMatchType<0>], []>;
 
 //===----------------------------------------------------------------------===//
 // Trapping float-to-int conversions

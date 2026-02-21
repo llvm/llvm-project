@@ -60,7 +60,7 @@ wasm::ValType toValType(MVT Type);
 
 /// Sets a Wasm Symbol Type.
 void wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
-                       ArrayRef<MVT> VTs);
+                       ArrayRef<MVT> VTs, bool Addr64);
 
 } // end namespace WebAssembly
 } // end namespace llvm

@@ -1,4 +1,5 @@
 ; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s
+; RUN: llc < %s --mtriple=wasm64-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s
 
 %externref = type ptr addrspace(10) ;; addrspace 10 is nonintegral
 %funcref = type ptr addrspace(20)   ;; addrspace 20 is nonintegral
