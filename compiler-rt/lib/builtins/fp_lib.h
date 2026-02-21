@@ -368,10 +368,11 @@ static __inline fp_t __compiler_rt_fmax(fp_t x, fp_t y) {
 #endif
 }
 
-#elif defined(QUAD_PRECISION) && defined(CRT_HAS_TF_MODE)
+#elif defined(QUAD_PRECISION)
+#if defined(CRT_HAS_TF_MODE)
+#if defined(CRT_HAS_IEEE_TF)
 // The generic implementation only works for ieee754 floating point. For other
 // floating point types, continue to rely on the libm implementation for now.
-#if defined(CRT_HAS_IEEE_TF)
 static __inline tf_float __compiler_rt_logbtf(tf_float x) {
   return __compiler_rt_logbX(x);
 }
@@ -386,6 +387,9 @@ static __inline tf_float __compiler_rt_fmaxtf(tf_float x, tf_float y) {
 #define __compiler_rt_fmaxl __compiler_rt_fmaxtf
 #define crt_fabstf crt_fabsf128
 #define crt_copysigntf crt_copysignf128
+#else
+#error Unsupported TF mode type
+#endif
 #elif defined(CRT_LDBL_128BIT)
 static __inline tf_float __compiler_rt_logbtf(tf_float x) {
   return crt_logbl(x);
@@ -401,8 +405,6 @@ static __inline tf_float __compiler_rt_fmaxtf(tf_float x, tf_float y) {
 #define __compiler_rt_fmaxl crt_fmaxl
 #define crt_fabstf crt_fabsl
 #define crt_copysigntf crt_copysignl
-#else
-#error Unsupported TF mode type
 #endif
 
 #endif // *_PRECISION

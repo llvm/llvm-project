@@ -872,8 +872,15 @@ set(riscv64_SOURCES
   ${riscv_SOURCES}
 )
 
-set(sparc_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
-set(sparcv9_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
+# Exclude the FT sources for 32-bit SPARC.  Clang doesn't
+# support 128-bit long double on 32-bit SPARC.
+if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "sparc")
+  set(sparc_SOURCES ${GENERIC_SOURCES})
+  set(sparcv9_SOURCES ${GENERIC_SOURCES})
+else()
+  set(sparc_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
+  set(sparcv9_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
+endif()
 
 set(s390x_SOURCES
   ${GENERIC_SOURCES}
