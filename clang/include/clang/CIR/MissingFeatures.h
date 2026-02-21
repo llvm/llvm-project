@@ -279,6 +279,7 @@ struct MissingFeatures {
   static bool emitNullabilityCheck() { return false; }
   static bool emitTypeCheck() { return false; }
   static bool emitTypeMetadataCodeForVCall() { return false; }
+  static bool materializedGlobalTempCache() { return false; }
 
   // Fast math.
   static bool fastMathGuard() { return false; }

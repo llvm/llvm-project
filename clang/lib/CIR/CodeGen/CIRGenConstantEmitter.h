@@ -65,6 +65,8 @@ public:
   /// constant.  If this succeeds, the emission must be finalized.
   mlir::Attribute tryEmitForInitializer(const VarDecl &d);
 
+  mlir::Attribute emitForInitializer(const APValue &value, QualType destType);
+
   void finalize(cir::GlobalOp gv);
 
   // All of the "abstract" emission methods below permit the emission to
