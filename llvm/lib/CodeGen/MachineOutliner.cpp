@@ -475,6 +475,12 @@ struct MachineOutliner : public ModulePass {
 
   StringRef getPassName() const override { return "Machine Outliner"; }
 
+  /// createPrinterPass - Get a machine function printer pass.
+  Pass *createPrinterPass(raw_ostream &OS,
+                          const std::string &Banner) const override {
+    return createMachineFunctionPrinterPass(OS, Banner);
+  }
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineModuleInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
