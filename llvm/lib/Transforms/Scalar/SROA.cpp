@@ -4355,16 +4355,23 @@ private:
   //   => phi ((gep ptr1, idx), (gep ptr2, idx))
   // and  gep ptr, (phi idx1, idx2)
   //   => phi ((gep ptr, idx1), (gep ptr, idx2))
+  //
+  // Also handles GEPs as PHI incoming values when non-cyclic:
+  //   gep (phi (gep ptr1, idx1), (gep ptr2, idx2)), idx
+  //   => phi ((gep (gep ptr1, idx1), idx), (gep (gep ptr2, idx2), idx))
   bool unfoldGEPPhi(GetElementPtrInst &GEPI) {
-    // To prevent infinitely expanding recursive phis, bail if the GEP pointer
-    // operand (looking through the phi if it is the phi we want to unfold) is
-    // an instruction besides a static alloca.
+    // To prevent infinitely expanding recursive phis, only allow GEP pointer
+    // operands (looking through the phi if it is the phi we want to unfold)
+    // that are static allocas or GEPs that do not point back
+    // to the PHI node itself (i.e. they don't form a cycle).
     PHINode *Phi = dyn_cast<PHINode>(GEPI.getPointerOperand());
-    auto IsInvalidPointerOperand = [](Value *V) {
+    auto IsInvalidPointerOperand = [Phi](Value *V) {
       if (!isa<Instruction>(V))
         return false;
       if (auto *AI = dyn_cast<AllocaInst>(V))
         return !AI->isStaticAlloca();
+      if (isa<GetElementPtrInst>(V) && Phi && getUnderlyingObject(V, 0) != Phi)
+        return false;
       return true;
     };
     if (Phi) {
@@ -4414,9 +4421,6 @@ private:
                                     Phi->getName() + ".sroa.phi");
 
     Type *SourceTy = GEPI.getSourceElementType();
-    // We only handle arguments, constants, and static allocas here, so we can
-    // insert GEPs at the end of the entry block.
-    IRB.SetInsertPoint(GEPI.getFunction()->getEntryBlock().getTerminator());
     for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
       Value *Op = Phi->getIncomingValue(I);
       BasicBlock *BB = Phi->getIncomingBlock(I);
@@ -4425,6 +4429,16 @@ private:
         NewGEP = NewPhi->getIncomingValue(NI);
       } else {
         SmallVector<Value *> NewOps = GetNewOps(Op);
+
+        // For arguments, constants, and static allocas, we insert GEPs at the
+        // end of the entry block. For GEP incoming values, we insert right
+        // after the GEP to ensure proper dominance.
+        if (auto *OpGEP = dyn_cast<GetElementPtrInst>(NewOps[0])) {
+          IRB.SetInsertPoint(OpGEP->getNextNode());
+        } else {
+          IRB.SetInsertPoint(
+              GEPI.getFunction()->getEntryBlock().getTerminator());
+        }
         NewGEP =
             IRB.CreateGEP(SourceTy, NewOps[0], ArrayRef(NewOps).drop_front(),
                           Phi->getName() + ".sroa.gep", GEPI.getNoWrapFlags());

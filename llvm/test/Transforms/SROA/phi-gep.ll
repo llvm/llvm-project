@@ -705,6 +705,194 @@ bb4:
   ret i32 %load
 }
 
+define i32 @test_gep_phi_gep(i1 %cond) {
+; CHECK-LABEL: @test_gep_phi_gep(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[PHI_SROA_PHI_SROA_SPECULATED:%.*]] = phi i32 [ 1000, [[THEN]] ], [ 5000, [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[PHI_SROA_PHI_SROA_SPECULATED]]
+;
+entry:
+  %a = alloca [2 x i32], align 4
+  %b = alloca [2 x i32], align 4
+  %a1 = getelementptr inbounds [2 x i32], ptr %a, i64 0, i64 1
+  %b1 = getelementptr inbounds [2 x i32], ptr %b, i64 0, i64 1
+  store i32 1000, ptr %a1, align 4
+  store i32 5000, ptr %b1, align 4
+  %gep_a = getelementptr inbounds [2 x i32], ptr %a, i64 0, i64 0
+  %gep_b = getelementptr inbounds [2 x i32], ptr %b, i64 0, i64 0
+  br i1 %cond, label %then, label %else
+
+then:
+  br label %merge
+
+else:
+  br label %merge
+
+merge:
+  %phi = phi ptr [ %gep_a, %then ], [ %gep_b, %else ]
+  %elem1 = getelementptr inbounds i32, ptr %phi, i64 1
+  %val = load i32, ptr %elem1, align 4
+  ret i32 %val
+}
+
+define i32 @test_gep_phi_gep_cycle(i1 %cond) {
+; CHECK-LABEL: @test_gep_phi_gep_cycle(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca [4 x i32], align 4
+; CHECK-NEXT:    [[A0:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 0, i64 0
+; CHECK-NEXT:    store i32 42, ptr [[A0]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[A0]], [[ENTRY:%.*]] ], [ [[GEP:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[GEP]] = getelementptr inbounds i32, ptr [[PHI]], i64 1
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PHI]], align 4
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[VAL]], 0
+; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+entry:
+  %a = alloca [4 x i32], align 4
+  %a0 = getelementptr inbounds [4 x i32], ptr %a, i64 0, i64 0
+  store i32 42, ptr %a0, align 4
+  br label %loop
+
+loop:
+  %phi = phi ptr [ %a0, %entry ], [ %gep, %loop ]
+  %gep = getelementptr inbounds i32, ptr %phi, i64 1
+  %val = load i32, ptr %phi, align 4
+  %done = icmp eq i32 %val, 0
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret i32 %val
+}
+
+define i32 @test_gep_phi_gep_self(i1 %cond) {
+; CHECK-LABEL: @test_gep_phi_gep_self(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca [4 x i32], align 4
+; CHECK-NEXT:    call void @use(ptr [[A]])
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 0, i64 0
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[GEP_A]], [[ENTRY:%.*]] ], [ [[PHI]], [[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[PHI]], i64 1
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[VAL]], 0
+; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+entry:
+  %a = alloca [4 x i32], align 4
+  call void @use(ptr %a)
+  %gep_a = getelementptr inbounds [4 x i32], ptr %a, i64 0, i64 0
+  br label %loop
+
+loop:
+  %phi = phi ptr [ %gep_a, %entry ], [ %phi, %loop ]
+  %gep = getelementptr inbounds i32, ptr %phi, i64 1
+  %val = load i32, ptr %gep, align 4
+  %done = icmp eq i32 %val, 0
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret i32 %val
+}
+
+define i32 @test_gep_phi_gep_non_alloca_operands(i1 %cond) {
+; CHECK-LABEL: @test_gep_phi_gep_non_alloca_operands(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca [4 x i32], align 4
+; CHECK-NEXT:    [[B:%.*]] = alloca [4 x i32], align 4
+; CHECK-NEXT:    call void @use(ptr [[A]])
+; CHECK-NEXT:    call void @use(ptr [[B]])
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 0, i64 1
+; CHECK-NEXT:    [[PHI_SROA_GEP:%.*]] = getelementptr inbounds i32, ptr [[GEP_A]], i64 1
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds [4 x i32], ptr [[B]], i64 0, i64 1
+; CHECK-NEXT:    [[PHI_SROA_GEP1:%.*]] = getelementptr inbounds i32, ptr [[GEP_B]], i64 1
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[PHI_SROA_PHI:%.*]] = phi ptr [ [[PHI_SROA_GEP]], [[THEN]] ], [ [[PHI_SROA_GEP1]], [[ELSE]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[GEP_A]], [[THEN]] ], [ [[GEP_B]], [[ELSE]] ]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PHI_SROA_PHI]], align 4
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+entry:
+  %a = alloca [4 x i32], align 4
+  %b = alloca [4 x i32], align 4
+  call void @use(ptr %a)
+  call void @use(ptr %b)
+  br i1 %cond, label %then, label %else
+
+then:
+  %gep_a = getelementptr inbounds [4 x i32], ptr %a, i64 0, i64 1
+  br label %merge
+
+else:
+  %gep_b = getelementptr inbounds [4 x i32], ptr %b, i64 0, i64 1
+  br label %merge
+
+merge:
+  %phi = phi ptr [ %gep_a, %then ], [ %gep_b, %else ]
+  %elem1 = getelementptr inbounds i32, ptr %phi, i64 1
+  %val = load i32, ptr %elem1, align 4
+  ret i32 %val
+}
+
+define i32 @test_gep_phi_alloca_and_non_alloca_operands(i1 %cond, ptr %arg) {
+; CHECK-LABEL: @test_gep_phi_alloca_and_non_alloca_operands(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca [2 x i32], align 4
+; CHECK-NEXT:    store i32 42, ptr [[A]], align 4
+; CHECK-NEXT:    call void @use(ptr [[A]])
+; CHECK-NEXT:    [[PHI_SROA_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 1
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[GEP_ARG:%.*]] = getelementptr inbounds i32, ptr [[ARG:%.*]], i64 0
+; CHECK-NEXT:    [[PHI_SROA_GEP1:%.*]] = getelementptr inbounds i32, ptr [[GEP_ARG]], i64 1
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[PHI_SROA_PHI:%.*]] = phi ptr [ [[PHI_SROA_GEP]], [[THEN]] ], [ [[PHI_SROA_GEP1]], [[ELSE]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[A]], [[THEN]] ], [ [[GEP_ARG]], [[ELSE]] ]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PHI_SROA_PHI]], align 4
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+entry:
+  %a = alloca [2 x i32], align 4
+  store i32 42, ptr %a, align 4
+  call void @use(ptr %a)
+  br i1 %cond, label %then, label %else
+
+then:
+  br label %merge
+
+else:
+  %gep_arg = getelementptr inbounds i32, ptr %arg, i64 0
+  br label %merge
+
+merge:
+  %phi = phi ptr [ %a, %then ], [ %gep_arg, %else ]
+  %elem1 = getelementptr inbounds i32, ptr %phi, i64 1
+  %val = load i32, ptr %elem1, align 4
+  ret i32 %val
+}
+
+declare void @use(ptr)
+
 define i64 @test_unfold_phi_duplicate_phi_entry(ptr %arg, i8 %arg1, i1 %arg2) {
 ; CHECK-LABEL: @test_unfold_phi_duplicate_phi_entry(
 ; CHECK-NEXT:  bb:
