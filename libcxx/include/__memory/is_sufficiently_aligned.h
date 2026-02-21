@@ -24,7 +24,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <size_t _Alignment, class _Tp>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_sufficiently_aligned(_Tp* __ptr) {
+#if __has_builtin(__builtin_is_aligned)
+  return __builtin_is_aligned(__ptr, _Alignment);
+#else
   return reinterpret_cast<uintptr_t>(__ptr) % _Alignment == 0;
+#endif
 }
 
 #endif // _LIBCPP_STD_VER >= 26
