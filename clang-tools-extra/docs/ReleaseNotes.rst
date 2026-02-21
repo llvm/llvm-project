@@ -480,6 +480,9 @@ Changes in existing checks
   - Fixed a false positive where function templates could be diagnosed as generic 
     identifiers when `DefaultCase` was enabled.
 
+  - Added the `TrimPrefixes` and `TrimSuffixes` options to trim all known other
+    prefixes and suffixes when fixing an identifier.
+
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check:
 
