@@ -608,6 +608,13 @@ its enabled sub-projects. Nearly all of these variable names begin with
     should only appear in one of the two lists. If a project is a valid possibility
     for both, prefer putting it in ``LLVM_ENABLE_RUNTIMES``.
 
+**LLVM_BINUTILS_INCDIR**:STRING
+  Specify the path to the directory of `/path/to/binutils/include`,  which contains
+  `plugin-api.h`. This is necessary if you need to integrate binutils tools（like
+  the gold linker) into your LLVM build process even if `plugin-api.h` locates in
+  `/usr/include`. You should also specify this parameter if you want to compile
+  `LLVMgold.so`.
+
 **LLVM_ENABLE_RTTI**:BOOL
   Build LLVM with run-time type information. Defaults to OFF.
 
