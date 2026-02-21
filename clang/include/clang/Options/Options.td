@@ -3572,6 +3572,17 @@ def fmodules_single_module_parse_mode :
   Group<f_Group>, Flags<[]>, Visibility<[CC1Option]>,
   MarshallingInfoFlag<PreprocessorOpts<"SingleModuleParseMode">>;
 
+def fmodules_driver :
+  Flag<["-"], "fmodules-driver">,
+  Group<f_Group>,
+  Visibility<[ClangOption]>,
+  HelpText<"Enable support for driver managed module builds (experimental)">;
+def fno_modules_driver :
+  Flag<["-"], "fno-modules-driver">,
+  Group<f_Group>,
+  Visibility<[ClangOption]>,
+  HelpText<"Disable support for driver managed module builds (experimental)">;
+
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
