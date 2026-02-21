@@ -3550,7 +3550,6 @@ protected:
 
 public:
   using CaseWeightOpt = std::optional<uint32_t>;
-  SwitchInst *raw() { return &SI; }
   SwitchInst &operator*() { return SI; }
   operator SwitchInst *() { return &SI; }
 
