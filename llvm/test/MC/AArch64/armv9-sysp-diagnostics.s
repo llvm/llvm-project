@@ -7,21 +7,20 @@
 // registers with 128-bit formats (op0, op1, Cn, Cm, op2)
 // For sysp, op0 is 0
 
-sysp #0, c2, c0, #0, x0, x2
+sysp #0, c8, c0, #0, x0, x2
 // ERRORS: error: expected second odd register of a consecutive same-size even/odd register pair
-sysp #0, c2, c0, #0, x0
+sysp #0, c8, c0, #0, x0
 // ERRORS: error: expected comma
-sysp #0, c2, c0, #0, x1, x2
+sysp #0, c8, c0, #0, x1, x2
 // ERRORS: error: expected first even register of a consecutive same-size even/odd register pair
-sysp #0, c2, c0, #0, x31, x0
+sysp #0, c8, c0, #0, x31, x0
 // ERRORS: error: xzr must be followed by xzr
-sysp #0, c2, c0, #0, xzr, x30
+sysp #0, c8, c0, #0, xzr, x30
 // ERRORS: error: xzr must be followed by xzr
-sysp #0, c2, c0, #0, xzr
+sysp #0, c8, c0, #0, xzr
 // ERRORS: error: expected comma
-sysp #0, c2, c0, #0, xzr,
+sysp #0, c8, c0, #0, xzr,
 // ERRORS: error: expected register operand
-
 
 tlbip RVAE3IS
 // ERRORS: error: expected comma
