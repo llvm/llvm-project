@@ -971,6 +971,70 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_Select) {
       DAG->isKnownToBeAPowerOfTwo(VSelect444Big, DemandAll, /*OrZero=*/true));
 }
 
+TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_ISD_SRL) {
+  SDLoc Loc;
+  auto Cst0 = DAG->getConstant(0, Loc, MVT::i32);
+  auto Cst1 = DAG->getConstant(1, Loc, MVT::i32);
+  auto Cst4 = DAG->getConstant(4, Loc, MVT::i32);
+  auto Cst7 = DAG->getConstant(7, Loc, MVT::i32);
+  auto CstBig = DAG->getConstant(2 << 17, Loc, MVT::i32);
+
+  auto SRL41 = DAG->getNode(ISD::SRL, Loc, MVT::i32, Cst4, Cst1);
+  auto SRL44 = DAG->getNode(ISD::SRL, Loc, MVT::i32, Cst4, Cst4);
+  auto SRL71 = DAG->getNode(ISD::SRL, Loc, MVT::i32, Cst7, Cst1);
+  auto SRLBig4 = DAG->getNode(ISD::SRL, Loc, MVT::i32, CstBig, Cst4);
+
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRL41));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(SRL44));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRL44, /*OrZero=*/true));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(SRL71));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRLBig4));
+
+  auto VecVT = MVT::v2i16;
+  auto Vec04 = DAG->getBuildVector(VecVT, Loc, {Cst0, Cst4});
+  auto Vec11 = DAG->getBuildVector(VecVT, Loc, {Cst1, Cst1});
+  auto Vec44 = DAG->getBuildVector(VecVT, Loc, {Cst4, Cst4});
+  auto Vec74 = DAG->getBuildVector(VecVT, Loc, {Cst7, Cst4});
+  auto Vec4Big = DAG->getBuildVector(VecVT, Loc, {Cst4, CstBig});
+
+  auto SRL4404 = DAG->getNode(ISD::SRL, Loc, VecVT, Vec44, Vec04);
+  auto SRL7411 = DAG->getNode(ISD::SRL, Loc, VecVT, Vec74, Vec11);
+  auto SRL4Big04 = DAG->getNode(ISD::SRL, Loc, VecVT, Vec4Big, Vec04);
+  auto SRL4411 = DAG->getNode(ISD::SRL, Loc, VecVT, Vec44, Vec11);
+
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(SRL4404));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRL4404, /*OrZero=*/true));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(SRL7411));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(SRL7411, /*OrZero=*/true));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRL4411));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRL4411, /*OrZero=*/true));
+
+  APInt DemandLo(2, 1);
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(SRL7411, DemandLo));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(SRL7411, DemandLo, /*OrZero=*/true));
+
+  APInt DemandHi(2, 2);
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRL7411, DemandHi));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRL7411, DemandHi, /*OrZero=*/true));
+
+  APInt DemandAll(2, 3);
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(SRL4Big04, DemandAll));
+  EXPECT_TRUE(
+      DAG->isKnownToBeAPowerOfTwo(SRL4Big04, DemandAll, /*OrZero=*/true));
+
+  auto SplatVT = MVT::nxv2i16;
+  auto Splat4 = DAG->getSplat(SplatVT, Loc, Cst4);
+  auto SplatBig = DAG->getSplat(SplatVT, Loc, CstBig);
+
+  auto SRLSplatBig4 = DAG->getNode(ISD::SRL, Loc, SplatVT, SplatBig, Splat4);
+  auto SRLSplat44 = DAG->getNode(ISD::SRL, Loc, SplatVT, Splat4, Splat4);
+
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(SRLSplatBig4));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRLSplatBig4, /*OrZero=*/true));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(SRLSplat44));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRLSplat44, /*OrZero=*/true));
+}
+
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_BUILD_VECTOR) {
   TargetLowering TL(*TM, *STI);
 
