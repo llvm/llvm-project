@@ -94,7 +94,7 @@ static TracePart* TracePartAlloc(ThreadState* thr) {
     if (trace->parts_allocated == max_parts ||
         ctx->trace_part_finished_excess) {
       part = ctx->trace_part_recycle.PopFront();
-      DPrintf("#%d: TracePartAlloc: part=%p\n", thr->tid, part);
+      DPrintf("#%d: TracePartAlloc: part=%p\n", thr->tid, (void*)part);
       if (part && part->trace) {
         Trace* trace1 = part->trace;
         Lock trace_lock(&trace1->mtx);
@@ -957,7 +957,7 @@ static bool TraceSkipGap(ThreadState* thr) {
   DCHECK_EQ(reinterpret_cast<uptr>(pos + 1) & TracePart::kAlignment, 0);
   auto *part = trace->parts.Back();
   DPrintf("#%d: TraceSwitchPart enter trace=%p parts=%p-%p pos=%p\n", thr->tid,
-          trace, trace->parts.Front(), part, pos);
+          (void*)trace, (void*)trace->parts.Front(), (void*)part, (void*)pos);
   if (!part)
     return false;
   // We can get here when we still have space in the current trace part.
@@ -1071,7 +1071,7 @@ void TraceSwitchPartImpl(ThreadState* thr) {
       ctx->trace_part_recycle.PushBack(recycle);
   }
   DPrintf("#%d: TraceSwitchPart exit parts=%p-%p pos=0x%zx\n", thr->tid,
-          trace->parts.Front(), trace->parts.Back(),
+          (void*)trace->parts.Front(), (void*)trace->parts.Back(),
           atomic_load_relaxed(&thr->trace_pos));
 }
 
