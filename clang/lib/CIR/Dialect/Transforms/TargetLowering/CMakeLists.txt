@@ -7,8 +7,7 @@ add_clang_library(MLIRCIRTargetLowering
   LowerItaniumCXXABI.cpp
   TargetLoweringInfo.cpp
   Targets/X86.cpp
-  Targets/NVPTX.cpp
-
+  
   DEPENDS
   clangBasic
 
