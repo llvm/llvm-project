@@ -3749,8 +3749,10 @@ static void sortJavaImports(const FormatStyle &Style,
 
 namespace {
 
-const char JavaImportRegexPattern[] =
-    "^[\t ]*import[\t ]+(static[\t ]*)?([^\t ]*)[\t ]*;";
+constexpr StringRef
+    JavaImportRegexPattern("^import[\t ]+(static[\t ]*)?([^\t ]*)[\t ]*;");
+
+constexpr StringRef JavaPackageRegexPattern("^package[\t ]+");
 
 } // anonymous namespace
 
@@ -3759,26 +3761,43 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
                                       StringRef FileName,
                                       tooling::Replacements &Replaces) {
   unsigned Prev = 0;
-  unsigned SearchFrom = 0;
+  bool HasImport = false;
   llvm::Regex ImportRegex(JavaImportRegexPattern);
+  llvm::Regex PackageRegex(JavaPackageRegexPattern);
   SmallVector<StringRef, 4> Matches;
   SmallVector<JavaImportDirective, 16> ImportsInBlock;
   SmallVector<StringRef> AssociatedCommentLines;
 
-  bool FormattingOff = false;
-
-  for (;;) {
-    auto Pos = Code.find('\n', SearchFrom);
-    StringRef Line =
-        Code.substr(Prev, (Pos != StringRef::npos ? Pos : Code.size()) - Prev);
+  for (bool FormattingOff = false;;) {
+    auto Pos = Code.find('\n', Prev);
+    auto GetLine = [&] {
+      return Code.substr(Prev,
+                         (Pos != StringRef::npos ? Pos : Code.size()) - Prev);
+    };
+    StringRef Line = GetLine();
 
     StringRef Trimmed = Line.trim();
-    if (isClangFormatOff(Trimmed))
+    if (Trimmed.empty() || PackageRegex.match(Trimmed)) {
+      // Skip empty line and package statement.
+    } else if (isClangFormatOff(Trimmed)) {
       FormattingOff = true;
-    else if (isClangFormatOn(Trimmed))
+    } else if (isClangFormatOn(Trimmed)) {
       FormattingOff = false;
-
-    if (ImportRegex.match(Line, &Matches)) {
+    } else if (Trimmed.starts_with("//")) {
+      // Associating comments within the imports with the nearest import below.
+      if (HasImport)
+        AssociatedCommentLines.push_back(Line);
+    } else if (Trimmed.starts_with("/*")) {
+      const auto EndPos = Code.find("*/", Prev + 2);
+      Pos = EndPos != StringRef::npos ? Code.find('\n', EndPos + 2)
+                                      : StringRef::npos;
+      if (HasImport) {
+        // Extend `Line` for a multiline comment to include all lines the
+        // comment spans.
+        Line = GetLine();
+        AssociatedCommentLines.push_back(Line);
+      }
+    } else if (ImportRegex.match(Trimmed, &Matches)) {
       if (FormattingOff) {
         // If at least one import line has formatting turned off, turn off
         // formatting entirely.
@@ -3791,17 +3810,18 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
         IsStatic = true;
       ImportsInBlock.push_back(
           {Identifier, Line, Prev, AssociatedCommentLines, IsStatic});
+      HasImport = true;
       AssociatedCommentLines.clear();
-    } else if (!Trimmed.empty() && !ImportsInBlock.empty()) {
-      // Associating comments within the imports with the nearest import below
-      AssociatedCommentLines.push_back(Line);
+    } else {
+      // `Trimmed` is neither empty, nor a comment or a package/import
+      // statement.
+      break;
     }
-    Prev = Pos + 1;
     if (Pos == StringRef::npos || Pos + 1 == Code.size())
       break;
-    SearchFrom = Pos + 1;
+    Prev = Pos + 1;
   }
-  if (!ImportsInBlock.empty())
+  if (HasImport)
     sortJavaImports(Style, ImportsInBlock, Ranges, FileName, Code, Replaces);
   return Replaces;
 }

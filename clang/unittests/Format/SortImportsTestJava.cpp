@@ -349,6 +349,44 @@ TEST_F(SortImportsTestJava, NoReplacementsForValidImportsWindows) {
       sortIncludes(FmtStyle, Code, GetCodeRange(Code), "input.java").empty());
 }
 
+TEST_F(SortImportsTestJava, DoNotSortImportsInBlockComment) {
+  constexpr StringRef Code("/* import org.d;\n"
+                           "import org.c;\n"
+                           "import org.b; */\n"
+                           "import org.a;");
+  EXPECT_EQ(Code, sort(Code));
+}
+
+TEST_F(SortImportsTestJava, StopAtClassDeclaration) {
+  EXPECT_EQ("import org.a;\n"
+            "\n"
+            "class Foo {\n"
+            "  String code = \"\"\"\n"
+            "      import org.c;\n"
+            "      import org.b;\n"
+            "  \"\"\";\n"
+            "}",
+            sort("import org.a;\n"
+                 "\n"
+                 "class Foo {\n"
+                 "  String code = \"\"\"\n"
+                 "      import org.c;\n"
+                 "      import org.b;\n"
+                 "  \"\"\";\n"
+                 "}"));
+}
+
+TEST_F(SortImportsTestJava, SortImportsAfterPackageStatement) {
+  EXPECT_EQ("package org.a;\n"
+            "\n"
+            "import org.a;\n"
+            "import org.b;\n",
+            sort("package org.a;\n"
+                 "\n"
+                 "import org.b;\n"
+                 "import org.a;\n"));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang
