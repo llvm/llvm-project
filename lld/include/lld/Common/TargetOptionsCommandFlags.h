@@ -18,11 +18,10 @@
 #include <optional>
 
 namespace lld {
-llvm::TargetOptions initTargetOptionsFromCodeGenFlags();
 std::optional<llvm::Reloc::Model> getRelocModelFromCMModel();
 std::optional<llvm::CodeModel::Model> getCodeModelFromCMModel();
 std::string getCPUStr();
 std::vector<std::string> getMAttrs();
-}
+} // namespace lld
 
 #endif

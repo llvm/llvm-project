@@ -43,50 +43,71 @@ static std::string getThinLTOOutputFile(Ctx &ctx, StringRef modulePath) {
                                    ctx.arg.thinLTOPrefixReplaceNew);
 }
 
-static lto::Config createConfig(Ctx &ctx) {
-  lto::Config c;
+static std::shared_ptr<MemoryBuffer> getBBSectionsMemoryBuffer(Ctx &ctx) {
+  if (ctx.arg.ltoBasicBlockSections.empty() ||
+      ctx.arg.ltoBasicBlockSections == "all" ||
+      ctx.arg.ltoBasicBlockSections == "none")
+    return nullptr;
 
-  // LLD supports the new relocations and address-significance tables.
-  c.Options = initTargetOptionsFromCodeGenFlags();
-  c.Options.EmitAddrsig = true;
-  for (StringRef C : ctx.arg.mllvmOpts)
-    c.MllvmArgs.emplace_back(C.str());
-
-  // Always emit a section per function/datum with LTO.
-  c.Options.FunctionSections = true;
-  c.Options.DataSections = true;
-
-  // Check if basic block sections must be used.
-  // Allowed values for --lto-basic-block-sections are "all",
-  // "<file name specifying basic block ids>", or none.  This is the equivalent
-  // of -fbasic-block-sections= flag in clang.
-  if (!ctx.arg.ltoBasicBlockSections.empty()) {
-    if (ctx.arg.ltoBasicBlockSections == "all") {
-      c.Options.BBSections = BasicBlockSection::All;
-    } else if (ctx.arg.ltoBasicBlockSections == "labels") {
-      c.Options.BBAddrMap = true;
-      Warn(ctx)
-          << "'--lto-basic-block-sections=labels' is deprecated; Please use "
-             "'--lto-basic-block-address-map' instead";
-    } else if (ctx.arg.ltoBasicBlockSections == "none") {
-      c.Options.BBSections = BasicBlockSection::None;
-    } else {
-      ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
-          MemoryBuffer::getFile(ctx.arg.ltoBasicBlockSections.str());
-      if (!MBOrErr) {
-        ErrAlways(ctx) << "cannot open " << ctx.arg.ltoBasicBlockSections << ":"
-                       << MBOrErr.getError().message();
-      } else {
-        c.Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
-      }
-      c.Options.BBSections = BasicBlockSection::List;
-    }
+  if (ctx.arg.ltoBasicBlockSections == "labels") {
+    Warn(ctx)
+        << "'--lto-basic-block-sections=labels' is deprecated; Please use "
+           "'--lto-basic-block-address-map' instead";
+    return nullptr;
   }
 
-  c.Options.BBAddrMap = ctx.arg.ltoBBAddrMap;
+  ErrorOr<std::unique_ptr<MemoryBuffer>> mbOrErr =
+      MemoryBuffer::getFile(ctx.arg.ltoBasicBlockSections.str());
+  if (!mbOrErr) {
+    ErrAlways(ctx) << "cannot open " << ctx.arg.ltoBasicBlockSections << ":"
+                   << mbOrErr.getError().message();
+  }
+  return std::move(*mbOrErr);
+}
 
-  c.Options.UniqueBasicBlockSectionNames =
-      ctx.arg.ltoUniqueBasicBlockSectionNames;
+static lto::Config createConfig(Ctx &ctx) {
+  lto::Config c;
+  std::shared_ptr<MemoryBuffer> mbPtr = getBBSectionsMemoryBuffer(ctx);
+
+  // Set up the callback to modify TargetOptions.
+  c.InitTargetOptions =
+      [&ctx, mb = std::move(mbPtr)](const Triple &TT) -> TargetOptions {
+    TargetOptions options = codegen::InitTargetOptionsFromCodeGenFlags(TT);
+    // LLD supports the new relocations and address-significance tables.
+    options.EmitAddrsig = true;
+    // Always emit a section per function/datum with LTO.
+    options.FunctionSections = true;
+    options.DataSections = true;
+
+    // Check if basic block sections must be used.
+    // Allowed values for --lto-basic-block-sections are "all",
+    // "<file name specifying basic block ids>", or none.  This is the
+    // equivalent of -fbasic-block-sections= flag in clang.
+    if (!ctx.arg.ltoBasicBlockSections.empty()) {
+      if (ctx.arg.ltoBasicBlockSections == "all") {
+        options.BBSections = BasicBlockSection::All;
+      } else if (ctx.arg.ltoBasicBlockSections == "labels") {
+        options.BBAddrMap = true;
+      } else if (ctx.arg.ltoBasicBlockSections == "none") {
+        options.BBSections = BasicBlockSection::None;
+      } else {
+        options.BBSectionsFuncListBuf = mb;
+        options.BBSections = BasicBlockSection::List;
+      }
+    }
+
+    options.BBAddrMap = ctx.arg.ltoBBAddrMap;
+
+    options.UniqueBasicBlockSectionNames =
+        ctx.arg.ltoUniqueBasicBlockSectionNames;
+    if (ctx.arg.ltoEmitAsm) {
+      options.MCOptions.AsmVerbose = true;
+    }
+    return options;
+  };
+
+  for (StringRef C : ctx.arg.mllvmOpts)
+    c.MllvmArgs.emplace_back(C.str());
 
   if (auto relocModel = getRelocModelFromCMModel())
     c.RelocModel = *relocModel;
@@ -156,7 +177,6 @@ static lto::Config createConfig(Ctx &ctx) {
 
   if (ctx.arg.ltoEmitAsm) {
     c.CGFileType = CodeGenFileType::AssemblyFile;
-    c.Options.MCOptions.AsmVerbose = true;
   }
 
   if (!ctx.arg.saveTempsArgs.empty())

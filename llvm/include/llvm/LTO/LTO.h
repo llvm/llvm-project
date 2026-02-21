@@ -74,7 +74,7 @@ LLVM_ABI std::string computeLTOCacheKey(
     StringRef ModuleID, const FunctionImporter::ImportMapTy &ImportList,
     const FunctionImporter::ExportSetTy &ExportList,
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-    const GVSummaryMapTy &DefinedGlobals,
+    const GVSummaryMapTy &DefinedGlobals, const Triple &TT,
     const DenseSet<GlobalValue::GUID> &CfiFunctionDefs = {},
     const DenseSet<GlobalValue::GUID> &CfiFunctionDecls = {});
 
@@ -274,7 +274,7 @@ public:
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      MapVector<StringRef, BitcodeModule> &ModuleMap) = 0;
+      MapVector<StringRef, BitcodeModule> &ModuleMap, Triple TheTriple) = 0;
   virtual Error wait() {
     BackendThreadPool.wait();
     if (Err)

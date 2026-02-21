@@ -878,17 +878,23 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   ThinBackend Backend;
 
   Conf.CPU = options::mcpu;
-  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
+  Conf.InitTargetOptions = [](const Triple &TheTriple) {
+    TargetOptions Options =
+        codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
 
-  // Disable the new X86 relax relocations since gold might not support them.
-  // FIXME: Check the gold version or add a new option to enable them.
-  Conf.Options.MCOptions.X86RelaxRelocations = false;
+    // Disable the new X86 relax relocations since gold might not support them.
+    // FIXME: Check the gold version or add a new option to enable them.
+    Options.MCOptions.X86RelaxRelocations = false;
 
-  // Toggle function/data sections.
-  if (!codegen::getExplicitFunctionSections())
-    Conf.Options.FunctionSections = SplitSections;
-  if (!codegen::getExplicitDataSections())
-    Conf.Options.DataSections = SplitSections;
+    // Toggle function/data sections.
+    if (!codegen::getExplicitFunctionSections())
+      Options.FunctionSections = SplitSections;
+    if (!codegen::getExplicitDataSections())
+      Options.DataSections = SplitSections;
+    if (options::TheOutputType == options::OT_ASM_ONLY)
+      Options.MCOptions.AsmVerbose = true;
+    return Options;
+  };
 
   Conf.MAttrs = codegen::getMAttrs();
   Conf.RelocModel = RelocationModel;
@@ -952,7 +958,6 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
     break;
   case options::OT_ASM_ONLY:
     Conf.CGFileType = CodeGenFileType::AssemblyFile;
-    Conf.Options.MCOptions.AsmVerbose = true;
     break;
   }
 
