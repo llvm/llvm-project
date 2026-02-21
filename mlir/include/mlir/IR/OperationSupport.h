@@ -1331,7 +1331,11 @@ struct OperationEquivalence {
     // When provided, the properties attached to the operation are ignored.
     IgnoreProperties = 4,
 
-    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreProperties)
+    // When provided, the commutativity of the operation is ignored, and
+    // operands are compared in an order-sensitive way.
+    IgnoreCommutativity = 8,
+
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreCommutativity)
   };
 
   /// Compute a hash for the given operation.
@@ -1348,8 +1352,8 @@ struct OperationEquivalence {
   /// Helper that can be used with `computeHash` above to ignore operation
   /// operands/result mapping.
   static llvm::hash_code ignoreHashValue(Value) { return llvm::hash_code{}; }
-  /// Helper that can be used with `computeHash` above to ignore operation
-  /// operands/result mapping.
+  /// Helper that can be used with `computeHash` to compute the hash value
+  /// of operands/results directly.
   static llvm::hash_code directHashValue(Value v) { return hash_value(v); }
 
   /// Compare two operations (including their regions) and return if they are

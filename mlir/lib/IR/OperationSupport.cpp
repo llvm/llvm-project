@@ -689,7 +689,8 @@ llvm::hash_code OperationEquivalence::computeHash(
     hash = llvm::hash_combine(hash, op->getLoc());
 
   //   - Operands
-  if (op->hasTrait<mlir::OpTrait::IsCommutative>() &&
+  if (!(flags & Flags::IgnoreCommutativity) &&
+      op->hasTrait<mlir::OpTrait::IsCommutative>() &&
       op->getNumOperands() > 0) {
     size_t operandHash = hashOperands(op->getOperand(0));
     for (auto operand : op->getOperands().drop_front())
@@ -854,7 +855,7 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
     return false;
 
   // 2. Compare operands.
-  if (checkCommutativeEquivalent &&
+  if (!(flags & IgnoreCommutativity) && checkCommutativeEquivalent &&
       lhs->hasTrait<mlir::OpTrait::IsCommutative>()) {
     auto lhsRange = lhs->getOperands();
     auto rhsRange = rhs->getOperands();
