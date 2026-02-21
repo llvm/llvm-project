@@ -1,0 +1,383 @@
+// RUN: cir-opt %s -cir-flatten-cfg -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
+!rec_NonTrivial = !cir.record<struct "NonTrivial" padded {!u8i}>
+#false = #cir.bool<false> : !cir.bool
+#true = #cir.bool<true> : !cir.bool
+
+// Test EH-only cleanup flattening. Normal exits skip the cleanup,
+// exception-throwing calls are replaced with try_call and unwind to an
+// EH cleanup block that performs the cleanup and resumes unwinding.
+cir.func @test_eh_only_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  } cleanup eh {
+    cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_eh_only_cleanup()
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+//
+// Body: the call is replaced with try_call.
+// CHECK:       ^[[BODY]]:
+// CHECK:         cir.try_call @doSomething(%[[ALLOCA]]) ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// Unwind block.
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EH_TOKEN:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:         cir.br ^[[EH_CLEANUP:bb[0-9]+]](%[[EH_TOKEN]] : !cir.eh_token)
+//
+// EH cleanup block.
+// CHECK:       ^[[EH_CLEANUP]](%[[ET:.*]]: !cir.eh_token):
+// CHECK:         %[[CT:.*]] = cir.begin_cleanup %[[ET]] : !cir.eh_token -> !cir.cleanup_token
+// CHECK:         cir.call @dtor(%[[ALLOCA]]) nothrow
+// CHECK:         cir.end_cleanup %[[CT]] : !cir.cleanup_token
+// CHECK:         cir.resume
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.return
+
+// Test cleanup kind "all" flattening. Normal exits go through the normal
+// cleanup path, and exception-throwing calls unwind to an EH cleanup block.
+cir.func @test_all_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  } cleanup all {
+    cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_all_cleanup()
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+//
+// Body with try_call for the throwing call.
+// CHECK:       ^[[BODY]]:
+// CHECK:         cir.try_call @doSomething(%[[ALLOCA]]) ^[[NORMAL_BODY:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+//
+// Normal path: yield branches to normal cleanup.
+// CHECK:       ^[[NORMAL_BODY]]:
+// CHECK:         cir.br ^[[NORMAL_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[NORMAL_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]]) nothrow
+// CHECK:         cir.br ^[[EXIT:bb[0-9]+]]
+// CHECK:       ^[[EXIT]]:
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// Unwind block.
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EH_TOKEN:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:         cir.br ^[[EH_CLEANUP:bb[0-9]+]](%[[EH_TOKEN]] : !cir.eh_token)
+//
+// EH cleanup block (cloned from cleanup region).
+// CHECK:       ^[[EH_CLEANUP]](%[[ET:.*]]: !cir.eh_token):
+// CHECK:         %[[CT:.*]] = cir.begin_cleanup %[[ET]] : !cir.eh_token -> !cir.cleanup_token
+// CHECK:         cir.call @dtor(%[[ALLOCA]]) nothrow
+// CHECK:         cir.end_cleanup %[[CT]] : !cir.cleanup_token
+// CHECK:         cir.resume
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.return
+
+// Test EH cleanup with multiple calls that may throw. Each call becomes a
+// try_call, and all unwind to the same shared unwind block.
+cir.func @test_eh_cleanup_multiple_calls() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.call @doSomethingElse(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  } cleanup eh {
+    cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_eh_cleanup_multiple_calls()
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+//
+// First call replaced with try_call, unwinding to the shared block.
+// CHECK:       ^[[BODY]]:
+// CHECK:         cir.try_call @doSomething(%[[ALLOCA]]) ^[[AFTER_FIRST:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+//
+// Second call also replaced with try_call, unwinding to the same block.
+// CHECK:       ^[[AFTER_FIRST]]:
+// CHECK:         cir.try_call @doSomethingElse(%[[ALLOCA]]) ^[[AFTER_SECOND:bb[0-9]+]], ^[[UNWIND]]
+//
+// CHECK:       ^[[AFTER_SECOND]]:
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// Shared unwind block -- both try_calls unwind here.
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EH:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:         cir.br ^[[EH_CLEANUP:bb[0-9]+]](%[[EH]] : !cir.eh_token)
+//
+// EH cleanup block.
+// CHECK:       ^[[EH_CLEANUP]](%[[ET:.*]]: !cir.eh_token):
+// CHECK:         %[[CT:.*]] = cir.begin_cleanup %[[ET]] : !cir.eh_token -> !cir.cleanup_token
+// CHECK:         cir.call @dtor(%[[ALLOCA]]) nothrow
+// CHECK:         cir.end_cleanup %[[CT]] : !cir.cleanup_token
+// CHECK:         cir.resume
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.return
+
+// Test that nothrow calls are NOT replaced with try_call.
+cir.func @test_eh_cleanup_nothrow_call() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.call @nothrowFunc(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  } cleanup eh {
+    cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_eh_cleanup_nothrow_call()
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+//
+// Only the throwing call becomes try_call.
+// CHECK:       ^[[BODY]]:
+// CHECK:         cir.try_call @doSomething(%[[ALLOCA]]) ^[[AFTER_FIRST:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+//
+// The nothrow call remains as a regular cir.call, not try_call.
+// CHECK:       ^[[AFTER_FIRST]]:
+// CHECK:         cir.call @nothrowFunc(%[[ALLOCA]]) nothrow
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EH:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:         cir.br ^[[EH_CLEANUP:bb[0-9]+]](%[[EH]] : !cir.eh_token)
+//
+// CHECK:       ^[[EH_CLEANUP]](%[[ET:.*]]: !cir.eh_token):
+// CHECK:         %[[CT:.*]] = cir.begin_cleanup %[[ET]] : !cir.eh_token -> !cir.cleanup_token
+// CHECK:         cir.call @dtor(%[[ALLOCA]]) nothrow
+// CHECK:         cir.end_cleanup %[[CT]] : !cir.cleanup_token
+// CHECK:         cir.resume
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.return
+
+// Test EH cleanup with a call that returns a value.
+cir.func @test_eh_cleanup_call_with_result() -> !s32i {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    %2 = cir.call @get() : () -> !s32i
+    cir.store %2, %1 : !s32i, !cir.ptr<!s32i>
+    cir.yield
+  } cleanup eh {
+    cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  %3 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+  cir.return %3 : !s32i
+}
+
+// CHECK-LABEL: cir.func @test_eh_cleanup_call_with_result()
+// CHECK:         %[[ALLOCA_CLASS:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         %[[ALLOCA_RET:.*]] = cir.alloca !s32i
+// CHECK:         cir.call @ctor(%[[ALLOCA_CLASS]])
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+//
+// The try_call returns a result that is used by subsequent operations.
+// CHECK:       ^[[BODY]]:
+// CHECK:         %[[RESULT:.*]] = cir.try_call @get() ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.store %[[RESULT]], %[[ALLOCA_RET]]
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EH:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:         cir.br ^[[EH_CLEANUP:bb[0-9]+]](%[[EH]] : !cir.eh_token)
+//
+// CHECK:       ^[[EH_CLEANUP]](%[[ET:.*]]: !cir.eh_token):
+// CHECK:         %{{.*}} = cir.begin_cleanup %[[ET]] : !cir.eh_token -> !cir.cleanup_token
+// CHECK:         cir.call @dtor(%[[ALLOCA_CLASS]]) nothrow
+// CHECK:         cir.end_cleanup
+// CHECK:         cir.resume
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         %[[RETVAL:.*]] = cir.load %[[ALLOCA_RET]]
+// CHECK:         cir.return %[[RETVAL]]
+
+// Test NRVO pattern: cleanup all with cir.if in the cleanup region.
+// The cir.if gets flattened first, creating a multi-block cleanup region.
+// Then the cleanup scope flattening must handle cloning the multi-block
+// cleanup region for the EH path.
+cir.func @test_nrvo() -> !rec_NonTrivial {
+  %0 = cir.alloca !rec_NonTrivial, !cir.ptr<!rec_NonTrivial>, ["__retval"] {alignment = 1 : i64}
+  %1 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["nrvo"] {alignment = 1 : i64}
+  cir.cleanup.scope {
+    %2 = cir.const #false
+    cir.store align(1) %2, %1 : !cir.bool, !cir.ptr<!cir.bool>
+    cir.call @_Z10maybeThrowv() : () -> ()
+    %3 = cir.const #true
+    cir.store %3, %1 : !cir.bool, !cir.ptr<!cir.bool>
+    cir.yield
+  } cleanup all {
+    %4 = cir.load align(1) %1 : !cir.ptr<!cir.bool>, !cir.bool
+    %5 = cir.unary(not, %4) : !cir.bool, !cir.bool
+    cir.if %5 {
+      cir.call @_ZN10NonTrivialD1Ev(%0) nothrow : (!cir.ptr<!rec_NonTrivial>) -> ()
+    }
+    cir.yield
+  }
+  %6 = cir.load %0 : !cir.ptr<!rec_NonTrivial>, !rec_NonTrivial
+  cir.return %6 : !rec_NonTrivial
+}
+
+// CHECK-LABEL: cir.func @test_nrvo()
+// CHECK:         %[[RETVAL:.*]] = cir.alloca !rec_NonTrivial
+// CHECK:         %[[NRVO:.*]] = cir.alloca !cir.bool
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+//
+// Body: store false to nrvo flag, try_call maybeThrow.
+// CHECK:       ^[[BODY]]:
+// CHECK:         %[[FALSE:.*]] = cir.const #false
+// CHECK:         cir.store align(1) %[[FALSE]], %[[NRVO]]
+// CHECK:         cir.try_call @_Z10maybeThrowv() ^[[AFTER_CALL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+//
+// After call: store true to nrvo flag, branch to normal cleanup.
+// CHECK:       ^[[AFTER_CALL]]:
+// CHECK:         %[[TRUE:.*]] = cir.const #true
+// CHECK:         cir.store %[[TRUE]], %[[NRVO]]
+// CHECK:         cir.br ^[[NORMAL_CLEANUP:bb[0-9]+]]
+//
+// Normal cleanup: inlined cleanup region with flattened cir.if.
+// CHECK:       ^[[NORMAL_CLEANUP]]:
+// CHECK:         %[[N_FLAG:.*]] = cir.load align(1) %[[NRVO]] : !cir.ptr<!cir.bool>, !cir.bool
+// CHECK:         %[[N_NOT:.*]] = cir.unary(not, %[[N_FLAG]]) : !cir.bool, !cir.bool
+// CHECK:         cir.brcond %[[N_NOT]] ^[[N_IF_TRUE:bb[0-9]+]], ^[[N_MERGE:bb[0-9]+]]
+//
+// CHECK:       ^[[N_IF_TRUE]]:
+// CHECK:         cir.call @_ZN10NonTrivialD1Ev(%[[RETVAL]]) nothrow
+// CHECK:         cir.br ^[[N_MERGE]]
+//
+// CHECK:       ^[[N_MERGE]]:
+// CHECK:         cir.br ^[[EXIT:bb[0-9]+]]
+// CHECK:       ^[[EXIT]]:
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// Unwind block.
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EH_TOK:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:         cir.br ^[[EH_CLEANUP:bb[0-9]+]](%[[EH_TOK]] : !cir.eh_token)
+//
+// EH cleanup entry: multi-block region cloned from the cleanup.
+// The cir.if was flattened into brcond + branches.
+// CHECK:       ^[[EH_CLEANUP]](%[[ET:.*]]: !cir.eh_token):
+// CHECK:         %[[CT:.*]] = cir.begin_cleanup %[[ET]] : !cir.eh_token -> !cir.cleanup_token
+// CHECK:         %[[EH_FLAG:.*]] = cir.load align(1) %[[NRVO]] : !cir.ptr<!cir.bool>, !cir.bool
+// CHECK:         %[[EH_NOT:.*]] = cir.unary(not, %[[EH_FLAG]]) : !cir.bool, !cir.bool
+// CHECK:         cir.brcond %[[EH_NOT]] ^[[EH_IF_TRUE:bb[0-9]+]], ^[[EH_MERGE:bb[0-9]+]]
+//
+// EH cleanup if-true: call destructor.
+// CHECK:       ^[[EH_IF_TRUE]]:
+// CHECK:         cir.call @_ZN10NonTrivialD1Ev(%[[RETVAL]]) nothrow
+// CHECK:         cir.br ^[[EH_MERGE]]
+//
+// EH cleanup merge: end cleanup and resume unwinding.
+// CHECK:       ^[[EH_MERGE]]:
+// CHECK:         cir.end_cleanup %[[CT]] : !cir.cleanup_token
+// CHECK:         cir.resume
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         %[[RET:.*]] = cir.load %[[RETVAL]]
+// CHECK:         cir.return %[[RET]]
+
+
+// Test that we can handle an eh cleanup inside a try op with no handlers.
+// In this case, the unwind from the EH cleanup can be left to unwind to
+// callers.
+cir.func @test_eh_cleanup_in_try() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.try {
+    cir.cleanup.scope {
+      cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    } cleanup eh {
+      cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK: cir.func @test_eh_cleanup_in_try()
+// CHECK:   %[[C:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
+// CHECK:   cir.call @ctor(%[[C]])
+// CHECK:   cir.br ^[[TRY_BODY:bb[0-9]+]]
+//
+// Try body: the cleanup scope body was inlined.
+// CHECK: ^[[TRY_BODY]]:
+// CHECK:   cir.br ^[[CLEANUP_BODY:bb[0-9]+]]
+//
+// Cleanup scope body: the call is rewritten to try_call.
+// CHECK: ^[[CLEANUP_BODY]]:
+// CHECK:   cir.try_call @doSomething(%[[C]]) ^[[NORMAL_CONT:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+//
+// Normal continuation from the call.
+// CHECK: ^[[NORMAL_CONT]]:
+// CHECK:   cir.br ^[[TRY_EXIT:bb[0-9]+]]
+//
+// Unwind block.
+// CHECK: ^[[UNWIND]]:
+// CHECK:   %[[EH_TOK:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:   cir.br ^[[EH_CLEANUP:bb[0-9]+]](%[[EH_TOK]] : !cir.eh_token)
+//
+// EH cleanup block.
+// CHECK: ^[[EH_CLEANUP]](%[[ET:.*]]: !cir.eh_token):
+// CHECK:   %[[CT:.*]] = cir.begin_cleanup %[[ET]] : !cir.eh_token -> !cir.cleanup_token
+// CHECK:   cir.call @dtor(%[[C]]) nothrow
+// CHECK:   cir.end_cleanup %[[CT]] : !cir.cleanup_token
+// CHECK:   cir.resume
+//
+// Try exit: branches to continue.
+// CHECK: ^[[TRY_EXIT]]:
+// CHECK:   cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// CHECK: ^[[CONTINUE]]:
+// CHECK:   cir.return
+
+cir.func private @get() -> !s32i
+cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
+cir.func private @dtor(!cir.ptr<!rec_SomeClass>) attributes {nothrow}
+cir.func private @doSomething(!cir.ptr<!rec_SomeClass>)
+cir.func private @doSomethingElse(!cir.ptr<!rec_SomeClass>)
+cir.func private @nothrowFunc(!cir.ptr<!rec_SomeClass>)
+cir.func private @shouldContinue() -> !cir.bool
+cir.func private @_Z10maybeThrowv()
+cir.func private @_ZN10NonTrivialD1Ev(!cir.ptr<!rec_NonTrivial>)
