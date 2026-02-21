@@ -373,7 +373,7 @@ define float @cmp_one_nnan_fabs(float %x) {
 ; CHECK-LABEL: define float @cmp_one_nnan_fabs(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call nnan float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[MUL_FABS_X:%.*]] = fmul float [[FABS_X]], 0x4170000000000000
+; CHECK-NEXT:    [[MUL_FABS_X:%.*]] = fmul nnan float [[FABS_X]], 0x4170000000000000
 ; CHECK-NEXT:    [[X_IS_NOT_ZERO:%.*]] = fcmp one float [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[X_IS_NOT_ZERO]], float [[FABS_X]], float [[MUL_FABS_X]]
 ; CHECK-NEXT:    ret float [[SELECT]]
