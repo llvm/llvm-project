@@ -272,8 +272,11 @@ Removed checks
 Miscellaneous
 ^^^^^^^^^^^^^
 
-Improvements to include-fixer
------------------------------
+Improvements to clang-include-cleaner
+-------------------------------------
+
+- Fixed a problem where macros in the codebase with names matching standard
+  library symbols were mistakenly identified as standard library symbols.
 
 Improvements to clang-include-fixer
 -----------------------------------
