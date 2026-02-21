@@ -45,6 +45,11 @@ LLVM_C_EXTERN_C_BEGIN
 LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITEnableDebugSupport(LLVMOrcLLJITRef J);
 
 /**
+ * Install the plugin to log perf jitdump events for each object.
+ */
+LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITEnablePerfSupport(LLVMOrcLLJITRef J);
+
+/**
  * @}
  */
 
