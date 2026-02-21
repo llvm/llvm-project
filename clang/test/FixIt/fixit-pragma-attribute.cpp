@@ -84,3 +84,7 @@
 
 #pragma clang attribute push (__attribute__((objc_externally_retained)), apply_to)
 // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:82-[[@LINE-1]]:82}:" = any(function, variable(unless(is_parameter)))"
+
+int x;
+#pragma clang attribute push ([[noreturn (x))
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:42-[[@LINE-1]]:45}:""
