@@ -555,7 +555,7 @@ bool TargetRegisterInfo::getCoveringSubRegIndexes(
 
   for (unsigned Idx = 1, E = getNumSubRegIndices(); Idx < E; ++Idx) {
     // Is this index even compatible with the given class?
-    if (getSubClassWithSubReg(RC, Idx) != RC)
+    if (!isSubRegValidForRegClass(RC, Idx))
       continue;
     LaneBitmask SubRegMask = getSubRegIndexLaneMask(Idx);
     // Early exit if we found a perfect match.
