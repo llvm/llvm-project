@@ -1026,8 +1026,8 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_ISD_SRL) {
   auto Splat4 = DAG->getSplat(SplatVT, Loc, Cst4);
   auto SplatBig = DAG->getSplat(SplatVT, Loc, CstBig);
 
-  auto SRLSplatBig4 = DAG->getNode(ISD::SRL, Loc, VecVT, SplatBig, Splat4);
-  auto SRLSplat44 = DAG->getNode(ISD::SRL, Loc, VecVT, Splat4, Splat4);
+  auto SRLSplatBig4 = DAG->getNode(ISD::SRL, Loc, SplatVT, SplatBig, Splat4);
+  auto SRLSplat44 = DAG->getNode(ISD::SRL, Loc, SplatVT, Splat4, Splat4);
 
   EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(SRLSplatBig4));
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SRLSplatBig4, /*OrZero=*/true));
