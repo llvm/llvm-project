@@ -503,8 +503,16 @@ private:
     llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
   private:
+    /// The data stack representing "self". The value of "self" is the results
+    /// of `init` combined with the results of `update`. Together, these values
+    /// are placed on the stack when calling `num_children`,
+    /// `get_child_at_index`, etc.
+    FormatterBytecode::DataStack GetSelf();
+
+  private:
     const SyntheticBytecodeImplementation &m_impl;
-    FormatterBytecode::DataStack m_self;
+    FormatterBytecode::DataStack m_init_results;
+    FormatterBytecode::DataStack m_update_results;
   };
 
 public:
