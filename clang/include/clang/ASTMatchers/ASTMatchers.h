@@ -3229,6 +3229,22 @@ AST_MATCHER_REGEX(NamedDecl, matchesName, RegExp) {
   return RegExp->match(FullNameString);
 }
 
+/// Matches string literals that contain a substring matched by the given RegExp.
+///
+/// Example matches "foo" and "foobar" but not "bar"
+///   (matcher = stringLiteral(matchesString("foo.*")))
+/// \code
+///   const char* a = "foo";
+///   const char* b = "foobar";
+///   const char* c = "bar";
+/// \endcode
+///
+/// Usable as: Matcher<StringLiteral>
+AST_MATCHER_REGEX(StringLiteral, matchesString, RegExp) {
+  StringRef Str = Node.getBytes();
+  return RegExp->match(Str);
+}
+
 /// Matches overloaded operator names.
 ///
 /// Matches overloaded operator names specified in strings without the
