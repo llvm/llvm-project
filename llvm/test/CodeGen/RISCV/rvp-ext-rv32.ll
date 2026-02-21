@@ -562,7 +562,7 @@ define <4 x i8> @test_insert_vector_8_elem2(<4 x i8> %a, i8 %val) {
 define <4 x i8> @test_non_const_splat_i8(i8 %elt) {
 ; CHECK-LABEL: test_non_const_splat_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    padd.bs a0, zero, a0
+; CHECK-NEXT:    pmv.bs a0, a0
 ; CHECK-NEXT:    ret
   %insert = insertelement <4 x i8> poison, i8 %elt, i32 0
   %splat = shufflevector <4 x i8> %insert, <4 x i8> poison, <4 x i32> zeroinitializer
@@ -572,7 +572,7 @@ define <4 x i8> @test_non_const_splat_i8(i8 %elt) {
 define <2 x i16> @test_non_const_splat_i16(i16 %elt) {
 ; CHECK-LABEL: test_non_const_splat_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    padd.hs a0, zero, a0
+; CHECK-NEXT:    pmv.hs a0, a0
 ; CHECK-NEXT:    ret
   %insert = insertelement <2 x i16> poison, i16 %elt, i32 0
   %splat = shufflevector <2 x i16> %insert, <2 x i16> poison, <2 x i32> zeroinitializer

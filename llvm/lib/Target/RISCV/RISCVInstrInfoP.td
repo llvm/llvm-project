@@ -1475,6 +1475,148 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PMAXU_DB     : RVPPairBinaryExchanged_rr<0b1111, 0b10, "pmaxu.db", Commutable=1>;
 } // Predicates = [HasStdExtP, IsRV32]
 
+//===----------------------------------------------------------------------===//
+// Assembler Pseudo Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtP] in {
+  def : InstAlias<"pmv.bs $rd, $rs", (PADD_BS GPR:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pmv.hs $rd, $rs", (PADD_HS GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pneg.b $rd, $rs", (PSUB_B GPR:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pneg.h $rd, $rs", (PSUB_H GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pabs.b $rd, $rs", (PABD_B GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pabs.h $rd, $rs", (PABD_H GPR:$rd, GPR:$rs, X0)>;
+  // No pabd.w instruction
+
+  def : InstAlias<"pzext.h.b $rd, $rs", (PPAIRE_B GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmseqz.b $rd, $rs", (PMSEQ_B GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pmseqz.h $rd, $rs", (PMSEQ_H GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmsnez.b $rd, $rs", (PMSLTU_B GPR:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pmsnez.h $rd, $rs", (PMSLTU_H GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pmsltz.b $rd, $rs", (PMSLT_B GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pmsltz.h $rd, $rs", (PMSLT_H GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmsgtz.b $rd, $rs", (PMSLT_B GPR:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pmsgtz.h $rd, $rs", (PMSLT_H GPR:$rd, X0, GPR:$rs)>;
+
+  // The canonical pmslt(u) form will always be printed. Therefore,
+  // set a zero weight.
+  def : InstAlias<"pmsgt.b $rd, $rs, $rt",  (PMSLT_B GPR:$rd, GPR:$rt, GPR:$rs),  0>;
+  def : InstAlias<"pmsgt.h $rd, $rs, $rt",  (PMSLT_H GPR:$rd, GPR:$rt, GPR:$rs),  0>;
+  def : InstAlias<"pmsgtu.b $rd, $rs, $rt", (PMSLTU_B GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+  def : InstAlias<"pmsgtu.h $rd, $rs, $rt", (PMSLTU_H GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+}
+let Predicates = [HasStdExtP, IsRV32] in {
+  def : InstAlias<"mseqz $rd, $rs", (MSEQ GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"msnez $rd, $rs", (MSLTU GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"msltz $rd, $rs", (MSLT GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"msgtz $rd, $rs", (MSLT GPR:$rd, X0, GPR:$rs)>;
+
+  // The canonical mslt(u) form will always be printed. Therefore,
+  // set a zero weight.
+  def : InstAlias<"msgt $rd, $rs, $rt",  (MSLT GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+  def : InstAlias<"msgtu $rd, $rs, $rt", (MSLTU GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+}
+let Predicates = [HasStdExtP, IsRV64] in {
+  def : InstAlias<"pmv.ws $rd, $rs", (PADD_WS GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pneg.w $rd, $rs", (PSUB_W GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pzext.w.h $rd, $rs", (PPAIRE_H GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmseqz.w $rd, $rs", (PMSEQ_W GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmsnez.w $rd, $rs", (PMSLTU_W GPR:$rd, X0, GPR:$rs)>;
+
+  def : InstAlias<"pmsltz.w $rd, $rs", (PMSLT_W GPR:$rd, GPR:$rs, X0)>;
+
+  def : InstAlias<"pmsgtz.w $rd, $rs", (PMSLT_W GPR:$rd, X0, GPR:$rs)>;
+
+  // The canonical pmslt(u) form will always be printed. Therefore,
+  // set a zero weight.
+  def : InstAlias<"pmsgt.w $rd, $rs, $rt", (PMSLT_W GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+  def : InstAlias<"pmsgtu.w $rd, $rs, $rt", (PMSLTU_W GPR:$rd, GPR:$rt, GPR:$rs), 0>;
+}
+
+let Predicates = [HasStdExtP, IsRV32] in {
+  def : InstAlias<"pmv.dbs $rd, $rs",
+                  (PADD_DBS GPRPairRV32:$rd, X0_Pair, GPR:$rs)>;
+  def : InstAlias<"pmv.dhs $rd, $rs",
+                  (PADD_DHS GPRPairRV32:$rd, X0_Pair, GPR:$rs)>;
+  def : InstAlias<"pmv.dws $rd, $rs",
+                  (PADD_DWS GPRPairRV32:$rd, X0_Pair, GPR:$rs)>;
+
+  def : InstAlias<"pneg.db $rd, $rs",
+                  (PSUB_DB GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pneg.dh $rd, $rs",
+                  (PSUB_DH GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pneg.dw $rd, $rs",
+                  (PSUB_DW GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"negd $rd, $rs",
+                  (SUBD GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+
+  def : InstAlias<"pabs.db $rd, $rs",
+                  (PABD_DB GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pabs.dh $rd, $rs",
+                  (PABD_DH GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  // No pabd.dw instruction
+
+  def : InstAlias<"pzext.dh.b $rd, $rs",
+                  (PPAIRE_DB GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pzext.dw.h $rd, $rs",
+                  (PPAIRE_DH GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+
+  def : InstAlias<"pmseqz.db $rd, $rs",
+                  (PMSEQ_DB GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pmseqz.dh $rd, $rs",
+                  (PMSEQ_DH GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pmseqz.dw $rd, $rs",
+                  (PMSEQ_DW GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+
+  def : InstAlias<"pmsnez.db $rd, $rs",
+                  (PMSLTU_DB GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pmsnez.dh $rd, $rs",
+                  (PMSLTU_DH GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pmsnez.dw $rd, $rs",
+                  (PMSLTU_DW GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+
+  def : InstAlias<"pmsltz.db $rd, $rs",
+                  (PMSLT_DB GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pmsltz.dh $rd, $rs",
+                  (PMSLT_DH GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+  def : InstAlias<"pmsltz.dw $rd, $rs",
+                  (PMSLT_DW GPRPairRV32:$rd, GPRPairRV32:$rs, X0_Pair)>;
+
+  def : InstAlias<"pmsgtz.db $rd, $rs",
+                  (PMSLT_DB GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pmsgtz.dh $rd, $rs",
+                  (PMSLT_DH GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+  def : InstAlias<"pmsgtz.dw $rd, $rs",
+                  (PMSLT_DW GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
+
+  // The canonical pmslt(u) form will always be printed. Therefore,
+  // set a zero weight.
+  def : InstAlias<"pmsgt.db $rd, $rs, $rt",
+                  (PMSLT_DB GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+  def : InstAlias<"pmsgt.dh $rd, $rs, $rt",
+                  (PMSLT_DH GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+  def : InstAlias<"pmsgt.dw $rd, $rs, $rt",
+                  (PMSLT_DW GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+  def : InstAlias<"pmsgtu.db $rd, $rs, $rt",
+                  (PMSLTU_DB GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+  def : InstAlias<"pmsgtu.dh $rd, $rs, $rt",
+                  (PMSLTU_DH GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+  def : InstAlias<"pmsgtu.dw $rd, $rs, $rt",
+                  (PMSLTU_DW GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
+}
 
 //===----------------------------------------------------------------------===//
 // Codegen patterns
