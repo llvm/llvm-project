@@ -119,7 +119,17 @@ enum TypeEvaluationKind {
 /// Helper class with most of the code for saving a value for a
 /// conditional expression cleanup.
 struct DominatingLLVMValue {
-  typedef llvm::PointerIntPair<llvm::Value *, 1, bool> saved_type;
+  struct saved_type {
+    llvm::Value *Value; // Original value if not saved, alloca if saved
+    llvm::Type *Type;   // nullptr if not saved, element type if saved
+
+    saved_type() : Value(nullptr), Type(nullptr) {}
+    saved_type(llvm::Value *V) : Value(V), Type(nullptr) {}
+    saved_type(llvm::AllocaInst *Alloca, llvm::Type *Ty)
+        : Value(Alloca), Type(Ty) {}
+
+    bool isSaved() const { return Type != nullptr; }
+  };
 
   /// Answer whether the given value needs extra work to be saved.
   static bool needsSaving(llvm::Value *value) {
@@ -5598,28 +5608,29 @@ private:
 inline DominatingLLVMValue::saved_type
 DominatingLLVMValue::save(CodeGenFunction &CGF, llvm::Value *value) {
   if (!needsSaving(value))
-    return saved_type(value, false);
+    return saved_type(value);
 
   // Otherwise, we need an alloca.
   auto align = CharUnits::fromQuantity(
-      CGF.CGM.getDataLayout().getPrefTypeAlign(value->getType()));
-  Address alloca =
-      CGF.CreateTempAlloca(value->getType(), align, "cond-cleanup.save");
-  CGF.Builder.CreateStore(value, alloca);
+                   CGF.CGM.getDataLayout().getPrefTypeAlign(value->getType()))
+                   .getAsAlign();
+  llvm::AllocaInst *AI =
+      CGF.CreateTempAlloca(value->getType(), "cond-cleanup.save");
+  AI->setAlignment(align);
+  CGF.Builder.CreateAlignedStore(value, AI, align);
 
-  return saved_type(alloca.emitRawPointer(CGF), true);
+  return saved_type(AI, value->getType());
 }
 
 inline llvm::Value *DominatingLLVMValue::restore(CodeGenFunction &CGF,
                                                  saved_type value) {
   // If the value says it wasn't saved, trust that it's still dominating.
-  if (!value.getInt())
-    return value.getPointer();
+  if (!value.isSaved())
+    return value.Value;
 
   // Otherwise, it should be an alloca instruction, as set up in save().
-  auto alloca = cast<llvm::AllocaInst>(value.getPointer());
-  return CGF.Builder.CreateAlignedLoad(alloca->getAllocatedType(), alloca,
-                                       alloca->getAlign());
+  auto AI = cast<llvm::AllocaInst>(value.Value);
+  return CGF.Builder.CreateAlignedLoad(value.Type, AI, AI->getAlign());
 }
 
 } // end namespace CodeGen
