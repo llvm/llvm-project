@@ -641,8 +641,7 @@ define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
 ; SSE2-NEXT:    movd %edi, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,0,1,1]
 ; SSE2-NEXT:    por %xmm1, %xmm2
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0,0]
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm2[1,1]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; SSE2-NEXT:    pand %xmm0, %xmm2
 ; SSE2-NEXT:    pandn %xmm1, %xmm0
 ; SSE2-NEXT:    por %xmm2, %xmm0
@@ -655,23 +654,37 @@ define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
 ; SSE41-NEXT:    movd %edi, %xmm1
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,0,1,1]
 ; SSE41-NEXT:    por %xmm1, %xmm2
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,1,1]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; SSE41-NEXT:    pinsrd $1, %edi, %xmm1
 ; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm1
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: simplify_select:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX-NEXT:    vmovd %edi, %xmm1
-; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,0,1,1]
-; AVX-NEXT:    vpor %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]
-; AVX-NEXT:    vpinsrd $1, %edi, %xmm2, %xmm2
-; AVX-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: simplify_select:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX1-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %edi, %xmm1
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,0,1,1]
+; AVX1-NEXT:    vpor %xmm1, %xmm2, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX1-NEXT:    vpinsrd $1, %edi, %xmm1, %xmm1
+; AVX1-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: simplify_select:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX2-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vmovd %edi, %xmm2
+; AVX2-NEXT:    vpbroadcastd %xmm2, %xmm2
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[1,0,1,1]
+; AVX2-NEXT:    vpor %xmm1, %xmm3, %xmm1
+; AVX2-NEXT:    vpinsrd $1, %edi, %xmm2, %xmm2
+; AVX2-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; AVX2-NEXT:    retq
   %a = insertelement <2 x i32> <i32 0, i32 undef>, i32 %x, i32 1
   %b = insertelement <2 x i32> <i32 undef, i32 0>, i32 %x, i32 0
   %y = or <2 x i32> %a, %b
