@@ -353,6 +353,16 @@ add_header_library(
 )
 
 add_header_library(
+  bf16addl
+  HDRS
+    bf16addl.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   bf16addf128
   HDRS
     bf16addf128.h
@@ -809,7 +819,7 @@ add_header_library(
 )
 
 add_header_library(
-  f16addl   
+  f16addl
   HDRS
     f16addl.h
   DEPENDS
