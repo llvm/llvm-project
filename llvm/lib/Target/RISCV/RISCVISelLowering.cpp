@@ -12292,9 +12292,10 @@ SDValue RISCVTargetLowering::lowerVECREDUCE(SDValue Op,
   MVT VecVT = VecEVT.getSimpleVT();
   MVT VecEltVT = VecVT.getVectorElementType();
 
-  // Scalarize vecreduce_(and|or|xor) for fixed-vector pow-of-2 types, if the
-  // entire vector fits into a scalar.
-  if (is_contained({ISD::VECREDUCE_AND, ISD::VECREDUCE_OR, ISD::VECREDUCE_XOR},
+  // Scalarize vecreduce_(and|or|xor) for loaded values of fixed-vector pow-of-2
+  // types, if the entire vector fits into a scalar.
+  if (isa<LoadSDNode>(Vec) &&
+      is_contained({ISD::VECREDUCE_AND, ISD::VECREDUCE_OR, ISD::VECREDUCE_XOR},
                    Op.getOpcode()) &&
       VecVT.isFixedLengthVector() && VecVT.isPow2VectorType() &&
       VecVT.bitsLE(Subtarget.getXLenVT())) {
