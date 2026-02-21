@@ -8715,7 +8715,7 @@ let Predicates = [HasNEON] in {
                                        (i32 24)),
                             ssub)>;
 
-  // Using MOVI to materialize select FP16 bit patterns (where one byte is 0).
+  // Using MOVI to materialize select FP16 bit patterns
   def : Pat<(f16 fpimm16SIMDModImmType5:$in),
             (EXTRACT_SUBREG (MOVIv4i16 (fpimm16SIMDModImmType5XForm f16:$in),
                                        (i32 0)),
