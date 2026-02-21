@@ -12656,6 +12656,28 @@ static void CheckImplicitArgumentConversions(Sema &S, const CallExpr *TheCall,
                                              SourceLocation CC) {
   for (unsigned I = 0, N = TheCall->getNumArgs(); I < N; ++I) {
     const Expr *CurrA = TheCall->getArg(I);
+
+    if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(CurrA))
+      // We shouldnt skip over any node here as it may be an attempt to silence
+      // the warning
+      if (const auto *CCE = dyn_cast<CXXConstructExpr>(MTE->getSubExpr()))
+        if (CCE->getNumArgs() == 1 &&
+            CCE->getArg(0)->getType()->isBooleanType() &&
+            !CCE->getConstructor()->isExplicit()) {
+          const Expr *Inner = CCE->getArg(0)->IgnoreImpCasts();
+          if ((Inner->getType()->isAnyPointerType() &&
+               Inner->getType()->getPointeeType().getUnqualifiedType() ==
+                   CCE->getType().getUnqualifiedType())) {
+            S.Diag(CCE->getLocation(),
+                   diag::warn_imp_constructor_pointer_to_bool)
+                << Inner->getType() << CCE->getType() << CCE->getConstructor()
+                << FixItHint::CreateInsertion(Inner->getBeginLoc(), "*");
+            S.Diag(CCE->getConstructor()->getLocation(),
+                   diag::note_entity_declared_at)
+                << CCE->getConstructor();
+          }
+        }
+
     if (!IsImplicitBoolFloatConversion(S, CurrA, true))
       continue;
 

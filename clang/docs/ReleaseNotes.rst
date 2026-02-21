@@ -261,6 +261,19 @@ Improvements to Clang's diagnostics
 - Clang now emits ``-Wsizeof-pointer-memaccess`` when snprintf/vsnprintf use the sizeof 
   the destination buffer(dynamically allocated) in the len parameter(#GH162366)
 
+- ``-Wpointer-bool-conversion`` will now also warn in the following case
+
+  .. code-block:: c
+
+    struct B {
+      B(bool V) {}
+    };
+    void test(const B& b);
+    void test0(B* b) {
+      test(b); // this will call B::B(bool) and create a new B
+    }
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
