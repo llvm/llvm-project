@@ -16452,7 +16452,7 @@ private:
   bool IsLambda = false;
 };
 
-static void diagnoseImplicitlyRetainedSelf(Sema &S) {
+static void diagnoseBlockCaptures(Sema &S) {
   llvm::DenseMap<const BlockDecl *, bool> EscapeInfo;
 
   auto IsOrNestedInEscapingBlock = [&](const BlockDecl *BD) {
@@ -16473,13 +16473,35 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
     return It->second = R;
   };
 
-  // If the location where 'self' is implicitly retained is inside a escaping
-  // block, emit a diagnostic.
-  for (const std::pair<SourceLocation, const BlockDecl *> &P :
-       S.ImplicitlyRetainedSelfLocs)
-    if (IsOrNestedInEscapingBlock(P.second))
-      S.Diag(P.first, diag::warn_implicitly_retains_self)
-          << FixItHint::CreateInsertion(P.first, "self->");
+  for (const auto &C : S.DiagnosableBlockCaptures) {
+    //  Do not emit a diagnostic if the location is invalid.
+    if (!C.Loc.isValid())
+      continue;
+
+    // Do not emit a diagnostic if the block is not escaping.
+    if (!IsOrNestedInEscapingBlock(C.BD))
+      continue;
+
+    // Emit the correct warning depending on the type of capture.
+    switch (C.Type) {
+    case Sema::BlockCapture::Self:
+      S.Diag(C.Loc, diag::warn_implicitly_retains_self)
+          << FixItHint::CreateInsertion(C.Loc, "self->");
+      break;
+
+    case Sema::BlockCapture::This:
+      S.Diag(C.Loc, diag::warn_blocks_capturing_this);
+      break;
+
+    case Sema::BlockCapture::Reference:
+      S.Diag(C.Loc, diag::warn_blocks_capturing_reference);
+      break;
+
+    case Sema::BlockCapture::RawPointer:
+      S.Diag(C.Loc, diag::warn_blocks_capturing_raw_pointer);
+      break;
+    }
+  }
 }
 
 static bool methodHasName(const FunctionDecl *FD, StringRef Name) {
@@ -16822,6 +16844,10 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
         }
       }
 
+      // Warn about block captures, unless this is a lambda function.
+      if (!isLambdaCallOperator(FD))
+        diagnoseBlockCaptures(*this);
+
       assert((FD == getCurFunctionDecl(/*AllowLambdas=*/true)) &&
              "Function parsing confused");
     } else if (ObjCMethodDecl *MD = dyn_cast_or_null<ObjCMethodDecl>(dcl)) {
@@ -16874,7 +16900,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
         FSI->ObjCWarnForNoInitDelegation = false;
       }
 
-      diagnoseImplicitlyRetainedSelf(*this);
+      diagnoseBlockCaptures(*this);
     } else {
       // Parsing the function declaration failed in some way. Pop the fake scope
       // we pushed on.

@@ -4915,8 +4915,10 @@ ExprResult SemaObjC::BuildIvarRefExpr(Scope *S, SourceLocation Loc,
       SemaRef.getCurFunction()->recordUseOfWeak(Result);
   }
   if (getLangOpts().ObjCAutoRefCount && !SemaRef.isUnevaluatedContext())
-    if (const BlockDecl *BD = SemaRef.CurContext->getInnermostBlockDecl())
-      SemaRef.ImplicitlyRetainedSelfLocs.push_back({Loc, BD});
+    if (const BlockDecl *BD = SemaRef.CurContext->getInnermostBlockDecl()) {
+      SemaRef.DiagnosableBlockCaptures.push_back(
+          Sema::BlockCapture{Loc, BD, Sema::BlockCapture::Self});
+    }
 
   return Result;
 }

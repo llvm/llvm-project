@@ -8352,6 +8352,22 @@ public:
     }
   };
 
+  /// Store information about a diagnosable block catpure.
+  struct BlockCapture {
+    /// Enumeration representing types of block captures that may be
+    /// diagnosable because they could be problematic.
+    enum CaptureType {
+      Self,
+      This,
+      Reference,
+      RawPointer,
+    };
+
+    SourceLocation Loc;
+    const BlockDecl *BD;
+    CaptureType Type;
+  };
+
   /// Check an argument list for placeholders that we won't try to
   /// handle later.
   bool CheckArgsForPlaceholders(MultiExprArg args);
@@ -8368,8 +8384,7 @@ public:
 
   /// List of SourceLocations where 'self' is implicitly retained inside a
   /// block.
-  llvm::SmallVector<std::pair<SourceLocation, const BlockDecl *>, 1>
-      ImplicitlyRetainedSelfLocs;
+  llvm::SmallVector<BlockCapture, 1> DiagnosableBlockCaptures;
 
   /// Do an explicit extend of the given block pointer if we're in ARC.
   void maybeExtendBlockObject(ExprResult &E);

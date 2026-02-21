@@ -17002,6 +17002,11 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   // Set the captured variables on the block.
   SmallVector<BlockDecl::Capture, 4> Captures;
   for (Capture &Cap : BSI->Captures) {
+    if (Cap.isThisCapture()) {
+      DiagnosableBlockCaptures.push_back(
+          Sema::BlockCapture{Cap.getLocation(), BD, Sema::BlockCapture::This});
+    }
+
     if (Cap.isInvalid() || Cap.isThisCapture())
       continue;
     // Cap.getVariable() is always a VarDecl because
@@ -17058,6 +17063,14 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
           CopyExpr = Result.get();
         }
       }
+    }
+
+    QualType Type = Cap.getCaptureType();
+    if (Type->isPointerOrReferenceType()) {
+      DiagnosableBlockCaptures.push_back(Sema::BlockCapture{
+          Cap.getLocation(), BD,
+          Type->isReferenceType() ? Sema::BlockCapture::Reference
+                                  : Sema::BlockCapture::RawPointer});
     }
 
     BlockDecl::Capture NewCap(Var, Cap.isBlockCapture(), Cap.isNested(),

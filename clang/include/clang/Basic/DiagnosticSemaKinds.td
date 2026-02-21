@@ -1657,6 +1657,17 @@ def warn_implicitly_retains_self : Warning <
   "block implicitly retains 'self'; explicitly mention 'self' to indicate "
   "this is intended behavior">,
   InGroup<DiagGroup<"implicit-retain-self">>, DefaultIgnore;
+def warn_blocks_capturing_this : Warning<"block implicitly captures 'this'">,
+                                 InGroup<DiagGroup<"blocks-capturing-this">>,
+                                 DefaultIgnore;
+def warn_blocks_capturing_reference
+    : Warning<"block implicitly captures a C++ reference">,
+      InGroup<DiagGroup<"blocks-capturing-reference">>,
+      DefaultIgnore;
+def warn_blocks_capturing_raw_pointer
+    : Warning<"block implicitly captures a raw pointer">,
+      InGroup<DiagGroup<"blocks-capturing-raw-pointer">>,
+      DefaultIgnore;
 def warn_arc_possible_repeated_use_of_weak : Warning <
   "weak %select{variable|property|implicit property|instance variable}0 %1 may "
   "be accessed multiple times in this %select{function|method|block|lambda}2 "
