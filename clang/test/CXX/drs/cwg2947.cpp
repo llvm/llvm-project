@@ -32,6 +32,8 @@
 // RUN: %clang_cc1 -std=c++26 %t/cwg2947_ext2.cpp -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++26 %t/cwg2947_ext3.cpp -fsyntax-only -verify
 
+// cwg2947: 23 open 2024-10-29
+
 //--- cwg2947_example1.cpp
 // #define DOT_BAR .bar
 export module foo DOT_BAR; // error: expansion of DOT_BAR; does not begin with ; or [
