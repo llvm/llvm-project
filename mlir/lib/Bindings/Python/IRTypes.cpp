@@ -751,20 +751,6 @@ void PyTupleType::bindDerived(ClassTy &c) {
       },
       nb::arg("elements"), nb::arg("context") = nb::none(),
       "Create a tuple type");
-  c.def_static(
-      "get_tuple",
-      [](std::vector<PyType> elements, DefaultingPyMlirContext context) {
-        std::vector<MlirType> elements_(elements.size());
-        std::copy(elements.begin(), elements.end(), elements_.begin());
-        MlirType t = mlirTupleTypeGet(context->get(), elements_.size(),
-                                      elements_.data());
-        return PyTupleType(context->getRef(), t);
-      },
-      nb::arg("elements"), nb::arg("context") = nb::none(),
-      // clang-format off
-        nb::sig("def get_tuple(elements: Sequence[Type], context: Context | None = None) -> TupleType"),
-      // clang-format on
-      "Create a tuple type");
   c.def(
       "get_type",
       [](PyTupleType &self, intptr_t pos) -> nb::typed<nb::object, PyType> {
@@ -800,24 +786,6 @@ void PyFunctionType::bindDerived(ClassTy &c) {
         return PyFunctionType(context->getRef(), t);
       },
       nb::arg("inputs"), nb::arg("results"), nb::arg("context") = nb::none(),
-      "Gets a FunctionType from a list of input and result types");
-  c.def_static(
-      "get",
-      [](std::vector<PyType> inputs, std::vector<PyType> results,
-         DefaultingPyMlirContext context) {
-        std::vector<MlirType> inputs_(inputs.size());
-        std::copy(inputs.begin(), inputs.end(), inputs_.begin());
-        std::vector<MlirType> results_(results.size());
-        std::copy(results.begin(), results.end(), results_.begin());
-        MlirType t =
-            mlirFunctionTypeGet(context->get(), inputs_.size(), inputs_.data(),
-                                results_.size(), results_.data());
-        return PyFunctionType(context->getRef(), t);
-      },
-      nb::arg("inputs"), nb::arg("results"), nb::arg("context") = nb::none(),
-      // clang-format off
-        nb::sig("def get(inputs: Sequence[Type], results: Sequence[Type], context: Context | None = None) -> FunctionType"),
-      // clang-format on
       "Gets a FunctionType from a list of input and result types");
   c.def_prop_ro(
       "inputs",

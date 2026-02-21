@@ -1990,7 +1990,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     [[fallthrough]];
   case RISCVISD::SUBD:
   case RISCVISD::PPAIRE_DB:
-  case RISCVISD::WADDAU: {
+  case RISCVISD::WADDAU:
+  case RISCVISD::WSUBAU: {
     assert(!Subtarget->is64Bit() && "Unexpected opcode");
     assert((Node->getOpcode() != RISCVISD::PPAIRE_DB ||
             Subtarget->enablePExtSIMDCodeGen()) &&
@@ -2010,17 +2011,16 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     SDValue Op1Hi = Node->getOperand(3);
 
     MachineSDNode *New;
-    if (Node->getOpcode() == RISCVISD::WADDAU) {
-      // WADDAU: rd = rd + zext(rs1) + zext(rs2)
-      // Op0 is the accumulator (GPRPair), Op1Lo and Op1Hi are the two 32-bit
-      // values to add.
-      New = CurDAG->getMachineNode(RISCV::WADDAU, DL, MVT::Untyped, Op0, Op1Lo,
-                                   Op1Hi);
+    if (Opcode == RISCVISD::WADDAU || Opcode == RISCVISD::WSUBAU) {
+      // WADDAU/WSUBAU: Op0 is the accumulator (GPRPair), Op1Lo and Op1Hi are
+      // the two 32-bit values.
+      unsigned Opc = Opcode == RISCVISD::WADDAU ? RISCV::WADDAU : RISCV::WSUBAU;
+      New = CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Op0, Op1Lo, Op1Hi);
     } else {
       SDValue Op1 = buildGPRPair(CurDAG, DL, MVT::Untyped, Op1Lo, Op1Hi);
 
       unsigned Opc;
-      switch (Node->getOpcode()) {
+      switch (Opcode) {
       default:
         llvm_unreachable("Unexpected opcode");
       case RISCVISD::ADDD:
@@ -4559,6 +4559,54 @@ bool RISCVDAGToDAGISel::selectRVVSimm5(SDValue N, unsigned Width,
 
     Imm = CurDAG->getSignedTargetConstant(ImmVal, SDLoc(N),
                                           Subtarget->getXLenVT());
+    return true;
+  }
+
+  return false;
+}
+
+// Match XOR with a VMSET_VL operand. Return the other operand.
+bool RISCVDAGToDAGISel::selectVMNOTOp(SDValue N, SDValue &Res) {
+  if (N.getOpcode() != ISD::XOR)
+    return false;
+
+  if (N.getOperand(0).getOpcode() == RISCVISD::VMSET_VL) {
+    Res = N.getOperand(1);
+    return true;
+  }
+
+  if (N.getOperand(1).getOpcode() == RISCVISD::VMSET_VL) {
+    Res = N.getOperand(0);
+    return true;
+  }
+
+  return false;
+}
+
+// Match VMXOR_VL with a VMSET_VL operand. Making sure that that VL operand
+// matches the parent's VL. Return the other operand of the VMXOR_VL.
+bool RISCVDAGToDAGISel::selectVMNOT_VLOp(SDNode *Parent, SDValue N,
+                                         SDValue &Res) {
+  if (N.getOpcode() != RISCVISD::VMXOR_VL)
+    return false;
+
+  assert(Parent &&
+         (Parent->getOpcode() == RISCVISD::VMAND_VL ||
+          Parent->getOpcode() == RISCVISD::VMOR_VL ||
+          Parent->getOpcode() == RISCVISD::VMXOR_VL) &&
+         "Unexpected parent");
+
+  // The VL should match the parent.
+  if (Parent->getOperand(2) != N->getOperand(2))
+    return false;
+
+  if (N.getOperand(0).getOpcode() == RISCVISD::VMSET_VL) {
+    Res = N.getOperand(1);
+    return true;
+  }
+
+  if (N.getOperand(1).getOpcode() == RISCVISD::VMSET_VL) {
+    Res = N.getOperand(0);
     return true;
   }
 

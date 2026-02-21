@@ -3774,6 +3774,38 @@ mlir::ValueRange cir::TryOp::getSuccessorInputs(RegionSuccessor successor) {
                               : ValueRange();
 }
 
+LogicalResult cir::TryOp::verify() {
+  mlir::ArrayAttr handlerTypes = getHandlerTypes();
+  if (!handlerTypes) {
+    if (!getHandlerRegions().empty())
+      return emitOpError(
+          "handler regions must be empty when no handler types are present");
+    return success();
+  }
+
+  mlir::MutableArrayRef<mlir::Region> handlerRegions = getHandlerRegions();
+
+  // The parser and builder won't allow this to happen, but the loop below
+  // relies on the sizes being the same, so we check it here.
+  if (handlerRegions.size() != handlerTypes.size())
+    return emitOpError(
+        "number of handler regions and handler types must match");
+
+  for (const auto &[typeAttr, handlerRegion] :
+       llvm::zip(handlerTypes, handlerRegions)) {
+    // The unwind region does not require a cir.catch_param.
+    if (mlir::isa<cir::UnwindAttr>(typeAttr))
+      continue;
+
+    mlir::Block &entryBlock = handlerRegion.front();
+    if (entryBlock.empty() || !mlir::isa<cir::CatchParamOp>(entryBlock.front()))
+      return emitOpError(
+          "catch handler region must start with 'cir.catch_param'");
+  }
+
+  return success();
+}
+
 static void
 printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
                        mlir::MutableArrayRef<mlir::Region> handlerRegions,

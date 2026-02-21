@@ -36,6 +36,7 @@ public:
   Error visitSymbolBegin(codeview::CVSymbol &Record) override;
   Error visitSymbolBegin(codeview::CVSymbol &Record, uint32_t Offset) override;
   Error visitSymbolEnd(codeview::CVSymbol &Record) override;
+  Error visitUnknownSymbol(codeview::CVSymbol &Record) override;
 
   void setSymbolGroup(const SymbolGroup *Group) { SymGroup = Group; }
 
@@ -50,6 +51,8 @@ private:
 
   std::string typeIndex(codeview::TypeIndex TI) const;
   std::string idIndex(codeview::TypeIndex TI) const;
+
+  void printSymbolBytes(codeview::CVSymbol &Record) const;
 
   LinePrinter &P;
 

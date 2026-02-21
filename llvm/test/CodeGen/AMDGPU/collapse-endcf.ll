@@ -164,7 +164,7 @@ bb.inner.then:                                    ; preds = %bb.outer.then
   br label %bb.outer.end
 
 bb.outer.end:                                     ; preds = %bb.outer.then, %bb.inner.then, %bb
-  store i32 3, ptr addrspace(3) null
+  store i32 3, ptr addrspace(3) zeroinitializer
   ret void
 }
 
@@ -360,7 +360,7 @@ bb.inner.end:                                     ; preds = %bb.inner.then, %bb.
   br label %bb.outer.end
 
 bb.outer.end:                                     ; preds = %bb.inner.then, %bb
-  store i32 3, ptr addrspace(3) null
+  store i32 3, ptr addrspace(3) zeroinitializer
   ret void
 }
 
@@ -586,7 +586,7 @@ bb.else:                                             ; preds = %bb.outer.then
   br label %bb.outer.end
 
 bb.outer.end:                                        ; preds = %bb, %bb.then, %bb.else
-  store i32 3, ptr addrspace(3) null
+  store i32 3, ptr addrspace(3) zeroinitializer
   ret void
 }
 
@@ -872,7 +872,7 @@ bb.inner.then2:
   br label %bb.outer.end
 
 bb.outer.end:
-  store i32 3, ptr addrspace(3) null
+  store i32 3, ptr addrspace(3) zeroinitializer
   ret void
 }
 
