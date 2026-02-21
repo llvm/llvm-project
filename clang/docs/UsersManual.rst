@@ -149,7 +149,7 @@ Options to Control Error and Warning Messages
 
 .. option:: -w
 
-  Disable all diagnostics.
+  Disable all warning diagnostics. Errors are still emitted.
 
 .. option:: -Weverything
 
