@@ -3494,7 +3494,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
 
   // Never use the initializer of a weak variable, not even for constant
   // folding. We can't be sure that this is the definition that will be used.
-  if (VD->isWeak()) {
+  if (VD->isWeak()&& (Info.EvalMode != EvaluationMode::ConstantExpression)) {
     Info.FFDiag(E, diag::note_constexpr_var_init_weak) << VD;
     NoteLValueLocation(Info, Base);
     return false;
