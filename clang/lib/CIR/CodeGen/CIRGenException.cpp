@@ -12,6 +12,8 @@
 
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
+#include "mlir/IR/Block.h"
+#include "mlir/IR/Location.h"
 
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -361,6 +363,7 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
   for (unsigned i = 0; i != numHandlers; ++i) {
     const CXXCatchStmt *catchStmt = s.getHandler(i);
     mlir::Region *handler = &tryOp.getHandlerRegions()[i];
+    mlir::Location handlerLoc = getLoc(catchStmt->getCatchLoc());
 
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPointToStart(&handler->front());
@@ -391,6 +394,14 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
 
     // Fall out through the catch cleanups.
     handlerScope.forceCleanup();
+
+    mlir::Block *block = &handler->getBlocks().back();
+    if (block->empty() ||
+        !block->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointToEnd(block);
+      builder.createYield(handlerLoc);
+    }
   }
 
   return mlir::success();
