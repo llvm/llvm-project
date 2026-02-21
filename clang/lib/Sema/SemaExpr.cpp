@@ -11604,6 +11604,13 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
   if (!IExp->getType()->isIntegerType())
     return InvalidOperands(Loc, LHS, RHS);
 
+  if (OriginalOperand Orig(PExp);
+      Orig.getType()->isArrayType() && Orig.Orig->isPRValue()) {
+    Diag(Loc, diag::err_typecheck_array_prvalue_operand)
+        << PExp->getSourceRange();
+    return QualType();
+  }
+
   // Adding to a null pointer results in undefined behavior.
   if (PExp->IgnoreParenCasts()->isNullPointerConstant(
           Context, Expr::NPC_ValueDependentIsNotNull)) {
@@ -11699,6 +11706,18 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
   if (!compType.isNull() && compType->isArithmeticType()) {
     if (CompLHSTy) *CompLHSTy = compType;
     return compType;
+  }
+
+  OriginalOperand OrigLHS(LHS.get()), OrigRHS(RHS.get());
+  bool LHSArrP = OrigLHS.getType()->isArrayType() && OrigLHS.Orig->isPRValue();
+  bool RHSArrP = OrigRHS.getType()->isArrayType() && OrigRHS.Orig->isPRValue();
+  if (LHSArrP || RHSArrP) {
+    auto &&diag = Diag(Loc, diag::err_typecheck_array_prvalue_operand);
+    if (LHSArrP)
+      diag << LHS.get()->getSourceRange();
+    if (RHSArrP)
+      diag << RHS.get()->getSourceRange();
+    return QualType();
   }
 
   // Either ptr - int   or   ptr - ptr.
@@ -16129,6 +16148,11 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       InputExpr->getType()->isSpecificBuiltinType(BuiltinType::Dependent)) {
     resultType = Context.DependentTy;
   } else {
+    if (Opc == UO_Deref || Opc == UO_Plus) {
+      if (InputExpr->getType()->isArrayType() && InputExpr->isPRValue())
+        return ExprError(Diag(OpLoc, diag::err_typecheck_array_prvalue_operand)
+                         << InputExpr->getSourceRange());
+    }
     switch (Opc) {
     case UO_PreInc:
     case UO_PreDec:

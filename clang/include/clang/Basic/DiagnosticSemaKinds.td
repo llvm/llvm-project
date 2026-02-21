@@ -7902,6 +7902,8 @@ def warn_param_mismatched_alignment : Warning<
 
 def err_objc_object_assignment : Error<
   "cannot assign to class object (%0 invalid)">;
+def err_typecheck_array_prvalue_operand : Error<
+  "array prvalue is not permitted">;
 def err_typecheck_invalid_operands : Error<
   "invalid operands to binary expression (%0 and %1)">, Deferrable;
 def note_typecheck_invalid_operands_converted : Note<
