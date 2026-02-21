@@ -36,42 +36,43 @@ void SANITIZER_CDECL __tsan_release(void *addr);
 // the flags may be passed to __tsan_mutex_pre_lock/__tsan_mutex_post_lock
 // annotations.
 
-// Mutex has static storage duration and no-op constructor and destructor.
-// This effectively makes tsan ignore destroy annotation.
-static const unsigned __tsan_mutex_linker_init      = 1 << 0;
-// Mutex is write reentrant.
-static const unsigned __tsan_mutex_write_reentrant  = 1 << 1;
-// Mutex is read reentrant.
-static const unsigned __tsan_mutex_read_reentrant   = 1 << 2;
-// Mutex does not have static storage duration, and must not be used after
-// its destructor runs.  The opposite of __tsan_mutex_linker_init.
-// If this flag is passed to __tsan_mutex_destroy, then the destruction
-// is ignored unless this flag was previously set on the mutex.
-static const unsigned __tsan_mutex_not_static       = 1 << 8;
+enum : unsigned {
+  // Mutex has static storage duration and no-op constructor and destructor.
+  // This effectively makes tsan ignore destroy annotation.
+  __tsan_mutex_linker_init = 1 << 0,
+  // Mutex is write reentrant.
+  __tsan_mutex_write_reentrant = 1 << 1,
+  // Mutex is read reentrant.
+  __tsan_mutex_read_reentrant = 1 << 2,
+  // Mutex does not have static storage duration, and must not be used after
+  // its destructor runs.  The opposite of __tsan_mutex_linker_init.
+  // If this flag is passed to __tsan_mutex_destroy, then the destruction
+  // is ignored unless this flag was previously set on the mutex.
+  __tsan_mutex_not_static = 1 << 8,
 
-// Mutex operation flags:
+  // Mutex operation flags:
 
-// Denotes read lock operation.
-static const unsigned __tsan_mutex_read_lock = 1 << 3;
-// Denotes try lock operation.
-static const unsigned __tsan_mutex_try_lock = 1 << 4;
-// Denotes that a try lock operation has failed to acquire the mutex.
-static const unsigned __tsan_mutex_try_lock_failed = 1 << 5;
-// Denotes that the lock operation acquires multiple recursion levels.
-// Number of levels is passed in recursion parameter.
-// This is useful for annotation of e.g. Java builtin monitors,
-// for which wait operation releases all recursive acquisitions of the mutex.
-static const unsigned __tsan_mutex_recursive_lock = 1 << 6;
-// Denotes that the unlock operation releases all recursion levels.
-// Number of released levels is returned and later must be passed to
-// the corresponding __tsan_mutex_post_lock annotation.
-static const unsigned __tsan_mutex_recursive_unlock = 1 << 7;
+  // Denotes read lock operation.
+  __tsan_mutex_read_lock = 1 << 3,
+  // Denotes try lock operation.
+  __tsan_mutex_try_lock = 1 << 4,
+  // Denotes that a try lock operation has failed to acquire the mutex.
+  __tsan_mutex_try_lock_failed = 1 << 5,
+  // Denotes that the lock operation acquires multiple recursion levels.
+  // Number of levels is passed in recursion parameter.
+  // This is useful for annotation of e.g. Java builtin monitors,
+  // for which wait operation releases all recursive acquisitions of the mutex.
+  __tsan_mutex_recursive_lock = 1 << 6,
+  // Denotes that the unlock operation releases all recursion levels.
+  // Number of released levels is returned and later must be passed to
+  // the corresponding __tsan_mutex_post_lock annotation.
+  __tsan_mutex_recursive_unlock = 1 << 7,
 
-// Convenient composed constants.
-static const unsigned __tsan_mutex_try_read_lock =
-    __tsan_mutex_read_lock | __tsan_mutex_try_lock;
-static const unsigned __tsan_mutex_try_read_lock_failed =
-    __tsan_mutex_try_read_lock | __tsan_mutex_try_lock_failed;
+  // Convenient composed constants.
+  __tsan_mutex_try_read_lock = __tsan_mutex_read_lock | __tsan_mutex_try_lock,
+  __tsan_mutex_try_read_lock_failed =
+      __tsan_mutex_try_read_lock | __tsan_mutex_try_lock_failed
+};
 
 // Annotate creation of a mutex.
 // Supported flags: mutex creation flags.
