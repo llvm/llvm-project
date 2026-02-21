@@ -63825,3 +63825,31 @@ Align X86TargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
     return Align(1ULL << ExperimentalPrefInnermostLoopAlignment);
   return TargetLowering::getPrefLoopAlignment();
 }
+
+#ifndef NDEBUG
+void X86TargetLowering::verifyTargetSDNode(const SDNode *N) const {
+  switch (N->getOpcode()) {
+  default:
+    break;
+  case X86ISD::KSHIFTL:
+  case X86ISD::KSHIFTR: {
+    EVT VT = N->getValueType(0);
+    auto *Amt = cast<ConstantSDNode>(N->getOperand(1));
+    assert(Amt->getAPIntValue().ult(VT.getVectorNumElements()) &&
+           "Out of range KSHIFT shift amount");
+    break;
+  }
+  case X86ISD::PSADBW: {
+    EVT VT = N->getValueType(0);
+    SDValue LHS = N->getOperand(0);
+    SDValue RHS = N->getOperand(1);
+    assert((VT == MVT::v2i64 || VT == MVT::v4i64 || VT == MVT::v8i64) &&
+           LHS.getValueType() == RHS.getValueType() &&
+           LHS.getValueSizeInBits() == VT.getSizeInBits() &&
+           LHS.getValueType().getScalarType() == MVT::i8 &&
+           "Unexpected PSADBW types");
+    break;
+  }
+  }
+}
+#endif

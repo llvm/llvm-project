@@ -1720,6 +1720,10 @@ namespace llvm {
       return TargetLoweringBase::getTypeToTransformTo(Context, VT);
     }
 
+#ifndef NDEBUG
+    void verifyTargetSDNode(const SDNode *N) const override;
+#endif
+
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,
