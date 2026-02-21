@@ -1093,7 +1093,7 @@ bool WebAssemblyFastISel::selectZExt(const Instruction *I) {
   return true;
 }
 
-static bool isSignedLoad(const MachineInstr *LI) {
+static bool isSignExtLoad(const MachineInstr *LI) {
   switch (LI->getOpcode()) {
   default:
     return false;
@@ -1122,7 +1122,7 @@ bool WebAssemblyFastISel::selectSExt(const Instruction *I) {
     return false;
 
   MachineInstr *MI = MRI.getUniqueVRegDef(In);
-  if (MI && isSignedLoad(MI)) {
+  if (MI && isSignExtLoad(MI)) {
     // The load instruction has already been folded into a signed load
     // by selectLoad, so we don't need to emit any extension instruction.
     // Just map the result of this SExt to the signed load register.
