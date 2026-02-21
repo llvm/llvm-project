@@ -1903,6 +1903,7 @@ module std [system] {
     module empty_view                     { header "__ranges/empty_view.h" }
     module enable_borrowed_range          { header "__ranges/enable_borrowed_range.h" }
     module enable_view                    { header "__ranges/enable_view.h" }
+    module enumerate_view                 { header "__ranges/enumerate_view.h" }
     module filter_view {
       header "__ranges/filter_view.h"
       export std.functional.bind_back

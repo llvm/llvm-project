@@ -104,7 +104,7 @@
 "","","","","","",""
 "`P0290R4 <https://wg21.link/P0290R4>`__","``apply()`` for ``synchronized_value<T>``","2023-02 (Issaquah)","","","`#105249 <https://github.com/llvm/llvm-project/issues/105249>`__",""
 "`P2770R0 <https://wg21.link/P2770R0>`__","Stashing stashing ``iterators`` for proper flattening","2023-02 (Issaquah)","|Complete|","21","`#105250 <https://github.com/llvm/llvm-project/issues/105250>`__",""
-"`P2164R9 <https://wg21.link/P2164R9>`__","``views::enumerate``","2023-02 (Issaquah)","","","`#105251 <https://github.com/llvm/llvm-project/issues/105251>`__",""
+"`P2164R9 <https://wg21.link/P2164R9>`__","``views::enumerate``","2023-02 (Issaquah)","|Complete|","23","`#105251 <https://github.com/llvm/llvm-project/issues/105251>`__",""
 "`P2711R1 <https://wg21.link/P2711R1>`__","Making multi-param constructors of ``views`` ``explicit``","2023-02 (Issaquah)","|Complete|","21","`#105252 <https://github.com/llvm/llvm-project/issues/105252>`__",""
 "`P2609R3 <https://wg21.link/P2609R3>`__","Relaxing Ranges Just A Smidge","2023-02 (Issaquah)","|Complete|","20","`#105253 <https://github.com/llvm/llvm-project/issues/105253>`__","Implemented as a DR in C++20. Other implementations will do the same."
 "`P2713R1 <https://wg21.link/P2713R1>`__","Escaping improvements in ``std::format``","2023-02 (Issaquah)","|Complete|","19","`#105254 <https://github.com/llvm/llvm-project/issues/105254>`__",""
