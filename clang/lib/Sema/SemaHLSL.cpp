@@ -5296,6 +5296,8 @@ QualType SemaHLSL::checkMatrixComponent(Sema &S, QualType baseType,
   }
 
   QualType ElemTy = MT->getElementType();
+  if (NumComponents == 1)
+    return ElemTy;
   QualType VT = S.Context.getExtVectorType(ElemTy, NumComponents);
   if (HasRepeated)
     VK = VK_PRValue;

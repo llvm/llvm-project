@@ -1746,8 +1746,7 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
     assert(!NeedExecCopyReservedReg &&
            "Whole wave functions can use the reg mapped for their i1 argument");
 
-    // FIXME: Be more efficient!
-    unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
+    unsigned NumArchVGPRs = ST.getAddressableNumArchVGPRs();
     for (MCRegister Reg :
          AMDGPU::VGPR_32RegClass.getRegisters().take_front(NumArchVGPRs))
       if (MF.getRegInfo().isPhysRegModified(Reg)) {
