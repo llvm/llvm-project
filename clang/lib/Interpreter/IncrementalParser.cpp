@@ -13,6 +13,7 @@
 #include "IncrementalParser.h"
 #include "IncrementalAction.h"
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
@@ -162,7 +163,7 @@ IncrementalParser::Parse(llvm::StringRef input) {
 }
 
 void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
-  if (StoredDeclsMap *Map = MostRecentTU->getPrimaryContext()->getLookupPtr()) {
+  if (auto *Map = MostRecentTU->getPrimaryContext()->getLookupPtr()) {
     for (auto &&[Key, List] : *Map) {
       DeclContextLookupResult R = List.getLookupResult();
       std::vector<NamedDecl *> NamedDeclsToRemove;
@@ -178,6 +179,30 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
       } else {
         for (NamedDecl *D : NamedDeclsToRemove)
           List.remove(D);
+      }
+    }
+  }
+
+  auto *ECCD = S.getASTContext().getExternCContextDecl();
+  if (auto *Map = ECCD->getPrimaryContext()->getLookupPtr()) {
+    for (auto &&[Key, List] : *Map) {
+      DeclContextLookupResult R = List.getLookupResult();
+      std::vector<NamedDecl *> NamedDeclsToRemove;
+      for (NamedDecl *D : R) {
+        // Implicitly generated C decl is not attached to the current TU but
+        // lexically attached to the recent TU, so we need to check the lexical
+        // context.
+        DeclContext *LDC = D->getLexicalDeclContext();
+        while (LDC && !isa<TranslationUnitDecl>(LDC)) {
+          LDC = LDC->getLexicalParent();
+        }
+        TranslationUnitDecl *TopTU = cast_or_null<TranslationUnitDecl>(LDC);
+        if (TopTU == MostRecentTU)
+          NamedDeclsToRemove.push_back(D);
+      }
+      for (NamedDecl *D : NamedDeclsToRemove) {
+        List.remove(D);
+        S.IdResolver.RemoveDecl(D);
       }
     }
   }
