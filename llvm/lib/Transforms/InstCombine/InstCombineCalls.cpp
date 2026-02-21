@@ -4272,11 +4272,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                        m_Poison(), m_APInt(Scalar), m_APInt(VL))) ||
         VL->isOne() || Scalar->getBitWidth() > VL->getBitWidth())
       return nullptr;
-    auto *VecTy = cast<VectorType>(II->getType());
-    bool IsScalable = VecTy->isScalableTy();
+    auto *VecTy = cast<ScalableVectorType>(II->getType());
     ElementCount EC = VecTy->getElementCount();
-    ElementCount ScaleFactor =
-        ElementCount::get(VL->getZExtValue(), IsScalable);
+    ElementCount ScaleFactor = ElementCount::getScalable(VL->getZExtValue());
     auto *EltTy = cast<IntegerType>(VecTy->getScalarType());
     auto *NewEltTy = IntegerType::get(
         CI.getContext(), EltTy->getScalarSizeInBits() * VL->getZExtValue());
@@ -4284,7 +4282,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         NewEltTy->getBitWidth() > VL->getBitWidth())
       return nullptr;
     ElementCount NewEC =
-        ElementCount::get(EC.getKnownScalarFactor(ScaleFactor), IsScalable);
+        ElementCount::getScalable(EC.getKnownScalarFactor(ScaleFactor));
     Type *RetTy = VectorType::get(NewEltTy, NewEC);
     assert(VecTy->canLosslesslyBitCastTo(RetTy) &&
            "Lossless bitcast between types expected");
