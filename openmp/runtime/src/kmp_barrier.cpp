@@ -1317,6 +1317,15 @@ static bool __kmp_init_hierarchical_barrier_thread(enum barrier_type bt,
                                                    kmp_bstate_t *thr_bar,
                                                    kmp_uint32 nproc, int gtid,
                                                    int tid, kmp_team_t *team) {
+  // Helper macro to identify bytes in a kmp_uint64 in an endian-independent
+  // way.  Input 0 results in the byte address of the MSB, input 7 results
+  // in the byte address of the LSB.
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define __kmp_msb_byteoffset(offset) (offset)
+#else
+#define __kmp_msb_byteoffset(offset) (7 - (offset))
+#endif
+
   // Checks to determine if (re-)initialization is needed
   bool uninitialized = thr_bar->team == NULL;
   bool team_changed = team != thr_bar->team;
@@ -1331,6 +1340,7 @@ static bool __kmp_init_hierarchical_barrier_thread(enum barrier_type bt,
   if (uninitialized || team_sz_changed || tid_changed) {
     thr_bar->my_level = thr_bar->depth - 1; // default for primary thread
     thr_bar->parent_tid = -1; // default for primary thread
+    thr_bar->offset = -1; // unused for primary thread
     if (!KMP_MASTER_TID(tid)) {
       // if not primary thread, find parent thread in hierarchy
       kmp_uint32 d = 0;
@@ -1350,10 +1360,14 @@ static bool __kmp_init_hierarchical_barrier_thread(enum barrier_type bt,
         }
         ++d;
       }
+
+      kmp_uint32 offset = ((kmp_uint32)tid - thr_bar->parent_tid) /
+                          thr_bar->skip_per_level[thr_bar->my_level];
+      offset = offset - 1;
+      KMP_ASSERT(offset < 7);
+      __kmp_type_convert(__kmp_msb_byteoffset(offset), &(thr_bar->offset));
     }
-    __kmp_type_convert(7 - ((tid - thr_bar->parent_tid) /
-                            (thr_bar->skip_per_level[thr_bar->my_level])),
-                       &(thr_bar->offset));
+
     thr_bar->old_tid = tid;
     thr_bar->wait_flag = KMP_BARRIER_NOT_WAITING;
     thr_bar->team = team;
@@ -1375,9 +1389,11 @@ static bool __kmp_init_hierarchical_barrier_thread(enum barrier_type bt,
       __kmp_type_convert(nproc - tid - 1, &(thr_bar->leaf_kids));
     thr_bar->leaf_state = 0;
     for (int i = 0; i < thr_bar->leaf_kids; ++i)
-      ((char *)&(thr_bar->leaf_state))[7 - i] = 1;
+      ((char *)&(thr_bar->leaf_state))[__kmp_msb_byteoffset(i)] = 1;
   }
   return retval;
+
+#undef __kmp_msb_byteoffset
 }
 
 static void __kmp_hierarchical_barrier_gather(
@@ -1531,8 +1547,7 @@ static void __kmp_hierarchical_barrier_gather(
     } else {
       // Leaf does special release on "offset" bits of parent's b_arrived flag
       thr_bar->b_arrived = team->t.t_bar[bt].b_arrived + KMP_BARRIER_STATE_BUMP;
-      kmp_flag_oncore flag(&thr_bar->parent_bar->b_arrived,
-                           thr_bar->offset + 1);
+      kmp_flag_oncore flag(&thr_bar->parent_bar->b_arrived, thr_bar->offset);
       flag.set_waiter(other_threads[thr_bar->parent_tid]);
       flag.release();
     }
@@ -1580,7 +1595,7 @@ static void __kmp_hierarchical_barrier_release(
       // Wait on my "offset" bits on parent's b_go flag
       thr_bar->wait_flag = KMP_BARRIER_PARENT_FLAG;
       kmp_flag_oncore flag(&thr_bar->parent_bar->b_go, KMP_BARRIER_STATE_BUMP,
-                           thr_bar->offset + 1, bt,
+                           thr_bar->offset, bt,
                            this_thr USE_ITT_BUILD_ARG(itt_sync_obj));
       flag.wait(this_thr, TRUE);
       if (thr_bar->wait_flag ==
@@ -1589,7 +1604,7 @@ static void __kmp_hierarchical_barrier_release(
               KMP_INIT_BARRIER_STATE); // Reset my b_go flag for next time
       } else { // Reset my bits on parent's b_go flag
         (RCAST(volatile char *,
-               &(thr_bar->parent_bar->b_go)))[thr_bar->offset + 1] = 0;
+               &(thr_bar->parent_bar->b_go)))[thr_bar->offset] = 0;
       }
     }
     thr_bar->wait_flag = KMP_BARRIER_NOT_WAITING;
