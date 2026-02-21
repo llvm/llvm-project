@@ -8546,8 +8546,8 @@ static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
       N0.hasOneUse() && N1.hasOneUse()) {
     auto *S0 = dyn_cast<ConstantSDNode>(N0.getOperand(2));
     auto *S1 = dyn_cast<ConstantSDNode>(N1.getOperand(2));
-    if (S0 && S1 && S0->getZExtValue() != 0 && S1->getZExtValue() != 0 &&
-        (S0->getZExtValue() + S1->getZExtValue()) == BW) {
+    if (S0 && S1 && S0->getZExtValue() < BW && S1->getZExtValue() < BW &&
+        S0->getZExtValue() == (BW - S1->getZExtValue())) {
       SDValue A = N0.getOperand(0);
       SDValue B = N0.getOperand(1);
       SDValue C = N1.getOperand(0);
