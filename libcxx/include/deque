@@ -185,6 +185,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__algorithm/copy_n.h>
 #  include <__algorithm/equal.h>
 #  include <__algorithm/fill_n.h>
+#  include <__algorithm/iterator_operations.h>
 #  include <__algorithm/lexicographical_compare.h>
 #  include <__algorithm/lexicographical_compare_three_way.h>
 #  include <__algorithm/max.h>
@@ -853,7 +854,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI iterator insert_range(const_iterator __position, _Range&& __range) {
     if constexpr (ranges::bidirectional_range<_Range>) {
       auto __n = static_cast<size_type>(ranges::distance(__range));
-      return __insert_bidirectional(__position, ranges::begin(__range), ranges::end(__range), __n);
+      return __insert_bidirectional<_RangeAlgPolicy>(__position, ranges::begin(__range), ranges::end(__range), __n);
 
     } else if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       auto __n = static_cast<size_type>(ranges::distance(__range));
@@ -1223,10 +1224,10 @@ private:
   template <class _Iterator>
   _LIBCPP_HIDE_FROM_ABI iterator __insert_with_size(const_iterator __p, _Iterator __f, size_type __n);
 
-  template <class _BiIter, class _Sentinel>
+  template <class _AlgPolicy, class _BiIter, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI iterator
   __insert_bidirectional(const_iterator __p, _BiIter __f, _Sentinel __sent, size_type __n);
-  template <class _BiIter>
+  template <class _AlgPolicy, class _BiIter>
   _LIBCPP_HIDE_FROM_ABI iterator __insert_bidirectional(const_iterator __p, _BiIter __f, _BiIter __l, size_type __n);
 
   template <class _InpIter, __enable_if_t<__has_exactly_input_iterator_category<_InpIter>::value, int> = 0>
@@ -1806,20 +1807,21 @@ deque<_Tp, _Allocator>::__insert_with_size(const_iterator __p, _Iterator __f, si
 template <class _Tp, class _Allocator>
 template <class _BiIter, __enable_if_t<__has_bidirectional_iterator_category<_BiIter>::value, int> >
 typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::insert(const_iterator __p, _BiIter __f, _BiIter __l) {
-  return __insert_bidirectional(__p, __f, __l, std::distance(__f, __l));
+  return __insert_bidirectional<_ClassicAlgPolicy>(__p, __f, __l, std::distance(__f, __l));
 }
 
 template <class _Tp, class _Allocator>
-template <class _BiIter, class _Sentinel>
+template <class _AlgPolicy, class _BiIter, class _Sentinel>
 _LIBCPP_HIDE_FROM_ABI typename deque<_Tp, _Allocator>::iterator
 deque<_Tp, _Allocator>::__insert_bidirectional(const_iterator __p, _BiIter __f, _Sentinel, size_type __n) {
-  return __insert_bidirectional(__p, __f, std::next(__f, __n), __n);
+  return __insert_bidirectional<_AlgPolicy>(__p, __f, _IterOps<_AlgPolicy>::next(__f, __n), __n);
 }
 
 template <class _Tp, class _Allocator>
-template <class _BiIter>
+template <class _AlgPolicy, class _BiIter>
 _LIBCPP_HIDE_FROM_ABI typename deque<_Tp, _Allocator>::iterator
 deque<_Tp, _Allocator>::__insert_bidirectional(const_iterator __p, _BiIter __f, _BiIter __l, size_type __n) {
+  using _Ops          = _IterOps<_AlgPolicy>;
   size_type __pos     = __p - begin();
   size_type __to_end  = size() - __pos;
   allocator_type& __a = __alloc();
@@ -1832,7 +1834,7 @@ deque<_Tp, _Allocator>::__insert_bidirectional(const_iterator __p, _BiIter __f, 
     iterator __i         = __old_begin;
     _BiIter __m          = __f;
     if (__n > __pos) {
-      __m = __pos < __n / 2 ? std::prev(__l, __pos) : std::next(__f, __n - __pos);
+      __m = __pos < __n / 2 ? _Ops::prev(__l, __pos) : _Ops::next(__f, __n - __pos);
       for (_BiIter __j = __m; __j != __f; --__start_, ++__size())
         __alloc_traits::construct(__a, std::addressof(*--__i), *--__j);
       __n = __pos;
@@ -1859,7 +1861,7 @@ deque<_Tp, _Allocator>::__insert_bidirectional(const_iterator __p, _BiIter __f, 
     _BiIter __m        = __l;
     size_type __de     = size() - __pos;
     if (__n > __de) {
-      __m = __de < __n / 2 ? std::next(__f, __de) : std::prev(__l, __n - __de);
+      __m = __de < __n / 2 ? _Ops::next(__f, __de) : _Ops::prev(__l, __n - __de);
       for (_BiIter __j = __m; __j != __l; ++__i, (void)++__j, ++__size())
         __alloc_traits::construct(__a, std::addressof(*__i), *__j);
       __n = __de;
