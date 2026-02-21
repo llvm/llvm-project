@@ -19,7 +19,7 @@
 
 #include <unordered_map>
 
-#include "test_transparent_unordered.h"
+#include "test_transparent_associative.h"
 
 int main(int, char**) {
   using key_type = StoredType<int>;
