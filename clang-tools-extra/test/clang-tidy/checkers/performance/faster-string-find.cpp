@@ -14,6 +14,9 @@ struct basic_string {
   int find_first_not_of(const Char *) const;
   int find_last_of(const Char *) const;
   int find_last_not_of(const Char *) const;
+  bool starts_with(const Char *) const;
+  bool ends_with(const Char *) const;
+  bool contains(const Char *) const;
 };
 
 typedef basic_string<char> string;
@@ -28,6 +31,9 @@ struct basic_string_view {
   int find_first_not_of(const Char *) const;
   int find_last_of(const Char *) const;
   int find_last_not_of(const Char *) const;
+  bool starts_with(const Char *) const;
+  bool ends_with(const Char *) const;
+  bool contains(const Char *) const;
 };
 
 typedef basic_string_view<char> string_view;
@@ -87,6 +93,15 @@ void StringFind() {
   Str.find_last_not_of("a");
   // CHECK-MESSAGES: [[@LINE-1]]:24: warning: 'find_last_not_of' called with a
   // CHECK-FIXES: Str.find_last_not_of('a');
+  Str.starts_with("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:19: warning: 'starts_with' called with a
+  // CHECK-FIXES: Str.starts_with('a');
+  Str.ends_with("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:17: warning: 'ends_with' called with a string
+  // CHECK-FIXES: Str.ends_with('a');
+  Str.contains("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:16: warning: 'contains' called with a
+  // CHECK-FIXES: Str.contains('a');
 
   // std::wstring should work.
   std::wstring WStr;

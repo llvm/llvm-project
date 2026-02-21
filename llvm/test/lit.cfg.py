@@ -63,8 +63,8 @@ if config.enable_profcheck:
     config.excludes.append("llvm-objcopy")
     # (Issue #161235) Temporarily exclude LoopVectorize.
     config.excludes.append("LoopVectorize")
-    # exclude UpdateTestChecks - they fail because of inserted prof annotations
-    config.excludes.append("UpdateTestChecks")
+    # Exclude suites that fail due to inserted profile annotations.
+    config.excludes.extend(["UpdateTestChecks", "Bitcode"])
     # TODO(#166655): Reenable Instrumentation tests
     config.excludes.append("Instrumentation")
     # profiling doesn't work quite well on GPU, excluding

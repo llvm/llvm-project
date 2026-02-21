@@ -8,27 +8,8 @@ class MyClass<int size, list<ValueType> types, dag registers>
   let Size = size;
 }
 
-class Indexes<int N> {
-  list<int> all = [0,  1,  2,  3];
-  list<int> slice =
-    !foldl([]<int>, all, acc, cur,
-           !listconcat(acc, !if(!lt(cur, N), [cur], [])));
-}
-
 foreach Index = 0-3 in {
   def sub#Index : SubRegIndex<32, !shl(Index, 5)>;
-}
-
-foreach Size = {2,4} in {
-  foreach Index = Indexes<!add(5, !mul(Size, -1))>.slice in {
-    def !foldl("", Indexes<Size>.slice, acc, cur,
-               !strconcat(acc#!if(!eq(acc,""),"","_"), "sub"#!add(cur, Index))) :
-      SubRegIndex<!mul(Size, 32), !shl(Index, 5)> {
-      let CoveringSubRegIndices =
-        !foldl([]<SubRegIndex>, Indexes<Size>.slice, acc, cur,
-               !listconcat(acc, [!cast<SubRegIndex>(sub#!add(cur, Index))]));
-    }
-  }
 }
 
 let Namespace = "MyTarget" in {
