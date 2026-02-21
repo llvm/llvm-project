@@ -16014,8 +16014,16 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     getSema().pushCodeSynthesisContext(C);
 
     // Instantiate the body of the lambda expression.
-    Body = Invalid ? StmtError()
-                   : getDerived().TransformLambdaBody(E, E->getBody());
+    // Use runWithSufficientStackSpace to handle deeply nested recursive
+    // lambdas that might exhaust the stack before hitting the template
+    // instantiation depth limit.
+    if (Invalid) {
+      Body = StmtError();
+    } else {
+      getSema().runWithSufficientStackSpace(E->getBody()->getBeginLoc(), [&] {
+        Body = getDerived().TransformLambdaBody(E, E->getBody());
+      });
+    }
 
     getSema().popCodeSynthesisContext();
   }
