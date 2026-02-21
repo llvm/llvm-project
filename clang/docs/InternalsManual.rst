@@ -3451,22 +3451,38 @@ are similar.
 Testing
 -------
 All functional changes to Clang should come with test coverage demonstrating
-the change in behavior.
+the change in behavior. There are four kinds of tests:
+
+* Unit tests: such tests are placed in ``clang/test/unittest``.
+* Diagnostic tests: such tests ensures that only specific diagnostics are
+  emitted at specific source lines. Those tests are using ``-verify`` mode of
+  ``-cc1``, which is described below in
+  :ref:`"Verifying Diagnostics" <verifying-diagnostics>`. Additional
+  provisions for tests for C++ defect reports are described in ... section. 
+* AST dump tests: such tests pass AST dump to
+  `FileCheck <https://llvm.org/docs/CommandGuide/FileCheck.html>`_ utility,
+  which check presence of certain patterns (or lack of thereof).
+* LLVM IR tests: in such tests LLVM IR output of Clang is checked, which is
+  needed in cases when checking diagnostics is not sufficient (e.g. when
+  testing exception handling or object lifetime). Such tests pass LLVM IR
+  output to
+  `FileCheck <https://llvm.org/docs/CommandGuide/FileCheck.html>`_ utility,
+  which check presence of certain IR patterns (or lack of thereof).
 
 .. _verifying-diagnostics:
 
 Verifying Diagnostics
 ^^^^^^^^^^^^^^^^^^^^^
 Clang ``-cc1`` supports the ``-verify`` command line option as a way to
-validate diagnostic behavior. This option will use special comments within the
-test file to verify that expected diagnostics appear in the correct source
-locations. If all of the expected diagnostics match the actual output of Clang,
-then the invocation will return normally. If there are discrepancies between
-the expected and actual output, Clang will emit detailed information about
-which expected diagnostics were not seen or which unexpected diagnostics were
-seen, etc. A complete example is:
+validate diagnostic behavior. This option will use special comments, called
+directives, within the test file to verify that expected diagnostics appear in
+the correct source locations. If all of the expected diagnostics match the
+actual output of Clang, then the invocation will return normally. If there are
+discrepancies between the expected and actual output, Clang will emit detailed
+information about which expected diagnostics were not seen or which unexpected
+diagnostics were seen, etc. A complete example is:
 
-.. code-block: c++
+.. code-block:: c++
 
   // RUN: %clang_cc1 -verify %s
   int A = B; // expected-error {{use of undeclared identifier 'B'}}
@@ -3476,6 +3492,53 @@ diagnostic verifier will pass. However, if the expected error does not appear
 or appears in a different location than expected, or if additional diagnostics
 appear, the diagnostic verifier will fail and emit information as to why.
 
+Directive Syntax
+~~~~~~~~~~~~~~~~
+EBNF syntax description of the directives is the following:
+
+.. productionlist:: verify-grammar
+  directive: prefix , "-" , diagnostic-kind , [ regex-match ] , [ diagnotic-loc ] , [ " " , quantifier ] , "{" , [ delimiter-open ], "{", [ diagnostic-text ] , "}" , [ delimiter-close ], "}" ;
+  diagnostic-kind : "error" | "warning" | "note" | "remark" ;
+  regex-match : "-re" ;
+  diagnostic-loc : "@" , ( "+" | "-" ) , number
+                 : | "@" , line
+                 : | "@" , file-path , ":" , line
+                 : | "@" , "*" , [ ":" , "*" ]
+                 : | "@" , "#" , marker-name ;
+  line : number | "*" ;
+  number : digit, { digit } ;
+  quantifier : "+"
+             : | number , [ "+" ]
+             : | number , "-" , number ;
+  delimiter-open : { "{" } ;
+  delimiter-close : { "}" } ;
+
+Where:
+
+- ``prefix`` is "expected" or a custom string
+  (:ref:`Custom Prefixes <custom-prefixes>`).
+- ``delimiter-open`` and ``delimiter-close`` have to have the same length
+  (:ref:`Diagnostic Text <diagnostic-text>`).
+- ``file-path`` is relative or absolte path to a file
+  (:ref:`Diagnostic Location <diagnostic-location>`).
+- ``marker-name`` is name of the marker somewhere in the source
+  (:ref:`Diagnostic Location <diagnostic-location>`).
+- ``diagnostic-text`` is text of the expected diagnostic
+  (:ref:`Diagnostic Text <diagnostic-text>`).
+
+Examples:
+
+- ``// expected-note {{declared here}}``
+- ``// expected-error@+1 0-1 {{{expected identifier or '{'}}}``
+- ``// cxx98-17-warning@#func-decl + {{target exception specification is not superset of source}}``
+- ``// expected-note@* 1 {{file entered}}``
+- ``// expected-note@decls.h:2 {{previous declaration is here}}``
+- ``// cxx11-17-error-re@-1 {{no matching constructor for initialization of 'A' (aka '(lambda at {{.+}})')}}``
+
+.. _custom-prefixes:
+
+Custom Prefixes
+~~~~~~~~~~~~~~~
 The ``-verify`` command optionally accepts a comma-delimited list of one or
 more verification prefixes that can be used to craft those special comments.
 Each prefix must start with a letter and contain only alphanumeric characters,
@@ -3502,8 +3565,10 @@ Multiple occurrences accumulate prefixes.  For example,
 ``-verify -verify=foo,bar -verify=baz`` is equivalent to
 ``-verify=expected,foo,bar,baz``.
 
-Specifying Diagnostics
-^^^^^^^^^^^^^^^^^^^^^^
+.. _diagnostic-location:
+
+Dianogstic Location
+^^^^^^^^^^^^^^^^^^^
 Indicating that a line expects an error or a warning is easy. Put a comment
 on the line that has the diagnostic, use
 ``expected-{error,warning,remark,note}`` to tag if it's an expected error,
@@ -3514,7 +3579,7 @@ should be included in test cases unless there is a compelling reason to use
 truncated text instead.)
 
 For a full description of the matching behavior, including more complex
-matching scenarios, see :ref:`matching <DiagnosticMatching>` below.
+matching scenarios, see :ref:`"Diagnostic text" <diagnostic-text>` below.
 
 Here's an example of the most commonly used way to specify expected
 diagnostics:
@@ -3565,6 +3630,8 @@ appending the marker to the diagnostic with ``@#<marker>``, as with:
 
 The name of a marker used in a directive must be unique within the compilation.
 
+Quantifiers
+~~~~~~~~~~~
 The simple syntax above allows each specification to match exactly one
 diagnostic. You can use the extended syntax to customize this. The extended
 syntax is ``expected-<type> <n> {{diag text}}``, where ``<type>`` is one of
@@ -3601,11 +3668,10 @@ A range can also be specified by ``<n>-<m>``. For example:
 
 In this example, the diagnostic may appear only once, if at all.
 
-.. _DiagnosticMatching:
+.. _diagnostic-text:
 
-Matching Modes
-~~~~~~~~~~~~~~
-
+Diagnostic Text
+~~~~~~~~~~~~~~~
 The default matching mode is simple string, which looks for the expected text
 that appears between the first `{{` and `}}` pair of the comment. The string is
 interpreted just as-is, with one exception: the sequence `\n` is converted to a
@@ -3646,6 +3712,153 @@ Examples matching error: "variable has incomplete type 'struct s'"
   // expected-error-re {{variable has type 'struct {{.*}}'}}
   // expected-error-re {{variable has type 'struct {{(.*)}}'}}
   // expected-error-re {{variable has type 'struct{{[[:space:]](.*)}}'}}
+
+Verifying the Directives
+~~~~~~~~~~~~~~~~~~~~~~~~
+Clang ``-cc1`` also has ``-verify-directives`` mode, which can be enabled
+alongside ``-verify`` to place additional restrictions on directives,
+and strives to improve readability of the expected compiler output
+for reviewers and future readers, but makes it a bit harder to write the test:
+
+- Diagnostic text specified in a directive has to be a full match.
+- Lexical order of directives has to match order in which diagnostics are
+  emitted.
+- Each directive can match exactly one diagnostic.
+- Wildcards (``*``) are not allowed in diagnostic location.
+
+It is recommended to write new tests with this mode enabled, but for some tests
+it's not possible. Typical problems and their solutions are listed below.
+
+- **Diagnostic is issued only sometimes.**
+  The cause of variance needs to be identified and captured. Typically it is
+  either a compiler option like language mode, in which case additional custom
+  prefix should be sufficient, or platform, in which case triple has to be
+  explicitly passed in command-line arguments.
+- **Template instantiations at the end of translation unit.**
+  Instantiations at the end of the TU cause associated diagnostics to appear
+  too late. Instantiations need to happen before the next directive, and when
+  it is possible, it still takes some creativity to achieve, especially in
+  C++98 mode. Typical solutions include explicit template instantiations,
+  manifestly constant-evaluated expressions, ``enable_if``, and removing
+  template parameters altogether.
+- **Analysis-based warnings.** Some warnings, like ``-Wunused``, are based
+  on CFG analysis and are emitted later than e.g. parser would emit them,
+  because some lookahead is required to collect all the necessary information
+  for such analysis. Not much can be done in this case.
+- **Lambdas.** When lambda is mentioned in diagnostic message, it is identified
+  by its source location, which is typically not salient for the test,
+  and would make it overspecified. In this case regex match can be used to skip
+  over source location.
+
+C++ Defect Report Tests
+^^^^^^^^^^^^^^^^^^^^^^^
+C++ Defect Report tests are placed in ``clang/test/CXX/drs`` directory, which
+consists of two types of files:
+
+- files where tests are grouped by 100 by issue number, e.g. ``cwg15xx.cpp``
+  ("big files");
+- files with individual tests or smaller groups of tests, e.g. ``cwg177x.cpp``
+  or ``cwg787.cpp``.
+
+C++ defect report tests are run in all language modes available via ``-std=``,
+except for modes with GNU extensions and ``c++03``, as it is synonymous to
+``c++98``. Exceptions, pedantic errors, and ``-verify-directives`` are enabled.
+
+Big files are where most of the tests end up being placed to save on process
+startup cost during test runs. Big files also serve as an index of tests:
+even if test is placed in its individual file, it's still mentioned in the
+big file where this test would be placed otherwise. Big files need all tests
+to work with the same set of compiler options specified in RUN lines, but
+sometimes tests need special provisions, in which case they should be placed
+in their own file. Typical reasons for that include:
+
+- **Test is checking AST dump or LLVM IR.** We don't yet know how
+  to concatenate FileCheck directives from multiple tests into a single file
+  without avoiding test interference. 
+- **Test is not compatible with ``-verify-directives``.** For instance, some
+  tests can't be rewritten to prevent instantiations at the end of TU.
+- **Test needs C++20 modules.** Such tests require special RUN lines to compile
+  modules in the right order.
+- **Test prevents compiler from checking subsequent tests.** In some cases
+  that involve templates Clang refuses to recover from expected errors and will
+  skip over expected errors in subsequent tests.
+
+C++ defect report tests make heavy use of markers. Marker names need to
+be prefixed with ``cwgNNN-``, where NNN is number of the core issue being
+tested. This is especially needed in big files, because all markers share
+the same namespace.
+
+Some diagnostics are expected only in certain language modes. This in handled
+in two parts. First, C++ defect report tests share a common pool of custom
+prefixes:
+
+- ``expected`` for diagnostics issued in all language modes;
+- ``cxxNN`` (e.g. ``cxx98``) for diagnostics issued only in one language mode;
+- ``since-cxxNN`` (e.g. ``since-cxx11``) for diagnostics that are issued
+  in a certain language mode and all newer language modes;
+- ``cxxNN-MM`` (e.g. ``cxx98-14``) for diagnostics that appear in all language
+  modes within a certain range.
+
+Second, parts of tests that test features not universally available in all
+language modes are guarded with ``#if __cplusplus``. Prefixes of directives
+in such parts need to reflect the latest ``#if __cplusplus`` guard to make
+tests require less context to understand, even though this is not strictly
+necessary to make the test work:
+
+.. code-block:: c++
+
+  #if __cplusplus >= 201103L
+  enum : int { a };
+  enum class { b };
+  // since-cxx11-error@-1 {{scoped enumeration requires a name}}
+  #endif
+
+On top of `-verify-directives`, C++ defect report tests use the following
+conventions to make it easier to reconstruct compiler output while looking at
+directives:
+
+- Errors and warnings are placed on the next line after the line they are
+  expecting a diagnostic at, and at the same indentation.
+
+  .. code-block:: c++
+
+    namespace X::Y {}
+    // cxx98-14-error@-1 {{nested namespace definition is a C++17 extension; define each namespace separately}}
+    namespace X {
+      namespace X::Y {}
+      // cxx98-14-error@-1 {{nested namespace definition is a C++17 extension; define each namespace separately}}
+    }
+
+- Directives that are placed right after the line they are expecting
+  a diagnostic at use relative offsets (``@-1``, ``@-2``, and so on),
+  as long as it's obvious that all relative offsets point to the same line.
+  If there is a feeling readers would start counting lines to make sure
+  they know where the diagnostic is expected, markers should be used instead.
+
+  .. code-block:: c++
+
+    bool b = (void(*)(S, S))operator- < (void(*)(S, S))operator-;
+    // cxx98-17-warning@-1 {{ordered comparison of function pointers ('void (*)(S, S)' and 'void (*)(S, S)')}}
+    // cxx20-23-error@-2 {{expected '>'}}
+    //   cxx20-23-note@-3 {{to match this '<'}}
+
+    int *q = new int[T()]; // #cwg299-q
+    // cxx98-11-error@#cwg299-q {{ambiguous conversion of array size expression of type 'T' to an integral or enumeration type}}
+    //   cxx98-11-note@#cwg299-int {{conversion to integral type 'int' declared here}}
+    //   cxx98-11-note@#cwg299-ushort {{conversion to integral type 'unsigned short' declared here}}
+    // since-cxx14-error-re@#cwg299-q {{conversion from 'T' to '__size_t' (aka 'unsigned {{long long|long|int}}') is ambiguous}}
+    //   since-cxx14-note@#cwg299-int {{candidate function}}
+    //   since-cxx14-note@#cwg299-ushort {{candidate function}}
+
+- Notes and remarks are indented by two spaces relative to the error or warning
+  they are attached to.
+
+  .. code-block:: c++
+
+    void (*p)() throw(int) = &f; // #cwg92-p
+    // since-cxx17-error@#cwg92-p {{ISO C++17 does not allow dynamic exception specifications}}
+    //   since-cxx17-note@#cwg92-p {{use 'noexcept(false)' instead}}
+    // cxx98-14-error@#cwg92-p {{target exception specification is not superset of source}}
 
 Feature Test Macros
 ===================

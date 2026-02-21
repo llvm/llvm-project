@@ -76,6 +76,8 @@ ENUM_DIAGOPT(VerifyIgnoreUnexpected, DiagnosticLevelMask, 4,
              DiagnosticLevelMask::None) /// Ignore unexpected diagnostics of
                                         /// the specified levels when using
                                         /// -verify.
+DIAGOPT(VerifyDirectives, 1, 0) /// Enable checks of 'expected' directives
+                                /// themselves.
 DIAGOPT(ElideType, 1, 0)         /// Elide identical types in template diffing
 DIAGOPT(ShowTemplateTree, 1, 0)  /// Print a template tree when diffing
 

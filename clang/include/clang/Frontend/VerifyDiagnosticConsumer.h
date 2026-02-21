@@ -30,6 +30,12 @@ class LangOptions;
 class SourceManager;
 class TextDiagnosticBuffer;
 
+enum class DiagnosticMatchResult {
+  NoMatch,
+  Partial,
+  Full,
+};
+
 /// VerifyDiagnosticConsumer - Create a diagnostic client which will use
 /// markers in the input source to check that all the emitted diagnostics match
 /// those expected. See clang/docs/InternalsManual.rst for details about how to
@@ -46,7 +52,7 @@ public:
     create(bool RegexKind, SourceLocation DirectiveLoc,
            SourceLocation DiagnosticLoc, StringRef Spelling,
            bool MatchAnyFileAndLine, bool MatchAnyLine, StringRef Text,
-           unsigned Min, unsigned Max);
+           unsigned Min, unsigned Max, bool FullMatchRequired);
 
   public:
     /// Constant representing n or more matches.
@@ -59,6 +65,7 @@ public:
     unsigned Min, Max;
     bool MatchAnyLine;
     bool MatchAnyFileAndLine; // `MatchAnyFileAndLine` implies `MatchAnyLine`.
+    bool FullMatchRequired;
 
     Directive(const Directive &) = delete;
     Directive &operator=(const Directive &) = delete;
@@ -69,16 +76,18 @@ public:
     virtual bool isValid(std::string &Error) = 0;
 
     // Returns true on match.
-    virtual bool match(StringRef S) = 0;
+    virtual DiagnosticMatchResult match(StringRef S) const = 0;
 
   protected:
     Directive(SourceLocation DirectiveLoc, SourceLocation DiagnosticLoc,
               StringRef Spelling, bool MatchAnyFileAndLine, bool MatchAnyLine,
-              StringRef Text, unsigned Min, unsigned Max)
+              StringRef Text, unsigned Min, unsigned Max,
+              bool FullMatchRequired)
         : DirectiveLoc(DirectiveLoc), DiagnosticLoc(DiagnosticLoc),
           Spelling(Spelling), Text(Text), Min(Min), Max(Max),
           MatchAnyLine(MatchAnyLine || MatchAnyFileAndLine),
-          MatchAnyFileAndLine(MatchAnyFileAndLine) {
+          MatchAnyFileAndLine(MatchAnyFileAndLine),
+          FullMatchRequired(FullMatchRequired) {
       assert(!DirectiveLoc.isInvalid() && "DirectiveLoc is invalid!");
       assert((!DiagnosticLoc.isInvalid() || MatchAnyLine) &&
              "DiagnosticLoc is invalid!");
@@ -112,6 +121,8 @@ public:
   struct ParsingState {
     DirectiveStatus Status;
     std::string FirstNoDiagnosticsDirective;
+    bool AllDirectivesMatchExactlyOneDiag = true;
+    bool WildcardsAreErroneouslyPresent = false;
   };
 
   class MarkerTracker;
@@ -128,6 +139,9 @@ private:
   unsigned ActiveSourceFiles = 0;
   ParsingState State;
   ExpectedData ED;
+  bool CheckOrderOfDirectives;
+  bool OneDiagPerDirective;
+  bool DisableWildcardInDiagLoc;
 
   void CheckDiagnostics();
 

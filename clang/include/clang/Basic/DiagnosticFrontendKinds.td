@@ -187,6 +187,15 @@ def err_verify_no_directives : Error<
     "no expected directives found: consider use of '%0-no-diagnostics'">;
 def err_verify_nonconst_addrspace : Error<
   "qualifier 'const' is needed for variables in address space '%0'">;
+def err_verify_message_partial_match : Error<
+  "diagnostic messages of '%0' severity not fully matched: %1">;
+def err_verify_directive_out_of_order : Error<
+  "all diagnostics were successfully matched, but out-of-order directives "
+  "were found: %0">;
+def err_verify_non_singular_match : Error<
+  "exactly one diagnostic can be matched">;
+def err_verify_wildcard_loc : Error<
+  "cannot use wildcard for diagnostic location">;
 
 def note_fixit_applied : Note<"FIX-IT applied suggested code changes">;
 def note_fixit_in_macro : Note<
