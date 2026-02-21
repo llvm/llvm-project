@@ -1748,15 +1748,15 @@ foreach bitsVal = [8, 32, 64, 128] in {
 
 // Base class for tensor load/store operations with 4 descriptor groups.
 class ROCDL_TensorLDSIntrOp<string mnemonic> :
-  ROCDL_IntrOp<mnemonic, [], [], [], 0, 0, 1, 0, [4], ["cachePolicy"]> {
+  ROCDL_IntrOp<mnemonic, [], [], [], 0, 0, 1, 0, [5], ["cachePolicy"]> {
   dag args = (ins ROCDL_V4I32Type:$dgroup0, ROCDL_V8I32Type:$dgroup1,
                   ROCDL_V4I32Type:$dgroup2, ROCDL_V4I32Type:$dgroup3,
-                  I32Attr:$cachePolicy);
+                  ROCDL_V8I32Type:$dgroup4, I32Attr:$cachePolicy);
   let arguments = !con(args, baseArgs);
   let summary = "Base class for ROCDL tensor load/store to/from LDS.";
   let description = [{
     Moves tiles of tensor data between global memory and LDS. The tile is
-    described by the $dgroup descriptors. 4 $dgroup descriptors allows for
+    described by the $dgroup descriptors. 5 $dgroup descriptors allows for
     movement of up to 5D tensors. $cachePolicy describes the memory scope and an
     indicator of expected data re-use.
 
@@ -1781,46 +1781,9 @@ class ROCDL_TensorLDSIntrOp<string mnemonic> :
   }];
 }
 
-// Base class for tensor load/store operations with 2 descriptor groups
-// (D2 variant).
-class ROCDL_TensorLDSIntrD2Op<string mnemonic> :
-  ROCDL_IntrOp<mnemonic, [], [], [], 0, 0, 1, 0, [2], ["cachePolicy"]> {
-  dag args = (ins ROCDL_V4I32Type:$dgroup0, ROCDL_V8I32Type:$dgroup1,
-                  I32Attr:$cachePolicy);
-  let arguments = !con(args, baseArgs);
-  let summary = "Base class for ROCDL tensor load/store to/from LDS (D2 variant).";
-  let description = [{
-    Moves tiles of tensor data between global memory and LDS. The tile is
-    described by the $dgroup descriptors. 2 $dgroup descriptors allows for
-    movement of up to 2D tensors. $cachePolicy describes the memory scope and an
-    indicator of expected data re-use.
-
-    This op is for gfx1250+ architectures.
-
-    Example:
-    ```mlir
-    // Tensor load from global memory to LDS using 2 descriptor groups (D2).
-    rocdl.tensor.load.to.lds.d2 %dg0, %dg1 cachepolicy 0 : vector<4xi32>, vector<8xi32>
-
-    // Tensor store from LDS to global memory using 2 descriptor groups (D2).
-    rocdl.tensor.store.from.lds.d2 %dg0, %dg1 cachepolicy 0 : vector<4xi32>, vector<8xi32>
-    ```
-  }];
-  let assemblyFormat = [{
-    attr-dict operands `cachepolicy` $cachePolicy `:` type($dgroup0) `,` type($dgroup1)
-  }];
-  let extraClassDefinition = [{
-    SmallVector<Value> $cppClass::getAccessedOperands() {
-      return {getDgroup0(), getDgroup1()};
-    }
-  }];
-}
-
 // Tensor load and store operations
 def ROCDL_TensorLoadToLDSOp : ROCDL_TensorLDSIntrOp<"tensor.load.to.lds">;
 def ROCDL_TensorStoreFromLDSOp : ROCDL_TensorLDSIntrOp<"tensor.store.from.lds">;
-def ROCDL_TensorLoadToLDSD2Op : ROCDL_TensorLDSIntrD2Op<"tensor.load.to.lds.d2">;
-def ROCDL_TensorStoreFromLDSD2Op : ROCDL_TensorLDSIntrD2Op<"tensor.store.from.lds.d2">;
 
 //===---------------------------------------------------------------------===//
 // Operations on raw buffer resources (stride of 0, bounds checks either off or in
