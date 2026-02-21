@@ -126,6 +126,7 @@ Design Documents
    ConstantInterpreter
    LLVMExceptionHandlingCodeGen
    ClangIRCodeDuplication
+   ClangIRABILowering
    ClangIRCleanupAndEHDesign
 
 Indices and tables
