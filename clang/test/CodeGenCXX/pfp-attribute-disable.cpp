@@ -8,7 +8,7 @@ private:
   int private_data;
 };  // Not Standard-layout, mixed access
 
-// CHECK-LABEL: load_pointers_without_no_field_protection 
+// CHECK-LABEL: load_pointers_without_no_field_protection
 int* load_pointers_without_no_field_protection(S *t) {
   return t->ptr1;
 }

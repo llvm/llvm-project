@@ -118,4 +118,4 @@ void test_const_ptr_to_const_data() {
   const int data = 42; // expected-note {{Memory region is declared as immutable here}}
   const int *ptr = &data;
   *(int*)ptr = 100; // expected-warning {{Trying to write to immutable memory}}
-} 
+}

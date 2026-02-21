@@ -22,28 +22,28 @@ int atomic(void) {
 
   old = __sync_fetch_and_add(&val, 1);
   // CHECK: atomicrmw add ptr %val, i32 1 seq_cst, align 4
-  
+
   old = __sync_fetch_and_sub(&valc, 2);
   // CHECK: atomicrmw sub ptr %valc, i8 2 seq_cst, align 1
-  
+
   old = __sync_fetch_and_min(&val, 3);
   // CHECK: atomicrmw min ptr %val, i32 3 seq_cst, align 4
-  
+
   old = __sync_fetch_and_max(&val, 4);
   // CHECK: atomicrmw max ptr %val, i32 4 seq_cst, align 4
-  
+
   old = __sync_fetch_and_umin(&uval, 5u);
   // CHECK: atomicrmw umin ptr %uval, i32 5 seq_cst, align 4
-  
+
   old = __sync_fetch_and_umax(&uval, 6u);
   // CHECK: atomicrmw umax ptr %uval, i32 6 seq_cst, align 4
-  
+
   old = __sync_lock_test_and_set(&val, 7);
   // CHECK: atomicrmw xchg ptr %val, i32 7 seq_cst, align 4
-  
+
   old = __sync_swap(&val, 8);
   // CHECK: atomicrmw xchg ptr %val, i32 8 seq_cst, align 4
-  
+
   old = __sync_val_compare_and_swap(&val, 4, 1976);
   // CHECK: [[PAIR:%[a-z0-9_.]+]] = cmpxchg ptr %val, i32 4, i32 1976 seq_cst seq_cst, align 4
   // CHECK: extractvalue { i32, i1 } [[PAIR]], 0
@@ -60,10 +60,10 @@ int atomic(void) {
 
   old = __sync_fetch_and_xor(&val, 0xb);
   // CHECK: atomicrmw xor ptr %val, i32 11 seq_cst, align 4
- 
+
   old = __sync_fetch_and_nand(&val, 0xc);
   // CHECK: atomicrmw nand ptr %val, i32 12 seq_cst, align 4
- 
+
   old = __sync_add_and_fetch(&val, 1);
   // CHECK: atomicrmw add ptr %val, i32 1 seq_cst, align 4
 
@@ -78,10 +78,10 @@ int atomic(void) {
 
   old = __sync_xor_and_fetch(&valc, 5);
   // CHECK: atomicrmw xor ptr %valc, i8 5 seq_cst, align 1
- 
+
   old = __sync_nand_and_fetch(&valc, 6);
   // CHECK: atomicrmw nand ptr %valc, i8 6 seq_cst, align 1
- 
+
   __sync_val_compare_and_swap((void **)0, (void *)0, (void *)0);
   // X86:      [[PAIR:%[a-z0-9_.]+]] = cmpxchg ptr null, i32 0, i32 0 seq_cst seq_cst, align 4
   // X86-NEXT: extractvalue { i32, i1 } [[PAIR]], 0
@@ -94,11 +94,11 @@ int atomic(void) {
     // CHECK: trunc i8 [[VAL]] to i1
     old = 42;
   }
-  
+
   __sync_bool_compare_and_swap((void **)0, (void *)0, (void *)0);
   // X86:     cmpxchg ptr null, i32 0, i32 0 seq_cst seq_cst, align 4
   // SYSTEMZ: cmpxchg ptr null, i64 0, i64 0 seq_cst seq_cst, align 8
-  
+
   __sync_lock_release(&val);
   // CHECK: store atomic i32 0, {{.*}} release, align 4
 

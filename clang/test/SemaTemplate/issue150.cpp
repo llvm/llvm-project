@@ -16,7 +16,7 @@ struct is_same<T, T> {
 namespace PR9353 {
   template<class _T, class Traits> class IM;
 
-  template <class T, class Trt, 
+  template <class T, class Trt,
             template<class _T, class Traits = int> class IntervalMap>
   void foo(IntervalMap<T,Trt>* m) { typedef IntervalMap<int> type; }
 
@@ -40,32 +40,32 @@ namespace PR9400 {
 }
 
 namespace MultiReplace {
-  template<typename Z, 
+  template<typename Z,
            template<typename T, typename U = T *, typename V = U const> class TT>
   struct X {
     typedef TT<Z> type;
   };
 
-  template<typename T, typename = int, typename = float> 
+  template<typename T, typename = int, typename = float>
   struct Y { };
 
   int check0[is_same<X<int, Y>::type, Y<int, int*, int* const> >::value? 1 : -1];
 }
 
 namespace MultiReplacePartial {
-  template<typename First, typename Z, 
+  template<typename First, typename Z,
            template<typename T, typename U = T *, typename V = U const> class TT>
   struct X {
     typedef TT<Z> type;
   };
 
-  template<typename Z, 
+  template<typename Z,
            template<typename T, typename U = T *, typename V = U const> class TT>
   struct X<int, Z, TT> {
     typedef TT<Z> type;
   };
 
-  template<typename T, typename = int, typename = float> 
+  template<typename T, typename = int, typename = float>
   struct Y { };
 
   int check0[is_same<X<int, int, Y>::type, Y<int, int*, int* const> >::value? 1 : -1];
@@ -91,8 +91,8 @@ namespace PR9016 {
   {
     IntervalSet<T> IntervalSetT;
   };
-  
-  template <class T, 
+
+  template <class T,
             template<class _T, template<class> class Compare = PR9016::less,
                      class = typename interval_type_default<_T,Compare>::type,
                      template<class> class = allocator> class IntervalSet>

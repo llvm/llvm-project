@@ -180,7 +180,7 @@ void testLambdaCaptureAndGlobal(int * p) {
 
 auto file_scope_lambda = [](int *ptr) {
   // expected-warning@-1{{'ptr' is an unsafe pointer used for buffer access}}
-  
+
   ptr[5] = 10;  // expected-note{{used in buffer access here}}
 };
 
@@ -208,11 +208,11 @@ void testLambdaImplicitCapture(long idx) {
                           // expected-note@-1{{change type of 'a' to 'std::array' to label it for hardening}}
   int b[10];              // expected-warning{{'b' is an unsafe buffer that does not perform bounds checks}}
                           // expected-note@-1{{change type of 'b' to 'std::array' to label it for hardening}}
-  
+
   auto Lam1 = [=]() {
     return a[idx];           // expected-note{{used in buffer access here}}
   };
-  
+
   auto Lam2 = [&]() {
     return b[idx];           // expected-note{{used in buffer access here}}
   };

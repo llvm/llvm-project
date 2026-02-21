@@ -7,7 +7,7 @@ namespace N {
 void g() {
   // CHECK: N::f<int>(3.14
   N::f<int>(3.14);
-  
+
   // CHECK: N::f<double>
   void (*fp)(int) = N::f<double>;
 }

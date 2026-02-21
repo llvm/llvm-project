@@ -4,13 +4,13 @@ set(LLVM_TARGET_DEFINITIONS Opts.td)
 tablegen(LLVM Opts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(HelloSubTableGen)
 
-set(LLVM_LINK_COMPONENTS  
+set(LLVM_LINK_COMPONENTS
   Support
-  Option  
+  Option
   )
 
 add_llvm_example(OptSubcommand
-  llvm-hello-sub.cpp  
+  llvm-hello-sub.cpp
   )
 
 target_include_directories(OptSubcommand

@@ -102,28 +102,28 @@ ReturnType simple_ordinary_least_squares_with_R_squared_impl(RandomAccessContain
 }
 } // namespace detail
 
-template<typename RandomAccessContainer, typename Real = typename RandomAccessContainer::value_type, 
+template<typename RandomAccessContainer, typename Real = typename RandomAccessContainer::value_type,
          typename std::enable_if<std::is_integral<Real>::value, bool>::type = true>
 inline auto simple_ordinary_least_squares(RandomAccessContainer const & x, RandomAccessContainer const & y) -> std::pair<double, double>
 {
     return detail::simple_ordinary_least_squares_impl<std::pair<double, double>>(x, y);
 }
 
-template<typename RandomAccessContainer, typename Real = typename RandomAccessContainer::value_type, 
+template<typename RandomAccessContainer, typename Real = typename RandomAccessContainer::value_type,
          typename std::enable_if<!std::is_integral<Real>::value, bool>::type = true>
 inline auto simple_ordinary_least_squares(RandomAccessContainer const & x, RandomAccessContainer const & y) -> std::pair<Real, Real>
 {
     return detail::simple_ordinary_least_squares_impl<std::pair<Real, Real>>(x, y);
 }
 
-template<typename RandomAccessContainer, typename Real = typename RandomAccessContainer::value_type, 
+template<typename RandomAccessContainer, typename Real = typename RandomAccessContainer::value_type,
          typename std::enable_if<std::is_integral<Real>::value, bool>::type = true>
 inline auto simple_ordinary_least_squares_with_R_squared(RandomAccessContainer const & x, RandomAccessContainer const & y) -> std::tuple<double, double, double>
 {
     return detail::simple_ordinary_least_squares_with_R_squared_impl<std::tuple<double, double, double>>(x, y);
 }
 
-template<typename RandomAccessContainer, typename Real = typename RandomAccessContainer::value_type, 
+template<typename RandomAccessContainer, typename Real = typename RandomAccessContainer::value_type,
          typename std::enable_if<!std::is_integral<Real>::value, bool>::type = true>
 inline auto simple_ordinary_least_squares_with_R_squared(RandomAccessContainer const & x, RandomAccessContainer const & y) -> std::tuple<Real, Real, Real>
 {

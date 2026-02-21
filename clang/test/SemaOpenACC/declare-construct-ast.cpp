@@ -235,10 +235,10 @@ struct DependentStruct {
 // CHECK-NEXT: BuiltinType{{.*}}'int'
 // CHECK-NEXT: CXXRecordDecl{{.*}} struct DependentStruct
 
-// CHECK-NEXT: VarDecl{{.*}} StaticMem 'const int' 
+// CHECK-NEXT: VarDecl{{.*}} StaticMem 'const int'
 // CHECK-NEXT: IntegerLiteral{{.*}}'int' 5
 
-// CHECK-NEXT: VarDecl{{.*}} StaticMem2 'const int' 
+// CHECK-NEXT: VarDecl{{.*}} StaticMem2 'const int'
 // CHECK-NEXT: IntegerLiteral{{.*}}'int' 5
 //
 // CHECK-NEXT: VarDecl{{.*}} StaticMemArray 'const int[5]'

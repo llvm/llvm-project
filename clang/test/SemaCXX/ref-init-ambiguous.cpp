@@ -2,15 +2,15 @@
 
 enum E2 { };
 
-struct A { 
+struct A {
   operator E2&(); // expected-note 3 {{candidate function}}
 };
 
-struct B { 
+struct B {
   operator E2&(); // expected-note 3 {{candidate function}}
 };
 
-struct C : B, A { 
+struct C : B, A {
 };
 
 void test(C c) {

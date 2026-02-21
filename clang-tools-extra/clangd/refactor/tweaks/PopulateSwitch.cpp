@@ -92,7 +92,7 @@ bool PopulateSwitch::prepare(const Selection &Sel) {
   //  - the whole expression (possibly wrapped in implicit casts)
   //  - the outer body (typically CompoundStmt)
   // Selections *within* the expression or body don't trigger.
-  // direct child (the 
+  // direct child (the
   Switch = CA->ASTNode.get<SwitchStmt>();
   if (!Switch) {
     if (const SelectionTree::Node *Parent = CA->outerImplicit().Parent)

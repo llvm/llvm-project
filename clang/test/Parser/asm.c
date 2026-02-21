@@ -11,7 +11,7 @@ void f1(void) {
 
 void f2(void) {
   asm("foo" : "=r" (a)); // expected-error {{use of undeclared identifier 'a'}}
-  asm("foo" : : "r" (b)); // expected-error {{use of undeclared identifier 'b'}} 
+  asm("foo" : : "r" (b)); // expected-error {{use of undeclared identifier 'b'}}
 
   [[]] asm("");
   [[gnu::deprecated]] asm(""); // expected-warning {{'gnu::deprecated' attribute ignored}}

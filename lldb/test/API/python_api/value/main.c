@@ -22,7 +22,7 @@ const char *weekdays[5] = { "Monday",
 const char **g_table[2] = { days_of_week, weekdays };
 
 typedef int MyInt;
-  
+
 struct MyStruct
 {
   int a;
@@ -44,7 +44,7 @@ struct Container
     struct MyBiggerStruct big;
   } data;
 };
-  
+
 int main (int argc, char const *argv[])
 {
     uint32_t uinthex = 0xE0A35F10;

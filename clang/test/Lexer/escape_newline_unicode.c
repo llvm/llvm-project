@@ -7,8 +7,8 @@ int a\
 ス = 42;
 // expected-warning@-2 {{unused variable 'aス'}}
 
-int b\ 
-\ 
+int b\
+\
 ス = 42;
 // expected-warning@-2 {{backslash and newline separated by space}}
 // expected-warning@-4 {{backslash and newline separated by space}}

@@ -62,8 +62,8 @@ int i = 0;
 int j = 0;
 int  nn = 10;
 #pragma omp target default(firstprivate)
-#pragma omp teams 
-#pragma teams distribute parallel for simd 
+#pragma omp teams
+#pragma teams distribute parallel for simd
         for (j = 0; j < nn; j++ ) {
           for (i = 0; i < nn; i++ ) {
                 ;

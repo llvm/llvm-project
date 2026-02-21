@@ -1,8 +1,8 @@
 // This test verifies that the modules visible to the translation unit are computed in dependency scanning.
-// "client" in the first scan represents the translation unit that imports an explicit submodule, 
-//    that only exports one other module. 
-// In the second scan, the translation unit that imports an explicit submodule, 
-//    that exports an additional module. 
+// "client" in the first scan represents the translation unit that imports an explicit submodule,
+//    that only exports one other module.
+// In the second scan, the translation unit that imports an explicit submodule,
+//    that exports an additional module.
 // Thus, the dependencies of the top level module for the submodule always differ from what is visible to the TU.
 
 // RUN: rm -rf %t
@@ -60,7 +60,7 @@ module A {
     header "visibleToTU.h"
   }
   explicit module invisibleToTU {
-    header "invisibleToTU.h" 
+    header "invisibleToTU.h"
   }
 }
 
@@ -71,7 +71,7 @@ module A {
     export visible
   }
   explicit module invisibleToTU {
-    header "invisibleToTU.h" 
+    header "invisibleToTU.h"
   }
 }
 
@@ -109,8 +109,8 @@ module transitive {
 typedef int transitive_t;
 
 //--- client.c
-#include <A/visibleToTU.h> 
+#include <A/visibleToTU.h>
 visible_t foo_v(void);
 // Both decls are not visible, thus should fail to actually compile.
 transitive_t foo_t(void);
-invisible_t foo_i(void); 
+invisible_t foo_i(void);

@@ -363,7 +363,7 @@ isl_int *isl_set_wrap_facet(__isl_keep isl_set *set,
 	isl_set_free(set);
 	if (res == isl_lp_error)
 		return NULL;
-	isl_assert(ctx, res == isl_lp_ok || res == isl_lp_unbounded, 
+	isl_assert(ctx, res == isl_lp_ok || res == isl_lp_unbounded,
 		   return NULL);
 	return facet;
 error:
@@ -1251,7 +1251,7 @@ static __isl_give isl_basic_set *convex_hull_pair_pointed(
 	set = isl_set_add_basic_set(set, bset2);
 	hull = uset_convex_hull(set);
 	hull = isl_basic_set_preimage(hull, T);
-	 
+
 	isl_vec_free(dir);
 
 	return hull;
@@ -1293,7 +1293,7 @@ static __isl_give isl_basic_set *convex_hull_pair(
 						    isl_basic_set_copy(bset2)));
 	if (!aff)
 		goto error;
-	if (aff->n_eq != 0) 
+	if (aff->n_eq != 0)
 		return modulo_affine_hull(isl_basic_set_union(bset1, bset2), aff);
 	isl_basic_set_free(aff);
 

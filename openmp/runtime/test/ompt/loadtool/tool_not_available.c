@@ -8,14 +8,14 @@
 
 // RUN: %libomp-compile -DCODE -DTOOL && \
 // RUN:    env OMP_TOOL_VERBOSE_INIT=stdout %libomp-run | \
-// RUN:    FileCheck %s --check-prefixes CHECK,ADDRSPACE 
+// RUN:    FileCheck %s --check-prefixes CHECK,ADDRSPACE
 
 // Note: We should compile the tool without -fopenmp as other tools developer
 //      would do. Otherwise this test may pass for the wrong reasons on Darwin.
 
 // RUN: %clang %flags -DTOOL -shared -fPIC %s -o %t.tool_dir/tool.so
 
-// 2. "introducing a dynamically-linked library that includes the tool’s 
+// 2. "introducing a dynamically-linked library that includes the tool’s
 //    definition of ompt_start_tool into the application’s address space"
 
 // 2.1 Link with tool during compilation
@@ -28,16 +28,16 @@
 
 // RUN: %libomp-compile -DCODE -lomp %no-as-needed-flag %t.tool_dir/tool.so && \
 // RUN:    env OMP_TOOL_VERBOSE_INIT=stdout %libomp-run | \
-// RUN:    FileCheck %s --check-prefixes CHECK,ADDRSPACE 
+// RUN:    FileCheck %s --check-prefixes CHECK,ADDRSPACE
 
 // 2.3 Inject tool via the dynamic loader
 
 // RUN: %libomp-compile -DCODE && \
 // RUN:    env OMP_TOOL_VERBOSE_INIT=stdout %preload-tool %libomp-run | \
-// RUN:    FileCheck %s --check-prefixes CHECK,ADDRSPACE 
+// RUN:    FileCheck %s --check-prefixes CHECK,ADDRSPACE
 
 // 3. "providing the name of a dynamically-linked library appropriate for the
-//    architecture and operating system used by the application in the 
+//    architecture and operating system used by the application in the
 //    tool-libraries-var ICV"
 
 // RUN: %libomp-compile -DCODE && env OMP_TOOL_LIBRARIES=%t.tool_dir/tool.so \

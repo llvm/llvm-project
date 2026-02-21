@@ -131,7 +131,7 @@ private:
 
   std::unique_ptr<msf::MappedBlockStream> OldFpoStream;
   FixedStreamArray<object::FpoData> OldFpoRecords;
-  
+
   std::unique_ptr<msf::MappedBlockStream> NewFpoStream;
   codeview::DebugFrameDataSubsectionRef NewFpoRecords;
 

@@ -305,7 +305,7 @@ namespace boost { namespace math { namespace detail {
       }
    }
 
-      
+
    template <class T, class Policy>
    T hypergeometric_1F1_imp(const T& a, const T& b, const T& z, const Policy& pol, long long& log_scaling)
    {
@@ -484,7 +484,7 @@ namespace boost { namespace math { namespace detail {
             // Let's otherwise make z positive (almost always)
             // by Kummer's transformation
             // (we also don't transform if z belongs to [-1,0])
-            // Also note that Kummer's transformation fails when b is 
+            // Also note that Kummer's transformation fails when b is
             // a negative integer, although this seems to be unmentioned
             // in the literature...
             long long scaling = lltrunc(z);
@@ -621,7 +621,7 @@ namespace boost { namespace math { namespace detail {
 
       if (b < 0)
          return detail::hypergeometric_1F1_checked_series_impl(a, b, z, pol, log_scaling);
-      
+
       return detail::hypergeometric_1F1_generic_series(a, b, z, pol, log_scaling, function);
    }
 

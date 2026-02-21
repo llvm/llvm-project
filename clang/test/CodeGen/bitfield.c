@@ -7,7 +7,7 @@ static int f0(int n) {
     int b : 2;
     long long c : 31;
   } x = { 0xdeadbeef, 0xdeadbeef, 0xdeadbeef };
-  
+
   x.a += n;
   x.b += n;
   x.c += n;
@@ -24,12 +24,12 @@ int g0(void) {
 }
 
 static int f1(void) {
-  struct s1 { 
-    int a:13; 
-    char b; 
+  struct s1 {
+    int a:13;
+    char b;
     unsigned short c:7;
   } x;
-  
+
   x.a = -40;
   x.b = 10;
   x.c = 15;
@@ -50,7 +50,7 @@ static int f2(void) {
     short a[3];
     int b : 15;
   } x;
-  
+
   x.a[0] = x.a[1] = x.a[2] = -40;
   x.b = 10;
 
@@ -76,7 +76,7 @@ static int f3(int n) {
   } y;
   y.a = -0x56789abcL;
   y.b = -0x56789abcL;
-  return ((y.a += x.a += n) + 
+  return ((y.a += x.a += n) +
           (y.b += x.b += n));
 }
 

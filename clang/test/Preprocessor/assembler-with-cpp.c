@@ -5,7 +5,7 @@
 #endif
 
 
-// Invalid token pasting is ok. 
+// Invalid token pasting is ok.
 #define A X ## .
 1: A
 // CHECK-Identifiers-False: 1: X .
@@ -52,7 +52,7 @@
 7: FOO(blarg)
 // CHECK-Identifiers-True: 7: blarg$foo
 
-// 
+//
 #define T6() T6 #nostring
 #define T7(x) T7 #x
 8: T6()

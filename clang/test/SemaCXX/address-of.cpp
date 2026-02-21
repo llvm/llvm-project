@@ -6,14 +6,14 @@ void bar(int*);
 class c {
   int var;
   static int svar;
-  void foo() { 
-    bar(&var); 
-    bar(&svar);  
+  void foo() {
+    bar(&var);
+    bar(&svar);
   }
 
   static void wibble() {
     bar(&var); // expected-error{{invalid use of member 'var' in static member function}}
-    bar(&svar); 
+    bar(&svar);
   }
 };
 

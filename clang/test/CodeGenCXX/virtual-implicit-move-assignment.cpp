@@ -8,5 +8,5 @@ struct D : B { D(); virtual void a(); };
 void D::a() {}
 D d;
 
-// CHECK: @_ZTV1D = {{.*}} @_ZN1DaSEOS_ 
+// CHECK: @_ZTV1D = {{.*}} @_ZN1DaSEOS_
 // CHECK: define linkonce_odr {{.*}} @_ZN1DaSEOS_

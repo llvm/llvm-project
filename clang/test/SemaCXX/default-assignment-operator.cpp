@@ -23,21 +23,21 @@ class X  : Base {
 // expected-note@-5 2 {{copy assignment operator of 'X' is implicitly deleted because base class 'Base' has a deleted copy assignment operator}}
 #endif
 
-public: 
+public:
   X();
   const int cint;
 #if __cplusplus <= 199711L
 // expected-note@-2 {{declared here}}
 #endif
-}; 
+};
 
-struct Y  : X { 
+struct Y  : X {
   Y();
   Y& operator=(const Y&);
   Y& operator=(volatile Y&);
   Y& operator=(const volatile Y&);
   Y& operator=(Y&);
-}; 
+};
 
 class Z : Y {};
 
@@ -159,7 +159,7 @@ namespace ProtectedCheck {
 }
 
 namespace MultiplePaths {
-  struct X0 { 
+  struct X0 {
     X0 &operator=(const X0&);
   };
 

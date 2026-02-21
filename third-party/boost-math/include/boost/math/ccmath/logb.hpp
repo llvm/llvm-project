@@ -21,10 +21,10 @@ namespace boost::math::ccmath {
 
 namespace detail {
 
-// The value of the exponent returned by std::logb is always 1 less than the exponent returned by 
-// std::frexp because of the different normalization requirements: for the exponent e returned by std::logb, 
-// |arg*r^-e| is between 1 and r (typically between 1 and 2), but for the exponent e returned by std::frexp, 
-// |arg*2^-e| is between 0.5 and 1. 
+// The value of the exponent returned by std::logb is always 1 less than the exponent returned by
+// std::frexp because of the different normalization requirements: for the exponent e returned by std::logb,
+// |arg*r^-e| is between 1 and r (typically between 1 and 2), but for the exponent e returned by std::frexp,
+// |arg*2^-e| is between 0.5 and 1.
 template <typename T>
 constexpr T logb_impl(T arg) noexcept
 {
@@ -53,7 +53,7 @@ constexpr Real logb(Real arg) noexcept
         {
             return arg;
         }
-        
+
         return boost::math::ccmath::detail::logb_impl(arg);
     }
     else

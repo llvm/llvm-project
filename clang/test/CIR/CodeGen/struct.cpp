@@ -259,7 +259,7 @@ void unary_extension() {
 // OGCG: %[[A_ADDR:.*]] = alloca %struct.CompleteS, align 4
 // OGCG: call void @llvm.memset.p0.i64(ptr align 4 %[[A_ADDR]], i8 0, i64 8, i1 false)
 
-void bin_comma() { 
+void bin_comma() {
   CompleteS a = (CompleteS(), CompleteS());
 }
 

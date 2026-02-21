@@ -7,7 +7,7 @@
 // RUN: env XRAY_FDR_OPTIONS="no_file_flush=true func_duration_threshold_us=0" \
 // RUN:     %run %t 2>&1 | FileCheck %s
 // RUN: find %t.dir -name 'fdr-inmemory-test-*' | wc -l | tr -d '\n' > %t.file_count
-// RUN: %python -c "import sys; sys.exit(int(sys.argv[1]))" %{readfile:%t.file_count} 
+// RUN: %python -c "import sys; sys.exit(int(sys.argv[1]))" %{readfile:%t.file_count}
 // RUN: rm -rf %t.dir
 //
 // REQUIRES: built-in-llvm-tree

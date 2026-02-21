@@ -12,7 +12,7 @@
 // RUN:   --image=file=%t/elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_80 \
 // RUN:   --image=file=%t/elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908 \
 // RUN:   --image=file=%t/elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a \
-// RUN:   --image=file=%t/elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90c 
+// RUN:   --image=file=%t/elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90c
 // RUN: llvm-offload-binary %t/package.out \
 // RUN:   --image=file=%t/sm_70.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70 \
 // RUN:   --image=file=%t/gfx908.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908
@@ -25,7 +25,7 @@
 // RUN:   --image=file=%t/elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_80 \
 // RUN:   --image=file=%t/elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908 \
 // RUN:   --image=file=%t/elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a \
-// RUN:   --image=file=%t/elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx90c 
+// RUN:   --image=file=%t/elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx90c
 // RUN: llvm-offload-binary %t/package --image=kind=openmp
 // RUN: diff *-nvptx64-nvidia-cuda-sm_70.0.o %t/elf.o; rm *-nvptx64-nvidia-cuda-sm_70.0.o
 // RUN: diff *-nvptx64-nvidia-cuda-sm_80.1.o %t/elf.o; rm *-nvptx64-nvidia-cuda-sm_80.1.o

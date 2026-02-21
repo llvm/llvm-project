@@ -48,7 +48,7 @@ public:
   lldb::addr_t SetupDispatchFunction(Thread &thread,
                                      ValueList &dispatch_values);
   const DispatchFunction *FindDispatchFunction(lldb::addr_t addr);
-  void ForEachDispatchFunction(std::function<void(lldb::addr_t, 
+  void ForEachDispatchFunction(std::function<void(lldb::addr_t,
                                                   const DispatchFunction &)>);
 
 private:

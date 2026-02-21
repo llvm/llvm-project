@@ -10,7 +10,7 @@ namespace has_inline_namespaces {
   inline namespace inner {
     template<class T> void f(T&) {}
 
-    template<class T> 
+    template<class T>
     struct X0 {
       struct MemberClass {};
 
@@ -59,7 +59,7 @@ template struct has_inline_namespaces::X0<X4>::MemberClass;
 
 template void has_inline_namespaces::X0<X4>::mem_func();
 
-template 
+template
 struct has_inline_namespaces::X0<X4>::MemberClassTemplate<X3>;
 
 template

@@ -358,7 +358,7 @@ TEST(TBDv3, WriteMultipleDocuments) {
   Document.addSymbol(EncodeKind::GlobalSymbol, "_sym3", Targets);
   Document.addSymbol(EncodeKind::GlobalSymbol, "_sym4", Targets);
   File.addDocument(std::make_shared<InterfaceFile>(std::move(Document)));
-  
+
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
   Error Result = TextAPIWriter::writeToStream(OS, File);

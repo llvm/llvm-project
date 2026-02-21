@@ -5,10 +5,10 @@
 // RUN:   -mllvm -debug-only=pchcontainer &>%t-pch.ll
 // RUN: cat %t-pch.ll | FileCheck %s
 
-template<class...>                     
+template<class...>
 using __void_t [[gnu::nodebug]] = void;
-                                       
-__void_t<> func() {}                   
+
+__void_t<> func() {}
 
 // CHECK: !DICompileUnit
 // CHECK-NOT: __void_t

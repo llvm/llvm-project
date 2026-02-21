@@ -13,7 +13,7 @@ pluggable **streamer**. By default, MLIR integrates with LLVM's
 you to:
 
 - Stream remarks as passes run
-- Serialize to **YAML** or **LLVM Bitstream** 
+- Serialize to **YAML** or **LLVM Bitstream**
 
 ***
 

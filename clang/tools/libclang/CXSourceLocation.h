@@ -25,7 +25,7 @@ class SourceManager;
 namespace cxloc {
 
 /// Translate a Clang source location into a CIndex source location.
-static inline CXSourceLocation 
+static inline CXSourceLocation
 translateSourceLocation(const SourceManager &SM, const LangOptions &LangOpts,
                         SourceLocation Loc) {
   if (Loc.isInvalid())
@@ -35,7 +35,7 @@ translateSourceLocation(const SourceManager &SM, const LangOptions &LangOpts,
                               Loc.getRawEncoding() };
   return Result;
 }
-  
+
 /// Translate a Clang source location into a CIndex source location.
 static inline CXSourceLocation translateSourceLocation(ASTContext &Context,
                                                        SourceLocation Loc) {
@@ -50,10 +50,10 @@ static inline CXSourceLocation translateSourceLocation(ASTContext &Context,
 /// start of the token at the end. However, for external clients it is more
 /// useful to have a CXSourceRange be a proper half-open interval. This routine
 /// does the appropriate translation.
-CXSourceRange translateSourceRange(const SourceManager &SM, 
+CXSourceRange translateSourceRange(const SourceManager &SM,
                                    const LangOptions &LangOpts,
                                    const CharSourceRange &R);
-  
+
 /// Translate a Clang source range into a CIndex source range.
 static inline CXSourceRange translateSourceRange(ASTContext &Context,
                                                  SourceRange R) {

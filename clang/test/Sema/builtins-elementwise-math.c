@@ -490,7 +490,7 @@ void test_builtin_elementwise_bitreverse(int i, float f, double d, float4 v, int
 
   i = __builtin_elementwise_bitreverse(f);
   // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'float')}}
-  
+
   i = __builtin_elementwise_bitreverse(f, f);
   // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
 
@@ -848,7 +848,7 @@ void test_builtin_elementwise_pow(int i, short s, double d, float4 v, int3 iv, u
 
   i = __builtin_elementwise_pow(uv, iv);
   // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'unsigned3' (vector of 3 'unsigned int' values))}}
-  
+
 }
 
 void test_builtin_elementwise_roundeven(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {

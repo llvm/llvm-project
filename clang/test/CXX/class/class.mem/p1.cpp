@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 
-struct S 
+struct S
 {
   static int v1; // expected-note{{previous declaration is here}}
   int v1; //expected-error{{duplicate member 'v1'}}
@@ -21,7 +21,7 @@ S::M m; //expected-error{{no type named 'M' in 'S'}}
 S::X x; //expected-error{{variable has incomplete type 'S::X'}}
 
 
-struct S2 
+struct S2
 {
   static int v2; // expected-note{{previous declaration is here}}
   static int v2; //expected-error{{duplicate member 'v2'}}
@@ -48,32 +48,32 @@ struct S5
 {
   static int v5; //expected-note{{previous definition is here}}
   void v5() { } //expected-error{{redefinition of 'v5' as different kind of symbol}}
-  
+
   void v6() { } //expected-note{{previous definition is here}}
   static int v6; //expected-error{{redefinition of 'v6' as different kind of symbol}}
-  
+
   void v7() { }
   void v7(int) { } //expected-note{{previous definition is here}}
   static int v7;  //expected-error{{redefinition of 'v7' as different kind of symbol}}
-  
+
   void v8();
   int v8(int); //expected-note{{previous declaration is here}}
   int v8; //expected-error{{duplicate member 'v8'}}
-  
-  
+
+
 };
 
 namespace PR8245 {
   class X {
   public:
-    template<class C> 
+    template<class C>
     class Inner {
     public:
       void foo(bool bar = true);
       int bam;
     };
 
-    Inner<int> _foo;    
+    Inner<int> _foo;
   };
 
   void f() {

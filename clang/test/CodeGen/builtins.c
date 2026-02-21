@@ -545,7 +545,7 @@ void test_float_builtin_ops(float F, double D, long double LD, int I) {
   // CHECK: foo_bar0
   resld = __builtin_roundevenl(LD);
   // CHECK: call [[LDTYPE]] @llvm.roundeven.[[LDLLVMTY]]
-  
+
   __asm__("foo_bar1:");
 // CHECK: foo_bar1
   resli = __builtin_lroundf (F);
@@ -936,7 +936,7 @@ void test_builtin_bswapg(unsigned char uc, unsigned short us, unsigned int ui,
                        unsigned __int128 ui128,
 #endif
                        _BitInt(8) bi8,
-                       _BitInt(16) bi16, _BitInt(32) bi32, 
+                       _BitInt(16) bi16, _BitInt(32) bi32,
                        _BitInt(64) bi64, _BitInt(128) bi128) {
 #if __aarch64__
   int x = 0;
@@ -982,7 +982,7 @@ void test_builtin_bitreverseg(unsigned char uc, unsigned short us, unsigned int 
                        unsigned __int128 ui128,
 #endif
                        _BitInt(8) bi8,
-                       _BitInt(16) bi16, _BitInt(32) bi32, 
+                       _BitInt(16) bi16, _BitInt(32) bi32,
                        _BitInt(64) bi64, _BitInt(128) bi128) {
 #if __aarch64__
   int x = 0;

@@ -60,7 +60,7 @@ public:
          && detail::check_scale(
 "boost::math::inverse_chi_squared_distribution<%1%>::inverse_chi_squared_distribution",
          m_scale, &result,  Policy());
-   } // inverse_chi_squared_distribution constructor 
+   } // inverse_chi_squared_distribution constructor
 
    BOOST_MATH_GPU_ENABLED inverse_chi_squared_distribution(RealType df = 1) : m_df(df)
    {
@@ -144,8 +144,8 @@ BOOST_MATH_GPU_ENABLED RealType pdf(const inverse_chi_squared_distribution<RealT
    { // Treat as special case.
      return 0;
    }
-   // Wikipedia scaled inverse chi sq (df, scale) related to inv gamma (df/2, df * scale /2) 
-   // so use inverse gamma pdf with shape = df/2, scale df * scale /2 
+   // Wikipedia scaled inverse chi sq (df, scale) related to inv gamma (df/2, df * scale /2)
+   // so use inverse gamma pdf with shape = df/2, scale df * scale /2
    // RealType shape = df /2; // inv_gamma shape
    // RealType scale = df * scale/2; // inv_gamma scale
    // RealType result = gamma_p_derivative(shape, scale / x, Policy()) * scale / (x * x);

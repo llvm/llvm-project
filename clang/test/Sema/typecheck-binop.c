@@ -2,7 +2,7 @@
  */
 struct incomplete; // expected-note{{forward declaration of 'struct incomplete'}}
 
-int sub1(int *a, double *b) { 
+int sub1(int *a, double *b) {
   return a - b;    /* expected-error{{not pointers to compatible types}} */
 }
 

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-struct T { 
+struct T {
   void f();
 };
 

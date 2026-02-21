@@ -11,7 +11,7 @@ struct Base {
   void f0();
 };
 
-struct X0 : Base { 
+struct X0 : Base {
   typedef Base CrazyBase;
 };
 
@@ -45,7 +45,7 @@ void call_f0_through_typedef2(T x) {
 
 struct OtherBase { };
 
-struct X1 : Base, OtherBase { 
+struct X1 : Base, OtherBase {
   typedef OtherBase CrazyBase;
 #if __cplusplus <= 199711L
   // expected-note@-2 {{lookup in the object type 'X1' refers here}}

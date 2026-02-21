@@ -4,7 +4,7 @@ class Foo {
 	public:
 		Foo *next;
 		int ID;
-	
+
 	Foo () : next(0), ID(++_ID) {}
 };
 

@@ -76,7 +76,7 @@ private:
 using normal = normal_distribution<double>;
 
 //
-// Deduction guides, note we don't check the 
+// Deduction guides, note we don't check the
 // value of __cpp_deduction_guides, just assume
 // they work as advertised, even if this is pre-final C++17.
 //
@@ -98,7 +98,7 @@ template <class RealType, class Policy>
 BOOST_MATH_GPU_ENABLED inline boost::math::pair<RealType, RealType> range(const normal_distribution<RealType, Policy>& /*dist*/)
 { // Range of permissible values for random variable x.
   BOOST_MATH_IF_CONSTEXPR (boost::math::numeric_limits<RealType>::has_infinity)
-  { 
+  {
      return boost::math::pair<RealType, RealType>(-boost::math::numeric_limits<RealType>::infinity(), boost::math::numeric_limits<RealType>::infinity()); // - to + infinity.
   }
   else
@@ -112,7 +112,7 @@ template <class RealType, class Policy>
 BOOST_MATH_GPU_ENABLED inline boost::math::pair<RealType, RealType> support(const normal_distribution<RealType, Policy>& /*dist*/)
 { // This is range values for random variable x where cdf rises from 0 to 1, and outside it, the pdf is zero.
   BOOST_MATH_IF_CONSTEXPR (boost::math::numeric_limits<RealType>::has_infinity)
-  { 
+  {
      return boost::math::pair<RealType, RealType>(-boost::math::numeric_limits<RealType>::infinity(), boost::math::numeric_limits<RealType>::infinity()); // - to + infinity.
   }
   else

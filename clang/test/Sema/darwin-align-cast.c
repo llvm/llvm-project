@@ -8,10 +8,10 @@ struct cmsghdr {};
 
 #if 0
 This code below comes from the following system headers:
-sys/socket.h:#define CMSG_SPACE(l) (__DARWIN_ALIGN(sizeof(struct  
+sys/socket.h:#define CMSG_SPACE(l) (__DARWIN_ALIGN(sizeof(struct
 cmsghdr)) + __DARWIN_ALIGN(l))
 
-i386/_param.h:#define __DARWIN_ALIGN(p) ((__darwin_size_t)((char *)(p)  
+i386/_param.h:#define __DARWIN_ALIGN(p) ((__darwin_size_t)((char *)(p)
 + __DARWIN_ALIGNBYTES) &~ __DARWIN_ALIGNBYTES)
 #endif
 

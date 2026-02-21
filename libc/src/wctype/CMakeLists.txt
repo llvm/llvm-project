@@ -5,5 +5,5 @@ add_entrypoint_object(
   HDRS
     iswalpha.h
   DEPENDS
-    libc.src.__support.wctype_utils    
+    libc.src.__support.wctype_utils
 )

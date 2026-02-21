@@ -226,7 +226,7 @@ isl_stat isl_hash_table_foreach(isl_ctx *ctx, struct isl_hash_table *table,
 		if (table->entries[h].data &&
 		    fn(&table->entries[h].data, user) < 0)
 			return isl_stat_error;
-	
+
 	return isl_stat_ok;
 }
 

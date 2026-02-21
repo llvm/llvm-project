@@ -33,7 +33,7 @@ int main() {
     int res =  __kmpc_start_record_task(nullptr, gtid, /* kmp_tdg_flags */ 0, /* tdg_id */0);
     if (res) {
       num_tasks++;
-      #pragma omp task 
+      #pragma omp task
       func(&num_exec);
     }
     __kmpc_end_record_task(nullptr, gtid, /* kmp_tdg_flags */0, /* tdg_id */0);

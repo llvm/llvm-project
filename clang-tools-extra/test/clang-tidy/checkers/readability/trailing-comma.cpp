@@ -29,10 +29,10 @@ enum E3 {
   Q,
 };
 
-enum SingleEnum1 { ONE };   
-enum SingleEnum2 { TWO, };  
+enum SingleEnum1 { ONE };
+enum SingleEnum2 { TWO, };
 // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: enum should not have a trailing comma
-// CHECK-FIXES: enum SingleEnum2 { TWO };  
+// CHECK-FIXES: enum SingleEnum2 { TWO };
 enum SingleEnum3 {
   THREE
 };
@@ -81,7 +81,7 @@ void f() {
   int single1[] = {1};
   int single2[] = {1,};
   // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: initializer list should not have a trailing comma
-  // CHECK-FIXES:  int single2[] = {1};       
+  // CHECK-FIXES:  int single2[] = {1};
   int single3[] = {
     1
   };
@@ -92,10 +92,10 @@ void f() {
   int single4[] = {
     1,
   };
-  S singleS1 = {42};          
-  S singleS2 = {42,};         
+  S singleS1 = {42};
+  S singleS2 = {42,};
   // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: initializer list should not have a trailing comma
-  // CHECK-FIXES:  S singleS2 = {42};      
+  // CHECK-FIXES:  S singleS2 = {42};
 }
 
 struct N { S a, b; };

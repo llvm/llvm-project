@@ -55,7 +55,7 @@ template<int... Values> struct X1nt;
 template<int ...Values, int V> struct X1nt<V, Values...> { };
 
 template<template<int> class... Meta> struct X1tt;
-template<template<int> class... Meta, template<int> class M> 
+template<template<int> class... Meta, template<int> class M>
   struct X1tt<M, Meta...> { };
 
 template<typename ...Types, typename T>
@@ -64,7 +64,7 @@ void f1t(X1t<T, Types...>);
 template<int ...Values, int V>
 void f1nt(X1nt<V, Values...>);
 
-template<template<int> class... Meta, template<int> class M> 
+template<template<int> class... Meta, template<int> class M>
 void f1tt(X1tt<M, Meta...>);
 
 namespace DefaultTemplateArgsInFunction {

@@ -46,12 +46,12 @@ int test__mulsc3(float a, float b, float c, float d)
 //             a, b, c, d, crealf(r), cimagf(r));
 	float _Complex dividend;
 	float _Complex divisor;
-	
+
 	__real__ dividend = a;
 	__imag__ dividend = b;
 	__real__ divisor = c;
 	__imag__ divisor = d;
-	
+
     switch (classify(dividend))
     {
     case zero:
@@ -186,7 +186,7 @@ int test__mulsc3(float a, float b, float c, float d)
         }
         break;
     }
-    
+
     return 0;
 }
 

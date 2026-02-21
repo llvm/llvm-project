@@ -237,7 +237,7 @@ nub_bool_t MachVMMemory::GetMemoryProfile(
     mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
     host_statistics64(localHost, HOST_VM_INFO64, (host_info64_t)&vminfo,
                       &count);
-    
+
     kern_return_t kr;
     mach_msg_type_number_t info_count;
     task_vm_info_data_t vm_info;

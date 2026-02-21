@@ -63,7 +63,7 @@ void DoTransform() {
 
 //--- mock_resolver.h
 // expected-no-diagnostics
-#pragma once 
+#pragma once
 #include "set_bits2.h"
 
 class QualifyingSet2 {

@@ -1,4 +1,4 @@
-// This test ensures that the --quiet flag only suppresses the "X warnings generated" 
+// This test ensures that the --quiet flag only suppresses the "X warnings generated"
 // message while keeping all diagnostic information including caret indicators (^).
 
 // RUN: clang-tidy -checks=-*,readability-magic-numbers,clang-diagnostic-sign-compare %s -- \

@@ -8,7 +8,7 @@
 int main() {
   const char *td = textdomain("abcd");
   if (td[0] == 0) {
-    printf("Try read"); 
+    printf("Try read");
   }
   return 0;
 }

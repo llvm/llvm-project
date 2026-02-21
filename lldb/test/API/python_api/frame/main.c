@@ -39,12 +39,12 @@ int main (int argc, char const *argv[])
 {
     int A1 = a(1, 'A');  // a(1, 'A') -> b(2, 'B') -> c(3, 'C')
     printf("a(1, 'A') returns %d\n", A1);
-    
+
     int B2 = b(2, 'B');  // b(2, 'B') -> c(3, 'C')
     printf("b(2, 'B') returns %d\n", B2);
-    
+
     int A3 = a(3, 'A');  // a(3, 'A') -> c(4, 'B')
     printf("a(3, 'A') returns %d\n", A3);
-    
+
     return 0;
 }

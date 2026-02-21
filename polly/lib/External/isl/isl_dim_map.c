@@ -7,7 +7,7 @@
  * Written by Sven Verdoolaege, K.U.Leuven, Departement
  * Computerwetenschappen, Celestijnenlaan 200A, B-3001 Leuven, Belgium
  * and INRIA Saclay - Ile-de-France, Parc Club Orsay Universite,
- * ZAC des vignes, 4 rue Jacques Monod, 91893 Orsay, France 
+ * ZAC des vignes, 4 rue Jacques Monod, 91893 Orsay, France
  */
 
 #include <isl_map_private.h>
@@ -77,7 +77,7 @@ void isl_dim_map_dim_range(__isl_keep isl_dim_map *dim_map,
 	off = isl_space_offset(space, type);
 	if (!dim_map || off < 0)
 		return;
-	
+
 	for (i = 0; i < n; ++i) {
 		dim_map->m[1 + dst_pos + i].pos = 1 + off + first + i;
 		dim_map->m[1 + dst_pos + i].sgn = 1;
@@ -102,7 +102,7 @@ void isl_dim_map_div(__isl_keep isl_dim_map *dim_map,
 
 	if (!dim_map || !bmap)
 		return;
-	
+
 	src_pos = isl_basic_map_offset(bmap, isl_dim_div);
 	for (i = 0; i < bmap->n_div; ++i) {
 		dim_map->m[1 + dst_pos + i].pos = src_pos + i;

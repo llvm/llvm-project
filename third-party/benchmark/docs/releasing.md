@@ -28,4 +28,4 @@ module(name = "com_github_google_benchmark", version="1.8.0")
       * `git push --force --tags origin`
 * Confirm that the "Build and upload Python wheels" action runs to completion
     * Run it manually if it hasn't run.
-    * IMPORTANT: When re-running manually, make sure to select the newly created `<tag>` as the workflow version in the "Run workflow" tab on the GitHub Actions page. 
+    * IMPORTANT: When re-running manually, make sure to select the newly created `<tag>` as the workflow version in the "Run workflow" tab on the GitHub Actions page.

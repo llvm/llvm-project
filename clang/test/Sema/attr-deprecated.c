@@ -4,7 +4,7 @@
 
 int f(void) __attribute__((deprecated)); // expected-note 2 {{'f' has been explicitly marked deprecated here}}
 void g(void) __attribute__((deprecated));// expected-note {{'g' has been explicitly marked deprecated here}}
-void g(void); 
+void g(void);
 
 extern int var __attribute__((deprecated)); // expected-note 2 {{'var' has been explicitly marked deprecated here}}
 
@@ -19,13 +19,13 @@ int a(void) {
 }
 
 // test if attributes propagate to variables
-extern int var; 
+extern int var;
 int w(void) {
   return var; // expected-warning {{'var' is deprecated}}
 }
 
 int old_fn(void) __attribute__ ((deprecated));// expected-note {{'old_fn' has been explicitly marked deprecated here}}
-int old_fn(void); 
+int old_fn(void);
 int (*fn_ptr)(void) = old_fn; // expected-warning {{'old_fn' is deprecated}}
 
 int old_fn(void) {
@@ -47,7 +47,7 @@ typedef struct foo foo_dep __attribute__((deprecated)); // expected-note 12 {{'f
 foo_dep *test2;    // expected-warning {{'foo_dep' is deprecated}}
 
 struct __attribute__((deprecated, // expected-note 2 {{'bar_dep' has been explicitly marked deprecated here}}
-                      invalid_attribute)) bar_dep ;  // expected-warning {{unknown attribute 'invalid_attribute' ignored}} 
+                      invalid_attribute)) bar_dep ;  // expected-warning {{unknown attribute 'invalid_attribute' ignored}}
 
 struct bar_dep *test3;   // expected-warning {{'bar_dep' is deprecated}}
 
@@ -121,12 +121,12 @@ struct test22 {
   __attribute((deprecated)) foo_dep e, f;
 };
 
-typedef int test23_ty __attribute((deprecated)); 
+typedef int test23_ty __attribute((deprecated));
 // Redefining a typedef is a C11 feature.
 #if __STDC_VERSION__ <= 199901L
 // expected-note@-3 {{'test23_ty' has been explicitly marked deprecated here}}
 #else
 // expected-note@-5 {{'test23_ty' has been explicitly marked deprecated here}}
-typedef int test23_ty; 
+typedef int test23_ty;
 #endif
 test23_ty test23_v; // expected-warning {{'test23_ty' is deprecated}}

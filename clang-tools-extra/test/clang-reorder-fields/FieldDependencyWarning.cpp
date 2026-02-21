@@ -27,20 +27,20 @@ static char bar(char c) {
 
 Foo::Foo() : x(), y(), c(), z(0, 'a') {}
 
-Foo::Foo(int x, double y, char cin) :  
-  x(x),                 
-  y(y),                 
-  c(cin),               
-  z(this->x, bar(c))    
+Foo::Foo(int x, double y, char cin) :
+  x(x),
+  y(y),
+  c(cin),
+  z(this->x, bar(c))
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: reordering field x after z makes x uninitialized when used in init expression
   // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: reordering field c after z makes c uninitialized when used in init expression
 {}
 
 Foo::Foo(int nx) :
-  x(nx),              
+  x(nx),
   y(x),
-  c(0),            
-  z(bar(bar(x)), c)     
+  c(0),
+  z(bar(bar(x)), c)
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: reordering field x after y makes x uninitialized when used in init expression
   // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: reordering field x after z makes x uninitialized when used in init expression
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: reordering field c after z makes c uninitialized when used in init expression

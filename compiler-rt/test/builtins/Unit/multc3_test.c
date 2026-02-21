@@ -51,12 +51,12 @@ int test__multc3(fp_t a, fp_t b, fp_t c, fp_t d)
 //             a, b, c, d, creall(r), cimagl(r));
 	Qcomplex dividend;
 	Qcomplex divisor;
-	
+
 	__real__ dividend = a;
 	__imag__ dividend = b;
 	__real__ divisor = c;
 	__imag__ divisor = d;
-	
+
     switch (classify(dividend))
     {
     case zero:
@@ -187,7 +187,7 @@ int test__multc3(fp_t a, fp_t b, fp_t c, fp_t d)
         }
         break;
     }
-    
+
     return 0;
 }
 

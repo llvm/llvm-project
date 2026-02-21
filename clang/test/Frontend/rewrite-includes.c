@@ -13,9 +13,9 @@ A(in,t) a;
 #endif
   // indented
 #/**/include /**/ "rewrite-includes5.h" /**/ \
- 
+
 #include "rewrite-includes6.h" // comment
- 
+
 #include "rewrite-includes6.h" /* comment
                                   continues */
 #include "rewrite-includes7.h"

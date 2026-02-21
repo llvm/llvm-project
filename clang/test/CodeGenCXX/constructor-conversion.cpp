@@ -6,7 +6,7 @@
 extern "C" int printf(...);
 
 class X { // ...
-public: 
+public:
   X(int) : iX(2), fX(2.3) , name("HELLO\n") {  }
 
   X(const char* arg, int ix=0) { iX = ix; fX = 6.0; name = arg+ix; }

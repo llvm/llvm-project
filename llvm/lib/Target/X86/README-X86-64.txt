@@ -100,7 +100,7 @@ LBB1_2:	## bb2
 LBB1_3:	## bb
 	imull	$45, %edi, %eax
 	jmp	LBB1_2	## bb2
-  
+
 Before regalloc, we have:
 
         %reg1025 = IMUL32rri8 %reg1024, 45, implicit-def %eflags

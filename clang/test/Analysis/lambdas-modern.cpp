@@ -16,7 +16,7 @@ void testCopyElidedObjectCaptured(int x) {
   int r = [e = Elided(x)] {
     return e.x;
   }();
-  
+
   clang_analyzer_eval(r == 14); // expected-warning{{TRUE}}
 }
 

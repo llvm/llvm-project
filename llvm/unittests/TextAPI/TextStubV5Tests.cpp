@@ -367,13 +367,13 @@ TEST(TBDv5, ReadFile) {
 }
 
 TEST(TBDv5, ReadMultipleTargets) {
-  static const char TBDv5File[] = R"({ 
+  static const char TBDv5File[] = R"({
 "tapi_tbd_version": 5,
 "main_library":  {
   "target_info": [
       {
           "target": "x86_64-macos",
-          "min_deployment": "10.14" 
+          "min_deployment": "10.14"
       },
       {
           "target": "arm64-macos",
@@ -437,13 +437,13 @@ TEST(TBDv5, ReadMultipleTargets) {
 }
 
 TEST(TBDv5, ReadMultipleDocuments) {
-  static const char TBDv5File[] = R"({ 
+  static const char TBDv5File[] = R"({
 "tapi_tbd_version": 5,
 "main_library": {
   "target_info": [
     {
       "target": "armv7-ios",
-      "min_deployment": "11.0" 
+      "min_deployment": "11.0"
     }
   ],
   "install_names":[
@@ -458,20 +458,20 @@ TEST(TBDv5, ReadMultipleDocuments) {
     "target_info": [
       {
         "target": "armv7-ios",
-        "min_deployment": "11.0" 
+        "min_deployment": "11.0"
       }
     ],
     "install_names":[
       { "name":"/u/l/l/libfoo.dylib" }
     ],
-    "flags":[ 
+    "flags":[
       { "attributes": ["not_app_extension_safe"] }
-    ], 
+    ],
     "exported_symbols": [
       {
         "data": {
           "thread_local": [ "_globalVar" ],
-          "objc_class": [ "ClassData", "ClassA", "ClassB"], 
+          "objc_class": [ "ClassData", "ClassA", "ClassB"],
           "objc_eh_type": [ "ClassA", "ClassB" ]
         },
         "text": {
@@ -796,20 +796,20 @@ TEST(TBDv5, WriteFile) {
 }
 
 TEST(TBDv5, WriteMultipleDocuments) {
-  static const char TBDv5File[] = R"({ 
+  static const char TBDv5File[] = R"({
 "tapi_tbd_version": 5,
 "main_library": {
   "target_info": [
     {
       "target": "armv7-ios",
-      "min_deployment": "11.0" 
+      "min_deployment": "11.0"
     }
   ],
   "install_names":[
     { "name":"/S/L/F/Foo.framework/Foo" }
   ],
   "reexported_libraries": [
-    { "names": ["/u/l/l/libfoo.dylib"] 
+    { "names": ["/u/l/l/libfoo.dylib"]
     }
   ]
 },
@@ -818,11 +818,11 @@ TEST(TBDv5, WriteMultipleDocuments) {
     "target_info": [
       {
         "target": "armv7-ios",
-        "min_deployment": "11.0" 
+        "min_deployment": "11.0"
       },
       {
         "target": "armv7s-ios",
-        "min_deployment": "11.0" 
+        "min_deployment": "11.0"
       }
     ],
     "install_names":[
@@ -843,9 +843,9 @@ TEST(TBDv5, WriteMultipleDocuments) {
         ]
       }],
     "reexported_libraries": [ { "names": ["@rpath/libfoo.dylib"] } ],
-    "flags":[ 
+    "flags":[
       { "attributes": ["not_app_extension_safe"] }
-    ], 
+    ],
     "exported_symbols": [
       {
         "text": {
@@ -858,7 +858,7 @@ TEST(TBDv5, WriteMultipleDocuments) {
     "target_info": [
       {
         "target": "armv7-ios",
-        "min_deployment": "11.0" 
+        "min_deployment": "11.0"
       }
     ],
     "install_names":[
@@ -937,7 +937,7 @@ TEST(TBDv5, WriteMultipleDocuments) {
 }
 
 TEST(TBDv5, Target_Simulator) {
-  static const char TBDv5File[] = R"({ 
+  static const char TBDv5File[] = R"({
 "tapi_tbd_version": 5,
 "main_library": {
   "target_info": [
@@ -947,7 +947,7 @@ TEST(TBDv5, Target_Simulator) {
     },
     {
       "target": "x86_64-ios-simulator",
-      "min_deployment": "11.3" 
+      "min_deployment": "11.3"
     }
   ],
   "install_names":[
@@ -981,7 +981,7 @@ TEST(TBDv5, Target_Simulator) {
 }
 
 TEST(TBDv5, Target_UnsupportedMinOS) {
-  static const char TBDv5File[] = R"({ 
+  static const char TBDv5File[] = R"({
 "tapi_tbd_version": 5,
 "main_library": {
   "target_info": [
@@ -991,7 +991,7 @@ TEST(TBDv5, Target_UnsupportedMinOS) {
     },
     {
       "target": "x86_64-macos",
-      "min_deployment": "10.14" 
+      "min_deployment": "10.14"
     }
   ],
   "install_names":[
@@ -1025,7 +1025,7 @@ TEST(TBDv5, Target_UnsupportedMinOS) {
 }
 
 TEST(TBDv5, MisspelledKey) {
-  static const char TBDv5File[] = R"({ 
+  static const char TBDv5File[] = R"({
 "tapi_tbd_version": 5,
 "main_library": {
   "target_info": [
@@ -1047,7 +1047,7 @@ TEST(TBDv5, MisspelledKey) {
 }
 
 TEST(TBDv5, InvalidVersion) {
-  static const char TBDv5File[] = R"({ 
+  static const char TBDv5File[] = R"({
 "tapi_tbd_version": 11,
 "main_library": {
   "target_info": [
@@ -1069,7 +1069,7 @@ TEST(TBDv5, InvalidVersion) {
 }
 
 TEST(TBDv5, MissingRequiredKey) {
-  static const char TBDv5File[] = R"({ 
+  static const char TBDv5File[] = R"({
 "main_library": {
   "target_info": [
     {
@@ -1090,7 +1090,7 @@ TEST(TBDv5, MissingRequiredKey) {
 }
 
 TEST(TBDv5, InvalidSymbols) {
-  static const char TBDv5File[] = R"({ 
+  static const char TBDv5File[] = R"({
 "tapi_tbd_version": 5,
 "main_library": {
   "target_info": [
@@ -1121,7 +1121,7 @@ TEST(TBDv5, InvalidSymbols) {
 }
 
 TEST(TBDv5, DefaultMinOS) {
-  static const char TBDv5File[] = R"({ 
+  static const char TBDv5File[] = R"({
 "tapi_tbd_version": 5,
 "main_library": {
   "target_info": [
@@ -1146,7 +1146,7 @@ TEST(TBDv5, DefaultMinOS) {
 }
 
 TEST(TBDv5, InvalidMinOS) {
-  static const char TBDv5File[] = R"({ 
+  static const char TBDv5File[] = R"({
 "tapi_tbd_version": 5,
 "main_library": {
   "target_info": [
@@ -1168,13 +1168,13 @@ TEST(TBDv5, InvalidMinOS) {
 }
 
 TEST(TBDv5, RISCV) {
-  static const char TBDv5File[] = R"({ 
+  static const char TBDv5File[] = R"({
 "tapi_tbd_version": 5,
 "main_library": {
   "target_info": [
     {
       "target": "riscv32-ios",
-      "min_deployment": "34.1" 
+      "min_deployment": "34.1"
     }
   ],
   "install_names":[
@@ -1195,21 +1195,21 @@ TEST(TBDv5, RISCV) {
 }
 
 TEST(TBDv5, SimSupport) {
-  static const char TBDv5File[] = R"({ 
+  static const char TBDv5File[] = R"({
 "tapi_tbd_version": 5,
 "main_library": {
   "target_info": [
     {
       "target": "arm64-macos",
-      "min_deployment": "11.1" 
+      "min_deployment": "11.1"
     }
   ],
   "install_names":[
     { "name":"/S/L/F/Foo.framework/Foo" }
   ],
-  "flags":[ 
+  "flags":[
     { "attributes": ["sim_support"] }
-  ] 
+  ]
 }})";
 
   Expected<TBDFile> Result =
@@ -1226,21 +1226,21 @@ TEST(TBDv5, SimSupport) {
 }
 
 TEST(TBDv5, NotForSharedCache) {
-  static const char TBDv5File[] = R"({ 
+  static const char TBDv5File[] = R"({
 "tapi_tbd_version": 5,
 "main_library": {
   "target_info": [
     {
       "target": "arm64-macos",
-      "min_deployment": "11.1" 
+      "min_deployment": "11.1"
     }
   ],
   "install_names":[
     { "name":"/S/L/F/Foo.framework/Foo" }
   ],
-  "flags":[ 
+  "flags":[
     { "attributes": ["not_for_dyld_shared_cache"] }
-  ] 
+  ]
 }})";
 
   Expected<TBDFile> Result =
@@ -1258,7 +1258,7 @@ TEST(TBDv5, NotForSharedCache) {
 }
 
 TEST(TBDv5, ObjCInterfaces) {
-  static const char TBDv5File[] = R"({ 
+  static const char TBDv5File[] = R"({
 "tapi_tbd_version": 5,
 "main_library": {
   "target_info": [

@@ -114,7 +114,7 @@ int test_enum_cases(enum Cases C) {
       ++i;
       return i;
     }
-  }  
+  }
 }
 
 // Handle unreachable code triggered by macro expansions.
@@ -380,17 +380,17 @@ void test_with_paren_silencing(int x) {
     calledFun();
   else
     calledFun(); // no-warning
-  
+
   if (!1) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
     calledFun(); // expected-warning {{code will never be executed}}
   else
     calledFun();
-  
+
   if ((!1))
     calledFun(); // no-warning
   else
     calledFun();
-  
+
   if (!(1))
     calledFun(); // no-warning
   else

@@ -6,7 +6,7 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 void test_setjmp(void *env) {
   // CIR-LABEL: test_setjmp
-  // CIR-SAME: [[ENV:%.*]]: 
+  // CIR-SAME: [[ENV:%.*]]:
   // CIR-NEXT: [[ENV_ALLOCA:%[0-9]+]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>,
   // CIR-NEXT: cir.store [[ENV]], [[ENV_ALLOCA]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
   // CIR-NEXT: [[ENV_LOAD:%[0-9]+]] = cir.load align(8) [[ENV_ALLOCA]]
@@ -23,18 +23,18 @@ void test_setjmp(void *env) {
 
   // LLVM-LABEL: test_setjmp
   // LLVM-SAME: (ptr{{.*}}[[ENV:%.*]])
-  // LLVM-NEXT: [[FA:%[0-9]+]] = {{.*}}@llvm.frameaddress.p0(i32 0) 
+  // LLVM-NEXT: [[FA:%[0-9]+]] = {{.*}}@llvm.frameaddress.p0(i32 0)
   // LLVM-NEXT: store ptr [[FA]], ptr [[ENV]], align 8
-  // LLVM-NEXT: [[SS:%[0-9]+]] = {{.*}}@llvm.stacksave.p0() 
+  // LLVM-NEXT: [[SS:%[0-9]+]] = {{.*}}@llvm.stacksave.p0()
   // LLVM-NEXT: [[GEP:%[0-9]+]] = getelementptr i8, ptr [[ENV]], i64 16
   // LLVM-NEXT: store ptr [[SS]], ptr [[GEP]], align 8
   // LLVM-NEXT: @llvm.eh.sjlj.setjmp(ptr{{.*}}[[ENV]])
-  
+
   // OGCG-LABEL: test_setjmp
   // OGCG-SAME: (ptr{{.*}}[[ENV:%.*]])
-  // OGCG: [[FA:%.*]] = {{.*}}@llvm.frameaddress.p0(i32 0) 
+  // OGCG: [[FA:%.*]] = {{.*}}@llvm.frameaddress.p0(i32 0)
   // OGCG-NEXT: store ptr [[FA]], ptr [[ENV]], align 8
-  // OGCG-NEXT: [[SS:%.*]] = {{.*}}@llvm.stacksave.p0() 
+  // OGCG-NEXT: [[SS:%.*]] = {{.*}}@llvm.stacksave.p0()
   // OGCG-NEXT: [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[ENV]], i64 16
   // OGCG-NEXT: store ptr [[SS]], ptr [[GEP]], align 8
   // OGCG-NEXT: @llvm.eh.sjlj.setjmp(ptr{{.*}}[[ENV]])
@@ -43,7 +43,7 @@ void test_setjmp(void *env) {
 
 void test_longjmp(void *env) {
   // CIR-LABEL: test_longjmp
-  // CIR-SAME: [[ENV:%.*]]: 
+  // CIR-SAME: [[ENV:%.*]]:
   // CIR-NEXT: [[ENV_ALLOCA:%[0-9]+]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>,
   // CIR-NEXT: cir.store [[ENV]], [[ENV_ALLOCA]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
   // CIR-NEXT: [[ENV_LOAD:%[0-9]+]] = cir.load align(8) [[ENV_ALLOCA]]
@@ -55,7 +55,7 @@ void test_longjmp(void *env) {
   // LLVM-LABEL: test_longjmp
   // LLVM: @llvm.eh.sjlj.longjmp
   // LLVM-NEXT: unreachable
-  
+
   // OGCG-LABEL: test_longjmp
   // OGCG: @llvm.eh.sjlj.longjmp
   // OGCG-NEXT: unreachable

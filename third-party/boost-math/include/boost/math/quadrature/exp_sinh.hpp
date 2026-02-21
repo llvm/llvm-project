@@ -113,8 +113,8 @@ auto exp_sinh<Real, Policy>::integrate(const F& f, Real tolerance, Real* error, 
 #include <boost/math/policies/error_handling.hpp>
 #include <boost/math/constants/constants.hpp>
 
-namespace boost { 
-namespace math { 
+namespace boost {
+namespace math {
 namespace quadrature {
 
 template <class F, class Real, class Policy = policies::policy<> >

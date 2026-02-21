@@ -25,7 +25,7 @@ struct Test0a {
 
 // V-table should be defined externally.
 Test0a::Test0a() { use(typeid(Test0a)); }
-// CHECK: @_ZTV6Test0a = external unnamed_addr constant 
+// CHECK: @_ZTV6Test0a = external unnamed_addr constant
 // CHECK: @_ZTI6Test0a = external constant
 
 // This is still not a key function.
@@ -44,7 +44,7 @@ void Test0b::foo() {}
 
 // V-table should be defined externally.
 Test0b::Test0b() { use(typeid(Test0b)); }
-// CHECK: @_ZTV6Test0b = external unnamed_addr constant 
+// CHECK: @_ZTV6Test0b = external unnamed_addr constant
 // CHECK: @_ZTI6Test0b = external constant
 
 /*** Test1a ******************************************************************/
@@ -57,7 +57,7 @@ struct Test1a {
 
 // V-table should be defined externally.
 Test1a::Test1a() { use(typeid(Test1a)); }
-// CHECK: @_ZTV6Test1a = external unnamed_addr constant 
+// CHECK: @_ZTV6Test1a = external unnamed_addr constant
 // CHECK: @_ZTI6Test1a = external constant
 
 // 'bar' becomes the key function when 'foo' is defined inline.
@@ -76,7 +76,7 @@ inline void Test1b::foo() {}
 
 // V-table should be defined externally.
 Test1b::Test1b() { use(typeid(Test1b)); }
-// CHECK: @_ZTV6Test1b = external unnamed_addr constant 
+// CHECK: @_ZTV6Test1b = external unnamed_addr constant
 // CHECK: @_ZTI6Test1b = external constant
 
 /*** Test2a ******************************************************************/

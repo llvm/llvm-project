@@ -5,7 +5,7 @@
 
 // CONFIG open rdar://6416474
 // was  rdar://5847976
-// was  rdar://6348320 
+// was  rdar://6348320
 
 #include <stdio.h>
 #include <Block.h>
@@ -13,11 +13,11 @@
 int verbose = 0;
 
 int main(int argc, char* argv[]) {
-	
+
         if (argc > 1) verbose = 1;
-        
+
 	__block void (^recursive_local_block)(int);
-		
+
 	if (verbose) printf("recursive_local_block is a local recursive block\n");
 	recursive_local_block = ^(int i) {
 		if (verbose) printf("%d\n", i);
@@ -37,9 +37,9 @@ int main(int argc, char* argv[]) {
     };
 
 	if (verbose) printf("other_local_block's address is %p, running it:\n", (void*)other_local_block);
-		
+
 	other_local_block(5);
-	
+
 #if __APPLE_CC__ >= 5627
 	if (verbose) printf("Creating other_copied_block: a Block_copy of a block that will call recursive_local_block\n");
 
@@ -47,9 +47,9 @@ int main(int argc, char* argv[]) {
 		if (verbose) printf("other_copied_block running\n");
 		recursive_local_block(i);
     });
-		
+
 	if (verbose) printf("other_copied_block's address is %p, running it:\n", (void*)other_copied_block);
-	
+
 	other_copied_block(5);
 #endif
 
@@ -63,11 +63,11 @@ int main(int argc, char* argv[]) {
 			recursive_copy_block(i - 1);
 		}
     });
-		
+
 	if (verbose) printf("recursive_copy_block's address is %p, running it:\n", (void*)recursive_copy_block);
 
 	recursive_copy_block(5);
-        
+
         printf("%s: Success\n", argv[0]);
 	return 0;
 }

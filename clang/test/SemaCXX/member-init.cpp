@@ -62,7 +62,7 @@ struct TypedefInit {
 // PR10578
 namespace PR10578 {
   template<typename T>
-  struct X { 
+  struct X {
     X() {
       T* x = 1; // expected-error{{cannot initialize a variable of type 'int *' with an rvalue of type 'int'}} expected-warning {{unused variable}}
     }

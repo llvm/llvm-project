@@ -3,9 +3,9 @@
 // A default template-argument shall not be specified in a function
 // template declaration or a function template definition
 template<typename T = int> // expected-warning{{default template arguments for a function template are a C++11 extension}}
-  void foo0(T); 
-template<typename T = int> // expected-warning{{default template arguments for a function template are a C++11 extension}} 
-  void foo1(T) { } 
+  void foo0(T);
+template<typename T = int> // expected-warning{{default template arguments for a function template are a C++11 extension}}
+  void foo1(T) { }
 
 // [...] nor in the template-parameter-list of the definition of a
 // member of a class template.
@@ -15,7 +15,7 @@ struct X0 {
 };
 
 template<int N = 0> // expected-error{{cannot add a default template argument}}
-void X0<N>::f() { } 
+void X0<N>::f() { }
 
 class X1 {
   template<template<int> class TT = X0> // expected-error{{not permitted on a friend template}}

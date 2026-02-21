@@ -54,7 +54,7 @@ public:
                                                 HostInfo::GetTargetTriple())) {}
   TypeSystemClang *GetAST() const { return m_ast.get(); }
 };
-  
+
 /// Constructs a TypeSystemClang that contains a single RecordDecl that contains
 /// a single FieldDecl. Utility class as this setup is a common starting point
 /// for unit test that exercise the ASTImporter.

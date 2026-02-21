@@ -3,7 +3,7 @@ add_mlir_library(MLIROpenACCTestPasses
   TestPointerLikeTypeInterface.cpp
   TestRecipePopulate.cpp
   TestOpenACCSupport.cpp
-  
+
   EXCLUDE_FROM_LIBMLIR
 )
 mlir_target_link_libraries(MLIROpenACCTestPasses PUBLIC

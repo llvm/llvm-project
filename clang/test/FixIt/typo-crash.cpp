@@ -9,10 +9,10 @@ template<typename T> void template_id1() {
 namespace PR12297 {
   namespace A {
     typedef short   T;
-    
+
     namespace B {
       typedef short   T;
-        
+
       T global(); // expected-note {{'::PR12297::global' declared here}}
     }
   }

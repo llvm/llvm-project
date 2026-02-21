@@ -1106,7 +1106,7 @@ In the example above, three lldb extensions are shown:
     * A list of compression types that the stub can use to compress packets
     when the QEnableCompression packet is used to request one of them.
   * `SupportedWatchpointTypes=<item,item,...>`
-    * A list of watchpoint types that this stub can manage. Currently defined 
+    * A list of watchpoint types that this stub can manage. Currently defined
       names are:
         * `x86_64` - 64-bit x86-64 watchpoints (1, 2, 4, 8 byte watchpoints
           aligned to those amounts)
@@ -1436,7 +1436,7 @@ tuples to return are:
   region that are "dirty" -- they have been modified.
   Page addresses are in base 16. The size of a page can
   be found from the `qHostInfo`'s `page-size` key-value.
-  
+
   If the stub supports identifying dirty pages within a
   memory region, this key should always be present for all
   `qMemoryRegionInfo` replies.  This key with no pages
@@ -1514,7 +1514,7 @@ The request packet has the fields:
    1. mode bits in base 16
    2. file path in ascii-hex encoding
 
-Reply: 
+Reply:
   * `F<mkdir-return-code>`
     (mkdir called successfully and returned with the given return code)
   * `Exx` (An error occurred)

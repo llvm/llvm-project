@@ -106,7 +106,7 @@ bool ThreadPlanStepRange::InRange() {
 
   size_t num_ranges = m_address_ranges.size();
   for (size_t i = 0; i < num_ranges; i++) {
-    ret_value = 
+    ret_value =
         m_address_ranges[i].ContainsLoadAddress(pc_load_addr, &GetTarget());
     if (ret_value)
       break;
@@ -340,7 +340,7 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
 
   // clear the m_found_calls, we'll rediscover it for this range.
   m_found_calls = false;
-  
+
   lldb::addr_t cur_addr = GetThread().GetRegisterContext()->GetPC();
   // Find the current address in our address ranges, and fetch the disassembly
   // if we haven't already:
@@ -551,7 +551,7 @@ bool ThreadPlanStepRange::IsPlanStale() {
       lldb::addr_t addr = GetThread().GetRegisterContext()->GetPC() - 1;
       size_t num_ranges = m_address_ranges.size();
       for (size_t i = 0; i < num_ranges; i++) {
-        bool in_range = 
+        bool in_range =
             m_address_ranges[i].ContainsLoadAddress(addr, &GetTarget());
         if (in_range) {
           SetPlanComplete();

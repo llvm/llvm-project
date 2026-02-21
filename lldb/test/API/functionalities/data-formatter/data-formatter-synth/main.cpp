@@ -30,7 +30,7 @@ struct BagOfBags
     BagOfInts y;
     BagOfFloats z;
     BagOfFloats q;
-    BagOfBags() : 
+    BagOfBags() :
     x('E'),
     y('B'),
     z(1.1),
@@ -45,7 +45,7 @@ struct Plenty
     int* array;
     int array_size;
     int bitfield;
-    
+
     Plenty(int N, bool flagA, bool flagB) :
     some_values(new BagOfInts(N)),
     array(new int[N]),
@@ -61,17 +61,17 @@ int main (int argc, const char * argv[])
 {
     BagOfInts int_bag(6);
     BagOfFloats float_bag(2.71);
-    
+
     BagOfBags bag_bag;
     EmptyStruct es;
-    
+
     Plenty plenty_of_stuff(5,true,false);
-    
+
     plenty_of_stuff.bitfield = 0x11; // Set break point at this line.
-    
+
     bag_bag.x.z = 12;
-    
+
     return 0;
-    
+
 }
 

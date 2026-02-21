@@ -108,7 +108,7 @@ namespace boost
                {
                   xterm *= (a + i - 1) / (x * (a + b + i - 2));
                }
-               
+
                last_term = term;
             }
             last_term = 0;
@@ -829,7 +829,7 @@ namespace boost
 
       template <class RealType, class Policy>
       BOOST_MATH_GPU_ENABLED inline RealType variance(const non_central_beta_distribution<RealType, Policy>& dist)
-      { 
+      {
          //
          // Relative error of this function may be arbitrarily large... absolute
          // error will be small however... that's the best we can do for now.

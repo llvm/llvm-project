@@ -638,7 +638,7 @@ std::string_view test2() {
   StatusOr<Wrapper2<std::string_view>> k;
   // We expect dangling issues as the conversion operator is lifetimebound。
   std::string_view bad = StatusOr<Wrapper2<std::string_view>>().value(); // expected-warning {{temporary whose address is used as value of}}
-  
+
   return k.value(); // expected-warning {{address of stack memory associated}} \
                     // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
 }
@@ -990,14 +990,14 @@ void test4() {
 
 namespace range_based_for_loop_variables {
 std::string_view test_view_loop_var(std::vector<std::string> strings) {
-  for (std::string_view s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+  for (std::string_view s : strings) {  // cfg-warning {{address of stack memory is returned later}}
     return s; //cfg-note {{returned here}}
   }
   return "";
 }
 
 const char* test_view_loop_var_with_data(std::vector<std::string> strings) {
-  for (std::string_view s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+  for (std::string_view s : strings) {  // cfg-warning {{address of stack memory is returned later}}
     return s.data(); //cfg-note {{returned here}}
   }
   return "";
@@ -1011,14 +1011,14 @@ std::string_view test_no_error_for_views(std::vector<std::string_view> views) {
 }
 
 std::string_view test_string_ref_var(std::vector<std::string> strings) {
-  for (const std::string& s : strings) {  // cfg-warning {{address of stack memory is returned later}} 
+  for (const std::string& s : strings) {  // cfg-warning {{address of stack memory is returned later}}
     return s; //cfg-note {{returned here}}
   }
   return "";
 }
 
 std::string_view test_opt_strings(std::optional<std::vector<std::string>> strings_or) {
-  for (const std::string& s : *strings_or) {  // cfg-warning {{address of stack memory is returned later}} 
+  for (const std::string& s : *strings_or) {  // cfg-warning {{address of stack memory is returned later}}
     return s; //cfg-note {{returned here}}
   }
   return "";

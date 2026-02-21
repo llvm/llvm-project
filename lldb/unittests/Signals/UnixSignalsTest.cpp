@@ -63,7 +63,7 @@ TEST(UnixSignalsTest, Reset) {
   bool stop_val     = signals.GetShouldStop(2);
   bool notify_val   = signals.GetShouldNotify(2);
   bool suppress_val = signals.GetShouldSuppress(2);
-  
+
   // Change two, then reset one and make sure only that one was reset:
   EXPECT_EQ(true, signals.SetShouldNotify(2, !notify_val));
   EXPECT_EQ(true, signals.SetShouldSuppress(2, !suppress_val));
@@ -71,7 +71,7 @@ TEST(UnixSignalsTest, Reset) {
   EXPECT_EQ(stop_val, signals.GetShouldStop(2));
   EXPECT_EQ(notify_val, signals.GetShouldStop(2));
   EXPECT_EQ(!suppress_val, signals.GetShouldNotify(2));
-  
+
   // Make sure reset with no arguments resets them all:
   EXPECT_EQ(true, signals.SetShouldSuppress(2, !suppress_val));
   EXPECT_EQ(true, signals.SetShouldNotify(2, !notify_val));

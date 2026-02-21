@@ -62,7 +62,7 @@ Krzysztof.Parzyszek@amd.com (email), kparzysz (GitHub), kparzysz (Discourse)
 
 ##### Target Offload
 Sergio Afonso \
-safonsof@amd.com (email), skatrak (GitHub), skatrak (Discourse) 
+safonsof@amd.com (email), skatrak (GitHub), skatrak (Discourse)
 
 #### OpenACC
 Valentin Clement \

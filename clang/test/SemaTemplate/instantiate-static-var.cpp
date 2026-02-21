@@ -16,7 +16,7 @@ X<int, 0> xi0; // expected-note{{in instantiation of template class 'X<int, 0>' 
 
 template<typename T>
 class Y {
-  static const T value = 0; 
+  static const T value = 0;
 #if __cplusplus <= 199711L
 // expected-warning@-2 {{in-class initializer for static data member of type 'const float' is a GNU extension}}
 #else
@@ -40,7 +40,7 @@ T Z<T>::value; // expected-error{{no matching constructor}}
 
 struct DefCon {};
 
-struct NoDefCon { 
+struct NoDefCon {
   NoDefCon(const NoDefCon&); // expected-note{{candidate constructor}}
 };
 
@@ -105,7 +105,7 @@ void MyTest3() {
 }
 
 namespace PR6449 {
-  template<typename T>    
+  template<typename T>
   struct X0  {
     static const bool var = false;
   };
@@ -118,7 +118,7 @@ namespace PR6449 {
     static const bool var = false;
   };
 
-  template<typename T>      
+  template<typename T>
   const bool X1<T>::var;
 
   template class X0<char>;

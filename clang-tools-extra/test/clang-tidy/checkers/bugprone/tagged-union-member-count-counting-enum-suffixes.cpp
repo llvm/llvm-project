@@ -24,7 +24,7 @@ struct TaggedUnionWithCounterCountSuffix {
 };
 
 // CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
-struct TaggedUnionWithCounterSizeSuffix { 
+struct TaggedUnionWithCounterSizeSuffix {
   enum {
     twc11,
     twc22,

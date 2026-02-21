@@ -1,10 +1,10 @@
 /// Most likely platform specific sed differences
 // UNSUPPORTED: system-windows
 
-/// This test validates that modules that depend on prebuilt modules 
-///   resolve `is-in-stable-directories` correctly. 
-/// The steps are: 
-/// 1. Scan dependencies to build the PCH. One of the module's depend on header 
+/// This test validates that modules that depend on prebuilt modules
+///   resolve `is-in-stable-directories` correctly.
+/// The steps are:
+/// 1. Scan dependencies to build the PCH. One of the module's depend on header
 ///   that is seemingly from the sysroot. However, it depends on a local header that is overlaid.
 /// 2. Build the PCH & dependency PCMs.
 /// 3. Scan a source file that transitively depends on the same modules as the pcm.

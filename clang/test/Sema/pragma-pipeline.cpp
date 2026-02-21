@@ -18,7 +18,7 @@ void test(int *List, int Length, int Value) {
     }
   }
 
-#pragma clang loop pipeline(disable) 
+#pragma clang loop pipeline(disable)
 /* expected-error {{expected a for, while, or do-while loop to follow '#pragma clang loop'}} */ int j = Length;
 #pragma clang loop pipeline_initiation_interval(4)
 /* expected-error {{expected a for, while, or do-while loop to follow '#pragma clang loop'}} */ int k = Length;

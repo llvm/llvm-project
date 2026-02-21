@@ -62,7 +62,7 @@ namespace Replace {
     typedef TT<int, int> type;
   };
 
-  int check0[is_same<EverythingToInt<tuple<double, float>>::type, 
+  int check0[is_same<EverythingToInt<tuple<double, float>>::type,
              tuple<int, int>>::value? 1 : -1];
 }
 
@@ -72,7 +72,7 @@ namespace Math {
     typedef int_tuple<Values*2 ...> type;
   };
 
-  int check0[is_same<double_values<1, 2, -3>::type, 
+  int check0[is_same<double_values<1, 2, -3>::type,
                      int_tuple<2, 4, -6>>::value? 1 : -1];
 
   template<int ...Values>
@@ -80,7 +80,7 @@ namespace Math {
     typedef int_tuple<(Values*Values)...> type;
   };
 
-  int check1[is_same<square<1, 2, -3>::type, 
+  int check1[is_same<square<1, 2, -3>::type,
                      int_tuple<1, 4, 9>>::value? 1 : -1];
 
   template<typename IntTuple> struct square_tuple;
@@ -90,12 +90,12 @@ namespace Math {
     typedef int_tuple<(Values*Values)...> type;
   };
 
-  int check2[is_same<square_tuple<int_tuple<1, 2, -3> >::type, 
+  int check2[is_same<square_tuple<int_tuple<1, 2, -3> >::type,
                      int_tuple<1, 4, 9>>::value? 1 : -1];
 
   template<int ...Values> struct sum;
 
-  template<int First, int ...Rest> 
+  template<int First, int ...Rest>
   struct sum<First, Rest...> {
     static const int value = First + sum<Rest...>::value;
   };
@@ -124,12 +124,12 @@ namespace ListMath {
 
   template<typename T, T i, T ... V>
   struct add<T, i, V...> {
-    static const T value = i + add<T, V...>::value; 
+    static const T value = i + add<T, V...>::value;
   };
 
   template<typename T>
   struct add<T> {
-    static const T value = T(); 
+    static const T value = T();
   };
 
   template<typename T, T ... V>
@@ -155,7 +155,7 @@ namespace Indices {
     : build_indices_impl<I+1, N, int_tuple<Indices..., I> > {
   };
 
-  template<unsigned N, int ...Indices> 
+  template<unsigned N, int ...Indices>
   struct build_indices_impl<N, N, int_tuple<Indices...> > {
     typedef int_tuple<Indices...> type;
   };
@@ -173,22 +173,22 @@ namespace TemplateTemplateApply {
     typedef tuple<typename Meta<T>::type...> type;
   };
 
-  template<typename T> 
+  template<typename T>
   struct add_reference {
     typedef T& type;
   };
 
-  template<typename T> 
+  template<typename T>
   struct add_pointer {
     typedef T* type;
   };
 
-  template<typename T> 
+  template<typename T>
   struct add_const {
     typedef const T type;
   };
 
-  int check0[is_same<apply_each<int, 
+  int check0[is_same<apply_each<int,
                                 add_reference, add_pointer, add_const>::type,
                      tuple<int&, int*, int const>>::value? 1 : -1];
 
@@ -197,7 +197,7 @@ namespace TemplateTemplateApply {
     typedef typename apply_each<T, Meta...>::type type;
   };
 
-  int check1[is_same<apply_each_indirect<int, add_reference, add_pointer, 
+  int check1[is_same<apply_each_indirect<int, add_reference, add_pointer,
                                          add_const>::type,
                      tuple<int&, int*, int const>>::value? 1 : -1];
 
@@ -227,7 +227,7 @@ namespace TemplateTemplateApply {
     };
   };
 
-  int check2[is_same<apply_each_nested<int, add_reference_meta, 
+  int check2[is_same<apply_each_nested<int, add_reference_meta,
                                        add_pointer_meta, add_const_meta>::type,
                      tuple<int&, int*, int const>>::value? 1 : -1];
 
@@ -262,12 +262,12 @@ namespace SuperReplace {
   struct replace_with_int {
     typedef int type;
   };
-  
+
   template<template<typename ...> class TT, typename ...Types>
   struct replace_with_int<TT<Types...>> {
     typedef TT<typename replace_with_int<Types>::type...> type;
   };
-  
+
   int check0[is_same<replace_with_int<pair<tuple<float, double, short>,
                                            pair<char, unsigned char>>>::type,
                      pair<tuple<int, int, int>, pair<int, int>>>::value? 1 : -1];

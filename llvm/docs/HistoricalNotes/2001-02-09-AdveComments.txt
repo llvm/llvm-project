@@ -24,7 +24,7 @@ o  On reflection, I really like your idea of having the two different switch
 
 o  In the lookup-indirect form of the switch, is there a reason not to make
    the val-type uint?  Most HLL switch statements (including Java and C++)
-   require that anyway.  And it would also make the val-type uniform 
+   require that anyway.  And it would also make the val-type uniform
    in the two forms of the switch.
 
    I did see the switch-on-bool examples and, while cute, we can just use
@@ -83,7 +83,7 @@ o  A pair of important synchronization instr'ns to think about:
 
 
 o  Other classes of instructions that are valuable for pipeline performance:
-     conditional-move		 
+     conditional-move
      predicated instructions
 
 

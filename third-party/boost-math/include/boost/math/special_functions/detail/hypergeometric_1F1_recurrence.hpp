@@ -326,7 +326,7 @@
     T first {};
     T second {};
     if(ak == 0)
-    { 
+    {
        first = 1;
        ak -= 1;
        second = 1 - z / b;
@@ -363,22 +363,22 @@
      using std::swap;
      BOOST_MATH_STD_USING // modf, frexp, fabs, pow
      //
-     // We compute 
+     // We compute
      //
-     // M[a + a_shift, b + b_shift; z] 
+     // M[a + a_shift, b + b_shift; z]
      //
      // and recurse backwards on a and b down to
      //
      // M[a, b, z]
      //
      // With a + a_shift > 1 and b + b_shift > z
-     // 
+     //
      // There are 3 distinct regions to ensure stability during the recursions:
      //
      // a > 0         :  stable for backwards on a
      // a < 0, b > 0  :  stable for backwards on a and b
-     // a < 0, b < 0  :  stable for backwards on b (as long as |b| is small). 
-     // 
+     // a < 0, b < 0  :  stable for backwards on b (as long as |b| is small).
+     //
      // We could simplify things by ignoring the middle region, but it's more efficient
      // to recurse on a and b together when we can.
      //
@@ -460,7 +460,7 @@
      // which is leading_a_shift -1 steps.
      //
      second = boost::math::tools::apply_recurrence_relation_backward(
-        hypergeometric_1F1_recurrence_a_coefficients<T>(a + a_shift - 1, b + b_shift, z), 
+        hypergeometric_1F1_recurrence_a_coefficients<T>(a + a_shift - 1, b + b_shift, z),
         leading_a_shift, first, second, &log_scaling, &first);
 
      if (a_b_shift)
@@ -509,7 +509,7 @@
      if (trailing_b_shift)
      {
         second = boost::math::tools::apply_recurrence_relation_backward(
-           hypergeometric_1F1_recurrence_small_b_coefficients<T>(a, b, z, trailing_b_shift), 
+           hypergeometric_1F1_recurrence_small_b_coefficients<T>(a, b, z, trailing_b_shift),
            trailing_b_shift, first, second, &log_scaling);
      }
      return second;

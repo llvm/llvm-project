@@ -24,7 +24,7 @@ void dumpCallback(MlirStringRef message, void *userData) {
 
 void testExportSMTLIB(MlirContext ctx) {
   // clang-format off
-  const char *testSMT = 
+  const char *testSMT =
     "func.func @test() {\n"
     "  smt.solver() : () -> () { }\n"
     "  return\n"

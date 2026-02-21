@@ -35,7 +35,7 @@ unsigned short test_cvtss_sh(float a) {
 }
 
 TEST_CONSTEXPR(match_m128(
-    _mm_cvtph_ps(_mm_setr_epi16(0x3C00, 0x4000, 0x4200, 0x4400, 0, 0, 0, 0)), 
+    _mm_cvtph_ps(_mm_setr_epi16(0x3C00, 0x4000, 0x4200, 0x4400, 0, 0, 0, 0)),
     1.0f, 2.0f, 3.0f, 4.0f
 ));
 
@@ -77,7 +77,7 @@ __m256 test_mm256_cvtph_ps(__m128i a) {
   return _mm256_cvtph_ps(a);
 }
 TEST_CONSTEXPR(match_m256(
-    _mm256_cvtph_ps(_mm_setr_epi16(0x3C00, 0x4000, 0x4200, 0x4400, 0x4500, 0x3800, 0xC000, 0x0000)), 
+    _mm256_cvtph_ps(_mm_setr_epi16(0x3C00, 0x4000, 0x4200, 0x4400, 0x4500, 0x3800, 0xC000, 0x0000)),
     1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 0.5f, -2.0f, 0.0f
 ));
 

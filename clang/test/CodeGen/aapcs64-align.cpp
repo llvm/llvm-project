@@ -21,7 +21,7 @@ struct BITINT129 {
 int test_bitint129(){
   return __builtin_offsetof(struct BITINT129, v);
 }
-// CHECK:  ret i32 16 
+// CHECK:  ret i32 16
 
 struct BITINT127 {
     char ch;
@@ -31,7 +31,7 @@ struct BITINT127 {
 int test_bitint127(){
   return __builtin_offsetof(struct BITINT127, v);
 }
-// CHECK:  ret i32 16 
+// CHECK:  ret i32 16
 
 struct BITINT63 {
     char ch;
@@ -41,7 +41,7 @@ struct BITINT63 {
 int test_bitint63(){
   return __builtin_offsetof(struct BITINT63, v);
 }
-// CHECK:  ret i32 8 
+// CHECK:  ret i32 8
 
 struct BITINT32 {
     char ch;

@@ -5,7 +5,7 @@ template<template<> class C> class D; // expected-error{{template template param
 
 
 struct A {};
-template<class M, 
+template<class M,
          class T = A,  // expected-note{{previous default template argument defined here}}
          class C> // expected-error{{template parameter missing a default argument}}
 class X0 {}; // expected-note{{template is declared here}}

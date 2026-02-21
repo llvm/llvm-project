@@ -155,7 +155,7 @@ public:
   class Iterator {
   };
 };
- 
+
 template<class T>
 class F2  {
   typename F1<T>:: /*template*/  Iterator<0> Mypos; // expected-error {{use 'template' keyword to treat 'Iterator' as a dependent template name}}

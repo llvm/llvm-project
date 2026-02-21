@@ -19,7 +19,7 @@ int main (int argc, const char * argv[]) {
         } else
             dispatch_async(dispatch_get_main_queue(), ^{ blockFu(20); });
     };
-    
+
     dispatch_apply(10, dispatch_get_concurrent_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT), blockFu);
 
     dispatch_main();

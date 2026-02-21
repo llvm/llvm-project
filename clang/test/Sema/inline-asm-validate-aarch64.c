@@ -57,7 +57,7 @@ void read_write_modifier0(int one, int two) {
 // CHECK: fix-it:{{.*}}:{[[#@LINE-1]]:17-[[#@LINE-1]]:19}:"%w2"
 }
 
-// CHECK-NOT: warning: 
+// CHECK-NOT: warning:
 void read_write_modifier1(int one, int two) {
   long wide_two = two;
   asm ("%w0 %1" : "+r" (one), "+r" (wide_two));

@@ -149,7 +149,7 @@ def ChangeCallTargetOp : ... {
     // Allow the handle to be to concrete `func.call` ops as well as any op implementing
     // the `CallOpInterface`.
     AnyTypeOf<[Transform_ConcreteOpType<"func.call">, CallOpInterfaceHandle]>:$call,
-    StrAttr:$new_target); 
+    StrAttr:$new_target);
 }
 ```
 

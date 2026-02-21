@@ -103,7 +103,7 @@ The full documentation is available on [boost.org](http://www.boost.org/doc/libs
 
 Defining `BOOST_MATH_STANDALONE` allows Boost.Math to be used without any Boost dependencies.
 Some functionality is reduced in this mode. A static_assert message will alert you
-if a particular feature has been disabled by standalone mode. Standalone mode is not designed to 
+if a particular feature has been disabled by standalone mode. Standalone mode is not designed to
 be used with the rest of boost, and may result in compiler errors.
 
 ## Supported Compilers
@@ -155,7 +155,7 @@ The default action for a PR or commit to a PR is for CI to run the full compleme
     * [apple] to test Apple Clang on the latest version of MacOS.
     * [windows] to test MSVC-14.0, MSVC-14.2, MSVC-14.3, CYGWIN, and mingw on the latest version of Windows.
     * [standalone] to run standalone mode compile tests
-     
+
 
 ### Building documentation
 

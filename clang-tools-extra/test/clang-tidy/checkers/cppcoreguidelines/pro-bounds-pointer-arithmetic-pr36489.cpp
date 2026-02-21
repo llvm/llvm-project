@@ -32,7 +32,7 @@ void auto_deduction_binary() {
   auto *p9 = getPtrDeclTypeAuto() + 1;
   // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: do not use pointer arithmetic
   auto p10 = getCharPtr() + 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: do not use pointer 
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: do not use pointer
   auto* p11 = getCharPtr() + 1;
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: do not use pointer arithmetic
 }

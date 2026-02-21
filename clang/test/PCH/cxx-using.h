@@ -9,7 +9,7 @@ struct B {
     void f(char c);
 };
 
-struct D : B 
+struct D : B
 {
     using B::f;
     void f(int);

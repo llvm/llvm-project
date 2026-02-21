@@ -11,7 +11,7 @@ typedef void (*CallbackFn)(int);
 // Callback function with "internal" linkage.
 // CHECK-LABEL: define internal void @_ZL10myCallbacki(
 // CHECK-SAME: {{.*}} !type [[F_CALLBACK:![0-9]+]]
-static void myCallback(int value) 
+static void myCallback(int value)
 {
     volatile int sink = value;
     (void)sink;

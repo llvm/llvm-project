@@ -1606,8 +1606,8 @@ vector float test_vec_vec_splati_ins_f(void) {
   return vec_splati_ins(vfa, 0, 1.0f);
 }
 
-// In this test case, the second argument of vec_splati_ins is outside of the 
-// expected range [0,1]. A mask of 0x01 is applied to obtain an in-range value 
+// In this test case, the second argument of vec_splati_ins is outside of the
+// expected range [0,1]. A mask of 0x01 is applied to obtain an in-range value
 // for the second argument.
 vector signed int test_vec_vec_splati_ins_range(void) {
   // CHECK-BE: [[T0:%.+]] = and i32 %{{.+}}, 1

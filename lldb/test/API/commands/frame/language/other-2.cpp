@@ -1,6 +1,6 @@
 #include "other.h"
 
-void 
+void
 Other::DoSomethingElse()
 {
   DoSomething();

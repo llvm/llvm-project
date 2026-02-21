@@ -573,10 +573,10 @@ static bool LoadValueFromConsecutiveGPRRegisters(
   } else {
     const RegisterInfo *reg_info = nullptr;
     if (is_return_value) {
-      // The SysV arm64 ABI doesn't require you to write the return location 
-      // back to x8 before returning from the function the way the x86_64 ABI 
+      // The SysV arm64 ABI doesn't require you to write the return location
+      // back to x8 before returning from the function the way the x86_64 ABI
       // does.  It looks like all the users of this ABI currently choose not to
-      // do that, and so we can't reconstruct stack based returns on exit 
+      // do that, and so we can't reconstruct stack based returns on exit
       // from the function.
       return false;
     } else {

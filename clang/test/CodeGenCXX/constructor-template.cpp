@@ -13,7 +13,7 @@ struct A {
 template<typename T>
 struct B {
   B(T) {}
-  
+
   A nodes;
 };
 

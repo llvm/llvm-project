@@ -49,14 +49,14 @@ namespace boost {
          typedef std::input_iterator_tag iterator_category;
 
          bessel_j_backwards_iterator(const T& v, const T& x)
-            : it(detail::bessel_jy_recurrence<T>(v, x), boost::math::cyl_bessel_j(v, x, Policy())) 
+            : it(detail::bessel_jy_recurrence<T>(v, x), boost::math::cyl_bessel_j(v, x, Policy()))
          {
             if(v < 0)
                boost::math::policies::raise_domain_error("bessel_j_backwards_iterator<%1%>", "Order must be > 0 stable backwards recurrence but got %1%", v, Policy());
          }
 
          bessel_j_backwards_iterator(const T& v, const T& x, const T& J_v)
-            : it(detail::bessel_jy_recurrence<T>(v, x), J_v) 
+            : it(detail::bessel_jy_recurrence<T>(v, x), J_v)
          {
             if(v < 0)
                boost::math::policies::raise_domain_error("bessel_j_backwards_iterator<%1%>", "Order must be > 0 stable backwards recurrence but got %1%", v, Policy());
@@ -103,7 +103,7 @@ namespace boost {
                boost::math::policies::raise_domain_error("bessel_i_backwards_iterator<%1%>", "Order must be > 0 stable backwards recurrence but got %1%", v, Policy());
          }
          bessel_i_backwards_iterator(const T& v, const T& x, const T& I_v)
-            : it(detail::bessel_ik_recurrence<T>(v, x), I_v) 
+            : it(detail::bessel_ik_recurrence<T>(v, x), I_v)
          {
             if(v < -1)
                boost::math::policies::raise_domain_error("bessel_i_backwards_iterator<%1%>", "Order must be > 0 stable backwards recurrence but got %1%", v, Policy());
@@ -150,7 +150,7 @@ namespace boost {
                boost::math::policies::raise_domain_error("bessel_i_forwards_iterator<%1%>", "Order must be < 0 stable forwards recurrence but got %1%", v, Policy());
          }
          bessel_i_forwards_iterator(const T& v, const T& x, const T& I_v)
-            : it(detail::bessel_ik_recurrence<T>(v, x), I_v) 
+            : it(detail::bessel_ik_recurrence<T>(v, x), I_v)
          {
             if (v > 1)
                boost::math::policies::raise_domain_error("bessel_i_forwards_iterator<%1%>", "Order must be < 0 stable forwards recurrence but got %1%", v, Policy());

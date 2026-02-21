@@ -8,8 +8,8 @@
 
 Label 1
 a line
-trailing whitespace   
-trailing more whitespace   
+trailing whitespace
+trailing more whitespace
 Label 2
 a line
    leading whitespace
@@ -28,7 +28,7 @@ Label 66
 // CHECK-LABEL:Label 1
 // CHECK:a line
 // CHECK:trailing whitespace
-// CHECK:trailing more whitespace   
+// CHECK:trailing more whitespace
 // ERROR-STRICT:error: {{C}}HECK: expected string not found in input
 // ERROR-STRICT:// {{C}}HECK:trailing whitespace
 

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-apple-darwin10.0.0 -o - %s | FileCheck %s
-struct A { 
+struct A {
   A &operator=(const A&);
   A &operator=(A&);
 };
@@ -21,7 +21,7 @@ struct CopyByValue {
   CopyByValue &operator=(CopyByValue);
 };
 
-struct D : A, B, virtual C { 
+struct D : A, B, virtual C {
   int scalar;
   int scalar_array[2][3];
   B class_member;

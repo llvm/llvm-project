@@ -63,8 +63,8 @@ int main() {
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_masked'
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_create'
-  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_schedule' 
-  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_cancel' 
+  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_schedule'
+  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_cancel'
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_thread_begin'
 
   // CHECK: {{^}}0: NULL_POINTER=[[NULL:.*$]]
@@ -84,7 +84,7 @@ int main() {
 
   // CHECK-DAG: {{^}}{{[0-9]+}}: ompt_event_cancel: task_id={{[0-f]+}}, flags=ompt_cancel_taskgroup|ompt_cancel_discarded_task=72, codeptr_ra=[[NULL]]
   // CHECK-DAG: {{^}}{{[0-9]+}}: ompt_event_cancel: task_id={{[0-f]+}}, flags=ompt_cancel_taskgroup|ompt_cancel_discarded_task=72, codeptr_ra=[[NULL]]
-  
+
   // CHECK-DAG: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_thread_begin: thread_type=ompt_thread_worker=2, thread_id=[[THREAD_ID]]
   // CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_cancel: task_id={{[0-f]+}}, flags=ompt_cancel_taskgroup|ompt_cancel_detected=40, codeptr_ra={{(0x)?[0-f]*}}
   // clang-format on

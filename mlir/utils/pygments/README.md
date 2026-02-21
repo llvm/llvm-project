@@ -31,7 +31,7 @@ the preamble.
 
 Place the `mlir_lexer.py` in a place where the `latex` binary can find it,
 typically in the working directory next to the main `.tex` file. Note that you
-will have to invoke `latex` with the `-shell-escape` flag. See the `minted` 
+will have to invoke `latex` with the `-shell-escape` flag. See the `minted`
 package [documentation](https://ctan.org/pkg/minted?lang=en) for more
 information.
 

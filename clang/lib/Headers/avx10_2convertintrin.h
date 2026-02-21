@@ -150,9 +150,9 @@ _mm_maskz_cvtx2ps_ph(__mmask8 __U, __m128 __A, __m128 __B) {
 /// Convert two 256-bit vectors, \a __A and \a __B, containing packed
 ///    single-precision (32-bit) floating-point elements to a 256-bit vector
 ///    containing FP16 elements.
-///   
+///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF i < 8
 /// 		dst.fp16[i] := convert_fp32_to_fp16(__B.fp32[i])
 /// 	ELSE
@@ -231,7 +231,7 @@ _mm256_mask_cvtx2ps_ph(__m256h __W, __mmask16 __U, __m256 __A, __m256 __B) {
 ///    element should be zeroed instead.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF __U[i]
 /// 		IF i < 8
 /// 			dst.fp16[i] := convert_fp32_to_fp16(__B.fp32[i])
@@ -1135,7 +1135,7 @@ _mm256_maskz_cvts_biasph_hf8(__mmask16 __U, __m256i __A, __m256h __B) {
 ///    floating-point elements to a 128-bit vector containing E5M2 FP8 elements.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF i < 8
 /// 		dst.bf8[i] := convert_fp16_to_bf8(__B.fp16[i])
 /// 	ELSE
@@ -1214,7 +1214,7 @@ _mm_mask_cvt2ph_bf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
 ///    instead.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF __U[i]
 /// 		IF i < 8
 /// 			dst.bf8[i] := convert_fp16_to_bf8(__B.fp16[i])
@@ -1255,8 +1255,8 @@ _mm_maskz_cvt2ph_bf8(__mmask16 __U, __m128h __A, __m128h __B) {
 ///    floating-point elements to a 256-bit vector containing E5M2 FP8 elements.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 31 
-/// 	IF i < 16 
+/// FOR i := 0 to 31
+/// 	IF i < 16
 /// 		dst.bf8[i] := convert_fp16_to_bf8(__B.fp16[i])
 /// 	ELSE
 /// 		dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i - 16])
@@ -1290,9 +1290,9 @@ _mm256_cvt2ph_bf8(__m256h __A, __m256h __B) {
 ///    from \a __W instead.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 31 
+/// FOR i := 0 to 31
 /// 	IF __U[i]
-/// 		IF i < 16 
+/// 		IF i < 16
 /// 			dst.bf8[i] := convert_fp16_to_bf8(__B.fp16[i])
 /// 		ELSE
 /// 			dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i - 16])
@@ -1334,9 +1334,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvt2ph_bf8(
 ///    instead.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 31 
+/// FOR i := 0 to 31
 /// 	IF __U[i]
-/// 		IF i < 16 
+/// 		IF i < 16
 /// 			dst.bf8[i] := convert_fp16_to_bf8(__B.fp16[i])
 /// 		ELSE
 /// 			dst.bf8[i] := convert_fp16_to_bf8(__A.fp16[i - 16])
@@ -1376,7 +1376,7 @@ _mm256_maskz_cvt2ph_bf8(__mmask32 __U, __m256h __A, __m256h __B) {
 ///    Resulting elements are saturated in case of overflow.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF i < 8
 /// 		dst.bf8[i] := convert_fp16_to_bf8_saturate(__B.fp16[i])
 /// 	ELSE
@@ -1411,7 +1411,7 @@ _mm_cvts_2ph_bf8(__m128h __A, __m128h __B) {
 ///    from \a __W instead. Resulting elements are saturated in case of overflow.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF __U[i]
 /// 		IF i < 8
 /// 			dst.bf8[i] := convert_fp16_to_bf8_saturate(__B.fp16[i])
@@ -1455,7 +1455,7 @@ _mm_mask_cvts_2ph_bf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
 ///    instead. Resulting elements are saturated in case of overflow.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF __U[i]
 /// 		IF i < 8
 /// 			dst.bf8[i] := convert_fp16_to_bf8_saturate(__B.fp16[i])
@@ -1497,8 +1497,8 @@ _mm_maskz_cvts_2ph_bf8(__mmask16 __U, __m128h __A, __m128h __B) {
 ///    Resulting elements are saturated in case of overflow.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 31 
-/// 	IF i < 16 
+/// FOR i := 0 to 31
+/// 	IF i < 16
 /// 		dst.bf8[i] := convert_fp16_to_bf8_saturate(__B.fp16[i])
 /// 	ELSE
 /// 		dst.bf8[i] := convert_fp16_to_bf8_saturate(__A.fp16[i - 16])
@@ -1532,9 +1532,9 @@ _mm256_cvts_2ph_bf8(__m256h __A, __m256h __B) {
 ///    from \a __W instead. Resulting elements are saturated in case of overflow.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 31 
+/// FOR i := 0 to 31
 /// 	IF __U[i]
-/// 		IF i < 16 
+/// 		IF i < 16
 /// 			dst.bf8[i] := convert_fp16_to_bf8_saturate(__B.fp16[i])
 /// 		ELSE
 /// 			dst.bf8[i] := convert_fp16_to_bf8_saturate(__A.fp16[i - 16])
@@ -1576,9 +1576,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts_2ph_bf8(
 ///    instead. Resulting elements are saturated in case of overflow.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 31 
+/// FOR i := 0 to 31
 /// 	IF __U[i]
-/// 		IF i < 16 
+/// 		IF i < 16
 /// 			dst.bf8[i] := convert_fp16_to_bf8_saturate(__B.fp16[i])
 /// 		ELSE
 /// 			dst.bf8[i] := convert_fp16_to_bf8_saturate(__A.fp16[i - 16])
@@ -1617,7 +1617,7 @@ _mm256_maskz_cvts_2ph_bf8(__mmask32 __U, __m256h __A, __m256h __B) {
 ///    floating-point elements to a 128-bit vector containing E4M3 FP8 elements.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF i < 8
 /// 		dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
 /// 	ELSE
@@ -1652,7 +1652,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvt2ph_hf8(__m128h __A,
 ///    from \a __W instead.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF __U[i]
 /// 		IF i < 8
 /// 			dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
@@ -1696,7 +1696,7 @@ _mm_mask_cvt2ph_hf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
 ///    instead.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF __U[i]
 /// 		IF i < 8
 /// 			dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
@@ -1737,8 +1737,8 @@ _mm_maskz_cvt2ph_hf8(__mmask16 __U, __m128h __A, __m128h __B) {
 ///    floating-point elements to a 256-bit vector containing E4M3 FP8 elements.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 31 
-/// 	IF i < 16 
+/// FOR i := 0 to 31
+/// 	IF i < 16
 /// 		dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
 /// 	ELSE
 /// 		dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i - 16])
@@ -1772,9 +1772,9 @@ _mm256_cvt2ph_hf8(__m256h __A, __m256h __B) {
 ///    from \a __W instead.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 31 
+/// FOR i := 0 to 31
 /// 	IF __U[i]
-/// 		IF i < 16 
+/// 		IF i < 16
 /// 			dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
 /// 		ELSE
 /// 			dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i - 16])
@@ -1816,9 +1816,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvt2ph_hf8(
 ///    instead.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 31 
+/// FOR i := 0 to 31
 /// 	IF __U[i]
-/// 		IF i < 16 
+/// 		IF i < 16
 /// 			dst.hf8[i] := convert_fp16_to_hf8(__B.fp16[i])
 /// 		ELSE
 /// 			dst.hf8[i] := convert_fp16_to_hf8(__A.fp16[i - 16])
@@ -1858,7 +1858,7 @@ _mm256_maskz_cvt2ph_hf8(__mmask32 __U, __m256h __A, __m256h __B) {
 ///    Resulting elements are saturated in case of overflow.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF i < 8
 /// 		dst.hf8[i] := convert_fp16_to_hf8_saturate(__B.fp16[i])
 /// 	ELSE
@@ -1893,7 +1893,7 @@ _mm_cvts_2ph_hf8(__m128h __A, __m128h __B) {
 ///    from \a __W instead. Resulting elements are saturated in case of overflow.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF __U[i]
 /// 		IF i < 8
 /// 			dst.hf8[i] := convert_fp16_to_hf8_saturate(__B.fp16[i])
@@ -1937,7 +1937,7 @@ _mm_mask_cvts_2ph_hf8(__m128i __W, __mmask16 __U, __m128h __A, __m128h __B) {
 ///    instead. Resulting elements are saturated in case of overflow.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF __U[i]
 /// 		IF i < 8
 /// 			dst.hf8[i] := convert_fp16_to_hf8_saturate(__B.fp16[i])
@@ -1979,8 +1979,8 @@ _mm_maskz_cvts_2ph_hf8(__mmask16 __U, __m128h __A, __m128h __B) {
 ///    Resulting elements are saturated in case of overflow.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 31 
-/// 	IF i < 16 
+/// FOR i := 0 to 31
+/// 	IF i < 16
 /// 		dst.hf8[i] := convert_fp16_to_hf8_saturate(__B.fp16[i])
 /// 	ELSE
 /// 		dst.hf8[i] := convert_fp16_to_hf8_saturate(__A.fp16[i - 16])
@@ -2014,9 +2014,9 @@ _mm256_cvts_2ph_hf8(__m256h __A, __m256h __B) {
 ///    from \a __W instead. Resulting elements are saturated in case of overflow.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 31 
+/// FOR i := 0 to 31
 /// 	IF __U[i]
-/// 		IF i < 16 
+/// 		IF i < 16
 /// 			dst.hf8[i] := convert_fp16_to_hf8_saturate(__B.fp16[i])
 /// 		ELSE
 /// 			dst.hf8[i] := convert_fp16_to_hf8_saturate(__A.fp16[i - 16])
@@ -2058,9 +2058,9 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts_2ph_hf8(
 ///    instead. Resulting elements are saturated in case of overflow.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 31 
+/// FOR i := 0 to 31
 /// 	IF __U[i]
-/// 		IF i < 16 
+/// 		IF i < 16
 /// 			dst.hf8[i] := convert_fp16_to_hf8_saturate(__B.fp16[i])
 /// 		ELSE
 /// 			dst.hf8[i] := convert_fp16_to_hf8_saturate(__A.fp16[i - 16])
@@ -2223,7 +2223,7 @@ static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_cvthf8_ph(__m128i __A) {
 ///    taken from \a __W instead.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF __U[i]
 /// 		dst.fp16[i] := convert_hf8_to_fp16(__A.hf8[i])
 /// 	ELSE
@@ -2260,7 +2260,7 @@ _mm256_mask_cvthf8_ph(__m256h __W, __mmask16 __U, __m128i __A) {
 ///    zeroed instead.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF __U[i]
 /// 		dst.fp16[i] := convert_hf8_to_fp16(__A.hf8[i])
 /// 	ELSE
@@ -2309,7 +2309,7 @@ _mm256_maskz_cvthf8_ph(__mmask16 __U, __m128i __A) {
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
 ///    A 128-bit vector of [16 x bf8]. Lower elements correspond to the (converted)
-///    elements from \a __A; upper elements are zeroed. 
+///    elements from \a __A; upper elements are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtph_bf8(__m128h __A) {
   return (__m128i)__builtin_ia32_vcvtph2bf8_128_mask(
       (__v8hf)__A, (__v16qi)(__m128i)_mm_undefined_si128(), (__mmask8)-1);
@@ -2416,7 +2416,7 @@ _mm256_cvtph_bf8(__m256h __A) {
 /// Convert 256-bit vector \a __A containing packed FP16 floating-point elements
 ///    to a 128-bit vector containing E5M2 FP8 elements. Merging mask \a __U is
 ///    used to determine if given element should be taken from \a __W instead.
-///   
+///
 /// \code{.operation}
 /// FOR i := 0 to 15
 /// 	IF __U[i]
@@ -2452,7 +2452,7 @@ _mm256_mask_cvtph_bf8(__m128i __W, __mmask16 __U, __m256h __A) {
 /// Convert 256-bit vector \a __A containing packed FP16 floating-point elements
 ///    to a 128-bit vector containing E5M2 FP8 elements. Zeroing mask \a __U is
 ///    used to determine if given element should be zeroed instead.
-///   
+///
 /// \code{.operation}
 /// FOR i := 0 to 15
 /// 	IF __U[i]
@@ -2486,7 +2486,7 @@ _mm256_maskz_cvtph_bf8(__mmask16 __U, __m256h __A) {
 /// Convert 128-bit vector \a __A containing packed FP16 floating-point elements
 ///    to a 128-bit vector containing E5M2 FP8 elements. Upper elements of
 ///    resulting vector are zeroed. Results are saturated.
-///   
+///
 /// \code{.operation}
 /// FOR i := 0 to 7
 /// 	dst.bf8[i] := convert_fp16_to_bf8_saturate(__A.fp16[i])
@@ -2503,7 +2503,7 @@ _mm256_maskz_cvtph_bf8(__mmask16 __U, __m256h __A) {
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
 ///    A 128-bit vector of [16 x bf8]. Lower elements correspond to the (converted)
-///    elements from \a __A; upper elements are zeroed. 
+///    elements from \a __A; upper elements are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_ph_bf8(__m128h __A) {
   return (__m128i)__builtin_ia32_vcvtph2bf8s_128_mask(
       (__v8hf)__A, (__v16qi)(__m128i)_mm_undefined_si128(), (__mmask8)-1);
@@ -2650,7 +2650,7 @@ _mm256_mask_cvts_ph_bf8(__m128i __W, __mmask16 __U, __m256h __A) {
 ///    instead.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF __U[i]
 /// 		dst.bf8[i] := convert_fp16_to_bf8_saturate(__A.fp16[i])
 /// 	ELSE
@@ -2699,7 +2699,7 @@ _mm256_maskz_cvts_ph_bf8(__mmask16 __U, __m256h __A) {
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
 ///    A 128-bit vector of [16 x hf8]. Lower elements correspond to the (converted)
-///    elements from \a __A; upper elements are zeroed. 
+///    elements from \a __A; upper elements are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtph_hf8(__m128h __A) {
   return (__m128i)__builtin_ia32_vcvtph2hf8_128_mask(
       (__v8hf)__A, (__v16qi)(__m128i)_mm_undefined_si128(), (__mmask8)-1);
@@ -2806,7 +2806,7 @@ _mm256_cvtph_hf8(__m256h __A) {
 /// Convert 256-bit vector \a __A containing packed FP16 floating-point elements
 ///    to a 128-bit vector containing E4M3 FP8 elements. Merging mask \a __U is
 ///    used to determine if given element should be taken from \a __W instead.
-///   
+///
 /// \code{.operation}
 /// FOR i := 0 to 15
 /// 	IF __U[i]
@@ -2842,7 +2842,7 @@ _mm256_mask_cvtph_hf8(__m128i __W, __mmask16 __U, __m256h __A) {
 /// Convert 256-bit vector \a __A containing packed FP16 floating-point elements
 ///    to a 128-bit vector containing E4M3 FP8 elements. Zeroing mask \a __U is
 ///    used to determine if given element should be zeroed instead.
-///   
+///
 /// \code{.operation}
 /// FOR i := 0 to 15
 /// 	IF __U[i]
@@ -2876,7 +2876,7 @@ _mm256_maskz_cvtph_hf8(__mmask16 __U, __m256h __A) {
 /// Convert 128-bit vector \a __A containing packed FP16 floating-point elements
 ///    to a 128-bit vector containing E4M3 FP8 elements. Upper elements of
 ///    resulting vector are zeroed. Results are saturated.
-///   
+///
 /// \code{.operation}
 /// FOR i := 0 to 7
 /// 	dst.hf8[i] := convert_fp16_to_hf8_saturate(__A.fp16[i])
@@ -2893,7 +2893,7 @@ _mm256_maskz_cvtph_hf8(__mmask16 __U, __m256h __A) {
 ///    A 128-bit vector of [8 x fp16].
 /// \returns
 ///    A 128-bit vector of [16 x hf8]. Lower elements correspond to the (converted)
-///    elements from \a __A; upper elements are zeroed. 
+///    elements from \a __A; upper elements are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_ph_hf8(__m128h __A) {
   return (__m128i)__builtin_ia32_vcvtph2hf8s_128_mask(
       (__v8hf)__A, (__v16qi)(__m128i)_mm_undefined_si128(), (__mmask8)-1);
@@ -3040,7 +3040,7 @@ _mm256_mask_cvts_ph_hf8(__m128i __W, __mmask16 __U, __m256h __A) {
 ///    instead.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF __U[i]
 /// 		dst.hf8[i] := convert_fp16_to_hf8_saturate(__A.fp16[i])
 /// 	ELSE
@@ -3186,7 +3186,7 @@ static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_cvtbf8_ph(__m128i __A) {
 ///    taken from \a __W instead.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF __U[i]
 /// 		dst.fp16[i] := convert_bf8_to_fp16(__A.bf8[i])
 /// 	ELSE
@@ -3221,7 +3221,7 @@ _mm256_mask_cvtbf8_ph(__m256h __W, __mmask16 __U, __m128i __A) {
 ///    zeroed instead.
 ///
 /// \code{.operation}
-/// FOR i := 0 to 15 
+/// FOR i := 0 to 15
 /// 	IF __U[i]
 /// 		dst.fp16[i] := convert_bf8_to_fp16(__A.bf8[i])
 /// 	ELSE

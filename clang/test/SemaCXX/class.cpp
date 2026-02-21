@@ -170,7 +170,7 @@ namespace PR7153 {
   public:
     struct A { } mutable *member;
   };
- 
+
   void f(const EnclosingClass &ec) {
     ec.member = 0;
   }
@@ -223,6 +223,6 @@ void f() {
 }
 }
 
-struct PR9989 { 
-  static int const PR9989_Member = sizeof PR9989_Member; 
+struct PR9989 {
+  static int const PR9989_Member = sizeof PR9989_Member;
 };

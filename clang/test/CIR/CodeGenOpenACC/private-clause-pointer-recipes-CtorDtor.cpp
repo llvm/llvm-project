@@ -631,7 +631,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: }
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
-// CHECK-NEXT: } 
+// CHECK-NEXT: }
   ;
 #pragma acc parallel private(TwoPtr[B][A:B])
   ;

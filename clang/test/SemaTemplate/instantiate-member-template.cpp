@@ -25,7 +25,7 @@ template<typename T>
 struct X1 {
   template<typename U>
   struct Inner0 {
-    U x; 
+    U x;
     T y; // expected-error{{void}}
   };
 
@@ -34,26 +34,26 @@ struct X1 {
     U x; // expected-error{{void}}
     T y;
   };
-  
+
   template<typename U>
   struct Inner2 {
     struct SuperInner {
       U z; // expected-error{{void}}
     };
   };
-  
+
   template<typename U>
   struct Inner3 {
     void f0(T t, U u) { // expected-note{{passing argument to parameter 't' here}}
       (void)(t + u); // expected-error{{invalid operands}}
     }
-    
+
     template<typename V>
     V f1(T t, U u, V) {
       return t + u; // expected-error{{cannot initialize return object}}
     }
   };
-  
+
   template<typename U>
   struct Inner4;
 };
@@ -63,7 +63,7 @@ template<typename U>
 struct X1<T>::Inner4 {
   template<typename V>
   V f2(T t, U u, V);
-  
+
   static U value;
 };
 
@@ -81,25 +81,25 @@ V X1<T>::Inner4<U>::f2(T t, U u, V) {
 void test_X1(int *ip, int i, double *dp) {
   X1<void>::Inner0<int> *xvip; // okay
   X1<void>::Inner0<int> xvi; // expected-note{{instantiation}}
-  
+
   X1<int>::Inner1<void> *xivp; // okay
   X1<int>::Inner1<void> xiv; // expected-note{{instantiation}}
-  
+
   X1<int>::Inner2<void>::SuperInner *xisivp; // okay
   X1<int>::Inner2<void>::SuperInner xisiv; // expected-note{{instantiation}}
-  
+
   X1<int*>::Inner3<int> id3;
   id3.f0(ip, i);
   id3.f0(dp, i); // expected-error{{cannot initialize a parameter of type 'int *' with an lvalue of type 'double *'}}
   id3.f1(ip, i, ip);
   id3.f1(ip, i, dp); // expected-note{{instantiation}}
-  
+
   X1<int*>::Inner3<double*> id3b;
   id3b.f0(ip, dp); // expected-note{{instantiation}}
-  
+
   X1<int*>::Inner4<int> id4;
   id4.f2(ip, i, dp); // expected-note{{instantiation}}
-  
+
   X1<int*>::Inner4<int>::value = 17;
   i = X1<int*>::Inner4<int&>::value; // expected-note{{instantiation}}
 }
@@ -109,7 +109,7 @@ template<typename T>
 struct X2 {
   template<T *Ptr> // expected-error{{pointer to a reference}}
   struct Inner;
-  
+
   template<T Value> // expected-error{{cannot have type 'float'}}
   struct Inner2;
 };
@@ -120,39 +120,39 @@ X2<float> x2b; // expected-note{{instantiation}}
 namespace N0 {
   template<typename T>
   struct X0 { };
-  
+
   struct X1 {
     template<typename T> void f(X0<T>& vals) { g(vals); }
     template<typename T> void g(X0<T>& vals) { }
   };
-  
+
   void test(X1 x1, X0<int> x0i, X0<long> x0l) {
     x1.f(x0i);
     x1.f(x0l);
-  }  
+  }
 }
 
 namespace PR6239 {
-  template <typename T>  
-  struct X0 {  
+  template <typename T>
+  struct X0 {
     class type {
-      typedef T E;    
+      typedef T E;
       template <E e>  // subsitute T for E and bug goes away
-      struct sfinae {  };  
-      
-      template <class U>  
-      typename sfinae<&U::operator=>::type test(int);  
+      struct sfinae {  };
+
+      template <class U>
+      typename sfinae<&U::operator=>::type test(int);
     };
   };
 
-  template <typename T>  
-  struct X1 {  
-    typedef T E;    
+  template <typename T>
+  struct X1 {
+    typedef T E;
     template <E e>  // subsitute T for E and bug goes away
-    struct sfinae {  };  
-    
-    template <class U>  
-    typename sfinae<&U::operator=>::type test(int);  
+    struct sfinae {  };
+
+    template <class U>
+    typename sfinae<&U::operator=>::type test(int);
   };
 
 }
@@ -167,7 +167,7 @@ namespace PR7587 {
     template<
       template<typename> class TT,
       typename U = typename X1<T>::type
-    > 
+    >
     struct Inner {
       typedef X2<TT<typename X1<T>::type> > Type;
     };
@@ -180,7 +180,7 @@ namespace PR7587 {
     template<
       template<typename> class TT,
       typename U = typename X1<T>::type
-    > 
+    >
     struct Inner {
       typedef X2<TT<typename X1<T>::type> > Type;
     };

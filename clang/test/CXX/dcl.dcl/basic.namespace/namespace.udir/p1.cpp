@@ -59,7 +59,7 @@ namespace test2 {
   namespace test {
     using namespace A::B;
     using namespace C;
-    
+
     opaque1 test() {
       return foo(); // expected-error {{call to 'foo' is ambiguous}}
     }
@@ -103,7 +103,7 @@ namespace test4 {
       opaque0 foo(); // expected-note {{candidate}}
     }
   }
-  
+
   namespace C {
     using namespace A::B;
   }

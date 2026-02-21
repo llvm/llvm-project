@@ -61,7 +61,7 @@ void *malloc(size_t);
 void checkUndefinedPlacementElementCount() {
   int n;
   // expected-note@-1{{'n' declared without an initial value}}
-  
+
   void *buffer = malloc(sizeof(std::string) * 10);
   std::string *p =
       ::new (buffer) std::string[n]; // expected-warning{{Element count in new[] is a garbage value}}

@@ -13,7 +13,7 @@
 
 #include <typeinfo>
 
-// C is an incomplete class type, so any direct or indirect pointer types should have 
+// C is an incomplete class type, so any direct or indirect pointer types should have
 // internal linkage, as should the type info for C itself.
 struct C;
 // CHECK: @_ZTIP1C = internal constant

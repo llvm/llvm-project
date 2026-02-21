@@ -36,7 +36,7 @@ template <typename T> struct D : A<T> {
  * \brief
 */
   using A<T>::f;
-  
+
   void f();
 };
 // CHECK: <Declaration>template &lt;typename T&gt; struct D :  A&lt;T&gt; {}</Declaration>

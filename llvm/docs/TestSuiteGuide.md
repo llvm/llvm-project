@@ -24,7 +24,7 @@ Quickstart
    ```
 
    Installing the official Python release of lit in a Python virtual
-   environment could also work. This will install the most recent 
+   environment could also work. This will install the most recent
    release of lit:
 
    ```bash
@@ -35,7 +35,7 @@ Quickstart
    lit 18.1.8
    ```
 
-   Please note that recent tests may rely on features not in the latest released lit. 
+   Please note that recent tests may rely on features not in the latest released lit.
    If in doubt, try one of the previous methods.
 
 2. Check out the `test-suite` module with:

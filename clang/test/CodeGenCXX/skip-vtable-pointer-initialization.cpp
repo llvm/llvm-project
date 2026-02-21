@@ -12,7 +12,7 @@ struct A {
 
 // CHECK-LABEL: define{{.*}} void @_ZN5Test11AD2Ev
 // CHECK-NOT: store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN5Test11AE, i64 0, i64 2), ptr
-A::~A() 
+A::~A()
 {
 }
 
@@ -52,7 +52,7 @@ struct A {
 // CHECK-LABEL: define{{.*}} void @_ZN5Test31AD2Ev
 // CHECK-NOT: store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTVN5Test31AE, i32 0, i32 0, i32 2), ptr
 A::~A() {
-  
+
 }
 
 }
@@ -192,7 +192,7 @@ namespace Test9 {
 // Check that we emit a VTT for B, even though we don't initialize the vtable pointer in the destructor.
 struct A { virtual ~A () { } };
 struct B : virtual A {};
-struct C : virtual B { 
+struct C : virtual B {
   virtual ~C();
 };
 C::~C() {}

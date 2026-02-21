@@ -14,22 +14,22 @@ A g();
 
 void f(A a, A *ap, A& ar) {
   // This should not be a virtual function call.
-  
+
   // CHECK: call void @_ZN1A1fEv(ptr {{[^,]*}} %a)
   a.f();
 
-  // CHECK: call void %  
+  // CHECK: call void %
   ap->f();
 
-  // CHECK: call void %  
+  // CHECK: call void %
   ar.f();
-  
+
   // CHECK: call void @_ZN1A1fEv
   A().f();
 
   // CHECK: call void @_ZN1A1fEv
   g().f();
-  
+
   // CHECK: call void @_ZN1A1fEv
   a.h().f();
 
@@ -60,7 +60,7 @@ void fd(D d, XD xd, D *p) {
 
   // CHECK: call void @_ZN1A1fEv
   gd().f();
-  
+
   // CHECK: call void @_ZNK1A7f_constEv
   d.f_const();
 
@@ -101,7 +101,7 @@ void fd(D d, XD xd, D *p) {
 struct B {
   virtual void f();
   ~B();
-  
+
   B h();
 };
 
@@ -109,7 +109,7 @@ struct B {
 void f() {
   // CHECK: call void @_ZN1B1fEv
   B().f();
-  
+
   // CHECK: call void @_ZN1B1fEv
   B().h().f();
 }

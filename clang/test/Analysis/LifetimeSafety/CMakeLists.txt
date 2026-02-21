@@ -7,7 +7,7 @@
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
 # Define paths for the virtual environment and requirements file.
-set(LIFETIME_BENCHMARK_SCRIPT 
+set(LIFETIME_BENCHMARK_SCRIPT
   "${CMAKE_CURRENT_SOURCE_DIR}/benchmark.py")
 set(LIFETIME_BENCHMARK_VENV_DIR "${CMAKE_CURRENT_BINARY_DIR}/benchmark-venv")
 set(LIFETIME_BENCHMARK_REQUIREMENTS
@@ -47,10 +47,10 @@ if(EXISTS ${LIFETIME_BENCHMARK_SCRIPT} AND EXISTS ${LIFETIME_BENCHMARK_REQUIREME
 
     # Display the output directly in the console.
     USES_TERMINAL
-    
+
     COMMENT "Running Lifetime Analysis performance benchmarks..."
   )
 
-  set_target_properties(benchmark_lifetime_safety_analysis 
+  set_target_properties(benchmark_lifetime_safety_analysis
     PROPERTIES FOLDER "Clang/Benchmarks")
 endif()

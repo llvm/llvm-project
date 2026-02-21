@@ -20,9 +20,9 @@ class septic_hermite
 {
 public:
     using Real = typename RandomAccessContainer::value_type;
-    septic_hermite(RandomAccessContainer && x, RandomAccessContainer && y, RandomAccessContainer && dydx, 
+    septic_hermite(RandomAccessContainer && x, RandomAccessContainer && y, RandomAccessContainer && dydx,
                    RandomAccessContainer && d2ydx2, RandomAccessContainer && d3ydx3)
-     : impl_(std::make_shared<detail::septic_hermite_detail<RandomAccessContainer>>(std::move(x), 
+     : impl_(std::make_shared<detail::septic_hermite_detail<RandomAccessContainer>>(std::move(x),
      std::move(y), std::move(dydx), std::move(d2ydx2), std::move(d3ydx3)))
     {}
 
@@ -121,7 +121,7 @@ public:
         return impl_->prime(x);
     }
 
-    inline Real double_prime(Real x) const 
+    inline Real double_prime(Real x) const
     {
         return impl_->double_prime(x);
     }

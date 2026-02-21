@@ -36,7 +36,7 @@ int main()
   sizeof(oneT<int>); // expected-error {{invalid application of 'sizeof' to a function type}}
   sizeof(twoT<int>); //expected-error {{reference to overloaded function could not be resolved; did you mean to call it?}}
   decltype(oneT<int>)* fun = 0;
-  
+
   *one;    // expected-warning {{expression result unused}}
   *oneT<int>;   // expected-warning {{expression result unused}}
   *two;  //expected-error {{reference to overloaded function could not be resolved; did you mean to call it with no arguments?}} expected-error {{indirection requires pointer operand}}
@@ -56,7 +56,7 @@ int main()
                     // expected-note {{prefix with the address-of operator to silence this warning}}
   (false ? one : oneT<int>);   // expected-warning {{expression result unused}}
   void (*p1)(int); p1 = oneT<int>;
-  
+
   int i = (int) (false ? (void (*)(int))twoT<int> : oneT<int>); //expected-error {{incompatible operand}}
   (twoT<int>) == oneT<int>; //expected-error {{reference to overloaded function could not be resolved; did you mean to call it?}} {{cannot resolve overloaded function 'twoT' from context}}
   bool b = oneT<int>; // expected-warning {{address of function 'oneT<int>' will always evaluate to 'true'}} expected-note {{prefix with the address-of operator to silence this warning}}

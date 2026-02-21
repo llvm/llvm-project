@@ -56,7 +56,7 @@ T tmain(T argc) {
 // CHECK: #pragma omp distribute
   for (int i = 0; i < 10; ++i)foo();
 // CHECK-NEXT: for (int i = 0; i < 10; ++i)
-// CHECK-NEXT: foo();  
+// CHECK-NEXT: foo();
   return T();
 }
 

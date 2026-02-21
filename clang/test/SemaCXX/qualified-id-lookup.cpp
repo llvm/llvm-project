@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 namespace Ns {
   int f(); // expected-note{{previous declaration is here}}
 
@@ -44,8 +44,8 @@ namespace N {
   }
 }
 
-void N::f1::foo(int i) { 
-  f1::member = i; 
+void N::f1::foo(int i) {
+  f1::member = i;
   f1::type &ir = i;
 }
 
@@ -83,7 +83,7 @@ namespace a {
 }
 
 // PR clang/3291
-namespace a {  
+namespace a {
   namespace a {   // A1
     namespace a { // A2
       int i; // expected-note{{'a::a::a::i' declared here}}
@@ -96,7 +96,7 @@ void test_a() {
   a::a::a::i = 4;
   a::a::j = 3; // expected-error-re{{no member named 'j' in namespace 'a::a'{{$}}}}
 }
-  
+
 struct Undef { // expected-note{{definition of 'Undef' is not complete until the closing '}'}}
   typedef int type;
 
@@ -123,7 +123,7 @@ namespace test1 {
     }
   };
 
-  template class ClassChecker<int>;  
+  template class ClassChecker<int>;
 }
 
 namespace PR6830 {

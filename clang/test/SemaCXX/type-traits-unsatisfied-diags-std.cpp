@@ -415,7 +415,7 @@ namespace test_namespace {
     static_assert(is_empty<int&>::value);
     // expected-error-re@-1 {{static assertion failed due to requirement '{{.*}}is_empty<int &>::value'}} \
     // expected-note@-1 {{'int &' is not empty}} \
-    // expected-note@-1 {{because it is a reference type}} 
+    // expected-note@-1 {{because it is a reference type}}
     static_assert(is_empty_v<int&>);
     // expected-error@-1 {{static assertion failed due to requirement 'is_empty_v<int &>'}} \
     // expected-note@-1 {{'int &' is not empty}} \

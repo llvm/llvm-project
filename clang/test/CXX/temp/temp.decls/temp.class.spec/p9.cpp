@@ -24,4 +24,4 @@ struct int_values<C1, 12, C3> {
   static const unsigned value = 1;
 };
 
-int check2[int_values<256, 12, 3>::value == 0? 1 : -1];  
+int check2[int_values<256, 12, 3>::value == 0? 1 : -1];

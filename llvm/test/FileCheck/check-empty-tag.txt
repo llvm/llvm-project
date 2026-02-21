@@ -54,4 +54,3 @@ CHECK6B: expected string not found in input
 ; CHECK-EMPTY, like CHECK-NEXT, will report an error if the first matching
 ; line is not the line immediately following the previous check.
 the next line has spaces
-  

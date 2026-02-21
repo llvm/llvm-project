@@ -41,7 +41,7 @@ int main() {                           // CHECK:       [[# @LINE]]| 1|int main()
     x = 0; /*                          // CHECK-NEXT:  [[# @LINE]]|  |
     comment                            // CHECK-NEXT:  [[# @LINE]]|  |
     */                                 // CHECK-NEXT:  [[# @LINE]]|  |
-                                       // CHECK-NEXT:  [[# @LINE]]|  | 
+                                       // CHECK-NEXT:  [[# @LINE]]|  |
     /*                                 // CHECK-NEXT:  [[# @LINE]]|  |
     comment                            // CHECK-NEXT:  [[# @LINE]]|  |
     */ x = 0;                          // CHECK-NEXT:  [[# @LINE]]|  |

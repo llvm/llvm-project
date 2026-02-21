@@ -42,7 +42,7 @@ namespace PR15742 {
   template <class _T1, class _T2> struct A {
     A (const _T1 &, const _T2 &);
   };
-  
+
   typedef void *NPIdentifier;
 
   template <class T> class B {

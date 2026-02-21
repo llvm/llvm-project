@@ -132,8 +132,8 @@ struct WithCopyConstructor1 : public T {
 // CHECK-MESSAGES: :[[@LINE-6]]:5: warning: initializer for member 'f' is redundant
 // CHECK-MESSAGES: :[[@LINE-6]]:5: warning: initializer for member 'g' is redundant
 // CHECK-FIXES: WithCopyConstructor1(const WithCopyConstructor1& other) : T()
-// CHECK-NEXT: 
-// CHECK-NEXT: 
+// CHECK-NEXT:
+// CHECK-NEXT:
 // CHECK-NEXT: {}
 
 // struct whose copy constructor default-initializes its base class

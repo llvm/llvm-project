@@ -15,8 +15,8 @@ program, now modified to implement a sort of 'lazy' compilation.
 The toy-jit.cpp file contains a version of the original JIT-based source code
 that has been modified to disable most stderr output for timing purposes.
 
-To build the program you will need to have 'clang++' and 'llvm-config' in your 
-path. If you attempt to build using the LLVM 3.3 release, some minor 
+To build the program you will need to have 'clang++' and 'llvm-config' in your
+path. If you attempt to build using the LLVM 3.3 release, some minor
 modifications will be required.
 
 This directory also contains a Python script that may be used to generate random

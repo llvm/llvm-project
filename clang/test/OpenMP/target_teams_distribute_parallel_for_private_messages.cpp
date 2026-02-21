@@ -44,7 +44,7 @@ class S4 {
 public:
   S4(int v):a(v) { }
 };
-class S5 { 
+class S5 {
   int a;
   S5():a(0) {} // expected-note {{implicitly declared private here}}
 public:

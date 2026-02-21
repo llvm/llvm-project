@@ -80,7 +80,7 @@ struct T {};
 
 typedef T<nullptr, nullptr, nullptr, nullptr> NT;
 
-namespace test1 { 
+namespace test1 {
 template<typename T, typename U> struct is_same {
   static const bool value = false;
 };
@@ -163,18 +163,18 @@ namespace overloading {
 
 namespace templates {
   template<typename T, nullptr_t Value>
-  struct X { 
+  struct X {
     X() { ptr = Value; }
 
     T *ptr;
   };
-  
+
   X<int, nullptr> x;
 
 
   template<int (*fp)(int), int* p, int A::* pmd, int (A::*pmf)(int)>
   struct X2 {};
-  
+
   X2<nullptr, nullptr, nullptr, nullptr> x2;
 }
 

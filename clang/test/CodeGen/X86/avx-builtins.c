@@ -1092,7 +1092,7 @@ __m128i test_mm256_extractf128_si256(__m256i A) {
 }
 TEST_CONSTEXPR(match_m128i(_mm256_extractf128_si256(((__m256i){0ULL, 1ULL, 2ULL, 3ULL}), 1),
               2ULL, 3ULL));
-              
+
 __m256d test_mm256_floor_pd(__m256d x) {
   // CHECK-LABEL: test_mm256_floor_pd
   // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %{{.*}}, i32 1)

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux-pc -DIS64 -fsyntax-only -verify -std=c++17 %s 
+// RUN: %clang_cc1 -triple x86_64-linux-pc -DIS64 -fsyntax-only -verify -std=c++17 %s
 // RUN: %clang_cc1 -triple x86_64-windows-pc -DIS64 -fsyntax-only -verify -std=c++17 %s
 // RUN: %clang_cc1 -triple i386-linux-pc -fsyntax-only -verify -std=c++17 %s
 // RUN: %clang_cc1 -triple i386-windows-pc -DW32 -fsyntax-only -verify -std=c++17 %s

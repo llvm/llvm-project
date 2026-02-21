@@ -455,7 +455,7 @@ TEST_F(AArch64GISelMITest, BuildFPEnv) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT S32 = LLT::scalar(32); 
+  LLT S32 = LLT::scalar(32);
   SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
 

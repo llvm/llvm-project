@@ -54,7 +54,7 @@ original motivating case is a larger pattern that your fold enables to
 optimize in some non-trivial way, you may add it as well -- however, the bulk
 of the test coverage should be minimal.
 
-Give tests short, but meaningful names. Don't call them `@test1`, `@test2` etc. 
+Give tests short, but meaningful names. Don't call them `@test1`, `@test2` etc.
 For example, a test checking multi-use behavior of a fold involving the
 addition of two selects might be called `@add_of_selects_multi_use`.
 
@@ -62,7 +62,7 @@ Add representative tests for each test category (discussed below), but don't
 test all combinations of everything. If you have multi-use tests, and you have
 commuted tests, you shouldn't also add commuted multi-use tests.
 
-Prefer to keep bit-widths for tests low to improve performance of proof checking using alive2. Using `i8` is better than `i128` where possible. 
+Prefer to keep bit-widths for tests low to improve performance of proof checking using alive2. Using `i8` is better than `i128` where possible.
 
 ### Add negative tests
 
@@ -289,7 +289,7 @@ call void @llvm.assume(i1 %ov.not)
 
 ### Timeouts
 
-Alive2 proofs will sometimes produce a timeout with the following message: 
+Alive2 proofs will sometimes produce a timeout with the following message:
 
 ```
 Alive2 timed out while processing your query.
@@ -392,7 +392,7 @@ intrinsics, such as `TargetTransformInfo::instCombineIntrinsic()`. These are
 already inherently target-dependent anyway.
 
 If some canonicalization narrow/widen the integer width of expressions, please
-check `shouldChangeType()` first. Otherwise, we may evaluate the expression 
+check `shouldChangeType()` first. Otherwise, we may evaluate the expression
 in illegal/inefficient types.
 
 For vector-specific transforms that require cost-modelling, the VectorCombine

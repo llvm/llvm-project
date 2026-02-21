@@ -40,7 +40,7 @@ namespace inner {
 // CHECK-HTML-NEXT:                                    <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">inner</a>
 // CHECK-HTML-NEXT:                                </li>
 // CHECK-HTML-NEXT:                            </ul>
-// CHECK-HTML-NEXT:                        </details> 
+// CHECK-HTML-NEXT:                        </details>
 // CHECK-HTML-NEXT:                    </li>
 // CHECK-HTML-NEXT:                </ul>
 // CHECK-HTML-NEXT:            </div>

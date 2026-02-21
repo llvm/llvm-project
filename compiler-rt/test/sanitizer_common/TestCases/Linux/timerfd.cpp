@@ -47,6 +47,6 @@ int main (int argc, char** argv)
 
   printf("DONE\n");
   // CHECK: DONE
-  
+
   return 0;
 }

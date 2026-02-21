@@ -3,14 +3,14 @@
 template<typename T>
 struct X0 {
   void f(T&);
-  
+
   struct Inner;
-  
+
   static T static_var;
 };
 
 template<typename T>
-void X0<T>::f(T& t) { 
+void X0<T>::f(T& t) {
   t = 1; // expected-error{{incompatible integer to pointer conversion}}
 }
 

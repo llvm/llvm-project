@@ -1,5 +1,5 @@
-int pat (int in) { 
-  return in + 5; // break here 
+int pat (int in) {
+  return in + 5; // break here
 }
 
 int tat (int in) { return pat(in + 10); }

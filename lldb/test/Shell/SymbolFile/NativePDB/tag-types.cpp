@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
   DerivedVirtual2 DV2;
   EnumInt EI;
   EnumShort ES;
-  
+
   return 0;
 }
 

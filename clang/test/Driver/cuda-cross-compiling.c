@@ -25,7 +25,7 @@
 // BINDINGS-NEXT: "nvptx64-nvidia-cuda" - "NVPTX::Linker", inputs: ["[[CUBIN]].o"], output: "a.out"
 
 //
-// Test the generated arguments to the CUDA binary utils when targeting NVPTX. 
+// Test the generated arguments to the CUDA binary utils when targeting NVPTX.
 // Ensure that the '.o' files are converted to '.cubin' if produced internally.
 //
 // RUN: %clang -target nvptx64-nvidia-cuda -march=sm_61 -### %s 2>&1 \
@@ -36,7 +36,7 @@
 // ARGS-NEXT: clang-nvlink-wrapper{{.*}}"-o" "a.out" "-arch" "sm_61"{{.*}}"[[CUBIN]].o"
 
 //
-// Test the generated arguments to the CUDA binary utils when targeting NVPTX. 
+// Test the generated arguments to the CUDA binary utils when targeting NVPTX.
 // Ensure that we emit '.o' files if compiled with '-c'
 //
 // RUN: %clang -target nvptx64-nvidia-cuda -march=sm_61 -c -### %s 2>&1 \
@@ -48,7 +48,7 @@
 // OBJECT-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_61" "--output-file" "[[OBJ:.+]].o" "[[PTX]].s" "-c"
 
 //
-// Test the generated arguments to the CUDA binary utils when targeting NVPTX. 
+// Test the generated arguments to the CUDA binary utils when targeting NVPTX.
 // Ensure that we copy input '.o' files to '.cubin' files when linking.
 //
 // RUN: touch %t.o

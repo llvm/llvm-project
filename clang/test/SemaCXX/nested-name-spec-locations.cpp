@@ -23,7 +23,7 @@ namespace outer_alias = outer;
 template<typename T>
 struct UnresolvedUsingValueDeclTester {
   using outer::inner::X0<
-          typename add_reference<T>::type 
+          typename add_reference<T>::type
     * // expected-error{{declared as a pointer to a reference of type}}
         >::value;
 };
@@ -33,7 +33,7 @@ UnresolvedUsingValueDeclTester<int> UnresolvedUsingValueDeclCheck; // expected-n
 template<typename T>
 struct UnresolvedUsingTypenameDeclTester {
   using outer::inner::X0<
-          typename add_reference<T>::type 
+          typename add_reference<T>::type
     * // expected-error{{declared as a pointer to a reference of type}}
         >::value;
 };
@@ -44,7 +44,7 @@ UnresolvedUsingTypenameDeclTester<int> UnresolvedUsingTypenameDeclCheck; // expe
 template<typename T, typename U>
 struct PseudoDestructorExprTester {
   void f(T *t) {
-    t->T::template Inner<typename add_reference<U>::type 
+    t->T::template Inner<typename add_reference<U>::type
       * // expected-error{{as a pointer to a reference of type}}
       >::Blarg::~Blarg();
   }
@@ -65,7 +65,7 @@ void PseudoDestructorExprCheck(
 template<typename T>
 struct DependentScopedDeclRefExpr {
   void f() {
-    outer_alias::inner::X0<typename add_reference<T>::type 
+    outer_alias::inner::X0<typename add_reference<T>::type
       * // expected-error{{as a pointer to a reference of type}}
       >::value = 17;
   }
@@ -79,7 +79,7 @@ void DependentScopedDeclRefExprCheck(DependentScopedDeclRefExpr<int> t) {
 template<typename T>
 struct TypenameTypeTester {
   typedef typename outer::inner::X0<
-          typename add_reference<T>::type 
+          typename add_reference<T>::type
     * // expected-error{{declared as a pointer to a reference of type}}
         >::type type;
 };
@@ -88,7 +88,7 @@ TypenameTypeTester<int> TypenameTypeCheck; // expected-note{{in instantiation of
 
 template<typename T, typename U>
 struct DependentTemplateSpecializationTypeTester {
-  typedef typename T::template apply<typename add_reference<U>::type 
+  typedef typename T::template apply<typename add_reference<U>::type
                                      * // expected-error{{declared as a pointer to a reference of type}}
                                      >::type type;
 };
@@ -104,7 +104,7 @@ DependentTemplateSpecializationTypeTester<HasApply, int> DTSTCheck; // expected-
 
 template<typename T, typename U>
 struct DependentTemplateSpecializationTypeTester2 {
-  typedef typename T::template apply<typename add_reference<U>::type 
+  typedef typename T::template apply<typename add_reference<U>::type
                                      * // expected-error{{declared as a pointer to a reference of type}}
                                      > type;
 };
@@ -113,7 +113,7 @@ DependentTemplateSpecializationTypeTester2<HasApply, int> DTSTCheck2; // expecte
 
 template<typename T, typename U>
 struct DependentTemplateSpecializationTypeTester3 :
-  T::template apply<typename add_reference<U>::type 
+  T::template apply<typename add_reference<U>::type
                                      * // expected-error{{declared as a pointer to a reference of type}}
                                      >
 {};
@@ -122,7 +122,7 @@ DependentTemplateSpecializationTypeTester3<HasApply, int> DTSTCheck3; // expecte
 
 template<typename T, typename U>
 struct DependentTemplateSpecializationTypeTester4 {
-  typedef class T::template apply<typename add_reference<U>::type 
+  typedef class T::template apply<typename add_reference<U>::type
                                      * // expected-error{{declared as a pointer to a reference of type}}
                                      > type;
 };

@@ -10,7 +10,7 @@ struct NonConstCopy {
   NonConstCopy(NonConstCopy&);
 };
 
-struct VirtualInheritsNonConstCopy : virtual NonConstCopy { 
+struct VirtualInheritsNonConstCopy : virtual NonConstCopy {
   VirtualInheritsNonConstCopy();
   VirtualInheritsNonConstCopy(const VirtualInheritsNonConstCopy&);
 };

@@ -98,7 +98,7 @@ void test7(C& c) {
 
 // C++ [dcl.ref]p1, C++ [dcl.ref]p4
 void test8(int& const,// expected-error{{'const' qualifier may not be applied to a reference}}
-           
+
            void&,     // expected-error{{cannot form a reference to 'void'}}
            int& &)    // expected-error{{type name declared as a reference to a reference}}
 {
@@ -131,7 +131,7 @@ class string {
   char *Data;
   unsigned Length;
 public:
-  string(); 
+  string();
   ~string();
 };
 
@@ -144,11 +144,11 @@ void test9() {
 void test10() {
   __attribute((vector_size(16))) typedef int vec4;
   typedef __attribute__(( ext_vector_type(4) )) int ext_vec4;
-  
+
   vec4 v;
   int &a = v[0]; // expected-error{{non-const reference cannot bind to vector element}}
   const int &b = v[0];
-  
+
   ext_vec4 ev;
   int &c = ev.x; // expected-error{{non-const reference cannot bind to vector element}}
   const int &d = ev.x;

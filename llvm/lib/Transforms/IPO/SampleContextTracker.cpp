@@ -232,7 +232,7 @@ SampleContextTracker::getCalleeContextSamplesFor(const CallBase &Inst,
     return nullptr;
 
   CalleeName = FunctionSamples::getCanonicalFnName(CalleeName);
-  
+
   FunctionId FName = getRepInFormat(CalleeName);
 
   // For indirect call, CalleeName will be empty, in which case the context

@@ -26,5 +26,5 @@ TEST(StateTest, Formatv) {
   EXPECT_EQ("detached", llvm::formatv("{0}", eStateDetached).str());
   EXPECT_EQ("exited", llvm::formatv("{0}", eStateExited).str());
   EXPECT_EQ("suspended", llvm::formatv("{0}", eStateSuspended).str());
-  
+
 }

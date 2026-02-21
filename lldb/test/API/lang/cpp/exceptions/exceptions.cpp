@@ -14,11 +14,11 @@ catches_exception (int value)
     }
     catch (int value)
     {
-        return value;  
+        return value;
     }
 }
 
-int 
+int
 intervening_function (int value)
 {
     return throws_exception_on_even (2 * value);
@@ -34,7 +34,7 @@ throws_exception_on_even (int value)
         return value;
 }
 
-int 
+int
 main ()
 {
     catches_exception (10); // Stop here

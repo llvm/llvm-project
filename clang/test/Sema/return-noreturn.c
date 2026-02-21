@@ -43,7 +43,7 @@ _Noreturn void test5(void) {
 
 void test6(void)
 {
-    (void)^{ 
+    (void)^{
        for(;;)
         ;
      };

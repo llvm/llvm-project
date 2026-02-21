@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
-// RUN: %clang_cc1 -fsyntax-only -verify -std=gnu++98 %s 
-// RUN: %clang_cc1 -fsyntax-only -verify -std=gnu++11 %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=gnu++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=gnu++11 %s
 
 void f() {
   float v1 = float(1);

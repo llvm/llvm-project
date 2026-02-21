@@ -2,7 +2,7 @@
 
 // NOLINTBEGIN(google-explicit-constructor)
 class A { A(int i); };
-// NOLINTEND(google-explicit-constructo) <-- typo: missing 'r' 
+// NOLINTEND(google-explicit-constructo) <-- typo: missing 'r'
 
 // Note: the expected output has been split over several lines so that clang-tidy
 //       does not see the "no lint" suppression comment and mistakenly assume it

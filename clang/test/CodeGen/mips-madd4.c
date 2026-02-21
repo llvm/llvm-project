@@ -3,7 +3,7 @@
 // RUN: %clang --target=mips64-unknown-linux -S -mno-madd4 %s -o -| FileCheck %s -check-prefix=NOMADD4
 // RUN: %clang --target=mips64-unknown-linux -S -mmadd4    -fno-honor-nans %s -o -| FileCheck %s -check-prefix=MADD4-NONAN
 // RUN: %clang --target=mips64-unknown-linux -S -mno-madd4 -fno-honor-nans %s -o -| FileCheck %s -check-prefix=NOMADD4-NONAN
- 
+
 float madd_s (float f, float g, float h)
 {
   return (f * g) + h;

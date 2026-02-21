@@ -103,7 +103,7 @@ void test_deref_in_array(void) {
 void test_string_array_in_array(void) {
     char matrix[2][6] = {"hello", "world"};
 }
-  
+
 // CIR-LABEL: cir.func{{.*}} @test_string_array_in_array
 // CIR:   %[[MATRIX:.*]] = cir.alloca !cir.array<!cir.array<!s8i x 6> x 2>, {{.*}}, ["matrix", init]
 // CIR:   %[[CONST:.*]] = cir.get_global @[[MATRIX_CONST]] : !cir.ptr<!cir.array<!cir.array<!s8i x 6> x 2>>

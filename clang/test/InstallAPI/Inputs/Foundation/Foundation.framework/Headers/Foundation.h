@@ -1,19 +1,19 @@
-@interface NSObject 
+@interface NSObject
 @end
 
-typedef unsigned char BOOL; 
+typedef unsigned char BOOL;
 #ifndef NS_AVAILABLE
 #define NS_AVAILABLE(x,y) __attribute__((availability(macosx,introduced=x)))
-#endif 
+#endif
 #ifndef NS_UNAVAILABLE
 #define NS_UNAVAILABLE  __attribute__((unavailable))
-#endif 
+#endif
 #ifndef NS_DEPRECATED_MAC
 #define NS_DEPRECATED_MAC(x,y) __attribute__((availability(macosx,introduced=x,deprecated=y,message="" )));
-#endif 
+#endif
 
 @interface NSManagedObject
-@end 
+@end
 
-@interface NSSet 
-@end 
+@interface NSSet
+@end

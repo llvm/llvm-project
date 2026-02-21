@@ -55,7 +55,7 @@ struct A {
   A();
   A(int);
   ~A();
-  
+
   A(const A&) = delete; // expected-note 0-2{{'A' has been explicitly marked deleted here}}
 };
 
@@ -79,7 +79,7 @@ void f() {
 #if __cplusplus <= 201402L
   // expected-error@-2 {{copying member subobject of type 'A' invokes deleted constructor}}
 #endif
-  
+
   C c1 = { 1 };
 }
 
@@ -159,7 +159,7 @@ namespace IdiomaticStdArrayInitDoesNotWarn {
     T contents[N];
   };
   StdArray<int, 3> x = {1, 2, 3};
-  
+
   template<typename T, int N> struct ArrayAndSomethingElse {
     T contents[N];
     int something_else;

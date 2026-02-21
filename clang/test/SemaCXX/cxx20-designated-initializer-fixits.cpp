@@ -40,20 +40,20 @@ struct : public A, public B {
   unsigned e : 2;
 } data = {
   {.z=0,
-         
-         
-   .y=1, 
-         
-   .x=2}, 
-  {.b=3,  
-   .a=4}, 
-    .e = 1, 
-            
-    .d = 1, 
-            
-    .c = 1, 
-    .b = 1, 
-    .a = 1, 
+
+
+   .y=1,
+
+   .x=2},
+  {.b=3,
+   .a=4},
+    .e = 1,
+
+    .d = 1,
+
+    .c = 1,
+    .b = 1,
+    .a = 1,
 };
 }
 // CHECK: fix-it:"{{.*}}":{[[@LINE-17]]:4-[[@LINE-17]]:8}:".x=2"
@@ -88,10 +88,10 @@ struct derived : public col, public point {
 
 void test() {
   derived a {
-    {.b = 1, .g = 2, .r = 3}, 
+    {.b = 1, .g = 2, .r = 3},
     { .z = 1, .y=2, .x =  3 },
-    .z1 = 1, 
-    .z2 = 2, 
+    .z1 = 1,
+    .z2 = 2,
   };
 }
 // CHECK: fix-it:"{{.*}}":{[[@LINE-6]]:6-[[@LINE-6]]:12}:".r = 3"

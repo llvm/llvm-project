@@ -24,7 +24,7 @@ int main() {
 
   void *non_accessible = mmap(nullptr, page_size * 2, PROT_NONE,
                               MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  
+
   if (non_accessible == MAP_FAILED)
     return 0;
 

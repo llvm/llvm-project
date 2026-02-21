@@ -39,8 +39,8 @@
 
 *   **`MLIR_BINDINGS_PYTHON_NB_DOMAIN`**: `STRING`
 
-    nanobind (and MLIR) domain within which extensions will be compiled. 
-    This determines whether this package will share nanobind types with other bindings packages. 
+    nanobind (and MLIR) domain within which extensions will be compiled.
+    This determines whether this package will share nanobind types with other bindings packages.
     Expected to be unique per project (and per specific set of bindings, for projects with multiple bindings packages).
     Can also be passed explicitly to `add_mlir_python_modules`.
 
@@ -1240,7 +1240,7 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
 
 See [`mlir/test/python/lib/PythonTestModuleNanobind.cpp`] for more examples.
 
-**Note**: if you are defining such types/attributes in a downstream project, it is critical you define 
+**Note**: if you are defining such types/attributes in a downstream project, it is critical you define
 `MLIR_BINDINGS_PYTHON_NB_DOMAIN` (which is used to determine `MLIR_BINDINGS_PYTHON_DOMAIN`) such that it is unique to
 your project and for every set of bindings built/distributed by your project. See **CMake variables** above.
 

@@ -7,7 +7,7 @@ struct B {
     default:
       return;
     }
-    
+
     switch (b) {
     case 17 // expected-error{{expected ':' after 'case'}}
       break;

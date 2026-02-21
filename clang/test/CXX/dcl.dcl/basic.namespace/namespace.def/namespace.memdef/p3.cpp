@@ -48,7 +48,7 @@ struct X1 { };
 struct Y {
   template<typename T> union X0;
   template<typename T> friend union X0;
-  
+
   union X1;
   friend union X1;
 };
@@ -70,7 +70,7 @@ namespace N3 {
 // Friends declared as template-ids aren't subject to the restriction
 // on innermost namespaces.
 namespace test5 {
-  template <class T> void f(T);  
+  template <class T> void f(T);
   namespace ns {
     class A {
       friend void f<int>(int);

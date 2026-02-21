@@ -77,8 +77,8 @@ public:
       *ReplacementRange = clang_getNullRange();
     return cxstring::createEmpty();
   }
-};    
-    
+};
+
 class CXDiagnosticRenderer : public DiagnosticNoteRenderer {
 public:
   CXDiagnosticRenderer(const LangOptions &LangOpts, DiagnosticOptions &DiagOpts,
@@ -95,7 +95,7 @@ public:
         dyn_cast_if_present<const StoredDiagnostic *>(D);
     if (!SD)
       return;
-    
+
     if (Level != DiagnosticsEngine::Note)
       CurrentSet = MainSet;
 
@@ -113,7 +113,7 @@ public:
                              DiagOrStoredDiag D) override {
     if (!D.isNull())
       return;
-    
+
     CXSourceLocation L;
     if (Loc.hasManager())
       L = translateSourceLocation(Loc.getManager(), LangOpts, Loc);
@@ -143,7 +143,7 @@ public:
 
   CXDiagnosticSetImpl *CurrentSet;
   CXDiagnosticSetImpl *MainSet;
-};  
+};
 }
 
 CXDiagnosticSetImpl *cxdiag::lazyCreateDiags(CXTranslationUnit TU,
@@ -246,7 +246,7 @@ CXString clang_formatDiagnostic(CXDiagnostic Diagnostic, unsigned Options) {
 
   SmallString<256> Str;
   llvm::raw_svector_ostream Out(Str);
-  
+
   if (Options & CXDiagnostic_DisplaySourceLocation) {
     // Print source location (file:line), along with optional column
     // and source ranges.
@@ -267,7 +267,7 @@ CXString clang_formatDiagnostic(CXDiagnostic Diagnostic, unsigned Options) {
         for (unsigned I = 0; I != N; ++I) {
           CXFile StartFile, EndFile;
           CXSourceRange Range = clang_getDiagnosticRange(Diagnostic, I);
-          
+
           unsigned StartLine, StartColumn, EndLine, EndColumn;
           clang_getSpellingLocation(clang_getRangeStart(Range),
                                     &StartFile, &StartLine, &StartColumn,
@@ -277,7 +277,7 @@ CXString clang_formatDiagnostic(CXDiagnostic Diagnostic, unsigned Options) {
 
           if (StartFile != EndFile || StartFile != File)
             continue;
-          
+
           Out << "{" << StartLine << ":" << StartColumn << "-"
               << EndLine << ":" << EndColumn << "}";
           PrintedRange = true;
@@ -285,7 +285,7 @@ CXString clang_formatDiagnostic(CXDiagnostic Diagnostic, unsigned Options) {
         if (PrintedRange)
           Out << ":";
       }
-      
+
       Out << " ";
     }
   }
@@ -305,7 +305,7 @@ CXString clang_formatDiagnostic(CXDiagnostic Diagnostic, unsigned Options) {
   else
     Out << "<no diagnostic text>";
   clang_disposeString(Text);
-  
+
   if (Options & (CXDiagnostic_DisplayOption | CXDiagnostic_DisplayCategoryId |
                  CXDiagnostic_DisplayCategoryName)) {
     bool NeedBracket = true;
@@ -322,8 +322,8 @@ CXString clang_formatDiagnostic(CXDiagnostic Diagnostic, unsigned Options) {
       }
       clang_disposeString(OptionName);
     }
-    
-    if (Options & (CXDiagnostic_DisplayCategoryId | 
+
+    if (Options & (CXDiagnostic_DisplayCategoryId |
                    CXDiagnostic_DisplayCategoryName)) {
       if (unsigned CategoryID = clang_getDiagnosticCategory(Diagnostic)) {
         if (Options & CXDiagnostic_DisplayCategoryId) {
@@ -335,7 +335,7 @@ CXString clang_formatDiagnostic(CXDiagnostic Diagnostic, unsigned Options) {
           NeedBracket = false;
           NeedComma = true;
         }
-        
+
         if (Options & CXDiagnostic_DisplayCategoryName) {
           CXString CategoryName = clang_getDiagnosticCategoryText(Diagnostic);
           if (NeedBracket)
@@ -354,7 +354,7 @@ CXString clang_formatDiagnostic(CXDiagnostic Diagnostic, unsigned Options) {
     if (!NeedBracket)
       Out << "]";
   }
-  
+
   return cxstring::createDup(Out.str());
 }
 
@@ -396,18 +396,18 @@ unsigned clang_getDiagnosticCategory(CXDiagnostic Diag) {
     return D->getCategory();
   return 0;
 }
-  
+
 CXString clang_getDiagnosticCategoryName(unsigned Category) {
   // Kept for backward compatibility.
   return cxstring::createRef(DiagnosticIDs::getCategoryNameFromID(Category));
 }
-  
+
 CXString clang_getDiagnosticCategoryText(CXDiagnostic Diag) {
   if (CXDiagnosticImpl *D = static_cast<CXDiagnosticImpl *>(Diag))
     return D->getCategoryText();
   return cxstring::createEmpty();
 }
-  
+
 unsigned clang_getDiagnosticNumRanges(CXDiagnostic Diag) {
   if (CXDiagnosticImpl *D = static_cast<CXDiagnosticImpl *>(Diag))
     return D->getNumRanges();
@@ -415,7 +415,7 @@ unsigned clang_getDiagnosticNumRanges(CXDiagnostic Diag) {
 }
 
 CXSourceRange clang_getDiagnosticRange(CXDiagnostic Diag, unsigned Range) {
-  CXDiagnosticImpl *D = static_cast<CXDiagnosticImpl *>(Diag);  
+  CXDiagnosticImpl *D = static_cast<CXDiagnosticImpl *>(Diag);
   if (!D || Range >= D->getNumRanges())
     return clang_getNullRange();
   return D->getRange(Range);
@@ -444,7 +444,7 @@ void clang_disposeDiagnosticSet(CXDiagnosticSet Diags) {
       delete D;
   }
 }
-  
+
 CXDiagnostic clang_getDiagnosticInSet(CXDiagnosticSet Diags,
                                       unsigned Index) {
   if (CXDiagnosticSetImpl *D = static_cast<CXDiagnosticSetImpl*>(Diags))
@@ -452,7 +452,7 @@ CXDiagnostic clang_getDiagnosticInSet(CXDiagnosticSet Diags,
       return D->getDiagnostic(Index);
   return nullptr;
 }
-  
+
 CXDiagnosticSet clang_getChildDiagnostics(CXDiagnostic Diag) {
   if (CXDiagnosticImpl *D = static_cast<CXDiagnosticImpl *>(Diag)) {
     CXDiagnosticSetImpl &ChildDiags = D->getChildDiagnostics();

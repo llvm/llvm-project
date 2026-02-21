@@ -12,7 +12,7 @@
 #if _BYTE_ORDER == _BIG_ENDIAN
 #define _YUGA_LITTLE_ENDIAN 0
 #define _YUGA_BIG_ENDIAN    1
-#elif _BYTE_ORDER == _LITTLE_ENDIAN 
+#elif _BYTE_ORDER == _LITTLE_ENDIAN
 #define _YUGA_LITTLE_ENDIAN 1
 #define _YUGA_BIG_ENDIAN    0
 #endif /* _BYTE_ORDER */

@@ -31,7 +31,7 @@ svfloat32_t test_svmlalltt_lane_f32_mf8(svfloat32_t zda, svmfloat8_t zn, svmfloa
 
 // CHECK: declare <16 x i8> @llvm.aarch64.neon.fp8.fcvtn.v16i8.v8f16(<8 x half>, <8 x half>) [[ATTR4]]
 
-// CHECK: attributes [[ATTR1:#.*]] = {{{.*}}} 
+// CHECK: attributes [[ATTR1:#.*]] = {{{.*}}}
 // CHECK: attributes [[ATTR2:#.*]] = {{{.*}}}
 // CHECK: attributes [[ATTR3]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 // CHECK: attributes [[ATTR4]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: read) }

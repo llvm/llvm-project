@@ -55,7 +55,7 @@ void foo3() {
   // DUMP-NEXT:    CapturedStmt
   // DUMP-NEXT:      CapturedDecl
   #pragma omp for
-  // PRINT:     #pragma omp reverse 
+  // PRINT:     #pragma omp reverse
   // DUMP-NEXT: OMPReverseDirective
   #pragma omp reverse
   for (int i = 7; i < 17; i += 3)
@@ -109,7 +109,7 @@ void foo5(int start, int end, int step) {
   for (int i = 7; i < 17; i += 1)
     // PRINT: #pragma omp reverse
     // DUMP:  OMPReverseDirective
-    #pragma omp reverse 
+    #pragma omp reverse
     // PRINT:     for (int j = 7; j < 17; j += 1)
     // DUMP-NEXT: ForStmt
     for (int j = 7; j < 17; j += 1)

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // expected-no-diagnostics
 
-template<class T> class Array { /* ... */ }; 
+template<class T> class Array { /* ... */ };
 template<class T> void sort(Array<T>& v) { }
 
 // instantiate sort(Array<int>&) - template-argument deduced

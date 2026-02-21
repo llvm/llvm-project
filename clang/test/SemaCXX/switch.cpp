@@ -15,11 +15,11 @@ void test() {
 }
 
 // PR5518
-struct A { 
+struct A {
   operator int(); // expected-note{{conversion to integral type}}
 };
 
-void x() { 
+void x() {
   switch(A()) {
   }
 }

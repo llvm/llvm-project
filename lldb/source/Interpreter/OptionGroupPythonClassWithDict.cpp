@@ -21,18 +21,18 @@ OptionGroupPythonClassWithDict::OptionGroupPythonClassWithDict(
                           "implementation of a ");
   m_key_usage_text.append(class_use);
   m_key_usage_text.append(".  Pairs can be specified more than once.");
-  
+
   m_value_usage_text.assign("The value for the previous key in the pair passed "
                             "to the implementation of a ");
   m_value_usage_text.append(class_use);
   m_value_usage_text.append(".  Pairs can be specified more than once.");
-  
+
   m_class_usage_text.assign("The name of the ");
   m_class_usage_text.append(m_is_class ? "class" : "function");
   m_class_usage_text.append(" that will manage a ");
   m_class_usage_text.append(class_use);
   m_class_usage_text.append(".");
-  
+
   m_option_definition[0].usage_mask = LLDB_OPT_SET_1;
   m_option_definition[0].required = m_required_options.Test(eScriptClass);
   m_option_definition[0].long_option = "script-class";
@@ -65,7 +65,7 @@ OptionGroupPythonClassWithDict::OptionGroupPythonClassWithDict(
   m_option_definition[2].completion_type = 0;
   m_option_definition[2].argument_type = eArgTypeNone;
   m_option_definition[2].usage_text = m_value_usage_text.data();
-  
+
   m_option_definition[3].usage_mask = LLDB_OPT_SET_3;
   m_option_definition[3].required = m_required_options.Test(ePythonFunction);
   m_option_definition[3].long_option = "python-function";

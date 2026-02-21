@@ -3,17 +3,17 @@
 #pragma clang module build M
   module M { module A {} module B {} module C {} }
 #pragma clang module contents
-  
+
   #pragma clang module begin M.A
     template<typename U> struct X {
       template<typename T> void f();
     };
   #pragma clang module end
-  
+
   #pragma clang module begin M.B
     template<typename T, typename U = void> struct ST { static void f(); };
   #pragma clang module end
-  
+
   #pragma clang module begin M.C
     template<typename U> struct X;
     void foo(X<int>);

@@ -110,7 +110,7 @@ inline double lanczos13m53::lanczos_sum<double>(const double& x)
 
    double ALIGN16 t[2];
    _mm_store_pd(t, sum_even);
-   
+
    return t[0] / t[1];
 }
 
@@ -204,7 +204,7 @@ inline double lanczos13m53::lanczos_sum_expG_scaled<double>(const double& x)
 
    double ALIGN16 t[2];
    _mm_store_pd(t, sum_even);
-   
+
    return t[0] / t[1];
 }
 

@@ -3509,9 +3509,9 @@ add_fp_unittest(
   SRCS
     rsqrtf_test.cpp
   DEPENDS
-    libc.hdr.errno_macros  
-    libc.hdr.fenv_macros  
-    libc.src.math.rsqrtf 
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.rsqrtf
 )
 
 add_fp_unittest(
@@ -3521,8 +3521,8 @@ add_fp_unittest(
   SRCS
     rsqrtf16_test.cpp
   DEPENDS
-    libc.hdr.errno_macros  
-    libc.hdr.fenv_macros 
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.rsqrtf16
 )
 

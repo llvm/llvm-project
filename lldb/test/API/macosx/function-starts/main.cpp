@@ -14,7 +14,7 @@ static void *a_function()
 {
     while (1)
     {
-        std::this_thread::sleep_for(std::chrono::microseconds(100)); 
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
         dont_strip_me();
     }
     return 0;

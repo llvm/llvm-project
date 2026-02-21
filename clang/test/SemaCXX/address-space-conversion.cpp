@@ -24,7 +24,7 @@ typedef B __attribute__((address_space(2))) *B_ptr_2;
 
 void test_const_cast(int_ptr ip, int_ptr_1 ip1, int_ptr_2 ip2,
                      A_ptr ap, A_ptr_1 ap1, A_ptr_2 ap2,
-                     const int *cip, 
+                     const int *cip,
                      const int __attribute__((address_space(1))) *cip1) {
   // Cannot use const_cast to cast between address spaces, add an
   // address space, or remove an address space.
@@ -67,7 +67,7 @@ void test_static_cast(void_ptr vp, void_ptr_1 vp1, void_ptr_2 vp2,
   (void)static_cast<A_ptr>(vp);
   (void)static_cast<A_ptr_1>(vp1);
   (void)static_cast<A_ptr_2>(vp2);
-  
+
   // Ill-formed upcasts
   (void)static_cast<A_ptr>(bp1); // expected-error{{is not allowed}}
   (void)static_cast<A_ptr>(bp2); // expected-error{{is not allowed}}

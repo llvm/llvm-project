@@ -63,22 +63,22 @@
 // RECIP13: error: unknown argument
 
 // RUN: not %clang -### -S %s -mrecip=divd:1,divd  2>&1 | FileCheck --check-prefix=RECIP14 %s
-// RECIP14: error: invalid value 
+// RECIP14: error: invalid value
 
 // RUN: not %clang -### -S %s -mrecip=sqrt,sqrtf  2>&1 | FileCheck --check-prefix=RECIP15 %s
-// RECIP15: error: invalid value 
+// RECIP15: error: invalid value
 
 // RUN: not %clang -### -S %s -mrecip=+default:10  2>&1 | FileCheck --check-prefix=RECIP16 %s
-// RECIP16: error: invalid value 
+// RECIP16: error: invalid value
 
 // RUN: not %clang -### -S %s -mrecip=!vec-divd:  2>&1 | FileCheck --check-prefix=RECIP17 %s
-// RECIP17: error: invalid value 
+// RECIP17: error: invalid value
 
 // RUN: not %clang -### -S %s -mrecip=divh:1,divh  2>&1 | FileCheck --check-prefix=RECIP20 %s
-// RECIP20: error: invalid value 
+// RECIP20: error: invalid value
 
 // RUN: not %clang -### -S %s -mrecip=divh,div  2>&1 | FileCheck --check-prefix=RECIP21 %s
-// RECIP21: error: invalid value 
+// RECIP21: error: invalid value
 
 // RUN: not %clang -### -S %s -mrecip=sqrt,sqrth  2>&1 | FileCheck --check-prefix=RECIP22 %s
-// RECIP22: error: invalid value 
+// RECIP22: error: invalid value

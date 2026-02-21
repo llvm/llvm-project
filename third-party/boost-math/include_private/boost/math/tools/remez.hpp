@@ -34,9 +34,9 @@ struct remez_error_function
    typedef boost::function1<T, T const &> function_type;
 public:
    remez_error_function(
-      function_type f_, 
-      const polynomial<T>& n, 
-      const polynomial<T>& d, 
+      function_type f_,
+      const polynomial<T>& n,
+      const polynomial<T>& d,
       bool rel_err)
          : f(f_), numerator(n), denominator(d), rel_error(rel_err) {}
 
@@ -278,12 +278,12 @@ void remez_minimax<T>::init_chebyshev()
 
 template <class T>
 void remez_minimax<T>::reset(
-         unsigned oN, 
-         unsigned oD, 
-         T a, 
-         T b, 
-         bool pin, 
-         bool rel_err, 
+         unsigned oN,
+         unsigned oD,
+         T a,
+         T b,
+         bool pin,
+         bool rel_err,
          int sk,
          int bits)
 {
@@ -330,16 +330,16 @@ void remez_minimax<T>::reset(
 
 template <class T>
 inline remez_minimax<T>::remez_minimax(
-         typename remez_minimax<T>::function_type f, 
-         unsigned oN, 
-         unsigned oD, 
-         T a, 
-         T b, 
-         bool pin, 
-         bool rel_err, 
+         typename remez_minimax<T>::function_type f,
+         unsigned oN,
+         unsigned oD,
+         T a,
+         T b,
+         bool pin,
+         bool rel_err,
          int sk,
          int bits)
-   : func(f) 
+   : func(f)
 {
    m_brake = 0;
    reset(oN, oD, a, b, pin, rel_err, sk, bits);
@@ -347,12 +347,12 @@ inline remez_minimax<T>::remez_minimax(
 
 template <class T>
 void remez_minimax<T>::reset(
-         unsigned oN, 
-         unsigned oD, 
-         T a, 
-         T b, 
-         bool pin, 
-         bool rel_err, 
+         unsigned oN,
+         unsigned oD,
+         T a,
+         T b,
+         bool pin,
+         bool rel_err,
          int sk,
          int bits,
          const vector_type& points)
@@ -390,13 +390,13 @@ void remez_minimax<T>::reset(
 
 template <class T>
 inline remez_minimax<T>::remez_minimax(
-         typename remez_minimax<T>::function_type f, 
-         unsigned oN, 
-         unsigned oD, 
-         T a, 
-         T b, 
-         bool pin, 
-         bool rel_err, 
+         typename remez_minimax<T>::function_type f,
+         unsigned oN,
+         unsigned oD,
+         T a,
+         T b,
+         bool pin,
+         bool rel_err,
          int sk,
          int bits,
          const vector_type& points)
@@ -454,7 +454,7 @@ T remez_minimax<T>::iterate()
             }
             x *= x0;
          }
-         // The last variable to be solved for is the error term, 
+         // The last variable to be solved for is the error term,
          // sign changes with each control point:
          T E = rel_error ? T(sign * fabs(b[i])) : T(sign);
          A(i, unknowns - 1) = E;
@@ -498,7 +498,7 @@ T remez_minimax<T>::iterate()
 
    //
    // Next comes another sanity check, we want to verify that all the control
-   // points do actually alternate in sign, in practice we may have 
+   // points do actually alternate in sign, in practice we may have
    // additional roots in the error function that cause this to fail.
    // Failure here is always fatal: even though this code attempts to correct
    // the problem it usually only postpones the inevitable.
@@ -570,10 +570,10 @@ T remez_minimax<T>::iterate()
       eps_tolerance<T> tol(m_precision);
       std::uintmax_t max_iter = 1000;
       std::pair<T, T> p = toms748_solve(
-         Err, 
-         control_points[i-1], 
-         control_points[i], 
-         tol, 
+         Err,
+         control_points[i-1],
+         control_points[i],
+         tol,
          max_iter);
       zeros[i] = (p.first + p.second) / 2;
       //zeros[i] = bisect(Err, control_points[i-1], control_points[i], m_precision);

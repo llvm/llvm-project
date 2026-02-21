@@ -3,7 +3,7 @@ mlir_tablegen(TestTransformsOps.h.inc -gen-op-decls)
 mlir_tablegen(TestTransformsOps.cpp.inc -gen-op-defs)
 add_public_tablegen_target(MLIRTestTransformsOpsIncGen)
 
-set(LLVM_OPTIONAL_SOURCES 
+set(LLVM_OPTIONAL_SOURCES
   TestDialectConversion.cpp)
 set(MLIRTestTransformsPDLDep)
 set(MLIRTestTransformsPDLSrc)

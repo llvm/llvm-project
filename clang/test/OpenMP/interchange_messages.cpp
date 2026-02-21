@@ -147,7 +147,7 @@ void func() {
   // expected-error@+6 {{expected 3 for loops after '#pragma omp for', but found only 2}}
   // expected-note@+1 {{as specified in 'collapse' clause}}
   #pragma omp for collapse(3)
-  #pragma omp interchange 
+  #pragma omp interchange
   for (int i = 0; i < 7; ++i)
     for (int j = 0; j < 13; ++j)
       ;
@@ -159,7 +159,7 @@ void func() {
     ;
 
   // expected-error@+3 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', '>=', or '!=') of loop variable 'j'}}
-  #pragma omp interchange 
+  #pragma omp interchange
   for (int i = 0; i < 7; ++i)
     for (int j = 0; j/3<7; ++j)
       ;

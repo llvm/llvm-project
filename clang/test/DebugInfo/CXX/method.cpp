@@ -21,7 +21,7 @@ class A {
 protected:
   void foo(int, A, decltype(u));
   void bar();
-}; 
+};
 
 void A::foo(int, A, decltype(u)) {
 }

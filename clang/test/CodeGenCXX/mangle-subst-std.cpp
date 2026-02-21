@@ -4,9 +4,9 @@
 // involve standard substitutions.
 
 
-// CHECK: @_ZTVSd = linkonce_odr unnamed_addr constant 
+// CHECK: @_ZTVSd = linkonce_odr unnamed_addr constant
 // CHECK: @_ZTTSd = linkonce_odr unnamed_addr constant
-// CHECK: @_ZTCSd0_Si = linkonce_odr unnamed_addr constant 
+// CHECK: @_ZTCSd0_Si = linkonce_odr unnamed_addr constant
 // CHECK: @_ZTCSd16_So = linkonce_odr unnamed_addr constant
 // CHECK: @_ZTVSi = linkonce_odr unnamed_addr constant
 // CHECK: @_ZTTSi = linkonce_odr unnamed_addr constant
@@ -15,7 +15,7 @@
 
 namespace std {
   struct A { A(); };
-  
+
   // CHECK-LABEL: define{{.*}} void @_ZNSt1AC2Ev(ptr {{[^,]*}} %this) unnamed_addr
   // CHECK-LABEL: define{{.*}} void @_ZNSt1AC1Ev(ptr {{[^,]*}} %this) unnamed_addr
   A::A() { }
@@ -37,7 +37,7 @@ void f(std::basic_string<char, char, int>) { }
 
 namespace std {
   template<typename> struct char_traits { };
-  
+
   typedef std::basic_string<char, std::char_traits<char>, std::allocator<char> > string;
 }
 
@@ -45,26 +45,26 @@ namespace std {
 void f(std::string) { }
 
 namespace std {
-  template<typename, typename> struct basic_ios { 
+  template<typename, typename> struct basic_ios {
     basic_ios(int);
     virtual ~basic_ios();
   };
-  template<typename charT, typename traits = char_traits<charT> > 
-  struct basic_istream : virtual public basic_ios<charT, traits> { 
+  template<typename charT, typename traits = char_traits<charT> >
+  struct basic_istream : virtual public basic_ios<charT, traits> {
     basic_istream(int x) : basic_ios<charT, traits>(x), stored(x) { }
 
     int stored;
   };
-  template<typename charT, typename traits = char_traits<charT> > 
-  struct basic_ostream : virtual public basic_ios<charT, traits> { 
+  template<typename charT, typename traits = char_traits<charT> >
+  struct basic_ostream : virtual public basic_ios<charT, traits> {
     basic_ostream(int x) : basic_ios<charT, traits>(x), stored(x) { }
 
     float stored;
   };
 
-  template<typename charT, typename traits = char_traits<charT> > 
-    struct basic_iostream : public basic_istream<charT, traits>, 
-                            public basic_ostream<charT, traits> { 
+  template<typename charT, typename traits = char_traits<charT> >
+    struct basic_iostream : public basic_istream<charT, traits>,
+                            public basic_ostream<charT, traits> {
     basic_iostream(int x) : basic_istream<charT, traits>(x),
                             basic_ostream<charT, traits>(x),
                             basic_ios<charT, traits>(x) { }
@@ -84,7 +84,7 @@ extern "C++" {
 namespace std
 {
   typedef void (*terminate_handler) ();
-  
+
   // CHECK: _ZSt13set_terminatePFvvE
   terminate_handler set_terminate(terminate_handler) { return 0; }
 }
@@ -106,7 +106,7 @@ void create_streams() {
 namespace N {
   namespace std {
     struct A { void f(); };
-    
+
     // CHECK-LABEL: define{{.*}} void @_ZN1N3std1A1fEv
     void A::f() { }
   }

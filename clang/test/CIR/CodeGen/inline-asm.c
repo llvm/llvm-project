@@ -14,7 +14,7 @@ __asm__ ("foo3");
 // LLVM-NEXT: module asm "foo3"
 
 //      CIR: cir.func{{.*}}@empty1
-//      CIR: cir.asm(x86_att, 
+//      CIR: cir.asm(x86_att,
 // CIR-NEXT:   out = [],
 // CIR-NEXT:   in = [],
 // CIR-NEXT:   in_out = [],
@@ -39,7 +39,7 @@ void empty2() {
 
 //      CIR: cir.func{{.*}}@empty3
 //      CIR: %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
-//      CIR: cir.asm(x86_att, 
+//      CIR: cir.asm(x86_att,
 // CIR-NEXT:   out = [%[[X]] : !cir.ptr<!s32i> (maybe_memory)],
 // CIR-NEXT:   in = [],
 // CIR-NEXT:   in_out = [%[[X]] : !cir.ptr<!s32i> (maybe_memory)],
@@ -53,7 +53,7 @@ void empty3(int x) {
 
 //      CIR: cir.func{{.*}}@empty4
 //      CIR: %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
-//      CIR: cir.asm(x86_att, 
+//      CIR: cir.asm(x86_att,
 // CIR-NEXT:   out = [],
 // CIR-NEXT:   in = [%[[X]] : !cir.ptr<!s32i> (maybe_memory)],
 // CIR-NEXT:   in_out = [],
@@ -67,7 +67,7 @@ void empty4(int x) {
 
 //      CIR: cir.func{{.*}}@empty5
 //      CIR: %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
-//      CIR: cir.asm(x86_att, 
+//      CIR: cir.asm(x86_att,
 // CIR-NEXT:   out = [%[[X]] : !cir.ptr<!s32i> (maybe_memory)],
 // CIR-NEXT:   in = [],
 // CIR-NEXT:   in_out = [],
@@ -82,7 +82,7 @@ void empty5(int x) {
 //      CIR: cir.func{{.*}}@empty6
 //      CIR: %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
 //      CIR: %[[X_LOAD:.*]] = cir.load align(4) %[[X]] : !cir.ptr<!s32i>, !s32i
-//      CIR: cir.asm(x86_att, 
+//      CIR: cir.asm(x86_att,
 // CIR-NEXT:   out = [],
 // CIR-NEXT:   in = [],
 // CIR-NEXT:   in_out = [%[[X_LOAD]] : !s32i],
@@ -100,7 +100,7 @@ void empty6(int x) {
 //      CIR: %[[X:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init]
 //      CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"]
 //      CIR: %[[X_LOAD:.*]] = cir.load align(4) %[[X]] : !cir.ptr<!u32i>, !u32i
-//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                     out = [],
 // CIR-NEXT:                     in = [%[[X_LOAD]] : !u32i],
 // CIR-NEXT:                     in_out = [],
@@ -127,7 +127,7 @@ unsigned add1(unsigned int x) {
 //      CIR: cir.func{{.*}}@add2
 //      CIR: %[[X:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init]
 //      CIR: %[[X_LOAD:.*]] = cir.load align(4) %[[X]] : !cir.ptr<!u32i>, !u32i
-//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                     out = [],
 // CIR-NEXT:                     in = [],
 // CIR-NEXT:                     in_out = [%[[X_LOAD]] : !u32i],
@@ -148,7 +148,7 @@ unsigned add2(unsigned int x) {
 //      CIR: cir.func{{.*}}@add3
 //      CIR: %[[X:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init]
 //      CIR: %[[X_LOAD:.*]] = cir.load{{.*}} %[[X]] : !cir.ptr<!u32i>, !u32i
-//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                     out = [],
 // CIR-NEXT:                     in = [],
 // CIR-NEXT:                     in_out = [%[[X_LOAD]] : !u32i],
@@ -169,9 +169,9 @@ unsigned add3(unsigned int x) { // ((42 + x) - 1) * 2
 }
 
 //      CIR: cir.func{{.*}}@add4
-//      CIR: %[[X:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["x", init] 
+//      CIR: %[[X:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["x", init]
 //      CIR: %[[X_LOAD:.*]] = cir.load {{.*}}  %[[X]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-// CIR-NEXT: cir.asm(x86_att, 
+// CIR-NEXT: cir.asm(x86_att,
 // CIR-NEXT:       out = [%[[X_LOAD]] : !cir.ptr<!s32i> (maybe_memory)],
 // CIR-NEXT:       in = [],
 // CIR-NEXT:       in_out = [],
@@ -191,7 +191,7 @@ void add4(int *x) {
 //      CIR: %[[R:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["r"]
 //      CIR: %[[X_LOAD:.*]] = cir.load{{.*}} %[[X]] : !cir.ptr<!cir.float>, !cir.float
 //      CIR: %[[Y_LOAD:.*]] = cir.load{{.*}} %[[Y]] : !cir.ptr<!cir.float>, !cir.float
-//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                      out = [],
 // CIR-NEXT:                      in = [%[[X_LOAD]] : !cir.float, %[[Y_LOAD]] : !cir.float],
 // CIR-NEXT:                      in_out = [],
@@ -217,7 +217,7 @@ float add5(float x, float y) {
 
 //      CIR: cir.func{{.*}}@mov
 //      CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"] {alignment = 4 : i64}
-//      CIR: %[[RES:.*]] = cir.asm(x86_att, 
+//      CIR: %[[RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:   out = [],
 // CIR-NEXT:   in = [],
 // CIR-NEXT:   in_out = [],
@@ -245,7 +245,7 @@ unsigned mov(unsigned x) {
 // CIR-NEXT: cir.load align(1) %[[GET_MEM]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[GET_MEM:.*]] = cir.get_member %[[ASM_STRUCT]][1] {name = ""} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!s32i>
 // CIR-NEXT: cir.load align(1) %[[GET_MEM]] : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT: cir.store 
+// CIR-NEXT: cir.store
 // CIR-NEXT: cir.store
 // CIR-NEXT: cir.return
 // LLVM: define{{.*}}@t1
@@ -293,7 +293,7 @@ void t3(unsigned char *src, unsigned long long temp) {
 //      CIR: cir.func{{.*}}@t4
 //      CIR: %[[A:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["a"] {alignment = 8 : i64}
 //      CIR: %[[B:.*]] = cir.alloca !rec_reg, !cir.ptr<!rec_reg>, ["b"] {alignment = 8 : i64}
-//      CIR: cir.asm(x86_att, 
+//      CIR: cir.asm(x86_att,
 // CIR-NEXT:   out = [],
 // CIR-NEXT:   in = [%[[A]] : !cir.ptr<!u64i> (maybe_memory), %[[B]] : !cir.ptr<!rec_reg> (maybe_memory)],
 // CIR-NEXT:   in_out = [],
@@ -312,7 +312,7 @@ void t4(void) {
 //      CIR: cir.func{{.*}}@t5
 //      CIR: %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
 //      CIR: %[[FUNC:.*]] = cir.get_global @t5 : !cir.ptr<!cir.func<(!s32i)>>
-//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                     out = [],
 // CIR-NEXT:                     in = [%[[FUNC]] : !cir.ptr<!cir.func<(!s32i)>>],
 // CIR-NEXT:                     in_out = [],
@@ -332,7 +332,7 @@ void t5(int i) {
 
 //      CIR: cir.func{{.*}}@t6
 //      CIR: %[[FUNC:.*]] = cir.get_global @t6 : !cir.ptr<!cir.func<()>>
-//      CIR: cir.asm(x86_att, 
+//      CIR: cir.asm(x86_att,
 // LLVM: define{{.*}}@t6
 // CIR-NEXT:   out = [],
 // CIR-NEXT:   in = [%[[FUNC]] : !cir.ptr<!cir.func<()>>],
@@ -347,7 +347,7 @@ void t6(void) {
 //      CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 //      CIR: %[[A_LOAD:.*]] = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
 //      CIR: %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
-// CIR-NEXT: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+// CIR-NEXT: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                     out = [],
 // CIR-NEXT:                     in = [%[[FOUR]] : !s32i],
 // CIR-NEXT:                     in_out = [%[[A_LOAD]] : !s32i],
@@ -359,12 +359,12 @@ void t6(void) {
 // LLVM: %[[ASM_RES:.*]] = call i32 asm sideeffect "T7 NAMED: $1", "=r,i,0,~{dirflag},~{fpsr},~{flags}"(i32 4, i32 %[[A_LOAD]])
 // LLVM: store i32 %[[ASM_RES]], ptr %[[A]]
 void t7(int a) {
-  __asm__ volatile("T7 NAMED: %[input]" : "+r"(a): [input] "i" (4));  
+  __asm__ volatile("T7 NAMED: %[input]" : "+r"(a): [input] "i" (4));
 }
 
 //      CIR: cir.func{{.*}}@t8
-//      CIR: %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i 
-// CIR-NEXT: cir.asm(x86_att, 
+//      CIR: %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
+// CIR-NEXT: cir.asm(x86_att,
 // CIR-NEXT:   out = [],
 // CIR-NEXT:   in = [%[[FOUR]] : !s32i],
 // CIR-NEXT:   in_out = [],
@@ -399,7 +399,7 @@ unsigned t9(unsigned int a) {
 //      CIR: %[[ZERO2:.*]] = cir.const #cir.int<0> : !s32i
 //      CIR: %[[ZERO3:.*]] = cir.const #cir.int<0> : !s32i
 //      CIR: %[[ZERO_3_CAST:.*]] = cir.cast int_to_float %[[ZERO3]] : !s32i -> !cir.double
-// CIR-NEXT: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+// CIR-NEXT: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                     out = [],
 // CIR-NEXT:                     in = [%[[ZERO1]] : !s32i, %[[ZERO2]] : !s32i, %[[ZERO_3_CAST]] : !cir.double],
 // CIR-NEXT:                     in_out = [%[[R_LOAD]] : !s32i],
@@ -419,7 +419,7 @@ void t10(int r) {
 //      CIR: %[[OUTPUT:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["output"]
 //      CIR: %[[INPUT_LOAD:.*]] = cir.load align(1) %[[INPUT]] : !cir.ptr<!s8i>, !s8i
 //      CIR: %[[INPUT_CAST:.*]] = cir.cast integral %[[INPUT_LOAD]] : !s8i -> !u32i
-// CIR-NEXT: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+// CIR-NEXT: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                     out = [],
 // CIR-NEXT:                     in = [%[[INPUT_CAST]] : !u32i],
 // CIR-NEXT:                     in_out = [],
@@ -450,7 +450,7 @@ unsigned t11(signed char input) {
 //      CIR: %[[INPUT:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["input", init]
 //      CIR: %[[OUTPUT:.*]] = cir.alloca !u8i, !cir.ptr<!u8i>, ["output"]
 //      CIR: %[[INPUT_LOAD:.*]] = cir.load align(4) %[[INPUT]] : !cir.ptr<!u32i>, !u32i
-// CIR-NEXT: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+// CIR-NEXT: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                     out = [],
 // CIR-NEXT:                     in = [%[[INPUT_LOAD]] : !u32i],
 // CIR-NEXT:                     in_out = [],
@@ -478,7 +478,7 @@ unsigned char t12(unsigned input) {
 //      CIR: %[[INPUT:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["input", init]
 //      CIR: %[[OUTPUT:.*]] = cir.alloca !u8i, !cir.ptr<!u8i>, ["output"]
 //      CIR: %[[INPUT_LOAD:.*]] = cir.load align(4) %[[INPUT]] : !cir.ptr<!u32i>, !u32i
-// CIR-NEXT: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+// CIR-NEXT: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                     out = [],
 // CIR-NEXT:                     in = [%[[INPUT_LOAD]] : !u32i],
 // CIR-NEXT:                     in_out = [],
@@ -528,7 +528,7 @@ struct large {
 //      CIR: %[[LARGE:.*]] = cir.alloca !cir.ptr<!rec_large>, !cir.ptr<!cir.ptr<!rec_large>>, ["P", init]
 //      CIR: %[[LARGE_LOAD:.*]] = cir.load deref align(8) %1 : !cir.ptr<!cir.ptr<!rec_large>>, !cir.ptr<!rec_large>
 //      CIR: %[[X_LOAD:.*]] = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
-//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                     out = [],
 // CIR-NEXT:                     in = [%[[LARGE_LOAD]] : !cir.ptr<!rec_large> (maybe_memory), %[[X_LOAD]] : !s32i],
 // CIR-NEXT:                     in_out = [],
@@ -552,7 +552,7 @@ unsigned long t15(int x, struct large *P) {
 //      CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"]
 //      CIR: %[[B:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b"]
 //      CIR: %[[B_LOAD:.*]] = cir.load align(4) %[[B]] : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+// CIR-NEXT: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                     out = [],
 // CIR-NEXT:                     in = [%[[B_LOAD]] : !s32i],
 // CIR-NEXT:                     in_out = [],
@@ -596,7 +596,7 @@ void t17(void) {
 //      CIR: %[[B:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b"]
 //      CIR: %[[ASM_RES_VAR:.*]] = cir.alloca !rec_anon_struct, !cir.ptr<!rec_anon_struct>, ["__asm_result"]
 //      CIR: %[[DATA_LOAD:.*]] = cir.load align(4) %[[DATA]] : !cir.ptr<!u32i>, !u32i
-//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                     out = [],
 // CIR-NEXT:                     in = [%[[DATA_LOAD]] : !u32i],
 // CIR-NEXT:                     in_out = [],
@@ -630,7 +630,7 @@ void t17(void) {
 //
 // LLVMONLY: %[[GEP_FIRST_LOAD:.*]] = extractvalue { i32, i32 } %[[ASM_RES]], 0
 // LLVMONLY: %[[GEP_SECOND_LOAD:.*]] = extractvalue { i32, i32 } %[[ASM_RES]], 1
-// 
+//
 // LLVM: store i32 %[[GEP_FIRST_LOAD]], ptr %[[A]]
 // LLVM: store i32 %[[GEP_SECOND_LOAD]], ptr %[[B]]
 int t18(unsigned data) {
@@ -645,7 +645,7 @@ int t18(unsigned data) {
 //      CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"]
 //      CIR: %[[B:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b"]
 //      CIR: %[[DATA_LOAD:.*]] = cir.load align(4) %[[DATA]] : !cir.ptr<!u32i>, !u32i
-//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                     out = [],
 // CIR-NEXT:                     in = [%[[DATA_LOAD]] : !u32i],
 // CIR-NEXT:                     in_out = [],
@@ -674,7 +674,7 @@ int t19(unsigned data) {
 //      CIR: %[[BIGRES:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["bigres"]
 //      CIR: %[[LA_LOAD:.*]] = cir.load align(4) %[[LA]] : !cir.ptr<!u32i>, !u32i
 //      CIR: %[[LB_LOAD:.*]] = cir.load align(4) %[[LB]] : !cir.ptr<!u32i>, !u32i
-//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                     out = [],
 // CIR-NEXT:                     in = [%[[LA_LOAD]] : !u32i, %[[LB_LOAD]] : !u32i],
 // CIR-NEXT:                     in_out = [],
@@ -706,7 +706,7 @@ unsigned char t22(unsigned char a, unsigned char b) {
 //      CIR: %[[RES:.*]] = cir.alloca !u8i, !cir.ptr<!u8i>, ["res"]
 //      CIR: %[[LA_LOAD:.*]] = cir.load align(4) %[[LA]] : !cir.ptr<!u32i>, !u32i
 //      CIR: %[[LB_LOAD:.*]] = cir.load align(4) %[[LB]] : !cir.ptr<!u32i>, !u32i
-//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                     out = [],
 // CIR-NEXT:                     in = [%[[LA_LOAD]] : !u32i, %[[LB_LOAD]] : !u32i],
 // CIR-NEXT:                     in_out = [],
@@ -737,7 +737,7 @@ unsigned char t23(unsigned char a, unsigned char b) {
 //      CIR: %[[ADDR:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["addr"]
 //      CIR: %[[C_LOAD:.*]] = cir.load align(1) %[[C]] : !cir.ptr<!s8i>, !s8i
 //      CIR: %[[C_LOAD_CAST:.*]] = cir.cast integral %[[C_LOAD]] : !s8i -> !u64i
-//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                     out = [],
 // CIR-NEXT:                     in = [%[[C_LOAD_CAST]] : !u64i]
 // CIR-NEXT:                     in_out = [],
@@ -798,7 +798,7 @@ void t27(void) {
 
 //      CIR: cir.func{{.*}}@t28
 //      CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-//      CIR: cir.asm(x86_att, 
+//      CIR: cir.asm(x86_att,
 // CIR-NEXT:   out = [],
 // CIR-NEXT:   in = [%[[ONE]] : !s32i],
 // CIR-NEXT:   in_out = [],
@@ -816,7 +816,7 @@ static unsigned t29_var[1];
 
 //      CIR: cir.func{{.*}}@t29
 //      CIR: %[[ARR:.*]] = cir.get_global @t29_var : !cir.ptr<!cir.array<!u32i x 1>>
-//      CIR: cir.asm(x86_att, 
+//      CIR: cir.asm(x86_att,
 // CIR-NEXT:   out = [],
 // CIR-NEXT:   in = [%[[ARR]] : !cir.ptr<!cir.array<!u32i x 1>> (maybe_memory)],
 // CIR-NEXT:   in_out = [],
@@ -871,7 +871,7 @@ void t31(int len) {
 //      CIR: %[[PTR:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init]
 //      CIR: %[[RET:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ret"]
 //      CIR: %[[PTR_LOAD:.*]] = cir.load align(8) %0 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
-//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att, 
+//      CIR: %[[ASM_RES:.*]] = cir.asm(x86_att,
 // CIR-NEXT:                     out = [],
 // CIR-NEXT:                     in = [%[[PTR_LOAD]] : !cir.ptr<!void>],
 // CIR-NEXT:                     in_out = [],
@@ -893,7 +893,7 @@ void *t33(void *ptr)
 }
 
 //      CIR: %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
-//      CIR: cir.asm(x86_att, 
+//      CIR: cir.asm(x86_att,
 // CIR-NEXT:   out = [],
 // CIR-NEXT:   in = [%[[FOUR]] : !s32i],
 // CIR-NEXT:   in_out = [],

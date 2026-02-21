@@ -120,7 +120,7 @@ inline T cyl_bessel_i_prime_imp(T v, T x, const Policy& pol)
          return static_cast<T>(0.5);
       else if (floor(v) == v || v > 1)
          return 0;
-      else 
+      else
          return boost::math::policies::raise_domain_error<T>(function, "Got x = %1%, but function is indeterminate for this order", x, pol);
    }
    //

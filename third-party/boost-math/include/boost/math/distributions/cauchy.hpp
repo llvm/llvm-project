@@ -190,7 +190,7 @@ template <class RealType, class Policy>
 BOOST_MATH_GPU_ENABLED inline const boost::math::pair<RealType, RealType> range(const cauchy_distribution<RealType, Policy>&)
 { // Range of permissible values for random variable x.
   BOOST_MATH_IF_CONSTEXPR (boost::math::numeric_limits<RealType>::has_infinity)
-  { 
+  {
      return boost::math::pair<RealType, RealType>(-boost::math::numeric_limits<RealType>::infinity(), boost::math::numeric_limits<RealType>::infinity()); // - to + infinity.
   }
   else
@@ -205,7 +205,7 @@ BOOST_MATH_GPU_ENABLED inline const boost::math::pair<RealType, RealType> suppor
 { // Range of supported values for random variable x.
    // This is range where cdf rises from 0 to 1, and outside it, the pdf is zero.
   BOOST_MATH_IF_CONSTEXPR (boost::math::numeric_limits<RealType>::has_infinity)
-  { 
+  {
      return boost::math::pair<RealType, RealType>(-boost::math::numeric_limits<RealType>::infinity(), boost::math::numeric_limits<RealType>::infinity()); // - to + infinity.
   }
   else
@@ -217,7 +217,7 @@ BOOST_MATH_GPU_ENABLED inline const boost::math::pair<RealType, RealType> suppor
 
 template <class RealType, class Policy>
 BOOST_MATH_GPU_ENABLED inline RealType pdf(const cauchy_distribution<RealType, Policy>& dist, const RealType& x)
-{  
+{
    BOOST_MATH_STD_USING  // for ADL of std functions
 
    constexpr auto function = "boost::math::pdf(cauchy<%1%>&, %1%)";

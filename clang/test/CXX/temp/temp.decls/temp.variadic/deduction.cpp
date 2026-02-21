@@ -46,6 +46,6 @@ namespace DeductionWithConversion {
     static const unsigned value = 1;
   };
 
-  int check1[int_values<256, 12, 3>::value == 0? 1 : -1];  
-  int check2[int_values<3, 12, 3>::value == 1? 1 : -1];  
+  int check1[int_values<256, 12, 3>::value == 0? 1 : -1];
+  int check2[int_values<3, 12, 3>::value == 1? 1 : -1];
 }

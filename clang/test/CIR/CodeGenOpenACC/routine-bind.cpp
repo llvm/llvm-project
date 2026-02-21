@@ -124,13 +124,13 @@ void hasLambdas() {
 //
 // These two LOOK weird because the first argument to each of these is the
 // implicit 'this', so they look like they have the lambda mangling (and
-// demanglers don't handle lambdas well).  
+// demanglers don't handle lambdas well).
 // CHECK:  acc.routine @[[LAMBDA1_R_NAME]] func(@_ZZ10hasLambdasvENK3$_0clEifd) bind(@_Z7LAMBDA1PKZ10hasLambdasvE3$_0ifd) seq
 // Manual demangle:
 // Func name: _Z7LAMBDA1 -> LAMBDA1
-// Args: P -> Pointer 
+// Args: P -> Pointer
 //       K -> Const
-//       Z10hasLambdasv-> hasLambdas(void):: 
+//       Z10hasLambdasv-> hasLambdas(void)::
 //       E3$_0 -> anonymous type #0
 //       ifd -> taking args int, float, double.
 // // CHECK:  acc.routine @[[LAMBDA2_R_NAME]] func(@_ZZ10hasLambdasvENK3$_1clEifd) bind(@_Z7LAMBDA2PKZ10hasLambdasvE3$_1ifd) seq

@@ -8,7 +8,7 @@ namespace Foo
     {
     public:
       Baz (int value):m_value(value) {}
-      int Function () 
+      int Function ()
       {
         printf ("%s returning: %d.\n", __FUNCTION__, m_value);
         return m_value + 1;
@@ -21,7 +21,7 @@ namespace Foo
     {
     public:
       Baz2 (int value):m_value(value) {}
-      int Function () 
+      int Function ()
       {
         printf ("%s returning: %d.\n", __FUNCTION__, m_value);
         return m_value + 2;
@@ -43,7 +43,7 @@ class Baz
 {
 public:
     Baz (int value):m_value(value) {}
-    int Function () 
+    int Function ()
     {
         printf ("%s returning: %d.\n", __FUNCTION__, m_value);
         return m_value + 4;
@@ -67,7 +67,7 @@ int main ()
 
   printf ("Yup, got %d from Baz.\n", mine.Function());
   printf ("Yup, got %d from Baz.\n", mine2.Function());
-  printf ("Yup, got %d from Baz.\n", bare_baz.Function());  
+  printf ("Yup, got %d from Baz.\n", bare_baz.Function());
   printf ("And  got %d from Bar.\n", Foo::Bar::Function());
   printf ("And  got %d from ::.\n", ::Function());
 

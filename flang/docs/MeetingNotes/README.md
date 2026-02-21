@@ -16,19 +16,19 @@ This directory combines the notes from the Flang Technical and Community Calls. 
 
 ## Flang Community
 
-* **Websites:**  
-  * **Flang:** [https://flang.llvm.org](https://flang.llvm.org)   
+* **Websites:**
+  * **Flang:** [https://flang.llvm.org](https://flang.llvm.org)
 
-* **Issues:**  
+* **Issues:**
   * Issues for Flang should be reported in GitHub: [https://github.com/llvm/llvm-project/issues](https://github.com/llvm/llvm-project/issues). Please use the "flang" tag for flang-related issues.
 
-* **LLVM mailing lists and Discourse channels:** There are now two communication channels hosted by llvm.org:  
+* **LLVM mailing lists and Discourse channels:** There are now two communication channels hosted by llvm.org:
   * The Flang Discourse channel (used primarily for discussions): [https://discourse.llvm.org/c/subprojects/flang/33](https://discourse.llvm.org/c/subprojects/flang/33)
   * The flang-commits mailing list (used primarily for routine notifications): subscribe at [https://lists.llvm.org/cgi-bin/mailman/listinfo/flang-commits](https://lists.llvm.org/cgi-bin/mailman/listinfo/flang-commits)
 
 * **Slack:** The [flang-compiler.slack.com](http://flang-compiler.slack.com)
-workspace is used for informal real-time communication in the Flang community.  
+workspace is used for informal real-time communication in the Flang community.
 See the [Getting Involved](https://flang.llvm.org/docs/GettingInvolved.html#flang-slack-workspace) page in flang's documentation for instructions on joining the workspace.
 
-* **Flang Development:**  
-  * On GitHub: The source code for Flang is available on [https://github.com/llvm/llvm-project/tree/main/flang](https://github.com/llvm/llvm-project/tree/main/flang). It is recommended to start in the "docs" directory.  
+* **Flang Development:**
+  * On GitHub: The source code for Flang is available on [https://github.com/llvm/llvm-project/tree/main/flang](https://github.com/llvm/llvm-project/tree/main/flang). It is recommended to start in the "docs" directory.

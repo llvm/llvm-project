@@ -23,7 +23,7 @@ namespace boost{ namespace math{ namespace tools{
 
 template <class F, class T>
 BOOST_MATH_GPU_ENABLED boost::math::pair<T, T> brent_find_minima(F f, T min, T max, int bits, boost::math::uintmax_t& max_iter)
-   noexcept(BOOST_MATH_IS_FLOAT(T) 
+   noexcept(BOOST_MATH_IS_FLOAT(T)
    #ifndef BOOST_MATH_HAS_GPU_SUPPORT
    && noexcept(std::declval<F>()(std::declval<T>()))
    #endif

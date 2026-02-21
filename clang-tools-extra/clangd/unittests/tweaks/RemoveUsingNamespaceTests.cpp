@@ -35,9 +35,9 @@ TEST_F(RemoveUsingNamespaceTest, All) {
        R"cpp(
       namespace ns1 { struct vector {}; }
       namespace ns2 { struct map {}; }
-      
+
       using namespace ns2;
-      
+
       int main() {
         ns1::vector v1;
         ns1::vector v2;
@@ -57,7 +57,7 @@ TEST_F(RemoveUsingNamespaceTest, All) {
        R"cpp(
       #define DECLARE(x, y) x y
       namespace ns { struct vector {}; }
-      
+
       int main() {
         DECLARE(ns::vector, v1);
         DECLARE(ns::vector, v2);
@@ -73,7 +73,7 @@ TEST_F(RemoveUsingNamespaceTest, All) {
     )cpp",
        R"cpp(
       namespace aa { namespace bb { struct map {}; }}
-      
+
       int main() {
         aa::bb::map m;
       }
@@ -88,7 +88,7 @@ TEST_F(RemoveUsingNamespaceTest, All) {
     )cpp",
        R"cpp(
       namespace aa { namespace bb { struct map {}; }}
-      
+
       int main() {
         aa::bb::map m;
       }
@@ -102,7 +102,7 @@ TEST_F(RemoveUsingNamespaceTest, All) {
     )cpp",
        R"cpp(
       namespace aa { namespace bb { struct map {}; }}
-      
+
       typedef aa::bb::map map;
       int main() { map M; }
     )cpp"},
@@ -117,7 +117,7 @@ TEST_F(RemoveUsingNamespaceTest, All) {
     )cpp",
        R"cpp(
       namespace aa { namespace bb { struct map {}; }}
-      
+
       using namespace aa;
       int main() {
         aa::bb::map m;
@@ -135,7 +135,7 @@ TEST_F(RemoveUsingNamespaceTest, All) {
        R"cpp(
       namespace aa { namespace bb { struct map {}; }}
       using namespace aa::bb;
-      
+
       int main() {
         map m;
       }
@@ -171,8 +171,8 @@ TEST_F(RemoveUsingNamespaceTest, All) {
        R"cpp(
       namespace a::b { struct Foo {}; }
       using namespace a;
-      
-      
+
+
       int main() { a::b::Foo F;}
     )cpp"},
       {R"cpp(
@@ -185,8 +185,8 @@ TEST_F(RemoveUsingNamespaceTest, All) {
        R"cpp(
       namespace a::b { struct Foo {}; }
       using namespace a;
-      
-      
+
+
       int main() { b::Foo F;}
     )cpp"},
       {// Enumerators.
@@ -207,7 +207,7 @@ TEST_F(RemoveUsingNamespaceTest, All) {
         comma, identifier, numeric
       };
       }
-      
+
       int main() {
         auto x = tokens::comma;
       }
@@ -222,7 +222,7 @@ TEST_F(RemoveUsingNamespaceTest, All) {
     )cpp",
        R"cpp(
       namespace std { inline namespace ns1 { inline namespace ns2 { struct vector {}; }}}
-      
+
       int main() {
         std::vector V;
       }
@@ -244,7 +244,7 @@ TEST_F(RemoveUsingNamespaceTest, All) {
       struct Foo {};
       void operator+(const Foo &, int) {}
       }
-      
+
       int main() {
         ns::Foo foo;
         foo + 10;
@@ -262,7 +262,7 @@ TEST_F(RemoveUsingNamespaceTest, All) {
       namespace ns {
       long double operator "" _w(long double);
       }
-      
+
       int main() { 1.5_w; }
     )cpp"},
       {
@@ -273,7 +273,7 @@ TEST_F(RemoveUsingNamespaceTest, All) {
     )cpp",
           R"cpp(
       namespace a { inline namespace b { void foobar(); } }
-      
+
       int main() { a::b::foobar(); }
     )cpp"}};
   for (auto C : Cases)

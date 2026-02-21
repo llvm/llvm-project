@@ -46,7 +46,7 @@ namespace N5 {
   char &f(char);
 }
 
-namespace N10 { 
+namespace N10 {
   int &f(int);
 }
 

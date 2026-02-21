@@ -429,7 +429,7 @@ namespace boost {
                   return 0;  // TODO: don't know what else to do???
                unsigned index = total_elements - stride;
                BOOST_MATH_ASSERT(domain[index][0] == a_max);
-               while (domain[index][1] < b) 
+               while (domain[index][1] < b)
                   ++index;
                double b0 = domain[index - 1][1];
                double b1 = domain[index][1];

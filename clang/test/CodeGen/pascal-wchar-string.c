@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
           abort ();
         if (wt2[0] != 4)
           abort ();
-        
+
         return 0;
 }
 

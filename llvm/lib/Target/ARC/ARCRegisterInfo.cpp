@@ -219,7 +219,7 @@ bool ARCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   }
   replaceFrameIndex(II, TII, Reg, getFrameRegister(MF), Offset, StackSize,
                     ObjSize, RS, SPAdj);
-  return true;                  
+  return true;
 }
 
 Register ARCRegisterInfo::getFrameRegister(const MachineFunction &MF) const {

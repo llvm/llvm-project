@@ -33,7 +33,7 @@ int foo() {
 int noret() {
 }
 
-// CLEAN:   define dso_local i32 @noret() #0 {   
+// CLEAN:   define dso_local i32 @noret() #0 {
 // NOUNDEF: define dso_local noundef i32 @noret() #0 {
 // CHECK:   %retval = alloca
 // CLEAN:        @__msan_retval_tls

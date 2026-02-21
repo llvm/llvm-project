@@ -70,7 +70,7 @@ union Union4 {
 };
 
 // CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
-struct CountingEnumCaseInsensitivityTest1 { 
+struct CountingEnumCaseInsensitivityTest1 {
   enum {
     node_type_loop,
     node_type_branch,
@@ -81,7 +81,7 @@ struct CountingEnumCaseInsensitivityTest1 {
 };
 
 // CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
-struct CountingEnumCaseInsensitivityTest2 { 
+struct CountingEnumCaseInsensitivityTest2 {
   enum {
     NODE_TYPE_LOOP,
     NODE_TYPE_BRANCH,

@@ -20,7 +20,7 @@ public:
   void setLoc(Loc L) {
     l = L;
   }
-  
+
 };
 class P2 {
 public:
@@ -34,7 +34,7 @@ class Derived: public P1, public P2 {
 int radar13445834(Derived *Builder, Loc l) {
   Builder->setLoc(l);
   return Builder->accessBase();
-  
+
 }
 
 void boundedNumberOfBindings() {

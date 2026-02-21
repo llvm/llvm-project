@@ -277,7 +277,7 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: define dso_local i32 @bar()
 // WINDOWS: call i32 @foo.resolver()
 
-// ITANIUM: define weak_odr ptr @foo.resolver() #[[ATTR_RESOLVER:[0-9]+]] 
+// ITANIUM: define weak_odr ptr @foo.resolver() #[[ATTR_RESOLVER:[0-9]+]]
 // LINUX-SAME: comdat
 // ITANIUM: call void @__cpu_indicator_init()
 // ITANIUM: ret ptr @foo.arch_sandybridge
@@ -303,7 +303,7 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: define dso_local i32 @bar2()
 // WINDOWS: call i32 @foo_inline.resolver()
 
-// ITANIUM: define weak_odr ptr @foo_inline.resolver() #[[ATTR_RESOLVER]] 
+// ITANIUM: define weak_odr ptr @foo_inline.resolver() #[[ATTR_RESOLVER]]
 // LINUX-SAME: comdat
 // ITANIUM: call void @__cpu_indicator_init()
 // ITANIUM: ret ptr @foo_inline.arch_sandybridge
@@ -339,7 +339,7 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: define dso_local void @bar4()
 // WINDOWS: call void @foo_multi.resolver(i32 noundef 1, double noundef 5.{{[0+e]*}})
 
-// ITANIUM: define weak_odr ptr @foo_multi.resolver() #[[ATTR_RESOLVER]] 
+// ITANIUM: define weak_odr ptr @foo_multi.resolver() #[[ATTR_RESOLVER]]
 // LINUX-SAME: comdat
 // ITANIUM: and i32 %{{.*}}, 4352
 // ITANIUM: icmp eq i32 %{{.*}}, 4352
@@ -478,7 +478,7 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: define linkonce_odr dso_local void @pr50025c() #{{[0-9]*}} comdat
 // WINDOWS: call void @pr50025b.resolver()
 
-// ITANIUM: define weak_odr ptr @pr50025b.resolver() #[[ATTR_RESOLVER]] 
+// ITANIUM: define weak_odr ptr @pr50025b.resolver() #[[ATTR_RESOLVER]]
 // LINUX-SAME: comdat
 // ITANIUM: ret ptr @pr50025b
 // ITANIUM: define linkonce void @pr50025b()

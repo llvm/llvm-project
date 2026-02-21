@@ -137,7 +137,7 @@ void positiveTypedefs() {
   MySP p1 = {};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p1' of type 'MySP' (aka 'SmartPointer') can be declared 'const'
   // CHECK-FIXES: MySP const p1 = {};
-  
+
   MySP* p2 = {};
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p2' of type 'MySP *' (aka 'SmartPointer *') can be declared 'const'
   // CHECK-FIXES: MySP* const p2 = {};

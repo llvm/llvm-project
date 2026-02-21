@@ -12,5 +12,5 @@ int overflow_in_memregion(long j) {
 void rdar39593879(long long *d) {
   long e, f;
   e = f = d[1]; // no-crash
-  for (; d[e];) f-- > 0; // expected-warning{{relational comparison result unused}}; 
+  for (; d[e];) f-- > 0; // expected-warning{{relational comparison result unused}};
 }

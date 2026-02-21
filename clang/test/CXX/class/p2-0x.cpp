@@ -10,7 +10,7 @@ namespace Test2 {
 
 template<typename T> struct A final { }; // expected-note 2 {{'A' declared here}}
 struct B : A<int> { }; // expected-error {{base 'A' is marked 'final'}}
-  
+
 template<typename T> struct C : A<T> { }; // expected-error {{base 'A' is marked 'final'}}
 struct D : C<int> { }; // expected-note {{in instantiation of template class 'Test2::C<int>' requested here}}
 

@@ -54,7 +54,7 @@ BOOST_MATH_GPU_ENABLED T lgamma_small_imp(T z, T zm1, T zm2, const boost::math::
    BOOST_MATH_ASSERT(z >= tools::root_epsilon<T>());
    /*
    * Can not be reached:
-   * 
+   *
    if(z < tools::epsilon<T>())
    {
       result = -log(z);
@@ -215,7 +215,7 @@ BOOST_MATH_GPU_ENABLED T lgamma_small_imp(T z, T zm1, T zm2, const boost::math::
          constexpr float Y = 0.452017307281494140625f;
 
          BOOST_MATH_STATIC const T P[] = {
-            static_cast<T>(BOOST_MATH_BIG_CONSTANT(T, 64, -0.292329721830270012337e-1)), 
+            static_cast<T>(BOOST_MATH_BIG_CONSTANT(T, 64, -0.292329721830270012337e-1)),
             static_cast<T>(BOOST_MATH_BIG_CONSTANT(T, 64, 0.144216267757192309184e0)),
             static_cast<T>(BOOST_MATH_BIG_CONSTANT(T, 64, -0.142440390738631274135e0)),
             static_cast<T>(BOOST_MATH_BIG_CONSTANT(T, 64, 0.542809694055053558157e-1)),

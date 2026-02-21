@@ -73,7 +73,7 @@ BOOST_MATH_GPU_ENABLED inline typename Functor::result_type sum_series(Functor& 
 }
 
 template <class Functor>
-BOOST_MATH_GPU_ENABLED inline typename Functor::result_type sum_series(Functor& func, int bits) noexcept(BOOST_MATH_IS_FLOAT(typename Functor::result_type) 
+BOOST_MATH_GPU_ENABLED inline typename Functor::result_type sum_series(Functor& func, int bits) noexcept(BOOST_MATH_IS_FLOAT(typename Functor::result_type)
 #ifndef BOOST_MATH_HAS_GPU_SUPPORT
 && noexcept(std::declval<Functor>()())
 #endif

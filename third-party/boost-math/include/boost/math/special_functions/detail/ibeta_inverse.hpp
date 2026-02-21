@@ -125,7 +125,7 @@ BOOST_MATH_GPU_ENABLED T temme_method_1_ibeta_inverse(T a, T b, T z, const Polic
       x = 0;
    else if (x > 1)
       x = 1;
-   
+
    BOOST_MATH_ASSERT(eta * (x - 0.5) >= 0);
 #ifdef BOOST_INSTRUMENT
    std::cout << "Estimating x with Temme method 1: " << x << std::endl;
@@ -316,7 +316,7 @@ BOOST_MATH_GPU_ENABLED T temme_method_2_ibeta_inverse(T /*a*/, T /*b*/, T z, T r
       // Due to numerical instability we may have cases where no root is found when
       // in fact we should just touch the origin.  We simply ignore the error here
       // and return our best guess for x so far...
-      // Maybe we should special case the symmetrical parameter case, but it's not clear 
+      // Maybe we should special case the symmetrical parameter case, but it's not clear
       // whether that is the only situation when problems can occur.
       // See https://github.com/boostorg/math/issues/1169
    }
@@ -425,7 +425,7 @@ BOOST_MATH_GPU_ENABLED T temme_method_3_ibeta_inverse(T a, T b, T p, T q, const 
 
    // Early exit for cases with numerical precision issues.
    if (cross == 0 || cross == 1) { return cross; }
-   
+
    x = tools::newton_raphson_iterate(
       temme_root_finder<T>(u, mu), x, lower, upper, policies::digits<T, Policy>() / 2);
 #ifdef BOOST_INSTRUMENT
@@ -867,7 +867,7 @@ BOOST_MATH_GPU_ENABLED T ibeta_inv_imp(T a, T b, T p, T q, const Policy& pol, T*
       else if(pow(p, 1/a) < 0.5)
       {
 #ifndef BOOST_MATH_NO_EXCEPTIONS
-         try 
+         try
          {
 #endif
             x = pow(p * a * boost::math::beta(a, b, pol), 1 / a);
@@ -888,7 +888,7 @@ BOOST_MATH_GPU_ENABLED T ibeta_inv_imp(T a, T b, T p, T q, const Policy& pol, T*
       {
          // model a distorted quarter circle:
 #ifndef BOOST_MATH_NO_EXCEPTIONS
-         try 
+         try
          {
 #endif
             y = pow(1 - pow(p, b * boost::math::beta(a, b, pol)), 1/b);

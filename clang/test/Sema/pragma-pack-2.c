@@ -51,7 +51,7 @@ void f(void) {
   #pragma pack(push, 2)
   struct s5_0 {
     char f0;
-    struct s2_4_0 { 
+    struct s2_4_0 {
       int f0;
     } f1;
   };

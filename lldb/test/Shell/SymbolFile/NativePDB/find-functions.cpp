@@ -112,8 +112,8 @@ int varargs_fn(int x, int y, ...) {
 
 int main(int argc, char **argv) {
   return static_fn() + varargs_fn(argc, argc) + s.simple_method() +
-  Struct::static_method() + s.virtual_method() + s.overloaded_method() + 
-  Class::overloaded_method(false) + c.overloaded_method(1) + c.overloaded_method() 
+  Struct::static_method() + s.virtual_method() + s.overloaded_method() +
+  Class::overloaded_method(false) + c.overloaded_method(1) + c.overloaded_method()
   + overloaded_method() + overloaded_method(1);
 }
 

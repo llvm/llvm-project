@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 %s -verify 
+// RUN: %clang_cc1 -std=c++11 %s -verify
 // expected-no-diagnostics
 
 namespace PR13003 {
@@ -13,9 +13,9 @@ namespace PR13003 {
     template <typename... Args>
     void_type2(Args&&...) { }
   };
-  
+
   struct atom { };
-  
+
   void_type v1 = atom();
   void_type2 v2 = atom();
 }

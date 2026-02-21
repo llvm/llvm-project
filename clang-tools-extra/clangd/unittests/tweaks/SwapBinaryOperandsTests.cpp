@@ -70,12 +70,12 @@ TEST_F(SwapBinaryOperandsTest, Test) {
   EXPECT_UNAVAILABLE(R"cpp(
             namespace std {
                 struct strong_ordering {
-                    int val; 
+                    int val;
                     static const strong_ordering less;
                     static const strong_ordering equivalent;
                     static const strong_ordering equal;
                     static const strong_ordering greater;
-                }; 
+                };
                     inline constexpr strong_ordering strong_ordering::less {-1};
                     inline constexpr strong_ordering strong_ordering::equivalent {0};
                     inline constexpr strong_ordering strong_ordering::equal {0};

@@ -20,7 +20,7 @@ namespace MembersTest {
 namespace GlobalsTest {
   int IntVar;
   double DoubleVar;
-  
+
   typedef int Typedef;
   enum Enum {
     Val1

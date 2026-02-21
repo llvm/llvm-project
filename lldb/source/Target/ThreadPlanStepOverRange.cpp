@@ -216,7 +216,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
       // we are in a stub then it's likely going to be hard to get out from
       // here.  It is probably easiest to step into the stub, and then it will
       // be straight-forward to step out.
-      new_plan_sp = thread.QueueThreadPlanForStepThrough(m_stack_id, false, 
+      new_plan_sp = thread.QueueThreadPlanForStepThrough(m_stack_id, false,
                                                          stop_others, m_status);
     } else {
       // The current clang (at least through 424) doesn't always get the

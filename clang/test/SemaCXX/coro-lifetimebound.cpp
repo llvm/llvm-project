@@ -59,7 +59,7 @@ Co<int> bar_coro(const int &b, int c) {
 }
 
 [[clang::coro_wrapper]] Co<int> complex_plain_return(int b) {
-  return b > 0 
+  return b > 0
       ? foo_coro(1)   // expected-warning {{returning address of local temporary object}}
       : bar_coro(0, 1); // expected-warning {{returning address of local temporary object}}
 }
@@ -159,7 +159,7 @@ template <typename T> struct [[clang::coro_lifetimebound]] CoNoCRT {
 };
 
 CoNoCRT<int> foo_coro(const int& a) { co_return a; }
-CoNoCRT<int> bar(int a) { 
+CoNoCRT<int> bar(int a) {
   auto x = foo_coro(a);
   co_return 1;
 }

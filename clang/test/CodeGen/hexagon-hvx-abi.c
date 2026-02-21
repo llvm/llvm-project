@@ -7,7 +7,7 @@ typedef long HVX_VectorPair __attribute__((__vector_size__(2*__HVX_LENGTH__)))
   __attribute__((aligned(__HVX_LENGTH__)));
 
 // CHECK-HVX64: define {{.*}} <16 x i32> @foo(<16 x i32> noundef %a, <32 x i32> noundef %b)
-// CHECK-HVX128: define {{.*}} <32 x i32> @foo(<32 x i32> noundef %a, <64 x i32> noundef %b) 
+// CHECK-HVX128: define {{.*}} <32 x i32> @foo(<32 x i32> noundef %a, <64 x i32> noundef %b)
 HVX_Vector foo(HVX_Vector a, HVX_VectorPair b) {
   return a;
 }

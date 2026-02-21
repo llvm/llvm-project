@@ -6,7 +6,7 @@
 // RUN: -config='{CheckOptions: { \
 // RUN:   readability-qualified-auto.AllowedTypes: "[iI]terator$;my::ns::Ignored1;std::array<.*>::Ignored2;MyIgnoredPtr", \
 // RUN:   readability-qualified-auto.IgnoreAliasing: false \
-// RUN: }}' -check-suffix=ALIAS -- 
+// RUN: }}' -check-suffix=ALIAS --
 
 namespace typedefs {
 typedef int *MyPtr;
@@ -372,7 +372,7 @@ void ignored_types() {
   auto it1 = arr.begin();
   // CHECK-MESSAGES-NOT: warning: 'auto it' can be declared as 'auto *it'
   // CHECK-FIXES-NOT: auto *it = vec.it_begin();
-  
+
   auto it2 = carr.begin();
   // CHECK-MESSAGES-NOT: warning: 'auto it2' can be declared as 'auto *it2'
   // CHECK-FIXES-NOT: auto *it2 = carr.begin();
@@ -449,7 +449,7 @@ void ignored_types_template(std::array<T, 4> arr, const std::array<T, 4>& carr) 
   auto it1 = arr.begin();
   // CHECK-MESSAGES-NOT: warning: 'auto it' can be declared as 'auto *it'
   // CHECK-FIXES-NOT: auto *it = arr.it_begin();
-  
+
   auto it2 = carr.begin();
   // CHECK-MESSAGES-NOT: warning: 'auto it2' can be declared as 'auto *it2'
   // CHECK-FIXES-NOT: auto *it2 = carr.begin();

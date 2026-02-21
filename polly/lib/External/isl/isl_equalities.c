@@ -148,7 +148,7 @@ static __isl_take isl_mat *parameter_compression_1(__isl_keep isl_mat *B,
  * constraints specified by B and d.
  * See also the documentation of isl_mat_parameter_compression.
  * We put the matrix
- * 
+ *
  *		A = [ L_1^{-T} L_2^{-T} ... L_k^{-T} ]
  *
  * on a common denominator.  This denominator D is the lcm of modulos d.

@@ -11,7 +11,7 @@ void f() {
   for (int x(1);;) {}
 }
 
-class Y { 
+class Y {
 public: explicit Y(float);
 };
 
@@ -46,7 +46,7 @@ void g() {
 }
 
 struct Base {
-   operator int*() const; 
+   operator int*() const;
 };
 
 struct Derived : Base {
@@ -55,6 +55,6 @@ struct Derived : Base {
 
 void foo(const Derived cd, Derived d) {
         int *pi = cd;	// expected-error {{no viable conversion from 'const Derived' to 'int *'}}
-        int *ppi = d; 
+        int *ppi = d;
 
 }

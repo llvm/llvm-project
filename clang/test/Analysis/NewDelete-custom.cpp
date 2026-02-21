@@ -14,7 +14,7 @@ void *operator new(std::size_t, double d);
 
 class C {
 public:
-  void *operator new(std::size_t);  
+  void *operator new(std::size_t);
 };
 
 void testNewMethod() {

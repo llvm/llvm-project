@@ -68,7 +68,7 @@ extern "C" void test_s3(Context& Ctx) {
 
 // CHECK-LABEL: test_s3
 // CHECK: [[S3_NEW1:%.*]] = call noundef ptr @_ZN2S3nwIS_EEPvSt13type_identityIT_EmSt11align_val_t({{.*}},{{.*}} 4,{{.*}} 4)
-// CHECK: call void @_ZN2S3dlIS_EEvSt13type_identityIT_EPvmSt11align_val_t({{.*}},{{.*}},{{.*}} 4,{{.*}} 4) 
+// CHECK: call void @_ZN2S3dlIS_EEvSt13type_identityIT_EPvmSt11align_val_t({{.*}},{{.*}},{{.*}} 4,{{.*}} 4)
 // CHECK: [[S3_NEW2:%.*]] = call noundef ptr @_ZN2S3nwIS_EEPvSt13type_identityIT_EmSt11align_val_t({{.*}},{{.*}} 4,{{.*}} 128)
 // CHECK: call void @_ZN2S3dlIS_EEvSt13type_identityIT_EPvmSt11align_val_t({{.*}},{{.*}},{{.*}} 4,{{.*}} 4)
 // CHECK: call void @_ZN2S3dlIS_EEvSt13type_identityIT_EPvmSt11align_val_t({{.*}},{{.*}}[[S3_NEW1]],{{.*}} 4,{{.*}} 4)

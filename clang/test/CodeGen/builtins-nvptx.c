@@ -1005,7 +1005,7 @@ __device__ void nvvm_async_copy(__attribute__((address_space(3))) void* dst, __a
   __nvvm_cp_async_ca_shared_global_16(dst, src, 2);
   // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.cg.shared.global.16.s({{.*}}, i32 2)
   __nvvm_cp_async_cg_shared_global_16(dst, src, 2);
-  
+
   // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.commit.group
   __nvvm_cp_async_commit_group();
   // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.wait.group(i32 0)
@@ -1146,13 +1146,13 @@ __device__ void nvvm_cvt_sm89() {
 __device__ void nvvm_cvt_sm90() {
 #if (PTX >= 78) && (__CUDA_ARCH__ >= 900)
   // CHECK_PTX78_SM90: call i32 @llvm.nvvm.f2tf32.rn(float 1.000000e+00)
-  __nvvm_f2tf32_rn(1.0f); 
+  __nvvm_f2tf32_rn(1.0f);
   // CHECK_PTX78_SM90: call i32 @llvm.nvvm.f2tf32.rn.relu(float 1.000000e+00)
-  __nvvm_f2tf32_rn_relu(1.0f); 
+  __nvvm_f2tf32_rn_relu(1.0f);
   // CHECK_PTX78_SM90: call i32 @llvm.nvvm.f2tf32.rz(float 1.000000e+00)
-  __nvvm_f2tf32_rz(1.0f); 
+  __nvvm_f2tf32_rz(1.0f);
   // CHECK_PTX78_SM90: call i32 @llvm.nvvm.f2tf32.rz.relu(float 1.000000e+00)
-  __nvvm_f2tf32_rz_relu(1.0f); 
+  __nvvm_f2tf32_rz_relu(1.0f);
 #endif
   // CHECK: ret void
 }
@@ -1161,13 +1161,13 @@ __device__ void nvvm_cvt_sm90() {
 __device__ void nvvm_cvt_sm100() {
 #if (PTX >= 86) && (__CUDA_ARCH__ >= 1000)
   // CHECK_PTX86_SM100: call i32 @llvm.nvvm.f2tf32.rn.satfinite(float 1.000000e+00)
-  __nvvm_f2tf32_rn_satfinite(1.0f); 
+  __nvvm_f2tf32_rn_satfinite(1.0f);
   // CHECK_PTX86_SM100: call i32 @llvm.nvvm.f2tf32.rn.relu.satfinite(float 1.000000e+00)
-  __nvvm_f2tf32_rn_relu_satfinite(1.0f); 
+  __nvvm_f2tf32_rn_relu_satfinite(1.0f);
   // CHECK_PTX86_SM100: call i32 @llvm.nvvm.f2tf32.rz.satfinite(float 1.000000e+00)
-  __nvvm_f2tf32_rz_satfinite(1.0f); 
+  __nvvm_f2tf32_rz_satfinite(1.0f);
   // CHECK_PTX86_SM100: call i32 @llvm.nvvm.f2tf32.rz.relu.satfinite(float 1.000000e+00)
-  __nvvm_f2tf32_rz_relu_satfinite(1.0f); 
+  __nvvm_f2tf32_rz_relu_satfinite(1.0f);
 #endif
   // CHECK: ret void
 }
@@ -1226,12 +1226,12 @@ __device__ void nvvm_cvt_sm100a_sm101a_sm120a() {
   // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
   // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
   __nvvm_ff_to_e2m1x2_rn_relu_satfinite(1.0f, 1.0f);
-  
+
   // CHECK_PTX86_SM100a: call <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn(i16 76)
   // CHECK_PTX86_SM101a: call <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn(i16 76)
   // CHECK_PTX86_SM120a: call <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn(i16 76)
   __nvvm_e2m1x2_to_f16x2_rn(0x004C);
-  
+
   // CHECK_PTX86_SM100a: call <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn.relu(i16 76)
   // CHECK_PTX86_SM101a: call <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn.relu(i16 76)
   // CHECK_PTX86_SM120a: call <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn.relu(i16 76)
@@ -1281,14 +1281,14 @@ __device__ void nvvm_cvt_sm100a_sm101a_sm120a() {
   // CHECK_PTX86_SM101a: call <2 x bfloat> @llvm.nvvm.ue8m0x2.to.bf16x2(i16 19532)
   // CHECK_PTX86_SM120a: call <2 x bfloat> @llvm.nvvm.ue8m0x2.to.bf16x2(i16 19532)
   __nvvm_ue8m0x2_to_bf16x2(0x4C4C);
-  
+
 #endif
   // CHECK: ret void
 }
 
 __device__ void nvvm_cvt_sm100a_sm103a() {
 #if (PTX >= 87) && (__CUDA_ARCH_FEAT_SM100_ALL || __CUDA_ARCH_FEAT_SM103_ALL)
-  
+
   typedef __fp16 f16x2 __attribute__((ext_vector_type(2)));
   typedef __bf16 bf16x2 __attribute__((ext_vector_type(2)));
   typedef char uint8x4 __attribute__((ext_vector_type(4)));
@@ -1298,13 +1298,13 @@ __device__ void nvvm_cvt_sm100a_sm103a() {
 // CHECK_PTX87_SM103a: %[[R1:.*]] = call <2 x half> @llvm.nvvm.ff2f16x2.rs(float 1.000000e+00, float 1.000000e+00, i32 0)
 // CHECK_PTX87_SM103a: store <2 x half> %[[R1]], ptr %r1
   f16x2 r1 =  __nvvm_ff2f16x2_rs(1.0f, 1.0f, 0);
-  
+
 // CHECK_PTX87_SM100a: %[[R2:.*]] = call <2 x half> @llvm.nvvm.ff2f16x2.rs.relu(float 1.000000e+00, float 1.000000e+00, i32 0)
 // CHECK_PTX87_SM100a: store <2 x half> %[[R2]], ptr %r2
 // CHECK_PTX87_SM103a: %[[R2:.*]] = call <2 x half> @llvm.nvvm.ff2f16x2.rs.relu(float 1.000000e+00, float 1.000000e+00, i32 0)
 // CHECK_PTX87_SM103a: store <2 x half> %[[R2]], ptr %r2
   f16x2 r2 =  __nvvm_ff2f16x2_rs_relu(1.0f, 1.0f, 0);
-  
+
 // CHECK_PTX87_SM100a: %[[R3:.*]] = call <2 x half> @llvm.nvvm.ff2f16x2.rs.satfinite(float 1.000000e+00, float 1.000000e+00, i32 0)
 // CHECK_PTX87_SM100a: store <2 x half> %[[R3]], ptr %r3
 // CHECK_PTX87_SM103a: %[[R3:.*]] = call <2 x half> @llvm.nvvm.ff2f16x2.rs.satfinite(float 1.000000e+00, float 1.000000e+00, i32 0)
@@ -1369,7 +1369,7 @@ __device__ void nvvm_cvt_sm100a_sm103a() {
 // CHECK_PTX87_SM100a: store <4 x i8> %[[R13]], ptr %r13
 // CHECK_PTX87_SM103a: %[[R13:.*]] = call <4 x i8> @llvm.nvvm.f32x4.to.e2m3x4.rs.satfinite(<4 x float> splat (float 1.000000e+00), i32 0)
 // CHECK_PTX87_SM103a: store <4 x i8> %[[R13]], ptr %r13
-  uint8x4 r13 = __nvvm_f32x4_to_e2m3x4_rs_satfinite({1.0f, 1.0f, 1.0f, 1.0f}, 0);  
+  uint8x4 r13 = __nvvm_f32x4_to_e2m3x4_rs_satfinite({1.0f, 1.0f, 1.0f, 1.0f}, 0);
 
 // CHECK_PTX87_SM100a: %[[R14:.*]] = call <4 x i8> @llvm.nvvm.f32x4.to.e2m3x4.rs.relu.satfinite(<4 x float> splat (float 1.000000e+00), i32 0)
 // CHECK_PTX87_SM100a: store <4 x i8> %[[R14]], ptr %r14
@@ -1607,7 +1607,7 @@ __device__ void nvvm_add_mul_f16_sat() {
   __nvvm_mul_rn_sat_v2f16(F16X2, F16X2_2);
   // CHECK: call <2 x half> @llvm.nvvm.mul.rn.ftz.sat.v2f16
   __nvvm_mul_rn_ftz_sat_v2f16(F16X2, F16X2_2);
-  
+
   // CHECK: ret void
 }
 

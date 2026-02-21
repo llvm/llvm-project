@@ -20,7 +20,7 @@ TEST(Rewriter, OverwritesChangedFiles) {
   Context.Rewrite.ReplaceText(Context.getLocation(ID, 2, 1), 5, "replaced");
   EXPECT_FALSE(Context.Rewrite.overwriteChangedFiles());
   EXPECT_EQ("line1\nreplaced\nline3\nline4",
-            Context.getFileContentFromDisk("t.cpp")); 
+            Context.getFileContentFromDisk("t.cpp"));
 }
 
 TEST(Rewriter, ContinuesOverwritingFilesOnError) {
@@ -33,7 +33,7 @@ TEST(Rewriter, ContinuesOverwritingFilesOnError) {
                               "replaced");
   EXPECT_TRUE(Context.Rewrite.overwriteChangedFiles());
   EXPECT_EQ("line1\nreplaced\nline3\nline4",
-            Context.getFileContentFromDisk("working.cpp")); 
+            Context.getFileContentFromDisk("working.cpp"));
 }
 
 TEST(Rewriter, AdjacentInsertAndDelete) {

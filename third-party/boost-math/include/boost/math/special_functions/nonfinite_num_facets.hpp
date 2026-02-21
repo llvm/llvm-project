@@ -3,7 +3,7 @@
 
 // Copyright 2006 Johan Rade
 // Copyright 2012 K R Walker
-// Copyright 2011, 2012 Paul A. Bristow 
+// Copyright 2011, 2012 Paul A. Bristow
 
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt
@@ -139,7 +139,7 @@ namespace boost {
         case FP_ZERO:
           if((flags_ & signed_zero) && ((boost::math::signbit)(val)))
           { // Flag set to distinguish between positive and negative zero.
-            // But string "0" should have stuff after decimal point if setprecision and/or exp format. 
+            // But string "0" should have stuff after decimal point if setprecision and/or exp format.
 
             std::basic_ostringstream<CharType> zeros; // Needs to be CharType version.
 
@@ -191,7 +191,7 @@ namespace boost {
         }
 
         if(body)
-        { // 
+        { //
           if(adjust == std::ios_base::internal)
           { // Put fill between sign and digits.
             put_fill(it, iosb, fill, width);

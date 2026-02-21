@@ -9,7 +9,7 @@ struct A { int x; };
 #endif
 // expected-note@-5 {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
 
-class Base { 
+class Base {
 public:
   virtual void f();
 };

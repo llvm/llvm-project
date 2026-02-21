@@ -46,7 +46,7 @@ void testit_one(int dnum) {
   // expected-error@+1 {{use of undeclared identifier 'x'}}
   #pragma omp dispatch novariants(x)
   disp_call();
-  
+
   // expected-error@+1 {{expected '(' after 'nocontext'}}
   #pragma omp dispatch nocontext
   disp_call();

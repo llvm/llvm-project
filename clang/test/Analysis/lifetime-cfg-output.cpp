@@ -5,7 +5,7 @@
 // that has a non-trivial destructor. The types with a trivial destructor
 // ends their lifetime when the underlying memory is released, i.e. they
 // are destroyed last, after all objects with non-trivial destructors.
-// Consequently, they are handled differently in code, and we should make 
+// Consequently, they are handled differently in code, and we should make
 // sure that test cover also trivially destructible types.
 
 extern bool UV;

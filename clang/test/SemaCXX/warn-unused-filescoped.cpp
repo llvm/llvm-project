@@ -72,7 +72,7 @@ struct S {
   struct VS {
     virtual void vm() { }
   };
-  
+
   struct SVS : public VS {
     void vm() { }
   };

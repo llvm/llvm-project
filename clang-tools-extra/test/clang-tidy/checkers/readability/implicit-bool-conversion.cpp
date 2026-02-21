@@ -548,7 +548,7 @@ namespace PR71848 {
   }
 }
 
-namespace PR161318 {  
+namespace PR161318 {
   int AddParenOutsideOfCompoundAssignOp() {
     int val = -1;
     while(val >>= 7) {

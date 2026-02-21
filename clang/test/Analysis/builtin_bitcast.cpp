@@ -54,7 +54,7 @@ void gh_69922(size_t p) {
 
 namespace {
   typedef unsigned long uintptr_t;
-  
+
   bool previously_crash(const void *& ptr) {
     clang_analyzer_dump(__builtin_bit_cast(void*, static_cast<uintptr_t>(-1)));
     // expected-warning-re@-1 {{{{[0-9]+}} (Loc)}}

@@ -93,7 +93,7 @@ namespace PR8977 {
 
 // In a base-specifier-list (Clause 10); the pattern is a base-specifier.
 template<typename ...Mixins>
-struct HasMixins : public Mixins... { 
+struct HasMixins : public Mixins... {
   HasMixins();
   HasMixins(const HasMixins&);
   HasMixins(int i);
@@ -169,7 +169,7 @@ struct extract_nested_types {
 };
 
 tuple<int, float> *t_int_float;
-extract_nested_types<identity<int>, identity<float> >::types *t_int_float_2 
+extract_nested_types<identity<int>, identity<float> >::types *t_int_float_2
   = t_int_float;
 
 template<int ...N>
@@ -177,8 +177,8 @@ struct tuple_of_ints {
   typedef tuple<int_c<N>...> type;
 };
 
-int check_temp_arg_1[is_same<tuple_of_ints<1, 2, 3, 4, 5>::type, 
-                             tuple<int_c<1>, int_c<2>, int_c<3>, int_c<4>, 
+int check_temp_arg_1[is_same<tuple_of_ints<1, 2, 3, 4, 5>::type,
+                             tuple<int_c<1>, int_c<2>, int_c<3>, int_c<4>,
                                    int_c<5>>>::value? 1 : -1];
 
 #if __cplusplus < 201703L
@@ -238,7 +238,7 @@ namespace PackExpansionWithinLambda {
 
       //    - in an attribute-list
       // FIXME: We do not support any such attributes yet.
-      
+
       //    - in an alignment-specifier
       alignas(T...) int y;
 

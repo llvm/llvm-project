@@ -8,7 +8,7 @@ struct has_nondeduced_pack_test {
 };
 
 template<typename R, typename FirstType, typename ...Types>
-struct has_nondeduced_pack_test<R(FirstType, Types..., int), 
+struct has_nondeduced_pack_test<R(FirstType, Types..., int),
                                 R(FirstType, Types...)> {
   static const bool value = true;
 };

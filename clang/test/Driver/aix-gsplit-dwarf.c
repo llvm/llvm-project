@@ -1,4 +1,4 @@
-// Verify error message is emitted for `-gsplit-dwarf` on AIX 
+// Verify error message is emitted for `-gsplit-dwarf` on AIX
 // as it's unsupported at the moment.
 
 // RUN: not %clang -target powerpc-ibm-aix -gdwarf-4 -gsplit-dwarf %s 2>&1 \

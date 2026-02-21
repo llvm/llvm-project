@@ -36,9 +36,9 @@ T tmain(T argc, S **argv) {
 
 #pragma omp target
 #pragma omp teams distribute parallel for simd safelen (argc  // expected-note {{to match this '('}} expected-error 2 {{integral constant expression}} expected-note 0+{{constant expression}} expected-error {{expected ')'}}
-  for (int i = ST; i < N; i++) 
+  for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i-ST];
-  
+
 #pragma omp target
 #pragma omp teams distribute parallel for simd safelen (ST // expected-error {{argument to 'safelen' clause must be a strictly positive integer value}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = ST; i < N; i++)
@@ -51,7 +51,7 @@ T tmain(T argc, S **argv) {
 
 #pragma omp target
 #pragma omp teams distribute parallel for simd safelen ((ST > 0) ? 1 + ST : 2)
-  for (int i = ST; i < N; i++) 
+  for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i-ST];
 
 #pragma omp target
@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
 #pragma omp teams distribute parallel for simd safelen (2+2)) // expected-warning {{extra tokens at the end of '#pragma omp teams distribute parallel for simd' are ignored}}
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i-4];
-  
+
 
 #pragma omp target
 #pragma omp teams distribute parallel for simd safelen (foobool(1) > 0 ? 1 : 2) // expected-error {{integral constant expression}} expected-note 0+{{constant expression}}

@@ -82,12 +82,12 @@ void test_compatibility(void) {
     cvt_i("%lli"); // expected-warning{{format specifier 'lli' is incompatible with 'i'}}
     cvt_i("%p"); // expected-warning{{format specifier 'p' is incompatible with 'i'}}
     cvt_hhi("%hhi");
-    cvt_hhi("%hi"); // expected-warning{{format specifier 'hi' is incompatible with 'hhi'}} 
-    cvt_hhi("%i"); // expected-warning{{format specifier 'i' is incompatible with 'hhi'}} 
-    cvt_hhi("%li"); // expected-warning{{format specifier 'li' is incompatible with 'hhi'}} 
+    cvt_hhi("%hi"); // expected-warning{{format specifier 'hi' is incompatible with 'hhi'}}
+    cvt_hhi("%i"); // expected-warning{{format specifier 'i' is incompatible with 'hhi'}}
+    cvt_hhi("%li"); // expected-warning{{format specifier 'li' is incompatible with 'hhi'}}
     cvt_n("%s"); // expected-warning{{format specifier 's' is incompatible with 'n'}}
     cvt_s("%hhn"); // expected-warning{{format specifier 'hhn' is incompatible with 's'}}
-    
+
     cvt_p("%@"); // expected-warning{{invalid conversion specifier '@'}}
     cvt_at("%p"); // expected-warning{{format specifier 'p' is incompatible with '@'}}
 
@@ -109,7 +109,7 @@ void test_too_few_args(void) {
 void cvt_several(const char *c) __attribute__((format_matches(printf, 1, "%f %i %s"))); // expected-note{{comparing with this specifier}}
 
 void test_moving_args_around(void) {
-    cvt_several("%1g %-d %1.5s"); 
+    cvt_several("%1g %-d %1.5s");
 
     cvt_several("%3$s %1$g %2$i");
 
@@ -148,7 +148,7 @@ void test_multiple_format_strings(const char *fmt1, const char *fmt2) {
     test_recv_multiple_format_strings(fmt1, fmt2);
     test_recv_multiple_format_strings("%.5s", fmt2);
     test_recv_multiple_format_strings(fmt1, "%04d");
-    
+
     test_recv_multiple_format_strings("%s", fmt1); // expected-warning{{passing 'printf' format string where 'os_log' format string is expected}}
     test_recv_multiple_format_strings(fmt2, "%d"); // expected-warning{{passing 'os_log' format string where 'printf' format string is expected}}
 
@@ -184,7 +184,7 @@ void test_oslog(void) {
     call_oslog_public("%{private}i");
 }
 
-// MARK: - 
+// MARK: -
 void accept_value(const char *f) __attribute__((format_matches(freebsd_kprintf, 1, "%s%i%i"))); // \
     expected-note 3{{comparing with this specifier}} \
     expected-note 3{{format string is defined here}}

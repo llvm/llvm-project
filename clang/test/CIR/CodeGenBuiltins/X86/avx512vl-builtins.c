@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -target-feature +avx512vl -fclangir -emit-cir -o %t.cir -Wall -Werror -Wsign-conversion 
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -target-feature +avx512vl -fclangir -emit-cir -o %t.cir -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -target-feature +avx512vl -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
@@ -16,7 +16,7 @@ __m128d test_mm_mmask_i64gather_pd(__m128d __v1_old, __mmask8 __mask, __m128i __
 
   // OGCG-LABEL: @test_mm_mmask_i64gather_pd
   // OGCG: @llvm.x86.avx512.mask.gather3div2.df
-  return _mm_mmask_i64gather_pd(__v1_old, __mask, __index, __addr, 2); 
+  return _mm_mmask_i64gather_pd(__v1_old, __mask, __index, __addr, 2);
 }
 
 __m128i test_mm_mmask_i64gather_epi64(__m128i __v1_old, __mmask8 __mask, __m128i __index, void const *__addr) {
@@ -28,7 +28,7 @@ __m128i test_mm_mmask_i64gather_epi64(__m128i __v1_old, __mmask8 __mask, __m128i
 
   // OGCG-LABEL: @test_mm_mmask_i64gather_epi64
   // OGCG: @llvm.x86.avx512.mask.gather3div2.di
-  return _mm_mmask_i64gather_epi64(__v1_old, __mask, __index, __addr, 2); 
+  return _mm_mmask_i64gather_epi64(__v1_old, __mask, __index, __addr, 2);
 }
 
 __m256d test_mm256_mmask_i64gather_pd(__m256d __v1_old, __mmask8 __mask, __m256i __index, void const *__addr) {
@@ -40,7 +40,7 @@ __m256d test_mm256_mmask_i64gather_pd(__m256d __v1_old, __mmask8 __mask, __m256i
 
   // OGCG-LABEL: @test_mm256_mmask_i64gather_pd
   // OGCG: @llvm.x86.avx512.mask.gather3div4.df
-  return _mm256_mmask_i64gather_pd(__v1_old, __mask, __index, __addr, 2); 
+  return _mm256_mmask_i64gather_pd(__v1_old, __mask, __index, __addr, 2);
 }
 
 __m256i test_mm256_mmask_i64gather_epi64(__m256i __v1_old, __mmask8 __mask, __m256i __index, void const *__addr) {
@@ -52,7 +52,7 @@ __m256i test_mm256_mmask_i64gather_epi64(__m256i __v1_old, __mmask8 __mask, __m2
 
   // OGCG-LABEL: @test_mm256_mmask_i64gather_epi64
   // OGCG: @llvm.x86.avx512.mask.gather3div4.di
-  return _mm256_mmask_i64gather_epi64(__v1_old, __mask, __index, __addr, 2); 
+  return _mm256_mmask_i64gather_epi64(__v1_old, __mask, __index, __addr, 2);
 }
 
 __m128 test_mm_mmask_i64gather_ps(__m128 __v1_old, __mmask8 __mask, __m128i __index, void const *__addr) {
@@ -64,7 +64,7 @@ __m128 test_mm_mmask_i64gather_ps(__m128 __v1_old, __mmask8 __mask, __m128i __in
 
   // OGCG-LABEL: @test_mm_mmask_i64gather_ps
   // OGCG: @llvm.x86.avx512.mask.gather3div4.sf
-  return _mm_mmask_i64gather_ps(__v1_old, __mask, __index, __addr, 2); 
+  return _mm_mmask_i64gather_ps(__v1_old, __mask, __index, __addr, 2);
 }
 
 __m128i test_mm_mmask_i64gather_epi32(__m128i __v1_old, __mmask8 __mask, __m128i __index, void const *__addr) {
@@ -76,7 +76,7 @@ __m128i test_mm_mmask_i64gather_epi32(__m128i __v1_old, __mmask8 __mask, __m128i
 
   // OGCG-LABEL: @test_mm_mmask_i64gather_epi32
   // OGCG: @llvm.x86.avx512.mask.gather3div4.si
-  return _mm_mmask_i64gather_epi32(__v1_old, __mask, __index, __addr, 2); 
+  return _mm_mmask_i64gather_epi32(__v1_old, __mask, __index, __addr, 2);
 }
 
 __m128 test_mm256_mmask_i64gather_ps(__m128 __v1_old, __mmask8 __mask, __m256i __index, void const *__addr) {
@@ -88,7 +88,7 @@ __m128 test_mm256_mmask_i64gather_ps(__m128 __v1_old, __mmask8 __mask, __m256i _
 
   // OGCG-LABEL: @test_mm256_mmask_i64gather_ps
   // OGCG: @llvm.x86.avx512.mask.gather3div8.sf
-  return _mm256_mmask_i64gather_ps(__v1_old, __mask, __index, __addr, 2); 
+  return _mm256_mmask_i64gather_ps(__v1_old, __mask, __index, __addr, 2);
 }
 
 __m128i test_mm256_mmask_i64gather_epi32(__m128i __v1_old, __mmask8 __mask, __m256i __index, void const *__addr) {
@@ -100,7 +100,7 @@ __m128i test_mm256_mmask_i64gather_epi32(__m128i __v1_old, __mmask8 __mask, __m2
 
   // OGCG-LABEL: @test_mm256_mmask_i64gather_epi32
   // OGCG: @llvm.x86.avx512.mask.gather3div8.si
-  return _mm256_mmask_i64gather_epi32(__v1_old, __mask, __index, __addr, 2); 
+  return _mm256_mmask_i64gather_epi32(__v1_old, __mask, __index, __addr, 2);
 }
 
 __m128d test_mm_mask_i32gather_pd(__m128d __v1_old, __mmask8 __mask, __m128i __index, void const *__addr) {
@@ -112,7 +112,7 @@ __m128d test_mm_mask_i32gather_pd(__m128d __v1_old, __mmask8 __mask, __m128i __i
 
   // OGCG-LABEL: @test_mm_mask_i32gather_pd
   // OGCG: @llvm.x86.avx512.mask.gather3siv2.df
-  return _mm_mmask_i32gather_pd(__v1_old, __mask, __index, __addr, 2); 
+  return _mm_mmask_i32gather_pd(__v1_old, __mask, __index, __addr, 2);
 }
 
 __m128i test_mm_mask_i32gather_epi64(__m128i __v1_old, __mmask8 __mask, __m128i __index, void const *__addr) {
@@ -124,7 +124,7 @@ __m128i test_mm_mask_i32gather_epi64(__m128i __v1_old, __mmask8 __mask, __m128i 
 
   // OGCG-LABEL: @test_mm_mask_i32gather_epi64
   // OGCG: @llvm.x86.avx512.mask.gather3siv2.di
-  return _mm_mmask_i32gather_epi64(__v1_old, __mask, __index, __addr, 2); 
+  return _mm_mmask_i32gather_epi64(__v1_old, __mask, __index, __addr, 2);
 }
 
 __m256d test_mm256_mask_i32gather_pd(__m256d __v1_old, __mmask8 __mask, __m128i __index, void const *__addr) {
@@ -136,7 +136,7 @@ __m256d test_mm256_mask_i32gather_pd(__m256d __v1_old, __mmask8 __mask, __m128i 
 
   // OGCG-LABEL: @test_mm256_mask_i32gather_pd
   // OGCG: @llvm.x86.avx512.mask.gather3siv4.df
-  return _mm256_mmask_i32gather_pd(__v1_old, __mask, __index, __addr, 2); 
+  return _mm256_mmask_i32gather_pd(__v1_old, __mask, __index, __addr, 2);
 }
 
 __m256i test_mm256_mask_i32gather_epi64(__m256i __v1_old, __mmask8 __mask, __m128i __index, void const *__addr) {
@@ -148,7 +148,7 @@ __m256i test_mm256_mask_i32gather_epi64(__m256i __v1_old, __mmask8 __mask, __m12
 
   // OGCG-LABEL: @test_mm256_mask_i32gather_epi64
   // OGCG: @llvm.x86.avx512.mask.gather3siv4.di
-  return _mm256_mmask_i32gather_epi64(__v1_old, __mask, __index, __addr, 2); 
+  return _mm256_mmask_i32gather_epi64(__v1_old, __mask, __index, __addr, 2);
 }
 
 __m128 test_mm_mask_i32gather_ps(__m128 __v1_old, __mmask8 __mask, __m128i __index, void const *__addr) {
@@ -160,7 +160,7 @@ __m128 test_mm_mask_i32gather_ps(__m128 __v1_old, __mmask8 __mask, __m128i __ind
 
   // OGCG-LABEL: @test_mm_mask_i32gather_ps
   // OGCG: @llvm.x86.avx512.mask.gather3siv4.sf
-  return _mm_mmask_i32gather_ps(__v1_old, __mask, __index, __addr, 2); 
+  return _mm_mmask_i32gather_ps(__v1_old, __mask, __index, __addr, 2);
 }
 
 __m128i test_mm_mask_i32gather_epi32(__m128i __v1_old, __mmask8 __mask, __m128i __index, void const *__addr) {
@@ -172,7 +172,7 @@ __m128i test_mm_mask_i32gather_epi32(__m128i __v1_old, __mmask8 __mask, __m128i 
 
   // OGCG-LABEL: @test_mm_mask_i32gather_epi32
   // OGCG: @llvm.x86.avx512.mask.gather3siv4.si
-  return _mm_mmask_i32gather_epi32(__v1_old, __mask, __index, __addr, 2); 
+  return _mm_mmask_i32gather_epi32(__v1_old, __mask, __index, __addr, 2);
 }
 
 __m256 test_mm256_mask_i32gather_ps(__m256 __v1_old, __mmask8 __mask, __m256i __index, void const *__addr) {
@@ -184,7 +184,7 @@ __m256 test_mm256_mask_i32gather_ps(__m256 __v1_old, __mmask8 __mask, __m256i __
 
   // OGCG-LABEL: @test_mm256_mask_i32gather_ps
   // OGCG: @llvm.x86.avx512.mask.gather3siv8.sf
-  return _mm256_mmask_i32gather_ps(__v1_old, __mask, __index, __addr, 2); 
+  return _mm256_mmask_i32gather_ps(__v1_old, __mask, __index, __addr, 2);
 }
 
 __m256i test_mm256_mask_i32gather_epi32(__m256i __v1_old, __mmask8 __mask, __m256i __index, void const *__addr) {
@@ -196,7 +196,7 @@ __m256i test_mm256_mask_i32gather_epi32(__m256i __v1_old, __mmask8 __mask, __m25
 
   // OGCG-LABEL: @test_mm256_mask_i32gather_epi32
   // OGCG: @llvm.x86.avx512.mask.gather3siv8.si
-  return _mm256_mmask_i32gather_epi32(__v1_old, __mask, __index, __addr, 2); 
+  return _mm256_mmask_i32gather_epi32(__v1_old, __mask, __index, __addr, 2);
 }
 
 __m128i test_mm_ror_epi32(__m128i __A) {
@@ -367,7 +367,7 @@ __m256i test_mm256_shuffle_i64x2(__m256i a, __m256i b) {
 __m128 test_mm_mask_loadu_ps(__m128 __W, __mmask8 __U, void const *__P) {
   // CIR-LABEL: _mm_mask_loadu_ps
   // CIR: cir.vec.masked_load align(1) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>, <4 x !cir.int<s, 1>>, <4 x !cir.float> -> !cir.vector<4 x !cir.float>
-                                                           
+
   // LLVM-LABEL: test_mm_mask_loadu_ps
   // LLVM: [[MASK4:%.*]] = shufflevector <8 x i1> %{{.+}}, <8 x i1> %{{.+}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // LLVM: call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 %{{.+}}, <4 x i1> [[MASK4]], <4 x float> %{{.+}})
@@ -389,7 +389,7 @@ __m128 test_mm_maskz_loadu_ps(__mmask8 __U, void const *__P) {
   // OGCG-LABEL: test_mm_maskz_loadu_ps
   // OGCG: [[MASK4:%.*]] = shufflevector <8 x i1> %{{.+}}, <8 x i1> %{{.+}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // OGCG: call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 %{{.+}}, <4 x i1> [[MASK4]], <4 x float> %{{.+}})
-  return _mm_maskz_loadu_ps(__U, __P); 
+  return _mm_maskz_loadu_ps(__U, __P);
 }
 
 __m256 test_mm256_mask_loadu_ps(__m256 __W, __mmask8 __U, void const *__P) {
@@ -401,7 +401,7 @@ __m256 test_mm256_mask_loadu_ps(__m256 __W, __mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm256_mask_loadu_ps
   // OGCG: @llvm.masked.load.v8f32.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x float> %{{.*}})
-  return _mm256_mask_loadu_ps(__W, __U, __P); 
+  return _mm256_mask_loadu_ps(__W, __U, __P);
 }
 
 __m256 test_mm256_maskz_loadu_ps(__mmask8 __U, void const *__P) {
@@ -413,19 +413,19 @@ __m256 test_mm256_maskz_loadu_ps(__mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm256_maskz_loadu_ps
   // OGCG: @llvm.masked.load.v8f32.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x float> %{{.*}})
-  return _mm256_maskz_loadu_ps(__U, __P); 
+  return _mm256_maskz_loadu_ps(__U, __P);
 }
 
 __m256d test_mm256_mask_loadu_pd(__m256d __W, __mmask8 __U, void const *__P) {
   // CIR-LABEL: _mm256_mask_loadu_pd
   // CIR: cir.vec.masked_load align(1) %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.vector<4 x !cir.double>>, <4 x !cir.int<s, 1>>, <4 x !cir.double> -> !cir.vector<4 x !cir.double>
-  
+
   // LLVM-LABEL: @test_mm256_mask_loadu_pd
   // LLVM: @llvm.masked.load.v4f64.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x double> %{{.*}})
 
   // OGCG-LABEL: @test_mm256_mask_loadu_pd
   // OGCG: @llvm.masked.load.v4f64.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x double> %{{.*}})
-  return _mm256_mask_loadu_pd(__W, __U, __P); 
+  return _mm256_mask_loadu_pd(__W, __U, __P);
 }
 
 __m128i test_mm_mask_loadu_epi32(__m128i __W, __mmask8 __U, void const *__P) {
@@ -437,7 +437,7 @@ __m128i test_mm_mask_loadu_epi32(__m128i __W, __mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm_mask_loadu_epi32
   // OGCG: @llvm.masked.load.v4i32.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x i32> %{{.*}})
-  return _mm_mask_loadu_epi32(__W, __U, __P); 
+  return _mm_mask_loadu_epi32(__W, __U, __P);
 }
 
 __m256i test_mm256_mask_loadu_epi32(__m256i __W, __mmask8 __U, void const *__P) {
@@ -449,7 +449,7 @@ __m256i test_mm256_mask_loadu_epi32(__m256i __W, __mmask8 __U, void const *__P) 
 
   // OGCG-LABEL: @test_mm256_mask_loadu_epi32
   // OGCG: @llvm.masked.load.v8i32.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x i32> %{{.*}})
-  return _mm256_mask_loadu_epi32(__W, __U, __P); 
+  return _mm256_mask_loadu_epi32(__W, __U, __P);
 }
 
 __m128i test_mm_mask_loadu_epi64(__m128i __W, __mmask8 __U, void const *__P) {
@@ -461,7 +461,7 @@ __m128i test_mm_mask_loadu_epi64(__m128i __W, __mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm_mask_loadu_epi64
   // OGCG: @llvm.masked.load.v2i64.p0(ptr align 1 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})
-  return _mm_mask_loadu_epi64(__W, __U, __P); 
+  return _mm_mask_loadu_epi64(__W, __U, __P);
 }
 
 __m256i test_mm256_mask_loadu_epi64(__m256i __W, __mmask8 __U, void const *__P) {
@@ -473,7 +473,7 @@ __m256i test_mm256_mask_loadu_epi64(__m256i __W, __mmask8 __U, void const *__P) 
 
   // OGCG-LABEL: @test_mm256_mask_loadu_epi64
   // OGCG: @llvm.masked.load.v4i64.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x i64> %{{.*}})
-  return _mm256_mask_loadu_epi64(__W, __U, __P); 
+  return _mm256_mask_loadu_epi64(__W, __U, __P);
 }
 
 __m256i test_mm256_maskz_loadu_epi64(__mmask8 __U, void const *__P) {
@@ -485,7 +485,7 @@ __m256i test_mm256_maskz_loadu_epi64(__mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm256_maskz_loadu_epi64
   // OGCG: @llvm.masked.load.v4i64.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x i64> %{{.*}})
-  return _mm256_maskz_loadu_epi64(__U, __P); 
+  return _mm256_maskz_loadu_epi64(__U, __P);
 }
 
 __m128 test_mm_mask_load_ps(__m128 __W, __mmask8 __U, void const *__P) {
@@ -497,7 +497,7 @@ __m128 test_mm_mask_load_ps(__m128 __W, __mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm_mask_load_ps
   // OGCG: @llvm.masked.load.v4f32.p0(ptr align 16 %{{.*}}, <4 x i1> %{{.*}}, <4 x float> %{{.*}})
-  return _mm_mask_load_ps(__W, __U, __P); 
+  return _mm_mask_load_ps(__W, __U, __P);
 }
 
 __m128 test_mm_maskz_load_ps(__mmask8 __U, void const *__P) {
@@ -509,7 +509,7 @@ __m128 test_mm_maskz_load_ps(__mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm_maskz_load_ps
   // OGCG: @llvm.masked.load.v4f32.p0(ptr align 16 %{{.*}}, <4 x i1> %{{.*}}, <4 x float> %{{.*}})
-  return _mm_maskz_load_ps(__U, __P); 
+  return _mm_maskz_load_ps(__U, __P);
 }
 
 __m256 test_mm256_mask_load_ps(__m256 __W, __mmask8 __U, void const *__P) {
@@ -521,7 +521,7 @@ __m256 test_mm256_mask_load_ps(__m256 __W, __mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm256_mask_load_ps
   // OGCG: @llvm.masked.load.v8f32.p0(ptr align 32 %{{.*}}, <8 x i1> %{{.*}}, <8 x float> %{{.*}})
-  return _mm256_mask_load_ps(__W, __U, __P); 
+  return _mm256_mask_load_ps(__W, __U, __P);
 }
 
 __m256 test_mm256_maskz_load_ps(__mmask8 __U, void const *__P) {
@@ -533,7 +533,7 @@ __m256 test_mm256_maskz_load_ps(__mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm256_maskz_load_ps
   // OGCG: @llvm.masked.load.v8f32.p0(ptr align 32 %{{.*}}, <8 x i1> %{{.*}}, <8 x float> %{{.*}})
-  return _mm256_maskz_load_ps(__U, __P); 
+  return _mm256_maskz_load_ps(__U, __P);
 }
 
 __m128d test_mm_mask_load_pd(__m128d __W, __mmask8 __U, void const *__P) {
@@ -545,7 +545,7 @@ __m128d test_mm_mask_load_pd(__m128d __W, __mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm_mask_load_pd
   // OGCG: @llvm.masked.load.v2f64.p0(ptr align 16 %{{.*}}, <2 x i1> %{{.*}}, <2 x double> %{{.*}})
-  return _mm_mask_load_pd(__W, __U, __P); 
+  return _mm_mask_load_pd(__W, __U, __P);
 }
 
 __m128d test_mm_maskz_load_pd(__mmask8 __U, void const *__P) {
@@ -557,7 +557,7 @@ __m128d test_mm_maskz_load_pd(__mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm_maskz_load_pd
   // OGCG: @llvm.masked.load.v2f64.p0(ptr align 16 %{{.*}}, <2 x i1> %{{.*}}, <2 x double> %{{.*}})
-  return _mm_maskz_load_pd(__U, __P); 
+  return _mm_maskz_load_pd(__U, __P);
 }
 
 __m128d test_mm_maskz_loadu_pd(__mmask8 __U, void const *__P) {
@@ -569,7 +569,7 @@ __m128d test_mm_maskz_loadu_pd(__mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm_maskz_loadu_pd
   // OGCG: @llvm.masked.load.v2f64.p0(ptr align 1 %{{.*}}, <2 x i1> %{{.*}}, <2 x double> %{{.*}})
-  return _mm_maskz_loadu_pd(__U, __P); 
+  return _mm_maskz_loadu_pd(__U, __P);
 }
 
 __m256d test_mm256_mask_load_pd(__m256d __W, __mmask8 __U, void const *__P) {
@@ -581,7 +581,7 @@ __m256d test_mm256_mask_load_pd(__m256d __W, __mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm256_mask_load_pd
   // OGCG: @llvm.masked.load.v4f64.p0(ptr align 32 %{{.*}}, <4 x i1> %{{.*}}, <4 x double> %{{.*}})
-  return _mm256_mask_load_pd(__W, __U, __P); 
+  return _mm256_mask_load_pd(__W, __U, __P);
 }
 
 __m256d test_mm256_maskz_load_pd(__mmask8 __U, void const *__P) {
@@ -593,7 +593,7 @@ __m256d test_mm256_maskz_load_pd(__mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm256_maskz_load_pd
   // OGCG: @llvm.masked.load.v4f64.p0(ptr align 32 %{{.*}}, <4 x i1> %{{.*}}, <4 x double> %{{.*}})
-  return _mm256_maskz_load_pd(__U, __P); 
+  return _mm256_maskz_load_pd(__U, __P);
 }
 
 __m256d test_mm256_maskz_loadu_pd(__mmask8 __U, void const *__P) {
@@ -605,7 +605,7 @@ __m256d test_mm256_maskz_loadu_pd(__mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm256_maskz_loadu_pd
   // OGCG: @llvm.masked.load.v4f64.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x double> %{{.*}})
-  return _mm256_maskz_loadu_pd(__U, __P); 
+  return _mm256_maskz_loadu_pd(__U, __P);
 }
 
 __m128i test_mm_mask_load_epi32(__m128i __W, __mmask8 __U, void const *__P) {
@@ -617,7 +617,7 @@ __m128i test_mm_mask_load_epi32(__m128i __W, __mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm_mask_load_epi32
   // OGCG: @llvm.masked.load.v4i32.p0(ptr align 16 %{{.*}}, <4 x i1> %{{.*}}, <4 x i32> %{{.*}})
-  return _mm_mask_load_epi32(__W, __U, __P); 
+  return _mm_mask_load_epi32(__W, __U, __P);
 }
 
 __m128i test_mm_maskz_load_epi32(__mmask8 __U, void const *__P) {
@@ -629,7 +629,7 @@ __m128i test_mm_maskz_load_epi32(__mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm_maskz_load_epi32
   // OGCG: @llvm.masked.load.v4i32.p0(ptr align 16 %{{.*}}, <4 x i1> %{{.*}}, <4 x i32> %{{.*}})
-  return _mm_maskz_load_epi32(__U, __P); 
+  return _mm_maskz_load_epi32(__U, __P);
 }
 
 __m128i test_mm_maskz_loadu_epi32(__mmask8 __U, void const *__P) {
@@ -641,7 +641,7 @@ __m128i test_mm_maskz_loadu_epi32(__mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm_maskz_loadu_epi32
   // OGCG: @llvm.masked.load.v4i32.p0(ptr align 1 %{{.*}}, <4 x i1> %{{.*}}, <4 x i32> %{{.*}})
-  return _mm_maskz_loadu_epi32(__U, __P); 
+  return _mm_maskz_loadu_epi32(__U, __P);
 }
 
 __m256i test_mm256_maskz_load_epi32(__mmask8 __U, void const *__P) {
@@ -653,7 +653,7 @@ __m256i test_mm256_maskz_load_epi32(__mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm256_maskz_load_epi32
   // OGCG: @llvm.masked.load.v8i32.p0(ptr align 32 %{{.*}}, <8 x i1> %{{.*}}, <8 x i32> %{{.*}})
-  return _mm256_maskz_load_epi32(__U, __P); 
+  return _mm256_maskz_load_epi32(__U, __P);
 }
 
 __m256i test_mm256_maskz_loadu_epi32(__mmask8 __U, void const *__P) {
@@ -665,7 +665,7 @@ __m256i test_mm256_maskz_loadu_epi32(__mmask8 __U, void const *__P) {
 
   // OGCG-LABEL: @test_mm256_maskz_loadu_epi32
   // OGCG: @llvm.masked.load.v8i32.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x i32> %{{.*}})
-  return _mm256_maskz_loadu_epi32(__U, __P); 
+  return _mm256_maskz_loadu_epi32(__U, __P);
 }
 
 __m128i test_mm_mask_load_epi64(__m128i __W, __mmask8 __U, void const *__P) {
@@ -676,8 +676,8 @@ __m128i test_mm_mask_load_epi64(__m128i __W, __mmask8 __U, void const *__P) {
   // LLVM: @llvm.masked.load.v2i64.p0(ptr align 16 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})
 
   // OGCG-LABEL: @test_mm_mask_load_epi64
-  // OGCG: @llvm.masked.load.v2i64.p0(ptr align 16 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})  
-  return _mm_mask_load_epi64(__W, __U, __P); 
+  // OGCG: @llvm.masked.load.v2i64.p0(ptr align 16 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})
+  return _mm_mask_load_epi64(__W, __U, __P);
 }
 
 __m128i test_mm_maskz_loadu_epi64(__mmask8 __U, void const *__P) {
@@ -688,8 +688,8 @@ __m128i test_mm_maskz_loadu_epi64(__mmask8 __U, void const *__P) {
   // LLVM: @llvm.masked.load.v2i64.p0(ptr align 1 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})
 
   // OGCG-LABEL: @test_mm_maskz_loadu_epi64
-  // OGCG: @llvm.masked.load.v2i64.p0(ptr align 1 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})  
-  return _mm_maskz_loadu_epi64(__U, __P); 
+  // OGCG: @llvm.masked.load.v2i64.p0(ptr align 1 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})
+  return _mm_maskz_loadu_epi64(__U, __P);
 }
 
 __m128i test_mm_maskz_load_epi64(__mmask8 __U, void const *__P) {
@@ -700,8 +700,8 @@ __m128i test_mm_maskz_load_epi64(__mmask8 __U, void const *__P) {
   // LLVM: @llvm.masked.load.v2i64.p0(ptr align 16 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})
 
   // OGCG-LABEL: @test_mm_maskz_load_epi64
-  // OGCG: @llvm.masked.load.v2i64.p0(ptr align 16 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})  
-  return _mm_maskz_load_epi64(__U, __P); 
+  // OGCG: @llvm.masked.load.v2i64.p0(ptr align 16 %{{.*}}, <2 x i1> %{{.*}}, <2 x i64> %{{.*}})
+  return _mm_maskz_load_epi64(__U, __P);
 }
 
 __m256i test_mm256_mask_load_epi64(__m256i __W, __mmask8 __U, void const *__P) {
@@ -712,8 +712,8 @@ __m256i test_mm256_mask_load_epi64(__m256i __W, __mmask8 __U, void const *__P) {
   // LLVM: @llvm.masked.load.v4i64.p0(ptr align 32 %{{.*}}, <4 x i1> %{{.*}}, <4 x i64> %{{.*}})
 
   // OGCG-LABEL: @test_mm256_mask_load_epi64
-  // OGCG: @llvm.masked.load.v4i64.p0(ptr align 32 %{{.*}}, <4 x i1> %{{.*}}, <4 x i64> %{{.*}}) 
-  return _mm256_mask_load_epi64(__W, __U, __P); 
+  // OGCG: @llvm.masked.load.v4i64.p0(ptr align 32 %{{.*}}, <4 x i1> %{{.*}}, <4 x i64> %{{.*}})
+  return _mm256_mask_load_epi64(__W, __U, __P);
 }
 
 __m256i test_mm256_maskz_load_epi64(__mmask8 __U, void const *__P) {
@@ -724,6 +724,6 @@ __m256i test_mm256_maskz_load_epi64(__mmask8 __U, void const *__P) {
   // LLVM: @llvm.masked.load.v4i64.p0(ptr align 32 %{{.*}}, <4 x i1> %{{.*}}, <4 x i64> %{{.*}})
 
   // OGCG-LABEL: @test_mm256_maskz_load_epi64
-  // OGCG: @llvm.masked.load.v4i64.p0(ptr align 32 %{{.*}}, <4 x i1> %{{.*}}, <4 x i64> %{{.*}})  
-  return _mm256_maskz_load_epi64(__U, __P); 
+  // OGCG: @llvm.masked.load.v4i64.p0(ptr align 32 %{{.*}}, <4 x i1> %{{.*}}, <4 x i64> %{{.*}})
+  return _mm256_maskz_load_epi64(__U, __P);
 }

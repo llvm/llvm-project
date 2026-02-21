@@ -65,7 +65,7 @@ void foo() {
 
   Obj.fp = T_func<Cls1>;
   Cls1 Cls1Obj;
-  
+
   // CST: call noundef ptr %{{.*}}, !callee_type [[F_TFUNC_CLS1_CT:![0-9]+]]
   Obj.fp(Cls1Obj, &Cls1Obj, &Cls1Obj, Cls1Obj, Cls1Obj);
 

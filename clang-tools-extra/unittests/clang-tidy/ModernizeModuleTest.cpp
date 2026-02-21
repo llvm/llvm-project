@@ -248,7 +248,7 @@ static const MatchParam MatchParams[] = {
 
 TEST_P(MatcherTest, MatchResult) {
   const MatchParam &Param = GetParam();
- 
+
   EXPECT_TRUE(matchText(Param.Text, Param.AllowComma) == Param.Matched);
 }
 

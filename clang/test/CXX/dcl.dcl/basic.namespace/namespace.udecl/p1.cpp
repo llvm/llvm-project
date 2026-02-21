@@ -36,7 +36,7 @@ namespace Test0 {
 
     void test2() {
       class ::foo a;
-      
+
       // Argument-dependent lookup is ambiguous between B:: and ::.
       test<0> _0 = foo(a); // expected-error {{call to 'foo' is ambiguous}}
 

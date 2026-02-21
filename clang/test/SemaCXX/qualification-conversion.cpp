@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -fsyntax-only -pedantic -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -pedantic -verify %s
 int* quals1(int const * p);
 int* quals2(int const * const * pp);
 int* quals3(int const * * const * ppp); // expected-note{{candidate function}}
 
 void test_quals(int * p, int * * pp, int * * * ppp) {
-  int const * const * pp2 = pp; 
+  int const * const * pp2 = pp;
   quals1(p);
   quals2(pp);
   quals3(ppp); // expected-error {{no matching}}

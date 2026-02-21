@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++98 -Wno-c++11-extensions -Wc++11-compat 
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++98 -Wno-c++11-extensions -Wc++11-compat
 void f() {
   auto a = a; // expected-error{{variable 'a' declared with deduced type 'auto' cannot appear in its own initializer}}
   auto *b = b; // expected-error{{variable 'b' declared with deduced type 'auto *' cannot appear in its own initializer}}
@@ -10,7 +10,7 @@ void f() {
 
 void g() {
   auto a; // expected-error{{declaration of variable 'a' with deduced type 'auto' requires an initializer}}
-  
+
   auto *b; // expected-error{{declaration of variable 'b' with deduced type 'auto *' requires an initializer}}
 
   if (auto b) {} // expected-error {{must have an initializer}}

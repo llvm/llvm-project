@@ -16,9 +16,9 @@
 // RUN:   | FileCheck --check-prefixes=CHECK-AS32,CHECK-AS32-CC1 %s
 // CHECK-AS32-NOT: warning:
 // CHECK-AS32-CC1: "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
-// CHECK-AS32: "{{.*}}as{{(.exe)?}}" 
-// CHECK-AS32: "-a32" 
-// CHECK-AS32: "-many" 
+// CHECK-AS32: "{{.*}}as{{(.exe)?}}"
+// CHECK-AS32: "-a32"
+// CHECK-AS32: "-many"
 
 // Check powerpc64-ibm-aix7.1.0.0, system assembler is used for assembly files, 64-bit.
 // RUN: %clang -x assembler %s -### -c -fintegrated-as 2>&1 \
@@ -35,19 +35,19 @@
 // RUN:   | FileCheck --check-prefixes=CHECK-AS64,CHECK-AS64-CC1 %s
 // CHECK-AS64-NOT: warning:
 // CHECK-AS64-CC1: "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
-// CHECK-AS64: "{{.*}}as{{(.exe)?}}" 
-// CHECK-AS64: "-a64" 
+// CHECK-AS64: "{{.*}}as{{(.exe)?}}"
+// CHECK-AS64: "-a64"
 // CHECK-AS64: "-many"
 
-// Check powerpc-ibm-aix7.1.0.0, 32-bit. -Xassembler <arg> option. 
+// Check powerpc-ibm-aix7.1.0.0, 32-bit. -Xassembler <arg> option.
 // RUN: %clang %s -### -c -fno-integrated-as 2>&1 \
 // RUN:         -Xassembler -w \
 // RUN:         --target=powerpc-ibm-aix7.1.0.0 \
 // RUN:   | FileCheck --check-prefix=CHECK-AS32-Xassembler %s
 // CHECK-AS32-Xassembler-NOT: warning:
 // CHECK-AS32-Xassembler: "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
-// CHECK-AS32-Xassembler: "{{.*}}as{{(.exe)?}}" 
-// CHECK-AS32-Xassembler: "-a32" 
+// CHECK-AS32-Xassembler: "{{.*}}as{{(.exe)?}}"
+// CHECK-AS32-Xassembler: "-a32"
 // CHECK-AS32-Xassembler: "-many"
 // CHECK-AS32-Xassembler: "-w"
 
@@ -58,8 +58,8 @@
 // RUN:   | FileCheck --check-prefix=CHECK-AS64-Wa %s
 // CHECK-AS64-Wa-NOT: warning:
 // CHECK-AS64-Wa: "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
-// CHECK-AS64-Wa: "{{.*}}as{{(.exe)?}}" 
-// CHECK-AS64-Wa: "-a64" 
+// CHECK-AS64-Wa: "{{.*}}as{{(.exe)?}}"
+// CHECK-AS64-Wa: "-a64"
 // CHECK-AS64-Wa: "-many"
 // CHECK-AS64-Wa: "-v"
 // CHECK-AS64-Wa: "-w"

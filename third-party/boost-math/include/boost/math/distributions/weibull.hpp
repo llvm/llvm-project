@@ -188,7 +188,7 @@ BOOST_MATH_GPU_ENABLED inline RealType logpdf(const weibull_distribution<RealTyp
       }
       return policies::raise_overflow_error<RealType>(function, 0, Policy());
    }
-   
+
    result = log(shape) - shape * log(scale) + log(x) * (shape - 1) - pow(x / scale, shape);
 
    return result;

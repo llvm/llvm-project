@@ -187,7 +187,7 @@ void f1() {
   // aware of potential buffer size issues.
 
   const unsigned N = 32;
-  alignas(S) unsigned char buffer1[sizeof(S) * N]; 
+  alignas(S) unsigned char buffer1[sizeof(S) * N];
   ::new (buffer1) S[N]; // no-warning: See comments above
 }
 
@@ -199,7 +199,7 @@ void f2() {
   // On some systems, placement array new could allocate more memory than the nominal size of the array.
   // See the comment at f1() above for more details.
   const unsigned N = 32;
-  alignas(S) unsigned char buffer2[sizeof(S) * N + sizeof(int)]; 
+  alignas(S) unsigned char buffer2[sizeof(S) * N + sizeof(int)];
   ::new (buffer2) S[N]; // no-warning: See comments above
 }
 } // namespace testArrayTypesAllocation

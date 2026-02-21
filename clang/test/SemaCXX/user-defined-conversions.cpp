@@ -40,7 +40,7 @@ void h_test(C c) {
 // Test conversion followed by copy-construction
 struct FunkyDerived;
 
-struct Base { 
+struct Base {
   Base(const FunkyDerived&);
 };
 

@@ -586,7 +586,7 @@ microarchitecture clocked at 2.0GHz. Given that the computation performs
 $`5 \cdot 80 \cdot 100 \cdot 128 \cdot (2 \cdot 3 \cdot 3 \cdot 128 + 2) \approx 5.9 * 10^9`$
 floating point operations, it reaches ~14 GFlops. With 1 FMA unit available,
 the single-core performance of the test processor is 64 GFlops
-($`16 \cdot 2 \cdot 2 \cdot 10^9`$, where 16 is the vector width), so only 
+($`16 \cdot 2 \cdot 2 \cdot 10^9`$, where 16 is the vector width), so only
 22% of the theoretical peak is achieved.
 
 The code produced by Halide runs in ~120ms on the same processor, a 3.5x

@@ -90,13 +90,13 @@ void constant_id_string(unsigned idx) {
   char safe_char = "abc"[1]; // no-warning
   safe_char = ""[0];
   safe_char = "\0"[0];
- 
+
   char abcd[5] = "abc";
   abcd[2]; // no-warning
 
   char unsafe_char = "abc"[3];
   unsafe_char = "abc"[-1]; //expected-warning{{unsafe buffer access}}
-  unsafe_char = ""[1]; //expected-warning{{unsafe buffer access}} 
+  unsafe_char = ""[1]; //expected-warning{{unsafe buffer access}}
   unsafe_char = ""[idx]; //expected-warning{{unsafe buffer access}}
 }
 

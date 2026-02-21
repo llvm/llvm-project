@@ -20,7 +20,7 @@ enum Color {
 
 typedef int MyTypedef;
 
-// CHECK:       { 
+// CHECK:       {
 // CHECK-NEXT:    "DocumentationFileName": "index",
 // CHECK-NEXT:    "Enums": [
 // CHECK-NEXT:      {

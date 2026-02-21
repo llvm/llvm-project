@@ -2,7 +2,7 @@
 
 struct A { // expected-warning {{does not declare any constructor to initialize}}
      const int i; // expected-note{{const member 'i' will never be initialized}} expected-note {{implicitly deleted}}
-     virtual void f() { } 
+     virtual void f() { }
 };
 
 int main () {

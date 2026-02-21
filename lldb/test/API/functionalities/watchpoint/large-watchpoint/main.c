@@ -9,7 +9,7 @@ int main() {
 
   puts ("break here");
 
-  for (int i = 0; i < count - 16; i += 16) 
+  for (int i = 0; i < count - 16; i += 16)
     array[i] += 10;
 
   puts ("done, exiting.");

@@ -9,7 +9,7 @@
  * Written by Sven Verdoolaege, K.U.Leuven, Departement
  * Computerwetenschappen, Celestijnenlaan 200A, B-3001 Leuven, Belgium
  * and INRIA Saclay - Ile-de-France, Parc Club Orsay Universite,
- * ZAC des vignes, 4 rue Jacques Monod, 91893 Orsay, France 
+ * ZAC des vignes, 4 rue Jacques Monod, 91893 Orsay, France
  * and Ecole Normale Superieure, 45 rue d'Ulm, 75230 Paris, France
  * and Cerebras Systems, 175 S San Antonio Rd, Los Altos, CA, USA
  */
@@ -333,7 +333,7 @@ static __isl_give isl_printer *print_affine_of_len(__isl_keep isl_space *space,
 				flip = 1;
 				isl_int_neg(c[i], c[i]);
 				p = isl_printer_print_str(p, " - ");
-			} else 
+			} else
 				p = isl_printer_print_str(p, " + ");
 		}
 		first = 0;
@@ -2829,7 +2829,7 @@ static __isl_give isl_printer *print_ls_partial_affine_c(
 				flip = 1;
 				isl_int_neg(c[i], c[i]);
 				p = isl_printer_print_str(p, " - ");
-			} else 
+			} else
 				p = isl_printer_print_str(p, " + ");
 		}
 		first = 0;

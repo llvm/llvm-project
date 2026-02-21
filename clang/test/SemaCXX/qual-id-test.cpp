@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
@@ -45,7 +45,7 @@ namespace C
         A::sub a;
 
         a.x();
-    
+
         a.sub::x();
         a.base::x();
 
@@ -90,7 +90,7 @@ namespace C
 
     void fun4a() {
       A::sub *a;
-      
+
       typedef A::member base;
 #if __cplusplus <= 199711L
       // expected-note@-2 {{lookup from the current scope refers here}}
@@ -103,11 +103,11 @@ namespace C
 
     void fun4b() {
       A::sub *a;
-      
+
       typedef A::B::base base;
       a->base::x();
     }
-  
+
     template<typename T>
     void fun5()
     {
@@ -125,7 +125,7 @@ namespace C
   void test_fun5() {
     fun5<A::sub>(); // expected-note{{instantiation}}
   }
-  
+
   template<typename T>
   void fun6() {
     T a;
@@ -134,11 +134,11 @@ namespace C
     a->member::foo();
     a.B::base::x(); // expected-error{{use of undeclared identifier 'B'}}
    }
-  
+
   void test_fun6() {
     fun6<A::sub>(); // expected-note{{instantiation}}
   }
-  
+
 }
 
 // PR4703

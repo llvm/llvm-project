@@ -15,7 +15,7 @@ const int &lvalue_noop_cast() {
   return 17;
 }
 
-// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_Z20lvalue_integral_castv() 
+// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_Z20lvalue_integral_castv()
 const short &lvalue_integral_cast() {
   if (i == 0)
     // CHECK: store i16 17, ptr

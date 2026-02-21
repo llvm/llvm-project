@@ -100,7 +100,7 @@ struct Derived : public Base {
   int member;
 };
 
-Derived::Derived(int x) 
+Derived::Derived(int x)
   : member(x), Base(x) {
 }
 
@@ -216,7 +216,7 @@ void casts(int *ip) {
 // CHECK: load-stmts.cpp:103:10: CXXConstructor=Derived:103:10 (Definition)
 // CHECK: load-stmts.cpp:103:1: TypeRef=struct Derived:98:8 Extent=[103:1 - 103:
 // FIXME: Missing TypeRef for constructor name.
-// CHECK: load-stmts.cpp:103:22: ParmDecl=x:103:22 (Definition) 
+// CHECK: load-stmts.cpp:103:22: ParmDecl=x:103:22 (Definition)
 // CHECK: load-stmts.cpp:104:5: MemberRef=member:100:7 Extent=[104:5 - 104:11]
 // CHECK: load-stmts.cpp:104:12: DeclRefExpr=x:103:22 Extent=[104:12 - 104:13]
 // CHECK: load-stmts.cpp:104:16: TypeRef=struct Base:94:8 Extent=[104:16 - 104:2

@@ -8,7 +8,7 @@
 
 extern COMPILER_RT_ABI su_int __udivmodsi4(su_int a, su_int b, su_int* rem);
 
-int test__udivmodsi4(su_int a, su_int b, 
+int test__udivmodsi4(su_int a, su_int b,
 						su_int expected_result, su_int expected_rem)
 {
 	su_int rem;
@@ -23,7 +23,7 @@ int test__udivmodsi4(su_int a, su_int b,
                a, b, rem, expected_rem);
 		return 1;
 	}
-	
+
     return 0;
 }
 
@@ -41,7 +41,7 @@ int main()
 
 	if (test__udivmodsi4(0x80000000, 8, 0x10000000, 0))
         return 1;
-  	
+
  	if (test__udivmodsi4(0x80000003, 8, 0x10000000, 3))
         return 1;
 

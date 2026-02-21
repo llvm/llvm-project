@@ -1,6 +1,6 @@
 // Header for PCH test stmts.c
 
-void f0(int x) { 
+void f0(int x) {
   // NullStmt
   ;
   // IfStmt

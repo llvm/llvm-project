@@ -21,8 +21,8 @@ int main()
   int i14 = 14;
   int i15 = 15;
   int i16 = 16;
- 
-  int r = 0; 
+
+  int r = 0;
   #pragma omp parallel for firstprivate(i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15, i16) reduction(+:r)
   for (i = 0; i < i16; i++) {
     r += i + i1 + i2 + i3 + i4 + i5 + i6 + i7 + i8 + i9 + i10 + i11 + i12 + i13 + i14 + i15 + i16;

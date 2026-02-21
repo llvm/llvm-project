@@ -36,7 +36,7 @@ void use(bool cond, struct S s1, struct S s2, int val1, int val2) {
   // CHECK: %[[VAL2LD:.+]] = load i32, ptr %[[VAL2]]
   // CHECK: %[[VAL2TRUNC:.+]] = trunc i32 %[[VAL2LD]] to i16
   // CHECK: %[[BF_LOAD:.+]] = load i16, ptr %[[S1]]
-  // CHECK: %[[BF_VAL:.+]] = and i16 %[[VAL2TRUNC]], 63 
+  // CHECK: %[[BF_VAL:.+]] = and i16 %[[VAL2TRUNC]], 63
   // CHECK: %[[BF_SHIFT:.+]] = shl i16 %[[BF_VAL]], 5
   // CHECK: %[[BF_CLEAR:.+]] = and i16 %[[BF_LOAD]], -2017
   // CHECK: %[[BF_SET:.+]] = or i16 %[[BF_CLEAR]], %[[BF_SHIFT]]
@@ -70,7 +70,7 @@ void use(bool cond, struct S s1, struct S s2, int val1, int val2) {
   // CHECK: %[[VAL2LD:.+]] = load i32, ptr %[[VAL2]]
   // CHECK: %[[VAL2TRUNC:.+]] = trunc i32 %[[VAL2LD]] to i16
   // CHECK: %[[BF_LOAD:.+]] = load i16, ptr %[[S2]]
-  // CHECK: %[[BF_VAL:.+]] = and i16 %[[VAL2TRUNC]], 63 
+  // CHECK: %[[BF_VAL:.+]] = and i16 %[[VAL2TRUNC]], 63
   // CHECK: %[[BF_SHIFT:.+]] = shl i16 %[[BF_VAL]], 5
   // CHECK: %[[BF_CLEAR:.+]] = and i16 %[[BF_LOAD]], -2017
   // CHECK: %[[BF_SET:.+]] = or i16 %[[BF_CLEAR]], %[[BF_SHIFT]]
@@ -122,7 +122,7 @@ void use2(bool cond1, bool cond2, struct S s1, int val1, int val2, int val3) {
   // CHECK: %[[VAL2LD:.+]] = load i32, ptr %[[VAL2]]
   // CHECK: %[[VAL2TRUNC:.+]] = trunc i32 %[[VAL2LD]] to i16
   // CHECK: %[[BF_LOAD:.+]] = load i16, ptr %[[S1]]
-  // CHECK: %[[BF_VAL:.+]] = and i16 %[[VAL2TRUNC]], 63 
+  // CHECK: %[[BF_VAL:.+]] = and i16 %[[VAL2TRUNC]], 63
   // CHECK: %[[BF_SHIFT:.+]] = shl i16 %[[BF_VAL]], 5
   // CHECK: %[[BF_CLEAR:.+]] = and i16 %[[BF_LOAD]], -2017
   // CHECK: %[[BF_SET:.+]] = or i16 %[[BF_CLEAR]], %[[BF_SHIFT]]

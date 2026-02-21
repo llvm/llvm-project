@@ -2,17 +2,17 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -std=c++20 -fopenmp-version=60 -fsyntax-only -verify %s
 // expected-no-diagnostics
 
-// Check AST and unparsing 
+// Check AST and unparsing
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -std=c++20 -fopenmp-version=60 -ast-dump  %s | FileCheck %s --check-prefix=DUMP
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -std=c++20 -fopenmp-version=60 -ast-print %s | FileCheck %s --check-prefix=PRINT
 
-// Check same results after serialization round-trip 
+// Check same results after serialization round-trip
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -std=c++20 -fopenmp-version=60 -emit-pch -o %t %s
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -std=c++20 -fopenmp-version=60 -include-pch %t -ast-dump-all %s | FileCheck %s --check-prefix=DUMP
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -std=c++20 -fopenmp-version=60 -include-pch %t -ast-print    %s | FileCheck %s --check-prefix=PRINT
 
 #ifndef HEADER
-#define HEADER 
+#define HEADER
 
 // placeholder for loop body code
 extern "C" void body(...);
@@ -22,9 +22,9 @@ extern "C" void body(...);
 void foo1() {
     // PRINT: #pragma omp fuse
     // DUMP:  OMPFuseDirective
-    #pragma omp fuse 
+    #pragma omp fuse
     // PRINT: {
-    // DUMP: CompoundStmt       
+    // DUMP: CompoundStmt
     {
         // PRINT: for (int i = 0; i < 10; i += 2)
         // DUMP: ForStmt
@@ -60,10 +60,10 @@ void foo2() {
     // DUMP-NEXT: IntegerLiteral {{.*}} 4
     #pragma omp unroll partial(4)
     // PRINT: #pragma omp fuse
-    // DUMP-NEXT: OMPFuseDirective 
-    #pragma omp fuse 
+    // DUMP-NEXT: OMPFuseDirective
+    #pragma omp fuse
     // PRINT: {
-    // DUMP: CompoundStmt       
+    // DUMP: CompoundStmt
     {
         // PRINT: for (int i = 0; i < 10; i += 2)
         // DUMP: ForStmt
@@ -76,20 +76,20 @@ void foo2() {
         for (int j = 10; j > 0; --j)
             // PRINT: body(j)
             // DUMP: CallExpr
-            body(j);  
-    }    
-    
+            body(j);
+    }
+
 }
 
 //PRINT-LABEL: void foo3(
 //DUMP-LABEL: FunctionTemplateDecl {{.*}} foo3
-template<int Factor1, int Factor2> 
+template<int Factor1, int Factor2>
 void foo3() {
     // PRINT:  #pragma omp fuse
     // DUMP: OMPFuseDirective
-    #pragma omp fuse 
+    #pragma omp fuse
     // PRINT: {
-    // DUMP: CompoundStmt       
+    // DUMP: CompoundStmt
     {
         // PRINT: #pragma omp unroll partial(Factor1)
         // DUMP: OMPUnrollDirective
@@ -120,13 +120,13 @@ void tfoo3() {
 
 //PRINT-LABEL: void foo4(
 //DUMP-LABEL: FunctionTemplateDecl {{.*}} foo4
-template<typename T, T Step> 
+template<typename T, T Step>
 void foo4(int start, int end) {
     // PRINT:  #pragma omp fuse
     // DUMP: OMPFuseDirective
-    #pragma omp fuse 
+    #pragma omp fuse
     // PRINT: {
-    // DUMP: CompoundStmt       
+    // DUMP: CompoundStmt
     {
         // PRINT: for (T i = start; i < end; i += Step)
         // DUMP: ForStmt
@@ -136,7 +136,7 @@ void foo4(int start, int end) {
             body(i);
 
         // PRINT: for (T j = end; j > start; j -= Step)
-        // DUMP: ForStmt 
+        // DUMP: ForStmt
         for (T j = end; j > start; j -= Step) {
             // PRINT: body(j)
             // DUMP: CallExpr
@@ -159,9 +159,9 @@ void foo5() {
     double arr[128], arr2[128];
     // PRINT: #pragma omp fuse
     // DUMP:  OMPFuseDirective
-    #pragma omp fuse 
+    #pragma omp fuse
     // PRINT: {
-    // DUMP: CompoundStmt       
+    // DUMP: CompoundStmt
     {
         // PRINT-NEXT: for (auto &&a : arr)
         // DUMP-NEXT: CXXForRangeStmt
@@ -191,13 +191,13 @@ void foo5() {
 void foo6() {
     // PRINT: #pragma omp fuse
     // DUMP: OMPFuseDirective
-    #pragma omp fuse 
+    #pragma omp fuse
     // PRINT: {
     // DUMP: CompoundStmt
     {
         // PRINT: #pragma omp fuse
         // DUMP: OMPFuseDirective
-        #pragma omp fuse 
+        #pragma omp fuse
         // PRINT: {
         // DUMP: CompoundStmt
         {
@@ -215,7 +215,7 @@ void foo6() {
         #pragma omp unroll partial(4)
         // PRINT: for (int k = 0; k < 250; ++k)
         // DUMP: ForStmt
-        for (int k = 0; k < 250; ++k) 
+        for (int k = 0; k < 250; ++k)
             body(k);
     }
 }
@@ -225,15 +225,15 @@ void foo6() {
 void foo7() {
     // PRINT: #pragma omp fuse
     // DUMP:  OMPFuseDirective
-    #pragma omp fuse 
+    #pragma omp fuse
     // PRINT: {
-    // DUMP: CompoundStmt       
+    // DUMP: CompoundStmt
     {
         // PRINT: {
-        // DUMP: CompoundStmt   
+        // DUMP: CompoundStmt
         {
             // PRINT: {
-            // DUMP: CompoundStmt   
+            // DUMP: CompoundStmt
             {
                 // PRINT: for (int i = 0; i < 10; i += 2)
                 // DUMP: ForStmt
@@ -250,13 +250,13 @@ void foo7() {
             }
         }
         // PRINT: {
-        // DUMP: CompoundStmt   
+        // DUMP: CompoundStmt
         {
             // PRINT: {
-            // DUMP: CompoundStmt   
+            // DUMP: CompoundStmt
             {
                 // PRINT: {
-                // DUMP: CompoundStmt   
+                // DUMP: CompoundStmt
                 {
                     // PRINT: for (int k = 0; k <= 10; ++k)
                     // DUMP: ForStmt
@@ -279,7 +279,7 @@ void foo8() {
     // DUMP: OMPLooprangeClause
     #pragma omp fuse looprange(2,2)
     // PRINT: {
-    // DUMP: CompoundStmt       
+    // DUMP: CompoundStmt
     {
         // PRINT: for (int i = 0; i < 10; i += 2)
         // DUMP: ForStmt
@@ -308,14 +308,14 @@ void foo8() {
 //DUMP-LABEL: FunctionTemplateDecl {{.*}} foo9
 //DUMP-LABEL: NonTypeTemplateParmDecl {{.*}} F
 //DUMP-LABEL: NonTypeTemplateParmDecl {{.*}} C
-template<int F, int C> 
+template<int F, int C>
 void foo9() {
     // PRINT:  #pragma omp fuse looprange(F,C)
     // DUMP: OMPFuseDirective
     // DUMP: OMPLooprangeClause
     #pragma omp fuse looprange(F,C)
     // PRINT: {
-    // DUMP: CompoundStmt       
+    // DUMP: CompoundStmt
     {
         // PRINT: for (int i = 0; i < 10; i += 2)
         // DUMP: ForStmt
@@ -346,7 +346,7 @@ void foo10() {
     // DUMP: OMPLooprangeClause
     #pragma omp fuse looprange(2,2)
     // PRINT: {
-    // DUMP: CompoundStmt       
+    // DUMP: CompoundStmt
     {
         // PRINT: for (int i = 0; i < 10; i += 2)
         // DUMP: ForStmt

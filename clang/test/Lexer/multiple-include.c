@@ -16,7 +16,7 @@ typedef struct { ff *a;} S;
 
 S s = { H_Pass_8_C };
 
-#endif 
+#endif
 
 #if defined(XVID_AUTO_INCLUDE) && defined(REFERENCE_CODE)
 #elif defined(XVID_AUTO_INCLUDE) && !defined(REFERENCE_CODE)

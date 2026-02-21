@@ -744,20 +744,20 @@ TEST_F(TestArm64InstEmulation, TestCFARegisterTrackedAcrossJumps) {
   // row[3]:   12: CFA=fp+16 => x19=[CFA-24] x20=[CFA-32] fp=[CFA-16] lr=[CFA-8]
   // row[4]:   32: CFA=sp+32 => x19=[CFA-24] x20=[CFA-32] fp=[CFA-16] lr=[CFA-8]
   // row[5]:   36: CFA=sp+32 => x19=[CFA-24] x20=[CFA-32] fp= <same> lr= <same>
-  // row[6]:   40: CFA=sp +0 => x19= <same> x20= <same> fp= <same> lr= <same> 
-  // row[7]:   44: CFA=fp+16 => x19=[CFA-24] x20=[CFA-32] fp=[CFA-16] lr=[CFA-8] 
-  // row[8]:   64: CFA=sp+32 => x19=[CFA-24] x20=[CFA-32] fp=[CFA-16] lr=[CFA-8] 
-  // row[9]:   68: CFA=sp+32 => x19=[CFA-24] x20=[CFA-32] fp= <same> lr= <same> 
-  // row[10]:  72: CFA=sp +0 => x19= <same> x20= <same> fp= <same> lr= <same> 
+  // row[6]:   40: CFA=sp +0 => x19= <same> x20= <same> fp= <same> lr= <same>
+  // row[7]:   44: CFA=fp+16 => x19=[CFA-24] x20=[CFA-32] fp=[CFA-16] lr=[CFA-8]
+  // row[8]:   64: CFA=sp+32 => x19=[CFA-24] x20=[CFA-32] fp=[CFA-16] lr=[CFA-8]
+  // row[9]:   68: CFA=sp+32 => x19=[CFA-24] x20=[CFA-32] fp= <same> lr= <same>
+  // row[10]:  72: CFA=sp +0 => x19= <same> x20= <same> fp= <same> lr= <same>
 
-  // The specific bug we're looking for is this incorrect CFA definition, 
-  // where the InstEmulation is using the $sp value mixed in with $fp, 
+  // The specific bug we're looking for is this incorrect CFA definition,
+  // where the InstEmulation is using the $sp value mixed in with $fp,
   // it looks like this:
   //
   // row[7]:   44: CFA=fp+16 => x19=[CFA-24] x20=[CFA-32] fp=[CFA-16] lr=[CFA-8]
   // row[8]:   52: CFA=fp+64 => x19=[CFA-24] x20=[CFA-32] fp=[CFA-16] lr=[CFA-8]
   // row[9]:   68: CFA=fp+64 => x19=[CFA-24] x20=[CFA-32] fp= <same> lr= <same>
- 
+
   sample_range = AddressRange(0x1000, sizeof(data));
 
   EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
@@ -777,7 +777,7 @@ TEST_F(TestArm64InstEmulation, TestCFARegisterTrackedAcrossJumps) {
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(16, row->GetCFAValue().GetOffset());
 
-  // Confirm that we have no additional UnwindPlan rows before the 
+  // Confirm that we have no additional UnwindPlan rows before the
   // real epilogue -- we still get the Row at offset 44.
   row = unwind_plan.GetRowForFunctionOffset(60);
   EXPECT_EQ(44, row->GetOffset());
@@ -785,7 +785,7 @@ TEST_F(TestArm64InstEmulation, TestCFARegisterTrackedAcrossJumps) {
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(16, row->GetCFAValue().GetOffset());
 
-  // And in the epilogue, confirm that we start by switching back to 
+  // And in the epilogue, confirm that we start by switching back to
   // defining the CFA in terms of $sp.
   row = unwind_plan.GetRowForFunctionOffset(64);
   EXPECT_EQ(64, row->GetOffset());

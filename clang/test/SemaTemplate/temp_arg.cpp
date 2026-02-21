@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,precxx17 %std_cxx98-14 %s
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx17 %std_cxx17- %s
-template<typename T, 
-         int I, 
+template<typename T,
+         int I,
          template<typename> class TT>
   class A; // precxx17-note 3 {{template is declared here}} \
               cxx17-note 2 {{template is declared here}} \

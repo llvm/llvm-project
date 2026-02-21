@@ -184,7 +184,7 @@ ArgumentContainer cma_es(
   Eigen::Matrix<DimensionlessReal, Eigen::Dynamic, Eigen::Dynamic> C = Eigen::Matrix<DimensionlessReal, Eigen::Dynamic, Eigen::Dynamic>::Identity(n, n);
   ArgumentContainer mean_vector;
   // See the footnote in Figure 6 of the arxiv review:
-  // We should consider the more robust initialization described there. . . 
+  // We should consider the more robust initialization described there. . .
   Real sigma = DimensionlessReal(0.3)*(params.upper_bounds[0] - params.lower_bounds[0]);;
   if (params.initial_guess) {
     mean_vector = *params.initial_guess;

@@ -4,11 +4,11 @@
 namespace Test1 {
 struct A { };
 
-struct B : virtual A { 
+struct B : virtual A {
   virtual void f();
 };
 
-void B::f() { } 
+void B::f() { }
 }
 
 // Check that we don't add a secondary virtual pointer for Test2::A, since Test2::A doesn't have any virtual member functions or bases.
@@ -35,7 +35,7 @@ namespace Test3 {
   class X1 { int i; };
   class C3 : public X1 { int i; };
   class D : public C1, public C2, public C3 { int i;  };
-  
+
   D d;
 }
 
@@ -54,7 +54,7 @@ namespace Test4 {
   class X1 { int i; };
   class C3 : public X1 { int i; };
   class D : public C1, public C2, public C3 { int i;  };
-  
+
   D d;
 }
 

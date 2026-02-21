@@ -5,7 +5,7 @@
  *
  * Written by Sven Verdoolaege, INRIA Saclay - Ile-de-France,
  * Parc Club Orsay Universite, ZAC des vignes, 4 rue Jacques Monod,
- * 91893 Orsay, France 
+ * 91893 Orsay, France
  */
 
 #include <stdlib.h>
@@ -2484,12 +2484,12 @@ __isl_give isl_poly *isl_poly_subs(__isl_take isl_poly *poly,
 
 	isl_poly_free(base);
 	isl_poly_free(poly);
-				
+
 	return res;
 error:
 	isl_poly_free(poly);
 	return NULL;
-}	
+}
 
 __isl_give isl_poly *isl_poly_from_affine(isl_ctx *ctx, isl_int *f,
 	isl_int denom, unsigned len)
@@ -4131,7 +4131,7 @@ __isl_give isl_term *isl_term_alloc(__isl_take isl_space *space,
 	term->div = div;
 	isl_int_init(term->n);
 	isl_int_init(term->d);
-	
+
 	return term;
 error:
 	isl_space_free(space);

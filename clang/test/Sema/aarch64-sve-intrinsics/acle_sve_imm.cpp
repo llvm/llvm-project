@@ -427,7 +427,7 @@ void test_num_args()
   // expected-note@* {{requires 0 arguments, but 1 was provided}}
   SVE_ACLE_FUNC(svptrue,, _b32,)(3);
   // expected-note@* {{requires 0 arguments, but 1 was provided}}
-  SVE_ACLE_FUNC(svptrue,, _b64,)(4); 
+  SVE_ACLE_FUNC(svptrue,, _b64,)(4);
 }
 
 void test_enum(svbool_t pg, const void *const_void_ptr, uint64_t u64)

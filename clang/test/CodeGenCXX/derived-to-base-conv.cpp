@@ -4,7 +4,7 @@ struct A {
   A(const A&);
   A();
   ~A();
-}; 
+};
 
 struct B : public A {
   B();
@@ -16,7 +16,7 @@ struct C : public B {
   C();
   C(const C& Other);
   ~C();
-}; 
+};
 
 struct X {
   operator B&();

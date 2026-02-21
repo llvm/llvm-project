@@ -10,7 +10,7 @@ void xxx(int argc) {
 
 #pragma omp parallel master // expected-error {{unexpected OpenMP directive '#pragma omp parallel master'}}
 
-int foo() { 
+int foo() {
   return 0;
 }
 

@@ -28,7 +28,7 @@ S GetNumbers();
 
 int used_binding() {
     const auto [a, b] = GetNumbers(); // no-warning
-    return a + b; 
+    return a + b;
 }
 
 void no_warning_on_copy(S s) {

@@ -7,9 +7,9 @@ template void f(int); // expected-error{{duplicate explicit instantiation}}
 template<typename T>
 struct X0 {
   union Inner { };
-  
+
   void f(T) { }
-  
+
   static T value;
 };
 
@@ -36,7 +36,7 @@ namespace NestedClassRedecls {
     struct Nested;
     friend struct Nested;
 
-    struct Nested { 
+    struct Nested {
       Nested() {}
     } nested;
   };

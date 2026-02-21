@@ -12,7 +12,7 @@ void f0();
 
 void g0() {
   f0(); // okay!
-} 
+}
 
 template<typename T, int N = T::value>
 int &f1(T);

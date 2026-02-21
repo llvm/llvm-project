@@ -10,7 +10,7 @@ namespace std{
 template <class T, size_t N>
 class array {
   T elements[N];
-  
+
   public:
   T& operator[](unsigned i) {
     if (i >= N) {

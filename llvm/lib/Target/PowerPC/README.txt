@@ -82,7 +82,7 @@ _X:
         blr
 
 It would be better to materialize .CPI_X into a register, then use immediates
-off of the register to avoid the lis's.  This is even more important in PIC 
+off of the register to avoid the lis's.  This is even more important in PIC
 mode.
 
 Note that this (and the static variable version) is discussed here for GCC:
@@ -103,13 +103,13 @@ LBB1_1: ; cond_true
         lfs f3, lo16(LCPI1_1)(r2)
         fsub f0, f0, f1
         fsel f1, f0, f2, f3
-        blr 
+        blr
 
 ===-------------------------------------------------------------------------===
 
 PIC Code Gen IPO optimization:
 
-Squish small scalar globals together into a single global struct, allowing the 
+Squish small scalar globals together into a single global struct, allowing the
 address of the struct to be CSE'd, avoiding PIC accesses (also reduces the size
 of the GOT on targets with one).
 
@@ -126,7 +126,7 @@ void foo(unsigned char *c) {
   *c = a;
 }
 
-So that 
+So that
 
 _foo:
         lis r2, ha16(_a)
@@ -184,7 +184,7 @@ This theoretically may help improve twolf slightly (used in dimbox.c:142?).
 
 ===-------------------------------------------------------------------------===
 
-PR5945: This: 
+PR5945: This:
 define i32 @clamp0g(i32 %a) {
 entry:
         %cmp = icmp slt i32 %a, 0
@@ -215,11 +215,11 @@ _clamp0g:
 
 int foo(int N, int ***W, int **TK, int X) {
   int t, i;
-  
+
   for (t = 0; t < N; ++t)
     for (i = 0; i < 4; ++i)
       W[t / X][i][t % X] = TK[i][t];
-      
+
   return 5;
 }
 
@@ -335,7 +335,7 @@ int test(_Bool X) {
   return X ? 524288 : 0;
 }
 
-to: 
+to:
 _test:
         cmplwi cr0, r3, 0
         lis r2, 8
@@ -344,7 +344,7 @@ _test:
 LBB1_1: ;entry
         mr r3, r2
 LBB1_2: ;entry
-        blr 
+        blr
 
 instead of:
 _test:
@@ -372,11 +372,11 @@ _bar:
 	cntlzw r2, r3
 	slwi r2, r2, 26
 	srawi r3, r2, 31
-	blr 
+	blr
 
 it would be better to produce:
 
-_bar: 
+_bar:
         addic r3,r3,-1
         subfe r3,r3,r3
         blr
@@ -429,7 +429,7 @@ __Z11no_overflowjj:
         mfcr r2
         rlwinm r2, r2, 29, 31, 31
         xori r3, r2, 1
-        blr 
+        blr
 
 //===---------------------------------------------------------------------===//
 
@@ -448,7 +448,7 @@ _test:
 	rlwinm r3, r2, 29, 31, 31
 	rlwinm r2, r2, 31, 31, 31
 	or r3, r2, r3
-	blr 
+	blr
 
 GCC compiles this into:
 
@@ -458,7 +458,7 @@ GCC compiles this into:
 	mfcr r3
 	rlwinm r3,r3,31,1
 	blr
-        
+
 which is more efficient and can use mfocr.  See PR642 for some more context.
 
 //===---------------------------------------------------------------------===//
@@ -487,7 +487,7 @@ LBB1_1:	; bb
 	cmplwi cr0, r4, 32000
 	mr r2, r4
 	bne cr0, LBB1_1	; bb
-	blr 
+	blr
 _foo2:
 	li r2, 0
 LBB2_1:	; bb
@@ -496,12 +496,12 @@ LBB2_1:	; bb
 	cmplwi cr0, r4, 32000
 	mr r2, r4
 	bne cr0, LBB2_1	; bb
-	blr 
+	blr
 
 The 'mr' could be eliminated to folding the add into the cmp better.
 
 //===---------------------------------------------------------------------===//
-Codegen for the following (low-probability) case deteriorated considerably 
+Codegen for the following (low-probability) case deteriorated considerably
 when the correctness fixes for unordered comparisons went in (PR 642, 58871).
 It should be possible to recover the code quality described in the comments.
 
@@ -539,13 +539,13 @@ void foo (float *__restrict__ a, int *__restrict__ b, int n) {
       a[n] = b[n]  * 2.321;
 }
 
-we load b[n] to GPR, then move it VSX register and convert it float. We should 
+we load b[n] to GPR, then move it VSX register and convert it float. We should
 use vsx scalar integer load instructions to avoid direct moves
 
 //===----------------------------------------------------------------------===//
 ; RUN: llvm-as < %s | llc -march=ppc32 | not grep fneg
 
-; This could generate FSEL with appropriate flags (FSEL is not IEEE-safe, and 
+; This could generate FSEL with appropriate flags (FSEL is not IEEE-safe, and
 ; should not be generated except with -enable-finite-only-fp-math or the like).
 ; With the correctness fixes for PR642 (58871) LowerSELECT_CC would need to
 ; recognize a more elaborate tree than a simple SETxx.

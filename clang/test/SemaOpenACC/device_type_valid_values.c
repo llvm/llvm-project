@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fopenacc -verify 
+// RUN: %clang_cc1 %s -fopenacc -verify
 
 void foo(int i) {
 #pragma acc parallel device_type(*)

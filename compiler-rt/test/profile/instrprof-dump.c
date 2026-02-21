@@ -20,7 +20,7 @@ int main(int argc, const char *argv[]) {
 
   /* not profiled -- cleared later. */
   skip(0);   /* skipped region */
-  
+
   __llvm_profile_reset_counters();
   Ret += bar(0);  /* region 2 */
   __llvm_profile_dump();
@@ -57,6 +57,6 @@ __attribute__((noinline)) int bar(int X) {
 }
 
 /*
-PROF: ![[ENT]] = !{!"function_entry_count", i64 2}  
+PROF: ![[ENT]] = !{!"function_entry_count", i64 2}
 PROF: ![[PD1]] = !{!"branch_weights", i32 2, i32 2}
 */

@@ -25,7 +25,7 @@ struct B : A {
 #if __cplusplus <= 199711L
 // expected-note@-2 {{'operator delete' declared here}}
 #endif
-}; 
+};
 
 struct C : A {
 #if __cplusplus <= 199711L
@@ -38,10 +38,10 @@ struct C : A {
 #if __cplusplus <= 199711L
 // expected-note@-2 {{'operator delete' declared here}}
 #endif
-}; 
+};
 
 void f() {
-  (void)new B; 
+  (void)new B;
   (void)new C;
 #if __cplusplus <= 199711L
 // expected-note@-2 {{implicit destructor for 'C' first required here}}

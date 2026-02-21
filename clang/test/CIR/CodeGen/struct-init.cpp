@@ -113,7 +113,7 @@ void init_var(int a, int b) {
 // LLVM:   store i32 %[[A_ARG]], ptr %[[A_PTR]]
 // LLVM:   store i32 %[[B_ARG]], ptr %[[B_PTR]]
 // LLVM:   %[[S_A:.*]] = getelementptr %struct.S, ptr %[[S]], i32 0, i32 0
-// LLVM:   %[[A:.*]] = load i32, ptr %[[A_PTR]] 
+// LLVM:   %[[A:.*]] = load i32, ptr %[[A_PTR]]
 // LLVM:   store i32 %[[A]], ptr %[[S_A]]
 // LLVM:   %[[S_B:.*]] = getelementptr %struct.S, ptr %[[S]], i32 0, i32 1
 // LLVM:   %[[B:.*]] = load i32, ptr %[[B_PTR]]
@@ -127,7 +127,7 @@ void init_var(int a, int b) {
 // OGCG:   store i32 %[[A_ARG]], ptr %[[A_PTR]]
 // OGCG:   store i32 %[[B_ARG]], ptr %[[B_PTR]]
 // OGCG:   %[[S_A:.*]] = getelementptr {{.*}} %struct.S, ptr %[[S]], i32 0, i32 0
-// OGCG:   %[[A:.*]] = load i32, ptr %[[A_PTR]] 
+// OGCG:   %[[A:.*]] = load i32, ptr %[[A_PTR]]
 // OGCG:   store i32 %[[A]], ptr %[[S_A]]
 // OGCG:   %[[S_B:.*]] = getelementptr {{.*}} %struct.S, ptr %[[S]], i32 0, i32 1
 // OGCG:   %[[B:.*]] = load i32, ptr %[[B_PTR]]
@@ -174,7 +174,7 @@ void init_expr(int a, int b, int c) {
 // LLVM:   store i32 %[[B_ARG]], ptr %[[B_PTR]]
 // LLVM:   store i32 %[[C_ARG]], ptr %[[C_PTR]]
 // LLVM:   %[[S_A:.*]] = getelementptr %struct.S, ptr %[[S]], i32 0, i32 0
-// LLVM:   %[[A:.*]] = load i32, ptr %[[A_PTR]] 
+// LLVM:   %[[A:.*]] = load i32, ptr %[[A_PTR]]
 // LLVM:   %[[A_PLUS_ONE:.*]] = add nsw i32 %[[A]], 1
 // LLVM:   store i32 %[[A_PLUS_ONE]], ptr %[[S_A]]
 // LLVM:   %[[S_B:.*]] = getelementptr %struct.S, ptr %[[S]], i32 0, i32 1
@@ -196,7 +196,7 @@ void init_expr(int a, int b, int c) {
 // OGCG:   store i32 %[[B_ARG]], ptr %[[B_PTR]]
 // OGCG:   store i32 %[[C_ARG]], ptr %[[C_PTR]]
 // OGCG:   %[[S_A:.*]] = getelementptr {{.*}} %struct.S, ptr %[[S]], i32 0, i32 0
-// OGCG:   %[[A:.*]] = load i32, ptr %[[A_PTR]] 
+// OGCG:   %[[A:.*]] = load i32, ptr %[[A_PTR]]
 // OGCG:   %[[A_PLUS_ONE:.*]] = add nsw i32 %[[A]], 1
 // OGCG:   store i32 %[[A_PLUS_ONE]], ptr %[[S_A]]
 // OGCG:   %[[S_B:.*]] = getelementptr {{.*}} %struct.S, ptr %[[S]], i32 0, i32 1

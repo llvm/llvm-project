@@ -15,10 +15,10 @@ struct N::M::A<T*> { };
 
 // C++ [temp.class.spec]p9
 //   bullet 1, as amended by DR1315
-template <int I, int J> struct A {}; 
+template <int I, int J> struct A {};
 template <int I> struct A<I+5, I*2> {}; // expected-error{{cannot be deduced}} expected-note {{'I'}}
-template <int I, int J> struct B {}; 
-template <int I> struct B<I, I> {}; //OK 
+template <int I, int J> struct B {};
+template <int I> struct B<I, I> {}; //OK
 
 //   bullet 2
 template <class T, T t> struct C {};  // expected-note{{declared here}}
@@ -26,7 +26,7 @@ template <class T> struct C<T, 1>; // expected-error{{specializes}}
 template <class T, T* t> struct C<T*, t>; // okay
 
 template< int X, int (*array_ptr)[X] > class A2 {}; // expected-note{{here}}
-int array[5]; 
+int array[5];
 template< int X > class A2<X, &array> { }; // expected-error{{specializes}}
 
 template<typename T, int N, template<typename X> class TT>

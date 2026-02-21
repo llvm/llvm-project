@@ -152,11 +152,11 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnit) {
   ASSERT_EQ(tok::l_square, toks[0].getKind());
   ASSERT_EQ(tok::identifier, toks[1].getKind());
   ASSERT_EQ(tok::r_square, toks[2].getKind());
-  
+
   SourceLocation lsqrLoc = toks[0].getLocation();
   SourceLocation idLoc = toks[1].getLocation();
   SourceLocation rsqrLoc = toks[2].getLocation();
-  
+
   SourceLocation macroExpStartLoc = SourceMgr.translateLineCol(mainFileID, 2, 1);
   SourceLocation macroExpEndLoc = SourceMgr.translateLineCol(mainFileID, 2, 6);
   ASSERT_TRUE(macroExpStartLoc.isFileID());

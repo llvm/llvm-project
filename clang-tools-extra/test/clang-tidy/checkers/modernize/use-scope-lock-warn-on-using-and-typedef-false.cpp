@@ -15,7 +15,7 @@ void PositiveUsingDecl() {
   using std::lock_guard;
 
   using LockMFun = std::lock_guard<std::mutex>;
-  
+
   typedef std::lock_guard<std::mutex> LockDefFun;
 }
 

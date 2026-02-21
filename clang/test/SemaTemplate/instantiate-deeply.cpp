@@ -26,11 +26,11 @@ template <typename T>
 class Foo {
 public:
   Foo() {}
-  
+
   struct Bar {
     T value;
   };
-  
+
   Bar u;
 };
 

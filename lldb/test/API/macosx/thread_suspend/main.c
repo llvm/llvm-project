@@ -41,7 +41,7 @@ main()
   pthread_create(&suspend_thread, NULL, suspend_func, NULL);
 
   pthread_cond_wait(&signal_cond, &signal_mutex);
-  
+
   mach_port_t th_port = pthread_mach_thread_np(suspend_thread);
   thread_suspend(th_port);
 
@@ -49,10 +49,10 @@ main()
 
   pthread_t running_thread;
   pthread_create(&running_thread, NULL, running_func, NULL);
-  
+
   pthread_join(running_thread, NULL);
   thread_resume(th_port);             // Break here after thread_join
-  
+
   pthread_join(suspend_thread, NULL);
   return 0; // Break here to make sure the thread exited normally
 }

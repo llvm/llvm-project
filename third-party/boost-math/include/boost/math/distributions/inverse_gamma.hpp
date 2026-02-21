@@ -162,7 +162,7 @@ BOOST_MATH_GPU_ENABLED inline RealType pdf(const inverse_gamma_distribution<Real
    if(false == detail::check_inverse_gamma(function, scale, shape, &result, Policy()))
    { // distribution parameters bad.
       return result;
-   } 
+   }
    if(x == 0)
    { // Treat random variate zero as a special case.
       return 0;
@@ -210,7 +210,7 @@ BOOST_MATH_GPU_ENABLED inline RealType logpdf(const inverse_gamma_distribution<R
    if(false == detail::check_inverse_gamma(function, scale, shape, &result, Policy()))
    { // distribution parameters bad.
       return result;
-   } 
+   }
    if(x == 0)
    { // Treat random variate zero as a special case.
       return result;
@@ -222,7 +222,7 @@ BOOST_MATH_GPU_ENABLED inline RealType logpdf(const inverse_gamma_distribution<R
    result = scale / x;
    if(result < tools::min_value<RealType>())
       return result;  // random variable is infinite or so close as to make no difference.
-      
+
    // x * x may under or overflow, likewise our result
    if (!(boost::math::isfinite)(x*x))
    {

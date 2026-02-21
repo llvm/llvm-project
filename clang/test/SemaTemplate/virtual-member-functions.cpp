@@ -12,7 +12,7 @@ template <class T> struct A {
 };
 template<class T> A<T>::A() {} // expected-note{{instantiation}}
 
-template<class T> int A<T>::a(T x) { 
+template<class T> int A<T>::a(T x) {
   return *x; // expected-error{{requires pointer operand}}
 }
 
@@ -38,7 +38,7 @@ template <class T> struct A {
 };
 template<class T> A<T>::~A() {} // expected-note{{instantiation}}
 
-template<class T> int A<T>::a(T x) { 
+template<class T> int A<T>::a(T x) {
   return *x; // expected-error{{requires pointer operand}}
 }
 
@@ -49,7 +49,7 @@ void f() {
 
 template<typename T>
 struct Base {
-  virtual ~Base() { 
+  virtual ~Base() {
     int *ptr = 0;
     T t = ptr; // expected-error{{cannot initialize}}
   }

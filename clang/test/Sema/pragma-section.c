@@ -44,7 +44,7 @@ void fn_bad_seg(void){} // expected-error {{'fn_bad_seg' causes a section type c
 #pragma section(".my_seg", read, write, 1) //  expected-warning {{expected action or ')' in '#pragma section' - ignored}}
 
 #pragma bss_seg(".drectve") // expected-warning{{#pragma bss_seg(".drectve") has undefined behavior, use #pragma comment(linker, ...) instead}}
-#pragma code_seg(".drectve") // expected-warning{{#pragma code_seg(".drectve") has undefined behavior, use #pragma comment(linker, ...) instead}} 
+#pragma code_seg(".drectve") // expected-warning{{#pragma code_seg(".drectve") has undefined behavior, use #pragma comment(linker, ...) instead}}
 #pragma const_seg(".drectve")  // expected-warning{{#pragma const_seg(".drectve") has undefined behavior, use #pragma comment(linker, ...) instead}}
 #pragma data_seg(".drectve")  // expected-warning{{#pragma data_seg(".drectve") has undefined behavior, use #pragma comment(linker, ...) instead}}
 #pragma code_seg(".my_seg")

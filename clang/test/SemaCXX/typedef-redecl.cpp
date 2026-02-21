@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 typedef int INT;
 typedef INT REALLY_INT; // expected-note {{previous definition is here}}
 typedef REALLY_INT REALLY_REALLY_INT;
@@ -22,10 +22,10 @@ typedef int f; // expected-error{{redefinition of 'f' as different kind of symbo
 typedef int f2; // expected-note{{previous definition is here}}
 void f2(); // expected-error{{redefinition of 'f2' as different kind of symbol}}
 
-typedef struct s s; 
-typedef int I; 
-typedef int I; 
-typedef I I; 
+typedef struct s s;
+typedef int I;
+typedef int I;
+typedef I I;
 
 struct s { };
 
@@ -34,7 +34,7 @@ namespace test1 {
   typedef int foo;
   namespace a { using test1::foo; };
   typedef int foo;
-  using namespace a; 
+  using namespace a;
   foo x;
 }
 

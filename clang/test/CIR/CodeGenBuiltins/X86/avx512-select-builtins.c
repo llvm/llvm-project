@@ -294,7 +294,7 @@ __m512d test_selectpd_512(__mmask8 k, __m512d a, __m512d b) {
   return __builtin_ia32_selectpd_512(k, (__v8df)a, (__v8df)b);
 }
 
-// Scalar Selects 
+// Scalar Selects
 
 __m128h test_selectsh_128(__mmask8 k, __m128h a, __m128h b) {
   // CIR-LABEL: @test_selectsh_128

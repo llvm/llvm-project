@@ -19,5 +19,5 @@ void CallNew() {
 // CHECK:   `-ImplicitCastExpr {{.*}} 'long' <IntegralCast>
 // CHECK:   `-IntegerLiteral {{.*}} 'int' 0
 void f() {
-    (void)CallNew<true>; 
+    (void)CallNew<true>;
 }

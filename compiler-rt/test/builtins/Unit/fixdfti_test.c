@@ -9,7 +9,7 @@
 
 // Returns: convert a to a signed long long, rounding toward zero.
 
-// Assumption: double is a IEEE 64 bit floating point type 
+// Assumption: double is a IEEE 64 bit floating point type
 //             su_int is a 32 bit integral type
 //             value in double is representable in ti_int (no range checking performed)
 

@@ -4,7 +4,7 @@
 // RUN: %env_asan_opts="halt_on_error=1" not %run %t 2>&1 | FileCheck %s
 // RUN: not %run %t 2>&1 | FileCheck %s
 // REQUIRES: leak-detection
-// UNSUPPORTED: android 
+// UNSUPPORTED: android
 
 #include <stdlib.h>
 

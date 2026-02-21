@@ -70,7 +70,7 @@ void Func14() {}
 //
 // CHECK: cir.func{{.*}} @[[F14_NAME:.*Func14[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F14_R_NAME:.*]]]>}
 
-// CHECK: acc.routine @[[F2_R_NAME]] func(@[[F2_NAME]]) seq ([#acc.device_type<radeon>]) 
+// CHECK: acc.routine @[[F2_R_NAME]] func(@[[F2_NAME]]) seq ([#acc.device_type<radeon>])
 // CHECK: acc.routine @[[F4_R_NAME]] func(@[[F4_NAME]]) vector ([#acc.device_type<radeon>]) seq ([#acc.device_type<nvidia>])
 // CHECK: acc.routine @[[F6_R_NAME]] func(@[[F6_NAME]]) gang([#acc.device_type<radeon>], dim: 1 : i64 [#acc.device_type<multicore>])
 // CHECK: acc.routine @[[F8_R_NAME]] func(@[[F8_NAME]]) gang(dim: 2 : i64 [#acc.device_type<radeon>])

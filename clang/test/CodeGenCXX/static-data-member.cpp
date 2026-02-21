@@ -23,11 +23,11 @@ namespace test1 {
 
   const int A::a;
 
-  struct S { 
+  struct S {
     static int i;
   };
 
-  void f() { 
+  void f() {
     int a = S::i;
   }
 }

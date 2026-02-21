@@ -260,7 +260,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: for (int i = argc; i < c; ++i)
 // CHECK-NEXT: a = 2;
 #pragma omp parallel
-#ifdef OMP52 
+#ifdef OMP52
 #pragma omp for private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(3) schedule(auto) ordered nowait linear(g: step(-1)) reduction(task, +:e)
 #else
 #pragma omp for private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(3) schedule(auto) ordered nowait linear(g:-1) reduction(task, +:e)

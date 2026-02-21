@@ -191,7 +191,7 @@ body:             |
     %2:vgpr_32 = V_ADD_U32_e32 %0, %1, implicit $exec
     %3:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
-  
+
   bb.1:
     S_NOP 0, implicit %4
     S_ENDPGM 0
@@ -332,7 +332,7 @@ machineFunctionInfo:
 body:             |
   bb.0:
     %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
-  
+
   bb.1:
     S_NOP 0, implicit %0, implicit %0
 
@@ -407,7 +407,7 @@ body:             |
     %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
     %2:vgpr_32 = V_ADD_U32_e32 %0, %1, implicit $exec
     S_NOP 0, implicit %0
-  
+
   bb.1:
     %3:vgpr_32 = V_ADD_U32_e32 %2, %2, implicit $exec
 
@@ -486,7 +486,7 @@ body:             |
 
   bb.1:
     %2:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
-    
+
   bb.2:
     %3:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
     S_BRANCH %bb.3
@@ -553,9 +553,9 @@ body:             |
   bb.0:
     undef %01.sub0:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
     %01.sub1:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
-    
+
     undef %2.sub0:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
-    
+
     undef %34.sub0:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
 
   bb.1:

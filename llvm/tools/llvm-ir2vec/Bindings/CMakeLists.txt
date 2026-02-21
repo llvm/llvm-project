@@ -17,11 +17,11 @@ else()
       OUTPUT_STRIP_TRAILING_WHITESPACE
       ERROR_QUIET
   )
-  
+
   if(NOT STATUS EQUAL "0")
       message(FATAL_ERROR "nanobind not found (install via 'pip install nanobind' or set nanobind_DIR)")
   endif()
-  
+
   message(STATUS "found nanobind at: ${PACKAGE_DIR}")
   set(nanobind_DIR "${PACKAGE_DIR}")
 endif()

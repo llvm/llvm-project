@@ -54,7 +54,7 @@
 //
 // Ruben H, Gambino J (1982). "The Exact Distribution of Kolmogorov's Statistic
 // Dn for n <= 10." Annals of the Institute of Statistical Mathematics.
-// 
+//
 // For a good bibliography and overview of the various algorithms, including
 // both exact and asymptotic forms, see
 // https://www.jstatsoft.org/article/view/v039i11

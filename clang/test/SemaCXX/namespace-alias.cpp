@@ -26,7 +26,7 @@ namespace F {
   namespace D = B; // expected-error {{reference to 'B' is ambiguous}}
 }
 
-namespace G { 
+namespace G {
   namespace B = N;
 }
 
@@ -43,9 +43,9 @@ namespace H {
   namespace B = A2; // expected-error {{redefinition of 'B' as an alias for a different namespace}}
 }
 
-namespace I { 
+namespace I {
   namespace A1 { int i; }
-  
+
   namespace A2 = A1;
 
   namespace A3::extra::specifiers = A2;  // expected-error {{alias must be a single identifier}}
@@ -56,7 +56,7 @@ int f() {
 }
 
 namespace J {
-  namespace A { 
+  namespace A {
     namespace B { void func (); }
   }
 

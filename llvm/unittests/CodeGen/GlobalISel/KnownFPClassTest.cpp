@@ -729,7 +729,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFAdd) {
 TEST_F(AArch64GISelMITest, TestFPClassFAdd_Zero) {
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %lhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))    
+    %lhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
     %rhs:_(s32) = G_FCONSTANT float 0.0
     %fadd:_(s32) = G_FADD %lhs, %rhs
     %copy_fadd:_(s32) = COPY %fadd
@@ -754,7 +754,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFAdd_Zero) {
 TEST_F(AArch64GISelMITest, TestFPClassFAdd_NegZero) {
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %lhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))    
+    %lhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
     %rhs:_(s32) = G_FCONSTANT float -0.0
     %fadd:_(s32) = G_FADD %lhs, %rhs
     %copy_fadd:_(s32) = COPY %fadd
@@ -779,7 +779,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFAdd_NegZero) {
 TEST_F(AArch64GISelMITest, TestFPClassFstrictAdd_Zero) {
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %lhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))    
+    %lhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
     %rhs:_(s32) = G_FCONSTANT float 0.0
     %fadd:_(s32) = G_STRICT_FADD %lhs, %rhs
     %copy_fadd:_(s32) = COPY %fadd
@@ -954,7 +954,7 @@ TEST_F(AArch64GISelMITest, TestFPClassSelectIsFPClass) {
     %lhs:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
     %rhs:_(s32) = G_FCONSTANT float 0.0
     %cond:_(s1) = G_IS_FPCLASS %lhs, 96
-    %sel:_(s32) = G_SELECT %cond, %lhs, %rhs 
+    %sel:_(s32) = G_SELECT %cond, %lhs, %rhs
     %copy_sel:_(s32) = COPY %sel
 )";
 

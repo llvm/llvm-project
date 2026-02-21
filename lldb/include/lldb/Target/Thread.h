@@ -420,7 +420,7 @@ public:
   virtual bool ThreadHasQueueInformation() const { return false; }
 
   /// GetStackFrameCount can be expensive.  Stacks can get very deep, and they
-  /// require memory reads for each frame.  So only use GetStackFrameCount when 
+  /// require memory reads for each frame.  So only use GetStackFrameCount when
   /// you need to know the depth of the stack.  When iterating over frames, its
   /// better to generate the frames one by one with GetFrameAtIndex, and when
   /// that returns NULL, you are at the end of the stack.  That way your loop
@@ -1254,11 +1254,11 @@ public:
   void ResetStopInfo();
 
   void SetShouldReportStop(Vote vote);
-  
-  void SetShouldRunBeforePublicStop(bool newval) { 
-      m_should_run_before_public_stop = newval; 
+
+  void SetShouldRunBeforePublicStop(bool newval) {
+      m_should_run_before_public_stop = newval;
   }
-  
+
   bool ShouldRunBeforePublicStop() {
       return m_should_run_before_public_stop;
   }
@@ -1377,7 +1377,7 @@ protected:
   uint32_t m_stop_info_override_stop_id; // The stop ID containing the last time
                                          // the stop info was checked against
                                          // the stop info override
-  bool m_should_run_before_public_stop;  // If this thread has "stop others" 
+  bool m_should_run_before_public_stop;  // If this thread has "stop others"
                                          // private work to do, then it will
                                          // set this.
   lldb::addr_t m_stopped_at_unexecuted_bp; // Set to the address of a breakpoint

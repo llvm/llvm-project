@@ -49,7 +49,7 @@ void foo(float f) {
 // HAS_ERRNO: declare <2 x float> @casinf(<2 x float> noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare { x86_fp80, x86_fp80 } @casinl(ptr noundef byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
 
-  __builtin_casinh(f);     __builtin_casinhf(f);    __builtin_casinhl(f); 
+  __builtin_casinh(f);     __builtin_casinhf(f);    __builtin_casinhl(f);
 
 // NO__ERRNO: declare { double, double } @casinh(double noundef, double noundef) [[READNONE]]
 // NO__ERRNO: declare <2 x float> @casinhf(<2 x float> noundef) [[READNONE]]
@@ -58,7 +58,7 @@ void foo(float f) {
 // HAS_ERRNO: declare <2 x float> @casinhf(<2 x float> noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare { x86_fp80, x86_fp80 } @casinhl(ptr noundef byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
 
-  __builtin_catan(f);      __builtin_catanf(f);     __builtin_catanl(f); 
+  __builtin_catan(f);      __builtin_catanf(f);     __builtin_catanl(f);
 
 // NO__ERRNO: declare { double, double } @catan(double noundef, double noundef) [[READNONE]]
 // NO__ERRNO: declare <2 x float> @catanf(<2 x float> noundef) [[READNONE]]
@@ -126,7 +126,7 @@ void foo(float f) {
 // HAS_ERRNO: declare <2 x float> @clogf(<2 x float> noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare { x86_fp80, x86_fp80 } @clogl(ptr noundef byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
 
-  __builtin_cproj(f);      __builtin_cprojf(f);     __builtin_cprojl(f); 
+  __builtin_cproj(f);      __builtin_cprojf(f);     __builtin_cprojl(f);
 
 // NO__ERRNO: declare { double, double } @cproj(double noundef, double noundef) [[READNONE]]
 // NO__ERRNO: declare <2 x float> @cprojf(<2 x float> noundef) [[READNONE]]
@@ -169,7 +169,7 @@ void foo(float f) {
 // HAS_ERRNO: declare <2 x float> @csinhf(<2 x float> noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare { x86_fp80, x86_fp80 } @csinhl(ptr noundef byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
 
-  __builtin_csqrt(f);      __builtin_csqrtf(f);     __builtin_csqrtl(f);  
+  __builtin_csqrt(f);      __builtin_csqrtf(f);     __builtin_csqrtl(f);
 
 // NO__ERRNO: declare { double, double } @csqrt(double noundef, double noundef) [[READNONE]]
 // NO__ERRNO: declare <2 x float> @csqrtf(<2 x float> noundef) [[READNONE]]
@@ -187,7 +187,7 @@ void foo(float f) {
 // HAS_ERRNO: declare <2 x float> @ctanf(<2 x float> noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare { x86_fp80, x86_fp80 } @ctanl(ptr noundef byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
 
-  __builtin_ctanh(f);      __builtin_ctanhf(f);     __builtin_ctanhl(f); 
+  __builtin_ctanh(f);      __builtin_ctanhf(f);     __builtin_ctanhl(f);
 
 // NO__ERRNO: declare { double, double } @ctanh(double noundef, double noundef) [[READNONE]]
 // NO__ERRNO: declare <2 x float> @ctanhf(<2 x float> noundef) [[READNONE]]

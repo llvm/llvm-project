@@ -19,7 +19,7 @@ int array2[is_class<char[3]>::value? -1 : 1];
 
 namespace instantiation_order1 {
   template<typename T>
-  struct it_is_a_trap { 
+  struct it_is_a_trap {
     typedef typename T::trap type;
   };
 
@@ -32,7 +32,7 @@ namespace instantiation_order1 {
   struct enable_if<false, T> { };
 
   template<typename T>
-  typename enable_if<sizeof(T) == 17>::type 
+  typename enable_if<sizeof(T) == 17>::type
   f(const T&, typename it_is_a_trap<T>::type* = 0);
 
   void f(...);

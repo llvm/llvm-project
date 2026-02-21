@@ -16,7 +16,7 @@ auto foo() {
   return L;
 }
 
-template<typename T> 
+template<typename T>
 auto foo2() {
   return [](const T&) { return 42; };
 }
@@ -50,7 +50,7 @@ struct A {
 
   template<class U = decltype(default_lambda<S>())>
     U func(U u = default_lambda<S>()) { return u; }
-  
+
   template<class T> auto foo() { return [](const T&) { return 42; }; }
 };
 //CHECK_ABIV6: define linkonce_odr noundef i32 @_ZZN22inline_member_function1AIdE14default_lambdaIdEEDavENKUlRKdE_clES5_(ptr

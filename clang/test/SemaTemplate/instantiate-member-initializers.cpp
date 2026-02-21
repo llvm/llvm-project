@@ -12,7 +12,7 @@ A<void*> a1; // expected-note{{in instantiation of member function 'A<void *>::A
 template<typename T> struct B {
   B() : b(1), // expected-warning {{field 'b' will be initialized after field 'a'}}
     a(2) { }
-  
+
   int a;
   int b;
 };

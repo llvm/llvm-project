@@ -1,6 +1,6 @@
  // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
  // RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 %s
- 
+
 class D {
     class E{
         class F{}; // expected-note{{implicitly declared private here}}

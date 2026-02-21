@@ -918,7 +918,7 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
 // C front-end. The builtin name is passed in as BuiltinName, and a target
 // prefix (e.g. 'ppc') is passed in as TargetPrefix.
 Intrinsic::ID
-Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix, 
+Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix,
                                       StringRef BuiltinName) {{
   using namespace Intrinsic;
 )",

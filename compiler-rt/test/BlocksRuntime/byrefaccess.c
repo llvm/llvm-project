@@ -21,9 +21,9 @@ void callVoidVoid(void (^closure)(void)) {
 
 int main(int argc, char *argv[]) {
     __block int i = 10;
-    
+
     callVoidVoid(^{ ++i; });
-    
+
     if (i != 11) {
         printf("*** %s didn't update i\n", argv[0]);
         return 1;

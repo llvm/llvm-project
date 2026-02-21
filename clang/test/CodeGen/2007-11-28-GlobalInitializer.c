@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - 
+// RUN: %clang_cc1 -emit-llvm %s -o -
 // PR1744
 typedef struct foo { int x; char *p; } FOO;
 extern FOO yy[];

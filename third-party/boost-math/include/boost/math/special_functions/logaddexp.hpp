@@ -17,7 +17,7 @@ Real logaddexp(Real x1, Real x2) noexcept
     using std::log1p;
     using std::exp;
     using std::abs;
-    
+
     // Validate inputs first
     if (!(boost::math::isfinite)(x1))
     {

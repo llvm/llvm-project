@@ -9,7 +9,7 @@
  * Written by Sven Verdoolaege, K.U.Leuven, Departement
  * Computerwetenschappen, Celestijnenlaan 200A, B-3001 Leuven, Belgium
  * and INRIA Saclay - Ile-de-France, Parc Club Orsay Universite,
- * ZAC des vignes, 4 rue Jacques Monod, 91893 Orsay, France 
+ * ZAC des vignes, 4 rue Jacques Monod, 91893 Orsay, France
  * and Cerebras Systems, 1237 E Arques Ave, Sunnyvale, CA, USA
  */
 
@@ -4775,7 +4775,7 @@ static isl_bool parallel_constraints(__isl_keep isl_basic_map *bmap,
 	}
 
 	if (i < bmap->n_ineq) {
-		*first = ((isl_int **)entry->data) - bmap->ineq; 
+		*first = ((isl_int **)entry->data) - bmap->ineq;
 		*second = i;
 	}
 

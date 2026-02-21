@@ -18,7 +18,7 @@ struct foo
     int p;
     int q;
     int r;
-    
+
     foo(int X) :
     a(X),
     b(X+1),
@@ -58,7 +58,7 @@ int main()
     wrapfoo wrapper{f00_ptr};
 
     f00_1.a++; // Set break point at this line.
-    
+
     wrapint test_cast('A' +
                256*'B' +
                256*256*'C'+

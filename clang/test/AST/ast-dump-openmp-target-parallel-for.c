@@ -494,7 +494,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |     | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       |     | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
 // CHECK-NEXT: |       |     | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |     | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++' 
+// CHECK-NEXT: |       |     | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       |     | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       |     | `-ForStmt {{.*}} <line:19:5, line:20:7>
 // CHECK-NEXT: |       |     |   |-DeclStmt {{.*}} <line:19:10, col:19>

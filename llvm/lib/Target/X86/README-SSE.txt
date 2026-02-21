@@ -218,7 +218,7 @@ xorps %xmm0, %xmm0
 movss %xmm1, %xmm0
 ret
 
-Because mulss doesn't modify the top 3 elements, the top elements of 
+Because mulss doesn't modify the top 3 elements, the top elements of
 xmm1 are already zero'd.  We could compile this to:
 
 movss 4(%esp), %xmm0
@@ -254,7 +254,7 @@ movaps c2(%esp), %xmm1
 movss %xmm1, %xmm0
 ret
 
-However, since the reload is only used by these instructions, we could 
+However, since the reload is only used by these instructions, we could
 "fold" it into the uses, producing something like this:
 
 movaps c(%esp), %xmm1
@@ -266,7 +266,7 @@ ret
 
 ... saving two instructions.
 
-The basic idea is that a reload from a spill slot, can, if only one 4-byte 
+The basic idea is that a reload from a spill slot, can, if only one 4-byte
 chunk is used, bring in 3 zeros the one element instead of 4 elements.
 This can be used to simplify a variety of shuffle operations, where the
 elements are fixed zeros.
@@ -334,7 +334,7 @@ nodes which are selected to max / min instructions that are marked commutable.
 
 //===---------------------------------------------------------------------===//
 
-We should materialize vector constants like "all ones" and "signbit" with 
+We should materialize vector constants like "all ones" and "signbit" with
 code like:
 
      cmpeqps xmm1, xmm1   ; xmm1 = all-ones
@@ -375,7 +375,7 @@ _y:
         ret
 
 "y" looks good, but "x" does silly movzwl stuff around into a GPR.  It seems
-like movd would be sufficient in both cases as the value is already zero 
+like movd would be sufficient in both cases as the value is already zero
 extended in the 32-bit stack slot IIRC.  For signed short, it should also be
 save, as a really-signed value would be undefined for pslld.
 
@@ -404,9 +404,9 @@ CodeGen/X86/vec_align.ll tests whether we can turn 4 scalar loads into a single
 1. The code to infer alignment from loads of globals is in the X86 backend,
    not the dag combiner.  This is because dagcombine2 needs to be able to see
    through the X86ISD::Wrapper node, which DAGCombine can't really do.
-2. The code for turning 4 x load into a single vector load is target 
+2. The code for turning 4 x load into a single vector load is target
    independent and should be moved to the dag combiner.
-3. The code for turning 4 x load into a vector load can only handle a direct 
+3. The code for turning 4 x load into a vector load can only handle a direct
    load from a global or a direct load from the stack.  It should be generalized
    to handle any load from P, P+4, P+8, P+12, where P can be anything.
 4. The alignment inference code cannot handle loads from globals in non-static
@@ -445,11 +445,11 @@ _ccosf:
 	ret
 
 Note the load into xmm0, then xor (to negate), then store.  In PIC mode,
-this code computes the pic base and does two loads to do the constant pool 
+this code computes the pic base and does two loads to do the constant pool
 load, so the improvement is much bigger.
 
 The tricky part about this xform is that the argument load/store isn't exposed
-until post-legalize, and at that point, the fneg has been custom expanded into 
+until post-legalize, and at that point, the fneg has been custom expanded into
 an X86 fxor.  This means that we need to handle this case in the x86 backend
 instead of in target independent code.
 
@@ -519,7 +519,7 @@ madd:
 //===---------------------------------------------------------------------===//
 
 Consider:
-#include <emmintrin.h> 
+#include <emmintrin.h>
 __m128 foo2 (float x) {
  return _mm_set_ps (0, 0, x, 0);
 }
@@ -698,7 +698,7 @@ double MonteCarlo_num_flops(int Num_samples) {
 
 In fpstack mode, this compiles into:
 
-LCPI1_0:					
+LCPI1_0:
 	.long	1082130432	## float 4.000000e+00
 _MonteCarlo_num_flops:
 	subl	$4, %esp
@@ -708,7 +708,7 @@ _MonteCarlo_num_flops:
 	fmuls	LCPI1_0
 	addl	$4, %esp
 	ret
-        
+
 in SSE mode, it compiles into significantly slower code:
 
 _MonteCarlo_num_flops:

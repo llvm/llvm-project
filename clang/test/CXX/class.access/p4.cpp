@@ -112,12 +112,12 @@ namespace test2 {
 
   A a; // expected-error {{calling a private constructor}}
   A A::foo; // okay
-  
+
 #if __cplusplus < 201103L
   class B : A { }; // expected-error {{base class 'A' has private default constructor}}
   B b; // expected-note{{implicit default constructor}}
-  
-  class C : virtual A { 
+
+  class C : virtual A {
   public:
     C();
   };
@@ -127,7 +127,7 @@ namespace test2 {
 #else
   class B : A { }; // expected-note {{base class 'A' has an inaccessible default constructor}}
   B b; // expected-error {{call to implicitly-deleted default constructor}}
-  
+
   // FIXME: Do a better job of explaining how we get here from class D.
   class C : virtual A { // expected-note {{default constructor of 'D' is implicitly deleted because base class 'A' has an inaccessible default constructor}}
   public:
@@ -324,7 +324,7 @@ namespace test5 {
 #if __cplusplus < 201103L
   class Test1 { A a; }; // expected-error {{private member}}
   void test1() {
-    Test1 a; 
+    Test1 a;
     a = Test1(); // expected-note{{implicit copy}}
   }
 
@@ -336,7 +336,7 @@ namespace test5 {
 #else
   class Test1 { A a; }; // expected-note {{because field 'a' has an inaccessible copy assignment operator}}
   void test1() {
-    Test1 a; 
+    Test1 a;
     a = Test1(); // expected-error {{copy assignment operator is implicitly deleted}}
   }
 
@@ -393,7 +393,7 @@ namespace test7 {
   };
 }
 
-// Ignored operator new and delete overloads are not 
+// Ignored operator new and delete overloads are not
 namespace test8 {
   typedef __typeof__(sizeof(int)) size_t;
 
@@ -501,11 +501,11 @@ namespace test14 {
   class X {
     ~X(); // expected-note {{declared private here}}
   };
-  
+
   struct Y1 {
     operator X();
   };
-  
+
   void g() {
     const X &xr = Y1(); // expected-error{{temporary of type 'X' has private destructor}}
   }
@@ -539,7 +539,7 @@ namespace test15 {
   };
 
   template class A<int>;
-  template class A<long>; // expected-note 4 {{in instantiation}} 
+  template class A<long>; // expected-note 4 {{in instantiation}}
 
   template <class T> class B : public A<T> {
     // TODO: These first two accesses can be detected as ill-formed at
@@ -595,7 +595,7 @@ namespace test18 {
 // PR8325
 namespace test19 {
   class A { ~A(); };
-  // The destructor is not implicitly referenced here.  Contrast to test16, 
+  // The destructor is not implicitly referenced here.  Contrast to test16,
   // testing PR7281, earlier in this file.
   void b(A* x) { throw x; }
 }

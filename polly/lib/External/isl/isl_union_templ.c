@@ -6,7 +6,7 @@
  *
  * Written by Sven Verdoolaege, INRIA Saclay - Ile-de-France,
  * Parc Club Orsay Universite, ZAC des vignes, 4 rue Jacques Monod,
- * 91893 Orsay, France 
+ * 91893 Orsay, France
  * and Ecole Normale Superieure, 45 rue d'Ulm, 75230 Paris, France
  */
 
@@ -1029,7 +1029,7 @@ __isl_give isl_union_set *FN(UNION,domain)(__isl_take UNION *u)
 		goto error;
 
 	FN(UNION,free)(u);
-	
+
 	return uset;
 error:
 	isl_union_set_free(uset);

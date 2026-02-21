@@ -7,7 +7,7 @@ foreach(arch ${SANITIZER_COMMON_SUPPORTED_ARCH})
                      COMMAND ${CMAKE_COMMAND} -E make_directory ${RTSanitizerCommonSymbolizerInternalDir})
 
   add_custom_command(OUTPUT RTSanitizerCommonSymbolizerInternal.${arch}.o
-                     DEPENDS ${RTSanitizerCommonSymbolizerInternalDir} 
+                     DEPENDS ${RTSanitizerCommonSymbolizerInternalDir}
                              sanitizer_wrappers.cpp
                              sanitizer_symbolize.cpp
                              scripts/build_symbolizer.sh

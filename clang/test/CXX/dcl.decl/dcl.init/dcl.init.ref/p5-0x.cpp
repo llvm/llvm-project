@@ -90,28 +90,28 @@ void test_direct_binding() {
 }
 
 namespace std_example_1 {
-  double d = 2.0; 
-  double& rd = d; 
+  double d = 2.0;
+  double& rd = d;
   const double& rcd = d;
-  struct A { }; 
-  struct B : A { 
+  struct A { };
+  struct B : A {
     operator int&();
   } b;
-  A& ra = b; 
-  const A& rca = b; 
+  A& ra = b;
+  const A& rca = b;
   int& ir = B();
 }
 
 namespace std_example_2 {
   double& rd2 = 2.0; // expected-error{{non-const lvalue reference to type 'double' cannot bind to a temporary of type 'double'}}
-  int i = 2; 
+  int i = 2;
   double& rd3 = i; // expected-error{{non-const lvalue reference to type 'double' cannot bind to a value of unrelated type 'int'}}
-  struct A { }; 
-  struct B : A { } b; 
-  extern B f(); 
-  const A& rca = f(); 
+  struct A { };
+  struct B : A { } b;
+  extern B f();
+  const A& rca = f();
   A&& rra = f();
-  struct X { 
+  struct X {
     operator B();  // expected-note{{candidate function}}
     operator int&(); // expected-note{{candidate function}}
   } x;
@@ -142,23 +142,23 @@ namespace argument_passing {
     base_rvalue_ref(xvalue<Base>());
     base_rvalue_ref(xvalue<Derived>());
     int_rvalue_ref(xvalue<int>());
-    
+
     base_rvalue_ref(prvalue<Base>());
     base_rvalue_ref(prvalue<Derived>());
-    
+
     array_rvalue_ref(HasArray().array);
-    
+
     function_rvalue_ref(f);
-    
+
     base_rvalue_ref(ConvertsTo<Base&&>());
     base_rvalue_ref(ConvertsTo<Derived&&>());
     int_rvalue_ref(ConvertsTo<int&&>());
-    
+
     base_rvalue_ref(ConvertsTo<Base>());
     base_rvalue_ref(ConvertsTo<Derived>());
 
     function_rvalue_ref(ConvertsTo<int(&)(int)>());
-    
+
     int_rvalue_ref(ConvertsTo<int&>()); // expected-error{{no matching function for call to 'int_rvalue_ref'}}
     int_rvalue_ref(ConvertsTo<float&>()); // expected-error{{no matching function for call to 'int_rvalue_ref'}}
   }

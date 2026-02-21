@@ -30,7 +30,7 @@ int bad_var_definition = 3;  // expected-error {{non-inline external definitions
 class A {
 public:
     // This is a declaration instead of definition.
-    static const int value = 43; 
+    static const int value = 43;
 };
 
 void deleted_fn_ok (void) = delete;

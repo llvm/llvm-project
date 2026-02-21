@@ -7,4 +7,4 @@ int main(int argc, const char *argv[]) {
     return 1;
   return 0;
 }
-// CHECK: LLVM Profile Error: Failed to write file 
+// CHECK: LLVM Profile Error: Failed to write file

@@ -12,14 +12,14 @@ int main (int argc, const char * argv[]) {
     BobTheStruct outty;
     BobTheStruct (^copyStruct)(BobTheStruct);
     int i;
-    
+
     for(i=0; i<30; i++) {
         inny.ps[i] = i * i * i;
         inny.qs[i] = -i * i * i;
     }
-    
+
     copyStruct = ^(BobTheStruct aBigStruct){ return aBigStruct; };  // pass-by-value intrinsically copies the argument
-    
+
     outty = copyStruct(inny);
 
     if ( &inny == &outty ) {
@@ -30,7 +30,7 @@ int main (int argc, const char * argv[]) {
             exit(1);
         }
     }
-    
+
     return 0;
 }
 
@@ -38,7 +38,7 @@ namespace rdar8134521 {
   void foo() {
     int (^P)(int) = reinterpret_cast<int(^)(int)>(1);
     P = (int(^)(int))(1);
-    
+
     P = reinterpret_cast<int(^)(int)>((void*)1);
     P = (int(^)(int))((void*)1);
   }

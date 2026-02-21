@@ -12,7 +12,7 @@
 int main (int argc, const char * argv[]) {
     int (^x[NUMBER_OF_BLOCKS])();
     int i;
-    
+
     for(i=0; i<NUMBER_OF_BLOCKS; i++) x[i] = ^{ return i; };
 
     for(i=0; i<NUMBER_OF_BLOCKS; i++) {
@@ -21,8 +21,8 @@ int main (int argc, const char * argv[]) {
             exit(1);
         }
     }
-    
+
     printf("%s: success\n", argv[0]);
-    
+
     return 0;
 }

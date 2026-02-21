@@ -25,7 +25,7 @@ void test3(void) {
 // {} should not be treated as asm variants.
 void test4(float *a, float *b) {
   // CHECK: @test4
-  // CHECK: call void asm sideeffect "vld1.32 {d8[],d9[]}, 
+  // CHECK: call void asm sideeffect "vld1.32 {d8[],d9[]},
   __asm__ volatile (
                     "vld1.32 {d8[],d9[]}, [%1,:32] \n\t"
                     "vst1.32 {q4},        [%0,:128] \n\t"

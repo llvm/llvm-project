@@ -375,7 +375,7 @@ namespace boost {
 } // namespace math
 } // namespace boost
 
-#else // Special handling for NVRTC 
+#else // Special handling for NVRTC
 
 namespace boost {
 namespace math {

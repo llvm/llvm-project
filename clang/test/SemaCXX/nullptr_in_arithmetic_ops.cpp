@@ -59,7 +59,7 @@ void foo() {
   void (^c)();
   c = nullptr;
   b = c == nullptr || nullptr == c || c != nullptr || nullptr != c;
-  
+
   class X;
   void (X::*d) ();
   d = nullptr;

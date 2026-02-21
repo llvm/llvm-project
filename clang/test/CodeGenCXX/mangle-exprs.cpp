@@ -43,7 +43,7 @@ namespace Casts {
   template< unsigned O >
   void implicit(typename enable_if< O <= 4 >::type* = 0) {
   }
-  
+
   template< unsigned O >
   void cstyle(typename enable_if< O <= (unsigned)4 >::type* = 0) {
   }
@@ -51,7 +51,7 @@ namespace Casts {
   template< unsigned O >
   void functional(typename enable_if< O <= unsigned(4) >::type* = 0) {
   }
-  
+
   template< unsigned O >
   void static_(typename enable_if< O <= static_cast<unsigned>(4) >::type* = 0) {
   }
@@ -82,7 +82,7 @@ namespace Casts {
 
   extern int i;
   extern struct S {} s;
-  
+
   // CHECK-LABEL: define weak_odr void @_ZN5Casts8implicitILj4EEEvPN9enable_ifIXleT_Li4EEvE4typeE
   template void implicit<4>(void*);
   // CHECK-LABEL: define weak_odr void @_ZN5Casts6cstyleILj4EEEvPN9enable_ifIXleT_cvjLi4EEvE4typeE
@@ -169,7 +169,7 @@ namespace test2 {
 }
 
 namespace test3 {
-  template <class T, class U> void a(T x, U y, decltype(x.*y) z) {}  
+  template <class T, class U> void a(T x, U y, decltype(x.*y) z) {}
 
   struct X {
     int *member;

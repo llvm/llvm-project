@@ -667,14 +667,14 @@ DWARF:
   debug_str:
     - Foo
 
-  debug_line:      
+  debug_line:
     - Version:         4
       MinInstLength:   1
       MaxOpsPerInst:   1
       DefaultIsStmt:   1
       LineBase:        0
       LineRange:       0
-      Files:           
+      Files:
         - Name:            main.cpp
           DirIdx:          0
           ModTime:         0

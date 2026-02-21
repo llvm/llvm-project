@@ -1,14 +1,14 @@
 typedef struct objc_selector    *SEL;
 
-@interface Foo 
+@interface Foo
 - (void) NotOK;
 @end
 
 @implementation Foo
 - (void) foo
 {
-  SEL a = @selector(b1ar); 
-  a = @selector(b1ar); 
+  SEL a = @selector(b1ar);
+  a = @selector(b1ar);
   a = @selector(bar);
   a = @selector(ok);	// expected-warning {{unimplemented selector 'ok'}}
   a = @selector(ok);

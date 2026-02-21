@@ -69,7 +69,7 @@ namespace NS {
 
 namespace NS {
   // CHECK: @_ZN2NS1fERNS_1CE
-  void f(C&) { } 
+  void f(C&) { }
 }
 
 namespace Test1 {

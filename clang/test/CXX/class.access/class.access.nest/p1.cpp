@@ -10,7 +10,7 @@ namespace test0 {
       static const unsigned long max_length;
     };
   };
-  
+
   const unsigned long A::C::max_length = sizeof(B);
 }
 

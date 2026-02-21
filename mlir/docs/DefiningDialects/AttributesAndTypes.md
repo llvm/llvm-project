@@ -48,7 +48,7 @@ describes the process for defining both Attributes and Types side-by-side with
 examples for both. If necessary, a section will explicitly call out any
 distinct differences.
 
-One difference is that generating C++ classes from declarative TableGen 
+One difference is that generating C++ classes from declarative TableGen
 definitions will require adding additional targets to your `CMakeLists.txt`.
 This is not necessary for custom types. The details are outlined further below.
 
@@ -181,16 +181,16 @@ respectively. This can be explicitly overridden via the `cppClassName` field.
 ### CMake Targets
 
 If you added your dialect using `add_mlir_dialect()` in your `CMakeLists.txt`,
-the above mentioned classes will automatically get generated for custom 
-_types_. They will be output in a file named `<Your Dialect>Types.h.inc`. 
+the above mentioned classes will automatically get generated for custom
+_types_. They will be output in a file named `<Your Dialect>Types.h.inc`.
 
 To also generate the classes for custom _attributes_, you will need to add
-two additional TableGen targets to your `CMakeLists.txt`: 
+two additional TableGen targets to your `CMakeLists.txt`:
 
 ```cmake
-mlir_tablegen(<Your Dialect>AttrDefs.h.inc -gen-attrdef-decls 
+mlir_tablegen(<Your Dialect>AttrDefs.h.inc -gen-attrdef-decls
               -attrdefs-dialect=<Your Dialect>)
-mlir_tablegen(<Your Dialect>AttrDefs.cpp.inc -gen-attrdef-defs 
+mlir_tablegen(<Your Dialect>AttrDefs.cpp.inc -gen-attrdef-defs
               -attrdefs-dialect=<Your Dialect>)
 add_public_tablegen_target(<Your Dialect>AttrDefsIncGen)
 ```
@@ -853,8 +853,8 @@ if they are not present.
 
 ###### `struct` Directive
 
-The `struct` directive accepts a list of variables or directives to capture and 
-will generate a parser and printer for a comma-separated list of key-value pairs. 
+The `struct` directive accepts a list of variables or directives to capture and
+will generate a parser and printer for a comma-separated list of key-value pairs.
 If an optional parameter is included in the `struct`, it can be elided. The variables
 are printed in the order they are specified in the argument list **but can be
 parsed in any order**. For example:
@@ -912,10 +912,10 @@ ParseResult parseFoo(AsmParser &parser, int &foo);
 void printFoo(AsmPrinter &printer, int foo);
 ```
 
-As you can see, by default parameters are passed into the parse function by 
+As you can see, by default parameters are passed into the parse function by
 reference. This is only possible if the C++ type is default constructible.
 If the C++ type is not default constructible, the parameter is wrapped in a
-`FailureOr`. Therefore, given the following definition: 
+`FailureOr`. Therefore, given the following definition:
 
 ```tablegen
 let parameters = (ins "NotDefaultConstructible":$foobar);

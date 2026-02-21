@@ -18,9 +18,9 @@ int f0(void) {
   return OBJECT_SIZE_BUILTIN(&a); // expected-error {{too few arguments to function}}
 }
 int f1(void) {
-  return (OBJECT_SIZE_BUILTIN(&a, 0) + 
-          OBJECT_SIZE_BUILTIN(&a, 1) + 
-          OBJECT_SIZE_BUILTIN(&a, 2) + 
+  return (OBJECT_SIZE_BUILTIN(&a, 0) +
+          OBJECT_SIZE_BUILTIN(&a, 1) +
+          OBJECT_SIZE_BUILTIN(&a, 2) +
           OBJECT_SIZE_BUILTIN(&a, 3));
 }
 int f2(void) {

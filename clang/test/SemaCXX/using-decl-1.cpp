@@ -15,7 +15,7 @@ namespace M {
 namespace N {
   using M::f;
   void f(int) { } // expected-note{{previous}}
-  
+
   void f(int) { } // expected-error{{redefinition}}
 }
 
@@ -32,7 +32,7 @@ struct X0 {
 struct X1 : X0 {
   void operator()(float&);
   using X0::operator();
-  
+
   void test() {
     (*this)(1);
   }
@@ -64,9 +64,9 @@ namespace P {
 namespace test0 {
   namespace ns {
     class Foo {};
-    
+
     namespace inner {
-      void foo(char *); // expected-note {{no known conversion}} 
+      void foo(char *); // expected-note {{no known conversion}}
     }
 
     using inner::foo;

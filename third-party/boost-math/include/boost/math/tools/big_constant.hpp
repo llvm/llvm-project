@@ -12,7 +12,7 @@
 // On NVRTC we don't need any of this
 // We just have a simple definition of the macro since the largest float
 // type on the platform is a 64-bit double
-#ifndef BOOST_MATH_HAS_NVRTC 
+#ifndef BOOST_MATH_HAS_NVRTC
 
 #ifndef BOOST_MATH_STANDALONE
 #include <boost/lexical_cast.hpp>
@@ -22,7 +22,7 @@
 #include <type_traits>
 #include <limits>
 
-namespace boost{ namespace math{ 
+namespace boost{ namespace math{
 
 namespace tools{
 

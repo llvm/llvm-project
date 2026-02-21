@@ -29,7 +29,7 @@ HasNested f;
 // CHECK: ![[INNERSTRUCT]] = !DICompositeType(tag: DW_TAG_structure_type, name: "InnerStruct"
 // CHECK-SAME: flags: DIFlagFwdDecl
 
-// CHECK: ![[ANONYMOUS_UNION]] = !DIDerivedType(tag: DW_TAG_member, 
+// CHECK: ![[ANONYMOUS_UNION]] = !DIDerivedType(tag: DW_TAG_member,
 // CHECK-SAME: baseType: ![[ANONYMOUS_UNION_TYPE:[0-9]+]]
 // CHECK: ![[ANONYMOUS_UNION_TYPE]] = distinct !DICompositeType(tag: DW_TAG_union_type,
 // CHECK-SAME: elements: ![[ANONYMOUS_UNION_MEMBERS:[0-9]+]], identifier: ".?AT<unnamed-type-$S1>@HasNested@@")

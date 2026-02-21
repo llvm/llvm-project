@@ -1600,7 +1600,7 @@ BOOST_MATH_GPU_ENABLED T ibeta_imp(T a, T b, T x, const Policy& pol, bool inv, b
          }
          else
             fract = ibeta_fraction2(a, b, x, y, pol, normalised, p_derivative);
-            
+
          BOOST_MATH_INSTRUMENT_VARIABLE(fract);
       }
    }

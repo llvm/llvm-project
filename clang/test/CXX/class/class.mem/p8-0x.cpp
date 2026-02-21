@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s
 
-struct Base1 { 
+struct Base1 {
   virtual void g();
 };
 
@@ -9,7 +9,7 @@ struct A : Base1 {
   virtual void h() final final; // expected-error {{class member already marked 'final'}}
 };
 
-struct Base2 { 
+struct Base2 {
   virtual void e1(), e2();
   virtual void f();
 };
@@ -28,7 +28,7 @@ struct C {
 };
 
 namespace inline_extension {
-  struct Base1 { 
+  struct Base1 {
     virtual void g() {}
   };
 
@@ -37,7 +37,7 @@ namespace inline_extension {
     virtual void h() final final {} // expected-error {{class member already marked 'final'}}
   };
 
-  struct Base2 { 
+  struct Base2 {
     virtual void f();
   };
 

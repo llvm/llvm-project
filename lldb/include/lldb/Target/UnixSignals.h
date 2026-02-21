@@ -83,8 +83,8 @@ public:
   bool SetShouldNotify(int32_t signo, bool value);
 
   bool SetShouldNotify(const char *signal_name, bool value);
-  
-  bool ResetSignal(int32_t signo, bool reset_stop = true, 
+
+  bool ResetSignal(int32_t signo, bool reset_stop = true,
                    bool reset_notify = true, bool reset_suppress = true);
 
   // These provide an iterator through the signals available on this system.

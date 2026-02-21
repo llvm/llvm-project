@@ -5,20 +5,20 @@
 // conversion of A::* to B::* is better than conversion of A::* to C::*,
 struct A {
 int Ai;
-}; 
+};
 
-struct B : public A {}; 
-struct C : public B {}; 
+struct B : public A {};
+struct C : public B {};
 
-const char * f(int C::*){ return ""; } 
-int f(int B::*) { return 1; } 
+const char * f(int C::*){ return ""; }
+int f(int B::*) { return 1; }
 
-struct D : public C {}; 
+struct D : public C {};
 
-const char * g(int B::*){ return ""; } 
-int g(int D::*) { return 1; } 
+const char * g(int B::*){ return ""; }
+int g(int D::*) { return 1; }
 
-void test() 
+void test()
 {
   int i = f(&A::Ai);
 
@@ -38,7 +38,7 @@ struct X {
 
 void g(pmfc);
 
-void test2(X x) 
+void test2(X x)
 {
     g(x);
 }

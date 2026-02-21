@@ -159,7 +159,7 @@ struct X1 {
   X1();
   X1(X1&);
   X1(const X0&);
-  
+
   operator X0() const;
 };
 
@@ -178,11 +178,11 @@ struct X3 : X2 {
 
 struct X4 {
   typedef const X3 X3_typedef;
-  
+
   void f() const {
     (void)static_cast<X3_typedef*>(x2);
   }
-  
+
   const X2 *x2;
 };
 
@@ -190,7 +190,7 @@ struct X4 {
 void PR5897() { (void)static_cast<const int(*)[1]>((const void*)0); }
 
 namespace PR6072 {
-  struct A { }; 
+  struct A { };
   struct B : A { void f(int); void f(); };  // expected-note 2{{candidate function}}
   struct C : B { };
   struct D { };

@@ -19,7 +19,7 @@ template <typename T, typename T1> void foo(T t, T1 r)
     T block_arg;
     __block T1 byref_block_arg;
 
-    T1 (^block)(char, T, T1, double) =  
+    T1 (^block)(char, T, T1, double) =
 	^ T1 (char ch, T arg, T1 arg2, double d1) { byref_block_arg = arg2;
            					    return byref_block_arg + block_arg + arg; };
 

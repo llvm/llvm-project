@@ -210,7 +210,7 @@ int main (int argc, char **argv) {
 // CHECK-NEXT: foo();
   const int CLEN = 4;
 // CHECK-NEXT: const int CLEN = 4;
-#ifdef OMP52  
+#ifdef OMP52
   #pragma omp simd aligned(a:CLEN) linear(a: step(CLEN)) safelen(CLEN) collapse( 1 ) simdlen(CLEN) linear(r: val, step(CLEN)) if(a)
 #elif OMP5
   #pragma omp simd aligned(a:CLEN) linear(a:CLEN) safelen(CLEN) collapse( 1 ) simdlen(CLEN) linear(val(r): CLEN) if(a)

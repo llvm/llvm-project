@@ -34,7 +34,7 @@ struct N : M , P, Q {
   int i1;
   float d1;
   void PR() {
-    printf("f1 = %f d1 = %f i1 = %d ld = %f \n", f1,d1,i1, ld); 
+    printf("f1 = %f d1 = %f i1 = %d ld = %f \n", f1,d1,i1, ld);
     MPR();
     PPR();
     QPR();
@@ -170,12 +170,12 @@ X<T>::X(const X &other) : start(0), end(0) { }
 X<int> get_X(X<int> x) { return x; }
 
 namespace PR10720 {
-  struct X { 
-    X(const X&); 
-    X(X&&); 
+  struct X {
+    X(const X&);
+    X(X&&);
     X& operator=(const X&);
     X& operator=(X&&);
-    ~X(); 
+    ~X();
   };
 
   struct pair2 {

@@ -3,7 +3,7 @@
 // RUN: {bugprone-pointer-arithmetic-on-polymorphic-object.IgnoreInheritedVirtualFunctions: true}}"
 
 class Base {
-public:  
+public:
   virtual ~Base() {}
 };
 

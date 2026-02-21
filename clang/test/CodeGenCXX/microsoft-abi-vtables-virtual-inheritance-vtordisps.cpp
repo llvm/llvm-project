@@ -323,7 +323,7 @@ struct E : virtual D {
 };
 
 E e;
-void use(E *obj) { delete obj; } 
+void use(E *obj) { delete obj; }
 
 struct F : virtual Z, virtual D {
   // CHECK-LABEL: VFTable for 'V2' in 'extended::D' in 'extended::F' (2 entries).

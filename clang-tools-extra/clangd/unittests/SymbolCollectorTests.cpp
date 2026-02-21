@@ -2174,14 +2174,14 @@ TEST_F(SymbolCollectorTest, Concepts) {
 
 TEST_F(SymbolCollectorTest, IncludeHeaderForwardDecls) {
   CollectorOpts.CollectIncludePath = true;
-  const std::string Header = R"cpp(#pragma once 
+  const std::string Header = R"cpp(#pragma once
 struct Foo;
 #include "full.h"
 )cpp";
   auto FullFile = testPath("full.h");
   InMemoryFileSystem->addFile(FullFile, 0,
                               llvm::MemoryBuffer::getMemBuffer(R"cpp(
-#pragma once 
+#pragma once
 struct Foo {};)cpp"));
   runSymbolCollector(Header, /*Main=*/"",
                      /*ExtraArgs=*/{"-I", testRoot()});

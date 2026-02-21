@@ -85,7 +85,7 @@ namespace ns3 {
 //expected-note@-7{{subexpression not valid in a constant expression}}
 //expected-note@-6{{in call to}}
 #endif
-} 
+}
 
 } // end ns test_constexpr_call
 
@@ -95,7 +95,7 @@ void f() {
   auto L = [] { return c; };
   constexpr char C = L();
 }
-  
+
 void f(char c) { //expected-note{{declared here}}
   auto L = [] { return c; }; //expected-error{{cannot be implicitly captured}} expected-note{{lambda expression begins here}} expected-note 2 {{capture 'c' by}} expected-note 2 {{default capture by}}
   int I = L();
@@ -122,7 +122,7 @@ static_assert(fp4(Str) == Str);
 auto NCL = [](int i) { static int j; return j; }; //expected-note{{declared here}}
 constexpr int (*fp5)(int) = NCL;
 constexpr int I =  //expected-error{{must be initialized by a constant expression}}
-                  fp5(5); //expected-note{{non-constexpr function}} 
+                  fp5(5); //expected-note{{non-constexpr function}}
 
 namespace test_dont_always_instantiate_constexpr_templates {
 
@@ -133,7 +133,7 @@ auto deduced_return_type = [](auto x) { return x.get(); }; //expected-error{{not
 decltype(deduced_return_type(0)) d;  //expected-note{{requested here}}
 
 
-  
+
 } // end ns test_dont_always_instantiate_constexpr_templates
 } // end ns1
 
@@ -145,7 +145,7 @@ namespace ns1_simple_lambda {
 namespace ns0 {
 constexpr int I = [](auto a) { return a; }(10);
 
-static_assert(I == 10); 
+static_assert(I == 10);
 static_assert(10 == [](auto a) { return a; }(10));
 static_assert(3.14 == [](auto a) { return a; }(3.14));
 
@@ -154,9 +154,9 @@ static_assert(3.14 == [](auto a) { return a; }(3.14));
 namespace ns1 {
 constexpr auto f(int i) {
   double d = 3.14;
-  auto L = [=](auto a) { 
+  auto L = [=](auto a) {
     int Isz = sizeof(i);
-    return sizeof(i) + sizeof(a) + sizeof(d); 
+    return sizeof(i) + sizeof(a) + sizeof(d);
   };
   int I = L("abc") + L(nullptr);
   return L;
@@ -184,14 +184,14 @@ constexpr auto f(int i) {
   auto L = [=](auto a) {
     int Isz = sizeof(i);
     asm("hello");
-    return sizeof(i) + sizeof(a) + sizeof(d); 
+    return sizeof(i) + sizeof(a) + sizeof(d);
   };
   return L;
 }
 
 constexpr auto L = f(3);
 
-constexpr auto M =  // expected-error{{must be initialized by}} 
+constexpr auto M =  // expected-error{{must be initialized by}}
     L("abc");
 #if __cpp_constexpr < 201907L
 //expected-note@-2{{non-constexpr function}}
@@ -210,12 +210,12 @@ namespace test_captures_1 {
 namespace ns1 {
 constexpr auto f(int i) {
   struct S { int x; } s = { i * 2 };
-  auto L = [=](auto a) { 
+  auto L = [=](auto a) {
     return i + s.x + a;
   };
   return L;
 }
-constexpr auto M = f(3);  
+constexpr auto M = f(3);
 
 static_assert(M(10) == 19);
 
@@ -233,7 +233,7 @@ constexpr auto foo(int n) {
   auto M = L([n](int p) { return p == n; });
   M(); M();
   L([n](int p) { return p == n + 2; });
-  
+
   return L;
 }
 
@@ -254,7 +254,7 @@ constexpr auto foo(int n) {
   auto M = L([n](int p) { return p == n; });
   M()(); M()();
   L([n](int p) { return p == n; });
-  
+
   return L;
 }
 
@@ -315,7 +315,7 @@ namespace ns1_test_lvalue_type {
     volatile int n;
     constexpr bool B = [&]{ return &n; }() == &n; // should be accepted
   }
-} // end ns1_unimplemented 
+} // end ns1_unimplemented
 
 } // end ns test_lambda_is_cce
 

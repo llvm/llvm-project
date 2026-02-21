@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wswitch-enum -Wcovered-switch-default -triple x86_64-linux-gnu %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wswitch-enum -Wcovered-switch-default -triple x86_64-linux-gnu %s -fexperimental-new-constant-interpreter
-void f (int z) { 
-  while (z) { 
+void f (int z) {
+  while (z) {
     default: z--;            // expected-error {{statement not in switch}}
-  } 
+  }
 }
 
 void foo(int X) {
@@ -23,7 +23,7 @@ void foo(int X) {
   }
 }
 
-void test3(void) { 
+void test3(void) {
   // empty switch;
   switch (0); // expected-warning {{no case matching constant switch condition '0'}} \
               // expected-warning {{switch statement has empty body}} \
@@ -46,18 +46,18 @@ void test4(void)
   case 0 ... g(): // expected-error {{expression is not an integer constant expression}}
     break;
   }
-  
+
   switch (cond) {
   case 0 && g() ... 1 || g():
     break;
   }
-  
+
   switch (cond) {
   case g() // expected-error {{expression is not an integer constant expression}}
       && 0:
     break;
   }
-  
+
   switch (cond) {
   case 0 ...
       g() // expected-error {{expression is not an integer constant expression}}
@@ -66,13 +66,13 @@ void test4(void)
   }
 }
 
-void test5(int z) { 
+void test5(int z) {
   switch(z) {
     default:  // expected-note {{previous case defined here}}
     default:  // expected-error {{multiple default labels in one switch}}
       break;
   }
-} 
+}
 
 void test6(void) {
   char ch = 'a';
@@ -188,7 +188,7 @@ void test10(void) {
     case 0 ...  //expected-warning{{case value not in enumerated type 'enum (unnamed}}
 	    1:  //expected-warning{{case value not in enumerated type 'enum (unnamed}}
     case 2 ... 4:
-    case 5 ...  //expected-warning{{case value not in enumerated type 'enum (unnamed}}	
+    case 5 ...  //expected-warning{{case value not in enumerated type 'enum (unnamed}}
 	      9:  //expected-warning{{case value not in enumerated type 'enum (unnamed}}
     case 10 ... 12:
     case 13 ...  //expected-warning{{case value not in enumerated type 'enum (unnamed}}
@@ -213,7 +213,7 @@ void test11(void) {
     case B:
     case C:
       break;
-      
+
     default:
       break;
   }
@@ -317,13 +317,13 @@ int test18(void) {
 typedef enum {
         kOne = 1,
 } Ints;
-        
+
 void rdar110822110(Ints i)
 {
         switch (i) {
                 case kOne:
                         break;
-                case 2: 	// expected-warning {{case value not in enumerated type 'Ints'}}          
+                case 2: 	// expected-warning {{case value not in enumerated type 'Ints'}}
                         break;
                 default:	// expected-warning {{default label in switch which covers all enumeration values}}
                         break;

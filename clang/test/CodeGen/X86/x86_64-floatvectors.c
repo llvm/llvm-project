@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s | \
 // RUN:   FileCheck %s
 
-// This test validates that the inreg branch generation for __builtin_va_arg 
+// This test validates that the inreg branch generation for __builtin_va_arg
 // does not exceed the alloca size of the type, which can cause the SROA pass to
 // eliminate the assignment.
 

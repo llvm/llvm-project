@@ -31,7 +31,7 @@ template <class T> T A<T>::accessMemberConst() const
 template <class T> int A<T>::accessStaticMember()
 {
   return s_a; // breakpoint 3
-} 
+}
 
 int main()
 {

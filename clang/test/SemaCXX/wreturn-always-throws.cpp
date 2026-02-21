@@ -8,7 +8,7 @@ namespace std {
   };
   class runtime_error {
   public:
-    runtime_error(const string &); 
+    runtime_error(const string &);
   };
 }
 
@@ -29,7 +29,7 @@ int alwaysThrows() {
 
 // Template version.
 
-template<typename T> 
+template<typename T>
 void throwErrorTemplate(const T& msg) {
   throw msg;
 }
@@ -55,11 +55,11 @@ struct S {
 };
 
 template<typename T>
-void S<T>::f() { throw 0; } 
+void S<T>::f() { throw 0; }
 template<>
 void S<int>::f() {}
 
-template<typename T> 
-void S<T>::g() {}  
-template<> 
+template<typename T>
+void S<T>::g() {}
+template<>
 void S<int>::g() { throw 0; }

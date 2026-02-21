@@ -14,12 +14,12 @@ void test_capture_constness(int i, const int ic) {
   (void)[i,ic] ()->void {
     float &fr1 = check_const_int(i);
     float &fr2 = check_const_int(ic);
-  }; 
+  };
 
   (void)[=] ()->void {
     float &fr1 = check_const_int(i);
     float &fr2 = check_const_int(ic);
-  }; 
+  };
 
   (void)[i,ic] () mutable ->void {
     int &ir = check_const_int(i);
@@ -51,6 +51,6 @@ struct S1 {
     [&]()->int {
       S1 &s1 = operator=(&this->x);
       return operator()(this->x + y);
-    }(); 
+    }();
   }
 };

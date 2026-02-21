@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
-struct AStruct { 
+struct AStruct {
   int i;
   char *s;
   double d;

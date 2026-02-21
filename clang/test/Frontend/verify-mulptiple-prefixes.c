@@ -15,14 +15,14 @@ undefined_type x; // #1
 // bar-error{{another error not seen}}
 // bar-error-re{{regex error{{}} not present}}
 
-// CHECK1: error: diagnostics with 'error' severity expected but not seen: 
+// CHECK1: error: diagnostics with 'error' severity expected but not seen:
 // CHECK1:   Line 12 'foo-error': there is no error here
 // CHECK1:   Line 13 'bar-error': error not seen
 // CHECK1:   Line 15 'bar-error': another error not seen
 // CHECK1:   Line 16 'bar-error-re': regex error{{{{[}][}]}} not present
-// CHECK1: error: diagnostics with 'error' severity seen but not expected: 
+// CHECK1: error: diagnostics with 'error' severity seen but not expected:
 // CHECK1:   Line 10: unknown type name 'undefined_type'
-// CHECK1: error: diagnostics with 'note' severity expected but not seen: 
+// CHECK1: error: diagnostics with 'note' severity expected but not seen:
 // CHECK1:   Line 14 'bar-note': declared here
 // CHECK1: 6 errors generated.
 
@@ -33,7 +33,7 @@ undefined_type x; // #1
 // quux-no-diagnostics
 // qux-error-re@#1{{unknown type name 'undefined_type'}}
 
-// CHECK2: error: diagnostics with 'error' severity seen but not expected: 
+// CHECK2: error: diagnostics with 'error' severity seen but not expected:
 // CHECK2:   Line 10: unknown type name 'undefined_type'
 // CHECK2:   Line 32: 'baz-error' directive cannot follow 'qux-no-diagnostics' directive
 // CHECK2:   Line 34: 'qux-error-re' directive cannot follow 'qux-no-diagnostics' directive
@@ -43,6 +43,6 @@ undefined_type x; // #1
 // eggs-error@#1{{unknown type name 'undefined_type'}}
 // spam-no-diagnostics
 
-// CHECK3: error: diagnostics with 'error' severity seen but not expected: 
+// CHECK3: error: diagnostics with 'error' severity seen but not expected:
 // CHECK3:   Line 44: 'spam-no-diagnostics' directive cannot follow other expected directives
 // CHECK3: 1 error generated.

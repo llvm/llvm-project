@@ -12,10 +12,10 @@ struct X1 {
   X1(const X1 &) throw();
 };
 
-struct X2 : X1 { 
+struct X2 : X1 {
   X2();
 };
-struct X3 : X0, X1 { 
+struct X3 : X0, X1 {
   X3();
 };
 
@@ -47,7 +47,7 @@ struct X6 {
   X6() throw();
 };
 
-struct X7 { 
+struct X7 {
   X7();
 };
 

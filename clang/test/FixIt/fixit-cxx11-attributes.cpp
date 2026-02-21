@@ -16,7 +16,7 @@ namespace ClassSpecifier {
    // CHECK: fix-it:{{.*}}:{14:37-14:51}
 
   class base {};
-  class [[]] [[]] final_class 
+  class [[]] [[]] final_class
     alignas(float) [[]] final // expected-error {{an attribute list cannot appear here}}
     alignas(float) [[]] [[]] alignas(float): base{}; // expected-error {{an attribute list cannot appear here}}
     // CHECK: fix-it:{{.*}}:{19:19-19:19}
@@ -24,7 +24,7 @@ namespace ClassSpecifier {
     // CHECK: fix-it:{{.*}}:{19:19-19:19}
     // CHECK: fix-it:{{.*}}:{21:5-21:44}
 
-  class [[]] [[]] final_class_another 
+  class [[]] [[]] final_class_another
     [[]] [[]] alignas(16) final // expected-error {{an attribute list cannot appear here}}
     [[]] [[]] alignas(16) [[]]{}; // expected-error {{an attribute list cannot appear here}}
     // CHECK: fix-it:{{.*}}:{27:19-27:19}

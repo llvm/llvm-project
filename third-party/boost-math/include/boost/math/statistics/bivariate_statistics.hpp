@@ -76,7 +76,7 @@ ReturnType means_and_covariance_parallel_impl(ForwardIterator u_begin, ForwardIt
 
     const unsigned max_concurrency = std::thread::hardware_concurrency() == 0 ? 2u : std::thread::hardware_concurrency();
     unsigned num_threads = 2u;
-    
+
     // 5.16 comes from benchmarking. See boost/math/reporting/performance/bivariate_statistics_performance.cpp
     // Threading is faster for: 10 + 5.16e-3 N/j <= 5.16e-3N => N >= 10^4j/5.16(j-1).
     const auto parallel_lower_bound = 10e4*max_concurrency/(5.16*(max_concurrency-1));
@@ -223,7 +223,7 @@ ReturnType correlation_coefficient_parallel_impl(ForwardIterator u_begin, Forwar
 
     const unsigned max_concurrency = std::thread::hardware_concurrency() == 0 ? 2u : std::thread::hardware_concurrency();
     unsigned num_threads = 2u;
-    
+
     // 3.25 comes from benchmarking. See boost/math/reporting/performance/bivariate_statistics_performance.cpp
     // Threading is faster for: 10 + 3.25e-3 N/j <= 3.25e-3N => N >= 10^4j/3.25(j-1).
     const auto parallel_lower_bound = 10e4*max_concurrency/(3.25*(max_concurrency-1));

@@ -84,7 +84,7 @@ BOOST_MATH_GPU_ENABLED void handle_zero_derivative(F f,
    T& result,
    T& guess,
    const T& min,
-   const T& max) noexcept(BOOST_MATH_IS_FLOAT(T) 
+   const T& max) noexcept(BOOST_MATH_IS_FLOAT(T)
    #ifndef BOOST_MATH_HAS_GPU_SUPPORT
    && noexcept(std::declval<F>()(std::declval<T>()))
    #endif
@@ -134,7 +134,7 @@ BOOST_MATH_GPU_ENABLED void handle_zero_derivative(F f,
 } // namespace
 
 template <class F, class T, class Tol, class Policy>
-BOOST_MATH_GPU_ENABLED boost::math::pair<T, T> bisect(F f, T min, T max, Tol tol, boost::math::uintmax_t& max_iter, const Policy& pol) noexcept(policies::is_noexcept_error_policy<Policy>::value && BOOST_MATH_IS_FLOAT(T) 
+BOOST_MATH_GPU_ENABLED boost::math::pair<T, T> bisect(F f, T min, T max, Tol tol, boost::math::uintmax_t& max_iter, const Policy& pol) noexcept(policies::is_noexcept_error_policy<Policy>::value && BOOST_MATH_IS_FLOAT(T)
 #ifndef BOOST_MATH_HAS_GPU_SUPPORT
 && noexcept(std::declval<F>()(std::declval<T>()))
 #endif
@@ -220,7 +220,7 @@ BOOST_MATH_GPU_ENABLED inline boost::math::pair<T, T> bisect(F f, T min, T max, 
 }
 
 template <class F, class T, class Tol>
-BOOST_MATH_GPU_ENABLED inline boost::math::pair<T, T> bisect(F f, T min, T max, Tol tol) noexcept(policies::is_noexcept_error_policy<policies::policy<> >::value && BOOST_MATH_IS_FLOAT(T) 
+BOOST_MATH_GPU_ENABLED inline boost::math::pair<T, T> bisect(F f, T min, T max, Tol tol) noexcept(policies::is_noexcept_error_policy<policies::policy<> >::value && BOOST_MATH_IS_FLOAT(T)
 #ifndef BOOST_MATH_HAS_GPU_SUPPORT
 && noexcept(std::declval<F>()(std::declval<T>()))
 #endif
@@ -259,7 +259,7 @@ BOOST_MATH_GPU_ENABLED T newton_raphson_iterate(F f, T guess, T min, T max, int 
    // we update these to the function value when we update the endpoints
    // of the range.  Then, provided at some point we update both endpoints
    // checking that max_range_f * min_range_f <= 0 verifies there is a root
-   // to be found somewhere.  Note that if there is no root, and we approach 
+   // to be found somewhere.  Note that if there is no root, and we approach
    // a local minima, then the derivative will go to zero, and hence the next
    // step will jump out of bounds (or at least past the minima), so this
    // check *should* happen in pathological cases.
@@ -560,7 +560,7 @@ namespace detail {
       // we update these to the function value when we update the endpoints
       // of the range.  Then, provided at some point we update both endpoints
       // checking that max_range_f * min_range_f <= 0 verifies there is a root
-      // to be found somewhere.  Note that if there is no root, and we approach 
+      // to be found somewhere.  Note that if there is no root, and we approach
       // a local minima, then the derivative will go to zero, and hence the next
       // step will jump out of bounds (or at least past the minima), so this
       // check *should* happen in pathological cases.
@@ -912,7 +912,7 @@ inline double fma_workaround(double x, double y, double z) { return ::fma(x, y, 
 #ifndef BOOST_MATH_NO_LONG_DOUBLE_MATH_FUNCTIONS
 inline long double fma_workaround(long double x, long double y, long double z) { return ::fmal(x, y, z); }
 #endif
-#endif            
+#endif
 template<class T>
 inline T discriminant(T const& a, T const& b, T const& c)
 {

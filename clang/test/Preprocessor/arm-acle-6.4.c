@@ -90,11 +90,11 @@
 // CHECK-V6T2: __ARM_ARCH_ISA_THUMB 2
 
 // RUN: %clang -target arm-none-linux-eabi -march=armv6k -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-V6K
- 
+
 // CHECK-V6K: __ARM_FEATURE_LDREX 0xf
 
 // RUN: %clang -target arm-none-linux-eabi -march=armv6kz -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-V6KZ
- 
+
 // CHECK-V6KZ: __ARM_FEATURE_LDREX 0xf
 
 // RUN: %clang -target arm-none-linux-eabi -march=armv7-a -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-V7A

@@ -7,7 +7,7 @@ int g0; // expected-error{{non-static declaration of 'g0' follows static declara
 static int g1;
 extern int g1;
 
-static int g2; 
+static int g2;
 __private_extern__ int g2;
 
 int g3; // expected-note{{previous definition}}

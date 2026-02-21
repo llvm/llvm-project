@@ -43,7 +43,7 @@ public:
         using std::isfinite;
         if (!isfinite(x))
         {
-            throw std::domain_error("Cannot convert non-finites into continued fractions.");  
+            throw std::domain_error("Cannot convert non-finites into continued fractions.");
         }
         b_.reserve(50);
         Real bj = round(x);
@@ -106,7 +106,7 @@ public:
 
     Real khinchin_geometric_mean() const {
         if (b_.size() == 1)
-        { 
+        {
             return std::numeric_limits<Real>::quiet_NaN();
         }
         using std::log;
@@ -132,7 +132,7 @@ public:
     const std::vector<Z>& partial_denominators() const {
         return b_;
     }
-    
+
     template<typename T, typename Z2>
     friend std::ostream& operator<<(std::ostream& out, centered_continued_fraction<T, Z2>& ccf);
 
@@ -153,7 +153,7 @@ std::ostream& operator<<(std::ostream& out, centered_continued_fraction<Real, Z2
     {
         out << std::setprecision(p);
     }
-   
+
     out << "[" << scf.b_.front();
     if (scf.b_.size() > 1)
     {

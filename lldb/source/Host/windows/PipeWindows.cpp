@@ -106,7 +106,7 @@ Status PipeWindows::CreateNew(llvm::StringRef name) {
   ZeroMemory(&m_read_overlapped, sizeof(m_read_overlapped));
   m_read_overlapped.hEvent = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
 
-  // Open the write end of the pipe. Note that closing either the read or 
+  // Open the write end of the pipe. Note that closing either the read or
   // write end of the pipe could directly close the pipe itself.
   Status result = OpenNamedPipe(name, false);
   if (!result.Success()) {

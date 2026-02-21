@@ -5,7 +5,7 @@ template<typename T>
 class X0 {
 public:
   void f(T t);
-  
+
   struct Inner {
     void g(T t);
   };
@@ -38,7 +38,7 @@ void test_intptr(X0<int*> xi, X0<int*>::Inner xii) {
 #endif
 }
 
-extern template class X0<long*>; 
+extern template class X0<long*>;
 
 void test_longptr(X0<long*> xl, X0<long*>::Inner xli) {
   xl.f(0);
@@ -51,13 +51,13 @@ template<typename T>
 class X1 {
 public:
   void f(T t) { t += 2; }
-  
+
   void g(T t);
 };
 
 template<typename T>
-void X1<T>::g(T t) { 
-  t += 2; 
+void X1<T>::g(T t) {
+  t += 2;
 }
 
 extern template class X1<void*>;

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++23 %s readability-else-after-return %t 
+// RUN: %check_clang_tidy -std=c++23 %s readability-else-after-return %t
 
 // Consteval if is an exception to the rule, we cannot remove the else.
 void f() {

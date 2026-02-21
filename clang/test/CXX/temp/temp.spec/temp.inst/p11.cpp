@@ -10,5 +10,5 @@ namespace test0 {
     {}
   };
   void f1(A<int> x) { x.Allocate(); }
-  
+
 }

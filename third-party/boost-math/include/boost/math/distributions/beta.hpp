@@ -424,7 +424,7 @@ namespace boost
           return RealType(0);
         }
       }
-      
+
       return static_cast<RealType>(ibeta_derivative(a, b, x, Policy()));
     } // pdf
 

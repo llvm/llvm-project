@@ -3,12 +3,12 @@
 void f() {
   typedef int T;
   int x, *px;
-  
+
   // Type id.
   (T())x;    // expected-error {{cast from 'int' to 'T ()'}}
   (T())+x;   // expected-error {{cast from 'int' to 'T ()'}}
   (T())*px;  // expected-error {{cast from 'int' to 'T ()'}}
-  
+
   // Expression.
   x = (T());
   x = (T())/x;

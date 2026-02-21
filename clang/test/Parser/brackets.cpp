@@ -171,11 +171,11 @@ namespace gh147333 {
     int[1] operator+();
     // expected-error@-1{{brackets are not allowed here; to declare an array, place the brackets after the name}}
     // expected-error@-2{{function cannot return array type}}
-    
+
     int[1] operator ""_x(unsigned long long);
     // expected-error@-1{{brackets are not allowed here; to declare an array, place the brackets after the name}}
     // expected-error@-2{{function cannot return array type}}
-       
+
     struct A {
         int[1] operator int();
         // expected-error@-1{{brackets are not allowed here; to declare an array, place the brackets after the name}}
@@ -189,13 +189,13 @@ namespace gh147333 {
         // TODO: The following is too noisy and redundant.
         // expected-error@-3{{function cannot return array type}}
         // expected-error@-4{{constructor cannot have a return type}}
-        
+
         int[1] ~A();
         // expected-error@-1{{brackets are not allowed here; to declare an array, place the brackets after the name}}
         // TODO: This isn't helpful.
         // expected-error@-3{{array has incomplete element type 'void'}}
     };
-    
+
     template<typename T>
     struct B {
         int[1] B<T>();

@@ -212,7 +212,7 @@ template <typename T, typename Policy>
 BOOST_MATH_GPU_ENABLED T ellint_rj_imp(T x, T y, T z, T p, const Policy& pol)
 {
    BOOST_MATH_STD_USING
-   
+
    constexpr auto function = "boost::math::ellint_rj<%1%>(%1%,%1%,%1%)";
 
    if(x < 0)
@@ -272,7 +272,7 @@ BOOST_MATH_GPU_ENABLED T ellint_rj_imp(T x, T y, T z, T p, const Policy& pol)
 } // namespace detail
 
 template <class T1, class T2, class T3, class T4, class Policy>
-BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T1, T2, T3, T4>::type 
+BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T1, T2, T3, T4>::type
    ellint_rj(T1 x, T2 y, T3 z, T4 p, const Policy& pol)
 {
    typedef typename tools::promote_args<T1, T2, T3, T4>::type result_type;
@@ -287,7 +287,7 @@ BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T1, T2, T3, T4>::type
 }
 
 template <class T1, class T2, class T3, class T4>
-BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T1, T2, T3, T4>::type 
+BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T1, T2, T3, T4>::type
    ellint_rj(T1 x, T2 y, T3 z, T4 p)
 {
    return ellint_rj(x, y, z, p, policies::policy<>());

@@ -2730,10 +2730,10 @@ struct undefined_lanczos : public boost::math::integral_constant<int, (boost::ma
 template <class Real, class Policy>
 struct lanczos
 {
-   BOOST_MATH_STATIC constexpr auto target_precision = policies::precision<Real, Policy>::type::value <= 0 ? (boost::math::numeric_limits<int>::max)()-2 : 
+   BOOST_MATH_STATIC constexpr auto target_precision = policies::precision<Real, Policy>::type::value <= 0 ? (boost::math::numeric_limits<int>::max)()-2 :
                                                                                                    policies::precision<Real, Policy>::type::value;
 
-   using type = typename boost::math::conditional<(target_precision <= lanczos6m24::value), lanczos6m24, 
+   using type = typename boost::math::conditional<(target_precision <= lanczos6m24::value), lanczos6m24,
                 typename boost::math::conditional<(target_precision <= lanczos13m53::value), lanczos13m53,
                 typename boost::math::conditional<(target_precision <= lanczos11::value), lanczos11,
                 typename boost::math::conditional<(target_precision <= lanczos17m64::value), lanczos17m64,

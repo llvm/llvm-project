@@ -209,7 +209,7 @@ T tmain(T argc) {
 #pragma omp master taskloop simd in_reduction(* : ca) // expected-error {{const-qualified variable cannot be in_reduction}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp master taskloop simd in_reduction(- : da) // expected-error 2 {{const-qualified variable cannot be in_reduction}} omp52-warning 3 {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}} 
+#pragma omp master taskloop simd in_reduction(- : da) // expected-error 2 {{const-qualified variable cannot be in_reduction}} omp52-warning 3 {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp master taskloop simd in_reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}

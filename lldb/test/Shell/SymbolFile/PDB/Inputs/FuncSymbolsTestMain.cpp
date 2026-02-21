@@ -1,4 +1,4 @@
- 
+
 // Global functions
 int Func_arg_array(int array[]) { return 1; }
 void Func_arg_void(void) { return; }

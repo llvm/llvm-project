@@ -235,7 +235,7 @@ decltype(std::declval<F>()(std::declval<Real>(), std::declval<Real>())) tanh_sin
        --max_right_position;
     //
     // Check for non-finite values at the end points:
-    // 
+    //
     result_type yp{ f(-1 - m_abscissas[0][max_left_position], m_abscissas[0][max_left_position]) };
     result_type ym{ f(1 + m_abscissas[0][max_right_position], -m_abscissas[0][max_right_position]) };
     result_type tail_tolerance{ (std::max)(boost::math::tools::epsilon<Real>(), Real(tolerance * tolerance)) };

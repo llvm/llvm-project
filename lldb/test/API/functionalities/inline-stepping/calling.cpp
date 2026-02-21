@@ -26,7 +26,7 @@ void called_by_inline_trivial ();
 
 static int inline_value;
 
-int 
+int
 function_to_call ()
 {
     return inline_value;
@@ -68,14 +68,14 @@ inline_ref_2 (int &value)
 {
     int increment = called_by_inline_ref (value);  // In inline_ref_2.
     value += 1; // At increment in inline_ref_2.
-    return value; 
+    return value;
 }
 
 void
 caller_trivial_1 ()
 {
     caller_trivial_2(); // In caller_trivial_1.
-    inline_value += 1; 
+    inline_value += 1;
 }
 
 void
@@ -137,21 +137,21 @@ max_value(const std::string& lhs, const std::string& rhs)
 int
 main (int argc, char **argv)
 {
-    
+
     inline_value = 0;    // Stop here and step over to set up stepping over.
 
     inline_trivial_1 ();    // At inline_trivial_1 called from main.
 
     caller_trivial_1();     // At first call of caller_trivial_1 in main.
-    
+
     caller_trivial_1();     // At second call of caller_trivial_1 in main.
-    
+
     caller_ref_1 (argc); // At first call of caller_ref_1 in main.
-    
-    caller_ref_1 (argc); // At second call of caller_ref_1 in main. 
-    
+
+    caller_ref_1 (argc); // At second call of caller_ref_1 in main.
+
     function_to_call (); // Make sure debug info for this function gets generated.
-    
+
     max_value(123, 456);                                // Call max_value template
     max_value(std::string("abc"), std::string("0022")); // Call max_value specialized
 

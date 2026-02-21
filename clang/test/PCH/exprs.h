@@ -35,7 +35,7 @@ struct Y {
 struct Z {
   struct Y y;
 };
-typedef typeof(__builtin_offsetof(struct Z, y.array[1 + 2].member)) 
+typedef typeof(__builtin_offsetof(struct Z, y.array[1 + 2].member))
   offsetof_type;
 
 // UnaryExprOrTypeTraitExpr

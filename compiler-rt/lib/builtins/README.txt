@@ -223,7 +223,7 @@ void __enable_execute_stack(void* addr);
 // is a C language extension __attribute__((cleanup(func))) which marks local
 // variables as needing the cleanup function "func" to be run when the
 // variable goes out of scope.  That includes when an exception is thrown,
-// so a personality handler is needed.  
+// so a personality handler is needed.
 _Unwind_Reason_Code __gcc_personality_v0(int version, _Unwind_Action actions,
          uint64_t exceptionClass, struct _Unwind_Exception* exceptionObject,
          _Unwind_Context_t context);
@@ -240,27 +240,27 @@ void* __emutls_get_address(struct __emutls_control*);
 
 // There is no C interface to the saveFP/restFP functions.  They are helper
 // functions called by the prolog and epilog of functions that need to save
-// a number of non-volatile float point registers.  
+// a number of non-volatile float point registers.
 saveFP
 restFP
 
 // PowerPC has a standard template for trampoline functions.  This function
 // generates a custom trampoline function with the specific realFunc
 // and localsPtr values.
-void __trampoline_setup(uint32_t* trampOnStack, int trampSizeAllocated, 
+void __trampoline_setup(uint32_t* trampOnStack, int trampSizeAllocated,
                                 const void* realFunc, void* localsPtr);
 
 // adds two 128-bit double-double precision values ( x + y )
-long double __gcc_qadd(long double x, long double y);  
+long double __gcc_qadd(long double x, long double y);
 
 // subtracts two 128-bit double-double precision values ( x - y )
-long double __gcc_qsub(long double x, long double y); 
+long double __gcc_qsub(long double x, long double y);
 
 // multiples two 128-bit double-double precision values ( x * y )
-long double __gcc_qmul(long double x, long double y);  
+long double __gcc_qmul(long double x, long double y);
 
 // divides two 128-bit double-double precision values ( x / y )
-long double __gcc_qdiv(long double a, long double b);  
+long double __gcc_qdiv(long double a, long double b);
 
 
 //    ARM specific functions
@@ -276,17 +276,17 @@ switchu8
 // called in the prolog and epilog of Thumb1 functions.  When the C++ ABI use
 // SJLJ for exceptions, each function with a catch clause or destructors needs
 // to save and restore all registers in it prolog and epilog.  But there is
-// no way to access vector and high float registers from thumb1 code, so the 
-// compiler must add call outs to these helper functions in the prolog and 
+// no way to access vector and high float registers from thumb1 code, so the
+// compiler must add call outs to these helper functions in the prolog and
 // epilog.
 restore_vfp_d8_d15_regs
 save_vfp_d8_d15_regs
 
 
 // Note: long ago ARM processors did not have floating point hardware support.
-// Floating point was done in software and floating point parameters were 
+// Floating point was done in software and floating point parameters were
 // passed in integer registers.  When hardware support was added for floating
-// point, new *vfp functions were added to do the same operations but with 
+// point, new *vfp functions were added to do the same operations but with
 // floating point parameters in floating point registers.
 
 // Undocumented functions

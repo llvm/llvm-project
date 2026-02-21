@@ -40,7 +40,7 @@ public:
   }
 
 protected:
-  
+
   TypeSystemClang *m_ast = nullptr;
   std::unique_ptr<clang_utils::TypeSystemClangHolder> m_holder;
 

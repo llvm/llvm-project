@@ -26,21 +26,21 @@ class T2_A { };
 // An alternate version of the same.
 class T3_A;
 template<typename T>
-struct T3_B { 
-  void f0(T *a) { 
+struct T3_B {
+  void f0(T *a) {
     delete a; // expected-error{{calling a private destructor of class 'T3_A'}}
-  } 
+  }
 };
 
-struct T3_C { 
-  T3_B<T3_A> x; 
-  void f0(T3_A *a) { 
+struct T3_C {
+  T3_B<T3_A> x;
+  void f0(T3_A *a) {
     x.f0(a); // expected-note{{in instantiation of member function 'T3_B<T3_A>::f0' requested here}}
-  } 
+  }
 };
 
 void f0(T3_A *a) { T3_C x; x.f0(a); }
-class T3_A { 
-private: 
+class T3_A {
+private:
   ~T3_A(); // expected-note{{declared private here}}
 };

@@ -41,7 +41,7 @@ void code_align() {
 #if __cplusplus >= 201103L
 template <int A, int B>
 void code_align_cpp() {
-  int a[10];	
+  int a[10];
   // CHECK-CPP: ![[MD_FP_4]] = distinct !{![[MD_FP_4]], ![[MP]], ![[MD_code_align_4:[0-9]+]]}
   // CHECK-CPP-NEXT: ![[MD_code_align_4]] = !{!"llvm.loop.align", i32 32}
   [[clang::code_align(A)]] for (int i = 0; i != 10; ++i)

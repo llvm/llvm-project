@@ -4,7 +4,7 @@
 class A
 {
 public:
-    A(int a) : 
+    A(int a) :
         m_a(a)
     {
     }
@@ -12,13 +12,13 @@ public:
     virtual int get2() const { return m_a; }
     virtual int get() const { return m_a; }
 protected:
-    int m_a;    
+    int m_a;
 };
 
 class B : public A
 {
 public:
-    B(int a, int b) : 
+    B(int a, int b) :
         A(a),
         m_b(b)
     {
@@ -35,8 +35,8 @@ public:
     int get() const override
     {
         return m_b;
-    }   
-            
+    }
+
 protected:
     int m_b;
 };
@@ -51,7 +51,7 @@ struct C
 class D : public C, public B
 {
 public:
-    D(int a, int b, int c, int d) : 
+    D(int a, int b, int c, int d) :
         C(c),
         B(a, b),
         m_d(d)

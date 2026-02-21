@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 template<typename T, typename U = const T> struct Def1;
 
-template<> struct Def1<int> { 
+template<> struct Def1<int> {
   void foo();
 };
 
@@ -24,7 +24,7 @@ template<typename T,  // FIXME: bad error message below, needs better location i
          typename T2 = const T*>  // expected-error{{'T2' declared as a pointer to a reference}}
   struct Def2;
 
-template<> struct Def2<int> { 
+template<> struct Def2<int> {
   void foo();
 };
 
@@ -40,11 +40,11 @@ template<> struct Def1<const int> { }; // expected-error{{redefinition of 'Def1<
 
 template<typename T, typename T2 = T&> struct Def3;
 
-template<> struct Def3<int> { 
+template<> struct Def3<int> {
   void foo();
 };
 
-template<> struct Def3<int&> { 
+template<> struct Def3<int&> {
   void bar();
 };
 
@@ -83,7 +83,7 @@ template<typename R, typename Arg1, typename Arg2 = Arg1,
          typename FuncType = R (*)(Arg1, Arg2)>
   struct Def6;
 
-template<> struct Def6<int, float> { 
+template<> struct Def6<int, float> {
   void foo();
 };
 
@@ -91,7 +91,7 @@ template<> struct Def6<bool, int[5], float(double, double)> {
   void bar();
 };
 
-bool test_Def6(Def6<int, float, float> *d6a, 
+bool test_Def6(Def6<int, float, float> *d6a,
                Def6<int, float, float, int (*)(float, float)> *d6b,
                Def6<bool, int[5], float(double, double),
                     bool(*)(int*, float(*)(double, double))> *d6c) {

@@ -25,7 +25,7 @@ class Task final {
   using value_type = T;
 
   class promise_type final {
-   public: 
+   public:
     Task<void> get_return_object() { return Task<void>(std::coroutine_handle<promise_type>::from_promise(*this)); }
 
     void unhandled_exception() {}

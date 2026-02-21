@@ -11,6 +11,6 @@ struct Foo {
 
 int main() {
   const int x = 13;
-  bar::Foo foo = { &x, 0, 1.29, 17 }; // CHECK: {{^  bar::Foo foo = { 1.29, 17, 0, &x };}} 
+  bar::Foo foo = { &x, 0, 1.29, 17 }; // CHECK: {{^  bar::Foo foo = { 1.29, 17, 0, &x };}}
   return 0;
 }

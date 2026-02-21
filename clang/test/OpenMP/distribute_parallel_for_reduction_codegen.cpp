@@ -39,13 +39,13 @@
 
 template <typename T>
 T tmain(T &r) {
-  int n = 1000;  
+  int n = 1000;
   // schedule: dynamic chunk
   #pragma omp target map(tofrom:r)
   #pragma omp teams
   #pragma omp distribute parallel for reduction(+:r)
   for (int i = 0; i < n; ++i)
-    r += (T)i;  
+    r += (T)i;
 
   return r;
 }

@@ -26,7 +26,7 @@ a_type = GET_TYPE_INT(a),
 b_type = GET_TYPE_INT(b)
 };
 
-_Static_assert(GET_TYPE_INT(a) == GET_TYPE_INT(b), "ok"); 
+_Static_assert(GET_TYPE_INT(a) == GET_TYPE_INT(b), "ok");
 
 extern enum x e_a;
 extern __typeof(b) e_a;

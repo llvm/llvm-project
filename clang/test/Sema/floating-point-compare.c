@@ -2,7 +2,7 @@
 
 int f1(float x, float y) {
   return x == y; // expected-warning {{comparing floating point with ==}}
-} 
+}
 
 int f2(float x, float y) {
   return x != y; // expected-warning {{comparing floating point with ==}}

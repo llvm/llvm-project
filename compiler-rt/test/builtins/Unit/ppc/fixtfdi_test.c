@@ -454,26 +454,26 @@ const int numTestCases = sizeof(testCases) / sizeof(struct testVector);
 int64_t __fixtfdi(long double x);
 
 int main(int argc, char *argv[]) {
-	
+
 	int i;
 	DD input;
 	int64_t expected_result, computed_result;
-	
+
 	for (i=0; i<numTestCases; ++i) {
 		input.hi = testCases[i].xhi;
 		input.lo = testCases[i].xlo;
 		expected_result = testCases[i].result;
-		
+
 		computed_result = __fixtfdi(input.ld);
-		
+
 		if (computed_result != expected_result) {
 			printf("Error for __fixtfdi at %La = ( %a , %a ):\n", input.ld, input.hi, input.lo);
 			printf("\tExpected %016llx ( %lld )\n", expected_result, expected_result);
 			printf("\tComputed %016llx ( %lld )\n", computed_result, computed_result);
-			
+
 			return 1;
 		}
 	}
-	
+
 	return 0;
 }

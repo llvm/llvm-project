@@ -3,7 +3,7 @@
 
 // Test with pch.
 // RUN: %clang_cc1 -x c++ -emit-pch -o %t %S/Inputs/namespaces.h
-// RUN: %clang_cc1 -x c++ -include-pch %t -fsyntax-only %s 
+// RUN: %clang_cc1 -x c++ -include-pch %t -fsyntax-only %s
 
 int int_val;
 N1::t1 *ip1 = &int_val;

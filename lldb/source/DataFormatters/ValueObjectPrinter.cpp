@@ -85,7 +85,7 @@ bool ValueObjectPrinter::ShouldPrintObjectDescription() {
 }
 
 llvm::Error ValueObjectPrinter::PrintValueObject() {
-  // If the incoming ValueObject is in an error state, the best we're going to 
+  // If the incoming ValueObject is in an error state, the best we're going to
   // get out of it is its type.  But if we don't even have that, just print
   // the error and exit early.
   if (m_orig_valobj.GetError().Fail() &&

@@ -83,7 +83,7 @@ if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
       add_library(MLIR_NVPTXCOMPILER_LIB STATIC IMPORTED GLOBAL)
       # Downstream projects can modify this path and use it in CMake. For example:
       # add_library(MLIR_NVPTXCOMPILER_LIB STATIC IMPORTED GLOBAL)
-      # set_property(TARGET MLIR_NVPTXCOMPILER_LIB PROPERTY IMPORTED_LOCATION ${...})  
+      # set_property(TARGET MLIR_NVPTXCOMPILER_LIB PROPERTY IMPORTED_LOCATION ${...})
       # where `...` is to be replaced with the path to the library.
       set_property(TARGET MLIR_NVPTXCOMPILER_LIB PROPERTY IMPORTED_LOCATION ${MLIR_NVPTXCOMPILER_LIB_PATH})
       # Link against `nvptxcompiler_static`. TODO: use `CUDA::nvptxcompiler_static`.
@@ -101,7 +101,7 @@ if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
       endif()
 
       add_library(MLIR_NVFATBIN_LIB STATIC IMPORTED GLOBAL)
-      set_property(TARGET MLIR_NVFATBIN_LIB PROPERTY IMPORTED_LOCATION ${MLIR_NVFATBIN_LIB_PATH})  
+      set_property(TARGET MLIR_NVFATBIN_LIB PROPERTY IMPORTED_LOCATION ${MLIR_NVFATBIN_LIB_PATH})
       target_link_libraries(MLIRNVVMTarget PRIVATE MLIR_NVFATBIN_LIB)
     endif()
   else()
@@ -141,7 +141,7 @@ if (MLIR_NVVM_EMBED_LIBDEVICE)
               "Requested using the `nvptxcompiler` library backend but it couldn't be found.")
     endif()
   endif()
-  
+
   embed_binary_to_src(${MLIR_NVVM_LIBDEVICE_PATH} ${CMAKE_CURRENT_BINARY_DIR}/libdevice_embedded.c _mlir_embedded_libdevice)
   add_mlir_library(MLIRNVVMLibdevice
     ${CMAKE_CURRENT_BINARY_DIR}/libdevice_embedded.c

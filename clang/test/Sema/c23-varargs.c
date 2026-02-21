@@ -38,6 +38,6 @@ void bar(int x, int y, ...) {
                            expected-error {{too many arguments to function call, expected at most 2, have 3}}
   va_start(list, y, y); // pre-c23-error {{too many arguments provided to function-like macro invocation}} \
                            pre-c23-error {{use of undeclared identifier 'va_start'}} \
-                           expected-error {{too many arguments to function call, expected at most 2, have 3}}	
+                           expected-error {{too many arguments to function call, expected at most 2, have 3}}
   // pre-c23-note@__stdarg_va_arg.h:* 4 {{macro 'va_start' defined here}}
 }

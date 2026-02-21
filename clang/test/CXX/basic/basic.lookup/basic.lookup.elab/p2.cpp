@@ -4,7 +4,7 @@ namespace test0 {
   struct A {
     static int foo;
   };
-  
+
   namespace i0 {
     typedef int A; // expected-note {{declared here}}
 

@@ -32,7 +32,7 @@ struct X1 {
     T member1;
     U member2; // expected-error{{incomplete}}
   };
-  
+
   template<typename U>
   void f(T& t, U u) {
     t = u; // expected-error{{incompatible}}
@@ -59,15 +59,15 @@ struct NonDefaultConstructible { // expected-note{{candidate constructor (the im
 
 template<typename T, typename U>
 struct X2 {
-  void f(T &t, U u) { 
+  void f(T &t, U u) {
     t = u; // expected-error{{incompatible}}
   }
-  
+
   struct Inner {
     T member1;
     U member2; // expected-error{{incomplete}}
   };
-  
+
   static T static_member1;
   static U static_member2;
 };
@@ -87,8 +87,8 @@ template struct X2<int, Incomplete>::Inner; // expected-note{{instantiation}}
 
 template int X2<int, float>::static_member1;
 template int* X2<int*, float>::static_member1; // expected-note{{instantiation}}
-template 
+template
   NonDefaultConstructible X2<NonDefaultConstructible, int>::static_member1;
 
-template 
+template
   NonDefaultConstructible X2<int, NonDefaultConstructible>::static_member2; // expected-note{{instantiation}}

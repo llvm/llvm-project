@@ -9,7 +9,7 @@
  * Written by Sven Verdoolaege, K.U.Leuven, Departement
  * Computerwetenschappen, Celestijnenlaan 200A, B-3001 Leuven, Belgium
  * and INRIA Saclay - Ile-de-France, Parc Club Orsay Universite,
- * ZAC des vignes, 4 rue Jacques Monod, 91893 Orsay, France 
+ * ZAC des vignes, 4 rue Jacques Monod, 91893 Orsay, France
  * and Ecole Normale Superieure, 45 rue d’Ulm, 75230 Paris, France
  * and Cerebras Systems, 175 S San Antonio Rd, Los Altos, CA, USA
  */
@@ -2175,7 +2175,7 @@ static __isl_give isl_map *read_conjunct(__isl_keep isl_stream *s,
 		isl_map_free(map);
 		return isl_map_empty(space);
 	}
-		
+
 	return add_constraint(s, v, map, rational);
 error:
 	isl_map_free(map);
@@ -3149,7 +3149,7 @@ __isl_give isl_map *isl_stream_read_map(__isl_keep isl_stream *s)
 	if (obj.v)
 		isl_assert(s->ctx, obj.type == isl_obj_map ||
 				   obj.type == isl_obj_set, goto error);
-	
+
 	if (obj.type == isl_obj_set)
 		obj.v = isl_map_from_range(obj.v);
 

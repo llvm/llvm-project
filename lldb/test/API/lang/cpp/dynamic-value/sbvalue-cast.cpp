@@ -1,7 +1,7 @@
 #ifdef DO_VIRTUAL_INHERITANCE
 #define VIRTUAL virtual
 #else
-#define VIRTUAL 
+#define VIRTUAL
 #endif
 
 #include <stdio.h>
@@ -45,7 +45,7 @@ public:
         printf("m_b_val=%d\n", m_b_val);
     }
     virtual ~DerivedB() {}
-    
+
     virtual void
     forcast(int input) {
         int future_val = m_b_val + input * 2;

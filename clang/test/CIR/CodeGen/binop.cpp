@@ -77,7 +77,7 @@ void b0(int a, int b) {
 
 // LLVM:         ret void
 
-// OGCG-LABEL: define{{.*}} void @_Z2b0ii(i32 {{.*}} %a, i32 {{.*}} %b) {{.*}} { 
+// OGCG-LABEL: define{{.*}} void @_Z2b0ii(i32 {{.*}} %a, i32 {{.*}} %b) {{.*}} {
 // OGCG:         %[[A_ADDR:.*]] = alloca i32
 // OGCG:         %[[B_ADDR:.*]] = alloca i32
 // OGCG:         %[[X:.*]] = alloca i32

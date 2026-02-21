@@ -2971,7 +2971,7 @@ TEST(DocumentLinks, All) {
   Annotations MainCpp(R"cpp(
       #define HEADER_AA "faa.h"
       #define HEADER_BB "fbb.h"
-      #define GET_HEADER(X) HEADER_ ## X 
+      #define GET_HEADER(X) HEADER_ ## X
 
       #/*comments*/include /*comments*/ $foo[["foo.h"]] //more comments
       int end_of_preamble = 0;

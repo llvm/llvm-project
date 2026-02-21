@@ -148,7 +148,7 @@ enum class FeatureIndex : size_t {
 #undef POPULATE_INDICES
 
 // IR2Vec embeddings
-// Dimensions of embeddings are not known in the compile time (until vocab is 
+// Dimensions of embeddings are not known in the compile time (until vocab is
 // read). Hence macros cannot be used here.
   callee_embedding,
   caller_embedding

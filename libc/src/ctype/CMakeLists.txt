@@ -115,7 +115,7 @@ add_entrypoint_object(
   HDRS
     isupper.h
   DEPENDS
-    libc.src.__support.CPP.limits  
+    libc.src.__support.CPP.limits
     libc.src.__support.ctype_utils
 )
 
@@ -285,7 +285,7 @@ add_entrypoint_object(
   HDRS
     isupper_l.h
   DEPENDS
-    libc.src.__support.CPP.limits  
+    libc.src.__support.CPP.limits
     libc.src.__support.ctype_utils
     libc.hdr.types.locale_t
 )

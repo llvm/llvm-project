@@ -208,5 +208,5 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
     # Make sure we search LLVMSupport first, before the CRT libs
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_CXX_LINKER_WRAPPER_FLAG}-INCLUDE:malloc")
   endif()
-  
+
 endif()

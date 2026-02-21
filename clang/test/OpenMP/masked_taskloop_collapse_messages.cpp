@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
   // expected-error@+3 {{integral constant expression}} expected-note@+3 0+{{constant expression}}
   // expected-error@+2 2 {{directive '#pragma omp masked taskloop' cannot contain more than one 'collapse' clause}}
   // expected-error@+1 {{argument to 'collapse' clause must be a strictly positive integer value}}
-  #pragma omp masked taskloop collapse (foobool(argc)), collapse (true), collapse (-5) 
+  #pragma omp masked taskloop collapse (foobool(argc)), collapse (true), collapse (-5)
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
   #pragma omp masked taskloop collapse (S1) // expected-error {{'S1' does not refer to a value}}
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];

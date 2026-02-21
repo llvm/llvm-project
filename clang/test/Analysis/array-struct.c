@@ -18,7 +18,7 @@ void f(void) {
   int (*p)[10];
   p = &a;
   (*p)[3] = 1;
-  
+
   struct s d;
   struct s *q;
   q = &d;
@@ -56,7 +56,7 @@ void f5(void) {
 // AllocaRegion test.
 void f6(void) {
   char *p;
-  p = __builtin_alloca(10); 
+  p = __builtin_alloca(10);
   g(p);
   char c = *p;
   p[1] = 'a';
@@ -100,7 +100,7 @@ void f11(void) {
     a.data = 1;
 }
 
-// Convert unsigned offset to signed when creating ElementRegion from 
+// Convert unsigned offset to signed when creating ElementRegion from
 // SymbolicRegion.
 void f12(int *list) {
   unsigned i = 0;
@@ -143,7 +143,7 @@ struct s3 gets3(void) {
 void accessArrayFieldNoCrash(void) {
   bar(gets3().a);
   bar((gets3().a));
-  bar(((gets3().a)));  
+  bar(((gets3().a)));
 }
 
 // Test if the array is correctly invalidated.
@@ -159,7 +159,7 @@ struct s3 p[1];
 // Code from postgresql.
 // Current cast logic of region store mistakenly leaves the final result region
 // an ElementRegion of type 'char'. Then load a nonloc::SymbolVal from it and
-// assigns to 'a'. 
+// assigns to 'a'.
 void f16(struct s3 *p) {
   struct s3 a = *((struct s3*) ((char*) &p[0])); // expected-warning{{Casting a non-structure type to a structure type and accessing a field can lead to memory access errors or data corruption}}
 }

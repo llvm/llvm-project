@@ -8,12 +8,12 @@ struct IntHolder { // expected-note 0-1{{here}} expected-note 2-4{{candidate con
 
 template<typename T, typename U>
 struct X { // expected-note{{here}}
-  void f() { 
+  void f() {
     T t; // expected-error{{no matching}}
   }
 
   void g() { }
-  
+
   struct Inner {
 #if __cplusplus >= 201103L
     T value; 	// expected-note {{has no default constructor}}
@@ -22,7 +22,7 @@ struct X { // expected-note{{here}}
     T value; 	// expected-note {{member is declared here}}
 #endif
   };
-  
+
   static T value;
 };
 
@@ -32,14 +32,14 @@ T X<T, U>::value; // expected-error{{no matching constructor}}
 IntHolder &test_X_IntHolderInt(X<IntHolder, int> xih) {
   xih.g(); // okay
   xih.f(); // expected-note{{instantiation}}
-  
+
   X<IntHolder, int>::Inner inner;
 #if __cplusplus >= 201103L
   // expected-error@-2 {{call to implicitly-deleted}}
 #else
   // expected-note@-4 {{first required here}}
 #endif
-  
+
   return X<IntHolder, int>::value; // expected-note{{instantiation}}
 }
 
@@ -60,9 +60,9 @@ IntHolder X<IntHolder, long>::value = 17;
 IntHolder &test_X_IntHolderInt(X<IntHolder, long> xih) {
   xih.g(); // okay
   xih.f(); // okay, uses specialization
-  
+
   X<IntHolder, long>::Inner inner; // okay, uses specialization
-  
+
   return X<IntHolder, long>::value; // okay, uses specialization
 }
 

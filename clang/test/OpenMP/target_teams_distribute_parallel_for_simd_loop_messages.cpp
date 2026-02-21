@@ -245,7 +245,7 @@ int test_iteration_spaces() {
 
 // expected-error@+3 {{loop iteration variable in the associated loop of 'omp target teams distribute parallel for simd' directive may not be firstprivate, predetermined as linear}}
 // expected-note@+1 {{defined as firstprivate}}
-#pragma omp target teams distribute parallel for simd firstprivate(ii) 
+#pragma omp target teams distribute parallel for simd firstprivate(ii)
   for (ii = 0; ii < 10; ii++)
     c[ii] = a[ii];
 

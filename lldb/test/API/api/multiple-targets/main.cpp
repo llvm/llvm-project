@@ -15,7 +15,7 @@ int main (int argc, char **argv)
   SBDebugger debugger = SBDebugger::Create(false);
   auto lambda = [&](){
     SBError error;
-    SBTarget target = debugger.CreateTarget(program_file, nullptr, nullptr, 
+    SBTarget target = debugger.CreateTarget(program_file, nullptr, nullptr,
                                             false, error);
   };
 

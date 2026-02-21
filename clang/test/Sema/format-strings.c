@@ -979,7 +979,7 @@ void test_promotion(void) {
   printf("%hu", 'a'); // expected-warning{{format specifies type 'unsigned short' but the argument has type 'char'}}
   printf("%d", 'a'); // no-warning
   printf("%u", 'a'); // no-warning
-  
+
   // pointers
   printf("%s", i); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
 }

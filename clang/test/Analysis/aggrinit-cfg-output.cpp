@@ -18,7 +18,7 @@ int main() {
 // CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, ArrayToPointerDecay, char *)
 // CHECK-NEXT:   3: [B1.2] (ImplicitCastExpr, NoOp, const char *)
 // CHECK-NEXT:   4: 3
-// CHECK-NEXT:   5: 
+// CHECK-NEXT:   5:
 // CHECK-NEXT:   6: {[B1.1]}
 // CHECK-NEXT:   7: StringRef s{a};
 // CHECK-NEXT:   8: s

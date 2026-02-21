@@ -38,7 +38,7 @@ inline T spherical_harmonic_prefix(unsigned n, unsigned m, T theta, const Policy
    T x = cos(theta);
 
    T leg = detail::legendre_p_imp(n, m, x, static_cast<T>(pow(fabs(sin_theta), T(m))), pol);
-   
+
    T prefix = boost::math::tgamma_delta_ratio(static_cast<T>(n - m + 1), static_cast<T>(2 * m), pol);
    prefix *= (2 * n + 1) / (4 * constants::pi<T>());
    prefix = sqrt(prefix);
@@ -149,7 +149,7 @@ std::complex<T> spherical_harmonic(unsigned n, int m, U theta, U phi, const Poli
 } // namespace detail
 
 template <class T1, class T2, class Policy>
-inline std::complex<typename tools::promote_args<T1, T2>::type> 
+inline std::complex<typename tools::promote_args<T1, T2>::type>
    spherical_harmonic(unsigned n, int m, T1 theta, T2 phi, const Policy& pol)
 {
    typedef typename tools::promote_args<T1, T2>::type result_type;
@@ -158,14 +158,14 @@ inline std::complex<typename tools::promote_args<T1, T2>::type>
 }
 
 template <class T1, class T2>
-inline std::complex<typename tools::promote_args<T1, T2>::type> 
+inline std::complex<typename tools::promote_args<T1, T2>::type>
    spherical_harmonic(unsigned n, int m, T1 theta, T2 phi)
 {
    return boost::math::spherical_harmonic(n, m, theta, phi, policies::policy<>());
 }
 
 template <class T1, class T2, class Policy>
-inline typename tools::promote_args<T1, T2>::type 
+inline typename tools::promote_args<T1, T2>::type
    spherical_harmonic_r(unsigned n, int m, T1 theta, T2 phi, const Policy& pol)
 {
    typedef typename tools::promote_args<T1, T2>::type result_type;
@@ -174,14 +174,14 @@ inline typename tools::promote_args<T1, T2>::type
 }
 
 template <class T1, class T2>
-inline typename tools::promote_args<T1, T2>::type 
+inline typename tools::promote_args<T1, T2>::type
    spherical_harmonic_r(unsigned n, int m, T1 theta, T2 phi)
 {
    return boost::math::spherical_harmonic_r(n, m, theta, phi, policies::policy<>());
 }
 
 template <class T1, class T2, class Policy>
-inline typename tools::promote_args<T1, T2>::type 
+inline typename tools::promote_args<T1, T2>::type
    spherical_harmonic_i(unsigned n, int m, T1 theta, T2 phi, const Policy& pol)
 {
    typedef typename tools::promote_args<T1, T2>::type result_type;
@@ -190,7 +190,7 @@ inline typename tools::promote_args<T1, T2>::type
 }
 
 template <class T1, class T2>
-inline typename tools::promote_args<T1, T2>::type 
+inline typename tools::promote_args<T1, T2>::type
    spherical_harmonic_i(unsigned n, int m, T1 theta, T2 phi)
 {
    return boost::math::spherical_harmonic_i(n, m, theta, phi, policies::policy<>());

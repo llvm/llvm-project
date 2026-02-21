@@ -55,7 +55,7 @@ enum blake3_flags {
 #include <immintrin.h>
 #endif
 
-#if !defined(BLAKE3_USE_NEON) 
+#if !defined(BLAKE3_USE_NEON)
   // If BLAKE3_USE_NEON not manually set, autodetect based on AArch64ness
   #if defined(IS_AARCH64)
     #if defined(__ARM_BIG_ENDIAN)
@@ -140,7 +140,7 @@ INLINE unsigned int popcnt(uint64_t x) {
 }
 
 // Largest power of two less than or equal to x. As a special case, returns 1
-// when x is 0. 
+// when x is 0.
 INLINE uint64_t round_down_to_power_of_2(uint64_t x) {
   return 1ULL << highest_one(x | 1);
 }

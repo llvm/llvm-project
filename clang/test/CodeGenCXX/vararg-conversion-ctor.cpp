@@ -3,10 +3,10 @@
 
 extern "C" int printf(...);
 
-struct A { 
+struct A {
   A(...) {
-    printf("A::A(...)\n"); 
-  } 
+    printf("A::A(...)\n");
+  }
 };
 
 A a(1.34);

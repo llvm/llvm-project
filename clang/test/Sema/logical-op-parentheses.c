@@ -27,7 +27,7 @@ void logical_op_parentheses(unsigned i) {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-5]]:14-[[@LINE-5]]:14}:"("
   // CHECK: fix-it:"{{.*}}":{[[@LINE-6]]:20-[[@LINE-6]]:20}:")"
 
-  (void)(t && 
+  (void)(t &&
              t || t);
 #ifndef SILENCE
   // expected-warning@-3 {{'&&' within '||'}}
@@ -35,7 +35,7 @@ void logical_op_parentheses(unsigned i) {
 #endif
   // CHECK: fix-it:"{{.*}}":{[[@LINE-6]]:10-[[@LINE-6]]:10}:"("
   // CHECK: fix-it:"{{.*}}":{[[@LINE-6]]:15-[[@LINE-6]]:15}:")"
-	
+
 	(void)(i || i && "w00t");
   (void)("w00t" && i || i);
   (void)("w00t" && t || t);

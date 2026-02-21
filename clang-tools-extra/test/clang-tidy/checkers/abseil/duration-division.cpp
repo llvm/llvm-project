@@ -39,7 +39,7 @@ void Positives() {
   if (MACRO_DIVEQ(d, d, 0.0)) {}
   // CHECK-MESSAGES: [[@LINE-1]]:7: warning: operator/ on absl::Duration objects
   // CHECK-FIXES: if (MACRO_DIVEQ(d, d, 0.0)) {}
- 
+
   TakesDouble(d/d);
   // CHECK-MESSAGES: [[@LINE-1]]:16: warning: operator/ on absl::Duration objects
   // CHECK-FIXES: TakesDouble(absl::FDivDuration(d, d));

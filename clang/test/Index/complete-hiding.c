@@ -12,7 +12,7 @@ void f() {
   int ValueA = 0;
   int StructA = 0;
   struct StructB { };
-  
+
   struct StructA sa = { };
 }
 

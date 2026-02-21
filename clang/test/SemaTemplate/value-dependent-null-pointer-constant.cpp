@@ -19,7 +19,7 @@ struct X0 {
 // expected-error@-2 {{incompatible operand types ('int' and 'const char *')}}
 #endif
   }
-  
+
   bool f2(const char *str) {
     return str == N;
 #if __cplusplus >= 201103L
@@ -29,8 +29,8 @@ struct X0 {
 };
 
 // PR4996
-template<unsigned I> int f0() { 
-  return __builtin_choose_expr(I, 0, 1); 
+template<unsigned I> int f0() {
+  return __builtin_choose_expr(I, 0, 1);
 }
 
 // PR5041

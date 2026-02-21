@@ -16,10 +16,10 @@ int main(int argc, char **argv) {
     perror("Failed to mmap: ");
     abort();
   }
-  
+
   r = __hwasan_tag_pointer(r, 0);
   __hwasan_tag_memory(r, 1,  2 * kPS);
-  
+
   // Disable access to the page just after tag-mismatch report address.
   res = mprotect((char*)r + kPS, kPS, PROT_NONE);
   if (res) {

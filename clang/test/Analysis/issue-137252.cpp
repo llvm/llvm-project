@@ -45,6 +45,6 @@ int main()
   // `__deleter__` incorrectly.  The engine assigned zero to
   // `__deleter__`--an empty record sharing offset with `__ptr__`.
   // The assignment over wrote `__ptr__`.
-  std::unique_ptr<X> a(new X()); 
+  std::unique_ptr<X> a(new X());
   return 0;
 }

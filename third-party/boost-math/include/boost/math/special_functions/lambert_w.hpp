@@ -198,9 +198,9 @@ inline double must_reduce_to_double(const T& z, const std::false_type&)
    }
 
    #else
-   
+
    return boost::lexical_cast<double>(z);
-   
+
    #endif
 
 #else

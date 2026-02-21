@@ -18,14 +18,14 @@
           and for ObjC or ObjC++ we have
              RR and GC capabilities
         we assume C++ friendly includes for C/ObjC even if C++ isn't used
-             
-             
+
+
         four compilers: C, ObjC, C++, ObjC++
           and for ObjC or ObjC++ we can compile
               RR, RR+GC, GC+RR, GC
           although to test RR+GC we need to build a shell "main" in both modes
           and/or run with GC disabled if possible.
-              
+
     To maximize coverage we mark files with capabilities and then ask them to be
     compiled with each variation of compiler and option.
     If the file doesn't have the capability it politely refuses.
@@ -44,7 +44,7 @@ enum options {
     DoDashO = (1 << 9),
     DoDashOs = (1 << 10),
     DoDashO2 = (1 << 11),
-    
+
     DoC99 = (1 << 12), // -std=c99
 };
 

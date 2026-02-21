@@ -8,10 +8,10 @@
  * distribute, sublicense, and/or sell copies of the Software, and to permit
  * persons to whom the Software is furnished to do so, subject to the following
  * conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -259,7 +259,7 @@ void _Block_use_GC5( void *(*alloc)(const unsigned long, const bool isOne, const
     _Block_use_GC(alloc, setHasRefcount, gc_assign, gc_assign_weak, _Block_memmove_gc_broken);
 }
 
- 
+
 /*
  * Called from objc-auto to alternatively turn on retain/release.
  * Prior to this the only "object" support we can provide is for those
@@ -286,10 +286,10 @@ static void *_Block_copy_internal(const void *arg, const int flags) {
     struct Block_layout *aBlock;
     const bool wantsOne = (WANTS_ONE & flags) == WANTS_ONE;
 
-    //printf("_Block_copy_internal(%p, %x)\n", arg, flags);	
+    //printf("_Block_copy_internal(%p, %x)\n", arg, flags);
     if (!arg) return NULL;
-    
-    
+
+
     // The following would be better done as a switch statement
     aBlock = (struct Block_layout *)arg;
     if (aBlock->flags & BLOCK_NEEDS_FREE) {
@@ -368,7 +368,7 @@ static void *_Block_copy_internal(const void *arg, const int flags) {
 static void _Block_byref_assign_copy(void *dest, const void *arg, const int flags) {
     struct Block_byref **destp = (struct Block_byref **)dest;
     struct Block_byref *src = (struct Block_byref *)arg;
-        
+
     //printf("_Block_byref_assign_copy called, byref destp %p, src %p, flags %x\n", destp, src, flags);
     //printf("src dump: %s\n", _Block_byref_dump(src));
     if (src->forwarding->flags & BLOCK_IS_GC) {
@@ -417,7 +417,7 @@ static void _Block_byref_release(const void *arg) {
 
     // dereference the forwarding pointer since the compiler isn't doing this anymore (ever?)
     shared_struct = shared_struct->forwarding;
-    
+
     //printf("_Block_byref_release %p called, flags are %x\n", shared_struct, shared_struct->flags);
     // To support C++ destructors under GC we arrange for there to be a finalizer for this
     // by using an isa that directs the code to a finalizer that calls the byref_destroy method.
@@ -519,7 +519,7 @@ unsigned long int Block_size(void *arg) {
 #pragma mark Compiler SPI entry points
 #endif /* if 0 */
 
-    
+
 /*******************************************************
 
 Entry points used by the compiler - the real API!
@@ -548,7 +548,7 @@ So the __block copy/dispose helpers will generate flag values of 3 or 7 for obje
         __weak block id              128+3+16
 	__block (^Block)             128+7
 	__weak __block (^Block)      128+7+16
-        
+
 The implementation of the two routines would be improved by switch statements enumerating the eight cases.
 
 ********************************************************/

@@ -63,7 +63,7 @@ void b10();
 void b11();
 enum E {
   c1,
-  c2, 
+  c2,
   c3,
   c4,
   c5,

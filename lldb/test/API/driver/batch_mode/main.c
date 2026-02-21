@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 
-int 
+int
 main (int argc, char **argv)
 {
     lldb_enable_attach();

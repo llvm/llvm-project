@@ -281,7 +281,7 @@ void Broadcaster::BroadcasterImpl::PrivateBroadcastEvent(EventSP &event_sp,
     // start handling the event before we're done adding all the pending
     // listeners.
     // Also, don't redo the check for unique here, since otherwise that could
-    // be racy, and if we send the event to the primary listener then we SHOULD 
+    // be racy, and if we send the event to the primary listener then we SHOULD
     // send it to the secondary listeners or they will get out of sync with the
     // primary listener.
     if (!hijacking_listener_sp) {
@@ -322,7 +322,7 @@ void Broadcaster::BroadcasterImpl::SetPrimaryListener(lldb::ListenerSP
   // don't hold two copies.
   RemoveListener(listener_sp.get(), UINT32_MAX);
   m_primary_listener_sp = listener_sp;
-                                                      
+
 }
 
 bool Broadcaster::BroadcasterImpl::HijackBroadcaster(

@@ -5,18 +5,18 @@
 
 struct A {};
 
-struct B 
-{ 
+struct B
+{
   operator A&();
-}; 
+};
 
 
 struct D : public B {
   operator A();
 };
 
-extern B f(); 
-extern D d(); 
+extern B f();
+extern D d();
 
 int main() {
 	const A& rca = f();

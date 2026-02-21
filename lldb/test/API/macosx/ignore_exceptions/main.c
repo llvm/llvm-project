@@ -23,7 +23,7 @@ main()
   kern_return_t vm_result = vm_allocate(mach_task_self(), &g_int_ptr, g_size, VM_FLAGS_ANYWHERE);
   for (int i = 0; i < 10; i++)
     g_int_ptr[i] = i * 10;
-  
+
   vm_result = mach_vm_protect(mach_task_self(), (mach_vm_address_t) g_int_ptr, g_size, 0, VM_PROT_NONE);
   struct sigaction my_action;
   sigemptyset(&my_action.sa_mask);

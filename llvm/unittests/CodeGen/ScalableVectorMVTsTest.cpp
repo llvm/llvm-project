@@ -94,7 +94,7 @@ TEST(ScalableVectorMVTsTest, IRToVTTranslation) {
   VectorType *ScV8Int64Ty =
       VectorType::get(Int64Ty, ElementCount::getScalable(8));
 
-  // Check that we can map a scalable IR type to an MVT 
+  // Check that we can map a scalable IR type to an MVT
   MVT Mnxv8i64 = MVT::getVT(ScV8Int64Ty);
   ASSERT_TRUE(Mnxv8i64.isScalableVector());
   ASSERT_EQ(ScV8Int64Ty->getElementCount(), Mnxv8i64.getVectorElementCount());

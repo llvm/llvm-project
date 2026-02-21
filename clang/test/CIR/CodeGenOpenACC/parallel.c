@@ -253,7 +253,7 @@ void acc_parallel(int cond) {
   // CHECK-NEXT: %[[THREE_CAST:.*]] = builtin.unrealized_conversion_cast %[[THREE_LITERAL]] : !s32i to si32
   // CHECK-NEXT: acc.parallel async([#acc.device_type<nvidia>, #acc.device_type<radeon>], %[[THREE_CAST]] : si32) {
   // CHECK-NEXT: acc.yield
-  // CHECK-NEXT: } loc 
+  // CHECK-NEXT: } loc
 
 #pragma acc parallel num_gangs(1)
   {}

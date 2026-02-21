@@ -71,7 +71,7 @@ void ParamPackFunction(T... args);
 // JSON-NEXT:      "Template": {
 // JSON-NEXT:        "Parameters": [
 // JSON-NEXT:          {
-// JSON-NEXT:            "End": true, 
+// JSON-NEXT:            "End": true,
 // JSON-NEXT:            "Param": "class... T"
 // JSON-NEXT:          }
 // JSON-NEXT:        ]
@@ -131,7 +131,7 @@ void function(T x) {}
 // JSON-NEXT:            "Param": "typename T"
 // JSON-NEXT:          },
 // JSON-NEXT:          {
-// JSON-NEXT:            "End": true, 
+// JSON-NEXT:            "End": true,
 // JSON-NEXT:            "Param": "int U = 1"
 // JSON-NEXT:          }
 // JSON-NEXT:        ]
@@ -197,7 +197,7 @@ void function<bool, 0>(bool x) {}
 // JSON-NEXT:              "Param": "bool"
 // JSON-NEXT:            },
 // JSON-NEXT:            {
-// JSON-NEXT:              "End": true, 
+// JSON-NEXT:              "End": true,
 // JSON-NEXT:              "Param": "0"
 // JSON-NEXT:            }
 // JSON-NEXT:          ],
@@ -313,7 +313,7 @@ tuple<int, int, bool> func_with_tuple_param(tuple<int, int, bool> t) { return t;
 // HTML-NEXT:              <h3>Parameters</h3>
 // HTML-NEXT:              <div>
 // HTML-NEXT:                  <b>t</b>   The input to func_with_tuple_param
-// HTML-NEXT:              </div> 
+// HTML-NEXT:              </div>
 // HTML-NEXT:          </div>
 // HTML-NEXT:      </div>
 // HTML-NEXT:      <p>Defined at line [[# @LINE - 81]] of file {{.*}}templates.cpp</p>

@@ -23,13 +23,13 @@ void test_const_ref_to_nonconst_data() {
   int data = 42;
   const int &ref = data;
   *(int*)&ref = 100; // No warning expected
-} 
+}
 
 void test_const_ref_to_const_data() {
   const int data = 42; // expected-note {{Memory region is declared as immutable here}}
   const int &ref = data;
   *(int*)&ref = 100; // expected-warning {{Trying to write to immutable memory}}
-} 
+}
 
 void test_ref_to_nonconst_data() {
   int data = 42;

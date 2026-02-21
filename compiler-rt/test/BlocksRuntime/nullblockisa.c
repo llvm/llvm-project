@@ -30,13 +30,13 @@ void check(void (^b)(void)) {
     }
     return;
 }
-        
+
 int main(int argc, char *argv[]) {
 
    __block int i;
-   
+
    check(^{ printf("%d\n", ++i); });
    printf("%s: success\n", argv[0]);
    return 0;
 }
-   
+

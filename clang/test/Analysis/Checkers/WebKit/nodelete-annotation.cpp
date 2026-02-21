@@ -176,7 +176,7 @@ struct Data {
   virtual void doSomething() { }
 
   int a[3] { 0 };
-  
+
 protected:
   Data() = default;
 

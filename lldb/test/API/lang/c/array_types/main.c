@@ -31,7 +31,7 @@ int main (int argc, char const *argv[])
         {1,2},
         {3,4}
     };
-    struct point_tag points_2_4_matrix[2][4] = { // Set break point at this line. 
+    struct point_tag points_2_4_matrix[2][4] = { // Set break point at this line.
         {{ 1, 2}, { 3, 4}, { 5, 6}, { 7, 8}},
         {{11,22}, {33,44}, {55,66}, {77,88}}
     };

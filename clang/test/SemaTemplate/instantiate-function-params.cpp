@@ -59,12 +59,12 @@ namespace PR6990 {
   struct X2;
 
   template <typename = int *, typename TokenT = int,
-            typename = int( X2<TokenT> &)> 
+            typename = int( X2<TokenT> &)>
   struct X3
   {
   };
 
-  template <typename , typename P> 
+  template <typename , typename P>
   struct X3_base : X3< X1<int, P> >
   {
   protected: typedef X1< P> type;

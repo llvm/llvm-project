@@ -42,7 +42,7 @@ void multiple_block_cfg() {
       p = &s;    // nobailout-warning {{object whose reference is captured does not live long enough}}
     } else {     // nobailout-note {{destroyed here}}
       p = &safe;
-    }     
-  }             
+    }
+  }
   p->use();      // nobailout-note {{later used here}}
 }

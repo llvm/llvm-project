@@ -34,7 +34,7 @@ void f() {
 
 struct N { S a, b; };
 
-void nested() { 
+void nested() {
   N n1 = {.a = {.x = 1, .y = 2}, .b = {.x = 3, .y = 4,},};
   // CHECK-MESSAGES: :[[@LINE-1]]:54: warning: initializer list should not have a trailing comma
   // CHECK-MESSAGES: :[[@LINE-2]]:56: warning: initializer list should not have a trailing comma

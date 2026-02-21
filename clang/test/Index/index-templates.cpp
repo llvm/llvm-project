@@ -88,7 +88,7 @@ void init_list(T t, U u) {
 template<typename T>
 struct compare { };
 
-template<typename Key, typename Value, 
+template<typename Key, typename Value,
          typename Comparison = compare<Pair<Key, Value> >,
          typename Allocator = allocator<Pair<Key, Value> > >
 struct map;

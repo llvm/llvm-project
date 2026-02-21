@@ -72,9 +72,9 @@
       b1 = b2; b2 = b3; b3 = b4;
       a1 = a2; a2 = a3; a3 = a4;
 
-      xn3 = xn2; 
-      xn2 = xn1; 
-      xn1 = xn0; 
+      xn3 = xn2;
+      xn2 = xn1;
+      xn1 = xn0;
       xn0 += 1;
       ct1 += two;
     }

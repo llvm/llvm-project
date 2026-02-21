@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -E -dM %s -o - | FileCheck %s -strict-whitespace
 
 // Space at end even without expansion tokens
-// CHECK: #define A(x) 
+// CHECK: #define A(x)
 #define A(x)
 
 // Space before expansion list.

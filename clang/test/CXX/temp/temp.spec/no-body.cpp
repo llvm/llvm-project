@@ -71,7 +71,7 @@ namespace exp_spec {
 template<typename T> void f1(T) { }
 template<typename T> struct x1 { };  // expected-note {{explicitly specialized declaration is here}}
 
-// Should recover as if specializations, 
+// Should recover as if specializations,
 // thus also complain about not being in global scope.
 namespace args_bad {
 #ifndef FIXING

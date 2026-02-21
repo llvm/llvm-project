@@ -22,15 +22,15 @@ class T { /* ... */ };  // expected-note{{candidate constructor (the implicit co
 // expected-note@-2 {{candidate constructor (the implicit move constructor) not viable}}
 #endif
 
-int i; 
+int i;
 
 template<class T, T i> struct X2 {
-  void f(T t) 
-  { 
+  void f(T t)
+  {
     T t1 = i; // template-parameters T and i
     ::T t2 = ::i; // global namespace members T and i  \
     // expected-error{{no viable conversion}}
-  } 
+  }
 };
 
 namespace PR6831 {

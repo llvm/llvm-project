@@ -22,7 +22,7 @@ int foo(int *a, int i) {
   __builtin_assume(isconst() > 2);
   __builtin_assume(ispure(i) > 2);
   __builtin_assume(ispure(++i) > 2); //expected-warning {{assumption is ignored because it contains (potential) side-effects}}
-  
+
   int test = sizeof(struct{char qq[(__builtin_assume(i != 5), 7)];}); // expected-warning {{variable length array}}
 #endif
   return a[i];

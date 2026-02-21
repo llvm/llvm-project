@@ -9,9 +9,9 @@ void override_me_cpp() {}
 // CHECK: define dso_local void @dont_override_me() #1
 extern "C" void dont_override_me() {}
 
-// CHECK: attributes #0 = { 
+// CHECK: attributes #0 = {
 // CHECK-SAME: loader-replaceable
 
-// CHECK: attributes #1 = { 
+// CHECK: attributes #1 = {
 // CHECK-NOT: loader-replaceable
 // CHECK-SAME: }

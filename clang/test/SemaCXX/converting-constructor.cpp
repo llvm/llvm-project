@@ -4,7 +4,7 @@
 
 class Z { };
 
-class Y { 
+class Y {
 public:
   Y(const Z&);
 };

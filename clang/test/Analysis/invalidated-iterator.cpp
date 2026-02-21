@@ -214,15 +214,15 @@ namespace GH116372 {
   public:
     ExplicitThis();
     ExplicitThis(ExplicitThis& other);
-  
+
     ExplicitThis& operator=(this ExplicitThis& self, ExplicitThis const& other) { // no crash
       self.f = other.f;
       return self;
     }
-  
+
     ~ExplicitThis();
   };
-  
+
   void func(ExplicitThis& obj1) {
       obj1 = obj1;
   }

@@ -7,7 +7,7 @@ void clang_analyzer_eval(bool);
 
 void testVector(std::vector<int> &nums) {
   if (nums.begin() != nums.end()) return;
-  
+
   clang_analyzer_eval(nums.size() == 0);
 #if INLINE
   // expected-warning@-2 {{TRUE}}

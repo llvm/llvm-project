@@ -80,9 +80,9 @@
 #define BadDrawable         9   /* parameter not a Pixmap or Window */
 #define BadAccess           10  /* depending on context:
                                 - key/button already grabbed
-                                - attempt to free an illegal 
-                                  cmap entry 
-                                - attempt to store into a read-only 
+                                - attempt to free an illegal
+                                  cmap entry
+                                - attempt to store into a read-only
                                   color map entry. */
                                 // - attempt to modify the access control
                                 //   list from other than the local host.
@@ -96,9 +96,9 @@
 // CHECK-FIXES-NEXT: BadDrawable =         9,   /* parameter not a Pixmap or Window */
 // CHECK-FIXES-NEXT: BadAccess =           10,  /* depending on context:
 // CHECK-FIXES-NEXT:                                 - key/button already grabbed
-// CHECK-FIXES-NEXT:                                 - attempt to free an illegal 
-// CHECK-FIXES-NEXT:                                   cmap entry 
-// CHECK-FIXES-NEXT:                                 - attempt to store into a read-only 
+// CHECK-FIXES-NEXT:                                 - attempt to free an illegal
+// CHECK-FIXES-NEXT:                                   cmap entry
+// CHECK-FIXES-NEXT:                                 - attempt to store into a read-only
 // CHECK-FIXES-NEXT:                                   color map entry. */
 // CHECK-FIXES-NEXT:                                 // - attempt to modify the access control
 // CHECK-FIXES-NEXT:                                 //   list from other than the local host.

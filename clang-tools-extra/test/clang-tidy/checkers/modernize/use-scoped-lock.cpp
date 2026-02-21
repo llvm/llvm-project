@@ -37,8 +37,8 @@ void Positive() {
     // CHECK-MESSAGES: :[[@LINE-4]]:47: note: additional 'std::lock_guard' declared here
     // CHECK-MESSAGES: :[[@LINE-4]]:33: note: additional 'std::lock_guard' declared here
   }
-  
-  { 
+
+  {
     std::lock(m, m);
     std::lock_guard<std::mutex> l1(m, std::adopt_lock);
     std::lock_guard<std::mutex> l2(m, std::adopt_lock);
@@ -52,7 +52,7 @@ void Positive() {
     std::lock_guard<std::mutex> l4(m, std::adopt_lock);
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'std::scoped_lock' instead of 'std::lock_guard'
     // CHECK-FIXES: std::scoped_lock l4(std::adopt_lock, m);
-  } 
+  }
 }
 
 
@@ -271,7 +271,7 @@ struct PositiveClass {
     }
 
     {
-      std::lock(m1, m2);  
+      std::lock(m1, m2);
       std::lock_guard<std::mutex> l1(m1, std::adopt_lock);
       std::lock_guard<std::mutex> l2(m2, std::adopt_lock);
       // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
@@ -282,7 +282,7 @@ struct PositiveClass {
       // CHECK-FIXES: std::scoped_lock l3(m3);
     }
   }
-  
+
   std::mutex m1;
   std::mutex m2;
   std::mutex m3;
@@ -299,7 +299,7 @@ struct PositiveTemplatedClass {
     }
 
     {
-      std::lock(m1, m2);  
+      std::lock(m1, m2);
       std::lock_guard<std::mutex> l1(m1, std::adopt_lock);
       std::lock_guard<std::mutex> l2(m2, std::adopt_lock);
       // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
@@ -320,7 +320,7 @@ struct PositiveTemplatedClass {
     }
 
     {
-      std::lock(m1, m2);  
+      std::lock(m1, m2);
       std::lock_guard<std::mutex> l1(m1, std::adopt_lock);
       std::lock_guard<std::mutex> l2(m2, std::adopt_lock);
       // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
@@ -331,7 +331,7 @@ struct PositiveTemplatedClass {
       // CHECK-FIXES: std::scoped_lock l3(m3);
     }
   }
-  
+
   std::mutex m1;
   std::mutex m2;
   std::mutex m3;

@@ -24,8 +24,8 @@ void test_format_attr(char * Str, std::string StdStr) {
   __builtin_os_log_format(nullptr, "hello", Str); // expected-format-warning{{data argument not used by format string}}
   __builtin_os_log_format(nullptr, "hello %s", StdStr.c_str());
   __builtin_os_log_format(nullptr, "hello %s", Str);  // expected-warning{{formatting function '__builtin_os_log_format' is unsafe}} \
-			         expected-note{{string argument is not guaranteed to be null-terminated}} 
+			         expected-note{{string argument is not guaranteed to be null-terminated}}
 
   __builtin_os_log_format(nullptr, "hello %"); // expected-format-warning{{incomplete format specifier}}
-  __builtin_os_log_format(nullptr, "hello %d", .42); // expected-format-warning{{format specifies type 'int' but the argument has type 'double'}} 
+  __builtin_os_log_format(nullptr, "hello %d", .42); // expected-format-warning{{format specifies type 'int' but the argument has type 'double'}}
 }

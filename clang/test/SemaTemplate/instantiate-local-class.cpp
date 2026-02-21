@@ -60,7 +60,7 @@ namespace PR8801 {
     class X;
     typedef int (X::*pmf_type)();
     class X : public T { };
-    
+
     pmf_type pmf = &T::foo;
   }
 

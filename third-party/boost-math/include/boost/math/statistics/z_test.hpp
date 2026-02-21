@@ -38,7 +38,7 @@ ReturnType one_sample_z_test_impl(T sample_mean, T sample_variance, T sample_siz
 }
 
 template<typename ReturnType, typename ForwardIterator>
-ReturnType one_sample_z_test_impl(ForwardIterator begin, ForwardIterator end, typename std::iterator_traits<ForwardIterator>::value_type assumed_mean) 
+ReturnType one_sample_z_test_impl(ForwardIterator begin, ForwardIterator end, typename std::iterator_traits<ForwardIterator>::value_type assumed_mean)
 {
     using Real = typename std::tuple_element<0, ReturnType>::type;
     std::pair<Real, Real> temp = mean_and_sample_variance(begin, end);
@@ -102,14 +102,14 @@ inline auto one_sample_z_test(Real sample_mean, Real sample_variance, Real sampl
     return detail::one_sample_z_test_impl<std::pair<Real, Real>>(sample_mean, sample_variance, sample_size, assumed_mean);
 }
 
-template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type, 
+template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type,
          typename std::enable_if<std::is_integral<Real>::value, bool>::type = true>
 inline auto one_sample_z_test(ForwardIterator begin, ForwardIterator end, Real assumed_mean) -> std::pair<double, double>
 {
     return detail::one_sample_z_test_impl<std::pair<double, double>>(begin, end, assumed_mean);
 }
 
-template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type, 
+template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type,
          typename std::enable_if<!std::is_integral<Real>::value, bool>::type = true>
 inline auto one_sample_z_test(ForwardIterator begin, ForwardIterator end, Real assumed_mean) -> std::pair<Real, Real>
 {
@@ -130,14 +130,14 @@ inline auto one_sample_z_test(Container const & v, Real assumed_mean) -> std::pa
     return detail::one_sample_z_test_impl<std::pair<Real, Real>>(std::begin(v), std::end(v), assumed_mean);
 }
 
-template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type, 
+template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type,
          typename std::enable_if<std::is_integral<Real>::value, bool>::type = true>
 inline auto two_sample_z_test(ForwardIterator begin_1, ForwardIterator end_1, ForwardIterator begin_2, ForwardIterator end_2) -> std::pair<double, double>
 {
     return detail::two_sample_z_test_impl<std::pair<double, double>>(begin_1, end_1, begin_2, end_2);
 }
 
-template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type, 
+template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type,
          typename std::enable_if<!std::is_integral<Real>::value, bool>::type = true>
 inline auto two_sample_z_test(ForwardIterator begin_1, ForwardIterator end_1, ForwardIterator begin_2, ForwardIterator end_2) -> std::pair<Real, Real>
 {

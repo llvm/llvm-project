@@ -9,7 +9,7 @@ __int64 x5 = 0x42i64;
 __int64 x6 = 0x42I64;
 
 __int64 y = 0x42i64u;  // expected-error {{invalid suffix}}
-__int64 w = 0x43ui64; 
+__int64 w = 0x43ui64;
 __int64 z = 9Li64;  // expected-error {{invalid suffix}}
 __int64 q = 10lli64;  // expected-error {{invalid suffix}}
 
@@ -54,7 +54,7 @@ void pr_7968(void)
 x1234e+1;
 
   int var6=
-  /*expected-warning {{backslash and newline separated by space}} */    0\       
-x1234e+1;                      
+  /*expected-warning {{backslash and newline separated by space}} */    0\
+x1234e+1;
 }
 

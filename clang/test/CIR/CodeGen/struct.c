@@ -9,7 +9,7 @@
 // checks are at the top.
 // CIR-DAG: !rec_IncompleteS = !cir.record<struct "IncompleteS" incomplete>
 // CIR-DAG: !rec_CompleteS = !cir.record<struct "CompleteS" {!s32i, !s8i}>
-// CIR-DAG: !rec_OuterS = !cir.record<struct "OuterS" {!rec_InnerS, !s32i}>  
+// CIR-DAG: !rec_OuterS = !cir.record<struct "OuterS" {!rec_InnerS, !s32i}>
 // CIR-DAG: !rec_InnerS = !cir.record<struct "InnerS" {!s32i, !s8i}>
 // CIR-DAG: !rec_PackedS = !cir.record<struct "PackedS" packed {!s32i, !s8i}>
 // CIR-DAG: !rec_PackedAndPaddedS = !cir.record<struct "PackedAndPaddedS" packed padded {!s32i, !s8i, !u8i}>

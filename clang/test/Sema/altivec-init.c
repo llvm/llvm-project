@@ -3,7 +3,7 @@
 typedef int v4 __attribute((vector_size(16)));
 typedef short v8 __attribute((vector_size(16)));
 
-v8 foo(void) { 
+v8 foo(void) {
   v8 a;
   v4 b;
   a = (v8){4, 2};
@@ -50,7 +50,7 @@ typedef struct VecMem {
   vector signed vec;
 } VecMem;
 
-// The following should not assert.  See qiongsiwu1's comment here: 
+// The following should not assert.  See qiongsiwu1's comment here:
 // https://reviews.llvm.org/D115670
 void test2(void) {
   vector signed local_vec = {1, 2, 3, 4};

@@ -104,7 +104,7 @@
            // Forward recursion on a is stable as long as 2a-b+z > 0.
            // If 2a-b+z < 0 then backwards recursion is stable even though
            // the function may be strictly increasing with a.  Potentially
-           // we may need to split the recurrence in 2 sections - one using 
+           // we may need to split the recurrence in 2 sections - one using
            // forward recursion, and one backwards.
            //
            // We will get the next seed value from the ratio
@@ -463,7 +463,7 @@
         // OK for z smaller than log_max_value<Quad> though, maybe we can stretch a little further
         // but that's not clear...
         // Also need to add on a fudge factor to the cost to account for the fact that we need
-        // to calculate the Bessel functions, this is not quite as high as the gamma function 
+        // to calculate the Bessel functions, this is not quite as high as the gamma function
         // method above as this is generally more accurate and so preferred if the methods are close:
         //
         cost = 50 + fabs(b - a);

@@ -1195,11 +1195,11 @@ void fPaddingBitfieldTest() {
 }
 
 struct NamedBitfieldTest {
-  int b; 
+  int b;
   long long named : 7; // expected-note{{uninitialized field 'this->named'}}
   NamedBitfieldTest(int b) : b(b) {} // expected-warning{{1 uninitialized field at the end of the constructor call}}
 };
 
 void fNamedBitfieldTest() {
-  NamedBitfieldTest nb(42); 
+  NamedBitfieldTest nb(42);
 }

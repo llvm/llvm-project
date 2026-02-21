@@ -13,15 +13,15 @@
 // complex ranges are specified. However, warnings are not emitted in
 // the following cases:
 // (a) When the positive/negative form or a different value of the same
-//     option is specified. 
-//       Example: 
+//     option is specified.
+//       Example:
 //          `-ffast-math -fno-fast-math`
 //          `-fcx-limited-range -fno-cx-limited-range`
 //          `-fcx-fortran-rules -fno-cx-fortran-rules`
 //          `-fcomplex-arithmetic=full -fcomplex-arithmetic=improved`
 //          `-ffp-model=strict -ffp-model=aggressive`
 //
-// (b) When -ffp-model= is overridden by -f[no-]fast-math. 
+// (b) When -ffp-model= is overridden by -f[no-]fast-math.
 //       Example:
 //          `-ffp-model=fast -fno-fast-math`
 //          `-ffp-model=strict -ffast-math`

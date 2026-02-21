@@ -5,7 +5,7 @@ typedef void Void;
 
 void foo(void) {
   int X;
-  
+
   X = sizeof(int (void a));    // expected-error {{argument may not have 'void' type}}
   X = sizeof(int (int, void)); // expected-error {{must be the first and only parameter}}
   X = sizeof(int (void, ...)); // expected-error {{must be the first and only parameter}}

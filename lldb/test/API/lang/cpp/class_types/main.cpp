@@ -9,7 +9,7 @@ public:
     {
         return m_i != 0;
     }
-    
+
 private:
     int m_i;
 };

@@ -8,7 +8,7 @@ const char *missing_comma[] = {
     "future",
     "optional",
     "packaged_task" // expected-note{{place parentheses around the string literal to silence warning}}
-    "promise",      // expected-warning{{suspicious concatenation of string literals in an array initialization; did you mean to separate the elements with a comma?}}     
+    "promise",      // expected-warning{{suspicious concatenation of string literals in an array initialization; did you mean to separate the elements with a comma?}}
     "shared_future"
 };
 
@@ -54,8 +54,8 @@ const char *warn[] = { "cpll", "gpll", "hdmiphy" "usb480m" }; // expected-note{{
 // expected-warning@-1{{suspicious concatenation of string literals in an array initialization; did you mean to separate the elements with a comma?}}
 
 const char *missing_two_commas_ignore[] = {"basic_filebuf",
-                       "basic_ios" 
-                       "future"  
+                       "basic_ios"
+                       "future"
                        "optional",
                        "packaged_task"};
 

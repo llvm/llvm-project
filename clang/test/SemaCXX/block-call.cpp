@@ -4,7 +4,7 @@ int (*FP)();
 int (^IFP) ();
 int (^II) (int);
 int main() {
-  int (*FPL) (int) = FP; // expected-error {{cannot initialize a variable of type 'int (*)(int)' with an lvalue of type 'int (*)()'}} 
+  int (*FPL) (int) = FP; // expected-error {{cannot initialize a variable of type 'int (*)(int)' with an lvalue of type 'int (*)()'}}
 
   // For Blocks, the ASTContext::typesAreBlockCompatible() makes sure this is an error.
   int (^PFR) (int) = IFP; // expected-error {{cannot initialize a variable of type 'int (^)(int)' with an lvalue of type 'int (^)()'}}

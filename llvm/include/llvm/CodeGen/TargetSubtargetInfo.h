@@ -173,7 +173,7 @@ public:
   ///
   /// Similar in behavior to `isZeroIdiom`. However, it knows how to identify
   /// all dependency breaking instructions (i.e. not just zero-idioms).
-  /// 
+  ///
   /// As for `isZeroIdiom`, this method returns a mask of "broken" dependencies.
   /// (See method `isZeroIdiom` for a detailed description of Mask).
   virtual bool isDependencyBreaking(const MachineInstr *MI, APInt &Mask) const {

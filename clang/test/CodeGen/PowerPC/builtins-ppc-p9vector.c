@@ -1059,7 +1059,7 @@ vector unsigned long long test95(void) {
 // CHECK-NEXT-NEXT: ret <2 x i64>
   return vec_xl_len(ull,0);
 }
- 
+
 vector signed long long test96(void) {
 // CHECK-BE: @llvm.ppc.vsx.lxvl(ptr %{{.+}}, i64
 // CHECK-BE-NEXT-NEXT: ret <2 x i64>

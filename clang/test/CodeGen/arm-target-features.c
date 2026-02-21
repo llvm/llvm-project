@@ -89,22 +89,22 @@
 // CHECK-ARMV6T2-LINUX: "target-features"="+armv6t2,-thumb-mode"
 
 // RUN: %clang_cc1 -triple thumbv6m-linux-gnueabi -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV6M-LINUX
-// RUN: %clang_cc1 -triple thumb-linux-gnueabi -target-cpu cortex-m0 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV6M-LINUX 
+// RUN: %clang_cc1 -triple thumb-linux-gnueabi -target-cpu cortex-m0 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV6M-LINUX
 // CHECK-ARMV6M-LINUX: "target-features"="+armv6-m,+thumb-mode"
 
 // RUN: %clang_cc1 -triple thumbv7m-linux-gnueabi -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV7M-LINUX
 // CHECK-ARMV7M-LINUX: "target-features"="+armv7-m,+thumb-mode"
 
-// RUN: %clang_cc1 -triple thumb-linux-gnueabi -target-cpu cortex-m3 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV7M-M3-LINUX 
+// RUN: %clang_cc1 -triple thumb-linux-gnueabi -target-cpu cortex-m3 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV7M-M3-LINUX
 // CHECK-ARMV7M-M3-LINUX: "target-features"="+armv7-m,+hwdiv,+thumb-mode"
 
 // RUN: %clang_cc1 -triple thumbv8m.base-linux-gnueabi -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV8M-LINUX
 // CHECK-ARMV8M-LINUX: "target-features"="+armv8-m.base,+thumb-mode"
 
-// RUN: %clang_cc1 -triple thumb-linux-gnueabi -target-cpu cortex-m23 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV8M-M23-LINUX 
+// RUN: %clang_cc1 -triple thumb-linux-gnueabi -target-cpu cortex-m23 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV8M-M23-LINUX
 // CHECK-ARMV8M-M23-LINUX: "target-features"="+armv8-m.base,+hwdiv,+thumb-mode"
 
-// RUN: %clang_cc1 -triple thumb-linux-gnueabi -target-cpu cortex-m33 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV8M-MAIN-LINUX 
+// RUN: %clang_cc1 -triple thumb-linux-gnueabi -target-cpu cortex-m33 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV8M-MAIN-LINUX
 // CHECK-ARMV8M-MAIN-LINUX: "target-features"="+armv8-m.main,+dsp,+fp-armv8d16sp,+fp16,+hwdiv,+thumb-mode,+vfp2sp,+vfp3d16sp,+vfp4d16sp"
 
 // RUN: %clang_cc1 -triple thumb-linux-gnueabi -target-cpu cortex-m55 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ARMV81M-MAIN-LINUX

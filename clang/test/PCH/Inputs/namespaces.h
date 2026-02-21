@@ -39,6 +39,6 @@ extern "C" {
   void ext();
 }
 
-inline namespace N4 { 
+inline namespace N4 {
   struct MemberOfN4;
 }

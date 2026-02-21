@@ -5,7 +5,7 @@ void clang_analyzer_checkInlined(bool);
 
 class A {
 public:
-  ~A() { 
+  ~A() {
     int *x = 0;
     *x = 3; // expected-warning{{Dereference of null pointer}}
   }
@@ -287,14 +287,14 @@ namespace ExplicitDestructorCall {
       clang_analyzer_checkInlined(true); // expected-warning{{TRUE}}
     }
   };
-  
+
   class Subclass : public VirtualDtor {
   public:
     virtual ~Subclass() {
       clang_analyzer_checkInlined(false); // no-warning
     }
   };
-  
+
   void destroy(Subclass *obj) {
     obj->VirtualDtor::~VirtualDtor();
   }

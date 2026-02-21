@@ -8,15 +8,15 @@
 // RUN: %clang_cc1 %s -fsyntax-only -Werror -Wweak-template-vtables
 
 struct A { // expected-warning {{'A' has no out-of-line virtual method definitions; its vtable will be emitted in every translation unit}}
-  virtual void f() { } 
+  virtual void f() { }
 };
 
 template<typename T> struct B {
-  virtual void f() { } 
+  virtual void f() { }
 };
 
 namespace {
-  struct C { 
+  struct C {
     virtual void f() { }
   };
 }
@@ -40,9 +40,9 @@ class Parent {
 public:
   Parent() {}
   virtual ~Parent();
-  virtual void * getFoo() const = 0;    
+  virtual void * getFoo() const = 0;
 };
-  
+
 class Derived : public Parent {
 public:
   Derived();

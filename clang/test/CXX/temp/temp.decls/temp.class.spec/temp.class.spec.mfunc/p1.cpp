@@ -7,11 +7,11 @@ template<typename T>
 struct A<T*, 2> {
   A(T);
   ~A();
-  
+
   void f(T*);
-  
+
   operator T*();
-  
+
   static T value;
 };
 

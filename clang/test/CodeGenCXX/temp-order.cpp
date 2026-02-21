@@ -141,7 +141,7 @@ static unsigned f7() {
 // 5, 2
 static unsigned f8() {
   TempTracker tt;
-  
+
   {
     (void)((A(tt, 2) || A(tt, 3)) && A(tt, 5));
   }

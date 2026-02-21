@@ -12,7 +12,7 @@ template <class T>
 void IntToString(T a)
 {
  string result;
- T digit; 
+ T digit;
  char((digit < 10 ? '0' : 'a') + digit) + result;
 }
 

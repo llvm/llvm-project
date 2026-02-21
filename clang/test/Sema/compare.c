@@ -245,7 +245,7 @@ int test2(int i32) {
     unsigned long long u63 : 63;
     unsigned long long u64 : 64;
   } *x;
-  
+
   if (x->u8 == i32) { // comparison in int32, exact
     return 0;
   } else if (x->u31 == i32) { // comparison in int32, exact

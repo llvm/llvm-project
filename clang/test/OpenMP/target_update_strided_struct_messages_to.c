@@ -2,9 +2,9 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 #define N 8
-typedef struct { 
+typedef struct {
   double data[N];
-  int len; 
+  int len;
 } T;
 
 int main(int argc, char **argv) {
@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
 
   #pragma omp target update to(s.data[0:4:-1]) // expected-error {{section stride is evaluated to a non-positive value -1}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 
-  // Missing colon 
+  // Missing colon
   #pragma omp target update to(s.data[0:4 2]) // expected-error {{expected ']'}} expected-note {{to match this '['}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
   {}
 

@@ -14,7 +14,7 @@
 // CHECK-DAG: private unnamed_addr constant [65 x i8] c"void functionTemplateWithUnnamedTemplateParameter(T) [T = float]\00"
 
 // CHECK-DAG: private unnamed_addr constant [60 x i8] c"void functionTemplateExplicitSpecialization(T) [T = double]\00"
-// CHECK-DAG: private unnamed_addr constant [52 x i8] c"T *functionTemplateWithCompoundTypes(T *) [T = int]\00" 
+// CHECK-DAG: private unnamed_addr constant [52 x i8] c"T *functionTemplateWithCompoundTypes(T *) [T = int]\00"
 // CHECK-DAG: private unnamed_addr constant [54 x i8] c"T functionTemplateWithTemplateReturnType() [T = char]\00"
 // CHECK-DAG: private unnamed_addr constant [57 x i8] c"void functionTemplateWithoutParameterList() [T = double]\00"
 // CHECK-DAG: private unnamed_addr constant [62 x i8] c"void functionTemplateWithTwoParams(T, U) [T = int, U = float]\00"
@@ -219,7 +219,7 @@ public:
     printf("__FUNCTION__ %s\n", __FUNCTION__);
     printf("__PRETTY_FUNCTION__ %s\n\n", __PRETTY_FUNCTION__);
   }
-  
+
   void constVolatileFunction() const volatile {
     printf("__func__ %s\n", __func__);
     printf("__FUNCTION__ %s\n", __FUNCTION__);
@@ -463,14 +463,14 @@ int main() {
   topLevelNamespace.topLevelNamespaceFunction();
 
   NS::Base::staticFunction();
-  
+
   NS::Base b;
   b.inlineFunction();
   b.virtualFunction();
   b.variadicFunction(0);
   b.functionWithParameters(0, 0, 0);
   b.functionReturningClass();
-  
+
   b.withTemplateParameter1(NS::ClassTemplate<int>());
   b.withTemplateParameter2(NS::ClassTemplate<NS::Base *>());
   b.functionReturingTemplate1();
@@ -485,21 +485,21 @@ int main() {
 
   NS::Derived d;
   d.virtualFunction();
-  
+
   NS::ClassTemplate<int> t1;
   t1.classTemplateFunction();
   NS::ClassTemplate<NS::Base *> t2;
   t2.classTemplateFunction();
-  
+
   NS::Constructor c1;
   NS::Constructor c2(0);
   NS::Constructor c3((NS::Base *)0);
-  
+
   {
     NS::Destructor destructor;
   }
 
-  NS::ContainerForAnonymousRecords anonymous; 
+  NS::ContainerForAnonymousRecords anonymous;
   anonymous.anonymousClass.anonymousClassFunction();
   anonymous.anonymousStruct.anonymousStructFunction();
   anonymous.anonymousUnion.anonymousUnionFunction();
@@ -555,14 +555,14 @@ void _dispatch_once(dispatch_block_t block);
 
 XXX::XXX()
 {
-   _dispatch_once(^{ notify_register_dispatch( ^(int token) { XXLog(__FUNCTION__); }); 
+   _dispatch_once(^{ notify_register_dispatch( ^(int token) { XXLog(__FUNCTION__); });
    });
 }
 // CHECK: define internal {{.*}}void @___ZN3XXXC2Ev_block_invoke_
 
 XXX::~XXX()
 {
-   _dispatch_once(^{ notify_register_dispatch( ^(int token) { XXLog(__FUNCTION__); }); 
+   _dispatch_once(^{ notify_register_dispatch( ^(int token) { XXLog(__FUNCTION__); });
    });
 }
 // CHECK: define internal {{.*}}void @___ZN3XXXD2Ev_block_invoke_

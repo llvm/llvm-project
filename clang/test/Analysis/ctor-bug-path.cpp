@@ -10,10 +10,10 @@ struct S {
 };
 
 void CtorDirect() {
-  int *x = nullptr, *y = nullptr; 
+  int *x = nullptr, *y = nullptr;
   // expected-note@-1{{'x' initialized to a null pointer value}}
 
-  S s(x, y); 
+  S s(x, y);
   // expected-note@-1{{Passing null pointer value via 1st parameter 'a'}}
   // expected-note@-2{{Calling constructor for 'S'}}
   // expected-note@-3{{Returning from constructor for 'S'}}
@@ -85,10 +85,10 @@ struct S {
 };
 
 void CtorDirect() {
-  int *x = nullptr, *y = nullptr; 
+  int *x = nullptr, *y = nullptr;
   // expected-note@-1{{'x' initialized to a null pointer value}}
 
-  S s{x, y}; 
+  S s{x, y};
   // expected-note@-1{{Passing null pointer value via 1st parameter 'a'}}
   // expected-note@-2{{Calling constructor for 'S'}}
   // expected-note@-3{{Returning from constructor for 'S'}}
@@ -156,7 +156,7 @@ void StructuredBinding() {
   int *x = nullptr, *y = nullptr;
   //expected-note@-1{{'y' initialized to a null pointer value}}
 
-  S s{x, y}; 
+  S s{x, y};
   //expected-note@-1{{'s.p2' initialized to a null pointer value}}
   //expected-note@-2{{'s' initialized here}}
 
@@ -191,14 +191,14 @@ namespace nestedCtorInitializer {
     S2 s2;
 
     //FIXME: Put more information to the notes.
-    S(int *x, int *y) : s2{x, y} {}; 
+    S(int *x, int *y) : s2{x, y} {};
     // expected-note@-1{{Null pointer value stored to 's.s2.s3.s4.s5.y'}}
   };
 
   void nestedCtorInit(){
     int *x = nullptr, *y = nullptr; // expected-note{{'y' initialized to a null pointer value}}
 
-    S s{x,y}; 
+    S s{x,y};
     // expected-note@-1{{Passing null pointer value via 2nd parameter}}
     // expected-note@-2{{Calling constructor for 'S'}}
     // expected-note@-3{{Returning from constructor for 'S'}}

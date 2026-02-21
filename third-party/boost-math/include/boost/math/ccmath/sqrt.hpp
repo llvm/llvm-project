@@ -19,7 +19,7 @@
 #include <boost/math/ccmath/isinf.hpp>
 #include <boost/math/tools/is_constant_evaluated.hpp>
 
-namespace boost::math::ccmath { 
+namespace boost::math::ccmath {
 
 namespace detail {
 
@@ -48,7 +48,7 @@ constexpr Real sqrt(Real x)
 {
     if(BOOST_MATH_IS_CONSTANT_EVALUATED(x))
     {
-        if (boost::math::ccmath::isnan(x) || 
+        if (boost::math::ccmath::isnan(x) ||
            (boost::math::ccmath::isinf(x) && x > 0) ||
             boost::math::ccmath::abs(x) == Real(0))
         {

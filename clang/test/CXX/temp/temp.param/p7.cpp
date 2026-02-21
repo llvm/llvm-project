@@ -8,8 +8,8 @@
 struct A; // expected-note {{forward declaration}}
 
 template<double d> class X; // cxx17-error{{cannot have type}}
-template<double* pd> class Y; //OK 
-template<double& rd> class Z; //OK 
+template<double* pd> class Y; //OK
+template<double& rd> class Z; //OK
 
 template<A a> class X0; // expected-error{{has incomplete type 'A'}}
 

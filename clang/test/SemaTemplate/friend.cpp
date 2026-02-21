@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 template<typename T> struct A {
   struct B { };
-  
+
   friend struct B;
 };
 
@@ -19,7 +19,7 @@ namespace PR6770 {
   }
   using namespace N;
 
-  namespace M { 
+  namespace M {
     float f1(float);
   }
   using M::f1;

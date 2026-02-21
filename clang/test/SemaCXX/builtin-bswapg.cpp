@@ -20,12 +20,12 @@ void test_basic_type_checks() {
 
 template<typename T>
 void test_template_type_check() {
-  static_assert(__is_same(T, decltype(__builtin_bswapg(T{}))), 
+  static_assert(__is_same(T, decltype(__builtin_bswapg(T{}))),
                 "bswapg should return the same type as its argument");
   constexpr T zero{};
   constexpr T max = ~T{};
   constexpr T one = T{1};
-    
+
   static_assert(__is_same(T, decltype(__builtin_bswapg(zero))), "");
   static_assert(__is_same(T, decltype(__builtin_bswapg(max))), "");
   static_assert(__is_same(T, decltype(__builtin_bswapg(one))), "");
@@ -45,16 +45,16 @@ template void test_template_type_check<_BitInt(128)>();
 
 void test_lambda_type_checks() {
   auto lambda = [](auto x) {
-    static_assert(__is_same(decltype(x), decltype(__builtin_bswapg(x))), 
+    static_assert(__is_same(decltype(x), decltype(__builtin_bswapg(x))),
                   "bswapg in lambda should preserve type");
     return __builtin_bswapg(x);
   };
   auto result_long = lambda(42UL);
   static_assert(__is_same(unsigned long, decltype(result_long)), "");
-    
+
   auto result_int = lambda(42);
   static_assert(__is_same(int, decltype(result_int)), "");
-    
+
   auto result_short = lambda(static_cast<short>(42));
   static_assert(__is_same(short, decltype(result_short)), "");
 
@@ -76,10 +76,10 @@ template<auto Value>
 struct ValueTemplateTypeTest {
   using value_type = decltype(Value);
   using result_type = decltype(__builtin_bswapg(Value));
-    
+
   static constexpr bool type_matches = __is_same(value_type, result_type);
   static_assert(type_matches, "Value template bswapg should preserve type");
-    
+
   static constexpr auto swapped_value = __builtin_bswapg(Value);
 };
 
@@ -102,29 +102,29 @@ void test_basic_errors() {
   test_invalid_type<float>();
   // expected-note@-1 {{in instantiation of function template specialization 'test_invalid_type<float>' requested here}}
   // expected-error@#invalid_type_use {{1st argument must be a scalar integer type (was 'float')}}
-  
-  test_invalid_type<double>(); 
+
+  test_invalid_type<double>();
   // expected-note@-1 {{in instantiation of function template specialization 'test_invalid_type<double>' requested here}}
   // expected-error@#invalid_type_use {{1st argument must be a scalar integer type (was 'double')}}
 
-  test_invalid_type<void*>(); 
+  test_invalid_type<void*>();
   // expected-note@-1 {{in instantiation of function template specialization 'test_invalid_type<void *>' requested here}}
   // expected-error@#invalid_type_use {{1st argument must be a scalar integer type (was 'void *')}}
 }
 
 template<typename T>
 auto test_dependent_context(T value) -> decltype(__builtin_bswapg(value)) { // #dependent_use
-  return __builtin_bswapg(value); 
+  return __builtin_bswapg(value);
 }
 
 void test_dependent_errors() {
-  test_dependent_context(1.0f); 
+  test_dependent_context(1.0f);
   // expected-error@-1 {{no matching function for call to 'test_dependent_context'}}
   // expected-note@#dependent_use {{candidate template ignored: substitution failure [with T = float]: 1st argument must be a scalar integer type (was 'float')}}
-  test_dependent_context(1.0l); 
+  test_dependent_context(1.0l);
   // expected-error@-1 {{no matching function for call to 'test_dependent_context'}}
   // expected-note@#dependent_use {{candidate template ignored: substitution failure [with T = long double]: 1st argument must be a scalar integer type (was 'long double')}}
-  test_dependent_context("hello"); 
+  test_dependent_context("hello");
   // expected-error@-1 {{no matching function for call to 'test_dependent_context'}}
   // expected-note@#dependent_use {{candidate template ignored: substitution failure [with T = const char *]: 1st argument must be a scalar integer type (was 'const char *')}}
 }
@@ -133,7 +133,7 @@ void test_lambda_errors() {
   auto lambda = [](auto x) {
     return __builtin_bswapg(x); // #lambda_use
   };
-  
+
   lambda(1.0f);
   // expected-error@#lambda_use {{1st argument must be a scalar integer type (was 'float')}}
   // expected-note@-2 {{in instantiation of function template specialization 'test_lambda_errors()::(lambda)::operator()<float>' requested here}}

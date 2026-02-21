@@ -270,14 +270,14 @@ BOOST_MATH_GPU_ENABLED T erf_imp(T z, bool invert, const Policy& pol, const std:
          // Max Error found at double precision =        2.961182e-17
          // LCOV_EXCL_START
          BOOST_MATH_STATIC_LOCAL_VARIABLE const T Y = 1.044948577880859375f;
-         BOOST_MATH_STATIC const T P[] = {    
+         BOOST_MATH_STATIC const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.0834305892146531832907),
             BOOST_MATH_BIG_CONSTANT(T, 53, -0.338165134459360935041),
             BOOST_MATH_BIG_CONSTANT(T, 53, -0.0509990735146777432841),
             BOOST_MATH_BIG_CONSTANT(T, 53, -0.00772758345802133288487),
             BOOST_MATH_BIG_CONSTANT(T, 53, -0.000322780120964605683831),
          };
-         BOOST_MATH_STATIC const T Q[] = {    
+         BOOST_MATH_STATIC const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 53, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.455004033050794024546),
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.0875222600142252549554),
@@ -303,7 +303,7 @@ BOOST_MATH_GPU_ENABLED T erf_imp(T z, bool invert, const Policy& pol, const std:
          // Max Error found at double precision =        4.841816e-17
          // LCOV_EXCL_START
          BOOST_MATH_STATIC_LOCAL_VARIABLE const T Y = 0.405935764312744140625f;
-         BOOST_MATH_STATIC const T P[] = {    
+         BOOST_MATH_STATIC const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 53, -0.098090592216281240205),
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.178114665841120341155),
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.191003695796775433986),
@@ -311,7 +311,7 @@ BOOST_MATH_GPU_ENABLED T erf_imp(T z, bool invert, const Policy& pol, const std:
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.0195049001251218801359),
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.00180424538297014223957),
          };
-         BOOST_MATH_STATIC const T Q[] = {    
+         BOOST_MATH_STATIC const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 53, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 53, 1.84759070983002217845),
             BOOST_MATH_BIG_CONSTANT(T, 53, 1.42628004845511324508),
@@ -338,7 +338,7 @@ BOOST_MATH_GPU_ENABLED T erf_imp(T z, bool invert, const Policy& pol, const std:
          // Maximum Relative Change in Control Points:   9.886e-05
          // LCOV_EXCL_START
          BOOST_MATH_STATIC_LOCAL_VARIABLE const T Y = 0.50672817230224609375f;
-         BOOST_MATH_STATIC const T P[] = {    
+         BOOST_MATH_STATIC const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 53, -0.0243500476207698441272),
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.0386540375035707201728),
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.04394818964209516296),
@@ -346,7 +346,7 @@ BOOST_MATH_GPU_ENABLED T erf_imp(T z, bool invert, const Policy& pol, const std:
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.00323962406290842133584),
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.000235839115596880717416),
          };
-         BOOST_MATH_STATIC const T Q[] = {    
+         BOOST_MATH_STATIC const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 53, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 53, 1.53991494948552447182),
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.982403709157920235114),
@@ -373,7 +373,7 @@ BOOST_MATH_GPU_ENABLED T erf_imp(T z, bool invert, const Policy& pol, const std:
          // Max Error found at double precision =        2.062515e-17
          // LCOV_EXCL_START
          BOOST_MATH_STATIC_LOCAL_VARIABLE const T Y = 0.5405750274658203125f;
-         BOOST_MATH_STATIC const T P[] = {    
+         BOOST_MATH_STATIC const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.00295276716530971662634),
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.0137384425896355332126),
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.00840807615555585383007),
@@ -381,7 +381,7 @@ BOOST_MATH_GPU_ENABLED T erf_imp(T z, bool invert, const Policy& pol, const std:
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.000250269961544794627958),
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.113212406648847561139e-4),
          };
-         BOOST_MATH_STATIC const T Q[] = {    
+         BOOST_MATH_STATIC const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 53, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 53, 1.04217814166938418171),
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.442597659481563127003),
@@ -408,7 +408,7 @@ BOOST_MATH_GPU_ENABLED T erf_imp(T z, bool invert, const Policy& pol, const std:
          // Maximum Relative Change in Control Points:   1.357e-05
          // LCOV_EXCL_START
          BOOST_MATH_STATIC_LOCAL_VARIABLE const T Y = 0.5579090118408203125f;
-         BOOST_MATH_STATIC const T P[] = {    
+         BOOST_MATH_STATIC const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.00628057170626964891937),
             BOOST_MATH_BIG_CONSTANT(T, 53, 0.0175389834052493308818),
             BOOST_MATH_BIG_CONSTANT(T, 53, -0.212652252872804219852),
@@ -417,7 +417,7 @@ BOOST_MATH_GPU_ENABLED T erf_imp(T z, bool invert, const Policy& pol, const std:
             BOOST_MATH_BIG_CONSTANT(T, 53, -3.22729451764143718517),
             BOOST_MATH_BIG_CONSTANT(T, 53, -2.8175401114513378771),
          };
-         BOOST_MATH_STATIC const T Q[] = {    
+         BOOST_MATH_STATIC const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 53, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 53, 2.79257750980575282228),
             BOOST_MATH_BIG_CONSTANT(T, 53, 11.0567237927800161565),
@@ -506,7 +506,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
          // Maximum Relative Change in Control Points:   1.474e-04
          // LCOV_EXCL_START
          static const T Y = 1.044948577880859375f;
-         static const T P[] = {    
+         static const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.0834305892146531988966),
             BOOST_MATH_BIG_CONSTANT(T, 64, -0.338097283075565413695),
             BOOST_MATH_BIG_CONSTANT(T, 64, -0.0509602734406067204596),
@@ -514,7 +514,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
             BOOST_MATH_BIG_CONSTANT(T, 64, -0.000489468651464798669181),
             BOOST_MATH_BIG_CONSTANT(T, 64, -0.200305626366151877759e-4),
          };
-         static const T Q[] = {    
+         static const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 64, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.455817300515875172439),
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.0916537354356241792007),
@@ -540,7 +540,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
          // Maximum Relative Change in Control Points:   5.110e-03
          // LCOV_EXCL_START
          static const T Y = 0.405935764312744140625f;
-         static const T P[] = {    
+         static const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 64, -0.0980905922162812031672),
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.159989089922969141329),
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.222359821619935712378),
@@ -550,7 +550,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.000441266654514391746428),
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.266689068336295642561e-7),
          };
-         static const T Q[] = {    
+         static const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 64, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 64, 2.03237474985469469291),
             BOOST_MATH_BIG_CONSTANT(T, 64, 1.78355454954969405222),
@@ -578,7 +578,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
          // Maximum Relative Change in Control Points:   1.793e-04
          // LCOV_EXCL_START
          static const T Y = 0.50672817230224609375f;
-         static const T P[] = {    
+         static const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 64, -0.024350047620769840217),
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.0343522687935671451309),
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.0505420824305544949541),
@@ -587,7 +587,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.00090807914416099524444),
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.515917266698050027934e-4),
          };
-         static const T Q[] = {    
+         static const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 64, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 64, 1.71657861671930336344),
             BOOST_MATH_BIG_CONSTANT(T, 64, 1.26409634824280366218),
@@ -615,7 +615,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
          // Max Error found at long double precision =   1.446908e-20
          // LCOV_EXCL_START
          static const T Y  = 0.5405750274658203125f;
-         static const T P[] = {    
+         static const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.0029527671653097284033),
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.0141853245895495604051),
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.0104959584626432293901),
@@ -624,7 +624,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.523435380636174008685e-4),
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.189896043050331257262e-5),
          };
-         static const T Q[] = {    
+         static const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 64, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 64, 1.19352160185285642574),
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.603256964363454392857),
@@ -652,7 +652,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
          // Maximum Relative Change in Control Points:   2.319e-05
          // LCOV_EXCL_START
          static const T Y = 0.55825519561767578125f;
-         static const T P[] = {    
+         static const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.00593438793008050214106),
             BOOST_MATH_BIG_CONSTANT(T, 64, 0.0280666231009089713937),
             BOOST_MATH_BIG_CONSTANT(T, 64, -0.141597835204583050043),
@@ -663,7 +663,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
             BOOST_MATH_BIG_CONSTANT(T, 64, -29.2545152747009461519),
             BOOST_MATH_BIG_CONSTANT(T, 64, -16.8865774499799676937),
          };
-         static const T Q[] = {    
+         static const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 64, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 64, 4.72948911186645394541),
             BOOST_MATH_BIG_CONSTANT(T, 64, 23.6750543147695749212),
@@ -753,7 +753,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
          // Expected Error Term:                         -6.124e-36
          // Maximum Relative Change in Control Points:   3.492e-10
          static const T Y = 1.0841522216796875f;
-         static const T P[] = {    
+         static const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.0442269454158250738961589031215451778),
             BOOST_MATH_BIG_CONSTANT(T, 113, -0.35549265736002144875335323556961233),
             BOOST_MATH_BIG_CONSTANT(T, 113, -0.0582179564566667896225454670863270393),
@@ -763,7 +763,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
             BOOST_MATH_BIG_CONSTANT(T, 113, -0.169655010425186987820201021510002265e-5),
             BOOST_MATH_BIG_CONSTANT(T, 113, -0.344448249920445916714548295433198544e-7),
          };
-         static const T Q[] = {    
+         static const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.466542092785657604666906909196052522),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.100005087012526447295176964142107611),
@@ -789,7 +789,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
          // Expected Error Term:                         1.387e-35
          // Maximum Relative Change in Control Points:   6.127e-05
          static const T Y = 0.371877193450927734375f;
-         static const T P[] = {    
+         static const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, -0.0640320213544647969396032886581290455),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.200769874440155895637857443946706731),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.378447199873537170666487408805779826),
@@ -801,7 +801,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.0001144764551085935580772512359680516),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.436544865032836914773944382339900079e-5),
          };
-         static const T Q[] = {    
+         static const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 113, 2.47651182872457465043733800302427977),
             BOOST_MATH_BIG_CONSTANT(T, 113, 2.78706486002517996428836400245547955),
@@ -831,7 +831,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
          // Expected Error Term:                         1.538e-35
          // Maximum Relative Change in Control Points:   6.104e-05
          static const T Y = 0.45658016204833984375f;
-         static const T P[] = {    
+         static const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, -0.0289965858925328393392496555094848345),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.0868181194868601184627743162571779226),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.169373435121178901746317404936356745),
@@ -843,7 +843,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.376494706741453489892108068231400061e-4),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.133166058052466262415271732172490045e-5),
          };
-         static const T Q[] = {    
+         static const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 113, 2.32970330146503867261275580968135126),
             BOOST_MATH_BIG_CONSTANT(T, 113, 2.46325715420422771961250513514928746),
@@ -872,7 +872,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
          // Maximum Relative Change in Control Points:   1.316e-04
          // Max Error found at long double precision =   1.998462e-35
          static const T Y = 0.50250148773193359375f;
-         static const T P[] = {    
+         static const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, -0.0201233630504573402185161184151016606),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.0331864357574860196516686996302305002),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.0716562720864787193337475444413405461),
@@ -884,7 +884,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.991531438367015135346716277792989347e-5),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.312857043762117596999398067153076051e-6),
          };
-         static const T Q[] = {    
+         static const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 113, 2.13506082409097783827103424943508554),
             BOOST_MATH_BIG_CONSTANT(T, 113, 2.06399257267556230937723190496806215),
@@ -914,7 +914,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
          // Maximum Relative Change in Control Points:   7.103e-05
          // Max Error found at long double precision =   5.794737e-36
          static const T Y = 0.52896785736083984375f;
-         static const T P[] = {    
+         static const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, -0.00902152521745813634562524098263360074),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.0145207142776691539346923710537580927),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.0301681239582193983824211995978678571),
@@ -926,7 +926,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.241918026931789436000532513553594321e-5),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.676586625472423508158937481943649258e-7),
          };
-         static const T Q[] = {    
+         static const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.93669171363907292305550231764920001),
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.69468476144051356810672506101377494),
@@ -955,7 +955,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
          // Maximum Relative Change in Control Points:   1.363e-04
          // Max Error found at long double precision =   1.747062e-36
          static const T Y = 0.54037380218505859375f;
-         static const T P[] = {    
+         static const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, -0.0033703486408887424921155540591370375),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.0104948043110005245215286678898115811),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.0148530118504000311502310457390417795),
@@ -966,7 +966,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.343526765122727069515775194111741049e-5),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.971120407556888763695313774578711839e-7),
          };
-         static const T Q[] = {    
+         static const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.59911256167540354915906501335919317),
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.136006830764025173864831382946934),
@@ -994,7 +994,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
          // Maximum Relative Change in Control Points:   2.475e-05
          // Max Error found at long double precision =   1.349545e-35
          static const T Y = 0.55000019073486328125f;
-         static const T P[] = {    
+         static const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.00118142849742309772151454518093813615),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.0072201822885703318172366893469382745),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.0078782276276860110721875733778481505),
@@ -1007,7 +1007,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.929502490223452372919607105387474751e-8),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.156161469668275442569286723236274457e-9),
          };
-         static const T Q[] = {    
+         static const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.52955245103668419479878456656709381),
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.06263944820093830054635017117417064),
@@ -1037,7 +1037,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
          // Maximum Relative Change in Control Points:   1.027e-03
          // Max Error found at long double precision =   2.646420e-36
          static const T Y = 0.5574436187744140625f;
-         static const T P[] = {    
+         static const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.000293236907400849056269309713064107674),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.00225110719535060642692275221961480162),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.00190984458121502831421717207849429799),
@@ -1049,7 +1049,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.454764611880548962757125070106650958e-8),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.673002744115866600294723141176820155e-10),
          };
-         static const T Q[] = {    
+         static const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.12843690320861239631195353379313367),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.569900657061622955362493442186537259),
@@ -1078,7 +1078,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
          // Maximum Relative Change in Control Points:   2.632e-06
          // Max Error found at long double precision =   9.849522e-36
          static const T Y = 0.56083202362060546875f;
-         static const T P[] = {    
+         static const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.000282420728751494363613829834891390121),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.00175387065018002823433704079355125161),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.0021344978564889819420775336322920375),
@@ -1090,7 +1090,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.55075079477173482096725348704634529e-7),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.119735694018906705225870691331543806e-8),
          };
-         static const T Q[] = {    
+         static const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.69889613396167354566098060039549882),
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.28824647372749624464956031163282674),
@@ -1119,7 +1119,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
          // Maximum Relative Change in Control Points:   4.674e-04
          // Max Error found at long double precision =   1.162590e-35
          static const T Y = 0.5632686614990234375f;
-         static const T P[] = {    
+         static const T P[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.000920922048732849448079451574171836943),
             BOOST_MATH_BIG_CONSTANT(T, 113, 0.00321439044532288750501700028748922439),
             BOOST_MATH_BIG_CONSTANT(T, 113, -0.250455263029390118657884864261823431),
@@ -1133,7 +1133,7 @@ T erf_imp(T z, bool invert, const Policy& pol, const std::integral_constant<int,
             BOOST_MATH_BIG_CONSTANT(T, 113, -271.651566205951067025696102600443452),
             BOOST_MATH_BIG_CONSTANT(T, 113, -60.0530577077238079968843307523245547),
          };
-         static const T Q[] = {    
+         static const T Q[] = {
             BOOST_MATH_BIG_CONSTANT(T, 113, 1.0),
             BOOST_MATH_BIG_CONSTANT(T, 113, 3.49040448075464744191022350947892036),
             BOOST_MATH_BIG_CONSTANT(T, 113, 34.3563592467165971295915749548313227),
@@ -1185,9 +1185,9 @@ BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T>::type erf(T z, con
    typedef typename policies::evaluation<result_type, Policy>::type value_type;
    typedef typename policies::precision<result_type, Policy>::type precision_type;
    typedef typename policies::normalise<
-      Policy, 
-      policies::promote_float<false>, 
-      policies::promote_double<false>, 
+      Policy,
+      policies::promote_float<false>,
+      policies::promote_double<false>,
       policies::discrete_quantile<>,
       policies::assert_undefined<> >::type forwarding_policy;
 
@@ -1218,9 +1218,9 @@ BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T>::type erfc(T z, co
    typedef typename policies::evaluation<result_type, Policy>::type value_type;
    typedef typename policies::precision<result_type, Policy>::type precision_type;
    typedef typename policies::normalise<
-      Policy, 
-      policies::promote_float<false>, 
-      policies::promote_double<false>, 
+      Policy,
+      policies::promote_float<false>,
+      policies::promote_double<false>,
       policies::discrete_quantile<>,
       policies::assert_undefined<> >::type forwarding_policy;
 

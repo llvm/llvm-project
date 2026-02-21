@@ -44,7 +44,7 @@ void load(typename T::MaskType mask) {
 template < typename Value_, int IsMask_, typename Derived_ >
 struct StaticArrayImpl< Value_, 32, IsMask_, Derived_ > {
   using Array1 = conditional_t< IsMask_, void, Array< Value_, 16 > >; // expected-warning 0+ {{}}
-  
+
   template < typename Mask >
   static Derived_ load_(Mask mask) {
     return Derived_{load< Array1 >(mask.a1), Mask{}}; // expected-error 0+ {{}}

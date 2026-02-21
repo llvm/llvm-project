@@ -41,7 +41,7 @@ void test() {
   delete [] A0;
   // expected-error@-1 {{attempt to use a deleted function}}
   // expected-note@#2 {{'operator delete[]<BasicTypeAwareArrayAllocator>' has been explicitly marked deleted here}}
-  
+
   BasicTypeAwareNonArrayAllocator *A1 = new BasicTypeAwareNonArrayAllocator[10];
   delete [] A1;
 

@@ -1290,8 +1290,8 @@ TEST(TypeHints, Lambda) {
   assertTypeHints(R"cpp(
     void f() {
       int cap = 42;
-      auto $L[[L]] = [cap, $init[[init]] = 1 + 1](int a$ret[[)]] { 
-        return a + cap + init; 
+      auto $L[[L]] = [cap, $init[[init]] = 1 + 1](int a$ret[[)]] {
+        return a + cap + init;
       };
     }
   )cpp",
@@ -1367,7 +1367,7 @@ TEST(TypeHints, StructuredBindings_TupleLike) {
 TEST(TypeHints, StructuredBindings_NoInitializer) {
   assertTypeHints(R"cpp(
     // No initializer (ill-formed).
-    // Do not show useless "NULL TYPE" hint.    
+    // Do not show useless "NULL TYPE" hint.
     auto [x, y];  /*error-ok*/
   )cpp");
 }
@@ -1810,10 +1810,10 @@ TEST(DesignatorHints, NoCrash) {
 
 TEST(DesignatorHints, ParenInit) {
   assertDesignatorHints(R"cpp(
-    struct S { 
+    struct S {
       int x;
       int y;
-      int z; 
+      int z;
     };
     S s ($x[[1]], $y[[2+2]], $z[[4]]);
   )cpp",
@@ -1828,9 +1828,9 @@ TEST(DesignatorHints, ParenInitDerived) {
       int b;
     };
 
-    struct S2 : S1 { 
+    struct S2 : S1 {
       int c;
-      int d; 
+      int d;
     };
     S2 s2 ({$a[[0]], $b[[0]]}, $c[[0]], $d[[0]]);
   )cpp",
@@ -1961,13 +1961,13 @@ TEST(BlockEndHints, Functions) {
       return 41;
     $foo[[}]]
 
-    template<int X> 
-    int bar() { 
+    template<int X>
+    int bar() {
       // No hint for lambda for now
-      auto f = []() { 
-        return X; 
+      auto f = []() {
+        return X;
       };
-      return f(); 
+      return f();
     $bar[[}]]
 
     // No hint because this isn't a definition
@@ -1988,7 +1988,7 @@ TEST(BlockEndHints, Methods) {
     struct Test {
       // No hint because there's no function body
       Test() = default;
-      
+
       ~Test() {
       $dtor[[}]]
 
@@ -2213,7 +2213,7 @@ TEST(BlockEndHints, PrintRefs) {
 
       while (ns::S{}.method1()) {
       $method1[[}]]
-      
+
       while (ns::S{}.method2(int_a, int_a)) {
       $method2[[}]]
     } // suppress
@@ -2307,7 +2307,7 @@ TEST(BlockEndHints, TrailingSemicolon) {
   assertBlockEndHints(R"cpp(
     // The hint is placed after the trailing ';'
     struct S1 {
-    $S1[[}  ;]]   
+    $S1[[}  ;]]
 
     // The hint is always placed in the same line with the closing '}'.
     // So in this case where ';' is missing, it is attached to '}'.
@@ -2328,7 +2328,7 @@ TEST(BlockEndHints, TrailingSemicolon) {
     struct {
       int x;
     $anon[[}]]
-    
+
     s2;
   )cpp",
                       ExpectedHint{" // struct S1", "S1"},
@@ -2419,7 +2419,7 @@ TEST(BlockEndHints, MinLineLimit) {
 
       while (ns::S{}.method1()) {
       }
-      
+
       while (ns::S{}.method2(int_a, int_a)) {
       }
     $foo[[}]]

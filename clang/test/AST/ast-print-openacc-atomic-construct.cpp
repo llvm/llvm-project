@@ -13,7 +13,7 @@ void foo(int v, int x) {
 // CHECK-NEXT:  x++;
 #pragma acc atomic update
   x++;
-// CHECK-NEXT: pragma acc atomic 
+// CHECK-NEXT: pragma acc atomic
 // CHECK-NEXT:  x--;
 #pragma acc atomic
   x--;
@@ -23,7 +23,7 @@ void foo(int v, int x) {
   v = x++;
 
 // CHECK-NEXT: #pragma acc atomic capture
-// CHECK-NEXT: { 
+// CHECK-NEXT: {
 // CHECK-NEXT: x--;
 // CHECK-NEXT: v = x;
 // CHECK-NEXT: }
@@ -55,7 +55,7 @@ void foo2(int v, int x) {
   v = x++;
 
 // CHECK-NEXT: #pragma acc atomic capture if(x > v)
-// CHECK-NEXT: { 
+// CHECK-NEXT: {
 // CHECK-NEXT: x--;
 // CHECK-NEXT: v = x;
 // CHECK-NEXT: }

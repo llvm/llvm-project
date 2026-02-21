@@ -31,17 +31,17 @@ template<typename T> void f(T t) {}
 int main(int argc, char **argv) {
   f<int*>(IntP);
   f<Foo*>(FooP);
-  
+
   f<Foo __unaligned *>(UFooP);
   f<Foo *__restrict>(RFooP);
-  
+
   f<const Foo*>(CFooP);
   f<volatile Foo*>(VFooP);
   f<const volatile Foo*>(CVFooP);
-  
+
   f<Foo&>(F);
   f<Foo&&>(static_cast<Foo&&>(F));
-  
+
   f(&Foo::X);
   f(&Foo::func);
   return 0;

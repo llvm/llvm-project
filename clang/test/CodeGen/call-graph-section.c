@@ -35,11 +35,11 @@ int *qux(char *a, float *b, double *c) {
 // CHECK-LABEL: define {{(dso_local)?}} void @corge(
 // CHECK-SAME: {{.*}} !type [[F_TVOID]]
 void corge() {
-  int (*fp_baz)(char, float, double) = baz;  
+  int (*fp_baz)(char, float, double) = baz;
   // CHECK: call i32 {{.*}}, !callee_type [[F_TPRIMITIVE_CT:![0-9]+]]
   fp_baz('a', .0f, .0);
 
-  int *(*fp_qux)(char *, float *, double *) = qux;  
+  int *(*fp_qux)(char *, float *, double *) = qux;
   // CHECK: call ptr {{.*}}, !callee_type [[F_TPTR_CT:![0-9]+]]
   fp_qux(0, 0, 0);
 }
@@ -60,15 +60,15 @@ void stparam(struct st2 a, struct st2 *b) {}
 // CHECK-SAME: {{.*}} !type [[F_TVOID]]
 void stf() {
   struct st1 St1;
-  St1.fp = qux;  
+  St1.fp = qux;
   // CHECK: call ptr {{.*}}, !callee_type [[F_TPTR_CT:![0-9]+]]
   St1.fp(0, 0, 0);
 
   struct st2 St2;
-  St2.m.fp = qux;  
+  St2.m.fp = qux;
   // CHECK: call ptr {{.*}}, !callee_type [[F_TPTR_CT:![0-9]+]]
   St2.m.fp(0, 0, 0);
-  
+
   // CHECK: call void {{.*}}, !callee_type [[F_TSTRUCT_CT:![0-9]+]]
   void (*fp_stparam)(struct st2, struct st2 *) = stparam;
   fp_stparam(St2, &St2);

@@ -8,7 +8,7 @@ struct X {
 void func() {
   // CHECK: fix-it:"{{.*}}":{10:6-10:8}:"{}"
   X x(); // expected-warning {{function declaration}} expected-note{{replace parentheses with an initializer}}
-  
+
   typedef int *Ptr;
   // CHECK: fix-it:"{{.*}}":{14:8-14:10}:" = nullptr"
   Ptr p(); // expected-warning {{function declaration}} expected-note {{replace parentheses with an initializer}}

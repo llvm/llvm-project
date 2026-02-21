@@ -8,7 +8,7 @@
 // optimizers are able to process Clang's IR. GlobalOpt in particular is
 // sensitive to the casts we emit.
 
-// CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] 
+// CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }]
 // CHECK: [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_ctor_globalopt.cpp, ptr null }]
 
 // CHECK-LABEL: define internal {{.*}}void @_GLOBAL__sub_I_ctor_globalopt.cpp()

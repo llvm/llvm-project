@@ -140,7 +140,7 @@ void test_length_modifiers_and_flags(void) {
 }
 #else
 void test_fixed_point_specifiers_no_printf() {
-  printf("%k", i);  // expected-warning{{invalid conversion specifier 'k'}}  
+  printf("%k", i);  // expected-warning{{invalid conversion specifier 'k'}}
   printf("%K", i);  // expected-warning{{invalid conversion specifier 'K'}}
   printf("%r", i);  // expected-warning{{invalid conversion specifier 'r'}}
   printf("%R", i);  // expected-warning{{invalid conversion specifier 'R'}}

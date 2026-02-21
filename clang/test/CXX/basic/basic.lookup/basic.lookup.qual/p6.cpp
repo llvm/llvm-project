@@ -1,25 +1,25 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // expected-no-diagnostics
 
-struct C { 
+struct C {
   typedef int I;
-}; 
+};
 
-typedef int I1, I2; 
-extern int* p; 
-extern int* q; 
+typedef int I1, I2;
+extern int* p;
+extern int* q;
 
 void f() {
-  p->C::I::~I(); 
+  p->C::I::~I();
   q->I1::~I2();
 }
 
-struct A { 
+struct A {
   ~A();
-}; 
+};
 
-typedef A AB; 
+typedef A AB;
 int main() {
-  AB *p; 
+  AB *p;
   p->AB::~AB();
 }

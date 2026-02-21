@@ -47,7 +47,7 @@ constexpr Real fmin(Real x, Real y) noexcept
         {
             return x;
         }
-        
+
         return boost::math::ccmath::detail::fmin_impl(x, y);
     }
     else

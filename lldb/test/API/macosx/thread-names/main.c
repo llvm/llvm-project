@@ -8,7 +8,7 @@ void *
 second_thread (void *in)
 {
     pthread_setname_np ("second thread");
-    while (1) 
+    while (1)
         sleep (1);
     return NULL;
 }
@@ -17,7 +17,7 @@ void *
 third_thread (void *in)
 {
     pthread_setname_np ("third thread");
-    while (1) 
+    while (1)
         sleep (1);
     return NULL;
 }

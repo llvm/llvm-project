@@ -81,7 +81,7 @@ struct S
 {
     int *x;
 };
- 
+
 S f() { return S{new int[4]}; }
 
 void test_struct_claim_use() {

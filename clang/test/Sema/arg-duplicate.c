@@ -2,14 +2,14 @@
 
 int f3(y, x,       // expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C23}}
        x)          // expected-error {{redefinition of parameter}}
-  int y, 
+  int y,
       x,           // expected-note {{previous declaration is here}}
       x;           // expected-error {{redefinition of parameter}}
 {
-  return x + y; 
-} 
+  return x + y;
+}
 
-void f4(void) { 
+void f4(void) {
   f3 (1, 1, 2, 3, 4); // expected-warning{{too many arguments}}
 }
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -verify 
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -verify
 
 namespace PR10457 {
 

@@ -23,26 +23,26 @@ SA(3, sizeof(G) == 2);
 
 struct Empty { Empty(); };
 
-struct I : Empty { 
+struct I : Empty {
   Empty e;
 };
 SA(4, sizeof(I) == 2);
 
-struct J : Empty { 
+struct J : Empty {
   Empty e[2];
 };
 SA(5, sizeof(J) == 3);
 
-template<int N> struct Derived : Empty, Derived<N - 1> { 
+template<int N> struct Derived : Empty, Derived<N - 1> {
 };
 template<> struct Derived<0> : Empty { };
 
-struct S1 : virtual Derived<10> { 
+struct S1 : virtual Derived<10> {
   Empty e;
 };
 SA(6, sizeof(S1) == 24);
 
-struct S2 : virtual Derived<10> { 
+struct S2 : virtual Derived<10> {
   Empty e[2];
 };
 SA(7, sizeof(S2) == 24);
@@ -51,7 +51,7 @@ struct S3 {
   Empty e;
 };
 
-struct S4 : Empty, S3 { 
+struct S4 : Empty, S3 {
 };
 SA(8, sizeof(S4) == 2);
 

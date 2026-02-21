@@ -5,7 +5,7 @@ enum {
 extern int glob_x;
 
 int f(int x) {
-  return x+glob_x+VALUE; 
+  return x+glob_x+VALUE;
 }
 
 typedef struct {

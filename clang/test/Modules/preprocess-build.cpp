@@ -8,10 +8,10 @@
   module foo { module bar {} }
 #pragma clang module contents
   #pragma clang module begin foo.bar
-  
+
     // Can import baz here even though it was created in an outer build.
     #pragma clang module import baz
-  
+
     #pragma clang module build bar
       module bar {}
     #pragma clang module contents
@@ -19,11 +19,11 @@
         extern int n;
       #pragma clang module end
     #pragma clang module endbuild // bar
-    
+
     #pragma clang module import bar
-    
+
     constexpr int *f() { return &n; }
-  
+
   #pragma clang module end
 #pragma clang module endbuild // foo
 

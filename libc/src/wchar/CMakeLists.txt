@@ -310,7 +310,7 @@ add_entrypoint_object(
     libc.hdr.types.size_t
     libc.hdr.wchar_macros
     libc.src.__support.macros.null_check
-)   
+)
 
 add_entrypoint_object(
   wcschr

@@ -67,7 +67,7 @@ int f0_b(struct s0 *a) {
 // Note that 'y' still causes struct s1 to be four-byte aligned.
 
 // Note that we are incompatible with GCC on this example.
-// 
+//
 // CHECK-LABEL: define{{.*}} i32 @f1_a
 // CHECK:   load i32, ptr %{{.*}}, align 4
 // CHECK: }

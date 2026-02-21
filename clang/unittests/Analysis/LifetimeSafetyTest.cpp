@@ -35,7 +35,7 @@ public:
 
       struct [[gsl::Owner]] MyObj { ~MyObj() {} int i; };
 
-      struct [[gsl::Pointer()]] View { 
+      struct [[gsl::Pointer()]] View {
         View(const MyObj&);
         View();
       };
@@ -1116,7 +1116,7 @@ TEST_F(LifetimeAnalysisTest, LifetimeboundReturnReference) {
       POINT(p1);
 
       View v2 = Identity(v1);
-      
+
       const MyObj& b = Identity(v1);
       View v3 = Identity(b);
       POINT(p2);
@@ -1333,7 +1333,7 @@ TEST_F(LifetimeAnalysisTest, LivenessInLoopAndIf2) {
           q = p;
           POINT(p4);
         }
-        
+
         POINT(p5);
         (void)*p;
         (void)*q;
@@ -1383,7 +1383,7 @@ TEST_F(LifetimeAnalysisTest, TrivialDestructorsUAF) {
           int s = 1;
           ptr = &s;
       }
-      POINT(p1);    
+      POINT(p1);
       (void)*ptr;
     }
   )");
@@ -1489,7 +1489,7 @@ TEST_F(LifetimeAnalysisTest, ReassignFromSafeToLocalThenReturn) {
       MyObj* p = &safe_obj;
 
       p = &local_obj;
-      POINT(P); 
+      POINT(P);
       return p;
     }
   )");
@@ -1652,7 +1652,7 @@ TEST_F(LifetimeAnalysisTest, TrackImplicitObjectArg_STLBegin) {
         iterator begin();
       };
     }
-    
+
     void target() {
       std::vector<int> vec;
       auto it = vec.begin();
@@ -1670,7 +1670,7 @@ TEST_F(LifetimeAnalysisTest, TrackImplicitObjectArg_OwnerDeref) {
         T& operator*();
       };
     }
-    
+
     void target() {
       std::optional<int> opt;
       int& r = *opt;
@@ -1688,7 +1688,7 @@ TEST_F(LifetimeAnalysisTest, TrackImplicitObjectArg_Value) {
         T& value();
       };
     }
-    
+
     void target() {
       std::optional<int> opt;
       int& r = opt.value();
@@ -1706,7 +1706,7 @@ TEST_F(LifetimeAnalysisTest, TrackImplicitObjectArg_UniquePtr_Get) {
         T *get() const;
       };
     }
-    
+
     void target() {
       std::unique_ptr<int> up;
       int* r = up.get();
@@ -1721,11 +1721,11 @@ TEST_F(LifetimeAnalysisTest, TrackImplicitObjectArg_ConversionOperator) {
     struct [[gsl::Pointer(int)]] IntPtr {
       int& operator*();
     };
-    
+
     struct [[gsl::Owner(int)]] OwnerWithConversion {
       operator IntPtr();
     };
-    
+
     void target() {
       OwnerWithConversion owner;
       IntPtr ptr = owner;
@@ -1781,16 +1781,16 @@ TEST_F(LifetimeAnalysisTest, TrackImplicitObjectArg_GSLPointerArg) {
     void target() {
       std::string s1;
       std::string_view sv1 = s1;
-      
+
       std::string s2;
       const char* sv2 = std::string_view(s2).begin();
-      
+
       std::string s3;
       const char* sv3 = std::string_view(s3).data();
-      
+
       std::string s4;
       std::string_view sv4 = std::string_view{std::string_view(s4).data()};
-            
+
       std::string s5;
       const char* data5 = std::string_view(s5).data();
       std::string_view sv5 = data5;
@@ -1816,11 +1816,11 @@ TEST_F(LifetimeAnalysisTest, TrackFirstArgument_StdBegin) {
         struct iterator {};
         iterator begin();
       };
-      
+
       template<typename C>
       auto begin(C& c) -> decltype(c.begin());
     }
-    
+
     void target() {
       std::vector<int> vec;
       auto it = std::begin(vec);
@@ -1837,11 +1837,11 @@ TEST_F(LifetimeAnalysisTest, TrackFirstArgument_StdData) {
       struct vector {
         const T* data() const;
       };
-      
+
       template<typename C>
       auto data(C& c) -> decltype(c.data());
     }
-    
+
     void target() {
       std::vector<int> vec;
       const int* p = std::data(vec);
@@ -1855,7 +1855,7 @@ TEST_F(LifetimeAnalysisTest, TrackFirstArgument_StdAnyCast) {
   SetupTest(R"(
     namespace std {
       struct any {};
-      
+
       template<typename T>
       T any_cast(const any& op);
     }

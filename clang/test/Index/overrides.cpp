@@ -7,7 +7,7 @@ struct B {
   virtual void g();
 };
 
-struct C : B, A { 
+struct C : B, A {
   virtual void g();
 };
 

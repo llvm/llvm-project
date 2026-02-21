@@ -11,13 +11,13 @@ struct C : B, A { };
 namespace ZeroInit {
   // CHECK-GLOBAL: @_ZN8ZeroInit1aE ={{.*}} global i64 -1
   int A::* a;
-  
+
   // CHECK-GLOBAL: @_ZN8ZeroInit2aaE ={{.*}} global [2 x i64] [i64 -1, i64 -1]
   int A::* aa[2];
-  
+
   // CHECK-GLOBAL: @_ZN8ZeroInit3aaaE ={{.*}} global [2 x [2 x i64]] {{\[}}[2 x i64] [i64 -1, i64 -1], [2 x i64] [i64 -1, i64 -1]]
   int A::* aaa[2][2];
-  
+
   // CHECK-GLOBAL: @_ZN8ZeroInit1bE ={{.*}} global i64 -1,
   int A::* b = 0;
 
@@ -26,14 +26,14 @@ namespace ZeroInit {
     int A::*a;
   } sa;
   void test_sa() { (void) sa; } // force emission
-  
+
   // CHECK-GLOBAL: @_ZN8ZeroInit3ssaE = internal
   // CHECK-GLOBAL: [2 x i64] [i64 -1, i64 -1]
   struct {
     int A::*aa[2];
   } ssa[2];
   void test_ssa() { (void) ssa; }
-  
+
   // CHECK-GLOBAL: @_ZN8ZeroInit2ssE = internal global %struct.anon.1 { %struct.anon.2 { i64 -1 } }
   struct {
     struct {
@@ -41,7 +41,7 @@ namespace ZeroInit {
     } s;
   } ss;
   void test_ss() { (void) ss; }
-  
+
   struct A {
     int A::*a;
     int b;
@@ -101,7 +101,7 @@ namespace Comparisons {
 
     // CHECK: icmp ne i64 {{.*}}, -1
     if (a != 0) { }
-    
+
     // CHECK: icmp ne i64 -1, {{.*}}
     if (0 != a) { }
 
@@ -176,7 +176,7 @@ namespace BoolPtrToMember {
 }
 
 namespace PR8507 {
-  
+
 struct S;
 void f(S* p, double S::*pm) {
   if (0 < p->*pm) {
@@ -202,7 +202,7 @@ namespace PR11487 {
     char x[16];
   } x;
   // CHECK-GLOBAL: @_ZN7PR114871xE ={{.*}} global %"union.PR11487::U" { i64 -1, [8 x i8] zeroinitializer }, align 8
-  
+
 }
 
 namespace PR13097 {

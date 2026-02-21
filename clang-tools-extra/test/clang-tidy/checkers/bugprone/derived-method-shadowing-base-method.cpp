@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s bugprone-derived-method-shadowing-base-method %t
 
-class Base 
+class Base
 {
     void method();
     void methodWithArg(int I);
@@ -18,7 +18,7 @@ public:
 
 // only declaration should be checked
 void A::method()
-{    
+{
 }
 
 class B
@@ -70,7 +70,7 @@ class TemplateBase
 public:
    virtual void size() const = 0;
 };
-    
+
 template<typename T>
 class K : public TemplateBase<T>
 {

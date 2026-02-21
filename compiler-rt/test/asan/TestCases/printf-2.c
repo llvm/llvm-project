@@ -23,5 +23,5 @@ int main() {
   // Check that %s is sanitized.
   // CHECK-ON: heap-use-after-free
   // CHECK-ON-NOT: 0 12 1.239 34
-  // CHECK-OFF: 0 12 1.239 
+  // CHECK-OFF: 0 12 1.239
 }

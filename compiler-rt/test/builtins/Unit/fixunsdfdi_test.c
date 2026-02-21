@@ -7,9 +7,9 @@
 // Returns: convert a to a unsigned long long, rounding toward zero.
 //          Negative values all become zero.
 
-// Assumption: double is a IEEE 64 bit floating point type 
+// Assumption: double is a IEEE 64 bit floating point type
 //             du_int is a 64 bit integral type
-//             value in double is representable in du_int or is negative 
+//             value in double is representable in du_int or is negative
 //                 (no range checking performed)
 
 // seee eeee eeee mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm

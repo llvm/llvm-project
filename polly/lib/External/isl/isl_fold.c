@@ -5,7 +5,7 @@
  *
  * Written by Sven Verdoolaege, INRIA Saclay - Ile-de-France,
  * Parc Club Orsay Universite, ZAC des vignes, 4 rue Jacques Monod,
- * 91893 Orsay, France 
+ * 91893 Orsay, France
  */
 
 #include <isl_map_private.h>
@@ -1259,7 +1259,7 @@ __isl_give isl_pw_qpolynomial_fold *isl_pw_qpolynomial_fold_from_pw_qpolynomial(
 
 	if (!pwqp)
 		return NULL;
-	
+
 	pwf = isl_pw_qpolynomial_fold_alloc_size(isl_space_copy(pwqp->dim),
 						type, pwqp->n);
 
@@ -1917,7 +1917,7 @@ __isl_give isl_pw_qpolynomial_fold *isl_map_apply_pw_qpolynomial_fold(
 
 	pwf = isl_pw_qpolynomial_fold_intersect_domain(pwf, dom);
 	pwf = isl_pw_qpolynomial_fold_bound(pwf, tight);
-	
+
 	return pwf;
 error:
 	isl_map_free(map);

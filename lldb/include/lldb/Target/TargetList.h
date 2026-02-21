@@ -194,11 +194,11 @@ public:
   void SetSelectedTarget(const lldb::TargetSP &target);
 
   lldb::TargetSP GetSelectedTarget();
-  
+
   ///  Returns whether any module, including ones in the process of being
   ///  added, contains this module.  I don't want to give direct access to
   ///  these not yet added target, but for interruption purposes, we might
-  ///  need to ask whether this target contains this module. 
+  ///  need to ask whether this target contains this module.
   bool AnyTargetContainsModule(Module &module);
 
   TargetIterable Targets() {
@@ -229,11 +229,11 @@ private:
                                      lldb::TargetSP &target_sp);
 
   void RegisterInProcessTarget(lldb::TargetSP target_sp);
-  
+
   void UnregisterInProcessTarget(lldb::TargetSP target_sp);
-  
+
   bool IsTargetInProcess(lldb::TargetSP target_sp);
-  
+
   void AddTargetInternal(lldb::TargetSP target_sp, bool do_select);
 
   void SetSelectedTargetInternal(uint32_t index);

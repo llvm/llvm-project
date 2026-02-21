@@ -65,7 +65,7 @@ for i in range(num_items):
         print(f"#define MACRO_{suffix}_{i} 0")
     else:
         print(f"#define MACRO_{suffix}_{i} MACRO_{suffix}_{i-1} + 1")
-    
+
 //--- include/signature-expectation.h
 // Expensive header is used to slow down the build of SignatureExpectation module.
 // Without the slow down we are able to validate and rebuild Target before another thread can do it.
@@ -75,20 +75,20 @@ for i in range(num_items):
 //--- prepare-expected-signature.c
 #include <signature-expectation.h>
 //--- prepare-expected-signature.json.template
-[{                                                                              
+[{
   "file": "DIR/prepare-expected-signature.c",
   "directory": "DIR",
   "command": "clang @DIR/ctx.rsp DIR/prepare-expected-signature.c"
-}] 
+}]
 
 //--- create-outdated-module.c
 #include <target.h>
 //--- create-outdated-module.json.template
-[{                                                                              
+[{
   "file": "DIR/create-outdated-module.c",
   "directory": "DIR",
   "command": "clang @DIR/ctx.rsp DIR/create-outdated-module.c"
-}] 
+}]
 
 //--- use-outdated-module.c
 // At first load SignatureExpectation module, so it would load Target but
@@ -110,13 +110,13 @@ for i in range(num_items):
 #include <target.h>
 
 //--- incremental.json.template
-[{                                                                              
+[{
   "file": "DIR/use-outdated-module.c",
   "directory": "DIR",
   "command": "clang @DIR/ctx.rsp DIR/use-outdated-module.c"
 },
-{                                                                              
+{
   "file": "DIR/rebuild-outdated-module.c",
   "directory": "DIR",
   "command": "clang @DIR/ctx.rsp DIR/rebuild-outdated-module.c"
-}] 
+}]

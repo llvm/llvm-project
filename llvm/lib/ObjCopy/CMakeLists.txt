@@ -22,7 +22,7 @@ source_group("Header Files\\DXContainer" REGULAR_EXPRESSION
 source_group("Source Files" REGULAR_EXPRESSION
   .*[.]cpp
 )
-source_group("Source Files\\COFF" REGULAR_EXPRESSION  
+source_group("Source Files\\COFF" REGULAR_EXPRESSION
   COFF/.*[.]cpp
 )
 source_group("Source Files\\ELF" REGULAR_EXPRESSION
@@ -83,7 +83,7 @@ add_llvm_component_library(LLVMObjCopy
   MachO
   wasm
   XCOFF
- 
+
   DEPENDS
   intrinsics_gen
 

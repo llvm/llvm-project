@@ -19,10 +19,10 @@ void f(T t) {
   }
 }
 #else
-struct HasFoo { 
+struct HasFoo {
   void foo();
 };
-struct HasBar { 
+struct HasBar {
   void bar(int);
   void bar(float);
 };

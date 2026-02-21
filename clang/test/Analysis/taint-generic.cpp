@@ -175,7 +175,7 @@ void log_freefunc(const char *fmt, ...);
 void test_format_attribute_freefunc() {
   int n;
   fscanf(stdin, "%d", &n); // Get a tainted value.
-                           
+
   log_freefunc("This number is suspicious: %d\n", n); // no-warning
 }
 
@@ -190,7 +190,7 @@ struct Foo {
   void test_format_attribute_method() {
     int n;
     fscanf(stdin, "%d", &n); // Get a tainted value.
-                             
+
     // The analyzer used to misinterpret the parameter indices in the format
     // attribute when the format attribute is applied to a method.
     log_method("This number is suspicious: %d\n", n); // no-warning
@@ -202,7 +202,7 @@ struct Foo {
   void test_format_attribute_static_method() {
     int n;
     fscanf(stdin, "%d", &n); // Get a tainted value.
-                             
+
     log_static_method("This number is suspicious: %d\n", n); // no-warning
   }
 };

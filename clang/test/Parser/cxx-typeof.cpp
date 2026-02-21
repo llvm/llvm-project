@@ -5,7 +5,7 @@
 static void test() {
   int *pi;
   int x;
-  typeof pi[x] y; 
+  typeof pi[x] y;
 }
 
 // From the gcc test suite.

@@ -5,7 +5,7 @@ typedef __builtin_va_list va_list;
 
 void myFunc(void) {
     va_list values;
-    
+
     int value;
 
     while (value = va_arg(values, int)) {  // expected-warning {{using the result of an assignment as a condition without parentheses}} \

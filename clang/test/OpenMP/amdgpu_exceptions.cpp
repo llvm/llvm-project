@@ -1,8 +1,8 @@
 // REQUIRES: amdgpu-registered-target, staticanalyzer
 
 /**
- * The first four lines test that a warning is produced when enabling 
- * -Wopenmp-target-exception no matter what combination of -fexceptions and 
+ * The first four lines test that a warning is produced when enabling
+ * -Wopenmp-target-exception no matter what combination of -fexceptions and
  * -fcxx-exceptions are set, as we want OpenMP to always allow exceptions in the
  * target region but emit a warning instead.
 */
@@ -13,8 +13,8 @@
 // RUN: %clang_cc1 -fopenmp -triple amdgcn-amd-amdhsa -fopenmp-is-target-device %s -verify=with -Wopenmp-target-exception -analyze
 
 /**
- * The following four lines test that no warning is emitted when providing 
- * -Wno-openmp-target-exception no matter the combination of -fexceptions and 
+ * The following four lines test that no warning is emitted when providing
+ * -Wno-openmp-target-exception no matter the combination of -fexceptions and
  * -fcxx-exceptions.
 */
 
@@ -24,7 +24,7 @@
 // RUN: %clang_cc1 -fopenmp -triple amdgcn-amd-amdhsa -fopenmp-is-target-device %s -verify=without -Wno-openmp-target-exception -analyze
 
 /**
- * Finally we should test that we only ignore exceptions in the OpenMP 
+ * Finally we should test that we only ignore exceptions in the OpenMP
  * offloading tool-chain
 */
 
@@ -39,7 +39,7 @@ int foo(void) {
 	try { // with-warning {{target 'amdgcn-amd-amdhsa' does not support exception handling; 'catch' block is ignored}}
 		throw 404; // with-warning {{target 'amdgcn-amd-amdhsa' does not support exception handling; 'throw' is assumed to be never reached}}
 	}
-	catch (int e){ 
+	catch (int e){
 		error = e;
 	}
 	return error;

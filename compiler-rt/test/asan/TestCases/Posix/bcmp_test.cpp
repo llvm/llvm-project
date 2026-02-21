@@ -3,7 +3,7 @@
 // RUN: %clangxx_asan -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
-// REQUIRES: compiler-rt-optimized, (linux && !android) || openbsd || freebsd || netbsd 
+// REQUIRES: compiler-rt-optimized, (linux && !android) || openbsd || freebsd || netbsd
 // XFAIL: darwin
 
 #include <string.h>

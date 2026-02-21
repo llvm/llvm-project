@@ -607,7 +607,7 @@ __isl_give isl_map *isl_map_subtract_domain(__isl_take isl_map *map,
 	if (!ok)
 		isl_die(isl_set_get_ctx(dom), isl_error_invalid,
 			"incompatible spaces", goto error);
-	
+
 	ext_dom = isl_map_universe(isl_map_get_space(map));
 	ext_dom = isl_map_intersect_domain(ext_dom, dom);
 	return isl_map_subtract(map, ext_dom);
@@ -632,7 +632,7 @@ __isl_give isl_map *isl_map_subtract_range(__isl_take isl_map *map,
 	if (!ok)
 		isl_die(isl_set_get_ctx(dom), isl_error_invalid,
 			"incompatible spaces", goto error);
-	
+
 	ext_dom = isl_map_universe(isl_map_get_space(map));
 	ext_dom = isl_map_intersect_range(ext_dom, dom);
 	return isl_map_subtract(map, ext_dom);
@@ -699,7 +699,7 @@ static isl_bool map_diff_is_empty(__isl_keep isl_map *map1,
 
 	if (!map1 || !map2)
 		return isl_bool_error;
-	
+
 	for (i = 0; i < map1->n; ++i) {
 		is_empty = basic_map_diff_is_empty(map1->p[i], map2);
 		if (is_empty < 0 || !is_empty)

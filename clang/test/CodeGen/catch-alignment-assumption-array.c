@@ -24,7 +24,7 @@ void *caller(void) {
   // CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.ubsantrap(i8 23){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT:   unreachable, !nosanitize
   // CHECK-SANITIZE:                  [[CONT]]:
-  // CHECK-NEXT:                        call void @llvm.assume(i1 true) [ "align"(ptr %[[ARRAYDECAY]], i64 1) ] 
+  // CHECK-NEXT:                        call void @llvm.assume(i1 true) [ "align"(ptr %[[ARRAYDECAY]], i64 1) ]
   // CHECK-NEXT:                        ret ptr %[[ARRAYDECAY]]
   // CHECK-NEXT:                      }
   return __builtin_assume_aligned(str, 1);

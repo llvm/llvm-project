@@ -20,7 +20,7 @@ namespace rdar8436162 {
   };
 
   class ClsE : public ClsB, public ClsF {
-    void test() { 
+    void test() {
       f();
       g(); // expected-error{{member 'g' found in multiple base classes of different types}}
     }

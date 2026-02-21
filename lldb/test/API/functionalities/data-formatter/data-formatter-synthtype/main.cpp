@@ -13,7 +13,7 @@ public:
 class hasAnInt {
     public:
         myInt theInt;
-        hasAnInt() : theInt(42) {}  
+        hasAnInt() : theInt(42) {}
 };
 
 myInt operator + (myInt x, myInt y) { return myInt(x.val() + y.val()); }

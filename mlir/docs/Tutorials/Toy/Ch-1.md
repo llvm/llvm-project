@@ -73,7 +73,7 @@ The AST from the above code is fairly straightforward; here is a dump of it:
 
 ```
 Module:
-  Function 
+  Function
     Proto 'multiply_transpose' @test/Examples/Toy/Ch1/ast.toy:4:1
     Params: [a, b]
     Block {
@@ -86,7 +86,7 @@ Module:
             var: b @test/Examples/Toy/Ch1/ast.toy:5:35
           ]
     } // Block
-  Function 
+  Function
     Proto 'main' @test/Examples/Toy/Ch1/ast.toy:8:1
     Params: []
     Block {

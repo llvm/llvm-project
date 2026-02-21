@@ -11,8 +11,8 @@ template<typename T> struct X1t; // expected-error{{template type parameter conf
 template<typename T> struct X2t; // expected-note{{previous template type parameter declared here}}
 template<typename ...T> struct X2t; // expected-error{{template type parameter pack conflicts with previous template type parameter}}
 
-template<template<typename ...T> class> struct X0t_intt; 
-template<template<typename ...T> class> struct X0t_intt; 
+template<template<typename ...T> class> struct X0t_intt;
+template<template<typename ...T> class> struct X0t_intt;
 
 template<template<typename ...T> class> struct X1t_intt; // expected-note{{previous template type parameter pack declared here}}
 template<template<typename T> class> struct X1t_intt; // expected-error{{template type parameter conflicts with previous template type parameter pack}}

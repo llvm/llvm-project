@@ -669,7 +669,7 @@ bool x86AssemblyInspectionEngine::mov_reg_to_local_stack_frame_p(
 }
 
 // Returns true if this is a jmp instruction where we can't
-// know the destination address statically. 
+// know the destination address statically.
 //
 // ff e0                                   jmpq   *%rax
 // ff e1                                   jmpq   *%rcx
@@ -706,13 +706,13 @@ bool x86AssemblyInspectionEngine::jmp_to_reg_p() {
 // that may be branch/jumped to.
 //
 // Cannot determine the offset of a JMP that jumps to the address in
-// a register ("jmpq *%rax") or offset from a register value 
+// a register ("jmpq *%rax") or offset from a register value
 // ("jmpq *0x28(%rax)"), this method will return false on those
 // instructions.
 //
 // These instructions all end in either a relative 8/16/32 bit value
 // depending on the instruction and the current execution mode of the
-// inferior process.  Once we know the size of the opcode instruction, 
+// inferior process.  Once we know the size of the opcode instruction,
 // we can use the total instruction length to determine the size of
 // the relative offset without having to compute it correctly.
 
@@ -872,7 +872,7 @@ int32_t x86AssemblyInspectionEngine::extract_4_signed(uint8_t *b) {
 
 
 bool x86AssemblyInspectionEngine::instruction_length(uint8_t *insn_p,
-                                                     int &length, 
+                                                     int &length,
                                                      uint32_t buffer_remaining_bytes) {
 
   uint32_t max_op_byte_size = std::min(buffer_remaining_bytes, m_arch.GetMaximumOpcodeByteSize());
@@ -968,7 +968,7 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
 
     m_cur_insn = data + current_func_text_offset;
     if (!instruction_length(m_cur_insn, insn_len, size - current_func_text_offset)
-        || insn_len == 0 
+        || insn_len == 0
         || insn_len > kMaxInstructionByteSize) {
       // An unrecognized/junk instruction
       break;
@@ -1242,10 +1242,10 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
       // Check if the current instruction is the end of an epilogue sequence,
       // and if so, re-instate the prologue-completed unwind state.
 
-      // The current instruction is a branch/jump outside this function, 
-      // a ret, or a jump through a register value which we cannot 
-      // determine the effcts of.  Verify that the stack frame state 
-      // has been unwound to the same as it was at function entry to avoid 
+      // The current instruction is a branch/jump outside this function,
+      // a ret, or a jump through a register value which we cannot
+      // determine the effcts of.  Verify that the stack frame state
+      // has been unwound to the same as it was at function entry to avoid
       // mis-identifying a JMP instruction as an epilogue.
       UnwindPlan::Row::AbstractRegisterLocation sp, pc;
       if (row.GetRegisterInfo(m_lldb_sp_regnum, sp) &&
@@ -1566,8 +1566,8 @@ bool x86AssemblyInspectionEngine::FindFirstNonPrologueInstruction(
     int scratch;
 
     m_cur_insn = data + offset;
-    if (!instruction_length(m_cur_insn, insn_len, size - offset) 
-        || insn_len > kMaxInstructionByteSize 
+    if (!instruction_length(m_cur_insn, insn_len, size - offset)
+        || insn_len > kMaxInstructionByteSize
         || insn_len == 0) {
       // An error parsing the instruction, i.e. probably data/garbage - stop
       // scanning

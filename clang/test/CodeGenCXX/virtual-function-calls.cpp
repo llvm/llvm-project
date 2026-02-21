@@ -13,7 +13,7 @@ void f(A *a) {
   a->f('c');
 }
 
-struct B : virtual A { 
+struct B : virtual A {
   virtual void f();
 };
 
@@ -24,8 +24,8 @@ void f(B * b) {
 }
 
 namespace Test1 {
-  struct A { 
-    virtual ~A(); 
+  struct A {
+    virtual ~A();
   };
 
   struct B : A {

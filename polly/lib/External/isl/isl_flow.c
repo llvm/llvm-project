@@ -12,7 +12,7 @@
  * and K.U.Leuven, Departement Computerwetenschappen, Celestijnenlaan 200A,
  * B-3001 Leuven, Belgium
  * and INRIA Saclay - Ile-de-France, Parc Club Orsay Universite,
- * ZAC des vignes, 4 rue Jacques Monod, 91893 Orsay, France 
+ * ZAC des vignes, 4 rue Jacques Monod, 91893 Orsay, France
  * and Ecole Normale Superieure, 45 rue d'Ulm, 75230 Paris, France
  */
 
@@ -290,7 +290,7 @@ __isl_give isl_access_info *isl_access_info_add_source(
 		goto error;
 	ctx = isl_map_get_ctx(acc->sink.map);
 	isl_assert(ctx, acc->n_must + acc->n_may < acc->max_source, goto error);
-	
+
 	if (must) {
 		if (acc->n_may)
 			acc->source[acc->n_must + acc->n_may] =
@@ -512,7 +512,7 @@ __isl_give isl_map *isl_flow_get_no_source(__isl_keep isl_flow *deps, int must)
 {
 	if (!deps)
 		return NULL;
-	
+
 	if (must)
 		return isl_set_unwrap(isl_set_copy(deps->must_no_source));
 	else
@@ -633,7 +633,7 @@ error:
  * The subset of set_C for which no such iteration can be found is returned
  * in *empty.
  */
-static struct isl_map *last_source(struct isl_access_info *acc, 
+static struct isl_map *last_source(struct isl_access_info *acc,
 				    struct isl_set *set_C,
 				    int j, int level, struct isl_set **empty)
 {
@@ -1141,10 +1141,10 @@ error:
  * are considered.
  * In particular, we consider may accesses that precede the remaining
  * sink iterations, moving elements from mustdo to maydo when appropriate,
- * and may accesses that occur between a must source and a sink of any 
+ * and may accesses that occur between a must source and a sink of any
  * dependences found at the current level, turning must dependences into
  * may dependences when appropriate.
- * 
+ *
  */
 static __isl_give isl_flow *compute_val_based_dependences(
 	__isl_keep isl_access_info *acc)

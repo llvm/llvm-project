@@ -42,10 +42,10 @@ void test3() {
   // FIXME: The unreachable part is just the '?', but really all of this
   // code is unreachable and shouldn't be separately reported.
   halt()        // expected-warning {{will never be executed}}
-    ? 
+    ?
     dead() : dead();
   live(),
-    float       
+    float
       (halt()); // expected-warning {{will never be executed}}
 }
 
@@ -56,7 +56,7 @@ namespace Test4 {
   S &foor();
   void test4() {
     halt(), foor()// expected-warning {{will never be executed}}
-      .mem;       
+      .mem;
   }
 }
 
@@ -99,7 +99,7 @@ struct TestUnreachableB {
 
 void test_unreachable_templates_harness() {
   test_unreachable_templates<TestUnreachableA>();
-  test_unreachable_templates<TestUnreachableB>(); 
+  test_unreachable_templates<TestUnreachableB>();
 }
 
 // Do warn about explicit template specializations, as they represent
@@ -314,17 +314,17 @@ void test_with_paren_silencing(int x) {
     calledFun();
   else
     calledFun(); // no-warning
-  
+
   if (!true) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
     calledFun(); // expected-warning {{code will never be executed}}
   else
     calledFun();
-  
+
   if ((!true))
     calledFun(); // no-warning
   else
     calledFun();
-  
+
   if (!(true))
     calledFun(); // no-warning
   else
@@ -344,17 +344,17 @@ void test_with_paren_silencing_impcast(int x) {
     calledFun();
   else
     calledFun(); // no-warning
-  
+
   if (!1) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
     calledFun(); // expected-warning {{code will never be executed}}
   else
     calledFun();
-  
+
   if ((!1))
     calledFun(); // no-warning
   else
     calledFun();
-  
+
   if (!(1))
     calledFun(); // no-warning
   else

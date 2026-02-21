@@ -45,7 +45,7 @@ int x = foo();
 //   EDIT-NOT: {{^}}#include "foobar.h"{{$}}
 
 //        RUN: cp %s %t.cpp
-//        RUN: clang-include-cleaner -edit --ignore-headers="foobar\.h,foo\.h" %t.cpp -- -I%S/Inputs/ 
+//        RUN: clang-include-cleaner -edit --ignore-headers="foobar\.h,foo\.h" %t.cpp -- -I%S/Inputs/
 //        RUN: FileCheck --match-full-lines --check-prefix=EDIT2 %s < %t.cpp
 //  EDIT2-NOT: {{^}}#include "foo.h"{{$}}
 

@@ -67,13 +67,13 @@ define i32 @test15(i32 %X1) {
 
 Reassociate should handle the example in GCC PR16157:
 
-extern int a0, a1, a2, a3, a4; extern int b0, b1, b2, b3, b4; 
-void f () {  /* this can be optimized to four additions... */ 
-        b4 = a4 + a3 + a2 + a1 + a0; 
-        b3 = a3 + a2 + a1 + a0; 
-        b2 = a2 + a1 + a0; 
-        b1 = a1 + a0; 
-} 
+extern int a0, a1, a2, a3, a4; extern int b0, b1, b2, b3, b4;
+void f () {  /* this can be optimized to four additions... */
+        b4 = a4 + a3 + a2 + a1 + a0;
+        b3 = a3 + a2 + a1 + a0;
+        b2 = a2 + a1 + a0;
+        b1 = a1 + a0;
+}
 
 This requires reassociating to forms of expressions that are already available,
 something that reassoc doesn't think about yet.
@@ -94,7 +94,7 @@ for 1,2,4,8 bytes.
 It would be nice to revert this patch:
 http://lists.llvm.org/pipermail/llvm-commits/Week-of-Mon-20060213/031986.html
 
-And teach the dag combiner enough to simplify the code expanded before 
+And teach the dag combiner enough to simplify the code expanded before
 legalize.  It seems plausible that this knowledge would let it simplify other
 stuff too.
 
@@ -153,7 +153,7 @@ quantum_sigma_x in 462.libquantum contains the following loop:
 	{
 	  /* Flip the target bit of each basis state */
 	  reg->node[i].state ^= ((MAX_UNSIGNED) 1 << target);
-	} 
+	}
 
 Where MAX_UNSIGNED/state is a 64-bit int.  On a 32-bit platform it would be just
 so cool to turn it into something like:
@@ -166,7 +166,7 @@ so cool to turn it into something like:
      for(i=0; i<reg->size; i++)
        reg->node[i].state ^= Res & 0xFFFFFFFF00000000ULL
    }
-   
+
 ... which would only do one 32-bit XOR per loop iteration instead of two.
 
 It would also be nice to recognize the reg->size doesn't alias reg->node[i],
@@ -190,7 +190,7 @@ unsigned long reverse(unsigned v) {
 
 We don't delete this output free loop, because trip count analysis doesn't
 realize that it is finite (if it were infinite, it would be undefined).  Not
-having this blocks Loop Idiom from matching strlen and friends.  
+having this blocks Loop Idiom from matching strlen and friends.
 
 void foo(char *C) {
   int x = 0;
@@ -246,15 +246,15 @@ unsigned short read_16_be(const unsigned char *adr) {
 
 -instcombine should handle this transform:
    icmp pred (sdiv X / C1 ), C2
-when X, C1, and C2 are unsigned.  Similarly for udiv and signed operands. 
+when X, C1, and C2 are unsigned.  Similarly for udiv and signed operands.
 
 Currently InstCombine avoids this transform but will do it when the signs of
-the operands and the sign of the divide match. See the FIXME in 
-InstructionCombining.cpp in the visitSetCondInst method after the switch case 
+the operands and the sign of the divide match. See the FIXME in
+InstructionCombining.cpp in the visitSetCondInst method after the switch case
 for Instruction::UDiv (around line 4447) for more details.
 
 The SingleSource/Benchmarks/Shootout-C++/hash and hash2 tests have examples of
-this construct. 
+this construct.
 
 //===---------------------------------------------------------------------===//
 
@@ -358,7 +358,7 @@ they were associative.  "return foo() << 1" can be tail recursion eliminated.
 
 //===---------------------------------------------------------------------===//
 
-Argument promotion should promote arguments for recursive functions, like 
+Argument promotion should promote arguments for recursive functions, like
 this:
 
 ; RUN: llvm-as < %s | opt -argpromotion | llvm-dis | grep x.val
@@ -402,14 +402,14 @@ LBB1_1:	# return
 LBB1_2:	# cond_true
 ...
 
-The PIC base computation (call+popl) is only used on one path through the 
-code, but is currently always computed in the entry block.  It would be 
-better to sink the picbase computation down into the block for the 
-assertion, as it is the only one that uses it.  This happens for a lot of 
+The PIC base computation (call+popl) is only used on one path through the
+code, but is currently always computed in the entry block.  It would be
+better to sink the picbase computation down into the block for the
+assertion, as it is the only one that uses it.  This happens for a lot of
 code with early outs.
 
-Another example is loads of arguments, which are usually emitted into the 
-entry block on targets like x86.  If not used in all paths through a 
+Another example is loads of arguments, which are usually emitted into the
+entry block on targets like x86.  If not used in all paths through a
 function, they should be sunk into the ones that do.
 
 In this case, whole-function-isel would also handle this.
@@ -448,7 +448,7 @@ instructions.
 
 //===---------------------------------------------------------------------===//
 
-DAG Combiner should try to combine small loads into larger loads when 
+DAG Combiner should try to combine small loads into larger loads when
 profitable.  For example, we compile this C++ example:
 
 struct THotKey { short Key; bool Control; bool Shift; bool Alt; };
@@ -552,7 +552,7 @@ exit value computation.
 
 We miss a bunch of rotate opportunities on various targets, including ppc, x86,
 etc.  On X86, we miss a bunch of 'rotate by variable' cases because the rotate
-matching code in dag combine doesn't look through truncates aggressively 
+matching code in dag combine doesn't look through truncates aggressively
 enough.  Here are some testcases reduces from GCC PR17886:
 
 unsigned long long f5(unsigned long long x, unsigned long long y) {
@@ -579,7 +579,7 @@ This (and similar related idioms):
 
 unsigned int foo(unsigned char i) {
   return i | (i<<8) | (i<<16) | (i<<24);
-} 
+}
 
 compiles into:
 
@@ -598,7 +598,7 @@ entry:
 it would be better as:
 
 unsigned int bar(unsigned char i) {
-  unsigned int j=i | (i << 8); 
+  unsigned int j=i | (i << 8);
   return j | (j<<16);
 }
 
@@ -673,7 +673,7 @@ comparisons: just transform, for example, "n % 3 == 1" to "(n-1) % 3 == 0".
 //===---------------------------------------------------------------------===//
 
 Better mod/ref analysis for scanf would allow us to eliminate the vtable and a
-bunch of other stuff from this example (see PR1604): 
+bunch of other stuff from this example (see PR1604):
 
 #include <cstdio>
 struct test {
@@ -694,7 +694,7 @@ These functions perform the same computation, but produce different assembly.
 define i8 @select(i8 %x) readnone nounwind {
   %A = icmp ult i8 %x, 250
   %B = select i1 %A, i8 0, i8 1
-  ret i8 %B 
+  ret i8 %B
 }
 
 define i8 @addshr(i8 %x) readnone nounwind {
@@ -905,9 +905,9 @@ not optimized with "clang -emit-llvm-bc | opt -O3".
 
 This was noticed in the entryblock for grokdeclarator in 403.gcc:
 
-        %tmp = icmp eq i32 %decl_context, 4          
-        %decl_context_addr.0 = select i1 %tmp, i32 3, i32 %decl_context 
-        %tmp1 = icmp eq i32 %decl_context_addr.0, 1 
+        %tmp = icmp eq i32 %decl_context, 4
+        %decl_context_addr.0 = select i1 %tmp, i32 3, i32 %decl_context
+        %tmp1 = icmp eq i32 %decl_context_addr.0, 1
         %decl_context_addr.1 = select i1 %tmp1, i32 0, i32 %decl_context_addr.0
 
 tmp1 should be simplified to something like:
@@ -940,20 +940,20 @@ On this function GVN hoists the fully redundant value of *res, but nothing
 moves the store out.  This gives us this code:
 
 bb:		; preds = %bb2, %entry
-	%.rle = phi i32 [ 0, %entry ], [ %.rle6, %bb2 ]	
+	%.rle = phi i32 [ 0, %entry ], [ %.rle6, %bb2 ]
 	%i.05 = phi i32 [ 0, %entry ], [ %indvar.next, %bb2 ]
 	%1 = load i32* %cond, align 4
 	%2 = icmp eq i32 %1, 0
 	br i1 %2, label %bb2, label %bb1
 
 bb1:		; preds = %bb
-	%3 = xor i32 %.rle, 234	
+	%3 = xor i32 %.rle, 234
 	store i32 %3, i32* %res, align 4
 	br label %bb2
 
 bb2:		; preds = %bb, %bb1
-	%.rle6 = phi i32 [ %3, %bb1 ], [ %.rle, %bb ]	
-	%indvar.next = add i32 %i.05, 1	
+	%.rle6 = phi i32 [ %3, %bb1 ], [ %.rle, %bb ]
+	%indvar.next = add i32 %i.05, 1
 	%exitcond = icmp eq i32 %indvar.next, %n
 	br i1 %exitcond, label %return, label %bb
 
@@ -1024,7 +1024,7 @@ sunk the store to winner out.
 However, this is awful on several levels: the conditional truncate in the loop
 (-indvars at fault? why can't we completely promote the IV to i64?).
 
-Beyond that, we have a partially redundant load in the loop: if "winner" (aka 
+Beyond that, we have a partially redundant load in the loop: if "winner" (aka
 %i.01718) isn't updated, we reload Y[winner].y the next time through the loop.
 Similarly, the addressing that feeds it (including the sext) is redundant. In
 the end we get this generated assembly:
@@ -1089,7 +1089,7 @@ symbolic phi translation.  The code we get looks like (g is on the stack):
 
 bb2:		; preds = %bb1
 ..
-	%9 = getelementptr %struct.f* %g, i32 0, i32 0		
+	%9 = getelementptr %struct.f* %g, i32 0, i32 0
 	store i32 %8, i32* %9, align  bel %bb3
 
 bb3:		; preds = %bb1, %bb2, %bb
@@ -1117,7 +1117,7 @@ predcom-4.c
 loadpre5.c
 
 [TURN SELECT INTO BRANCH]
-loadpre14.c loadpre15.c 
+loadpre14.c loadpre15.c
 
 actually a conditional increment: loadpre18.c loadpre19.c
 
@@ -1154,7 +1154,7 @@ GCC testsuite.
 //===---------------------------------------------------------------------===//
 
 There are some interesting cases in testsuite/gcc.dg/tree-ssa/pred-comm* in the
-GCC testsuite.  For example, we get the first example in predcom-1.c, but 
+GCC testsuite.  For example, we get the first example in predcom-1.c, but
 miss the second one:
 
 unsigned fib[1000];
@@ -1191,7 +1191,7 @@ SingleSource/Benchmarks/Misc/dt.c
 
 Interesting missed case because of control flow flattening (should be 2 loads):
 http://gcc.gnu.org/bugzilla/show_bug.cgi?id=26629
-With: llvm-gcc t2.c -S -o - -O0 -emit-llvm | llvm-as | 
+With: llvm-gcc t2.c -S -o - -O0 -emit-llvm | llvm-as |
              opt -mem2reg -gvn -instcombine | llvm-dis
 we miss it because we need 1) CRIT EDGE 2) MULTIPLE DIFFERENT
 VALS PRODUCED BY ONE BLOCK OVER DIFFERENT PATHS
@@ -1265,24 +1265,24 @@ case.
         %3073 = call i8* @strcpy(i8* %3072, i8* %3071) nounwind
         %strlen = call i32 @strlen(i8* %3072)    ; uses = 1
         %endptr = getelementptr [100 x i8]* %tempString, i32 0, i32 %strlen
-        call void @llvm.memcpy.i32(i8* %endptr, 
+        call void @llvm.memcpy.i32(i8* %endptr,
           i8* getelementptr ([5 x i8]* @"\01LC42", i32 0, i32 0), i32 5, i32 1)
-        %3074 = call i32 @strlen(i8* %endptr) nounwind readonly 
-        
+        %3074 = call i32 @strlen(i8* %endptr) nounwind readonly
+
 This is interesting for a couple reasons.  First, in this:
 
 The memcpy+strlen strlen can be replaced with:
 
-        %3074 = call i32 @strlen([5 x i8]* @"\01LC42") nounwind readonly 
+        %3074 = call i32 @strlen([5 x i8]* @"\01LC42") nounwind readonly
 
 Because the destination was just copied into the specified memory buffer.  This,
 in turn, can be constant folded to "4".
 
 In other code, it contains:
 
-        %endptr6978 = bitcast i8* %endptr69 to i32*            
+        %endptr6978 = bitcast i8* %endptr69 to i32*
         store i32 7107374, i32* %endptr6978, align 1
-        %3167 = call i32 @strlen(i8* %endptr69) nounwind readonly    
+        %3167 = call i32 @strlen(i8* %endptr69) nounwind readonly
 
 Which could also be constant folded.  Whatever is producing this should probably
 be fixed to leave this as a memcpy from a string.
@@ -1297,12 +1297,12 @@ bb8:            ; preds = %_ZN18eonImageCalculatorC1Ev.exit
         br i1 %685, label %bb10, label %bb9
 
 bb9:            ; preds = %bb8
-        %686 = call i32 @strlen(i8* %683) nounwind readonly          
+        %686 = call i32 @strlen(i8* %683) nounwind readonly
         %687 = icmp ugt i32 %686, 254           ; <i1> [#uses=1]
         br i1 %687, label %bb10, label %bb11
 
 bb10:           ; preds = %bb9, %bb8
-        %688 = call i32 @strlen(i8* %683) nounwind readonly          
+        %688 = call i32 @strlen(i8* %683) nounwind readonly
 
 This could be eliminated by doing the strlen once in bb8, saving code size and
 improving perf on the bb8->9->10 path.
@@ -1311,14 +1311,14 @@ improving perf on the bb8->9->10 path.
 
 I see an interesting fully redundant call to strlen left in 186.crafty:InputMove
 which looks like:
-       %movetext11 = getelementptr [128 x i8]* %movetext, i32 0, i32 0 
- 
+       %movetext11 = getelementptr [128 x i8]* %movetext, i32 0, i32 0
+
 
 bb62:           ; preds = %bb55, %bb53
-        %promote.0 = phi i32 [ %169, %bb55 ], [ 0, %bb53 ]             
+        %promote.0 = phi i32 [ %169, %bb55 ], [ 0, %bb53 ]
         %171 = call i32 @strlen(i8* %movetext11) nounwind readonly align 1
         %172 = add i32 %171, -1         ; <i32> [#uses=1]
-        %173 = getelementptr [128 x i8]* %movetext, i32 0, i32 %172       
+        %173 = getelementptr [128 x i8]* %movetext, i32 0, i32 %172
 
 ...  no stores ...
        br i1 %or.cond, label %bb65, label %bb72
@@ -1328,7 +1328,7 @@ bb65:           ; preds = %bb62
         br label %bb72
 
 bb72:           ; preds = %bb65, %bb62
-        %trank.1 = phi i32 [ %176, %bb65 ], [ -1, %bb62 ]            
+        %trank.1 = phi i32 [ %176, %bb65 ], [ -1, %bb62 ]
         %177 = call i32 @strlen(i8* %movetext11) nounwind readonly align 1
 
 Note that on the bb62->bb72 path, that the %177 strlen call is partially
@@ -1351,14 +1351,14 @@ This pattern repeats several times, basically doing:
 
 call void @llvm.memcpy.i32(
         i8* getelementptr ([10 x i8]* @out.4543, i32 0, i32 0),
-       i8* getelementptr ([7 x i8]* @"\01LC28700", i32 0, i32 0), i32 7, i32 1) 
-%101 = call@printf(i8* ...   @out.4543, i32 0, i32 0)) nounwind 
+       i8* getelementptr ([7 x i8]* @"\01LC28700", i32 0, i32 0), i32 7, i32 1)
+%101 = call@printf(i8* ...   @out.4543, i32 0, i32 0)) nounwind
 
 It is basically doing:
 
   memcpy(globalarray, "string");
   printf(...,  globalarray);
-  
+
 Anyway, by knowing that printf just reads the memory and forward substituting
 the string directly into the printf, this eliminates reads from globalarray.
 Since this pattern occurs frequently in crafty (due to the "DisplayTime" and
@@ -1458,12 +1458,12 @@ This can be generalized for other forms:
 These two functions produce different code. They shouldn't:
 
 #include <stdint.h>
- 
+
 uint8_t p1(uint8_t b, uint8_t a) {
   b = (b & ~0xc0) | (a & 0xc0);
   return (b);
 }
- 
+
 uint8_t p2(uint8_t b, uint8_t a) {
   b = (b & ~0x40) | (a & 0x40);
   b = (b & ~0x80) | (a & 0x80);
@@ -1497,10 +1497,10 @@ Specifically, it does nothing to:
 
 define i32 @test(i32 %x, i32 %y, i32 %z) nounwind {
 entry:
-  %0 = add nsw i32 %y, %z                         
-  %1 = mul i32 %0, %x                             
-  %2 = mul i32 %y, %z                             
-  %3 = add nsw i32 %1, %2                         
+  %0 = add nsw i32 %y, %z
+  %1 = mul i32 %0, %x
+  %2 = mul i32 %y, %z
+  %3 = add nsw i32 %1, %2
   ret i32 %3
 }
 
@@ -1586,7 +1586,7 @@ This is a range comparison on a divided result (from 403.gcc):
   %1337 = sdiv i32 %1336, 8                       ; [#uses=1]
   %.off.i208 = add i32 %1336, 7                   ; [#uses=1]
   %1338 = icmp ult i32 %.off.i208, 15             ; [#uses=1]
-  
+
 We already catch this (removing the sdiv) if there isn't an add, we should
 handle the 'add' as well.  This is a common idiom with it's builtin_alloca code.
 C testcase:
@@ -1760,7 +1760,7 @@ entry:
 but this code (X & -A)/A is X >> log2(A) when A is a power of 2, so this case
 should be instcombined into just "a >> 4".
 
-We do get this at the codegen level, so something knows about it, but 
+We do get this at the codegen level, so something knows about it, but
 instcombine should catch it earlier:
 
 _foo:                                   ## @foo
@@ -2023,7 +2023,7 @@ entry:
 We should be able to fold away this fmul to 0.0.  More generally, fmul(x,0.0)
 can be folded to 0.0 if we can prove that the LHS is not -0.0, not a NaN, and
 not an INF.  The CannotBeNegativeZero predicate in value tracking should be
-extended to support general "fpclassify" operations that can return 
+extended to support general "fpclassify" operations that can return
 yes/no/unknown for each of these predicates.
 
 In this predicate, we know that uitofp is trivially never NaN or -0.0, and
@@ -2122,7 +2122,7 @@ Here's a blob of code that you can drop into the bottom of visitICmp to see some
 missed cases:
 
   { Value *A, *B, *C, *D;
-    if (match(Op0, m_Add(m_Value(A), m_Value(B))) && 
+    if (match(Op0, m_Add(m_Value(A), m_Value(B))) &&
         match(Op1, m_Add(m_Value(C), m_Value(D))) &&
         (A == C || A == D || B == C || B == D)) {
       errs() << "OP0 = " << *Op0 << "  U=" << Op0->getNumUses() << "\n";

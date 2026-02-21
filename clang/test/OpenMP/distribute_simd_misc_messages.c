@@ -1188,8 +1188,8 @@ void test_nontemporal(void) {
     ;
 // omp-50-and-later-error@+4 {{expected 'concurrent' in OpenMP clause 'order'}}
 // expected-note@+3 {{to match this '('}}
-// expected-error@+2 {{expected ')'}} 
-// omp45-error@+1 {{unexpected OpenMP clause 'order' in directive '#pragma omp distribute simd'}} 
+// expected-error@+2 {{expected ')'}}
+// omp45-error@+1 {{unexpected OpenMP clause 'order' in directive '#pragma omp distribute simd'}}
 #pragma omp distribute simd order(none
   for (int i = 0; i < 10; ++i)
     ;

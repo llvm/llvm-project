@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s \
-// RUN:  -analyzer-constraints=z3 
+// RUN:  -analyzer-constraints=z3
 // RUN: %clang_analyze_cc1 -verify %s \
 // RUN:  -analyzer-checker=core,debug.ExprInspection \
 // RUN:  -analyzer-config crosscheck-with-z3=true

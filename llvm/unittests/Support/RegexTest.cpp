@@ -144,7 +144,7 @@ TEST_F(RegexTest, Substitution) {
 
   EXPECT_EQ("aber", Regex("[0-9]+").sub("\\", "a1234ber", &Error));
   EXPECT_EQ(Error, "replacement string contained trailing backslash");
-  
+
   // Backreferences
   EXPECT_EQ("aa1234bber", Regex("a[0-9]+b").sub("a\\0b", "a1234ber", &Error));
   EXPECT_EQ("", Error);

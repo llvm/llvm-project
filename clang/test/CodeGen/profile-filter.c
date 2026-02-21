@@ -6,7 +6,7 @@
 // RUN: echo "src:%t/main.c" | sed -e 's/\\/\\\\/g' > %t-file.list
 // RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t-file.list -emit-llvm %t/main.c -o - | FileCheck %s --check-prefix=FILE
 // RUN: %clang_cc1 -fprofile-instrument=llvm -fprofile-list=%t/section.list -emit-llvm %t/main.c -o - | FileCheck %s --check-prefix=SECTION
-// RUN: %clang_cc1 -fprofile-instrument=sample-coldcov -fprofile-list=%t/cold-func.list -emit-llvm %t/main.c -o - | FileCheck %s --check-prefix=COLDCOV 
+// RUN: %clang_cc1 -fprofile-instrument=sample-coldcov -fprofile-list=%t/cold-func.list -emit-llvm %t/main.c -o - | FileCheck %s --check-prefix=COLDCOV
 // RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t/exclude.list -emit-llvm %t/main.c -o - | FileCheck %s --check-prefix=EXCLUDE
 // RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t/exclude-only.list -emit-llvm %t/main.c -o - | FileCheck %s --check-prefix=EXCLUDE
 

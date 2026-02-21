@@ -11,9 +11,9 @@ struct ToBool { explicit operator bool(); };
 
 struct B;
 struct A {
-  A(); 
+  A();
   A(const B&); // expected-note 2 {{candidate constructor}}
-}; 
+};
 struct B { operator A() const; }; // expected-note 2 {{candidate function}}
 struct I { operator int(); };
 struct J { operator I(); };
@@ -200,7 +200,7 @@ void test()
 
   (void)&(i1 ? flds.b1 : flds.i1); // expected-error {{address of bit-field requested}}
   (void)&(i1 ? flds.i1 : flds.b1); // expected-error {{address of bit-field requested}}
-  
+
 
   unsigned long test0 = 5;
   test0 = test0 ? (long) test0 : test0; // expected-warning {{operand of ? changes signedness: 'long' to 'unsigned long'}}
@@ -300,7 +300,7 @@ namespace test1 {
 }
 
 namespace rdar7998817 {
-  class X { 
+  class X {
     X(X&); // expected-note{{declared private here}}
 
     struct ref { };
@@ -308,7 +308,7 @@ namespace rdar7998817 {
   public:
     X();
     X(ref);
-    
+
     operator ref();
   };
 

@@ -45,8 +45,8 @@ void zeroSizeArrayStackInLambda() {
 
     []{
         S arr[0];
-    }();    
-    
+    }();
+
     clang_analyzer_eval(S::CtorInvocationCount == 0); //expected-warning{{TRUE}}
     clang_analyzer_eval(S::DtorInvocationCount == 0); //expected-warning{{TRUE}}
 }
@@ -57,7 +57,7 @@ void zeroSizeArrayHeap() {
 
     auto *arr = new S[0];
     delete[] arr;
-    
+
     clang_analyzer_eval(S::CtorInvocationCount == 0); //expected-warning{{TRUE}}
     clang_analyzer_eval(S::DtorInvocationCount == 0); //expected-warning{{TRUE}}
 }
@@ -68,7 +68,7 @@ void zeroSizeMultidimensionalArrayHeap() {
 
     auto *arr = new S[2][0];
     delete[] arr;
-        
+
     auto *arr2 = new S[0][2];
     delete[] arr2;
 
@@ -105,13 +105,13 @@ void zeroSizeArrayBinding() {
 void zeroSizeArrayLambdaCapture() {
     S::CtorInvocationCount = 0;
     S::DtorInvocationCount = 0;
-        
+
     S arr[0];
 
     auto l = [arr]{};
-    [arr]{}();    
-    
-    //FIXME: These should be TRUE. We should avoid calling the destructor 
+    [arr]{}();
+
+    //FIXME: These should be TRUE. We should avoid calling the destructor
     // of the temporary that is materialized as the lambda.
     clang_analyzer_eval(S::CtorInvocationCount == 0); //expected-warning{{TRUE}} expected-warning{{FALSE}}
     clang_analyzer_eval(S::DtorInvocationCount == 0); //expected-warning{{TRUE}} expected-warning{{FALSE}}
@@ -161,7 +161,7 @@ void zeroSizeArrayMember() {
 void zeroSizeArrayMemberCopyMove() {
     S::CtorInvocationCount = 0;
     S::DtorInvocationCount = 0;
-    
+
     {
         Wrapper W;
         Wrapper W2 = W;

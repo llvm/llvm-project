@@ -102,7 +102,7 @@ BOOST_MATH_GPU_ENABLED inline T asymptotic_bessel_j_large_x_2(T v, T x, const Po
    BOOST_MATH_STD_USING
    // Get the phase and amplitude:
    T ampl = asymptotic_bessel_amplitude(v, x);
-   if (0 == ampl) 
+   if (0 == ampl)
       return ampl;  // shortcut.
    T phase = asymptotic_bessel_phase_mx(v, x);
    BOOST_MATH_INSTRUMENT_VARIABLE(ampl);

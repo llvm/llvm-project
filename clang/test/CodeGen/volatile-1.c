@@ -200,7 +200,7 @@ void test(void) {
   __real (i = j);
   // CHECK-NEXT: load volatile
   __imag i;
-  
+
   // ============================================================
   // FIXME: Test cases we get wrong.
 
@@ -217,7 +217,7 @@ void test(void) {
   // CHECK-NEXT: call void @llvm.memcpy{{.*}}, i1 true
   ((a=a),a);
 
-  // Not a use.  gcc gets this wrong, it doesn't emit the copy!  
+  // Not a use.  gcc gets this wrong, it doesn't emit the copy!
   // (void)(a=a);
 
   // Not a use.  gcc got this wrong in 4.2 and omitted the side effects

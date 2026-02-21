@@ -38,7 +38,7 @@ template<typename T>
 struct X4 {
   X4();
   X4(const X4&, T = get_value_badly<T>()); // expected-note{{in instantiation of}}
-}; 
+};
 
 // Check for "dangerous" default arguments that could cause recursion.
 struct X5 {

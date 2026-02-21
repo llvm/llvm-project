@@ -3,7 +3,7 @@
 
 template<typename T> struct Node {
 	int lhs;
-	void splay( )                
+	void splay( )
 	{
 		Node<T> n[1];
 		(void)n->lhs;

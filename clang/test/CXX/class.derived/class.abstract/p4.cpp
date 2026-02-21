@@ -1,17 +1,17 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 namespace PR6631 {
-  struct A { 
+  struct A {
     virtual void f() = 0;
   };
 
   struct B : virtual A { };
 
-  struct C : virtual A { 
+  struct C : virtual A {
     virtual void f();
   };
 
-  struct D : public B, public C { 
+  struct D : public B, public C {
     virtual void f();
   };
 
@@ -23,7 +23,7 @@ namespace PR6631 {
 // Check cases where we have a virtual function that is pure in one
 // subobject but not pure in another subobject.
 namespace PartlyPure {
-  struct A { 
+  struct A {
     virtual void f() = 0; // expected-note{{unimplemented pure virtual method}}
   };
 
@@ -41,7 +41,7 @@ namespace PartlyPure {
 }
 
 namespace NonPureAlongOnePath {
-  struct A { 
+  struct A {
     virtual void f() = 0;
   };
 
@@ -55,11 +55,11 @@ namespace NonPureAlongOnePath {
 
   void f() {
     (void) new D; // okay
-  }  
+  }
 }
 
 namespace NonPureAlongOnePath2 {
-  struct Aprime { 
+  struct Aprime {
     virtual void f() = 0;
   };
 
@@ -76,5 +76,5 @@ namespace NonPureAlongOnePath2 {
 
   void f() {
     (void) new D; // okay
-  }  
+  }
 }

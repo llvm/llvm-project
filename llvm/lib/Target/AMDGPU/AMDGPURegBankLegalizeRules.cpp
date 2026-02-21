@@ -1009,7 +1009,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivB64, P5}, {{VgprB64}, {VgprP5}}})
       .Any({{DivB96, P5}, {{VgprB96}, {VgprP5}}})
       .Any({{DivB128, P5}, {{VgprB128}, {VgprP5}}})
-      
+
       .Any({{DivS32, Ptr128}, {{Vgpr32}, {VgprPtr128}}});
 
 

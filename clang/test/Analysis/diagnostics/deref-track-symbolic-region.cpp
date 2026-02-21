@@ -43,7 +43,7 @@ int testRefToNullPtr2() {
 }
 
 void testMemberNullPointerDeref() {
-  struct Wrapper {char c; int *ptr; };  
+  struct Wrapper {char c; int *ptr; };
   Wrapper w = {'a', nullptr};           // expected-note {{'w.ptr' initialized to a null pointer value}}
   *w.ptr = 1;                           //expected-warning {{Dereference of null pointer}}
                                         // expected-note@-1{{Dereference of null pointer}}

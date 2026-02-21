@@ -1,4 +1,4 @@
-// This validates that all expected OSVersions that allow fallbacks 
+// This validates that all expected OSVersions that allow fallbacks
 // from iOS behave as expected against a common version bump.
 
 // RUN: %clang_cc1 "-triple" "arm64-apple-ios26" -fsyntax-only -verify %s
@@ -17,12 +17,12 @@ __attribute__((availability(ios,strict,introduced=26)))
 int iOSExistingAPI2(void);
 
 void testAvailabilityCheck(void) {
-  
+
   if (__builtin_available(iOS 19, *)) {
     iOSExistingAPI();
     iOSExistingAPI2();
   }
-  
+
   if (__builtin_available(iOS 26, *)) {
     iOSExistingAPI();
     iOSExistingAPI2();

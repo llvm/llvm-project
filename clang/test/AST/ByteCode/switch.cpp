@@ -176,7 +176,7 @@ namespace gnurange {
     return false;
   }
   static_assert(d(1)); // both-error {{static assertion failed}}
-  
+
   constexpr bool s(int x) { // both-note {{declared here}}
     switch (x) {
       case bad(x) - 100 ... bad(x) + 100: // both-error {{case value is not a constant expression}} \

@@ -30,10 +30,10 @@ void foo2()
 {
   A b = ({ A a(1); A a1(2); A a2(3); a1; a2; a; });
   if (b.i != 1)
-    abort(); 
+    abort();
   A c = ({ A a(1); A a1(2); A a2(3); a1; a2; a; A a3(4); a2; a3; });
   if (c.i != 4)
-    abort(); 
+    abort();
 }
 
 void foo3()

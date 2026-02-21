@@ -20,28 +20,28 @@
 // CHECK: define {{.*}} @_ZZN1J1KEvEN1CC2Ev(
 // CHECK: define {{.*}} @_ZZN1J1KEvENK1C1FEv(
 
-struct I { 
+struct I {
   virtual void F() const = 0;
 };
 
 void Go(const I &i);
 
-void G() { 
-  { 
-    struct C : I { 
+void G() {
+  {
+    struct C : I {
       void F() const {}
     };
     Go(C());
   }
-  { 
-    struct C : I { 
+  {
+    struct C : I {
       void F() const { G(); }
       void G() const {}
     };
     Go(C());
   }
-  { 
-    struct C : I { 
+  {
+    struct C : I {
       void F() const { H(); }
       void H() const {}
     };

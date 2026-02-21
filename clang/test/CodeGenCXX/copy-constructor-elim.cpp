@@ -19,7 +19,7 @@ C foo() {
 };
 
 class X { // ...
-public: 
+public:
   X(int) {}
   X(const X&, int i = 1, int j = 2, C c = foo()) {
     printf("X(const X&, %d, %d, %d)\n", i, j, c.iC);

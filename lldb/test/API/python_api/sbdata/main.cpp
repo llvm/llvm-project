@@ -16,20 +16,20 @@ struct foo
 int main (int argc, char const *argv[])
 {
     foo* foobar = new foo[2];
-    
+
     foobar[0].a = 1;
     foobar[0].b = 9;
 
     foobar[1].a = 8;
     foobar[1].b = 5;
-    
+
     foobar[1].b = 7; // set breakpoint here
-    
+
     foobar[1].c = 6.28;
-    
+
     foo barfoo[] = {foo(1,2,3), foo(4,5,6)};
-    
+
     delete[] foobar;
-    
+
     return 0;
 }

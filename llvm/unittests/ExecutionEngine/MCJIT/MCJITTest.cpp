@@ -218,9 +218,9 @@ TEST_F(MCJITTest, lazy_function_creator_pointer) {
                 "Parent");
   CallInst *Call = Builder.CreateCall(Foo, {});
   Builder.CreateRet(Call);
-  
+
   createJIT(std::move(M));
-  
+
   // Set up the lazy function creator that records the name of the last
   // unresolved external function found in the module. Using a function pointer
   // prevents us from capturing local variables, which is why this is static.
@@ -234,15 +234,15 @@ TEST_F(MCJITTest, lazy_function_creator_pointer) {
     if (symbol) {
       return symbol;
     }
-    
+
     UnresolvedExternal = str;
     return (void *)(uintptr_t)-1;
   };
   TheJIT->InstallLazyFunctionCreator(UnresolvedHandler);
-  
+
   // JIT the module.
   TheJIT->finalizeObject();
-  
+
   // Verify that our handler was called.
   EXPECT_EQ(UnresolvedExternal, "Foo");
 }
@@ -261,9 +261,9 @@ TEST_F(MCJITTest, lazy_function_creator_lambda) {
   CallInst *Call2 = Builder.CreateCall(Foo2, {});
   Value *Result = Builder.CreateAdd(Call1, Call2);
   Builder.CreateRet(Result);
-  
+
   createJIT(std::move(M));
-  
+
   // Set up the lazy function creator that records the name of unresolved
   // external functions in the module.
   std::vector<std::string> UnresolvedExternals;
@@ -280,10 +280,10 @@ TEST_F(MCJITTest, lazy_function_creator_lambda) {
     return (void *)(uintptr_t)-1;
   };
   TheJIT->InstallLazyFunctionCreator(UnresolvedHandler);
-  
+
   // JIT the module.
   TheJIT->finalizeObject();
-  
+
   // Verify that our handler was called for each unresolved function.
   auto I = UnresolvedExternals.begin(), E = UnresolvedExternals.end();
   EXPECT_EQ(UnresolvedExternals.size(), 2u);

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm %s  -o /dev/null
 
-/* This triggered a problem in reload, fixed by disabling most of the 
+/* This triggered a problem in reload, fixed by disabling most of the
  * steps of compilation in GCC.  Before this change, the code went through
  * the entire backend of GCC, even though it was unnecessary for LLVM output
  * now it is skipped entirely, and since reload doesn't run, it can't cause

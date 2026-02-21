@@ -14,7 +14,7 @@ void test(int *i) {
  a + i;
 }
 
-_Bool test2b; 
+_Bool test2b;
 int test2(void) { if (test2b); return 0; }
 
 // PR1921
@@ -29,7 +29,7 @@ int t2 = __alignof__(void);
 void test4(void) {
   t1 = sizeof(void);
   t2 = __alignof__(void);
-  
+
   t1 = sizeof(test4());
   t2 = __alignof__(test4());
 }
@@ -70,13 +70,13 @@ int bar(void) {
 void f2(void);
 unsigned f1(void) {
   void (*fp)(void) = f2;
-  
+
   ++fp;
   fp++;
   --fp;
   fp--;
   return (unsigned) fp;
-}  
+}
 
 union f3_x {int x; float y;};
 int f3(void) {return ((union f3_x)2).x;}

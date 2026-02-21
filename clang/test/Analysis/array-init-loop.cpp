@@ -160,7 +160,7 @@ struct S3 {
   int i;
 };
 
-// The duplicate is required to emit a warning at 2 different places. 
+// The duplicate is required to emit a warning at 2 different places.
 struct S3_duplicate {
   int i;
 };
@@ -224,7 +224,7 @@ void move_ctor_init_non_pod() {
   clang_analyzer_eval(moved.arr[3].i == 6); // expected-warning{{TRUE}}
 }
 
-//Note: This is the only solution I could find to check the values without 
+//Note: This is the only solution I could find to check the values without
 // crashing clang. For more details on the crash see Issue #57135.
 void lambda_capture_multi_array() {
   S3 arr[2][2] = {1,2,3,4};
@@ -273,12 +273,12 @@ void copy_ctor_multi() {
   MW.arr[1][1].i = 3;
 
   MultiWrapper MWCopy = MW;
-  
+
   clang_analyzer_eval(MWCopy.arr[0][0].i == 0); // expected-warning{{TRUE}}
   clang_analyzer_eval(MWCopy.arr[0][1].i == 1); // expected-warning{{TRUE}}
   clang_analyzer_eval(MWCopy.arr[1][0].i == 2); // expected-warning{{TRUE}}
   clang_analyzer_eval(MWCopy.arr[1][1].i == 3); // expected-warning{{TRUE}}
-} 
+}
 
 void move_ctor_multi() {
   MultiWrapper MW;
@@ -289,12 +289,12 @@ void move_ctor_multi() {
   MW.arr[1][1].i = 3;
 
   MultiWrapper MWMove = (MultiWrapper &&) MW;
-  
+
   clang_analyzer_eval(MWMove.arr[0][0].i == 0); // expected-warning{{TRUE}}
   clang_analyzer_eval(MWMove.arr[0][1].i == 1); // expected-warning{{TRUE}}
   clang_analyzer_eval(MWMove.arr[1][0].i == 2); // expected-warning{{TRUE}}
   clang_analyzer_eval(MWMove.arr[1][1].i == 3); // expected-warning{{TRUE}}
-} 
+}
 
 void structured_binding_multi() {
   S3 arr[2][2] = {1,2,3,4};

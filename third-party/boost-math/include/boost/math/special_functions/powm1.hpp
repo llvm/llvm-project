@@ -40,7 +40,7 @@ BOOST_MATH_GPU_ENABLED inline T powm1_imp(const T x, const T y, const Policy& po
          return boost::math::policies::raise_overflow_error<T>(function, nullptr, pol);
       // fall through....
    }
-   
+
    T result = pow(x, y) - 1;
    if((boost::math::isinf)(result))
       return result < 0 ? -boost::math::policies::raise_overflow_error<T>(function, nullptr, pol) : boost::math::policies::raise_overflow_error<T>(function, nullptr, pol);

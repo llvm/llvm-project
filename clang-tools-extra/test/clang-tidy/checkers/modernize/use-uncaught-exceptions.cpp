@@ -18,13 +18,13 @@ namespace std {
 }
 
 template <typename T>
-bool doSomething(T t) { 
+bool doSomething(T t) {
   return t();
   // CHECK-FIXES: return t();
 }
 
 template <bool (*T)()>
-bool doSomething2() { 
+bool doSomething2() {
   return T();
   // CHECK-MESSAGES: [[@LINE-1]]:10: warning: 'std::uncaught_exception' is deprecated, use 'std::uncaught_exceptions' instead
   // CHECK-FIXES: return T();

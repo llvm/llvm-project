@@ -502,7 +502,7 @@ define i32 @f4() !guid !3 {
       "Counters": [1],
       "Callsites": [
         [{ "Guid": 1001,
-            "Counters": [10]}, 
+            "Counters": [10]},
           { "Guid": 1002,
             "Counters": [11],
             "Callsites": [[{"Guid": 1004, "Counters":[13]}]]
@@ -520,7 +520,7 @@ define i32 @f4() !guid !3 {
             "Counters": [1],
             "Callsites": [
               [{ "Guid": 1001,
-                  "Counters": [101]}, 
+                  "Counters": [101]},
                 { "Guid": 1002,
                   "Counters": [102],
                   "Callsites": [[{"Guid": 1004, "Counters":[104]}]]

@@ -3,7 +3,7 @@
 // CHECK: test12_A::foo()
 struct test12_A {
   virtual void foo();
-  
+
   void bar() {
     test12_A::foo();
   }

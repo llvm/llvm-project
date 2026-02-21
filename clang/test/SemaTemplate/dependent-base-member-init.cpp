@@ -41,9 +41,9 @@ namespace PR6062 {
   class A : public T::type
   {
     A() : T::type()
-    {  
+    {
     }
-    
+
     template <typename U>
     A(U const& init)
       : T::type(init)

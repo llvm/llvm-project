@@ -261,7 +261,7 @@ void foo() {
 void bar() {
   if (RefCountable *a = provide_ref_ctnbl()) {
     // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
-    a->method();    
+    a->method();
   }
   for (RefCountable *b = provide_ref_ctnbl(); b != nullptr;) {
     // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}

@@ -22,7 +22,7 @@ void test_f0_outer_scope() {
 }
 
 void f0(int i = 1, // expected-error{{redefinition of default argument}}
-        int, int); 
+        int, int);
 
 template<typename T> void f1(T); // expected-note{{previous}}
 
@@ -33,13 +33,13 @@ void f1(T = T()); // expected-error{{cannot be added}}
 namespace N1 {
   // example from C++03 standard
   // FIXME: make these "f2"s into "f"s, then fix our scoping issues
-  void f2(int, int); 
-  void f2(int, int = 7); 
+  void f2(int, int);
+  void f2(int, int = 7);
   void h() {
-    f2(3); // OK, calls f(3, 7) 
+    f2(3); // OK, calls f(3, 7)
     void f(int = 1, int);	// expected-error{{missing default argument}}
   }
-  
+
   void m()
   {
     void f(int, int); // expected-note{{'f' declared here}}
@@ -48,7 +48,7 @@ namespace N1 {
     f(4); // okay
     void f(int, int = 5); // expected-error{{redefinition of default argument}}
   }
-  
+
   void n()
   {
     f2(6); // okay
@@ -62,7 +62,7 @@ struct A {
   struct B {
     static void Foo (int = 0);
   };
-  
+
   // should not hide default args
   friend void B::Foo (int);
 };

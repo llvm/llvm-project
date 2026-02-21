@@ -197,7 +197,7 @@ void quals_rank3(int volatile *); // expected-note{{candidate function}}
 
 void test_quals_ranking(int * p, int volatile *pq, int * * pp, int * * * ppp) {
   int* q1 = quals_rank1(p);
-  float* q2 = quals_rank1(pq); 
+  float* q2 = quals_rank1(pq);
   double* q3 = quals_rank1("string literal");
   char a[17];
   const char* ap = a;
@@ -248,8 +248,8 @@ void test_base(A* a) {
   derived4(a); // expected-error{{no matching function for call to 'derived4}}
 }
 
-// Test overloading of references. 
-// (FIXME: tests binding to determine candidate sets, not overload 
+// Test overloading of references.
+// (FIXME: tests binding to determine candidate sets, not overload
 //  resolution per se).
 int* intref(int&);
 float* intref(const int&);
@@ -330,7 +330,7 @@ void g(opt o) {
 namespace PR5756 {
   int &a(void*, int);
   float &a(void*, float);
-  void b() { 
+  void b() {
     int &ir = a(0,0);
     (void)ir;
   }
@@ -382,15 +382,15 @@ namespace IncompleteConversion {
 
   void completeFunction(Complete *); // expected-note 2 {{cannot convert argument of incomplete type}}
   void completeFunction(Complete &); // expected-note 2 {{cannot convert argument of incomplete type}}
-  
+
   void testTypeConversion(Incomplete *P) {
     completeFunction(P); // expected-error {{no matching function for call to 'completeFunction'}}
     completeFunction(*P); // expected-error {{no matching function for call to 'completeFunction'}}
   }
-  
+
   void incompletePointerFunction(Incomplete *); // expected-note {{candidate function not viable: cannot convert argument of incomplete type 'Incomplete' to 'Incomplete *' for 1st argument; take the address of the argument with &}}
   void incompleteReferenceFunction(Incomplete &); // expected-note {{candidate function not viable: cannot convert argument of incomplete type 'Incomplete *' to 'Incomplete &' for 1st argument; dereference the argument with *}}
-  
+
   void testPointerReferenceConversion(Incomplete &reference, Incomplete *pointer) {
     incompletePointerFunction(reference); // expected-error {{no matching function for call to 'incompletePointerFunction'}}
     incompleteReferenceFunction(pointer); // expected-error {{no matching function for call to 'incompleteReferenceFunction'}}
@@ -400,10 +400,10 @@ namespace IncompleteConversion {
 namespace DerivedToBaseVsVoid {
   struct A { };
   struct B : A { };
-  
+
   float &f(void *);
   int &f(const A*);
-  
+
   void g(B *b) {
     int &ir = f(b);
   }
@@ -417,7 +417,7 @@ namespace test4 {
     static void foo(int*); // expected-note {{not viable}}
     static void foo(long*); // expected-note {{not viable}}
 
-    void bar(A *a) { 
+    void bar(A *a) {
       foo(a); // expected-error {{no matching function for call}}
     }
   };
@@ -427,10 +427,10 @@ namespace DerivedToBase {
   struct A { };
   struct B : A { };
   struct C : B { };
-  
+
   int &f0(const A&);
   float &f0(B);
-  
+
   void g() {
     float &fr = f0(C());
   }
@@ -453,7 +453,7 @@ namespace PR6483 {
     f1(x0); // expected-error{{no matching function for call}}
     f0(x1);
     f1(x1); // expected-error{{no matching function for call}}
-  }  
+  }
 }
 
 namespace PR6078 {
@@ -518,7 +518,7 @@ namespace NontrivialSubsequence {
   public:
     operator const X0 *();
   };
- 
+
   A a;
   void foo( void const * );
 
@@ -554,7 +554,7 @@ namespace rdar9173984 {
 namespace PR9507 {
   void f(int * const&); // expected-note{{candidate function}}
   void f(int const(&)[1]); // expected-note{{candidate function}}
- 
+
   int main() {
     int n[1];
     f(n); // expected-error{{call to 'f' is ambiguous}}

@@ -6,7 +6,7 @@ struct S {
 
 S f();
 
-void g() { 
+void g() {
   S a( f() );
 }
 

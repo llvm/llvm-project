@@ -146,13 +146,13 @@
                  return std::make_pair(r, r);
               }
               std::pair<Real, Real> r = hypergeometric_pFq_checked_series_impl(aj, bj, Real(1 / z), pol, termination, log_scale);
-              
+
               #if (defined(__GNUC__) && __GNUC__ == 13)
               Real mul = pow(-z, Real(-*aj.begin()));
               #else
               Real mul = pow(-z, -*aj.begin());
               #endif
-              
+
               r.first *= mul;
               r.second *= mul;
               return r;

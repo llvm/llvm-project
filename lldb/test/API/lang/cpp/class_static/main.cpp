@@ -29,18 +29,18 @@ public:
   static PointType g_points[];
 };
 
-PointType A::g_points[] = 
+PointType A::g_points[] =
 {
     {    1,    2 },
     {   11,   22 }
 };
-static PointType g_points[] = 
+static PointType g_points[] =
 {
     {    3,    4 },
     {   33,   44 }
 };
 
-PointType AA::g_points[] = 
+PointType AA::g_points[] =
 {
     {    5,    6 },
     {   55,   66 }

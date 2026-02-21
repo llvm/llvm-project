@@ -279,7 +279,7 @@ class AllocatorAwareClassSwapWrongArgType {
         // CHECK-MESSAGES: [[@LINE-1]]:42: warning: operator=() does not handle self-assignment properly [bugprone-unhandled-self-assignment]
         int tmp = 0;
         swap(tmp);
-        
+
         return *this;
     }
 
@@ -310,14 +310,14 @@ class AllocatorAwareClassAdlSwapWrongArgType {
         // CHECK-MESSAGES: [[@LINE-1]]:45: warning: operator=() does not handle self-assignment properly [bugprone-unhandled-self-assignment]
         int tmp = 0;
         swap(*this, tmp);
-        
+
         return *this;
     }
 
     allocator_type get_allocator() const {
         return allocator_type();
     }
-    
+
     friend void swap(AllocatorAwareClassAdlSwapWrongArgType&, int&) {
     }
 };
@@ -347,7 +347,7 @@ class AllocatorAwareClassAdlSwapWrongArgs {
     allocator_type get_allocator() const {
         return allocator_type();
     }
-    
+
     friend void swap(AllocatorAwareClassAdlSwapWrongArgs&, AllocatorAwareClassAdlSwapWrongArgs&) {
     }
 };
@@ -707,7 +707,7 @@ class AllocatorAwareClassStdSwap {
 
     AllocatorAwareClassStdSwap& operator=(const AllocatorAwareClassStdSwap& other) {
         using std::swap;
-        
+
         AllocatorAwareClassStdSwap tmp(other, get_allocator());
         swap(*this, tmp);
         return *this;
@@ -741,7 +741,7 @@ class AllocatorAwareClassAdlSwap {
     allocator_type get_allocator() const {
         return allocator_type();
     }
-    
+
     friend void swap(AllocatorAwareClassAdlSwap&, AllocatorAwareClassAdlSwap&) {
     }
 };

@@ -28,7 +28,7 @@ int func2() {
 // CHECK-CC2: OVERLOAD: [#void#]foo(int arg)
 
 // TODO: llvm/llvm-project/146649
-// This is incorrect behavior. Correct Result should be a variant of, 
+// This is incorrect behavior. Correct Result should be a variant of,
 // CC3: should be something like [#void#]foo(<#A self#>, <#int arg#>)
 // CC4: should be something like [#void#]bar(<#A self#>, <#int arg#>)
 int func3() {
@@ -53,7 +53,7 @@ struct C {
   int memberFnA(this C&, float a);
 
   void foo(this C& self) {
-    // Should not offer any members here, since 
+    // Should not offer any members here, since
     // it needs to be referenced through `self`.
     mem
     // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):8 -std=c++23 %s | FileCheck --allow-empty %s
@@ -85,7 +85,7 @@ struct C {
 struct S {
   void foo1(int a);
   void foo2(int a) const;
-  void foo2(this const S& self, float a);  
+  void foo2(this const S& self, float a);
   void foo3(this const S& self, int a);
   void foo4(this S& self, int a);
 };

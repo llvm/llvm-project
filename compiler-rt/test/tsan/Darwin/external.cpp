@@ -41,7 +41,7 @@ extern "C" {
 
 int main(int argc, char *argv[]) {
   InitializeLibrary();
-  
+
   {
     MyObjectRef ref = ObjectCreate();
     std::thread t1([ref]{ ObjectRead(ref); });
@@ -49,9 +49,9 @@ int main(int argc, char *argv[]) {
     t1.join();
     t2.join();
   }
-  
+
   // CHECK-NOT: WARNING: ThreadSanitizer
-  
+
   fprintf(stderr, "RR test done\n");
   // CHECK: RR test done
 
@@ -62,14 +62,14 @@ int main(int argc, char *argv[]) {
     t1.join();
     t2.join();
   }
-  
+
   // TEST1: WARNING: ThreadSanitizer: data race
   // TEST1: {{Write|Read}} of size 8 at
   // TEST1: Previous {{write|read}} of size 8 at
   // TEST1: Location is heap block of size 16 at
-  
+
   // TEST2-NOT: WARNING: ThreadSanitizer
-  
+
   // TEST3: WARNING: ThreadSanitizer: race on MyLibrary::MyObject
   // TEST3: {{Modifying|Read-only}} access of MyLibrary::MyObject at
   // TEST3: {{ObjectWrite|ObjectRead}}
@@ -89,11 +89,11 @@ int main(int argc, char *argv[]) {
     t1.join();
     t2.join();
   }
-  
+
   // TEST1-NOT: WARNING: ThreadSanitizer: data race
-  
+
   // TEST2-NOT: WARNING: ThreadSanitizer
-  
+
   // TEST3: WARNING: ThreadSanitizer: race on MyLibrary::MyObject
   // TEST3: Modifying access of MyLibrary::MyObject at
   // TEST3: {{ObjectWrite|ObjectWriteAnother}}

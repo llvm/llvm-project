@@ -141,7 +141,7 @@ If you are using clang, you may need to set `LLVMAR_EXECUTABLE`,
 To enable sanitizer checks (eg., `asan` and `tsan`), add:
 ```
  -DCMAKE_C_FLAGS="-g -O2 -fno-omit-frame-pointer -fsanitize=address -fsanitize=thread -fno-sanitize-recover=all"
- -DCMAKE_CXX_FLAGS="-g -O2 -fno-omit-frame-pointer -fsanitize=address -fsanitize=thread -fno-sanitize-recover=all "  
+ -DCMAKE_CXX_FLAGS="-g -O2 -fno-omit-frame-pointer -fsanitize=address -fsanitize=thread -fno-sanitize-recover=all "
 ```
 
 ### Stable and Experimental Library Versions
@@ -186,7 +186,7 @@ BENCHMARK_MAIN();
 ```
 
 To run the benchmark, compile and link against the `benchmark` library
-(libbenchmark.a/.so). If you followed the build steps above, this library will 
+(libbenchmark.a/.so). If you followed the build steps above, this library will
 be under the build directory you created.
 
 ```bash

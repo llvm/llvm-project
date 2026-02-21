@@ -22,7 +22,7 @@
 #ifndef HEADER
 #define HEADER
 
-#pragma omp requires unified_address 
+#pragma omp requires unified_address
 // CHECK:#pragma omp requires unified_address
 
 #pragma omp requires unified_shared_memory

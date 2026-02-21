@@ -8,7 +8,7 @@ struct X {
   union {
     int i;
     float f;
-    
+
     union {
       float f2;
       double d;
@@ -48,7 +48,7 @@ struct Redecl {
   };
 
   int z; // expected-error{{duplicate member 'z'}}
-  void zz(void); // expected-error{{duplicate member 'zz'}} 
+  void zz(void); // expected-error{{duplicate member 'zz'}}
 };
 
 union { // expected-warning{{declaration does not declare anything}}

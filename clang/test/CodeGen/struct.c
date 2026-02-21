@@ -115,7 +115,7 @@ typedef struct _a {
 void f11(void) {
   struct _a a1;
   a a2;
-    
+
   a1 = a2;
   a2 = a1;
 }

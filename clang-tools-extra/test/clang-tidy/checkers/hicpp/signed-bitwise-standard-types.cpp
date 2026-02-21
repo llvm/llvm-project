@@ -90,7 +90,7 @@ void still_forbidden() {
   // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use of a signed integer operand with a binary bitwise operator
   SResult = std::ctype_base::mask::lower ^ -8;
   // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use of a signed integer operand with a binary bitwise operator
-  
+
   // Staying within the allowed standard types is ok for bitwise assignment
   // operations.
   std::ctype_base::mask var = std::ctype_base::mask::print;

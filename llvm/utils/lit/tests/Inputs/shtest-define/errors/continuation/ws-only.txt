@@ -1,7 +1,7 @@
 # Surely an empty substitution continuation is an accident, so it's an error.
 
 # DEFINE: %{foo} = foo \
-# DEFINE:  
+# DEFINE:
 #        ^~ whitespace intentional
 # RUN: echo '%{foo}'
 

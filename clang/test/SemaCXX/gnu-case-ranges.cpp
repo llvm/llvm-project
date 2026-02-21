@@ -9,9 +9,9 @@ enum E {
 };
 
 
-int test(enum E e) 
+int test(enum E e)
 {
-    switch (e) 
+    switch (e)
     {
         case one:
             return 7;

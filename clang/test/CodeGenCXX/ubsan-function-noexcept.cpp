@@ -3,7 +3,7 @@
 /// Check the following two functions have the same func_sanitize metadata, i.e.
 /// they have the same type hash despite the exception specifier.
 // CHECK: define{{.*}} void @_Z1fv() #[[#]] !func_sanitize ![[FUNCSAN:.*]] {
-// CHECK: define{{.*}} void @_Z10f_noexceptv() #[[#]] !func_sanitize 
+// CHECK: define{{.*}} void @_Z10f_noexceptv() #[[#]] !func_sanitize
 // CHECK-SAME: ![[FUNCSAN]] {
 void f() {}
 void f_noexcept() noexcept {}

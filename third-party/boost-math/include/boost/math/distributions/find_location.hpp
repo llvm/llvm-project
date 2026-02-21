@@ -34,11 +34,11 @@ namespace boost
       // For example, a nominal minimum acceptable z, so that p * 100 % are > z
       typename Dist::value_type p, // probability value desired at x, say 0.95 for 95% > z.
       typename Dist::value_type scale, // scale parameter, for example, normal standard deviation.
-      const Policy& pol 
+      const Policy& pol
       )
     {
-      static_assert(::boost::math::tools::is_distribution<Dist>::value, "The provided distribution does not meet the conceptual requirements of a distribution."); 
-      static_assert(::boost::math::tools::is_scaled_distribution<Dist>::value, "The provided distribution does not meet the conceptual requirements of a scaled distribution."); 
+      static_assert(::boost::math::tools::is_distribution<Dist>::value, "The provided distribution does not meet the conceptual requirements of a distribution.");
+      static_assert(::boost::math::tools::is_scaled_distribution<Dist>::value, "The provided distribution does not meet the conceptual requirements of a scaled distribution.");
       static const char* function = "boost::math::find_location<Dist, Policy>&, %1%)";
 
       if(!(boost::math::isfinite)(p) || (p < 0) || (p > 1))
@@ -56,7 +56,7 @@ namespace boost
        return policies::raise_domain_error<typename Dist::value_type>(
            function, "scale parameter was %1%, but must be finite!", scale, pol);
       }
-        
+
       //cout << "z " << z << ", p " << p << ",  quantile(Dist(), p) "
       //  << quantile(Dist(), p) << ", quan * scale " << quantile(Dist(), p) * scale << endl;
       return z - (quantile(Dist(), p) * scale);

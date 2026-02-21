@@ -4,7 +4,7 @@ void f1(void) {
   int x, y, z;
   #pragma unused(x)
   #pragma unused(y, z)
-  
+
   int w; // expected-warning {{unused}}
   #pragma unused w // expected-warning{{missing '(' after '#pragma unused' - ignoring}}
 }

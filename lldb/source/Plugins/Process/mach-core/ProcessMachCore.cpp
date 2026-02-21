@@ -411,7 +411,7 @@ bool ProcessMachCore::LoadBinariesViaMetadata() {
 
   // LoadCoreFileImges may have set the dynamic loader, e.g. in
   // PlatformDarwinKernel::LoadPlatformBinaryAndSetup().
-  // If we now have a dynamic loader, save its name so we don't 
+  // If we now have a dynamic loader, save its name so we don't
   // un-set it later.
   if (m_dyld_up)
     m_dyld_plugin_name = GetDynamicLoader()->GetPluginName();

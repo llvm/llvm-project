@@ -240,7 +240,7 @@ that has the trait AutomaticAllocationScope.
 
 This trait adds the property that the operation is known to have
 [broadcast-compatible](https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html)
-operands and that its result type is compatible with the inferred broadcast shape. 
+operands and that its result type is compatible with the inferred broadcast shape.
 See [The `Broadcastable` Trait](Broadcastable.md) for details.
 
 ### Commutative

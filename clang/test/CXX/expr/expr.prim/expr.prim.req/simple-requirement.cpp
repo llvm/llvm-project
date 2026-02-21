@@ -149,7 +149,7 @@ static_assert(A<0>::baz());
 
 template<auto x>
 constexpr bool A<x>::faz() {
-    return requires(B a, B b) { 
+    return requires(B a, B b) {
       a.p();
       b.data_member;
       B::static_member;
@@ -171,7 +171,7 @@ concept C1 = requires() { A<N>::f(); };
 static_assert(!C1<0>);
 
 template <> class A<1> {
-public: 
+public:
   static void f() {}
 };
 static_assert(C1<1>);
@@ -204,7 +204,7 @@ class A {
    static void f();
    friend struct B<short>;
 };
- 
+
 template <class T> struct B {
   static constexpr int index() requires requires{ A::f(); } {
     return 1;
@@ -219,7 +219,7 @@ static_assert(B<int>::index() == 2);
 
 namespace missing_member_function {
 template <class T> struct Use;
-class X { 
+class X {
   int a;
   static int B;
   friend struct Use<short>;

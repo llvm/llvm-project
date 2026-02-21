@@ -67,7 +67,7 @@ void Test() {
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: constructor creating an empty string
   std::string r2("test", 0, -4);
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: negative value used as length parameter
-  std::string r3("test", -4, 1); 
+  std::string r3("test", -4, 1);
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: negative value used as position of the first character parameter
   std::string r4("test", 0, 0x1000000);
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: suspicious large length parameter

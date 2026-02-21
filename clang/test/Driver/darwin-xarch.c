@@ -4,7 +4,7 @@
 // RUN:   -c %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-COMPILE < %t %s
 //
-// CHECK-COMPILE: "-cc1" "-triple" "i386-apple-macosx10.4.0" 
+// CHECK-COMPILE: "-cc1" "-triple" "i386-apple-macosx10.4.0"
 // CHECK-COMPILE: "-cc1" "-triple" "x86_64-apple-macosx10.5.0"
 
 // RUN: %clang --target=x86_64-apple-darwin10 -### \

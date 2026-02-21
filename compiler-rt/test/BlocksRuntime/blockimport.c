@@ -26,14 +26,14 @@
 int main(int argc, char *argv[]) {
     int i = 1;
     int (^intblock)(void) = ^{ return i*10; };
-    
+
     void (^vv)(void) = ^{
         if (argc > 0) {
             printf("intblock returns %d\n", intblock());
         }
     };
 
-#if 0    
+#if 0
     //printf("Block dump %s\n", _Block_dump(vv));
     {
         struct Block_layout *layout = (struct Block_layout *)(void *)vv;

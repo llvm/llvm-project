@@ -38,7 +38,7 @@ void test_Y() {
   {
     Y y2; // expected-note{{jump bypasses variable with a non-trivial destructor}}
   inner:
-    f();    
+    f();
   }
   return;
 }

@@ -88,7 +88,7 @@ TEST_F(PPConditionalDirectiveRecordTest, PPRecAPI) {
 
   // Make sure we got the tokens that we expected.
   ASSERT_EQ(10U, toks.size());
-  
+
   EXPECT_FALSE(PPRec->rangeIntersectsConditionalDirective(
                     SourceRange(toks[0].getLocation(), toks[1].getLocation())));
   EXPECT_TRUE(PPRec->rangeIntersectsConditionalDirective(

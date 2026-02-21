@@ -6,7 +6,7 @@ struct S {
 };
 
 void test(void) {
-  offsetof(struct S, c); 
+  offsetof(struct S, c);
 }
 
 // CHECK: PreStmt<OffsetOfExpr>

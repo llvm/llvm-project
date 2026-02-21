@@ -28,7 +28,7 @@
 // RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/partition3.cpp \
 // RUN:  -o %t/A-Part3.pcm
 
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %t/moduleA.cpp -fprebuilt-module-path=%t 
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %t/moduleA.cpp -fprebuilt-module-path=%t
 
 //--- partition1.cpp
 export module A:Part1;

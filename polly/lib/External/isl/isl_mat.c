@@ -1631,7 +1631,7 @@ __isl_give isl_mat *isl_mat_insert_zero_rows(__isl_take isl_mat *mat,
 	mat = isl_mat_insert_rows(mat, row, n);
 	if (!mat)
 		return NULL;
-	
+
 	for (i = 0; i < n; ++i)
 		isl_seq_clr(mat->row[row + i], mat->n_col);
 

@@ -105,10 +105,10 @@
 # CHECK: lock cmpxchgw %di, (%rcx)
 0x66 0xf0 0x0f 0xb1 0x39
 
-# Test that a prefix on it's own works. It's debatable as to if this is 
+# Test that a prefix on it's own works. It's debatable as to if this is
 # something that is considered valid, but however as LLVM's own disassembler
-# has decided to disassemble prefixes as being separate opcodes, it therefore 
+# has decided to disassemble prefixes as being separate opcodes, it therefore
 # should be capable of re-consuming it's own output.
 # CHECK: rep
 0xf3
-# ***IMPORTANT ^-- this must be at the end of the file to be a valid test *** 
+# ***IMPORTANT ^-- this must be at the end of the file to be a valid test ***

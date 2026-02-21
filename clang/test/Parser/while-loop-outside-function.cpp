@@ -10,9 +10,9 @@ while // expected-error {{while loop outside of a function}}
 do { // expected-error {{expected unqualified-id}}
     int some_var = 1;
     some_var += 3;
-} 
+}
 while // expected-error {{while loop outside of a function}}
-(true); 
+(true);
 
 void someFunction() {
     while(true) {};

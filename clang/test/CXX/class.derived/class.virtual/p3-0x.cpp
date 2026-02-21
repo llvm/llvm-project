@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s
 
 namespace Test1 {
 
@@ -38,7 +38,7 @@ struct A {
 };
 
 template<typename... Args>
-struct B : A { 
+struct B : A {
   virtual void f(Args...) override; // expected-error {{'f' marked 'override' but does not override any member functions}}
 };
 
@@ -144,7 +144,7 @@ namespace DiagnosticsQOI {
     void bar(double) override; // expected-error {{non-virtual member function marked 'override' hides virtual member functions}}
     void bar(long double) final; // expected-error {{non-virtual member function marked 'final' hides virtual member functions}}
   };
-  
+
   template<typename T>
   struct Z : T {
     static void foo() override; // expected-error {{only virtual member functions can be marked 'override'}}

@@ -22,7 +22,7 @@ namespace math{
 
 // Recurrence relation for Hermite polynomials:
 template <class T1, class T2, class T3>
-BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T1, T2, T3>::type 
+BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T1, T2, T3>::type
    hermite_next(unsigned n, T1 x, T2 Hn, T3 Hnm1)
 {
    using promoted_type = tools::promote_args_t<T1, T2, T3>;
@@ -55,7 +55,7 @@ BOOST_MATH_GPU_ENABLED T hermite_imp(unsigned n, T x)
 } // namespace detail
 
 template <class T, class Policy>
-BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T>::type 
+BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T>::type
    hermite(unsigned n, T x, const Policy&)
 {
    typedef typename tools::promote_args<T>::type result_type;
@@ -64,7 +64,7 @@ BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T>::type
 }
 
 template <class T>
-BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T>::type 
+BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T>::type
    hermite(unsigned n, T x)
 {
    return boost::math::hermite(n, x, policies::policy<>());

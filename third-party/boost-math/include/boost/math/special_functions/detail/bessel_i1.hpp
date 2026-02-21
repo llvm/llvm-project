@@ -7,7 +7,7 @@
 // Modified Bessel function of the first kind of order zero
 // we use the approximating forms derived in:
 // "Rational Approximations for the Modified Bessel Function of the First Kind - I1(x) for Computations with Double Precision"
-// by Pavel Holoborodko, 
+// by Pavel Holoborodko,
 // see http://www.advanpix.com/2015/11/12/rational-approximations-for-the-modified-bessel-function-of-the-first-kind-i1-for-computations-with-double-precision/
 // The actual coefficients used are our own, and extend Pavel's work to precision's other than double.
 
@@ -195,7 +195,7 @@ BOOST_MATH_GPU_ENABLED T bessel_i1_imp(const T& x, const boost::math::integral_c
             BOOST_MATH_BIG_CONSTANT(T, 64, 1.83991379419781823063672109e-21),
             BOOST_MATH_BIG_CONSTANT(T, 64, 8.87732714140192556332037815e-24),
             BOOST_MATH_BIG_CONSTANT(T, 64, 3.32120654663773147206454247e-26),
-            BOOST_MATH_BIG_CONSTANT(T, 64, 1.95294659305369207813486871e-28) 
+            BOOST_MATH_BIG_CONSTANT(T, 64, 1.95294659305369207813486871e-28)
          };
          T a = x * x / 4;
          T Q[3] = { 1, 0.5f, boost::math::tools::evaluate_polynomial(P, a) };

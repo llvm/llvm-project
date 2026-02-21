@@ -7,9 +7,9 @@ template void f0(int); // expected-error{{explicit instantiation of undefined fu
 template<typename T>
 struct X0 {
   struct Inner;
-  
+
   void f1(); // expected-note{{here}}
-  
+
   static T value; // expected-note{{here}}
 };
 

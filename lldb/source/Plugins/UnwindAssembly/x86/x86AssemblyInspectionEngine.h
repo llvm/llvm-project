@@ -116,10 +116,10 @@ private:
   bool ret_pattern_p();
   bool jmp_to_reg_p();
   bool pc_rel_branch_or_jump_p (const int instruction_length, int &offset);
-  bool non_local_branch_p (const lldb::addr_t current_func_text_offset, 
+  bool non_local_branch_p (const lldb::addr_t current_func_text_offset,
                            const lldb_private::AddressRange &func_range,
                            const int instruction_length);
-  bool local_branch_p (const lldb::addr_t current_func_text_offset, 
+  bool local_branch_p (const lldb::addr_t current_func_text_offset,
                        const lldb_private::AddressRange &func_range,
                        const int instruction_length,
                        lldb::addr_t &target_insn_offset);

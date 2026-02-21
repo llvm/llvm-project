@@ -3309,7 +3309,7 @@ TEST(SignatureHelpTest, VariadicType) {
 TEST(SignatureHelpTest, SkipExplicitObjectParameter) {
   Annotations Code(R"cpp(
     struct A {
-      void foo(this auto&& self, int arg); 
+      void foo(this auto&& self, int arg);
       void bar(this A self, int arg);
     };
     int main() {
@@ -4457,7 +4457,7 @@ TEST(CompletionTest, PreambleFromDifferentTarget) {
 TEST(CompletionTest, SkipExplicitObjectParameter) {
   Annotations Code(R"cpp(
     struct A {
-      void foo(this auto&& self, int arg); 
+      void foo(this auto&& self, int arg);
       void bar(this A self, int arg);
     };
 
@@ -4521,7 +4521,7 @@ TEST(CompletionTest, MemberAccessInExplicitObjMemfn) {
       int memberFnA(this A&, float a);
 
       void foo(this A& self) {
-        // Should not offer any members here, since 
+        // Should not offer any members here, since
         // it needs to be referenced through `self`.
         mem$c1^;
         // should offer all results

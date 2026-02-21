@@ -6,7 +6,7 @@
 
 // Returns: convert a to a signed long long, rounding toward zero.
 
-// Assumption: float is a IEEE 32 bit floating point type 
+// Assumption: float is a IEEE 32 bit floating point type
 //             su_int is a 32 bit integral type
 //             value in float is representable in di_int (no range checking performed)
 

@@ -96,7 +96,7 @@ struct VMI7 : VMIBase1, VMI5, private VMI6 { };
 struct B {
   static int const volatile (*a)[10];
   static int (*b)[10];
-  
+
   static int const volatile (B::*c)[10];
   static int (B::*d)[10];
 };
@@ -109,11 +109,11 @@ int f() {
 
   // A does not have any bases.
   CHECK_VTABLE(A, class);
-  
+
   // SI1 has a single public base.
   CHECK_VTABLE(SI1, si_class);
   CHECK(to<__si_class_type_info>(typeid(SI1)).__base_type == &typeid(A));
-  
+
   // SI2 has a single public empty base.
   CHECK_VTABLE(SI2, si_class);
   CHECK(to<__si_class_type_info>(typeid(SI2)).__base_type == &typeid(Empty));
@@ -143,7 +143,7 @@ int f() {
   CHECK_BASE_INFO_OFFSET_FLAGS(VMI5, 0, 0, __base_class_type_info::__public_mask);
   CHECK_BASE_INFO_TYPE(VMI5, 1, VMIBase2);
   CHECK_BASE_INFO_OFFSET_FLAGS(VMI5, 1, 4, __base_class_type_info::__public_mask);
-  
+
   // VMI6 has diamond shaped inheritance.
   CHECK_VTABLE(VMI6, vmi_class);
   CHECK(to<__vmi_class_type_info>(typeid(VMI6)).__flags == __vmi_class_type_info::__diamond_shaped_mask);
@@ -152,7 +152,7 @@ int f() {
   CHECK_BASE_INFO_OFFSET_FLAGS(VMI6, 0, -24, __base_class_type_info::__public_mask | __base_class_type_info::__virtual_mask);
   CHECK_BASE_INFO_TYPE(VMI6, 1, VMIBase3);
   CHECK_BASE_INFO_OFFSET_FLAGS(VMI6, 1, 0, __base_class_type_info::__public_mask);
-  
+
   // VMI7 has both non-diamond and diamond shaped inheritance.
   CHECK_VTABLE(VMI7, vmi_class);
   CHECK(to<__vmi_class_type_info>(typeid(VMI7)).__flags == (__vmi_class_type_info::__non_diamond_repeat_mask | __vmi_class_type_info::__diamond_shaped_mask));
@@ -163,7 +163,7 @@ int f() {
   CHECK_BASE_INFO_OFFSET_FLAGS(VMI7, 1, 20, __base_class_type_info::__public_mask);
   CHECK_BASE_INFO_TYPE(VMI7, 2, VMI6);
   CHECK_BASE_INFO_OFFSET_FLAGS(VMI7, 2, 0, 0);
-  
+
   // Pointers to incomplete classes.
   CHECK_VTABLE(Incomplete *, pointer);
   CHECK(to<__pbase_type_info>(typeid(Incomplete *)).__flags == __pbase_type_info::__incomplete_mask);
@@ -192,7 +192,7 @@ extern "C" void printf(const char *, ...);
 
 int main() {
   int result = f();
-  
+
   if (result == 0)
     printf("success!\n");
   else

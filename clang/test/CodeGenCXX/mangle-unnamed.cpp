@@ -43,7 +43,7 @@ int f5() {
   static union {
     int a;
   };
-  
+
   // CHECK: _ZZ2f5vE1a
   return a;
 }
@@ -56,7 +56,7 @@ int f6() {
     };
     int b;
   };
-  
+
   // CXX98: _ZZ2f6vE1b
   return b;
 }
@@ -68,7 +68,7 @@ int f7() {
       int b;
     } a;
   };
-  
+
   // CHECK: _ZZ2f7vE1a
   return a.b;
 }

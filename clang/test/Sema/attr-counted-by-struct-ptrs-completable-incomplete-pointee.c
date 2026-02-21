@@ -17,7 +17,7 @@
 // expected-note@+1 24{{forward declaration of 'struct IncompleteTy'}}
 struct IncompleteTy; // expected-note 27{{consider providing a complete definition for 'struct IncompleteTy'}}
 
-typedef struct IncompleteTy Incomplete_t; 
+typedef struct IncompleteTy Incomplete_t;
 
 struct CBBufDeclPos {
   int count;
@@ -75,7 +75,7 @@ void test_CBBufDeclPos(struct CBBufDeclPos* ptr) {
   void* tmp3 = implicit_full_init.buf;
   // expected-error@+1{{cannot use 'implicit_full_init.buf_typedef' with '__counted_by' attributed type 'Incomplete_t * __counted_by(count)' (aka 'struct IncompleteTy *') because the pointee type 'Incomplete_t' (aka 'struct IncompleteTy') is incomplete}}
   void* tmp4 = implicit_full_init.buf_typedef;
-  
+
   struct CBBufDeclPos explicit_non_desig_init = {
     0,
     // expected-error@+1{{cannot initialize 'CBBufDeclPos::buf' with '__counted_by' attributed type 'struct IncompleteTy * __counted_by(count)' (aka 'struct IncompleteTy *') because the pointee type 'struct IncompleteTy' is incomplete}}
@@ -113,7 +113,7 @@ void test_CBBufDeclPos(struct CBBufDeclPos* ptr) {
   uninit.buf_typedef++; // // expected-error{{arithmetic on a pointer to an incomplete type 'Incomplete_t' (aka 'struct IncompleteTy')}}
   ++uninit.buf_typedef; // expected-error{{arithmetic on a pointer to an incomplete type 'Incomplete_t' (aka 'struct IncompleteTy')}}
   uninit.buf_typedef -= 1; // expected-error{{arithmetic on a pointer to an incomplete type 'Incomplete_t' (aka 'struct IncompleteTy')}}
-  
+
   uninit.buf--; // expected-error{{arithmetic on a pointer to an incomplete type 'struct IncompleteTy'}}
   --uninit.buf; // expected-error{{arithmetic on a pointer to an incomplete type 'struct IncompleteTy'}}
   uninit.buf -= 1; // expected-error{{arithmetic on a pointer to an incomplete type 'struct IncompleteTy'}}
@@ -139,16 +139,16 @@ void test_CBBufDeclPos(struct CBBufDeclPos* ptr) {
   // ## Use of fields in expressions
   // ===========================================================================
   // expected-error@+2{{cannot use 'uninit.buf' with '__counted_by' attributed type 'struct IncompleteTy * __counted_by(count)' (aka 'struct IncompleteTy *') because the pointee type 'struct IncompleteTy' is incomplete}}
-  void* addr = 
+  void* addr =
     ((char*) uninit.buf ) + 1;
   // expected-error@+2{{cannot use 'uninit.buf_typedef' with '__counted_by' attributed type 'Incomplete_t * __counted_by(count)' (aka 'struct IncompleteTy *') because the pointee type 'Incomplete_t' (aka 'struct IncompleteTy') is incomplete}}
-  void* addr_typedef = 
+  void* addr_typedef =
     ((char*) uninit.buf_typedef ) + 1;
   // expected-error@+2{{cannot use 'ptr->buf' with '__counted_by' attributed type 'struct IncompleteTy * __counted_by(count)' (aka 'struct IncompleteTy *') because the pointee type 'struct IncompleteTy' is incomplete}}
-  void* addr_ptr = 
+  void* addr_ptr =
     ((char*) ptr->buf ) + 1;
   // expected-error@+2{{cannot use 'ptr->buf_typedef' with '__counted_by' attributed type 'Incomplete_t * __counted_by(count)' (aka 'struct IncompleteTy *') because the pointee type 'Incomplete_t' (aka 'struct IncompleteTy') is incomplete}}
-  void* addr_ptr_typedef = 
+  void* addr_ptr_typedef =
     ((char*) ptr->buf_typedef ) + 1;
 
 
@@ -289,7 +289,7 @@ void test_CBBufDeclPos_completed(struct CBBufDeclPos* ptr) {
   };
 
   struct CBBufDeclPos implicit_full_init = {0};
-  
+
   struct CBBufDeclPos explicit_non_desig_init = {
     0,
     0x0,
@@ -384,10 +384,10 @@ void use_CBBufTyPos(struct CBBufTyPos* ptr) {
 
   // Use
   // expected-error@+2{{cannot use 'ptr->buf' with '__counted_by' attributed type 'struct IncompleteTy2 * __counted_by(count)' (aka 'struct IncompleteTy2 *') because the pointee type 'struct IncompleteTy2' is incomplete}}
-  void* addr = 
+  void* addr =
     ((char*) ptr->buf ) + 1;
   // expected-error@+2{{cannot use 'ptr->buf_typedef' with '__counted_by' attributed type 'Incomplete_ty2 * __counted_by(count)' (aka 'struct IncompleteTy2 *') because the pointee type 'Incomplete_ty2' (aka 'struct IncompleteTy2') is incomplete}}
-  void* addr_typedef = 
+  void* addr_typedef =
     ((char*) ptr->buf_typedef ) + 1;
 
   // expected-error@+1{{cannot use 'ptr->buf' with '__counted_by' attributed type 'struct IncompleteTy2 * __counted_by(count)' (aka 'struct IncompleteTy2 *') because the pointee type 'struct IncompleteTy2' is incomplete}}
@@ -458,10 +458,10 @@ void use_CBBufUnionTyPos(struct CBBufUnionTyPos* ptr) {
 
   // Use
   // expected-error@+2{{cannot use 'ptr->buf' with '__counted_by' attributed type 'union IncompleteUnionTy * __counted_by(count)' (aka 'union IncompleteUnionTy *') because the pointee type 'union IncompleteUnionTy' is incomplete}}
-  void* addr = 
+  void* addr =
     ((char*) ptr->buf ) + 1;
   // expected-error@+2{{cannot use 'ptr->buf_typedef' with '__counted_by' attributed type 'IncompleteUnion_ty * __counted_by(count)' (aka 'union IncompleteUnionTy *') because the pointee type 'IncompleteUnion_ty' (aka 'union IncompleteUnionTy') is incomplete}}
-  void* addr_typedef = 
+  void* addr_typedef =
     ((char*) ptr->buf_typedef ) + 1;
 
   // expected-error@+1{{cannot use 'ptr->buf' with '__counted_by' attributed type 'union IncompleteUnionTy * __counted_by(count)' (aka 'union IncompleteUnionTy *') because the pointee type 'union IncompleteUnionTy' is incomplete}}
@@ -532,10 +532,10 @@ void use_CBBufEnumTyPos(struct CBBufEnumTyPos* ptr) {
 
   // Use
   // expected-error@+2{{cannot use 'ptr->buf' with '__counted_by' attributed type 'enum IncompleteEnumTy * __counted_by(count)' (aka 'enum IncompleteEnumTy *') because the pointee type 'enum IncompleteEnumTy' is incomplete}}
-  void* addr = 
+  void* addr =
     ((char*) ptr->buf ) + 1;
   // expected-error@+2{{cannot use 'ptr->buf_typedef' with '__counted_by' attributed type 'IncompleteEnum_ty * __counted_by(count)' (aka 'enum IncompleteEnumTy *') because the pointee type 'IncompleteEnum_ty' (aka 'enum IncompleteEnumTy') is incomplete}}
-  void* addr_typedef = 
+  void* addr_typedef =
     ((char*) ptr->buf_typedef ) + 1;
 
   // expected-error@+1{{cannot use 'ptr->buf' with '__counted_by' attributed type 'enum IncompleteEnumTy * __counted_by(count)' (aka 'enum IncompleteEnumTy *') because the pointee type 'enum IncompleteEnumTy' is incomplete}}

@@ -23,7 +23,7 @@ struct S1; // expected-note {{declared here}} expected-note 2 {{forward declarat
 extern S1 a;
 class S2 {
   mutable int a;
-  
+
 public:
   S2() : a(0) {}
   S2(const S2 &s2) : a(s2.a) {}
@@ -36,7 +36,7 @@ const S2 ba[5];
 class S3 {
   int a;
   S3 &operator=(const S3 &s3);
-  
+
 public:
   S3() : a(0) {} // expected-note 2 {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
   S3(S3 &s3) : a(s3.a) {} // expected-note 2 {{candidate constructor not viable: 1st argument ('const S3') would lose const qualifier}}
@@ -141,7 +141,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 
 #pragma omp target
-#pragma omp teams distribute parallel for simd private(i), firstprivate(i) // expected-error {{private variable cannot be firstprivate}} omp4-note 2 {{defined as private}} omp5-note {{defined as private}} 
+#pragma omp teams distribute parallel for simd private(i), firstprivate(i) // expected-error {{private variable cannot be firstprivate}} omp4-note 2 {{defined as private}} omp5-note {{defined as private}}
   for (i = 0; i < argc; ++i) foo(); // omp4-error {{loop iteration variable in the associated loop of 'omp teams distribute parallel for simd' directive may not be private, predetermined as linear}}
 
 #pragma omp target

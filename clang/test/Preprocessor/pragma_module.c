@@ -22,7 +22,7 @@
   #error X should be defined here
   #endif
  #pragma clang module end
- 
+
  #ifndef X
  #error X should still be defined
  #endif

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-struct A { 
+struct A {
   int a;  // expected-note 4{{member found by ambiguous name lookup}}
   static int b;
   static int c; // expected-note 2{{member found by ambiguous name lookup}}
@@ -81,12 +81,12 @@ struct C2 : virtual A {
   enum E3 { enumerator3_2 }; // expected-note 2{{member type 'C2::E3' found by ambiguous name lookup}}
 };
 
-struct D2 : B2, C2 { 
+struct D2 : B2, C2 {
   void test_virtual_lookup();
 };
 
 struct F : A { };
-struct G : F, D2 { 
+struct G : F, D2 {
   void test_virtual_lookup();
 };
 
@@ -139,7 +139,7 @@ struct HasMemberType2 {
   struct type { }; // expected-note{{member type 'HasMemberType2::type' found by ambiguous name lookup}}
 };
 
-struct HasAnotherMemberType : HasMemberType1, HasMemberType2 { 
+struct HasAnotherMemberType : HasMemberType1, HasMemberType2 {
   struct type { };
 };
 
@@ -151,7 +151,7 @@ struct X0 {
   struct Inner {
     static const int m;
   };
-  
+
   static const int n = 17;
 };
 

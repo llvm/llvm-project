@@ -94,17 +94,17 @@ void test19(void) {
   // LLVM: store i32 8
   // OGCG: store i32 8
   gi = __builtin_object_size(&foo.a, 0);
-  
+
   // CIR: cir.const #cir.int<4>
   // LLVM: store i32 4
   // OGCG: store i32 4
   gi = __builtin_object_size(&foo.a, 1);
-  
+
   // CIR: cir.const #cir.int<8>
   // LLVM: store i32 8
   // OGCG: store i32 8
   gi = __builtin_object_size(&foo.a, 2);
-  
+
   // CIR: cir.const #cir.int<4>
   // LLVM: store i32 4
   // OGCG: store i32 4
@@ -114,17 +114,17 @@ void test19(void) {
   // LLVM: store i32 4
   // OGCG: store i32 4
   gi = __builtin_object_size(&foo.b, 0);
-  
+
   // CIR: cir.const #cir.int<4>
   // LLVM: store i32 4
   // OGCG: store i32 4
   gi = __builtin_object_size(&foo.b, 1);
-  
+
   // CIR: cir.const #cir.int<4>
   // LLVM: store i32 4
   // OGCG: store i32 4
   gi = __builtin_object_size(&foo.b, 2);
-  
+
   // CIR: cir.const #cir.int<4>
   // LLVM: store i32 4
   // OGCG: store i32 4
@@ -141,17 +141,17 @@ void test20(void) {
   // LLVM: store i32 380
   // OGCG: store i32 380
   gi = __builtin_object_size(&t[0].t[5], 0);
-  
+
   // CIR: cir.const #cir.int<20>
   // LLVM: store i32 20
   // OGCG: store i32 20
   gi = __builtin_object_size(&t[0].t[5], 1);
-  
+
   // CIR: cir.const #cir.int<380>
   // LLVM: store i32 380
   // OGCG: store i32 380
   gi = __builtin_object_size(&t[0].t[5], 2);
-  
+
   // CIR: cir.const #cir.int<20>
   // LLVM: store i32 20
   // OGCG: store i32 20
@@ -168,17 +168,17 @@ void test21(void) {
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size(&t + 1, 0);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size(&t + 1, 1);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size(&t + 1, 2);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
@@ -188,17 +188,17 @@ void test21(void) {
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size(&t.t + 1, 0);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size(&t.t + 1, 1);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size(&t.t + 1, 2);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
@@ -215,17 +215,17 @@ void test22(void) {
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size(&t[10], 0);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size(&t[10], 1);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size(&t[10], 2);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
@@ -235,17 +235,17 @@ void test22(void) {
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size(&t[9].t[10], 0);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size(&t[9].t[10], 1);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size(&t[9].t[10], 2);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
@@ -255,17 +255,17 @@ void test22(void) {
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size((char*)&t[0] + sizeof(t), 0);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size((char*)&t[0] + sizeof(t), 1);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size((char*)&t[0] + sizeof(t), 2);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
@@ -275,17 +275,17 @@ void test22(void) {
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size((char*)&t[9].t[0] + 10*sizeof(t[0].t), 0);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size((char*)&t[9].t[0] + 10*sizeof(t[0].t), 1);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
   gi = __builtin_object_size((char*)&t[9].t[0] + 10*sizeof(t[0].t), 2);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
@@ -302,17 +302,17 @@ void test23(struct Test23Ty *p) {
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(p, 0);
-  
+
   // CIR: cir.objsize max nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(p, 1);
-  
+
   // CIR: cir.objsize min nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = __builtin_object_size(p, 2);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
@@ -322,17 +322,17 @@ void test23(struct Test23Ty *p) {
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(&p->a, 0);
-  
+
   // CIR: cir.const #cir.int<4>
   // LLVM: store i32 4
   // OGCG: store i32 4
   gi = __builtin_object_size(&p->a, 1);
-  
+
   // CIR: cir.objsize min nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = __builtin_object_size(&p->a, 2);
-  
+
   // CIR: cir.const #cir.int<4>
   // LLVM: store i32 4
   // OGCG: store i32 4
@@ -342,17 +342,17 @@ void test23(struct Test23Ty *p) {
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(&p->t[5], 0);
-  
+
   // CIR: cir.objsize max nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(&p->t[5], 1);
-  
+
   // CIR: cir.objsize min nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = __builtin_object_size(&p->t[5], 2);
-  
+
   // CIR: cir.const #cir.int<20>
   // LLVM: store i32 20
   // OGCG: store i32 20
@@ -367,17 +367,17 @@ void test24(void) {
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size((void*)0, 0);
-  
+
   // CIR: cir.objsize max nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size((void*)0, 1);
-  
+
   // CIR: cir.objsize min nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 true, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 true, i1 true, i1
   gi = __builtin_object_size((void*)0, 2);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
@@ -392,17 +392,17 @@ void test25(void) {
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size((void*)0x1000, 0);
-  
+
   // CIR: cir.objsize max nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size((void*)0x1000, 1);
-  
+
   // CIR: cir.objsize min nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 true, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 true, i1 true, i1
   gi = __builtin_object_size((void*)0x1000, 2);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
@@ -421,17 +421,17 @@ void test26(void) {
   // LLVM: store i32 316
   // OGCG: store i32 316
   gi = __builtin_object_size(&t[1].v[11], 0);
-  
+
   // CIR: cir.const #cir.int<312>
   // LLVM: store i32 312
   // OGCG: store i32 312
   gi = __builtin_object_size(&t[1].v[12], 1);
-  
+
   // CIR: cir.const #cir.int<308>
   // LLVM: store i32 308
   // OGCG: store i32 308
   gi = __builtin_object_size(&t[1].v[13], 2);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
@@ -448,17 +448,17 @@ void test27(struct Test27IncompleteTy *t) {
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(t, 0);
-  
+
   // CIR: cir.objsize max nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(t, 1);
-  
+
   // CIR: cir.objsize min nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = __builtin_object_size(t, 2);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
@@ -468,17 +468,17 @@ void test27(struct Test27IncompleteTy *t) {
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(&test27, 0);
-  
+
   // CIR: cir.objsize max nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(&test27, 1);
-  
+
   // CIR: cir.objsize min nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 true, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr {{.*}}, i1 true, i1 true, i1
   gi = __builtin_object_size(&test27, 2);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
@@ -495,17 +495,17 @@ void test28(void) {
   // LLVM: store i32 360
   // OGCG: store i32 360
   gi = __builtin_object_size((char*)((short*)(&t[1])), 0);
-  
+
   // CIR: cir.const #cir.int<360>
   // LLVM: store i32 360
   // OGCG: store i32 360
   gi = __builtin_object_size((char*)((short*)(&t[1])), 1);
-  
+
   // CIR: cir.const #cir.int<360>
   // LLVM: store i32 360
   // OGCG: store i32 360
   gi = __builtin_object_size((char*)((short*)(&t[1])), 2);
-  
+
   // CIR: cir.const #cir.int<360>
   // LLVM: store i32 360
   // OGCG: store i32 360
@@ -515,17 +515,17 @@ void test28(void) {
   // LLVM: store i32 356
   // OGCG: store i32 356
   gi = __builtin_object_size((char*)((short*)(&t[1].v[1])), 0);
-  
+
   // CIR: cir.const #cir.int<36>
   // LLVM: store i32 36
   // OGCG: store i32 36
   gi = __builtin_object_size((char*)((short*)(&t[1].v[1])), 1);
-  
+
   // CIR: cir.const #cir.int<356>
   // LLVM: store i32 356
   // OGCG: store i32 356
   gi = __builtin_object_size((char*)((short*)(&t[1].v[1])), 2);
-  
+
   // CIR: cir.const #cir.int<36>
   // LLVM: store i32 36
   // OGCG: store i32 36
@@ -561,17 +561,17 @@ void test29(struct DynStructVar *dv, struct DynStruct0 *d0,
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(dv->snd, 0);
-  
+
   // CIR: cir.objsize max nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(dv->snd, 1);
-  
+
   // CIR: cir.objsize min nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = __builtin_object_size(dv->snd, 2);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
@@ -581,17 +581,17 @@ void test29(struct DynStructVar *dv, struct DynStruct0 *d0,
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(d0->snd, 0);
-  
+
   // CIR: cir.objsize max nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(d0->snd, 1);
-  
+
   // CIR: cir.objsize min nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = __builtin_object_size(d0->snd, 2);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
@@ -601,17 +601,17 @@ void test29(struct DynStructVar *dv, struct DynStruct0 *d0,
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(d1->snd, 0);
-  
+
   // CIR: cir.objsize max nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(d1->snd, 1);
-  
+
   // CIR: cir.objsize min nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = __builtin_object_size(d1->snd, 2);
-  
+
   // CIR: cir.const #cir.int<1>
   // LLVM: store i32 1
   // OGCG: store i32 1
@@ -621,17 +621,17 @@ void test29(struct DynStructVar *dv, struct DynStruct0 *d0,
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(ss->snd, 0);
-  
+
   // CIR: cir.objsize max nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(ss->snd, 1);
-  
+
   // CIR: cir.objsize min nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = __builtin_object_size(ss->snd, 2);
-  
+
   // CIR: cir.const #cir.int<2>
   // LLVM: store i32 2
   // OGCG: store i32 2
@@ -648,17 +648,17 @@ void test30(void) {
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(nested->fst.snd, 0);
-  
+
   // CIR: cir.const #cir.int<1>
   // LLVM: store i32 1
   // OGCG: store i32 1
   gi = __builtin_object_size(nested->fst.snd, 1);
-  
+
   // CIR: cir.objsize min nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = __builtin_object_size(nested->fst.snd, 2);
-  
+
   // CIR: cir.const #cir.int<1>
   // LLVM: store i32 1
   // OGCG: store i32 1
@@ -668,39 +668,39 @@ void test30(void) {
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(nested->snd.snd, 0);
-  
+
   // CIR: cir.objsize max nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(nested->snd.snd, 1);
-  
+
   // CIR: cir.objsize min nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = __builtin_object_size(nested->snd.snd, 2);
-  
+
   // CIR: cir.const #cir.int<1>
   // LLVM: store i32 1
   // OGCG: store i32 1
   gi = __builtin_object_size(nested->snd.snd, 3);
 
   union { struct DynStruct1 d1; char c[1]; } *u;
-  
+
   // CIR: cir.objsize max nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(u->c, 0);
-  
+
   // CIR: cir.objsize max nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(u->c, 1);
-  
+
   // CIR: cir.objsize min nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = __builtin_object_size(u->c, 2);
-  
+
   // CIR: cir.const #cir.int<1>
   // LLVM: store i32 1
   // OGCG: store i32 1
@@ -710,17 +710,17 @@ void test30(void) {
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(u->d1.snd, 0);
-  
+
   // CIR: cir.objsize max nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(u->d1.snd, 1);
-  
+
   // CIR: cir.objsize min nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = __builtin_object_size(u->d1.snd, 2);
-  
+
   // CIR: cir.const #cir.int<1>
   // LLVM: store i32 1
   // OGCG: store i32 1
@@ -801,22 +801,22 @@ void PR30346(void) {
   };
 
   struct sockaddr *sa;
-  
+
   // CIR: cir.objsize max nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(sa->sa_data, 0);
-  
+
   // CIR: cir.objsize max nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1
   gi = __builtin_object_size(sa->sa_data, 1);
-  
+
   // CIR: cir.objsize min nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   // OGCG: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 true, i1 true, i1
   gi = __builtin_object_size(sa->sa_data, 2);
-  
+
   // CIR: cir.const #cir.int<14>
   // LLVM: store i32 14
   // OGCG: store i32 14
@@ -833,17 +833,17 @@ void incomplete_and_function_types(void) {
   // LLVM: call i64 @llvm.objectsize.i64.p0
   // OGCG: call i64 @llvm.objectsize.i64.p0
   gi = __builtin_object_size(incomplete_char_array, 0);
-  
+
   // CIR: cir.objsize max nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0
   // OGCG: call i64 @llvm.objectsize.i64.p0
   gi = __builtin_object_size(incomplete_char_array, 1);
-  
+
   // CIR: cir.objsize min nullunknown {{.*}} : !cir.ptr<!void> -> !u64i
   // LLVM: call i64 @llvm.objectsize.i64.p0
   // OGCG: call i64 @llvm.objectsize.i64.p0
   gi = __builtin_object_size(incomplete_char_array, 2);
-  
+
   // CIR: cir.const #cir.int<0>
   // LLVM: store i32 0
   // OGCG: store i32 0
@@ -869,7 +869,7 @@ void deeply_nested(void) {
   // LLVM: store i32 4
   // OGCG: store i32 4
   gi = __builtin_object_size(&a->b[1].c[1].d[1].e[1], 1);
-  
+
   // CIR: cir.const #cir.int<4>
   // LLVM: store i32 4
   // OGCG: store i32 4

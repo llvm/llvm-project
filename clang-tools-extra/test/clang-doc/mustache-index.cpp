@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --format=html --doxygen --output=%t --executor=standalone %s 
+// RUN: clang-doc --format=html --doxygen --output=%t --executor=standalone %s
 // RUN: FileCheck %s < %t/html/GlobalNamespace/index.html
 
 enum Color {

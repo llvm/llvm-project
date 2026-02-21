@@ -646,17 +646,17 @@ namespace preferred_name {
 namespace gh169072 {
   template <typename T>
   [[gnu::constructor]] void foo() {}
-  
+
   template void foo<int>();
 
   template <typename T>
   [[gnu::destructor]] void bar() {}
-  
+
   template void bar<int>();
 
   // Also test with explicit priority argument
   template <typename T>
   [[gnu::constructor(101)]] void baz() {}
-  
+
   template void baz<int>();
 }

@@ -6,7 +6,7 @@ namespace test0 {
     static void foo(T &&t) {
       t.foo(); // expected-error {{member reference base type 'int' is not a structure or union}}
     }
-  }; 
+  };
 
   void test() {
     A<int>::foo({}); // expected-note {{requested here}}

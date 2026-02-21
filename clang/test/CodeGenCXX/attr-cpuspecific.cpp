@@ -16,7 +16,7 @@ void foo() {
 
 // LINUX: @_ZN1S4FuncEv = weak_odr alias void (ptr), ptr @_ZN1S4FuncEv.ifunc
 // LINUX: @_ZN1S4FuncEv.ifunc = weak_odr ifunc void (ptr), ptr @_ZN1S4FuncEv.resolver
-// LINUX: define weak_odr ptr @_ZN1S4FuncEv.resolver() #[[ATTR_RESOLVER:[0-9]+]] 
+// LINUX: define weak_odr ptr @_ZN1S4FuncEv.resolver() #[[ATTR_RESOLVER:[0-9]+]]
 // LINUX: ret ptr @_ZN1S4FuncEv.S
 // LINUX: ret ptr @_ZN1S4FuncEv.O
 // LINUX: declare void @_ZN1S4FuncEv.S

@@ -102,7 +102,7 @@ int foo(int x, int y, int z) {
   // COLUMNS: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[DNOARGS:[0-9]+]]
   // COLUMNS: call noundef i32 @{{.*}}onearg{{.*}}, !dbg ![[DONEARG:[0-9]+]]
   // COLUMNS: store i32 %{{[^,]+}}, ptr %d,{{.*}} !dbg ![[DECLD:[0-9]+]]
-  
+
   d = onearg(noargs());
   // NONEST: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[SETD:[0-9]+]]
   // NONEST: call noundef i32 @{{.*}}onearg{{.*}}, !dbg ![[SETD]]

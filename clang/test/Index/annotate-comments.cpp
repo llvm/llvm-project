@@ -225,7 +225,7 @@ void isdoxy50(int);
 // fix it.
 /**
  * Aaa. IS_DOXYGEN_START
- * 
+ *
  * Bbb. IS_DOXYGEN_END
  */
 void isdoxy51(int);
@@ -235,7 +235,7 @@ void isdoxy51(int);
 /**
  * Aaa. IS_DOXYGEN_START
  * Bbb.
- *  
+ *
  * Ccc. IS_DOXYGEN_END
  */
 void isdoxy52(int);

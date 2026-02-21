@@ -28,7 +28,7 @@ T tmain(T argc, S **argv) {
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
   // expected-error@+1 2 {{integral constant expression}} expected-note@+1 0+{{constant expression}}
-  #pragma omp target parallel for simd collapse (argc 
+  #pragma omp target parallel for simd collapse (argc
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   // expected-error@+1 2 {{argument to 'collapse' clause must be a strictly positive integer value}}
   #pragma omp target parallel for simd collapse (ST // expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -72,14 +72,14 @@ int main(int argc, char **argv) {
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4]; // expected-error {{expected 4 for loops after '#pragma omp target parallel for simd', but found only 1}}
 #if __cplusplus >= 201103L
 
-#endif 
+#endif
   #pragma omp target parallel for simd collapse (foobool(1) > 0 ? 1 : 2) // expected-error {{integral constant expression}} expected-note 0+{{constant expression}}
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
 
   // expected-error@+3 {{integral constant expression}} expected-note@+3 0+{{constant expression}}
   // expected-error@+2 2 {{directive '#pragma omp target parallel for simd' cannot contain more than one 'collapse' clause}}
   // expected-error@+1 {{argument to 'collapse' clause must be a strictly positive integer value}}
-  #pragma omp target parallel for simd collapse (foobool(argc)), collapse (true), collapse (-5) 
+  #pragma omp target parallel for simd collapse (foobool(argc)), collapse (true), collapse (-5)
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
   #pragma omp target parallel for simd collapse (S1) // expected-error {{'S1' does not refer to a value}}
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];

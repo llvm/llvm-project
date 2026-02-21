@@ -14,16 +14,16 @@
 #endif
 
 // CHECK: Type: struct X0
-struct X0 { 
-  int x[6] PACKED; 
+struct X0 {
+  int x[6] PACKED;
 };
 
 void use_X0(void) { struct X0 x0; x0.x[5] = sizeof(struct X0); };
 
 // CHECK: Type: struct X1
-struct X1 { 
-  char x[13]; 
-  struct X0 y; 
+struct X1 {
+  char x[13];
+  struct X0 y;
 } PACKED;
 
 void use_X1(void) { struct X1 x1; x1.x[5] = sizeof(struct X1); };

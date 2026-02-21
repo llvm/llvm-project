@@ -91,5 +91,5 @@ struct CrazyFun {
 
 void fun(CrazyFun cf) {
   A<int, float> aif = cf;
-  A<int, int> aii = cf;  
+  A<int, int> aii = cf;
 }

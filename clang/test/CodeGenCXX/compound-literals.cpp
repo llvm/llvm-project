@@ -7,7 +7,7 @@ struct X {
   ~X();
 };
 
-struct Y { 
+struct Y {
   int i;
   X x;
 };

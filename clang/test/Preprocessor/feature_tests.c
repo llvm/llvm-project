@@ -106,19 +106,19 @@ _Static_assert(__is_identifier /* comment */ (xyz), "oops");
 #if __is_identifier(,())
 #endif
 
-// expected-error@+1 {{missing ')' after 'abc'}} 
+// expected-error@+1 {{missing ')' after 'abc'}}
 #if __is_identifier(abc xyz) // expected-note {{to match this '('}}
 #endif
 
-// expected-error@+1 {{missing ')' after 'abc'}} 
+// expected-error@+1 {{missing ')' after 'abc'}}
 #if __is_identifier(abc())   // expected-note {{to match this '('}}
 #endif
 
-// expected-error@+1 {{missing ')' after '.'}} 
+// expected-error@+1 {{missing ')' after '.'}}
 #if __is_identifier(.abc)    // expected-note {{to match this '('}}
 #endif
 
-// expected-error@+1 {{nested parentheses not permitted in '__is_identifier'}} 
+// expected-error@+1 {{nested parentheses not permitted in '__is_identifier'}}
 #if __is_identifier((abc))
 #endif
 

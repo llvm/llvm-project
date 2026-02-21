@@ -25,12 +25,12 @@ namespace {
   class D {
     static int d;
   };
-  
+
   int D::d = f();
 
   // Check for generation of a VTT with internal linkage
   // CHECK-1: @_ZTSN12_GLOBAL__N_11X1EE = internal constant
-  struct X { 
+  struct X {
     struct EBase { };
     struct E : public virtual EBase { virtual ~E() {} };
   };

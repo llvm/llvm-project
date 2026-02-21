@@ -21,7 +21,7 @@ int c = 'df';  // expected-warning{{multi-character character constant}}
 void ppo0(void){} // first verify that we do not give anything on this
 #pragma clang diagnostic push // now push
 
-#pragma clang diagnostic warning "-Weverything" 
+#pragma clang diagnostic warning "-Weverything"
 void ppr1(void){} // expected-warning {{no previous prototype for function 'ppr1'}}
 // expected-note@-1{{declare 'static' if the function is not intended to be used outside of this translation unit}}
 

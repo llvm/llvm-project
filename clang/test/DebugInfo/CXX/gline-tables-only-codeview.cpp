@@ -8,7 +8,7 @@ struct C {
   void m() {}
   // Test externally visible lambda.
   void lambda2() { []() {}(); }
- 
+
   // Test naming for function parameters.
   void lambda_params(int x = [](){ return 0; }(), int y = [](){ return 1; }()) {}
 };

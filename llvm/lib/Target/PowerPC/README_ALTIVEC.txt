@@ -5,7 +5,7 @@ registers, to generate better spill code.
 
 //===----------------------------------------------------------------------===//
 
-The first should be a single lvx from the constant pool, the second should be 
+The first should be a single lvx from the constant pool, the second should be
 a xor/stvx:
 
 void foo(void) {
@@ -33,7 +33,7 @@ When -ffast-math is on, we can use 0.0.
   v4f32 Vector;
   v4f32 Vector2 = { Vector.X, Vector.X, Vector.X, Vector.X };
 
-Since we know that "Vector" is 16-byte aligned and we know the element offset 
+Since we know that "Vector" is 16-byte aligned and we know the element offset
 of ".X", we should change the load into a lve*x instruction, instead of doing
 a load/store/lve*x sequence.
 
@@ -60,7 +60,7 @@ in memory this is a big win.
 
 //===----------------------------------------------------------------------===//
 
-extract_vector_elt of an arbitrary constant vector can be done with the 
+extract_vector_elt of an arbitrary constant vector can be done with the
 following instructions:
 
 vTemp = vec_splat(v0,2);    // 2 is the element the src is in.
@@ -106,7 +106,7 @@ vcmpeqfp. result is used by a branch.  This can be improved.
 The code generated for this is truly aweful:
 
 vector float test(float a, float b) {
- return (vector float){ 0.0, a, 0.0, 0.0}; 
+ return (vector float){ 0.0, a, 0.0, 0.0};
 }
 
 LCPI1_0:                                        ;  float
@@ -135,7 +135,7 @@ _test:
 //===----------------------------------------------------------------------===//
 
 int foo(vector float *x, vector float *y) {
-        if (vec_all_eq(*x,*y)) return 3245; 
+        if (vec_all_eq(*x,*y)) return 3245;
         else return 12;
 }
 
@@ -173,7 +173,7 @@ which prevents the vnot pattern from matching.
 
 //===----------------------------------------------------------------------===//
 
-An alternative to the store/store/load approach for illegal insert element 
+An alternative to the store/store/load approach for illegal insert element
 lowering would be:
 
 1. store element to any ol' slot
@@ -197,11 +197,11 @@ Should codegen branches on vec_any/vec_all to avoid mfcr.  Two examples:
   return aa;
 }
 
-vector float f(vector float a, vector float b) { 
-  if (vec_any_eq(a, b)) 
-    return a; 
-  else 
-    return b; 
+vector float f(vector float a, vector float b) {
+  if (vec_any_eq(a, b))
+    return a;
+  else
+    return b;
 }
 
 //===----------------------------------------------------------------------===//
@@ -269,7 +269,7 @@ This will generate the following instruction sequence:
         vaddudm 2, 2, 3
         blr
 
-This will almost certainly cause a load-hit-store hazard.  
+This will almost certainly cause a load-hit-store hazard.
 Since val is a value parameter, it should not need to be saved onto
 the stack, unless it's being done set up the vector register. Instead,
 it would be better to splat the value into a vector register, and then
@@ -280,7 +280,7 @@ remove the (dead) stores to the stack.
 At the moment we always generate a lxsdx in preference to lfd, or stxsdx in
 preference to stfd.  When we have a reg-immediate addressing mode, this is a
 poor choice, since we have to load the address into an index register.  This
-should be fixed for P7/P8. 
+should be fixed for P7/P8.
 
 //===----------------------------------------------------------------------===//
 

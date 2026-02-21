@@ -131,7 +131,7 @@ TEST(ExprEngineVisitTest, checkLocationAndBind) {
     public:
       int Value;
     };
-    extern MyClass MyClassWrite, MyClassRead; 
+    extern MyClass MyClassWrite, MyClassRead;
     void top() {
       MyClassWrite = MyClassRead;
     }

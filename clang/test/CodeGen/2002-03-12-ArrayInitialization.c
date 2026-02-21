@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm %s  -o /dev/null
 
-/* GCC would generate bad code if not enough initializers are 
+/* GCC would generate bad code if not enough initializers are
    specified for an array.
  */
 

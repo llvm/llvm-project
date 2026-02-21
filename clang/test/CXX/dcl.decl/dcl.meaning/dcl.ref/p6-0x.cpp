@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
 
-template<typename T, typename U> 
+template<typename T, typename U>
 struct is_same {
   static const bool value = false;
 };
@@ -14,8 +14,8 @@ struct is_same<T, T> {
 #define CHECK_EQUAL_TYPES(T1, T2) \
   int JOIN(array,__LINE__)[is_same<T1, T2>::value? 1 : -1]
 
-int i; 
-typedef int& LRI; 
+int i;
+typedef int& LRI;
 typedef int&& RRI;
 
 typedef LRI& r1; CHECK_EQUAL_TYPES(r1, int&);

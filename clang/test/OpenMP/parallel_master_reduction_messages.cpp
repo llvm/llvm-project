@@ -345,7 +345,7 @@ int main(int argc, char **argv) {
   {
     foo();
   }
-#pragma omp parallel master reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}} omp52-warning {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}} 
+#pragma omp parallel master reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}} omp52-warning {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   {
     foo();
   }

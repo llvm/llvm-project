@@ -1,6 +1,6 @@
 @import templates_top;
 
-template<typename T> class Vector { 
+template<typename T> class Vector {
 public:
   void push_back(const T&);
 };

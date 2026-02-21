@@ -29,7 +29,7 @@ void f(void)
 
 // Don't issue FIXIT for flexible arrays.
 struct S {
-  int y; 
+  int y;
   char x[];
 };
 

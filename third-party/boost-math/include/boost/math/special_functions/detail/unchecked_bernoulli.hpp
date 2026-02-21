@@ -20,8 +20,8 @@
 #include <boost/math/constants/constants.hpp>
 #include <boost/math/special_functions/math_fwd.hpp>
 
-namespace boost { namespace math { 
-   
+namespace boost { namespace math {
+
 namespace detail {
 
 template <unsigned N>
@@ -57,7 +57,7 @@ struct max_bernoulli_index<4>
 template <class T>
 struct bernoulli_imp_variant
 {
-   static constexpr unsigned value = 
+   static constexpr unsigned value =
       (std::numeric_limits<T>::max_exponent == 128)
       && (std::numeric_limits<T>::radix == 2)
       && (std::numeric_limits<T>::digits <= std::numeric_limits<float>::digits)

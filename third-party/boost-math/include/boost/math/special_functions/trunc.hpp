@@ -132,7 +132,7 @@ BOOST_MATH_GPU_ENABLED inline int itrunc(const T& v, const Policy& pol)
                 )
    {
       constexpr result_type max_val = boost::math::ccmath::ldexp(static_cast<result_type>(1), std::numeric_limits<int>::digits);
-      
+
       if (r >= max_val || r < -max_val)
       {
          return static_cast<int>(boost::math::policies::raise_rounding_error("boost::math::itrunc<%1%>(%1%)", nullptr, v, static_cast<int>(0), pol));
@@ -141,7 +141,7 @@ BOOST_MATH_GPU_ENABLED inline int itrunc(const T& v, const Policy& pol)
    else
    {
       static const result_type max_val = ldexp(static_cast<result_type>(1), std::numeric_limits<int>::digits);
-   
+
       if (r >= max_val || r < -max_val)
       {
          return static_cast<int>(boost::math::policies::raise_rounding_error("boost::math::itrunc<%1%>(%1%)", nullptr, v, static_cast<int>(0), pol));
@@ -180,7 +180,7 @@ BOOST_MATH_GPU_ENABLED inline long ltrunc(const T& v, const Policy& pol)
                 )
    {
       constexpr result_type max_val = boost::math::ccmath::ldexp(static_cast<result_type>(1), std::numeric_limits<long>::digits);
-      
+
       if (r >= max_val || r < -max_val)
       {
          return static_cast<long>(boost::math::policies::raise_rounding_error("boost::math::ltrunc<%1%>(%1%)", nullptr, v, static_cast<long>(0), pol));
@@ -189,7 +189,7 @@ BOOST_MATH_GPU_ENABLED inline long ltrunc(const T& v, const Policy& pol)
    else
    {
       static const result_type max_val = ldexp(static_cast<result_type>(1), std::numeric_limits<long>::digits);
-   
+
       if (r >= max_val || r < -max_val)
       {
          return static_cast<long>(boost::math::policies::raise_rounding_error("boost::math::ltrunc<%1%>(%1%)", nullptr, v, static_cast<long>(0), pol));
@@ -228,7 +228,7 @@ BOOST_MATH_GPU_ENABLED inline long long lltrunc(const T& v, const Policy& pol)
                 )
    {
       constexpr result_type max_val = boost::math::ccmath::ldexp(static_cast<result_type>(1), std::numeric_limits<long long>::digits);
-      
+
       if (r >= max_val || r < -max_val)
       {
          return static_cast<long long>(boost::math::policies::raise_rounding_error("boost::math::lltrunc<%1%>(%1%)", nullptr, v, static_cast<long long>(0), pol));
@@ -237,7 +237,7 @@ BOOST_MATH_GPU_ENABLED inline long long lltrunc(const T& v, const Policy& pol)
    else
    {
       static const result_type max_val = ldexp(static_cast<result_type>(1), std::numeric_limits<long long>::digits);
-   
+
       if (r >= max_val || r < -max_val)
       {
          return static_cast<long long>(boost::math::policies::raise_rounding_error("boost::math::lltrunc<%1%>(%1%)", nullptr, v, static_cast<long long>(0), pol));

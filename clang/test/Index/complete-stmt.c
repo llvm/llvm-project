@@ -4,7 +4,7 @@
 typedef int Integer;
 void f(int x) {
   if (x) {
-  } 
+  }
 }
 
 // RUN: env CINDEXTEST_CODE_COMPLETE_PATTERNS=1 c-index-test -code-completion-at=%s:7:4 %s | FileCheck -check-prefix=CHECK-IF-ELSE %s

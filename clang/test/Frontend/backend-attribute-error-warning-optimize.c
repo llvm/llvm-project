@@ -28,5 +28,5 @@ void cleaner_function(char*);
 
 void asdf(void){
 	[[gnu::cleanup(cleaner_function)]] // expected-error {{call to 'cleaner_function' declared with 'error' attribute: error please}}
-	char x; 
+	char x;
 }

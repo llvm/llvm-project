@@ -107,7 +107,7 @@ void test_short_reference(short& a) {
 }
 // CHECK-LABEL: @_Z20test_short_referenceRs
 // CHECK: store ptr %a, ptr
-// CHECK: load ptr, ptr 
+// CHECK: load ptr, ptr
 // CHECK: load i16, ptr
 // CHECK: call i16 @llvm.bswap.i16
 

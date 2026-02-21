@@ -18,13 +18,13 @@ struct TaggedUnionWithMaxsizeAsCounterPrefix {
     twc1,
     twc2,
     twc3,
-    maxsizetwc,  
+    maxsizetwc,
   } Kind;
   Union4 Data;
 };
 
 // CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
-struct TaggedUnionWithLastAsCounterPrefix { 
+struct TaggedUnionWithLastAsCounterPrefix {
   enum {
     twc11,
     twc22,

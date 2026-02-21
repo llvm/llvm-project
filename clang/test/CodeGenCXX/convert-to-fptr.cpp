@@ -5,27 +5,27 @@
 
 extern "C" int printf(...);
 
-int f1(int arg)  { return arg; }; 
+int f1(int arg)  { return arg; };
 
-int f2(float arg) { return int(arg); }; 
+int f2(float arg) { return int(arg); };
 
-typedef int (*fp1)(int); 
+typedef int (*fp1)(int);
 
-typedef int (*fp2)(float); 
+typedef int (*fp2)(float);
 
 struct A {
   operator fp1() { return f1; }
-  operator fp2() { return f2; } 
+  operator fp2() { return f2; }
 } a;
 
 
 // Test for function reference.
-typedef int (&fr1)(int); 
-typedef int (&fr2)(float); 
+typedef int (&fr1)(int);
+typedef int (&fr2)(float);
 
 struct B {
   operator fr1() { return f1; }
-  operator fr2() { return f2; } 
+  operator fr2() { return f2; }
 } b;
 
 int main()

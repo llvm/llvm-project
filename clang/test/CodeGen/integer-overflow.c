@@ -12,21 +12,21 @@ void test1(void) {
   // WRAPV-LABEL: define{{.*}} void @test1
   // TRAPV-LABEL: define{{.*}} void @test1
   extern volatile int f11G, a, b;
-  
+
   // DEFAULT: add nsw i32
   // WRAPV: add i32
   // TRAPV: llvm.sadd.with.overflow.i32
   // CATCH_UB: llvm.sadd.with.overflow.i32
   // TRAPV_HANDLER: foo(
   f11G = a + b;
-  
+
   // DEFAULT: sub nsw i32
   // WRAPV: sub i32
   // TRAPV: llvm.ssub.with.overflow.i32
   // CATCH_UB: llvm.ssub.with.overflow.i32
   // TRAPV_HANDLER: foo(
   f11G = a - b;
-  
+
   // DEFAULT: mul nsw i32
   // WRAPV: mul i32
   // TRAPV: llvm.smul.with.overflow.i32
@@ -34,29 +34,29 @@ void test1(void) {
   // TRAPV_HANDLER: foo(
   f11G = a * b;
 
-  // DEFAULT: sub nsw i32 0, 
-  // WRAPV: sub i32 0, 
+  // DEFAULT: sub nsw i32 0,
+  // WRAPV: sub i32 0,
   // TRAPV: llvm.ssub.with.overflow.i32(i32 0
   // CATCH_UB: llvm.ssub.with.overflow.i32(i32 0
   // TRAPV_HANDLER: foo(
   f11G = -a;
-  
+
   // PR7426 - Overflow checking for increments.
-  
+
   // DEFAULT: add nsw i32 {{.*}}, 1
   // WRAPV: add i32 {{.*}}, 1
   // TRAPV: llvm.sadd.with.overflow.i32({{.*}}, i32 1)
   // CATCH_UB: llvm.sadd.with.overflow.i32({{.*}}, i32 1)
   // TRAPV_HANDLER: foo(
   ++a;
-  
+
   // DEFAULT: add nsw i32 {{.*}}, -1
   // WRAPV: add i32 {{.*}}, -1
   // TRAPV: llvm.ssub.with.overflow.i32({{.*}}, i32 1)
   // CATCH_UB: llvm.ssub.with.overflow.i32({{.*}}, i32 1)
   // TRAPV_HANDLER: foo(
   --a;
-  
+
   // -fwrapv does not affect inbounds for GEP's.
   // This is controlled by -fwrapv-pointer instead.
   extern int* P;

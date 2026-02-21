@@ -14,7 +14,7 @@ struct SomeOtherData
     char *strptr;
     int intarr[5];
     float flarr[7];
-    
+
     SomeOtherData()
     {
         strcpy(strarr,"Nested Hello world!");
@@ -25,7 +25,7 @@ struct SomeOtherData
         intarr[2] = 7;
         intarr[3] = 6;
         intarr[4] = 5;
-        
+
         flarr[0] = 25.5;
         flarr[1] = 25.25;
         flarr[2] = 25.125;
@@ -43,14 +43,14 @@ int main (int argc, const char * argv[])
     strptr = "Hello world!";
     int intarr[5] = {1,1,2,3,5};
     float flarr[7] = {78.5,77.25,78.0,76.125,76.75,76.875,77.0};
-    
+
     SomeData data;
-    
+
     SomeOtherData other;
-    
+
     float* flptr = flarr;
     int* intptr = intarr;
-    
+
     return 0; // Set break point at this line.
-    
+
 }

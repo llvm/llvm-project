@@ -10,13 +10,13 @@ class X0 {
     (void)[=, &foo] () {};
     (void)[=, this] () {}; // expected-warning {{C++20 extension}}
     (void)[&, foo] () {};
-    (void)[&, &foo] () {}; // expected-error {{'&' cannot precede a capture when}} 
+    (void)[&, &foo] () {}; // expected-error {{'&' cannot precede a capture when}}
     (void)[&, this] () {};
   }
 };
 
-struct S2 { 
-  void f(int i); 
+struct S2 {
+  void f(int i);
   void g(int i);
 };
 

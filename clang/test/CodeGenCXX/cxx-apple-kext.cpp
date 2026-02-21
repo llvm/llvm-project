@@ -9,7 +9,7 @@
 // CHECK-NO-KEXT: call i32 @__cxa_atexit({{.*}} @_ZN3fooD1Ev
 // CHECK-NO-KEXT: declare i32 @__cxa_atexit
 
-// CHECK-KEXT: @_ZTV3foo = 
+// CHECK-KEXT: @_ZTV3foo =
 // CHECK-KEXT-NOT: @_ZTVN10__cxxabiv117
 // CHECK-KEXT-NOT: call i32 @__cxa_atexit({{.*}} @_ZN3fooD1Ev
 // CHECK-KEXT-NOT: declare i32 @__cxa_atexit

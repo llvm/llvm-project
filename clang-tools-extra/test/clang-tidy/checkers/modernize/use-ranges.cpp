@@ -88,7 +88,7 @@ void Positives() {
 void Reverse(){
   std::vector<int> I, J;
   std::vector<std::unique_ptr<int>> K;
-  
+
   // Expect to have no check messages
   std::find(K.rbegin(), K.rend(), nullptr);
 

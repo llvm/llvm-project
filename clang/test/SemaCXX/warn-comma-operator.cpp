@@ -145,7 +145,7 @@ void void_func();
 int int_func() { return 0; }
 
 void void_function_comma(){
-  void_func(), int_func(); // expected no -Wcomma because of the returning type `void` 
+  void_func(), int_func(); // expected no -Wcomma because of the returning type `void`
   // Reported by https://github.com/llvm/llvm-project/issues/57151
   // Descriptions about -Wcomma: https://reviews.llvm.org/D3976
 }

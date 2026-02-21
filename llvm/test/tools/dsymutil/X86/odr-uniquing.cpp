@@ -3,7 +3,7 @@
    cp odr-uniquing/1.o odr-uniquing/2.o
    The aim of these test is to check that all the 'type types' that
    should be uniqued through the ODR really are.
-   
+
    The resulting object file is linked against itself using a fake
    debug map. The end result is:
     - with ODR uniquing: all types (expect for the union for now) in

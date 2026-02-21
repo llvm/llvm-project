@@ -40,8 +40,8 @@ TEST(RecursiveASTVisitor, DeductionGuideNonImplicitMode) {
 template <typename T>
 concept False = true;
 
-template <typename T> 
-struct Foo { 
+template <typename T>
+struct Foo {
   Foo(T);
 };
 
@@ -50,7 +50,7 @@ Foo(T) -> Foo<int>;
 
 template <typename U>
 using Bar = Foo<U>;
-Bar s(1); 
+Bar s(1);
    )cpp",
       DeductionGuideVisitor::Lang_CXX2a));
 }
@@ -64,8 +64,8 @@ TEST(RecursiveASTVisitor, DeductionGuideImplicitMode) {
 template <typename T>
 concept False = true;
 
-template <typename T> 
-struct Foo { 
+template <typename T>
+struct Foo {
   Foo(T);
 };
 
@@ -74,7 +74,7 @@ Foo(T) -> Foo<int>;
 
 template <typename U>
 using Bar = Foo<U>;
-Bar s(1); 
+Bar s(1);
    )cpp",
       DeductionGuideVisitor::Lang_CXX2a));
 }

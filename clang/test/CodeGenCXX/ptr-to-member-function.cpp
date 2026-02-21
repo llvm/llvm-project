@@ -9,7 +9,7 @@ extern "C" int printf(...);
 struct A {
 int Ai;
 bool foo(int* arg) const;
-}; 
+};
 
 bool A::foo(int* arg) const {
     printf("A::foo(%d)\n", *arg);
@@ -18,9 +18,9 @@ bool A::foo(int* arg) const {
 
 struct B : public A {
   void bf() { printf("B::bf called\n"); }
-}; 
+};
 
-struct C : public B { }; 
+struct C : public B { };
 
 // conversion of B::* to C::* is better than conversion of A::* to C::*
 typedef void (A::*pmfa)();
@@ -40,7 +40,7 @@ void g(pmfc pm) {
   (c.*pm)();
 }
 
-void test2(X x) 
+void test2(X x)
 {
     g(x);
 }

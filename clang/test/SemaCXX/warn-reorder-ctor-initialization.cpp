@@ -15,22 +15,22 @@ public:
   int s1;
   int s2;
   int s3;
-}; 
+};
 
 
 // testing virtual bases.
 
 
-struct V { 
+struct V {
   V();
 };
 
-struct A : public virtual V { 
-  A(); 
+struct A : public virtual V {
+  A();
 };
 
 struct B : public virtual V {
-  B(); 
+  B();
 };
 
 struct Diamond : public A, public B {
@@ -38,30 +38,30 @@ struct Diamond : public A, public B {
 };
 
 
-struct C : public A, public B, private virtual V { 
+struct C : public A, public B, private virtual V {
   C() { }
 };
 
 
-struct D : public A, public B { 
+struct D : public A, public B {
   D()  : A(), V() {   } // expected-warning {{base class 'A' will be initialized after base 'V'}}
 };
 
 
-struct E : public A, public B, private virtual V { 
+struct E : public A, public B, private virtual V {
   E()  : A(), V() {  } // expected-warning {{base class 'A' will be initialized after base 'V'}}
 };
 
 
-struct A1  { 
-  A1(); 
+struct A1  {
+  A1();
 };
 
 struct B1 {
   B1();
 };
 
-struct F : public A1, public B1, private virtual V { 
+struct F : public A1, public B1, private virtual V {
   F()  : A1(), V() {  } // expected-warning {{base class 'A1' will be initialized after base 'V'}}
 };
 

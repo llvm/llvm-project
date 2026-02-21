@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -emit-llvm -triple %itanium_abi_triple -o - | FileCheck %s
 
-// CHECK: @_ZTVZZ1HvEN1S1IEvE1S = 
+// CHECK: @_ZTVZZ1HvEN1S1IEvE1S =
 
 // CHECK: define {{.*}} @_Z2L1v(
 // CHECK: define {{.*}} @_ZZ2L1vEN1S2L2Ev(

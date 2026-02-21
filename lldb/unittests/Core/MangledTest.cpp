@@ -158,12 +158,12 @@ TEST(MangledTest, NameIndexes_FindFunctionSymbols) {
 
   auto ExpectedFile = TestFile::fromYaml(R"(
 --- !ELF
-FileHeader:      
+FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB
   Type:            ET_EXEC
   Machine:         EM_X86_64
-Sections:        
+Sections:
   - Name:            .text
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]

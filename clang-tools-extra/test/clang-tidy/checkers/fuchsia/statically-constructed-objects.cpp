@@ -72,7 +72,7 @@ public:
 };
 
 static S s1(1);
-static S s2(0); 
+static S s2(0);
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: static objects are disallowed; if possible, use a constexpr constructor instead [fuchsia-statically-constructed-objects]
 // CHECK-MESSAGES-NEXT: static S s2(0);
 

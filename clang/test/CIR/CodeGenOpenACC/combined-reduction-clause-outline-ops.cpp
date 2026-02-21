@@ -50,7 +50,7 @@ void acc_combined() {
 // CHECK-NEXT:  cir.call @_ZpLR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline>{{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -81,7 +81,7 @@ void acc_combined() {
 // CHECK-NEXT:  cir.call @_ZmLR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline>{{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -118,7 +118,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineaSERKS_(%[[LHSARG]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline>{{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -155,7 +155,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineaSERKS_(%[[LHSARG]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline>{{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -186,7 +186,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.call @_ZaNR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline>{{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -217,7 +217,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.call @_ZoRR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline>{{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -248,7 +248,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.call @_ZeOR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline>{{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -280,7 +280,7 @@ void acc_combined() {
 // CHECK-NEXT: @_ZN19HasOperatorsOutlineaSERKS_(%[[LHSARG]], %[[OP_RES]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline>{{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -312,7 +312,7 @@ void acc_combined() {
 // CHECK-NEXT: @_ZN19HasOperatorsOutlineaSERKS_(%[[LHSARG]], %[[OP_RES]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline>{{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):
 // CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineD1Ev(%[[ARG]]) nothrow : (!cir.ptr<!rec_HasOperatorsOutline>)
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
@@ -351,7 +351,7 @@ void acc_combined() {
 // CHECK-NEXT: } while {
 // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsOutline>>, !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp(ne, %[[TEMP_LOAD]], %[[END_ITR]]) : !cir.ptr<!rec_HasOperatorsOutline>, !cir.bool
-// CHECK-NEXT: cir.condition(%[[CMP]]) 
+// CHECK-NEXT: cir.condition(%[[CMP]])
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
 //
@@ -382,7 +382,7 @@ void acc_combined() {
 //
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
@@ -525,7 +525,7 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
@@ -674,7 +674,7 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
@@ -823,7 +823,7 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
@@ -966,7 +966,7 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
@@ -1021,7 +1021,7 @@ void acc_combined() {
 // CHECK-NEXT: } while {
 // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsOutline>>, !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp(ne, %[[TEMP_LOAD]], %[[END_ITR]]) : !cir.ptr<!rec_HasOperatorsOutline>, !cir.bool
-// CHECK-NEXT: cir.condition(%[[CMP]]) 
+// CHECK-NEXT: cir.condition(%[[CMP]])
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
 //
@@ -1051,7 +1051,7 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
@@ -1105,7 +1105,7 @@ void acc_combined() {
 // CHECK-NEXT: } while {
 // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsOutline>>, !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp(ne, %[[TEMP_LOAD]], %[[END_ITR]]) : !cir.ptr<!rec_HasOperatorsOutline>, !cir.bool
-// CHECK-NEXT: cir.condition(%[[CMP]]) 
+// CHECK-NEXT: cir.condition(%[[CMP]])
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
 //
@@ -1135,7 +1135,7 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
@@ -1282,7 +1282,7 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
@@ -1337,7 +1337,7 @@ void acc_combined() {
 // CHECK-NEXT: } while {
 // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsOutline>>, !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp(ne, %[[TEMP_LOAD]], %[[END_ITR]]) : !cir.ptr<!rec_HasOperatorsOutline>, !cir.bool
-// CHECK-NEXT: cir.condition(%[[CMP]]) 
+// CHECK-NEXT: cir.condition(%[[CMP]])
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
 //
@@ -1370,7 +1370,7 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):  
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}):
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<4>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
@@ -1465,7 +1465,7 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}): 
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
@@ -1568,7 +1568,7 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}): 
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
@@ -1677,7 +1677,7 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}): 
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
@@ -1786,7 +1786,7 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}): 
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
@@ -1889,7 +1889,7 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}): 
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
@@ -1992,7 +1992,7 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}): 
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
@@ -2095,7 +2095,7 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}): 
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
@@ -2201,7 +2201,7 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}): 
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
@@ -2307,7 +2307,7 @@ void acc_combined() {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>>
 // CHECK-NEXT: } destroy {
-// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}): 
+// CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}):
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i

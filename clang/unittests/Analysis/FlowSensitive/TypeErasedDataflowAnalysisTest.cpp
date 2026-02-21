@@ -755,7 +755,7 @@ TEST_F(AnalyzerNoreturnTest, DirectNoReturnCall) {
 TEST_F(AnalyzerNoreturnTest, CanonicalDeclCallCheck) {
   std::string Code = R"(
     #include "noreturn_test_defs.h"
-    
+
     extern void assertionHandler();
 
     void target() {

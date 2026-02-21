@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c23 %s
 
-// Compound literal doesn't need a constant expression inside a initializer-list if it is already inside a function 
+// Compound literal doesn't need a constant expression inside a initializer-list if it is already inside a function
 // see: https://github.com/llvm/llvm-project/issues/87867
 int foo(int *a, int b) {
     return 0;

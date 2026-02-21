@@ -21,7 +21,7 @@ namespace rdar13094134 {
   class X {
     typedef struct {
       Y *y; // expected-error{{unknown type name 'Y'}}
-    } Y; 
+    } Y;
   };
 
   X<int> xi;

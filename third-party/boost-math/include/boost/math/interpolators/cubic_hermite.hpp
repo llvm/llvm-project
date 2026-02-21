@@ -18,7 +18,7 @@ class cubic_hermite {
 public:
     using Real = typename RandomAccessContainer::value_type;
 
-    cubic_hermite(RandomAccessContainer && x, RandomAccessContainer && y, RandomAccessContainer && dydx) 
+    cubic_hermite(RandomAccessContainer && x, RandomAccessContainer && y, RandomAccessContainer && dydx)
     : impl_(std::make_shared<detail::cubic_hermite_detail<RandomAccessContainer>>(std::move(x), std::move(y), std::move(dydx)))
     {}
 
@@ -60,7 +60,7 @@ class cardinal_cubic_hermite {
 public:
     using Real = typename RandomAccessContainer::value_type;
 
-    cardinal_cubic_hermite(RandomAccessContainer && y, RandomAccessContainer && dydx, Real x0, Real dx) 
+    cardinal_cubic_hermite(RandomAccessContainer && y, RandomAccessContainer && dydx, Real x0, Real dx)
     : impl_(std::make_shared<detail::cardinal_cubic_hermite_detail<RandomAccessContainer>>(std::move(y), std::move(dydx), x0, dx))
     {}
 
@@ -101,7 +101,7 @@ public:
     using Point = typename RandomAccessContainer::value_type;
     using Real = typename Point::value_type;
 
-    cardinal_cubic_hermite_aos(RandomAccessContainer && data, Real x0, Real dx) 
+    cardinal_cubic_hermite_aos(RandomAccessContainer && data, Real x0, Real dx)
     : impl_(std::make_shared<detail::cardinal_cubic_hermite_detail_aos<RandomAccessContainer>>(std::move(data), x0, dx))
     {}
 

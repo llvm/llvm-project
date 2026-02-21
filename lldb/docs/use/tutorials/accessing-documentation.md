@@ -30,11 +30,11 @@ get help on the lldb.SBFrame class:
 
    class SBFrame(builtins.object)
     |  SBFrame(*args)
-    |  
+    |
     |  Represents one of the stack frames associated with a thread.
-    |  
+    |
     |  SBThread contains SBFrame(s). For example (from test/lldbutil.py), ::
-    |  
+    |
     |      def print_stacktrace(thread, string_buffer = False):
     |          '''Prints a simple stack trace of this thread.'''
 ...
@@ -50,11 +50,11 @@ currently selected process:
 
    class SBProcess(builtins.object)
     |  SBProcess(*args)
-    |  
+    |
     |  Represents the process associated with the target program.
-    |  
+    |
     |  SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
-    |  
+    |
     |      # ==================================================
     |      # Utility functions related to Threads and Processes
     |      # ==================================================

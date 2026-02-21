@@ -5,7 +5,7 @@
 #include <altivec.h>
 
 // CHECK-LABEL: test1
-// CHECK: dss 
+// CHECK: dss
 void test1() {
   vec_dss(1);
 }

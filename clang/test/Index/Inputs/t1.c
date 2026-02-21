@@ -20,7 +20,7 @@ void field_test(void) {
   struct S1 s1;
   s1.x = 0;
   ((struct S2 *)0)->x = 0;
-  
+
   struct MyStruct ms;
   ms.field_var = 10;
 }

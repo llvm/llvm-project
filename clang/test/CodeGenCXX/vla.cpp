@@ -68,19 +68,19 @@ void test2(int b) {
   int varr[b];
   // AMDGCN: %__end1 = alloca ptr, align 8, addrspace(5)
   // AMDGCN: [[END:%.*]] = addrspacecast ptr addrspace(5) %__end1 to ptr
-  // get the address of %b by checking the first store that stores it 
+  // get the address of %b by checking the first store that stores it
   //CHECK: store i32 %b, ptr [[PTR_B:%.*]]
 
   // get the size of the VLA by getting the first load of the PTR_B
   //CHECK: [[VLA_NUM_ELEMENTS_PREZEXT:%.*]] = load i32, ptr [[PTR_B]]
   //CHECK-NEXT: [[VLA_NUM_ELEMENTS_PRE:%.*]] = zext i32 [[VLA_NUM_ELEMENTS_PREZEXT]]
-  
+
   b = 15;
   //CHECK: store i32 15, ptr [[PTR_B]]
-  
+
   // Now get the sizeof, and then divide by the element size
-  
-  
+
+
   //CHECK: [[VLA_SIZEOF:%.*]] = mul nuw i64 4, [[VLA_NUM_ELEMENTS_PRE]]
   //CHECK-NEXT: [[VLA_NUM_ELEMENTS_POST:%.*]] = udiv i64 [[VLA_SIZEOF]], 4
   //CHECK-NEXT: [[VLA_END_PTR:%.*]] = getelementptr inbounds nuw i32, ptr {{%.*}}, i64 [[VLA_NUM_ELEMENTS_POST]]
@@ -94,22 +94,22 @@ void test3(int b, int c) {
   int varr[b][c];
   // AMDGCN: %__end1 = alloca ptr, align 8, addrspace(5)
   // AMDGCN: [[END:%.*]] = addrspacecast ptr addrspace(5) %__end1 to ptr
-  // get the address of %b by checking the first store that stores it 
+  // get the address of %b by checking the first store that stores it
   //CHECK: store i32 %b, ptr [[PTR_B:%.*]]
   //CHECK-NEXT: store i32 %c, ptr [[PTR_C:%.*]]
-  
+
   // get the size of the VLA by getting the first load of the PTR_B
   //CHECK: [[VLA_DIM1_PREZEXT:%.*]] = load i32, ptr [[PTR_B]]
   //CHECK-NEXT: [[VLA_DIM1_PRE:%.*]] = zext i32 [[VLA_DIM1_PREZEXT]]
   //CHECK: [[VLA_DIM2_PREZEXT:%.*]] = load i32, ptr [[PTR_C]]
   //CHECK-NEXT: [[VLA_DIM2_PRE:%.*]] = zext i32 [[VLA_DIM2_PREZEXT]]
-  
+
   b = 15;
   c = 15;
   //CHECK: store i32 15, ptr [[PTR_B]]
   //CHECK: store i32 15, ptr [[PTR_C]]
   // Now get the sizeof, and then divide by the element size
-  
+
   // multiply the two dimensions, then by the element type and then divide by the sizeof dim2
   //CHECK: [[VLA_DIM1_X_DIM2:%.*]] = mul nuw i64 [[VLA_DIM1_PRE]], [[VLA_DIM2_PRE]]
   //CHECK-NEXT: [[VLA_SIZEOF:%.*]] = mul nuw i64 4, [[VLA_DIM1_X_DIM2]]
@@ -119,7 +119,7 @@ void test3(int b, int c) {
   //CHECK-NEXT: [[VLA_END_PTR:%.*]] = getelementptr inbounds nuw i32, ptr {{%.*}}, i64 [[VLA_END_INDEX]]
   //X64-NEXT: store ptr [[VLA_END_PTR]], ptr %__end
   //AMDGCN-NEXT: store ptr [[VLA_END_PTR]], ptr [[END]]
- 
+
   for (auto &d : varr) 0;
 }
 

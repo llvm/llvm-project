@@ -29,7 +29,7 @@ void test9(const void *P) {
 }
 
 
-void *test10(void) { 
+void *test10(void) {
 bar:
   return &&bar;  // expected-warning {{returning address of label, which is local}}
 }
@@ -54,7 +54,7 @@ void test11(int bit) {
 enum Numbers { kOne,  kTwo,  kThree,  kFour};
 int test12(enum Numbers num) {
   switch (num == kOne) {// expected-warning {{switch condition has boolean value}}
-  default: 
+  default:
   case kThree:
     break;
   }

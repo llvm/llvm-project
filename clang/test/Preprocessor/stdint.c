@@ -13,7 +13,7 @@
 // ARM:typedef uint32_t uint_least32_t;
 // ARM:typedef int32_t int_fast32_t;
 // ARM:typedef uint32_t uint_fast32_t;
-// 
+//
 // ARM:typedef short int16_t;
 // ARM:typedef unsigned short uint16_t;
 // ARM:typedef int16_t int_least16_t;
@@ -30,7 +30,7 @@
 //
 // ARM:typedef int intptr_t;
 // ARM:typedef unsigned int uintptr_t;
-// 
+//
 // ARM:typedef long long int intmax_t;
 // ARM:typedef long long unsigned int uintmax_t;
 //
@@ -120,7 +120,7 @@
 // ARM64_32:typedef uint32_t uint_least32_t;
 // ARM64_32:typedef int32_t int_fast32_t;
 // ARM64_32:typedef uint32_t uint_fast32_t;
-// 
+//
 // ARM64_32:typedef short int16_t;
 // ARM64_32:typedef unsigned short uint16_t;
 // ARM64_32:typedef int16_t int_least16_t;
@@ -137,7 +137,7 @@
 //
 // ARM64_32:typedef long int intptr_t;
 // ARM64_32:typedef long unsigned int uintptr_t;
-// 
+//
 // ARM64_32:typedef long long int intmax_t;
 // ARM64_32:typedef long long unsigned int uintmax_t;
 //
@@ -1607,7 +1607,7 @@
 //
 //
 // stdint.h forms several macro definitions by pasting together identifiers
-// to form names (eg. int32_t is formed from int ## 32 ## _t). The following 
+// to form names (eg. int32_t is formed from int ## 32 ## _t). The following
 // case tests that these joining operations are performed correctly even if
 // the identifiers used in the operations (int, uint, _t, INT, UINT, _MIN,
 // _MAX, and _C(v)) are themselves macros.

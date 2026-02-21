@@ -66,8 +66,8 @@ std::pair<Real, Real> ooura_sin_node_and_weight(long n, Real h, Real alpha)
         // Equation 44 of https://arxiv.org/pdf/0911.4796.pdf
         // Fourier Transform of the Stretched Exponential Function: Analytic Error Bounds,
         // Double Exponential Transform, and Open-Source Implementation,
-        // Joachim Wuttke, 
-        // The C library libkww provides functions to compute the Kohlrausch-Williams-Watts function, 
+        // Joachim Wuttke,
+        // The C library libkww provides functions to compute the Kohlrausch-Williams-Watts function,
         // the Laplace-Fourier transform of the stretched (or compressed) exponential function exp(-t^beta)
         // for exponent beta between 0.1 and 1.9 with sixteen decimal digits accuracy.
 
@@ -179,7 +179,7 @@ class ooura_fourier_sin_detail {
 public:
     ooura_fourier_sin_detail(const Real relative_error_goal, size_t levels) {
 #ifdef BOOST_MATH_INSTRUMENT_OOURA
-      std::cout << "ooura_fourier_sin with relative error goal " << relative_error_goal 
+      std::cout << "ooura_fourier_sin with relative error goal " << relative_error_goal
         << " & " << levels << " levels." << std::endl;
 #endif // BOOST_MATH_INSTRUMENT_OOURA
         if (relative_error_goal < std::numeric_limits<Real>::epsilon() * 2) {
@@ -385,7 +385,7 @@ private:
         #ifdef BOOST_MATH_HAS_THREADS
         // std::scoped_lock once C++17 is more common?
         std::lock_guard<std::mutex> lock(node_weight_mutex_);
-        #endif 
+        #endif
         // Another thread might have already finished this calculation and appended it to the nodes/weights:
         if (current_num_levels == big_nodes_.size()) {
             big_nodes_.push_back(bnode_row);
@@ -653,7 +653,7 @@ private:
 
     #ifdef BOOST_MATH_HAS_THREADS
     std::mutex node_weight_mutex_;
-    #endif 
+    #endif
 
     std::vector<std::vector<Real>> big_nodes_;
     std::vector<std::vector<Real>> bweights_;

@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: @main
 
-struct dyn_array { 
+struct dyn_array {
     int size;
     int data[];
 };

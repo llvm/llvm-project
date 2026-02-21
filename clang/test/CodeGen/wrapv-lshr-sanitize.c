@@ -5,7 +5,7 @@ int lsh_overflow(int a, int b) {
   // CHECK-NOT: br
   // CHECK-NOT: call void @__ubsan_
   // CHECK-NOT: call void @llvm.trap
-  
+
   // CHECK:      %[[RET:.*]] = shl i32
   // CHECK-NEXT: ret i32 %[[RET]]
   return a << b;

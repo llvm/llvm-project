@@ -2,9 +2,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s -DNONE -Wno-gnu
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s -DNONE -Wno-gnu
 
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DALL -Wgnu 
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s -DALL -Wgnu 
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s -DALL -Wgnu 
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DALL -Wgnu
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s -DALL -Wgnu
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s -DALL -Wgnu
 
 // RUN: %clang_cc1 -fsyntax-only -verify %s -DALL -Wno-gnu \
 // RUN:   -Wgnu-anonymous-struct -Wredeclared-class-member \

@@ -16,7 +16,7 @@ The rundown is that after RTL generation, the following happens:
 3 .     Compute live ranges for CSE
 4 . [t] Jump threading (jumps to jumps with identical or inverse conditions)
 5 . [t] CSE
-6 . *** Conversion to SSA 
+6 . *** Conversion to SSA
 7 . [t] SSA Based DCE
 8 . *** Conversion to LLVM
 9 .     UnSSA

@@ -37,7 +37,7 @@ T tmain(T argc, S **argv) {
 // expected-error@+3 {{expected ')'}} expected-note@+3 {{to match this '('}}
 // expected-error@+2 2 {{integral constant expression}} expected-note@+2 0+{{constant expression}}
 #pragma omp target
-#pragma omp teams distribute collapse (argc 
+#pragma omp teams distribute collapse (argc
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i-ST];
 
@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
 // expected-error@+3 2 {{directive '#pragma omp teams distribute' cannot contain more than one 'collapse' clause}}
 // expected-error@+2 {{argument to 'collapse' clause must be a strictly positive integer value}}
 #pragma omp target
-#pragma omp teams distribute collapse (foobool(argc)), collapse (true), collapse (-5) 
+#pragma omp teams distribute collapse (foobool(argc)), collapse (true), collapse (-5)
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i-4];
 

@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
   barrier_init(&barrier, 2);
   fprintf(stderr, "Start.\n");
   // CHECK: Start.
-  
+
   {
     void *opaque_object = malloc(16);
     std::thread t1([opaque_object] {
@@ -64,10 +64,10 @@ int main(int argc, char *argv[]) {
     t1.join();
     t2.join();
   }
-  
+
   fprintf(stderr, "external+regular test done.\n");
   // CHECK: external+regular test done.
-  
+
   {
     void *opaque_object = malloc(16);
     std::thread t1([opaque_object] {
@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
     t1.join();
     t2.join();
   }
-  
+
   fprintf(stderr, "regular+external test done.\n");
   // CHECK: regular+external test done.
 }

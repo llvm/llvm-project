@@ -4,7 +4,7 @@
 #include <stdarg.h>
 
 int main(int argc, char *argv[]) {
-    
+
     long (^addthem)(const char *, ...) = ^long (const char *format, ...){
         va_list argp;
         const char *p;

@@ -28,7 +28,7 @@ IncompleteC *p;
 // OGCG: @p = global ptr null, align 8
 
 class CompleteC {
-public:    
+public:
   int a;
   char b;
 };

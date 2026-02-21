@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
   tag = __tsan_external_register_tag("HelloWorld");
   fprintf(stderr, "Start.\n");
   // CHECK: Start.
-   
+
   for (int i = 0; i < 4; i++) {
     void *opaque_object = malloc(16);
     std::thread t1([opaque_object] {
@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
     t1.join();
     t2.join();
   }
-  
+
   fprintf(stderr, "First phase done.\n");
   // CHECK: First phase done.
 

@@ -187,7 +187,7 @@ void thread_loop() {
     }
   }
 }
-  
+
 void parallel_for_with_loop_teams_bind(){
   #pragma omp parallel for
   for (int i = 0; i < NNN; i++) {

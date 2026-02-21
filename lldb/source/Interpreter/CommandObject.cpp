@@ -312,7 +312,7 @@ void CommandObject::HandleArgumentCompletion(
     assert(entry_ptr && "We said there was one entry, but there wasn't.");
     return; // Not worth crashing if asserts are off...
   }
-  
+
   CommandArgumentEntry &entry = *entry_ptr;
   // For now, we only handle the simple case of one homogenous argument type.
   if (entry.size() != 1)
@@ -496,13 +496,13 @@ bool CommandObject::IsPairType(ArgumentRepetitionType arg_repeat_type) {
          (arg_repeat_type == eArgRepeatPairRangeOptional);
 }
 
-std::optional<ArgumentRepetitionType> 
+std::optional<ArgumentRepetitionType>
 CommandObject::ArgRepetitionFromString(llvm::StringRef string) {
   return llvm::StringSwitch<ArgumentRepetitionType>(string)
-  .Case("plain", eArgRepeatPlain)  
+  .Case("plain", eArgRepeatPlain)
   .Case("optional", eArgRepeatOptional)
   .Case("plus", eArgRepeatPlus)
-  .Case("star", eArgRepeatStar) 
+  .Case("star", eArgRepeatStar)
   .Case("range", eArgRepeatRange)
   .Case("pair-plain", eArgRepeatPairPlain)
   .Case("pair-optional", eArgRepeatPairOptional)

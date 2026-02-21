@@ -33,8 +33,8 @@ void test_parsing_failures() {
 void test_semantic_failures() {
   (void)_Countof(1);         // expected-error {{'_Countof' requires an argument of array type; 'int' invalid}}
   int non_array;
-  (void)_Countof non_array;  // expected-error {{'_Countof' requires an argument of array type; 'int' invalid}}  
-  (void)_Countof(int);       // expected-error {{'_Countof' requires an argument of array type; 'int' invalid}}  
+  (void)_Countof non_array;  // expected-error {{'_Countof' requires an argument of array type; 'int' invalid}}
+  (void)_Countof(int);       // expected-error {{'_Countof' requires an argument of array type; 'int' invalid}}
   (void)_Countof(void);      // expected-error {{invalid application of '_Countof' to an incomplete type 'void'}}
   int arr2[_Countof(void)];  // expected-error {{invalid application of '_Countof' to an incomplete type 'void'}}
   void *vp = &non_array;
@@ -54,7 +54,7 @@ void test_semantic_failures() {
 
 void test_constant_expression_behavior(int n) {
   static_assert(_Countof(global_array) == 12);
-  static_assert(_Countof global_array == 12);  
+  static_assert(_Countof global_array == 12);
   static_assert(_Countof(int[12]) == 12);
 
   // Use of a VLA makes it not a constant expression, same as with sizeof.
@@ -63,7 +63,7 @@ void test_constant_expression_behavior(int n) {
   static_assert(sizeof(array));   // expected-error {{static assertion expression is not an integral constant expression}}
   static_assert(_Countof(int[n]));// expected-error {{static assertion expression is not an integral constant expression}}
   static_assert(sizeof(int[n]));  // expected-error {{static assertion expression is not an integral constant expression}}
-  
+
   // Constant folding works the same way as sizeof, too.
   const int m = 12;
   int other_array[m];
@@ -71,7 +71,7 @@ void test_constant_expression_behavior(int n) {
   static_assert(_Countof(other_array)); // expected-error {{static assertion expression is not an integral constant expression}}
   static_assert(sizeof(int[m]));        // expected-error {{static assertion expression is not an integral constant expression}}
   static_assert(_Countof(int[m]));      // expected-error {{static assertion expression is not an integral constant expression}}
-  
+
   // Note that this applies to each array dimension.
   int another_array[n][7];
   static_assert(_Countof(another_array)); // expected-error {{static assertion expression is not an integral constant expression}}
@@ -82,7 +82,7 @@ void test_constant_expression_behavior(int n) {
   int yet_another_array[7][n];
   static_assert(_Countof(yet_another_array) == 7);
   static_assert(_Countof(*yet_another_array)); // expected-error {{static assertion expression is not an integral constant expression}}
-  
+
   int one_more_time[n][n][7];
   static_assert(_Countof(one_more_time));  // expected-error {{static assertion expression is not an integral constant expression}}
   static_assert(_Countof(*one_more_time)); // expected-error {{static assertion expression is not an integral constant expression}}
@@ -181,7 +181,7 @@ void test_struct_members() {
 
 void test_compound_literals() {
   static_assert(_Countof((int[2]){}) == 2);
-  static_assert(_Countof((int[]){1, 2, 3, 4}) == 4);	
+  static_assert(_Countof((int[]){1, 2, 3, 4}) == 4);
 }
 
 /* We don't get a diagnostic for test_f1(), because it ends up unused

@@ -13,7 +13,7 @@ __pragma(comment(lib, "bar"))
 #pragma comment(linker,"foo") // expected-warning {{'#pragma comment linker' ignored}}
 __pragma(comment(linker, " bar=" "2")) // expected-warning {{'#pragma comment linker' ignored}}
 
-#pragma comment(user) // expected-warning {{'#pragma comment user' ignored}} 
+#pragma comment(user) // expected-warning {{'#pragma comment user' ignored}}
 #pragma comment(user, "Compiled on " __DATE__ " at " __TIME__ ) // expected-warning {{'#pragma comment user' ignored}}
 __pragma(comment(user, "foo")) // expected-warning {{'#pragma comment user' ignored}}
 

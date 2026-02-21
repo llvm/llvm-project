@@ -124,9 +124,9 @@ struct select_power_if_positive
 
 template <int N, typename T, class Policy>
 BOOST_MATH_GPU_ENABLED constexpr inline typename tools::promote_args<T>::type pow(T base, const Policy& policy)
-{ 
+{
    using result_type = typename tools::promote_args<T>::type;
-   return detail::select_power_if_positive<N>::type::result(static_cast<result_type>(base), policy); 
+   return detail::select_power_if_positive<N>::type::result(static_cast<result_type>(base), policy);
 }
 
 template <int N, typename T>

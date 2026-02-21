@@ -89,7 +89,7 @@ void jump_over_var_with_dtor() {
     }
   }
 
- 
+
 void exception_jump() {
   goto l2; // expected-error {{cannot jump}}
   try { // expected-note {{jump bypasses initialization of try block}}
@@ -105,7 +105,7 @@ int jump_over_indirect_goto() {
  a0:
   return 0;
 }
-  
+
 }
 
 namespace PR11826 {
@@ -150,20 +150,20 @@ namespace PR11826_for_symmetry {
 namespace ms_using_declaration_bug {
 
 class A {
-public: 
-  int f(); 
+public:
+  int f();
 };
 
 class B : public A {
-private:   
+private:
   using A::f;
   void g() {
     f(); // no diagnostic
   }
 };
 
-class C : public B { 
-private:   
+class C : public B {
+private:
   using B::f; // expected-warning {{using declaration referring to inaccessible member 'ms_using_declaration_bug::B::f' (which refers to accessible member 'ms_using_declaration_bug::A::f') is a Microsoft compatibility extension}}
 };
 
@@ -238,7 +238,7 @@ template void function_missing_typename<D>(const D::Type param);
 
 //MSVC allows forward enum declaration
 enum ENUM; // expected-warning {{forward references to 'enum' types are a Microsoft extension}}
-ENUM *var = 0;     
+ENUM *var = 0;
 ENUM var2 = (ENUM)0;
 enum ENUM1* var3 = 0;// expected-warning {{forward references to 'enum' types are a Microsoft extension}}
 

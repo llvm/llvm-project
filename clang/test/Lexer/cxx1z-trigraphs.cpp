@@ -16,7 +16,7 @@ static_assert("??="[0] == '#', "");
 error here;
 
 // Note, there is intentionally trailing whitespace one line below.
-// ??/  
+// ??/
 error here;
 
 #if !ENABLED_TRIGRAPHS

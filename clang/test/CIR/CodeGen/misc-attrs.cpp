@@ -79,7 +79,7 @@ extern "C" {
   // LLVM: call void @leaf() #[[LEAF_CALL_ATTR:.*]]
     leaf();
 
-  // CIR: cir.call @modular_format({{.*}}) {modular_format = "kprintf,1,2,someIdent,someStr,aspect,aspect2"} : 
+  // CIR: cir.call @modular_format({{.*}}) {modular_format = "kprintf,1,2,someIdent,someStr,aspect,aspect2"} :
   // LLVM: call void {{.*}}@modular_format({{.*}}) #[[MOD_FORMAT_CALL_ATTR:.*]]
     modular_format("");
   }

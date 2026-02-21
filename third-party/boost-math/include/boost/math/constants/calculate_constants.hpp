@@ -1094,7 +1094,7 @@ inline T constant_laplace_limit<T>::compute(BOOST_MATH_EXPLICIT_TEMPLATE_TYPE_SP
     tmp = sqrt(1+x*x);
     etmp = exp(tmp);
     residual = x*exp(tmp) - 1 - tmp;
-    df = etmp -x/tmp + etmp*x*x/tmp;    
+    df = etmp -x/tmp + etmp*x*x/tmp;
   } while(abs(residual) > 2*std::numeric_limits<T>::epsilon());
   return x;
 }

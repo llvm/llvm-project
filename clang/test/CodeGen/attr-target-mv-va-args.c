@@ -42,7 +42,7 @@ int bar(void) {
 // IFUNC-MACHO: call i32 (i32, ...) @foo.ifunc(i32 noundef 1, i32 noundef 97, double
 // IFUNC-MACHO: call i32 (i32, ...) @foo.ifunc(i32 noundef 2, double noundef 2.2{{[0-9Ee+]+}}, ptr noundef
 
-// IFUNC-MACHO: define weak_odr ptr @foo.resolver() #{{[0-9]+}} 
+// IFUNC-MACHO: define weak_odr ptr @foo.resolver() #{{[0-9]+}}
 // IFUNC-MACHO: ret ptr @foo.arch_sandybridge
 // IFUNC-MACHO: ret ptr @foo.arch_ivybridge
 // IFUNC-MACHO: ret ptr @foo.sse4.2
@@ -55,7 +55,7 @@ int bar(void) {
 // NO-IFUNC: ret i32 1
 // NO-IFUNC: define dso_local i32 @foo(i32 noundef %i, ...)
 // NO-IFUNC: ret i32 2
-// NO-IFUNC: define dso_local i32 @bar() 
+// NO-IFUNC: define dso_local i32 @bar()
 // NO-IFUNC: call i32 (i32, ...) @foo.resolver(i32 noundef 1, i32 noundef 97, double
 // NO-IFUNC: call i32 (i32, ...) @foo.resolver(i32 noundef 2, double noundef 2.2{{[0-9Ee+]+}}, ptr noundef
 

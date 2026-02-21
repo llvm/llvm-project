@@ -38,7 +38,7 @@ int test_assign() {
 
     int c;
   } c;
-  
+
   c.a = 0;
   c.b = (unsigned long long)-1;
   c.c = 0;

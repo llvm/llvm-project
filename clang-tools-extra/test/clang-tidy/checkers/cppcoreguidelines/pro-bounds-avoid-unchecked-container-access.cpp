@@ -52,12 +52,12 @@
 
 // RUN: %check_clang_tidy -std=c++23 -check-suffixes=AT-CXX-23 %t/cppcoreguidelines-pro-bounds-avoid-unchecked-container-access-cxx-23.cpp \
 // RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-access %t -- \
-// RUN: -config='{CheckOptions: {cppcoreguidelines-pro-bounds-avoid-unchecked-container-access.FixMode: at}}' -- -I%t -DCXX_23=1 
+// RUN: -config='{CheckOptions: {cppcoreguidelines-pro-bounds-avoid-unchecked-container-access.FixMode: at}}' -- -I%t -DCXX_23=1
 
 // RUN: %check_clang_tidy -std=c++23 -check-suffixes=FUNC-CXX-23 %t/cppcoreguidelines-pro-bounds-avoid-unchecked-container-access-cxx-23.cpp \
 // RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-access %t -- \
 // RUN: -config='{CheckOptions: {cppcoreguidelines-pro-bounds-avoid-unchecked-container-access.FixMode: function, \
-// RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-access.FixFunction: "f"}}' -- -I%t -DCXX_23=1 
+// RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-access.FixFunction: "f"}}' -- -I%t -DCXX_23=1
 
 // RUN: %check_clang_tidy -std=c++23 -check-suffixes=FUNC-EMPTY-ARGS-CXX-23 %t/cppcoreguidelines-pro-bounds-avoid-unchecked-container-access-cxx-23.cpp \
 // RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-access %t -- \
@@ -226,7 +226,7 @@ auto m3 = OBJECT_BEHIND_MACRO[0];
 // CHECK-FIXES-AT: auto m3 = OBJECT_BEHIND_MACRO.at(0);
 // CHECK-FIXES-FUNC: auto m3 = f(OBJECT_BEHIND_MACRO, 0);
 
-// Check that spacing does not invalidate the fixes 
+// Check that spacing does not invalidate the fixes
 std::array<int , 3> longname;
 
 auto z1 = longname   [    0    ]  ;
@@ -293,8 +293,8 @@ auto y = TestMapNoExcl[0];
 std::map<int,int> TestMapExcl;
 auto y = TestMapExcl[0];
 // CHECK-MESSAGES-DEFAULT-EXCL: :[[@LINE-1]]:21: warning: possibly unsafe 'operator[]', consider bounds-safe alternatives [cppcoreguidelines-pro-bounds-avoid-unchecked-container-access]
-// CHECK-FIXES-AT-EXCL: auto y = TestMapExcl.at(0);   
-// CHECK-FIXES-FUNC-EXCL: auto y = f(TestMapExcl, 0); 
+// CHECK-FIXES-AT-EXCL: auto y = TestMapExcl.at(0);
+// CHECK-FIXES-FUNC-EXCL: auto y = f(TestMapExcl, 0);
 
 
 //--- cppcoreguidelines-pro-bounds-avoid-unchecked-container-access-cxx-23.cpp
@@ -320,22 +320,22 @@ auto b23 = a[];
 // CHECK-FIXES-AT-CXX-23: auto b23 = a.at();
 // CHECK-FIXES-FUNC-CXX-23: auto b23 = f(a);
 // CHECK-FIXES-FUNC-EMPTY-ARGS-CXX-23: auto b23 = g(a);
-// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23: :[[@LINE-5]]:13: warning: possibly unsafe 'operator[]' [cppcoreguidelines-pro-bounds-avoid-unchecked-container-access] 
-// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23-NOT: :[[@LINE-6]]:{{.*}}: note: FIX-IT applied suggested code changes 
+// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23: :[[@LINE-5]]:13: warning: possibly unsafe 'operator[]' [cppcoreguidelines-pro-bounds-avoid-unchecked-container-access]
+// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23-NOT: :[[@LINE-6]]:{{.*}}: note: FIX-IT applied suggested code changes
 
 auto fa23 = (&a)->operator[]();
 // CHECK-MESSAGES-DEFAULT-CXX-23: :[[@LINE-1]]:13: warning: possibly unsafe 'operator[]', consider bounds-safe alternatives [cppcoreguidelines-pro-bounds-avoid-unchecked-container-access]
 // CHECK-FIXES-AT-CXX-23: auto fa23 = (&a)->at();
 // CHECK-FIXES-FUNC-CXX-23: auto fa23 = f(*(&a));
 // CHECK-FIXES-FUNC-EMPTY-ARGS-CXX-23: auto fa23 = g(*(&a));
-// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23: :[[@LINE-5]]:13: warning: possibly unsafe 'operator[]' [cppcoreguidelines-pro-bounds-avoid-unchecked-container-access] 
-// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23-NOT: :[[@LINE-6]]:{{.*}}: note: FIX-IT applied suggested code changes 
+// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23: :[[@LINE-5]]:13: warning: possibly unsafe 'operator[]' [cppcoreguidelines-pro-bounds-avoid-unchecked-container-access]
+// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23-NOT: :[[@LINE-6]]:{{.*}}: note: FIX-IT applied suggested code changes
 
 auto fd23 = a.operator[]();
 // CHECK-MESSAGES-DEFAULT-CXX-23: :[[@LINE-1]]:13: warning: possibly unsafe 'operator[]', consider bounds-safe alternatives [cppcoreguidelines-pro-bounds-avoid-unchecked-container-access]
 // CHECK-FIXES-AT-CXX-23: auto fd23 = a.at();
 // CHECK-FIXES-FUNC-CXX-23: auto fd23 = f(a);
 // CHECK-FIXES-FUNC-EMPTY-ARGS-CXX-23: auto fd23 = g(a);
-// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23: :[[@LINE-5]]:13: warning: possibly unsafe 'operator[]' [cppcoreguidelines-pro-bounds-avoid-unchecked-container-access] 
-// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23-NOT: :[[@LINE-6]]:{{.*}}: note: FIX-IT applied suggested code changes 
+// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23: :[[@LINE-5]]:13: warning: possibly unsafe 'operator[]' [cppcoreguidelines-pro-bounds-avoid-unchecked-container-access]
+// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23-NOT: :[[@LINE-6]]:{{.*}}: note: FIX-IT applied suggested code changes
 #endif

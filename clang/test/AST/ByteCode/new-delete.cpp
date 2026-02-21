@@ -1079,10 +1079,10 @@ namespace BaseCompare {
 }
 
 
-namespace NegativeArraySize { 
+namespace NegativeArraySize {
   constexpr void f() { // both-error {{constexpr function never produces a constant expression}}
     int x = -1;
-    int *p = new int[x]; //both-note {{cannot allocate array; evaluated array bound -1 is negative}} 
+    int *p = new int[x]; //both-note {{cannot allocate array; evaluated array bound -1 is negative}}
   }
 } // namespace NegativeArraySize
 
@@ -1093,7 +1093,7 @@ namespace NewNegSizeNothrow {
 
   constexpr bool test_nothrow_neg_size() {
     int x = get_neg_size();
-    int* p = new (std::nothrow) int[x]; 
+    int* p = new (std::nothrow) int[x];
     return p == nullptr;
   }
 

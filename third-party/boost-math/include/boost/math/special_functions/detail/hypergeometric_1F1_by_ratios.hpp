@@ -54,7 +54,7 @@
 
       So try z_limit = -b / (4 - 5 * sqrt(log(a)) * a / b);
       or     z_limit = -b / (4 - 5 * (log(a)) * a / b)  for a < 100
-      
+
       This still isn't quite right for both a and b small, but we'll be using a Bessel approximation
       in that region anyway.
 
@@ -581,7 +581,7 @@
         T ratio = 1 / boost::math::tools::function_ratio_from_forwards_recurrence(coef, boost::math::policies::get_epsilon<T, Policy>(), max_iter);
         boost::math::policies::check_series_iterations<T>("boost::math::hypergeometric_1F1_from_function_ratio_negative_b_positive_a<%1%>(%1%,%1%,%1%)", max_iter, pol);
         //
-        // We can't normalise via the Wronksian as the subtraction in the Wronksian will suffer an exquisite amount of cancellation - 
+        // We can't normalise via the Wronksian as the subtraction in the Wronksian will suffer an exquisite amount of cancellation -
         // potentially many hundreds of digits in this region.  However, if forwards iteration is stable at this point
         // it will also be stable for M(a, b+1, z) etc all the way up to the origin, and hopefully one step beyond.  So
         // use a reference value just over the origin to normalise:

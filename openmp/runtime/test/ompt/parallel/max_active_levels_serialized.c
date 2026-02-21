@@ -42,7 +42,7 @@ int main() {
   // CHECK-NOT: 0: thread_data initially not null
 
   // THREADS: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin: parent_task_id=[[PARENT_TASK_ID:[0-f]+]], parent_task_frame.exit=[[NULL]], parent_task_frame.reenter={{(0x)?[0-f]+}}, parallel_id=[[PARALLEL_ID:[0-f]+]], requested_team_size=2, codeptr_ra=[[RETURN_ADDRESS:(0x)?[0-f]+]]{{[0-f][0-f]}}, invoker=[[PARALLEL_INVOKER:[0-9]+]]
-  
+
   // THREADS: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID:[0-f]+]]
   // THREADS: {{^}}[[MASTER_ID]]: task level 0: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
   // THREADS: {{^}}[[MASTER_ID]]: task level 1: parallel_id=[[IMPLICIT_PARALLEL_ID:[0-f]+]], task_id=[[PARENT_TASK_ID]]

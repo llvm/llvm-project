@@ -1914,7 +1914,7 @@ int atomic_load_dynamic_order(int *ptr, int order) {
   // OGCG-LABEL: atomic_load_dynamic_order
 
   return __atomic_load_n(ptr, order);
-  
+
   // CIR:      %[[PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
   // CIR-NEXT: %[[ORDER:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
   // CIR-NEXT: cir.switch(%[[ORDER]] : !s32i) {
@@ -2032,7 +2032,7 @@ void atomic_store_dynamic_order(int *ptr, int order) {
   // LLVM-NEXT:   %[[VALUE:.+]] = load i32, ptr %{{.+}}, align 4
   // LLVM-NEXT:   store atomic i32 %[[VALUE]], ptr %[[PTR]] seq_cst, align 4
   // LLVM-NEXT:   br label %{{.+}}
-  
+
   // OGCG:        %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
   // OGCG-NEXT:   %[[ORDER:.+]] = load i32, ptr %{{.+}}, align 4
   // OGCG:        switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [
@@ -2135,7 +2135,7 @@ int atomic_load_and_store_dynamic_order(int *ptr, int order) {
   // LLVM-NEXT:   br label %[[CONTINUE_BLK]]
   // LLVM:      [[CONTINUE_BLK]]:
   // LLVM-NEXT:   %{{.+}} = load i32, ptr %[[RES_SLOT]], align 4
-  
+
   // OGCG:        %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
   // OGCG-NEXT:   %[[ORDER:.+]] = load i32, ptr %{{.+}}, align 4
   // OGCG:        switch i32 %[[ORDER]], label %[[DEFAULT_BLK:.+]] [

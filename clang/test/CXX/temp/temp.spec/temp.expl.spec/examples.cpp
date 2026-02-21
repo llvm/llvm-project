@@ -2,12 +2,12 @@
 
 namespace PR5907 {
   template<typename T> struct identity { typedef T type; };
-  struct A { A(); }; 
+  struct A { A(); };
   identity<A>::type::A() { }
 
   struct B { void f(); };
   template<typename T> struct C { typedef B type; };
-  
+
   void C<int>::type::f() { }
 }
 
@@ -54,26 +54,26 @@ namespace PR8277b {
 }
 
 namespace PR8708 {
-  template<typename T> struct A { 
+  template<typename T> struct A {
     template<typename U> struct B {
       // #2
-      void f();     
-    }; 
-  };  
+      void f();
+    };
+  };
 
-  // #A specialize the member template for 
+  // #A specialize the member template for
   // implicit instantiation of A<int>,
   // leaving the member template "unspecialized"
   // (14.7.3/16). Specialization uses the syntax
   // for explicit specialization (14.7.3/14)
-  template<> template<typename U> 
+  template<> template<typename U>
   struct A<int>::B {
     // #1
     void g();
-  };  
+  };
 
   // #1 define its function g. There is an enclosing
-  // class template, so we write template<> for each 
+  // class template, so we write template<> for each
   // specialized template (14.7.3/15).
   template<> template<typename U>
   void A<int>::B<U>::g() { }
@@ -88,7 +88,7 @@ namespace PR8708 {
   // specializing the member too. This specializes
   // #A
   template<> template<>
-  struct A<int>::B<int> { 
+  struct A<int>::B<int> {
     // #3
     void h();
   };
@@ -97,9 +97,9 @@ namespace PR8708 {
   // we write no "template<>".
   void A<int>::B<int>::h() { }
 
-  void test() { 
+  void test() {
     // calls #1
-    A<int>::B<float> a; a.g(); 
+    A<int>::B<float> a; a.g();
 
     // calls #2
     A<float>::B<int> b; b.f();

@@ -11,7 +11,7 @@ void f0(void) {
 
 void f1(void) {
   char const str[] = "This will change";
-  p = str; 
+  p = str;
   p = 0; // no-warning
 }
 
@@ -20,7 +20,7 @@ void f2(void) {
 } // expected-warning@-1{{Address of stack memory allocated by call to alloca() on line 19 is still referred to by the global variable 'p' upon returning to the caller.  This will be a dangling reference}}
 
 // PR 7383 - previously the stack address checker would crash on this example
-//  because it would attempt to do a direct load from 'pr7383_list'. 
+//  because it would attempt to do a direct load from 'pr7383_list'.
 static int pr7383(__const char *__)
 {
   return 0;

@@ -2,7 +2,7 @@
 
 /* foo */
 
-struct 
+struct
 
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s.h:4:8 -o - %s | FileCheck -check-prefix=CHECK-CC1 %s
 // CHECK-CC1: X

@@ -733,7 +733,7 @@ the block. The cleanup block will begin with a call to
 `cir.begin_cleanup` which returns a cleanup token.
 
 ```
-^bb4 (%eh_token : !cir.eh_token): 
+^bb4 (%eh_token : !cir.eh_token):
   %cleanup_token = cir.begin_cleanup %eh_token : !cir.eh_token -> !cir.cleanup_token
 ```
 
@@ -750,7 +750,7 @@ for the exception being caught as an argument, and the first operation
 of the catch handling block must be a `cir.begin_catch` operation.
 
 ```
-^bb6 (%token : !cir.eh_token):    
+^bb6 (%token : !cir.eh_token):
   %catch_token, %exn_ptr = cir.begin_catch %8 -> (!cir.catch_token, !cir.ptr<!s32i>)
 ```
 

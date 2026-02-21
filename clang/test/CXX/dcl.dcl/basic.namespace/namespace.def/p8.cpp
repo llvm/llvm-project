@@ -90,7 +90,7 @@ namespace redecl { inline namespace n1 {
   {
   public:
       typedef Tp& reference;
-  
+
       void allocate(allocator<void>::const_pointer = 0);
   };
 
@@ -99,7 +99,7 @@ namespace redecl { inline namespace n1 {
 // Normal redeclarations (not for explicit instantiations or
 // specializations) are distinct in an inline namespace vs. not in an
 // inline namespace.
-namespace redecl2 { 
+namespace redecl2 {
   inline namespace n1 {
     void f(int) { }
     struct X1 { };

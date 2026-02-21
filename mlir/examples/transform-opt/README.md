@@ -37,4 +37,4 @@ mlir-transform-opt payload.mlir -transform=transform.mlir \
 Check out the [Transform dialect
 tutorial](https://mlir.llvm.org/docs/Tutorials/transform/) as well as
 [documentation](https://mlir.llvm.org/docs/Dialects/Transform/) to learn more
-about the dialect. 
+about the dialect.

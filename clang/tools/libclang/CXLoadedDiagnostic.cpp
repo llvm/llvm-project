@@ -42,7 +42,7 @@ public:
   Strings Categories;
   Strings WarningFlags;
   Strings FileNames;
-  
+
   FileSystemOptions FO;
   FileManager FakeFiles;
   llvm::DenseMap<unsigned, FileEntryRef> Files;
@@ -84,7 +84,7 @@ CXDiagnosticSeverity CXLoadedDiagnostic::getSeverity() const {
   // The 'Remark' level isn't represented in the stable API.
   case serialized_diags::Remark: return CXDiagnostic_Warning;
   }
-  
+
   llvm_unreachable("Invalid diagnostic level");
 }
 
@@ -95,7 +95,7 @@ static CXSourceLocation makeLocation(const CXLoadedDiagnostic::Location *DLoc) {
   V |= 0x1;
   CXSourceLocation Loc = { {  (void*) V, nullptr }, 0 };
   return Loc;
-}  
+}
 
 CXSourceLocation CXLoadedDiagnostic::getLocation() const {
   // The lowest bit of ptr_data[0] is always set to 1 to indicate this
@@ -151,8 +151,8 @@ void CXLoadedDiagnostic::decodeLocation(CXSourceLocation location,
                                         unsigned int *line,
                                         unsigned int *column,
                                         unsigned int *offset) {
-  
-  
+
+
   // CXSourceLocation consists of the following fields:
   //
   //   void *ptr_data[2];
@@ -163,15 +163,15 @@ void CXLoadedDiagnostic::decodeLocation(CXSourceLocation location,
   //
   // For now, do the unoptimized approach and store the data in a side
   // data structure.  We can optimize this case later.
-  
+
   uintptr_t V = (uintptr_t) location.ptr_data[0];
   assert((V & 0x1) == 1);
   V &= ~(uintptr_t)1;
-  
+
   const Location &Loc = *((Location*)V);
-  
+
   if (file)
-    *file = Loc.file;  
+    *file = Loc.file;
   if (line)
     *line = Loc.line;
   if (column)
@@ -198,7 +198,7 @@ class DiagLoader : serialized_diags::SerializedDiagnosticReader {
       *errorString = cxstring::createDup(err);
     return serialized_diags::SDError::HandlerFailed;
   }
-  
+
   std::error_code reportInvalidFile(llvm::StringRef err) {
     return reportBad(CXLoadDiag_InvalidFile, err);
   }
@@ -300,7 +300,7 @@ DiagLoader::readRange(const serialized_diags::Location &SDStart,
     return EC;
   if ((EC = readLocation(SDEnd, *End)))
     return EC;
-  
+
   CXSourceLocation startLoc = makeLocation(Start);
   CXSourceLocation endLoc = makeLocation(End);
   SR = clang_getRange(startLoc, endLoc);

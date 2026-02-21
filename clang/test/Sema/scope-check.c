@@ -41,7 +41,7 @@ L:
   return sizeof a;
 }
 
-int test6(void) { 
+int test6(void) {
   // just plain invalid.
   goto x;  // expected-error {{use of undeclared label 'x'}}
 }
@@ -59,7 +59,7 @@ void test7(int x) {
 int test8(int x) {
   // For statement.
   goto L2;     // expected-error {{cannot jump from this goto statement to its label}}
-  for (int arr[x];   // expected-note {{jump bypasses initialization of variable length array}}  
+  for (int arr[x];   // expected-note {{jump bypasses initialization of variable length array}}
        ; ++x)
     L2:;
 
@@ -68,36 +68,36 @@ int test8(int x) {
   int Y = ({  int a[x];   // expected-note {{jump bypasses initialization of variable length array}} \
                           // expected-note {{jump enters a statement expression}}
            L3: 4; });
-  
+
   goto L4; // expected-error {{cannot jump from this goto statement to its label}}
   {
     int A[x],  // expected-note {{jump bypasses initialization of variable length array}}
         B[x];  // expected-note {{jump bypasses initialization of variable length array}}
   L4: ;
   }
-  
+
   {
   L5: ;// ok
     int A[x], B = ({ if (x)
                        goto L5;
-                     else 
+                     else
                        goto L6;
-                   4; }); 
+                   4; });
   L6:; // ok.
     if (x) goto L6; // ok
   }
-  
+
   {
   L7: ;// ok
     int A[x], B = ({ if (x)
                        goto L7;
-                     else 
+                     else
                        goto L8;  // expected-error {{cannot jump from this goto statement to its label}}
                      4; }),
         C[x];   // expected-note {{jump bypasses initialization of variable length array}}
   L8:; // bad
   }
- 
+
   {
   L9: ;// ok
     int A[({ if (x)
@@ -140,11 +140,11 @@ L2: ;
   int a[n]; // expected-note {{jump bypasses initialization of variable length array}}
 
 L3:         // expected-note {{possible target of indirect goto}}
-L4:  
+L4:
   goto *P;
   goto L3;  // ok
   goto L4;  // ok
-  
+
   void *Ptrs[] = {
     &&L2,
     &&L3
@@ -155,7 +155,7 @@ void test10(int n, void *P) {
   goto L0;     // expected-error {{cannot jump from this goto statement to its label}}
   typedef int A[n];  // expected-note {{jump bypasses initialization of VLA typedef}}
 L0:
-  
+
   goto L1;      // expected-error {{cannot jump from this goto statement to its label}}
   A b, c[10];        // expected-note 2 {{jump bypasses initialization of variable length array}}
 L1:
@@ -169,7 +169,7 @@ void test11(int n) {
   void *P = ^{
     switch (n) {
     case 1:;
-    case 2: 
+    case 2:
     case 3:;
       int Arr[n]; // expected-note {{jump bypasses initialization of variable length array}}
     case 4:       // expected-error {{cannot jump from switch statement to this case label}}

@@ -52,7 +52,7 @@ int *testStdCopyInvalidatesBuffer(std::vector<int> v) {
 int *testStdCopyBackwardInvalidatesBuffer(std::vector<int> v) {
   int n = v.size();
   int *buf = (int *)malloc(n * sizeof(int));
-  
+
   buf[0] = 66;
 
   // Call to copy_backward should invalidate buf.

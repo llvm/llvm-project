@@ -70,10 +70,10 @@ int test_init_in_condition_while() {
     if (x == 2)
       break;
   }
-  
+
   if (z == 2)
     return 0;
-  
+
   clang_analyzer_warnIfReached();  // unreachable
   return 0;
 }
@@ -87,7 +87,7 @@ int test_init_in_condition_for() {
   }
   if (z == 1)
     return 0;
-    
+
   clang_analyzer_warnIfReached();  // unreachable
   return 0;
 }
@@ -99,10 +99,10 @@ int test_init_in_condition_for() {
 class TestHandleThis {
   int x;
 
-  TestHandleThis();  
+  TestHandleThis();
   int foo();
   int null_deref_negative();
-  int null_deref_positive();  
+  int null_deref_positive();
 };
 
 int TestHandleThis::foo() {
@@ -116,7 +116,7 @@ int TestHandleThis::null_deref_negative() {
     return 1;
   }
   clang_analyzer_warnIfReached();  // unreachable
-  return 0;  
+  return 0;
 }
 
 int TestHandleThis::null_deref_positive() {
@@ -125,7 +125,7 @@ int TestHandleThis::null_deref_positive() {
     return 1;
   }
   clang_analyzer_warnIfReached();  // expected-warning{{REACHABLE}}
-  return 0;  
+  return 0;
 }
 
 // PR 7675 - passing literals by-reference
@@ -266,7 +266,7 @@ class Rdar9212495_B : public Rdar9212495_C {};
 class Rdar9212495_A : public Rdar9212495_B {};
 const Rdar9212495_A& rdar9212495(const Rdar9212495_C* ptr) {
   const Rdar9212495_A& val = dynamic_cast<const Rdar9212495_A&>(*ptr);
-  
+
   // This is not valid C++; dynamic_cast with a reference type will throw an
   // exception if the pointer does not match the expected type. However, our
   // implementation of dynamic_cast will pass through a null pointer...or a
@@ -274,7 +274,7 @@ const Rdar9212495_A& rdar9212495(const Rdar9212495_C* ptr) {
   if (&val == 0) {
     val.bar(); // expected-warning{{Called C++ object pointer is null}}
   }
-  
+
   return val;
 }
 

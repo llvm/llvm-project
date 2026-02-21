@@ -53,7 +53,7 @@
 // CHECK-SPIRV-BINARY-OFFLOAD-DEVICE-ONLY: [[P6:[0-9]+]]: offload, "device-hip (spirv64-amd-amdhsa)" {[[P5]]}, none
 
 // RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
-// RUN:         -nogpuinc -nogpulib -x hip %s -save-temps \ 
+// RUN:         -nogpuinc -nogpulib -x hip %s -save-temps \
 // RUN:         -use-spirv-backend --offload-device-only -fgpu-rdc -ccc-print-phases \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC
 

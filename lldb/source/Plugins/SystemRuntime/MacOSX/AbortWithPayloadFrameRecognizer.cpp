@@ -56,7 +56,7 @@ AbortWithPayloadFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   static constexpr llvm::StringLiteral info_key("abort_with_payload");
 
   Log *log = GetLog(LLDBLog::SystemRuntime);
-  
+
   if (!frame_sp) {
     LLDB_LOG(log, "abort_with_payload recognizer: invalid frame.");
     return {};
@@ -197,8 +197,8 @@ AbortWithPayloadFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   abort_dict_sp->AddStringItem(reason_key, reason_string);
   abort_dict_sp->AddIntegerItem(flags_key, flags_val);
 
-  // This will overwrite the abort_with_payload information in the dictionary  
-  // already.  But we can only crash on abort_with_payload once, so that 
+  // This will overwrite the abort_with_payload information in the dictionary
+  // already.  But we can only crash on abort_with_payload once, so that
   // shouldn't matter.
   process->GetExtendedCrashInfoDict()->AddItem(info_key, abort_dict_sp);
 

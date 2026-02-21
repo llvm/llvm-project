@@ -5,7 +5,7 @@
 struct nil { };
 
 template<typename Head, typename Tail = nil>
-struct cons { 
+struct cons {
   typedef Head head;
   typedef Tail tail;
 };
@@ -34,8 +34,8 @@ struct length<nil> {
   static const unsigned value = 0;
 };
 
-typedef cons<unsigned char, 
-             cons<unsigned short, 
+typedef cons<unsigned char,
+             cons<unsigned short,
                   cons<unsigned int,
                        cons<unsigned long> > > > unsigned_inttypes;
 int length0[length<unsigned_inttypes>::value == 4? 1 : -1];
@@ -45,7 +45,7 @@ int length0[length<unsigned_inttypes>::value == 4? 1 : -1];
 // FIXME: I would prefer that this be a partial specialization, but
 // that requires partial ordering of class template partial
 // specializations.
-template<typename T> 
+template<typename T>
 class reverse {
   typedef typename reverse<typename T::tail>::type reversed_tail;
 
@@ -69,8 +69,8 @@ public:
 };
 
 int reverse0[is_same<reverse<unsigned_inttypes>::type,
-                     cons<unsigned long, 
-                          cons<unsigned int, 
+                     cons<unsigned long,
+                          cons<unsigned int,
                                cons<unsigned short,
                                     cons<unsigned char> > > > >::value? 1 : -1];
 

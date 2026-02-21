@@ -110,7 +110,7 @@ void reassign_to_null() {
 // CHECK-NEXT:       Src:  {{[0-9]+}} (Expr: ImplicitCastExpr, Type : MyObj *)
 // CHECK:   Expire ([[L_S1]] (Path: s1))
 }
-// FIXME: Have a better representation for nullptr than just an empty origin. 
+// FIXME: Have a better representation for nullptr than just an empty origin.
 //        It should be a separate loan and origin kind.
 
 // CHECK-LABEL: Function: pointer_indirection
@@ -140,7 +140,7 @@ void pointer_indirection() {
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: [[O_PP_INNER:[0-9]+]] (Decl: pp, Type : int *)
 // CHECK-NEXT:       Src:  {{[0-9]+}} (Expr: UnaryOperator, Type : int *)
-  
+
   // FIXME: Propagate origins across dereference unary operator*
   int *q = *pp;
 // CHECK:   Use ([[O_PP_OUTER]] (Decl: pp, Type : int **), [[O_PP_INNER]] (Decl: pp, Type : int *), Read)

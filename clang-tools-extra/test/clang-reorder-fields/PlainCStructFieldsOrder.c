@@ -9,6 +9,6 @@ struct Foo {
 
 int main(void) {
   const int x = 13;
-  struct Foo foo = { &x, 0, 1.29, 17 }; // CHECK: {{^  struct Foo foo = { 1.29, 17, 0, &x };}} 
+  struct Foo foo = { &x, 0, 1.29, 17 }; // CHECK: {{^  struct Foo foo = { 1.29, 17, 0, &x };}}
   return 0;
 }

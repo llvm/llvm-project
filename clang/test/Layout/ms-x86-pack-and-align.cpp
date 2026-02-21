@@ -357,20 +357,20 @@ struct MB : virtual MA {
 
 struct RA {};
 #pragma pack(1)
-struct __declspec(align(8)) RB0 { 
+struct __declspec(align(8)) RB0 {
 	__declspec(align(1024)) int b : 3;
 };
 
-struct __declspec(align(8)) RB1 { 
+struct __declspec(align(8)) RB1 {
 	__declspec(align(1024)) int b : 3;
 	virtual void f() {}
 };
 
-struct __declspec(align(8)) RB2 : virtual RA { 
+struct __declspec(align(8)) RB2 : virtual RA {
 	__declspec(align(1024)) int b : 3;
 };
 
-struct __declspec(align(8)) RB3 : virtual RA { 
+struct __declspec(align(8)) RB3 : virtual RA {
 	__declspec(align(1024)) int b : 3;
 	virtual void f() {}
 };

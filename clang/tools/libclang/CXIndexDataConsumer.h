@@ -61,7 +61,7 @@ struct ContainerInfo : public CXIdxContainerInfo {
   const DeclContext *DC;
   CXIndexDataConsumer *IndexCtx;
 };
-  
+
 struct DeclInfo : public CXIdxDeclInfo {
   enum DInfoKind {
     Info_Decl,
@@ -75,7 +75,7 @@ struct DeclInfo : public CXIdxDeclInfo {
 
     Info_CXXClass
   };
-  
+
   DInfoKind Kind;
 
   EntityInfo EntInfo;
@@ -278,7 +278,7 @@ class CXIndexDataConsumer : public index::IndexDataConsumer {
   IndexerCallbacks &CB;
   unsigned IndexOptions;
   CXTranslationUnit CXTU;
-  
+
   typedef llvm::DenseMap<const FileEntry *, CXIdxClientFile> FileMapTy;
   typedef llvm::DenseMap<const DeclContext *, CXIdxClientContainer>
     ContainerMapTy;
@@ -384,7 +384,7 @@ public:
   bool handleEnumerator(const EnumConstantDecl *D);
 
   bool handleTagDecl(const TagDecl *D);
-  
+
   bool handleTypedefName(const TypedefNameDecl *D);
 
   bool handleObjCInterface(const ObjCInterfaceDecl *D);

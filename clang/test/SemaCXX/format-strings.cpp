@@ -130,7 +130,7 @@ namespace Templates {
     p.print("abc"); // expected-note {{requested here}}
   }
 
-  
+
   extern void (^block_print)(const char * format, ...) __attribute__((format(printf, 1, 2)));
 
   template<typename T>
@@ -166,24 +166,24 @@ void f() {
 #if __cplusplus >= 201103L
 namespace evaluated {
 
-constexpr const char *basic() { 
-  return 
+constexpr const char *basic() {
+  return
 "%s %d"; // expected-note {{format string is defined here}}
 }
 
-constexpr const char *correct_fmt() { 
-  return 
+constexpr const char *correct_fmt() {
+  return
 "%d %d";
 }
 
-constexpr const char *string_linebreak() { 
-  return 
+constexpr const char *string_linebreak() {
+  return
 "%d %d"
 "%d %s"; // expected-note {{format string is defined here}}
 }
 
-/*non-constexpr*/ const char *not_literal() { 
-  return 
+/*non-constexpr*/ const char *not_literal() {
+  return
 "%d %d"
 "%d %s";
 }

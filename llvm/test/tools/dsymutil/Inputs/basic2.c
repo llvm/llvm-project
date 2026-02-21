@@ -24,5 +24,5 @@ int foo(int arg) {
    with a custom clang that had different settings for the linetable
    encoding constants: line_base == -1 and line_range == 4.
 
-   clang -c -g basic2.c -o basic2-custom-linetable.macho.x86_64.o 
+   clang -c -g basic2.c -o basic2-custom-linetable.macho.x86_64.o
 */

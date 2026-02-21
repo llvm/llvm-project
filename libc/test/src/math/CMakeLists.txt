@@ -2473,7 +2473,7 @@ add_fp_unittest(
   SRCS
     asinf16_test.cpp
   DEPENDS
-    libc.src.math.asinf16  
+    libc.src.math.asinf16
 )
 
 add_fp_unittest(
@@ -2519,7 +2519,7 @@ add_fp_unittest(
   SRCS
     acosf16_test.cpp
   DEPENDS
-    libc.src.math.acosf16  
+    libc.src.math.acosf16
 )
 
 add_fp_unittest(
@@ -2530,7 +2530,7 @@ add_fp_unittest(
   SRCS
     acospif16_test.cpp
   DEPENDS
-    libc.src.math.acospif16  
+    libc.src.math.acospif16
 )
 
 add_fp_unittest(

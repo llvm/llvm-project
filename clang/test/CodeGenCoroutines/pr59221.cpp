@@ -10,7 +10,7 @@ template <typename T> struct task {
 	struct promise_type {
 		T value{123};
 		std::coroutine_handle<> caller{std::noop_coroutine()};
-		
+
 		struct final_awaiter: std::suspend_always {
 			auto await_suspend(std::coroutine_handle<promise_type> me) const noexcept {
 				return me.promise().caller;
@@ -28,22 +28,22 @@ template <typename T> struct task {
 		}
 		constexpr void return_value(T v) noexcept {
 			value = v;
-		} 
+		}
 		constexpr auto & get_return_object() noexcept {
 			return *this;
 		}
 	};
-	
+
 	using coroutine_handle = std::coroutine_handle<promise_type>;
-	
+
 	promise_type & promise{nullptr};
-	
+
 	task(promise_type & p) noexcept: promise{p} { }
-	
+
 	~task() noexcept {
 		coroutine_handle::from_promise(promise).destroy();
 	}
-	
+
 	auto await_ready() noexcept {
         return false;
     }
@@ -56,11 +56,11 @@ template <typename T> struct task {
     constexpr auto await_resume() const noexcept {
         return promise.value;
     }
-	
+
 	// non-coroutine access to result
 	auto get() noexcept {
 		const auto handle = coroutine_handle::from_promise(promise);
-		
+
 		if (!handle.done()) {
 			handle.resume();
 		}

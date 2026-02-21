@@ -612,7 +612,7 @@ TEST(SourceCodeTests, HalfOpenFileRange) {
     int main() {
       $a[[P<P<P<P<P<int>>>>> a]];
       $b[[int b = 1]];
-      $c[[FOO(b, c)]]; 
+      $c[[FOO(b, c)]];
       $d[[FOO(BAR(BAR(b)), d)]];
       // FIXME: We might want to select everything inside the outer ECHO.
       ECHO(ECHO($e[[int) ECHO(e]]));

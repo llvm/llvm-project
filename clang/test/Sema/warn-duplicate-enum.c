@@ -63,9 +63,9 @@ enum {
 
 enum { J1, J2 = -1, J3 };
 
-enum { 
-  K1, 
-  K2, 
+enum {
+  K1,
+  K2,
   K3,
   K4 = K2,
   K5 = 2

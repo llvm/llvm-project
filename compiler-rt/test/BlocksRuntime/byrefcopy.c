@@ -22,7 +22,7 @@ void callVoidVoid(void (^closure)(void)) {
 
 int main(int argc, char *argv[]) {
     int __block i = 10;
-    
+
     void (^block)(void) = ^{ ++i; };
     //printf("original (old style) is  %s\n", _Block_dump_old(block));
     //printf("original (new style) is %s\n", _Block_dump(block));
@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
     //printf("copy is %s\n", _Block_dump(blockcopy));
     // use a copy & see that it updates i
     callVoidVoid(block);
-    
+
     if (i != 11) {
         printf("*** %s didn't update i\n", argv[0]);
         return 1;

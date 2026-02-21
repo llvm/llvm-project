@@ -56,6 +56,6 @@ __attribute__((noinline)) void foo(int n, int N) {
 }
 
 int main() {
-  foo(10, 20); 
+  foo(10, 20);
   return 0;
 }

@@ -59,7 +59,7 @@ namespace Conversion {
     explicit operator bool();
   };
 
-  A::operator bool() { return false; } 
+  A::operator bool() { return false; }
 
   struct B {
     void f(int);
@@ -69,7 +69,7 @@ namespace Conversion {
   void f(A a, B b) {
     b.f(a);
   }
-  
+
   void testExplicit()
   {
     // Taken from 12.3.2p2
@@ -81,7 +81,7 @@ namespace Conversion {
       explicit operator Y() const; // expected-note 2{{not a candidate}}
       explicit operator int() const; // expected-note {{not a candidate}}
     };
-    
+
     Z z;
     // 13.3.1.4p1 & 8.5p16:
     Y y2 = z; // expected-error {{no viable conversion from 'Z' to 'Y'}}
@@ -111,7 +111,7 @@ namespace Conversion {
     const X x1{z};
     const X& x2{z};
   }
-  
+
   void testBool() {
     struct Bool {
       operator bool();
@@ -125,43 +125,43 @@ namespace Conversion {
 
     (void) (1 + b);
     (void) (1 + n); // expected-error {{invalid operands to binary expression ('int' and 'NotBool')}}
-    
+
     // 5.3.1p9:
     (void) (!b);
     (void) (!n);
-    
+
     // 5.14p1:
     (void) (b && true);
     (void) (n && true);
-    
+
     // 5.15p1:
     (void) (b || true);
     (void) (n || true);
-    
+
     // 5.16p1:
     (void) (b ? 0 : 1);
     (void) (n ? 0: 1);
-    
+
     // 5.19p5:
     // TODO: After constexpr has been implemented
-    
+
     // 6.4p4:
     if (b) {}
     if (n) {}
-    
+
     // 6.4.2p2:
     switch (b) {} // expected-warning {{switch condition has boolean value}}
     switch (n) {} // expected-error {{switch condition type 'NotBool' requires explicit conversion to 'bool'}} \
                      expected-warning {{switch condition has boolean value}}
-    
+
     // 6.5.1:
     while (b) {}
     while (n) {}
-    
+
     // 6.5.2p1:
     do {} while (b);
     do {} while (n);
-    
+
     // 6.5.3:
     for (;b;) {}
     for (;n;) {}
@@ -211,10 +211,10 @@ namespace Conversion {
     struct NotInt {
       explicit operator int(); // expected-note {{conversion to integral type 'int' declared here}}
     };
-    
+
     Int    i;
     NotInt ni;
-    
+
     new int[i];
     new int[ni]; // expected-error {{array size expression of type 'NotInt' requires explicit conversion to type 'int'}}
   }
@@ -229,26 +229,26 @@ namespace Conversion {
     struct NotPtr {
       explicit operator int*(); // expected-note {{conversion}}
     };
-    
+
     Ptr    p;
     NotPtr np;
-    
+
     delete p;
     delete np; // expected-error {{converting delete expression from type 'NotPtr' to type 'int *' invokes an explicit conversion function}}
   }
-  
+
   void testFunctionPointer()
   {
     // 13.3.1.1.2p2:
     using Func = void(*)(int);
-    
+
     struct FP {
       operator Func();
     };
     struct NotFP {
       explicit operator Func();
     };
-    
+
     FP    fp;
     NotFP nfp;
     fp(1);

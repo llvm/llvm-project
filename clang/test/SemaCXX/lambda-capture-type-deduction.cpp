@@ -307,7 +307,7 @@ struct LengthPercentage {};
 
 void reflectSum() {
   Range resultR;
-  [&] (auto) -> LengthPercentage<resultR> { 
+  [&] (auto) -> LengthPercentage<resultR> {
     return {};
   }(0);
 }

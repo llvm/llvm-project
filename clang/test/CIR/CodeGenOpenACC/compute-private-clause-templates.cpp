@@ -62,7 +62,7 @@ void dependent_version(const T &cc, const U &ndc, const V &dtor, const W &someIn
   // CHECK-NEXT: %[[PRIV_LOAD:.*]] = cir.load %[[SOMEINT]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
   // CHECK-NEXT: %[[PRIVATE4:.*]] = acc.private varPtr(%[[PRIV_LOAD]] : !cir.ptr<!s32i>) recipe(@privatization__ZTSi) -> !cir.ptr<!s32i> {name = "someInt"}
 
-  // CHECK-NEXT: acc.parallel private(%[[PRIVATE1]], %[[PRIVATE2]], %[[PRIVATE3]], %[[PRIVATE4]] : !cir.ptr<!rec_CopyConstruct>, 
+  // CHECK-NEXT: acc.parallel private(%[[PRIVATE1]], %[[PRIVATE2]], %[[PRIVATE3]], %[[PRIVATE4]] : !cir.ptr<!rec_CopyConstruct>,
   // CHECK-SAME: !cir.ptr<!rec_NonDefaultCtor>,
   // CHECK-SAME: !cir.ptr<!rec_HasDtor>,
   // CHECK-SAME: !cir.ptr<!s32i>) {

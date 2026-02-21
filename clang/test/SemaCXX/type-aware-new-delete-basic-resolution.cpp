@@ -125,7 +125,7 @@ BaseClass1::~BaseClass1() {
   // expected-note@#45 {{'operator delete<BaseClass1>' has been explicitly marked deleted here}}
 }
 
-struct SubClass1 : BaseClass1 { 
+struct SubClass1 : BaseClass1 {
   virtual ~SubClass1();
 };
 
@@ -261,7 +261,7 @@ struct ClassScopedTemplatePackStruct {
 };
 
 void test() {
-  
+
   // untyped in class declaration wins
   UntypedInclassNew *O1 = new UntypedInclassNew;
   // expected-error@-1 {{call to deleted function 'operator new'}}

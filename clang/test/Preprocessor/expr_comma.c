@@ -2,7 +2,7 @@
 // RUN: not %clang_cc1 -E %s -std=c89 -pedantic-errors
 
 // Comma is allowed if unevaluated in C99
-// RUN: %clang_cc1 -E %s -std=c99 -pedantic-errors 
+// RUN: %clang_cc1 -E %s -std=c99 -pedantic-errors
 
 // PR2279
 

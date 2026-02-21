@@ -98,7 +98,7 @@ namespace rdar8360106 {
   template<typename R, typename T> void f0(R (*)(T), T);
   template<typename R, typename T> void f1(R (&)(T) , T); // expected-note{{candidate template ignored: couldn't infer template argument 'R'}}
   template<typename R, typename T> void f2(R (* const&)(T), T); // expected-note{{candidate template ignored: couldn't infer template argument 'R'}}
-  
+
   int g(int);
   int g(int, int);
 

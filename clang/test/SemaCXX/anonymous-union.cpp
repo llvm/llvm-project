@@ -8,7 +8,7 @@ struct X {
   union {
     int i;
     float f;
-    
+
     union { // expected-warning{{anonymous types declared in an anonymous union are an extension}}
       float f2;
       mutable double d;
@@ -111,7 +111,7 @@ struct BadMembers {
   union {
     struct X { }; // expected-error {{types cannot be declared in an anonymous union}}
     struct { int x; int y; } y; // expected-warning{{anonymous types declared in an anonymous union are an extension}}
-    
+
     void f(); // expected-error{{functions cannot be declared in an anonymous union}}
   private: int x1; // expected-error{{anonymous union cannot contain a private data member}}
   protected: float x2; // expected-error{{anonymous union cannot contain a protected data member}}
@@ -173,7 +173,7 @@ void foo_PR6741() {
         char *m_a;
         int *m_b;
     };
- 
+
     if(1) {
         union {
             char *m_a;
@@ -190,7 +190,7 @@ namespace PR8326 {
       : x(0)
       , y(1){
     }
-  
+
   private:
     const union { // expected-warning{{anonymous union cannot be 'const'}}
       struct { // expected-warning{{anonymous structs are a GNU extension}} expected-warning{{declared in an anonymous union}}

@@ -87,7 +87,7 @@ extern "C"
   extern void * sel_getUid(char *name);
   extern int printf(const char *format, ...);
 }
-extern "C" void * 
+extern "C" void *
 __lldb_objc_find_implementation_for_selector (void *object,
                                               void *sel,
                                               int is_str_ptr,
@@ -118,7 +118,7 @@ __lldb_objc_find_implementation_for_selector (void *object,
   };
 
   struct __lldb_imp_return_struct return_struct;
-                                                                           
+
   if (debug)
     printf ("\n*** Called with obj: %p sel: %p is_str_ptr: %d "
             "is_stret: %d is_super: %d, "
@@ -135,7 +135,7 @@ __lldb_objc_find_implementation_for_selector (void *object,
   }
   if (is_super) {
     if (is_super2) {
-      return_struct.class_addr 
+      return_struct.class_addr
           = ((__lldb_objc_super *) object)->class_ptr->super_ptr;
     } else {
       return_struct.class_addr = ((__lldb_objc_super *) object)->class_ptr;
@@ -144,11 +144,11 @@ __lldb_objc_find_implementation_for_selector (void *object,
       printf("*** Super, class addr: %p\n", return_struct.class_addr);
   } else {
     // This code seems a little funny, but has its reasons...
-    // The call to [object class] is here because if this is a class, and has 
-    // not been called into yet, we need to do something to force the class to 
+    // The call to [object class] is here because if this is a class, and has
+    // not been called into yet, we need to do something to force the class to
     // initialize itself.
-    // Then the call to object_getClass will actually return the correct class, 
-    // either the class if object is a class instance, or the meta-class if it 
+    // Then the call to object_getClass will actually return the correct class,
+    // either the class if object is a class instance, or the meta-class if it
     // is a class pointer.
     void *class_ptr = (void *) [(id) object class];
     return_struct.class_addr = (id)  object_getClass((id) object);
@@ -554,8 +554,8 @@ const AppleObjCTrampolineHandler::DispatchFunction
 // This is the table of ObjC "accelerated dispatch" functions.  They are a set
 // of objc methods that are "seldom overridden" and so the compiler replaces the
 // objc_msgSend with a call to one of the dispatch functions.  That will check
-// whether the method has been overridden, and directly call the Foundation 
-// implementation if not.  
+// whether the method has been overridden, and directly call the Foundation
+// implementation if not.
 // This table is supposed to be complete.  If ones get added in the future, we
 // will have to add them to the table.
 const char *AppleObjCTrampolineHandler::g_opt_dispatch_names[] = {
@@ -1153,12 +1153,12 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
       }
     }
   }
-  
+
   // Finally, check if we have hit an "optimized dispatch" function.  This will
   // either directly call the base implementation or dispatch an objc_msgSend
   // if the method has been overridden.  So we just do a "step in/step out",
-  // setting a breakpoint on objc_msgSend, and if we hit the msgSend, we 
-  // will automatically step in again.  That's the job of the 
+  // setting a breakpoint on objc_msgSend, and if we hit the msgSend, we
+  // will automatically step in again.  That's the job of the
   // AppleThreadPlanStepThroughDirectDispatch.
   if (!this_dispatch && !ret_plan_sp) {
     MsgsendMap::iterator pos;

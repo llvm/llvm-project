@@ -2,7 +2,7 @@
 #include "nonexistent_header.h"
 struct X {
   int member;
-  
+
   enum E { Val1 };
 };
 
@@ -27,7 +27,7 @@ void test_Z() {
 float& overloaded(int i, long second);
 double& overloaded(float f, int second);
 int& overloaded(Z z, int second);
-                
+
 void test_overloaded() {
   // RUN: c-index-test -code-completion-at=%s:33:18 %s | FileCheck -check-prefix=CHECK-OVERLOAD %s
   overloaded(Z(), 0);

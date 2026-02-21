@@ -3,12 +3,12 @@
 template<class T, class V>
 struct A{
     A(); // expected-note{{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
-    A(A&); // expected-note{{candidate constructor not viable: expects an lvalue for 1st argument}} 
+    A(A&); // expected-note{{candidate constructor not viable: expects an lvalue for 1st argument}}
     A(A<V, T>); // expected-error{{copy constructor must pass its first argument by reference}}
 };
 
 void f() {
-    A<int, int> a = A<int, int>(); // expected-note{{in instantiation of template class 'A<int, int>'}} 
+    A<int, int> a = A<int, int>(); // expected-note{{in instantiation of template class 'A<int, int>'}}
     A<int, double> a1 = A<double, int>(); // No error (not a copy constructor)
 }
 

@@ -23,7 +23,7 @@ namespace PR93409 {
       auto operator<=>(const Y&) const = default;
       X m_x;
   };
-  
+
   bool compare(const Y& y1, const Y& y2)
   {
      return y1 == y2 || y1 < y2 || y1 > y2;

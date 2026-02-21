@@ -212,7 +212,7 @@ static bool addDiscriminators(Function &F) {
       //  1) We want to avoid a non-deterministic assignment of
       //     discriminators.
       //  2) We want to minimize the number of base discriminators used.
-      if (!isa<InvokeInst>(I) && (!isa<CallInst>(I) || isa<IntrinsicInst>(I)))  
+      if (!isa<InvokeInst>(I) && (!isa<CallInst>(I) || isa<IntrinsicInst>(I)))
         continue;
 
       DILocation *CurrentDIL = I.getDebugLoc();

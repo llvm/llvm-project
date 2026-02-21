@@ -39,7 +39,7 @@ void use(int x, unsigned int y, float f, HasOps ops) {
   // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load{{.*}} %[[TEMP_ALLOCA]] : !cir.ptr<!u32i>, !u32i
   // CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[TEMP_LOAD]]) : !u32i, !u32i
   // CHECK-NEXT: cir.store {{.*}}%[[INC]], %[[TEMP_ALLOCA]] : !u32i, !cir.ptr<!u32i>
-  // 
+  //
   // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load{{.*}} %[[TEMP_ALLOCA]] : !cir.ptr<!u32i>, !u32i
   // CHECK-NEXT: acc.yield %[[TEMP_LOAD]] : !u32i
   // CHECK-NEXT: }
@@ -54,7 +54,7 @@ void use(int x, unsigned int y, float f, HasOps ops) {
   // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load{{.*}} %[[TEMP_ALLOCA]] : !cir.ptr<!cir.float>, !cir.float
   // CHECK-NEXT: %[[INC:.*]] = cir.unary(dec, %[[TEMP_LOAD]]) : !cir.float, !cir.float
   // CHECK-NEXT: cir.store {{.*}}%[[INC]], %[[TEMP_ALLOCA]] : !cir.float, !cir.ptr<!cir.float>
-  // 
+  //
   // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load{{.*}} %[[TEMP_ALLOCA]] : !cir.ptr<!cir.float>, !cir.float
   // CHECK-NEXT: acc.yield %[[TEMP_LOAD]] : !cir.float
   // CHECK-NEXT: }

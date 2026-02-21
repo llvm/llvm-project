@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify 
+// RUN: %clang_cc1 %s -verify
 
 void foo() {
   // expected-error@+1{{an attribute list cannot appear here}}

@@ -205,7 +205,7 @@ void m1(std::string&&) {
 
   using m1tp = void (*)(std::string &&);
   m1tp m1p2 = m1;
-  m1p2(s.c_str());  
+  m1p2(s.c_str());
 }
 
 // Test for overloaded operator->

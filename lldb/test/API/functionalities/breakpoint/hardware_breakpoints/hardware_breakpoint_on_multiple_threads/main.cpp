@@ -19,7 +19,7 @@ thread_func (uint32_t thread_index) {
   printf ("%s (thread index = %u) starting...\n", __FUNCTION__, thread_index);
 
   hw_break_mutex.lock();
-  
+
   hw_break_function(thread_index); // Call hw_break_function
 
   hw_break_mutex.unlock();
@@ -28,7 +28,7 @@ thread_func (uint32_t thread_index) {
 
 int main (int argc, char const *argv[])
 {
-  std::thread threads[NUM_OF_THREADS]; 
+  std::thread threads[NUM_OF_THREADS];
 
   printf ("Starting thread creation with hardware breakpoint set...\n");
 

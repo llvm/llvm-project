@@ -8,7 +8,7 @@ struct X0 {
   (X0)(float);
   X0 (f0)(int);
   X0 (f0)(type);
-  
+
   X0 f1();
   X0 f1(double);
 };

@@ -1,5 +1,5 @@
 // DEFINE: %{common_opts_mac} = -triple x86_64-apple-macos10.7.0
-// DEFINE: %{limit} = -fnoopenmp-use-tls -ferror-limit 100 
+// DEFINE: %{limit} = -fnoopenmp-use-tls -ferror-limit 100
 // DEFINE: %{target_mac} = -fopenmp-targets=x86_64-apple-macos10.7.0
 // DEFINE: %{aux_triple} = -aux-triple x86_64-apple-macos10.7.0
 // DEFINE: %{openmp45} = -fopenmp -fopenmp-version=45
@@ -42,7 +42,7 @@ int recursive = recursive ^ 3 + gg;
 // omp60-error@+3 {{unexpected OpenMP directive '#pragma omp end declare_target'}}
 // omp52-error@+2 {{unexpected OpenMP directive '#pragma omp end declare target'}}
 // omp45-to-51-error@+1 {{unexpected OpenMP directive '#pragma omp end declare target'}}
-#pragma omp end declare target 
+#pragma omp end declare target
 
 // ompvar-error@+1 {{variable captured in declare target region must appear in a to clause}}
 int a, b, z;
@@ -52,25 +52,25 @@ __thread int t;
 // omp60-error@+3 {{expected '(' after 'declare_target'}}
 // omp52-error@+2 {{expected '(' after 'declare target'}}
 // omp45-to-51-error@+1 {{expected '(' after 'declare target'}}
-#pragma omp declare target . 
+#pragma omp declare target .
 // omp52-or-later-warning@+1 {{the delimited form of '#pragma omp declare target' without clauses is deprecated; use '#pragma omp begin declare target' instead}}
 #pragma omp declare target
 void f();
 // omp60-warning@+3 {{extra tokens at the end of '#pragma omp end declare_target' are ignored}}
 // omp52-warning@+2 {{extra tokens at the end of '#pragma omp end declare target' are ignored}}
 // omp45-to-51-warning@+1 {{extra tokens at the end of '#pragma omp end declare target' are ignored}}
-#pragma omp end declare target shared(a) 
+#pragma omp end declare target shared(a)
 
 // omp60-error@+10 {{unexpected 'map' clause, only 'enter', 'link', 'device_type' or 'indirect' clauses expected}}
 // omp60-error@+9 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // omp52-error@+8 {{unexpected 'map' clause, only 'enter', 'link', 'device_type' or 'indirect' clauses expected}}
 // omp52-error@+7 {{expected at least one 'enter', 'link' or 'indirect' clause}}
-// omp51-error@+6 {{unexpected 'map' clause, only 'to', 'link', 'device_type' or 'indirect' clauses expected}} 
+// omp51-error@+6 {{unexpected 'map' clause, only 'to', 'link', 'device_type' or 'indirect' clauses expected}}
 // omp51-error@+5 {{expected at least one 'to', 'link' or 'indirect' clause}}
 // omp5-error@+4 {{unexpected 'map' clause, only 'to', 'link' or 'device_type' clauses expected}}
 // omp5-error@+3 {{expected at least one 'to' or 'link' clause}}
 // omp45-error@+2 {{unexpected 'map' clause, only 'to' or 'link' clauses expected}}
-// omp45-error@+1 {{expected at least one 'to' or 'link' clause}} 
+// omp45-error@+1 {{expected at least one 'to' or 'link' clause}}
 #pragma omp declare target map(a)
 
 // omp60-error@+5 {{unexpected 'to' clause, use 'enter' instead}}
@@ -78,10 +78,10 @@ void f();
 // omp52-error@+3 {{unexpected 'to' clause, use 'enter' instead}}
 // omp52-error@+2 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // omp45-to-51-error@+1 {{use of undeclared identifier 'foo1'}}
-#pragma omp declare target to(foo1) 
+#pragma omp declare target to(foo1)
 
 // expected-error@+1 {{use of undeclared identifier 'foo2'}}
-#pragma omp declare target link(foo2) 
+#pragma omp declare target link(foo2)
 
 // omp60-error@+6 {{unexpected 'to' clause, use 'enter' instead}}
 // omp60-error@+5 {{expected at least one 'enter', 'link' or 'indirect' clause}}
@@ -96,7 +96,7 @@ void q();
 // omp52-or-later-error@+3 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // omp5-and-51-warning@+2 {{more than one 'device_type' clause is specified}}
 // omp45-error@+1 {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}}
-#pragma omp declare target to(q) device_type(any) device_type(any) device_type(host) 
+#pragma omp declare target to(q) device_type(any) device_type(any) device_type(host)
 
 #if _OPENMP == 202011
 // omp51-error@+1 {{directive '#pragma omp declare target' cannot contain more than one 'indirect' clause}}
@@ -131,7 +131,7 @@ void bar();
 void c();
 
 // expected-note@+1 {{'func' defined here}}
-void func() {} 
+void func() {}
 
 // omp52-or-later-error@+5 {{unexpected 'allocate' clause, only 'enter', 'link', 'device_type' or 'indirect' clauses expected}}
 // omp51-error@+4 {{unexpected 'allocate' clause, only 'to', 'link', 'device_type' or 'indirect' clauses expected}}
@@ -186,7 +186,7 @@ void cba();
 // omp60-error@+3 {{unexpected OpenMP directive '#pragma omp end declare_target'}}
 // omp52-error@+2 {{unexpected OpenMP directive '#pragma omp end declare target'}}
 // omp45-to-51-error@+1 {{unexpected OpenMP directive '#pragma omp end declare target'}}
-#pragma omp end declare target 
+#pragma omp end declare target
 
 #pragma omp begin declare target
 #pragma omp begin declare target
@@ -196,7 +196,7 @@ void fed();
 
 #pragma omp begin declare target
 // expected-note@+1 {{defined as threadprivate or thread local}}
-#pragma omp threadprivate(a) 
+#pragma omp threadprivate(a)
 extern int b;
 int g;
 
@@ -225,24 +225,24 @@ int C::method1() {
 
 void foo(int p) {
 // expected-error@+1 {{threadprivate variables cannot be used in target constructs}}
-  a = 0; 
+  a = 0;
   b = 0;
 // expected-error@+1 {{threadprivate variables cannot be used in target constructs}}
-  t = 1; 
+  t = 1;
   C object;
   VC object1;
   g = object.method();
   g += object.method1();
   g += object1.method() + p;
   // dev5-error@+1 {{function with 'device_type(host)' is not available on device}}
-  f(); 
+  f();
   q();
   c();
 }
 #pragma omp begin declare target
 void foo1() {
   // omp5-or-later-var-note@+1 {{variable 'z' is captured here}}
-  [&](){ (void)(b+z);}(); 
+  [&](){ (void)(b+z);}();
 }
 #pragma omp end declare target
 
@@ -251,7 +251,7 @@ void foo1() {
 // omp60-error@+3 {{unexpected OpenMP directive '#pragma omp end declare_target'}}
 // omp52-error@+2 {{unexpected OpenMP directive '#pragma omp end declare target'}}
 // omp45-to-51-error@+1 {{unexpected OpenMP directive '#pragma omp end declare target'}}
-#pragma omp end declare target 
+#pragma omp end declare target
 
 int C::method() {
   return 0;
@@ -274,12 +274,12 @@ int main (int argc, char **argv) {
 // omp60-error@+3 {{unexpected OpenMP directive '#pragma omp declare_target'}}
 // omp52-error@+2 {{unexpected OpenMP directive '#pragma omp declare target'}}
 // omp45-to-51-error@+1 {{unexpected OpenMP directive '#pragma omp declare target'}}
-#pragma omp declare target 
+#pragma omp declare target
   int v;
 // omp60-error@+3 {{unexpected OpenMP directive '#pragma omp end declare_target'}}
 // omp52-error@+2 {{unexpected OpenMP directive '#pragma omp end declare target'}}
 // omp45-to-51-error@+1 {{unexpected OpenMP directive '#pragma omp end declare target'}}
-#pragma omp end declare target 
+#pragma omp end declare target
   foo(v);
 
   // omp52-or-later-error@+2 {{expected at least one 'enter', 'link' or 'indirect' clause}}
@@ -288,7 +288,7 @@ int main (int argc, char **argv) {
   // omp52-or-later-error@+3 {{unexpected 'to' clause, use 'enter' instead}}
   // omp52-or-later-error@+2 {{expected at least one 'enter', 'link' or 'indirect' clause}}
   // omp45-to-51-var-error@+1 {{local variable 'a' should not be used in 'declare target' directive}}
-#pragma omp declare target to(a) 
+#pragma omp declare target to(a)
   return (0);
 }
 
@@ -299,30 +299,30 @@ namespace {
 #pragma omp end declare target
 
 // expected-error@+1 {{'S' used in declare target directive is not a variable or a function name}}
-#pragma omp declare target link(S) 
+#pragma omp declare target link(S)
 
 // expected-error@+1 {{'x' appears multiple times in clauses on the same declare target directive}}
-#pragma omp declare target (x, x) 
+#pragma omp declare target (x, x)
 // omp52-or-later-error@+3 {{unexpected 'to' clause, use 'enter' instead}}
 // omp52-or-later-error@+2 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // omp45-to-51-clause-error@+1 {{'x' appears multiple times in clauses on the same declare target directive}}
 #pragma omp declare target to(x) to(x)
 // expected-error@+1 {{'x' must not appear in both clauses 'to' and 'link'}}
-#pragma omp declare target link(x) 
+#pragma omp declare target link(x)
 
 void bazz() {}
 // omp52-or-later-error@+4 {{unexpected 'to' clause, use 'enter' instead}}
 // omp52-or-later-error@+3 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // host5-note@+2 3 {{marked as 'device_type(nohost)' here}}
-// omp45-error@+1 {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} 
+// omp45-error@+1 {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}}
 #pragma omp declare target to(bazz) device_type(nohost)
 void bazzz() {bazz();}
 // omp52-or-later-error@+3 {{unexpected 'to' clause, use 'enter' instead}}
 // omp52-or-later-error@+2 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // omp45-error@+1 {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}}
-#pragma omp declare target to(bazzz) device_type(nohost) 
+#pragma omp declare target to(bazzz) device_type(nohost)
 // host5-error@+1 {{function with 'device_type(nohost)' is not available on host}}
-void any() {bazz();} 
+void any() {bazz();}
 // host5-error@+1 {{function with 'device_type(nohost)' is not available on host}}
 void host1() {bazz();}
 // omp52-or-later-error@+4 {{unexpected 'to' clause, use 'enter' instead}}
@@ -334,12 +334,12 @@ void host1() {bazz();}
 void host2() {bazz();}
 // omp52-or-later-error@+2 {{unexpected 'to' clause, use 'enter' instead}}
 // omp52-or-later-error@+1 {{expected at least one 'enter', 'link' or 'indirect' clause}}
-#pragma omp declare target to(host2) 
+#pragma omp declare target to(host2)
 // dev5-error@+1 {{function with 'device_type(host)' is not available on device}}
 void device() {host1();}
 // omp52-or-later-error@+4 {{unexpected 'to' clause, use 'enter' instead}}
 // omp52-or-later-error@+3 {{expected at least one 'enter', 'link' or 'indirect' clause}}
-// host5-note@+2 2 {{marked as 'device_type(nohost)' here}} 
+// host5-note@+2 2 {{marked as 'device_type(nohost)' here}}
 // omp45-error@+1 {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}}
 #pragma omp declare target to(device) device_type(nohost)
 void host3() {host1();} // dev5-error {{function with 'device_type(host)' is not available on device}}
@@ -350,7 +350,7 @@ void host3() {host1();} // dev5-error {{function with 'device_type(host)' is not
 #pragma omp begin declare target
 void any1() {any();}
 // dev5-error@+1 {{function with 'device_type(host)' is not available on device}}
-void any2() {host1();} 
+void any2() {host1();}
 // host5-error@+1 {{function with 'device_type(nohost)' is not available on host}}
 void any3() {device();}
 void any4() {any2();}
@@ -379,22 +379,22 @@ int MultiDevTy;
 #pragma omp declare target to(MultiDevTy) device_type(nohost)
 
 // expected-warning@+1 {{declaration is not declared in any declare target region}}
-static int variable = 100; 
+static int variable = 100;
 static float variable1 = 200;
 // expected-warning@+1 {{declaration is not declared in any declare target region}}
-static float variable2 = variable1;  
+static float variable2 = variable1;
 
 // expected-warning@+1 {{declaration is not declared in any declare target region}}
-static int var = 1;  
+static int var = 1;
 
 static int var1 = 10;
 static int *var2 = &var1;
 // expected-warning@+1 {{declaration is not declared in any declare target region}}
-static int **ptr1 = &var2;  
+static int **ptr1 = &var2;
 
 int arr[2] = {1,2};
 // expected-warning@+1 {{declaration is not declared in any declare target region}}
-int (*arrptr)[2] = &arr;  
+int (*arrptr)[2] = &arr;
 
 class declare{
   public: int x;
@@ -402,24 +402,24 @@ class declare{
 };
 declare obj1;
 // expected-warning@+1 {{declaration is not declared in any declare target region}}
-declare *obj2 = &obj1;  
+declare *obj2 = &obj1;
 
 struct target{
   int x;
   void print();
 };
 // expected-warning@+1 {{declaration is not declared in any declare target region}}
-static target S;  
+static target S;
 
 #pragma omp begin declare target
 // expected-note@+1 {{used here}}
-int target_var = variable;  
+int target_var = variable;
 // expected-note@+1 {{used here}}
-float target_var1 = variable2;  
+float target_var1 = variable2;
 // expected-note@+1 {{used here}}
-int *ptr = &var;  
+int *ptr = &var;
 // expected-note@+1 {{used here}}
-int ***ptr2 = &ptr1; 
+int ***ptr2 = &ptr1;
 // expected-note@+1 {{used here}}
 int (**ptr3)[2] = &arrptr;
 // expected-note@+1 {{used here}}

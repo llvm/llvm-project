@@ -8,7 +8,7 @@
 // RUN:     XRAY_PROFILING_OPTIONS=no_flush=true %run %t
 // RUN: env XRAY_OPTIONS=verbosity=1 %run %t
 // RUN: ls xray-log.profiling-single-* | wc -l | tr -d '\n' > %t.profiles
-// RUN: %python -c "import sys; sys.exit(int(sys.argv[1]) - 2)" %{readfile:%t.profiles} 
+// RUN: %python -c "import sys; sys.exit(int(sys.argv[1]) - 2)" %{readfile:%t.profiles}
 // RUN: rm -f xray-log.profiling-single-*
 //
 // REQUIRES: built-in-llvm-tree

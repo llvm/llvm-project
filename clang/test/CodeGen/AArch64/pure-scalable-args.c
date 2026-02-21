@@ -382,7 +382,7 @@ void test_argpass_callee_side(PST v) {
 #endif
 void test_va_arg(int n, ...) {
      va_list ap;
-     va_start(ap, n);  
+     va_start(ap, n);
      PST v = va_arg(ap, PST);
      va_end(ap);
 

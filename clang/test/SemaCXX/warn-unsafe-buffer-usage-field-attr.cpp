@@ -37,20 +37,20 @@ struct A {
 
 struct B {
    A a;
- 
+
    [[clang::unsafe_buffer_usage]]
    int buf[];
 };
 
-struct D { 
+struct D {
   [[clang::unsafe_buffer_usage]]
   int *ptr, *ptr2;
 
   [[clang::unsafe_buffer_usage]]
   int buf[10];
- 
+
   size_t sz;
-  
+
 };
 
 void foo(int *ptr);
@@ -122,7 +122,7 @@ class R {
    int* getArray() {
      return array; //expected-warning{{field 'array' prone to unsafe buffer manipulation}}
    }
- 
+
    void setArray(int *arr) {
      array = arr; //expected-warning{{field 'array' prone to unsafe buffer manipulation}}
    }
@@ -176,11 +176,11 @@ void test_attribute_union(C c) {
   int address = c.ptr.ptr2;
 }
 
-struct AnonFields2 { 
-  [[clang::unsafe_buffer_usage]] 
-  struct { 
-    int a; 
-  }; 
+struct AnonFields2 {
+  [[clang::unsafe_buffer_usage]]
+  struct {
+    int a;
+  };
 };
 
 void test_anon_struct(AnonFields2 af) {

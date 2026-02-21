@@ -12,7 +12,7 @@ void g3(const
         * // expected-warning{{missing a nullability type specifier}}
 // expected-note@-1 {{insert '_Nullable' if the pointer may be null}}
 // expected-note@-2 {{insert '_Nonnull' if the pointer should never be null}}
-        ); 
+        );
 
 @interface SomeClass
 @property (retain,nonnull) id property1;

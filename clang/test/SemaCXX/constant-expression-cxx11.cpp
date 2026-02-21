@@ -2624,7 +2624,7 @@ namespace GH150709 {
   struct E : C { };
   struct F : D { };
   struct G : E { };
-  
+
   constexpr C c1, c2[2];
   constexpr D d1, d2[2];
   constexpr E e1, e2[2];

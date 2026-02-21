@@ -12,7 +12,7 @@ template<typename T> T prvalue();
 // expression whose object expression is an lvalue, the program is
 // ill-formed if the second operand is a pointer to member function
 // with ref-qualifier &&.
-void test(X *xp, int (X::*pmf)(int), int (X::*l_pmf)(int) &, 
+void test(X *xp, int (X::*pmf)(int), int (X::*l_pmf)(int) &,
           int (X::*r_pmf)(int) &&) {
   // No ref-qualifier.
   (lvalue<X>().*pmf)(17);

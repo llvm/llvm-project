@@ -70,7 +70,7 @@ void CommandObjectRegexCommand::DoExecute(llvm::StringRef command,
       // Interpret the new command and return this as the result!
       if (m_interpreter.GetExpandRegexAliases())
         result.GetOutputStream().Printf("%s\n", new_command->c_str());
-      // We don't have to pass an override_context here, as the command that 
+      // We don't have to pass an override_context here, as the command that
       // called us should have set up the context appropriately.
       bool force_repeat_command = true;
       m_interpreter.HandleCommand(new_command->c_str(), eLazyBoolNo, result,

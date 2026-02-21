@@ -85,7 +85,7 @@ void basic_lval_6()
         IntClass(char const*);
         operator int() const;
     };
-    
+
     struct ConvertibleToIntClass
     {
         operator IntClass() const;
@@ -98,7 +98,7 @@ void basic_lval_6()
     ASSERT_RVALUE((int)intLvalue);
     ASSERT_RVALUE((short)intLvalue);
     ASSERT_RVALUE((long)intLvalue);
-    
+
     // Same tests with function-call notation
     ASSERT_RVALUE(int(intLvalue));
     ASSERT_RVALUE(short(intLvalue));
@@ -110,11 +110,11 @@ void basic_lval_6()
 
     ASSERT_RVALUE(static_cast<int>(IntClass()));
     IntClass intClassLValue;
-    ASSERT_RVALUE(static_cast<int>(intClassLValue)); 
+    ASSERT_RVALUE(static_cast<int>(intClassLValue));
     ASSERT_RVALUE(static_cast<IntClass>(ConvertibleToIntClass()));
     ConvertibleToIntClass convertibleToIntClassLValue;
     ASSERT_RVALUE(static_cast<IntClass>(convertibleToIntClassLValue));
-    
+
 
     typedef signed char signed_char;
     typedef unsigned char unsigned_char;
@@ -122,7 +122,7 @@ void basic_lval_6()
     ASSERT_RVALUE(unsigned_char(charLValue));
 
     ASSERT_RVALUE(int(IntClass()));
-    ASSERT_RVALUE(int(intClassLValue)); 
+    ASSERT_RVALUE(int(intClassLValue));
     ASSERT_RVALUE(IntClass(ConvertibleToIntClass()));
     ASSERT_RVALUE(IntClass(convertibleToIntClassLValue));
 }
@@ -172,7 +172,7 @@ void Function();
 struct BaseClass
 {
     virtual ~BaseClass();
-    
+
     int BaseNonstaticMemberFunction();
     static int BaseStaticMemberFunction();
     int baseDataMember;
@@ -208,7 +208,7 @@ struct Class : BaseClass
     enum Enum { Enumerator };
 
     operator long() const;
-    
+
     Class();
     Class(int,int);
 
@@ -236,10 +236,10 @@ struct Class : BaseClass
         // extension simply rejects them as requiring additional context
         __is_lvalue_expr(::Class::NestedFuncTemplate);    // qualified-id: template \
         // expected-error{{reference to overloaded function could not be resolved; did you mean to call it?}}
-        
+
         __is_lvalue_expr(::Class::NestedMemfunTemplate);  // qualified-id: template \
         // expected-error{{reference to non-static member function must be called}}
-        
+
         __is_lvalue_expr(::Class::operator+);             // operator-function-id: template \
         // expected-error{{reference to non-static member function must be called}}
 
@@ -282,7 +282,7 @@ void expr_call_10()
     // result type is a reference.  This statement is partially
     // redundant with basic.lval/5
     basic_lval_5();
-    
+
     ASSERT_LVALUE(ReturnIntReference());
     ASSERT_LVALUE(ReturnEnumReference());
 }
@@ -315,7 +315,7 @@ void expr_sub_1(int* pointer)
     // enumeration or integral type. The result is an lvalue of type
     // "T."
     ASSERT_LVALUE(pointer[1]);
-    
+
     // The expression E1[E2] is identical (by definition) to *((E1)+(E2)).
     ASSERT_LVALUE(*(pointer+1));
 }
@@ -348,12 +348,12 @@ void expr_type_conv_2()
 void expr_ref_4()
 {
     // Applies to expressions of the form E1.E2
-    
+
     // If E2 is declared to have type "reference to T", then E1.E2 is
     // an lvalue;.... Otherwise, one of the following rules applies.
     ASSERT_LVALUE(Class().staticReferenceDataMember);
     ASSERT_LVALUE(Class().referenceDataMember);
-    
+
     // - If E2 is a static data member, and the type of E2 is T, then
     // E1.E2 is an lvalue; ...
     ASSERT_LVALUE(Class().staticNonreferenceDataMember);
@@ -369,7 +369,7 @@ void expr_ref_4()
     // - If E1.E2 refers to a static member function, ... then E1.E2
     // is an lvalue
     ASSERT_LVALUE(Class().StaticMemberFunction);
-    
+
     // - Otherwise, if E1.E2 refers to a non-static member function,
     // then E1.E2 is not an lvalue.
     //ASSERT_RVALUE(Class().NonstaticMemberFunction);
@@ -468,7 +468,7 @@ void expr_unary_op_1(int* pointer, struct incomplete* pointerToIncompleteType)
     // expression to which it is applied shall be a pointer to an
     // object type, or a pointer to a function type and the result is
     // an lvalue referring to the object or function to which the
-    // expression points.  
+    // expression points.
     ASSERT_LVALUE(*pointer);
     ASSERT_LVALUE(*Function);
 
@@ -507,7 +507,7 @@ void expr_mptr_oper()
     Class lvalue;
     ASSERT_LVALUE(lvalue.*(&Class::dataMember));
     //ASSERT_RVALUE(lvalue.*(&Class::NonstaticMemberFunction));
-    
+
     // (cont'd)...The result of an ->* expression is an lvalue only
     // if its second operand is a pointer to data member. If the
     // second operand is the null pointer to member value (4.11), the
@@ -540,14 +540,14 @@ void expr_cond(bool cond)
     // where both operands are throw-expressions. ]
     ASSERT_RVALUE(cond ? (void)1 : (void)0);
     ASSERT_RVALUE(cond ? throw 1 : throw 0);
-    
+
     // expr.cond/4: If the second and third operands are lvalues and
     // have the same type, the result is of that type and is an
     // lvalue.
     ASSERT_LVALUE(cond ? classLvalue : classLvalue);
     int intLvalue = 0;
     ASSERT_LVALUE(cond ? intLvalue : intLvalue);
-    
+
     // expr.cond/5:Otherwise, the result is an rvalue.
     typedef Class MakeRValue;
     ASSERT_RVALUE(cond ? MakeRValue() : classLvalue);

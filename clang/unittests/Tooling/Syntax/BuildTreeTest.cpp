@@ -4258,7 +4258,7 @@ TEST_P(BuildSyntaxTreeTest, InitDeclarator_Brace) {
   }
   EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
-struct S { 
+struct S {
   S();
   S(int);
   S(int, float);
@@ -4315,7 +4315,7 @@ TEST_P(BuildSyntaxTreeTest, InitDeclarator_EqualBrace) {
   }
   EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
-struct S { 
+struct S {
   S();
   S(int);
   S(int, float);

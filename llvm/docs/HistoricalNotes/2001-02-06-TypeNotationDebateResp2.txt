@@ -5,14 +5,14 @@ Subject: RE: Type notation debate...
 
 > Arrays (without and with size):
 > type ::= '[' type ']' | '[' INT ',' type ']'.
-> 
+>
 > The arrays with size lists the dimensions and the type in a single list.
 > That is just too confusing:
 
 >       [10, 40, int]
 > This seems to be a 3-D array where the third dimension is something strange.
 > It is too confusing to have a list of 3 things, some of which are dimensions
-> and one is a type. 
+> and one is a type.
 
 The above grammar indicates that there is only one integer parameter, ie
 the upper bound.  The lower bound is always implied to be zero, for

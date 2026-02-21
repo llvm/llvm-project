@@ -3,7 +3,7 @@
 template<typename T>
 struct X {
   template<typename U> struct Inner { };
-  
+
   template<typename U> void f(T, U) { }
 };
 
@@ -13,7 +13,7 @@ struct X<int>::Inner {
 };
 
 template<> template<typename U>
-void X<int>::f(int x, U y) { 
+void X<int>::f(int x, U y) {
   x = y; // expected-error{{incompatible pointer to integer conversion}}
 }
 
@@ -24,7 +24,7 @@ void test(X<int> xi, X<long> xl, float *fp) {
   xi.f(17, 3.14159);
   xi.f(17, fp); // expected-note{{instantiation}}
   X<long>::Inner<float*> xli;
-  
+
   xli.member = fp; // expected-error{{no member}}
   xl.f(17, fp); // okay
 }

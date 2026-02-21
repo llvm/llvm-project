@@ -78,7 +78,7 @@ void test_namespace_scopes() {
         using namespace ns1;
         printf("ns1::value = %d\n", value); // Evaluate ns1::value
     } while(0);
-    
+
     do {
         using namespace ns2;
         printf("ns2::value = %d\n", value); // Evaluate ns2::value
@@ -87,7 +87,7 @@ void test_namespace_scopes() {
 
 int Foo::myfunc(int a)
 {
-    test_namespace_scopes();    
+    test_namespace_scopes();
 
     ::my_uint_t anon_uint = 0;
     A::uint_t a_uint = 1;

@@ -158,7 +158,7 @@ ReturnObject RAIISafeSuspendTest() {
   co_await other{};
   co_await safe::AwaitFunc();
   co_await safe::Obj().AwaitMethod();
-} 
+}
 
 // ================================================================================
 // Safe transformable awaitable

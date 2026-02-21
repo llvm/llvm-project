@@ -6,7 +6,7 @@
 extern void clang_analyzer_eval(_Bool);
 
 // Test if the 'storage' region gets properly initialized after it is cast to
-// 'struct sockaddr *'. 
+// 'struct sockaddr *'.
 
 typedef unsigned char __uint8_t;
 typedef unsigned int __uint32_t;

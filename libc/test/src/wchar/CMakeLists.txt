@@ -191,7 +191,7 @@ add_libc_test(
 )
 
 add_libc_test(
-  wmemset_test 
+  wmemset_test
   SUITE
     libc_wchar_unittests
   SRCS
@@ -351,7 +351,7 @@ add_libc_test(
   DEPENDS
     libc.src.wchar.wcscat
 )
-  
+
 add_libc_test(
   wcsstr_test
   SUITE

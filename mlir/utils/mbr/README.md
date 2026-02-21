@@ -77,7 +77,7 @@ If you want to run only specific benchmarks, you can use the positional argument
 
 1. If you want to run benchmarks in a specific directory or a file, set
    `top_level_path` to that.
-2. If you want to run a specific benchmark function, set the `top_level_path` to 
+2. If you want to run a specific benchmark function, set the `top_level_path` to
    the file containing that benchmark function, followed by a `::`, and then the
    benchmark function name. For example, `mlir/benchmark/python/benchmark_sparse.py::benchmark_sparse_mlir_multiplication`.
 

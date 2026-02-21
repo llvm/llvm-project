@@ -8,17 +8,17 @@ void test1(void) {
   return 1; // return-mismatch-warning{{void function 'test1' should not return a value}}
 }
 
-int test2(void) { 
+int test2(void) {
     return; // return-mismatch-warning{{non-void function 'test2' should return a value}}
-} 
+}
 
-int test3(void) { 
+int test3(void) {
     // return-type-warning@+1 {{non-void function does not return a value}}
-} 
+}
 
 int test4(void) {
     (void)(bar() || foo()); // return-type-warning@+1 {{non-void function does not return a value in all control paths}}
-} 
+}
 
 void test5(void) {
 } // no-warning

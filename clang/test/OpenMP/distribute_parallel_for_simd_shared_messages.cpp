@@ -58,7 +58,7 @@ T tmain(T argc, S **argv) {
   int &j = i;
   int acc = 0;
   int n = 1000;
-  
+
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd shared // expected-error {{expected '(' after 'shared'}}

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -DCHECK_ERROR %s -verify 
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -DCHECK_ERROR %s -verify
 
 float function_scope(float a) {
 #pragma float_control(precise, on) junk // expected-warning {{extra tokens at end of '#pragma float_control' - ignored}}

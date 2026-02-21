@@ -20,7 +20,7 @@ add_flang_library(FortranUtils
   FortranEvaluate
   FortranSupport
   HLFIRDialect
- 
+
   MLIR_LIBS
   MLIRSupport
   MLIROpenMPDialect

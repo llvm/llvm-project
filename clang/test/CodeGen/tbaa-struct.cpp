@@ -31,7 +31,7 @@ struct B {
 };
 
 void copy2(B *b1, B *b2) {
-// CHECK-LABEL: _Z5copy2P1BS0_ 
+// CHECK-LABEL: _Z5copy2P1BS0_
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) %{{.*}}, ptr noundef nonnull align 4 dereferenceable(24) %{{.*}}, i64 24, i1 false)
 // CHECK-OLD-SAME: !tbaa.struct [[TBAA_STRUCT10:![0-9]+]]
 // CHECK-NEW-SAME: !tbaa [[TBAA12:![0-9]+]]

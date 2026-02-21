@@ -76,11 +76,11 @@ struct smart_ptr {
   struct safe_bool {
     int member;
   };
-  
-  operator int safe_bool::*() const { 
+
+  operator int safe_bool::*() const {
     return ptr? &safe_bool::member : 0;
   }
-  
+
   T* ptr;
 };
 

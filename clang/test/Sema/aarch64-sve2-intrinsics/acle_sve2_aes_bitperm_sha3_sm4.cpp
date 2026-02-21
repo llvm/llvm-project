@@ -44,7 +44,7 @@ void test(uint8_t u8, uint16_t u16, uint32_t u32, uint64_t u64)
   // expected-error@+2 {{'svbgrp_n_u8' needs target feature (sve,sve-bitperm)|(sme,ssve-bitperm)}}
   // overload-error@+1 {{'svbgrp' needs target feature (sve,sve-bitperm)|(sme,ssve-bitperm)}}
   SVE_ACLE_FUNC(svbgrp,_n_u8,,)(svundef_u8(), u8);
-  
+
   // expected-error@+2 {{'svbdep_u16' needs target feature (sve,sve-bitperm)|(sme,ssve-bitperm)}}
   // overload-error@+1 {{'svbdep' needs target feature (sve,sve-bitperm)|(sme,ssve-bitperm)}}
   SVE_ACLE_FUNC(svbdep,_u16,,)(svundef_u16(), svundef_u16());
@@ -63,7 +63,7 @@ void test(uint8_t u8, uint16_t u16, uint32_t u32, uint64_t u64)
   // expected-error@+2 {{'svbgrp_n_u16' needs target feature (sve,sve-bitperm)|(sme,ssve-bitperm)}}
   // overload-error@+1 {{'svbgrp' needs target feature (sve,sve-bitperm)|(sme,ssve-bitperm)}}
   SVE_ACLE_FUNC(svbgrp,_n_u16,,)(svundef_u16(), u16);
-  
+
   // expected-error@+2 {{'svbdep_u32' needs target feature (sve,sve-bitperm)|(sme,ssve-bitperm)}}
   // overload-error@+1 {{'svbdep' needs target feature (sve,sve-bitperm)|(sme,ssve-bitperm)}}
   SVE_ACLE_FUNC(svbdep,_u32,,)(svundef_u32(), svundef_u32());
@@ -88,7 +88,7 @@ void test(uint8_t u8, uint16_t u16, uint32_t u32, uint64_t u64)
   // expected-error@+2 {{'svsm4ekey_u32' needs target feature sve,sve-sm4}}
   // overload-error@+1 {{'svsm4ekey' needs target feature sve,sve-sm4}}
   SVE_ACLE_FUNC(svsm4ekey,_u32,,)(svundef_u32(), svundef_u32());
-  
+
   // expected-error@+2 {{'svbdep_u64' needs target feature (sve,sve-bitperm)|(sme,ssve-bitperm)}}
   // overload-error@+1 {{'svbdep' needs target feature (sve,sve-bitperm)|(sme,ssve-bitperm)}}
   SVE_ACLE_FUNC(svbdep,_u64,,)(svundef_u64(), svundef_u64());

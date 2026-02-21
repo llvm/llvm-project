@@ -3,7 +3,7 @@
 void g();
 
 // CHECK: define{{.*}} void @_Z1fv() [[NUW:#[0-9]+]]
-void f() throw (int) { 
+void f() throw (int) {
 
   // CHECK-NOT: invoke void @_Z1gv
   g();

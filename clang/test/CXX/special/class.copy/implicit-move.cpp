@@ -142,16 +142,16 @@ void test_deletion_exclusion() {
   static_assert(!noexcept(cntco = ContainsNonTrivialCopyOnly()), "");
 
   ContainsConst cc;
-  cc = ContainsConst(); // expected-error {{no viable}} 
+  cc = ContainsConst(); // expected-error {{no viable}}
 
   ContainsRef cr;
-  cr = ContainsRef(); // expected-error {{no viable}} 
+  cr = ContainsRef(); // expected-error {{no viable}}
 
   DirectVirtualBase dvb;
-  dvb = DirectVirtualBase(); // expected-error {{no viable}} 
+  dvb = DirectVirtualBase(); // expected-error {{no viable}}
 
   IndirectVirtualBase ivb;
-  ivb = IndirectVirtualBase(); // expected-error {{no viable}} 
+  ivb = IndirectVirtualBase(); // expected-error {{no viable}}
 }
 
 struct ContainsRValueRef {

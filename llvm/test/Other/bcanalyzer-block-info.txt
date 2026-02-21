@@ -5,7 +5,7 @@ RUN: llvm-bcanalyzer -dump %S/Inputs/no-block-info.bc -block-info %S/Inputs/bloc
   CHECK: <ABC
 UNKNOWN: <UnknownBlock8
    DATA:   NumWords=4 BlockCodeSize=2>
-  CHECK:   <AAA 
+  CHECK:   <AAA
 UNKNOWN:   <UnknownCode0
    DATA:     op0=42 op1=43 op2=44/>
   CHECK:   <BBB

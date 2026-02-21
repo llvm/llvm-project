@@ -84,7 +84,7 @@ void MyDialect::initialize() {
 
 The `summary` and `description` fields allow for providing user documentation
 for the dialect. The `summary` field expects a simple single-line string, with the
-`description` field used for long and extensive documentation. This documentation can be 
+`description` field used for long and extensive documentation. This documentation can be
 used to generate markdown documentation for the dialect and is used by upstream
 [MLIR dialects](https://mlir.llvm.org/docs/Dialects/).
 
@@ -230,7 +230,7 @@ is verified. The hook necessary for the dialect to implement has the form:
 /// Verify the use of the given attribute, whose name is prefixed by the namespace of this
 /// dialect, that was used on the attribute dictionary of a region entry block argument.
 /// Note: As described above, when a region entry block has a dictionary is up to the individual
-/// operation to define. 
+/// operation to define.
 LogicalResult MyDialect::verifyRegionArgAttribute(Operation *op, unsigned regionIndex,
                                                   unsigned argIndex, NamedAttribute attribute);
 ```
@@ -250,7 +250,7 @@ has the form:
 /// Generate verification for the given attribute, whose name is prefixed by the namespace
 /// of this dialect, that was used on the attribute dictionary of a region result.
 /// Note: As described above, when a region entry block has a dictionary is up to the individual
-/// operation to define. 
+/// operation to define.
 LogicalResult MyDialect::verifyRegionResultAttribute(Operation *op, unsigned regionIndex,
                                                      unsigned argIndex, NamedAttribute attribute);
 ```
@@ -258,8 +258,8 @@ LogicalResult MyDialect::verifyRegionResultAttribute(Operation *op, unsigned reg
 ### Operation Interface Fallback
 
 Some dialects have an open ecosystem and don't register all of the possible operations. In such
-cases it is still possible to provide support for implementing an `OpInterface` for these 
-operations. When an operation isn't registered or does not provide an implementation for an 
+cases it is still possible to provide support for implementing an `OpInterface` for these
+operations. When an operation isn't registered or does not provide an implementation for an
 interface, the query will fallback to the dialect itself. The `hasOperationInterfaceFallback`
 field may be used to declare this fallback for operations:
 
@@ -269,10 +269,10 @@ field may be used to declare this fallback for operations:
 void *MyDialect::getRegisteredInterfaceForOp(TypeID typeID, StringAttr opName);
 ```
 
-For a more detail description of the expected usages of this hook, view the detailed 
+For a more detail description of the expected usages of this hook, view the detailed
 [interface documentation](../Interfaces.md/#dialect-fallback-for-opinterface).
 
-### Default Attribute/Type Parsers and Printers 
+### Default Attribute/Type Parsers and Printers
 
 When a dialect registers an Attribute or Type, it must also override the respective
 `Dialect::parseAttribute`/`Dialect::printAttribute` or
@@ -286,7 +286,7 @@ parser and printer of its Attributes and Types it should set these to `0` as nec
 
 ### Dialect-wide Canonicalization Patterns
 
-Generally, [canonicalization](../Canonicalization.md) patterns are specific to individual 
+Generally, [canonicalization](../Canonicalization.md) patterns are specific to individual
 operations within a dialect. There are some cases, however, that prompt canonicalization
 patterns to be added to the dialect-level. For example, if a dialect defines a canonicalization
 pattern that operates on an interface or trait, it can be beneficial to only add this pattern
@@ -514,7 +514,7 @@ AbstractOperation::VerifyInvariantsFn verifyFn = [](Operation* op) {
 AbstractOperation::ParseAssemblyFn parseFn =
     [](OpAsmParser &parser, OperationState &state) {
         // Parse the operation, given that the name is already parsed.
-        ...    
+        ...
 };
 
 // Printer function
@@ -526,14 +526,14 @@ auto printFn = [](Operation *op, OpAsmPrinter &printer) {
 
 // General folder implementation, see AbstractOperation::foldHook for more
 // information.
-auto foldHookFn = [](Operation * op, ArrayRef<Attribute> operands, 
+auto foldHookFn = [](Operation * op, ArrayRef<Attribute> operands,
                                    SmallVectorImpl<OpFoldResult> &result) {
     ...
 };
 
 // Returns any canonicalization pattern rewrites that the operation
 // supports, for use by the canonicalization pass.
-auto getCanonicalizationPatterns = 
+auto getCanonicalizationPatterns =
         [](RewritePatternSet &results, MLIRContext *context) {
     ...
 }
@@ -635,7 +635,7 @@ though overriden `parseType` methods need to add the necessary support for them.
 ```c++
 Type MyDialect::parseType(DialectAsmParser &parser) const {
     ...
-    
+
     // The type name.
     StringRef typeTag;
     if (failed(parser.parseKeyword(&typeTag)))

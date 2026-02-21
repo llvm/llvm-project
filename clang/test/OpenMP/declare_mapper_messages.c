@@ -62,7 +62,7 @@ struct vec {                                                            // expec
 // expected-error@+3 {{only variable 'vvec' is allowed in map clauses of this 'omp declare mapper' directive}}
 // expected-error@+2 {{expected at least one clause on '#pragma omp declare mapper' directive}}
 // expected-note@+1 {{'it' declared here}}
-#pragma omp declare mapper(id2: struct vec vvec) map(iterator(it=0:vvec.len:2), tofrom:vvec.data[it]) 
+#pragma omp declare mapper(id2: struct vec vvec) map(iterator(it=0:vvec.len:2), tofrom:vvec.data[it])
 
 #else
 #pragma omp declare mapper(id2: struct vec vvec) map(iterator(it=0:vvec.len:2), tofrom:vvec.data[it])

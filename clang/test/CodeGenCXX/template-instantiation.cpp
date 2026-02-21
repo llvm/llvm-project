@@ -119,7 +119,7 @@ namespace test3 {
   struct S  {
       virtual void m();
   };
-  
+
   template<typename T>
   void S<T>::m() { }
 

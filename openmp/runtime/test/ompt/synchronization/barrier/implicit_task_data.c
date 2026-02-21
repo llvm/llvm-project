@@ -5,7 +5,7 @@
 // This test checks that values stored in task_data in a barrier_begin event
 // are still present in the corresponding barrier_end event.
 // Therefore, callback implementations different from the ones in callback.h are necessary.
-// This is a test for an issue reported in 
+// This is a test for an issue reported in
 // https://github.com/OpenMPToolsInterface/LLVM-openmp/issues/39
 // clang-format on
 

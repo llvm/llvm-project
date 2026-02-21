@@ -102,7 +102,7 @@ typedef union {
   float f; // expected-warning{{floating}}
 } TU3 __attribute__((transparent_union));
 
-typedef union { } TU4 __attribute__((transparent_union)); // expected-warning{{field}} 
+typedef union { } TU4 __attribute__((transparent_union)); // expected-warning{{field}}
 
 typedef int int4 __attribute__((ext_vector_type(4)));
 typedef union {

@@ -9,7 +9,7 @@ __TYPE_PARSER__
 __TYPE_PRINTER__
 
 /// Parse a type registered to this dialect.
-::mlir::Type __DIALECT_CPP_NAME__::parseType(::mlir::DialectAsmParser &parser) 
+::mlir::Type __DIALECT_CPP_NAME__::parseType(::mlir::DialectAsmParser &parser)
   const
 {
   ::llvm::SMLoc typeLoc = parser.getCurrentLocation();
@@ -18,7 +18,7 @@ __TYPE_PRINTER__
   auto parseResult = generatedTypeParser(parser, &mnemonic, genType);
   if (parseResult.has_value())
     return genType;
-  
+
   parser.emitError(typeLoc) << "unknown  type `"
       << mnemonic << "` in dialect `" << getNamespace() << "`";
   return {};
@@ -28,7 +28,7 @@ __TYPE_PRINTER__
 void __DIALECT_CPP_NAME__::printType(::mlir::Type type,
                     ::mlir::DialectAsmPrinter &printer) const {
   ((void) generatedTypePrinter(type, printer));
-  
+
 }
 
 __NAMESPACE_CLOSE__

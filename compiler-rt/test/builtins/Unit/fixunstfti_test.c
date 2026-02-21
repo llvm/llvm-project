@@ -15,7 +15,7 @@
 
 // Assumption: long double is a 128 bit floating point type
 //             tu_int is a 128 bit integral type
-//             value in long double is representable in tu_int or is negative 
+//             value in long double is representable in tu_int or is negative
 //                 (no range checking performed)
 
 COMPILER_RT_ABI tu_int __fixunstfti(long double a);

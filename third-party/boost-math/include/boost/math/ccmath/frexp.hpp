@@ -33,7 +33,7 @@ template <typename Real>
 inline constexpr Real frexp_impl(Real arg, int* exp)
 {
     const bool negative_arg = (arg < Real(0));
-    
+
     Real f = negative_arg ? -arg : arg;
     int e2 = 0;
     constexpr Real two_pow_32 = Real(4294967296);
@@ -49,7 +49,7 @@ inline constexpr Real frexp_impl(Real arg, int* exp)
         f = f / Real(2);
         ++e2;
     }
-    
+
     if(exp != nullptr)
     {
         *exp = e2;
@@ -65,9 +65,9 @@ inline constexpr Real frexp(Real arg, int* exp)
 {
     if(BOOST_MATH_IS_CONSTANT_EVALUATED(arg))
     {
-        return arg == Real(0)  ? detail::frexp_zero_impl(arg, exp) : 
+        return arg == Real(0)  ? detail::frexp_zero_impl(arg, exp) :
                arg == Real(-0) ? detail::frexp_zero_impl(arg, exp) :
-               boost::math::ccmath::isinf(arg) ? detail::frexp_zero_impl(arg, exp) : 
+               boost::math::ccmath::isinf(arg) ? detail::frexp_zero_impl(arg, exp) :
                boost::math::ccmath::isnan(arg) ? detail::frexp_zero_impl(arg, exp) :
                boost::math::ccmath::detail::frexp_impl(arg, exp);
     }

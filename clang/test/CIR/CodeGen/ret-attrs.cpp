@@ -45,7 +45,7 @@ Struct &all_attrs(){}
 
 void calls(MemPtrTy mpt) {
   not_noundef_because_strict_return();
-  // CIR: cir.call @not_noundef_because_strict_return() : () -> (!cir.ptr<!s32i> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nonnull}) 
+  // CIR: cir.call @not_noundef_because_strict_return() : () -> (!cir.ptr<!s32i> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nonnull})
   // LLVM: call nonnull align 4 dereferenceable(4) ptr @not_noundef_because_strict_return()
   not_noundef_void();
   // CIR: cir.call @_Z16not_noundef_voidv() : () -> ()

@@ -22,6 +22,6 @@ int main() {
   struct shm_info shmInfo;
   res = shmctl(0, SHM_INFO, (struct shmid_ds *)&shmInfo);
   assert(res > -1);
-  
+
   return 0;
 }

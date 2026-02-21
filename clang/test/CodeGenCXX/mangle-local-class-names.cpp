@@ -10,7 +10,7 @@ void FUNC ()
   {
     float IVAR1 ;
 
-    struct SSSS 
+    struct SSSS
     {
       float bv;
       SSSS( const float& from): bv(from) { }
@@ -34,7 +34,7 @@ void FUNC ()
 void GORF (float IVAR1)
 {
   {
-    struct SSSS 
+    struct SSSS
     {
       float bv;
       SSSS( const float& from): bv(from) { }

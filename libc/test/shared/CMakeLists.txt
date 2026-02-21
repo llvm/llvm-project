@@ -132,7 +132,7 @@ add_fp_unittest(
     libc.src.__support.math.llogbf128
     libc.src.__support.math.llogbf16
     libc.src.__support.math.logbl
-    libc.src.__support.math.logf16    
+    libc.src.__support.math.logf16
     libc.src.__support.math.llogbl
     libc.src.__support.math.pow
     libc.src.__support.math.powf

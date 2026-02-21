@@ -18,7 +18,7 @@ struct Test0 {
   Test0 *memptr;
   struct MemClass { int a; } memstruct;
   int &memfun();
-  
+
   void test() {
     int *p;
     p = &Test0::memfoo++;

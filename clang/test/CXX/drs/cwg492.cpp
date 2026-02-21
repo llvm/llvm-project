@@ -15,7 +15,7 @@
 namespace std {
 struct type_info {
   const char* name() const NOTHROW;
-}; 
+};
 } // namespace std
 
 namespace cwg492 { // cwg492: 2.7

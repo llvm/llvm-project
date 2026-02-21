@@ -10,7 +10,7 @@
 template<typename T, typename XType, typename YType>
 struct DesigInit0 {
   void f(XType x, YType y) {
-    T agg = { 
+    T agg = {
 #if __cplusplus <= 199711L
       .y = y, // expected-error{{does not refer}}
       .x = x  // expected-error{{does not refer}}
@@ -34,7 +34,7 @@ struct Point3D {
 
 template struct DesigInit0<Point3D, int, double>;
 
-struct Color { 
+struct Color {
   unsigned char red, green, blue;
 };
 

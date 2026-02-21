@@ -48,7 +48,7 @@ void h();
 constinit void h(); // expected-error {{constinit can only be used in variable declarations}}
 constexpr void i(); // expected-note {{here}}
 constinit void i(); // expected-error {{non-constexpr declaration of 'i' follows constexpr declaration}}
-// expected-error@-1 {{constinit can only be used in variable declarations}} 
+// expected-error@-1 {{constinit can only be used in variable declarations}}
 
 typedef constinit int type; // expected-error {{typedef cannot be constinit}}
 using type = constinit int; // expected-error {{type name does not allow constinit specifier}}

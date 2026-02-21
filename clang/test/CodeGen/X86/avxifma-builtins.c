@@ -123,7 +123,7 @@ TEST_CONSTEXPR(match_v2di(_mm_madd52hi_avx_epu64(
                               (__m128i)((__v2du){0xFFFFFFFFFFFFFull, 0}),
                               (__m128i)((__v2du){0xFFFFFFFFFFFFFull, 0})),
                           0xFFFFFFFFFFFFEull, 0));
-                        
+
 __m256i test_mm256_madd52hi_avx_epu64(__m256i __X, __m256i __Y, __m256i __Z) {
   // CHECK-LABEL: test_mm256_madd52hi_avx_epu64
   // CHECK: call {{.*}}<4 x i64> @llvm.x86.avx512.vpmadd52h.uq.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}})

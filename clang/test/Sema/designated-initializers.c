@@ -27,8 +27,8 @@ struct point {
   double y;
 };
 
-struct point p1 = { 
-  .y = 1.0, 
+struct point p1 = {
+  .y = 1.0,
   x: 2.0, // expected-warning{{}}
   .a = 4.0, // expected-error{{field designator 'a' does not refer to any field in type 'struct point'}}
 };
@@ -37,7 +37,7 @@ struct point p2 = {
   [1] = 1.0 // expected-error{{array designator cannot initialize non-array type}}
 };
 
-struct point array[10] = { 
+struct point array[10] = {
   [0].x = 1.0,
   [1].y = 2.0,
   [2].z = 3.0, // expected-error{{field designator 'z' does not refer to any field in type 'struct point'}}
@@ -128,7 +128,7 @@ int counter = 0;
 int get8(void) { ++counter; return 8; }
 
 void test(void) {
-  struct X xs[] = { 
+  struct X xs[] = {
     [0] = (struct X){1, 2}, // expected-note 2 {{previous initialization is here}}
     [0].c = 3,  // expected-warning{{initializer partially overrides prior initialization of this subobject}}
     (struct X) {4, 5, 6}, // expected-note{{previous initialization is here}}
@@ -214,8 +214,8 @@ struct Enigma {
   char *string2;
 };
 
-struct Enigma enigma = { 
-  .double_ptr = &d0, &c0, 
+struct Enigma enigma = {
+  .double_ptr = &d0, &c0,
   &f0, // expected-note{{previous}}
   &c0,
   .float_ptr = &f0 // expected-warning{{overrides}}
@@ -288,12 +288,12 @@ struct expr {
   } val;
 };
 
-struct expr expr0 = { 
+struct expr expr0 = {
   .nargs = 2,
   .val = {
-    .args = { 
-      [0] = (struct expr *)0, 
-      [1] = (struct expr *)0 
+    .args = {
+      [0] = (struct expr *)0,
+      [1] = (struct expr *)0
     }
   }
 };

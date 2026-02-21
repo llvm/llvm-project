@@ -38,13 +38,13 @@ extern void g0(void);
 
 void f0(void) {
   result = 1;
-  
+
   bool_mul(bool_id(1));
   aggr_mul(aggr_id((AggrTy) { 2, 3, 5}));
   empty_mul(empty_id((EmptyTy) {}));
   scalar_mul(scalar_id(7));
   complex_mul(complex_id(11 + 13i));
-  
+
   // This call should be eliminated.
   if (result != 2 * 3 * 5 * 7 * 11 * 13 * 53)
     g0();

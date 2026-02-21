@@ -7,9 +7,9 @@ typedef struct
 int main()
 {
     mystruct c;
-    
+
     c.a = 5;
     c.b = 3.6;
-    
+
     return 0;
 }

@@ -24,10 +24,10 @@ void visionos_introduced_1_1(); // visionos-note 4 {{'visionos_introduced_1_1' h
 void use2() {
   if (__builtin_available(iOS 16.1, *))
     visionos_introduced_1_1(); // visionos-warning {{'visionos_introduced_1_1' is only available on visionOS 1.1 or newer}} visionos-note {{enclose}}
-                              
+
   if (__builtin_available(xrOS 1.1, *)) // visionos-error {{unrecognized platform name xrOS}}
     visionos_introduced_1_1(); // visionos-warning {{'visionos_introduced_1_1' is only available on visionOS 1.1 or newer}} visionos-note {{enclose}}
-  
+
   if (__builtin_available(xros_app_extension 1, *)) // visionos-error {{unrecognized platform name xros_app_extension}}
     visionos_introduced_1_1(); // visionos-warning {{'visionos_introduced_1_1' is only available on visionOS 1.1 or newer}} visionos-note {{enclose}}
 

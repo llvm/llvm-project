@@ -165,7 +165,7 @@ void InlineFunc() {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
   // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!cir.array<!cir.array<!s16i x 3> x 5>>) bounds(%[[BOUNDS1]], %[[BOUNDS2]]) to varPtr(%[[GET2DARRAYMEM]] : !cir.ptr<!cir.array<!cir.array<!s16i x 3> x 5>>) {dataClause = #acc<data_clause acc_copy>, name = "this->twoDArrayMember[1][2]"}
- 
+
 #pragma acc kernels loop copy(this->iSTy)
   for(int i = 0; i < 5; ++i);
   // CHECK-NEXT: %[[GETSTRUCTMEM:.*]] = cir.get_member %[[THIS_LOAD]][3] {name = "iSTy"} : !cir.ptr<!rec_StructTy> -> !cir.ptr<!rec_InnerStructTy>

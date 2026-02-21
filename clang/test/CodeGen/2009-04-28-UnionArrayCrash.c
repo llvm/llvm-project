@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - 
+// RUN: %clang_cc1 -emit-llvm %s -o -
 // PR4082
 union U {
   int I;

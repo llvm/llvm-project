@@ -100,7 +100,7 @@ void testPlacementArrNewBufValueExplicitArrOp() {
 //----- Other cases
 void testNewMemoryIsInHeap() {
   int *p = new int;
-  if (global != p) // condition is always true as 'p' wraps a heap region that 
+  if (global != p) // condition is always true as 'p' wraps a heap region that
                    // is different from a region wrapped by 'global'
     global = p; // pointer escapes
 }

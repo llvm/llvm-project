@@ -44,10 +44,10 @@ voidVoid testRoutine(const char *whoami) {
         //printf("incring dumbo from %d\n", dumbo);
         ++dumbo;
     };
-    
-    
+
+
     voidVoid copy = Block_copy(dummy);
-    
+
 
     return copy;
 }
@@ -61,8 +61,8 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i <  100; ++i) {
         Block_release(array[i]);
     }
-    
-    
+
+
     printf("%s: success\n", argv[0]);
     return 0;
 }

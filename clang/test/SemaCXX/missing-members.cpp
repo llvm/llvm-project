@@ -33,9 +33,9 @@ int A::B::U::i = 10; // expected-error {{no member named 'i' in 'A::B::U'}}
 
 using A::B::D; // expected-error {{no member named 'D' in namespace 'A::B'}}
 
-struct S : A::B::C { 
+struct S : A::B::C {
   using A::B::C::f; // expected-error {{no member named 'f' in 'A::B::C'}}
-  
+
 };
 
 struct S1 {};

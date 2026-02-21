@@ -170,7 +170,7 @@ public:
     int64_t Val;
     if (!Imm->evaluateAsAbsolute(Val))
       return false;
-    
+
     if (Val == 0 || Val == 1 || Val == 2 || Val == 4 || Val == 8 || Val == -1)
       return true;
 

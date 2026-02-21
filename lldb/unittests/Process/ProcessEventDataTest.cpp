@@ -187,7 +187,7 @@ TEST_F(ProcessEventDataTest, DoOnRemoval) {
                ->m_should_stop_hit_count == 0;
   ASSERT_TRUE(result);
 }
-#endif 
+#endif
 
 TEST_F(ProcessEventDataTest, ShouldStop) {
   ArchSpec arch("x86_64-apple-macosx-");

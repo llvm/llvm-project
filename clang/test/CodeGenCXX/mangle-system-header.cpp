@@ -7,5 +7,5 @@
 void operator delete (void*, void*) {}
 
 // PR6217
-// CHECK-LABEL: define{{.*}} void @_Z3barv() 
+// CHECK-LABEL: define{{.*}} void @_Z3barv()
 void bar() { }

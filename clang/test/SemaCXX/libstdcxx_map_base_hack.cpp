@@ -12,7 +12,7 @@ template <typename _Key, typename _Value, typename _Ex, bool __unique,
           // expected-note@-1{{previous template declaration}}
           typename _Hashtable>
 struct _Map_base {};
-} } } 
+} } }
 
 namespace std { namespace tr1 {
   template<typename T>

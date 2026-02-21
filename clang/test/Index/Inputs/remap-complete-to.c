@@ -3,4 +3,4 @@ int f0(int *pointer1, float *pointer2) {
 }
 
 void g() {
-  
+

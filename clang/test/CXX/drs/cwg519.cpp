@@ -23,13 +23,13 @@ void f() {
 
 // CHECK-LABEL: define {{.*}} void @cwg519::f()()
 // CHECK:         store ptr null, ptr [[A:%.+]],
-// CHECK-NEXT:    [[TEMP_A:%.+]] = load ptr, ptr [[A]] 
+// CHECK-NEXT:    [[TEMP_A:%.+]] = load ptr, ptr [[A]]
 // CHECK-NEXT:    store ptr [[TEMP_A]], ptr [[V:%.+]],
 // CHECK-NEXT:    [[TEMP_V:%.+]] = load ptr, ptr [[V]]
 // CHECK-NEXT:    {{.+}} = icmp eq ptr [[TEMP_V]], null
 
 // CHECK:         store ptr null, ptr [[W:%.+]],
-// CHECK-NEXT:    [[TEMP_W:%.+]] = load ptr, ptr [[W]] 
+// CHECK-NEXT:    [[TEMP_W:%.+]] = load ptr, ptr [[W]]
 // CHECK-NEXT:    store ptr [[TEMP_W]], ptr [[B:%.+]],
 // CHECK-NEXT:    [[TEMP_B:%.+]] = load ptr, ptr [[B]]
 // CHECK-NEXT:    {{.+}} = icmp eq ptr [[TEMP_B]], null

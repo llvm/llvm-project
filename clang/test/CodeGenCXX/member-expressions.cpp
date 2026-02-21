@@ -28,7 +28,7 @@ A *g();
 
 void f(A *a) {
   A::E e1 = a->Foo;
-  
+
   // CHECK: call noundef ptr @_Z1gv()
   A::E e2 = g()->Foo;
   // CHECK: call void @_ZN1AC1Ev(

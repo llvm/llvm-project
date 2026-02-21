@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
   assert(argc == 2);
   char buf[1024];
   snprintf(buf, sizeof(buf), "%s/%s", argv[1], "scandir_test_root/");
-  
+
   struct dirent **d;
   int res = scandir(buf, &d, my_filter, my_compar);
   assert(res == 2);

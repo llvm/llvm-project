@@ -497,7 +497,7 @@ static CXErrorCode clang_indexSourceFile_Impl(
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<std::vector<const char*> >
     ArgsCleanup(Args.get());
-  
+
   Args->insert(Args->end(), command_line_args,
                command_line_args + num_command_line_args);
 
@@ -544,7 +544,7 @@ static CXErrorCode clang_indexSourceFile_Impl(
 
   // Since libclang is primarily used by batch tools dealing with
   // (often very broken) source code, where spell-checking can have a
-  // significant negative impact on performance (particularly when 
+  // significant negative impact on performance (particularly when
   // precompiled headers are involved), we disable it.
   CInvok->getLangOpts().SpellChecking = false;
 
@@ -591,7 +591,7 @@ static CXErrorCode clang_indexSourceFile_Impl(
   bool PrecompilePreamble = false;
   bool CreatePreambleOnFirstParse = false;
   bool CacheCodeCompletionResults = false;
-  PreprocessorOptions &PPOpts = CInvok->getPreprocessorOpts(); 
+  PreprocessorOptions &PPOpts = CInvok->getPreprocessorOpts();
   PPOpts.AllowPCHWithCompilerErrors = true;
 
   if (requestedToGetTU) {
@@ -771,11 +771,11 @@ clang_index_getObjCProtocolRefListInfo(const CXIdxDeclInfo *DInfo) {
     return nullptr;
 
   const DeclInfo *DI = static_cast<const DeclInfo *>(DInfo);
-  
+
   if (const ObjCInterfaceDeclInfo *
         InterInfo = dyn_cast<ObjCInterfaceDeclInfo>(DI))
     return InterInfo->ObjCInterDeclInfo.protocols;
-  
+
   if (const ObjCProtocolDeclInfo *
         ProtInfo = dyn_cast<ObjCProtocolDeclInfo>(DI))
     return &ProtInfo->ObjCProtoRefListInfo;
@@ -931,7 +931,7 @@ int clang_indexSourceFileFullArgv(
     fprintf(stderr, "],\n");
     fprintf(stderr, "  'options' : %d,\n", TU_options);
     fprintf(stderr, "}\n");
-    
+
     return 1;
   } else if (getenv("LIBCLANG_RESOURCE_USAGE")) {
     if (out_TU)
@@ -962,7 +962,7 @@ int clang_indexTranslationUnit(CXIndexAction idxAction,
 
   if (!RunSafely(CRC, IndexTranslationUnitImpl)) {
     fprintf(stderr, "libclang: crash detected during indexing TU\n");
-    
+
     return 1;
   }
 

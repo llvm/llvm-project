@@ -58,7 +58,7 @@ Regardless of success or failure, the script performs the following cleanup step
 
 ### Dry Run (Safe Mode)
 
-To see what actions the script *would* perform without actually creating branches, pushing code, or opening pull requests, use the `--dry-run` flag. 
+To see what actions the script *would* perform without actually creating branches, pushing code, or opening pull requests, use the `--dry-run` flag.
 
 ```bash
 python3 git-llvm-push --dry-run
@@ -100,7 +100,7 @@ python3 git-llvm-push --upstream-remote origin --remote my-fork
 
 ## Alternate usage via `git llvm-push`
 
-If the script is available on your PATH, you can use it as a git subcommand, similar to `git clang-format`. 
+If the script is available on your PATH, you can use it as a git subcommand, similar to `git clang-format`.
 
 ```bash
 git llvm-push [FLAGS] ...

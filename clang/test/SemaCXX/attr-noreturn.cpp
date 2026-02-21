@@ -176,7 +176,7 @@ void test_f0a() {
   void (*fp1)() __attribute__((noreturn)) = f0;
 }
 
-// Taking the address of an overloaded noreturn function 
+// Taking the address of an overloaded noreturn function
 void f0(int) __attribute__((__noreturn__));
 
 void test_f0b() {

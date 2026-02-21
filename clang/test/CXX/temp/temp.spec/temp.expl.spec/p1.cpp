@@ -3,8 +3,8 @@
 
 // This test creates cases where implicit instantiations of various entities
 // would cause a diagnostic, but provides expliict specializations for those
-// entities that avoid the diagnostic. The intent is to verify that 
-// implicit instantiations do not occur (because the explicit specialization 
+// entities that avoid the diagnostic. The intent is to verify that
+// implicit instantiations do not occur (because the explicit specialization
 // is used instead).
 struct NonDefaultConstructible {
   NonDefaultConstructible(int);
@@ -29,21 +29,21 @@ void test_f0(NonDefaultConstructible NDC) {
 template<typename T>
 struct X0 {
   static T member;
-  
+
   void f1(T t) {
     t = 17;
   }
-  
+
   struct Inner : public T { };
-  
+
   template<typename U>
   struct InnerTemplate : public T { };
-  
+
   template<typename U>
   void ft1(T t, U u);
 };
 
-template<typename T> 
+template<typename T>
 template<typename U>
 void X0<T>::ft1(T t, U u) {
   t = u;
@@ -53,7 +53,7 @@ template<typename T> T X0<T>::member;
 
 template<> struct X0<void> { };
 X0<void> test_X0;
-  
+
 
 //     -- member function of a class template
 template<> void X0<void*>::f1(void *) { }
@@ -63,7 +63,7 @@ void test_spec(X0<void*> xvp, void *vp) {
 }
 
 //     -- static data member of a class template
-template<> 
+template<>
 NonDefaultConstructible X0<NonDefaultConstructible>::member = 17;
 
 NonDefaultConstructible &get_static_member() {
@@ -95,6 +95,6 @@ void test_func_template(X0<void *> xvp, void *vp, const void *cvp) {
 // example from the standard:
 template<class T> class stream;
 template<> class stream<char> { /* ... */ };
-template<class T> class Array { /* ... */ }; 
+template<class T> class Array { /* ... */ };
 template<class T> void sort(Array<T>& v) { /* ... */ }
 template<> void sort<char*>(Array<char*>&) ;

@@ -22,10 +22,10 @@ void foo2() __asm__("bar");
 int nux __asm__("foo");
 extern float nux2 __asm__("foo");
 
-int test() { 
+int test() {
   foo();
   foo2();
-  
+
   return nux + nux2;
 }
 

@@ -11,7 +11,7 @@ void A::g(A* a)
 {
   f(); // expected-warning{{'f' is deprecated}}
   a->f(); // expected-warning{{'f' is deprecated}}
-  
+
   (void)b; // expected-warning{{'b' is deprecated}}
   (void)a->b; // expected-warning{{'b' is deprecated}}
 }
@@ -20,7 +20,7 @@ void A::h(A* a)
 {
   f();
   a->f();
-  
+
   (void)b;
   (void)a->b;
 }
@@ -49,7 +49,7 @@ void C::g() {
 void f(B* b, C *c) {
   b->f(); // expected-warning{{'f' is deprecated}}
   b->B::f(); // expected-warning{{'f' is deprecated}}
-  
+
   c->f();
   c->C::f();
   c->B::f(); // expected-warning{{'f' is deprecated}}
@@ -61,9 +61,9 @@ struct D {
   virtual void f(int, int) __attribute__((deprecated));// expected-note{{'f' has been explicitly marked deprecated here}}
 };
 
-void D::f() { } 
-void D::f(int v) { } 
-void D::f(int v1, int v2) { } 
+void D::f() { }
+void D::f(int v) { }
+void D::f(int v1, int v2) { }
 
 void f(D* d) {
   d->f(); // expected-warning{{'f' is deprecated}}
@@ -205,7 +205,7 @@ namespace test6 {
     A x; // expected-warning {{'A' is deprecated}}
     x = a0; // expected-warning {{'a0' is deprecated}}
   }
-  
+
   enum B {
     b0 __attribute__((deprecated)), // expected-note {{'b0' has been explicitly marked deprecated here}}
     b1

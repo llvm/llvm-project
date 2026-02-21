@@ -2,7 +2,7 @@ const char *s0 = m0;
 int s1 = m1;
 const char *s2 = m0;
 
-// FIXME: This test fails inexplicably on Windows in a manner that makes it 
+// FIXME: This test fails inexplicably on Windows in a manner that makes it
 // look like standard error isn't getting flushed properly.
 
 // RUN: false

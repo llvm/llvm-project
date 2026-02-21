@@ -18,7 +18,7 @@ class SmallVector : public SmallVectorImpl<T> {
     MinUs = (static_cast<unsigned int>(sizeof(T))*N +	// expected-error {{invalid application of 'sizeof' to an incomplete type 'CallSite'}}
              static_cast<unsigned int>(sizeof(U)) - 1) /
             static_cast<unsigned int>(sizeof(U)),
-    NumInlineEltsElts = MinUs 
+    NumInlineEltsElts = MinUs
   };
   U InlineElts[NumInlineEltsElts];
 public:

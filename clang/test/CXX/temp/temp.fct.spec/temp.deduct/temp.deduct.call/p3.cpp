@@ -10,7 +10,7 @@ void test_f0(int i, const int ci) {
   A<int> a1 = f0(ci);
 }
 
-// If P is a reference type, the type referred to by P is used for type 
+// If P is a reference type, the type referred to by P is used for type
 // deduction.
 template<typename T> A<T> f1(T&);
 
@@ -40,7 +40,7 @@ void test_g1(A<float> af) {
 }
 
 //   - If the original P is a reference type, the deduced A (i.e., the type
-//     referred to by the reference) can be more cv-qualified than the 
+//     referred to by the reference) can be more cv-qualified than the
 //     transformed A.
 template<typename T> A<T> f2(const T&);
 
@@ -63,7 +63,7 @@ void Test() {
   Foo(a);
 }
 
-//   - The transformed A can be another pointer or pointer to member type that 
+//   - The transformed A can be another pointer or pointer to member type that
 //     can be converted to the deduced A via a qualification conversion (4.4).
 template<typename T> A<T> f3(T * * const * const);
 
@@ -86,9 +86,9 @@ namespace noreturn_stripping {
   }
 }
 
-//   - If P is a class, and P has the form template-id, then A can be a 
+//   - If P is a class, and P has the form template-id, then A can be a
 //     derived class of the deduced A. Likewise, if P is a pointer to a class
-//     of the form template-id, A can be a pointer to a derived class pointed 
+//     of the form template-id, A can be a pointer to a derived class pointed
 //     to by the deduced A.
 template<typename T, int I> struct C { };
 
@@ -132,7 +132,7 @@ namespace N {
 
   void test()
   {
-    D d; 
+    D d;
     N::F<T0>(d); // Fails
     N::F<T1>(d); // OK
   }

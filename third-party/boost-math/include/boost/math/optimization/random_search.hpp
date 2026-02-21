@@ -102,7 +102,7 @@ ArgumentContainer random_search(
         if (target_attained) {
             break;
         }
-        // Fill trial vector: 
+        // Fill trial vector:
         uniform_real_distribution<DimensionlessReal> unif01(DimensionlessReal(0), DimensionlessReal(1));
         for (size_t i = 0; i < dimension; ++i) {
             trial_vector[i] = params.lower_bounds[i] + (params.upper_bounds[i] - params.lower_bounds[i])*unif01(g);

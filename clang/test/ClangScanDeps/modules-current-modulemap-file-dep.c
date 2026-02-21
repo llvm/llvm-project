@@ -32,7 +32,7 @@
         },
         {
           "name": "header.h",
-          "type": "file", 
+          "type": "file",
           "external-contents": "DIR/original/header.h"
         }
       ]

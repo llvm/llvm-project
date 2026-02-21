@@ -56,5 +56,5 @@ else()
       ${LIT_BASE_DIR}/llvm-lit.cmd
       @ONLY
       NEWLINE_STYLE DOS)
-  endif()  
+  endif()
 endif()

@@ -10,7 +10,7 @@ void xxx(int argc) {
 
 #pragma omp parallel masked // expected-error {{unexpected OpenMP directive '#pragma omp parallel masked'}}
 
-int foo() { 
+int foo() {
   return 0;
 }
 

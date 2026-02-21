@@ -35,8 +35,8 @@
 # CHECK-V8: warning: invalid instruction encoding
 # CHECK-V8: [0x42,0x0f,0xa1,0xf2]
 
-# The SETPAN(v8.1a) and TST(v8) instructions occupy the same space, but SETPAN 
-# uses the encoding for the invalid NV predicate operand. This test checks that 
+# The SETPAN(v8.1a) and TST(v8) instructions occupy the same space, but SETPAN
+# uses the encoding for the invalid NV predicate operand. This test checks that
 # the disassembler is correctly disambiguating and decoding these instructions.
 
 [0x00 0x00 0x10 0xf1]

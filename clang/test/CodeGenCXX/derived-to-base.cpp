@@ -1,17 +1,17 @@
 // RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
-struct A { 
-  void f(); 
-  
+struct A {
+  void f();
+
   int a;
 };
 
-struct B : A { 
+struct B : A {
   double b;
 };
 
 void f() {
   B b;
-  
+
   b.f();
 }
 
@@ -46,15 +46,15 @@ namespace test3 {
   }
 }
 
-// Ensure volatile is preserved during derived-to-base conversion. 
+// Ensure volatile is preserved during derived-to-base conversion.
 namespace PR127683 {
 
 struct Base {
   int Val;
 };
-  
+
 struct Derived : Base { };
-  
+
 volatile Derived Obj;
 
 // CHECK-LABEL: define void @_ZN8PR12768319test_volatile_storeEv()

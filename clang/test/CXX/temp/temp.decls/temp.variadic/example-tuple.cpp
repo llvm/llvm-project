@@ -35,8 +35,8 @@ struct is_same<T, T> {
   static const bool value = true;
 };
 
-template<typename T> 
-class reference_wrapper { 
+template<typename T>
+class reference_wrapper {
   T *ptr;
 
 public:
@@ -44,11 +44,11 @@ public:
   operator T&() const { return *ptr; }
 };
 
-template<typename T> reference_wrapper<T> ref(T& t) { 
-  return reference_wrapper<T>(t); 
+template<typename T> reference_wrapper<T> ref(T& t) {
+  return reference_wrapper<T>(t);
 }
 template<typename T> reference_wrapper<const T> cref(const T& t) {
-  return reference_wrapper<const T>(t); 
+  return reference_wrapper<const T>(t);
 }
 
 template<typename... Values> class tuple;
@@ -56,36 +56,36 @@ template<typename... Values> class tuple;
 // Basis case: zero-length tuple
 template<> class tuple<> { };
 
-template<typename Head, typename... Tail> 
-class tuple<Head, Tail...> : private tuple<Tail...> { 
+template<typename Head, typename... Tail>
+class tuple<Head, Tail...> : private tuple<Tail...> {
   typedef tuple<Tail...> inherited;
 
-public: 
+public:
   tuple() { }
   // implicit copy-constructor is okay
 
-  // Construct tuple from separate arguments. 
+  // Construct tuple from separate arguments.
   tuple(typename add_const_reference<Head>::type v,
-        typename add_const_reference<Tail>::type... vtail) 
+        typename add_const_reference<Tail>::type... vtail)
     : m_head(v), inherited(vtail...) { }
 
-  // Construct tuple from another tuple. 
+  // Construct tuple from another tuple.
   template<typename... VValues> tuple(const tuple<VValues...>& other)
     : m_head(other.head()), inherited(other.tail()) { }
 
-  template<typename... VValues> tuple& 
+  template<typename... VValues> tuple&
   operator=(const tuple<VValues...>& other) {
-    m_head = other.head(); 
-    tail() = other.tail(); 
+    m_head = other.head();
+    tail() = other.tail();
     return *this;
   }
 
-  typename add_reference<Head>::type head() { return m_head; } 
+  typename add_reference<Head>::type head() { return m_head; }
   typename add_reference<const Head>::type head() const { return m_head; }
-  inherited& tail() { return *this; } 
+  inherited& tail() { return *this; }
   const inherited& tail() const { return *this; }
 
-protected: 
+protected:
   Head m_head;
 };
 
@@ -110,23 +110,23 @@ void test_tuple() {
 }
 
 // Creation functions
-template<typename T> 
+template<typename T>
 struct make_tuple_result {
   typedef T type;
 };
 
-template<typename T> 
+template<typename T>
 struct make_tuple_result<reference_wrapper<T> > {
   typedef T& type;
 };
 
-template<typename... Values> 
-tuple<typename make_tuple_result<Values>::type...> 
+template<typename... Values>
+tuple<typename make_tuple_result<Values>::type...>
 make_tuple(const Values&... values) {
   return tuple<typename make_tuple_result<Values>::type...>(values...);
 }
 
-template<typename... Values> 
+template<typename... Values>
 tuple<Values&...> tie(Values&... values) {
   return tuple<Values&...>(values...);
 }
@@ -154,12 +154,12 @@ int check_tuple_size_3[tuple_size<tuple<char, unsigned char, signed char>>::valu
 
 template<int I, typename Tuple> struct tuple_element;
 
-template<int I, typename Head, typename... Tail> 
+template<int I, typename Head, typename... Tail>
 struct tuple_element<I, tuple<Head, Tail...> > {
   typedef typename tuple_element<I-1, tuple<Tail...> >::type type;
 };
 
-template<typename Head, typename... Tail> 
+template<typename Head, typename... Tail>
 struct tuple_element<0, tuple<Head, Tail...> > {
   typedef Head type;
 };
@@ -175,35 +175,35 @@ int check_tuple_element_2[is_same<tuple_element<2, tuple<int&, float, double>>::
 
 // Element access
 template<int I, typename Tuple> class get_impl;
-template<int I, typename Head, typename... Values> 
+template<int I, typename Head, typename... Values>
 class get_impl<I, tuple<Head, Values...> > {
   typedef typename tuple_element<I-1, tuple<Values...> >::type Element;
-  typedef typename add_reference<Element>::type RJ; 
+  typedef typename add_reference<Element>::type RJ;
   typedef typename add_const_reference<Element>::type PJ;
   typedef get_impl<I-1, tuple<Values...> > Next;
-public: 
+public:
   static RJ get(tuple<Head, Values...>& t) { return Next::get(t.tail()); }
   static PJ get(const tuple<Head, Values...>& t) { return Next::get(t.tail()); }
 };
 
-template<typename Head, typename... Values> 
+template<typename Head, typename... Values>
 class get_impl<0, tuple<Head, Values...> > {
-  typedef typename add_reference<Head>::type RJ; 
+  typedef typename add_reference<Head>::type RJ;
   typedef typename add_const_reference<Head>::type PJ;
-public: 
-  static RJ get(tuple<Head, Values...>& t) { return t.head(); } 
+public:
+  static RJ get(tuple<Head, Values...>& t) { return t.head(); }
   static PJ get(const tuple<Head, Values...>& t) { return t.head(); }
 };
 
 template<int I, typename... Values> typename add_reference<
 typename tuple_element<I, tuple<Values...> >::type >::type
-get(tuple<Values...>& t) { 
+get(tuple<Values...>& t) {
   return get_impl<I, tuple<Values...> >::get(t);
 }
 
 template<int I, typename... Values> typename add_const_reference<
 typename tuple_element<I, tuple<Values...> >::type >::type
-get(const tuple<Values...>& t) { 
+get(const tuple<Values...>& t) {
   return get_impl<I, tuple<Values...> >::get(t);
 }
 
@@ -219,24 +219,24 @@ void test_element_access(tuple<int*, float*, double*&> t3) {
 // Relational operators
 inline bool operator==(const tuple<>&, const tuple<>&) { return true; }
 
-template<typename T, typename... TTail, typename U, typename... UTail> 
+template<typename T, typename... TTail, typename U, typename... UTail>
 bool operator==(const tuple<T, TTail...>& t, const tuple<U, UTail...>& u) {
   return t.head() == u.head() && t.tail() == u.tail();
 }
 
-template<typename... TValues, typename... UValues> 
+template<typename... TValues, typename... UValues>
 bool operator!=(const tuple<TValues...>& t, const tuple<UValues...>& u) {
-  return !(t == u); 
+  return !(t == u);
 }
 
 inline bool operator<(const tuple<>&, const tuple<>&) { return false; }
 
-template<typename T, typename... TTail, typename U, typename... UTail> 
+template<typename T, typename... TTail, typename U, typename... UTail>
 bool operator<(const tuple<T, TTail...>& t, const tuple<U, UTail...>& u) {
   return (t.head() < u.head() || (!(t.head() < u.head()) && t.tail() < u.tail()));
 }
 
-template<typename... TValues, typename... UValues> 
+template<typename... TValues, typename... UValues>
 bool operator>(const tuple<TValues...>& t, const tuple<UValues...>& u) {
   return u < t;
 }

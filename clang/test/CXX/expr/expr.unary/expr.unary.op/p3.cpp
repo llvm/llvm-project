@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only %s -verify 
+// RUN: %clang_cc1 -fsyntax-only %s -verify
 // expected-no-diagnostics
 
 namespace rdar10544564 {
@@ -22,7 +22,7 @@ namespace rdar10544564 {
       X (Y::*func_mem_ptr2)() = &Y::memfunc2;
     }
   };
-  
+
   X Y::*data_mem_ptr = &Y::member;
   X (Y::*func_mem_ptr1)() = &Y::memfunc1;
   X (Y::*func_mem_ptr2)() = &Y::memfunc2;

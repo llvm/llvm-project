@@ -170,7 +170,7 @@ extern "C" void f1(int) {
   // CHECK: call ptr @_ZNSt16coroutine_handleINSt16coroutine_traitsIJviEE12promise_typeEE12from_addressEPv(ptr %[[FRAME]])
   //   ... many lines of code to coerce coroutine_handle into an ptr scalar
   // CHECK: %[[CH:.+]] = load ptr, ptr %{{.+}}
-  // CHECK: %[[YES:.+]] = call zeroext i1 @_ZN13suspend_maybe13await_suspendESt16coroutine_handleIvE(ptr {{[^,]*}} %[[AWAITABLE]], ptr %[[CH]]) 
+  // CHECK: %[[YES:.+]] = call zeroext i1 @_ZN13suspend_maybe13await_suspendESt16coroutine_handleIvE(ptr {{[^,]*}} %[[AWAITABLE]], ptr %[[CH]])
   // CHECK-NEXT: ret i1 %[[YES]]
 }
 
@@ -387,7 +387,7 @@ extern "C" void TestTailcall() {
   // CHECK: call ptr  @_ZNSt16coroutine_handleINSt16coroutine_traitsIJvEE12promise_typeEE12from_addressEPv(ptr %[[FRAME]])
   //   ... many lines of code to coerce coroutine_handle into an ptr scalar
   // CHECK: %[[CH:.+]] = load ptr, ptr %{{.+}}
-  // CHECK-NEXT: %[[RESULT:.+]] = call ptr @_ZN13TailCallAwait13await_suspendESt16coroutine_handleIvE(ptr {{[^,]*}} %[[AWAITABLE]], ptr %[[CH]]) 
+  // CHECK-NEXT: %[[RESULT:.+]] = call ptr @_ZN13TailCallAwait13await_suspendESt16coroutine_handleIvE(ptr {{[^,]*}} %[[AWAITABLE]], ptr %[[CH]])
   // CHECK-NEXT: %[[COERCE:.+]] = getelementptr inbounds nuw %"struct.std::coroutine_handle", ptr %[[TMP:.+]], i32 0, i32 0
   // CHECK-NEXT: store ptr %[[RESULT]], ptr %[[COERCE]]
   // CHECK-NEXT: %[[ADDR:.+]] = call ptr @_ZNSt16coroutine_handleIvE7addressEv(ptr {{[^,]*}} %[[TMP]])

@@ -1919,7 +1919,7 @@
 0x30 0x1b 0x42 0xec
 0x1f 0x1b 0x52 0xec
 0x30 0x1b 0x52 0xec
-# CHECK: vmov d15, r1, r2 
+# CHECK: vmov d15, r1, r2
 # CHECK: vmov d16, r1, r2
 # CHECK: vmov r1, r2, d15
 # CHECK: vmov r1, r2, d16
@@ -1942,404 +1942,404 @@
 
 # rdar://11034702
 0x0d 0x87 0x04 0xf4
-# CHECK: vst1.8	{d8}, [r4]!            
+# CHECK: vst1.8	{d8}, [r4]!
 0x4d 0x87 0x04 0xf4
-# CHECK: vst1.16	{d8}, [r4]!             
+# CHECK: vst1.16	{d8}, [r4]!
 0x8d 0x87 0x04 0xf4
-# CHECK: vst1.32	{d8}, [r4]!             
+# CHECK: vst1.32	{d8}, [r4]!
 0xcd 0x87 0x04 0xf4
-# CHECK: vst1.64	{d8}, [r4]!             
+# CHECK: vst1.64	{d8}, [r4]!
 0x06 0x87 0x04 0xf4
-# CHECK: vst1.8	{d8}, [r4], r6          
+# CHECK: vst1.8	{d8}, [r4], r6
 0x46 0x87 0x04 0xf4
-# CHECK: vst1.16	{d8}, [r4], r6          
+# CHECK: vst1.16	{d8}, [r4], r6
 0x86 0x87 0x04 0xf4
-# CHECK: vst1.32	{d8}, [r4], r6          
+# CHECK: vst1.32	{d8}, [r4], r6
 0xc6 0x87 0x04 0xf4
-# CHECK: vst1.64	{d8}, [r4], r6          
+# CHECK: vst1.64	{d8}, [r4], r6
 
 0x0d 0x8a 0x04 0xf4
-# CHECK: vst1.8	{d8, d9}, [r4]!         
+# CHECK: vst1.8	{d8, d9}, [r4]!
 0x4d 0x8a 0x04 0xf4
-# CHECK: vst1.16	{d8, d9}, [r4]!         
+# CHECK: vst1.16	{d8, d9}, [r4]!
 0x8d 0x8a 0x04 0xf4
-# CHECK: vst1.32	{d8, d9}, [r4]!         
+# CHECK: vst1.32	{d8, d9}, [r4]!
 0xcd 0x8a 0x04 0xf4
-# CHECK: vst1.64	{d8, d9}, [r4]!         
+# CHECK: vst1.64	{d8, d9}, [r4]!
 0x06 0x8a 0x04 0xf4
-# CHECK: vst1.8	{d8, d9}, [r4], r6      
+# CHECK: vst1.8	{d8, d9}, [r4], r6
 0x46 0x8a 0x04 0xf4
-# CHECK: vst1.16	{d8, d9}, [r4], r6      
+# CHECK: vst1.16	{d8, d9}, [r4], r6
 0x86 0x8a 0x04 0xf4
-# CHECK: vst1.32	{d8, d9}, [r4], r6      
+# CHECK: vst1.32	{d8, d9}, [r4], r6
 0xc6 0x8a 0x04 0xf4
-# CHECK: vst1.64	{d8, d9}, [r4], r6      
+# CHECK: vst1.64	{d8, d9}, [r4], r6
 
 0x0d 0x86 0x04 0xf4
-# CHECK: vst1.8	{d8, d9, d10}, [r4]!    
+# CHECK: vst1.8	{d8, d9, d10}, [r4]!
 0x4d 0x86 0x04 0xf4
-# CHECK: vst1.16	{d8, d9, d10}, [r4]!    
+# CHECK: vst1.16	{d8, d9, d10}, [r4]!
 0x8d 0x86 0x04 0xf4
-# CHECK: vst1.32	{d8, d9, d10}, [r4]!    
+# CHECK: vst1.32	{d8, d9, d10}, [r4]!
 0xcd 0x86 0x04 0xf4
-# CHECK: vst1.64	{d8, d9, d10}, [r4]!    
+# CHECK: vst1.64	{d8, d9, d10}, [r4]!
 0x06 0x86 0x04 0xf4
-# CHECK: vst1.8	{d8, d9, d10}, [r4], r6 
+# CHECK: vst1.8	{d8, d9, d10}, [r4], r6
 0x46 0x86 0x04 0xf4
-# CHECK: vst1.16	{d8, d9, d10}, [r4], r6 
+# CHECK: vst1.16	{d8, d9, d10}, [r4], r6
 0x86 0x86 0x04 0xf4
-# CHECK: vst1.32	{d8, d9, d10}, [r4], r6 
+# CHECK: vst1.32	{d8, d9, d10}, [r4], r6
 0xc6 0x86 0x04 0xf4
-# CHECK: vst1.64	{d8, d9, d10}, [r4], r6 
+# CHECK: vst1.64	{d8, d9, d10}, [r4], r6
 
 0x0d 0x82 0x04 0xf4
-# CHECK: vst1.8	{d8, d9, d10, d11}, [r4]! 
+# CHECK: vst1.8	{d8, d9, d10, d11}, [r4]!
 0x4d 0x82 0x04 0xf4
-# CHECK: vst1.16	{d8, d9, d10, d11}, [r4]! 
+# CHECK: vst1.16	{d8, d9, d10, d11}, [r4]!
 0x8d 0x82 0x04 0xf4
-# CHECK: vst1.32	{d8, d9, d10, d11}, [r4]! 
+# CHECK: vst1.32	{d8, d9, d10, d11}, [r4]!
 0xcd 0x82 0x04 0xf4
-# CHECK: vst1.64	{d8, d9, d10, d11}, [r4]! 
+# CHECK: vst1.64	{d8, d9, d10, d11}, [r4]!
 0x06 0x82 0x04 0xf4
-# CHECK: vst1.8	{d8, d9, d10, d11}, [r4], r6 
+# CHECK: vst1.8	{d8, d9, d10, d11}, [r4], r6
 0x46 0x82 0x04 0xf4
-# CHECK: vst1.16	{d8, d9, d10, d11}, [r4], r6 
+# CHECK: vst1.16	{d8, d9, d10, d11}, [r4], r6
 0x86 0x82 0x04 0xf4
-# CHECK: vst1.32	{d8, d9, d10, d11}, [r4], r6 
+# CHECK: vst1.32	{d8, d9, d10, d11}, [r4], r6
 0xc6 0x82 0x04 0xf4
-# CHECK: vst1.64	{d8, d9, d10, d11}, [r4], r6 
+# CHECK: vst1.64	{d8, d9, d10, d11}, [r4], r6
 
 0x0d 0x88 0x04 0xf4
-# CHECK: vst2.8	{d8, d9}, [r4]!         
+# CHECK: vst2.8	{d8, d9}, [r4]!
 0x4d 0x88 0x04 0xf4
-# CHECK: vst2.16	{d8, d9}, [r4]!         
+# CHECK: vst2.16	{d8, d9}, [r4]!
 0x8d 0x88 0x04 0xf4
-# CHECK: vst2.32	{d8, d9}, [r4]!         
+# CHECK: vst2.32	{d8, d9}, [r4]!
 0x06 0x88 0x04 0xf4
-# CHECK: vst2.8	{d8, d9}, [r4], r6      
+# CHECK: vst2.8	{d8, d9}, [r4], r6
 0x46 0x88 0x04 0xf4
-# CHECK: vst2.16	{d8, d9}, [r4], r6      
+# CHECK: vst2.16	{d8, d9}, [r4], r6
 0x86 0x88 0x04 0xf4
-# CHECK: vst2.32	{d8, d9}, [r4], r6      
+# CHECK: vst2.32	{d8, d9}, [r4], r6
 
 0x0d 0x89 0x04 0xf4
-# CHECK: vst2.8	{d8, d10}, [r4]!        
+# CHECK: vst2.8	{d8, d10}, [r4]!
 0x4d 0x89 0x04 0xf4
-# CHECK: vst2.16	{d8, d10}, [r4]!        
+# CHECK: vst2.16	{d8, d10}, [r4]!
 0x8d 0x89 0x04 0xf4
-# CHECK: vst2.32	{d8, d10}, [r4]!        
+# CHECK: vst2.32	{d8, d10}, [r4]!
 0x06 0x89 0x04 0xf4
-# CHECK: vst2.8	{d8, d10}, [r4], r6     
+# CHECK: vst2.8	{d8, d10}, [r4], r6
 0x46 0x89 0x04 0xf4
-# CHECK: vst2.16	{d8, d10}, [r4], r6     
+# CHECK: vst2.16	{d8, d10}, [r4], r6
 0x86 0x89 0x04 0xf4
-# CHECK: vst2.32	{d8, d10}, [r4], r6     
+# CHECK: vst2.32	{d8, d10}, [r4], r6
 
 0x0d 0x84 0x04 0xf4
-# CHECK: vst3.8	{d8, d9, d10}, [r4]!    
+# CHECK: vst3.8	{d8, d9, d10}, [r4]!
 0x4d 0x84 0x04 0xf4
-# CHECK: vst3.16	{d8, d9, d10}, [r4]!    
+# CHECK: vst3.16	{d8, d9, d10}, [r4]!
 0x8d 0x84 0x04 0xf4
-# CHECK: vst3.32	{d8, d9, d10}, [r4]!    
+# CHECK: vst3.32	{d8, d9, d10}, [r4]!
 0x06 0x85 0x04 0xf4
-# CHECK: vst3.8	{d8, d10, d12}, [r4], r6 
+# CHECK: vst3.8	{d8, d10, d12}, [r4], r6
 0x46 0x85 0x04 0xf4
-# CHECK: vst3.16	{d8, d10, d12}, [r4], r6 
+# CHECK: vst3.16	{d8, d10, d12}, [r4], r6
 0x86 0x85 0x04 0xf4
-# CHECK: vst3.32	{d8, d10, d12}, [r4], r6 
+# CHECK: vst3.32	{d8, d10, d12}, [r4], r6
 
 0x0d 0x80 0x04 0xf4
-# CHECK: vst4.8	{d8, d9, d10, d11}, [r4]! 
+# CHECK: vst4.8	{d8, d9, d10, d11}, [r4]!
 0x4d 0x80 0x04 0xf4
-# CHECK: vst4.16	{d8, d9, d10, d11}, [r4]! 
+# CHECK: vst4.16	{d8, d9, d10, d11}, [r4]!
 0x8d 0x80 0x04 0xf4
-# CHECK: vst4.32	{d8, d9, d10, d11}, [r4]! 
+# CHECK: vst4.32	{d8, d9, d10, d11}, [r4]!
 0x06 0x81 0x04 0xf4
-# CHECK: vst4.8	{d8, d10, d12, d14}, [r4], r6 
+# CHECK: vst4.8	{d8, d10, d12, d14}, [r4], r6
 0x46 0x81 0x04 0xf4
-# CHECK: vst4.16	{d8, d10, d12, d14}, [r4], r6 
+# CHECK: vst4.16	{d8, d10, d12, d14}, [r4], r6
 0x86 0x81 0x04 0xf4
-# CHECK: vst4.32	{d8, d10, d12, d14}, [r4], r6 
+# CHECK: vst4.32	{d8, d10, d12, d14}, [r4], r6
 
 0x4f 0x8a 0x04 0xf4
-# CHECK: vst1.16	{d8, d9}, [r4]          
+# CHECK: vst1.16	{d8, d9}, [r4]
 0x8f 0x8a 0x04 0xf4
-# CHECK: vst1.32	{d8, d9}, [r4]          
+# CHECK: vst1.32	{d8, d9}, [r4]
 0xcf 0x8a 0x04 0xf4
-# CHECK: vst1.64	{d8, d9}, [r4]          
+# CHECK: vst1.64	{d8, d9}, [r4]
 0x0f 0x8a 0x04 0xf4
-# CHECK: vst1.8	{d8, d9}, [r4]          
+# CHECK: vst1.8	{d8, d9}, [r4]
 
 0x4f 0x88 0x04 0xf4
-# CHECK: vst2.16	{d8, d9}, [r4]          
+# CHECK: vst2.16	{d8, d9}, [r4]
 0x8f 0x88 0x04 0xf4
-# CHECK: vst2.32	{d8, d9}, [r4]          
+# CHECK: vst2.32	{d8, d9}, [r4]
 0x0f 0x88 0x04 0xf4
-# CHECK: vst2.8	{d8, d9}, [r4]          
+# CHECK: vst2.8	{d8, d9}, [r4]
 
 0x4d 0x88 0x04 0xf4
-# CHECK: vst2.16	{d8, d9}, [r4]!         
+# CHECK: vst2.16	{d8, d9}, [r4]!
 0x46 0x88 0x04 0xf4
-# CHECK: vst2.16	{d8, d9}, [r4], r6      
+# CHECK: vst2.16	{d8, d9}, [r4], r6
 0x8d 0x88 0x04 0xf4
-# CHECK: vst2.32	{d8, d9}, [r4]!         
+# CHECK: vst2.32	{d8, d9}, [r4]!
 0x86 0x88 0x04 0xf4
-# CHECK: vst2.32	{d8, d9}, [r4], r6      
+# CHECK: vst2.32	{d8, d9}, [r4], r6
 0x0d 0x88 0x04 0xf4
-# CHECK: vst2.8	{d8, d9}, [r4]!         
+# CHECK: vst2.8	{d8, d9}, [r4]!
 0x06 0x88 0x04 0xf4
-# CHECK: vst2.8	{d8, d9}, [r4], r6      
+# CHECK: vst2.8	{d8, d9}, [r4], r6
 
 0x4f 0x89 0x04 0xf4
-# CHECK: vst2.16	{d8, d10}, [r4]         
+# CHECK: vst2.16	{d8, d10}, [r4]
 0x8f 0x89 0x04 0xf4
-# CHECK: vst2.32	{d8, d10}, [r4]         
+# CHECK: vst2.32	{d8, d10}, [r4]
 0x0f 0x89 0x04 0xf4
-# CHECK: vst2.8	{d8, d10}, [r4]         
+# CHECK: vst2.8	{d8, d10}, [r4]
 
 0x0f 0x84 0x04 0xf4
-# CHECK: vst3.8	{d8, d9, d10}, [r4]     
+# CHECK: vst3.8	{d8, d9, d10}, [r4]
 0x4f 0x84 0x04 0xf4
-# CHECK: vst3.16	{d8, d9, d10}, [r4]     
+# CHECK: vst3.16	{d8, d9, d10}, [r4]
 0x8f 0x84 0x04 0xf4
-# CHECK: vst3.32	{d8, d9, d10}, [r4]     
+# CHECK: vst3.32	{d8, d9, d10}, [r4]
 
 0x0f 0x80 0x04 0xf4
-# CHECK: vst4.8	{d8, d9, d10, d11}, [r4] 
+# CHECK: vst4.8	{d8, d9, d10, d11}, [r4]
 0x4f 0x80 0x04 0xf4
-# CHECK: vst4.16	{d8, d9, d10, d11}, [r4] 
+# CHECK: vst4.16	{d8, d9, d10, d11}, [r4]
 0x8f 0x80 0x04 0xf4
-# CHECK: vst4.32	{d8, d9, d10, d11}, [r4] 
+# CHECK: vst4.32	{d8, d9, d10, d11}, [r4]
 
 0x0f 0x85 0x04 0xf4
-# CHECK: vst3.8	{d8, d10, d12}, [r4]    
+# CHECK: vst3.8	{d8, d10, d12}, [r4]
 0x4f 0x85 0x04 0xf4
-# CHECK: vst3.16	{d8, d10, d12}, [r4]    
+# CHECK: vst3.16	{d8, d10, d12}, [r4]
 0x8f 0x85 0x04 0xf4
-# CHECK: vst3.32	{d8, d10, d12}, [r4]    
+# CHECK: vst3.32	{d8, d10, d12}, [r4]
 
 0x0f 0x81 0x04 0xf4
-# CHECK: vst4.8	{d8, d10, d12, d14}, [r4] 
+# CHECK: vst4.8	{d8, d10, d12, d14}, [r4]
 0x4f 0x81 0x04 0xf4
-# CHECK: vst4.16	{d8, d10, d12, d14}, [r4] 
+# CHECK: vst4.16	{d8, d10, d12, d14}, [r4]
 0x8f 0x81 0x04 0xf4
-# CHECK: vst4.32	{d8, d10, d12, d14}, [r4] 
+# CHECK: vst4.32	{d8, d10, d12, d14}, [r4]
 
 # rdar://11204059
 0x0d 0x87 0x24 0xf4
-# CHECK: vld1.8	{d8}, [r4]!             
+# CHECK: vld1.8	{d8}, [r4]!
 0x4d 0x87 0x24 0xf4
-# CHECK: vld1.16	{d8}, [r4]!             
+# CHECK: vld1.16	{d8}, [r4]!
 0x8d 0x87 0x24 0xf4
-# CHECK: vld1.32	{d8}, [r4]!             
+# CHECK: vld1.32	{d8}, [r4]!
 0xcd 0x87 0x24 0xf4
-# CHECK: vld1.64	{d8}, [r4]!             
+# CHECK: vld1.64	{d8}, [r4]!
 0x06 0x87 0x24 0xf4
-# CHECK: vld1.8	{d8}, [r4], r6          
+# CHECK: vld1.8	{d8}, [r4], r6
 0x46 0x87 0x24 0xf4
-# CHECK: vld1.16	{d8}, [r4], r6          
+# CHECK: vld1.16	{d8}, [r4], r6
 0x86 0x87 0x24 0xf4
-# CHECK: vld1.32	{d8}, [r4], r6          
+# CHECK: vld1.32	{d8}, [r4], r6
 0xc6 0x87 0x24 0xf4
-# CHECK: vld1.64	{d8}, [r4], r6          
+# CHECK: vld1.64	{d8}, [r4], r6
 0x0d 0x8a 0x24 0xf4
-# CHECK: vld1.8	{d8, d9}, [r4]!         
+# CHECK: vld1.8	{d8, d9}, [r4]!
 0x4d 0x8a 0x24 0xf4
-# CHECK: vld1.16	{d8, d9}, [r4]!         
+# CHECK: vld1.16	{d8, d9}, [r4]!
 0x8d 0x8a 0x24 0xf4
-# CHECK: vld1.32	{d8, d9}, [r4]!         
+# CHECK: vld1.32	{d8, d9}, [r4]!
 0xcd 0x8a 0x24 0xf4
-# CHECK: vld1.64	{d8, d9}, [r4]!         
+# CHECK: vld1.64	{d8, d9}, [r4]!
 0x06 0x8a 0x24 0xf4
-# CHECK: vld1.8	{d8, d9}, [r4], r6      
+# CHECK: vld1.8	{d8, d9}, [r4], r6
 0x46 0x8a 0x24 0xf4
-# CHECK: vld1.16	{d8, d9}, [r4], r6      
+# CHECK: vld1.16	{d8, d9}, [r4], r6
 0x86 0x8a 0x24 0xf4
-# CHECK: vld1.32	{d8, d9}, [r4], r6      
+# CHECK: vld1.32	{d8, d9}, [r4], r6
 0xc6 0x8a 0x24 0xf4
-# CHECK: vld1.64	{d8, d9}, [r4], r6      
+# CHECK: vld1.64	{d8, d9}, [r4], r6
 0x0d 0x86 0x24 0xf4
-# CHECK: vld1.8	{d8, d9, d10}, [r4]!    
+# CHECK: vld1.8	{d8, d9, d10}, [r4]!
 0x4d 0x86 0x24 0xf4
-# CHECK: vld1.16	{d8, d9, d10}, [r4]!    
+# CHECK: vld1.16	{d8, d9, d10}, [r4]!
 0x8d 0x86 0x24 0xf4
-# CHECK: vld1.32	{d8, d9, d10}, [r4]!    
+# CHECK: vld1.32	{d8, d9, d10}, [r4]!
 0xcd 0x86 0x24 0xf4
-# CHECK: vld1.64	{d8, d9, d10}, [r4]!    
+# CHECK: vld1.64	{d8, d9, d10}, [r4]!
 0x06 0x86 0x24 0xf4
-# CHECK: vld1.8	{d8, d9, d10}, [r4], r6 
+# CHECK: vld1.8	{d8, d9, d10}, [r4], r6
 0x46 0x86 0x24 0xf4
-# CHECK: vld1.16	{d8, d9, d10}, [r4], r6 
+# CHECK: vld1.16	{d8, d9, d10}, [r4], r6
 0x86 0x86 0x24 0xf4
-# CHECK: vld1.32	{d8, d9, d10}, [r4], r6 
+# CHECK: vld1.32	{d8, d9, d10}, [r4], r6
 0xc6 0x86 0x24 0xf4
-# CHECK: vld1.64	{d8, d9, d10}, [r4], r6 
+# CHECK: vld1.64	{d8, d9, d10}, [r4], r6
 0x0d 0x82 0x24 0xf4
-# CHECK: vld1.8	{d8, d9, d10, d11}, [r4]! 
+# CHECK: vld1.8	{d8, d9, d10, d11}, [r4]!
 0x4d 0x82 0x24 0xf4
-# CHECK: vld1.16	{d8, d9, d10, d11}, [r4]! 
+# CHECK: vld1.16	{d8, d9, d10, d11}, [r4]!
 0x8d 0x82 0x24 0xf4
-# CHECK: vld1.32	{d8, d9, d10, d11}, [r4]! 
+# CHECK: vld1.32	{d8, d9, d10, d11}, [r4]!
 0xcd 0x82 0x24 0xf4
-# CHECK: vld1.64	{d8, d9, d10, d11}, [r4]! 
+# CHECK: vld1.64	{d8, d9, d10, d11}, [r4]!
 0x06 0x82 0x24 0xf4
-# CHECK: vld1.8	{d8, d9, d10, d11}, [r4], r6 
+# CHECK: vld1.8	{d8, d9, d10, d11}, [r4], r6
 0x46 0x82 0x24 0xf4
-# CHECK: vld1.16	{d8, d9, d10, d11}, [r4], r6 
+# CHECK: vld1.16	{d8, d9, d10, d11}, [r4], r6
 0x86 0x82 0x24 0xf4
-# CHECK: vld1.32	{d8, d9, d10, d11}, [r4], r6 
+# CHECK: vld1.32	{d8, d9, d10, d11}, [r4], r6
 0xc6 0x82 0x24 0xf4
-# CHECK: vld1.64	{d8, d9, d10, d11}, [r4], r6 
+# CHECK: vld1.64	{d8, d9, d10, d11}, [r4], r6
 0x0d 0x88 0x24 0xf4
-# CHECK: vld2.8	{d8, d9}, [r4]!         
+# CHECK: vld2.8	{d8, d9}, [r4]!
 0x4d 0x88 0x24 0xf4
-# CHECK: vld2.16	{d8, d9}, [r4]!         
+# CHECK: vld2.16	{d8, d9}, [r4]!
 0x8d 0x88 0x24 0xf4
-# CHECK: vld2.32	{d8, d9}, [r4]!         
+# CHECK: vld2.32	{d8, d9}, [r4]!
 0x06 0x88 0x24 0xf4
-# CHECK: vld2.8	{d8, d9}, [r4], r6      
+# CHECK: vld2.8	{d8, d9}, [r4], r6
 0x46 0x88 0x24 0xf4
-# CHECK: vld2.16	{d8, d9}, [r4], r6      
+# CHECK: vld2.16	{d8, d9}, [r4], r6
 0x86 0x88 0x24 0xf4
-# CHECK: vld2.32	{d8, d9}, [r4], r6      
+# CHECK: vld2.32	{d8, d9}, [r4], r6
 0x0d 0x89 0x24 0xf4
-# CHECK: vld2.8	{d8, d10}, [r4]!        
+# CHECK: vld2.8	{d8, d10}, [r4]!
 0x4d 0x89 0x24 0xf4
-# CHECK: vld2.16	{d8, d10}, [r4]!        
+# CHECK: vld2.16	{d8, d10}, [r4]!
 0x8d 0x89 0x24 0xf4
-# CHECK: vld2.32	{d8, d10}, [r4]!        
+# CHECK: vld2.32	{d8, d10}, [r4]!
 0x06 0x89 0x24 0xf4
-# CHECK: vld2.8	{d8, d10}, [r4], r6     
+# CHECK: vld2.8	{d8, d10}, [r4], r6
 0x46 0x89 0x24 0xf4
-# CHECK: vld2.16	{d8, d10}, [r4], r6     
+# CHECK: vld2.16	{d8, d10}, [r4], r6
 0x86 0x89 0x24 0xf4
-# CHECK: vld2.32	{d8, d10}, [r4], r6     
+# CHECK: vld2.32	{d8, d10}, [r4], r6
 0x0d 0x84 0x24 0xf4
-# CHECK: vld3.8	{d8, d9, d10}, [r4]!    
+# CHECK: vld3.8	{d8, d9, d10}, [r4]!
 0x4d 0x84 0x24 0xf4
-# CHECK: vld3.16	{d8, d9, d10}, [r4]!    
+# CHECK: vld3.16	{d8, d9, d10}, [r4]!
 0x8d 0x84 0x24 0xf4
-# CHECK: vld3.32	{d8, d9, d10}, [r4]!    
+# CHECK: vld3.32	{d8, d9, d10}, [r4]!
 0x06 0x85 0x24 0xf4
-# CHECK: vld3.8	{d8, d10, d12}, [r4], r6 
+# CHECK: vld3.8	{d8, d10, d12}, [r4], r6
 0x46 0x85 0x24 0xf4
-# CHECK: vld3.16	{d8, d10, d12}, [r4], r6 
+# CHECK: vld3.16	{d8, d10, d12}, [r4], r6
 0x86 0x85 0x24 0xf4
-# CHECK: vld3.32	{d8, d10, d12}, [r4], r6 
+# CHECK: vld3.32	{d8, d10, d12}, [r4], r6
 0x0d 0x80 0x24 0xf4
-# CHECK: vld4.8	{d8, d9, d10, d11}, [r4]! 
+# CHECK: vld4.8	{d8, d9, d10, d11}, [r4]!
 0x4d 0x80 0x24 0xf4
-# CHECK: vld4.16	{d8, d9, d10, d11}, [r4]! 
+# CHECK: vld4.16	{d8, d9, d10, d11}, [r4]!
 0x8d 0x80 0x24 0xf4
-# CHECK: vld4.32	{d8, d9, d10, d11}, [r4]! 
+# CHECK: vld4.32	{d8, d9, d10, d11}, [r4]!
 0x06 0x81 0x24 0xf4
-# CHECK: vld4.8	{d8, d10, d12, d14}, [r4], r6 
+# CHECK: vld4.8	{d8, d10, d12, d14}, [r4], r6
 0x46 0x81 0x24 0xf4
-# CHECK: vld4.16	{d8, d10, d12, d14}, [r4], r6 
+# CHECK: vld4.16	{d8, d10, d12, d14}, [r4], r6
 0x86 0x81 0x24 0xf4
-# CHECK: vld4.32	{d8, d10, d12, d14}, [r4], r6 
+# CHECK: vld4.32	{d8, d10, d12, d14}, [r4], r6
 0x4f 0x8a 0x24 0xf4
-# CHECK: vld1.16	{d8, d9}, [r4]          
+# CHECK: vld1.16	{d8, d9}, [r4]
 0x8f 0x8a 0x24 0xf4
-# CHECK: vld1.32	{d8, d9}, [r4]          
+# CHECK: vld1.32	{d8, d9}, [r4]
 0xcf 0x8a 0x24 0xf4
-# CHECK: vld1.64	{d8, d9}, [r4]          
+# CHECK: vld1.64	{d8, d9}, [r4]
 0x0f 0x8a 0x24 0xf4
-# CHECK: vld1.8	{d8, d9}, [r4]          
+# CHECK: vld1.8	{d8, d9}, [r4]
 0x4f 0x88 0x24 0xf4
-# CHECK: vld2.16	{d8, d9}, [r4]          
+# CHECK: vld2.16	{d8, d9}, [r4]
 0x8f 0x88 0x24 0xf4
-# CHECK: vld2.32	{d8, d9}, [r4]          
+# CHECK: vld2.32	{d8, d9}, [r4]
 0x0f 0x88 0x24 0xf4
-# CHECK: vld2.8	{d8, d9}, [r4]          
+# CHECK: vld2.8	{d8, d9}, [r4]
 0x4d 0x88 0x24 0xf4
-# CHECK: vld2.16	{d8, d9}, [r4]!         
+# CHECK: vld2.16	{d8, d9}, [r4]!
 0x46 0x88 0x24 0xf4
-# CHECK: vld2.16	{d8, d9}, [r4], r6      
+# CHECK: vld2.16	{d8, d9}, [r4], r6
 0x8d 0x88 0x24 0xf4
-# CHECK: vld2.32	{d8, d9}, [r4]!         
+# CHECK: vld2.32	{d8, d9}, [r4]!
 0x86 0x88 0x24 0xf4
-# CHECK: vld2.32	{d8, d9}, [r4], r6      
+# CHECK: vld2.32	{d8, d9}, [r4], r6
 0x0d 0x88 0x24 0xf4
-# CHECK: vld2.8	{d8, d9}, [r4]!         
+# CHECK: vld2.8	{d8, d9}, [r4]!
 0x06 0x88 0x24 0xf4
-# CHECK: vld2.8	{d8, d9}, [r4], r6      
+# CHECK: vld2.8	{d8, d9}, [r4], r6
 0x4f 0x89 0x24 0xf4
-# CHECK: vld2.16	{d8, d10}, [r4]         
+# CHECK: vld2.16	{d8, d10}, [r4]
 0x8f 0x89 0x24 0xf4
-# CHECK: vld2.32	{d8, d10}, [r4]         
+# CHECK: vld2.32	{d8, d10}, [r4]
 0x0f 0x89 0x24 0xf4
-# CHECK: vld2.8	{d8, d10}, [r4]         
+# CHECK: vld2.8	{d8, d10}, [r4]
 0x4d 0x83 0x24 0xf4
-# CHECK: vld2.16	{d8, d9, d10, d11}, [r4]! 
+# CHECK: vld2.16	{d8, d9, d10, d11}, [r4]!
 0x46 0x83 0x24 0xf4
-# CHECK: vld2.16	{d8, d9, d10, d11}, [r4], r6 
+# CHECK: vld2.16	{d8, d9, d10, d11}, [r4], r6
 0x8d 0x83 0x24 0xf4
-# CHECK: vld2.32	{d8, d9, d10, d11}, [r4]! 
+# CHECK: vld2.32	{d8, d9, d10, d11}, [r4]!
 0x86 0x83 0x24 0xf4
-# CHECK: vld2.32	{d8, d9, d10, d11}, [r4], r6 
+# CHECK: vld2.32	{d8, d9, d10, d11}, [r4], r6
 0x0d 0x83 0x24 0xf4
-# CHECK: vld2.8	{d8, d9, d10, d11}, [r4]! 
+# CHECK: vld2.8	{d8, d9, d10, d11}, [r4]!
 0x06 0x83 0x24 0xf4
-# CHECK: vld2.8	{d8, d9, d10, d11}, [r4], r6 
+# CHECK: vld2.8	{d8, d9, d10, d11}, [r4], r6
 0x0f 0x84 0x24 0xf4
-# CHECK: vld3.8	{d8, d9, d10}, [r4]     
+# CHECK: vld3.8	{d8, d9, d10}, [r4]
 0x4f 0x84 0x24 0xf4
-# CHECK: vld3.16	{d8, d9, d10}, [r4]     
+# CHECK: vld3.16	{d8, d9, d10}, [r4]
 0x8f 0x84 0x24 0xf4
-# CHECK: vld3.32	{d8, d9, d10}, [r4]     
+# CHECK: vld3.32	{d8, d9, d10}, [r4]
 0x0f 0x80 0x24 0xf4
-# CHECK: vld4.8	{d8, d9, d10, d11}, [r4] 
+# CHECK: vld4.8	{d8, d9, d10, d11}, [r4]
 0x4f 0x80 0x24 0xf4
-# CHECK: vld4.16	{d8, d9, d10, d11}, [r4] 
+# CHECK: vld4.16	{d8, d9, d10, d11}, [r4]
 0x8f 0x80 0x24 0xf4
-# CHECK: vld4.32	{d8, d9, d10, d11}, [r4] 
+# CHECK: vld4.32	{d8, d9, d10, d11}, [r4]
 0x0f 0x85 0x24 0xf4
-# CHECK: vld3.8	{d8, d10, d12}, [r4]    
+# CHECK: vld3.8	{d8, d10, d12}, [r4]
 0x4f 0x85 0x24 0xf4
-# CHECK: vld3.16	{d8, d10, d12}, [r4]    
+# CHECK: vld3.16	{d8, d10, d12}, [r4]
 0x8f 0x85 0x24 0xf4
-# CHECK: vld3.32	{d8, d10, d12}, [r4]    
+# CHECK: vld3.32	{d8, d10, d12}, [r4]
 0x0f 0x81 0x24 0xf4
-# CHECK: vld4.8	{d8, d10, d12, d14}, [r4] 
+# CHECK: vld4.8	{d8, d10, d12, d14}, [r4]
 0x4f 0x81 0x24 0xf4
-# CHECK: vld4.16	{d8, d10, d12, d14}, [r4] 
+# CHECK: vld4.16	{d8, d10, d12, d14}, [r4]
 0x8f 0x81 0x24 0xf4
-# CHECK: vld4.32	{d8, d10, d12, d14}, [r4] 
+# CHECK: vld4.32	{d8, d10, d12, d14}, [r4]
 
 # rdar://11256967
 0x0f 0x0d 0xa2 0xf4
-# CHECK: vld2.8	{d0[], d1[]}, [r2]      
+# CHECK: vld2.8	{d0[], d1[]}, [r2]
 0x4f 0x0d 0xa2 0xf4
-# CHECK: vld2.16	{d0[], d1[]}, [r2]      
+# CHECK: vld2.16	{d0[], d1[]}, [r2]
 0x8f 0x0d 0xa2 0xf4
-# CHECK: vld2.32	{d0[], d1[]}, [r2]      
+# CHECK: vld2.32	{d0[], d1[]}, [r2]
 0x0d 0x0d 0xa2 0xf4
-# CHECK: vld2.8	{d0[], d1[]}, [r2]!     
+# CHECK: vld2.8	{d0[], d1[]}, [r2]!
 0x4d 0x0d 0xa2 0xf4
-# CHECK: vld2.16	{d0[], d1[]}, [r2]!     
+# CHECK: vld2.16	{d0[], d1[]}, [r2]!
 0x8d 0x0d 0xa2 0xf4
-# CHECK: vld2.32	{d0[], d1[]}, [r2]!     
+# CHECK: vld2.32	{d0[], d1[]}, [r2]!
 0x03 0x0d 0xa2 0xf4
-# CHECK: vld2.8	{d0[], d1[]}, [r2], r3  
+# CHECK: vld2.8	{d0[], d1[]}, [r2], r3
 0x43 0x0d 0xa2 0xf4
-# CHECK: vld2.16	{d0[], d1[]}, [r2], r3  
+# CHECK: vld2.16	{d0[], d1[]}, [r2], r3
 0x83 0x0d 0xa2 0xf4
-# CHECK: vld2.32	{d0[], d1[]}, [r2], r3  
+# CHECK: vld2.32	{d0[], d1[]}, [r2], r3
 0x2f 0x0d 0xa3 0xf4
-# CHECK: vld2.8	{d0[], d2[]}, [r3]      
+# CHECK: vld2.8	{d0[], d2[]}, [r3]
 0x6f 0x0d 0xa3 0xf4
-# CHECK: vld2.16	{d0[], d2[]}, [r3]      
+# CHECK: vld2.16	{d0[], d2[]}, [r3]
 0xaf 0x0d 0xa3 0xf4
-# CHECK: vld2.32	{d0[], d2[]}, [r3]      
+# CHECK: vld2.32	{d0[], d2[]}, [r3]
 0x2d 0x0d 0xa3 0xf4
-# CHECK: vld2.8	{d0[], d2[]}, [r3]!     
+# CHECK: vld2.8	{d0[], d2[]}, [r3]!
 0x6d 0x0d 0xa3 0xf4
-# CHECK: vld2.16	{d0[], d2[]}, [r3]!     
+# CHECK: vld2.16	{d0[], d2[]}, [r3]!
 0xad 0x0d 0xa3 0xf4
-# CHECK: vld2.32	{d0[], d2[]}, [r3]!     
+# CHECK: vld2.32	{d0[], d2[]}, [r3]!
 0x24 0x0d 0xa3 0xf4
-# CHECK: vld2.8	{d0[], d2[]}, [r3], r4  
+# CHECK: vld2.8	{d0[], d2[]}, [r3], r4
 0x64 0x0d 0xa3 0xf4
 0xa4 0x0d 0xa3 0xf4
-# CHECK: vld2.32	{d0[], d2[]}, [r3], r4  
+# CHECK: vld2.32	{d0[], d2[]}, [r3], r4

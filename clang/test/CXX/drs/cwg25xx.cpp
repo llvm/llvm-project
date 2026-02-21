@@ -140,7 +140,7 @@ struct S2 {
 namespace cwg2553 { // cwg2553: 18 review 2023-07-14
 #if __cplusplus >= 202302L
 struct B {
-  virtual void f(this B&); 
+  virtual void f(this B&);
   // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
   static void f(this B&);
   // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a static function}}
@@ -188,7 +188,7 @@ struct C {
 void foo() {
     constexpr auto b = [](this C) { return 1; };
     // FIXME: closure type shouldn't have a conversion function to function
-    //        pointer, because explicit object parameter is present. 
+    //        pointer, because explicit object parameter is present.
     constexpr int (*fp)(C) = b;
     static_assert(fp(1) == 1);
     static_assert((&decltype(b)::operator())(1) == 1);

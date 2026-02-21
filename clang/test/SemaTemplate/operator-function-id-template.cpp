@@ -2,7 +2,7 @@
 // expected-no-diagnostics
 
 template<typename T>
-struct A { 
+struct A {
   template<typename U> A<T> operator+(U);
 };
 

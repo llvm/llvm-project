@@ -32,7 +32,7 @@ void test_lfence(void) {
 void test_pause(void) {
   // CIR-LABEL: @test_pause
   // CIR: cir.call_llvm_intrinsic "x86.sse2.pause"  : () -> !void
-  
+
   // LLVM-LABEL: @test_pause
   // LLVM: call void @llvm.x86.sse2.pause()
 
@@ -44,7 +44,7 @@ void test_pause(void) {
 void test_clflush(void* a){
   // CIR-LABEL: test_clflush
   // CIR: cir.call_llvm_intrinsic "x86.sse2.clflush" %{{.*}} : (!cir.ptr<!void, target_address_space(0)>) -> !void
-  
+
   // LLVM-LABEL: @test_clflush
   // LLVM: call void @llvm.x86.sse2.clflush(ptr {{.*}})
 

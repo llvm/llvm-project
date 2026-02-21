@@ -13,7 +13,7 @@ namespace ParameterPacksWithFunctions {
   struct count<> {
     static const unsigned value = 0;
   };
-  
+
   template<unsigned> struct unsigned_c { };
 
   template<typename ... Types>
@@ -32,9 +32,9 @@ namespace rdar12176336 {
 
   struct method {
     vararg_func implementation;
-	
+
     method(vararg_func implementation) : implementation(implementation) {}
-	
+
     template<typename TReturnType, typename... TArguments, typename TFunctionType = TReturnType (*)(TArguments...)>
     auto getImplementation() const -> TFunctionType
     {

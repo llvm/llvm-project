@@ -26,23 +26,23 @@ static void test(void) {
 
     vec3 += vec2; // expected-error {{cannot convert between vector values of different size}}
     vec4 += vec3; // expected-error {{cannot convert between vector values of different size}}
-    
+
     vec4 = 5.0f;
     vec4 = (float4)5.0f;
     vec4 = (float4)5;
     vec4 = (float4)vec4_3;
-    
+
     ivec4 = (int4)5.0f;
     ivec4 = (int4)5;
     ivec4 = (int4)vec4_3;
-    
+
     i = (int)ivec4; // expected-error {{invalid conversion between vector type 'int4' (vector of 4 'int' values) and integer type 'int' of different size}}
     i = ivec4; // expected-error {{assigning to 'int' from incompatible type 'int4' (vector of 4 'int' values)}}
-    
+
     ivec4 = (int4)ptr; // expected-error {{invalid conversion between vector type 'int4' (vector of 4 'int' values) and scalar type 'int *'}}
-    
+
     vec4 = (float4)vec2; // expected-error {{invalid conversion between ext-vector type 'float4' (vector of 4 'float' values) and 'float2' (vector of 2 'float' values)}}
-  
+
     ish8 += 5;
     ivec4 *= 5;
      vec4 /= 5.2f;
@@ -103,20 +103,20 @@ static void splats(int i, long l, __uint128_t t, float f, double d) {
   ulong2 vl = (unsigned long)l;
   float2 vf = f;
   double2 vd = d;
-  
+
   vs = 65536 + vs; // expected-warning {{implicit conversion from 'int' to 'short8' (vector of 8 'short' values) changes value from 65536 to 0}}
   vs = vs + i; // expected-warning {{implicit conversion loses integer precision}}
   vs = vs + 1;
   vs = vs + 1.f; // expected-error {{cannot convert between vector values of different size}}
-  
+
   vi = l + vi; // expected-warning {{implicit conversion loses integer precision}}
   vi = 1 + vi;
   vi = vi + 2.0; // expected-error {{cannot convert between vector values of different size}}
   vi = vi + 0xffffffff; // expected-warning {{implicit conversion changes signedness}}
-  
+
   vl = l + vl; // expected-warning {{implicit conversion changes signedness}}
   vl = vl + t; // expected-warning {{implicit conversion loses integer precision}}
-  
+
   vf = 1 + vf;
   vf = l + vf; // expected-warning {{implicit conversion from 'long' to 'float2' (vector of 2 'float' values) may lose precision}}
   vf = 2.0 + vf;

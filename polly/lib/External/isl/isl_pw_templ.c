@@ -77,7 +77,7 @@ static __isl_give PW *FN(PW,add_dup_piece)(__isl_take PW *pw,
 	pw->p[pw->n].set = set;
 	pw->p[pw->n].FIELD = el;
 	pw->n++;
-	
+
 	isl_space_free(el_dim);
 	return pw;
 error:
@@ -937,7 +937,7 @@ static __isl_give PW *FN(PW,restrict_domain)(__isl_take PW *pw,
 		pw = FN(PW,restore_domain_at)(pw, i, domain);
 		pw = FN(PW,exploit_equalities_and_remove_if_empty)(pw, i);
 	}
-	
+
 	isl_set_free(set);
 	return pw;
 error:

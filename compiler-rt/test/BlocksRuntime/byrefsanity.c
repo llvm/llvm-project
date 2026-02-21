@@ -16,7 +16,7 @@ main(int argc, char *argv[])
 {
     __block int var = 0;
     void (^b)(void) = ^{ var++; };
-    
+
     //sanity(b);
     b();
     printf("%s: success!\n", argv[0]);
@@ -69,4 +69,4 @@ void sanity(void *arg) {
 #endif
 
 
-        
+

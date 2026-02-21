@@ -26,7 +26,7 @@ const wchar_t *wmemchr_test(const wchar_t *s, const wchar_t c, size_t n) {
   // CHECK: br i1 [[NN0]], label %[[EXIT]], label %[[EQ]]
   //
   // CHECK: [[EXIT]]:
-  // CHECK: [[RV:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ null, %[[NEXT]] ], [ [[RES]], %[[EQ]] ] 
+  // CHECK: [[RV:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ null, %[[NEXT]] ], [ [[RES]], %[[EQ]] ]
   // CHECK: ret ptr [[RV]]
   return __builtin_wmemchr(s, c, n);
 }

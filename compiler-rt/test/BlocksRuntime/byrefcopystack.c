@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
     setClosures();
     bumpi();
     int i = geti();
-    
+
     if (i != 11) {
         printf("*** %s didn't update i\n", argv[0]);
         return 1;

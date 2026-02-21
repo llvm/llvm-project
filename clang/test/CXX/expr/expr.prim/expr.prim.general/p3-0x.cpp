@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -verify 
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -verify
 
 struct A {
   int &f(int*);
   float &f(int*) const noexcept;
-  
+
   int *ptr;
   auto g1() noexcept(noexcept(f(ptr))) -> decltype(f(this->ptr));
   auto g2() const noexcept(noexcept(f((*this).ptr))) -> decltype(f(ptr));
@@ -113,7 +113,7 @@ namespace Static {
     static auto g() -> decltype(this->m); // expected-error{{'this' cannot be used in a static member function declaration}}
 
     static int h();
-    
+
     static int i() noexcept(noexcept(m + 2)); // expected-error{{'this' cannot be implicitly used in a static member function declaration}}
   };
 
@@ -154,7 +154,7 @@ namespace rdar13473493 {
     {
       return wrapped(args...);
     }
-  
+
   private:
     F wrapped;
   };

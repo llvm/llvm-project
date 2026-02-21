@@ -10,6 +10,6 @@
 #include "lib1.h"
 // CHECK-MESSAGES: lib1.h:1:1:  warning: avoid 'pragma once' directive; use include guards instead
 
-// # pragma   once 
+// # pragma   once
 #include "lib2.h"
 // CHECK-MESSAGES: lib2.h:1:1:  warning: avoid 'pragma once' directive; use include guards instead

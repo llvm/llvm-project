@@ -305,7 +305,7 @@ void l4() {
 // OGCG:   ret void
 
 void l5() {
-  for (int arr[]{1,2,3,4}; auto x : arr) {} 
+  for (int arr[]{1,2,3,4}; auto x : arr) {}
 }
 
 // CIR: cir.func{{.*}} @_Z2l5v

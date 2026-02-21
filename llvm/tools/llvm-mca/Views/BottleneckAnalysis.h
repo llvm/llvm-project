@@ -15,7 +15,7 @@
 /// Example of bottleneck analysis report for a dot-product on X86 btver2:
 ///
 /// Cycles with backend pressure increase [ 40.76% ]
-/// Throughput Bottlenecks: 
+/// Throughput Bottlenecks:
 ///   Resource Pressure       [ 39.34% ]
 ///   - JFPA  [ 39.34% ]
 ///   - JFPU0  [ 39.34% ]
@@ -43,20 +43,20 @@
 ///              Instruction                     Dependency Information
 /// +----< 2.    vhaddps %xmm3, %xmm3, %xmm4
 /// |
-/// |    < loop carried > 
+/// |    < loop carried >
 /// |
 /// |      0.    vmulps	 %xmm0, %xmm0, %xmm2
 /// +----> 1.    vhaddps %xmm2, %xmm2, %xmm3     ## RESOURCE interference:  JFPA [ probability: 73% ]
 /// +----> 2.    vhaddps %xmm3, %xmm3, %xmm4     ## REGISTER dependency:  %xmm3
 /// |
-/// |    < loop carried > 
+/// |    < loop carried >
 /// |
 /// +----> 1.    vhaddps %xmm2, %xmm2, %xmm3     ## RESOURCE interference:  JFPA [ probability: 73% ]
 ///
 ///
 /// The algorithm that computes the critical sequence is very similar to a
 /// critical path analysis.
-/// 
+///
 /// A dependency graph is used internally to track dependencies between nodes.
 /// Nodes of the graph represent instructions from the input assembly sequence,
 /// and edges of the graph represent data dependencies or processor resource

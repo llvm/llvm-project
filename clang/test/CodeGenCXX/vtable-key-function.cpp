@@ -2,7 +2,7 @@
 // PR5697
 namespace PR5697 {
 struct A {
-  virtual void f() { } 
+  virtual void f() { }
   A();
   A(int);
 };

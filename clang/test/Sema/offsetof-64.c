@@ -19,4 +19,4 @@ struct Chunk2 {
 
 // FIXME: Remove this error when the constant evaluator learns to
 // ignore bad types.
-int test2 = __builtin_offsetof(struct Chunk2, data);  // expected-error{{initializer element is not a compile-time constant}} 
+int test2 = __builtin_offsetof(struct Chunk2, data);  // expected-error{{initializer element is not a compile-time constant}}

@@ -59,7 +59,7 @@ int main() {
 
   // make sure initial data pointers are null
   // CHECK-NOT: 0: new_task_data initially not null
-  
+
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: __builtin_frame_address(0)=[[MAIN_REENTER:(0x)?[0-f]+]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_parallel_begin: parent_task_id=[[PARENT_TASK_ID:[0-f]+]], parent_task_frame.exit=[[NULL]], parent_task_frame.reenter={{(0x)?[0-f]+}}, parallel_id=[[PARALLEL_ID:[0-f]+]], requested_team_size=2, codeptr_ra={{(0x)?[0-f]+}}, invoker=[[PARALLEL_INVOKER:[0-9]+]]
   // nested parallel masters

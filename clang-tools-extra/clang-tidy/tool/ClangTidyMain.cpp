@@ -364,7 +364,7 @@ line sent to the compiler. Please note that
 removing arguments might change the semantic
 of the analyzed code, possibly leading to
 compiler errors, false positives or
-false negatives. This option is applied 
+false negatives. This option is applied
 before --extra-arg and --extra-arg-before)"),
                                          cl::cat(ClangTidyCategory));
 

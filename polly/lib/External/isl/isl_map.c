@@ -13,7 +13,7 @@
  * Written by Sven Verdoolaege, K.U.Leuven, Departement
  * Computerwetenschappen, Celestijnenlaan 200A, B-3001 Leuven, Belgium
  * and INRIA Saclay - Ile-de-France, Parc Club Orsay Universite,
- * ZAC des vignes, 4 rue Jacques Monod, 91893 Orsay, France 
+ * ZAC des vignes, 4 rue Jacques Monod, 91893 Orsay, France
  * and Ecole Normale Superieure, 45 rue d’Ulm, 75230 Paris, France
  * and Inria Paris - Rocquencourt, Domaine de Voluceau - Rocquencourt,
  * B.P. 105 - 78153 Le Chesnay, France
@@ -581,7 +581,7 @@ __isl_give isl_basic_map *isl_basic_map_from_local_space(
 	for (i = 0; i < n_div; ++i)
 		isl_seq_cpy(bmap->div[i], ls->div->row[i], ls->div->n_col);
 	bmap = add_known_div_constraints(bmap);
-					
+
 	isl_local_space_free(ls);
 	return bmap;
 error:
@@ -2793,7 +2793,7 @@ __isl_give isl_map *isl_map_remove_divs(__isl_take isl_map *map)
 	map = isl_map_cow(map);
 	if (!map)
 		return NULL;
-	
+
 	for (i = 0; i < map->n; ++i) {
 		map->p[i] = isl_basic_map_remove_divs(map->p[i]);
 		if (!map->p[i])
@@ -3878,7 +3878,7 @@ __isl_give isl_map *isl_map_remove_dims(__isl_take isl_map *map,
 	map = isl_map_cow(map);
 	if (isl_map_check_range(map, type, first, n) < 0)
 		return isl_map_free(map);
-	
+
 	for (i = 0; i < map->n; ++i) {
 		map->p[i] = isl_basic_map_eliminate_vars(map->p[i],
 			isl_basic_map_offset(map->p[i], type) - 1 + first, n);
@@ -10283,7 +10283,7 @@ __isl_give isl_basic_set *isl_basic_set_expand_divs(
 
 /* Look for a div in dst that corresponds to the div "div" in src.
  * The divs before "div" in src and dst are assumed to be the same.
- * 
+ *
  * Return the position of the corresponding div in dst
  * if there is one.  Otherwise, return a position beyond the integer divisions.
  * Return isl_size_error on error.
@@ -10745,12 +10745,12 @@ static isl_bool isl_map_plain_has_fixed_var(__isl_keep isl_map *map,
 	if (map->n == 0)
 		return isl_bool_false;
 	if (map->n == 1)
-		return isl_basic_map_plain_has_fixed_var(map->p[0], pos, val); 
+		return isl_basic_map_plain_has_fixed_var(map->p[0], pos, val);
 	isl_int_init(v);
 	isl_int_init(tmp);
-	fixed = isl_basic_map_plain_has_fixed_var(map->p[0], pos, &v); 
+	fixed = isl_basic_map_plain_has_fixed_var(map->p[0], pos, &v);
 	for (i = 1; fixed == isl_bool_true && i < map->n; ++i) {
-		fixed = isl_basic_map_plain_has_fixed_var(map->p[i], pos, &tmp); 
+		fixed = isl_basic_map_plain_has_fixed_var(map->p[i], pos, &tmp);
 		if (fixed == isl_bool_true && isl_int_ne(tmp, v))
 			fixed = isl_bool_false;
 	}
@@ -11907,7 +11907,7 @@ uint32_t isl_map_get_hash(__isl_keep isl_map *map)
 		bmap_hash = isl_basic_map_get_hash(map->p[i]);
 		isl_hash_hash(hash, bmap_hash);
 	}
-		
+
 	isl_map_free(map);
 
 	return hash;
@@ -12797,7 +12797,7 @@ isl_bool isl_basic_set_is_wrapping(__isl_keep isl_basic_set *bset)
 {
 	if (!bset)
 		return isl_bool_error;
-	
+
 	return isl_space_is_wrapping(bset->dim);
 }
 
@@ -12805,7 +12805,7 @@ isl_bool isl_set_is_wrapping(__isl_keep isl_set *set)
 {
 	if (!set)
 		return isl_bool_error;
-	
+
 	return isl_space_is_wrapping(set->dim);
 }
 
@@ -13630,7 +13630,7 @@ __isl_give isl_basic_map *isl_basic_map_from_constraint_matrices(
 			if (dim < 0)
 				goto error;
 			for (k = 0; k < dim; ++k) {
-				isl_int_set(bmap->eq[l][off + k], 
+				isl_int_set(bmap->eq[l][off + k],
 					    eq->row[i][pos]);
 				++pos;
 			}
@@ -13646,7 +13646,7 @@ __isl_give isl_basic_map *isl_basic_map_from_constraint_matrices(
 			if (dim < 0)
 				goto error;
 			for (k = 0; k < dim; ++k) {
-				isl_int_set(bmap->ineq[l][off + k], 
+				isl_int_set(bmap->ineq[l][off + k],
 					    ineq->row[i][pos]);
 				++pos;
 			}
@@ -13698,7 +13698,7 @@ isl_bool isl_basic_map_can_zip(__isl_keep isl_basic_map *bmap)
 {
 	if (!bmap)
 		return isl_bool_error;
-	
+
 	return isl_space_can_zip(bmap->dim);
 }
 
@@ -13706,7 +13706,7 @@ isl_bool isl_map_can_zip(__isl_keep isl_map *map)
 {
 	if (!map)
 		return isl_bool_error;
-	
+
 	return isl_space_can_zip(map->dim);
 }
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s 
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s
 
 template<class T> void f(T) { /* ... */ }
 template<class T> inline void g(T) { /* ... */ }
@@ -28,7 +28,7 @@ template<> void X<int>::f() { }
 template<> void X<int>::h() { }
 
 // CHECK: define linkonce_odr void @_Z1fIiEvT_
-template<> inline void f<>(int) { /* ... */ } 
+template<> inline void f<>(int) { /* ... */ }
 
 // CHECK: define linkonce_odr void @_ZN1XIiE1gEv
 template<> inline void X<int>::g() { }

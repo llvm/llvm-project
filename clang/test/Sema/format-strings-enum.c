@@ -31,7 +31,7 @@ typedef enum { LongConstant = ~0UL } LongEnum;
 void testLong(LongEnum input) {
   printf("%u", input); // expected-warning{{format specifies type 'unsigned int' but the argument has underlying type}}
   printf("%u", LongConstant); // expected-warning{{format specifies type 'unsigned int'}}
-  
+
   printf("%lu", input);
   printf("%lu", LongConstant);
 }

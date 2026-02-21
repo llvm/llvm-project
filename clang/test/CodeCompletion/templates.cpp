@@ -1,10 +1,10 @@
 namespace std {
   template<typename T>
-  class allocator { 
+  class allocator {
   public:
     void in_base();
   };
-  
+
   template<typename T, typename Alloc = std::allocator<T> >
   class vector : Alloc {
   public:

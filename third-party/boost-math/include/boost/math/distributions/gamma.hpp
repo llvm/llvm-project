@@ -172,7 +172,7 @@ BOOST_MATH_GPU_ENABLED inline RealType logpdf(const gamma_distribution<RealType,
    }
 
    result = -k*log(theta) + (k-1)*log(x) - lgamma(k) - (x/theta);
-   
+
    return result;
 } // logpdf
 

@@ -3,7 +3,7 @@
 
 extern "C" {
   namespace N {
-    struct X { 
+    struct X {
       virtual void f();
     };
     void X::f() { }

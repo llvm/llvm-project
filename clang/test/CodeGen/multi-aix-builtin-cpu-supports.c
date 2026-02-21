@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %s | FileCheck %s
 
-int main() { 
-  int ret = 0; 
+int main() {
+  int ret = 0;
   ret += __builtin_cpu_supports("vsx");     // Test reading `vsx` information from the system variable `_system_configuration`.
   ret += __builtin_cpu_supports("htm");     // Test getting `htm` information from the function call `getsystemcfg`
   ret += __builtin_cpu_supports("cellbe");  // The test always returns false for the feature 'cellbe.
@@ -12,7 +12,7 @@ int main() {
 }
 
 // CHECK:     @_system_configuration = external global { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i64, i32, i32, i32, i32, i64, i64, i64, i64, i32, i32, i32, i32, i32, i32, i64, i32, i8, i8, i8, i8, i32, i32, i16, i16, [3 x i32], i32 }
-// CHECK-EMPTY: 
+// CHECK-EMPTY:
 // CHECK-NEXT: ; Function Attrs: noinline nounwind optnone
 // CHECK-NEXT: define i32 @main() #0 {
 // CHECK-NEXT: entry:
@@ -50,5 +50,5 @@ int main() {
 // CHECK-NEXT:   %12 = load i32, ptr %ret, align 4
 // CHECK-NEXT:   ret i32 %12
 // CHECK-NEXT: }
-// CHECK-EMPTY: 
+// CHECK-EMPTY:
 // CHECK-NEXT: declare i64 @getsystemcfg(i32)

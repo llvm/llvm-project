@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -target-feature +avx512vl -fclangir -emit-cir -o %t.cir -Wall -Werror -Wsign-conversion 
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -target-feature +avx512vl -fclangir -emit-cir -o %t.cir -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -target-feature +avx512vl -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx10.1-512 -target-feature +avx512vl -fclangir -emit-cir -o %t.cir -Wall -Werror -Wsign-conversion 
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx10.1-512 -target-feature +avx512vl -fclangir -emit-cir -o %t.cir -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx10.1-512 -target-feature +avx512vl -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
@@ -26,7 +26,7 @@ __m128i test_mm_movm_epi8(__mmask16 __A) {
   // OGCG-LABEL: @test_mm_movm_epi8
   // OGCG: %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
   // OGCG: %{{.*}} = sext <16 x i1> %{{.*}} to <16 x i8>
-  return _mm_movm_epi8(__A); 
+  return _mm_movm_epi8(__A);
 }
 
 __m256i test_mm256_movm_epi8(__mmask32 __A) {
@@ -41,7 +41,7 @@ __m256i test_mm256_movm_epi8(__mmask32 __A) {
   // OGCG-LABEL: @test_mm256_movm_epi8
   // OGCG: %{{.*}} = bitcast i32 %{{.*}} to <32 x i1>
   // OGCG: %{{.*}} = sext <32 x i1> %{{.*}} to <32 x i8>
-  return _mm256_movm_epi8(__A); 
+  return _mm256_movm_epi8(__A);
 }
 
 __m512i test_mm512_movm_epi8(__mmask64 __A) {
@@ -56,7 +56,7 @@ __m512i test_mm512_movm_epi8(__mmask64 __A) {
   // OGCG-LABEL: @test_mm512_movm_epi8
   // OGCG: %{{.*}} = bitcast i64 %{{.*}} to <64 x i1>
   // OGCG: %{{.*}} = sext <64 x i1> %{{.*}} to <64 x i8>
-  return _mm512_movm_epi8(__A); 
+  return _mm512_movm_epi8(__A);
 }
 
 __m128i test_mm_movm_epi16(__mmask8 __A) {
@@ -71,7 +71,7 @@ __m128i test_mm_movm_epi16(__mmask8 __A) {
   // OGCG-LABEL: @test_mm_movm_epi16
   // OGCG: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // OGCG: %{{.*}} = sext <8 x i1> %{{.*}} to <8 x i16>
-  return _mm_movm_epi16(__A); 
+  return _mm_movm_epi16(__A);
 }
 
 __m256i test_mm256_movm_epi16(__mmask16 __A) {
@@ -86,9 +86,9 @@ __m256i test_mm256_movm_epi16(__mmask16 __A) {
   // OGCG-LABEL: @test_mm256_movm_epi16
   // OGCG: %{{.*}} = bitcast i16 %{{.*}} to <16 x i1>
   // OGCG: %{{.*}} = sext <16 x i1> %{{.*}} to <16 x i16>
-  return _mm256_movm_epi16(__A); 
+  return _mm256_movm_epi16(__A);
 }
-  
+
 __mmask16 test_mm_movepi8_mask(__m128i __A) {
   // CIR-LABEL: _mm_movepi8_mask
   // CIR: cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<16 x !s8i>
@@ -102,7 +102,7 @@ __mmask16 test_mm_movepi8_mask(__m128i __A) {
   // OGCG-LABEL: @test_mm_movepi8_mask
   // OGCG: [[CMP:%.*]] = icmp slt <16 x i8> %{{.*}}, zeroinitializer
   // OGCG: bitcast <16 x i1> [[CMP]] to i16
-  return _mm_movepi8_mask(__A); 
+  return _mm_movepi8_mask(__A);
 }
 
 __mmask16 test_mm256_movepi16_mask(__m256i __A) {
@@ -118,5 +118,5 @@ __mmask16 test_mm256_movepi16_mask(__m256i __A) {
   // OGCG-LABEL: @test_mm256_movepi16_mask
   // OGCG: [[CMP:%.*]] = icmp slt <16 x i16> %{{.*}}, zeroinitializer
   // OGCG: bitcast <16 x i1> [[CMP]] to i16
-  return _mm256_movepi16_mask(__A); 
+  return _mm256_movepi16_mask(__A);
 }

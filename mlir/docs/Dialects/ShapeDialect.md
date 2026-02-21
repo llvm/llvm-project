@@ -7,7 +7,7 @@ Description of operations & types within the Shape dialect as well as their
 
 ## Different stages of lowering Shape dialect
 
-In this section we shall give a brief overview of the different uses of the 
+In this section we shall give a brief overview of the different uses of the
 shape dialect and the lowering between these uses. Currently we have 3 worlds /
 stages of lowering of shape functions:
 

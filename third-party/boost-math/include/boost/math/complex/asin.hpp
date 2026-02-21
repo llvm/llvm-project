@@ -19,7 +19,7 @@ namespace std{ using ::sqrt; using ::fabs; using ::acos; using ::asin; using ::a
 
 namespace boost{ namespace math{
 
-template<class T> 
+template<class T>
 [[deprecated("Replaced by C++11")]] inline std::complex<T> asin(const std::complex<T>& z)
 {
    //
@@ -48,7 +48,7 @@ template<class T>
 #pragma warning(disable:4127)
 #endif
    //
-   // Get real and imaginary parts, discard the signs as we can 
+   // Get real and imaginary parts, discard the signs as we can
    // figure out the sign of the result later:
    //
    T x = std::fabs(z.real());
@@ -116,7 +116,7 @@ template<class T>
       //
       // Figure out if our input is within the "safe area" identified by Hull et al.
       // This would be more efficient with portable floating point exception handling;
-      // fortunately the quantities M and u identified by Hull et al (figure 3), 
+      // fortunately the quantities M and u identified by Hull et al (figure 3),
       // match with the max and min methods of numeric_limits<T>.
       //
       T safe_max = detail::safe_max(static_cast<T>(8));
@@ -199,7 +199,7 @@ template<class T>
             // There is an assumption in Hull et al's analysis that
             // if we get here then x == 1.  This is true for all "good"
             // machines where :
-            // 
+            //
             // E^2 > 8*sqrt(u); with:
             //
             // E =  std::numeric_limits<T>::epsilon()

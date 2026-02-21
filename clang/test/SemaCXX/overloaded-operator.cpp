@@ -78,8 +78,8 @@ float& operator==(E1, E2);  // expected-note{{candidate function}} \
 
 void enum_test(Enum1 enum1, Enum2 enum2, E1 e1, E2 e2, Enum1 next_enum1) {
   float &f1 = (e1 == e2);
-  float &f2 = (enum1 == e2); 
-  float &f3 = (e1 == enum2); 
+  float &f2 = (enum1 == e2);
+  float &f3 = (e1 == enum2);
   float &f4 = (enum1 == next_enum1);  // expected-error{{non-const lvalue reference to type 'float' cannot bind to a temporary of type 'bool'}}
 }
 
@@ -136,7 +136,7 @@ struct SmartPtr {
   long& operator*() const volatile;
 };
 
-void test_smartptr(SmartPtr ptr, const SmartPtr cptr, 
+void test_smartptr(SmartPtr ptr, const SmartPtr cptr,
                    const volatile SmartPtr cvptr) { // cxx23-warning {{volatile-qualified parameter type 'const volatile SmartPtr' is deprecated}}
   int &ir = *ptr;
   long &lr = *cptr;
@@ -194,7 +194,7 @@ void test_callable(Callable c, Callable2 c2, const Callable2& c2c,
   int &ir2 = c2();
   int &ir3 = c2(1);
   double &fr2 = c2c();
-  
+
   int &ir4 = dc(17);
   double &fr3 = dc(3.14159f);
 }
@@ -272,13 +272,13 @@ struct BB : AA {};
 bool x(BB y, BB z) { return y != z; }
 
 
-struct AX { 
+struct AX {
   AX& operator ->();	 // expected-note {{declared here}}
   int b;
-}; 
+};
 
 void m() {
-  AX a; 
+  AX a;
   a->b = 0; // expected-error {{circular pointer delegation detected}}
 }
 
@@ -496,7 +496,7 @@ namespace PR14995 {
   };
 
   E<char> e; // expected-note {{in instantiation of template class 'PR14995::E<char>' requested here}}
-  
+
   struct F {
     template<typename... T>
     int operator++ (T...) {}
@@ -630,7 +630,7 @@ void foo() {
   --aa; // expected-error {{overload resolution selected deleted operator '--'}}
   aa--; // expected-error {{overload resolution selected deleted operator '--'}}
 
-  c cc; 
+  c cc;
   --cc; // expected-error {{overload resolution selected deleted operator '--'}}
   cc--; // expected-error {{overload resolution selected deleted operator '--'}}
 }

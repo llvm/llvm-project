@@ -30,7 +30,7 @@ void (^test1)(int) = ^(int i) { // expected-warning {{declaration shadows a vari
   {
     int i; // expected-warning {{declaration shadows a local variable}} \
            // expected-note{{previous declaration is here}}
-    
+
     (^(int i) { return i; })(i); //expected-warning {{declaration shadows a local variable}}
   }
 };

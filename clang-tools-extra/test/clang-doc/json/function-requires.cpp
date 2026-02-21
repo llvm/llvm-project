@@ -52,7 +52,7 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:      },
-// CHECK-NEXT:      "USR": "{{[0-9A-F]*}}" 
+// CHECK-NEXT:      "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    {
 // CHECK-NEXT:      "End": true,

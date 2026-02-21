@@ -194,9 +194,9 @@
           #ifdef BOOST_MATH_ENABLE_CUDA
           #  pragma nv_diag_suppress 20012
           #endif
-          
+
           BOOST_MATH_GPU_ENABLED function_object_bi_and_bi_prime(const function_object_bi_and_bi_prime&) = default;
-          
+
           #ifdef BOOST_MATH_ENABLE_CUDA
           #  pragma nv_diag_default 20012
           #endif

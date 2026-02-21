@@ -20,14 +20,14 @@ namespace std{ using ::sqrt; using ::fabs; using ::acos; using ::asin; using ::a
 
 namespace boost{ namespace math{
 
-template<class T> 
+template<class T>
 [[deprecated("Replaced by C++11")]] std::complex<T> atanh(const std::complex<T>& z)
 {
    //
    // References:
    //
-   // Eric W. Weisstein. "Inverse Hyperbolic Tangent." 
-   // From MathWorld--A Wolfram Web Resource. 
+   // Eric W. Weisstein. "Inverse Hyperbolic Tangent."
+   // From MathWorld--A Wolfram Web Resource.
    // http://mathworld.wolfram.com/InverseHyperbolicTangent.html
    //
    // Also: The Wolfram Functions Site,
@@ -38,7 +38,7 @@ template<class T>
    //
    // See also: https://svn.boost.org/trac/boost/ticket/7291
    //
-   
+
    static const T pi = boost::math::constants::pi<T>();
    static const T half_pi = pi / 2;
    static const T one = static_cast<T>(1.0L);
@@ -88,9 +88,9 @@ template<class T>
       T mxm1 = one - x;
       ///
       // The real part is given by:
-      // 
+      //
       // real(atanh(z)) == log1p(4*x / ((x-1)*(x-1) + y^2))
-      // 
+      //
       real = boost::math::log1p(four * x / (mxm1*mxm1 + yy));
       real /= four;
       if((boost::math::signbit)(z.real()))

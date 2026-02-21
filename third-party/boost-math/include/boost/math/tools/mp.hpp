@@ -18,12 +18,12 @@
 namespace boost { namespace math { namespace tools { namespace meta_programming {
 
 // Types:
-// Typelist 
+// Typelist
 template<typename... T>
 struct mp_list {};
 
 // Size_t
-template<boost::math::size_t N> 
+template<boost::math::size_t N>
 using mp_size_t = boost::math::integral_constant<boost::math::size_t, N>;
 
 // Boolean
@@ -38,16 +38,16 @@ struct mp_identity
 };
 
 // Turns struct into quoted metafunction
-template<template<typename...> class F> 
+template<template<typename...> class F>
 struct mp_quote_trait
 {
-    template<typename... T> 
+    template<typename... T>
     using fn = typename F<T...>::type;
 };
 
 namespace detail {
 // Size
-template<typename L> 
+template<typename L>
 struct mp_size_impl {};
 
 template<template<typename...> class L, typename... T> // Template template parameter must use class
@@ -57,7 +57,7 @@ struct mp_size_impl<L<T...>>
 };
 }
 
-template<typename T> 
+template<typename T>
 using mp_size = typename detail::mp_size_impl<T>::type;
 
 namespace detail {
@@ -65,7 +65,7 @@ namespace detail {
 template<typename L>
 struct mp_front_impl {};
 
-template<template<typename...> class L, typename T1, typename... T> 
+template<template<typename...> class L, typename T1, typename... T>
 struct mp_front_impl<L<T1, T...>>
 {
     using type = T1;
@@ -175,15 +175,15 @@ template<typename L, typename Index>
 using mp_at = typename detail::mp_at_c<L, Index::value>::type;
 
 // Back
-template<typename L> 
+template<typename L>
 using mp_back = mp_at_c<L, mp_size<L>::value - 1>;
 
 namespace detail {
 // Push back
-template<typename L, typename... T> 
+template<typename L, typename... T>
 struct mp_push_back_impl {};
 
-template<template<typename...> class L, typename... U, typename... T> 
+template<template<typename...> class L, typename... U, typename... T>
 struct mp_push_back_impl<L<U...>, T...>
 {
     using type = L<U..., T...>;
@@ -205,7 +205,7 @@ struct mp_push_front_impl<L<U...>, T...>
 };
 }
 
-template<typename L, typename... T> 
+template<typename L, typename... T>
 using mp_push_front = typename detail::mp_push_front_impl<L, T...>::type;
 
 namespace detail{
@@ -226,10 +226,10 @@ struct mp_if_c_impl<false, T, E>
 };
 }
 
-template<bool C, typename T, typename... E> 
+template<bool C, typename T, typename... E>
 using mp_if_c = typename detail::mp_if_c_impl<C, T, E...>::type;
 
-template<typename C, typename T, typename... E> 
+template<typename C, typename T, typename... E>
 using mp_if = typename detail::mp_if_c_impl<static_cast<bool>(C::value), T, E...>::type;
 
 namespace detail {
@@ -237,38 +237,38 @@ namespace detail {
 template<typename L, template<typename...> class P>
 struct mp_find_if_impl {};
 
-template<template<typename...> class L, template<typename...> class P> 
+template<template<typename...> class L, template<typename...> class P>
 struct mp_find_if_impl<L<>, P>
 {
     using type = mp_size_t<0>;
 };
 
-template<typename L, template<typename...> class P> 
+template<typename L, template<typename...> class P>
 struct mp_find_if_impl_2
 {
     using r = typename mp_find_if_impl<L, P>::type;
     using type = mp_size_t<1 + r::value>;
 };
 
-template<template<typename...> class L, typename T1, typename... T, template<typename...> class P> 
+template<template<typename...> class L, typename T1, typename... T, template<typename...> class P>
 struct mp_find_if_impl<L<T1, T...>, P>
 {
     using type = typename mp_if<P<T1>, mp_identity<mp_size_t<0>>, mp_find_if_impl_2<mp_list<T...>, P>>::type;
 };
 }
 
-template<typename L, template<typename...> class P> 
+template<typename L, template<typename...> class P>
 using mp_find_if = typename detail::mp_find_if_impl<L, P>::type;
 
-template<typename L, typename Q> 
+template<typename L, typename Q>
 using mp_find_if_q = mp_find_if<L, Q::template fn>;
 
 namespace detail {
 // Append
-template<typename... L> 
+template<typename... L>
 struct mp_append_impl {};
 
-template<> 
+template<>
 struct mp_append_impl<>
 {
     using type = mp_list<>;
@@ -286,14 +286,14 @@ struct mp_append_impl<L1<T1...>, L2<T2...>>
     using type = L1<T1..., T2...>;
 };
 
-template<template<typename...> class L1, typename... T1, template<typename...> class L2, typename... T2, 
+template<template<typename...> class L1, typename... T1, template<typename...> class L2, typename... T2,
          template<typename...> class L3, typename... T3>
 struct mp_append_impl<L1<T1...>, L2<T2...>, L3<T3...>>
 {
     using type = L1<T1..., T2..., T3...>;
 };
 
-template<template<typename...> class L1, typename... T1, template<typename...> class L2, typename... T2, 
+template<template<typename...> class L1, typename... T1, template<typename...> class L2, typename... T2,
          template<typename...> class L3, typename... T3, template<typename...> class L4, typename... T4>
 struct mp_append_impl<L1<T1...>, L2<T2...>, L3<T3...>, L4<T4...>>
 {
@@ -301,39 +301,39 @@ struct mp_append_impl<L1<T1...>, L2<T2...>, L3<T3...>, L4<T4...>>
 };
 
 template<template<typename...> class L1, typename... T1, template<typename...> class L2, typename... T2,
-         template<typename...> class L3, typename... T3, template<typename...> class L4, typename... T4, 
-         template<typename...> class L5, typename... T5, typename... Lr> 
+         template<typename...> class L3, typename... T3, template<typename...> class L4, typename... T4,
+         template<typename...> class L5, typename... T5, typename... Lr>
 struct mp_append_impl<L1<T1...>, L2<T2...>, L3<T3...>, L4<T4...>, L5<T5...>, Lr...>
 {
     using type = typename mp_append_impl<L1<T1..., T2..., T3..., T4..., T5...>, Lr...>::type;
 };
 }
 
-template<typename... L> 
+template<typename... L>
 using mp_append = typename detail::mp_append_impl<L...>::type;
 
 namespace detail {
 // Remove if
-template<typename L, template<typename...> class P> 
+template<typename L, template<typename...> class P>
 struct mp_remove_if_impl{};
 
 template<template<typename...> class L, typename... T, template<typename...> class P>
 struct mp_remove_if_impl<L<T...>, P>
-{    
-    template<typename U> 
-    struct _f 
-    { 
-        using type = mp_if<P<U>, mp_list<>, mp_list<U>>; 
+{
+    template<typename U>
+    struct _f
+    {
+        using type = mp_if<P<U>, mp_list<>, mp_list<U>>;
     };
-    
+
     using type = mp_append<L<>, typename _f<T>::type...>;
 };
 }
 
-template<typename L, template<class...> class P> 
+template<typename L, template<class...> class P>
 using mp_remove_if = typename detail::mp_remove_if_impl<L, P>::type;
 
-template<typename L, typename Q> 
+template<typename L, typename Q>
 using mp_remove_if_q = mp_remove_if<L, Q::template fn>;
 
 template<typename T, T... Index>
@@ -401,9 +401,9 @@ public:
 template<typename T, T N>
 struct make_integer_sequence_impl
 {
-    using type = typename iseq_if_c<N == 0, 
-                                    iseq_identity<integer_sequence<T>>, 
-                                    iseq_if_c<N == 1, iseq_identity<integer_sequence<T, 0>>, 
+    using type = typename iseq_if_c<N == 0,
+                                    iseq_identity<integer_sequence<T>>,
+                                    iseq_if_c<N == 1, iseq_identity<integer_sequence<T, 0>>,
                                     make_integer_sequence_impl_<T, N>>>::type;
 };
 

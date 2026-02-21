@@ -286,17 +286,17 @@ void test_whitespace() {
   // CHECK-FIXES: {{^}}  test();{{$}}
 
   if (cond("preserve empty lines"))
- 
-  
+
+
     int s;
-   
-    
+
+
   else
- 
-  
+
+
     int t;
-   
-    
+
+
   test();
 
   // CHECK-MESSAGES: :[[@LINE-14]]:{{[0-9]+}}: warning: statement should be inside braces

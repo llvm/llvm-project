@@ -19,7 +19,7 @@ auto XL1 = []() mutable //
 auto XL2 = [] () constexpr mutable constexpr { }; //expected-error{{cannot appear multiple times}}
 auto L = []() mutable constexpr { };
 auto L2 = []() constexpr { };
-auto L4 = []() constexpr mutable { }; 
+auto L4 = []() constexpr mutable { };
 auto XL16 = [] () constexpr
                   mutable
                   constexpr   //expected-error{{cannot appear multiple times}}

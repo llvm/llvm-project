@@ -23,7 +23,7 @@ together with its specifications:
 
 ## Implementation
 
-The function's actual implementation is defined in an internal header, while the public entry point is a thin wrapper 
+The function's actual implementation is defined in an internal header, while the public entry point is a thin wrapper
 added to the following locations:
 
 - Add the core math logic (under `LIBC_NAMESPACE::math` namespace) to:

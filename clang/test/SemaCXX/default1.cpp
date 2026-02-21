@@ -11,7 +11,7 @@ void g(int i, int j, int k = 3);
 void g(int i, int j = 2, int k);
 void g(int i = 1, int j, int k);
 
-void h(int i, int j = 2, int k = 3, 
+void h(int i, int j = 2, int k = 3,
        int l, // expected-error {{missing default argument on parameter 'l'}}
        int,   // expected-error {{missing default argument on parameter}}
        int n);// expected-error {{missing default argument on parameter 'n'}}
@@ -20,7 +20,7 @@ struct S { } s;
 void i(int = s) { } // expected-error {{no viable conversion}} \
 // expected-note{{passing argument to parameter here}}
 
-struct X { 
+struct X {
   X(int);
 };
 

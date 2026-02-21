@@ -5,7 +5,7 @@ int (^x)(void) = ^() { return 21; };
 
 
 // Check that the block literal is emitted with a null isa pointer
-// CHECK: @__block_literal_global = internal global { ptr, i32, i32, ptr, ptr } { ptr null, 
+// CHECK: @__block_literal_global = internal global { ptr, i32, i32, ptr, ptr } { ptr null,
 
 // Check that _NSConcreteGlobalBlock has the correct dllimport specifier.
 // CHECK: @_NSConcreteGlobalBlock = external dllimport global ptr

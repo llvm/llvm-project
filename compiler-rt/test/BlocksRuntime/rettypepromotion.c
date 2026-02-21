@@ -10,7 +10,7 @@
  *  Created by Blaine Garst on 11/3/08.
  *
  */
- 
+
 // CONFIG error:
 // C++ and C give different errors so we don't check for an exact match.
 // The error is that enum's are defined to be ints, always, even if defined with explicit long values

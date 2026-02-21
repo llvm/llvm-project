@@ -190,7 +190,7 @@ int main(int argc, char **argv) {
   for (int k = 0; k < argc; ++k) ++k;
   // expected-error@+2 {{argument of aligned clause should be array, pointer, reference to array or reference to pointer, not 'S1'}}
   // expected-error@+1 {{argument of aligned clause should be array, pointer, reference to array or reference to pointer, not 'S2'}}
-  #pragma omp target simd aligned (a, b) 
+  #pragma omp target simd aligned (a, b)
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp target simd aligned (argv[1]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;

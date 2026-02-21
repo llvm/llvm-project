@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-llvm-passes -o - %s -O1 | FileCheck %s 
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-llvm-passes -o - -x c++ %s -O1 | FileCheck %s 
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-llvm-passes -o - %s -O1 | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-llvm-passes -o - -x c++ %s -O1 | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s -O0 | FileCheck %s --check-prefix=CHECK_O0
 
 // When optimizing, the builtin should be converted to metadata.
@@ -18,7 +18,7 @@ void branch(int x) {
 // CHECK: !unpredictable [[METADATA:.+]]
 
 // CHECK_O0-NOT: builtin_unpredictable
-// CHECK_O0-NOT: !unpredictable 
+// CHECK_O0-NOT: !unpredictable
 
   if (__builtin_unpredictable(x > 0))
     foo ();
@@ -31,7 +31,7 @@ int unpredictable_switch(int x) {
 // CHECK: !unpredictable [[METADATA:.+]]
 
 // CHECK_O0-NOT: builtin_unpredictable
-// CHECK_O0-NOT: !unpredictable 
+// CHECK_O0-NOT: !unpredictable
 
   switch(__builtin_unpredictable(x)) {
   default:

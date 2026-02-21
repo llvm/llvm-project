@@ -29,7 +29,7 @@ add_header_library(
     libc.src.__support.time.units
 )
 
-if(TARGET libc.src.__support.time.${LIBC_TARGET_OS}.clock_settime)  
+if(TARGET libc.src.__support.time.${LIBC_TARGET_OS}.clock_settime)
   add_object_library(
     clock_settime
     ALIAS

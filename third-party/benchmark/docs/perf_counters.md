@@ -16,7 +16,7 @@ This feature is available if:
   dependency via Bazel.
 
 The feature does not require modifying benchmark code. Counter collection is
-handled at the boundaries where timer collection is also handled. 
+handled at the boundaries where timer collection is also handled.
 
 To opt-in:
 * If using a Bazel build, add `--define pfm=1` to your build flags

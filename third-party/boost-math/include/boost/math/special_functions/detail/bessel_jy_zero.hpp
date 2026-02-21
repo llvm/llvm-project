@@ -229,7 +229,7 @@
           BOOST_MATH_GPU_ENABLED boost::math::tuple<T, T> operator()(const T& x) const
           {
             // Obtain Jv(x) and Jv'(x).
-            // Chris's original code called the Bessel function implementation layer direct, 
+            // Chris's original code called the Bessel function implementation layer direct,
             // but that circumvented optimizations for integer-orders.  Call the documented
             // top level functions instead, and let them sort out which implementation to use.
             T j_v;
@@ -453,7 +453,7 @@
             const bool order_is_zero = ((my_v > -half_epsilon) && (my_v < +half_epsilon));
 
             // Obtain Yv(x) and Yv'(x).
-            // Chris's original code called the Bessel function implementation layer direct, 
+            // Chris's original code called the Bessel function implementation layer direct,
             // but that circumvented optimizations for integer-orders.  Call the documented
             // top level functions instead, and let them sort out which implementation to use.
             T y_v;

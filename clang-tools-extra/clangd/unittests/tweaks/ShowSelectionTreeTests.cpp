@@ -22,7 +22,7 @@ TEST_F(ShowSelectionTreeTest, Test) {
   EXPECT_AVAILABLE("/*c^omment*/ int foo() { return 2 ^ + 2; }");
 
   const char *Output = R"(message:
- TranslationUnitDecl 
+ TranslationUnitDecl
    VarDecl int x = fcall(2 + 2)
     .CallExpr fcall(2 + 2)
        ImplicitCastExpr fcall
@@ -33,7 +33,7 @@ TEST_F(ShowSelectionTreeTest, Test) {
   EXPECT_EQ(apply("int fcall(int); int x = fca[[ll(2 +]]2);"), Output);
 
   Output = R"(message:
- TranslationUnitDecl 
+ TranslationUnitDecl
    FunctionDecl void x()
      CompoundStmt { …
        ForStmt for (;;) …

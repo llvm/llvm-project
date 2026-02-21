@@ -33,7 +33,7 @@ namespace std{
   template <typename T> class span {
 
    T *elements;
- 
+
    span(T *, unsigned){}
 
    public:
@@ -145,12 +145,12 @@ void warned_patterns_array(std::array<int, 5> array_ptr, std::array<Base, 10> ba
 
 void not_warned_patterns(std::span<A> span_ptr, std::span<Base> base_span) {
     int *p = (int*) span_ptr.data(); // Cast to a smaller type
-  
+
     B *b = (B*) span_ptr.data(); // Cast to a type of same size.
 
     p = (int*) span_ptr.data();
     A *a = (A*) span_ptr.hello(); // Invoking other methods.
-   
+
      intptr_t k = (intptr_t) span_ptr.data();
     k = (intptr_t) (span_ptr.data());
 }
@@ -159,7 +159,7 @@ void not_warned_patterns(std::span<A> span_ptr, std::span<Base> base_span) {
 void other_classes(std::span_duplicate<int> span_ptr) {
     int *p;
     A *a = (A*)span_ptr.data();
-    a = (A*)span_ptr.data(); 
+    a = (A*)span_ptr.data();
 }
 
 // Potential source for false negatives

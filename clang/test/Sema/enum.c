@@ -121,7 +121,7 @@ int NegativeShortTest[NegativeShort == -1 ? 1 : -1];
 enum Color { Red, Green, Blue }; // expected-note{{previous use is here}}
 typedef struct Color NewColor; // expected-error {{use of 'Color' with tag type that does not match previous declaration}}
 
-// Enumerations with a fixed underlying type. 
+// Enumerations with a fixed underlying type.
 // https://github.com/llvm/llvm-project/issues/116880
 #if __STDC_VERSION__ >= 202311L
   static_assert(__has_feature(c_fixed_enum));

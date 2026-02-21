@@ -17,10 +17,10 @@
 namespace lldb_private {
 
 // Use this Option group if you have a python class that implements some
-// Python extension point, and you pass a SBStructuredData to the class 
-// __init__ method.  
+// Python extension point, and you pass a SBStructuredData to the class
+// __init__ method.
 // class_option specifies the class name
-// the key and value options are read in in pairs, and a 
+// the key and value options are read in in pairs, and a
 // StructuredData::Dictionary is constructed with those pairs.
 class OptionGroupPythonClassWithDict : public OptionGroup {
 public:
@@ -49,7 +49,7 @@ public:
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;
   Status OptionParsingFinished(ExecutionContext *execution_context) override;
-  
+
   const StructuredData::DictionarySP GetStructuredData() {
     return m_dict_sp;
   }

@@ -11,7 +11,7 @@ struct S : Base {
 };
 
 struct T : Base {
-  virtual void override() override { } 
+  virtual void override() override { }
 };
 
 struct override;

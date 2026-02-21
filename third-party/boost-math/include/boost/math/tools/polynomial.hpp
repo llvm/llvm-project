@@ -338,7 +338,7 @@ public:
 #ifdef BOOST_MATH_HAS_IS_CONST_ITERABLE
     template <class Range, typename std::enable_if<boost::math::tools::detail::is_const_iterable<Range>::value, bool>::type = true>
     BOOST_MATH_GPU_ENABLED explicit polynomial(const Range& r)
-       : polynomial(r.begin(), r.end()) 
+       : polynomial(r.begin(), r.end())
     {
     }
 #endif

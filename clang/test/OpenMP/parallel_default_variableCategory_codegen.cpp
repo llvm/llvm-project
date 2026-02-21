@@ -31,7 +31,7 @@ int main (int argc, char **argv) {
   }
 
   int *aggregate[VECTOR_SIZE] = {0,0,0,0};
-  
+
   #pragma omp parallel masked num_threads(2)
   {
      // aggregate

@@ -62,10 +62,10 @@ typename get_nth_type<1, Args1...>::type second_arg_pair(pair<Args1, Args2>...);
 void test_pair_deduction(int *ip, float *fp, double *dp) {
   int *ip1 = first_arg_pair(make_pair(ip, 17));
   int *ip2 = first_arg_pair(make_pair(ip, 17), make_pair(fp, 17));
-  int *ip3 = first_arg_pair(make_pair(ip, 17), make_pair(fp, 17), 
+  int *ip3 = first_arg_pair(make_pair(ip, 17), make_pair(fp, 17),
                             make_pair(dp, 17));
   float *fp1 = second_arg_pair(make_pair(ip, 17), make_pair(fp, 17));
-  float *fp2 = second_arg_pair(make_pair(ip, 17), make_pair(fp, 17), 
+  float *fp2 = second_arg_pair(make_pair(ip, 17), make_pair(fp, 17),
                                make_pair(dp, 17));
   no_type nt1 = first_arg_pair();
   no_type nt2 = second_arg_pair();

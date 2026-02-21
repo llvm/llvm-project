@@ -16,7 +16,7 @@ static void private_symbol() {
 
 int main() {
   foo();
-  
+
   NS::Foo f;
   f.bar();
   private_symbol();

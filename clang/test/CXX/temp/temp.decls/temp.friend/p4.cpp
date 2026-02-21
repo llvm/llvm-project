@@ -6,7 +6,7 @@ struct X1 {
                           // expected-note{{previous definition}}
 };
 
-X1<int> x1a; 
+X1<int> x1a;
 X1<float> x1b; // expected-note {{in instantiation of}}
 
 template<typename T>
@@ -17,13 +17,13 @@ struct X2 {
                            // expected-note{{previous definition}}
 };
 
-int array0[sizeof(X2<int>)]; 
+int array0[sizeof(X2<int>)];
 int array1[sizeof(X2<float>)]; // expected-note{{instantiation of}}
 
 void g() {
   X2<int> xi;
   f(xi);
-  X2<float> xf; 
+  X2<float> xf;
   f(xf);
 }
 
@@ -34,12 +34,12 @@ struct X3 {
   friend void h(int x);
 };
 
-int array2[sizeof(X3<int>)]; 
+int array2[sizeof(X3<int>)];
 int array3[sizeof(X3<float>)];
 
 void i() {
   X3<int> xi;
   h(xi);
-  X3<float> xf; 
+  X3<float> xf;
   h(xf);
 }

@@ -18,7 +18,7 @@
 // Tests for signed integer overflow stuff.
 void test1(void) {
   extern volatile int f11G, a, b;
-  
+
   // DEFAULT-CIR:  cir.binop(add, {{.*}}, {{.*}}) nsw : !s32i
   // DEFAULT-LLVM: add nsw i32
   // DEFAULT-OGCG: add nsw i32
@@ -26,7 +26,7 @@ void test1(void) {
   // WRAPV-LLVM: add i32
   // WRAPV-OGCG: add i32
   f11G = a + b;
-  
+
   // DEFAULT-CIR:  cir.binop(sub, {{.*}}, {{.*}}) nsw : !s32i
   // DEFAULT-LLVM: sub nsw i32
   // DEFAULT-OGCG: sub nsw i32
@@ -34,7 +34,7 @@ void test1(void) {
   // WRAPV-LLVM: sub i32
   // WRAPV-OGCG: sub i32
   f11G = a - b;
-  
+
   // DEFAULT-CIR:  cir.binop(mul, {{.*}}, {{.*}}) nsw : !s32i
   // DEFAULT-LLVM: mul nsw i32
   // DEFAULT-OGCG: mul nsw i32
@@ -44,15 +44,15 @@ void test1(void) {
   f11G = a * b;
 
   // DEFAULT-CIR:  cir.unary(minus, {{.*}}) nsw : !s32i
-  // DEFAULT-LLVM: sub nsw i32 0, 
-  // DEFAULT-OGCG: sub nsw i32 0, 
+  // DEFAULT-LLVM: sub nsw i32 0,
+  // DEFAULT-OGCG: sub nsw i32 0,
   // WRAPV-CIR:  cir.unary(minus, {{.*}}) : !s32i
-  // WRAPV-LLVM: sub i32 0, 
-  // WRAPV-OGCG: sub i32 0, 
+  // WRAPV-LLVM: sub i32 0,
+  // WRAPV-OGCG: sub i32 0,
   f11G = -a;
-  
+
   // PR7426 - Overflow checking for increments.
-  
+
   // DEFAULT-CIR:  cir.unary(inc, {{.*}}) nsw : !s32i
   // DEFAULT-LLVM: add nsw i32 {{.*}}, 1
   // DEFAULT-OGCG: add nsw i32 {{.*}}, 1
@@ -60,7 +60,7 @@ void test1(void) {
   // WRAPV-LLVM: add i32 {{.*}}, 1
   // WRAPV-OGCG: add i32 {{.*}}, 1
   ++a;
-  
+
   // DEFAULT-CIR:  cir.unary(dec, {{.*}}) nsw : !s32i
   // DEFAULT-LLVM: sub nsw i32 {{.*}}, 1
   // DEFAULT-OGCG: add nsw i32 {{.*}}, -1
@@ -68,7 +68,7 @@ void test1(void) {
   // WRAPV-LLVM: sub i32 {{.*}}, 1
   // WRAPV-OGCG: add i32 {{.*}}, -1
   --a;
-  
+
   // -fwrapv does not affect inbounds for GEP's.
   // This is controlled by -fwrapv-pointer instead.
   extern int* P;

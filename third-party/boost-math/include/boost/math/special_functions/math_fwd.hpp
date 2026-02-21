@@ -350,7 +350,7 @@ namespace boost
       chebyshev_t(unsigned n, Real const & x, const Policy&);
    template<class Real>
    tools::promote_args_t<Real> chebyshev_t(unsigned n, Real const & x);
-   
+
    template <class Real, class Policy>
    tools::promote_args_t<Real>
       chebyshev_u(unsigned n, Real const & x, const Policy&);
@@ -970,11 +970,11 @@ namespace boost
    BOOST_MATH_GPU_ENABLED int sign BOOST_NO_MACRO_EXPAND(const T& z);
 
    template <class T, class U>
-   BOOST_MATH_GPU_ENABLED typename tools::promote_args_permissive<T, U>::type 
+   BOOST_MATH_GPU_ENABLED typename tools::promote_args_permissive<T, U>::type
    copysign BOOST_NO_MACRO_EXPAND(const T& x, const U& y);
 
    template <class T>
-   BOOST_MATH_GPU_ENABLED typename tools::promote_args_permissive<T>::type 
+   BOOST_MATH_GPU_ENABLED typename tools::promote_args_permissive<T>::type
    changesign BOOST_NO_MACRO_EXPAND(const T& z);
 
    // Exponential integrals:

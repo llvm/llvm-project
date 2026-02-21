@@ -89,7 +89,7 @@ template <class T, unsigned N> class DepArrMem {
 };
 
 struct RefArr {
-  typedef 
+  typedef
           int
               &
                 intrefarr

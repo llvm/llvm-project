@@ -43,14 +43,14 @@ class C
    C& operator=(const C&) = delete;
 public:
   C(int state) : state_(new int(state)) { }
-  
+
   C(C&& a) {
-    state_ = a.state_; 
+    state_ = a.state_;
     a.state_ = 0;
   }
 
   ~C() {
-    delete state_; 
+    delete state_;
     state_ = 0;
   }
 };

@@ -53,7 +53,7 @@ std::vector<T> generate_random_uniform_vector(std::size_t size, std::size_t seed
     {
         x = dis(gen);
     }
-    
+
     return v;
 }
 

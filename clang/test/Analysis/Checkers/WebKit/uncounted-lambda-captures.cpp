@@ -159,7 +159,7 @@ template<class A, class... B> struct Visitor : Visitor<A>, Visitor<B...> {
     using Visitor<A>::operator ();
     using Visitor<B...>::operator ();
 };
-  
+
 template<class A> struct Visitor<A> : A {
     Visitor(A a)
         : A(a)
@@ -168,7 +168,7 @@ template<class A> struct Visitor<A> : A {
 
     using A::operator();
 };
- 
+
 template<class... F> Visitor<F...> makeVisitor(F... f)
 {
     return Visitor<F...>(f...);

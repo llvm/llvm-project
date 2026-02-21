@@ -25,7 +25,7 @@
 
 #else
 // If we are compiled with a compiler that doesn't have native blocks support,
-// define and call the block manually. 
+// define and call the block manually.
 
 #define INVOKE_BLOCK2(block, arg1, arg2) block->invoke(block, arg1, arg2)
 

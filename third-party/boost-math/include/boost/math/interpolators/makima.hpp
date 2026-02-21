@@ -75,7 +75,7 @@ public:
             }
         }
         // Quadratic extrapolation at the other end:
-        
+
         decltype(s.size()) n = s.size();
         Real mnm4 = (y[n-3]-y[n-4])/(x[n-3]-x[n-4]);
         Real mnm3 = (y[n-2]-y[n-3])/(x[n-2]-x[n-3]);

@@ -365,11 +365,11 @@ namespace ZeroSize {
   // CHECK:         0 |   union ZeroSize::union_of_empty x (empty)
   // CHECK:         0 |     struct ZeroSize::empty x (empty)
   // CHECK:           | [sizeof=1, align=1,
-  // CHECK:           |  nvsize=1, nvalign=1] 
+  // CHECK:           |  nvsize=1, nvalign=1]
 
   struct struct_of_empty_container {
     [[msvc::no_unique_address]] struct_of_empty x;
-  }; 
+  };
   static_assert(sizeof(struct_of_empty_container) == 1);
   // CHECK:*** Dumping AST Record Layout
   // CHECK:         0 | struct ZeroSize::struct_of_empty_container
@@ -377,6 +377,6 @@ namespace ZeroSize {
   // CHECK:         0 |   struct ZeroSize::struct_of_empty x (empty)
   // CHECK:         0 |     struct ZeroSize::empty x (empty)
   // CHECK:           | [sizeof=1, align=1,
-  // CHECK:           |  nvsize=1, nvalign=1] 
+  // CHECK:           |  nvsize=1, nvalign=1]
 
 }

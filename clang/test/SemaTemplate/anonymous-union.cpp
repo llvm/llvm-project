@@ -9,9 +9,9 @@ struct T0 {
 };
 template <typename T>
 struct T1 : public T0, public T { //expected-warning{{direct base 'T0' is inaccessible due to ambiguity:\n    struct T1<struct A> -> T0\n    struct T1<struct A> -> A -> T0}}
-  void f0() { 
+  void f0() {
     m0 = 0; // expected-error{{ambiguous conversion}}
-  } 
+  }
 };
 
 struct A : public T0 { };
@@ -22,7 +22,7 @@ namespace rdar8635664 {
   template<typename T>
   struct X {
     struct inner;
-  
+
     struct inner {
       union {
         int x;

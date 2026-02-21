@@ -66,7 +66,7 @@ We use a script to do all this:
 #!/bin/sh
 llvm-gcc $1.c -o $1
 opt -lowerswitch -paths -emitfuncs $1.bc > $1.run.bc
-llc -f $1.run.bc 
+llc -f $1.run.bc
 LIBS=$HOME/llvm_sparc/lib/Debug
 GXX=/usr/dcs/software/evaluation/bin/g++
 $GXX -g -L $LIBS $1.run.s -o $1.run.llc \

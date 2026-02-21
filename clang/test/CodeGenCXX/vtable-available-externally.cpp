@@ -120,7 +120,7 @@ struct A {
   virtual void f() { }
 };
 
-struct B : A { 
+struct B : A {
   virtual ~B();
 };
 
@@ -141,7 +141,7 @@ struct B {
   int b;
 };
 
-struct C : A, B { 
+struct C : A, B {
   C();
 };
 

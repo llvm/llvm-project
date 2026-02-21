@@ -3,21 +3,21 @@ template<typename T, typename U> // expected-note{{previous template}}
 class X0 {
 public:
   typedef int size_type;
-  
+
   X0(int);
   ~X0();
-  
+
   void f0(const T&, const U&);
-  
+
   T& operator[](int i) const;
-  
+
   void f1(size_type) const;
   void f2(size_type) const;
   void f3(size_type) const;
   void f4() ;
-  
+
   operator T*() const;
-  
+
   T value;
 };
 
@@ -41,7 +41,7 @@ template<class X, class Y, class Z> // expected-error{{too many template paramet
 void X0<X, Y>::f3(size_type) const {
 }
 
-template<class X, class Y> 
+template<class X, class Y>
 void X0<Y, X>::f4() { } // expected-error{{does not refer}}
 
 // FIXME: error message should probably say, "redefinition of 'X0<T, U>::f0'"
@@ -68,7 +68,7 @@ namespace N { template <class X> void A<X>::a() {} }
 
 // PR5566
 template<typename T>
-struct X1 { 
+struct X1 {
   template<typename U>
   struct B { void f(); };
 };

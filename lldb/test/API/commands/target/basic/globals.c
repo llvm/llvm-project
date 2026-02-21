@@ -8,10 +8,10 @@ static int my_static_int = 228;
 int main (int argc, char const *argv[])
 {
     printf("global char: %c\n", my_global_char);
-    
+
     printf("global str: %s\n", my_global_str);
 
     printf("argc + my_static_int = %d\n", (argc + my_static_int));
-    
+
     return 0;
 }

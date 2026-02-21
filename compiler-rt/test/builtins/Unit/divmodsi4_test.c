@@ -9,7 +9,7 @@
 extern COMPILER_RT_ABI si_int __divmodsi4(si_int a, si_int b, si_int* rem);
 
 
-int test__divmodsi4(si_int a, si_int b, 
+int test__divmodsi4(si_int a, si_int b,
 						si_int expected_result, si_int expected_rem)
 {
 	si_int rem;
@@ -24,7 +24,7 @@ int test__divmodsi4(si_int a, si_int b,
                a, b, rem, expected_rem);
 		return 1;
 	}
-	
+
     return 0;
 }
 
@@ -53,7 +53,7 @@ int main()
         return 1;
 	if (test__divmodsi4(19, -5, -3, 4))
         return 1;
-  	
+
 	if (test__divmodsi4(0x80000000, 8, 0xf0000000, 0))
         return 1;
 	if (test__divmodsi4(0x80000007, 8, 0xf0000001, -1))

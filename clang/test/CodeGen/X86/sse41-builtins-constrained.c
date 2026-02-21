@@ -78,7 +78,7 @@ __m128d test_mm_round_sd_fround_no_exc(__m128d x, __m128d y) {
 __m128 test_mm_round_ss_trunc(__m128 x, __m128 y) {
   // CHECK-LABEL: test_mm_round_ss_trunc
   // CHECK: %[[A:.*]] = extractelement <4 x float> %{{.*}}, i32 0
-  // CHECK: %[[B:.*]] = call float @llvm.experimental.constrained.trunc.f32(float %[[A:.*]], metadata !"fpexcept.ignore") 
+  // CHECK: %[[B:.*]] = call float @llvm.experimental.constrained.trunc.f32(float %[[A:.*]], metadata !"fpexcept.ignore")
   // CHECK: %{{.*}} = insertelement <4 x float> %0, float %[[B:.*]], i32 0
   return _mm_round_ss(x, y, 0b1011);
 }

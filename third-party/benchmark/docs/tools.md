@@ -199,7 +199,7 @@ whether the performance has statistically-significantly changed. `compare.py`
 uses [Mann–Whitney U
 test](https://en.wikipedia.org/wiki/Mann%E2%80%93Whitney_U_test), with a null
 hypothesis being that there's no difference in performance.
- 
+
 **The below output is a summary of a benchmark comparison with statistics
 provided for a multi-threaded process.**
 ```
@@ -279,7 +279,7 @@ are displayed for each input size.
 A statistically-significant difference is determined by a **p-value**, which is
 a measure of the probability that the observed difference could have occurred
 just by random chance. A smaller p-value indicates stronger evidence against the
-null hypothesis. 
+null hypothesis.
 
 **Therefore:**
   1. If the p-value is less than the chosen significance level (alpha), we
@@ -307,7 +307,7 @@ The result of said the statistical test is additionally communicated through col
 In statistical terms, **'green'** means we reject the null hypothesis that
 there's no difference in performance, and **'red'** means we fail to reject the
 null hypothesis. This might seem counter-intuitive if you're expecting 'green'
-to mean 'improved performance' and 'red' to mean 'worsened performance'. 
+to mean 'improved performance' and 'red' to mean 'worsened performance'.
 ```bash
   But remember, in this context:
 

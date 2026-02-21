@@ -5342,7 +5342,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
                   "ppc-trap-reason") &&
              "Unsupported annotation data type!");
       for (unsigned i = 1; i < MD->getNumOperands(); i++) {
-        assert(isa<MDString>(MD->getOperand(i)) && 
+        assert(isa<MDString>(MD->getOperand(i)) &&
                "Invalid data type for annotation ppc-trap-reason!");
         OpsWithMD.push_back(
             getI32Imm(std::stoi(cast<MDString>(

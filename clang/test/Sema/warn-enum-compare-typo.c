@@ -1,37 +1,37 @@
-// RUN: %clang_cc1 -fsyntax-only -Wenum-compare-typo -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -Wenum-compare-typo -verify %s
 // RUN: %clang_cc1 -fsyntax-only -Wenum-compare-typo -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 
-enum PossibleTypoLeft { 
+enum PossibleTypoLeft {
   Val1 = 1 << 0,
-  // expected-warning@+3 {{comparison operator '<' is potentially a typo for a shift operator '<<'}} 
+  // expected-warning@+3 {{comparison operator '<' is potentially a typo for a shift operator '<<'}}
   // expected-note@+2 {{use '<<' to perform a bitwise shift}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:12-[[@LINE+1]]:13}:"<<"
-  Bad1 = 1 < 2, 
-  // expected-warning@+3 {{comparison operator '>' is potentially a typo for a shift operator '>>'}} 
+  Bad1 = 1 < 2,
+  // expected-warning@+3 {{comparison operator '>' is potentially a typo for a shift operator '>>'}}
   // expected-note@+2 {{use '>>' to perform a bitwise shift}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:12-[[@LINE+1]]:13}:">>"
   Bad2 = 1 > 3,
-  // expected-warning@+3 {{comparison operator '>' is potentially a typo for a shift operator '>>'}} 
+  // expected-warning@+3 {{comparison operator '>' is potentially a typo for a shift operator '>>'}}
   // expected-note@+2 {{use '>>' to perform a bitwise shift}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:13-[[@LINE+1]]:14}:">>"
-  Bad3 = (1 > 3) 
+  Bad3 = (1 > 3)
 };
 
-enum PossibleTypoRight { 
+enum PossibleTypoRight {
   Val2 = 1 >> 0,
-  // expected-warning@+3 {{comparison operator '<' is potentially a typo for a shift operator '<<'}} 
+  // expected-warning@+3 {{comparison operator '<' is potentially a typo for a shift operator '<<'}}
   // expected-note@+2 {{use '<<' to perform a bitwise shift}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:12-[[@LINE+1]]:13}:"<<"
-  Bad4 = 1 < 2, 
-  // expected-warning@+3 {{comparison operator '>' is potentially a typo for a shift operator '>>'}} 
+  Bad4 = 1 < 2,
+  // expected-warning@+3 {{comparison operator '>' is potentially a typo for a shift operator '>>'}}
   // expected-note@+2 {{use '>>' to perform a bitwise shift}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:12-[[@LINE+1]]:13}:">>"
   Bad5 = 1 > 3,
-  // expected-warning@+3 {{comparison operator '<' is potentially a typo for a shift operator '<<'}} 
+  // expected-warning@+3 {{comparison operator '<' is potentially a typo for a shift operator '<<'}}
   // expected-note@+2 {{use '<<' to perform a bitwise shift}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:13-[[@LINE+1]]:14}:"<<"
-  Bad6 = (1 < 3) 
+  Bad6 = (1 < 3)
 };
 
 // Case 3: Context provided by other bitwise operators (&, |)
@@ -40,11 +40,11 @@ enum PossibleTypoBitwiseOr {
   FlagA = 0x1,
   FlagB = 0x2,
   FlagCombo = FlagA | FlagB,
-  // expected-warning@+3 {{comparison operator '<' is potentially a typo for a shift operator '<<'}} 
+  // expected-warning@+3 {{comparison operator '<' is potentially a typo for a shift operator '<<'}}
   // expected-note@+2 {{use '<<' to perform a bitwise shift}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:17-[[@LINE+1]]:18}:"<<"
   FlagTypo1 = 1 < FlagCombo,
-  // expected-warning@+3 {{comparison operator '>' is potentially a typo for a shift operator '>>'}} 
+  // expected-warning@+3 {{comparison operator '>' is potentially a typo for a shift operator '>>'}}
   // expected-note@+2 {{use '>>' to perform a bitwise shift}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:17-[[@LINE+1]]:18}:">>"
   FlagTypo2 = 1 > FlagCombo
@@ -52,11 +52,11 @@ enum PossibleTypoBitwiseOr {
 
 enum PossibleTypoBitwiseAnd {
   FlagAnd = FlagA & FlagB,
-  // expected-warning@+3 {{comparison operator '<' is potentially a typo for a shift operator '<<'}} 
+  // expected-warning@+3 {{comparison operator '<' is potentially a typo for a shift operator '<<'}}
   // expected-note@+2 {{use '<<' to perform a bitwise shift}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:17-[[@LINE+1]]:18}:"<<"
   FlagTypo3 = 1 < FlagAnd,
-  // expected-warning@+3 {{comparison operator '>' is potentially a typo for a shift operator '>>'}} 
+  // expected-warning@+3 {{comparison operator '>' is potentially a typo for a shift operator '>>'}}
   // expected-note@+2 {{use '>>' to perform a bitwise shift}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:17-[[@LINE+1]]:18}:">>"
   FlagTypo4 = 1 > FlagAnd

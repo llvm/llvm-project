@@ -9,7 +9,7 @@
 struct S {
   explicit(true) S(int);
   // expected-warning@-1 {{explicit(bool) is a C++20 extension}}
-  
+
   explicit(false) S(float);
   // expected-warning@-1 {{explicit(bool) is a C++20 extension}}
 };

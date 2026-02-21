@@ -32,7 +32,7 @@ struct base {
 
 struct bar1 : public base {
   using base::foo;
-  template <typename T> requires IsEmpty<T> 
+  template <typename T> requires IsEmpty<T>
   Opaque<1> foo() { return Opaque<1>(); };
 };
 
@@ -83,7 +83,7 @@ struct baz : public base1 {
   template <typename T> requires IsEmpty<T> && IsEmpty<T>
   Opaque<1> foo() { return Opaque<1>(); };  // expected-note {{candidate function}}
 };
-void func() { 
+void func() {
   expect<0>(base1{}.foo<Empty>());
   expect<1>(bar1{}.foo<Empty>());
   expect<0>(base2{}.foo<Empty>());
@@ -134,17 +134,17 @@ void func() {
 } // namespace same_constraint_at_different_place
 
 namespace more_constrained {
-struct base1 { 
+struct base1 {
   template <class T> Opaque<0> foo() { return Opaque<0>(); }
 };
-struct derived1 : base1 { 
+struct derived1 : base1 {
   using base1::foo;
   template <IsEmpty T> Opaque<1> foo() { return Opaque<1>(); }
 };
-struct base2 { 
+struct base2 {
   template <IsEmpty T> Opaque<0> foo() { return Opaque<0>(); }
 };
-struct derived2 : base2 { 
+struct derived2 : base2 {
   using base2::foo;
   template <class T> Opaque<1> foo() { return Opaque<1>(); }
 };
@@ -165,7 +165,7 @@ struct base {
 
 struct bar : public base {
   using base::foo;
-  template <int N> 
+  template <int N>
   int foo() { return 2; }; // expected-note {{candidate template ignored: substitution failure: too many template arguments for function template 'foo'}}
 };
 

@@ -15,7 +15,7 @@ template<> template<>
 void X<int>::mf2(int, int = 17) // expected-error{{default}}
 { }
 
-template<> template<typename U> 
+template<> template<typename U>
 void X<int>::mf2(int, U = U()) // expected-error{{default}}
 {
 }

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - 
+// RUN: %clang_cc1 %s -emit-llvm -o -
 
 struct s {
   unsigned long int field[0];

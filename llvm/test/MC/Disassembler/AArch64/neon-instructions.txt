@@ -674,7 +674,7 @@
 0xab 0xdc 0x77 0x4e
 
 #----------------------------------------------------------------------
-# Vector Shift Left long 
+# Vector Shift Left long
 #----------------------------------------------------------------------
 # CHECK: shll2	v2.8h, v4.16b, #8
 # CHECK: shll2	v6.4s, v8.8h, #16
@@ -1567,7 +1567,7 @@
 # CHECK: cmhs d20, d21, d22
 0xb4,0x3e,0xf6,0x7e
 
-        
+
 #----------------------------------------------------------------------
 # Scalar Compare Signed Greather Than Or Equal
 #----------------------------------------------------------------------
@@ -1691,8 +1691,8 @@
 #----------------------------------------------------------------------
 # Scalar Floating-point Absolute Compare Mask Greater Than
 #----------------------------------------------------------------------
-# CHECK: facgt s10, s11, s12   
-# CHECK: facgt d20, d21, d22   
+# CHECK: facgt s10, s11, s12
+# CHECK: facgt d20, d21, d22
 0x6a,0xed,0xac,0x7e
 0xb4,0xee,0xf6,0x7e
 
@@ -1763,7 +1763,7 @@
 # CHECK: sqdmlal d19, s24, s12
 0x71,0x93,0x6c,0x5e
 0x13,0x93,0xac,0x5e
-        
+
 #----------------------------------------------------------------------
 # Signed Saturating Doubling Multiply-Subtract Long
 #----------------------------------------------------------------------
@@ -1771,7 +1771,7 @@
 # CHECK: sqdmlsl d12, s23, s13
 0x8e,0xb1,0x79,0x5e
 0xec,0xb2,0xad,0x5e
-        
+
 #----------------------------------------------------------------------
 # Signed Saturating Doubling Multiply Long
 #----------------------------------------------------------------------
@@ -1995,7 +1995,7 @@
 # CHECK: fcvtzs d21, d12, #1
 0x95,0xfd,0x3f,0x5f
 0x95,0xfd,0x7f,0x5f
-        
+
 #----------------------------------------------------------------------
 # Scalar Floating-point Convert To Unsigned Fixed-point (Immediate)
 #----------------------------------------------------------------------
@@ -2592,7 +2592,7 @@
 # CHECK: fcvtnu d21, d14
 0xac,0xa9,0x21,0x7e
 0xd5,0xa9,0x61,0x7e
-        
+
 #----------------------------------------------------------------------
 # Scalar Floating-point Convert To Signed Integer, Rounding Toward
 # Positive Infinity
@@ -2601,7 +2601,7 @@
 # CHECK: fcvtps d21, d14
 0xb6,0xa9,0xa1,0x5e
 0xd5,0xa9,0xe1,0x5e
-        
+
 #----------------------------------------------------------------------
 # Scalar Floating-point Convert To Unsigned Integer, Rounding Toward
 # Positive Infinity
@@ -2618,9 +2618,9 @@
 # CHECK: fcvtzs d21, d14
 0xac,0xb9,0xa1,0x5e
 0xd5,0xb9,0xe1,0x5e
-        
+
 #----------------------------------------------------------------------
-# Scalar Floating-point Convert To Unsigned Integer, Rounding Toward 
+# Scalar Floating-point Convert To Unsigned Integer, Rounding Toward
 # Zero
 #----------------------------------------------------------------------
 # CHECK: fcvtzu s12, s13

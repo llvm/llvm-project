@@ -36,19 +36,19 @@ enum MyEnum {
 class AnotherClass
 {
 public:
-    __attribute__ ((always_inline)) int complicatedFunction() 
+    __attribute__ ((always_inline)) int complicatedFunction()
     {
         struct {
             int i;
         } s = { 15 };
-    
+
         int numbers[4] = { 2, 3, 4, 5 };
-    
+
         for (signed char number: numbers)
         {
             s.i -= number;
         }
-    
+
         return s.i;
     }
 };

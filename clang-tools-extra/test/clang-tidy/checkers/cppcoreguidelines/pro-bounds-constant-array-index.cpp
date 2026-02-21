@@ -192,7 +192,7 @@ void implicitCopyMoveCtor() {
 void lambdaCapture() {
   int arr[3];
 
-  // Capturing an array by value uses an ArraySubscriptExpr. Don't warn. 
+  // Capturing an array by value uses an ArraySubscriptExpr. Don't warn.
   [arr](){};
 }
 

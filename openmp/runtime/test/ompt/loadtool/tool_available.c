@@ -3,7 +3,7 @@
 
 // RUN: mkdir -p %t.tool_dir
 
-// 1. "statically-linking the tool’s definition of ompt_start_tool into an 
+// 1. "statically-linking the tool’s definition of ompt_start_tool into an
 //     OpenMP application"
 
 // RUN: %libomp-compile -DCODE -DTOOL && env OMP_TOOL_VERBOSE_INIT=stdout \
@@ -14,14 +14,14 @@
 
 // RUN: %clang %flags -DTOOL -shared -fPIC %s -o %t.tool_dir/tool.so
 
-// 2. "introducing a dynamically-linked library that includes the tool’s 
+// 2. "introducing a dynamically-linked library that includes the tool’s
 //    definition of ompt_start_tool into the application’s address space"
 
 // 2.1 Link with tool during compilation
 
 // RUN: %libomp-compile -DCODE %no-as-needed-flag %t.tool_dir/tool.so && \
 // RUN:    env OMP_TOOL_VERBOSE_INIT=stdout %libomp-run | FileCheck %s \
-// RUN:    --check-prefixes CHECK,ADDRSPACE 
+// RUN:    --check-prefixes CHECK,ADDRSPACE
 
 // 2.2 Link with tool during compilation, but AFTER the runtime
 
@@ -36,10 +36,10 @@
 // RUN:    --check-prefixes CHECK,ADDRSPACE
 
 // 3. "providing the name of a dynamically-linked library appropriate for the
-//    architecture and operating system used by the application in the 
+//    architecture and operating system used by the application in the
 //    tool-libraries-var ICV"
 
-// 3.1 OMP_TOOL_VERBOSE_INIT not set 
+// 3.1 OMP_TOOL_VERBOSE_INIT not set
 
 // RUN: %libomp-compile -DCODE && \
 // RUN:    env OMP_TOOL_LIBRARIES=%t.tool_dir/tool.so %libomp-run | FileCheck %s

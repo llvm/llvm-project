@@ -15,17 +15,17 @@ struct MyClass {
   int myMethod(int MyParam);
   static void staticMethod();
   const int& getConst();
-  
+
   enum Color {
     RED,
     GREEN,
     BLUE = 5
   };
-  
+
   typedef int MyTypedef;
-  
+
   class NestedClass;
-  
+
   friend struct Foo;
   /// This is a function template friend.
   template<typename T> friend void friendFunction(int);

@@ -70,7 +70,7 @@ void test_S(S s) {
 
   // NOTE: These manglings don't actually matter that much, because
   // the lambdas in the default arguments of g() won't be seen by
-  // multiple translation units. We check them mainly to ensure that they don't 
+  // multiple translation units. We check them mainly to ensure that they don't
   // get the special mangling for lambdas in in-class default arguments.
   // CHECK: call noundef i32 @"_ZNK1S3$_0clEv"
   // CHECK-NEXT: call noundef i32 @"_ZNK1S3$_1clEv"
@@ -119,7 +119,7 @@ void test_ST(ST<double> st) {
 // CHECK-LABEL: define linkonce_odr noundef double @_ZZN2STIdE1fEddEd_NKUlvE_clEv
 // CHECK: ret double 3
 
-template<typename T> 
+template<typename T>
 struct StaticMembers {
   static T x;
   static T y;

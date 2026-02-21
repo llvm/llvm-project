@@ -30,8 +30,8 @@ struct N : M, P {
   P p;
 };
 
-struct O : B { 
-  ~O() { return; } 
+struct O : B {
+  ~O() { return; }
 };
 
 int main() {

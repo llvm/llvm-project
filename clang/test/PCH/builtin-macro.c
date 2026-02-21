@@ -3,7 +3,7 @@
 
 // Test with pch.
 // RUN: %clang_cc1 -D__DATE__= -D__TIMESTAMP__= -Wno-builtin-macro-redefined -emit-pch -o %t %s
-// RUN: %clang_cc1 -D__DATE__= -D__TIMESTAMP__= -Wno-builtin-macro-redefined -include-pch %t -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -D__DATE__= -D__TIMESTAMP__= -Wno-builtin-macro-redefined -include-pch %t -fsyntax-only -verify %s
 
 #if !defined(HEADER)
 #define HEADER

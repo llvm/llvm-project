@@ -19,11 +19,11 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp target teams nowait (3.14) device (-10u) // omp-52-and-earlier-warning {{extra tokens at the end of '#pragma omp target teams' are ignored}}
   foo();
-#pragma omp target teams nowait (argc>> z) // omp-52-and-earlier-warning {{extra tokens at the end of '#pragma omp target teams' are ignored}} 
+#pragma omp target teams nowait (argc>> z) // omp-52-and-earlier-warning {{extra tokens at the end of '#pragma omp target teams' are ignored}}
   foo();
 #pragma omp target teams nowait (argv[1] = 2) // omp-52-and-earlier-warning {{extra tokens at the end of '#pragma omp target teams' are ignored}} omp-60-and-later-error {{expected ')'}} omp-60-and-later-note {{to match this '('}}
   foo();
-#pragma omp target teams nowait (argc > 0 ? argv[1] : argv[2]) // omp-52-and-earlier-warning {{extra tokens at the end of '#pragma omp target teams' are ignored}} 
+#pragma omp target teams nowait (argc > 0 ? argv[1] : argv[2]) // omp-52-and-earlier-warning {{extra tokens at the end of '#pragma omp target teams' are ignored}}
   foo();
 #pragma omp target teams nowait (S1) // omp-52-and-earlier-warning {{extra tokens at the end of '#pragma omp target teams' are ignored}} omp-60-and-later-error {{use of undeclared identifier 'S1'}}
   foo();

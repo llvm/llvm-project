@@ -35,7 +35,7 @@ template<typename T> void f(T t) {}
 
 int main(int argc, char **argv) {
   struct Scoped {};
-  
+
   struct { } Anonymous;
 
   f(Nothing{});
@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
   f(Union{});
   f(Anonymous);
   f(Enum::A);
-  
+
 
   f<const Nothing>(Nothing{});
   f<volatile Nothing>(Nothing{});

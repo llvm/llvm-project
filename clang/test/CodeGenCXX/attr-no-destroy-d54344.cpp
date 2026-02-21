@@ -9,7 +9,7 @@
 // despite being marked as __attribute((no_destroy)) in which case
 // it would trigger an assertion due to an incorrect assumption.
 
-// This test is more reliable with asserts to work as without 
+// This test is more reliable with asserts to work as without
 // the crash may (unlikely) could generate working but semantically
 // incorrect code.
 
@@ -39,6 +39,6 @@ e g;
 // CHECK-ATTR-NOT: @__cxa_atexit
 
 // Same scenario except with global flag (-fno-c++-static-destructors)
-// supressing it instead of the attribute. 
+// supressing it instead of the attribute.
 // CHECK-FLAG: @__cxx_global_var_init
 // CHECK-FLAG-NOT: @__cxa_atexit

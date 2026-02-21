@@ -41,7 +41,7 @@ template<typename T>
 struct is_pointer_in_address_space_1<T __attribute__((address_space(1))) *> {
   static const bool value = true;
 };
-                
+
 int check_ptr_in_as1[is_pointer_in_address_space_1<int_1_ptr>::value? 1 : -1];
 int check_ptr_in_as2[is_pointer_in_address_space_1<int_2_ptr>::value? -1 : 1];
 int check_ptr_in_as3[is_pointer_in_address_space_1<int*>::value? -1 : 1];

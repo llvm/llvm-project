@@ -10,7 +10,7 @@ struct Outer {
 
 struct Base {
   void base_member();
-  
+
   typedef int Int;
   Int typedeffed_member();
 };

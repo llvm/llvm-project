@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only -Wno-strict-prototypes
 struct xx { int bitf:1; };
 
-struct entry { struct xx *whatever; 
-               int value; 
+struct entry { struct xx *whatever;
+               int value;
                int bitf:1; };
 void add_one(int *p) { (*p)++; }
 
@@ -18,9 +18,9 @@ void test(void) {
 void foo(void) {
   register int x[10];
   &x[10];              // expected-error {{address of register variable requested}}
-    
+
   register int *y;
-  
+
   int *x2 = &y; // expected-error {{address of register variable requested}}
   int *x3 = &y[10];
 }
@@ -33,7 +33,7 @@ void testVectorComponentAccess(void) {
 
 typedef __attribute__(( ext_vector_type(4) ))  float float4;
 
-float *testExtVectorComponentAccess(float4 x) { 
+float *testExtVectorComponentAccess(float4 x) {
   return &x.w; // expected-error {{address of vector element requested}}
 }
 
@@ -70,7 +70,7 @@ void f1(void) {
 
 void f2(void) {
   register int *y;
-  
+
   int *_dummy0 = &y; // expected-error {{address of register variable requested}}
   int *_dummy1 = &y[10];
 }
@@ -82,7 +82,7 @@ void f3(void) {
 
 void f4(void) {
   register _Complex int x;
-  
+
   int *_dummy0 = &__real__ x; // expected-error {{address of register variable requested}}
 }
 

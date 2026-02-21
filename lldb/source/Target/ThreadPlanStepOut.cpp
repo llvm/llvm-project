@@ -178,7 +178,7 @@ void ThreadPlanStepOut::SetupReturnAddress(
       return;
     }
 
-    Breakpoint *return_bp = 
+    Breakpoint *return_bp =
         GetTarget().CreateBreakpoint(m_return_addr, true, false).get();
 
     if (return_bp != nullptr) {

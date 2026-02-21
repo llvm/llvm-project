@@ -60,7 +60,7 @@ int test__muldc3(double a, double b, double c, double d)
 //             a, b, c, d, creal(r), cimag(r));
 	double _Complex dividend;
 	double _Complex divisor;
-  double _Complex temp;	
+  double _Complex temp;
 
 	__real__ dividend = a;
 	__imag__ dividend = b;
@@ -69,7 +69,7 @@ int test__muldc3(double a, double b, double c, double d)
 
   __real__ temp = a * c - b * d;
   __imag__ temp = a * d + b * c;
-	
+
     switch (classify(dividend))
     {
     case zero:
@@ -200,7 +200,7 @@ int test__muldc3(double a, double b, double c, double d)
         }
         break;
     }
-    
+
     return 0;
 }
 

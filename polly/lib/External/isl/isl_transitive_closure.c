@@ -5,7 +5,7 @@
  *
  * Written by Sven Verdoolaege, INRIA Saclay - Ile-de-France,
  * Parc Club Orsay Universite, ZAC des vignes, 4 rue Jacques Monod,
- * 91893 Orsay, France 
+ * 91893 Orsay, France
  */
 
 #include <isl_ctx_private.h>
@@ -44,7 +44,7 @@ isl_bool isl_union_map_is_transitively_closed(__isl_keep isl_union_map *umap)
 
 	return closed;
 }
- 
+
 /* Given a map that represents a path with the length of the path
  * encoded as the difference between the last output coordindate
  * and the last input coordinate, set this length to either
@@ -651,7 +651,7 @@ static __isl_give isl_map *path_along_delta(__isl_take isl_space *space,
 	if (!is_id)
 		isl_int_set_si(path->ineq[k][0], -1);
 	isl_int_set_si(path->ineq[k][off + d], 1);
-			
+
 	free(div_purity);
 	isl_basic_set_free(delta);
 	path = isl_basic_map_finalize(path);
@@ -2662,7 +2662,7 @@ static __isl_give isl_union_map *union_floyd_warshall_on_list(isl_ctx *ctx,
 				isl_map_from_basic_map(
 					isl_basic_map_copy(list[k])));
 	}
-	
+
 	floyd_warshall_iterate(grid, n_group, exact);
 
 	app = isl_union_map_empty(isl_map_get_space(grid[0][0]));
@@ -2934,7 +2934,7 @@ __isl_give isl_union_map *isl_union_map_power(__isl_take isl_union_map *umap,
 	umap = isl_union_map_zip(umap);
 	dm = deltas_map(isl_union_map_get_space(umap));
 	umap = isl_union_map_apply_domain(umap, dm);
-	
+
 	return umap;
 }
 

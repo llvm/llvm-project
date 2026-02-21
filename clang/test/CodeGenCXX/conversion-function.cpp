@@ -43,15 +43,15 @@ Y y;
 
 int count=0;
 class O { // ...
-public: 
+public:
   operator int(){ return ++iO; }
   O() : iO(count++) {}
   int iO;
 };
 
 void g(O a, O b) {
-  int i = (a) ? 1+a : 0; 
-  int j = (a&&b) ? a+b : i; 
+  int i = (a) ? 1+a : 0;
+  int j = (a&&b) ? a+b : i;
   if (a) { }
   printf("i = %d j = %d a.iO = %d b.iO = %d\n", i, j, a.iO, b.iO);
 }

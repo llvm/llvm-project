@@ -66,7 +66,7 @@ public:
 
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
-  
+
     return Infos[Kind - FirstTargetFixupKind];
   }
 

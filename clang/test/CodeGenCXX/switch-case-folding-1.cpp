@@ -6,7 +6,7 @@ int test(int val){
 	// Make sure we don't crash when constant folding the case 4
 	// statement due to the case 5 statement contained in the do loop
 	switch (val) {
-		case 4: do { 
+		case 4: do {
                      switch (6)  {
                        case 6: {
                          case 5: x++;

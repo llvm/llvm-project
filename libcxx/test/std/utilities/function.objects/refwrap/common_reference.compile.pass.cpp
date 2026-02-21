@@ -131,7 +131,7 @@ struct Test {
   static_assert(same_as<R4, common_reference_t<T const&&, Ref<T>>>);
   static_assert(same_as<R5, common_reference_t<T,         Ref<T>>>);
 
-  // reference qualification of reference_wrapper is irrelevant 
+  // reference qualification of reference_wrapper is irrelevant
   static_assert(same_as<R1, common_reference_t<Ref<T>&,        T&>>);
   static_assert(same_as<R1, common_reference_t<Ref<T> ,        T&>>);
   static_assert(same_as<R1, common_reference_t<Ref<T> const&,  T&>>);

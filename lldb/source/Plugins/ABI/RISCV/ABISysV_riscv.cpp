@@ -142,7 +142,7 @@ ABISysV_riscv::CreateInstance(ProcessSP process_sp, const ArchSpec &arch) {
 
   if (llvm::Triple::riscv32 != machine && llvm::Triple::riscv64 != machine)
     return ABISP();
-  
+
   ABISysV_riscv *abi = new ABISysV_riscv(std::move(process_sp),
                                          MakeMCRegisterInfo(arch));
   if (abi)
@@ -749,7 +749,7 @@ UnwindPlanSP ABISysV_riscv::CreateDefaultUnwindPlan() {
   if (m_is_rv64)
     reg_size = 8;
 
-  // Assume the ra reg (return pc) and caller's frame pointer 
+  // Assume the ra reg (return pc) and caller's frame pointer
   // have been spilled to stack already.
   row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, reg_size * -2, true);
   row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, reg_size * -1, true);

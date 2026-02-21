@@ -13,7 +13,7 @@ struct C : B {
 
 
 void foo(C c, B b, int A::* pmf) {
-	int j = c->*pmf; 
+	int j = c->*pmf;
 	int i = b->*pmf;
 }
 

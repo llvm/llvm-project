@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 void f();
 void f(int);
-void f(int, float); 
+void f(int, float);
 void f(int, int);
 void f(int, ...);
 

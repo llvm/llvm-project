@@ -1,4 +1,4 @@
-# TODO: Use generic "add_startup_object" https://github.com/llvm/llvm-project/issues/133156 
+# TODO: Use generic "add_startup_object" https://github.com/llvm/llvm-project/issues/133156
 function(add_startup_object name)
   cmake_parse_arguments(
     "ADD_STARTUP_OBJECT"

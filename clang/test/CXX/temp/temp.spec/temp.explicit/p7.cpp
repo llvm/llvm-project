@@ -5,11 +5,11 @@ struct X0 {
   struct MemberClass {
     T member; // expected-error{{with function type}}
   };
-  
-  T* f0(T* ptr) { 
+
+  T* f0(T* ptr) {
     return ptr + 1; // expected-error{{pointer to the function}}
-  } 
-  
+  }
+
   static T* static_member;
 };
 

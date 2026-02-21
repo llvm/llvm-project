@@ -64,7 +64,7 @@ public:
   T remove_min() {
     assert(!empty());
     T tmp = Storage[0];
-    
+
     unsigned NewSize = Storage.size() - 1;
     if (NewSize) {
       // Move the slot at the end to the beginning.
@@ -950,7 +950,7 @@ void DifferenceEngine::diff(const Function *L, const Function *R) {
   // FIXME: types
   // FIXME: attributes and CC
   // FIXME: parameter attributes
-  
+
   // If both are declarations, we're done.
   if (L->empty() && R->empty())
     return;

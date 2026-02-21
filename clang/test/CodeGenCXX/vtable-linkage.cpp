@@ -24,10 +24,10 @@ B::B() { }
 
 struct C : virtual B {
   C();
-  virtual void f() { } 
+  virtual void f() { }
 };
 
-C::C() { } 
+C::C() { }
 
 struct D {
   virtual void f();
@@ -162,7 +162,7 @@ void use_F() {
 // CHECK-DAG: @"_ZTS3$_0" = internal constant
 // CHECK-DAG: @"_ZTI3$_0" = internal constant
 
-// The A vtable should have internal linkage since it is inside an anonymous 
+// The A vtable should have internal linkage since it is inside an anonymous
 // namespace.
 // CHECK-DAG: @_ZTVN12_GLOBAL__N_11AE = internal unnamed_addr constant
 // CHECK-DAG: @_ZTSN12_GLOBAL__N_11AE = internal constant

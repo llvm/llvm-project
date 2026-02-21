@@ -50,10 +50,10 @@ struct ProfiledCallGraphNode {
   using edges = std::set<edge, ProfiledCallGraphEdgeComparer>;
   using iterator = edges::iterator;
   using const_iterator = edges::const_iterator;
-  
+
   ProfiledCallGraphNode(FunctionId FName = FunctionId()) : Name(FName)
   {}
-  
+
   FunctionId Name;
   edges Edges;
 };
@@ -133,7 +133,7 @@ public:
   iterator begin() { return Root.Edges.begin(); }
   iterator end() { return Root.Edges.end(); }
   ProfiledCallGraphNode *getEntryNode() { return &Root; }
-  
+
   void addProfiledFunction(FunctionId Name) {
     auto [It, Inserted] = ProfiledFunctions.try_emplace(Name);
     if (Inserted) {

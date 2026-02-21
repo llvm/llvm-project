@@ -327,7 +327,7 @@ bool ThreadList::ShouldStop(Event *event_ptr) {
     else {
       bool this_thread_forces_run = thread_sp->ShouldRunBeforePublicStop();
       a_thread_needs_to_run |= this_thread_forces_run;
-      if (this_thread_forces_run) 
+      if (this_thread_forces_run)
         LLDB_LOG(log,
                  "ThreadList::{0} thread: {1:x}, "
                  "says it needs to run before public stop.",

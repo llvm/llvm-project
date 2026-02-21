@@ -39,12 +39,12 @@ int main (int argc, const char * argv[])
     First first(12,34);
     Second second(65,43.25);
     Third *third = new Third(96,'E');
-    
+
     first.dummy = 1; // Set break point at this line.
     first.dummy = 2;
     first.dummy = 3;
     first.dummy = 4;
     first.dummy = 5;
-    
+
 }
 

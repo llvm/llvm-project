@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -emit-llvm -triple %itanium_abi_triple -o - | FileCheck %s
 
-#define WEAK __attribute__ ((weak)) 
+#define WEAK __attribute__ ((weak))
 
 class WEAK A {
   virtual void foo();

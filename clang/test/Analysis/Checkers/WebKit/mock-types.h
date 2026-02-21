@@ -238,7 +238,7 @@ struct RefCountable {
   void constMethod() const;
   int trivial() { return 123; }
   RefCountable* next();
-  
+
 private:
   unsigned m_refCount { 0 };
 };

@@ -7,12 +7,12 @@ namespace {
 
 static int ctorcalls;
 static int dtorcalls;
-  
+
 struct A {
   A() : i(0) { ctorcalls++; }
   ~A() { dtorcalls++; }
   int i;
-  
+
   friend const A& operator<<(const A& a, int n) {
     return a;
   }

@@ -21,7 +21,7 @@ namespace GH139818{
 
     struct Y {
       constexpr ~Y() noexcept(false) { throw "oops"; }  // expected-note {{subexpression not valid in a constant expression}}
-                                                        
+
       constexpr operator bool() {
         return b;
       }

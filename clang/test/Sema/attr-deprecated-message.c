@@ -15,7 +15,7 @@ INT1 f1(void) __attribute__ ((deprecated("Please avoid f1"))); // expected-note 
 INT1 f2(void); // expected-warning {{'INT1' is deprecated: Please avoid INT1}}
 
 typedef enum {red, green, blue} Color __attribute__((deprecated("Please avoid Color"))); // expected-note {{'Color' has been explicitly marked deprecated here}}
- 
+
 
 Color c1; // expected-warning {{'Color' is deprecated: Please avoid Color}}
 

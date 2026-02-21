@@ -89,7 +89,7 @@ void test_open(const char *path) {
   fd = open(path, O_CREAT); // expected-warning{{Call to 'open' requires a 3rd argument when the 'O_CREAT' flag is set}}
   if (!fd)
     close(fd);
-} 
+}
 
 void test_open_at(int directory_fd, const char *relative_path) {
   int fd;
@@ -180,7 +180,7 @@ void test_reallocf_nowarn(char *ptr, size_t size) {
 void test_alloca(void) {
   char *foo = alloca(0); // expected-warning{{Call to 'alloca' has an allocation size of 0 bytes}}
   for(unsigned i = 0; i < 100; i++) {
-    foo[i] = 0; 
+    foo[i] = 0;
   }
 }
 void test_alloca_nowarn(size_t sz) {
@@ -192,7 +192,7 @@ void test_alloca_nowarn(size_t sz) {
 void test_builtin_alloca(void) {
   char *foo2 = __builtin_alloca(0); // expected-warning{{Call to 'alloca' has an allocation size of 0 bytes}}
   for(unsigned i = 0; i < 100; i++) {
-    foo2[i] = 0; 
+    foo2[i] = 0;
   }
 }
 void test_builtin_alloca_nowarn(size_t sz) {
@@ -204,7 +204,7 @@ void test_builtin_alloca_nowarn(size_t sz) {
 void test_valloc(void) {
   char *foo = valloc(0); // expected-warning{{Call to 'valloc' has an allocation size of 0 bytes}}
   for(unsigned i = 0; i < 100; i++) {
-    foo[i] = 0; 
+    foo[i] = 0;
   }
 }
 void test_valloc_nowarn(size_t sz) {
@@ -222,7 +222,7 @@ void test_dispatch_once_in_macro(void) {
 // Test inlining of dispatch_sync.
 void test_dispatch_sync(dispatch_queue_t queue, int *q) {
   int *p = 0;
-  dispatch_sync(queue, ^(void){ 
+  dispatch_sync(queue, ^(void){
 	  if (q) {
 		*p = 1; // expected-warning {{null pointer}}
 	   }

@@ -133,7 +133,7 @@ int test_block_command4(int);
 // There is trailing whitespace on one of the following lines, don't remove it!
 // expected-warning@+1 {{empty paragraph passed to '\brief' command}}
 /// \brief
-/// 
+///
 /// \returns Aaa
 int test_block_command5(int);
 
@@ -1271,7 +1271,7 @@ int test_nocrash14();
 
 // expected-warning@+2 {{'@union' command should not be used in a comment attached to a non-union declaration}}
 /*!
-   @union U This is new 
+   @union U This is new
 */
 struct U { int iS; };
 

@@ -181,13 +181,13 @@ BOOST_MATH_GPU_ENABLED T ellint_e_imp(T k, const Policy& pol, boost::math::integ
 // double precision versions use the coefficients from:
 // "Fast computation of complete elliptic integrals and Jacobian elliptic functions",
 // Celestial Mechanics and Dynamical Astronomy, April 2012.
-// 
+//
 // Higher precision coefficients for 80-bit long doubles can be calculated
 // using for example:
 // Table[N[SeriesCoefficient[ EllipticE [ m ], { m, 875/1000, i} ], 20], {i, 0, 24}]
 // and checking the value of the first neglected term with:
 // N[SeriesCoefficient[ EllipticE [ m ], { m, 875/1000, 24} ], 20] * (2.5/100)^24
-// 
+//
 // For m > 0.9 we don't use the method of the paper above, but simply call our
 // existing routines.
 //

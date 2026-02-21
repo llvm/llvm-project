@@ -134,7 +134,7 @@ namespace PR5755 {
     char* p = 0;
     delete[] p;
   }
-  
+
   void Test() {
     Foo<int>();
   }
@@ -225,7 +225,7 @@ static int is_pod1[is_pod<Y>::value? 1 : -1];
 // ---------------------------------------------------------------------
 template<typename T, typename Val1>
 struct InitList1 {
-  void f(Val1 val1) { 
+  void f(Val1 val1) {
     T x = { val1 };
 #if __cplusplus >= 201103L
     // expected-error@-2 {{type 'float' cannot be narrowed to 'int' in initializer list}}
@@ -247,7 +247,7 @@ template struct InitList1<APair, int*>;
 
 template<typename T, typename Val1, typename Val2>
 struct InitList2 {
-  void f(Val1 val1, Val2 val2) { 
+  void f(Val1 val1, Val2 val2) {
     T x = { val1, val2 }; // expected-error{{cannot initialize}}
   }
 };
@@ -323,7 +323,7 @@ struct NonDepMemberExpr0 {
   }
 };
 
-template struct NonDepMemberExpr0<0>; 
+template struct NonDepMemberExpr0<0>;
 
 template<typename T, typename Result>
 struct MemberFuncCall0 {

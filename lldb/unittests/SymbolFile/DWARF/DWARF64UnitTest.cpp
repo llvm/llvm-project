@@ -36,13 +36,13 @@ DWARF:
               Form:            DW_FORM_strp
             - Attribute:       DW_AT_language
               Form:            DW_FORM_data2
-            - Attribute:       DW_AT_stmt_list 
-              Form:            DW_FORM_sec_offset 
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
         - Code:            0x02
-          Tag:             DW_TAG_subprogram 
+          Tag:             DW_TAG_subprogram
           Children:        DW_CHILDREN_no
           Attributes:
-            - Attribute:       DW_AT_name 
+            - Attribute:       DW_AT_name
               Form:            DW_FORM_strp
   debug_info:
     - Format:          DWARF64

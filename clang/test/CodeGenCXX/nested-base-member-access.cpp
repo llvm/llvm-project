@@ -36,9 +36,9 @@ struct P : Q, L  {
 struct N : M,P {
   N() : M(100), P(200) {}
   void PR() {
-    this->MPR(); this->PPR(); this->QPR(); 
+    this->MPR(); this->PPR(); this->QPR();
     IQPR();
-    printf("iM = %d\n", iM); 
+    printf("iM = %d\n", iM);
     printf("iP = %d\n", iP);
     printf("iQ = %d\n", iQ);
     printf("iL = %d\n", iL);

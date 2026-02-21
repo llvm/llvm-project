@@ -2,7 +2,7 @@
 
 template <class T> struct A { A(); };
 struct B { A<int> x; };
-void a() {   
+void a() {
   B b;
 }
 

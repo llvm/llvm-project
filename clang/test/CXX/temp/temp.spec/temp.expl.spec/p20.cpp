@@ -8,7 +8,7 @@ struct A { }; // expected-note{{template is declared here}}
 struct X {
   template<> friend void f<int>(int); // expected-error{{in a friend}}
   template<> friend class A<int>; // expected-error{{cannot be a friend}}
-  
+
   friend void f<float>(float); // okay
   friend class A<float>; // okay
 };

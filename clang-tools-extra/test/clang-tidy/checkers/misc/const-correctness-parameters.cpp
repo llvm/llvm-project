@@ -165,7 +165,7 @@ void instantiate() {
   sfinae_func(b);
 }
 
-// Leave this for further reference if const-correctness is implemented on template functions/methods 
+// Leave this for further reference if const-correctness is implemented on template functions/methods
 
 template<typename T>
 struct TemplateClass {

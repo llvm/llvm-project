@@ -6,7 +6,7 @@ struct A {
 
 struct B {
   A a;
-  
+
   B() : a("test") { }
 };
 

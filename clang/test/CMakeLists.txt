@@ -147,7 +147,7 @@ if(LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
     spirv-as
     spirv-link
     )
-endif()    
+endif()
 
 if( NOT CLANG_BUILT_STANDALONE )
   list(APPEND CLANG_TEST_DEPS

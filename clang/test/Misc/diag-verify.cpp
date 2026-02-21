@@ -25,17 +25,17 @@ void test() {
   x = y; // expected-error{{use of undeclared identifier 'y' identifier 'y'}}
 }
 
-//CHECK: error: 'expected-error' diagnostics expected but not seen: 
+//CHECK: error: 'expected-error' diagnostics expected but not seen:
 //CHECK:   Line 17: use of undeclared identifier 'y' is fine
 //CHECK:   Line 18: abuse of undeclared identifier 'y'
 //CHECK:   Line 19: good use of undeclared identifier 'y' in code
-//CHECK:   Line 20:  use of undeclared identifier 'y' 
+//CHECK:   Line 20:  use of undeclared identifier 'y'
 //CHECK:   Line 21: use of undeclared identifier 'y' is disallowed
 //CHECK:   Line 22: please don't use of undeclared identifier 'y'
 //CHECK:   Line 23: use of undeclared identifier 'y'; please declare y before use
 //CHECK:   Line 24: use of use of undeclared identifier 'y'
 //CHECK:   Line 25: use of undeclared identifier 'y' identifier 'y'
-//CHECK: error: 'expected-error' diagnostics seen but not expected: 
+//CHECK: error: 'expected-error' diagnostics seen but not expected:
 //CHECK:   Line 17: use of undeclared identifier 'y'
 //CHECK:   Line 18: use of undeclared identifier 'y'
 //CHECK:   Line 19: use of undeclared identifier 'y'

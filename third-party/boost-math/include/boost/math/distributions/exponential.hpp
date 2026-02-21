@@ -95,7 +95,7 @@ template <class RealType, class Policy>
 BOOST_MATH_GPU_ENABLED inline boost::math::pair<RealType, RealType> range(const exponential_distribution<RealType, Policy>& /*dist*/)
 { // Range of permissible values for random variable x.
   BOOST_MATH_IF_CONSTEXPR (boost::math::numeric_limits<RealType>::has_infinity)
-  { 
+  {
     return boost::math::pair<RealType, RealType>(static_cast<RealType>(0), boost::math::numeric_limits<RealType>::infinity()); // 0 to + infinity.
   }
   else
@@ -148,7 +148,7 @@ BOOST_MATH_GPU_ENABLED inline RealType logpdf(const exponential_distribution<Rea
       return result;
    if(0 == detail::verify_exp_x(function, x, &result, Policy()))
       return result;
-   
+
    result = log(lambda) - lambda * x;
    return result;
 } // logpdf

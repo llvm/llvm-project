@@ -54,7 +54,7 @@ void test_instantiation(X<double>::C *x,
   double &dr = x->foo();
   float &fr = e->bar();
   f->foo(); // expected-error{{implicit instantiation of undefined member 'X<float>::D::F'}}
-  
+
 }
 
 

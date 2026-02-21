@@ -61,7 +61,7 @@ int noSuppressMacroUnrelated(void) {
 // did not come from the macro.
 int noSuppressMacroUnrelatedOtherReason(void) {
   int *x = RETURN_NULL();
-  x = returnFreshPointer();  
+  x = returnFreshPointer();
   x = 0; // expected-note{{Null pointer value stored to 'x'}}
   return *x; // expected-warning{{Dereference of null pointer}}
              // expected-note@-1{{Dereference}}

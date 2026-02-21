@@ -5,11 +5,11 @@ struct X0 {
   void f(T &t) {
     t = 0;
   }
-  
+
   void g(T &t);
-  
+
   void h(T &t);
-  
+
   static T static_var;
 };
 

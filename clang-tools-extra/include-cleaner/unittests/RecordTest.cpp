@@ -135,7 +135,7 @@ TEST_F(RecordASTTest, ImplicitTemplates) {
   }
   )cpp";
   Inputs.Code = R"cpp(
-  #include "dispatch.h"  
+  #include "dispatch.h"
   struct MyGetter {
     template <class T> static int get() { return T::value; }
   };

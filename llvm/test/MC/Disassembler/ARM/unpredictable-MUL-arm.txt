@@ -1,7 +1,7 @@
 # RUN: llvm-mc --disassemble %s -triple=armv7-linux-gnueabi 2>&1 | FileCheck %s
 
 # CHECK: potentially undefined
-# CHECK: 0x93 0x12 0x01 0x00 
+# CHECK: 0x93 0x12 0x01 0x00
 0x93 0x12 0x01 0x00
 
 # CHECK: potentially undefined

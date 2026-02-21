@@ -32,8 +32,8 @@ struct Struct {
 
 #pragma acc declare present(ArgHSE, ArgInt, LocalHSE, LocalInt, ArgHSEPtr[1:1], LocalHSEArr[1:1])
     // CHECK: %[[ARG_HSE_PRESENT:.*]] = acc.present varPtr(%[[ARG_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {name = "ArgHSE"}
-    // CHECK-NEXT: %[[ARG_INT_PRESENT:.*]] = acc.present varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "ArgInt"} 
-    // CHECK-NEXT: %[[LOC_HSE_PRESENT:.*]] = acc.present varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {name = "LocalHSE"} 
+    // CHECK-NEXT: %[[ARG_INT_PRESENT:.*]] = acc.present varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "ArgInt"}
+    // CHECK-NEXT: %[[LOC_HSE_PRESENT:.*]] = acc.present varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {name = "LocalHSE"}
     // CHECK-NEXT: %[[LOC_INT_PRESENT:.*]] = acc.present varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "LocalInt"}
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
     // CHECK-NEXT: %[[LB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
@@ -92,7 +92,7 @@ void Struct::MemFunc2(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *ArgHSEP
     int LocalInt;
 #pragma acc declare present(ArgHSE, ArgInt, ArgHSEPtr[1:1])
     // CHECK: %[[ARG_HSE_PRESENT:.*]] = acc.present varPtr(%[[ARG_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {name = "ArgHSE"}
-    // CHECK-NEXT: %[[ARG_INT_PRESENT:.*]] = acc.present varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "ArgInt"} 
+    // CHECK-NEXT: %[[ARG_INT_PRESENT:.*]] = acc.present varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "ArgInt"}
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
     // CHECK-NEXT: %[[LB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -104,7 +104,7 @@ void Struct::MemFunc2(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *ArgHSEP
     // CHECK-NEXT: %[[ENTER1:.*]] = acc.declare_enter dataOperands(%[[ARG_HSE_PRESENT]], %[[ARG_INT_PRESENT]], %[[ARG_HSE_PTR_PRESENT]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!rec_HasSideEffects>>)
 
 #pragma acc declare present(LocalHSE, LocalInt, LocalHSEArr[1:1])
-    // CHECK-NEXT: %[[LOC_HSE_PRESENT:.*]] = acc.present varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {name = "LocalHSE"} 
+    // CHECK-NEXT: %[[LOC_HSE_PRESENT:.*]] = acc.present varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {name = "LocalHSE"}
     // CHECK-NEXT: %[[LOC_INT_PRESENT:.*]] = acc.present varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "LocalInt"}
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
     // CHECK-NEXT: %[[LB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
@@ -149,7 +149,7 @@ extern "C" void NormalFunc(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *Ar
     int LocalInt;
 #pragma acc declare present(ArgHSE, ArgInt, ArgHSEPtr[1:1])
     // CHECK: %[[ARG_HSE_PRESENT:.*]] = acc.present varPtr(%[[ARG_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {name = "ArgHSE"}
-    // CHECK-NEXT: %[[ARG_INT_PRESENT:.*]] = acc.present varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "ArgInt"} 
+    // CHECK-NEXT: %[[ARG_INT_PRESENT:.*]] = acc.present varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "ArgInt"}
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
     // CHECK-NEXT: %[[LB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -162,7 +162,7 @@ extern "C" void NormalFunc(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *Ar
     {
       // CHECK-NEXT: cir.scope {
 #pragma acc declare present(LocalHSE, LocalInt, LocalHSEArr[1:1])
-    // CHECK-NEXT: %[[LOC_HSE_PRESENT:.*]] = acc.present varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {name = "LocalHSE"} 
+    // CHECK-NEXT: %[[LOC_HSE_PRESENT:.*]] = acc.present varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {name = "LocalHSE"}
     // CHECK-NEXT: %[[LOC_INT_PRESENT:.*]] = acc.present varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "LocalInt"}
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
     // CHECK-NEXT: %[[LB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
@@ -187,7 +187,7 @@ extern "C" void NormalFunc(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *Ar
     do_thing();
     // CHECK-NEXT: cir.call @do_thing
     // CHECK-NEXT: acc.declare_exit token(%[[ENTER1]]) dataOperands(%[[ARG_HSE_PRESENT]], %[[ARG_INT_PRESENT]], %[[ARG_HSE_PTR_PRESENT]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!rec_HasSideEffects>>)
- 
+
     // CHECK-NEXT: acc.delete accPtr(%[[ARG_HSE_PRESENT]] : !cir.ptr<!rec_HasSideEffects>) {dataClause = #acc<data_clause acc_present>, name = "ArgHSE"}
     // CHECK-NEXT: acc.delete accPtr(%[[ARG_INT_PRESENT]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_present>, name = "ArgInt"}
     // CHECK-NEXT: acc.delete accPtr(%[[ARG_HSE_PTR_PRESENT]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) bounds(%[[BOUND1]]) {dataClause = #acc<data_clause acc_present>, name = "ArgHSEPtr[1:1]"}

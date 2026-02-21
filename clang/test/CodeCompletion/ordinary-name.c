@@ -17,7 +17,7 @@ void foo() {
 
   // PR8744
   // RUN: %clang_cc1 -isystem %S/Inputs -fsyntax-only -code-completion-at=%s:%(line-18):11 %s
-  
+
   // RUN: %clang_cc1 -isystem %S/Inputs -fsyntax-only -fdebugger-support -code-completion-at=%s:%(line-15):9 %s -o - | FileCheck -check-prefix=CHECK-DBG %s
   // CHECK-DBG: __builtin_va_list
   // CHECK-DBG: __INTEGER_TYPE

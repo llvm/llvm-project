@@ -20,34 +20,34 @@ void f(const T&, const int (&)[ODRUSE_SZ]) { }
 #define F_CALL(x, a) f(x, selector_ ## a)
 
 // This is a risky assumption, because if an empty class gets captured by value
-// the lambda's size will still be '1' 
+// the lambda's size will still be '1'
 #define ASSERT_NO_CAPTURES(L) static_assert(sizeof(L) == 1, "size of closure with no captures must be 1")
 #define ASSERT_CLOSURE_SIZE_EXACT(L, N) static_assert(sizeof(L) == (N), "size of closure must be " #N)
 #define ASSERT_CLOSURE_SIZE(L, N) static_assert(sizeof(L) >= (N), "size of closure must be >=" #N)
 
 
 namespace sample {
-  struct X {  
+  struct X {
     int i;
     X(int i) : i(i) { }
   };
-} 
- 
+}
+
 namespace test_transformations_in_templates {
 template<class T> void foo(T t) {
   auto L = [](auto a) { return a; };
 }
 template<class T> void foo2(T t) {
-  auto L = [](auto a) -> void { 
+  auto L = [](auto a) -> void {
     auto M = [](char b) -> void {
-      auto N = [](auto c) -> void { 
-        int selector[sizeof(c) == 1 ? 
-                      (sizeof(b) == 1 ? 1 : 2) 
+      auto N = [](auto c) -> void {
+        int selector[sizeof(c) == 1 ?
+                      (sizeof(b) == 1 ? 1 : 2)
                       : 2
-                    ]{};      
-      };  
+                    ]{};
+      };
       N('a');
-    };    
+    };
   };
   L(3.14);
 }
@@ -83,10 +83,10 @@ void doit() {
   //[](){ return ({int b = 5; return 'c'; 'x';}); };
 
   //auto X = ^{ return a; };
-  
+
   //auto Y = []() -> auto { return 3; return 'c'; };
-  }  
-}  
+  }
+}
 }
 
 
@@ -116,13 +116,13 @@ void doit() {
       return [=](int p) {
         return [](auto b) {
           DEFINE_SELECTOR(a);
-          F_CALL(x, a); 
-          return 0;        
-        }; 
+          F_CALL(x, a);
+          return 0;
+        };
       };
     };
     ASSERT_NO_CAPTURES(L);
-  }  
+  }
 }  // doit
 } // namespace
 
@@ -146,19 +146,19 @@ void doit() {
     const int x = 10;
     auto L = [](auto a) {
       //const int y = 20;
-      return [](int p) { 
-        return [](auto b) { 
+      return [](int p) {
+        return [](auto b) {
           DEFINE_SELECTOR(a);
-          F_CALL(x, a);  
-          return 0;        
-        }; 
+          F_CALL(x, a);
+          return 0;
+        };
       };
     };
     auto M = L(3);
     auto N = M(5);
-    
+
   }
-  
+
   { // if the nested capture does not implicitly or explicitly allow any captures
     // nothing should capture - and instantiations will create errors if needed.
     const int x = 0;
@@ -178,7 +178,7 @@ void doit() {
   { // Permutations of this example must be thoroughly tested!
     const int x = 0;
     sample::X cx{5};
-    auto L = [=](auto a) { 
+    auto L = [=](auto a) {
       const int z = 3;
       return [&,a](auto b) {
         // expected-warning@-1 {{address of stack memory associated with local variable 'z' returned}}
@@ -192,7 +192,7 @@ void doit() {
           decltype(a) A = a;
           decltype(b) B = b;
           const int &i = cx.i;
-        }; 
+        };
       };
     };
     auto M = L(3)(3.5); // #call
@@ -201,7 +201,7 @@ void doit() {
 }
 namespace Test_no_capture_of_clearly_no_odr_use {
 auto foo() {
- const int x = 10; 
+ const int x = 10;
  auto L = [=](auto a) {
     return  [=](auto b) {
       return [=](auto c) {
@@ -214,14 +214,14 @@ auto foo() {
   auto N = M(2.14);
   ASSERT_NO_CAPTURES(L);
   ASSERT_NO_CAPTURES(N);
-  
+
   return 0;
 }
 }
 
 namespace Test_capture_of_odr_use_var {
 auto foo() {
- const int x = 10; 
+ const int x = 10;
  auto L = [=](auto a) {
     return  [=](auto b) {
       return [=](auto c) {
@@ -235,32 +235,32 @@ auto foo() {
   auto M_int = L(1);
   auto N_int_int = M_int(2);
   ASSERT_CLOSURE_SIZE_EXACT(L, sizeof(x));
-  // M_int captures both a & x   
+  // M_int captures both a & x
   ASSERT_CLOSURE_SIZE_EXACT(M_int, sizeof(x) + sizeof(int));
-  // N_int_int captures both a & x   
-  ASSERT_CLOSURE_SIZE_EXACT(N_int_int, sizeof(x) + sizeof(int)); 
+  // N_int_int captures both a & x
+  ASSERT_CLOSURE_SIZE_EXACT(N_int_int, sizeof(x) + sizeof(int));
   auto M_double = L(3.14);
   ASSERT_CLOSURE_SIZE(M_double, sizeof(x) + sizeof(double));
-  
+
   return 0;
 }
 auto run = foo();
 }
 
-}    
+}
 namespace more_nested_captures_1 {
 template<class T> struct Y {
   static void f(int, double, ...) { }
-  template<class R> 
+  template<class R>
   static void f(const int&, R, ...) { }
   template<class R>
   void foo(R t) {
     const int x = 10; //expected-note{{declared here}}
-    auto L = [](auto a) { 
+    auto L = [](auto a) {
        return [=](auto b) {
-        return [=](auto c) { 
+        return [=](auto c) {
           f(x, c, b, a);  //expected-error{{reference to local variable 'x'}}
-          return 0; 
+          return 0;
         };
       };
     };
@@ -278,16 +278,16 @@ int run = (yi.foo(3.14), 0); //expected-note{{in instantiation of}}
 namespace more_nested_captures_1_1 {
 template<class T> struct Y {
   static void f(int, double, ...) { }
-  template<class R> 
+  template<class R>
   static void f(const int&, R, ...) { }
   template<class R>
   void foo(R t) {
     const int x = 10; //expected-note{{declared here}}
-    auto L = [](auto a) { 
+    auto L = [](auto a) {
        return [=](char b) {
-        return [=](auto c) { 
+        return [=](auto c) {
           f(x, c, b, a);  //expected-error{{reference to local variable 'x'}}
-          return 0; 
+          return 0;
         };
       };
     };
@@ -303,44 +303,44 @@ int run = (yi.foo(3.14), 0); //expected-note{{in instantiation of}}
 namespace more_nested_captures_1_2 {
 template<class T> struct Y {
   static void f(int, double, ...) { }
-  template<class R> 
+  template<class R>
   static void f(const int&, R, ...) { }
   template<class R>
   void foo(R t) {
-    const int x = 10; 
-    auto L = [=](auto a) { 
+    const int x = 10;
+    auto L = [=](auto a) {
        return [=](char b) {
-        return [=](auto c) { 
-          f(x, c, b, a);  
-          return 0; 
+        return [=](auto c) {
+          f(x, c, b, a);
+          return 0;
         };
       };
     };
     auto M = L(t);
     auto N = M('b');
     N(3.14);
-    N(5);  
+    N(5);
   }
 };
 Y<int> yi;
-int run = (yi.foo(3.14), 0); 
+int run = (yi.foo(3.14), 0);
 }
 
 namespace more_nested_captures_1_3 {
 template<class T> struct Y {
   static void f(int, double, ...) { }
-  template<class R> 
+  template<class R>
   static void f(const int&, R, ...) { }
   template<class R>
   void foo(R t) {
     const int x = 10; //expected-note{{declared here}}
-    auto L = [=](auto a) { 
+    auto L = [=](auto a) {
        return [](auto b) {
         const int y = 0;
-        return [=](auto c) { 
+        return [=](auto c) {
           f(x, c, b);  //expected-error{{reference to local variable 'x'}}
           f(y, b, c);
-          return 0; 
+          return 0;
         };
       };
     };
@@ -358,13 +358,13 @@ int run = (yi.foo(3.14), 0); //expected-note{{in instantiation of}}
 namespace more_nested_captures_1_4 {
 template<class T> struct Y {
   static void f(int, double, ...) { }
-  template<class R> 
+  template<class R>
   static void f(const int&, R, ...) { }
   template<class R>
   void foo(R t) {
     const int x = 10; //expected-note{{declared here}}
     auto L = [=](auto a) {
-       T t2{t};       
+       T t2{t};
        return [](auto b) {
         const int y = 0; //expected-note{{declared here}}
         return [](auto c) { //expected-note 2{{lambda expression begins here}} expected-note 2 {{capture 'x' by}}  expected-note 2 {{capture 'y' by}} expected-note 4 {{default capture by}}
@@ -390,16 +390,16 @@ int run = (yi.foo('a'), 0); //expected-note{{in instantiation of}}
 namespace more_nested_captures_2 {
 template<class T> struct Y {
   static void f(int, double) { }
-  template<class R> 
+  template<class R>
   static void f(const int&, R) { }
-  template<class R> 
+  template<class R>
   void foo(R t) {
     const int x = 10;
-    auto L = [=](auto a) { 
+    auto L = [=](auto a) {
        return [=](auto b) {
-        return [=](auto c) { 
-          f(x, c);  
-          return 0; 
+        return [=](auto c) {
+          f(x, c);
+          return 0;
         };
       };
     };
@@ -417,16 +417,16 @@ int run = (yi.foo(3.14), 0);
 namespace more_nested_captures_3 {
 template<class T> struct Y {
   static void f(int, double) { }
-  template<class R> 
+  template<class R>
   static void f(const int&, R) { }
-  template<class R> 
+  template<class R>
   void foo(R t) {
     const int x = 10; //expected-note{{declared here}}
-    auto L = [](auto a) { 
+    auto L = [](auto a) {
        return [=](auto b) {
-        return [=](auto c) { 
+        return [=](auto c) {
           f(x, c);   //expected-error{{reference to local variable 'x'}}
-          return 0; 
+          return 0;
         };
       };
     };
@@ -444,16 +444,16 @@ int run = (yi.foo(3.14), 0); //expected-note{{in instantiation of}}
 namespace more_nested_captures_4 {
 template<class T> struct Y {
   static void f(int, double) { }
-  template<class R> 
+  template<class R>
   static void f(const int&, R) { }
-  template<class R> 
+  template<class R>
   void foo(R t) {
     const int x = 10;  //expected-note{{'x' declared here}}
-    auto L = [](auto a) { 
+    auto L = [](auto a) {
        return [=](char b) {
-        return [=](auto c) { 
+        return [=](auto c) {
           f(x, c);  //expected-error{{reference to local variable 'x'}}
-          return 0; 
+          return 0;
         };
       };
     };
@@ -471,22 +471,22 @@ int run = (yi.foo(3.14), 0); //expected-note{{in instantiation of}}
 namespace more_nested_captures_5 {
 template<class T> struct Y {
   static void f(int, double) { }
-  template<class R> 
+  template<class R>
   static void f(const int&, R) { }
-  template<class R> 
+  template<class R>
   void foo(R t) {
     const int x = 10;
-    auto L = [=](auto a) { 
+    auto L = [=](auto a) {
        return [=](char b) {
-        return [=](auto c) { 
-          f(x, c);   
-          return 0; 
+        return [=](auto c) {
+          f(x, c);
+          return 0;
         };
       };
     };
     auto M = L(t);
     auto N = M('b');
-    N(3); 
+    N(3);
     N(3.14);
   }
 };
@@ -499,11 +499,11 @@ namespace lambdas_in_NSDMIs {
 template<class T>
   struct L {
       T t{};
-      T t2 = ([](auto a) { return [](auto b) { return b; };})(t)(t);    
-      T t3 = ([](auto a) { return a; })(t);    
+      T t2 = ([](auto a) { return [](auto b) { return b; };})(t)(t);
+      T t3 = ([](auto a) { return a; })(t);
   };
-  L<int> l; 
-  int run = l.t2; 
+  L<int> l;
+  int run = l.t2;
 }
 namespace test_nested_decltypes_in_trailing_return_types {
 int foo() {
@@ -538,19 +538,19 @@ struct X {
       L(2); //expected-note{{in instantiation}}
     }
   }
-  
+
   int g() {
-    auto L = [=](auto a) { 
+    auto L = [=](auto a) {
       return [](int i) {
         return [=](auto b) {
-          f(b); 
+          f(b);
           int x = i;
         };
       };
     };
-    auto M = L(0.0); 
+    auto M = L(0.0);
     auto N = M(3);
-    N(5.32); // OK 
+    N(5.32); // OK
     return 0;
   }
 };
@@ -560,7 +560,7 @@ namespace more_this_capture_1_1 {
 struct X {
   void f(int) { }
   static void f(double) { }
-  
+
   int g() {
     auto L = [=](auto a) {
       return [](int i) { // expected-note {{explicitly capture 'this'}} expected-note {{while substituting into a lambda}}
@@ -570,9 +570,9 @@ struct X {
         };
       };
     };
-    auto M = L(0.0);  
+    auto M = L(0.0);
     auto N = M(3);
-    N(5.32); // OK 
+    N(5.32); // OK
     L(3); // expected-note{{instantiation}}
     return 0;
   }
@@ -584,12 +584,12 @@ namespace more_this_capture_1_1_1 {
 struct X {
   void f(int) { }
   static void f(double) { }
-  
+
   int g() {
     auto L = [=](auto a) {
       return [](auto b) { // expected-note {{explicitly capture 'this'}} expected-note {{while substituting into a lambda}}
         return [=](int i) { // expected-note {{while substituting into a lambda}}
-          f(b); 
+          f(b);
           f(decltype(a){}); //expected-error{{this}}
         };
       };
@@ -608,19 +608,19 @@ namespace more_this_capture_1_1_1_1 {
 struct X {
   void f(int) { }
   static void f(double) { }
-  
+
   int g() {
     auto L = [=](auto a) {
       return [](auto b) { // expected-note {{explicitly capture 'this'}}
         return [=](int i) { // expected-note {{while substituting into a lambda}}
           f(b); //expected-error{{this}}
-          f(decltype(a){}); 
+          f(decltype(a){});
         };
       };
     };
     auto M_double = L(0.0);  // OK
     auto N = M_double(3); //expected-note{{instantiation}}
-    
+
     return 0;
   }
 };
@@ -631,7 +631,7 @@ namespace more_this_capture_2 {
 struct X {
   void f(int) { }
   static void f(double) { }
-  
+
   int g() {
     auto L = [=](auto a) {
       return [](int i) {
@@ -641,7 +641,7 @@ struct X {
         };
       };
     };
-    auto M = L(0.0); 
+    auto M = L(0.0);
     auto N = M(3);
     N(5); // NOT OK expected-note{{in instantiation of}}
     return 0;
@@ -660,14 +660,14 @@ int foo()
       const int &r = x;   //expected-error{{variable}}
     };
   }
-  { // This variable is not used 
-    const int x = 0; 
-    auto L = [](auto a) { 
-      int i = x;       
+  { // This variable is not used
+    const int x = 0;
+    auto L = [](auto a) {
+      int i = x;
     };
   }
-  { 
-  
+  {
+
     const int x = 0; //expected-note{{declared}}
     auto L = [=](auto a) { // <-- #A
       const int y = 0;
@@ -681,7 +681,7 @@ int foo()
         const int &r = x; //expected-error{{variable}}
       };
     };
-    
+
   }
   return 0;
 }
@@ -694,7 +694,7 @@ int foo() {
   {
     auto L = [](int a) {
       int y = 10;
-      return [=](auto b) { 
+      return [=](auto b) {
         return a + y;
       };
     };
@@ -705,7 +705,7 @@ int foo() {
     int x;
     auto L = [](int a) {
       int y = 10;
-      return [=](auto b) { 
+      return [=](auto b) {
         return a + y;
       };
     };
@@ -726,11 +726,11 @@ int foo() {
   }
   {
     int x;
-    auto L = [](auto a) { 
-      int y = 10; 
-      return [=](int b) { 
+    auto L = [](auto a) {
+      int y = 10;
+      return [=](int b) {
         return [=] (auto c) {
-          return a + y; 
+          return a + y;
         };
       };
     };
@@ -776,12 +776,12 @@ namespace test_conversion_to_fptr {
 template<class T> struct X {
 
   T (*fp)(T) = [](auto a) { return a; };
-  
+
 };
 
 X<int> xi;
 
-template<class T> 
+template<class T>
 void fooT(T t, T (*fp)(T) = [](auto a) { return a; }) {
   fp(t);
 }
@@ -852,11 +852,11 @@ int test() {
 
 {
  auto L = [=](auto b) {
-    return [](auto a) { 
-      return [=](auto c) { 
-        return [](auto d) ->decltype(a + b + c + d) { return d; }; 
-      }; 
-    }; 
+    return [](auto a) {
+      return [=](auto c) {
+        return [](auto d) ->decltype(a + b + c + d) { return d; };
+      };
+    };
   };
   int (*fp)(int) = L('8')(3)(short{});
   double (*fs)(char) = L(3.14)(short{})('4');
@@ -875,7 +875,7 @@ int run2 = test();
 
 namespace this_capture {
 void f(char, int) { }
-template<class T> 
+template<class T>
 void f(T, const int&) { }
 
 struct X {
@@ -890,7 +890,7 @@ struct X {
     L('a')(5);
     L('b')(4);
     L(3.14)('3');
-    
+
   }
 
 };
@@ -901,7 +901,7 @@ namespace this_capture_unresolvable {
 struct X {
   void f(int) { }
   static void f(double) { }
-  
+
   int g() {
     auto lam = [=](auto a) { f(a); }; // captures 'this'
     lam(0); // ok.
@@ -915,7 +915,7 @@ struct X {
     return 0;
   }
   double (*fd)(double) = [](auto a) { f(a); return a; };
-  
+
 };
 
 int run = X{}.g();
@@ -934,8 +934,8 @@ struct FunctorInt {
 template<class T> struct YUnresolvable {
   void f(int) { }
   static void f(double) { }
-  
-  T t = [](auto a) { f(a); return a; }; 
+
+  T t = [](auto a) { f(a); return a; };
   T t2 = [=](auto b) { f(b); return b; };
 };
 
@@ -957,7 +957,7 @@ YUnresolvable2<FunctorInt> yui;
 
 template<class T> struct YOnlyStatic {
   static void f(double) { }
-  
+
   T t = [](auto a) { f(a); return a; };
 };
 YOnlyStatic<FunctorDouble> yos;
@@ -977,7 +977,7 @@ struct FunctorDouble {
   template<class T> FunctorDouble(T t) { t(2.14); };
 };
 struct FunctorInt {
-  template<class T> FunctorInt(T t) { t(2); }; 
+  template<class T> FunctorInt(T t) { t(2); };
 };
 
 template<class T> struct YThisCapture {
@@ -1009,9 +1009,9 @@ template<class T> double YThisCapture<T>::d = 3.14;
 
 
 #ifdef DELAYED_TEMPLATE_PARSING
-template<class T> void foo_no_error(T t) { 
-  auto L = []()  
-    { return t; }; 
+template<class T> void foo_no_error(T t) {
+  auto L = []()
+    { return t; };
 }
 template<class T> void foo(T t) { //expected-note 2{{declared here}}
   auto L = []()  //expected-note 2{{begins here}}
@@ -1033,9 +1033,9 @@ namespace no_this_capture_for_static {
 
 struct X {
   static void f(double) { }
-  
+
   int g() {
-    auto lam = [=](auto a) { f(a); }; 
+    auto lam = [=](auto a) { f(a); };
     lam(0); // ok.
     ASSERT_NO_CAPTURES(lam);
     return 0;
@@ -1049,7 +1049,7 @@ namespace this_capture_for_non_static {
 
 struct X {
   void f(double) { }
-  
+
   int g() {
     auto L = [=](auto a) { f(a); };
     L(0);
@@ -1067,7 +1067,7 @@ struct X {
   void f(int) { }
   static void f(double, int i) { }
   int g() {
-    auto lam = [](auto a) { f(a, a); }; 
+    auto lam = [](auto a) { f(a, a); };
     lam(0);
     return 0;
   }
@@ -1102,7 +1102,7 @@ struct X {
   template<class T>
   int g(T t) {
     auto L = [](auto a) { f(a); }; //expected-error{{'this'}} expected-note {{explicitly capture 'this'}}
-    L(t); 
+    L(t);
     return 0;
   }
 };
@@ -1116,8 +1116,8 @@ struct X {
   static void f(int) { }
   template<class T>
   int g(T t) {
-    auto L = [](auto a) { f(a); };  
-    L(t); 
+    auto L = [](auto a) { f(a); };
+    L(t);
     return 0;
   }
 };
@@ -1131,18 +1131,18 @@ namespace nested_this_capture_1 {
 struct X {
   void f(int) { }
   static void f(double) { }
-  
+
   int g() {
-    auto L = [=](auto a) { 
+    auto L = [=](auto a) {
       return [this]() {
         return [=](auto b) {
-          f(b); 
+          f(b);
         };
       };
     };
     auto M = L(0);
     auto N = M();
-    N(5);    
+    N(5);
     return 0;
   }
 };
@@ -1156,19 +1156,19 @@ namespace nested_this_capture_2 {
 struct X {
   void f(int) { }
   static void f(double) { }
-  
+
   int g() {
-    auto L = [=](auto a) { 
+    auto L = [=](auto a) {
       return [&]() {
         return [=](auto b) {
-          f(b);  
+          f(b);
         };
       };
     };
     auto M = L(0);
     auto N = M();
-    N(5);   
-    N(3.14);    
+    N(5);
+    N(3.14);
     return 0;
   }
 };
@@ -1183,19 +1183,19 @@ struct X {
   void f(int, T t) { }
   template<class T>
   static void f(double, T t) { }
-  
+
   int g() {
-    auto L = [=](auto a) { 
+    auto L = [=](auto a) {
       return [&](auto c) {
         return [=](auto b) {
-          f(b, c); 
+          f(b, c);
         };
       };
     };
     auto M = L(0);
     auto N = M('a');
-    N(5); 
-    N(3.14);    
+    N(5);
+    N(3.14);
     return 0;
   }
 };
@@ -1209,7 +1209,7 @@ namespace nested_this_capture_3_2 {
 struct X {
   void f(int) { }
   static void f(double) { }
-  
+
   int g() {
     auto L = [=](auto a) {
       return [](int i) {
@@ -1219,10 +1219,10 @@ struct X {
         };
       };
     };
-    auto M = L(0.0); 
+    auto M = L(0.0);
     auto N = M(3);
     N(5); //expected-note {{in instantiation of}}
-    N(3.14); // OK.    
+    N(3.14); // OK.
     return 0;
   }
 };
@@ -1235,7 +1235,7 @@ namespace nested_this_capture_4 {
 struct X {
   void f(int) { }
   static void f(double) { }
-  
+
   int g() {
     auto L = [](auto a) {
       return [=](auto i) {
@@ -1245,10 +1245,10 @@ struct X {
         };
       };
     };
-    auto M = L(0.0); 
+    auto M = L(0.0);
     auto N = M(3);
     N(5); //expected-note {{in instantiation of}}
-    N(3.14); // OK.    
+    N(3.14); // OK.
     return 0;
   }
 };
@@ -1276,7 +1276,7 @@ int foo2() {
 inline auto foo3(int x) {
   int local = 1;
   auto L = [=](auto a) {
-        int i = a[local];    
+        int i = a[local];
         return  [=](auto b) mutable {
           auto n = b;
           return [&, n](auto c) mutable {
@@ -1288,7 +1288,7 @@ inline auto foo3(int x) {
   auto M = L("foo-abc");
   auto N = M("foo-def");
   auto O = N("foo-ghi");
-  
+
   return L;
 }
 
@@ -1308,12 +1308,12 @@ namespace capture_arrays {
 
 inline int sum_array(int n) {
   int array2[5] = { 1, 2, 3, 4, 5};
-  
-  auto L = [=](auto N) -> int {  
+
+  auto L = [=](auto N) -> int {
     int sum = 0;
     int array[5] = { 1, 2, 3, 4, 5 };
     sum += array2[sum];
-    sum += array2[N];    
+    sum += array2[N];
     return 0;
   };
   L(2);
@@ -1342,7 +1342,7 @@ template<class R> struct X {
     L(&t);
     return 0;
   }
-  
+
   template<> int foo<char>(char c) { //expected-warning{{explicit specialization}}
     const int x = 10;
     auto LC = [](auto a) { return a; };
@@ -1355,12 +1355,12 @@ template<class R> struct X {
       };
     };
     auto M = L(1);
-    
+
     ASSERT_NO_CAPTURES(M);
     return 0;
   }
-  
-}; 
+
+};
 
 int run_char = X<int>{}.foo('a');
 int run_int = X<double>{}.foo(4);
@@ -1397,14 +1397,14 @@ struct A {
   static void bar(double) { }
 };
 
-struct B 
+struct B
 {
   template<class T>
   auto f() {
-    auto L =  [=] { 
-      T{}.bar(3.0); 
+    auto L =  [=] {
+      T{}.bar(3.0);
       T::bar(3);
-    
+
     };
     ASSERT_NO_CAPTURES(L);
     return L;
@@ -1422,14 +1422,14 @@ struct A {
   static void bar(double) { }
 };
 
-struct B 
+struct B
 {
   using T = A;
   auto f() {
-    auto L =  [=](auto a) {  
-      T{}.bar(a); 
+    auto L =  [=](auto a) {
+      T{}.bar(a);
       T::bar(a);
-    
+
     };
     ASSERT_NO_CAPTURES(L);
     return L;
@@ -1448,14 +1448,14 @@ struct A {
   static void bar(double) { }
 };
 
-struct B 
+struct B
 {
   using T = A;
   auto f() {
-    auto L =  [=](auto a) { 
-      T{}.bar(a); 
+    auto L =  [=](auto a) {
+      T{}.bar(a);
       T::bar(a); // This call ignores the instance member function because the implicit object argument fails to convert.
-    
+
     };
     ASSERT_NO_CAPTURES(L);
     return L;
@@ -1464,7 +1464,7 @@ struct B
 
 void test() {
   B{}.f()(3.0);
-  B{}.f()(3); 
+  B{}.f()(3);
 }
 
 } // end ns3
@@ -1480,10 +1480,10 @@ struct B : A
 {
   using T = A;
   auto f() {
-    auto L =  [=](auto a) { 
-      T{}.bar(a); 
-      T::bar(a); 
-    
+    auto L =  [=](auto a) {
+      T{}.bar(a);
+      T::bar(a);
+
     };
     // just check to see if the size if >= 2 bytes (which should be the case if we capture anything)
     ASSERT_CLOSURE_SIZE(L, 2);
@@ -1493,7 +1493,7 @@ struct B : A
 
 void test() {
   B{}.f()(3.0);
-  B{}.f()(3); 
+  B{}.f()(3);
 }
 
 } // end ns4
@@ -1504,16 +1504,16 @@ struct A {
   static void bar(double) { }
 };
 
-struct B 
+struct B
 {
   template<class T>
   auto f() {
-    auto L =  [&](auto a) { 
-      T{}.bar(a); 
-      T::bar(a); 
-    
+    auto L =  [&](auto a) {
+      T{}.bar(a);
+      T::bar(a);
+
     };
-    
+
     ASSERT_NO_CAPTURES(L);
     return L;
   };
@@ -1521,7 +1521,7 @@ struct B
 
 void test() {
   B{}.f<A>()(3.0);
-  B{}.f<A>()(3); 
+  B{}.f<A>()(3);
 }
 
 } // end ns5

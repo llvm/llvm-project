@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++1y -DCXX1Y 
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++1y -DCXX1Y
 
 namespace test_factorial {
 
@@ -64,11 +64,11 @@ namespace test_deduction_failure {
  }
 
 }
-  
+
 namespace test_instantiation_or_sfinae_failure {
 int test2() {
   {
-    auto L = [](auto *a) { 
+    auto L = [](auto *a) {
                 return (*a)(a); }; //expected-error{{called object type 'double' is not a function}}
     double d;
     L(&d); //expected-note{{in instantiation of}}
@@ -77,21 +77,21 @@ int test2() {
   }
   {
     auto L = [](auto *a) ->decltype (a->foo()) { //expected-note2{{candidate template ignored:}}
-                return (*a)(a); }; 
+                return (*a)(a); };
     double d;
-    L(&d); //expected-error{{no matching function for call}} 
+    L(&d); //expected-error{{no matching function for call}}
     auto M = [](auto b) { return b; };
-    L(&M); //expected-error{{no matching function for call}} 
- 
+    L(&M); //expected-error{{no matching function for call}}
+
   }
   return 0;
 }
 
 
 }
-  
+
 namespace test_misc {
-auto GL = [](auto a, decltype(a) b) //expected-note{{candidate function}} 
+auto GL = [](auto a, decltype(a) b) //expected-note{{candidate function}}
                 -> int { return a + b; };
 
 void test() {
@@ -100,7 +100,7 @@ void test() {
 }
 
 void test2() {
-  auto l = [](auto *a) -> int { 
+  auto l = [](auto *a) -> int {
               (*a)(a); return 0; }; //expected-error{{called object type 'double' is not a function}}
   l(&l);
   double d;
@@ -112,17 +112,17 @@ void test2() {
 namespace nested_lambdas {
   int test() {
     auto L = [](auto a) {
-                 return [=](auto b) {  
+                 return [=](auto b) {
                            return a + b;
                         };
               };
   }
   auto get_lambda() {
     return [](auto a) {
-      return a; 
+      return a;
     };
   };
-  
+
   int test2() {
     auto L = get_lambda();
     L(3);

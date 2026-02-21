@@ -5,7 +5,7 @@
 
 template <class scriptmemberptr> int InitMember(scriptmemberptr);
 
-template <class> 
+template <class>
 struct contentmap
 {
   static void InitDataMap()

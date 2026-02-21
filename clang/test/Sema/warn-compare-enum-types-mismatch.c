@@ -44,8 +44,8 @@ void foo(void) {
   a < b;
   // expected-warning@-1 {{comparison of different enumeration types}}
 
-  // In the following cases we purposefully differ from GCC and dont warn 
-  a == C; 
+  // In the following cases we purposefully differ from GCC and dont warn
+  a == C;
   A < C;
-  b >= C; 
+  b >= C;
 }

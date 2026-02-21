@@ -323,7 +323,7 @@ void test17(void) {
   unsigned int x;
   x = U.a;
   x = U.b;
-  x = U.c; // expected-warning {{implicit conversion loses integer precision}} 
+  x = U.c; // expected-warning {{implicit conversion loses integer precision}}
 }
 
 // PR 5939
@@ -363,11 +363,11 @@ void test_7676608(void) {
 
 void test_7904686(void) {
   const int i = -1;
-  unsigned u1 = i; // expected-warning {{implicit conversion changes signedness}}  
-  u1 = i; // expected-warning {{implicit conversion changes signedness}}  
+  unsigned u1 = i; // expected-warning {{implicit conversion changes signedness}}
+  u1 = i; // expected-warning {{implicit conversion changes signedness}}
 
-  unsigned u2 = -1; // expected-warning {{implicit conversion changes signedness}}  
-  u2 = -1; // expected-warning {{implicit conversion changes signedness}}  
+  unsigned u2 = -1; // expected-warning {{implicit conversion changes signedness}}
+  u2 = -1; // expected-warning {{implicit conversion changes signedness}}
 }
 
 // don't warn about conversions required by contexts in system headers
@@ -396,11 +396,11 @@ void test_8559831(enum E8559831b value_a, E8559831c value_c) {
   test_8559831_a(E8559831b_val); // expected-warning{{implicit conversion from enumeration type 'enum E8559831b' to different enumeration type 'enum E8559831a'}}
   enum E8559831a a1a = E8559831b_val; // expected-warning{{implicit conversion from enumeration type 'enum E8559831b' to different enumeration type 'enum E8559831a'}}
   a1 = E8559831b_val; // expected-warning{{implicit conversion from enumeration type 'enum E8559831b' to different enumeration type 'enum E8559831a'}}
-  
+
   test_8559831_a(value_c); // expected-warning{{implicit conversion from enumeration type 'E8559831c' to different enumeration type 'enum E8559831a'}}
   enum E8559831a a2 = value_c; // expected-warning{{implicit conversion from enumeration type 'E8559831c' to different enumeration type 'enum E8559831a'}}
   a2 = value_c; // expected-warning{{implicit conversion from enumeration type 'E8559831c' to different enumeration type 'enum E8559831a'}}
-  
+
    test_8559831_a(value_d);
    enum E8559831a a3 = value_d;
    a3 = value_d;

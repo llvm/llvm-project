@@ -82,7 +82,7 @@ TEST(MemoryMapping, LoadedModuleArchAndUUID) {
 #  if (SANITIZER_LINUX || SANITIZER_NETBSD || SANITIZER_SOLARIS) && \
       defined(_LP64)
 const char *const parse_unix_input = R"(
-7fb9862f1000-7fb9862f3000 rw-p 00000000 00:00 0 
+7fb9862f1000-7fb9862f3000 rw-p 00000000 00:00 0
 Size:                  8 kB
 Rss:                   4 kB
 7fb9864ae000-7fb9864b1000 r--p 001ba000 fd:01 22413919                   /lib/x86_64-linux-gnu/libc-2.32.so

@@ -58,7 +58,7 @@ struct Foo {
   // CHECK: CXXFoldExpr {{.*}} <col:13, col:34>
   template <variadic_concept<int>... Ts>
   Foo();
-  
+
   // CHECK:InjectedClassNameType
   // CHECK-NEXT: CXXRecord {{.*}} 'Foo'
 };

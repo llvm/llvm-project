@@ -87,11 +87,11 @@ TEST(DeltaAlgorithmTest, Basic) {
   //
   // 11 = |{ {},
   //         {0}, {1}, {2}, {3},
-  //         {1, 2, 3}, {0, 2, 3}, {0, 1, 3}, {0, 1, 2}, 
+  //         {1, 2, 3}, {0, 2, 3}, {0, 1, 3}, {0, 1, 2},
   //         {0, 1}, {2, 3} }|
   FDA = FixedDeltaAlgorithm(range(10));
   EXPECT_EQ(range(4), FDA.Run(range(4)));
-  EXPECT_EQ(11U, FDA.getNumTests());  
+  EXPECT_EQ(11U, FDA.getNumTests());
 }
 
 }

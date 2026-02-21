@@ -3,7 +3,7 @@
 class Foo {
 public:
   const int* x;
-  int y;        
+  int y;
 };
 
 class Bar {

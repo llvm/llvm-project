@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple mipsel-unknown-linux -O3 -o - -emit-llvm %s | FileCheck %s -check-prefix=O32
 // RUN: %clang_cc1 -triple mips64el-unknown-linux -O3 -target-abi n64 -o - -emit-llvm %s | FileCheck %s -check-prefix=N64
 
-// vectors larger than 16-bytes are returned via the hidden pointer argument. 
+// vectors larger than 16-bytes are returned via the hidden pointer argument.
 // N64/N32 returns vectors whose size is equal to or smaller than 16-bytes in
-// integer registers. 
+// integer registers.
 typedef float  v4sf __attribute__ ((__vector_size__ (16)));
 typedef double v4df __attribute__ ((__vector_size__ (32)));
 typedef int v4i32 __attribute__ ((__vector_size__ (16)));

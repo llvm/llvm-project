@@ -25,9 +25,9 @@ typedef __WCHAR_TYPE__ wchar_t;
 #else /* Solaris, Linux, non-arm64 macOS, ... */
   #define WCHAR_T_TYPE int
 #endif
- 
+
 int check_wchar_size[sizeof(*L"") == sizeof(wchar_t) ? 1 : -1];
- 
+
 void foo(void) {
   WCHAR_T_TYPE t1[] = L"x";
   wchar_t tab[] = L"x";

@@ -14,11 +14,11 @@ The following convention is followed:
     or any of the C++ headers in which the type is defined.
 *   If `_Float16` is used, the code requires the support of C additional
     floating types.
-*   If `__bf16` is used, the code requires a compiler that supports it, such as 
+*   If `__bf16` is used, the code requires a compiler that supports it, such as
     GCC or Clang.
 *   If `emitc.array` with a dimension of size zero is used, then the code
     requires [a GCC extension](https://gcc.gnu.org/onlinedocs/gcc/Zero-Length.html).
-*   If `aligned_alloc` is passed to an `emitc.call_opaque` operation, then C++17 
+*   If `aligned_alloc` is passed to an `emitc.call_opaque` operation, then C++17
     or C11 is required.
 *   Else the generated code is compatible with C99.
 
@@ -27,7 +27,7 @@ Cpp emitter and therefore need to be considered while implementing conversions.
 
 Type conversions are provided for the MLIR type `index` into the unsigned `size_t`
 type and its signed counterpart `ptrdiff_t`. Conversions between these two types
-are only valid if the `index`-typed values are within 
+are only valid if the `index`-typed values are within
 `[PTRDIFF_MIN, PTRDIFF_MAX]`.
 
 After the conversion, C/C++ code can be emitted with `mlir-translate`. The tool

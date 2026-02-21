@@ -36,7 +36,7 @@ void clobbers(void) {
   asm ("nop" : "=c" (a) : "r" (no_clobber_conflict) : "%rcx"); // expected-error {{asm-specifier for input or output variable conflicts with asm clobber list}}
   asm ("nop" : "=r" (no_clobber_conflict) : "c" (c) : "%rcx"); // expected-error {{asm-specifier for input or output variable conflicts with asm clobber list}}
   asm ("nop" : "=r" (clobber_conflict) : "c" (c) : "%rcx"); // expected-error {{asm-specifier for input or output variable conflicts with asm clobber list}}
-  asm ("nop" : "=a" (a) : "b" (b) : "%rcx", "%rbx"); // expected-error {{asm-specifier for input or output variable conflicts with asm clobber list}} 
+  asm ("nop" : "=a" (a) : "b" (b) : "%rcx", "%rbx"); // expected-error {{asm-specifier for input or output variable conflicts with asm clobber list}}
 }
 
 void test3(void) {

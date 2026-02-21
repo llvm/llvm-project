@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -E %s -I%S/Inputs | FileCheck -strict-whitespace %s
-// RUN: %clang_cc1 -fms-compatibility -DMS -E %s -I%S/Inputs | FileCheck -check-prefix=CHECK-MS -strict-whitespace %s 
+// RUN: %clang_cc1 -fms-compatibility -DMS -E %s -I%S/Inputs | FileCheck -check-prefix=CHECK-MS -strict-whitespace %s
 // RUN: %clang_cc1 -E %s -I%S/Inputs -DBADINC -verify
 
 #ifdef BADINC

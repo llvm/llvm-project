@@ -56,7 +56,7 @@ BOOST_MATH_GPU_ENABLED T cbrt_imp(T z, const Policy& pol)
    // Expected Error Term:                         -1.231e-006
    // Maximum Relative Change in Control Points:   5.982e-004
    //
-   BOOST_MATH_STATIC const T P[] = { 
+   BOOST_MATH_STATIC const T P[] = {
       static_cast<T>(0.37568269008611818),
       static_cast<T>(1.3304968705558024),
       static_cast<T>(-1.4897101632445036),

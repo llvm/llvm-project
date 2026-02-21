@@ -74,7 +74,7 @@ class S8 : public S7<S> {
 public:
   S8(int v) : S7<S>(v){
 #pragma omp target
-#pragma omp teams distribute private(a) private(this->a) private(S7<S>::a) 
+#pragma omp teams distribute private(a) private(this->a) private(S7<S>::a)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
   }
@@ -135,7 +135,7 @@ T tmain(T argc) {
 // CHECK: #pragma omp target
 // CHECK-NEXT: #pragma omp teams distribute
 // CHECK-NEXT: for (int i = 0; i < 10; ++i)
-// CHECK-NEXT: foo();  
+// CHECK-NEXT: foo();
 #pragma omp target
 #pragma omp teams distribute default(none), private(b) firstprivate(argc) shared(d) reduction(+:c) reduction(max:e) num_teams(f) thread_limit(d)
     for (int k = 0; k < 10; ++k)

@@ -247,7 +247,7 @@
         return result * exp(T(k));
      }
      //
-     // I'm unable to find any situation where this series isn't divergent and therefore 
+     // I'm unable to find any situation where this series isn't divergent and therefore
      // is probably quite useless:
      //
      template <class T, class Policy>

@@ -332,7 +332,7 @@ class daubechies_scaling {
     // List our interpolators:
     //
     using interpolator_list = std::tuple<
-        detail::null_interpolator, detail::matched_holder_aos<vector_type>, detail::linear_interpolation_aos<vector_type>, 
+        detail::null_interpolator, detail::matched_holder_aos<vector_type>, detail::linear_interpolation_aos<vector_type>,
         interpolators::detail::cardinal_cubic_hermite_detail_aos<vector_type>, interpolators::detail::cardinal_quintic_hermite_detail_aos<vector_type>,
         interpolators::detail::cardinal_septic_hermite_detail_aos<vector_type> >;
     //

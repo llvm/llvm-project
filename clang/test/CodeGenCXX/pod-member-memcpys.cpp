@@ -126,7 +126,7 @@ struct WithEmptyNUAField {
 
 // Assignment operators are output in the order they're encountered.
 
-#define CALL_AO(T) void callAO##T(T& a, const T& b) { a = b; } 
+#define CALL_AO(T) void callAO##T(T& a, const T& b) { a = b; }
 
 CALL_AO(Basic)
 CALL_AO(PODMember)

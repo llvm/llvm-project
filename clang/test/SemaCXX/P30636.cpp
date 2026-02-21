@@ -15,6 +15,6 @@ int fallthrough_template(int i)
       return 5;
   }
 }
-                                      
+
 template int fallthrough_template<true>(int);
 

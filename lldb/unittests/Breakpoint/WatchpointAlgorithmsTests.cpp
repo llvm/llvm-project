@@ -47,7 +47,7 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
 #if defined(__LP64__)
     // These two tests don't work if lldb is built on
     // a 32-bit system (likely with a 32-bit size_t).
-    // A 32-bit lldb debugging a 64-bit process isn't 
+    // A 32-bit lldb debugging a 64-bit process isn't
     // critical right now.
     {
       {0x7fffffffe83b, 1},
@@ -152,12 +152,12 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
 
     // In this case, our aligned size is 128, and increasing it to 256
     // still can't watch the requested region.  The algorithm
-    // falls back to using two 128 byte watchpoints.  
-    // The alternative would be to use a 1024B watchpoint 
+    // falls back to using two 128 byte watchpoints.
+    // The alternative would be to use a 1024B watchpoint
     // starting at 0x1000, to watch this 120 byte user request.
     //
     // This still isn't ideal.  The user is asking to watch 0x12e0-1358
-    // and could be optimally handled by a 
+    // and could be optimally handled by a
     // 16-byte watchpoint at 0x12e0 and a 128-byte watchpoint at 0x1300
     {
       {0x12e0, 120},

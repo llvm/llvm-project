@@ -34,7 +34,7 @@ struct Obj {
   int a; Obj(); Obj(const Obj& r) = delete; Obj &operator=(const Obj& r);
   ~Obj();
 };
- 
+
 void foo() {
   int i,count = 0;
   Obj obj;

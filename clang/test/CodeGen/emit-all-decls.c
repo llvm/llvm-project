@@ -4,5 +4,5 @@
 // RUN: grep "@foo" %t
 
 static void foo(void) {
-  
+
 }

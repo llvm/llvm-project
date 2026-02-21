@@ -41,7 +41,7 @@ namespace S1 {
   }
 
   namespace S2 {
-    
+
     namespace S3 {
       void f() {
         x = 0; // expected-error {{no viable overloaded '='}}

@@ -43,7 +43,7 @@ void test_new() {
 }
 
 void test_memptr(X<long> *p1, long X<long>::*pm1,
-                 X<long(long)> *p2, 
+                 X<long(long)> *p2,
 #ifdef MSABI
                  long (X<long(long)>::*pm2)(long)) { // expected-note{{in instantiation of template class 'X<long (long)>' requested here}}
 #else
@@ -83,7 +83,7 @@ namespace PR6376 {
       typedef W<T, U> type;
     };
   };
-  
+
   template<typename T, typename U>
   struct Y : public X<T>::template apply<U>::type { };
 
@@ -94,7 +94,7 @@ namespace TemporaryObjectCopy {
   // Make sure we instantiate classes when we create a temporary copy.
   template<typename T>
   struct X {
-    X(T); 
+    X(T);
   };
 
   template<typename T>

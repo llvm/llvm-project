@@ -10,7 +10,7 @@
 int main(int argc, char *argv[]) {
   int fd = getpt();
   assert(fd >= 0);
-  
+
   struct termios t;
   int res = tcgetattr(fd, &t);
   assert(!res);

@@ -47,7 +47,7 @@ namespace overloadCheck{
     int g(this S&&,AlwaysTrue auto) {return 1;}
 
     int h(AlwaysTrue auto) { return 1; } //expected-note {{previous definition is here}}
-    int h(this S&&,AlwaysTrue auto) { // expected-error {{class member cannot be redeclared}} 
+    int h(this S&&,AlwaysTrue auto) { // expected-error {{class member cannot be redeclared}}
       return 1;
     }
   };

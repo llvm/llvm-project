@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-uninitialized -fsyntax-only -verify -std=c++11 -Wno-error=static-float-init %s 
+// RUN: %clang_cc1 -Wno-uninitialized -fsyntax-only -verify -std=c++11 -Wno-error=static-float-init %s
 
 int vs = 0; // expected-note {{declared here}}
 

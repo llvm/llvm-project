@@ -6,11 +6,11 @@ void f0(int *ip = &global_f); // expected-error{{cannot initialize}} \
 // expected-note{{passing argument to parameter 'ip' here}}
 
 // Example from C++03 standard
-int a = 1; 
-int f(int); 
+int a = 1;
+int f(int);
 int g(int x = f(a));
 
-void h() { 
+void h() {
   a = 2;
   {
     int *a = 0;

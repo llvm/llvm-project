@@ -9,7 +9,7 @@ template <typename T> struct B {
     int a;
     void* b;
   };
-    
+
   void f() {
     a = 10;
     b = 0;
@@ -32,14 +32,14 @@ C<int> c0(0);
 
 namespace PR7088 {
   template<typename T>
-  void f() { 
-    union { 
-      int a; 
+  void f() {
+    union {
+      int a;
       union {
         float real;
         T d;
       };
-    }; 
+    };
 
     a = 17;
     d = 3.14;

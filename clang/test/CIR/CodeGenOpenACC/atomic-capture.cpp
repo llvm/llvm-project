@@ -81,7 +81,7 @@ void use(int x, int v, float f, HasOps ops) {
   // CHECK-NEXT: ^bb0(%[[X_VAR:.*]]: !s32i{{.*}}):
   // CHECK-NEXT: %[[X_VAR_ALLOC:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x_var", init]
   // CHECK-NEXT: cir.store %[[X_VAR]], %[[X_VAR_ALLOC]] : !s32i, !cir.ptr<!s32i>
-  // 
+  //
   // CHECK-NEXT: %[[X_VAR_LOAD:.*]] = cir.load{{.*}} %[[X_VAR_ALLOC]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[DEC:.*]] = cir.unary(dec, %[[X_VAR_LOAD]]) nsw : !s32i, !s32i
   // CHECK-NEXT: cir.store{{.*}} %[[DEC]], %[[X_VAR_ALLOC]] : !s32i, !cir.ptr<!s32i>

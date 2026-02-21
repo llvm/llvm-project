@@ -22,6 +22,6 @@ typedef float NonIgnored;
 //--- ignores-list
 Ignored
 IGNORED_4
-IGNORED_3   
+IGNORED_3
 IGNORED_2
 IGNORED_1

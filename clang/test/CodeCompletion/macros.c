@@ -11,7 +11,7 @@ void test(struct Point *p) {
   // RUN: %clang_cc1 -include %S/Inputs/macros.h -fsyntax-only -code-completion-macros -code-completion-at=%s:%(line+1):14 %s -o - | FileCheck -check-prefix=CC1 %s
   switch (p->IDENTITY(color)) {
   // RUN: %clang_cc1 -include %S/Inputs/macros.h -fsyntax-only -code-completion-macros -code-completion-at=%s:%(line+1):10 %s -o - | FileCheck -check-prefix=CC2 %s
-    case 
+    case
   }
   // RUN: %clang_cc1 -include %S/Inputs/macros.h -fsyntax-only -code-completion-macros -code-completion-at=%s:%(line+1):8 %s -o - | FileCheck -check-prefix=CC3 %s
 #ifdef Q

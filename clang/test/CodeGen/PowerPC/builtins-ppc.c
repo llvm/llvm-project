@@ -20,7 +20,7 @@ long long test_builtin_ppc_get_timebase() {
 void test_builtin_ppc_setrnd() {
   volatile double res;
   volatile int x = 100;
-  
+
   // CHECK: call double @llvm.ppc.setrnd(i32 2)
   res = __builtin_setrnd(2);
 

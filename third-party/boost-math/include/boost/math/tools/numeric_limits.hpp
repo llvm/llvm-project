@@ -3,7 +3,7 @@
 //  Boost Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
-//  Regular use of std::numeric_limits functions can not be used on 
+//  Regular use of std::numeric_limits functions can not be used on
 //  GPU platforms like CUDA since they are missing the __device__ marker
 //  and libcu++ does not provide something analogous.
 //  Rather than using giant if else blocks make our own version of numeric limits
@@ -30,7 +30,7 @@ namespace boost {
 namespace math {
 
 template <typename T>
-struct numeric_limits 
+struct numeric_limits
 #ifndef BOOST_MATH_HAS_NVRTC
 : public std::numeric_limits<T> {};
 #else
@@ -73,8 +73,8 @@ struct numeric_limits<float>
     BOOST_MATH_GPU_ENABLED BOOST_MATH_STATIC constexpr float round_error   () { return 0.5F; }
     BOOST_MATH_GPU_ENABLED BOOST_MATH_STATIC constexpr float infinity      () { return static_cast<float>(INFINITY); }
     BOOST_MATH_GPU_ENABLED BOOST_MATH_STATIC constexpr float quiet_NaN     () { return static_cast<float>(NAN); }
-    BOOST_MATH_GPU_ENABLED BOOST_MATH_STATIC constexpr float signaling_NaN () 
-    { 
+    BOOST_MATH_GPU_ENABLED BOOST_MATH_STATIC constexpr float signaling_NaN ()
+    {
         #ifdef FLT_SNAN
         return FLT_SNAN;
         #else
@@ -118,8 +118,8 @@ struct numeric_limits<double>
     BOOST_MATH_GPU_ENABLED BOOST_MATH_STATIC constexpr double round_error   () { return 0.5; }
     BOOST_MATH_GPU_ENABLED BOOST_MATH_STATIC constexpr double infinity      () { return static_cast<double>(INFINITY); }
     BOOST_MATH_GPU_ENABLED BOOST_MATH_STATIC constexpr double quiet_NaN     () { return static_cast<double>(NAN); }
-    BOOST_MATH_GPU_ENABLED BOOST_MATH_STATIC constexpr double signaling_NaN () 
-    { 
+    BOOST_MATH_GPU_ENABLED BOOST_MATH_STATIC constexpr double signaling_NaN ()
+    {
         #ifdef DBL_SNAN
         return DBL_SNAN;
         #else

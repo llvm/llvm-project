@@ -94,7 +94,7 @@ TEST(raw_ostreamTest, Types_Buffered) {
   EXPECT_EQ("X", printToString(X{}));
 }
 
-TEST(raw_ostreamTest, Types_Unbuffered) {  
+TEST(raw_ostreamTest, Types_Unbuffered) {
   // Char
   EXPECT_EQ("c", printToStringUnbuffered('c'));
 
@@ -128,7 +128,7 @@ TEST(raw_ostreamTest, Types_Unbuffered) {
   EXPECT_EQ("X", printToString(X{}));
 }
 
-TEST(raw_ostreamTest, BufferEdge) {  
+TEST(raw_ostreamTest, BufferEdge) {
   EXPECT_EQ("1.20", printToString(format("%.2f", 1.2), 1));
   EXPECT_EQ("1.20", printToString(format("%.2f", 1.2), 2));
   EXPECT_EQ("1.20", printToString(format("%.2f", 1.2), 3));
@@ -163,7 +163,7 @@ TEST(raw_ostreamTest, WriteEscaped) {
   EXPECT_EQ("\\001\\010\\200", Str);
 }
 
-TEST(raw_ostreamTest, Justify) {  
+TEST(raw_ostreamTest, Justify) {
   EXPECT_EQ("xyz   ", printToString(left_justify("xyz", 6), 6));
   EXPECT_EQ("abc",    printToString(left_justify("abc", 3), 3));
   EXPECT_EQ("big",    printToString(left_justify("big", 1), 3));
@@ -220,7 +220,7 @@ TEST(raw_ostreamTest, Indent) {
   EXPECT_EQ(Spaces(10), printToString(Temp));
 }
 
-TEST(raw_ostreamTest, FormatHex) {  
+TEST(raw_ostreamTest, FormatHex) {
   EXPECT_EQ("0x1234",     printToString(format_hex(0x1234, 6), 6));
   EXPECT_EQ("0x001234",   printToString(format_hex(0x1234, 8), 8));
   EXPECT_EQ("0x00001234", printToString(format_hex(0x1234, 10), 10));
@@ -232,20 +232,20 @@ TEST(raw_ostreamTest, FormatHex) {
   EXPECT_EQ("0x123",      printToString(format_hex(0x123, 3), 5));
   EXPECT_EQ("FF",         printToString(format_hex_no_prefix(0xFF, 2, true), 4));
   EXPECT_EQ("ABCD",       printToString(format_hex_no_prefix(0xABCD, 2, true), 4));
-  EXPECT_EQ("0xffffffffffffffff",     
+  EXPECT_EQ("0xffffffffffffffff",
                           printToString(format_hex(UINT64_MAX, 18), 18));
-  EXPECT_EQ("0x8000000000000000",     
+  EXPECT_EQ("0x8000000000000000",
                           printToString(format_hex((INT64_MIN), 18), 18));
 }
 
-TEST(raw_ostreamTest, FormatDecimal) {  
+TEST(raw_ostreamTest, FormatDecimal) {
   EXPECT_EQ("   0",        printToString(format_decimal(0, 4), 4));
   EXPECT_EQ("  -1",        printToString(format_decimal(-1, 4), 4));
   EXPECT_EQ("    -1",      printToString(format_decimal(-1, 6), 6));
   EXPECT_EQ("1234567890",  printToString(format_decimal(1234567890, 10), 10));
-  EXPECT_EQ("  9223372036854775807", 
+  EXPECT_EQ("  9223372036854775807",
                           printToString(format_decimal(INT64_MAX, 21), 21));
-  EXPECT_EQ(" -9223372036854775808", 
+  EXPECT_EQ(" -9223372036854775808",
                           printToString(format_decimal(INT64_MIN, 21), 21));
 }
 

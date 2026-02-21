@@ -59,7 +59,7 @@ void h(void) {
   func_accepting_checked(unchecked);
 
   // CHECK:      [[B:%.*]] = load ptr, ptr @checked
-  // CHECK-NEXT: call void @_Z22func_accepting_checkedPFvvE(ptr noundef [[B]]) 
+  // CHECK-NEXT: call void @_Z22func_accepting_checkedPFvvE(ptr noundef [[B]])
   func_accepting_checked(checked);
 
   // CHECK: store { i64, i64 } { i64 ptrtoint (ptr no_cfi @_ZN1A16unchecked_methodEv to i64), i64 0 }, ptr %A1

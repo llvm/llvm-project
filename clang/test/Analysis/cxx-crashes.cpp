@@ -49,7 +49,7 @@ void *f(S* w) {
 
 namespace {
 
-struct C { 
+struct C {
   void *p;
   static void f();
 };
@@ -63,7 +63,7 @@ void vla(int n) {
   int nums[n];
   nums[0] = 1;
   clang_analyzer_eval(nums[0] == 1); // expected-warning{{TRUE}}
-  
+
   // This used to fail with MallocChecker on, and /only/ in C++ mode.
   // This struct is POD, though, so it should be fine to put it in a VLA.
   struct { int x; } structs[n];

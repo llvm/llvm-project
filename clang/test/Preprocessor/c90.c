@@ -1,4 +1,4 @@
-/* RUN: %clang_cc1 %s -std=c89 -Eonly -verify -pedantic-errors 
+/* RUN: %clang_cc1 %s -std=c89 -Eonly -verify -pedantic-errors
  * RUN: %clang_cc1 %s -std=c89 -E | FileCheck %s
  */
 

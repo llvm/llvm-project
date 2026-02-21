@@ -105,7 +105,7 @@ void test11(int i) {
   case 41: ;
     ^{ break; }();     // expected-error {{'break' statement not in loop or switch statement}}
   }
-  
+
   for (; i < 100; ++i)
     ^{ break; }();     // expected-error {{'break' statement not in loop or switch statement}}
 }
@@ -187,7 +187,7 @@ void test18(void) {
 
 int test19(void) {
   goto L0;       // expected-error {{cannot jump}}
-  
+
   __block int x; // expected-note {{jump bypasses setup of __block variable}}
 L0:
   x = 0;

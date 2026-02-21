@@ -81,7 +81,7 @@ void test2() {
   // OGCG: store i32 16
   gi = __builtin_object_size((A*)&c->bs[0], 1);
 
-  // NYI: DerivedToBase cast 
+  // NYI: DerivedToBase cast
   // gi = __builtin_object_size((A*)&c->bs[0], 2);
 
   // CIR: cir.const #cir.int<16>

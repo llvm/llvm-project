@@ -18,7 +18,7 @@ static_assert(!__is_standard_layout(B));
 // CHECK:          0 | struct C
 // CHECK-NEXT:     0 |   struct B (base)
 // CHECK-NEXT:     0 |     struct A (base) (empty)
-// CHECK-NEXT:   0:- |       int 
+// CHECK-NEXT:   0:- |       int
 // CHECK-NEXT:     0 |     int n
 // CHECK-NEXT:     4 |     char[3] c
 // CHECK-NEXT:     8 |   char d

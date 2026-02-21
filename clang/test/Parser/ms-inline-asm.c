@@ -75,5 +75,5 @@ void t15(S s) {
 }
 
 int t_fail(void) { // expected-note {{to match this}}
-  __asm 
+  __asm
   __asm { // expected-error 3 {{expected}} expected-note {{to match this}}

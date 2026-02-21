@@ -62,7 +62,7 @@ template<int ...Values> int_tuple<Values...> f6() {}
 template int_tuple<1, 2, 3> f6();
 
 // Mangling of template template argument expansions
-template<template<typename> class ...Templates> 
+template<template<typename> class ...Templates>
 template_tuple<Templates...> f7() {}
 // CHECK-LABEL: define weak_odr void @_Z2f7IJ8identity13add_referenceEE14template_tupleIJDpT_EEv
 template template_tuple<identity, add_reference> f7();

@@ -55,7 +55,7 @@ elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx" OR
   list(APPEND compile_options --cuda-feature=+ptx63)
 elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv" OR
        "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv")
-  set(target_name "spirv") 
+  set(target_name "spirv")
 endif()
 
 # Trick to combine these into a bitcode file via the linker's LTO pass.

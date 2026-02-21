@@ -243,7 +243,7 @@ TEST_F(PCHPreambleTest, ParseWithBom) {
 
   ASSERT_TRUE(ReparseAST(AST));
   ASSERT_FALSE(AST->getDiagnostics().hasErrorOccurred());
-  
+
   // Check preamble PCH was really reused
   ASSERT_EQ(HeaderReadCount, GetFileReadCount(Header));
 

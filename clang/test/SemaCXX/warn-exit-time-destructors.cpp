@@ -15,7 +15,7 @@ namespace test1 {
 namespace test2 {
 void f() {
   struct A { ~A() { } };
-  
+
   static A a; // expected-warning {{declaration requires an exit-time destructor}}
   static A b[10]; // expected-warning {{declaration requires an exit-time destructor}}
   static A c[10][10]; // expected-warning {{declaration requires an exit-time destructor}}

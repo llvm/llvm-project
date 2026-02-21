@@ -35,7 +35,7 @@ TEST_CONSTEXPR(match_m256i(_mm256_clmulepi64_epi128(((__m256i){(long long)0x8000
 
 // Test with all bits set (0xFFFFFFFFFFFFFFFF) - maximum value
 // imm8=0x01: upper(A) * lower(B) for each 128-bit lane
-// For lane 0: upper(0xFFFFFFFFFFFFFFFF) * lower(0x2) 
+// For lane 0: upper(0xFFFFFFFFFFFFFFFF) * lower(0x2)
 // For lane 1: upper(0xFFFFFFFFFFFFFFFF) * lower(0x3)
 // Note: This test case removed due to complexity - using simpler edge cases instead
 

@@ -11,7 +11,7 @@ non_trivial::~non_trivial() noexcept(false) {}
 // delegation optimization (complete->base) can't be
 // performed.
 struct delegator {
-  non_trivial n; 
+  non_trivial n;
   delegator();
   delegator(int);
   delegator(char);

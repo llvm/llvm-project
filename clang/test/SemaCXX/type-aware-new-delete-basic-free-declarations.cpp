@@ -54,7 +54,7 @@ template <typename T> void *operator new(typename S<T>::type_identity, size_t, s
 // expected-error@-1 {{'operator new' cannot take a dependent type as its 1st parameter}}
 
 // Invalid type aware declarations
-void *operator new(std::type_identity<int>, size_t); 
+void *operator new(std::type_identity<int>, size_t);
 // expected-error@-1 {{type aware 'operator new' must have at least three parameters}}
 void *operator new(std::type_identity<int>, size_t, TestType&);
 // expected-error@-1 {{type aware 'operator new' takes type std::align_val_t ('std::align_val_t') as 3rd parameter}}

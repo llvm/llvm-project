@@ -15,7 +15,7 @@ thread3(void *input)
 
     int dummy = 47; // thread3-before-lock
 
-    std::unique_lock<std::mutex> lock(mutex); 
+    std::unique_lock<std::mutex> lock(mutex);
     cond.notify_all(); // Set thread3 break point on notify_all at this line.
     return NULL;
 }

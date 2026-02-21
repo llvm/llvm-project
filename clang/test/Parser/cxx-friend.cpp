@@ -20,7 +20,7 @@ union U {
 };
 
 class B {
-  // 'A' here should refer to the declaration above.  
+  // 'A' here should refer to the declaration above.
   friend class A;
 
   friend C;

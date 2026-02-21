@@ -25,7 +25,7 @@ typedef lanczos13 lanczos13UDT;
 struct lanczos22UDT : public std::integral_constant<int, 120>
 {
    //
-   // Produces slightly better than 128-bit long-double precision when 
+   // Produces slightly better than 128-bit long-double precision when
    // evaluated at higher precision:
    //
    template <class T>

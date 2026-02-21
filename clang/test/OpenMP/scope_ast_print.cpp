@@ -34,9 +34,9 @@ int foo1() {
   int a;
   int i = 1;
   #pragma omp scope private(a) reduction(+:i) nowait
-  { 
-    a = 123; 
-    ++i; 
+  {
+    a = 123;
+    ++i;
   }
   return i;
 }
@@ -56,8 +56,8 @@ T run() {
   T b;
 
   #pragma omp scope private(a) reduction(*:b)
-  { 
-    b *= a; 
+  {
+    b *= a;
   }
   return b;
 }

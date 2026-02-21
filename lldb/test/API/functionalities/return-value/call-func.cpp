@@ -6,7 +6,7 @@ static char *g_second_pointer = "I am the second";
 // We have a function calling a function in a few cases to test that if you stop in the
 // inner function then do "up/fin" you get the return value from the outer-most frame.
 
-int 
+int
 inner_sint (int value)
 {
   return value;
@@ -25,20 +25,20 @@ inner_float (float value)
   return value;
 }
 
-float 
+float
 outer_float (float value)
 {
   float outer_value = 2 * inner_float(value);
   return outer_value;
 }
 
-double 
+double
 return_double (double value)
 {
   return value;
 }
 
-long double 
+long double
 return_long_double (long double value)
 {
   return value;
@@ -502,7 +502,7 @@ return_derived_class(derived_class value) {
   return value;
 }
 
-int 
+int
 main ()
 {
   int first_int = 123456;
@@ -603,5 +603,5 @@ main ()
   return_ext_vector_size_float32_4 ((ext_vector_size_float32_4){ 16.5, 32.25, 64.125, 128.0625});
   return_ext_vector_size_float32_8 ((ext_vector_size_float32_8){ 16.5, 32.25, 64.125, 128.0625, 1.59, 3.57, 8.63, 9.12 });
 
-  return 0; 
+  return 0;
 }

@@ -163,7 +163,7 @@ TEST(MCJITMemoryManagerTest, ManyVariedAllocations) {
 
     for (unsigned j = 0; j < DataSize; j++) {
       uint8_t ExpectedData = 2 + (i % 254);
-      EXPECT_EQ(ExpectedData, data[i][j]); 
+      EXPECT_EQ(ExpectedData, data[i][j]);
     }
   }
 }

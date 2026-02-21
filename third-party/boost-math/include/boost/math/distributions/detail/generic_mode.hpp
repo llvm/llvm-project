@@ -76,10 +76,10 @@ BOOST_MATH_GPU_ENABLED typename Dist::value_type generic_find_mode(const Dist& d
    boost::math::uintmax_t max_iter = policies::get_max_root_iterations<policy_type>();
 
    value_type result = tools::brent_find_minima(
-      pdf_minimizer<Dist>(dist), 
-      lower_bound, 
-      upper_bound, 
-      policies::digits<value_type, policy_type>(), 
+      pdf_minimizer<Dist>(dist),
+      lower_bound,
+      upper_bound,
+      policies::digits<value_type, policy_type>(),
       max_iter).first;
    if(max_iter >= policies::get_max_root_iterations<policy_type>())
    {
@@ -127,10 +127,10 @@ BOOST_MATH_GPU_ENABLED typename Dist::value_type generic_find_mode_01(const Dist
    boost::math::uintmax_t max_iter = policies::get_max_root_iterations<policy_type>();
 
    value_type result = tools::brent_find_minima(
-      pdf_minimizer<Dist>(dist), 
-      lower_bound, 
-      upper_bound, 
-      policies::digits<value_type, policy_type>(), 
+      pdf_minimizer<Dist>(dist),
+      lower_bound,
+      upper_bound,
+      policies::digits<value_type, policy_type>(),
       max_iter).first;
    if(max_iter >= policies::get_max_root_iterations<policy_type>())
    {

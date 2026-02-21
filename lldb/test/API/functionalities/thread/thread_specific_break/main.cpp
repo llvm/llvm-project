@@ -15,7 +15,7 @@ thread_function ()
     // https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-sleep#remarks
 }
 
-int 
+int
 main ()
 {
     // Set main breakpoint here.

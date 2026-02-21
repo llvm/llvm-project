@@ -57,7 +57,7 @@ int main()
 
 	if (test__aeabi_uidivmod(0x80000000, 8, 0x10000000, 0))
         return 1;
- 
+
  	if (test__aeabi_uidivmod(0x80000003, 8, 0x10000000, 3))
         return 1;
 #else

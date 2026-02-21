@@ -28,7 +28,7 @@ void test1_f2(void) {
 void test2_f1() {}
 int test2_f2(void);
 
-void test2_f3(void) { 
+void test2_f3(void) {
   test2_f1(test2_f2()); // expected-warning{{too many arguments in call to 'test2_f1'}}
 }
 

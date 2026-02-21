@@ -355,7 +355,7 @@ protected:
 
         if (num_constituents == 0) {
           m_should_stop = true;
-          actually_hit_any_locations = true;  // We're going to stop, don't 
+          actually_hit_any_locations = true;  // We're going to stop, don't
                                               // change the stop info.
         } else {
           // We go through each location, and test first its precondition -
@@ -521,7 +521,7 @@ protected:
                   bp_loc_sp->ConditionSaysStop(exe_ctx, condition_error);
 
               if (!condition_error.Success()) {
-                // If the condition fails to evaluate, we are going to stop 
+                // If the condition fails to evaluate, we are going to stop
                 // at it, so the location was hit.
                 actually_hit_any_locations = true;
                 const char *err_str =
@@ -545,7 +545,7 @@ protected:
                           loc_desc.GetData(),
                           static_cast<unsigned long long>(thread_sp->GetID()),
                           condition_says_stop);
-                if (condition_says_stop) 
+                if (condition_says_stop)
                   actually_hit_any_locations = true;
                 else {
                   // We don't want to increment the hit count of breakpoints if
@@ -792,7 +792,7 @@ protected:
   // them and they won't behave correctly.
   class ThreadPlanStepOverWatchpoint : public ThreadPlanStepInstruction {
   public:
-    ThreadPlanStepOverWatchpoint(Thread &thread, 
+    ThreadPlanStepOverWatchpoint(Thread &thread,
                                  StopInfoWatchpointSP stop_info_sp,
                                  WatchpointSP watch_sp)
         : ThreadPlanStepInstruction(thread, false, true, eVoteNoOpinion,
@@ -812,7 +812,7 @@ protected:
       }
       return true;
     }
-    
+
     bool DoPlanExplainsStop(Event *event_ptr) override {
       if (ThreadPlanStepInstruction::DoPlanExplainsStop(event_ptr))
         return true;
@@ -820,7 +820,7 @@ protected:
       // lldb-server resets the stop info for threads that didn't get to run,
       // so we might have not gotten to run, but still have a watchpoint stop
       // reason, in which case this will indeed be for us.
-      if (stop_info_sp 
+      if (stop_info_sp
           && stop_info_sp->GetStopReason() == eStopReasonWatchpoint)
         return true;
       return false;
@@ -830,7 +830,7 @@ protected:
       // Don't artifically keep the watchpoint alive.
       m_watch_sp.reset();
     }
-    
+
     bool ShouldStop(Event *event_ptr) override {
       bool should_stop = ThreadPlanStepInstruction::ShouldStop(event_ptr);
       bool plan_done = MischiefManaged();
@@ -841,7 +841,7 @@ protected:
       }
       return should_stop;
     }
-    
+
     bool ShouldRunBeforePublicStop() override {
         return true;
     }
@@ -875,7 +875,7 @@ protected:
     Log *log = GetLog(LLDBLog::Process);
     ThreadSP thread_sp(m_thread_wp.lock());
     assert(thread_sp);
-    
+
     if (thread_sp->GetTemporaryResumeState() == eStateSuspended) {
       // This is the second firing of a watchpoint so don't process it again.
       LLDB_LOG(log, "We didn't run but stopped with a StopInfoWatchpoint, we "
@@ -884,7 +884,7 @@ protected:
       m_should_stop_is_valid = true;
       return m_should_stop;
     }
-    
+
     WatchpointSP wp_sp(
         thread_sp->CalculateTarget()->GetWatchpointList().FindByID(GetValue()));
     // If we can no longer find the watchpoint, we just have to stop:
@@ -922,14 +922,14 @@ protected:
     bool wp_triggers_after = process_sp->GetWatchpointReportedAfter();
 
     if (!wp_triggers_after) {
-      // We have to step over the watchpoint before we know what to do:   
-      StopInfoWatchpointSP me_as_siwp_sp 
+      // We have to step over the watchpoint before we know what to do:
+      StopInfoWatchpointSP me_as_siwp_sp
           = std::static_pointer_cast<StopInfoWatchpoint>(shared_from_this());
       ThreadPlanSP step_over_wp_sp =
           std::make_shared<ThreadPlanStepOverWatchpoint>(*(thread_sp.get()),
                                                          me_as_siwp_sp, wp_sp);
       // When this plan is done we want to stop, so set this as a Controlling
-      // plan.    
+      // plan.
       step_over_wp_sp->SetIsControllingPlan(true);
       step_over_wp_sp->SetOkayToDiscard(false);
 
@@ -937,14 +937,14 @@ protected:
       error = thread_sp->QueueThreadPlan(step_over_wp_sp, false);
       // If we couldn't push the thread plan, just stop here:
       if (!error.Success()) {
-        LLDB_LOGF(log, "Could not push our step over watchpoint plan: %s", 
+        LLDB_LOGF(log, "Could not push our step over watchpoint plan: %s",
             error.AsCString());
 
         m_should_stop = true;
         m_should_stop_is_valid = true;
         return true;
       } else {
-      // Otherwise, don't set m_should_stop, we don't know that yet.  Just 
+      // Otherwise, don't set m_should_stop, we don't know that yet.  Just
       // say we should continue, and tell the thread we really should do so:
         thread_sp->SetShouldRunBeforePublicStop(true);
         m_using_step_over_plan = true;
@@ -955,7 +955,7 @@ protected:
       m_should_stop_is_valid = true;
       return m_should_stop;
     }
-    
+
     return m_should_stop;
   }
 
@@ -1120,7 +1120,7 @@ private:
     assert(m_using_step_over_plan);
     m_step_over_plan_complete = true;
   }
-  
+
   bool m_should_stop = false;
   bool m_should_stop_is_valid = false;
   // A false watchpoint hit has happened -

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -ast-print %s | FileCheck %s
 
-// This testcase checks the functionality of 
+// This testcase checks the functionality of
 // Sema::ActOn{Start,End}FunctionDeclarator, specifically checking that
 // ActOnEndFunctionDeclarator is called after the typedef so the enum
 // is in the global scope, not the scope of f().

@@ -78,7 +78,7 @@ namespace boost{
          double b = arg_b;
          //
          // On Mac OS X we evaluate "double" functions at "long double" precision,
-         // but "long double" actually has a very slightly narrower range than "double"!  
+         // but "long double" actually has a very slightly narrower range than "double"!
          // Therefore use the range of "long double" as our limits since results outside
          // that range may have been truncated to 0 or INF:
          //

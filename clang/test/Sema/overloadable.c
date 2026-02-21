@@ -74,7 +74,7 @@ void test() {
   f1();
 }
 
-// Validate that the invalid function doesn't stay overloadable. 
+// Validate that the invalid function doesn't stay overloadable.
 int __attribute__((overloadable)) invalid(); // expected-error{{'overloadable' function 'invalid' must have a prototype}}
 int __attribute__((overloadable)) invalid(int); // expected-error{{redeclaration of 'invalid' must not have the 'overloadable' attribute}}
                                                 // expected-note@-2{{previous unmarked overload of function is here}}

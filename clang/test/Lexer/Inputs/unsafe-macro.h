@@ -16,7 +16,7 @@
 // expected-note@+4{{macro marked 'restrict_expansion' here}}
 // expected-note@+3{{macro marked 'restrict_expansion' here}}
 // expected-note@+2{{macro marked 'restrict_expansion' here}}
-// expected-note@+1{{macro marked 'restrict_expansion' here}} 
+// expected-note@+1{{macro marked 'restrict_expansion' here}}
 #pragma clang restrict_expansion(UNSAFE_MACRO, "Don't use this!")
 
 #define UNSAFE_MACRO_2 2

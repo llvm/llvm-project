@@ -41,7 +41,7 @@ void testConditionalAnalysis(char * message, int x) {
   fprintf(stderr, "AssertMacros: %s", (x!=0) ? (((x!=0) ? "hello" : "world")) : ((x!=0) ? "hello" : "world"));
   fprintf(stderr, "AssertMacros: %s", (x!=0) ? (((x!=0) ? "hello" : "world")) : ((x!=0) ? "hello" : message));
   // cxx-warning@-1 {{function 'fprintf' is unsafe}}
-  // cxx-note@-2 {{string argument is not guaranteed to be null-terminated}}											       
+  // cxx-note@-2 {{string argument is not guaranteed to be null-terminated}}
 }
 
 // Test that the analysis will not crash when a conditional expression

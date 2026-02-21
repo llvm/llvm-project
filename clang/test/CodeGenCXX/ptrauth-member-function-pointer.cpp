@@ -175,7 +175,7 @@ struct Class0 {
 // CHECK: %[[V1:.*]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[V2:.*]] = call i64 @llvm.ptrauth.auth(i64 %[[V1]], i32 2, i64 0)
 // CHECK: %[[V3:.*]] = inttoptr i64 %[[V2]] to ptr
-// CHECK: %[[VFN:.*]] = getelementptr inbounds ptr, ptr %[[V3]], i64 3 
+// CHECK: %[[VFN:.*]] = getelementptr inbounds ptr, ptr %[[V3]], i64 3
 // CHECK: %[[V5:.*]] = ptrtoint ptr %[[VFN]] to i64
 // CHECK: call i64 @llvm.ptrauth.blend(i64 %[[V5]], i64 55535)
 

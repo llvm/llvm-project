@@ -22,7 +22,7 @@ void f2() {
 #define variadic5(first, second, args ...)
 
 void test_variadic() {
-  
+
 }
 
 // RUN: c-index-test -code-completion-at=%s:7:1 %s -I%S | FileCheck -check-prefix=CHECK-CC0 %s

@@ -3,7 +3,7 @@
 
 // Test with pch.
 // RUN: %clang_cc1 -emit-pch -o %t %S/multiple_decls.h
-// RUN: %clang_cc1 -include-pch %t -ast-print -o - %s 
+// RUN: %clang_cc1 -include-pch %t -ast-print -o - %s
 
 void f0(char c) {
   wide(c);

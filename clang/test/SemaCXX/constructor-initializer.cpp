@@ -2,29 +2,29 @@
 // RUN: %clang_cc1 -Wreorder -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -Wreorder -fsyntax-only -verify -std=c++11 %s
 
-class A { 
+class A {
   int m;
 public:
    A() : A::m(17) { } // expected-error {{member initializer 'm' does not name a non-static data member or base class}}
    A(int);
 };
 
-class B : public A { 
+class B : public A {
 public:
   B() : A(), m(1), n(3.14) { }
 
 private:
   int m;
-  float n;  
+  float n;
 };
 
 
-class C : public virtual B { 
+class C : public virtual B {
 public:
   C() : B() { }
 };
 
-class D : public C { 
+class D : public C {
 public:
   D() : B(), C() { }
 };
@@ -37,14 +37,14 @@ public:
 
 typedef int INT;
 
-class F : public B { 
+class F : public B {
 public:
   int B;
 
   F() : B(17),
         m(17), // expected-error{{member initializer 'm' does not name a non-static data member or base class}}
         INT(17) // expected-error{{constructor initializer 'INT' (aka 'int') does not name a class}}
-  { 
+  {
   }
 };
 
@@ -65,14 +65,14 @@ class  X {};
 class Y {};
 
 struct S : Y, virtual X {
-  S (); 
+  S ();
 };
 
-struct Z : S { 
+struct Z : S {
   Z() : X(), S(), E()  {} // expected-error {{type 'E' is not a direct or virtual base of 'Z'}}
 };
 
-class U { 
+class U {
   union { int a; char* p; };
   union { int b; double d; };
 
@@ -174,14 +174,14 @@ class CopyConstructorTest {
 template<typename T>
 struct NDC {
   T &ref;
-  
+
   NDC() { }
   NDC(T &ref) : ref(ref) { }
 };
-  
+
 struct X0 : NDC<int> {
   X0(int &ref) : NDC<int>(ref), ndc(ref) { }
-  
+
   NDC<int> ndc;
 };
 
@@ -190,7 +190,7 @@ namespace Test0 {
 struct A { A(); };
 
 struct B {
-  B() { } 
+  B() { }
   const A a;
 };
 
@@ -205,7 +205,7 @@ namespace Test1 {
 
 namespace Test2 {
 
-struct A { 
+struct A {
   A(const A&);
 };
 
@@ -247,7 +247,7 @@ namespace test3 {
 
   class B : public A {
   public:
-    B(const String& s, int e=0) // expected-error {{unknown type name}} 
+    B(const String& s, int e=0) // expected-error {{unknown type name}}
       : A(e), m_String(s) , m_ErrorStr(__null) {} // expected-error {{no matching constructor}} \
       expected-error {{member initializer 'm_String' does not name}} \
       expected-error {{member initializer 'm_ErrorStr' does not name}}

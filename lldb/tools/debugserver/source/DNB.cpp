@@ -425,7 +425,7 @@ nub_process_t DNBProcessGetPIDByName(const char *name) {
 }
 
 nub_process_t DNBProcessAttachByName(const char *name, struct timespec *timeout,
-                                     const RNBContext::IgnoredExceptions 
+                                     const RNBContext::IgnoredExceptions
                                              &ignored_exceptions, char *err_str,
                                      size_t err_len) {
   if (err_str && err_len > 0)
@@ -452,8 +452,8 @@ nub_process_t DNBProcessAttachByName(const char *name, struct timespec *timeout,
 }
 
 nub_process_t DNBProcessAttach(nub_process_t attach_pid,
-                               struct timespec *timeout, 
-                               const RNBContext::IgnoredExceptions 
+                               struct timespec *timeout,
+                               const RNBContext::IgnoredExceptions
                                        &ignored_exceptions,
                                char *err_str, size_t err_len) {
   if (err_str && err_len > 0)
@@ -511,7 +511,7 @@ nub_process_t DNBProcessAttach(nub_process_t attach_pid,
     DNBLogThreadedIf(LOG_PROCESS, "(DebugNub) attaching to pid %d...",
                      attach_pid);
     pid =
-        processSP->AttachForDebug(attach_pid, ignored_exceptions, err_str, 
+        processSP->AttachForDebug(attach_pid, ignored_exceptions, err_str,
                                   err_len);
 
     if (pid != INVALID_NUB_PROCESS) {
@@ -809,14 +809,14 @@ DNBProcessAttachWait(RNBContext *ctx, const char *waitfor_process_name,
       }
 
       // Now we're going to wait a while before polling again.  But we also
-      // need to check whether we've gotten an event from the debugger  
+      // need to check whether we've gotten an event from the debugger
       // telling us to interrupt the wait.  So we'll use the wait for a possible
       // next event to also be our short pause...
       struct timespec short_timeout;
       DNBTimer::OffsetTimeOfDay(&short_timeout, 0, waitfor_interval);
-      uint32_t event_mask = RNBContext::event_read_packet_available 
+      uint32_t event_mask = RNBContext::event_read_packet_available
           | RNBContext::event_read_thread_exiting;
-      nub_event_t set_events = ctx->Events().WaitForSetEvents(event_mask, 
+      nub_event_t set_events = ctx->Events().WaitForSetEvents(event_mask,
           &short_timeout);
       if (set_events & RNBContext::event_read_packet_available) {
         // If we get any packet from the debugger while waiting on the async,
@@ -834,7 +834,7 @@ DNBProcessAttachWait(RNBContext *ctx, const char *waitfor_process_name,
                     "%s to appear.\n", waitfor_process_name);
         break;
       }
-      
+
     }
   }
 
@@ -850,7 +850,7 @@ DNBProcessAttachWait(RNBContext *ctx, const char *waitfor_process_name,
     // attaching.
     ::usleep(waitfor_interval);
     waitfor_pid = DNBProcessAttach(waitfor_pid, timeout_abstime,
-                                   ctx->GetIgnoredExceptions(), err_str, 
+                                   ctx->GetIgnoredExceptions(), err_str,
                                    err_len);
   }
 

@@ -22,7 +22,7 @@ namespace boost::math::ccmath {
 
 namespace detail {
 
-template <typename T> 
+template <typename T>
 constexpr T abs_impl(T x) noexcept
 {
     if ((boost::math::ccmath::isnan)(x))
@@ -38,7 +38,7 @@ constexpr T abs_impl(T x) noexcept
     {
         BOOST_MATH_ASSERT(x != (std::numeric_limits<T>::min)());
     }
-    
+
     return x >= 0 ? x : -x;
 }
 

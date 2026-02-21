@@ -35,7 +35,7 @@
 
 void test1_explicit_firstprivate() {
   double *ptr = nullptr;
-  
+
   // Explicit firstprivate should generate map type 288
   // (TARGET_PARAM | LITERAL, no IS_PTR flag for explicit clauses)
   #pragma omp target firstprivate(ptr)
@@ -53,7 +53,7 @@ void test1_explicit_firstprivate() {
 
 void test2_defaultmap_firstprivate_pointer() {
   double *ptr = nullptr;
-  
+
   // defaultmap(firstprivate:pointer) creates implicit firstprivate
   // Should generate map type 800 (TARGET_PARAM | LITERAL | IS_PTR)
   #pragma omp target defaultmap(firstprivate:pointer)
@@ -70,7 +70,7 @@ void test2_defaultmap_firstprivate_pointer() {
 
 void test3_defaultmap_scalar_double() {
   double d = 3.0;
-  
+
   // OpenMP's "scalar" category excludes pointers but includes arithmetic types
   // Double gets implicit firstprivate → map type 800
   #pragma omp target defaultmap(firstprivate:scalar)
@@ -88,7 +88,7 @@ void test3_defaultmap_scalar_double() {
 
 void test4_pointer_with_scalar_defaultmap() {
   double *ptr = nullptr;
-  
+
   // Note: defaultmap(firstprivate:scalar) does NOT apply to pointers (scalar excludes pointers).
   // However, the pointer still gets 800 because in OpenMP 5.0+, pointers without explicit
   // data-sharing attributes are implicitly firstprivate and lowered as IS_PTR|LITERAL|TARGET_PARAM.
@@ -110,7 +110,7 @@ void test5_multiple_firstprivate() {
   int *a = nullptr;
   float *b = nullptr;
   double *c = nullptr;
-  
+
   // All explicit firstprivate pointers get map type 288
   #pragma omp target firstprivate(a, b, c)
   {
@@ -129,7 +129,7 @@ void test5_multiple_firstprivate() {
 
 void test6_const_pointer() {
   const double *const_ptr = nullptr;
-  
+
   // Const pointer with explicit firstprivate → 288
   #pragma omp target firstprivate(const_ptr)
   {
@@ -149,7 +149,7 @@ void test6_const_pointer() {
 
 void test7_pointer_to_pointer() {
   int **pp = nullptr;
-  
+
   // Pointer-to-pointer with explicit firstprivate → 288
   #pragma omp target firstprivate(pp)
   {

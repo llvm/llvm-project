@@ -9,7 +9,7 @@
 #pragma comment(linker," bar=" BAR)
 // CHECK: #pragma comment(linker," bar=" "2")
 
-#pragma comment( user, "Compiled on " __DATE__ " at " __TIME__ ) 
+#pragma comment( user, "Compiled on " __DATE__ " at " __TIME__ )
 // CHECK: {{#pragma comment\( user, \"Compiled on \".*\" at \".*\" \)}}
 
 #pragma comment(foo)    // expected-error {{unknown kind of pragma comment}}

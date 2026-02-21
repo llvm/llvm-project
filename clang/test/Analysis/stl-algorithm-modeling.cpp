@@ -514,7 +514,7 @@ void test_search_n2(std::vector<int> V, int n) {
 
   clang_analyzer_eval(i3 == i2); // expected-warning{{FALSE}}}
 
-  
+
   clang_analyzer_eval(clang_analyzer_iterator_position(i3) >=
                       clang_analyzer_iterator_position(i1)); // expected-warning@-1{{TRUE}}
   clang_analyzer_eval(clang_analyzer_iterator_position(i3) <

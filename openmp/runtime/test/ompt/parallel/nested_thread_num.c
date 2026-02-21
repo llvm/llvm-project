@@ -73,14 +73,14 @@ int main() {
 // CHECK-DAG: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_implicit_task_begin:
 // CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_begin:
 
-// CHECK: ompt_event_parallel_end: parallel_id=[[PARALLEL_ID]], 
+// CHECK: ompt_event_parallel_end: parallel_id=[[PARALLEL_ID]],
 // CHECK-SAME: task_id=[[PARENT_TASK_ID]], invoker=[[PARALLEL_INVOKER]]
 // CHECK: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[RETURN_ADDRESS]]
 
 // THREADS: {{^}}0: NULL_POINTER=[[NULL:.*$]]
 // THREADS: __builtin_frame_address(0)=[[MAIN_REENTER:(0x)?[0-f]+]]
 // THREADS: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin:
-// THREADS-SAME: parent_task_id=[[PARENT_TASK_ID:[0-f]+]], 
+// THREADS-SAME: parent_task_id=[[PARENT_TASK_ID:[0-f]+]],
 // THREADS-SAME: parent_task_frame.exit=[[NULL]],
 // THREADS-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}},
 // THREADS-SAME: parallel_id=[[PARALLEL_ID:[0-f]+]], requested_team_size=2,
@@ -89,44 +89,44 @@ int main() {
 
 // nested parallel masters
 // THREADS: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin:
-// THREADS-SAME: parallel_id=[[PARALLEL_ID]], 
+// THREADS-SAME: parallel_id=[[PARALLEL_ID]],
 // THREADS-SAME: task_id=[[IMPLICIT_TASK_ID:[0-f]+]],
 // THREADS-SAME: team_size=2, thread_num=0
 
 // THREADS: __builtin_frame_address({{.}})=[[EXIT:(0x)?[0-f]+]]
 
 // THREADS: {{^}}[[MASTER_ID]]: task level 0: parallel_id=[[PARALLEL_ID]],
-// THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]], exit_frame=[[EXIT]], 
-// THREADS-SAME: reenter_frame=[[NULL]], 
+// THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]], exit_frame=[[EXIT]],
+// THREADS-SAME: reenter_frame=[[NULL]],
 // THREADS-SAME: thread_num=0
 
 // THREADS: {{^}}[[MASTER_ID]]: task level 1:
-// THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID:[0-f]+]], 
-// THREADS-SAME: task_id=[[PARENT_TASK_ID]], exit_frame=[[NULL]], 
+// THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID:[0-f]+]],
+// THREADS-SAME: task_id=[[PARENT_TASK_ID]], exit_frame=[[NULL]],
 // THREADS-SAME: reenter_frame={{(0x)?[0-f]+}}
 
 // THREADS: __builtin_frame_address(0)=[[REENTER:(0x)?[0-f]+]]
 
 // THREADS: {{^}}[[MASTER_ID]]: ompt_event_parallel_begin:
-// THREADS-SAME: parent_task_id=[[IMPLICIT_TASK_ID]], 
+// THREADS-SAME: parent_task_id=[[IMPLICIT_TASK_ID]],
 // THREADS-SAME: parent_task_frame.exit=[[EXIT]],
 // THREADS-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}},
-// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID:[0-f]+]], 
+// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID:[0-f]+]],
 // THREADS-SAME: requested_team_size=2,
 // THREADS-SAME: codeptr_ra=[[NESTED_RETURN_ADDRESS:(0x)?[0-f]+]]{{[0-f][0-f]}},
 // THREADS-SAME: invoker=[[PARALLEL_INVOKER]]
 
 // THREADS: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin:
 // THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]],
-// THREADS-SAME: task_id=[[NESTED_IMPLICIT_TASK_ID:[0-f]+]], team_size=2, 
+// THREADS-SAME: task_id=[[NESTED_IMPLICIT_TASK_ID:[0-f]+]], team_size=2,
 // THREADS-SAME: thread_num=0
 
 // THREADS: __builtin_frame_address({{.}})=[[NESTED_EXIT:(0x)?[0-f]+]]
 
 // THREADS: {{^}}[[MASTER_ID]]: task level 0:
-// THREADS-SAME:  parallel_id=[[NESTED_PARALLEL_ID]], 
+// THREADS-SAME:  parallel_id=[[NESTED_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[NESTED_IMPLICIT_TASK_ID]],
-// THREADS-SAME: exit_frame=[[NESTED_EXIT]], reenter_frame=[[NULL]], 
+// THREADS-SAME: exit_frame=[[NESTED_EXIT]], reenter_frame=[[NULL]],
 // THREADS-SAME: thread_num=0
 
 // THREADS: {{^}}[[MASTER_ID]]: task level 1: parallel_id=[[PARALLEL_ID]],
@@ -134,8 +134,8 @@ int main() {
 // THREADS-SAME: reenter_frame={{(0x)?[0-f]+}}
 
 // THREADS: {{^}}[[MASTER_ID]]: task level 2:
-// THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID]], 
-// THREADS-SAME: task_id=[[PARENT_TASK_ID]], exit_frame=[[NULL]], 
+// THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID]],
+// THREADS-SAME: task_id=[[PARENT_TASK_ID]], exit_frame=[[NULL]],
 // THREADS-SAME: reenter_frame={{(0x)?[0-f]+}}
 
 // THREADS: __builtin_frame_address(0)=[[NESTED_REENTER:(0x)?[0-f]+]]
@@ -149,7 +149,7 @@ int main() {
 // THREADS-SAME: codeptr_ra=[[BARRIER_RETURN_ADDRESS:(0x)?[0-f]+]]{{[0-f][0-f]}}
 
 // THREADS: {{^}}[[MASTER_ID]]: task level 0:
-// THREADS-SAME:  parallel_id=[[NESTED_PARALLEL_ID]], 
+// THREADS-SAME:  parallel_id=[[NESTED_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[NESTED_IMPLICIT_TASK_ID]],
 // THREADS-SAME: exit_frame=[[NESTED_EXIT]], reenter_frame={{(0x)?[0-f]+}}
 
@@ -160,7 +160,7 @@ int main() {
 // THREADS: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[BARRIER_RETURN_ADDRESS]]
 
 // THREADS: {{^}}[[MASTER_ID]]: task level 0:
-// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]], 
+// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[NESTED_IMPLICIT_TASK_ID]],
 // THREADS-SAME: exit_frame=[[NESTED_EXIT]], reenter_frame=[[NULL]]
 
@@ -171,7 +171,7 @@ int main() {
 // THREADS-SAME: codeptr_ra=[[NESTED_RETURN_ADDRESS]]{{[0-f][0-f]}}
 
 // THREADS: {{^}}[[MASTER_ID]]: task level 0:
-// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]], 
+// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[NESTED_IMPLICIT_TASK_ID]],
 // THREADS-SAME: exit_frame=[[NULL]], reenter_frame=[[NULL]]
 
@@ -183,7 +183,7 @@ int main() {
 // THREADS-SAME: parallel_id={{[0-f]+}}, task_id=[[NESTED_IMPLICIT_TASK_ID]]
 
 // THREADS: {{^}}[[MASTER_ID]]: ompt_event_parallel_end:
-// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]], 
+// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]],
 // THREADS-SAME: invoker=[[PARALLEL_INVOKER]],
 // THREADS-SAME: codeptr_ra=[[NESTED_RETURN_ADDRESS]]{{[0-f][0-f]}}
@@ -193,7 +193,7 @@ int main() {
 // THREADS-NOT: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_end
 
 // THREADS: {{^}}[[MASTER_ID]]: task level 0: parallel_id=[[PARALLEL_ID]],
-// THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]], exit_frame=[[EXIT]], 
+// THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]], exit_frame=[[EXIT]],
 // THREADS-SAME: reenter_frame=[[NULL]]
 
 // implicit barrier
@@ -202,7 +202,7 @@ int main() {
 // THREADS-SAME: codeptr_ra=[[RETURN_ADDRESS]]{{[0-f][0-f]}}
 
 // THREADS: {{^}}[[MASTER_ID]]: task level 0: parallel_id=[[PARALLEL_ID]],
-// THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]], exit_frame=[[NULL]], 
+// THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]], exit_frame=[[NULL]],
 // THREADS-SAME: reenter_frame=[[NULL]]
 
 // THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_implicit_parallel_end:
@@ -214,7 +214,7 @@ int main() {
 
 // THREADS: {{^}}[[MASTER_ID]]: ompt_event_parallel_end:
 // THREADS-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[PARENT_TASK_ID]],
-// THREADS-SAME: invoker=[[PARALLEL_INVOKER]], 
+// THREADS-SAME: invoker=[[PARALLEL_INVOKER]],
 // THREADS-SAME: codeptr_ra=[[RETURN_ADDRESS]]{{[0-f][0-f]}}
 
 // THREADS: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[RETURN_ADDRESS]]
@@ -222,20 +222,20 @@ int main() {
 // Worker of first nesting level
 
 // THREADS: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_implicit_task_begin:
-// THREADS-SAME: parallel_id=[[PARALLEL_ID]], 
-// THREADS-SAME: task_id=[[IMPLICIT_TASK_ID:[0-f]+]], team_size=2, 
+// THREADS-SAME: parallel_id=[[PARALLEL_ID]],
+// THREADS-SAME: task_id=[[IMPLICIT_TASK_ID:[0-f]+]], team_size=2,
 // THREADS-SAME: thread_num=[[OUTER_THREADNUM:[0-9]+]]
 
 // THREADS: {{^}}[[THREAD_ID]]: task level 0: parallel_id=[[PARALLEL_ID]],
-// THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]], 
+// THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]],
 // THREADS-SAME: thread_num=[[OUTER_THREADNUM]]
 
 // THREADS: {{^}}[[THREAD_ID]]: task level 1:
-// THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID]], 
+// THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[PARENT_TASK_ID]]
 
 // THREADS: {{^}}[[THREAD_ID]]: ompt_event_parallel_begin:
-// THREADS-SAME: parent_task_id=[[IMPLICIT_TASK_ID]], 
+// THREADS-SAME: parent_task_id=[[IMPLICIT_TASK_ID]],
 // THREADS-SAME: parent_task_frame.exit={{(0x)?[0-f]+}},
 // THREADS-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}},
 // THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID:[0-f]+]], requested_team_size=2,
@@ -248,16 +248,16 @@ int main() {
 // THREADS-SAME: thread_num=[[INNER_THREADNUM:[0-9]+]]
 
 // THREADS: {{^}}[[THREAD_ID]]: task level 0:
-// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]], 
+// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[NESTED_IMPLICIT_TASK_ID]],
 // THREADS-SAME: thread_num=[[INNER_THREADNUM]]
 
 // THREADS: {{^}}[[THREAD_ID]]: task level 1: parallel_id=[[PARALLEL_ID]],
-// THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]], 
+// THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]],
 // THREADS-SAME: thread_num=[[OUTER_THREADNUM]]
 
 // THREADS: {{^}}[[THREAD_ID]]: task level 2:
-// THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID]], 
+// THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[PARENT_TASK_ID]]
 
 // THREADS-NOT: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end
@@ -273,7 +273,7 @@ int main() {
 // THREADS-SAME: parallel_id={{[0-f]+}}, task_id=[[NESTED_IMPLICIT_TASK_ID]]
 
 // THREADS: {{^}}[[THREAD_ID]]: ompt_event_parallel_end:
-// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]], 
+// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]], invoker=[[PARALLEL_INVOKER]]
 
 // THREADS-NOT: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end
@@ -295,7 +295,7 @@ int main() {
 // THREADS-SAME: thread_num=[[THREADNUM:[0-9]+]]
 
 // THREADS: {{^}}[[THREAD_ID]]: task level 0:
-// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]], 
+// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]]
 // THREADS-SAME: thread_num=[[THREADNUM]]
 
@@ -306,7 +306,7 @@ int main() {
 // THREADS-SAME: thread_num={{[01]}}
 
 // THREADS: {{^}}[[THREAD_ID]]: task level 2:
-// THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID]], 
+// THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[PARENT_TASK_ID]]
 // THREADS-SAME: thread_num=0
 
@@ -330,7 +330,7 @@ int main() {
 // THREADS-SAME: thread_num=[[THREADNUM:[0-9]+]]
 
 // THREADS: {{^}}[[THREAD_ID]]: task level 0:
-// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]], 
+// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]]
 // THREADS-SAME: thread_num=[[THREADNUM]]
 
@@ -341,7 +341,7 @@ int main() {
 // THREADS-SAME: thread_num={{[01]}}
 
 // THREADS: {{^}}[[THREAD_ID]]: task level 2:
-// THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID]], 
+// THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[PARENT_TASK_ID]]
 // THREADS-SAME: thread_num=0
 

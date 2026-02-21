@@ -23,10 +23,10 @@ template<typename T> void f3(T a, T b = T() + T()); // expected-error{{invalid o
 void g() {
   f1(10);
   f1(S()); // expected-note{{in instantiation of default function argument expression for 'f1<S>' required here}}
-  
+
   f2(10);
   f2(S());
-  
+
   f3(10);
   f3(S()); // expected-note{{in instantiation of default function argument expression for 'f3<S>' required here}}
 }
@@ -48,7 +48,7 @@ void g2() {
 void g3(F<int> f, F<struct S> s) {
   f.f();
   s.f(); // expected-note{{in instantiation of default function argument expression for 'f<S>' required here}}
-  
+
   F<int> f2;
   F<S> s2; // expected-note{{in instantiation of default function argument expression for 'F<S>' required here}}
 }
@@ -115,7 +115,7 @@ template<typename T> struct A {
   // expected-note 3{{passing argument to parameter here}}
 };
 
-struct B : A<int*> { 
+struct B : A<int*> {
   B();
 };
 B::B() { } // expected-note {{in instantiation of default function argument expression for 'A<int *>' required he}}
@@ -127,7 +127,7 @@ C::C() { } // expected-note {{in instantiation of default function argument expr
 
 struct D {
   D();
-  
+
   A<int*> a;
 };
 D::D() { } // expected-note {{in instantiation of default function argument expression for 'A<int *>' required he}}
@@ -162,12 +162,12 @@ namespace PR5810 {
   struct allocator {
     allocator() { int a[sizeof(T) ? -1 : -1]; } // expected-error2 {{array with a negative size}}
   };
-  
+
   template<typename T>
   struct vector {
     vector(const allocator<T>& = allocator<T>()) {} // expected-note2 {{instantiation of}}
   };
-  
+
   struct A { };
   struct B { };
 
@@ -175,7 +175,7 @@ namespace PR5810 {
   void FilterVTs() {
     vector<A> Result;
   }
-  
+
   void f() {
     vector<A> Result;
   }
@@ -229,8 +229,8 @@ namespace PR5810b {
 
 namespace PR5810c {
   template<typename T>
-  struct X { 
-    X() { 
+  struct X {
+    X() {
       T t;
       double *****p = t; // expected-error{{cannot initialize a variable of type 'double *****' with an lvalue of type 'int'}}
     }
@@ -251,7 +251,7 @@ namespace PR8127 {
     PointerClass( T * object_p ) : p_( object_p ) {
       p_->acquire();
     }
-  private:    
+  private:
     T * p_;
   };
 
@@ -285,8 +285,8 @@ namespace rdar8427926 {
 }
 
 namespace PR8401 {
-  template<typename T> 
-  struct A { 
+  template<typename T>
+  struct A {
     A() { T* x = 1; } // expected-error{{cannot initialize a variable of type 'int *' with an rvalue of type 'int'}}
   };
 

@@ -4,4 +4,4 @@ int main(int argc, char* argv[]) {
   return 0;
 }
 // CHECK-NOT: __main_void
-// CHECK: define i32 @__main_argc_argv(i32 noundef %argc, ptr noundef %argv) #0 { 
+// CHECK: define i32 @__main_argc_argv(i32 noundef %argc, ptr noundef %argv) #0 {

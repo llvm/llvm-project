@@ -400,14 +400,14 @@ namespace boost
             T integral = pow(v, v / 2) * exp(-v * mu * mu / (2 * (x * x + v)));
             if (integral != 0)
             {
-               integral *= integrator.integrate([&x, v, mu](T y) 
+               integral *= integrator.integrate([&x, v, mu](T y)
                   {
                      T p;
                      if (v * log(y) < tools::log_max_value<T>())
                         p = pow(y, v) * exp(boost::math::pow<2>((y - mu * x / sqrt(x * x + v))) / -2);
                      else
                         p = exp(log(y) * v + boost::math::pow<2>((y - mu * x / sqrt(x * x + v))) / -2);
-                     return p; 
+                     return p;
                   });
             }
             integral /= boost::math::constants::root_pi<T>() * boost::math::tgamma(v / 2, pol) * pow(T(2), (v - 1) / 2) * pow(x * x + v, (v + 1) / 2);
@@ -579,7 +579,7 @@ namespace boost
                return pdf(students_t_distribution<T, Policy>(n), t - delta);
             }
             //
-            // Figure out if the hypergeometric formula will be efficient or not, 
+            // Figure out if the hypergeometric formula will be efficient or not,
             // based on where the summit of the series.
             //
             T a = (n + 1) / 2;
@@ -587,7 +587,7 @@ namespace boost
             T summit = (sqrt(x * (4 * a + x)) + x) / 2;
             if (summit < 40)
                return non_central_t_pdf_hypergeometric(t, n, delta, pol);
-            // 
+            //
             // Otherwise, for t < 0 we have to use the reflection formula:
             //
             if (t < 0)
@@ -618,7 +618,7 @@ namespace boost
             result *= dt;
             if (result <= tol)
             {
-               // More than half the digits in the result have cancelled, 
+               // More than half the digits in the result have cancelled,
                // Try direct integration... super slow but reliable as far as we can tell...
                if (delta < 0)
                {

@@ -3,13 +3,13 @@
 // expected-no-diagnostics
 
 #define N 11
-typedef struct { 
-  double data[N]; 
-  int len; 
+typedef struct {
+  double data[N];
+  int len;
 } T;
 
 int main(int argc, char **argv) {
-  T s; 
+  T s;
   s.len = N;
 
   // Valid partial strided updates

@@ -11,7 +11,7 @@ std::condition_variable  control_condition;
 std::mutex thread_started_mutex;
 std::condition_variable  thread_started_condition;
 
-// This function runs in a thread.  The locking dance is to make sure that 
+// This function runs in a thread.  The locking dance is to make sure that
 // by the time the main thread reaches the pthread_join below, this thread
 // has for sure acquired the contended_mutex.  So then the call_me_to_get_lock
 // function will block trying to get the mutex, and only succeed once it
@@ -22,7 +22,7 @@ void
 lock_acquirer_1 (void)
 {
   std::unique_lock<std::mutex> contended_lock(contended_mutex);
-  
+
   // Grab this mutex, that will ensure that the main thread
   // is in its cond_wait for it (since that's when it drops the mutex.
 

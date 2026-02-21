@@ -17,6 +17,6 @@ namespace CaptureThis {
     int o = [&]{return this->m + 1; }();
     int p = [&]{return [&](int x) { return this->m + x;}(o); }();
   };
-  
+
   X x;
 }

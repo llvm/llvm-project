@@ -7,7 +7,7 @@ int foo(void) {
 	try {
 		throw 404;
 	}
-	catch (int e){ 
+	catch (int e){
 		error = e;
 	}
 	return error;

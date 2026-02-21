@@ -80,8 +80,8 @@ public:
         }
         a_.shrink_to_fit();
     }
-    
-    
+
+
     const std::vector<Z>& digits() const
     {
         return a_;

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -w -emit-llvm %s  -o /dev/null
 
-/* These are random tests that I used when working on the GCC frontend 
+/* These are random tests that I used when working on the GCC frontend
    originally. */
 
 // test floating point comparison!
@@ -30,8 +30,8 @@ static char *temp;
 static int remaining;
 static char *localmalloc(int size) {
   char *blah;
-  
-  if (size>remaining) 
+
+  if (size>remaining)
     {
       temp = (char *) malloc(32768);
       remaining = 32768;

@@ -11,13 +11,13 @@ void noteOnMacro(int y) {
   y++;
   y--;
   mallocmemory
-  y++; 
+  y++;
   y++;
   delete x; // expected-warning {{Memory allocated by 'malloc()' should be deallocated by 'free()', not 'delete'}}
 }
 
 void macroIsFirstInFunction(int y) {
-  mallocmemory 
+  mallocmemory
   y++; // expected-warning {{Potential leak of memory pointed to by 'x'}}
 }
 
@@ -39,7 +39,7 @@ int macroInExpressionNoNote(int *p, int y) {;
   return *p; // expected-warning {{Dereference of null pointer}}
 }
 
-#define macroWithArg(mp) mp==0 
+#define macroWithArg(mp) mp==0
 int macroWithArgInExpression(int *p, int y) {;
   y++;
   if (macroWithArg(p))

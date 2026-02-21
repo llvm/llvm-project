@@ -34,7 +34,7 @@ void func_unroll() {
 
 
 // PRINT-LABEL: void func_unroll_full() {
-// DUMP-LABEL:  FunctionDecl {{.*}} func_unroll_full 
+// DUMP-LABEL:  FunctionDecl {{.*}} func_unroll_full
 void func_unroll_full() {
   // PRINT:     #pragma omp unroll full
   // DUMP:      OMPUnrollDirective
@@ -50,7 +50,7 @@ void func_unroll_full() {
 
 
 // PRINT-LABEL: void func_unroll_partial() {
-// DUMP-LABEL:  FunctionDecl {{.*}} func_unroll_partial 
+// DUMP-LABEL:  FunctionDecl {{.*}} func_unroll_partial
 void func_unroll_partial() {
   // PRINT:     #pragma omp unroll partial
   // DUMP:      OMPUnrollDirective
@@ -67,7 +67,7 @@ void func_unroll_partial() {
 
 
 // PRINT-LABEL: void func_unroll_partial_factor() {
-// DUMP-LABEL:  FunctionDecl {{.*}} func_unroll_partial_factor 
+// DUMP-LABEL:  FunctionDecl {{.*}} func_unroll_partial_factor
 void func_unroll_partial_factor() {
   // PRINT:     #pragma omp unroll partial(4)
   // DUMP:      OMPUnrollDirective
@@ -86,7 +86,7 @@ void func_unroll_partial_factor() {
 
 
 // PRINT-LABEL: void func_unroll_partial_factor_for() {
-// DUMP-LABEL:  FunctionDecl {{.*}} func_unroll_partial_factor_for 
+// DUMP-LABEL:  FunctionDecl {{.*}} func_unroll_partial_factor_for
 void func_unroll_partial_factor_for() {
   // PRINT:     #pragma omp for
   // DUMP:      OMPForDirective

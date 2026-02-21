@@ -17,7 +17,7 @@ public:
 };
 template<typename T> void vector<T>::push_back(const T&) { }
 void f() {
-  
+
 }
 
 int foo();

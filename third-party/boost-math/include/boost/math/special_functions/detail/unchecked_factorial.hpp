@@ -1398,7 +1398,7 @@ inline T unchecked_factorial_imp(unsigned i, const boost::math::integral_constan
    // If you're foolish enough to instantiate factorial
    // on an integer type then you end up here.  But this code is
    // only intended for (fixed precision) multiprecision types.
-   // 
+   //
    // Note, factorial<unsigned int>(n) is not implemented
    // because it would overflow integral type T for too small n
    // to be useful. Use instead a floating-point type,
@@ -1523,7 +1523,7 @@ inline T unchecked_factorial_imp(unsigned i, const boost::math::integral_constan
    // If you're foolish enough to instantiate factorial
    // on an integer type then you end up here.  But this code is
    // only intended for (variable precision) multiprecision types.
-   // 
+   //
    // Note, factorial<unsigned int>(n) is not implemented
    // because it would overflow integral type T for too small n
    // to be useful. Use instead a floating-point type,
@@ -1703,11 +1703,11 @@ BOOST_MATH_GPU_ENABLED inline T unchecked_factorial(unsigned i)
 template <class T>
 struct max_factorial
 {
-   static constexpr unsigned value = 
-      boost::math::numeric_limits<T>::digits == boost::math::numeric_limits<float>::digits ? max_factorial<float>::value 
+   static constexpr unsigned value =
+      boost::math::numeric_limits<T>::digits == boost::math::numeric_limits<float>::digits ? max_factorial<float>::value
       : boost::math::numeric_limits<T>::digits == boost::math::numeric_limits<double>::digits ? max_factorial<double>::value
-      #ifndef BOOST_MATH_GPU_ENABLED 
-      : boost::math::numeric_limits<T>::digits == boost::math::numeric_limits<long double>::digits ? max_factorial<long double>::value 
+      #ifndef BOOST_MATH_GPU_ENABLED
+      : boost::math::numeric_limits<T>::digits == boost::math::numeric_limits<long double>::digits ? max_factorial<long double>::value
       BOOST_MATH_DETAIL_FLOAT128_MAX_FACTORIAL
       #endif
       : 100;

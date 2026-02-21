@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple riscv64 \
-// RUN:   -disable-O0-optnone -o - -fsyntax-only %s -verify 
+// RUN:   -disable-O0-optnone -o - -fsyntax-only %s -verify
 // REQUIRES: riscv-registered-target
 
 __rvv_int8m1_t foo8() { /* expected-error {{RISC-V type '__rvv_int8m1_t' requires the 'zve32x' extension}} */

@@ -51,7 +51,7 @@ void test(boolean a, boolean b, int *p, volatile int *q, int i) {
 #ifdef __cplusplus
   b = foo() bitand bar(); // Ok, no warning expected
   b = foo() My_BITAND bar(); // Ok, no warning expected
-                          
+
 #endif
 
   if (foo() & bar())      // expected-warning {{use of bitwise '&' with boolean operands}}

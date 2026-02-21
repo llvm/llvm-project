@@ -35,7 +35,7 @@ T tmain(T argc, S **argv) {
 #pragma omp teams
   // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
   // expected-error@+1 2 {{integral constant expression}} expected-note@+1 0+{{constant expression}}
-#pragma omp distribute parallel for collapse (argc 
+#pragma omp distribute parallel for collapse (argc
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
 #pragma omp target
 #pragma omp teams
@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
   // expected-error@+3 {{argument to 'collapse' clause must be a strictly positive integer value}}
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for collapse (foobool(argc)), collapse (true), collapse (-5) 
+#pragma omp distribute parallel for collapse (foobool(argc)), collapse (true), collapse (-5)
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
 #pragma omp target
 #pragma omp teams

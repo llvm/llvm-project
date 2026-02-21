@@ -51,7 +51,7 @@ void test(X x, const X xc, X* xp, const X* xcp, volatile X xv, volatile X* xvp) 
   double& d1 = xp->g(0.0);
   double& d2 = X::g(0.0);
   X::g(0); // expected-error{{call to 'g' is ambiguous}}
-  
+
   X::h(0); // expected-error{{call to non-static member function without an object argument}}
 }
 
@@ -72,7 +72,7 @@ namespace test1 {
   class A {
     template <class T>
     void foo(T t, unsigned N); // expected-note {{candidate function template not viable: no known conversion from 'const char[6]' to 'unsigned int' for 2nd argument}}
-    void foo(int n, char N); // expected-note {{candidate function not viable: no known conversion from 'const char[6]' to 'char' for 2nd argument}} 
+    void foo(int n, char N); // expected-note {{candidate function not viable: no known conversion from 'const char[6]' to 'char' for 2nd argument}}
     void foo(int n, const char *s, int t); // expected-note {{candidate function not viable: requires 3 arguments, but 2 were provided}}
     void foo(int n, const char *s, int t, ...); // expected-note {{candidate function not viable: requires at least 3 arguments, but 2 were provided}}
     void foo(int n, const char *s, int t, int u = 0); // expected-note {{candidate function not viable: requires at least 3 arguments, but 2 were provided}}
@@ -81,7 +81,7 @@ namespace test1 {
     void bar(int i); //expected-note {{candidate function not viable: 'this' argument has type 'const A', but method is not marked const}}
 
     void baz(A &d); // expected-note {{candidate function not viable: 1st argument ('const A') would lose const qualifier}}
-    void baz(int i); // expected-note {{candidate function not viable: no known conversion from 'const A' to 'int' for 1st argument}} 
+    void baz(int i); // expected-note {{candidate function not viable: no known conversion from 'const A' to 'int' for 1st argument}}
 
     void ref() &&;   // expected-note {{expects an rvalue for object argument}} expected-note {{requires 0 arguments, but 1 was provided}}
     void ref(int) &; // expected-note {{expects an lvalue for object argument}} expected-note {{requires 1 argument, but 0 were provided}}

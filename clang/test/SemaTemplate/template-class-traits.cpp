@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 // expected-no-diagnostics
 #define T(b) (b) ? 1 : -1
 #define F(b) (b) ? -1 : 1

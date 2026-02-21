@@ -9,7 +9,7 @@ by giving the compiler the freedom of how to parallelize for specific
 architectures. OpenACC also provides the ability to optimize the
 parallelism through increasingly more prescriptive clauses.
 
-This dialect models the constructs from the 
+This dialect models the constructs from the
 [OpenACC 3.3 specification](https://www.openacc.org/sites/default/files/inline-images/Specification/OpenACC-3.3-final.pdf)
 
 This document describes the design of the OpenACC dialect in MLIR. It
@@ -400,7 +400,7 @@ symbol (or string) the acc routine is needed for, along with parallelism
 associated. This defines a symbol that can be referenced in attribute.
 * The `acc.routine_info` attribute is an attribute used on the source
 dialect specific operation which specifies one or multiple `acc.routine`
-symbols. Typically, this is attached to `func.func` which either 
+symbols. Typically, this is attached to `func.func` which either
 provides the declaration (in case of externals) or provides the
 actual body of the acc routine in the dialect that the source language
 was translated to.

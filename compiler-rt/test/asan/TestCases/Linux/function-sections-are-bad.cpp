@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
   printf("%s\n", dlerror());
   assert(dlerror() == 0);
   f();
-  
+
   dlclose(handle);
   return 0;
 }

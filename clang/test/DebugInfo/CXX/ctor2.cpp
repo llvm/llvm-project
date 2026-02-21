@@ -5,7 +5,7 @@
 class MyClass
 {
 public:
-    explicit MyClass (int i) : 
+    explicit MyClass (int i) :
         m_i (i)
     {}
 private:

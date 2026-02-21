@@ -197,7 +197,7 @@ T hypergeometric_pdf_lanczos_imp(T /*dummy*/, std::uint64_t x, std::uint64_t r, 
          result *= sqrt(bases[sorted_indexes[i]] * exp(static_cast<T>(base_e_factors[sorted_indexes[i]])));
       else
          result *= pow(bases[sorted_indexes[i]] * exp(static_cast<T>(base_e_factors[sorted_indexes[i]])), exponents[sorted_indexes[i]]);
-   
+
       BOOST_MATH_INSTRUMENT_VARIABLE(result);
    }
 
@@ -205,13 +205,13 @@ T hypergeometric_pdf_lanczos_imp(T /*dummy*/, std::uint64_t x, std::uint64_t r, 
       * Lanczos::lanczos_sum_expG_scaled(static_cast<T>(r + 1))
       * Lanczos::lanczos_sum_expG_scaled(static_cast<T>(N - n + 1))
       * Lanczos::lanczos_sum_expG_scaled(static_cast<T>(N - r + 1))
-      / 
+      /
       ( Lanczos::lanczos_sum_expG_scaled(static_cast<T>(N + 1))
          * Lanczos::lanczos_sum_expG_scaled(static_cast<T>(x + 1))
          * Lanczos::lanczos_sum_expG_scaled(static_cast<T>(n - x + 1))
          * Lanczos::lanczos_sum_expG_scaled(static_cast<T>(r - x + 1))
          * Lanczos::lanczos_sum_expG_scaled(static_cast<T>(N - n - r + x + 1)));
-   
+
    BOOST_MATH_INSTRUMENT_VARIABLE(result);
    return result;
 }
@@ -428,7 +428,7 @@ T hypergeometric_pdf_factorial_imp(std::uint64_t x, std::uint64_t r, std::uint64
 
 
 template <class T, class Policy>
-inline typename tools::promote_args<T>::type 
+inline typename tools::promote_args<T>::type
    hypergeometric_pdf(std::uint64_t x, std::uint64_t r, std::uint64_t n, std::uint64_t N, const Policy&)
 {
    BOOST_FPU_EXCEPTION_GUARD
@@ -436,9 +436,9 @@ inline typename tools::promote_args<T>::type
    typedef typename policies::evaluation<result_type, Policy>::type value_type;
    typedef typename lanczos::lanczos<value_type, Policy>::type evaluation_type;
    typedef typename policies::normalise<
-      Policy, 
-      policies::promote_float<false>, 
-      policies::promote_double<false>, 
+      Policy,
+      policies::promote_float<false>,
+      policies::promote_double<false>,
       policies::discrete_quantile<>,
       policies::assert_undefined<> >::type forwarding_policy;
 
@@ -464,7 +464,7 @@ inline typename tools::promote_args<T>::type
    else
    {
       //
-      // Catch all case - use the lanczos approximation - where available - 
+      // Catch all case - use the lanczos approximation - where available -
       // to evaluate the ratio of factorials.  This is reasonably fast
       // (almost as quick as using logarithmic evaluation in terms of lgamma)
       // but only a few digits better in accuracy than using lgamma:

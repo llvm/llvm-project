@@ -16,7 +16,7 @@ float fp_contract_2(float a, float b, float c) {
   {
     #pragma STDC FP_CONTRACT ON
   }
-  return a * b + c;  
+  return a * b + c;
 }
 
 // Does FP_CONTRACT survive template instantiation?

@@ -55,7 +55,7 @@ namespace test0 {
 //   derived class.
 namespace test1 {
   class Base { // expected-note 6{{member is declared here}}
-  public: 
+  public:
     int pub; // expected-note{{member is declared here}}
     static int spub; // expected-note{{member is declared here}}
   protected: int prot; static int sprot; // expected-note 4 {{declared protected here}}

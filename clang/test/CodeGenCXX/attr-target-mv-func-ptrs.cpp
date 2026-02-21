@@ -5,7 +5,7 @@ void temp();
 void temp(int);
 using FP = void(*)(int);
 void b() {
-  FP f = temp; 
+  FP f = temp;
 }
 
 int __attribute__((target("sse4.2"))) foo(int) { return 0; }

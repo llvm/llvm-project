@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 
 void f1() {
   struct X {
     struct Y;
   };
-  
+
   struct X::Y {
     void f() {}
   };
@@ -13,7 +13,7 @@ void f1() {
 void f2() {
   struct X {
     struct Y;
-    
+
     struct Y {
       void f() {}
     };

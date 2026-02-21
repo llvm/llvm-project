@@ -15,7 +15,7 @@ namespace A {
   };
   using ClassTypedef = C<char>::ClassTypedef;
   using ClassTypedef2 = C<wchar_t>::ClassTypedef;
-  
+
   template<typename T>
   using AliasTemplate = typename C<T>::ClassTypedef;
 }
@@ -38,7 +38,7 @@ using VarArgsFuncTypedefA = float(*)(...);
 
 int main(int argc, char **argv) {
   long double *Ptr;
-  
+
   A::B::NamespaceTypedef *X0;
   A::C<char>::ClassTypedef *X1;
   A::C<wchar_t>::ClassTypedef *X2;

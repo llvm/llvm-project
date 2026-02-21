@@ -2,8 +2,8 @@
 
 // CHECK: @_ZTV5TemplIiE = internal unnamed_addr constant { [7 x ptr] } { [7 x ptr] [ptr null, ptr null, ptr @_ZN5TemplIiED1Ev, ptr @_ZN5TemplIiED0Ev, ptr @_ZN5TemplIiE1fEv, ptr @_ZN5TemplIiE1gEv, ptr null] }
 
-struct B1 { 
-  virtual ~B1(); 
+struct B1 {
+  virtual ~B1();
 };
 
 B1::~B1() {}

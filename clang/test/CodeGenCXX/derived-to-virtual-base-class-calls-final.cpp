@@ -4,8 +4,8 @@ struct A { int i; };
 struct B { char j; };
 struct C : A, B { int k; };
 
-struct D final : virtual C { 
-  D(); 
+struct D final : virtual C {
+  D();
   virtual void f();
 };
 

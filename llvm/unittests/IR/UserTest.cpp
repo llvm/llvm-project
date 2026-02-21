@@ -143,7 +143,7 @@ TEST(UserTest, replaceUseOfWith) {
 
   auto XUser = find(X.users(), &(I1));
   EXPECT_NE(XUser, X.user_end());
- 
+
   EXPECT_TRUE(XUser->replaceUsesOfWith(&X, &I0));
   EXPECT_EQ(X.user_begin(), X.user_end());
   EXPECT_NE(I0.user_begin(), I0.user_end());

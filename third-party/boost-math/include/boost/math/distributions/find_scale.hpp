@@ -36,11 +36,11 @@ namespace boost
       // For example, a nominal minimum acceptable weight z, so that p * 100 % are > z
       typename Dist::value_type p, // probability value desired at x, say 0.95 for 95% > z.
       typename Dist::value_type location, // location parameter, for example, normal distribution mean.
-      const Policy& pol 
+      const Policy& pol
       )
     {
-      static_assert(::boost::math::tools::is_distribution<Dist>::value, "The provided distribution does not meet the conceptual requirements of a distribution."); 
-      static_assert(::boost::math::tools::is_scaled_distribution<Dist>::value, "The provided distribution does not meet the conceptual requirements of a scaled distribution."); 
+      static_assert(::boost::math::tools::is_distribution<Dist>::value, "The provided distribution does not meet the conceptual requirements of a distribution.");
+      static_assert(::boost::math::tools::is_scaled_distribution<Dist>::value, "The provided distribution does not meet the conceptual requirements of a scaled distribution.");
       static const char* function = "boost::math::find_scale<Dist, Policy>(%1%, %1%, %1%, Policy)";
 
       if(!(boost::math::isfinite)(p) || (p < 0) || (p > 1))
@@ -60,21 +60,21 @@ namespace boost
       }
 
       //cout << "z " << z << ", p " << p << ",  quantile(Dist(), p) "
-      //<< quantile(Dist(), p) << ", z - mean " << z - location 
+      //<< quantile(Dist(), p) << ", z - mean " << z - location
       //<<", sd " << (z - location)  / quantile(Dist(), p) << endl;
 
       //quantile(N01, 0.001) -3.09023
       //quantile(N01, 0.01) -2.32635
       //quantile(N01, 0.05) -1.64485
       //quantile(N01, 0.333333) -0.430728
-      //quantile(N01, 0.5) 0  
+      //quantile(N01, 0.5) 0
       //quantile(N01, 0.666667) 0.430728
       //quantile(N01, 0.9) 1.28155
       //quantile(N01, 0.95) 1.64485
       //quantile(N01, 0.99) 2.32635
       //quantile(N01, 0.999) 3.09023
 
-      typename Dist::value_type result = 
+      typename Dist::value_type result =
         (z - location)  // difference between desired x and current location.
         / quantile(Dist(), p); // standard distribution.
 
@@ -107,8 +107,8 @@ namespace boost
       //  << quantile(Dist(), c.param1) //q
       //  << endl;
 
-      static_assert(::boost::math::tools::is_distribution<Dist>::value, "The provided distribution does not meet the conceptual requirements of a distribution."); 
-      static_assert(::boost::math::tools::is_scaled_distribution<Dist>::value, "The provided distribution does not meet the conceptual requirements of a scaled distribution."); 
+      static_assert(::boost::math::tools::is_distribution<Dist>::value, "The provided distribution does not meet the conceptual requirements of a distribution.");
+      static_assert(::boost::math::tools::is_scaled_distribution<Dist>::value, "The provided distribution does not meet the conceptual requirements of a scaled distribution.");
       static const char* function = "boost::math::find_scale<Dist, Policy>(complement(%1%, %1%, %1%, Policy))";
 
       // Checks on arguments, as not complemented version,
@@ -132,10 +132,10 @@ namespace boost
           function, "find_scale location parameter was %1%, but must be finite!", location, c.param3);
       }
 
-      typename Dist::value_type result = 
+      typename Dist::value_type result =
         (c.dist - c.param2)  // difference between desired x and current location.
         / quantile(complement(Dist(), c.param1));
-      //     (  z    - location) / (quantile(complement(Dist(),  q)) 
+      //     (  z    - location) / (quantile(complement(Dist(),  q))
       if (result <= 0)
       { // If policy isn't to throw, return the scale <= 0.
         policies::raise_evaluation_error<typename Dist::value_type>(function, "Computed scale (%1%) is <= 0!" " Was the complement intended?", result, Policy()); // LCOV_EXCL_LINE
@@ -157,8 +157,8 @@ namespace boost
       //  << quantile(Dist(), c.param1) //q
       //  << endl;
 
-      static_assert(::boost::math::tools::is_distribution<Dist>::value, "The provided distribution does not meet the conceptual requirements of a distribution."); 
-      static_assert(::boost::math::tools::is_scaled_distribution<Dist>::value, "The provided distribution does not meet the conceptual requirements of a scaled distribution.");  
+      static_assert(::boost::math::tools::is_distribution<Dist>::value, "The provided distribution does not meet the conceptual requirements of a distribution.");
+      static_assert(::boost::math::tools::is_scaled_distribution<Dist>::value, "The provided distribution does not meet the conceptual requirements of a scaled distribution.");
       static const char* function = "boost::math::find_scale<Dist, Policy>(complement(%1%, %1%, %1%, Policy))";
 
       // Checks on arguments, as not complemented version,
@@ -182,10 +182,10 @@ namespace boost
           function, "find_scale location parameter was %1%, but must be finite!", location, policies::policy<>());
       }
 
-      typename Dist::value_type result = 
+      typename Dist::value_type result =
         (z - location)  // difference between desired x and current location.
         / quantile(complement(Dist(), q));
-      //     (  z    - location) / (quantile(complement(Dist(),  q)) 
+      //     (  z    - location) / (quantile(complement(Dist(),  q))
       if (result <= 0)
       { // If policy isn't to throw, return the scale <= 0.
         policies::raise_evaluation_error<typename Dist::value_type>(function, "Computed scale (%1%) is <= 0!" " Was the complement intended?", // LCOV_EXCL_LINE

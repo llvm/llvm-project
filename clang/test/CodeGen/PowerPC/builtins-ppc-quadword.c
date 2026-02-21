@@ -35,23 +35,23 @@ void test1() {
   /* vec_add */
   res_vlll = vec_add(vlll, vlll);
 // CHECK: add <1 x i128>
-// CHECK-LE: add <1 x i128> 
+// CHECK-LE: add <1 x i128>
 // CHECK-PPC: error: call to 'vec_add' is ambiguous
 
   res_vulll = vec_add(vulll, vulll);
-// CHECK: add <1 x i128> 
-// CHECK-LE: add <1 x i128> 
+// CHECK: add <1 x i128>
+// CHECK-LE: add <1 x i128>
 // CHECK-PPC: error: call to 'vec_add' is ambiguous
 
   /* vec_vadduqm */
   res_vlll = vec_vadduqm(vlll, vlll);
-// CHECK: add <1 x i128> 
-// CHECK-LE: add <1 x i128> 
+// CHECK: add <1 x i128>
+// CHECK-LE: add <1 x i128>
 // CHECK-PPC: error: assigning to '__vector __int128' (vector of 1 '__int128' value) from incompatible type 'int'
 
   res_vulll = vec_vadduqm(vulll, vulll);
-// CHECK: add <1 x i128> 
-// CHECK-LE: add <1 x i128> 
+// CHECK: add <1 x i128>
+// CHECK-LE: add <1 x i128>
 // CHECK-PPC: error: assigning to '__vector unsigned __int128' (vector of 1 'unsigned __int128' value) from incompatible type 'int'
 
   /* vec_vaddeuqm */
@@ -59,7 +59,7 @@ void test1() {
 // CHECK: @llvm.ppc.altivec.vaddeuqm
 // CHECK-LE: @llvm.ppc.altivec.vaddeuqm
 // CHECK-PPC: error: assigning to '__vector __int128' (vector of 1 '__int128' value) from incompatible type 'int'
-  
+
   res_vulll = vec_vaddeuqm(vulll, vulll, vulll);
 // CHECK: @llvm.ppc.altivec.vaddeuqm
 // CHECK-LE: @llvm.ppc.altivec.vaddeuqm
@@ -82,7 +82,7 @@ void test1() {
 // CHECK: @llvm.ppc.altivec.vaddcuq
 // CHECK-LE: @llvm.ppc.altivec.vaddcuq
 // CHECK-PPC: error: assigning to '__vector __int128' (vector of 1 '__int128' value) from incompatible type 'int'
-  
+
   res_vulll = vec_vaddcuq(vulll, vulll);
 // CHECK: @llvm.ppc.altivec.vaddcuq
 // CHECK-LE: @llvm.ppc.altivec.vaddcuq
@@ -102,25 +102,25 @@ void test1() {
   /* vec_sub */
   res_vlll = vec_sub(vlll, vlll);
 // CHECK: sub <1 x i128>
-// CHECK-LE: sub <1 x i128> 
+// CHECK-LE: sub <1 x i128>
 // CHECK-PPC: error: call to 'vec_sub' is ambiguous
-  
+
   res_vulll = vec_sub(vulll, vulll);
-// CHECK: sub <1 x i128> 
-// CHECK-LE: sub <1 x i128> 
+// CHECK: sub <1 x i128>
+// CHECK-LE: sub <1 x i128>
 // CHECK-PPC: error: call to 'vec_sub' is ambiguous
 
   /* vec_vsubuqm */
   res_vlll = vec_vsubuqm(vlll, vlll);
-// CHECK: sub <1 x i128> 
-// CHECK-LE: sub <1 x i128> 
+// CHECK: sub <1 x i128>
+// CHECK-LE: sub <1 x i128>
 // CHECK-PPC: error: assigning to '__vector __int128' (vector of 1 '__int128' value) from incompatible type 'int'
-  
+
   res_vulll = vec_vsubuqm(vulll, vulll);
-// CHECK: sub <1 x i128> 
-// CHECK-LE: sub <1 x i128> 
+// CHECK: sub <1 x i128>
+// CHECK-LE: sub <1 x i128>
 // CHECK-PPC: error: assigning to '__vector unsigned __int128' (vector of 1 'unsigned __int128' value) from incompatible type 'int'
-  
+
   res_vuc = vec_sub_u128(vuc, vuc);
 // CHECK: sub <1 x i128>
 // CHECK-LE: sub <1 x i128>
@@ -130,28 +130,28 @@ void test1() {
 // CHECK: @llvm.ppc.altivec.vsubeuqm
 // CHECK-LE: @llvm.ppc.altivec.vsubeuqm
 // CHECK-PPC: error: assigning to '__vector __int128' (vector of 1 '__int128' value) from incompatible type 'int'
-  
+
   /* vec_sube */
   res_vlll = vec_sube(vlll, vlll, vlll);
 // CHECK: @llvm.ppc.altivec.vsubeuqm
 // CHECK-LE: @llvm.ppc.altivec.vsubeuqm
 // CHECK-PPC: error: call to 'vec_sube' is ambiguous
-  
+
   res_vulll = vec_sube(vulll, vulll, vulll);
 // CHECK: @llvm.ppc.altivec.vsubeuqm
 // CHECK-LE: @llvm.ppc.altivec.vsubeuqm
 // CHECK-PPC: error: call to 'vec_sube' is ambiguous
-  
+
   res_vlll = vec_sube(vlll, vlll, vlll);
 // CHECK: @llvm.ppc.altivec.vsubeuqm
 // CHECK-LE: @llvm.ppc.altivec.vsubeuqm
 // CHECK-PPC: error: call to 'vec_sube' is ambiguous
-  
+
   res_vulll = vec_vsubeuqm(vulll, vulll, vulll);
 // CHECK: @llvm.ppc.altivec.vsubeuqm
 // CHECK-LE: @llvm.ppc.altivec.vsubeuqm
 // CHECK-PPC: error: assigning to '__vector unsigned __int128' (vector of 1 'unsigned __int128' value) from incompatible type 'int'
-  
+
   res_vulll = vec_sube(vulll, vulll, vulll);
 // CHECK: @llvm.ppc.altivec.vsubeuqm
 // CHECK-LE: @llvm.ppc.altivec.vsubeuqm
@@ -181,7 +181,7 @@ void test1() {
 // CHECK: @llvm.ppc.altivec.vsubcuq
 // CHECK-LE: @llvm.ppc.altivec.vsubcuq
 // CHECK-PPC: error: assigning to '__vector __int128' (vector of 1 '__int128' value) from incompatible type 'int'
-  
+
   res_vulll = vec_vsubcuq(vulll, vulll);
 // CHECK: @llvm.ppc.altivec.vsubcuq
 // CHECK-LE: @llvm.ppc.altivec.vsubcuq
@@ -201,12 +201,12 @@ void test1() {
   res_vlll = vec_subec(vlll, vlll, vlll);
 // CHECK: @llvm.ppc.altivec.vsubecuq
 // CHECK-LE: @llvm.ppc.altivec.vsubecuq
-// CHECK-PPC: error: assigning to '__vector __int128' (vector of 1 '__int128' value) from incompatible type 'int'  
+// CHECK-PPC: error: assigning to '__vector __int128' (vector of 1 '__int128' value) from incompatible type 'int'
 
   res_vulll = vec_subec(vulll, vulll, vulll);
 // CHECK: @llvm.ppc.altivec.vsubecuq
 // CHECK-LE: @llvm.ppc.altivec.vsubecuq
-// CHECK-PPC: error: assigning to '__vector unsigned __int128' (vector of 1 'unsigned __int128' value) from incompatible type 'int'  
+// CHECK-PPC: error: assigning to '__vector unsigned __int128' (vector of 1 'unsigned __int128' value) from incompatible type 'int'
 
   res_vuc = vec_subec_u128(vuc, vuc, vuc);
 // CHECK: @llvm.ppc.altivec.vsubecuq

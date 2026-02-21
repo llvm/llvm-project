@@ -4,7 +4,7 @@ void t1() {
   // CHECK: [[REFLOAD:%.*]] = load ptr, ptr @a, align 8
   // CHECK: load i32, ptr [[REFLOAD]], align 4
   extern int& a;
-  int b = a; 
+  int b = a;
 }
 
 void t2(int& a) {
@@ -41,40 +41,40 @@ void test_bool() {
   f(a);
 
   f(true);
-  
+
   bool_reference_return() = true;
   a = bool_reference_return();
-  
+
   struct { const bool& b; } b = { true };
 }
 
 void test_scalar() {
   int a = 10;
   f(a);
-  
+
   struct { int bitfield : 3; } s = { 3 };
   f(s.bitfield);
-  
+
   f(10);
 
   __attribute((vector_size(16))) typedef int vec4;
   f((vec4){1,2,3,4}[0]);
-  
+
   int_reference_return() = 10;
   a = int_reference_return();
-  
+
   struct { const int& a; } agg = { 10 };
 }
 
 void test_complex() {
   _Complex int a = 10i;
   f(a);
-  
+
   f(10i);
-  
+
   complex_int_reference_return() = 10i;
   a = complex_int_reference_return();
-  
+
   struct { const _Complex int &a; } agg = { 10i };
 }
 
@@ -86,7 +86,7 @@ void test_aggregate() {
   aggregate_reference_return().a = 10;
 
   c = aggregate_reference_return();
-  
+
   struct { const C& a; } agg = { C() };
 }
 
@@ -225,7 +225,7 @@ namespace N2 {
   // CHECK: ret void
   void g(int i) {
     const X &xr = getZ().has.x;
-    i = 19;    
+    i = 19;
   }
 }
 
@@ -246,7 +246,7 @@ const A &sA123 = A(123);
 }
 
 namespace N4 {
-  
+
 struct A {
   A();
   ~A();
@@ -258,7 +258,7 @@ void f() {
   // CHECK: call i32 @__cxa_atexit
   // CHECK: ret void
   static const A& ar = A();
-  
+
 }
 }
 

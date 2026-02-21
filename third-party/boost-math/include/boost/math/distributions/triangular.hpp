@@ -10,7 +10,7 @@
 // http://mathworld.wolfram.com/TriangularDistribution.html
 // Note that the 'constructors' defined by Wolfram are difference from those here,
 // for example
-// N[variance[triangulardistribution{1, +2}, 1.5], 50] computes 
+// N[variance[triangulardistribution{1, +2}, 1.5], 50] computes
 // 0.041666666666666666666666666666666666666666666666667
 // TriangularDistribution{1, +2}, 1.5 is the analog of triangular_distribution(1, 1.5, 2)
 
@@ -491,7 +491,7 @@ namespace boost{ namespace math
       return result;
     }
     return root_two<RealType>() * (lower + upper - 2 * mode) * (2 * lower - upper - mode) * (lower - 2 * upper + mode) /
-      (5 * pow((lower * lower + upper * upper + mode * mode 
+      (5 * pow((lower * lower + upper * upper + mode * mode
         - lower * upper - lower * mode - upper * mode), RealType(3)/RealType(2)));
     // #11768: Skewness formula for triangular distribution is incorrect -  corrected 29 Oct 2015 for release 1.61.
   } // RealType skewness(const triangular_distribution<RealType, Policy>& dist)

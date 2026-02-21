@@ -5,7 +5,7 @@
     return name ## _hidden;                                    \
   }
 
-int 
+int
 call_through_indirect_hidden(int arg)
 {
   return arg + 5;

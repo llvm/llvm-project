@@ -202,7 +202,7 @@ BOOST_MATH_GPU_ENABLED T cyl_bessel_i_imp_final(T v, T x, const Policy& pol)
    constexpr auto function = "boost::math::cyl_bessel_i<%1%>(%1%,%1%)";
    if(x == 0)
    {
-      if(v < 0) 
+      if(v < 0)
          return floor(v) == v ? static_cast<T>(0) : policies::raise_overflow_error<T>(function, nullptr, pol);
       return (v == 0) ? static_cast<T>(1) : static_cast<T>(0);
    }
@@ -251,7 +251,7 @@ BOOST_MATH_GPU_ENABLED T cyl_bessel_i_imp(T v, T x, const Policy& pol)
          {
             r = -r;
          }
-         
+
          return r;
       }
       else
@@ -259,7 +259,7 @@ BOOST_MATH_GPU_ENABLED T cyl_bessel_i_imp(T v, T x, const Policy& pol)
          return policies::raise_domain_error<T>(function, "Got x = %1%, but we need x >= 0", x, pol);
       }
    }
-   
+
    return cyl_bessel_i_imp_final(T(v), T(x), pol);
 }
 

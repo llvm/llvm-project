@@ -65,7 +65,7 @@ private:
   lldb::DataBufferSP GetL2CacheLine(lldb::addr_t addr, Status &error);
 };
 
-    
+
 
 class AllocatedBlock {
 public:

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm %s  -o /dev/null
 
-/* GCC Used to generate code that contained a branch to the entry node of 
+/* GCC Used to generate code that contained a branch to the entry node of
  * the do_merge function.  This is illegal LLVM code.  To fix this, GCC now
  * inserts an entry node regardless of whether or not it has to insert allocas.
  */

@@ -1045,9 +1045,9 @@ LLVM_C_ABI LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(
  * be visible to JIT'd code. Note that the symbol name passed to the Filter
  * function is the full mangled symbol: The client is responsible for stripping
  * the global prefix if present.
- * 
+ *
  * THIS API IS EXPERIMENTAL AND LIKELY TO CHANGE IN THE NEAR FUTURE!
- * 
+ *
  */
 LLVM_C_ABI LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForPath(
     LLVMOrcDefinitionGeneratorRef *Result, const char *FileName,
@@ -1065,7 +1065,7 @@ LLVM_C_ABI LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForPath(
  * return an error.
  *
  * THIS API IS EXPERIMENTAL AND LIKELY TO CHANGE IN THE NEAR FUTURE!
- * 
+ *
  */
 LLVM_C_ABI LLVMErrorRef LLVMOrcCreateStaticLibrarySearchGeneratorForPath(
     LLVMOrcDefinitionGeneratorRef *Result, LLVMOrcObjectLayerRef ObjLayer,

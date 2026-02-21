@@ -21,14 +21,14 @@ struct Empty1 { };
 struct Empty2 { };
 
 // CHECK: Type: struct X0
-struct X0 : public Empty1 { 
-  int x[6] PACKED; 
+struct X0 : public Empty1 {
+  int x[6] PACKED;
 };
 
 // CHECK: Type: struct X1
-struct X1 : public X0, public Empty2 { 
-  char x[13]; 
-  struct X0 y; 
+struct X1 : public X0, public Empty2 {
+  char x[13];
+  struct X0 y;
 } PACKED;
 
 // CHECK: Type: struct X2

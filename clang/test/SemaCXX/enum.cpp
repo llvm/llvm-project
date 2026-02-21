@@ -66,10 +66,10 @@ namespace test1 {
 namespace PR6061 {
   struct A { enum { id }; };
   struct B { enum { id }; };
-  
+
   struct C : public A, public B
-  { 
-    enum { id }; 
+  {
+    enum { id };
   };
 }
 

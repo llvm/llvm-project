@@ -6,7 +6,7 @@
 #include "Inputs/system-header-simulator-for-malloc.h"
 
 //===----------------------------------------------------------------------===//
-// unique_ptr test cases 
+// unique_ptr test cases
 //===----------------------------------------------------------------------===//
 namespace unique_ptr_tests {
 
@@ -43,7 +43,7 @@ void test_malloc_with_smart_ptr() {
 }
 
 // Test 2: Check that we don't report leaks for unique_ptr in temporary objects
-struct Foo { 
+struct Foo {
   unique_ptr<int> i;
 };
 
@@ -52,7 +52,7 @@ void add_foo(Foo foo) {
 }
 
 void test_temporary_object() {
-  // No warning should be emitted for this - the memory is managed by unique_ptr 
+  // No warning should be emitted for this - the memory is managed by unique_ptr
   // in the temporary Foo object, which will properly clean up the memory
   add_foo({make_unique<int>(1)});
 }
@@ -76,7 +76,7 @@ void add_derived(Derived derived) {
 }
 
 void test_base_class_smart_ptr() {
-  // No warning should be emitted for this - the memory is managed by unique_ptr 
+  // No warning should be emitted for this - the memory is managed by unique_ptr
   // in the base class field of the temporary Derived object
   add_derived(Derived(make_unique<int>(1), 42));
 }
@@ -91,7 +91,7 @@ struct MultiPtr {
   unique_ptr<int> ptr1;
   unique_ptr<int> ptr2;
   unique_ptr<int> ptr3;
-  
+
   MultiPtr(unique_ptr<int>&& p1, unique_ptr<int>&& p2, unique_ptr<int>&& p3)
     : ptr1(static_cast<unique_ptr<int>&&>(p1))
     , ptr2(static_cast<unique_ptr<int>&&>(p2))
@@ -139,9 +139,9 @@ void test_direct_constructor() {
 }
 
 void test_mixed_direct_constructor() {
-  int* raw1 = new int(1); 
+  int* raw1 = new int(1);
   int* raw2 = new int(2); // expected-note {{Memory is allocated}}
-  
+
   unique_ptr<int> smart(raw1); // This should escape raw1
   // raw2 should leak since it's not managed by any smart pointer
   int x = *raw2; // expected-warning {{Potential leak of memory pointed to by 'raw2'}} expected-note {{Potential leak of memory pointed to by 'raw2'}}
@@ -150,7 +150,7 @@ void test_mixed_direct_constructor() {
 // Test 7: Multiple memory owning arguments - demonstrates addTransition API usage
 void addMultipleOwningArgs(
   unique_ptr<int> ptr1,
-  unique_ptr<int> ptr2, 
+  unique_ptr<int> ptr2,
   unique_ptr<int> ptr3
 ) {
   // All unique_ptr destructors will be called when arguments go out of scope
@@ -162,7 +162,7 @@ void test_multiple_memory_owning_arguments() {
   // This test specifically exercises the addTransition API with multiple owning arguments
   addMultipleOwningArgs(
     make_unique<int>(1),
-    make_unique<int>(2), 
+    make_unique<int>(2),
     make_unique<int>(3)
   );
 }
@@ -181,7 +181,7 @@ template <typename T>
 struct unique_ptr {
   T* ptr;
 
-  // Constructor with ellipsis - can receive more arguments than parameters  
+  // Constructor with ellipsis - can receive more arguments than parameters
   unique_ptr(T* p, ...) : ptr(p) {}
 
   ~unique_ptr() {
@@ -197,13 +197,13 @@ void process_variadic_smart_ptr(unique_ptr<int> ptr) {
 
 void test_variadic_constructor_bounds() {
   void *malloc_ptr = malloc(4); // expected-note {{Memory is allocated}}
-  
+
   // This call creates a smart pointer with more arguments than formal parameters
   // The constructor has 1 formal parameter (T* p) plus ellipsis, but we pass multiple args
   // This should trigger the bounds checking issue in handleSmartPointerConstructorArguments
   int* raw_ptr = new int(42);
   process_variadic_smart_ptr(unique_ptr<int>(raw_ptr, 1, 2, 3, 4, 5));
-  
+
   (void)malloc_ptr;
 } // expected-warning {{Potential leak of memory pointed to by 'malloc_ptr'}}
   // expected-note@-1 {{Potential leak of memory pointed to by 'malloc_ptr'}}
@@ -235,7 +235,7 @@ shared_ptr<T> make_shared(Args&&... args) {
 }
 
 // Test 1: Check that we don't report leaks for shared_ptr in temporary objects
-struct Foo { 
+struct Foo {
   shared_ptr<int> i;
 };
 
@@ -244,7 +244,7 @@ void add_foo(Foo foo) {
 }
 
 void test_temporary_object() {
-  // No warning should be emitted for this - the memory is managed by shared_ptr 
+  // No warning should be emitted for this - the memory is managed by shared_ptr
   // in the temporary Foo object, which will properly clean up the memory
   add_foo({make_shared<int>(1)});
 }

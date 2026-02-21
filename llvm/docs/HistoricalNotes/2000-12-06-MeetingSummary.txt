@@ -6,12 +6,12 @@ We met to discuss the LLVM instruction format and bytecode representation:
 ISSUES RESOLVED
 ---------------
 
-1. We decided that we shall use a flat namespace to represent our 
+1. We decided that we shall use a flat namespace to represent our
    variables in SSA form, as opposed to having a two dimensional namespace
    of the original variable and the SSA instance subscript.
 
 ARGUMENT AGAINST:
-   * A two dimensional namespace would be valuable when doing alias 
+   * A two dimensional namespace would be valuable when doing alias
      analysis because the extra information can help limit the scope of
      analysis.
 
@@ -37,7 +37,7 @@ IDEAS TO CONSIDER
 
 1. Including dominator information in the LLVM bytecode
    representation.  This is one example of an analysis result that may be
-   packaged with the bytecodes themselves.  As a conceptual implementation 
+   packaged with the bytecodes themselves.  As a conceptual implementation
    idea, we could include an immediate dominator number for each basic block
    in the LLVM bytecode program.  Basic blocks could be numbered according
    to the order of occurrence in the bytecode representation.
@@ -45,8 +45,8 @@ IDEAS TO CONSIDER
 2. Including loop header and body information.  This would facilitate
    detection of intervals and natural loops.
 
-UNRESOLVED ISSUES 
------------------ 
+UNRESOLVED ISSUES
+-----------------
 
 1. Will oSUIF provide enough of an infrastructure to support the research
    that we will be doing?  We know that it has less than stellar
@@ -72,7 +72,7 @@ UNRESOLVED ISSUES
    either hardware or software based LLVM runtimes), but we have several
    'infinite' spaces that instructions operate in (SSA register numbers,
    type spaces, or packet length [if packets were implemented]).  Several
-   options were mentioned including: 
+   options were mentioned including:
      A. Using 16 or 32 bit numbers, which would be 'big enough'
      B. A scheme similar to how UTF-8 works, to encode infinite numbers
         while keeping small number small.

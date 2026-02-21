@@ -105,7 +105,7 @@ We are restricted to using single instructions to branch between the
 original code, trace, and instrumented code. So we have to keep the
 code copies in memory near the original code (they can't be far enough
 away that a single pc-relative branch would not work.) Malloc() or
-data region space is too far away. this impacts the design of the 
+data region space is too far away. this impacts the design of the
 trace cache.
 
 We use a dummy function that is full of a bunch of for loops which we

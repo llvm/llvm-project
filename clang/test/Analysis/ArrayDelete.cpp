@@ -32,7 +32,7 @@ void same_function() {
     Base *sd = new Derived[10]; // expected-note{{Casting from 'Derived' to 'Base' here}}
     delete[] sd; // expected-warning{{Deleting an array of 'Derived' objects as their base class 'Base' is undefined}}
     // expected-note@-1{{Deleting an array of 'Derived' objects as their base class 'Base' is undefined}}
-    
+
     Base *dd = new DoubleDerived[10]; // expected-note{{Casting from 'DoubleDerived' to 'Base' here}}
     delete[] dd; // expected-warning{{Deleting an array of 'DoubleDerived' objects as their base class 'Base' is undefined}}
     // expected-note@-1{{Deleting an array of 'DoubleDerived' objects as their base class 'Base' is undefined}}

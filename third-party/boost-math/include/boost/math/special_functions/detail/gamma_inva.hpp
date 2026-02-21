@@ -21,13 +21,13 @@
 #include <boost/math/tools/config.hpp>
 #include <boost/math/tools/toms748_solve.hpp>
 
-namespace boost{ namespace math{ 
+namespace boost{ namespace math{
 
 #ifdef BOOST_MATH_HAS_NVRTC
 template <typename T, typename Policy>
 BOOST_MATH_GPU_ENABLED auto erfc_inv(T x, const Policy&);
 #endif
-   
+
 namespace detail{
 
 template <class T, class Policy>

@@ -289,7 +289,7 @@ attributes when the attribute value is equal to the default.
 
 For enum attributes, you can use `DefaultValuedEnumAttr<EnumAttr, EnumCase>`
 instead of `DefaultValuedAttr`. This allows specifying the default value using a
-TableGen `EnumCase` variable instead of a raw string. For example 
+TableGen `EnumCase` variable instead of a raw string. For example
 `DefaultValuedEnumAttr<SomeI64Enum, I64Case5>`.
 
 #### Confining attributes

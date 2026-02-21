@@ -2854,7 +2854,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestDisassemblyMidFunctionEpilogues) {
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(wordsize, row->GetCFAValue().GetOffset());
 
-  // Check that we've reinstated the stack frame setup 
+  // Check that we've reinstated the stack frame setup
   // unwind instructions after a jmpq *%eax
   // row:   CFA=ebp +8 => esp=CFA+0 eip=[CFA-8]
   row = unwind_plan.GetRowForFunctionOffset(18);
@@ -2863,7 +2863,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestDisassemblyMidFunctionEpilogues) {
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(wordsize * 2, row->GetCFAValue().GetOffset());
 
-  // Check that we've reinstated the stack frame setup 
+  // Check that we've reinstated the stack frame setup
   // unwind instructions after a mid-function retq
   // row:   CFA=ebp +8 => esp=CFA+0 eip=[CFA-8]
   row = unwind_plan.GetRowForFunctionOffset(28);
@@ -2895,7 +2895,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestDisassemblyMidFunctionEpilogues) {
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(wordsize, row->GetCFAValue().GetOffset());
 
-  // Check that we've reinstated the stack frame setup 
+  // Check that we've reinstated the stack frame setup
   // unwind instructions after a jmpq *%eax
   // row:   CFA=rbp+16 => rsp=CFA+0 rip=[CFA-16]
   row = unwind_plan.GetRowForFunctionOffset(18);
@@ -2904,7 +2904,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestDisassemblyMidFunctionEpilogues) {
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(wordsize * 2, row->GetCFAValue().GetOffset());
 
-  // Check that we've reinstated the stack frame setup 
+  // Check that we've reinstated the stack frame setup
   // unwind instructions after a mid-function retq
   // row:   CFA=rbp+16 => rsp=CFA+0 rip=[CFA-16]
   row = unwind_plan.GetRowForFunctionOffset(28);

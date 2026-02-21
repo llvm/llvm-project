@@ -84,7 +84,7 @@ int rethrow_from_block(int a, int b) {
 // OGCG:  %[[DIV_A_B:.*]] = sdiv i32 %[[TMP_A]], %[[TMP_B]]
 // OGCG:  ret i32 %[[DIV_A_B]]
 
-void throw_scalar() { 
+void throw_scalar() {
   throw 1;
 }
 

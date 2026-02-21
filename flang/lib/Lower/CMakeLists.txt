@@ -49,7 +49,7 @@ add_flang_library(FortranLower
   [["flang/Lower/BoxAnalyzer.h"]]
   [["flang/Lower/PFTBuilder.h"]]
   [["flang/Lower/DirectivesCommon.h"]]
-  
+
   DEPENDS
   CUFAttrs
   CUFDialect

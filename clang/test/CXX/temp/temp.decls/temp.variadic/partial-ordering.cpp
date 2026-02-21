@@ -4,7 +4,7 @@
 // Various tests related to partial ordering of variadic templates.
 template<typename ...Types> struct tuple;
 
-template<typename Tuple> 
+template<typename Tuple>
 struct X1 {
   static const unsigned value = 0;
 };

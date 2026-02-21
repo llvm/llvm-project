@@ -11,6 +11,6 @@ void wibble();
 
 namespace Blah {
   void f() { };
-  
+
   void g();
 }

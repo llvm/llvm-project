@@ -116,7 +116,7 @@ T tmain(T argc) {
     foo();
 // CHECK: #pragma omp target teams distribute
 // CHECK-NEXT: for (int i = 0; i < 10; ++i)
-// CHECK-NEXT: foo();  
+// CHECK-NEXT: foo();
 #pragma omp target teams distribute default(none), private(b) firstprivate(argc) shared(d) reduction(+:c) reduction(max:e) num_teams(f) thread_limit(d)
     for (int k = 0; k < 10; ++k)
       e += d + argc;

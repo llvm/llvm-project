@@ -561,7 +561,7 @@ TEST_F(LibclangParseTest, AllSkippedRanges) {
 
   CXSourceRangeList *Ranges = clang_getAllSkippedRanges(ClangTU);
   EXPECT_EQ(2U, Ranges->count);
-  
+
   CXSourceLocation cxl;
   unsigned line;
   cxl = clang_getRangeStart(Ranges->ranges[0]);

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 
 struct A {
    A() : value(), cvalue() { } // expected-error {{reference to type 'int' requires an initializer}}

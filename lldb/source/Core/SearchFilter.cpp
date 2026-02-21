@@ -149,7 +149,7 @@ bool SearchFilter::CompUnitPasses(FileSpec &fileSpec) { return true; }
 bool SearchFilter::CompUnitPasses(CompileUnit &compUnit) { return true; }
 
 bool SearchFilter::FunctionPasses(Function &function) {
-  // This is a slightly cheesy job, but since we don't have finer grained 
+  // This is a slightly cheesy job, but since we don't have finer grained
   // filters yet, just checking that the start address passes is probably
   // good enough for the base class behavior.
   Address addr = function.GetAddress();
@@ -707,7 +707,7 @@ bool SearchFilterByModuleListAndCU::AddressPasses(Address &address) {
     cu_spec = sym_ctx.comp_unit->GetPrimaryFile();
   if (m_cu_spec_list.FindFileIndex(0, cu_spec, false) == UINT32_MAX)
     return false; // Fails the file check
-  return SearchFilterByModuleList::ModulePasses(sym_ctx.module_sp); 
+  return SearchFilterByModuleList::ModulePasses(sym_ctx.module_sp);
 }
 
 bool SearchFilterByModuleListAndCU::CompUnitPasses(FileSpec &fileSpec) {

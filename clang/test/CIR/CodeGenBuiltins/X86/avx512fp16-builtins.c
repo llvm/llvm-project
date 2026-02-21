@@ -97,7 +97,7 @@ _Float16 test_mm512_reduce_mul_ph(__m512h __W) {
 
 _Float16 test_mm512_reduce_max_ph(__m512h __W) {
   // CIR-LABEL: _mm512_reduce_max_ph
-  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmax" %[[V:.*]] (!cir.vector<32 x !cir.f16>) -> !cir.f16 
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmax" %[[V:.*]] (!cir.vector<32 x !cir.f16>) -> !cir.f16
 
   // CIR-LABEL: test_mm512_reduce_max_ph
   // CIR: cir.call @_mm512_reduce_max_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<32 x !cir.f16>) -> !cir.f16
@@ -112,7 +112,7 @@ _Float16 test_mm512_reduce_max_ph(__m512h __W) {
 
 _Float16 test_mm512_reduce_min_ph(__m512h __W) {
   // CIR-LABEL: _mm512_reduce_min_ph
-  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmin" %[[V:.*]] (!cir.vector<32 x !cir.f16>) -> !cir.f16 
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmin" %[[V:.*]] (!cir.vector<32 x !cir.f16>) -> !cir.f16
 
   // CIR-LABEL: test_mm512_reduce_min_ph
   // CIR: cir.call @_mm512_reduce_min_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<32 x !cir.f16>) -> !cir.f16

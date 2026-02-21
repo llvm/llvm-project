@@ -21,7 +21,7 @@ namespace e
   {
     return puts(__PRETTY_FUNCTION__);
   }
-  
+
   namespace g
   {
     int unique_function_name()
@@ -36,12 +36,12 @@ class g
 public:
   int unique_function_name()
   {
-    return puts(__PRETTY_FUNCTION__); 
+    return puts(__PRETTY_FUNCTION__);
   }
-  
+
   int unique_function_name(int i)
   {
-    return puts(__PRETTY_FUNCTION__); 
+    return puts(__PRETTY_FUNCTION__);
   }
 };
 

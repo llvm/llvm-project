@@ -9,7 +9,7 @@ int printf( const char* format, char *); // <-- Fake decl of `printf`; to reprod
 namespace std { // fake std namespace; to reproduce the bug, a CXXConversionDecl needs to be in std namespace.
   class X {
     char * p;
-  public:    
+  public:
     operator char*() {return p;}
   };
 

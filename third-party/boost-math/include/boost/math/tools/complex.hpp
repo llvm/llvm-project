@@ -56,14 +56,14 @@ namespace boost {
 
          #ifndef BOOST_MATH_ENABLE_CUDA
          template <typename T>
-         struct is_complex_type_impl<T, void_t<decltype(std::declval<T>().real()), 
+         struct is_complex_type_impl<T, void_t<decltype(std::declval<T>().real()),
                                                decltype(std::declval<T>().imag())>>
          {
             static constexpr bool value = true;
          };
          #else
          template <typename T>
-         struct is_complex_type_impl<T, void_t<decltype(cuda::std::declval<T>().real()), 
+         struct is_complex_type_impl<T, void_t<decltype(cuda::std::declval<T>().real()),
                                                decltype(cuda::std::declval<T>().imag())>>
          {
             static constexpr bool value = true;
@@ -73,7 +73,7 @@ namespace boost {
 
          template <typename T>
          struct is_complex_type : public detail::is_complex_type_impl<T> {};
-         
+
          //
          // Use this trait to typecast integer literals to something
          // that will interoperate with T:

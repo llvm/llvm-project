@@ -27,5 +27,5 @@ const char getAChar()
 int main (int argc, char const *argv[])
 {
     int six = twice(3);
-    return 0; 
+    return 0;
 }

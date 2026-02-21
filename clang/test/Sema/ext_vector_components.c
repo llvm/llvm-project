@@ -21,7 +21,7 @@ static void test(void) {
     vec4.s01z; // expected-error {{illegal vector component name 'z'}}
     vec2 = vec4.s01; // legal, shorten
     vec2 = vec4.S01; // legal, shorten
-    
+
     vec3 = vec4.xyz; // legal, shorten
     f = vec2.x; // legal, shorten
     f = vec4.xy.x; // legal, shorten
@@ -37,7 +37,7 @@ static void test(void) {
     vec4.s06; // expected-error {{vector component access exceeds type 'float4'}}
     vec4.x = vec16.sf;
     vec4.x = vec16.sF;
-  
+
     vec4p->yz = vec4p->xy;
 
     vec2.a; // expected-error {{vector component access exceeds type 'float2'}}

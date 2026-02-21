@@ -1,6 +1,6 @@
 // RUN: not %clang -fsyntax-only -fno-diagnostics-show-line-numbers -fmacro-backtrace-limit=0 %s 2>&1 | FileCheck %s
 
-#define FOO 1+"hi" 
+#define FOO 1+"hi"
 #define BAR FOO
 #define BAZ BAR
 #define QUZ BAZ
@@ -48,7 +48,7 @@ FOOL;
 // CHECK: #define BAR FOO
 // CHECK:             ^
 // CHECK: :3:13: note: expanded from macro 'FOO'
-// CHECK: #define FOO 1+"hi" 
+// CHECK: #define FOO 1+"hi"
 // CHECK:             ^
 
 #define ADD(a, b) a ## #b

@@ -1,7 +1,7 @@
 // This test is added to provide test coverage for the uwtable attribute. It
 // aims to make sure that for an X86_64 output compiled with -fexceptions or
 //  -fno-exceptions, a uwtable attribute is emitted. However, for an AArch64
-//  output with -fexceptions a uwtable attribute is emitted, but with 
+//  output with -fexceptions a uwtable attribute is emitted, but with
 // -fno-exceptions a uwtable attribute is not emitted.
 
 // RUN: %clang -g -fexceptions --target=x86_64-apple-darwin %s -S -emit-llvm -o - | FileCheck %s --check-prefix=X86_64_UWTABLE_EXCEPTIONS

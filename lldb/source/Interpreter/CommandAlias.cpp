@@ -158,7 +158,7 @@ void CommandAlias::GetAliasExpansion(StreamString &help_string) const {
       help_string.Printf(" %s", value.c_str());
     } else {
       help_string.Printf(" %s", opt.c_str());
-      if ((value != CommandInterpreter::g_no_argument) 
+      if ((value != CommandInterpreter::g_no_argument)
            && (value != CommandInterpreter::g_need_argument)) {
         help_string.Printf(" %s", value.c_str());
       }

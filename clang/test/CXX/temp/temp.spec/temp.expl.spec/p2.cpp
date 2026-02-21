@@ -28,7 +28,7 @@ namespace N0 {
   void test_f0(NonDefaultConstructible NDC) {
     f0(NDC);
   }
-  
+
   template<> void f0(int);
   template<> void f0(long);
 }
@@ -45,34 +45,34 @@ template<> void N0::f0(double) { }
 
 struct X1 {
   template<typename T> void f(T);
-  
+
   template<> void f(int);
 };
 
 //     -- class template
 namespace N0 {
-  
+
 template<typename T>
 struct X0 { // expected-note {{explicitly specialized declaration is here}}
   static T member;
-  
+
   void f1(T t) {
     t = 17;
   }
-  
+
   struct Inner : public T { }; // expected-note 2{{explicitly specialized declaration is here}}
-  
+
   template<typename U>
   struct InnerTemplate : public T { }; // expected-note {{explicitly specialized declaration is here}}
   // expected-error@-1 {{base specifier must name a class}}
-  
+
   template<typename U>
   void ft1(T t, U u);
 };
 
 }
 
-template<typename T> 
+template<typename T>
 template<typename U>
 void N0::X0<T>::ft1(T t, U u) {
   t = u;
@@ -91,7 +91,7 @@ namespace N0 {
   template<> struct X0<volatile void>;
 }
 
-template<> struct N0::X0<volatile void> { 
+template<> struct N0::X0<volatile void> {
   void f1(void *);
 };
 
@@ -115,13 +115,13 @@ void test_x0_cvvoid(N0::X0<const volatile void*> x0, const volatile void *cvp) {
 //     -- static data member of a class template
 namespace N0 {
   // This actually tests p15; the following is a declaration, not a definition.
-  template<> 
+  template<>
   NonDefaultConstructible X0<NonDefaultConstructible>::member;
-  
+
   template<> long X0<long>::member = 17;
 
   template<> float X0<float>::member;
-  
+
   template<> double X0<double>::member;
 }
 
@@ -139,7 +139,7 @@ namespace N1 {
 
 //    -- member class of a class template
 namespace N0 {
-  
+
   template<>
   struct X0<void*>::Inner { };
 
@@ -181,7 +181,7 @@ namespace N0 {
   template<>
   template<>
   struct X0<void*>::InnerTemplate<int> { };
-  
+
   template<> template<>
   struct X0<int>::InnerTemplate<int>; // expected-note{{forward declaration}}
 
@@ -213,7 +213,7 @@ namespace N0 {
   template<>
   template<>
   void X0<void*>::ft1(void*, const void*) { }
-  
+
   template<> template<>
   void X0<void*>::ft1(void *, int);
 

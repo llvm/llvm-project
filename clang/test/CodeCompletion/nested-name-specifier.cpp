@@ -1,6 +1,6 @@
 namespace N {
   struct A { };
-  namespace M { 
+  namespace M {
     struct C { };
   };
 }

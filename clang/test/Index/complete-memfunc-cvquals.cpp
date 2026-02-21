@@ -26,7 +26,7 @@ void text(Foo f, Foo *fp, const Foo &fc, const Foo *fcp,
 }
 
 void Foo::bar() {
-  
+
 }
 
 void Foo::baz() const {

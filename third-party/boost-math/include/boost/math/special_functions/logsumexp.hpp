@@ -20,14 +20,14 @@ Real logsumexp(ForwardIterator first, ForwardIterator last)
 {
     using std::exp;
     using std::log1p;
-    
+
     const auto elem = std::max_element(first, last);
     const Real max_val = *elem;
 
     Real arg = 0;
     while (first != last)
     {
-        if (first != elem) 
+        if (first != elem)
         {
             arg += exp(*first - max_val);
         }
@@ -44,12 +44,12 @@ inline Real logsumexp(const Container& c)
     return logsumexp(std::begin(c), std::end(c));
 }
 
-template <typename... Args, typename Real = typename std::common_type<Args...>::type, 
+template <typename... Args, typename Real = typename std::common_type<Args...>::type,
           typename std::enable_if<std::is_floating_point<Real>::value, bool>::type = true>
 inline Real logsumexp(Args&& ...args)
 {
     std::initializer_list<Real> list {std::forward<Args>(args)...};
-    
+
     if(list.size() == 2)
     {
         return logaddexp(*list.begin(), *std::next(list.begin()));

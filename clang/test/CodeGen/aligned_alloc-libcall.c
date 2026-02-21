@@ -9,4 +9,4 @@ void *test(size_t alignment, size_t size) {
   return aligned_alloc(alignment, size);
 }
 
-// CHECK: attributes #2 = { nobuiltin "no-builtin-aligned_alloc" } 
+// CHECK: attributes #2 = { nobuiltin "no-builtin-aligned_alloc" }

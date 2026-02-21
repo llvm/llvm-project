@@ -5,7 +5,7 @@ Subject: Type notation debate...
 
 This is the way that I am currently planning on implementing types:
 
-Primitive Types:        
+Primitive Types:
 type ::= void|bool|sbyte|ubyte|short|ushort|int|uint|long|ulong
 
 Method:
@@ -46,7 +46,7 @@ Now with this syntax, his example would be represented as:
 
 [ %10, bool (int, int) * ] *
 
-vs 
+vs
 
 bool (*(*)[10])(int, int)
 

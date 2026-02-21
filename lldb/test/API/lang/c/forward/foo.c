@@ -1,6 +1,6 @@
 #include "foo.h"
 
-int 
+int
 foo (struct bar *bar_ptr)
 {
     return 1;

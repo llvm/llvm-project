@@ -73,7 +73,7 @@ protected:
 
   StateType SendCPacket(StringExtractorGDBRemote &response) {
     return client.SendContinuePacketAndWaitForResponse(delegate, LinuxSignals(),
-                                                       "c", g_timeout, 
+                                                       "c", g_timeout,
                                                        response);
   }
 

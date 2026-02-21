@@ -15,7 +15,7 @@
 extern "C" {
   __attribute__((hot))
   void normal(){}
-  // CIR: cir.func{{.*}}@normal() 
+  // CIR: cir.func{{.*}}@normal()
   // CIROZ-SAME: minsize
   // CIR-SAME: optsize
   // BOTH: define{{.*}}@normal(){{.*}} #[[NORMAL_ATTR:.*]] {
@@ -23,7 +23,7 @@ extern "C" {
   __attribute__((cold))
   __attribute__((optnone))
   void optnone(){}
-  // CIR: cir.func{{.*}}@optnone() 
+  // CIR: cir.func{{.*}}@optnone()
   // CIR-NOT: optsize
   // CIR-NOT: minsize
   // BOTH: define{{.*}}@optnone(){{.*}} #[[OPTNONE_ATTR:.*]] {

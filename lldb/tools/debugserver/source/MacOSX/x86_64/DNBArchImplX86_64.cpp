@@ -344,7 +344,7 @@ kern_return_t DNBArchImplX86_64::GetFPUState(bool force) {
       for (int i = 0; i < sizeof(m_state.context.fpu.no_avx.__fpu_rsrv4); ++i)
         m_state.context.fpu.no_avx.__fpu_rsrv4[i] = INT8_MIN;
       m_state.context.fpu.no_avx.__fpu_reserved1 = -1;
-      
+
       if (CPUHasAVX() || FORCE_AVX_REGS) {
         for (int i = 0; i < 16; ++i) {
           m_state.context.fpu.avx.__fpu_ymmh0.__xmm_reg[i] = '0' + i;
@@ -533,8 +533,8 @@ kern_return_t DNBArchImplX86_64::SetFPUState() {
       else
         DNBLogThreadedIf(LOG_THREAD,
             "::thread_get_state attempted save of avx512 fpu regctx failed, will try saving avx regctx");
-    } 
-    
+    }
+
     if (CPUHasAVX() || FORCE_AVX_REGS) {
       flavor = __x86_64_AVX_STATE;
       count = e_regSetWordSizeAVX;

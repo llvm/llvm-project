@@ -191,7 +191,7 @@ void TemplFunc(T t) {
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
 
   decltype(T::value) Local = 0, LocalArray[5] = {};
-  // CHECK-NEXT: DeclStmt 
+  // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl
   // CHECK-NEXT: IntegerLiteral
   // CHECK-NEXT: VarDecl
@@ -314,7 +314,7 @@ void TemplFunc(T t) {
   // CHECK-NEXT: DeclRefExpr{{.*}}'value' 'const unsigned int'
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'SomeStruct'
 
-  // CHECK-NEXT: DeclStmt 
+  // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: IntegerLiteral

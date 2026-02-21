@@ -7,7 +7,7 @@ inline int frob(int x) { return x; }
 [[deprecated]] int frob(int); // expected-note 2 {{'frob' has been explicitly marked deprecated here}}
 
 void use1() {
-  // Using this should give a deprecation warning, but not a nodiscard warning.	
+  // Using this should give a deprecation warning, but not a nodiscard warning.
   frob(0); // expected-warning {{'frob' is deprecated}}
 }
 

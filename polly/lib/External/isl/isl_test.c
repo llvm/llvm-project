@@ -4928,7 +4928,7 @@ int test_schedule(isl_ctx *ctx)
 	S = "{ S1[i] -> [0,i]; S2[i] -> [1,i] }";
 	if (test_one_schedule(ctx, D, W, R, S, 1, 1) < 0)
 		return -1;
-	
+
 	D = "{ S1[i] : 0 < i < 10; S2[i] : 0 <= i < 10 }";
 	W = "{ S1[i] -> a[i]; S2[i] -> b[i] }";
 	R = "{ S2[i] -> a[i]; S1[i] -> b[i-1] }";
@@ -5134,7 +5134,7 @@ int test_schedule(isl_ctx *ctx)
 	ctx->opt->schedule_algorithm = ISL_SCHEDULE_ALGORITHM_ISL;
 	if (test_special_schedule(ctx, D, V, P, S) < 0)
 		return -1;
-	
+
 	D = "{ A[a]; B[] }";
 	V = "{}";
 	P = "{ A[a] -> B[] }";

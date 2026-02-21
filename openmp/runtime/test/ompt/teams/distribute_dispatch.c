@@ -2,7 +2,7 @@
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 
-/// GCC lowering of distribute results in calls to 
+/// GCC lowering of distribute results in calls to
 /// omp_get_num_teams/omp_get_team_num rather than region calls
 // UNSUPPORTED: gcc
 // clang-format on

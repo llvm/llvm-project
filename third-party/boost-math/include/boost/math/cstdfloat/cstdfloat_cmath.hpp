@@ -374,7 +374,7 @@ extern "C" boost::math::cstdfloat::detail::float_internal128_t BOOST_CSTDFLOAT_F
 extern "C" boost::math::cstdfloat::detail::float_internal128_t BOOST_CSTDFLOAT_FLOAT128_ACOSH(boost::math::cstdfloat::detail::float_internal128_t x) BOOST_MATH_NOTHROW;
 extern "C" boost::math::cstdfloat::detail::float_internal128_t BOOST_CSTDFLOAT_FLOAT128_ATANH(boost::math::cstdfloat::detail::float_internal128_t x) BOOST_MATH_NOTHROW;
 extern "C" boost::math::cstdfloat::detail::float_internal128_t BOOST_CSTDFLOAT_FLOAT128_TGAMMA(boost::math::cstdfloat::detail::float_internal128_t x) BOOST_MATH_NOTHROW;
- 
+
 #else // BOOST_CSTDFLOAT_BROKEN_FLOAT128_MATH_FUNCTIONS
 
 // Forward declaration of the patched exponent function, exp(x).
@@ -852,7 +852,7 @@ namespace std
    using boost::math::cstdfloat::detail::fabs;
 
 #if !(defined(_GLIBCXX_USE_FLOAT128) && defined(__GNUC__) && (__GNUC__ >= 7))
-#if (defined(__clang__) && !(!defined(__STRICT_ANSI__) && defined(_GLIBCXX_USE_FLOAT128))) || (__GNUC__ <= 6 && !defined(__clang__)) 
+#if (defined(__clang__) && !(!defined(__STRICT_ANSI__) && defined(_GLIBCXX_USE_FLOAT128))) || (__GNUC__ <= 6 && !defined(__clang__))
    // workaround for clang using libstdc++ and old GCC
    using boost::math::cstdfloat::detail::abs;
 #endif

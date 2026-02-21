@@ -63,13 +63,13 @@ namespace boost
         class quaternion
         {
         public:
-            
+
             typedef T value_type;
-            
-            
+
+
             // constructor for H seen as R^4
             // (also default constructor)
-            
+
             constexpr explicit            quaternion( T const & requested_a = T(),
                                             T const & requested_b = T(),
                                             T const & requested_c = T(),
@@ -81,10 +81,10 @@ namespace boost
             {
                 // nothing to do!
             }
-            
-            
+
+
             // constructor for H seen as C^2
-                
+
             constexpr explicit            quaternion( ::std::complex<T> const & z0,
                                             ::std::complex<T> const & z1 = ::std::complex<T>())
             :   a(z0.real()),
@@ -94,8 +94,8 @@ namespace boost
             {
                 // nothing to do!
             }
-            
-            
+
+
             // UNtemplated copy constructor
             constexpr quaternion(quaternion const & a_recopier)
                : a(a_recopier.R_component_1()),
@@ -108,9 +108,9 @@ namespace boost
                b(std::move(a_recopier.R_component_2())),
                c(std::move(a_recopier.R_component_3())),
                d(std::move(a_recopier.R_component_4())) {}
-            
+
             // templated copy constructor
-            
+
             template<typename X>
             constexpr explicit            quaternion(quaternion<X> const & a_recopier)
             :   a(static_cast<T>(a_recopier.R_component_1())),
@@ -120,12 +120,12 @@ namespace boost
             {
                 // nothing to do!
             }
-            
-            
+
+
             // destructor
             // (this is taken care of by the compiler itself)
-            
-            
+
+
             // accessors
             //
             // Note:    Like complex number, quaternions do have a meaningful notion of "real part",
@@ -134,7 +134,7 @@ namespace boost
             //            nothing simpler (as opposed to the complex number case).
             //            However, for practicality, there are accessors for the other components
             //            (these are necessary for the templated copy constructor, for instance).
-            
+
             constexpr T real() const
             {
                return(a);
@@ -189,7 +189,7 @@ namespace boost
             }
 
             // assignment operators
-            
+
             template<typename X>
             BOOST_MATH_CXX14_CONSTEXPR quaternion<T> &        operator = (quaternion<X> const  & a_affecter)
             {
@@ -368,9 +368,9 @@ namespace boost
             BOOST_MATH_CXX14_CONSTEXPR quaternion<T> &        operator -= (T const & rhs) { return do_subtract(rhs, detail::is_trivial_arithmetic_type<T>()); }
             BOOST_MATH_CXX14_CONSTEXPR quaternion<T> &        operator -= (::std::complex<T> const & rhs) { return do_subtract(rhs, detail::is_trivial_arithmetic_type<T>()); }
             template<typename X> BOOST_MATH_CXX14_CONSTEXPR quaternion<T> & operator -= (quaternion<X> const & rhs) { return do_subtract(rhs, detail::is_trivial_arithmetic_type<T>()); }
-            
+
             BOOST_MATH_CXX14_CONSTEXPR quaternion<T> &        operator *= (T const & rhs) { return do_multiply(rhs, detail::is_trivial_arithmetic_type<T>()); }
-            
+
             BOOST_MATH_CXX14_CONSTEXPR quaternion<T> &        operator *= (::std::complex<T> const & rhs)
             {
                 T    ar = rhs.real();
@@ -379,7 +379,7 @@ namespace boost
                 swap(result);
                 return(*this);
             }
-            
+
             template<typename X>
             BOOST_MATH_CXX14_CONSTEXPR quaternion<T> &        operator *= (quaternion<X> const & rhs)
             {
@@ -387,14 +387,14 @@ namespace boost
                 T    br = static_cast<T>(rhs.R_component_2());
                 T    cr = static_cast<T>(rhs.R_component_3());
                 T    dr = static_cast<T>(rhs.R_component_4());
-                
+
                 quaternion<T> result(a*ar - b*br - c*cr - d*dr, a*br + b*ar + c*dr - d*cr, a*cr - b*dr + c*ar + d*br, a*dr + b*cr - c*br + d*ar);
                 swap(result);
                 return(*this);
             }
-            
+
             BOOST_MATH_CXX14_CONSTEXPR quaternion<T> &        operator /= (T const & rhs) { return do_divide(rhs, detail::is_trivial_arithmetic_type<T>()); }
-            
+
             BOOST_MATH_CXX14_CONSTEXPR quaternion<T> &        operator /= (::std::complex<T> const & rhs)
             {
                 T    ar = rhs.real();
@@ -404,7 +404,7 @@ namespace boost
                 swap(result);
                 return(*this);
             }
-            
+
             template<typename X>
             BOOST_MATH_CXX14_CONSTEXPR quaternion<T> &        operator /= (quaternion<X> const & rhs)
             {
@@ -412,7 +412,7 @@ namespace boost
                 T    br = static_cast<T>(rhs.R_component_2());
                 T    cr = static_cast<T>(rhs.R_component_3());
                 T    dr = static_cast<T>(rhs.R_component_4());
-                
+
                 T    denominator = ar*ar+br*br+cr*cr+dr*dr;
                 quaternion<T> result((+a*ar+b*br+c*cr+d*dr)/denominator, (-a*br+b*ar-c*dr+d*cr)/denominator, (-a*cr+b*dr+c*ar-d*br)/denominator, (-a*dr-b*cr+c*br+d*ar)/denominator);
                 swap(result);
@@ -420,13 +420,13 @@ namespace boost
             }
         private:
            T a, b, c, d;
-            
+
         };
 
 // swap:
 template <class T>
 BOOST_MATH_CXX14_CONSTEXPR void swap(quaternion<T>& a, quaternion<T>& b) { a.swap(b); }
-        
+
 // operator+
 template <class T1, class T2>
 inline constexpr typename std::enable_if<std::is_convertible<T2, T1>::value, quaternion<T1> >::type
@@ -563,22 +563,22 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
    result /= b;
    return result;
 }
-        
-        
+
+
         template<typename T>
         inline constexpr const quaternion<T>&             operator + (quaternion<T> const & q)
         {
             return q;
         }
-        
-        
+
+
         template<typename T>
         inline constexpr quaternion<T>                    operator - (quaternion<T> const & q)
         {
             return(quaternion<T>(-q.R_component_1(),-q.R_component_2(),-q.R_component_3(),-q.R_component_4()));
         }
-        
-        
+
+
         template<typename R, typename T>
         inline constexpr typename std::enable_if<std::is_convertible<R, T>::value, bool>::type operator == (R const & lhs, quaternion<T> const & rhs)
         {
@@ -589,15 +589,15 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
                         (rhs.R_component_4() == static_cast<T>(0))
                     );
         }
-        
-        
+
+
         template<typename T, typename R>
         inline constexpr typename std::enable_if<std::is_convertible<R, T>::value, bool>::type operator == (quaternion<T> const & lhs, R const & rhs)
         {
            return rhs == lhs;
         }
-        
-        
+
+
         template<typename T>
         inline constexpr bool                                operator == (::std::complex<T> const & lhs, quaternion<T> const & rhs)
         {
@@ -608,15 +608,15 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
                         (rhs.R_component_4() == static_cast<T>(0))
                     );
         }
-        
-        
+
+
         template<typename T>
         inline constexpr bool                                operator == (quaternion<T> const & lhs, ::std::complex<T> const & rhs)
         {
            return rhs == lhs;
         }
-        
-        
+
+
         template<typename T>
         inline constexpr bool                                operator == (quaternion<T> const & lhs, quaternion<T> const & rhs)
         {
@@ -627,14 +627,14 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
                         (rhs.R_component_4() == lhs.R_component_4())
                     );
         }
-                
+
         template<typename R, typename T> inline constexpr bool operator != (R const & lhs, quaternion<T> const & rhs) { return !(lhs == rhs); }
         template<typename T, typename R> inline constexpr bool operator != (quaternion<T> const & lhs, R const & rhs) { return !(lhs == rhs); }
         template<typename T> inline constexpr bool operator != (::std::complex<T> const & lhs, quaternion<T> const & rhs) { return !(lhs == rhs); }
         template<typename T> inline constexpr bool operator != (quaternion<T> const & lhs, ::std::complex<T> const & rhs) { return !(lhs == rhs); }
         template<typename T> inline constexpr bool operator != (quaternion<T> const & lhs, quaternion<T> const & rhs) { return !(lhs == rhs); }
-        
-        
+
+
         // Note:    we allow the following formats, with a, b, c, and d reals
         //            a
         //            (a), (a,b), (a,b,c), (a,b,c,d)
@@ -644,48 +644,48 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
                                                                 quaternion<T> & q)
         {
             const ::std::ctype<charT> & ct = ::std::use_facet< ::std::ctype<charT> >(is.getloc());
-            
+
             T    a = T();
             T    b = T();
             T    c = T();
             T    d = T();
-            
+
             ::std::complex<T>    u = ::std::complex<T>();
             ::std::complex<T>    v = ::std::complex<T>();
-            
+
             charT    ch = charT();
             char    cc;
-            
+
             is >> ch;                                        // get the first lexeme
-            
+
             if    (!is.good())    goto finish;
-            
+
             cc = ct.narrow(ch, char());
-            
+
             if    (cc == '(')                            // read "(", possible: (a), (a,b), (a,b,c), (a,b,c,d), (a,(c)), (a,(c,d)), ((a)), ((a),c), ((a),(c)), ((a),(c,d)), ((a,b)), ((a,b),c), ((a,b),(c)), ((a,b,),(c,d,))
             {
                 is >> ch;                                    // get the second lexeme
-                
+
                 if    (!is.good())    goto finish;
-                
+
                 cc = ct.narrow(ch, char());
-                
+
                 if    (cc == '(')                        // read "((", possible: ((a)), ((a),c), ((a),(c)), ((a),(c,d)), ((a,b)), ((a,b),c), ((a,b),(c)), ((a,b,),(c,d,))
                 {
                     is.putback(ch);
-                    
+
                     is >> u;                                // we extract the first and second components
                     a = u.real();
                     b = u.imag();
-                    
+
                     if    (!is.good())    goto finish;
-                    
+
                     is >> ch;                                // get the next lexeme
-                    
+
                     if    (!is.good())    goto finish;
-                    
+
                     cc = ct.narrow(ch, char());
-                    
+
                     if        (cc == ')')                    // format: ((a)) or ((a,b))
                     {
                         q = quaternion<T>(a,b);
@@ -695,15 +695,15 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
                         is >> v;                            // we extract the third and fourth components
                         c = v.real();
                         d = v.imag();
-                        
+
                         if    (!is.good())    goto finish;
-                        
+
                         is >> ch;                                // get the last lexeme
-                        
+
                         if    (!is.good())    goto finish;
-                        
+
                         cc = ct.narrow(ch, char());
-                        
+
                         if    (cc == ')')                    // format: ((a),c), ((a),(c)), ((a),(c,d)), ((a,b),c), ((a,b),(c)) or ((a,b,),(c,d,))
                         {
                             q = quaternion<T>(a,b,c,d);
@@ -721,17 +721,17 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
                 else                                // read "(a", possible: (a), (a,b), (a,b,c), (a,b,c,d), (a,(c)), (a,(c,d))
                 {
                     is.putback(ch);
-                    
+
                     is >> a;                                // we extract the first component
-                    
+
                     if    (!is.good())    goto finish;
-                    
+
                     is >> ch;                                // get the third lexeme
-                    
+
                     if    (!is.good())    goto finish;
-                    
+
                     cc = ct.narrow(ch, char());
-                    
+
                     if        (cc == ')')                    // format: (a)
                     {
                         q = quaternion<T>(a);
@@ -739,28 +739,28 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
                     else if    (cc == ',')                // read "(a,", possible: (a,b), (a,b,c), (a,b,c,d), (a,(c)), (a,(c,d))
                     {
                         is >> ch;                            // get the fourth lexeme
-                        
+
                         if    (!is.good())    goto finish;
-                        
+
                         cc = ct.narrow(ch, char());
-                        
+
                         if    (cc == '(')                // read "(a,(", possible: (a,(c)), (a,(c,d))
                         {
                             is.putback(ch);
-                            
+
                             is >> v;                        // we extract the third and fourth component
-                            
+
                             c = v.real();
                             d = v.imag();
-                            
+
                             if    (!is.good())    goto finish;
-                            
+
                             is >> ch;                        // get the ninth lexeme
-                            
+
                             if    (!is.good())    goto finish;
-                            
+
                             cc = ct.narrow(ch, char());
-                            
+
                             if    (cc == ')')                // format: (a,(c)) or (a,(c,d))
                             {
                                 q = quaternion<T>(a,b,c,d);
@@ -773,17 +773,17 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
                         else                        // read "(a,b", possible: (a,b), (a,b,c), (a,b,c,d)
                         {
                             is.putback(ch);
-                            
+
                             is >> b;                        // we extract the second component
-                            
+
                             if    (!is.good())    goto finish;
-                            
+
                             is >> ch;                        // get the fifth lexeme
-                            
+
                             if    (!is.good())    goto finish;
-                            
+
                             cc = ct.narrow(ch, char());
-                            
+
                             if    (cc == ')')                // format: (a,b)
                             {
                                 q = quaternion<T>(a,b);
@@ -791,15 +791,15 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
                             else if    (cc == ',')        // read "(a,b,", possible: (a,b,c), (a,b,c,d)
                             {
                                 is >> c;                    // we extract the third component
-                                
+
                                 if    (!is.good())    goto finish;
-                                
+
                                 is >> ch;                    // get the seventh lexeme
-                                
+
                                 if    (!is.good())    goto finish;
-                                
+
                                 cc = ct.narrow(ch, char());
-                                
+
                                 if        (cc == ')')        // format: (a,b,c)
                                 {
                                     q = quaternion<T>(a,b,c);
@@ -807,15 +807,15 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
                                 else if    (cc == ',')    // read "(a,b,c,", possible: (a,b,c,d)
                                 {
                                     is >> d;                // we extract the fourth component
-                                    
+
                                     if    (!is.good())    goto finish;
-                                    
+
                                     is >> ch;                // get the ninth lexeme
-                                    
+
                                     if    (!is.good())    goto finish;
-                                    
+
                                     cc = ct.narrow(ch, char());
-                                    
+
                                     if    (cc == ')')        // format: (a,b,c,d)
                                     {
                                         q = quaternion<T>(a,b,c,d);
@@ -845,19 +845,19 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
             else                                        // format:    a
             {
                 is.putback(ch);
-                
+
                 is >> a;                                    // we extract the first component
-                
+
                 if    (!is.good())    goto finish;
-                
+
                 q = quaternion<T>(a);
             }
-            
+
             finish:
             return(is);
         }
-        
-        
+
+
         template<typename T, typename charT, class traits>
         ::std::basic_ostream<charT,traits> &    operator << (    ::std::basic_ostream<charT,traits> & os,
                                                                 quaternion<T> const & q)
@@ -867,55 +867,55 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
             s.flags(os.flags());
             s.imbue(os.getloc());
             s.precision(os.precision());
-            
+
             s << '('    << q.R_component_1() << ','
                         << q.R_component_2() << ','
                         << q.R_component_3() << ','
                         << q.R_component_4() << ')';
-            
+
             return os << s.str();
         }
-        
-        
+
+
         // values
-        
+
         template<typename T>
         inline constexpr T real(quaternion<T> const & q)
         {
             return(q.real());
         }
-        
-        
+
+
         template<typename T>
         inline constexpr quaternion<T> unreal(quaternion<T> const & q)
         {
             return(q.unreal());
         }
-                
+
         template<typename T>
         inline T sup(quaternion<T> const & q)
         {
             using    ::std::abs;
             return (std::max)((std::max)(abs(q.R_component_1()), abs(q.R_component_2())), (std::max)(abs(q.R_component_3()), abs(q.R_component_4())));
         }
-        
-        
+
+
         template<typename T>
         inline T l1(quaternion<T> const & q)
         {
            using    ::std::abs;
            return abs(q.R_component_1()) + abs(q.R_component_2()) + abs(q.R_component_3()) + abs(q.R_component_4());
         }
-        
-        
+
+
         template<typename T>
         inline T abs(quaternion<T> const & q)
         {
             using    ::std::abs;
             using    ::std::sqrt;
-            
+
             T            maxim = sup(q);    // overflow protection
-            
+
             if    (maxim == static_cast<T>(0))
             {
                 return(maxim);
@@ -923,7 +923,7 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
             else
             {
                 T    mixam = static_cast<T>(1)/maxim;    // prefer multiplications over divisions
-                
+
                 T a = q.R_component_1() * mixam;
                 T b = q.R_component_2() * mixam;
                 T c = q.R_component_3() * mixam;
@@ -933,23 +933,23 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
                 b *= b;
                 c *= c;
                 d *= d;
-                
+
                 return(maxim * sqrt(a + b + c + d));
             }
-            
+
             //return(sqrt(norm(q)));
         }
-        
-        
+
+
         // Note:    This is the Cayley norm, not the Euclidean norm...
-        
+
         template<typename T>
         inline BOOST_MATH_CXX14_CONSTEXPR T norm(quaternion<T>const  & q)
         {
             return(real(q*conj(q)));
         }
-        
-        
+
+
         template<typename T>
         inline constexpr quaternion<T> conj(quaternion<T> const & q)
         {
@@ -958,8 +958,8 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
                                     -q.R_component_3(),
                                     -q.R_component_4()));
         }
-        
-        
+
+
         template<typename T>
         inline quaternion<T>                    spherical(  T const & rho,
                                                             T const & theta,
@@ -968,29 +968,29 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
         {
             using ::std::cos;
             using ::std::sin;
-            
+
             //T    a = cos(theta)*cos(phi1)*cos(phi2);
             //T    b = sin(theta)*cos(phi1)*cos(phi2);
             //T    c = sin(phi1)*cos(phi2);
             //T    d = sin(phi2);
-            
+
             T    courrant = static_cast<T>(1);
-            
+
             T    d = sin(phi2);
-            
+
             courrant *= cos(phi2);
-            
+
             T    c = sin(phi1)*courrant;
-            
+
             courrant *= cos(phi1);
-            
+
             T    b = sin(theta)*courrant;
             T    a = cos(theta)*courrant;
-            
+
             return(rho*quaternion<T>(a,b,c,d));
         }
-        
-        
+
+
         template<typename T>
         inline quaternion<T>                    semipolar(  T const & rho,
                                                             T const & alpha,
@@ -999,16 +999,16 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
         {
             using ::std::cos;
             using ::std::sin;
-            
+
             T    a = cos(alpha)*cos(theta1);
             T    b = cos(alpha)*sin(theta1);
             T    c = sin(alpha)*cos(theta2);
             T    d = sin(alpha)*sin(theta2);
-            
+
             return(rho*quaternion<T>(a,b,c,d));
         }
-        
-        
+
+
         template<typename T>
         inline quaternion<T>                    multipolar( T const & rho1,
                                                             T const & theta1,
@@ -1017,16 +1017,16 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
         {
             using ::std::cos;
             using ::std::sin;
-            
+
             T    a = rho1*cos(theta1);
             T    b = rho1*sin(theta1);
             T    c = rho2*cos(theta2);
             T    d = rho2*sin(theta2);
-            
+
             return(quaternion<T>(a,b,c,d));
         }
-        
-        
+
+
         template<typename T>
         inline quaternion<T>                    cylindrospherical(  T const & t,
                                                                     T const & radius,
@@ -1035,17 +1035,17 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
         {
             using ::std::cos;
             using ::std::sin;
-            
-            
-            
+
+
+
             T    b = radius*cos(longitude)*cos(latitude);
             T    c = radius*sin(longitude)*cos(latitude);
             T    d = radius*sin(latitude);
-            
+
             return(quaternion<T>(t,b,c,d));
         }
-        
-        
+
+
         template<typename T>
         inline quaternion<T>                    cylindrical(T const & r,
                                                             T const & angle,
@@ -1054,104 +1054,104 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
         {
             using ::std::cos;
             using ::std::sin;
-            
+
             T    a = r*cos(angle);
             T    b = r*sin(angle);
-            
+
             return(quaternion<T>(a,b,h1,h2));
         }
-        
-        
+
+
         // transcendentals
         // (please see the documentation)
-        
-        
+
+
         template<typename T>
         inline quaternion<T>                    exp(quaternion<T> const & q)
         {
             using    ::std::exp;
             using    ::std::cos;
-            
+
             using    ::boost::math::sinc_pi;
-            
+
             T    u = exp(real(q));
-            
+
             T    z = abs(unreal(q));
-            
+
             T    w = sinc_pi(z);
-            
+
             return(u*quaternion<T>(cos(z),
                 w*q.R_component_2(), w*q.R_component_3(),
                 w*q.R_component_4()));
         }
-        
-        
+
+
         template<typename T>
         inline quaternion<T>                    cos(quaternion<T> const & q)
         {
             using    ::std::sin;
             using    ::std::cos;
             using    ::std::cosh;
-            
+
             using    ::boost::math::sinhc_pi;
-            
+
             T    z = abs(unreal(q));
-            
+
             T    w = -sin(q.real())*sinhc_pi(z);
-            
+
             return(quaternion<T>(cos(q.real())*cosh(z),
                 w*q.R_component_2(), w*q.R_component_3(),
                 w*q.R_component_4()));
         }
-        
-        
+
+
         template<typename T>
         inline quaternion<T>                    sin(quaternion<T> const & q)
         {
             using    ::std::sin;
             using    ::std::cos;
             using    ::std::cosh;
-            
+
             using    ::boost::math::sinhc_pi;
-            
+
             T    z = abs(unreal(q));
-            
+
             T    w = +cos(q.real())*sinhc_pi(z);
-            
+
             return(quaternion<T>(sin(q.real())*cosh(z),
                 w*q.R_component_2(), w*q.R_component_3(),
                 w*q.R_component_4()));
         }
-        
-        
+
+
         template<typename T>
         inline quaternion<T>                    tan(quaternion<T> const & q)
         {
             return(sin(q)/cos(q));
         }
-        
-        
+
+
         template<typename T>
         inline quaternion<T>                    cosh(quaternion<T> const & q)
         {
             return((exp(+q)+exp(-q))/static_cast<T>(2));
         }
-        
-        
+
+
         template<typename T>
         inline quaternion<T>                    sinh(quaternion<T> const & q)
         {
             return((exp(+q)-exp(-q))/static_cast<T>(2));
         }
-        
-        
+
+
         template<typename T>
         inline quaternion<T>                    tanh(quaternion<T> const & q)
         {
             return(sinh(q)/cosh(q));
         }
-        
-        
+
+
         template<typename T>
         quaternion<T>                            pow(quaternion<T> const & q,
                                                     int n)
@@ -1159,16 +1159,16 @@ inline BOOST_MATH_CXX14_CONSTEXPR quaternion<T> operator / (const quaternion<T>&
             if        (n > 1)
             {
                 int    m = n>>1;
-                
+
                 quaternion<T>    result = pow(q, m);
-                
+
                 result *= result;
-                
+
                 if    (n != (m<<1))
                 {
                     result *= q; // n odd
                 }
-                
+
                 return(result);
             }
             else if    (n == 1)

@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wall -Wno-infinite-recursion %s
 
 void foo(void) {}
-static void f2(void) {} 
+static void f2(void) {}
 static void f1(void) {f2();} // expected-warning{{unused}}
 
 static int f0(void) { return 17; } // expected-warning{{not needed and will not be emitted}}

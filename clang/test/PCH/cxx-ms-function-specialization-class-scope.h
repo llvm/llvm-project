@@ -5,12 +5,12 @@ template <class T>
 class B {
 public:
 	template <class U>
-    B(U p) { 
+    B(U p) {
 	}
 	template <>
     B(int p) { // expected-warning{{explicit specialization of 'B<T>' within class scope is a Microsoft extension}}
 	}
-	
+
 	template <class U>
     void f(U p) {
 	  T y = 9;
@@ -22,7 +22,7 @@ public:
 	  T a = 3;
 	}
 
-	void f(int p) { 
+	void f(int p) {
  	  T a = 3;
     }
 };

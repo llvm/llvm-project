@@ -9,25 +9,25 @@ namespace variadic_expansion {
     f([&a(t)]()->decltype(auto) {
       return a;
     }() ...);
-    
+
     auto L = [x = f([&a(t)]()->decltype(auto) { return a; }()...)]() { return x; };
     const int y = 10;
-    auto M = [x = y, 
-                &z = y](T& ... t) { }; 
-    auto N = [x = y, 
-                &z = y, n = f(t...), 
-                o = f([&a(t)](T& ... t)->decltype(auto) { return a; }(t...)...), t...](T& ... s) { 
-                  fv([&a(t)]()->decltype(auto) { 
+    auto M = [x = y,
+                &z = y](T& ... t) { };
+    auto N = [x = y,
+                &z = y, n = f(t...),
+                o = f([&a(t)](T& ... t)->decltype(auto) { return a; }(t...)...), t...](T& ... s) {
+                  fv([&a(t)]()->decltype(auto) {
                     return a;
                   }() ...);
-                };                 
+                };
     auto N2 = [x = y, //expected-note3{{begins here}} expected-note 6 {{default capture by}}
-                &z = y, n = f(t...), 
+                &z = y, n = f(t...),
                 o = f([&a(t)](T& ... t)->decltype(auto) { return a; }(t...)...)](T& ... s) { // expected-note 6 {{capture 't' by}} expected-note {{substituting into a lambda}}
                 fv([&a(t)]()->decltype(auto) { //expected-error 3{{captured}}
                     return a;
                   }() ...);
-                };                 
+                };
 
   }
 
@@ -37,7 +37,7 @@ namespace variadic_expansion {
 namespace odr_use_within_init_capture {
 
 int test() {
-  
+
   { // no captures
     const int x = 10;
     auto L = [z = x + 2](int a) {
@@ -46,14 +46,14 @@ int test() {
       };
       return M;
     };
-        
+
   }
   { // should not capture
     const int x = 10;
     auto L = [&z = x](int a) {
       return a;;
     };
-        
+
   }
   {
     const int x = 10;
@@ -67,9 +67,9 @@ int test() {
   }
   {
     const int x = 10;
-    auto L = [k = x](char a) { 
-      return [=](int b) { 
-        return [j = k](int c) { 
+    auto L = [k = x](char a) {
+      return [=](int b) {
+        return [j = k](int c) {
           return c;
         };
       };
@@ -77,9 +77,9 @@ int test() {
   }
   {
     const int x = 10;
-    auto L = [k = x](char a) { 
-      return [k](int b) { 
-        return [j = k](int c) { 
+    auto L = [k = x](char a) {
+      return [k](int b) {
+        return [j = k](int c) {
           return c;
         };
       };
@@ -106,14 +106,14 @@ int test(T t = T{}) {
       };
       return M;
     };
-        
+
   }
   { // should not capture
     const T x = 10;
     auto L = [&z = x](T a) {
       return a;;
     };
-        
+
   }
   { // will need to capture x in outer lambda
     const T x = 10; //expected-note {{declared}}
@@ -125,19 +125,19 @@ int test(T t = T{}) {
     };
   }
   { // will need to capture x in outer lambda
-    const T x = 10; 
-    auto L = [=,z = x](char a) { 
-      auto M = [&y = x](T b) { 
+    const T x = 10;
+    auto L = [=,z = x](char a) {
+      auto M = [&y = x](T b) {
         return y;
       };
       return M;
     };
-        
+
   }
   { // will need to capture x in outer lambda
-    const T x = 10; 
-    auto L = [x, z = x](char a) { 
-      auto M = [&y = x](T b) { 
+    const T x = 10;
+    auto L = [x, z = x](char a) {
+      auto M = [&y = x](T b) {
         return y;
       };
       return M;
@@ -155,12 +155,12 @@ int test(T t = T{}) {
   {
     // no captures
     const T x = 10;
-    auto L = [z = 
-                  [z = x, &y = x](char a) { return z + y; }('a')](char a) 
+    auto L = [z =
+                  [z = x, &y = x](char a) { return z + y; }('a')](char a)
       { return z; };
-  
+
   }
-  
+
   return 0;
 }
 

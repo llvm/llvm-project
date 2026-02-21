@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
   // expected-error@+3 {{integral constant expression}} expected-note@+3 0+{{constant expression}}
   // expected-error@+2 2 {{directive '#pragma omp parallel masked taskloop simd' cannot contain more than one 'simdlen' clause}}
   // expected-error@+1 {{argument to 'simdlen' clause must be a strictly positive integer value}}
-  #pragma omp parallel masked taskloop simd simdlen (foobool(argc)), simdlen (true), simdlen (-5) 
+  #pragma omp parallel masked taskloop simd simdlen (foobool(argc)), simdlen (true), simdlen (-5)
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
   #pragma omp parallel masked taskloop simd simdlen (S1) // expected-error {{'S1' does not refer to a value}}
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];

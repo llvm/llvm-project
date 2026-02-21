@@ -1,4 +1,4 @@
-# Discourse Migration Guide 
+# Discourse Migration Guide
 
 ## Current Status of Migration: Discourse is back online at a new URL: [https://discourse.llvm.org](https://discourse.llvm.org). The old one still works as well. We are aware of an issue with reply by email to emails from before the merge. We will update once we know more.
 
@@ -153,7 +153,7 @@ migration.
 <tr><td>Test-list</td><td>Obsolete</td></tr>
 <tr><td>vmkit-commits</td><td>Obsolete</td></tr>
 <tr><td>WiCT</td><td>Community/Women in Compilers and Tools</td></tr>
-<tr><td>www-scripts</td><td>Obsolete</td></tr> 
+<tr><td>www-scripts</td><td>Obsolete</td></tr>
 </table>
 
 

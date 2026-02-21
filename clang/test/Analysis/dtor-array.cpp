@@ -119,7 +119,7 @@ int EvalOrder::dtorCalled = 0;
 void dtorEvaluationOrder() {
   EvalOrder::ctorCalled = 0;
   EvalOrder::dtorCalled = 0;
-  
+
   EvalOrder* eptr = new EvalOrder[4];
   delete[] eptr;
 
@@ -213,8 +213,8 @@ struct c {
       ;
   }
 };
-void f() { 
-  c g; 
+void f() {
+  c g;
   clang_analyzer_warnIfReached();  // expected-warning{{REACHABLE}}
 }
 
@@ -282,7 +282,7 @@ void multidimensionalPrep(){
 void multidimensional(){
   evalOrderPrep();
   multidimensionalPrep();
-  
+
   clang_analyzer_eval(EvalOrder::dtorCalled == 4); // expected-warning {{TRUE}}
   clang_analyzer_eval(EvalOrder::dtorCalled == EvalOrder::ctorCalled); // expected-warning {{TRUE}}
 
@@ -313,7 +313,7 @@ struct MultiWrapper{
 
 void multidimensionalMember(){
   evalOrderPrep();
-  
+
   auto* mptr = new MultiWrapper;
   delete mptr;
 

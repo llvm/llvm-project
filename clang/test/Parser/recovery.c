@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -pedantic -fblocks %s
 
 // PR2241
-float test2241[2] = { 
+float test2241[2] = {
   1e,            // expected-error {{exponent}}
   1ee0           // expected-error {{exponent}}
 };
@@ -21,17 +21,17 @@ static void f (char * (*g) (char **, int), char **p, ...) {
 
 void test(int a) {
   struct { int i; } x;
-  
+
   if (x.hello)   // expected-error {{no member named 'hello'}}
     test(0);
   else
     ;
-  
+
   if (x.hello == 0)   // expected-error {{no member named 'hello'}}
     test(0);
   else
     ;
-  
+
   if ((x.hello == 0))   // expected-error {{no member named 'hello'}}
     test(0);
   else
@@ -60,7 +60,7 @@ struct S A = {
 &BADIDENT, 0     /* expected-error {{use of undeclared identifier}} */
 };
 
-void test6248081(void) { 
+void test6248081(void) {
   [10]  // expected-error {{expected expression}}
 }
 

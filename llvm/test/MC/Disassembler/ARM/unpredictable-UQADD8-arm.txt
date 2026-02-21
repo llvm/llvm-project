@@ -13,4 +13,4 @@
 
 # CHECK: warning: potentially undefined
 # CHECK: uqadd8	r5, r6, pc
- 
+

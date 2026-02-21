@@ -26,10 +26,10 @@ T create_object3(){
     return obj; // no warning
 }
 
-// Known issue: if a function template uses a 
-// deduced return type (i.e. auto or decltype(auto)), 
-// then NRVO is not applied for any instantiation of 
-// that function template 
+// Known issue: if a function template uses a
+// deduced return type (i.e. auto or decltype(auto)),
+// then NRVO is not applied for any instantiation of
+// that function template
 // (see https://github.com/llvm/llvm-project/issues/95280).
 template<typename T>
 auto create_object4(){

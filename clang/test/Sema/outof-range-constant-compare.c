@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -Wtautological-constant-out-of-range-compare -verify %s 
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -Wtautological-constant-out-of-range-compare -verify %s
 
 int value(void);
 
@@ -104,7 +104,7 @@ int main(void)
 
     enum E {
     yes,
-    no, 
+    no,
     maybe
     };
     enum E e;

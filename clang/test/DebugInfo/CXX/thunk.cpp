@@ -18,17 +18,17 @@ namespace Test1 {
   struct A {
     virtual void f();
   };
-  
+
   struct B {
     virtual void f();
   };
-  
+
   struct C : A, B {
     virtual void c();
-    
+
     virtual void f();
   };
-  
+
 // CHECK-DAG: DISubprogram{{.*}}linkageName: "?f@C@Test1@@W7EAAXXZ"{{.*}} flags: {{.*}}DIFlagThunk
   void C::f() { }
 }
@@ -36,17 +36,17 @@ namespace Test1 {
 namespace Test2 {
   struct V1 { };
   struct V2 : virtual V1 { };
-  
+
   struct A {
     virtual V1 *f();
   };
-  
+
   struct B : A {
     virtual void b();
-    
+
     virtual V2 *f();
   };
-  
+
 // CHECK-DAG: DISubprogram{{.*}}linkageName: "?f@B@Test2@@QEAAPEAUV1@2@XZ"{{.*}} flags: {{.*}}DIFlagThunk
   V2 *B::f() { return 0; }
 }
@@ -55,17 +55,17 @@ namespace Test3 {
   struct A {
     virtual void f();
   };
-  
+
   struct B {
     virtual void f();
   };
-  
+
   struct __attribute__((visibility("protected"))) C : A, B {
     virtual void c();
-    
+
     virtual void f();
   };
-  
+
 // CHECK-DAG: DISubprogram{{.*}}linkageName: "?f@C@Test3@@W7EAAXXZ"{{.*}} flags: {{.*}}DIFlagThunk
   void C::f() { }
 }
@@ -90,8 +90,8 @@ namespace Test4 {
   void C::f() {}
 
   // Force C::f to be used.
-  void f() { 
-    C c; 
+  void f() {
+    C c;
     c.f();
   }
 }
@@ -249,15 +249,15 @@ namespace Test12 {
   struct A {
     virtual void f();
   };
-  
+
   struct B {
     virtual void f();
   };
-  
+
   struct C : A, B {
     virtual void f();
   };
-  
+
   void C::f() { }
   // ITANIUM: define {{.*}}void @_ZThn{{[48]}}_N6Test121C1fEv
   // ITANIUM-SAME: !dbg ![[SP:[0-9]+]]

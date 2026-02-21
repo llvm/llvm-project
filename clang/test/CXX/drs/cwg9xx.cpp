@@ -120,7 +120,7 @@ class B : A {
   a& rvalue_ref() override;
   a&& lvalue_ref() override;
 
-  a&& rvalue_vs_lvalue_ref() override; 
+  a&& rvalue_vs_lvalue_ref() override;
   // since-cxx11-error@-1 {{virtual function 'rvalue_vs_lvalue_ref' has a different return type ('a &&') than the function it overrides (which has return type 'a &')}}
   //   since-cxx11-note@#cwg960-A-rvalue_vs_lvalue_ref {{overridden virtual function is here}}
 

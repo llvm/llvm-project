@@ -81,13 +81,13 @@ namespace test3 {
 namespace test4 {
   template <class T> struct X {
     template <class U> void operator+=(U);
-    
+
     template <class V>
     template <class U>
     friend void X<V>::operator+=(U); // expected-warning {{not supported}}
   };
 
-  void test() {   
+  void test() {
     X<int>() += 1.0;
   }
 }

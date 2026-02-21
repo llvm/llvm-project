@@ -43,21 +43,21 @@ namespace math {
 
 template <typename T>
 BOOST_MATH_GPU_ENABLED constexpr T min BOOST_MATH_PREVENT_MACRO_SUBSTITUTION (const T& a, const T& b)
-{ 
-    return a < b ? a : b; 
+{
+    return a < b ? a : b;
 }
 
 template <typename T>
 BOOST_MATH_GPU_ENABLED constexpr T max BOOST_MATH_PREVENT_MACRO_SUBSTITUTION (const T& a, const T& b)
-{ 
+{
     return a > b ? a : b;
 }
 
 template <typename T>
 BOOST_MATH_GPU_ENABLED constexpr void swap BOOST_MATH_PREVENT_MACRO_SUBSTITUTION (T& a, T& b)
-{ 
-    T t(a); 
-    a = b; 
+{
+    T t(a);
+    a = b;
     b = t;
 }
 

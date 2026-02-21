@@ -26,7 +26,7 @@ void testlonglong(void) {
 // CHECK: alloca i64, align 4
 void testunsignedlonglong(void) {
   unsigned long long ull = 2;
-  fooull(&ull);	
+  fooull(&ull);
 }
 
 // CHECK-LABEL: define{{.*}} void @testlongdouble()

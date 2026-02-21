@@ -307,7 +307,7 @@ struct SampleProfTest : ::testing::Test {
     FunctionSamples *ReadBooSamples = Reader->getSamplesFor(BooName);
     ASSERT_TRUE(ReadBooSamples != nullptr);
     ASSERT_EQ(1232u, ReadBooSamples->getTotalSamples());
-    
+
     FunctionId MconstructRep = getRepInFormat(MconstructName);
     FunctionId StringviewRep = getRepInFormat(StringviewName);
     ASSERT_EQ(1000u, CTMap.get()[MconstructRep]);

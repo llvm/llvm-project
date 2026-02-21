@@ -211,7 +211,7 @@ namespace PR12436 {
     template<typename T>
     X(std::initializer_list<int>, T);
   };
-  
+
   X x({}, 17);
 }
 

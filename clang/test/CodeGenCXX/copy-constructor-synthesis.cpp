@@ -27,12 +27,12 @@ struct X  : M, N, P { // ...
         au_i1(1234), au1_4("MASKED") {}
   P p0;
   void pr() {
-    printf("iM = %d iN = %d, m1.iM = %d\n", iM, iN, m1.iM); 
-    printf("im = %d p0.iP = %d, p1.iP = %d\n", iP, p0.iP, p1.iP); 
+    printf("iM = %d iN = %d, m1.iM = %d\n", iM, iN, m1.iM);
+    printf("im = %d p0.iP = %d, p1.iP = %d\n", iP, p0.iP, p1.iP);
     printf("f1 = %f  d1 = %f  i1 = %d name(%s) \n", f1, d1, i1, name);
     printf("bf1 = %x  bf2 = %x\n", bf1, bf2);
-    printf("au_i2 = %d\n", au_i2); 
-    printf("au1_1 = %s\n", au1_1); 
+    printf("au_i2 = %d\n", au_i2);
+    printf("au1_1 = %s\n", au1_1);
   }
   M m1;
   P p1;

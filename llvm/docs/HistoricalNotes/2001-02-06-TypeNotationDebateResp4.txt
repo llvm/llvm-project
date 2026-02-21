@@ -45,7 +45,7 @@ yourself.... so every time you invoke a virtual method one is involved
 > And the old array syntax:
 >       type [ int, int, ...]
 > is just much more familiar and clear to people than anything new you
-> introduce, no matter how logical it is.  
+> introduce, no matter how logical it is.
 
 Erm... excuse me but how is this the "old array syntax"?  If you are
 arguing for consistency with C, you should be asking for 'type int []',
@@ -71,7 +71,7 @@ structure of types much more obvious than the "c way".
 
 > > In my opinion, it is critically important to have clear and concise type
 > > specifications, because types are going to be all over the programs.
-> 
+>
 > I absolutely agree.  But the question is, what is more clear and concise?
 > The syntax programmers are used to out of years of experience or a new
 > syntax that they have never seen that has a more logical structure.  I think

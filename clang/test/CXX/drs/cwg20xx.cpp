@@ -86,7 +86,7 @@ namespace cwg2076 { // cwg2076: 13
     operator string_view() const;
   };
 
-  void foo(const string &); // #cwg2076-foo 
+  void foo(const string &); // #cwg2076-foo
   void bar(string_view); // #cwg2076-bar
 
   void func(const string &arg) {
@@ -369,7 +369,7 @@ int f()
   return 0;
 }
 } // namespace GH42233
-} // namespace cwg2091 
+} // namespace cwg2091
 
 namespace cwg2094 { // cwg2094: 5
   struct A { int n; };

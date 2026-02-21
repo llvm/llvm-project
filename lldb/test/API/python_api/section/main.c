@@ -2,7 +2,7 @@
 #include <string.h>
 
 // This simple program is to test the lldb Python API SBSection. It includes
-// somes global data, and so the build process produces a DATA section, which 
+// somes global data, and so the build process produces a DATA section, which
 // the test code can use to query for the target byte size
 
 char my_global_var_of_char_type = 'X';

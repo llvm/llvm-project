@@ -34,15 +34,15 @@ struct A {
 
 void test(const int (&a6)[17]) {
   int x = templ_f<int, 5>(3);
-  
+
   S<char, float>::templ();
   S<int, char>::partial();
   S<int, float>::explicit_special();
-  
+
   Dep<A>::Ty ty;
   Dep<A> a;
   a.f();
-  
+
   S3<int> s3;
   s3.m();
 

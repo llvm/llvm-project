@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple spirv64-intel -fopenmp-targets=spirv64-intel -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -DTEAMS -o - | FileCheck %s
 // expected-no-diagnostics
 
-// CHECK: define weak_odr protected spir_kernel void @__omp_offloading_{{.*}}(ptr addrspace(1) noalias noundef %{{.*}}, ptr addrspace(1) noundef align 4 dereferenceable(128) %{{.*}}) 
+// CHECK: define weak_odr protected spir_kernel void @__omp_offloading_{{.*}}(ptr addrspace(1) noalias noundef %{{.*}}, ptr addrspace(1) noundef align 4 dereferenceable(128) %{{.*}})
 
 int main() {
   int x[32] = {0};

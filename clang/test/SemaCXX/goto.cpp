@@ -68,13 +68,13 @@ public:
 
 void rdar9135994()
 {
-X:  
+X:
     goto X;
 }
 
 namespace PR9495 {
-  struct NonPOD { NonPOD(); ~NonPOD(); };  
-  
+  struct NonPOD { NonPOD(); ~NonPOD(); };
+
   void f(bool b) {
     NonPOD np;
     if (b) {

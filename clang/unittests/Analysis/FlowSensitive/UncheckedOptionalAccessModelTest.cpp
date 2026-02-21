@@ -945,7 +945,7 @@ TEST_P(UncheckedOptionalAccessTest, OptionalReturnedFromFuntionCall) {
   ExpectDiagnosticsFor(
       R"(
     #include "unchecked_optional_access_test.h"
-    
+
     struct S {
       $ns::$optional<float> x;
     } s;
@@ -2827,14 +2827,14 @@ TEST_P(
       struct B {
         const A& getA() const { return a; }
 
-        void callWithoutChanges() const { 
-          // no-op 
+        void callWithoutChanges() const {
+          // no-op
         }
 
         A a;
       };
 
-      void target(B& b) {  
+      void target(B& b) {
         if (b.getA().get().has_value()) {
           b.callWithoutChanges(); // calling const method which cannot change A
           b.getA().get().value();

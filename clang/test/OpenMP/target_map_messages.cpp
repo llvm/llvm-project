@@ -136,7 +136,7 @@ struct SA {
     {}
     #pragma omp target map(self, tofrom: c[:],f)   // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}} // lt60-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
     {}
-    #pragma omp target map(self, tofrom: c,f[:])   // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}} // lt60-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}} 
+    #pragma omp target map(self, tofrom: c,f[:])   // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}} // lt60-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
     {}
     #pragma omp target map(close, tofrom: c,f)
     {}

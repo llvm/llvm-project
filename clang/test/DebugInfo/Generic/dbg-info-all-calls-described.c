@@ -69,7 +69,7 @@
 // NO-ATTR-NOT: FlagAllCallsDescribed
 
 // HAS-ATTR-DAG: DISubprogram(name: "declaration1", {{.*}}, spFlags: DISPFlagOptimized)
-// HAS-ATTR-DAG: DISubprogram(name: "declaration2", {{.*}}, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized 
+// HAS-ATTR-DAG: DISubprogram(name: "declaration2", {{.*}}, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized
 // HAS-ATTR-DAG: DISubprogram(name: "declaration3", {{.*}}, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
 // HAS-ATTR-DAG: DISubprogram(name: "declaration4", {{.*}}, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized
 

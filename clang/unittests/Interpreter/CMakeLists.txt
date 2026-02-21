@@ -62,8 +62,8 @@ add_distinct_clang_unittest(ClangReplInterpreterTests
   )
 
 if(TARGET compiler-rt AND LLVM_ON_UNIX)
-  add_dependencies(ClangReplInterpreterTests 
-    llvm-jitlink-executor 
+  add_dependencies(ClangReplInterpreterTests
+    llvm-jitlink-executor
     compiler-rt
   )
   message(STATUS "Adding dependency on compiler-rt for out of process JIT tests")

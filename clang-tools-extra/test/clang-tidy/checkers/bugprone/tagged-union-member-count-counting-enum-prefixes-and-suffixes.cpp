@@ -33,7 +33,7 @@ struct TaggedUnionPrefixAndSuffixMatch {
 
 // CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (3) than tags (2)
 struct TaggedUnionOnlyPrefixMatch {
-  enum { 
+  enum {
     prefixtag1,
     prefixtag2,
     lastprefixtag

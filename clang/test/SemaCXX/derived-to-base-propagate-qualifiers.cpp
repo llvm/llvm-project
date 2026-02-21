@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -ast-dump -verify %s | FileCheck %s
 
-// Ensure qualifiers are preserved during derived-to-base conversion. 
+// Ensure qualifiers are preserved during derived-to-base conversion.
 namespace PR127683 {
 
 struct Base {
@@ -35,7 +35,7 @@ void test_load() {
 
   // CHECK: `-ImplicitCastExpr {{.*}} 'const PR127683::Base' lvalue <UncheckedDerivedToBase (Base)>
   Val = CObj.Val;
-  
+
   // CHECK: `-ImplicitCastExpr {{.*}} 'const volatile PR127683::Base' lvalue <UncheckedDerivedToBase (Base)>
   Val = CVObj.Val;
 

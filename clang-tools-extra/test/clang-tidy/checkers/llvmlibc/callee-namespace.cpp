@@ -76,11 +76,11 @@ void Test() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'wrong_name_macro_func' must resolve to a function declared within the namespace defined by the 'LIBC_NAMESPACE' macro
   // CHECK-MESSAGES: :3:31: note: expanded from macro 'OTHER_MACRO_NAMESPACE'
   // CHECK-MESSAGES: :5:8: note: resolves to this declaration
-  
+
   __llvm_libc::right_name_no_macro_func();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'right_name_no_macro_func' must resolve to a function declared within the namespace defined by the 'LIBC_NAMESPACE' macro
   // CHECK-MESSAGES: :9:8: note: resolves to this declaration
-  
+
 }
 
 } // namespace __llvm_libc

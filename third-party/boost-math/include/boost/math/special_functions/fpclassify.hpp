@@ -763,8 +763,8 @@ BOOST_MATH_GPU_ENABLED inline bool isfinite(T x)
 template <typename T>
 BOOST_MATH_GPU_ENABLED inline bool isnormal(T x)
 {
-   return x != static_cast<T>(0) && x != static_cast<T>(-0) && 
-            !boost::math::isnan(x) && 
+   return x != static_cast<T>(0) && x != static_cast<T>(-0) &&
+            !boost::math::isnan(x) &&
             !boost::math::isinf(x);
 }
 

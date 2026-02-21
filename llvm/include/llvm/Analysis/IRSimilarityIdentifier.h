@@ -530,7 +530,7 @@ struct IRInstructionMapper {
         return Legal;
       return Illegal;
     }
-    InstrType visitPHINode(PHINode &PN) { 
+    InstrType visitPHINode(PHINode &PN) {
       if (EnableBranches)
         return Legal;
       return Illegal;
@@ -597,7 +597,7 @@ struct IRInstructionMapper {
     // Flag that lets the classifier know whether we should allow intrinsics to
     // be checked for similarity.
     bool EnableIntrinsics = false;
-  
+
     // Flag that lets the classifier know whether we should allow tail calls to
     // be checked for similarity.
     bool EnableMustTailCalls = false;
@@ -774,9 +774,9 @@ public:
   /// \param InstValA - The assignment GVN from the first IRSimilarityCandidate.
   /// \param InstValB - The assignment GVN from the second
   /// IRSimilarityCandidate.
-  /// \param [in,out] ValueNumberMappingA - A mapping of value numbers from 
+  /// \param [in,out] ValueNumberMappingA - A mapping of value numbers from
   /// candidate \p A to candidate \B.
-  /// \param [in,out] ValueNumberMappingB - A mapping of value numbers from 
+  /// \param [in,out] ValueNumberMappingB - A mapping of value numbers from
   /// candidate \p B to candidate \A.
   /// \returns true if the IRSimilarityCandidates assignments are compatible.
   LLVM_ABI static bool compareAssignmentMapping(

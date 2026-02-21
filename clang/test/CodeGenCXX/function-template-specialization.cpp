@@ -8,8 +8,8 @@ template<typename T, typename U>
 T* next(T* ptr, const U& diff);
 
 template<typename T, typename U>
-T* next(T* ptr, const U& diff) { 
-  return ptr + diff; 
+T* next(T* ptr, const U& diff) {
+  return ptr + diff;
 }
 
 void test(int *iptr, float *fptr, int diff) {
@@ -48,11 +48,11 @@ const int &GetData<int>(bool b) {
 namespace GH125747 {
 
 template<typename F> constexpr int visit(F f) { return f(0); }
-    
+
 template <class T> int G(T t);
-    
+
 int main() { return visit([](auto s) -> int { return G(s); }); }
-    
+
 template <class T> int G(T t) {
   return 0;
 }

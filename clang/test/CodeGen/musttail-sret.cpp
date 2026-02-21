@@ -68,7 +68,7 @@ double _Complex F8(signed short P0) {
 // CHECK-NOT: alloca
 // CHECK-ARM: musttail call arm_aapcscc void @_Z2F7s(ptr dead_on_unwind writable sret({ double, double }) align 8 %agg.result, i16 noundef signext 20391)
 // CHECK-ARM64: musttail call noundef { double, double } @_Z2F7s(i16 noundef 20391)
-// CHECK-X86: musttail call void @_Z2F7s(ptr dead_on_unwind writable sret({ double, double }) align 4 %agg.result, i16 noundef signext 20391) 
+// CHECK-X86: musttail call void @_Z2F7s(ptr dead_on_unwind writable sret({ double, double }) align 4 %agg.result, i16 noundef signext 20391)
 // CHECK-X64: musttail call noundef { double, double } @_Z2F7s(i16 noundef signext 20391)
 
 signed _BitInt(100) F9(float P0, float P1, double P2, char P3);

@@ -10,13 +10,13 @@ typedef struct nested1 {
 
 struct nested2 {
     int a;
-    NESTED1; 
+    NESTED1;
     int b;
 };
 
 struct test {
     int    x;
-    struct nested2; 
+    struct nested2;
     int    y;
 };
 

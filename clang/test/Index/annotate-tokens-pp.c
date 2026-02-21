@@ -18,7 +18,7 @@ void test_macro_args() {
   int w = j + j;
 }
 
-#define fun_with_macro_bodies(x, y) do { if (x) y } while (0) 
+#define fun_with_macro_bodies(x, y) do { if (x) y } while (0)
 
 void test() {
   int x = 10;

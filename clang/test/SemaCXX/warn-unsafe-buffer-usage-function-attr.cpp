@@ -49,7 +49,7 @@ void foo<int *>(int *t) {}
 void caller1(int *p, int *q) {
     testVariadics(p, q);  // expected-warning{{function introduces unsafe buffer manipulation}}
     adder(p, q);  // expected-warning{{function introduces unsafe buffer manipulation}}
-    
+
     int x;
     foo(x);
     foo(&x);  // expected-warning{{function introduces unsafe buffer manipulation}}
@@ -60,14 +60,14 @@ class BaseClass {
 public:
     [[clang::unsafe_buffer_usage]]
     virtual void func() {}
-    
+
     virtual void func1() {}
 };
 
 class DerivedClass : public BaseClass {
 public:
     void func() {}
-    
+
     [[clang::unsafe_buffer_usage]]
     void func1() {}
 };
@@ -76,11 +76,11 @@ void testInheritance() {
     DerivedClass DC;
     DC.func();
     DC.func1();  // expected-warning{{function introduces unsafe buffer manipulation}}
-    
+
     BaseClass *BC;
     BC->func();  // expected-warning{{function introduces unsafe buffer manipulation}}
     BC->func1();
-    
+
     BC = &DC;
     BC->func();  // expected-warning{{function introduces unsafe buffer manipulation}}
     BC->func1();

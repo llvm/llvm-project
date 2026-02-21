@@ -16,7 +16,7 @@ int main()
   T t;
   print("foo");
   t<<"foo";
-  
+
   return 0;
 }
-  
+

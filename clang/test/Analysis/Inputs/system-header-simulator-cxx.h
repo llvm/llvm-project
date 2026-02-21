@@ -84,7 +84,7 @@ template <typename T, typename Ptr, typename Ref> struct __vector_iterator {
   Ref operator[](difference_type n) {
     return *(ptr+n);
   }
-  
+
   bool operator==(const iterator &rhs) const { return ptr == rhs.ptr; }
   bool operator==(const const_iterator &rhs) const { return ptr == rhs.ptr; }
 
@@ -144,7 +144,7 @@ template <typename T, typename Ptr, typename Ref> struct __deque_iterator {
   Ref operator[](difference_type n) {
     return *(ptr+n);
   }
-  
+
   bool operator==(const iterator &rhs) const { return ptr == rhs.ptr; }
   bool operator==(const const_iterator &rhs) const { return ptr == rhs.ptr; }
 
@@ -241,10 +241,10 @@ namespace std {
   struct pair {
     T1 first;
     T2 second;
-    
+
     pair() : first(), second() {}
     pair(const T1 &a, const T2 &b) : first(a), second(b) {}
-    
+
     template<class U1, class U2>
     pair(const pair<U1, U2> &other) : first(other.first),
                                       second(other.second) {}
@@ -254,11 +254,11 @@ namespace std {
   T2& get(pair<T1, T2>& p) ;
   template<class T1, class T2>
   T1& get(const pair<T1, T2>& p) ;
-  
+
   typedef __typeof__(sizeof(int)) size_t;
 
   template <class T> class initializer_list;
-  
+
   template< class T > struct remove_reference      {typedef T type;};
   template< class T > struct remove_reference<T&>  {typedef T type;};
   template< class T > struct remove_reference<T&&> {typedef T type;};
@@ -299,7 +299,7 @@ namespace std {
     vector(const vector &other);
     vector(vector &&other);
     ~vector();
-    
+
     size_t size() const {
       return size_t(_finish - _start);
     }
@@ -339,11 +339,11 @@ namespace std {
     T &operator[](size_t n) {
       return _start[n];
     }
-    
+
     const T &operator[](size_t n) const {
       return _start[n];
     }
-    
+
     iterator begin() { return iterator(_start); }
     const_iterator begin() const { return const_iterator(_start); }
     const_iterator cbegin() const { return const_iterator(_start); }
@@ -355,7 +355,7 @@ namespace std {
     T& back() { return *(end() - 1); }
     const T& back() const { return *(end() - 1); }
   };
-  
+
   template<typename T>
   class list {
     struct __item {
@@ -375,7 +375,7 @@ namespace std {
     list(const list &other);
     list(list &&other);
     ~list();
-    
+
     list& operator=(const list &other);
     list& operator=(list &&other);
     list& operator=(std::initializer_list<T> ilist);
@@ -445,11 +445,11 @@ namespace std {
     deque(const deque &other);
     deque(deque &&other);
     ~deque();
-    
+
     size_t size() const {
       return size_t(_finish - _start);
     }
-    
+
     deque& operator=(const deque &other);
     deque& operator=(deque &&other);
     deque& operator=(std::initializer_list<T> ilist);
@@ -527,7 +527,7 @@ namespace std {
     forward_list(const forward_list &other);
     forward_list(forward_list &&other);
     ~forward_list();
-    
+
     forward_list& operator=(const forward_list &other);
     forward_list& operator=(forward_list &&other);
     forward_list& operator=(std::initializer_list<T> ilist);
@@ -1301,13 +1301,13 @@ template <typename Ret, typename... Args> class packaged_task<Ret(Args...)> {
   {
     template<class T>
     struct type_identity { using type = T; }; // or use std::type_identity (since C++20)
- 
+
     template<class T>
     auto try_add_pointer(int) -> type_identity<typename std::remove_reference<T>::type*>;
     template<class T>
     auto try_add_pointer(...) -> type_identity<T>;
   } // namespace detail
- 
+
   template<class T>
   struct add_pointer : decltype(detail::try_add_pointer<T>(0)) {};
 
@@ -1328,7 +1328,7 @@ template <typename Ret, typename... Args> class packaged_task<Ret(Args...)> {
   struct decay{typedef remove_cv_t<remove_reference_t<T>> type;};
   template<class T>
   using decay_t = typename decay<T>::type;
-  
+
   // variant
   template <class... Types> class variant;
   // variant helper classes

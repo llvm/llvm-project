@@ -33,7 +33,7 @@ __m256 test_mm256_mask_cvtph_ps(__m256 __W, __mmask8 __U, __m128i __A) {
   // COMMONIR: bitcast <2 x i64> %{{.*}} to <8 x i16>
   // COMMONIR: bitcast <8 x i16> %{{.*}} to <8 x half>
   // UNCONSTRAINED: fpext <8 x half> %{{.*}} to <8 x float>
-  // CONSTRAINED: call <8 x float> @llvm.experimental.constrained.fpext.v8f32.v8f16(<8 x half> %{{.*}}, metadata !"fpexcept.strict") 
+  // CONSTRAINED: call <8 x float> @llvm.experimental.constrained.fpext.v8f32.v8f16(<8 x half> %{{.*}}, metadata !"fpexcept.strict")
   // COMMONIR: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_mask_cvtph_ps(__W, __U, __A);
 }
@@ -43,7 +43,7 @@ __m256 test_mm256_maskz_cvtph_ps(__mmask8 __U, __m128i __A) {
   // COMMONIR: bitcast <2 x i64> %{{.*}} to <8 x i16>
   // COMMONIR: bitcast <8 x i16> %{{.*}} to <8 x half>
   // UNCONSTRAINED: fpext <8 x half> %{{.*}} to <8 x float>
-  // CONSTRAINED: call <8 x float> @llvm.experimental.constrained.fpext.v8f32.v8f16(<8 x half> %{{.*}}, metadata !"fpexcept.strict") 
+  // CONSTRAINED: call <8 x float> @llvm.experimental.constrained.fpext.v8f32.v8f16(<8 x half> %{{.*}}, metadata !"fpexcept.strict")
   // COMMONIR: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_maskz_cvtph_ps(__U, __A);
 }

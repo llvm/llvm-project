@@ -100,7 +100,7 @@ void f1(int len) {
 void f2(int len) {
   int arr[len + 4];
 }
-  
+
 // CIR: cir.func{{.*}} @f2(%[[LEN_ARG:.*]]: !s32i {{.*}})
 // CIR:   %[[LEN_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["len", init]
 // CIR:   %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
@@ -114,7 +114,7 @@ void f2(int len) {
 // CIR:   %[[ARR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[TOTAL_LEN_SIZE_T]] : !u64i, ["arr"]
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
-  
+
 // LLVM: define{{.*}} void @f2(i32 %[[LEN_ARG:.*]])
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i32
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
@@ -127,9 +127,9 @@ void f2(int len) {
 // LLVM:   %[[ARR:.*]] = alloca i32, i64 %[[TOTAL_LEN_SIZE_T]]
 // LLVM:   %[[STACK_RESTORE_PTR:.*]] = load ptr, ptr %[[SAVED_STACK]]
 // LLVM:   call void @llvm.stackrestore.p0(ptr %[[STACK_RESTORE_PTR]])
-  
+
 // Note: VLA_EXPR0 below is emitted to capture debug info.
-  
+
 // OGCG: define{{.*}} void @f2(i32 {{.*}} %[[LEN_ARG:.*]])
 // OGCG:   %[[LEN_ADDR:.*]] = alloca i32
 // OGCG:   %[[SAVED_STACK:.*]] = alloca ptr

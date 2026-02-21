@@ -18,9 +18,9 @@ void g() {
 #else
   // expected-warning@-4{{ISO C++11 does not allow conversion from string literal to 'char *'}}
 #endif
- 
+
   f<int>("aa",3.0);       // Y is deduced to be char*, and
-                          // Z is deduced to be double 
+                          // Z is deduced to be double
   f("aa",3.0); // expected-error{{no matching}}
 }
 
@@ -28,10 +28,10 @@ void g() {
 namespace PR5910 {
   template <typename T>
   void Func() {}
-  
+
   template <typename R>
   void Foo(R (*fp)());
-  
+
   void Test() {
     Foo(Func<int>);
   }

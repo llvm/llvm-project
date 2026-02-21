@@ -175,7 +175,7 @@ int main() {
   G g;
   H h;
   H h1(1);
-  X x; 
+  X x;
   X x1(1);
   M m;
   Y *y = new Y;

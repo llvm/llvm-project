@@ -8,7 +8,7 @@ void f() {
 
   // Verify statically that __null is the right size
   int a[sizeof(typeof(__null)) == sizeof(void*)? 1 : -1];
-  
+
   // Verify that null is evaluated as 0.
   int b[__null ? -1 : 1];
 }

@@ -57,7 +57,7 @@ void ww(
 
 struct S2 {
     int x, y;
-    S2() : 
+    S2() :
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreorder"
     y(),

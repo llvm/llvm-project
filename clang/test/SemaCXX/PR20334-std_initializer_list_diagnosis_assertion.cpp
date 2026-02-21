@@ -11,7 +11,7 @@ namespace std {
 }
 
 template<class E> int f(std::initializer_list<E> il);
-	
+
 
 int F = f({1, 2, 3});
 // cxx98-error@-1 {{expected expression}}

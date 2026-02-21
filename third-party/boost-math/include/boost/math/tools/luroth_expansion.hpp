@@ -85,8 +85,8 @@ public:
         }
         d_.shrink_to_fit();
     }
-    
-    
+
+
     const std::vector<Z>& digits() const {
       return d_;
     }
@@ -105,7 +105,7 @@ public:
         }
         return exp(g/(d_.size() - 1));
     }
-    
+
     template<typename T, typename Z2>
     friend std::ostream& operator<<(std::ostream& out, luroth_expansion<T, Z2>& scf);
 

@@ -8,7 +8,7 @@ void f1(void) {
 
 void f2(void) {
   #pragma STDC FP_CONTRACT OFF
-  #pragma STDC FP_CONTRACT ON 
+  #pragma STDC FP_CONTRACT ON
 }
 
 struct S1 {

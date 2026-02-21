@@ -24,7 +24,7 @@ struct TestVector {
 };
 
 int test__cmpsf2(const struct TestVector *vector) {
-    
+
     if (__eqsf2(vector->a, vector->b) != vector->eqReference) {
         printf("error in __eqsf2(%a, %a) = %d, expected %d\n",
                vector->a, vector->b,
@@ -32,7 +32,7 @@ int test__cmpsf2(const struct TestVector *vector) {
                vector->eqReference);
         return 1;
     }
-    
+
     if (__gesf2(vector->a, vector->b) != vector->geReference) {
         printf("error in __gesf2(%a, %a) = %d, expected %d\n",
                vector->a, vector->b,
@@ -40,7 +40,7 @@ int test__cmpsf2(const struct TestVector *vector) {
                vector->geReference);
         return 1;
     }
-    
+
     if (__gtsf2(vector->a, vector->b) != vector->gtReference) {
         printf("error in __gtsf2(%a, %a) = %d, expected %d\n",
                vector->a, vector->b,
@@ -48,7 +48,7 @@ int test__cmpsf2(const struct TestVector *vector) {
                vector->gtReference);
         return 1;
     }
-    
+
     if (__lesf2(vector->a, vector->b) != vector->leReference) {
         printf("error in __lesf2(%a, %a) = %d, expected %d\n",
                vector->a, vector->b,
@@ -56,7 +56,7 @@ int test__cmpsf2(const struct TestVector *vector) {
                vector->leReference);
         return 1;
     }
-    
+
     if (__ltsf2(vector->a, vector->b) != vector->ltReference) {
         printf("error in __ltsf2(%a, %a) = %d, expected %d\n",
                vector->a, vector->b,
@@ -64,7 +64,7 @@ int test__cmpsf2(const struct TestVector *vector) {
                vector->ltReference);
         return 1;
     }
-    
+
     if (__nesf2(vector->a, vector->b) != vector->neReference) {
         printf("error in __nesf2(%a, %a) = %d, expected %d\n",
                vector->a, vector->b,
@@ -72,7 +72,7 @@ int test__cmpsf2(const struct TestVector *vector) {
                vector->neReference);
         return 1;
     }
-    
+
     if (__unordsf2(vector->a, vector->b) != vector->unReference) {
         printf("error in __unordsf2(%a, %a) = %d, expected %d\n",
                vector->a, vector->b,
@@ -80,13 +80,13 @@ int test__cmpsf2(const struct TestVector *vector) {
                vector->unReference);
         return 1;
     }
-    
+
     return 0;
 }
 
 /*
 void generateVectors() {
-    
+
     const float arguments[] = {
         __builtin_nanf(""),
         -__builtin_inff(),
@@ -108,9 +108,9 @@ void generateVectors() {
          0x1.fffffep127,
          __builtin_inff()
     };
-    
+
     int numArguments = sizeof arguments / sizeof arguments[0];
-    
+
     for (int i=0; i<numArguments; ++i) {
         for (int j=0; j<numArguments; ++j) {
             const float a = arguments[i];
@@ -119,7 +119,7 @@ void generateVectors() {
             const int geResult = a > b ?  1 : a == b ? 0 : -1;
             const int unResult = a != a || b != b ? 1 : 0;
             printf("{%a,%a,%d,%d,%d,%d,%d,%d,%d},\n",
-                   a, b, 
+                   a, b,
                    leResult,
                    geResult,
                    geResult,
@@ -456,7 +456,7 @@ static const struct TestVector vectors[] = {
     {__builtin_inff(),0x1.000002p0f,1,1,1,1,1,1,0},
     {__builtin_inff(),0x1.fffffep+127f,1,1,1,1,1,1,0},
     {__builtin_inff(),__builtin_inff(),0,0,0,0,0,0,0},
-};    
+};
 
 int main(int argc, char *argv[]) {
     const int numVectors = sizeof vectors / sizeof vectors[0];

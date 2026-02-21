@@ -7,7 +7,7 @@
 
 // Returns: convert a to a double, rounding toward even.
 
-// Assumption: double is a IEEE 64 bit floating point type 
+// Assumption: double is a IEEE 64 bit floating point type
 //             du_int is a 64 bit integral type
 
 // seee eeee eeee mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm

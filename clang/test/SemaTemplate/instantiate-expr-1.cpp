@@ -133,29 +133,29 @@ void test_asm(T t) {
 void test_asm() {
   int* a;
   test_asm(a);
-  
+
   int b;
   test_asm(b); // expected-note {{in instantiation of function template specialization 'test_asm<int>' requested here}}
 }
 
 namespace PR6424 {
-  template<int I> struct X { 
-    X() { 
+  template<int I> struct X {
+    X() {
       int *ip = I; // expected-error{{cannot initialize a variable of type 'int *' with an rvalue of type 'int'}}
     }
   };
-  
+
   template<int> struct Y {
     typedef X<7> X7;
-    
+
     void f() { X7(); } // expected-note{{instantiation}}
   };
-  
-  template void Y<3>::f(); 
 
-  template<int I> 
+  template void Y<3>::f();
+
+  template<int I>
   struct X2 {
-    void *operator new(__SIZE_TYPE__) { 
+    void *operator new(__SIZE_TYPE__) {
       int *ip = I; // expected-error{{cannot initialize a variable of type 'int *' with an rvalue of type 'int'}}
       return ip;
     }
@@ -163,11 +163,11 @@ namespace PR6424 {
 
   template<int> struct Y2 {
     typedef X2<7> X;
-    void f() { 
+    void f() {
       new X(); // expected-note{{instantiation of}}
     }
   };
-  
+
   template void Y2<3>::f();
 
   template<typename T>

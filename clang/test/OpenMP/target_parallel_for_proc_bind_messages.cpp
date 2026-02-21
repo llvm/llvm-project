@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
 #pragma omp target parallel for proc_bind( // omp50-error {{expected 'master', 'close' or 'spread' in OpenMP clause 'proc_bind'}} omp51-error {{expected 'master', 'close', 'spread' or 'primary' in OpenMP clause 'proc_bind'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (i = 0; i < argc; ++i)
     foo();
-#pragma omp target parallel for proc_bind() // omp50-error {{expected 'master', 'close' or 'spread' in OpenMP clause 'proc_bind'}} omp51-error {{expected 'master', 'close', 'spread' or 'primary' in OpenMP clause 'proc_bind'}} 
+#pragma omp target parallel for proc_bind() // omp50-error {{expected 'master', 'close' or 'spread' in OpenMP clause 'proc_bind'}} omp51-error {{expected 'master', 'close', 'spread' or 'primary' in OpenMP clause 'proc_bind'}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp target parallel for proc_bind(master // expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
 #pragma omp target parallel for proc_bind(close), proc_bind(spread) // expected-error {{directive '#pragma omp target parallel for' cannot contain more than one 'proc_bind' clause}}
   for (i = 0; i < argc; ++i)
     foo();
-#pragma omp target parallel for proc_bind(x) // omp50-error {{expected 'master', 'close' or 'spread' in OpenMP clause 'proc_bind'}} omp51-error {{expected 'master', 'close', 'spread' or 'primary' in OpenMP clause 'proc_bind'}} 
+#pragma omp target parallel for proc_bind(x) // omp50-error {{expected 'master', 'close' or 'spread' in OpenMP clause 'proc_bind'}} omp51-error {{expected 'master', 'close', 'spread' or 'primary' in OpenMP clause 'proc_bind'}}
   for (i = 0; i < argc; ++i)
     foo();
 

@@ -48,7 +48,7 @@ struct ConvertibleToInt {
 template<typename T> T create();
 
 // First bullet: lvalue references binding to lvalues (the simple cases).
-void bind_lvalue_to_lvalue(Base b, Derived d, 
+void bind_lvalue_to_lvalue(Base b, Derived d,
                            const Base bc, const Derived dc,
                            Diamond diamond,
                            int i) {

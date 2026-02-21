@@ -15,7 +15,7 @@
 
 namespace boost{ namespace math{
 
-template<class T> 
+template<class T>
 [[deprecated("Replaced by C++11")]] inline std::complex<T> asinh(const std::complex<T>& x)
 {
    //

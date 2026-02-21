@@ -8,7 +8,7 @@
 
 //--- foo.map
 module "foo" {
-  export * 
+  export *
   header "foo.h"
 }
 

@@ -8,7 +8,7 @@ typedef short s2 __attribute__ ((vector_size(4)));
 typedef enum { Evalue = 0x10000 } E;
 
 void f(void)
-{  
+{
   t1 v1;
   t2 v2;
   t3 v3;
@@ -17,19 +17,19 @@ void f(void)
 
   e = (E)v4;
   v4 = (s2)e;
-  
+
   v2 = (t2)v1; // expected-error {{invalid conversion between vector type \
 't2' (vector of 16 'char' values) and 't1' (vector of 1 'long long' value) of different size}}
   v1 = (t1)v2; // expected-error {{invalid conversion between vector type \
 't1' (vector of 1 'long long' value) and 't2' (vector of 16 'char' values) of different size}}
   v3 = (t3)v2;
-  
+
   v1 = (t1)(char *)10; // expected-error {{invalid conversion between vector \
 type 't1' (vector of 1 'long long' value) and scalar type 'char *'}}
   v1 = (t1)(long long)10;
   v1 = (t1)(short)10; // expected-error {{invalid conversion between vector \
 type 't1' (vector of 1 'long long' value) and integer type 'short' of different size}}
-  
+
   long long r1 = (long long)v1;
   short r2 = (short)v1; // expected-error {{invalid conversion between vector \
 type 't1' (vector of 1 'long long' value) and integer type 'short' of different size}}

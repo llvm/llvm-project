@@ -1,82 +1,82 @@
 # RUN: llvm-mc --disassemble %s -triple powerpc64-unknown-unknown -mcpu=pwr7 | FileCheck %s
 
-# FIXME: test b target                        
+# FIXME: test b target
 
-# FIXME: test ba target                       
+# FIXME: test ba target
 
-# FIXME: test bl target                       
+# FIXME: test bl target
 
-# FIXME: test bla target                      
+# FIXME: test bla target
 
-# FIXME: test bc 4, 10, target                
+# FIXME: test bc 4, 10, target
 
-# FIXME: test bca 4, 10, target               
+# FIXME: test bca 4, 10, target
 
-# FIXME: test bcl 4, 10, target               
+# FIXME: test bcl 4, 10, target
 
-# FIXME: test bcla 4, 10, target              
+# FIXME: test bcla 4, 10, target
 
-# CHECK: bclr 4, 10, 3                   
+# CHECK: bclr 4, 10, 3
 0x4c 0x8a 0x18 0x20
 
 # CHECK: bclr 4, 10
 0x4c 0x8a 0x00 0x20
 
-# CHECK: bclrl 4, 10, 3                  
+# CHECK: bclrl 4, 10, 3
 0x4c 0x8a 0x18 0x21
 
 # CHECK: bclrl 4, 10
 0x4c 0x8a 0x00 0x21
 
-# CHECK: bcctr 4, 10, 3                  
+# CHECK: bcctr 4, 10, 3
 0x4c 0x8a 0x1c 0x20
 
 # CHECK: bcctr 4, 10
 0x4c 0x8a 0x04 0x20
 
-# CHECK: bcctrl 4, 10, 3                 
+# CHECK: bcctrl 4, 10, 3
 0x4c 0x8a 0x1c 0x21
 
 # CHECK: bcctrl 4, 10
 0x4c 0x8a 0x04 0x21
 
-# CHECK: crand 2, 3, 4                   
+# CHECK: crand 2, 3, 4
 0x4c 0x43 0x22 0x02
 
-# CHECK: crnand 2, 3, 4                  
+# CHECK: crnand 2, 3, 4
 0x4c 0x43 0x21 0xc2
 
-# CHECK: cror 2, 3, 4                    
+# CHECK: cror 2, 3, 4
 0x4c 0x43 0x23 0x82
 
-# CHECK: crxor 2, 3, 4                   
+# CHECK: crxor 2, 3, 4
 0x4c 0x43 0x21 0x82
 
-# CHECK: crnor 2, 3, 4                   
+# CHECK: crnor 2, 3, 4
 0x4c 0x43 0x20 0x42
 
-# CHECK: creqv 2, 3, 4                   
+# CHECK: creqv 2, 3, 4
 0x4c 0x43 0x22 0x42
 
-# CHECK: crandc 2, 3, 4                  
+# CHECK: crandc 2, 3, 4
 0x4c 0x43 0x21 0x02
 
-# CHECK: crorc 2, 3, 4                   
+# CHECK: crorc 2, 3, 4
 0x4c 0x43 0x23 0x42
 
-# CHECK: mcrf 2, 3                       
+# CHECK: mcrf 2, 3
 0x4d 0x0c 0x00 0x00
 
-# CHECK: sc 1                            
+# CHECK: sc 1
 0x44 0x00 0x00 0x22
 
 # CHECK: sc
 0x44 0x00 0x00 0x02
 
-# CHECK: scv 1                            
+# CHECK: scv 1
 0x44 0x00 0x00 0x21
 
-# CHECK: scv 2                            
+# CHECK: scv 2
 0x44 0x00 0x00 0x41
 
 # CHECK: clrbhrb
@@ -88,73 +88,73 @@
 # CHECK: rfebb
 0x4c 0x00 0x09 0x24
 
-# CHECK: lbz 2, 128(4)                   
+# CHECK: lbz 2, 128(4)
 0x88 0x44 0x00 0x80
 
-# CHECK: lbzx 2, 3, 4                    
+# CHECK: lbzx 2, 3, 4
 0x7c 0x43 0x20 0xae
 
-# CHECK: lbzu 2, 128(4)                  
+# CHECK: lbzu 2, 128(4)
 0x8c 0x44 0x00 0x80
 
-# CHECK: lbzux 2, 3, 4                   
+# CHECK: lbzux 2, 3, 4
 0x7c 0x43 0x20 0xee
 
-# CHECK: lhz 2, 128(4)                   
+# CHECK: lhz 2, 128(4)
 0xa0 0x44 0x00 0x80
 
-# CHECK: lhzx 2, 3, 4                    
+# CHECK: lhzx 2, 3, 4
 0x7c 0x43 0x22 0x2e
 
-# CHECK: lhzu 2, 128(4)                  
+# CHECK: lhzu 2, 128(4)
 0xa4 0x44 0x00 0x80
 
-# CHECK: lhzux 2, 3, 4                   
+# CHECK: lhzux 2, 3, 4
 0x7c 0x43 0x22 0x6e
 
-# CHECK: lha 2, 128(4)                   
+# CHECK: lha 2, 128(4)
 0xa8 0x44 0x00 0x80
 
-# CHECK: lhax 2, 3, 4                    
+# CHECK: lhax 2, 3, 4
 0x7c 0x43 0x22 0xae
 
-# CHECK: lhau 2, 128(4)                  
+# CHECK: lhau 2, 128(4)
 0xac 0x44 0x00 0x80
 
-# CHECK: lhaux 2, 3, 4                   
+# CHECK: lhaux 2, 3, 4
 0x7c 0x43 0x22 0xee
 
-# CHECK: lwz 2, 128(4)                   
+# CHECK: lwz 2, 128(4)
 0x80 0x44 0x00 0x80
 
-# CHECK: lwzx 2, 3, 4                    
+# CHECK: lwzx 2, 3, 4
 0x7c 0x43 0x20 0x2e
 
-# CHECK: lwzu 2, 128(4)                  
+# CHECK: lwzu 2, 128(4)
 0x84 0x44 0x00 0x80
 
-# CHECK: lwzux 2, 3, 4                   
+# CHECK: lwzux 2, 3, 4
 0x7c 0x43 0x20 0x6e
 
-# CHECK: lwa 2, 128(4)                   
+# CHECK: lwa 2, 128(4)
 0xe8 0x44 0x00 0x82
 
-# CHECK: lwax 2, 3, 4                    
+# CHECK: lwax 2, 3, 4
 0x7c 0x43 0x22 0xaa
 
-# CHECK: lwaux 2, 3, 4                   
+# CHECK: lwaux 2, 3, 4
 0x7c 0x43 0x22 0xea
 
-# CHECK: ld 2, 128(4)                    
+# CHECK: ld 2, 128(4)
 0xe8 0x44 0x00 0x80
 
-# CHECK: ldx 2, 3, 4                     
+# CHECK: ldx 2, 3, 4
 0x7c 0x43 0x20 0x2a
 
-# CHECK: ldu 2, 128(4)                   
+# CHECK: ldu 2, 128(4)
 0xe8 0x44 0x00 0x81
 
-# CHECK: ldux 2, 3, 4                    
+# CHECK: ldux 2, 3, 4
 0x7c 0x43 0x20 0x6a
 
 # CHECK: lq 2, 128(4)
@@ -163,52 +163,52 @@
 # CHECK: lq 28, 128(30)
 0xe3 0x9e 0x00 0x80
 
-# CHECK: stb 2, 128(4)                   
+# CHECK: stb 2, 128(4)
 0x98 0x44 0x00 0x80
 
-# CHECK: stbx 2, 3, 4                    
+# CHECK: stbx 2, 3, 4
 0x7c 0x43 0x21 0xae
 
-# CHECK: stbu 2, 128(4)                  
+# CHECK: stbu 2, 128(4)
 0x9c 0x44 0x00 0x80
 
-# CHECK: stbux 2, 3, 4                   
+# CHECK: stbux 2, 3, 4
 0x7c 0x43 0x21 0xee
 
-# CHECK: sth 2, 128(4)                   
+# CHECK: sth 2, 128(4)
 0xb0 0x44 0x00 0x80
 
-# CHECK: sthx 2, 3, 4                    
+# CHECK: sthx 2, 3, 4
 0x7c 0x43 0x23 0x2e
 
-# CHECK: sthu 2, 128(4)                  
+# CHECK: sthu 2, 128(4)
 0xb4 0x44 0x00 0x80
 
-# CHECK: sthux 2, 3, 4                   
+# CHECK: sthux 2, 3, 4
 0x7c 0x43 0x23 0x6e
 
-# CHECK: stw 2, 128(4)                   
+# CHECK: stw 2, 128(4)
 0x90 0x44 0x00 0x80
 
-# CHECK: stwx 2, 3, 4                    
+# CHECK: stwx 2, 3, 4
 0x7c 0x43 0x21 0x2e
 
-# CHECK: stwu 2, 128(4)                  
+# CHECK: stwu 2, 128(4)
 0x94 0x44 0x00 0x80
 
-# CHECK: stwux 2, 3, 4                   
+# CHECK: stwux 2, 3, 4
 0x7c 0x43 0x21 0x6e
 
-# CHECK: std 2, 128(4)                   
+# CHECK: std 2, 128(4)
 0xf8 0x44 0x00 0x80
 
-# CHECK: stdx 2, 3, 4                    
+# CHECK: stdx 2, 3, 4
 0x7c 0x43 0x21 0x2a
 
-# CHECK: stdu 2, 128(4)                  
+# CHECK: stdu 2, 128(4)
 0xf8 0x44 0x00 0x81
 
-# CHECK: stdux 2, 3, 4                   
+# CHECK: stdux 2, 3, 4
 0x7c 0x43 0x21 0x6a
 
 # CHECK: stq 2, 128(4)
@@ -217,40 +217,40 @@
 # CHECK: stq 28, 128(30)
 0xfb 0x9e 0x00 0x82
 
-# CHECK: lhbrx 2, 3, 4                   
+# CHECK: lhbrx 2, 3, 4
 0x7c 0x43 0x26 0x2c
 
-# CHECK: sthbrx 2, 3, 4                  
+# CHECK: sthbrx 2, 3, 4
 0x7c 0x43 0x27 0x2c
 
-# CHECK: lwbrx 2, 3, 4                   
+# CHECK: lwbrx 2, 3, 4
 0x7c 0x43 0x24 0x2c
 
-# CHECK: stwbrx 2, 3, 4                  
+# CHECK: stwbrx 2, 3, 4
 0x7c 0x43 0x25 0x2c
 
-# CHECK: ldbrx 2, 3, 4                   
+# CHECK: ldbrx 2, 3, 4
 0x7c 0x43 0x24 0x28
 
-# CHECK: stdbrx 2, 3, 4                  
+# CHECK: stdbrx 2, 3, 4
 0x7c 0x43 0x25 0x28
 
-# CHECK: lmw 2, 128(1)                   
+# CHECK: lmw 2, 128(1)
 0xb8 0x41 0x00 0x80
 
-# CHECK: stmw 2, 128(1)                  
+# CHECK: stmw 2, 128(1)
 0xbc 0x41 0x00 0x80
 
-# CHECK: addi 2, 3, 128                  
+# CHECK: addi 2, 3, 128
 0x38 0x43 0x00 0x80
 
-# CHECK: addis 2, 3, 128                 
+# CHECK: addis 2, 3, 128
 0x3c 0x43 0x00 0x80
 
-# CHECK: add 2, 3, 4                     
+# CHECK: add 2, 3, 4
 0x7c 0x43 0x22 0x14
 
-# CHECK: add. 2, 3, 4                    
+# CHECK: add. 2, 3, 4
 0x7c 0x43 0x22 0x15
 
 # CHECK: addo 2, 3, 4
@@ -259,10 +259,10 @@
 # CHECK: addo. 2, 3, 4
 0x7c 0x43 0x26 0x15
 
-# CHECK: sub 2, 4, 3                     
+# CHECK: sub 2, 4, 3
 0x7c 0x43 0x20 0x50
 
-# CHECK: sub. 2, 4, 3                    
+# CHECK: sub. 2, 4, 3
 0x7c 0x43 0x20 0x51
 
 # CHECK: subfo 2, 3, 4
@@ -271,19 +271,19 @@
 # CHECK: subfo. 2, 3, 4
 0x7c 0x43 0x24 0x51
 
-# CHECK: addic 2, 3, 128                 
+# CHECK: addic 2, 3, 128
 0x30 0x43 0x00 0x80
 
-# CHECK: addic. 2, 3, 128                
+# CHECK: addic. 2, 3, 128
 0x34 0x43 0x00 0x80
 
-# CHECK: subfic 2, 3, 4                  
+# CHECK: subfic 2, 3, 4
 0x20 0x43 0x00 0x04
 
-# CHECK: addc 2, 3, 4                    
+# CHECK: addc 2, 3, 4
 0x7c 0x43 0x20 0x14
 
-# CHECK: addc. 2, 3, 4                   
+# CHECK: addc. 2, 3, 4
 0x7c 0x43 0x20 0x15
 
 # CHECK: addco 2, 3, 4
@@ -292,10 +292,10 @@
 # CHECK: addco. 2, 3, 4
 0x7c 0x43 0x24 0x15
 
-# CHECK: subc 2, 4, 3                    
+# CHECK: subc 2, 4, 3
 0x7c 0x43 0x20 0x10
 
-# CHECK: subc. 2, 4, 3                   
+# CHECK: subc. 2, 4, 3
 0x7c 0x43 0x20 0x11
 
 # CHECK: subfco 2, 3, 4
@@ -304,10 +304,10 @@
 # CHECK: subfco. 2, 3, 4
 0x7c 0x43 0x24 0x11
 
-# CHECK: adde 2, 3, 4                    
+# CHECK: adde 2, 3, 4
 0x7c 0x43 0x21 0x14
 
-# CHECK: adde. 2, 3, 4                   
+# CHECK: adde. 2, 3, 4
 0x7c 0x43 0x21 0x15
 
 # CHECK: addeo 2, 3, 4
@@ -316,10 +316,10 @@
 # CHECK: addeo. 2, 3, 4
 0x7c 0x43 0x25 0x15
 
-# CHECK: subfe 2, 3, 4                   
+# CHECK: subfe 2, 3, 4
 0x7c 0x43 0x21 0x10
 
-# CHECK: subfe. 2, 3, 4                  
+# CHECK: subfe. 2, 3, 4
 0x7c 0x43 0x21 0x11
 
 # CHECK: subfeo 2, 3, 4
@@ -328,10 +328,10 @@
 # CHECKE: subfeo. 2, 3, 4
 0x7c 0x43 0x25 0x11
 
-# CHECK: addme 2, 3                      
+# CHECK: addme 2, 3
 0x7c 0x43 0x01 0xd4
 
-# CHECK: addme. 2, 3                     
+# CHECK: addme. 2, 3
 0x7c 0x43 0x01 0xd5
 
 # CHECK: addmeo 2, 3
@@ -340,10 +340,10 @@
 # CHECK: addmeo. 2, 3
 0x7c 0x43 0x05 0xd5
 
-# CHECK: subfme 2, 3                     
+# CHECK: subfme 2, 3
 0x7c 0x43 0x01 0xd0
 
-# CHECK: subfme. 2, 3                    
+# CHECK: subfme. 2, 3
 0x7c 0x43 0x01 0xd1
 
 # CHECK: subfmeo 2, 3
@@ -352,10 +352,10 @@
 # CHECK: subfmeo. 2, 3
 0x7c 0x43 0x05 0xd1
 
-# CHECK: addze 2, 3                      
+# CHECK: addze 2, 3
 0x7c 0x43 0x01 0x94
 
-# CHECK: addze. 2, 3                     
+# CHECK: addze. 2, 3
 0x7c 0x43 0x01 0x95
 
 # CHECK: addzeo 2, 3
@@ -364,10 +364,10 @@
 # CHECK: addzeo. 2, 3
 0x7c 0x43 0x05 0x95
 
-# CHECK: subfze 2, 3                     
+# CHECK: subfze 2, 3
 0x7c 0x43 0x01 0x90
 
-# CHECK: subfze. 2, 3                    
+# CHECK: subfze. 2, 3
 0x7c 0x43 0x01 0x91
 
 # CHECK: subfzeo 2, 3
@@ -376,10 +376,10 @@
 # CHECK: subfzeo. 2, 3
 0x7c 0x43 0x05 0x91
 
-# CHECK: neg 2, 3                        
+# CHECK: neg 2, 3
 0x7c 0x43 0x00 0xd0
 
-# CHECK: neg. 2, 3                       
+# CHECK: neg. 2, 3
 0x7c 0x43 0x00 0xd1
 
 # CHECK: nego 2, 3
@@ -388,19 +388,19 @@
 # CHECK: nego. 2, 3
 0x7c 0x43 0x04 0xd1
 
-# CHECK: mulli 2, 3, 128                 
+# CHECK: mulli 2, 3, 128
 0x1c 0x43 0x00 0x80
 
-# CHECK: mulhw 2, 3, 4                   
+# CHECK: mulhw 2, 3, 4
 0x7c 0x43 0x20 0x96
 
-# CHECK: mulhw. 2, 3, 4                  
+# CHECK: mulhw. 2, 3, 4
 0x7c 0x43 0x20 0x97
 
-# CHECK: mullw 2, 3, 4                   
+# CHECK: mullw 2, 3, 4
 0x7c 0x43 0x21 0xd6
 
-# CHECK: mullw. 2, 3, 4                  
+# CHECK: mullw. 2, 3, 4
 0x7c 0x43 0x21 0xd7
 
 # CHECK: mullwo 2, 3, 4
@@ -409,10 +409,10 @@
 # CHECK: mullwo. 2, 3, 4
 0x7c 0x43 0x25 0xd7
 
-# CHECK: mulhwu 2, 3, 4                  
+# CHECK: mulhwu 2, 3, 4
 0x7c 0x43 0x20 0x16
 
-# CHECK: mulhwu. 2, 3, 4                 
+# CHECK: mulhwu. 2, 3, 4
 0x7c 0x43 0x20 0x17
 
 # CHECK: maddhd 2, 3, 4, 5
@@ -436,10 +436,10 @@
 # CHECK: lnia 3
 0x4c,0x60,0x00,0x04
 
-# CHECK: divw 2, 3, 4                    
+# CHECK: divw 2, 3, 4
 0x7c 0x43 0x23 0xd6
 
-# CHECK: divw. 2, 3, 4                   
+# CHECK: divw. 2, 3, 4
 0x7c 0x43 0x23 0xd7
 
 # CHECK: divwo 2, 3, 4
@@ -448,10 +448,10 @@
 # CHECK: divwo. 2, 3, 4
 0x7c 0x43 0x27 0xd7
 
-# CHECK: divwu 2, 3, 4                   
+# CHECK: divwu 2, 3, 4
 0x7c 0x43 0x23 0x96
 
-# CHECK: divwu. 2, 3, 4                  
+# CHECK: divwu. 2, 3, 4
 0x7c 0x43 0x23 0x97
 
 # CHECK: divwuo 2, 3, 4
@@ -499,10 +499,10 @@
 # CHECK: modud 2, 3, 4
 0x7c 0x43 0x22 0x12
 
-# CHECK: mulld 2, 3, 4                   
+# CHECK: mulld 2, 3, 4
 0x7c 0x43 0x21 0xd2
 
-# CHECK: mulld. 2, 3, 4                  
+# CHECK: mulld. 2, 3, 4
 0x7c 0x43 0x21 0xd3
 
 # CHECK: mulldo 2, 3, 4
@@ -511,22 +511,22 @@
 # CHECK: mulldo. 2, 3, 4
 0x7c 0x43 0x25 0xd3
 
-# CHECK: mulhd 2, 3, 4                   
+# CHECK: mulhd 2, 3, 4
 0x7c 0x43 0x20 0x92
 
-# CHECK: mulhd. 2, 3, 4                  
+# CHECK: mulhd. 2, 3, 4
 0x7c 0x43 0x20 0x93
 
-# CHECK: mulhdu 2, 3, 4                  
+# CHECK: mulhdu 2, 3, 4
 0x7c 0x43 0x20 0x12
 
-# CHECK: mulhdu. 2, 3, 4                 
+# CHECK: mulhdu. 2, 3, 4
 0x7c 0x43 0x20 0x13
 
-# CHECK: divd 2, 3, 4                    
+# CHECK: divd 2, 3, 4
 0x7c 0x43 0x23 0xd2
 
-# CHECK: divd. 2, 3, 4                   
+# CHECK: divd. 2, 3, 4
 0x7c 0x43 0x23 0xd3
 
 # CHECK: divdo 2, 3, 4
@@ -535,10 +535,10 @@
 # CHECK: divdo. 2, 3, 4
 0x7c 0x43 0x27 0xd3
 
-# CHECK: divdu 2, 3, 4                   
+# CHECK: divdu 2, 3, 4
 0x7c 0x43 0x23 0x92
 
-# CHECK: divdu. 2, 3, 4                  
+# CHECK: divdu. 2, 3, 4
 0x7c 0x43 0x23 0x93
 
 # CHECK: divduo 2, 3, 4
@@ -571,28 +571,28 @@
 # CHECK: divdeuo. 2, 3, 4
 0x7c 0x43 0x27 0x13
 
-# CHECK: cmpdi 2, 3, 128                 
+# CHECK: cmpdi 2, 3, 128
 0x2d 0x23 0x00 0x80
 
-# CHECK: cmpd 2, 3, 4                    
+# CHECK: cmpd 2, 3, 4
 0x7d 0x23 0x20 0x00
 
-# CHECK: cmpldi 2, 3, 128                
+# CHECK: cmpldi 2, 3, 128
 0x29 0x23 0x00 0x80
 
-# CHECK: cmpld 2, 3, 4                   
+# CHECK: cmpld 2, 3, 4
 0x7d 0x23 0x20 0x40
 
-# CHECK: cmpwi 2, 3, 128                 
+# CHECK: cmpwi 2, 3, 128
 0x2d 0x03 0x00 0x80
 
-# CHECK: cmpw 2, 3, 4                    
+# CHECK: cmpw 2, 3, 4
 0x7d 0x03 0x20 0x00
 
-# CHECK: cmplwi 2, 3, 128                
+# CHECK: cmplwi 2, 3, 128
 0x29 0x03 0x00 0x80
 
-# CHECK: cmplw 2, 3, 4                   
+# CHECK: cmplw 2, 3, 4
 0x7d 0x03 0x20 0x40
 
 # CHECK: cmprb 3, 1, 7, 17
@@ -625,85 +625,85 @@
 # CHECK: tdllt 3, 4
 0x7c 0x43 0x20 0x88
 
-# CHECK: isel 2, 3, 4, 5                 
+# CHECK: isel 2, 3, 4, 5
 0x7c 0x43 0x21 0x5e
 
-# CHECK: andi. 2, 3, 128                 
+# CHECK: andi. 2, 3, 128
 0x70 0x62 0x00 0x80
 
-# CHECK: andis. 2, 3, 128                
+# CHECK: andis. 2, 3, 128
 0x74 0x62 0x00 0x80
 
-# CHECK: ori 2, 3, 128                   
+# CHECK: ori 2, 3, 128
 0x60 0x62 0x00 0x80
 
-# CHECK: oris 2, 3, 128                  
+# CHECK: oris 2, 3, 128
 0x64 0x62 0x00 0x80
 
-# CHECK: xori 2, 3, 128                  
+# CHECK: xori 2, 3, 128
 0x68 0x62 0x00 0x80
 
-# CHECK: xoris 2, 3, 128                 
+# CHECK: xoris 2, 3, 128
 0x6c 0x62 0x00 0x80
 
-# CHECK: and 2, 3, 4                     
+# CHECK: and 2, 3, 4
 0x7c 0x62 0x20 0x38
 
-# CHECK: and. 2, 3, 4                    
+# CHECK: and. 2, 3, 4
 0x7c 0x62 0x20 0x39
 
-# CHECK: xor 2, 3, 4                     
+# CHECK: xor 2, 3, 4
 0x7c 0x62 0x22 0x78
 
-# CHECK: xor. 2, 3, 4                    
+# CHECK: xor. 2, 3, 4
 0x7c 0x62 0x22 0x79
 
-# CHECK: nand 2, 3, 4                    
+# CHECK: nand 2, 3, 4
 0x7c 0x62 0x23 0xb8
 
-# CHECK: nand. 2, 3, 4                   
+# CHECK: nand. 2, 3, 4
 0x7c 0x62 0x23 0xb9
 
-# CHECK: or 2, 3, 4                      
+# CHECK: or 2, 3, 4
 0x7c 0x62 0x23 0x78
 
-# CHECK: or. 2, 3, 4                     
+# CHECK: or. 2, 3, 4
 0x7c 0x62 0x23 0x79
 
-# CHECK: nor 2, 3, 4                     
+# CHECK: nor 2, 3, 4
 0x7c 0x62 0x20 0xf8
 
-# CHECK: nor. 2, 3, 4                    
+# CHECK: nor. 2, 3, 4
 0x7c 0x62 0x20 0xf9
 
-# CHECK: eqv 2, 3, 4                     
+# CHECK: eqv 2, 3, 4
 0x7c 0x62 0x22 0x38
 
-# CHECK: eqv. 2, 3, 4                    
+# CHECK: eqv. 2, 3, 4
 0x7c 0x62 0x22 0x39
 
-# CHECK: andc 2, 3, 4                    
+# CHECK: andc 2, 3, 4
 0x7c 0x62 0x20 0x78
 
-# CHECK: andc. 2, 3, 4                   
+# CHECK: andc. 2, 3, 4
 0x7c 0x62 0x20 0x79
 
-# CHECK: orc 2, 3, 4                     
+# CHECK: orc 2, 3, 4
 0x7c 0x62 0x23 0x38
 
-# CHECK: orc. 2, 3, 4                    
+# CHECK: orc. 2, 3, 4
 0x7c 0x62 0x23 0x39
 
-# CHECK: extsb 2, 3                      
+# CHECK: extsb 2, 3
 0x7c 0x62 0x07 0x74
 
-# CHECK: extsb. 2, 3                     
+# CHECK: extsb. 2, 3
 0x7c 0x62 0x07 0x75
 
-# CHECK: extsh 2, 3                      
+# CHECK: extsh 2, 3
 0x7c 0x62 0x07 0x34
 
-# CHECK: extsh. 2, 3                     
+# CHECK: extsh. 2, 3
 0x7c 0x62 0x07 0x35
 
 # CHECK: cntlzw 2, 3
@@ -712,25 +712,25 @@
 # CHECK: cntlzw. 2, 3
 0x7c 0x62 0x00 0x35
 
-# CHECK: popcntw 2, 3                    
+# CHECK: popcntw 2, 3
 0x7c 0x62 0x02 0xf4
 
-# CHECK: popcntb 2, 3                    
+# CHECK: popcntb 2, 3
 0x7c 0x62 0x00 0xf4
 
-# CHECK: extsw 2, 3                      
+# CHECK: extsw 2, 3
 0x7c 0x62 0x07 0xb4
 
-# CHECK: extsw. 2, 3                     
+# CHECK: extsw. 2, 3
 0x7c 0x62 0x07 0xb5
 
-# CHECK: cntlzd 2, 3                     
+# CHECK: cntlzd 2, 3
 0x7c 0x62 0x00 0x74
 
-# CHECK: cntlzd. 2, 3                    
+# CHECK: cntlzd. 2, 3
 0x7c 0x62 0x00 0x75
 
-# CHECK: popcntd 2, 3                    
+# CHECK: popcntd 2, 3
 0x7c 0x62 0x03 0xf4
 
 # CHECK: bpermd 2, 3, 4
@@ -739,112 +739,112 @@
 # CHECK: cmpb 7, 21, 4
 0x7e 0xa7 0x23 0xf8
 
-# CHECK: rlwinm 2, 3, 4, 5, 6            
+# CHECK: rlwinm 2, 3, 4, 5, 6
 0x54 0x62 0x21 0x4c
 
-# CHECK: rlwinm. 2, 3, 4, 5, 6           
+# CHECK: rlwinm. 2, 3, 4, 5, 6
 0x54 0x62 0x21 0x4d
 
-# CHECK: rlwnm 2, 3, 4, 5, 6             
+# CHECK: rlwnm 2, 3, 4, 5, 6
 0x5c 0x62 0x21 0x4c
 
-# CHECK: rlwnm. 2, 3, 4, 5, 6            
+# CHECK: rlwnm. 2, 3, 4, 5, 6
 0x5c 0x62 0x21 0x4d
 
-# CHECK: rlwimi 2, 3, 4, 5, 6            
+# CHECK: rlwimi 2, 3, 4, 5, 6
 0x50 0x62 0x21 0x4c
 
-# CHECK: rlwimi. 2, 3, 4, 5, 6           
+# CHECK: rlwimi. 2, 3, 4, 5, 6
 0x50 0x62 0x21 0x4d
 
-# CHECK: rldicl 2, 3, 4, 5               
+# CHECK: rldicl 2, 3, 4, 5
 0x78 0x62 0x21 0x40
 
-# CHECK: rldicl. 2, 3, 4, 5              
+# CHECK: rldicl. 2, 3, 4, 5
 0x78 0x62 0x21 0x41
 
-# CHECK: rldicr 2, 3, 4, 5               
+# CHECK: rldicr 2, 3, 4, 5
 0x78 0x62 0x21 0x44
 
-# CHECK: rldicr. 2, 3, 4, 5              
+# CHECK: rldicr. 2, 3, 4, 5
 0x78 0x62 0x21 0x45
 
-# CHECK: rldic 2, 3, 4, 5                
+# CHECK: rldic 2, 3, 4, 5
 0x78 0x62 0x21 0x48
 
-# CHECK: rldic. 2, 3, 4, 5               
+# CHECK: rldic. 2, 3, 4, 5
 0x78 0x62 0x21 0x49
 
-# CHECK: rldcl 2, 3, 4, 5                
+# CHECK: rldcl 2, 3, 4, 5
 0x78 0x62 0x21 0x50
 
-# CHECK: rldcl. 2, 3, 4, 5               
+# CHECK: rldcl. 2, 3, 4, 5
 0x78 0x62 0x21 0x51
 
-# CHECK: rldcr 2, 3, 4, 5                
+# CHECK: rldcr 2, 3, 4, 5
 0x78 0x62 0x21 0x52
 
-# CHECK: rldcr. 2, 3, 4, 5               
+# CHECK: rldcr. 2, 3, 4, 5
 0x78 0x62 0x21 0x53
 
-# CHECK: rldimi 2, 3, 4, 5               
+# CHECK: rldimi 2, 3, 4, 5
 0x78 0x62 0x21 0x4c
 
-# CHECK: rldimi. 2, 3, 4, 5              
+# CHECK: rldimi. 2, 3, 4, 5
 0x78 0x62 0x21 0x4d
 
-# CHECK: slw 2, 3, 4                     
+# CHECK: slw 2, 3, 4
 0x7c 0x62 0x20 0x30
 
-# CHECK: slw. 2, 3, 4                    
+# CHECK: slw. 2, 3, 4
 0x7c 0x62 0x20 0x31
 
-# CHECK: srw 2, 3, 4                     
+# CHECK: srw 2, 3, 4
 0x7c 0x62 0x24 0x30
 
-# CHECK: srw. 2, 3, 4                    
+# CHECK: srw. 2, 3, 4
 0x7c 0x62 0x24 0x31
 
-# CHECK: srawi 2, 3, 4                   
+# CHECK: srawi 2, 3, 4
 0x7c 0x62 0x26 0x70
 
-# CHECK: srawi. 2, 3, 4                  
+# CHECK: srawi. 2, 3, 4
 0x7c 0x62 0x26 0x71
 
-# CHECK: sraw 2, 3, 4                    
+# CHECK: sraw 2, 3, 4
 0x7c 0x62 0x26 0x30
 
-# CHECK: sraw. 2, 3, 4                   
+# CHECK: sraw. 2, 3, 4
 0x7c 0x62 0x26 0x31
 
-# CHECK: sld 2, 3, 4                     
+# CHECK: sld 2, 3, 4
 0x7c 0x62 0x20 0x36
 
-# CHECK: sld. 2, 3, 4                    
+# CHECK: sld. 2, 3, 4
 0x7c 0x62 0x20 0x37
 
-# CHECK: srd 2, 3, 4                     
+# CHECK: srd 2, 3, 4
 0x7c 0x62 0x24 0x36
 
-# CHECK: srd. 2, 3, 4                    
+# CHECK: srd. 2, 3, 4
 0x7c 0x62 0x24 0x37
 
-# CHECK: sradi 2, 3, 4                   
+# CHECK: sradi 2, 3, 4
 0x7c 0x62 0x26 0x74
 
-# CHECK: sradi. 2, 3, 4                  
+# CHECK: sradi. 2, 3, 4
 0x7c 0x62 0x26 0x75
 
-# CHECK: srad 2, 3, 4                    
+# CHECK: srad 2, 3, 4
 0x7c 0x62 0x26 0x34
 
-# CHECK: srad. 2, 3, 4                   
+# CHECK: srad. 2, 3, 4
 0x7c 0x62 0x26 0x35
 
-# CHECK: extswsli 2, 3, 4                
+# CHECK: extswsli 2, 3, 4
 0x7c 0x62 0x26 0xf4
 
-# CHECK: extswsli. 2, 3, 4               
+# CHECK: extswsli. 2, 3, 4
 0x7c 0x62 0x26 0xf5
 
 # CHECK: cdtbcd 2, 7
@@ -856,10 +856,10 @@
 # CHECK: addg6s 2, 3, 4
 0x7c 0x43 0x20 0x94
 
-# CHECK: mtspr 600, 2                    
+# CHECK: mtspr 600, 2
 0x7c 0x58 0x93 0xa6
 
-# CHECK: mfspr 2, 600                    
+# CHECK: mfspr 2, 600
 0x7c 0x58 0x92 0xa6
 
 # CHECK: mtudscr 2
@@ -868,16 +868,16 @@
 # CHECK: mfudscr 2
 0x7c 0x43 0x02 0xa6
 
-# CHECK: mtcrf 123, 2                    
+# CHECK: mtcrf 123, 2
 0x7c 0x47 0xb1 0x20
 
-# CHECK: mfcr 2                          
+# CHECK: mfcr 2
 0x7c 0x40 0x00 0x26
 
-# CHECK: mtocrf 16, 2                    
+# CHECK: mtocrf 16, 2
 0x7c 0x51 0x01 0x20
 
-# CHECK: mfocrf 16, 8                    
+# CHECK: mfocrf 16, 8
 0x7e 0x10 0x80 0x26
 
 # CHECK: mcrxrx 7

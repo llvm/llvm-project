@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - 
+// RUN: %clang_cc1 -emit-llvm %s -o -
 // PR3744
 struct Empty {};
 struct Union {

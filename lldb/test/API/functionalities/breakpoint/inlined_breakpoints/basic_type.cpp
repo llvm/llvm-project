@@ -23,7 +23,7 @@
 #include <cstdint>
 #include <cstdio>
 
-class a_class 
+class a_class
 {
 public:
     a_class (const T& a, const T& b) :
@@ -40,7 +40,7 @@ public:
     get_a()
     {
         return m_a;
-    } 
+    }
 
     void
     set_a (const T& a)
@@ -52,7 +52,7 @@ public:
     get_b()
     {
         return m_b;
-    } 
+    }
 
     void
     set_b (const T& b)
@@ -87,13 +87,13 @@ void Puts(char const *msg)
   std::puts(msg);
 }
 
-int 
+int
 main (int argc, char const *argv[])
 {
     T a = T_VALUE_1;
     T* a_ptr = &a;
     T& a_ref = a;
-    T a_array_bounded[2] = { T_VALUE_1, T_VALUE_2 };    
+    T a_array_bounded[2] = { T_VALUE_1, T_VALUE_2 };
     T a_array_unbounded[] = { T_VALUE_1, T_VALUE_2 };
 
     a_class a_class_instance (T_VALUE_1, T_VALUE_2);
@@ -122,7 +122,7 @@ main (int argc, char const *argv[])
     a_union_zero_array_bounded[0].a = T_VALUE_1;
     a_union_zero_array_bounded[1].a = T_VALUE_2;
     a_union_zero_t a_union_zero_array_unbounded[] = {{ T_VALUE_1 }, { T_VALUE_2 }};
-    
+
 #ifdef T_PRINTF_FORMAT
     std::printf ("%s: a = '" T_PRINTF_FORMAT "'\n", T_CSTR, a);
     std::printf ("%s*: %p => *a_ptr = '" T_PRINTF_FORMAT "'\n", T_CSTR, a_ptr, *a_ptr);
@@ -147,7 +147,7 @@ main (int argc, char const *argv[])
     std::printf ("(a_struct_t*) a_struct_ptr = %p, a_struct_ptr->b = '" T_PRINTF_FORMAT "'\n", a_struct_ptr, a_struct_ptr->b);
     std::printf ("(a_struct_t&) a_struct_ref = %p, a_struct_ref.a = '" T_PRINTF_FORMAT "'\n", &a_struct_ref, a_struct_ref.a);
     std::printf ("(a_struct_t&) a_struct_ref = %p, a_struct_ref.b = '" T_PRINTF_FORMAT "'\n", &a_struct_ref, a_struct_ref.b);
-    
+
     std::printf ("(a_union_zero_t) a_union_zero.a = '" T_PRINTF_FORMAT "'\n", a_union_zero.a);
     std::printf ("(a_union_zero_t*) a_union_zero_ptr = %p, a_union_zero_ptr->a = '" T_PRINTF_FORMAT "'\n", a_union_zero_ptr, a_union_zero_ptr->a);
     std::printf ("(a_union_zero_t&) a_union_zero_ref = %p, a_union_zero_ref.a = '" T_PRINTF_FORMAT "'\n", &a_union_zero_ref, a_union_zero_ref.a);

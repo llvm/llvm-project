@@ -177,7 +177,7 @@ __m128 test_mm_maskz_sqrt_ss(__mmask8 __U, __m128 __A, __m128 __B){
 
 __m512 test_mm512_cvtph_ps (__m256i __A)
 {
-  // COMMON-LABEL: test_mm512_cvtph_ps 
+  // COMMON-LABEL: test_mm512_cvtph_ps
   // COMMONIR: bitcast <4 x i64> %{{.*}} to <16 x i16>
   // COMMONIR: bitcast <16 x i16> %{{.*}} to <16 x half>
   // UNCONSTRAINED: fpext <16 x half> %{{.*}} to <16 x float>
@@ -187,7 +187,7 @@ __m512 test_mm512_cvtph_ps (__m256i __A)
 
 __m512 test_mm512_mask_cvtph_ps (__m512 __W, __mmask16 __U, __m256i __A)
 {
-  // COMMON-LABEL: test_mm512_mask_cvtph_ps 
+  // COMMON-LABEL: test_mm512_mask_cvtph_ps
   // COMMONIR: bitcast <4 x i64> %{{.*}} to <16 x i16>
   // COMMONIR: bitcast <16 x i16> %{{.*}} to <16 x half>
   // UNCONSTRAINED: fpext <16 x half> %{{.*}} to <16 x float>
@@ -198,7 +198,7 @@ __m512 test_mm512_mask_cvtph_ps (__m512 __W, __mmask16 __U, __m256i __A)
 
 __m512 test_mm512_maskz_cvtph_ps (__mmask16 __U, __m256i __A)
 {
-  // COMMON-LABEL: test_mm512_maskz_cvtph_ps 
+  // COMMON-LABEL: test_mm512_maskz_cvtph_ps
   // COMMONIR: bitcast <4 x i64> %{{.*}} to <16 x i16>
   // COMMONIR: bitcast <16 x i16> %{{.*}} to <16 x half>
   // UNCONSTRAINED: fpext <16 x half> %{{.*}} to <16 x float>

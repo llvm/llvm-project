@@ -96,13 +96,13 @@ SA(6_1, sizeof(I) == 5);
 namespace PR5580 {
 
 class A { bool iv0 : 1; };
-SA(7, sizeof(A) == 1);  
+SA(7, sizeof(A) == 1);
 
 class B : A { bool iv0 : 1; };
 SA(8, sizeof(B) == 2);
 
 struct C { bool iv0 : 1; };
-SA(9, sizeof(C) == 1);  
+SA(9, sizeof(C) == 1);
 
 struct D : C { bool iv0 : 1; };
 SA(10, sizeof(D) == 2);
@@ -146,12 +146,12 @@ namespace test1 {
   private:
     long long x;
   };
-   
+
   struct tail_padded_pod_in_11_only {
     pod_in_11_only pod11;
     char tail_padding;
   };
-    
+
   struct might_use_tail_padding : public tail_padded_pod_in_11_only {
     char may_go_into_tail_padding;
   };
@@ -164,11 +164,11 @@ namespace test2 {
   private:
     long long x;
   };
-   
+
   struct tail_padded_pod_in_11_only {
     pod_in_11_only pod11 __attribute__((aligned(16)));
   };
-    
+
   struct might_use_tail_padding : public tail_padded_pod_in_11_only {
     char may_go_into_tail_padding;
   };
@@ -181,7 +181,7 @@ namespace test3 {
   private:
     long long x;
   };
-   
+
   struct tail_padded_pod_in_11_only {
     pod_in_11_only pod11;
     char tail_padding;
@@ -190,7 +190,7 @@ namespace test3 {
   struct second_base {
       char foo;
   };
-    
+
   struct might_use_tail_padding : public tail_padded_pod_in_11_only, public second_base {
 
   };
@@ -202,7 +202,7 @@ namespace test4 {
   private:
     long long x;
   };
-   
+
   struct tail_padded_pod_in_11_only {
     pod_in_11_only pod11;
     char tail_padding;
@@ -211,7 +211,7 @@ namespace test4 {
   struct second_base {
     char foo;
   };
-    
+
   struct might_use_tail_padding : public tail_padded_pod_in_11_only, public second_base {
     char may_go_into_tail_padding;
   };
@@ -228,7 +228,7 @@ namespace test5 {
   private:
     long long x;
   };
-   
+
   struct tail_padded_pod_in_11_only {
     pod_in_11_only pod11;
     char tail_padding;
@@ -238,7 +238,7 @@ namespace test5 {
     pod_in_11_only2 two;
     char foo;
   };
-    
+
   struct might_use_tail_padding : public tail_padded_pod_in_11_only, public second_base {
     char may_go_into_tail_padding;
   };
@@ -255,7 +255,7 @@ namespace test6 {
   private:
     long long x;
   };
-   
+
   struct tail_padded_pod_in_11_only {
     pod_in_11_only pod11;
     char tail_padding;
@@ -265,7 +265,7 @@ namespace test6 {
     pod_in_11_only2 two;
     char foo;
   };
-    
+
   struct might_use_tail_padding : public tail_padded_pod_in_11_only, public second_base {
     char may_go_into_tail_padding;
   };
@@ -277,13 +277,13 @@ namespace test7 {
   private:
     long long x;
   };
-   
+
   struct tail_padded_pod_in_11_only {
     pod_in_11_only pod11;
     pod_in_11_only pod12;
     char tail_padding;
   };
-    
+
   struct might_use_tail_padding : public tail_padded_pod_in_11_only {
     char may_go_into_tail_padding;
   };
@@ -296,7 +296,7 @@ namespace test8 {
   private:
     long long x;
   };
-   
+
   struct tail_padded_pod_in_11_only {
     pod_in_11_only pod11;
     char tail_padding;
@@ -306,7 +306,7 @@ namespace test8 {
     tail_padded_pod_in_11_only pod;
     char padding;
   };
-    
+
   struct might_use_tail_padding : public another_layer {
     char may_go_into_tail_padding;
   };
@@ -319,7 +319,7 @@ namespace test9 {
   private:
     long long x;
   };
-   
+
   struct tail_padded_pod_in_11_only {
     pod_in_11_only pod11;
     char tail_padding;
@@ -327,7 +327,7 @@ namespace test9 {
 
   struct another_layer : tail_padded_pod_in_11_only {
   };
-    
+
   struct might_use_tail_padding : public another_layer {
     char may_go_into_tail_padding;
   };
@@ -340,7 +340,7 @@ namespace test10 {
   private:
     long long x;
   };
-   
+
   struct A {
     pod_in_11_only a;
     char apad;
@@ -358,7 +358,7 @@ namespace test10 {
   struct D {
     char d;
   };
-    
+
   struct might_use_tail_padding : public A, public B, public C, public D {
   };
 
@@ -370,7 +370,7 @@ namespace test11 {
   private:
     long long x;
   };
-   
+
   struct A {
     pod_in_11_only a;
     char apad;
@@ -393,7 +393,7 @@ namespace test11 {
     pod_in_11_only d;
     char dpad;
   };
-    
+
   struct might_use_tail_padding : public A, public B, public C, public D {
     char m;
   };
@@ -406,7 +406,7 @@ namespace test12 {
   private:
     long long x;
   };
-   
+
   struct A {
     pod_in_11_only a __attribute__((aligned(128)));
   };
@@ -422,7 +422,7 @@ namespace test12 {
   struct D {
     char dpad;
   };
-    
+
   struct might_use_tail_padding : public A, public B, public C, public D {
     char m;
   };
@@ -434,7 +434,7 @@ namespace test13 {
   private:
     long long x;
   };
-   
+
   struct A {
     pod_in_11_only a;
     char apad;
@@ -451,7 +451,7 @@ namespace test13 {
 
   struct D {
   };
-    
+
   struct might_use_tail_padding : public A, public B, public C, public D {
     char m;
   };
@@ -463,7 +463,7 @@ namespace test14 {
   private:
     long long x;
   };
-   
+
   struct A {
     pod_in_11_only a;
     char apad;
@@ -482,7 +482,7 @@ namespace test15 {
   private:
     long long x;
   };
-   
+
   struct A {
     pod_in_11_only a;
     char apad;
@@ -505,7 +505,7 @@ namespace test16 {
   private:
     long long x;
   };
-   
+
   struct A  {
     pod_in_11_only a;
     char apad;
@@ -519,7 +519,7 @@ namespace test16 {
 
   struct C : public A, public B {
   };
-  
+
   struct D : public C {
   };
 
@@ -534,7 +534,7 @@ namespace test17 {
   private:
     long long x;
   };
-   
+
   struct A {
     pod_in_11_only a __attribute__((aligned(512)));
   };
@@ -552,7 +552,7 @@ namespace test17 {
   struct D {
     char dpad;
   };
-    
+
   struct might_use_tail_padding : public A, public B, public C, public D {
     char a;
   };
@@ -564,7 +564,7 @@ namespace test18 {
   private:
     long long x;
   };
-   
+
   struct A  {
     pod_in_11_only a;
     char apad;

@@ -17,19 +17,19 @@ private:
   char z;
 };
 
-Derived::Derived(long ny) : 
+Derived::Derived(long ny) :
   Base(),
-  y(ny), 
-  z(static_cast<char>(y)) 
+  y(ny),
+  z(static_cast<char>(y))
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: reordering field y after z makes y uninitialized when used in init expression
 {}
 
-Derived::Derived(char nz) : 
+Derived::Derived(char nz) :
   Base(),
   y(nz),
   // Check that base class fields are correctly ignored in reordering checks
   // x has field index 1 and so would improperly warn if this wasn't the case since the command for this file swaps field indexes 1 and 2
-  z(x) 
+  z(x)
   // CHECK-MESSAGES-NOT: :[[@LINE-1]]:3: warning: reordering field x after z makes x uninitialized when used in init expression
 {}
 

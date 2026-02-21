@@ -292,7 +292,7 @@ int foobar5(int argc, float ub[]) {
   foo();
 #pragma omp task in_reduction(* : ca) // expected-error {{const-qualified variable cannot be in_reduction}}
   foo();
-#pragma omp task in_reduction(- : da) // expected-error {{const-qualified variable cannot be in_reduction}} omp52-warning {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}} 
+#pragma omp task in_reduction(- : da) // expected-error {{const-qualified variable cannot be in_reduction}} omp52-warning {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   foo();
 #pragma omp task in_reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
   foo();

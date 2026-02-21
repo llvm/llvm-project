@@ -133,7 +133,7 @@ public:
         Real d2 = (s1 - s0)/(2*dx);
         Real c2 = 3*d1 - 2*d2;
         Real c3 = 2*(d2 - d1)/dx;
-        return s0 + 2*c2*(x-x0) + 3*c3*(x-x0)*(x-x0); 
+        return s0 + 2*c2*(x-x0) + 3*c3*(x-x0)*(x-x0);
     }
 
 

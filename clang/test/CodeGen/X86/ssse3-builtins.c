@@ -91,7 +91,7 @@ __m128i test_mm_hsub_epi32(__m128i a, __m128i b) {
   // CHECK: call <4 x i32> @llvm.x86.ssse3.phsub.d.128(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_hsub_epi32(a, b);
 }
-TEST_CONSTEXPR(match_v4si(_mm_hsub_epi32((__m128i)(__v4si){4,3,1,1}, (__m128i)(__v4si){7,5,10,5}), 1,0,2,5));   
+TEST_CONSTEXPR(match_v4si(_mm_hsub_epi32((__m128i)(__v4si){4,3,1,1}, (__m128i)(__v4si){7,5,10,5}), 1,0,2,5));
 
 __m128i test_mm_hsubs_epi16(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_hsubs_epi16

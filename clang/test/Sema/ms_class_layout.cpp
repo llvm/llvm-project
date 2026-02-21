@@ -26,7 +26,7 @@ public:
   double a;
 };
 
-class C : public virtual A, 
+class C : public virtual A,
           public D, public B {
 public:
   double c1_field;
@@ -56,7 +56,7 @@ struct G
     int g_field;
 };
 
-struct H : public G, 
+struct H : public G,
            public virtual D
 {
 };
@@ -126,14 +126,14 @@ struct sd : virtual s, virtual ICh {
   char y;
   virtual int asd() {return -1;}
 };
-struct AV { 
-  virtual void foo(); 
+struct AV {
+  virtual void foo();
 };
-struct BV : AV { 
+struct BV : AV {
 };
-struct CV : virtual BV { 
-  CV(); 
-  virtual void foo(); 
+struct CV : virtual BV {
+  CV();
+  virtual void foo();
 };
 struct DV : BV {
 };
@@ -141,7 +141,7 @@ struct EV : CV, DV {
 };
 #pragma pack(pop)
 
-// This needs only for building layouts. 
+// This needs only for building layouts.
 // Without this clang doesn`t dump record layouts.
 int main() {
   // This avoid "Can't yet mangle constructors!" for MS ABI.

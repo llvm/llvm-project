@@ -74,7 +74,7 @@ constexpr Real hypot(Real x, Real y) noexcept
         {
             return y;
         }
-        
+
         return boost::math::ccmath::detail::hypot_impl(x, y);
     }
     else

@@ -10,7 +10,7 @@
 # This is test is dealing with a undefined condition code value of 15 in the
 # above sequence of junk bytes and not allowing the disassembler to abort on
 # printing the final instruction in this list.
-# 
+#
 # CHECK: ittte	al
 # CHECK: vldr	d19, [pc, #388]
 # CHECK: vsub.f64	d17, d17, d16

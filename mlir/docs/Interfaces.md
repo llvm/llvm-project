@@ -92,7 +92,7 @@ the concepts described in the
 [`Operation Definition Specification`](DefiningDialects/Operations.md) documentation.
 
 MLIR also supports defining dialect interfaces directly in **TableGen**.
-This reduces boilerplate and allows authors to specify high-level interface 
+This reduces boilerplate and allows authors to specify high-level interface
 structure declaratively.
 
 For example, the above interface can be defined using ODS as follows:
@@ -100,7 +100,7 @@ For example, the above interface can be defined using ODS as follows:
 ```tablegen
 def DialectInlinerInterface : DialectInterface<"DialectInlinerInterface"> {
   let description = [{
-     Define a base inlining interface class to allow for dialects to opt-in to 
+     Define a base inlining interface class to allow for dialects to opt-in to
      the inliner.
   }];
 
@@ -148,7 +148,7 @@ set(LLVM_TARGET_DEFINITIONS DialectInlinerInterface.td)
 mlir_tablegen(DialectInlinerInterface.h.inc -gen-dialect-interface-decls)
 ```
 
-An example of this can be found in the DialectInlinerInterface implementation 
+An example of this can be found in the DialectInlinerInterface implementation
 and the related `CMakeLists.txt` under `mlir/include/mlir/Transforms`.
 
 #### DialectInterfaceCollection

@@ -8,7 +8,7 @@ int coin(void);
 // a cycle in the generated ExplodedGraph.
 void testCycle(float i) {
   int *x = returnNull();
-  int y; 
+  int y;
   while (i > 0) {
     x = returnNull();
     y = 2;

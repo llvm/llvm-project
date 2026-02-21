@@ -108,7 +108,7 @@ void test() {
   constexpr auto y = &X<false>::f;
   static_assert(__is_same(decltype(y), int(*const)(short)));
   static_assert(y(0) == 24, "");
-  
+
   constexpr auto z = &f<int>;
   static_assert(__is_same(decltype(z), int(*const)(int)));
   static_assert(z(0) == 2, "");

@@ -8,8 +8,8 @@ RUN:      'baz' >> %t.out
 CHECK: foo bar baz
 
 #                 v~~ intentional whitespace
-RUN: echo 'foo'  \   
-RUN:      'bar'  \ 
+RUN: echo 'foo'  \
+RUN:      'bar'  \
 #                 ^ intentional whitespace
 RUN:      'baz' >> %t.out
 CHECK: foo bar baz

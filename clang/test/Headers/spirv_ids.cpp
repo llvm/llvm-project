@@ -52,7 +52,7 @@
 // CHECK: call i32 @llvm.spv.num.subgroups()
 // CHECK: call i32 @llvm.spv.subgroup.id()
 // CHECK: call i32 @llvm.spv.subgroup.local.invocation.id()
-  
+
 // NV: call noundef i64 @_Z28__spirv_BuiltInNumWorkgroupsi(i32 noundef 0) #2
 // NV: call noundef i64 @_Z28__spirv_BuiltInNumWorkgroupsi(i32 noundef 1) #2
 // NV: call noundef i64 @_Z28__spirv_BuiltInNumWorkgroupsi(i32 noundef 2) #2

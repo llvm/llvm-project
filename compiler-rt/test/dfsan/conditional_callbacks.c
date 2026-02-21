@@ -80,7 +80,7 @@ int main(int Argc, char *Argv[]) {
   if (DataI) {
     result = 42;
   }
-  
+
   fprintf(stderr, "Result is %d\n", result);
   assert(dfsan_get_label(DataJ) == LabelJ);
 

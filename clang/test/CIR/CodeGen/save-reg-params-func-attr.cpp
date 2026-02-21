@@ -18,7 +18,7 @@ extern "C" {
     // CIR: cir.call{{.*}}@func()
     // CIR-NOT: save_reg_params
     // CIR: cir.return
-    // LLVM: call void{{.*}}@func() #[[CALL_ATTRS:.*]] 
+    // LLVM: call void{{.*}}@func() #[[CALL_ATTRS:.*]]
 
   }
 }

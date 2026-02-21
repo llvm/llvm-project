@@ -43,7 +43,7 @@ int main() {
   assert(a.sa_flags & SA_SIGINFO);
 
   guard = mmap(0, 3 * page_size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
-  guard = (char*)guard + page_size;  // work around a kernel bug 
+  guard = (char*)guard + page_size;  // work around a kernel bug
   for (int i = 0; i < 1000000; i++) {
     mprotect(guard, page_size, PROT_NONE);
     *(int*)guard = 1;

@@ -19,7 +19,7 @@ SQLITE_PRIVATE int sqlite3PutVarint(unsigned char *p, u64 v){
       v >>= 7;
     }
     return 9;
-  }    
+  }
   n = 0;
   do{
     buf[n++] = (v & 0x7f) | 0x80;

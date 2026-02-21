@@ -1237,13 +1237,13 @@ private:
 /// So I've also added a base class in Python that provides a table-driven
 /// way of defining the options and arguments, which automatically fills the
 /// option values, making them available as properties in Python.
-/// 
+///
 class CommandObjectScriptingObjectParsed : public CommandObjectParsed {
-private: 
+private:
   class CommandOptions : public Options {
   public:
-    CommandOptions(CommandInterpreter &interpreter, 
-        StructuredData::GenericSP cmd_obj_sp) : m_interpreter(interpreter), 
+    CommandOptions(CommandInterpreter &interpreter,
+        StructuredData::GenericSP cmd_obj_sp) : m_interpreter(interpreter),
             m_cmd_obj_sp(cmd_obj_sp) {}
 
     ~CommandOptions() override = default;
@@ -1251,7 +1251,7 @@ private:
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                           ExecutionContext *execution_context) override {
       Status error;
-      ScriptInterpreter *scripter = 
+      ScriptInterpreter *scripter =
         m_interpreter.GetDebugger().GetScriptInterpreter();
       if (!scripter) {
         return Status::FromErrorString(
@@ -1272,9 +1272,9 @@ private:
       // Pass the long option, since you aren't actually required to have a
       // short_option, and for those options the index or short option character
       // aren't meaningful on the python side.
-      const char * long_option = 
+      const char * long_option =
         m_options_definition_up.get()[option_idx].long_option;
-      bool success = scripter->SetOptionValueForCommandObject(m_cmd_obj_sp, 
+      bool success = scripter->SetOptionValueForCommandObject(m_cmd_obj_sp,
         execution_context, long_option, option_arg);
       if (!success)
         return Status::FromErrorStringWithFormatv(
@@ -1283,7 +1283,7 @@ private:
     }
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
-      ScriptInterpreter *scripter = 
+      ScriptInterpreter *scripter =
         m_interpreter.GetDebugger().GetScriptInterpreter();
       if (!scripter || !m_cmd_obj_sp)
         return;
@@ -1296,8 +1296,8 @@ private:
         return {};
       return llvm::ArrayRef(m_options_definition_up.get(), m_num_options);
     }
-    
-    static Status ParseUsageMaskFromArray(StructuredData::ObjectSP obj_sp, 
+
+    static Status ParseUsageMaskFromArray(StructuredData::ObjectSP obj_sp,
         size_t counter, uint32_t &usage_mask) {
       // If the usage entry is not provided, we use LLDB_OPT_SET_ALL.
       // If the usage mask is a UINT, the option belongs to that group.
@@ -1310,10 +1310,10 @@ private:
         usage_mask = LLDB_OPT_SET_ALL;
         return error;
       }
-      
+
       usage_mask = 0;
-      
-      StructuredData::UnsignedInteger *uint_val = 
+
+      StructuredData::UnsignedInteger *uint_val =
           obj_sp->GetAsUnsignedInteger();
       if (uint_val) {
         // If this is an integer, then this specifies a single group:
@@ -1333,8 +1333,8 @@ private:
       }
       // This is the array ForEach for accumulating a group usage mask from
       // an array of string descriptions of groups.
-      auto groups_accumulator 
-          = [counter, &usage_mask, &error] 
+      auto groups_accumulator
+          = [counter, &usage_mask, &error]
             (StructuredData::Object *obj) -> bool {
         StructuredData::UnsignedInteger *int_val = obj->GetAsUnsignedInteger();
         if (int_val) {
@@ -1352,14 +1352,14 @@ private:
           error = Status::FromErrorStringWithFormatv(
               "Group element not an int or array of integers for element {0}",
               counter);
-          return false; 
+          return false;
         }
         size_t num_range_elem = arr_val->GetSize();
         if (num_range_elem != 2) {
           error = Status::FromErrorStringWithFormatv(
               "Subranges of a group not a start and a stop for element {0}",
               counter);
-          return false; 
+          return false;
         }
         int_val = arr_val->GetItemAtIndex(0)->GetAsUnsignedInteger();
         if (!int_val) {
@@ -1367,7 +1367,7 @@ private:
               "Start element of a subrange of a "
               "group not unsigned int for element {0}",
               counter);
-          return false; 
+          return false;
         }
         uint32_t start = int_val->GetValue();
         int_val = arr_val->GetItemAtIndex(1)->GetAsUnsignedInteger();
@@ -1376,7 +1376,7 @@ private:
               "End element of a subrange of a group"
               " not unsigned int for element {0}",
               counter);
-          return false; 
+          return false;
         }
         uint32_t end = int_val->GetValue();
         if (start == 0 || end == 0 || start > end) {
@@ -1394,8 +1394,8 @@ private:
       array_val->ForEach(groups_accumulator);
       return error;
     }
-    
-    
+
+
     Status SetOptionsFromArray(StructuredData::Dictionary &options) {
       Status error;
       m_num_options = options.GetSize();
@@ -1405,11 +1405,11 @@ private:
       m_usage_container.resize(m_num_options);
       m_enum_storage.resize(m_num_options);
       m_enum_vector.resize(m_num_options);
-      
+
       size_t counter = 0;
       size_t short_opt_counter = 0;
       // This is the Array::ForEach function for adding option elements:
-      auto add_element = [this, &error, &counter, &short_opt_counter] 
+      auto add_element = [this, &error, &counter, &short_opt_counter]
           (llvm::StringRef long_option, StructuredData::Object *object) -> bool {
         StructuredData::Dictionary *opt_dict = object->GetAsDictionary();
         if (!opt_dict) {
@@ -1418,22 +1418,22 @@ private:
           return false;
         }
         OptionDefinition &option_def = m_options_definition_up.get()[counter];
-        
+
         // We aren't exposing the validator yet, set it to null
         option_def.validator = nullptr;
         // We don't require usage masks, so set it to one group by default:
         option_def.usage_mask = 1;
-        
+
         // Now set the fields of the OptionDefinition Array from the dictionary:
         //
         // Note that I don't check for unknown fields in the option dictionaries
         // so a scriptor can add extra elements that are helpful when they go to
         // do "set_option_value"
-        
+
         // Usage Mask:
         StructuredData::ObjectSP obj_sp = opt_dict->GetValueForKey("groups");
         if (obj_sp) {
-          error = ParseUsageMaskFromArray(obj_sp, counter, 
+          error = ParseUsageMaskFromArray(obj_sp, counter,
                                           option_def.usage_mask);
           if (error.Fail())
             return false;
@@ -1450,15 +1450,15 @@ private:
                 "for option {0}",
                 counter);
             return false;
-          } 
-          option_def.required = boolean_val->GetValue();      
+          }
+          option_def.required = boolean_val->GetValue();
         }
-        
+
         // Short Option:
         int short_option;
         obj_sp = opt_dict->GetValueForKey("short_option");
         if (obj_sp) {
-          // The value is a string, so pull the 
+          // The value is a string, so pull the
           llvm::StringRef short_str = obj_sp->GetStringValue();
           if (short_str.empty()) {
             error = Status::FromErrorStringWithFormatv(
@@ -1475,12 +1475,12 @@ private:
           }
           short_option = (int) short_str[0];
         } else {
-          // If the short option is not provided, then we need a unique value 
+          // If the short option is not provided, then we need a unique value
           // less than the lowest printable ASCII character.
           short_option = short_opt_counter++;
         }
         option_def.short_option = short_option;
-        
+
         // Long Option is the key from the outer dict:
         if (long_option.empty()) {
           error = Status::FromErrorStringWithFormatv(
@@ -1489,11 +1489,11 @@ private:
         }
         auto inserted = g_string_storer.insert(long_option.str());
         option_def.long_option = ((*(inserted.first)).data());
-        
+
         // Value Type:
         obj_sp = opt_dict->GetValueForKey("value_type");
         if (obj_sp) {
-          StructuredData::UnsignedInteger *uint_val 
+          StructuredData::UnsignedInteger *uint_val
               = obj_sp->GetAsUnsignedInteger();
           if (!uint_val) {
             error = Status::FromErrorStringWithFormatv(
@@ -1515,7 +1515,7 @@ private:
           option_def.argument_type = eArgTypeNone;
           option_def.option_has_arg = false;
         }
-        
+
         // Completion Type:
         obj_sp = opt_dict->GetValueForKey("completion_type");
         if (obj_sp) {
@@ -1559,7 +1559,7 @@ private:
         option_def.usage_text = m_usage_container[counter].data();
 
         // Enum Values:
-        
+
         obj_sp = opt_dict->GetValueForKey("enum_values");
         if (obj_sp) {
           StructuredData::Array *array = obj_sp->GetAsArray();
@@ -1574,12 +1574,12 @@ private:
           size_t enum_ctr = 0;
           m_enum_storage[counter] = std::vector<EnumValueStorage>(num_elem);
           std::vector<EnumValueStorage> &curr_elem = m_enum_storage[counter];
-          
+
           // This is the Array::ForEach function for adding enum elements:
           // Since there are only two fields to specify the enum, use a simple
           // two element array with value first, usage second.
           // counter is only used for reporting so I pass it by value here.
-          auto add_enum = [&enum_ctr, &curr_elem, counter, &error] 
+          auto add_enum = [&enum_ctr, &curr_elem, counter, &error]
               (StructuredData::Object *object) -> bool {
             StructuredData::Array *enum_arr = object->GetAsArray();
             if (!enum_arr) {
@@ -1601,7 +1601,7 @@ private:
             StructuredData::ObjectSP obj_sp = enum_arr->GetItemAtIndex(0);
             llvm::StringRef val_stref = obj_sp->GetStringValue();
             std::string value_cstr_str = val_stref.str().c_str();
-            
+
             // Enum Usage:
             obj_sp = enum_arr->GetItemAtIndex(1);
             if (!obj_sp) {
@@ -1613,17 +1613,17 @@ private:
             }
             llvm::StringRef usage_stref = obj_sp->GetStringValue();
             std::string usage_cstr_str = usage_stref.str().c_str();
-            curr_elem[enum_ctr] = EnumValueStorage(value_cstr_str, 
+            curr_elem[enum_ctr] = EnumValueStorage(value_cstr_str,
                 usage_cstr_str, enum_ctr);
-            
+
             enum_ctr++;
             return true;
           }; // end of add_enum
-          
+
           array->ForEach(add_enum);
           if (!error.Success())
             return false;
-          // We have to have a vector of elements to set in the options, make 
+          // We have to have a vector of elements to set in the options, make
           // that here:
           for (auto &elem : curr_elem)
             m_enum_vector[counter].emplace_back(elem.element);
@@ -1633,7 +1633,7 @@ private:
         counter++;
         return true;
       }; // end of add_element
-      
+
       options.ForEach(add_element);
       return error;
     }
@@ -1770,30 +1770,30 @@ private:
         element.usage = "usage not set";
         element.value = 0;
       }
-      
-      EnumValueStorage(std::string in_str_val, std::string in_usage, 
+
+      EnumValueStorage(std::string in_str_val, std::string in_usage,
           size_t in_value) : value(std::move(in_str_val)), usage(std::move(in_usage)) {
         SetElement(in_value);
       }
-      
-      EnumValueStorage(const EnumValueStorage &in) : value(in.value), 
+
+      EnumValueStorage(const EnumValueStorage &in) : value(in.value),
           usage(in.usage) {
         SetElement(in.element.value);
       }
-      
+
       EnumValueStorage &operator=(const EnumValueStorage &in) {
         value = in.value;
         usage = in.usage;
         SetElement(in.element.value);
         return *this;
       }
-      
+
       void SetElement(size_t in_value) {
         element.value = in_value;
         element.string_value = value.data();
-        element.usage = usage.data(); 
+        element.usage = usage.data();
       }
-      
+
       std::string value;
       std::string usage;
       OptionEnumValueElement element;
@@ -1804,10 +1804,10 @@ private:
     // commands, so those are stored in a global set: g_string_storer.
     // But the usages are much less likely to be reused, so those are stored in
     // a vector in the command instance.  It gets resized to the correct size
-    // and then filled with null-terminated strings in the std::string, so the 
+    // and then filled with null-terminated strings in the std::string, so the
     // are valid C-strings that won't move around.
     // The enum values and descriptions are treated similarly - these aren't
-    // all that common so it's not worth the effort to dedup them.  
+    // all that common so it's not worth the effort to dedup them.
     size_t m_num_options = 0;
     std::unique_ptr<OptionDefinition> m_options_definition_up;
     std::vector<std::vector<EnumValueStorage>> m_enum_storage;
@@ -1819,15 +1819,15 @@ private:
   };
 
 public:
-  static CommandObjectSP Create(CommandInterpreter &interpreter, 
+  static CommandObjectSP Create(CommandInterpreter &interpreter,
                 std::string name,
                 StructuredData::GenericSP cmd_obj_sp,
-                ScriptedCommandSynchronicity synch, 
+                ScriptedCommandSynchronicity synch,
                 CommandReturnObject &result) {
     CommandObjectSP new_cmd_sp(new CommandObjectScriptingObjectParsed(
         interpreter, name, cmd_obj_sp, synch));
 
-    CommandObjectScriptingObjectParsed *parsed_cmd 
+    CommandObjectScriptingObjectParsed *parsed_cmd
         = static_cast<CommandObjectScriptingObjectParsed *>(new_cmd_sp.get());
     // Now check all the failure modes, and report if found.
     Status opt_error = parsed_cmd->GetOptionsError();
@@ -1838,7 +1838,7 @@ public:
                                    opt_error.AsCString());
     if (arg_error.Fail())
       result.AppendErrorWithFormat("%sfailed to parse argument definitions: %s",
-                                   opt_error.Fail() ? ", also " : "", 
+                                   opt_error.Fail() ? ", also " : "",
                                    arg_error.AsCString());
 
     if (!result.Succeeded())
@@ -1851,9 +1851,9 @@ public:
                                std::string name,
                                StructuredData::GenericSP cmd_obj_sp,
                                ScriptedCommandSynchronicity synch)
-      : CommandObjectParsed(interpreter, name.c_str()), 
-        m_cmd_obj_sp(cmd_obj_sp), m_synchro(synch), 
-        m_options(interpreter, cmd_obj_sp), m_fetched_help_short(false), 
+      : CommandObjectParsed(interpreter, name.c_str()),
+        m_cmd_obj_sp(cmd_obj_sp), m_synchro(synch),
+        m_options(interpreter, cmd_obj_sp), m_fetched_help_short(false),
         m_fetched_help_long(false) {
     StreamString stream;
     ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
@@ -1866,14 +1866,14 @@ public:
     GetFlags().Set(scripter->GetFlagsForCommandObject(cmd_obj_sp));
 
     // Now set up the options definitions from the options:
-    StructuredData::ObjectSP options_object_sp 
+    StructuredData::ObjectSP options_object_sp
         = scripter->GetOptionsForCommandObject(cmd_obj_sp);
     // It's okay not to have an options dict.
     if (options_object_sp) {
       // The options come as a dictionary of dictionaries.  The key of the
       // outer dict is the long option name (since that's required).  The
       // value holds all the other option specification bits.
-      StructuredData::Dictionary *options_dict 
+      StructuredData::Dictionary *options_dict
           = options_object_sp->GetAsDictionary();
       // but if it exists, it has to be an array.
       if (options_dict) {
@@ -1888,28 +1888,28 @@ public:
     }
     // Then fetch the args.  Since the arguments can have usage masks you need
     // an array of arrays.
-    StructuredData::ObjectSP args_object_sp 
+    StructuredData::ObjectSP args_object_sp
       = scripter->GetArgumentsForCommandObject(cmd_obj_sp);
     if (args_object_sp) {
-      StructuredData::Array *args_array = args_object_sp->GetAsArray();        
+      StructuredData::Array *args_array = args_object_sp->GetAsArray();
       if (!args_array) {
         m_args_error =
             Status::FromErrorString("Argument specification is not an array");
         return;
       }
       size_t counter = 0;
-      
+
       // This is the Array::ForEach function that handles the
       // CommandArgumentEntry arrays one by one:
-      auto arg_array_adder = [this, &counter] (StructuredData::Object *object) 
+      auto arg_array_adder = [this, &counter] (StructuredData::Object *object)
           -> bool {
         // This is the Array::ForEach function to add argument entries:
         CommandArgumentEntry this_entry;
         size_t elem_counter = 0;
-        auto args_adder = [this, counter, &elem_counter, &this_entry] 
+        auto args_adder = [this, counter, &elem_counter, &this_entry]
             (StructuredData::Object *object) -> bool {
           // The arguments definition has three fields, the argument type, the
-          // repeat and the usage mask. 
+          // repeat and the usage mask.
           CommandArgumentType arg_type = eArgTypeNone;
           ArgumentRepetitionType arg_repetition = eArgRepeatOptional;
           uint32_t arg_opt_set_association;
@@ -1929,10 +1929,10 @@ public:
             return false;
           }
           // Argument Type:
-          StructuredData::ObjectSP obj_sp 
+          StructuredData::ObjectSP obj_sp
               = arg_dict->GetValueForKey("arg_type");
           if (obj_sp) {
-            StructuredData::UnsignedInteger *uint_val 
+            StructuredData::UnsignedInteger *uint_val
                 = obj_sp->GetAsUnsignedInteger();
             if (!uint_val) {
               report_error("value type must be an unsigned integer");
@@ -1960,13 +1960,13 @@ public:
               return false;
             }
             arg_repetition = *repeat;
-          } 
-          
+          }
+
           // Usage Mask:
           obj_sp = arg_dict->GetValueForKey("groups");
-          m_args_error = CommandOptions::ParseUsageMaskFromArray(obj_sp, 
+          m_args_error = CommandOptions::ParseUsageMaskFromArray(obj_sp,
               counter, arg_opt_set_association);
-          this_entry.emplace_back(arg_type, arg_repetition, 
+          this_entry.emplace_back(arg_type, arg_repetition,
               arg_opt_set_association);
           elem_counter++;
           return true;
@@ -1978,7 +1978,7 @@ public:
                                                  "{0} is not an array",
                                                  counter);
         }
-        
+
         args_array->ForEach(args_adder);
         if (m_args_error.Fail())
           return false;
@@ -2133,7 +2133,7 @@ protected:
     Status error;
 
     result.SetStatus(eReturnStatusInvalid);
-    
+
     if (!scripter ||
         !scripter->RunScriptBasedParsedCommand(m_cmd_obj_sp, args,
                                          m_synchro, result, error, m_exe_ctx)) {
@@ -2474,7 +2474,7 @@ protected:
       case eLazyBoolNo:
         m_overwrite = false;
     }
-    
+
     Status path_error;
     m_container = GetCommandInterpreter().VerifyUserMultiwordCmdPath(
         command, true, path_error);
@@ -2523,9 +2523,9 @@ protected:
                                       "'{0}'", m_options.m_class_name);
         return;
       }
-      
+
       if (m_options.m_parsed_command) {
-        new_cmd_sp = CommandObjectScriptingObjectParsed::Create(m_interpreter, 
+        new_cmd_sp = CommandObjectScriptingObjectParsed::Create(m_interpreter,
             m_cmd_name, cmd_obj_sp, m_synchronicity, result);
         if (!result.Succeeded())
           return;
@@ -2534,7 +2534,7 @@ protected:
             m_interpreter, m_cmd_name, cmd_obj_sp, m_synchronicity,
             m_completion_type);
     }
-    
+
     // Assume we're going to succeed...
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
     if (!m_container) {

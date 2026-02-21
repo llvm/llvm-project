@@ -5,7 +5,7 @@
 * Add support for compiling functions in both ARM and Thumb mode, then taking
   the smallest.
 
-* Add support for compiling individual basic blocks in thumb mode, when in a 
+* Add support for compiling individual basic blocks in thumb mode, when in a
   larger ARM function.  This can be used for presumed cold code, like paths
   to abort (failure path of asserts), EH handling code, etc.
 
@@ -37,7 +37,7 @@ LPCRELL0:
 	mov r1, #PCRELV0
 	add r1, pc
 	ldr r0, [r0, r1]
-	mov pc, r0 
+	mov pc, r0
 	.align	2
 LJTI1_0_0:
 	.long	 LBB1_3
@@ -51,7 +51,7 @@ We should be able to generate:
 LPCRELL0:
 	add r1, LJTI1_0_0
 	ldr r0, [r0, r1]
-	mov pc, r0 
+	mov pc, r0
 	.align	2
 LJTI1_0_0:
 	.long	 LBB1_3
@@ -159,7 +159,7 @@ L12:
 	.align 2
 L11:
 	.long	642
-        
+
 
 GCC is doing a couple of clever things here:
   1. It is predicating one of the returns.  This isn't a clear win though: in

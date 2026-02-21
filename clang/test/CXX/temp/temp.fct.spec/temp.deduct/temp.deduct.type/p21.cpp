@@ -4,23 +4,23 @@
 // Note: Template argument deduction involving parameter packs
 // (14.5.3) can deduce zero or more arguments for each parameter pack.
 
-template<class> struct X { 
+template<class> struct X {
   static const unsigned value = 0;
-}; 
+};
 
-template<class R, class ... ArgTypes> struct X<R(int, ArgTypes ...)> { 
-  static const unsigned value = 1;
-}; 
-
-template<class ... Types> struct Y { 
-  static const unsigned value = 0;
-}; 
-
-template<class T, class ... Types> struct Y<T, Types& ...> { 
+template<class R, class ... ArgTypes> struct X<R(int, ArgTypes ...)> {
   static const unsigned value = 1;
 };
 
-template<class ... Types> int f(void (*)(Types ...)); 
+template<class ... Types> struct Y {
+  static const unsigned value = 0;
+};
+
+template<class T, class ... Types> struct Y<T, Types& ...> {
+  static const unsigned value = 1;
+};
+
+template<class ... Types> int f(void (*)(Types ...));
 void g(int, float);
 
 int check0[X<int>::value == 0? 1 : -1]; // uses primary template

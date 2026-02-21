@@ -9,7 +9,7 @@ void func4(){
                  : parallel for) otherwise(parallel)
       for (int i = 0; i < 100; i++)
         ;
-  
+
   #pragma omp metadirective when(user = {condition(1)}  \
                 : parallel for) otherwise()
       for (int i = 0; i < 100; i++)

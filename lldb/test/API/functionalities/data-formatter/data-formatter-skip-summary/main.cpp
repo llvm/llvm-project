@@ -18,7 +18,7 @@ struct DeepData_3
 {
     DeepData_4& m_child1;
     DeepData_4 m_child2;
-    
+
     DeepData_3() : m_child1(* (new DeepData_4())), m_child2(DeepData_4()) {}
 };
 
@@ -27,13 +27,13 @@ struct DeepData_2
     DeepData_3 m_child1;
     DeepData_3 m_child2;
     DeepData_3 m_child3;
-    DeepData_3 m_child4;    
+    DeepData_3 m_child4;
 };
 
 struct DeepData_1
 {
     DeepData_2 *m_child1;
-    
+
     DeepData_1() :
     m_child1(new DeepData_2())
     {}
@@ -52,6 +52,6 @@ int main()
 {
     DeepData_1 data1;
     DeepData_2 data2;
-    
+
     return 0; // Set break point at this line.
 }

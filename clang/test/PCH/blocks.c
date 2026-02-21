@@ -3,7 +3,7 @@
 
 // Test with pch.
 // RUN: %clang_cc1 -emit-pch -fblocks -o %t %S/blocks.h
-// RUN: %clang_cc1 -fblocks -include-pch %t -emit-llvm -o - %s 
+// RUN: %clang_cc1 -fblocks -include-pch %t -emit-llvm -o - %s
 
 int do_add(int x, int y) { return add(x, y); }
 

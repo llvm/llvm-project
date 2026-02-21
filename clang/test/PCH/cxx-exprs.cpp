@@ -3,7 +3,7 @@
 
 // Test with pch.
 // RUN: %clang_cc1 -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -include-pch %t -verify -std=c++11 %s 
+// RUN: %clang_cc1 -include-pch %t -verify -std=c++11 %s
 
 // RUN: %clang_cc1 -std=c++11 -emit-pch -fpch-instantiate-templates -o %t %s
 // RUN: %clang_cc1 -include-pch %t -verify -std=c++11 %s

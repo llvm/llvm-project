@@ -1111,7 +1111,7 @@ namespace Virtual {
     static_assert(k.f() == 10); // both-error {{not an integral constant expression}} \
                                 // both-note {{virtual function called on object 'k' whose dynamic type is not constant}}
   }
-  
+
   static_assert(K().f() == 10);
 
   void f3() {
@@ -1148,13 +1148,13 @@ namespace Virtual {
   static K p;
   static_assert(p.f() == 10); // both-error {{not an integral constant expression}} \
                               // both-note {{virtual function called on object 'p' whose dynamic type is not constant}}
-  
+
   void f4() {
     static K p;
     static_assert(p.f() == 10); // both-error {{not an integral constant expression}} \
                                 // both-note {{virtual function called on object 'p' whose dynamic type is not constant}}
   }
-  
+
   const K q;
   static_assert(q.f() == 10); // both-error {{not an integral constant expression}} \
                               // both-note {{virtual function called on object 'q' whose dynamic type is not constant}}

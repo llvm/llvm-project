@@ -3,9 +3,9 @@
 namespace PR8019 {
   struct x;
   template<typename T> struct x2;
-  struct y { 
+  struct y {
     struct PR8019::x { int x; };  // expected-error{{non-friend class member 'x' cannot have a qualified name}}
-  
+
     struct inner;
     struct y::inner { }; // expected-error{{extra qualification on member 'inner'}}
 
@@ -14,7 +14,7 @@ namespace PR8019 {
 
     template<typename T>
     struct inner_template;
-  
+
     template<typename T>
     struct y::inner_template { }; // expected-error{{extra qualification on member 'inner_template'}}
   };

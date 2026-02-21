@@ -22,7 +22,7 @@ void f() {
 // CHECK-NEXT:         {{.+}} unwind label %lpad
 // CHECK-LABEL:      lpad:
 // CHECK:              br {{.+}}, label {{.+}}, label %arraydestroy.body
-// CHECK-LABEL:      arraydestroy.body:         
+// CHECK-LABEL:      arraydestroy.body:
 // CHECK:              [[ARRAYDESTROY_ELEMENT:%.*]] = getelementptr {{.+}}, i64 -1
 // CXX98-NEXT:         invoke void @cwg1807::S::~S()({{.*}}[[ARRAYDESTROY_ELEMENT]])
 // SINCE-CXX11-NEXT:   call void @cwg1807::S::~S()({{.*}}[[ARRAYDESTROY_ELEMENT]])

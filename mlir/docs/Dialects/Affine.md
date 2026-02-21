@@ -64,7 +64,7 @@ identifiers to enable powerful analysis and transformation. An SSA value's use
 can be bound to a symbolic identifier if that SSA value is either:
 
 1. a region argument for an op with trait `AffineScope` (eg. `FuncOp`),
-2. a value defined at the top level of an `AffineScope` op (i.e., 
+2. a value defined at the top level of an `AffineScope` op (i.e.,
 immediately enclosed by the latter),
 3. a value that dominates the `AffineScope` op enclosing the value's
 use,

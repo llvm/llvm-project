@@ -311,7 +311,7 @@ constexpr int *V83 = V82;
 constexpr int *V84 = 42;
 // expected-error@-1 {{constexpr pointer initializer is not null}}
 constexpr int *V85 = nullptr;
-constexpr int *V91 = 0.0; 
+constexpr int *V91 = 0.0;
 // expected-error@-1 {{initializing 'int *const' with an expression of incompatible type 'double'}}
 
 // Check that constexpr variables should not be VLAs.

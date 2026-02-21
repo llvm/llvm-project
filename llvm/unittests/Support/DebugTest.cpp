@@ -19,8 +19,8 @@ using namespace llvm;
 TEST(DebugTest, Basic) {
   std::string s1, s2;
   raw_string_ostream os1(s1), os2(s2);
-  static const char *DT[] = {"A", "B"};  
-  
+  static const char *DT[] = {"A", "B"};
+
   llvm::DebugFlag = true;
   setCurrentDebugTypes(DT, 2);
   DEBUG_WITH_TYPE("A", os1 << "A");

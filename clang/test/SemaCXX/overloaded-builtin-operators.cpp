@@ -24,7 +24,7 @@ struct Enum2 {
 };
 
 
-struct X { 
+struct X {
   void f();
 };
 
@@ -53,7 +53,7 @@ void f(Short s, Long l, Enum1 e1, Enum2 e2, Xpmf pmf) {
   // C++ [over.built]p16
   (void)(pmf == &X::f);
   (void)(pmf == 0);
-  
+
   // C++ [over.built]p17
   (void)static_cast<yes&>(islong(s % l));
   (void)static_cast<yes&>(islong(l << s));
@@ -112,11 +112,11 @@ void g(BoolRef br, ShortRef sr, LongRef lr, FloatRef fr, E2Ref e2_ref, XpmfRef p
   // C++ [over.built]p20:
   E2 e2r2;
   e2r2 = e2_ref;
-  
+
   pmf &pmr = (pmf_ref = &X::f); // expected-error{{no viable overloaded '='}}
   pmf pmr2;
   pmr2 = pmf_ref;
-               
+
   // C++ [over.built]p22
   short& sr2 = (sr %= lr);
   volatile long& lr2 = (lr <<= sr);
@@ -183,7 +183,7 @@ struct ConvertibleToPtrOf {
   operator T*();
 };
 
-bool test_with_base_ptrs(ConvertibleToPtrOf<Derived1> d1, 
+bool test_with_base_ptrs(ConvertibleToPtrOf<Derived1> d1,
                          ConvertibleToPtrOf<Derived2> d2) {
   return d1 == d2; // expected-error{{invalid operands}}
 }

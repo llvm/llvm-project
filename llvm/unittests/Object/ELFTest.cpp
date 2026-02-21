@@ -362,7 +362,7 @@ TEST(ELFTest, Hash) {
 
   // This string hashes to 0x100000000 in the originally formulated function,
   // when long is 64 bits -- but that was never the intent. The code was
-  // presuming 32-bit long. Thus make sure that extra bit doesn't appear. 
+  // presuming 32-bit long. Thus make sure that extra bit doesn't appear.
   EXPECT_EQ(hashSysV("ZZZZZW9p"), 0U);
 }
 

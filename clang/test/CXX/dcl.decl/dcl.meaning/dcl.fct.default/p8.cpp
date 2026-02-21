@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-class A { 
+class A {
   void f(A* p = this) { }	// expected-error{{invalid use of 'this'}}
 
   void test();

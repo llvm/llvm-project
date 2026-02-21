@@ -4,7 +4,7 @@
 
 template<typename T> struct MyClass {
   T MemberTemplate;
-  T method(T Param); 
+  T method(T Param);
 };
 
 // CHECK:         "Name": "MyClass",
@@ -25,8 +25,8 @@ template<typename T> struct MyClass {
 // CHECK-NEXT:          "QualName": "T",
 // CHECK-NEXT:          "USR": "0000000000000000000000000000000000000000"
 // CHECK-NEXT:        }
-// CHECK-NEXT:      } 
-// CHECK-NEXT:    ], 
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ],
 // CHECK-NEXT:    "ReturnType": {
 // CHECK-NEXT:      "IsBuiltIn": false,
 // CHECK-NEXT:      "IsTemplate": true,
@@ -39,4 +39,4 @@ template<typename T> struct MyClass {
 // CHECK-NEXT:          "End": true,
 // CHECK-NEXT:          "Param": "typename T"
 // CHECK-NEXT:        }
-// CHECK-NEXT:      ] 
+// CHECK-NEXT:      ]

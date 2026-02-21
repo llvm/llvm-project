@@ -16,7 +16,7 @@ void test(bool b) {
 namespace rdar9623945 {
   void f(...) {
   }
-  
+
   class X {
   public:
     const char* text(void);

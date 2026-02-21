@@ -139,7 +139,7 @@ namespace test2 {
   struct ilist_walker {
     static X *getPrev(X *N) { return N->getPrev(); }
     static X *getNext(X *N) { return N->getNext(); }
-  };  
+  };
 
   struct ilist_walker_bad {
     static X *getPrev(X *N) { return N->getPrev(); } // \
@@ -147,7 +147,7 @@ namespace test2 {
 
     static X *getNext(X *N) { return N->getNext(); } // \
     // expected-error {{'getNext' is a private member of 'test2::ilist_node'}}
-  };  
+  };
 }
 
 namespace test3 {

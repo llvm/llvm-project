@@ -48,7 +48,7 @@ int main() {
 
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_parallel_end: parallel_id=[[PARALLEL_ID]], task_id={{[0-f]+}}, invoker={{[0-9]+}}, codeptr_ra=[[PARALLEL_RETURN_ADDRESS]]
   // CHECK: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[PARALLEL_RETURN_ADDRESS]]
-  
+
   // CHECK: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_loop_[[SCHED]]_begin: parallel_id=[[PARALLEL_ID]], task_id={{[0-f]+}}, codeptr_ra={{(0x)?[0-f]+}}
   // CHECK: {{^}}[[THREAD_ID]]: ompt_event_loop_[[SCHED]]_end: parallel_id=[[PARALLEL_ID]], task_id={{[0-f]+}}, codeptr_ra=[[LOOP_END_RETURN_ADDRESS:(0x)?[0-f]+]]{{[0-f][0-f]}}
   // CHECK: {{^}}[[THREAD_ID]]: fuzzy_address={{.*}}[[LOOP_END_RETURN_ADDRESS]]

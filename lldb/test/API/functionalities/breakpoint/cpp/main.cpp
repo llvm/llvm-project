@@ -6,15 +6,15 @@ namespace a {
     public:
         c();
         ~c();
-        void func1() 
+        void func1()
         {
             puts (__PRETTY_FUNCTION__);
         }
-        void func2() 
+        void func2()
         {
             puts (__PRETTY_FUNCTION__);
         }
-        void func3() 
+        void func3()
         {
             puts (__PRETTY_FUNCTION__);
         }
@@ -29,15 +29,15 @@ namespace aa {
     public:
         cc();
         ~cc();
-        void func1() 
+        void func1()
         {
             puts (__PRETTY_FUNCTION__);
         }
-        void func2() 
+        void func2()
         {
             puts (__PRETTY_FUNCTION__);
         }
-        void func3() 
+        void func3()
         {
             puts (__PRETTY_FUNCTION__);
         }
@@ -52,11 +52,11 @@ namespace b {
     public:
         c();
         ~c();
-        void func1() 
+        void func1()
         {
             puts (__PRETTY_FUNCTION__);
         }
-        void func3() 
+        void func3()
         {
             puts (__PRETTY_FUNCTION__);
         }
@@ -71,11 +71,11 @@ namespace c {
     public:
         d () {}
         ~d() {}
-        void func2() 
+        void func2()
         {
             puts (__PRETTY_FUNCTION__);
         }
-        void func3() 
+        void func3()
         {
             puts (__PRETTY_FUNCTION__);
         }

@@ -96,7 +96,7 @@ struct alignas(32) XRayRecord {
 
   // The ID of process that is currently running
   uint32_t PId = 0;
-  
+
   // Use some bytes in the end of the record for buffers.
   char Buffer[8] = {};
 } __attribute__((packed));

@@ -9,7 +9,7 @@
 // CHECK-MESSAGES-UPPERCASE: :[[@LINE-1]]:1: warning: including 'vERILOG.cl' may cause additional compilation errors due to the name of the kernel source file; consider renaming the included kernel source file [altera-kernel-name-restriction]
 #include "VHDL.cl"
 // CHECK-MESSAGES-UPPERCASE: :[[@LINE-1]]:1: warning: including 'VHDL.cl' may cause additional compilation errors due to the name of the kernel source file; consider renaming the included kernel source file [altera-kernel-name-restriction]
-#else 
+#else
 // These are the banned kernel filenames, and should trigger warnings
 #include "kernel.cl"
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: including 'kernel.cl' may cause additional compilation errors due to the name of the kernel source file; consider renaming the included kernel source file [altera-kernel-name-restriction]

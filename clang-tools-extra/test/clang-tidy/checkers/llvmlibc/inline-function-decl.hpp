@@ -287,7 +287,7 @@ template <unsigned int NumberOfBits> struct HasMemberAndTemplate {
 // CHECK-FIXES: LIBC_INLINE void explicitFunction() {}
 };
 
-static auto instanceOfStruct = HasMemberAndTemplate<16>(); 
+static auto instanceOfStruct = HasMemberAndTemplate<16>();
 
 struct HasMemberAndExplicitDefault {
   int TrivialMember;

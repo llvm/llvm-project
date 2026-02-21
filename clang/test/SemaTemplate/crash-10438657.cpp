@@ -7,9 +7,9 @@ class collate : public locale::facet {
 protected:
 virtual ~collate() {}
   class wxObject;
-  class __attribute__ ((visibility("default"))) wxGDIRefData 
+  class __attribute__ ((visibility("default"))) wxGDIRefData
     : public wxObjectRefData {};
   class __attribute__ ((visibility("default"))) wxGDIObject : public wxObject { \
       public:
       virtual bool IsOk() const {
-        return m_refData && static_cast<wxGDIRefData *>(m_refData)->IsOk(); 
+        return m_refData && static_cast<wxGDIRefData *>(m_refData)->IsOk();

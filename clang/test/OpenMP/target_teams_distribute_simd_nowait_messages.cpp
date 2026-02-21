@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute simd nowait (argc>> z) // omp-52-and-earlier-warning {{extra tokens at the end of '#pragma omp target teams distribute simd' are ignored}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd nowait (argv[1] = 2) // omp-52-and-earlier-warning {{extra tokens at the end of '#pragma omp target teams distribute simd' are ignored}} omp-60-and-later-error {{expected ')'}} omp-60-and-later-note {{to match this '('}} 
+#pragma omp target teams distribute simd nowait (argv[1] = 2) // omp-52-and-earlier-warning {{extra tokens at the end of '#pragma omp target teams distribute simd' are ignored}} omp-60-and-later-error {{expected ')'}} omp-60-and-later-note {{to match this '('}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute simd nowait (argc > 0 ? argv[1] : argv[2]) // omp-52-and-earlier-warning {{extra tokens at the end of '#pragma omp target teams distribute simd' are ignored}}
   for (i = 0; i < argc; ++i) foo();

@@ -23,7 +23,7 @@ __m256i test__builtin_ia32_permdi256()
     // OGCG: shufflevector <4 x i64> {{%.*}}, <4 x i64> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 0>
     __v4di vec = {0, 1, 2, 3};
     return __builtin_ia32_permdi256(vec, 1);
-} 
+}
 
 __m512i test__builtin_ia32_permdi512()
 {
@@ -47,7 +47,7 @@ __m256d test__builtin_ia32_permdf256()
     // OGCG: shufflevector <4 x double> {{%.*}}, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 0>
     __v4df vec = {0, 1, 2, 3};
     return __builtin_ia32_permdf256(vec, 1);
-}   
+}
 
 __m512d test__builtin_ia32_permdf512()
 {

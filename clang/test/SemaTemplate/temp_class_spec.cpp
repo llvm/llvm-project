@@ -62,7 +62,7 @@ int is_volatile0[is_volatile<int>::value? -1 : 1];
 int is_volatile1[is_volatile<volatile int>::value? 1 : -1];
 int is_volatile2[is_volatile<const volatile int>::value? 1 : -1];
 int is_volatile3[is_volatile<volatile char[3]>::value? 1 : -1];
-                 
+
 template<typename T, typename U>
 struct is_same {
   static const bool value = false;
@@ -153,12 +153,12 @@ struct remove_extent {
 };
 
 template<typename T>
-struct remove_extent<T[]> { 
+struct remove_extent<T[]> {
   typedef T type;
 };
 
 template<typename T, unsigned N>
-struct remove_extent<T[N]> { 
+struct remove_extent<T[N]> {
   typedef T type;
 };
 
@@ -318,11 +318,11 @@ int is_nested_value_type_identity2[
 
 
 // C++ [temp.class.spec]p4:
-template<class T1, class T2, int I> class A { }; //#1 
-template<class T, int I> class A<T, T*, I> { }; //#2 
-template<class T1, class T2, int I> class A<T1*, T2, I> { }; //#3 
-template<class T> class A<int, T*, 5> { }; //#4 
-template<class T1, class T2, int I> class A<T1, T2*, I> { }; //#5 
+template<class T1, class T2, int I> class A { }; //#1
+template<class T, int I> class A<T, T*, I> { }; //#2
+template<class T1, class T2, int I> class A<T1*, T2, I> { }; //#3
+template<class T> class A<int, T*, 5> { }; //#4
+template<class T1, class T2, int I> class A<T1, T2*, I> { }; //#5
 
 // Redefinition of class template partial specializations
 template<typename T, T N, typename U> class A0;
@@ -334,13 +334,13 @@ template<typename T, T N> class A0<T, N, int> { }; // expected-error{{redef}}
 namespace PR6025 {
   template< int N > struct A;
 
-  namespace N 
+  namespace N
   {
-    template< typename F > 
+    template< typename F >
     struct B;
   }
 
-  template< typename Protect, typename Second > 
+  template< typename Protect, typename Second >
   struct C;
 
   template <class T>
@@ -352,14 +352,14 @@ namespace PR6025 {
 namespace PR6181 {
   template <class T>
   class a;
-  
+
   class s;
-  
+
   template <class U>
   class a<s> // expected-error{{partial specialization of 'a' does not use any of its template parameters}}
   {
   };
-  
+
 }
 
 // Check that we do not crash on invalid code that leads to invalid base.

@@ -47,7 +47,7 @@ class A {
 
 void f() {
   A<char*> a;
-  
+
   delete a;
 }
 

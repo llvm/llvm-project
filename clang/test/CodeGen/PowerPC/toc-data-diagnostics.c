@@ -61,7 +61,7 @@ long long test2() {
 // CHECK: @a = global %struct.large_struct zeroinitializer, align 4
 // CHECK: @f = thread_local global i32 0, align 4
 // CHECK: @h = external global [0 x i32], align 4
-// CHECK: @g = external global %struct.SomeStruct, align 1 
+// CHECK: @g = external global %struct.SomeStruct, align 1
 // CHECK: @test2.ll = internal global i64 5, align 8
 // CHECK: @aliasOne = alias i32, ptr @globalOneWithAlias
 // CHECK: @aliasTwo = alias i32, ptr @globalTwoWithAlias

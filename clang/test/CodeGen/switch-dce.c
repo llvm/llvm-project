@@ -20,7 +20,7 @@ void test1(void) {
   switch (0)
     case 1:
       dead();
-} 
+}
 
 
 // CHECK: @test2
@@ -38,7 +38,7 @@ void test2(void) {
   case 4:
     i += 2;
     // Fall off the end of the switch.
-  } 
+  }
 }
 
 
@@ -58,7 +58,7 @@ void test3(void) {
     i += 2;
     break;
   }
-  } 
+  }
 }
 
 // CHECK: @test4
@@ -77,7 +77,7 @@ void test4(void) {
       i += 2;
       break;
     }
-  } 
+  }
 }
 
 // This shouldn't crash codegen, but we don't have to optimize out the switch
@@ -89,7 +89,7 @@ void test5(void) {
       x = 4;
       i = x;
       break;
-  } 
+  }
 }
 
 // CHECK: @test6
@@ -106,7 +106,7 @@ void test6(void) {
     dead();
     break;
   }
-  } 
+  }
 }
 
 // CHECK: @test7
@@ -126,7 +126,7 @@ void test7(void) {
         ++i;
     }
     break;
-  } 
+  }
 }
 
 // CHECK: @test8
@@ -144,7 +144,7 @@ void test8(void) {
   case 4:
     ++i;
     // Fall off the end of the switch.
-  } 
+  }
 }
 
 // CHECK: @test9
@@ -165,7 +165,7 @@ void test9(int i) {
   case 4:
     ++i;
     break;
-  } 
+  }
 }
 
 // CHECK: @test10
@@ -180,7 +180,7 @@ int test10(void) {
 		default:
 			dead();
 	}
-	
+
 	return 0;
 }
 

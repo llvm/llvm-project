@@ -47,7 +47,7 @@ constexpr Real fmax(Real x, Real y) noexcept
         {
             return x;
         }
-        
+
         return boost::math::ccmath::detail::fmax_impl(x, y);
     }
     else

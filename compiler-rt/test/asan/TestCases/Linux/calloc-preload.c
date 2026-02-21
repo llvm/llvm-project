@@ -1,6 +1,6 @@
 // Test that initially callocked memory is properly freed
 // (see https://github.com/google/sanitizers/issues/626).
-// 
+//
 // RUN: %clang %s -o %t
 // RUN: env LD_PRELOAD=%shared_libasan %run %t
 //

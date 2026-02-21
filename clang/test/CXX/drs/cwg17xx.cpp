@@ -153,9 +153,9 @@ namespace cwg1753 { // cwg1753: 11
 namespace cwg1756 { // cwg1756: 3.7
 #if __cplusplus >= 201103L
   // Direct-list-initialization of a non-class object
-  
+
   int a{0};
-  
+
   struct X { operator int(); } x;
   int b{x};
 #endif

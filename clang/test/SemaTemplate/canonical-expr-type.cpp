@@ -42,7 +42,7 @@ struct X2 {
   typedef T __attribute__((ext_vector_type(N))) type1;
   typedef T __attribute__((ext_vector_type(M))) type2;
   typedef T __attribute__((ext_vector_type(N))) type3;
-  
+
   void f0(type1); // expected-note{{previous}}
   void f0(type2);
   void f0(type3); // expected-error{{redeclared}}

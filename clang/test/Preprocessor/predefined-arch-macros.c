@@ -2549,7 +2549,7 @@
 // CHECK_NVL_M32: #define __AVX512VL__ 1
 // CHECK_NVL_M32: #define __AVX512VNNI__ 1
 // CHECK_NVL_M32: #define __AVX512VPOPCNTDQ__ 1
-// We check for NOT AVX512 after all checks for AVX512, so 
+// We check for NOT AVX512 after all checks for AVX512, so
 // if we missed some check on NVL, the test will fail.
 // CHECK_ARL_M32-NOT: AVX512
 // CHECK_ARL_M32: #define __AVXIFMA__ 1

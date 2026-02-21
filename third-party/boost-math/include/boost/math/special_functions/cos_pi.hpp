@@ -51,7 +51,7 @@ BOOST_MATH_GPU_ENABLED T cos_pi_imp(T x, const Policy&)
    }
    if(rem == 0.5f)
       return 0;
-   
+
    if(rem > 0.25f)
    {
       rem = 0.5f - rem;
@@ -75,7 +75,7 @@ BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T>::type cos_pi(T x, 
       policies::promote_double<false>,
       policies::discrete_quantile<>,
       policies::assert_undefined<>,
-      // We want to ignore overflows since the result is in [-1,1] and the 
+      // We want to ignore overflows since the result is in [-1,1] and the
       // check slows the code down considerably.
       policies::overflow_error<policies::ignore_error> >::type forwarding_policy;
    return policies::checked_narrowing_cast<result_type, forwarding_policy>(boost::math::detail::cos_pi_imp<value_type>(x, forwarding_policy()), "cos_pi");

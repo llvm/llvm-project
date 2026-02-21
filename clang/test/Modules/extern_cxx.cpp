@@ -16,7 +16,7 @@ extern "C++" {
   #pragma clang module begin A.C
   } // expected-error {{extraneous closing brace}}
   #pragma clang module end
-  
+
   #pragma clang module begin A.C
   extern "C++" { // expected-note {{to match this '{'}}
   #pragma clang module end // expected-error {{expected '}' at end of module}}

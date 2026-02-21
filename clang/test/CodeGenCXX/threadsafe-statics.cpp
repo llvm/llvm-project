@@ -10,7 +10,7 @@ int f();
 // WITH-TSS: call i32 @__cxa_guard_acquire
 // WITH-TSS: call void @__cxa_guard_release
 // WITH-TSS: ret void
-void g() { 
+void g() {
   static int a = f();
 }
 

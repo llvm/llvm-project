@@ -60,19 +60,19 @@ namespace PR7123 {
   {
     enum
       { value = 0 };
-  
+
     instantiate< requirement_<void(*)(usage_requirements<BidirectionalIterator>)>::failed> int534; // expected-note{{in instantiation of}}
-  
+
     ~BidirectionalIterator()
     { i--; } // expected-error{{cannot decrement value of type 'PR7123::X'}}
-  
+
     TT i;
   };
 
   struct X
   { };
 
-  template<typename RanIter> 
+  template<typename RanIter>
   typename Requires_< BidirectionalIterator<RanIter>::value >::type sort(RanIter,RanIter){}
 
   void f()

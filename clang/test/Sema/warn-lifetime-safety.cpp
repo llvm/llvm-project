@@ -14,7 +14,7 @@ struct [[gsl::Owner]] MyObj {
   MyObj& operator=(MyObj&&);
   ~MyObj() {}  // Non-trivial destructor
   MyObj operator+(MyObj);
-  
+
   View getView() const [[clang::lifetimebound]];
   const int* getData() const [[clang::lifetimebound]];
 };
@@ -202,7 +202,7 @@ void definite_potential_together(bool cond) {
     if (cond)
       p_definite = &s;  // expected-warning {{does not live long enough}}
     if (cond)
-      p_maybe = &s;     // expected-warning {{may not live long enough}}         
+      p_maybe = &s;     // expected-warning {{may not live long enough}}
   }                     // expected-note 2 {{destroyed here}}
   (void)*p_definite;    // expected-note {{later used here}}
   if (!cond)
@@ -292,8 +292,8 @@ void definite_loop_with_break(bool cond) {
       MyObj temp;
       p = &temp; // expected-warning {{does not live long enough}}
       break;     // expected-note {{destroyed here}}
-    }           
-  } 
+    }
+  }
   (void)*p;     // expected-note {{later used here}}
 }
 
@@ -318,7 +318,7 @@ void potential_multiple_expiry_of_same_loan(bool cond) {
     MyObj unsafe;
     if (cond) {
       p = &unsafe; // expected-warning {{does not live long enough}}
-      break;       // expected-note {{destroyed here}} 
+      break;       // expected-note {{destroyed here}}
     }
   }
   (void)*p;       // expected-note {{later used here}}
@@ -473,13 +473,13 @@ void small_scope_reference_var_no_error() {
 //===----------------------------------------------------------------------===//
 
 MyObj* simple_return_stack_address() {
-  MyObj s;      
+  MyObj s;
   MyObj* p = &s; // expected-warning {{address of stack memory is returned later}}
   return p;      // expected-note {{returned here}}
 }
 
 MyObj* direct_return() {
-  MyObj s;      
+  MyObj s;
   return &s;     // expected-warning {{address of stack memory is returned later}}
                  // expected-note@-1 {{returned here}}
 }
@@ -500,11 +500,11 @@ const MyObj& return_reference_to_param_via_pointer_no_error() {
 }
 
 const MyObj* conditional_assign_unconditional_return(const MyObj& safe, bool c) {
-  MyObj s; 
+  MyObj s;
   const MyObj* p = &safe;
   if (c) {
     p = &s;       // expected-warning {{address of stack memory is returned later}}
-  }     
+  }
   return p;      // expected-note {{returned here}}
 }
 
@@ -513,7 +513,7 @@ View conditional_assign_both_branches(const MyObj& safe, bool c) {
   View p;
   if (c) {
     p = s;      // expected-warning {{address of stack memory is returned later}}
-  } 
+  }
   else {
     p = safe;
   }
@@ -531,7 +531,7 @@ View reassign_safe_to_local(const MyObj& safe) {
 View pointer_chain_to_local() {
   MyObj local;
   View p1 = local;     // expected-warning {{address of stack memory is returned later}}
-  View p2 = p1; 
+  View p2 = p1;
   return p2;          // expected-note {{returned here}}
 }
 
@@ -568,13 +568,13 @@ View multiple_assign_single_return(const MyObj& safe, bool c1, bool c2) {
 }
 
 View direct_return_of_local() {
-  MyObj stack;      
+  MyObj stack;
   return stack;     // expected-warning {{address of stack memory is returned later}}
                     // expected-note@-1 {{returned here}}
 }
 
 MyObj& reference_return_of_local() {
-  MyObj stack;      
+  MyObj stack;
   return stack;     // expected-warning {{address of stack memory is returned later}}
                     // expected-note@-1 {{returned here}}
 }
@@ -593,7 +593,7 @@ TriviallyDestructedClass* trivial_class_uar () {
   return ptr;     // expected-note {{returned here}}
 }
 
-const int& return_parameter(int a) { 
+const int& return_parameter(int a) {
   return a; // expected-warning {{address of stack memory is returned later}}
             // expected-note@-1 {{returned here}}
 }
@@ -672,7 +672,7 @@ void test_lifetimebound_multi_level() {
   int** result;
   {
     int* p = nullptr;
-    int** pp = &p;  
+    int** pp = &p;
     int*** ppp = &pp; // expected-warning {{object whose reference is captured does not live long enough}}
     result = return_inner_ptr_addr(ppp);
   }                   // expected-note {{destroyed here}}
@@ -706,7 +706,7 @@ int** test_ternary_double_ptr(bool cond) {
 MyObj* uaf_before_uar() {
   MyObj* p;
   {
-    MyObj local_obj; 
+    MyObj local_obj;
     p = &local_obj;  // expected-warning {{object whose reference is captured does not live long enough}}
   }                  // expected-note {{destroyed here}}
   return p;          // expected-note {{later used here}}
@@ -715,7 +715,7 @@ MyObj* uaf_before_uar() {
 View uar_before_uaf(const MyObj& safe, bool c) {
   View p;
   {
-    MyObj local_obj; 
+    MyObj local_obj;
     p = local_obj;  // expected-warning {{address of stack memory is returned later}}
     if (c) {
       return p;      // expected-note {{returned here}}
@@ -885,10 +885,10 @@ void lifetimebound_no_error_safe_usage() {
 void lifetimebound_partial_safety(bool cond) {
   MyObj safe_obj;
   View v = safe_obj;
-  
+
   if (cond) {
     MyObj temp_obj;
-    v = Choose(true, 
+    v = Choose(true,
                safe_obj,
                temp_obj); // expected-warning {{object whose reference is captured does not live long enough}}
   }                       // expected-note {{destroyed here}}
@@ -941,10 +941,10 @@ View lifetimebound_return_by_value_param(MyObj stack_param) {
 }
 
 View lifetimebound_return_by_value_multiple_param(int cond, MyObj a, MyObj b, MyObj c) {
-  if (cond == 1) 
+  if (cond == 1)
     return Identity(a); // expected-warning {{address of stack memory is returned later}}
                         // expected-note@-1 {{returned here}}
-  if (cond == 2) 
+  if (cond == 2)
     return Identity(b); // expected-warning {{address of stack memory is returned later}}
                         // expected-note@-1 {{returned here}}
   return Identity(c); // expected-warning {{address of stack memory is returned later}}
@@ -956,7 +956,7 @@ View lifetimebound_return_by_value_param_template(T t) {
   return Identity(t); // expected-warning {{address of stack memory is returned later}}
                       // expected-note@-1 {{returned here}}
 }
-void use_lifetimebound_return_by_value_param_template() { 
+void use_lifetimebound_return_by_value_param_template() {
   lifetimebound_return_by_value_param_template(MyObj{}); // function-note {{in instantiation of}}
 }
 
@@ -999,9 +999,9 @@ void conditional_operator_one_unsafe_branch(bool cond) {
   }  // expected-note {{destroyed here}}
 
   // This is not a use-after-free for any value of `cond` but the analysis
-  // cannot reason this and marks the above as a false positive. This 
+  // cannot reason this and marks the above as a false positive. This
   // ensures safety regardless of cond's value.
-  if (cond) 
+  if (cond)
     p = &safe;
   (void)*p;  // expected-note {{later used here}}
 }
@@ -1294,15 +1294,15 @@ T&& MaxT(T&& a [[clang::lifetimebound]], T&& b [[clang::lifetimebound]]);
 
 const MyObj& call_max_with_obj() {
   MyObj oa, ob;
-  return  MaxT(oa,    // expected-warning {{address of stack memory is returned later}}          
+  return  MaxT(oa,    // expected-warning {{address of stack memory is returned later}}
                       // expected-note@-1 2 {{returned here}}
                ob);   // expected-warning {{address of stack memory is returned later}}
-                    
+
 }
 
 MyObj* call_max_with_obj_error() {
   MyObj oa, ob;
-  return  &MaxT(oa,   // expected-warning {{address of stack memory is returned later}}          
+  return  &MaxT(oa,   // expected-warning {{address of stack memory is returned later}}
                       // expected-note@-1 2 {{returned here}}
                 ob);  // expected-warning {{address of stack memory is returned later}}
 }

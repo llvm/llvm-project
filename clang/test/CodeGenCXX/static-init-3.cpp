@@ -24,5 +24,5 @@ class A { };
 class B : public A { };
 
 template<typename T> struct X2 {};
-X2< B > bg = X1< X2< B > >::get(); 
+X2< B > bg = X1< X2< B > >::get();
 X2< A > ag = X1< X2< A > >::get();

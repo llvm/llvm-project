@@ -110,16 +110,16 @@ void type_conversions_ptmf()
   fp_nonallocating = &PTMF::unannotated; // expected-warning {{attribute 'nonallocating' should not be added via type conversion}}
 }
 
-// There was a bug: noexcept and nonblocking could be individually removed in conversion, but not both  
+// There was a bug: noexcept and nonblocking could be individually removed in conversion, but not both
 void type_conversions_2()
 {
   auto receives_fp = [](void (*fp)()) {
   };
-  
+
   auto ne = +[]() noexcept {};
   auto nl = +[]() [[clang::nonblocking]] {};
   auto nl_ne = +[]() noexcept [[clang::nonblocking]] {};
-  
+
   receives_fp(ne);
   receives_fp(nl);
   receives_fp(nl_ne);

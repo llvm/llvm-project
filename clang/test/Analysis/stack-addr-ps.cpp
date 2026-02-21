@@ -46,7 +46,7 @@ const int &get_reference1() { return get_value(); } // expected-warning{{Address
 
 const int &get_reference2() {
   const int &x = get_value(); // expected-note {{binding reference variable 'x' here}}
-  return x; // expected-warning{{Address of stack memory associated with temporary object of type 'int' lifetime extended by local variable 'x' returned to caller}} expected-warning {{returning reference to local temporary}} 
+  return x; // expected-warning{{Address of stack memory associated with temporary object of type 'int' lifetime extended by local variable 'x' returned to caller}} expected-warning {{returning reference to local temporary}}
 }
 
 const int &get_reference3() {
@@ -1110,9 +1110,9 @@ int* return_cpp_reinterpret_cast_no_warning(long x) {
 }
 
 // TODO: The tail call expression tree must not hold a reference to an arg or stack local:
-// "The lifetimes of all local variables and function parameters end immediately before the 
-// [tail] call to the function. This means that it is undefined behaviour to pass a pointer or 
-// reference to a local variable to the called function, which is not the case without the 
+// "The lifetimes of all local variables and function parameters end immediately before the
+// [tail] call to the function. This means that it is undefined behaviour to pass a pointer or
+// reference to a local variable to the called function, which is not the case without the
 // attribute."
 // These only warn from -Wreturn-stack-address for now
 namespace with_attr_musttail {

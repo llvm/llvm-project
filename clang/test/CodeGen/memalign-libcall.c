@@ -9,4 +9,4 @@ void *test(size_t alignment, size_t size) {
   return memalign(alignment, size);
 }
 
-// CHECK: attributes #2 = { nobuiltin "no-builtin-memalign" } 
+// CHECK: attributes #2 = { nobuiltin "no-builtin-memalign" }

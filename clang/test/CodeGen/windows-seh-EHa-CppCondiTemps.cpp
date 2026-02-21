@@ -3,7 +3,7 @@
 // CHECK: define dso_local noundef i32 @"?bar@@YAHHVB1@@VB2@@@Z"
 // CHECK: %coerce.dive1 = getelementptr inbounds nuw %class.B2
 // CHECK: %coerce.dive2 = getelementptr inbounds nuw %class.B1
-// -----   scope begin of two passed-by-value temps  
+// -----   scope begin of two passed-by-value temps
 // CHECK: invoke void @llvm.seh.scope.begin()
 // CHECK: invoke void @llvm.seh.scope.begin()
 // CHECK: invoke void @llvm.seh.scope.end()
@@ -27,7 +27,7 @@
 
 // CHECK: define linkonce_odr dso_local noundef ptr @"??0B2@@QEAA@XZ"
 // CHECK: call noundef ptr @"??0B1@@QEAA@XZ"(ptr
-// -----  scope begin of base ctor 
+// -----  scope begin of base ctor
 // CHECK: invoke void @llvm.seh.scope.begin()
 // CHECK: invoke void @llvm.seh.scope.end()
 // -----  B1 scope end without base dtor
@@ -38,7 +38,7 @@
 void printf(...);
 
 int xxxx = 0;
-int* ptr; 
+int* ptr;
 
 int foo(int a)
 {
@@ -113,7 +113,7 @@ int main() {
   class B3 b3inmain;
 
   // Test conditional ctor and dtor
-  int m = (xxxx > 1) ? B2().data + foo(99) : 
+  int m = (xxxx > 1) ? B2().data + foo(99) :
       B3().data + foo(88);
 
   // Test: passed-in by value
@@ -121,7 +121,7 @@ int main() {
   int i = bar(foo(0), B1(), B2());
 
   // Test: returned by value
-  // Per Windows ABI, caller allocate a temp in stack, then ctored by callee, 
+  // Per Windows ABI, caller allocate a temp in stack, then ctored by callee,
   //          finally dtored in caller after consumed
   class B1 b1fromgoo = goo(i);
 

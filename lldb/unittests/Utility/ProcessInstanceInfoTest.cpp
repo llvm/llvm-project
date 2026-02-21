@@ -74,7 +74,7 @@ TEST(ProcessInstanceInfo, DumpTable) {
   EXPECT_STREQ(
       R"(PID    PARENT USER       GROUP      EFF USER   EFF GROUP  TRIPLE                         ARGUMENTS
 ====== ====== ========== ========== ========== ========== ============================== ============================
-47     0      user1      group3     2          4          x86_64-pc-linux                
+47     0      user1      group3     2          4          x86_64-pc-linux
 )",
       s.GetData());
 }

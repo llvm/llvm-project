@@ -15,13 +15,13 @@ long my_global = 0;
 
 int main(int argc, const char *argv[]) {
   fprintf(stderr, "Hello world.\n");
-  
+
   queue = dispatch_queue_create("my.queue", DISPATCH_QUEUE_CONCURRENT);
   sem = dispatch_semaphore_create(0);
   path = tempnam(NULL, "libdispatch-io-barrier");
   char buf[1000];
   data = dispatch_data_create(buf, sizeof(buf), NULL, DISPATCH_DATA_DESTRUCTOR_DEFAULT);
-  
+
   dispatch_io_t channel = dispatch_io_create_with_path(DISPATCH_IO_STREAM, path, O_CREAT | O_WRONLY, 0666, queue, ^(int error) { });
   if (! channel) abort();
   dispatch_io_set_high_water(channel, 1);
@@ -40,7 +40,7 @@ int main(int argc, const char *argv[]) {
 
   dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
   dispatch_io_close(channel, 0);
-  
+
   fprintf(stderr, "Done.\n");
   return 0;
 }

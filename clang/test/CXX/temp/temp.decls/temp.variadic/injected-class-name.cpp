@@ -68,7 +68,7 @@ namespace rdar8848837 {
   };
 
   template<typename R, typename ...ArgTypes>
-  unsigned_c<sizeof(1 + g(ArgTypes()...))> X1<R(ArgTypes...)>::f() { 
+  unsigned_c<sizeof(1 + g(ArgTypes()...))> X1<R(ArgTypes...)>::f() {
     return unsigned_c<sizeof(int)>();
   }
 

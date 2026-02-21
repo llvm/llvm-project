@@ -11,7 +11,7 @@ struct i_am_cool
 	i_am_cool(int I, float F, char C) :
     integer(I), floating(F), character(C) {}
 	i_am_cool() : integer(1), floating(2), character('3') {}
-    
+
 };
 
 struct i_am_cooler
@@ -19,7 +19,7 @@ struct i_am_cooler
 	i_am_cool first_cool;
 	i_am_cool second_cool;
 	float floating;
-	
+
 	i_am_cooler(int I1, int I2, float F1, float F2, char C1, char C2) :
     first_cool(I1,F1,C1),
     second_cool(I2,F2,C2),
@@ -96,7 +96,7 @@ struct VeryLong
     int x_1;
     int y_1;
     int z_1;
-    
+
     int a_2;
     int b_2;
     int c_2;
@@ -127,43 +127,43 @@ struct VeryLong
 
 int main (int argc, const char * argv[])
 {
-    
+
     int iAmInt = 9;
     const int constInt = 42;
     volatile int volatileInt = 43;
     const volatile int constVolatileInt = 44;
-    
+
     i_am_cool cool_boy(1,0.5,3);
     i_am_cooler cooler_boy(1,2,0.1,0.2,'A','B');
-    
+
 	i_am_cool *cool_pointer = new i_am_cool(3,-3.141592,'E');
-    
+
     i_am_cool cool_array[5];
-    
+
     cool_array[3].floating = 5.25;
     cool_array[4].integer = 6;
     cool_array[2].character = 'Q';
-    
+
     int int_array[] = {1,2,3,4,5};
     const int const_int_array[] = {11, 12, 13, 14, 15};
 
     IWrapPointers wrapper;
-        
+
     *int_array = -1;
-    
+
     int* pointer = &cool_array[4].integer;
-    
+
     IWrapPointers *wrap_pointer = &wrapper;
-    
+
     Couple couple(9,9.99,'X');
-	
-	SimpleWithPointers sparray[] = 
+
+	SimpleWithPointers sparray[] =
         {SimpleWithPointers(-1,-2,'3'),
         SimpleWithPointers(-4,-5,'6'),
         SimpleWithPointers(-7,-8,'9')};
-    
+
     Simple a_simple_object(3,0.14,'E');
-    
+
     VeryLong a_long_guy;
     auto *unused = &a_long_guy; // ensure a_long_guy isn't optimized out
 

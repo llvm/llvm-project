@@ -53,10 +53,10 @@ struct TemplateC {
 template<typename T>
 struct TemplateD {
   template<typename U>
-  TemplateD(U&& val) : member(val) { 
+  TemplateD(U&& val) : member(val) {
     ;
   }
-  
+
   T member;
 };
 // CHECK-MESSAGES: :[[@LINE-6]]:3: warning: function 'TemplateD<T>' exceeds recommended size/complexity thresholds [readability-function-size]

@@ -163,7 +163,7 @@ void foo() {
 void bar() {
   if (CheckedObj *a = provide_ref_ctnbl()) {
     // expected-warning@-1{{Local variable 'a' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
-    a->method();    
+    a->method();
   }
   for (CheckedObj *b = provide_ref_ctnbl(); b != nullptr;) {
     // expected-warning@-1{{Local variable 'b' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}

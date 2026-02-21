@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -check-suffix=DEFAULT %s \
-// RUN: bugprone-narrowing-conversions %t -- 
+// RUN: bugprone-narrowing-conversions %t --
 
 // RUN: %check_clang_tidy -check-suffix=DISABLED %s \
 // RUN: bugprone-narrowing-conversions %t -- \

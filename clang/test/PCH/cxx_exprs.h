@@ -53,21 +53,21 @@ void Derived::g() {
   // CXXThisExpr
   f(2);        // Implicit
   this->f(1);  // Explicit
-  
+
   // CXXThrowExpr
   throw;
   throw 42;
-  
+
   // CXXDefaultArgExpr
   f();
-  
+
   const Derived &X = foo();
-  
-  // FIXME: How do I make a CXXBindReferenceExpr, CXXConstructExpr? 
-  
+
+  // FIXME: How do I make a CXXBindReferenceExpr, CXXConstructExpr?
+
   int A = int(0.5);  // CXXFunctionalCastExpr
   A = int();         // CXXZeroInitValueExpr
-  
+
   Base *b = new Base(4);       // CXXNewExpr
   delete b;                    // CXXDeleteExpr
 }

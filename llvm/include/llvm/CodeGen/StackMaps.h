@@ -390,7 +390,7 @@ private:
   /// STACKMAP, and PATCHPOINT the label is expected to immediately *preceed*
   /// lowering of the MI to MCInsts.  For STATEPOINT, it expected to
   /// immediately *follow*.  It's not clear this difference was intentional,
-  /// but it exists today.  
+  /// but it exists today.
   void recordStackMapOpers(const MCSymbol &L,
                            const MachineInstr &MI, uint64_t ID,
                            MachineInstr::const_mop_iterator MOI,

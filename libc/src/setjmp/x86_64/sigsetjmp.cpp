@@ -34,7 +34,7 @@ LLVM_LIBC_FUNCTION(int, sigsetjmp, (sigjmp_buf buf)) {
       mov %%eax,8(%%esp)
       mov %c[extra](%%ebx), %%ebx
       jmp %P[epilogue]
-      
+
 .Lnosave:
       jmp %P[setjmp])" ::[retaddr] "i"(offsetof(__jmp_buf, sig_retaddr)),
       [extra] "i"(offsetof(__jmp_buf, sig_extra)), [setjmp] "X"(setjmp),
@@ -57,7 +57,7 @@ LLVM_LIBC_FUNCTION(int, sigsetjmp, (sigjmp_buf, int)) {
       mov %%eax, %%esi
       mov %c[extra](%%rdi), %%rbx
       jmp %P[epilogue]
-      
+
 .Lnosave:
       jmp %P[setjmp])" ::[retaddr] "i"(offsetof(__jmp_buf, sig_retaddr)),
       [extra] "i"(offsetof(__jmp_buf, sig_extra)), [setjmp] "X"(setjmp),

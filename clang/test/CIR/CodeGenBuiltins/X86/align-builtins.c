@@ -91,4 +91,4 @@ __v8di test_builtin_ia32_alignq512()
   __v8di vec1 = {0, 1, 2, 3, 4, 5, 6, 7};
   __v8di vec2 = {8, 9, 10, 11, 12, 13, 14, 15};
   return __builtin_ia32_alignq512(vec1, vec2, 0);
-} 
+}

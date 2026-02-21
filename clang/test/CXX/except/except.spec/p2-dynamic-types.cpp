@@ -30,5 +30,5 @@ struct DR437_out {
       void f() throw(DR437_out);
       void g() throw(DR437_out*);
       void h() throw(DR437_out&);
-   }; 
+   };
 };

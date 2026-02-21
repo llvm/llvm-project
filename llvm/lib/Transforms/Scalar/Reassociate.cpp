@@ -969,7 +969,7 @@ static BinaryOperator *convertOrWithNoCommonBitsToAdd(Instruction *Or) {
 /// Return true if we should break up this subtract of X-Y into (X + -Y).
 static bool ShouldBreakUpSubtract(Instruction *Sub) {
   // If this is a negation, we can't split it up!
-  if (match(Sub, m_Neg(m_Value())) || match(Sub, m_FNeg(m_Value()))) 
+  if (match(Sub, m_Neg(m_Value())) || match(Sub, m_FNeg(m_Value())))
     return false;
 
   // Don't breakup X - undef.

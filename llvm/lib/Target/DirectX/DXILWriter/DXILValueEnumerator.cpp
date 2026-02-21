@@ -363,7 +363,7 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
 
 ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType) {
   EnumerateType(PrefixType);
-  
+
   UseListOrders = predictUseListOrder(M);
 
   // Enumerate the global variables.

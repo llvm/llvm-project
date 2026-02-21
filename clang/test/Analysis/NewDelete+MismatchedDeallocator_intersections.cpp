@@ -16,7 +16,7 @@ void *malloc(size_t);
 void free(void *);
 
 //------------------------------------------------------------------
-// Check that alpha.cplusplus.NewDelete + unix.MismatchedDeallocator 
+// Check that alpha.cplusplus.NewDelete + unix.MismatchedDeallocator
 // does not enable warnings produced by the unix.Malloc checker.
 //------------------------------------------------------------------
 void testMallocFreeNoWarn() {

@@ -21,7 +21,7 @@ int f1(int i,          // expected-note {{previous declaration is here}}
        int i, int j) { // expected-error {{redefinition of parameter 'i'}}
   i = 17;
   return j;
-} 
+}
 
 int x;
 void g(int x, int y = x); // expected-error {{default argument references parameter 'x'}}
@@ -31,21 +31,21 @@ void g2(int x, int y, int z = x + y); // expected-error {{default argument refer
 class X {
   void f(X* x = this); // expected-error{{invalid use of 'this' outside of a non-static member function}}
 
-  void g() { 
+  void g() {
     int f(X* x = this); // expected-error{{default argument references 'this'}}
   }
 };
 
 // C++ [dcl.fct.default]p6
-class C { 
+class C {
   static int x;
   void f(int i = 3); // expected-note{{previous definition is here}}
-  void g(int i, int j = x); 
+  void g(int i, int j = x);
 
   void h();
-}; 
+};
 void C::f(int i = 3) // expected-error{{redefinition of default argument}}
-{ } 
+{ }
 
 void C::g(int i = 88, int j) {}
 
@@ -54,10 +54,10 @@ void C::h() {
 }
 
 // C++ [dcl.fct.default]p9
-struct Y { 
-  int a; 
+struct Y {
+  int a;
   int mem1(int i = a); // expected-error{{invalid use of non-static data member 'a'}}
-  int mem2(int i = b); // OK; use Y::b 
+  int mem2(int i = b); // OK; use Y::b
   int mem3(int i);
   int mem4(int i);
 
@@ -74,8 +74,8 @@ struct Y {
 
   int mem7(Nested n = Nested());
 
-  static int b; 
-}; 
+  static int b;
+};
 
 int Y::mem3(int i = b) { return i; } // OK; use X::b
 
@@ -89,7 +89,7 @@ class Z {
 public:
   Z(Z&, int i = 17); // expected-note 3 {{candidate constructor}}
 
-  void f(Z& z) { 
+  void f(Z& z) {
     Z z2;    // expected-error{{no matching constructor for initialization}}
     Z z3(z);
   }
@@ -126,7 +126,7 @@ template <> class C3<int> {
 
 // Make sure we actually parse the default argument for an inline definition
 class XX {
-  void A(int length = -1 ) {  } 
+  void A(int length = -1 ) {  }
   void B() { A(); }
 };
 

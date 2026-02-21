@@ -21,7 +21,7 @@ void test_cxx_functional_value_init() {
   (void)NoValueInit(); // expected-error{{no matching constructor for initialization}}
 }
 
-void test_cxx_function_cast_multi() { 
+void test_cxx_function_cast_multi() {
   (void)NoValueInit(0, 0);
   (void)NoValueInit(0, 0, 0); // expected-error{{no matching constructor for initialization}}
   (void)int(1, 2); // expected-error{{excess elements in scalar initializer}}

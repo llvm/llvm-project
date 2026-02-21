@@ -8,8 +8,8 @@ struct Variant {
 Variant getValue();
 
 void testVariant() {
-  bool ret1 = getValue() || getValue(); 
-  bool ret2 = getValue() && getValue(); 
+  bool ret1 = getValue() || getValue();
+  bool ret2 = getValue() && getValue();
   bool ret3 = !getValue();
 }
 
@@ -20,7 +20,7 @@ struct ExplicitVariant {
 ExplicitVariant getExplicitValue();
 
 void testExplicitVariant() {
-  bool ret1 = getExplicitValue() || getExplicitValue(); 
-  bool ret2 = getExplicitValue() && getExplicitValue(); 
+  bool ret1 = getExplicitValue() || getExplicitValue();
+  bool ret2 = getExplicitValue() && getExplicitValue();
   bool ret3 = !getExplicitValue();
 }

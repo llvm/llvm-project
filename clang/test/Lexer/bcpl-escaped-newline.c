@@ -9,6 +9,6 @@
 // expected-error@-1 {{qux}}
 
 // Trailing whitespace!
-//\ 
+//\
 #error quux
 // expected-warning@-2 {{backslash and newline separated by space}}

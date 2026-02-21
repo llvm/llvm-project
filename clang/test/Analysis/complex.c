@@ -16,7 +16,7 @@ void f1(int * p) {
   // If p != 0 then this branch is feasible; otherwise it is not.
   if (__real__ (intptr_t) p)
     *p = 1; // no-warning
-    
+
   *p = 2; // expected-warning{{Dereference of null pointer}}
 }
 

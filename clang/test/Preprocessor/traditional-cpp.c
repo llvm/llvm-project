@@ -20,7 +20,7 @@
 foo // bar
 
 
-/* The lines in this file contain hard tab characters and trailing whitespace; 
+/* The lines in this file contain hard tab characters and trailing whitespace;
  * do not change them! */
 
 /* CHECK: {{^}}	indented!{{$}}
@@ -38,17 +38,17 @@ bracket(|  spaces  |)
 # define foo bar
 foo!
 -
-	foo!	foo!	
+	foo!	foo!
 /* CHECK: {{^}}bar!{{$}}
  * CHECK: {{^}}	bar!	bar!	{{$}}
  */
 
 /* Deliberately check a leading newline with spaces on that line. */
-   
+
 # define foo bar
 foo!
 -
-	foo!	foo!	
+	foo!	foo!
 /* CHECK: {{^}}bar!{{$}}
  * CHECK: {{^}}	bar!	bar!	{{$}}
  */

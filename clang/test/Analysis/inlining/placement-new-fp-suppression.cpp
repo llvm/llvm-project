@@ -124,7 +124,7 @@ void f(const ASTContext &C) {
 #ifndef SUPPRESSED
   // expected-warning@-2 {{Called C++ object pointer is null}}
 #endif
-}	
+}
 
 void g(const ASTContext &C) {
   A *a = new (C) A[1];

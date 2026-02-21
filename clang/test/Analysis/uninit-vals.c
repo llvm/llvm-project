@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -fblocks -verify -analyzer-output=text %s
 
 struct FPRec {
-  void (*my_func)(int * x);  
+  void (*my_func)(int * x);
 };
 
 int bar(int x);
@@ -19,19 +19,19 @@ int f1_b(void) {
 }
 
 int f2(void) {
-  
+
   int x; // expected-note{{'x' declared without an initial value}}
-  
+
   if (x+1)  // expected-warning{{The left operand of '+' is a garbage value}}
             // expected-note@-1{{The left operand of '+' is a garbage value}}
     return 1;
-    
-  return 2;  
+
+  return 2;
 }
 
 int f2_b(void) {
   int x; // expected-note{{'x' declared without an initial value}}
-  
+
   return ((1+x)+2+((x))) + 1 ? 1 : 2; // expected-warning{{The right operand of '+' is a garbage value}}
                                       // expected-note@-1{{The right operand of '+' is a garbage value}}
 }
@@ -173,7 +173,7 @@ struct Point getHalfPoint(void) {
   return p;
 }
 
-void use(struct Point p); 
+void use(struct Point p);
 
 void testUseHalfPoint(void) {
   struct Point p = getHalfPoint(); // expected-note{{'p' initialized here}}

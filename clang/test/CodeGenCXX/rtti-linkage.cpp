@@ -83,7 +83,7 @@ struct B : A {
 };
 void B::f() { }
 
-// C is an incomplete class type, so any direct or indirect pointer types should have 
+// C is an incomplete class type, so any direct or indirect pointer types should have
 // internal linkage, as should the type info for C itself.
 struct C;
 
@@ -102,10 +102,10 @@ namespace {
   // D is inside an anonymous namespace, so all type information related to D should have
   // internal linkage.
   struct D { };
-  
+
   // E is also inside an anonymous namespace.
   enum E { };
-  
+
 };
 
 // F has a key function defined in the translation unit, but it is inline so the RTTI
@@ -126,10 +126,10 @@ const std::type_info &t2() {
   // The exception specification is not part of the RTTI descriptor, so it should not have
   // internal linkage.
   (void)typeid(void (*)() throw (D));
-  
+
   (void)typeid(E);
-  
-  return typeid(getD());  
+
+  return typeid(getD());
 }
 
 namespace Arrays {

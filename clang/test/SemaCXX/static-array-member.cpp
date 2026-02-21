@@ -2,7 +2,7 @@
 
 struct X0 {
   static int array[];
-  
+
   int x;
   int y;
 };

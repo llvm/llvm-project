@@ -1,16 +1,16 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 namespace test0 {
-  struct BASE { 
+  struct BASE {
     operator int &(); // expected-note {{candidate function}}
-  }; 
-  struct BASE1 { 
+  };
+  struct BASE1 {
     operator int &(); // expected-note {{candidate function}}
-  }; 
+  };
 
   struct B : public BASE, BASE1 {};
 
-  extern B f(); 
+  extern B f();
   B b1;
 
   void func(const int ci, const char cc);
@@ -33,16 +33,16 @@ namespace test0 {
 
 namespace test1 {
   struct E;
-  struct A { 
-    A (E&); 
+  struct A {
+    A (E&);
   };
 
-  struct E { 
-    operator A (); 
+  struct E {
+    operator A ();
   };
 
-  struct C { 
-    C (E&);  
+  struct C {
+    C (E&);
   };
 
   void f1(A);	// expected-note {{candidate function}}
@@ -51,7 +51,7 @@ namespace test1 {
   void Test2()
   {
     E b;
-    f1(b);  // expected-error {{call to 'f1' is ambiguous}}	
+    f1(b);  // expected-error {{call to 'f1' is ambiguous}}
             // ambiguous because b -> C via constructor and
             // b -> A via constructor or conversion function.
   }

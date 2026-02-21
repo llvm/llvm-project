@@ -57,7 +57,7 @@ void f8(int *fst, ...) {
   va_list *y = &x;
   va_start(*y,fst);
   va_end(x);
-} // no-warning 
+} // no-warning
 
 void reinit(int *fst, ...) {
   va_list va;
@@ -130,8 +130,8 @@ void doublemsg(int fst, ...) {
   // expected-note@-2{{Initialized va_list}}
   // expected-note@-3{{Initialized va_list}}
   // expected-note@-4{{Initialized va_list}}
-  // expected-note@-5{{Initialized va_list 'va' is leaked}} 
-} 
+  // expected-note@-5{{Initialized va_list 'va' is leaked}}
+}
 
 void in_array(int fst, ...) {
   va_list va_array[8];

@@ -216,7 +216,7 @@ void foo2(void) {
                                 teams distribute parallel for)\
                                 default(parallel for)
   for (int i = 0; i < 100; i++)
-  ;  
+  ;
 
 #pragma omp metadirective when(implementation = {extension(match_all)} \
                                : nothing) default(parallel for)
@@ -254,7 +254,7 @@ void foo2(void) {
                  : parallel for) otherwise()
       for (int i=0; i<10; i++)
         ;
-    
+
     #pragma omp metadirective when(user = {condition(1)}	\
                 : parallel for) otherwise()
       for (int i=0; i<10; i++)

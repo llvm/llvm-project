@@ -518,7 +518,7 @@ void test_builtin_elementwise_bitreverse(si8 vi1, si8 vi2,
                                   long long int i1, long long int i2, short si,
                                   _BitInt(31) bi1, _BitInt(31) bi2,
                                   char ci) {
-  
+
 
   // CHECK:      [[I1:%.+]] = load i64, ptr %i1.addr, align 8
   // CHECK-NEXT: call i64 @llvm.bitreverse.i64(i64 [[I1]])

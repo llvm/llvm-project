@@ -39,7 +39,7 @@ _Pragma("acc atomic read")
 #pragma acc atomic write
   v = x + 1;
 
-// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic update 
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic update
 // CHECK-NEXT: UnaryOperator{{.*}} 'int' postfix '++'
 // CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
 #pragma acc atomic update
@@ -98,7 +98,7 @@ _Pragma("acc atomic read")
 _Pragma("acc atomic write if (v < x)")
   v = x + 1;
 
-// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic update 
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic update
 // CHECK-NEXT: if clause
 // CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
 // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
@@ -180,7 +180,7 @@ void templ_foo(T v, T x) {
 #pragma acc atomic write
   v = x + I;
 
-// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic update 
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic update
 // CHECK-NEXT: UnaryOperator{{.*}} '<dependent type>' postfix '++'
 // CHECK-NEXT: DeclRefExpr{{.*}}'x' 'T'
 #pragma acc atomic update
@@ -232,7 +232,7 @@ void templ_foo(T v, T x) {
 _Pragma("acc atomic write if (v < x)")
   v = x + I;
 
-// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic update 
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic update
 // CHECK-NEXT: if clause
 // CHECK-NEXT: BinaryOperator{{.*}}'<dependent type>' '<'
 // CHECK-NEXT: DeclRefExpr{{.*}}'v' 'T'
@@ -302,7 +302,7 @@ _Pragma("acc atomic write if (v < x)")
 // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} 'int'{{.*}}I
 // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
 
-// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic update 
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic update
 // CHECK-NEXT: UnaryOperator{{.*}} 'int' postfix '++'
 // CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
 
@@ -353,7 +353,7 @@ _Pragma("acc atomic write if (v < x)")
 // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} 'int'{{.*}}I
 // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
 
-// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic update 
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic update
 // CHECK-NEXT: if clause
 // CHECK-NEXT: BinaryOperator{{.*}}'bool' '<'
 // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>

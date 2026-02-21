@@ -5,9 +5,9 @@ void f(int i, int j, int k);
 struct X { };
 void f(X);
 namespace N {
-  struct Y { 
-    Y(int = 0); 
-    
+  struct Y {
+    Y(int = 0);
+
     operator int() const;
   };
   void f(Y y, int ZZ);

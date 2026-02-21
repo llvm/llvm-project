@@ -39,7 +39,7 @@ void test_lambda_positive() {
   int capture_int = 10;
   double capture_double = 3.14;
   int* capture_ptr = nullptr;
-  
+
   auto l4 = [capture_int]() { return capture_int; };
   // CHECK-MESSAGES-ALL: :[[@LINE-1]]:13: warning: use a trailing return type for this lambda [modernize-use-trailing-return-type]
   // CHECK-MESSAGES-NOAUTO: :[[@LINE-2]]:13: warning: use a trailing return type for this lambda [modernize-use-trailing-return-type]
@@ -80,7 +80,7 @@ void test_lambda_positive_template() {
 }
 
 void test_lambda_negative() {
-  auto l1_good = [](int arg) -> int { return 0; };  
+  auto l1_good = [](int arg) -> int { return 0; };
 }
 
 // this function is solely used to not to get "wrong config error" from the check.

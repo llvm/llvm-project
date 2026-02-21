@@ -11,7 +11,7 @@ int rdar93730392(void) {
 
   for (int i = 0 ; i < size_rdar9373039 ; ++i)
     x = 1;
-    
+
   int extra = (2 + foo_rdar9373039 ("Clang") + ((4 - ((unsigned int) (2 + foo_rdar9373039 ("Clang")) % 4)) % 4)) + (2 + foo_rdar9373039 ("1.0") + ((4 - ((unsigned int) (2 + foo_rdar9373039 ("1.0")) % 4)) % 4)); // expected-warning {{never read}}
 
   for (int i = 0 ; i < size_rdar9373039 ; ++i)
@@ -141,7 +141,7 @@ void rdar_12075238__aux(unsigned long y);
 int rdar_12075238_(unsigned long count) {
   if ((count < 3) || (count > 6))
     return 0;
-	
+
   unsigned long array[6];
   unsigned long i = 0;
   for (; i <= count - 2; i++)

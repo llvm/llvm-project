@@ -4,7 +4,7 @@
 
 template<typename T> struct A {
   virtual void f(T) { }
-  inline void g() { } 
+  inline void g() { }
 };
 
 // Explicit instantiations have external linkage.

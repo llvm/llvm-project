@@ -77,8 +77,8 @@ void testLogicalVecVec(v2u v2ua, v2s v2sa, v2f v2fa) {
 
 void testLogicalVecScalar(v2u v2ua, v2s v2sa, v2f v2fa) {
   unsigned u1;
-  v2ua = v2ua && u1; // expected-error {{logical expression with vector type 'v2u' (vector of 2 'unsigned int' values) and non-vector type 'unsigned int' is only supported in C++}} 
-  v2ua = v2ua || u1; // expected-error {{logical expression with vector type 'v2u' (vector of 2 'unsigned int' values) and non-vector type 'unsigned int' is only supported in C++}} 
+  v2ua = v2ua && u1; // expected-error {{logical expression with vector type 'v2u' (vector of 2 'unsigned int' values) and non-vector type 'unsigned int' is only supported in C++}}
+  v2ua = v2ua || u1; // expected-error {{logical expression with vector type 'v2u' (vector of 2 'unsigned int' values) and non-vector type 'unsigned int' is only supported in C++}}
 
   v2sa = v2sa && u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2s' (vector of 2 'int' values) as implicit conversion would cause truncation}} expected-error {{invalid operands to binary expression ('v2s' (vector of 2 'int' values) and 'unsigned int')}}
   v2sa = v2sa || u1; // expected-error {{cannot convert between scalar type 'unsigned int' and vector type 'v2s' (vector of 2 'int' values) as implicit conversion would cause truncation}} expected-error {{invalid operands to binary expression ('v2s' (vector of 2 'int' values) and 'unsigned int')}}

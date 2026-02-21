@@ -312,7 +312,7 @@
 
 
 // This isn't fast-math, but the option is handled in the same place as other FP params.
-// Last option wins, and strict behavior is assumed by default. 
+// Last option wins, and strict behavior is assumed by default.
 
 // RUN: %clang -### -fno-strict-float-cast-overflow -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FPOV-WORKAROUND %s

@@ -843,7 +843,7 @@ void SystemZAsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
   OutStreamer->emitLabel(MILabel);
-  
+
   SM.recordStackMap(*MILabel, MI);
   assert(NumNOPBytes % 2 == 0 && "Invalid number of NOP bytes requested!");
 

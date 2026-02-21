@@ -300,7 +300,7 @@ namespace boost
       { // Probability for any k is zero.
         return boost::math::numeric_limits<RealType>::quiet_NaN();
       }
-      
+
       // Special case where k and lambda are both positive
       if(k > 0 && mean > 0)
       {

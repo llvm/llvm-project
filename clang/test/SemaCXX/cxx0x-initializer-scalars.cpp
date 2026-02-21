@@ -120,8 +120,8 @@ namespace integral {
 
 namespace PR12118 {
   void test() {
-    one f(std::initializer_list<int>); 
-    two f(int); 
+    one f(std::initializer_list<int>);
+    two f(int);
 
     // to initializer_list is preferred
     static_assert(sizeof(f({0})) == sizeof(one), "bad overload");

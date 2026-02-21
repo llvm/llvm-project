@@ -284,7 +284,7 @@ void SelfInvalidatingMap() {
   // insertion and following is unsafe for this container.
   mp[1] = "42";
   mp[2]     // expected-note {{invalidated here}}
-    = 
+    =
     mp[1];  // expected-warning {{object whose reference is captured is later invalidated}} expected-note {{later used here}}
 }
 
@@ -292,7 +292,7 @@ void InvalidateErase() {
   std::flat_map<int, std::string> mp;
   // None of these containers provide iterator stability. So following is unsafe:
   auto it = mp.find(3); // expected-warning {{object whose reference is captured is later invalidated}}
-  mp.erase(mp.find(4)); // expected-note {{invalidated here}} 
+  mp.erase(mp.find(4)); // expected-note {{invalidated here}}
   if (it != mp.end())   // expected-note {{later used here}}
     *it;
 }

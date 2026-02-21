@@ -10,7 +10,7 @@ void Issue56873_1() {
 
     // This line used to crash
     S *arr = new S[n];
-    
+
     clang_analyzer_warnIfReached();  // expected-warning{{REACHABLE}}
 }
 
@@ -19,6 +19,6 @@ void Issue56873_2() {
 
     // This line used to crash
     int *arr = new int[n];
-    
+
     clang_analyzer_warnIfReached();  // expected-warning{{REACHABLE}}
 }

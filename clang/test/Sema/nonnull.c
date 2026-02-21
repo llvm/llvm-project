@@ -95,7 +95,7 @@ int evil_nonnull_func(int* pointer, void * pv)
      return 0;
    } else {
      return *pointer;
-   } 
+   }
 
    pointer = pv;
    if (!pointer)
@@ -113,7 +113,7 @@ int another_evil_nonnull_func(int* pointer, char ch, void * pv) {
      return 0;
    } else {
      return *pointer;
-   } 
+   }
 
    set_param_to_null(&pointer);
    if (!pointer)
@@ -138,7 +138,7 @@ void yet_another_evil_nonnull_func(int* pointer)
      FOO();
    } else {
      FEE();
-   } 
+   }
    pointer = returns_null(&pv);
  }
 }

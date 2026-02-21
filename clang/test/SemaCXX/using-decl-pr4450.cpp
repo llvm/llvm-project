@@ -6,7 +6,7 @@ namespace A {
 }
 
 namespace X {
-  using A::g; 
+  using A::g;
 }
 
 void h()

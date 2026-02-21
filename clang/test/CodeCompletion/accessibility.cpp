@@ -35,7 +35,7 @@ class Y : public X {
     // X-OBJ: priv (Inaccessible)
     // X-OBJ: prot (Inaccessible)
     // X-OBJ: pub : [#int#]pub
-    
+
     Y().pub + 10;
     // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):9 %s -o - \
     // RUN: | FileCheck -check-prefix=Y-OBJ %s
@@ -54,7 +54,7 @@ class Y : public X {
     //
     // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-8):8 %s -o - \
     // RUN: | FileCheck -check-prefix=THIS-BASE %s
-    
+
 
     this->Unrelated::pub = 10; // a check we don't crash in this cases.
     Y().Unrelated::pub = 10; // a check we don't crash in this cases.

@@ -3,15 +3,15 @@
 template<int i> class A {  };
 template<short s> void f(A<s>); // expected-note{{candidate template ignored: substitution failure}}
 
-void k1() { 
+void k1() {
   A<1> a;
   f(a); // expected-error{{no matching function for call}}
   f<1>(a);
 }
-template<const short cs> class B { }; 
-template<short s> void g(B<s>); 
+template<const short cs> class B { };
+template<short s> void g(B<s>);
 void k2() {
-  B<1> b; 
+  B<1> b;
   g(b); // OK: cv-qualifiers are ignored on template parameter types
 }
 

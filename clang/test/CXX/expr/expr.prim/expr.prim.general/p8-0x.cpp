@@ -45,11 +45,11 @@ namespace PR10127 {
   decltype(outer())::fail::inner e; // expected-error{{no member named 'fail' in 'PR10127::outer'}}
   decltype()::fail f; // expected-error{{expected expression}}
   decltype()::middle::fail g; // expected-error{{expected expression}}
-  
+
   decltype(int()) h;
   decltype(int())::PR10127::outer i; // expected-error{{'decltype(int())' (aka 'int') is not a class, namespace, or enumeration}}
   decltype(int())::global j; // expected-error{{'decltype(int())' (aka 'int') is not a class, namespace, or enumeration}}
-  
+
   outer::middle k = decltype(outer())::middle();
   outer::middle::inner l = decltype(outer())::middle::inner();
 
@@ -65,7 +65,7 @@ namespace PR10127 {
     bar,
     baz
   };
-  
+
   foo m = decltype(foo::bar)::baz;
 
   enum E {};

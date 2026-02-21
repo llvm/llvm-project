@@ -29,7 +29,7 @@ struct FibonacciEval2;
 
 template<unsigned I>
 struct Fibonacci2 {
-  static const unsigned value 
+  static const unsigned value
     = FibonacciEval2<I-1>::value + FibonacciEval2<I-2>::value;
 };
 

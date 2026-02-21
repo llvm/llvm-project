@@ -10,8 +10,8 @@ The source code in this directory combines all previous versions, including the
 old JIT-based implementation, into a single file for easy comparison with
 command line options to select between the various possibilities.
 
-To build the program you will need to have 'clang++' and 'llvm-config' in your 
-path. If you attempt to build using the LLVM 3.3 release, some minor 
+To build the program you will need to have 'clang++' and 'llvm-config' in your
+path. If you attempt to build using the LLVM 3.3 release, some minor
 modifications will be required.
 
 This directory also contains a Python script that may be used to generate random

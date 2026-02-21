@@ -58,8 +58,8 @@ x86_lc_thread_load_command ()
     add_uint64 (data, 0x0000000000000000);       // rsi
     add_uint64 (data, 0xffffff9246e2ba20);       // rbp
     add_uint64 (data, 0xffffff9246e2ba10);       // rsp
-    add_uint64 (data, 0x0000000000000000);       // r8 
-    add_uint64 (data, 0x0000000000000000);       // r9 
+    add_uint64 (data, 0x0000000000000000);       // r8
+    add_uint64 (data, 0x0000000000000000);       // r9
     add_uint64 (data, 0x0000000000000000);       // r10
     add_uint64 (data, 0x0000000000000000);       // r11
     add_uint64 (data, 0xffffff7f96ce5fe1);       // r12
@@ -75,7 +75,7 @@ x86_lc_thread_load_command ()
 }
 
 void
-add_lc_note_kern_ver_str_load_command (std::vector<std::vector<uint8_t> > &loadcmds, 
+add_lc_note_kern_ver_str_load_command (std::vector<std::vector<uint8_t> > &loadcmds,
                                        std::vector<uint8_t> &payload,
                                        int payload_file_offset,
                                        std::string ident)
@@ -87,7 +87,7 @@ add_lc_note_kern_ver_str_load_command (std::vector<std::vector<uint8_t> > &loadc
     char lc_note_name[16];
     memset (lc_note_name, 0, 16);
     strcpy (lc_note_name, "kern ver str");
-    
+
     // lc_note.data_owner
     for (int i = 0; i < 16; i++)
         loadcmd_data.push_back (lc_note_name[i]);

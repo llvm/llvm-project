@@ -25,7 +25,7 @@ void foo(int i) {
   }
 
   [[unknown_attribute]] return; // expected-warning {{unknown attribute 'unknown_attribute' ignored}}
-	 
+
 
   alignas(8) ; // expected-error {{'alignas' attribute cannot be applied to a statement}}
   [[noreturn]] { } // expected-error {{'noreturn' attribute cannot be applied to a statement}}

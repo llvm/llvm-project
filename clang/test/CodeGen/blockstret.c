@@ -22,7 +22,7 @@ typedef struct bigbig {
 BigStruct_t (^global)(void) = ^{ return *(BigStruct_t *)malloc(sizeof(struct bigbig)); };
 
 const char * getBlockSignature(void *);
- 
+
 BigStruct_t foo(int param) {
    BigStruct_t x;
    BigStruct_t (^f)(int) = ^(int param) {
@@ -60,7 +60,7 @@ struct block_descriptor_small {
 struct block_layout_abi { // can't change
   void *isa;
   int flags;
-  int reserved; 
+  int reserved;
   void (*invoke)(void *, ...);
   struct block_descriptor_big *descriptor;
 };
@@ -68,7 +68,7 @@ struct block_layout_abi { // can't change
 const char *getBlockSignature(void *block) {
    struct block_layout_abi *layout = (struct block_layout_abi *)block;
    if ((layout->flags & BLOCK_HAS_OBJC_TYPE) != BLOCK_HAS_OBJC_TYPE) return 0;
-   if (layout->flags & BLOCK_HAS_COPY_DISPOSE) 
+   if (layout->flags & BLOCK_HAS_COPY_DISPOSE)
       return layout->descriptor->signature;
    else
       return ((struct block_descriptor_small *)layout->descriptor)->signature;
@@ -79,12 +79,12 @@ int usesStruct(void *block) {
    int want = BLOCK_HAS_OBJC_TYPE | BLOCK_USE_STRET;
    return (layout->flags & want) == want;
 }
-    
-   
+
+
 int main(int argc, char *argv[]) {
    printf("desired global flags: %d\n", BLOCK_USE_STRET | BLOCK_IS_GLOBAL  | BLOCK_HAS_OBJC_TYPE);
    printf("desired stack flags: %d\n",  BLOCK_USE_STRET | BLOCK_HAS_OBJC_TYPE);
-   
+
    printf("should be non-zero: %d\n", usesStruct(global));
    BigStruct_t x;
    BigStruct_t (^local)(int) = ^(int param) {

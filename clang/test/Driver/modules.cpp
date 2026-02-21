@@ -7,7 +7,7 @@
 // RUN: %clang -std=c++2a -x c++-module --precompile %t/foo.cpp -o %t/foo.pcm -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE
 // RUN: %clang -std=gnu++2a -x c++-module --precompile %t/foo.cpp -o %t/foo-gnu.pcm -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE
 //
-// CHECK-PRECOMPILE: -cc1 {{.*}} -emit-module-interface 
+// CHECK-PRECOMPILE: -cc1 {{.*}} -emit-module-interface
 // CHECK-PRECOMPILE-SAME: -o {{.*}}.pcm
 // CHECK-PRECOMPILE-SAME: -x c++
 // CHECK-PRECOMPILE-SAME: foo.cpp

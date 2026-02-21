@@ -628,12 +628,12 @@ TYPED_TEST(SmallVectorTest, MoveAssignTest) {
   // Make sure the # of constructor/destructor calls line up. There
   // are two live objects after clearing the other vector.
   U.clear();
-  EXPECT_EQ(Constructable::getNumConstructorCalls()-2, 
+  EXPECT_EQ(Constructable::getNumConstructorCalls()-2,
             Constructable::getNumDestructorCalls());
 
   // There shouldn't be any live objects any more.
   V.clear();
-  EXPECT_EQ(Constructable::getNumConstructorCalls(), 
+  EXPECT_EQ(Constructable::getNumConstructorCalls(),
             Constructable::getNumDestructorCalls());
 }
 

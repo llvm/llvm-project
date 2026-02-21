@@ -308,26 +308,26 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
 void test_substr() {
     std::string str("hello world");
     std::string prefix = "hello";
-    
+
     // Basic pattern
     str.substr(0, 5) == "hello";
     // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr [modernize-use-starts-ends-with]
     // CHECK-FIXES: str.starts_with("hello");
-    
+
     // With string literal on left side
     "hello" == str.substr(0, 5);
     // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr [modernize-use-starts-ends-with]
     // CHECK-FIXES: str.starts_with("hello");
-    
+
     // Inequality comparison
     str.substr(0, 5) != "world";
     // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with instead of substr [modernize-use-starts-ends-with]
     // CHECK-FIXES: !str.starts_with("world");
-    
+
     // Ensure non-zero start position is not transformed
     str.substr(1, 5) == "hello";
     str.substr(0, 4) == "hello"; // Length mismatch
-    
+
     size_t len = 5;
     str.substr(0, len) == "hello"; // Non-constant length
 

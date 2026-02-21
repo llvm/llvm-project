@@ -190,7 +190,7 @@ T tmain(T argc) {
 #pragma omp parallel masked taskloop reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp parallel masked taskloop reduction(- : da) // expected-error 2 {{const-qualified variable cannot be reduction}} omp52-warning 3 {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}} 
+#pragma omp parallel masked taskloop reduction(- : da) // expected-error 2 {{const-qualified variable cannot be reduction}} omp52-warning 3 {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp parallel masked taskloop reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}

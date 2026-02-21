@@ -2,12 +2,12 @@
 // RUN: %clang_cc1 -fsyntax-only -pedantic -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -pedantic -verify -std=c++11 %s
 // C++ [dcl.init.aggr]p2
-struct A { 
+struct A {
   int x;
-  struct B { 
+  struct B {
     int i;
     int j;
-  } b; 
+  } b;
 } a1 = { 1, { 2, 3 } };
 
 struct NonAggregate {
@@ -36,7 +36,7 @@ NonAggregate non_aggregate_test2[2] = { { 1, 2 }, { 3, 4 } };
 #endif
 
 // C++ [dcl.init.aggr]p3
-A a_init = A(); 
+A a_init = A();
 
 // C++ [dcl.init.aggr]p4
 int x[] = { 1, 3, 5 };
@@ -54,7 +54,7 @@ struct StaticMemberTest {
 char cv[4] = { 'a', 's', 'd', 'f', 0 }; // expected-error{{excess elements in array initializer}}
 
 // C++ [dcl.init.aggr]p7
-struct TooFew { int a; char* b; int c; }; 
+struct TooFew { int a; char* b; int c; };
 TooFew too_few = { 1, "asdf" };
 #if __cplusplus <= 199711L
 // expected-warning@-2 {{conversion from string literal to 'char *' is deprecated}}
@@ -117,7 +117,7 @@ struct EmptyTest {
 
 EmptyTest empty_test2 = { 3 }; // expected-error{{initializer for aggregate with no elements requires explicit braces}}
 
-struct NonEmpty { 
+struct NonEmpty {
   int a;
   Empty empty;
 };
@@ -145,14 +145,14 @@ float y2[4][3] = { { 1, 3, 5 }, { 2, 4, 6 }, { 3, 5, 7 } };
 float same_as_y2[4][3] = { 1, 3, 5, 2, 4, 6, 3, 5, 7 };
 
 // C++ [dcl.init.aggr]p12
-struct A2 { 
+struct A2 {
   int i;
   operator int *();
-}; 
+};
 struct B2 {
-  A2 a1, a2; 
+  A2 a1, a2;
   int *z;
-}; 
+};
 struct C2 {
   operator A2();
 };
@@ -160,7 +160,7 @@ struct D2 {
   operator int();
 };
 A2 a2;
-C2 c2; 
+C2 c2;
 D2 d2;
 B2 b2 = { 4, a2, a2 };
 B2 b2_2 = { 4, d2, 0 };
@@ -172,8 +172,8 @@ union u { int a; char* b; }; // expected-note{{candidate constructor (the implic
 // expected-note@-2 {{candidate constructor (the implicit move constructor)}}
 #endif
 
-u u1 = { 1 }; 
-u u2 = u1; 
+u u1 = { 1 };
+u u2 = u1;
 u u3 = 1; // expected-error{{no viable conversion}}
 u u4 = { 0, "asdf" };  // expected-error{{excess elements in union initializer}}
 u u5 = { "asdf" }; // expected-error{{cannot initialize a member subobject of type 'int' with an lvalue of type 'const char[5]'}}

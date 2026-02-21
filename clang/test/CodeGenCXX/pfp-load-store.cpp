@@ -11,7 +11,7 @@ private:
 struct ArrayType {
   int* array[3];
 private:
-  int private_data;  
+  int private_data;
 };
 
 struct Array {

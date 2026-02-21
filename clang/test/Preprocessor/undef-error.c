@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -pedantic-errors -Wno-empty-translation-unit -verify 
+// RUN: %clang_cc1 %s -pedantic-errors -Wno-empty-translation-unit -verify
 // PR2045
 
 #define b

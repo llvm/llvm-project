@@ -21,10 +21,10 @@ void test_htm() {
   __builtin_tbegin(4); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_tend(-1);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_tsr(55);   // expected-error-re {{argument value {{.*}} is outside the valid range}}
-  __builtin_tabortwc(-5, 2, 3); // expected-error-re {{argument value {{.*}} is outside the valid range}} 
+  __builtin_tabortwc(-5, 2, 3); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_tabortdc(55, 2, 3); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_tabortwci(-5, 2, 5); // expected-error-re {{argument value {{.*}} is outside the valid range}}
-  __builtin_tabortwci(5, 2, 55); // expected-error-re {{argument value {{.*}} is outside the valid range}}  
+  __builtin_tabortwci(5, 2, 55); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_tabortdci(-5, 2, 5); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_tabortdci(5, 2, 55); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }

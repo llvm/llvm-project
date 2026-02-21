@@ -7,7 +7,7 @@ float &f0(void*, int);
 void test_f0(int* ip, void *vp) {
   // One argument is better...
   int &ir = f0(ip, 0);
-  
+
   // Prefer non-templates to templates
   float &fr = f0(vp, 0);
 }
@@ -34,6 +34,6 @@ namespace deduction_guide_example {
   A<int> *pb = &b;
 }
 
-// Partial ordering of function template specializations will be tested 
+// Partial ordering of function template specializations will be tested
 // elsewhere
 // FIXME: Initialization by user-defined conversion is tested elsewhere

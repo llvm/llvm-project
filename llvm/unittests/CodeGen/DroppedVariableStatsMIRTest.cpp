@@ -81,18 +81,18 @@ TEST(DroppedVariableStatsMIR, BothDeleted) {
   ; ModuleID = '/tmp/test.ll'
   source_filename = "/tmp/test.ll"
   target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
-  
+
   define noundef range(i32 -2147483647, -2147483648) i32 @_Z3fooi(i32 noundef %x) local_unnamed_addr !dbg !4 {
   entry:
       #dbg_value(i32 %x, !10, !DIExpression(), !11)
     %add = add nsw i32 %x, 1, !dbg !12
     ret i32 0
   }
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!2}
   !llvm.ident = !{!3}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
   !1 = !DIFile(filename: "/tmp/code.cpp", directory: "/")
   !2 = !{i32 2, !"Debug Info Version", i32 3}
@@ -170,7 +170,7 @@ machineFunctionInfo: {}
 body:             |
   bb.1.entry:
     liveins: $w0
-  
+
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_CONSTANT i32 1
     %3:_(s32) = G_CONSTANT i32 0
@@ -230,18 +230,18 @@ TEST(DroppedVariableStatsMIR, DbgValLost) {
   ; ModuleID = '/tmp/test.ll'
   source_filename = "/tmp/test.ll"
   target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
-  
+
   define noundef range(i32 -2147483647, -2147483648) i32 @_Z3fooi(i32 noundef %x) local_unnamed_addr !dbg !4 {
   entry:
       #dbg_value(i32 %x, !10, !DIExpression(), !11)
     %add = add nsw i32 %x, 1, !dbg !12
     ret i32 0
   }
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!2}
   !llvm.ident = !{!3}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
   !1 = !DIFile(filename: "/tmp/code.cpp", directory: "/")
   !2 = !{i32 2, !"Debug Info Version", i32 3}
@@ -319,7 +319,7 @@ machineFunctionInfo: {}
 body:             |
   bb.1.entry:
     liveins: $w0
-  
+
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_CONSTANT i32 1
     %3:_(s32) = G_CONSTANT i32 0
@@ -372,18 +372,18 @@ TEST(DroppedVariableStatsMIR, UnrelatedScopes) {
   ; ModuleID = '/tmp/test.ll'
   source_filename = "/tmp/test.ll"
   target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
-  
+
   define noundef range(i32 -2147483647, -2147483648) i32 @_Z3fooi(i32 noundef %x) local_unnamed_addr !dbg !4 {
   entry:
       #dbg_value(i32 %x, !10, !DIExpression(), !11)
     %add = add nsw i32 %x, 1, !dbg !12
     ret i32 0
   }
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!2}
   !llvm.ident = !{!3}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
   !1 = !DIFile(filename: "/tmp/code.cpp", directory: "/")
   !2 = !{i32 2, !"Debug Info Version", i32 3}
@@ -462,7 +462,7 @@ machineFunctionInfo: {}
 body:             |
   bb.1.entry:
     liveins: $w0
-  
+
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_CONSTANT i32 1
     %3:_(s32) = G_CONSTANT i32 0
@@ -515,18 +515,18 @@ TEST(DroppedVariableStatsMIR, ChildScopes) {
   ; ModuleID = '/tmp/test.ll'
   source_filename = "/tmp/test.ll"
   target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
-  
+
   define noundef range(i32 -2147483647, -2147483648) i32 @_Z3fooi(i32 noundef %x) local_unnamed_addr !dbg !4 {
   entry:
       #dbg_value(i32 %x, !10, !DIExpression(), !11)
     %add = add nsw i32 %x, 1, !dbg !12
     ret i32 0
   }
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!2}
   !llvm.ident = !{!3}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
   !1 = !DIFile(filename: "/tmp/code.cpp", directory: "/")
   !2 = !{i32 2, !"Debug Info Version", i32 3}
@@ -605,7 +605,7 @@ machineFunctionInfo: {}
 body:             |
   bb.1.entry:
     liveins: $w0
-  
+
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_CONSTANT i32 1
     %3:_(s32) = G_CONSTANT i32 0
@@ -659,18 +659,18 @@ TEST(DroppedVariableStatsMIR, InlinedAt) {
   ; ModuleID = '/tmp/test.ll'
   source_filename = "/tmp/test.ll"
   target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
-  
+
   define noundef range(i32 -2147483647, -2147483648) i32 @_Z3fooi(i32 noundef %x) local_unnamed_addr !dbg !4 {
   entry:
       #dbg_value(i32 %x, !10, !DIExpression(), !11)
     %add = add nsw i32 %x, 1, !dbg !12
     ret i32 0
   }
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!2}
   !llvm.ident = !{!3}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
   !1 = !DIFile(filename: "/tmp/code.cpp", directory: "/")
   !2 = !{i32 2, !"Debug Info Version", i32 3}
@@ -750,7 +750,7 @@ machineFunctionInfo: {}
 body:             |
   bb.1.entry:
     liveins: $w0
-  
+
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_CONSTANT i32 1
     %3:_(s32) = G_CONSTANT i32 0
@@ -804,18 +804,18 @@ TEST(DroppedVariableStatsMIR, InlinedAtShared) {
   ; ModuleID = '/tmp/test.ll'
   source_filename = "/tmp/test.ll"
   target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
-  
+
   define noundef range(i32 -2147483647, -2147483648) i32 @_Z3fooi(i32 noundef %x) local_unnamed_addr !dbg !4 {
   entry:
       #dbg_value(i32 %x, !10, !DIExpression(), !11)
     %add = add nsw i32 %x, 1, !dbg !12
     ret i32 0
   }
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!2}
   !llvm.ident = !{!3}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
   !1 = !DIFile(filename: "/tmp/code.cpp", directory: "/")
   !2 = !{i32 2, !"Debug Info Version", i32 3}
@@ -895,7 +895,7 @@ machineFunctionInfo: {}
 body:             |
   bb.1.entry:
     liveins: $w0
-  
+
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_CONSTANT i32 1
     %3:_(s32) = G_CONSTANT i32 0
@@ -949,18 +949,18 @@ TEST(DroppedVariableStatsMIR, InlinedAtChild) {
   ; ModuleID = '/tmp/test.ll'
   source_filename = "/tmp/test.ll"
   target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
-  
+
   define noundef range(i32 -2147483647, -2147483648) i32 @_Z3fooi(i32 noundef %x) local_unnamed_addr !dbg !4 {
   entry:
       #dbg_value(i32 %x, !10, !DIExpression(), !11)
     %add = add nsw i32 %x, 1, !dbg !12
     ret i32 0
   }
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!2}
   !llvm.ident = !{!3}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
   !1 = !DIFile(filename: "/tmp/code.cpp", directory: "/")
   !2 = !{i32 2, !"Debug Info Version", i32 3}
@@ -1041,7 +1041,7 @@ machineFunctionInfo: {}
 body:             |
   bb.1.entry:
     liveins: $w0
-  
+
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_CONSTANT i32 1
     %3:_(s32) = G_CONSTANT i32 0

@@ -607,7 +607,7 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   // |------------------------------------------------------|-------------------------------|
   // | cuda::atomic_load                                    | fence.sc.<scope>;             |
   // |   (memory_order_seq_cst, cuda::thread_scope_<scope>) | ld.acquire.<scope>;           |
-  // |------------------------------------------------------|-------------------------------|  
+  // |------------------------------------------------------|-------------------------------|
   // | cuda::atomic_store                                   | fence.sc.<scope>;             |
   // |   (memory_order_seq_cst, cuda::thread_scope_<scope>) | st.release.<scope>;           |
   // |------------------------------------------------------|-------------------------------|

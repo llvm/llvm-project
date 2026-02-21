@@ -5457,7 +5457,7 @@ void test6() {
 // CHECK: fsub <4 x float>
 // CHECK-LE: fsub <4 x float>
 
-  
+
 
   res_vsc = vec_vsububm(vsc, vsc);
 // CHECK: sub <16 x i8>

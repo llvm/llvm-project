@@ -13,7 +13,7 @@ T tmain(T argc, S **argv) {
 
   // Missing parentheses
   #pragma omp parallel message // expected-error {{expected '(' after 'message'}}
-  
+
   // Empty parentheses
   #pragma omp parallel message() // expected-error {{expected expression}}
 
@@ -23,7 +23,7 @@ T tmain(T argc, S **argv) {
 
   // Multiple arguments
   #pragma omp parallel message("msg1", "msg2") // expected-error {{expected ')'}} expected-note {{to match this '('}}
-  
+
   // Unterminated string
   // expected-error@+1 {{expected expression}} expected-error@+1 {{expected ')'}} expected-warning@+1 {{missing terminating '"' character}} expected-note@+1 {{to match this '('}}
   #pragma omp parallel message("unterminated

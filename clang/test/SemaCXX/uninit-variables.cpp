@@ -78,7 +78,7 @@ int test5() {
 
 // This test previously crashed Sema.
 class Rdar9188004A {
-public: 
+public:
   virtual ~Rdar9188004A();
 };
 

@@ -77,7 +77,7 @@ namespace test3 {
     A a;
   };
 
-  struct C : A { 
+  struct C : A {
     ~C() { }
   };
 }

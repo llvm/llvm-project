@@ -2,7 +2,7 @@
 // REQUIRES: systemz-registered-target
 
 // RUN: export CLANG_CONFIG_PATH=%S/Inputs/config-zos
-// RUN: env -u CLANG_NO_DEFAULT_CONFIG %clang --target=s390x-ibm-zos -c -### %s 2>&1 | FileCheck %s 
+// RUN: env -u CLANG_NO_DEFAULT_CONFIG %clang --target=s390x-ibm-zos -c -### %s 2>&1 | FileCheck %s
 // CHECK: Configuration file: {{.*}}/Inputs/config-zos/clang.cfg
 // CHECK: "-D" "ABC=123"
 

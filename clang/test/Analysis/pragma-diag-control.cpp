@@ -9,7 +9,7 @@ struct [[clang::consumable(unconsumed)]] Linear {
   ~Linear() {}
 };
 
-int a() {	
+int a() {
   Linear l;
   return 0; // No -Wconsumed diagnostic, analysis is not enabled.
   return 1; // expected-error {{'return' will never be executed}}
@@ -60,7 +60,7 @@ int f() {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code-aggressive"
 }
-#pragma clang diagnostic pop	
+#pragma clang diagnostic pop
 
 int g() {
   Linear l;

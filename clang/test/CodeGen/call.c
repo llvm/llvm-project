@@ -17,7 +17,7 @@ void js_GetErrorMessage(void);
 void JS_ReportErrorNumber(JSErrorCallback errorCallback, ...);
 void Interpret(void) {
   JS_ReportErrorNumber(js_GetErrorMessage, 0);
-  
+
   // CHECK: call {{.*}}void ({{.*}}, ...) @JS_ReportErrorNumber({{.*}}@js_GetErrorMessage
 }
 

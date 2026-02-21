@@ -165,7 +165,7 @@ TEST(CharInfoTest, isDigit) {
 
   EXPECT_FALSE(isDigit('z'));
   EXPECT_FALSE(isDigit('Z'));
-  
+
   EXPECT_FALSE(isDigit('.'));
   EXPECT_FALSE(isDigit('_'));
 
@@ -186,7 +186,7 @@ TEST(CharInfoTest, isHexDigit) {
 
   EXPECT_FALSE(isHexDigit('z'));
   EXPECT_FALSE(isHexDigit('Z'));
-  
+
   EXPECT_FALSE(isHexDigit('.'));
   EXPECT_FALSE(isHexDigit('_'));
 
@@ -207,7 +207,7 @@ TEST(CharInfoTest, isLetter) {
 
   EXPECT_TRUE(isLetter('z'));
   EXPECT_TRUE(isLetter('Z'));
-  
+
   EXPECT_FALSE(isLetter('.'));
   EXPECT_FALSE(isLetter('_'));
 
@@ -229,7 +229,7 @@ TEST(CharInfoTest, isLowercase) {
 
   EXPECT_TRUE(isLowercase('z'));
   EXPECT_FALSE(isLowercase('Z'));
-  
+
   EXPECT_FALSE(isLowercase('.'));
   EXPECT_FALSE(isLowercase('_'));
 

@@ -19,9 +19,9 @@ extern const char *TestMainArgv0;
 
 TEST(TensorSpecTest, JSONParsing) {
   auto Value = json::parse(
-      R"({"name": "tensor_name", 
-        "port": 2, 
-        "type": "int32_t", 
+      R"({"name": "tensor_name",
+        "port": 2,
+        "type": "int32_t",
         "shape":[1,4]
         })");
   EXPECT_TRUE(!!Value);
@@ -34,9 +34,9 @@ TEST(TensorSpecTest, JSONParsing) {
 TEST(TensorSpecTest, JSONParsingInvalidTensorType) {
   auto Value = json::parse(
       R"(
-        {"name": "tensor_name", 
-        "port": 2, 
-        "type": "no such type", 
+        {"name": "tensor_name",
+        "port": 2,
+        "type": "no such type",
         "shape":[1,4]
         }
       )");

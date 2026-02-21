@@ -39,7 +39,7 @@ public:
 
 	void start()
 	{
-		
+
 	}
 
 	~bug_thread_executor()
@@ -51,7 +51,7 @@ public:
 
 	virtual void wait() noexcept override
 	{
-		
+
 	}
 };
 
@@ -73,7 +73,7 @@ public:
 
 	constexpr std::suspend_always initial_suspend() noexcept { return {}; }
 
-	std::suspend_always final_suspend() noexcept 
+	std::suspend_always final_suspend() noexcept
 	{
 		return {};
 	}
@@ -84,7 +84,7 @@ public:
 
 	void get_result() const
 	{
-		
+
 	}
 };
 
@@ -103,15 +103,15 @@ class bug_task
 
 	bug_task(handle coro, promise_t* p) noexcept : this_coro{ coro }, this_promise{ p }
 	{
-	
+
 	}
 
 public:
 	using promise_type = bug_task_promise;
 
     bug_task(bug_task&& other) noexcept
-		: this_coro{ exchange(other.this_coro, nullptr) }, this_promise{ exchange(other.this_promise, nullptr) } { 
-		
+		: this_coro{ exchange(other.this_coro, nullptr) }, this_promise{ exchange(other.this_promise, nullptr) } {
+
 	}
 
 	~bug_task()
@@ -130,7 +130,7 @@ public:
 		return this_coro;
 	}
 
-	void await_resume() 
+	void await_resume()
 	{
 		return this_promise->get_result();
 	}

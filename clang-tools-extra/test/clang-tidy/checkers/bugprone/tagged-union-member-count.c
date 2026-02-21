@@ -92,7 +92,7 @@ struct TaggedUnionStructWithPredefinedTagAndInlineUnion {
 };
 
 // CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
-struct TaggedUnionStructWithInlineTagAndPredefinedUnion { 
+struct TaggedUnionStructWithInlineTagAndPredefinedUnion {
   enum {
     TaggedUnion7tag1,
     TaggedUnion7tag2,
@@ -102,7 +102,7 @@ struct TaggedUnionStructWithInlineTagAndPredefinedUnion {
 };
 
 // CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
-struct TaggedUnionStructWithInlineTagAndInlineUnion { 
+struct TaggedUnionStructWithInlineTagAndInlineUnion {
   enum {
     TaggedUnion8tag1,
     TaggedUnion8tag2,
@@ -120,22 +120,22 @@ struct TaggedUnionStructWithInlineTagAndInlineUnion {
 };
 
 // CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
-struct TaggedUnionStructNesting { 
+struct TaggedUnionStructNesting {
   enum Tags3 Tag;
   union {
     float F;
     int I;
     long L;
     // CHECK-MESSAGES: :[[@LINE+1]]:12: warning: tagged union has more data members (4) than tags (3)
-    struct innerdecl { 
+    struct innerdecl {
       enum Tags3 Tag;
       union Union4 Data;
-    } Inner; 
+    } Inner;
   } Data;
 };
 
 // CHECK-MESSAGES: :[[@LINE+1]]:8: warning: tagged union has more data members (4) than tags (3)
-struct TaggedUnionStructWithTypedefedTagAndTypedefedUnion { 
+struct TaggedUnionStructWithTypedefedTagAndTypedefedUnion {
   Tags3 Tag;
   Union4 Data;
 };

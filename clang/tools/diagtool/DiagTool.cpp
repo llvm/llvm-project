@@ -45,7 +45,7 @@ void DiagTools::printCommands(llvm::raw_ostream &out) {
     toolNames.push_back(it->getKey());
     unsigned len = it->getKey().size();
     if (len > maxName)
-      maxName = len;    
+      maxName = len;
   }
   llvm::sort(toolNames);
 
@@ -56,8 +56,8 @@ void DiagTools::printCommands(llvm::raw_ostream &out) {
     unsigned spaces = (maxName + 3) - (it->size());
     for (unsigned i = 0; i < spaces; ++i)
       out << ' ';
-    
-    out << getTool(*it)->getDescription() << '\n';    
+
+    out << getTool(*it)->getDescription() << '\n';
   }
 }
 

@@ -446,7 +446,7 @@ BOOST_MATH_GPU_ENABLED T gamma_p_inv_imp(T a, T p, const Policy& pol)
    // Go ahead and iterate:
    //
    boost::math::uintmax_t max_iter = policies::get_max_root_iterations<Policy>();
-   
+
    #ifndef BOOST_MATH_HAS_GPU_SUPPORT
    guess = tools::halley_iterate(
       detail::gamma_p_inverse_func<T, Policy>(a, p, false),
@@ -464,7 +464,7 @@ BOOST_MATH_GPU_ENABLED T gamma_p_inv_imp(T a, T p, const Policy& pol)
       digits,
       max_iter);
    #endif
-   
+
    policies::check_root_iterations<T>(function, max_iter, pol);
    BOOST_MATH_INSTRUMENT_VARIABLE(guess);
    if(guess == lower)

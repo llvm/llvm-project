@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin10 -mconstructor-aliases | FileCheck %s
 
-struct A { 
+struct A {
   A();
 };
 
@@ -8,7 +8,7 @@ struct A {
 // CHECK-LABEL: define{{.*}} void @_ZN1AC2Ev(ptr {{[^,]*}} %this) unnamed_addr
 A::A() { }
 
-struct B : virtual A { 
+struct B : virtual A {
   B();
 };
 

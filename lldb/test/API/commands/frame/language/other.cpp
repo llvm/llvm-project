@@ -2,7 +2,7 @@
 
 extern "C" void some_func();
 
-void 
+void
 Other::DoSomething()
 {
   some_func();

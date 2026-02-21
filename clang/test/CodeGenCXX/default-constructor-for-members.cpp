@@ -11,7 +11,7 @@ struct S {
 };
 
 struct M {
-  S ARR_S; 
+  S ARR_S;
 };
 
 int main() {

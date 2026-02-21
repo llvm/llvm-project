@@ -240,7 +240,7 @@ void n_ShouldNotDiag() noexcept {
   }
 }
 // As seen in p34973, this should not throw the warning.  If there is an active
-// exception, catch(...) catches everything. 
+// exception, catch(...) catches everything.
 void o_ShouldNotDiag() noexcept {
   try {
     throw;

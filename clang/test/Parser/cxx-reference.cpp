@@ -20,7 +20,7 @@ int & volatile Y = val; // expected-error {{'volatile' qualifier may not be appl
 int & const volatile Z = val; /* expected-error {{'const' qualifier may not be applied}} \
                            expected-error {{'volatile' qualifier may not be applied}} */
 
-typedef int && RV; 
+typedef int && RV;
 #if __cplusplus <= 199711L
 // expected-warning@-2 {{rvalue references are a C++11 extension}}
 #endif

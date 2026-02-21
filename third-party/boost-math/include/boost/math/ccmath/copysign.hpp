@@ -53,7 +53,7 @@ template <typename T1, typename T2>
 constexpr auto copysign(T1 mag, T2 sgn) noexcept
 {
     if (BOOST_MATH_IS_CONSTANT_EVALUATED(mag))
-    {        
+    {
         using promoted_type = boost::math::tools::promote_args_t<T1, T2>;
         return boost::math::ccmath::copysign(static_cast<promoted_type>(mag), static_cast<promoted_type>(sgn));
     }

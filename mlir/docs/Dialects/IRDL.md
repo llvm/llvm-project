@@ -51,7 +51,7 @@ IRDL wraps all types in an `mlir::TypeAttr` attribute.
 The core principles of IRDL are the following, in no particular order:
 
 - **Portability.** IRDL dialects should be self-contained, such that dialects
-  can be easily distributed with minimal assumptions on which compiler 
+  can be easily distributed with minimal assumptions on which compiler
   infrastructure (or which commit of MLIR) is used.
 - **Introspection.** The IRDL dialect definition mechanism should strive
   towards offering as much introspection abilities as possible. Dialects
@@ -75,7 +75,7 @@ variables. Constraint variables are defined as the results of constraint
 operations (like `irdl.is` or constraint combinators).
 
 Constraint variables act as variables: as such, matching against the same
-constraint variable multiple times can only succeed if the matching type or 
+constraint variable multiple times can only succeed if the matching type or
 attribute is the same as the one that previously matched. In the following
 example:
 
@@ -111,7 +111,7 @@ of intended use cases for IRDL, in no particular order:
   Portable IRDL dialects allow to share the dialect definitions between MLIR
   and other compiler infrastructures without needing to maintain multiple
   potentially out-of-sync definitions.
-- **Dialect simplification.** Because IRDL definitions can easily be 
+- **Dialect simplification.** Because IRDL definitions can easily be
   mechanically modified, it is possible to simplify the definition of dialects
   based on which operations are actually used, leading to smaller compilers.
 - **SMT analysis.** Because IRDL dialect definitions are declarative, their

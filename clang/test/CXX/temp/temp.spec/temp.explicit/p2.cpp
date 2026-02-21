@@ -3,15 +3,15 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -pedantic -std=c++11 %s
 
 // Example from the standard
-template<class T> class Array { void mf() { } }; 
+template<class T> class Array { void mf() { } };
 
-template class Array<char>; 
+template class Array<char>;
 template void Array<int>::mf();
 template<class T> void sort(Array<T>& v) { /* ... */ }
 template void sort(Array<char>&);
-namespace N { 
+namespace N {
   template<class T> void f(T&) { }
-} 
+}
 template void N::f<int>(int&);
 
 
@@ -35,7 +35,7 @@ namespace N {
   template<typename T>
   struct X1 { // expected-note{{explicit instantiation refers here}}
   };
-  
+
   template<typename T>
   void f1(T) {} // expected-note{{explicit instantiation refers here}}
 }

@@ -12,12 +12,12 @@
 # A value consisting only of whitespace is trimmed to the empty string.
 #
 #               v~~ intentional whitespace
-# DEFINE: %{ws}=   
+# DEFINE: %{ws}=
 # RUN: echo "'%{ws}'"
 # CHECK:# | ''
 #
 #                 v intentional whitespace
-# REDEFINE: %{ws}= 
+# REDEFINE: %{ws}=
 # RUN: echo "'%{ws}'"
 # CHECK:# | ''
 
@@ -48,11 +48,11 @@
 # whitespace in between isn't permitted.)
 #
 #                                       v~~ intentional whitespace
-# DEFINE:   %{whitespace}  =  abc    def   
+# DEFINE:   %{whitespace}  =  abc    def
 # RUN: echo "'%{whitespace}'"
 # CHECK:# | 'abc    def'
 #                                      v intentional whitespace
-# REDEFINE: %{whitespace} = Hello World 
+# REDEFINE: %{whitespace} = Hello World
 # RUN: echo "'%{whitespace}'"
 # CHECK:# | 'Hello World'
 
@@ -63,7 +63,7 @@
 # DEFINE:ghi\
 # DEFINE: jkl \
 # DEFINE: mno  \
-# DEFINE:  pqr 
+# DEFINE:  pqr
 #             ^ intentional whitespace
 # RUN: echo "'%{continue}'"
 # CHECK:# | 'abc def ghi jkl mno pqr'
@@ -78,16 +78,16 @@
 # because it looks like a line continuation.
 #
 #                                   v~~~~~~~~~~~ intentional whitespace
-# DEFINE: %{ws-after-continue}=foo \            
-# DEFINE: bar                      \ 
+# DEFINE: %{ws-after-continue}=foo \
+# DEFINE: bar                      \
 #                                   ^ intentional whitespace
 # DEFINE: baz
 # RUN: echo "'%{ws-after-continue}'"
 # CHECK:# | 'foo bar baz'
 #
 #                                     v intentional whitespace
-# REDEFINE: %{ws-after-continue}=foo \ 
-# REDEFINE: bar                      \            
+# REDEFINE: %{ws-after-continue}=foo \
+# REDEFINE: bar                      \
 #                                     ^~~~~~~~~~~~ intentional whitespace
 # REDEFINE: baz
 # RUN: echo "'%{ws-after-continue}'"

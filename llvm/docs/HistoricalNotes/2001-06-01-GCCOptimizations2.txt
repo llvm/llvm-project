@@ -12,10 +12,10 @@ could do them a translation unit at a time, just as GCC does now.  This
 would lead to a pipeline like this:
 
 Static optimizations, xlation unit at a time:
-.c --GCC--> .llvm --llvmopt--> .llvm 
+.c --GCC--> .llvm --llvmopt--> .llvm
 
 Link time optimizations:
-.llvm --llvm-ld--> .llvm --llvm-link-opt--> .llvm 
+.llvm --llvm-ld--> .llvm --llvm-link-opt--> .llvm
 
 Of course, many optimizations could be shared between llvmopt and
 llvm-link-opt, but the wouldn't need to be shared...  Thus compile time
@@ -35,7 +35,7 @@ much less time consuming to adapt, say, SSA-PRE than to rewrite it.
 > But your larger point is valid that adding SSA based optimizations is
 > feasible and should be fun.  (Again, link time cost is the issue.)
 
-Assuming linktime cost wasn't an issue, the question is: 
+Assuming linktime cost wasn't an issue, the question is:
 Does using GCC's backend buy us anything?
 
 > It also occurs to me that GCC is probably doing quite a bit of back-end

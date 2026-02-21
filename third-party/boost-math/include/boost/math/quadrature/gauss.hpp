@@ -36,7 +36,7 @@ struct gauss_constant_category
 #endif
          (std::numeric_limits<T>::digits10 <= 110) && std::is_constructible<T, const char*>::value ? 4 : 999
       ) : (std::numeric_limits<T>::digits10 <= 110) && std::is_constructible<T, const char*>::value ? 4 : 999;
-   
+
    using storage_type =
       std::conditional_t<(std::numeric_limits<T>::is_specialized == 0), T,
          std::conditional_t<(std::numeric_limits<T>::radix == 2),

@@ -17,7 +17,7 @@ void pipeline_not_disabled(int *List, int Length, int Value) {
 }
 
 void pipeline_initiation_interval(int *List, int Length, int Value) {
-// CHECK-LABEL: define {{.*}} @_Z28pipeline_initiation_interval 
+// CHECK-LABEL: define {{.*}} @_Z28pipeline_initiation_interval
 #pragma clang loop pipeline_initiation_interval(10)
   for (int i = 0; i < Length; i++) {
     // CHECK: br label {{.*}}, !llvm.loop ![[LOOP_3:.*]]

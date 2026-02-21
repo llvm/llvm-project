@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -O2 -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o -  | FileCheck %s
-struct agg 
+struct agg
 {
 int a ;
 int b ;

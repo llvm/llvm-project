@@ -22,7 +22,7 @@ void call() {
 // CHECK: call void @_ZN1Y3getEv
 // CHECK-NEXT: call void @_ZN1XD1Ev
 // CHECK-NEXT: ret void
-template void call<int>();  
+template void call<int>();
 
 template<typename T>
 void compound_literal() {
@@ -33,5 +33,5 @@ void compound_literal() {
 // CHECK: call void @_ZN1XC1Ev
 // CHECK-NEXT: call void @_ZN2X2D1Ev
 // CHECK-NEXT: ret void
-template void compound_literal<int>();  
+template void compound_literal<int>();
 

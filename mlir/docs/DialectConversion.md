@@ -400,7 +400,7 @@ Note: context-aware type conversion functions impact the ability of the
 framework to cache the conversion result. In the absence of a context-aware
 conversion, all context-free type conversions can be cached. Otherwise only the
 context-free conversions added after a context-aware type conversion can be
-cached (conversions are applied in reverse order). 
+cached (conversions are applied in reverse order).
 As such it is advised to add context-aware conversions as early as possible in
 the sequence of `addConversion` calls (so that they apply last).
 
@@ -548,7 +548,7 @@ the respective type converter callback whenever a materialization is required.
 From the perspective of type conversion, the types of block arguments are a bit
 special. Throughout the conversion process, blocks may move between regions of
 different operations. Given this, the conversion of the types for blocks must be
-done explicitly via a conversion pattern. 
+done explicitly via a conversion pattern.
 
 To convert the types of block arguments within a Region, a custom hook on the
 `ConversionPatternRewriter` must be invoked; `convertRegionTypes`. This hook

@@ -11,7 +11,7 @@ public:
 };
 
 void paren_test() {
-    Baz baz;     
+    Baz baz;
     int& n = baz.protected_num_;
     sink_protected(n); // expected-warning{{reading variable 'protected_num_' requires holding mutex 'baz.lock_'}}
     int& n2 = (baz.protected_num_);

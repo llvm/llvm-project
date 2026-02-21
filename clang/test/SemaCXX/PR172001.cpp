@@ -41,7 +41,7 @@ void f() {
   float a = 0.0f, b = 0.0f; // float <=> float requires std::partial_ordering
 #endif
 
-  auto res = a <=> b; 
+  auto res = a <=> b;
 
   // test1-error@-2 {{standard library implementation of 'std::partial_ordering' is not supported; the type does not have the expected form}}
   // test2-error@-3 {{cannot use builtin operator '<=>' because type 'std::partial_ordering' was not found; include <compare>}}

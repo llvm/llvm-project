@@ -15,12 +15,12 @@ void test_stringswitch(int argc, char *argv[]) {
 }
 
 namespace PR6986 {
-  template<class Class,typename Type,Type Class::*> 
+  template<class Class,typename Type,Type Class::*>
   struct non_const_member_base
   {
   };
 
-  template<class Class,typename Type,Type Class::*PtrToMember> 
+  template<class Class,typename Type,Type Class::*PtrToMember>
   struct member: non_const_member_base<Class,Type,PtrToMember>
   {
   };
@@ -40,13 +40,13 @@ namespace rdar8980215 {
   enum E { E1, E2, E3 };
 
   template<typename T, E e = E2>
-  struct X0 { 
+  struct X0 {
     X0() {}
     template<typename U> X0(const X0<U, e> &);
   };
 
   template<typename T>
-  struct X1 : X0<T> { 
+  struct X1 : X0<T> {
     X1() {}
     template<typename U> X1(const X1<U> &x) : X0<T>(x) { }
   };

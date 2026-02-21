@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-class C { 
+class C {
 public:
   void f(int i = 3); // expected-note{{here}}
   void g(int i, int j = 99);
@@ -18,7 +18,7 @@ void test_C(C c) {
 template<typename T>
 struct X0 {
   void f(int);
-  
+
   struct Inner {
     void g(int);
   };

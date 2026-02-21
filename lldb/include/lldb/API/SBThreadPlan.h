@@ -30,7 +30,7 @@ public:
 
   SBThreadPlan(lldb::SBThread &thread, const char *class_name);
 
-  SBThreadPlan(lldb::SBThread &thread, const char *class_name, 
+  SBThreadPlan(lldb::SBThread &thread, const char *class_name,
                lldb::SBStructuredData &args_data);
 
   ~SBThreadPlan();

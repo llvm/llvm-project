@@ -20,12 +20,12 @@ enum class EnumType
 };
 
 template <EnumType Arg> class EnumTemplate;
-                                          
+
 //----------------------------------------------------------------------
 // Specialization for use when "Arg" is "EnumType::Member"
 //----------------------------------------------------------------------
 template <>
-class EnumTemplate<EnumType::Member> 
+class EnumTemplate<EnumType::Member>
 {
 public:
     EnumTemplate(int m) :
@@ -46,13 +46,13 @@ protected:
 // Specialization for use when "Arg" is "EnumType::Subclass"
 //----------------------------------------------------------------------
 template <>
-class EnumTemplate<EnumType::Subclass> : 
-    public EnumTemplate<EnumType::Member> 
+class EnumTemplate<EnumType::Subclass> :
+    public EnumTemplate<EnumType::Member>
 {
 public:
     EnumTemplate(int m) : EnumTemplate<EnumType::Member>(m)
     {
-    }    
+    }
 };
 
 template <typename FLOAT> struct T1 { FLOAT f = 1.5; };

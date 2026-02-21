@@ -95,7 +95,7 @@ int main() {
   // CHECK: {{^}}0: NULL_POINTER=[[NULL:.*$]]
 
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_initial_task_begin: parallel_id={{[0-f]+}}
-  // CHECK-SAME: task_id=[[INITIAL_TASK_ID:[0-f]+]], actual_parallelism=1, index=1, flags=1 
+  // CHECK-SAME: task_id=[[INITIAL_TASK_ID:[0-f]+]], actual_parallelism=1, index=1, flags=1
 
   // CHECK-NOT: 0: parallel_data initially not null
 

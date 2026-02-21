@@ -3,7 +3,7 @@
 template <class T>
 void ignore_template(const T *) {}
 void ignore(const int *) {}
-void dont_ignore_non_empty(const int *) { ; } 
+void dont_ignore_non_empty(const int *) { ; }
 void dont_ignore_block(const int *) { {} }
 void dont_ignore_try_block(const int *) try {
 } catch (...) {

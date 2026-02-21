@@ -5,7 +5,7 @@
 // dependency information.
 
 // The first compilation verifies that transitive dependencies on local input are captured.
-// The second compilation verifies that external paths are resolved when a 
+// The second compilation verifies that external paths are resolved when a
 // vfsoverlay for determining is-in-stable-directories.
 
 // RUN: rm -rf %t
@@ -66,7 +66,7 @@ module A {
 //--- Sysroot/usr/include/A/A.h
 #ifdef USE_VFS
 #include <A/A_vfs.h>
-#endif 
+#endif
 typedef int A_t;
 
 //--- SysrootButNotReally/A/A_vfs.h

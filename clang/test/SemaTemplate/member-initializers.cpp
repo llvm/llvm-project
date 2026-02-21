@@ -3,7 +3,7 @@
 
 template<typename T> struct A {
   A() : j(10), i(10) { }
-  
+
   int i;
   int j;
 };

@@ -38,23 +38,23 @@ static cl::opt<std::string> TrainingLog(
 static cl::opt<std::string> TFModelUnderTrainingPath(
     "ml-inliner-model-under-training", cl::Hidden,
     cl::desc(R"(Path to SavedModel from the previous training iteration.
-The directory is also expected to contain a JSON specification of the 
-outputs expected to be logged, where the first entry must be the 
-inlining decision. The file containing the specification should be 
-called output_spec.json. The expected JSON value is an array of 
-dictionaries. Each dictionary should have 2 keys: 
+The directory is also expected to contain a JSON specification of the
+outputs expected to be logged, where the first entry must be the
+inlining decision. The file containing the specification should be
+called output_spec.json. The expected JSON value is an array of
+dictionaries. Each dictionary should have 2 keys:
 
 - "tensor_spec, followed by the TensorSpec description of the
-output; and 
+output; and
 - "logging_name", a string indicating the name to use when
-logging the output values. 
+logging the output values.
 
 Example:
 [
   {
-    "logging_name" : "some_name", 
-    "tensor_spec" : { 
-      "name" : "model_name", 
+    "logging_name" : "some_name",
+    "tensor_spec" : {
+      "name" : "model_name",
       "port" : 0,
       "shape" : [2, 3],
       "type" : "float"

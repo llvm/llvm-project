@@ -3,13 +3,13 @@
 template<typename T>
 struct X0 {
   void f();
-  
+
   template<typename U>
   void g(U);
-  
+
   struct Nested {
   };
-  
+
   static T member;
 };
 
@@ -39,16 +39,16 @@ template<>
 struct X0<int> { }; // expected-error{{after instantiation}}
 
 // Example from the standard
-template<class T> class Array { /* ... */ }; 
+template<class T> class Array { /* ... */ };
 
 template<class T> void sort(Array<T>& v) { /* ... */ }
 
 struct String {};
 
 void f(Array<String>& v) {
-  
+
   sort(v); // expected-note{{required}}
-           // use primary template 
+           // use primary template
            // sort(Array<T>&), T is String
 }
 

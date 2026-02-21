@@ -39,12 +39,12 @@ void test_explicit_spec_simple() {
 void test_explicit_spec_extension(double *dp) {
   int *ip1 = first_arg<int *>(0, 0);
   int *ip2 = first_arg<int *, float*>(0, 0, 0, 0);
-  float *fp1 = first_arg<float *, double*, int*>(0, 0, 0);  
-  int *i1 = second_arg<float *>(0, (int*)0, 0);  
+  float *fp1 = first_arg<float *, double*, int*>(0, 0, 0);
+  int *i1 = second_arg<float *>(0, (int*)0, 0);
   double *dp1 = first_arg<>(dp);
 }
 
-template<typename ...Types> 
+template<typename ...Types>
 struct tuple { };
 
 template<typename ...Types>

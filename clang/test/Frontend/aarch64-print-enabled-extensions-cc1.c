@@ -100,7 +100,7 @@
 // NEG_ONLY-NEXT:     FEAT_TRBE                                              Enable Trace Buffer Extension
 
 // DISABLE_DEP: Extensions enabled for the given AArch64 target
-// DISABLE_DEP-EMPTY: 
+// DISABLE_DEP-EMPTY:
 // DISABLE_DEP-NEXT:     Architecture Feature(s)                                Description
 // DISABLE_DEP-NEXT:     FEAT_AdvSIMD                                           Enable Advanced SIMD instructions
 // DISABLE_DEP-NEXT:     FEAT_ETE                                               Enable Embedded Trace Extension
@@ -109,7 +109,7 @@
 // DISABLE_DEP-NEXT:     FEAT_TRBE                                              Enable Trace Buffer Extension
 
 // DISABLE_DEP2: Extensions enabled for the given AArch64 target
-// DISABLE_DEP2-EMPTY: 
+// DISABLE_DEP2-EMPTY:
 // DISABLE_DEP2-NEXT:     Architecture Feature(s)                                Description
 // DISABLE_DEP2-NEXT:     FEAT_AdvSIMD                                           Enable Advanced SIMD instructions
 // DISABLE_DEP2-NEXT:     FEAT_ETE                                               Enable Embedded Trace Extension
@@ -120,7 +120,7 @@
 // DISABLE_DEP2-NEXT:     FEAT_TRBE                                              Enable Trace Buffer Extension
 
 // DISABLE_VIA_XCLANG: Extensions enabled for the given AArch64 target
-// DISABLE_VIA_XCLANG-EMPTY: 
+// DISABLE_VIA_XCLANG-EMPTY:
 // DISABLE_VIA_XCLANG-NEXT:     Architecture Feature(s)                                Description
 // DISABLE_VIA_XCLANG-NEXT:     FEAT_AdvSIMD                                           Enable Advanced SIMD instructions
 // DISABLE_VIA_XCLANG-NEXT:     FEAT_ETE                                               Enable Embedded Trace Extension

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fsyntax-only -verify 
+// RUN: %clang_cc1 %s -fsyntax-only -verify
 
 typedef struct __CFError * CFErrorRef; // expected-note {{forward declaration of 'struct __CFError'}}
 

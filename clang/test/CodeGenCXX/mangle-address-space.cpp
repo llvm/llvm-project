@@ -6,7 +6,7 @@
 // CHECKNOOCL-LABEL: define {{.*}}void @_Z2f0Pc
 // WINNOOCL-LABEL: define {{.*}}void @"?f0@@YAXPEAD@Z"
 // CHECKOCL-LABEL: define {{.*}}void @_Z2f0PU9CLgenericc
-// WINOCL-LABEL: define {{.*}}void @"?f0@@YAXPEAU?$_ASCLgeneric@$$CAD@__clang@@@Z" 
+// WINOCL-LABEL: define {{.*}}void @"?f0@@YAXPEAU?$_ASCLgeneric@$$CAD@__clang@@@Z"
 void f0(char *p) { }
 // CHECK-LABEL: define {{.*}}void @_Z2f0PU3AS1c
 // WIN-LABEL: define {{.*}}void @"?f0@@YAXPEAU?$_AS@$00$$CAD@__clang@@@Z"

@@ -3,5 +3,5 @@
 class A {
 public:
   int x;
-}; 
+};
 A a;

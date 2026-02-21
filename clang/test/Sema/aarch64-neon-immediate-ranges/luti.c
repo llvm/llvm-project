@@ -189,7 +189,7 @@ void test_lookup_read_2bit_p16(poly16x4_t arg_p16x4, poly16x8_t arg_p16x8, uint8
 
 }
 
-// 4-bit indices 
+// 4-bit indices
 
 void test_lookup_read_4bit_u8(uint8x8_t arg_u8x8, uint8x16_t arg_u8x16) {
 	vluti4q_lane_u8(arg_u8x16, arg_u8x8, 0);

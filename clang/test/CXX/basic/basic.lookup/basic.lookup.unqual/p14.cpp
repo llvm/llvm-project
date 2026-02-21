@@ -7,14 +7,14 @@
 //   the variable member (after the declarator-id) is looked up as if
 //   the definition of the variable member occurred in its namespace.
 
-namespace N { 
+namespace N {
   struct S {};
-  S i; 
+  S i;
   extern S j;
   extern S j2;
-} 
+}
 
-int i = 2; 
+int i = 2;
 N::S N::j = i;
 N::S N::j2(i);
 
@@ -57,7 +57,7 @@ namespace M2 {
   extern "C" {
     namespace MInner {
       extern "C" {
-        class Bar { 
+        class Bar {
           void bar();
         };
       }

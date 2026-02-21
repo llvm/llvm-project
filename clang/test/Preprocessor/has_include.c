@@ -228,7 +228,7 @@ __has_include
 #endif
 
 #if __has_include_next(MACRO6/*expected-warning {{#include_next in primary source file}}*/\
-) 
+)
 #else
   #error "__has_include_next failed (10)."
 #endif
@@ -252,7 +252,7 @@ int.h>
 #endif
 
 #if __has_include_next(MACRO7/*expected-warning {{#include_next in primary source file}}*/\
-) 
+)
 #else
   #error "__has_include_next failed (12)."
 #endif

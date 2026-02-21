@@ -174,11 +174,11 @@ void fixits_in_lambda_capture() {
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
-  
+
   auto my_lambda = [p](){ // No fixits emitted here.
     foo(p);
   };
-  
+
   p[5] = 10;
 }
 
@@ -187,7 +187,7 @@ void fixits_in_lambda_capture_reference() {
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
- 
+
   auto my_lambda = [&p](){ // No fixits emitted here.
     foo(p);
   };
@@ -200,7 +200,7 @@ void fixits_in_lambda_capture_rename() {
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
-  
+
   auto my_lambda = [x = p](){ // No fixits emitted here.
     foo(x);
   };

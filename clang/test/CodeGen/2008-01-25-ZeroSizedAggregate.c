@@ -27,7 +27,7 @@ struct {
   char :0;
   struct{}h;
   char * i[5];
-} data; 
+} data;
 
 // Taking address of a zero sized field.
 struct Z {};

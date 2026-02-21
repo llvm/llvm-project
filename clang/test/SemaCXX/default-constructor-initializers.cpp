@@ -59,17 +59,17 @@ struct Y1 { // has no implicit default constructor
    Y1(int);
 };
 
-struct Y2  : Y1 { 
+struct Y2  : Y1 {
    Y2(int);
    Y2();
 };
 
 struct Y3 : public Y2 {
 };
-Y3 y3; 
+Y3 y3;
 
 struct Y4 {
-  Y2 y2; 
+  Y2 y2;
 };
 
 Y4 y4;

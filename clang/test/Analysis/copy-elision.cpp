@@ -155,7 +155,7 @@ public:
 };
 
 // Two warnings on no-elide: arg v holds the address of the temporary, and we
-// are returning an object which holds v which holds the address of the temporary 
+// are returning an object which holds v which holds the address of the temporary
 ClassWithoutDestructor make1(AddressVector<ClassWithoutDestructor> &v) {
   return ClassWithoutDestructor(v); // no-elide-warning{{Address of stack memory associated with temporary object of type 'ClassWithoutDestructor' returned to caller}}
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \
@@ -163,7 +163,7 @@ object of type 'ClassWithoutDestructor' is still \
 referred to by the caller variable 'v' upon returning to the caller}}
 }
 // Two warnings on no-elide: arg v holds the address of the temporary, and we
-// are returning an object which holds v which holds the address of the temporary 
+// are returning an object which holds v which holds the address of the temporary
 ClassWithoutDestructor make2(AddressVector<ClassWithoutDestructor> &v) {
   return make1(v); // no-elide-warning{{Address of stack memory associated with temporary object of type 'ClassWithoutDestructor' returned to caller}}
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \
@@ -171,7 +171,7 @@ object of type 'ClassWithoutDestructor' is still \
 referred to by the caller variable 'v' upon returning to the caller}}
 }
 // Two warnings on no-elide: arg v holds the address of the temporary, and we
-// are returning an object which holds v which holds the address of the temporary 
+// are returning an object which holds v which holds the address of the temporary
 ClassWithoutDestructor make3(AddressVector<ClassWithoutDestructor> &v) {
   return make2(v); // no-elide-warning{{Address of stack memory associated with temporary object of type 'ClassWithoutDestructor' returned to caller}}
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \

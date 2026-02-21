@@ -396,7 +396,7 @@ endif()
 
 add_compiler_rt_resource_file(asan_ignorelist asan_ignorelist.txt asan)
 
-# On AIX, static sanitizer libraries are not added to the DSO, so we need to put 
+# On AIX, static sanitizer libraries are not added to the DSO, so we need to put
 # asan.link_with_main_exec.txt and asan_cxx.link_with_main_exec.txt to the build
 # and install dir for use in resolving undefined sanitizer symbols at runtime.
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")

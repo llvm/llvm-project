@@ -13,7 +13,7 @@ void test(void) {
   struct Q s[] = {
     [0] = (struct Q){1, 2},
     [0].c = 3
-  }; 
+  };
 }
 
 // CHECK: void test(void)
@@ -36,5 +36,5 @@ void test(void) {
 // CHECK:  18: /*no init*/
 // CHECK:  19: 3
 // CHECK:  20: {[B1.17], [B1.18], [B1.19]}
-// CHECK:  21: {/*base*/[B1.16], /*updater*/[B1.20]} 
+// CHECK:  21: {/*base*/[B1.16], /*updater*/[B1.20]}
 // CHECK:  23: struct Q s[] = {[0] = (struct Q){1, 2}, [0].c = 3};

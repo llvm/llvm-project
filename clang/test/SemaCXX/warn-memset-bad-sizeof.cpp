@@ -283,7 +283,7 @@ void check_prints(){
     // expected-warning@#fooType_diagnostic {{'snprintf' call operates on objects of type 'void' while the size is based on a different type 'void *'}}
     // expected-note@#fooType_diagnostic {{did you mean to dereference the argument to 'sizeof' (and multiply it by the number of elements)?}}
     // expected-note@#fooType_voidptr_call {{in instantiation of function template specialization 'fooType<void *>' requested here}}
-    
+
     fooType<char>(); // #fooType_char_call
     // expected-error@#fooType_error {{cast from pointer to smaller type 'char' loses information}}
     // expected-note@#fooType_char_call {{in instantiation of function template specialization 'fooType<char>' requested here}}

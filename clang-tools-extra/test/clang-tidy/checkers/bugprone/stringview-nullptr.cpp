@@ -149,7 +149,7 @@ void temporary_construction() /* a */ {
     // CHECK-FIXES: (void)(std::string_view()) /* a4 */;
 
     // Default `const CharT*`
-    (void)(std::string_view({})) /* a5 */; 
+    (void)(std::string_view({})) /* a5 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing{{.*}}default
     // CHECK-FIXES: (void)(std::string_view()) /* a5 */;
   }

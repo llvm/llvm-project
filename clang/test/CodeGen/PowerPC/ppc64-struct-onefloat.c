@@ -25,7 +25,7 @@ void bar(Sf a, Sd b, SSf d, SSd e) {}
 // CHECK:  store double %e.coerce, ptr %{{[a-zA-Z0-9.]+}}, align 8
 // CHECK:  ret void
 
-void foo(void) 
+void foo(void)
 {
   Sf p1 = { 22.63f };
   Sd p2 = { 19.47 };

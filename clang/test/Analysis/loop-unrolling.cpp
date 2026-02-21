@@ -381,7 +381,7 @@ int nested_inlined_no_unroll1() {
   int k;
   for (int i = 0; i < 40; i++) {
     clang_analyzer_numTimesReached(); // default-warning {{9}} dfs-warning {{12}}
-    k = simple_unknown_bound_loop(); 
+    k = simple_unknown_bound_loop();
   }
   int a = 22 / k; // no-warning
   return 0;

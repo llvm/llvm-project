@@ -16,5 +16,5 @@ int main (int argc, char const *argv[])
 {
     D myD { D::anInt() };
     foo(&myD);
-    return 0; 
+    return 0;
 }

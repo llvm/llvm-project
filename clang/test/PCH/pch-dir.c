@@ -1,9 +1,9 @@
 // RUN: rm -rf %t.h.gch
 // RUN: mkdir -p %t.h.gch
 //
-// RUN: %clang -x c-header %S/pch-dir.h -DFOO=foo -o %t.h.gch/c.gch 
-// RUN: %clang -x c-header %S/pch-dir.h -DFOO=bar -o %t.h.gch/cbar.gch 
-// RUN: %clang -x c++-header -std=c++98 %S/pch-dir.h -o %t.h.gch/cpp.gch 
+// RUN: %clang -x c-header %S/pch-dir.h -DFOO=foo -o %t.h.gch/c.gch
+// RUN: %clang -x c-header %S/pch-dir.h -DFOO=bar -o %t.h.gch/cbar.gch
+// RUN: %clang -x c++-header -std=c++98 %S/pch-dir.h -o %t.h.gch/cpp.gch
 // RUN: %clang -include %t.h -DFOO=foo -fsyntax-only %s -Xclang -print-stats 2> %t.clog
 // RUN: FileCheck -check-prefix=CHECK-C %s < %t.clog
 // RUN: %clang -include %t.h -DFOO=bar -fsyntax-only %s -Xclang -ast-print > %t.cbarlog

@@ -11,10 +11,10 @@ int* f2(int y) {
 
 int* f3(int x, int *y) {
   int w = 0;
-  
+
   if (x)
     y = &w;
-    
+
   return y; // expected-warning{{Address of stack memory associated with local variable 'w' returned to caller}}
 }
 
@@ -26,12 +26,12 @@ void* compound_literal(int x, int y) {
 
   int* array[] = {};
   struct s { int z; double y; int w; };
-  
+
   if (y)
     return &((struct s){ 2, 0.4, 5 * 8 });
   // expected-warning-re@-1{{Address of stack memory associated with a compound literal declared on line {{[0-9]+}} returned to caller [core.StackAddressEscape]}}
   // expected-warning@-2{{address of stack memory}}
-  
+
   void* p = &((struct s){ 42, 0.4, x ? 42 : 0 });
   return p;
   // expected-warning-re@-1{{Address of stack memory associated with a compound literal declared on line {{[0-9]+}} returned to caller [core.StackAddressEscape]}}
@@ -52,7 +52,7 @@ struct baz {
 };
 
 int struct_test(struct baz byVal, int flag) {
-  if (flag)  
+  if (flag)
     return byVal.x; // no-warning
   else {
     return byVal.y[0]; // no-warning

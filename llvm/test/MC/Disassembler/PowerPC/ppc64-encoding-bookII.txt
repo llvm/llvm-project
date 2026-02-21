@@ -1,15 +1,15 @@
 # RUN: llvm-mc --disassemble %s -triple powerpc64-unknown-unknown -mcpu=pwr7 | FileCheck %s
 
-# CHECK: icbi 2, 3                       
+# CHECK: icbi 2, 3
 0x7c 0x02 0x1f 0xac
 
 # CHECK: icbt 0, 5, 31
 0x7c 0x05 0xf8 0x2c
 
-# CHECK: dcbt 2, 3                       
+# CHECK: dcbt 2, 3
 0x7c 0x02 0x1a 0x2c
 
-# CHECK: dcbtst 2, 3                     
+# CHECK: dcbtst 2, 3
 0x7c 0x02 0x19 0xec
 
 # CHECK: dcbt 2, 3, 10
@@ -18,19 +18,19 @@
 # CHECK: dcbtst 2, 3, 10
 0x7d 0x42 0x19 0xec
 
-# CHECK: dcbz 2, 3                       
+# CHECK: dcbz 2, 3
 0x7c 0x02 0x1f 0xec
 
-# CHECK: dcbst 2, 3                      
+# CHECK: dcbst 2, 3
 0x7c 0x02 0x18 0x6c
 
-# CHECK: isync                           
+# CHECK: isync
 0x4c 0x00 0x01 0x2c
 
-# CHECK: stwcx. 2, 3, 4                  
+# CHECK: stwcx. 2, 3, 4
 0x7c 0x43 0x21 0x2d
 
-# CHECK: stdcx. 2, 3, 4                  
+# CHECK: stdcx. 2, 3, 4
 0x7c 0x43 0x21 0xad
 
 # CHECK: stqcx. 2, 3, 4
@@ -48,7 +48,7 @@
 # CHECK: ptesync
 0x7c 0x40 0x04 0xac
 
-# CHECK: eieio                           
+# CHECK: eieio
 0x7c 0x00 0x06 0xac
 
 # CHECK: waitimpl
@@ -57,7 +57,7 @@
 # CHECK: mbar 1
 0x7c 0x20 0x06 0xac
 
-# CHECK: dcbf 2, 3                       
+# CHECK: dcbf 2, 3
 0x7c 0x02 0x18 0xac
 
 # CHECK: dcbfl 2, 3
@@ -129,10 +129,10 @@
 # CHECK: waitimpl
 0x7c 0x40 0x00 0x3c
 
-# CHECK: mftb 2, 123                     
+# CHECK: mftb 2, 123
 0x7c 0x5b 0x1a 0xe6
 
-# CHECK: mftb 2, 268                     
+# CHECK: mftb 2, 268
 0x7c 0x4c 0x42 0xe6
 
 # CHECK: mftbu 2

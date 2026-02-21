@@ -65,7 +65,7 @@ struct ClangExpressionDeclMapTest : public testing::Test {
   std::unique_ptr<FakeClangExpressionDeclMap> decl_map;
 
   std::unique_ptr<clang_utils::TypeSystemClangHolder> holder;
-  
+
   /// The target AST that lookup results should be imported to.
   TypeSystemClang *target_ast;
 

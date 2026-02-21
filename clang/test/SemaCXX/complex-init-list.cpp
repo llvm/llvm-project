@@ -5,7 +5,7 @@
 // if you have an explicit init list for a complex number that contains two
 // initializers, this extension kicks in to turn it into component-wise
 // initialization.
-// 
+//
 // See also the testcase for the C version of this extension in
 // test/Sema/complex-init-list.c.
 

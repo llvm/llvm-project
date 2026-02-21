@@ -74,13 +74,13 @@ int g[16] = {1, 2, 3, 4, 5, 6, 7, 8};
 // CIR-SAME:                     : !cir.array<!s32i x 8>,
 // CIR-SAME:   #cir.zero : !cir.array<!s32i x 8>}> : !rec_anon_struct1
 
-// LLVM:       @g = global <{ [8 x i32], [8 x i32] }> 
+// LLVM:       @g = global <{ [8 x i32], [8 x i32] }>
 // LLVM-SAME:          <{ [8 x i32]
 // LLVM-SAME:              [i32 1, i32 2, i32 3, i32 4,
 // LLVM-SAME:               i32 5, i32 6, i32 7, i32 8],
 // LLVM-SAME:             [8 x i32] zeroinitializer }>
 
-// OGCG:       @g = global <{ [8 x i32], [8 x i32] }> 
+// OGCG:       @g = global <{ [8 x i32], [8 x i32] }>
 // OGCG-SAME:          <{ [8 x i32]
 // OGCG-SAME:              [i32 1, i32 2, i32 3, i32 4,
 // OGCG-SAME:               i32 5, i32 6, i32 7, i32 8],

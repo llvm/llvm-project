@@ -11,7 +11,7 @@ void test1(void) {
   C = P - (P+10);
 }
 
-short x; 
+short x;
 void test2(char c) { x += c; }
 
 void foo(char *strbuf) {

@@ -36,23 +36,23 @@ int main(int argc, char *argv[]) {
     char *libsuffix = "-dynamic.so";
     char *libpath = malloc(strlen(argv[0]) + strlen(libsuffix) + 1);
     sprintf(libpath, "%s%s", argv[0], libsuffix);
-    
+
     void *handle = dlopen(libpath, RTLD_NOW);
     if (!handle) {
       fprintf(stderr, "dlopen: %s\n", dlerror());
       return 1;
     }
-    
+
     char *buffer = (char *)dlsym(handle, "buffer3");
     if (!buffer) {
       fprintf(stderr, "dlsym: %s\n", dlerror());
       return 1;
     }
-    
+
     buffer[argc] = 0;
     // ASAN-CHECK-3: {{0x.* is located 1 bytes .* 'buffer3'}}
   }
-  
+
   return 0;
 }
 

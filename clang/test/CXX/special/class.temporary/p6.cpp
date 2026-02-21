@@ -282,7 +282,7 @@ void check_dr1815() { // dr1815: yes
     ~B() {}
   };
   B a = {};
-  
+
   // CHECK: call {{.*}}block_scope_begin_function
   extern void block_scope_begin_function();
   extern void block_scope_end_function();
@@ -391,7 +391,7 @@ ListWrapper<E> g_temp() { return ListWrapper<E>{}; }
 template <typename T>
 void member_call_dependent_context() {
   // CHECK-CXX23: void @_ZN7P2718R011member_call29member_call_dependent_contextIiEEvv()
-  // CHECK-CXX23-LABEL: for.cond.cleanup: 
+  // CHECK-CXX23-LABEL: for.cond.cleanup:
   // CHECK-CXX23-NEXT: call void @_ZN7P2718R011member_call11ListWrapperIiED1Ev(
   // CHECK-CXX23-NEXT: call void @_ZN7P2718R011member_call11ListWrapperIiED1Ev(
   // CHECK-CXX23-NEXT: call void @_ZN7P2718R011member_call11ListWrapperIiED1Ev(
@@ -565,7 +565,7 @@ void f1() {
   std::mutex m;
   // CHECK-CXX23: void @_ZN7P2718R024discard_value_expression2f1Ev()
   // CHECK-CXX23-LABEL: for.cond.cleanup:
-  // CHECK-CXX23-NEXT: call void @_ZNSt10lock_guardISt5mutexED1Ev( 
+  // CHECK-CXX23-NEXT: call void @_ZNSt10lock_guardISt5mutexED1Ev(
   for (int x : std::lock_guard<std::mutex>(m), v)  // lock released in C++ 2023
     std::lock_guard<std::mutex> guard(m);  // OK in C++ 2023, now deadlocks
 }

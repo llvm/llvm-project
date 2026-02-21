@@ -4,7 +4,7 @@
 //CHECK: {{.*}}: error: excess elements in scalar initializer
 //CHECK-NEXT: {{^}}_Complex double gz1 = {1, 2, 3};
 //CHECK-NEXT: {{^}}                             ^{{$}}
-_Complex double gz1 = {1, 2, 3}; 
+_Complex double gz1 = {1, 2, 3};
 
 //CHECK: {{.*}}: error: excess elements in scalar initializer
 //CHECK-NEXT: {{^}}_Complex double dd = {1.0, 2.0, 3.0};

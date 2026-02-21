@@ -10,7 +10,7 @@ typedef void (*fnptr)();
 void self_conversion()
 {
   // T->T is allowed per [expr.reinterpret.cast]p2 so long as it doesn't
-  // cast away constness, and is integral, enumeration, pointer or 
+  // cast away constness, and is integral, enumeration, pointer or
   // pointer-to-member.
   int i = 0;
   (void)reinterpret_cast<int>(i);

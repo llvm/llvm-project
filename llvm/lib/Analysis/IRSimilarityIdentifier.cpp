@@ -112,7 +112,7 @@ void IRInstructionData::setBranchSuccessors(
 ArrayRef<Value *> IRInstructionData::getBlockOperVals() {
   assert((isa<BranchInst>(Inst) ||
          isa<PHINode>(Inst)) && "Instruction must be branch or PHINode");
-  
+
   if (BranchInst *BI = dyn_cast<BranchInst>(Inst))
     return ArrayRef<Value *>(
       std::next(OperVals.begin(), BI->isConditional() ? 1 : 0),
@@ -557,7 +557,7 @@ static bool checkNumberingAndReplaceCommutative(
     // If we could not find a Value, return 0.
     if (NewSet.empty())
       return false;
-    
+
     // Otherwise replace the old mapping with the newly constructed one.
     if (NewSet.size() != ValueMappingIt->second.size())
       ValueMappingIt->second.swap(NewSet);
@@ -680,7 +680,7 @@ bool IRSimilarityCandidate::compareNonCommutativeOperandMapping(
 
 bool IRSimilarityCandidate::compareCommutativeOperandMapping(
     OperandMapping A, OperandMapping B) {
-  DenseSet<unsigned> ValueNumbersA;      
+  DenseSet<unsigned> ValueNumbersA;
   DenseSet<unsigned> ValueNumbersB;
 
   ArrayRef<Value *>::iterator VItA = A.OperVals.begin();
@@ -751,7 +751,7 @@ bool IRSimilarityCandidate::checkRelativeLocations(RelativeLocMapping A,
   DenseSet<BasicBlock *> BasicBlockB;
   A.IRSC.getBasicBlocks(BasicBlockA);
   B.IRSC.getBasicBlocks(BasicBlockB);
-  
+
   // Determine if the block is contained in the region.
   bool AContained = BasicBlockA.contains(ABB);
   bool BContained = BasicBlockB.contains(BBB);
@@ -760,7 +760,7 @@ bool IRSimilarityCandidate::checkRelativeLocations(RelativeLocMapping A,
   // the region.
   if (AContained != BContained)
     return false;
-  
+
   // If both are contained, then we need to make sure that the relative
   // distance to the target blocks are the same.
   if (AContained)
@@ -823,7 +823,7 @@ bool IRSimilarityCandidate::compareStructure(
     if (!compareAssignmentMapping(InstValA, InstValB, ValueNumberMappingA,
                                   ValueNumberMappingB))
       return false;
-    
+
     if (!compareAssignmentMapping(InstValB, InstValA, ValueNumberMappingB,
                                   ValueNumberMappingA))
       return false;
@@ -1107,7 +1107,7 @@ void IRSimilarityCandidate::createCanonicalRelationFrom(
          "Canonical Relationship is non-empty");
   assert(!SourceCandLarge.NumberToCanonNum.empty() &&
          "Canonical Relationship is non-empty");
-  
+
   assert(!TargetCandLarge.CanonNumToNumber.empty() &&
          "Canonical Relationship is non-empty");
   assert(!TargetCandLarge.NumberToCanonNum.empty() &&
@@ -1124,7 +1124,7 @@ void IRSimilarityCandidate::createCanonicalRelationFrom(
     Value *CurrVal = ValueNumPair.first;
     unsigned TargetCandGVN = ValueNumPair.second;
 
-    // Find the numbering in the large candidate that surrounds the 
+    // Find the numbering in the large candidate that surrounds the
     // current candidate.
     std::optional<unsigned> OLargeTargetGVN = TargetCandLarge.getGVN(CurrVal);
     assert(OLargeTargetGVN.has_value() && "GVN not found for Value");
@@ -1134,13 +1134,13 @@ void IRSimilarityCandidate::createCanonicalRelationFrom(
         TargetCandLarge.getCanonicalNum(OLargeTargetGVN.value());
     assert(OTargetCandCanon.has_value() &&
            "Canononical Number not found for GVN");
-    
+
     // Get the GVN in the large source candidate from the canonical numbering.
     std::optional<unsigned> OLargeSourceGVN =
         SourceCandLarge.fromCanonicalNum(OTargetCandCanon.value());
     assert(OLargeSourceGVN.has_value() &&
            "GVN Number not found for Canonical Number");
-    
+
     // Get the Value from the GVN in the large source candidate.
     std::optional<Value *> OLargeSourceV =
         SourceCandLarge.fromGVN(OLargeSourceGVN.value());
@@ -1249,7 +1249,7 @@ CheckLargerCands(
   // whether or not there is a match.
   if (IncludedGroupsA.empty())
     return Result;
-  
+
   // Create a pair that contains the larger candidates.
   auto ItA = IncludedGroupAndCandA.find(*IncludedGroupsA.begin());
   auto ItB = IncludedGroupAndCandB.find(*IncludedGroupsA.begin());
@@ -1382,7 +1382,7 @@ void IRSimilarityIdentifier::findCandidates(
 
   DenseMap<unsigned, SimilarityGroup> StructuralGroups;
   DenseMap<unsigned, DenseSet<IRSimilarityCandidate *>> IndexToIncludedCand;
-  DenseMap<IRSimilarityCandidate *, unsigned> CandToGroup; 
+  DenseMap<IRSimilarityCandidate *, unsigned> CandToGroup;
 
   // Iterate over the subsequences found by the Suffix Tree to create
   // IRSimilarityCandidates for each repeated subsequence and determine which

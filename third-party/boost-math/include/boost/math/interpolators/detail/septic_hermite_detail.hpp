@@ -21,7 +21,7 @@ template<class RandomAccessContainer>
 class septic_hermite_detail {
 public:
     using Real = typename RandomAccessContainer::value_type;
-    septic_hermite_detail(RandomAccessContainer && x, RandomAccessContainer && y, RandomAccessContainer && dydx, RandomAccessContainer && d2ydx2, RandomAccessContainer && d3ydx3) 
+    septic_hermite_detail(RandomAccessContainer && x, RandomAccessContainer && y, RandomAccessContainer && dydx, RandomAccessContainer && d2ydx2, RandomAccessContainer && d3ydx3)
     : x_{std::move(x)}, y_{std::move(y)}, dydx_{std::move(dydx)}, d2ydx2_{std::move(d2ydx2)}, d3ydx3_{std::move(d3ydx3)}
     {
         if (x_.size() != y_.size())
@@ -94,7 +94,7 @@ public:
         Real dx = (x1-x0);
         Real t = (x-x0)/dx;
 
-        // See: 
+        // See:
         // http://seisweb.usask.ca/classes/GEOL481/2017/Labs/interpolation_utilities_matlab/shermite.m
         Real t2 = t*t;
         Real t3 = t2*t;
@@ -336,7 +336,7 @@ public:
         {
             return dy_[i]/inv_dx_;
         }
- 
+
         Real y0 = y_[i];
         Real y1 = y_[i+1];
         Real dy0 = dy_[i];

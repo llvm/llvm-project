@@ -1098,7 +1098,7 @@ static void update_row_sign(struct isl_tab *tab, int row, int col, int row_sgn)
  *
  * with a_jc \ne 0, we obtain
  *
- *	x_j = a_jc/a_rc x_r + a_j0 - a_jc a_r0/a_rc + sum a_ji - a_jc a_ri/a_rc 
+ *	x_j = a_jc/a_rc x_r + a_j0 - a_jc a_r0/a_rc + sum a_ji - a_jc a_ri/a_rc
  *
  * The tableau
  *

@@ -61,11 +61,11 @@ void f() {
 void f2() {
   // CODE-LP64: store { i64, i64 } { i64 ptrtoint (ptr @_ZN1A1fEv to i64), i64 0 }
   void (A::*pa2)() = &A::f;
-  
+
   // CODE-LP64: store { i64, i64 } { i64 1, i64 0 }
   // CODE-LP32: store { i32, i32 } { i32 1, i32 0 }
   void (A::*pa3)() = &A::vf1;
-  
+
   // CODE-LP64: store { i64, i64 } { i64 9, i64 0 }
   // CODE-LP32: store { i32, i32 } { i32 5, i32 0 }
   void (A::*pa4)() = &A::vf2;
@@ -106,7 +106,7 @@ namespace PR5138 {
   extern "C" {
     void baz(foo *);
   }
-  
+
   void (foo::*ptr1)(void *) = (void (foo::*)(void *))&foo::bar;
   void (*ptr2)(void *) = (void (*)(void *))&baz;
 
@@ -116,7 +116,7 @@ namespace PR5138 {
 // PR5593
 namespace PR5593 {
   struct A { };
-  
+
   bool f(void (A::*f)()) {
     return f && f;
   }
@@ -124,7 +124,7 @@ namespace PR5593 {
 
 namespace PR5718 {
   struct A { };
-  
+
   bool f(void (A::*f)(), void (A::*g)()) {
     return f == g;
   }
@@ -132,7 +132,7 @@ namespace PR5718 {
 
 namespace BoolMemberPointer {
   struct A { };
-  
+
   bool f(void (A::*f)()) {
     return !f;
   }
@@ -181,7 +181,7 @@ namespace PR6258 {
   }
 }
 
-// PR7027 
+// PR7027
 namespace PR7027 {
   struct X { void test( ); };
   void testX() { &X::test; }
@@ -209,7 +209,7 @@ namespace test7 {
 namespace test8 {
   struct X { };
   typedef int (X::*pmf)(int);
-  
+
   // CHECK: {{define.*_ZN5test81fEv}}
   pmf f() {
     // CHECK: {{ret.*zeroinitializer}}

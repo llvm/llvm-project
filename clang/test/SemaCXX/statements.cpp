@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -fsyntax-only -pedantic -verify
 
-void foo() { 
+void foo() {
   return foo();
 }
 
@@ -11,7 +11,7 @@ struct X {
 
 void test2() {
   goto later;  // expected-error {{cannot jump}}
-  X x;         // expected-note {{jump bypasses variable initialization}} 
+  X x;         // expected-note {{jump bypasses variable initialization}}
 later:
   ;
 }

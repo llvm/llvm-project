@@ -11,9 +11,9 @@
 
 using namespace llvm;
 
-static cl::opt<bool> 
+static cl::opt<bool>
 DisableAddiLoadHeuristic("disable-ppc-sched-addi-load",
-                         cl::desc("Disable scheduling addi instruction before" 
+                         cl::desc("Disable scheduling addi instruction before"
                                   "load for ppc"), cl::Hidden);
 static cl::opt<bool>
     EnableAddiHeuristic("ppc-postra-bias-addi",

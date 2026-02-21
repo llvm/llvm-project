@@ -285,7 +285,7 @@ void registerMyExtension(::mlir::DialectRegistry &registry) {
 }
 ```
 
-After registering the extension, it becomes possible to use our new operation in the Transform dialect interpreter. The upstream testing pass can be used as is. It actually exists in `mlir/test/Examples/transform/Ch2/sequence.mlir`, which contains the `microkernel` implementation. 
+After registering the extension, it becomes possible to use our new operation in the Transform dialect interpreter. The upstream testing pass can be used as is. It actually exists in `mlir/test/Examples/transform/Ch2/sequence.mlir`, which contains the `microkernel` implementation.
 
 ```mlir
 module attributes {transform.with_named_sequence} {

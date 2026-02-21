@@ -544,7 +544,7 @@ const char *MachException::Name(exception_type_t exc_type) {
   return NULL;
 }
 
-// Returns the exception mask for a given exception name.  
+// Returns the exception mask for a given exception name.
 // 0 is not a legit mask, so we return that in the case of an error.
 exception_mask_t MachException::ExceptionMask(const char *name) {
   static const char *exception_prefix = "EXC_";

@@ -30,7 +30,7 @@ void Y::doSomething() {
   this->;
 
   // RUN: c-index-test -code-completion-at=%s:33:3 %s | FileCheck -check-prefix=CHECK-SUPER-ACCESS-IMPLICIT %s
-  
+
 
   Z that;
   // RUN: c-index-test -code-completion-at=%s:37:8 %s | FileCheck -check-prefix=CHECK-ACCESS %s

@@ -31,7 +31,7 @@ void test2(void) {
     vec2 = vec4.xy;  // shorten
     f = vec2.x;      // extract elt
     vec4 = vec4.yyyy;  // splat
-    
+
     vec2.x = f;      // insert one.
     vec2.yx = vec2; // reverse
 }
@@ -62,13 +62,13 @@ void test4(float4 *out) {
 void test5(float4 *out) {
   float a;
   float4 b;
-  
+
   a = 1.0f;
   b = a;
   b = b * 5.0f;
   b = 5.0f * b;
   b *= a;
-  
+
   *out = b;
 }
 
@@ -253,7 +253,7 @@ void test14(uint4 *ap, uint4 *bp, unsigned c) {
   uint4 a = *ap;
   uint4 b = *bp;
   int4 d;
-  
+
   // CHECK: udiv <4 x i32>
   // CHECK: urem <4 x i32>
   a = a / b;
@@ -290,7 +290,7 @@ int4 test15(uint4 V0) {
 // CHECK: @test16
 void test16(float2 a, float2 b) {
   float2 t0 = (a + b) / 2;
-} 
+}
 
 typedef char char16 __attribute__((ext_vector_type(16)));
 

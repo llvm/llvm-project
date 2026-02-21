@@ -93,14 +93,14 @@ namespace PR10291 {
   {
   public:
 
-    X() : i(0) { } 
+    X() : i(0) { }
 
     void foo()
-    {   
-      throw 
+    {
+      throw
         i == 0u ?
         5 : 6;
-    }   
+    }
 
   private:
     int i;

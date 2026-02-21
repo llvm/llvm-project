@@ -60,7 +60,7 @@ using cuda::std::is_polymorphic;
 using cuda::std::is_abstract;
 using cuda::std::is_final;
 using cuda::std::is_signed;
-using cuda::std::is_unsigned; 
+using cuda::std::is_unsigned;
 
 // Supported Operations
 using cuda::std::is_constructible;
@@ -207,7 +207,7 @@ using std::is_polymorphic;
 using std::is_abstract;
 using std::is_final;
 using std::is_signed;
-using std::is_unsigned; 
+using std::is_unsigned;
 
 // Supported Operations
 using std::is_constructible;
@@ -306,7 +306,7 @@ using std::common_type_t;
 using std::underlying_type;
 using std::underlying_type_t;
 
-#endif 
+#endif
 
 template <bool B>
 using bool_constant = boost::math::integral_constant<bool, B>;

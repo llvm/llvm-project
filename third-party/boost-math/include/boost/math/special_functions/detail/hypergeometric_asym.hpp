@@ -92,7 +92,7 @@
            if (fabs(sum) * boost::math::policies::get_epsilon<T, Policy>() > fabs(term))
               break;
            if(fabs(sum) / abs_sum < boost::math::policies::get_epsilon<T, Policy>())
-              return boost::math::policies::raise_evaluation_error<T>(function, "Large-z asymptotic approximation to 1F1 has destroyed all the digits in the result due to cancellation.  Current best guess is %1%", 
+              return boost::math::policies::raise_evaluation_error<T>(function, "Large-z asymptotic approximation to 1F1 has destroyed all the digits in the result due to cancellation.  Current best guess is %1%",
                  prefix * sum, Policy());
            if(k > boost::math::policies::get_max_series_iterations<Policy>())
               return boost::math::policies::raise_evaluation_error<T>(function, "1F1: Unable to locate solution in a reasonable time:"

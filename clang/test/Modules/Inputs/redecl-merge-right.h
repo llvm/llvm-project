@@ -82,7 +82,7 @@ int ONE;
 @import redecl_merge_top.Explicit;
 const int one = ONE;
 
-@interface ClassWithDef 
+@interface ClassWithDef
 - (void)method;
 @end
 

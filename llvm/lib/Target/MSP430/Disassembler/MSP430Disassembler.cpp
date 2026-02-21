@@ -128,7 +128,7 @@ static DecodeStatus DecodeMemOperand(MCInst &MI, uint64_t Bits,
   if (DecodeGR16RegisterClass(MI, Reg, Address, Decoder) !=
       MCDisassembler::Success)
     return MCDisassembler::Fail;
-  
+
   MI.addOperand(MCOperand::createImm((int16_t)Imm));
   return MCDisassembler::Success;
 }

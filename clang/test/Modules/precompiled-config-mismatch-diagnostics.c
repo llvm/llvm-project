@@ -12,7 +12,7 @@
 // RUN:   -fmodules-cache-path=%t/cache -fsyntax-only -include-pch %t/BuildDir/h1.h.pch \
 // RUN:   %t/client.c 2>&1 | FileCheck %s  --check-prefixes=OPTMODE,CONFIG
 
-// Check command line difference that end up in the module hash, but is not 
+// Check command line difference that end up in the module hash, but is not
 // uniquely reported as a mismatch.
 // RUN: not %clang_cc1 -I%t/BuildDir -fimplicit-module-maps -fmodules \
 // RUN:   -dwarf-ext-refs -fmodule-format=obj \
@@ -42,7 +42,7 @@ typedef int A_t;
 #include <A/A.h>
 #if __OPTIMIZE__
 A_t foo(void);
-#endif 
+#endif
 
 //--- client.c
 typedef int foo_t;

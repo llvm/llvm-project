@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -std=c++11 -fcxx-exceptions -fexceptions -fsyntax-only -verify -triple wasm32 -Wno-unused-value -target-feature +reference-types %s
 // RUN: %clang_cc1 -std=c++20 -fcxx-exceptions -fexceptions -fsyntax-only -verify -triple wasm32 -Wno-unused-value -target-feature +reference-types %s
 
-// 
+//
 // Note: As WebAssembly references are sizeless types, we don't exhaustively
 // test for cases covered by sizeless-1.c and similar tests.
 
-// Using c++11 to test dynamic exception specifications (which are not 
+// Using c++11 to test dynamic exception specifications (which are not
 // allowed in c++17).
 
 // Unlike standard sizeless types, reftype globals are supported.

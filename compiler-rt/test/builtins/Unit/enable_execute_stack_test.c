@@ -49,7 +49,7 @@ int main()
 #endif
     // mark stack page containing execution_buffer to be executable
     __enable_execute_stack(execution_buffer);
-	
+
     // verify you can copy and execute a function
     pfunc f1 = (pfunc)memcpy_f(execution_buffer, func1, 128);
     __clear_cache(execution_buffer, &execution_buffer[128]);

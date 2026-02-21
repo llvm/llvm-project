@@ -7,9 +7,9 @@
 // Returns: convert a to a unsigned int, rounding toward zero.
 //          Negative values all become zero.
 
-// Assumption: float is a IEEE 32 bit floating point type 
+// Assumption: float is a IEEE 32 bit floating point type
 //             su_int is a 32 bit integral type
-//             value in float is representable in su_int or is negative 
+//             value in float is representable in su_int or is negative
 //                 (no range checking performed)
 
 // seee eeee emmm mmmm mmmm mmmm mmmm mmmm

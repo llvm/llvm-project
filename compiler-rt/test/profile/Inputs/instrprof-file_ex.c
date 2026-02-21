@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
 
   for (i = 0; i < 10; i++) {
     c = fork();
-    // in child: 
+    // in child:
     if (c == 0) {
       FILE *F = lprofOpenFileEx(FN);
       if (!F) {

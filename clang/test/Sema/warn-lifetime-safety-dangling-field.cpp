@@ -34,7 +34,7 @@ struct CtorInitButMoved {
 struct CtorInitButMovedOwned {
   std::string_view view;  // expected-note {{this field dangles}}
   std::string owned;
-  CtorInitButMovedOwned(std::string s) 
+  CtorInitButMovedOwned(std::string s)
     : view(s),  // expected-warning-re {{address of stack memory escapes to a field. {{.*}} may have been moved}}
     owned(std::move(s)) {}  // expected-note {{potentially moved here}}
 };
@@ -42,8 +42,8 @@ struct CtorInitButMovedOwned {
 struct CtorInitButMovedOwnedOrderedCorrectly {
   std::string owned;
   std::string_view view;
-  CtorInitButMovedOwnedOrderedCorrectly(std::string s) 
-    :owned(std::move(s)), view(owned) {} 
+  CtorInitButMovedOwnedOrderedCorrectly(std::string s)
+    :owned(std::move(s)), view(owned) {}
 };
 
 struct CtorInitMultipleViews {
@@ -106,7 +106,7 @@ struct MemberSetters {
     view = s;     // expected-warning {{address of stack memory escapes to a field}}
     p = s.data(); // expected-warning {{address of stack memory escapes to a field}}
   }
-  
+
   void setWithLocalButMoved() {
     std::string s;
     view = s;                 // expected-warning-re {{address of stack memory escapes to a field. {{.*}} may have been moved}}
@@ -166,7 +166,7 @@ struct IndirectEscape{
   struct {
     const char *p;
   } b;
-  
+
   void foo() {
     std::string s;
     b.p = s.data();

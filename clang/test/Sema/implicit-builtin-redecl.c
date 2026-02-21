@@ -9,7 +9,7 @@ static void* malloc(int size) {
 void *calloc(int, int, int); // expected-warning{{incompatible redeclaration of library function 'calloc'}} \
 // expected-note{{'calloc' is a builtin with type 'void *}}
 
-void f1(void) { 
+void f1(void) {
   calloc(0, 0, 0);
 }
 

@@ -19,7 +19,7 @@ namespace std{ using ::sqrt; using ::fabs; using ::acos; using ::asin; using ::a
 
 namespace boost{ namespace math{
 
-template<class T> 
+template<class T>
 [[deprecated("Replaced by C++11")]] std::complex<T> acos(const std::complex<T>& z)
 {
    //
@@ -43,13 +43,13 @@ template<class T>
    static const T half_pi = s_pi / 2;
    static const T log_two = boost::math::constants::ln_two<T>();
    static const T quarter_pi = s_pi / 4;
-   
+
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4127)
 #endif
    //
-   // Get real and imaginary parts, discard the signs as we can 
+   // Get real and imaginary parts, discard the signs as we can
    // figure out the sign of the result later:
    //
    T x = std::fabs(z.real());
@@ -57,7 +57,7 @@ template<class T>
 
    T real, imag; // these hold our result
 
-   // 
+   //
    // Handle special cases specified by the C99 standard,
    // many of these special cases aren't really needed here,
    // but doing it this way prevents overflow/underflow arithmetic
@@ -107,7 +107,7 @@ template<class T>
       //
       // Figure out if our input is within the "safe area" identified by Hull et al.
       // This would be more efficient with portable floating point exception handling;
-      // fortunately the quantities M and u identified by Hull et al (figure 3), 
+      // fortunately the quantities M and u identified by Hull et al (figure 3),
       // match with the max and min methods of numeric_limits<T>.
       //
       T safe_max = detail::safe_max(static_cast<T>(8));
@@ -192,7 +192,7 @@ template<class T>
             // There is an assumption in Hull et al's analysis that
             // if we get here then x == 1.  This is true for all "good"
             // machines where :
-            // 
+            //
             // E^2 > 8*sqrt(u); with:
             //
             // E =  std::numeric_limits<T>::epsilon()

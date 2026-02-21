@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm %s  -o /dev/null
 
-/* This testcase doesn't actually test a bug, it's just the result of me 
+/* This testcase doesn't actually test a bug, it's just the result of me
  * figuring out the syntax for forward declaring a static variable. */
 struct list {
   int x;

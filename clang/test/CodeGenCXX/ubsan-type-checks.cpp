@@ -8,9 +8,9 @@ struct A {
   // COMMON-LABEL: define linkonce_odr void @_ZN1A10do_nothingEv
   void do_nothing() {
     // ALIGN-NOT: ptrtoint ptr %{{.*}} to i64, !nosanitize
- 
+
     // NULL: icmp ne ptr %{{.*}}, null, !nosanitize
- 
+
     // OBJSIZE-NOT: call i64 @llvm.objectsize
   }
 };

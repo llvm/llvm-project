@@ -42,9 +42,9 @@ bool testNoCrashOnSwitchEnumBoolConstant() {
   EnumBool E = EnumBool::F;
   switch (E) {
     case EnumBool::F:
-      return false; 
+      return false;
   }
-  return true; 
+  return true;
 }
 
 typedef __INTPTR_TYPE__ intptr_t;

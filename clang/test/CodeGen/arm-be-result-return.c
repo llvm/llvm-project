@@ -9,7 +9,7 @@ extern union Us { short s; } us;
 union Us callee_us(void) { return us; }
 // CHECK-LABEL: callee_us()
 // CHECK: zext i16
-// CHECK: shl 
+// CHECK: shl
 // CHECK: ret i32
 
 void caller_us(void) {
@@ -24,7 +24,7 @@ extern struct Ss { short s; } ss;
 struct Ss callee_ss(void) { return ss; }
 // CHECK-LABEL: callee_ss()
 // CHECK: zext i16
-// CHECK: shl 
+// CHECK: shl
 // CHECK: ret i32
 
 void caller_ss(void) {

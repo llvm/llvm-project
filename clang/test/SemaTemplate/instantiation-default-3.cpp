@@ -7,12 +7,12 @@ template<typename T, typename U = A<T*> >
   struct B : U { };
 
 template<>
-struct A<int*> { 
+struct A<int*> {
   void foo();
 };
 
 template<>
-struct A<float*> { 
+struct A<float*> {
   void bar();
 };
 

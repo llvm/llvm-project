@@ -22,18 +22,18 @@ set(LIBOMPD_LD_STD_FLAGS FALSE CACHE BOOL
   "Use -stdlibc++ instead of -libc++ library for C++ ")
 
 if(${LIBOMPD_LD_STD_FLAGS})
-#  Find and replace/add libstdc++ to compile flags     
+#  Find and replace/add libstdc++ to compile flags
    STRING( FIND "${CMAKE_CXX_FLAGS}" "-stdlib=libc++" OUT )
-   if("${OUT}" STREQUAL "-1" )   
+   if("${OUT}" STREQUAL "-1" )
       set (CMAKE_CXX_FLAGS "-stdlib=libstdc++ ${CMAKE_CXX_FLAGS}")
    else()
       STRING( REPLACE "-stdlib=libc++" "-stdlib=libstdc++" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} )
-   endif()         
+   endif()
 
 #  Find and replace/add libstdc++ to loader flags
    STRING( FIND "${CMAKE_SHARED_LINKER_FLAGS}" "-stdlib=libc++" OUT )
-   if("${OUT}" STREQUAL "-1" )   
-      set (CMAKE_SHARED_LINKER_FLAGS "-stdlib=libstdc++ ${CMAKE_SHARED_LINKER_FLAGS}")         
+   if("${OUT}" STREQUAL "-1" )
+      set (CMAKE_SHARED_LINKER_FLAGS "-stdlib=libstdc++ ${CMAKE_SHARED_LINKER_FLAGS}")
    else()
       STRING( REPLACE "-stdlib=libc++" "-stdlib=libstdc++" CMAKE_SHARED_LINKER_FLAGS ${CMAKE_SHARED_LINKER_FLAGS} )
    endif()

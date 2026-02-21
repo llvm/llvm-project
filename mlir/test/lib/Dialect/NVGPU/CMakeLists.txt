@@ -18,4 +18,4 @@ mlir_target_link_libraries(MLIRNVGPUTestPasses PUBLIC
   MLIRSCFDialect
   MLIRTransformUtils
   )
-  
+

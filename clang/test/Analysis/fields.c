@@ -91,7 +91,7 @@ void testBitfields(void) {
 
   extern struct InnerBits getInner(void);
   bits.inner = getInner();
-  
+
   if (foo() && bits.inner.e) // no-warning
     return;
   if (foo() && bits.inner.y) // no-warning
@@ -100,7 +100,7 @@ void testBitfields(void) {
     return;
 
   bits.inner.f = 1;
-  
+
   if (foo() && bits.inner.e) // no-warning
     return;
   if (foo() && bits.inner.y) // no-warning

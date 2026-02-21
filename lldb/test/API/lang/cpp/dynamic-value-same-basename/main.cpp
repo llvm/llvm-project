@@ -7,7 +7,7 @@ namespace namesp
     virtual void doSomething() {
       printf ("namesp function did something.\n");
     }
-  }; 
+  };
 }
 
 class Virtual {
@@ -29,4 +29,4 @@ main()
 
   return 0;
 }
-    
+

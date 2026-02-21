@@ -544,7 +544,7 @@ static uint32_t g_d31_invalidates[] = {fpu_v31, fpu_s31, LLDB_INVALID_REGNUM};
     #reg, nullptr, 8, 0, lldb::eEncodingUint, lldb::eFormatHex,                \
         KIND_ALL_INVALID, nullptr, nullptr, nullptr,                           \
   }
-  
+
 #define DEFINE_EXTENSION_REG_GENERIC(reg, generic_kind)                        \
   {                                                                            \
     #reg, nullptr, 8, 0, lldb::eEncodingUint, lldb::eFormatHex,                \

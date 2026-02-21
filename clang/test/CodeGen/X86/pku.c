@@ -6,7 +6,7 @@
 unsigned int test_rdpkru_u32(void) {
   // CHECK-LABEL: @test_rdpkru_u32
   // CHECK: @llvm.x86.rdpkru
-  return _rdpkru_u32(); 
+  return _rdpkru_u32();
 }
 void test_wrpkru(unsigned int __A) {
   // CHECK-LABEL: @test_wrpkru

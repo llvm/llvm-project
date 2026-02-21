@@ -33,7 +33,7 @@ template<typename T> void f2(T (&array)[42]);
 template<> void f2<double>(double (&array)[42]);
 template<> void f2<42>(double (&array)[42]);
 
-void f2<25>(double (&array)[25]); // expected-error{{specialization}} 
+void f2<25>(double (&array)[25]); // expected-error{{specialization}}
 
 // PR5833
 namespace PR5833 {

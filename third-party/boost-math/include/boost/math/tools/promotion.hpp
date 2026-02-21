@@ -34,14 +34,14 @@ namespace boost
     namespace tools
     {
       ///// This promotion system works as follows:
-      // 
+      //
       // Rule<T1> (one argument promotion rule):
       //   - Promotes `T` to `double` if `T` is an integer type as identified by
       //     `std::is_integral`, otherwise is `T`
       //
       // Rule<T1, T2_to_TN...> (two or more argument promotion rule):
       //   - 1. Calculates type using applying Rule<T1>.
-      //   - 2. Calculates type using applying Rule<T2_to_TN...> 
+      //   - 2. Calculates type using applying Rule<T2_to_TN...>
       //   - If the type calculated in 1 and 2 are both floating point types, as
       //     identified by `std::is_floating_point`, then return the type
       //     determined by `std::common_type`. Otherwise return the type using
@@ -81,10 +81,10 @@ namespace boost
       template <class T1, class T2, bool = (boost::math::is_floating_point<T1>::value && boost::math::is_floating_point<T2>::value)>
       struct pa2_integral_already_removed {
          using type = typename boost::math::conditional<
-            !boost::math::is_floating_point<T2>::value && boost::math::is_convertible<T1, T2>::value, 
+            !boost::math::is_floating_point<T2>::value && boost::math::is_convertible<T1, T2>::value,
             T2, T1>::type;
       };
-      // For two floating point types, promotes using `std::common_type` functionality 
+      // For two floating point types, promotes using `std::common_type` functionality
       template <class T1, class T2>
       struct pa2_integral_already_removed<T1, T2, true> {
          using type = boost::math::common_type_t<T1, T2, float>;

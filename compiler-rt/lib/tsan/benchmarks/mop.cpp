@@ -48,7 +48,7 @@ void test() {
   pthread_t th;
   pthread_create(&th, 0, thread<T, write>, (void*)1);
   thread<T, write>(0);
-  pthread_join(th, 0);  
+  pthread_join(th, 0);
 }
 
 template<bool write>

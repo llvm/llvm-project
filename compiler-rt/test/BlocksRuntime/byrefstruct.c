@@ -26,16 +26,16 @@ int main (int argc, const char * argv[]) {
             fiddly.qs[i]++;
         }
     };
-    
+
     memset(&fiddly, 0xA5, sizeof(fiddly));
-    memset(&copy, 0x2A, sizeof(copy));    
-    
+    memset(&copy, 0x2A, sizeof(copy));
+
     int i;
     for(i=0; i<30; i++) {
         fiddly.ps[i] = i * i * i;
         fiddly.qs[i] = -i * i * i;
     }
-    
+
     copy = fiddly;
     incrementFiddly();
 
@@ -50,7 +50,7 @@ int main (int argc, const char * argv[]) {
             exit(1);
         }
     }
-    
+
     printf("%s: success\n", argv[0]);
     return 0;
 }

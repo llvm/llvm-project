@@ -1112,7 +1112,7 @@ llvm::GlobalVariable::LinkageTypes
 CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   if (!RD->isExternallyVisible())
     return llvm::GlobalVariable::InternalLinkage;
-  
+
   // In windows, the linkage of vtable is not related to modules.
   bool IsInNamedModule = !getTarget().getCXXABI().isMicrosoft() &&
         RD->isInNamedModule();

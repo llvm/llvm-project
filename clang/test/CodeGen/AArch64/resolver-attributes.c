@@ -55,8 +55,8 @@ __attribute__((ifunc("ifunc_resolver"))) int ifunc(void);
 
 // HIDDEN: define weak_odr hidden ptr @global_target_clones.resolver() [[ATTR_RESOLVER:(#[0-9]+)?]]{{( comdat)?}}
 // HIDDEN: define weak_odr hidden ptr @global_target_version.resolver() [[ATTR_RESOLVER]]{{( comdat)?}}
-// HIDDEN: define internal ptr @static_target_clones.resolver() [[ATTR_RESOLVER]] 
-// HIDDEN: define internal ptr @static_target_version.resolver() [[ATTR_RESOLVER]] 
+// HIDDEN: define internal ptr @static_target_clones.resolver() [[ATTR_RESOLVER]]
+// HIDDEN: define internal ptr @static_target_version.resolver() [[ATTR_RESOLVER]]
 
 // ELF:       attributes #[[ATTR_IFUNC_RESOLVER]] = { {{.*}}"branch-target-enforcement"{{.*}} }
 

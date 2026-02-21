@@ -574,12 +574,12 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
     void *image_ptr;
     const char *error_str;
   };
-  
+
   extern "C" void *memcpy(void *, const void *, size_t size);
   extern "C" size_t strlen(const char *);
-  
 
-  void * __lldb_dlopen_wrapper (const char *name, 
+
+  void * __lldb_dlopen_wrapper (const char *name,
                                 const char *path_strings,
                                 char *buffer,
                                 __lldb_dlopen_result *result_ptr)
@@ -593,14 +593,14 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
         result_ptr->error_str = dlerror();
       return nullptr;
     }
-    
+
     // This is the case where we have a list of paths:
     size_t name_len = strlen(name);
     while (path_strings && path_strings[0] != '\0') {
       size_t path_len = strlen(path_strings);
       memcpy((void *) buffer, (void *) path_strings, path_len);
       buffer[path_len] = '/';
-      char *target_ptr = buffer+path_len+1; 
+      char *target_ptr = buffer+path_len+1;
       memcpy((void *) target_ptr, (void *) name, name_len + 1);
       result_ptr->image_ptr = dlopen(buffer, RTLD_LAZY);
       if (result_ptr->image_ptr) {
@@ -659,7 +659,7 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   arguments.PushValue(value);
   arguments.PushValue(value);
   arguments.PushValue(value);
-  
+
   do_dlopen_function = dlopen_utility_func_up->MakeFunctionCaller(
       clang_void_pointer_type, arguments, exe_ctx.GetThreadSP(), utility_error);
   if (utility_error.Fail()) {
@@ -668,14 +668,14 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
         utility_error.AsCString());
     return nullptr;
   }
-  
+
   do_dlopen_function = dlopen_utility_func_up->GetFunctionCaller();
   if (!do_dlopen_function) {
     error =
         Status::FromErrorString("dlopen error: could not get function caller.");
     return nullptr;
   }
-  
+
   // We made a good utility function, so cache it in the process:
   return dlopen_utility_func_up;
 }
@@ -697,9 +697,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
         "dlopen error: no thread available to call dlopen.");
     return LLDB_INVALID_IMAGE_TOKEN;
   }
-  
+
   DiagnosticManager diagnostics;
-  
+
   ExecutionContext exe_ctx;
   thread_sp->CalculateExecutionContext(exe_ctx);
 
@@ -717,7 +717,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   // If we couldn't make it, the error will be in error, so we can exit here.
   if (!dlopen_utility_func)
     return LLDB_INVALID_IMAGE_TOKEN;
-    
+
   do_dlopen_function = dlopen_utility_func->GetFunctionCaller();
   if (!do_dlopen_function) {
     error =
@@ -725,12 +725,12 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
     return LLDB_INVALID_IMAGE_TOKEN;
   }
   arguments = do_dlopen_function->GetArgumentValues();
-  
+
   // Now insert the path we are searching for and the result structure into the
   // target.
   uint32_t permissions = ePermissionsReadable|ePermissionsWritable;
   size_t path_len = path.size() + 1;
-  lldb::addr_t path_addr = process->AllocateMemory(path_len, 
+  lldb::addr_t path_addr = process->AllocateMemory(path_len,
                                                    permissions,
                                                    utility_error);
   if (path_addr == LLDB_INVALID_ADDRESS) {
@@ -753,7 +753,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
         utility_error.AsCString());
     return LLDB_INVALID_IMAGE_TOKEN;
   }
-  
+
   // Make space for our return structure.  It is two pointers big: the token
   // and the error string.
   const uint32_t addr_size = process->GetAddressByteSize();
@@ -766,7 +766,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
         utility_error.AsCString());
     return LLDB_INVALID_IMAGE_TOKEN;
   }
-  
+
   // Make sure we deallocate the result structure memory
   llvm::scope_exit return_cleanup([process, return_addr] {
     // Deallocate the buffer
@@ -779,14 +779,14 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   std::optional<llvm::scope_exit<std::function<void()>>> path_array_cleanup;
 
   // This is the address to a buffer large enough to hold the largest path
-  // conjoined with the library name we're passing in.  This is a convenience 
+  // conjoined with the library name we're passing in.  This is a convenience
   // to avoid having to call malloc in the dlopen function.
   lldb::addr_t buffer_addr = 0x0;
   std::optional<llvm::scope_exit<std::function<void()>>> buffer_cleanup;
 
   // Set the values into our args and write them to the target:
   if (paths != nullptr) {
-    // First insert the paths into the target.  This is expected to be a 
+    // First insert the paths into the target.  This is expected to be a
     // continuous buffer with the strings laid out null terminated and
     // end to end with an empty string terminating the buffer.
     // We also compute the buffer's required size as we go.
@@ -804,8 +804,8 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
         buffer_size = path_size;
     }
     path_array.push_back('\0');
-    
-    path_array_addr = process->AllocateMemory(path_array.size(), 
+
+    path_array_addr = process->AllocateMemory(path_array.size(),
                                               permissions,
                                               utility_error);
     if (path_array_addr == LLDB_INVALID_ADDRESS) {
@@ -814,14 +814,14 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
           utility_error.AsCString());
       return LLDB_INVALID_IMAGE_TOKEN;
     }
-    
+
     // Make sure we deallocate the paths array.
     path_array_cleanup.emplace([process, path_array_addr]() {
       // Deallocate the path array.
       process->DeallocateMemory(path_array_addr);
     });
 
-    process->WriteMemory(path_array_addr, path_array.data(), 
+    process->WriteMemory(path_array_addr, path_array.data(),
                          path_array.size(), utility_error);
 
     if (utility_error.Fail()) {
@@ -833,8 +833,8 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
     // Now make spaces in the target for the buffer.  We need to add one for
     // the '/' that the utility function will insert and one for the '\0':
     buffer_size += path.size() + 2;
-    
-    buffer_addr = process->AllocateMemory(buffer_size, 
+
+    buffer_addr = process->AllocateMemory(buffer_size,
                                           permissions,
                                           utility_error);
     if (buffer_addr == LLDB_INVALID_ADDRESS) {
@@ -843,23 +843,23 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
           utility_error.AsCString());
       return LLDB_INVALID_IMAGE_TOKEN;
     }
-  
+
     // Make sure we deallocate the buffer memory:
     buffer_cleanup.emplace([process, buffer_addr]() {
       // Deallocate the buffer.
       process->DeallocateMemory(buffer_addr);
     });
   }
-    
+
   arguments.GetValueAtIndex(0)->GetScalar() = path_addr;
   arguments.GetValueAtIndex(1)->GetScalar() = path_array_addr;
   arguments.GetValueAtIndex(2)->GetScalar() = buffer_addr;
   arguments.GetValueAtIndex(3)->GetScalar() = return_addr;
 
   lldb::addr_t func_args_addr = LLDB_INVALID_ADDRESS;
-  
+
   diagnostics.Clear();
-  if (!do_dlopen_function->WriteFunctionArguments(exe_ctx, 
+  if (!do_dlopen_function->WriteFunctionArguments(exe_ctx,
                                                  func_args_addr,
                                                  arguments,
                                                  diagnostics)) {
@@ -868,7 +868,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
         "dlopen error: could not write function arguments:"));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
-  
+
   // Make sure we clean up the args structure.  We can't reuse it because the
   // Platform lives longer than the process and the Platforms don't get a
   // signal to clean up cached data when a process goes away.
@@ -901,7 +901,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
       scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
 
   return_value.SetCompilerType(clang_void_pointer_type);
-  
+
   ExpressionResults results = do_dlopen_function->ExecuteFunction(
       exe_ctx, &func_args_addr, options, diagnostics, return_value);
   if (results != eExpressionCompleted) {
@@ -910,9 +910,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
         "dlopen error: failed executing dlopen wrapper function:"));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
-  
+
   // Read the dlopen token from the return area:
-  lldb::addr_t token = process->ReadPointerFromMemory(return_addr, 
+  lldb::addr_t token = process->ReadPointerFromMemory(return_addr,
                                                       utility_error);
   if (utility_error.Fail()) {
     error = Status::FromErrorStringWithFormat(
@@ -920,7 +920,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
         utility_error.AsCString());
     return LLDB_INVALID_IMAGE_TOKEN;
   }
-  
+
   // The dlopen succeeded!
   if (token != 0x0) {
     if (loaded_image && buffer_addr != 0x0)
@@ -934,10 +934,10 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
     }
     return process->AddImageToken(token);
   }
-    
+
   // We got an error, lets read in the error string:
   std::string dlopen_error_str;
-  lldb::addr_t error_addr 
+  lldb::addr_t error_addr
     = process->ReadPointerFromMemory(return_addr + addr_size, utility_error);
   if (utility_error.Fail()) {
     error = Status::FromErrorStringWithFormat(
@@ -945,9 +945,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
         utility_error.AsCString());
     return LLDB_INVALID_IMAGE_TOKEN;
   }
-  
-  size_t num_chars = process->ReadCStringFromMemory(error_addr + addr_size, 
-                                                    dlopen_error_str, 
+
+  size_t num_chars = process->ReadCStringFromMemory(error_addr + addr_size,
+                                                    dlopen_error_str,
                                                     utility_error);
   if (utility_error.Success() && num_chars > 0)
     error = Status::FromErrorStringWithFormat("dlopen error: %s",

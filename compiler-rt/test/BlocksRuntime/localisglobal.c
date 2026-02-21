@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     int i = 10;
     void (^local)(void) = ^ { printf("hi %d\n", i); };
     void (^localisglobal)(void) = ^ { printf("hi\n"); };
-    
+
     if (aresame(local, localisglobal)) {
         printf("local block could be global, but isn't\n");
         return 1;
@@ -37,5 +37,5 @@ int main(int argc, char *argv[]) {
     }
     printf("%s: success\n", argv[0]);
     return 0;
-    
+
 }

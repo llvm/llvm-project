@@ -18,24 +18,24 @@ void f3() {
   const int &irc = i;
 
   [=,&irc,&ir] {
-    static_assert(is_same<decltype(((r))), float const&>::value, 
+    static_assert(is_same<decltype(((r))), float const&>::value,
                   "should be const float&");
     static_assert(is_same<decltype(x), float>::value, "should be float");
-    static_assert(is_same<decltype((x)), const float&>::value, 
+    static_assert(is_same<decltype((x)), const float&>::value,
                   "should be const float&");
     static_assert(is_same<decltype(r), float&>::value, "should be float&");
     static_assert(is_same<decltype(ir), int&>::value, "should be int&");
     static_assert(is_same<decltype((ir)), int&>::value, "should be int&");
-    static_assert(is_same<decltype(irc), const int&>::value, 
+    static_assert(is_same<decltype(irc), const int&>::value,
                   "should be const int&");
-    static_assert(is_same<decltype((irc)), const int&>::value, 
+    static_assert(is_same<decltype((irc)), const int&>::value,
                   "should be const int&");
   }();
 
   [=] {
     [=] () mutable {
       static_assert(is_same<decltype(x), float>::value, "should be float");
-      static_assert(is_same<decltype((x)), float&>::value, 
+      static_assert(is_same<decltype((x)), float&>::value,
                     "should be float&");
     }();
   }();

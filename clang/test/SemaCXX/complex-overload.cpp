@@ -29,7 +29,7 @@ void test_foo_3(float fv, double dv, float _Complex fc, double _Complex dc) {
 }
 
 char *promote_or_convert(double _Complex);  // expected-note{{candidate function}}
-int *promote_or_convert(long double _Complex); // expected-note{{candidate function}} 
+int *promote_or_convert(long double _Complex); // expected-note{{candidate function}}
 
 void test_promote_or_convert(float f, float _Complex fc) {
   char *cp = promote_or_convert(fc);

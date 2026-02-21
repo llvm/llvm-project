@@ -15,7 +15,7 @@
 
 #include <cassert>
 #include <cstdint>
-  
+
 namespace clang {
 
 class IdentifierInfo;

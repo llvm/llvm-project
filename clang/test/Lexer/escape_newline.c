@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -E -CC -ftrigraphs %s
 
 // This is an ugly way to spell a -> token.
- -??/      
+ -??/
 >
 
 // \

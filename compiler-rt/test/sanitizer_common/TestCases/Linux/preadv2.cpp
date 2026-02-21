@@ -12,7 +12,7 @@
 #endif
 
 #if !__GLIBC_PREREQ(2, 26)
-#define preadv2(a, b, c, d, e) preadv(a, b, c, d) 
+#define preadv2(a, b, c, d, e) preadv(a, b, c, d)
 #endif
 
 int main(void) {

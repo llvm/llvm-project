@@ -1,6 +1,6 @@
 # C language Family Front-end
 
-Welcome to Clang. 
+Welcome to Clang.
 
 This is a compiler front-end for the C family of languages (C, C++ and Objective-C) which is built as part of the LLVM compiler infrastructure project.
 
@@ -17,9 +17,9 @@ If you're interested in more (including how to build Clang) it is best to read t
 * Information on the LLVM project:    http://llvm.org/
 
 * If you have questions or comments about Clang, a great place to discuss them is on the Clang forums:    
-  
+
   [Clang Frontend - LLVM Discussion Forums](https://discourse.llvm.org/c/clang/)
 
 * If you find a bug in Clang, please file it in the LLVM bug tracker:
-  
+
     https://github.com/llvm/llvm-project/issues

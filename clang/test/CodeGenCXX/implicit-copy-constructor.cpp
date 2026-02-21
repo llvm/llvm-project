@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -std=c++11 | FileCheck %s
 
-struct A { 
+struct A {
   A();
   A(const A&);
   A(A&);
@@ -22,7 +22,7 @@ struct POD {
   int array[3][4];
 };
 
-struct D : A, B, virtual C { 
+struct D : A, B, virtual C {
   D();
   int scalar;
   int scalar_array[2][3];

@@ -38,7 +38,7 @@ struct i_am_cool
 	i_am_cool(int I, ShowMyGuts F, char C) :
     integer(I), floating(F), character(C) {}
 	i_am_cool() : integer(1), floating(2), character('3') {}
-    
+
 };
 
 struct i_am_cooler
@@ -46,7 +46,7 @@ struct i_am_cooler
 	i_am_cool first_cool;
 	i_am_cool second_cool;
 	ShowMyGuts floating;
-	
+
 	i_am_cooler(int I1, int I2, float F1, float F2, char C1, char C2) :
     first_cool(I1,F1,C1),
     second_cool(I2,F2,C2),
@@ -67,7 +67,7 @@ void has_local_mem_func_pointers() {
   const char *(IUseCharStar::*member_func_ptr)(int) =
       &IUseCharStar::member_func;
   auto &ref_to_member_func_ptr = member_func_ptr;
-  
+
   void (IUseCharStar::*virt_member_func_ptr)() =
       &IUseCharStar::virt_member_func;
 
@@ -76,50 +76,50 @@ void has_local_mem_func_pointers() {
 
 int main (int argc, const char * argv[])
 {
-    
+
     int iAmInt = 1;
     const float& IAmFloat = float(2.45);
 
     RealNumber RNILookChar = 3.14;
     Temperature TMILookFloat = 4.97;
     Speed SPILookHex = 5.55;
-    
+
     Counter CTILookInt = 6;
     BitField BFILookHex = 7;
     SignalMask SMILookHex = 8;
     Modifiers MFILookHex = 9;
-    
+
     Accumulator* ACILookInt = new Accumulator(10);
-    
+
     const Type1& T1ILookChar = 11;
     Type2 T2ILookHex = 12;
     Type3 T3ILookChar = 13;
     Type4 T4ILookChar = 14;
-    
+
     AnotherChildType AHILookInt = 15;
-    
+
     Speed* SPPtrILookHex = new Speed(16);
-    
+
     TestPoint iAmSomewhere(4,6);
-    
+
 	i_am_cool *cool_pointer = (i_am_cool*)malloc(sizeof(i_am_cool)*3);
 	cool_pointer[0] = i_am_cool(3,-3.141592,'E');
 	cool_pointer[1] = i_am_cool(0,-3.141592,'E');
 	cool_pointer[2] = i_am_cool(0,-3.141592,'E');
-    
+
     i_am_cool cool_array[5];
-    
+
     cool_array[3].floating = 5.25;
     cool_array[4].integer = 6;
     cool_array[2].character = 'Q';
-    
+
     int int_array[] = {1,2,3,4,5};
-    
+
     IUseCharStar iEncapsulateCharStar;
-    
+
     char  strarr[32] = "Hello world!";
     char* strptr     = "Hello world!";
-    
+
     i_am_cooler the_coolest_guy(1,2,3.14,6.28,'E','G');
 
     has_local_mem_func_pointers();

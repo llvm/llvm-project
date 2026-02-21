@@ -60,7 +60,7 @@ public:
   S8(int v) : S7<S>(v){
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute private(a) private(this->a) private(S7<S>::a) 
+#pragma omp distribute private(a) private(this->a) private(S7<S>::a)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
   }
@@ -109,7 +109,7 @@ T tmain(T argc) {
 // CHECK: #pragma omp distribute
   for (int i = 0; i < 10; ++i)foo();
 // CHECK-NEXT: for (int i = 0; i < 10; ++i)
-// CHECK-NEXT: foo();  
+// CHECK-NEXT: foo();
   return T();
 }
 

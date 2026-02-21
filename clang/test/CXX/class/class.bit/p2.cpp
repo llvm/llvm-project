@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 struct A {
-private: 
+private:
   int : 0;
 };
 

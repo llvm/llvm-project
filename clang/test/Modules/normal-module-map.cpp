@@ -2,8 +2,8 @@
 // RUN: %clang_cc1 -x objective-c -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -I %S/Inputs/normal-module-map %s -verify
 #include "Umbrella/umbrella_sub.h"
 
-int getUmbrella(void) { 
-  return umbrella + umbrella_sub; 
+int getUmbrella(void) {
+  return umbrella + umbrella_sub;
 }
 
 @import Umbrella2;

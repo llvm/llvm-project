@@ -465,7 +465,7 @@ TEST_F(DefineOutlineTest, InCppFile) {
           R"cpp(
             namespace foo {
             namespace {
-            struct Foo { void bar() ; };void Foo::bar() {} 
+            struct Foo { void bar() ; };void Foo::bar() {}
             struct Bar { void foo(); };
             void Bar::foo() {}
             }

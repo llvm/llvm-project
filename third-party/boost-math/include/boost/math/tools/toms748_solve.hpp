@@ -52,7 +52,7 @@ private:
 };
 
 // CUDA warns about __host__ __device__ marker on defaulted constructor
-// but the warning is benign 
+// but the warning is benign
 #ifdef BOOST_MATH_ENABLE_CUDA
 #  pragma nv_diag_suppress 20012
 #endif
@@ -60,7 +60,7 @@ private:
 struct equal_floor
 {
    BOOST_MATH_GPU_ENABLED equal_floor() = default;
-   
+
    template <class T>
    BOOST_MATH_GPU_ENABLED bool operator()(const T& a, const T& b)
    {
@@ -72,7 +72,7 @@ struct equal_floor
 struct equal_ceil
 {
    BOOST_MATH_GPU_ENABLED equal_ceil() = default;
-   
+
    template <class T>
    BOOST_MATH_GPU_ENABLED bool operator()(const T& a, const T& b)
    {
@@ -84,7 +84,7 @@ struct equal_ceil
 struct equal_nearest_integer
 {
    BOOST_MATH_GPU_ENABLED equal_nearest_integer() = default;
-   
+
    template <class T>
    BOOST_MATH_GPU_ENABLED bool operator()(const T& a, const T& b)
    {
@@ -104,7 +104,7 @@ BOOST_MATH_GPU_ENABLED void bracket(F f, T& a, T& b, T c, T& fa, T& fb, T& d, T&
 {
    //
    // Given a point c inside the existing enclosing interval
-   // [a, b] sets a = c if f(c) == 0, otherwise finds the new 
+   // [a, b] sets a = c if f(c) == 0, otherwise finds the new
    // enclosing interval: either [a, c] or [c, b] and sets
    // d and fd to the point that has just been removed from
    // the interval.  In other words d is the third best guess
@@ -113,7 +113,7 @@ BOOST_MATH_GPU_ENABLED void bracket(F f, T& a, T& b, T c, T& fa, T& fb, T& d, T&
    BOOST_MATH_STD_USING  // For ADL of std math functions
    T tol = tools::epsilon<T>() * 2;
    //
-   // If the interval [a,b] is very small, or if c is too close 
+   // If the interval [a,b] is very small, or if c is too close
    // to one end of the interval then we need to adjust the
    // location of c accordingly:
    //
@@ -203,7 +203,7 @@ BOOST_MATH_GPU_ENABLED inline T secant_interpolate(const T& a, const T& b, const
 
 template <class T>
 BOOST_MATH_GPU_ENABLED T quadratic_interpolate(const T& a, const T& b, T const& d,
-                                               const T& fa, const T& fb, T const& fd, 
+                                               const T& fa, const T& fb, T const& fd,
                                                unsigned count)
 {
    //
@@ -258,12 +258,12 @@ BOOST_MATH_GPU_ENABLED T quadratic_interpolate(const T& a, const T& b, T const& 
 }
 
 template <class T>
-BOOST_MATH_GPU_ENABLED T cubic_interpolate(const T& a, const T& b, const T& d, 
-                                           const T& e, const T& fa, const T& fb, 
+BOOST_MATH_GPU_ENABLED T cubic_interpolate(const T& a, const T& b, const T& d,
+                                           const T& e, const T& fa, const T& fb,
                                            const T& fd, const T& fe)
 {
    //
-   // Uses inverse cubic interpolation of f(x) at points 
+   // Uses inverse cubic interpolation of f(x) at points
    // [a,b,d,e] to obtain an approximate root of f(x).
    // Points d and e lie outside the interval [a,b]
    // and are the third and forth best approximations
@@ -274,7 +274,7 @@ BOOST_MATH_GPU_ENABLED T cubic_interpolate(const T& a, const T& b, const T& d,
    // interpolation in case of an erroneous result.
    //
    BOOST_MATH_INSTRUMENT_CODE(" a = " << a << " b = " << b
-      << " d = " << d << " e = " << e << " fa = " << fa << " fb = " << fb 
+      << " d = " << d << " e = " << e << " fa = " << fa << " fb = " << fb
       << " fd = " << fd << " fe = " << fe);
    T q11 = (d - e) * fd / (fe - fd);
    T q21 = (b - d) * fb / (fd - fb);
@@ -332,7 +332,7 @@ BOOST_MATH_GPU_ENABLED boost::math::pair<T, T> toms748_solve(F f, const T& ax, c
    b = bx;
    if(a >= b)
       return boost::math::detail::pair_from_single(policies::raise_domain_error(
-         function, 
+         function,
          "Parameters a and b out of order: a=%1%", a, pol));
    fa = fax;
    fb = fbx;
@@ -349,7 +349,7 @@ BOOST_MATH_GPU_ENABLED boost::math::pair<T, T> toms748_solve(F f, const T& ax, c
 
    if(boost::math::sign(fa) * boost::math::sign(fb) > 0)
       return boost::math::detail::pair_from_single(policies::raise_domain_error(
-         function, 
+         function,
          "Parameters a and b do not bracket the root: a=%1%", a, pol));
    // dummy value for fd, e and fe:
    fe = e = fd = 1e5F;
@@ -460,7 +460,7 @@ BOOST_MATH_GPU_ENABLED boost::math::pair<T, T> toms748_solve(F f, const T& ax, c
       if((0 == --count) || (fa == 0) || tol(a, b))
          break;
       //
-      // And finally... check to see if an additional bisection step is 
+      // And finally... check to see if an additional bisection step is
       // to be taken, we do this if we're not converging fast enough:
       //
       if((b - a) < mu * (b0 - a0))
@@ -577,7 +577,7 @@ BOOST_MATH_GPU_ENABLED boost::math::pair<T, T> bracket_and_solve_root(F f, const
             // Escape route just in case the answer is zero!
             max_iter -= count;
             max_iter += 1;
-            return a > 0 ? boost::math::make_pair(T(0), T(a)) : boost::math::make_pair(T(a), T(0)); 
+            return a > 0 ? boost::math::make_pair(T(0), T(a)) : boost::math::make_pair(T(a), T(0));
          }
          if(count == 0)
             return boost::math::detail::pair_from_single(policies::raise_evaluation_error(function, "Unable to bracket root, last nearest value was %1%", a, pol));
@@ -607,13 +607,13 @@ BOOST_MATH_GPU_ENABLED boost::math::pair<T, T> bracket_and_solve_root(F f, const
    max_iter -= count;
    max_iter += 1;
    boost::math::pair<T, T> r = toms748_solve(
-      f, 
-      (a < 0 ? b : a), 
-      (a < 0 ? a : b), 
-      (a < 0 ? fb : fa), 
-      (a < 0 ? fa : fb), 
-      tol, 
-      count, 
+      f,
+      (a < 0 ? b : a),
+      (a < 0 ? a : b),
+      (a < 0 ? fb : fa),
+      (a < 0 ? fa : fb),
+      tol,
+      count,
       pol);
    max_iter += count;
    BOOST_MATH_INSTRUMENT_CODE("max_iter = " << max_iter << " count = " << count);

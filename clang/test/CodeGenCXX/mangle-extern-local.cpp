@@ -32,7 +32,7 @@ struct S {
   }
 };
 
-int anchorf3() { return S::f3(); } 
+int anchorf3() { return S::f3(); }
 
 extern "C" {
 int f4() {

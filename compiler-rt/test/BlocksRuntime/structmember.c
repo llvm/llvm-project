@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
         long int c;
     } localStuff = { 10, 20, 30 };
     int d;
-    
+
     void (^a)(void) = ^ { printf("d is %d", d); };
     void (^b)(void) = ^ { printf("d is %d, localStuff.a is %lu", d, localStuff.a); };
 

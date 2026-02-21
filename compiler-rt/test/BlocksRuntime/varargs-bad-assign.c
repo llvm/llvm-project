@@ -16,7 +16,7 @@
 int main (int argc, const char * argv[]) {
     int (^sumn)(int n, ...);
     int six = 0;
-    
+
     sumn = ^(int a, int b, int n, ...){
         int result = 0;
         va_list numbers;
@@ -37,7 +37,7 @@ int main (int argc, const char * argv[]) {
         printf("%s: Expected 6 but got %d\n", argv[0], six);
         exit(1);
     }
-    
+
     printf("%s: success\n", argv[0]);
     return 0;
 }

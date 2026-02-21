@@ -6312,11 +6312,11 @@ class Return {
     mu.Lock();
     return foo;
   }
-  
+
   Foo returns_value_not_locked() {
     return foo;               // expected-warning {{reading variable 'foo' requires holding mutex 'mu'}}
   }
-  
+
   Foo returns_value_releases_lock_before_return() UNLOCK_FUNCTION(mu) {
     mu.Unlock();
     return foo;               // expected-warning {{reading variable 'foo' requires holding mutex 'mu'}}
@@ -6348,12 +6348,12 @@ class Return {
     mu.Unlock();
     return foo;               // // expected-warning {{returning variable 'foo' by reference requires holding mutex 'mu' exclusively}}
   }
-  
+
   Foo &returns_ref_aquires_lock() EXCLUSIVE_LOCK_FUNCTION(mu) {
     mu.Lock();
     return foo;
   }
-  
+
   const Foo &returns_constref_shared_locks_required() SHARED_LOCKS_REQUIRED(mu) {
     return foo;
   }
@@ -6381,7 +6381,7 @@ class Return {
   const Foo *returns_pt_constptr_shared_locks_required() SHARED_LOCKS_REQUIRED(mu) {
     return foo_ptr;
   }
-  
+
   Foo *returns_ptr() {
     return &foo;              // expected-warning {{returning pointer to variable 'foo' requires holding mutex 'mu' exclusively}}
   }

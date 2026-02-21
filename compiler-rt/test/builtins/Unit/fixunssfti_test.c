@@ -10,9 +10,9 @@
 // Returns: convert a to a unsigned long long, rounding toward zero.
 //          Negative values all become zero.
 
-// Assumption: float is a IEEE 32 bit floating point type 
+// Assumption: float is a IEEE 32 bit floating point type
 //             tu_int is a 64 bit integral type
-//             value in float is representable in tu_int or is negative 
+//             value in float is representable in tu_int or is negative
 //                 (no range checking performed)
 
 // seee eeee emmm mmmm mmmm mmmm mmmm mmmm

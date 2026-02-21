@@ -10,7 +10,7 @@
 // RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV7MyClass.html --check-prefix=HTML-MYCLASS
 
 #define DECLARE_METHODS                                           \
-    /**   							  
+    /**
      * @brief Declare a method to calculate the sum of two numbers
      */                                                           \
     int Add(int a, int b) {                                       \

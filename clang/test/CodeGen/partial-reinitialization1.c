@@ -28,7 +28,7 @@ struct P2 { char x[6]; };
 struct P2 l2 = {
   .x = { [1] = 'o' },
   .x = { [0] = 'n' }
-}; 
+};
 
 struct P3 {
     struct Q3 {
@@ -49,8 +49,8 @@ struct P3 l3 = {
                     .q.r2 = { .e = 10 }
 };
 
-// This bit is taken from Sema/wchar.c so we can avoid the wchar.h include.      
-typedef __WCHAR_TYPE__ wchar_t;                                                  
+// This bit is taken from Sema/wchar.c so we can avoid the wchar.h include.
+typedef __WCHAR_TYPE__ wchar_t;
 
 struct P4 {
     wchar_t x[6];

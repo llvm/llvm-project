@@ -68,7 +68,7 @@ int test_omp_task_depend_iterator() {
     threadOrderError = (threadOrder[i] != i) || threadOrderError;
 
   // FALSE If dependencies between tasks were not enforced in the correct order.
-  return !threadOrderError; 
+  return !threadOrderError;
 }
 
 

@@ -342,7 +342,7 @@ foreach(header
   add_custom_command(
     OUTPUT ${staged_header}
     COMMAND ${copy_command}
-    DEPENDS ${header}     
+    DEPENDS ${header}
     COMMENT "LLDB headers: stage LLDB headers in include directory")
 
   list(APPEND lldb_staged_headers ${staged_header})

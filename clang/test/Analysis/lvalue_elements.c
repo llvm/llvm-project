@@ -14,7 +14,7 @@ int main(){
 
     // expected-warning@+1 {{&Element{array,reg_$1<int unknown_index>,int}}}
     clang_analyzer_dump(&array[unknown_index]);
-    
+
     // expected-warning@+1 {{&Element{Element{matrix,1 S64b,int[3]},1 S64b,int}}}
     clang_analyzer_dump(&matrix[const_index][const_index]);
 

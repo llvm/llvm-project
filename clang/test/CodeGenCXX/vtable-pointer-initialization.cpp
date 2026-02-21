@@ -15,7 +15,7 @@ struct A : Base {
   ~A();
 
   virtual void f();
-  
+
   Field field;
 };
 
@@ -31,11 +31,11 @@ A::A() { }
 // CHECK: call void @_ZN5FieldD1Ev(
 // CHECK: call void @_ZN4BaseD2Ev(
 // CHECK: ret void
-A::~A() { } 
+A::~A() { }
 
 struct B : Base {
   virtual void f();
-  
+
   Field field;
 };
 

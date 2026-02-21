@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
   for (int i=0; i<200; i++) foo();
 #pragma omp target default(none) // expected-note {{explicit data sharing attribute, data mapping attribute, or is_device_ptr clause requested here}}
   x++; // expected-error {{variable 'x' must have explicitly specified data sharing attributes, data mapping attributes, or in an is_device_ptr clause}}
-#endif 
+#endif
 
 #ifdef OMP52
 #pragma omp target default(firstprivate) // expected-error {{unexpected OpenMP clause 'default' in directive '#pragma omp target'}}
@@ -47,7 +47,7 @@ int j = 0, i = 0, nn = 10;
 		;
 	  }
 	}
-#endif 
- 
+#endif
+
   return 0;
 }

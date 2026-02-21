@@ -296,7 +296,7 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
               register_value.reset();
           }
         }
-      } 
+      }
     }
     if (!str_offset.empty() && !str_offset.getAsInteger(0, offset)) {
       Status error;
@@ -310,7 +310,7 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
         return addr - offset;
       }
     } else if (register_value)
-      // In the case of register values, someone might just want to get the 
+      // In the case of register values, someone might just want to get the
       // value in a language whose expression parser doesn't support registers.
       return register_value.value();
   }

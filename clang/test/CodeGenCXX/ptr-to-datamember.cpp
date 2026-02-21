@@ -30,7 +30,7 @@ public:
   double d;
   int Ai;
   F Af;
-}; 
+};
 
 template <typename T> struct TT {
   int T::t::*pti;
@@ -75,7 +75,7 @@ void test_aggr_pdata_1(A* pa) {
   pr(pa->*af);
 }
 
-int main() 
+int main()
 {
   A a1;
   TT<I> tt;

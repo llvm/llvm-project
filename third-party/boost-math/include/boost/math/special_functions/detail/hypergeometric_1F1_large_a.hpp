@@ -9,7 +9,7 @@
 #define BOOST_MATH_HYPERGEOMETRIC_1F1_CF_HPP
 //
 // Evaluation of 1F1 by continued fraction
-// by asymptotic approximation for large a, 
+// by asymptotic approximation for large a,
 // see https://dlmf.nist.gov/13.8#E9
 //
 // This is not terribly useful, as it only gets a few digits correct even for very

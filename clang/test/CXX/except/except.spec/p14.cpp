@@ -4,14 +4,14 @@ struct B { };
 struct C { };
 
 // Destructor
-struct X0 { 
-  virtual ~X0() throw(A); // expected-note{{overridden virtual function is here}} 
+struct X0 {
+  virtual ~X0() throw(A); // expected-note{{overridden virtual function is here}}
 };
-struct X1 { 
-  virtual ~X1() throw(B); // expected-note{{overridden virtual function is here}} 
+struct X1 {
+  virtual ~X1() throw(B); // expected-note{{overridden virtual function is here}}
 };
 struct X2 : public X0, public X1 { }; // expected-error 2{{exception specification of overriding function is more lax than base version}}
- 
+
 // Copy-assignment operator.
 struct CA0 {
   CA0 &operator=(const CA0&) throw(A);
@@ -117,7 +117,7 @@ namespace rdar13017229 {
   struct Base {
     virtual ~Base() {}
   };
-  
+
   struct Derived : Base {
     virtual ~Derived();
     Typo foo(); // expected-error{{unknown type name 'Typo'}}

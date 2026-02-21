@@ -30,41 +30,41 @@ void testAttributeType(MlirContext ctx) {
   assert(!mlirTypeIsNull(constructedType) && "couldn't construct PDLAttributeType");
 
   // CHECK: parsedType isa PDLType: 1
-  fprintf(stderr, "parsedType isa PDLType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLType: %d\n",
       mlirTypeIsAPDLType(parsedType));
   // CHECK: parsedType isa PDLAttributeType: 1
-  fprintf(stderr, "parsedType isa PDLAttributeType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLAttributeType: %d\n",
       mlirTypeIsAPDLAttributeType(parsedType));
   // CHECK: parsedType isa PDLOperationType: 0
-  fprintf(stderr, "parsedType isa PDLOperationType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLOperationType: %d\n",
       mlirTypeIsAPDLOperationType(parsedType));
   // CHECK: parsedType isa PDLRangeType: 0
-  fprintf(stderr, "parsedType isa PDLRangeType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLRangeType: %d\n",
       mlirTypeIsAPDLRangeType(parsedType));
   // CHECK: parsedType isa PDLTypeType: 0
-  fprintf(stderr, "parsedType isa PDLTypeType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLTypeType: %d\n",
       mlirTypeIsAPDLTypeType(parsedType));
   // CHECK: parsedType isa PDLValueType: 0
-  fprintf(stderr, "parsedType isa PDLValueType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLValueType: %d\n",
       mlirTypeIsAPDLValueType(parsedType));
 
   // CHECK: constructedType isa PDLType: 1
-  fprintf(stderr, "constructedType isa PDLType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLType: %d\n",
       mlirTypeIsAPDLType(constructedType));
   // CHECK: constructedType isa PDLAttributeType: 1
-  fprintf(stderr, "constructedType isa PDLAttributeType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLAttributeType: %d\n",
       mlirTypeIsAPDLAttributeType(constructedType));
   // CHECK: constructedType isa PDLOperationType: 0
-  fprintf(stderr, "constructedType isa PDLOperationType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLOperationType: %d\n",
       mlirTypeIsAPDLOperationType(constructedType));
   // CHECK: constructedType isa PDLRangeType: 0
-  fprintf(stderr, "constructedType isa PDLRangeType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLRangeType: %d\n",
       mlirTypeIsAPDLRangeType(constructedType));
   // CHECK: constructedType isa PDLTypeType: 0
-  fprintf(stderr, "constructedType isa PDLTypeType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLTypeType: %d\n",
       mlirTypeIsAPDLTypeType(constructedType));
   // CHECK: constructedType isa PDLValueType: 0
-  fprintf(stderr, "constructedType isa PDLValueType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLValueType: %d\n",
       mlirTypeIsAPDLValueType(constructedType));
 
   // CHECK: equal: 1
@@ -90,41 +90,41 @@ void testOperationType(MlirContext ctx) {
   assert(!mlirTypeIsNull(constructedType) && "couldn't construct PDLAttributeType");
 
   // CHECK: parsedType isa PDLType: 1
-  fprintf(stderr, "parsedType isa PDLType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLType: %d\n",
       mlirTypeIsAPDLType(parsedType));
   // CHECK: parsedType isa PDLAttributeType: 0
-  fprintf(stderr, "parsedType isa PDLAttributeType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLAttributeType: %d\n",
       mlirTypeIsAPDLAttributeType(parsedType));
-  // CHECK: parsedType isa PDLOperationType: 1 
-  fprintf(stderr, "parsedType isa PDLOperationType: %d\n", 
+  // CHECK: parsedType isa PDLOperationType: 1
+  fprintf(stderr, "parsedType isa PDLOperationType: %d\n",
       mlirTypeIsAPDLOperationType(parsedType));
   // CHECK: parsedType isa PDLRangeType: 0
-  fprintf(stderr, "parsedType isa PDLRangeType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLRangeType: %d\n",
       mlirTypeIsAPDLRangeType(parsedType));
   // CHECK: parsedType isa PDLTypeType: 0
-  fprintf(stderr, "parsedType isa PDLTypeType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLTypeType: %d\n",
       mlirTypeIsAPDLTypeType(parsedType));
   // CHECK: parsedType isa PDLValueType: 0
-  fprintf(stderr, "parsedType isa PDLValueType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLValueType: %d\n",
       mlirTypeIsAPDLValueType(parsedType));
 
   // CHECK: constructedType isa PDLType: 1
-  fprintf(stderr, "constructedType isa PDLType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLType: %d\n",
       mlirTypeIsAPDLType(constructedType));
   // CHECK: constructedType isa PDLAttributeType: 0
-  fprintf(stderr, "constructedType isa PDLAttributeType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLAttributeType: %d\n",
       mlirTypeIsAPDLAttributeType(constructedType));
   // CHECK: constructedType isa PDLOperationType: 1
-  fprintf(stderr, "constructedType isa PDLOperationType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLOperationType: %d\n",
       mlirTypeIsAPDLOperationType(constructedType));
   // CHECK: constructedType isa PDLRangeType: 0
-  fprintf(stderr, "constructedType isa PDLRangeType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLRangeType: %d\n",
       mlirTypeIsAPDLRangeType(constructedType));
   // CHECK: constructedType isa PDLTypeType: 0
-  fprintf(stderr, "constructedType isa PDLTypeType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLTypeType: %d\n",
       mlirTypeIsAPDLTypeType(constructedType));
   // CHECK: constructedType isa PDLValueType: 0
-  fprintf(stderr, "constructedType isa PDLValueType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLValueType: %d\n",
       mlirTypeIsAPDLValueType(constructedType));
 
   // CHECK: equal: 1
@@ -153,41 +153,41 @@ void testRangeType(MlirContext ctx) {
   assert(!mlirTypeIsNull(constructedType) && "couldn't construct PDLAttributeType");
 
   // CHECK: parsedType isa PDLType: 1
-  fprintf(stderr, "parsedType isa PDLType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLType: %d\n",
       mlirTypeIsAPDLType(parsedType));
   // CHECK: parsedType isa PDLAttributeType: 0
-  fprintf(stderr, "parsedType isa PDLAttributeType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLAttributeType: %d\n",
       mlirTypeIsAPDLAttributeType(parsedType));
   // CHECK: parsedType isa PDLOperationType: 0
-  fprintf(stderr, "parsedType isa PDLOperationType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLOperationType: %d\n",
       mlirTypeIsAPDLOperationType(parsedType));
-  // CHECK: parsedType isa PDLRangeType: 1 
-  fprintf(stderr, "parsedType isa PDLRangeType: %d\n", 
+  // CHECK: parsedType isa PDLRangeType: 1
+  fprintf(stderr, "parsedType isa PDLRangeType: %d\n",
       mlirTypeIsAPDLRangeType(parsedType));
   // CHECK: parsedType isa PDLTypeType: 0
-  fprintf(stderr, "parsedType isa PDLTypeType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLTypeType: %d\n",
       mlirTypeIsAPDLTypeType(parsedType));
   // CHECK: parsedType isa PDLValueType: 0
-  fprintf(stderr, "parsedType isa PDLValueType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLValueType: %d\n",
       mlirTypeIsAPDLValueType(parsedType));
 
   // CHECK: constructedType isa PDLType: 1
-  fprintf(stderr, "constructedType isa PDLType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLType: %d\n",
       mlirTypeIsAPDLType(constructedType));
   // CHECK: constructedType isa PDLAttributeType: 0
-  fprintf(stderr, "constructedType isa PDLAttributeType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLAttributeType: %d\n",
       mlirTypeIsAPDLAttributeType(constructedType));
   // CHECK: constructedType isa PDLOperationType: 0
-  fprintf(stderr, "constructedType isa PDLOperationType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLOperationType: %d\n",
       mlirTypeIsAPDLOperationType(constructedType));
-  // CHECK: constructedType isa PDLRangeType: 1 
-  fprintf(stderr, "constructedType isa PDLRangeType: %d\n", 
+  // CHECK: constructedType isa PDLRangeType: 1
+  fprintf(stderr, "constructedType isa PDLRangeType: %d\n",
       mlirTypeIsAPDLRangeType(constructedType));
   // CHECK: constructedType isa PDLTypeType: 0
-  fprintf(stderr, "constructedType isa PDLTypeType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLTypeType: %d\n",
       mlirTypeIsAPDLTypeType(constructedType));
   // CHECK: constructedType isa PDLValueType: 0
-  fprintf(stderr, "constructedType isa PDLValueType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLValueType: %d\n",
       mlirTypeIsAPDLValueType(constructedType));
 
   // CHECK: equal: 1
@@ -217,41 +217,41 @@ void testTypeType(MlirContext ctx) {
   assert(!mlirTypeIsNull(constructedType) && "couldn't construct PDLAttributeType");
 
   // CHECK: parsedType isa PDLType: 1
-  fprintf(stderr, "parsedType isa PDLType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLType: %d\n",
       mlirTypeIsAPDLType(parsedType));
   // CHECK: parsedType isa PDLAttributeType: 0
-  fprintf(stderr, "parsedType isa PDLAttributeType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLAttributeType: %d\n",
       mlirTypeIsAPDLAttributeType(parsedType));
   // CHECK: parsedType isa PDLOperationType: 0
-  fprintf(stderr, "parsedType isa PDLOperationType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLOperationType: %d\n",
       mlirTypeIsAPDLOperationType(parsedType));
   // CHECK: parsedType isa PDLRangeType: 0
-  fprintf(stderr, "parsedType isa PDLRangeType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLRangeType: %d\n",
       mlirTypeIsAPDLRangeType(parsedType));
-  // CHECK: parsedType isa PDLTypeType: 1 
-  fprintf(stderr, "parsedType isa PDLTypeType: %d\n", 
+  // CHECK: parsedType isa PDLTypeType: 1
+  fprintf(stderr, "parsedType isa PDLTypeType: %d\n",
       mlirTypeIsAPDLTypeType(parsedType));
   // CHECK: parsedType isa PDLValueType: 0
-  fprintf(stderr, "parsedType isa PDLValueType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLValueType: %d\n",
       mlirTypeIsAPDLValueType(parsedType));
 
   // CHECK: constructedType isa PDLType: 1
-  fprintf(stderr, "constructedType isa PDLType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLType: %d\n",
       mlirTypeIsAPDLType(constructedType));
   // CHECK: constructedType isa PDLAttributeType: 0
-  fprintf(stderr, "constructedType isa PDLAttributeType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLAttributeType: %d\n",
       mlirTypeIsAPDLAttributeType(constructedType));
   // CHECK: constructedType isa PDLOperationType: 0
-  fprintf(stderr, "constructedType isa PDLOperationType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLOperationType: %d\n",
       mlirTypeIsAPDLOperationType(constructedType));
   // CHECK: constructedType isa PDLRangeType: 0
-  fprintf(stderr, "constructedType isa PDLRangeType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLRangeType: %d\n",
       mlirTypeIsAPDLRangeType(constructedType));
   // CHECK: constructedType isa PDLTypeType: 1
-  fprintf(stderr, "constructedType isa PDLTypeType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLTypeType: %d\n",
       mlirTypeIsAPDLTypeType(constructedType));
   // CHECK: constructedType isa PDLValueType: 0
-  fprintf(stderr, "constructedType isa PDLValueType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLValueType: %d\n",
       mlirTypeIsAPDLValueType(constructedType));
 
   // CHECK: equal: 1
@@ -277,41 +277,41 @@ void testValueType(MlirContext ctx) {
   assert(!mlirTypeIsNull(constructedType) && "couldn't construct PDLAttributeType");
 
   // CHECK: parsedType isa PDLType: 1
-  fprintf(stderr, "parsedType isa PDLType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLType: %d\n",
       mlirTypeIsAPDLType(parsedType));
   // CHECK: parsedType isa PDLAttributeType: 0
-  fprintf(stderr, "parsedType isa PDLAttributeType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLAttributeType: %d\n",
       mlirTypeIsAPDLAttributeType(parsedType));
   // CHECK: parsedType isa PDLOperationType: 0
-  fprintf(stderr, "parsedType isa PDLOperationType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLOperationType: %d\n",
       mlirTypeIsAPDLOperationType(parsedType));
   // CHECK: parsedType isa PDLRangeType: 0
-  fprintf(stderr, "parsedType isa PDLRangeType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLRangeType: %d\n",
       mlirTypeIsAPDLRangeType(parsedType));
   // CHECK: parsedType isa PDLTypeType: 0
-  fprintf(stderr, "parsedType isa PDLTypeType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLTypeType: %d\n",
       mlirTypeIsAPDLTypeType(parsedType));
   // CHECK: parsedType isa PDLValueType: 1
-  fprintf(stderr, "parsedType isa PDLValueType: %d\n", 
+  fprintf(stderr, "parsedType isa PDLValueType: %d\n",
       mlirTypeIsAPDLValueType(parsedType));
 
   // CHECK: constructedType isa PDLType: 1
-  fprintf(stderr, "constructedType isa PDLType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLType: %d\n",
       mlirTypeIsAPDLType(constructedType));
   // CHECK: constructedType isa PDLAttributeType: 0
-  fprintf(stderr, "constructedType isa PDLAttributeType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLAttributeType: %d\n",
       mlirTypeIsAPDLAttributeType(constructedType));
   // CHECK: constructedType isa PDLOperationType: 0
-  fprintf(stderr, "constructedType isa PDLOperationType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLOperationType: %d\n",
       mlirTypeIsAPDLOperationType(constructedType));
   // CHECK: constructedType isa PDLRangeType: 0
-  fprintf(stderr, "constructedType isa PDLRangeType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLRangeType: %d\n",
       mlirTypeIsAPDLRangeType(constructedType));
   // CHECK: constructedType isa PDLTypeType: 0
-  fprintf(stderr, "constructedType isa PDLTypeType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLTypeType: %d\n",
       mlirTypeIsAPDLTypeType(constructedType));
   // CHECK: constructedType isa PDLValueType: 1
-  fprintf(stderr, "constructedType isa PDLValueType: %d\n", 
+  fprintf(stderr, "constructedType isa PDLValueType: %d\n",
       mlirTypeIsAPDLValueType(constructedType));
 
   // CHECK: equal: 1

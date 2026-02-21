@@ -13,12 +13,12 @@ namespace PR6045 {
     static const unsigned int member = r;
     void f();
   };
-  
+
   template<unsigned int r>
   const unsigned int A<r>::member;
-  
+
   template<unsigned int r>
-  void A<r>::f() 
+  void A<r>::f()
   {
     unsigned k;
     (void)(k % member);

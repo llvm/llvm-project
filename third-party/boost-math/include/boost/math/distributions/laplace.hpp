@@ -241,7 +241,7 @@ BOOST_MATH_GPU_ENABLED inline RealType logcdf(const laplace_distribution<RealTyp
    // Checking function argument.
    constexpr auto function = "boost::math::logcdf(const laplace_distribution<%1%>&, %1%)";
    // Check scale and location.
-   if (false == dist.check_parameters(function, &result)) 
+   if (false == dist.check_parameters(function, &result))
    {
       return result;
    }
@@ -249,14 +249,14 @@ BOOST_MATH_GPU_ENABLED inline RealType logcdf(const laplace_distribution<RealTyp
    // Special cdf values:
    if((boost::math::isinf)(x))
    {
-      if(x < 0) 
+      if(x < 0)
       {
          return 0; // -infinity.
       }
       return 1; // + infinity.
    }
 
-   if (false == detail::check_x(function, x, &result, Policy())) 
+   if (false == detail::check_x(function, x, &result, Policy()))
    {
       return result;
    }
@@ -295,7 +295,7 @@ BOOST_MATH_GPU_ENABLED inline RealType quantile(const laplace_distribution<RealT
         "probability parameter is 0, but must be > 0!", Policy());
       return -result; // -inf
    }
-  
+
    if(p == 1)
    {
       result = policies::raise_overflow_error<RealType>(function,
@@ -372,8 +372,8 @@ BOOST_MATH_GPU_ENABLED inline RealType logcdf(const complemented2_type<laplace_d
    // Special cdf values.
    if((boost::math::isinf)(x))
    {
-     if(x < 0) 
-     { 
+     if(x < 0)
+     {
        return 1; // cdf complement -infinity is unity.
      }
 
@@ -407,7 +407,7 @@ BOOST_MATH_GPU_ENABLED inline RealType quantile(const complemented2_type<laplace
    // Checking function argument.
    constexpr auto function = "quantile(const complemented2_type<laplace_distribution<%1%>, %1%>&)";
    if (false == c.dist.check_parameters(function, &result)) return result;
-   
+
    // Extreme values.
    if(q == 0)
    {

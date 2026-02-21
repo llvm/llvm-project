@@ -13,12 +13,12 @@ float get_b(union u_tag *my_u) {
   return my_u->b;
 }
 
-int f2( float __x ) { 
-  union{ 
-    float __f; 
-    unsigned int __u; 
+int f2( float __x ) {
+  union{
+    float __f;
+    unsigned int __u;
   }__u;
-  return (int)(__u.__u >> 31); 
+  return (int)(__u.__u >> 31);
 }
 
 typedef union { int i; int *j; } value;
@@ -29,7 +29,7 @@ int f3(value v) {
 
 enum E9 { one, two };
 union S65 { enum E9 a; } ; union S65 s65;
-void fS65(void) { enum E9 e = s65.a; } 
+void fS65(void) { enum E9 e = s65.a; }
 
 typedef union{
   unsigned char x[65536];

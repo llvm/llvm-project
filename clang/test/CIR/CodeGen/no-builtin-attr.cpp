@@ -136,7 +136,7 @@ void caller() {
 // LLVM-SPC-SAME:"no-builtins"
 // LLVM-BTH-SAME:"no-builtins"
 // LLVM-ALL-SAME:"no-builtins"
-// 
+//
 // LLVM: attributes #[[NO_MCPY_ATTR]] = {
 // LLVM-DEF-SAME: "no-builtin-memcpy"
 // LLVM-SPC-SAME: "no-builtin-memcmp"

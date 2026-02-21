@@ -19,12 +19,12 @@
 
 JSON Format specification.
 
-All library level keys, accept target values and are defaulted if not specified. 
+All library level keys, accept target values and are defaulted if not specified.
 
 {
 "tapi_tbd_version": 5,                            # Required: TBD version for all documents in file
 "main_library": {                                 # Required: top level library
-  "target_info": [                                # Required: target information 
+  "target_info": [                                # Required: target information
     {
       "target": "x86_64-macos",
       "min_deployment": "10.14"                   # Optional: minOS defaults to 0
@@ -38,10 +38,10 @@ All library level keys, accept target values and are defaulted if not specified.
       "min_deployment": "12.1"
     }],
   "flags":[{"attributes": ["flat_namespace"]}],     # Optional:
-  "install_names":[{"name":"/S/L/F/Foo.fwk/Foo"}],  # Required: library install name 
+  "install_names":[{"name":"/S/L/F/Foo.fwk/Foo"}],  # Required: library install name
   "current_versions":[{"version": "1.2"}],          # Optional: defaults to 1
   "compatibility_versions":[{ "version": "1.1"}],   # Optional: defaults to 1
-  "rpaths": [                                       # Optional: 
+  "rpaths": [                                       # Optional:
     {
       "targets": ["x86_64-macos"],                  # Optional: defaults to targets in `target-info`
       "paths": ["@executable_path/.../Frameworks"]
@@ -51,7 +51,7 @@ All library level keys, accept target values and are defaulted if not specified.
   "reexported_libraries": [{"names": ["/u/l/l/foo.dylib"]}],
   "exported_symbols": [{                            # List of export symbols section
       "targets": ["x86_64-macos", "arm64-macos"],   # Optional: defaults to targets in `target-info`
-        "text": {                                   # List of Text segment symbols 
+        "text": {                                   # List of Text segment symbols
           "global": [ "_func" ],
           "weak": [],
           "thread_local": []

@@ -2,9 +2,9 @@
 template<typename T> int force_same(T, T);
 
 // C++ [dcl.enum]p5:
-//   [...] If the underlying type is not fixed, the type of each enumerator is 
+//   [...] If the underlying type is not fixed, the type of each enumerator is
 //   the type of its initializing value:
-//     - If an initializer is specified for an enumerator, the initializing 
+//     - If an initializer is specified for an enumerator, the initializing
 //       value has the same type as the expression.
 enum Bullet1 {
   Bullet1Val1 = 'a',
@@ -13,7 +13,7 @@ enum Bullet1 {
   Bullet1Val2IsUnsigned = sizeof(force_same(Bullet1Val2, unsigned(0)))
 };
 
-//    - If no initializer is specified for the first enumerator, the 
+//    - If no initializer is specified for the first enumerator, the
 //      initializing value has an unspecified integral type.
 enum Bullet2 {
   Bullet2Val,
@@ -21,9 +21,9 @@ enum Bullet2 {
 };
 
 //    - Otherwise the type of the initializing value is the same as the type
-//      of the initializing value of the preceding enumerator unless the 
+//      of the initializing value of the preceding enumerator unless the
 //      incremented value is not representable in that type, in which case the
-//      type is an unspecified integral type sufficient to contain the 
+//      type is an unspecified integral type sufficient to contain the
 //      incremented value. If no such type exists, the program is ill-formed.
 enum Bullet3a {
   Bullet3aVal1 = 17,

@@ -52,7 +52,7 @@ struct SA {
       ;
 #pragma omp target simd is_device_ptr(raa) // OK
     for (int ii=0; ii<10; ii++)
-      ;   
+      ;
 #pragma omp target simd is_device_ptr(e) // expected-error{{expected pointer, array, reference to pointer, or reference to array in 'is_device_ptr clause'}}
     for (int ii=0; ii<10; ii++)
       ;

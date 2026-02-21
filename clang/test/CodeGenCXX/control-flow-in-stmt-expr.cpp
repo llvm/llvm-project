@@ -18,7 +18,7 @@ struct Printies {
 void ParenInit() {
   // CHECK-LABEL: define dso_local void @_Z9ParenInitv()
   // CHECK: [[CLEANUP_DEST:%.+]] = alloca i32, align 4
-  Printies ps(Printy("a"), 
+  Printies ps(Printy("a"),
               // CHECK: call void @_ZN6PrintyC1EPKc
               ({
                 if (foo()) return;
@@ -50,12 +50,12 @@ void break_in_stmt_expr() {
   // Verify that the "break" in "if.then".calls dtor before jumping to "for.end".
 
   // CHECK-LABEL: define dso_local void @_Z18break_in_stmt_exprv()
-  Printies p{Printy("a"), 
+  Printies p{Printy("a"),
             // CHECK: call void @_ZN6PrintyC1EPKc
             ({
                 for (;;) {
                     Printies ps{
-                      Printy("b"), 
+                      Printy("b"),
                       // CHECK: for.cond:
                       // CHECK:   call void @_ZN6PrintyC1EPKc
                       ({
@@ -368,7 +368,7 @@ void NewArrayInit() {
     "a",
     // CHECK: call void @_ZN6PrintyC1EPKc
     // CHECK: store ptr %array.exp.next, ptr %array.init.end, align 8
-    "b", 
+    "b",
     // CHECK: call void @_ZN6PrintyC1EPKc
     // CHECK: store ptr %array.exp.next1, ptr %array.init.end, align 8
     ({
@@ -473,7 +473,7 @@ void Accept2(int x, int y);
 
 void InactiveNormalCleanup() {
   // CHECK-LABEL: define {{.*}}InactiveNormalCleanupEv()
-  
+
   // The first A{} below is an inactive normal cleanup which
   // is not popped from EHStack on deactivation. This needs an
   // "active" cleanup flag.

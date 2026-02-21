@@ -54,7 +54,7 @@ class C13 { C13(int i); }; // NOLINT(google-explicit-constructor) NOLINT(some-ot
 class C14 { C14(int i); }; // NOLINTNEXTLINE(some-other-check) NOLINT(google-explicit-constructor)
 
 // NOLINTNEXTLINE(google-explicit-constructor) NOLINT(some-other-check)
-class C15 { C15(int i); }; 
+class C15 { C15(int i); };
 
 // Any text after a NOLINT expression is treated as a comment:
 class C16 { C16(int i); }; // NOLINT: suppress check because <reason>
@@ -75,7 +75,7 @@ class C21 { C21(int i); }; // NOLINT( google-explicit-constructor , some-other-c
 class C22 { C22(int i); }; // NOLINT(google-explicit- constructor)
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: single-argument constructors must be marked explicit
 
-// If there is a space between "NOLINT" and the bracket, it is treated as a regular NOLINT: 
+// If there is a space between "NOLINT" and the bracket, it is treated as a regular NOLINT:
 class C23 { C23(int i); }; // NOLINT (some-other-check)
 
 void f() {

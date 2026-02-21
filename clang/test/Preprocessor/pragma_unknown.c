@@ -18,7 +18,7 @@
 
 #pragma STDC CX_LIMITED_RANGE ON
 #pragma STDC CX_LIMITED_RANGE OFF
-#pragma STDC CX_LIMITED_RANGE DEFAULT 
+#pragma STDC CX_LIMITED_RANGE DEFAULT
 #pragma STDC CX_LIMITED_RANGE IN_BETWEEN   // expected-warning {{expected 'ON' or 'OFF' or 'DEFAULT' in pragma}}
 // CHECK: {{^}}#pragma STDC CX_LIMITED_RANGE ON{{$}}
 // CHECK: {{^}}#pragma STDC CX_LIMITED_RANGE OFF{{$}}

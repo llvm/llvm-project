@@ -27,7 +27,7 @@ namespace PR5911 {
 struct Foo { int foo; };
 Foo& ignoreSetMutex = *(new Foo);
 
-// Binding to a bit-field that requires a temporary. 
+// Binding to a bit-field that requires a temporary.
 struct { int bitfield : 3; } s = { 3 };
 const int &s2 = s.bitfield;
 

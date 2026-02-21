@@ -2,7 +2,7 @@
 
 // CHECK: error:
 // CHECK-SAME: 'f0' is unavailable: introduced in macOS 11
-// CHECK-NOT: unknown 
+// CHECK-NOT: unknown
 
 void f0(void) __attribute__((availability(macosx,strict,introduced=11)));
 

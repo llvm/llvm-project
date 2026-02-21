@@ -24,7 +24,7 @@ void func(int n) {
   // expected-error@+1 {{expected expression}} expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
   #pragma omp unroll partial(
   for (int i = 0; i < n; ++i) {}
-  
+
   // expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
   #pragma omp unroll partial(4
   for (int i = 0; i < n; ++i) {}
@@ -55,15 +55,15 @@ void func(int n) {
   #pragma omp unroll partial(a)
   for (int i = 0; i < n; ++i) {}
 
-  // expected-error@+1 {{argument to 'partial' clause must be a strictly positive integer value}} 
+  // expected-error@+1 {{argument to 'partial' clause must be a strictly positive integer value}}
   #pragma omp unroll partial(0)
   for (int i = 0; i < n; ++i) {}
-    
-  // expected-error@+1 {{directive '#pragma omp unroll' cannot contain more than one 'partial' clause}} 
+
+  // expected-error@+1 {{directive '#pragma omp unroll' cannot contain more than one 'partial' clause}}
   #pragma omp unroll partial partial
   for (int i = 0; i < n; ++i) {}
 
-  // expected-error@+1 {{directive '#pragma omp unroll' cannot contain more than one 'partial' clause}} 
+  // expected-error@+1 {{directive '#pragma omp unroll' cannot contain more than one 'partial' clause}}
   #pragma omp unroll partial(4) partial
   for (int i = 0; i < n; ++i) {}
 
@@ -97,13 +97,13 @@ void func(int n) {
   #pragma omp unroll
   #pragma omp unroll
   for (int i = 0; i < n; ++i) {}
-  
+
   // expected-error@+2 {{statement after '#pragma omp tile' must be a for loop}}
   #pragma omp tile sizes(4)
   #pragma omp unroll
   for (int i = 0; i < n; ++i) {}
-  
-  // expected-error@+4 {{expected 2 for loops after '#pragma omp for', but found only 1}} 
+
+  // expected-error@+4 {{expected 2 for loops after '#pragma omp for', but found only 1}}
   // expected-note@+1 {{as specified in 'collapse' clause}}
   #pragma omp for collapse(2)
   for (int i = 0; i < n; ++i) {
@@ -115,7 +115,7 @@ void func(int n) {
 
 template<typename T, int Factor>
 void templated_func(int n) {
-  // expected-error@+1 {{argument to 'partial' clause must be a strictly positive integer value}} 
+  // expected-error@+1 {{argument to 'partial' clause must be a strictly positive integer value}}
   #pragma omp unroll partial(Factor)
   for (T i = 0; i < n; ++i) {}
 

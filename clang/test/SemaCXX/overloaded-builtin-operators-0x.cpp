@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fshow-overloads=best -std=c++11 -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -fshow-overloads=best -std=c++11 -verify %s
 // expected-no-diagnostics
 
 template <class T>

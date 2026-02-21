@@ -15,7 +15,7 @@
 
 // Assumption: fp_t is a 128 bit floating point type
 //             du_int is a 64 bit integral type
-//             value in fp_t is representable in du_int or is negative 
+//             value in fp_t is representable in du_int or is negative
 //                 (no range checking performed)
 
 COMPILER_RT_ABI du_int __fixunstfdi(fp_t a);

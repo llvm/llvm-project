@@ -2,10 +2,10 @@
 
 // RUN: %clang_cc1 -E %s | FileCheck -strict-whitespace %s
 
-#define debug(...) fprintf(stderr, __VA_ARGS__) 
-#define showlist(...) puts(#__VA_ARGS__) 
+#define debug(...) fprintf(stderr, __VA_ARGS__)
+#define showlist(...) puts(#__VA_ARGS__)
 #define report(test, ...) ((test)?puts(#test):\
-                           printf(__VA_ARGS__)) 
+                           printf(__VA_ARGS__))
 debug("Flag");
 // CHECK: fprintf(stderr, "Flag");
 

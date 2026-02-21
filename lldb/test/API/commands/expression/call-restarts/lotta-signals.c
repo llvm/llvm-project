@@ -46,12 +46,12 @@ call_me_nosig (int some_value)
   return some_value;
 }
 
-int 
+int
 main ()
 {
   int ret_val;
   signal (SIGCHLD, sigchld_handler);
-  
+
   ret_val = call_me (2);  // Stop here in main.
 
   ret_val = call_me_nosig (10);

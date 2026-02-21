@@ -9,7 +9,7 @@ namespace N {
 template<> class X<int> { /* ... */ };	// expected-error {{no template named 'X'; did you mean 'N::X'?}}
 
 namespace N {
-  
+
 template<> class X<char*> { /* ... */ };	// OK: X is a template
-  
+
 }

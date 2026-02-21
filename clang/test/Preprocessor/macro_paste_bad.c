@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -Eonly -verify -pedantic %s
 // pasting ""x"" and ""+"" does not give a valid preprocessing token
-#define XYZ  x ## + 
+#define XYZ  x ## +
 XYZ   // expected-error {{pasting formed 'x+', an invalid preprocessing token}}
 #define XXYZ  . ## test
 XXYZ   // expected-error {{pasting formed '.test', an invalid preprocessing token}}

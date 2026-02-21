@@ -10,7 +10,7 @@
 //  Created by Blaine Garst on 6/24/08.
 //
 // pure C nothing more needed
-// CONFIG 
+// CONFIG
 
 
 #include <stdio.h>
@@ -25,13 +25,13 @@ void callVoidVoid(void (^closure)(void)) {
 
 int main(int argc, char *argv[]) {
     int i = 1;
-    
+
     void (^vv)(void) = ^{
         if (argc > 0) {
             callVoidVoid(^{ Global = i; });
         }
     };
-    
+
     i = 2;
     vv();
     if (Global != 1) {

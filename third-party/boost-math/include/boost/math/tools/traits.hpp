@@ -8,7 +8,7 @@
 This header defines two traits classes, both in namespace boost::math::tools.
 
 is_distribution<D>::value is true iff D has overloaded "cdf" and
-"quantile" functions, plus member typedefs value_type and policy_type.  
+"quantile" functions, plus member typedefs value_type and policy_type.
 It's not much of a definitive test frankly,
 but if it looks like a distribution and quacks like a distribution
 then it must be a distribution.
@@ -88,7 +88,7 @@ template <typename D>
 struct is_distribution_imp
 {
    static constexpr bool value =
-      has_quantile<D>::value 
+      has_quantile<D>::value
       && has_cdf<D>::value
       && has_value_type<D>::value
       && has_policy_type<D>::value;
@@ -116,9 +116,9 @@ struct is_scaled_distribution_helper
 template <typename D>
 struct is_scaled_distribution_helper<D, true>
 {
-   static constexpr bool value = 
-      (sizeof(test_has_location<D>(0)) != 1) 
-      && 
+   static constexpr bool value =
+      (sizeof(test_has_location<D>(0)) != 1)
+      &&
       (sizeof(test_has_scale<D>(0)) != 1);
 };
 

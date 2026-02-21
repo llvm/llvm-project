@@ -72,7 +72,7 @@ int t8(void) {
   __asm { int 5}
   __asm int 6
   __asm int 7
-  __asm { 
+  __asm {
     int 8
   }
   return 10;

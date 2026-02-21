@@ -17,16 +17,16 @@ void test() {
   _Generic(struct S, default : 0);
   _Generic(enum E, default : 0);
   _Generic(union U, default : 0);
-  
+
   // We can also parse array types.
   _Generic(int[12], default : 0);
-  
+
   // And pointer to array types, too.
   _Generic(int(*)[12], default : 0);
-  
+
   // We do not accept a parenthesized type name.
   _Generic((int), int : 0); // expected-error {{expected expression}}
-  
+
   // We can parse more complex types as well. Note, this is a valid spelling of
   // a function  pointer type in C but is not a valid spelling of a function
   // pointer type in C++. Surprise!
@@ -55,7 +55,7 @@ struct inst {
 void cpp_test() {
   // Ensure we can parse more complex C++ typenames as well.
   _Generic(S<int>::T<inst>::foo, int : 1);
-  
+
   // And that the type name doesn't confuse us when given an initialization
   // expression.
   _Generic(S<int>::T<inst>::foo{}, int : 1);

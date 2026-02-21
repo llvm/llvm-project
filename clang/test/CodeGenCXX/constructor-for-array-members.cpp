@@ -25,7 +25,7 @@ struct M {
     for (int i = 0; i < 2; i++)
       for (int j = 0; j < 3; j++)
         for (int k = 0; k < 4; k++)
-           printf("MULTI_ARR[%d][%d][%d].iS = %d MULTI_ARR[%d][%d][%d].f1 = %f\n", 
+           printf("MULTI_ARR[%d][%d][%d].iS = %d MULTI_ARR[%d][%d][%d].f1 = %f\n",
                   i,j,k, MULTI_ARR[i][j][k].iS, i,j,k, MULTI_ARR[i][j][k].f1);
 
   }

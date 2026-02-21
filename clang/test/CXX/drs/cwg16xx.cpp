@@ -470,7 +470,7 @@ namespace cwg1696 { // cwg1696: 7
       const int &v = 42;  // #cwg1696-A2-a
     };
     A2 a1;    // #cwg1696-A2-b
-    
+
     A2 a2(1); // OK, unfortunately
 #endif
   }

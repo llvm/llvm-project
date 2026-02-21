@@ -342,11 +342,11 @@ TEST(FoldingRanges, PseudoParserWithoutLineFoldings) {
       )cpp",
       R"cpp(
         #pragma region R1[[
-        
+
         #pragma region R2[[
          constexpr int a = 2;
         ]]#pragma endregion
-        
+
         ]]#pragma endregion
       )cpp",
       R"cpp(

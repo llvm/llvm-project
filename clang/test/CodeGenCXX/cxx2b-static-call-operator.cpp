@@ -69,7 +69,7 @@ void test_consteval_constexpr() {
   int y = FunctorConstexpr{}(x, 2);
   constexpr int z1 = FunctorConsteval{}(2, 2);
   constexpr int z2 = FunctorConstexpr{}(2, 2);
-  
+
   static_assert(z1 == 4);
   static_assert(z2 == 4);
 

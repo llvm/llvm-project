@@ -1838,13 +1838,13 @@ TEST(IRSimilarityCandidate, PredicateIsomorphism) {
   std::vector<IRInstructionData *>::iterator Start, End;
   Start = InstrList.begin();
   End = InstrList.begin();
-  
+
   std::advance(End, 1);
   IRSimilarityCandidate Cand1(0, 2, *Start, *End);
 
   Start = InstrList.begin();
   End = InstrList.begin();
-  
+
   std::advance(Start, 3);
   std::advance(End, 4);
   IRSimilarityCandidate Cand2(3, 2, *Start, *End);
@@ -1936,7 +1936,7 @@ TEST(IRSimilarityCandidate, IdenticalWithDebug) {
                           bb2:
                              %4 = add i32 %a, %b
                              %5 = add i32 %b, %a
-                             ret i32 0       
+                             ret i32 0
                           }
 
                           !0 = distinct !{!"test\00", i32 10}
@@ -2249,7 +2249,7 @@ TEST(IRSimilarityCandidate, SameBranchStructureInternal) {
                              %3 = add i32 %a, %b
                              ret i32 0
                           }
-                          
+
                           define i32 @f2(i32 %a, i32 %b) {
                           bb0:
                              %0 = add i32 %a, %b
@@ -2300,7 +2300,7 @@ TEST(IRSimilarityCandidate, DifferentBranchStructureInternal) {
                              %5 = add i32 %a, %b
                              ret i32 0
                           }
-                          
+
                           define i32 @f2(i32 %a, i32 %b) {
                           bb0:
                              %0 = add i32 %a, %b
@@ -2351,7 +2351,7 @@ TEST(IRSimilarityCandidate, SameBranchStructureOutside) {
                              %3 = add i32 %a, %b
                              ret i32 0
                           }
-                          
+
                           define i32 @f2(i32 %a, i32 %b) {
                           bb0:
                              %0 = add i32 %a, %b
@@ -2398,7 +2398,7 @@ TEST(IRSimilarityCandidate, DifferentBranchStructureOutside) {
                              %3 = add i32 %a, %b
                              ret i32 0
                           }
-                          
+
                           define i32 @f2(i32 %a, i32 %b) {
                           bb0:
                              %0 = add i32 %a, %b
@@ -2445,12 +2445,12 @@ TEST(IRSimilarityCandidate, SamePHIStructureInternal) {
                           bb1:
                              br label %bb2
                           bb2:
-                             %0 = phi i32 [ %a, %bb0 ], [ %b, %bb1 ] 
+                             %0 = phi i32 [ %a, %bb0 ], [ %b, %bb1 ]
                              %1 = add i32 %b, %a
                              %2 = add i32 %a, %b
                              ret i32 0
                           }
-                          
+
                           define i32 @f2(i32 %a, i32 %b) {
                           bb0:
                              br label %bb2
@@ -2496,12 +2496,12 @@ TEST(IRSimilarityCandidate, DifferentPHIStructureInternal) {
                           bb3:
                              br label %bb2
                           bb2:
-                             %0 = phi i32 [ %a, %bb0 ], [ %b, %bb1 ] 
+                             %0 = phi i32 [ %a, %bb0 ], [ %b, %bb1 ]
                              %1 = add i32 %b, %a
                              %2 = add i32 %a, %b
                              ret i32 0
                           }
-                          
+
                           define i32 @f2(i32 %a, i32 %b) {
                           bb0:
                              br label %bb2
@@ -2510,7 +2510,7 @@ TEST(IRSimilarityCandidate, DifferentPHIStructureInternal) {
                           bb3:
                              br label %bb2
                           bb2:
-                             %0 = phi i32 [ %a, %bb0 ], [ %b, %bb3 ] 
+                             %0 = phi i32 [ %a, %bb0 ], [ %b, %bb3 ]
                              %1 = add i32 %b, %a
                              %2 = add i32 %a, %b
                              ret i32 0

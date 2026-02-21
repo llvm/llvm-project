@@ -3,7 +3,7 @@
 //  Boost Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
-//  Regular use of std::array functions can not be used on 
+//  Regular use of std::array functions can not be used on
 //  GPU platforms like CUDA since they are missing the __device__ marker
 //  Alias as needed to get correct support
 

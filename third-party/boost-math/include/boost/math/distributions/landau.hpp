@@ -4238,7 +4238,7 @@ BOOST_MATH_GPU_ENABLED inline RealType landau_quantile_upper_imp_prec(const Real
 template <class RealType>
 BOOST_MATH_GPU_ENABLED inline RealType landau_quantile_imp_prec(const RealType& p, bool complement, const boost::math::integral_constant<int, 53>& tag)
 {
-    if (p > 0.5) 
+    if (p > 0.5)
     {
         return !complement ? landau_quantile_upper_imp_prec(1 - p, tag) : landau_quantile_lower_imp_prec(1 - p, tag);
     }
@@ -4249,7 +4249,7 @@ BOOST_MATH_GPU_ENABLED inline RealType landau_quantile_imp_prec(const RealType& 
 template <class RealType>
 BOOST_MATH_GPU_ENABLED inline RealType landau_quantile_imp_prec(const RealType& p, bool complement, const boost::math::integral_constant<int, 113>& tag)
 {
-    if (p > 0.5) 
+    if (p > 0.5)
     {
         return !complement ? landau_quantile_upper_imp_prec(1 - p, tag) : landau_quantile_lower_imp_prec(1 - p, tag);
     }
@@ -4453,7 +4453,7 @@ class landau_distribution
         : mu(l_location), c(l_scale)
     {
         BOOST_MATH_STD_USING
-        
+
         constexpr auto function = "boost::math::landau_distribution<%1%>::landau_distribution";
         RealType result = 0;
         detail::check_location(function, l_location, &result, Policy());

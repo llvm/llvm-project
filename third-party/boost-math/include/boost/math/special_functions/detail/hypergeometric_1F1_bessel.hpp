@@ -30,7 +30,7 @@
               return false;  // might as well fall through to recursion
         if (b <= 100)
            return true;
-        // Even though we're in a reasonable domain for Tricomi's approximation, 
+        // Even though we're in a reasonable domain for Tricomi's approximation,
         // the arguments to the Bessel functions may be so large that we can't
         // actually evaluate them:
         T x = sqrt(fabs(2 * z * b - 4 * a * z));
@@ -106,7 +106,7 @@
                  std::fill(bessel_cache.begin(), bessel_cache.end(), std::numeric_limits<T>::quiet_NaN());
               }
 #else
-           if ((std::numeric_limits<T>::has_infinity && !(boost::math::isfinite)(bessel_cache[cache_size - 1])) 
+           if ((std::numeric_limits<T>::has_infinity && !(boost::math::isfinite)(bessel_cache[cache_size - 1]))
               || (!std::numeric_limits<T>::has_infinity && ((boost::math::isnan)(bessel_cache[cache_size - 1]) || (fabs(bessel_cache[cache_size - 1]) >= tools::max_value<T>()))))
            {
               policies::raise_evaluation_error("hypergeometric_1F1_AS_13_3_7_tricomi_series<%1%>", "Expected finite Bessel function result but got %1%", bessel_cache[cache_size - 1], pol);
@@ -501,12 +501,12 @@
         // This series is only convergent/useful for a and b approximately equal
         // (ideally |a-b| < 1).  The series can also go divergent after a while
         // when b < 0, which limits precision to around that of double.  In that
-        // situation we return 0 to terminate the series as otherwise the divergent 
+        // situation we return 0 to terminate the series as otherwise the divergent
         // terms will destroy all the bits in our result before they do eventually
         // converge again.  One important use case for this series is for z < 0
         // and |a| << |b| so that either b-a == b or at least most of the digits in a
-        // are lost in the subtraction.  Note that while you can easily convince yourself 
-        // that the result should be unity when b-a == b, in fact this is not (quite) 
+        // are lost in the subtraction.  Note that while you can easily convince yourself
+        // that the result should be unity when b-a == b, in fact this is not (quite)
         // the case for large z.
         //
         hypergeometric_1F1_AS_13_3_6_series(const T& a, const T& b, const T& z, const T& b_minus_a, const Policy& pol_)

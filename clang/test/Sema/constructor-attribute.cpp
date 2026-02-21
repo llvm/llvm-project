@@ -14,11 +14,11 @@ template <float P> [[gnu::constructor(P)]] void f(); // expected-error {{'gnu::c
 template <double P> [[gnu::constructor(P)]] void f(); // expected-error {{'gnu::constructor' attribute requires an integer constant}}
 template <int *P> [[gnu::constructor(P)]] void f(); // expected-error {{'gnu::constructor' attribute requires an integer constant}}
 
-template <long long P> [[gnu::constructor(P)]] void f() {} // expected-error {{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}} 
+template <long long P> [[gnu::constructor(P)]] void f() {} // expected-error {{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}}
 template void f<1LL<<32>(); // expected-note {{in instantiation of function template specialization 'f<4294967296LL>' requested here}}
 template void f<101>();
 
-template <typename T> [[gnu::constructor(static_cast<T>(1LL<<32))]] void f() {} // expected-error {{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}} 
+template <typename T> [[gnu::constructor(static_cast<T>(1LL<<32))]] void f() {} // expected-error {{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}}
 template void f<long long>(); // expected-note {{in instantiation of function template specialization 'f<long long>' requested here}}
 template void f<int>();
 
@@ -49,11 +49,11 @@ template <float P> [[gnu::destructor(P)]] void fd(); // expected-error {{'gnu::d
 template <double P> [[gnu::destructor(P)]] void fd(); // expected-error {{'gnu::destructor' attribute requires an integer constant}}
 template <int *P> [[gnu::destructor(P)]] void fd(); // expected-error {{'gnu::destructor' attribute requires an integer constant}}
 
-template <long long P> [[gnu::destructor(P)]] void fd() {} // expected-error {{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}} 
+template <long long P> [[gnu::destructor(P)]] void fd() {} // expected-error {{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}}
 template void fd<1LL<<32>(); // expected-note {{in instantiation of function template specialization 'fd<4294967296LL>' requested here}}
 template void fd<101>();
 
-template <typename T> [[gnu::destructor(static_cast<T>(1LL<<32))]] void fd() {} // expected-error {{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}} 
+template <typename T> [[gnu::destructor(static_cast<T>(1LL<<32))]] void fd() {} // expected-error {{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}}
 template void fd<long long>(); // expected-note {{in instantiation of function template specialization 'fd<long long>' requested here}}
 template void fd<int>();
 

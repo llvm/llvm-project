@@ -239,7 +239,7 @@ void nb11() [[clang::nonblocking]]
 
 	ComputedNB<true> CNB_true;
 	CNB_true.method();
-	
+
 	ComputedNB<false> CNB_false;
 	CNB_false.method(); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function}}
 }
@@ -266,7 +266,7 @@ struct PTMFTester {
 	template <typename T>
 	struct Holder {
 		T value;
-		
+
 		T& operator*() { return value; }
 	};
 
@@ -318,7 +318,7 @@ void nb19() [[clang::nonblocking]] {
 	__builtin_assume(1);
 	void *ptr = __builtin_malloc(1); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin_malloc'}}
 	__builtin_free(ptr); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin_free'}}
-	
+
 	void *p2 = __builtin_operator_new(1); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin_operator_new'}}
 	__builtin_operator_delete(p2); // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function '__builtin_operator_delete'}}
 }
@@ -485,7 +485,7 @@ struct HasFoo { int foo() const { return 0; } };
 
 template <class A, class B>
 inline bool compare(const A& a, const B& b)
-	requires requires { 
+	requires requires {
 		a.foo();
 	}
 {

@@ -8,9 +8,9 @@ template<int> void f0() { } // expected-error{{redefinition}}
 
 typedef int INT;
 
-template<template<class T, T Value1, INT> class X> 
+template<template<class T, T Value1, INT> class X>
   void f0() { } // expected-note{{previous}}
-template<template<typename T, T Value1, int> class> 
+template<template<typename T, T Value1, int> class>
   void f0() { } // expected-error{{redefinition}}
 
 template<typename T>

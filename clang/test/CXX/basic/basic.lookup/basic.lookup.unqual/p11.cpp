@@ -2,11 +2,11 @@
 
 static const int a = 10;
 
-void f0(int a, 
+void f0(int a,
         int b = a) { // expected-error {{default argument references parameter 'a'}}
 }
 
-template<int a, 
+template<int a,
          int b = a>
 class A {
 };

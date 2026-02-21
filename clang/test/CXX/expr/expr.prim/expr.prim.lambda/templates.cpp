@@ -68,19 +68,19 @@ namespace p2 {
 
   template<typename T>
   struct Boom {
-    Boom(const Boom&) { 
+    Boom(const Boom&) {
       T* x = 1; // expected-error{{cannot initialize a variable of type 'float *' with an rvalue of type 'int'}}
     }
     void tickle() const;
   };
-  
+
   template<typename R, typename T>
   void odr_used(R &r, Boom<T> boom) {
     const std::type_info &ti
       = typeid([=,&r] () -> R& { // expected-error{{lambda expression in an unevaluated operand}}
           boom.tickle();
-          return r; 
-        }()); 
+          return r;
+        }());
   }
 
   template void odr_used(int&, Boom<int>); // expected-note{{in instantiation of function template specialization}}
@@ -90,8 +90,8 @@ namespace p2 {
     const std::type_info &ti
       = typeid([=,&r] () -> R& { // expected-note{{in instantiation of member function 'p2::Boom<float>::Boom' requested here}}
           boom.tickle();
-          return r; 
-        }()); 
+          return r;
+        }());
   }
 
   template void odr_used2(P&, Boom<float>);

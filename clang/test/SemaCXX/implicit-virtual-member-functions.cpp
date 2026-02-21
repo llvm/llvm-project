@@ -77,7 +77,7 @@ struct D : A {
 #if __cplusplus <= 199711L
 // expected-note@-2 {{'operator delete' declared here}}
 #endif
-}; 
+};
 
 void f() {
   new D;

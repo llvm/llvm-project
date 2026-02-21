@@ -228,7 +228,7 @@ void test_svget_svset_b(uint64_t idx, svboolx2_t tuple2, svboolx4_t tuple4, svbo
 }
 
 __attribute__((target("+sve2p1")))
-void test_svdup_laneq(){  
+void test_svdup_laneq(){
   svuint8_t zn_u8;
   svuint16_t zn_u16;
   svuint32_t zn_u32;

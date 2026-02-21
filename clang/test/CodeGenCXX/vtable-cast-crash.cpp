@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -emit-llvm-only -triple %itanium_abi_triple %s
 struct A
 {
-A();    
+A();
 virtual ~A();
 };
 
@@ -18,4 +18,4 @@ B::B()
 B::~B()
 {
 }
-                         
+

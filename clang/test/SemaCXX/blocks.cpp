@@ -14,7 +14,7 @@ void reference_lvalue_test(int& (^f)()) {
 namespace test1 {
   void g(void (^)());
   struct Foo {
-    void foo();   
+    void foo();
     void test() {
       (void) ^{ foo(); };
     }

@@ -9,7 +9,7 @@
 
 // Returns: convert a to a float, rounding toward even.
 
-// Assumption: float is a IEEE 32 bit floating point type 
+// Assumption: float is a IEEE 32 bit floating point type
 //             tu_int is a 128 bit integral type
 
 // seee eeee emmm mmmm mmmm mmmm mmmm mmmm

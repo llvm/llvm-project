@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 int a_function_to_call()
-{ 
+{
     return 0;
 }
 

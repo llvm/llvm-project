@@ -19,15 +19,15 @@ int main (int argc, const char * argv[]) {
     MiniStruct inny;
     MiniStruct outty;
     MiniStruct (^copyStruct)(MiniStruct);
-    
+
     memset(&inny, 0xA5, sizeof(inny));
-    memset(&outty, 0x2A, sizeof(outty));    
-    
+    memset(&outty, 0x2A, sizeof(outty));
+
     inny.a = 12;
     inny.b = 42;
 
     copyStruct = ^(MiniStruct aTinyStruct){ return aTinyStruct; };  // pass-by-value intrinsically copies the argument
-    
+
     outty = copyStruct(inny);
 
     if ( &inny == &outty ) {
@@ -38,7 +38,7 @@ int main (int argc, const char * argv[]) {
         printf("%s: struct contents did not match.", argv[0]);
         exit(1);
     }
-    
+
     printf("%s: success\n", argv[0]);
     return 0;
 }

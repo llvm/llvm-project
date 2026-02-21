@@ -1,12 +1,12 @@
-/// This tests the expected error case when there is a mismatch between the pcm dependencies passed in 
-/// the command line with `fmodule-file` and whats encoded in the pcm. 
+/// This tests the expected error case when there is a mismatch between the pcm dependencies passed in
+/// the command line with `fmodule-file` and whats encoded in the pcm.
 
-/// The steps are: 
+/// The steps are:
 /// 1. Build the module A with no dependencies. The first variant to build is A-1.pcm.
-/// 2. Build the same module with files that resolve from different search paths. 
+/// 2. Build the same module with files that resolve from different search paths.
 ///     This variant is named A-2.pcm.
 /// 3. Build module B that depends on the earlier module A-1.pcm.
-/// 4. Build client that directly depends on both modules (A & B), 
+/// 4. Build client that directly depends on both modules (A & B),
 ///     but depends on a incompatible variant of A (A-2.pcm) for B to use.
 
 // RUN: rm -rf %t
@@ -31,7 +31,7 @@
 // RUN:     -fmodule-map-file=%t/BuildDir/A/module.modulemap \
 // RUN:     -fmodule-map-file=%t/Sysroot/usr/include/B/module.modulemap \
 // RUN:     -fmodule-file=A=%t/A-2.pcm -fmodule-file=B=%t/B-1.pcm \
-// RUN:     -Wmodule-file-mapping-mismatch -verify %s  
+// RUN:     -Wmodule-file-mapping-mismatch -verify %s
 
 
 #include <A/A.h>

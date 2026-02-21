@@ -546,7 +546,7 @@ MCSymbol *PPCAsmPrinter::lookUpOrCreateTOCEntry(const MCSymbol *Sym,
 
 void PPCAsmPrinter::LowerSTACKMAP(StackMaps &SM, const MachineInstr &MI) {
   unsigned NumNOPBytes = MI.getOperand(1).getImm();
-  
+
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
   OutStreamer->emitLabel(MILabel);
@@ -3238,7 +3238,7 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::TD:
   case PPC::TDI: {
     if (MI->getNumOperands() < 5)
-      break; 
+      break;
     const MachineOperand &LangMO = MI->getOperand(3);
     const MachineOperand &ReasonMO = MI->getOperand(4);
     if (!LangMO.isImm() || !ReasonMO.isImm())

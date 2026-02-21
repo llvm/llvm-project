@@ -316,7 +316,7 @@ TEST_F(MemoryBufferTest, slice) {
   std::error_code EC = MB.getError();
   ASSERT_FALSE(EC);
   EXPECT_EQ(0x4000UL, MB.get()->getBufferSize());
- 
+
   StringRef BufData = MB.get()->getBuffer();
   EXPECT_TRUE(BufData.substr(0x0000, 8) == "12345678");
   EXPECT_TRUE(BufData.substr(0x0FF8, 8) == "12345678");
@@ -331,7 +331,7 @@ TEST_F(MemoryBufferTest, slice) {
   EC = MB2.getError();
   ASSERT_FALSE(EC);
   EXPECT_EQ(0x3000UL, MB2.get()->getBufferSize());
-  
+
   StringRef BufData2 = MB2.get()->getBuffer();
   EXPECT_TRUE(BufData2.substr(0x0000, 8) == "12345678");
   EXPECT_TRUE(BufData2.substr(0x17F8, 8) == "12345678");

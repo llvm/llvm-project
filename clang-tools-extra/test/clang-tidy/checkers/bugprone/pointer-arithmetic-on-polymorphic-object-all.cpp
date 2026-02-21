@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s bugprone-pointer-arithmetic-on-polymorphic-object %t --
 
 class Base {
-public:  
+public:
   virtual ~Base() {}
 };
 

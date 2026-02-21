@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 %s -fopenacc -Wno-unused-value -verify 
+// RUN: %clang_cc1 %s -fopenacc -Wno-unused-value -verify
 
 void NormalFunc(int I) {
   // No clauses are valid, but we parse them anyway, just mark them as not valid
   // on this construct.
- 
+
   // expected-error@+1{{OpenACC 'copy' clause is not valid on 'atomic' directive}}
 #pragma acc atomic copy(I)
   I = I + 1;
@@ -1575,7 +1575,7 @@ void AtomicCaptureTemplateCompound2(T LHS, T RHS) {
   }
 }
 void AtomicCaptureCompound(int LHS, int RHS) {
-  AtomicCaptureTemplateCompound(1, 2); 
+  AtomicCaptureTemplateCompound(1, 2);
   AtomicCaptureTemplateCompound2(S1, S2); //expected-note{{in instantiation of function template specialization}}
 
   // expected-error@+2{{statement associated with OpenACC 'atomic capture' directive is invalid}}

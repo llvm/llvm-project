@@ -7,7 +7,7 @@ struct X {
   X(const X&);
 };
 
-X getX(int value) { 
+X getX(int value) {
   switch (value) {
   case 1: return X(value);
   case 2: return X(value, value);

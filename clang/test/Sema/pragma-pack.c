@@ -12,7 +12,7 @@
 /* expected-warning {{value of #pragma pack(show) == 16}} */ #pragma pack(show)
 #pragma pack(push) // -> (eek, 2), (, 2), 16
 /* expected-warning {{value of #pragma pack(show) == 16}} */ #pragma pack(show)
-#pragma pack(1) 
+#pragma pack(1)
 #pragma pack(push, 8) // -> (eek, 2), (, 2), (, 1), 8
 /* expected-warning {{value of #pragma pack(show) == 8}} */ #pragma pack(show)
 #pragma pack(pop) // -> (eek, 2), (,2), 1

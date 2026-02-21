@@ -22,20 +22,20 @@ int main()
 {
   auto l1 = [](auto a) -> int { return a + 5; };
   auto l2 = [](auto *p) -> int { return p + 5; };
- 
+
   struct A { int i; char f(int) { return 'c'; } };
-  auto l3 = [](auto &&ur, 
-                auto &lr, 
-                auto v, 
-                int i, 
+  auto l3 = [](auto &&ur,
+                auto &lr,
+                auto v,
+                int i,
                 auto* p,
                 auto A::*memvar,
                 auto (A::*memfun)(int),
                 char c,
                 decltype (v)* pv
-                , auto (&array)[5] 
+                , auto (&array)[5]
               ) -> int { return v + i + c
-                          + array[0]; 
+                          + array[0];
                        };
   int arr[5] = {0, 1, 2, 3, 4 };
   int lval = 0;
@@ -49,18 +49,18 @@ int main()
       static double dfi(int i) { return i + 3.14; }
       static Local localfi(int) { return Local{}; }
     };
-    auto l4 = [](auto (*fp)(int)) -> int { return fp(3); }; //expected-error{{no viable conversion from returned value of type 'Local' to function return type 'int'}} 
+    auto l4 = [](auto (*fp)(int)) -> int { return fp(3); }; //expected-error{{no viable conversion from returned value of type 'Local' to function return type 'int'}}
     l4(&Local::ifi);
     l4(&Local::cfi);
     l4(&Local::dfi);
-    l4(&Local::localfi); //expected-note{{in instantiation of function template specialization}}  
+    l4(&Local::localfi); //expected-note{{in instantiation of function template specialization}}
   }
   {
     auto unnamed_parameter = [](auto, auto) -> void { };
     unnamed_parameter(3, '4');
   }
   {
-    auto l = [](auto 
+    auto l = [](auto
                       (*)(auto)) { }; //expected-error{{'auto' not allowed}}
     //FIXME: These diagnostics might need some work.
     auto l2 = [](char auto::*pm) { };  //expected-error{{cannot combine with previous}}\

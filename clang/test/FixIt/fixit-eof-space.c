@@ -6,4 +6,4 @@
 
 // CHECK: :9:8: warning: duplicate 'extern' declaration specifier
 // CHECK: fix-it:"{{.*}}":{9:8-9:15}:""
-extern extern 
+extern extern

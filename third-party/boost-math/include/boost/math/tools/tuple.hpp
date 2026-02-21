@@ -15,7 +15,7 @@
 #include <cuda/std/utility>
 #include <cuda/std/tuple>
 
-namespace boost { 
+namespace boost {
 namespace math {
 
 using cuda::std::pair;
@@ -47,7 +47,7 @@ BOOST_MATH_GPU_ENABLED T&& forward(boost::math::remove_reference_t<T>&& arg) noe
 } // namespace detail
 
 template <typename T, typename... Ts>
-BOOST_MATH_GPU_ENABLED auto make_tuple(T&& t, Ts&&... ts) 
+BOOST_MATH_GPU_ENABLED auto make_tuple(T&& t, Ts&&... ts)
 {
     return cuda::std::tuple<boost::math::decay_t<T>, boost::math::decay_t<Ts>...>(
         boost::math::detail::forward<T>(t), boost::math::detail::forward<Ts>(ts)...
@@ -61,7 +61,7 @@ BOOST_MATH_GPU_ENABLED auto make_tuple(T&& t, Ts&&... ts)
 
 #include <tuple>
 
-namespace boost { 
+namespace boost {
 namespace math {
 
 using ::std::tuple;

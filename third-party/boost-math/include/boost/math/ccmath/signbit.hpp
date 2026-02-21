@@ -66,7 +66,7 @@ struct IEEEf2bits
     std::uint32_t sign : 1;
     std::uint32_t exponent : 8;
     std::uint32_t mantissa : 23;
-#endif 
+#endif
 };
 
 struct IEEEd2bits
@@ -148,7 +148,7 @@ template <typename T>
 constexpr bool signbit_impl(T arg)
 {
     if constexpr (std::is_same_v<T, float>)
-    {   
+    {
         const auto u = BOOST_MATH_BIT_CAST(IEEEf2bits, arg);
         return u.sign;
     }
@@ -177,7 +177,7 @@ constexpr bool signbit_impl(T arg)
 
 // Typical implementations of signbit involve type punning via union and manipulating
 // overflow (see libc++ or musl). Neither of these are allowed in constexpr contexts
-// (technically type punning via union in general is UB in c++ but well defined in C) 
+// (technically type punning via union in general is UB in c++ but well defined in C)
 // therefore we static assert these cases.
 
 template <typename T>

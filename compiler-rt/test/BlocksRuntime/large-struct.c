@@ -20,17 +20,17 @@ int main (int argc, const char * argv[]) {
     BobTheStruct outty;
     BobTheStruct (^copyStruct)(BobTheStruct);
     int i;
-    
+
     memset(&inny, 0xA5, sizeof(inny));
-    memset(&outty, 0x2A, sizeof(outty));    
-    
+    memset(&outty, 0x2A, sizeof(outty));
+
     for(i=0; i<30; i++) {
         inny.ps[i] = i * i * i;
         inny.qs[i] = -i * i * i;
     }
-    
+
     copyStruct = ^(BobTheStruct aBigStruct){ return aBigStruct; };  // pass-by-value intrinsically copies the argument
-    
+
     outty = copyStruct(inny);
 
     if ( &inny == &outty ) {
@@ -43,8 +43,8 @@ int main (int argc, const char * argv[]) {
             exit(1);
         }
     }
-    
+
     printf("%s: success\n", argv[0]);
-    
+
     return 0;
 }

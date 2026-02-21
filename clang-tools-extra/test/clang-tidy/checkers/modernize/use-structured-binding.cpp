@@ -91,7 +91,7 @@ void DecomposeByAssignWarnCases() {
     int x = P.first;
     int y = P.second; // REMOVE
     // CHECK-FIXES: // REMOVE
-    
+
     auto another_p = getPair<int, int>();
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
     // CHECK-FIXES: auto [another_x, another_y] = getPair<int, int>();
@@ -648,7 +648,7 @@ void IgnoreDirectInit() {
   {
     std::pair<int, int> P{1, 1};
     int x = P.first;
-    int y = P.second; 
+    int y = P.second;
   }
 
   {
@@ -677,61 +677,61 @@ void StdMapTestCases() {
 
 void SpecialCases1() {
   {
-    auto P = getPair<int, int>();                                                                                                                                                          
-    int y = P.second;  // second first                                                                                                                                                  
+    auto P = getPair<int, int>();
+    int y = P.second;  // second first
     int x = P.first;
   }
 
   {
-    auto P = getPair<int, int>();                                                                                                                                                          
-    int x = P.first;                                                                                                                                                                       
+    auto P = getPair<int, int>();
+    int x = P.first;
     // P.second never assigned
   }
 
   {
-    auto P = getPair<int, int>();                                                                                                                                                          
-    int x = P.first + 1;                                                                                                                                             
-    int y = P.second;  
-  }                                                                                                                                                                                                                                                                                                                                                                                                 
-  {
-    auto P = getPair<int, int>();                                                                                                                                                          
-    float x = P.first;  // int -> float                                                                                                                                                      
-    float y = P.second;   
-  }                                                                                                                                                                  
-                                                                                                                                                                                                                                                                                                                                           
-  {
-    auto P = getPair<int, int>();                                                                                                                                                          
-    int x = P.first;                                                                                                                                                                       
-    int dummy = 42;                                                                                                                                         
-    int y = P.second;     
+    auto P = getPair<int, int>();
+    int x = P.first + 1;
+    int y = P.second;
   }
-  
+  {
+    auto P = getPair<int, int>();
+    float x = P.first;  // int -> float
+    float y = P.second;
+  }
+
+  {
+    auto P = getPair<int, int>();
+    int x = P.first;
+    int dummy = 42;
+    int y = P.second;
+  }
+
   {
     for (auto P : std::unordered_map<int, int>()) {
-      int x = P.first;                                                                                                                                                                     
-      int dummy = 42;                                                                                                                                              
-      int y = P.second;     
+      int x = P.first;
+      int dummy = 42;
+      int y = P.second;
     }
   }
-                                                                                                                                                                                          
+
   {
     std::pair<int, int> somePair;
-    std::pair<int, int>* P = &somePair;                                                                                                                                                    
-    int x = P->first;                                                                                                                                                                      
+    std::pair<int, int>* P = &somePair;
+    int x = P->first;
     int y = P->second;
   }
 
   {
     std::pair<int, int> somePair;
-    std::pair<int, int>& P = somePair;                                        
-    int x = P.first;                                                                                                                                                                      
+    std::pair<int, int>& P = somePair;
+    int x = P.first;
     int y = P.second;
   }
 
   {
     std::pair<int, int> somePair;
-    const std::pair<int, int>& P = somePair;                                        
-    int x = P.first;                                                                                                                                                                      
+    const std::pair<int, int>& P = somePair;
+    int x = P.first;
     int y = P.second;
   }
 }
@@ -864,7 +864,7 @@ void SpecialCases2() {
   {
     int x, y;
     auto P = getPair<int, int>();
-    x = P.first;  
+    x = P.first;
     y = P.second;
   }
 

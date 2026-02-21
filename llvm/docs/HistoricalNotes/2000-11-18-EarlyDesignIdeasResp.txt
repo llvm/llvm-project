@@ -22,7 +22,7 @@ subject to change)
    to be able to statically eliminate many bounds checks in Java
    programs... for example.
 
- 2. Instead, we can do the following (eventually): 
+ 2. Instead, we can do the following (eventually):
    * Java bytecode is used as our "safe" representation (to avoid
      reinventing something that we don't add much value to).  When the
      user chooses to execute Java bytecodes directly (ie, not
@@ -180,7 +180,7 @@ is that often times there is no concrete product of the research... :)
 > it yesterday, I didn't remember where the idea had come from but I
 > remembered later.  Just giving credit where its due...
 
-:) Thanks.  
+:) Thanks.
 
 > Perhaps you can save the above as a file under RCS so you and I can
 > continue to expand on this.

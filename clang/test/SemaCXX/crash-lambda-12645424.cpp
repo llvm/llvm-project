@@ -35,7 +35,7 @@ template<class, class Pattern> struct get_case {
 template<class Pattern> struct rvalue_builder {
   template<typename Expr> typename get_case<Expr, Pattern>::type operator>>(Expr ); // expected-note {{candidate template ignored}}
 };
-  
+
 template<typename Arg0> rvalue_builder< type_list<Arg0> > on(const Arg0& ) ;
 
 class Z {

@@ -135,13 +135,13 @@ namespace N8 {
   struct X {
     X operator+(const X&) const;
   };
-  
+
   template<typename T>
   T test_plus(const T* xp, const T& x, const T& y) {
     x.operator+(y);
     return xp->operator+(y);
   }
-  
+
   void test_test_plus(X x) {
     test_plus(&x, x, x);
   }
@@ -151,31 +151,31 @@ namespace N9 {
   struct A {
     bool operator==(int value);
   };
-  
+
   template<typename T> struct B {
     bool f(A a) {
       return a == 1;
     }
   };
-  
-  template struct B<int>;  
+
+  template struct B<int>;
 }
 
 namespace N10 {
   template <typename T>
   class A {
     struct X { };
-    
+
   public:
     ~A() {
       f(reinterpret_cast<X *>(0), reinterpret_cast<X *>(0));
     }
-    
+
   private:
     void f(X *);
     void f(X *, X *);
   };
-  
+
   template class A<int>;
 }
 
@@ -183,10 +183,10 @@ namespace N12 {
   // PR5224
   template<typename T>
   struct A { typedef int t0; };
-  
+
   struct C  {
     C(int);
-    
+
     template<typename T>
     static C *f0(T a0) {return new C((typename A<T>::t0) 1);   }
   };

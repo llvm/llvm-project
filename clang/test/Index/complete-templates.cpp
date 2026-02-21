@@ -4,14 +4,14 @@ template<typename T>
 class X {
   X();
   X(const X&);
-  
+
   template<typename U> X(U);
 };
 
 template<typename T> void f(T);
 
 void test() {
-  
+
 }
 
 // RUN: c-index-test -code-completion-at=%s:14:2 %s | FileCheck %s

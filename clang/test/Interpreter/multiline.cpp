@@ -10,7 +10,7 @@ int i = \
 printf("i=%d\n", i);
 // CHECK: i=12
 
-void f(int x) \ 
+void f(int x) \
 {                                               \
   printf("x=\
           %d", x); \

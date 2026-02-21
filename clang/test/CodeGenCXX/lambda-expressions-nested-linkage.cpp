@@ -17,9 +17,9 @@ void foo() {
 
 namespace non_template {
   struct L {
-    int t = ([](int a) { return [](int b) { return b; };})(2)(3);    
+    int t = ([](int a) { return [](int b) { return b; };})(2)(3);
   };
-  L l; 
+  L l;
 }
 
 // It's important that this is not in a namespace; we're testing the mangling
@@ -32,7 +32,7 @@ void test_lambda_in_inline_variable(Wrap<decltype(lambda_in_inline_variable)>) {
 namespace lambdas_in_NSDMIs_template_class {
 template<class T>
 struct L {
-    T t2 = ([](int a) { return [](int b) { return b; };})(T{})(T{});    
+    T t2 = ([](int a) { return [](int b) { return b; };})(T{})(T{});
 };
 L<int> l;
 }

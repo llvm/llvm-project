@@ -180,7 +180,7 @@ struct S {
 
 void test2(void) {
   struct S *btkr;
-  
+
   *btkr = (struct S) {
     .keys  = 0,
     { .data  = 0 },

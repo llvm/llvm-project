@@ -134,12 +134,12 @@ namespace ns_unused_by_foo {
 
 namespace ns_used_by_foo { // line 31
   void x(); // line 32
-  void unused_y(); 
+  void unused_y();
 } // line 34
 
-// Does not have any declarations that are used, so 
+// Does not have any declarations that are used, so
 // will not be marked as used.
-namespace ns_used_by_foo { 
+namespace ns_used_by_foo {
   void unused_z();
 }
 //--- foo.cpp

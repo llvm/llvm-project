@@ -34,7 +34,7 @@ template<class T>
 class B
 {
   A<T> a_;
-  
+
 public:
   void destroy();
 };
@@ -53,7 +53,7 @@ void do_destroy_B(B<int> b) {
 struct X1 {
   int* f1(int);
   template<typename T> float* f1(T);
-  
+
   static int* f2(int);
   template<typename T> static float* f2(T);
 };
@@ -63,20 +63,20 @@ void test_X1(X1 x1) {
   float *fp2 = x1.f1<int>(3.14); // expected-warning {{implicit conversion from 'double' to 'int' changes value from 3.14 to 3}}
   int *ip1 = x1.f1(17);
   float *ip2 = x1.f1(3.14);
-  
+
   float* (X1::*mf1)(int) = &X1::f1;
   float* (X1::*mf2)(int) = &X1::f1<>;
   float* (X1::*mf3)(float) = &X1::f1<float>;
-  
+
   float* (*fp3)(int) = &X1::f2;
   float* (*fp4)(int) = &X1::f2<>;
-  float* (*fp5)(float) = &X1::f2<float>;  
+  float* (*fp5)(float) = &X1::f2<float>;
   float* (*fp6)(int) = X1::f2;
   float* (*fp7)(int) = X1::f2<>;
-  float* (*fp8)(float) = X1::f2<float>;  
+  float* (*fp8)(float) = X1::f2<float>;
 }
 
-template<int A> struct X2 { 
+template<int A> struct X2 {
   int m;
 };
 
@@ -98,7 +98,7 @@ template<typename T>
 struct X5 {
   template<typename U>
   void f();
-  
+
   void g() {
     this->f<T*>();
   }
@@ -126,7 +126,7 @@ namespace PR6021 {
 
 namespace rdar8198511 {
   template<int, typename U>
-  struct Base { 
+  struct Base {
     void f();
   };
 

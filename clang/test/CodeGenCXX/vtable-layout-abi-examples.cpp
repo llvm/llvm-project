@@ -15,7 +15,7 @@
 /// http://www.codesourcery.com/public/cxx-abi/
 
 namespace Test1 {
-  
+
 // This is from http://www.codesourcery.com/public/cxx-abi/cxx-vtable-ex.html
 
 // CHECK-1:      Vtable for 'Test1::A' (5 entries).
@@ -163,7 +163,7 @@ struct E : X, D {
   void f();
   void h ();
 };
-void E::f() { } 
+void E::f() { }
 
 }
 
@@ -194,7 +194,7 @@ struct C : virtual public A { int j; };
 struct D : public B, public C {
   virtual void d();
 };
-void D::d() { } 
+void D::d() { }
 
 }
 

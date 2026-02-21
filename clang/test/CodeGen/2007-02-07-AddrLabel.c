@@ -1,5 +1,5 @@
 // PR947
-// RUN: %clang_cc1 %s -emit-llvm -o - 
+// RUN: %clang_cc1 %s -emit-llvm -o -
 
 void foo(void) {
     void *ptr;

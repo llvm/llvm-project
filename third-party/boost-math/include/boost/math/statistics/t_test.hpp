@@ -20,7 +20,7 @@
 namespace boost { namespace math { namespace statistics { namespace detail {
 
 template<typename ReturnType, typename T>
-ReturnType one_sample_t_test_impl(T sample_mean, T sample_variance, T num_samples, T assumed_mean) 
+ReturnType one_sample_t_test_impl(T sample_mean, T sample_variance, T num_samples, T assumed_mean)
 {
     using Real = typename std::tuple_element<0, ReturnType>::type;
     using std::sqrt;
@@ -42,7 +42,7 @@ ReturnType one_sample_t_test_impl(T sample_mean, T sample_variance, T num_sample
 }
 
 template<typename ReturnType, typename ForwardIterator>
-ReturnType one_sample_t_test_impl(ForwardIterator begin, ForwardIterator end, typename std::iterator_traits<ForwardIterator>::value_type assumed_mean) 
+ReturnType one_sample_t_test_impl(ForwardIterator begin, ForwardIterator end, typename std::iterator_traits<ForwardIterator>::value_type assumed_mean)
 {
     using Real = typename std::tuple_element<0, ReturnType>::type;
     std::pair<Real, Real> temp = mean_and_sample_variance(begin, end);
@@ -69,11 +69,11 @@ ReturnType welchs_t_test_impl(T mean_1, T variance_1, T size_1, T mean_2, T vari
     Real test_statistic = (static_cast<Real>(mean_1) - static_cast<Real>(mean_2))/s_estimator;
     auto student = boost::math::students_t_distribution<Real, no_promote_policy>(dof);
     Real pvalue;
-    if (test_statistic > 0) 
+    if (test_statistic > 0)
     {
         pvalue = 2*boost::math::cdf<Real>(student, -test_statistic);;
     }
-    else 
+    else
     {
         pvalue = 2*boost::math::cdf<Real>(student, test_statistic);
     }
@@ -95,11 +95,11 @@ ReturnType two_sample_t_test_impl(T mean_1, T variance_1, T size_1, T mean_2, T 
 
     auto student = boost::math::students_t_distribution<Real, no_promote_policy>(dof);
     Real pvalue;
-    if (test_statistic > 0) 
+    if (test_statistic > 0)
     {
         pvalue = 2*boost::math::cdf<Real>(student, -test_statistic);;
     }
-    else 
+    else
     {
         pvalue = 2*boost::math::cdf<Real>(student, test_statistic);
     }
@@ -124,7 +124,7 @@ ReturnType two_sample_t_test_impl(ForwardIterator begin_1, ForwardIterator end_1
     Real mean_2 = std::get<0>(temp_2);
     Real variance_2 = std::get<1>(temp_2);
     Real std_dev_2 = sqrt(variance_2);
-    
+
     if(std_dev_1 > 2 * std_dev_2 || std_dev_2 > 2 * std_dev_1)
     {
         return welchs_t_test_impl<ReturnType>(mean_1, variance_1, Real(n1), mean_2, variance_2, Real(n2));
@@ -142,7 +142,7 @@ ReturnType paired_samples_t_test_impl(ForwardIterator begin_1, ForwardIterator e
     using Real = typename std::tuple_element<0, ReturnType>::type;
     using no_promote_policy = boost::math::policies::policy<boost::math::policies::promote_float<false>, boost::math::policies::promote_double<false>>;
     using std::sqrt;
-    
+
     std::vector<Real> delta;
     ForwardIterator it_1 = begin_1;
     ForwardIterator it_2 = begin_2;
@@ -166,11 +166,11 @@ ReturnType paired_samples_t_test_impl(ForwardIterator begin_1, ForwardIterator e
 
     auto student = boost::math::students_t_distribution<Real, no_promote_policy>(n - 1);
     Real pvalue;
-    if (test_statistic > 0) 
+    if (test_statistic > 0)
     {
         pvalue = 2*boost::math::cdf<Real>(student, -test_statistic);;
     }
-    else 
+    else
     {
         pvalue = 2*boost::math::cdf<Real>(student, test_statistic);
     }
@@ -191,14 +191,14 @@ inline auto one_sample_t_test(Real sample_mean, Real sample_variance, Real num_s
     return detail::one_sample_t_test_impl<std::pair<Real, Real>>(sample_mean, sample_variance, num_samples, assumed_mean);
 }
 
-template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type, 
+template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type,
          typename std::enable_if<std::is_integral<Real>::value, bool>::type = true>
 inline auto one_sample_t_test(ForwardIterator begin, ForwardIterator end, Real assumed_mean) -> std::pair<double, double>
 {
     return detail::one_sample_t_test_impl<std::pair<double, double>>(begin, end, assumed_mean);
 }
 
-template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type, 
+template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type,
          typename std::enable_if<!std::is_integral<Real>::value, bool>::type = true>
 inline auto one_sample_t_test(ForwardIterator begin, ForwardIterator end, Real assumed_mean) -> std::pair<Real, Real>
 {
@@ -219,14 +219,14 @@ inline auto one_sample_t_test(Container const & v, Real assumed_mean) -> std::pa
     return detail::one_sample_t_test_impl<std::pair<Real, Real>>(std::begin(v), std::end(v), assumed_mean);
 }
 
-template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type, 
+template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type,
          typename std::enable_if<std::is_integral<Real>::value, bool>::type = true>
 inline auto two_sample_t_test(ForwardIterator begin_1, ForwardIterator end_1, ForwardIterator begin_2, ForwardIterator end_2) -> std::pair<double, double>
 {
     return detail::two_sample_t_test_impl<std::pair<double, double>>(begin_1, end_1, begin_2, end_2);
 }
 
-template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type, 
+template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type,
          typename std::enable_if<!std::is_integral<Real>::value, bool>::type = true>
 inline auto two_sample_t_test(ForwardIterator begin_1, ForwardIterator end_1, ForwardIterator begin_2, ForwardIterator end_2) -> std::pair<Real, Real>
 {
@@ -245,14 +245,14 @@ inline auto two_sample_t_test(Container const & u, Container const & v) -> std::
     return detail::two_sample_t_test_impl<std::pair<Real, Real>>(std::begin(u), std::end(u), std::begin(v), std::end(v));
 }
 
-template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type, 
+template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type,
          typename std::enable_if<std::is_integral<Real>::value, bool>::type = true>
 inline auto paired_samples_t_test(ForwardIterator begin_1, ForwardIterator end_1, ForwardIterator begin_2, ForwardIterator end_2) -> std::pair<double, double>
 {
     return detail::paired_samples_t_test_impl<std::pair<double, double>>(begin_1, end_1, begin_2, end_2);
 }
 
-template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type, 
+template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type,
          typename std::enable_if<!std::is_integral<Real>::value, bool>::type = true>
 inline auto paired_samples_t_test(ForwardIterator begin_1, ForwardIterator end_1, ForwardIterator begin_2, ForwardIterator end_2) -> std::pair<Real, Real>
 {

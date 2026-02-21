@@ -64,7 +64,7 @@ int add_ptr_idx_ult_ptr_signed(const char *ptr, int index) {
   return ptr + index < ptr;
 }
 
-// Negative test with unrelated pointers. 
+// Negative test with unrelated pointers.
 
 int add_ptr_idx_ult_ptr2(const char *ptr, const char *ptr2, unsigned index) {
   return ptr + index < ptr2;

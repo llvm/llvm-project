@@ -38,7 +38,7 @@ void malloced_array() {
 
   align_free(align_realloced);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not manage memory manually; use RAII [cppcoreguidelines-no-malloc]
-  
+
   // check if a call to malloc as function argument is found as well
   free(malloc(20));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not manage memory manually; use RAII [cppcoreguidelines-no-malloc]

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=NORMAL
 // RUN: %clang_cc1 %s -std=c++11 -fms-compatibility -triple=x86_64-pc-win32 -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=MSVCCOMPAT
-// CHECK: ; ModuleID 
+// CHECK: ; ModuleID
 
 struct A {
     inline void f();
@@ -64,7 +64,7 @@ namespace test2 {
   struct A;
   void f(const A& a);
   struct A {
-    friend void f(const A& a) { } 
+    friend void f(const A& a) { }
   };
   void g() {
     A a;

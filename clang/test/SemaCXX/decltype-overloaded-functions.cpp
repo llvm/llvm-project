@@ -8,7 +8,7 @@ template<typename T> struct S {
   decltype(T::f) * f; // expected-error {{call to non-static member function without an object argument}}
 };
 
-struct K { 
+struct K {
   void f();
   void f(int);
 };

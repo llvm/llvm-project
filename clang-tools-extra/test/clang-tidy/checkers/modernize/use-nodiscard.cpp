@@ -43,51 +43,51 @@ public:
     bool f4(void) const;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'f4' should be marked NO_DISCARD [modernize-use-nodiscard]
     // CHECK-FIXES: NO_DISCARD bool f4(void) const;
-    
+
     // negative tests
 
     void f5() const;
-    
+
     bool f6();
-    
+
     bool f7(int &);
-    
+
     bool f8(int &) const;
-    
+
     bool f9(int *) const;
-    
+
     bool f10(const int &, int &) const;
-    
+
     NO_DISCARD bool f12() const;
-    
+
     MUST_USE_RESULT bool f13() const;
-    
+
     [[nodiscard]] bool f11() const;
-    
+
     [[clang::warn_unused_result]] bool f11a() const;
-    
+
     [[gnu::warn_unused_result]] bool f11b() const;
 
     bool _f20() const;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function '_f20' should be marked NO_DISCARD [modernize-use-nodiscard]
     // CHECK-FIXES: NO_DISCARD bool _f20() const;
-    
+
     NO_RETURN bool f21() const;
-    
+
     ~Foo();
-    
+
     bool operator+=(int) const;
-    
+
     // extra keywords (virtual,inline,const) on return type
-    
+
     virtual bool f14() const;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'f14' should be marked NO_DISCARD [modernize-use-nodiscard]
     // CHECK-FIXES: NO_DISCARD virtual bool f14() const;
-    
+
     const bool f15() const;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'f15' should be marked NO_DISCARD [modernize-use-nodiscard]
     // CHECK-FIXES: NO_DISCARD const bool f15() const;
-    
+
     inline const bool f16() const;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'f16' should be marked NO_DISCARD [modernize-use-nodiscard]
     // CHECK-FIXES: NO_DISCARD inline const bool f16() const;
@@ -101,9 +101,9 @@ public:
     // CHECK-FIXES: NO_DISCARD inline virtual const bool f17() const;
 
     // inline with body
-    bool f18() const 
+    bool f18() const
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'f18' should be marked NO_DISCARD [modernize-use-nodiscard]
-    // CHECK-FIXES: NO_DISCARD bool f18() const 
+    // CHECK-FIXES: NO_DISCARD bool f18() const
     {
      return true;
     }
@@ -113,11 +113,11 @@ public:
     // CHECK-FIXES: NO_DISCARD bool f19() const;
 
     BOOLEAN_FUNC;
-    
+
     bool f24(size_type) const;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'f24' should be marked NO_DISCARD [modernize-use-nodiscard]
     // CHECK-FIXES: NO_DISCARD bool f24(size_type) const;
-    
+
     bool f28(my_unsigned) const;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'f28' should be marked NO_DISCARD [modernize-use-nodiscard]
     // CHECK-FIXES: NO_DISCARD bool f28(my_unsigned) const;
@@ -231,7 +231,7 @@ public:
     template <typename T2>
     operator Vec<T2, cn>() const;
 };
-    
+
 template <class T>
 class Bar2 {
 public:

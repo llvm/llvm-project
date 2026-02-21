@@ -3,7 +3,7 @@
 
 // Test with pch.
 // RUN: %clang_cc1 -x c++-header -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -std=c++11 -include-pch %t -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -std=c++11 -include-pch %t -fsyntax-only -verify %s
 
 #ifndef PASS1
 #define PASS1

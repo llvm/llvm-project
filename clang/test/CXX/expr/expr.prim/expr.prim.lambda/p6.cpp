@@ -23,7 +23,7 @@ void test_conversion() {
   void (*fp6)(int) noexcept = [](int x) noexcept { };
 }
 
-void test_no_conversion() { 
+void test_no_conversion() {
   int (*fp1)(int) = [=](int x) { return x + 1; }; // expected-error{{no viable conversion}}
   void (*fp2)(int) = [&](int x) { }; // expected-error{{no viable conversion}}
 }

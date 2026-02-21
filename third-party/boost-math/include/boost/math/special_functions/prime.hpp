@@ -24,7 +24,7 @@ namespace boost{ namespace math{
       //
       // This is basically three big tables which together
       // occupy 19946 bytes, we use the smallest type which
-      // will handle each value, and store the final set of 
+      // will handle each value, and store the final set of
       // values in a uint16_t with the values offset by 0xffff.
       // That gives us the first 10000 primes with the largest
       // being 104729:

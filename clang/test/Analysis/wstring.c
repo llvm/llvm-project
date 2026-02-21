@@ -4,7 +4,7 @@
 // RUN:   -analyzer-checker=alpha.unix.cstring \
 // RUN:   -analyzer-disable-checker=alpha.unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=debug.ExprInspection \
-// RUN:   -analyzer-config eagerly-assume=false  
+// RUN:   -analyzer-config eagerly-assume=false
 //
 // RUN: %clang_analyze_cc1 -verify %s -DUSE_BUILTINS \
 // RUN:   -analyzer-checker=core \

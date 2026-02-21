@@ -18,7 +18,7 @@ extern "C" {
 
 extern "C" void NonInstrumentedModule() {
   InitializeLibrary();
-  
+
   MyObjectRef ref = ObjectCreate();
   std::thread t1([ref]{ ObjectWrite(ref, 42); });
   std::thread t2([ref]{ ObjectWrite(ref, 43); });

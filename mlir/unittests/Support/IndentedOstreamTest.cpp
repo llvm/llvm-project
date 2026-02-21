@@ -86,12 +86,12 @@ TEST(FormatTest, Reindent) {
   // String to print with some additional empty lines at the start and lines
   // with just spaces.
   const auto *desc = R"(
-       
-       
+
+
          First line
                  second line
-                 
-                 
+
+
   )";
   ros.printReindented(desc);
   const auto *expected =

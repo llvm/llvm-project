@@ -505,7 +505,7 @@ __isl_give isl_vec *isl_vec_add(__isl_take isl_vec *vec1,
 
 	isl_seq_combine(vec1->el, vec1->ctx->one, vec1->el,
 			vec1->ctx->one, vec2->el, vec1->size);
-	
+
 	isl_vec_free(vec2);
 	return vec1;
 error:
@@ -526,7 +526,7 @@ __isl_give isl_vec *isl_vec_sort(__isl_take isl_vec *vec)
 {
 	if (!vec)
 		return NULL;
-	
+
 	qsort(vec->el, vec->size, sizeof(*vec->el), &qsort_int_cmp);
 
 	return vec;
@@ -550,7 +550,7 @@ __isl_give isl_vec *isl_vec_drop_els(__isl_take isl_vec *vec,
 			    vec->size - pos - n);
 
 	vec->size -= n;
-	
+
 	return vec;
 error:
 	isl_vec_free(vec);

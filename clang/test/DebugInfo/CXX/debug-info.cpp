@@ -67,7 +67,7 @@ namespace VirtualDtor {
   struct Y {
     virtual ~Y();
   };
-  
+
   Y::~Y() { }
 }
 

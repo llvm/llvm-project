@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple riscv64 \
 // RUN:   -target-feature +zve32x -disable-O0-optnone -o - \
-// RUN:   -fsyntax-only %s -verify 
+// RUN:   -fsyntax-only %s -verify
 // REQUIRES: riscv-registered-target
 
   // (ELEN, LMUL) pairs of (8, mf8), (16, mf4), (32, mf2), (64, m1) is not in zve32*

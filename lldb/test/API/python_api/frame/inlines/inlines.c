@@ -10,13 +10,13 @@ not_inlined_2 (int input)
   return input;
 }
 
-int 
+int
 not_inlined_1 (int input)
 {
   printf ("Called in not_inlined_1 with %d.\n", input);
   return not_inlined_2(input);
 }
-  
+
 INLINE_ME int
 inner_inline (int inner_input, int mod_value)
 {

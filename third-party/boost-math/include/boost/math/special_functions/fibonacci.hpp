@@ -30,7 +30,7 @@ inline BOOST_MATH_CXX14_CONSTEXPR T unchecked_fibonacci(unsigned long long n) no
     // This function is called by the rest and computes the actual nth fibonacci number
     // First few fibonacci numbers: 0 (0th), 1 (1st), 1 (2nd), 2 (3rd), ...
     if (n <= 2) return n == 0 ? 0 : 1;
-    /* 
+    /*
      * This is based on the following identities by Dijkstra:
      *   F(2*n-1) = F(n-1)^2 + F(n)^2
      *   F(2*n)   = (2*F(n-1) + F(n)) * F(n)
@@ -43,7 +43,7 @@ inline BOOST_MATH_CXX14_CONSTEXPR T unchecked_fibonacci(unsigned long long n) no
     for (mask >>= 1; mask; mask >>= 1) {
         T t1 = a * a;
         a = 2 * a * b - t1, b = b * b + t1;
-        if (mask & n) 
+        if (mask & n)
             t1 = b, b = b + a, a = t1; // equivalent to: swap(a,b), b += a;
     }
     return a;

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
 
-struct T { 
+struct T {
   struct x {
     int m;
   };

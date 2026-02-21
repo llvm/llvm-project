@@ -7,7 +7,7 @@
 // R U N: %clang_cc1 -std=c++20 %t/a.pcm  -emit-obj -o %t/a.o
 //
 // RUN: %clang_cc1 -std=c++20 %t/b.cpp  -emit-module-interface -o %t/b.pcm \
-// RUN: -fprebuilt-module-path=%t 
+// RUN: -fprebuilt-module-path=%t
 // R U N: %clang_cc1 -std=c++20 %t/b.pcm  -emit-obj -o %t/b.o
 //
 // RUN: %clang_cc1 -std=c++20 %t/b-impl.cpp -emit-obj -o %t/b-impl.o \

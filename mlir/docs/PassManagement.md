@@ -107,7 +107,7 @@ struct MyFunctionPass : ... {
   void runOnOperation() {
     // Here we can freely cast to FunctionOpInterface, because our `canScheduleOn` ensures
     // that our pass is only executed on operations implementing that interface.
-    FunctionOpInterface op = cast<FunctionOpInterface>(getOperation()); 
+    FunctionOpInterface op = cast<FunctionOpInterface>(getOperation());
   }
 };
 ```
@@ -854,7 +854,7 @@ namespace foo {
 void registerMyPasses() {
   // Register all of the passes.
   foo::registerExamplePasses();
-  
+
   // Or
 
   // Register `MyPass` specifically.
@@ -1402,23 +1402,23 @@ $ tree /tmp/pipeline_output
 *   `mlir-use-nameloc-as-prefix`
     * If your source IR has named locations (`loc("named_location")"`) then passing this flag will use those
       names (`named_location`) to prefix the corresponding SSA identifiers:
-    
+
       ```mlir
-      %1 = memref.load %0[] : memref<i32> loc("alice")  
+      %1 = memref.load %0[] : memref<i32> loc("alice")
       %2 = memref.load %0[] : memref<i32> loc("bob")
       %3 = memref.load %0[] : memref<i32> loc("bob")
       ```
-      
-      will print 
-    
+
+      will print
+
       ```mlir
       %alice = memref.load %0[] : memref<i32>
       %bob = memref.load %0[] : memref<i32>
       %bob_0 = memref.load %0[] : memref<i32>
       ```
-      
+
       These names will also be preserved through passes to newly created operations if using the appropriate location.
-      
+
 
 ## Crash and Failure Reproduction
 

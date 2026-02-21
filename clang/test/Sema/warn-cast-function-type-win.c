@@ -26,7 +26,7 @@ void test(void) {
   test1_type t1 = (test1_type)GetProcAddress1();
   // linux-cpp-warning@-1 {{cast from 'FARPROC1' (aka 'int (*)()') to 'test1_type' (aka 'int (*)(int)') converts to incompatible function type}}
   // strict-warning@-2 {{cast from 'FARPROC1' (aka 'int (*)()') to 'test1_type' (aka 'int (*)(int)') converts to incompatible function type}}
-  
+
   // This case is diagnosed in both C and C++ modes on Linux because the return
   // type of FARPROC2 does not match the return type of test2_type.
   test2_type t2 = (test2_type)GetProcAddress2();

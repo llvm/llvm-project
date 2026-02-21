@@ -12,7 +12,7 @@ using namespace M;
 
 namespace N {
   namespace M {
-  } 
+  }
 }
 
 namespace M {

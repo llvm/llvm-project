@@ -166,7 +166,7 @@ int main() {                    // CHECK: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2 =
   i = i == 0?i + 12:i + 10;     // CHECK-NEXT: File 0, [[@LINE]]:21 -> [[@LINE]]:27 = (#0 - #6)
 
   // GH-45481
-  S s;                    
+  S s;
   s.the_prop = 0? 1 : 2;        // CHECK-NEXT: File 0, [[@LINE]]:16 -> [[@LINE]]:17 = #0
                                 // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:16 -> [[@LINE-1]]:17 = 0, (#0 - #7)
                                 // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:18 -> [[@LINE-2]]:19 = #7
@@ -200,7 +200,7 @@ constexpr int check_consteval_with_else_discarded_then(int i) { // CHECK-NEXT: [
 // CHECK-LABEL: _Z43check_notconsteval_with_else_discarded_elsei:
 constexpr int check_notconsteval_with_else_discarded_else(int i) { // CHECK-NEXT: [[@LINE]]:{{[0-9]+}} -> {{[0-9]+}}:2 = #0
   if !consteval {                       // CHECK-NEXT: Skipped,File 0, [[@LINE]]:3 -> [[@LINE]]:17 = 0
-    i *= 3;                             
+    i *= 3;
   } else {                              // CHECK-NEXT: File 0, [[@LINE-2]]:17 -> [[@LINE]]:4 = #0
     i *= 5;                             // CHECK-NEXT: Skipped,File 0, [[@LINE-1]]:4 -> [[@LINE+1]]:4 = 0
   }
@@ -210,10 +210,10 @@ constexpr int check_notconsteval_with_else_discarded_else(int i) { // CHECK-NEXT
 // GH-57377
 // CHECK-LABEL: _Z32check_consteval_branch_discardedi:
 constexpr int check_consteval_branch_discarded(int i) { // CHECK-NEXT: [[@LINE]]:{{[0-9]+}} -> {{[0-9]+}}:2 = #0
-  if consteval {                        // CHECK-NEXT: Skipped,File 0, [[@LINE]]:3 -> [[@LINE+2]]:4 = 0 
-    i *= 3;      
+  if consteval {                        // CHECK-NEXT: Skipped,File 0, [[@LINE]]:3 -> [[@LINE+2]]:4 = 0
+    i *= 3;
   }
-  return i;      
+  return i;
 }
 
 // GH-57377

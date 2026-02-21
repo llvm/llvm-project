@@ -430,7 +430,7 @@ else() # not Apple
     if (${arch} IN_LIST XRAY_DSO_SUPPORTED_ARCH)
       add_compiler_rt_object_libraries(RTXrayDSO
         ARCHS ${arch}
-        SOURCES ${XRAY_DSO_SOURCES} ${${arch}_DSO_SOURCES} 
+        SOURCES ${XRAY_DSO_SOURCES} ${${arch}_DSO_SOURCES}
         ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
         CFLAGS ${XRAY_CFLAGS}
         DEFS ${XRAY_COMMON_DEFINITIONS_DSO}

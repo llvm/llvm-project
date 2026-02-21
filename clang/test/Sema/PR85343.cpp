@@ -12,7 +12,7 @@ template <typename f> struct ac {
 
 struct d {
   template <typename f>
-  d(f) { 
+  d(f) {
     ac<f> a;
   }
 };

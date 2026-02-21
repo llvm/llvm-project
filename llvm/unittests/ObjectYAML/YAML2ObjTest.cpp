@@ -66,7 +66,7 @@ Symbols:
   ASSERT_TRUE(Errors[0] == "ObjectYAML: repeated symbol name: 'foo'");
   ASSERT_TRUE(Errors[1] == Errors[0]);
 
-  // 2. Test convertYAML(). 
+  // 2. Test convertYAML().
 
   Errors.clear();
   Storage.clear();

@@ -174,7 +174,7 @@ int f12(int x) {
   switch (x) {
   default:
     return 3;
-  case 10 ... -1: 
+  case 10 ... -1:
     return 0;
   }
 }

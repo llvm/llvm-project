@@ -2,7 +2,7 @@
 
 namespace N {
   struct X { };
-  
+
   X operator+(X, X);
 
   void f(X); // expected-note 2 {{'N::f' declared here}}

@@ -514,7 +514,7 @@ static __isl_give isl_pw_qpolynomial_fold *bernstein_coefficients_full_recursive
 	nvar = isl_basic_set_dim(bset, isl_dim_set);
 	if (nvar < 0 || !poly)
 		goto error;
-	
+
 	len = isl_alloc_array(bset->ctx, int, nvar);
 	if (nvar && !len)
 		goto error;

@@ -23,5 +23,5 @@ int main (int argc, char const *argv[])
 {
     D myD { D::anInt() };
     C().foo(&myD);
-    return 0; 
+    return 0;
 }

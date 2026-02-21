@@ -7,7 +7,7 @@ namespace {
   auto Lambda1 = [](){};
 
   auto Lambda2 = [](){};
-} // namespace 
+} // namespace
 
 #pragma acc routine(NSFunc1) seq
 #pragma acc routine(Lambda2) seq

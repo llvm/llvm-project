@@ -238,10 +238,10 @@ void do_destruct(int z) {
   // CHECK: ret
 }
 
-int f(X); 
+int f(X);
 
 template<typename T>
-int instantiated(T x) { 
+int instantiated(T x) {
   int result;
 
   // CHECK: call void @_ZN1XC1ERKS_
@@ -283,7 +283,7 @@ int instantiated(T x) {
   // CHECK: store i32 7
   // CHECK: store i32 8
   switch (f(x)) {
-  case 0: 
+  case 0:
     result = 7;
     break;
 

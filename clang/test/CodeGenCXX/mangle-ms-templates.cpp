@@ -156,7 +156,7 @@ void template_mangling() {
   IntTemplate<-11> neg_11;
 // CHECK: call {{.*}} @"??0?$IntTemplate@$0?L@@@QAE@XZ"
 // X64: call {{.*}} @"??0?$IntTemplate@$0?L@@@QEAA@XZ"
-  
+
   UnsignedIntTemplate<4294967295> ffffffff;
 // CHECK: call {{.*}} @"??0?$UnsignedIntTemplate@$0PPPPPPPP@@@QAE@XZ"
 // X64: call {{.*}} @"??0?$UnsignedIntTemplate@$0PPPPPPPP@@@QEAA@XZ"

@@ -52,7 +52,7 @@ BOOST_MATH_GPU_ENABLED inline T sin_pi_imp(T x, const Policy&)
       rem = 1 - rem;
    if(rem == 0.5f)
       return static_cast<T>(invert ? -1 : 1);
-   
+
    rem = sin(constants::pi<T>() * rem);
    return invert ? T(-rem) : rem;
 }
@@ -83,7 +83,7 @@ BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<T>::type sin_pi(T x, 
       policies::promote_double<false>,
       policies::discrete_quantile<>,
       policies::assert_undefined<>,
-      // We want to ignore overflows since the result is in [-1,1] and the 
+      // We want to ignore overflows since the result is in [-1,1] and the
       // check slows the code down considerably.
       policies::overflow_error<policies::ignore_error> >::type forwarding_policy;
    return policies::checked_narrowing_cast<result_type, forwarding_policy>(boost::math::detail::sin_pi_dispatch<value_type>(x, forwarding_policy()), "sin_pi");

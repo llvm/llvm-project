@@ -62,8 +62,8 @@ template <typename T>
 struct has_hidden_guard_digits_10<T, true> : public std::integral_constant<bool, (std::numeric_limits<T>::digits10 != std::numeric_limits<T>::max_digits10)> {};
 
 template <typename T>
-struct has_hidden_guard_digits 
-    : public has_hidden_guard_digits_10<T, 
+struct has_hidden_guard_digits
+    : public has_hidden_guard_digits_10<T,
     std::numeric_limits<T>::is_specialized
     && (std::numeric_limits<T>::radix == 10) >
 {};
@@ -71,7 +71,7 @@ struct has_hidden_guard_digits
 template <typename T>
 constexpr T normalize_value(const T& val, const std::false_type&) { return val; }
 template <typename T>
-constexpr T normalize_value(const T& val, const std::true_type&) 
+constexpr T normalize_value(const T& val, const std::true_type&)
 {
     static_assert(std::numeric_limits<T>::is_specialized, "Type T must be specialized.");
     static_assert(std::numeric_limits<T>::radix != 2, "Type T must be specialized.");
@@ -79,7 +79,7 @@ constexpr T normalize_value(const T& val, const std::true_type&)
     std::intmax_t shift = static_cast<std::intmax_t>(std::numeric_limits<T>::digits) - static_cast<std::intmax_t>(boost::math::ccmath::ilogb(val)) - 1;
     T result = boost::math::ccmath::scalbn(val, shift);
     result = boost::math::ccmath::round(result);
-    return boost::math::ccmath::scalbn(result, -shift); 
+    return boost::math::ccmath::scalbn(result, -shift);
 }
 
 template <typename T>
@@ -147,7 +147,7 @@ template <typename T>
 constexpr T float_next_imp(const T& val, const std::true_type&)
 {
     using exponent_type = exponent_type_t<T>;
-    
+
     exponent_type expon {};
 
     int fpclass = boost::math::ccmath::fpclassify(val);
@@ -170,8 +170,8 @@ constexpr T float_next_imp(const T& val, const std::true_type&)
         return detail::get_smallest_value<T>();
     }
 
-    if ((fpclass != FP_SUBNORMAL) && (fpclass != FP_ZERO) 
-        && (boost::math::ccmath::fabs(val) < detail::get_min_shift_value<T>()) 
+    if ((fpclass != FP_SUBNORMAL) && (fpclass != FP_ZERO)
+        && (boost::math::ccmath::fabs(val) < detail::get_min_shift_value<T>())
         && (val != -tools::min_value<T>()))
     {
         //
@@ -227,8 +227,8 @@ constexpr T float_next_imp(const T& val, const std::false_type&)
         return detail::get_smallest_value<T>();
     }
 
-    if ((fpclass != FP_SUBNORMAL) && (fpclass != FP_ZERO) 
-        && (boost::math::ccmath::fabs(val) < detail::get_min_shift_value<T>()) 
+    if ((fpclass != FP_SUBNORMAL) && (fpclass != FP_ZERO)
+        && (boost::math::ccmath::fabs(val) < detail::get_min_shift_value<T>())
         && (val != -tools::min_value<T>()))
     {
         //
@@ -287,8 +287,8 @@ constexpr T float_prior_imp(const T& val, const std::true_type&)
         return -detail::get_smallest_value<T>();
     }
 
-    if ((fpclass != FP_SUBNORMAL) && (fpclass != FP_ZERO) 
-        && (boost::math::ccmath::fabs(val) < detail::get_min_shift_value<T>()) 
+    if ((fpclass != FP_SUBNORMAL) && (fpclass != FP_ZERO)
+        && (boost::math::ccmath::fabs(val) < detail::get_min_shift_value<T>())
         && (val != tools::min_value<T>()))
     {
         //
@@ -346,8 +346,8 @@ constexpr T float_prior_imp(const T& val, const std::false_type&)
         return -detail::get_smallest_value<T>();
     }
 
-    if ((fpclass != FP_SUBNORMAL) && (fpclass != FP_ZERO) 
-        && (boost::math::ccmath::fabs(val) < detail::get_min_shift_value<T>()) 
+    if ((fpclass != FP_SUBNORMAL) && (fpclass != FP_ZERO)
+        && (boost::math::ccmath::fabs(val) < detail::get_min_shift_value<T>())
         && (val != tools::min_value<T>()))
     {
         //
@@ -359,7 +359,7 @@ constexpr T float_prior_imp(const T& val, const std::false_type&)
     }
 
     expon = 1 + boost::math::ccmath::ilogb(val);
-    
+
     if (T remain = boost::math::ccmath::scalbn(val, -expon); remain * std::numeric_limits<T>::radix == 1)
     {
         --expon; // when val is a power of two we must reduce the exponent
@@ -400,8 +400,8 @@ constexpr result_type nextafter(const T& val, const U& direction)
         }
         else if (val == direction)
         {
-            // IEC 60559 recommends that from is returned whenever from == to. These functions return to instead, 
-            // which makes the behavior around zero consistent: std::nextafter(-0.0, +0.0) returns +0.0 and 
+            // IEC 60559 recommends that from is returned whenever from == to. These functions return to instead,
+            // which makes the behavior around zero consistent: std::nextafter(-0.0, +0.0) returns +0.0 and
             // std::nextafter(+0.0, -0.0) returns -0.0.
             return direction;
         }

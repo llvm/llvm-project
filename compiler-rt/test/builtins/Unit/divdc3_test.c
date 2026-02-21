@@ -46,12 +46,12 @@ int test__divdc3(double a, double b, double c, double d)
 //             a, b, c, d, creal(r), cimag(r));
 	double _Complex dividend;
 	double _Complex divisor;
-	
+
 	__real__ dividend = a;
 	__imag__ dividend = b;
 	__real__ divisor = c;
 	__imag__ divisor = d;
-	
+
     switch (classify(dividend))
     {
     case zero:
@@ -186,7 +186,7 @@ int test__divdc3(double a, double b, double c, double d)
         }
         break;
     }
-    
+
     return 0;
 }
 

@@ -31,8 +31,8 @@ struct beta_inv_ab_t
    BOOST_MATH_GPU_ENABLED beta_inv_ab_t(T b_, T z_, T p_, bool invert_, bool swap_ab_) : b(b_), z(z_), p(p_), invert(invert_), swap_ab(swap_ab_) {}
    BOOST_MATH_GPU_ENABLED T operator()(T a)
    {
-      return invert ? 
-         p - boost::math::ibetac(swap_ab ? b : a, swap_ab ? a : b, z, Policy()) 
+      return invert ?
+         p - boost::math::ibetac(swap_ab ? b : a, swap_ab ? a : b, z, Policy())
          : boost::math::ibeta(swap_ab ? b : a, swap_ab ? a : b, z, Policy()) - p;
    }
 private:
@@ -99,7 +99,7 @@ BOOST_MATH_GPU_ENABLED T ibeta_inv_ab_imp(const T& b, const T& z, const T& p, co
    //
    tools::eps_tolerance<T> tol(policies::digits<T, Policy>());
    //
-   // Now figure out a starting guess for what a may be, 
+   // Now figure out a starting guess for what a may be,
    // we'll start out with a value that'll put p or q
    // right bang in the middle of their range, the functions
    // are quite sensitive so we should need too many steps
@@ -163,15 +163,15 @@ BOOST_MATH_GPU_ENABLED T ibeta_inv_ab_imp(const T& b, const T& z, const T& p, co
 } // namespace detail
 
 template <class RT1, class RT2, class RT3, class Policy>
-BOOST_MATH_GPU_ENABLED typename tools::promote_args<RT1, RT2, RT3>::type 
+BOOST_MATH_GPU_ENABLED typename tools::promote_args<RT1, RT2, RT3>::type
       ibeta_inva(RT1 b, RT2 x, RT3 p, const Policy& pol)
 {
    typedef typename tools::promote_args<RT1, RT2, RT3>::type result_type;
    typedef typename policies::evaluation<result_type, Policy>::type value_type;
    typedef typename policies::normalise<
-      Policy, 
-      policies::promote_float<false>, 
-      policies::promote_double<false>, 
+      Policy,
+      policies::promote_float<false>,
+      policies::promote_double<false>,
       policies::discrete_quantile<>,
       policies::assert_undefined<> >::type forwarding_policy;
 
@@ -269,9 +269,9 @@ BOOST_MATH_GPU_ENABLED typename tools::promote_args<RT1, RT2, RT3>::type
    typedef typename tools::promote_args<RT1, RT2, RT3>::type result_type;
    typedef typename policies::evaluation<result_type, Policy>::type value_type;
    typedef typename policies::normalise<
-      Policy, 
-      policies::promote_float<false>, 
-      policies::promote_double<false>, 
+      Policy,
+      policies::promote_float<false>,
+      policies::promote_double<false>,
       policies::discrete_quantile<>,
       policies::assert_undefined<> >::type forwarding_policy;
 
@@ -286,37 +286,37 @@ BOOST_MATH_GPU_ENABLED typename tools::promote_args<RT1, RT2, RT3>::type
 
    return policies::checked_narrowing_cast<result_type, forwarding_policy>(
       detail::ibeta_inv_ab_imp(
-         static_cast<value_type>(a), 
-         static_cast<value_type>(x), 
-         static_cast<value_type>(1 - static_cast<value_type>(q)), 
+         static_cast<value_type>(a),
+         static_cast<value_type>(x),
+         static_cast<value_type>(1 - static_cast<value_type>(q)),
          static_cast<value_type>(q),
          true, pol),
          function);
 }
 
 template <class RT1, class RT2, class RT3>
-BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<RT1, RT2, RT3>::type 
+BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<RT1, RT2, RT3>::type
          ibeta_inva(RT1 b, RT2 x, RT3 p)
 {
    return boost::math::ibeta_inva(b, x, p, policies::policy<>());
 }
 
 template <class RT1, class RT2, class RT3>
-BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<RT1, RT2, RT3>::type 
+BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<RT1, RT2, RT3>::type
          ibetac_inva(RT1 b, RT2 x, RT3 q)
 {
    return boost::math::ibetac_inva(b, x, q, policies::policy<>());
 }
 
 template <class RT1, class RT2, class RT3>
-BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<RT1, RT2, RT3>::type 
+BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<RT1, RT2, RT3>::type
          ibeta_invb(RT1 a, RT2 x, RT3 p)
 {
    return boost::math::ibeta_invb(a, x, p, policies::policy<>());
 }
 
 template <class RT1, class RT2, class RT3>
-BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<RT1, RT2, RT3>::type 
+BOOST_MATH_GPU_ENABLED inline typename tools::promote_args<RT1, RT2, RT3>::type
          ibetac_invb(RT1 a, RT2 x, RT3 q)
 {
    return boost::math::ibetac_invb(a, x, q, policies::policy<>());

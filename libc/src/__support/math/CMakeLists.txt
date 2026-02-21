@@ -809,7 +809,7 @@ add_header_library(
 )
 
 add_header_library(
-  f16addl   
+  f16addl
   HDRS
     f16addl.h
   DEPENDS

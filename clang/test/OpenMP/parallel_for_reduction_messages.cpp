@@ -230,8 +230,8 @@ T tmain(T argc) {
     foo();
 #if defined(_OPENMP) && (_OPENMP >= 202411)
 #pragma omp parallel private(fl)
-#pragma omp for reduction(original(abcxx),+:fl) // expected-error {{private or shared or default}} expected-warning {{extra tokens at the end of '#pragma omp for'}} 
-for (int i = 1; i <= 10; i++) 
+#pragma omp for reduction(original(abcxx),+:fl) // expected-error {{private or shared or default}} expected-warning {{extra tokens at the end of '#pragma omp for'}}
+for (int i = 1; i <= 10; i++)
   foo();
 #endif
   return T();
@@ -249,20 +249,20 @@ for (int i = 1; i <= 10; i++)
 for (int i = 0; i < 10; ++i)
     ;
 
-#pragma omp parallel 
-#pragma omp for reduction(original(shared),+:fl) 
+#pragma omp parallel
+#pragma omp for reduction(original(shared),+:fl)
 for( int i = 0; i < 10; i++)
 ;
 #pragma omp parallel for reduction(original(private),+: fl // expected-error {{expected ')'}} expected-note {{to match this '('}}
 for (int i = 0; i < 10; ++i)
     ;
 #pragma omp parallel firstprivate(fl)
-#pragma omp for reduction(+:fl) 
+#pragma omp for reduction(+:fl)
 for( int i = 0; i < 10; i++)
 ;
 
-#pragma omp parallel 
-#pragma omp for reduction(original(private),+:fl) 
+#pragma omp parallel
+#pragma omp for reduction(original(private),+:fl)
 for( int i = 0; i < 10; i++)
 ;
 
@@ -272,7 +272,7 @@ void test_interaction(){
 int x;
 #if defined(_OPENMP) && (_OPENMP >= 202411)
 #pragma omp parallel private(x)
-#pragma omp for reduction(original(private),+:x) nowait 
+#pragma omp for reduction(original(private),+:x) nowait
 for (int i = 0; i < 10; ++i)
   x += 1;
 #pragma omp parallel
@@ -290,10 +290,10 @@ for (int i = 0; i < 10; ++i)
 template<typename T>
 void test_template_reduction() {
   T x = T();
-#if defined(_OPENMP) && (_OPENMP >= 202411)  
+#if defined(_OPENMP) && (_OPENMP >= 202411)
   #pragma omp parallel private(x)
   {
-    #pragma omp for reduction(original(private),+:x) 
+    #pragma omp for reduction(original(private),+:x)
     for (int i = 0; i < 10; ++i) {
       x += T(1);
     }
@@ -310,7 +310,7 @@ struct Custom {
 };
 void test_user_defined_type() {
   Custom c;
-#if defined(_OPENMP) && (_OPENMP >= 202411)  
+#if defined(_OPENMP) && (_OPENMP >= 202411)
   #pragma omp parallel private(c)
   #pragma omp for reduction(original(private),+:c)
     for (int i = 0; i < 10; ++i)

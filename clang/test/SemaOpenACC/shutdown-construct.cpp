@@ -50,7 +50,7 @@ void TestInst() {
 #pragma acc shutdown device_type(multicore) device_num(getI()) if (getI() < getS())
   // expected-error@+2{{OpenACC 'device_num' clause cannot appear more than once on a 'shutdown' directive}}
   // expected-note@+1{{previous 'device_num' clause is here}}
-#pragma acc shutdown device_type(default) device_type(radeon) device_num(t) if (t < T::value) device_num(getI()) 
+#pragma acc shutdown device_type(default) device_type(radeon) device_num(t) if (t < T::value) device_num(getI())
 
   // expected-error@+1{{value of type 'const NotConvertible' is not contextually convertible to 'bool'}}
 #pragma acc shutdown if (T::NCValue)

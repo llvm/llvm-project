@@ -12,7 +12,7 @@
 // These intrinsics expand to code containing multiple compound and declaration
 // statements rather than just plain function calls, which leads to:
 //  * "scopes" at the CIR level, and then
-//  * redundant branches at the LLVM IR level.  
+//  * redundant branches at the LLVM IR level.
 // The default lowering path never generates those redundant LLVM IR branches,
 // hence for CIR we use `opt -passes=simplifycfg` to reduce the control flow
 // and to make LLVM IR match for all paths.

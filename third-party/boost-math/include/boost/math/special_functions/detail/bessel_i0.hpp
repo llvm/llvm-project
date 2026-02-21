@@ -32,7 +32,7 @@
 // Modified Bessel function of the first kind of order zero
 // we use the approximating forms derived in:
 // "Rational Approximations for the Modified Bessel Function of the First Kind - I0(x) for Computations with Double Precision"
-// by Pavel Holoborodko, 
+// by Pavel Holoborodko,
 // see http://www.advanpix.com/2015/11/11/rational-approximations-for-the-modified-bessel-function-of-the-first-kind-i0-computations-double-precision
 // The actual coefficients used are our own, and extend Pavel's work to precision's other than double.
 
@@ -438,7 +438,7 @@ BOOST_MATH_GPU_ENABLED T bessel_i0_imp(const T& x, const boost::math::integral_c
          BOOST_MATH_BIG_CONSTANT(T, 113, 1.2368879358870281916900125550129211146626e+28),
          BOOST_MATH_BIG_CONSTANT(T, 113, -2.8296235063297831758204519071113999839858e+28),
          BOOST_MATH_BIG_CONSTANT(T, 113, 4.1253861666023020670144616019148954773662e+28),
-         BOOST_MATH_BIG_CONSTANT(T, 113, -2.8809536950051955163648980306847791014734e+28) 
+         BOOST_MATH_BIG_CONSTANT(T, 113, -2.8809536950051955163648980306847791014734e+28)
       };
       // LCOV_EXCL_STOP
       return exp(x) * boost::math::tools::evaluate_polynomial(P, T(1 / x)) / sqrt(x);
@@ -500,7 +500,7 @@ BOOST_MATH_GPU_ENABLED T bessel_i0_imp(const T& x, const boost::math::integral_c
          BOOST_MATH_BIG_CONSTANT(T, 113, 1.2076909538525038580501368530598517194748e+03),
          BOOST_MATH_BIG_CONSTANT(T, 113, 7.5684635141332367730007149159063086133399e+03),
          BOOST_MATH_BIG_CONSTANT(T, 113, 3.5178192543258299267923025833141286569141e+04),
-         BOOST_MATH_BIG_CONSTANT(T, 113, 6.2966297919851965784482163987240461837728e+05) 
+         BOOST_MATH_BIG_CONSTANT(T, 113, 6.2966297919851965784482163987240461837728e+05)
       };
       // LCOV_EXCL_STOP
       T ex = exp(x / 2);

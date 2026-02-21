@@ -9,103 +9,103 @@
 # CHECK: mtmsr 4
 0x7c 0x80 0x01 0x24
 
-# CHECK: mtmsr 4, 1                       
+# CHECK: mtmsr 4, 1
 0x7c 0x81 0x01 0x24
 
-# CHECK: mfmsr 4                         
+# CHECK: mfmsr 4
 0x7c 0x80 0x00 0xa6
 
 # CHECK: mtmsrd 4
 0x7c 0x80 0x01 0x64
 
-# CHECK: mtmsrd 4, 1                     
+# CHECK: mtmsrd 4, 1
 0x7c 0x81 0x01 0x64
 
-# CHECK: mfspr 4, 272                    
+# CHECK: mfspr 4, 272
 0x7c 0x90 0x42 0xa6
 
-# CHECK: mfspr 4, 273                    
+# CHECK: mfspr 4, 273
 0x7c 0x91 0x42 0xa6
 
-# CHECK: mfspr 4, 274                    
+# CHECK: mfspr 4, 274
 0x7c 0x92 0x42 0xa6
 
-# CHECK: mfspr 4, 275                    
+# CHECK: mfspr 4, 275
 0x7c 0x93 0x42 0xa6
 
-# CHECK: mtspr 272, 4                    
+# CHECK: mtspr 272, 4
 0x7c 0x90 0x43 0xa6
 
-# CHECK: mtspr 273, 4                    
+# CHECK: mtspr 273, 4
 0x7c 0x91 0x43 0xa6
 
-# CHECK: mtspr 274, 4                    
+# CHECK: mtspr 274, 4
 0x7c 0x92 0x43 0xa6
 
-# CHECK: mtspr 275, 4                    
+# CHECK: mtspr 275, 4
 0x7c 0x93 0x43 0xa6
 
-# CHECK: mtspr 272, 4                    
+# CHECK: mtspr 272, 4
 0x7c 0x90 0x43 0xa6
 
-# CHECK: mtspr 273, 4                    
+# CHECK: mtspr 273, 4
 0x7c 0x91 0x43 0xa6
 
-# CHECK: mtspr 274, 4                    
+# CHECK: mtspr 274, 4
 0x7c 0x92 0x43 0xa6
 
-# CHECK: mtspr 275, 4                    
+# CHECK: mtspr 275, 4
 0x7c 0x93 0x43 0xa6
 
-# CHECK: mtasr 4                         
+# CHECK: mtasr 4
 0x7c 0x98 0x43 0xa6
 
-# CHECK: mfdec 4                         
+# CHECK: mfdec 4
 0x7c 0x96 0x02 0xa6
 
-# CHECK: mtdec 4                         
+# CHECK: mtdec 4
 0x7c 0x96 0x03 0xa6
 
 # CHECK: mfpvr 4
 0x7c 0x9f 0x42 0xa6
 
-# CHECK: mfsdr1 4                        
+# CHECK: mfsdr1 4
 0x7c 0x99 0x02 0xa6
 
-# CHECK: mtsdr1 4                        
+# CHECK: mtsdr1 4
 0x7c 0x99 0x03 0xa6
 
-# CHECK: mfsrr0 4                        
+# CHECK: mfsrr0 4
 0x7c 0x9a 0x02 0xa6
 
-# CHECK: mtsrr0 4                        
+# CHECK: mtsrr0 4
 0x7c 0x9a 0x03 0xa6
 
-# CHECK: mfsrr1 4                        
+# CHECK: mfsrr1 4
 0x7c 0x9b 0x02 0xa6
 
-# CHECK: mtsrr1 4                        
+# CHECK: mtsrr1 4
 0x7c 0x9b 0x03 0xa6
 
-# CHECK: slbie 4                         
+# CHECK: slbie 4
 0x7c 0x00 0x23 0x64
 
-# CHECK: slbmte 4, 5                     
+# CHECK: slbmte 4, 5
 0x7c 0x80 0x2b 0x24
 
-# CHECK: slbmfee 4, 5                    
+# CHECK: slbmfee 4, 5
 0x7c 0x80 0x2f 0x26
 
 0x7c 0x40 0x1e 0xa6
 # CHECK: slbmfev 2, 3
 
-# CHECK: slbia                           
+# CHECK: slbia
 0x7c 0x00 0x03 0xe4
 
-# CHECK: tlbsync                         
+# CHECK: tlbsync
 0x7c 0x00 0x04 0x6c
 
-# CHECK: tlbiel 4                        
+# CHECK: tlbiel 4
 0x7c 0x00 0x22 0x24
 
 # CHECK: tlbie 4

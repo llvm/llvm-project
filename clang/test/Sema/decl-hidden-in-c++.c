@@ -59,7 +59,7 @@ struct Y {
   struct Z1 {
     int x;
   } zs;
-  
+
   struct Z2 {
 	// This is fine, it is still valid C++.
     struct Z1 inner_zs;

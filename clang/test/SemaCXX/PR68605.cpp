@@ -2,13 +2,13 @@
 // RUN: %clang_cc1 -verify=all -fsyntax-only -std=c++20 -Wshadow-all %s
 
 // Test for issue #68605: Inconsistent shadow warnings for lambda capture of structured bindings.
-// 
+//
 // The issue was that structured binding lambda captures were incorrectly classified
-// as regular shadow warnings (shown with -Wshadow) while regular parameter captures 
+// as regular shadow warnings (shown with -Wshadow) while regular parameter captures
 // were classified as uncaptured-local warnings (shown only with -Wshadow-all).
 //
-// This test validates that both VarDecl and BindingDecl lambda captures now 
-// behave consistently: no warnings with -Wshadow, but uncaptured-local warnings 
+// This test validates that both VarDecl and BindingDecl lambda captures now
+// behave consistently: no warnings with -Wshadow, but uncaptured-local warnings
 // with -Wshadow-all.
 
 namespace std {
@@ -39,7 +39,7 @@ void foo2(Pair val) {
 void foo3() {
   Pair data{42, 100};
   auto [id, value] = data; // all-note 2{{previous declaration is here}}
-  
+
   // Both show consistent uncaptured-local warnings with -Wshadow-all
   auto lambda1 = [id = id](){ return id; }; // all-warning {{declaration shadows a structured binding}}
   auto lambda2 = [value = value](){ return value; }; // all-warning {{declaration shadows a structured binding}}
@@ -50,7 +50,7 @@ void foo4() {
   int regular_var = 10; // all-note {{previous declaration is here}}
   Pair pair_data{1, 2};
   auto [x, y] = pair_data; // all-note 2{{previous declaration is here}}
-  
+
   // All captures now show consistent uncaptured-local warnings with -Wshadow-all
   auto lambda1 = [regular_var = regular_var](){}; // all-warning {{declaration shadows a local variable}}
   auto lambda2 = [x = x](){}; // all-warning {{declaration shadows a structured binding}}
@@ -61,7 +61,7 @@ void foo4() {
 void foo5() {
   int outer = 5; // expected-note {{previous declaration is here}} all-note {{previous declaration is here}}
   auto [a, b] = Pair{1, 2}; // expected-note {{previous declaration is here}} all-note {{previous declaration is here}}
-  
+
   // This SHOULD still warn - it's actual shadowing within the lambda body
   auto lambda = [outer, a](){ // expected-note {{variable 'outer' is explicitly captured here}} all-note {{variable 'outer' is explicitly captured here}} expected-note {{variable 'a' is explicitly captured here}} all-note {{variable 'a' is explicitly captured here}}
     int outer = 10; // expected-warning {{declaration shadows a local variable}} all-warning {{declaration shadows a local variable}}

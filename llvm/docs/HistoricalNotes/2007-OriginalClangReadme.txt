@@ -4,7 +4,7 @@
                                                              Chris Lattner
 
 I. Introduction:
- 
+
  clang: noun
     1. A loud, resonant, metallic sound.
     2. The strident call of a crane or goose.
@@ -21,11 +21,11 @@ I. Introduction:
  This front-end is built as a component of the LLVM toolkit that can be used
  with the LLVM backend or independently of it.  In this spirit, the API has been
  carefully designed as the following components:
- 
+
    libsupport  - Basic support library, reused from LLVM.
 
    libsystem   - System abstraction library, reused from LLVM.
-   
+
    libbasic    - Diagnostics, SourceLocations, SourceBuffer abstraction,
                  file system caching for input source files.  This depends on
                  libsupport and libsystem.
@@ -66,7 +66,7 @@ I. Introduction:
 
    libcodegen  - Lower the AST to LLVM IR for optimization & codegen.  Depends
                  on libast.
-                 
+
    clang       - An example driver, client of the libraries at various levels.
                  This depends on all these libraries, and on LLVM VMCore.
 
@@ -78,7 +78,7 @@ I. Introduction:
  compiler tool, it makes sense to take those plus the AST building and semantic
  analyzer library.  Finally, if you want to use this with the LLVM backend,
  you'd take these components plus the AST to LLVM lowering code.
- 
+
  In the future I hope this toolkit will grow to include new and interesting
  components, including a C++ front-end, ObjC support, and a whole lot of other
  things.
@@ -103,17 +103,17 @@ II. Usage of clang driver:
 
  * -Eonly mode does all preprocessing, but does not print the output,
      useful for timing the preprocessor.
- 
+
  * -fsyntax-only is currently partially implemented, lacking some
      semantic analysis (some errors and warnings are not produced).
 
  * -parse-noop parses code without building an AST.  This is useful
      for timing the cost of the parser without including AST building
      time.
- 
+
  * -parse-ast builds ASTs, but doesn't print them.  This is most
      useful for timing AST building vs -parse-noop.
- 
+
  * -parse-ast-print pretty prints most expression and statements nodes.
 
  * -parse-ast-check checks that diagnostic messages that are expected

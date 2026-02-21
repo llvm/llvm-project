@@ -311,7 +311,7 @@ implicit_firstprivate() {
 #pragma omp parallel num_threads(1)
   {
     int i = 0;
-    // DUMP: OMPTaskDirective 
+    // DUMP: OMPTaskDirective
     // DUMP-NEXT: OMPFirstprivateClause
     // DUMP-NOT: DeclRefExpr {{.+}} 'i' {{.+}} non_odr_use_unevaluated
     // DUMP: DeclRefExpr {{.+}} 'i' 'int' refers_to_enclosing_variable_or_capture

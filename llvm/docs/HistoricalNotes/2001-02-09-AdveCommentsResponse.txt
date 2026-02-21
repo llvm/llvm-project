@@ -144,7 +144,7 @@ needed...
 
 > Other classes of instructions that are valuable for pipeline
 > performance:
->    conditional-move            
+>    conditional-move
 >    predicated instructions
 
 Conditional move is effectly a special case of a predicated
@@ -208,15 +208,15 @@ idea.  :)
 Here is an example of using the switch statement (with my recommended
 syntax):
 
-switch uint %val, label %otherwise, 
-       [%3 x {uint, label}] [ { uint %57, label %l1 }, 
-                              { uint %20, label %l2 }, 
+switch uint %val, label %otherwise,
+       [%3 x {uint, label}] [ { uint %57, label %l1 },
+                              { uint %20, label %l2 },
                               { uint %14, label %l3 } ]
 
 Here it is with the syntax you are proposing:
 
-switch uint %val, label %otherwise, 
-       array %3 of {uint, label} 
+switch uint %val, label %otherwise,
+       array %3 of {uint, label}
               array of {uint, label}
                               { uint %57, label %l1 },
                               { uint %20, label %l2 },
@@ -231,7 +231,7 @@ switch uint %val, label %otherwise,
                                     { uint %14, label %l3 } ]
 
 But then the syntax is inconsistent between type definition and constant
-definition (why do []'s enclose the constants but not the types??).  
+definition (why do []'s enclose the constants but not the types??).
 
 Anyways, I'm sure that there is much debate still to be had over
 this... :)

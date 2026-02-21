@@ -121,7 +121,7 @@ void use() {
   captureVector(std::vector<int>{}, x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
   std::vector<int> local_vector;
   captureVector(local_vector, x);
-  int local_array[2]; 
+  int local_array[2];
   captureArray(local_array, x);
   captureInitList({1, 2}, x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
   captureInitList(getLifetimeBoundInitList({1, 2}), x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
@@ -166,7 +166,7 @@ void captureByUnknown(std::string_view s [[clang::lifetime_capture_by(unknown)]]
 
 std::string_view getLifetimeBoundView(const std::string& s [[clang::lifetimebound]]);
 
-void use() {  
+void use() {
   std::string_view local_string_view;
   std::string local_string;
   // capture by global.
@@ -202,7 +202,7 @@ void use() {
   s.captureView(getLifetimeBoundView(std::string())); // expected-warning {{object whose reference is captured by 's' will be destroyed at the end of the full-expression}}
   s.captureView(getLifetimeBoundString(std::string()));  // expected-warning {{object whose reference is captured by 's' will be destroyed at the end of the full-expression}}
   s.captureView(getNotLifetimeBoundView(std::string()));
-}  
+}
 } // namespace capture_by_this
 
 // ****************************************************************************
@@ -240,7 +240,7 @@ void useCaptureDefaultArg() {
   std::string local;
   captureDefaultArg(x, local);
 }
-} // namespace default_arg 
+} // namespace default_arg
 
 // ****************************************************************************
 // Container: *No* distinction between pointer-like and other element type
@@ -283,11 +283,11 @@ void use_container() {
 
   MyVector<std::string> vector_of_string;
   vector_of_string.push_back(std::string()); // Ok.
-  
+
   MyVector<std::string_view> vector_of_view;
   vector_of_view.push_back(std::string()); // expected-warning {{object whose reference is captured by 'vector_of_view' will be destroyed at the end of the full-expression}}
   vector_of_view.push_back(getLifetimeBoundView(std::string())); // expected-warning {{object whose reference is captured by 'vector_of_view' will be destroyed at the end of the full-expression}}
-  
+
   MyVector<const std::string*> vector_of_pointer;
   vector_of_pointer.push_back(getLifetimeBoundPointer(std::string())); // expected-warning {{object whose reference is captured by 'vector_of_pointer' will be destroyed at the end of the full-expression}}
   vector_of_pointer.push_back(getLifetimeBoundPointer(*getLifetimeBoundPointer(std::string()))); // expected-warning {{object whose reference is captured by 'vector_of_pointer' will be destroyed at the end of the full-expression}}
@@ -330,7 +330,7 @@ void use_my_view() {
   vector_of_my_view.push_back(getLifetimeBoundView(std::string{})); // expected-warning {{object whose reference is captured by 'vector_of_my_view' will be destroyed at the end of the full-expression}}
   vector_of_my_view.push_back(getLifetimeBoundString(getLifetimeBoundView(std::string{}))); // expected-warning {{object whose reference is captured by 'vector_of_my_view' will be destroyed at the end of the full-expression}}
   vector_of_my_view.push_back(getNotLifetimeBoundView(getLifetimeBoundString(getLifetimeBoundView(std::string{}))));
-  
+
   // Use with container of other view types.
   MyVector<std::string_view> vector_of_view;
   vector_of_view.push_back(getMySV());
@@ -346,7 +346,7 @@ void use_with_optional_view() {
   std::optional<std::string_view> optional_of_view;
   vector_of_view.push_back(optional_of_view.value());
   vector_of_view.push_back(getOptionalS().value()); // expected-warning {{object whose reference is captured by 'vector_of_view' will be destroyed at the end of the full-expression}}
-  
+
   vector_of_view.push_back(getOptionalSV().value());
   vector_of_view.push_back(getOptionalMySV().value());
   vector_of_view.push_back(getOptionalMySVNotP().value());
@@ -374,7 +374,7 @@ void use() {
   // 'std::string' and not 'std::string_view'. Therefore no diagnostic here.
   capture2(std::string_view(), x2);
   capture2(std::string(), x2); // expected-warning {{object whose reference is captured by 'x2' will be destroyed at the end of the full-expression}}
-  
+
   std::vector<std::string_view> x3;
   capture3(std::string_view(), x3);
   capture3(std::string(), x3); // expected-warning {{object whose reference is captured by 'x3' will be destroyed at the end of the full-expression}}
@@ -394,7 +394,7 @@ void use() {
   std::string local;
   std::vector<std::string_view> views;
   views.push_back(std::string()); // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}}
-  views.insert(views.begin(), 
+  views.insert(views.begin(),
             std::string()); // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}}
   views.push_back(getLifetimeBoundView(std::string())); // expected-warning {{object whose reference is captured by 'views' will be destroyed at the end of the full-expression}}
   views.push_back(getNotLifetimeBoundView(std::string()));
@@ -446,7 +446,7 @@ void test() {
   T t(1); // expected-warning {{temporary whose address is used}}
   auto y = bar(T(1)); // expected-warning {{temporary whose address is used}}
   T3 t3(T(1)); // expected-warning {{temporary whose address is used}}
-    
+
   int a;
   T2(1, a); // expected-warning {{object whose reference is captured by}}
 }

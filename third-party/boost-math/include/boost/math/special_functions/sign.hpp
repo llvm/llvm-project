@@ -20,14 +20,14 @@
 #include <boost/math/special_functions/math_fwd.hpp>
 #include <boost/math/special_functions/detail/fp_traits.hpp>
 
-namespace boost{ namespace math{ 
+namespace boost{ namespace math{
 
 namespace detail {
 
   // signbit
 
 #ifdef BOOST_MATH_USE_STD_FPCLASSIFY
-    template<class T> 
+    template<class T>
     BOOST_MATH_GPU_ENABLED inline int signbit_impl(T x, native_tag const&)
     {
         using std::signbit;
@@ -44,7 +44,7 @@ namespace detail {
         return x < 0;
     }
 
-    template<class T> 
+    template<class T>
     BOOST_MATH_GPU_ENABLED inline int signbit_impl(T x, generic_tag<false> const&)
     {
         return x < 0;
@@ -52,7 +52,7 @@ namespace detail {
 
 #if defined(__GNUC__) && (LDBL_MANT_DIG == 106)
     //
-    // Special handling for GCC's "double double" type, 
+    // Special handling for GCC's "double double" type,
     // in this case the sign is the same as the sign we
     // get by casting to double, no overflow/underflow
     // can occur since the exponents are the same magnitude
@@ -78,7 +78,7 @@ namespace detail {
         return a & traits::sign ? 1 : 0;
     }
 
-    template<class T> 
+    template<class T>
     BOOST_MATH_GPU_ENABLED inline int signbit_impl(T x, ieee_copy_leading_bits_tag const&)
     {
         typedef typename fp_traits<T>::type traits;
@@ -90,7 +90,7 @@ namespace detail {
     }
 
     // Changesign
-    
+
     // Generic versions first, note that these do not handle
     // signed zero or NaN.
 
@@ -107,7 +107,7 @@ namespace detail {
     }
 #if defined(__GNUC__) && (LDBL_MANT_DIG == 106)
     //
-    // Special handling for GCC's "double double" type, 
+    // Special handling for GCC's "double double" type,
     // in this case we need to change the sign of both
     // components of the "double double":
     //
@@ -154,9 +154,9 @@ namespace detail {
 
 }   // namespace detail
 
-template<class T> 
+template<class T>
 BOOST_MATH_GPU_ENABLED int (signbit)(T x)
-{ 
+{
    typedef typename detail::fp_traits<T>::type traits;
    typedef typename traits::method method;
    // typedef typename boost::is_floating_point<T>::type fp_tag;
@@ -170,9 +170,9 @@ BOOST_MATH_GPU_ENABLED inline int sign BOOST_NO_MACRO_EXPAND(const T& z)
    return (z == 0) ? 0 : (boost::math::signbit)(z) ? -1 : 1;
 }
 
-template <class T> 
+template <class T>
 BOOST_MATH_GPU_ENABLED typename tools::promote_args_permissive<T>::type (changesign)(const T& x)
-{ //!< \brief return unchanged binary pattern of x, except for change of sign bit. 
+{ //!< \brief return unchanged binary pattern of x, except for change of sign bit.
    typedef typename detail::fp_traits<T>::sign_change_type traits;
    typedef typename traits::method method;
    // typedef typename boost::is_floating_point<T>::type fp_tag;
@@ -182,12 +182,12 @@ BOOST_MATH_GPU_ENABLED typename tools::promote_args_permissive<T>::type (changes
 }
 
 template <class T, class U>
-BOOST_MATH_GPU_ENABLED inline typename tools::promote_args_permissive<T, U>::type 
+BOOST_MATH_GPU_ENABLED inline typename tools::promote_args_permissive<T, U>::type
    copysign BOOST_NO_MACRO_EXPAND(const T& x, const U& y)
 {
    BOOST_MATH_STD_USING
    typedef typename tools::promote_args_permissive<T, U>::type result_type;
-   return (boost::math::signbit)(static_cast<result_type>(x)) != (boost::math::signbit)(static_cast<result_type>(y)) 
+   return (boost::math::signbit)(static_cast<result_type>(x)) != (boost::math::signbit)(static_cast<result_type>(y))
       ? (boost::math::changesign)(static_cast<result_type>(x)) : static_cast<result_type>(x);
 }
 

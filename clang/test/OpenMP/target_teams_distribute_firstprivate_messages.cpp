@@ -45,7 +45,7 @@ const S2 ba[5];
 class S3 {
   int a;
   S3 &operator=(const S3 &s3);
-  
+
 public:
   S3() : a(0) {} // expected-note 2 {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
   S3(S3 &s3) : a(s3.a) {} // expected-note 2 {{candidate constructor not viable: 1st argument ('const S3') would lose const qualifier}}

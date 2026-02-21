@@ -14,7 +14,7 @@ template<typename Real>
 Real agm(Real a, Real g)
 {
     using std::sqrt;
-    
+
     if (a < g)
     {
         // Mathematica, mpfr, and mpmath are all symmetric functions:

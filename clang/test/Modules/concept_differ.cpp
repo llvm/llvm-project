@@ -6,11 +6,11 @@
 
 //--- module.modulemap
 module "foo" {
-  export * 
+  export *
   header "foo.h"
 }
 module "bar" {
-  export * 
+  export *
   header "bar.h"
 }
 

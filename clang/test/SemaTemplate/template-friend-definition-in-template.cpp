@@ -10,7 +10,7 @@ template <int A1> struct A {
 };
 
 template struct A<1>;
-int main() { 
+int main() {
   foo1(1.0);
 }
 

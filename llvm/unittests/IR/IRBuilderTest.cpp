@@ -348,12 +348,12 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
   ASSERT_TRUE(isa<IntrinsicInst>(V));
   II = cast<IntrinsicInst>(V);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fmul);
-  
+
   V = Builder.CreateFDiv(V, V);
   ASSERT_TRUE(isa<IntrinsicInst>(V));
   II = cast<IntrinsicInst>(V);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fdiv);
-  
+
   V = Builder.CreateFRem(V, V);
   ASSERT_TRUE(isa<IntrinsicInst>(V));
   II = cast<IntrinsicInst>(V);
@@ -684,7 +684,7 @@ TEST_F(IRBuilderTest, FastMathFlags) {
   ASSERT_TRUE(isa<Instruction>(F));
   FDiv = cast<Instruction>(F);
   EXPECT_FALSE(FDiv->hasAllowReciprocal());
- 
+
   // Try individual flags.
   FMF.clear();
   FMF.setAllowReciprocal();
@@ -743,7 +743,7 @@ TEST_F(IRBuilderTest, FastMathFlags) {
   EXPECT_TRUE(FAdd->hasApproxFunc());
   EXPECT_TRUE(FAdd->hasAllowContract());
   EXPECT_FALSE(FAdd->hasAllowReassoc());
-  
+
   FMF.setAllowReassoc();
   Builder.clearFastMathFlags();
   Builder.setFastMathFlags(FMF);

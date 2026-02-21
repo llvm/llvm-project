@@ -1332,7 +1332,7 @@ namespace init_list {
       d3{ d3.b, num } // expected-warning{{uninitialized}}
     {}
   };
-  
+
   struct E {
     E();
     E foo();

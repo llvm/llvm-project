@@ -40,7 +40,7 @@ T tmain(T argc, S **argv) {
 // expected-error@+3 2 {{integral constant expression}} expected-note@+3 0+{{constant expression}}
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd simdlen (argc 
+#pragma omp distribute parallel for simd simdlen (argc
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i-ST];
 

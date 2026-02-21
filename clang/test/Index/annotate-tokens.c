@@ -19,7 +19,7 @@ enum Color g(int i, ...) {
   do {
     x.a++;
   } while (x.a < 10);
-  
+
   enum Color c;
   switch (c) {
   case Red:

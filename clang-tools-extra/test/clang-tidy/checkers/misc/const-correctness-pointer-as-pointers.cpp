@@ -64,7 +64,7 @@ void ignoreNonConstRefOps() {
   // init with non-const ref
   int* p0 {nullptr};
   int*& r1 = p0;
-  
+
   // non-const ref param
   int* p1 {nullptr};
   takeNonConstRef(p1);

@@ -10,7 +10,7 @@
 
 // Assumption: long double is an intel 80 bit floating point type padded with 6 bytes
 //             su_int is a 32 bit integral type
-//             value in long double is representable in su_int or is negative 
+//             value in long double is representable in su_int or is negative
 //                 (no range checking performed)
 
 // gggg gggg gggg gggg gggg gggg gggg gggg | gggg gggg gggg gggg seee eeee eeee eeee |

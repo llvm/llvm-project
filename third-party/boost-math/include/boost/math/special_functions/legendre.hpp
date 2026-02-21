@@ -70,7 +70,7 @@ T legendre_imp(unsigned l, T x, const Policy& pol, bool second = false)
 }
 
 template <class T, class Policy>
-T legendre_p_prime_imp(unsigned l, T x, const Policy& pol, T* Pn 
+T legendre_p_prime_imp(unsigned l, T x, const Policy& pol, T* Pn
 #ifdef BOOST_NO_CXX11_NULLPTR
    = 0
 #else
@@ -82,7 +82,7 @@ T legendre_p_prime_imp(unsigned l, T x, const Policy& pol, T* Pn
    // Error handling:
    if ((x < -1) || (x > 1))
       return policies::raise_domain_error<T>(function, "The Legendre Polynomial is defined for -1 <= x <= 1, but got x = %1%.", x, pol);
-   
+
    if (l == 0)
     {
         BOOST_MATH_ASSERT(Pn == nullptr); // There are no zeros of P_0 so we shoud never call this with l = 0 and Pn non-null.
@@ -136,10 +136,10 @@ struct legendre_p_zero_func
    legendre_p_zero_func(int n_, const Policy& p) : n(n_), pol(p) {}
 
    std::pair<T, T> operator()(T x) const
-   { 
+   {
       T Pn;
       T Pn_prime = detail::legendre_p_prime_imp(n, x, pol, &Pn);
-      return std::pair<T, T>(Pn, Pn_prime); 
+      return std::pair<T, T>(Pn, Pn_prime);
    }
 };
 

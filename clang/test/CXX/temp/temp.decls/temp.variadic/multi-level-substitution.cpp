@@ -48,7 +48,7 @@ namespace PacksAtDifferentLevels {
   int check1[X<short, int>::Inner<tuple<pair<short, unsigned short>,
                                         pair<int, unsigned int>,
                                         pair<long, unsigned long>>
-                                       >::value == 1? 1 : -1]; 
+                                       >::value == 1? 1 : -1];
 
   template<unsigned ...Values> struct unsigned_tuple { };
   template<typename ...Types>
@@ -99,7 +99,7 @@ namespace PacksAtDifferentLevels {
   int check5[X2<short, int>::Inner<int(pair<short, unsigned short>,
                                        pair<int, unsigned int>,
                                        pair<long, unsigned long>)
-                                     >::value == 1? 1 : -1]; 
+                                     >::value == 1? 1 : -1];
 
   template<typename T, typename U>
   struct some_function_object {

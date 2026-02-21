@@ -904,13 +904,13 @@ void checkMoreLoopZombies4(bool flag) {
 }
 
 void checkExplicitDestructorCalls() {
-  // The below code segments invoke the destructor twice (explicit and 
-  // implicit). While this is not a desired code behavior, it is 
+  // The below code segments invoke the destructor twice (explicit and
+  // implicit). While this is not a desired code behavior, it is
   // not the use-after-move checker's responsibility to issue such a warning.
   {
      B* b = new B;
      B a = std::move(*b);
-     b->~B(); // no-warning 
+     b->~B(); // no-warning
      delete b;
   }
   {
@@ -921,7 +921,7 @@ void checkExplicitDestructorCalls() {
   {
     B b;
     B a  = std::move(b);
-    b.~B(); // no-warning 
+    b.~B(); // no-warning
   }
 }
 

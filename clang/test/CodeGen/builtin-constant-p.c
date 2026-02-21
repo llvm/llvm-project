@@ -142,7 +142,7 @@ extern unsigned long long test14_v;
 
 void test14(void) {
   // CHECK-LABEL: test14
-  // CHECK: call void asm sideeffect "", {{.*}}(i32 -1) 
+  // CHECK: call void asm sideeffect "", {{.*}}(i32 -1)
   __asm__ __volatile__("" :: "n"( (__builtin_constant_p(test14_v) || 0) ? 1 : -1));
 }
 

@@ -28,7 +28,7 @@ void noargs(...) {
   __builtin_va_list list;
   // CHECK:   %list = alloca ptr
   __builtin_va_start(list, 0);
-  // CHECK-NEXT: call void @llvm.va_start.p0(ptr %list)  
+  // CHECK-NEXT: call void @llvm.va_start.p0(ptr %list)
   __builtin_c23_va_start(list);
   // CHECK-NEXT: call void @llvm.va_start.p0(ptr %list)
 }

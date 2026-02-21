@@ -88,7 +88,7 @@ class S8 : public S7<S> {
 public:
   S8(int v) : S7<S>(v){
 #pragma omp target
-#pragma omp teams distribute parallel for simd private(a) private(this->a) private(S7<S>::a) 
+#pragma omp teams distribute parallel for simd private(a) private(this->a) private(S7<S>::a)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
   }

@@ -114,7 +114,7 @@ TEST(TestReturnValueUnderConstructionChecker,
          }
 
          void foo() {
-           D d = returnD(1); 
+           D d = returnD(1);
          })"));
 }
 

@@ -56,7 +56,7 @@ public:
 
 #if __cplusplus >= 201703L
 
-// Test CXXDefaultInitExpr rebuild issue in 
+// Test CXXDefaultInitExpr rebuild issue in
 // https://github.com/llvm/llvm-project/pull/87933
 namespace test_rebuild {
 template <typename T, int> class C {
@@ -101,7 +101,7 @@ void TypeTest_Element_Test::TestBody() {
 }
 } //  namespace test_rebuild
 
-// Test CXXDefaultInitExpr rebuild issue in 
+// Test CXXDefaultInitExpr rebuild issue in
 // https://github.com/llvm/llvm-project/pull/92527
 namespace test_rebuild2 {
 struct F {

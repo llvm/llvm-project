@@ -3,7 +3,7 @@
 
 // Test with pch.
 // RUN: %clang_cc1 -emit-pch -o %t %S/functions.h
-// RUN: %clang_cc1 -include-pch %t -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -include-pch %t -fsyntax-only -verify %s
 
 int f0(int x0, int y0, ...) { return x0 + y0; }
 
@@ -18,10 +18,10 @@ float *test_f1(int val, double x, double y) {
 void test_g0(int *x, float * y) {
   g0(y); // expected-error{{incompatible pointer types passing 'float *' to parameter of type 'int *'}}
          // expected-note@functions.h:9{{passing argument to parameter here}}
-  g0(x); 
+  g0(x);
 }
 
 void __attribute__((noreturn)) test_abort(int code) {
   do_abort(code);
 }
-  
+

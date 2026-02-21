@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=line-tables-only -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=line-directives-only -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited          -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=standalone       -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
-// RUN: %clang_cc1 -emit-llvm                                   -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=NO_MACRO %s 
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=line-tables-only -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=line-directives-only -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited          -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=standalone       -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s
+// RUN: %clang_cc1 -emit-llvm                                   -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=NO_MACRO %s
 
 // RUN: %clang_cc1 -debug-info-kind=limited -debug-info-macro %S/Inputs/debug-info-macro.h -emit-pch -o %t.pch -DC3
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -debug-info-macro %s -o - -include-pch %t.pch "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,PCH %s 
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -debug-info-macro %s -o - -include-pch %t.pch "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,PCH %s
 
 // This test checks that macro Debug info is correctly generated.
 
@@ -42,7 +42,7 @@
 // CHECK:  [[FileInclude1]] = !DIMacroFile(line: 16, file: [[HeaderFile]], nodes: [[N3:![0-9]+]])
 // CHECK:  [[N3]] = !{[[DefineAx:![0-9]+]], [[UndefA]]}
 // CHECK:  [[DefineAx]] = !DIMacro(type: DW_MACINFO_define, line: 3, name: "A(x,y,z)", value: "(x)")
-// CHECK:  [[UndefD1]] = !DIMacro(type: DW_MACINFO_undef, line: 17, name: "D1") 
+// CHECK:  [[UndefD1]] = !DIMacro(type: DW_MACINFO_undef, line: 17, name: "D1")
 
 // CHECK:  [[DefineD2]] = !DIMacro(type: DW_MACINFO_define, line: 18, name: "D2", value: "2")
 // CHECK:  [[FileInclude2]] = !DIMacroFile(line: 19, file: [[HeaderFile]], nodes: [[N4:![0-9]+]])

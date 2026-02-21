@@ -23,7 +23,7 @@ int test3(void) {
 int test4(void) {
   int x; // expected-note{{initialize the variable 'x' to silence this warning}}
   ++x; // expected-warning{{variable 'x' is uninitialized when used here}}
-  return x; 
+  return x;
 }
 
 int test5(void) {

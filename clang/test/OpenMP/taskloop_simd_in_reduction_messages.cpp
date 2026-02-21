@@ -296,7 +296,7 @@ int main(int argc, char **argv) {
 #pragma omp taskloop simd in_reduction( // expected-error {{expected unqualified-id}} expected-warning {{missing ':' after reduction identifier - ignoring}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp taskloop simd in_reduction(- // expected-warning {{missing ':' after reduction identifier - ignoring}} expected-error {{expected ')'}} expected-note {{to match this '('}} 
+#pragma omp taskloop simd in_reduction(- // expected-warning {{missing ':' after reduction identifier - ignoring}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp taskloop simd in_reduction() // expected-error {{expected unqualified-id}} expected-warning {{missing ':' after reduction identifier - ignoring}}

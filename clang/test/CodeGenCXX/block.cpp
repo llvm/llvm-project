@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple %itanium_abi_triple -emit-llvm -o - -fblocks 
-// RUN: %clang_cc1 %s -triple %ms_abi_triple -fno-rtti -emit-llvm -o - -fblocks 
+// RUN: %clang_cc1 %s -triple %itanium_abi_triple -emit-llvm -o - -fblocks
+// RUN: %clang_cc1 %s -triple %ms_abi_triple -fno-rtti -emit-llvm -o - -fblocks
 // Just test that this doesn't crash the compiler...
 
 void func(void*);

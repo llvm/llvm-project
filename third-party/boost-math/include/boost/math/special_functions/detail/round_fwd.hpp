@@ -19,7 +19,7 @@
 namespace boost
 {
    namespace math
-   { 
+   {
 
    template <class T, class Policy>
    BOOST_MATH_GPU_ENABLED typename tools::promote_args<T>::type trunc(const T& v, const Policy& pol);

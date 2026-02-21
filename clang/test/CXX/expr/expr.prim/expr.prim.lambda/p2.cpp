@@ -22,7 +22,7 @@ void unevaluated_operand(P &p, int i) {
 
 template<typename T>
 struct Boom {
-  Boom(const Boom&) { 
+  Boom(const Boom&) {
     T* x = 1; // expected-error{{cannot initialize a variable of type 'int *' with an rvalue of type 'int'}} \
     // expected-error{{cannot initialize a variable of type 'double *' with an rvalue of type 'int'}}
   }

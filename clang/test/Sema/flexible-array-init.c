@@ -15,12 +15,12 @@ void test(void) {
   // expected-warning{{zero size arrays are an extension}}
 }
 
-struct foo { 
-  int x; 
+struct foo {
+  int x;
   int y[]; // expected-note 8 {{initialized flexible array member 'y' is here}}
-}; 
+};
 struct bar { struct foo z; }; // expected-warning {{'z' may not be nested in a struct due to flexible array member}}
-     
+
 struct foo a = { 1, { 2, 3, 4 } };        // expected-warning{{flexible array initialization is a GNU extension}}
 struct bar b = { { 1, { 2, 3, 4 } } };    // expected-error{{initialization of flexible array member is not allowed}}
 struct bar c = { { 1, { } } };            // // expected-warning{{flexible array initialization is a GNU extension}} \
@@ -44,7 +44,7 @@ struct polygon {
   int numpoints;
   struct point points[]; // expected-note{{initialized flexible array member 'points' is here}}
 };
-struct polygon poly = { 
+struct polygon poly = {
   .points[2] = { 1, 2} }; // expected-error{{designator into flexible array member subobject}}
 
 // PR3540
@@ -81,7 +81,7 @@ typedef struct PR10648 {
  unsigned long n;
  int v[]; // expected-note {{initialized flexible array member 'v' is here}}
 } PR10648;
-int f10648(void) { 
+int f10648(void) {
   return (PR10648){2, {3, 4}}.v[1]; // expected-error {{initialization of flexible array member is not allowed}}
 }
 

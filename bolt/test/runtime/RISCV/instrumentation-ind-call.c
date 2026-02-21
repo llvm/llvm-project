@@ -1,7 +1,7 @@
 /*
 REQUIRES: system-linux,bolt-runtime
 
-RUN: %clang %cflags %s -o %t.exe -Wl,-q 
+RUN: %clang %cflags %s -o %t.exe -Wl,-q
 
 RUN: llvm-bolt %t.exe --instrument --instrumentation-file=%t.fdata \
 RUN:   -o %t.instrumented

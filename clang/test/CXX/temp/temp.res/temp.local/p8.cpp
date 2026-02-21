@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
 
-namespace N { 
+namespace N {
   enum { C };
   template<class T> class B {
     void f(T);
-  }; 
+  };
 }
 
 template<class C> void N::B<C>::f(C) {
@@ -26,7 +26,7 @@ namespace N {
     };
 
     struct Y {
-      template<typename U> void f(U);      
+      template<typename U> void f(U);
     };
   }
 
@@ -35,7 +35,7 @@ namespace N {
   };
 }
 
-template<typename C> 
+template<typename C>
 template<typename D>
 void N::M::X<C>::f(C, D) {
   C c;
@@ -47,7 +47,7 @@ void N::M::Y::f(C) {
   C c;
 }
 
-template<typename D> 
+template<typename D>
 void N::Y::f(D) {
   D d;
 }

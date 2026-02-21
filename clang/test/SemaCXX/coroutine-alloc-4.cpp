@@ -109,7 +109,7 @@ task6 f5() { // expected-error 1+{{unable to find '::operator new(size_t, align_
     co_return 43;
 }
 
-void *operator new(std::size_t, std::align_val_t, std::nothrow_t) noexcept; 
+void *operator new(std::size_t, std::align_val_t, std::nothrow_t) noexcept;
 
 task6 f6() {
     co_return 43;

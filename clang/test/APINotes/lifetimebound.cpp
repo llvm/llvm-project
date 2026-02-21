@@ -5,11 +5,11 @@
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/Lifetimebound -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter methodToAnnotate -x c++ | FileCheck --check-prefix=CHECK-METHOD %s
 #include "Lifetimebound.h"
 
-// CHECK-PARAM: FunctionDecl {{.+}} funcToAnnotate 
+// CHECK-PARAM: FunctionDecl {{.+}} funcToAnnotate
 // CHECK-PARAM-NEXT: ParmVarDecl {{.+}} p
 // CHECK-PARAM-NEXT: LifetimeBoundAttr
 
-// CHECK-METHOD: CXXMethodDecl {{.+}} methodToAnnotate 
+// CHECK-METHOD: CXXMethodDecl {{.+}} methodToAnnotate
 // CHECK-METHOD-NEXT: ParmVarDecl {{.+}} p
 // CHECK-METHOD-NEXT: LifetimeBoundAttr
 

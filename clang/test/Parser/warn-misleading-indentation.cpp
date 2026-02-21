@@ -112,7 +112,7 @@ void f4(int i) {
 int bar(void);
 
 int foo(int* dst)
-{   
+{
     if (dst)
        return
     bar();
@@ -235,7 +235,7 @@ int a4(void)
 #if (TAB_SIZE == 1)
 // expected-warning@-2 {{misleading indentation; statement is not part of the previous 'if'}}
 // expected-note@-5 {{here}}
-#endif 
+#endif
 }
 
 int a5(void)

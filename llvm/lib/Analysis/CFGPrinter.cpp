@@ -185,8 +185,8 @@ void Function::viewCFGOnly(const BlockFrequencyInfo *BFI,
   viewCFG(true, BFI, BPI);
 }
 
-/// Find all blocks on the paths which terminate with a deoptimize or 
-/// unreachable (i.e. all blocks which are post-dominated by a deoptimize 
+/// Find all blocks on the paths which terminate with a deoptimize or
+/// unreachable (i.e. all blocks which are post-dominated by a deoptimize
 /// or unreachable). These paths are hidden if the corresponding cl::opts
 /// are enabled.
 void DOTGraphTraits<DOTFuncInfo *>::computeDeoptOrUnreachablePaths(

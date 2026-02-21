@@ -8,7 +8,7 @@ int main() {
   int i = 0;
   do_something_with_pointers(&i, 0);
   do_something_with_pointers(0, &i); // expected-warning{{null passed to a callee that requires a non-null argument}}
-  
+
   extern void *p;
   do_something_with_arrays(0, p); // expected-warning{{null passed to a callee that requires a non-null argument}}
   do_something_with_arrays(p, 0); // expected-warning{{null passed to a callee that requires a non-null argument}}

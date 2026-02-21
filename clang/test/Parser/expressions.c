@@ -46,7 +46,7 @@ int test_leading_extension(void) {
 
 // PR3972
 int test5(int);
-int test6(void) { 
+int test6(void) {
   return test5(      // expected-note {{to match}}
                test5(1)
                  ; // expected-error {{expected ')'}}

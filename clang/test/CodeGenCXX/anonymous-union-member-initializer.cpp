@@ -18,7 +18,7 @@ struct A {
     int a;
     void* b;
   };
-  
+
   A() : a(0) { }
 };
 
@@ -133,7 +133,7 @@ namespace test3 {
   // CHECK: [[THIS:%.*]] = load
   // CHECK-NEXT: [[UNION:%.*]] = getelementptr inbounds {{.*}} [[THIS]], i32 0, i32 0
   // CHECK-NEXT: [[CALLBACK:%.*]] = getelementptr inbounds {{.*}} [[UNION]], i32 0, i32 0
-  // CHECK: store 
+  // CHECK: store
   // CHECK-NEXT: [[UNION:%.*]] = getelementptr inbounds {{.*}} [[THIS]], i32 0, i32 0
   // CHECK-NEXT: [[CVALUE:%.*]] = getelementptr inbounds {{.*}} [[UNION]], i32 0, i32 1
   // CHECK-NEXT: store ptr null, ptr [[CVALUE]]
@@ -152,7 +152,7 @@ struct S {
 } s;
 
 
-//PR8760 
+//PR8760
 template <typename T> struct Foo {
   Foo() : ptr(__nullptr) {}
   union {

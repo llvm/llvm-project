@@ -73,7 +73,7 @@ BOOST_MATH_GPU_ENABLED void adjust_bounds(Real& a, Real& b, tools::equal_nearest
 // This is where all the work is done:
 //
 template <class Dist, class Tolerance>
-BOOST_MATH_GPU_ENABLED typename Dist::value_type 
+BOOST_MATH_GPU_ENABLED typename Dist::value_type
    do_inverse_discrete_quantile(
       const Dist& dist,
       const typename Dist::value_type& p,
@@ -147,7 +147,7 @@ BOOST_MATH_GPU_ENABLED typename Dist::value_type
       }
    }
    //
-   // Try and bracket using a couple of additions first, 
+   // Try and bracket using a couple of additions first,
    // we're assuming that "guess" is likely to be accurate
    // to the nearest int or so:
    //
@@ -177,7 +177,7 @@ BOOST_MATH_GPU_ENABLED typename Dist::value_type
       if(count && (fa * fb >= 0))
       {
          //
-         // We didn't bracket the root, try 
+         // We didn't bracket the root, try
          // once more:
          //
          a = b;
@@ -373,7 +373,7 @@ BOOST_MATH_GPU_ENABLED inline typename Dist::value_type round_to_ceil(const Dist
 // to an int where required.
 //
 template <class Dist>
-BOOST_MATH_GPU_ENABLED inline typename Dist::value_type 
+BOOST_MATH_GPU_ENABLED inline typename Dist::value_type
    inverse_discrete_quantile(
       const Dist& dist,
       typename Dist::value_type p,
@@ -393,18 +393,18 @@ BOOST_MATH_GPU_ENABLED inline typename Dist::value_type
    if(pp <= pdf(dist, 0))
       return 0;
    return do_inverse_discrete_quantile(
-      dist, 
-      p, 
+      dist,
+      p,
       c,
-      guess, 
-      multiplier, 
-      adder, 
+      guess,
+      multiplier,
+      adder,
       tools::eps_tolerance<typename Dist::value_type>(policies::digits<typename Dist::value_type, typename Dist::policy_type>()),
       max_iter);
 }
 
 template <class Dist>
-BOOST_MATH_GPU_ENABLED inline typename Dist::value_type 
+BOOST_MATH_GPU_ENABLED inline typename Dist::value_type
    inverse_discrete_quantile(
       const Dist& dist,
       const typename Dist::value_type& p,
@@ -421,33 +421,33 @@ BOOST_MATH_GPU_ENABLED inline typename Dist::value_type
    if(pp <= pdf(dist, 0))
       return 0;
    //
-   // What happens next depends on whether we're looking for an 
+   // What happens next depends on whether we're looking for an
    // upper or lower quantile:
    //
    if(pp < 0.5f)
       return round_to_floor(dist, do_inverse_discrete_quantile(
-         dist, 
-         p, 
+         dist,
+         p,
          c,
-         (guess < 1 ? value_type(1) : (value_type)floor(guess)), 
-         multiplier, 
-         adder, 
+         (guess < 1 ? value_type(1) : (value_type)floor(guess)),
+         multiplier,
+         adder,
          tools::equal_floor(),
          max_iter), p, c);
    // else:
    return round_to_ceil(dist, do_inverse_discrete_quantile(
-      dist, 
-      p, 
+      dist,
+      p,
       c,
-      (value_type)ceil(guess), 
-      multiplier, 
-      adder, 
+      (value_type)ceil(guess),
+      multiplier,
+      adder,
       tools::equal_ceil(),
       max_iter), p, c);
 }
 
 template <class Dist>
-BOOST_MATH_GPU_ENABLED inline typename Dist::value_type 
+BOOST_MATH_GPU_ENABLED inline typename Dist::value_type
    inverse_discrete_quantile(
       const Dist& dist,
       const typename Dist::value_type& p,
@@ -464,33 +464,33 @@ BOOST_MATH_GPU_ENABLED inline typename Dist::value_type
    if(pp <= pdf(dist, 0))
       return 0;
    //
-   // What happens next depends on whether we're looking for an 
+   // What happens next depends on whether we're looking for an
    // upper or lower quantile:
    //
    if(pp < 0.5f)
       return round_to_ceil(dist, do_inverse_discrete_quantile(
-         dist, 
-         p, 
+         dist,
+         p,
          c,
-         ceil(guess), 
-         multiplier, 
-         adder, 
+         ceil(guess),
+         multiplier,
+         adder,
          tools::equal_ceil(),
          max_iter), p, c);
    // else:
    return round_to_floor(dist, do_inverse_discrete_quantile(
-      dist, 
-      p, 
+      dist,
+      p,
       c,
-      (guess < 1 ? value_type(1) : floor(guess)), 
-      multiplier, 
-      adder, 
+      (guess < 1 ? value_type(1) : floor(guess)),
+      multiplier,
+      adder,
       tools::equal_floor(),
       max_iter), p, c);
 }
 
 template <class Dist>
-BOOST_MATH_GPU_ENABLED inline typename Dist::value_type 
+BOOST_MATH_GPU_ENABLED inline typename Dist::value_type
    inverse_discrete_quantile(
       const Dist& dist,
       const typename Dist::value_type& p,
@@ -507,18 +507,18 @@ BOOST_MATH_GPU_ENABLED inline typename Dist::value_type
    if(pp <= pdf(dist, 0))
       return 0;
    return round_to_floor(dist, do_inverse_discrete_quantile(
-      dist, 
-      p, 
+      dist,
+      p,
       c,
-      (guess < 1 ? value_type(1) : floor(guess)), 
-      multiplier, 
-      adder, 
+      (guess < 1 ? value_type(1) : floor(guess)),
+      multiplier,
+      adder,
       tools::equal_floor(),
       max_iter), p, c);
 }
 
 template <class Dist>
-BOOST_MATH_GPU_ENABLED inline typename Dist::value_type 
+BOOST_MATH_GPU_ENABLED inline typename Dist::value_type
    inverse_discrete_quantile(
       const Dist& dist,
       const typename Dist::value_type& p,
@@ -534,18 +534,18 @@ BOOST_MATH_GPU_ENABLED inline typename Dist::value_type
    if(pp <= pdf(dist, 0))
       return 0;
    return round_to_ceil(dist, do_inverse_discrete_quantile(
-      dist, 
-      p, 
+      dist,
+      p,
       c,
-      ceil(guess), 
-      multiplier, 
-      adder, 
+      ceil(guess),
+      multiplier,
+      adder,
       tools::equal_ceil(),
       max_iter), p, c);
 }
 
 template <class Dist>
-BOOST_MATH_GPU_ENABLED inline typename Dist::value_type 
+BOOST_MATH_GPU_ENABLED inline typename Dist::value_type
    inverse_discrete_quantile(
       const Dist& dist,
       const typename Dist::value_type& p,
@@ -567,12 +567,12 @@ BOOST_MATH_GPU_ENABLED inline typename Dist::value_type
    // with two results that both round to the same integer quickly.
    //
    return round_to_floor(dist, do_inverse_discrete_quantile(
-      dist, 
-      p, 
+      dist,
+      p,
       c,
-      (guess < 0.5f ? value_type(1.5f) : floor(guess + 0.5f) + 0.5f), 
-      multiplier, 
-      adder, 
+      (guess < 0.5f ? value_type(1.5f) : floor(guess + 0.5f) + 0.5f),
+      multiplier,
+      adder,
       tools::equal_nearest_integer(),
       max_iter) + 0.5f, p, c);
 }

@@ -157,7 +157,7 @@ extern "C" void test_ensure_type_aware_overrides() {
 // CHECK: [[S6_ALLOC:%.*]] = call {{.*}} @_ZN2S6nwIS_EEPvSt13type_identityIT_EmSt11align_val_t(
 // CHECK: @_ZN2S6C1Ev({{.*}}[[S6_ALLOC]])
 // CHECK-NEXT: unwind label %[[S6LPAD:.*]]
-// CHECK: [[S6_VTABLE:%vtable.*]] = load 
+// CHECK: [[S6_VTABLE:%vtable.*]] = load
 // CHECK: [[S6_DFN_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[S6_VTABLE]], i64 1
 // CHECK: [[S6_DFN:%.*]] = load ptr, ptr [[S6_DFN_ADDR]]
 // CHECK: call void [[S6_DFN]](

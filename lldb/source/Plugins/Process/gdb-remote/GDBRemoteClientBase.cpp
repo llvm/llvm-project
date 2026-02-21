@@ -51,12 +51,12 @@ StateType GDBRemoteClientBase::SendContinuePacketAndWaitForResponse(
   if (!cont_lock)
     return eStateInvalid;
   OnRunPacketSent(true);
-  // The main ReadPacket loop wakes up at computed_timeout intervals, just to 
+  // The main ReadPacket loop wakes up at computed_timeout intervals, just to
   // check that the connection hasn't dropped.  When we wake up we also check
   // whether there is an interrupt request that has reached its endpoint.
-  // If we want a shorter interrupt timeout that kWakeupInterval, we need to 
+  // If we want a shorter interrupt timeout that kWakeupInterval, we need to
   // choose the shorter interval for the wake up as well.
-  std::chrono::seconds computed_timeout = std::min(interrupt_timeout, 
+  std::chrono::seconds computed_timeout = std::min(interrupt_timeout,
                                                    kWakeupInterval);
   for (;;) {
     PacketResult read_result = ReadPacket(response, computed_timeout, false);

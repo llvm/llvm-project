@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 struct X { // expected-note{{previous definition is here}}
   struct X { } x; // expected-error{{nested redefinition of 'X'}}
-}; 
+};
 
 struct Y { };
 void f(void) {

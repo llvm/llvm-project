@@ -39,10 +39,10 @@ void test(void) {
 // XSAVE: [[low32_3:%[0-9a-zA-Z]+]] = trunc i64 [[tmp_ULLi_3]] to i32
 // XSAVE: call void @llvm.x86.xrstor(ptr [[tmp_vp_3]], i32 [[high32_3]], i32 [[low32_3]])
   (void)__builtin_ia32_xrstor(tmp_vp, tmp_ULLi);
-  
+
 // XSAVE: call void @llvm.x86.xsave
   (void)_xsave(tmp_vp, tmp_ULLi);
-  
+
 // XSAVE: call void @llvm.x86.xrstor
   (void)_xrstor(tmp_vp, tmp_ULLi);
 #endif
@@ -55,7 +55,7 @@ void test(void) {
 // XSAVEOPT: [[low32_1:%[0-9a-zA-Z]+]] = trunc i64 [[tmp_ULLi_1]] to i32
 // XSAVEOPT: call void @llvm.x86.xsaveopt(ptr [[tmp_vp_1]], i32 [[high32_1]], i32 [[low32_1]])
   (void)__builtin_ia32_xsaveopt(tmp_vp, tmp_ULLi);
-  
+
 // XSAVEOPT: call void @llvm.x86.xsaveopt
   (void)_xsaveopt(tmp_vp, tmp_ULLi);
 #endif
@@ -68,8 +68,8 @@ void test(void) {
 // XSAVEC: [[low32_1:%[0-9a-zA-Z]+]] = trunc i64 [[tmp_ULLi_1]] to i32
 // XSAVEC: call void @llvm.x86.xsavec(ptr [[tmp_vp_1]], i32 [[high32_1]], i32 [[low32_1]])
   (void)__builtin_ia32_xsavec(tmp_vp, tmp_ULLi);
- 
-// XSAVEC: call void @llvm.x86.xsavec 
+
+// XSAVEC: call void @llvm.x86.xsavec
   (void)_xsavec(tmp_vp, tmp_ULLi);
 #endif
 
@@ -89,9 +89,9 @@ void test(void) {
 // XSAVES: [[low32_3:%[0-9a-zA-Z]+]] = trunc i64 [[tmp_ULLi_3]] to i32
 // XSAVES: call void @llvm.x86.xrstors(ptr [[tmp_vp_3]], i32 [[high32_3]], i32 [[low32_3]])
   (void)__builtin_ia32_xrstors(tmp_vp, tmp_ULLi);
-  
+
 // XSAVES: call void @llvm.x86.xsaves
-  (void)_xsaves(tmp_vp, tmp_ULLi); 
+  (void)_xsaves(tmp_vp, tmp_ULLi);
 
 // XSAVES: call void @llvm.x86.xrstors
   (void)_xrstors(tmp_vp, tmp_ULLi);
@@ -101,7 +101,7 @@ void test(void) {
 // XGETBV: [[tmp_Ui:%[0-9a-zA-z]+]] = load i32, ptr %tmp_Ui, align 4
 // XGETBV: call i64 @llvm.x86.xgetbv(i32 [[tmp_Ui]])
   tmp_ULLi = __builtin_ia32_xgetbv(tmp_Ui);
-  
+
 // XGETBV: call i64 @llvm.x86.xgetbv
   tmp_ULLi = _xgetbv(tmp_Ui);
 #endif
@@ -114,7 +114,7 @@ void test(void) {
 // XSETBV: [[low32_3:%[0-9a-zA-z]+]] = trunc i64 [[tmp_ULLi_3]] to i32
 // XSETBV: call void @llvm.x86.xsetbv(i32 [[tmp_Ui]], i32 [[high32_3]], i32 [[low32_3]])
   (void)__builtin_ia32_xsetbv(tmp_Ui, tmp_ULLi);
-  
+
   // XSETBV: call void @llvm.x86.xsetbv
   (void)_xsetbv(tmp_Ui, tmp_ULLi);
 #endif

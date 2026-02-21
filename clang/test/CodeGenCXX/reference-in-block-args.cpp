@@ -3,7 +3,7 @@
 extern "C" int printf(const char*, ...);
 
 struct ST {
-     int filler; 
+     int filler;
      int referrer;
 };
 
@@ -11,7 +11,7 @@ void OUTER_BLOCK(void (^fixer)(ST& ref)) {
     ST ref = {2, 100};
     fixer(ref);
 }
-  
+
 void INNER_BLOCK(int (^largeDo) ()) {
 	printf("%d\n", largeDo());
 }

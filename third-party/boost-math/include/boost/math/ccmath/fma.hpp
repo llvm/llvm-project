@@ -36,7 +36,7 @@ constexpr T fma_imp(const T x, const T y, const T z) noexcept
         return __builtin_fmal(x, y, z);
     }
     #endif
-    
+
     // If we can't use compiler intrinsics hope that -fma flag optimizes this call to fma instruction
     return (x * y) + z;
 }
@@ -83,20 +83,20 @@ constexpr auto fma(T1 x, T2 y, T3 z) noexcept
 {
     if (BOOST_MATH_IS_CONSTANT_EVALUATED(x))
     {
-        // If the type is an integer (e.g. epsilon == 0) then set the epsilon value to 1 so that type is at a minimum 
+        // If the type is an integer (e.g. epsilon == 0) then set the epsilon value to 1 so that type is at a minimum
         // cast to double
         constexpr auto T1p = std::numeric_limits<T1>::epsilon() > 0 ? std::numeric_limits<T1>::epsilon() : 1;
         constexpr auto T2p = std::numeric_limits<T2>::epsilon() > 0 ? std::numeric_limits<T2>::epsilon() : 1;
         constexpr auto T3p = std::numeric_limits<T3>::epsilon() > 0 ? std::numeric_limits<T3>::epsilon() : 1;
 
-        using promoted_type = 
+        using promoted_type =
                               #ifndef BOOST_MATH_NO_LONG_DOUBLE_MATH_FUNCTIONS
                               std::conditional_t<T1p <= LDBL_EPSILON && T1p <= T2p, T1,
                               std::conditional_t<T2p <= LDBL_EPSILON && T2p <= T1p, T2,
                               std::conditional_t<T3p <= LDBL_EPSILON && T3p <= T2p, T3,
                               #endif
                               std::conditional_t<T1p <= DBL_EPSILON && T1p <= T2p, T1,
-                              std::conditional_t<T2p <= DBL_EPSILON && T2p <= T1p, T2, 
+                              std::conditional_t<T2p <= DBL_EPSILON && T2p <= T1p, T2,
                               std::conditional_t<T3p <= DBL_EPSILON && T3p <= T2p, T3, double
                               #ifndef BOOST_MATH_NO_LONG_DOUBLE_MATH_FUNCTIONS
                               >>>>>>;

@@ -3,7 +3,7 @@
 
 // Test with pch.
 // RUN: %clang_cc1 -emit-pch -o %t %S/nonvisible-external-defs.h
-// RUN: %clang_cc1 -include-pch %t -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -include-pch %t -fsyntax-only -verify %s
 
 int g(int, float); // expected-error{{conflicting types}}
 

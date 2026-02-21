@@ -5,7 +5,7 @@
 template<typename T> T f0(T) NOEXCEPT;
 int f0(int) NOEXCEPT;
 
-// -- an object or reference being initialized 
+// -- an object or reference being initialized
 struct S {
   int (*f0)(int);
   float (*f1)(float);
@@ -29,13 +29,13 @@ void test_init_f0() {
 void test_assign_f0() {
   int (*f0a)(int) = 0;
   float (*f0b)(float) = 0;
-  
+
   f0a = f0;
   f0a = &f0;
   f0a = (f0);
   f0b = f0;
   f0b = &f0;
-  f0b = (f0);  
+  f0b = (f0);
 }
 
 // -- a parameter of a function (5.2.2),

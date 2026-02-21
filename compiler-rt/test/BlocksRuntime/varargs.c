@@ -27,12 +27,12 @@ int main (int argc, const char * argv[]) {
         return result;
     };
     int six = sumn(3, 1, 2, 3);
-    
+
     if ( six != 6 ) {
         printf("%s: Expected 6 but got %d\n", argv[0], six);
         exit(1);
     }
-    
+
     printf("%s: success\n", argv[0]);
     return 0;
 }

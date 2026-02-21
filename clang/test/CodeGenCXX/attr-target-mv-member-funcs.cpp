@@ -180,7 +180,7 @@ int templ_use() {
 // ITANIUM: ret ptr @_ZN5templIdE3fooEi.sse4.2
 // ITANIUM: ret ptr @_ZN5templIdE3fooEi
 
-// WINDOWS: define weak_odr dso_local i32 @"?foo@?$templ@N@@QEAAHH@Z.resolver"(ptr %0, i32 %1) 
+// WINDOWS: define weak_odr dso_local i32 @"?foo@?$templ@N@@QEAAHH@Z.resolver"(ptr %0, i32 %1)
 // WINDOWS-SAME: comdat
 // WINDOWS: call i32 @"?foo@?$templ@N@@QEAAHH@Z.arch_sandybridge"
 // WINDOWS: call i32 @"?foo@?$templ@N@@QEAAHH@Z.arch_ivybridge"

@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-darwin-apple -o - %s | FileCheck %s --check-prefixes=CHECK
 
- 
+
 // Removed from builtins.c as the behavior of __builtin_os_log differs between
 // platforms, so we only test on X86 however having this embedded in builtins.c
 // makes testing more obtuse for non-X86 dependent behaviours.

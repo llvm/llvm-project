@@ -4,7 +4,7 @@
 void func();
 void func2();
 
-bool func3() {                                                                                               
+bool func3() {
   __asm__("%cc0 = %c1" : : "X"(func), "X"(func2));
   return func2 == func;
-}                                                                                                                    
+}

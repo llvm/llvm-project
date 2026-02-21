@@ -61,8 +61,8 @@ extern inline int f9(void) { return 0; }
 
 // CHECK-C99-LABEL: define{{.*}} i32 @fB()
 
-int test_all(void) { 
-  return f0() + f1() + f2() + f3() + f4() + f5() + f6() + f7() + f8() + f9() 
+int test_all(void) {
+  return f0() + f1() + f2() + f3() + f4() + f5() + f6() + f7() + f8() + f9()
     + fA() + fB();
 }
 

@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
   pthread_mutex_t m[num_mutexes];
   for (int i = 0; i < num_mutexes; ++i)
     pthread_mutex_init(&m[i], NULL);
-  
+
   for (int i = 0; i < num_mutexes - 1; ++i) {
     pthread_mutex_lock(&m[i]);
     pthread_mutex_lock(&m[i + 1]);

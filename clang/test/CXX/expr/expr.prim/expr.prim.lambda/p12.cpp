@@ -21,7 +21,7 @@ struct ReachingThis {
 
   void foo() {
     (void)[this](){};
-    
+
     struct Local {
       int i;
 
@@ -54,7 +54,7 @@ void f1(int i) { // expected-note{{declared here}}
     auto m2 = [i]{
       int x[N][M];
       x[0][0] = i;
-    }; 
+    };
     (void)N;
     (void)M;
     (void)m2;
@@ -72,6 +72,6 @@ void f1(int i) { // expected-note{{declared here}}
           x += f;
         };
       };
-    } 
+    }
   };
 }

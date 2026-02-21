@@ -63,19 +63,19 @@ class PrivateAliasTemplateClassBase : private esft_template<PrivateAliasTemplate
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'PrivateAliasTemplateClassBase' is not publicly inheriting from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
 // CHECK-FIXES: class PrivateAliasTemplateClassBase : public esft_template<PrivateAliasTemplateClassBase> {};
 
-class DefaultAliasTemplateClassBase : esft_template<DefaultAliasTemplateClassBase> {}; 
+class DefaultAliasTemplateClassBase : esft_template<DefaultAliasTemplateClassBase> {};
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'DefaultAliasTemplateClassBase' is not publicly inheriting from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
 // CHECK-FIXES: class DefaultAliasTemplateClassBase : public esft_template<DefaultAliasTemplateClassBase> {};
 
-class PublicAliasTemplateClassBase : public esft_template<PublicAliasTemplateClassBase> {}; 
+class PublicAliasTemplateClassBase : public esft_template<PublicAliasTemplateClassBase> {};
 
-struct PrivateAliasTemplateStructBase : private esft_template<PrivateAliasTemplateStructBase> {}; 
+struct PrivateAliasTemplateStructBase : private esft_template<PrivateAliasTemplateStructBase> {};
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: 'PrivateAliasTemplateStructBase' is not publicly inheriting from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
 // CHECK-FIXES: struct PrivateAliasTemplateStructBase : public esft_template<PrivateAliasTemplateStructBase> {};
 
-struct DefaultAliasTemplateStructBase : esft_template<DefaultAliasTemplateStructBase> {}; 
+struct DefaultAliasTemplateStructBase : esft_template<DefaultAliasTemplateStructBase> {};
 
-struct PublicAliasTemplateStructBase : public esft_template<PublicAliasTemplateStructBase> {}; 
+struct PublicAliasTemplateStructBase : public esft_template<PublicAliasTemplateStructBase> {};
 
 //alias with specific instance
 using esft = std::enable_shared_from_this<ClassBase>;
@@ -83,39 +83,39 @@ class PrivateAliasClassBase : private esft {};
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'PrivateAliasClassBase' is not publicly inheriting from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
 // CHECK-FIXES: class PrivateAliasClassBase : public esft {};
 
-class DefaultAliasClassBase : esft {}; 
+class DefaultAliasClassBase : esft {};
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'DefaultAliasClassBase' is not publicly inheriting from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
 // CHECK-FIXES: class DefaultAliasClassBase : public esft {};
 
-class PublicAliasClassBase : public esft {}; 
+class PublicAliasClassBase : public esft {};
 
-struct PrivateAliasStructBase : private esft {}; 
+struct PrivateAliasStructBase : private esft {};
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: 'PrivateAliasStructBase' is not publicly inheriting from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
 // CHECK-FIXES: struct PrivateAliasStructBase : public esft {};
 
-struct DefaultAliasStructBase : esft {}; 
+struct DefaultAliasStructBase : esft {};
 
-struct PublicAliasStructBase : public esft {}; 
+struct PublicAliasStructBase : public esft {};
 
 //we can only typedef a specific instance of the template
 typedef std::enable_shared_from_this<ClassBase> EnableSharedFromThis;
-class PrivateTypedefClassBase : private EnableSharedFromThis {}; 
+class PrivateTypedefClassBase : private EnableSharedFromThis {};
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'PrivateTypedefClassBase' is not publicly inheriting from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
 // CHECK-FIXES: class PrivateTypedefClassBase : public EnableSharedFromThis {};
 
-class DefaultTypedefClassBase : EnableSharedFromThis {}; 
+class DefaultTypedefClassBase : EnableSharedFromThis {};
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'DefaultTypedefClassBase' is not publicly inheriting from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
 // CHECK-FIXES: class DefaultTypedefClassBase : public EnableSharedFromThis {};
 
-class PublicTypedefClassBase : public EnableSharedFromThis {}; 
+class PublicTypedefClassBase : public EnableSharedFromThis {};
 
-struct PrivateTypedefStructBase : private EnableSharedFromThis {}; 
+struct PrivateTypedefStructBase : private EnableSharedFromThis {};
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: 'PrivateTypedefStructBase' is not publicly inheriting from 'std::enable_shared_from_this', which will cause unintended behaviour when using 'shared_from_this'; make the inheritance public [bugprone-incorrect-enable-shared-from-this]
 // CHECK-FIXES: struct PrivateTypedefStructBase : public EnableSharedFromThis {};
 
-struct DefaultTypedefStructBase : EnableSharedFromThis {}; 
+struct DefaultTypedefStructBase : EnableSharedFromThis {};
 
-struct PublicTypedefStructBase : public EnableSharedFromThis {}; 
+struct PublicTypedefStructBase : public EnableSharedFromThis {};
 
 #define PRIVATE_ESFT_CLASS(ClassName) \
    class ClassName: private std::enable_shared_from_this<ClassName> { \

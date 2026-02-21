@@ -1069,7 +1069,7 @@ typedef struct myvec {
 #pragma omp declare mapper(id: myvec_t v) map(iterator(it=0:v.a), tofrom: v.b[it])
 // CK5: @[[ITER:[a-zA-Z0-9_]+]] = global i32 0, align 4
 
-void foo(){ 
+void foo(){
   myvec_t s;
   #pragma omp target map(mapper(id), to:s)
   {

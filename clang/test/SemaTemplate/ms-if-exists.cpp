@@ -28,10 +28,10 @@ X<int>::type2 i2; // expected-error{{no type named 'type2' in 'X<int>'}}
 X<int>::type3 i3;
 X<int>::type4 i4; // expected-error{{no type named 'type4' in 'X<int>'}}
 
-struct HasFoo { 
+struct HasFoo {
   void foo();
 };
-struct HasBar { 
+struct HasBar {
   void bar(int);
   void bar(float);
 };
@@ -49,7 +49,7 @@ void f(T t) {
   }
 
   int array2[] = {
-    0, 
+    0,
     __if_exists(T::bar) {2, }// expected-warning{{dependent __if_exists declarations are ignored}}
     3
   };

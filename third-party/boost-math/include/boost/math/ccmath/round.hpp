@@ -22,7 +22,7 @@ namespace boost::math::ccmath {
 
 namespace detail {
 
-// Computes the nearest integer value to arg (in floating-point format), 
+// Computes the nearest integer value to arg (in floating-point format),
 // rounding halfway cases away from zero, regardless of the current rounding mode.
 template <typename T>
 inline constexpr T round_impl(T arg) noexcept

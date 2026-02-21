@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm %s  -o /dev/null
 
-/* Test problem where bad code was generated with a ?: statement was 
+/* Test problem where bad code was generated with a ?: statement was
    in a function call argument */
 
 void foo(int, double, float);

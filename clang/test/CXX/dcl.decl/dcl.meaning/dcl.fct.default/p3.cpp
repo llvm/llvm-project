@@ -11,8 +11,8 @@ struct X0 {
   void (*g())(int = 22); // expected-error{{default arguments can only be specified for parameters in a function declaration}}
   void (*h(int = 49))(int);
   auto i(int) -> void (*)(int = 9); // expected-error{{default arguments can only be specified for parameters in a function declaration}}
-  
-  void mem8(int (*fp)(int) = (int (*)(int = 17))0); // expected-error{{default arguments can only be specified for parameters in a function declaration}}  
+
+  void mem8(int (*fp)(int) = (int (*)(int = 17))0); // expected-error{{default arguments can only be specified for parameters in a function declaration}}
 };
 
 template <typename... Ts>

@@ -3641,7 +3641,7 @@ ret_type foo(params) {}
 ---
 ### Parameters
 
-- 
+-
 - `type (aka can_type)`
 - `type foo (aka can_type)`
 - `type foo = default (aka can_type)`
@@ -4218,16 +4218,16 @@ Parameters:
 
 @brief brief doc
 
-longer doc  
+longer doc
 @note this is a note
 
-As you see, notes are "inlined".  
+As you see, notes are "inlined".
 @warning this is a warning
 
-As well as warnings  
-@param a this is a param  
-@return it returns something  
-@retval 0 if successful  
+As well as warnings
+@param a this is a param
+@return it returns something
+@retval 0 if successful
 @retval 1 if failed
 
 ---
@@ -4264,12 +4264,12 @@ brief doc
 
 longer doc
 
-**Note:**  
+**Note:**
 this is a note
 
 As you see, notes are "inlined".
 
-**Warning:**  
+**Warning:**
 this is a warning
 
 As well as warnings)"},
@@ -4297,9 +4297,9 @@ Parameters:
 
 @brief brief doc
 
-longer doc  
-@param a this is a param  
-@param b does not exist  
+longer doc
+@param a this is a param
+@param b does not exist
 @return it returns something
 
 ---
@@ -4491,13 +4491,13 @@ TEST(Hover, ParseDocumentation) {
 @param x this is x
 \param y this is y
 @return something)",
-                   R"(@brief this is a typical use case  
-@param x this is x  
-\\param y this is y  
+                   R"(@brief this is a typical use case
+@param x this is x
+\\param y this is y
 @return something)",
-                   R"(@brief this is a typical use case  
-@param x this is x  
-\param y this is y  
+                   R"(@brief this is a typical use case
+@param x this is x
+\param y this is y
 @return something)",
                    R"(@brief this is a typical use case
 @param x this is x

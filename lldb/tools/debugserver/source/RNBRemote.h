@@ -107,7 +107,7 @@ public:
     start_noack_mode,                              // 'QStartNoAckMode'
     prefix_reg_packets_with_tid,        // 'QPrefixRegisterPacketsWithThreadID
     set_logging_mode,                   // 'QSetLogging:'
-    set_ignored_exceptions,             // 'QSetIgnoredExceptions'           
+    set_ignored_exceptions,             // 'QSetIgnoredExceptions'
     set_max_packet_size,                // 'QSetMaxPacketSize:'
     set_max_payload_size,               // 'QSetMaxPayloadSize:'
     set_environment_variable,           // 'QEnvironment:'

@@ -17,7 +17,7 @@ add_header_library(
     libc.hdr.types.size_t
     libc.src.__support.error_or
     .mbstate
-    .character_converter 
+    .character_converter
 )
 
 add_header_library(

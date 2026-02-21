@@ -8,8 +8,8 @@ void test1(void) {
 void test2(void) {
   if (0) { if (1) {} } else { }
 
-  do { } while (0); 
-  
+  do { } while (0);
+
   while (0) while(0) do ; while(0);
 
   for ((void)0;0;(void)0)
@@ -21,21 +21,21 @@ void test2(void) {
 
 void test3(void) {
     switch (0) {
-    
+
     case 4:
       if (0) {
     case 6: ;
       }
     default:
-      ;     
+      ;
   }
 }
 
 void test4(void) {
   if (0);  // expected-warning {{if statement has empty body}} expected-note {{put the semicolon on a separate line to silence this warning}}
-  
+
   int X;  // declaration in a block.
-  
+
 foo:  if (0); // expected-warning {{if statement has empty body}} expected-note {{put the semicolon on a separate line to silence this warning}}
 }
 
@@ -49,8 +49,8 @@ void test5(void) {
 }
 
 
-void test6(void) { 
-  do 
+void test6(void) {
+  do
     .           // expected-error {{expected expression}}
    while (0);
 }

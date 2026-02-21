@@ -23,7 +23,7 @@ void test_rand(void)
 {
   unsigned short a[7];
   unsigned b;
-  
+
   rand();	// no-warning
   drand48();	// no-warning
   erand48(a);	// no-warning

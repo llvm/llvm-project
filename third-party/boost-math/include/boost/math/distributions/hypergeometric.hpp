@@ -212,10 +212,10 @@ namespace boost { namespace math {
       // Checking function argument
       RealType result = 0;
       const char* function = "boost::math::quantile(const hypergeometric_distribution<%1%>&, %1%)";
-      if (false == dist.check_params(function, &result)) 
+      if (false == dist.check_params(function, &result))
          return result;
 
-      if(false == detail::check_probability(function, p, &result, Policy())) 
+      if(false == detail::check_probability(function, p, &result, Policy()))
          return result;
 
       return static_cast<RealType>(detail::hypergeometric_quantile(p, RealType(1 - p), dist.defective(), dist.sample_count(), dist.total(), Policy()));
@@ -229,7 +229,7 @@ namespace boost { namespace math {
       // Checking function argument
       RealType result = 0;
       const char* function = "quantile(const complemented2_type<hypergeometric_distribution<%1%>, %1%>&)";
-      if (false == c.dist.check_params(function, &result)) 
+      if (false == c.dist.check_params(function, &result))
          return result;
       if (false == detail::check_probability(function, c.param, &result, Policy()))
          return result;

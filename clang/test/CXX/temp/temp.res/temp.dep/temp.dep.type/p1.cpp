@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s 
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 // Examples from CWG1056.
 namespace Example1 {

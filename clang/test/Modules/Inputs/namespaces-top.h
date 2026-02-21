@@ -1,12 +1,12 @@
-namespace N1 { 
+namespace N1 {
   int& f(int);
 }
 
-namespace N2 { 
+namespace N2 {
   int& f(int);
 }
 
-namespace N3 { 
+namespace N3 {
   int& f(int);
 }
 

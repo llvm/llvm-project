@@ -102,7 +102,7 @@ TEST_F(TestMCDisasmInstanceRISCV, TestOpcodeBytePrinter) {
       0x20, 0x00, 0x20, 0x00,
 
       0x1f, 0x02,             // 48 bit xqci.e.li rd=8 imm=0x1000
-      0x00, 0x00, 
+      0x00, 0x00,
       0x00, 0x10,
   };
   // clang-format on

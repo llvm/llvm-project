@@ -59,7 +59,7 @@ TEST(FormatIncremental, SplitComment) {
 
   expectAfterNewline(R"cpp(
 // trailing whitespace is not a split
-^   
+^
 )cpp",
    R"cpp(
 // trailing whitespace is not a split
@@ -78,7 +78,7 @@ TEST(FormatIncremental, SplitComment) {
 )cpp");
 
   expectAfterNewline(R"cpp(
-// extra   
+// extra
     ^     whitespace
 )cpp",
    R"cpp(

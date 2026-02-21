@@ -6,11 +6,11 @@ double sqrt(double X);  // implicitly const because of no -fmath-errno!
 
 void bar(volatile int *VP, int *P, int A,
          _Complex double C, volatile _Complex double VC) {
-  
+
   VP < P;              // expected-warning {{relational comparison result unused}}
   (void)A;
   (void)foo(1,2);      // no warning.
-  
+
   A < foo(1, 2);       // expected-warning {{relational comparison result unused}}
 
   foo(1,2)+foo(4,3);   // expected-warning {{expression result unused}}
@@ -23,7 +23,7 @@ void bar(volatile int *VP, int *P, int A,
 
   __real__ C;          // expected-warning {{expression result unused}}
   __real__ VC;
-  
+
   // We know this can't change errno because of no -fmath-errno.
   sqrt(A);  // expected-warning {{ignoring return value of function declared with const attribute}}
 }
@@ -57,17 +57,17 @@ void t4(int a) {
     b < 1; // expected-warning{{relational comparison result unused}}
   else
     b < 2; // expected-warning{{relational comparison result unused}}
-    
+
   while (1)
     b < 3; // expected-warning{{relational comparison result unused}}
 
   do
     b < 4; // expected-warning{{relational comparison result unused}}
   while (1);
-  
+
   for (;;)
     b < 5; // expected-warning{{relational comparison result unused}}
-    
+
   for (b < 1;;) {} // expected-warning{{relational comparison result unused}}
   for (;b < 1;) {}
   for (;;b < 1) {} // expected-warning{{relational comparison result unused}}
@@ -111,7 +111,7 @@ void t10(void) {
 
 void f(int i, ...) {
     __builtin_va_list ap;
-    
+
     __builtin_va_start(ap, i);
     __builtin_va_arg(ap, int);
     __builtin_va_end(ap);

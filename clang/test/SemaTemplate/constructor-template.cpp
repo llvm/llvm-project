@@ -8,7 +8,7 @@ struct X0 { // expected-note {{candidate constructor (the implicit copy construc
   X0(int); // expected-note{{candidate}}
   template<typename T> X0(T); // expected-note {{candidate}}
   template<typename T, typename U> X0(T*, U*); // expected-note {{candidate}}
-  
+
   // PR4761
   template<typename T> X0() : f0(T::foo) {} // expected-note {{candidate}}
   int f0;
@@ -27,7 +27,7 @@ void test_X0(int i, float f) {
   accept_X0(&f);
   X0 x0e(&i, &f);
   X0 x0f(&f, &i);
-  
+
   X0 x0g(f, &i); // expected-error{{no matching constructor}}
 }
 
@@ -40,9 +40,9 @@ struct X1 {
 template<typename T>
 struct Outer {
   typedef X1<T> A;
-  
+
   A alloc;
-  
+
   explicit Outer(const A& a) : alloc(a) { }
 };
 
@@ -65,7 +65,7 @@ struct X2 {
 X2 test(bool Cond, X2 x2) {
   if (Cond)
     return x2; // okay, uses copy constructor
-  
+
   return X2(); // precxx17-error{{no matching constructor}}
 }
 

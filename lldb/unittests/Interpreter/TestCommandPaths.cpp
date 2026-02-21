@@ -103,7 +103,7 @@ TEST_F(VerifyUserMultiwordCmdPathTest, TestErrors) {
   ArchSpec arch("x86_64-apple-macosx-");
 
   Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
-                            
+
   DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);
 

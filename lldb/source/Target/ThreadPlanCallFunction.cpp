@@ -388,7 +388,7 @@ void ThreadPlanCallFunction::DidPush() {
 
 #ifndef SINGLE_STEP_EXPRESSIONS
   Thread &thread = GetThread();
-  m_subplan_sp = std::make_shared<ThreadPlanRunToAddress>(thread, m_start_addr, 
+  m_subplan_sp = std::make_shared<ThreadPlanRunToAddress>(thread, m_start_addr,
                                                           m_stop_other_threads);
 
   thread.QueueThreadPlan(m_subplan_sp, false);

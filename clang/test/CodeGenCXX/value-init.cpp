@@ -165,11 +165,11 @@ namespace zeroinit {
   };
 
   template<typename>
-  struct X3 : X2<int> { 
+  struct X3 : X2<int> {
     X3() : X2<int>() { }
     int i;
   };
-  
+
 
   // CHECK-LABEL: define{{.*}} void @_ZN8zeroinit9testX0_X3Ev
   void testX0_X3() {
@@ -243,7 +243,7 @@ namespace PR11124 {
   // Make sure C::C doesn't overwrite parts of A while it is zero-initializing B
   struct A { int a; A(); A(int); };
   struct B : virtual A { int b; };
-  struct C : B { C(); };      
+  struct C : B { C(); };
   C::C() : A(3), B() {}
   // CHECK-LABEL: define{{.*}} void @_ZN7PR111241CC1Ev
   // CHECK: call void @llvm.memset.p0.i64(ptr align 8 {{.*}}, i8 0, i64 12, i1 false)
@@ -251,7 +251,7 @@ namespace PR11124 {
   // Make sure C::C doesn't overwrite parts of A while it is zero-initializing B
 
   struct B2 : virtual A { int B::*b; };
-  struct C2 : B2 { C2(); };      
+  struct C2 : B2 { C2(); };
   C2::C2() : A(3), B2() {}
   // CHECK-LABEL: define{{.*}} void @_ZN7PR111242C2C1Ev
   // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 {{.*}}, i64 16, i1 false)

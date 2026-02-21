@@ -5,14 +5,14 @@ struct s* t (struct s z[]) {   // expected-error {{array has incomplete element 
   return z;
 }
 
-void ff(void) { 
+void ff(void) {
   struct s v, *p; // expected-error {{variable has incomplete type 'struct s'}}
 
   p = &v;
 }
 
 void *k (void l[2]) {          // expected-error {{array has incomplete element type}}
-  return l; 
+  return l;
 }
 
 struct vari {
@@ -45,7 +45,7 @@ typedef int TA[I]; // expected-error {{variable length array declaration not all
 
 void strFunc(char *); // expected-note{{passing argument to parameter here}}
 const char staticAry[] = "test";
-void checkStaticAry(void) { 
+void checkStaticAry(void) {
   strFunc(staticAry); // expected-warning{{passing 'const char[5]' to parameter of type 'char *' discards qualifiers}}
 }
 

@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // expected-no-diagnostics
-template<int I, int J, class T> struct X { 
+template<int I, int J, class T> struct X {
   static const int value = 0;
 };
 
-template<int I, int J> struct X<I, J, int> { 
+template<int I, int J> struct X<I, J, int> {
   static const int value = 1;
 };
 
-template<int I> struct X<I, I, int> { 
+template<int I> struct X<I, I, int> {
   static const int value = 2;
 };
 
@@ -18,7 +18,7 @@ int array2[X<0, 0, int>::value == 2? 1 : -1];
 
 namespace DependentSubstPartialOrdering {
   template<typename T, typename U = void, typename V = void>
-  struct X { 
+  struct X {
     static const unsigned value = 1;
   };
 
@@ -34,7 +34,7 @@ namespace DependentSubstPartialOrdering {
 
   struct X1 { };
 
-  struct X2 { 
+  struct X2 {
     typedef void is_b;
   };
 

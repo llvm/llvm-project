@@ -70,7 +70,7 @@ void test3() {
   short sh = NULL; // expected-warning {{implicit conversion of NULL constant to 'short'}}
   double dbl = NULL; // expected-warning {{implicit conversion of NULL constant to 'double'}}
 
-  // Use FileCheck to ensure we don't get any unnecessary macro-expansion notes 
+  // Use FileCheck to ensure we don't get any unnecessary macro-expansion notes
   // (that don't appear as 'real' notes & can't be seen/tested by -verify)
   // CHECK-NOT: note:
   // CHECK: note: expanded from macro 'FINIT'

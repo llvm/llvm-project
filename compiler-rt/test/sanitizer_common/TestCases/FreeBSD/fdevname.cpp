@@ -10,7 +10,7 @@
 void test_fdevname() {
   int fd = open("/dev/null", O_RDONLY);
   char *name;
-  
+
   printf("test_fdevname\n");
   assert(fd != -1);
   assert((name = fdevname(fd)));

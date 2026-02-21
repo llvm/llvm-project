@@ -219,7 +219,7 @@ namespace boost {
 
   #include <cstring>
   #include <cctype>
-  
+
   namespace boost { namespace math { namespace cstdfloat { namespace detail {
 
   template<class string_type>

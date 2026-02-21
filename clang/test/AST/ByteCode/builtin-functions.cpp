@@ -894,19 +894,19 @@ namespace bswap {
   constexpr const int const_expr = 0x1234;
 
   void test_constexpr_reference() {
-    const int expr = 0x1234; 
+    const int expr = 0x1234;
     const int& ref = expr; // #declare
-    
+
     constexpr const int& const_ref = const_expr;
 
-    constexpr auto result2 = __builtin_bswapg(ref); 
+    constexpr auto result2 = __builtin_bswapg(ref);
     //expected-error@-1 {{constexpr variable 'result2' must be initialized by a constant expression}}
     //expected-note@-2 {{initializer of 'ref' is not a constant expression}}
     //expected-note@#declare {{declared here}}
     //ref-error@-4 {{constexpr variable 'result2' must be initialized by a constant expression}}
     //ref-note@-5 {{initializer of 'ref' is not a constant expression}}
     //ref-note@#declare {{declared here}}
-      
+
     constexpr auto result3 = __builtin_bswapg(const_ref);
   }
 }
@@ -1154,10 +1154,10 @@ namespace convertvector {
   constexpr vector8BitInt128 from_vector8BitInt128_to_vector8BitInt128_var =
       __builtin_convertvector((vector8BitInt128){0, 1, 2, 3, 4, 5, 6, 7},
                               vector8BitInt128);
-  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[0] == 0, ""); 
-  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[1] == 1, ""); 
-  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[2] == 2, ""); 
-  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[3] == 3, ""); 
+  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[0] == 0, "");
+  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[1] == 1, "");
+  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[2] == 2, "");
+  static_assert(from_vector8BitInt128_to_vector8BitInt128_var[3] == 3, "");
   static_assert(from_vector8BitInt128_to_vector8BitInt128_var[4] == 4, "");
 }
 

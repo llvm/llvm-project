@@ -13,4 +13,4 @@
 
 template <typename T>
 class a {
-  a< 
+  a<

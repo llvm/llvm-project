@@ -53,7 +53,7 @@ struct D {
 
 C c1(B(
   1  // expected-warning {{temporary whose address is used as value}}
-)); 
+));
 D d1(C(B(
   1  // expected-warning {{temporary whose address is used as value}}
 )));

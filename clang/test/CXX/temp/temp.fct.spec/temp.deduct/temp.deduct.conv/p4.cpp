@@ -8,7 +8,7 @@ struct AnyT {
 };
 
 void test_cvqual_ref(AnyT any) {
-  const int &cir = any;  
+  const int &cir = any;
 }
 
 struct AnyThreeLevelPtr {

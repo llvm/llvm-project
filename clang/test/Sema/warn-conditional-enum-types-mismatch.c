@@ -17,10 +17,10 @@ enum ExtendedStatusCodes {
 
 
 int get_flag(int cond) {
-  return cond ? A : B; 
+  return cond ? A : B;
   #ifdef __cplusplus
   // expected-warning@-2 {{conditional expression between different enumeration types ('ro' and 'rw')}}
-  #else 
+  #else
   // expected-warning@-4 {{conditional expression between different enumeration types ('enum ro' and 'enum rw')}}
   #endif
 }

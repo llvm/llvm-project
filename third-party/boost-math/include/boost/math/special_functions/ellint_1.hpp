@@ -192,13 +192,13 @@ BOOST_MATH_GPU_ENABLED inline T ellint_k_imp(T k, const Policy& pol, boost::math
 // double precision versions use the coefficients from:
 // "Fast computation of complete elliptic integrals and Jacobian elliptic functions",
 // Celestial Mechanics and Dynamical Astronomy, April 2012.
-// 
+//
 // Higher precision coefficients for 80-bit long doubles can be calculated
 // using for example:
 // Table[N[SeriesCoefficient[ EllipticK [ m ], { m, 875/1000, i} ], 20], {i, 0, 24}]
 // and checking the value of the first neglected term with:
 // N[SeriesCoefficient[ EllipticK [ m ], { m, 875/1000, 24} ], 20] * (2.5/100)^24
-// 
+//
 // For m > 0.9 we don't use the method of the paper above, but simply call our
 // existing routines.  The routine used in the above paper was tried (and is
 // archived in the code below), but was found to have slightly higher error rates.
@@ -454,7 +454,7 @@ BOOST_MATH_GPU_ENABLED BOOST_MATH_FORCEINLINE T ellint_k_imp(T k, const Policy& 
    }
    default:
       //
-      // This handles all cases where m > 0.9, 
+      // This handles all cases where m > 0.9,
       // including all error handling:
       //
       return ellint_k_imp(k, pol, boost::math::integral_constant<int, 2>());
@@ -767,7 +767,7 @@ BOOST_MATH_GPU_ENABLED typename tools::promote_args<T>::type ellint_1(T k, const
 {
    typedef typename tools::promote_args<T>::type result_type;
    typedef typename policies::evaluation<result_type, Policy>::type value_type;
-   typedef boost::math::integral_constant<int, 
+   typedef boost::math::integral_constant<int,
 #if defined(__clang_major__) && (__clang_major__ == 7)
       2
 #else

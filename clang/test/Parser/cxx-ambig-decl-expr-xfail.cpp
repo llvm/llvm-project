@@ -2,7 +2,7 @@
 // XFAIL: *
 // FIXME: This is PR7655
 
-struct X { 
+struct X {
   template<typename T> X(T);
   X(int, int);
 

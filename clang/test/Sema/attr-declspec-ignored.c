@@ -3,7 +3,7 @@
 __attribute__((visibility("hidden")))  __attribute__((aligned)) struct A; // expected-warning{{attribute 'visibility' is ignored, place it after "struct" to apply attribute to type declaration}} \
 // expected-warning{{attribute 'aligned' is ignored, place it after "struct" to apply attribute to type declaration}}
 __attribute__((visibility("hidden")))  __attribute__((aligned)) union B; // expected-warning{{attribute 'visibility' is ignored, place it after "union" to apply attribute to type declaration}} \
-// expected-warning{{attribute 'aligned' is ignored, place it after "union" to apply attribute to type declaration}} 
+// expected-warning{{attribute 'aligned' is ignored, place it after "union" to apply attribute to type declaration}}
 __attribute__((visibility("hidden")))  __attribute__((aligned)) enum C {C}; // expected-warning{{attribute 'visibility' is ignored, place it after "enum" to apply attribute to type declaration}} \
 // expected-warning{{attribute 'aligned' is ignored, place it after "enum" to apply attribute to type declaration}}
 

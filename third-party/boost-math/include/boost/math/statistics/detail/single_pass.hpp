@@ -124,7 +124,7 @@ ReturnType first_four_moments_parallel_impl(ForwardIterator first, ForwardIterat
     const auto elements = std::distance(first, last);
     const unsigned max_concurrency = std::thread::hardware_concurrency() == 0 ? 2u : std::thread::hardware_concurrency();
     unsigned num_threads = 2u;
-    
+
     // Threading is faster for: 10 + 5.13e-3 N/j <= 5.13e-3N => N >= 10^4j/5.13(j-1).
     const auto parallel_lower_bound = 10e4*max_concurrency/(5.13*(max_concurrency-1));
     const auto parallel_upper_bound = 10e4*2/5.13; // j = 2
@@ -186,13 +186,13 @@ ReturnType first_four_moments_parallel_impl(ForwardIterator first, ForwardIterat
 
         const Real n_ab = range_a + range_b;
         const Real delta = M1_b - M1_a;
-        
+
         M1_a = (range_a * M1_a + range_b * M1_b) / n_ab;
         M2_a = M2_a + M2_b + delta * delta * (range_a * range_b / n_ab);
-        M3_a = M3_a + M3_b + (delta * delta * delta) * range_a * range_b * (range_a - range_b) / (n_ab * n_ab)    
+        M3_a = M3_a + M3_b + (delta * delta * delta) * range_a * range_b * (range_a - range_b) / (n_ab * n_ab)
                + Real(3) * delta * (range_a * M2_b - range_b * M2_a) / n_ab;
         M4_a = M4_a + M4_b + (delta * delta * delta * delta) * range_a * range_b * (range_a * range_a - range_a * range_b + range_b * range_b) / (n_ab * n_ab * n_ab)
-               + Real(6) * delta * delta * (range_a * range_a * M2_b + range_b * range_b * M2_a) / (n_ab * n_ab) 
+               + Real(6) * delta * delta * (range_a * range_a * M2_b + range_b * range_b * M2_a) / (n_ab * n_ab)
                + Real(4) * delta * (range_a * M3_b - range_b * M3_a) / n_ab;
         range_a = n_ab;
     }
@@ -209,13 +209,13 @@ ReturnType skewness_sequential_impl(ForwardIterator first, ForwardIterator last)
 {
     using std::sqrt;
     BOOST_MATH_ASSERT_MSG(first != last, "At least one sample is required to compute skewness.");
-    
+
     ReturnType M1 = *first;
     ReturnType M2 = 0;
     ReturnType M3 = 0;
     ReturnType n = 2;
-        
-    for (auto it = std::next(first); it != last; ++it)    
+
+    for (auto it = std::next(first); it != last; ++it)
     {
         ReturnType delta21 = *it - M1;
         ReturnType tmp = delta21/n;
@@ -224,16 +224,16 @@ ReturnType skewness_sequential_impl(ForwardIterator first, ForwardIterator last)
         M1 += tmp;
         n += 1;
     }
-   
+
     ReturnType var = M2/(n-1);
-    
+
     if (var == 0)
     {
         // The limit is technically undefined, but the interpretation here is clear:
         // A constant dataset has no skewness.
         return ReturnType(0);
     }
-    
+
     ReturnType skew = M3/(M2*sqrt(var));
     return skew;
 }
@@ -288,11 +288,11 @@ template<typename ReturnType, typename ExecutionPolicy, typename ForwardIterator
 ReturnType gini_coefficient_parallel_impl(ExecutionPolicy&&, ForwardIterator first, ForwardIterator last)
 {
     using range_tuple = std::tuple<ReturnType, ReturnType, std::size_t>;
-    
+
     const auto elements = std::distance(first, last);
     const unsigned max_concurrency = std::thread::hardware_concurrency() == 0 ? 2u : std::thread::hardware_concurrency();
     unsigned num_threads = 2u;
-    
+
     // Threading is faster for: 10 + 10.12e-3 N/j <= 10.12e-3N => N >= 10^4j/10.12(j-1).
     const auto parallel_lower_bound = 10e4*max_concurrency/(10.12*(max_concurrency-1));
     const auto parallel_upper_bound = 10e4*2/10.12; // j = 2

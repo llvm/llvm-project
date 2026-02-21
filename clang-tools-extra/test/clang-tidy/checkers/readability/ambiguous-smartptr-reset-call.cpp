@@ -115,7 +115,7 @@ void Negative() {
   std::shared_ptr<Resettable> s_ptr;
   s_ptr.reset(nullptr);
   s_ptr->doSomething();
-  
+
   Resettable* raw_ptr;
   raw_ptr->reset();
   raw_ptr->doSomething();
@@ -123,7 +123,7 @@ void Negative() {
   Resettable resettable;
   resettable.reset();
   resettable.doSomething();
-  
+
   std::unique_ptr<ResettableWithParam> u_ptr_param;
   u_ptr_param.reset();
   u_ptr_param.reset(nullptr);

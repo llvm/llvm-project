@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
-struct X { 
+struct X {
   X();
-  X(int); 
+  X(int);
 };
 
 X operator+(X, X);

@@ -248,7 +248,7 @@ void test() {
   // CHECK-NEXT: store volatile
 
   __imag i;
-  
+
   // ============================================================
   // FIXME: Test cases we get wrong.
 
@@ -264,7 +264,7 @@ void test() {
   // CHECK-NEXT: call {{.*}}void
   ((a=a),a);
 
-  // Not a use.  gcc gets this wrong, it doesn't emit the copy!  
+  // Not a use.  gcc gets this wrong, it doesn't emit the copy!
   // CHECK-NEXT: call {{.*}}void
   (void)(a=a);
 

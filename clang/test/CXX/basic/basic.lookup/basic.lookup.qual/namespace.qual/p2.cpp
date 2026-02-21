@@ -22,10 +22,10 @@ namespace Numbers {
 void test() {
   int i = Ints::zero;
   Ints::f(i);
-  
+
   float f = Floats::zero;
   Floats::f(f);
-  
+
   double n = Numbers::zero; // expected-error {{reference to 'zero' is ambiguous}}
   Numbers::f(n); // expected-error{{call to 'f' is ambiguous}}
   Numbers::f(i);
