@@ -238,7 +238,8 @@ bool TGParser::AddValue(Record *CurRec, SMLoc Loc, const RecordVal &RV) {
 /// Return true on error, false on success.
 bool TGParser::SetValue(Record *CurRec, SMLoc Loc, const Init *ValName,
                         ArrayRef<unsigned> BitList, const Init *V,
-                        bool AllowSelfAssignment, bool OverrideDefLoc) {
+                        bool AllowSelfAssignment, bool OverrideDefLoc,
+                        LetMode Mode) {
   if (!V)
     return false;
 
@@ -249,6 +250,41 @@ bool TGParser::SetValue(Record *CurRec, SMLoc Loc, const Init *ValName,
   if (!RV)
     return Error(Loc,
                  "Value '" + ValName->getAsUnquotedString() + "' unknown!");
+
+  // Handle append/prepend by concatenating with the current value.
+  if (Mode != LetMode::Replace) {
+    assert(Mode == LetMode::Append || Mode == LetMode::Prepend);
+
+    if (!BitList.empty())
+      return Error(Loc, "Cannot use append/prepend with bit range");
+
+    const Init *CurrentValue = RV->getValue();
+    const RecTy *FieldType = RV->getType();
+
+    // If the current value is unset, just assign the new value directly.
+    if (!isa<UnsetInit>(CurrentValue)) {
+      const bool IsAppendMode = Mode == LetMode::Append;
+
+      const Init *LHS = IsAppendMode ? CurrentValue : V;
+      const Init *RHS = IsAppendMode ? V : CurrentValue;
+
+      BinOpInit::BinaryOp ConcatOp;
+      if (isa<ListRecTy>(FieldType))
+        ConcatOp = BinOpInit::LISTCONCAT;
+      else if (isa<StringRecTy>(FieldType))
+        ConcatOp = BinOpInit::STRCONCAT;
+      else if (isa<DagRecTy>(FieldType))
+        ConcatOp = BinOpInit::CONCAT;
+      else
+        return Error(Loc, Twine("Cannot ") +
+                              (IsAppendMode ? "append to" : "prepend to") +
+                              " field '" + ValName->getAsUnquotedString() +
+                              "' of type '" + FieldType->getAsString() +
+                              "' (expected list, string, code, or dag)");
+
+      V = BinOpInit::get(ConcatOp, LHS, RHS, FieldType)->Fold(CurRec);
+    }
+  }
 
   // Do not allow assignments like 'X = X'. This will just cause infinite loops
   // in the resolution machinery.
@@ -3610,6 +3646,22 @@ bool TGParser::ParseTemplateArgList(Record *CurRec) {
   return false;
 }
 
+/// ParseOptionalLetMode - Check for optional 'append' or 'prepend' contextual
+/// keyword after 'let'. Returns the LetMode and consumes the token if found.
+/// The current token must be tgtok::Id before calling.
+LetMode TGParser::ParseOptionalLetMode() {
+  assert(Lex.getCode() == tgtok::Id);
+  if (Lex.getCurStrVal() == "append") {
+    Lex.Lex();
+    return LetMode::Append;
+  }
+  if (Lex.getCurStrVal() == "prepend") {
+    Lex.Lex();
+    return LetMode::Prepend;
+  }
+  return LetMode::Replace;
+}
+
 /// ParseBodyItem - Parse a single item within the body of a def or class.
 ///
 ///   BodyItem ::= Declaration ';'
@@ -3637,8 +3689,15 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
     return false;
   }
 
-  // LET ID OptionalRangeList '=' Value ';'
-  if (Lex.Lex() != tgtok::Id)
+  // LET [append|prepend] ID OptionalBitList '=' Value ';'
+  Lex.Lex(); // eat 'let'.
+
+  if (Lex.getCode() != tgtok::Id)
+    return TokError("expected field identifier after let");
+
+  LetMode Mode = ParseOptionalLetMode();
+
+  if (Lex.getCode() != tgtok::Id)
     return TokError("expected field identifier after let");
 
   SMLoc IdLoc = Lex.getLoc();
@@ -3671,7 +3730,8 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
   if (!consume(tgtok::semi))
     return TokError("expected ';' after let expression");
 
-  return SetValue(CurRec, IdLoc, FieldName, BitList, Val);
+  return SetValue(CurRec, IdLoc, FieldName, BitList, Val,
+                  /*AllowSelfAssignment=*/false, /*OverrideDefLoc=*/true, Mode);
 }
 
 /// ParseBody - Read the body of a class or def. Return true on error, false on
@@ -3711,7 +3771,9 @@ bool TGParser::ParseBody(Record *CurRec) {
 bool TGParser::ApplyLetStack(Record *CurRec) {
   for (SmallVectorImpl<LetRecord> &LetInfo : LetStack)
     for (LetRecord &LR : LetInfo)
-      if (SetValue(CurRec, LR.Loc, LR.Name, LR.Bits, LR.Value))
+      if (SetValue(CurRec, LR.Loc, LR.Name, LR.Bits, LR.Value,
+                   /*AllowSelfAssignment=*/false, /*OverrideDefLoc=*/true,
+                   LR.Mode))
         return true;
   return false;
 }
@@ -4187,10 +4249,18 @@ bool TGParser::ParseClass() {
 /// of LetRecords.
 ///
 ///   LetList ::= LetItem (',' LetItem)*
-///   LetItem ::= ID OptionalRangeList '=' Value
+///   LetItem ::= [append|prepend] ID OptionalRangeList '=' Value
 ///
 void TGParser::ParseLetList(SmallVectorImpl<LetRecord> &Result) {
   do {
+    if (Lex.getCode() != tgtok::Id) {
+      TokError("expected identifier in let definition");
+      Result.clear();
+      return;
+    }
+
+    LetMode Mode = ParseOptionalLetMode();
+
     if (Lex.getCode() != tgtok::Id) {
       TokError("expected identifier in let definition");
       Result.clear();
@@ -4222,7 +4292,7 @@ void TGParser::ParseLetList(SmallVectorImpl<LetRecord> &Result) {
     }
 
     // Now that we have everything, add the record.
-    Result.emplace_back(Name, Bits, Val, NameLoc);
+    Result.emplace_back(Name, Bits, Val, NameLoc, Mode);
   } while (consume(tgtok::comma));
 }
 

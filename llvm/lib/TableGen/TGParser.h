@@ -26,13 +26,17 @@ struct MultiClass;
 struct SubClassReference;
 struct SubMultiClassReference;
 
+enum class LetMode { Replace, Append, Prepend };
+
 struct LetRecord {
   const StringInit *Name;
   std::vector<unsigned> Bits;
   const Init *Value;
   SMLoc Loc;
-  LetRecord(const StringInit *N, ArrayRef<unsigned> B, const Init *V, SMLoc L)
-      : Name(N), Bits(B), Value(V), Loc(L) {}
+  LetMode Mode;
+  LetRecord(const StringInit *N, ArrayRef<unsigned> B, const Init *V, SMLoc L,
+            LetMode M = LetMode::Replace)
+      : Name(N), Bits(B), Value(V), Loc(L), Mode(M) {}
 };
 
 /// RecordsEntry - Holds exactly one of a Record, ForeachLoop, or
@@ -223,10 +227,11 @@ private: // Semantic analysis methods.
   bool AddValue(Record *TheRec, SMLoc Loc, const RecordVal &RV);
   /// Set the value of a RecordVal within the given record. If `OverrideDefLoc`
   /// is set, the provided location overrides any existing location of the
-  /// RecordVal.
+  /// RecordVal. An optional `Mode` specifies append/prepend concatenation.
   bool SetValue(Record *TheRec, SMLoc Loc, const Init *ValName,
                 ArrayRef<unsigned> BitList, const Init *V,
-                bool AllowSelfAssignment = false, bool OverrideDefLoc = true);
+                bool AllowSelfAssignment = false, bool OverrideDefLoc = true,
+                LetMode Mode = LetMode::Replace);
   bool AddSubClass(Record *Rec, SubClassReference &SubClass);
   bool AddSubClass(RecordsEntry &Entry, SubClassReference &SubClass);
   bool AddSubMultiClass(MultiClass *CurMC,
@@ -270,6 +275,7 @@ private: // Parser methods.
   bool ParseIfBody(MultiClass *CurMultiClass, StringRef Kind);
   bool ParseAssert(MultiClass *CurMultiClass, Record *CurRec = nullptr);
   bool ParseTopLevelLet(MultiClass *CurMultiClass);
+  LetMode ParseOptionalLetMode();
   void ParseLetList(SmallVectorImpl<LetRecord> &Result);
 
   bool ParseObjectBody(Record *CurRec);
