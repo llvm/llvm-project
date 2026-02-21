@@ -14,6 +14,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Module.h"
 #include <map>
+#include <random>
 
 namespace llvm::ubi {
 
@@ -41,6 +42,11 @@ enum class MemoryObjectState {
   Freed,
 };
 
+enum class UndefValueBehavior {
+  NonDeterministic, // Each use of the undef value can yield different results.
+  Zero,             // All uses of the undef value yield zero.
+};
+
 class MemoryObject : public RefCountedBase<MemoryObject> {
   uint64_t Address;
   uint64_t Size;
@@ -65,6 +71,7 @@ public:
   StringRef getName() const { return Name; }
   unsigned getAddressSpace() const { return AS; }
   MemoryObjectState getState() const { return State; }
+  void setState(MemoryObjectState S) { State = S; }
   bool isConstant() const { return IsConstant; }
   void setIsConstant(bool C) { IsConstant = C; }
 
@@ -76,10 +83,8 @@ public:
     assert(Offset < Size && "Offset out of bounds");
     return Bytes[Offset];
   }
-  void writeRawBytes(uint64_t Offset, const void *Data, uint64_t Length);
-  void writeInteger(uint64_t Offset, const APInt &Int, const DataLayout &DL);
-  void writeFloat(uint64_t Offset, const APFloat &Float, const DataLayout &DL);
-  void writePointer(uint64_t Offset, const Pointer &Ptr, const DataLayout &DL);
+  ArrayRef<Byte> getBytes() const { return Bytes; }
+  MutableArrayRef<Byte> getBytes() { return Bytes; }
 
   void markAsFreed();
 };
@@ -126,6 +131,9 @@ class Context {
   uint32_t VScale = 4;
   uint32_t MaxSteps = 0;
   uint32_t MaxStackDepth = 256;
+  UndefValueBehavior UndefBehavior = UndefValueBehavior::NonDeterministic;
+
+  std::mt19937_64 Rng;
 
   // Memory
   uint64_t UsedMem = 0;
@@ -141,6 +149,10 @@ class Context {
   // precisely after we make ptrtoint have the implicit side-effect of exposing
   // the provenance.
   std::map<uint64_t, IntrusiveRefCntPtr<MemoryObject>> MemoryObjects;
+  AnyValue fromBytes(ArrayRef<Byte> Bytes, Type *Ty, uint32_t &OffsetInBits,
+                     bool CheckPaddingBits);
+  void toBytes(const AnyValue &Val, Type *Ty, uint32_t &OffsetInBits,
+               MutableArrayRef<Byte> Bytes, bool PaddingBits);
 
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
@@ -171,6 +183,8 @@ public:
   uint32_t getVScale() const { return VScale; }
   uint32_t getMaxSteps() const { return MaxSteps; }
   uint32_t getMaxStackDepth() const { return MaxStackDepth; }
+  void setUndefValueBehavior(UndefValueBehavior UB) { UndefBehavior = UB; }
+  void reseed(uint32_t Seed) { Rng.seed(Seed); }
 
   LLVMContext &getContext() const { return Ctx; }
   const DataLayout &getDataLayout() const { return DL; }
@@ -180,6 +194,8 @@ public:
       return VScale * EC.getKnownMinValue();
     return EC.getFixedValue();
   }
+  uint64_t getEffectiveTypeAllocSize(Type *Ty);
+  uint64_t getEffectiveTypeStoreSize(Type *Ty);
 
   const AnyValue &getConstantValue(Constant *C);
   IntrusiveRefCntPtr<MemoryObject> allocate(uint64_t Size, uint64_t Align,
@@ -189,6 +205,18 @@ public:
   /// Derive a pointer from a memory object with offset 0.
   /// Please use Pointer's interface for further manipulations.
   Pointer deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj);
+  /// Convert byte sequence to an value of the given type. Uninitialized bits
+  /// are flushed according to the options.
+  AnyValue fromBytes(ArrayRef<Byte> Bytes, Type *Ty);
+  /// Convert a value to byte sequence. Padding bits are set to zero.
+  void toBytes(const AnyValue &Val, Type *Ty, MutableArrayRef<Byte> Bytes);
+  /// Direct memory load without checks.
+  AnyValue load(MemoryObject &MO, uint64_t Offset, Type *ValTy);
+  /// Direct memory store without checks.
+  void store(MemoryObject &MO, uint64_t Offset, const AnyValue &Val,
+             Type *ValTy);
+  void storeRawBytes(MemoryObject &MO, uint64_t Offset, const void *Data,
+                     uint64_t Size);
 
   Function *getTargetFunction(const Pointer &Ptr);
   BasicBlock *getTargetBlock(const Pointer &Ptr);
