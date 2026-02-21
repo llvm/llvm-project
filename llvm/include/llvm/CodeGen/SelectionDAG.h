@@ -2395,6 +2395,9 @@ public:
   /// Test whether the given SDValue is known to contain non-zero value(s).
   LLVM_ABI bool isKnownNeverZero(SDValue Op, unsigned Depth = 0) const;
 
+  /// Test whether the given SDValue is known to contain non-zero value(s).
+  LLVM_ABI bool isKnownNeverZero(SDValue Op, const APInt &DemandedElts, unsigned Depth = 0) const; 
+
   /// Test whether the given float value is known to be positive. +0.0, +inf and
   /// +nan are considered positive, -0.0, -inf and -nan are not.
   LLVM_ABI bool cannotBeOrderedNegativeFP(SDValue Op) const;

@@ -6147,15 +6147,35 @@ bool SelectionDAG::isKnownNeverZeroFloat(SDValue Op) const {
 }
 
 bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
+   EVT VT = Op.getValueType();
+
+  // Since the number of lanes in a scalable vector is unknown at compile time,
+  // we track one bit which is implicitly broadcast to all lanes.  This means
+  // that all lanes in a scalable vector are considered demanded.
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+
+  return isKnownNeverZero(Op, DemandedElts, Depth);
+}
+
+bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts, unsigned Depth) const {
   if (Depth >= MaxRecursionDepth)
     return false; // Limit search depth.
+  
+  EVT OpVT = Op.getValueType();
+  unsigned BitWidth = OpVT.getScalarSizeInBits();
 
   assert(!Op.getValueType().isFloatingPoint() &&
          "Floating point types unsupported - use isKnownNeverZeroFloat");
 
   // If the value is a constant, we can obviously see if it is a zero or not.
-  if (ISD::matchUnaryPredicate(Op,
-                               [](ConstantSDNode *C) { return !C->isZero(); }))
+  auto IsNeverZero = [BitWidth](const ConstantSDNode *C) { 
+    APInt V = C->getAPIntValue().zextOrTrunc(BitWidth);
+    return !V.isZero(); 
+  };
+
+  if (ISD::matchUnaryPredicate(Op, IsNeverZero))
     return true;
 
   // TODO: Recognize more cases here. Most of the cases are also incomplete to
@@ -6164,14 +6184,30 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
   default:
     break;
 
+  case ISD::BUILD_VECTOR:
+    // Are all operands of a build vector constant powers of two or zero?
+    if (all_of(enumerate(Op->ops()), [&](auto P) {
+          auto *C = dyn_cast<ConstantSDNode>(P.value());
+          return !DemandedElts[P.index()] || (C && IsNeverZero(C));
+        }))
+      return true;
+    break;
+
+  case ISD::SPLAT_VECTOR:
+    // Is the operand of a splat vector a constant power of two?
+    if (auto *C = dyn_cast<ConstantSDNode>(Op->getOperand(0)))
+      if (IsNeverZero(C))
+        return true;
+    break;
+
   case ISD::OR:
     return isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
            isKnownNeverZero(Op.getOperand(0), Depth + 1);
 
   case ISD::VSELECT:
   case ISD::SELECT:
-    return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
-           isKnownNeverZero(Op.getOperand(2), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) &&
+           isKnownNeverZero(Op.getOperand(2), DemandedElts, Depth + 1);
 
   case ISD::SHL: {
     if (Op->getFlags().hasNoSignedWrap() || Op->getFlags().hasNoUnsignedWrap())
