@@ -305,6 +305,7 @@
 #include "llvm/Transforms/Scalar/LoopInterchange.h"
 #include "llvm/Transforms/Scalar/LoopLoadElimination.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
+#include "llvm/Transforms/Scalar/LoopPeelPass.h"
 #include "llvm/Transforms/Scalar/LoopPredication.h"
 #include "llvm/Transforms/Scalar/LoopRotation.h"
 #include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
