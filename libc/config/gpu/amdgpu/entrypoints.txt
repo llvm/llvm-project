@@ -286,6 +286,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.asinpif
     libc.src.math.atan
     libc.src.math.atan2
     libc.src.math.atan2f
