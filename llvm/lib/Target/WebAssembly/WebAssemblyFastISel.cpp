@@ -1383,7 +1383,7 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
   addLoadStoreOperands(Addr, MIB, createMachineMemOperandFor(Load));
 
   if (FoldExt) {
-    unsigned ExtReg = lookUpRegForValue(Ext);
+    Register ExtReg = lookUpRegForValue(Ext);
     if (ExtReg) {
       if (MachineInstr *ExtMI = MRI.getUniqueVRegDef(ExtReg)) {
         MRI.replaceRegWith(ExtReg, ResultReg);
