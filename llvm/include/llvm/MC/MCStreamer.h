@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCSection.h"
@@ -44,6 +43,7 @@ class APInt;
 class AssemblerConstantPools;
 class MCAsmBackend;
 class MCAssembler;
+class MCLFIRewriter;
 class MCContext;
 class MCExpr;
 class MCInst;
@@ -311,9 +311,7 @@ public:
     return StartTokLocPtr ? *StartTokLocPtr : SMLoc();
   }
 
-  void setLFIRewriter(std::unique_ptr<MCLFIRewriter> Rewriter) {
-    LFIRewriter = std::move(Rewriter);
-  }
+  void setLFIRewriter(std::unique_ptr<MCLFIRewriter> Rewriter);
 
   MCLFIRewriter *getLFIRewriter() { return LFIRewriter.get(); }
 

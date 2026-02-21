@@ -13,7 +13,6 @@
 
 #include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
-#include "llvm/MC/MCStreamer.h"
 
 using namespace llvm;
 
