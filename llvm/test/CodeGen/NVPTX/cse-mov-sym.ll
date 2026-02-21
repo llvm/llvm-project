@@ -17,17 +17,17 @@ define i32 @test_mov_sym(i32 %offset1, i32 %offset2, i1 %cond) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    ld.param.s32 %rd1, [test_mov_sym_param_0];
 ; CHECK-NEXT:    ld.param.b8 %rs1, [test_mov_sym_param_2];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NEXT:    ld.param.b32 %r1, [test_mov_sym_param_0];
-; CHECK-NEXT:    cvt.s64.s32 %rd1, %r1;
 ; CHECK-NEXT:    mov.b64 %rd2, global_smem;
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, %rd1;
 ; CHECK-NEXT:    ld.shared.b32 %r4, [%rd3];
 ; CHECK-NEXT:    not.pred %p2, %p1;
 ; CHECK-NEXT:    @%p2 bra $L__BB0_4;
 ; CHECK-NEXT:  // %bb.1: // %if1.preheader
+; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    ld.param.b32 %r2, [test_mov_sym_param_1];
 ; CHECK-NEXT:    setp.ne.b32 %p3, %r1, %r2;
 ; CHECK-NEXT:  $L__BB0_2: // %if1

@@ -68,6 +68,12 @@ public:
                              unsigned AS,
                              Instruction *I = nullptr) const override;
 
+  bool isTruncateFree(EVT SrcTy, EVT DSTTy) const override {
+    if (!SrcTy.isScalarInteger() || !DSTTy.isScalarInteger())
+      return false;
+    return SrcTy.getSizeInBits() == 64 && DSTTy.getSizeInBits() == 32;
+  }
+
   bool isTruncateFree(Type *SrcTy, Type *DstTy) const override {
     // Truncating 64-bit to 32-bit is free in SASS.
     if (!SrcTy->isIntegerTy() || !DstTy->isIntegerTy())

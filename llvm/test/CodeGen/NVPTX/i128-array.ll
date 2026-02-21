@@ -8,13 +8,13 @@ define [2 x i128] @foo(i64 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [foo_param_1];
 ; CHECK-NEXT:    ld.param.b64 %rd1, [foo_param_0];
-; CHECK-NEXT:    shr.s64 %rd2, %rd1, 63;
-; CHECK-NEXT:    cvt.s64.s32 %rd3, %r1;
-; CHECK-NEXT:    shr.s64 %rd4, %rd3, 63;
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd3, %rd4};
+; CHECK-NEXT:    ld.param.s32 %rd2, [foo_param_1];
+; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
+; CHECK-NEXT:    shr.s64 %rd3, %rd1, 63;
+; CHECK-NEXT:    shr.s64 %rd4, %rd2, 63;
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd3};
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0+16], {%rd2, %rd4};
 ; CHECK-NEXT:    ret;
   %1 = sext i64 %a to i128
   %2 = sext i32 %b to i128
