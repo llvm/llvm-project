@@ -22,6 +22,10 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "NVPTXGenInstrInfo.inc"
 
+// Implementation of getNamedOperandIdx() for LD/ST instructions.
+#define GET_INSTRINFO_NAMED_OPS
+#include "NVPTXGenInstrInfo.inc"
+
 // Pin the vtable to this file.
 void NVPTXInstrInfo::anchor() {}
 

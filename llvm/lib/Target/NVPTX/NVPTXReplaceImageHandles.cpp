@@ -1808,8 +1808,11 @@ bool NVPTXReplaceImageHandles::replaceImageHandle(MachineOperand &Op,
       // For CUDA, we preserve the param loads coming from function arguments
       return false;
 
-    assert(TexHandleDef.getOperand(7).isSymbol() && "Load is not a symbol!");
-    StringRef Sym = TexHandleDef.getOperand(7).getSymbolName();
+    int AddrIdx = NVPTX::getNamedOperandIdx(TexHandleDef.getOpcode(),
+                                            NVPTX::OpName::addr);
+    assert(AddrIdx != -1 && TexHandleDef.getOperand(AddrIdx).isSymbol() &&
+           "Load is not a symbol!");
+    StringRef Sym = TexHandleDef.getOperand(AddrIdx).getSymbolName();
     InstrsToRemove.insert(&TexHandleDef);
     Op.ChangeToES(Sym.data());
     MFI->getImageHandleSymbolIndex(Sym);

@@ -476,6 +476,20 @@ public:
   MachineMemOperand::Flags
   getVPIntrinsicMemOperandFlags(const VPIntrinsic &VPIntrin) const;
 
+  /// Hook for targets to record additional information about a
+  /// MachineMemOperand after it is created from an IR instruction.
+  /// This is called by SelectionDAGBuilder for load/store instructions
+  /// and during memcpy/memmove lowering.
+  /// Targets can use this to store target-specific cache policies or
+  /// other per-memop metadata in MachineFunctionInfo.
+  /// The OperandNo parameter specifies which memory operand of the instruction
+  /// this MMO corresponds to (used for multi-operand instructions like memcpy
+  /// where operand 0 is dest and operand 1 is src).
+  /// The default implementation does nothing.
+  virtual void recordTargetMMOInfo(MachineFunction &MF, MachineMemOperand *MMO,
+                                   const Instruction &I,
+                                   unsigned OperandNo = 0) const {}
+
   virtual bool isSelectSupported(SelectSupportKind /*kind*/) const {
     return true;
   }

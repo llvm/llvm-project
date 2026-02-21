@@ -363,6 +363,86 @@ void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
   llvm_unreachable(formatv("Unknown Modifier: {}", Modifier).str().c_str());
 }
 
+void NVPTXInstPrinter::printCacheControlHint(const MCInst *MI, int OpNum,
+                                             raw_ostream &O,
+                                             StringRef Modifier) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  unsigned Hint = MO.getImm();
+
+  // If no hint is set, print nothing
+  if (Hint == 0)
+    return;
+
+  // Check if L2::cache_hint mode is active
+  bool IsCacheHintMode = NVPTX::isL2CacheHintMode(Hint);
+
+  if (Modifier == "l1") {
+    // L1 qualifiers can be combined with L2::cache_hint mode
+    auto L1 = NVPTX::decodeL1Eviction(Hint);
+    switch (L1) {
+    case NVPTX::L1Eviction::Normal:
+      return;
+    case NVPTX::L1Eviction::Unchanged:
+      O << ".L1::evict_unchanged";
+      return;
+    case NVPTX::L1Eviction::First:
+      O << ".L1::evict_first";
+      return;
+    case NVPTX::L1Eviction::Last:
+      O << ".L1::evict_last";
+      return;
+    case NVPTX::L1Eviction::NoAllocate:
+      O << ".L1::no_allocate";
+      return;
+    }
+  } else if (Modifier == "l2") {
+    // Print L2 eviction qualifier if present
+    auto L2 = NVPTX::decodeL2Eviction(Hint);
+    switch (L2) {
+    case NVPTX::L2Eviction::Normal:
+      break;
+    case NVPTX::L2Eviction::First:
+      O << ".L2::evict_first";
+      break;
+    case NVPTX::L2Eviction::Last:
+      O << ".L2::evict_last";
+      break;
+    }
+    // In L2::cache_hint mode, also print the cache_hint qualifier
+    if (IsCacheHintMode)
+      O << ".L2::cache_hint";
+    return;
+  } else if (Modifier == "prefetch") {
+    // Prefetch qualifiers can be combined with L2::cache_hint mode
+    auto Prefetch = NVPTX::decodeL2Prefetch(Hint);
+    switch (Prefetch) {
+    case NVPTX::L2Prefetch::None:
+      return;
+    case NVPTX::L2Prefetch::Bytes64:
+      O << ".L2::64B";
+      return;
+    case NVPTX::L2Prefetch::Bytes128:
+      O << ".L2::128B";
+      return;
+    case NVPTX::L2Prefetch::Bytes256:
+      O << ".L2::256B";
+      return;
+    }
+  }
+  // Unknown modifier - silently ignore
+}
+
+void NVPTXInstPrinter::printCachePolicy(const MCInst *MI, int OpNum,
+                                        raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  // If the operand is a register and valid, print ", $reg"
+  if (MO.isReg() && MO.getReg().isValid()) {
+    O << ", ";
+    printRegName(O, MO.getReg());
+  }
+  // If it's an immediate 0 or invalid register, print nothing
+}
+
 void NVPTXInstPrinter::printMmaCode(const MCInst *MI, int OpNum, raw_ostream &O,
                                     StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);

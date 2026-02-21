@@ -125,6 +125,23 @@ public:
   bool hasDotInstructions() const {
     return SmVersion >= 61 && PTXVersion >= 50;
   }
+  // Cache hint SM version requirements (from PTX ISA documentation):
+  //
+  // | Cache Hint      | SM Requirement | PTX Requirement |
+  // |-----------------|----------------|-----------------|
+  // | L1::evict_*     | SM 70+         | -               |
+  // | L2::evict_*     | SM 70+         | -               |
+  // | L2::64B         | SM 75+         | -               |
+  // | L2::128B        | SM 75+         | -               |
+  // | L2::256B        | SM 80+         | -               |
+  // | L2::cache_hint  | SM 80+         | PTX 7.4+        |
+  //
+  bool hasL1EvictionHint() const { return SmVersion >= 70; }
+  bool hasL2EvictionHint() const { return SmVersion >= 70; }
+  bool hasL2Prefetch64B() const { return SmVersion >= 75; }
+  bool hasL2Prefetch128B() const { return SmVersion >= 75; }
+  bool hasL2Prefetch256B() const { return SmVersion >= 80; }
+  bool hasL2CacheHint() const { return SmVersion >= 80 && PTXVersion >= 74; }
 
   // Checks following instructions support:
   // - tcgen05.ld/st
