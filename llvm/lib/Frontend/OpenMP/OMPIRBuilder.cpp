@@ -9945,16 +9945,29 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
                                      ConstantInt::get(Int64Ty, 0));
   SmallBitVector RuntimeSizes(CombinedInfo.Sizes.size());
   for (unsigned I = 0, E = CombinedInfo.Sizes.size(); I < E; ++I) {
+    bool IsNonContigEntry =
+        IsNonContiguous &&
+        (static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+             CombinedInfo.Types[I] &
+             OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG) != 0);
+    // For NON_CONTIG entries ArgSizes must carry the dimension count
+    // (number of descriptor_dim records) – NOT the byte size expression.
+    // Variable subsection forms (e.g. 0:s.len/2:2) previously produced a
+    // non-constant size so we marked them runtime and stored the byte size,
+    // leading the runtime to treat it as DimSize and overrun descriptors.
+    if (IsNonContigEntry) {
+      // Dims must be long enough and positive.
+      assert(I < CombinedInfo.NonContigInfo.Dims.size() &&
+             "Induction variable is in-bounds with the NON_CONTIG Dims array");
+      const uint64_t DimCount = CombinedInfo.NonContigInfo.Dims[I];
+      assert(DimCount > 0 && "NON_CONTIG DimCount must be > 0");
+      ConstSizes[I] =
+          ConstantInt::get(Int64Ty, CombinedInfo.NonContigInfo.Dims[I]);
+      continue;
+    }
     if (auto *CI = dyn_cast<Constant>(CombinedInfo.Sizes[I])) {
       if (!isa<ConstantExpr>(CI) && !isa<GlobalValue>(CI)) {
-        if (IsNonContiguous &&
-            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                CombinedInfo.Types[I] &
-                OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG))
-          ConstSizes[I] =
-              ConstantInt::get(Int64Ty, CombinedInfo.NonContigInfo.Dims[I]);
-        else
-          ConstSizes[I] = CI;
+        ConstSizes[I] = CI;
         continue;
       }
     }
