@@ -151,9 +151,9 @@ SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 }
 
 inline Register getTypeReg(MachineRegisterInfo *MRI, Register OpReg) {
-  SPIRVType *TypeInst = MRI->getVRegDef(OpReg);
-  return TypeInst && TypeInst->getOpcode() == SPIRV::OpFunctionParameter
-             ? TypeInst->getOperand(1).getReg()
+  const MachineInstr *Inst = MRI->getVRegDef(OpReg);
+  return Inst && Inst->getOpcode() == SPIRV::OpFunctionParameter
+             ? Inst->getOperand(1).getReg()
              : OpReg;
 }
 
@@ -198,7 +198,7 @@ static void validatePtrTypes(const SPIRVSubtarget &STI,
   MachineFunction *MF = I.getParent()->getParent();
   Register OpReg = I.getOperand(OpIdx).getReg();
   Register OpTypeReg = getTypeReg(MRI, OpReg);
-  SPIRVType *OpType = GR.getSPIRVTypeForVReg(OpTypeReg, MF);
+  const MachineInstr *OpType = GR.getSPIRVTypeForVReg(OpTypeReg, MF);
   if (!ResType || !OpType || OpType->getOpcode() != SPIRV::OpTypePointer)
     return;
   // Get operand's pointee type
