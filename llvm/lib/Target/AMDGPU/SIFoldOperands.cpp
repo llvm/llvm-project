@@ -87,6 +87,8 @@ struct FoldableDef {
     return OpToFold->getSubReg();
   }
 
+  unsigned getDefSubReg() const { return DefSubReg; }
+
   bool isImm() const { return Kind == MachineOperand::MO_Immediate; }
 
   bool isFI() const {
@@ -128,6 +130,9 @@ struct FoldableDef {
         return false;
       MachineOperand TmpOp = MachineOperand::CreateFI(FrameIndexToFold);
       return TII.isOperandLegal(MI, OpIdx, &TmpOp);
+    }
+    case MachineOperand::MO_Register: {
+      return TII.isOperandLegal(MI, OpIdx, OpToFold);
     }
     default:
       // TODO: Try to apply DefSubReg, for global address we can extract
@@ -733,14 +738,16 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
     }
   }
 
-  // Rework once the VS_16 register class is updated to include proper
-  // 16-bit SGPRs instead of 32-bit ones.
-  if (Old.getSubReg() == AMDGPU::lo16 && TRI->isSGPRReg(*MRI, New->getReg()))
-    Old.setSubReg(AMDGPU::NoSubRegister);
+  assert(Old.getSubReg() == AMDGPU::NoSubRegister ||
+         (Old.getSubReg() == AMDGPU::lo16 &&
+          TRI->isSGPRReg(*MRI, New->getReg())) ||
+         MRI->getVRegDef(Old.getReg())->isRegSequence());
+
+  Old.setSubReg(New->getSubReg());
   if (New->getReg().isPhysical()) {
     Old.substPhysReg(New->getReg(), *TRI);
   } else {
-    Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
+    Old.substVirtReg(New->getReg(), 0, *TRI);
     Old.setIsUndef(New->isUndef());
   }
   return true;
@@ -1186,10 +1193,14 @@ void SIFoldOperandsImpl::foldOperand(
   if (UseOp->isReg() && OpToFold.isReg()) {
     if (UseOp->isImplicit())
       return;
-    // Allow folding from SGPRs to 16-bit VGPRs.
+
+    MachineInstr *SourceInstruction = MRI->getVRegDef(UseOp->getReg());
+    // Allow folding from SGPRs to 16-bit VGPRs
+    // or folding of non-subregs through REG_SEQUENCES.
     if (UseOp->getSubReg() != AMDGPU::NoSubRegister &&
         (UseOp->getSubReg() != AMDGPU::lo16 ||
-         !TRI->isSGPRReg(*MRI, OpToFold.getReg())))
+         !TRI->isSGPRReg(*MRI, OpToFold.getReg())) &&
+        !SourceInstruction->isRegSequence())
       return;
   }
 
@@ -1475,6 +1486,7 @@ void SIFoldOperandsImpl::foldOperand(
         UseMI->setDesc(TII->get(AMDGPU::COPY));
         UseMI->getOperand(1).setReg(OpToFold.getReg());
         UseMI->getOperand(1).setSubReg(OpToFold.getSubReg());
+        OpToFold.OpToFold->setIsKill(false);
         UseMI->getOperand(1).setIsKill(false);
         UseMI->removeOperand(2); // Remove exec read (or src1 for readlane)
         UseMI->clearFlag(MachineInstr::NoConvergent);
@@ -1779,11 +1791,18 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
     MachineInstr *UseMI = U->getParent();
 
     FoldableDef SubOpToFold = OpToFold.getWithSubReg(*TRI, U->getSubReg());
+    if (MI.isRegSequence() && OpToFold.getDefSubReg() != U->getSubReg())
+      continue;
     foldOperand(SubOpToFold, UseMI, UseMI->getOperandNo(U), FoldList,
                 CopiesToReplace);
   }
 
   if (CopiesToReplace.empty() && FoldList.empty())
+    return Changed;
+
+  // Only fold into REG_SEQUENCE uses if we fold into all of them and can remove
+  // the REG_SEQUENCE after.
+  if (MI.isRegSequence() && UsesToProcess.size() != FoldList.size())
     return Changed;
 
   MachineFunction *MF = MI.getMF();
@@ -2047,8 +2066,21 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
       return true;
   }
 
-  FoldableDef Def(OpToFold, DstRC);
-  bool Changed = foldInstOperand(MI, Def);
+  bool Changed = false;
+  if (!MI.isRegSequence()) {
+    FoldableDef Def(OpToFold, DstRC);
+    Changed = foldInstOperand(MI, Def);
+  } else {
+    // For REG_SEQUENCE, try to fold each of its sources separately.
+    for (unsigned I = 1, E = MI.getNumExplicitOperands(); I != E; I += 2) {
+      OpToFoldPtr = &MI.getOperand(I);
+      MachineOperand &OpToFoldRegSeq = *OpToFoldPtr;
+
+      unsigned Subreg = MI.getOperand(I + 1).getImm();
+      FoldableDef Def(OpToFoldRegSeq, DstRC, Subreg);
+      Changed |= foldInstOperand(MI, Def);
+    }
+  }
 
   // If we managed to fold all uses of this copy then we might as well
   // delete it now.
@@ -2802,7 +2834,7 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
         continue;
       }
 
-      if (TII->isFoldableCopy(MI)) {
+      if (TII->isFoldableCopy(MI) || MI.isRegSequence()) {
         Changed |= tryFoldFoldableCopy(MI, CurrentKnownM0Val);
         continue;
       }

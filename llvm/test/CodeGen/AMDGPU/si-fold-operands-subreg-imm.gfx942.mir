@@ -16,9 +16,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1107312640
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1006632960
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
-    ; CHECK-NEXT: [[V_PK_ADD_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_PK_ADD_F16 8, [[COPY]], 8, [[REG_SEQUENCE]].sub1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_PK_ADD_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_PK_ADD_F16 8, [[COPY]], 8, [[S_MOV_B32_]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_PK_ADD_F16_]]
     %0:vgpr_32 = COPY $vgpr0
     %1:sreg_32 = S_MOV_B32 1107312640
@@ -40,8 +38,6 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1107312640
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1006632960
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
     ; CHECK-NEXT: [[V_PK_ADD_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_PK_ADD_F16 8, [[COPY]], 4, 15360, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_PK_ADD_F16_]]
     %0:vgpr_32 = COPY $vgpr0
@@ -97,8 +93,6 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -16
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1006632960
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
     ; CHECK-NEXT: [[V_PK_ADD_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_PK_ADD_F16 8, [[COPY]], 8, -16, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_PK_ADD_F16_]]
     %0:vgpr_32 = COPY $vgpr0
@@ -121,8 +115,6 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 15360
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1006632960
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
     ; CHECK-NEXT: [[V_PK_ADD_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_PK_ADD_F16 8, [[COPY]], 8, 15360, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_PK_ADD_F16_]]
     %0:vgpr_32 = COPY $vgpr0
@@ -145,8 +137,6 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1006632960
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 15360
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
     ; CHECK-NEXT: [[V_PK_ADD_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_PK_ADD_F16 8, [[COPY]], 4, 15360, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_PK_ADD_F16_]]
     %0:vgpr_32 = COPY $vgpr0
@@ -169,8 +159,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 4755871576254054400
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B]].sub0, %subreg.sub0, [[S_MOV_B]].sub1, %subreg.sub1
-    ; CHECK-NEXT: [[V_PK_ADD_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_PK_ADD_F16 8, [[COPY]], 8, [[REG_SEQUENCE]].sub1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_PK_ADD_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_PK_ADD_F16 8, [[COPY]], 8, [[S_MOV_B]].sub1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_PK_ADD_F16_]]
     %0:vgpr_32 = COPY $vgpr0
     %1:sreg_64 = S_MOV_B64_IMM_PSEUDO 4755871576254054400
@@ -190,8 +179,6 @@ body:             |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 65971704299520
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE killed [[S_MOV_B]].sub0, %subreg.sub0, [[S_MOV_B]].sub1, %subreg.sub1
     ; CHECK-NEXT: [[V_PK_ADD_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_PK_ADD_F16 8, [[COPY]], 8, 15360, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_PK_ADD_F16_]]
     %0:vgpr_32 = COPY $vgpr0

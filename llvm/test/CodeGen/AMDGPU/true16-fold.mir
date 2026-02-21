@@ -222,8 +222,6 @@ body:             |
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[V_MOV_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_MOV_B16_t16_e64 0, -1, 0, implicit $exec
-    ; CHECK-NEXT: [[V_MOV_B16_t16_e64_1:%[0-9]+]]:vgpr_16 = V_MOV_B16_t16_e64 0, -1, 0, implicit $exec
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_MOV_B16_t16_e64_]], %subreg.lo16, [[V_MOV_B16_t16_e64_1]], %subreg.hi16
     ; CHECK-NEXT: [[V_MAX_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MAX_F32_e64 0, -1, 0, -1, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: $vgpr0 = COPY [[V_MAX_F32_e64_]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit $vgpr0

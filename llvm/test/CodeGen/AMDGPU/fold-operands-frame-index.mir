@@ -410,9 +410,7 @@ body:             |
     ; CHECK: liveins: $sgpr8
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr8
-    ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 123
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 %stack.0
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+    ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 %stack.0
     ; CHECK-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY]], %stack.0, implicit-def $scc
     ; CHECK-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY]], 123, implicit-def $scc
     ; CHECK-NEXT: $sgpr4 = COPY [[S_ADD_I32_]]

@@ -32,10 +32,8 @@ body:             |
   ; CHECK-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_1:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
   ; CHECK-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_2:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
   ; CHECK-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_3:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
-  ; CHECK-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_4:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:areg_128_align2 = REG_SEQUENCE [[V_ACCVGPR_WRITE_B32_e64_1]], %subreg.sub0, [[V_ACCVGPR_WRITE_B32_e64_2]], %subreg.sub1, [[V_ACCVGPR_WRITE_B32_e64_3]], %subreg.sub2, [[V_ACCVGPR_WRITE_B32_e64_4]], %subreg.sub3
-  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE1]]
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]]
   ; CHECK-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], 0, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_1:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], killed [[V_MFMA_F32_16X16X16F16_e64_]], 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_2:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], killed [[V_MFMA_F32_16X16X16F16_e64_1]], 0, 0, 0, implicit $mode, implicit $exec
@@ -48,9 +46,9 @@ body:             |
   ; CHECK-NEXT:   [[V_CVT_F16_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F16_F32_e64 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_PACK_B32_F16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_PACK_B32_F16_e64 0, killed [[V_CVT_F16_F32_e64_]], 0, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_PACK_B32_F16_e64_]], %subreg.sub0, killed [[V_MOV_B32_e32_]], %subreg.sub1
-  ; CHECK-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
-  ; CHECK-NEXT:   BUFFER_STORE_DWORDX2_OFFSET_exact [[REG_SEQUENCE2]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s64) into `ptr addrspace(8) null`, align 1, addrspace 8)
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_PACK_B32_F16_e64_]], %subreg.sub0, killed [[V_MOV_B32_e32_]], %subreg.sub1
+  ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
+  ; CHECK-NEXT:   BUFFER_STORE_DWORDX2_OFFSET_exact [[REG_SEQUENCE1]], killed [[REG_SEQUENCE2]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s64) into `ptr addrspace(8) null`, align 1, addrspace 8)
   ; CHECK-NEXT:   S_ENDPGM 0
   ;
   ; COALESCE-LABEL: name: test

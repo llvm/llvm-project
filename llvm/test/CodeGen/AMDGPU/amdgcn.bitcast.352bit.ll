@@ -565,7 +565,7 @@ define <22 x i16> @bitcast_v11i32_to_v22i16(<11 x i32> %a, i32 %b) {
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_cbranch_execz .LBB4_2
 ; SI-NEXT:  ; %bb.1: ; %cmp.false
-; SI-NEXT:    v_alignbit_b32 v12, v0, v10, 16
+; SI-NEXT:    v_alignbit_b32 v12, s4, v10, 16
 ; SI-NEXT:    v_alignbit_b32 v11, v9, v8, 16
 ; SI-NEXT:    v_alignbit_b32 v13, v7, v6, 16
 ; SI-NEXT:    v_alignbit_b32 v14, v5, v4, 16
@@ -596,7 +596,7 @@ define <22 x i16> @bitcast_v11i32_to_v22i16(<11 x i32> %a, i32 %b) {
 ; SI-NEXT:    v_alignbit_b32 v14, v5, v4, 16
 ; SI-NEXT:    v_alignbit_b32 v15, v3, v2, 16
 ; SI-NEXT:    v_alignbit_b32 v18, v1, v0, 16
-; SI-NEXT:    v_alignbit_b32 v12, v0, v10, 16
+; SI-NEXT:    v_alignbit_b32 v12, s4, v10, 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v9
 ; SI-NEXT:    v_lshrrev_b32_e32 v17, 16, v7
 ; SI-NEXT:    v_lshrrev_b32_e32 v19, 16, v5
@@ -1518,7 +1518,7 @@ define <22 x half> @bitcast_v11i32_to_v22f16(<11 x i32> %a, i32 %b) {
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_cbranch_execz .LBB8_2
 ; SI-NEXT:  ; %bb.1: ; %cmp.false
-; SI-NEXT:    v_alignbit_b32 v12, v0, v10, 16
+; SI-NEXT:    v_alignbit_b32 v12, s4, v10, 16
 ; SI-NEXT:    v_alignbit_b32 v11, v9, v8, 16
 ; SI-NEXT:    v_alignbit_b32 v13, v7, v6, 16
 ; SI-NEXT:    v_alignbit_b32 v14, v5, v4, 16
@@ -1549,7 +1549,7 @@ define <22 x half> @bitcast_v11i32_to_v22f16(<11 x i32> %a, i32 %b) {
 ; SI-NEXT:    v_alignbit_b32 v14, v5, v4, 16
 ; SI-NEXT:    v_alignbit_b32 v15, v3, v2, 16
 ; SI-NEXT:    v_alignbit_b32 v18, v1, v0, 16
-; SI-NEXT:    v_alignbit_b32 v12, v0, v10, 16
+; SI-NEXT:    v_alignbit_b32 v12, s4, v10, 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v9
 ; SI-NEXT:    v_lshrrev_b32_e32 v17, 16, v7
 ; SI-NEXT:    v_lshrrev_b32_e32 v19, 16, v5
@@ -2552,7 +2552,7 @@ define <22 x i16> @bitcast_v11f32_to_v22i16(<11 x float> %a, i32 %b) {
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_cbranch_execz .LBB12_2
 ; SI-NEXT:  ; %bb.1: ; %cmp.false
-; SI-NEXT:    v_alignbit_b32 v12, v0, v10, 16
+; SI-NEXT:    v_alignbit_b32 v12, s4, v10, 16
 ; SI-NEXT:    v_alignbit_b32 v11, v9, v8, 16
 ; SI-NEXT:    v_alignbit_b32 v13, v7, v6, 16
 ; SI-NEXT:    v_alignbit_b32 v14, v5, v4, 16
@@ -2583,7 +2583,7 @@ define <22 x i16> @bitcast_v11f32_to_v22i16(<11 x float> %a, i32 %b) {
 ; SI-NEXT:    v_alignbit_b32 v14, v5, v4, 16
 ; SI-NEXT:    v_alignbit_b32 v15, v3, v2, 16
 ; SI-NEXT:    v_alignbit_b32 v18, v1, v0, 16
-; SI-NEXT:    v_alignbit_b32 v12, v0, v10, 16
+; SI-NEXT:    v_alignbit_b32 v12, s4, v10, 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v9
 ; SI-NEXT:    v_lshrrev_b32_e32 v17, 16, v7
 ; SI-NEXT:    v_lshrrev_b32_e32 v19, 16, v5
@@ -3530,7 +3530,7 @@ define <22 x half> @bitcast_v11f32_to_v22f16(<11 x float> %a, i32 %b) {
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_cbranch_execz .LBB16_2
 ; SI-NEXT:  ; %bb.1: ; %cmp.false
-; SI-NEXT:    v_alignbit_b32 v12, v0, v10, 16
+; SI-NEXT:    v_alignbit_b32 v12, s4, v10, 16
 ; SI-NEXT:    v_alignbit_b32 v11, v9, v8, 16
 ; SI-NEXT:    v_alignbit_b32 v13, v7, v6, 16
 ; SI-NEXT:    v_alignbit_b32 v14, v5, v4, 16
@@ -3561,7 +3561,7 @@ define <22 x half> @bitcast_v11f32_to_v22f16(<11 x float> %a, i32 %b) {
 ; SI-NEXT:    v_alignbit_b32 v14, v5, v4, 16
 ; SI-NEXT:    v_alignbit_b32 v15, v3, v2, 16
 ; SI-NEXT:    v_alignbit_b32 v18, v1, v0, 16
-; SI-NEXT:    v_alignbit_b32 v12, v0, v10, 16
+; SI-NEXT:    v_alignbit_b32 v12, s4, v10, 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v9
 ; SI-NEXT:    v_lshrrev_b32_e32 v17, 16, v7
 ; SI-NEXT:    v_lshrrev_b32_e32 v19, 16, v5
