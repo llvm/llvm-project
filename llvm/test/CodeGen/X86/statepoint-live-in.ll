@@ -372,8 +372,8 @@ define void @test10(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movl %r9d, %ebp
-; CHECK-NEXT:    movl %r8d, %ebx
+; CHECK-NEXT:    movl %r9d, %ebx
+; CHECK-NEXT:    movl %r8d, %ebp
 ; CHECK-NEXT:    movl %ecx, %r14d
 ; CHECK-NEXT:    movl %edx, %r15d
 ; CHECK-NEXT:    movl %esi, %r12d
