@@ -1310,7 +1310,7 @@ public:
   /// popCatchScope - Pops the catch scope at the top of the EHScope
   /// stack, emitting any required code (other than the catch handlers
   /// themselves).
-  void popCatchScope();
+  llvm::BasicBlock* popCatchScope();
 
   llvm::BasicBlock *getEHResumeBlock(bool isCleanup);
   llvm::BasicBlock *getEHDispatchBlock(EHScopeStack::stable_iterator scope);
