@@ -887,10 +887,10 @@ A ``let`` statement collects a set of field values (sometimes called
 statements within the scope of the ``let``.
 
 .. productionlist::
-   Let:  "let" `LetList` "in" "{" `Statement`* "}"
-      :| "let" `LetList` "in" `Statement`
+   Let:  "let" `LetList` "in" `StatementOrList`
    LetList: `LetItem` ("," `LetItem`)*
    LetItem: `TokIdentifier` ["<" `RangeList` ">"] "=" `Value`
+   StatementOrList: "{" `Statement`* "}" | `Statement`
 
 The ``let`` statement establishes a scope, which is a sequence of statements
 in braces or a single statement with no braces. The bindings in the
@@ -1276,8 +1276,7 @@ The ``foreach`` statement iterates over a series of statements, varying a
 variable over a sequence of values.
 
 .. productionlist::
-   Foreach: "foreach" `ForeachIterator` "in" "{" `Statement`* "}"
-          :| "foreach" `ForeachIterator` "in" `Statement`
+   Foreach: "foreach" `ForeachIterator` "in" `StatementOrList`
    ForeachIterator: `TokIdentifier` "=" ("{" `RangeList` "}" | `RangePiece` | `Value`)
 
 The body of the ``foreach`` is a series of statements in braces or a
@@ -1336,9 +1335,7 @@ The ``if`` statement allows one of two statement groups to be selected based
 on the value of an expression.
 
 .. productionlist::
-   If: "if" `Value` "then" `IfBody`
-     :| "if" `Value` "then" `IfBody` "else" `IfBody`
-   IfBody: "{" `Statement`* "}" | `Statement`
+   If: "if" `Value` "then" `StatementOrList` [ "else" `StatementOrList` ]
 
 The value expression is evaluated. If it evaluates to true (in the same
 sense used by the bang operators), then the statements following the
@@ -1351,7 +1348,7 @@ has the usual ambiguity with "dangling else" clauses, and it is resolved in
 the usual way: in a case like ``if v1 then if v2 then {...} else {...}``, the
 ``else`` associates with the inner ``if`` rather than the outer one.
 
-The :token:`IfBody` of the then and else arms of the ``if`` establish an
+The :token:`StatementOrList` of the then and else arms of the ``if`` establish an
 inner scope. Any ``defvar`` variables defined in the bodies go out of scope
 when the bodies are finished (see `Defvar in a Record Body`_ for more details).
 
