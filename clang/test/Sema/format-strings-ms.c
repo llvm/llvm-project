@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fms-compatibility -triple=i386-pc-win32 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -fms-compatibility -triple=i386-pc-win32 -Wformat-non-iso -DNON_ISO_WARNING %s
 
+#include <stdint.h>
 int printf(const char *format, ...) __attribute__((format(printf, 1, 2)));
 int scanf(const char * restrict, ...) ;
 typedef unsigned short wchar_t;
@@ -83,6 +84,48 @@ void z_test(void *p) {
   printf("%wZ", p);
   printf("%hhZ", p); // expected-warning{{length modifier 'hh' results in undefined behavior or no effect with 'Z' conversion specifier}}
   scanf("%Z", p); // expected-warning{{invalid conversion specifier 'Z'}}
+}
+
+void w_int_test(void) {
+  int8_t a;
+  int16_t b;
+  uint32_t c;
+  int64_t d;
+
+  // for %w
+  printf("%w8b", a);
+  printf("%w16i", b);
+  printf("%w32u", c);
+  printf("%w64x", d);
+  scanf("%w8b", a); // expected-warning{{format specifies type 'signed char' but the argument has type 'int'}}
+  scanf("%w16i", b); // expected-warning{{format specifies type 'short' but the argument has type 'int'}}
+  scanf("%w32u", c);
+  scanf("%w64x", d);
+
+  // unsupported size
+  printf("%w92d", a); // expected-warning{{format specifies w width integer type with invalid bit-width 92}}
+  scanf("%w0i", b); // expected-warning{{format specifies w width integer type with invalid bit-width 0}}
+}
+
+void wf_test(void) {
+  int_fast8_t a;
+  uint_fast16_t b;
+  int_fast32_t c;
+  int_fast64_t d;
+
+  // for %wf
+  printf("%wf8b", a);
+  printf("%wf16u", b);
+  printf("%wf32o", c);
+  printf("%wf64X", d);
+  scanf("%wf8b", a); // expected-warning{{format specifies type 'signed char' but the argument has type 'int'}}
+  scanf("%wf16u", b);
+  scanf("%wf32o", c);
+  scanf("%wf64X", d);
+
+  // unsupported size
+  printf("%wf0d", a); // expected-warning{{format specifies wf width integer type with invalid bit-width 0}}
+  scanf("%wf35u", b); // expected-warning{{format specifies wf width integer type with invalid bit-width 35}}
 }
 
 #endif

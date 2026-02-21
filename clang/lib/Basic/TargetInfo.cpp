@@ -340,6 +340,31 @@ TargetInfo::IntType TargetInfo::getLeastIntTypeByWidth(unsigned BitWidth,
   return NoInt;
 }
 
+TargetInfo::IntType TargetInfo::getFastIntTypeByWidth(unsigned BitWidth,
+                                                      bool IsSigned, bool Fast)
+                                                      const {
+  IntType SignedFastType = getTriple().isArch64Bit() ? SignedLongLong : SignedInt;
+  IntType UnSignedFastType = getTriple().isArch64Bit() ?
+                             UnsignedLongLong : UnsignedInt;
+  if (getCharWidth() == BitWidth)
+    return IsSigned ? SignedChar : UnsignedChar;
+  if (getShortWidth() == BitWidth) {
+    if (Fast)
+      return IsSigned ? SignedFastType : UnSignedFastType;
+    else
+      return IsSigned ? SignedShort : UnsignedShort;
+  }
+  if (getIntWidth() == BitWidth) {
+    if (Fast)
+      return IsSigned ? SignedFastType : UnSignedFastType;
+    else
+      return IsSigned ? SignedInt : UnsignedInt;
+  }
+  if (getLongLongWidth() == BitWidth)
+    return IsSigned ? SignedLongLong : UnsignedLongLong;
+  return NoInt;
+}
+
 FloatModeKind TargetInfo::getRealTypeByWidth(unsigned BitWidth,
                                              FloatModeKind ExplicitType) const {
   if (getHalfWidth() == BitWidth)

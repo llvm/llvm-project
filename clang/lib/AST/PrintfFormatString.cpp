@@ -500,6 +500,30 @@ bool clang::analyze_format_string::parseFormatStringHasFormattingSpecifiers(
   return false;
 }
 
+ArgType clang::analyze_format_string::wToArgType(
+    int Size, bool IsSigned, bool Fast, ASTContext &C) {
+  switch (C.getTargetInfo().getFastIntTypeByWidth(Size, IsSigned, Fast)) {
+    case TargetInfo::SignedChar:
+      return C.SignedCharTy;
+    case TargetInfo::UnsignedChar:
+      return C.UnsignedCharTy;
+    case TargetInfo::SignedShort:
+      return C.ShortTy;
+    case TargetInfo::UnsignedShort:
+      return C.UnsignedShortTy;
+    case TargetInfo::SignedInt:
+      return C.IntTy;
+    case TargetInfo::UnsignedInt:
+      return C.UnsignedIntTy;
+    case TargetInfo::SignedLongLong:
+      return C.LongLongTy;
+    case TargetInfo::UnsignedLongLong:
+      return C.UnsignedLongLongTy;
+    default:
+      return ArgType::Invalid();
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Methods on PrintfSpecifier.
 //===----------------------------------------------------------------------===//
@@ -554,8 +578,12 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
             ArgType(Ctx.getPointerDiffType(), "ptrdiff_t"));
       case LengthModifier::AsAllocate:
       case LengthModifier::AsMAllocate:
-      case LengthModifier::AsWide:
         return ArgType::Invalid();
+      case LengthModifier::AsWide:
+      case LengthModifier::AsWideFast:
+        int S = getExplicitlyFixedSize();
+        bool Fast = LM.getKind() == LengthModifier::AsWideFast ? true : false;
+        return clang::analyze_format_string::wToArgType(S, true, Fast, Ctx);
     }
 
   if (CS.isUIntArg())
@@ -589,8 +617,12 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
             ArgType(Ctx.getUnsignedPointerDiffType(), "unsigned ptrdiff_t"));
       case LengthModifier::AsAllocate:
       case LengthModifier::AsMAllocate:
-      case LengthModifier::AsWide:
         return ArgType::Invalid();
+      case LengthModifier::AsWide:
+      case LengthModifier::AsWideFast:
+        int S = getExplicitlyFixedSize();
+        bool Fast = LM.getKind() == LengthModifier::AsWideFast ? true : false;
+        return clang::analyze_format_string::wToArgType(S, false, Fast, Ctx);
     }
 
   if (CS.isDoubleArg()) {
@@ -640,6 +672,7 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
       case LengthModifier::AsInt3264:
       case LengthModifier::AsInt64:
       case LengthModifier::AsWide:
+      case LengthModifier::AsWideFast:
         return ArgType::Invalid();
       case LengthModifier::AsShortLong:
         llvm_unreachable("only used for OpenCL which doesn not handle nArg");
