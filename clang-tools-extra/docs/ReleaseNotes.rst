@@ -266,6 +266,12 @@ Changes in existing checks
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
   crash from invalid ``Abbreviations`` option.
 
+- Improved :doc:`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` check by adding
+  a new (off-by-default) option `AllowFalseEvaluated`, which allows marking
+  move constructors with ``noexcept(expr)`` even if ``expr``
+  evaluates to ``false``.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

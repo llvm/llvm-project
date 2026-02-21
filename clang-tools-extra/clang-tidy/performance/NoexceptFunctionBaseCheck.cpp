@@ -30,7 +30,7 @@ void NoexceptFunctionBaseCheck::check(const MatchFinder::MatchResult &Result) {
   const Expr *NoexceptExpr = ProtoType->getNoexceptExpr();
   if (NoexceptExpr) {
     NoexceptExpr = NoexceptExpr->IgnoreImplicit();
-    if (!isa<CXXBoolLiteralExpr>(NoexceptExpr))
+    if (!isa<CXXBoolLiteralExpr>(NoexceptExpr) && !AllowFalseEvaluated)
       reportNoexceptEvaluatedToFalse(FuncDecl, NoexceptExpr);
     return;
   }

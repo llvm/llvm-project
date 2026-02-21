@@ -22,7 +22,8 @@ namespace clang::tidy::performance {
 class NoexceptFunctionBaseCheck : public ClangTidyCheck {
 public:
   NoexceptFunctionBaseCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+      : ClangTidyCheck(Name, Context),
+        AllowFalseEvaluated(Options.get("AllowFalseEvaluated", false)) {}
 
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus11 && LangOpts.CXXExceptions;
@@ -30,6 +31,10 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) final;
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
+  }
+
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override {
+    Options.store(Opts, "AllowFalseEvaluated", AllowFalseEvaluated);
   }
 
 protected:
@@ -41,6 +46,7 @@ protected:
   static constexpr StringRef BindFuncDeclName = "FuncDecl";
 
 private:
+  bool AllowFalseEvaluated;
   utils::ExceptionSpecAnalyzer SpecAnalyzer;
 };
 
