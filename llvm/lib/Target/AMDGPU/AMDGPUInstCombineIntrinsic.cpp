@@ -722,6 +722,30 @@ std::optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
   switch (IID) {
+  case Intrinsic::amdgcn_implicitarg_ptr: {
+    bool Modified = false;
+    // Not checking calling function's "amdgpu-no-implicitarg-ptr" attribute
+    // under the assumption that a call to this intrinsic is not present with
+    // that attribute.
+    if (!II.hasRetAttr(Attribute::Dereferenceable)) {
+      // Add dereferenceable and alignment attributes to the result.
+      uint64_t Bytes = ST->getImplicitArgNumBytes(*II.getFunction());
+      II.addRetAttr(
+          Attribute::getWithDereferenceableBytes(II.getContext(), Bytes));
+      Modified = true;
+    }
+
+    if (!II.hasRetAttr(Attribute::Alignment)) {
+      Align Align = ST->getAlignmentForImplicitArgPtr();
+      II.addRetAttr(Attribute::getWithAlignment(II.getContext(), Align));
+      Modified = true;
+    }
+
+    if (Modified)
+      return &II;
+
+    return std::nullopt;
+  } break;
   case Intrinsic::amdgcn_rcp: {
     Value *Src = II.getArgOperand(0);
     if (isa<PoisonValue>(Src))
