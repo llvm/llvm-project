@@ -975,15 +975,15 @@ Example:
     using v8i = int [[clang::ext_vector_type(8)]];
 
     v8i load(v8b mask, int *ptr) { return __builtin_masked_load(mask, ptr); }
-    
+
     v8i load_expand(v8b mask, int *ptr) {
       return __builtin_masked_expand_load(mask, ptr);
     }
-    
+
     void store(v8b mask, v8i val, int *ptr) {
       __builtin_masked_store(mask, val, ptr);
     }
-    
+
     void store_compress(v8b mask, v8i val, int *ptr) {
       __builtin_masked_compress_store(mask, val, ptr);
     }
@@ -1075,7 +1075,7 @@ The matrix type extension supports explicit casts. Implicit type conversion betw
 
 The matrix type extension supports column and row major memory layouts, but not
 all builtins are supported with row-major layout. The layout defaults to column
-major and can be specified using `-fmatrix-memory-layout`. To enable column 
+major and can be specified using `-fmatrix-memory-layout`. To enable column
 major layout, use `-fmatrix-memory-layout=column-major`, and for row major
 layout use `-fmatrix-memory-layout=row-major`
 
@@ -5552,6 +5552,120 @@ If no address spaces names are provided, all address spaces are fenced.
   // Fence only requested address spaces.
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local")
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local", "global")
+
+__builtin_amdgcn_processor_is and __builtin_amdgcn_is_invocable
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``__builtin_amdgcn_processor_is`` and ``__builtin_amdgcn_is_invocable`` provide
+a functional mechanism for programatically querying:
+
+* the identity of the current target processor;
+* the capability of the current target processor to invoke a particular builtin.
+
+**Syntax**:
+
+.. code-block:: c
+
+  __amdgpu_feature_predicate_t __builtin_amdgcn_processor_is(const char*);
+  __amdgpu_feature_predicate_t __builtin_amdgcn_is_invocable(builtin_name);
+
+**Example of use**:
+
+.. code-block:: c++
+
+  if (__builtin_amdgcn_processor_is("gfx1201") ||
+      __builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var))
+    __builtin_amdgcn_s_sleep_var(x);
+
+  if (!__builtin_amdgcn_processor_is("gfx906"))
+    __builtin_amdgcn_s_wait_event_export_ready();
+  else if (__builtin_amdgcn_processor_is("gfx1010") ||
+           __builtin_amdgcn_processor_is("gfx1101"))
+    __builtin_amdgcn_s_ttracedata_imm(1);
+
+  while (__builtin_amdgcn_processor_is("gfx1101")) *p += x;
+
+  do {
+    break;
+  } while (__builtin_amdgcn_processor_is("gfx1010"));
+
+  for (; __builtin_amdgcn_processor_is("gfx1201"); ++*p) break;
+
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_wait_event_export_ready))
+    __builtin_amdgcn_s_wait_event_export_ready();
+  else if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_ttracedata_imm))
+    __builtin_amdgcn_s_ttracedata_imm(1);
+
+  do {
+    break;
+  } while (
+      __builtin_amdgcn_is_invocable(__builtin_amdgcn_global_load_tr_b64_i32));
+
+  for (; __builtin_amdgcn_is_invocable(__builtin_amdgcn_permlane64); ++*p)
+    break;
+
+**Description**:
+
+The builtins return a value of type ``__amdgpu_feature_predicate_t``, which is a
+target specific type that behaves as if its C++ definition was the following:
+
+.. code-block:: c++
+
+  struct __amdgpu_feature_predicate_t {
+    __amdgpu_feature_predicate_t() = delete;
+    __amdgpu_feature_predicate_t(const __amdgpu_feature_predicate_t&) = delete;
+    __amdgpu_feature_predicate_t(__amdgpu_feature_predicate_t&&) = delete;
+
+    explicit
+    operator bool() const noexcept;
+  };
+
+The builtins can be used in C as well, wherein the
+``__amdgpu_feature_predicate_t`` type behaves as an opaque, forward declared
+type with conditional automated conversion to ``_Bool`` when used as the
+predicate argument to a control structure:
+
+.. code-block:: c
+
+  struct __amdgpu_feature_predicate_t ret();     // Error
+  void arg(struct __amdgpu_feature_predicate_t); // Error
+  void local() {
+    struct __amdgpu_feature_predicate_t x;       // Error
+    struct __amdgpu_feature_predicate_t y =
+        __builtin_amdgcn_processor_is("gfx900"); // Error
+  }
+  void valid_use() {
+    _Bool x = (_Bool)__builtin_amdgcn_processor_is("gfx900"); // OK
+    if (__builtin_amdgcn_processor_is("gfx900"))       // Implicit cast to _Bool
+      return;
+    for (; __builtin_amdgcn_processor_is("gfx900");)   // Implicit cast to _Bool
+      break;
+    while (__builtin_amdgcn_processor_is("gfx900"))    // Implicit cast to _Bool
+      break;
+    do {
+      break;
+    } while (__builtin_amdgcn_processor_is("gfx900")); // Implicit cast to _Bool
+
+    __builtin_amdgcn_processor_is("gfx900") ? x : !x;
+  }
+
+The boolean interpretation of the predicate values returned by the builtins:
+
+* indicates whether the current target matches the argument; the argument MUST
+  be a string literal and a valid AMDGPU target
+* indicates whether the builtin function passed as the argument can be invoked
+  by the current target; the argument MUST be either a generic or AMDGPU
+  specific builtin name
+
+When invoked while compiling for a concrete target, the builtins are evaluated
+early by Clang, and never produce any CodeGen effects / have no observable
+side-effects in IR. Conversely, when compiling for AMDGCN flavoured SPIR-v,
+which is an abstract target, a series of specialization constants are implicitly
+created, in correspondence with the predicates. These predicates get resolved
+when finalizing the compilation process for a concrete target, and shall reflect
+the latter's identity and features. Thus, it is possible to author high-level
+code, in e.g. HIP, that is target adaptive in a dynamic fashion, contrary to
+macro based mechanisms.
 
 __builtin_amdgcn_ballot_w{32,64}
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

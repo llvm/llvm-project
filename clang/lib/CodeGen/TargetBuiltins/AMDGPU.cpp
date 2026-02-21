@@ -369,6 +369,22 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
   Inst->setMetadata(LLVMContext::MD_mmra, MMRAMetadata::getMD(Ctx, MMRAs));
 }
 
+static Value *GetAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
+  Function *SpecConstFn = CGF.getSpecConstantFunction(CGF.getContext().BoolTy);
+  llvm::Type *SpecIdTy = SpecConstFn->getArg(0)->getType();
+  Constant *SpecId = ConstantInt::getAllOnesValue(SpecIdTy);
+  CallInst *Call = CGF.Builder.CreateCall(
+      SpecConstFn, {SpecId, ConstantInt::getFalse(CGF.getLLVMContext())});
+
+  // Encode the predicate as metadata, making it available to
+  // SPIRVPrepareGlobals.
+  LLVMContext &Ctx = CGF.getLLVMContext();
+  MDNode *Predicate = MDNode::get(Ctx, MDString::get(Ctx, Name.str()));
+  Call->setMetadata("llvm.amdgcn.feature.predicate", Predicate);
+
+  return Call;
+}
+
 static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID) {
   switch (BuiltinID) {
   default:
@@ -924,6 +940,23 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                    {llvm::Type::getInt64Ty(getLLVMContext())});
     llvm::Value *Env = EmitScalarExpr(E->getArg(0));
     return Builder.CreateCall(F, {Env});
+  }
+  case AMDGPU::BI__builtin_amdgcn_processor_is: {
+    assert(CGM.getTriple().isSPIRV() &&
+           "__builtin_amdgcn_processor_is should never reach CodeGen for "
+           "concrete targets!");
+    StringRef Proc = cast<clang::StringLiteral>(E->getArg(0))->getString();
+    return GetAMDGPUPredicate(*this, "is." + Proc);
+  }
+  case AMDGPU::BI__builtin_amdgcn_is_invocable: {
+    assert(CGM.getTriple().isSPIRV() &&
+           "__builtin_amdgcn_is_invocable should never reach CodeGen for "
+           "concrete targets!");
+    auto *FD = cast<FunctionDecl>(
+        cast<DeclRefExpr>(E->getArg(0))->getReferencedDeclOfCallee());
+    StringRef RF =
+        getContext().BuiltinInfo.getRequiredFeatures(FD->getBuiltinID());
+    return GetAMDGPUPredicate(*this, "has." + RF);
   }
   case AMDGPU::BI__builtin_amdgcn_read_exec:
     return EmitAMDGCNBallotForExec(*this, E, Int64Ty, Int64Ty, false);

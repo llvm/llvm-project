@@ -330,7 +330,10 @@ Target Specific Changes
 
 AMDGPU Support
 ^^^^^^^^^^^^^^
-
+- Introduced a new target specific builtin ``__builtin_amdgcn_processor_is``,
+  a late / deferred query for the current target processor.
+- Introduced a new target specific builtin ``__builtin_amdgcn_is_invocable``,
+  a late / deferred query for the availability of target specific builtins.
 - Initial support for gfx1310
 
 NVPTX Support

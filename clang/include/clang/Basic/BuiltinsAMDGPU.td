@@ -393,6 +393,11 @@ def __builtin_amdgcn_endpgm : AMDGPUBuiltin<"void()", [NoReturn]>;
 def __builtin_amdgcn_get_fpenv : AMDGPUBuiltin<"uint64_t()">;
 def __builtin_amdgcn_set_fpenv : AMDGPUBuiltin<"void(uint64_t)">;
 
+// These are special FE only builtins intended for forwarding the requirements
+// to the ME.
+def __builtin_amdgcn_processor_is : AMDGPUBuiltin<"__amdgpu_feature_predicate_t(char const *)", [NoThrow, Const, CustomTypeChecking, UnevaluatedArguments]>;
+def __builtin_amdgcn_is_invocable : AMDGPUBuiltin<"__amdgpu_feature_predicate_t()", [NoThrow, Const, CustomTypeChecking, UnevaluatedArguments]>;
+
 //===----------------------------------------------------------------------===//
 
 // Wave Reduction builtins.

@@ -1855,3 +1855,6 @@ def TrivialAutoVarInit : DiagGroup<"trivial-auto-var-init">;
 
 // A warning for options that enable a feature that is not yet complete
 def ExperimentalOption : DiagGroup<"experimental-option">;
+
+// Warnings about unguarded usages of AMDGPU target specific constructs
+def UnguardedBuiltinUsageAMDGPU : DiagGroup<"amdgpu-unguarded-builtin-usage">;

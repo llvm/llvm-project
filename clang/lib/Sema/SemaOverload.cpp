@@ -30,6 +30,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
+#include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
@@ -6363,12 +6364,13 @@ TryContextuallyConvertToBool(Sema &S, Expr *From) {
 ExprResult Sema::PerformContextuallyConvertToBool(Expr *From) {
   if (checkPlaceholderForOverload(*this, From))
     return ExprError();
+  if (From->getType() == Context.AMDGPUFeaturePredicateTy)
+    return AMDGPU().ExpandAMDGPUPredicateBI(dyn_cast<CallExpr>(From));
 
   ImplicitConversionSequence ICS = TryContextuallyConvertToBool(*this, From);
   if (!ICS.isBad())
     return PerformImplicitConversion(From, Context.BoolTy, ICS,
                                      AssignmentAction::Converting);
-
   if (!DiagnoseMultipleUserDefinedConversion(From, Context.BoolTy))
     return Diag(From->getBeginLoc(), diag::err_typecheck_bool_condition)
            << From->getType() << From->getSourceRange();
@@ -12194,6 +12196,16 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
 
   if (TakingCandidateAddress && !checkAddressOfCandidateIsAvailable(S, Fn))
     return;
+
+  // __amdgpu_feature_predicate_t can be explicitly cast to the logical op type,
+  // although this is almost always an error and we advise against it.
+  if (FromTy == S.Context.AMDGPUFeaturePredicateTy &&
+      ToTy == S.Context.getLogicalOperationType()) {
+    S.Diag(Conv.Bad.FromExpr->getExprLoc(),
+           diag::err_amdgcn_predicate_type_needs_explicit_bool_cast)
+        << Conv.Bad.FromExpr << ToTy;
+    return;
+  }
 
   // Emit the generic diagnostic and, optionally, add the hints to it.
   PartialDiagnostic FDiag = S.PDiag(diag::note_ovl_candidate_bad_conv);
