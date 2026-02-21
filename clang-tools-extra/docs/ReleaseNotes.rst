@@ -145,6 +145,11 @@ New checks
   Checks for presence or absence of trailing commas in enum definitions and
   initializer lists.
 
+- New :doc:`modernize-replace-with-std-copy
+  <clang-tidy/checks/modernize-replace-with-std-copy>` check.
+
+  Tries to replace calls to ``memmove`` and ``memcpy`` with an equivalent call to ``std::copy_n``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 

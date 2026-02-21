@@ -27,6 +27,7 @@
 #include "ReplaceAutoPtrCheck.h"
 #include "ReplaceDisallowCopyAndAssignMacroCheck.h"
 #include "ReplaceRandomShuffleCheck.h"
+#include "ReplaceWithStdCopyCheck.h"
 #include "ReturnBracedInitListCheck.h"
 #include "ShrinkToFitCheck.h"
 #include "TypeTraitsCheck.h"
@@ -108,6 +109,8 @@ public:
         "modernize-replace-auto-ptr");
     CheckFactories.registerCheck<ReplaceDisallowCopyAndAssignMacroCheck>(
         "modernize-replace-disallow-copy-and-assign-macro");
+    CheckFactories.registerCheck<ReplaceWithStdCopyCheck>(
+        "modernize-replace-with-std-copy");
     CheckFactories.registerCheck<ReplaceRandomShuffleCheck>(
         "modernize-replace-random-shuffle");
     CheckFactories.registerCheck<ReturnBracedInitListCheck>(
