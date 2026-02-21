@@ -531,16 +531,12 @@ uptr TlsBaseAddr() {
   return segbase;
 }
 
-// The size of the tls on darwin does not appear to be well documented,
-// however the vm memory map suggests that it is 1024 uptrs in size,
-// with a size of 0x2000 bytes on x86_64 and 0x1000 bytes on i386.
-uptr TlsSize() {
-#if defined(__x86_64__) || defined(__i386__)
-  return 1024 * sizeof(uptr);
-#else
-  return 0;
-#endif
-}
+// The size of the tls on darwin does not appear to be well documented.
+// but `pthread_s`'s `tsd` member (see libpthread/src/types_internal.h) is
+// defined as `_INTERNAL_POSIX_THREAD_KEYS_MAX +
+// `_INTERNAL_POSIX_THREAD_KEYS_END` (512 pointers on iPhone and 768 elsewhere).
+// Keep at 1024 for backwards compatibility.
+uptr TlsSize() { return 1024 * sizeof(uptr); }
 
 void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
                           uptr *tls_begin, uptr *tls_end) {
