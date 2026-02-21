@@ -284,11 +284,9 @@ void ProcessFreeBSDKernel::PrintUnreadMessage() {
     for (uint32_t i = 0; i < num_fields; i++) {
       std::string field_name;
       uint64_t field_offset = 0;
-      uint32_t field_bitfield_bit_size = 0;
-      bool field_is_bitfield = false;
 
-      msgbuf_type.GetFieldAtIndex(i, field_name, &field_offset,
-                                  &field_bitfield_bit_size, &field_is_bitfield);
+      msgbuf_type.GetFieldAtIndex(i, field_name, &field_offset, nullptr,
+                                  nullptr);
 
       if (field_name == "msg_ptr") {
         offset_msg_ptr = field_offset / 8; // Convert bits to bytes
