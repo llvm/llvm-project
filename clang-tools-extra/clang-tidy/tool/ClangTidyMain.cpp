@@ -565,11 +565,11 @@ static bool verifyFileExtensions(
 static bool verifyOptions(const llvm::StringSet<> &ValidOptions,
                           const ClangTidyOptions::OptionMap &OptionMap,
                           StringRef Source) {
-  bool AnyInvalid = false;
+  bool anyInvalid = false;
   for (auto Key : OptionMap.keys()) {
     if (ValidOptions.contains(Key))
       continue;
-    AnyInvalid = true;
+    anyInvalid = true;
     auto &Output = llvm::WithColor::warning(llvm::errs(), Source)
                    << "unknown check option '" << Key << '\'';
     const llvm::StringRef Closest = closest(Key, ValidOptions);
@@ -577,7 +577,7 @@ static bool verifyOptions(const llvm::StringSet<> &ValidOptions,
       Output << "; did you mean '" << Closest << '\'';
     Output << VerifyConfigWarningEnd;
   }
-  return AnyInvalid;
+  return anyInvalid;
 }
 
 static SmallString<256> makeAbsolute(llvm::StringRef Input) {
