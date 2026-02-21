@@ -1366,6 +1366,8 @@ codecvt<wchar_t, char, mbstate_t>::result codecvt<wchar_t, char, mbstate_t>::do_
 codecvt<wchar_t, char, mbstate_t>::result codecvt<wchar_t, char, mbstate_t>::do_unshift(
     state_type& st, extern_type* to, extern_type* to_end, extern_type*& to_nxt) const {
   to_nxt = to;
+  if (std::mbsinit(&st))
+    return ok;
   extern_type tmp[MB_LEN_MAX];
   size_t n = __locale::__wcrtomb(tmp, intern_type(), &st, __l_);
   if (n == size_t(-1) || n == 0) // on error
