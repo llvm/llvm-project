@@ -4162,8 +4162,7 @@ static bool interp__builtin_x86_comi(InterpState &S, CodePtr OpPC,
     break;
   case X86::BI__builtin_ia32_vcomish: {
     discard(S.Stk, *S.getContext().classify(Call->getArg(3)));
-    const APSInt Imm = popToAPSInt(S, Call->getArg(2));
-    Predicate = Imm.getZExtValue();
+    Predicate = popToUInt64(S, Call->getArg(2));
     break;
   }
   default:
@@ -4177,9 +4176,9 @@ static bool interp__builtin_x86_comi(InterpState &S, CodePtr OpPC,
       VectorA.getNumElems() != VectorB.getNumElems())
     return false;
 
-  const llvm::APFloat A = VectorA.elem<Floating>(0).getAPFloat();
-  const llvm::APFloat B = VectorB.elem<Floating>(0).getAPFloat();
-  const bool Matches = MatchesPredicate(Predicate, A.compare(B));
+  llvm::APFloat A = VectorA.elem<Floating>(0).getAPFloat();
+  llvm::APFloat B = VectorB.elem<Floating>(0).getAPFloat();
+  bool Matches = MatchesPredicate(Predicate, A.compare(B));
   pushInteger(S, Matches, Call->getType());
   return true;
 }
@@ -4194,9 +4193,11 @@ static bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
       ID == X86::BI__builtin_ia32_cmpss || ID == X86::BI__builtin_ia32_cmpsd;
 
   uint32_t Predicate;
+  bool IsScalar = false;
   if (HasImmArg) {
-    const APSInt ImmAPS = popToAPSInt(S, Call->getArg(2));
-    Predicate = ImmAPS.getZExtValue();
+    Predicate = popToUInt64(S, Call->getArg(2));
+    IsScalar = ID == X86::BI__builtin_ia32_cmpss ||
+               ID == X86::BI__builtin_ia32_cmpsd;
   } else {
     switch (ID) {
     case X86::BI__builtin_ia32_cmpeqss:
@@ -4204,72 +4205,96 @@ static bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
     case X86::BI__builtin_ia32_cmpeqps:
     case X86::BI__builtin_ia32_cmpeqpd:
       Predicate = X86CmpImm::CMP_EQ_OQ;
+      IsScalar = ID == X86::BI__builtin_ia32_cmpeqss ||
+                 ID == X86::BI__builtin_ia32_cmpeqsd;
       break;
     case X86::BI__builtin_ia32_cmpgess:
     case X86::BI__builtin_ia32_cmpgesd:
     case X86::BI__builtin_ia32_cmpgeps:
     case X86::BI__builtin_ia32_cmpgepd:
       Predicate = X86CmpImm::CMP_GE_OS;
+      IsScalar = ID == X86::BI__builtin_ia32_cmpgess ||
+                 ID == X86::BI__builtin_ia32_cmpgesd;
       break;
     case X86::BI__builtin_ia32_cmpgtss:
     case X86::BI__builtin_ia32_cmpgtsd:
     case X86::BI__builtin_ia32_cmpgtps:
     case X86::BI__builtin_ia32_cmpgtpd:
       Predicate = X86CmpImm::CMP_GT_OS;
+      IsScalar = ID == X86::BI__builtin_ia32_cmpgtss ||
+                 ID == X86::BI__builtin_ia32_cmpgtsd;
       break;
     case X86::BI__builtin_ia32_cmpltss:
     case X86::BI__builtin_ia32_cmpltsd:
     case X86::BI__builtin_ia32_cmpltps:
     case X86::BI__builtin_ia32_cmpltpd:
       Predicate = X86CmpImm::CMP_LT_OS;
+      IsScalar = ID == X86::BI__builtin_ia32_cmpltss ||
+                 ID == X86::BI__builtin_ia32_cmpltsd;
       break;
     case X86::BI__builtin_ia32_cmpless:
     case X86::BI__builtin_ia32_cmplesd:
     case X86::BI__builtin_ia32_cmpleps:
     case X86::BI__builtin_ia32_cmplepd:
       Predicate = X86CmpImm::CMP_LE_OS;
+      IsScalar = ID == X86::BI__builtin_ia32_cmpless ||
+                 ID == X86::BI__builtin_ia32_cmplesd;
       break;
     case X86::BI__builtin_ia32_cmpneqss:
     case X86::BI__builtin_ia32_cmpneqsd:
     case X86::BI__builtin_ia32_cmpneqps:
     case X86::BI__builtin_ia32_cmpneqpd:
       Predicate = X86CmpImm::CMP_NEQ_UQ;
+      IsScalar = ID == X86::BI__builtin_ia32_cmpneqss ||
+                 ID == X86::BI__builtin_ia32_cmpneqsd;
       break;
     case X86::BI__builtin_ia32_cmpngess:
     case X86::BI__builtin_ia32_cmpngesd:
     case X86::BI__builtin_ia32_cmpngeps:
     case X86::BI__builtin_ia32_cmpngepd:
       Predicate = X86CmpImm::CMP_NGE_US;
+      IsScalar = ID == X86::BI__builtin_ia32_cmpngess ||
+                 ID == X86::BI__builtin_ia32_cmpngesd;
       break;
     case X86::BI__builtin_ia32_cmpngtss:
     case X86::BI__builtin_ia32_cmpngtsd:
     case X86::BI__builtin_ia32_cmpngtps:
     case X86::BI__builtin_ia32_cmpngtpd:
       Predicate = X86CmpImm::CMP_NGT_US;
+      IsScalar = ID == X86::BI__builtin_ia32_cmpngtss ||
+                 ID == X86::BI__builtin_ia32_cmpngtsd;
       break;
     case X86::BI__builtin_ia32_cmpnless:
     case X86::BI__builtin_ia32_cmpnlesd:
     case X86::BI__builtin_ia32_cmpnleps:
     case X86::BI__builtin_ia32_cmpnlepd:
       Predicate = X86CmpImm::CMP_NLE_US;
+      IsScalar = ID == X86::BI__builtin_ia32_cmpnless ||
+                 ID == X86::BI__builtin_ia32_cmpnlesd;
       break;
     case X86::BI__builtin_ia32_cmpnltss:
     case X86::BI__builtin_ia32_cmpnltsd:
     case X86::BI__builtin_ia32_cmpnltps:
     case X86::BI__builtin_ia32_cmpnltpd:
       Predicate = X86CmpImm::CMP_NLT_US;
+      IsScalar = ID == X86::BI__builtin_ia32_cmpnltss ||
+                 ID == X86::BI__builtin_ia32_cmpnltsd;
       break;
     case X86::BI__builtin_ia32_cmpordss:
     case X86::BI__builtin_ia32_cmpordsd:
     case X86::BI__builtin_ia32_cmpordps:
     case X86::BI__builtin_ia32_cmpordpd:
       Predicate = X86CmpImm::CMP_ORD_Q;
+      IsScalar = ID == X86::BI__builtin_ia32_cmpordss ||
+                 ID == X86::BI__builtin_ia32_cmpordsd;
       break;
     case X86::BI__builtin_ia32_cmpunordss:
     case X86::BI__builtin_ia32_cmpunordsd:
     case X86::BI__builtin_ia32_cmpunordps:
     case X86::BI__builtin_ia32_cmpunordpd:
       Predicate = X86CmpImm::CMP_UNORD_Q;
+      IsScalar = ID == X86::BI__builtin_ia32_cmpunordss ||
+                 ID == X86::BI__builtin_ia32_cmpunordsd;
       break;
     default:
       llvm_unreachable("unhandled x86 cmp builtin");
@@ -4280,63 +4305,38 @@ static bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
   const Pointer &VectorA = S.Stk.pop<Pointer>();
   Pointer &Dst = S.Stk.peek<Pointer>();
 
-  const bool IsScalar = ID == X86::BI__builtin_ia32_cmpss ||
-                        ID == X86::BI__builtin_ia32_cmpsd ||
-                        ID == X86::BI__builtin_ia32_cmpeqss ||
-                        ID == X86::BI__builtin_ia32_cmpeqsd ||
-                        ID == X86::BI__builtin_ia32_cmpgess ||
-                        ID == X86::BI__builtin_ia32_cmpgesd ||
-                        ID == X86::BI__builtin_ia32_cmpgtss ||
-                        ID == X86::BI__builtin_ia32_cmpgtsd ||
-                        ID == X86::BI__builtin_ia32_cmpltss ||
-                        ID == X86::BI__builtin_ia32_cmpltsd ||
-                        ID == X86::BI__builtin_ia32_cmpless ||
-                        ID == X86::BI__builtin_ia32_cmplesd ||
-                        ID == X86::BI__builtin_ia32_cmpneqss ||
-                        ID == X86::BI__builtin_ia32_cmpneqsd ||
-                        ID == X86::BI__builtin_ia32_cmpngess ||
-                        ID == X86::BI__builtin_ia32_cmpngesd ||
-                        ID == X86::BI__builtin_ia32_cmpngtss ||
-                        ID == X86::BI__builtin_ia32_cmpngtsd ||
-                        ID == X86::BI__builtin_ia32_cmpnless ||
-                        ID == X86::BI__builtin_ia32_cmpnlesd ||
-                        ID == X86::BI__builtin_ia32_cmpnltss ||
-                        ID == X86::BI__builtin_ia32_cmpnltsd ||
-                        ID == X86::BI__builtin_ia32_cmpordss ||
-                        ID == X86::BI__builtin_ia32_cmpordsd ||
-                        ID == X86::BI__builtin_ia32_cmpunordss ||
-                        ID == X86::BI__builtin_ia32_cmpunordsd;
-
-  const auto NumLanes = VectorA.getNumElems();
+  unsigned NumLanes = VectorA.getNumElems();
   if (NumLanes != VectorB.getNumElems())
     return false;
 
-  for (unsigned int i = 0; i < NumLanes; ++i) {
+  for (unsigned I = 0; I != NumLanes; ++I) {
     // Handle cmpss/cmpsd
-    if (IsScalar && i > 0) {
+    if (IsScalar && I > 0) {
       // Copy the upper 3 packed elements from a to the upper elements of dst
-      Dst.elem<Floating>(i) = VectorA.elem<Floating>(i);
+      Dst.elem<Floating>(I) = VectorA.elem<Floating>(I);
       continue;
     }
 
-    llvm::APFloat AElement = VectorA.elem<Floating>(i).getAPFloat();
-    llvm::APFloat BElement = VectorB.elem<Floating>(i).getAPFloat();
+    llvm::APFloat AElement = VectorA.elem<Floating>(I).getAPFloat();
+    llvm::APFloat BElement = VectorB.elem<Floating>(I).getAPFloat();
 
     auto CompareResult = AElement.compare(BElement);
-    const bool Matches = MatchesPredicate(Predicate, CompareResult);
+    bool Matches = MatchesPredicate(Predicate, CompareResult);
 
     // Create bit patterns for comparison results:
     // True = all bits set (0xFFFFFFFF for float, 0xFFFFFFFFFFFFFFFF for double)
     // False = all bits zero
     const llvm::fltSemantics &Sem = AElement.getSemantics();
-    const unsigned BitWidth = llvm::APFloat::getSizeInBits(Sem);
-    const llvm::APFloat True(Sem, llvm::APInt::getAllOnes(BitWidth));
-    const llvm::APFloat False(Sem, llvm::APInt(BitWidth, 0));
+    unsigned BitWidth = llvm::APFloat::getSizeInBits(Sem);
 
-    if (Matches)
-      Dst.elem<Floating>(i) = Floating(True);
-    else
-      Dst.elem<Floating>(i) = Floating(False);
+    if (Matches) {
+      llvm::APFloat True(Sem, llvm::APInt::getAllOnes(BitWidth));
+      Dst.elem<Floating>(I) = Floating(True);
+    }
+    else {
+      llvm::APFloat False(Sem, llvm::APInt(BitWidth, 0));
+      Dst.elem<Floating>(I) = Floating(False);
+    }
   }
 
   Dst.initializeAllElements();
