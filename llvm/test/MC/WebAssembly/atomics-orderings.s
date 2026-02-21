@@ -17,30 +17,30 @@ main:
   # CHECK: i32.atomic.load 0 seqcst # encoding: [0xfe,0x10,0x02,0x00]
   # DISASM: i32.atomic.load 0 seqcst
   i32.atomic.load 0
-  # CHECK: i32.atomic.load 0 acqrel # encoding: [0xfe,0x10,0x22,0x00,0x01]
+  # CHECK: i32.atomic.load 0 acqrel # encoding: [0xfe,0x10,0x22,0x01,0x00]
   # DISASM: i32.atomic.load 0 acqrel
   i32.atomic.load 0 acqrel
   # CHECK: i32.atomic.load 0 seqcst # encoding: [0xfe,0x10,0x02,0x00]
   # DISASM: i32.atomic.load 0 seqcst
   i32.atomic.load 0 seqcst
 
-  # CHECK: i64.atomic.load 0 acqrel # encoding: [0xfe,0x11,0x23,0x00,0x01]
+  # CHECK: i64.atomic.load 0 acqrel # encoding: [0xfe,0x11,0x23,0x01,0x00]
   # DISASM: i64.atomic.load 0 acqrel
   i64.atomic.load 0 acqrel
 
-  # CHECK: i32.atomic.store 0 acqrel # encoding: [0xfe,0x17,0x22,0x00,0x01]
+  # CHECK: i32.atomic.store 0 acqrel # encoding: [0xfe,0x17,0x22,0x01,0x00]
   # DISASM: i32.atomic.store 0 acqrel
   i32.atomic.store 0 acqrel
 
-  # CHECK: i64.atomic.store 8 acqrel # encoding: [0xfe,0x18,0x23,0x08,0x01]
+  # CHECK: i64.atomic.store 8 acqrel # encoding: [0xfe,0x18,0x23,0x01,0x08]
   # DISASM: i64.atomic.store 8 acqrel
   i64.atomic.store 8 acqrel
 
-  # CHECK: i32.atomic.rmw.add 0 acqrel # encoding: [0xfe,0x1e,0x22,0x00,0x11]
+  # CHECK: i32.atomic.rmw.add 0 acqrel # encoding: [0xfe,0x1e,0x22,0x11,0x00]
   # DISASM: i32.atomic.rmw.add 0 acqrel
   i32.atomic.rmw.add 0 acqrel
 
-  # CHECK: i64.atomic.rmw.cmpxchg 0 acqrel # encoding: [0xfe,0x49,0x23,0x00,0x11]
+  # CHECK: i64.atomic.rmw.cmpxchg 0 acqrel # encoding: [0xfe,0x49,0x23,0x11,0x00]
   # DISASM: i64.atomic.rmw.cmpxchg 0 acqrel
   i64.atomic.rmw.cmpxchg 0 acqrel
 
@@ -48,7 +48,7 @@ main:
   # DISASM: i32.atomic.load8_u 0 seqcst
   i32.atomic.load8_u 0:p2align=0 seqcst
 
-  # CHECK: i64.atomic.rmw32.xchg_u 0 acqrel # encoding: [0xfe,0x47,0x22,0x00,0x11]
+  # CHECK: i64.atomic.rmw32.xchg_u 0 acqrel # encoding: [0xfe,0x47,0x22,0x11,0x00]
   # DISASM: i64.atomic.rmw32.xchg_u 0 acqrel
   i64.atomic.rmw32.xchg_u 0 acqrel
 

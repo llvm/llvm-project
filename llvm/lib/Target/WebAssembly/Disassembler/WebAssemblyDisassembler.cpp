@@ -43,6 +43,7 @@ static constexpr int WebAssemblyInstructionTableSize = 256;
 namespace {
 class WebAssemblyDisassembler final : public MCDisassembler {
   std::unique_ptr<const MCInstrInfo> MCII;
+  mutable std::optional<uint8_t> DecodedOrder;
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -164,6 +165,7 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     raw_ostream &CS) const {
   CommentStream = &CS;
   Size = 0;
+  DecodedOrder.reset();
   int Opc = nextByte(Bytes, Size);
   if (Opc < 0)
     return MCDisassembler::Fail;
@@ -192,7 +194,6 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
   // At this point we must have a valid instruction to decode.
   assert(WasmInst->ET == ET_Instruction);
   MI.setOpcode(WasmInst->Opcode);
-  bool HasBit5 = false;
   // Parse any operands.
   for (uint8_t OPI = 0; OPI < WasmInst->NumOperands; OPI++) {
     auto OT = OperandTable[WasmInst->OperandStart + OPI];
@@ -214,8 +215,10 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
       if (OT == WebAssembly::OPERAND_P2ALIGN) {
         int64_t Val = MI.getOperand(MI.getNumOperands() - 1).getImm();
         if (Val & 0x20) {
-          HasBit5 = true;
           MI.getOperand(MI.getNumOperands() - 1).setImm(Val & ~0x20);
+          if (Size >= Bytes.size())
+            return MCDisassembler::Fail;
+          DecodedOrder = Bytes[Size++];
         }
       }
       break;
@@ -267,24 +270,27 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     case WebAssembly::OPERAND_VEC_I8IMM:
     case WebAssembly::OPERAND_MEMORDER: {
       if (OT == WebAssembly::OPERAND_MEMORDER) {
-        bool HasP2Align = false;
-        for (uint8_t J = 0; J < OPI; J++)
-          if (OperandTable[WasmInst->OperandStart + J] ==
-              WebAssembly::OPERAND_P2ALIGN)
-            HasP2Align = true;
-        if (!HasP2Align || HasBit5) {
-          if (!parseImmediate<uint8_t>(MI, Size, Bytes))
-            return MCDisassembler::Fail;
-          uint8_t Val = MI.getOperand(MI.getNumOperands() - 1).getImm();
-          if (Val == 0x11 || Val == 0x01)
-            MI.getOperand(MI.getNumOperands() - 1)
-                .setImm(WebAssembly::MEM_ORDER_ACQ_REL);
-          else
-            MI.getOperand(MI.getNumOperands() - 1)
-                .setImm(WebAssembly::MEM_ORDER_SEQ_CST);
+        uint8_t Val;
+        if (DecodedOrder) {
+          Val = *DecodedOrder;
         } else {
-          MI.addOperand(MCOperand::createImm(WebAssembly::MEM_ORDER_SEQ_CST));
+          bool HasP2Align = false;
+          for (uint8_t J = 0; J < OPI; J++)
+            if (OperandTable[WasmInst->OperandStart + J] ==
+                WebAssembly::OPERAND_P2ALIGN)
+              HasP2Align = true;
+          if (!HasP2Align) {
+            if (Size >= Bytes.size())
+              return MCDisassembler::Fail;
+            Val = Bytes[Size++];
+          } else {
+            Val = WebAssembly::MEM_ORDER_SEQ_CST;
+          }
         }
+        if (Val == 0x11 || Val == 0x01)
+          MI.addOperand(MCOperand::createImm(WebAssembly::MEM_ORDER_ACQ_REL));
+        else
+          MI.addOperand(MCOperand::createImm(WebAssembly::MEM_ORDER_SEQ_CST));
       } else {
         if (!parseImmediate<uint8_t>(MI, Size, Bytes))
           return MCDisassembler::Fail;

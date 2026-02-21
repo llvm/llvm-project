@@ -110,13 +110,25 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
               if (J < Desc.getNumOperands() &&
                   Desc.operands()[J].OperandType ==
                       WebAssembly::OPERAND_MEMORDER) {
-                if (MI.getOperand(J).getImm() != WebAssembly::MEM_ORDER_SEQ_CST)
+                uint8_t Val = MI.getOperand(J).getImm();
+                if (Val != WebAssembly::MEM_ORDER_SEQ_CST) {
                   P2Align |= 0x20;
+                  encodeULEB128(P2Align, OS);
+                  if (Val == WebAssembly::MEM_ORDER_ACQ_REL) {
+                    StringRef Name = MCII.getName(Opcode);
+                    if (Name.contains("RMW") || Name.contains("CMPXCHG"))
+                      Val = 0x11;
+                  }
+                  support::endian::write<uint8_t>(OS, Val,
+                                                  llvm::endianness::little);
+                  goto DoneP2Align;
+                }
                 break;
               }
             }
           }
           encodeULEB128(P2Align, OS);
+        DoneP2Align:
           break;
         }
         case WebAssembly::OPERAND_OFFSET32:
@@ -131,29 +143,29 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
                                           llvm::endianness::little);
           break;
         case WebAssembly::OPERAND_MEMORDER: {
+          bool IsMemoryInst = false;
+          for (unsigned J = 0; J < MI.getNumOperands(); ++J) {
+            if (J < Desc.getNumOperands() &&
+                Desc.operands()[J].OperandType ==
+                    WebAssembly::OPERAND_P2ALIGN) {
+              IsMemoryInst = true;
+              break;
+            }
+          }
+          if (IsMemoryInst) {
+            // Already encoded in P2ALIGN case if non-default.
+            // If it was default (seqcst), nothing was encoded.
+            break;
+          }
           uint8_t Val = MO.getImm();
           if (STI.getFeatureBits()[WebAssembly::FeatureSharedEverything]) {
-            bool IsMemoryInst = false;
-            bool Bit5Set = false;
-            for (unsigned J = 0; J < MI.getNumOperands(); ++J) {
-              if (J < Desc.getNumOperands() &&
-                  Desc.operands()[J].OperandType ==
-                      WebAssembly::OPERAND_P2ALIGN) {
-                IsMemoryInst = true;
-                if (Val != WebAssembly::MEM_ORDER_SEQ_CST)
-                  Bit5Set = true;
-                break;
-              }
+            if (Val == WebAssembly::MEM_ORDER_ACQ_REL) {
+              StringRef Name = MCII.getName(Opcode);
+              if (Name.contains("RMW") || Name.contains("CMPXCHG"))
+                Val = 0x11;
             }
-            if (!IsMemoryInst || Bit5Set) {
-              if (Val == WebAssembly::MEM_ORDER_ACQ_REL) {
-                StringRef Name = MCII.getName(Opcode);
-                if (Name.contains("RMW") || Name.contains("CMPXCHG"))
-                  Val = 0x11;
-              }
-              support::endian::write<uint8_t>(OS, Val,
-                                              llvm::endianness::little);
-            }
+            support::endian::write<uint8_t>(OS, Val,
+                                            llvm::endianness::little);
           } else if (Opcode == WebAssembly::ATOMIC_FENCE ||
                      Opcode == WebAssembly::ATOMIC_FENCE_S) {
             support::endian::write<uint8_t>(OS, 0,
