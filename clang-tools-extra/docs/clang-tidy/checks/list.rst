@@ -431,6 +431,7 @@ Clang-Tidy Checks
    :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`readability-use-anyofallof <readability/use-anyofallof>`,
    :doc:`readability-use-concise-preprocessor-directives <readability/use-concise-preprocessor-directives>`, "Yes"
+   :doc:`readability-use-span-first-last <readability/use-span-first-last>`, "Yes"
    :doc:`readability-use-std-min-max <readability/use-std-min-max>`, "Yes"
    :doc:`zircon-temporary-objects <zircon/temporary-objects>`,
 

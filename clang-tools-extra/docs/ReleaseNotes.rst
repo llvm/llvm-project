@@ -145,6 +145,12 @@ New checks
   Checks for presence or absence of trailing commas in enum definitions and
   initializer lists.
 
+- New :doc:`readability-use-span-first-last
+  <clang-tidy/checks/readability/use-span-first-last>` check.
+
+  Suggests using ``std::span::first()`` and ``std::span::last()`` member
+  functions instead of equivalent ``subspan()`` calls.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 

@@ -65,6 +65,7 @@
 #include "UppercaseLiteralSuffixCheck.h"
 #include "UseAnyOfAllOfCheck.h"
 #include "UseConcisePreprocessorDirectivesCheck.h"
+#include "UseSpanFirstLastCheck.h"
 #include "UseStdMinMaxCheck.h"
 
 namespace clang::tidy {
@@ -188,6 +189,8 @@ public:
         "readability-use-anyofallof");
     CheckFactories.registerCheck<UseConcisePreprocessorDirectivesCheck>(
         "readability-use-concise-preprocessor-directives");
+    CheckFactories.registerCheck<UseSpanFirstLastCheck>(
+        "readability-use-span-first-last");
     CheckFactories.registerCheck<UseStdMinMaxCheck>(
         "readability-use-std-min-max");
   }
