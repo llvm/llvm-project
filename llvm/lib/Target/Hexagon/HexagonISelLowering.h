@@ -503,6 +503,7 @@ private:
 
   SDValue CreateTLWrapper(SDValue Op, SelectionDAG &DAG) const;
   SDValue RemoveTLWrapper(SDValue Op, SelectionDAG &DAG) const;
+  SDValue WidenHvxTruncateToBool(SDValue Op, SelectionDAG &DAG) const;
 
   std::pair<const TargetRegisterClass*, uint8_t>
   findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)
