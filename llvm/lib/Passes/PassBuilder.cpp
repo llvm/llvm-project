@@ -344,6 +344,7 @@
 #include "llvm/Transforms/Scalar/StructurizeCFG.h"
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
+#include "llvm/Transforms/Utils/MyDeadCodeEliminationPass.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BreakCriticalEdges.h"
