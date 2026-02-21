@@ -1793,6 +1793,15 @@ bool CursorVisitor::VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
   return Visit(TL.getOriginalLoc());
 }
 
+bool CursorVisitor::VisitAutoTypeLoc(AutoTypeLoc TL) {
+  // AutoTypeLoc represents the location of an auto type specifier.
+  // We do not visit children because the auto type itself is complete.
+  // This handler ensures that auto function parameters are properly
+  // reported as CXType_Auto in the libclang C API, rather than being
+  // incorrectly reported as TypeRef/unexposed.
+  return false;
+}
+
 bool CursorVisitor::VisitDeducedTemplateSpecializationTypeLoc(
     DeducedTemplateSpecializationTypeLoc TL) {
   if (VisitTemplateName(TL.getTypePtr()->getTemplateName(),

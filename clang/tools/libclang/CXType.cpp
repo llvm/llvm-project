@@ -150,6 +150,14 @@ CXType cxtype::MakeCXType(QualType T, CXTranslationUnit TU) {
       return MakeCXType(PTT->getInnerType(), TU);
     }
 
+    // Handle auto in function parameters (including constrained auto)
+    if (auto *TTP = T->getAs<TemplateTypeParmType>()) {
+      auto *D = TTP->getDecl();
+      if (D && D->isImplicit()) {
+        TK = CXType_Auto;
+      }
+    }
+
     ASTContext &Ctx = cxtu::getASTUnit(TU)->getASTContext();
     if (Ctx.getLangOpts().ObjC) {
       QualType UnqualT = T.getUnqualifiedType();
