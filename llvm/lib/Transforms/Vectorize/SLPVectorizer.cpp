@@ -25349,7 +25349,7 @@ class HorizontalReduction {
   }
 
   /// Checks if instruction is associative and can be vectorized.
-  enum class ReductionKind {Unordered, Ordered, None};
+  enum class ReductionKind { Unordered, Ordered, None };
   ReductionKind RK = ReductionKind::None;
   static ReductionKind isVectorizable(RecurKind Kind, Instruction *I,
                                       bool TwoElementReduction = false) {
@@ -25733,9 +25733,9 @@ public:
         // Also, do not try to reduce const values, if the operation is not
         // foldable.
         bool IsReducedVal = !EdgeInst || Level > RecursionMaxDepth ||
-            getRdxKind(EdgeInst) != RdxKind ||
-            IsCmpSelMinMax != isCmpSelMinMax(EdgeInst) ||
-            !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst);
+                            getRdxKind(EdgeInst) != RdxKind ||
+                            IsCmpSelMinMax != isCmpSelMinMax(EdgeInst) ||
+                            !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst);
         ReductionKind CurrentRK = IsReducedVal
                                       ? ReductionKind::None
                                       : isVectorizable(RdxKind, EdgeInst);
