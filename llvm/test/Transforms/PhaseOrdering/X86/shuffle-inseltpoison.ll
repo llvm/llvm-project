@@ -243,7 +243,6 @@ define <4 x i32> @shuffle_16_bitcast_32_shuffle_32_can_be_converted_up(<8 x i16>
 }
 
 ; shuffle<4 x i32>( bitcast<4 x i32>( shuffle<16 x i8>(v)))
-; TODO: Narrow and squash shuffles?
 
 define <4 x i32> @shuffle_8_bitcast_32_shuffle_32_can_not_be_converted_up(<16 x i8> %v1) {
 ; CHECK-LABEL: @shuffle_8_bitcast_32_shuffle_32_can_not_be_converted_up(
@@ -259,7 +258,6 @@ define <4 x i32> @shuffle_8_bitcast_32_shuffle_32_can_not_be_converted_up(<16 x 
 }
 
 ; shuffle<4 x i32>( bitcast<4 x i32>( shuffle<8 x i16>(v)))
-; TODO: Narrow and squash shuffles?
 
 define <4 x i32> @shuffle_16_bitcast_32_shuffle_32_can_not_be_converted_up(<8 x i16> %v1) {
 ; CHECK-LABEL: @shuffle_16_bitcast_32_shuffle_32_can_not_be_converted_up(
@@ -289,7 +287,6 @@ define <8 x i16> @shuffle_8_bitcast_16_shuffle_16_can__be_converted_up(<16 x i8>
 }
 
 ; shuffle<8 x i16>( bitcast<8 x i16>( shuffle<16 x i8>(v)))
-; TODO: Narrow and squash shuffles?
 
 define <8 x i16> @shuffle_8_bitcast_16_shuffle_16_can_not_be_converted_up(<16 x i8> %v1) {
 ; CHECK-LABEL: @shuffle_8_bitcast_16_shuffle_16_can_not_be_converted_up(
