@@ -232,8 +232,8 @@ Changes in existing checks
 
 - Improved :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` check to
-  analyze calls to the ``starts_with``, ``ends_with``, and ``contains``
-  string member functions.
+  analyze calls to the ``starts_with``, ``ends_with``, ``contains``,
+  and ``operator+=`` string member functions.
 
 - Improved :doc:`performance-inefficient-vector-operation
   <clang-tidy/checks/performance/inefficient-vector-operation>` check by
