@@ -2425,6 +2425,37 @@ static void buildTaskAffinityList(mlir::omp::TaskOp taskOp,
 }
 
 static mlir::LogicalResult
+convertIteratorRegion(llvm::Value *linearIV, IteratorInfo &iterInfo,
+                      mlir::Block &iteratorRegionBlock,
+                      llvm::IRBuilderBase &builder,
+                      LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Value *tmp = linearIV;
+  for (int d = (int)iterInfo.getDims() - 1; d >= 0; --d) {
+    llvm::Value *trip = iterInfo.getTrips()[d];
+    // idx_d = tmp % trip_d
+    llvm::Value *idx = builder.CreateURem(tmp, trip, "omp.it.idx");
+    // tmp = tmp / trip_d
+    tmp = builder.CreateUDiv(tmp, trip, "omp.it.lin.next");
+
+    // physIV_d = lb_d + idx_d * step_d
+    llvm::Value *physIV = builder.CreateAdd(
+        iterInfo.getLowerBounds()[d],
+        builder.CreateMul(idx, iterInfo.getSteps()[d]), "omp.it.phys_iv");
+
+    moduleTranslation.mapValue(iteratorRegionBlock.getArgument(d), physIV);
+  }
+
+  // Translate the iterator region into the loop body.
+  moduleTranslation.mapBlock(&iteratorRegionBlock, builder.GetInsertBlock());
+  if (mlir::failed(moduleTranslation.convertBlock(iteratorRegionBlock,
+                                                  /*ignoreArguments=*/true,
+                                                  builder))) {
+    return mlir::failure();
+  }
+  return mlir::success();
+}
+
+static mlir::LogicalResult
 buildTaskAffinityIteratorLoop(mlir::omp::IteratorsOp itersOp,
                               llvm::IRBuilderBase &builder,
                               mlir::LLVM::ModuleTranslation &moduleTranslation,
@@ -2454,43 +2485,22 @@ buildTaskAffinityIteratorLoop(mlir::omp::IteratorsOp itersOp,
     llvm::IRBuilderBase::InsertPointGuard g(builder);
     builder.restoreIP(bodyIP);
 
-    // Unflatten linearIV into per-dimension logical indices (row-major).
-    llvm::Value *tmp = linearIV;
-    for (int d = (int)iterInfo.getDims() - 1; d >= 0; --d) {
-      llvm::Value *trip = iterInfo.getTrips()[d];
-      // idx_d = tmp % trip_d
-      llvm::Value *idx = builder.CreateURem(tmp, trip, "omp.it.idx");
-      // tmp = tmp / trip_d
-      tmp = builder.CreateUDiv(tmp, trip, "omp.it.lin.next");
-
-      // physIV_d = lb_d + idx_d * step_d
-      llvm::Value *physIV = builder.CreateAdd(
-          iterInfo.getLowerBounds()[d],
-          builder.CreateMul(idx, iterInfo.getSteps()[d]),
-          "omp.it.phys_iv");
-
-      moduleTranslation.mapValue(iteratorRegionBlock.getArgument(d), physIV);
-    }
-
-    // Translate the iterator region into the loop body.
-    moduleTranslation.mapBlock(&iteratorRegionBlock, builder.GetInsertBlock());
-    if (mlir::failed(moduleTranslation.convertBlock(iteratorRegionBlock,
-                                                    /*ignoreArguments=*/true,
-                                                    builder))) {
+    if (failed(convertIteratorRegion(linearIV, iterInfo, iteratorRegionBlock,
+                                     builder, moduleTranslation))) {
       return llvm::make_error<llvm::StringError>(
-          "failed to translate iterators region",
-          llvm::inconvertibleErrorCode());
+          "failed to convert iterators region", llvm::inconvertibleErrorCode());
     }
 
     // Extract affinity entry from omp.yield and store into list[linearIV].
     auto yield = mlir::dyn_cast<mlir::omp::YieldOp>(
         iteratorRegionBlock.getTerminator());
+    assert(yield.getResults().size() == 1 &&
+           "expect omp.yield in iterator region to have one result");
     auto entryOp =
         yield.getResults()[0].getDefiningOp<mlir::omp::AffinityEntryOp>();
 
     llvm::Value *addr = moduleTranslation.lookupValue(entryOp.getAddr());
-    llvm::Value *len  = moduleTranslation.lookupValue(entryOp.getLen());
-
+    llvm::Value *len = moduleTranslation.lookupValue(entryOp.getLen());
     storeAffinityEntry(builder, list, linearIV, addr, len);
 
     // Avoid leaking region mappings if this iterator loop is reused/expanded.
