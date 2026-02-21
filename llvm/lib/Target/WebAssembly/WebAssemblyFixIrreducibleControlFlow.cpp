@@ -58,6 +58,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Support/Debug.h"
+#include <limits>
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-fix-irreducible-control-flow"
@@ -78,7 +79,7 @@ static BlockVector getSortedEntries(const BlockSet &Entries) {
   return SortedEntries;
 }
 
-// Calculates reachability in a region. Ignores branches to blocks outside of
+// Analyzes SCC structure in a region. Ignores branches to blocks outside of
 // the region, and ignores branches to the region entry (for the case where
 // the region is the inner part of a loop).
 class ReachabilityGraph {
@@ -98,16 +99,8 @@ public:
     calculate();
   }
 
-  bool canReach(MachineBasicBlock *From, MachineBasicBlock *To) const {
-    assert(inRegion(From) && inRegion(To));
-    auto I = Reachable.find(From);
-    if (I == Reachable.end())
-      return false;
-    return I->second.count(To);
-  }
-
   // "Loopers" are blocks that are in a loop. We detect these by finding blocks
-  // that can reach themselves.
+  // that are in a non-trivial SCC or have a self-loop.
   const BlockSet &getLoopers() const { return Loopers; }
 
   // Get all blocks that are loop entries.
@@ -120,65 +113,138 @@ public:
     assert(I != LoopEnterers.end());
     return I->second;
   }
+  unsigned getSCCId(MachineBasicBlock *MBB) const {
+    return SccId[getIndex(MBB)];
+  }
 
 private:
   MachineBasicBlock *Entry;
   const BlockSet &Blocks;
+  DenseMap<MachineBasicBlock *, unsigned> BlockIndex;
 
   BlockSet Loopers, LoopEntries;
   DenseMap<MachineBasicBlock *, BlockSet> LoopEnterers;
 
   bool inRegion(MachineBasicBlock *MBB) const { return Blocks.count(MBB); }
 
-  // Maps a block to all the other blocks it can reach.
-  DenseMap<MachineBasicBlock *, BlockSet> Reachable;
+  // Per-node adjacency in the region (excluding edges to Entry).
+  SmallVector<SmallVector<unsigned, 4>, 0> Succs;
+  SmallVector<bool, 0> SelfLoop;
+
+  // SCC = Strongly-connected component
+  // Map of an MBB's index (provided by `BlockIndex`) to it's assigned SCC
+  SmallVector<unsigned, 0> SccId; 
+  // The number of elements in each SCC
+  SmallVector<unsigned, 0> SccSize; 
+
+  unsigned getIndex(MachineBasicBlock *MBB) const {
+    auto It = BlockIndex.find(MBB);
+    assert(It != BlockIndex.end());
+    return It->second;
+  }
 
   void calculate() {
-    // Reachability computation work list. Contains pairs of recent additions
-    // (A, B) where we just added a link A => B.
-    using BlockPair = std::pair<MachineBasicBlock *, MachineBasicBlock *>;
-    SmallVector<BlockPair, 4> WorkList;
+    auto NumBlocks = Blocks.size();
+    Succs.assign(NumBlocks, {});
+    SelfLoop.assign(NumBlocks, false);
+
+    unsigned MMBIdx = 0;
+    BlockIndex.clear();
+    BlockIndex.reserve(NumBlocks);
+    for (auto *MBB : Blocks)
+      BlockIndex[MBB] = MMBIdx++;
 
     // Add all relevant direct branches.
+    MMBIdx = 0;
     for (auto *MBB : Blocks) {
       for (auto *Succ : MBB->successors()) {
         if (Succ != Entry && inRegion(Succ)) {
-          Reachable[MBB].insert(Succ);
-          WorkList.emplace_back(MBB, Succ);
+          if (Succ == MBB)
+            SelfLoop[MMBIdx] = true;
+          Succs[MMBIdx].push_back(getIndex(Succ));
         }
       }
+
+      ++MMBIdx;
     }
 
-    while (!WorkList.empty()) {
-      MachineBasicBlock *MBB, *Succ;
-      std::tie(MBB, Succ) = WorkList.pop_back_val();
-      assert(inRegion(MBB) && Succ != Entry && inRegion(Succ));
-      if (MBB != Entry) {
-        // We recently added MBB => Succ, and that means we may have enabled
-        // Pred => MBB => Succ.
-        for (auto *Pred : MBB->predecessors()) {
-          if (Reachable[Pred].insert(Succ).second) {
-            WorkList.emplace_back(Pred, Succ);
+    // Tarjan SCC (iterative) on the region graph.
+    SccId.assign(NumBlocks, std::numeric_limits<unsigned>::max());
+    SccSize.clear();
+    SmallVector<int, 0> Index(NumBlocks, -1);
+    SmallVector<int, 0> Lowlink(NumBlocks, 0);
+    SmallVector<unsigned, 0> Stack;
+    SmallVector<bool, 0> OnStack(NumBlocks, false);
+    int NextIndex = 0;
+
+    struct Frame {
+      unsigned V;
+      unsigned NextSucc;
+    };
+    SmallVector<Frame, 0> DFS;
+
+    auto pushNode = [&](unsigned V) {
+      Index[V] = Lowlink[V] = NextIndex++;
+      Stack.push_back(V);
+      OnStack[V] = true;
+      DFS.push_back({V, 0});
+    };
+
+    for (unsigned V = 0; V < NumBlocks; ++V) {
+      if (Index[V] != -1)
+        continue;
+      pushNode(V);
+      while (!DFS.empty()) {
+        Frame &F = DFS.back();
+        unsigned Cur = F.V;
+        if (F.NextSucc < Succs[Cur].size()) {
+          unsigned W = Succs[Cur][F.NextSucc++];
+          if (Index[W] == -1) {
+            pushNode(W);
+          } else if (OnStack[W]) {
+            Lowlink[Cur] = std::min(Lowlink[Cur], Index[W]);
           }
+          continue;
+        }
+
+        // Finished exploring Cur.
+        if (Lowlink[Cur] == Index[Cur]) {
+          unsigned Size = 0;
+          while (true) {
+            unsigned W = Stack.pop_back_val();
+            OnStack[W] = false;
+            SccId[W] = SccSize.size();
+            ++Size;
+            if (W == Cur)
+              break;
+          }
+          SccSize.push_back(Size);
+        }
+
+        DFS.pop_back();
+        if (!DFS.empty()) {
+          unsigned Parent = DFS.back().V;
+          Lowlink[Parent] = std::min(Lowlink[Parent], Lowlink[Cur]);
         }
       }
     }
 
-    // Blocks that can return to themselves are in a loop.
+    // Blocks that are in a loop are those in non-trivial SCCs or self-loops.
+    MMBIdx = 0;
     for (auto *MBB : Blocks) {
-      if (canReach(MBB, MBB)) {
+      if (MBB != Entry && (SccSize[SccId[MMBIdx]] > 1 || SelfLoop[MMBIdx])) {
         Loopers.insert(MBB);
       }
+      ++MMBIdx;
     }
     assert(!Loopers.count(Entry));
 
-    // Find the loop entries - loopers reachable from blocks not in that loop -
+    // Find the loop entries - loopers with predecessors outside their SCC -
     // and those outside blocks that reach them, the "loop enterers".
     for (auto *Looper : Loopers) {
+      unsigned LoopScc = getSCCId(Looper);
       for (auto *Pred : Looper->predecessors()) {
-        // Pred can reach Looper. If Looper can reach Pred, it is in the loop;
-        // otherwise, it is a block that enters into the loop.
-        if (!canReach(Looper, Pred)) {
+        if (getSCCId(Pred) != LoopScc) {
           LoopEntries.insert(Looper);
           LoopEnterers[Looper].insert(Pred);
         }
@@ -258,10 +324,16 @@ bool WebAssemblyFixIrreducibleControlFlow::processRegion(
 
     bool FoundIrreducibility = false;
 
-    for (auto *LoopEntry : getSortedEntries(Graph.getLoopEntries())) {
+    BlockVector SortedLoopEntries = getSortedEntries(Graph.getLoopEntries());
+    DenseMap<unsigned, BlockSet> EntriesByScc;
+    EntriesByScc.reserve(SortedLoopEntries.size());
+    for (auto *LoopEntry : SortedLoopEntries)
+      EntriesByScc[Graph.getSCCId(LoopEntry)].insert(LoopEntry);
+
+    for (auto *LoopEntry : SortedLoopEntries) {
       // Find mutual entries - all entries which can reach this one, and
       // are reached by it (that always includes LoopEntry itself). All mutual
-      // entries must be in the same loop, so if we have more than one, then we
+      // entries must be in the same SCC, so if we have more than one, then we
       // have irreducible control flow.
       //
       // (Note that we need to sort the entries here, as otherwise the order can
@@ -284,15 +356,7 @@ bool WebAssemblyFixIrreducibleControlFlow::processRegion(
       // a group of blocks all of whom can reach each other. (We'll see the
       // irreducibility after removing branches to the top of that enclosing
       // loop.)
-      BlockSet MutualLoopEntries;
-      MutualLoopEntries.insert(LoopEntry);
-      for (auto *OtherLoopEntry : Graph.getLoopEntries()) {
-        if (OtherLoopEntry != LoopEntry &&
-            Graph.canReach(LoopEntry, OtherLoopEntry) &&
-            Graph.canReach(OtherLoopEntry, LoopEntry)) {
-          MutualLoopEntries.insert(OtherLoopEntry);
-        }
-      }
+      auto &MutualLoopEntries = EntriesByScc[Graph.getSCCId(LoopEntry)];
 
       if (MutualLoopEntries.size() > 1) {
         makeSingleEntryLoop(MutualLoopEntries, Blocks, MF, Graph);
@@ -404,7 +468,7 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
     for (auto *Entry : Pred->successors()) {
       if (!Entries.count(Entry))
         continue;
-      if (Graph.canReach(Entry, Pred)) {
+      if (Graph.getSCCId(Entry) == Graph.getSCCId(Pred)) {
         InLoop.insert(Pred);
         break;
       }
