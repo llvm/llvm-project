@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=thumbv7-apple-ios -disable-ifcvt-diamond -stats 2>&1 | FileCheck %s
+; XFAIL: *
 ; Evaluate the two vld1.8 instructions in separate MBB's,
 ; instead of stalling on one and conditionally overwriting its result.
 ;

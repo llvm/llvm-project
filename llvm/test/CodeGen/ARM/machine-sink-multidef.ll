@@ -17,11 +17,11 @@ define arm_aapcscc void @g() {
 ; CHECK-NEXT:    ldr r0, [r1, r0, lsl #3]!
 ; CHECK-NEXT:    moveq r0, #0
 ; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    ldr r1, [r1, #4]
 ; CHECK-NEXT:    movne pc, lr
 ; CHECK-NEXT:  .LBB0_1: @ %if.then5
 ; CHECK-NEXT:    .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    ldr r1, [r1, #4]
 ; CHECK-NEXT:    bl k
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.2:

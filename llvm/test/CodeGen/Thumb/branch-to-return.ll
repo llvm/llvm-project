@@ -15,27 +15,26 @@ define i32 @foo(ptr %x, i32 %n) {
 ; CHECK-NEXT:    bhs .LBB0_3
 ; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    b .LBB0_6
+; CHECK-NEXT:    b .LBB0_5
 ; CHECK-NEXT:  .LBB0_3: @ %middle.block
+; CHECK-NEXT:    ldr.w r0, [r12]
 ; CHECK-NEXT:    cmp r1, r3
 ; CHECK-NEXT:    bne .LBB0_5
 ; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:  .LBB0_5:
-; CHECK-NEXT:    ldr.w r0, [r12]
-; CHECK-NEXT:  .LBB0_6: @ %for.body.preheader1
+; CHECK-NEXT:  .LBB0_5: @ %for.body.preheader1
 ; CHECK-NEXT:    subs r3, r1, r3
 ; CHECK-NEXT:    mvn r2, #12
 ; CHECK-NEXT:    and.w r1, r2, r1, lsl #2
 ; CHECK-NEXT:    add r1, r12
-; CHECK-NEXT:  .LBB0_7: @ %for.body
+; CHECK-NEXT:  .LBB0_6: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr r2, [r1], #4
 ; CHECK-NEXT:    subs r3, #1
 ; CHECK-NEXT:    add r0, r2
-; CHECK-NEXT:    bne .LBB0_7
-; CHECK-NEXT:  @ %bb.8: @ %for.cond.cleanup
+; CHECK-NEXT:    bne .LBB0_6
+; CHECK-NEXT:  @ %bb.7: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
 entry:
   %n.vec = and i32 %n, -4
