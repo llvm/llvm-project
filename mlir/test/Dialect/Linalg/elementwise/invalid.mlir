@@ -38,8 +38,7 @@ func.func @incorrect_result_rank(%A : memref<8x16xf32>, %B: memref<8x16xf32>, %C
 // -----
 
 func.func @unary_too_many_args(%A : memref<8x16x32xf32>, %B: memref<8x16x32xf32>, %C:  memref<8x16x32xf32>) {
-  // expected-error@+3 {{custom op 'linalg.elementwise' [parseNamedStructuredOpRegion] ods-gen generated region expects 2 args, got 3}}
-  // expected-error@+2 {{custom op 'linalg.elementwise' unable to parse elemwise op}}
+  // expected-error@+2 {{custom op 'linalg.elementwise' [parseNamedStructuredOpRegion] ods-gen generated region expects 2 args, got 3}}
   linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%A, %B : memref<8x16x32xf32>,  memref<8x16x32xf32>) outs(%C: memref<8x16x32xf32>)
   return
 }
@@ -47,8 +46,23 @@ func.func @unary_too_many_args(%A : memref<8x16x32xf32>, %B: memref<8x16x32xf32>
 // -----
 
 func.func @binary_too_few_args(%A : memref<8x16x32xf32>, %B: memref<8x16x32xf32>) {
-  // expected-error@+3 {{custom op 'linalg.elementwise' [parseNamedStructuredOpRegion] ods-gen generated region expects 3 args, got 2}}
-  // expected-error@+2 {{custom op 'linalg.elementwise' unable to parse elemwise op}}
+  // expected-error@+2 {{custom op 'linalg.elementwise' [parseNamedStructuredOpRegion] ods-gen generated region expects 3 args, got 2}}
   linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%A : memref<8x16x32xf32>) outs(%B: memref<8x16x32xf32>)
+  return
+}
+
+// -----
+
+func.func @vector_args(%A : memref<16x8xf32>, %B: vector<16x8xf32>) {
+  // expected-error@+1 {{custom op 'linalg.elementwise' input operand #1 must be a memref or ranked tensor, but got 'vector<16x8xf32>'}}
+  linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%A, %B: memref<16x8xf32>, vector<16x8xf32>) outs(%C: vector<16x8xf32>)
+  return
+}
+
+// -----
+
+func.func @input_output_mismatch(%A : memref<16x8xf32>, %B: memref<16x8xf32>) {
+  // expected-error@+1 {{custom op 'linalg.elementwise' input and output operands must have the same type category (all tensors or all memrefs)}}
+  linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%A, %B: memref<16x8xf32>, memref<16x8xf32>) outs(%C: tensor<16x8xf32>)
   return
 }

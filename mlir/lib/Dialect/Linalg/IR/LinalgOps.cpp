@@ -4852,11 +4852,56 @@ ParseResult ElementwiseOp::parse(OpAsmParser &parser, OperationState &result) {
   auto arityGroupAndKind = getArityGroupAndKind(elemwiseKindVal);
   int numRegionArgs =
       getArityGroupAsUInt(arityGroupAndKind.arityGroup) + 1 /*output*/;
-  if (parseNamedStructuredOp(parser, result, numRegionArgs,
-                             ElementwiseOp::getRegionBuilder())) {
-    return parser.emitError(parser.getCurrentLocation(),
-                            "unable to parse elemwise op");
+
+  // Parse structured op parts (ins/outs)
+  SmallVector<Type, 1> inputTypes, outputTypes;
+  SMLoc loc = parser.getCurrentLocation();
+  if (parseCommonStructuredOpParts(parser, result, inputTypes, outputTypes))
+    return failure();
+
+  // Parse optional attributes.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  // Parse result types.
+  SmallVector<Type, 1> resultTypes;
+  if (parseNamedStructuredOpResults(parser, resultTypes))
+    return failure();
+  result.addTypes(resultTypes);
+
+  // Type validation (before region build)
+  for (auto [i, type] : llvm::enumerate(inputTypes)) {
+    if (!llvm::isa<RankedTensorType, MemRefType>(type)) {
+      return parser.emitError(loc)
+             << "input operand #" << i
+             << " must be a memref or ranked tensor, but got " << type;
+    }
   }
+  for (auto [i, type] : llvm::enumerate(outputTypes)) {
+    if (!llvm::isa<RankedTensorType, MemRefType>(type)) {
+      return parser.emitError(loc)
+             << "output operand #" << i
+             << " must be a memref or ranked tensor, but got " << type;
+    }
+  }
+
+  bool hasTensor = llvm::any_of(inputTypes, llvm::IsaPred<RankedTensorType>) ||
+                   llvm::any_of(outputTypes, llvm::IsaPred<RankedTensorType>);
+  bool hasMemref = llvm::any_of(inputTypes, llvm::IsaPred<MemRefType>) ||
+                   llvm::any_of(outputTypes, llvm::IsaPred<MemRefType>);
+  if (hasTensor && hasMemref) {
+    return parser.emitError(loc)
+           << "input and output operands must have the same type category "
+              "(all tensors or all memrefs)";
+  }
+
+  // Build region
+  std::unique_ptr<Region> region = std::make_unique<Region>();
+  if (parseNamedStructuredOpRegion(parser, *region, numRegionArgs, inputTypes,
+                                   outputTypes, result.attributes.getAttrs(),
+                                   ElementwiseOp::getRegionBuilder(), loc))
+    return failure();
+  result.addRegion(std::move(region));
 
   // Initialize indexingMaps, if not supplied explicitly.
   if (indexingMapsAttr.empty()) {
@@ -4934,19 +4979,22 @@ void ElementwiseOp::regionBuilder(
   Value result;
 
   if (arityGroup == ElementwiseArityGroup::Unary) {
-    result = helper.buildUnaryFn(kind.unaryFn, block.getArgument(0));
+    result = helper.buildUnaryFn(kind.unaryFn, block.getArgument(0), emitError);
 
   } else if (arityGroup == ElementwiseArityGroup::Binary) {
     result = helper.buildBinaryFn(kind.binaryFn, block.getArgument(0),
-                                  block.getArgument(1));
-
+                                  block.getArgument(1), emitError);
   } else if (arityGroup == ElementwiseArityGroup::Ternary) {
     result = helper.buildTernaryFn(kind.ternaryFn, block.getArgument(0),
-                                   block.getArgument(1), block.getArgument(2));
+                                   block.getArgument(1), block.getArgument(2),
+                                   emitError);
 
   } else {
     assert(false && "found unhandled category in elemwise");
   }
+
+  if (!result)
+    return;
 
   yields.push_back(result);
   helper.yieldOutputs(yields);
