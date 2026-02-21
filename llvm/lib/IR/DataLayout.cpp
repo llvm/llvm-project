@@ -872,6 +872,9 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     const Align Align = abi_or_pref ? StructABIAlignment : StructPrefAlignment;
     return std::max(Align, Layout->getAlignment());
   }
+  case Type::ByteTyID:
+    // The byte type has the same alignment as the equally sized integer type.
+    return getIntegerAlignment(Ty->getByteBitWidth(), abi_or_pref);
   case Type::IntegerTyID:
     return getIntegerAlignment(Ty->getIntegerBitWidth(), abi_or_pref);
   case Type::HalfTyID:
@@ -981,6 +984,21 @@ Type *DataLayout::getIntPtrType(Type *Ty) const {
   if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
     return VectorType::get(IntTy, VecTy);
   return IntTy;
+}
+
+ByteType *DataLayout::getBytePtrType(LLVMContext &C,
+                                     unsigned AddressSpace) const {
+  return ByteType::get(C, getPointerSizeInBits(AddressSpace));
+}
+
+Type *DataLayout::getBytePtrType(Type *Ty) const {
+  assert(Ty->isPtrOrPtrVectorTy() &&
+         "Expected a pointer or pointer vector type.");
+  unsigned NumBits = getPointerTypeSizeInBits(Ty);
+  ByteType *ByteTy = ByteType::get(Ty->getContext(), NumBits);
+  if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
+    return VectorType::get(ByteTy, VecTy);
+  return ByteTy;
 }
 
 Type *DataLayout::getSmallestLegalIntType(LLVMContext &C, unsigned Width) const {

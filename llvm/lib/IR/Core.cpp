@@ -621,6 +621,8 @@ LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty) {
     return LLVMLabelTypeKind;
   case Type::MetadataTyID:
     return LLVMMetadataTypeKind;
+  case Type::ByteTyID:
+    return LLVMByteTypeKind;
   case Type::IntegerTyID:
     return LLVMIntegerTypeKind;
   case Type::FunctionTyID:
@@ -670,6 +672,20 @@ char *LLVMPrintTypeToString(LLVMTypeRef Ty) {
     os << "Printing <null> Type";
 
   return strdup(buf.c_str());
+}
+
+/*--.. Operations on byte types ............................................--*/
+
+LLVMTypeRef LLVMByteTypeInContext(LLVMContextRef C, unsigned NumBits) {
+  return wrap(ByteType::get(*unwrap(C), NumBits));
+}
+
+LLVMTypeRef LLVMByteType(unsigned NumBits) {
+  return LLVMByteTypeInContext(getGlobalContextForCAPI(), NumBits);
+}
+
+unsigned LLVMGetByteTypeWidth(LLVMTypeRef ByteTy) {
+  return unwrap<ByteType>(ByteTy)->getBitWidth();
 }
 
 /*--.. Operations on integer types .........................................--*/
@@ -1572,6 +1588,30 @@ LLVMValueRef LLVMConstIntOfStringAndSize(LLVMTypeRef IntTy, const char Str[],
                                Radix));
 }
 
+LLVMValueRef LLVMConstByte(LLVMTypeRef ByteTy, unsigned long long N) {
+  return wrap(ConstantByte::get(unwrap<ByteType>(ByteTy), N));
+}
+
+LLVMValueRef LLVMConstByteOfArbitraryPrecision(LLVMTypeRef ByteTy,
+                                               unsigned NumWords,
+                                               const uint64_t Words[]) {
+  ByteType *Ty = unwrap<ByteType>(ByteTy);
+  return wrap(ConstantByte::get(
+      Ty->getContext(), APInt(Ty->getBitWidth(), ArrayRef(Words, NumWords))));
+}
+
+LLVMValueRef LLVMConstByteOfString(LLVMTypeRef ByteTy, const char Str[],
+                                   uint8_t Radix) {
+  return wrap(
+      ConstantByte::get(unwrap<ByteType>(ByteTy), StringRef(Str), Radix));
+}
+
+LLVMValueRef LLVMConstByteOfStringAndSize(LLVMTypeRef ByteTy, const char Str[],
+                                          size_t SLen, uint8_t Radix) {
+  return wrap(
+      ConstantByte::get(unwrap<ByteType>(ByteTy), StringRef(Str, SLen), Radix));
+}
+
 LLVMValueRef LLVMConstReal(LLVMTypeRef RealTy, double N) {
   return wrap(ConstantFP::get(unwrap(RealTy), N));
 }
@@ -1599,6 +1639,14 @@ unsigned long long LLVMConstIntGetZExtValue(LLVMValueRef ConstantVal) {
 
 long long LLVMConstIntGetSExtValue(LLVMValueRef ConstantVal) {
   return unwrap<ConstantInt>(ConstantVal)->getSExtValue();
+}
+
+unsigned long long LLVMConstByteGetZExtValue(LLVMValueRef ConstantVal) {
+  return unwrap<ConstantByte>(ConstantVal)->getZExtValue();
+}
+
+long long LLVMConstByteGetSExtValue(LLVMValueRef ConstantVal) {
+  return unwrap<ConstantByte>(ConstantVal)->getSExtValue();
 }
 
 double LLVMConstRealGetDouble(LLVMValueRef ConstantVal, LLVMBool *LosesInfo) {

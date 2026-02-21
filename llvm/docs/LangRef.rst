@@ -787,8 +787,8 @@ be performed as loads and stores of the correct type since stores of other
 types may not propagate the external data.
 Therefore it is not legal to convert an existing load/store (or a
 ``llvm.memcpy`` / ``llvm.memmove`` intrinsic) of pointer types with external
-state to a load/store of an integer type with the same bitwidth, as that may drop
-the external state.
+state to a load/store of an integer or byte type with the same bitwidth, as that
+may drop the external state.
 
 
 .. _globalvars:
@@ -4455,6 +4455,54 @@ Examples:
 | ``i1942652``   | a really big integer of over 1 million bits.   |
 +----------------+------------------------------------------------+
 
+.. _t_byte:
+
+Byte Type
+"""""""""
+
+:Overview:
+
+The byte type represents raw memory data in SSA registers. It should be used
+when it cannot be determined whether a value holds a pointer or another type at
+run time, or if the value contains uninitialized or poison data. Frontends are
+expected to use a byte type when:
+
+#. Lowering memory operations like `memcpy` and `memmove` to load/store pairs
+   without knowing the underlying type being copied.
+
+#. Working with union types that can hold a pointer alongside a non-pointer
+   type.
+
+#. Working with possibly uninitialized data.
+
+Otherwise, when known, the specific specific type should be used. Each bit can
+be:
+
+* An integer bit (0 or 1)
+* Part of a pointer value
+* ``poison``
+
+Any bit width from 1 bit to 2\ :sup:`23`\ (about 8 million) can be specified.
+
+:Syntax:
+
+::
+
+      bN
+
+The number of bits the byte occupies is specified by the ``N`` value.
+
+Examples:
+*********
+
++----------------+------------------------------------------------+
+| ``b1``         | a single-bit byte value.                       |
++----------------+------------------------------------------------+
+| ``b32``        | a 32-bit byte value.                           |
++----------------+------------------------------------------------+
+| ``b128``       | a 128-bit byte value.                          |
++----------------+------------------------------------------------+
+
 .. _t_floating:
 
 Floating-Point Types
@@ -4888,6 +4936,10 @@ Simple Constants
     Note that hexadecimal integers are sign extended from the number
     of active bits, i.e., the bit width minus the number of leading
     zeros. So '``s0x0001``' of type '``i16``' will be -1, not 1.
+**Byte constants**
+    Byte constants are used to initialize global variables of the :ref:`byte
+    <t_byte>` type. These are strictly equivalent to integer constants:
+    ``store b8 42, ptr %p`` is equivalent to ``store i8 42, ptr %p``.
 **Floating-point constants**
     Floating-point constants use standard decimal notation (e.g.
     123.421), exponential notation (e.g., 1.23421e+2), or a more precise
@@ -11752,6 +11804,8 @@ If the value being loaded is of aggregate type, the bytes that correspond to
 padding may be accessed but are ignored, because it is impossible to observe
 padding from the loaded aggregate value.
 If ``<pointer>`` is not a well-defined value, the behavior is undefined.
+The behavior of loading a value of a type that differs from the type used to
+store it is described in the :ref:`bitcast <i_bitcast>` section.
 
 Examples:
 """""""""
@@ -13008,10 +13062,10 @@ The '``bitcast``' instruction takes a value to cast, which must be a
 non-aggregate first class value, and a type to cast it to, which must
 also be a non-aggregate :ref:`first class <t_firstclass>` type. The
 bit sizes of ``value`` and the destination type, ``ty2``, must be
-identical. If the source type is a pointer, the destination type must
-also be a pointer of the same size. This instruction supports bitwise
-conversion of vectors to integers and to vectors of other types (as
-long as they have the same size).
+identical. If the source type is a pointer, the destination type must also be a
+pointer or a byte (vector of bytes) of the same size. This instruction supports
+bitwise conversion of vectors to integers and to vectors of other types (as long
+as they have the same size).
 
 Semantics:
 """"""""""
@@ -13021,14 +13075,43 @@ is always a *no-op cast* because no bits change with this
 conversion. The conversion is done as if the ``value`` had been stored
 to memory and read back as type ``ty2``. Pointer (or vector of
 pointers) types may only be converted to other pointer (or vector of
-pointers) types with the same address space through this instruction.
-To convert pointers to other types, use the :ref:`inttoptr <i_inttoptr>`
-or :ref:`ptrtoint <i_ptrtoint>` instructions first.
+pointers) types with the same address space or byte (or vector of bytes) types
+through this instruction. To convert pointers to other types, use the
+:ref:`inttoptr <i_inttoptr>` or :ref:`ptrtoint <i_ptrtoint>` instructions first.
 
 There is a caveat for bitcasts involving vector types in relation to
 endianness. For example ``bitcast <2 x i8> <value> to i16`` puts element zero
 of the vector in the least significant bits of the i16 for little-endian while
 element zero ends up in the most significant bits for big-endian.
+
+If ``value`` is of the :ref:`byte type <t_byte>`:
+
+* If ``value`` contains at least one ``poison`` bit, the cast result is
+
+    * ``poison``, if ``ty2`` is a scalar type.
+
+    * a vector where only the lanes containing at least one ``poison`` bit are
+      ``poison``, if ``ty2`` is a vector type. The values of the remaining
+      non-``poison`` lanes are given by bitcasting the bits of ``value``
+      corresponding to each lane (according to the target's endianness) to the
+      lane element type.
+
+* If ``value`` is any mix of (non-``poison``) pointer and non-pointer bits:
+
+    * If ``ty2`` is a non-pointer type, the provenance of the pointer bits is
+      stripped without being exposed, similarly to the
+      :ref:`ptrtoaddr <i_ptrtoaddr>` instruction.
+
+    * If ``ty2`` is a pointer type, then if all bits of ``value`` are from the
+      same pointer and are correctly ordered (there were no pointer bit swaps),
+      the cast result is that pointer. If all the bits are from the same pointer
+      and these are not correctly ordered, or if ``value`` is a mix of bits from
+      different pointers or a mix of pointer and non-pointer bits, the result is
+      a pointer without provenance. This pointer cannot be dereferenced, but can
+      be used in comparisons or :ref:`getelementptr <i_getelementptr>`
+      instructions.
+
+* Otherwise, the cast is a *no-op*.
 
 Example:
 """"""""
@@ -13039,6 +13122,17 @@ Example:
       %Y = bitcast i32* %x to i16*      ; yields i16*:%x
       %Z = bitcast <2 x i32> %V to i64; ; yields i64: %V (depends on endianness)
       %Z = bitcast <2 x i32*> %V to <2 x i64*> ; yields <2 x i64*>
+
+      ; considering %bi to hold an integer and %bp to hold a pointer,
+      %a = bitcast b64 %bi to i64       ; returns an integer, no-op cast
+      %b = bitcast b64 %bp to i64       ; reinterprets the pointer as an integer, returning its address without exposing provenance
+      %c = bitcast b64 %bp to ptr       ; returns a pointer, no-op cast
+      %d = bitcast b64 %bi to ptr       ; reinterprets the integer as a pointer, returning a pointer with no provenance
+
+      %e = bitcast <2 x b32> %v to i64  ; reinterprets the raw bytes as an integer
+      %f = bitcast <2 x b32> %v to ptr  ; reinterprets the raw bytes as a pointer
+
+      %g = bitcast <2 x b32> %v to <4 x i16> ; reinterprets the raw bytes as integers
 
 .. _i_addrspacecast:
 
@@ -13471,6 +13565,7 @@ instructions may yield different values.
 While ``undef`` and ``poison`` pointers can be frozen, the result is a
 non-dereferenceable pointer. See the
 :ref:`Pointer Aliasing Rules <pointeraliasing>` section for more information.
+Values of the :ref:`byte type <t_byte>` are frozen on a per-bit basis.
 If an aggregate value or vector is frozen, the operand is frozen element-wise.
 The padding of an aggregate isn't considered, since it isn't visible
 without storing it into memory and loading it with a different type.
@@ -13498,6 +13593,9 @@ Example:
       %v.fr = freeze <2 x i32> %v                ; element-wise freeze
       %d = extractelement <2 x i32> %v.fr, i32 0 ; not undef
       %add.f = add i32 %d, %d                    ; even number
+
+      %l = load b32, ptr %p                      ; may be unitialized
+      %f = freeze b32 %l                         ; freezes on a per-bit basis
 
       ; branching on frozen value
       %poison = add nsw i1 %k, undef   ; poison
