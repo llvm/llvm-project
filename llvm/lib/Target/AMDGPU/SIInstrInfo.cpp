@@ -563,12 +563,26 @@ static bool memOpsHaveSameBasePtr(const MachineInstr &MI1,
   return Base1 == Base2;
 }
 
+static bool
+areBaseMemOperandsFromDS(ArrayRef<const MachineOperand *> operands) {
+  if (operands.empty())
+    return false;
+  const auto *MI = operands.front()->getParent();
+  return SIInstrInfo::isDS(*MI);
+}
+
 bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                                       int64_t Offset1, bool OffsetIsScalable1,
                                       ArrayRef<const MachineOperand *> BaseOps2,
                                       int64_t Offset2, bool OffsetIsScalable2,
                                       unsigned ClusterSize,
                                       unsigned NumBytes) const {
+  AMDGPUSubtarget::Generation Gen = ST.getGeneration();
+  if ((Gen >= AMDGPUSubtarget::GFX9 && Gen <= AMDGPUSubtarget::GFX12) &&
+      (areBaseMemOperandsFromDS(BaseOps1) ||
+       areBaseMemOperandsFromDS(BaseOps2)))
+    return false;
+
   // If the mem ops (to be clustered) do not have the same base ptr, then they
   // should not be clustered
   unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;

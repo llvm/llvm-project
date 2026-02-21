@@ -1097,24 +1097,24 @@ define amdgpu_kernel void @sgemm_inner_loop_read2_sequence(ptr addrspace(1) %C, 
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_lshl_b32 s2, s8, 2
 ; GFX9-NEXT:    s_add_i32 s3, s2, 0xc20
-; GFX9-NEXT:    s_addk_i32 s2, 0xc60
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s3
-; GFX9-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-NEXT:    s_addk_i32 s2, 0xc60
+; GFX9-NEXT:    ds_read2_b32 v[2:3], v0 offset1:1
+; GFX9-NEXT:    v_mov_b32_e32 v0, s2
+; GFX9-NEXT:    ds_read2_b32 v[4:5], v0 offset1:1
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 2, v1
-; GFX9-NEXT:    ds_read2_b32 v[0:1], v0 offset1:1
-; GFX9-NEXT:    ds_read2_b32 v[2:3], v2 offset1:1
-; GFX9-NEXT:    ds_read2_b32 v[4:5], v8 offset1:1
+; GFX9-NEXT:    ds_read2_b32 v[0:1], v8 offset1:1
 ; GFX9-NEXT:    ds_read2_b32 v[6:7], v8 offset0:32 offset1:33
-; GFX9-NEXT:    ds_read2_b32 v[8:9], v8 offset0:64 offset1:65
-; GFX9-NEXT:    s_waitcnt lgkmcnt(4)
-; GFX9-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(3)
-; GFX9-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX9-NEXT:    v_add_f32_e32 v0, v0, v3
+; GFX9-NEXT:    v_add_f32_e32 v2, v2, v3
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(2)
-; GFX9-NEXT:    v_add_f32_e32 v0, v0, v4
+; GFX9-NEXT:    v_add_f32_e32 v2, v2, v4
+; GFX9-NEXT:    ds_read2_b32 v[8:9], v8 offset0:64 offset1:65
+; GFX9-NEXT:    v_add_f32_e32 v2, v2, v5
+; GFX9-NEXT:    s_waitcnt lgkmcnt(2)
+; GFX9-NEXT:    v_add_f32_e32 v0, v2, v0
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX9-NEXT:    v_add_f32_e32 v0, v0, v5
+; GFX9-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_add_f32_e32 v0, v0, v6
 ; GFX9-NEXT:    v_add_f32_e32 v0, v0, v7
@@ -1487,25 +1487,25 @@ define amdgpu_kernel void @read2_v2i32_align1_odd_offset(ptr addrspace(1) %out) 
 ; GFX9-ALIGNED-LABEL: read2_v2i32_align1_odd_offset:
 ; GFX9-ALIGNED:       ; %bb.0: ; %entry
 ; GFX9-ALIGNED-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-ALIGNED-NEXT:    ds_read_u8 v0, v2 offset:65
 ; GFX9-ALIGNED-NEXT:    ds_read_u8 v3, v2 offset:66
-; GFX9-ALIGNED-NEXT:    ds_read_u8 v4, v2 offset:67
-; GFX9-ALIGNED-NEXT:    ds_read_u8 v5, v2 offset:68
 ; GFX9-ALIGNED-NEXT:    ds_read_u8 v1, v2 offset:70
-; GFX9-ALIGNED-NEXT:    ds_read_u8 v6, v2 offset:69
-; GFX9-ALIGNED-NEXT:    ds_read_u8 v7, v2 offset:72
-; GFX9-ALIGNED-NEXT:    ds_read_u8 v8, v2 offset:71
+; GFX9-ALIGNED-NEXT:    ds_read_u8 v0, v2 offset:65
+; GFX9-ALIGNED-NEXT:    ds_read_u8 v5, v2 offset:69
+; GFX9-ALIGNED-NEXT:    ds_read_u8 v6, v2 offset:72
+; GFX9-ALIGNED-NEXT:    ds_read_u8 v8, v2 offset:68
+; GFX9-ALIGNED-NEXT:    ds_read_u8 v4, v2 offset:67
+; GFX9-ALIGNED-NEXT:    ds_read_u8 v7, v2 offset:71
 ; GFX9-ALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX9-ALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-ALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
 ; GFX9-ALIGNED-NEXT:    v_lshlrev_b32_e32 v3, 8, v3
-; GFX9-ALIGNED-NEXT:    v_or_b32_e32 v1, v1, v6
-; GFX9-ALIGNED-NEXT:    v_lshlrev_b32_e32 v6, 8, v7
+; GFX9-ALIGNED-NEXT:    v_or_b32_e32 v1, v1, v5
+; GFX9-ALIGNED-NEXT:    v_lshlrev_b32_e32 v5, 8, v6
 ; GFX9-ALIGNED-NEXT:    v_or_b32_e32 v0, v3, v0
-; GFX9-ALIGNED-NEXT:    v_lshlrev_b32_e32 v3, 8, v5
-; GFX9-ALIGNED-NEXT:    v_or_b32_sdwa v6, v6, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX9-ALIGNED-NEXT:    v_lshlrev_b32_e32 v3, 8, v8
+; GFX9-ALIGNED-NEXT:    v_or_b32_sdwa v5, v5, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX9-ALIGNED-NEXT:    v_or_b32_sdwa v3, v3, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX9-ALIGNED-NEXT:    v_or_b32_e32 v1, v6, v1
+; GFX9-ALIGNED-NEXT:    v_or_b32_e32 v1, v5, v1
 ; GFX9-ALIGNED-NEXT:    v_or_b32_e32 v0, v3, v0
 ; GFX9-ALIGNED-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9-ALIGNED-NEXT:    s_endpgm

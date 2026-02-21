@@ -7,16 +7,16 @@
 ; Using -amgpu-schedule-relaxed-occupancy allows scheduler to produce better ILP by further relaxing occupancy target
 
 ; CHECK-LABEL: {{^}}load_fma_store:
-; OCC:    NumVgprs: 24
-; OCC-GCNTRACKER:    NumVgprs: 26
-; RELAX:    NumVgprs: 64
+; OCC:    NumVgprs: 20
+; OCC-GCNTRACKER:    NumVgprs: 22
+; RELAX:    NumVgprs: 60
 ; RELAX-GCNTRACKER:    NumVgprs: 60
-; OCC: NumVGPRsForWavesPerEU: 24
-; OCC-GCNTRACKER: NumVGPRsForWavesPerEU: 26
-; RELAX: NumVGPRsForWavesPerEU: 64
+; OCC: NumVGPRsForWavesPerEU: 20
+; OCC-GCNTRACKER: NumVGPRsForWavesPerEU: 22
+; RELAX: NumVGPRsForWavesPerEU: 60
 ; RELAX-GCNTRACKER: NumVGPRsForWavesPerEU: 60
 ; OCC:    Occupancy: 10
-; OCC-GCNTRACKER:    Occupancy: 9
+; OCC-GCNTRACKER:    Occupancy: 10
 ; RELAX: Occupancy: 4
 ; RELAX-GCNTRACKER: Occupancy: 4
 

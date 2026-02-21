@@ -48,9 +48,9 @@ define void @nonkernel() {
 ; G_GFX9-LABEL: nonkernel:
 ; G_GFX9:       ; %bb.0:
 ; G_GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; G_GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; G_GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; G_GFX9-NEXT:    v_mov_b32_e32 v3, 8
-; G_GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; G_GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; G_GFX9-NEXT:    ds_write_b32 v3, v2
 ; G_GFX9-NEXT:    ds_write_b64 v2, v[0:1]
@@ -60,9 +60,9 @@ define void @nonkernel() {
 ; G_GFX10-LABEL: nonkernel:
 ; G_GFX10:       ; %bb.0:
 ; G_GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; G_GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; G_GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; G_GFX10-NEXT:    v_mov_b32_e32 v3, 8
-; G_GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; G_GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; G_GFX10-NEXT:    ds_write_b32 v3, v2
 ; G_GFX10-NEXT:    ds_write_b64 v2, v[0:1]

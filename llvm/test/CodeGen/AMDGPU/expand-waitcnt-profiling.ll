@@ -374,12 +374,12 @@ define amdgpu_kernel void @test_lgkmcnt_lds_operations(ptr addrspace(3) %lds_ptr
 ; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-EXPAND-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-EXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset1:1
-; GFX11-EXPAND-NEXT:    ds_load_b32 v2, v2 offset:8
-; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX11-EXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-EXPAND-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-EXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v2
+; GFX11-EXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; GFX11-EXPAND-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-EXPAND-NEXT:    ds_load_b32 v2, v2 offset:8
+; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-EXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v2
 ; GFX11-EXPAND-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-EXPAND-NEXT:    s_endpgm
 ;
@@ -391,12 +391,12 @@ define amdgpu_kernel void @test_lgkmcnt_lds_operations(ptr addrspace(3) %lds_ptr
 ; GFX11-NOEXPAND-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NOEXPAND-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-NOEXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset1:1
-; GFX11-NOEXPAND-NEXT:    ds_load_b32 v2, v2 offset:8
-; GFX11-NOEXPAND-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX11-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX11-NOEXPAND-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NOEXPAND-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NOEXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v2
+; GFX11-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; GFX11-NOEXPAND-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NOEXPAND-NEXT:    ds_load_b32 v2, v2 offset:8
+; GFX11-NOEXPAND-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v2
 ; GFX11-NOEXPAND-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NOEXPAND-NEXT:    s_endpgm
 ;
@@ -408,12 +408,12 @@ define amdgpu_kernel void @test_lgkmcnt_lds_operations(ptr addrspace(3) %lds_ptr
 ; GFX12-EXPAND-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-EXPAND-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX12-EXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset1:1
-; GFX12-EXPAND-NEXT:    ds_load_b32 v2, v2 offset:8
-; GFX12-EXPAND-NEXT:    s_wait_dscnt 0x1
-; GFX12-EXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX12-EXPAND-NEXT:    s_wait_dscnt 0x0
-; GFX12-EXPAND-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-EXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v2
+; GFX12-EXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; GFX12-EXPAND-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-EXPAND-NEXT:    ds_load_b32 v2, v2 offset:8
+; GFX12-EXPAND-NEXT:    s_wait_dscnt 0x0
+; GFX12-EXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v2
 ; GFX12-EXPAND-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-EXPAND-NEXT:    s_endpgm
 ;
@@ -425,12 +425,12 @@ define amdgpu_kernel void @test_lgkmcnt_lds_operations(ptr addrspace(3) %lds_ptr
 ; GFX12-NOEXPAND-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NOEXPAND-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX12-NOEXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset1:1
-; GFX12-NOEXPAND-NEXT:    ds_load_b32 v2, v2 offset:8
-; GFX12-NOEXPAND-NEXT:    s_wait_dscnt 0x1
-; GFX12-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX12-NOEXPAND-NEXT:    s_wait_dscnt 0x0
-; GFX12-NOEXPAND-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NOEXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v2
+; GFX12-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; GFX12-NOEXPAND-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NOEXPAND-NEXT:    ds_load_b32 v2, v2 offset:8
+; GFX12-NOEXPAND-NEXT:    s_wait_dscnt 0x0
+; GFX12-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v2
 ; GFX12-NOEXPAND-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-NOEXPAND-NEXT:    s_endpgm
 
