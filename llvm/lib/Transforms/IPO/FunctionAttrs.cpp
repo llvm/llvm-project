@@ -47,6 +47,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -66,6 +67,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "function-attrs"
 
@@ -2376,12 +2378,13 @@ static bool runImpl(CallGraphSCC &SCC, AARGetterT AARGetter) {
 }
 
 static bool addNoRecurseAttrsTopDown(Function &F) {
+  if (F.doesNotRecurse())
+    return false;
+
   // We check the preconditions for the function prior to calling this to avoid
   // the cost of building up a reversible post-order list. We assert them here
   // to make sure none of the invariants this relies on were violated.
   assert(!F.isDeclaration() && "Cannot deduce norecurse without a definition!");
-  assert(!F.doesNotRecurse() &&
-         "This function has already been deduced as norecurs!");
   assert(F.hasInternalLinkage() &&
          "Can only do top-down deduction for internal linkage functions!");
 
@@ -2404,6 +2407,55 @@ static bool addNoRecurseAttrsTopDown(Function &F) {
   return true;
 }
 
+static bool addNoFPClassAttrsTopDown(Function &F) {
+  assert(!F.isDeclaration() && "Cannot deduce nofpclass without a definition!");
+  unsigned NumArgs = F.arg_size();
+  SmallVector<FPClassTest, 8> ArgsNoFPClass(NumArgs, fcAllFlags);
+  FPClassTest RetNoFPClass = fcAllFlags;
+
+  bool Changed = false;
+  for (User *U : F.users()) {
+    auto *CB = dyn_cast<CallBase>(U);
+    if (!CB || CB->getCalledFunction() != &F)
+      return false;
+
+    RetNoFPClass &= CB->getRetNoFPClass();
+    for (unsigned I = 0; I != NumArgs; ++I) {
+      // TODO: Consider computeKnownFPClass, at least with a small search
+      // depth. This will currently not catch non-splat vectors.
+      const APFloat *Cst;
+      if (match(CB->getArgOperand(I), m_APFloat(Cst)))
+        ArgsNoFPClass[I] &= ~Cst->classify();
+      else
+        ArgsNoFPClass[I] &= CB->getParamNoFPClass(I);
+    }
+  }
+
+  LLVMContext &Ctx = F.getContext();
+
+  if (RetNoFPClass != fcNone) {
+    FPClassTest OldAttr = F.getAttributes().getRetNoFPClass();
+    if (OldAttr != RetNoFPClass) {
+      F.addRetAttr(Attribute::getWithNoFPClass(Ctx, RetNoFPClass));
+      Changed = true;
+    }
+  }
+
+  for (unsigned I = 0; I != NumArgs; ++I) {
+    FPClassTest ArgNoFPClass = ArgsNoFPClass[I];
+    if (ArgNoFPClass == fcNone)
+      continue;
+    FPClassTest OldAttr = F.getParamNoFPClass(I);
+    if (OldAttr == ArgNoFPClass)
+      continue;
+
+    F.addParamAttr(I, Attribute::getWithNoFPClass(Ctx, ArgNoFPClass));
+    Changed = true;
+  }
+
+  return Changed;
+}
+
 static bool deduceFunctionAttributeInRPO(Module &M, LazyCallGraph &CG) {
   // We only have a post-order SCC traversal (because SCCs are inherently
   // discovered in post-order), so we accumulate them in a vector and then walk
@@ -2420,13 +2472,15 @@ static bool deduceFunctionAttributeInRPO(Module &M, LazyCallGraph &CG) {
       if (SCC.size() != 1)
         continue;
       Function &F = SCC.begin()->getFunction();
-      if (!F.isDeclaration() && !F.doesNotRecurse() && F.hasInternalLinkage())
+      if (!F.isDeclaration() && F.hasInternalLinkage())
         Worklist.push_back(&F);
     }
   }
   bool Changed = false;
-  for (auto *F : llvm::reverse(Worklist))
+  for (auto *F : llvm::reverse(Worklist)) {
     Changed |= addNoRecurseAttrsTopDown(*F);
+    Changed |= addNoFPClassAttrsTopDown(*F);
+  }
 
   return Changed;
 }
