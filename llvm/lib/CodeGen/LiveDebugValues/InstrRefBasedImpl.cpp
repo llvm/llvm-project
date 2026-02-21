@@ -2530,27 +2530,29 @@ bool InstrRefBasedLDV::mlocJoin(
 
 void InstrRefBasedLDV::findStackIndexInterference(
     SmallVectorImpl<unsigned> &Slots) {
-  // We could spend a bit of time finding the exact, minimal, set of stack
-  // indexes that interfere with each other, much like reg units. Or, we can
-  // rely on the fact that:
-  //  * The smallest / lowest index will interfere with everything at zero
-  //    offset, which will be the largest set of registers,
-  //  * Most indexes with non-zero offset will end up being interference units
-  //    anyway.
-  // So just pick those out and return them.
+  // Find the exact, minimal, set of stack indexes that interfere with each
+  // other, much like reg units.
+  SmallVector<std::pair<MLocTracker::StackSlotPos, unsigned>> AllSlotsBySize(
+      MTracker->StackSlotIdxes.begin(), MTracker->StackSlotIdxes.end());
+  std::sort(AllSlotsBySize.begin(), AllSlotsBySize.end(),
+            [](auto L, auto R) { return L.first.first < R.first.first; });
 
-  // We can rely on a single-byte stack index existing already, because we
-  // initialize them in MLocTracker.
-  auto It = MTracker->StackSlotIdxes.find({8, 0});
-  assert(It != MTracker->StackSlotIdxes.end());
-  Slots.push_back(It->second);
+  BitVector SlotCoverage, ThisSlot;
+  for (auto Pair : AllSlotsBySize) {
+    unsigned Start = Pair.first.second;
+    unsigned End = Start + Pair.first.first;
+    if (End > SlotCoverage.size()) {
+      SlotCoverage.resize(End, false);
+      ThisSlot.resize(End, false);
+    }
 
-  // Find anything that has a non-zero offset and add that too.
-  for (auto &Pair : MTracker->StackSlotIdxes) {
-    // Is offset zero? If so, ignore.
-    if (!Pair.first.second)
-      continue;
-    Slots.push_back(Pair.second);
+    ThisSlot.reset();
+    ThisSlot.set(Start, End);
+
+    if (!SlotCoverage.anyCommon(ThisSlot)) {
+      SlotCoverage |= ThisSlot;
+      Slots.push_back(Pair.second);
+    }
   }
 }
 
