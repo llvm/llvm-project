@@ -211,10 +211,10 @@ TEST_F(UnsafeBufferUsageTest, PointerArithmetic) {
 TEST_F(UnsafeBufferUsageTest, PointerIncrementDecrement) {
   auto Sum = setUpTest(R"cpp(
     void foo(int *p, int *q, int *r, int *s) {
-      ++p;
-      q++;
-      --r;
-      s--;
+      (++p)[5];
+      (q++)[5];
+      (--r)[5];
+      (s--)[5];
     }
   )cpp",
                        "foo");
@@ -230,22 +230,22 @@ TEST_F(UnsafeBufferUsageTest, PointerIncrementDecrement) {
 TEST_F(UnsafeBufferUsageTest, PointerAssignment) {
   auto Sum = setUpTest(R"cpp(
     void foo(int *p, int *q) {
-      p = q + 5;
+      (p = q + 5)[5];
     }
   )cpp",
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
   CHECK_HAS_ENTITY_POINTER_LEVEL(q, 1, Sum);
-  CHECK_NO_ENTITY_POINTER_LEVEL(p, 1, Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 1U);
+  CHECK_HAS_ENTITY_POINTER_LEVEL(p, 1, Sum);
+  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 2U);
 }
 
 TEST_F(UnsafeBufferUsageTest, CompoundAssignment) {
   auto Sum = setUpTest(R"cpp(
     void foo(int *p, int *q) {
-      p += 5;
-      q -= 3;
+      (p += 5)[5];
+      (q -= 3)[5];
     }
   )cpp",
                        "foo");
@@ -258,10 +258,11 @@ TEST_F(UnsafeBufferUsageTest, CompoundAssignment) {
 
 TEST_F(UnsafeBufferUsageTest, MultiLevelPointer) {
   auto Sum = setUpTest(R"cpp(
-    void foo(int **p, int **q) {
+    void foo(int **p, int **q, int **r) {
       (*p)[5];
-      **q;
-      q[5];
+      *(*q);
+      *(q[5]);
+      r[5][5];
     }
   )cpp",
                        "foo");
@@ -269,9 +270,11 @@ TEST_F(UnsafeBufferUsageTest, MultiLevelPointer) {
   EXPECT_NE(Sum, nullptr);
   CHECK_HAS_ENTITY_POINTER_LEVEL(p, 2, Sum);
   CHECK_HAS_ENTITY_POINTER_LEVEL(q, 1, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL(r, 1, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL(r, 2, Sum);
   CHECK_NO_ENTITY_POINTER_LEVEL(p, 1, Sum);
   CHECK_NO_ENTITY_POINTER_LEVEL(q, 2, Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 2U);
+  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 4U);
 }
 
 TEST_F(UnsafeBufferUsageTest, ConditionalOperator) {
@@ -335,27 +338,35 @@ TEST_F(UnsafeBufferUsageTest, ParenthesizedExpression) {
 
 TEST_F(UnsafeBufferUsageTest, ArrayParameter) {
   auto Sum = setUpTest(R"cpp(
-    void foo(int arr[]) {
+    void foo(int arr[], int arr2[][10]) {
+      int n = 5;
       arr[100];
+      arr2[5][n];
     }
   )cpp",
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
   CHECK_HAS_ENTITY_POINTER_LEVEL(arr, 1, Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 1U);
+  CHECK_HAS_ENTITY_POINTER_LEVEL(arr2, 1, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL(arr2, 2, Sum);
+  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 3U);
 }
 
 TEST_F(UnsafeBufferUsageTest, FunctionCall) {
   auto Sum = setUpTest(R"cpp(
-    int * foo() {
+    int ** (*fp)();
+    int ** foo() {
+      fp = &foo;
       foo()[5];
+      (*fp())[5];
     }
   )cpp",
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
   CHECK_HAS_ENTITY_POINTER_LEVEL_FOR_RETURN(foo, 1, Sum);
+  // No (foo, 2) becasue indirect calls are ignored.
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 1U);
 }
 
@@ -366,18 +377,19 @@ TEST_F(UnsafeBufferUsageTest, StructMemberAccess) {
       int (*ptr_to_arr)[10];
     };
     void foo(struct S obj) {
+      int n = 5;
       obj.ptr[5];
-      (*obj.ptr_to_arr)[5]; // FIXME: UnsafeBufferUsage does not return `(*obj.ptr_to_arr)` as an unsafe pointer
+      (*obj.ptr_to_arr)[n];
     }
   )cpp",
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
   CHECK_HAS_ENTITY_POINTER_LEVEL(ptr, 1, Sum);
-  // CHECK_HAS_ENTITY_POINTER_LEVEL(ptr_to_arr, 1, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL(ptr_to_arr, 2, Sum);
   CHECK_NO_ENTITY_POINTER_LEVEL(ptr, 2, Sum);
   CHECK_NO_ENTITY_POINTER_LEVEL(ptr_to_arr, 1, Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 1U);
+  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 2U);
 }
 
 TEST_F(UnsafeBufferUsageTest, StringLiteralSubscript) {
