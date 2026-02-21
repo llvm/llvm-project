@@ -20,6 +20,19 @@ namespace std {
   template<class InputIt, class T>
   InputIt find(InputIt first, InputIt last, const T& value);
 
+  namespace execution {
+    struct sequenced_policy {};
+    struct parallel_policy {};
+    inline constexpr sequenced_policy seq;
+    inline constexpr parallel_policy par;
+  }
+
+  template<class ExecutionPolicy, class InputIt, class T>
+  InputIt find(ExecutionPolicy&& policy, InputIt first, InputIt last, const T& value);
+
+  template<class ExecutionPolicy, class ForwardIt, class T>
+  ForwardIt lower_bound(ExecutionPolicy&& policy, ForwardIt first, ForwardIt last, const T& value);
+
   template<class ForwardIt, class T>
   ForwardIt lower_bound(ForwardIt first, ForwardIt last, const T& value);
 
@@ -193,4 +206,27 @@ namespace other {
 void test_other_namespace() {
   int arr[] = {1};
   if (other::find(arr, arr + 1, 1)) {}
+}
+
+void test_execution_policy() {
+  int arr[] = {1, 2, 3};
+  int* begin = arr;
+  int* end = arr + 3;
+
+  if (std::find(std::execution::seq, begin, end, 2)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+  // CHECK-FIXES: if ((std::find(std::execution::seq, begin, end, 2) != end)) {}
+
+  if (std::find(std::execution::par, begin, end, 2)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+  // CHECK-FIXES: if ((std::find(std::execution::par, begin, end, 2) != end)) {}
+
+  auto it = std::find(std::execution::seq, begin, end, 2);
+  if (it) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+  // CHECK-FIXES: if ((it != end)) {}
+
+  if (std::lower_bound(std::execution::seq, begin, end, 2)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+  // CHECK-FIXES: if ((std::lower_bound(std::execution::seq, begin, end, 2) != end)) {}
 }

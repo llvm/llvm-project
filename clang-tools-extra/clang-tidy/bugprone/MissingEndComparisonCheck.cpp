@@ -88,7 +88,18 @@ void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
     if (Call->getNumArgs() < 2)
       return;
 
-    const Expr *EndArg = Call->getArg(1);
+    unsigned EndIdx = 1;
+    const Expr *FirstArg = Call->getArg(0);
+    if (const auto *Record =
+            FirstArg->getType().getNonReferenceType()->getAsCXXRecordDecl()) {
+      if (Record->getName().ends_with("_policy"))
+        EndIdx = 2;
+    }
+
+    if (Call->getNumArgs() <= EndIdx)
+      return;
+
+    const Expr *EndArg = Call->getArg(EndIdx);
     // Filters nullptr, we assume the intent might be a valid check against null
     if (EndArg->IgnoreParenCasts()->isNullPointerConstant(
             *Result.Context, Expr::NPC_ValueDependentIsNull))
