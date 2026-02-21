@@ -229,6 +229,11 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(
         TC.getCompilerRTArgString(Args, "asan_dynamic", ToolChain::FT_Shared));
   }
+  if (Sanitize.needsFuzzer() && !Args.hasArg(options::OPT_nostdlib) &&
+      !Args.hasArg(options::OPT_nodefaultlibs)) {
+    CmdArgs.push_back(
+        TC.getCompilerRTArgString(Args, "fuzzer", ToolChain::FT_Static));
+  }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
     if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_mdll)) {
@@ -626,6 +631,8 @@ SanitizerMask toolchains::MinGW::getSupportedSanitizers() const {
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Vptr;
+  Res |= SanitizerKind::Fuzzer;
+  Res |= SanitizerKind::FuzzerNoLink;
   return Res;
 }
 
