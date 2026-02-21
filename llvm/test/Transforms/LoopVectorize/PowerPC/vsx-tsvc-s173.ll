@@ -24,7 +24,7 @@ define signext i32 @s173() #0 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA:%.*]], ptr @global_data, i64 0, i32 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr @global_data, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 32
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 48
@@ -64,15 +64,15 @@ define signext i32 @s173() #0 {
 ; CHECK-NEXT:    [[TMP22:%.*]] = fadd <4 x float> [[WIDE_LOAD5]], [[WIDE_LOAD13]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = fadd <4 x float> [[WIDE_LOAD6]], [[WIDE_LOAD14]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = fadd <4 x float> [[WIDE_LOAD7]], [[WIDE_LOAD15]]
-; CHECK-NEXT:    [[TMP25:%.*]] = add nsw i64 [[INDEX]], 16000
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], ptr @global_data, i64 0, i32 0, i64 [[TMP25]]
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP26]], i64 16
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP26]], i64 32
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP26]], i64 48
-; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP26]], i64 64
-; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP26]], i64 80
-; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP26]], i64 96
-; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP26]], i64 112
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr float, ptr @global_data, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP25]], i64 64000
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP25]], i64 64016
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[TMP25]], i64 64032
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[TMP25]], i64 64048
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[TMP25]], i64 64064
+; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP25]], i64 64080
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i8, ptr [[TMP25]], i64 64096
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i8, ptr [[TMP25]], i64 64112
 ; CHECK-NEXT:    store <4 x float> [[TMP17]], ptr [[TMP26]], align 4
 ; CHECK-NEXT:    store <4 x float> [[TMP18]], ptr [[TMP27]], align 4
 ; CHECK-NEXT:    store <4 x float> [[TMP19]], ptr [[TMP28]], align 4
