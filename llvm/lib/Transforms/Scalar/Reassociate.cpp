@@ -304,6 +304,83 @@ static BinaryOperator *LowerNegateToMultiply(Instruction *Neg) {
   return Res;
 }
 
+/// Try to distribute multiply over add when beneficial for reassociation
+/// Transforms: (A + B) * C  →  A*C + B*C
+/// This enables further reassociation opportunities
+static BinaryOperator *tryDistributeMul(BinaryOperator *I) {
+  if (I->getOpcode() != Instruction::Mul)
+    return nullptr;
+
+  Value *MulOp0 = I->getOperand(0);
+  Value *MulOp1 = I->getOperand(1);
+
+  // We need one constant and one add
+  ConstantInt *C = dyn_cast<ConstantInt>(MulOp1);
+  BinaryOperator *Add = dyn_cast<BinaryOperator>(MulOp0);
+
+  // Try swapped operands if needed
+  if (!C || !Add) {
+    C = dyn_cast<ConstantInt>(MulOp0);
+    Add = dyn_cast<BinaryOperator>(MulOp1);
+  }
+
+  if (!C || !Add || Add->getOpcode() != Instruction::Add)
+    return nullptr;
+
+  // Only distribute if the add has one use (avoid code bloat)
+  if (!Add->hasOneUse())
+    return nullptr;
+
+  // ===== NEW PROFITABILITY CHECK =====
+  // Only distribute if both add operands are non-constant
+  // This avoids distributing things like (x + 1) * 3 which don't help
+  Value *AddLHS = Add->getOperand(0);
+  Value *AddRHS = Add->getOperand(1);
+
+  bool AIsConstant = isa<Constant>(AddLHS);
+  bool BIsConstant = isa<Constant>(AddRHS);
+
+  // Don't distribute if either operand is a constant
+  // Distributing (x + 5) * 3 → x*3 + 15 doesn't create reassociation
+  // opportunities
+  if (AIsConstant || BIsConstant) {
+    return nullptr;
+  }
+  // ===== END PROFITABILITY CHECK =====
+
+  // DEBUG: Print what we found
+  dbgs() << "DISTRIBUTING: " << *I << "\n";
+  dbgs() << "  Add: " << *Add << "\n";
+  dbgs() << "  Constant: " << *C << "\n";
+
+  Value *A = Add->getOperand(0);
+  Value *B = Add->getOperand(1);
+
+  IRBuilder<> Builder(I);
+
+  // TODO: Reassociate pass needs comprehensive flag preservation.
+  // Distribution preserves flags, but later passes may drop them.
+  // Create with proper flags preserved
+  Value *AC = Builder.CreateMul(A, C);
+  Value *BC = Builder.CreateMul(B, C);
+
+  if (auto *MulInst = dyn_cast<BinaryOperator>(AC))
+    MulInst->copyIRFlags(I); // Copy nsw/nuw from original mul
+  if (auto *MulInst = dyn_cast<BinaryOperator>(BC))
+    MulInst->copyIRFlags(I);
+
+  Value *NewAdd = Builder.CreateAdd(AC, BC);
+  if (auto *AddInst = dyn_cast<BinaryOperator>(NewAdd))
+    AddInst->copyIRFlags(Add); // Copy nsw/nuw from original add
+
+  // After creating the new operations:
+  dbgs() << "Created AC: " << *AC << "\n";
+  dbgs() << "Created BC: " << *BC << "\n";
+  dbgs() << "Created NewAdd: " << *NewAdd << "\n";
+
+  return cast<BinaryOperator>(NewAdd);
+}
+
 using RepeatedValue = std::pair<Value *, uint64_t>;
 
 /// Given an associative binary expression, return the leaf
@@ -1606,7 +1683,10 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
         continue;
 
       unsigned Occ = ++FactorOccurrences[Factor];
-      if (Occ > MaxOcc) {
+      if (Occ > MaxOcc ||
+          (Occ == MaxOcc &&
+           (isa<Instruction>(Factor) || isa<Argument>(Factor)) &&
+           isa<Constant>(MaxOccVal) && !isa<UndefValue>(MaxOccVal))) {
         MaxOcc = Occ;
         MaxOccVal = Factor;
       }
@@ -1620,7 +1700,10 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
           if (!Duplicates.insert(Factor).second)
             continue;
           unsigned Occ = ++FactorOccurrences[Factor];
-          if (Occ > MaxOcc) {
+          if (Occ > MaxOcc ||
+              (Occ == MaxOcc &&
+               (isa<Instruction>(Factor) || isa<Argument>(Factor)) &&
+               isa<Constant>(MaxOccVal) && !isa<UndefValue>(MaxOccVal))) {
             MaxOcc = Occ;
             MaxOccVal = Factor;
           }
@@ -1633,7 +1716,10 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
           if (!Duplicates.insert(Factor).second)
             continue;
           unsigned Occ = ++FactorOccurrences[Factor];
-          if (Occ > MaxOcc) {
+          if (Occ > MaxOcc ||
+              (Occ == MaxOcc &&
+               (isa<Instruction>(Factor) || isa<Argument>(Factor)) &&
+               isa<Constant>(MaxOccVal) && !isa<UndefValue>(MaxOccVal))) {
             MaxOcc = Occ;
             MaxOccVal = Factor;
           }
@@ -2568,6 +2654,26 @@ PreservedAnalyses ReassociatePass::run(Function &F, FunctionAnalysisManager &) {
   BuildPairMap(RPOT);
 
   MadeChange = false;
+
+  // Pre-process: Distribute multiplications to enable reassociation
+  for (BasicBlock *BI : RPOT) {
+    for (BasicBlock::iterator II = BI->begin(), IE = BI->end(); II != IE;) {
+      Instruction *Inst = &*II;
+      ++II; // Advance before modification
+
+      if (auto *Mul = dyn_cast<BinaryOperator>(Inst)) {
+        if (Mul->getOpcode() == Instruction::Mul) {
+          if (BinaryOperator *Dist = tryDistributeMul(Mul)) {
+            LLVM_DEBUG(dbgs()
+                       << "Distributed: " << *Mul << " -> " << *Dist << "\n");
+            Mul->replaceAllUsesWith(Dist);
+            Mul->eraseFromParent();
+            MadeChange = true;
+          }
+        }
+      }
+    }
+  }
 
   // Traverse the same blocks that were analysed by BuildRankMap.
   for (BasicBlock *BI : RPOT) {
