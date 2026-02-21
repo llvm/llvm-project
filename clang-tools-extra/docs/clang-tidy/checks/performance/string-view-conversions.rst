@@ -15,6 +15,10 @@ Before:
         foo(42, std::string(sv), 3.14); // conversion to std::string is
                                         // redundant as std::string_view
                                         // is expected
+        foo(42, std::string(sv).c_str(), 2.71); // conversion to std::string and
+                                                // then to char* is redundant
+                                                // as std::string_view
+                                                // is expected
         foo(42, std::string("foo"), 3.14); // conversion to std::string is
                                            // redundant as std::string_view
                                            // is expected
@@ -27,5 +31,6 @@ After:
     void foo(int p1, std::string_view p2, double p3);
     void bar(std::string_view sv) {
         foo(42, sv, 3.14);
+        foo(42, sv, 2.71);
         foo(42, "foo", 3.14);
     }
