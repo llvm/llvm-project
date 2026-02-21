@@ -404,6 +404,14 @@ public:
 };
 
 FunctionPass *createX86PostLegalizerCombinerLegacy();
+
+class X86PreLegalizerCombinerPass
+    : public PassInfoMixin<X86PreLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 FunctionPass *createX86PreLegalizerCombiner();
 
 class X86LoadValueInjectionLoadHardeningPass
