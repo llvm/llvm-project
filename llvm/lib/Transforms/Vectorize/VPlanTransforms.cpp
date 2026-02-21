@@ -5428,21 +5428,38 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
   // original iteration.
   auto *CanIV = VectorLoop->getCanonicalIV();
   auto *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
-  VPBuilder PHBuilder(Plan.getVectorPreheader());
+  VPBasicBlock *VectorPH = Plan.getVectorPreheader();
+  VPBuilder PHBuilder(VectorPH, VectorPH->begin());
 
   VPValue *UF = &Plan.getUF();
+  VPValue *Step;
   if (VFToOptimize->isScalable()) {
     VPValue *VScale = PHBuilder.createElementCount(
         VectorLoop->getCanonicalIVType(), ElementCount::getScalable(1));
-    VPValue *VScaleUF = PHBuilder.createOverflowingOp(
-        Instruction::Mul, {VScale, UF}, {true, false});
-    Inc->setOperand(1, VScaleUF);
+    Step = PHBuilder.createOverflowingOp(Instruction::Mul, {VScale, UF},
+                                         {true, false});
     Plan.getVF().replaceAllUsesWith(VScale);
   } else {
-    Inc->setOperand(1, UF);
+    Step = UF;
     Plan.getVF().replaceAllUsesWith(
         Plan.getConstantInt(CanIV->getScalarType(), 1));
   }
+
+  // Materialize vector trip count with the narrowed step: TC - (TC % Step).
+  assert(Plan.getMiddleBlock()->getNumSuccessors() == 2 &&
+         "cannot materialize vector trip count when folding the tail or "
+         "requiring a scalar iteration");
+  VPValue *TC = Plan.getTripCount();
+  VPValue *R =
+      PHBuilder.createNaryOp(Instruction::URem, {TC, Step},
+                             DebugLoc::getCompilerGenerated(), "n.mod.vf");
+  VPValue *VectorTC =
+      PHBuilder.createSub(TC, R, DebugLoc::getCompilerGenerated(), "n.vec");
+  Plan.getVectorTripCount().replaceAllUsesWith(VectorTC);
+
+  Inc->setOperand(1, Step);
+  Plan.getVFxUF().replaceAllUsesWith(Step);
+
   removeDeadRecipes(Plan);
   assert(none_of(*VectorLoop->getEntryBasicBlock(),
                  IsaPred<VPVectorPointerRecipe>) &&
