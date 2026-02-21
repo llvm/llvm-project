@@ -411,6 +411,7 @@ clang-format
 
 libclang
 --------
+- Return valid CXUnaryOperatorKind and CXBinaryOperatorKind for overloaded operators.
 - Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
 
 Code Completion
