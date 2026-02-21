@@ -34,7 +34,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 64
+#define CINDEX_VERSION_MINOR 65
 
 #define CINDEX_VERSION_ENCODE(major, minor) (((major) * 10000) + ((minor) * 1))
 
@@ -4882,6 +4882,12 @@ CINDEX_LINKAGE unsigned clang_EnumDecl_isScoped(CXCursor C);
  * declared 'const'.
  */
 CINDEX_LINKAGE unsigned clang_CXXMethod_isConst(CXCursor C);
+
+/**
+ * Determine if a function, member function, or lambda is a coroutine.
+ *
+ */
+CINDEX_LINKAGE int clang_CXXIsCoroutine(CXCursor cursor);
 
 /**
  * Given a cursor that represents a template, determine
