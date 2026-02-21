@@ -222,15 +222,18 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
         // location.
         return false;
 
-      // For reads, check if they don't alias in the reverse direction and
-      // skip if so.
-      if (CheckReads && R.mayReadFromMemory() &&
-          !ScopedNoAliasAAResult::mayAliasInScopes(Loc->AATags.Scope,
-                                                   MemAA.NoAlias))
-        continue;
-
-      // Check if the memory operations may alias in the forward direction.
-      if (ScopedNoAliasAAResult::mayAliasInScopes(MemAA.Scope,
+      // The following code handles four cases:
+      // 1. When sinking, if the current memory operation's scope is contained
+      // within the sinking-store's noalias-scope, it is safe to sink.
+      // 2. Similarly, when hoisting, if hoisting-load's scope is contained
+      // within the current store's noalias-scope, it is safe to hoist.
+      // 3. When sinking, if the sinking-store's scope is not contained within
+      // the current memory operation's noalias-scope, it is not safe to sink.
+      // 4. When hoisting, if the current store's scope is not contained within
+      // the hoisting-load's noalias-scope, it is not safe to hoist.
+      if (ScopedNoAliasAAResult::mayAliasInScopes(Loc->AATags.Scope,
+                                                  MemAA.NoAlias) &&
+          ScopedNoAliasAAResult::mayAliasInScopes(MemAA.Scope,
                                                   Loc->AATags.NoAlias))
         return false;
     }
