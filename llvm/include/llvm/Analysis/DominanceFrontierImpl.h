@@ -74,14 +74,16 @@ void DominanceFrontierBase<BlockT, IsPostDom>::dump() const {
 #endif
 
 template <class BlockT, bool IsPostDom>
-void DominanceFrontierBase<BlockT, IsPostDom>::calculate(
-    const DomTreeT &DT, const DomTreeNodeT *Node) {
-  BlockT *BB = Node->getBlock();
+void DominanceFrontierBase<BlockT, IsPostDom>::calculate(const DomTreeT &DT) {
+  // NOTE: RootNode might be virtual for `IsPostDom == true`.
+  const DomTreeNodeT *RootNode = DT.getRootNode();
+  BlockT *BB = RootNode->getBlock();
 
   std::vector<DFCalculateWorkObject<BlockT>> workList;
   SmallPtrSet<BlockT *, 32> visited;
 
-  workList.push_back(DFCalculateWorkObject<BlockT>(BB, nullptr, Node, nullptr));
+  workList.push_back(
+      DFCalculateWorkObject<BlockT>(BB, nullptr, RootNode, nullptr));
   do {
     DFCalculateWorkObject<BlockT> *currentW = &workList.back();
     assert(currentW && "Missing work object.");
@@ -90,17 +92,22 @@ void DominanceFrontierBase<BlockT, IsPostDom>::calculate(
     BlockT *parentBB = currentW->parentBB;
     const DomTreeNodeT *currentNode = currentW->Node;
     const DomTreeNodeT *parentNode = currentW->parentNode;
-    assert(currentBB && "Invalid work object. Missing current Basic Block");
     assert(currentNode && "Invalid work object. Missing current Node");
-    DomSetType &S = this->Frontiers[currentBB];
 
     // Visit each block only once.
     if (visited.insert(currentBB).second) {
-      // Loop over CFG successors to calculate DFlocal[currentNode]
-      for (const auto Child : children<GraphTy>(currentBB)) {
-        // Does Node immediately dominate this successor?
-        if (DT[Child]->getIDom() != currentNode)
-          S.insert(Child);
+      // Loop over CFG successors to calculate DFlocal[currentNode].
+      //
+      // Note that for `IsPostDom == true`, virtual root node (empty currentBB)
+      // is an immediate post-dominator for all the exit nodes (which are
+      // virtual node's CFG successors).
+      if (currentBB) {
+        DomSetType &S = this->Frontiers[currentBB];
+        for (const auto Child : children<GraphTy>(currentBB)) {
+          // Does Node immediately dominate this successor?
+          if (DT[Child]->getIDom() != currentNode)
+            S.insert(Child);
+        }
       }
     }
 
@@ -123,17 +130,26 @@ void DominanceFrontierBase<BlockT, IsPostDom>::calculate(
     // If all children are visited or there is any child then pop this block
     // from the workList.
     if (!visitChild) {
-      if (!parentBB) {
+      if (RootNode == currentNode) {
         break;
       }
 
+      workList.pop_back();
+      if (!parentBB) {
+        assert(IsPostDom && "For forward frontiers only root node (processed "
+                            "above) might not have a parent.");
+        // Processing below isn't necessary for the virtual root node in case
+        // of post-dominance frontier.
+        continue;
+      }
+
+      DomSetType &S = this->Frontiers[currentBB];
       typename DomSetType::const_iterator CDFI = S.begin(), CDFE = S.end();
       DomSetType &parentSet = this->Frontiers[parentBB];
       for (; CDFI != CDFE; ++CDFI) {
         if (!DT.properlyDominates(parentNode, DT[*CDFI]))
           parentSet.insert(*CDFI);
       }
-      workList.pop_back();
     }
 
   } while (!workList.empty());
