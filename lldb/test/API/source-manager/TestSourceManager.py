@@ -38,6 +38,9 @@ class SourceManagerTestCase(TestBase):
         # Find the line number to break inside main().
         self.file = os.path.realpath(self.getBuildArtifact("main-copy.c"))
         self.line = line_number("main.c", "// Set break point at this line.")
+        # disable "There is a running process, kill it and restart?" prompt
+        self.runCmd("settings set auto-confirm true")
+        self.addTearDownHook(lambda: self.runCmd("settings clear auto-confirm"))
 
     def modify_content(self):
         # Read the main.c file content.
