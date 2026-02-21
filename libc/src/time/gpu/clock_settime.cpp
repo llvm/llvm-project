@@ -1,4 +1,4 @@
-//===---------- GPU implementation of the clock_gettime function ----------===//
+//===---------- GPU implementation of the clock_settime function ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/time/clock_gettime.h"
+#include "src/time/clock_settime.h"
 
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/time/clock_gettime.h"
-#include "src/__support/time/gpu/time_utils.h"
+#include "src/__support/time/clock_settime.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, clock_gettime, (clockid_t clockid, timespec *ts)) {
-  ErrorOr<int> result = internal::clock_gettime(clockid, ts);
+LLVM_LIBC_FUNCTION(int, clock_settime,
+                   (clockid_t clockid, const timespec *ts)) {
+  ErrorOr<int> result = internal::clock_settime(clockid, ts);
   if (result)
     return result.value();
   return result.error();
