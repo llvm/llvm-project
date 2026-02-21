@@ -432,6 +432,10 @@
 #    error "__cpp_lib_incomplete_container_elements should not be defined before c++17"
 #  endif
 
+#  ifdef __cpp_lib_indirect
+#    error "__cpp_lib_indirect should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_inplace_vector
 #    error "__cpp_lib_inplace_vector should not be defined before c++26"
 #  endif
@@ -1356,6 +1360,10 @@
 
 #  ifdef __cpp_lib_incomplete_container_elements
 #    error "__cpp_lib_incomplete_container_elements should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_indirect
+#    error "__cpp_lib_indirect should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_inplace_vector
@@ -2414,6 +2422,10 @@
 #  endif
 #  if __cpp_lib_incomplete_container_elements != 201505L
 #    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++17"
+#  endif
+
+#  ifdef __cpp_lib_indirect
+#    error "__cpp_lib_indirect should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_inplace_vector
@@ -3730,6 +3742,10 @@
 #  endif
 #  if __cpp_lib_incomplete_container_elements != 201505L
 #    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_indirect
+#    error "__cpp_lib_indirect should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_inplace_vector
@@ -5238,6 +5254,10 @@
 #  endif
 #  if __cpp_lib_incomplete_container_elements != 201505L
 #    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_indirect
+#    error "__cpp_lib_indirect should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_inplace_vector
@@ -7094,6 +7114,13 @@
 #  endif
 #  if __cpp_lib_incomplete_container_elements != 201505L
 #    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_indirect
+#    error "__cpp_lib_indirect should be defined in c++26"
+#  endif
+#  if __cpp_lib_indirect != 202502L
+#    error "__cpp_lib_indirect should have the value 202502L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
