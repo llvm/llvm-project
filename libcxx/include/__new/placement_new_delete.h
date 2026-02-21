@@ -17,7 +17,7 @@
 #endif
 
 #if defined(_LIBCPP_ABI_VCRUNTIME)
-#  include <new.h>
+#  include <vcruntime_new.h>
 #else
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void*
 operator new(std::size_t, void* __p) _NOEXCEPT {

@@ -201,5 +201,7 @@ void test() {
 
     std::launder(ptr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
+
+  std::get_new_handler(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 }
