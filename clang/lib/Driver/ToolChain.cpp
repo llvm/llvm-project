@@ -117,9 +117,16 @@ llvm::vfs::FileSystem &ToolChain::getVFS() const {
 }
 
 bool ToolChain::useIntegratedAs() const {
-  return Args.hasFlag(options::OPT_fintegrated_as,
-                      options::OPT_fno_integrated_as,
-                      IsIntegratedAssemblerDefault());
+  // When -save-temps is enabled in flang, it will attempt to use -cc1as which
+  // will not work. For now, we would like -save-temps to imply
+  // -fno-integrated-as. Eventually, we may want to consider having -fc1as - the
+  // flang analog of clang's cc1as.
+  if (D.IsFlangMode() && Args.hasArg(options::OPT_save_temps_EQ))
+    return false;
+  else
+    return Args.hasFlag(options::OPT_fintegrated_as,
+                        options::OPT_fno_integrated_as,
+                        IsIntegratedAssemblerDefault());
 }
 
 bool ToolChain::useIntegratedBackend() const {
