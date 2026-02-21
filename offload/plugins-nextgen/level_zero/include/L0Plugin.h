@@ -56,8 +56,7 @@ private:
   Expected<int32_t> findDevices();
 
 public:
-  LevelZeroPluginTy()
-      : GenericPluginTy(getTripleArch()) {}
+  LevelZeroPluginTy() : GenericPluginTy(getTripleArch()) {}
   virtual ~LevelZeroPluginTy() = default;
 
   L0DeviceTLSTy &getDeviceTLS(int32_t DeviceId) {
