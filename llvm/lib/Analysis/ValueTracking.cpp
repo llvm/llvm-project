@@ -2914,6 +2914,64 @@ static bool isGEPKnownNonNull(const GEPOperator *GEP, const SimplifyQuery &Q,
   return false;
 }
 
+static bool transferNonZero(const Value *Op, const Value *V, unsigned Depth) {
+  if (Op == V)
+    return true;
+  if (Depth++ > MaxAnalysisRecursionDepth / 2)
+    return false;
+  const Operator *I = dyn_cast<Operator>(V);
+  if (!I)
+    return false;
+  switch (I->getOpcode()) {
+  case Instruction::And:
+    return transferNonZero(I->getOperand(0), V, Depth) ||
+           transferNonZero(I->getOperand(1), V, Depth);
+  case Instruction::Select: {
+    const Value *Lhs, *Rhs;
+    auto MinOrMax = matchSelectPattern(I, Lhs, Rhs).Flavor;
+    if (MinOrMax == SPF_UMIN)
+      return transferNonZero(Lhs, V, Depth) || transferNonZero(Rhs, V, Depth);
+    if (MinOrMax == SPF_SMIN)
+      return (match(Rhs, m_StrictlyPositive()) &&
+              transferNonZero(Lhs, V, Depth)) ||
+             (match(Lhs, m_StrictlyPositive()) &&
+              transferNonZero(Rhs, V, Depth));
+    if (MinOrMax == SPF_SMAX)
+      return (match(Rhs, m_Negative()) && transferNonZero(Lhs, V, Depth)) ||
+             (match(Lhs, m_Negative()) && transferNonZero(Rhs, V, Depth));
+    break;
+  }
+  case Instruction::Call:
+  case Instruction::Invoke:
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+      default:
+        break;
+      case Intrinsic::ctpop:
+      case Intrinsic::bitreverse:
+      case Intrinsic::bswap:
+      case Intrinsic::abs:
+        return transferNonZero(II->getArgOperand(0), V, Depth);
+      case Intrinsic::umin:
+        return transferNonZero(II->getArgOperand(0), V, Depth) ||
+               transferNonZero(II->getArgOperand(1), V, Depth);
+      case Intrinsic::smin:
+        return match(II->getArgOperand(1), m_StrictlyPositive()) &&
+               transferNonZero(II->getArgOperand(0), V, Depth);
+      case Intrinsic::smax:
+        return match(II->getArgOperand(1), m_Negative()) &&
+               transferNonZero(II->getArgOperand(0), V, Depth);
+      case Intrinsic::ptrmask:
+        return transferNonZero(II->getArgOperand(0), V, Depth);
+      }
+    }
+    break;
+  default:
+    break;
+  }
+  return false;
+}
+
 static bool isKnownNonNullFromDominatingCondition(const Value *V,
                                                   const Instruction *CtxI,
                                                   const DominatorTree *DT) {
@@ -2943,22 +3001,32 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
     }
 
     // If the value is used as a load/store, then the pointer must be non null.
-    if (V == getLoadStorePointerOperand(UI)) {
-      if (!NullPointerIsDefined(UI->getFunction(),
-                                V->getType()->getPointerAddressSpace()) &&
-          DT->dominates(UI, CtxI))
-        return true;
+    if (auto *LV = getLoadStorePointerOperand(UI)) {
+      if (transferNonZero(LV, V, /*Depth=*/0)) {
+        if (!NullPointerIsDefined(UI->getFunction(),
+                                  V->getType()->getPointerAddressSpace()) &&
+            DT->dominates(UI, CtxI))
+          return true;
+      }
     }
 
-    if ((match(UI, m_IDiv(m_Value(), m_Specific(V))) ||
-         match(UI, m_IRem(m_Value(), m_Specific(V)))) &&
+    Value *X;
+    if ((match(UI, m_IDiv(m_Value(), m_Value(X))) ||
+         match(UI, m_IRem(m_Value(), m_Value(X)))) &&
+        transferNonZero(X, V, /*Depth=*/0) &&
         isValidAssumeForContext(UI, CtxI, DT))
       return true;
 
     // Consider only compare instructions uniquely controlling a branch
     Value *RHS;
     CmpPredicate Pred;
-    if (!match(UI, m_c_ICmp(Pred, m_Specific(V), m_Value(RHS))))
+    if (!match(UI, m_ICmp(Pred, m_Value(X), m_Value(RHS))))
+      continue;
+
+    if (transferNonZero(RHS, V, /*Depth=*/0)) {
+      Pred = CmpInst::getSwappedPredicate(Pred);
+      std::swap(RHS, X);
+    } else if (!transferNonZero(X, V, /*Depth=*/0))
       continue;
 
     bool NonNullIfTrue;
