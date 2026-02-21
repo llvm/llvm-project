@@ -730,6 +730,285 @@ entry:
   ret void
 }
 
+define void @store_factor8(ptr %ptr, <4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, <4 x i32> %a3,
+                                     <4 x i32> %a4, <4 x i32> %a5, <4 x i32> %a6, <4 x i32> %a7) {
+; CHECK-LABEL: store_factor8:
+; CHECK:       .Lfunc_begin17:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0:
+; CHECK:  zip1	[[V1:.*s]], [[I1:.*s]], [[I5:.*s]]
+; CHECK-NEXT:  zip2	[[V5:.*s]], [[I1]], [[I5]]
+; CHECK-NEXT:  zip1	[[V2:.*s]], [[I2:.*s]], [[I6:.*s]]
+; CHECK-NEXT:  zip2 [[V6:.*s]], [[I2]], [[I6]]
+; CHECK-NEXT:  zip1	[[V3:.*s]], [[I3:.*s]], [[I7:.*s]]
+; CHECK-NEXT:  zip2	[[V7:.*s]], [[I3]], [[I7]]
+; CHECK-NEXT:  zip1	[[V4:.*s]], [[I4:.*s]], [[I8:.*s]]
+; CHECK-NEXT:  zip2	[[V8:.*s]], [[I4]], [[I8]]
+; CHECK-NEXT:  st4 { [[V1]], [[V2]], [[V3]], [[V4]] }, [x0], #64
+; CHECK-NEXT:  st4 { [[V5]], [[V6]], [[V7]], [[V8]] }, [x0]
+; CHECK-NEXT:  ret
+
+  %v0 = shufflevector <4 x i32> %a0, <4 x i32> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v1 = shufflevector <4 x i32> %a2, <4 x i32> %a3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v2 = shufflevector <4 x i32> %a4, <4 x i32> %a5, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v3 = shufflevector <4 x i32> %a6, <4 x i32> %a7, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+
+  %s0 = shufflevector <8 x i32> %v0, <8 x i32> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %s1 = shufflevector <8 x i32> %v2, <8 x i32> %v3, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+
+  %interleaved.vec = shufflevector <16 x i32> %s0, <16 x i32> %s1, <32 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
+  store <32 x i32> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
+define dso_local void @store_factor8_1(ptr %dst, ptr %temp1, i64 %offset.idx, <8 x i16> %x, <8 x i16> %y,  <8 x i16> %z) {
+; CHECK-LABEL: store_factor8_1:
+; CHECK:       .Lfunc_begin18:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    ld1r { v3.8h }, [x1]
+; CHECK-NEXT:    movi v4.8h, #1
+; CHECK-NEXT:    movi v19.2d, #0000000000000000
+; CHECK-NEXT:    add x8, x0, x2, lsl #1
+; CHECK-NEXT:    orr v3.8h, #1
+; CHECK-NEXT:    add v3.8h, v3.8h, v4.8h
+; CHECK-NEXT:    zip1 v16.8h, v19.8h, v3.8h
+; CHECK-NEXT:    zip1 v17.8h, v0.8h, v19.8h
+; CHECK-NEXT:    zip1 v18.8h, v1.8h, v2.8h
+; CHECK-NEXT:    zip2 v3.8h, v19.8h, v3.8h
+; CHECK-NEXT:    zip2 v4.8h, v0.8h, v19.8h
+; CHECK-NEXT:    zip2 v5.8h, v1.8h, v2.8h
+; CHECK-NEXT:    mov v6.16b, v19.16b
+; CHECK-NEXT:    st4 { v16.8h, v17.8h, v18.8h, v19.8h }, [x8], #64
+; CHECK-NEXT:    st4 { v3.8h, v4.8h, v5.8h, v6.8h }, [x8]
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i32, ptr %temp1, align 4
+  %broadcast.splatinsert1 = insertelement <8 x i32> poison, i32 %0, i64 0
+  %broadcast.splat2 = shufflevector <8 x i32> %broadcast.splatinsert1, <8 x i32> poison, <8 x i32> zeroinitializer
+  %1 = getelementptr i16, ptr %dst, i64 %offset.idx
+  %2 = trunc <8 x i32> %broadcast.splat2 to <8 x i16>
+  %3 = or <8 x i16> %2, splat (i16 1)
+  %4 = add <8 x i16> %3, splat (i16 1)
+  %5 = shufflevector <8 x i16> zeroinitializer, <8 x i16> %x, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %6 = shufflevector <8 x i16> %y, <8 x i16> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %7 = shufflevector <8 x i16> %4, <8 x i16> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %8 = shufflevector <8 x i16> %z, <8 x i16> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %9 = shufflevector <16 x i16> %5, <16 x i16> %6, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %10 = shufflevector <16 x i16> %7, <16 x i16> %8, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %11 = shufflevector <32 x i16> %9, <32 x i16> %10, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+  %interleaved.vec = shufflevector <64 x i16> %11, <64 x i16> poison, <64 x i32> <i32 0, i32 8, i32 16, i32 24, i32 32, i32 40, i32 48, i32 56, i32 1, i32 9, i32 17, i32 25, i32 33, i32 41, i32 49, i32 57, i32 2, i32 10, i32 18, i32 26, i32 34, i32 42, i32 50, i32 58, i32 3, i32 11, i32 19, i32 27, i32 35, i32 43, i32 51, i32 59, i32 4, i32 12, i32 20, i32 28, i32 36, i32 44, i32 52, i32 60, i32 5, i32 13, i32 21, i32 29, i32 37, i32 45, i32 53, i32 61, i32 6, i32 14, i32 22, i32 30, i32 38, i32 46, i32 54, i32 62, i32 7, i32 15, i32 23, i32 31, i32 39, i32 47, i32 55, i32 63>
+  store <64 x i16> %interleaved.vec, ptr %1, align 2
+  ret void
+}
+
+define void @store_factor16(ptr %ptr, <4 x i32> %a0,  <4 x i32> %a1,  <4 x i32> %a2,  <4 x i32> %a3,
+                                      <4 x i32> %a4,  <4 x i32> %a5,  <4 x i32> %a6,  <4 x i32> %a7,
+                                      <4 x i32> %a8,  <4 x i32> %a9,  <4 x i32> %a10, <4 x i32> %a11,
+                                      <4 x i32> %a12, <4 x i32> %a13, <4 x i32> %a14, <4 x i32> %a15) {
+; CHECK-LABEL: store_factor16:
+; CHECK:       .Lfunc_begin19:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0:
+; CHECK:      	zip1	[[V05:.*s]], [[I05:.*s]], [[I13:.*s]]
+; CHECK-NEXT:  	zip1	[[V01:.*s]], [[I01:.*s]], [[I09:.*s]]
+; CHECK-NEXT:  	zip1	[[V02:.*s]], [[I02:.*s]], [[I10:.*s]]
+; CHECK-NEXT:  	zip1	[[V06:.*s]], [[I06:.*s]], [[I14:.*s]]
+; CHECK-NEXT:  	zip1	[[V07:.*s]], [[I07:.*s]], [[I15:.*s]]
+; CHECK-NEXT:  	zip2	[[V09:.*s]], [[I01]], [[I09]]
+; CHECK-NEXT:  	zip2	[[V13:.*s]], [[I05]], [[I13]]
+; CHECK-NEXT:  	zip1	[[V03:.*s]], [[I03:.*s]], [[I11:.*s]]
+; CHECK-NEXT:  	zip1	[[V04:.*s]], [[I04:.*s]], [[I12:.*s]]
+; CHECK-NEXT:  	zip1	[[V08:.*s]], [[I08:.*s]], [[I16:.*s]]
+; CHECK-NEXT:  	zip2	[[V10:.*s]], [[I02]], [[I10]]
+; CHECK-NEXT:  	zip2	[[V14:.*s]], [[I06]], [[I14]]
+; CHECK-NEXT:  	zip2	[[V11:.*s]], [[I03]], [[I11]]
+; CHECK-NEXT:  	zip1	[[V17:.*s]], [[V01]], [[V05]]
+; CHECK-NEXT:  	zip2	[[V15:.*s]], [[I07]], [[I15]]
+; CHECK-NEXT:  	zip2	[[V21:.*s]], [[V01]], [[V05]]
+; CHECK-NEXT:  	zip1	[[V18:.*s]], [[V02]], [[V06]]
+; CHECK-NEXT:  	zip2	[[V12:.*s]], [[I04]], [[I12]]
+; CHECK-NEXT:  	zip2	[[V16:.*s]], [[I08]], [[I16]]
+; CHECK-NEXT:  	zip1	[[V19:.*s]], [[V03]], [[V07]]
+; CHECK-NEXT:  	zip2	[[V22:.*s]], [[V02]], [[V06]]
+; CHECK-NEXT:  	zip1	[[V25:.*s]], [[V09]], [[V13]]
+; CHECK-NEXT:  	zip1	[[V20:.*s]], [[V04]], [[V08]]
+; CHECK-NEXT:  	zip2	[[V23:.*s]], [[V03]], [[V07]]
+; CHECK-NEXT:  	zip1	[[V26:.*s]], [[V10]], [[V14]]
+; CHECK-NEXT:  	zip2	[[V29:.*s]], [[V09]], [[V13]]
+; CHECK-NEXT:  	zip2	[[V24:.*s]], [[V04]], [[V08]]
+; CHECK-NEXT:  	zip1	[[V27:.*s]], [[V11]], [[V15]]
+; CHECK-NEXT:  	zip2	[[V30:.*s]], [[V10]], [[V14]]
+; CHECK-NEXT:  	zip1	[[V28:.*s]], [[V12]], [[V16]]
+; CHECK-NEXT:  	zip2	[[V31:.*s]], [[V11]], [[V15]]
+; CHECK-NEXT:  	zip2	[[V32:.*s]], [[V12]], [[V16]]
+; CHECK-NEXT:  	st4	{ [[V17]], [[V18]], [[V19]], [[V20]] }, [x8], #64
+; CHECK-NEXT:  	ldp	d9, d8, [sp, #48]               // 16-byte Folded Reload
+; CHECK-NEXT:  	ldp	d11, d10, [sp, #32]             // 16-byte Folded Reload
+; CHECK-NEXT:  	st4	{ [[V21]], [[V22]], [[V23]], [[V24]] }, [x8]
+; CHECK-NEXT:  	add	x8, x0, #128
+; CHECK-NEXT:  	ldp	d13, d12, [sp, #16]             // 16-byte Folded Reload
+; CHECK-NEXT:  	st4	{ [[V25]], [[V26]], [[V27]], [[V28]] }, [x8]
+; CHECK-NEXT:  	add	x8, x0, #192
+; CHECK-NEXT:  	st4	{ [[V29]], [[V30]], [[V31]], [[V32]] }, [x8]
+; CHECK-NEXT:  	ldp	d15, d14, [sp], #64             // 16-byte Folded Reload
+; CHECK-NEXT:  	ret
+
+  %v0 = shufflevector <4 x i32> %a0, <4 x i32> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v1 = shufflevector <4 x i32> %a2, <4 x i32> %a3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v2 = shufflevector <4 x i32> %a4, <4 x i32> %a5, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v3 = shufflevector <4 x i32> %a6, <4 x i32> %a7, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v4 = shufflevector <4 x i32> %a8, <4 x i32> %a9, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v5 = shufflevector <4 x i32> %a10, <4 x i32> %a11, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v6 = shufflevector <4 x i32> %a12, <4 x i32> %a13, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v7 = shufflevector <4 x i32> %a14, <4 x i32> %a15, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+
+  %s0 = shufflevector <8 x i32> %v0, <8 x i32> %v1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %s1 = shufflevector <8 x i32> %v2, <8 x i32> %v3, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %s2 = shufflevector <8 x i32> %v4, <8 x i32> %v5, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %s3 = shufflevector <8 x i32> %v6, <8 x i32> %v7, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+
+  %d0 = shufflevector <16 x i32> %s0, <16 x i32> %s1, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %d1 = shufflevector <16 x i32> %s2, <16 x i32> %s3, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+
+  %interleaved.vec = shufflevector <32 x i32> %d0, <32 x i32> %d1, <64 x i32>  <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60, i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 34, i32 38, i32 42, i32 46, i32 50, i32 54, i32 58, i32 62, i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
+  store <64 x i32> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
+define dso_local void @store_no_interleave(ptr noalias noundef readonly captures(none) %a, ptr noalias noundef readonly captures(none) %b, i8 noundef %c) {
+; CHECK-LABEL: store_no_interleave:
+; CHECK:       .Lfunc_begin20:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    movi v0.4h, #1
+; CHECK-NEXT:    fmov s1, w2
+; CHECK-NEXT:    ldrb w8, [x0]
+; CHECK-NEXT:    adrp x9, .LCPI20_3
+; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI20_3]
+; CHECK-NEXT:    adrp x9, .LCPI20_1
+; CHECK-NEXT:    ldr q5, [x9, :lo12:.LCPI20_1]
+; CHECK-NEXT:    and v0.8b, v1.8b, v0.8b
+; CHECK-NEXT:    dup v0.16b, v0.b[0]
+; CHECK-NEXT:    dup v1.16b, w2
+; CHECK-NEXT:    mov v2.16b, v1.16b
+; CHECK-NEXT:    tbl v3.16b, { v0.16b, v1.16b }, v3.16b
+; CHECK-NEXT:    tbl v5.16b, { v0.16b, v1.16b }, v5.16b
+; CHECK-NEXT:    mov v2.b[2], w8
+; CHECK-NEXT:    mov v2.b[10], w8
+; CHECK-NEXT:    adrp x8, .LCPI20_2
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI20_2]
+; CHECK-NEXT:    adrp x8, .LCPI20_0
+; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI20_0]
+; CHECK-NEXT:    ldrsw x8, [x1]
+; CHECK-NEXT:    tbl v4.16b, { v0.16b, v1.16b }, v4.16b
+; CHECK-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v6.16b
+; CHECK-NEXT:    lsl x8, x8, #3
+; CHECK-NEXT:    trn2 v1.4s, v2.4s, v3.4s
+; CHECK-NEXT:    trn2 v3.4s, v2.4s, v4.4s
+; CHECK-NEXT:    trn2 v4.4s, v2.4s, v5.4s
+; CHECK-NEXT:    trn2 v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    stp q3, q1, [x8, #-32]
+; CHECK-NEXT:    stp q0, q4, [x8, #-64]
+; CHECK-NEXT:    ret
+entry:
+  %b.promoted = load i32, ptr %b, align 4
+  %0 = insertelement <2 x i8> poison, i8 %c, i64 0
+  %1 = shufflevector <2 x i8> %0, <2 x i8> poison, <4 x i32> zeroinitializer
+  %2 = and <4 x i8> %1, <i8 1, i8 1, i8 -1, i8 -1>
+  %3 = load i32, ptr %a, align 4
+  %conv18 = trunc i32 %3 to i8
+  %4 = sext i32 %b.promoted to i64
+  %5 = add nsw i64 %4, -1
+  %n.vec30 = and i64 %5, -8
+  %broadcast.splatinsert33 = insertelement <8 x i8> poison, i8 %conv18, i64 0
+  %broadcast.splat34 = shufflevector <8 x i8> %broadcast.splatinsert33, <8 x i8> poison, <8 x i32> zeroinitializer
+  %broadcast.splatinsert35 = insertelement <8 x i8> poison, i8 %c, i64 0
+  %broadcast.splat36 = shufflevector <8 x i8> %broadcast.splatinsert35, <8 x i8> poison, <8 x i32> zeroinitializer
+  %15 = shufflevector <8 x i8> %broadcast.splatinsert35, <8 x i8> poison, <16 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+  %16 = shufflevector <8 x i8> %broadcast.splat34, <8 x i8> %broadcast.splat36, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %17 = shufflevector <4 x i8> %2, <4 x i8> poison, <16 x i32> zeroinitializer
+  %18 = shufflevector <8 x i8> %broadcast.splatinsert35, <8 x i8> poison, <16 x i32> zeroinitializer
+  %19 = shufflevector <16 x i8> %15, <16 x i8> %16, <32 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %20 = shufflevector <16 x i8> %17, <16 x i8> %18, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %interleaved.vec45 = shufflevector <32 x i8> %19, <32 x i8> %20, <64 x i32> <i32 poison, i32 8, i32 16, i32 24, i32 32, i32 40, i32 48, i32 56, i32 poison, i32 9, i32 17, i32 25, i32 33, i32 41, i32 49, i32 57, i32 poison, i32 10, i32 18, i32 26, i32 34, i32 42, i32 50, i32 58, i32 poison, i32 11, i32 19, i32 27, i32 35, i32 43, i32 51, i32 59, i32 poison, i32 12, i32 20, i32 28, i32 36, i32 44, i32 52, i32 60, i32 poison, i32 13, i32 21, i32 29, i32 37, i32 45, i32 53, i32 61, i32 poison, i32 14, i32 22, i32 30, i32 38, i32 46, i32 54, i32 62, i32 poison, i32 15, i32 23, i32 31, i32 39, i32 47, i32 55, i32 63>
+  %offset.idx = sub i64 %5, 0
+  %21 = shl nsw i64 %offset.idx, 3
+  %22 = getelementptr i8, ptr null, i64 %21
+  %23 = getelementptr i8, ptr %22, i64 -56
+  store <64 x i8> %interleaved.vec45, ptr %23, align 8
+  ret void
+}
+
+define dso_local void @store_no_interleave1(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, ptr %g, ptr %h, ptr %i,
+; CHECK-LABEL: store_no_interleave1:
+; CHECK:       .Lfunc_begin21:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    ldr x8, [sp]
+; CHECK-NEXT:    ldr d3, [x8]
+; CHECK-NEXT:    zip1 v4.4h, v3.4h, v0.4h
+; CHECK-NEXT:    zip2 v0.4h, v3.4h, v0.4h
+; CHECK-NEXT:    stp d4, d0, [x0]
+; CHECK-NEXT:    ldr d0, [x8]
+; CHECK-NEXT:    zip1 v3.4h, v0.4h, v1.4h
+; CHECK-NEXT:    zip2 v1.4h, v0.4h, v1.4h
+; CHECK-NEXT:    zip2 v0.4h, v0.4h, v2.4h
+; CHECK-NEXT:    stp d3, d1, [x0]
+; CHECK-NEXT:    zip2 v5.2s, v4.2s, v3.2s
+; CHECK-NEXT:    ldr d1, [x8]
+; CHECK-NEXT:    zip1 v1.4h, v1.4h, v2.4h
+; CHECK-NEXT:    zip1 v2.2s, v4.2s, v3.2s
+; CHECK-NEXT:    stp d1, d0, [x0]
+; CHECK-NEXT:    zip2 v0.2s, v3.2s, v1.2s
+; CHECK-NEXT:    str d4, [x1]
+; CHECK-NEXT:    zip1 v4.2s, v3.2s, v1.2s
+; CHECK-NEXT:    str d3, [x2]
+; CHECK-NEXT:    stp d2, d5, [x3]
+; CHECK-NEXT:    mov v5.d[1], v0.d[0]
+; CHECK-NEXT:    str d3, [x4]
+; CHECK-NEXT:    str d1, [x5]
+; CHECK-NEXT:    stp d4, d0, [x6]
+; CHECK-NEXT:    str q5, [x7]
+; CHECK-NEXT:    ret
+                                            <4 x i16> %j, <4 x i16> %k, <4 x i16> %l) local_unnamed_addr #0 {
+entry:
+  %0 = load <4 x i16>, ptr %i, align 8
+  %vzip.i = shufflevector <4 x i16> %0, <4 x i16> %j, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+  store <4 x i16> %vzip.i, ptr %a, align 8
+  %vzip1.i = shufflevector <4 x i16> %0, <4 x i16> %j, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
+  %1 = getelementptr inbounds nuw i8, ptr %a, i64 8
+  store <4 x i16> %vzip1.i, ptr %1 , align 8
+  %2 = load <4 x i16>, ptr %i, align 8
+  %vzip.i22 = shufflevector <4 x i16> %2, <4 x i16> %k, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+  store <4 x i16> %vzip.i22, ptr %a, align 8
+  %vzip1.i23 = shufflevector <4 x i16> %2, <4 x i16> %k, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
+  store <4 x i16> %vzip1.i23, ptr %1, align 8
+  %3 = load <4 x i16>, ptr %i, align 8
+  %vzip.i26 = shufflevector <4 x i16> %3, <4 x i16> %l, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+  store <4 x i16> %vzip.i26, ptr %a, align 8
+  %vzip1.i27 = shufflevector <4 x i16> %2, <4 x i16> %l, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
+  store <4 x i16> %vzip1.i27, ptr %1, align 8
+  store <4 x i16> %vzip.i, ptr %b, align 8
+  store <4 x i16> %vzip.i22, ptr %c, align 8
+  %4 = shufflevector <4 x i16> %vzip.i, <4 x i16> %vzip.i22, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %5 = shufflevector <4 x i16> %vzip.i, <4 x i16> %vzip.i22, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+  store <4 x i16> %4, ptr %d, align 8
+  %6 = getelementptr inbounds nuw i8, ptr %d, i64 8
+  store <4 x i16> %5, ptr %6, align 8
+  store <4 x i16> %vzip.i22, ptr %e, align 8
+  store <4 x i16> %vzip.i26, ptr %f, align 8
+  %7 = shufflevector <4 x i16> %vzip.i22, <4 x i16> %vzip.i26, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %8 = shufflevector <4 x i16> %vzip.i22, <4 x i16> %vzip.i26, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+  store <4 x i16> %7, ptr %g, align 8
+  %9 = getelementptr inbounds nuw i8, ptr %g, i64 8
+  store <4 x i16> %8, ptr %9, align 8
+  %10 = shufflevector <4 x i16> %5, <4 x i16> %8, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x i16> %10, ptr %h, align 16
+  ret void
+}
+
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

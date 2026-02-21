@@ -231,6 +231,8 @@ public:
 
   bool hasPairedLoad(EVT LoadedType, Align &RequiredAlignment) const override;
 
+  bool hasInterleaveWithGatherScatter() const override { return true; }
+
   unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
 
   bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
@@ -240,6 +242,9 @@ public:
   bool lowerInterleavedStore(Instruction *Store, Value *Mask,
                              ShuffleVectorInst *SVI, unsigned Factor,
                              const APInt &GapMask) const override;
+
+  bool lowerInterleavedStoreWithShuffle(StoreInst *SI, ShuffleVectorInst *SVI,
+                                        unsigned Factor) const;
 
   bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
                                         IntrinsicInst *DI) const override;

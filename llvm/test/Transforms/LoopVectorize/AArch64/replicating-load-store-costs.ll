@@ -335,50 +335,50 @@ define void @scalar_store_cost_after_discarding_interleave_group(ptr %dst, i32 %
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TEMP1:%.*]] = alloca [64 x i32], align 4
 ; CHECK-NEXT:    call void @init(ptr [[TEMP1]])
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[TMP21:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[X]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr <8 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <8 x i32> [[BROADCAST_SPLAT]], splat (i32 -171254)
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <8 x i32> [[TMP1]], splat (i32 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <8 x i32> [[TMP3]], splat (i32 1)
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr <8 x i32> [[TMP4]], splat (i32 1)
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc <8 x i32> [[TMP5]] to <8 x i16>
+; CHECK-NEXT:    [[TMP7:%.*]] = sub <8 x i32> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr <8 x i32> [[TMP7]], splat (i32 1)
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc <8 x i32> [[TMP8]] to <8 x i16>
+; CHECK-NEXT:    [[TMP10:%.*]] = or <8 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
+; CHECK-NEXT:    [[TMP11:%.*]] = add <8 x i32> [[TMP10]], splat (i32 1)
+; CHECK-NEXT:    [[TMP12:%.*]] = lshr <8 x i32> [[TMP11]], splat (i32 1)
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc <8 x i32> [[TMP12]] to <8 x i16>
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP21:%.*]] = mul i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TEMP1]], align 4
-; CHECK-NEXT:    [[SHR_0:%.*]] = lshr i32 [[X]], 1
-; CHECK-NEXT:    [[MUL_0:%.*]] = mul i32 [[X]], -171254
-; CHECK-NEXT:    [[SHR_1:%.*]] = lshr i32 [[MUL_0]], 1
-; CHECK-NEXT:    [[ADD_0:%.*]] = add i32 [[SHR_0]], [[SHR_1]]
-; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP21]]
-; CHECK-NEXT:    store i16 0, ptr [[TMP30]], align 2
-; CHECK-NEXT:    [[GEP_0_1:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP21]]
-; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr i8, ptr [[GEP_0_1]], i64 14
-; CHECK-NEXT:    store i16 0, ptr [[TMP38]], align 2
-; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 [[ADD_0]], 1
-; CHECK-NEXT:    [[SHR_2:%.*]] = lshr i32 [[ADD_1]], 1
-; CHECK-NEXT:    [[TMP54:%.*]] = trunc i32 [[SHR_2]] to i16
-; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr i8, ptr [[TMP30]], i64 2
-; CHECK-NEXT:    store i16 [[TMP54]], ptr [[TMP46]], align 2
-; CHECK-NEXT:    [[SUB_0:%.*]] = sub i32 0, [[MUL_0]]
-; CHECK-NEXT:    [[SHR_3:%.*]] = lshr i32 [[SUB_0]], 1
-; CHECK-NEXT:    [[TMP70:%.*]] = trunc i32 [[SHR_3]] to i16
-; CHECK-NEXT:    [[TMP62:%.*]] = getelementptr i8, ptr [[TMP30]], i64 12
-; CHECK-NEXT:    store i16 [[TMP70]], ptr [[TMP62]], align 2
-; CHECK-NEXT:    [[OR_0:%.*]] = or i32 [[X]], 1
-; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 [[OR_0]], 1
-; CHECK-NEXT:    [[SHR_4:%.*]] = lshr i32 [[ADD_2]], 1
-; CHECK-NEXT:    [[TMP86:%.*]] = trunc i32 [[SHR_4]] to i16
-; CHECK-NEXT:    [[TMP78:%.*]] = getelementptr i8, ptr [[TMP30]], i64 4
-; CHECK-NEXT:    store i16 [[TMP86]], ptr [[TMP78]], align 2
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[TMP22]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[GEP_0_2:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP21]]
-; CHECK-NEXT:    [[TMP94:%.*]] = getelementptr i8, ptr [[GEP_0_2]], i64 10
-; CHECK-NEXT:    store i16 0, ptr [[TMP94]], align 2
-; CHECK-NEXT:    [[TRUNC_3:%.*]] = trunc i32 [[TMP22]] to i16
-; CHECK-NEXT:    [[OR_1:%.*]] = or i16 [[TRUNC_3]], 1
-; CHECK-NEXT:    [[TMP113:%.*]] = add i16 [[OR_1]], 1
-; CHECK-NEXT:    [[TMP105:%.*]] = getelementptr i8, ptr [[TMP30]], i64 8
-; CHECK-NEXT:    store i16 [[TMP113]], ptr [[TMP105]], align 2
-; CHECK-NEXT:    [[TMP121:%.*]] = getelementptr i8, ptr [[TMP30]], i64 6
-; CHECK-NEXT:    store i16 0, ptr [[TMP121]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[TMP21]], 8
-; CHECK-NEXT:    [[EC:%.*]] = icmp ult i64 [[TMP21]], 128
-; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc <8 x i32> [[BROADCAST_SPLAT2]] to <8 x i16>
+; CHECK-NEXT:    [[TMP17:%.*]] = or <8 x i16> [[TMP16]], splat (i16 1)
+; CHECK-NEXT:    [[TMP18:%.*]] = add <8 x i16> [[TMP17]], splat (i16 1)
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <8 x i16> zeroinitializer, <8 x i16> [[TMP6]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <8 x i16> [[TMP13]], <8 x i16> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <8 x i16> [[TMP18]], <8 x i16> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <8 x i16> [[TMP9]], <8 x i16> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <16 x i16> [[TMP19]], <16 x i16> [[TMP20]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <16 x i16> [[TMP27]], <16 x i16> [[TMP28]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <32 x i16> [[TMP23]], <32 x i16> [[TMP24]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <64 x i16> [[TMP25]], <64 x i16> poison, <64 x i32> <i32 0, i32 8, i32 16, i32 24, i32 32, i32 40, i32 48, i32 56, i32 1, i32 9, i32 17, i32 25, i32 33, i32 41, i32 49, i32 57, i32 2, i32 10, i32 18, i32 26, i32 34, i32 42, i32 50, i32 58, i32 3, i32 11, i32 19, i32 27, i32 35, i32 43, i32 51, i32 59, i32 4, i32 12, i32 20, i32 28, i32 36, i32 44, i32 52, i32 60, i32 5, i32 13, i32 21, i32 29, i32 37, i32 45, i32 53, i32 61, i32 6, i32 14, i32 22, i32 30, i32 38, i32 46, i32 54, i32 62, i32 7, i32 15, i32 23, i32 31, i32 39, i32 47, i32 55, i32 63>
+; CHECK-NEXT:    store <64 x i16> [[INTERLEAVED_VEC]], ptr [[GEP_0_2]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; CHECK-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
   %temp1 = alloca [64 x i32], align 4
