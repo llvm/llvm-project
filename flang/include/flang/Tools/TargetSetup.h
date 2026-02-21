@@ -12,6 +12,10 @@
 #include "flang/Common/float128.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Frontend/TargetOptions.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cfloat>
 
@@ -58,17 +62,50 @@ namespace Fortran::tools {
     break;
   }
 
-  // Check for kind=16 support. See flang/runtime/Float128Math/math-entries.h.
-  // TODO: Take this from TargetInfo::getLongDoubleFormat for cross compilation.
-#ifdef FLANG_RUNTIME_F128_MATH_LIB
-  constexpr bool f128Support = true; // use libquadmath wrappers
-#elif HAS_LDBL128
-  constexpr bool f128Support = true; // use libm wrappers
-#else
-  constexpr bool f128Support = false;
-#endif
+  bool f128Support = false;
+  llvm::LLVMContext ctx;
+  std::unique_ptr<llvm::Module> dummyModule =
+      std::make_unique<llvm::Module>("quad-test", ctx);
+  dummyModule->setTargetTriple(targetMachine.getTargetTriple());
+  dummyModule->setDataLayout(targetMachine.createDataLayout());
 
-  if constexpr (!f128Support) {
+  llvm::FunctionType *dummyFTy =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(ctx), false);
+  llvm::Function *dummyF = llvm::Function::Create(dummyFTy,
+      llvm::GlobalValue::ExternalLinkage, "quad-test", dummyModule.get());
+
+  const llvm::TargetLowering *dummyTLI =
+      targetMachine.getSubtargetImpl(*dummyF)->getTargetLowering();
+
+  if (dummyTLI) {
+    llvm::EVT fp128EVT = llvm::EVT::getEVT(llvm::Type::getFP128Ty(ctx));
+
+    // Query for fp128 backend support. Based on this, determine whether
+    // compilation is possible on the frontend.
+    bool isLegal = dummyTLI->isTypeLegal(fp128EVT);
+
+    // We might also be able to determine fp128 backend support based on the
+    // LegalizeAction value. This is likely when the value is "Legal" or
+    // "LibCall". See
+    // https://llvm.org/doxygen/TargetLowering_8h_source.html#l00202.
+    llvm::TargetLowering::LegalizeAction LA =
+        dummyTLI->getOperationAction(llvm::ISD::FADD, fp128EVT);
+
+    // We might also be able to determine fp128 backend support based on the
+    // LegalizeTypeAction value. This is likely when the value is "TypeLegal".
+    // See https://llvm.org/doxygen/TargetLowering_8h_source.html#l00212.
+    llvm::TargetLowering::LegalizeTypeAction LTA =
+        dummyTLI->getTypeConversion(ctx, llvm::MVT::f128).first;
+
+    if (isLegal &&
+        (LA == llvm::TargetLowering::Legal ||
+            LA == llvm::TargetLowering::LibCall) &&
+        (LTA == llvm::TargetLowering::TypeLegal)) {
+      f128Support = true;
+    }
+  }
+
+  if (!f128Support) {
     targetCharacteristics.DisableType(Fortran::common::TypeCategory::Real, 16);
     targetCharacteristics.DisableType(
         Fortran::common::TypeCategory::Complex, 16);
