@@ -15,6 +15,8 @@ using Array = llvm::json::Array;
 using Object = llvm::json::Object;
 using Value = llvm::json::Value;
 
+LLVM_INSTANTIATE_REGISTRY(llvm::Registry<JSONFormat::FormatInfo>)
+
 //----------------------------------------------------------------------------
 // ErrorBuilder - Fluent API for constructing contextual errors.
 //----------------------------------------------------------------------------
@@ -705,7 +707,7 @@ JSONFormat::entityDataMapFromJSON(const SummaryName &SN,
     }
   }
 
-  return EntityDataMap;
+  return std::move(EntityDataMap);
 }
 
 llvm::Expected<Array> JSONFormat::entityDataMapToJSON(
@@ -841,7 +843,7 @@ JSONFormat::summaryDataMapFromJSON(const Array &SummaryDataArray,
     }
   }
 
-  return SummaryDataMap;
+  return std::move(SummaryDataMap);
 }
 
 llvm::Expected<Array> JSONFormat::summaryDataMapToJSON(
@@ -866,7 +868,7 @@ llvm::Expected<Array> JSONFormat::summaryDataMapToJSON(
     Result.push_back(std::move(*ExpectedSummaryDataMapObject));
   }
 
-  return Result;
+  return std::move(Result);
 }
 
 //----------------------------------------------------------------------------
@@ -956,7 +958,7 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
     getData(Summary) = std::move(*ExpectedSummaryDataMap);
   }
 
-  return Summary;
+  return std::move(Summary);
 }
 
 llvm::Error JSONFormat::writeTUSummary(const TUSummary &S,

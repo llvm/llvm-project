@@ -160,7 +160,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ;.
 ; DYNAMIC-SHADOW: [[META0]] = !{ptr @hwasan.note}
 ; DYNAMIC-SHADOW: [[META1:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META2:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META3:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-; DYNAMIC-SHADOW: [[META2]] = !DIFile(filename: "alloca.cpp", directory: {{.*}})
+; DYNAMIC-SHADOW: [[META2]] = !DIFile(filename: "{{.*}}alloca.cpp", directory: {{.*}})
 ; DYNAMIC-SHADOW: [[META3]] = !{}
 ; DYNAMIC-SHADOW: [[META4:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 4}
 ; DYNAMIC-SHADOW: [[META5:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
@@ -177,7 +177,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ;.
 ; ZERO-BASED-SHADOW: [[META0]] = !{ptr @hwasan.note}
 ; ZERO-BASED-SHADOW: [[META1:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META2:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META3:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-; ZERO-BASED-SHADOW: [[META2]] = !DIFile(filename: "alloca.cpp", directory: {{.*}})
+; ZERO-BASED-SHADOW: [[META2]] = !DIFile(filename: "{{.*}}alloca.cpp", directory: {{.*}})
 ; ZERO-BASED-SHADOW: [[META3]] = !{}
 ; ZERO-BASED-SHADOW: [[META4:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 4}
 ; ZERO-BASED-SHADOW: [[META5:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}

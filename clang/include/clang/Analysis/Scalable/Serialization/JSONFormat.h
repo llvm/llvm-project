@@ -14,8 +14,10 @@
 #define CLANG_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_H
 
 #include "clang/Analysis/Scalable/Serialization/SerializationFormat.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/Registry.h"
 
 namespace clang::ssaf {
 
@@ -124,5 +126,10 @@ private:
 };
 
 } // namespace clang::ssaf
+
+namespace llvm {
+extern template class CLANG_TEMPLATE_ABI
+    Registry<clang::ssaf::JSONFormat::FormatInfo>;
+} // namespace llvm
 
 #endif // CLANG_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_H

@@ -36,6 +36,8 @@ public:
   TUSummary(BuildNamespace TUNamespace) : TUNamespace(std::move(TUNamespace)) {}
 
   friend class SerializationFormat;
+  friend class TestFixture;
+  friend class TUSummaryBuilder;
 };
 
 } // namespace clang::ssaf

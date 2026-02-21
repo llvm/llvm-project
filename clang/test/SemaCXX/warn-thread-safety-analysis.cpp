@@ -7487,20 +7487,20 @@ void testPointerAliasEscapeAndReset(Foo *f) {
 // A function that may do anything to the objects referred to by the inputs.
 void escapeAliasMultiple(void *, void *, void *);
 void testPointerAliasEscapeMultiple(Foo *F) {
-    Foo *L;
-    F->mu.Lock(); // expected-note{{mutex acquired here}}
-    Foo *Fp = F;
-    escapeAliasMultiple(&L, &L, &Fp);
-    Fp->mu.Unlock(); // expected-warning{{releasing mutex 'Fp->mu' that was not held}}
+  Foo *L;
+  F->mu.Lock(); // expected-note{{mutex acquired here}}
+  Foo *Fp = F;
+  escapeAliasMultiple(&L, &L, &Fp);
+  Fp->mu.Unlock(); // expected-warning{{releasing mutex 'Fp->mu' that was not held}}
 } // expected-warning{{mutex 'F->mu' is still held at the end of function}}
 
 void unlockFooWithEscapablePointer(Foo **Fp) EXCLUSIVE_UNLOCK_FUNCTION((*Fp)->mu);
 void testEscapeInvalidationHappensRightAfterTheCall(Foo* F) {
-    Foo* L;
-    L = F;
-    L->mu.Lock();
-    // Release the lock held by 'L' before clearing its definition.
-    unlockFooWithEscapablePointer(&L);
+  Foo* L;
+  L = F;
+  L->mu.Lock();
+  // Release the lock held by 'L' before clearing its definition.
+  unlockFooWithEscapablePointer(&L);
 }
 
 void testEscapeInvalidationHappensRightAfterTheCtorCall(Foo* F) {

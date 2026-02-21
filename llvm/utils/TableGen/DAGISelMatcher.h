@@ -35,9 +35,9 @@ class SDNodeInfo;
 class TreePredicateFn;
 class TreePattern;
 
-MatcherList ConvertPatternToMatcher(const PatternToMatch &Pattern,
-                                    unsigned Variant,
-                                    const CodeGenDAGPatterns &CGP);
+MatcherList ConvertPatternToMatcherList(const PatternToMatch &Pattern,
+                                        unsigned Variant,
+                                        const CodeGenDAGPatterns &CGP);
 void OptimizeMatcher(MatcherList &ML, const CodeGenDAGPatterns &CGP);
 void EmitMatcherTable(MatcherList &ML, const CodeGenDAGPatterns &CGP,
                       raw_ostream &OS);
