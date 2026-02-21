@@ -57,6 +57,7 @@ private:
   Visit(const IdentifierNode &node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const MemberOfNode &node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const UnaryOpNode &node) override;
+  llvm::Expected<lldb::ValueObjectSP> Visit(const BinaryOpNode &node) override;
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const ArraySubscriptNode &node) override;
   llvm::Expected<lldb::ValueObjectSP>
@@ -73,6 +74,28 @@ private:
   /// includes array-to-pointer and integral promotion for eligible types.
   llvm::Expected<lldb::ValueObjectSP>
   UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location);
+
+  /// If `lhs_type` is unsigned and `rhs_type` is signed, check whether it
+  /// can represent all of the values of `lhs_type`.
+  /// If not, then promote `rhs_type` to the unsigned version of its type.
+  /// \returns Unchanged `rhs_type` or promoted unsigned version.
+  llvm::Expected<CompilerType> PromoteSignedInteger(CompilerType &lhs_type,
+                                                    CompilerType &rhs_type);
+
+  /// Perform an arithmetic conversion on two values from an arithmetic
+  /// operation.
+  /// \returns The result type of an arithmetic operation.
+  llvm::Expected<CompilerType> ArithmeticConversion(lldb::ValueObjectSP &lhs,
+                                                    lldb::ValueObjectSP &rhs,
+                                                    uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP> EvaluateScalarOp(BinaryOpKind kind,
+                                                       lldb::ValueObjectSP lhs,
+                                                       lldb::ValueObjectSP rhs,
+                                                       CompilerType result_type,
+                                                       uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryAddition(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                         uint32_t location);
   llvm::Expected<CompilerType>
   PickIntegerType(lldb::TypeSystemSP type_system,
                   std::shared_ptr<ExecutionContextScope> ctx,

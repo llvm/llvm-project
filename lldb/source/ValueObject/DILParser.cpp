@@ -127,7 +127,29 @@ ASTNodeUP DILParser::Run() {
 //  expression:
 //    cast_expression
 //
-ASTNodeUP DILParser::ParseExpression() { return ParseCastExpression(); }
+ASTNodeUP DILParser::ParseExpression() { return ParseAdditiveExpression(); }
+
+// Parse an additive_expression.
+//
+//  additive_expression:
+//    cast_expression {"+" cast_expression}
+//
+ASTNodeUP DILParser::ParseAdditiveExpression() {
+  auto lhs = ParseCastExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().Is(Token::plus)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseCastExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
 
 // Parse a cast_expression.
 //
