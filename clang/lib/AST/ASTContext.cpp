@@ -13466,6 +13466,30 @@ QualType ASTContext::getIntTypeForBitwidth(unsigned DestWidth,
   return QualTy;
 }
 
+/// getGCCCompatibleIntTypeForBitwidth -
+/// sets integer QualTy according to specified details:
+/// bitwidth, signed/unsigned.
+/// this function is compatible with GCC's preference:
+/// int > signed char > short > long > long long > int128_t
+/// Returns empty type if there is no appropriate target types.
+QualType ASTContext::getGCCCompatibleIntTypeForBitwidth(unsigned DestWidth,
+                                                        unsigned Signed) const {
+  const TargetInfo &Target = getTargetInfo();
+  if (Target.getIntWidth() == DestWidth)
+    return Signed ? IntTy : UnsignedIntTy;
+  if (Target.getCharWidth() == DestWidth)
+    return Signed ? SignedCharTy : UnsignedCharTy;
+  if (Target.getShortWidth() == DestWidth)
+    return Signed ? ShortTy : UnsignedShortTy;
+  if (Target.getLongWidth() == DestWidth)
+    return Signed ? LongTy : UnsignedLongTy;
+  if (Target.getLongLongWidth() == DestWidth)
+    return Signed ? LongLongTy : UnsignedLongLongTy;
+  if (DestWidth == 128)
+    return Signed ? Int128Ty : UnsignedInt128Ty;
+  return {};
+}
+
 /// getRealTypeForBitwidth -
 /// sets floating point QualTy according to specified bitwidth.
 /// Returns empty type if there is no appropriate target types.

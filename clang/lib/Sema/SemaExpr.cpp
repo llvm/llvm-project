@@ -13312,25 +13312,9 @@ QualType Sema::GetSignedVectorType(QualType V) {
     return Context.getExtVectorType(Context.LongLongTy, VTy->getNumElements());
   }
 
-  if (TypeSize == Context.getTypeSize(Context.Int128Ty))
-    return Context.getVectorType(Context.Int128Ty, VTy->getNumElements(),
-                                 VectorKind::Generic);
-  if (TypeSize == Context.getTypeSize(Context.LongLongTy))
-    return Context.getVectorType(Context.LongLongTy, VTy->getNumElements(),
-                                 VectorKind::Generic);
-  if (TypeSize == Context.getTypeSize(Context.LongTy))
-    return Context.getVectorType(Context.LongTy, VTy->getNumElements(),
-                                 VectorKind::Generic);
-  if (TypeSize == Context.getTypeSize(Context.IntTy))
-    return Context.getVectorType(Context.IntTy, VTy->getNumElements(),
-                                 VectorKind::Generic);
-  if (TypeSize == Context.getTypeSize(Context.ShortTy))
-    return Context.getVectorType(Context.ShortTy, VTy->getNumElements(),
-                                 VectorKind::Generic);
-  assert(TypeSize == Context.getTypeSize(Context.CharTy) &&
-         "Unhandled vector element size in vector compare");
-  return Context.getVectorType(Context.CharTy, VTy->getNumElements(),
-                               VectorKind::Generic);
+  QualType ETy = Context.getGCCCompatibleIntTypeForBitwidth(TypeSize, /*Signed=*/1);
+  assert(!ETy.isNull() && "Unhandled vector element size in vector compare");
+  return Context.getVectorType(ETy, VTy->getNumElements(), VectorKind::Generic);
 }
 
 QualType Sema::GetSignedSizelessVectorType(QualType V) {
