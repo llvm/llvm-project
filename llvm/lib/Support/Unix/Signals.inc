@@ -318,6 +318,12 @@ static void RegisterHandlers(
 
     struct sigaction NewHandler;
 
+#ifndef SA_ONSTACK
+    // Some platforms such as QNX do not define or implement SA_ONSTACK,
+    // so default that flag to 0 to just use the pre-existing stack there.
+    int SA_ONSTACK = 0;
+#endif
+
     switch (Kind) {
     case SignalKind::IsKill:
       if (NeedsPOSIXUtilitySignalHandling)
