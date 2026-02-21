@@ -686,8 +686,8 @@ void ModuleSummaryIndex::exportToDot(
         A.addComment("definition");
       else if (Flags.ImportType == GlobalValueSummary::ImportKind::Declaration)
         A.addComment("declaration");
-      if (Flags.NotRenameOnPromotion)
-        A.addComment("notRenameOnPromotion");
+      if (Flags.NoRenameOnPromotion)
+        A.addComment("noRenameOnPromotion");
       if (GUIDPreservedSymbols.count(SummaryIt.first))
         A.addComment("preserved");
 

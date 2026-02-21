@@ -1,3 +1,6 @@
+; Test a simgple cross module promotion where two same-name static functions
+; are in both modules respectively.
+
 ; Set up
 ; RUN: rm -rf %t
 ; RUN: mkdir -p %t
@@ -8,6 +11,7 @@
 ;
 ; RUN: llvm-lto2 run %t/a.bc %t/b.bc \
 ; RUN:  --whole-program-visibility-enabled-in-lto=true \
+; RUN:  -disable-always-rename-promoted-locals \
 ; RUN:  -save-temps -o %t/lto-out \
 ; RUN:  -r %t/a.bc,m1,px \
 ; RUN:  -r %t/b.bc,m2,p \

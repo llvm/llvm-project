@@ -270,7 +270,7 @@ struct ValueInfo {
   /// Checks if all copies are eligible for auto-hiding (have flag set).
   LLVM_ABI bool canAutoHide() const;
 
-  LLVM_ABI bool notRenameOnPromotion() const;
+  LLVM_ABI bool noRenameOnPromotion() const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ValueInfo &VI) {
@@ -517,19 +517,19 @@ public:
 
     /// This field is written by the ThinLTO prelink stage to decide whether
     /// a particular static global value should be promoted or not.
-    unsigned NotRenameOnPromotion : 1;
+    unsigned NoRenameOnPromotion : 1;
 
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage,
                      GlobalValue::VisibilityTypes Visibility,
                      bool NotEligibleToImport, bool Live, bool IsLocal,
                      bool CanAutoHide, ImportKind ImportType,
-                     bool NotRenameOnPromotion)
+                     bool NoRenameOnPromotion)
         : Linkage(Linkage), Visibility(Visibility),
           NotEligibleToImport(NotEligibleToImport), Live(Live),
           DSOLocal(IsLocal), CanAutoHide(CanAutoHide),
           ImportType(static_cast<unsigned>(ImportType)), Promoted(false),
-          NotRenameOnPromotion(NotRenameOnPromotion) {}
+          NoRenameOnPromotion(NoRenameOnPromotion) {}
   };
 
 private:
@@ -639,11 +639,11 @@ public:
 
   void setImportKind(ImportKind IK) { Flags.ImportType = IK; }
 
-  void setNotRenameOnPromotion(bool NotRenameOnPromotion) {
-    Flags.NotRenameOnPromotion = NotRenameOnPromotion;
+  void setNoRenameOnPromotion(bool NoRenameOnPromotion) {
+    Flags.NoRenameOnPromotion = NoRenameOnPromotion;
   }
 
-  bool notRenameOnPromotion() const { return Flags.NotRenameOnPromotion; }
+  bool noRenameOnPromotion() const { return Flags.NoRenameOnPromotion; }
 
   GlobalValueSummary::ImportKind importType() const {
     return static_cast<ImportKind>(Flags.ImportType);
@@ -914,7 +914,7 @@ public:
             GlobalValue::DefaultVisibility,
             /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false,
             /*CanAutoHide=*/false, GlobalValueSummary::ImportKind::Definition,
-            /*NotRenameOnPromotion=*/false),
+            /*NoRenameOnPromotion=*/false),
         /*NumInsts=*/0, FunctionSummary::FFlags{}, SmallVector<ValueInfo, 0>(),
         std::move(Edges), std::vector<GlobalValue::GUID>(),
         std::vector<FunctionSummary::VFuncId>(),
