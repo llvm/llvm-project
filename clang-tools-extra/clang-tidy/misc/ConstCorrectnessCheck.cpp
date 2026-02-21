@@ -20,9 +20,6 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::misc {
 
 namespace {
-// FIXME: This matcher exists in some other code-review as well.
-// It should probably move to ASTMatchers.
-AST_MATCHER(VarDecl, isLocal) { return Node.isLocalVarDecl(); }
 AST_MATCHER_P(DeclStmt, containsAnyDeclaration,
               ast_matchers::internal::Matcher<Decl>, InnerMatcher) {
   return ast_matchers::internal::matchesFirstInPointerRange(
