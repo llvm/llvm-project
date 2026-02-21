@@ -79,7 +79,7 @@ LLVM_ABI void checkForCycles(const SDNode *N, const SelectionDAG *DAG = nullptr,
 ///
 struct SDVTList {
   const EVT *VTs;
-  unsigned int NumVTs;
+  uint32_t NumVTs;
 };
 
 namespace ISD {
@@ -673,7 +673,7 @@ private:
   SDUse *UseList = nullptr;
 
   /// The number of entries in the Operand/Value list.
-  unsigned short NumOperands = 0;
+  uint32_t NumOperands = 0;
   unsigned short NumValues;
 
   // The ordering of the SDNodes. It roughly corresponds to the ordering of the
@@ -1026,10 +1026,10 @@ public:
                                       const SDNode *N);
 
   /// Return the number of values used by this operation.
-  unsigned getNumOperands() const { return NumOperands; }
+  uint32_t getNumOperands() const { return NumOperands; }
 
   /// Return the maximum number of operands that a SDNode can hold.
-  static constexpr size_t getMaxNumOperands() {
+  static constexpr uint32_t getMaxNumOperands() {
     return std::numeric_limits<decltype(SDNode::NumOperands)>::max();
   }
 
