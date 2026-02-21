@@ -2248,6 +2248,9 @@ TEST(TripleTest, EndianArchVariants) {
   EXPECT_EQ(Triple::bpfeb, T.getBigEndianArchVariant().getArch());
   EXPECT_EQ(Triple::bpfel, T.getLittleEndianArchVariant().getArch());
 
+  T.setArch(Triple::connex);
+  EXPECT_EQ(Triple::connex, T.getArch());
+
   T.setArch(Triple::mips64);
   EXPECT_EQ(Triple::mips64, T.getBigEndianArchVariant().getArch());
   EXPECT_EQ(Triple::NoSubArch, T.getBigEndianArchVariant().getSubArch());
