@@ -159,7 +159,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
   OS << "| enum ";
   if (I.Scoped)
     OS << "class ";
-  OS << (I.Name.empty() ? StringRef("(unnamed)") : StringRef(I.Name)) << " ";
+  OS << (I.Name.empty() ? "(unnamed)" : StringRef(I.Name)) << " ";
   if (I.BaseType && !I.BaseType->Type.QualName.empty()) {
     OS << ": " << I.BaseType->Type.QualName << " ";
   }
@@ -169,7 +169,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
   llvm::raw_string_ostream Members(Buffer);
   if (!I.Members.empty())
     for (const auto &N : I.Members)
-      Members << "| " << N.Name << " | " << N.Value << " |\n";
+      Members << "| " << N.Name << " |\n";
   writeLine(Members.str(), OS);
 
   maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);
