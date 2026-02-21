@@ -1468,7 +1468,9 @@ bool X86FrameLowering::isWin64Prologue(const MachineFunction &MF) const {
 }
 
 bool X86FrameLowering::needsDwarfCFI(const MachineFunction &MF) const {
-  return !isWin64Prologue(MF) && MF.needsFrameMoves();
+  return MF.getTarget().getMCAsmInfo()->getExceptionHandlingType() !=
+             ExceptionHandling::WinEH &&
+         MF.needsFrameMoves();
 }
 
 /// Return true if an opcode is part of the REP group of instructions
@@ -3815,8 +3817,7 @@ MachineBasicBlock::iterator X86FrameLowering::eliminateCallFramePseudoInstr(
     Amount = alignTo(Amount, getStackAlign());
 
     const Function &F = MF.getFunction();
-    bool WindowsCFI = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
-    bool DwarfCFI = !WindowsCFI && MF.needsFrameMoves();
+    bool DwarfCFI = needsDwarfCFI(MF);
 
     // If we have any exception handlers in this function, and we adjust
     // the SP before calls, we may need to indicate this to the unwinder
@@ -3825,7 +3826,7 @@ MachineBasicBlock::iterator X86FrameLowering::eliminateCallFramePseudoInstr(
     // GNU_ARGS_SIZE.
     // TODO: We don't need to reset this between subsequent functions,
     // if it didn't change.
-    bool HasDwarfEHHandlers = !WindowsCFI && !MF.getLandingPads().empty();
+    bool HasDwarfEHHandlers = DwarfCFI && !MF.getLandingPads().empty();
 
     if (HasDwarfEHHandlers && !isDestroy &&
         MF.getInfo<X86MachineFunctionInfo>()->getHasPushSequences())

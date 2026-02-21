@@ -560,14 +560,14 @@ define void @bar(ptr %r, i32 %s, i32 %w, i32 %x, ptr %j, i32 %d) nounwind {
 ; CHECK-NEXT:    cmpl {{[-0-9]+}}(%e{{[sb]}}p), %edx ## 4-byte Folded Reload
 ; CHECK-NEXT:    jb LBB1_9
 ; CHECK-NEXT:  LBB1_13: ## %bb20
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    cmpl $1, %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; CHECK-NEXT:    cmpl $1, %ebx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    je LBB1_19
 ; CHECK-NEXT:  ## %bb.14: ## %bb20
-; CHECK-NEXT:    cmpl $3, %esi
+; CHECK-NEXT:    cmpl $3, %ebx
 ; CHECK-NEXT:    jne LBB1_24
 ; CHECK-NEXT:  ## %bb.15: ## %bb22
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx ## 4-byte Reload
