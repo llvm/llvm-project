@@ -19,6 +19,7 @@
 #include "mlir/Target/LLVM/ROCDL/Utils.h"
 #include "mlir/Target/LLVMIR/Export.h"
 
+#include "llvm/Config/Targets.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -446,7 +447,7 @@ FailureOr<SmallVector<char, 0>> SerializeGPUModuleBase::moduleToObjectImpl(
   return compileToBinary(*serializedISA);
 }
 
-#if MLIR_ENABLE_ROCM_CONVERSIONS
+#if LLVM_HAS_AMDGPU_TARGET
 namespace {
 class AMDGPUSerializer : public SerializeGPUModuleBase {
 public:
@@ -471,7 +472,7 @@ FailureOr<SmallVector<char, 0>>
 AMDGPUSerializer::moduleToObject(llvm::Module &llvmModule) {
   return moduleToObjectImpl(targetOptions, llvmModule);
 }
-#endif // MLIR_ENABLE_ROCM_CONVERSIONS
+#endif // LLVM_HAS_AMDGPU_TARGET
 
 std::optional<mlir::gpu::SerializedObject>
 ROCDLTargetAttrImpl::serializeToObject(
@@ -484,7 +485,7 @@ ROCDLTargetAttrImpl::serializeToObject(
     module->emitError("module must be a GPU module");
     return std::nullopt;
   }
-#if MLIR_ENABLE_ROCM_CONVERSIONS
+#if LLVM_HAS_AMDGPU_TARGET
   AMDGPUSerializer serializer(*module, cast<ROCDLTargetAttr>(attribute),
                               options);
   serializer.init();
@@ -496,7 +497,7 @@ ROCDLTargetAttrImpl::serializeToObject(
   module->emitError("the `AMDGPU` target was not built. Please enable it when "
                     "building LLVM");
   return std::nullopt;
-#endif // MLIR_ENABLE_ROCM_CONVERSIONS
+#endif // LLVM_HAS_AMDGPU_TARGET
 }
 
 Attribute
