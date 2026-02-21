@@ -257,7 +257,7 @@ IndirectCallPromotion::getCallTargets(BinaryBasicBlock &BB,
         JT->Counts.empty() ? &DefaultJI : &JT->Counts[Range.first];
     const size_t JIAdj = JT->Counts.empty() ? 0 : 1;
     assert(JT->Type == JumpTable::JTT_PIC ||
-           JT->EntrySize == BC.AsmInfo->getCodePointerSize());
+           JT->getEntrySize() == BC.AsmInfo->getCodePointerSize());
     for (size_t I = Range.first; I < Range.second; ++I, JI += JIAdj) {
       MCSymbol *Entry = JT->Entries[I];
       const BinaryBasicBlock *ToBB = BF.getBasicBlockForLabel(Entry);
@@ -455,7 +455,7 @@ IndirectCallPromotion::maybeGetHotJumpTableTargets(BinaryBasicBlock &BB,
     if (!AccessInfo.MemoryObject && !AccessInfo.Offset)
       continue;
 
-    if (AccessInfo.Offset % JT->EntrySize != 0) // ignore bogus data
+    if (AccessInfo.Offset % JT->getEntrySize() != 0) // ignore bogus data
       return JumpTableInfoType();
 
     if (AccessInfo.MemoryObject) {
@@ -463,10 +463,10 @@ IndirectCallPromotion::maybeGetHotJumpTableTargets(BinaryBasicBlock &BB,
       if (!AccessInfo.MemoryObject->getName().starts_with(
               "JUMP_TABLE/" + Function.getOneName().str()))
         return JumpTableInfoType();
-      Index =
-          (AccessInfo.Offset - (ArrayStart - JT->getAddress())) / JT->EntrySize;
+      Index = (AccessInfo.Offset - (ArrayStart - JT->getAddress())) /
+              JT->getEntrySize();
     } else {
-      Index = (AccessInfo.Offset - ArrayStart) / JT->EntrySize;
+      Index = (AccessInfo.Offset - ArrayStart) / JT->getEntrySize();
     }
 
     // If Index is out of range it probably means the memory profiling data is
