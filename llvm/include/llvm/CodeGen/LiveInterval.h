@@ -245,9 +245,9 @@ namespace llvm {
     }
 
     /// Constructs a new LiveRange object.
-    LiveRange(bool UseSegmentSet = false)
-        : segmentSet(UseSegmentSet ? std::make_unique<SegmentSet>()
-                                   : nullptr) {}
+    explicit LiveRange(bool UseSegmentSet = false)
+        : segmentSet(UseSegmentSet ? std::make_unique<SegmentSet>() : nullptr) {
+    }
 
     /// Constructs a new LiveRange object by copying segments and valnos from
     /// another LiveRange.
