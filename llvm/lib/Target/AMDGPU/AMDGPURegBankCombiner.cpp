@@ -505,6 +505,7 @@ bool AMDGPURegBankCombinerImpl::matchCopySccVcc(
     MachineInstr &MI, CopySccVccMatchInfo &MatchInfo) const {
   assert(MI.getOpcode() == AMDGPU::COPY);
 
+  // TODO: Add a heuristic to determine whether the combine is profitable.
   Register VgprDst = MI.getOperand(0).getReg();
   Register SgprSrc = MI.getOperand(1).getReg();
 

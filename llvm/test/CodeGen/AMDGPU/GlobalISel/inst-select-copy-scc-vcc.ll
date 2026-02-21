@@ -6,15 +6,15 @@
 define amdgpu_kernel void @fcmp_uniform_select(float %a, i32 %b, i32 %c, ptr addrspace(1) %out) {
 ; GFX7-LABEL: fcmp_uniform_select:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x9
-; GFX7-NEXT:    s_load_dword s3, s[4:5], 0xb
+; GFX7-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x9
+; GFX7-NEXT:    s_load_dword s6, s[4:5], 0xb
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xd
-; GFX7-NEXT:    s_mov_b32 s2, -1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    v_cmp_eq_f32_e64 s[4:5], s6, 0
-; GFX7-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
-; GFX7-NEXT:    s_cselect_b32 s3, s7, s3
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s3
+; GFX7-NEXT:    v_mov_b32_e32 v1, s6
+; GFX7-NEXT:    v_cmp_eq_f32_e64 vcc, s2, 0
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX7-NEXT:    s_mov_b32 s2, -1
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX7-NEXT:    s_endpgm
@@ -25,11 +25,11 @@ define amdgpu_kernel void @fcmp_uniform_select(float %a, i32 %b, i32 %c, ptr add
 ; GFX8-NEXT:    s_load_dword s6, s[4:5], 0x2c
 ; GFX8-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x34
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    v_cmp_eq_f32_e64 s[4:5], s0, 0
-; GFX8-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; GFX8-NEXT:    s_cselect_b32 s0, s1, s6
+; GFX8-NEXT:    v_mov_b32_e32 v0, s1
+; GFX8-NEXT:    v_mov_b32_e32 v1, s6
+; GFX8-NEXT:    v_cmp_eq_f32_e64 vcc, s0, 0
+; GFX8-NEXT:    v_cndmask_b32_e32 v2, v1, v0, vcc
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2
-; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8-NEXT:    s_endpgm
@@ -37,16 +37,14 @@ define amdgpu_kernel void @fcmp_uniform_select(float %a, i32 %b, i32 %c, ptr add
 ; GFX11-LABEL: fcmp_uniform_select:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    s_load_b32 s6, s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[4:5], 0x34
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s6
 ; GFX11-NEXT:    v_cmp_eq_f32_e64 s0, s0, 0
-; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX11-NEXT:    s_cselect_b32 s0, s1, s6
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, s1, s0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[2:3]
 ; GFX11-NEXT:    s_endpgm
   %cmp = fcmp oeq float %a, 0.0

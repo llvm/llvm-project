@@ -105,7 +105,7 @@ def copy_scc_vcc_matchdata : GIDefMatchData<"CopySccVccMatchInfo">;
 
 def copy_scc_vcc : GICombineRule<
   (defs root:$copy, copy_scc_vcc_matchdata:$matchinfo),
-  (match (wip_match_opcode COPY):$copy,
+  (match (COPY $dst, $src):$copy,
          [{ return matchCopySccVcc(*${copy}, ${matchinfo}); }]),
   (apply [{ applyCopySccVcc(*${copy}, ${matchinfo}); }])>;
 
