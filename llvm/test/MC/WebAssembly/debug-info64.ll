@@ -147,6 +147,12 @@
 ; CHECK-NEXT:     Offset: 1317
 ; CHECK-NEXT:     Name: target_features
 ; CHECK-NEXT:   }
+; CHECK-NEXT:  Section {
+; CHECK-NEXT:    Type: CUSTOM (0x0) 
+; CHECK-NEXT:    Size: 33 
+; CHECK-NEXT:    Offset: 1257 
+; CHECK-NEXT:    Name: target_features 
+; CHECK-NEXT:  } 
 ; CHECK-NEXT: ]
 ; CHECK-NEXT: Relocations [
 ; CHECK-NEXT:   Section (7) DATA {

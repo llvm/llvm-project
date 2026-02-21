@@ -125,7 +125,7 @@ void scanRelocations(InputChunk *chunk) {
       // In single-threaded builds TLS is lowered away and TLS data can be
       // merged with normal data and allowing TLS relocation in non-TLS
       // segments.
-      if (ctx.arg.sharedMemory) {
+      if (ctx.isMultithreaded()) {
         if (!sym->isTLS()) {
           error(toString(file) + ": relocation " +
                 relocTypeToString(reloc.Type) +

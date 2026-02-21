@@ -38,7 +38,16 @@ WebAssemblySubtarget::initializeSubtargetDependencies(StringRef CPU,
   if (CPU.empty())
     CPU = "generic";
 
-  ParseSubtargetFeatures(CPU, /*TuneCPU*/ CPU, FS);
+  ParseSubtargetFeatures(CPU, /*TuneCPU*/ CPU, FS);  
+  
+  // WASIP3 implies using the component model thread context intrinsics by
+  // default, unless explicitly disabled.
+  if (!FS.contains("component-model-thread-context") && 
+      !HasComponentModelThreadContext && 
+      TargetTriple.getOS() == Triple::WASIp3) {
+    ToggleFeature(WebAssembly::FeatureComponentModelThreadContext);
+    HasComponentModelThreadContext = true;
+  }
 
   FeatureBitset Bits = getFeatureBits();
 

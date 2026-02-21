@@ -190,6 +190,9 @@ def allow_undefined_file: J<"allow-undefined-file=">,
 def allow_undefined_file_s: Separate<["-"], "allow-undefined-file">,
   Alias<allow_undefined_file>;
 
+def component_model_thread_context: FF<"component-model-thread-context">,
+  HelpText<"Use component model thread context intrinsics instead of global variables for the stack pointer and thread local storage">;
+
 defm export: Eq<"export", "Force a symbol to be exported">;
 
 defm export_if_defined: Eq<"export-if-defined",

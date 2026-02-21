@@ -234,11 +234,11 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
   // functions. It's OK to hardcode knowledge of specific symbols here; this
   // method is precisely there for fetching the signatures of known
   // Clang-provided symbols.
-  if (Name == "__stack_pointer" || Name == "__tls_base" ||
+  if (Name == "__stack_pointer" || Name == "__init_stack_pointer" ||
+      Name == "__tls_base" || Name == "__init_tls_base" ||
       Name == "__memory_base" || Name == "__table_base" ||
       Name == "__tls_size" || Name == "__tls_align") {
-    bool Mutable =
-        Name == "__stack_pointer" || Name == "__tls_base";
+    bool Mutable = Name == "__stack_pointer" || Name == "__tls_base";
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
     WasmSym->setGlobalType(wasm::WasmGlobalType{
         uint8_t(Subtarget.hasAddr64() ? wasm::WASM_TYPE_I64
@@ -266,6 +266,26 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
     wasm::ValType AddrType =
         Subtarget.hasAddr64() ? wasm::ValType::I64 : wasm::ValType::I32;
     Params.push_back(AddrType);
+  } else if (Name == "__wasm_component_model_builtin_context_get_0") {
+    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
+    WasmSym->setImportModule("$root");
+    WasmSym->setImportName("[context-get-0]");
+    Returns.push_back(wasm::ValType::I32);
+  } else if (Name == "__wasm_component_model_builtin_context_set_0") {
+    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
+    WasmSym->setImportModule("$root");
+    WasmSym->setImportName("[context-set-0]");
+    Params.push_back(wasm::ValType::I32);
+  } else if (Name == "__wasm_component_model_builtin_context_get_1") {
+    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
+    WasmSym->setImportModule("$root");
+    WasmSym->setImportName("[context-get-1]");
+    Returns.push_back(wasm::ValType::I32);
+  } else if (Name == "__wasm_component_model_builtin_context_set_1") {
+    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
+    WasmSym->setImportModule("$root");
+    WasmSym->setImportName("[context-set-1]");
+    Params.push_back(wasm::ValType::I32);
   } else { // Function symbols
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
     WebAssembly::getLibcallSignature(Subtarget, Name, Returns, Params);

@@ -27,6 +27,9 @@ class MCSymbolWasm;
 class TargetRegisterClass;
 class WebAssemblyFunctionInfo;
 class WebAssemblySubtarget;
+class MachineSDNode;
+class SDLoc;
+class SelectionDAG;
 
 namespace WebAssembly {
 
@@ -72,6 +75,12 @@ bool canLowerMultivalueReturn(const WebAssemblySubtarget *Subtarget);
 /// i.e., not indirectly via a pointer parameter that points to the value in
 /// memory.
 bool canLowerReturn(size_t ResultSize, const WebAssemblySubtarget *Subtarget);
+
+// Get the TLS base value for the current target
+// If using component model threading intrinsics: calls __wasm_component_model_builtin_context_get_1
+// Otherwise: global.get __tls_base
+MachineSDNode *getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
+                          const WebAssemblySubtarget *Subtarget);
 
 } // end namespace WebAssembly
 

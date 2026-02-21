@@ -42,6 +42,10 @@ call_weak:
 # CHECK-NEXT:        Memory:
 # CHECK-NEXT:          Minimum:         0x0
 # CHECK-NEXT:      - Module:          env
+# CHECK-NEXT:        Field:           weak_func
+# CHECK-NEXT:        Kind:            FUNCTION
+# CHECK-NEXT:        SigIndex:        0
+# CHECK-NEXT:      - Module:          env
 # CHECK-NEXT:        Field:           __memory_base
 # CHECK-NEXT:        Kind:            GLOBAL
 # CHECK-NEXT:        GlobalType:      I32
@@ -51,10 +55,6 @@ call_weak:
 # CHECK-NEXT:        Kind:            GLOBAL
 # CHECK-NEXT:        GlobalType:      I32
 # CHECK-NEXT:        GlobalMutable:   false
-# CHECK-NEXT:      - Module:          env
-# CHECK-NEXT:        Field:           weak_func
-# CHECK-NEXT:        Kind:            FUNCTION
-# CHECK-NEXT:        SigIndex:        0
 # CHECK-NEXT:  - Type:            FUNCTION
 
 # CHECK:        - Type:            EXPORT

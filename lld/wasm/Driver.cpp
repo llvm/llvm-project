@@ -906,6 +906,18 @@ createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
   return sym;
 }
 
+static UndefinedFunction *
+createUndefinedFunction(StringRef name, std::optional<StringRef> importName,
+                        std::optional<StringRef> importModule,
+                        WasmSignature *signature) {
+  auto *sym = cast<UndefinedFunction>(symtab->addUndefinedFunction(
+      name, importName, importModule, WASM_SYMBOL_UNDEFINED, nullptr, signature,
+      true));
+  ctx.arg.allowUndefinedSymbols.insert(sym->getName());
+  sym->isUsedInRegularObj = true;
+  return sym;
+}
+
 static InputGlobal *createGlobal(StringRef name, bool isMutable) {
   llvm::wasm::WasmGlobal wasmGlobal;
   bool is64 = ctx.arg.is64.value_or(false);
@@ -926,12 +938,23 @@ static DefinedGlobal *createOptionalGlobal(StringRef name, bool isMutable) {
   return symtab->addOptionalGlobalSymbol(name, g);
 }
 
-// Create ABI-defined synthetic symbols
-static void createSyntheticSymbols() {
+// Create ABI-defined synthetic symbols that are needed early, before LTO.
+static void createEarlySyntheticSymbols() {
   if (ctx.arg.relocatable)
     return;
 
   static WasmSignature nullSignature = {{}, {}};
+  ctx.sym.callCtors = symtab->addSyntheticFunction(
+      "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
+      make<SyntheticFunction>(nullSignature, "__wasm_call_ctors"));
+}
+
+// Create synthetic symbols that rely on information that is only available
+// after LTO, e.g. __stack_pointer, __tls_base.
+static void createPostLTOSymbols() {
+  if (ctx.arg.relocatable)
+    return;
+
   static WasmSignature i32ArgSignature = {{}, {ValType::I32}};
   static WasmSignature i64ArgSignature = {{}, {ValType::I64}};
   static llvm::wasm::WasmGlobalType globalTypeI32 = {WASM_TYPE_I32, false};
@@ -940,17 +963,16 @@ static void createSyntheticSymbols() {
                                                             true};
   static llvm::wasm::WasmGlobalType mutableGlobalTypeI64 = {WASM_TYPE_I64,
                                                             true};
-  ctx.sym.callCtors = symtab->addSyntheticFunction(
-      "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
-      make<SyntheticFunction>(nullSignature, "__wasm_call_ctors"));
 
   bool is64 = ctx.arg.is64.value_or(false);
 
+  auto stack_pointer_name =
+      ctx.componentModelThreadContext ? "__init_stack_pointer" : "__stack_pointer";
   if (ctx.isPic) {
     ctx.sym.stackPointer =
-        createUndefinedGlobal("__stack_pointer", ctx.arg.is64.value_or(false)
-                                                     ? &mutableGlobalTypeI64
-                                                     : &mutableGlobalTypeI32);
+        createUndefinedGlobal(stack_pointer_name, ctx.arg.is64.value_or(false)
+                                                      ? &mutableGlobalTypeI64
+                                                      : &mutableGlobalTypeI32);
     // For PIC code, we import two global variables (__memory_base and
     // __table_base) from the environment and use these as the offset at
     // which to load our static data and function table.
@@ -963,14 +985,15 @@ static void createSyntheticSymbols() {
     ctx.sym.tableBase->markLive();
   } else {
     // For non-PIC code
-    ctx.sym.stackPointer = createGlobalVariable("__stack_pointer", true);
+    ctx.sym.stackPointer = createGlobalVariable(stack_pointer_name, !ctx.componentModelThreadContext);
     ctx.sym.stackPointer->markLive();
   }
 
-  if (ctx.arg.sharedMemory) {
+  if (ctx.isMultithreaded()) {
     // TLS symbols are all hidden/dso-local
-    ctx.sym.tlsBase =
-        createGlobalVariable("__tls_base", true, WASM_SYMBOL_VISIBILITY_HIDDEN);
+    auto tls_base_name = ctx.componentModelThreadContext ? "__init_tls_base" : "__tls_base";
+    ctx.sym.tlsBase = createGlobalVariable(tls_base_name, !ctx.componentModelThreadContext,
+                                           WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsSize = createGlobalVariable("__tls_size", false,
                                            WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsAlign = createGlobalVariable("__tls_align", false,
@@ -979,6 +1002,21 @@ static void createSyntheticSymbols() {
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(is64 ? i64ArgSignature : i32ArgSignature,
                                 "__wasm_init_tls"));
+    if (ctx.componentModelThreadContext) {
+      ctx.sym.tlsBase->markLive();
+      ctx.sym.tlsSize->markLive();
+      ctx.sym.tlsAlign->markLive();
+      static WasmSignature contextSet1Signature{{}, {ValType::I32}};
+      ctx.sym.contextSet1 = createUndefinedFunction(
+          "__wasm_component_model_builtin_context_set_1", "[context-set-1]",
+          "$root", &contextSet1Signature);
+      ctx.sym.contextSet1->markLive();
+      static WasmSignature contextGet1Signature{{ValType::I32}, {}};
+      ctx.sym.contextGet1 = createUndefinedFunction(
+          "__wasm_component_model_builtin_context_get_1", "[context-get-1]",
+          "$root", &contextGet1Signature);
+      ctx.sym.contextGet1->markLive();
+    }
   }
 }
 
@@ -1017,7 +1055,7 @@ static void createOptionalSymbols() {
   //
   // __tls_size and __tls_align are not needed in this case since they are only
   // needed for __wasm_init_tls (which we do not create in this case).
-  if (!ctx.arg.sharedMemory)
+  if (!ctx.arg.sharedMemory && !ctx.componentModelThreadContext)
     ctx.sym.tlsBase = createOptionalGlobal("__tls_base", false);
 }
 
@@ -1272,6 +1310,77 @@ static void checkZOptions(opt::InputArgList &args) {
       warn("unknown -z value: " + StringRef(arg->getValue()));
 }
 
+// Determine the thread context ABI based on object file features.
+// This must be called after LTO, since LTO object files are needed.
+static void determineThreadContextABI(ArrayRef<ObjFile *> files) {
+  // A complication is that a user may attempt to link together object files
+  // compiled with different versions of LLVM, where one does not specifiy
+  // -component-model-thread-context when using the global thread context ABI.
+  // They may also attempt to link object files with the global ABI compiled with
+  // older LLVM versions, but link them with a newer wasm-ld. To ensure the correct behavior
+  // in both of these cases, we treat the import of a __stack_pointer global from the env module
+  // as an indication that the global thread context ABI is being used.
+
+  enum class ThreadContextABI {
+    Undetermined,
+    ComponentModelBuiltins,
+    Globals
+  };
+
+  ThreadContextABI threadContextABI = ThreadContextABI::Undetermined;
+
+  for (ObjFile *obj : files) {
+    auto targetFeatures = obj->getWasmObj()->getTargetFeatures();
+    auto threadContextFeature = llvm::find_if(targetFeatures,
+                              [](const auto &f) {
+                                return f.Name == "component-model-thread-context";
+                              });
+
+    bool usesComponentModelThreadContext = threadContextFeature != targetFeatures.end() &&
+                                    threadContextFeature->Prefix == WASM_FEATURE_PREFIX_USED;
+
+    if (threadContextFeature == targetFeatures.end()) {
+      // If the feature is not explicitly used or disallowed, check for the presence of a __stack_pointer
+      // import in this specific file to determine if the global thread context ABI is being used.
+      bool hasStackPointerImport = llvm::any_of(obj->getSymbols(), [](const auto &sym) {
+        return sym && sym->getName() == "__stack_pointer" && 
+               sym->kind() == Symbol::UndefinedGlobalKind &&
+               sym->importModule && sym->importModule == "env";
+      });
+      if (!hasStackPointerImport) {
+        // No __stack_pointer import, so this is probably an object file compiled from assembly or
+        // some other source that doesn't care about the thread context ABI. As such, we let it pass.
+        continue;
+      }
+      // Treat this as using the globals ABI
+      usesComponentModelThreadContext = false;
+    }     
+
+    if (usesComponentModelThreadContext) {
+      if (threadContextABI == ThreadContextABI::Undetermined) {
+        threadContextABI = ThreadContextABI::ComponentModelBuiltins;
+      } else if (threadContextABI != ThreadContextABI::ComponentModelBuiltins) {
+        error("thread context ABI mismatch: " + obj->getName() +
+              " uses component-model-thread-context but other files disallow it");
+      }
+    } else {
+      if (threadContextABI == ThreadContextABI::Undetermined) {
+        threadContextABI = ThreadContextABI::Globals;
+      } else if (threadContextABI != ThreadContextABI::Globals) {
+        error("thread context ABI mismatch: " + obj->getName() +
+              " disallows component-model-thread-context but other files use it"); 
+      }
+    }
+  }
+ 
+  // If the ABI is undetermined at this point, default to the globals ABI
+  ctx.componentModelThreadContext = (threadContextABI == ThreadContextABI::ComponentModelBuiltins);
+
+  if (ctx.arg.sharedMemory && ctx.componentModelThreadContext) {
+    error("--shared-memory is currently incompatible with component model thread context intrinsics");
+  }
+}
+
 LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
 
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
@@ -1361,7 +1470,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     ctx.arg.requiredExports.push_back(arg->getValue());
   }
 
-  createSyntheticSymbols();
+  createEarlySyntheticSymbols();
 
   // Add all files to the symbol table. This will add almost all
   // symbols that we need to the symbol table.
@@ -1445,6 +1554,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   symtab->compileBitcodeFiles();
   if (errorCount())
     return;
+
+  // Now that LTO is complete and all object files are available, determine the 
+  // thread context ABI and create symbols (__stack_pointer, __tls_base, etc.) based
+  // on the determined ABI.
+  determineThreadContextABI(ctx.objectFiles);
+  createPostLTOSymbols();
 
   // The LTO process can generate new undefined symbols, specifically libcall
   // functions.  Because those symbols might be declared in a stub library we

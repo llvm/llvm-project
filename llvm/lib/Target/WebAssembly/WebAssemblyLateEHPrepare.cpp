@@ -405,7 +405,7 @@ bool WebAssemblyLateEHPrepare::restoreStackPointer(MachineFunction &MF) {
            WebAssembly::isCatch(InsertPos->getOpcode()) &&
            "catch/catch_all should be present in every EH pad at this point");
     ++InsertPos; // Skip the catch instruction
-    FrameLowering->writeSPToGlobal(FrameLowering->getSPReg(MF), MF, MBB,
+    FrameLowering->writeBackSP(FrameLowering->getSPReg(MF), MF, MBB,
                                    InsertPos, MBB.begin()->getDebugLoc());
   }
   return Changed;

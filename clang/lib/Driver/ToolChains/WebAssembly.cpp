@@ -79,6 +79,19 @@ static bool WantsPthread(const llvm::Triple &Triple, const ArgList &Args) {
   return WantsPthread;
 }
 
+static bool WantsComponentModelThreadContext(const llvm::Triple &Triple, const ArgList &Args) {
+  // If the target is WASIP3, then enable the
+  // component-model-thread-context feature by default, unless explicitly
+  // disabled.
+  return Triple.getOS() == llvm::Triple::WASIp3 &&
+         Args.hasFlag(options::OPT_mcomponent_model_thread_context,
+                     options::OPT_mno_component_model_thread_context, true);
+}
+
+static bool WantsSharedMemory(const llvm::Triple &Triple, const ArgList &Args) {
+  return WantsPthread(Triple, Args) && !WantsComponentModelThreadContext(Triple, Args);
+}
+
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                 const InputInfo &Output,
                                 const InputInfoList &Inputs,
@@ -160,7 +173,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  if (WantsPthread(ToolChain.getTriple(), Args))
+  if (WantsSharedMemory(ToolChain.getTriple(), Args))
     CmdArgs.push_back("--shared-memory");
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
@@ -307,36 +320,45 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
                           options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fno-use-init-array");
 
-  // '-pthread' implies atomics, bulk-memory, mutable-globals, and sign-ext
+  if (WantsComponentModelThreadContext(getTriple(), DriverArgs)) {
+    CC1Args.push_back("-target-feature");
+    CC1Args.push_back("+component-model-thread-context");
+  }
+
+  // '-pthread' implies bulk-memory, and, if shared memory is also used,
+  // also implies atomics, mutable-globals, and sign-ext.
   if (WantsPthread(getTriple(), DriverArgs)) {
-    if (DriverArgs.hasFlag(options::OPT_mno_atomics, options::OPT_matomics,
-                           false))
-      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
-          << "-pthread"
-          << "-mno-atomics";
     if (DriverArgs.hasFlag(options::OPT_mno_bulk_memory,
                            options::OPT_mbulk_memory, false))
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)
           << "-pthread"
           << "-mno-bulk-memory";
-    if (DriverArgs.hasFlag(options::OPT_mno_mutable_globals,
-                           options::OPT_mmutable_globals, false))
-      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
-          << "-pthread"
-          << "-mno-mutable-globals";
-    if (DriverArgs.hasFlag(options::OPT_mno_sign_ext, options::OPT_msign_ext,
-                           false))
-      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
-          << "-pthread"
-          << "-mno-sign-ext";
-    CC1Args.push_back("-target-feature");
-    CC1Args.push_back("+atomics");
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+bulk-memory");
-    CC1Args.push_back("-target-feature");
-    CC1Args.push_back("+mutable-globals");
-    CC1Args.push_back("-target-feature");
-    CC1Args.push_back("+sign-ext");
+
+    if (WantsSharedMemory(getTriple(), DriverArgs)) {
+      if (DriverArgs.hasFlag(options::OPT_mno_atomics, options::OPT_matomics,
+                             false))
+        getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+            << "-pthread"
+            << "-mno-atomics";
+      if (DriverArgs.hasFlag(options::OPT_mno_mutable_globals,
+                             options::OPT_mmutable_globals, false))
+        getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+            << "-pthread"
+            << "-mno-mutable-globals";
+      if (DriverArgs.hasFlag(options::OPT_mno_sign_ext, options::OPT_msign_ext,
+                             false))
+        getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+            << "-pthread"
+            << "-mno-sign-ext";
+      CC1Args.push_back("-target-feature");
+      CC1Args.push_back("+atomics");
+      CC1Args.push_back("-target-feature");
+      CC1Args.push_back("+mutable-globals");
+      CC1Args.push_back("-target-feature");
+      CC1Args.push_back("+sign-ext");
+    }
   }
 
   if (!DriverArgs.hasFlag(options::OPT_mmutable_globals,

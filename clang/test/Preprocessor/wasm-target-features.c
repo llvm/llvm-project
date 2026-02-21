@@ -239,3 +239,12 @@
 // RUN:   | FileCheck %s -check-prefix=WIDE-ARITHMETIC
 //
 // WIDE-ARITHMETIC: #define __wasm_wide_arithmetic__ 1{{$}}
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm32-unknown-unknown -mcomponent-model-thread-context \
+// RUN:   | FileCheck %s -check-prefix=COMPONENT-MODEL-THREAD-CONTEXT
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm64-unknown-unknown -mcomponent-model-thread-context \
+// RUN:   | FileCheck %s -check-prefix=COMPONENT-MODEL-THREAD-CONTEXT
+
+// COMPONENT-MODEL-THREAD-CONTEXT: #define __wasm_component_model_thread_context__ 1{{$}}

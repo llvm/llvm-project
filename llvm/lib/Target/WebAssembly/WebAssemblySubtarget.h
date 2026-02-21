@@ -48,6 +48,7 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   bool HasBulkMemoryOpt = false;
   bool HasCallIndirectOverlong = false;
   bool HasCompactImports = false;
+  bool HasComponentModelThreadContext = false;
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
   bool HasFP16 = false;
@@ -111,6 +112,7 @@ public:
   bool hasBulkMemoryOpt() const { return HasBulkMemoryOpt; }
   bool hasCallIndirectOverlong() const { return HasCallIndirectOverlong; }
   bool hasCompactImports() const { return HasCompactImports; }
+  bool hasComponentModelThreadContext() const { return HasComponentModelThreadContext; }
   bool hasExceptionHandling() const { return HasExceptionHandling; }
   bool hasExtendedConst() const { return HasExtendedConst; }
   bool hasFP16() const { return HasFP16; }

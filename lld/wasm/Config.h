@@ -35,6 +35,7 @@ class Symbol;
 class DefinedData;
 class GlobalSymbol;
 class DefinedFunction;
+class UndefinedFunction;
 class DefinedGlobal;
 class UndefinedGlobal;
 class TableSymbol;
@@ -133,6 +134,8 @@ struct Config {
   std::optional<std::vector<std::string>> extraFeatures;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
 };
+
+enum class ThreadContextAbi { Undetermined, Globals, ComponentModelBuiltins };
 
 // The Ctx object hold all other (non-configuration) global state.
 struct Ctx {
@@ -252,6 +255,14 @@ struct Ctx {
     // Used as an address space for function pointers, with each function that
     // is used as a function pointer being allocated a slot.
     TableSymbol *indirectFunctionTable;
+
+    // __wasm_component_model_builtin_context_set_1
+    // Function used to set TLS base in component model modules.
+    UndefinedFunction *contextSet1;
+
+    // __wasm_component_model_builtin_context_get_1
+    // Function used to get TLS base in component model modules.
+    UndefinedFunction *contextGet1;
   };
   WasmSym sym;
 
@@ -271,8 +282,12 @@ struct Ctx {
                     0>
       whyExtractRecords;
 
+  // Whether to use component model thread context intrinsics for the stack pointer and TLS base.
+  bool componentModelThreadContext = false;
+
   Ctx();
   void reset();
+  bool isMultithreaded() const { return componentModelThreadContext || arg.sharedMemory; }
 };
 
 extern Ctx ctx;

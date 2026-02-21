@@ -38,6 +38,11 @@ def HasCallIndirectOverlong :
     Predicate<"Subtarget->hasCallIndirectOverlong()">,
     AssemblerPredicate<(all_of FeatureCallIndirectOverlong), "call-indirect-overlong">;
 
+def HasComponentModelThreadContext :
+    Predicate<"Subtarget->hasComponentModelThreadContext()">,
+    AssemblerPredicate<(all_of FeatureComponentModelThreadContext),
+                       "component-model-thread-context">;
+
 def HasExceptionHandling :
     Predicate<"Subtarget->hasExceptionHandling()">,
     AssemblerPredicate<(all_of FeatureExceptionHandling), "exception-handling">;

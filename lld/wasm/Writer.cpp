@@ -650,10 +650,12 @@ void Writer::populateTargetFeatures() {
   }
 
   if (tlsUsed) {
-    for (auto feature : {"atomics", "bulk-memory"})
-      if (!allowed.contains(feature))
-        error(StringRef("'") + feature +
-              "' feature must be used in order to use thread-local storage");
+    if (!allowed.contains("bulk-memory")) {
+      error("bulk-memory feature must be used in order to use thread-local storage");
+    }
+    if (!ctx.componentModelThreadContext && !allowed.contains("atomics")) {
+      error("atomics feature must be used in order to use thread-local storage");
+    }
   }
 
   // Validate that used features are allowed in output
@@ -1031,7 +1033,7 @@ static StringRef getOutputDataSegmentName(const InputChunk &seg) {
 OutputSegment *Writer::createOutputSegment(StringRef name) {
   LLVM_DEBUG(dbgs() << "new segment: " << name << "\n");
   OutputSegment *s = make<OutputSegment>(name);
-  if (ctx.arg.sharedMemory)
+  if (ctx.isMultithreaded())
     s->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
   if (!ctx.arg.relocatable && name.starts_with(".bss"))
     s->isBss = true;
@@ -1172,15 +1174,17 @@ void Writer::createSyntheticInitFunctions() {
     }
   }
 
-  if (ctx.arg.sharedMemory) {
+  if (ctx.isMultithreaded()) {
     if (out.globalSec->needsTLSRelocations()) {
       ctx.sym.applyGlobalTLSRelocs = symtab->addSyntheticFunction(
           "__wasm_apply_global_tls_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
           make<SyntheticFunction>(nullSignature,
                                   "__wasm_apply_global_tls_relocs"));
       ctx.sym.applyGlobalTLSRelocs->markLive();
-      // TLS relocations depend on  the __tls_base symbols
-      ctx.sym.tlsBase->markLive();
+      // Shared memory TLS relocations depend on  the __tls_base symbols
+      if (ctx.arg.sharedMemory) {
+        ctx.sym.tlsBase->markLive();
+      }
     }
 
     auto hasTLSRelocs = [](const OutputSegment *segment) {
@@ -1360,8 +1364,7 @@ void Writer::createInitMemoryFunction() {
           } else {
             writePtrConst(os, s->startVA, is64, "destination address");
           }
-          writeU8(os, WASM_OPCODE_GLOBAL_SET, "GLOBAL_SET");
-          writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "__tls_base");
+          writeSetTLSBase(ctx, os);
           if (ctx.isPic) {
             writeU8(os, WASM_OPCODE_LOCAL_GET, "local.tee");
             writeUleb128(os, 1, "local 1");
@@ -1424,7 +1427,7 @@ void Writer::createInitMemoryFunction() {
       if (needsPassiveInitialization(s) && !s->isBss) {
         // The TLS region should not be dropped since its is needed
         // during the initialization of each thread (__wasm_init_tls).
-        if (ctx.arg.sharedMemory && s->isTLS())
+        if (ctx.isMultithreaded() && s->isTLS())
           continue;
         // data.drop instruction
         writeU8(os, WASM_OPCODE_MISC_PREFIX, "bulk-memory prefix");
@@ -1631,11 +1634,15 @@ void Writer::createInitTLSFunction() {
 
     writeUleb128(os, 0, "num locals");
     if (tlsSeg) {
-      writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
-      writeUleb128(os, 0, "local index");
+      // When using component model thread context intrinsics, we don't set the TLS base
+      //inside __init_tls; this should be done as part of the thread startup stub.
+      if (!ctx.componentModelThreadContext) {
+        writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
+        writeUleb128(os, 0, "local index");
 
-      writeU8(os, WASM_OPCODE_GLOBAL_SET, "global.set");
-      writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "global index");
+        writeU8(os, WASM_OPCODE_GLOBAL_SET, "global.set");
+        writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "global index");
+      }
 
       // FIXME(wvo): this local needs to be I64 in wasm64, or we need an extend
       // op.

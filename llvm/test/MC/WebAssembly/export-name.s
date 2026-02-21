@@ -8,7 +8,14 @@ foo:
     .export_name foo, bar
     end_function
 
+baz:
+    .globl baz
+    .functype baz () -> ()
+    .export_name baz, "[baz]"
+    end_function
+
 # CHECK: .export_name foo, bar
+# CHECK: .export_name baz, "[baz]"
 
 # CHECK-OBJ:        - Type:            EXPORT
 # CHECK-OBJ-NEXT:     Exports:
@@ -24,3 +31,8 @@ foo:
 # CHECK-OBJ-NEXT:         Name:            foo
 # CHECK-OBJ-NEXT:         Flags:           [ EXPORTED ]
 # CHECK-OBJ-NEXT:         Function:        0
+# CHECK-OBJ-NEXT:       - Index:           1
+# CHECK-OBJ-NEXT:         Kind:            FUNCTION
+# CHECK-OBJ-NEXT:         Name:            baz
+# CHECK-OBJ-NEXT:         Flags:           [ EXPORTED ]
+# CHECK-OBJ-NEXT:         Function:        1

@@ -9,7 +9,10 @@ define void @foo() {
 }
 
 ; CHECK-LABEL: .custom_section.target_features
-; CHECK-NEXT: .int8 1
+; CHECK-NEXT: .int8 2
+; CHECK-NEXT: .int8 45
+; CHECK-NEXT: .int8 30
+; CHECK-NEXT: .ascii "component-model-thread-context"
 ; CHECK-NEXT: .int8 43
 ; CHECK-NEXT: .int8 15
 ; CHECK-NEXT: .ascii "mutable-globals"
