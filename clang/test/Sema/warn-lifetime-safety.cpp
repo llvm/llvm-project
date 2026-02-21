@@ -46,11 +46,10 @@ View construct_view(const MyObj &obj [[clang::lifetimebound]]) {
 void use(View);
 
 //===----------------------------------------------------------------------===//
-// Basic Definite Use-After-Free (-W...permissive)
-// These are cases where the pointer is guaranteed to be dangling at the use site.
+// Basic Use-After-Free
 //===----------------------------------------------------------------------===//
 
-void definite_simple_case() {
+void simple_case() {
   MyObj* p;
   {
     MyObj s;
@@ -59,7 +58,7 @@ void definite_simple_case() {
   (void)*p;     // expected-note {{later used here}}
 }
 
-void definite_simple_case_gsl() {
+void simple_case_gsl() {
   View v;
   {
     MyObj s;
@@ -86,7 +85,7 @@ void no_use_no_error_gsl() {
   // 'v' is dangling here, but since it is never used, no warning is issued.
 }
 
-void definite_pointer_chain() {
+void pointer_chain() {
   MyObj* p;
   MyObj* q;
   {
@@ -97,7 +96,7 @@ void definite_pointer_chain() {
   (void)*q;     // expected-note {{later used here}}
 }
 
-void definite_propagation_gsl() {
+void propagation_gsl() {
   View v1, v2;
   {
     MyObj s;
@@ -107,7 +106,7 @@ void definite_propagation_gsl() {
   v2.use();     // expected-note {{later used here}}
 }
 
-void definite_multiple_uses_one_warning() {
+void multiple_uses_one_warning() {
   MyObj* p;
   {
     MyObj s;
@@ -120,7 +119,7 @@ void definite_multiple_uses_one_warning() {
   (void)*q;
 }
 
-void definite_multiple_pointers() {
+void multiple_pointers() {
   MyObj *p, *q, *r;
   {
     MyObj s;
@@ -133,7 +132,7 @@ void definite_multiple_pointers() {
   (void)*r;     // expected-note {{later used here}}
 }
 
-void definite_single_pointer_multiple_loans(bool cond) {
+void single_pointer_multiple_loans(bool cond) {
   MyObj *p;
   if (cond){
     MyObj s;
@@ -146,7 +145,7 @@ void definite_single_pointer_multiple_loans(bool cond) {
   (void)*p;     // expected-note 2  {{later used here}}
 }
 
-void definite_single_pointer_multiple_loans_gsl(bool cond) {
+void single_pointer_multiple_loans_gsl(bool cond) {
   View v;
   if (cond){
     MyObj s;
@@ -159,7 +158,7 @@ void definite_single_pointer_multiple_loans_gsl(bool cond) {
   v.use();      // expected-note 2 {{later used here}}
 }
 
-void definite_if_branch(bool cond) {
+void if_branch(bool cond) {
   MyObj safe;
   MyObj* p = &safe;
   if (cond) {
@@ -169,7 +168,7 @@ void definite_if_branch(bool cond) {
   (void)*p;     // expected-note {{later used here}}
 }
 
-void potential_if_branch(bool cond) {
+void if_branch_potential(bool cond) {
   MyObj safe;
   MyObj* p = &safe;
   if (cond) {
@@ -182,7 +181,7 @@ void potential_if_branch(bool cond) {
     p = &safe;
 }
 
-void definite_if_branch_gsl(bool cond) {
+void if_branch_gsl(bool cond) {
   MyObj safe;
   View v = safe;
   if (cond) {
@@ -192,7 +191,7 @@ void definite_if_branch_gsl(bool cond) {
   v.use();      // expected-note {{later used here}}
 }
 
-void definite_potential_together(bool cond) {
+void potential_together(bool cond) {
   MyObj safe;
   MyObj* p_maybe = &safe;
   MyObj* p_definite = nullptr;
@@ -209,7 +208,7 @@ void definite_potential_together(bool cond) {
     (void)*p_maybe;     // expected-note {{later used here}}
 }
 
-void definite_overrides_potential(bool cond) {
+void overrides_potential(bool cond) {
   MyObj safe;
   MyObj* p;
   MyObj* q;
@@ -224,13 +223,12 @@ void definite_overrides_potential(bool cond) {
     q = &safe;
   }
 
-  // The use of 'p' is a definite error because it was never rescued.
-  (void)*q;
-  (void)*p;       // expected-note {{later used here}}
+  (void)*q;       // expected-note {{later used here}}
+  (void)*p;
   (void)*q;
 }
 
-void potential_due_to_conditional_killing(bool cond) {
+void due_to_conditional_killing(bool cond) {
   MyObj safe;
   MyObj* q;
   {
@@ -244,7 +242,7 @@ void potential_due_to_conditional_killing(bool cond) {
   (void)*q;       // expected-note {{later used here}}
 }
 
-void potential_for_loop_use_after_loop_body(MyObj safe) {
+void for_loop_use_after_loop_body(MyObj safe) {
   MyObj* p = &safe;
   for (int i = 0; i < 1; ++i) {
     MyObj s;
@@ -263,7 +261,7 @@ void safe_for_loop_gsl() {
   }
 }
 
-void potential_for_loop_gsl() {
+void for_loop_gsl() {
   MyObj safe;
   View v = safe;
   for (int i = 0; i < 1; ++i) {
@@ -273,7 +271,7 @@ void potential_for_loop_gsl() {
   v.use();      // expected-note {{later used here}}
 }
 
-void potential_for_loop_use_before_loop_body(MyObj safe) {
+void for_loop_use_before_loop_body(MyObj safe) {
   MyObj* p = &safe;
   // Prefer the earlier use for diagnsotics.
   for (int i = 0; i < 1; ++i) {
@@ -284,7 +282,7 @@ void potential_for_loop_use_before_loop_body(MyObj safe) {
   (void)*p;
 }
 
-void definite_loop_with_break(bool cond) {
+void loop_with_break(bool cond) {
   MyObj safe;
   MyObj* p = &safe;
   for (int i = 0; i < 10; ++i) {
@@ -297,7 +295,7 @@ void definite_loop_with_break(bool cond) {
   (void)*p;     // expected-note {{later used here}}
 }
 
-void definite_loop_with_break_gsl(bool cond) {
+void loop_with_break_gsl(bool cond) {
   MyObj safe;
   View v = safe;
   for (int i = 0; i < 10; ++i) {
@@ -310,7 +308,7 @@ void definite_loop_with_break_gsl(bool cond) {
   v.use();      // expected-note {{later used here}}
 }
 
-void potential_multiple_expiry_of_same_loan(bool cond) {
+void multiple_expiry_of_same_loan(bool cond) {
   // Choose the last expiry location for the loan (e.g., through scope-ends and break statements).
   MyObj safe;
   MyObj* p = &safe;
@@ -342,11 +340,6 @@ void potential_multiple_expiry_of_same_loan(bool cond) {
       break;          // expected-note {{destroyed here}}
     }
   }
-
-  // TODO: This can be argued to be a "maybe" warning. This is because
-  // we only check for confidence of liveness and not the confidence of
-  // the loan contained in an origin. To deal with this, we can introduce
-  // a confidence in loan propagation analysis as well like liveness.
   (void)*p;           // expected-note {{later used here}}
 
   p = &safe;
@@ -360,7 +353,7 @@ void potential_multiple_expiry_of_same_loan(bool cond) {
   (void)*p;           // expected-note {{later used here}}
 }
 
-void potential_switch(int mode) {
+void switch_potential(int mode) {
   MyObj safe;
   MyObj* p = &safe;
   switch (mode) {
@@ -378,7 +371,7 @@ void potential_switch(int mode) {
     (void)*p;     // expected-note {{later used here}}
 }
 
-void definite_switch(int mode) {
+void switch_uaf(int mode) {
   MyObj safe;
   MyObj* p = &safe;
   // A use domintates all the loan expires --> all definite error.
@@ -402,7 +395,7 @@ void definite_switch(int mode) {
   (void)*p;     // expected-note 3 {{later used here}}
 }
 
-void definite_switch_gsl(int mode) {
+void switch_gsl(int mode) {
   View v;
   switch (mode) {
   case 1: {
@@ -468,8 +461,7 @@ void small_scope_reference_var_no_error() {
 }
 
 //===----------------------------------------------------------------------===//
-// Basic Definite Use-After-Return (Return-Stack-Address) (-W...permissive)
-// These are cases where the pointer is guaranteed to be dangling at the use site.
+// Basic Use-After-Return (Return-Stack-Address)
 //===----------------------------------------------------------------------===//
 
 MyObj* simple_return_stack_address() {

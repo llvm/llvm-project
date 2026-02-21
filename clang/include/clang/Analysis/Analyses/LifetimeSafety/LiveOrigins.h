@@ -34,12 +34,6 @@ namespace clang::lifetimes::internal {
 using CausingFactType =
     ::llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>;
 
-enum class LivenessKind : uint8_t {
-  Dead,  // Not alive
-  Maybe, // Live on some path but not all paths (may-be-live)
-  Must   // Live on all paths (must-be-live)
-};
-
 /// Information about why an origin is live at a program point.
 struct LivenessInfo {
   /// The use that makes the origin live. If liveness is propagated from
@@ -48,28 +42,16 @@ struct LivenessInfo {
   /// This is 'null' when the origin is not live.
   CausingFactType CausingFact;
 
-  /// The kind of liveness of the origin.
-  /// `Must`: The origin is live on all control-flow paths from the current
-  /// point to the function's exit (i.e. the current point is dominated by a set
-  /// of uses).
-  /// `Maybe`: indicates it is live on some but not all paths.
-  ///
-  /// This determines the diagnostic's confidence level.
-  /// `Must`-be-alive at expiration implies a definite use-after-free,
-  /// while `Maybe`-be-alive suggests a potential one on some paths.
-  LivenessKind Kind;
-
-  LivenessInfo() : CausingFact(nullptr), Kind(LivenessKind::Dead) {}
-  LivenessInfo(CausingFactType CF, LivenessKind K) : CausingFact(CF), Kind(K) {}
+  LivenessInfo() : CausingFact(nullptr) {}
+  LivenessInfo(CausingFactType CF) : CausingFact(CF) {}
 
   bool operator==(const LivenessInfo &Other) const {
-    return CausingFact == Other.CausingFact && Kind == Other.Kind;
+    return CausingFact == Other.CausingFact;
   }
   bool operator!=(const LivenessInfo &Other) const { return !(*this == Other); }
 
   void Profile(llvm::FoldingSetNodeID &IDBuilder) const {
     IDBuilder.AddPointer(CausingFact.getOpaqueValue());
-    IDBuilder.Add(Kind);
   }
 };
 
