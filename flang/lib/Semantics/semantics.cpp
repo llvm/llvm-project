@@ -449,12 +449,12 @@ auto SemanticsContext::SearchScopeIndex(parser::CharBlock source)
   if (!scopeIndex_.empty()) {
     auto iter{scopeIndex_.upper_bound(source)};
     auto begin{scopeIndex_.begin()};
-    do {
+    while (iter != begin) {
       --iter;
       if (iter->first.Contains(source)) {
         return iter;
       }
-    } while (iter != begin);
+    }
   }
   return scopeIndex_.end();
 }
