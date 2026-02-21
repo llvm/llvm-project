@@ -1,3 +1,7 @@
+; Test to ensure that devirtualization promotes an internal virtual target to a
+; uniqued hidden symbol from a static function, and later on the static funciton
+; is promoted to the same hidden symbol.
+
 ; Set up
 ; RUN: rm -rf %t
 ; RUN: mkdir -p %t
@@ -8,6 +12,7 @@
 
 ; RUN: llvm-lto2 run %t/a.bc %t/b.bc \
 ; RUN:   --whole-program-visibility-enabled-in-lto=true \
+; RUN:   -disable-always-rename-promoted-locals \
 ; RUN:   -save-temps -o %t/lto-out \
 ; RUN:   -r %t/a.bc,test,px \
 ; RUN:   -r %t/b.bc,_ZN1B1fEi,p \

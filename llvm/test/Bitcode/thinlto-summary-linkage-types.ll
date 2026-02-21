@@ -12,8 +12,8 @@ define private void @private()
 }
 
 define internal void @internal()
-; CHECK: <PERMODULE_PROFILE {{.*}} op1=71
-; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=71
+; CHECK: <PERMODULE_PROFILE {{.*}} op1=7
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=7
 {
   ret void
 }

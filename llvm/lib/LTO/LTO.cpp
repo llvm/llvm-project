@@ -96,6 +96,7 @@ static cl::opt<bool>
 namespace llvm {
 extern cl::opt<bool> CodeGenDataThinLTOTwoRounds;
 extern cl::opt<bool> ForceImportAll;
+extern cl::opt<bool> DisableAlwaysRenamePromotedLocals;
 } // end namespace llvm
 
 namespace llvm {
@@ -518,7 +519,7 @@ static void thinLTOInternalizeAndPromoteGUID(
         if (ExternallyVisibleSymbolNamesPtr && !NameRecorded) {
           NameRecorded = true;
           if (ExternallyVisibleSymbolNamesPtr->insert(VI.name()).second)
-            S->setNotRenameOnPromotion(true);
+            S->setNoRenameOnPromotion(true);
         }
 
         S->promote();
@@ -2049,8 +2050,9 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   std::map<ValueInfo, std::vector<VTableSlotSummary>> LocalWPDTargetsMap;
   DenseSet<StringRef> ExternallyVisibleSymbolNames;
   DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr =
-      WholeProgramVisibilityEnabledInLTO ? &ExternallyVisibleSymbolNames
-                                         : nullptr;
+      (WholeProgramVisibilityEnabledInLTO && DisableAlwaysRenamePromotedLocals)
+          ? &ExternallyVisibleSymbolNames
+          : nullptr;
   runWholeProgramDevirtOnIndex(ThinLTO.CombinedIndex, ExportedGUIDs,
                                LocalWPDTargetsMap,
                                ExternallyVisibleSymbolNamesPtr);
