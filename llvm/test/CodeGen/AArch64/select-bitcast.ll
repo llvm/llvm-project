@@ -460,7 +460,7 @@ define void @if_then_else64(ptr %out, i64 %mask, ptr %if_true, ptr %if_false) {
 ; CHECK-BE-NEXT:    ld1 { v28.4s }, [x9]
 ; CHECK-BE-NEXT:    add x9, x3, #96
 ; CHECK-BE-NEXT:    ld1 { v3.4s }, [x8]
-; CHECK-BE-NEXT:    dup v6.4s, v17.s[1]
+; CHECK-BE-NEXT:    dup v6.4s, v17.s[0]
 ; CHECK-BE-NEXT:    add x8, x2, #176
 ; CHECK-BE-NEXT:    ld1 { v23.4s }, [x9]
 ; CHECK-BE-NEXT:    add x9, x3, #48
@@ -500,7 +500,7 @@ define void @if_then_else64(ptr %out, i64 %mask, ptr %if_true, ptr %if_false) {
 ; CHECK-BE-NEXT:    bsl v16.16b, v29.16b, v20.16b
 ; CHECK-BE-NEXT:    ld1 { v20.4s }, [x9]
 ; CHECK-BE-NEXT:    cmeq v8.4s, v8.4s, #0
-; CHECK-BE-NEXT:    dup v29.4s, v17.s[0]
+; CHECK-BE-NEXT:    dup v29.4s, v17.s[1]
 ; CHECK-BE-NEXT:    mov v17.16b, v30.16b
 ; CHECK-BE-NEXT:    add x8, x2, #112
 ; CHECK-BE-NEXT:    and v11.16b, v6.16b, v31.16b
@@ -622,5 +622,348 @@ start:
   store <64 x i32> %1, ptr %out, align 4
   ret void
 }
+
+define <8 x i8> @broadcast_u8_to_v8i8_zext(i8 %x) {
+; CHECK-LE-LABEL: broadcast_u8_to_v8i8_zext:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    dup v0.8b, w0
+; CHECK-LE-NEXT:    adrp x8, .LCPI4_0
+; CHECK-LE-NEXT:    ldr d1, [x8, :lo12:.LCPI4_0]
+; CHECK-LE-NEXT:    cmtst v0.8b, v0.8b, v1.8b
+; CHECK-LE-NEXT:    ushr v0.8b, v0.8b, #7
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: broadcast_u8_to_v8i8_zext:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    dup v0.8b, w0
+; CHECK-BE-NEXT:    adrp x8, .LCPI4_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI4_0
+; CHECK-BE-NEXT:    ld1 { v1.8b }, [x8]
+; CHECK-BE-NEXT:    cmtst v0.8b, v0.8b, v1.8b
+; CHECK-BE-NEXT:    ushr v0.8b, v0.8b, #7
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    ret
+  %v1 = bitcast i8 %x to <8 x i1>
+  %v8 = zext <8 x i1> %v1 to <8 x i8>
+  ret <8 x i8> %v8
+}
+
+define <8 x i8> @broadcast_u8_to_v8i8_sext(i8 %x) {
+; CHECK-LE-LABEL: broadcast_u8_to_v8i8_sext:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    dup v0.8b, w0
+; CHECK-LE-NEXT:    adrp x8, .LCPI5_0
+; CHECK-LE-NEXT:    ldr d1, [x8, :lo12:.LCPI5_0]
+; CHECK-LE-NEXT:    cmtst v0.8b, v0.8b, v1.8b
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: broadcast_u8_to_v8i8_sext:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    dup v0.8b, w0
+; CHECK-BE-NEXT:    adrp x8, .LCPI5_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI5_0
+; CHECK-BE-NEXT:    ld1 { v1.8b }, [x8]
+; CHECK-BE-NEXT:    cmtst v0.8b, v0.8b, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-BE-NEXT:    ret
+  %v1 = bitcast i8 %x to <8 x i1>
+  %v8 = sext <8 x i1> %v1 to <8 x i8>
+  ret <8 x i8> %v8
+}
+
+define <16 x i8> @broadcast_u16_to_v16i8_zext(i16 %x) {
+; CHECK-LE-LABEL: broadcast_u16_to_v16i8_zext:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    adrp x8, .LCPI6_0
+; CHECK-LE-NEXT:    fmov s1, w0
+; CHECK-LE-NEXT:    ldr q0, [x8, :lo12:.LCPI6_0]
+; CHECK-LE-NEXT:    adrp x8, .LCPI6_1
+; CHECK-LE-NEXT:    tbl v0.16b, { v1.16b }, v0.16b
+; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI6_1]
+; CHECK-LE-NEXT:    cmtst v0.16b, v0.16b, v1.16b
+; CHECK-LE-NEXT:    ushr v0.16b, v0.16b, #7
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: broadcast_u16_to_v16i8_zext:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    fmov s0, w0
+; CHECK-BE-NEXT:    adrp x8, .LCPI6_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI6_0
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x8]
+; CHECK-BE-NEXT:    adrp x8, .LCPI6_1
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI6_1
+; CHECK-BE-NEXT:    rev16 v0.16b, v0.16b
+; CHECK-BE-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x8]
+; CHECK-BE-NEXT:    cmtst v0.16b, v0.16b, v1.16b
+; CHECK-BE-NEXT:    ushr v0.16b, v0.16b, #7
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
+  %v1 = bitcast i16 %x to <16 x i1>
+  %v8 = zext <16 x i1> %v1 to <16 x i8>
+  ret <16 x i8> %v8
+}
+
+define <16 x i8> @broadcast_u16_to_v16i8_sext(i16 %x) {
+; CHECK-LE-LABEL: broadcast_u16_to_v16i8_sext:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    adrp x8, .LCPI7_0
+; CHECK-LE-NEXT:    fmov s1, w0
+; CHECK-LE-NEXT:    ldr q0, [x8, :lo12:.LCPI7_0]
+; CHECK-LE-NEXT:    adrp x8, .LCPI7_1
+; CHECK-LE-NEXT:    tbl v0.16b, { v1.16b }, v0.16b
+; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI7_1]
+; CHECK-LE-NEXT:    cmtst v0.16b, v0.16b, v1.16b
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: broadcast_u16_to_v16i8_sext:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    fmov s0, w0
+; CHECK-BE-NEXT:    adrp x8, .LCPI7_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI7_0
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x8]
+; CHECK-BE-NEXT:    adrp x8, .LCPI7_1
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI7_1
+; CHECK-BE-NEXT:    rev16 v0.16b, v0.16b
+; CHECK-BE-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x8]
+; CHECK-BE-NEXT:    cmtst v0.16b, v0.16b, v1.16b
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
+  %v1 = bitcast i16 %x to <16 x i1>
+  %v8 = sext <16 x i1> %v1 to <16 x i8>
+  ret <16 x i8> %v8
+}
+
+define <32 x i8> @broadcast_u32_to_v32i8_zext(i32 %x) {
+; CHECK-LE-LABEL: broadcast_u32_to_v32i8_zext:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    adrp x8, .LCPI8_0
+; CHECK-LE-NEXT:    adrp x9, .LCPI8_2
+; CHECK-LE-NEXT:    fmov s2, w0
+; CHECK-LE-NEXT:    ldr q0, [x8, :lo12:.LCPI8_0]
+; CHECK-LE-NEXT:    ldr q1, [x9, :lo12:.LCPI8_2]
+; CHECK-LE-NEXT:    adrp x8, .LCPI8_1
+; CHECK-LE-NEXT:    tbl v0.16b, { v2.16b }, v0.16b
+; CHECK-LE-NEXT:    tbl v1.16b, { v2.16b }, v1.16b
+; CHECK-LE-NEXT:    ldr q2, [x8, :lo12:.LCPI8_1]
+; CHECK-LE-NEXT:    cmtst v0.16b, v0.16b, v2.16b
+; CHECK-LE-NEXT:    cmtst v1.16b, v1.16b, v2.16b
+; CHECK-LE-NEXT:    ushr v0.16b, v0.16b, #7
+; CHECK-LE-NEXT:    ushr v1.16b, v1.16b, #7
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: broadcast_u32_to_v32i8_zext:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    fmov s0, w0
+; CHECK-BE-NEXT:    adrp x8, .LCPI8_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI8_0
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x8]
+; CHECK-BE-NEXT:    adrp x8, .LCPI8_2
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI8_2
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x8]
+; CHECK-BE-NEXT:    adrp x8, .LCPI8_1
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI8_1
+; CHECK-BE-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-BE-NEXT:    tbl v1.16b, { v0.16b }, v1.16b
+; CHECK-BE-NEXT:    tbl v0.16b, { v0.16b }, v2.16b
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x8]
+; CHECK-BE-NEXT:    cmtst v1.16b, v1.16b, v2.16b
+; CHECK-BE-NEXT:    cmtst v0.16b, v0.16b, v2.16b
+; CHECK-BE-NEXT:    ushr v1.16b, v1.16b, #7
+; CHECK-BE-NEXT:    ushr v0.16b, v0.16b, #7
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ret
+  %v1 = bitcast i32 %x to <32 x i1>
+  %v8 = zext <32 x i1> %v1 to <32 x i8>
+  ret <32 x i8> %v8
+}
+
+define <32 x i8> @broadcast_u32_to_v32i8_sext(i32 %x) {
+; CHECK-LE-LABEL: broadcast_u32_to_v32i8_sext:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    adrp x8, .LCPI9_0
+; CHECK-LE-NEXT:    adrp x9, .LCPI9_2
+; CHECK-LE-NEXT:    fmov s2, w0
+; CHECK-LE-NEXT:    ldr q0, [x8, :lo12:.LCPI9_0]
+; CHECK-LE-NEXT:    ldr q1, [x9, :lo12:.LCPI9_2]
+; CHECK-LE-NEXT:    adrp x8, .LCPI9_1
+; CHECK-LE-NEXT:    tbl v0.16b, { v2.16b }, v0.16b
+; CHECK-LE-NEXT:    tbl v1.16b, { v2.16b }, v1.16b
+; CHECK-LE-NEXT:    ldr q2, [x8, :lo12:.LCPI9_1]
+; CHECK-LE-NEXT:    cmtst v0.16b, v0.16b, v2.16b
+; CHECK-LE-NEXT:    cmtst v1.16b, v1.16b, v2.16b
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: broadcast_u32_to_v32i8_sext:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    fmov s0, w0
+; CHECK-BE-NEXT:    adrp x8, .LCPI9_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI9_0
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x8]
+; CHECK-BE-NEXT:    adrp x8, .LCPI9_2
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI9_2
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x8]
+; CHECK-BE-NEXT:    adrp x8, .LCPI9_1
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI9_1
+; CHECK-BE-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-BE-NEXT:    tbl v1.16b, { v0.16b }, v1.16b
+; CHECK-BE-NEXT:    tbl v0.16b, { v0.16b }, v2.16b
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x8]
+; CHECK-BE-NEXT:    cmtst v1.16b, v1.16b, v2.16b
+; CHECK-BE-NEXT:    cmtst v0.16b, v0.16b, v2.16b
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ret
+  %v1 = bitcast i32 %x to <32 x i1>
+  %v8 = sext <32 x i1> %v1 to <32 x i8>
+  ret <32 x i8> %v8
+}
+
+define <64 x i8> @broadcast_u64_to_v64i8_zext(i64 %x) {
+; CHECK-LE-LABEL: broadcast_u64_to_v64i8_zext:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    adrp x8, .LCPI10_0
+; CHECK-LE-NEXT:    adrp x9, .LCPI10_2
+; CHECK-LE-NEXT:    fmov d0, x0
+; CHECK-LE-NEXT:    adrp x10, .LCPI10_3
+; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI10_0]
+; CHECK-LE-NEXT:    adrp x8, .LCPI10_4
+; CHECK-LE-NEXT:    ldr q2, [x9, :lo12:.LCPI10_2]
+; CHECK-LE-NEXT:    ldr q3, [x10, :lo12:.LCPI10_3]
+; CHECK-LE-NEXT:    ldr q4, [x8, :lo12:.LCPI10_4]
+; CHECK-LE-NEXT:    tbl v1.16b, { v0.16b }, v1.16b
+; CHECK-LE-NEXT:    adrp x8, .LCPI10_1
+; CHECK-LE-NEXT:    tbl v2.16b, { v0.16b }, v2.16b
+; CHECK-LE-NEXT:    tbl v3.16b, { v0.16b }, v3.16b
+; CHECK-LE-NEXT:    tbl v0.16b, { v0.16b }, v4.16b
+; CHECK-LE-NEXT:    ldr q4, [x8, :lo12:.LCPI10_1]
+; CHECK-LE-NEXT:    cmtst v1.16b, v1.16b, v4.16b
+; CHECK-LE-NEXT:    cmtst v2.16b, v2.16b, v4.16b
+; CHECK-LE-NEXT:    cmtst v3.16b, v3.16b, v4.16b
+; CHECK-LE-NEXT:    cmtst v4.16b, v0.16b, v4.16b
+; CHECK-LE-NEXT:    ushr v0.16b, v1.16b, #7
+; CHECK-LE-NEXT:    ushr v1.16b, v2.16b, #7
+; CHECK-LE-NEXT:    ushr v2.16b, v3.16b, #7
+; CHECK-LE-NEXT:    ushr v3.16b, v4.16b, #7
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: broadcast_u64_to_v64i8_zext:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    fmov d0, x0
+; CHECK-BE-NEXT:    adrp x8, .LCPI10_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI10_0
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x8]
+; CHECK-BE-NEXT:    adrp x8, .LCPI10_4
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI10_4
+; CHECK-BE-NEXT:    adrp x9, .LCPI10_2
+; CHECK-BE-NEXT:    add x9, x9, :lo12:.LCPI10_2
+; CHECK-BE-NEXT:    ld1 { v3.16b }, [x8]
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-BE-NEXT:    adrp x8, .LCPI10_3
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI10_3
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x9]
+; CHECK-BE-NEXT:    ld1 { v4.16b }, [x8]
+; CHECK-BE-NEXT:    adrp x8, .LCPI10_1
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI10_1
+; CHECK-BE-NEXT:    ld1 { v5.16b }, [x8]
+; CHECK-BE-NEXT:    tbl v3.16b, { v0.16b }, v3.16b
+; CHECK-BE-NEXT:    tbl v1.16b, { v0.16b }, v1.16b
+; CHECK-BE-NEXT:    tbl v2.16b, { v0.16b }, v2.16b
+; CHECK-BE-NEXT:    tbl v0.16b, { v0.16b }, v4.16b
+; CHECK-BE-NEXT:    cmtst v3.16b, v3.16b, v5.16b
+; CHECK-BE-NEXT:    cmtst v1.16b, v1.16b, v5.16b
+; CHECK-BE-NEXT:    cmtst v2.16b, v2.16b, v5.16b
+; CHECK-BE-NEXT:    cmtst v0.16b, v0.16b, v5.16b
+; CHECK-BE-NEXT:    ushr v3.16b, v3.16b, #7
+; CHECK-BE-NEXT:    ushr v1.16b, v1.16b, #7
+; CHECK-BE-NEXT:    ushr v2.16b, v2.16b, #7
+; CHECK-BE-NEXT:    ushr v0.16b, v0.16b, #7
+; CHECK-BE-NEXT:    rev64 v3.16b, v3.16b
+; CHECK-BE-NEXT:    rev64 v2.16b, v2.16b
+; CHECK-BE-NEXT:    rev64 v5.16b, v1.16b
+; CHECK-BE-NEXT:    rev64 v4.16b, v0.16b
+; CHECK-BE-NEXT:    ext v0.16b, v3.16b, v3.16b, #8
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ext v3.16b, v5.16b, v5.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v4.16b, v4.16b, #8
+; CHECK-BE-NEXT:    ret
+  %v1 = bitcast i64 %x to <64 x i1>
+  %v8 = zext <64 x i1> %v1 to <64 x i8>
+  ret <64 x i8> %v8
+}
+
+define <64 x i8> @broadcast_u64_to_v64i8_sext(i64 %x) {
+; CHECK-LE-LABEL: broadcast_u64_to_v64i8_sext:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    adrp x8, .LCPI11_0
+; CHECK-LE-NEXT:    adrp x9, .LCPI11_2
+; CHECK-LE-NEXT:    fmov d0, x0
+; CHECK-LE-NEXT:    adrp x10, .LCPI11_3
+; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI11_0]
+; CHECK-LE-NEXT:    adrp x8, .LCPI11_4
+; CHECK-LE-NEXT:    ldr q2, [x9, :lo12:.LCPI11_2]
+; CHECK-LE-NEXT:    ldr q3, [x10, :lo12:.LCPI11_3]
+; CHECK-LE-NEXT:    ldr q4, [x8, :lo12:.LCPI11_4]
+; CHECK-LE-NEXT:    tbl v1.16b, { v0.16b }, v1.16b
+; CHECK-LE-NEXT:    adrp x8, .LCPI11_1
+; CHECK-LE-NEXT:    tbl v2.16b, { v0.16b }, v2.16b
+; CHECK-LE-NEXT:    tbl v3.16b, { v0.16b }, v3.16b
+; CHECK-LE-NEXT:    tbl v4.16b, { v0.16b }, v4.16b
+; CHECK-LE-NEXT:    ldr q5, [x8, :lo12:.LCPI11_1]
+; CHECK-LE-NEXT:    cmtst v0.16b, v1.16b, v5.16b
+; CHECK-LE-NEXT:    cmtst v1.16b, v2.16b, v5.16b
+; CHECK-LE-NEXT:    cmtst v2.16b, v3.16b, v5.16b
+; CHECK-LE-NEXT:    cmtst v3.16b, v4.16b, v5.16b
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: broadcast_u64_to_v64i8_sext:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    fmov d0, x0
+; CHECK-BE-NEXT:    adrp x8, .LCPI11_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI11_0
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x8]
+; CHECK-BE-NEXT:    adrp x8, .LCPI11_4
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI11_4
+; CHECK-BE-NEXT:    adrp x9, .LCPI11_2
+; CHECK-BE-NEXT:    add x9, x9, :lo12:.LCPI11_2
+; CHECK-BE-NEXT:    ld1 { v3.16b }, [x8]
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-BE-NEXT:    adrp x8, .LCPI11_3
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI11_3
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x9]
+; CHECK-BE-NEXT:    ld1 { v4.16b }, [x8]
+; CHECK-BE-NEXT:    adrp x8, .LCPI11_1
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI11_1
+; CHECK-BE-NEXT:    ld1 { v5.16b }, [x8]
+; CHECK-BE-NEXT:    tbl v3.16b, { v0.16b }, v3.16b
+; CHECK-BE-NEXT:    tbl v1.16b, { v0.16b }, v1.16b
+; CHECK-BE-NEXT:    tbl v2.16b, { v0.16b }, v2.16b
+; CHECK-BE-NEXT:    tbl v0.16b, { v0.16b }, v4.16b
+; CHECK-BE-NEXT:    cmtst v3.16b, v3.16b, v5.16b
+; CHECK-BE-NEXT:    cmtst v1.16b, v1.16b, v5.16b
+; CHECK-BE-NEXT:    cmtst v2.16b, v2.16b, v5.16b
+; CHECK-BE-NEXT:    cmtst v0.16b, v0.16b, v5.16b
+; CHECK-BE-NEXT:    rev64 v3.16b, v3.16b
+; CHECK-BE-NEXT:    rev64 v2.16b, v2.16b
+; CHECK-BE-NEXT:    rev64 v5.16b, v1.16b
+; CHECK-BE-NEXT:    rev64 v4.16b, v0.16b
+; CHECK-BE-NEXT:    ext v0.16b, v3.16b, v3.16b, #8
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ext v3.16b, v5.16b, v5.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v4.16b, v4.16b, #8
+; CHECK-BE-NEXT:    ret
+  %v1 = bitcast i64 %x to <64 x i1>
+  %v8 = sext <64 x i1> %v1 to <64 x i8>
+  ret <64 x i8> %v8
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK: {{.*}}
