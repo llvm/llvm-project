@@ -142,8 +142,8 @@ static cl::opt<unsigned> UnrollMaxUpperBound(
 
 static cl::opt<unsigned> PragmaUnrollThreshold(
     "pragma-unroll-threshold", cl::init(16 * 1024), cl::Hidden,
-    cl::desc("Unrolled size limit for loops with an unroll(full) or "
-             "unroll_count pragma."));
+    cl::desc("Unrolled size limit for loops with unroll metadata "
+             "(full, enable, or count)."));
 
 static cl::opt<unsigned> FlatLoopTripCountThreshold(
     "flat-loop-tripcount-threshold", cl::init(5), cl::Hidden,
@@ -1060,9 +1060,8 @@ bool llvm::computeUnrollCount(
             return OptimizationRemarkMissed(DEBUG_TYPE,
                                             "UnrollAsDirectedTooLarge",
                                             L->getStartLoc(), L->getHeader())
-                   << "Unable to unroll loop as directed by unroll(enable) "
-                      "pragma "
-                      "because unrolled size is too large.";
+                   << "unable to unroll loop as directed by enable unroll "
+                      "pragma because unrolled size is too large";
           });
       }
     }
@@ -1075,9 +1074,8 @@ bool llvm::computeUnrollCount(
       return OptimizationRemarkMissed(
                  DEBUG_TYPE, "CantFullUnrollAsDirectedRuntimeTripCount",
                  L->getStartLoc(), L->getHeader())
-             << "Unable to fully unroll loop as directed by unroll(full) "
-                "pragma "
-                "because loop has a runtime trip count.";
+             << "unable to fully unroll loop as directed by full unroll "
+                "pragma because loop has a runtime trip count";
     });
 
   // 7th priority is runtime unrolling.
