@@ -83,6 +83,38 @@ GetFlattenedWindowsCommandStringW(Args args) {
   return llvm::sys::flattenWindowsCommandLine(args_ref);
 }
 
+llvm::ErrorOr<ProcThreadAttributeList>
+ProcThreadAttributeList::Create(STARTUPINFOEXW &startupinfoex) {
+  SIZE_T attributelist_size = 0;
+  InitializeProcThreadAttributeList(/*lpAttributeList=*/nullptr,
+                                    /*dwAttributeCount=*/1, /*dwFlags=*/0,
+                                    &attributelist_size);
+
+  startupinfoex.lpAttributeList =
+      static_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(malloc(attributelist_size));
+
+  if (!startupinfoex.lpAttributeList)
+    return llvm::mapWindowsError(ERROR_OUTOFMEMORY);
+
+  if (!InitializeProcThreadAttributeList(startupinfoex.lpAttributeList,
+                                         /*dwAttributeCount=*/1,
+                                         /*dwFlags=*/0, &attributelist_size)) {
+    free(startupinfoex.lpAttributeList);
+    return llvm::mapWindowsError(GetLastError());
+  }
+
+  return ProcThreadAttributeList(startupinfoex.lpAttributeList);
+}
+
+llvm::Error ProcThreadAttributeList::SetupPseudoConsole(HPCON hPC) {
+  BOOL ok = UpdateProcThreadAttribute(lpAttributeList, 0,
+                                      PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, hPC,
+                                      sizeof(hPC), NULL, NULL);
+  if (!ok)
+    return llvm::errorCodeToError(llvm::mapWindowsError(GetLastError()));
+  return llvm::Error::success();
+}
+
 HostProcess
 ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
                                       Status &error) {
@@ -93,14 +125,12 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   startupinfoex.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
 
   HPCON hPC = launch_info.GetPTY().GetPseudoTerminalHandle();
-  bool use_pty = hPC != INVALID_HANDLE_VALUE &&
-                 launch_info.GetNumFileActions() == 0 &&
-                 launch_info.GetFlags().Test(lldb::eLaunchFlagLaunchInTTY);
+  bool use_pty = launch_info.ShouldUsePTY();
 
   HANDLE stdin_handle = GetStdioHandle(launch_info, STDIN_FILENO);
   HANDLE stdout_handle = GetStdioHandle(launch_info, STDOUT_FILENO);
   HANDLE stderr_handle = GetStdioHandle(launch_info, STDERR_FILENO);
-  auto close_handles = llvm::make_scope_exit([&] {
+  llvm::scope_exit close_handles([&] {
     if (stdin_handle)
       ::CloseHandle(stdin_handle);
     if (stdout_handle)
@@ -109,30 +139,17 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
       ::CloseHandle(stderr_handle);
   });
 
-  SIZE_T attributelist_size = 0;
-  InitializeProcThreadAttributeList(/*lpAttributeList=*/nullptr,
-                                    /*dwAttributeCount=*/1, /*dwFlags=*/0,
-                                    &attributelist_size);
-
-  startupinfoex.lpAttributeList =
-      static_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(malloc(attributelist_size));
-  auto free_attributelist =
-      llvm::make_scope_exit([&] { free(startupinfoex.lpAttributeList); });
-  if (!InitializeProcThreadAttributeList(startupinfoex.lpAttributeList,
-                                         /*dwAttributeCount=*/1, /*dwFlags=*/0,
-                                         &attributelist_size)) {
-    error = Status(::GetLastError(), eErrorTypeWin32);
+  auto attributelist_or_err = ProcThreadAttributeList::Create(startupinfoex);
+  if (!attributelist_or_err) {
+    error = attributelist_or_err.getError();
     return HostProcess();
   }
-  auto delete_attributelist = llvm::make_scope_exit(
-      [&] { DeleteProcThreadAttributeList(startupinfoex.lpAttributeList); });
+  ProcThreadAttributeList attributelist = std::move(*attributelist_or_err);
 
   std::vector<HANDLE> inherited_handles;
   if (use_pty) {
-    if (!UpdateProcThreadAttribute(startupinfoex.lpAttributeList, 0,
-                                   PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, hPC,
-                                   sizeof(hPC), NULL, NULL)) {
-      error = Status(::GetLastError(), eErrorTypeWin32);
+    if (auto err = attributelist.SetupPseudoConsole(hPC)) {
+      error = Status::FromError(std::move(err));
       return HostProcess();
     }
   } else {
@@ -186,7 +203,8 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
 
   BOOL result = ::CreateProcessW(
       wexecutable.c_str(), pwcommandLine, NULL, NULL,
-      /*bInheritHandles=*/!inherited_handles.empty(), flags, environment.data(),
+      /*bInheritHandles=*/!inherited_handles.empty() || use_pty, flags,
+      environment.data(),
       wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(),
       reinterpret_cast<STARTUPINFOW *>(&startupinfoex), &pi);
 

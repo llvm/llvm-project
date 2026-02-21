@@ -13,11 +13,11 @@ target triple = "i686-apple-darwin8"
 define void @test(ptr byval({ double, double })  %z, ptr %P) nounwind {
 entry:
 	%tmp3 = load double, ptr @G, align 16		; <double> [#uses=1]
-	%tmp4 = tail call double @fabs( double %tmp3 ) readnone	; <double> [#uses=1]
+	%tmp4 = tail call double @llvm.fabs.f64( double %tmp3 ) readnone	; <double> [#uses=1]
         store volatile double %tmp4, ptr %P
 	%tmp = getelementptr { double, double }, ptr %z, i32 0, i32 0		; <ptr> [#uses=1]
 	%tmp1 = load volatile double, ptr %tmp, align 8		; <double> [#uses=1]
-	%tmp2 = tail call double @fabs( double %tmp1 ) readnone	; <double> [#uses=1]
+	%tmp2 = tail call double @llvm.fabs.f64( double %tmp1 ) readnone	; <double> [#uses=1]
 	%tmp6 = fadd double %tmp4, %tmp2		; <double> [#uses=1]
 	store volatile double %tmp6, ptr %P, align 8
 	ret void
@@ -48,7 +48,7 @@ entry:
     ret <2 x double> %A
 }
 
-declare double @fabs(double)
+declare double @llvm.fabs.f64(double)
 
 ; The pointer is already known aligned, so and x,-16 is eliminable.
 define i32 @test4() nounwind {

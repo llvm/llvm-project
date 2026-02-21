@@ -1298,7 +1298,7 @@ auto ASTImporter::FunctionDeclImportCycleDetector::makeScopedCycleDetection(
     FunctionDeclsWithImportInProgress.insert(D);
     LambdaD = D;
   }
-  return llvm::make_scope_exit([this, LambdaD]() {
+  return llvm::scope_exit([this, LambdaD]() {
     if (LambdaD) {
       FunctionDeclsWithImportInProgress.erase(LambdaD);
     }
@@ -2009,6 +2009,18 @@ ExpectedType clang::ASTNodeImporter::VisitBTFTagAttributedType(
                                                          ToWrappedType);
 }
 
+ExpectedType clang::ASTNodeImporter::VisitOverflowBehaviorType(
+    const clang::OverflowBehaviorType *T) {
+  Error Err = Error::success();
+  OverflowBehaviorType::OverflowBehaviorKind ToKind = T->getBehaviorKind();
+  QualType ToUnderlyingType = importChecked(Err, T->getUnderlyingType());
+  if (Err)
+    return std::move(Err);
+
+  return Importer.getToContext().getOverflowBehaviorType(ToKind,
+                                                         ToUnderlyingType);
+}
+
 ExpectedType clang::ASTNodeImporter::VisitHLSLAttributedResourceType(
     const clang::HLSLAttributedResourceType *T) {
   Error Err = Error::success();
@@ -2547,8 +2559,7 @@ Error ASTNodeImporter::ImportDefinition(
   // Complete the definition even if error is returned.
   // The RecordDecl may be already part of the AST so it is better to
   // have it in complete state even if something is wrong with it.
-  auto DefinitionCompleterScopeExit =
-      llvm::make_scope_exit(DefinitionCompleter);
+  llvm::scope_exit DefinitionCompleterScopeExit(DefinitionCompleter);
 
   if (Error Err = setTypedefNameForAnonDecl(From, To, Importer))
     return Err;
@@ -9799,8 +9810,7 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
 
   // Push FromD to the stack, and remove that when we return.
   ImportPath.push(FromD);
-  auto ImportPathBuilder =
-      llvm::make_scope_exit([this]() { ImportPath.pop(); });
+  llvm::scope_exit ImportPathBuilder([this]() { ImportPath.pop(); });
 
   // Check whether there was a previous failed import.
   // If yes return the existing error.

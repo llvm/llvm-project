@@ -15,6 +15,6 @@ struct S1 {
 void __attribute__((fastcall)) foo2(S1 a, int b);
 void bar2(S1 a, int b) {
   // CHECK-LABEL: define{{.*}} void @_Z4bar22S1i
-  // CHECK: call x86_fastcallcc void @_Z4foo22S1i(ptr dead_on_return inreg %{{.*}}, i32 inreg %
+  // CHECK: call x86_fastcallcc void @_Z4foo22S1i(ptr inreg dead_on_return %{{.*}}, i32 inreg %
   foo2(a, b);
 }

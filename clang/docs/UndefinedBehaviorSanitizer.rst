@@ -380,6 +380,56 @@ This attribute may not be
 supported by other compilers, so consider using it together with
 ``#if defined(__clang__)``.
 
+Interaction of Inlining with Disabling Sanitizer Instrumentation
+-----------------------------------------------------------------
+
+Unlike many of the other sanitizers (e.g., ASan/MSan, TSan), UBSan is largely
+compatible with inlining, both the compiler's heuristic inlining as well as
+``__attribute__((always_inline))``.
+
+There are (at least) two exceptions:
+
+* inlining may change the layout of variables, which can affect whether
+  the `alignment` check detects an under-aligned variable
+* combining `__attribute((no_sanitize("local-bounds")))` with
+  `__attribute((always_inline))` is not supported
+
+Disabling Overflow Instrumentation with ``__attribute__((overflow_behavior(wrap)))``
+------------------------------------------------------------------------------------
+
+For more fine-grained control over how integer overflow is handled, you can use
+the ``__attribute__((overflow_behavior(wrap)))`` attribute. This attribute can
+be applied to ``typedef`` declarations and integer types to specify that
+arithmetic operations on that type should wrap on overflow. This can be used to
+disable overflow sanitization for specific types, while leaving it enabled for
+all other types.
+
+The ``overflow_behavior`` attribute not only affects UBSan instrumentation
+but also changes the fundamental overflow behavior of arithmetic operations
+on the annotated type. Operations on types marked with ``wrap`` will have
+well-defined wrapping semantics, while operations on types marked with
+``trap`` will be checked for overflow (regardless of global flags like
+``-fwrapv``).
+
+The attribute also affects implicit type promotion rules: when an overflow
+behavior type participates in arithmetic operations with standard integer
+types, the result maintains the overflow behavior type's characteristics,
+including its bit-width. This means annotated types can preserve narrower
+widths that would normally be promoted, allowing operations to stay within
+the constraints of the smallest annotated type in the expression.
+
+For more information, see :doc:`OverflowBehaviorTypes`.
+
+Enforcing Overflow Instrumentation with ``__attribute__((overflow_behavior(trap)))``
+---------------------------------------------------------------------------------------
+
+Conversely, you can use ``__attribute__((overflow_behavior(trap)))`` to
+enforce overflow checks for a specific type, even when ``-fwrapv`` is enabled
+globally. This is useful for ensuring that critical calculations are always
+checked for overflow, regardless of the global compiler settings.
+
+For more information, see :doc:`OverflowBehaviorTypes`.
+
 Suppressing Errors in Recompiled Code (Ignorelist)
 --------------------------------------------------
 

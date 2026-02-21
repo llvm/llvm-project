@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
-
 #include "PythonDataObjects.h"
 #include "ScriptInterpreterPython.h"
 
@@ -128,14 +124,13 @@ void PythonObject::Dump(Stream &strm) const {
   if (!py_str)
     return;
 
-  auto release_py_str = llvm::make_scope_exit([py_str] { Py_DECREF(py_str); });
+  llvm::scope_exit release_py_str([py_str] { Py_DECREF(py_str); });
 
   PyObject *py_bytes = PyUnicode_AsEncodedString(py_str, "utf-8", "replace");
   if (!py_bytes)
     return;
 
-  auto release_py_bytes =
-      llvm::make_scope_exit([py_bytes] { Py_DECREF(py_bytes); });
+  llvm::scope_exit release_py_bytes([py_bytes] { Py_DECREF(py_bytes); });
 
   char *buffer = nullptr;
   Py_ssize_t length = 0;
@@ -414,8 +409,7 @@ Expected<llvm::StringRef> PythonString::AsUTF8() const {
   PyObject *py_bytes = PyUnicode_AsUTF8String(m_py_obj);
   if (!py_bytes)
     return exception();
-  auto release_py_str =
-      llvm::make_scope_exit([py_bytes] { Py_DECREF(py_bytes); });
+  llvm::scope_exit release_py_str([py_bytes] { Py_DECREF(py_bytes); });
   Py_ssize_t size = PyBytes_Size(py_bytes);
   const char *str = PyBytes_AsString(py_bytes);
 
@@ -1490,4 +1484,3 @@ int lldb_private::python::RunSimpleString(const char *str) {
 
   return 0;
 }
-#endif

@@ -227,8 +227,8 @@ private:
                        orc_rt_WrapperFunctionBuffer ResultBytes) {
     // Abuse "session" to refer to the ControllerAccess object.
     // We can just re-use sendFunctionResult for this.
-    reinterpret_cast<MockControllerAccess *>(S)->sendWrapperResult(CallId,
-                                                                   ResultBytes);
+    reinterpret_cast<MockControllerAccess *>(S)->sendWrapperResult(
+        CallId, WrapperFunctionBuffer(ResultBytes));
   }
 
   Session &SS;
@@ -463,4 +463,15 @@ TEST(ControllerAccessTest, CallFromController) {
   EXPECT_EQ(Result, 42);
 
   S.waitForShutdown();
+}
+
+TEST(ControllerAccessTest, RedundantAsyncShutdown) {
+  // Check that redundant calls to shutdown have their callbacks run.
+  std::deque<std::unique_ptr<Task>> Tasks;
+  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+  S.waitForShutdown();
+
+  bool RedundantCallbackRan = false;
+  S.shutdown([&]() { RedundantCallbackRan = true; });
+  EXPECT_TRUE(RedundantCallbackRan);
 }

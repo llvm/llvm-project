@@ -160,14 +160,17 @@ public:
     }
   };
 
-  static bool findFDE(A &addressSpace, pint_t pc, pint_t ehSectionStart,
-                      size_t sectionLength, pint_t fdeHint, FDE_Info *fdeInfo,
-                      CIE_Info *cieInfo);
+  template <typename R>
+  static bool findFDE(A &addressSpace, typename R::link_hardened_reg_arg_t pc,
+                      pint_t ehSectionStart, size_t sectionLength,
+                      pint_t fdeHint, FDE_Info *fdeInfo, CIE_Info *cieInfo);
   static const char *decodeFDE(A &addressSpace, pint_t fdeStart,
                                FDE_Info *fdeInfo, CIE_Info *cieInfo,
                                bool useCIEInfo = false);
+  template <typename R>
   static bool parseFDEInstructions(A &addressSpace, const FDE_Info &fdeInfo,
-                                   const CIE_Info &cieInfo, pint_t upToPC,
+                                   const CIE_Info &cieInfo,
+                                   typename R::link_hardened_reg_arg_t upToPC,
                                    int arch, PrologInfo *results);
 
   static const char *parseCIE(A &addressSpace, pint_t cie, CIE_Info *cieInfo);
@@ -239,9 +242,12 @@ const char *CFI_Parser<A>::decodeFDE(A &addressSpace, pint_t fdeStart,
 
 /// Scan an eh_frame section to find an FDE for a pc
 template <typename A>
-bool CFI_Parser<A>::findFDE(A &addressSpace, pint_t pc, pint_t ehSectionStart,
-                            size_t sectionLength, pint_t fdeHint,
-                            FDE_Info *fdeInfo, CIE_Info *cieInfo) {
+template <typename R>
+bool CFI_Parser<A>::findFDE(A &addressSpace,
+                            typename R::link_hardened_reg_arg_t pc,
+                            pint_t ehSectionStart, size_t sectionLength,
+                            pint_t fdeHint, FDE_Info *fdeInfo,
+                            CIE_Info *cieInfo) {
   //fprintf(stderr, "findFDE(0x%llX)\n", (long long)pc);
   pint_t p = (fdeHint != 0) ? fdeHint : ehSectionStart;
   const pint_t ehSectionEnd = (sectionLength == SIZE_MAX)
@@ -451,10 +457,10 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
 
 /// "run" the DWARF instructions and create the abstract PrologInfo for an FDE
 template <typename A>
-bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
-                                         const FDE_Info &fdeInfo,
-                                         const CIE_Info &cieInfo, pint_t upToPC,
-                                         int arch, PrologInfo *results) {
+template <typename R>
+bool CFI_Parser<A>::parseFDEInstructions(
+    A &addressSpace, const FDE_Info &fdeInfo, const CIE_Info &cieInfo,
+    typename R::link_hardened_reg_arg_t upToPC, int arch, PrologInfo *results) {
   // Alloca is used for the allocation of the rememberStack entries. It removes
   // the dependency on new/malloc but the below for loop can not be refactored
   // into functions. Entry could be saved during the processing of a CIE and

@@ -477,10 +477,7 @@ public:
 
   LLVM_ABI void print(llvm::raw_ostream &OS) const;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const {
-    print(llvm::dbgs());
-    llvm::dbgs() << '\n';
-  }
+  LLVM_DUMP_METHOD void dump() const;
 #endif // !NDEBUG || LLVM_ENABLE_DUMP
 
 private:
@@ -811,7 +808,7 @@ bool fromJSON(const Value &E, std::optional<T> &Out, Path P) {
     Out = std::nullopt;
     return true;
   }
-  T Result = {};
+  T Result{};
   if (!fromJSON(E, Result, P))
     return false;
   Out = std::move(Result);
@@ -921,9 +918,7 @@ public:
   LLVM_ABI static char ID;
   ParseError(const char *Msg, unsigned Line, unsigned Column, unsigned Offset)
       : Msg(Msg), Line(Line), Column(Column), Offset(Offset) {}
-  void log(llvm::raw_ostream &OS) const override {
-    OS << llvm::formatv("[{0}:{1}, byte={2}]: {3}", Line, Column, Offset, Msg);
-  }
+  void log(llvm::raw_ostream &OS) const override;
   std::error_code convertToErrorCode() const override {
     return llvm::inconvertibleErrorCode();
   }

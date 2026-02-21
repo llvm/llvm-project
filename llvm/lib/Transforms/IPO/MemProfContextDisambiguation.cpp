@@ -111,6 +111,8 @@ STATISTIC(NumImportantContextIds, "Number of important context ids");
 STATISTIC(NumFixupEdgeIdsInserted, "Number of fixup edge ids inserted");
 STATISTIC(NumFixupEdgesAdded, "Number of fixup edges added");
 STATISTIC(NumFixedContexts, "Number of contexts with fixed edges");
+STATISTIC(AliaseesPrevailingInDiffModuleFromAlias,
+          "Number of aliasees prevailing in a different module than its alias");
 
 static cl::opt<std::string> DotFilePathPrefix(
     "memprof-dot-file-path-prefix", cl::init(""), cl::Hidden,
@@ -263,7 +265,8 @@ public:
   CallsiteContextGraph(CallsiteContextGraph &&) = default;
 
   /// Main entry point to perform analysis and transformations on graph.
-  bool process();
+  bool process(function_ref<void(StringRef, StringRef, const Twine &)>
+                   EmitRemark = nullptr);
 
   /// Perform cloning on the graph necessary to uniquely identify the allocation
   /// behavior of an allocation based on its context.
@@ -278,7 +281,9 @@ public:
 
   void dump() const;
   void print(raw_ostream &OS) const;
-  void printTotalSizes(raw_ostream &OS) const;
+  void printTotalSizes(raw_ostream &OS,
+                       function_ref<void(StringRef, StringRef, const Twine &)>
+                           EmitRemark = nullptr) const;
 
   friend raw_ostream &operator<<(raw_ostream &OS,
                                  const CallsiteContextGraph &CCG) {
@@ -487,7 +492,7 @@ public:
     void eraseCalleeEdge(const ContextEdge *Edge);
     void eraseCallerEdge(const ContextEdge *Edge);
 
-    void setCall(CallInfo C) { Call = C; }
+    void setCall(CallInfo C) { Call = std::move(C); }
 
     bool hasCall() const { return (bool)Call.call(); }
 
@@ -1083,6 +1088,7 @@ private:
                            unsigned CloneNo);
   std::string getLabel(const FunctionSummary *Func, const IndexCall &Call,
                        unsigned CloneNo) const;
+  DenseSet<GlobalValue::GUID> findAliaseeGUIDsPrevailingInDifferentModule();
 
   // Saves mapping from function summaries containing memprof records back to
   // its VI, for use in checking and debugging.
@@ -2467,17 +2473,61 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
       Call.call()->setMetadata(LLVMContext::MD_callsite, nullptr);
 }
 
+// Finds the set of GUIDs for weak aliasees that are prevailing in different
+// modules than any of their aliases. We need to handle these specially.
+DenseSet<GlobalValue::GUID>
+IndexCallsiteContextGraph::findAliaseeGUIDsPrevailingInDifferentModule() {
+  DenseSet<GlobalValue::GUID> AliaseeGUIDs;
+  for (auto &I : Index) {
+    auto VI = Index.getValueInfo(I);
+    for (auto &S : VI.getSummaryList()) {
+      // We only care about aliases to functions.
+      auto *AS = dyn_cast<AliasSummary>(S.get());
+      if (!AS)
+        continue;
+      auto *AliaseeSummary = &AS->getAliasee();
+      auto *AliaseeFS = dyn_cast<FunctionSummary>(AliaseeSummary);
+      if (!AliaseeFS)
+        continue;
+      // Skip this summary if it is not for the prevailing symbol for this GUID.
+      // The linker doesn't resolve local linkage values so don't check whether
+      // those are prevailing.
+      if (!GlobalValue::isLocalLinkage(S->linkage()) &&
+          !isPrevailing(VI.getGUID(), S.get()))
+        continue;
+      // Prevailing aliasee could be in a different module only if it is weak.
+      if (!GlobalValue::isWeakForLinker(AliaseeSummary->linkage()))
+        continue;
+      auto AliaseeGUID = AS->getAliaseeGUID();
+      // If the aliasee copy in this module is not prevailing, record it.
+      if (!isPrevailing(AliaseeGUID, AliaseeSummary))
+        AliaseeGUIDs.insert(AliaseeGUID);
+    }
+  }
+  AliaseesPrevailingInDiffModuleFromAlias += AliaseeGUIDs.size();
+  return AliaseeGUIDs;
+}
+
 IndexCallsiteContextGraph::IndexCallsiteContextGraph(
     ModuleSummaryIndex &Index,
     llvm::function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing)
     : Index(Index), isPrevailing(isPrevailing) {
+  // Since we use the aliasee summary info to create the necessary clones for
+  // its aliases, conservatively skip recording the aliasee function's callsites
+  // in the CCG for any that are prevailing in a different module than one of
+  // its aliases. We could record the necessary information to do this in the
+  // summary, but this case should not be common.
+  DenseSet<GlobalValue::GUID> GUIDsToSkip =
+      findAliaseeGUIDsPrevailingInDifferentModule();
   // Map for keeping track of the largest cold contexts up to the number given
   // by MemProfTopNImportant. Must be a std::map (not DenseMap) because keys
   // must be sorted.
   std::map<uint64_t, uint32_t> TotalSizeToContextIdTopNCold;
   for (auto &I : Index) {
     auto VI = Index.getValueInfo(I);
+    if (GUIDsToSkip.contains(VI.getGUID()))
+      continue;
     for (auto &S : VI.getSummaryList()) {
       // We should only add the prevailing nodes. Otherwise we may try to clone
       // in a weak copy that won't be linked (and may be different than the
@@ -3240,13 +3290,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
        << ")\n";
   if (!Clones.empty()) {
     OS << "\tClones: ";
-    bool First = true;
-    for (auto *C : Clones) {
-      if (!First)
-        OS << ", ";
-      First = false;
-      OS << C << " NodeId: " << C->NodeId;
-    }
+    ListSeparator LS;
+    for (auto *C : Clones)
+      OS << LS << C << " NodeId: " << C->NodeId;
     OS << "\n";
   } else if (CloneOf) {
     OS << "\tClone of " << CloneOf << " NodeId: " << CloneOf->NodeId << "\n";
@@ -3293,7 +3339,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::print(
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
-    raw_ostream &OS) const {
+    raw_ostream &OS,
+    function_ref<void(StringRef, StringRef, const Twine &)> EmitRemark) const {
   using GraphType = const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *;
   for (const auto Node : nodes<GraphType>(this)) {
     if (Node->isRemoved())
@@ -3310,17 +3357,19 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
       auto CSI = ContextIdToContextSizeInfos.find(Id);
       if (CSI != ContextIdToContextSizeInfos.end()) {
         for (auto &Info : CSI->second) {
-          OS << "MemProf hinting: "
-             << getAllocTypeString((uint8_t)TypeI->second)
-             << " full allocation context " << Info.FullStackId
-             << " with total size " << Info.TotalSize << " is "
-             << getAllocTypeString(Node->AllocTypes) << " after cloning";
+          std::string Msg =
+              "MemProf hinting: " + getAllocTypeString((uint8_t)TypeI->second) +
+              " full allocation context " + std::to_string(Info.FullStackId) +
+              " with total size " + std::to_string(Info.TotalSize) + " is " +
+              getAllocTypeString(Node->AllocTypes) + " after cloning";
           if (allocTypeToUse(Node->AllocTypes) != AllocTypeFromCall)
-            OS << " marked " << getAllocTypeString((uint8_t)AllocTypeFromCall)
-               << " due to cold byte percent";
+            Msg += " marked " + getAllocTypeString((uint8_t)AllocTypeFromCall) +
+                   " due to cold byte percent";
           // Print the internal context id to aid debugging and visualization.
-          OS << " (context id " << Id << ")";
-          OS << "\n";
+          Msg += " (context id " + std::to_string(Id) + ")";
+          OS << Msg << "\n";
+          if (EmitRemark)
+            EmitRemark(DEBUG_TYPE, "MemProfReport", Msg);
         }
       }
     }
@@ -3411,6 +3460,11 @@ struct DOTGraphTraits<const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *>
       assert(Func != G->NodeToCallingFunc.end());
       LabelString +=
           G->getLabel(Func->second, Node->Call.call(), Node->Call.cloneNo());
+      for (auto &MatchingCall : Node->MatchingCalls) {
+        LabelString += "\n";
+        LabelString += G->getLabel(Func->second, MatchingCall.call(),
+                                   MatchingCall.cloneNo());
+      }
     } else {
       LabelString += "null call";
       if (Node->Recursive)
@@ -6249,7 +6303,8 @@ void MemProfContextDisambiguation::performICP(
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
-bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::process() {
+bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::process(
+    function_ref<void(StringRef, StringRef, const Twine &)> EmitRemark) {
   if (DumpCCG) {
     dbgs() << "CCG before cloning:\n";
     dbgs() << *this;
@@ -6284,7 +6339,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::process() {
     exportToDot("clonefuncassign");
 
   if (MemProfReportHintedSizes)
-    printTotalSizes(errs());
+    printTotalSizes(errs(), EmitRemark);
 
   return Changed;
 }
@@ -6373,7 +6428,8 @@ PreservedAnalyses MemProfContextDisambiguation::run(Module &M,
 void MemProfContextDisambiguation::run(
     ModuleSummaryIndex &Index,
     llvm::function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-        isPrevailing) {
+        isPrevailing,
+    function_ref<void(StringRef, StringRef, const Twine &)> EmitRemark) {
   // TODO: If/when other types of memprof cloning are enabled beyond just for
   // hot and cold, we will need to change this to individually control the
   // AllocationType passed to addStackNodesForMIB during CCG construction.
@@ -6383,7 +6439,7 @@ void MemProfContextDisambiguation::run(
     return;
 
   IndexCallsiteContextGraph CCG(Index, isPrevailing);
-  CCG.process();
+  CCG.process(EmitRemark);
 }
 
 // Strips MemProf attributes and metadata. Can be invoked by the pass pipeline

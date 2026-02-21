@@ -346,9 +346,7 @@ def mif_EndTeamOp : mif_Op<"end_team", [AttrSizedOperandSegments, Terminator,
 // yet supported by the dialect. The argument is therefore not yet supported by
 // this operation and will be added later.
 //===----------------------------------------------------------------------===//
-def mif_ChangeTeamOp
-    : region_Op<"change_team", [AttrSizedOperandSegments,
-                                SingleBlockImplicitTerminator<"EndTeamOp">]> {
+def mif_ChangeTeamOp : region_Op<"change_team", [AttrSizedOperandSegments]> {
   let summary = "Changes the current team.";
   let description = [{
     The CHANGE TEAM construct changes the current team to the specified new
@@ -365,15 +363,17 @@ def mif_ChangeTeamOp
   let arguments = (ins AnyRefOrBoxType:$team,
       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
-  let regions = (region SizedRegion<1>:$region);
+
+  // The region can contain multiple blocks if the `change_team` construct
+  // contains constructs that create multiple blocks.
+  let regions = (region MinSizedRegion<1>:$region);
 
   let skipDefaultBuilders = 1;
   let builders =
       [OpBuilder<(ins "mlir::Value":$team,
-           CArg<"bool", "true">:$ensureTermination,
            CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>,
        OpBuilder<(ins "mlir::Value":$team, "mlir::Value":$stat,
-           "mlir::Value":$errmsg, CArg<"bool", "true">:$ensureTermination,
+           "mlir::Value":$errmsg,
            CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
 
   let extraClassDeclaration = [{

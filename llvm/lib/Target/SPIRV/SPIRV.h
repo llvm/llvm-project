@@ -26,6 +26,7 @@ ModulePass *createSPIRVPushConstantAccessLegacyPass(SPIRVTargetMachine *TM);
 FunctionPass *createSPIRVMergeRegionExitTargetsPass();
 FunctionPass *createSPIRVStripConvergenceIntrinsicsPass();
 ModulePass *createSPIRVLegalizeImplicitBindingPass();
+ModulePass *createSPIRVLegalizeZeroSizeArraysPass(const SPIRVTargetMachine &TM);
 FunctionPass *createSPIRVLegalizePointerCastPass(SPIRVTargetMachine *TM);
 FunctionPass *createSPIRVRegularizerPass();
 FunctionPass *createSPIRVPreLegalizerCombiner();
@@ -57,6 +58,7 @@ void initializeSPIRVPrepareFunctionsPass(PassRegistry &);
 void initializeSPIRVPrepareGlobalsPass(PassRegistry &);
 void initializeSPIRVStripConvergentIntrinsicsPass(PassRegistry &);
 void initializeSPIRVLegalizeImplicitBindingPass(PassRegistry &);
+void initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PassRegistry &);
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRV_H

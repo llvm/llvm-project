@@ -118,7 +118,7 @@ MemrefValue skipViewLikeOps(MemrefValue source);
 
 /// Given the 'indices' of a load/store operation where the memref is a result
 /// of a expand_shape op, returns the indices w.r.t to the source memref of the
-/// expand_shape op. For example
+/// expand_shape op into `sourceIndices`. For example
 ///
 /// %0 = ... : memref<12x42xf32>
 /// %1 = memref.expand_shape %0 [[0, 1], [2]]
@@ -129,14 +129,19 @@ MemrefValue skipViewLikeOps(MemrefValue source);
 ///
 /// %2 = load %0[6 * i1 + i2, %i3] :
 ///          memref<12x42xf32>
-LogicalResult resolveSourceIndicesExpandShape(
-    Location loc, PatternRewriter &rewriter,
-    memref::ExpandShapeOp expandShapeOp, ValueRange indices,
-    SmallVectorImpl<Value> &sourceIndices, bool startsInbounds);
+///
+/// If `startsInbounds` is true, optimizations that rely on all indices being
+/// non-negative and less than the corresponding memref dimension may be
+/// performed.
+void resolveSourceIndicesExpandShape(Location loc, PatternRewriter &rewriter,
+                                     memref::ExpandShapeOp expandShapeOp,
+                                     ValueRange indices,
+                                     SmallVectorImpl<Value> &sourceIndices,
+                                     bool startsInbounds);
 
 /// Given the 'indices' of a load/store operation where the memref is a result
 /// of a collapse_shape op, returns the indices w.r.t to the source memref of
-/// the collapse_shape op. For example
+/// the collapse_shape op, returing them into `sourceIndices`. For example
 ///
 /// %0 = ... : memref<2x6x42xf32>
 /// %1 = memref.collapse_shape %0 [[0, 1], [2]]
@@ -147,11 +152,25 @@ LogicalResult resolveSourceIndicesExpandShape(
 ///
 /// %2 = load %0[%i1 / 6, %i1 % 6, %i2] :
 ///          memref<2x6x42xf32>
-LogicalResult
-resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
-                                  memref::CollapseShapeOp collapseShapeOp,
-                                  ValueRange indices,
-                                  SmallVectorImpl<Value> &sourceIndices);
+void resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
+                                       memref::CollapseShapeOp collapseShapeOp,
+                                       ValueRange indices,
+                                       SmallVectorImpl<Value> &sourceIndices);
+
+/// Given the 'indices' of a load/store operation where the memref is a result
+/// of a rank-reducing full subview op, returns the indices w.r.t to the source
+/// memref of the memref.subview op. For example
+///
+///  %alias = memref.subview %src[0, 0, 0][1, 2, 2][1, 1, 1]: memref<1x2x2xf32>
+///                           to memref<2x2xf32>
+///  %val = memref.load %alias[%i, %j] : memref<2x2xf32>
+///
+/// could be folded into
+///
+///  %val = memref.load %src[0, %i, %j] : memref<1x2x2xf32>
+LogicalResult resolveSourceIndicesRankReducingSubview(
+    Location loc, OpBuilder &b, memref::SubViewOp subViewOp, ValueRange indices,
+    SmallVectorImpl<Value> &sourceIndices);
 
 } // namespace memref
 } // namespace mlir

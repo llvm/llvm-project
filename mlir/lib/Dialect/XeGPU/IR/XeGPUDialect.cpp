@@ -13,6 +13,7 @@
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 
@@ -213,13 +214,9 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                    DenseI32ArrayAttr inst_data, DenseI32ArrayAttr lane_layout,
                    DenseI32ArrayAttr lane_data, DenseI32ArrayAttr order) {
 
-  // A valid layout must include at least one of sg_layout and lane_layout.
-  // sg_layout is essential for Workgroup layout, while lane_layout is
-  // required for Subgroup layout.
-  if (!sg_layout && !inst_data && !lane_layout) {
-    return emitError()
-           << "expected at least one of sg_layout, inst_data or lane_layout";
-  }
+  // Special case for store_matrix
+  if (!sg_layout && !inst_data && !lane_layout)
+    return success();
 
   // generate code to check sg_laout, inst_data and lane_layout having the same
   // rank if they are not null.
@@ -295,9 +292,9 @@ LayoutAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId) {
   // Handle order attribute
   SmallVector<int64_t> order;
   if (orderAttr && !orderAttr.empty()) {
-    order = llvm::to_vector(
-        llvm::map_range(orderAttr.asArrayRef(),
-                        [](int32_t idx) { return static_cast<int64_t>(idx); }));
+    order = llvm::map_to_vector(orderAttr.asArrayRef(), [](int32_t idx) {
+      return static_cast<int64_t>(idx);
+    });
   } else {
     // Default order: [1, 0] for 2D (row-major), [2, 1, 0] for 3D, etc.
     order = llvm::to_vector(
@@ -400,7 +397,8 @@ bool LayoutAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
 }
 
 // set the layout for unit dims: sg_data, inst_data and lane_data to 1
-DistributeLayoutAttr LayoutAttr::setUnitDimData(SetVector<int64_t> unitDims) {
+DistributeLayoutAttr
+LayoutAttr::setUnitDimData(SmallVector<int64_t> unitDims) const {
   auto sgDataOpt = getSgData();
   auto instDataOpt = getInstData();
   auto laneDataOpt = getLaneData();
@@ -409,15 +407,14 @@ DistributeLayoutAttr LayoutAttr::setUnitDimData(SetVector<int64_t> unitDims) {
   SmallVector<int32_t> instData;
   SmallVector<int32_t> laneData;
 
-  if (sgDataOpt) {
+  if (sgDataOpt)
     sgData = llvm::to_vector(sgDataOpt.asArrayRef());
-  }
-  if (instDataOpt) {
+
+  if (instDataOpt)
     instData = llvm::to_vector(instDataOpt.asArrayRef());
-  }
-  if (laneDataOpt) {
+
+  if (laneDataOpt)
     laneData = llvm::to_vector(laneDataOpt.asArrayRef());
-  }
 
   for (auto dim : unitDims) {
     if (dim < static_cast<int64_t>(sgData.size()))
@@ -441,19 +438,18 @@ DistributeLayoutAttr LayoutAttr::setUnitDimData(SetVector<int64_t> unitDims) {
 }
 
 // set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
-DistributeLayoutAttr LayoutAttr::setUnitDimLayout(SetVector<int64_t> unitDims) {
+DistributeLayoutAttr
+LayoutAttr::setUnitDimLayout(SmallVector<int64_t> unitDims) const {
   auto sgLayoutOpt = getSgLayout();
   auto laneLayoutOpt = getLaneLayout();
 
   SmallVector<int32_t> sgLayout;
   SmallVector<int32_t> laneLayout;
 
-  if (sgLayoutOpt) {
+  if (sgLayoutOpt)
     sgLayout = llvm::to_vector(sgLayoutOpt.asArrayRef());
-  }
-  if (laneLayoutOpt) {
+  if (laneLayoutOpt)
     laneLayout = llvm::to_vector(laneLayoutOpt.asArrayRef());
-  }
 
   for (auto dim : unitDims) {
     if (dim < static_cast<int64_t>(sgLayout.size()))
@@ -472,21 +468,188 @@ DistributeLayoutAttr LayoutAttr::setUnitDimLayout(SetVector<int64_t> unitDims) {
       getLaneData(), getOrder());
 }
 
+// Derive a new layout with sg_data, inst_data and lane_data set to the
+// specified values for the given dimension
+DistributeLayoutAttr LayoutAttr::setDimData(int64_t dim, int64_t sgData,
+                                            int64_t instData,
+                                            int64_t laneData) {
+
+  SmallVector<int64_t> sgDataVec = getEffectiveSgDataAsInt();
+  SmallVector<int64_t> instDataVec = getEffectiveInstDataAsInt();
+  SmallVector<int64_t> laneDataVec = getEffectiveLaneDataAsInt();
+
+  if (dim < static_cast<int64_t>(sgDataVec.size()) && sgData != -1)
+    sgDataVec[dim] = sgData;
+  if (dim < static_cast<int64_t>(instDataVec.size()) && instData != -1)
+    instDataVec[dim] = instData;
+  if (dim < static_cast<int64_t>(laneDataVec.size()) && laneData != -1)
+    laneDataVec[dim] = laneData;
+
+  SmallVector<int32_t> sgDataVec32(sgDataVec.begin(), sgDataVec.end());
+  SmallVector<int32_t> instDataVec32(instDataVec.begin(), instDataVec.end());
+  SmallVector<int32_t> laneDataVec32(laneDataVec.begin(), laneDataVec.end());
+
+  return LayoutAttr::get(
+      getContext(), getSgLayout(),
+      sgDataVec.empty() ? DenseI32ArrayAttr()
+                        : DenseI32ArrayAttr::get(getContext(), sgDataVec32),
+      instDataVec.empty() ? DenseI32ArrayAttr()
+                          : DenseI32ArrayAttr::get(getContext(), instDataVec32),
+      getLaneLayout(),
+      laneDataVec.empty() ? DenseI32ArrayAttr()
+                          : DenseI32ArrayAttr::get(getContext(), laneDataVec32),
+      getOrder());
+}
+
+// Derive a new layout by collapsing dimensions.
+// `dimGroup` specifies a group of adjacent dimensions
+// that are collapsed into a single dimension in the derived layout.
+DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
+
+  SmallVector<int64_t> sgLayout = getEffectiveSgLayoutAsInt();
+  SmallVector<int64_t> sgData = getEffectiveSgDataAsInt();
+  SmallVector<int64_t> instData = getEffectiveInstDataAsInt();
+  SmallVector<int64_t> laneLayout = getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> laneData = getEffectiveLaneDataAsInt();
+
+  DenseI32ArrayAttr orderAttr = getOrder();
+  SmallVector<int32_t> orderVec;
+  if (orderAttr && !orderAttr.empty()) {
+    orderVec = llvm::to_vector(
+        llvm::map_range(orderAttr.asArrayRef(),
+                        [](int32_t idx) { return static_cast<int32_t>(idx); }));
+  }
+
+  SmallVector<int64_t> sortedDimGroup = dimGroup;
+  llvm::sort(sortedDimGroup);
+  int64_t dimBeforeCurrent = -1;
+  for (auto dimIdx : sortedDimGroup) {
+    // when order is present, adjacency dims are on order values like [3, 2, 1,
+    // 0] in decreasing order otherwise based on dim indices like [0, 1, 2, 3]
+    // in increasing order
+    if (dimBeforeCurrent >= 0) {
+      if (!orderVec.empty()) {
+        int64_t orderBefore = orderVec[dimBeforeCurrent];
+        int64_t orderCurrent = orderVec[dimIdx];
+        if (orderBefore != (orderCurrent - 1))
+          llvm::report_fatal_error(
+              "dimensions being collapsed must be adjacent in order");
+      } else {
+        if (dimIdx != (dimBeforeCurrent + 1))
+          llvm::report_fatal_error(
+              "dimensions being collapsed must be adjacent");
+      }
+    }
+    dimBeforeCurrent = dimIdx;
+  }
+
+  int firstDim = sortedDimGroup.front();
+
+  // collapse the dimensions in dimGroup into one dimension by multiplying their
+  // sizes together
+
+  if (!sgLayout.empty()) {
+    int64_t collapsedSglayout = 1, collapsedSgData = 1;
+    for (auto dimIdx : dimGroup) {
+      collapsedSglayout *= sgLayout[dimIdx];
+      collapsedSgData *= sgData[dimIdx];
+    }
+    for (auto dimIdx : llvm::reverse(sortedDimGroup)) {
+      sgLayout.erase(sgLayout.begin() + dimIdx, sgLayout.begin() + dimIdx + 1);
+      sgData.erase(sgData.begin() + dimIdx, sgData.begin() + dimIdx + 1);
+    }
+    sgLayout.insert(sgLayout.begin() + firstDim, collapsedSglayout);
+    sgData.insert(sgData.begin() + firstDim, collapsedSgData);
+  }
+
+  if (!instData.empty()) {
+    int64_t collapsedInstData = 1;
+    for (auto dimIdx : dimGroup)
+      collapsedInstData *= instData[dimIdx];
+    for (auto dimIdx : llvm::reverse(sortedDimGroup))
+      instData.erase(instData.begin() + dimIdx, instData.begin() + dimIdx + 1);
+    instData.insert(instData.begin() + firstDim, collapsedInstData);
+  }
+
+  if (!laneLayout.empty()) {
+    int64_t collapsedLaneLayout = 1, collapsedLaneData = 1;
+    for (auto dimIdx : dimGroup) {
+      collapsedLaneLayout *= laneLayout[dimIdx];
+      collapsedLaneData *= laneData[dimIdx];
+    }
+    for (auto dimIdx : llvm::reverse(sortedDimGroup)) {
+      laneLayout.erase(laneLayout.begin() + dimIdx,
+                       laneLayout.begin() + dimIdx + 1);
+      laneData.erase(laneData.begin() + dimIdx, laneData.begin() + dimIdx + 1);
+    }
+    laneLayout.insert(laneLayout.begin() + firstDim, collapsedLaneLayout);
+    laneData.insert(laneData.begin() + firstDim, collapsedLaneData);
+  }
+
+  // go through the values inside collapsedOrder, and re-map the order values
+  // to be in range of [0, N-1] where N is the number of dimensions in
+  // collapsed shape for exmaple, collapse dim group {2, 3} of order[1, 2, 3,
+  // 4] to new order[1, 3, 4]. the loop below remaps it to [1, 2, 3].
+  SmallVector<int32_t> collapsedOrder;
+  if (!orderVec.empty()) {
+
+    for (auto dimIdx : llvm::reverse(sortedDimGroup)) {
+      if (dimIdx != firstDim)
+        orderVec.erase(orderVec.begin() + dimIdx,
+                       orderVec.begin() + dimIdx + 1);
+    }
+
+    // say we have orderVec = {5, 3, 2, 1, 0}
+    // Create indices [0, 1, 2, 3, 4]
+    SmallVector<size_t> indices =
+        llvm::to_vector(llvm::seq<size_t>(0, orderVec.size()));
+
+    // Sort indices based on corresponding values
+    llvm::sort(indices,
+               [&](size_t a, size_t b) { return orderVec[a] < orderVec[b]; });
+    collapsedOrder = llvm::to_vector(llvm::map_range(
+        indices, [&](size_t i) { return static_cast<int32_t>(i); }));
+  }
+
+  // Create collapsed layout
+  SmallVector<int32_t> sgLayout32(sgLayout.begin(), sgLayout.end());
+  SmallVector<int32_t> sgData32(sgData.begin(), sgData.end());
+  SmallVector<int32_t> instData32(instData.begin(), instData.end());
+  SmallVector<int32_t> laneLayout32(laneLayout.begin(), laneLayout.end());
+  SmallVector<int32_t> laneData32(laneData.begin(), laneData.end());
+
+  auto collapsedLayout = xegpu::LayoutAttr::get(
+      getContext(),
+      sgLayout32.empty() ? DenseI32ArrayAttr()
+                         : DenseI32ArrayAttr::get(getContext(), sgLayout32),
+      sgData32.empty() ? DenseI32ArrayAttr()
+                       : DenseI32ArrayAttr::get(getContext(), sgData32),
+      instData32.empty() ? DenseI32ArrayAttr()
+                         : DenseI32ArrayAttr::get(getContext(), instData32),
+      laneLayout32.empty() ? DenseI32ArrayAttr()
+                           : DenseI32ArrayAttr::get(getContext(), laneLayout32),
+      laneData32.empty() ? DenseI32ArrayAttr()
+                         : DenseI32ArrayAttr::get(getContext(), laneData32),
+      collapsedOrder.empty()
+          ? DenseI32ArrayAttr()
+          : DenseI32ArrayAttr::get(getContext(), collapsedOrder));
+  return collapsedLayout;
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_SliceAttr
 //===----------------------------------------------------------------------===//
 LogicalResult
 SliceAttr::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
                   xegpu::DistributeLayoutAttr parent, DenseI64ArrayAttr dims) {
-  if (!parent || !dims)
-    return emitError() << "expected parent layout and dims attribute";
 
-  int64_t rank = parent.getRank();
+  if (!dims)
+    return emitError() << "expected dims attribute";
 
   // check every element in dims is unique and smaller than rank
   llvm::SmallDenseSet<int64_t> seen;
   for (int64_t dim : dims.asArrayRef()) {
-    if (dim < 0 || dim >= rank)
+    if (dim < 0)
       return emitError() << "invalid dim (" << dim << ") in slice attribute.";
     if (!seen.insert(dim).second)
       return emitError() << "repeated dim (" << dim << ") in slice attribute.";
@@ -536,8 +699,6 @@ FailureOr<SmallVector<SmallVector<Value>>>
 SliceAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
                                     Value linearId, ArrayRef<int64_t> shape) {
   assert(getRank() == static_cast<int64_t>(shape.size()) && "invalid shape.");
-  if (!isForWorkgroup())
-    return failure();
 
   SmallVector<int64_t> layout;
   SmallVector<int64_t> subShape;
@@ -603,56 +764,121 @@ bool SliceAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
           (flattenedThis.getDims() == flattenedOther.getDims()));
 }
 
-// Helper function to adjust unit dimensions from sliced space to parent space
-static SetVector<int64_t>
-adjustUnitDimsWithSliceDims(const SetVector<int64_t> &unitDims,
-                            ArrayRef<int64_t> sliceDims) {
-  // Reconstruct parent's non-sliced dimensions
+xegpu::SliceAttr SliceAttr::dropSliceDims(ArrayRef<int64_t> sliceDimsToDrop) {
+  if (sliceDimsToDrop.empty())
+    return *this;
+  SmallVector<int64_t> sliceDims{getDims().asArrayRef()};
+  for (auto dim : sliceDimsToDrop) {
+    auto foundIt = std::find(sliceDims.begin(), sliceDims.end(), dim);
+    assert(foundIt != sliceDims.end() &&
+           "Expected to find the specified reduction dim in slice dims");
+    sliceDims.erase(foundIt);
+  }
 
-  int64_t parentRank = sliceDims.size() + unitDims.size();
+  auto sliceWithoutDims = xegpu::SliceAttr::get(
+      this->getContext(), getParent(),
+      DenseI64ArrayAttr::get(this->getContext(), sliceDims));
+
+  return sliceWithoutDims;
+}
+
+// Helper function to adjust dimensions from sliced space to parent space
+// say we have a parent shape of rank 4, and slice dims [1,3], so the sliced
+// shape is of rank 2, if we want to set unit dim [0] in sliced space, it maps
+// to dim [0] in parent space; if we want to set unit dim [1] in sliced space,
+// it maps to dim [2] in parent space.
+static SmallVector<int64_t>
+mapSlicedDimsToParentSpace(const SmallVector<int64_t> &dimsToMap,
+                           ArrayRef<int64_t> sliceDims) {
+  // Rather than recovering the exact parent rank, we compute a safe upper
+  // bound so that dimsToMap can be adjusted safely. This upper bound is
+  // defined as max(dimsToMap, sliceDims) + 1 + sliceDims.size().
+  int64_t maxDim = -1;
+  maxDim =
+      std::max(maxDim, *std::max_element(sliceDims.begin(), sliceDims.end()));
+  maxDim =
+      std::max(maxDim, *std::max_element(dimsToMap.begin(), dimsToMap.end()));
+  int64_t parentSpaceRank = maxDim + sliceDims.size() + 1;
+
+  // get remaining dims in parent space after applying slicing with parent's
+  // slice Dims
   llvm::SmallDenseSet<int64_t> slicedDimsSet(sliceDims.begin(),
                                              sliceDims.end());
-  SmallVector<int64_t> nonSlicedDims;
-  for (int64_t i = 0; i < parentRank; ++i) {
+  SmallVector<int64_t> remainingDims;
+  for (int64_t i = 0; i < parentSpaceRank; ++i) {
     if (!slicedDimsSet.contains(i))
-      nonSlicedDims.push_back(i);
+      remainingDims.push_back(i);
   }
 
   // Map unit dims from sliced space to parent space
-  SetVector<int64_t> adjustUnitDims;
-  for (auto dim : unitDims) {
-    if (dim < static_cast<int64_t>(nonSlicedDims.size())) {
-      adjustUnitDims.insert(nonSlicedDims[dim]);
-    }
+  SmallVector<int64_t> adjustUnitDims;
+  for (auto dim : dimsToMap) {
+    int64_t mappedDim = remainingDims[dim];
+    adjustUnitDims.push_back(mappedDim);
   }
 
   return adjustUnitDims;
 }
 
 // set the layout for unit dims: sg_data, inst_data and lane_data to 1
-DistributeLayoutAttr SliceAttr::setUnitDimData(SetVector<int64_t> unitDims) {
-  SliceAttr attr = flatten();
-  ArrayRef<int64_t> sliceDims = attr.getDims().asArrayRef();
-  auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+DistributeLayoutAttr
+SliceAttr::setUnitDimData(SmallVector<int64_t> unitDims) const {
+  DistributeLayoutAttr parentLayout = getParent();
 
-  SetVector<int64_t> adjustUnitDims =
-      adjustUnitDimsWithSliceDims(unitDims, sliceDims);
+  ArrayRef<int64_t> sliceDims = getDims().asArrayRef();
 
-  return SliceAttr::get(getContext(), parent.setUnitDimData(adjustUnitDims),
-                        attr.getDims());
+  SmallVector<int64_t> adjustUnitDims =
+      mapSlicedDimsToParentSpace(unitDims, sliceDims);
+
+  return SliceAttr::get(getContext(),
+                        parentLayout.setUnitDimData(adjustUnitDims), getDims());
 }
 
 // set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
-DistributeLayoutAttr SliceAttr::setUnitDimLayout(SetVector<int64_t> unitDims) {
-  SliceAttr attr = flatten();
-  ArrayRef<int64_t> sliceDims = attr.getDims().asArrayRef();
-  auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+DistributeLayoutAttr
+SliceAttr::setUnitDimLayout(SmallVector<int64_t> unitDims) const {
+  DistributeLayoutAttr parentLayout = getParent();
 
-  SetVector<int64_t> adjustUnitDims =
-      adjustUnitDimsWithSliceDims(unitDims, sliceDims);
+  ArrayRef<int64_t> sliceDims = getDims().asArrayRef();
 
-  return SliceAttr::get(getContext(), parent.setUnitDimLayout(adjustUnitDims),
-                        attr.getDims());
+  SmallVector<int64_t> adjustUnitDims =
+      mapSlicedDimsToParentSpace(unitDims, sliceDims);
+
+  return SliceAttr::get(
+      getContext(), parentLayout.setUnitDimLayout(adjustUnitDims), getDims());
+}
+
+// Derive a new layout with sg_data, inst_data and lane_data set to the
+// specified values for the given dimension
+DistributeLayoutAttr SliceAttr::setDimData(int64_t dim, int64_t sgData,
+                                           int64_t instData, int64_t laneData) {
+  ArrayRef<int64_t> sliceDims = getDims().asArrayRef();
+  auto parent = getParent();
+
+  SmallVector<int64_t> dimSet;
+  dimSet.push_back(dim);
+  SmallVector<int64_t> adjustDims =
+      mapSlicedDimsToParentSpace(dimSet, sliceDims);
+  return SliceAttr::get(
+      getContext(),
+      parent.setDimData(adjustDims[0], sgData, instData, laneData), getDims());
+}
+
+// Derive a new layout by collapsing dimensions.
+// `dimGroup` specifies a group of adjacent dimensions
+// that are collapsed into a single dimension in the derived layout.
+DistributeLayoutAttr SliceAttr::collapseDims(SmallVector<int64_t> dimGroup) {
+
+  // Map the sliced dims from parent space to collapsed space
+  SmallVector<int64_t> sliceDims = llvm::to_vector(getDims().asArrayRef());
+
+  SmallVector<int64_t> dimsInParentSpace =
+      mapSlicedDimsToParentSpace(dimGroup, sliceDims);
+
+  auto collapsedParent = getParent().collapseDims(dimsInParentSpace);
+
+  return SliceAttr::get(getContext(), collapsedParent,
+                        DenseI64ArrayAttr::get(getContext(), sliceDims));
 }
 
 //===----------------------------------------------------------------------===//
@@ -754,7 +980,7 @@ TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
                                    bool boundary_check,
                                    MemorySpace memory_space,
                                    mlir::Attribute layout) {
-  auto context = elementType.getContext();
+  auto *context = elementType.getContext();
   auto attr = BlockTensorDescAttr::get(context, memory_space, array_length,
                                        boundary_check);
   return Base::get(context, shape, elementType, attr, layout);
@@ -764,7 +990,7 @@ TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
                                    mlir::Type elementType, int chunk_size,
                                    MemorySpace memory_space,
                                    mlir::Attribute layout) {
-  auto context = elementType.getContext();
+  auto *context = elementType.getContext();
   auto attr = ScatterTensorDescAttr::get(context, memory_space, chunk_size);
   return Base::get(context, shape, elementType, attr, layout);
 }
@@ -786,7 +1012,12 @@ TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
       return emitError() << "SLM is only supported for 1D block tensor";
   }
 
-  // for gather and scatter ops, Low-precision types are packed in 32-bit units.
+  if (!elementType.isIntOrFloat())
+    return emitError() << "unsupported element type " << elementType
+                       << ": expected integer or float";
+
+  // for gather and scatter ops, Low-precision types are packed in 32-bit
+  // units.
   unsigned bitWidth = elementType.getIntOrFloatBitWidth();
   int chunkAlignmentFactor =
       bitWidth < xegpu::uArch::generalPackedFormatBitSize
@@ -900,7 +1131,7 @@ void MemDescType::print(AsmPrinter &printer) const {
 
 Attribute MemLayoutAttr::parse(AsmParser &parser, Type type) {
 
-  auto context = parser.getContext();
+  auto *context = parser.getContext();
   llvm::SMLoc loc = parser.getCurrentLocation();
 
   llvm::SmallDenseSet<StringRef> seenKeys;

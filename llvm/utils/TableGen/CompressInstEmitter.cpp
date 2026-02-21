@@ -72,6 +72,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -165,13 +166,12 @@ public:
 bool CompressInstEmitter::validateRegister(const Record *Reg,
                                            const Record *RegClass,
                                            ArrayRef<SMLoc> Loc) {
-  assert(Reg->isSubClassOf("Register") && "Reg record should be a Register");
+  assert((Reg->isSubClassOf("Register") ||
+          Reg->isSubClassOf("RegisterByHwMode")) &&
+         "Reg record should be a Register");
   assert(RegClass->isSubClassOf("RegisterClassLike") &&
          "RegClass record should be RegisterClassLike");
-  const CodeGenRegisterClass &RC = Target.getRegisterClass(RegClass, Loc);
-  const CodeGenRegister *R = Target.getRegBank().getReg(Reg);
-  assert(R != nullptr && "Register not defined!!");
-  return RC.contains(R);
+  return Target.getRegBank().regClassContainsReg(RegClass, Reg, Loc);
 }
 
 bool CompressInstEmitter::validateTypes(const Record *DagOpType,
@@ -255,12 +255,13 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
                                            "' and Dag operand count mismatch");
 
       if (const auto *DI = dyn_cast<DefInit>(Dag->getArg(DAGOpNo))) {
-        if (DI->getDef()->isSubClassOf("Register")) {
+        if (DI->getDef()->isSubClassOf("Register") ||
+            DI->getDef()->isSubClassOf("RegisterByHwMode")) {
           // Check if the fixed register belongs to the Register class.
           if (!validateRegister(DI->getDef(), OpndRec, Rec->getLoc()))
             PrintFatalError(Rec->getLoc(),
                             "Error in Dag '" + Dag->getAsString() +
-                                "'Register: '" + DI->getDef()->getName() +
+                                "': Register '" + DI->getDef()->getName() +
                                 "' is not in register class '" +
                                 OpndRec->getName() + "'");
           OperandMap[OpNo].Kind = OpData::Reg;
@@ -608,15 +609,19 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   raw_string_ostream Func(F);
   raw_string_ostream FuncH(FH);
 
-  if (EType == EmitterType::Compress)
-    OS << "\n#ifdef GEN_COMPRESS_INSTR\n"
-       << "#undef GEN_COMPRESS_INSTR\n\n";
-  else if (EType == EmitterType::Uncompress)
-    OS << "\n#ifdef GEN_UNCOMPRESS_INSTR\n"
-       << "#undef GEN_UNCOMPRESS_INSTR\n\n";
-  else if (EType == EmitterType::CheckCompress)
-    OS << "\n#ifdef GEN_CHECK_COMPRESS_INSTR\n"
-       << "#undef GEN_CHECK_COMPRESS_INSTR\n\n";
+  auto GetEmitterGuard = [EType]() -> StringRef {
+    switch (EType) {
+    case EmitterType::Compress:
+      return "GEN_COMPRESS_INSTR";
+    case EmitterType::Uncompress:
+      return "GEN_UNCOMPRESS_INSTR";
+    case EmitterType::CheckCompress:
+      return "GEN_CHECK_COMPRESS_INSTR";
+    }
+    llvm_unreachable("Invalid emitter type");
+  };
+
+  IfDefEmitter IfDef(OS, GetEmitterGuard());
 
   if (EType == EmitterType::Compress) {
     FuncH << "static bool compressInst(MCInst &OutInst,\n";
@@ -630,16 +635,14 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     FuncH << "static bool isCompressibleInst(const MachineInstr &MI,\n";
     FuncH.indent(31) << "const " << TargetName << "Subtarget &STI) {\n";
   }
+  // HwModeId is used if we have any RegClassByHwMode patterns
+  if (!Target.getAllRegClassByHwMode().empty())
+    FuncH.indent(2) << "[[maybe_unused]] unsigned HwModeId = "
+                    << "STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);\n";
 
   if (CompressPatterns.empty()) {
     OS << FH;
     OS.indent(2) << "return false;\n}\n";
-    if (EType == EmitterType::Compress)
-      OS << "\n#endif //GEN_COMPRESS_INSTR\n";
-    else if (EType == EmitterType::Uncompress)
-      OS << "\n#endif //GEN_UNCOMPRESS_INSTR\n\n";
-    else if (EType == EmitterType::CheckCompress)
-      OS << "\n#endif //GEN_CHECK_COMPRESS_INSTR\n\n";
     return;
   }
 
@@ -735,7 +738,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
         switch (SourceOperandMap[OpNo].Kind) {
         case OpData::Operand:
           if (SourceOperandMap[OpNo].OpInfo.TiedOpIdx != -1) {
-            if (Source.Operands[OpNo].Rec->isSubClassOf("RegisterClass"))
+            if (Source.Operands[OpNo].Rec->isSubClassOf("RegisterClassLike"))
               CondStream << CondSep << "MI.getOperand(" << OpNo
                          << ").isReg() && MI.getOperand("
                          << SourceOperandMap[OpNo].OpInfo.TiedOpIdx
@@ -759,8 +762,14 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
           const Record *Reg = SourceOperandMap[OpNo].RegRec;
           CondStream << CondSep << "MI.getOperand(" << OpNo << ").isReg()"
                      << CondSep << "(MI.getOperand(" << OpNo
-                     << ").getReg() == " << TargetName << "::" << Reg->getName()
-                     << ")";
+                     << ").getReg() == ";
+          if (Reg->isSubClassOf("RegisterByHwMode")) {
+            RegisterByHwMode(Reg, Target.getRegBank())
+                .emitResolverCall(CondStream, "HwModeId");
+          } else {
+            CondStream << TargetName << "::" << Reg->getName();
+          }
+          CondStream << ")";
           break;
         }
         }
@@ -788,11 +797,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
           const Record *DagRec = DestOperandMap[OpNo].OpInfo.DagRec;
           // Check that the operand in the Source instruction fits
           // the type for the Dest instruction.
-          if (DagRec->isSubClassOf("RegisterClass") ||
-              DagRec->isSubClassOf("RegisterOperand")) {
-            auto *ClassRec = DagRec->isSubClassOf("RegisterClass")
-                                 ? DagRec
-                                 : DagRec->getValueAsDef("RegClass");
+          if (auto *ClassRec = Target.getAsRegClassLike(DagRec)) {
             // This is a register operand. Check the register class.
             // Don't check register class if this is a tied operand, it was done
             // for the operand it's tied to.
@@ -801,9 +806,15 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
               if (EType == EmitterType::CheckCompress)
                 CondStream << " && MI.getOperand(" << OpIdx
                            << ").getReg().isPhysical()";
-              CondStream << CondSep << TargetName << "MCRegisterClasses["
-                         << TargetName << "::" << ClassRec->getName()
-                         << "RegClassID].contains(MI.getOperand(" << OpIdx
+              CondStream << CondSep << TargetName << "MCRegisterClasses[";
+              if (ClassRec->isSubClassOf("RegClassByHwMode")) {
+                CondStream << TargetName << "RegClassByHwModeTables[HwModeId]["
+                           << TargetName << "::" << ClassRec->getName() << "]";
+              } else {
+                CondStream << TargetName << "::" << ClassRec->getName()
+                           << "RegClassID";
+              }
+              CondStream << "].contains(MI.getOperand(" << OpIdx
                          << ").getReg())";
             }
 
@@ -875,9 +886,14 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
           if (CompressOrUncompress) {
             // Fixed register has been validated at pattern validation time.
             const Record *Reg = DestOperandMap[OpNo].RegRec;
-            CodeStream.indent(6)
-                << "OutInst.addOperand(MCOperand::createReg(" << TargetName
-                << "::" << Reg->getName() << "));\n";
+            CodeStream.indent(6) << "OutInst.addOperand(MCOperand::createReg(";
+            if (Reg->isSubClassOf("RegisterByHwMode")) {
+              RegisterByHwMode(Reg, Target.getRegBank())
+                  .emitResolverCall(CodeStream, "HwModeId");
+            } else {
+              CodeStream << TargetName << "::" << Reg->getName();
+            }
+            CodeStream << "));\n";
           }
         } break;
         }
@@ -934,13 +950,6 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
 
   OS << FH;
   OS << F;
-
-  if (EType == EmitterType::Compress)
-    OS << "\n#endif //GEN_COMPRESS_INSTR\n";
-  else if (EType == EmitterType::Uncompress)
-    OS << "\n#endif //GEN_UNCOMPRESS_INSTR\n\n";
-  else if (EType == EmitterType::CheckCompress)
-    OS << "\n#endif //GEN_CHECK_COMPRESS_INSTR\n\n";
 }
 
 void CompressInstEmitter::run(raw_ostream &OS) {

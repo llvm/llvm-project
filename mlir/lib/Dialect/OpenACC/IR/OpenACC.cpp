@@ -4,10 +4,11 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// =============================================================================
+//===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -244,6 +245,12 @@ struct MemRefPointerLikeModel
     memref::StoreOp::create(builder, loc, valueToStore, memrefValue);
     return true;
   }
+
+  bool isDeviceData(Type pointer, Value var) const {
+    auto memrefTy = cast<T>(pointer);
+    Attribute memSpace = memrefTy.getMemorySpace();
+    return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
+  }
 };
 
 struct LLVMPointerPointerLikeModel
@@ -288,6 +295,20 @@ struct MemrefGlobalVariableModel
   Region *getInitRegion(Operation *op) const {
     // GlobalOp uses attributes for initialization, not regions
     return nullptr;
+  }
+
+  bool isDeviceData(Operation *op) const {
+    auto globalOp = cast<memref::GlobalOp>(op);
+    Attribute memSpace = globalOp.getType().getMemorySpace();
+    return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
+  }
+};
+
+struct GPULaunchOffloadRegionModel
+    : public acc::OffloadRegionOpInterface::ExternalModel<
+          GPULaunchOffloadRegionModel, gpu::LaunchOp> {
+  mlir::Region &getOffloadRegion(mlir::Operation *op) const {
+    return cast<gpu::LaunchOp>(op).getBody();
   }
 };
 
@@ -387,6 +408,7 @@ void OpenACCDialect::initialize() {
   memref::GetGlobalOp::attachInterface<MemrefAddressOfGlobalModel>(
       *getContext());
   memref::GlobalOp::attachInterface<MemrefGlobalVariableModel>(*getContext());
+  gpu::LaunchOp::attachInterface<GPULaunchOffloadRegionModel>(*getContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -405,7 +427,12 @@ getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
     return;
   }
 
-  regions.push_back(RegionSuccessor(op, op->getResults()));
+  regions.push_back(RegionSuccessor::parent());
+}
+
+static ValueRange getSingleRegionSuccessorInputs(Operation *op,
+                                                 RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(op->getResults()) : ValueRange();
 }
 
 void KernelsOp::getSuccessorRegions(RegionBranchPoint point,
@@ -414,10 +441,18 @@ void KernelsOp::getSuccessorRegions(RegionBranchPoint point,
                                     regions);
 }
 
+ValueRange KernelsOp::getSuccessorInputs(RegionSuccessor successor) {
+  return getSingleRegionSuccessorInputs(getOperation(), successor);
+}
+
 void ParallelOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
                                     regions);
+}
+
+ValueRange ParallelOp::getSuccessorInputs(RegionSuccessor successor) {
+  return getSingleRegionSuccessorInputs(getOperation(), successor);
 }
 
 void SerialOp::getSuccessorRegions(RegionBranchPoint point,
@@ -426,10 +461,8 @@ void SerialOp::getSuccessorRegions(RegionBranchPoint point,
                                     regions);
 }
 
-void KernelEnvironmentOp::getSuccessorRegions(
-    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
-                                    regions);
+ValueRange SerialOp::getSuccessorInputs(RegionSuccessor successor) {
+  return getSingleRegionSuccessorInputs(getOperation(), successor);
 }
 
 void DataOp::getSuccessorRegions(RegionBranchPoint point,
@@ -438,10 +471,18 @@ void DataOp::getSuccessorRegions(RegionBranchPoint point,
                                     regions);
 }
 
+ValueRange DataOp::getSuccessorInputs(RegionSuccessor successor) {
+  return getSingleRegionSuccessorInputs(getOperation(), successor);
+}
+
 void HostDataOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
                                     regions);
+}
+
+ValueRange HostDataOp::getSuccessorInputs(RegionSuccessor successor) {
+  return getSingleRegionSuccessorInputs(getOperation(), successor);
 }
 
 void LoopOp::getSuccessorRegions(RegionBranchPoint point,
@@ -454,13 +495,27 @@ void LoopOp::getSuccessorRegions(RegionBranchPoint point,
       regions.push_back(RegionSuccessor(&getRegion()));
       return;
     }
-    regions.push_back(RegionSuccessor(getOperation(), getResults()));
+    regions.push_back(RegionSuccessor::parent());
     return;
   }
 
   // Structured loops: model a loop-shaped region graph similar to scf.for.
   regions.push_back(RegionSuccessor(&getRegion()));
-  regions.push_back(RegionSuccessor(getOperation(), getResults()));
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange LoopOp::getSuccessorInputs(RegionSuccessor successor) {
+  return getSingleRegionSuccessorInputs(getOperation(), successor);
+}
+
+//===----------------------------------------------------------------------===//
+// RegionBranchTerminatorOpInterface
+//===----------------------------------------------------------------------===//
+
+MutableOperandRange
+TerminatorOp::getMutableSuccessorOperands(RegionSuccessor /*point*/) {
+  // `acc.terminator` does not forward operands.
+  return MutableOperandRange(getOperation(), /*start=*/0, /*length=*/0);
 }
 
 //===----------------------------------------------------------------------===//
@@ -812,20 +867,6 @@ LogicalResult acc::FirstprivateOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// FirstprivateMapInitialOp
-//===----------------------------------------------------------------------===//
-LogicalResult acc::FirstprivateMapInitialOp::verify() {
-  if (getDataClause() != acc::DataClause::acc_firstprivate)
-    return emitError("data clause associated with firstprivate operation must "
-                     "match its intent");
-  if (failed(checkVarAndVarType(*this)))
-    return failure();
-  if (failed(checkNoModifier(*this)))
-    return failure();
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // ReductionOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::ReductionOp::verify() {
@@ -1159,6 +1200,260 @@ bool acc::CacheOp::isCacheReadonly() {
                                  acc::DataClauseModifier::readonly);
 }
 
+//===----------------------------------------------------------------------===//
+// Data entry/exit operations - getEffects implementations
+//===----------------------------------------------------------------------===//
+
+// This function returns true iff the given operation is enclosed
+// in any ACC_COMPUTE_CONSTRUCT_OPS operation.
+// It is quite alike acc::getEnclosingComputeOp() utility,
+// but we cannot use it here.
+static bool isEnclosedIntoComputeOp(mlir::Operation *op) {
+  mlir::Operation *parentOp = op->getParentOp();
+  while (parentOp) {
+    if (mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS>(parentOp))
+      return true;
+    parentOp = parentOp->getParentOp();
+  }
+  return false;
+}
+
+/// Helper to add an effect on an operand, referenced by its mutable range.
+template <typename EffectTy>
+static void addOperandEffect(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects,
+    MutableOperandRange operand) {
+  for (unsigned i = 0, e = operand.size(); i < e; ++i)
+    effects.emplace_back(EffectTy::get(), &operand[i]);
+}
+
+/// Helper to add an effect on a result value.
+template <typename EffectTy>
+static void addResultEffect(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects,
+    Value result) {
+  effects.emplace_back(EffectTy::get(), mlir::cast<mlir::OpResult>(result));
+}
+
+// PrivateOp: accVar result write.
+void acc::PrivateOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // If acc.private is enclosed into a compute operation,
+  // then it denotes the device side privatization, hence
+  // it does not access the CurrentDeviceIdResource.
+  if (!isEnclosedIntoComputeOp(getOperation()))
+    effects.emplace_back(MemoryEffects::Read::get(),
+                         acc::CurrentDeviceIdResource::get());
+  // TODO: should this be MemoryEffects::Allocate?
+  addResultEffect<MemoryEffects::Write>(effects, getAccVar());
+}
+
+// FirstprivateOp: var read, accVar result write.
+void acc::FirstprivateOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // If acc.firstprivate is enclosed into a compute operation,
+  // then it denotes the device side privatization, hence
+  // it does not access the CurrentDeviceIdResource.
+  if (!isEnclosedIntoComputeOp(getOperation()))
+    effects.emplace_back(MemoryEffects::Read::get(),
+                         acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
+  addResultEffect<MemoryEffects::Write>(effects, getAccVar());
+}
+
+// ReductionOp: var read, accVar result write.
+void acc::ReductionOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // If acc.reduction is enclosed into a compute operation,
+  // then it denotes the device side reduction, hence
+  // it does not access the CurrentDeviceIdResource.
+  if (!isEnclosedIntoComputeOp(getOperation()))
+    effects.emplace_back(MemoryEffects::Read::get(),
+                         acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
+  addResultEffect<MemoryEffects::Write>(effects, getAccVar());
+}
+
+// DevicePtrOp: RuntimeCounters read.
+void acc::DevicePtrOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+}
+
+// PresentOp: RuntimeCounters read+write.
+void acc::PresentOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+}
+
+// CopyinOp: RuntimeCounters read+write, var read, accVar result write.
+void acc::CopyinOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
+  addResultEffect<MemoryEffects::Write>(effects, getAccVar());
+}
+
+// CreateOp: RuntimeCounters read+write, accVar result write.
+void acc::CreateOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  // TODO: should this be MemoryEffects::Allocate?
+  addResultEffect<MemoryEffects::Write>(effects, getAccVar());
+}
+
+// NoCreateOp: RuntimeCounters read+write.
+void acc::NoCreateOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+}
+
+// AttachOp: RuntimeCounters read+write, var read.
+void acc::AttachOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  // TODO: should we also add MemoryEffects::Write?
+  addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
+}
+
+// GetDevicePtrOp: RuntimeCounters read.
+void acc::GetDevicePtrOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+}
+
+// UpdateDeviceOp: var read, accVar result write.
+void acc::UpdateDeviceOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
+  addResultEffect<MemoryEffects::Write>(effects, getAccVar());
+}
+
+// UseDeviceOp: RuntimeCounters read.
+void acc::UseDeviceOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+}
+
+// DeclareDeviceResidentOp: RuntimeCounters write, var read.
+void acc::DeclareDeviceResidentOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
+}
+
+// DeclareLinkOp: RuntimeCounters write, var read.
+void acc::DeclareLinkOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
+}
+
+// CacheOp: NoMemoryEffect
+void acc::CacheOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {}
+
+// CopyoutOp: RuntimeCounters read+write, accVar read, var write.
+void acc::CopyoutOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getAccVarMutable());
+  addOperandEffect<MemoryEffects::Write>(effects, getVarMutable());
+}
+
+// DeleteOp: RuntimeCounters read+write, accVar read.
+void acc::DeleteOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getAccVarMutable());
+}
+
+// DetachOp: RuntimeCounters read+write, accVar read.
+void acc::DetachOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getAccVarMutable());
+}
+
+// UpdateHostOp: RuntimeCounters read+write, accVar read, var write.
+void acc::UpdateHostOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       acc::RuntimeCounters::get());
+  effects.emplace_back(MemoryEffects::Read::get(),
+                       acc::CurrentDeviceIdResource::get());
+  addOperandEffect<MemoryEffects::Read>(effects, getAccVarMutable());
+  addOperandEffect<MemoryEffects::Write>(effects, getVarMutable());
+}
+
 template <typename StructureOp>
 static ParseResult parseRegions(OpAsmParser &parser, OperationState &state,
                                 unsigned nRegions = 1) {
@@ -1239,65 +1534,6 @@ struct RemoveConstantIfConditionWithRegion : public OpRewritePattern<OpTy> {
       rewriter.modifyOpInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
     else
       replaceOpWithRegion(rewriter, op, op.getRegion());
-
-    return success();
-  }
-};
-
-/// Remove empty acc.kernel_environment operations. If the operation has wait
-/// operands, create a acc.wait operation to preserve synchronization.
-struct RemoveEmptyKernelEnvironment
-    : public OpRewritePattern<acc::KernelEnvironmentOp> {
-  using OpRewritePattern<acc::KernelEnvironmentOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(acc::KernelEnvironmentOp op,
-                                PatternRewriter &rewriter) const override {
-    assert(op->getNumRegions() == 1 && "expected op to have one region");
-
-    Block &block = op.getRegion().front();
-    if (!block.empty())
-      return failure();
-
-    // Conservatively disable canonicalization of empty acc.kernel_environment
-    // operations if the wait operands in the kernel_environment cannot be fully
-    // represented by acc.wait operation.
-
-    // Disable canonicalization if device type is not the default
-    if (auto deviceTypeAttr = op.getWaitOperandsDeviceTypeAttr()) {
-      for (auto attr : deviceTypeAttr) {
-        if (auto dtAttr = mlir::dyn_cast<acc::DeviceTypeAttr>(attr)) {
-          if (dtAttr.getValue() != mlir::acc::DeviceType::None)
-            return failure();
-        }
-      }
-    }
-
-    // Disable canonicalization if any wait segment has a devnum
-    if (auto hasDevnumAttr = op.getHasWaitDevnumAttr()) {
-      for (auto attr : hasDevnumAttr) {
-        if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(attr)) {
-          if (boolAttr.getValue())
-            return failure();
-        }
-      }
-    }
-
-    // Disable canonicalization if there are multiple wait segments
-    if (auto segmentsAttr = op.getWaitOperandsSegmentsAttr()) {
-      if (segmentsAttr.size() > 1)
-        return failure();
-    }
-
-    // Remove empty kernel environment.
-    // Preserve synchronization by creating acc.wait operation if needed.
-    if (!op.getWaitOperands().empty() || op.getWaitOnlyAttr())
-      rewriter.replaceOpWithNewOp<acc::WaitOp>(op, op.getWaitOperands(),
-                                               /*asyncOperand=*/Value(),
-                                               /*waitDevnum=*/Value(),
-                                               /*async=*/nullptr,
-                                               /*ifCond=*/Value());
-    else
-      rewriter.eraseOp(op);
 
     return success();
   }
@@ -1422,7 +1658,7 @@ static LogicalResult createDestroyRegion(OpBuilder &builder, Location loc,
       cast<TypedValue<PointerLikeType>>(destroyBlock->getArgument(1));
   if (isa<MappableType>(varType)) {
     auto mappableTy = cast<MappableType>(varType);
-    if (!mappableTy.generatePrivateDestroy(builder, loc, varToFree))
+    if (!mappableTy.generatePrivateDestroy(builder, loc, varToFree, bounds))
       return failure();
   } else {
     assert(isa<PointerLikeType>(varType) && "Expected PointerLikeType");
@@ -2873,24 +3109,23 @@ LogicalResult acc::HostDataOp::verify() {
     return emitError("at least one operand must appear on the host_data "
                      "operation");
 
-  for (mlir::Value operand : getDataClauseOperands())
-    if (!mlir::isa<acc::UseDeviceOp>(operand.getDefiningOp()))
+  llvm::SmallPtrSet<mlir::Value, 4> seenVars;
+  for (mlir::Value operand : getDataClauseOperands()) {
+    auto useDeviceOp =
+        mlir::dyn_cast<acc::UseDeviceOp>(operand.getDefiningOp());
+    if (!useDeviceOp)
       return emitError("expect data entry operation as defining op");
+
+    // Check for duplicate use_device clauses
+    if (!seenVars.insert(useDeviceOp.getVar()).second)
+      return emitError("duplicate use_device variable");
+  }
   return success();
 }
 
 void acc::HostDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
   results.add<RemoveConstantIfConditionWithRegion<HostDataOp>>(context);
-}
-
-//===----------------------------------------------------------------------===//
-// KernelEnvironmentOp
-//===----------------------------------------------------------------------===//
-
-void acc::KernelEnvironmentOp::getCanonicalizationPatterns(
-    RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveEmptyKernelEnvironment>(context);
 }
 
 //===----------------------------------------------------------------------===//

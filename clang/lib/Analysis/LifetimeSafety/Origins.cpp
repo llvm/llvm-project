@@ -9,9 +9,11 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
@@ -85,6 +87,18 @@ bool doesDeclHaveStorage(const ValueDecl *D) {
   return !D->getType()->isReferenceType();
 }
 
+OriginManager::OriginManager(ASTContext &AST, const Decl *D) : AST(AST) {
+  // Create OriginList for 'this' expr.
+  const auto *MD = llvm::dyn_cast_or_null<CXXMethodDecl>(D);
+  if (!MD || !MD->isInstance())
+    return;
+  // Lambdas can capture 'this' from the surrounding context, but in that case
+  // 'this' does not refer to the lambda object itself.
+  if (const CXXRecordDecl *P = MD->getParent(); P && P->isLambda())
+    return;
+  ThisOrigins = buildListForType(MD->getThisType(), MD);
+}
+
 OriginList *OriginManager::createNode(const ValueDecl *D, QualType QT) {
   OriginID NewID = getNextOriginID();
   AllOrigins.emplace_back(NewID, D, QT.getTypePtrOrNull());
@@ -124,6 +138,9 @@ OriginList *OriginManager::getOrCreateList(const ValueDecl *D) {
 OriginList *OriginManager::getOrCreateList(const Expr *E) {
   if (auto *ParenIgnored = E->IgnoreParens(); ParenIgnored != E)
     return getOrCreateList(ParenIgnored);
+  // We do not see CFG stmts for ExprWithCleanups. Simply peel them.
+  if (const ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(E))
+    return getOrCreateList(EWC->getSubExpr());
 
   if (!hasOrigins(E))
     return nullptr;
@@ -133,26 +150,38 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
     return It->second;
 
   QualType Type = E->getType();
+  // Special handling for 'this' expressions to share origins with the method's
+  // implicit object parameter.
+  if (isa<CXXThisExpr>(E) && ThisOrigins)
+    return *ThisOrigins;
 
-  // Special handling for DeclRefExpr to share origins with the underlying decl.
-  if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+  // Special handling for expressions referring to a decl to share origins with
+  // the underlying decl.
+  const ValueDecl *ReferencedDecl = nullptr;
+  if (auto *DRE = dyn_cast<DeclRefExpr>(E))
+    ReferencedDecl = DRE->getDecl();
+  else if (auto *ME = dyn_cast<MemberExpr>(E))
+    if (auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl());
+        Field && isa<CXXThisExpr>(ME->getBase()))
+      ReferencedDecl = Field;
+  if (ReferencedDecl) {
     OriginList *Head = nullptr;
-    // For non-reference declarations (e.g., `int* p`), the DeclRefExpr is an
+    // For non-reference declarations (e.g., `int* p`), the expression is an
     // lvalue (addressable) that can be borrowed, so we create an outer origin
     // for the lvalue itself, with the pointee being the declaration's list.
     // This models taking the address: `&p` borrows the storage of `p`, not what
     // `p` points to.
-    if (doesDeclHaveStorage(DRE->getDecl())) {
-      Head = createNode(DRE, QualType{});
-      // This ensures origin sharing: multiple DeclRefExprs to the same
+    if (doesDeclHaveStorage(ReferencedDecl)) {
+      Head = createNode(E, QualType{});
+      // This ensures origin sharing: multiple expressions to the same
       // declaration share the same underlying origins.
-      Head->setInnerOriginList(getOrCreateList(DRE->getDecl()));
+      Head->setInnerOriginList(getOrCreateList(ReferencedDecl));
     } else {
       // For reference-typed declarations (e.g., `int& r = p`) which have no
       // storage, the DeclRefExpr directly reuses the declaration's list since
       // references don't add an extra level of indirection at the expression
       // level.
-      Head = getOrCreateList(DRE->getDecl());
+      Head = getOrCreateList(ReferencedDecl);
     }
     return ExprToList[E] = Head;
   }

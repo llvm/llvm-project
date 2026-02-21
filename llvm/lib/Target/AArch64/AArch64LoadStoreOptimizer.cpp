@@ -447,6 +447,10 @@ static unsigned getPreIndexedOpcode(unsigned Opc) {
   switch (Opc) {
   default:
     llvm_unreachable("Opcode has no pre-indexed equivalent!");
+  case AArch64::STRBui:
+    return AArch64::STRBpre;
+  case AArch64::STRHui:
+    return AArch64::STRHpre;
   case AArch64::STRSui:
     return AArch64::STRSpre;
   case AArch64::STRDui:
@@ -461,6 +465,10 @@ static unsigned getPreIndexedOpcode(unsigned Opc) {
     return AArch64::STRWpre;
   case AArch64::STRXui:
     return AArch64::STRXpre;
+  case AArch64::LDRBui:
+    return AArch64::LDRBpre;
+  case AArch64::LDRHui:
+    return AArch64::LDRHpre;
   case AArch64::LDRSui:
     return AArch64::LDRSpre;
   case AArch64::LDRDui:
@@ -552,6 +560,10 @@ static unsigned getPostIndexedOpcode(unsigned Opc) {
   switch (Opc) {
   default:
     llvm_unreachable("Opcode has no post-indexed wise equivalent!");
+  case AArch64::STRBui:
+    return AArch64::STRBpost;
+  case AArch64::STRHui:
+    return AArch64::STRHpost;
   case AArch64::STRSui:
   case AArch64::STURSi:
     return AArch64::STRSpost;
@@ -571,6 +583,10 @@ static unsigned getPostIndexedOpcode(unsigned Opc) {
   case AArch64::STRXui:
   case AArch64::STURXi:
     return AArch64::STRXpost;
+  case AArch64::LDRBui:
+    return AArch64::LDRBpost;
+  case AArch64::LDRHui:
+    return AArch64::LDRHpost;
   case AArch64::LDRSui:
   case AArch64::LDURSi:
     return AArch64::LDRSpost;
@@ -739,6 +755,8 @@ static bool isMergeableLdStUpdate(MachineInstr &MI, AArch64FunctionInfo &AFI) {
   default:
     return false;
   // Scaled instructions.
+  case AArch64::STRBui:
+  case AArch64::STRHui:
   case AArch64::STRSui:
   case AArch64::STRDui:
   case AArch64::STRQui:
@@ -746,6 +764,8 @@ static bool isMergeableLdStUpdate(MachineInstr &MI, AArch64FunctionInfo &AFI) {
   case AArch64::STRWui:
   case AArch64::STRHHui:
   case AArch64::STRBBui:
+  case AArch64::LDRBui:
+  case AArch64::LDRHui:
   case AArch64::LDRSui:
   case AArch64::LDRDui:
   case AArch64::LDRQui:
@@ -833,10 +853,10 @@ static bool isMergeableIndexLdSt(MachineInstr &MI, int &Scale) {
   }
 }
 
-static bool isRewritableImplicitDef(unsigned Opc) {
-  switch (Opc) {
+static bool isRewritableImplicitDef(const MachineOperand &MO) {
+  switch (MO.getParent()->getOpcode()) {
   default:
-    return false;
+    return MO.isRenamable();
   case AArch64::ORRWrs:
   case AArch64::ADDWri:
     return true;
@@ -1047,7 +1067,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                         MI.getRegClassConstraint(OpIdx, TII, TRI))
                   MatchingReg = GetMatchingSubReg(RC);
                 else {
-                  if (!isRewritableImplicitDef(MI.getOpcode()))
+                  if (!isRewritableImplicitDef(MOP))
                     continue;
                   MatchingReg = GetMatchingSubReg(
                       TRI->getMinimalPhysRegClass(MOP.getReg()));
@@ -1739,7 +1759,7 @@ static bool canRenameMOP(const MachineOperand &MOP,
     // them must be known. For example, in ORRWrs the implicit-def
     // corresponds to the result register.
     if (MOP.isImplicit() && MOP.isDef()) {
-      if (!isRewritableImplicitDef(MOP.getParent()->getOpcode()))
+      if (!isRewritableImplicitDef(MOP))
         return false;
       return TRI->isSuperOrSubRegisterEq(
           MOP.getParent()->getOperand(0).getReg(), MOP.getReg());

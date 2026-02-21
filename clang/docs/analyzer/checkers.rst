@@ -83,7 +83,49 @@ Ensure the shift operands are in proper range before shifting.
 
 core.CallAndMessage (C, C++, ObjC)
 """"""""""""""""""""""""""""""""""
- Check for logical errors for function calls and Objective-C message expressions (e.g., uninitialized arguments, null function pointers).
+Check for logical errors for function calls and Objective-C message expressions
+(e.g., uninitialized arguments, null function pointers).
+
+This checker is a collection of related checks that are controlled by checker
+options. The following checks are all enabled by default, but can be turned off
+by setting their option to ``false``:
+
+* **FunctionPointer** Check for null or undefined function pointer at function
+  call.
+* **CXXThisMethodCall** Check for null or undefined ``this`` pointer at method
+  call.
+* **CXXDeallocationArg** Check for null or undefined argument of
+  ``operator delete``.
+* **ArgInitializedness** Check for undefined pass-by-value function arguments.
+* **ParameterCount** Check for correct number of passed arguments to functions
+  or ObjC blocks. This will warn if the actual argument count is less (but not
+  if more) than the required count (by the declaration).
+* **NilReceiver** Check whether the receiver in a message expression is
+  ``nil``.
+* **UndefReceiver** Check whether the receiver in a message expression is
+  undefined.
+
+The following check is disabled by default (because it is more likely to
+produce false positives), this can be turned on by set the option to ``true``:
+
+* **ArgPointeeInitializedness** Check for undefined pass-by-reference (pointer
+  to constant value or constant reference) function arguments. In special cases
+  non-constant arguments are checked. This happens for C library functions
+  where it is required to initialize (at least partially) a passed structure
+  which is used for both input and output (for example last argument of
+  ``mktime`` or ``mbrlen``).
+
+**Additional options**
+
+* **ArgPointeeInitializednessComplete** Controls when to emit the warning at
+  the **ArgPointeeInitializedness** check. If this option is ``false`` (the
+  default), a ``struct`` is considered to be "initialized" when at least one
+  member is initialized. When this option is set to ``true``, structures are
+  only accepted as initialized when all members are initialized. (Arguments of
+  C library functions which require initialization are always checked as if the
+  option would be ``false``.)
+
+**Some examples**
 
 .. literalinclude:: checkers/callandmessage_example.c
     :language: objc
@@ -96,41 +138,6 @@ core.DivideZero (C, C++, ObjC)
 
 .. literalinclude:: checkers/dividezero_example.c
     :language: c
-
-.. _core-FixedAddressDereference:
-
-core.FixedAddressDereference (C, C++, ObjC)
-"""""""""""""""""""""""""""""""""""""""""""
-Check for dereferences of fixed addresses.
-
-A pointer contains a fixed address if it was set to a hard-coded value or it
-becomes otherwise obvious that at that point it can have only a single fixed
-numerical value.
-
-.. code-block:: c
-
- void test1() {
-   int *p = (int *)0x020;
-   int x = p[0]; // warn
- }
-
- void test2(int *p) {
-   if (p == (int *)-1)
-     *p = 0; // warn
- }
-
- void test3() {
-   int (*p_function)(char, char);
-   p_function = (int (*)(char, char))0x04080;
-   int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
- }
-
-If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
-to true (the default value), then this checker never reports dereference of
-pointers with a specified address space. If the option is set to false, then
-reports from the specific x86 address spaces 256, 257 and 258 are still
-suppressed, but fixed address dereferences from other address spaces are
-reported.
 
 .. _core-NonNullParamChecker:
 
@@ -842,6 +849,60 @@ of this Clang attribute.
 
 Projects that use this pattern should not enable this optin checker.
 
+.. _optin-core-FixedAddressDereference:
+
+optin.core.FixedAddressDereference (C, C++, ObjC)
+"""""""""""""""""""""""""""""""""""""""""""""""""
+Check for dereferences of fixed addresses.
+
+A pointer contains a fixed address if it was set to a hard-coded value or it
+becomes otherwise obvious that at that point it can have only a single fixed
+numerical value.
+
+.. code-block:: c
+
+ void test1() {
+   int *p = (int *)0x020;
+   int x = p[0]; // warn
+ }
+
+ void test2(int *p) {
+   if (p == (int *)-1)
+     *p = 0; // warn
+ }
+
+ void test3() {
+   int (*p_function)(char, char);
+   p_function = (int (*)(char, char))0x04080;
+   int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
+ }
+
+Access of fixed numerical addresses can be legitimate in low-level projects (e.g. firmware) and hardware interop.
+These values are often marked as ``volatile`` (to prevent unwanted compiler optimizations),
+so this checker doesn't report situations where the pointee of the fixed address is ``volatile``.
+If this suppression is not sufficient on a low-level project, then consider disabling this ``optin`` checker.
+Note that null pointers will still be reported by :ref:`core.NullDereference <core-NullDereference>`
+regardless if the pointee is ``volatile`` or not.
+
+.. code-block:: c
+
+ void volatile_pointee() {
+   *(volatile int *)0x404 = 1; // no warning: fixed non-null "volatile" pointee, you must know what you are doing
+ }
+
+ void deref_volatile_nullptr() {
+   *(volatile int *)0 = 1; // core.NullDereference still warns about this
+ }
+
+If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
+to true (the default value), then this checker never reports dereference of
+pointers with a specified address space. If the option is set to false, then
+reports from the specific x86 address spaces 256, 257 and 258 are still
+suppressed, but fixed address dereferences from other address spaces are
+reported.
+Do not use the :ref:`address_space <langext-address_space_documentation>`
+attribute to suppress the reports - it just happens so that the checker also doesn't raise issues if the attribute is present.
+
 .. _optin-cplusplus-UninitializedObject:
 
 optin.cplusplus.UninitializedObject (C++)
@@ -1371,8 +1432,12 @@ For a more detailed description of configuration options, please see the
 
 **Configuration**
 
-* `Config`  Specifies the name of the YAML configuration file. The user can
-  define their own taint sources and sinks.
+* ``optin.taint.TaintPropagation:Config``  Specifies the name of the YAML
+  configuration file. The user can define their own taint sources and sinks.
+* ``optin.taint.TaintPropagation:EnableDefaultConfig`` If set to false,
+   the default source, sink and propagation rules are not loaded. This way,
+   advanced users can fully customize their taint configuration model.
+   Default: ``true``.
 
 **Related Guidelines**
 
@@ -1785,6 +1850,19 @@ security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
    strncpy(buf, "a", 1); // warn
  }
 
+The ``ReportMode`` option controls when warnings are reported:
+
+* ``all``: Reports all unsafe functions regardless of C standard or Annex K availability. Useful for security auditing and vulnerability scanning.
+
+* ``actionable``: Only reports when Annex K is available (C11 with ``__STDC_LIB_EXT1__`` and ``__STDC_WANT_LIB_EXT1__=1``).
+
+* ``c11-only``: Reports when C11 standard is enabled (does not take Annex K availability into account).
+
+To set this option, use:
+``-analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=all``
+
+By default, this option is set to *c11-only*.
+
 .. _security-MmapWriteExec:
 
 security.MmapWriteExec (C)
@@ -1963,7 +2041,7 @@ unix.BlockInCriticalSection (C, C++)
 Check for calls to blocking functions inside a critical section.
 Blocking functions detected by this checker: ``sleep, getc, fgets, read, recv``.
 Critical section handling functions modeled by this checker:
-``lock, unlock, pthread_mutex_lock, pthread_mutex_trylock, pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock``.
+``lock, unlock, pthread_mutex_lock, pthread_mutex_trylock, pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock, scoped_lock``.
 
 .. code-block:: c
 
@@ -3076,19 +3154,6 @@ Check for cases where the dynamic and the static type of an object are unrelated
  NSNumber *number = date;
  [number doubleValue];
 
-.. _alpha-core-FixedAddr:
-
-alpha.core.FixedAddr (C)
-""""""""""""""""""""""""
-Check for assignment of a fixed address to a pointer.
-
-.. code-block:: c
-
- void test() {
-   int *p;
-   p = (int *) 0x10000; // warn
- }
-
 .. _alpha-core-PointerArithm:
 
 alpha.core.PointerArithm (C)
@@ -3666,6 +3731,23 @@ This applies to:
 - Inside template instantiations and macro expansions that are visible to the compiler.
 
 For types like this, instead of using built in casts, the programmer will use helper functions that internally perform the appropriate type check and disable static analysis.
+
+alpha.webkit.NoDeleteChecker
+"""""""""""""""""""""""""""""""
+Check that ``[[clang::annotate_type("webkit.nodelete")]]`` annotation does not appear on a function which could delete an object.
+
+.. code-block:: cpp
+
+ void [[clang::annotate_type("webkit.nodelete")]] someFunction(RefCountable* obj) { // warn
+   delete obj;
+ };
+
+ Foo [[clang::annotate_type("webkit.nodelete")]] trivialFunction(RefCountable* obj) {
+   return obj->anotherTrivialFunction();
+ };
+ 
+``[[clang::annotate_type("webkit.nodelete")]]`` annotation makes the function ignored for the purpose of other WebKit smart pointer checkers.
+For example, ``alpha.webkit.UncountedCallArgsChecker`` will ignore a function call with this annotation.
 
 alpha.webkit.NoUncheckedPtrMemberChecker
 """"""""""""""""""""""""""""""""""""""""

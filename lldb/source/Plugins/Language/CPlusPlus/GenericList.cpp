@@ -354,9 +354,8 @@ lldb::ChildCacheState LibCxxForwardListFrontEnd::Update() {
     return lldb::ChildCacheState::eRefetch;
 
   // Anonymous strucutre index is in base class at index 0.
-  auto [impl_sp, is_compressed_pair] =
-      GetValueOrOldCompressedPair(*list_base_sp, /*anon_struct_idx=*/0,
-                                  "__before_begin_", "__before_begin_");
+  auto [impl_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
+      *list_base_sp, "__before_begin_", "__before_begin_");
   if (!impl_sp)
     return ChildCacheState::eRefetch;
 
@@ -383,8 +382,8 @@ llvm::Expected<uint32_t> LibCxxListFrontEnd::CalculateNumChildren() {
   if (!m_head || !m_tail || m_node_address == 0)
     return 0;
 
-  auto [size_node_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      m_backend, /*anon_struct_idx=*/1, "__size_", "__size_alloc_");
+  auto [size_node_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(m_backend, "__size_", "__size_alloc_");
   if (is_compressed_pair)
     size_node_sp = GetFirstValueOfLibCXXCompressedPair(*size_node_sp);
 

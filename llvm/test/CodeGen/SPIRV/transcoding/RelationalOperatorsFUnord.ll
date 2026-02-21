@@ -13,7 +13,7 @@
 define spir_kernel void @testFUnordEqual(<2 x float> %a, <2 x float> %b) {
 entry:
   %0 = fcmp ueq <2 x float> %a, %b
-  store <2 x i1> %0, <2 x i1> addrspace(1)* @var
+  store <2 x i1> %0, ptr addrspace(1) @var
   ret void
 }
 
@@ -26,7 +26,7 @@ entry:
 define spir_kernel void @testFUnordGreaterThan(<2 x float> %a, <2 x float> %b) {
 entry:
   %0 = fcmp ugt <2 x float> %a, %b
-  store <2 x i1> %0, <2 x i1> addrspace(1)* @var
+  store <2 x i1> %0, ptr addrspace(1) @var
   ret void
 }
 
@@ -39,7 +39,7 @@ entry:
 define spir_kernel void @testFUnordGreaterThanEqual(<2 x float> %a, <2 x float> %b) {
 entry:
   %0 = fcmp uge <2 x float> %a, %b
-  store <2 x i1> %0, <2 x i1> addrspace(1)* @var
+  store <2 x i1> %0, ptr addrspace(1) @var
   ret void
 }
 
@@ -52,7 +52,7 @@ entry:
 define spir_kernel void @testFUnordLessThan(<2 x float> %a, <2 x float> %b) {
 entry:
   %0 = fcmp ult <2 x float> %a, %b
-  store <2 x i1> %0, <2 x i1> addrspace(1)* @var
+  store <2 x i1> %0, ptr addrspace(1) @var
   ret void
 }
 
@@ -65,6 +65,6 @@ entry:
 define spir_kernel void @testFUnordLessThanEqual(<2 x float> %a, <2 x float> %b) {
 entry:
   %0 = fcmp ule <2 x float> %a, %b
-  store <2 x i1> %0, <2 x i1> addrspace(1)* @var
+  store <2 x i1> %0, ptr addrspace(1) @var
   ret void
 }

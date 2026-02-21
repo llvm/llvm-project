@@ -101,7 +101,6 @@ static void format(const T &Fractional, struct tm &LT, raw_ostream &OS,
       }
     FStream << Style[I];
   }
-  FStream.flush();
   char Buffer[256];  // Should be enough for anywhen.
   size_t Len = strftime(Buffer, sizeof(Buffer), Format.c_str(), &LT);
   OS << (Len ? Buffer : "BAD-DATE-FORMAT");

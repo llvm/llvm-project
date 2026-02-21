@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn %s 2>&1 | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn %s | FileCheck %s
 
 .byte .kernel.sgpr_count
 // CHECK: .byte 0

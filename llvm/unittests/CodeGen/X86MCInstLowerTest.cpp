@@ -84,7 +84,7 @@ protected:
         @G = external global i32
 
         define i32 @foo() {
-          %1 = load i32, i32* @G; load the global variable
+          %1 = load i32, ptr @G; load the global variable
           %2 = call i32 @f()
           %3 = mul i32 %1, %2
           ret i32 %3

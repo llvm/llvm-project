@@ -1,15 +1,15 @@
 // RUN: touch %t.S
 
-// RUN: %clang -target x86_64-apple-ios13.1-macabi -darwin-target-variant x86_64-apple-macos10.15 -isysroot %S/Inputs/MacOSX10.15.versioned.sdk -mlinker-version=520 -### %t.S  2>&1 \
+// RUN: %clang -target x86_64-apple-ios13.1-macabi -darwin-target-variant x86_64-apple-macos10.15 -isysroot %S/Inputs/MacOSX10.15.sdk -mlinker-version=520 -### %t.S  2>&1 \
 // RUN:   | FileCheck %s
 
-// RUN: %clang -target x86_64-apple-ios-macabi -mmacos-version-min=10.15 -isysroot %S/Inputs/MacOSX10.15.versioned.sdk -mlinker-version=520 -### %t.S 2>&1 \
+// RUN: %clang -target x86_64-apple-ios-macabi -mmacos-version-min=10.15 -isysroot %S/Inputs/MacOSX10.15.sdk -mlinker-version=520 -### %t.S 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-SDK-INFO %s
 
-// RUN: %clang -target x86_64-apple-ios-macabi -mmacos-version-min=10.15 -darwin-target-variant x86_64-apple-macos -isysroot %S/Inputs/MacOSX10.15.versioned.sdk -mlinker-version=520 -### %t.S 2>&1 \
+// RUN: %clang -target x86_64-apple-ios-macabi -mmacos-version-min=10.15 -darwin-target-variant x86_64-apple-macos -isysroot %S/Inputs/MacOSX10.15.sdk -mlinker-version=520 -### %t.S 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-VARIANT-SDK-INFO %s
 
-// RUN: %clang -target x86_64-apple-macos -mmacos-version-min=10.15 -darwin-target-variant x86_64-apple-ios-macabi -isysroot %S/Inputs/MacOSX10.15.versioned.sdk -mlinker-version=520 -### %t.S 2>&1 \
+// RUN: %clang -target x86_64-apple-macos -mmacos-version-min=10.15 -darwin-target-variant x86_64-apple-ios-macabi -isysroot %S/Inputs/MacOSX10.15.sdk -mlinker-version=520 -### %t.S 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-VARIANT-SDK-INFO-INV %s
 
 // CHECK: "-cc1as"

@@ -61,6 +61,19 @@ struct StructuralEquivalenceContext {
   /// (which we have already complained about).
   NonEquivalentDeclSet &NonEquivalentDecls;
 
+  /// RAII helper that is used to suppress diagnostics during attribute
+  /// equivalence checking.
+  struct AttrScopedAttrEquivalenceContext {
+    AttrScopedAttrEquivalenceContext(StructuralEquivalenceContext &Ctx)
+        : Ctx(Ctx), OldComplain(Ctx.Complain) {
+      Ctx.Complain = false;
+    }
+    ~AttrScopedAttrEquivalenceContext() { Ctx.Complain = OldComplain; }
+
+    StructuralEquivalenceContext &Ctx;
+    bool OldComplain;
+  };
+
   StructuralEquivalenceKind EqKind;
 
   /// Whether we're being strict about the spelling of types when
@@ -134,6 +147,10 @@ struct StructuralEquivalenceContext {
   // relevant warning for the input error diagnostic.
   unsigned getApplicableDiagnostic(unsigned ErrorDiagnostic);
 
+  /// Iterate over the decl pairs in DeclsToCheck until either an inequivalent
+  /// pair is found or the queue is empty.
+  bool checkDeclQueue();
+
 private:
   /// Finish checking all of the structural equivalences.
   ///
@@ -151,6 +168,16 @@ private:
   /// false if they are for sure not.
   bool CheckKindSpecificEquivalence(Decl *D1, Decl *D2);
 };
+
+/// Expose these functions so that they can be called by the functions that
+/// check equivalence of attribute arguments.
+namespace ASTStructuralEquivalence {
+bool isEquivalent(StructuralEquivalenceContext &Context, QualType T1,
+                  QualType T2);
+bool isEquivalent(StructuralEquivalenceContext &Context, const Stmt *S1,
+                  const Stmt *S2);
+bool isEquivalent(const IdentifierInfo *Name1, const IdentifierInfo *Name2);
+} // namespace ASTStructuralEquivalence
 
 } // namespace clang
 

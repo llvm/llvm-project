@@ -22,12 +22,12 @@ ret float %f1
 ; CHECK: %[[#F3]] = OpFDiv %[[#FloatTy]]
 ; CHECK: %[[#Callee]] = OpFunctionCall %[[#FloatTy]] %[[#CalleeName]]
 
-define void @test_fp_max_error_decoration(float %f1, float %f2, float* %out) {
+define void @test_fp_max_error_decoration(float %f1, float %f2, ptr %out) {
 entry:
 %f3 = fdiv float %f1, %f2, !fpmath !0
-store volatile float %f3, float* %out
+store volatile float %f3, ptr %out
 %call = call float @callee(float %f1, float %f2), !fpmath !1
-store volatile float %call, float* %out
+store volatile float %call, ptr %out
 ret void
 }
 

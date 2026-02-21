@@ -477,6 +477,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   Builder.defineMacro("__ARM_SIZEOF_MINIMAL_ENUM", Opts.ShortEnums ? "1" : "4");
 
+  // Clang supports range prefetch intrinsics
+  Builder.defineMacro("__ARM_PREFETCH_RANGE", "1");
+
   if (FPU & NeonMode) {
     Builder.defineMacro("__ARM_NEON", "1");
     // 64-bit NEON supports half, single and double precision operations.
@@ -561,6 +564,33 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_FEATURE_RCPC", "3");
   else if (HasRCPC)
     Builder.defineMacro("__ARM_FEATURE_RCPC", "1");
+
+  if (HasFPRCVT)
+    Builder.defineMacro("__ARM_FEATURE_FPRCVT", "1");
+
+  if (HasF8F16MM)
+    Builder.defineMacro("__ARM_FEATURE_F8F16MM", "1");
+
+  if (HasF8F32MM)
+    Builder.defineMacro("__ARM_FEATURE_F8F32MM", "1");
+
+  if (HasSVE_F16F32MM)
+    Builder.defineMacro("__ARM_FEATURE_SVE_F16F32MM", "1");
+
+  if (HasSVE_BFSCALE)
+    Builder.defineMacro("__ARM_FEATURE_SVE_BFSCALE", "1");
+
+  if (HasSVE_AES2)
+    Builder.defineMacro("__ARM_FEATURE_SVE_AES2", "1");
+
+  if (HasSSVE_AES)
+    Builder.defineMacro("__ARM_FEATURE_SSVE_AES", "1");
+
+  if (HasSVE2p2)
+    Builder.defineMacro("__ARM_FEATURE_SVE2p2", "1");
+
+  if (HasSME2p2)
+    Builder.defineMacro("__ARM_FEATURE_SME2p2", "1");
 
   if (HasFMV)
     Builder.defineMacro("__HAVE_FUNCTION_MULTI_VERSIONING", "1");
@@ -809,8 +839,30 @@ bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
   return true;
 }
 
-bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
-  return llvm::StringSwitch<bool>(Feature)
+/// A helper class for "hasFeature" lookups (mimicking a StringSwitch).
+struct FeatureLookupBuilder {
+  FeatureLookupBuilder(AArch64FeatureSet &Features) : Features(Features) {
+    Features.clear();
+  }
+
+  FeatureLookupBuilder &Case(StringRef Feat, bool HasFeature) {
+    if (HasFeature)
+      Features.insert(Feat);
+    return *this;
+  }
+
+  FeatureLookupBuilder &Cases(ArrayRef<StringRef> Feats, bool HasFeature) {
+    if (HasFeature)
+      Features.insert_range(Feats);
+    return *this;
+  }
+
+private:
+  AArch64FeatureSet &Features;
+};
+
+void AArch64TargetInfo::computeFeatureLookup() {
+  FeatureLookupBuilder(HasFeatureLookup)
       .Cases({"aarch64", "arm64", "arm"}, true)
       .Case("fmv", HasFMV)
       .Case("fp", FPU & FPUMode)
@@ -873,7 +925,19 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("ssve-fp8fma", HasSSVE_FP8FMA)
       .Case("sme-f8f32", HasSME_F8F32)
       .Case("sme-f8f16", HasSME_F8F16)
-      .Default(false);
+      .Case("fprcvt", HasFPRCVT)
+      .Case("f8f16mm", HasF8F16MM)
+      .Case("f8f32mm", HasF8F32MM)
+      .Case("sve-f16f32mm", HasSVE_F16F32MM)
+      .Case("sve-bfscale", HasSVE_BFSCALE)
+      .Case("sve-aes2", HasSVE_AES2)
+      .Case("ssve-aes", HasSSVE_AES)
+      .Case("sve2p2", FPU & SveMode && HasSVE2p2)
+      .Case("sme2p2", HasSME2p2);
+}
+
+bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
+  return HasFeatureLookup.contains(Feature);
 }
 
 void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
@@ -1102,6 +1166,24 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     }
     if (Feature == "+strict-align")
       HasUnalignedAccess = false;
+    if (Feature == "+fprcvt")
+      HasFPRCVT = true;
+    if (Feature == "+f8f16mm")
+      HasF8F16MM = true;
+    if (Feature == "+f8f32mm")
+      HasF8F32MM = true;
+    if (Feature == "+sve-f16f32mm")
+      HasSVE_F16F32MM = true;
+    if (Feature == "+sve-bfscale")
+      HasSVE_BFSCALE = true;
+    if (Feature == "+sve-aes2")
+      HasSVE_AES2 = true;
+    if (Feature == "+ssve-aes")
+      HasSSVE_AES = true;
+    if (Feature == "+sve2p2")
+      HasSVE2p2 = true;
+    if (Feature == "+sme2p2")
+      HasSME2p2 = true;
 
     // All predecessor archs are added but select the latest one for ArchKind.
     if (Feature == "+v8a" && ArchInfo->Version < llvm::AArch64::ARMV8A.Version)
@@ -1229,6 +1311,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   if (HasNoSVE)
     FPU &= ~SveMode;
 
+  computeFeatureLookup();
   return true;
 }
 

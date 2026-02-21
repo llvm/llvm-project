@@ -121,27 +121,6 @@ static_assert(__builtin_is_cpp_trivially_relocatable(U));
 // expected-note@-1 {{because it is a union with a user-declared move constructor}} \
 // expected-note@-1 {{because it is a union with a user-declared move assignment operator}}
 // expected-note@#tr-U {{'U' defined here}}
-struct S4 trivially_relocatable_if_eligible { // #tr-S4
-    ~S4();
-    B b;
-};
-static_assert(__builtin_is_cpp_trivially_relocatable(S4));
-// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_cpp_trivially_relocatable(trivially_relocatable::S4)'}} \
-// expected-note@-1 {{'S4' is not trivially relocatable}} \
-// expected-note@-1 {{because it has a non-trivially-relocatable member 'b' of type 'B'}} \
-// expected-note@#tr-S4 {{'S4' defined here}}
-
-union U2 trivially_relocatable_if_eligible { // #tr-U2
-    U2(const U2&);
-    U2(U2&&);
-    B b;
-};
-static_assert(__builtin_is_cpp_trivially_relocatable(U2));
-// expected-error@-1 {{static assertion failed due to requirement '__builtin_is_cpp_trivially_relocatable(trivially_relocatable::U2)'}} \
-// expected-note@-1 {{'U2' is not trivially relocatable}} \
-// expected-note@-1 {{because it has a deleted destructor}} \
-// expected-note@-1 {{because it has a non-trivially-relocatable member 'b' of type 'B'}} \
-// expected-note@#tr-U2 {{'U2' defined here}}
 }
 
 

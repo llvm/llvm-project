@@ -472,18 +472,6 @@ private:
   /// in LoopNest.
   bool isLoopInvariant(const SCEV *Expression, const Loop *LoopNest) const;
 
-  /// Makes sure all subscript pairs share the same integer type by
-  /// sign-extending as necessary.
-  /// Sign-extending a subscript is safe because getelementptr assumes the
-  /// array subscripts are signed.
-  void unifySubscriptType(ArrayRef<Subscript *> Pairs);
-
-  /// removeMatchingExtensions - Examines a subscript pair.
-  /// If the source and destination are identically sign (or zero)
-  /// extended, it strips off the extension in an effort to
-  /// simplify the actual analysis.
-  void removeMatchingExtensions(Subscript *Pair);
-
   /// collectCommonLoops - Finds the set of loops from the LoopNest that
   /// have a level <= CommonLevels and are referred to by the SCEV Expression.
   void collectCommonLoops(const SCEV *Expression, const Loop *LoopNest,
@@ -498,13 +486,6 @@ private:
   /// linear. Collect the set of loops mentioned by Dst.
   bool checkDstSubscript(const SCEV *Dst, const Loop *LoopNest,
                          SmallBitVector &Loops);
-
-  /// isKnownPredicate - Compare X and Y using the predicate Pred.
-  /// Basically a wrapper for SCEV::isKnownPredicate,
-  /// but tries harder, especially in the presence of sign and zero
-  /// extensions and symbolics.
-  bool isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *X,
-                        const SCEV *Y) const;
 
   /// collectUpperBound - All subscripts are the same type (on my machine,
   /// an i64). The loop bound may be a smaller type. collectUpperBound

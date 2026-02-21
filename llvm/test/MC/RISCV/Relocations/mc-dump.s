@@ -7,7 +7,7 @@
 # CHECK-NEXT:  Align:4 Fill:0 FillLen:1 MaxBytesToEmit:4 Nops
 # CHECK-NEXT:  Symbol @0 .text
 # CHECK-NEXT:0 Data LinkerRelaxable Size:8 [97,00,00,00,e7,80,00,00]
-# CHECK-NEXT:  Fixup @0 Value:specifier(19,ext) Kind:4023 LinkerRelaxable
+# CHECK-NEXT:  Fixup @0 Value:specifier(4014,ext) Kind:4023 LinkerRelaxable
 # CHECK-NEXT:  Symbol @0 $x
 # CHECK-NEXT:8 Align LinkerRelaxable Size:0+6 []
 # CHECK-NEXT:  Align:8 Fill:0 FillLen:1 MaxBytesToEmit:8 Nops

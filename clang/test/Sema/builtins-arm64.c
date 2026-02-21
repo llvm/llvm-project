@@ -30,6 +30,19 @@ void test_prefetch(void) {
   __builtin_arm_prefetch(0, 0, 0, 0, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
+void test_range_prefetch(void) {
+  __builtin_arm_range_prefetch(0, 2, 0, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_arm_range_prefetch(0, 0, 2, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+
+  __builtin_arm_range_prefetch_x(0, 2, 0, 0, 0, 0, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_arm_range_prefetch_x(0, 0, 2, 0, 0, 0, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_arm_range_prefetch_x(0, 0, 0, -2097153, 0, 0, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_arm_range_prefetch_x(0, 0, 0, 2097152, 0, 0, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_arm_range_prefetch_x(0, 0, 0, 0, 65537, 0, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_arm_range_prefetch_x(0, 0, 0, 0, 0, -2097153, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_arm_range_prefetch_x(0, 0, 0, 0, 0, 2097152, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+}
+
 void test_trap(short s, unsigned short us) {
   __builtin_arm_trap(42);
   __builtin_arm_trap(65535);

@@ -1157,6 +1157,9 @@ DEF_TRAVERSE_TYPE(CountAttributedType, {
 DEF_TRAVERSE_TYPE(BTFTagAttributedType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
+DEF_TRAVERSE_TYPE(OverflowBehaviorType,
+                  { TRY_TO(TraverseType(T->getUnderlyingType())); })
+
 DEF_TRAVERSE_TYPE(HLSLAttributedResourceType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
@@ -1510,6 +1513,9 @@ DEF_TRAVERSE_TYPELOC(CountAttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
 
 DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
+                     { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
+
+DEF_TRAVERSE_TYPELOC(OverflowBehaviorType,
                      { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
 
 DEF_TRAVERSE_TYPELOC(HLSLAttributedResourceType,
@@ -2783,7 +2789,7 @@ DEF_TRAVERSE_STMT(CXXNewExpr, {
 DEF_TRAVERSE_STMT(OffsetOfExpr, {
   // The child-iterator will pick up the expression representing
   // the field.
-  // FIMXE: for code like offsetof(Foo, a.b.c), should we get
+  // FIXME: for code like offsetof(Foo, a.b.c), should we get
   // making a MemberExpr callbacks for Foo.a, Foo.a.b, and Foo.a.b.c?
   TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
 })
@@ -2884,6 +2890,8 @@ DEF_TRAVERSE_STMT(CXXUnresolvedConstructExpr, {
   TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
 })
 
+DEF_TRAVERSE_STMT(CXXReflectExpr, {/*TODO*/})
+
 // These expressions all might take explicit template arguments.
 // We traverse those if so.  FIXME: implement these.
 DEF_TRAVERSE_STMT(CXXConstructExpr, {})
@@ -2942,6 +2950,7 @@ DEF_TRAVERSE_STMT(UserDefinedLiteral, {})
 DEF_TRAVERSE_STMT(DesignatedInitExpr, {})
 DEF_TRAVERSE_STMT(DesignatedInitUpdateExpr, {})
 DEF_TRAVERSE_STMT(ExtVectorElementExpr, {})
+DEF_TRAVERSE_STMT(MatrixElementExpr, {})
 DEF_TRAVERSE_STMT(GNUNullExpr, {})
 DEF_TRAVERSE_STMT(ImplicitValueInitExpr, {})
 DEF_TRAVERSE_STMT(NoInitExpr, {})
@@ -3528,6 +3537,13 @@ bool RecursiveASTVisitor<Derived>::VisitOMPDefaultClause(OMPDefaultClause *) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPThreadsetClause(
     OMPThreadsetClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPTransparentClause(
+    OMPTransparentClause *C) {
+  TRY_TO(TraverseStmt(C->getImpexType()));
   return true;
 }
 

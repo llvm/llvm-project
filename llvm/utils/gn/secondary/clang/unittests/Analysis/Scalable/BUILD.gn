@@ -10,13 +10,25 @@ unittest("ClangScalableAnalysisTests") {
     "//clang/lib/Serialization",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Support",
   ]
+  include_dirs = [ "." ]
   sources = [
     "ASTEntityMappingTest.cpp",
     "BuildNamespaceTest.cpp",
     "EntityIdTableTest.cpp",
     "EntityIdTest.cpp",
+    "EntityLinkageTest.cpp",
     "EntityNameTest.cpp",
+    "Registries/FancyAnalysisData.cpp",
+    "Registries/MockSerializationFormat.cpp",
+    "Registries/MockSummaryExtractor1.cpp",
+    "Registries/MockSummaryExtractor2.cpp",
+    "Registries/SerializationFormatRegistryTest.cpp",
+    "Registries/SummaryExtractorRegistryTest.cpp",
+    "Serialization/JSONFormatTest.cpp",
     "SummaryNameTest.cpp",
+    "TUSummaryBuilderTest.cpp",
+    "TestFixture.cpp",
   ]
 }

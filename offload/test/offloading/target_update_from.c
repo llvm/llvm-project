@@ -1,4 +1,5 @@
 // RUN: %libomptarget-compile-run-and-check-generic
+// XFAIL: intelgpu
 // This test checks that "update from" clause in OpenMP supports strided
 // sections. #pragma omp target update from(result[0:N/2:2]) updates every other
 // element from device

@@ -784,7 +784,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
     ```mlir
       xegpu.prefetch %tdesc {l1_hint = #xegpu.cache_hint<cached>,
                              l2_hint = #xegpu.cache_hint<cached>,
-                             l3_hint = #xegpu.cache_hint<cached>, 
+                             l3_hint = #xegpu.cache_hint<cached>,
                              layout = #xegpu.layout<sg_layout = [8], sg_data = [32]>
                              }
         : !xegpu.tensor_desc<256xf16>
@@ -912,7 +912,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
 
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
 
-    - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the result 
+    - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the result
       of load. Only valid at workgroup and subgroup levels.
 
     Results:
@@ -923,7 +923,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
   ```mlir
     %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>,
                              l2_hint = #xegpu.cache_hint<uncached>,
-                             l3_hint = #xegpu.cache_hint<uncached>}, 
+                             l3_hint = #xegpu.cache_hint<uncached>},
                              layout = #xegpu.layout<sg_layout = [8], sg_data = [32]>>
           : !xegpu.tensor_desc<256xf32, #xegpu.scatter_tdesc_attr<memory_space=global>>,
             vector<256xi1> -> vector<256xf32>
@@ -950,7 +950,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
     %mask = vector.constant_mask [16]: vector<16xi1>
     %val = xegpu.load %a[%offsets], %mask {l1_hint = #xegpu.cache_hint<cached>,
                            l2_hint = #xegpu.cache_hint<cached>,
-                           l3_hint = #xegpu.cache_hint<cached>, 
+                           l3_hint = #xegpu.cache_hint<cached>,
                            layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
       : memref<1024xf32>, vector<16xi1>, vector<16xindex> -> vector<16xf32>
   ```
@@ -1195,7 +1195,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint)>,
-    OpBuilder<(ins "Value": $value, "Value": $dest, 
+    OpBuilder<(ins "Value": $value, "Value": $dest,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
                     "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
@@ -1288,7 +1288,7 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
     - `lhs`: A vector value representing the left-hand-side matrix tile (A) participating in the
       matrix multiply.
 
-    - `rhs`: A vector value representing the right-hand-side matrix tile (B). 
+    - `rhs`: A vector value representing the right-hand-side matrix tile (B).
 
     - `acc`: [optional] A vector value representing the accumulator matrix tile (C). When present, the
       result is computed as `lhs * rhs + acc`; otherwise, the accumulator is implicitly assumed to be zero.
@@ -1319,7 +1319,7 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
   let arguments = (ins
     XeGPU_DpasOprType : $lhs,
     XeGPU_DpasOprType : $rhs,
-    Optional<XeGPU_DpasResType>: $acc, 
+    Optional<XeGPU_DpasResType>: $acc,
     OptionalAttr<DistributeLayoutAttr>:$layout_a,
     OptionalAttr<DistributeLayoutAttr>:$layout_b,
     OptionalAttr<DistributeLayoutAttr>:$layout_cd
@@ -1369,7 +1369,7 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
 def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
       MemoryEffects<[MemRead, MemWrite]>,
       AllElementTypesMatch<["tensorDesc", "value", "result"]>,
-      AllShapesMatch<["tensorDesc", "value", "result"]>, 
+      AllShapesMatch<["tensorDesc", "value", "result"]>,
       AnchorLayoutInterface]> {
   let summary = "Atomic read-modify-write operation on the TensorDesc. ";
 
@@ -1382,7 +1382,7 @@ def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
     be applied during the modification.
 
     This operation serves as an anchor through which users assign a layout attribute
-    to govern computation distribution.    
+    to govern computation distribution.
 
     Arguments:
     - `kind`: An attribute that specifies the atomic operation to be performed
@@ -1521,10 +1521,10 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["sou
             : vector<128x128xf16>
         ```
     }];
-    let arguments = (ins XeGPU_VectorType: $source,
+    let arguments = (ins XeGPU_VectorOrOffsetVectorType: $source,
                          DistributeLayoutAttr: $input_layout,
                          DistributeLayoutAttr: $target_layout);
-    let results = (outs XeGPU_VectorType: $result);
+    let results = (outs XeGPU_VectorOrOffsetVectorType: $result);
     let assemblyFormat = [{
         $source prop-dict attr-dict `:` type($source)
     }];
@@ -1586,16 +1586,15 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     OptionalAttr<UnitAttr>:$subgroup_block_io,
     OptionalAttr<DistributeLayoutAttr>:$layout
   );
-  let results = (outs AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$res);  
+  let results = (outs AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>:$res);
   let assemblyFormat = [{
     $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
     prop-dict attr-dict `` `:` type(operands) `->` type(results)
   }];
 
   let description = [{
-    This operation loads a 2D block of data from shared local memory (SLM) as specified
-    by the provided 2D `mem_desc`. Only 2D memory descriptors are supported; use the
-    subview operation to obtain a compatible 2D `mem_desc` from a higher-rank descriptor if needed.
+    This operation loads an nD block of data from shared local memory (SLM) as specified
+    by the provided nD `mem_desc`. Memory descriptors of any rank are supported.
 
     This operation serves as an anchor through which users assign a layout attribute
     to govern computation distribution.
@@ -1665,9 +1664,8 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
   let assemblyFormat = [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
                           prop-dict attr-dict `` `:` type(operands)}];
   let description = [{
-    This operation stores a 2D `data` fragment into the shared local memory region
-    specified by a 2D `mem_desc`. Only 2D memory descriptors are supported; use the
-    subview operation to obtain a 2D `mem_desc` from a higher-rank descriptor if needed.
+    This operation stores an nD `data` fragment into the shared local memory region
+    specified by an nD `mem_desc`. Memory descriptors of any rank are supported.
 
     This operation serves as an anchor through which users assign a layout attribute
     to govern computation distribution.
@@ -1716,6 +1714,144 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
 
   }];
 
+  let hasVerifier = 1;
+}
+
+def XeGPU_TruncfOp
+    : XeGPU_Op<"truncf", [AllRanksMatch<["source", "result"]>,
+                          AllShapesMatch<["source", "result"]>, Pure]> {
+  let summary = "It performs floating point truncation from higher precision "
+                "to lower precision.";
+
+  let description =
+      [{The `xegpu.truncf` operation truncates floating point values from a higher
+    precision type to a lower precision type.
+    Converts `f16` and `bf16` to microscaling float types.
+    Rounding mode defaults to round to nearest even.
+
+    Example:
+    ```mlir
+      %res = xegpu.truncf %src : vector<16xf16> -> vector<16xf8E5M2>
+    ```
+
+  }];
+
+  let arguments = (ins FixedVectorOfNonZeroRankOf<[XeGPU_FloatType]>:$source);
+  let results = (outs FixedVectorOfNonZeroRankOf<[XeGPU_FloatType]>:$result);
+
+  let extraClassDeclaration = [{
+
+    Type getSourceType() {
+      return getSource().getType();
+    }
+
+    Type getResultType() {
+      return getResult().getType();
+    }
+
+  }];
+
+  let assemblyFormat = [{
+    $source attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
+                                          AllElementTypesMatch<["a", "b"]>,
+                                          AnchorLayoutInterface]> {
+  let summary = "It performs scaled mma computation";
+
+  let description =
+      [{DPAS MX performs matrix multiplication on matrix A and Matrix B
+    of low precision data type. A is of size`mxk`
+    size, B is of size `kxn`, and accumulate on matrix C of size `mxn` to the same size
+    matrix.
+
+    In lane level code, each lane from a subgroup holds a data fragment for A, B, Acc and the result,
+    which are represented as 1D vectors.
+
+    This operation serves as an anchor through which users assign a layout attribute
+    to govern computation distribution.
+
+    Arguments:
+
+    - `a`: A vector value representing the left-hand-side matrix tile (A) participating in the
+      matrix multiply.
+
+    - `b`: A vector value representing the right-hand-side matrix tile (B).
+
+    - `acc`: A vector value representing the accumulator matrix tile (C). The
+      result is computed as `a * b + acc`.
+
+    - `scale_a`: A floating point vector/scalar value used to scale `a` for
+      matrix multiplication.
+
+    - `scale_b`: A floating point vector/scalar value used to scale `b` for
+      matrix multiplication.
+
+    - `layout_a`, `layout_b`, `layout_cd`: [optional] Attributes that identify this
+      operation as anchor for operands A, B, and the accumulator/result, enabling users to assign layouts
+      that govern distribution at the subgroup and/or lane level. Only valid at workgroup and subgroup
+      level.
+
+  }];
+
+  let arguments = (ins XeGPU_DpasOprType:$a, XeGPU_DpasOprType:$b,
+      Optional<XeGPU_DpasResType>:$acc,
+      Optional<AnyTypeOf<[F8E8M0FNU,
+                          VectorOfRankAndType<[1, 2], [F8E8M0FNU]>]>>:$scale_a,
+      Optional<AnyTypeOf<[F8E8M0FNU,
+                          VectorOfRankAndType<[1, 2], [F8E8M0FNU]>]>>:$scale_b,
+      OptionalAttr<DistributeLayoutAttr>:$layout_a,
+      OptionalAttr<DistributeLayoutAttr>:$layout_b,
+      OptionalAttr<DistributeLayoutAttr>:$layout_cd);
+  let results = (outs XeGPU_DpasResType:$result);
+  let extraClassDeclaration = [{
+
+    xegpu::DistributeLayoutAttr getAnchorLayout() {
+      return getLayoutCd().value_or(nullptr);
+    }
+
+    void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
+      setLayoutCdAttr(anchorLayout);
+    }
+
+    VectorType getAType() {
+      return getA().getType();
+    }
+
+    VectorType getBType() {
+      return getB().getType();
+    }
+
+    VectorType getAccType() {
+      return getAcc().getType();
+    }
+
+    Type getScaleAType() {
+      return getScaleA().getType();
+    }
+
+    Type getScaleBType() {
+      return getScaleB().getType();
+    }
+
+    VectorType getResultType() {
+      return getResult().getType();
+    }
+
+  }];
+  let assemblyFormat = [{
+    $a `,` $b (`,` $acc^)?
+    (`scale_a` `=` $scale_a^)?
+    (`scale_b` `=` $scale_b^)?
+    attr-dict `:` type($a)`,` type($b)
+    (`,` type($acc)^)?
+    (`,` type($scale_a)^)?
+    (`,` type($scale_b)^)? `->` type($result)
+  }];
   let hasVerifier = 1;
 }
 

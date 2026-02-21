@@ -31,6 +31,7 @@
 #include <flang/Semantics/tools.h>
 #include <flang/Semantics/type.h>
 #include <flang/Utils/OpenMP.h>
+#include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/CommandLine.h>
@@ -255,9 +256,10 @@ getIterationVariableSymbol(const lower::pft::Evaluation &eval) {
         if (const auto &maybeCtrl = doLoop.GetLoopControl()) {
           using LoopControl = parser::LoopControl;
           if (auto *bounds = std::get_if<LoopControl::Bounds>(&maybeCtrl->u)) {
-            static_assert(std::is_same_v<decltype(bounds->name),
-                                         parser::Scalar<parser::Name>>);
-            return bounds->name.thing.symbol;
+            using NameType = llvm::remove_cvref_t<decltype(bounds->Name())>;
+            static_assert(
+                std::is_same_v<NameType, parser::Scalar<parser::Name>>);
+            return bounds->Name().thing.symbol;
           }
         }
         return static_cast<semantics::Symbol *>(nullptr);
@@ -834,13 +836,14 @@ void collectTileSizesFromOpenMPConstruct(
 
 int64_t collectLoopRelatedInfo(
     lower::AbstractConverter &converter, mlir::Location currentLocation,
-    lower::pft::Evaluation &eval, const omp::List<omp::Clause> &clauses,
+    lower::pft::Evaluation &eval, lower::pft::Evaluation *nestedEval,
+    const omp::List<omp::Clause> &clauses,
     mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) {
   int64_t numCollapse = 1;
 
   // Collect the loops to collapse.
-  lower::pft::Evaluation *doConstructEval = getNestedDoConstruct(eval);
+  lower::pft::Evaluation *doConstructEval = nestedEval;
   if (doConstructEval->getIf<parser::DoConstruct>()->IsDoConcurrent()) {
     TODO(currentLocation, "Do Concurrent in Worksharing loop construct");
   }
@@ -852,21 +855,21 @@ int64_t collectLoopRelatedInfo(
     numCollapse = collapseValue;
   }
 
-  collectLoopRelatedInfo(converter, currentLocation, eval, numCollapse, result,
-                         iv);
+  collectLoopRelatedInfo(converter, currentLocation, eval, nestedEval,
+                         numCollapse, result, iv);
   return numCollapse;
 }
 
 void collectLoopRelatedInfo(
     lower::AbstractConverter &converter, mlir::Location currentLocation,
-    lower::pft::Evaluation &eval, int64_t numCollapse,
-    mlir::omp::LoopRelatedClauseOps &result,
+    lower::pft::Evaluation &eval, lower::pft::Evaluation *nestedEval,
+    int64_t numCollapse, mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) {
 
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   // Collect the loops to collapse.
-  lower::pft::Evaluation *doConstructEval = getNestedDoConstruct(eval);
+  lower::pft::Evaluation *doConstructEval = nestedEval;
   if (doConstructEval->getIf<parser::DoConstruct>()->IsDoConcurrent()) {
     TODO(currentLocation, "Do Concurrent in Worksharing loop construct");
   }
@@ -894,19 +897,19 @@ void collectLoopRelatedInfo(
     assert(bounds && "Expected bounds for worksharing do loop");
     lower::StatementContext stmtCtx;
     result.loopLowerBounds.push_back(fir::getBase(
-        converter.genExprValue(*semantics::GetExpr(bounds->lower), stmtCtx)));
+        converter.genExprValue(*semantics::GetExpr(bounds->Lower()), stmtCtx)));
     result.loopUpperBounds.push_back(fir::getBase(
-        converter.genExprValue(*semantics::GetExpr(bounds->upper), stmtCtx)));
-    if (bounds->step) {
+        converter.genExprValue(*semantics::GetExpr(bounds->Upper()), stmtCtx)));
+    if (auto &step = bounds->Step()) {
       result.loopSteps.push_back(fir::getBase(
-          converter.genExprValue(*semantics::GetExpr(bounds->step), stmtCtx)));
+          converter.genExprValue(*semantics::GetExpr(step), stmtCtx)));
     } else { // If `step` is not present, assume it as `1`.
       result.loopSteps.push_back(firOpBuilder.createIntegerConstant(
           currentLocation, firOpBuilder.getIntegerType(32), 1));
     }
-    iv.push_back(bounds->name.thing.symbol);
-    loopVarTypeSize = std::max(loopVarTypeSize,
-                               bounds->name.thing.symbol->GetUltimate().size());
+    iv.push_back(bounds->Name().thing.symbol);
+    loopVarTypeSize = std::max(
+        loopVarTypeSize, bounds->Name().thing.symbol->GetUltimate().size());
     if (--collapseValue)
       doConstructEval = getNestedDoConstruct(*doConstructEval);
   } while (collapseValue > 0);

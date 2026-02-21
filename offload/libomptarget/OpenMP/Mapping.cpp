@@ -83,10 +83,14 @@ int MappingInfoTy::associatePtr(void *HstPtrBegin, void *TgtPtrBegin,
                /*UseHoldRefCount=*/false, /*Name=*/nullptr,
                /*IsRefCountINF=*/true))
            .first->HDTT;
-  ODBG(ODT_Mapping) << "Creating new map entry: HstBase=" << NewEntry.HstPtrBase
-                    << ", HstBegin=" << NewEntry.HstPtrBegin
-                    << ", HstEnd=" << NewEntry.HstPtrEnd
-                    << ", TgtBegin=" << NewEntry.TgtPtrBegin
+  ODBG(ODT_Mapping) << "Creating new map entry: HstBase="
+                    << reinterpret_cast<void *>(NewEntry.HstPtrBase)
+                    << ", HstBegin="
+                    << reinterpret_cast<void *>(NewEntry.HstPtrBegin)
+                    << ", HstEnd="
+                    << reinterpret_cast<void *>(NewEntry.HstPtrEnd)
+                    << ", TgtBegin="
+                    << reinterpret_cast<void *>(NewEntry.TgtPtrBegin)
                     << ", DynRefCount=" << NewEntry.dynRefCountToStr()
                     << ", HoldRefCount=" << NewEntry.holdRefCountToStr();
   (void)NewEntry;
@@ -502,9 +506,11 @@ int MappingInfoTy::deallocTgtPtrAndEntry(HostDataToTargetTy *Entry,
                                          int64_t Size) {
   assert(Entry && "Trying to deallocate a null entry.");
 
-  ODBG(ODT_Mapping) << "Deleting tgt data " << Entry->TgtPtrBegin << " of size "
-                    << Size << " by freeing allocation "
-                    << "starting at " << Entry->TgtAllocBegin;
+  ODBG(ODT_Mapping) << "Deleting tgt data "
+                    << reinterpret_cast<void *>(Entry->TgtPtrBegin)
+                    << " of size " << Size << " by freeing allocation "
+                    << "starting at "
+                    << reinterpret_cast<void *>(Entry->TgtAllocBegin);
 
   void *Event = Entry->getEvent();
   if (Event && Device.destroyEvent(Event) != OFFLOAD_SUCCESS) {

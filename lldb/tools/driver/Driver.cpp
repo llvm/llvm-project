@@ -34,7 +34,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #ifdef _WIN32
-#include "llvm/Support/Windows/WindowsSupport.h"
+#include "lldb/Host/windows/PythonPathSetup/PythonPathSetup.h"
 #endif
 
 #include <algorithm>
@@ -400,7 +400,8 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   }
 
   if (m_option_data.m_print_python_path) {
-    SBFileSpec python_file_spec = SBHostOS::GetLLDBPythonPath();
+    SBFileSpec python_file_spec =
+        SBHostOS::GetScriptPath(lldb::eScriptLanguagePython);
     if (python_file_spec.IsValid()) {
       char python_path[PATH_MAX];
       size_t num_chars = python_file_spec.GetPath(python_path, PATH_MAX);
@@ -432,90 +433,6 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
 
   return error;
 }
-
-#ifdef _WIN32
-#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
-/// Returns the full path to the lldb.exe executable.
-inline std::wstring GetPathToExecutableW() {
-  // Iterate until we reach the Windows API maximum path length (32,767).
-  std::vector<WCHAR> buffer;
-  buffer.resize(MAX_PATH /*=260*/);
-  while (buffer.size() < 32767) {
-    if (GetModuleFileNameW(NULL, buffer.data(), buffer.size()) < buffer.size())
-      return std::wstring(buffer.begin(), buffer.end());
-    buffer.resize(buffer.size() * 2);
-  }
-  return L"";
-}
-
-/// \brief Resolve the full path of the directory defined by
-/// LLDB_PYTHON_DLL_RELATIVE_PATH. If it exists, add it to the list of DLL
-/// search directories.
-/// \return `true` if the library was added to the search path.
-/// `false` otherwise.
-bool AddPythonDLLToSearchPath() {
-  std::wstring modulePath = GetPathToExecutableW();
-  if (modulePath.empty())
-    return false;
-
-  SmallVector<char, MAX_PATH> utf8Path;
-  if (sys::windows::UTF16ToUTF8(modulePath.c_str(), modulePath.length(),
-                                utf8Path))
-    return false;
-  sys::path::remove_filename(utf8Path);
-  sys::path::append(utf8Path, LLDB_PYTHON_DLL_RELATIVE_PATH);
-  sys::fs::make_absolute(utf8Path);
-
-  SmallVector<wchar_t, 1> widePath;
-  if (sys::windows::widenPath(utf8Path.data(), widePath))
-    return false;
-
-  if (sys::fs::exists(utf8Path))
-    return SetDllDirectoryW(widePath.data());
-  return false;
-}
-#endif
-
-#ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
-/// Returns true if `python3x.dll` can be loaded.
-bool IsPythonDLLInPath() {
-#define WIDEN2(x) L##x
-#define WIDEN(x) WIDEN2(x)
-  HMODULE h = LoadLibraryW(WIDEN(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME));
-  if (!h)
-    return false;
-  FreeLibrary(h);
-  return true;
-#undef WIDEN2
-#undef WIDEN
-}
-#endif
-
-/// Try to setup the DLL search path for the Python Runtime Library
-/// (python3xx.dll).
-///
-/// If `LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME` is set, we first check if
-/// python3xx.dll is in the search path. If it's not, we try to add it and
-/// check for it a second time.
-/// If only `LLDB_PYTHON_DLL_RELATIVE_PATH` is set, we try to add python3xx.dll
-/// to the search path python.dll is already in the search path or not.
-void SetupPythonRuntimeLibrary() {
-#ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
-  if (IsPythonDLLInPath())
-    return;
-#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
-  if (AddPythonDLLToSearchPath() && IsPythonDLLInPath())
-    return;
-#endif
-  WithColor::error() << "unable to find '"
-                     << LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME << "'.\n";
-  return;
-#elif defined(LLDB_PYTHON_DLL_RELATIVE_PATH)
-  if (!AddPythonDLLToSearchPath())
-    WithColor::error() << "unable to find the Python runtime library.\n";
-#endif
-}
-#endif
 
 std::string EscapeString(std::string arg) {
   std::string::size_type pos = 0;
@@ -634,7 +551,7 @@ int Driver::MainLoop() {
   // Check if we have any data in the commands stream, and if so, save it to a
   // temp file
   // so we can then run the command interpreter using the file contents.
-  bool go_interactive = true;
+  bool go_interactive = !m_option_data.m_batch;
   if ((commands_stream.GetData() != nullptr) &&
       (commands_stream.GetSize() != 0u)) {
     SBError error = m_debugger.SetInputString(commands_stream.GetData());
@@ -672,6 +589,7 @@ int Driver::MainLoop() {
     if (m_option_data.m_batch &&
         results.GetResult() == lldb::eCommandInterpreterResultInferiorCrash &&
         !m_option_data.m_after_crash_commands.empty()) {
+      go_interactive = true;
       SBStream crash_commands_stream;
       WriteCommandsForSourcing(eCommandPlacementAfterCrash,
                                crash_commands_stream);
@@ -820,7 +738,10 @@ int main(int argc, char const *argv[]) {
 #endif
 
 #ifdef _WIN32
-  SetupPythonRuntimeLibrary();
+  auto python_path_or_err = SetupPythonRuntimeLibrary();
+  if (!python_path_or_err)
+    llvm::WithColor::error()
+        << llvm::toString(python_path_or_err.takeError()) << '\n';
 #endif
 
   // Parse arguments.

@@ -9,68 +9,126 @@
 <html lang="en-US">
 {{>HeadPartial}}
 <body>
-    {{>NavbarPartial}}
+    <header>
+        {{>NavbarPartial}}
+    </header>
     <main>
         <div class="container">
             <div class="sidebar">
-                <h2>{{#RecordType}}{{RecordType}} {{/RecordType}}{{Name}}</h2>
+                <h2>{{Name}}</h2>
                 <ul>
                     {{#HasEnums}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#Enums">Enums</a>
-                    </li>
                     <li>
-                        <ul>
-                            {{#Enums}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
-                            </li>
-                            {{/Enums}}
-                        </ul>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Enums">Enums</a>
+                            </summary>
+                            <ul>
+                                {{#Enums}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Enums}}
+                            </ul>
+                        </details>
                     </li>
                     {{/HasEnums}}
                     {{#HasRecords}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#Classes">Inner Classes</a>
-                    </li>
                     <li>
-                        <ul>
-                            {{#Records}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
-                            </li>
-                            {{/Records}}
-                        </ul>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Records">Records</a>
+                            </summary>
+                            <ul>
+                                {{#Records}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Records}}
+                            </ul>
+                        </details>
                     </li>
                     {{/HasRecords}}
                     {{#HasFunctions}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#Functions">Functions</a>
-                    </li>
                     <li>
-                        <ul>
-                            {{#Functions}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{USR}}">{{Name}}{{#Template}}{{#Specialization}}&lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Specialization}}{{/Template}}</a>
-                            </li>
-                            {{/Functions}}
-                        </ul>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Functions">Functions</a>
+                            </summary>
+                            <ul>
+                                {{#Functions}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}{{#Template}}{{#Specialization}}&lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Specialization}}{{/Template}}</a>
+                                </li>
+                                {{/Functions}}
+                            </ul>
+                        </details>
                     </li>
                     {{/HasFunctions}}
                     {{#HasNamespaces}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#Namespaces">Namespaces</a>
-                    </li>
                     <li>
-                        <ul>
-                            {{#Namespaces}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
-                            </li>
-                            {{/Namespaces}}
-                        </ul>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Namespaces">Namespaces</a>
+                            </summary>
+                            <ul>
+                                {{#Namespaces}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Namespaces}}
+                            </ul>
+                        </details>
                     </li>
                     {{/HasNamespaces}}
+                    {{#HasConcepts}}
+                    <li>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Concepts">Concepts</a>
+                            </summary>
+                            <ul>
+                                {{#Concepts}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Concepts}}
+                            </ul>
+                        </details>
+                    </li>
+                    {{/HasConcepts}}
+                    {{#HasTypedefs}}
+                    <li>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Typedefs">Typedefs</a>
+                            </summary>
+                            <ul>
+                                {{#Typedefs}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Typedefs}}
+                            </ul>
+                        </details>
+                    </li>
+                    {{/HasTypedefs}}
+                    {{#HasVariables}}
+                    <li>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Variables">Variables</a>
+                            </summary>
+                            <ul>
+                                {{#Variables}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Variables}}
+                            </ul>
+                        </details>
+                    </li>
+                    {{/HasVariables}}
                 </ul>
             </div>
             <div class="resizer" id="resizer"></div>
@@ -100,8 +158,8 @@
                 </section>
                 {{/HasEnums}}
                 {{#HasRecords}}
-                <section id="Classes" class="section-container">
-                    <h2>Inner Classes</h2>
+                <section id="Records" class="section-container">
+                    <h2>Records</h2>
                     <ul class="class-container">
                         {{#Records}}
                         <li id="{{USR}}" style="max-height: 40px;">
@@ -125,6 +183,47 @@
                     </ul>
                 </section>
                 {{/HasFunctions}}
+                {{#HasConcepts}}
+                <section id="Concepts" class="section-container">
+                    <h2>Concepts</h2>
+                    {{#Concepts}}
+                    <div id="{{USR}}" class="delimiter-container">
+                        <div>
+                            <pre><code class="language-cpp code-clang-doc">{{#Template}}template &lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Template}} {{Name}} {{ConstraintExpression}}</code></pre> 
+                        </div>
+                        {{#Description}}
+                        {{>Comments}}
+                        {{/Description}}
+                        {{#Location}}
+                        <p>Defined at line {{LineNumber}} of file {{^FileURL}}{{Filename}}{{/FileURL}}{{#FileURL}}<a href="{{FileURL}}">{{Filename}}</a>{{/FileURL}}</p>
+                        {{/Location}}
+                    </div>
+                    {{/Concepts}}
+                </section>
+                {{/HasConcepts}}
+                {{#HasTypedefs}}
+                <section id="Typedefs" class="section-container">
+                    <h2>Typedefs</h2>
+                    {{#Typedefs}}
+                    {{>AliasPartial}}
+                    {{/Typedefs}}
+                </section>
+                {{/HasTypedefs}}
+                {{#HasVariables}}
+                <section id="Variables" class="section-container">
+                    <h2>Variables</h2>
+                    <div>
+                        {{#Variables}}
+                        <div id="{{USR}}" class="delimiter-container">
+                            <pre><code class="language-cpp code-clang-doc" >{{#IsStatic}}static {{/IsStatic}}{{Type.QualName}} {{Name}}</code></pre>
+                            {{#Location}}
+                            <p>Defined at line {{LineNumber}} of file {{^FileURL}}{{Filename}}{{/FileURL}}{{#FileURL}}<a href="{{FileURL}}">{{Filename}}</a>{{/FileURL}}</p>
+                            {{/Location}}
+                        </div>
+                        {{/Variables}}
+                    </div>
+                </section>
+                {{/HasVariables}}
             </div>
         </div>
     </main>

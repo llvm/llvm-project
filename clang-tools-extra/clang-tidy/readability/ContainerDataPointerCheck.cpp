@@ -37,7 +37,7 @@ ContainerDataPointerCheck::ContainerDataPointerCheck(StringRef Name,
 void ContainerDataPointerCheck::registerMatchers(MatchFinder *Finder) {
   const auto Record =
       cxxRecordDecl(
-          unless(matchers::matchesAnyListedName(IgnoredContainers)),
+          unless(matchers::matchesAnyListedRegexName(IgnoredContainers)),
           isSameOrDerivedFrom(
               namedDecl(
                   has(cxxMethodDecl(isPublic(), hasName("data")).bind("data")))

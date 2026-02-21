@@ -2,6 +2,7 @@
 
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
+#include "mlir/IR/BuiltinTypes.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/GlobalDecl.h"
@@ -373,6 +374,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cir::VectorType::get(builder.getDoubleTy(), 2,
                                         /*is_scalable=*/true);
       break;
+    case BuiltinType::SveBool:
+      resultType = cir::VectorType::get(builder.getUIntNTy(1), 16,
+                                        /*is_scalable=*/true);
+      break;
 
     // Unsigned integral types.
     case BuiltinType::Char8:
@@ -504,15 +509,11 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::ConstantArray: {
     const ConstantArrayType *arrTy = cast<ConstantArrayType>(ty);
     mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
-
-    // TODO(CIR): In LLVM, "lower arrays of undefined struct type to arrays of
-    // i8 just to have a concrete type"
-    if (!cir::isSized(elemTy)) {
-      cgm.errorNYI(SourceLocation(), "arrays of undefined struct type", type);
-      resultType = cgm.uInt32Ty;
-      break;
-    }
-
+    // In classic codegen, arrays of unsized types which it assumes are "arrays
+    // of undefined struct type" are lowered to arrays of i8 "just to have a
+    // concrete type", but in CIR, we can get here with abstract types like
+    // !cir.method and !cir.data_member, so we just create an array of the type
+    // and handle it during lowering if we still don't have a sized type.
     resultType = cir::ArrayType::get(elemTy, arrTy->getSize().getZExtValue());
     break;
   }
@@ -539,14 +540,18 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::MemberPointer: {
     const auto *mpt = cast<MemberPointerType>(ty);
 
-    mlir::Type memberTy = convertType(mpt->getPointeeType());
+    NestedNameSpecifier mptNNS = mpt->getQualifier();
     auto clsTy = mlir::cast<cir::RecordType>(
-        convertType(QualType(mpt->getQualifier().getAsType(), 0)));
+        convertType(QualType(mptNNS.getAsType(), 0)));
     if (mpt->isMemberDataPointer()) {
+      mlir::Type memberTy = convertType(mpt->getPointeeType());
       resultType = cir::DataMemberType::get(memberTy, clsTy);
     } else {
-      assert(!cir::MissingFeatures::methodType());
-      cgm.errorNYI(SourceLocation(), "MethodType");
+      auto memberFuncTy = getFunctionType(cgm.getTypes().arrangeCXXMethodType(
+          mptNNS.getAsRecordDecl(),
+          mpt->getPointeeType()->getAs<clang::FunctionProtoType>(),
+          /*methodDecl=*/nullptr));
+      resultType = cir::MethodType::get(memberFuncTy, clsTy);
     }
     break;
   }
@@ -661,15 +666,14 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
   return getCIRGenRecordLayout(rd).isZeroInitializable();
 }
 
-const CIRGenFunctionInfo &
-CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType,
-                                    llvm::ArrayRef<CanQualType> argTypes,
-                                    RequiredArgs required) {
+const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
+    CanQualType returnType, llvm::ArrayRef<CanQualType> argTypes,
+    FunctionType::ExtInfo info, RequiredArgs required) {
   assert(llvm::all_of(argTypes,
                       [](CanQualType t) { return t.isCanonicalAsParam(); }));
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID id;
-  CIRGenFunctionInfo::Profile(id, required, returnType, argTypes);
+  CIRGenFunctionInfo::Profile(id, info, required, returnType, argTypes);
 
   void *insertPos = nullptr;
   CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
@@ -686,7 +690,7 @@ CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType,
   assert(!cir::MissingFeatures::opCallCallConv());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(returnType, argTypes, required);
+  fi = CIRGenFunctionInfo::create(info, returnType, argTypes, required);
   functionInfos.InsertNode(fi, insertPos);
 
   return *fi;
@@ -710,7 +714,7 @@ void CIRGenTypes::updateCompletedType(const TagDecl *td) {
   // If this is an enum being completed, then we flush all non-struct types
   // from the cache. This allows function types and other things that may be
   // derived from the enum to be recomputed.
-  if (const auto *ed = dyn_cast<EnumDecl>(td)) {
+  if ([[maybe_unused]] const auto *ed = dyn_cast<EnumDecl>(td)) {
     // Classic codegen clears the type cache if it contains an entry for this
     // enum type that doesn't use i32 as the underlying type, but I can't find
     // a test case that meets that condition. C++ doesn't allow forward
@@ -741,4 +745,14 @@ void CIRGenTypes::updateCompletedType(const TagDecl *td) {
   // If necessary, provide the full definition of a type only used with a
   // declaration so far.
   assert(!cir::MissingFeatures::generateDebugInfo());
+}
+
+unsigned CIRGenTypes::getTargetAddressSpace(QualType ty) const {
+  // Return the address space for the type. If the type is a
+  // function type without an address space qualifier, the
+  // program address space is used. Otherwise, the target picks
+  // the best address space based on the type information
+  return ty->isFunctionType() && !ty.hasAddressSpace()
+             ? cgm.getDataLayout().getProgramAddressSpace()
+             : getASTContext().getTargetAddressSpace(ty.getAddressSpace());
 }

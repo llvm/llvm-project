@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h"
 
 #include "mlir/AsmParser/AsmParser.h"
-
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
@@ -43,6 +42,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/LogicalResult.h"
@@ -310,8 +310,8 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   // Attach listener to keep track of newly created ops.
   OpBuilder::Listener *previousListener = rewriter.getListener();
-  auto resetListener =
-      llvm::make_scope_exit([&]() { rewriter.setListener(previousListener); });
+  llvm::scope_exit resetListener(
+      [&]() { rewriter.setListener(previousListener); });
   NewOpsListener newOpsListener(previousListener);
   rewriter.setListener(&newOpsListener);
 
@@ -876,8 +876,8 @@ static Operation *replaceForAllWithNewSignature(
 
   // Fix terminator
   scf::InParallelOp terminatorOp = newforallOp.getTerminator();
-  SmallVector<Operation *> yieldingOps = llvm::to_vector<4>(llvm::map_range(
-      terminatorOp.getYieldingOps(), [](Operation &op) { return &op; }));
+  SmallVector<Operation *> yieldingOps = llvm::map_to_vector<4>(
+      terminatorOp.getYieldingOps(), [](Operation &op) { return &op; });
   Operation *firstYieldOp = yieldingOps.front();
   rewriter.setInsertionPoint(firstYieldOp);
   Value src = tileAndFuseResult.tiledValues[0];
@@ -1149,8 +1149,8 @@ tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
   bvm.map(destinationTensors[resultNumber], bbArg);
   auto tileableProducerClone =
       cast<TilingInterface>(rewriter.clone(*tileableProducer, bvm));
-  auto scopeGuard =
-      llvm::make_scope_exit([&]() { rewriter.eraseOp(tileableProducerClone); });
+  llvm::scope_exit scopeGuard(
+      [&]() { rewriter.eraseOp(tileableProducerClone); });
 
   // Tile the producer.
   FailureOr<TilingResult> tileAndFuseResult =
@@ -2841,7 +2841,7 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
   if (getDynamicChunkSizes()) {
     auto diag = DiagnosedSilenceableFailure::success();
     if (isa<TransformHandleTypeInterface>(getDynamicChunkSizes().getType())) {
-      chunkSizes = llvm::to_vector(llvm::map_range(
+      chunkSizes = llvm::map_to_vector(
           state.getPayloadOps(getDynamicChunkSizes()), [&](Operation *op) {
             if (op->getNumResults() != 1 ||
                 !op->getResult(0).getType().isIndex()) {
@@ -2851,11 +2851,11 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
               diag.attachNote(op->getLoc()) << "dynamic split point";
             }
             return OpFoldResult(op->getResult(0));
-          }));
+          });
     } else {
-      chunkSizes = llvm::to_vector(
-          llvm::map_range(state.getParams(getDynamicChunkSizes()),
-                          [](Attribute attr) { return OpFoldResult(attr); }));
+      chunkSizes = llvm::map_to_vector(
+          state.getParams(getDynamicChunkSizes()),
+          [](Attribute attr) { return OpFoldResult(attr); });
     }
     if (diag.isSilenceableFailure())
       return diag;
@@ -3190,9 +3190,9 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForOp::applyToOne(
   rewriter.replaceOp(target, result->replacements);
   for (Value initValue : result->initialValues)
     results.push_back(initValue.getDefiningOp());
-  for (auto parallelTiledOp : result->tiledOps)
+  for (auto *parallelTiledOp : result->tiledOps)
     results.push_back(parallelTiledOp);
-  for (auto mergeOp : result->mergeOps)
+  for (auto *mergeOp : result->mergeOps)
     results.push_back(mergeOp);
   results.push_back(result->loops.front());
   return DiagnosedSilenceableFailure::success();
@@ -3274,9 +3274,9 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForallOp::applyToOne(
 
   for (Value initValue : result->initialValues)
     results.push_back(initValue.getDefiningOp());
-  for (auto parallelTiledOp : result->tiledOps)
+  for (auto *parallelTiledOp : result->tiledOps)
     results.push_back(parallelTiledOp);
-  for (auto mergeOp : result->mergeOps)
+  for (auto *mergeOp : result->mergeOps)
     results.push_back(mergeOp);
   results.push_back(result->loops.front());
   return DiagnosedSilenceableFailure::success();
@@ -3529,10 +3529,9 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
     if (isa<ParamType>(transformValue.getType())) {
       dynamicSizeProducers.push_back({});
       ArrayRef<Attribute> params = state.getParams(transformValue);
-      paramSizes.push_back(
-          llvm::to_vector(llvm::map_range(params, [](Attribute attr) {
-            return cast<IntegerAttr>(attr).getValue().getSExtValue();
-          })));
+      paramSizes.push_back(llvm::map_to_vector(params, [](Attribute attr) {
+        return cast<IntegerAttr>(attr).getValue().getSExtValue();
+      }));
 
       if (paramSizes.back().size() != targets.size()) {
         DiagnosedSilenceableFailure diag =
@@ -4314,7 +4313,7 @@ DiagnosedSilenceableFailure transform::TransposeMatmulOp::applyToOne(
           .Case([&](linalg::BatchMatmulOp op) {
             return transposeBatchMatmul(rewriter, op, transposeLHS);
           })
-          .Default([&](Operation *op) { return failure(); });
+          .Default(failure());
   if (failed(maybeTransformed))
     return emitSilenceableFailure(target->getLoc()) << "not supported";
   // Handle to the new Matmul operation with transposed filters
@@ -4448,7 +4447,7 @@ DiagnosedSilenceableFailure transform::MapCopyToThreadsOp::applyToOne(
     return diag;
 
   results.push_back(tilingResult.loops.front());
-  for (auto op : tilingResult.tiledOps)
+  for (auto *op : tilingResult.tiledOps)
     results.push_back(op);
   return DiagnosedSilenceableFailure::success();
 }

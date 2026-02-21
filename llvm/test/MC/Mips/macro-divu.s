@@ -7,6 +7,7 @@
 // CHECK-NOTRAP: divu	$zero, $25, $11                 # encoding: [0x03,0x2b,0x00,0x1b]
 // CHECK-NOTRAP: bnez	$11, $tmp0                      # encoding: [0x15,0x60,A,A]
 // CHECK-NOTRAP: #   fixup A - offset: 0, value: $tmp0-4, kind: fixup_Mips_PC16
+// CHECK-NOTRAP: nop                                    # encoding: [0x00,0x00,0x00,0x00]
 // CHECK-NOTRAP: break	7                               # encoding: [0x00,0x07,0x00,0x0d]
 // CHECK-NOTRAP: $tmp0:
 // CHECK-NOTRAP: mflo	$25                             # encoding: [0x00,0x00,0xc8,0x12]
@@ -18,6 +19,7 @@
 // CHECK-NOTRAP: divu	$zero, $24, $12                 # encoding: [0x03,0x0c,0x00,0x1b]
 // CHECK-NOTRAP: bnez	$12, $tmp1                      # encoding: [0x15,0x80,A,A]
 // CHECK-NOTRAP: #   fixup A - offset: 0, value: $tmp1-4, kind: fixup_Mips_PC16
+// CHECK-NOTRAP: nop                                    # encoding: [0x00,0x00,0x00,0x00]
 // CHECK-NOTRAP: break	7                               # encoding: [0x00,0x07,0x00,0x0d]
 // CHECK-NOTRAP: $tmp1:
 // CHECK-NOTRAP: mflo	$24                             # encoding: [0x00,0x00,0xc0,0x12]
@@ -41,6 +43,7 @@
 // CHECK-NOTRAP: divu	$zero, $5, $6                   # encoding: [0x00,0xa6,0x00,0x1b]
 // CHECK-NOTRAP: bnez	$6, $tmp2                       # encoding: [0x14,0xc0,A,A]
 // CHECK-NOTRAP: #   fixup A - offset: 0, value: $tmp2-4, kind: fixup_Mips_PC16
+// CHECK-NOTRAP: nop                                    # encoding: [0x00,0x00,0x00,0x00]
 // CHECK-NOTRAP: break	7                               # encoding: [0x00,0x07,0x00,0x0d]
 // CHECK-NOTRAP: $tmp2:
 // CHECK-NOTRAP: mflo	$4                              # encoding: [0x00,0x00,0x20,0x12]
@@ -64,6 +67,7 @@
 // CHECK-NOTRAP: divu	$zero, $25, $11                 # encoding: [0x03,0x2b,0x00,0x1b]
 // CHECK-NOTRAP: bnez	$11, $tmp3                      # encoding: [0x15,0x60,A,A]
 // CHECK-NOTRAP: #   fixup A - offset: 0, value: $tmp3-4, kind: fixup_Mips_PC16
+// CHECK-NOTRAP: nop                                    # encoding: [0x00,0x00,0x00,0x00]
 // CHECK-NOTRAP: break	7                               # encoding: [0x00,0x07,0x00,0x0d]
 // CHECK-NOTRAP: $tmp3:
 // CHECK-NOTRAP: mflo	$25                             # encoding: [0x00,0x00,0xc8,0x12]
@@ -75,6 +79,7 @@
 // CHECK-NOTRAP: divu	$zero, $24, $12                 # encoding: [0x03,0x0c,0x00,0x1b]
 // CHECK-NOTRAP: bnez	$12, $tmp4                      # encoding: [0x15,0x80,A,A]
 // CHECK-NOTRAP: #   fixup A - offset: 0, value: $tmp4-4, kind: fixup_Mips_PC16
+// CHECK-NOTRAP: nop                                    # encoding: [0x00,0x00,0x00,0x00]
 // CHECK-NOTRAP: break	7                               # encoding: [0x00,0x07,0x00,0x0d]
 // CHECK-NOTRAP: $tmp4:
 // CHECK-NOTRAP: mflo	$24                             # encoding: [0x00,0x00,0xc0,0x12]
@@ -98,6 +103,7 @@
 // CHECK-NOTRAP: divu	$zero, $5, $6                   # encoding: [0x00,0xa6,0x00,0x1b]
 // CHECK-NOTRAP: bnez	$6, $tmp5                       # encoding: [0x14,0xc0,A,A]
 // CHECK-NOTRAP: #   fixup A - offset: 0, value: $tmp5-4, kind: fixup_Mips_PC16
+// CHECK-NOTRAP: nop                                    # encoding: [0x00,0x00,0x00,0x00]
 // CHECK-NOTRAP: break	7                               # encoding: [0x00,0x07,0x00,0x0d]
 // CHECK-NOTRAP: $tmp5:
 // CHECK-NOTRAP: mflo	$4                              # encoding: [0x00,0x00,0x20,0x12]

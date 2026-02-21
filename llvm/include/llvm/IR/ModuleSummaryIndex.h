@@ -30,7 +30,6 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/InterleavedRange.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScaledNumber.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
@@ -76,19 +75,11 @@ struct CalleeInfo {
   LLVM_PREFERRED_TYPE(bool)
   uint32_t HasTailCall : 1;
 
-  /// The value stored in RelBlockFreq has to be interpreted as the digits of
-  /// a scaled number with a scale of \p -ScaleShift.
-  static constexpr unsigned RelBlockFreqBits = 28;
-  uint32_t RelBlockFreq : RelBlockFreqBits;
-  static constexpr int32_t ScaleShift = 8;
-  static constexpr uint64_t MaxRelBlockFreq = (1 << RelBlockFreqBits) - 1;
-
   CalleeInfo()
       : Hotness(static_cast<uint32_t>(HotnessType::Unknown)),
-        HasTailCall(false), RelBlockFreq(0) {}
-  explicit CalleeInfo(HotnessType Hotness, bool HasTC, uint64_t RelBF)
-      : Hotness(static_cast<uint32_t>(Hotness)), HasTailCall(HasTC),
-        RelBlockFreq(RelBF) {}
+        HasTailCall(false) {}
+  explicit CalleeInfo(HotnessType Hotness, bool HasTC)
+      : Hotness(static_cast<uint32_t>(Hotness)), HasTailCall(HasTC) {}
 
   void updateHotness(const HotnessType OtherHotness) {
     Hotness = std::max(Hotness, static_cast<uint32_t>(OtherHotness));
@@ -99,24 +90,6 @@ struct CalleeInfo {
   void setHasTailCall(const bool HasTC) { HasTailCall = HasTC; }
 
   HotnessType getHotness() const { return HotnessType(Hotness); }
-
-  /// Update \p RelBlockFreq from \p BlockFreq and \p EntryFreq
-  ///
-  /// BlockFreq is divided by EntryFreq and added to RelBlockFreq. To represent
-  /// fractional values, the result is represented as a fixed point number with
-  /// scale of -ScaleShift.
-  void updateRelBlockFreq(uint64_t BlockFreq, uint64_t EntryFreq) {
-    if (EntryFreq == 0)
-      return;
-    using Scaled64 = ScaledNumber<uint64_t>;
-    Scaled64 Temp(BlockFreq, ScaleShift);
-    Temp /= Scaled64::get(EntryFreq);
-
-    uint64_t Sum =
-        SaturatingAdd<uint64_t>(Temp.toInt<uint64_t>(), RelBlockFreq);
-    Sum = std::min(Sum, uint64_t(MaxRelBlockFreq));
-    RelBlockFreq = static_cast<uint32_t>(Sum);
-  }
 };
 
 inline const char *getHotnessName(CalleeInfo::HotnessType HT) {
@@ -454,29 +427,19 @@ struct AllocInfo {
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const AllocInfo &AE) {
-  bool First = true;
-  OS << "Versions: ";
-  for (auto V : AE.Versions) {
-    if (!First)
-      OS << ", ";
-    First = false;
-    OS << (unsigned)V;
-  }
+  OS << "Versions: "
+     << interleaved(map_range(AE.Versions, StaticCastTo<unsigned>));
+
   OS << " MIB:\n";
-  for (auto &M : AE.MIBs) {
+  for (auto &M : AE.MIBs)
     OS << "\t\t" << M << "\n";
-  }
   if (!AE.ContextSizeInfos.empty()) {
     OS << "\tContextSizeInfo per MIB:\n";
     for (auto Infos : AE.ContextSizeInfos) {
       OS << "\t\t";
-      bool FirstInfo = true;
-      for (auto [FullStackId, TotalSize] : Infos) {
-        if (!FirstInfo)
-          OS << ", ";
-        FirstInfo = false;
-        OS << "{ " << FullStackId << ", " << TotalSize << " }";
-      }
+      ListSeparator InfoLS;
+      for (auto [FullStackId, TotalSize] : Infos)
+        OS << InfoLS << "{ " << FullStackId << ", " << TotalSize << " }";
       OS << "\n";
     }
   }
@@ -546,6 +509,10 @@ public:
     /// summary. The value is interpreted as 'ImportKind' enum defined above.
     unsigned ImportType : 1;
 
+    /// This symbol was promoted. Thinlink stages need to be aware of this
+    /// transition
+    unsigned Promoted : 1;
+
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage,
                      GlobalValue::VisibilityTypes Visibility,
@@ -554,7 +521,7 @@ public:
         : Linkage(Linkage), Visibility(Visibility),
           NotEligibleToImport(NotEligibleToImport), Live(Live),
           DSOLocal(IsLocal), CanAutoHide(CanAutoHide),
-          ImportType(static_cast<unsigned>(ImportType)) {}
+          ImportType(static_cast<unsigned>(ImportType)), Promoted(false) {}
   };
 
 private:
@@ -621,10 +588,26 @@ public:
     return static_cast<GlobalValue::LinkageTypes>(Flags.Linkage);
   }
 
+  bool wasPromoted() const { return Flags.Promoted; }
+
+  void promote() {
+    assert(GlobalValue::isLocalLinkage(linkage()) &&
+           "unexpected (re-)promotion of non-local symbol");
+    assert(!Flags.Promoted);
+    Flags.Promoted = true;
+    Flags.Linkage = GlobalValue::LinkageTypes::ExternalLinkage;
+  }
+
   /// Sets the linkage to the value determined by global summary-based
   /// optimization. Will be applied in the ThinLTO backends.
   void setLinkage(GlobalValue::LinkageTypes Linkage) {
+    assert(!wasPromoted());
+    assert(!GlobalValue::isExternalLinkage(Linkage) && "use `promote` instead");
     Flags.Linkage = Linkage;
+  }
+
+  void setExternalLinkageForTest() {
+    Flags.Linkage = GlobalValue::LinkageTypes::ExternalLinkage;
   }
 
   /// Return true if this global value can't be imported.

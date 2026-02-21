@@ -18,9 +18,6 @@ extern "C" void __cxa_finalize(void *dso);
 
 namespace LIBC_NAMESPACE_DECL {
 
-// FIXME: Factor this out into common logic so we don't need to stub it here.
-void teardown_main_tls() {}
-
 // FIXME: Touch this symbol to force this to be linked in statically.
 volatile void *dummy = &LIBC_NAMESPACE::rpc::client;
 
@@ -48,7 +45,7 @@ static void call_fini_array_callbacks() {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel,
+extern "C" [[gnu::visibility("protected"), clang::device_kernel,
              clang::amdgpu_flat_work_group_size(1, 1),
              clang::amdgpu_max_num_work_groups(1)]] void
 _begin(int argc, char **argv, char **env) {
@@ -62,14 +59,14 @@ _begin(int argc, char **argv, char **env) {
   LIBC_NAMESPACE::call_init_array_callbacks(argc, argv, env);
 }
 
-extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel]] void
+extern "C" [[gnu::visibility("protected"), clang::device_kernel]] void
 _start(int argc, char **argv, char **envp, int *ret) {
   // Invoke the 'main' function with every active thread that the user launched
   // the _start kernel with.
   __atomic_fetch_or(ret, main(argc, argv, envp), __ATOMIC_RELAXED);
 }
 
-extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel,
+extern "C" [[gnu::visibility("protected"), clang::device_kernel,
              clang::amdgpu_flat_work_group_size(1, 1),
              clang::amdgpu_max_num_work_groups(1)]] void
 _end() {

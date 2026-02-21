@@ -5,6 +5,11 @@
 ; RUN: llc --mtriple=riscv32 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SOFT-RV32
 ; RUN: llc --mtriple=riscv32 --mattr=+d,+zfh < %s | FileCheck %s --check-prefixes=CHECK,CHECK-FP16-RV32
 ; RUN: llc --mtriple=riscv32 --mattr=+d,-zfh < %s | FileCheck %s --check-prefixes=CHECK,CHECK-NOFP16-RV32
+; RUN: llc -mtriple=riscv32 -mattr=+zfinx -verify-machineinstrs < %s | FileCheck -check-prefix=RV32ZFINX %s
+; RUN: llc -mtriple=riscv64 -mattr=+zfinx -verify-machineinstrs < %s | FileCheck -check-prefix=RV64ZFINX %s
+; RUN: llc -mtriple=riscv64 -mattr=+zdinx -verify-machineinstrs < %s | FileCheck -check-prefix=RV64ZDINX %s
+; RUN: llc -mtriple=riscv32 -mattr=+zhinx -target-abi=ilp32 -verify-machineinstrs < %s | FileCheck -check-prefix=RV32ZHINX %s
+; RUN: llc -mtriple=riscv64 -mattr=+zhinx -verify-machineinstrs < %s | FileCheck -check-prefix=RV64ZHINX %s
 
 define half @fcanonicalize_f16(half %x) {
 ; CHECK-SOFT-RV64-LABEL: fcanonicalize_f16:
@@ -90,6 +95,73 @@ define half @fcanonicalize_f16(half %x) {
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, 16
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV32-NEXT:    ret
+;
+; RV32ZFINX-LABEL: fcanonicalize_f16:
+; RV32ZFINX:       # %bb.0:
+; RV32ZFINX-NEXT:    addi sp, sp, -16
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 16
+; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    .cfi_offset ra, -4
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV32ZFINX-NEXT:    lui a1, 1048560
+; RV32ZFINX-NEXT:    or a0, a0, a1
+; RV32ZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    .cfi_restore ra
+; RV32ZFINX-NEXT:    addi sp, sp, 16
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZFINX-NEXT:    ret
+;
+; RV64ZFINX-LABEL: fcanonicalize_f16:
+; RV64ZFINX:       # %bb.0:
+; RV64ZFINX-NEXT:    addi sp, sp, -16
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 16
+; RV64ZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    .cfi_offset ra, -8
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV64ZFINX-NEXT:    lui a1, 1048560
+; RV64ZFINX-NEXT:    or a0, a0, a1
+; RV64ZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV64ZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    .cfi_restore ra
+; RV64ZFINX-NEXT:    addi sp, sp, 16
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZFINX-NEXT:    ret
+;
+; RV64ZDINX-LABEL: fcanonicalize_f16:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    addi sp, sp, -16
+; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 16
+; RV64ZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    .cfi_offset ra, -8
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV64ZDINX-NEXT:    lui a1, 1048560
+; RV64ZDINX-NEXT:    or a0, a0, a1
+; RV64ZDINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV64ZDINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    .cfi_restore ra
+; RV64ZDINX-NEXT:    addi sp, sp, 16
+; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZDINX-NEXT:    ret
+;
+; RV32ZHINX-LABEL: fcanonicalize_f16:
+; RV32ZHINX:       # %bb.0:
+; RV32ZHINX-NEXT:    fmin.h a0, a0, a0
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: fcanonicalize_f16:
+; RV64ZHINX:       # %bb.0:
+; RV64ZHINX-NEXT:    fmin.h a0, a0, a0
+; RV64ZHINX-NEXT:    ret
   %z = call nnan half @llvm.canonicalize.f16(half %x)
   ret half %z
 }
@@ -250,6 +322,114 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, 16
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV32-NEXT:    ret
+;
+; RV32ZFINX-LABEL: fcanonicalize_v2f16:
+; RV32ZFINX:       # %bb.0:
+; RV32ZFINX-NEXT:    addi sp, sp, -16
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 16
+; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    .cfi_offset ra, -4
+; RV32ZFINX-NEXT:    .cfi_offset s0, -8
+; RV32ZFINX-NEXT:    .cfi_offset s1, -12
+; RV32ZFINX-NEXT:    mv s0, a1
+; RV32ZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s1, a0
+; RV32ZFINX-NEXT:    mv a0, s0
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv a1, a0
+; RV32ZFINX-NEXT:    mv a0, s1
+; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    .cfi_restore ra
+; RV32ZFINX-NEXT:    .cfi_restore s0
+; RV32ZFINX-NEXT:    .cfi_restore s1
+; RV32ZFINX-NEXT:    addi sp, sp, 16
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZFINX-NEXT:    ret
+;
+; RV64ZFINX-LABEL: fcanonicalize_v2f16:
+; RV64ZFINX:       # %bb.0:
+; RV64ZFINX-NEXT:    addi sp, sp, -32
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 32
+; RV64ZFINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    .cfi_offset ra, -8
+; RV64ZFINX-NEXT:    .cfi_offset s0, -16
+; RV64ZFINX-NEXT:    .cfi_offset s1, -24
+; RV64ZFINX-NEXT:    mv s0, a1
+; RV64ZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s1, a0
+; RV64ZFINX-NEXT:    mv a0, s0
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv a1, a0
+; RV64ZFINX-NEXT:    mv a0, s1
+; RV64ZFINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    .cfi_restore ra
+; RV64ZFINX-NEXT:    .cfi_restore s0
+; RV64ZFINX-NEXT:    .cfi_restore s1
+; RV64ZFINX-NEXT:    addi sp, sp, 32
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZFINX-NEXT:    ret
+;
+; RV64ZDINX-LABEL: fcanonicalize_v2f16:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    addi sp, sp, -32
+; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 32
+; RV64ZDINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    .cfi_offset ra, -8
+; RV64ZDINX-NEXT:    .cfi_offset s0, -16
+; RV64ZDINX-NEXT:    .cfi_offset s1, -24
+; RV64ZDINX-NEXT:    mv s0, a1
+; RV64ZDINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s1, a0
+; RV64ZDINX-NEXT:    mv a0, s0
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv a1, a0
+; RV64ZDINX-NEXT:    mv a0, s1
+; RV64ZDINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    .cfi_restore ra
+; RV64ZDINX-NEXT:    .cfi_restore s0
+; RV64ZDINX-NEXT:    .cfi_restore s1
+; RV64ZDINX-NEXT:    addi sp, sp, 32
+; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZDINX-NEXT:    ret
+;
+; RV32ZHINX-LABEL: fcanonicalize_v2f16:
+; RV32ZHINX:       # %bb.0:
+; RV32ZHINX-NEXT:    fmin.h a0, a0, a0
+; RV32ZHINX-NEXT:    fmin.h a1, a1, a1
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: fcanonicalize_v2f16:
+; RV64ZHINX:       # %bb.0:
+; RV64ZHINX-NEXT:    fmin.h a0, a0, a0
+; RV64ZHINX-NEXT:    fmin.h a1, a1, a1
+; RV64ZHINX-NEXT:    ret
   %z = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %x)
   ret <2 x half> %z
 }
@@ -410,6 +590,114 @@ define <2 x half> @fcanonicalize_v2f16_nnan(<2 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, 16
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV32-NEXT:    ret
+;
+; RV32ZFINX-LABEL: fcanonicalize_v2f16_nnan:
+; RV32ZFINX:       # %bb.0:
+; RV32ZFINX-NEXT:    addi sp, sp, -16
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 16
+; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    .cfi_offset ra, -4
+; RV32ZFINX-NEXT:    .cfi_offset s0, -8
+; RV32ZFINX-NEXT:    .cfi_offset s1, -12
+; RV32ZFINX-NEXT:    mv s0, a1
+; RV32ZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s1, a0
+; RV32ZFINX-NEXT:    mv a0, s0
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv a1, a0
+; RV32ZFINX-NEXT:    mv a0, s1
+; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    .cfi_restore ra
+; RV32ZFINX-NEXT:    .cfi_restore s0
+; RV32ZFINX-NEXT:    .cfi_restore s1
+; RV32ZFINX-NEXT:    addi sp, sp, 16
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZFINX-NEXT:    ret
+;
+; RV64ZFINX-LABEL: fcanonicalize_v2f16_nnan:
+; RV64ZFINX:       # %bb.0:
+; RV64ZFINX-NEXT:    addi sp, sp, -32
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 32
+; RV64ZFINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    .cfi_offset ra, -8
+; RV64ZFINX-NEXT:    .cfi_offset s0, -16
+; RV64ZFINX-NEXT:    .cfi_offset s1, -24
+; RV64ZFINX-NEXT:    mv s0, a1
+; RV64ZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s1, a0
+; RV64ZFINX-NEXT:    mv a0, s0
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv a1, a0
+; RV64ZFINX-NEXT:    mv a0, s1
+; RV64ZFINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    .cfi_restore ra
+; RV64ZFINX-NEXT:    .cfi_restore s0
+; RV64ZFINX-NEXT:    .cfi_restore s1
+; RV64ZFINX-NEXT:    addi sp, sp, 32
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZFINX-NEXT:    ret
+;
+; RV64ZDINX-LABEL: fcanonicalize_v2f16_nnan:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    addi sp, sp, -32
+; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 32
+; RV64ZDINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    .cfi_offset ra, -8
+; RV64ZDINX-NEXT:    .cfi_offset s0, -16
+; RV64ZDINX-NEXT:    .cfi_offset s1, -24
+; RV64ZDINX-NEXT:    mv s0, a1
+; RV64ZDINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s1, a0
+; RV64ZDINX-NEXT:    mv a0, s0
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv a1, a0
+; RV64ZDINX-NEXT:    mv a0, s1
+; RV64ZDINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    .cfi_restore ra
+; RV64ZDINX-NEXT:    .cfi_restore s0
+; RV64ZDINX-NEXT:    .cfi_restore s1
+; RV64ZDINX-NEXT:    addi sp, sp, 32
+; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZDINX-NEXT:    ret
+;
+; RV32ZHINX-LABEL: fcanonicalize_v2f16_nnan:
+; RV32ZHINX:       # %bb.0:
+; RV32ZHINX-NEXT:    fmin.h a0, a0, a0
+; RV32ZHINX-NEXT:    fmin.h a1, a1, a1
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: fcanonicalize_v2f16_nnan:
+; RV64ZHINX:       # %bb.0:
+; RV64ZHINX-NEXT:    fmin.h a0, a0, a0
+; RV64ZHINX-NEXT:    fmin.h a1, a1, a1
+; RV64ZHINX-NEXT:    ret
   %z = call nnan <2 x half> @llvm.canonicalize.v2f16(<2 x half> %x)
   ret <2 x half> %z
 }
@@ -717,6 +1005,213 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, 64
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV32-NEXT:    ret
+;
+; RV32ZFINX-LABEL: fcanonicalize_v4f16:
+; RV32ZFINX:       # %bb.0:
+; RV32ZFINX-NEXT:    addi sp, sp, -32
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 32
+; RV32ZFINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    .cfi_offset ra, -4
+; RV32ZFINX-NEXT:    .cfi_offset s0, -8
+; RV32ZFINX-NEXT:    .cfi_offset s1, -12
+; RV32ZFINX-NEXT:    .cfi_offset s2, -16
+; RV32ZFINX-NEXT:    .cfi_offset s3, -20
+; RV32ZFINX-NEXT:    .cfi_offset s4, -24
+; RV32ZFINX-NEXT:    lhu a2, 0(a1)
+; RV32ZFINX-NEXT:    lhu s1, 4(a1)
+; RV32ZFINX-NEXT:    lhu s2, 8(a1)
+; RV32ZFINX-NEXT:    lhu s3, 12(a1)
+; RV32ZFINX-NEXT:    mv s0, a0
+; RV32ZFINX-NEXT:    mv a0, a2
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s4, a0
+; RV32ZFINX-NEXT:    mv a0, s1
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s1, a0
+; RV32ZFINX-NEXT:    mv a0, s2
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s2, a0
+; RV32ZFINX-NEXT:    mv a0, s3
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV32ZFINX-NEXT:    sh s4, 0(s0)
+; RV32ZFINX-NEXT:    sh s1, 2(s0)
+; RV32ZFINX-NEXT:    sh s2, 4(s0)
+; RV32ZFINX-NEXT:    sh a0, 6(s0)
+; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    .cfi_restore ra
+; RV32ZFINX-NEXT:    .cfi_restore s0
+; RV32ZFINX-NEXT:    .cfi_restore s1
+; RV32ZFINX-NEXT:    .cfi_restore s2
+; RV32ZFINX-NEXT:    .cfi_restore s3
+; RV32ZFINX-NEXT:    .cfi_restore s4
+; RV32ZFINX-NEXT:    addi sp, sp, 32
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZFINX-NEXT:    ret
+;
+; RV64ZFINX-LABEL: fcanonicalize_v4f16:
+; RV64ZFINX:       # %bb.0:
+; RV64ZFINX-NEXT:    addi sp, sp, -48
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 48
+; RV64ZFINX-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    .cfi_offset ra, -8
+; RV64ZFINX-NEXT:    .cfi_offset s0, -16
+; RV64ZFINX-NEXT:    .cfi_offset s1, -24
+; RV64ZFINX-NEXT:    .cfi_offset s2, -32
+; RV64ZFINX-NEXT:    .cfi_offset s3, -40
+; RV64ZFINX-NEXT:    .cfi_offset s4, -48
+; RV64ZFINX-NEXT:    lhu a2, 0(a1)
+; RV64ZFINX-NEXT:    lhu s1, 8(a1)
+; RV64ZFINX-NEXT:    lhu s2, 16(a1)
+; RV64ZFINX-NEXT:    lhu s3, 24(a1)
+; RV64ZFINX-NEXT:    mv s0, a0
+; RV64ZFINX-NEXT:    mv a0, a2
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s4, a0
+; RV64ZFINX-NEXT:    mv a0, s1
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s1, a0
+; RV64ZFINX-NEXT:    mv a0, s2
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s2, a0
+; RV64ZFINX-NEXT:    mv a0, s3
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV64ZFINX-NEXT:    sh s4, 0(s0)
+; RV64ZFINX-NEXT:    sh s1, 2(s0)
+; RV64ZFINX-NEXT:    sh s2, 4(s0)
+; RV64ZFINX-NEXT:    sh a0, 6(s0)
+; RV64ZFINX-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    .cfi_restore ra
+; RV64ZFINX-NEXT:    .cfi_restore s0
+; RV64ZFINX-NEXT:    .cfi_restore s1
+; RV64ZFINX-NEXT:    .cfi_restore s2
+; RV64ZFINX-NEXT:    .cfi_restore s3
+; RV64ZFINX-NEXT:    .cfi_restore s4
+; RV64ZFINX-NEXT:    addi sp, sp, 48
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZFINX-NEXT:    ret
+;
+; RV64ZDINX-LABEL: fcanonicalize_v4f16:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    addi sp, sp, -48
+; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 48
+; RV64ZDINX-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    .cfi_offset ra, -8
+; RV64ZDINX-NEXT:    .cfi_offset s0, -16
+; RV64ZDINX-NEXT:    .cfi_offset s1, -24
+; RV64ZDINX-NEXT:    .cfi_offset s2, -32
+; RV64ZDINX-NEXT:    .cfi_offset s3, -40
+; RV64ZDINX-NEXT:    .cfi_offset s4, -48
+; RV64ZDINX-NEXT:    lhu a2, 0(a1)
+; RV64ZDINX-NEXT:    lhu s1, 8(a1)
+; RV64ZDINX-NEXT:    lhu s2, 16(a1)
+; RV64ZDINX-NEXT:    lhu s3, 24(a1)
+; RV64ZDINX-NEXT:    mv s0, a0
+; RV64ZDINX-NEXT:    mv a0, a2
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s4, a0
+; RV64ZDINX-NEXT:    mv a0, s1
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s1, a0
+; RV64ZDINX-NEXT:    mv a0, s2
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s2, a0
+; RV64ZDINX-NEXT:    mv a0, s3
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV64ZDINX-NEXT:    sh s4, 0(s0)
+; RV64ZDINX-NEXT:    sh s1, 2(s0)
+; RV64ZDINX-NEXT:    sh s2, 4(s0)
+; RV64ZDINX-NEXT:    sh a0, 6(s0)
+; RV64ZDINX-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    .cfi_restore ra
+; RV64ZDINX-NEXT:    .cfi_restore s0
+; RV64ZDINX-NEXT:    .cfi_restore s1
+; RV64ZDINX-NEXT:    .cfi_restore s2
+; RV64ZDINX-NEXT:    .cfi_restore s3
+; RV64ZDINX-NEXT:    .cfi_restore s4
+; RV64ZDINX-NEXT:    addi sp, sp, 48
+; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZDINX-NEXT:    ret
+;
+; RV32ZHINX-LABEL: fcanonicalize_v4f16:
+; RV32ZHINX:       # %bb.0:
+; RV32ZHINX-NEXT:    fmin.h a1, a1, a1
+; RV32ZHINX-NEXT:    fmin.h a2, a2, a2
+; RV32ZHINX-NEXT:    fmin.h a3, a3, a3
+; RV32ZHINX-NEXT:    fmin.h a4, a4, a4
+; RV32ZHINX-NEXT:    sh a1, 0(a0)
+; RV32ZHINX-NEXT:    sh a2, 2(a0)
+; RV32ZHINX-NEXT:    sh a3, 4(a0)
+; RV32ZHINX-NEXT:    sh a4, 6(a0)
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: fcanonicalize_v4f16:
+; RV64ZHINX:       # %bb.0:
+; RV64ZHINX-NEXT:    fmin.h a1, a1, a1
+; RV64ZHINX-NEXT:    fmin.h a2, a2, a2
+; RV64ZHINX-NEXT:    fmin.h a3, a3, a3
+; RV64ZHINX-NEXT:    fmin.h a4, a4, a4
+; RV64ZHINX-NEXT:    sh a1, 0(a0)
+; RV64ZHINX-NEXT:    sh a2, 2(a0)
+; RV64ZHINX-NEXT:    sh a3, 4(a0)
+; RV64ZHINX-NEXT:    sh a4, 6(a0)
+; RV64ZHINX-NEXT:    ret
   %z = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %x)
   ret <4 x half> %z
 }
@@ -1024,6 +1519,213 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, 64
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV32-NEXT:    ret
+;
+; RV32ZFINX-LABEL: fcanonicalize_v4f16_nnan:
+; RV32ZFINX:       # %bb.0:
+; RV32ZFINX-NEXT:    addi sp, sp, -32
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 32
+; RV32ZFINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    .cfi_offset ra, -4
+; RV32ZFINX-NEXT:    .cfi_offset s0, -8
+; RV32ZFINX-NEXT:    .cfi_offset s1, -12
+; RV32ZFINX-NEXT:    .cfi_offset s2, -16
+; RV32ZFINX-NEXT:    .cfi_offset s3, -20
+; RV32ZFINX-NEXT:    .cfi_offset s4, -24
+; RV32ZFINX-NEXT:    lhu a2, 0(a1)
+; RV32ZFINX-NEXT:    lhu s1, 4(a1)
+; RV32ZFINX-NEXT:    lhu s2, 8(a1)
+; RV32ZFINX-NEXT:    lhu s3, 12(a1)
+; RV32ZFINX-NEXT:    mv s0, a0
+; RV32ZFINX-NEXT:    mv a0, a2
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s4, a0
+; RV32ZFINX-NEXT:    mv a0, s1
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s1, a0
+; RV32ZFINX-NEXT:    mv a0, s2
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s2, a0
+; RV32ZFINX-NEXT:    mv a0, s3
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV32ZFINX-NEXT:    sh s4, 0(s0)
+; RV32ZFINX-NEXT:    sh s1, 2(s0)
+; RV32ZFINX-NEXT:    sh s2, 4(s0)
+; RV32ZFINX-NEXT:    sh a0, 6(s0)
+; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    .cfi_restore ra
+; RV32ZFINX-NEXT:    .cfi_restore s0
+; RV32ZFINX-NEXT:    .cfi_restore s1
+; RV32ZFINX-NEXT:    .cfi_restore s2
+; RV32ZFINX-NEXT:    .cfi_restore s3
+; RV32ZFINX-NEXT:    .cfi_restore s4
+; RV32ZFINX-NEXT:    addi sp, sp, 32
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZFINX-NEXT:    ret
+;
+; RV64ZFINX-LABEL: fcanonicalize_v4f16_nnan:
+; RV64ZFINX:       # %bb.0:
+; RV64ZFINX-NEXT:    addi sp, sp, -48
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 48
+; RV64ZFINX-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    .cfi_offset ra, -8
+; RV64ZFINX-NEXT:    .cfi_offset s0, -16
+; RV64ZFINX-NEXT:    .cfi_offset s1, -24
+; RV64ZFINX-NEXT:    .cfi_offset s2, -32
+; RV64ZFINX-NEXT:    .cfi_offset s3, -40
+; RV64ZFINX-NEXT:    .cfi_offset s4, -48
+; RV64ZFINX-NEXT:    lhu a2, 0(a1)
+; RV64ZFINX-NEXT:    lhu s1, 8(a1)
+; RV64ZFINX-NEXT:    lhu s2, 16(a1)
+; RV64ZFINX-NEXT:    lhu s3, 24(a1)
+; RV64ZFINX-NEXT:    mv s0, a0
+; RV64ZFINX-NEXT:    mv a0, a2
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s4, a0
+; RV64ZFINX-NEXT:    mv a0, s1
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s1, a0
+; RV64ZFINX-NEXT:    mv a0, s2
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s2, a0
+; RV64ZFINX-NEXT:    mv a0, s3
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV64ZFINX-NEXT:    sh s4, 0(s0)
+; RV64ZFINX-NEXT:    sh s1, 2(s0)
+; RV64ZFINX-NEXT:    sh s2, 4(s0)
+; RV64ZFINX-NEXT:    sh a0, 6(s0)
+; RV64ZFINX-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    .cfi_restore ra
+; RV64ZFINX-NEXT:    .cfi_restore s0
+; RV64ZFINX-NEXT:    .cfi_restore s1
+; RV64ZFINX-NEXT:    .cfi_restore s2
+; RV64ZFINX-NEXT:    .cfi_restore s3
+; RV64ZFINX-NEXT:    .cfi_restore s4
+; RV64ZFINX-NEXT:    addi sp, sp, 48
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZFINX-NEXT:    ret
+;
+; RV64ZDINX-LABEL: fcanonicalize_v4f16_nnan:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    addi sp, sp, -48
+; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 48
+; RV64ZDINX-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    .cfi_offset ra, -8
+; RV64ZDINX-NEXT:    .cfi_offset s0, -16
+; RV64ZDINX-NEXT:    .cfi_offset s1, -24
+; RV64ZDINX-NEXT:    .cfi_offset s2, -32
+; RV64ZDINX-NEXT:    .cfi_offset s3, -40
+; RV64ZDINX-NEXT:    .cfi_offset s4, -48
+; RV64ZDINX-NEXT:    lhu a2, 0(a1)
+; RV64ZDINX-NEXT:    lhu s1, 8(a1)
+; RV64ZDINX-NEXT:    lhu s2, 16(a1)
+; RV64ZDINX-NEXT:    lhu s3, 24(a1)
+; RV64ZDINX-NEXT:    mv s0, a0
+; RV64ZDINX-NEXT:    mv a0, a2
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s4, a0
+; RV64ZDINX-NEXT:    mv a0, s1
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s1, a0
+; RV64ZDINX-NEXT:    mv a0, s2
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s2, a0
+; RV64ZDINX-NEXT:    mv a0, s3
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV64ZDINX-NEXT:    sh s4, 0(s0)
+; RV64ZDINX-NEXT:    sh s1, 2(s0)
+; RV64ZDINX-NEXT:    sh s2, 4(s0)
+; RV64ZDINX-NEXT:    sh a0, 6(s0)
+; RV64ZDINX-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    .cfi_restore ra
+; RV64ZDINX-NEXT:    .cfi_restore s0
+; RV64ZDINX-NEXT:    .cfi_restore s1
+; RV64ZDINX-NEXT:    .cfi_restore s2
+; RV64ZDINX-NEXT:    .cfi_restore s3
+; RV64ZDINX-NEXT:    .cfi_restore s4
+; RV64ZDINX-NEXT:    addi sp, sp, 48
+; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZDINX-NEXT:    ret
+;
+; RV32ZHINX-LABEL: fcanonicalize_v4f16_nnan:
+; RV32ZHINX:       # %bb.0:
+; RV32ZHINX-NEXT:    fmin.h a1, a1, a1
+; RV32ZHINX-NEXT:    fmin.h a2, a2, a2
+; RV32ZHINX-NEXT:    fmin.h a3, a3, a3
+; RV32ZHINX-NEXT:    fmin.h a4, a4, a4
+; RV32ZHINX-NEXT:    sh a1, 0(a0)
+; RV32ZHINX-NEXT:    sh a2, 2(a0)
+; RV32ZHINX-NEXT:    sh a3, 4(a0)
+; RV32ZHINX-NEXT:    sh a4, 6(a0)
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: fcanonicalize_v4f16_nnan:
+; RV64ZHINX:       # %bb.0:
+; RV64ZHINX-NEXT:    fmin.h a1, a1, a1
+; RV64ZHINX-NEXT:    fmin.h a2, a2, a2
+; RV64ZHINX-NEXT:    fmin.h a3, a3, a3
+; RV64ZHINX-NEXT:    fmin.h a4, a4, a4
+; RV64ZHINX-NEXT:    sh a1, 0(a0)
+; RV64ZHINX-NEXT:    sh a2, 2(a0)
+; RV64ZHINX-NEXT:    sh a3, 4(a0)
+; RV64ZHINX-NEXT:    sh a4, 6(a0)
+; RV64ZHINX-NEXT:    ret
   %z = call nnan <4 x half> @llvm.canonicalize.v4f16(<4 x half> %x)
   ret <4 x half> %z
 }
@@ -1575,6 +2277,363 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, 112
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV32-NEXT:    ret
+;
+; RV32ZFINX-LABEL: fcanonicalize_v8f16:
+; RV32ZFINX:       # %bb.0:
+; RV32ZFINX-NEXT:    addi sp, sp, -48
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 48
+; RV32ZFINX-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s2, 32(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s3, 28(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s5, 20(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s6, 16(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s7, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s8, 8(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    .cfi_offset ra, -4
+; RV32ZFINX-NEXT:    .cfi_offset s0, -8
+; RV32ZFINX-NEXT:    .cfi_offset s1, -12
+; RV32ZFINX-NEXT:    .cfi_offset s2, -16
+; RV32ZFINX-NEXT:    .cfi_offset s3, -20
+; RV32ZFINX-NEXT:    .cfi_offset s4, -24
+; RV32ZFINX-NEXT:    .cfi_offset s5, -28
+; RV32ZFINX-NEXT:    .cfi_offset s6, -32
+; RV32ZFINX-NEXT:    .cfi_offset s7, -36
+; RV32ZFINX-NEXT:    .cfi_offset s8, -40
+; RV32ZFINX-NEXT:    lhu s7, 16(a1)
+; RV32ZFINX-NEXT:    lhu s5, 20(a1)
+; RV32ZFINX-NEXT:    lhu s3, 24(a1)
+; RV32ZFINX-NEXT:    lhu s1, 28(a1)
+; RV32ZFINX-NEXT:    lhu a2, 0(a1)
+; RV32ZFINX-NEXT:    lhu s4, 4(a1)
+; RV32ZFINX-NEXT:    lhu s6, 8(a1)
+; RV32ZFINX-NEXT:    lhu s8, 12(a1)
+; RV32ZFINX-NEXT:    mv s0, a0
+; RV32ZFINX-NEXT:    mv a0, a2
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s2, a0
+; RV32ZFINX-NEXT:    mv a0, s4
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s4, a0
+; RV32ZFINX-NEXT:    mv a0, s6
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s6, a0
+; RV32ZFINX-NEXT:    mv a0, s8
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s8, a0
+; RV32ZFINX-NEXT:    mv a0, s7
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s7, a0
+; RV32ZFINX-NEXT:    mv a0, s5
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s5, a0
+; RV32ZFINX-NEXT:    mv a0, s3
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s3, a0
+; RV32ZFINX-NEXT:    mv a0, s1
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV32ZFINX-NEXT:    sh s7, 8(s0)
+; RV32ZFINX-NEXT:    sh s5, 10(s0)
+; RV32ZFINX-NEXT:    sh s3, 12(s0)
+; RV32ZFINX-NEXT:    sh a0, 14(s0)
+; RV32ZFINX-NEXT:    sh s2, 0(s0)
+; RV32ZFINX-NEXT:    sh s4, 2(s0)
+; RV32ZFINX-NEXT:    sh s6, 4(s0)
+; RV32ZFINX-NEXT:    sh s8, 6(s0)
+; RV32ZFINX-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s2, 32(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s3, 28(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s4, 24(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s5, 20(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s6, 16(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s7, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s8, 8(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    .cfi_restore ra
+; RV32ZFINX-NEXT:    .cfi_restore s0
+; RV32ZFINX-NEXT:    .cfi_restore s1
+; RV32ZFINX-NEXT:    .cfi_restore s2
+; RV32ZFINX-NEXT:    .cfi_restore s3
+; RV32ZFINX-NEXT:    .cfi_restore s4
+; RV32ZFINX-NEXT:    .cfi_restore s5
+; RV32ZFINX-NEXT:    .cfi_restore s6
+; RV32ZFINX-NEXT:    .cfi_restore s7
+; RV32ZFINX-NEXT:    .cfi_restore s8
+; RV32ZFINX-NEXT:    addi sp, sp, 48
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZFINX-NEXT:    ret
+;
+; RV64ZFINX-LABEL: fcanonicalize_v8f16:
+; RV64ZFINX:       # %bb.0:
+; RV64ZFINX-NEXT:    addi sp, sp, -80
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 80
+; RV64ZFINX-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s1, 56(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s2, 48(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s3, 40(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s4, 32(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s5, 24(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s6, 16(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s7, 8(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s8, 0(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    .cfi_offset ra, -8
+; RV64ZFINX-NEXT:    .cfi_offset s0, -16
+; RV64ZFINX-NEXT:    .cfi_offset s1, -24
+; RV64ZFINX-NEXT:    .cfi_offset s2, -32
+; RV64ZFINX-NEXT:    .cfi_offset s3, -40
+; RV64ZFINX-NEXT:    .cfi_offset s4, -48
+; RV64ZFINX-NEXT:    .cfi_offset s5, -56
+; RV64ZFINX-NEXT:    .cfi_offset s6, -64
+; RV64ZFINX-NEXT:    .cfi_offset s7, -72
+; RV64ZFINX-NEXT:    .cfi_offset s8, -80
+; RV64ZFINX-NEXT:    lhu s7, 32(a1)
+; RV64ZFINX-NEXT:    lhu s5, 40(a1)
+; RV64ZFINX-NEXT:    lhu s3, 48(a1)
+; RV64ZFINX-NEXT:    lhu s1, 56(a1)
+; RV64ZFINX-NEXT:    lhu a2, 0(a1)
+; RV64ZFINX-NEXT:    lhu s4, 8(a1)
+; RV64ZFINX-NEXT:    lhu s6, 16(a1)
+; RV64ZFINX-NEXT:    lhu s8, 24(a1)
+; RV64ZFINX-NEXT:    mv s0, a0
+; RV64ZFINX-NEXT:    mv a0, a2
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s2, a0
+; RV64ZFINX-NEXT:    mv a0, s4
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s4, a0
+; RV64ZFINX-NEXT:    mv a0, s6
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s6, a0
+; RV64ZFINX-NEXT:    mv a0, s8
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s8, a0
+; RV64ZFINX-NEXT:    mv a0, s7
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s7, a0
+; RV64ZFINX-NEXT:    mv a0, s5
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s5, a0
+; RV64ZFINX-NEXT:    mv a0, s3
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s3, a0
+; RV64ZFINX-NEXT:    mv a0, s1
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV64ZFINX-NEXT:    sh s7, 8(s0)
+; RV64ZFINX-NEXT:    sh s5, 10(s0)
+; RV64ZFINX-NEXT:    sh s3, 12(s0)
+; RV64ZFINX-NEXT:    sh a0, 14(s0)
+; RV64ZFINX-NEXT:    sh s2, 0(s0)
+; RV64ZFINX-NEXT:    sh s4, 2(s0)
+; RV64ZFINX-NEXT:    sh s6, 4(s0)
+; RV64ZFINX-NEXT:    sh s8, 6(s0)
+; RV64ZFINX-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s2, 48(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s3, 40(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s7, 8(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s8, 0(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    .cfi_restore ra
+; RV64ZFINX-NEXT:    .cfi_restore s0
+; RV64ZFINX-NEXT:    .cfi_restore s1
+; RV64ZFINX-NEXT:    .cfi_restore s2
+; RV64ZFINX-NEXT:    .cfi_restore s3
+; RV64ZFINX-NEXT:    .cfi_restore s4
+; RV64ZFINX-NEXT:    .cfi_restore s5
+; RV64ZFINX-NEXT:    .cfi_restore s6
+; RV64ZFINX-NEXT:    .cfi_restore s7
+; RV64ZFINX-NEXT:    .cfi_restore s8
+; RV64ZFINX-NEXT:    addi sp, sp, 80
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZFINX-NEXT:    ret
+;
+; RV64ZDINX-LABEL: fcanonicalize_v8f16:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    addi sp, sp, -80
+; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 80
+; RV64ZDINX-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s1, 56(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s2, 48(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s3, 40(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s4, 32(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s5, 24(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s6, 16(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s7, 8(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s8, 0(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    .cfi_offset ra, -8
+; RV64ZDINX-NEXT:    .cfi_offset s0, -16
+; RV64ZDINX-NEXT:    .cfi_offset s1, -24
+; RV64ZDINX-NEXT:    .cfi_offset s2, -32
+; RV64ZDINX-NEXT:    .cfi_offset s3, -40
+; RV64ZDINX-NEXT:    .cfi_offset s4, -48
+; RV64ZDINX-NEXT:    .cfi_offset s5, -56
+; RV64ZDINX-NEXT:    .cfi_offset s6, -64
+; RV64ZDINX-NEXT:    .cfi_offset s7, -72
+; RV64ZDINX-NEXT:    .cfi_offset s8, -80
+; RV64ZDINX-NEXT:    lhu s7, 32(a1)
+; RV64ZDINX-NEXT:    lhu s5, 40(a1)
+; RV64ZDINX-NEXT:    lhu s3, 48(a1)
+; RV64ZDINX-NEXT:    lhu s1, 56(a1)
+; RV64ZDINX-NEXT:    lhu a2, 0(a1)
+; RV64ZDINX-NEXT:    lhu s4, 8(a1)
+; RV64ZDINX-NEXT:    lhu s6, 16(a1)
+; RV64ZDINX-NEXT:    lhu s8, 24(a1)
+; RV64ZDINX-NEXT:    mv s0, a0
+; RV64ZDINX-NEXT:    mv a0, a2
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s2, a0
+; RV64ZDINX-NEXT:    mv a0, s4
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s4, a0
+; RV64ZDINX-NEXT:    mv a0, s6
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s6, a0
+; RV64ZDINX-NEXT:    mv a0, s8
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s8, a0
+; RV64ZDINX-NEXT:    mv a0, s7
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s7, a0
+; RV64ZDINX-NEXT:    mv a0, s5
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s5, a0
+; RV64ZDINX-NEXT:    mv a0, s3
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s3, a0
+; RV64ZDINX-NEXT:    mv a0, s1
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV64ZDINX-NEXT:    sh s7, 8(s0)
+; RV64ZDINX-NEXT:    sh s5, 10(s0)
+; RV64ZDINX-NEXT:    sh s3, 12(s0)
+; RV64ZDINX-NEXT:    sh a0, 14(s0)
+; RV64ZDINX-NEXT:    sh s2, 0(s0)
+; RV64ZDINX-NEXT:    sh s4, 2(s0)
+; RV64ZDINX-NEXT:    sh s6, 4(s0)
+; RV64ZDINX-NEXT:    sh s8, 6(s0)
+; RV64ZDINX-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s2, 48(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s3, 40(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s7, 8(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s8, 0(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    .cfi_restore ra
+; RV64ZDINX-NEXT:    .cfi_restore s0
+; RV64ZDINX-NEXT:    .cfi_restore s1
+; RV64ZDINX-NEXT:    .cfi_restore s2
+; RV64ZDINX-NEXT:    .cfi_restore s3
+; RV64ZDINX-NEXT:    .cfi_restore s4
+; RV64ZDINX-NEXT:    .cfi_restore s5
+; RV64ZDINX-NEXT:    .cfi_restore s6
+; RV64ZDINX-NEXT:    .cfi_restore s7
+; RV64ZDINX-NEXT:    .cfi_restore s8
+; RV64ZDINX-NEXT:    addi sp, sp, 80
+; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZDINX-NEXT:    ret
+;
+; RV32ZHINX-LABEL: fcanonicalize_v8f16:
+; RV32ZHINX:       # %bb.0:
+; RV32ZHINX-NEXT:    lh t0, 0(sp)
+; RV32ZHINX-NEXT:    fmin.h a1, a1, a1
+; RV32ZHINX-NEXT:    fmin.h a2, a2, a2
+; RV32ZHINX-NEXT:    fmin.h a3, a3, a3
+; RV32ZHINX-NEXT:    fmin.h a4, a4, a4
+; RV32ZHINX-NEXT:    fmin.h a5, a5, a5
+; RV32ZHINX-NEXT:    fmin.h a6, a6, a6
+; RV32ZHINX-NEXT:    fmin.h a7, a7, a7
+; RV32ZHINX-NEXT:    fmin.h t0, t0, t0
+; RV32ZHINX-NEXT:    sh a5, 8(a0)
+; RV32ZHINX-NEXT:    sh a6, 10(a0)
+; RV32ZHINX-NEXT:    sh a7, 12(a0)
+; RV32ZHINX-NEXT:    sh t0, 14(a0)
+; RV32ZHINX-NEXT:    sh a1, 0(a0)
+; RV32ZHINX-NEXT:    sh a2, 2(a0)
+; RV32ZHINX-NEXT:    sh a3, 4(a0)
+; RV32ZHINX-NEXT:    sh a4, 6(a0)
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: fcanonicalize_v8f16:
+; RV64ZHINX:       # %bb.0:
+; RV64ZHINX-NEXT:    lh t0, 0(sp)
+; RV64ZHINX-NEXT:    fmin.h a1, a1, a1
+; RV64ZHINX-NEXT:    fmin.h a2, a2, a2
+; RV64ZHINX-NEXT:    fmin.h a3, a3, a3
+; RV64ZHINX-NEXT:    fmin.h a4, a4, a4
+; RV64ZHINX-NEXT:    fmin.h a5, a5, a5
+; RV64ZHINX-NEXT:    fmin.h a6, a6, a6
+; RV64ZHINX-NEXT:    fmin.h a7, a7, a7
+; RV64ZHINX-NEXT:    fmin.h t0, t0, t0
+; RV64ZHINX-NEXT:    sh a5, 8(a0)
+; RV64ZHINX-NEXT:    sh a6, 10(a0)
+; RV64ZHINX-NEXT:    sh a7, 12(a0)
+; RV64ZHINX-NEXT:    sh t0, 14(a0)
+; RV64ZHINX-NEXT:    sh a1, 0(a0)
+; RV64ZHINX-NEXT:    sh a2, 2(a0)
+; RV64ZHINX-NEXT:    sh a3, 4(a0)
+; RV64ZHINX-NEXT:    sh a4, 6(a0)
+; RV64ZHINX-NEXT:    ret
   %z = call <8 x half> @llvm.canonicalize.v8f16(<8 x half> %x)
   ret <8 x half> %z
 }
@@ -2126,6 +3185,363 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, 112
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOFP16-RV32-NEXT:    ret
+;
+; RV32ZFINX-LABEL: fcanonicalize_v8f16_nnan:
+; RV32ZFINX:       # %bb.0:
+; RV32ZFINX-NEXT:    addi sp, sp, -48
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 48
+; RV32ZFINX-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s2, 32(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s3, 28(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s5, 20(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s6, 16(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s7, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s8, 8(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    .cfi_offset ra, -4
+; RV32ZFINX-NEXT:    .cfi_offset s0, -8
+; RV32ZFINX-NEXT:    .cfi_offset s1, -12
+; RV32ZFINX-NEXT:    .cfi_offset s2, -16
+; RV32ZFINX-NEXT:    .cfi_offset s3, -20
+; RV32ZFINX-NEXT:    .cfi_offset s4, -24
+; RV32ZFINX-NEXT:    .cfi_offset s5, -28
+; RV32ZFINX-NEXT:    .cfi_offset s6, -32
+; RV32ZFINX-NEXT:    .cfi_offset s7, -36
+; RV32ZFINX-NEXT:    .cfi_offset s8, -40
+; RV32ZFINX-NEXT:    lhu s7, 16(a1)
+; RV32ZFINX-NEXT:    lhu s5, 20(a1)
+; RV32ZFINX-NEXT:    lhu s3, 24(a1)
+; RV32ZFINX-NEXT:    lhu s1, 28(a1)
+; RV32ZFINX-NEXT:    lhu a2, 0(a1)
+; RV32ZFINX-NEXT:    lhu s4, 4(a1)
+; RV32ZFINX-NEXT:    lhu s6, 8(a1)
+; RV32ZFINX-NEXT:    lhu s8, 12(a1)
+; RV32ZFINX-NEXT:    mv s0, a0
+; RV32ZFINX-NEXT:    mv a0, a2
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s2, a0
+; RV32ZFINX-NEXT:    mv a0, s4
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s4, a0
+; RV32ZFINX-NEXT:    mv a0, s6
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s6, a0
+; RV32ZFINX-NEXT:    mv a0, s8
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s8, a0
+; RV32ZFINX-NEXT:    mv a0, s7
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s7, a0
+; RV32ZFINX-NEXT:    mv a0, s5
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s5, a0
+; RV32ZFINX-NEXT:    mv a0, s3
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    mv s3, a0
+; RV32ZFINX-NEXT:    mv a0, s1
+; RV32ZFINX-NEXT:    call __extendhfsf2
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    call __truncsfhf2
+; RV32ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV32ZFINX-NEXT:    sh s7, 8(s0)
+; RV32ZFINX-NEXT:    sh s5, 10(s0)
+; RV32ZFINX-NEXT:    sh s3, 12(s0)
+; RV32ZFINX-NEXT:    sh a0, 14(s0)
+; RV32ZFINX-NEXT:    sh s2, 0(s0)
+; RV32ZFINX-NEXT:    sh s4, 2(s0)
+; RV32ZFINX-NEXT:    sh s6, 4(s0)
+; RV32ZFINX-NEXT:    sh s8, 6(s0)
+; RV32ZFINX-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s2, 32(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s3, 28(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s4, 24(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s5, 20(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s6, 16(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s7, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s8, 8(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    .cfi_restore ra
+; RV32ZFINX-NEXT:    .cfi_restore s0
+; RV32ZFINX-NEXT:    .cfi_restore s1
+; RV32ZFINX-NEXT:    .cfi_restore s2
+; RV32ZFINX-NEXT:    .cfi_restore s3
+; RV32ZFINX-NEXT:    .cfi_restore s4
+; RV32ZFINX-NEXT:    .cfi_restore s5
+; RV32ZFINX-NEXT:    .cfi_restore s6
+; RV32ZFINX-NEXT:    .cfi_restore s7
+; RV32ZFINX-NEXT:    .cfi_restore s8
+; RV32ZFINX-NEXT:    addi sp, sp, 48
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZFINX-NEXT:    ret
+;
+; RV64ZFINX-LABEL: fcanonicalize_v8f16_nnan:
+; RV64ZFINX:       # %bb.0:
+; RV64ZFINX-NEXT:    addi sp, sp, -80
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 80
+; RV64ZFINX-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s1, 56(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s2, 48(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s3, 40(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s4, 32(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s5, 24(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s6, 16(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s7, 8(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s8, 0(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    .cfi_offset ra, -8
+; RV64ZFINX-NEXT:    .cfi_offset s0, -16
+; RV64ZFINX-NEXT:    .cfi_offset s1, -24
+; RV64ZFINX-NEXT:    .cfi_offset s2, -32
+; RV64ZFINX-NEXT:    .cfi_offset s3, -40
+; RV64ZFINX-NEXT:    .cfi_offset s4, -48
+; RV64ZFINX-NEXT:    .cfi_offset s5, -56
+; RV64ZFINX-NEXT:    .cfi_offset s6, -64
+; RV64ZFINX-NEXT:    .cfi_offset s7, -72
+; RV64ZFINX-NEXT:    .cfi_offset s8, -80
+; RV64ZFINX-NEXT:    lhu s7, 32(a1)
+; RV64ZFINX-NEXT:    lhu s5, 40(a1)
+; RV64ZFINX-NEXT:    lhu s3, 48(a1)
+; RV64ZFINX-NEXT:    lhu s1, 56(a1)
+; RV64ZFINX-NEXT:    lhu a2, 0(a1)
+; RV64ZFINX-NEXT:    lhu s4, 8(a1)
+; RV64ZFINX-NEXT:    lhu s6, 16(a1)
+; RV64ZFINX-NEXT:    lhu s8, 24(a1)
+; RV64ZFINX-NEXT:    mv s0, a0
+; RV64ZFINX-NEXT:    mv a0, a2
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s2, a0
+; RV64ZFINX-NEXT:    mv a0, s4
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s4, a0
+; RV64ZFINX-NEXT:    mv a0, s6
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s6, a0
+; RV64ZFINX-NEXT:    mv a0, s8
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s8, a0
+; RV64ZFINX-NEXT:    mv a0, s7
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s7, a0
+; RV64ZFINX-NEXT:    mv a0, s5
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s5, a0
+; RV64ZFINX-NEXT:    mv a0, s3
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    mv s3, a0
+; RV64ZFINX-NEXT:    mv a0, s1
+; RV64ZFINX-NEXT:    call __extendhfsf2
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    call __truncsfhf2
+; RV64ZFINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV64ZFINX-NEXT:    sh s7, 8(s0)
+; RV64ZFINX-NEXT:    sh s5, 10(s0)
+; RV64ZFINX-NEXT:    sh s3, 12(s0)
+; RV64ZFINX-NEXT:    sh a0, 14(s0)
+; RV64ZFINX-NEXT:    sh s2, 0(s0)
+; RV64ZFINX-NEXT:    sh s4, 2(s0)
+; RV64ZFINX-NEXT:    sh s6, 4(s0)
+; RV64ZFINX-NEXT:    sh s8, 6(s0)
+; RV64ZFINX-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s2, 48(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s3, 40(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s7, 8(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s8, 0(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    .cfi_restore ra
+; RV64ZFINX-NEXT:    .cfi_restore s0
+; RV64ZFINX-NEXT:    .cfi_restore s1
+; RV64ZFINX-NEXT:    .cfi_restore s2
+; RV64ZFINX-NEXT:    .cfi_restore s3
+; RV64ZFINX-NEXT:    .cfi_restore s4
+; RV64ZFINX-NEXT:    .cfi_restore s5
+; RV64ZFINX-NEXT:    .cfi_restore s6
+; RV64ZFINX-NEXT:    .cfi_restore s7
+; RV64ZFINX-NEXT:    .cfi_restore s8
+; RV64ZFINX-NEXT:    addi sp, sp, 80
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZFINX-NEXT:    ret
+;
+; RV64ZDINX-LABEL: fcanonicalize_v8f16_nnan:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    addi sp, sp, -80
+; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 80
+; RV64ZDINX-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s1, 56(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s2, 48(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s3, 40(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s4, 32(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s5, 24(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s6, 16(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s7, 8(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd s8, 0(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    .cfi_offset ra, -8
+; RV64ZDINX-NEXT:    .cfi_offset s0, -16
+; RV64ZDINX-NEXT:    .cfi_offset s1, -24
+; RV64ZDINX-NEXT:    .cfi_offset s2, -32
+; RV64ZDINX-NEXT:    .cfi_offset s3, -40
+; RV64ZDINX-NEXT:    .cfi_offset s4, -48
+; RV64ZDINX-NEXT:    .cfi_offset s5, -56
+; RV64ZDINX-NEXT:    .cfi_offset s6, -64
+; RV64ZDINX-NEXT:    .cfi_offset s7, -72
+; RV64ZDINX-NEXT:    .cfi_offset s8, -80
+; RV64ZDINX-NEXT:    lhu s7, 32(a1)
+; RV64ZDINX-NEXT:    lhu s5, 40(a1)
+; RV64ZDINX-NEXT:    lhu s3, 48(a1)
+; RV64ZDINX-NEXT:    lhu s1, 56(a1)
+; RV64ZDINX-NEXT:    lhu a2, 0(a1)
+; RV64ZDINX-NEXT:    lhu s4, 8(a1)
+; RV64ZDINX-NEXT:    lhu s6, 16(a1)
+; RV64ZDINX-NEXT:    lhu s8, 24(a1)
+; RV64ZDINX-NEXT:    mv s0, a0
+; RV64ZDINX-NEXT:    mv a0, a2
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s2, a0
+; RV64ZDINX-NEXT:    mv a0, s4
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s4, a0
+; RV64ZDINX-NEXT:    mv a0, s6
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s6, a0
+; RV64ZDINX-NEXT:    mv a0, s8
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s8, a0
+; RV64ZDINX-NEXT:    mv a0, s7
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s7, a0
+; RV64ZDINX-NEXT:    mv a0, s5
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s5, a0
+; RV64ZDINX-NEXT:    mv a0, s3
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    mv s3, a0
+; RV64ZDINX-NEXT:    mv a0, s1
+; RV64ZDINX-NEXT:    call __extendhfsf2
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    call __truncsfhf2
+; RV64ZDINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV64ZDINX-NEXT:    sh s7, 8(s0)
+; RV64ZDINX-NEXT:    sh s5, 10(s0)
+; RV64ZDINX-NEXT:    sh s3, 12(s0)
+; RV64ZDINX-NEXT:    sh a0, 14(s0)
+; RV64ZDINX-NEXT:    sh s2, 0(s0)
+; RV64ZDINX-NEXT:    sh s4, 2(s0)
+; RV64ZDINX-NEXT:    sh s6, 4(s0)
+; RV64ZDINX-NEXT:    sh s8, 6(s0)
+; RV64ZDINX-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s2, 48(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s3, 40(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s7, 8(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld s8, 0(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    .cfi_restore ra
+; RV64ZDINX-NEXT:    .cfi_restore s0
+; RV64ZDINX-NEXT:    .cfi_restore s1
+; RV64ZDINX-NEXT:    .cfi_restore s2
+; RV64ZDINX-NEXT:    .cfi_restore s3
+; RV64ZDINX-NEXT:    .cfi_restore s4
+; RV64ZDINX-NEXT:    .cfi_restore s5
+; RV64ZDINX-NEXT:    .cfi_restore s6
+; RV64ZDINX-NEXT:    .cfi_restore s7
+; RV64ZDINX-NEXT:    .cfi_restore s8
+; RV64ZDINX-NEXT:    addi sp, sp, 80
+; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZDINX-NEXT:    ret
+;
+; RV32ZHINX-LABEL: fcanonicalize_v8f16_nnan:
+; RV32ZHINX:       # %bb.0:
+; RV32ZHINX-NEXT:    lh t0, 0(sp)
+; RV32ZHINX-NEXT:    fmin.h a1, a1, a1
+; RV32ZHINX-NEXT:    fmin.h a2, a2, a2
+; RV32ZHINX-NEXT:    fmin.h a3, a3, a3
+; RV32ZHINX-NEXT:    fmin.h a4, a4, a4
+; RV32ZHINX-NEXT:    fmin.h a5, a5, a5
+; RV32ZHINX-NEXT:    fmin.h a6, a6, a6
+; RV32ZHINX-NEXT:    fmin.h a7, a7, a7
+; RV32ZHINX-NEXT:    fmin.h t0, t0, t0
+; RV32ZHINX-NEXT:    sh a5, 8(a0)
+; RV32ZHINX-NEXT:    sh a6, 10(a0)
+; RV32ZHINX-NEXT:    sh a7, 12(a0)
+; RV32ZHINX-NEXT:    sh t0, 14(a0)
+; RV32ZHINX-NEXT:    sh a1, 0(a0)
+; RV32ZHINX-NEXT:    sh a2, 2(a0)
+; RV32ZHINX-NEXT:    sh a3, 4(a0)
+; RV32ZHINX-NEXT:    sh a4, 6(a0)
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: fcanonicalize_v8f16_nnan:
+; RV64ZHINX:       # %bb.0:
+; RV64ZHINX-NEXT:    lh t0, 0(sp)
+; RV64ZHINX-NEXT:    fmin.h a1, a1, a1
+; RV64ZHINX-NEXT:    fmin.h a2, a2, a2
+; RV64ZHINX-NEXT:    fmin.h a3, a3, a3
+; RV64ZHINX-NEXT:    fmin.h a4, a4, a4
+; RV64ZHINX-NEXT:    fmin.h a5, a5, a5
+; RV64ZHINX-NEXT:    fmin.h a6, a6, a6
+; RV64ZHINX-NEXT:    fmin.h a7, a7, a7
+; RV64ZHINX-NEXT:    fmin.h t0, t0, t0
+; RV64ZHINX-NEXT:    sh a5, 8(a0)
+; RV64ZHINX-NEXT:    sh a6, 10(a0)
+; RV64ZHINX-NEXT:    sh a7, 12(a0)
+; RV64ZHINX-NEXT:    sh t0, 14(a0)
+; RV64ZHINX-NEXT:    sh a1, 0(a0)
+; RV64ZHINX-NEXT:    sh a2, 2(a0)
+; RV64ZHINX-NEXT:    sh a3, 4(a0)
+; RV64ZHINX-NEXT:    sh a4, 6(a0)
+; RV64ZHINX-NEXT:    ret
   %z = call nnan <8 x half> @llvm.canonicalize.v8f16(<8 x half> %x)
   ret <8 x half> %z
 }
@@ -2178,6 +3594,31 @@ define float @fcanonicalize_f32(float %x) {
 ; CHECK-NOFP16-RV32:       # %bb.0:
 ; CHECK-NOFP16-RV32-NEXT:    fmin.s fa0, fa0, fa0
 ; CHECK-NOFP16-RV32-NEXT:    ret
+;
+; RV32ZFINX-LABEL: fcanonicalize_f32:
+; RV32ZFINX:       # %bb.0:
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    ret
+;
+; RV64ZFINX-LABEL: fcanonicalize_f32:
+; RV64ZFINX:       # %bb.0:
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    ret
+;
+; RV64ZDINX-LABEL: fcanonicalize_f32:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    ret
+;
+; RV32ZHINX-LABEL: fcanonicalize_f32:
+; RV32ZHINX:       # %bb.0:
+; RV32ZHINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: fcanonicalize_f32:
+; RV64ZHINX:       # %bb.0:
+; RV64ZHINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZHINX-NEXT:    ret
   %z = call nnan float @llvm.canonicalize.f32(float %x)
   ret float %z
 }
@@ -2264,6 +3705,36 @@ define <2 x float> @fcanonicalize_v2f32(<2 x float> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    fmin.s fa0, fa0, fa0
 ; CHECK-NOFP16-RV32-NEXT:    fmin.s fa1, fa1, fa1
 ; CHECK-NOFP16-RV32-NEXT:    ret
+;
+; RV32ZFINX-LABEL: fcanonicalize_v2f32:
+; RV32ZFINX:       # %bb.0:
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    fmin.s a1, a1, a1
+; RV32ZFINX-NEXT:    ret
+;
+; RV64ZFINX-LABEL: fcanonicalize_v2f32:
+; RV64ZFINX:       # %bb.0:
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    fmin.s a1, a1, a1
+; RV64ZFINX-NEXT:    ret
+;
+; RV64ZDINX-LABEL: fcanonicalize_v2f32:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    fmin.s a1, a1, a1
+; RV64ZDINX-NEXT:    ret
+;
+; RV32ZHINX-LABEL: fcanonicalize_v2f32:
+; RV32ZHINX:       # %bb.0:
+; RV32ZHINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZHINX-NEXT:    fmin.s a1, a1, a1
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: fcanonicalize_v2f32:
+; RV64ZHINX:       # %bb.0:
+; RV64ZHINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZHINX-NEXT:    fmin.s a1, a1, a1
+; RV64ZHINX-NEXT:    ret
   %z = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %x)
   ret <2 x float> %z
 }
@@ -2350,6 +3821,36 @@ define <2 x float> @fcanonicalize_v2f32_nnan(<2 x float> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    fmin.s fa0, fa0, fa0
 ; CHECK-NOFP16-RV32-NEXT:    fmin.s fa1, fa1, fa1
 ; CHECK-NOFP16-RV32-NEXT:    ret
+;
+; RV32ZFINX-LABEL: fcanonicalize_v2f32_nnan:
+; RV32ZFINX:       # %bb.0:
+; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZFINX-NEXT:    fmin.s a1, a1, a1
+; RV32ZFINX-NEXT:    ret
+;
+; RV64ZFINX-LABEL: fcanonicalize_v2f32_nnan:
+; RV64ZFINX:       # %bb.0:
+; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZFINX-NEXT:    fmin.s a1, a1, a1
+; RV64ZFINX-NEXT:    ret
+;
+; RV64ZDINX-LABEL: fcanonicalize_v2f32_nnan:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZDINX-NEXT:    fmin.s a1, a1, a1
+; RV64ZDINX-NEXT:    ret
+;
+; RV32ZHINX-LABEL: fcanonicalize_v2f32_nnan:
+; RV32ZHINX:       # %bb.0:
+; RV32ZHINX-NEXT:    fmin.s a0, a0, a0
+; RV32ZHINX-NEXT:    fmin.s a1, a1, a1
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: fcanonicalize_v2f32_nnan:
+; RV64ZHINX:       # %bb.0:
+; RV64ZHINX-NEXT:    fmin.s a0, a0, a0
+; RV64ZHINX-NEXT:    fmin.s a1, a1, a1
+; RV64ZHINX-NEXT:    ret
   %z = call nnan <2 x float> @llvm.canonicalize.v2f32(<2 x float> %x)
   ret <2 x float> %z
 }
@@ -2514,6 +4015,66 @@ define <4 x float> @fcanonicalize_v4f32(<4 x float> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    fsw fa2, 8(a0)
 ; CHECK-NOFP16-RV32-NEXT:    fsw fa3, 12(a0)
 ; CHECK-NOFP16-RV32-NEXT:    ret
+;
+; RV32ZFINX-LABEL: fcanonicalize_v4f32:
+; RV32ZFINX:       # %bb.0:
+; RV32ZFINX-NEXT:    fmin.s a1, a1, a1
+; RV32ZFINX-NEXT:    fmin.s a2, a2, a2
+; RV32ZFINX-NEXT:    fmin.s a3, a3, a3
+; RV32ZFINX-NEXT:    fmin.s a4, a4, a4
+; RV32ZFINX-NEXT:    sw a1, 0(a0)
+; RV32ZFINX-NEXT:    sw a2, 4(a0)
+; RV32ZFINX-NEXT:    sw a3, 8(a0)
+; RV32ZFINX-NEXT:    sw a4, 12(a0)
+; RV32ZFINX-NEXT:    ret
+;
+; RV64ZFINX-LABEL: fcanonicalize_v4f32:
+; RV64ZFINX:       # %bb.0:
+; RV64ZFINX-NEXT:    fmin.s a1, a1, a1
+; RV64ZFINX-NEXT:    fmin.s a2, a2, a2
+; RV64ZFINX-NEXT:    fmin.s a3, a3, a3
+; RV64ZFINX-NEXT:    fmin.s a4, a4, a4
+; RV64ZFINX-NEXT:    sw a1, 0(a0)
+; RV64ZFINX-NEXT:    sw a2, 4(a0)
+; RV64ZFINX-NEXT:    sw a3, 8(a0)
+; RV64ZFINX-NEXT:    sw a4, 12(a0)
+; RV64ZFINX-NEXT:    ret
+;
+; RV64ZDINX-LABEL: fcanonicalize_v4f32:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    fmin.s a1, a1, a1
+; RV64ZDINX-NEXT:    fmin.s a2, a2, a2
+; RV64ZDINX-NEXT:    fmin.s a3, a3, a3
+; RV64ZDINX-NEXT:    fmin.s a4, a4, a4
+; RV64ZDINX-NEXT:    sw a1, 0(a0)
+; RV64ZDINX-NEXT:    sw a2, 4(a0)
+; RV64ZDINX-NEXT:    sw a3, 8(a0)
+; RV64ZDINX-NEXT:    sw a4, 12(a0)
+; RV64ZDINX-NEXT:    ret
+;
+; RV32ZHINX-LABEL: fcanonicalize_v4f32:
+; RV32ZHINX:       # %bb.0:
+; RV32ZHINX-NEXT:    fmin.s a1, a1, a1
+; RV32ZHINX-NEXT:    fmin.s a2, a2, a2
+; RV32ZHINX-NEXT:    fmin.s a3, a3, a3
+; RV32ZHINX-NEXT:    fmin.s a4, a4, a4
+; RV32ZHINX-NEXT:    sw a1, 0(a0)
+; RV32ZHINX-NEXT:    sw a2, 4(a0)
+; RV32ZHINX-NEXT:    sw a3, 8(a0)
+; RV32ZHINX-NEXT:    sw a4, 12(a0)
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: fcanonicalize_v4f32:
+; RV64ZHINX:       # %bb.0:
+; RV64ZHINX-NEXT:    fmin.s a1, a1, a1
+; RV64ZHINX-NEXT:    fmin.s a2, a2, a2
+; RV64ZHINX-NEXT:    fmin.s a3, a3, a3
+; RV64ZHINX-NEXT:    fmin.s a4, a4, a4
+; RV64ZHINX-NEXT:    sw a1, 0(a0)
+; RV64ZHINX-NEXT:    sw a2, 4(a0)
+; RV64ZHINX-NEXT:    sw a3, 8(a0)
+; RV64ZHINX-NEXT:    sw a4, 12(a0)
+; RV64ZHINX-NEXT:    ret
   %z = call nnan <4 x float> @llvm.canonicalize.v4f32(<4 x float> %x)
   ret <4 x float> %z
 }
@@ -2568,6 +4129,71 @@ define double @fcanonicalize_f64(double %x) {
 ; CHECK-NOFP16-RV32:       # %bb.0:
 ; CHECK-NOFP16-RV32-NEXT:    fmin.d fa0, fa0, fa0
 ; CHECK-NOFP16-RV32-NEXT:    ret
+;
+; RV32ZFINX-LABEL: fcanonicalize_f64:
+; RV32ZFINX:       # %bb.0:
+; RV32ZFINX-NEXT:    addi sp, sp, -16
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 16
+; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    .cfi_offset ra, -4
+; RV32ZFINX-NEXT:    lui a3, 261888
+; RV32ZFINX-NEXT:    li a2, 0
+; RV32ZFINX-NEXT:    call __muldf3
+; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    .cfi_restore ra
+; RV32ZFINX-NEXT:    addi sp, sp, 16
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZFINX-NEXT:    ret
+;
+; RV64ZFINX-LABEL: fcanonicalize_f64:
+; RV64ZFINX:       # %bb.0:
+; RV64ZFINX-NEXT:    addi sp, sp, -16
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 16
+; RV64ZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    .cfi_offset ra, -8
+; RV64ZFINX-NEXT:    li a1, 1023
+; RV64ZFINX-NEXT:    slli a1, a1, 52
+; RV64ZFINX-NEXT:    call __muldf3
+; RV64ZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    .cfi_restore ra
+; RV64ZFINX-NEXT:    addi sp, sp, 16
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZFINX-NEXT:    ret
+;
+; RV64ZDINX-LABEL: fcanonicalize_f64:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    fmin.d a0, a0, a0
+; RV64ZDINX-NEXT:    ret
+;
+; RV32ZHINX-LABEL: fcanonicalize_f64:
+; RV32ZHINX:       # %bb.0:
+; RV32ZHINX-NEXT:    addi sp, sp, -16
+; RV32ZHINX-NEXT:    .cfi_def_cfa_offset 16
+; RV32ZHINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    .cfi_offset ra, -4
+; RV32ZHINX-NEXT:    lui a3, 261888
+; RV32ZHINX-NEXT:    li a2, 0
+; RV32ZHINX-NEXT:    call __muldf3
+; RV32ZHINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    .cfi_restore ra
+; RV32ZHINX-NEXT:    addi sp, sp, 16
+; RV32ZHINX-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: fcanonicalize_f64:
+; RV64ZHINX:       # %bb.0:
+; RV64ZHINX-NEXT:    addi sp, sp, -16
+; RV64ZHINX-NEXT:    .cfi_def_cfa_offset 16
+; RV64ZHINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    .cfi_offset ra, -8
+; RV64ZHINX-NEXT:    li a1, 1023
+; RV64ZHINX-NEXT:    slli a1, a1, 52
+; RV64ZHINX-NEXT:    call __muldf3
+; RV64ZHINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    .cfi_restore ra
+; RV64ZHINX-NEXT:    addi sp, sp, 16
+; RV64ZHINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZHINX-NEXT:    ret
   %z = call double @llvm.canonicalize.f64(double %x)
   ret double %z
 }
@@ -2622,6 +4248,71 @@ define double @fcanonicalize_f64_nnan(double %x) {
 ; CHECK-NOFP16-RV32:       # %bb.0:
 ; CHECK-NOFP16-RV32-NEXT:    fmin.d fa0, fa0, fa0
 ; CHECK-NOFP16-RV32-NEXT:    ret
+;
+; RV32ZFINX-LABEL: fcanonicalize_f64_nnan:
+; RV32ZFINX:       # %bb.0:
+; RV32ZFINX-NEXT:    addi sp, sp, -16
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 16
+; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    .cfi_offset ra, -4
+; RV32ZFINX-NEXT:    lui a3, 261888
+; RV32ZFINX-NEXT:    li a2, 0
+; RV32ZFINX-NEXT:    call __muldf3
+; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    .cfi_restore ra
+; RV32ZFINX-NEXT:    addi sp, sp, 16
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZFINX-NEXT:    ret
+;
+; RV64ZFINX-LABEL: fcanonicalize_f64_nnan:
+; RV64ZFINX:       # %bb.0:
+; RV64ZFINX-NEXT:    addi sp, sp, -16
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 16
+; RV64ZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    .cfi_offset ra, -8
+; RV64ZFINX-NEXT:    li a1, 1023
+; RV64ZFINX-NEXT:    slli a1, a1, 52
+; RV64ZFINX-NEXT:    call __muldf3
+; RV64ZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    .cfi_restore ra
+; RV64ZFINX-NEXT:    addi sp, sp, 16
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZFINX-NEXT:    ret
+;
+; RV64ZDINX-LABEL: fcanonicalize_f64_nnan:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    fmin.d a0, a0, a0
+; RV64ZDINX-NEXT:    ret
+;
+; RV32ZHINX-LABEL: fcanonicalize_f64_nnan:
+; RV32ZHINX:       # %bb.0:
+; RV32ZHINX-NEXT:    addi sp, sp, -16
+; RV32ZHINX-NEXT:    .cfi_def_cfa_offset 16
+; RV32ZHINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    .cfi_offset ra, -4
+; RV32ZHINX-NEXT:    lui a3, 261888
+; RV32ZHINX-NEXT:    li a2, 0
+; RV32ZHINX-NEXT:    call __muldf3
+; RV32ZHINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    .cfi_restore ra
+; RV32ZHINX-NEXT:    addi sp, sp, 16
+; RV32ZHINX-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: fcanonicalize_f64_nnan:
+; RV64ZHINX:       # %bb.0:
+; RV64ZHINX-NEXT:    addi sp, sp, -16
+; RV64ZHINX-NEXT:    .cfi_def_cfa_offset 16
+; RV64ZHINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    .cfi_offset ra, -8
+; RV64ZHINX-NEXT:    li a1, 1023
+; RV64ZHINX-NEXT:    slli a1, a1, 52
+; RV64ZHINX-NEXT:    call __muldf3
+; RV64ZHINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    .cfi_restore ra
+; RV64ZHINX-NEXT:    addi sp, sp, 16
+; RV64ZHINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZHINX-NEXT:    ret
   %z = call nnan double @llvm.canonicalize.f64(double %x)
   ret double %z
 }
@@ -2738,6 +4429,188 @@ define <2 x double> @fcanonicalize_v2f64(<2 x double> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    fmin.d fa0, fa0, fa0
 ; CHECK-NOFP16-RV32-NEXT:    fmin.d fa1, fa1, fa1
 ; CHECK-NOFP16-RV32-NEXT:    ret
+;
+; RV32ZFINX-LABEL: fcanonicalize_v2f64:
+; RV32ZFINX:       # %bb.0:
+; RV32ZFINX-NEXT:    addi sp, sp, -32
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 32
+; RV32ZFINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    .cfi_offset ra, -4
+; RV32ZFINX-NEXT:    .cfi_offset s0, -8
+; RV32ZFINX-NEXT:    .cfi_offset s1, -12
+; RV32ZFINX-NEXT:    .cfi_offset s2, -16
+; RV32ZFINX-NEXT:    .cfi_offset s3, -20
+; RV32ZFINX-NEXT:    .cfi_offset s4, -24
+; RV32ZFINX-NEXT:    lw a2, 0(a1)
+; RV32ZFINX-NEXT:    lw a4, 4(a1)
+; RV32ZFINX-NEXT:    lw s0, 8(a1)
+; RV32ZFINX-NEXT:    lw s1, 12(a1)
+; RV32ZFINX-NEXT:    mv s2, a0
+; RV32ZFINX-NEXT:    lui a3, 261888
+; RV32ZFINX-NEXT:    mv a0, a2
+; RV32ZFINX-NEXT:    mv a1, a4
+; RV32ZFINX-NEXT:    li a2, 0
+; RV32ZFINX-NEXT:    call __muldf3
+; RV32ZFINX-NEXT:    mv s3, a0
+; RV32ZFINX-NEXT:    mv s4, a1
+; RV32ZFINX-NEXT:    lui a3, 261888
+; RV32ZFINX-NEXT:    mv a0, s0
+; RV32ZFINX-NEXT:    mv a1, s1
+; RV32ZFINX-NEXT:    li a2, 0
+; RV32ZFINX-NEXT:    call __muldf3
+; RV32ZFINX-NEXT:    sw s3, 0(s2)
+; RV32ZFINX-NEXT:    sw s4, 4(s2)
+; RV32ZFINX-NEXT:    sw a0, 8(s2)
+; RV32ZFINX-NEXT:    sw a1, 12(s2)
+; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    .cfi_restore ra
+; RV32ZFINX-NEXT:    .cfi_restore s0
+; RV32ZFINX-NEXT:    .cfi_restore s1
+; RV32ZFINX-NEXT:    .cfi_restore s2
+; RV32ZFINX-NEXT:    .cfi_restore s3
+; RV32ZFINX-NEXT:    .cfi_restore s4
+; RV32ZFINX-NEXT:    addi sp, sp, 32
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZFINX-NEXT:    ret
+;
+; RV64ZFINX-LABEL: fcanonicalize_v2f64:
+; RV64ZFINX:       # %bb.0:
+; RV64ZFINX-NEXT:    addi sp, sp, -32
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 32
+; RV64ZFINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    .cfi_offset ra, -8
+; RV64ZFINX-NEXT:    .cfi_offset s0, -16
+; RV64ZFINX-NEXT:    .cfi_offset s1, -24
+; RV64ZFINX-NEXT:    .cfi_offset s2, -32
+; RV64ZFINX-NEXT:    mv s0, a1
+; RV64ZFINX-NEXT:    li s1, 1023
+; RV64ZFINX-NEXT:    slli s1, s1, 52
+; RV64ZFINX-NEXT:    mv a1, s1
+; RV64ZFINX-NEXT:    call __muldf3
+; RV64ZFINX-NEXT:    mv s2, a0
+; RV64ZFINX-NEXT:    mv a0, s0
+; RV64ZFINX-NEXT:    mv a1, s1
+; RV64ZFINX-NEXT:    call __muldf3
+; RV64ZFINX-NEXT:    mv a1, a0
+; RV64ZFINX-NEXT:    mv a0, s2
+; RV64ZFINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    .cfi_restore ra
+; RV64ZFINX-NEXT:    .cfi_restore s0
+; RV64ZFINX-NEXT:    .cfi_restore s1
+; RV64ZFINX-NEXT:    .cfi_restore s2
+; RV64ZFINX-NEXT:    addi sp, sp, 32
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZFINX-NEXT:    ret
+;
+; RV64ZDINX-LABEL: fcanonicalize_v2f64:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    fmin.d a0, a0, a0
+; RV64ZDINX-NEXT:    fmin.d a1, a1, a1
+; RV64ZDINX-NEXT:    ret
+;
+; RV32ZHINX-LABEL: fcanonicalize_v2f64:
+; RV32ZHINX:       # %bb.0:
+; RV32ZHINX-NEXT:    addi sp, sp, -32
+; RV32ZHINX-NEXT:    .cfi_def_cfa_offset 32
+; RV32ZHINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    .cfi_offset ra, -4
+; RV32ZHINX-NEXT:    .cfi_offset s0, -8
+; RV32ZHINX-NEXT:    .cfi_offset s1, -12
+; RV32ZHINX-NEXT:    .cfi_offset s2, -16
+; RV32ZHINX-NEXT:    .cfi_offset s3, -20
+; RV32ZHINX-NEXT:    .cfi_offset s4, -24
+; RV32ZHINX-NEXT:    lw a2, 0(a1)
+; RV32ZHINX-NEXT:    lw a4, 4(a1)
+; RV32ZHINX-NEXT:    lw s0, 8(a1)
+; RV32ZHINX-NEXT:    lw s1, 12(a1)
+; RV32ZHINX-NEXT:    mv s2, a0
+; RV32ZHINX-NEXT:    lui a3, 261888
+; RV32ZHINX-NEXT:    mv a0, a2
+; RV32ZHINX-NEXT:    mv a1, a4
+; RV32ZHINX-NEXT:    li a2, 0
+; RV32ZHINX-NEXT:    call __muldf3
+; RV32ZHINX-NEXT:    mv s3, a0
+; RV32ZHINX-NEXT:    mv s4, a1
+; RV32ZHINX-NEXT:    lui a3, 261888
+; RV32ZHINX-NEXT:    mv a0, s0
+; RV32ZHINX-NEXT:    mv a1, s1
+; RV32ZHINX-NEXT:    li a2, 0
+; RV32ZHINX-NEXT:    call __muldf3
+; RV32ZHINX-NEXT:    sw s3, 0(s2)
+; RV32ZHINX-NEXT:    sw s4, 4(s2)
+; RV32ZHINX-NEXT:    sw a0, 8(s2)
+; RV32ZHINX-NEXT:    sw a1, 12(s2)
+; RV32ZHINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    .cfi_restore ra
+; RV32ZHINX-NEXT:    .cfi_restore s0
+; RV32ZHINX-NEXT:    .cfi_restore s1
+; RV32ZHINX-NEXT:    .cfi_restore s2
+; RV32ZHINX-NEXT:    .cfi_restore s3
+; RV32ZHINX-NEXT:    .cfi_restore s4
+; RV32ZHINX-NEXT:    addi sp, sp, 32
+; RV32ZHINX-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: fcanonicalize_v2f64:
+; RV64ZHINX:       # %bb.0:
+; RV64ZHINX-NEXT:    addi sp, sp, -32
+; RV64ZHINX-NEXT:    .cfi_def_cfa_offset 32
+; RV64ZHINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    .cfi_offset ra, -8
+; RV64ZHINX-NEXT:    .cfi_offset s0, -16
+; RV64ZHINX-NEXT:    .cfi_offset s1, -24
+; RV64ZHINX-NEXT:    .cfi_offset s2, -32
+; RV64ZHINX-NEXT:    mv s0, a1
+; RV64ZHINX-NEXT:    li s1, 1023
+; RV64ZHINX-NEXT:    slli s1, s1, 52
+; RV64ZHINX-NEXT:    mv a1, s1
+; RV64ZHINX-NEXT:    call __muldf3
+; RV64ZHINX-NEXT:    mv s2, a0
+; RV64ZHINX-NEXT:    mv a0, s0
+; RV64ZHINX-NEXT:    mv a1, s1
+; RV64ZHINX-NEXT:    call __muldf3
+; RV64ZHINX-NEXT:    mv a1, a0
+; RV64ZHINX-NEXT:    mv a0, s2
+; RV64ZHINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    .cfi_restore ra
+; RV64ZHINX-NEXT:    .cfi_restore s0
+; RV64ZHINX-NEXT:    .cfi_restore s1
+; RV64ZHINX-NEXT:    .cfi_restore s2
+; RV64ZHINX-NEXT:    addi sp, sp, 32
+; RV64ZHINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZHINX-NEXT:    ret
   %z = call <2 x double> @llvm.canonicalize.v2f64(<2 x double> %x)
   ret <2 x double> %z
 }
@@ -2854,6 +4727,188 @@ define <2 x double> @fcanonicalize_v2f64_nnan(<2 x double> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    fmin.d fa0, fa0, fa0
 ; CHECK-NOFP16-RV32-NEXT:    fmin.d fa1, fa1, fa1
 ; CHECK-NOFP16-RV32-NEXT:    ret
+;
+; RV32ZFINX-LABEL: fcanonicalize_v2f64_nnan:
+; RV32ZFINX:       # %bb.0:
+; RV32ZFINX-NEXT:    addi sp, sp, -32
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 32
+; RV32ZFINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    .cfi_offset ra, -4
+; RV32ZFINX-NEXT:    .cfi_offset s0, -8
+; RV32ZFINX-NEXT:    .cfi_offset s1, -12
+; RV32ZFINX-NEXT:    .cfi_offset s2, -16
+; RV32ZFINX-NEXT:    .cfi_offset s3, -20
+; RV32ZFINX-NEXT:    .cfi_offset s4, -24
+; RV32ZFINX-NEXT:    lw a2, 0(a1)
+; RV32ZFINX-NEXT:    lw a4, 4(a1)
+; RV32ZFINX-NEXT:    lw s0, 8(a1)
+; RV32ZFINX-NEXT:    lw s1, 12(a1)
+; RV32ZFINX-NEXT:    mv s2, a0
+; RV32ZFINX-NEXT:    lui a3, 261888
+; RV32ZFINX-NEXT:    mv a0, a2
+; RV32ZFINX-NEXT:    mv a1, a4
+; RV32ZFINX-NEXT:    li a2, 0
+; RV32ZFINX-NEXT:    call __muldf3
+; RV32ZFINX-NEXT:    mv s3, a0
+; RV32ZFINX-NEXT:    mv s4, a1
+; RV32ZFINX-NEXT:    lui a3, 261888
+; RV32ZFINX-NEXT:    mv a0, s0
+; RV32ZFINX-NEXT:    mv a1, s1
+; RV32ZFINX-NEXT:    li a2, 0
+; RV32ZFINX-NEXT:    call __muldf3
+; RV32ZFINX-NEXT:    sw s3, 0(s2)
+; RV32ZFINX-NEXT:    sw s4, 4(s2)
+; RV32ZFINX-NEXT:    sw a0, 8(s2)
+; RV32ZFINX-NEXT:    sw a1, 12(s2)
+; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    .cfi_restore ra
+; RV32ZFINX-NEXT:    .cfi_restore s0
+; RV32ZFINX-NEXT:    .cfi_restore s1
+; RV32ZFINX-NEXT:    .cfi_restore s2
+; RV32ZFINX-NEXT:    .cfi_restore s3
+; RV32ZFINX-NEXT:    .cfi_restore s4
+; RV32ZFINX-NEXT:    addi sp, sp, 32
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZFINX-NEXT:    ret
+;
+; RV64ZFINX-LABEL: fcanonicalize_v2f64_nnan:
+; RV64ZFINX:       # %bb.0:
+; RV64ZFINX-NEXT:    addi sp, sp, -32
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 32
+; RV64ZFINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    .cfi_offset ra, -8
+; RV64ZFINX-NEXT:    .cfi_offset s0, -16
+; RV64ZFINX-NEXT:    .cfi_offset s1, -24
+; RV64ZFINX-NEXT:    .cfi_offset s2, -32
+; RV64ZFINX-NEXT:    mv s0, a1
+; RV64ZFINX-NEXT:    li s1, 1023
+; RV64ZFINX-NEXT:    slli s1, s1, 52
+; RV64ZFINX-NEXT:    mv a1, s1
+; RV64ZFINX-NEXT:    call __muldf3
+; RV64ZFINX-NEXT:    mv s2, a0
+; RV64ZFINX-NEXT:    mv a0, s0
+; RV64ZFINX-NEXT:    mv a1, s1
+; RV64ZFINX-NEXT:    call __muldf3
+; RV64ZFINX-NEXT:    mv a1, a0
+; RV64ZFINX-NEXT:    mv a0, s2
+; RV64ZFINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    .cfi_restore ra
+; RV64ZFINX-NEXT:    .cfi_restore s0
+; RV64ZFINX-NEXT:    .cfi_restore s1
+; RV64ZFINX-NEXT:    .cfi_restore s2
+; RV64ZFINX-NEXT:    addi sp, sp, 32
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZFINX-NEXT:    ret
+;
+; RV64ZDINX-LABEL: fcanonicalize_v2f64_nnan:
+; RV64ZDINX:       # %bb.0:
+; RV64ZDINX-NEXT:    fmin.d a0, a0, a0
+; RV64ZDINX-NEXT:    fmin.d a1, a1, a1
+; RV64ZDINX-NEXT:    ret
+;
+; RV32ZHINX-LABEL: fcanonicalize_v2f64_nnan:
+; RV32ZHINX:       # %bb.0:
+; RV32ZHINX-NEXT:    addi sp, sp, -32
+; RV32ZHINX-NEXT:    .cfi_def_cfa_offset 32
+; RV32ZHINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    .cfi_offset ra, -4
+; RV32ZHINX-NEXT:    .cfi_offset s0, -8
+; RV32ZHINX-NEXT:    .cfi_offset s1, -12
+; RV32ZHINX-NEXT:    .cfi_offset s2, -16
+; RV32ZHINX-NEXT:    .cfi_offset s3, -20
+; RV32ZHINX-NEXT:    .cfi_offset s4, -24
+; RV32ZHINX-NEXT:    lw a2, 0(a1)
+; RV32ZHINX-NEXT:    lw a4, 4(a1)
+; RV32ZHINX-NEXT:    lw s0, 8(a1)
+; RV32ZHINX-NEXT:    lw s1, 12(a1)
+; RV32ZHINX-NEXT:    mv s2, a0
+; RV32ZHINX-NEXT:    lui a3, 261888
+; RV32ZHINX-NEXT:    mv a0, a2
+; RV32ZHINX-NEXT:    mv a1, a4
+; RV32ZHINX-NEXT:    li a2, 0
+; RV32ZHINX-NEXT:    call __muldf3
+; RV32ZHINX-NEXT:    mv s3, a0
+; RV32ZHINX-NEXT:    mv s4, a1
+; RV32ZHINX-NEXT:    lui a3, 261888
+; RV32ZHINX-NEXT:    mv a0, s0
+; RV32ZHINX-NEXT:    mv a1, s1
+; RV32ZHINX-NEXT:    li a2, 0
+; RV32ZHINX-NEXT:    call __muldf3
+; RV32ZHINX-NEXT:    sw s3, 0(s2)
+; RV32ZHINX-NEXT:    sw s4, 4(s2)
+; RV32ZHINX-NEXT:    sw a0, 8(s2)
+; RV32ZHINX-NEXT:    sw a1, 12(s2)
+; RV32ZHINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    .cfi_restore ra
+; RV32ZHINX-NEXT:    .cfi_restore s0
+; RV32ZHINX-NEXT:    .cfi_restore s1
+; RV32ZHINX-NEXT:    .cfi_restore s2
+; RV32ZHINX-NEXT:    .cfi_restore s3
+; RV32ZHINX-NEXT:    .cfi_restore s4
+; RV32ZHINX-NEXT:    addi sp, sp, 32
+; RV32ZHINX-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: fcanonicalize_v2f64_nnan:
+; RV64ZHINX:       # %bb.0:
+; RV64ZHINX-NEXT:    addi sp, sp, -32
+; RV64ZHINX-NEXT:    .cfi_def_cfa_offset 32
+; RV64ZHINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    .cfi_offset ra, -8
+; RV64ZHINX-NEXT:    .cfi_offset s0, -16
+; RV64ZHINX-NEXT:    .cfi_offset s1, -24
+; RV64ZHINX-NEXT:    .cfi_offset s2, -32
+; RV64ZHINX-NEXT:    mv s0, a1
+; RV64ZHINX-NEXT:    li s1, 1023
+; RV64ZHINX-NEXT:    slli s1, s1, 52
+; RV64ZHINX-NEXT:    mv a1, s1
+; RV64ZHINX-NEXT:    call __muldf3
+; RV64ZHINX-NEXT:    mv s2, a0
+; RV64ZHINX-NEXT:    mv a0, s0
+; RV64ZHINX-NEXT:    mv a1, s1
+; RV64ZHINX-NEXT:    call __muldf3
+; RV64ZHINX-NEXT:    mv a1, a0
+; RV64ZHINX-NEXT:    mv a0, s2
+; RV64ZHINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    .cfi_restore ra
+; RV64ZHINX-NEXT:    .cfi_restore s0
+; RV64ZHINX-NEXT:    .cfi_restore s1
+; RV64ZHINX-NEXT:    .cfi_restore s2
+; RV64ZHINX-NEXT:    addi sp, sp, 32
+; RV64ZHINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZHINX-NEXT:    ret
   %z = call nnan <2 x double> @llvm.canonicalize.v2f64(<2 x double> %x)
   ret <2 x double> %z
 }
@@ -3006,6 +5061,211 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ; CHECK-NOFP16-RV32-NEXT:  .LBB15_2: # %start
 ; CHECK-NOFP16-RV32-NEXT:    fmin.d fa0, fa1, fa1
 ; CHECK-NOFP16-RV32-NEXT:    ret
+;
+; RV32ZFINX-LABEL: fcanonicalize_softfloat:
+; RV32ZFINX:       # %bb.0: # %start
+; RV32ZFINX-NEXT:    addi sp, sp, -32
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 32
+; RV32ZFINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    .cfi_offset ra, -4
+; RV32ZFINX-NEXT:    .cfi_offset s0, -8
+; RV32ZFINX-NEXT:    .cfi_offset s1, -12
+; RV32ZFINX-NEXT:    .cfi_offset s2, -16
+; RV32ZFINX-NEXT:    .cfi_offset s3, -20
+; RV32ZFINX-NEXT:    .cfi_offset s4, -24
+; RV32ZFINX-NEXT:    mv s0, a3
+; RV32ZFINX-NEXT:    mv s1, a2
+; RV32ZFINX-NEXT:    mv s2, a1
+; RV32ZFINX-NEXT:    mv s3, a0
+; RV32ZFINX-NEXT:    call __ltdf2
+; RV32ZFINX-NEXT:    srli s4, a0, 31
+; RV32ZFINX-NEXT:    mv a0, s3
+; RV32ZFINX-NEXT:    mv a1, s2
+; RV32ZFINX-NEXT:    mv a2, s3
+; RV32ZFINX-NEXT:    mv a3, s2
+; RV32ZFINX-NEXT:    call __unorddf2
+; RV32ZFINX-NEXT:    snez a0, a0
+; RV32ZFINX-NEXT:    or a0, a0, s4
+; RV32ZFINX-NEXT:    bnez a0, .LBB15_2
+; RV32ZFINX-NEXT:  # %bb.1: # %start
+; RV32ZFINX-NEXT:    mv s1, s3
+; RV32ZFINX-NEXT:    mv s0, s2
+; RV32ZFINX-NEXT:  .LBB15_2: # %start
+; RV32ZFINX-NEXT:    lui a3, 261888
+; RV32ZFINX-NEXT:    mv a0, s1
+; RV32ZFINX-NEXT:    mv a1, s0
+; RV32ZFINX-NEXT:    li a2, 0
+; RV32ZFINX-NEXT:    call __muldf3
+; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    .cfi_restore ra
+; RV32ZFINX-NEXT:    .cfi_restore s0
+; RV32ZFINX-NEXT:    .cfi_restore s1
+; RV32ZFINX-NEXT:    .cfi_restore s2
+; RV32ZFINX-NEXT:    .cfi_restore s3
+; RV32ZFINX-NEXT:    .cfi_restore s4
+; RV32ZFINX-NEXT:    addi sp, sp, 32
+; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZFINX-NEXT:    ret
+;
+; RV64ZFINX-LABEL: fcanonicalize_softfloat:
+; RV64ZFINX:       # %bb.0: # %start
+; RV64ZFINX-NEXT:    addi sp, sp, -32
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 32
+; RV64ZFINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    .cfi_offset ra, -8
+; RV64ZFINX-NEXT:    .cfi_offset s0, -16
+; RV64ZFINX-NEXT:    .cfi_offset s1, -24
+; RV64ZFINX-NEXT:    .cfi_offset s2, -32
+; RV64ZFINX-NEXT:    mv s0, a1
+; RV64ZFINX-NEXT:    mv s1, a0
+; RV64ZFINX-NEXT:    call __ltdf2
+; RV64ZFINX-NEXT:    srli s2, a0, 63
+; RV64ZFINX-NEXT:    mv a0, s1
+; RV64ZFINX-NEXT:    mv a1, s1
+; RV64ZFINX-NEXT:    call __unorddf2
+; RV64ZFINX-NEXT:    snez a0, a0
+; RV64ZFINX-NEXT:    or a0, a0, s2
+; RV64ZFINX-NEXT:    bnez a0, .LBB15_2
+; RV64ZFINX-NEXT:  # %bb.1: # %start
+; RV64ZFINX-NEXT:    mv s0, s1
+; RV64ZFINX-NEXT:  .LBB15_2: # %start
+; RV64ZFINX-NEXT:    li a1, 1023
+; RV64ZFINX-NEXT:    slli a1, a1, 52
+; RV64ZFINX-NEXT:    mv a0, s0
+; RV64ZFINX-NEXT:    call __muldf3
+; RV64ZFINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    .cfi_restore ra
+; RV64ZFINX-NEXT:    .cfi_restore s0
+; RV64ZFINX-NEXT:    .cfi_restore s1
+; RV64ZFINX-NEXT:    .cfi_restore s2
+; RV64ZFINX-NEXT:    addi sp, sp, 32
+; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZFINX-NEXT:    ret
+;
+; RV64ZDINX-LABEL: fcanonicalize_softfloat:
+; RV64ZDINX:       # %bb.0: # %start
+; RV64ZDINX-NEXT:    flt.d a2, a0, a1
+; RV64ZDINX-NEXT:    feq.d a3, a0, a0
+; RV64ZDINX-NEXT:    xori a3, a3, 1
+; RV64ZDINX-NEXT:    or a2, a3, a2
+; RV64ZDINX-NEXT:    bnez a2, .LBB15_2
+; RV64ZDINX-NEXT:  # %bb.1: # %start
+; RV64ZDINX-NEXT:    mv a1, a0
+; RV64ZDINX-NEXT:  .LBB15_2: # %start
+; RV64ZDINX-NEXT:    fmin.d a0, a1, a1
+; RV64ZDINX-NEXT:    ret
+;
+; RV32ZHINX-LABEL: fcanonicalize_softfloat:
+; RV32ZHINX:       # %bb.0: # %start
+; RV32ZHINX-NEXT:    addi sp, sp, -32
+; RV32ZHINX-NEXT:    .cfi_def_cfa_offset 32
+; RV32ZHINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    .cfi_offset ra, -4
+; RV32ZHINX-NEXT:    .cfi_offset s0, -8
+; RV32ZHINX-NEXT:    .cfi_offset s1, -12
+; RV32ZHINX-NEXT:    .cfi_offset s2, -16
+; RV32ZHINX-NEXT:    .cfi_offset s3, -20
+; RV32ZHINX-NEXT:    .cfi_offset s4, -24
+; RV32ZHINX-NEXT:    mv s0, a3
+; RV32ZHINX-NEXT:    mv s1, a2
+; RV32ZHINX-NEXT:    mv s2, a1
+; RV32ZHINX-NEXT:    mv s3, a0
+; RV32ZHINX-NEXT:    call __ltdf2
+; RV32ZHINX-NEXT:    srli s4, a0, 31
+; RV32ZHINX-NEXT:    mv a0, s3
+; RV32ZHINX-NEXT:    mv a1, s2
+; RV32ZHINX-NEXT:    mv a2, s3
+; RV32ZHINX-NEXT:    mv a3, s2
+; RV32ZHINX-NEXT:    call __unorddf2
+; RV32ZHINX-NEXT:    snez a0, a0
+; RV32ZHINX-NEXT:    or a0, a0, s4
+; RV32ZHINX-NEXT:    bnez a0, .LBB15_2
+; RV32ZHINX-NEXT:  # %bb.1: # %start
+; RV32ZHINX-NEXT:    mv s1, s3
+; RV32ZHINX-NEXT:    mv s0, s2
+; RV32ZHINX-NEXT:  .LBB15_2: # %start
+; RV32ZHINX-NEXT:    lui a3, 261888
+; RV32ZHINX-NEXT:    mv a0, s1
+; RV32ZHINX-NEXT:    mv a1, s0
+; RV32ZHINX-NEXT:    li a2, 0
+; RV32ZHINX-NEXT:    call __muldf3
+; RV32ZHINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    .cfi_restore ra
+; RV32ZHINX-NEXT:    .cfi_restore s0
+; RV32ZHINX-NEXT:    .cfi_restore s1
+; RV32ZHINX-NEXT:    .cfi_restore s2
+; RV32ZHINX-NEXT:    .cfi_restore s3
+; RV32ZHINX-NEXT:    .cfi_restore s4
+; RV32ZHINX-NEXT:    addi sp, sp, 32
+; RV32ZHINX-NEXT:    .cfi_def_cfa_offset 0
+; RV32ZHINX-NEXT:    ret
+;
+; RV64ZHINX-LABEL: fcanonicalize_softfloat:
+; RV64ZHINX:       # %bb.0: # %start
+; RV64ZHINX-NEXT:    addi sp, sp, -32
+; RV64ZHINX-NEXT:    .cfi_def_cfa_offset 32
+; RV64ZHINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    .cfi_offset ra, -8
+; RV64ZHINX-NEXT:    .cfi_offset s0, -16
+; RV64ZHINX-NEXT:    .cfi_offset s1, -24
+; RV64ZHINX-NEXT:    .cfi_offset s2, -32
+; RV64ZHINX-NEXT:    mv s0, a1
+; RV64ZHINX-NEXT:    mv s1, a0
+; RV64ZHINX-NEXT:    call __ltdf2
+; RV64ZHINX-NEXT:    srli s2, a0, 63
+; RV64ZHINX-NEXT:    mv a0, s1
+; RV64ZHINX-NEXT:    mv a1, s1
+; RV64ZHINX-NEXT:    call __unorddf2
+; RV64ZHINX-NEXT:    snez a0, a0
+; RV64ZHINX-NEXT:    or a0, a0, s2
+; RV64ZHINX-NEXT:    bnez a0, .LBB15_2
+; RV64ZHINX-NEXT:  # %bb.1: # %start
+; RV64ZHINX-NEXT:    mv s0, s1
+; RV64ZHINX-NEXT:  .LBB15_2: # %start
+; RV64ZHINX-NEXT:    li a1, 1023
+; RV64ZHINX-NEXT:    slli a1, a1, 52
+; RV64ZHINX-NEXT:    mv a0, s0
+; RV64ZHINX-NEXT:    call __muldf3
+; RV64ZHINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    .cfi_restore ra
+; RV64ZHINX-NEXT:    .cfi_restore s0
+; RV64ZHINX-NEXT:    .cfi_restore s1
+; RV64ZHINX-NEXT:    .cfi_restore s2
+; RV64ZHINX-NEXT:    addi sp, sp, 32
+; RV64ZHINX-NEXT:    .cfi_def_cfa_offset 0
+; RV64ZHINX-NEXT:    ret
 start:
   %2 = fcmp olt double %0, %1
   %3 = fcmp uno double %0, 0.000000e+00

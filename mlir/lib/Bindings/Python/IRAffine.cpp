@@ -8,31 +8,26 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
-#include "IRModule.h"
-#include "NanobindUtils.h"
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
+#include "mlir/Bindings/Python/IRCore.h"
+// clang-format off
+#include "mlir/Bindings/Python/NanobindUtils.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+// clang-format on
 #include "mlir-c/IntegerSet.h"
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "mlir/Support/LLVM.h"
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
 
 namespace nb = nanobind;
 using namespace mlir;
-using namespace mlir::python;
-
-using llvm::SmallVector;
-using llvm::StringRef;
-using llvm::Twine;
+using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
 static const char kDumpDocstring[] =
     R"(Dumps a debug representation of the object to stderr.)";
@@ -42,22 +37,19 @@ static const char kDumpDocstring[] =
 /// Throws errors in case of failure, using "action" to describe what the caller
 /// was attempting to do.
 template <typename PyType, typename CType>
-static void pyListToVector(const nb::list &list,
-                           llvm::SmallVectorImpl<CType> &result,
-                           StringRef action) {
+static void pyListToVector(const nb::list &list, std::vector<CType> &result,
+                           std::string_view action) {
   result.reserve(nb::len(list));
   for (nb::handle item : list) {
     try {
       result.push_back(nb::cast<PyType>(item));
     } catch (nb::cast_error &err) {
-      std::string msg = (llvm::Twine("Invalid expression when ") + action +
-                         " (" + err.what() + ")")
-                            .str();
+      std::string msg = nanobind::detail::join("Invalid expression when ",
+                                               action, " (", err.what(), ")");
       throw std::runtime_error(msg.c_str());
     } catch (std::runtime_error &err) {
-      std::string msg = (llvm::Twine("Invalid expression (None?) when ") +
-                         action + " (" + err.what() + ")")
-                            .str();
+      std::string msg = nanobind::detail::join(
+          "Invalid expression (None?) when ", action, " (", err.what(), ")");
       throw std::runtime_error(msg.c_str());
     }
   }
@@ -65,7 +57,7 @@ static void pyListToVector(const nb::list &list,
 
 template <typename PermutationTy>
 static bool isPermutation(const std::vector<PermutationTy> &permutation) {
-  llvm::SmallVector<bool, 8> seen(permutation.size(), false);
+  std::vector<bool> seen(permutation.size(), false);
   for (auto val : permutation) {
     if (val < permutation.size()) {
       if (seen[val])
@@ -78,7 +70,9 @@ static bool isPermutation(const std::vector<PermutationTy> &permutation) {
   return true;
 }
 
-namespace {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 /// CRTP base class for Python MLIR affine expressions that subclass AffineExpr
 /// and should be castable from it. Intermediate hierarchy classes can be
@@ -102,11 +96,11 @@ public:
   static MlirAffineExpr castFrom(PyAffineExpr &orig) {
     if (!DerivedTy::isaFunction(orig)) {
       auto origRepr = nb::cast<std::string>(nb::repr(nb::cast(orig)));
-      throw nb::value_error((Twine("Cannot cast affine expression to ") +
-                             DerivedTy::pyClassName + " (from " + origRepr +
-                             ")")
-                                .str()
-                                .c_str());
+      throw nb::value_error(
+          nanobind::detail::join("Cannot cast affine expression to ",
+                                 DerivedTy::pyClassName, " (from ", origRepr,
+                                 ")")
+              .c_str());
     }
     return orig;
   }
@@ -114,12 +108,6 @@ public:
   static void bind(nb::module_ &m) {
     auto cls = ClassTy(m, DerivedTy::pyClassName);
     cls.def(nb::init<PyAffineExpr &>(), nb::arg("expr"));
-    cls.def_static(
-        "isinstance",
-        [](PyAffineExpr &otherAffineExpr) -> bool {
-          return DerivedTy::isaFunction(otherAffineExpr);
-        },
-        nb::arg("other"));
     DerivedTy::bindDerived(cls);
   }
 
@@ -195,14 +183,14 @@ public:
   static constexpr const char *pyClassName = "AffineBinaryExpr";
   using PyConcreteAffineExpr::PyConcreteAffineExpr;
 
-  PyAffineExpr lhs() {
+  nb::typed<nb::object, PyAffineExpr> lhs() {
     MlirAffineExpr lhsExpr = mlirAffineBinaryOpExprGetLHS(get());
-    return PyAffineExpr(getContext(), lhsExpr);
+    return PyAffineExpr(getContext(), lhsExpr).maybeDownCast();
   }
 
-  PyAffineExpr rhs() {
+  nb::typed<nb::object, PyAffineExpr> rhs() {
     MlirAffineExpr rhsExpr = mlirAffineBinaryOpExprGetRHS(get());
-    return PyAffineExpr(getContext(), rhsExpr);
+    return PyAffineExpr(getContext(), rhsExpr).maybeDownCast();
   }
 
   static void bindDerived(ClassTy &c) {
@@ -356,7 +344,9 @@ public:
   }
 };
 
-} // namespace
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
 
 bool PyAffineExpr::operator==(const PyAffineExpr &other) const {
   return mlirAffineExprEqual(affineExpr, other.affineExpr);
@@ -375,10 +365,33 @@ PyAffineExpr PyAffineExpr::createFromCapsule(const nb::object &capsule) {
       rawAffineExpr);
 }
 
+nb::typed<nb::object, PyAffineExpr> PyAffineExpr::maybeDownCast() {
+  MlirAffineExpr expr = get();
+  if (mlirAffineExprIsAConstant(expr))
+    return nb::cast(PyAffineConstantExpr(getContext(), expr));
+  if (mlirAffineExprIsADim(expr))
+    return nb::cast(PyAffineDimExpr(getContext(), expr));
+  if (mlirAffineExprIsASymbol(expr))
+    return nb::cast(PyAffineSymbolExpr(getContext(), expr));
+  if (mlirAffineExprIsAAdd(expr))
+    return nb::cast(PyAffineAddExpr(getContext(), expr));
+  if (mlirAffineExprIsAMul(expr))
+    return nb::cast(PyAffineMulExpr(getContext(), expr));
+  if (mlirAffineExprIsAMod(expr))
+    return nb::cast(PyAffineModExpr(getContext(), expr));
+  if (mlirAffineExprIsAFloorDiv(expr))
+    return nb::cast(PyAffineFloorDivExpr(getContext(), expr));
+  if (mlirAffineExprIsACeilDiv(expr))
+    return nb::cast(PyAffineCeilDivExpr(getContext(), expr));
+  return nb::cast(*this);
+}
+
 //------------------------------------------------------------------------------
 // PyAffineMap and utilities.
 //------------------------------------------------------------------------------
-namespace {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 /// A list of expressions contained in an affine map. Internally these are
 /// stored as a consecutive array leading to inexpensive random access. Both
@@ -414,7 +427,9 @@ private:
 
   PyAffineMap affineMap;
 };
-} // namespace
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
 
 bool PyAffineMap::operator==(const PyAffineMap &other) const {
   return mlirAffineMapEqual(affineMap, other.affineMap);
@@ -436,7 +451,9 @@ PyAffineMap PyAffineMap::createFromCapsule(const nb::object &capsule) {
 //------------------------------------------------------------------------------
 // PyIntegerSet and utilities.
 //------------------------------------------------------------------------------
-namespace {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 class PyIntegerSetConstraint {
 public:
@@ -490,7 +507,9 @@ private:
 
   PyIntegerSet set;
 };
-} // namespace
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
 
 bool PyIntegerSet::operator==(const PyIntegerSet &other) const {
   return mlirIntegerSetEqual(integerSet, other.integerSet);
@@ -509,7 +528,10 @@ PyIntegerSet PyIntegerSet::createFromCapsule(const nb::object &capsule) {
       rawIntegerSet);
 }
 
-void mlir::python::populateIRAffine(nb::module_ &m) {
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
+void populateIRAffine(nb::module_ &m) {
   //----------------------------------------------------------------------------
   // Mapping of PyAffineExpr and derived classes.
   //----------------------------------------------------------------------------
@@ -570,7 +592,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
            })
       .def("__hash__",
            [](PyAffineExpr &self) {
-             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+             return std::hash<const void *>{}(self.get().ptr);
            })
       .def_prop_ro(
           "context",
@@ -582,6 +604,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
              return PyAffineExpr(self.getContext(),
                                  mlirAffineExprCompose(self, other));
            })
+      .def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR, &PyAffineExpr::maybeDownCast)
       .def(
           "shift_dims",
           [](PyAffineExpr &self, uint32_t numDims, uint32_t shift,
@@ -706,12 +729,12 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
            })
       .def("__hash__",
            [](PyAffineMap &self) {
-             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+             return std::hash<const void *>{}(self.get().ptr);
            })
       .def_static(
           "compress_unused_symbols",
           [](const nb::list &affineMaps, DefaultingPyMlirContext context) {
-            SmallVector<MlirAffineMap> maps;
+            std::vector<MlirAffineMap> maps;
             pyListToVector<PyAffineMap, MlirAffineMap>(
                 affineMaps, maps, "attempting to create an AffineMap");
             std::vector<MlirAffineMap> compressed(affineMaps.size());
@@ -739,7 +762,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
           "get",
           [](intptr_t dimCount, intptr_t symbolCount, const nb::list &exprs,
              DefaultingPyMlirContext context) {
-            SmallVector<MlirAffineExpr> affineExprs;
+            std::vector<MlirAffineExpr> affineExprs;
             pyListToVector<PyAffineExpr, MlirAffineExpr>(
                 exprs, affineExprs, "attempting to create an AffineMap");
             MlirAffineMap map =
@@ -892,7 +915,7 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
            })
       .def("__hash__",
            [](PyIntegerSet &self) {
-             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+             return std::hash<const void *>{}(self.get().ptr);
            })
       .def_prop_ro(
           "context",
@@ -913,17 +936,14 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
             if (exprs.size() == 0)
               throw nb::value_error("Expected non-empty list of constraints");
 
-            // Copy over to a SmallVector because std::vector has a
-            // specialization for booleans that packs data and does not
-            // expose a `bool *`.
-            SmallVector<bool, 8> flags(eqFlags.begin(), eqFlags.end());
-
-            SmallVector<MlirAffineExpr> affineExprs;
+            // std::vector<bool> does not expose a bool* data pointer.
+            std::vector<char> flags(eqFlags.begin(), eqFlags.end());
+            std::vector<MlirAffineExpr> affineExprs;
             pyListToVector<PyAffineExpr>(exprs, affineExprs,
                                          "attempting to create an IntegerSet");
             MlirIntegerSet set = mlirIntegerSetGet(
                 context->get(), numDims, numSymbols, exprs.size(),
-                affineExprs.data(), flags.data());
+                affineExprs.data(), reinterpret_cast<bool *>(flags.data()));
             return PyIntegerSet(context->getRef(), set);
           },
           nb::arg("num_dims"), nb::arg("num_symbols"), nb::arg("exprs"),
@@ -954,7 +974,8 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
                   "Expected the number of symbol replacement expressions "
                   "to match that of symbols");
 
-            SmallVector<MlirAffineExpr> dimAffineExprs, symbolAffineExprs;
+            std::vector<MlirAffineExpr> dimAffineExprs;
+            std::vector<MlirAffineExpr> symbolAffineExprs;
             pyListToVector<PyAffineExpr>(
                 dimExprs, dimAffineExprs,
                 "attempting to create an IntegerSet by replacing dimensions");
@@ -995,3 +1016,6 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
   PyIntegerSetConstraint::bind(m);
   PyIntegerSetConstraintList::bind(m);
 }
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir

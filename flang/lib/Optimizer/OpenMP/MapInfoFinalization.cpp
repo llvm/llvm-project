@@ -1143,7 +1143,8 @@ class MapInfoFinalizationPass
           newMemberIndices.emplace_back(path);
 
         op.setMembersIndexAttr(builder.create2DI64ArrayAttr(newMemberIndices));
-        op.setPartialMap(true);
+        // Set to partial map only if there is no user-defined mapper.
+        op.setPartialMap(op.getMapperIdAttr() == nullptr);
 
         return mlir::WalkResult::advance();
       });

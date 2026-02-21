@@ -208,7 +208,6 @@ __isl_give isl_ast_build *isl_ast_build_dup(__isl_keep isl_ast_build *build)
 	dup->strides = isl_vec_copy(build->strides);
 	dup->offsets = isl_multi_aff_copy(build->offsets);
 	dup->executed = isl_union_map_copy(build->executed);
-	dup->single_valued = build->single_valued;
 	dup->options = isl_union_map_copy(build->options);
 	dup->at_each_domain = build->at_each_domain;
 	dup->at_each_domain_user = build->at_each_domain_user;
@@ -2439,21 +2438,4 @@ __isl_give isl_set *isl_ast_build_eliminate(
 	domain = isl_ast_build_eliminate_inner(build, domain);
 	domain = isl_ast_build_eliminate_divs(build, domain);
 	return domain;
-}
-
-/* Replace build->single_valued by "sv".
- */
-__isl_give isl_ast_build *isl_ast_build_set_single_valued(
-	__isl_take isl_ast_build *build, int sv)
-{
-	if (!build)
-		return build;
-	if (build->single_valued == sv)
-		return build;
-	build = isl_ast_build_cow(build);
-	if (!build)
-		return build;
-	build->single_valued = sv;
-
-	return build;
 }

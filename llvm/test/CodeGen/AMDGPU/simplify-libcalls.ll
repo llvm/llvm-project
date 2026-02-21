@@ -277,7 +277,11 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_pow_half
-; GCN-POSTLINK: call fast float @_Z3powff(float %tmp, float 5.000000e-01)
+; GCN-POSTLINK: call fast float @llvm.fabs.f32
+; GCN-POSTLINK: call fast float @llvm.log2.f32
+; GCN-POSTLINK: fmul fast float
+; GCN-POSTLINK: call fast float @llvm.exp2.f32
+
 ; GCN-PRELINK: %__pow2sqrt = tail call fast float @llvm.sqrt.f32(float %tmp)
 define amdgpu_kernel void @test_pow_half(ptr addrspace(1) nocapture %a) {
 entry:
@@ -289,7 +293,10 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_pow_mhalf
-; GCN-POSTLINK: call fast float @_Z3powff(float %tmp, float -5.000000e-01)
+; GCN-POSTLINK: call fast float @llvm.fabs.f32
+; GCN-POSTLINK: call fast float @llvm.log2.f32
+; GCN-POSTLINK: fmul fast float
+; GCN-POSTLINK: call fast float @llvm.exp2.f32
 ; GCN-PRELINK: %__pow2rsqrt = tail call fast float @_Z5rsqrtf(float %tmp)
 define amdgpu_kernel void @test_pow_mhalf(ptr addrspace(1) nocapture %a) {
 entry:
@@ -354,14 +361,13 @@ declare half @_Z4pownDhi(half, i32)
 ; GCN-NATIVE: %__log2 = tail call fast half @llvm.log2.f16(half %__fabs)
 ; GCN-NATIVE: %pownI2F = sitofp i32 %y to half
 ; GCN-NATIVE: %__ylogx = fmul fast half %__log2, %pownI2F
-; GCN-NATIVE: %__exp2 = tail call fast half @llvm.exp2.f16(half %__ylogx)
+; GCN-NATIVE: %__exp2 = tail call fast nofpclass(nan ninf nzero nsub nnorm) half @llvm.exp2.f16(half %__ylogx)
 ; GCN-NATIVE: %__ytou = trunc i32 %y to i16
 ; GCN-NATIVE: %__yeven = shl i16 %__ytou, 15
 ; GCN-NATIVE: %0 = bitcast half %x to i16
 ; GCN-NATIVE: %__pow_sign = and i16 %__yeven, %0
-; GCN-NATIVE: %1 = bitcast half %__exp2 to i16
-; GCN-NATIVE: %2 = or disjoint i16 %__pow_sign, %1
-; GCN-NATIVE: %3 = bitcast i16 %2 to half
+; GCN-NATIVE: %1 = bitcast i16 %__pow_sign to half
+; GCN-NATIVE: %__pow_sign1 = tail call fast half @llvm.copysign.f16(half %__exp2, half %1)
 define half @test_pown_f16(half %x, i32 %y) {
 entry:
   %call = call fast half @_Z4pownDhi(half %x, i32 %y)
@@ -374,8 +380,8 @@ declare float @_Z4pownfi(float, i32)
 ; GCN: %__fabs = tail call fast float @llvm.fabs.f32(float %tmp)
 ; GCN: %__log2 = tail call fast float @llvm.log2.f32(float %__fabs)
 ; GCN: %__ylogx = fmul fast float %__log2, 1.013000e+03
-; GCN: %__exp2 = tail call fast float @llvm.exp2.f32(float %__ylogx)
-; GCN: %[[r0:.*]] = tail call float @llvm.copysign.f32(float %__exp2, float %tmp)
+; GCN: %__exp2 = tail call fast nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float %__ylogx)
+; GCN: %[[r0:.*]] = tail call fast float @llvm.copysign.f32(float %__exp2, float %tmp)
 ; GCN: store float %[[r0]], ptr addrspace(1) %a, align 4
 define amdgpu_kernel void @test_pow(ptr addrspace(1) nocapture %a) {
 entry:
@@ -388,7 +394,7 @@ entry:
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_powr
 ; GCN: %__log2 = tail call fast float @llvm.log2.f32(float %tmp)
 ; GCN: %__ylogx = fmul fast float %tmp1, %__log2
-; GCN: %__exp2 = tail call fast float @llvm.exp2.f32(float %__ylogx)
+; GCN: %__exp2 = tail call fast nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float %__ylogx)
 ; GCN: store float %__exp2, ptr addrspace(1) %a, align 4
 define amdgpu_kernel void @test_powr(ptr addrspace(1) nocapture %a) {
 entry:
@@ -406,13 +412,13 @@ entry:
 ; GCN: %__log2 = tail call fast float @llvm.log2.f32(float %__fabs)
 ; GCN: %pownI2F = sitofp i32 %conv to float
 ; GCN: %__ylogx = fmul fast float %__log2, %pownI2F
-; GCN: %__exp2 = tail call fast float @llvm.exp2.f32(float %__ylogx)
+; GCN: %__exp2 = tail call fast nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float %__ylogx)
 ; GCN: %__yeven = shl i32 %conv, 31
 ; GCN: %[[r0:.*]] = bitcast float %tmp to i32
 ; GCN: %__pow_sign = and i32 %__yeven, %[[r0]]
-; GCN: %[[r1:.*]] = bitcast float %__exp2 to i32
-; GCN: %[[r2:.*]] = or disjoint i32 %__pow_sign, %[[r1]]
-; GCN: store i32 %[[r2]], ptr addrspace(1) %a, align 4
+; GCN: %[[r1:.*]] = bitcast i32 %__pow_sign to float
+; GCN: %[[r2:.*]] = tail call fast float @llvm.copysign.f32(float %__exp2, float %[[r1]])
+; GCN: store float %[[r2]], ptr addrspace(1) %a, align 4
 define amdgpu_kernel void @test_pown(ptr addrspace(1) nocapture %a) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4
@@ -431,8 +437,8 @@ declare <2 x half> @_Z3powDv2_DhS_(<2 x half>, <2 x half>)
 ; GCN: %__fabs = tail call fast half @llvm.fabs.f16(half %x)
 ; GCN: %__log2 = tail call fast half @llvm.log2.f16(half %__fabs)
 ; GCN: %__ylogx = fmul fast half %__log2, 0xH4A80
-; GCN: %__exp2 = tail call fast half @llvm.exp2.f16(half %__ylogx)
-; GCN: %1 = tail call half @llvm.copysign.f16(half %__exp2, half %x)
+; GCN: %__exp2 = tail call fast nofpclass(nan ninf nzero nsub nnorm) half @llvm.exp2.f16(half %__ylogx)
+; GCN: %__pow_sign1 = tail call fast half @llvm.copysign.f16(half %__exp2, half %x)
 define half @test_pow_fast_f16__y_13(half %x) {
   %powr = tail call fast half @_Z3powDhDh(half %x, half 13.0)
   ret half %powr
@@ -442,8 +448,8 @@ define half @test_pow_fast_f16__y_13(half %x) {
 ; GCN: %__fabs = tail call fast <2 x half> @llvm.fabs.v2f16(<2 x half> %x)
 ; GCN: %__log2 = tail call fast <2 x half> @llvm.log2.v2f16(<2 x half> %__fabs)
 ; GCN: %__ylogx = fmul fast <2 x half> %__log2, splat (half 0xH4A80)
-; GCN: %__exp2 = tail call fast <2 x half> @llvm.exp2.v2f16(<2 x half> %__ylogx)
-; GCN: %1 = tail call <2 x half> @llvm.copysign.v2f16(<2 x half> %__exp2, <2 x half> %x)
+; GCN: %__exp2 = tail call fast nofpclass(nan ninf nzero nsub nnorm) <2 x half> @llvm.exp2.v2f16(<2 x half> %__ylogx)
+; GCN: %__pow_sign1 = tail call fast <2 x half> @llvm.copysign.v2f16(<2 x half> %__exp2, <2 x half> %x)
 define <2 x half> @test_pow_fast_v2f16__y_13(<2 x half> %x) {
   %powr = tail call fast <2 x half> @_Z3powDv2_DhS_(<2 x half> %x, <2 x half> <half 13.0, half 13.0>)
   ret <2 x half> %powr
@@ -474,7 +480,12 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_rootn_3
-; GCN-POSTLINK: call fast float @_Z5rootnfi(float %tmp, i32 3)
+; GCN-POSTLINK: call fast float @llvm.log2.f32
+; GCN-POSTLINK: fmul
+; GCN-POSTLINK: call fast float @llvm.exp2.f32
+; GCN-POSTLINK: select fast i1
+; GCN-POSTLINK: call fast float @llvm.copysign.f32
+
 ; GCN-PRELINK: %__rootn2cbrt = tail call fast float @_Z4cbrtf(float %tmp)
 define amdgpu_kernel void @test_rootn_3(ptr addrspace(1) nocapture %a) {
 entry:
@@ -657,7 +668,7 @@ declare float @_Z5log10f(float)
 ; GCN: %tmp1 = load float, ptr addrspace(1) %arrayidx1, align 4
 ; GCN: %__log2 = tail call fast float @llvm.log2.f32(float %tmp)
 ; GCN: %__ylogx = fmul fast float %tmp1, %__log2
-; GCN: %__exp2 = tail call fast float @llvm.exp2.f32(float %__ylogx)
+; GCN: %__exp2 = tail call fast nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float %__ylogx)
 ; GCN: store float %__exp2, ptr addrspace(1) %a, align 4
 define amdgpu_kernel void @test_use_native_powr(ptr addrspace(1) nocapture %a) {
 entry:

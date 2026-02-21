@@ -781,6 +781,32 @@ define i1 @test_lane4_2xi1(<vscale x 2 x i1> %a) #0 {
   ret i1 %b
 }
 
+define i1 @test_lane0_1xi1(<vscale x 1 x i1> %a) #0 {
+; CHECK-LABEL: test_lane0_1xi1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 p0.d, p0.d, p0.d
+; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 1 x i1> %a, i32 0
+  ret i1 %b
+}
+
+define i1 @test_lanex_1xi1(<vscale x 1 x i1> %a, i32 %x) #0 {
+; CHECK-LABEL: test_lanex_1xi1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 p0.d, p0.d, p0.d
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
+; CHECK-NEXT:    whilels p0.d, xzr, x8
+; CHECK-NEXT:    lastb x8, p0, z0.d
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 1 x i1> %a, i32 %x
+  ret i1 %b
+}
+
 declare i64 @llvm.vscale.i64()
 
 attributes #0 = { "target-features"="+sve,+bf16" }

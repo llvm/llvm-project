@@ -17,21 +17,21 @@
 ; CHECK-SPIRV:     %[[#r6]] = OpFRem %[[#float]]
 ; CHECK-SPIRV:     %[[#r7]] = OpFRem %[[#float]]
 
-define spir_kernel void @testFRem(float %a, float %b, float addrspace(1)* %out) local_unnamed_addr {
+define spir_kernel void @testFRem(float %a, float %b, ptr addrspace(1) %out) local_unnamed_addr {
 entry:
   %r1 = frem float %a, %b
-  store volatile float %r1, float addrspace(1)* %out
+  store volatile float %r1, ptr addrspace(1) %out
   %r2 = frem nnan float %a, %b
-  store volatile float %r2, float addrspace(1)* %out
+  store volatile float %r2, ptr addrspace(1) %out
   %r3 = frem ninf float %a, %b
-  store volatile float %r3, float addrspace(1)* %out
+  store volatile float %r3, ptr addrspace(1) %out
   %r4 = frem nsz float %a, %b
-  store volatile float %r4, float addrspace(1)* %out
+  store volatile float %r4, ptr addrspace(1) %out
   %r5 = frem arcp float %a, %b
-  store volatile float %r5, float addrspace(1)* %out
+  store volatile float %r5, ptr addrspace(1) %out
   %r6 = frem fast float %a, %b
-  store volatile float %r6, float addrspace(1)* %out
+  store volatile float %r6, ptr addrspace(1) %out
   %r7 = frem nnan ninf float %a, %b
-  store volatile float %r7, float addrspace(1)* %out
+  store volatile float %r7, ptr addrspace(1) %out
   ret void
 }

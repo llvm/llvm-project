@@ -64,6 +64,9 @@ static cl::opt<bool> DisableI2pP2iOpt(
 std::optional<TypeSize>
 AllocaInst::getAllocationSize(const DataLayout &DL) const {
   TypeSize Size = DL.getTypeAllocSize(getAllocatedType());
+  // Zero-sized types can return early since 0 * N = 0 for any array size N.
+  if (Size.isZero())
+    return Size;
   if (isArrayAllocation()) {
     auto *C = dyn_cast<ConstantInt>(getArraySize());
     if (!C)
@@ -137,14 +140,12 @@ PHINode::PHINode(const PHINode &PN)
 // predecessor basic block is deleted.
 Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
   Value *Removed = getIncomingValue(Idx);
-
-  // Move everything after this operand down.
-  //
-  // FIXME: we could just swap with the end of the list, then erase.  However,
-  // clients might not expect this to happen.  The code as it is thrashes the
-  // use/def lists, which is kinda lame.
-  std::copy(op_begin() + Idx + 1, op_end(), op_begin() + Idx);
-  copyIncomingBlocks(drop_begin(blocks(), Idx + 1), Idx);
+  // Swap with the end of the list.
+  unsigned Last = getNumOperands() - 1;
+  if (Idx != Last) {
+    setIncomingValue(Idx, getIncomingValue(Last));
+    setIncomingBlock(Idx, getIncomingBlock(Last));
+  }
 
   // Nuke the last value.
   Op<-1>().set(nullptr);
@@ -162,26 +163,21 @@ Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
 void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate,
                                     bool DeletePHIIfEmpty) {
   unsigned NumOps = getNumIncomingValues();
-  unsigned NewNumOps = 0;
-  for (unsigned Idx = 0; Idx < NumOps; ++Idx) {
-    if (Predicate(Idx))
-      continue;
 
-    if (Idx != NewNumOps) {
-      setIncomingValue(NewNumOps, getIncomingValue(Idx));
-      setIncomingBlock(NewNumOps, getIncomingBlock(Idx));
+  // Loop backwards in case the predicate is purely index based.
+  for (unsigned Idx = NumOps; Idx-- > 0;) {
+    if (Predicate(Idx)) {
+      unsigned LastIdx = NumOps - 1;
+      if (Idx != LastIdx) {
+        setIncomingValue(Idx, getIncomingValue(LastIdx));
+        setIncomingBlock(Idx, getIncomingBlock(LastIdx));
+      }
+      getOperandUse(LastIdx).set(nullptr);
+      NumOps--;
     }
-    ++NewNumOps;
   }
 
-  if (NewNumOps == NumOps)
-    return;
-
-  // Remove operands.
-  for (unsigned Idx = NewNumOps; Idx < NumOps; ++Idx)
-    getOperandUse(Idx).set(nullptr);
-
-  setNumHungOffUseOperands(NewNumOps);
+  setNumHungOffUseOperands(NumOps);
 
   // If the PHI node is dead, because it has zero entries, nuke it now.
   if (getNumOperands() == 0 && DeletePHIIfEmpty) {
@@ -2325,7 +2321,7 @@ bool ShuffleVectorInst::isOneUseSingleSourceMask(ArrayRef<int> Mask, int VF) {
     return false;
   for (unsigned K = 0, Sz = Mask.size(); K < Sz; K += VF) {
     ArrayRef<int> SubMask = Mask.slice(K, VF);
-    if (all_of(SubMask, [](int Idx) { return Idx == PoisonMaskElem; }))
+    if (all_of(SubMask, equal_to(PoisonMaskElem)))
       continue;
     SmallBitVector Used(VF, false);
     for (int Idx : SubMask) {

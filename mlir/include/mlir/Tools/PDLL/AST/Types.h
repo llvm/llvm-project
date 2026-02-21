@@ -11,6 +11,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/StorageUniquer.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include <optional>
 
 namespace mlir {
@@ -187,8 +188,8 @@ struct TupleTypeStorage
   static TupleTypeStorage *
   construct(StorageUniquer::StorageAllocator &alloc,
             std::pair<ArrayRef<Type>, ArrayRef<StringRef>> key) {
-    SmallVector<StringRef> names = llvm::to_vector(llvm::map_range(
-        key.second, [&](StringRef name) { return alloc.copyInto(name); }));
+    SmallVector<StringRef> names = llvm::map_to_vector(
+        key.second, [&](StringRef name) { return alloc.copyInto(name); });
     return new (alloc.allocate<TupleTypeStorage>())
         TupleTypeStorage(std::make_pair(alloc.copyInto(key.first),
                                         alloc.copyInto(llvm::ArrayRef(names))));

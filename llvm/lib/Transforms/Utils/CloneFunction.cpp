@@ -88,8 +88,8 @@ createIdentityMDPredicate(const Function &F, CloneFunctionChangeType Changes) {
   };
 
   return [=](const Metadata *MD) {
-    // Avoid cloning types, compile units, and (other) subprograms.
-    if (isa<DICompileUnit>(MD) || isa<DIType>(MD))
+    // Avoid cloning compile units.
+    if (isa<DICompileUnit>(MD))
       return true;
 
     if (auto *SP = dyn_cast<DISubprogram>(MD))
@@ -103,6 +103,29 @@ createIdentityMDPredicate(const Function &F, CloneFunctionChangeType Changes) {
     if (auto *DV = dyn_cast<DILocalVariable>(MD))
       if (auto *S = dyn_cast_or_null<DILocalScope>(DV->getScope()))
         return ShouldKeep(S->getSubprogram());
+
+    // Clone types that are local to subprograms being cloned.
+    // Avoid cloning other types.
+    auto *Type = dyn_cast<DIType>(MD);
+    if (!Type)
+      return false;
+
+    // No need to clone types if subprograms are not cloned.
+    if (SPClonedWithinModule == nullptr)
+      return true;
+
+    // Scopeless types may be derived from local types (e.g. pointers to local
+    // types). They may need cloning.
+    if (const DIDerivedType *DTy = dyn_cast_or_null<DIDerivedType>(Type);
+        DTy && !DTy->getScope())
+      return false;
+
+    auto *LScope = dyn_cast_or_null<DILocalScope>(Type->getScope());
+    if (!LScope)
+      return true;
+
+    if (ShouldKeep(LScope->getSubprogram()))
+      return true;
 
     return false;
   };
@@ -811,23 +834,29 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     if (NumPreds != PN->getNumIncomingValues()) {
       assert(NumPreds < PN->getNumIncomingValues());
       // Count how many times each predecessor comes to this block.
-      std::map<BasicBlock *, unsigned> PredCount;
+      DenseMap<BasicBlock *, unsigned> PredCount;
       for (BasicBlock *Pred : predecessors(NewBB))
-        --PredCount[Pred];
-
-      // Figure out how many entries to remove from each PHI.
-      for (BasicBlock *Pred : PN->blocks())
         ++PredCount[Pred];
 
-      // At this point, the excess predecessor entries are positive in the
-      // map.  Loop over all of the PHIs and remove excess predecessor
-      // entries.
       BasicBlock::iterator I = NewBB->begin();
+      DenseMap<BasicBlock *, unsigned> SeenPredCount;
+      SeenPredCount.reserve(PredCount.size());
       for (; (PN = dyn_cast<PHINode>(I)); ++I) {
-        for (const auto &[Pred, Count] : PredCount) {
-          for ([[maybe_unused]] unsigned _ : llvm::seq<unsigned>(Count))
-            PN->removeIncomingValue(Pred, false);
-        }
+        SeenPredCount.clear();
+        PN->removeIncomingValueIf(
+            [&](unsigned Idx) {
+              BasicBlock *IncomingBlock = PN->getIncomingBlock(Idx);
+              auto It = PredCount.find(IncomingBlock);
+              if (It == PredCount.end())
+                return true;
+              unsigned &SeenCount = SeenPredCount[IncomingBlock];
+              if (SeenCount < It->second) {
+                SeenCount++;
+                return false;
+              }
+              return true;
+            },
+            false);
       }
     }
 

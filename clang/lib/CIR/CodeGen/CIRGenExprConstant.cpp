@@ -1671,6 +1671,12 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
   return {};
 }
 
+mlir::Attribute ConstantEmitter::tryEmitAbstract(const Expr *e,
+                                                 QualType destType) {
+  AbstractStateRAII state{*this, true};
+  return tryEmitPrivate(e, destType);
+}
+
 mlir::Attribute ConstantEmitter::tryEmitConstantExpr(const ConstantExpr *ce) {
   if (!ce->hasAPValueResult())
     return {};
@@ -1884,9 +1890,14 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
       return {};
     }
 
-    if (isa<CXXMethodDecl>(memberDecl)) {
-      cgm.errorNYI("ConstExprEmitter::tryEmitPrivate member pointer to method");
-      return {};
+    if (auto const *cxxDecl = dyn_cast<CXXMethodDecl>(memberDecl)) {
+      auto ty = mlir::cast<cir::MethodType>(cgm.convertType(destType));
+      if (cxxDecl->isVirtual())
+        return cgm.getCXXABI().buildVirtualMethodAttr(ty, cxxDecl);
+
+      cir::FuncOp methodFuncOp =
+          cgm.getAddrOfFunction(cxxDecl, ty.getMemberFuncTy());
+      return cgm.getBuilder().getMethodAttr(ty, methodFuncOp);
     }
 
     auto cirTy = mlir::cast<cir::DataMemberType>(cgm.convertType(destType));

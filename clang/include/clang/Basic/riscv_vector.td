@@ -1356,6 +1356,19 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
 let RequiredFeatures = ["zvfbfmin"], Log2LMUL = [-2, -1, 0, 1, 2] in
 def vfwcvtbf16_f_f_v : RVVConvBuiltin<"Fw", "Fwv", "y", "vfwcvtbf16_f">;
 
+// Zvfofp8min
+let Log2LMUL = [-3, -2, -1, 0, 1, 2],
+    RequiredFeatures = ["zvfofp8min"],
+    UnMaskedPolicyScheme = HasPassthruOperand in {
+  let OverloadedName = "vfwcvt_f_f8e4m3_bf16" in
+    defm : RVVConvBuiltinSet<"vfwcvt_f_f_v", "a", [["vw", "wv"]]>;
+  let OverloadedName = "vfwcvt_f_f8e5m2_bf16",
+      IRName = "vfwcvt_f_f_v_alt",
+      MaskedIRName = "vfwcvt_f_f_v_alt_mask",
+      AltFmt = 1 in
+    defm : RVVConvBuiltinSet<"vfwcvt_f_f_v", "b", [["vw", "wv"]]>;
+}
+
 let ManualCodegen = [{
   {
     return emitRVVFloatingConvBuiltin(this, E, ReturnValue, ResultType, ID,
@@ -1434,6 +1447,42 @@ let ManualCodegen = [{
         Log2LMUL = [-2, -1, 0, 1, 2],
         OverloadedName = "vfncvtbf16_f" in
     defm : RVVConvBuiltinSet<"vfncvtbf16_f_f_w", "y", [["v", "vFwu"]]>;
+
+    // Zvfofp8min
+    let RequiredFeatures = ["zvfofp8min"] in {
+      let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
+        let OverloadedName = "vfncvt_f_bf16_f8e4m3" in
+          defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "a", [["wv", "vwu"]]>;
+        let OverloadedName = "vfncvt_f_bf16_f8e5m2",
+            IRName = "vfncvt_f_f_w_alt",
+            MaskedIRName = "vfncvt_f_f_w_alt_mask",
+            AltFmt = 1 in
+          defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "b", [["wv", "vwu"]]>;
+        let OverloadedName = "vfncvt_sat_f_bf16_f8e4m3" in
+          defm : RVVConvBuiltinSet<"vfncvt_sat_f_f_w", "a", [["wv", "vwu"]]>;
+        let OverloadedName = "vfncvt_sat_f_bf16_f8e5m2",
+            IRName = "vfncvt_sat_f_f_w_alt",
+            MaskedIRName = "vfncvt_sat_f_f_w_alt_mask",
+            AltFmt = 1 in
+          defm : RVVConvBuiltinSet<"vfncvt_sat_f_f_w", "b", [["wv", "vwu"]]>;
+      }
+      let Log2LMUL = [-3, -2, -1, 0, 1] in {
+        let OverloadedName = "vfncvt_f_f8e4m3" in
+          defm : RVVConvBuiltinSet<"vfncvt_f_f_q", "a", [["v", "vqu"]]>;
+        let OverloadedName = "vfncvt_f_f8e5m2",
+            IRName = "vfncvt_f_f_q_alt",
+            MaskedIRName = "vfncvt_f_f_q_alt_mask",
+            AltFmt = 1 in
+          defm : RVVConvBuiltinSet<"vfncvt_f_f_q", "b", [["v", "vqu"]]>;
+        let OverloadedName = "vfncvt_sat_f_f8e4m3" in
+          defm : RVVConvBuiltinSet<"vfncvt_sat_f_f_q", "a", [["v", "vqu"]]>;
+        let OverloadedName = "vfncvt_sat_f_f8e5m2",
+            IRName = "vfncvt_sat_f_f_q_alt",
+            MaskedIRName = "vfncvt_sat_f_f_q_alt_mask",
+            AltFmt = 1 in
+          defm : RVVConvBuiltinSet<"vfncvt_sat_f_f_q", "b", [["v", "vqu"]]>;
+      }
+    }
   }
 
   // 13.17. Single-Width Floating-Point/Integer Type-Convert Instructions
@@ -1506,6 +1555,45 @@ let ManualCodegen = [{
   let Log2LMUL = [-2, -1, 0, 1, 2],
       OverloadedName = "vfncvtbf16_f" in
   defm : RVVConvBuiltinSet<"vfncvtbf16_f_f_w", "y", [["v", "vFw"]]>;
+
+  // Zvfofp8min
+  let RequiredFeatures = ["zvfofp8min"] in {
+    let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
+      let OverloadedName = "vfncvt_f_bf16_f8e4m3" in
+        defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "a", [["wv", "vw"]]>;
+      let OverloadedName = "vfncvt_f_bf16_f8e5m2",
+          IRName = "vfncvt_f_f_w_alt",
+          MaskedIRName = "vfncvt_f_f_w_alt_mask",
+          AltFmt = 1 in
+        defm : RVVConvBuiltinSet<"vfncvt_f_f_w", "b", [["wv", "vw"]]>;
+      let OverloadedName = "vfncvt_sat_f_bf16_f8e4m3" in
+        defm : RVVConvBuiltinSet<"vfncvt_sat_f_f_w", "a", [["wv", "vw"]]>;
+      let OverloadedName = "vfncvt_sat_f_bf16_f8e5m2",
+          IRName = "vfncvt_sat_f_f_w_alt",
+          MaskedIRName = "vfncvt_sat_f_f_w_alt_mask",
+          AltFmt = 1 in
+        defm : RVVConvBuiltinSet<"vfncvt_sat_f_f_w", "b", [["wv", "vw"]]>;
+    }
+    let Log2LMUL = [-3, -2, -1, 0, 1] in {
+      // The non-policy overloaded version will have conflict with zvfhmin, so we
+      // need another naming. The reason policy version doesn't have this issue is
+      // because of passthru operand which is f16 in zvfhmin and u8 in this case.
+      let OverloadedName = "vfncvt_f_f8e4m3" in
+        defm : RVVConvBuiltinSet<"vfncvt_f_f_q", "a", [["v", "vq"]]>;
+      let OverloadedName = "vfncvt_f_f8e5m2",
+          IRName = "vfncvt_f_f_q_alt",
+          MaskedIRName = "vfncvt_f_f_q_alt_mask",
+          AltFmt = 1 in
+        defm : RVVConvBuiltinSet<"vfncvt_f_f_q", "b", [["v", "vq"]]>;
+      let OverloadedName = "vfncvt_sat_f_f8e4m3" in
+        defm : RVVConvBuiltinSet<"vfncvt_sat_f_f_q", "a", [["v", "vq"]]>;
+      let OverloadedName = "vfncvt_sat_f_f8e5m2",
+          IRName = "vfncvt_sat_f_f_q_alt",
+          MaskedIRName = "vfncvt_sat_f_f_q_alt_mask",
+          AltFmt = 1 in
+        defm : RVVConvBuiltinSet<"vfncvt_sat_f_f_q", "b", [["v", "vq"]]>;
+    }
+  }
 }
 }
 
@@ -1954,6 +2042,22 @@ let UnMaskedPolicyScheme = HasPassthruOperand in {
   let RequiredFeatures = ["zvbc"] in {
     defm vclmul  : RVVInt64BinBuiltinSet;
     defm vclmulh : RVVInt64BinBuiltinSet;
+  }
+
+  // zvabd
+  let RequiredFeatures = ["zvabd"] in {
+    defm vabs : RVVOutBuiltinSet<"vabs", "csil", [["v", "Uv", "Uvv"]]>;
+    defm vabd : RVVOutBuiltinSet<"vabd", "cs", [["vv", "Uv", "Uvvv"]]>;
+    defm vabdu : RVVOutBuiltinSet<"vabdu", "cs", [["vv", "Uv", "UvUvUv"]]>;
+  }
+}
+
+let UnMaskedPolicyScheme = HasPolicyOperand, HasMaskedOffOperand = false in {
+  let RequiredFeatures = ["zvabd"] in {
+    defm vwabda : RVVOutOp1Op2BuiltinSet<"vwabda", "cs",
+                                         [["vv", "Uw", "UwUwvv"]]>;
+    defm vwabdau : RVVOutOp1Op2BuiltinSet<"vwabdau", "cs",
+                                          [["vv", "Uw", "UwUwUvUv"]]>;
   }
 }
 

@@ -693,6 +693,8 @@ public:
     return (getSTI().hasFeature(Mips::FeatureCnMipsP));
   }
 
+  bool isR5900() const { return (getSTI().hasFeature(Mips::FeatureR5900)); }
+
   bool inPicMode() {
     return IsPicEnabled;
   }
@@ -4301,6 +4303,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       LabelOp =
           MCOperand::createExpr(MCSymbolRefExpr::create(BrTarget, Context));
       TOut.emitRRX(Mips::BNE, RtReg, ZeroReg, LabelOp, IDLoc, STI);
+      TOut.emitNop(IDLoc, STI);
     }
 
     if (!UseTraps)

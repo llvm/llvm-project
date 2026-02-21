@@ -603,7 +603,7 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 
   Actions.ActOnStartOfFunctionDef(getCurScope(), LM.D);
 
-  auto _ = llvm::make_scope_exit([&]() {
+  llvm::scope_exit _([&]() {
     while (Tok.isNot(tok::eof))
       ConsumeAnyToken();
 

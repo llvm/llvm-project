@@ -16,6 +16,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CommandLine.h"
@@ -96,7 +97,7 @@ void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   if (MO.isImm()) {
-    markup(O, Markup::Immediate) << formatImm(MO.getImm());
+    printImm(MI, OpNo, STI, O);
     return;
   }
 
@@ -108,6 +109,10 @@ void RISCVInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
                                           unsigned OpNo,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {
+  // Do not print the numeric target address when symbolizing.
+  if (SymbolizeOperands)
+    return;
+
   const MCOperand &MO = MI->getOperand(OpNo);
   if (!MO.isImm())
     return printOperand(MI, OpNo, STI, O);
@@ -335,6 +340,22 @@ void RISCVInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,
   O << ", ";
   printRegName(O, MO.getReg());
   O << ".t";
+}
+
+void RISCVInstPrinter::printImm(const MCInst *MI, unsigned OpNo,
+                                const MCSubtargetInfo &STI, raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  const unsigned Opcode = MI->getOpcode();
+  uint64_t Imm = Op.getImm();
+  if (STI.getTargetTriple().isOSBinFormatMachO() &&
+      (Opcode == RISCV::ANDI || Opcode == RISCV::ORI || Opcode == RISCV::XORI ||
+       Opcode == RISCV::C_ANDI || Opcode == RISCV::AUIPC ||
+       Opcode == RISCV::LUI)) {
+    if (!STI.hasFeature(RISCV::Feature64Bit))
+      Imm &= 0xffffffff;
+    markup(O, Markup::Immediate) << formatHex(Imm);
+  } else
+    markup(O, Markup::Immediate) << formatImm(Imm);
 }
 
 const char *RISCVInstPrinter::getRegisterName(MCRegister Reg) {

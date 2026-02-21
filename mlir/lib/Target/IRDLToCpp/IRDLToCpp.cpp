@@ -647,11 +647,10 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
   dialect.walk([&](mlir::Operation *op) {
     res =
         llvm::TypeSwitch<Operation *, LogicalResult>(op)
-            .Case<irdl::DialectOp>(([](irdl::DialectOp) { return success(); }))
-            .Case<irdl::OperationOp>(
-                ([](irdl::OperationOp) { return success(); }))
-            .Case<irdl::TypeOp>(([](irdl::TypeOp) { return success(); }))
-            .Case<irdl::OperandsOp>(([](irdl::OperandsOp op) -> LogicalResult {
+            .Case(([](irdl::DialectOp) { return success(); }))
+            .Case(([](irdl::OperationOp) { return success(); }))
+            .Case(([](irdl::TypeOp) { return success(); }))
+            .Case(([](irdl::OperandsOp op) -> LogicalResult {
               if (llvm::all_of(
                       op.getVariadicity(), [](irdl::VariadicityAttr attr) {
                         return attr.getValue() == irdl::Variadicity::single;
@@ -660,7 +659,7 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
               return op.emitError("IRDL C++ translation does not yet support "
                                   "variadic operations");
             }))
-            .Case<irdl::ResultsOp>(([](irdl::ResultsOp op) -> LogicalResult {
+            .Case(([](irdl::ResultsOp op) -> LogicalResult {
               if (llvm::all_of(
                       op.getVariadicity(), [](irdl::VariadicityAttr attr) {
                         return attr.getValue() == irdl::Variadicity::single;
@@ -669,9 +668,9 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
               return op.emitError(
                   "IRDL C++ translation does not yet support variadic results");
             }))
-            .Case<irdl::AnyOp>(([](irdl::AnyOp) { return success(); }))
-            .Case<irdl::RegionOp>(([](irdl::RegionOp) { return success(); }))
-            .Case<irdl::RegionsOp>(([](irdl::RegionsOp) { return success(); }))
+            .Case(([](irdl::AnyOp) { return success(); }))
+            .Case(([](irdl::RegionOp) { return success(); }))
+            .Case(([](irdl::RegionsOp) { return success(); }))
             .Default([](mlir::Operation *op) -> LogicalResult {
               return op->emitError("IRDL C++ translation does not yet support "
                                    "translation of ")

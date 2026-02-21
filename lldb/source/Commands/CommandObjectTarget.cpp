@@ -308,7 +308,7 @@ protected:
         return;
       }
 
-      auto on_error = llvm::make_scope_exit(
+      llvm::scope_exit on_error(
           [&target_list = debugger.GetTargetList(), &target_sp]() {
             target_list.DeleteTarget(target_sp);
           });
@@ -1589,7 +1589,7 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
         name, interpreter.GetDebugger().GetRegexMatchAnsiPrefix(),
         interpreter.GetDebugger().GetRegexMatchAnsiSuffix());
     for (uint32_t i = 0; i < num_matches; ++i) {
-      Symbol *symbol = symtab->SymbolAtIndex(match_indexes[i]);
+      const Symbol *symbol = symtab->SymbolAtIndex(match_indexes[i]);
       if (symbol) {
         if (symbol->ValueIsAddress()) {
           DumpAddress(

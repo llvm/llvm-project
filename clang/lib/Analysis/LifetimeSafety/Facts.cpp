@@ -9,6 +9,8 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/AST/Decl.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
+#include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace clang::lifetimes::internal {
 
@@ -45,11 +47,25 @@ void OriginFlowFact::dump(llvm::raw_ostream &OS, const LoanManager &,
   OS << "\n";
 }
 
-void OriginEscapesFact::dump(llvm::raw_ostream &OS, const LoanManager &,
-                             const OriginManager &OM) const {
+void MovedOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                           const OriginManager &OM) const {
+  OS << "MovedOrigins (";
+  OM.dump(getMovedOrigin(), OS);
+  OS << ")\n";
+}
+
+void ReturnEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                            const OriginManager &OM) const {
   OS << "OriginEscapes (";
   OM.dump(getEscapedOriginID(), OS);
-  OS << ")\n";
+  OS << ", via Return)\n";
+}
+
+void FieldEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                           const OriginManager &OM) const {
+  OS << "OriginEscapes (";
+  OM.dump(getEscapedOriginID(), OS);
+  OS << ", via Field)\n";
 }
 
 void UseFact::dump(llvm::raw_ostream &OS, const LoanManager &,
@@ -64,6 +80,13 @@ void UseFact::dump(llvm::raw_ostream &OS, const LoanManager &,
       OS << ", ";
   }
   OS << ", " << (isWritten() ? "Write" : "Read") << ")\n";
+}
+
+void InvalidateOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                                const OriginManager &OM) const {
+  OS << "InvalidateOrigin (";
+  OM.dump(getInvalidatedOrigin(), OS);
+  OS << ")\n";
 }
 
 void TestPointFact::dump(llvm::raw_ostream &OS, const LoanManager &,

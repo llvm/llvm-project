@@ -23,6 +23,7 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/IRBuilder.h"
@@ -96,7 +97,8 @@ static Function *getOrCreateFunction(Module *M, Type *RetTy,
   return NewF;
 }
 
-static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic) {
+static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic,
+                                     const TargetTransformInfo &TTI) {
   // For @llvm.memset.* intrinsic cases with constant value and length arguments
   // are emulated via "storing" a constant array to the destination. For other
   // cases we wrap the intrinsic in @spirv.llvm_memset_* function and expand the
@@ -140,7 +142,7 @@ static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic) {
     auto *MemSet = IRB.CreateMemSet(Dest, Val, Len, MSI->getDestAlign(),
                                     MSI->isVolatile());
     IRB.CreateRetVoid();
-    expandMemSetAsLoop(cast<MemSetInst>(MemSet));
+    expandMemSetAsLoop(cast<MemSetInst>(MemSet), TTI);
     MemSet->eraseFromParent();
     break;
   }
@@ -385,15 +387,40 @@ static void lowerExpectAssume(IntrinsicInst *II) {
 }
 
 static bool toSpvLifetimeIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID) {
+  auto *LifetimeArg0 = II->getArgOperand(0);
+
+  // If the lifetime argument is a poison value, the intrinsic has no effect.
+  if (isa<PoisonValue>(LifetimeArg0)) {
+    II->eraseFromParent();
+    return true;
+  }
+
   IRBuilder<> Builder(II);
-  auto *Alloca = cast<AllocaInst>(II->getArgOperand(0));
+  auto *Alloca = cast<AllocaInst>(LifetimeArg0);
   std::optional<TypeSize> Size =
       Alloca->getAllocationSize(Alloca->getDataLayout());
   Value *SizeVal = Builder.getInt64(Size ? *Size : -1);
-  Builder.CreateIntrinsic(NewID, Alloca->getType(),
-                          {SizeVal, II->getArgOperand(0)});
+  Builder.CreateIntrinsic(NewID, Alloca->getType(), {SizeVal, LifetimeArg0});
   II->eraseFromParent();
   return true;
+}
+
+static void
+lowerConstrainedFmuladd(IntrinsicInst *II,
+                        SmallVector<Instruction *> &EraseFromParent) {
+  auto *FPI = cast<ConstrainedFPIntrinsic>(II);
+  Value *A = FPI->getArgOperand(0);
+  Value *Mul = FPI->getArgOperand(1);
+  Value *Add = FPI->getArgOperand(2);
+  IRBuilder<> Builder(II->getParent());
+  Builder.SetInsertPoint(II);
+  std::optional<RoundingMode> Rounding = FPI->getRoundingMode();
+  Value *Product = Builder.CreateFMul(A, Mul, II->getName() + ".mul");
+  Value *Result = Builder.CreateConstrainedFPBinOp(
+      Intrinsic::experimental_constrained_fadd, Product, Add, {},
+      II->getName() + ".add", nullptr, Rounding);
+  II->replaceAllUsesWith(Result);
+  EraseFromParent.push_back(II);
 }
 
 // Substitutes calls to LLVM intrinsics with either calls to SPIR-V intrinsics
@@ -402,6 +429,7 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
   bool Changed = false;
   const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
   SmallVector<Instruction *> EraseFromParent;
+  const TargetTransformInfo &TTI = TM.getTargetTransformInfo(*F);
   for (BasicBlock &BB : *F) {
     for (Instruction &I : make_early_inc_range(BB)) {
       auto Call = dyn_cast<CallInst>(&I);
@@ -414,7 +442,7 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
       switch (II->getIntrinsicID()) {
       case Intrinsic::memset:
       case Intrinsic::bswap:
-        Changed |= lowerIntrinsicToFunction(II);
+        Changed |= lowerIntrinsicToFunction(II, TTI);
         break;
       case Intrinsic::fshl:
       case Intrinsic::fshr:
@@ -449,6 +477,10 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         lowerPtrAnnotation(II);
         Changed = true;
         break;
+      case Intrinsic::experimental_constrained_fmuladd:
+        lowerConstrainedFmuladd(II, EraseFromParent);
+        Changed = true;
+        break;
       case Intrinsic::experimental_constrained_fcmp:
       case Intrinsic::experimental_constrained_fcmps:
         lowerConstrainedFPCmpIntrinsic(dyn_cast<ConstrainedFPCmpIntrinsic>(II),
@@ -462,7 +494,7 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
                 return false;
               return II->getCalledFunction()->getName().starts_with(Prefix);
             }))
-          Changed |= lowerIntrinsicToFunction(II);
+          Changed |= lowerIntrinsicToFunction(II, TTI);
         break;
       }
     }
@@ -627,6 +659,13 @@ bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
 }
 
 bool SPIRVPrepareFunctions::runOnModule(Module &M) {
+  // Resolve the SPIR-V environment from module content before any
+  // function-level processing. This must happen before legalization so that
+  // isShader()/isKernel() return correct values.
+  const_cast<SPIRVTargetMachine &>(TM)
+      .getMutableSubtargetImpl()
+      ->resolveEnvFromModule(M);
+
   bool Changed = false;
   for (Function &F : M) {
     Changed |= substituteIntrinsicCalls(&F);

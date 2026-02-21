@@ -410,3 +410,11 @@ func.func @_QMmPtest.fir() {
   %27 = fir.box_addr %26 {test.ptr = "t_alloc.tgt.fir"} : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   return
 }
+
+fir.global @_QMmEp1 : !fir.box<!fir.ptr<f32>>
+fir.global @_QMmEarr : !fir.array<2xf32>
+fir.global @_QMmEt_arr target : !fir.array<2xf32>
+fir.global @_QMmEalloc : !fir.box<!fir.heap<f32>>
+fir.global @_QMmEt_alloc target : !fir.box<!fir.heap<f32>>
+fir.global @_QMmEt target : f32
+fir.global @_QMmEv : f32

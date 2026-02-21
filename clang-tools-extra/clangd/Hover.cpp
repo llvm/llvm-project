@@ -70,7 +70,8 @@ namespace clangd {
 namespace {
 
 PrintingPolicy getPrintingPolicy(PrintingPolicy Base) {
-  Base.AnonymousTagLocations = false;
+  Base.AnonymousTagNameStyle =
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
   Base.TerseOutput = true;
   Base.PolishForDeclaration = true;
   Base.ConstantsAsWritten = true;
@@ -176,19 +177,22 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
   // tag for extra clarity. This isn't very idiomatic, so don't attempt it for
   // complex cases, including pointers/references, template specializations,
   // etc.
+  PrintingPolicy Copy(PP);
   if (!QT.isNull() && !QT.hasQualifiers() && PP.SuppressTagKeyword) {
     if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr());
-        TT && TT->isCanonicalUnqualified())
+        TT && TT->isCanonicalUnqualified()) {
+      Copy.SuppressTagKeywordInAnonNames = true;
       OS << TT->getDecl()->getKindName() << " ";
+    }
   }
-  QT.print(OS, PP);
+  QT.print(OS, Copy);
 
   const Config &Cfg = Config::current();
   if (!QT.isNull() && Cfg.Hover.ShowAKA) {
     bool ShouldAKA = false;
     QualType DesugaredTy = clang::desugarForDiagnostic(ASTCtx, QT, ShouldAKA);
     if (ShouldAKA)
-      Result.AKA = DesugaredTy.getAsString(PP);
+      Result.AKA = DesugaredTy.getAsString(Copy);
   }
   return Result;
 }
@@ -1790,7 +1794,7 @@ void parseDocumentationParagraph(llvm::StringRef Text, markup::Paragraph &Out) {
 
 void parseDocumentation(llvm::StringRef Input, markup::Document &Output) {
   // A documentation string is treated as a sequence of paragraphs,
-  // where the paragraphs are seperated by at least one empty line
+  // where the paragraphs are separated by at least one empty line
   // (meaning 2 consecutive newline characters).
   // Possible leading empty lines (introduced by an odd number > 1 of
   // empty lines between 2 paragraphs) will be removed later in the Markup

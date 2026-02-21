@@ -44,9 +44,8 @@ void storeAtMatrixSubscriptExpr(int row, int col, half value) {
     // ROW-CHECK-NEXT: [[row_major_index:%.*]] = add i32 [[row_offset]], [[col_load:%.*]]
     // COL-CHECK: [[col_offset:%.*]] = mul i32 [[col_load:%.*]], 2
     // COL-CHECK-NEXT: [[col_major_index:%.*]] = add i32 [[col_offset]], [[row_load:%.*]]
-    // CHECK-NEXT: [[matrix_as_vec:%.*]] = load <6 x half>, ptr addrspace(2) @gM, align 2
-    // ROW-CHECK-NEXT: [[matrix_after_insert:%.*]] = insertelement <6 x half> [[matrix_as_vec]], half [[value_load]], i32 [[row_major_index]]
-    // COL-CHECK-NEXT: [[matrix_after_insert:%.*]] = insertelement <6 x half> [[matrix_as_vec]], half [[value_load]], i32 [[col_major_index]]
-    // CHECK-NEXT: store <6 x half> [[matrix_after_insert]], ptr addrspace(2) @gM, align 2
+    // ROW-CHECK-NEXT: [[matrix_gep:%.*]] = getelementptr <6 x half>, ptr addrspace(2) @gM, i32 0, i32 [[row_major_index]]
+    // COL-CHECK-NEXT: [[matrix_gep:%.*]] = getelementptr <6 x half>, ptr addrspace(2) @gM, i32 0, i32 [[col_major_index]]
+    // CHECK-NEXT: store half [[value_load]], ptr addrspace(2) [[matrix_gep]], align 2
     gM[row][col] = value;
 }

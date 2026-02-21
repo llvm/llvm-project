@@ -503,6 +503,11 @@ Retry:
     ProhibitAttributes(GNUAttrs);
     HandlePragmaAttribute();
     return StmtEmpty();
+  case tok::annot_pragma_export:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
+    HandlePragmaExport();
+    return StmtEmpty();
   }
 
   // If we reached this code, the statement must end in a semicolon.
@@ -1031,6 +1036,9 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
       break;
     case tok::annot_pragma_dump:
       HandlePragmaDump();
+      break;
+    case tok::annot_pragma_export:
+      HandlePragmaExport();
       break;
     default:
       checkForPragmas = false;
@@ -2379,8 +2387,7 @@ StmtResult Parser::ParseDeferStatement(SourceLocation *TrailingElseLoc) {
 
   Actions.ActOnStartOfDeferStmt(DeferLoc, getCurScope());
 
-  auto OnError = llvm::make_scope_exit(
-      [&] { Actions.ActOnDeferStmtError(getCurScope()); });
+  llvm::scope_exit OnError([&] { Actions.ActOnDeferStmtError(getCurScope()); });
 
   StmtResult Res = ParseStatement(TrailingElseLoc);
   if (!Res.isUsable())

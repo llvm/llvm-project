@@ -179,6 +179,7 @@ static ExprValue bitOr(LinkerScript &s, ExprValue a, ExprValue b) {
 }
 
 void ScriptParser::readDynamicList() {
+  SaveAndRestore saved(lexState, State::VersionNode);
   expect("{");
   SmallVector<SymbolVersion, 0> locals;
   SmallVector<SymbolVersion, 0> globals;
@@ -207,6 +208,7 @@ void ScriptParser::readVersionScript() {
 }
 
 void ScriptParser::readVersionScriptCommand() {
+  SaveAndRestore saved(lexState, State::VersionNode);
   if (consume("{")) {
     readAnonymousDeclaration();
     return;
@@ -539,9 +541,9 @@ void ScriptParser::readRegionAlias() {
   StringRef name = readName();
   expect(")");
 
-  if (ctx.script->memoryRegions.count(alias))
+  if (ctx.script->memoryRegions.contains(alias))
     setError("redefinition of memory region '" + alias + "'");
-  if (!ctx.script->memoryRegions.count(name))
+  if (!ctx.script->memoryRegions.contains(name))
     setError("memory region '" + name + "' is not defined");
   ctx.script->memoryRegions.insert({alias, ctx.script->memoryRegions[name]});
 }
@@ -1588,7 +1590,7 @@ Expr ScriptParser::readPrimary() {
   }
   if (tok == "LENGTH") {
     StringRef name = readParenName();
-    if (ctx.script->memoryRegions.count(name) == 0) {
+    if (!ctx.script->memoryRegions.contains(name)) {
       setError("memory region not defined: " + name);
       return [] { return 0; };
     }
@@ -1624,7 +1626,7 @@ Expr ScriptParser::readPrimary() {
   }
   if (tok == "ORIGIN") {
     StringRef name = readParenName();
-    if (ctx.script->memoryRegions.count(name) == 0) {
+    if (!ctx.script->memoryRegions.contains(name)) {
       setError("memory region not defined: " + name);
       return [] { return 0; };
     }
@@ -1779,11 +1781,11 @@ ScriptParser::readSymbols() {
       SmallVector<SymbolVersion, 0> ext = readVersionExtern();
       v->insert(v->end(), ext.begin(), ext.end());
     } else {
-      if (tok == "local:" || (tok == "local" && consume(":"))) {
+      if (tok == "local" && consume(":")) {
         v = &locals;
         continue;
       }
-      if (tok == "global:" || (tok == "global" && consume(":"))) {
+      if (tok == "global" && consume(":")) {
         v = &globals;
         continue;
       }

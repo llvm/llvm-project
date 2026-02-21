@@ -500,7 +500,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
           if (module_sp) {
             if (Symtab *symtab = module_sp->GetSymtab()) {
               const addr_t file_Addr = GetFileAddress();
-              Symbol *symbol =
+              const Symbol *symbol =
                   symtab->FindSymbolContainingFileAddress(file_Addr);
               if (symbol) {
                 const char *symbol_name = symbol->GetName().AsCString();

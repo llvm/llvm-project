@@ -8,98 +8,172 @@
 
 #include "mlir-c/Dialect/PDL.h"
 #include "mlir-c/IR.h"
+#include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
-using namespace llvm;
-using namespace mlir;
-using namespace mlir::python;
 using namespace mlir::python::nanobind_adaptors;
 
-static void populateDialectPDLSubmodule(const nanobind::module_ &m) {
-  //===-------------------------------------------------------------------===//
-  // PDLType
-  //===-------------------------------------------------------------------===//
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
+namespace pdl {
 
-  auto pdlType = mlir_type_subclass(m, "PDLType", mlirTypeIsAPDLType);
+//===-------------------------------------------------------------------===//
+// PDLType
+//===-------------------------------------------------------------------===//
 
-  //===-------------------------------------------------------------------===//
-  // AttributeType
-  //===-------------------------------------------------------------------===//
+struct PDLType : PyConcreteType<PDLType> {
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLType;
+  static constexpr const char *pyClassName = "PDLType";
+  using Base::Base;
 
-  auto attributeType =
-      mlir_type_subclass(m, "AttributeType", mlirTypeIsAPDLAttributeType);
-  attributeType.def_classmethod(
-      "get",
-      [](const nb::object &cls, MlirContext ctx) {
-        return cls(mlirPDLAttributeTypeGet(ctx));
-      },
-      "Get an instance of AttributeType in given context.", nb::arg("cls"),
-      nb::arg("context") = nb::none());
+  static void bindDerived(ClassTy &c) {}
+};
 
-  //===-------------------------------------------------------------------===//
-  // OperationType
-  //===-------------------------------------------------------------------===//
+//===-------------------------------------------------------------------===//
+// AttributeType
+//===-------------------------------------------------------------------===//
 
-  auto operationType =
-      mlir_type_subclass(m, "OperationType", mlirTypeIsAPDLOperationType);
-  operationType.def_classmethod(
-      "get",
-      [](const nb::object &cls, MlirContext ctx) {
-        return cls(mlirPDLOperationTypeGet(ctx));
-      },
-      "Get an instance of OperationType in given context.", nb::arg("cls"),
-      nb::arg("context") = nb::none());
+struct AttributeType : PyConcreteType<AttributeType> {
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLAttributeType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPDLAttributeTypeGetTypeID;
+  static constexpr const char *pyClassName = "AttributeType";
+  static inline const MlirStringRef name = mlirPDLAttributeTypeGetName();
+  using Base::Base;
 
-  //===-------------------------------------------------------------------===//
-  // RangeType
-  //===-------------------------------------------------------------------===//
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          return AttributeType(context->getRef(),
+                               mlirPDLAttributeTypeGet(context.get()->get()));
+        },
+        "Get an instance of AttributeType in given context.",
+        nb::arg("context").none() = nb::none());
+  }
+};
 
-  auto rangeType = mlir_type_subclass(m, "RangeType", mlirTypeIsAPDLRangeType);
-  rangeType.def_classmethod(
-      "get",
-      [](const nb::object &cls, MlirType elementType) {
-        return cls(mlirPDLRangeTypeGet(elementType));
-      },
-      "Gets an instance of RangeType in the same context as the provided "
-      "element type.",
-      nb::arg("cls"), nb::arg("element_type"));
-  rangeType.def_property_readonly(
-      "element_type",
-      [](MlirType type) { return mlirPDLRangeTypeGetElementType(type); },
-      nb::sig(
-          "def element_type(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Type")),
-      "Get the element type.");
+//===-------------------------------------------------------------------===//
+// OperationType
+//===-------------------------------------------------------------------===//
 
-  //===-------------------------------------------------------------------===//
-  // TypeType
-  //===-------------------------------------------------------------------===//
+struct OperationType : PyConcreteType<OperationType> {
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLOperationType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPDLOperationTypeGetTypeID;
+  static constexpr const char *pyClassName = "OperationType";
+  static inline const MlirStringRef name = mlirPDLOperationTypeGetName();
+  using Base::Base;
 
-  auto typeType = mlir_type_subclass(m, "TypeType", mlirTypeIsAPDLTypeType);
-  typeType.def_classmethod(
-      "get",
-      [](const nb::object &cls, MlirContext ctx) {
-        return cls(mlirPDLTypeTypeGet(ctx));
-      },
-      "Get an instance of TypeType in given context.", nb::arg("cls"),
-      nb::arg("context") = nb::none());
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          return OperationType(context->getRef(),
+                               mlirPDLOperationTypeGet(context.get()->get()));
+        },
+        "Get an instance of OperationType in given context.",
+        nb::arg("context").none() = nb::none());
+  }
+};
 
-  //===-------------------------------------------------------------------===//
-  // ValueType
-  //===-------------------------------------------------------------------===//
+//===-------------------------------------------------------------------===//
+// RangeType
+//===-------------------------------------------------------------------===//
 
-  auto valueType = mlir_type_subclass(m, "ValueType", mlirTypeIsAPDLValueType);
-  valueType.def_classmethod(
-      "get",
-      [](const nb::object &cls, MlirContext ctx) {
-        return cls(mlirPDLValueTypeGet(ctx));
-      },
-      "Get an instance of TypeType in given context.", nb::arg("cls"),
-      nb::arg("context") = nb::none());
+struct RangeType : PyConcreteType<RangeType> {
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLRangeType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPDLRangeTypeGetTypeID;
+  static constexpr const char *pyClassName = "RangeType";
+  static inline const MlirStringRef name = mlirPDLRangeTypeGetName();
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](const PyType &elementType, DefaultingPyMlirContext context) {
+          return RangeType(context->getRef(), mlirPDLRangeTypeGet(elementType));
+        },
+        "Gets an instance of RangeType in the same context as the provided "
+        "element type.",
+        nb::arg("element_type"), nb::arg("context").none() = nb::none());
+    c.def_prop_ro(
+        "element_type",
+        [](RangeType &type) {
+          return PyType(type.getContext(), mlirPDLRangeTypeGetElementType(type))
+              .maybeDownCast();
+        },
+        "Get the element type.");
+  }
+};
+
+//===-------------------------------------------------------------------===//
+// TypeType
+//===-------------------------------------------------------------------===//
+
+struct TypeType : PyConcreteType<TypeType> {
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLTypeType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPDLTypeTypeGetTypeID;
+  static constexpr const char *pyClassName = "TypeType";
+  static inline const MlirStringRef name = mlirPDLTypeTypeGetName();
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          return TypeType(context->getRef(),
+                          mlirPDLTypeTypeGet(context.get()->get()));
+        },
+        "Get an instance of TypeType in given context.",
+        nb::arg("context").none() = nb::none());
+  }
+};
+
+//===-------------------------------------------------------------------===//
+// ValueType
+//===-------------------------------------------------------------------===//
+
+struct ValueType : PyConcreteType<ValueType> {
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPDLValueType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPDLValueTypeGetTypeID;
+  static constexpr const char *pyClassName = "ValueType";
+  static inline const MlirStringRef name = mlirPDLValueTypeGetName();
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          return ValueType(context->getRef(),
+                           mlirPDLValueTypeGet(context.get()->get()));
+        },
+        "Get an instance of TypeType in given context.",
+        nb::arg("context").none() = nb::none());
+  }
+};
+
+static void populateDialectPDLSubmodule(nanobind::module_ &m) {
+  PDLType::bind(m);
+  AttributeType::bind(m);
+  OperationType::bind(m);
+  RangeType::bind(m);
+  TypeType::bind(m);
+  ValueType::bind(m);
 }
+} // namespace pdl
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
 
 NB_MODULE(_mlirDialectsPDL, m) {
   m.doc() = "MLIR PDL dialect.";
-  populateDialectPDLSubmodule(m);
+  mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::pdl::populateDialectPDLSubmodule(
+      m);
 }

@@ -1,56 +1,50 @@
 ; Test branch weight metadata, estimated trip count metadata, and block
 ; frequencies after loop peeling.
 
+; ------------------------------------------------------------------------------
 ; RUN: opt < %s -S -passes='print<block-freq>' 2>&1 | \
 ; RUN:   FileCheck -check-prefix=CHECK %s
+;
+; Verify that the test code produces the original loop body frequency we expect.
+; CHECK: - do.body: float = 10.0,
 
-; The -implicit-check-not options make sure that no additional labels or calls
-; to @f show up.
+; ------------------------------------------------------------------------------
 ; RUN: opt < %s -S -passes='loop-unroll,print<block-freq>' \
 ; RUN:     -unroll-force-peel-count=2 2>&1 | \
 ; RUN:   FileCheck %s -check-prefix=CHECK-UR \
-; RUN:       -implicit-check-not='{{^[^ ;]*:}}' \
+; RUN:       -implicit-check-not='llvm.loop.estimated_trip_count' \
+; RUN:       -implicit-check-not='!prof' \
+; RUN:       -implicit-check-not='branch_weights' \
 ; RUN:       -implicit-check-not='call void @f'
-
-; CHECK: block-frequency-info: test
-; CHECK: do.body: float = 10.0,
-
-; The sum should still be ~10.
 ;
+; The sum is the original loop body frequency, 10.
 ; CHECK-UR: block-frequency-info: test
-; CHECK-UR: - [[DO_BODY_PEEL:.*]]: float = 1.0,
-; CHECK-UR: - [[DO_BODY_PEEL2:.*]]: float = 0.9,
-; CHECK-UR: - [[DO_BODY:.*]]: float = 8.1,
+; CHECK-UR: - do.body.peel: float = 1.0,
+; CHECK-UR: - do.body.peel2: float = 0.9,
+; CHECK-UR: - do.body: float = 8.1,
+;
+; The original branch weights are preserved across all peeled iterations and the
+; remaining loop, and there is one original loop body (represented by a call to
+; @f) within each peeled iteration.
+; CHECK-UR: call void @f
+; CHECK-UR: br i1 %{{.*}}, label %do.end, label %do.body.peel.next, !prof !0
+; CHECK-UR: call void @f
+; CHECK-UR: br i1 %{{.*}}, label %do.end, label %do.body.peel.next1, !prof !0
+; CHECK-UR: call void @f
+; CHECK-UR: br i1 %{{.*}}, label %do.end.loopexit, label %do.body, !prof !0, !llvm.loop !1
+; CHECK-UR: !0 = !{!"branch_weights", i32 1, i32 9}
+;
+; llvm.loop.estimated_trip_count plus the number of peeled iterations, 2, equals
+; the original estimated trip count, which is the original loop body frequency,
+; 10, because there is no prior llvm.loop.estimated_trip_count.
+; CHECK-UR: !1 = distinct !{!1, !2, !3, !4}
+; CHECK-UR: !2 = !{!"llvm.loop.peeled.count", i32 2}
+; CHECK-UR: !3 = !{!"llvm.loop.estimated_trip_count", i32 8}
+; CHECK-UR: !4 = !{!"llvm.loop.unroll.disable"}
 
 declare void @f(i32)
 
 define void @test(i32 %n) {
-; CHECK-UR-LABEL: define void @test(
-;       CHECK-UR: [[ENTRY:.*]]:
-;       CHECK-UR:   br label %[[DO_BODY_PEEL_BEGIN:.*]]
-;       CHECK-UR: [[DO_BODY_PEEL_BEGIN]]:
-;       CHECK-UR:   br label %[[DO_BODY_PEEL:.*]]
-;       CHECK-UR: [[DO_BODY_PEEL]]:
-;       CHECK-UR:   call void @f
-;       CHECK-UR:   br i1 %{{.*}}, label %[[DO_END:.*]], label %[[DO_BODY_PEEL_NEXT:.*]], !prof ![[#PROF:]]
-;       CHECK-UR: [[DO_BODY_PEEL_NEXT]]:
-;       CHECK-UR:   br label %[[DO_BODY_PEEL2:.*]]
-;       CHECK-UR: [[DO_BODY_PEEL2]]:
-;       CHECK-UR:   call void @f
-;       CHECK-UR:   br i1 %{{.*}}, label %[[DO_END]], label %[[DO_BODY_PEEL_NEXT1:.*]], !prof ![[#PROF]]
-;       CHECK-UR: [[DO_BODY_PEEL_NEXT1]]:
-;       CHECK-UR:   br label %[[DO_BODY_PEEL_NEXT5:.*]]
-;       CHECK-UR: [[DO_BODY_PEEL_NEXT5]]:
-;       CHECK-UR:   br label %[[ENTRY_PEEL_NEWPH:.*]]
-;       CHECK-UR: [[ENTRY_PEEL_NEWPH]]:
-;       CHECK-UR:   br label %[[DO_BODY]]
-;       CHECK-UR: [[DO_BODY]]:
-;       CHECK-UR:   call void @f
-;       CHECK-UR:   br i1 %{{.*}}, label %[[DO_END_LOOPEXIT:.*]], label %[[DO_BODY]], !prof ![[#PROF]], !llvm.loop ![[#LOOP_UR_LATCH:]]
-;       CHECK-UR: [[DO_END_LOOPEXIT]]:
-;       CHECK-UR:   br label %[[DO_END]]
-;       CHECK-UR: [[DO_END]]:
-;       CHECK-UR:   ret void
 
 entry:
   br label %do.body
@@ -67,9 +61,3 @@ do.end:
 }
 
 !0 = !{!"branch_weights", i32 1, i32 9}
-
-; CHECK-UR: ![[#PROF]] = !{!"branch_weights", i32 1, i32 9}
-; CHECK-UR: ![[#LOOP_UR_LATCH]] = distinct !{![[#LOOP_UR_LATCH]], ![[#LOOP_UR_PC:]], ![[#LOOP_UR_TC:]], ![[#DISABLE:]]}
-; CHECK-UR: ![[#LOOP_UR_PC]] = !{!"llvm.loop.peeled.count", i32 2}
-; CHECK-UR: ![[#LOOP_UR_TC]] = !{!"llvm.loop.estimated_trip_count", i32 8}
-; CHECK-UR: ![[#DISABLE]] = !{!"llvm.loop.unroll.disable"}

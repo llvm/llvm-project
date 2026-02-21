@@ -1,5 +1,5 @@
 // FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
-// UNSUPPORTED: ios, android
+// UNSUPPORTED: darwin-remote, android
 //
 // RUN: %clangxx_asan  %s -o %t
 

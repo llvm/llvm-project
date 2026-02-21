@@ -158,10 +158,7 @@ public:
   static char ID;
 
   ComplexDeinterleavingLegacyPass(const TargetMachine *TM = nullptr)
-      : FunctionPass(ID), TM(TM) {
-    initializeComplexDeinterleavingLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+      : FunctionPass(ID), TM(TM) {}
 
   StringRef getPassName() const override {
     return "Complex Deinterleaving Pass";
@@ -2434,7 +2431,7 @@ void ComplexDeinterleavingGraph::processReductionSingle(
 
   Value *NewInit = nullptr;
   if (auto *C = dyn_cast<Constant>(Init)) {
-    if (C->isZeroValue())
+    if (C->isNullValue())
       NewInit = Constant::getNullValue(NewVTy);
   }
 

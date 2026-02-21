@@ -1,0 +1,40 @@
+########################
+# Test "report" command.
+########################
+# Include files with a "a" in their name and exclude header files.
+RUN: llvm-cov report -instr-profile %S/Inputs/sources_specified/main.profdata \
+RUN:   -path-equivalence=/tmp,%S/Inputs \
+RUN:   -include-filename-regex='.*a.*' -ignore-filename-regex='.*\.h$' \
+RUN:   %S/Inputs/sources_specified/main.covmapping --show-branch-summary=false \
+RUN:   | FileCheck -check-prefix=REPORT_SOURCE_WITH_A %s
+
+REPORT_SOURCE_WITH_A-NOT: {{.*}}dec.h{{.*}}
+REPORT_SOURCE_WITH_A-NOT: {{.*}}inc.h{{.*}}
+REPORT_SOURCE_WITH_A-NOT: {{.*}}abs.h{{.*}}
+REPORT_SOURCE_WITH_A: {{^}}TOTAL 1{{.*}}100.00%{{$}}
+
+# Only include files from "extra" directory and ignore files starting with "d".
+RUN: llvm-cov report -instr-profile %S/Inputs/sources_specified/main.profdata \
+RUN:   -path-equivalence=/tmp,%S/Inputs \
+RUN:   -include-filename-regex='.*extra[/\\].*' -ignore-filename-regex='.[/\\]d.*' \
+RUN:   %S/Inputs/sources_specified/main.covmapping --show-branch-summary=false \
+RUN:   | FileCheck -check-prefix=REPORT_INCLUDE_DIR_WITHOUT_D %s
+
+REPORT_INCLUDE_DIR_WITHOUT_D-NOT: {{.*}}extra{{[/\\]}}dec.h{{.*}}
+REPORT_INCLUDE_DIR_WITHOUT_D: {{.*}}extra{{[/\\]}}inc.h{{.*}}
+REPORT_INCLUDE_DIR_WITHOUT_D-NOT: {{.*}}abs.h{{.*}}
+REPORT_INCLUDE_DIR_WITHOUT_D-NOT: {{.*}}main.cc{{.*}}
+REPORT_INCLUDE_DIR_WITHOUT_D: {{^}}TOTAL 1{{.*}}100.00%{{$}}
+
+# Same test as above but the arguments are passed in a different order.
+RUN: llvm-cov report -instr-profile %S/Inputs/sources_specified/main.profdata \
+RUN:   -path-equivalence=/tmp,%S/Inputs \
+RUN:   -ignore-filename-regex='.[/\\]d.*' -include-filename-regex='.*extra[/\\].*'  \
+RUN:   %S/Inputs/sources_specified/main.covmapping --show-branch-summary=false \
+RUN:   | FileCheck -check-prefix=REPORT_INCLUDE_DIR_WITHOUT_D_REVERSED %s
+
+REPORT_INCLUDE_DIR_WITHOUT_D_REVERSED-NOT: {{.*}}extra{{[/\\]}}dec.h{{.*}}
+REPORT_INCLUDE_DIR_WITHOUT_D_REVERSED: {{.*}}extra{{[/\\]}}inc.h{{.*}}
+REPORT_INCLUDE_DIR_WITHOUT_D_REVERSED-NOT: {{.*}}abs.h{{.*}}
+REPORT_INCLUDE_DIR_WITHOUT_D_REVERSED-NOT: {{.*}}main.cc{{.*}}
+REPORT_INCLUDE_DIR_WITHOUT_D_REVERSED: {{^}}TOTAL 1{{.*}}100.00%{{$}}

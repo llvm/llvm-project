@@ -583,3 +583,25 @@ TestTensorType::getBufferType(
 
   return emitError() << "expected MemRefType or TestMemrefType";
 }
+
+//===----------------------------------------------------------------------===//
+// TestTypeNewlineAndIndent
+//===----------------------------------------------------------------------===//
+
+Type TestTypeNewlineAndIndentType::parse(::mlir::AsmParser &parser) {
+  if (parser.parseLess() || parser.parseKeyword("indented_content") ||
+      parser.parseGreater()) {
+    return Type();
+  }
+  return get(parser.getContext());
+}
+
+void TestTypeNewlineAndIndentType::print(::mlir::AsmPrinter &printer) const {
+  printer << "<";
+  printer.increaseIndent();
+  printer.printNewline();
+  printer << "indented_content";
+  printer.decreaseIndent();
+  printer.printNewline();
+  printer << ">";
+}

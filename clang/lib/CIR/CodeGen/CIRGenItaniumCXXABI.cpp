@@ -156,6 +156,9 @@ public:
                               cir::PointerType destCIRTy, bool isRefCast,
                               Address src) override;
 
+  cir::MethodAttr buildVirtualMethodAttr(cir::MethodType methodTy,
+                                         const CXXMethodDecl *md) override;
+
   Address initializeArrayCookie(CIRGenFunction &cgf, Address newPtr,
                                 mlir::Value numElements, const CXXNewExpr *e,
                                 QualType elementType) override;
@@ -957,6 +960,7 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
 
   case Type::Builtin:
   case Type::BitInt:
+  case Type::OverflowBehavior:
   // GCC treats vector and complex types as fundamental types.
   case Type::Vector:
   case Type::ExtVector:
@@ -1383,6 +1387,9 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
     break;
 
   case Type::BitInt:
+    break;
+
+  case Type::OverflowBehavior:
     break;
 
   case Type::ConstantArray:
@@ -1920,7 +1927,7 @@ static CharUnits computeOffsetHint(ASTContext &astContext,
   // If Dst is not derived from Src we can skip the whole computation below and
   // return that Src is not a public base of Dst.  Record all inheritance paths.
   if (!dst->isDerivedFrom(src, paths))
-    return CharUnits::fromQuantity(-2ULL);
+    return CharUnits::fromQuantity(-2);
 
   unsigned numPublicPaths = 0;
   CharUnits offset;
@@ -1936,7 +1943,7 @@ static CharUnits computeOffsetHint(ASTContext &astContext,
       // If the path contains a virtual base class we can't give any hint.
       // -1: no hint.
       if (pathElement.Base->isVirtual())
-        return CharUnits::fromQuantity(-1ULL);
+        return CharUnits::fromQuantity(-1);
 
       if (numPublicPaths > 1) // Won't use offsets, skip computation.
         continue;
@@ -1951,11 +1958,11 @@ static CharUnits computeOffsetHint(ASTContext &astContext,
 
   // -2: Src is not a public base of Dst.
   if (numPublicPaths == 0)
-    return CharUnits::fromQuantity(-2ULL);
+    return CharUnits::fromQuantity(-2);
 
   // -3: Src is a multiple public base type but never a virtual base type.
   if (numPublicPaths > 1)
-    return CharUnits::fromQuantity(-3ULL);
+    return CharUnits::fromQuantity(-3);
 
   // Otherwise, the Src type is a unique public nonvirtual base type of Dst.
   // Return the offset of Src from the origin of Dst.
@@ -2195,6 +2202,25 @@ mlir::Value CIRGenItaniumCXXABI::emitDynamicCast(CIRGenFunction &cgf,
                                         isRefCast, castInfo);
 }
 
+cir::MethodAttr
+CIRGenItaniumCXXABI::buildVirtualMethodAttr(cir::MethodType methodTy,
+                                            const CXXMethodDecl *md) {
+  assert(md->isVirtual() && "only deal with virtual member functions");
+
+  uint64_t index = cgm.getItaniumVTableContext().getMethodVTableIndex(md);
+  uint64_t vtableOffset;
+  if (cgm.getItaniumVTableContext().isRelativeLayout()) {
+    // Multiply by 4-byte relative offsets.
+    vtableOffset = index * 4;
+  } else {
+    const ASTContext &astContext = cgm.getASTContext();
+    CharUnits pointerWidth = astContext.toCharUnitsFromBits(
+        astContext.getTargetInfo().getPointerWidth(LangAS::Default));
+    vtableOffset = index * pointerWidth.getQuantity();
+  }
+
+  return cir::MethodAttr::get(methodTy, vtableOffset);
+}
 /// The Itanium ABI always places an offset to the complete object
 /// at entry -2 in the vtable.
 void CIRGenItaniumCXXABI::emitVirtualObjectDelete(
@@ -2333,6 +2359,8 @@ static void initCatchParam(CIRGenFunction &cgf, const VarDecl &catchParam,
                            Address paramAddr, SourceLocation loc) {
   CanQualType catchType =
       cgf.cgm.getASTContext().getCanonicalType(catchParam.getType());
+  mlir::Type cirCatchTy = cgf.convertTypeForMem(catchType);
+
   // If we're catching by reference, we can just cast the object
   // pointer to the appropriate pointer.
   if (isa<ReferenceType>(catchType)) {
@@ -2347,22 +2375,47 @@ static void initCatchParam(CIRGenFunction &cgf, const VarDecl &catchParam,
     // If the catch type is a pointer type, __cxa_begin_catch returns
     // the pointer by value.
     if (catchType->hasPointerRepresentation()) {
-      cgf.cgm.errorNYI(loc, "initCatchParam: hasPointerRepresentation");
-      return;
+      mlir::Value catchParam =
+          callBeginCatch(cgf, cirCatchTy, /*endMightThrow=*/false);
+      switch (catchType.getQualifiers().getObjCLifetime()) {
+      case Qualifiers::OCL_Strong:
+        cgf.cgm.errorNYI(loc,
+                         "initCatchParam: PointerRepresentation OCL_Strong");
+        return;
+
+      case Qualifiers::OCL_ExplicitNone:
+      case Qualifiers::OCL_Autoreleasing:
+        cgf.cgm.errorNYI(loc, "initCatchParam: PointerRepresentation "
+                              "OCL_ExplicitNone & OCL_Autoreleasing");
+        return;
+
+      case Qualifiers::OCL_None:
+        cgf.getBuilder().createStore(cgf.getLoc(loc), catchParam, paramAddr);
+        return;
+
+      case Qualifiers::OCL_Weak:
+        cgf.cgm.errorNYI(loc, "initCatchParam: PointerRepresentation OCL_Weak");
+        return;
+      }
+
+      llvm_unreachable("bad ownership qualifier!");
     }
 
+    // Otherwise, it returns a pointer into the exception object.
     mlir::Type cirCatchTy = cgf.convertTypeForMem(catchType);
     mlir::Value catchParam =
-        callBeginCatch(cgf, cgf.getBuilder().getPointerTo(cirCatchTy), false);
+        callBeginCatch(cgf, cgf.getBuilder().getPointerTo(cirCatchTy),
+                       /*endMightThrow=*/false);
     LValue srcLV = cgf.makeNaturalAlignAddrLValue(catchParam, catchType);
     LValue destLV = cgf.makeAddrLValue(paramAddr, catchType);
     switch (tek) {
     case cir::TEK_Complex: {
-      cgf.cgm.errorNYI(loc, "initCatchParam: cir::TEK_Complex");
+      mlir::Value load = cgf.emitLoadOfComplex(srcLV, loc);
+      cgf.emitStoreOfComplex(cgf.getLoc(loc), load, destLV, /*isInit=*/true);
       return;
     }
     case cir::TEK_Scalar: {
-      auto exnLoad = cgf.emitLoadOfScalar(srcLV, loc);
+      mlir::Value exnLoad = cgf.emitLoadOfScalar(srcLV, loc);
       cgf.emitStoreOfScalar(exnLoad, destLV, /*isInit=*/true);
       return;
     }
@@ -2370,7 +2423,6 @@ static void initCatchParam(CIRGenFunction &cgf, const VarDecl &catchParam,
       llvm_unreachable("evaluation kind filtered out!");
     }
 
-    // Otherwise, it returns a pointer into the exception object.
     llvm_unreachable("bad evaluation kind");
   }
 

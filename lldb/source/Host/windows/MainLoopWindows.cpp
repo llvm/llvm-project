@@ -247,7 +247,7 @@ MainLoopWindows::RegisterReadObject(const IOObjectSP &object_sp,
         callback};
   } else {
     DWORD file_type = GetFileType(waitable_handle);
-    if (file_type != FILE_TYPE_PIPE) {
+    if (file_type != FILE_TYPE_CHAR && file_type != FILE_TYPE_PIPE) {
       error = Status::FromErrorStringWithFormat("Unsupported file type %ld",
                                                 file_type);
       return nullptr;

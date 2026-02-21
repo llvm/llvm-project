@@ -27,7 +27,7 @@
 
 #include "llvm/Support/Error.h"
 
-using namespace llvm::omp::target::debug;
+using namespace llvm::offload::debug;
 
 namespace llvm {
 
@@ -81,8 +81,8 @@ class MemoryManagerTy {
   static int findBucket(size_t Size) {
     const size_t F = floorToPowerOfTwo(Size);
 
-    ODBG(ODT_Alloc) << "findBucket: Size " << Size << " is floored to " << F
-                    << ".";
+    ODBG(OLDT_Alloc) << "findBucket: Size " << Size << " is floored to " << F
+                     << ".";
 
     int L = 0, H = NumBuckets - 1;
     while (H - L > 1) {
@@ -97,7 +97,7 @@ class MemoryManagerTy {
 
     assert(L >= 0 && L < NumBuckets && "L is out of range");
 
-    ODBG(ODT_Alloc) << "findBucket: Size " << Size << " goes to bucket " << L;
+    ODBG(OLDT_Alloc) << "findBucket: Size " << Size << " goes to bucket " << L;
 
     return L;
   }
@@ -195,8 +195,8 @@ class MemoryManagerTy {
     // We cannot get memory from the device. It might be due to OOM. Let's
     // free all memory in FreeLists and try again.
     if (TgtPtr == nullptr) {
-      ODBG(ODT_Alloc) << "Failed to get memory on device. Free all memory "
-                      << "in FreeLists and try again.";
+      ODBG(OLDT_Alloc) << "Failed to get memory on device. Free all memory "
+                       << "in FreeLists and try again.";
       TgtPtrOrErr = freeAndAllocate(Size, HstPtr);
       if (!TgtPtrOrErr)
         return TgtPtrOrErr.takeError();
@@ -204,8 +204,8 @@ class MemoryManagerTy {
     }
 
     if (TgtPtr == nullptr)
-      ODBG(ODT_Alloc) << "Still cannot get memory on device probably because "
-                      << "the device is OOM.";
+      ODBG(OLDT_Alloc) << "Still cannot get memory on device probably because "
+                       << "the device is OOM.";
 
     return TgtPtr;
   }
@@ -237,20 +237,20 @@ public:
     if (Size == 0)
       return nullptr;
 
-    ODBG(ODT_Alloc) << "MemoryManagerTy::allocate: size " << Size
-                    << " with host pointer " << HstPtr << ".";
+    ODBG(OLDT_Alloc) << "MemoryManagerTy::allocate: size " << Size
+                     << " with host pointer " << HstPtr << ".";
 
     // If the size is greater than the threshold, allocate it directly from
     // device.
     if (Size > SizeThreshold) {
-      ODBG(ODT_Alloc) << Size << " is greater than the threshold "
-                      << SizeThreshold << ". Allocate it directly from device";
+      ODBG(OLDT_Alloc) << Size << " is greater than the threshold "
+                       << SizeThreshold << ". Allocate it directly from device";
       auto TgtPtrOrErr = allocateOrFreeAndAllocateOnDevice(Size, HstPtr);
       if (!TgtPtrOrErr)
         return TgtPtrOrErr.takeError();
 
-      ODBG(ODT_Alloc) << "Got target pointer " << *TgtPtrOrErr
-                      << ". Return directly.";
+      ODBG(OLDT_Alloc) << "Got target pointer " << *TgtPtrOrErr
+                       << ". Return directly.";
 
       return *TgtPtrOrErr;
     }
@@ -273,13 +273,13 @@ public:
     }
 
     if (NodePtr != nullptr)
-      ODBG(ODT_Alloc) << "Find one node " << NodePtr << " in the bucket.";
+      ODBG(OLDT_Alloc) << "Find one node " << NodePtr << " in the bucket.";
 
     // We cannot find a valid node in FreeLists. Let's allocate on device and
     // create a node for it.
     if (NodePtr == nullptr) {
-      ODBG(ODT_Alloc) << "Cannot find a node in the FreeLists. "
-                      << "Allocate on device.";
+      ODBG(OLDT_Alloc) << "Cannot find a node in the FreeLists. "
+                       << "Allocate on device.";
       // Allocate one on device
       auto TgtPtrOrErr = allocateOrFreeAndAllocateOnDevice(Size, HstPtr);
       if (!TgtPtrOrErr)
@@ -296,8 +296,8 @@ public:
         NodePtr = &Itr.first->second;
       }
 
-      ODBG(ODT_Alloc) << "Node address " << NodePtr << ", target pointer "
-                      << TgtPtr << ", size " << Size;
+      ODBG(OLDT_Alloc) << "Node address " << NodePtr << ", target pointer "
+                       << TgtPtr << ", size " << Size;
     }
 
     assert(NodePtr && "NodePtr should not be nullptr at this point");
@@ -307,7 +307,8 @@ public:
 
   /// Deallocate memory pointed by \p TgtPtr
   Error free(void *TgtPtr) {
-    ODBG(ODT_Alloc) << "MemoryManagerTy::free: target memory " << TgtPtr << ".";
+    ODBG(OLDT_Alloc) << "MemoryManagerTy::free: target memory " << TgtPtr
+                     << ".";
 
     NodeTy *P = nullptr;
 
@@ -324,15 +325,15 @@ public:
 
     // The memory is not managed by the manager
     if (P == nullptr) {
-      ODBG(ODT_Alloc) << "Cannot find its node. Delete it on device directly.";
+      ODBG(OLDT_Alloc) << "Cannot find its node. Delete it on device directly.";
       return deleteOnDevice(TgtPtr);
     }
 
     // Insert the node to the free list
     const int B = findBucket(P->Size);
 
-    ODBG(ODT_Alloc) << "Found its node " << P << ". Insert it to bucket " << B
-                    << ".";
+    ODBG(OLDT_Alloc) << "Found its node " << P << ". Insert it to bucket " << B
+                     << ".";
 
     {
       std::lock_guard<std::mutex> G(FreeListLocks[B]);
@@ -355,8 +356,8 @@ public:
     size_t Threshold = MemoryManagerThreshold.get();
 
     if (MemoryManagerThreshold.isPresent() && Threshold == 0) {
-      ODBG(ODT_Alloc) << "Disabled memory manager as user set "
-                      << "LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD=0.";
+      ODBG(OLDT_Alloc) << "Disabled memory manager as user set "
+                       << "LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD=0.";
       return std::make_pair(0, false);
     }
 

@@ -345,10 +345,10 @@ define i32 @test_count_bits(ptr %test_base) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 12
-; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP5:%.*]] = udiv i64 [[TMP1]], 8
-; CHECK-NEXT:    [[TMP6:%.*]] = udiv i64 [[TMP2]], 8
-; CHECK-NEXT:    [[TMP7:%.*]] = udiv i64 [[TMP3]], 8
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i64 [[TMP3]], 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TEST_BASE:%.*]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TEST_BASE]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TEST_BASE]], i64 [[TMP6]]

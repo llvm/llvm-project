@@ -22,7 +22,8 @@ struct TypeNameVisitor : TestVisitor {
     if (ExpectedName != "") {
       PrintingPolicy Policy(Context->getPrintingPolicy());
       Policy.SuppressScope = false;
-      Policy.AnonymousTagLocations = true;
+      Policy.AnonymousTagNameStyle =
+          llvm::to_underlying(PrintingPolicy::AnonymousTagMode::SourceLocation);
       Policy.PolishForDeclaration = true;
       Policy.SuppressUnwrittenScope = true;
       std::string ActualName = TypeName::getFullyQualifiedName(
@@ -361,14 +362,14 @@ TEST(QualTypeNameTest, AnonStrucs) {
   TypeNameVisitor AnonStrucs;
   AnonStrucs.ExpectedQualTypeNames["a"] = "short";
   AnonStrucs.ExpectedQualTypeNames["un_in_st_1"] =
-      "union (unnamed struct at input.cc:1:1)::(unnamed union at "
+      "union (unnamed struct at input.cc:1:1)::(unnamed at "
       "input.cc:2:27)";
   AnonStrucs.ExpectedQualTypeNames["b"] = "short";
   AnonStrucs.ExpectedQualTypeNames["un_in_st_2"] =
-      "union (unnamed struct at input.cc:1:1)::(unnamed union at "
+      "union (unnamed struct at input.cc:1:1)::(unnamed at "
       "input.cc:5:27)";
   AnonStrucs.ExpectedQualTypeNames["anon_st"] =
-      "struct (unnamed struct at input.cc:1:1)";
+      "struct (unnamed at input.cc:1:1)";
   AnonStrucs.runOver(R"(struct {
                           union {
                             short a;

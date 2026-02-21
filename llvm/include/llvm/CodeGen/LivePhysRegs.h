@@ -83,6 +83,9 @@ public:
   void addReg(MCRegister Reg) {
     assert(TRI && "LivePhysRegs is not initialized.");
     assert(Reg < TRI->getNumRegs() && "Expected a physical register.");
+    // Constant registers are never considered live.
+    if (TRI->isConstantPhysReg(Reg))
+      return;
     for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
       LiveRegs.insert(SubReg);
   }
@@ -223,18 +226,13 @@ static inline bool recomputeLiveIns(MachineBasicBlock &MBB) {
 /// Convenience function for recomputing live-in's for a set of MBBs until the
 /// computation converges.
 inline void fullyRecomputeLiveIns(ArrayRef<MachineBasicBlock *> MBBs) {
-  MachineBasicBlock *const *Data = MBBs.data();
-  const size_t Len = MBBs.size();
-  while (true) {
-    bool AnyChange = false;
-    for (size_t I = 0; I < Len; ++I)
-      if (recomputeLiveIns(*Data[I]))
-        AnyChange = true;
-    if (!AnyChange)
-      return;
-  }
+  bool Change = false;
+  do {
+    Change = false;
+    for (MachineBasicBlock *MBB : MBBs)
+      Change |= recomputeLiveIns(*MBB);
+  } while (Change);
 }
-
 
 } // end namespace llvm
 

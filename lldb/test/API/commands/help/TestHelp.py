@@ -237,12 +237,38 @@ class HelpCommandTestCase(TestBase):
 
     @no_debug_info_test
     def test_help_format_output(self):
-        """Test that help output reaches TerminalWidth."""
+        """Test that help output reaches TerminalWidth and wraps to the next
+        line if needed."""
+        self.runCmd("settings set term-width 118")
+        self.expect(
+            "help format",
+            matching=True,
+            patterns=[
+                r"^<format> -- One of the format names \(or one-character names\) that can be used to show a variable's value:\n"
+                r"\s+\"default\"\n"
+            ],
+        )
+
+        # The length of the first line will not be exactly 108 because we split
+        # at the last whitespace point before the limit.
         self.runCmd("settings set term-width 108")
         self.expect(
             "help format",
             matching=True,
-            substrs=["<format> -- One of the format names"],
+            patterns=[
+                r"^<format> -- One of the format names \(or one-character names\) that can be used to show a variable's\n"
+                r"\s+value:\n"
+            ],
+        )
+
+        self.runCmd("settings set term-width 90")
+        self.expect(
+            "help format",
+            matching=True,
+            patterns=[
+                r"<format> -- One of the format names \(or one-character names\) that can be used to show a\n"
+                r"\s+variable's value:\n"
+            ],
         )
 
     @no_debug_info_test
@@ -267,6 +293,62 @@ class HelpCommandTestCase(TestBase):
                 "The format to use for each of the value to be written.",
                 "-s <byte-size> ( --size <byte-size> )",
                 "The size in bytes to write from input file or each value.",
+            ],
+        )
+
+    @no_debug_info_test
+    def test_help_option_description_terminal_width_no_ansi(self):
+        """Test that help on commands formats option descriptions acccording
+        to the terminal width."""
+        # Should fit on one line.
+        self.runCmd("settings set term-width 138")
+        self.expect(
+            "help breakpoint set",
+            matching=True,
+            patterns=[
+                r"\s+Set the breakpoint only in this shared library.  Can repeat this option multiple times to specify multiple shared libraries.\n"
+            ],
+        )
+
+        # Must be printed on two lines.
+        self.runCmd("settings set term-width 100")
+        self.expect(
+            "help breakpoint set",
+            matching=True,
+            patterns=[
+                r"\s+Set the breakpoint only in this shared library.  Can repeat this option multiple times\n"
+                r"\s+to specify multiple shared libraries.\n"
+            ],
+        )
+
+    @no_debug_info_test
+    def test_help_option_description_terminal_width_with_ansi(self):
+        """Test that help on commands formats option descriptions that include
+        ANSI codes acccording to the terminal width."""
+        self.runCmd("settings set use-color on")
+
+        # FIXME: lldb crashes when the width is exactly 135 - https://github.com/llvm/llvm-project/issues/177570
+
+        # Should fit on one line.
+        self.runCmd("settings set term-width 138")
+        self.expect(
+            "help breakpoint set",
+            matching=True,
+            patterns=[
+                # The "S" of "Set" is underlined.
+                r"\s+\x1b\[4mS\x1b\[0met the breakpoint only in this shared library.  Can repeat this option multiple times to specify multiple shared libraries.\n"
+            ],
+        )
+
+        # Must be printed on two lines.
+        # FIXME: Second line is truncated - https://github.com/llvm/llvm-project/issues/177570
+        self.runCmd("settings set term-width 100")
+        self.expect(
+            "help breakpoint set",
+            matching=True,
+            patterns=[
+                r"\s+\x1b\[4mS\x1b\[0met the breakpoint only in this shared library.  Can repeat this option\n"
+                r"\s+multiple times to specify multiple shared li\n"
             ],
         )
 

@@ -1,0 +1,136 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+// Test basic cleanup.scope with all cleanup kind (normal + eh)
+cir.func @cleanup_scope_all() {
+  cir.cleanup.scope {
+    cir.yield
+  } cleanup all {
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK: cir.func @cleanup_scope_all() {
+// CHECK:   cir.cleanup.scope {
+// CHECK:     cir.yield
+// CHECK:   } cleanup all {
+// CHECK:     cir.yield
+// CHECK:   }
+// CHECK:   cir.return
+// CHECK: }
+
+// Test cleanup.scope with normal-only cleanup
+cir.func @cleanup_scope_normal() {
+  cir.cleanup.scope {
+    cir.yield
+  } cleanup normal {
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK: cir.func @cleanup_scope_normal() {
+// CHECK:   cir.cleanup.scope {
+// CHECK:     cir.yield
+// CHECK:   } cleanup normal {
+// CHECK:     cir.yield
+// CHECK:   }
+// CHECK:   cir.return
+// CHECK: }
+
+// Test cleanup.scope with EH-only cleanup
+cir.func @cleanup_scope_eh() {
+  cir.cleanup.scope {
+    cir.yield
+  } cleanup eh {
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK: cir.func @cleanup_scope_eh() {
+// CHECK:   cir.cleanup.scope {
+// CHECK:     cir.yield
+// CHECK:   } cleanup eh {
+// CHECK:     cir.yield
+// CHECK:   }
+// CHECK:   cir.return
+// CHECK: }
+
+// Test nested cleanup.scope operations
+cir.func @nested_cleanup_scopes() {
+  cir.cleanup.scope {
+    cir.cleanup.scope {
+      cir.yield
+    } cleanup all {
+      cir.yield
+    }
+    cir.yield
+  } cleanup all {
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK: cir.func @nested_cleanup_scopes() {
+// CHECK:   cir.cleanup.scope {
+// CHECK:     cir.cleanup.scope {
+// CHECK:       cir.yield
+// CHECK:     } cleanup all {
+// CHECK:       cir.yield
+// CHECK:     }
+// CHECK:     cir.yield
+// CHECK:   } cleanup all {
+// CHECK:     cir.yield
+// CHECK:   }
+// CHECK:   cir.return
+// CHECK: }
+
+// Test cleanup.scope inside cir.scope
+cir.func @cleanup_in_scope() {
+  cir.scope {
+    cir.cleanup.scope {
+      cir.yield
+    } cleanup all {
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK: cir.func @cleanup_in_scope() {
+// CHECK:   cir.scope {
+// CHECK:     cir.cleanup.scope {
+// CHECK:       cir.yield
+// CHECK:     } cleanup all {
+// CHECK:       cir.yield
+// CHECK:     }
+// CHECK:   }
+// CHECK:   cir.return
+// CHECK: }
+
+
+// Test basic cleanup.scope with all cleanup kind (normal + eh)
+cir.func @return_within_cleanup() {
+  cir.cleanup.scope {
+    cir.return
+  } cleanup all {
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK: cir.func @return_within_cleanup() {
+// CHECK:   cir.cleanup.scope {
+// CHECK:     cir.return
+// CHECK:   } cleanup all {
+// CHECK:     cir.yield
+// CHECK:   }
+// CHECK:   cir.return
+// CHECK: }
+
+}

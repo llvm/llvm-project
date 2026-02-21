@@ -49,7 +49,7 @@ private:
   SmallVector<GlobListItem, 0> Items;
 
 public:
-  const SmallVectorImpl<GlobListItem> &getItems() const { return Items; };
+  const SmallVectorImpl<GlobListItem> &getItems() const { return Items; }
 };
 
 /// A \p GlobList that caches search results, so that search is performed only

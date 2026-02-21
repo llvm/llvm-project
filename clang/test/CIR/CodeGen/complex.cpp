@@ -1472,13 +1472,13 @@ void calling_function_that_return_complex() {
 }
 
 // CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
-// CIR: %[[RESULT:.*]] = cir.call @_Z24complex_type_return_typev() : () -> !cir.complex<!cir.float>
+// CIR: %[[RESULT:.*]] = cir.call @_Z24complex_type_return_typev() : () -> (!cir.complex<!cir.float> {llvm.noundef})
 // CIR: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
 // TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
 
 // LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[RESULT:.*]] = call { float, float } @_Z24complex_type_return_typev()
+// LLVM: %[[RESULT:.*]] = call noundef { float, float } @_Z24complex_type_return_typev()
 // LLVM: store { float, float } %[[RESULT]], ptr %[[A_ADDR]], align 4
 
 // OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4

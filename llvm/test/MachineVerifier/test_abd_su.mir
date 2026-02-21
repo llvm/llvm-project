@@ -1,8 +1,8 @@
-# RUN: not --crash llc -verify-machineinstrs -mtriple=arm64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 ---
-name:            g_abd_su
+name: g_abd_su
 body: |
   bb.0:
 
@@ -35,6 +35,4 @@ body: |
     ; CHECK: Type mismatch in generic instruction
     ; CHECK: Type mismatch in generic instruction
     %20:_(s1) = G_ABDU %18, %19
-
 ...
-

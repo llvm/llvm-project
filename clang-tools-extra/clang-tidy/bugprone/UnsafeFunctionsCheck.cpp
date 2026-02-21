@@ -10,6 +10,7 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Analysis/AnnexKDetection.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include <cassert>
@@ -60,7 +61,8 @@ static StringRef getReplacementFor(StringRef FunctionName,
       .Cases({"asctime", "asctime_r"}, "strftime")
       .Case("gets", "fgets")
       .Case("rewind", "fseek")
-      .Case("setbuf", "setvbuf");
+      .Case("setbuf", "setvbuf")
+      .Case("get_temporary_buffer", "operator new[]");
 }
 
 static StringRef getReplacementForAdditional(StringRef FunctionName,
@@ -97,6 +99,9 @@ static StringRef getRationaleFor(StringRef FunctionName) {
       .Cases({"rewind", "setbuf"}, "has no error detection")
       .Case("vfork", "is insecure as it can lead to denial of service "
                      "situations in the parent process")
+      .Case("get_temporary_buffer", "returns uninitialized memory without "
+                                    "performance advantages, was deprecated in "
+                                    "C++17 and removed in C++20")
       .Default("is not bounds-checking");
 }
 
@@ -109,26 +114,7 @@ static bool isAnnexKAvailable(std::optional<bool> &CacheVar, Preprocessor *PP,
   if (CacheVar.has_value())
     return *CacheVar;
 
-  if (!LO.C11)
-    // TODO: How is "Annex K" available in C++ mode?
-    return (CacheVar = false).value();
-
-  assert(PP && "No Preprocessor registered.");
-
-  if (!PP->isMacroDefined("__STDC_LIB_EXT1__") ||
-      !PP->isMacroDefined("__STDC_WANT_LIB_EXT1__"))
-    return (CacheVar = false).value();
-
-  const auto *MI =
-      PP->getMacroInfo(PP->getIdentifierInfo("__STDC_WANT_LIB_EXT1__"));
-  if (!MI || MI->tokens_empty())
-    return (CacheVar = false).value();
-
-  const Token &T = MI->tokens().back();
-  if (!T.isLiteral() || !T.getLiteralData())
-    return (CacheVar = false).value();
-
-  CacheVar = StringRef(T.getLiteralData(), T.getLength()) == "1";
+  CacheVar = analysis::isAnnexKAvailable(PP, LO);
   return CacheVar.value();
 }
 
@@ -155,7 +141,7 @@ parseCheckedFunctions(StringRef Option, ClangTidyContext *Context) {
 
     Result.push_back(
         {Name.trim().str(),
-         matchers::MatchesAnyListedNameMatcher::NameMatcher(Name.trim()),
+         matchers::MatchesAnyListedRegexNameMatcher::NameMatcher(Name.trim()),
          Replacement.trim().str(), Reason.trim().str()});
   }
 
@@ -221,7 +207,8 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
 
     // Matching functions with replacements without Annex K.
     auto FunctionNamesMatcher =
-        hasAnyName("::asctime", "asctime_r", "::gets", "::rewind", "::setbuf");
+        hasAnyName("::asctime", "asctime_r", "::gets", "::rewind", "::setbuf",
+                   "::std::get_temporary_buffer");
     Finder->addMatcher(
         declRefExpr(
             to(functionDecl(FunctionNamesMatcher).bind(FunctionNamesId)))
@@ -247,7 +234,8 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
     for (const auto &Entry : CustomFunctions)
       FunctionNames.emplace_back(Entry.Name);
 
-    auto CustomFunctionsMatcher = matchers::matchesAnyListedName(FunctionNames);
+    auto CustomFunctionsMatcher =
+        matchers::matchesAnyListedRegexName(FunctionNames);
 
     Finder->addMatcher(declRefExpr(to(functionDecl(CustomFunctionsMatcher)
                                           .bind(CustomFunctionNamesId)))

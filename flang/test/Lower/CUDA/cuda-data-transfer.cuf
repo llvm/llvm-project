@@ -30,6 +30,15 @@ module mod1
     end function
   end interface
 
+  interface
+    function somefunction(d, n)
+      integer :: n
+      real(8), device :: d(n,n)
+      real(8) :: somefunction(n)
+    end function
+  end interface
+      
+
 contains
   function dev1(a)
     integer, device :: a(:)
@@ -455,9 +464,10 @@ end subroutine
 ! CHECK: cuf.data_transfer
 
 subroutine sub23(n)
+  use mod1
   integer :: n
   real(8), device :: d(n,n), x(n)
-  x = sum(d,dim=2) ! Was triggering Unsupported CUDA data transfer
+  x = somefunction(d,2) ! Was triggering Unsupported CUDA data transfer
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub23
@@ -578,3 +588,31 @@ end subroutine
 ! CHECK: %{{.*}} = cuf.alloc !fir.type<_QMmod1Tt3{spheres:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMmod1Ts{c:!fir.array<3xf32>}>>>>}> {bindc_name = "t", data_attr = #cuf.cuda<managed>, uniq_name = "_QFsub30Et"} -> !fir.ref<!fir.type<_QMmod1Tt3{spheres:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMmod1Ts{c:!fir.array<3xf32>}>>>>}>>
 ! CHECK: hlfir.assign 
 ! CHECK-NOT: cuf.data_transfer
+
+! Test that assigment with only managed variables on both rhs and lhs is done
+! on the host.
+
+subroutine sub31()
+  type :: t30
+    real, managed, allocatable :: q(:)
+  end type
+  type(t30), managed, allocatable :: x(:)
+  x(4)%q = x(3)%q
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub31()
+! CHECK: cuf.alloc !fir.box<!fir.heap<!fir.array<?x!fir.type<_QFsub31Tt30{q:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>> 
+! CHECK: hlfir.assign 
+! CHECK-NOT: cuf.data_transfer
+
+subroutine sub32()
+  integer, managed :: adev(10)
+  integer :: a
+
+  adev = a
+
+  adev = 0
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub32() 
+! CHECK-COUNT-2: cuf.data_transfer

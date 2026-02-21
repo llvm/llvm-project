@@ -1,0 +1,85 @@
+# COM: Checks the extraction of symbol tags.
+
+# RUN: clangd -lit-test < %s | FileCheck %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{"textDocument":{"documentSymbol":{"hierarchicalDocumentSymbolSupport":true}},"workspace":{"symbol":{"symbolKind":{"valueSet": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26]}}}},"trace":"off"}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,
+    "text":
+    "class A {\n virtual void f() const = 0;\n};"
+}}}
+---
+{"jsonrpc":"2.0","id":2,"method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"test:///main.cpp"}}}
+# CHECK:  "id": 2
+# CHECK:   "jsonrpc": "2.0",
+# CHECK:   "result": [
+# CHECK:     {
+# CHECK:       "children": [
+# CHECK:         {
+# CHECK:           "detail": "void () const",
+# CHECK:           "kind": 6,
+# CHECK:           "name": "f",
+# CHECK:           "range": {
+# CHECK:             "end": {
+# CHECK:               "character": 27,
+# CHECK:               "line": 1
+# CHECK:             },
+# CHECK:             "start": {
+# CHECK:               "character": 1,
+# CHECK:               "line": 1
+# CHECK:             }
+# CHECK:           },
+# CHECK:           "selectionRange": {
+# CHECK:             "end": {
+# CHECK:               "character": 15,
+# CHECK:               "line": 1
+# CHECK:             },
+# CHECK:             "start": {
+# CHECK:               "character": 14,
+# CHECK:               "line": 1
+# CHECK:             }
+# CHECK:           },
+# CHECK:           "tags": [
+# CHECK:             2,
+# CHECK:             9,
+# CHECK:             15,
+# CHECK:             18,
+# CHECK:             20
+# CHECK:           ]
+# CHECK:         }
+# CHECK:       ],
+# CHECK:       "detail": "class",
+# CHECK:       "kind": 5,
+# CHECK:       "name": "A",
+# CHECK:       "range": {
+# CHECK:         "end": {
+# CHECK:           "character": 1,
+# CHECK:           "line": 2
+# CHECK:         },
+# CHECK:         "start": {
+# CHECK:           "character": 0,
+# CHECK:           "line": 0
+# CHECK:         }
+# CHECK:       },
+# CHECK:       "selectionRange": {
+# CHECK:         "end": {
+# CHECK:           "character": 7,
+# CHECK:           "line": 0
+# CHECK:         },
+# CHECK:         "start": {
+# CHECK:           "character": 6,
+# CHECK:           "line": 0
+# CHECK:         }
+# CHECK:       },
+# CHECK:       "tags": [
+# CHECK:         9,
+# CHECK:         18,
+# CHECK:         19
+# CHECK:       ]
+# CHECK:     }
+# CHECK:   ]
+# CHECK: }
+
+---
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

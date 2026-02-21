@@ -6,8 +6,6 @@ target triple = "aarch64-linux-gnu"
 define { <vscale x 16 x i8>, <vscale x 16 x i8> } @test_sclamp_single_x2_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8> %d) {
 ; CHECK-LABEL: test_sclamp_single_x2_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    sclamp { z0.b, z1.b }, z2.b, z3.b
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.sclamp.single.x2.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8> %d)
@@ -17,8 +15,6 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @test_sclamp_single_x2_i8(<vsc
 define { <vscale x 8 x i16>, <vscale x 8 x i16> } @test_sclamp_single_x2_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c, <vscale x 8 x i16> %d) {
 ; CHECK-LABEL: test_sclamp_single_x2_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    sclamp { z0.h, z1.h }, z2.h, z3.h
 ; CHECK-NEXT:    ret
   %res = call { <vscale x  8 x i16>, <vscale x  8 x i16> } @llvm.aarch64.sve.sclamp.single.x2.nxv8i16(<vscale x  8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c, <vscale x 8 x i16> %d)
@@ -28,8 +24,6 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16> } @test_sclamp_single_x2_i16(<vs
 define { <vscale x 4 x i32>, <vscale x 4 x i32> } @test_sclamp_single_x2_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d) {
 ; CHECK-LABEL: test_sclamp_single_x2_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    sclamp { z0.s, z1.s }, z2.s, z3.s
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.sclamp.single.x2.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d)
@@ -39,8 +33,6 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32> } @test_sclamp_single_x2_i32(<vs
 define { <vscale x 2 x i64>, <vscale x 2 x i64> } @test_sclamp_single_x2_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c, <vscale x 2 x i64> %d) {
 ; CHECK-LABEL: test_sclamp_single_x2_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    sclamp { z0.d, z1.d }, z2.d, z3.d
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.sclamp.single.x2.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c, <vscale x 2 x i64> %d)
@@ -50,10 +42,6 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64> } @test_sclamp_single_x2_i64(<vs
 define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @test_sclamp_single_x4_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8> %d, <vscale x 16 x i8> %e, <vscale x 16 x i8> %f) {
 ; CHECK-LABEL: test_sclamp_single_x4_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    sclamp { z0.b - z3.b }, z4.b, z5.b
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.sclamp.single.x4.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8> %d, <vscale x 16 x i8> %e, <vscale x 16 x i8> %f)
@@ -63,10 +51,6 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @test_sclamp_single_x4_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c, <vscale x 8 x i16> %d, <vscale x 8 x i16> %e, <vscale x 8 x i16> %f) {
 ; CHECK-LABEL: test_sclamp_single_x4_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    sclamp { z0.h - z3.h }, z4.h, z5.h
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.sclamp.single.x4.nxv8i16(<vscale x  8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c, <vscale x 8 x i16> %d, <vscale x 8 x i16> %e, <vscale x 8 x i16> %f)
@@ -76,10 +60,6 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @test_sclamp_single_x4_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d, <vscale x 4 x i32> %e, <vscale x 4 x i32> %f) {
 ; CHECK-LABEL: test_sclamp_single_x4_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    sclamp { z0.s - z3.s }, z4.s, z5.s
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.sclamp.single.x4.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d, <vscale x 4 x i32> %e, <vscale x 4 x i32> %f)
@@ -89,10 +69,6 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @test_sclamp_single_x4_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c, <vscale x 2 x i64> %d, <vscale x 2 x i64> %e, <vscale x 2 x i64> %f) {
 ; CHECK-LABEL: test_sclamp_single_x4_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    sclamp { z0.d - z3.d }, z4.d, z5.d
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.sclamp.single.x4.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c, <vscale x 2 x i64> %d, <vscale x 2 x i64> %e, <vscale x 2 x i64> %f)

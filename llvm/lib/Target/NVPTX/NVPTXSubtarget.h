@@ -29,6 +29,10 @@
 
 namespace llvm {
 
+// FullSmVersion encoding: SM * 10 + ArchSuffixOffset
+// ArchSuffixOffset: 0 (base), 2 ('f'), 3 ('a')
+// e.g. sm_100 -> 1000, sm_100f -> 1002, sm_100a -> 1003
+
 class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   virtual void anchor();
   std::string TargetName;
@@ -36,8 +40,9 @@ class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   // PTX version x.y is represented as 10*x+y, e.g. 3.1 == 31
   unsigned PTXVersion;
 
-  // Full SM version x.y is represented as 100*x+10*y+feature, e.g. 3.1 == 310
-  // sm_90a == 901
+  // FullSmVersion encoding: SM * 10 + ArchSuffixOffset
+  // ArchSuffixOffset: 0 (base), 2 ('f'), 3 ('a')
+  // e.g. sm_30 -> 300, sm_90a -> 903, sm_100f -> 1002
   unsigned int FullSmVersion;
 
   // SM version x.y is represented as 10*x+y, e.g. 3.1 == 31. Derived from
@@ -120,29 +125,6 @@ public:
   bool hasDotInstructions() const {
     return SmVersion >= 61 && PTXVersion >= 50;
   }
-  // Tcgen05 instructions in Blackwell family
-  bool hasTcgen05Instructions() const {
-    bool HasTcgen05 = false;
-    unsigned MinPTXVersion = 86;
-    switch (FullSmVersion) {
-    default:
-      break;
-    case 1003: // sm_100a
-    case 1013: // sm_101a
-      HasTcgen05 = true;
-      break;
-    case 1103: // sm_110a
-      HasTcgen05 = true;
-      MinPTXVersion = 90;
-      break;
-    case 1033: // sm_103a
-      HasTcgen05 = true;
-      MinPTXVersion = 88;
-      break;
-    }
-
-    return HasTcgen05 && PTXVersion >= MinPTXVersion;
-  }
 
   // Checks following instructions support:
   // - tcgen05.ld/st
@@ -150,6 +132,7 @@ public:
   // - tcgen05.cp
   // - tcgen05.fence/wait
   // - tcgen05.commit
+  // - tcgen05.mma
   bool hasTcgen05InstSupport() const {
     // sm_101 renamed to sm_110 in PTX 9.0
     return hasPTXWithFamilySMs(90, {100, 110}) ||
@@ -166,8 +149,41 @@ public:
   }
 
   bool hasTcgen05MMAScaleInputDImm() const {
-    return FullSmVersion == 1003 && PTXVersion >= 86;
+    return hasPTXWithFamilySMs(88, {100}) || hasPTXWithAccelSMs(86, {100});
   }
+
+  bool hasTcgen05MMAI8Kind() const {
+    return hasPTXWithAccelSMs(90, {100, 110}) ||
+           hasPTXWithAccelSMs(86, {100, 101});
+  }
+
+  bool hasTcgen05MMASparseMxf4nvf4() const {
+    return hasPTXWithAccelSMs(90, {100, 110, 103}) ||
+           hasPTXWithAccelSMs(87, {100, 101, 103});
+  }
+
+  bool hasTcgen05MMASparseMxf4() const {
+    return hasPTXWithAccelSMs(90, {100, 110, 103}) ||
+           hasPTXWithAccelSMs(86, {100, 101, 103});
+  }
+
+  bool hasTcgen05LdRedSupport() const {
+    return hasPTXWithFamilySMs(90, {110, 103}) ||
+           hasPTXWithFamilySMs(88, {101, 103});
+  }
+
+  bool hasReduxSyncF32() const {
+    return hasPTXWithFamilySMs(88, {100}) || hasPTXWithAccelSMs(86, {100});
+  }
+
+  bool hasMMABlockScale() const {
+    return hasPTXWithFamilySMs(88, {120}) || hasPTXWithAccelSMs(87, {120});
+  }
+
+  bool hasMMASparseBlockScaleF4() const {
+    return hasPTXWithAccelSMs(87, {120, 121});
+  }
+
   // f32x2 instructions in Blackwell family
   bool hasF32x2Instructions() const;
 
@@ -203,6 +219,20 @@ public:
            hasPTXWithAccelSMs(86, {100, 101, 120});
   }
 
+  // Checks support for conversions involving the following types:
+  // - bf16x2 -> f8x2
+  // - f16x2 -> f6x2
+  // - bf16x2 -> f6x2
+  // - f16x2 -> f4x2
+  // - bf16x2 -> f4x2
+  bool hasFP16X2ToNarrowFPConversionSupport() const {
+    return hasPTXWithFamilySMs(91, {100, 110, 120});
+  }
+
+  bool hasS2F6X2ConversionSupport() const {
+    return hasPTXWithAccelSMs(91, {100, 103, 110, 120, 121});
+  }
+
   bool hasTensormapReplaceSupport() const {
     return hasPTXWithFamilySMs(90, {90, 100, 110, 120}) ||
            hasPTXWithFamilySMs(88, {90, 100, 101, 120}) ||
@@ -231,6 +261,25 @@ public:
     return hasTensormapReplaceSupport();
   }
 
+  bool hasClusterLaunchControlTryCancelMulticastSupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
+           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
+           hasPTXWithAccelSMs(86, {100, 101, 120});
+  }
+
+  bool hasSetMaxNRegSupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
+           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
+           hasPTXWithAccelSMs(86, {100, 101, 120}) ||
+           hasPTXWithAccelSMs(80, {90});
+  }
+
+  bool hasLdStmatrixBlackwellSupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
+           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
+           hasPTXWithAccelSMs(86, {100, 101, 120});
+  }
+
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
   // terminates a basic block. Instead, it would assume that control flow
   // continued to the next instruction. The next instruction could be in the
@@ -240,6 +289,9 @@ public:
   // present.
   bool hasPTXASUnreachableBug() const { return PTXVersion < 83; }
   bool hasCvtaParam() const { return SmVersion >= 70 && PTXVersion >= 77; }
+  bool hasConvertWithStochasticRounding() const {
+    return hasPTXWithAccelSMs(87, {100, 103});
+  }
   unsigned int getFullSmVersion() const { return FullSmVersion; }
   unsigned int getSmVersion() const { return getFullSmVersion() / 10; }
   unsigned int getSmFamilyVersion() const { return getFullSmVersion() / 100; }
@@ -261,9 +313,9 @@ public:
     return getFullSmVersion() % 10 == 2 ? PTXVersion >= 88
                                         : hasArchAccelFeatures();
   }
-  // If the user did not provide a target we default to the `sm_30` target.
+  // If the user did not provide a target we default to the `sm_75` target.
   std::string getTargetName() const {
-    return TargetName.empty() ? "sm_30" : TargetName;
+    return TargetName.empty() ? "sm_75" : TargetName;
   }
   bool hasTargetName() const { return !TargetName.empty(); }
 

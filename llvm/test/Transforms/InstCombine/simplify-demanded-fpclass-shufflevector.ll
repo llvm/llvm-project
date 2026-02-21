@@ -197,8 +197,7 @@ define nofpclass(nan ninf nnorm nsub nzero) <4 x half> @ret_positives_non_nan___
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) <4 x half> @ret_positives_non_nan___shuffle_fabs(
 ; CHECK-SAME: i1 [[COND:%.*]], <4 x half> nofpclass(ninf nzero nsub nnorm) [[KNOWN_POSITIVE0:%.*]], <4 x half> nofpclass(ninf nzero nsub nnorm) [[KNOWN_POSITIVE1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x half> [[KNOWN_POSITIVE0]], <4 x half> [[KNOWN_POSITIVE1]], <4 x i32> <i32 4, i32 2, i32 3, i32 0>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = call <4 x half> @llvm.fabs.v4f16(<4 x half> [[TMP1]])
-; CHECK-NEXT:    ret <4 x half> [[SHUFFLE]]
+; CHECK-NEXT:    ret <4 x half> [[TMP1]]
 ;
   %fabs.0 = call <4 x half> @llvm.fabs.v4f16(<4 x half> %known.positive0)
   %fabs.1 = call <4 x half> @llvm.fabs.v4f16(<4 x half> %known.positive1)

@@ -1,5 +1,4 @@
 ; RUN: opt < %s -S -passes=inline -inline-threshold=20 | FileCheck %s
-; RUN: opt < %s -S -passes='cgscc(inline)' -inline-threshold=20 | FileCheck %s
 ; RUN: opt < %s -S -passes='module-inline' -inline-threshold=20 | FileCheck %s
 ; Check that we don't drop FastMathFlag when estimating inlining profitability.
 ;

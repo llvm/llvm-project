@@ -253,8 +253,8 @@ end subroutine
 ! CHECK:           ^bb0(%[[VAL_17:.*]]: index):
 ! CHECK:             %[[VAL_18:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_17]])  typeparams %[[VAL_2]]#1 : (!fir.box<!fir.array<10x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_28:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_15]] : index) {bindc_name = ".result"}
-! CHECK:             %[[VAL_29:.*]] = fir.call @_QMchar_elemPelem_return_char(%[[VAL_28]], %[[VAL_15]], %[[VAL_18]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_30:.*]]:2 = hlfir.declare %[[VAL_28]] typeparams %[[VAL_15]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:             %[[VAL_29:.*]] = fir.call @_QMchar_elemPelem_return_char(%[[VAL_28]], %[[VAL_15]], %[[VAL_18]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_31:.*]] = arith.constant false
 ! CHECK:             %[[VAL_32:.*]] = hlfir.as_expr %[[VAL_30]]#0 move %[[VAL_31]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
 ! CHECK:             hlfir.yield_element %[[VAL_32]] : !hlfir.expr<!fir.char<1,?>>

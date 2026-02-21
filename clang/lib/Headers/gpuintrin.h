@@ -60,12 +60,17 @@ _Pragma("omp end declare target");
 #include <nvptxintrin.h>
 #elif defined(__AMDGPU__)
 #include <amdgpuintrin.h>
+#elif defined(__SPIRV__)
+#include <spirvintrin.h>
 #elif !defined(_OPENMP)
 #error "This header is only meant to be used on GPU architectures."
 #endif
 
 _Pragma("omp begin declare target device_type(nohost)");
 _Pragma("omp begin declare variant match(device = {kind(gpu)})");
+
+// Attribute to declare a function as a kernel.
+#define __gpu_kernel __attribute__((device_kernel, visibility("protected")))
 
 #define __GPU_X_DIM 0
 #define __GPU_Y_DIM 1
@@ -81,7 +86,7 @@ _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks(int __dim) {
   case 2:
     return __gpu_num_blocks_z();
   default:
-    __builtin_unreachable();
+    return 1;
   }
 }
 
@@ -95,7 +100,7 @@ _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_block_id(int __dim) {
   case 2:
     return __gpu_block_id_z();
   default:
-    __builtin_unreachable();
+    return 0;
   }
 }
 
@@ -109,7 +114,7 @@ _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_threads(int __dim) {
   case 2:
     return __gpu_num_threads_z();
   default:
-    __builtin_unreachable();
+    return 1;
   }
 }
 
@@ -123,7 +128,7 @@ _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_thread_id(int __dim) {
   case 2:
     return __gpu_thread_id_z();
   default:
-    __builtin_unreachable();
+    return 0;
   }
 }
 

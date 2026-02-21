@@ -53,6 +53,7 @@ static_library("LLVMSparcCodeGen") {
     "SparcSubtarget.cpp",
     "SparcTargetMachine.cpp",
     "SparcTargetObjectFile.cpp",
+    "SparcTargetTransformInfo.cpp",
   ]
 }
 

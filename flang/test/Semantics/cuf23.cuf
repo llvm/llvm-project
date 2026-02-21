@@ -53,3 +53,33 @@ attributes(global) subroutine global_with_block()
     print*, a ! ok
   end block
 end subroutine
+
+subroutine intrinsic_error(n)
+  integer :: n
+  real(8), device :: d(n,n), x(n)
+!ERROR: Actual argument d associated with host intrinsic sum is on the device
+  x = sum(d,dim=2)
+end subroutine
+
+subroutine intrinsic_error_skipped(ws)
+  integer(8), device, optional :: ws(*)
+  integer(8) :: p
+  if (.not. present(ws)) then
+    print*, 'not present'
+  else
+    p = loc(ws(1))
+  end if
+end subroutine
+
+subroutine intrinsic_error_size(n)
+  integer :: n, x
+  real(8), device :: d(n,n)
+  x = size(d,dim=1) ! ok
+  x = sizeof(d) ! ok
+end subroutine
+
+subroutine intrinsic_error_skip_show_descriptor(n)
+  use flang_debug
+  real(8), allocatable, device :: d(:)
+  call show_descriptor(d) ! ok, descriptore in managed memory
+end subroutine

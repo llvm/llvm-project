@@ -13,7 +13,7 @@
 ; For the YAML case, the function we pick depends on the order of the candidate
 ; list.
 ; YAML: --- !Missed
-; YAML-NEXT: Pass:            machine-outliner
+; YAML: Pass:            machine-outliner
 ; YAML-NEXT: Name:            NotOutliningCheaper
 ; YAML-NEXT: Function:
 ; YAML-NEXT: Args:

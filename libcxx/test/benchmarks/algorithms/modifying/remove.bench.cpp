@@ -27,12 +27,6 @@ int main(int argc, char** argv) {
       return element == value;
     });
   };
-  auto ranges_remove_if = [](auto first, auto last, auto const& value) {
-    return std::ranges::remove_if(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element == value;
-    });
-  };
 
   // Benchmark {std,ranges}::{remove,remove_if} on a sequence of the form xxxxxxxxxxyyyyyyyyyy
   // where we remove the prefix of x's from the sequence.
@@ -83,17 +77,11 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::remove(vector<int>) (prefix)", std_remove);
     bm.operator()<std::deque<int>>("std::remove(deque<int>) (prefix)", std_remove);
     bm.operator()<std::list<int>>("std::remove(list<int>) (prefix)", std_remove);
-    bm.operator()<std::vector<int>>("rng::remove(vector<int>) (prefix)", std::ranges::remove);
-    bm.operator()<std::deque<int>>("rng::remove(deque<int>) (prefix)", std::ranges::remove);
-    bm.operator()<std::list<int>>("rng::remove(list<int>) (prefix)", std::ranges::remove);
 
     // {std,ranges}::remove_if
     bm.operator()<std::vector<int>>("std::remove_if(vector<int>) (prefix)", std_remove_if);
     bm.operator()<std::deque<int>>("std::remove_if(deque<int>) (prefix)", std_remove_if);
     bm.operator()<std::list<int>>("std::remove_if(list<int>) (prefix)", std_remove_if);
-    bm.operator()<std::vector<int>>("rng::remove_if(vector<int>) (prefix)", ranges_remove_if);
-    bm.operator()<std::deque<int>>("rng::remove_if(deque<int>) (prefix)", ranges_remove_if);
-    bm.operator()<std::list<int>>("rng::remove_if(list<int>) (prefix)", ranges_remove_if);
   }
 
   // Benchmark {std,ranges}::remove on a sequence of the form xyxyxyxyxyxyxyxyxyxy
@@ -147,17 +135,11 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::remove(vector<int>) (sprinkled)", std_remove);
     bm.operator()<std::deque<int>>("std::remove(deque<int>) (sprinkled)", std_remove);
     bm.operator()<std::list<int>>("std::remove(list<int>) (sprinkled)", std_remove);
-    bm.operator()<std::vector<int>>("rng::remove(vector<int>) (sprinkled)", std::ranges::remove);
-    bm.operator()<std::deque<int>>("rng::remove(deque<int>) (sprinkled)", std::ranges::remove);
-    bm.operator()<std::list<int>>("rng::remove(list<int>) (sprinkled)", std::ranges::remove);
 
     // {std,ranges}::remove_if
     bm.operator()<std::vector<int>>("std::remove_if(vector<int>) (sprinkled)", std_remove_if);
     bm.operator()<std::deque<int>>("std::remove_if(deque<int>) (sprinkled)", std_remove_if);
     bm.operator()<std::list<int>>("std::remove_if(list<int>) (sprinkled)", std_remove_if);
-    bm.operator()<std::vector<int>>("rng::remove_if(vector<int>) (sprinkled)", ranges_remove_if);
-    bm.operator()<std::deque<int>>("rng::remove_if(deque<int>) (sprinkled)", ranges_remove_if);
-    bm.operator()<std::list<int>>("rng::remove_if(list<int>) (sprinkled)", ranges_remove_if);
   }
 
   benchmark::Initialize(&argc, argv);

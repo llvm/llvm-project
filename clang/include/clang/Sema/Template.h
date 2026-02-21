@@ -188,7 +188,9 @@ enum class TemplateSubstitutionKind : char {
     bool isAnyArgInstantiationDependent() const {
       for (ArgumentListLevel ListLevel : TemplateArgumentLists)
         for (const TemplateArgument &TA : ListLevel.Args)
-          if (TA.isInstantiationDependent())
+          // There might be null template arguments representing unused template
+          // parameter mappings in an MLTAL during concept checking.
+          if (!TA.isNull() && TA.isInstantiationDependent())
             return true;
       return false;
     }

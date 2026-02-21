@@ -16,6 +16,7 @@
 #define LLVM_LTO_LTO_H
 
 #include "llvm/IR/LLVMRemarkStreamer.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/Support/Compiler.h"
 #include <memory>
 
@@ -131,7 +132,12 @@ private:
   std::vector<std::pair<StringRef, Comdat::SelectionKind>> ComdatTable;
 
   MemoryBufferRef MbRef;
-  bool IsMemberOfArchive = false;
+  bool IsFatLTOObject = false;
+  // For distributed compilation, each input must exist as an individual bitcode
+  // file on disk and be identified by its ModuleID. Archive members and FatLTO
+  // objects violate this. So, in these cases we flag that the bitcode must be
+  // written out to a new standalone file.
+  bool SerializeForDistribution = false;
   bool IsThinLTO = false;
   StringRef ArchivePath;
   StringRef MemberName;
@@ -167,6 +173,12 @@ public:
     using irsymtab::Symbol::getSectionName;
     using irsymtab::Symbol::isExecutable;
     using irsymtab::Symbol::isUsed;
+
+    // Returns whether this symbol is a library call that LTO code generation
+    // may emit references to. Such symbols must be considered external, as
+    // removing them or modifying their interfaces would invalidate the code
+    // generator's knowledge about them.
+    bool isLibcall(const RTLIB::RuntimeLibcallsInfo &Libcalls) const;
   };
 
   /// A range over the symbols in this InputFile.
@@ -194,12 +206,20 @@ public:
 
   // Returns the only BitcodeModule from InputFile.
   LLVM_ABI BitcodeModule &getSingleBitcodeModule();
+  // Returns the primary BitcodeModule from InputFile.
+  LLVM_ABI BitcodeModule &getPrimaryBitcodeModule();
   // Returns the memory buffer reference for this input file.
   MemoryBufferRef getFileBuffer() const { return MbRef; }
-  // Returns true if this input file is a member of an archive.
-  bool isMemberOfArchive() const { return IsMemberOfArchive; }
-  // Mark this input file as a member of archive.
-  void memberOfArchive(bool MA) { IsMemberOfArchive = MA; }
+  // Returns true if this input should be serialized to disk for distribution.
+  // See the comment on SerializeForDistribution for details.
+  bool getSerializeForDistribution() const { return SerializeForDistribution; }
+  // Mark whether this input should be serialized to disk for distribution.
+  // See the comment on SerializeForDistribution for details.
+  void setSerializeForDistribution(bool SFD) { SerializeForDistribution = SFD; }
+  // Returns true if this bitcode came from a FatLTO object.
+  bool isFatLTOObject() const { return IsFatLTOObject; }
+  // Mark this bitcode as coming from a FatLTO object.
+  void fatLTOObject(bool FO) { IsFatLTOObject = FO; }
 
   // Returns true if bitcode is ThinLTO.
   bool isThinLTO() const { return IsThinLTO; }
@@ -443,6 +463,13 @@ public:
   LLVM_ABI static SmallVector<const char *>
   getRuntimeLibcallSymbols(const Triple &TT);
 
+protected:
+  // Called at the start of run().
+  virtual Error serializeInputsForDistribution() { return Error::success(); }
+
+  // Called before returning from run().
+  virtual void cleanup();
+
 private:
   Config Conf;
 
@@ -574,7 +601,7 @@ private:
 
   void addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
                             ArrayRef<SymbolResolution> Res, unsigned Partition,
-                            bool InSummary);
+                            bool InSummary, const Triple &TT);
 
   // These functions take a range of symbol resolutions and consume the
   // resolutions used by a single input module. Functions return ranges refering
@@ -615,13 +642,27 @@ private:
   // Diagnostic optimization remarks file
   LLVMRemarkFileHandle DiagnosticOutputFile;
 
+  // A dummy module to host the dummy function.
+  std::unique_ptr<Module> DummyModule;
+
+  // A dummy function created in a private module to provide a context for
+  // LTO-link optimization remarks. This is needed for ThinLTO where we
+  // may not have any IR functions available, because the optimization remark
+  // handling requires a function.
+  Function *LinkerRemarkFunction = nullptr;
+
+  // Setup optimization remarks according to the provided configuration.
+  Error setupOptimizationRemarks();
+
 public:
+  /// Helper to emit an optimization remark during the LTO link when outside of
+  /// the standard optimization pass pipeline.
+  void emitRemark(OptimizationRemark &Remark);
+
   virtual Expected<std::shared_ptr<lto::InputFile>>
   addInput(std::unique_ptr<lto::InputFile> InputPtr) {
     return std::shared_ptr<lto::InputFile>(InputPtr.release());
   }
-
-  virtual llvm::Error handleArchiveInputs() { return llvm::Error::success(); }
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for

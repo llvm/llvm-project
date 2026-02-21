@@ -510,7 +510,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterColon
           ? Previous
           : Current;
-  if (BreakConstructorInitializersToken.is(TT_CtorInitializerColon) &&
+  if (Style.BreakConstructorInitializers != FormatStyle::BCIS_AfterComma &&
+      BreakConstructorInitializersToken.is(TT_CtorInitializerColon) &&
       (State.Column + State.Line->Last->TotalLength - Previous.TotalLength >
            getColumnLimit(State) ||
        CurrentState.BreakBeforeParameter) &&

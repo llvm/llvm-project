@@ -73,8 +73,8 @@ define i32 @sext_of_non_memory_op(ptr %src, i32 %offset, i64 %n) #0 {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP10]], 16
-; CHECK-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 4
+; CHECK-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP12]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -88,7 +88,7 @@ define i32 @sext_of_non_memory_op(ptr %src, i32 %offset, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[OFFSET]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = sext i32 [[TMP14]] to i64
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = mul nuw nsw i64 [[TMP11]], 2
+; CHECK-NEXT:    [[TMP17:%.*]] = shl nuw nsw i64 [[TMP11]], 1
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul nuw nsw i64 [[TMP11]], 3
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP17]]
@@ -122,7 +122,7 @@ define i32 @sext_of_non_memory_op(ptr %src, i32 %offset, i64 %n) #0 {
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP31]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[TMP32:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP33:%.*]] = mul nuw i64 [[TMP32]], 8
+; CHECK-NEXT:    [[TMP33:%.*]] = shl nuw i64 [[TMP32]], 3
 ; CHECK-NEXT:    [[N_MOD_VF10:%.*]] = urem i64 [[TMP0]], [[TMP33]]
 ; CHECK-NEXT:    [[N_VEC11:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF10]]
 ; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <vscale x 8 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0

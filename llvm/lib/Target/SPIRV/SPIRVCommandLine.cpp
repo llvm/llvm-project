@@ -64,6 +64,9 @@ static const std::map<StringRef, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_GOOGLE_user_type},
         {"SPV_ALTERA_arbitrary_precision_integers",
          SPIRV::Extension::Extension::SPV_ALTERA_arbitrary_precision_integers},
+        {"SPV_ALTERA_arbitrary_precision_floating_point",
+         SPIRV::Extension::Extension::
+             SPV_ALTERA_arbitrary_precision_floating_point},
         {"SPV_INTEL_cache_controls",
          SPIRV::Extension::Extension::SPV_INTEL_cache_controls},
         {"SPV_INTEL_float_controls2",
@@ -114,6 +117,7 @@ static const std::map<StringRef, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_KHR_integer_dot_product},
         {"SPV_KHR_linkonce_odr",
          SPIRV::Extension::Extension::SPV_KHR_linkonce_odr},
+        {"SPV_KHR_fma", SPIRV::Extension::Extension::SPV_KHR_fma},
         {"SPV_INTEL_inline_assembly",
          SPIRV::Extension::Extension::SPV_INTEL_inline_assembly},
         {"SPV_INTEL_bindless_images",
@@ -178,7 +182,9 @@ static const std::map<StringRef, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::
              SPV_ALTERA_arbitrary_precision_fixed_point},
         {"SPV_EXT_image_raw10_raw12",
-         SPIRV::Extension::Extension::SPV_EXT_image_raw10_raw12}};
+         SPIRV::Extension::Extension::SPV_EXT_image_raw10_raw12},
+        {"SPV_INTEL_unstructured_loop_controls",
+         SPIRV::Extension::Extension::SPV_INTEL_unstructured_loop_controls}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,
@@ -190,7 +196,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
 
   auto M = partition(Tokens, [](auto &&T) { return T.starts_with('+'); });
 
-  if (std::any_of(M, Tokens.end(), [](auto &&T) { return T == "all"; }))
+  if (std::any_of(M, Tokens.end(), equal_to("all")))
     copy(make_second_range(SPIRVExtensionMap), std::inserter(Vals, Vals.end()));
 
   for (auto &&Token : make_range(Tokens.begin(), M)) {

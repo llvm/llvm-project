@@ -191,6 +191,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__algorithm/min.h>
 #  include <__algorithm/move.h>
 #  include <__algorithm/move_backward.h>
+#  include <__algorithm/ranges_copy_n.h>
 #  include <__algorithm/remove.h>
 #  include <__algorithm/remove_if.h>
 #  include <__assert>
@@ -698,8 +699,16 @@ public:
       __assign_with_size_random_access(ranges::begin(__range), __n);
 
     } else if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
-      auto __n = static_cast<size_type>(ranges::distance(__range));
-      __assign_with_size(ranges::begin(__range), __n);
+      auto __n     = ranges::distance(__range);
+      auto __first = ranges::begin(__range);
+
+      auto __result = std::ranges::copy_n(std::move(__first), std::min<size_t>(__n, size()), begin());
+
+      if (static_cast<size_type>(__n) > size()) {
+        __append_with_size(std::move(__result.in), __n - size());
+      } else {
+        __erase_to_end(__result.out);
+      }
 
     } else {
       __assign_with_sentinel(ranges::begin(__range), ranges::end(__range));
@@ -815,7 +824,11 @@ public:
 
   template <_ContainerCompatibleRange<_Tp> _Range>
   _LIBCPP_HIDE_FROM_ABI void append_range(_Range&& __range) {
-    insert_range(end(), std::forward<_Range>(__range));
+    if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
+      __append_with_size(ranges::begin(__range), ranges::distance(__range));
+    } else {
+      __append_with_sentinel(ranges::begin(__range), ranges::end(__range));
+    }
   }
 #    endif
 
@@ -940,7 +953,7 @@ private:
     (void)__end;
     (void)__annotation_type;
     (void)__place;
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
     // __beg - index of the first item to annotate
     // __end - index behind the last item to annotate (so last item + 1)
     // __annotation_type - __asan_unposion or __asan_poison
@@ -1033,23 +1046,23 @@ private:
       std::__annotate_double_ended_contiguous_container<_Allocator>(
           __mem_beg, __mem_end, __old_beg, __old_end, __new_beg, __new_end);
     }
-#  endif // __has_feature(address_sanitizer)
+#  endif // _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_new(size_type __current_size) const _NOEXCEPT {
     (void)__current_size;
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
     if (__current_size == 0)
       __annotate_from_to(0, __map_.size() * __block_size, __asan_poison, __asan_back_moved);
     else {
       __annotate_from_to(0, __start_, __asan_poison, __asan_front_moved);
       __annotate_from_to(__start_ + __current_size, __map_.size() * __block_size, __asan_poison, __asan_back_moved);
     }
-#  endif // __has_feature(address_sanitizer)
+#  endif // _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_delete() const _NOEXCEPT {
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
     if (empty()) {
       for (size_t __i = 0; __i < __map_.size(); ++__i) {
         __annotate_whole_block(__i, __asan_unposion);
@@ -1058,19 +1071,19 @@ private:
       __annotate_from_to(0, __start_, __asan_unposion, __asan_front_moved);
       __annotate_from_to(__start_ + size(), __map_.size() * __block_size, __asan_unposion, __asan_back_moved);
     }
-#  endif // __has_feature(address_sanitizer)
+#  endif // _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_increase_front(size_type __n) const _NOEXCEPT {
     (void)__n;
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
     __annotate_from_to(__start_ - __n, __start_, __asan_unposion, __asan_front_moved);
 #  endif
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_increase_back(size_type __n) const _NOEXCEPT {
     (void)__n;
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
     __annotate_from_to(__start_ + size(), __start_ + size() + __n, __asan_unposion, __asan_back_moved);
 #  endif
   }
@@ -1078,7 +1091,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI void __annotate_shrink_front(size_type __old_size, size_type __old_start) const _NOEXCEPT {
     (void)__old_size;
     (void)__old_start;
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
     __annotate_from_to(__old_start, __old_start + (__old_size - size()), __asan_poison, __asan_front_moved);
 #  endif
   }
@@ -1086,7 +1099,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI void __annotate_shrink_back(size_type __old_size, size_type __old_start) const _NOEXCEPT {
     (void)__old_size;
     (void)__old_start;
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
     __annotate_from_to(__old_start + size(), __old_start + __old_size, __asan_poison, __asan_back_moved);
 #  endif
   }
@@ -1099,7 +1112,7 @@ private:
   __annotate_whole_block(size_t __block_index, __asan_annotation_type __annotation_type) const _NOEXCEPT {
     (void)__block_index;
     (void)__annotation_type;
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
     __map_const_iterator __block_it = __map_.begin() + __block_index;
     const void* __block_start       = std::__to_address(*__block_it);
     const void* __block_end         = std::__to_address(*__block_it + __block_size);
@@ -1112,7 +1125,7 @@ private:
     }
 #  endif
   }
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
 
 public:
   _LIBCPP_HIDE_FROM_ABI bool __verify_asan_annotations() const _NOEXCEPT {
@@ -1174,7 +1187,7 @@ public:
   }
 
 private:
-#  endif // __has_feature(address_sanitizer)
+#  endif // _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
   _LIBCPP_HIDE_FROM_ABI bool __maybe_remove_front_spare(bool __keep_one = true) {
     if (__front_spare_blocks() >= 2 || (!__keep_one && __front_spare_blocks())) {
       __annotate_whole_block(0, __asan_unposion);
@@ -1201,7 +1214,7 @@ private:
 
   template <class _RandomAccessIterator>
   _LIBCPP_HIDE_FROM_ABI void __assign_with_size_random_access(_RandomAccessIterator __f, difference_type __n);
-  template <class _Iterator>
+  template <class _AlgPolicy, class _Iterator>
   _LIBCPP_HIDE_FROM_ABI void __assign_with_size(_Iterator __f, difference_type __n);
 
   template <class _Iterator, class _Sentinel>
@@ -1459,24 +1472,6 @@ deque<_Tp, _Allocator>::__assign_with_size_random_access(_RandomAccessIterator _
     __append_with_size(__l, __n - size());
   } else
     __erase_to_end(std::copy_n(__f, __n, begin()));
-}
-
-template <class _Tp, class _Allocator>
-template <class _Iterator>
-_LIBCPP_HIDE_FROM_ABI void deque<_Tp, _Allocator>::__assign_with_size(_Iterator __f, difference_type __n) {
-  if (static_cast<size_type>(__n) > size()) {
-    auto __added_size = __n - size();
-
-    auto __i = begin();
-    for (auto __count = size(); __count != 0; --__count) {
-      *__i++ = *__f++;
-    }
-
-    __append_with_size(__f, __added_size);
-
-  } else {
-    __erase_to_end(std::copy_n(__f, __n, begin()));
-  }
 }
 
 template <class _Tp, class _Allocator>
@@ -1803,7 +1798,7 @@ template <class _Iterator>
 _LIBCPP_HIDE_FROM_ABI typename deque<_Tp, _Allocator>::iterator
 deque<_Tp, _Allocator>::__insert_with_size(const_iterator __p, _Iterator __f, size_type __n) {
   __split_buffer<value_type, allocator_type> __buf(__n, 0, __alloc());
-  __buf.__construct_at_end_with_size(__f, __n);
+  __buf.__construct_at_end_with_size(std::move(__f), __n);
   typedef typename __split_buffer<value_type, allocator_type>::iterator __fwd;
   return insert(__p, move_iterator<__fwd>(__buf.begin()), move_iterator<__fwd>(__buf.end()));
 }

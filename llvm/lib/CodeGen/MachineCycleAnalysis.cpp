@@ -22,9 +22,7 @@ template class llvm::GenericCycle<llvm::MachineSSAContext>;
 char MachineCycleInfoWrapperPass::ID = 0;
 
 MachineCycleInfoWrapperPass::MachineCycleInfoWrapperPass()
-    : MachineFunctionPass(ID) {
-  initializeMachineCycleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(MachineCycleInfoWrapperPass, "machine-cycles",
                       "Machine Cycle Info Analysis", true, true)
@@ -79,9 +77,7 @@ public:
 char MachineCycleInfoPrinterLegacy::ID = 0;
 
 MachineCycleInfoPrinterLegacy::MachineCycleInfoPrinterLegacy()
-    : MachineFunctionPass(ID) {
-  initializeMachineCycleInfoPrinterLegacyPass(*PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(MachineCycleInfoPrinterLegacy, "print-machine-cycles",
                       "Print Machine Cycle Info Analysis", true, true)

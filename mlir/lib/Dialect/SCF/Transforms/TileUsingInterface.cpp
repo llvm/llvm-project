@@ -1327,7 +1327,18 @@ getUntiledProducerFromSliceSource(OpOperand *source,
   }
   if (loopIt == loops.rend())
     destinationIterArg = source;
-  return {dyn_cast<OpResult>(source->get()), destinationIterArg};
+
+  auto result = dyn_cast<OpResult>(source->get());
+  if (result) {
+    Operation *producer = result.getOwner();
+    Operation *innermostLoop = loops.back();
+    // If the producer is already inside the innermost loop (where the slice
+    // is), it has already been fused. Skip it to avoid infinite loops.
+    if (innermostLoop->isProperAncestor(producer))
+      return {OpResult(), std::nullopt};
+  }
+
+  return {result, destinationIterArg};
 }
 
 /// Implementation of fusing producer of a single slice by computing the
@@ -1498,6 +1509,14 @@ FailureOr<SmallVector<Operation *>> mlir::scf::yieldReplacementForFusedProducer(
     auto tilableOp = cast<TilingInterface>(originalOwner);
     // b. get iterDomain Offset and Sizes based on sliceOp tile
     SmallVector<OpFoldResult> iterDomainOffset, iterDomainSizes;
+    // Set insertion point before any operations that might create new SSA
+    // values used in offset/size computations. This ensures all values created
+    // by getIterationDomainTileFromResultTile and getResultTilePosition
+    // dominate the extract_slice operations created later.
+    if (auto tiledDestStyleOp =
+            dyn_cast<DestinationStyleOpInterface>(tiledOwner)) {
+      rewriter.setInsertionPoint(tiledDestStyleOp);
+    }
     // skip tensor.pack/unpack/pad, which expects single opResult
     if (tilableOp->getNumResults() > 1 &&
         failed(tilableOp.getIterationDomainTileFromResultTile(
@@ -1539,7 +1558,6 @@ FailureOr<SmallVector<Operation *>> mlir::scf::yieldReplacementForFusedProducer(
     // necessary
     if (auto tiledDestStyleOp =
             dyn_cast<DestinationStyleOpInterface>(tiledOwner)) {
-      rewriter.setInsertionPoint(tiledDestStyleOp);
       for (const auto &&[index, newRegionArg] :
            llvm::enumerate(newRegionIterArgs)) {
         auto destSlice = tensor::ExtractSliceOp::create(
@@ -1754,8 +1772,8 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
   // the mutation of replacement values. To do this, we attach a listener to
   // update the replacements as they happen.
   OpBuilder::Listener *previousListener = rewriter.getListener();
-  auto resetListener =
-      llvm::make_scope_exit([&]() { rewriter.setListener(previousListener); });
+  llvm::scope_exit resetListener(
+      [&]() { rewriter.setListener(previousListener); });
   ReplacementListener replaceListener(replacements, previousListener);
   rewriter.setListener(&replaceListener);
 

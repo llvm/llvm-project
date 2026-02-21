@@ -106,16 +106,16 @@ enum PathFormat : unsigned { ePatFormatPath, ePathFormatURI };
 /// Arguments for `initialize` request.
 struct InitializeRequestArguments {
   /// The ID of the debug adapter.
-  std::string adapterID;
+  String adapterID;
 
   /// The ID of the client using this adapter.
-  std::string clientID;
+  String clientID;
 
   /// The human-readable name of the client using this adapter.
-  std::string clientName;
+  String clientName;
 
   /// The ISO-639 locale of the client using this adapter, e.g. en-US or de-CH.
-  std::string locale;
+  String locale;
 
   /// Determines in what format paths are specified. The default is `path`,
   /// which is the native format.
@@ -153,7 +153,7 @@ struct Configuration {
   /// information in your executable contains relative paths, this option can be
   /// used so that `lldb-dap` can find source files and object files that have
   /// relative paths.
-  std::string debuggerRoot;
+  String debuggerRoot;
 
   /// Enable auto generated summaries for variables when no summaries exist for
   /// a given type. This feature can cause performance delays in large projects
@@ -180,7 +180,7 @@ struct Configuration {
   /// Console, instead of printing variables. Defaults to a backtick. If it's an
   /// empty string, then all expression in the Debug Console are treated as
   /// regular LLDB commands.
-  std::string commandEscapePrefix = "`";
+  String commandEscapePrefix = "`";
 
   /// If non-empty, stack frames will have descriptions generated based on the
   /// provided format. See https://lldb.llvm.org/use/formatting.html for an
@@ -189,58 +189,58 @@ struct Configuration {
   /// default frame names will be used. This might come with a performance cost
   /// because debug information might need to be processed to generate the
   /// description.
-  std::optional<std::string> customFrameFormat;
+  std::optional<String> customFrameFormat;
 
   /// Same as `customFrameFormat`, but for threads instead of stack frames.
-  std::optional<std::string> customThreadFormat;
+  std::optional<String> customThreadFormat;
 
   /// Specify a source path to remap "./" to allow full paths to be used when
   /// setting breakpoints in binaries that have relative source paths.
-  std::string sourcePath;
+  String sourcePath;
 
   /// Specify an array of path re-mappings. Each element in the array must be a
   /// two element array containing a source and destination pathname. Overrides
   /// sourcePath.
-  std::vector<std::pair<std::string, std::string>> sourceMap;
+  std::vector<std::pair<String, String>> sourceMap;
 
   /// LLDB commands executed upon debugger startup prior to creating the LLDB
   /// target.
-  std::vector<std::string> preInitCommands;
+  std::vector<String> preInitCommands;
 
   /// LLDB commands executed upon debugger startup prior to creating the LLDB
   /// target.
-  std::vector<std::string> initCommands;
+  std::vector<String> initCommands;
 
   /// LLDB commands executed just before launching/attaching, after the LLDB
   /// target has been created.
-  std::vector<std::string> preRunCommands;
+  std::vector<String> preRunCommands;
 
   /// LLDB commands executed just after launching/attaching, after the LLDB
   /// target has been created.
-  std::vector<std::string> postRunCommands;
+  std::vector<String> postRunCommands;
 
   /// LLDB commands executed just after each stop.
-  std::vector<std::string> stopCommands;
+  std::vector<String> stopCommands;
 
   /// LLDB commands executed when the program exits.
-  std::vector<std::string> exitCommands;
+  std::vector<String> exitCommands;
 
   /// LLDB commands executed when the debugging session ends.
-  std::vector<std::string> terminateCommands;
+  std::vector<String> terminateCommands;
 
   /// Path to the executable.
   ///
   /// *NOTE:* When launching, either `launchCommands` or `program` must be
   /// configured. If both are configured then `launchCommands` takes priority.
-  std::string program;
+  String program;
 
   /// Target triple for the program (arch-vendor-os). If not set, inferred from
   /// the binary.
-  std::string targetTriple;
+  String targetTriple;
 
   /// Specify name of the platform to use for this target, creating the platform
   /// if necessary.
-  std::string platformName;
+  String platformName;
 };
 
 enum Console : unsigned {
@@ -269,19 +269,19 @@ struct LaunchRequestArguments {
   /// *NOTE:* Either launchCommands or program must be configured.
   ///
   /// If set, takes priority over the 'program' when launching the target.
-  std::vector<std::string> launchCommands;
+  std::vector<String> launchCommands;
 
   /// The program working directory.
-  std::string cwd;
+  String cwd;
 
   /// An array of command line argument strings to be passed to the program
   /// being launched.
-  std::vector<std::string> args;
+  std::vector<String> args;
 
   /// Environment variables to set when launching the program. The format of
   /// each environment variable string is "VAR=VALUE" for environment variables
   /// with values or just "VAR" for environment variables with no values.
-  llvm::StringMap<std::string> env;
+  llvm::StringMap<String> env;
 
   /// If set, then the client stub should detach rather than killing the
   /// debuggee if it loses connection with lldb.
@@ -302,7 +302,7 @@ struct LaunchRequestArguments {
   Console console = eConsoleInternal;
 
   /// An array of file paths for redirecting the program's standard IO streams.
-  std::vector<std::optional<std::string>> stdio;
+  std::vector<std::optional<String>> stdio;
 
   /// @}
 };
@@ -313,9 +313,18 @@ bool fromJSON(const llvm::json::Value &, LaunchRequestArguments &,
 /// field is required.
 using LaunchResponse = VoidResponse;
 
-#define LLDB_DAP_INVALID_PORT -1
+#define LLDB_DAP_INVALID_PORT (-1)
 /// An invalid 'frameId' default value.
 #define LLDB_DAP_INVALID_FRAME_ID UINT64_MAX
+
+struct DAPSession {
+  /// A unique ID of an existing target to attach to.
+  lldb::user_id_t targetId;
+
+  /// A unique ID of an existing debugger instance to use.
+  lldb::user_id_t debuggerId;
+};
+bool fromJSON(const llvm::json::Value &, DAPSession &, llvm::json::Path);
 
 /// lldb-dap specific attach arguments.
 struct AttachRequestArguments {
@@ -332,7 +341,7 @@ struct AttachRequestArguments {
   /// to a process by name. These commands may optionally create a new target
   /// and must perform an attach. A valid process must exist after these
   /// commands complete or the `"attach"` will fail.
-  std::vector<std::string> attachCommands;
+  std::vector<String> attachCommands;
 
   /// System process ID to attach to.
   lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
@@ -346,16 +355,13 @@ struct AttachRequestArguments {
 
   /// The hostname to connect to a remote system. The default hostname being
   /// used `localhost`.
-  std::string gdbRemoteHostname = "localhost";
+  String gdbRemoteHostname = "localhost";
 
   /// Path to the core file to debug.
-  std::string coreFile;
+  String coreFile;
 
-  /// Unique ID of an existing target to attach to.
-  std::optional<lldb::user_id_t> targetId;
-
-  /// ID of an existing debugger instance to use.
-  std::optional<int> debuggerId;
+  /// An existing session that consist of a target and debugger.
+  std::optional<DAPSession> session;
 
   /// @}
 };
@@ -396,16 +402,16 @@ struct CompletionsArguments {
 
   /// One or more source lines. Typically this is the text users have typed into
   /// the debug console before they asked for completion.
-  std::string text;
+  String text;
 
   /// The position within `text` for which to determine the completion
   /// proposals. It is measured in UTF-16 code units and the client capability
   /// `columnsStartAt1` determines whether it is 0- or 1-based.
-  int64_t column = 0;
+  uint32_t column = LLDB_INVALID_COLUMN_NUMBER;
 
   /// A line for which to determine the completion proposals. If missing the
   /// first line of the text is assumed.
-  int64_t line = 0;
+  uint32_t line = 1;
 };
 bool fromJSON(const llvm::json::Value &, CompletionsArguments &,
               llvm::json::Path);
@@ -429,16 +435,16 @@ struct SetVariableArguments {
   /// The reference of the variable container. The `variablesReference` must
   /// have been obtained in the current suspended state. See 'Lifetime of Object
   ///  References' in the Overview section for details.
-  uint64_t variablesReference = UINT64_MAX;
+  var_ref_t variablesReference{var_ref_t::k_invalid_var_ref};
 
   /// The name of the variable in the container.
-  std::string name;
+  String name;
 
   /// The value of the variable.
-  std::string value;
+  String value;
 
   /// Specifies details on how to format the response value.
-  ValueFormat format;
+  std::optional<ValueFormat> format;
 };
 bool fromJSON(const llvm::json::Value &, SetVariableArguments &,
               llvm::json::Path);
@@ -446,11 +452,11 @@ bool fromJSON(const llvm::json::Value &, SetVariableArguments &,
 /// Response to `setVariable` request.
 struct SetVariableResponseBody {
   /// The new value of the variable.
-  std::string value;
+  String value;
 
   /// The type of the new value. Typically shown in the UI when hovering over
   /// the value.
-  std::string type;
+  String type;
 
   /// If `variablesReference` is > 0, the new value is structured and its
   /// children can be retrieved by passing `variablesReference` to the
@@ -460,7 +466,7 @@ struct SetVariableResponseBody {
   /// If this property is included in the response, any `variablesReference`
   /// previously associated with the updated variable, and those of its
   /// children, are no longer valid.
-  uint64_t variablesReference = 0;
+  var_ref_t variablesReference{var_ref_t::k_no_child};
 
   /// The number of named child variables.
   /// The client can use this information to present the variables in a paged
@@ -521,10 +527,10 @@ bool fromJSON(const llvm::json::Value &, SourceArguments &, llvm::json::Path);
 /// Response to `source` request.
 struct SourceResponseBody {
   /// Content of the source reference.
-  std::string content;
+  String content;
 
   /// Content type (MIME type) of the source.
-  std::optional<std::string> mimeType;
+  std::optional<String> mimeType;
 };
 llvm::json::Value toJSON(const SourceResponseBody &);
 
@@ -721,12 +727,12 @@ struct DataBreakpointInfoArguments {
   /// for a child of the container. The `variablesReference` must have been
   /// obtained in the current suspended state.See 'Lifetime of Object
   /// References' in the Overview section for details.
-  std::optional<int64_t> variablesReference;
+  std::optional<var_ref_t> variablesReference;
 
   /// The name of the variable's child to obtain data breakpoint information
   /// for. If `variablesReference` isn't specified, this can be an expression,
   /// or an address if `asAddress` is also true.
-  std::string name;
+  String name;
 
   /// When `name` is an expression, evaluate it in the scope of this stack
   /// frame. If not specified, the expression is evaluated in the global scope.
@@ -749,7 +755,7 @@ struct DataBreakpointInfoArguments {
 
   /// The mode of the desired breakpoint. If defined, this must be one of the
   /// `breakpointModes` the debug adapter advertised in its `Capabilities`.
-  std::optional<std::string> mode;
+  std::optional<String> mode;
 };
 bool fromJSON(const llvm::json::Value &, DataBreakpointInfoArguments &,
               llvm::json::Path);
@@ -764,11 +770,11 @@ struct DataBreakpointInfoResponseBody {
   /// for details. Breakpoints set using the `dataId` in the
   /// `setDataBreakpoints` request may outlive the lifetime of the associated
   /// `dataId`.
-  std::optional<std::string> dataId;
+  std::optional<String> dataId;
 
   /// UI string that describes on what data the breakpoint is set on or why a
   /// data breakpoint is not available.
-  std::string description;
+  String description;
 
   /// Attribute lists the available access types for a potential data
   /// breakpoint. A UI client could surface this information.
@@ -802,7 +808,7 @@ struct SetExceptionBreakpointsArguments {
   /// Set of exception filters specified by their ID. The set of all possible
   /// exception filters is defined by the `exceptionBreakpointFilters`
   /// capability. The `filter` and `filterOptions` sets are additive.
-  std::vector<std::string> filters;
+  std::vector<String> filters;
 
   /// Set of exception filters and their options. The set of all possible
   /// exception filters is defined by the `exceptionBreakpointFilters`
@@ -947,7 +953,7 @@ struct VariablesArguments {
   /// The variable for which to retrieve its children. The `variablesReference`
   /// must have been obtained in the current suspended state. See 'Lifetime of
   /// Object References' in the Overview section for details.
-  uint64_t variablesReference;
+  var_ref_t variablesReference{var_ref_t::k_invalid_var_ref};
 
   enum VariablesFilter : unsigned {
     eVariablesFilterBoth = 0,
@@ -1009,7 +1015,7 @@ struct WriteMemoryArguments {
   bool allowPartial = false;
 
   /// Bytes to write, encoded using base64.
-  std::string data;
+  String data;
 };
 bool fromJSON(const llvm::json::Value &, WriteMemoryArguments &,
               llvm::json::Path);
@@ -1024,10 +1030,10 @@ llvm::json::Value toJSON(const WriteMemoryResponseBody &);
 
 struct ModuleSymbolsArguments {
   /// The module UUID for which to retrieve symbols.
-  std::string moduleId;
+  String moduleId;
 
   /// The module path.
-  std::string moduleName;
+  String moduleName;
 
   /// The index of the first symbol to return; if omitted, start at the
   /// beginning.
@@ -1055,10 +1061,10 @@ bool fromJSON(const llvm::json::Value &, ExceptionInfoArguments &,
 
 struct ExceptionInfoResponseBody {
   /// ID of the exception that was thrown.
-  std::string exceptionId;
+  String exceptionId;
 
   /// Descriptive text for the exception.
-  std::string description;
+  String description;
 
   /// Mode that caused the exception notification to be raised.
   ExceptionBreakMode breakMode = eExceptionBreakModeNever;
@@ -1091,7 +1097,7 @@ enum EvaluateContext : unsigned {
 /// Arguments for `evaluate` request.
 struct EvaluateArguments {
   /// The expression to evaluate.
-  std::string expression;
+  String expression;
 
   /// Evaluate the expression in the scope of this stack frame. If not
   /// specified, the expression is evaluated in the global scope.
@@ -1137,12 +1143,12 @@ bool fromJSON(const llvm::json::Value &, EvaluateArguments &, llvm::json::Path);
 /// Response to 'evaluate' request.
 struct EvaluateResponseBody {
   /// The result of the evaluate request.
-  std::string result;
+  String result;
 
   /// The type of the evaluate result.
   /// This attribute should only be returned by a debug adapter if the
   /// corresponding capability `supportsVariableType` is true.
-  std::string type;
+  String type;
 
   /// Properties of an evaluate result that can be used to determine how to
   /// render the result in the UI.
@@ -1152,7 +1158,7 @@ struct EvaluateResponseBody {
   /// children can be retrieved by passing `variablesReference` to the
   /// `variables` request as long as execution remains suspended. See 'Lifetime
   /// of Object References' in the Overview section for details.
-  int64_t variablesReference = 0;
+  var_ref_t variablesReference{var_ref_t::k_no_child};
 
   /// The number of named child variables.
   /// The client can use this information to present the variables in a paged
@@ -1171,7 +1177,7 @@ struct EvaluateResponseBody {
   /// memory address contained in the pointer.
   /// This attribute may be returned by a debug adapter if corresponding
   /// capability `supportsMemoryReferences` is true.
-  std::string memoryReference;
+  String memoryReference;
 
   /// A reference that allows the client to request the location where the
   /// returned value is declared. For example, if a function pointer is
@@ -1234,7 +1240,7 @@ llvm::json::Value toJSON(const LocationsResponseBody &);
 /// Arguments for `compileUnits` request.
 struct CompileUnitsArguments {
   /// The ID of the module.
-  std::string moduleId;
+  String moduleId;
 };
 bool fromJSON(const llvm::json::Value &, CompileUnitsArguments &,
               llvm::json::Path);
@@ -1305,6 +1311,11 @@ struct StackTraceResponseBody {
   uint32_t totalFrames = 0;
 };
 llvm::json::Value toJSON(const StackTraceResponseBody &);
+
+/// Arguments for unknown request.
+using UnknownArguments = EmptyArguments;
+/// Response to unknowns request.
+using UnknownResponseBody = VoidResponse;
 
 } // namespace lldb_dap::protocol
 

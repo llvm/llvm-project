@@ -1,6 +1,7 @@
 /*
  * Copyright 2011      INRIA Saclay
  * Copyright 2012-2014 Ecole Normale Superieure
+ * Copyright 2019      Cerebras Systems
  *
  * Use of this software is governed by the MIT license
  *
@@ -8,6 +9,7 @@
  * Parc Club Orsay Universite, ZAC des vignes, 4 rue Jacques Monod,
  * 91893 Orsay, France
  * and Ecole Normale Superieure, 45 rue d’Ulm, 75230 Paris, France
+ * and Cerebras Systems, 175 S San Antonio Rd, Los Altos, CA, USA
  */
 
 #include <isl_ctx_private.h>
@@ -254,8 +256,6 @@ isl_size isl_local_space_var_offset(__isl_keep isl_local_space *ls,
 	isl_space *space;
 
 	space = isl_local_space_peek_space(ls);
-	if (space < 0)
-		return isl_size_error;
 	switch (type) {
 	case isl_dim_param:
 	case isl_dim_in:
@@ -488,7 +488,7 @@ __isl_keep isl_local *isl_local_space_peek_local(__isl_keep isl_local_space *ls)
 
 /* Return a copy of the local variables of "ls".
  */
-__isl_keep isl_local *isl_local_space_get_local(__isl_keep isl_local_space *ls)
+__isl_give isl_local *isl_local_space_get_local(__isl_keep isl_local_space *ls)
 {
 	return isl_local_copy(isl_local_space_peek_local(ls));
 }
@@ -1379,8 +1379,7 @@ static isl_bool is_linear_div_constraint(__isl_keep isl_local_space *ls,
 	} else {
 		return isl_bool_false;
 	}
-	if (isl_seq_first_non_zero(constraint + pos + 1,
-				    ls->div->n_row - div - 1) != -1)
+	if (isl_seq_any_non_zero(constraint + pos + 1, ls->div->n_row - div - 1))
 		return isl_bool_false;
 	return isl_bool_true;
 }
@@ -1454,9 +1453,10 @@ isl_bool isl_local_space_is_div_equality(__isl_keep isl_local_space *ls,
 	return isl_bool_ok(sign < 0);
 }
 
-/*
- * Set active[i] to 1 if the dimension at position i is involved
- * in the linear expression l.
+/* Return an array of integers, one for each variable of "ls",
+ * with entry i set to 1 if the variable at position i is involved
+ * in the linear expression "l".  This includes variables that appear
+ * in the definition of local variables that appear in "l".
  */
 int *isl_local_space_get_active(__isl_keep isl_local_space *ls, isl_int *l)
 {
@@ -1684,6 +1684,35 @@ __isl_give isl_local_space *isl_local_space_move_dims(
 	return ls;
 }
 
+/* Given a local space (A -> B), return the corresponding local space
+ * (B -> A).
+ */
+__isl_give isl_local_space *isl_local_space_wrapped_reverse(
+	__isl_take isl_local_space *ls)
+{
+	isl_space *space;
+	isl_local *local;
+	isl_size n_in, n_out;
+	unsigned offset;
+
+	space = isl_local_space_peek_space(ls);
+	offset = isl_space_offset(space, isl_dim_set);
+	n_in = isl_space_wrapped_dim(space, isl_dim_set, isl_dim_in);
+	n_out = isl_space_wrapped_dim(space, isl_dim_set, isl_dim_out);
+	if (offset < 0 || n_in < 0 || n_out < 0)
+		return isl_local_space_free(ls);
+
+	space = isl_local_space_take_space(ls);
+	space = isl_space_wrapped_reverse(space);
+	ls = isl_local_space_restore_space(ls, space);
+
+	local = isl_local_space_take_local(ls);
+	local = isl_local_move_vars(local, offset, offset + n_in, n_out);
+	ls = isl_local_space_restore_local(ls, local);
+
+	return ls;
+}
+
 /* Remove any internal structure of the domain of "ls".
  * If there is any such internal structure in the input,
  * then the name of the corresponding space is also removed.
@@ -1785,4 +1814,20 @@ error:
 	isl_local_space_free(ls);
 	isl_point_free(pnt);
 	return NULL;
+}
+
+/* Do any of the local variables in "ls" depend on the specified dimensions?
+ */
+isl_bool isl_local_space_involves_dims(__isl_keep isl_local_space *ls,
+	enum isl_dim_type type, unsigned first, unsigned n)
+{
+	isl_local *local;
+	isl_size off;
+
+	off = isl_local_space_var_offset(ls, type);
+	if (off < 0 || isl_local_space_check_range(ls, type, first, n) < 0)
+		return isl_bool_error;
+
+	local = isl_local_space_peek_local(ls);
+	return isl_local_involves_vars(local, off + first, n);
 }
