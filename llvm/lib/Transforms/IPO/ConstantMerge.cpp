@@ -93,7 +93,7 @@ isUnmergeableGlobal(GlobalVariable *GV,
 
 enum class CanMerge { No, Yes };
 static CanMerge makeMergeable(GlobalVariable *Old, GlobalVariable *New) {
-  if (!Old->hasGlobalUnnamedAddr() && !New->hasGlobalUnnamedAddr())
+  if (!Old->hasGlobalUnnamedAddr() || !New->hasGlobalUnnamedAddr())
     return CanMerge::No;
   if (Old->hasMetadataOtherThanDebugLoc())
     return CanMerge::No;
