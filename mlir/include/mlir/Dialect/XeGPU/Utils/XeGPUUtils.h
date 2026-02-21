@@ -147,6 +147,13 @@ Value lowerToVectorReductions(TypedValue<VectorType> src,
                               vector::CombiningKind kind, int64_t reductionDim,
                               Location loc, PatternRewriter &rewriter);
 
+Value lowerCrossLaneReductionToShuffles(TypedValue<VectorType> src,
+                                        TypedValue<VectorType> acc,
+                                        vector::CombiningKind kind,
+                                        int64_t reductionDim,
+                                        int64_t reductionSize, Location loc,
+                                        PatternRewriter &rewriter);
+
 /// Helper Function to find a proper instruction multiple for the user-supplied
 /// sg-level data shape (diven by `dim`). `candidates` are uArch allowed shapes.
 /// `candidateMultiples` are uArch multiples of such shapes (i.e. block count or

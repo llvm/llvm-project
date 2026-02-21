@@ -469,54 +469,32 @@ struct SgToWiMultiDimReduction
   LogicalResult
   matchAndRewrite(vector::MultiDimReductionOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Only lane-local reduction is handled here.
-    if (!isReductionLaneLocal(op))
-      return rewriter.notifyMatchFailure(
-          op, "Only lane-local reduction is supported, expected reduction "
-              "dimension to be "
-              "not distributed.");
-    auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
-    VectorType resVecTy = dyn_cast<VectorType>(op.getType());
-    auto resDistVecTyOrFailure =
-        getDistVecTypeBasedOnLaneLayout(resLayout, resVecTy);
-    // Simply create a new MultiDimReductionOp using adaptor operands and the
-    // new result type.
-    auto newOp = vector::MultiDimReductionOp::create(
-        rewriter, op.getLoc(), resDistVecTyOrFailure.value(), op.getKind(),
-        adaptor.getSource(), adaptor.getAcc(), op.getReductionDims());
-    rewriter.replaceOp(op, newOp.getResult());
-    return success();
-  }
-};
-
-/// This pattern rewrites a subgroup-level vector.multi_reduction op to a series
-/// of vector.extract_strided_slice, vector.reduction and
-/// vector.insert_strided_slice ops. This is used when the reduction dimension
-/// is distributed to lanes and a naive (lane-local) distribution is not
-/// possible. Then later on, these partially lowered subgroup-level ops are
-/// further lowered to workitem-level by respective patterns.
-struct LowerVectorMultiReductionPattern
-    : public OpConversionPattern<vector::MultiDimReductionOp> {
-  using OpConversionPattern<vector::MultiDimReductionOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::MultiDimReductionOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    // Only non-lane-local reduction is handled here.
-    if (isReductionLaneLocal(op))
-      return rewriter.notifyMatchFailure(
-          op, "Reduction is lane-local, it does not require rewrite.");
+    Value result;
     ArrayRef<int64_t> reductionDims = op.getReductionDims();
-    assert(
-        reductionDims.size() == 1 &&
-        "Expecting single reduction dimension for subgroup multi reduction op");
-
-    // Rewrite MultiDimReductionOp into a sequence of ReductionOps.
-    Value result = xegpu::lowerToVectorReductions(
-        cast<TypedValue<VectorType>>(op.getSource()),
-        cast<TypedValue<VectorType>>(op.getAcc()), op.getKind(),
-        reductionDims[0], op.getLoc(), rewriter);
-
+    assert(reductionDims.size() == 1 &&
+           "Expecting single reduction dimension for subgroup multi "
+           "reduction op");
+    if (isReductionLaneLocal(op)) {
+      auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
+      VectorType resVecTy = dyn_cast<VectorType>(op.getType());
+      auto resDistVecTyOrFailure =
+          getDistVecTypeBasedOnLaneLayout(resLayout, resVecTy);
+      // For lane local reduction, simply create a new MultiDimReductionOp using
+      // adaptor operands and the new result type.
+      result = vector::MultiDimReductionOp::create(
+          rewriter, op.getLoc(), resDistVecTyOrFailure.value(), op.getKind(),
+          adaptor.getSource(), adaptor.getAcc(), op.getReductionDims());
+    } else {
+      auto reductionDim = reductionDims[0];
+      VectorType sourceType = op.getSourceVectorType();
+      SmallVector<int64_t, 2> sourceShape(sourceType.getShape().begin(),
+                                          sourceType.getShape().end());
+      int64_t reductionDimSize = sourceShape[reductionDim];
+      result = xegpu::lowerCrossLaneReductionToShuffles(
+          cast<TypedValue<VectorType>>(adaptor.getSource()),
+          cast<TypedValue<VectorType>>(adaptor.getAcc()), op.getKind(),
+          reductionDim, reductionDimSize, op.getLoc(), rewriter);
+    }
     rewriter.replaceOp(op, result);
     return success();
   }
@@ -721,34 +699,11 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
   // vector::MultiDimReductionOp op legality.
   target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(
       [=](vector::MultiDimReductionOp op) -> bool {
-        // Check common conditions for subgroup multi reduction op.
-        if (!isValidSubgroupMultiReductionOp(op))
-          return true;
-        // Lane local reductions are illegal at this point and must be lowered.
-        return !isReductionLaneLocal(op);
+        return !isValidSubgroupMultiReductionOp(op);
       });
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   patterns.add<SgToWiCreateNdDesc, SgToWiLoadNd, SgToWiStoreNd, SgToWiDpas,
                SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd,
                SgToWiVectorReduction, SgToWiMultiDimReduction>(
       typeConverter, patterns.getContext());
-}
-
-void xegpu::populateXeGPUSgToWiLowerVectorMultiReductionAndLegality(
-    RewritePatternSet &patterns, ConversionTarget &target) {
-  // vector::MultiDimReductionOp legality.
-  target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(
-      [&](vector::MultiDimReductionOp op) {
-        // Check common conditions for subgroup multi reduction op.
-        if (!isValidSubgroupMultiReductionOp(op))
-          return true;
-        // Lane local reductions are legal. We only rewrite non-lane-local
-        // reductions.
-        return isReductionLaneLocal(op);
-      });
-  // vector::ReductionOp is legal.
-  target.addDynamicallyLegalOp<vector::ReductionOp>(
-      [&](vector::ReductionOp op) { return true; });
-  target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
-  patterns.add<LowerVectorMultiReductionPattern>(patterns.getContext());
 }

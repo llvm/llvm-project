@@ -727,6 +727,61 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
   return reductionResult;
 }
 
+Value xegpu::lowerCrossLaneReductionToShuffles(
+    TypedValue<VectorType> src, TypedValue<VectorType> acc,
+    vector::CombiningKind kind, int64_t reductionDim, int64_t reductionSize,
+    Location loc, PatternRewriter &rewriter) {
+  // Expecting a 2D source vector.
+  assert(src.getType().getRank() == 2 && "expected a 2D source vector");
+  VectorType sourceType = src.getType();
+  int64_t sourceH = sourceType.getShape()[0];
+  int64_t sourceW = sourceType.getShape()[1];
+  int nSlices = (reductionDim == 0) ? sourceW : sourceH;
+  // Create a constant vector to hold the result of the reduction.
+  TypedAttr zeroAttr = rewriter.getZeroAttr(sourceType.getElementType());
+  Value reductionResult = arith::ConstantOp::create(
+      rewriter, loc, acc.getType(),
+      DenseElementsAttr::get(acc.getType(), zeroAttr));
+
+  // For each slice of the source, extract the slice vector, do a reduction
+  // and, insert the reduced value back to the result vector.
+  for (int i = 0; i < nSlices; ++i) {
+    SmallVector<int64_t, 2> sliceOffsets, sliceSizes;
+    if (reductionDim == 1) {
+      sliceOffsets = {i, 0};
+      sliceSizes = {1, sourceW};
+    } else {
+      sliceOffsets = {0, i};
+      sliceSizes = {sourceH, 1};
+    }
+
+    vector::ExtractStridedSliceOp extractOp =
+        vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
+                                              sliceSizes, {1, 1});
+
+    int64_t nSliceElements = extractOp.getResult().getType().getNumElements();
+
+    vector::ShapeCastOp slice = vector::ShapeCastOp::create(
+        rewriter, loc,
+        VectorType::get({nSliceElements}, sourceType.getElementType()),
+        extractOp.getResult());
+
+    // Extract and reduction results in scalars, so no result layout is needed.
+    Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, i);
+
+    // Distribute and reduce across work-items in the subgroup.
+    Value fullReduce =
+        xegpu::subgroupReduction(loc, rewriter, slice, kind, reductionSize);
+
+    fullReduce =
+        vector::makeArithReduction(rewriter, loc, kind, fullReduce, accExtract);
+
+    reductionResult =
+        vector::InsertOp::create(rewriter, loc, fullReduce, reductionResult, i);
+  }
+  return reductionResult;
+}
+
 /// Explicit instantiations
 template int xegpu::getLargestDivisor<int>(int dim, ArrayRef<int> candidates,
                                            ArrayRef<int> candidateMultiples);
