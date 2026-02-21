@@ -670,9 +670,11 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
     (e.g., f16, i16) are packed into an i32 during lowering, permuted, and
     extracted back.
 
-    A Wave64 wavefront has 64 lanes (0-63) organized hierarchically:
-    - 4 rows of 16 lanes each: row 0 = lanes 0-15, row 1 = lanes 16-31,
-      row 2 = lanes 32-47, row 3 = lanes 48-63.
+    - Lanes are organized into rows of 16.
+    - A Wave64 wavefront has 4 rows of 16 lanes each: row 0 = lanes 0-15,
+      row 1 = lanes 16-31, row 2 = lanes 32-47, row 3 = lanes 48-63.
+    - Similarly, a Wave32 wavefront has two rows of 16 lanes each, organized
+      in the same fashion.
     - Each row is divided into 4 banks of 4 consecutive lanes: bank 0 =
       lanes 0-3, bank 1 = lanes 4-7, bank 2 = lanes 8-11, bank 3 =
       lanes 12-15 (lane numbers shown for row 0; add 16/32/48 for other rows).
@@ -697,13 +699,15 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
     - `row_ror(N)`: Rotate right by N (1-15) within the row. Lane n reads from
       lane ((n % 16) - N) mod 16 in the same row. Always in bounds.
 
-    Wavefront shifts and rotates (operate across all 64 lanes):
-    - `wave_shl`: Shift left by 1. Lane n reads from lane n + 1. Lane 63 is
-      out of bounds.
+    Wavefront shifts and rotates (not available on RDNA):
+    - `wave_shl`: Shift left by 1. Lane n reads from lane n + 1. The last lane
+      in the wavefront is out of bounds.
     - `wave_shr`: Shift right by 1. Lane n reads from lane n - 1. Lane 0 is
       out of bounds.
-    - `wave_rol`: Rotate left by 1. Lane n reads from lane (n + 1) mod 64.
-    - `wave_ror`: Rotate right by 1. Lane n reads from lane (n - 1) mod 64.
+    - `wave_rol`: Rotate left by 1. Lane n reads from lane (n + 1) mod W, where
+      W is the wavefront size.
+    - `wave_ror`: Rotate right by 1. Lane n reads from lane (n - 1) mod W, where
+      W is the wavefront size.
 
     Row mirrors:
     - `row_mirror`: Reverse lanes within each 16-lane row. Lane n reads from
@@ -711,7 +715,7 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
     - `row_half_mirror`: Reverse within each 8-lane half-row. Lane n reads
       from lane 7 - (n % 8) within its half-row.
 
-    Row broadcasts:
+    Row broadcasts (not available on RDNA):
     - `row_bcast_15`: Lane 15 of each row broadcasts to all lanes of the next
       row. Lanes in row 0 are not affected (retain `old`).
     - `row_bcast_31`: Lane 31 broadcasts to all lanes in rows 2 and 3.
@@ -746,7 +750,7 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
       results. Bit i enables row i (bit 0 = lanes 0-15, bit 1 = lanes
       16-31, etc.). Disabled lanes retain `old`.
     * `$bank_mask` (default 0xf): 4-bit mask controlling which banks write
-      results. Bit i enables bank i (bit 0 = lanes 0-3, 16-19, 32-35, 48-51).
+      results. Bit i enables bank i (bit 0 = lanes 0-3, 16-19, etc. across all rows).
       Disabled lanes retain `old`.
     * `$bound_ctrl` (default false): When false, out of bounds lanes retain
       `old`. When true, out-of-bounds lanes receive zero.
