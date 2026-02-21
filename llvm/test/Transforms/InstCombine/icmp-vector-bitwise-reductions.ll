@@ -6,8 +6,8 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define i1 @vreduce_and_eq(<4 x i8> %v) {
 ; CHECK-LABEL: define i1 @vreduce_and_eq(
 ; CHECK-SAME: <4 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[RED:%.*]] = call i8 @llvm.vector.reduce.and.v4i8(<4 x i8> [[V]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[RED]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[V]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %red = call i8 @llvm.vector.reduce.and.v4i8(<4 x i8> %v)
@@ -18,8 +18,8 @@ define i1 @vreduce_and_eq(<4 x i8> %v) {
 define i1 @vreduce_and_ne(<4 x i8> %v) {
 ; CHECK-LABEL: define i1 @vreduce_and_ne(
 ; CHECK-SAME: <4 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[RED:%.*]] = call i8 @llvm.vector.reduce.and.v4i8(<4 x i8> [[V]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[RED]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[V]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %red = call i8 @llvm.vector.reduce.and.v4i8(<4 x i8> %v)
@@ -30,8 +30,8 @@ define i1 @vreduce_and_ne(<4 x i8> %v) {
 define i1 @vreduce_or_eq(<4 x i8> %v) {
 ; CHECK-LABEL: define i1 @vreduce_or_eq(
 ; CHECK-SAME: <4 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[RED:%.*]] = call i8 @llvm.vector.reduce.or.v4i8(<4 x i8> [[V]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[RED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[V]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %red = call i8 @llvm.vector.reduce.or.v4i8(<4 x i8> %v)
@@ -42,8 +42,8 @@ define i1 @vreduce_or_eq(<4 x i8> %v) {
 define i1 @vreduce_or_ne(<4 x i8> %v) {
 ; CHECK-LABEL: define i1 @vreduce_or_ne(
 ; CHECK-SAME: <4 x i8> [[V:%.*]]) {
-; CHECK-NEXT:    [[RED:%.*]] = call i8 @llvm.vector.reduce.or.v4i8(<4 x i8> [[V]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[RED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[V]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %red = call i8 @llvm.vector.reduce.or.v4i8(<4 x i8> %v)
@@ -54,9 +54,8 @@ define i1 @vreduce_or_ne(<4 x i8> %v) {
 define i1 @loaded_value(ptr %p) {
 ; CHECK-LABEL: define i1 @loaded_value(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = load <4 x i8>, ptr [[P]], align 4
-; CHECK-NEXT:    [[RED:%.*]] = call i8 @llvm.vector.reduce.and.v4i8(<4 x i8> [[V]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[RED]], -1
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[V1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %v = load <4 x i8>, ptr %p
