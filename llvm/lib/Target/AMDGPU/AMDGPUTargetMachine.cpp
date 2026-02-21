@@ -979,6 +979,14 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           FPM.addPass(AMDGPUUniformIntrinsicCombinePass());
       });
 
+  PB.registerOptimizerLastEPCallback(
+      [](ModulePassManager &MPM, OptimizationLevel Level,
+         ThinOrFullLTOPhase Phase) {
+        if (Level == OptimizationLevel::O0)
+          return;
+        MPM.addPass(AMDGPUUnusedLibFuncCleanupPass());
+      });
+
   PB.registerCGSCCOptimizerLateEPCallback(
       [this](CGSCCPassManager &PM, OptimizationLevel Level) {
         if (Level == OptimizationLevel::O0)

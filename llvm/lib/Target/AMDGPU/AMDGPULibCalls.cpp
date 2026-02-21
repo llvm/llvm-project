@@ -22,6 +22,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <cmath>
 
 #define DEBUG_TYPE "amdgpu-simplifylib"
@@ -606,8 +607,21 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
     return false;
 
   FuncInfo FInfo;
-  if (!parseFunctionName(Callee->getName(), FInfo))
-    return false;
+  if (!parseFunctionName(Callee->getName(), FInfo)) {
+    // HIP math wrappers use static inline (for consistency with the CUDA clang
+    // headers), producing _ZL-prefixed names like _ZL3sind.  Strip the 'L' and
+    // retry, but only proceed for sin/cos so the broader pass behaviour is
+    // unchanged.
+    StringRef Name = Callee->getName();
+    if (!Name.starts_with("_ZL"))
+      return false;
+    std::string Stripped = ("_Z" + Name.drop_front(3)).str();
+    if (!parseFunctionName(Stripped, FInfo))
+      return false;
+    if (FInfo.getId() != AMDGPULibFunc::EI_SIN &&
+        FInfo.getId() != AMDGPULibFunc::EI_COS)
+      return false;
+  }
 
   // Further check the number of arguments to see if they match.
   // TODO: Check calling convention matches too
@@ -1705,6 +1719,18 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
   FunctionCallee FSinCosPrivate = getFunction(M, SinCosLibFuncPrivate);
   FunctionCallee FSinCosGeneric = getFunction(M, SinCosLibFuncGeneric);
   FunctionCallee FSinCos = FSinCosPrivate ? FSinCosPrivate : FSinCosGeneric;
+
+  // For HIP, the OpenCL-style mangled sincos may not exist. Fall back to
+  // __ocml_sincos_f{32,64} which has the same calling convention: returns sin
+  // value and stores cos through a private pointer.
+  if (!FSinCos) {
+    StringRef OcmlName = getArgType(fInfo) == AMDGPULibFunc::F32
+                             ? "__ocml_sincos_f32"
+                             : "__ocml_sincos_f64";
+    if (Function *OcmlSinCos = M->getFunction(OcmlName))
+      FSinCos = FunctionCallee(OcmlSinCos->getFunctionType(), OcmlSinCos);
+  }
+
   if (!FSinCos)
     return false;
 
@@ -1713,10 +1739,17 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
   SmallVector<CallInst *> SinCosCalls;
   FuncInfo PartnerInfo(isSin ? AMDGPULibFunc::EI_COS : AMDGPULibFunc::EI_SIN,
                        fInfo);
-  const std::string PairName = PartnerInfo.mangle();
+  std::string PairName = PartnerInfo.mangle();
 
-  StringRef SinName = isSin ? CI->getCalledFunction()->getName() : PairName;
-  StringRef CosName = isSin ? PairName : CI->getCalledFunction()->getName();
+  // mangle() always produces _Z-prefixed names, but the HIP math wrappers
+  // are static inline and use _ZL (internal linkage) mangling.  Adjust the
+  // partner name to match.
+  StringRef OrigName = CI->getCalledFunction()->getName();
+  if (OrigName.starts_with("_ZL"))
+    PairName.insert(2, "L");
+
+  StringRef SinName = isSin ? OrigName : StringRef(PairName);
+  StringRef CosName = isSin ? StringRef(PairName) : OrigName;
   const std::string SinCosPrivateName = SinCosLibFuncPrivate.mangle();
   const std::string SinCosGenericName = SinCosLibFuncGeneric.mangle();
 
@@ -1726,33 +1759,49 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
 
   SmallVector<DILocation *> MergeDbgLocs = {CI->getDebugLoc()};
 
-  for (User* U : CArgVal->users()) {
-    CallInst *XI = dyn_cast<CallInst>(U);
-    if (!XI || XI->getFunction() != F || XI->isNoBuiltin())
-      continue;
+  // Scan all calls in the function for sin/cos/sincos with equivalent
+  // arguments. We cannot just iterate CArgVal->users() because the partner
+  // call may use a different load from the same address that hasn't been CSE'd.
+  for (BasicBlock &BB : *F) {
+    for (Instruction &I : BB) {
+      CallInst *XI = dyn_cast<CallInst>(&I);
+      if (!XI || XI->isNoBuiltin())
+        continue;
 
-    Function *UCallee = XI->getCalledFunction();
-    if (!UCallee)
-      continue;
+      Function *UCallee = XI->getCalledFunction();
+      if (!UCallee || XI->arg_size() < 1)
+        continue;
 
-    bool Handled = true;
+      // Check for equivalent arguments: same SSA value, or both loads from
+      // the same pointer (which haven't been CSE'd yet).
+      Value *XIArg = XI->getArgOperand(0);
+      if (CArgVal != XIArg) {
+        auto *LA = dyn_cast<LoadInst>(CArgVal);
+        auto *LB = dyn_cast<LoadInst>(XIArg);
+        if (!LA || !LB || LA->getPointerOperand() != LB->getPointerOperand())
+          continue;
+      }
 
-    if (UCallee->getName() == SinName)
-      SinCalls.push_back(XI);
-    else if (UCallee->getName() == CosName)
-      CosCalls.push_back(XI);
-    else if (UCallee->getName() == SinCosPrivateName ||
-             UCallee->getName() == SinCosGenericName)
-      SinCosCalls.push_back(XI);
-    else
-      Handled = false;
+      bool Handled = true;
+      StringRef CalleeName = UCallee->getName();
 
-    if (Handled) {
-      MergeDbgLocs.push_back(XI->getDebugLoc());
-      auto *OtherOp = cast<FPMathOperator>(XI);
-      FMF &= OtherOp->getFastMathFlags();
-      FPMath = MDNode::getMostGenericFPMath(
-          FPMath, XI->getMetadata(LLVMContext::MD_fpmath));
+      if (CalleeName == SinName)
+        SinCalls.push_back(XI);
+      else if (CalleeName == CosName)
+        CosCalls.push_back(XI);
+      else if (CalleeName == SinCosPrivateName ||
+               CalleeName == SinCosGenericName)
+        SinCosCalls.push_back(XI);
+      else
+        Handled = false;
+
+      if (Handled) {
+        MergeDbgLocs.push_back(XI->getDebugLoc());
+        auto *OtherOp = cast<FPMathOperator>(XI);
+        FMF &= OtherOp->getFastMathFlags();
+        FPMath = MDNode::getMostGenericFPMath(
+            FPMath, XI->getMetadata(LLVMContext::MD_fpmath));
+      }
     }
   }
 
@@ -2070,6 +2119,29 @@ PreservedAnalyses AMDGPUUseNativeCallsPass::run(Function &F,
       if (CI && Simplifier.useNative(CI))
         Changed = true;
     }
+  }
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+}
+
+PreservedAnalyses AMDGPUUnusedLibFuncCleanupPass::run(Module &M,
+                                                      ModuleAnalysisManager &AM) {
+  // Remove device-library functions from @llvm.compiler.used and erase them
+  // if they have no callers.  These may have been eagerly pulled in before
+  // device-library linking to enable later optimisation passes (e.g. sin/cos
+  // → sincos merging); after those passes have run we clean up any that went
+  // unused.
+  bool Changed = false;
+  for (StringRef Name : {"__ocml_sincos_f32", "__ocml_sincos_f64"}) {
+    Function *F = M.getFunction(Name);
+    if (!F)
+      continue;
+    if (any_of(F->uses(), [](const Use &U) { return isa<CallBase>(U.getUser()); }))
+      continue;
+    removeFromUsedLists(M, [F](Constant *C) {
+      return C->stripPointerCasts() == F;
+    });
+    F->eraseFromParent();
+    Changed = true;
   }
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

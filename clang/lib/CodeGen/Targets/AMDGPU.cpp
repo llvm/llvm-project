@@ -10,6 +10,7 @@
 #include "TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -321,6 +322,7 @@ public:
   bool shouldEmitStaticExternCAliases() const override;
   bool shouldEmitDWARFBitFieldSeparators() const override;
   void setCUDAKernelCallingConvention(const FunctionType *&FT) const override;
+  void emitTargetGlobals(CodeGen::CodeGenModule &CGM) const override;
 };
 }
 
@@ -761,6 +763,36 @@ void CodeGenModule::handleAMDGPUWavesPerEUAttr(
     F->addFnAttr("amdgpu-waves-per-eu", AttrVal);
   } else
     assert(Max == 0 && "Max must be zero");
+}
+
+// If the module references both __ocml_sin and __ocml_cos for a given type,
+// inject a declaration + @llvm.compiler.used entry for the corresponding
+// __ocml_sincos so the demand-linker pulls it in from the device library.
+// The @llvm.compiler.used entry prevents early GlobalDCE from removing sincos
+// before the AMDGPUSimplifyLibCallsPass can use it.  A late cleanup pass
+// (AMDGPUUnusedLibFuncCleanupPass, registered at OptimizerLastEP) removes
+// unused sincos after optimization.
+void AMDGPUTargetCodeGenInfo::emitTargetGlobals(
+    CodeGen::CodeGenModule &CGM) const {
+  llvm::Module &M = CGM.getModule();
+  llvm::SmallVector<llvm::GlobalValue *, 2> ToAdd;
+
+  for (bool IsF32 : {true, false}) {
+    auto *Sin = M.getFunction(IsF32 ? "__ocml_sin_f32" : "__ocml_sin_f64");
+    auto *Cos = M.getFunction(IsF32 ? "__ocml_cos_f32" : "__ocml_cos_f64");
+    const char *Name = IsF32 ? "__ocml_sincos_f32" : "__ocml_sincos_f64";
+    if (!Sin || !Cos || M.getFunction(Name))
+      continue;
+    llvm::Type *FPTy = IsF32 ? llvm::Type::getFloatTy(M.getContext())
+                              : llvm::Type::getDoubleTy(M.getContext());
+    llvm::Type *PtrTy = llvm::PointerType::get(M.getContext(), 5);
+    ToAdd.push_back(llvm::Function::Create(
+        llvm::FunctionType::get(FPTy, {FPTy, PtrTy}, false),
+        llvm::GlobalValue::ExternalLinkage, Name, &M));
+  }
+
+  if (!ToAdd.empty())
+    llvm::appendToCompilerUsed(M, ToAdd);
 }
 
 std::unique_ptr<TargetCodeGenInfo>
