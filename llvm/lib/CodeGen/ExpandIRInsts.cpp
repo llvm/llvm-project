@@ -85,6 +85,103 @@ bool isSigned(unsigned int Opcode) {
   return Opcode == Instruction::SDiv || Opcode == Instruction::SRem;
 }
 
+/// For signed div/rem by a power of 2, compute the bias-adjusted dividend:
+///   Sign = ashr X, (BitWidth - 1)          -- 0 or -1
+///   Bias = lshr Sign, (BitWidth - ShiftAmt) -- 0 or 2^ShiftAmt - 1
+///   Adjusted = add X, Bias
+/// The bias adds (2^ShiftAmt - 1) for negative X, correcting rounding towards
+/// zero (instead of towards -inf that a plain ashr would give).
+/// The lshr form is used instead of 'and' to avoid large immediate constants.
+static Value *addSignedBias(IRBuilder<> &Builder, Value *X, unsigned BitWidth,
+                            unsigned ShiftAmt) {
+  assert(ShiftAmt > 0 && ShiftAmt < BitWidth &&
+         "ShiftAmt out of range; callers should handle ShiftAmt == 0");
+  Value *Sign = Builder.CreateAShr(X, BitWidth - 1, "sign");
+  Value *Bias = Builder.CreateLShr(Sign, BitWidth - ShiftAmt, "bias");
+  return Builder.CreateAdd(X, Bias, "adjusted");
+}
+
+/// Expand division or remainder by a power-of-2 constant.
+/// Division (let C = log2(|divisor|)):
+///   udiv X, 2^C  ->  lshr X, C
+///   sdiv X, 2^C  ->  ashr (add X, Bias), C  (Bias corrects rounding)
+///   sdiv exact X, 2^C  ->  ashr exact X, C  (no bias needed)
+///   For negative power-of-2 divisors, the division result is negated.
+/// Remainder (let C = log2(|divisor|)):
+///   urem X, 2^C  ->  and X, (2^C - 1)
+///   srem X, 2^C  ->  sub X, (shl (ashr (add X, Bias), C), C)
+static void expandPow2DivRem(BinaryOperator *BO) {
+  LLVM_DEBUG(dbgs() << "Expanding instruction: " << *BO << '\n');
+
+  unsigned Opcode = BO->getOpcode();
+  bool IsDiv = (Opcode == Instruction::UDiv || Opcode == Instruction::SDiv);
+  bool IsSigned = isSigned(Opcode);
+  // isExact() is only valid for div.
+  bool IsExact = IsDiv && BO->isExact();
+
+  assert(isConstantPowerOfTwo(BO->getOperand(1), IsSigned) &&
+         "Expected power-of-2 constant divisor");
+
+  Value *X = BO->getOperand(0);
+  auto *C = cast<ConstantInt>(BO->getOperand(1));
+  Type *Ty = BO->getType();
+  unsigned BitWidth = Ty->getIntegerBitWidth();
+
+  APInt DivisorVal = C->getValue();
+  bool IsNegativeDivisor = IsSigned && DivisorVal.isNegative();
+  // Use countr_zero() to get the shift amount directly from the bit pattern.
+  // This works correctly for both positive and negative powers of 2, including
+  // INT_MIN, without needing to negate the value first.
+  unsigned ShiftAmt = DivisorVal.countr_zero();
+
+  IRBuilder<> Builder(BO);
+  Value *Result;
+
+  if (ShiftAmt == 0) {
+    // Div by 1/-1: X / 1 = X, X / -1 = -X.
+    // Rem by 1/-1: always 0.
+    if (IsDiv)
+      Result = IsNegativeDivisor ? Builder.CreateNeg(X) : X;
+    else
+      Result = ConstantInt::get(Ty, 0);
+  } else if (IsSigned) {
+    // The signed expansion uses X multiple times (bias computation, shift,
+    // and sub for remainder). Freeze X to ensure consistent behavior if it is
+    // undef/poison. For exact division, no bias is needed and X is used only
+    // once, so freeze is unnecessary.
+    if (!IsExact && !isGuaranteedNotToBeUndefOrPoison(X))
+      X = Builder.CreateFreeze(X, X->getName() + ".fr");
+    // For exact division, no bias is needed since there's no rounding.
+    Value *Dividend =
+        IsExact ? X : addSignedBias(Builder, X, BitWidth, ShiftAmt);
+    Value *Quotient = Builder.CreateAShr(
+        Dividend, ShiftAmt, IsDiv && IsNegativeDivisor ? "pre.neg" : "shifted",
+        IsExact);
+    if (IsDiv) {
+      Result = IsNegativeDivisor ? Builder.CreateNeg(Quotient) : Quotient;
+    } else {
+      // Rem = X - (Quotient << ShiftAmt):
+      // clear lower ShiftAmt bits via round-trip shift, then subtract.
+      Value *Truncated = Builder.CreateShl(Quotient, ShiftAmt, "truncated");
+      Result = Builder.CreateSub(X, Truncated);
+    }
+  } else {
+    if (IsDiv) {
+      Result = Builder.CreateLShr(X, ShiftAmt, "", IsExact);
+    } else {
+      APInt Mask = APInt::getLowBitsSet(BitWidth, ShiftAmt);
+      Result = Builder.CreateAnd(X, ConstantInt::get(Ty, Mask));
+    }
+  }
+
+  BO->replaceAllUsesWith(Result);
+  if (Result != X)
+    if (auto *RI = dyn_cast<Instruction>(Result))
+      RI->takeName(BO);
+  BO->dropAllReferences();
+  BO->eraseFromParent();
+}
+
 /// This class implements a precise expansion of the frem instruction.
 /// The generated code is based on the fmod implementation in the AMD device
 /// libs.
@@ -1106,12 +1203,14 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     case Instruction::SDiv:
     case Instruction::URem:
     case Instruction::SRem:
+      // TODO: We don't consider vectors here.
+      // Power-of-2 divisors are handled inside the expansion (via efficient
+      // shift/mask sequences) rather than being excluded here, so that
+      // backends that cannot lower wide div/rem even for powers of two
+      // (e.g. when DAGCombiner is disabled) still get valid lowered code.
       return !DisableExpandLargeDivRem &&
              cast<IntegerType>(Ty->getScalarType())->getIntegerBitWidth() >
-                 MaxLegalDivRemBitWidth
-             // The backend has peephole optimizations for powers of two.
-             // TODO: We don't consider vectors here.
-             && !isConstantPowerOfTwo(I.getOperand(1), isSigned(I.getOpcode()));
+                 MaxLegalDivRemBitWidth;
     case Instruction::Call: {
       auto *II = dyn_cast<IntrinsicInst>(&I);
       if (II && (II->getIntrinsicID() == Intrinsic::fptoui_sat ||
@@ -1170,13 +1269,20 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
 
     case Instruction::UDiv:
     case Instruction::SDiv:
-      expandDivision(cast<BinaryOperator>(I));
-      break;
     case Instruction::URem:
-    case Instruction::SRem:
-      expandRemainder(cast<BinaryOperator>(I));
+    case Instruction::SRem: {
+      auto *BO = cast<BinaryOperator>(I);
+      if (isConstantPowerOfTwo(BO->getOperand(1), isSigned(BO->getOpcode()))) {
+        expandPow2DivRem(BO);
+      } else {
+        unsigned Opc = BO->getOpcode();
+        if (Opc == Instruction::UDiv || Opc == Instruction::SDiv)
+          expandDivision(BO);
+        else
+          expandRemainder(BO);
+      }
       break;
-
+    }
     case Instruction::Call: {
       auto *II = cast<IntrinsicInst>(I);
       assert(II->getIntrinsicID() == Intrinsic::fptoui_sat ||
