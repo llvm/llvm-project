@@ -30,6 +30,10 @@ namespace testing {
 #define siglongjmp(buf, val) longjmp(buf, val)
 #endif
 
+#ifdef __FreeBSD__
+using sighandler_t = __sighandler_t *;
+#endif
+
 static thread_local sigjmp_buf jumpBuffer;
 static thread_local bool caughtExcept;
 
