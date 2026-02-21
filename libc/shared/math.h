@@ -106,6 +106,7 @@
 #include "math/fsqrt.h"
 #include "math/fsqrtf128.h"
 #include "math/fsqrtl.h"
+#include "math/hypot.h"
 #include "math/hypotf.h"
 #include "math/hypotf16.h"
 #include "math/ilogb.h"
