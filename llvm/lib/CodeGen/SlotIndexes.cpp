@@ -182,6 +182,13 @@ void SlotIndexes::renumberIndexes(IndexList::iterator curItr) {
 
   LLVM_DEBUG(dbgs() << "\n*** Renumbered SlotIndexes " << startItr->getIndex()
                     << '-' << index << " ***\n");
+
+  // If we repack all the way to the end, add spacing in between the
+  // instructions so that future renumberings are able to catch up
+  // without also renumbering all the way to the end.
+  if (index == getLastIndex().getIndex())
+    packIndexes();
+
   ++NumLocalRenum;
 }
 
