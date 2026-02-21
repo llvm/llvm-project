@@ -494,6 +494,9 @@ KEYWORD(__thread                    , KEYALL)
 KEYWORD(__FUNCTION__                , KEYALL)
 KEYWORD(__PRETTY_FUNCTION__         , KEYALL)
 KEYWORD(__auto_type                 , KEYALL)
+KEYWORD(__fq_func__, KEYALL)
+KEYWORD(__mangled_func__, KEYALL)
+
 
 // MS Extensions
 KEYWORD(__FUNCDNAME__               , KEYMS)

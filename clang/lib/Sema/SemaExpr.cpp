@@ -2086,6 +2086,10 @@ static PredefinedIdentKind getPredefinedExprKind(tok::TokenKind Kind) {
     llvm_unreachable("unexpected TokenKind");
   case tok::kw___func__:
     return PredefinedIdentKind::Func; // [C99 6.4.2.2]
+  case tok::kw___fq_func__:
+    return PredefinedIdentKind::FQFunction;
+  case tok::kw___mangled_func__:
+    return PredefinedIdentKind::MangledFunction;
   case tok::kw___FUNCTION__:
     return PredefinedIdentKind::Function;
   case tok::kw___FUNCDNAME__:

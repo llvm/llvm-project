@@ -1064,6 +1064,8 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   case tok::kw_L__FUNCTION__:   // primary-expression: L__FUNCTION__ [MS]
   case tok::kw_L__FUNCSIG__:    // primary-expression: L__FUNCSIG__ [MS]
   case tok::kw___PRETTY_FUNCTION__:  // primary-expression: __P..Y_F..N__ [GNU]
+  case tok::kw___fq_func__:           // <-- Add this line
+  case tok::kw___mangled_func__: 
     // Function local predefined macros are represented by PredefinedExpr except
     // when Microsoft extensions are enabled and one of these macros is adjacent
     // to a string literal or another one of these macros.

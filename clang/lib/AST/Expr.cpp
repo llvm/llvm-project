@@ -654,6 +654,10 @@ StringRef PredefinedExpr::getIdentKindName(PredefinedIdentKind IK) {
     return "__FUNCTION__";
   case PredefinedIdentKind::FuncDName:
     return "__FUNCDNAME__";
+  case PredefinedIdentKind::FQFunction:
+    return "__fq_func__";
+  case PredefinedIdentKind::MangledFunction:
+    return "__mangled_func__";
   case PredefinedIdentKind::LFunction:
     return "L__FUNCTION__";
   case PredefinedIdentKind::PrettyFunction:
@@ -675,6 +679,34 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
                                         bool ForceElaboratedPrinting) {
   ASTContext &Context = CurrentDecl->getASTContext();
 
+  if (IK == PredefinedIdentKind::FQFunction) {
+  if (const auto *ND = dyn_cast<NamedDecl>(CurrentDecl))
+    return ND->getQualifiedNameAsString();
+  return "<unknown>";
+}
+
+if (IK == PredefinedIdentKind::MangledFunction) {
+  if (const auto *ND = dyn_cast<NamedDecl>(CurrentDecl)) {
+    std::unique_ptr<MangleContext> MC;
+    MC.reset(Context.createMangleContext());
+    SmallString<256> Buffer;
+    llvm::raw_svector_ostream Out(Buffer);
+    GlobalDecl GD;
+    if (const CXXConstructorDecl *CD = dyn_cast<CXXConstructorDecl>(ND))
+      GD = GlobalDecl(CD, Ctor_Base);
+    else if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(ND))
+      GD = GlobalDecl(DD, Dtor_Base);
+    else if (auto FD = dyn_cast<FunctionDecl>(ND)) {
+      GD = FD->isReferenceableKernel() ? GlobalDecl(FD) : GlobalDecl(ND);
+    } else
+      GD = GlobalDecl(ND);
+    MC->mangleName(GD, Out);
+    return std::string(Buffer);
+  }
+  return "<unknown>";
+}
+
+                                          
   if (IK == PredefinedIdentKind::FuncDName) {
     if (const NamedDecl *ND = dyn_cast<NamedDecl>(CurrentDecl)) {
       std::unique_ptr<MangleContext> MC;
