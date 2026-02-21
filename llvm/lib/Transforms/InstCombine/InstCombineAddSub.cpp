@@ -2860,9 +2860,33 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
         I, Builder.CreateIntrinsic(Intrinsic::usub_sat, {Ty}, {X, Op1}));
 
   // Op0 - umin(X, Op0) --> usub.sat(Op0, X)
-  if (match(Op1, m_OneUse(m_c_UMin(m_Value(X), m_Specific(Op0)))))
-    return replaceInstUsesWith(
-        I, Builder.CreateIntrinsic(Intrinsic::usub_sat, {Ty}, {Op0, X}));
+  if (match(Op1, m_OneUse(m_c_UMin(m_Value(X), m_Specific(Op0))))) {
+    // Op0 - umin(Op0, C) s< C2 --> Op0 s< C2 + C
+    // Constraints:
+    // 1. C >= 0: Range [0, C) must be valid.
+    // 2. C2 > 0: Range [C, C+C2) must imply extension.
+    // 3. No Signed Overflow: Merged upper bound (C + C2) must be safe.
+    const APInt *C;
+    if (I.hasOneUse() && I.hasNoSignedWrap() && match(X, m_APInt(C)) &&
+        C->isNonNegative()) {
+      const APInt *C2;
+      CmpPredicate Pred;
+      Instruction *MustICmp = cast<Instruction>(I.user_back());
+      if (match(MustICmp, m_ICmp(Pred, m_Specific(&I), m_APInt(C2))) &&
+          Pred == CmpInst::ICMP_SLT) {
+        bool Overflow;
+        APInt Sum = C->sadd_ov(*C2, Overflow);
+        if (C2->isStrictlyPositive() && !Overflow) {
+          Value *NewCmp = Builder.CreateICmpSLT(Op0, ConstantInt::get(Ty, Sum));
+          eraseInstFromFunction(*replaceInstUsesWith(*MustICmp, NewCmp));
+          // return eraseInstFromFunction(I);
+          return nullptr;
+        }
+      }
+    }
+    Value *USub = Builder.CreateIntrinsic(Intrinsic::usub_sat, {Ty}, {Op0, X});
+    return replaceInstUsesWith(I, USub);
+  }
 
   // Op0 - umax(X, Op0) --> 0 - usub.sat(X, Op0)
   if (match(Op1, m_OneUse(m_c_UMax(m_Value(X), m_Specific(Op0))))) {

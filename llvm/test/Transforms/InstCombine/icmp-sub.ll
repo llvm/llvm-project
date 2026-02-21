@@ -3,6 +3,123 @@
 
 declare void @use(i32)
 declare void @use_vec(<2 x i8>)
+declare i8 @llvm.umin.i8(i8, i8)
+
+; 1. Positive Tests
+; Basic valid case
+define i1 @test_basic_opt(i8 %x) {
+; CHECK-LABEL: @test_basic_opt(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 30
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %min = call i8 @llvm.umin.i8(i8 %x, i8 10)
+  %sub = sub nsw i8 %x, %min
+  %cmp = icmp slt i8 %sub, 20
+  ret i1 %cmp
+}
+
+; Boundary case - C is 0
+define i1 @test_c_is_zero(i8 %x) {
+; CHECK-LABEL: @test_c_is_zero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 10
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %min = call i8 @llvm.umin.i8(i8 %x, i8 0)
+  %sub = sub nsw i8 %x, %min
+  %cmp = icmp slt i8 %sub, 10
+  ret i1 %cmp
+}
+
+; Boundary case - Sum is exactly SMAX (127)
+define i1 @test_sum_is_smax(i8 %x) {
+; CHECK-LABEL: @test_sum_is_smax(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X:%.*]], 127
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %min = call i8 @llvm.umin.i8(i8 %x, i8 100)
+  %sub = sub nsw i8 %x, %min
+  %cmp = icmp slt i8 %sub, 27
+  ret i1 %cmp
+}
+
+; 2. Negative Tests
+; Missing 'nsw' flag on sub
+define i1 @fail_no_nsw(i8 %x) {
+; CHECK-LABEL: @fail_no_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], 118
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], -108
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %min = call i8 @llvm.umin.i8(i8 %x, i8 10)
+  %sub = sub i8 %x, %min
+  %cmp = icmp slt i8 %sub, 20
+  ret i1 %cmp
+}
+
+; C is Negative (Constraint 1 Violation)
+define i1 @fail_c_negative(i8 %x) {
+; CHECK-LABEL: @fail_c_negative(
+; CHECK-NEXT:    ret i1 true
+;
+  %min = call i8 @llvm.umin.i8(i8 %x, i8 -10)
+  %sub = sub nsw i8 %x, %min
+  %cmp = icmp slt i8 %sub, 20
+  ret i1 %cmp
+}
+
+; C2 is Zero (Constraint 2 Violation)
+define i1 @fail_c2_zero(i8 %x) {
+; CHECK-LABEL: @fail_c2_zero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], -119
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %min = call i8 @llvm.umin.i8(i8 %x, i8 10)
+  %sub = sub nsw i8 %x, %min
+  %cmp = icmp slt i8 %sub, 0
+  ret i1 %cmp
+}
+
+; C2 is Negative (Constraint 2 Violation)
+define i1 @fail_c2_negative(i8 %x) {
+; CHECK-LABEL: @fail_c2_negative(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], -119
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %min = call i8 @llvm.umin.i8(i8 %x, i8 10)
+  %sub = sub nsw i8 %x, %min
+  %cmp = icmp slt i8 %sub, -5
+  ret i1 %cmp
+}
+
+; Signed Overflow in C + C2 (Constraint 3 Violation)
+define i1 @fail_sum_overflow(i8 %x) {
+; CHECK-LABEL: @fail_sum_overflow(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], 28
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], -98
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %min = call i8 @llvm.umin.i8(i8 %x, i8 100)
+  %sub = sub nsw i8 %x, %min
+  %cmp = icmp slt i8 %sub, 30
+  ret i1 %cmp
+}
+
+; Multi-use of sub instruction
+define i8 @fail_multi_use(i8 %x) {
+; CHECK-LABEL: @fail_multi_use(
+; CHECK-NEXT:    [[SUB:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[X:%.*]], i8 10)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SUB]], 20
+; CHECK-NEXT:    [[RES:%.*]] = zext i1 [[CMP]] to i8
+; CHECK-NEXT:    [[RET:%.*]] = add nuw i8 [[SUB]], [[RES]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %min = call i8 @llvm.umin.i8(i8 %x, i8 10)
+  %sub = sub nsw i8 %x, %min
+  %cmp = icmp slt i8 %sub, 20
+  %res = zext i1 %cmp to i8
+  %ret = add i8 %sub, %res
+  ret i8 %ret
+}
 
 define i1 @test_nuw_and_unsigned_pred(i64 %x) {
 ; CHECK-LABEL: @test_nuw_and_unsigned_pred(
