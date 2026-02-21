@@ -43,7 +43,7 @@ class OProfileJITEventListener : public JITEventListener {
 
 public:
   OProfileJITEventListener(std::unique_ptr<OProfileWrapper> LibraryWrapper)
-    : Wrapper(std::move(LibraryWrapper)) {
+      : Wrapper(std::move(LibraryWrapper)) {
     initialize();
   }
 
@@ -112,14 +112,15 @@ void OProfileJITEventListener::notifyObjectLoaded(
       continue;
     }
 
-    DILineInfoTable Lines = Context->getLineInfoForAddressRange(Addr, Size);
+    DILineInfoTable Lines =
+        Context->getLineInfoForAddressRange(SectionedAddress{Addr}, Size);
     size_t i = 0;
     size_t num_entries = Lines.size();
     struct debug_line_info *debug_line;
     debug_line = (struct debug_line_info *)calloc(
         num_entries, sizeof(struct debug_line_info));
 
-    for (auto& It : Lines) {
+    for (auto &It : Lines) {
       debug_line[i].vma = (unsigned long)It.first;
       debug_line[i].lineno = It.second.Line;
       debug_line[i].filename =
@@ -150,8 +151,7 @@ void OProfileJITEventListener::notifyFreeingObject(ObjectKey Key) {
     const ObjectFile &DebugObj = *DebugObjects[Key].getBinary();
 
     // Use symbol info to iterate functions in the object.
-    for (symbol_iterator I = DebugObj.symbol_begin(),
-                         E = DebugObj.symbol_end();
+    for (symbol_iterator I = DebugObj.symbol_begin(), E = DebugObj.symbol_end();
          I != E; ++I) {
       if (I->getType() && *I->getType() == SymbolRef::ST_Function) {
         Expected<uint64_t> AddrOrErr = I->getAddress();
@@ -173,7 +173,7 @@ void OProfileJITEventListener::notifyFreeingObject(ObjectKey Key) {
   DebugObjects.erase(Key);
 }
 
-}  // anonymous namespace.
+} // anonymous namespace.
 
 namespace llvm {
 JITEventListener *JITEventListener::createOProfileJITEventListener() {
@@ -182,7 +182,6 @@ JITEventListener *JITEventListener::createOProfileJITEventListener() {
 
 } // namespace llvm
 
-LLVMJITEventListenerRef LLVMCreateOProfileJITEventListener(void)
-{
+LLVMJITEventListenerRef LLVMCreateOProfileJITEventListener(void) {
   return wrap(JITEventListener::createOProfileJITEventListener());
 }
