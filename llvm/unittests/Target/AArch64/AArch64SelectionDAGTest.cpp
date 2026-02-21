@@ -6,16 +6,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64SelectionDAGInfo.h"
-#include "llvm/ADT/APInt.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/AsmParser/Parser.h"
-#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
