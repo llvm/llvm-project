@@ -15934,7 +15934,7 @@ the instruction in the code sequence that references the table.
                                - wavefront    - local
                                               - generic
      store atomic release      - workgroup    - global   1. | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
+                                              - generic     | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
