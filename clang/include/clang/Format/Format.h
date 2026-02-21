@@ -2615,6 +2615,35 @@ struct FormatStyle {
   /// \version 7
   BreakInheritanceListStyle BreakInheritanceList;
 
+  /// If set to a value greater than 0, any parenthesized parameter or argument
+  /// list with more parameters than the specified number will be formatted with
+  /// one parameter per line. This applies to all parameter-like lists enclosed
+  /// in parentheses, including function declarations, function definitions,
+  /// function calls, and comma expressions.
+  /// \code
+  ///    BreakParametersAfter: 3
+  ///
+  ///    void foo(int a);
+  ///
+  ///    void bar(int a, int b, int c);
+  ///
+  ///    void baz(int a,
+  ///             int b,
+  ///             int c,
+  ///             int d);
+  ///
+  ///    foo(1);
+  ///
+  ///    bar(1, 2, 3);
+  ///
+  ///    baz(1,
+  ///        2,
+  ///        3,
+  ///        4);
+  /// \endcode
+  /// \version 23
+  unsigned BreakParametersAfter;
+
   /// The template declaration breaking style to use.
   /// \version 19
   BreakTemplateDeclarationsStyle BreakTemplateDeclarations;
@@ -5732,6 +5761,7 @@ struct FormatStyle {
            BreakFunctionDefinitionParameters ==
                R.BreakFunctionDefinitionParameters &&
            BreakInheritanceList == R.BreakInheritanceList &&
+           BreakParametersAfter == R.BreakParametersAfter &&
            BreakStringLiterals == R.BreakStringLiterals &&
            BreakTemplateDeclarations == R.BreakTemplateDeclarations &&
            ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&

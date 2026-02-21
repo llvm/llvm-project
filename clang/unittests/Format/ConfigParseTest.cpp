@@ -283,6 +283,7 @@ TEST(ConfigParseTest, ParsesConfigurationIntegers) {
   CHECK_PARSE_INT(BracedInitializerIndentWidth);
   CHECK_PARSE_INT(PPIndentWidth);
 
+  CHECK_PARSE_UNSIGNED(BreakParametersAfter);
   CHECK_PARSE_UNSIGNED(ColumnLimit);
   CHECK_PARSE_UNSIGNED(ConstructorInitializerIndentWidth);
   CHECK_PARSE_UNSIGNED(ContinuationIndentWidth);

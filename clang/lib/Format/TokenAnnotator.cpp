@@ -4248,6 +4248,23 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
                              ChildSize + Current->SpacesRequiredBefore;
     }
 
+    if (Style.BreakParametersAfter > 0 && Prev->is(tok::l_paren) &&
+        Prev->ParameterCount > Style.BreakParametersAfter) {
+      const auto *RParen = Prev->MatchingParen;
+      for (auto *ParamTok = Current; ParamTok && ParamTok != RParen;
+           ParamTok = ParamTok->Next) {
+        if (ParamTok->opensScope()) {
+          ParamTok = ParamTok->MatchingParen;
+          continue;
+        }
+
+        if (startsNextParameter(*ParamTok, Style)) {
+          ParamTok->MustBreakBefore = true;
+          ParamTok->CanBreakBefore = true;
+        }
+      }
+    }
+
     if (Current->is(TT_ControlStatementLBrace)) {
       if (Style.ColumnLimit > 0 &&
           Style.BraceWrapping.AfterControlStatement ==
