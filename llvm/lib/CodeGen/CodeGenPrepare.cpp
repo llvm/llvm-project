@@ -2211,7 +2211,7 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
   Value *RemAdd = Builder.CreateNUWAdd(NewRem, ConstantInt::get(Ty, 1));
   Value *RemCmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, RemAdd, RemAmt);
   Value *RemSel =
-      Builder.CreateSelect(RemCmp, Constant::getNullValue(Ty), RemAdd);
+      Builder.CreateSelect(RemCmp, Constant::getNullValue(Ty, DL), RemAdd);
 
   NewRem->addIncoming(Start, L->getLoopPreheader());
   NewRem->addIncoming(RemSel, L->getLoopLatch());
@@ -2608,7 +2608,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros, LoopInfo &LI,
 
   // Replace the unconditional branch that was created by the first split with
   // a compare against zero and a conditional branch.
-  Value *Zero = Constant::getNullValue(Ty);
+  Value *Zero = Constant::getNullValue(Ty, DL);
   // Avoid introducing branch on poison. This also replaces the ctz operand.
   if (!isGuaranteedNotToBeUndefOrPoison(Op))
     Op = Builder.CreateFreeze(Op, Op->getName() + ".fr");
@@ -4262,7 +4262,7 @@ private:
     }
     assert(CommonType && "At least one non-null value must be!");
     for (auto *V : NullValue)
-      Map[V] = Constant::getNullValue(CommonType);
+      Map[V] = Constant::getNullValue(CommonType, &DL);
     return true;
   }
 
@@ -6046,7 +6046,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 
     if (!ResultPtr && !AddrMode.BaseReg && !AddrMode.Scale &&
         !AddrMode.BaseOffs) {
-      SunkAddr = Constant::getNullValue(Addr->getType());
+      SunkAddr = Constant::getNullValue(Addr->getType(), DL);
     } else if (!ResultPtr) {
       return Modified;
     } else {
@@ -6223,7 +6223,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     }
 
     if (!Result)
-      SunkAddr = Constant::getNullValue(Addr->getType());
+      SunkAddr = Constant::getNullValue(Addr->getType(), DL);
     else
       SunkAddr = Builder.CreateIntToPtr(Result, Addr->getType(), "sunkaddr");
   }
@@ -6337,8 +6337,8 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
       auto *IndexTy = VectorType::get(ScalarIndexTy, NumElts);
       auto *SecondTy = GetElementPtrInst::getIndexedType(
           SourceTy, ArrayRef(Ops).drop_front());
-      NewAddr =
-          Builder.CreateGEP(SecondTy, NewAddr, Constant::getNullValue(IndexTy));
+      NewAddr = Builder.CreateGEP(SecondTy, NewAddr,
+                                  Constant::getNullValue(IndexTy, DL));
     } else {
       Value *Base = Ops[0];
       Value *Index = Ops[FinalIndex];
@@ -6346,8 +6346,8 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
       // Create a scalar GEP if there are more than 2 operands.
       if (Ops.size() != 2) {
         // Replace the last index with 0.
-        Ops[FinalIndex] =
-            Constant::getNullValue(Ops[FinalIndex]->getType()->getScalarType());
+        Ops[FinalIndex] = Constant::getNullValue(
+            Ops[FinalIndex]->getType()->getScalarType(), DL);
         Base = Builder.CreateGEP(SourceTy, Base, ArrayRef(Ops).drop_front());
         SourceTy = GetElementPtrInst::getIndexedType(
             SourceTy, ArrayRef(Ops).drop_front());
@@ -6379,7 +6379,8 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
              Intrinsic::masked_scatter);
       ScalarTy = MemoryInst->getOperand(0)->getType()->getScalarType();
     }
-    NewAddr = Builder.CreateGEP(ScalarTy, V, Constant::getNullValue(IndexTy));
+    NewAddr =
+        Builder.CreateGEP(ScalarTy, V, Constant::getNullValue(IndexTy, DL));
   } else {
     // Constant, SelectionDAGBuilder knows to check if its a splat.
     return false;

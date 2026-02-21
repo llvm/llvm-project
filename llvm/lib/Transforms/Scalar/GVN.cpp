@@ -2094,7 +2094,9 @@ bool GVNPass::processAssumeIntrinsic(AssumeInst *IntrinsicI) {
       // this code is not reachable.  FIXME: We could insert unreachable
       // instruction directly because we can modify the CFG.
       auto *NewS =
-          new StoreInst(PoisonValue::get(Int8Ty), Constant::getNullValue(PtrTy),
+          new StoreInst(PoisonValue::get(Int8Ty),
+                        Constant::getNullValue(
+                            PtrTy, &IntrinsicI->getModule()->getDataLayout()),
                         IntrinsicI->getIterator());
       if (MSSAU) {
         const MemoryUseOrDef *FirstNonDom = nullptr;

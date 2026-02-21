@@ -301,7 +301,8 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
         // ignore them when computing import. We do not export references
         // of writeonly object. See computeImportForReferencedGlobals
         if (ImportIndex.isWriteOnly(GVS))
-          V->setInitializer(Constant::getNullValue(V->getValueType()));
+          V->setInitializer(Constant::getNullValue(
+              V->getValueType(), &GV.getParent()->getDataLayout()));
       }
     }
   }

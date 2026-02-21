@@ -1424,7 +1424,7 @@ static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
 
   PHINode *PHI =
       PHINode::Create(Call->getType(), 2, Call->getName(), BBNext->begin());
-  PHI->addIncoming(Constant::getNullValue(Call->getType()), BB);
+  PHI->addIncoming(Constant::getNullValue(Call->getType(), &DL), BB);
   PHI->addIncoming(FirstOccursLocation, BBSuccess);
 
   Call->replaceAllUsesWith(PHI);

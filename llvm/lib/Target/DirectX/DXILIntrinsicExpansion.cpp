@@ -1022,7 +1022,8 @@ static Value *expandSignIntrinsic(CallInst *Orig) {
   Type *Ty = X->getType();
   Type *ScalarTy = Ty->getScalarType();
   Type *RetTy = Orig->getType();
-  Constant *Zero = Constant::getNullValue(Ty);
+  Constant *Zero =
+      Constant::getNullValue(Ty, &Orig->getModule()->getDataLayout());
 
   IRBuilder<> Builder(Orig);
 

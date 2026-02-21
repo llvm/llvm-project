@@ -4538,7 +4538,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       return nullptr;
     Type *ElementType = Gep->getSourceElementType();
     Value *NewT = Idx;
-    Value *NewF = Constant::getNullValue(Idx->getType());
+    Value *NewF = Constant::getNullValue(Idx->getType(), &DL);
     if (Swap)
       std::swap(NewT, NewF);
     Value *NewSI =

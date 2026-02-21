@@ -64,7 +64,8 @@ static bool runPass(Function &F) {
   while (isa<AllocaInst>(I)) ++I;
 
   CastInst *AllocaInsertionPoint = new BitCastInst(
-      Constant::getNullValue(Type::getInt32Ty(F.getContext())),
+      Constant::getNullValue(Type::getInt32Ty(F.getContext()),
+                             &F.getDataLayout()),
       Type::getInt32Ty(F.getContext()), "reg2mem alloca point", I);
 
   // Find the escaped instructions. But don't create stack slots for

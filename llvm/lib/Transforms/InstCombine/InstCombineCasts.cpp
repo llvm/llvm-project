@@ -1028,7 +1028,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     return &Trunc;
 
   if (DestWidth == 1) {
-    Value *Zero = Constant::getNullValue(SrcTy);
+    Value *Zero = Constant::getNullValue(SrcTy, &DL);
 
     Value *X;
     const APInt *C1;
@@ -1467,7 +1467,8 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
 
   // zext nneg bool x -> 0
   if (SrcTy->isIntOrIntVectorTy(1) && Zext.hasNonNeg())
-    return replaceInstUsesWith(Zext, Constant::getNullValue(Zext.getType()));
+    return replaceInstUsesWith(Zext,
+                               Constant::getNullValue(Zext.getType(), &DL));
 
   // Try to extend the entire expression tree to the wide destination type.
   unsigned BitsToClear;
@@ -2415,7 +2416,7 @@ Value *InstCombinerImpl::foldPtrToIntOrAddrOfGEP(Type *IntTy, Value *Ptr) {
       Res->getType() == IntTy && IntTy == IdxTy) {
     // pass
   } else if (isa<ConstantPointerNull>(Ptr)) {
-    Res = Constant::getNullValue(IdxTy);
+    Res = Constant::getNullValue(IdxTy, &DL);
   } else {
     return nullptr;
   }
@@ -3145,9 +3146,9 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       // If our destination is not a vector, then make this a straight
       // scalar-scalar cast.
       if (!DestTy->isVectorTy()) {
-        Value *Elem =
-          Builder.CreateExtractElement(Src,
-                     Constant::getNullValue(Type::getInt32Ty(CI.getContext())));
+        Value *Elem = Builder.CreateExtractElement(
+            Src,
+            Constant::getNullValue(Type::getInt32Ty(CI.getContext()), &DL));
         return CastInst::Create(Instruction::BitCast, Elem, DestTy);
       }
 

@@ -617,7 +617,7 @@ private:
   bool markNotConstant(ValueLatticeElement &IV, Value *V, Constant *C);
 
   bool markNotNull(ValueLatticeElement &IV, Value *V) {
-    return markNotConstant(IV, V, Constant::getNullValue(V->getType()));
+    return markNotConstant(IV, V, Constant::getNullValue(V->getType(), &DL));
   }
 
   /// markConstantRange - Mark the object as constant range with \p CR. If the
@@ -973,7 +973,8 @@ public:
         return ValueLatticeElement::getRange(*Range);
     }
     if (A->hasNonNullAttr())
-      return ValueLatticeElement::getNot(Constant::getNullValue(A->getType()));
+      return ValueLatticeElement::getNot(
+          Constant::getNullValue(A->getType(), &DL));
     // Assume nothing about the incoming arguments without attributes.
     return ValueLatticeElement::getOverdefined();
   }

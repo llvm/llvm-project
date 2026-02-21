@@ -1412,7 +1412,7 @@ auto AlignVectors::realignStoreGroup(IRBuilderBase &Builder,
     ByteSpan VSection =
         VSpan.section(Index * ScLen, ScLen).shift(-Index * ScLen);
     Value *Undef = UndefValue::get(SecTy);
-    Value *Zero = Constant::getNullValue(SecTy);
+    Value *Zero = Constant::getNullValue(SecTy, &DL);
     Value *AccumV = Undef;
     Value *AccumM = Zero;
     for (ByteSpan::Block &S : VSection) {
@@ -2984,7 +2984,7 @@ auto HvxIdioms::processFxpMulChopped(IRBuilderBase &Builder, Instruction &In,
 
   // Add the optional rounding to the proper word.
   if (Op.RoundAt.has_value()) {
-    Value *Zero = Constant::getNullValue(WordX[0]->getType());
+    Value *Zero = Constant::getNullValue(WordX[0]->getType(), &DL);
     SmallVector<Value *> RoundV(WordP.size(), Zero);
     RoundV[*Op.RoundAt / 32] =
         ConstantInt::get(HvxWordTy, 1ull << (*Op.RoundAt % 32));
@@ -3064,7 +3064,7 @@ auto HvxIdioms::createAddCarry(IRBuilderBase &Builder, Value *X, Value *Y,
     } else {
       AddCarry = HVC.HST.getIntrinsicId(Hexagon::V6_vaddcarry);
       if (CarryIn == nullptr)
-        CarryIn = Constant::getNullValue(HVC.getBoolTy(HVC.length(VecTy)));
+        CarryIn = Constant::getNullValue(HVC.getBoolTy(HVC.length(VecTy)), &DL);
       Args.push_back(CarryIn);
     }
     Value *Ret = HVC.createHvxIntrinsic(Builder, AddCarry,
@@ -3212,7 +3212,7 @@ auto HvxIdioms::createMulLong(IRBuilderBase &Builder, ArrayRef<Value *> WordX,
     }
   }
 
-  Value *Zero = Constant::getNullValue(WordX[0]->getType());
+  Value *Zero = Constant::getNullValue(WordX[0]->getType(), &DL);
 
   auto pop_back_or_zero = [Zero](auto &Vector) -> Value * {
     if (Vector.empty())

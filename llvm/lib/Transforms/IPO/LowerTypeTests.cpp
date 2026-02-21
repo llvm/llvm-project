@@ -1425,7 +1425,8 @@ void LowerTypeTestsModule::moveInitializerToModuleConstructor(
   IRBuilder<> IRB(WeakInitializerFn->getEntryBlock().getTerminator());
   GV->setConstant(false);
   IRB.CreateAlignedStore(GV->getInitializer(), GV, GV->getAlign());
-  GV->setInitializer(Constant::getNullValue(GV->getValueType()));
+  GV->setInitializer(
+      Constant::getNullValue(GV->getValueType(), &M.getDataLayout()));
 }
 
 void LowerTypeTestsModule::findGlobalVariableUsersOf(
@@ -1468,10 +1469,11 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
     if (PN)
       InsertPt = PN->getIncomingBlock(U)->getTerminator();
     IRBuilder Builder(InsertPt);
-    Value *ICmp = Builder.CreateICmp(CmpInst::ICMP_NE, F,
-                                     Constant::getNullValue(F->getType()));
-    Value *Select = Builder.CreateSelect(ICmp, JT,
-                                         Constant::getNullValue(F->getType()));
+    Value *ICmp = Builder.CreateICmp(
+        CmpInst::ICMP_NE, F,
+        Constant::getNullValue(F->getType(), &M.getDataLayout()));
+    Value *Select = Builder.CreateSelect(
+        ICmp, JT, Constant::getNullValue(F->getType(), &M.getDataLayout()));
 
     if (auto *SI = dyn_cast<SelectInst>(Select))
       setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);

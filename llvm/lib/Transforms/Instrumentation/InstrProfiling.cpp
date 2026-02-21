@@ -1095,7 +1095,8 @@ GlobalVariable *InstrLowerer::getOrCreateBiasVar(StringRef VarName) {
   // is being used. Runtime has a weak external reference that is used
   // to check whether that's the case or not.
   Bias = new GlobalVariable(M, Int64Ty, false, GlobalValue::LinkOnceODRLinkage,
-                            Constant::getNullValue(Int64Ty), VarName);
+                            Constant::getNullValue(Int64Ty, &M.getDataLayout()),
+                            VarName);
   Bias->setVisibility(GlobalVariable::HiddenVisibility);
   // A definition that's weak (linkonce_odr) without being in a COMDAT
   // section wouldn't lead to link errors, but it would lead to a dead
@@ -1624,8 +1625,9 @@ InstrLowerer::createRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc,
                                   GlobalValue::LinkageTypes Linkage) {
   uint64_t NumBytes = Inc->getNumBitmapBytes();
   auto *BitmapTy = ArrayType::get(Type::getInt8Ty(M.getContext()), NumBytes);
-  auto GV = new GlobalVariable(M, BitmapTy, false, Linkage,
-                               Constant::getNullValue(BitmapTy), Name);
+  auto GV = new GlobalVariable(
+      M, BitmapTy, false, Linkage,
+      Constant::getNullValue(BitmapTy, &M.getDataLayout()), Name);
   GV->setAlignment(Align(1));
   return GV;
 }
@@ -1664,8 +1666,9 @@ InstrLowerer::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
     GV->setAlignment(Align(1));
   } else {
     auto *CounterTy = ArrayType::get(Type::getInt64Ty(Ctx), NumCounters);
-    GV = new GlobalVariable(M, CounterTy, false, Linkage,
-                            Constant::getNullValue(CounterTy), Name);
+    GV = new GlobalVariable(
+        M, CounterTy, false, Linkage,
+        Constant::getNullValue(CounterTy, &M.getDataLayout()), Name);
     GV->setAlignment(Align(8));
   }
   return GV;
@@ -1774,7 +1777,8 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
       !needsRuntimeRegistrationOfSectionRange(TT)) {
     ArrayType *ValuesTy = ArrayType::get(Type::getInt64Ty(Ctx), NS);
     auto *ValuesVar = new GlobalVariable(
-        M, ValuesTy, false, Linkage, Constant::getNullValue(ValuesTy),
+        M, ValuesTy, false, Linkage,
+        Constant::getNullValue(ValuesTy, &M.getDataLayout()),
         getVarName(Inc, getInstrProfValuesVarPrefix(), Renamed));
     ValuesVar->setVisibility(Visibility);
     setGlobalVariableLargeSection(TT, *ValuesVar);
@@ -1918,9 +1922,10 @@ void InstrLowerer::emitVNodes() {
   auto *VNodeTy = StructType::get(Ctx, ArrayRef(VNodeTypes));
 
   ArrayType *VNodesTy = ArrayType::get(VNodeTy, NumCounters);
-  auto *VNodesVar = new GlobalVariable(
-      M, VNodesTy, false, GlobalValue::PrivateLinkage,
-      Constant::getNullValue(VNodesTy), getInstrProfVNodesVarName());
+  auto *VNodesVar =
+      new GlobalVariable(M, VNodesTy, false, GlobalValue::PrivateLinkage,
+                         Constant::getNullValue(VNodesTy, &M.getDataLayout()),
+                         getInstrProfVNodesVarName());
   setGlobalVariableLargeSection(TT, *VNodesVar);
   VNodesVar->setSection(
       getInstrProfSectionName(IPSK_vnodes, TT.getObjectFormat()));

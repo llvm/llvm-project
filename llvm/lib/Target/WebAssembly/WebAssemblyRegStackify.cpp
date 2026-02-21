@@ -114,13 +114,15 @@ static void convertImplicitDefToConstZero(MachineInstr *MI,
     MI->addOperand(MachineOperand::CreateImm(0));
   } else if (RegClass == &WebAssembly::F32RegClass) {
     MI->setDesc(TII->get(WebAssembly::CONST_F32));
-    auto *Val = cast<ConstantFP>(Constant::getNullValue(
-        Type::getFloatTy(MF.getFunction().getContext())));
+    auto *Val = cast<ConstantFP>(
+        Constant::getNullValue(Type::getFloatTy(MF.getFunction().getContext()),
+                               &MF.getFunction().getParent()->getDataLayout()));
     MI->addOperand(MachineOperand::CreateFPImm(Val));
   } else if (RegClass == &WebAssembly::F64RegClass) {
     MI->setDesc(TII->get(WebAssembly::CONST_F64));
-    auto *Val = cast<ConstantFP>(Constant::getNullValue(
-        Type::getDoubleTy(MF.getFunction().getContext())));
+    auto *Val = cast<ConstantFP>(
+        Constant::getNullValue(Type::getDoubleTy(MF.getFunction().getContext()),
+                               &MF.getFunction().getParent()->getDataLayout()));
     MI->addOperand(MachineOperand::CreateFPImm(Val));
   } else if (RegClass == &WebAssembly::V128RegClass) {
     MI->setDesc(TII->get(WebAssembly::CONST_V128_I64x2));

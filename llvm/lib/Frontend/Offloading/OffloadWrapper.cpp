@@ -915,7 +915,8 @@ private:
 
       GlobalVariable *GV = emitOffloadingEntry(
           M, /*Kind*/ OffloadKind::OFK_SYCL,
-          Constant::getNullValue(PointerType::getUnqual(C)), Name, /*Size*/ 0,
+          Constant::getNullValue(PointerType::getUnqual(C), &M.getDataLayout()),
+          Name, /*Size*/ 0,
           /*Flags*/ 0, /*Data*/ 0);
       EntriesInits.push_back(GV->getInitializer());
     }
@@ -958,8 +959,8 @@ private:
 
     // Note: NULL for now.
     std::pair<Constant *, Constant *> PropertiesConstants = {
-        Constant::getNullValue(PointerType::getUnqual(C)),
-        Constant::getNullValue(PointerType::getUnqual(C))};
+        Constant::getNullValue(PointerType::getUnqual(C), &M.getDataLayout()),
+        Constant::getNullValue(PointerType::getUnqual(C), &M.getDataLayout())};
 
     StringRef RawImage = OB.getImage();
     std::pair<Constant *, Constant *> Binary = addArrayToModule(
@@ -996,8 +997,10 @@ private:
                            Twine(OffloadKindTag) + "device_images");
     ImagesGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
-    Constant *EntriesB = Constant::getNullValue(PointerType::getUnqual(C));
-    Constant *EntriesE = Constant::getNullValue(PointerType::getUnqual(C));
+    Constant *EntriesB =
+        Constant::getNullValue(PointerType::getUnqual(C), &M.getDataLayout());
+    Constant *EntriesE =
+        Constant::getNullValue(PointerType::getUnqual(C), &M.getDataLayout());
     static constexpr uint16_t BinDescStructVersion = 1;
     Constant *DescInit = ConstantStruct::get(
         SyclBinDescTy,

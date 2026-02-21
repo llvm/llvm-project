@@ -47,7 +47,7 @@ static bool tryToImproveAlign(
   if (match(I, m_And(m_PtrToIntOrAddr(m_Value(PtrOp)), m_APInt(Const)))) {
     Align ActualAlign = Fn(PtrOp, Align(1), Align(1));
     if (Const->ult(ActualAlign.value())) {
-      I->replaceAllUsesWith(Constant::getNullValue(I->getType()));
+      I->replaceAllUsesWith(Constant::getNullValue(I->getType(), &DL));
       return true;
     }
     if (Const->uge(
@@ -59,7 +59,7 @@ static bool tryToImproveAlign(
   if (match(I, m_Trunc(m_PtrToIntOrAddr(m_Value(PtrOp))))) {
     Align ActualAlign = Fn(PtrOp, Align(1), Align(1));
     if (Log2(ActualAlign) >= I->getType()->getScalarSizeInBits()) {
-      I->replaceAllUsesWith(Constant::getNullValue(I->getType()));
+      I->replaceAllUsesWith(Constant::getNullValue(I->getType(), &DL));
       return true;
     }
   }

@@ -3600,7 +3600,8 @@ SDValue NVPTXTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
                       MachinePointerInfo(V));
 
   const Value *SrcV = Constant::getNullValue(
-      PointerType::get(*DAG.getContext(), ADDRESS_SPACE_LOCAL));
+      PointerType::get(*DAG.getContext(), ADDRESS_SPACE_LOCAL),
+      &DAG.getDataLayout());
 
   // Load the actual argument out of the pointer VAList
   return DAG.getLoad(VT, DL, Tmp1, VAList, MachinePointerInfo(SrcV));

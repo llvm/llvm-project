@@ -14634,7 +14634,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         ExtraCost += GetNodeMinBWAffectedCost(*E, E->getVectorFactor()) +
                      GetNodeMinBWAffectedCost(*E2, E2->getVectorFactor());
       }
-      V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF));
+      V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF), R.DL);
       V2 = getAllOnesValue(*R.DL, getWidenedType(ScalarTy, CommonVF));
     } else if (!V1 && P2.isNull()) {
       // Shuffle single entry node.
@@ -14661,7 +14661,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         std::iota(CommonMask.begin(), CommonMask.end(), 0);
       }
       ExtraCost += GetNodeMinBWAffectedCost(*E, CommonVF);
-      V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF));
+      V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF), R.DL);
       // Not identity/broadcast? Try to see if the original vector is better.
       if (!E->ReorderIndices.empty() && CommonVF == E->ReorderIndices.size() &&
           CommonVF == CommonMask.size() &&
@@ -14706,7 +14706,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         CommonVF = VF;
       }
       ExtraCost += GetValueMinBWAffectedCost(V1);
-      V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF));
+      V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF), R.DL);
       ExtraCost += GetNodeMinBWAffectedCost(
           *E2, std::min(CommonVF, E2->getVectorFactor()));
       V2 = getAllOnesValue(*R.DL, getWidenedType(ScalarTy, CommonVF));
@@ -14735,7 +14735,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       }
       ExtraCost += GetNodeMinBWAffectedCost(
           *E1, std::min(CommonVF, E1->getVectorFactor()));
-      V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF));
+      V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF), R.DL);
       ExtraCost += GetValueMinBWAffectedCost(V2);
       V2 = getAllOnesValue(*R.DL, getWidenedType(ScalarTy, CommonVF));
     } else {
@@ -14750,17 +14750,17 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       ExtraCost +=
           GetValueMinBWAffectedCost(V1) + GetValueMinBWAffectedCost(V2);
       if (V1->getType() != V2->getType()) {
-        V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF));
+        V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF), R.DL);
         V2 = getAllOnesValue(*R.DL, getWidenedType(ScalarTy, CommonVF));
       } else {
         if (cast<VectorType>(V1->getType())->getElementType() != ScalarTy)
-          V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF));
+          V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF), R.DL);
         if (cast<VectorType>(V2->getType())->getElementType() != ScalarTy)
           V2 = getAllOnesValue(*R.DL, getWidenedType(ScalarTy, CommonVF));
       }
     }
-    InVectors.front() =
-        Constant::getNullValue(getWidenedType(ScalarTy, CommonMask.size()));
+    InVectors.front() = Constant::getNullValue(
+        getWidenedType(ScalarTy, CommonMask.size()), R.DL);
     if (InVectors.size() == 2)
       InVectors.pop_back();
     return ExtraCost + BaseShuffleAnalysis::createShuffle<InstructionCost>(
@@ -14891,8 +14891,8 @@ public:
     SameNodesEstimated = false;
     if (NumParts != 1 && UniqueBases.size() != 1) {
       UseVecBaseAsInput = true;
-      VecBase =
-          Constant::getNullValue(getWidenedType(ScalarTy, CommonMask.size()));
+      VecBase = Constant::getNullValue(
+          getWidenedType(ScalarTy, CommonMask.size()), R.DL);
     }
     return VecBase;
   }
@@ -15037,7 +15037,7 @@ public:
           Vals.push_back(UndefValue::get(ScalarTy));
           continue;
         }
-        Vals.push_back(Constant::getNullValue(ScalarTy));
+        Vals.push_back(Constant::getNullValue(ScalarTy, R.DL));
       }
       if (auto *VecTy = dyn_cast<FixedVectorType>(VLScalarTy)) {
         assert(SLPReVec && "FixedVectorType is not expected.");
@@ -22362,7 +22362,8 @@ Value *BoUpSLP::vectorizeTree(
       // Replace conditions of the poisoning logical ops with the non-poison
       // constant value.
       for (SelectInst *SI : LogicalOpSelects)
-        SI->setCondition(Constant::getNullValue(SI->getCondition()->getType()));
+        SI->setCondition(
+            Constant::getNullValue(SI->getCondition()->getType(), DL));
     }
   }
   // Retain to-be-deleted instructions for some debug-info bookkeeping and alias
@@ -26890,7 +26891,7 @@ private:
           LLVM_DEBUG(dbgs()
                      << "SLP: Xor " << Cnt << "of " << Vec << ". (HorRdx)\n");
           if (Cnt % 2 == 0)
-            Vec = Constant::getNullValue(Vec->getType());
+            Vec = Constant::getNullValue(Vec->getType(), &DL);
           break;
         }
         case RecurKind::FAdd: {

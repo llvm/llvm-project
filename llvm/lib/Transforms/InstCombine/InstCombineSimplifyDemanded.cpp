@@ -1050,7 +1050,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         if (DemandedMask.isSubsetOf(Known.Zero) &&
             !match(I->getOperand(1), m_Zero()))
           return replaceOperand(
-              *I, 1, Constant::getNullValue(I->getOperand(1)->getType()));
+              *I, 1, Constant::getNullValue(I->getOperand(1)->getType(), &DL));
 
         // Mask in demanded space does nothing.
         // NOTE: We may have attributes associated with the return value of the

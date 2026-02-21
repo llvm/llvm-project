@@ -256,9 +256,10 @@ Value *getFP(IRBuilder<> &IRB) {
   Function *F = IRB.GetInsertBlock()->getParent();
   Module *M = F->getParent();
   return IRB.CreatePtrToInt(
-      IRB.CreateIntrinsic(Intrinsic::frameaddress,
-                          IRB.getPtrTy(M->getDataLayout().getAllocaAddrSpace()),
-                          {Constant::getNullValue(IRB.getInt32Ty())}),
+      IRB.CreateIntrinsic(
+          Intrinsic::frameaddress,
+          IRB.getPtrTy(M->getDataLayout().getAllocaAddrSpace()),
+          {Constant::getNullValue(IRB.getInt32Ty(), &F->getDataLayout())}),
       IRB.getIntPtrTy(M->getDataLayout()));
 }
 

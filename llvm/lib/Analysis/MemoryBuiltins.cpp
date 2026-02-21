@@ -443,7 +443,7 @@ Constant *llvm::getInitialValueOfAllocation(const Value *V,
   if ((AK & AllocFnKind::Uninitialized) != AllocFnKind::Unknown)
     return UndefValue::get(Ty);
   if ((AK & AllocFnKind::Zeroed) != AllocFnKind::Unknown)
-    return Constant::getNullValue(Ty);
+    return Constant::getNullValue(Ty, &Alloc->getDataLayout());
 
   return nullptr;
 }
@@ -718,7 +718,7 @@ Value *llvm::lowerObjectSizeCall(
     return nullptr;
 
   return MaxVal ? Constant::getAllOnesValue(ResultType)
-                : Constant::getNullValue(ResultType);
+                : Constant::getNullValue(ResultType, &DL);
 }
 
 STATISTIC(ObjectVisitorArgument,

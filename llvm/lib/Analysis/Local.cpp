@@ -75,5 +75,5 @@ Value *llvm::emitGEPOffset(IRBuilderBase *Builder, const DataLayout &DL,
     }
     AddOffset(Op);
   }
-  return Result ? Result : Constant::getNullValue(IntIdxTy);
+  return Result ? Result : Constant::getNullValue(IntIdxTy, &DL);
 }

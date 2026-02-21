@@ -1616,7 +1616,8 @@ Instruction *SPIRVEmitIntrinsics::visitSwitchInst(SwitchInst &I) {
   // it will be removed after IR translation pass
   B.SetInsertPoint(ParentBB);
   IndirectBrInst *BrI = B.CreateIndirectBr(
-      Constant::getNullValue(PointerType::getUnqual(ParentBB->getContext())),
+      Constant::getNullValue(PointerType::getUnqual(ParentBB->getContext()),
+                             &I.getModule()->getDataLayout()),
       BBCases.size());
   for (BasicBlock *BBCase : BBCases)
     BrI->addDestination(BBCase);

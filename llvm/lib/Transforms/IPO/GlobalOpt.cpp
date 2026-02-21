@@ -2427,7 +2427,8 @@ static bool OptimizeEmptyGlobalAtExitDtors(Function *CXAAtExitFn, bool isCXX) {
       continue;
 
     // Just remove the call.
-    CI->replaceAllUsesWith(Constant::getNullValue(CI->getType()));
+    CI->replaceAllUsesWith(Constant::getNullValue(
+        CI->getType(), &CI->getModule()->getDataLayout()));
     CI->eraseFromParent();
 
     if (isCXX)

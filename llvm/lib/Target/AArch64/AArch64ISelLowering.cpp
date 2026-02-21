@@ -32877,7 +32877,8 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
     Value *Accumulator) const {
   VectorType *Ty = cast<VectorType>(InputA->getType());
   if (Accumulator == nullptr)
-    Accumulator = Constant::getNullValue(Ty);
+    Accumulator = Constant::getNullValue(
+        Ty, &B.GetInsertBlock()->getModule()->getDataLayout());
   bool IsScalable = Ty->isScalableTy();
   bool IsInt = Ty->getElementType()->isIntegerTy();
 

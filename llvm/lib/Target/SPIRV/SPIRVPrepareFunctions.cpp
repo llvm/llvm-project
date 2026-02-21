@@ -517,7 +517,8 @@ addFunctionTypeMutation(NamedMDNode *NMD,
   transform(ChangedTys, std::back_inserter(MDArgs), [=, &Ctx](auto &&CTy) {
     return MDNode::get(
         Ctx, {ConstantAsMetadata::get(ConstantInt::get(I32Ty, CTy.first, true)),
-              ValueAsMetadata::get(Constant::getNullValue(CTy.second))});
+              ValueAsMetadata::get(Constant::getNullValue(
+                  CTy.second, &NMD->getParent()->getDataLayout()))});
   });
   NMD->addOperand(MDNode::get(Ctx, MDArgs));
 }

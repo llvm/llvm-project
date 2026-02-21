@@ -6649,7 +6649,8 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
           Condition = Builder.CreateSub(Condition, MinCaseVal);
         Value *And = Builder.CreateAnd(Condition, ~BitMask, "switch.and");
         Value *Cmp = Builder.CreateICmpEQ(
-            And, Constant::getNullValue(And->getType()), "switch.selectcmp");
+            And, Constant::getNullValue(And->getType(), &DL),
+            "switch.selectcmp");
         Value *Ret =
             Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
         if (auto *SI = dyn_cast<SelectInst>(Ret); SI && HasBranchWeights) {

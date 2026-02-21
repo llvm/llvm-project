@@ -282,7 +282,7 @@ Value *InstCombinerImpl::EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs,
   if (OneUseSum)
     Sum = Add(Sum, OneUseSum);
   if (!Sum)
-    return Constant::getNullValue(IdxTy);
+    return Constant::getNullValue(IdxTy, &DL);
   return Sum;
 }
 
@@ -1132,7 +1132,7 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
     Constant *C;
 
     if (IsTrueArm) {
-      C = Constant::getNullValue(V->getType());
+      C = Constant::getNullValue(V->getType(), &DL);
     } else if (IsZExt) {
       unsigned BitWidth = V->getType()->getScalarSizeInBits();
       C = Constant::getIntegerValue(V->getType(), APInt(BitWidth, 1));
@@ -3376,7 +3376,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     Type *EltTy = GTI.getIndexedType();
     if (EltTy->isSized() && DL.getTypeAllocSize(EltTy).isZero())
       if (!isa<Constant>(*I) || !match(I->get(), m_Zero())) {
-        *I = Constant::getNullValue(NewIndexType);
+        *I = Constant::getNullValue(NewIndexType, &DL);
         MadeChange = true;
       }
 
@@ -3482,7 +3482,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                           GEP.getName() + ".split", GEP.getNoWrapFlags());
 
     SmallVector<Value *> BackIndices;
-    BackIndices.push_back(Constant::getNullValue(NewScalarIndexTy));
+    BackIndices.push_back(Constant::getNullValue(NewScalarIndexTy, &DL));
     append_range(BackIndices, drop_begin(Indices, IdxNum));
     return GetElementPtrInst::Create(
         GetElementPtrInst::getIndexedType(GEPEltType, FrontIndices), FrontGEP,
@@ -3975,7 +3975,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
         if (isa<LoadInst>(I)) {
           assert(KnowInitZero || KnowInitUndef);
           Replace = KnowInitUndef ? UndefValue::get(I->getType())
-                                  : Constant::getNullValue(I->getType());
+                                  : Constant::getNullValue(I->getType(), &DL);
         } else
           Replace = PoisonValue::get(I->getType());
         replaceInstUsesWith(*I, Replace);
@@ -4958,7 +4958,7 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
         // Not an empty filter - it contains at least one null typeinfo.
         assert(NumTypeInfos > 0 && "Should have handled empty filter already!");
         Constant *TypeInfo =
-          Constant::getNullValue(FilterType->getElementType());
+            Constant::getNullValue(FilterType->getElementType(), &DL);
         // If this typeinfo is a catch-all then the filter can never match.
         if (isCatchAll(Personality, TypeInfo)) {
           // Throw the filter away.
@@ -5435,7 +5435,7 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
       return BestValue;
     };
 
-    Value *NullValue = Constant::getNullValue(Ty);
+    Value *NullValue = Constant::getNullValue(Ty, &DL);
     Value *BestValue = nullptr;
     for (auto *U : I.users()) {
       Value *V = NullValue;

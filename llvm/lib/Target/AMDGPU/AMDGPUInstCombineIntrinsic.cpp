@@ -976,7 +976,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, PoisonValue::get(Ty));
 
     if(IC.getSimplifyQuery().isUndefValue(Arg))
-      return IC.replaceInstUsesWith(II, Constant::getNullValue(Ty));
+      return IC.replaceInstUsesWith(II, Constant::getNullValue(Ty, &DL));
 
     ConstantInt *CArg = dyn_cast<ConstantInt>(II.getArgOperand(0));
     if (!CArg)
@@ -1409,7 +1409,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (auto *Src = dyn_cast<ConstantInt>(Arg)) {
       if (Src->isZero()) {
         // amdgcn.ballot(i1 0) is zero.
-        return IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
+        return IC.replaceInstUsesWith(
+            II, Constant::getNullValue(II.getType(), &DL));
       }
     }
     if (ST->isWave32() && II.getType()->getIntegerBitWidth() == 64) {

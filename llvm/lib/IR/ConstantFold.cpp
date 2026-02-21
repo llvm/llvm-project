@@ -142,7 +142,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     // [us]itofp(undef) = 0, because the result value is bounded.
     if (opc == Instruction::ZExt || opc == Instruction::SExt ||
         opc == Instruction::UIToFP || opc == Instruction::SIToFP)
-      return Constant::getNullValue(DestTy);
+      return Constant::getNullValue(DestTy, DL);
     return UndefValue::get(DestTy);
   }
 
@@ -161,7 +161,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
           return nullptr;
       }
     }
-    return Constant::getNullValue(DestTy);
+    return Constant::getNullValue(DestTy, DL);
   }
 
   // If the cast operand is a constant expression, there's a few things we can
@@ -1129,7 +1129,7 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
 
   // Fold FCMP_FALSE/FCMP_TRUE unconditionally.
   if (Predicate == FCmpInst::FCMP_FALSE)
-    return Constant::getNullValue(ResultTy);
+    return Constant::getNullValue(ResultTy, DL);
 
   if (Predicate == FCmpInst::FCMP_TRUE)
     return Constant::getAllOnesValue(ResultTy);
@@ -1174,7 +1174,7 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
         return Constant::getAllOnesValue(ResultTy);
       // C1 < 0 --> false
       if (Predicate == ICmpInst::ICMP_ULT)
-        return Constant::getNullValue(ResultTy);
+        return Constant::getNullValue(ResultTy, DL);
     }
   }
 

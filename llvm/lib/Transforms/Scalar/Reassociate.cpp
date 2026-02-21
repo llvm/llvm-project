@@ -297,7 +297,8 @@ static BinaryOperator *LowerNegateToMultiply(Instruction *Neg) {
 
   BinaryOperator *Res =
       CreateMul(Neg->getOperand(OpNo), NegOne, "", Neg->getIterator(), Neg);
-  Neg->setOperand(OpNo, Constant::getNullValue(Ty)); // Drop use of op.
+  Neg->setOperand(OpNo, Constant::getNullValue(
+                            Ty, &Neg->getDataLayout())); // Drop use of op.
   Res->takeName(Neg);
   Neg->replaceAllUsesWith(Res);
   Res->setDebugLoc(Neg->getDebugLoc());
@@ -1007,8 +1008,12 @@ static BinaryOperator *BreakUpSubtract(Instruction *Sub,
   Value *NegVal = NegateValue(Sub->getOperand(1), Sub, ToRedo);
   BinaryOperator *New =
       CreateAdd(Sub->getOperand(0), NegVal, "", Sub->getIterator(), Sub);
-  Sub->setOperand(0, Constant::getNullValue(Sub->getType())); // Drop use of op.
-  Sub->setOperand(1, Constant::getNullValue(Sub->getType())); // Drop use of op.
+  Sub->setOperand(
+      0, Constant::getNullValue(Sub->getType(),
+                                &Sub->getDataLayout())); // Drop use of op.
+  Sub->setOperand(
+      1, Constant::getNullValue(Sub->getType(),
+                                &Sub->getDataLayout())); // Drop use of op.
   New->takeName(Sub);
 
   // Everyone now refers to the add instruction.
@@ -1553,7 +1558,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
     // Remove X and -X from the operand list.
     if (Ops.size() == 2 &&
         (match(TheOp, m_Neg(m_Value())) || match(TheOp, m_FNeg(m_Value()))))
-      return Constant::getNullValue(X->getType());
+      return Constant::getNullValue(X->getType(), &I->getDataLayout());
 
     // Remove X and ~X from the operand list.
     if (Ops.size() == 2 && match(TheOp, m_Not(m_Value())))

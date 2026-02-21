@@ -1944,7 +1944,8 @@ static Value *upgradeX86PSLLDQIntrinsics(IRBuilder<> &Builder, Value *Op,
   Op = Builder.CreateBitCast(Op, VecTy, "cast");
 
   // We'll be shuffling in zeroes.
-  Value *Res = Constant::getNullValue(VecTy);
+  Value *Res = Constant::getNullValue(
+      VecTy, &Builder.GetInsertBlock()->getModule()->getDataLayout());
 
   // If shift is less than 16, emit a shuffle to move the bytes. Otherwise,
   // we'll just return the zero vector.
@@ -1978,7 +1979,8 @@ static Value *upgradeX86PSRLDQIntrinsics(IRBuilder<> &Builder, Value *Op,
   Op = Builder.CreateBitCast(Op, VecTy, "cast");
 
   // We'll be shuffling in zeroes.
-  Value *Res = Constant::getNullValue(VecTy);
+  Value *Res = Constant::getNullValue(
+      VecTy, &Builder.GetInsertBlock()->getModule()->getDataLayout());
 
   // If shift is less than 16, emit a shuffle to move the bytes. Otherwise,
   // we'll just return the zero vector.
@@ -2067,14 +2069,18 @@ static Value *upgradeX86ALIGNIntrinsics(IRBuilder<> &Builder, Value *Op0,
   // If palignr is shifting the pair of vectors more than the size of two
   // lanes, emit zero.
   if (ShiftVal >= 32)
-    return llvm::Constant::getNullValue(Op0->getType());
+    return llvm::Constant::getNullValue(
+        Op0->getType(),
+        &Builder.GetInsertBlock()->getModule()->getDataLayout());
 
   // If palignr is shifting the pair of input vectors more than one lane,
   // but less than two lanes, convert to shifting in zeroes.
   if (ShiftVal > 16) {
     ShiftVal -= 16;
     Op1 = Op0;
-    Op0 = llvm::Constant::getNullValue(Op0->getType());
+    Op0 = llvm::Constant::getNullValue(
+        Op0->getType(),
+        &Builder.GetInsertBlock()->getModule()->getDataLayout());
   }
 
   int Indices[64];
@@ -2222,7 +2228,8 @@ static Value *upgradeX86vpcom(IRBuilder<> &Builder, CallBase &CI, unsigned Imm,
     Pred = ICmpInst::ICMP_NE;
     break;
   case 0x6:
-    return Constant::getNullValue(Ty); // FALSE
+    return Constant::getNullValue(Ty,
+                                  &CI.getModule()->getDataLayout()); // FALSE
   case 0x7:
     return Constant::getAllOnesValue(Ty); // TRUE
   default:
@@ -2361,9 +2368,12 @@ static Value *applyX86MaskOn1BitsVec(IRBuilder<> &Builder, Value *Vec,
       Indices[i] = i;
     for (unsigned i = NumElts; i != 8; ++i)
       Indices[i] = NumElts + i % NumElts;
-    Vec = Builder.CreateShuffleVector(Vec,
-                                      Constant::getNullValue(Vec->getType()),
-                                      Indices);
+    Vec = Builder.CreateShuffleVector(
+        Vec,
+        Constant::getNullValue(
+            Vec->getType(),
+            &Builder.GetInsertBlock()->getModule()->getDataLayout()),
+        Indices);
   }
   return Builder.CreateBitCast(Vec, Builder.getIntNTy(std::max(NumElts, 8U)));
 }
@@ -2376,7 +2386,8 @@ static Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallBase &CI,
   Value *Cmp;
   if (CC == 3) {
     Cmp = Constant::getNullValue(
-        FixedVectorType::get(Builder.getInt1Ty(), NumElts));
+        FixedVectorType::get(Builder.getInt1Ty(), NumElts),
+        &CI.getModule()->getDataLayout());
   } else if (CC == 7) {
     Cmp = Constant::getAllOnesValue(
         FixedVectorType::get(Builder.getInt1Ty(), NumElts));
@@ -2686,7 +2697,10 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Value *Arg = CI->getArgOperand(0);
     Value *Neg = Builder.CreateNeg(Arg, "neg");
     Value *Cmp = Builder.CreateICmpSGE(
-        Arg, llvm::Constant::getNullValue(Arg->getType()), "abs.cond");
+        Arg,
+        llvm::Constant::getNullValue(Arg->getType(),
+                                     &CI->getModule()->getDataLayout()),
+        "abs.cond");
     Rep = Builder.CreateSelect(Cmp, Arg, Neg, "abs");
   } else if (Name == "abs.bf16" || Name == "abs.bf16x2") {
     Type *Ty = (Name == "abs.bf16")
@@ -2942,7 +2956,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     Value *Mask = CI->getArgOperand(2);
     Rep = Builder.CreateAnd(Op0, Op1);
     llvm::Type *Ty = Op0->getType();
-    Value *Zero = llvm::Constant::getNullValue(Ty);
+    Value *Zero =
+        llvm::Constant::getNullValue(Ty, &CI->getModule()->getDataLayout());
     ICmpInst::Predicate Pred = Name.starts_with("avx512.ptestm")
                                    ? ICmpInst::ICMP_NE
                                    : ICmpInst::ICMP_EQ;
@@ -3121,7 +3136,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
              Name.starts_with("avx512.cvtd2mask.") ||
              Name.starts_with("avx512.cvtq2mask.")) {
     Value *Op = CI->getArgOperand(0);
-    Value *Zero = llvm::Constant::getNullValue(Op->getType());
+    Value *Zero = llvm::Constant::getNullValue(
+        Op->getType(), &CI->getModule()->getDataLayout());
     Rep = Builder.CreateICmp(ICmpInst::ICMP_SLT, Op, Zero);
     Rep = applyX86MaskOn1BitsVec(Builder, Rep, nullptr);
   } else if (Name == "ssse3.pabs.b.128" || Name == "ssse3.pabs.w.128" ||
@@ -3427,7 +3443,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     ElementCount EC = cast<VectorType>(CI->getType())->getElementCount();
     Type *MaskTy = VectorType::get(Type::getInt32Ty(C), EC);
     SmallVector<int, 8> M;
-    ShuffleVectorInst::getShuffleMask(Constant::getNullValue(MaskTy), M);
+    ShuffleVectorInst::getShuffleMask(
+        Constant::getNullValue(MaskTy, &CI->getModule()->getDataLayout()), M);
     Rep = Builder.CreateShuffleVector(Op, M);
 
     if (CI->arg_size() == 3)
@@ -4146,8 +4163,10 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
     Rep = Builder.CreateIntrinsic(Intrinsic::fma, Ops[0]->getType(), Ops);
 
-    Rep = Builder.CreateInsertElement(Constant::getNullValue(CI->getType()),
-                                      Rep, (uint64_t)0);
+    Rep = Builder.CreateInsertElement(
+        Constant::getNullValue(CI->getType(),
+                               &CI->getModule()->getDataLayout()),
+        Rep, (uint64_t)0);
   } else if (Name.starts_with("avx512.mask.vfmadd.s") ||
              Name.starts_with("avx512.maskz.vfmadd.s") ||
              Name.starts_with("avx512.mask3.vfmadd.s") ||
@@ -4189,9 +4208,11 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       Rep = Builder.CreateFMA(A, B, C);
     }
 
-    Value *PassThru = IsMaskZ   ? Constant::getNullValue(Rep->getType())
-                      : IsMask3 ? C
-                                : A;
+    Value *PassThru =
+        IsMaskZ   ? Constant::getNullValue(Rep->getType(),
+                                           &CI->getModule()->getDataLayout())
+        : IsMask3 ? C
+                  : A;
 
     // For Mask3 with NegAcc, we need to create a new extractelement that
     // avoids the negation above.
@@ -4242,9 +4263,11 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       Rep = Builder.CreateFMA(A, B, C);
     }
 
-    Value *PassThru = IsMaskZ   ? llvm::Constant::getNullValue(CI->getType())
-                      : IsMask3 ? CI->getArgOperand(2)
-                                : CI->getArgOperand(0);
+    Value *PassThru =
+        IsMaskZ ? llvm::Constant::getNullValue(
+                      CI->getType(), &CI->getModule()->getDataLayout())
+        : IsMask3 ? CI->getArgOperand(2)
+                  : CI->getArgOperand(0);
 
     Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
   } else if (Name.starts_with("fma.vfmsubadd.p")) {
@@ -4311,9 +4334,11 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       Rep = Builder.CreateShuffleVector(Even, Odd, Idxs);
     }
 
-    Value *PassThru = IsMaskZ   ? llvm::Constant::getNullValue(CI->getType())
-                      : IsMask3 ? CI->getArgOperand(2)
-                                : CI->getArgOperand(0);
+    Value *PassThru =
+        IsMaskZ ? llvm::Constant::getNullValue(
+                      CI->getType(), &CI->getModule()->getDataLayout())
+        : IsMask3 ? CI->getArgOperand(2)
+                  : CI->getArgOperand(0);
 
     Rep = emitX86Select(Builder, CI->getArgOperand(3), Rep, PassThru);
   } else if (Name.starts_with("avx512.mask.pternlog.") ||
