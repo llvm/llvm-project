@@ -1010,7 +1010,7 @@ void Prescanner::QuotedCharacterLiteral(
     if (*at_ == '\\') {
       if (escapesEnabled) {
         isEscaped = !isEscaped;
-      } else {
+      } else if (!preprocessingOnly_) {
         // The parser always processes escape sequences, so don't confuse it
         // when escapes are disabled.
         insert('\\');
