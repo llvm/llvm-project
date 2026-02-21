@@ -2609,20 +2609,37 @@ bool LLParser::parseAllocKind(AllocFnKind &Kind) {
   return false;
 }
 
-static std::optional<MemoryEffects::Location> keywordToLoc(lltok::Kind Tok) {
+static ArrayRef<IRMemLocation> keywordToLoc(lltok::Kind Tok) {
+  using Loc = IRMemLocation;
+
+  static constexpr auto ArgMem = Loc::ArgMem;
+  static constexpr auto InaccessibleMem = Loc::InaccessibleMem;
+  static constexpr auto ErrnoMem = Loc::ErrnoMem;
+  static constexpr auto TargetMem0 = Loc::TargetMem0;
+  static constexpr auto TargetMem1 = Loc::TargetMem1;
+  static constexpr auto TargetMem = {Loc::TargetMem0, Loc::TargetMem1};
   switch (Tok) {
   case lltok::kw_argmem:
-    return IRMemLocation::ArgMem;
+    return ArgMem;
+
   case lltok::kw_inaccessiblemem:
-    return IRMemLocation::InaccessibleMem;
+    return InaccessibleMem;
+
   case lltok::kw_errnomem:
-    return IRMemLocation::ErrnoMem;
+    return ErrnoMem;
+
   case lltok::kw_target_mem0:
-    return IRMemLocation::TargetMem0;
+    return TargetMem0;
+
   case lltok::kw_target_mem1:
-    return IRMemLocation::TargetMem1;
+    return TargetMem1;
+
+  // In the case this represents all target memories
+  case lltok::kw_target_mem:
+    return TargetMem;
+
   default:
-    return std::nullopt;
+    return {};
   }
 }
 
@@ -2672,9 +2689,10 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
   }
 
   bool SeenLoc = false;
+  bool SeenTargetLoc = false;
   do {
-    std::optional<IRMemLocation> Loc = keywordToLoc(Lex.getKind());
-    if (Loc) {
+    ArrayRef<IRMemLocation> Locs = keywordToLoc(Lex.getKind());
+    if (!Locs.empty()) {
       Lex.Lex();
       if (!EatIfPresent(lltok::colon)) {
         tokError("expected ':' after location");
@@ -2684,7 +2702,7 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
 
     std::optional<ModRefInfo> MR = keywordToModRef(Lex.getKind());
     if (!MR) {
-      if (!Loc)
+      if (Locs.empty())
         tokError("expected memory location (argmem, inaccessiblemem, errnomem) "
                  "or access kind (none, read, write, readwrite)");
       else
@@ -2693,9 +2711,18 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
     }
 
     Lex.Lex();
-    if (Loc) {
+    if (!Locs.empty()) {
       SeenLoc = true;
-      ME = ME.getWithModRef(*Loc, *MR);
+      for (const IRMemLocation &Loc : Locs) {
+        ME = ME.getWithModRef(Loc, *MR);
+        if (ME.isTargetMemLoc(Loc) && Locs.size() == 1)
+          SeenTargetLoc = true;
+      }
+      if (Locs.size() > 1 && SeenTargetLoc) {
+        tokError("target memory default access kind must be specified first");
+        return std::nullopt;
+      }
+
     } else {
       if (SeenLoc) {
         tokError("default access kind must be specified first");
