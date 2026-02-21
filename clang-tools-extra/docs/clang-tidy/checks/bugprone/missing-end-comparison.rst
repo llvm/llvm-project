@@ -3,15 +3,15 @@
 bugprone-missing-end-comparison
 ===============================
 
-Finds instances where the result of a standard algorithm is used in a boolean
+Finds instances where the result of a standard algorithm is used in a Boolean
 context without being compared to the end iterator.
 
-Standard algorithms such as `std::find`, `std::search`, and `std::lower_bound`
+Standard algorithms such as ``std::find``, ``std::search``, and ``std::lower_bound``
 return an iterator to the element if found, or the end iterator otherwise.
 
-Using the result directly in a boolean context (like an `if` statement) is
+Using the result directly in a Boolean context (like an ``if`` statement) is
 almost always a bug, as it only checks if the iterator itself evaluates to
-`true`, which may always be true for many iterator types (including pointers).
+``true``, which may always be true for many iterator types (including pointers).
 
 Examples:
 

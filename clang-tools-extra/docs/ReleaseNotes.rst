@@ -105,7 +105,7 @@ New checks
 - New :doc:`bugprone-missing-end-comparison
   <clang-tidy/checks/bugprone/missing-end-comparison>` check.
 
-  Finds instances where the result of a standard algorithm is used in a boolean
+  Finds instances where the result of a standard algorithm is used in a Boolean
   context without being compared to the end iterator.
 
 - New :doc:`bugprone-unsafe-to-allow-exceptions
