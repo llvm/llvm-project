@@ -36,6 +36,7 @@
 #include "math/bf16divf.h"
 #include "math/bf16divl.h"
 #include "math/bf16fmaf.h"
+#include "math/bf16fmaf128.h"
 #include "math/bf16fmal.h"
 #include "math/canonicalize.h"
 #include "math/canonicalizebf16.h"
