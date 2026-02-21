@@ -121,36 +121,13 @@ xegpu::getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
   // dimensions are not distributed.
   unsigned distributionStart =
       originalType.getRank() - effectiveLaneLayout.size();
-
-  // Print original shape and lane layout for debugging
-  std::string shapeStr = "[";
-  for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
-    if (i > 0)
-      shapeStr += ", ";
-    shapeStr += std::to_string(dim);
-  }
-  shapeStr += "]";
-  LDBG() << "original shape: " << shapeStr;
-
-  std::string layoutStr = "[";
-  for (auto [i, dim] : llvm::enumerate(effectiveLaneLayout)) {
-    if (i > 0)
-      layoutStr += ", ";
-    layoutStr += std::to_string(dim);
-  }
-  layoutStr += "]";
-  LDBG() << "effective lane layout: " << layoutStr;
-
   for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
     if (i < distributionStart)
       continue;
     // Check if the dimension can be distributed evenly.
-    if (dim % effectiveLaneLayout[i - distributionStart] != 0) {
-      assert( effectiveLaneLayout[i - distributionStart] % dim == 0 &&
-              "The dimension size must be able evenly distributed to all lanes in round-robin manner.");
-      distributedShape[i] = 1;
-    } else
-      distributedShape[i] = dim / effectiveLaneLayout[i - distributionStart];
+    if (dim % effectiveLaneLayout[i - distributionStart] != 0)
+      return failure();
+    distributedShape[i] = dim / effectiveLaneLayout[i - distributionStart];
   }
   return VectorType::get(distributedShape, originalType.getElementType());
 }
@@ -765,22 +742,6 @@ Value xegpu::lowerCrossLaneReductionToShuffles(
   Value reductionResult = arith::ConstantOp::create(
       rewriter, loc, acc.getType(),
       DenseElementsAttr::get(acc.getType(), zeroAttr));
-  // auto srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
-  // auto accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
-  // // Reduction result should have the same layout as the accumulator.
-  // xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
-
-  // print source shape, reduction dim and reduction size for debugging
-  std::string shapeStr = "[";
-  for (auto [i, dim] : llvm::enumerate(sourceType.getShape())) {
-    if (i > 0)
-      shapeStr += ", ";
-    shapeStr += std::to_string(dim);
-  }
-  shapeStr += "]";
-  LDBG() << "source shape: " << shapeStr;
-  LDBG() << "reduction dim: " << reductionDim;
-  LDBG() << "reduction size: " << reductionSize;
 
   // For each slice of the source, extract the slice vector, do a reduction
   // and, insert the reduced value back to the result vector.
@@ -793,12 +754,6 @@ Value xegpu::lowerCrossLaneReductionToShuffles(
       sliceOffsets = {0, i};
       sliceSizes = {sourceH, 1};
     }
-
-    // print src, sliceOffsets, sliceSizes for debugging
-    LDBG() << "src: " << src;
-    LDBG() << "sliceOffsets: [" << sliceOffsets[0] << ", " << sliceOffsets[1]
-           << "]";
-    LDBG() << "sliceSizes: [" << sliceSizes[0] << ", " << sliceSizes[1] << "]";
 
     vector::ExtractStridedSliceOp extractOp =
         vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,

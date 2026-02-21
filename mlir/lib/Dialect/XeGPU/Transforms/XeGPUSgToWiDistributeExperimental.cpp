@@ -474,27 +474,17 @@ struct SgToWiMultiDimReduction
     assert(reductionDims.size() == 1 &&
            "Expecting single reduction dimension for subgroup multi "
            "reduction op");
-    // Only lane-local reduction is handled here.
     if (isReductionLaneLocal(op)) {
       auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
       VectorType resVecTy = dyn_cast<VectorType>(op.getType());
       auto resDistVecTyOrFailure =
           getDistVecTypeBasedOnLaneLayout(resLayout, resVecTy);
-      // Simply create a new MultiDimReductionOp using adaptor operands and the
-      // new result type.
+      // For lane local reduction, simply create a new MultiDimReductionOp using
+      // adaptor operands and the new result type.
       result = vector::MultiDimReductionOp::create(
           rewriter, op.getLoc(), resDistVecTyOrFailure.value(), op.getKind(),
           adaptor.getSource(), adaptor.getAcc(), op.getReductionDims());
     } else {
-
-      // print adaptor.getSource() and adaptor.getAcc() for debugging
-      LLVM_DEBUG({
-        llvm::dbgs() << "adaptor.getSource(): " << adaptor.getSource() << "\n";
-        llvm::dbgs() << "adaptor.getAcc(): " << adaptor.getAcc() << "\n";
-      });
-      // before get distribute vec type for source, first set its shape to be
-      // unit
-      // for the reduction dimension
       auto reductionDim = reductionDims[0];
       VectorType sourceType = op.getSourceVectorType();
       SmallVector<int64_t, 2> sourceShape(sourceType.getShape().begin(),
@@ -504,13 +494,7 @@ struct SgToWiMultiDimReduction
           cast<TypedValue<VectorType>>(adaptor.getSource()),
           cast<TypedValue<VectorType>>(adaptor.getAcc()), op.getKind(),
           reductionDim, reductionDimSize, op.getLoc(), rewriter);
-      // print the reduction op for debugging
-      LLVM_DEBUG({
-        llvm::dbgs() << "reductionOp3: " << *op << "\n";
-        llvm::dbgs() << "lowered reduction result3: " << result << "\n";
-      });
     }
-
     rewriter.replaceOp(op, result);
     return success();
   }
