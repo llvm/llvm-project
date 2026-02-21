@@ -637,7 +637,7 @@ private:
   ///
   /// NOTE: the function always returns a local (temp) symbol, even if there's
   ///       a global symbol that corresponds to an entry at this address.
-  MCSymbol *getOrCreateLocalLabel(uint64_t Address);
+  MCSymbol *getOrCreateLocalLabel(uint64_t Address, bool IsEntryPoint = false);
 
   /// Register an data entry at a given \p Offset into the function.
   void markDataAtOffset(uint64_t Offset) {
