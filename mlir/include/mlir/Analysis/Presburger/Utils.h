@@ -96,7 +96,8 @@ enum class ReprKind { Inequality, Equality, None };
 /// set to None.
 struct MaybeLocalRepr {
   ReprKind kind = ReprKind::None;
-  explicit operator bool() const { return kind != ReprKind::None; }
+  explicit operator bool() const { return hasRepr(); }
+  bool hasRepr() const { return kind != ReprKind::None; }
   union {
     unsigned equalityIdx;
     struct {
