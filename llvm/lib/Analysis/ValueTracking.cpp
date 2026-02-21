@@ -5927,7 +5927,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // Look for the case of a for loop which has a positive
     // initial value and is incremented by a squared value.
     // This will propagate sign information out of such loops.
-    if (P->getNumIncomingValues() != 2)
+    if (P->getNumIncomingValues() != 2 || Known.cannotBeOrderedLessThanZero())
       break;
     for (unsigned I = 0; I < 2; I++) {
       Value *RecurValue = P->getIncomingValue(1 - I);
@@ -5944,8 +5944,6 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           KnownFPClass KnownStart;
           computeKnownFPClass(Init, DemandedElts, InterestedClasses, KnownStart,
                               Q, Depth + 1);
-          if (KnownStart.isUnknown())
-            break;
           if (KnownStart.cannotBeOrderedLessThanZero() && L == R &&
               isGuaranteedNotToBeUndef(L, Q.AC, Q.CxtI, Q.DT, Depth + 1))
             Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
