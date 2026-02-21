@@ -67,6 +67,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
@@ -2472,8 +2473,26 @@ void ComplexDeinterleavingGraph::processReductionOperation(
   auto *FinalReductionReal = ReductionInfo[Real].second;
   auto *FinalReductionImag = ReductionInfo[Imag].second;
 
-  Builder.SetInsertPoint(
-      &*FinalReductionReal->getParent()->getFirstInsertionPt());
+  BasicBlock *InsertBB = FinalReductionReal->getParent();
+  if (FinalReductionImag->getParent() != InsertBB) {
+    DominatorTree DT(*Real->getFunction());
+    if (BasicBlock *DomBB = DT.findNearestCommonDominator(
+            FinalReductionReal->getParent(), FinalReductionImag->getParent()))
+      InsertBB = DomBB;
+  }
+
+  // Ensure we place the deinterleave after it's source
+  Instruction *InsertPt = &*InsertBB->getFirstInsertionPt();
+  if (auto *OpInst = dyn_cast<Instruction>(OperationReplacement)) {
+    if (OpInst->getParent() == InsertBB && !isa<PHINode>(OpInst)) {
+      if (Instruction *Next = OpInst->getNextNode())
+        InsertPt = Next;
+      else
+        InsertPt = InsertBB->getTerminator();
+    }
+  }
+  Builder.SetInsertPoint(InsertPt);
+
   auto *Deinterleave = Builder.CreateIntrinsic(Intrinsic::vector_deinterleave2,
                                                OperationReplacement->getType(),
                                                OperationReplacement);
