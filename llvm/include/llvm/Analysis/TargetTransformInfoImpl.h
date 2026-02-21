@@ -1146,7 +1146,11 @@ public:
 
   virtual bool preferPredicatedReductionSelect() const { return false; }
 
-  virtual bool preferEpilogueVectorization() const { return true; }
+  virtual bool preferEpilogueVectorization(ElementCount Iters) const {
+    // We consider epilogue vectorization unprofitable for targets that
+    // don't consider interleaving beneficial (eg. MVE).
+    return getMaxInterleaveFactor(Iters) > 1;
+  }
 
   virtual bool shouldConsiderVectorizationRegPressure() const { return false; }
 
