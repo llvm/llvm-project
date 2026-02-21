@@ -2559,11 +2559,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       Function *RegAffFn = getOrCreateRuntimeFunctionPtr(
           OMPRTL___kmpc_omp_reg_task_with_affinity);
       for (const auto &Affinity : Affinities) {
-        // bitcast to i8*
-        Value *AffPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-            Affinity.Info, Builder.getPtrTy(0));
-        createRuntimeFunctionCall(
-            RegAffFn, {Ident, ThreadID, TaskData, Affinity.Count, AffPtr});
+        createRuntimeFunctionCall(RegAffFn, {Ident, ThreadID, TaskData,
+                                             Affinity.Count, Affinity.Info});
       }
     }
 
