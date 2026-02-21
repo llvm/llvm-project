@@ -18,6 +18,7 @@
 #include "AMDGPUTargetTransformInfo.h"
 #include "GCNSubtarget.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
@@ -1425,6 +1426,75 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       Call->takeName(&II);
       return IC.replaceInstUsesWith(II, Call);
     }
+
+    // Fold ballot intrinsic based on llvm.assume hint about the result.
+    //
+    // assume(ballot(x) == ballot(true)) -> x = true
+    // assume(ballot(x) == -1)           -> x = true
+    // assume(ballot(x) == 0)            -> x = false
+    //
+    // Skip if Arg is a constant.
+    if (isa<Constant>(Arg))
+      break;
+
+    // Skip if ballot width doesn't match wave size.
+    if (ST->getWavefrontSize() != II.getType()->getIntegerBitWidth())
+      break;
+
+    // For each llvm.assume that references the ballot intrinsic, try to infer
+    // the value of the ballot's condition argument from the assumed relation.
+    for (auto &AssumeVH : IC.getAssumptionCache().assumptionsFor(&II)) {
+      if (!AssumeVH)
+        continue;
+
+      auto *Assume = cast<AssumeInst>(AssumeVH);
+      Value *Cond = Assume->getArgOperand(0);
+
+      // Pattern match: assume(icmp eq ballot, CompareValue)
+      ICmpInst *ICI = dyn_cast<ICmpInst>(Cond);
+      if (!ICI || ICI->getPredicate() != ICmpInst::ICMP_EQ)
+        continue;
+
+      Value *CompareValue;
+      if (!match(ICI, m_c_ICmp(m_Specific(&II), m_Value(CompareValue))))
+        continue;
+
+      // Determine the inferred value of the ballot's condition argument.
+      bool InferredCondValue;
+      if (auto *CI = dyn_cast<ConstantInt>(CompareValue)) {
+        if (CI->isMinusOne()) {
+          // ballot(x) == -1 means all lanes have x = true.
+          InferredCondValue = true;
+        } else if (CI->isZero()) {
+          // ballot(x) == 0 means all lanes have x = false.
+          InferredCondValue = false;
+        } else {
+          continue;
+        }
+      } else if (match(CompareValue,
+                       m_Intrinsic<Intrinsic::amdgcn_ballot>(m_One()))) {
+        // ballot(x) == ballot(true) means x = true (EXEC mask comparison).
+        InferredCondValue = true;
+      } else {
+        continue;
+      }
+
+      Constant *ReplacementValue =
+          ConstantInt::getBool(Arg->getContext(), InferredCondValue);
+
+      // Replace uses of the condition argument dominated by the assume.
+      bool Changed = false;
+      Arg->replaceUsesWithIf(ReplacementValue, [&](Use &U) {
+        Instruction *UserInst = dyn_cast<Instruction>(U.getUser());
+        bool Dominates = UserInst && IC.getDominatorTree().dominates(Assume, U);
+        Changed |= Dominates;
+        return Dominates;
+      });
+
+      if (Changed)
+        return nullptr;
+    }
+
     break;
   }
   case Intrinsic::amdgcn_wavefrontsize: {
