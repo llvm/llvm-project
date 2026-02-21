@@ -37,6 +37,7 @@ add_clang_library(clangTidyReadabilityModule STATIC
   NamespaceCommentCheck.cpp
   NonConstParameterCheck.cpp
   OperatorsRepresentationCheck.cpp
+  PointerToRefCheck.cpp
   QualifiedAutoCheck.cpp
   ReadabilityTidyModule.cpp
   RedundantAccessSpecifiersCheck.cpp

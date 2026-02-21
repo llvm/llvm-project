@@ -405,6 +405,7 @@ Clang-Tidy Checks
    :doc:`readability-named-parameter <readability/named-parameter>`, "Yes"
    :doc:`readability-non-const-parameter <readability/non-const-parameter>`, "Yes"
    :doc:`readability-operators-representation <readability/operators-representation>`, "Yes"
+   :doc:`readability-pointer-to-ref <readability/pointer-to-ref>`,
    :doc:`readability-qualified-auto <readability/qualified-auto>`, "Yes"
    :doc:`readability-redundant-access-specifiers <readability/redundant-access-specifiers>`, "Yes"
    :doc:`readability-redundant-casting <readability/redundant-casting>`, "Yes"
