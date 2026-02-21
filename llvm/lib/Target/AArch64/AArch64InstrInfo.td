@@ -8714,6 +8714,12 @@ let Predicates = [HasNEON] in {
             (EXTRACT_SUBREG (MOVIv2i32 (fpimm32SIMDModImmType4XForm f32:$in),
                                        (i32 24)),
                             ssub)>;
+
+  // Using MOVI to materialize select FP16 bit patterns
+  def : Pat<(f16 fpimm16SIMDModImmType5:$in),
+            (EXTRACT_SUBREG (MOVIv4i16 (fpimm16SIMDModImmType5XForm f16:$in),
+                                       (i32 0)),
+                            hsub)>;
 }
 
 let Predicates = [HasNEON] in {

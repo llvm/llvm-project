@@ -523,6 +523,14 @@ static inline uint64_t decodeAdvSIMDModImmType5(uint8_t Imm) {
   return (EncVal << 48) | (EncVal << 32) | (EncVal << 16) | EncVal;
 }
 
+static inline bool isFpImm16FittedAdvSIMDModImmType5(uint16_t Imm) {
+  return (Imm & 0xffULL) == Imm;
+}
+
+static inline uint8_t encodeFpImm16FittedAdvSIMDModImmType5(uint16_t Imm) {
+  return (Imm & 0xffULL);
+}
+
 // abcdefgh 0x00 abcdefgh 0x00 abcdefgh 0x00 abcdefgh 0x00
 static inline bool isAdvSIMDModImmType6(uint64_t Imm) {
   return ((Imm >> 32) == (Imm & 0xffffffffULL)) &&

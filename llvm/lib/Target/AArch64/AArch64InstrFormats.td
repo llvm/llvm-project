@@ -1465,6 +1465,12 @@ def fpimm16XForm : SDNodeXForm<fpimm, [{
       return CurDAG->getTargetConstant(Enc, SDLoc(N), MVT::i32);
     }]>;
 
+def fpimm16SIMDModImmType5XForm : SDNodeXForm<fpimm, [{
+      uint64_t Enc = N->getValueAPF().bitcastToAPInt().getZExtValue();
+      uint32_t Imm8 = AArch64_AM::encodeFpImm16FittedAdvSIMDModImmType5(Enc);
+      return CurDAG->getTargetConstant(Imm8, SDLoc(N), MVT::i32);
+    }]>;
+
 def fpimm32XForm : SDNodeXForm<fpimm, [{
       uint32_t Enc = AArch64_AM::getFP32Imm(N->getValueAPF());
       return CurDAG->getTargetConstant(Enc, SDLoc(N), MVT::i32);
@@ -1507,6 +1513,14 @@ def fpimm32SIMDModImmType4 : FPImmLeaf<f32, [{
       uint64_t Enc = Imm.bitcastToAPInt().getZExtValue();
       return Enc != 0 && AArch64_AM::isAdvSIMDModImmType4(Enc << 32 | Enc);
     }], fpimm32SIMDModImmType4XForm> {
+}
+
+def fpimm16SIMDModImmType5 : FPImmLeaf<f16, [{
+      uint64_t Enc = Imm.bitcastToAPInt().getZExtValue();
+      if (Enc == 0)
+        return false;
+      return AArch64_AM::isFpImm16FittedAdvSIMDModImmType5(Enc);
+    }], fpimm16SIMDModImmType5XForm> {
 }
 
 def fpimm64 : Operand<f64>,
