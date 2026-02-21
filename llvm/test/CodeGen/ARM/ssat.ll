@@ -387,15 +387,14 @@ entry:
 }
 
 ; Lower constant is different in the select and in the compare
+; FIXME: 0xff800001 can be constructed with mov r2, 0x7f, ror 6; or r2, r2, 0xe0, ror 14
 define i32 @no_sat_incorrect_constant(i32 %x) #0 {
 ; V4T-LABEL: no_sat_incorrect_constant:
 ; V4T:       @ %bb.0: @ %entry
-; V4T-NEXT:    mov r1, #1065353216
+; V4T-NEXT:    ldr r2, .LCPI11_0
 ; V4T-NEXT:    cmn r0, #8388608
-; V4T-NEXT:    orr r1, r1, #-1073741824
-; V4T-NEXT:    mov r2, r0
-; V4T-NEXT:    orrlt r2, r1, #1
-; V4T-NEXT:    ldr r1, .LCPI11_0
+; V4T-NEXT:    movge r2, r0
+; V4T-NEXT:    ldr r1, .LCPI11_1
 ; V4T-NEXT:    cmp r0, #8388608
 ; V4T-NEXT:    movlt r1, r2
 ; V4T-NEXT:    mov r0, r1
@@ -403,15 +402,16 @@ define i32 @no_sat_incorrect_constant(i32 %x) #0 {
 ; V4T-NEXT:    .p2align 2
 ; V4T-NEXT:  @ %bb.1:
 ; V4T-NEXT:  .LCPI11_0:
+; V4T-NEXT:    .long 4286578689 @ 0xff800001
+; V4T-NEXT:  .LCPI11_1:
 ; V4T-NEXT:    .long 8388607 @ 0x7fffff
 ;
 ; V6T2-LABEL: no_sat_incorrect_constant:
 ; V6T2:       @ %bb.0: @ %entry
-; V6T2-NEXT:    movw r2, #0
 ; V6T2-NEXT:    cmn r0, #8388608
 ; V6T2-NEXT:    mov r1, r0
-; V6T2-NEXT:    movt r2, #65408
-; V6T2-NEXT:    orrlt r1, r2, #1
+; V6T2-NEXT:    movwlt r1, #1
+; V6T2-NEXT:    movtlt r1, #65408
 ; V6T2-NEXT:    cmp r0, #8388608
 ; V6T2-NEXT:    movwge r1, #65535
 ; V6T2-NEXT:    movtge r1, #127

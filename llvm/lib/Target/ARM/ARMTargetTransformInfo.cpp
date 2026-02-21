@@ -464,6 +464,22 @@ static bool isFPSatMinMaxPattern(Instruction *Inst, const APInt &Imm) {
   return isa<FPToSIInst>(FP);
 }
 
+/// isLegalICmpImmediate - Return true if the specified immediate is legal
+/// icmp immediate, that is the target has icmp instructions which can compare
+/// a register against the immediate without having to materialize the
+/// immediate into a register.
+static bool isLegalCmpImmed(int64_t Imm, const ARMSubtarget *Subtarget) {
+  // Thumb2 and ARM modes can use cmn for negative immediates.
+  if (!Subtarget->isThumb())
+    return ARM_AM::getSOImmVal((uint32_t)Imm) != -1 ||
+           ARM_AM::getSOImmVal(-(uint32_t)Imm) != -1;
+  if (Subtarget->isThumb2())
+    return ARM_AM::getT2SOImmVal((uint32_t)Imm) != -1 ||
+           ARM_AM::getT2SOImmVal(-(uint32_t)Imm) != -1;
+  // Thumb1 doesn't have cmn, and only 8-bit immediates.
+  return Imm >= 0 && Imm <= 255;
+}
+
 InstructionCost ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                               const APInt &Imm, Type *Ty,
                                               TTI::TargetCostKind CostKind,
@@ -482,6 +498,13 @@ InstructionCost ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   if (Opcode == Instruction::GetElementPtr && Idx != 0)
     return 0;
 
+  if ((Opcode == Instruction::Shl || Opcode == Instruction::LShr ||
+       Opcode == Instruction::AShr) &&
+      Idx == 1) {
+    // Shifts are free (are we really going to get a shift of more than 64)?
+    return 0;
+  }
+
   if (Opcode == Instruction::And) {
     // UXTB/UXTH
     if (Imm == 255 || Imm == 65535)
@@ -491,19 +514,41 @@ InstructionCost ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
                     getIntImmCost(~Imm, Ty, CostKind));
   }
 
-  if (Opcode == Instruction::Add)
+  if (Opcode == Instruction::Add || Opcode == Instruction::Sub) {
+    if (Ty->getIntegerBitWidth() <= 32) {
+      int64_t ImmVal = Imm.getSExtValue();
+      if (!ST->isThumb())
+        if (ARM_AM::getSOImmVal((uint32_t)ImmVal) != -1 ||
+            ARM_AM::getSOImmVal(-(uint32_t)ImmVal) != -1)
+          return 0;
+      if (ST->isThumb2())
+        if (ARM_AM::getT2SOImmVal((uint32_t)ImmVal) != -1 ||
+            ARM_AM::getT2SOImmVal(-(uint32_t)ImmVal) != -1)
+          return 0;
+      // Thumb1 doesn't have cmn, and only 8-bit immediates.
+      ImmVal = ImmVal < 0 ? -ImmVal : ImmVal;
+      if (ImmVal >= 0 && ImmVal <= 255)
+        return 0;
+    }
+
     // Conversion to SUB is free, and means we can use -Imm instead.
     return std::min(getIntImmCost(Imm, Ty, CostKind),
                     getIntImmCost(-Imm, Ty, CostKind));
+  }
 
-  if (Opcode == Instruction::ICmp && Imm.isNegative() &&
-      Ty->getIntegerBitWidth() == 32) {
-    int64_t NegImm = -Imm.getSExtValue();
-    if (ST->isThumb2() && NegImm < 1<<12)
-      // icmp X, #-C -> cmn X, #C
-      return 0;
-    if (ST->isThumb() && NegImm < 1<<8)
-      // icmp X, #-C -> adds X, #C
+  if (Opcode == Instruction::ICmp && Ty->getIntegerBitWidth() < 64) {
+    int64_t ImmVal = Imm.getSExtValue();
+    if (!ST->isThumb())
+      if (ARM_AM::getSOImmVal((uint32_t)ImmVal) != -1 ||
+          ARM_AM::getSOImmVal(-(uint32_t)ImmVal) != -1)
+        return 0;
+    if (ST->isThumb2())
+      if (ARM_AM::getT2SOImmVal((uint32_t)ImmVal) != -1 ||
+          ARM_AM::getT2SOImmVal(-(uint32_t)ImmVal) != -1)
+        return 0;
+    // Thumb1 doesn't have cmn, and only 8-bit immediates.
+    ImmVal = ImmVal < 0 ? -ImmVal : ImmVal;
+    if (ImmVal >= 0 && ImmVal <= 255)
       return 0;
   }
 
@@ -524,12 +569,31 @@ InstructionCost ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   if (Inst && ST->hasVFP2Base() && isFPSatMinMaxPattern(Inst, Imm))
     return 0;
 
-  // We can convert <= -1 to < 0, which is generally quite cheap.
-  if (Inst && Opcode == Instruction::ICmp && Idx == 1 && Imm.isAllOnes()) {
+  // We can convert <= to <, which is generally quite cheap.
+  if (Inst && Opcode == Instruction::ICmp && Idx == 1 &&
+      ((Ty->getIntegerBitWidth() <= 32 &&
+        (!isLegalCmpImmed(Imm.getSExtValue(), ST))) ||
+       Imm.isAllOnes() || Imm.isOne())) {
     ICmpInst::Predicate Pred = cast<ICmpInst>(Inst)->getPredicate();
-    if (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLE)
+    if ((Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLE) &&
+        !Imm.isMaxSignedValue())
       return std::min(getIntImmCost(Imm, Ty, CostKind),
                       getIntImmCost(Imm + 1, Ty, CostKind));
+
+    if ((Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULE) &&
+        !Imm.isAllOnes())
+      return std::min(getIntImmCost(Imm, Ty, CostKind),
+                      getIntImmCost(Imm + 1, Ty, CostKind));
+
+    if ((Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGE) &&
+        !Imm.isMinSignedValue())
+      return std::min(getIntImmCost(Imm, Ty, CostKind),
+                      getIntImmCost(Imm - 1, Ty, CostKind));
+
+    if ((Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_UGE) &&
+        !Imm.isZero())
+      return std::min(getIntImmCost(Imm, Ty, CostKind),
+                      getIntImmCost(Imm - 1, Ty, CostKind));
   }
 
   return getIntImmCost(Imm, Ty, CostKind);
