@@ -578,6 +578,15 @@ def right_identity_one_int: GICombineRule<
   (apply (GIReplaceReg $dst, $x))
 >;
 
+// fold (A - B) - 1  ->  add (xor B, -1), A
+def sub_one_from_sub: GICombineRule<
+  (defs root:$dst),
+  (match (G_SUB $sub1, $a, $b),
+         (G_SUB $dst, $sub1, 1),
+         [{ return MRI.hasOneNonDBGUse(${sub1}.getReg()); }]),
+  (apply (G_XOR $xor1, $b, -1),
+         (G_ADD $dst, $xor1, $a))>;
+
 def right_identity_one_fp: GICombineRule<
   (defs root:$dst),
   (match (G_FMUL $dst, $x, $y):$root,
@@ -2305,7 +2314,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines, 
-    truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift]>;
+    truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift, sub_one_from_sub]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and
