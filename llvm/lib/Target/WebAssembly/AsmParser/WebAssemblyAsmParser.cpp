@@ -478,8 +478,6 @@ public:
       return false;
     StringRef S = Tok.getString();
     int64_t Order = StringSwitch<int64_t>(S)
-                        .Case("acquire", WebAssembly::MEM_ORDER_ACQUIRE)
-                        .Case("release", WebAssembly::MEM_ORDER_RELEASE)
                         .Case("acq_rel", WebAssembly::MEM_ORDER_ACQ_REL)
                         .Case("seq_cst", WebAssembly::MEM_ORDER_SEQ_CST)
                         .Default(-1);

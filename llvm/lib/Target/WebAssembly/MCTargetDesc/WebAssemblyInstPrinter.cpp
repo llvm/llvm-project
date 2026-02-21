@@ -380,15 +380,6 @@ void WebAssemblyInstPrinter::printWebAssemblyMemOrderOperand(const MCInst *MI,
     return;
 
   switch (Imm) {
-  case WebAssembly::MEM_ORDER_NONE:
-    // none is the default, print nothing
-    return;
-  case WebAssembly::MEM_ORDER_ACQUIRE:
-    O << " acquire";
-    break;
-  case WebAssembly::MEM_ORDER_RELEASE:
-    O << " release";
-    break;
   case WebAssembly::MEM_ORDER_ACQ_REL:
     O << " acq_rel";
     break;

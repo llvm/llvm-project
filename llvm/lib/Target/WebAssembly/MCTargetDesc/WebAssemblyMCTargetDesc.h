@@ -87,11 +87,8 @@ enum OperandType {
 };
 
 enum MemOrder {
-  MEM_ORDER_NONE = 0,
-  MEM_ORDER_ACQUIRE = 1,
-  MEM_ORDER_RELEASE = 2,
-  MEM_ORDER_ACQ_REL = 3,
-  MEM_ORDER_SEQ_CST = 4,
+  MEM_ORDER_SEQ_CST = 0,
+  MEM_ORDER_ACQ_REL = 1,
 };
 } // end namespace WebAssembly
 

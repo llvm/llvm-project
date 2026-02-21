@@ -103,6 +103,22 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
         case WebAssembly::OPERAND_I32IMM:
           encodeSLEB128(int32_t(MO.getImm()), OS);
           break;
+        case WebAssembly::OPERAND_P2ALIGN: {
+          uint64_t P2Align = MO.getImm();
+          if (STI.getFeatureBits()[WebAssembly::FeatureSharedEverything]) {
+            for (unsigned J = 0; J < MI.getNumOperands(); ++J) {
+              if (J < Desc.getNumOperands() &&
+                  Desc.operands()[J].OperandType ==
+                      WebAssembly::OPERAND_MEMORDER) {
+                if (MI.getOperand(J).getImm() != WebAssembly::MEM_ORDER_SEQ_CST)
+                  P2Align |= 0x20;
+                break;
+              }
+            }
+          }
+          encodeULEB128(P2Align, OS);
+          break;
+        }
         case WebAssembly::OPERAND_OFFSET32:
           encodeULEB128(uint32_t(MO.getImm()), OS);
           break;
@@ -114,16 +130,37 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           support::endian::write<uint8_t>(OS, MO.getImm(),
                                           llvm::endianness::little);
           break;
-        case WebAssembly::OPERAND_MEMORDER:
+        case WebAssembly::OPERAND_MEMORDER: {
+          uint8_t Val = MO.getImm();
           if (STI.getFeatureBits()[WebAssembly::FeatureSharedEverything]) {
-            support::endian::write<uint8_t>(OS, MO.getImm(),
-                                            llvm::endianness::little);
+            bool IsMemoryInst = false;
+            bool Bit5Set = false;
+            for (unsigned J = 0; J < MI.getNumOperands(); ++J) {
+              if (J < Desc.getNumOperands() &&
+                  Desc.operands()[J].OperandType ==
+                      WebAssembly::OPERAND_P2ALIGN) {
+                IsMemoryInst = true;
+                if (Val != WebAssembly::MEM_ORDER_SEQ_CST)
+                  Bit5Set = true;
+                break;
+              }
+            }
+            if (!IsMemoryInst || Bit5Set) {
+              if (Val == WebAssembly::MEM_ORDER_ACQ_REL) {
+                StringRef Name = MCII.getName(Opcode);
+                if (Name.contains("RMW") || Name.contains("CMPXCHG"))
+                  Val = 0x11;
+              }
+              support::endian::write<uint8_t>(OS, Val,
+                                              llvm::endianness::little);
+            }
           } else if (Opcode == WebAssembly::ATOMIC_FENCE ||
                      Opcode == WebAssembly::ATOMIC_FENCE_S) {
             support::endian::write<uint8_t>(OS, 0,
                                             llvm::endianness::little);
           }
           break;
+        }
         case WebAssembly::OPERAND_VEC_I16IMM:
           support::endian::write<uint16_t>(OS, MO.getImm(),
                                            llvm::endianness::little);

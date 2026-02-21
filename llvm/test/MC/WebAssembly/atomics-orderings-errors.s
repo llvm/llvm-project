@@ -3,11 +3,11 @@
 main:
   .functype main () -> ()
 
-  # CHECK: :[[@LINE+1]]:16: error: memory ordering requires shared-everything feature: acquire
-  atomic.fence acquire
+  # CHECK: :[[@LINE+1]]:16: error: memory ordering requires shared-everything feature: acq_rel
+  atomic.fence acq_rel
 
-  # CHECK: :[[@LINE+1]]:21: error: memory ordering requires shared-everything feature: release
-  i32.atomic.load 0 release
+  # CHECK: :[[@LINE+1]]:21: error: memory ordering requires shared-everything feature: acq_rel
+  i32.atomic.load 0 acq_rel
 
   # CHECK: :[[@LINE+1]]:24: error: memory ordering requires shared-everything feature: seq_cst
   i32.atomic.rmw.add 0 seq_cst
