@@ -39,7 +39,8 @@ constexpr auto Ulong = 1L;
 constexpr auto CompoundLiteral = (int){13};
 constexpr auto DoubleCast = (double)(1 / 3);
 constexpr auto String = "this is a string"; // both-error {{constexpr pointer initializer is not null}}
-constexpr signed auto Long = 1L; // both-error {{'auto' cannot be signed or unsigned}}
+constexpr signed auto Long = 1L; // both-error {{illegal storage class on file-scoped variable}}
+// both-error@-1 {{cannot combine with previous 'constexpr' declaration specifier}}
 _Static_assert(_Generic(Ulong, long : 1));
 _Static_assert(_Generic(CompoundLiteral, int : 1));
 _Static_assert(_Generic(DoubleCast, double : 1));
@@ -56,7 +57,7 @@ void f3(constexpr register int P1) { // both-error {{function parameter cannot b
 constexpr thread_local int V11 = 38; // both-error {{cannot combine with previous '_Thread_local' declaration specifier}}
 constexpr static thread_local double V12 = 38; // both-error {{cannot combine with previous '_Thread_local' declaration specifier}}
 constexpr extern thread_local char V13; // both-error {{cannot combine with previous '_Thread_local' declaration specifier}}
-// both-error@-1 {{cannot combine with previous 'extern' declaration specifier}}
+// both-error@-1 {{cannot combine with previous 'constexpr' declaration specifier}}
 // both-error@-2 {{constexpr variable declaration must be a definition}}
 constexpr thread_local short V14 = 38; // both-error {{cannot combine with previous '_Thread_local' declaration specifier}}
 
@@ -68,7 +69,7 @@ constexpr volatile int V17 = 0; // both-error {{constexpr variable cannot have t
 
 constexpr int * restrict V18 = 0; // both-error {{constexpr variable cannot have type 'int *const restrict'}}
 
-constexpr extern char Oops = 1; // both-error {{cannot combine with previous 'extern' declaration specifier}} \
+constexpr extern char Oops = 1; // both-error {{cannot combine with previous 'constexpr' declaration specifier}} \
                                 // both-warning {{'extern' variable has an initializer}}
 
 constexpr int * restrict * Oops1 = 0;
