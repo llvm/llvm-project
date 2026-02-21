@@ -17,7 +17,7 @@ bb0:
   br label %bb1
 
 bb1:
-  %dst = phi ptr [ null, %bb0 ], [ addrspacecast (ptr addrspace(3) null to ptr), %entry ]
+  %dst = phi ptr [ null, %bb0 ], [ addrspacecast (ptr addrspace(3) zeroinitializer to ptr), %entry ]
   store i64 0, ptr %dst, align 16
   ret void
 }

@@ -26,6 +26,11 @@
 // HOST: @Three_var = weak alias i32, ptr @__Three_var
 // HOST: @Three_var_ = alias i32, ptr @__Three_var
 //.
+// DEVICE: @__omp_rtl_debug_kind = weak_odr hidden addrspace(1) constant i32 0
+// DEVICE: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden addrspace(1) constant i32 0
+// DEVICE: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden addrspace(1) constant i32 0
+// DEVICE: @__omp_rtl_assume_no_thread_state = weak_odr hidden addrspace(1) constant i32 0
+// DEVICE: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden addrspace(1) constant i32 0
 // DEVICE: @__Two_var = addrspace(1) global i32 2, align 4
 // DEVICE: @__Three_var = addrspace(1) global i32 3, align 4
 // DEVICE: @Two = weak hidden alias i32 (), ptr @__Two
@@ -61,8 +66,6 @@ extern int __attribute__((alias("__One_var"))) One_var_;
 // DEVICE-LABEL: define hidden i32 @__Two(
 // DEVICE-SAME: ) #[[ATTR0:[0-9]+]] {
 // DEVICE-NEXT:  [[ENTRY:.*:]]
-// DEVICE-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
-// DEVICE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // DEVICE-NEXT:    ret i32 2
 //
 int __Two(void) { return 2; }
@@ -83,8 +86,6 @@ extern int __attribute__((alias("__Two_var"))) Two_var_;
 // DEVICE-LABEL: define hidden i32 @__Three(
 // DEVICE-SAME: ) #[[ATTR0]] {
 // DEVICE-NEXT:  [[ENTRY:.*:]]
-// DEVICE-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
-// DEVICE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // DEVICE-NEXT:    ret i32 3
 //
 int __Three(void) { return 3; }
@@ -94,3 +95,24 @@ int Three(void) __attribute__ ((weak, alias("__Three")));
 int Three_(void) __attribute__ ((alias("__Three")));
 extern int __attribute__((weak, alias("__Three_var"))) Three_var;
 extern int __attribute__((alias("__Three_var"))) Three_var_;
+//.
+// HOST: attributes #[[ATTR0]] = { noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+//.
+// DEVICE: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+//.
+// HOST: [[META0:![0-9]+]] = !{i32 1, !"__Two_var", i32 0, i32 0}
+// HOST: [[META1:![0-9]+]] = !{i32 1, !"__Three_var", i32 0, i32 1}
+// HOST: [[META2:![0-9]+]] = !{ptr @.offloading.entry_name}
+// HOST: [[META3:![0-9]+]] = !{ptr @.offloading.entry_name.1}
+// HOST: [[META4:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+// HOST: [[META5:![0-9]+]] = !{i32 7, !"openmp", i32 51}
+// HOST: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+//.
+// DEVICE: [[META0:![0-9]+]] = !{i32 1, !"__Two_var", i32 0, i32 0}
+// DEVICE: [[META1:![0-9]+]] = !{i32 1, !"__Three_var", i32 0, i32 1}
+// DEVICE: [[META2:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
+// DEVICE: [[META3:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+// DEVICE: [[META4:![0-9]+]] = !{i32 7, !"openmp", i32 51}
+// DEVICE: [[META5:![0-9]+]] = !{i32 7, !"openmp-device", i32 51}
+// DEVICE: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+//.

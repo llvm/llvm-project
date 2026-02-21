@@ -106,6 +106,27 @@ public:
   /// Get an ID for \p Ref.
   virtual CASID getID(ObjectRef Ref) const = 0;
 
+  /// Stores the data of a file into ObjectStore.
+  ///
+  /// An underlying implementation could perform optimizations that reduce I/O
+  /// and disk space consumption.
+  ///
+  /// If there are any concurrent modifications to the file, the contents in the
+  /// CAS may be corrupt.
+  ///
+  /// \param FilePath the path of the file data.
+  virtual Expected<ObjectRef> storeFromFile(StringRef Path);
+
+  /// Exports the data of an object to a file path. It does not include any
+  /// references of the object.
+  ///
+  /// An underlying implementation could perform optimizations that reduce I/O
+  /// and disk space consumption.
+  ///
+  /// \param Node the object to read data from.
+  /// \param FilePath the path of the file data.
+  virtual Error exportDataToFile(ObjectHandle Node, StringRef Path) const;
+
   /// Get an existing reference to the object called \p ID.
   ///
   /// Returns \c None if the object is not stored in this CAS.
@@ -300,6 +321,11 @@ public:
 
   /// Get the content of the node. Valid as long as the CAS is valid.
   StringRef getData() const { return CAS->getDataString(H); }
+
+  /// Exports the data of an object to a file path.
+  Error exportDataToFile(StringRef Path) const {
+    return CAS->exportDataToFile(H, Path);
+  }
 
   friend bool operator==(const ObjectProxy &Proxy, ObjectRef Ref) {
     return Proxy.getRef() == Ref;

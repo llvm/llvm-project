@@ -1609,7 +1609,7 @@ define i8 @fold_add_constant_preserve_nuw(i8 %x) {
 define i32 @sdiv_to_udiv(i32 %arg0, i32 %arg1) {
 ; CHECK-LABEL: @sdiv_to_udiv(
 ; CHECK-NEXT:    [[T0:%.*]] = shl nuw nsw i32 [[ARG0:%.*]], 8
-; CHECK-NEXT:    [[T2:%.*]] = add nuw nsw i32 [[T0]], 6242049
+; CHECK-NEXT:    [[T2:%.*]] = add nuw nsw i32 [[T0]], 6242048
 ; CHECK-NEXT:    [[T3:%.*]] = udiv i32 [[T2]], 192
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
@@ -4455,7 +4455,7 @@ define i32 @ceil_div_multi_use(i32 range(i32 0, 100) %x) {
   ret i32 %r
 }
 
-; Commuted test: add operands are swapped  
+; Commuted test: add operands are swapped
 define i32 @ceil_div_commuted(i32 range(i32 0, 100) %x) {
 ; CHECK-LABEL: @ceil_div_commuted(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[X:%.*]], 7

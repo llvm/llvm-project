@@ -158,6 +158,7 @@ set(files
   __algorithm/ranges_set_symmetric_difference.h
   __algorithm/ranges_set_union.h
   __algorithm/ranges_shift_left.h
+  __algorithm/ranges_shift_right.h
   __algorithm/ranges_shuffle.h
   __algorithm/ranges_sort.h
   __algorithm/ranges_sort_heap.h
@@ -480,6 +481,7 @@ set(files
   __iterator/aliasing_iterator.h
   __iterator/back_insert_iterator.h
   __iterator/bounded_iter.h
+  __iterator/capacity_aware_iterator.h
   __iterator/common_iterator.h
   __iterator/concepts.h
   __iterator/counted_iterator.h

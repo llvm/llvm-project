@@ -147,6 +147,19 @@ bool InstCombinerImpl::SimplifyDemandedInstructionBits(Instruction &Inst) {
   return SimplifyDemandedInstructionBits(Inst, Known);
 }
 
+bool InstCombinerImpl::SimplifyDemandedInstructionFPClass(Instruction &Inst) {
+  KnownFPClass Known;
+
+  Value *V =
+      SimplifyDemandedUseFPClass(&Inst, fcAllFlags, Known, /*CtxI=*/&Inst);
+  if (!V)
+    return false;
+  if (V == &Inst)
+    return true;
+  replaceInstUsesWith(Inst, V);
+  return true;
+}
+
 /// This form of SimplifyDemandedBits simplifies the specified instruction
 /// operand if possible, updating it in place. It returns true if it made any
 /// change and false otherwise.
@@ -603,6 +616,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     DemandedFromLHS.clearLowBits(NTZ);
     if (ShrinkDemandedConstant(I, 0, DemandedFromLHS) ||
         SimplifyDemandedBits(I, 0, DemandedFromLHS, LHSKnown, Q, Depth + 1))
+      return disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
+
+    unsigned NtzLHS = (~DemandedMask & LHSKnown.Zero).countr_one();
+    APInt DemandedFromRHS = DemandedFromOps;
+    DemandedFromRHS.clearLowBits(NtzLHS);
+    if (ShrinkDemandedConstant(I, 1, DemandedFromRHS))
       return disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
 
     // If we are known to be adding zeros to every bit below
@@ -2212,8 +2231,10 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
 
     break;
   }
+  case Intrinsic::maxnum:
   case Intrinsic::maximumnum: {
-    OpKind = KnownFPClass::MinMaxKind::maximumnum;
+    OpKind = IID == Intrinsic::maxnum ? KnownFPClass::MinMaxKind::maxnum
+                                      : KnownFPClass::MinMaxKind::maximumnum;
 
     if (cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
                                 KnownRHS.KnownFPClasses, OrderedZeroSign) &&
@@ -2227,8 +2248,10 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
 
     break;
   }
+  case Intrinsic::minnum:
   case Intrinsic::minimumnum: {
-    OpKind = KnownFPClass::MinMaxKind::minimumnum;
+    OpKind = IID == Intrinsic::minnum ? KnownFPClass::MinMaxKind::minnum
+                                      : KnownFPClass::MinMaxKind::minimumnum;
 
     if (cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
                                    KnownRHS.KnownFPClasses, OrderedZeroSign) &&
@@ -2261,6 +2284,8 @@ simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
                                   KnownFPClass &Known, unsigned Depth) {
 
   FPClassTest SrcDemandedMask = DemandedMask;
+  if (DemandedMask & fcNan)
+    SrcDemandedMask |= fcNan;
 
   // Zero results may have been rounded from subnormal or normal sources.
   if (DemandedMask & fcNegZero)
@@ -2297,7 +2322,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                                     unsigned Depth) {
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
   assert(Known == KnownFPClass() && "expected uninitialized state");
-  assert(I->hasOneUse() && "wrong version called");
 
   Type *VTy = I->getType();
 
@@ -2366,6 +2390,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
 
       FPClassTest SrcDemandedMask = DemandedMask;
+      if (DemandedMask & fcNan)
+        SrcDemandedMask |= fcNan;
 
       // Doubling a subnormal could have resulted in a normal value.
       if (DemandedMask & fcPosNormal)
@@ -2465,7 +2491,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
     if (DemandedMask & fcNan) {
       // mul +/-inf, 0 => nan
-      SrcDemandedMask |= fcZero | fcInf;
+      SrcDemandedMask |= fcZero | fcInf | fcNan;
 
       // TODO: Mode check
       // mul +/-inf, sub => nan if daz
@@ -2528,6 +2554,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     // X * -0.0 --> copysign(0.0, -X)
     if ((NonNanResult || KnownLHS.isKnownNeverInfOrNaN()) &&
         KnownRHS.isKnownAlways(fcPosZero | fcNan)) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // => copysign(+0, lhs)
       // Note: Dropping canonicalize
       Value *Copysign = Builder.CreateCopySign(Y, X, FMF);
@@ -2537,6 +2566,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
     if (KnownLHS.isKnownAlways(fcPosZero | fcNan) &&
         (NonNanResult || KnownRHS.isKnownNeverInfOrNaN())) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // => copysign(+0, rhs)
       // Note: Dropping canonicalize
       Value *Copysign = Builder.CreateCopySign(X, Y, FMF);
@@ -2546,6 +2578,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
     if ((NonNanResult || KnownLHS.isKnownNeverInfOrNaN()) &&
         KnownRHS.isKnownAlways(fcNegZero | fcNan)) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // => copysign(0, fneg(lhs))
       // Note: Dropping canonicalize
       Value *Copysign =
@@ -2556,6 +2591,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
     if (KnownLHS.isKnownAlways(fcNegZero | fcNan) &&
         (NonNanResult || KnownRHS.isKnownNeverInfOrNaN())) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // => copysign(+0, fneg(rhs))
       // Note: Dropping canonicalize
       Value *Copysign =
@@ -2570,6 +2608,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if (KnownLHS.isKnownAlways(fcInf | fcNan) &&
         (KnownRHS.isKnownNeverNaN() &&
          KnownRHS.cannotBeOrderedGreaterEqZero(Mode))) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // Note: Dropping canonicalize
       Value *Neg = Builder.CreateFNegFMF(X, FMF);
       Neg->takeName(I);
@@ -2579,6 +2620,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if (KnownRHS.isKnownAlways(fcInf | fcNan) &&
         (KnownLHS.isKnownNeverNaN() &&
          KnownLHS.cannotBeOrderedGreaterEqZero(Mode))) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // Note: Dropping canonicalize
       Value *Neg = Builder.CreateFNegFMF(Y, FMF);
       Neg->takeName(I);
@@ -2606,6 +2650,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     Value *Y = I->getOperand(1);
     if (X == Y && isGuaranteedNotToBeUndef(X, SQ.AC, CxtI, SQ.DT, Depth + 1)) {
       // If the source is 0, inf or nan, the result is a nan
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
 
       Value *IsZeroOrNan = Builder.CreateFCmpFMF(
           FCmpInst::FCMP_UEQ, I->getOperand(0), ConstantFP::getZero(VTy), FMF);
@@ -2645,7 +2691,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       // Subnormal is added in case of DAZ, but this isn't strictly
       // necessary. Every other input class implies a possible subnormal source,
       // so this only could matter in the degenerate case of only-nan results.
-      SrcDemandedMask |= fcZero | fcInf;
+      SrcDemandedMask |= fcZero | fcInf | fcNan;
     }
 
     // Zero outputs may be the result of underflow.
@@ -2683,6 +2729,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       return ConstantFP::getZero(VTy);
 
     if (KnownLHS.isKnownAlways(fcPosZero) && KnownRHS.isKnownNeverNaN()) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // nnan +0 / x -> copysign(0, rhs)
       // TODO: -0 / x => copysign(0, fneg(rhs))
       Value *Copysign = Builder.CreateCopySign(X, Y, FMF);
@@ -2698,6 +2747,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                            KnownLHS.isKnownNeverLogicalZero(Mode))) &&
          (KnownRHS.isKnownAlways(fcPosZero) ||
           (FMF.noSignedZeros() && KnownRHS.isKnownAlways(fcZero))))) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // nnan x / 0 => copysign(inf, x);
       // nnan nsz x / -0 => copysign(inf, x);
       Value *Copysign =
@@ -2731,6 +2783,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                              Known, Depth);
   case Instruction::FPExt: {
     FPClassTest SrcDemandedMask = DemandedMask;
+    if (DemandedMask & fcNan)
+      SrcDemandedMask |= fcNan;
 
     // No subnormal result does not imply not-subnormal in the source type.
     if ((DemandedMask & fcNegNormal) != fcNone)
@@ -2828,7 +2882,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::fmuladd: {
       // We can't do any simplification on the source besides stripping out
       // unneeded nans.
-      FPClassTest SrcDemandedMask = (DemandedMask & fcNan) | ~fcNan;
+      FPClassTest SrcDemandedMask = DemandedMask | ~fcNan;
+      if (DemandedMask & fcNan)
+        SrcDemandedMask |= fcNan;
 
       KnownFPClass KnownSrc[3];
 
@@ -2862,7 +2918,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::maximum:
     case Intrinsic::minimum:
     case Intrinsic::maximumnum:
-    case Intrinsic::minimumnum: {
+    case Intrinsic::minimumnum:
+    case Intrinsic::maxnum:
+    case Intrinsic::minnum: {
       const bool PropagateNaN =
           IID == Intrinsic::maximum || IID == Intrinsic::minimum;
 
@@ -2870,7 +2928,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       // operands (e.g., a known-positive result could have been clamped), but
       // we can still prune known-nan inputs.
       FPClassTest SrcDemandedMask =
-          PropagateNaN ? DemandedMask | ~fcNan : fcAllFlags;
+          PropagateNaN && ((DemandedMask & fcNan) == fcNone)
+              ? DemandedMask | ~fcNan
+              : fcAllFlags;
 
       KnownFPClass KnownLHS, KnownRHS;
       if (SimplifyDemandedFPClass(CI, 1, SrcDemandedMask, KnownRHS,
@@ -2937,6 +2997,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       }
 
       FPClassTest SrcDemandedMask = DemandedMask & fcNan;
+      if (DemandedMask & fcNan)
+        SrcDemandedMask |= fcNan;
 
       if (DemandedMask & fcZero) {
         // exp(-infinity) = 0
@@ -3022,6 +3084,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::log2:
     case Intrinsic::log10: {
       FPClassTest DemandedSrcMask = DemandedMask & (fcNan | fcPosInf);
+      if (DemandedMask & fcNan)
+        DemandedSrcMask |= fcNan;
 
       Type *EltTy = VTy->getScalarType();
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
@@ -3061,7 +3125,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
           DemandedMask & (fcNegZero | fcPositive | fcNan);
 
       if (DemandedMask & fcNan)
-        DemandedSrcMask |= (fcNegative & ~fcNegZero);
+        DemandedSrcMask |= fcNan | (fcNegative & ~fcNegZero);
 
       // sqrt(max_subnormal) is a normal value
       if (DemandedMask & fcPosNormal)
@@ -3093,12 +3157,51 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (Known.KnownFPClasses == fcZero) {
         if (FMF.noSignedZeros())
           return ConstantFP::getZero(VTy);
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(CI);
 
         Value *Copysign = Builder.CreateCopySign(ConstantFP::getZero(VTy),
                                                  CI->getArgOperand(0), FMF);
         Copysign->takeName(CI);
         return Copysign;
       }
+
+      return simplifyDemandedFPClassResult(CI, FMF, DemandedMask, Known,
+                                           {KnownSrc});
+    }
+    case Intrinsic::ldexp: {
+      FPClassTest SrcDemandedMask = DemandedMask & fcInf;
+      if (DemandedMask & fcNan)
+        SrcDemandedMask |= fcNan;
+
+      if (DemandedMask & fcPosInf)
+        SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
+      if (DemandedMask & fcNegInf)
+        SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
+
+      if (DemandedMask & (fcPosNormal | fcPosSubnormal))
+        SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
+      if (DemandedMask & (fcNegNormal | fcNegSubnormal))
+        SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
+
+      if (DemandedMask & fcPosZero)
+        SrcDemandedMask |= fcPosFinite;
+      if (DemandedMask & fcNegZero)
+        SrcDemandedMask |= fcNegFinite;
+
+      KnownFPClass KnownSrc;
+      if (SimplifyDemandedFPClass(CI, 0, SrcDemandedMask, KnownSrc, Depth + 1))
+        return CI;
+
+      Type *EltTy = VTy->getScalarType();
+      const fltSemantics &FltSem = EltTy->getFltSemantics();
+      DenormalMode Mode = F.getDenormalMode(FltSem);
+
+      KnownBits KnownExpBits =
+          ::computeKnownBits(CI->getArgOperand(1), SQ, Depth + 1);
+
+      Known = KnownFPClass::ldexp(KnownSrc, KnownExpBits, FltSem, Mode);
+      Known.knownNot(~DemandedMask);
 
       return simplifyDemandedFPClassResult(CI, FMF, DemandedMask, Known,
                                            {KnownSrc});
@@ -3111,6 +3214,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::round:
     case Intrinsic::roundeven: {
       FPClassTest DemandedSrcMask = DemandedMask;
+      if (DemandedMask & fcNan)
+        DemandedSrcMask |= fcNan;
 
       // Zero results imply valid subnormal sources.
       if (DemandedMask & fcNegZero)
@@ -3159,6 +3264,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       if ((IID == Intrinsic::trunc || IsRoundNearestOrTrunc) &&
           KnownSrc.isKnownAlways(fcZero | fcSubnormal)) {
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(CI);
+
         Value *Copysign = Builder.CreateCopySign(ConstantFP::getZero(VTy),
                                                  CI->getArgOperand(0));
         Copysign->takeName(CI);
@@ -3464,6 +3572,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
       Known = KnownFPClass::copysign(KnownMag, KnownSign);
       break;
     }
+    case Intrinsic::maxnum:
+    case Intrinsic::minnum:
     case Intrinsic::maximum:
     case Intrinsic::minimum:
     case Intrinsic::maximumnum:
@@ -3476,9 +3586,10 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
       KnownFPClass KnownLHS = computeKnownFPClass(
           CI->getArgOperand(0), DemandedMask, CxtI, Depth + 1);
 
-      return simplifyDemandedFPClassMinMax(
-          Known, IID, CI, DemandedMask, KnownLHS, KnownRHS, F,
-          cast<FPMathOperator>(CI)->hasNoSignedZeros());
+      // Cannot use NSZ in the multiple use case.
+      return simplifyDemandedFPClassMinMax(Known, IID, CI, DemandedMask,
+                                           KnownLHS, KnownRHS, F,
+                                           /*NSZ=*/false);
     }
     default:
       break;

@@ -320,7 +320,7 @@ def OpImageSampleExplicitLod: Op<88, (outs ID:$res),
 
 def OpImageSampleDrefImplicitLod: Op<89, (outs ID:$res),
                   (ins TYPE:$type, ID:$sampledImage, ID:$coord, ID:$dref, variable_ops),
-                  "$res = OpImageSampleDrefImplicitLod $type $sampledImage $dref $coord">;
+                  "$res = OpImageSampleDrefImplicitLod $type $sampledImage $coord $dref">;
 def OpImageSampleDrefExplicitLod: Op<90, (outs ID:$res),
                   (ins TYPE:$ty, ID:$im, ID:$uv, ID:$d, ImageOperand:$op, ID:$i, variable_ops),
                   "$res = OpImageSampleDrefExplicitLod $ty $im $uv $d $op $i">;
@@ -334,7 +334,7 @@ def OpImageSampleProjExplicitLod: Op<92, (outs ID:$res),
 
 def OpImageSampleProjDrefImplicitLod: Op<93, (outs ID:$res),
                   (ins TYPE:$type, ID:$sampledImage, ID:$coord, ID:$dref, variable_ops),
-                  "$res = OpImageSampleProjDrefImplicitLod $type $sampledImage $dref $coord">;
+                  "$res = OpImageSampleProjDrefImplicitLod $type $sampledImage $coord $dref">;
 def OpImageSampleProjDrefExplicitLod: Op<94, (outs ID:$res),
                   (ins TYPE:$ty, ID:$im, ID:$uv, ID:$d, ImageOperand:$op, ID:$i, variable_ops),
                   "$res = OpImageSampleProjDrefExplicitLod $ty $im $uv $d $op $i">;
@@ -373,7 +373,7 @@ def OpImageSparseSampleExplicitLod: Op<306, (outs ID:$res),
 
 def OpImageSparseSampleDrefImplicitLod: Op<307, (outs ID:$res),
                   (ins TYPE:$type, ID:$sampledImg, ID:$coord, ID:$dref, variable_ops),
-                  "$res = OpImageSparseSampleDrefImplicitLod $type $sampledImg $dref $coord">;
+                  "$res = OpImageSparseSampleDrefImplicitLod $type $sampledImg $coord $dref">;
 def OpImageSparseSampleDrefExplicitLod: Op<308, (outs ID:$res),
                   (ins TYPE:$ty, ID:$im, ID:$uv, ID:$d, ImageOperand:$op, ID:$i, variable_ops),
                   "$res = OpImageSparseSampleDrefExplicitLod $ty $im $uv $d $op $i">;
@@ -387,7 +387,7 @@ def OpImageSparseSampleProjExplicitLod: Op<310, (outs ID:$res),
 
 def OpImageSparseSampleProjDrefImplicitLod: Op<311, (outs ID:$res),
                   (ins TYPE:$type, ID:$sImage, ID:$coord, ID:$dref, variable_ops),
-                  "$res = OpImageSparseSampleProjDrefImplicitLod $type $sImage $dref $coord">;
+                  "$res = OpImageSparseSampleProjDrefImplicitLod $type $sImage $coord $dref">;
 def OpImageSparseSampleProjDrefExplicitLod: Op<312, (outs ID:$res),
                   (ins TYPE:$ty, ID:$im, ID:$uv, ID:$d, ImageOperand:$op, ID:$i, variable_ops),
                   "$res = OpImageSparseSampleProjDrefExplicitLod $ty $im $uv $d $op $i">;
@@ -527,7 +527,7 @@ def OpUDotAccSat: Op<4454, (outs ID:$res), (ins TYPE:$type, ID:$vec1, ID:$vec2, 
 def OpSUDotAccSat: Op<4455, (outs ID:$res), (ins TYPE:$type, ID:$vec1, ID:$vec2, ID:$acc, variable_ops),
                   "$res = OpSUDotAccSat $type $vec1 $vec2 $acc">;
 
-def OpFmaKHR: Op<6034, (outs ID:$res), (ins TYPE:$type, ID:$a, ID:$b, ID:$c),
+def OpFmaKHR: Op<4427, (outs ID:$res), (ins TYPE:$type, ID:$a, ID:$b, ID:$c),
                   "$res = OpFmaKHR $type $a $b $c">;
 
 // 3.42.14 Bit Instructions
@@ -625,6 +625,8 @@ def OpPhi: Op<245, (outs ID:$res), (ins TYPE:$type, ID:$var0, ID:$block0, variab
                   "$res = OpPhi $type $var0 $block0">;
 def OpLoopMerge: Op<246, (outs), (ins unknown:$merge, unknown:$continue, LoopControl:$lc, variable_ops),
                   "OpLoopMerge $merge $continue $lc">;
+def OpLoopControlINTEL: Op<5887, (outs), (ins LoopControl:$lc, variable_ops),
+                  "OpLoopControlINTEL $lc">;
 def OpSelectionMerge: Op<247, (outs), (ins unknown:$merge, SelectionControl:$sc),
                   "OpSelectionMerge $merge $sc">;
 def OpLabel: Op<248, (outs ID:$label), (ins), "$label = OpLabel">;

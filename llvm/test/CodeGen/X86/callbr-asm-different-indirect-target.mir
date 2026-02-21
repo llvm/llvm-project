@@ -35,7 +35,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY killed $edi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr8 = COPY killed [[COPY]].sub_8bit
   ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, killed [[MOV32r0_]], %subreg.sub_32bit
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG killed [[MOV32r0_]], %subreg.sub_32bit
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY killed [[SUBREG_TO_REG]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.loop (inlineasm-br-indirect-target):
@@ -65,7 +65,7 @@ body:             |
     %2:gr32 = COPY killed $edi
     %3:gr8 = COPY killed %2.sub_8bit
     %5:gr32 = MOV32r0 implicit-def dead $eflags
-    %4:gr64 = SUBREG_TO_REG 0, killed %5, %subreg.sub_32bit
+    %4:gr64 = SUBREG_TO_REG killed %5, %subreg.sub_32bit
 
   bb.1.loop (inlineasm-br-indirect-target):
     successors: %bb.2(0x40000000), %bb.1(0x40000000)

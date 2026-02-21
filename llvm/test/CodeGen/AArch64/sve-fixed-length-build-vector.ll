@@ -164,7 +164,7 @@ define void @build_vector_fractional_stride_v8i32(ptr %a) #0 {
 }
 
 ; zip1 pattern: constant <0, 1, 2, 3> is expanded to <0, 1, 2, 3, poison, poison, poison, poison>
-; to match the shuffle result width. isConstantSequence recognizes this as a sequence.
+; to match the shuffle result width. isArithmeticSequence recognizes this as a sequence.
 define <8 x i8> @zip_const_seq_with_variable(i8 %x) #0 {
 ; VBITS_GE_256-LABEL: zip_const_seq_with_variable:
 ; VBITS_GE_256:       // %bb.0:

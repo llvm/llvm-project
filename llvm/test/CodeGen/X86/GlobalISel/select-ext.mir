@@ -316,13 +316,13 @@ body:             |
     ; X86-LABEL: name: test_anyext_i1toi16
     ; X86: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edi
     ; X86-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-    ; X86-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr16 = SUBREG_TO_REG 0, [[COPY1]], %subreg.sub_8bit
+    ; X86-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr16 = SUBREG_TO_REG [[COPY1]], %subreg.sub_8bit
     ; X86-NEXT: $ax = COPY [[SUBREG_TO_REG]]
     ; X86-NEXT: RET 0, implicit $ax
     ; X64-LABEL: name: test_anyext_i1toi16
     ; X64: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; X64-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-    ; X64-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr16 = SUBREG_TO_REG 0, [[COPY1]], %subreg.sub_8bit
+    ; X64-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr16 = SUBREG_TO_REG [[COPY1]], %subreg.sub_8bit
     ; X64-NEXT: $ax = COPY [[SUBREG_TO_REG]]
     ; X64-NEXT: RET 0, implicit $ax
     %0(s32) = COPY $edi
@@ -348,13 +348,13 @@ body:             |
     ; X86-LABEL: name: test_anyext_i1toi32
     ; X86: [[COPY:%[0-9]+]]:gr32_abcd = COPY $edi
     ; X86-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-    ; X86-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr32 = SUBREG_TO_REG 0, [[COPY1]], %subreg.sub_8bit
+    ; X86-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr32 = SUBREG_TO_REG [[COPY1]], %subreg.sub_8bit
     ; X86-NEXT: $eax = COPY [[SUBREG_TO_REG]]
     ; X86-NEXT: RET 0, implicit $eax
     ; X64-LABEL: name: test_anyext_i1toi32
     ; X64: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; X64-NEXT: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-    ; X64-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr32 = SUBREG_TO_REG 0, [[COPY1]], %subreg.sub_8bit
+    ; X64-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr32 = SUBREG_TO_REG [[COPY1]], %subreg.sub_8bit
     ; X64-NEXT: $eax = COPY [[SUBREG_TO_REG]]
     ; X64-NEXT: RET 0, implicit $eax
     %0(s32) = COPY $edi

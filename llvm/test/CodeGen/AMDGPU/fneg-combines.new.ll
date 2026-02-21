@@ -648,6 +648,8 @@ define amdgpu_ps double @fneg_fadd_0_f64_nsz(double inreg %tmp2, double inreg %t
 ; SI-LABEL: fneg_fadd_0_f64_nsz:
 ; SI:       ; %bb.0: ; %.entry
 ; SI-NEXT:    v_div_scale_f64 v[0:1], s[4:5], s[2:3], s[2:3], 1.0
+; SI-NEXT:    s_mov_b32 s4, 0
+; SI-NEXT:    s_brev_b32 s5, 1
 ; SI-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
 ; SI-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; SI-NEXT:    v_fma_f64 v[2:3], v[2:3], v[4:5], v[2:3]
@@ -660,10 +662,7 @@ define amdgpu_ps double @fneg_fadd_0_f64_nsz(double inreg %tmp2, double inreg %t
 ; SI-NEXT:    v_mov_b32_e32 v2, s1
 ; SI-NEXT:    v_mov_b32_e32 v3, s0
 ; SI-NEXT:    v_div_fixup_f64 v[0:1], v[0:1], s[2:3], 1.0
-; SI-NEXT:    s_mov_b32 s2, 0
-; SI-NEXT:    v_mul_f64 v[0:1], v[0:1], 0
-; SI-NEXT:    s_brev_b32 s3, 1
-; SI-NEXT:    v_fma_f64 v[0:1], v[0:1], s[2:3], s[2:3]
+; SI-NEXT:    v_mul_f64 v[0:1], v[0:1], s[4:5]
 ; SI-NEXT:    v_cmp_nlt_f64_e64 vcc, -v[0:1], s[0:1]
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
@@ -690,8 +689,7 @@ define amdgpu_ps double @fneg_fadd_0_f64_nsz(double inreg %tmp2, double inreg %t
 ; VI-NEXT:    v_div_fixup_f64 v[0:1], v[0:1], s[2:3], 1.0
 ; VI-NEXT:    s_mov_b32 s2, 0
 ; VI-NEXT:    s_brev_b32 s3, 1
-; VI-NEXT:    v_mul_f64 v[0:1], v[0:1], 0
-; VI-NEXT:    v_fma_f64 v[0:1], v[0:1], s[2:3], s[2:3]
+; VI-NEXT:    v_mul_f64 v[0:1], v[0:1], s[2:3]
 ; VI-NEXT:    v_cmp_nlt_f64_e64 vcc, -v[0:1], s[0:1]
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
@@ -4659,7 +4657,7 @@ declare half @llvm.maxnum.f16(half, half) #1
 declare half @llvm.amdgcn.sin.f16(half) #1
 declare half @llvm.amdgcn.rcp.f16(half) #1
 
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { nounwind denormal_fpenv(float: preservesign) }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }
-attributes #4 = { nounwind "amdgpu-ieee"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #4 = { nounwind "amdgpu-ieee"="false" denormal_fpenv(float: preservesign) }

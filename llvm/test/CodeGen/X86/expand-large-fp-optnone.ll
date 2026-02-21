@@ -27,13 +27,13 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    orq %rdx, %rax
-; CHECK-NEXT:    movl %ecx, %r8d
+; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    movq %rdi, %r8
+; CHECK-NEXT:    orq %rdx, %r8
 ; CHECK-NEXT:    movq %rsi, %r9
-; CHECK-NEXT:    orq %r8, %r9
+; CHECK-NEXT:    orq %rax, %r9
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    orq %r9, %rax
+; CHECK-NEXT:    orq %r9, %r8
 ; CHECK-NEXT:    je .LBB0_10
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:  .LBB0_1: # %itofp-if-end

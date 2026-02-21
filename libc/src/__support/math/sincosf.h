@@ -58,8 +58,9 @@ LIBC_INLINE_VAR constexpr uint32_t EXCEPT_OUTPUTS_COS[N_EXCEPTS][4] = {
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 } // namespace sincosf_internal
 
-LIBC_INLINE static void sincosf(float x, float *sinp, float *cosp) {
+LIBC_INLINE void sincosf(float x, float *sinp, float *cosp) {
   using namespace sincosf_internal;
+  using namespace sincosf_utils_internal;
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
 

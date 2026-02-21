@@ -161,3 +161,25 @@ func.func @test_nop(%mem : memref<8192xf16, #amdgpu.address_space<fat_raw_buffer
     : vector<8xf16>, memref<8192xf16, #amdgpu.address_space<fat_raw_buffer>>, memref<4096xf16, #gpu_lds_addrspace>
   func.return
 }
+
+// -----
+
+#gpu_lds_addrspace = 3
+
+// CHECK: func @test_async_flag_preserved
+// CHECK-SAME: %[[ARG0:.*]]: index, %[[ARG1:.*]]: index
+func.func @test_async_flag_preserved(%offset_i: index, %offset_j: index) {
+  // CHECK: %[[LOCAL:.*]] = memref.alloc() : memref<64x64xf16, 3>
+  // CHECK: %[[MEM:.*]] = memref.alloc() : memref<64x128xf16>
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: amdgpu.gather_to_lds async %[[MEM]][%[[ARG0]], %[[ARG1]]], %[[LOCAL]][%[[C0]], %[[C0]]]
+  // CHECK-SAME: vector<8xf16>, memref<64x128xf16>, memref<64x64xf16, 3>
+
+  %alloc = memref.alloc() : memref<64x64xf16, #gpu_lds_addrspace>
+  %mem = memref.alloc() : memref<64x128xf16>
+  %subview = memref.subview %mem[0, 0][32, 64][1, 1] : memref<64x128xf16> to memref<32x64xf16, strided<[128, 1]>>
+  %c0 = arith.constant 0 : index
+  amdgpu.gather_to_lds async %subview[%offset_i, %offset_j], %alloc[%c0, %c0]
+    : vector<8xf16>, memref<32x64xf16, strided<[128, 1]>>, memref<64x64xf16, #gpu_lds_addrspace>
+  func.return
+}

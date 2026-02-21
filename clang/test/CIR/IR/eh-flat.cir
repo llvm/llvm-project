@@ -1,0 +1,225 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+
+cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
+cir.global "private" constant external @_ZTIPKc : !cir.ptr<!u8i>
+
+// Test cir.eh.initiate without cleanup
+cir.func @eh_initiate_basic(%arg0: !cir.ptr<!s32i>) {
+  cir.br ^bb1
+^bb1:
+  %eh_token = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb2(%eh_token : !cir.eh_token)
+^bb2(%tok: !cir.eh_token):
+  cir.return
+}
+
+// CHECK: cir.func @eh_initiate_basic(%arg0: !cir.ptr<!s32i>) {
+// CHECK:   cir.br ^bb1
+// CHECK: ^bb1:
+// CHECK:   %[[TOKEN:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:   cir.br ^bb2(%[[TOKEN]] : !cir.eh_token)
+// CHECK: ^bb2(%{{.*}}: !cir.eh_token):
+// CHECK:   cir.return
+// CHECK: }
+
+// Test cir.eh.initiate with cleanup
+cir.func @eh_initiate_cleanup(%arg0: !cir.ptr<!s32i>) {
+  cir.br ^bb1
+^bb1:
+  %eh_token = cir.eh.initiate cleanup : !cir.eh_token
+  cir.br ^bb2(%eh_token : !cir.eh_token)
+^bb2(%tok: !cir.eh_token):
+  cir.return
+}
+
+// CHECK: cir.func @eh_initiate_cleanup(%arg0: !cir.ptr<!s32i>) {
+// CHECK:   cir.br ^bb1
+// CHECK: ^bb1:
+// CHECK:   %[[TOKEN:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:   cir.br ^bb2(%[[TOKEN]] : !cir.eh_token)
+// CHECK: ^bb2(%{{.*}}: !cir.eh_token):
+// CHECK:   cir.return
+// CHECK: }
+
+// Test cir.eh.dispatch with catch_all
+cir.func @eh_dispatch_catch_all(%eh_token: !cir.eh_token) {
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch_all : ^bb1
+  ]
+^bb1:
+  cir.return
+}
+
+// CHECK: cir.func @eh_dispatch_catch_all(%arg0: !cir.eh_token) {
+// CHECK:   cir.eh.dispatch %arg0 : !cir.eh_token [
+// CHECK:     catch_all : ^bb1
+// CHECK:   ]
+// CHECK: ^bb1:
+// CHECK:   cir.return
+// CHECK: }
+
+// Test cir.eh.dispatch with unwind
+cir.func @eh_dispatch_unwind(%eh_token: !cir.eh_token) {
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    unwind : ^bb1
+  ]
+^bb1:
+  cir.return
+}
+
+// CHECK: cir.func @eh_dispatch_unwind(%arg0: !cir.eh_token) {
+// CHECK:   cir.eh.dispatch %arg0 : !cir.eh_token [
+// CHECK:     unwind : ^bb1
+// CHECK:   ]
+// CHECK: ^bb1:
+// CHECK:   cir.return
+// CHECK: }
+
+// Test cir.eh.dispatch with type handlers and catch_all
+cir.func @eh_dispatch_types_catch_all(%eh_token: !cir.eh_token) {
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^bb1,
+    catch(#cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>) : ^bb2,
+    catch_all : ^bb3
+  ]
+^bb1:
+  cir.return
+^bb2:
+  cir.return
+^bb3:
+  cir.return
+}
+
+// CHECK: cir.func @eh_dispatch_types_catch_all(%arg0: !cir.eh_token) {
+// CHECK:   cir.eh.dispatch %arg0 : !cir.eh_token [
+// CHECK:     catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^bb1,
+// CHECK:     catch(#cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>) : ^bb2,
+// CHECK:     catch_all : ^bb3
+// CHECK:   ]
+// CHECK: ^bb1:
+// CHECK:   cir.return
+// CHECK: ^bb2:
+// CHECK:   cir.return
+// CHECK: ^bb3:
+// CHECK:   cir.return
+// CHECK: }
+
+// Test cir.eh.dispatch with type handlers and unwind
+cir.func @eh_dispatch_types_unwind(%eh_token: !cir.eh_token) {
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^catch_int,
+    unwind : ^unwind
+  ]
+^catch_int:
+  cir.return
+^unwind:
+  cir.return
+}
+
+// CHECK: cir.func @eh_dispatch_types_unwind(%arg0: !cir.eh_token) {
+// CHECK:   cir.eh.dispatch %arg0 : !cir.eh_token [
+// CHECK:     catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^bb1,
+// CHECK:     unwind : ^bb2
+// CHECK:   ]
+// CHECK: ^bb1:
+// CHECK:   cir.return
+// CHECK: ^bb2:
+// CHECK:   cir.return
+// CHECK: }
+
+// Test cir.begin_cleanup and cir.end_cleanup
+cir.func @cleanup_ops(%eh_token: !cir.eh_token) {
+  %cleanup_token = cir.begin_cleanup %eh_token : !cir.eh_token -> !cir.cleanup_token
+  cir.end_cleanup %cleanup_token : !cir.cleanup_token
+  cir.return
+}
+
+// CHECK: cir.func @cleanup_ops(%arg0: !cir.eh_token) {
+// CHECK:   %[[CLEANUP:.*]] = cir.begin_cleanup %arg0 : !cir.eh_token -> !cir.cleanup_token
+// CHECK:   cir.end_cleanup %[[CLEANUP]] : !cir.cleanup_token
+// CHECK:   cir.return
+// CHECK: }
+
+// Test cir.begin_catch and cir.end_catch
+cir.func @catch_ops(%eh_token: !cir.eh_token) {
+  %catch_token, %exn_ptr = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+  cir.end_catch %catch_token : !cir.catch_token
+  cir.return
+}
+
+// CHECK: cir.func @catch_ops(%arg0: !cir.eh_token) {
+// CHECK:   %[[CATCH:.*]], %[[EXN:.*]] = cir.begin_catch %arg0 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+// CHECK:   cir.end_catch %[[CATCH]] : !cir.catch_token
+// CHECK:   cir.return
+// CHECK: }
+
+// Test cir.begin_catch with void pointer (catch all)
+cir.func @catch_all_ops(%eh_token: !cir.eh_token) {
+  %catch_token, %exn_ptr = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.end_catch %catch_token : !cir.catch_token
+  cir.return
+}
+
+// CHECK: cir.func @catch_all_ops(%arg0: !cir.eh_token) {
+// CHECK:   %[[CATCH:.*]], %[[EXN:.*]] = cir.begin_catch %arg0 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CHECK:   cir.end_catch %[[CATCH]] : !cir.catch_token
+// CHECK:   cir.return
+// CHECK: }
+
+// Test complete example with try_call, eh.initiate, cleanup, and dispatch
+cir.func private @mayThrow() -> ()
+cir.func private @destructor() -> ()
+
+cir.func @complete_example() {
+  cir.try_call @mayThrow() ^bb1, ^bb2 : () -> ()
+^bb1:  // Normal return
+  cir.return
+^bb2:  // Exception path
+  %eh_token = cir.eh.initiate cleanup : !cir.eh_token
+  %cleanup_token = cir.begin_cleanup %eh_token : !cir.eh_token -> !cir.cleanup_token
+  cir.call @destructor() : () -> ()
+  cir.end_cleanup %cleanup_token : !cir.cleanup_token
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^catch_int,
+    catch_all : ^catch_all
+  ]
+^catch_int:
+  %catch_token, %exn_ptr = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+  cir.end_catch %catch_token : !cir.catch_token
+  cir.return
+^catch_all:
+  %catch_token2, %exn_ptr2 = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.end_catch %catch_token2 : !cir.catch_token
+  cir.return
+}
+
+// CHECK: cir.func @complete_example()
+// CHECK:   cir.try_call @mayThrow() ^bb1, ^bb2 : () -> ()
+// CHECK: ^bb1:
+// CHECK:   cir.return
+// CHECK: ^bb2:
+// CHECK:   %[[EH:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:   %[[CLEANUP:.*]] = cir.begin_cleanup %[[EH]] : !cir.eh_token -> !cir.cleanup_token
+// CHECK:   cir.call @destructor() : () -> ()
+// CHECK:   cir.end_cleanup %[[CLEANUP]] : !cir.cleanup_token
+// CHECK:   cir.eh.dispatch %[[EH]] : !cir.eh_token [
+// CHECK:     catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^bb3,
+// CHECK:     catch_all : ^bb4
+// CHECK:   ]
+// CHECK: ^bb3:
+// CHECK:   %[[CATCH1:.*]], %{{.*}} = cir.begin_catch %[[EH]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+// CHECK:   cir.end_catch %[[CATCH1]] : !cir.catch_token
+// CHECK:   cir.return
+// CHECK: ^bb4:
+// CHECK:   %[[CATCH2:.*]], %{{.*}} = cir.begin_catch %[[EH]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CHECK:   cir.end_catch %[[CATCH2]] : !cir.catch_token
+// CHECK:   cir.return
+// CHECK: }
+
+}

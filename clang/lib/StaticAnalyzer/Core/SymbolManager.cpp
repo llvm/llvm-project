@@ -115,6 +115,8 @@ const Stmt *SymbolConjured::getStmt() const {
     return Elem->castAs<CFGTemporaryDtor>().getBindTemporaryExpr();
   case CFGElement::CleanupFunction:
     return nullptr;
+  case CFGElement::FullExprCleanup:
+    return nullptr;
   }
   return nullptr;
 }

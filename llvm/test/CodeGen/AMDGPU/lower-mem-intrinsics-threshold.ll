@@ -21,15 +21,6 @@ define amdgpu_kernel void @memset_size_0(ptr addrspace(1) %dst, i8 %val) {
 ; OPT4-NEXT:    ret void
 ;
 ; OPT0-LABEL: @memset_size_0(
-; OPT0-NEXT:    br i1 true, label [[SPLIT:%.*]], label [[LOADSTORELOOP:%.*]]
-; OPT0:       loadstoreloop:
-; OPT0-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], [[LOADSTORELOOP]] ]
-; OPT0-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[TMP1]]
-; OPT0-NEXT:    store i8 [[VAL:%.*]], ptr addrspace(1) [[TMP2]], align 1
-; OPT0-NEXT:    [[TMP3]] = add i64 [[TMP1]], 1
-; OPT0-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 0
-; OPT0-NEXT:    br i1 [[TMP4]], label [[LOADSTORELOOP]], label [[SPLIT]]
-; OPT0:       split:
 ; OPT0-NEXT:    ret void
 ;
 ; OPT_NEG-LABEL: @memset_size_0(
@@ -50,15 +41,11 @@ define amdgpu_kernel void @memset_size_4(ptr addrspace(1) %dst, i8 %val) {
 ; OPT4-NEXT:    ret void
 ;
 ; OPT0-LABEL: @memset_size_4(
-; OPT0-NEXT:    br i1 false, label [[SPLIT:%.*]], label [[LOADSTORELOOP:%.*]]
-; OPT0:       loadstoreloop:
-; OPT0-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], [[LOADSTORELOOP]] ]
-; OPT0-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[TMP1]]
-; OPT0-NEXT:    store i8 [[VAL:%.*]], ptr addrspace(1) [[TMP2]], align 1
-; OPT0-NEXT:    [[TMP3]] = add i64 [[TMP1]], 1
-; OPT0-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 4
-; OPT0-NEXT:    br i1 [[TMP4]], label [[LOADSTORELOOP]], label [[SPLIT]]
-; OPT0:       split:
+; OPT0-NEXT:    [[SETVALUE_SPLAT_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[VAL:%.*]], i64 0
+; OPT0-NEXT:    [[SETVALUE_SPLAT_SPLAT:%.*]] = shufflevector <4 x i8> [[SETVALUE_SPLAT_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
+; OPT0-NEXT:    [[SETVALUE_SPLAT_CAST:%.*]] = bitcast <4 x i8> [[SETVALUE_SPLAT_SPLAT]] to i32
+; OPT0-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 0
+; OPT0-NEXT:    store i32 [[SETVALUE_SPLAT_CAST]], ptr addrspace(1) [[TMP1]], align 1
 ; OPT0-NEXT:    ret void
 ;
 ; OPT_NEG-LABEL: @memset_size_4(
@@ -75,27 +62,19 @@ define amdgpu_kernel void @memset_size_8(ptr addrspace(1) %dst, i8 %val) {
 ; OPT8-NEXT:    ret void
 ;
 ; OPT4-LABEL: @memset_size_8(
-; OPT4-NEXT:    br i1 false, label [[SPLIT:%.*]], label [[LOADSTORELOOP:%.*]]
-; OPT4:       loadstoreloop:
-; OPT4-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], [[LOADSTORELOOP]] ]
-; OPT4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[TMP1]]
-; OPT4-NEXT:    store i8 [[VAL:%.*]], ptr addrspace(1) [[TMP2]], align 1
-; OPT4-NEXT:    [[TMP3]] = add i64 [[TMP1]], 1
-; OPT4-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 8
-; OPT4-NEXT:    br i1 [[TMP4]], label [[LOADSTORELOOP]], label [[SPLIT]]
-; OPT4:       split:
+; OPT4-NEXT:    [[SETVALUE_SPLAT_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[VAL:%.*]], i64 0
+; OPT4-NEXT:    [[SETVALUE_SPLAT_SPLAT:%.*]] = shufflevector <8 x i8> [[SETVALUE_SPLAT_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
+; OPT4-NEXT:    [[SETVALUE_SPLAT_CAST:%.*]] = bitcast <8 x i8> [[SETVALUE_SPLAT_SPLAT]] to i64
+; OPT4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 0
+; OPT4-NEXT:    store i64 [[SETVALUE_SPLAT_CAST]], ptr addrspace(1) [[TMP1]], align 1
 ; OPT4-NEXT:    ret void
 ;
 ; OPT0-LABEL: @memset_size_8(
-; OPT0-NEXT:    br i1 false, label [[SPLIT:%.*]], label [[LOADSTORELOOP:%.*]]
-; OPT0:       loadstoreloop:
-; OPT0-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], [[LOADSTORELOOP]] ]
-; OPT0-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[TMP1]]
-; OPT0-NEXT:    store i8 [[VAL:%.*]], ptr addrspace(1) [[TMP2]], align 1
-; OPT0-NEXT:    [[TMP3]] = add i64 [[TMP1]], 1
-; OPT0-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 8
-; OPT0-NEXT:    br i1 [[TMP4]], label [[LOADSTORELOOP]], label [[SPLIT]]
-; OPT0:       split:
+; OPT0-NEXT:    [[SETVALUE_SPLAT_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[VAL:%.*]], i64 0
+; OPT0-NEXT:    [[SETVALUE_SPLAT_SPLAT:%.*]] = shufflevector <8 x i8> [[SETVALUE_SPLAT_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
+; OPT0-NEXT:    [[SETVALUE_SPLAT_CAST:%.*]] = bitcast <8 x i8> [[SETVALUE_SPLAT_SPLAT]] to i64
+; OPT0-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 0
+; OPT0-NEXT:    store i64 [[SETVALUE_SPLAT_CAST]], ptr addrspace(1) [[TMP1]], align 1
 ; OPT0-NEXT:    ret void
 ;
 ; OPT_NEG-LABEL: @memset_size_8(

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_WASM_PLATFORMWASM_H
-#define LLDB_SOURCE_PLUGINS_PLATFORM_WASM_PLATFORMWASM_H
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_WEBASSEMBLY_PLATFORMWASM_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_WEBASSEMBLY_PLATFORMWASM_H
 
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -64,4 +64,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PLATFORM_WASM_PLATFORMWASM_H
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_WEBASSEMBLY_PLATFORMWASM_H

@@ -6932,7 +6932,8 @@ enum CXUnaryOperatorKind {
   /** __extension__ marker operator. */
   CXUnaryOperator_Extension,
   /** C++ co_await operator. */
-  CXUnaryOperator_Coawait
+  CXUnaryOperator_Coawait,
+  CXUnaryOperator_Last = CXUnaryOperator_Coawait
 };
 
 /**

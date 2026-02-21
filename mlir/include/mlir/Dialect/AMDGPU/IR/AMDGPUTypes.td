@@ -11,6 +11,7 @@
 
 include "mlir/Dialect/AMDGPU/IR/AMDGPUBase.td"
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinTypeInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // AMDGPU Type definitions
@@ -66,6 +67,30 @@ def AMDGPU_TDMDescriptorType : AMDGPU_Type<"TDMDescriptor", "tdm_descriptor"> {
   let description = [{
     This type is opaque and corresponds to the two or four descriptor groups
     used in tensor_load_to_lds or tensor_store_from_lds.
+  }];
+}
+
+def AMDGPU_DsBarrierStateType : AMDGPU_Type<"DsBarrierState", "ds_barrier_state",
+    [MemRefElementTypeInterface]> {
+  let summary = "State of an in-LDS barrier.";
+  let description = [{
+    Type that encodes the state of an in-LDS barrier as used by the atomic barrier
+    instructions introduced on gfx1250.
+
+    It consists of a 29-bit count of the number of pending arrivals at the barrier (the
+    *pending count*) in bits [28:0], a 3-bit *phase* in bits [31:29], and the 32-bit count
+    to re-initialize the pending count to on phase change (the *init count*) in bits [63:32].
+
+    When an instruction (either one of the explicit arrival primitives or tensor data
+    movement) *arrives* at such a barrier, the pending count is decremented. If this
+    decrement would cause the pending count to underflow, the count is instead reset
+    to the init count and the phase is decremented (wrapping back to 0). When the
+    phase is decremented, sleeping waves are woken up so they can check the barrier.
+
+    The barrier state resides in LDS, but an old barrier state can be returned from atomic
+    arrival instructions or though atomic loads.
+
+    This feature is not available prior to gfx1250.
   }];
 }
 

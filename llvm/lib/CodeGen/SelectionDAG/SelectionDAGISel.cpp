@@ -3168,7 +3168,8 @@ static size_t IsPredicateKnownToFail(
   case SelectionDAGISel::OPC_CheckType:
   case SelectionDAGISel::OPC_CheckTypeI32:
   case SelectionDAGISel::OPC_CheckTypeI64:
-  case SelectionDAGISel::OPC_CheckTypeByHwMode: {
+  case SelectionDAGISel::OPC_CheckTypeByHwMode:
+  case SelectionDAGISel::OPC_CheckTypeByHwMode0: {
     MVT VT;
     switch (Opcode) {
     case SelectionDAGISel::OPC_CheckTypeI32:
@@ -3179,6 +3180,9 @@ static size_t IsPredicateKnownToFail(
       break;
     case SelectionDAGISel::OPC_CheckTypeByHwMode:
       VT = getHwModeVT(Table, Index, SDISel);
+      break;
+    case SelectionDAGISel::OPC_CheckTypeByHwMode0:
+      VT = SDISel.getValueTypeForHwMode(0);
       break;
     default:
       VT = getSimpleVT(Table, Index);
@@ -3350,7 +3354,8 @@ public:
 
 void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
                                         const uint8_t *MatcherTable,
-                                        unsigned TableSize) {
+                                        unsigned TableSize,
+                                        const uint8_t *OperandLists) {
   // FIXME: Should these even be selected?  Handle these cases in the caller?
   switch (NodeToMatch->getOpcode()) {
   default:
@@ -3597,7 +3602,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     }
     case OPC_RecordMemRef:
       if (auto *MN = dyn_cast<MemSDNode>(N))
-        MatchedMemRefs.push_back(MN->getMemOperand());
+        llvm::append_range(MatchedMemRefs, MN->memoperands());
       else {
         LLVM_DEBUG(dbgs() << "Expected MemSDNode "; N->dump(CurDAG);
                    dbgs() << '\n');
@@ -3755,7 +3760,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_CheckType:
     case OPC_CheckTypeI32:
     case OPC_CheckTypeI64:
-    case OPC_CheckTypeByHwMode: {
+    case OPC_CheckTypeByHwMode:
+    case OPC_CheckTypeByHwMode0: {
       MVT VT;
       switch (Opcode) {
       case OPC_CheckTypeI32:
@@ -3766,6 +3772,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         break;
       case OPC_CheckTypeByHwMode:
         VT = getHwModeVT(MatcherTable, MatcherIndex, *this);
+        break;
+      case OPC_CheckTypeByHwMode0:
+        VT = getValueTypeForHwMode(0);
         break;
       default:
         VT = getSimpleVT(MatcherTable, MatcherIndex);
@@ -4226,8 +4235,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_MorphNodeTo2GlueInput:
     case OPC_MorphNodeTo1GlueOutput:
     case OPC_MorphNodeTo2GlueOutput: {
-      uint16_t TargetOpc = MatcherTable[MatcherIndex++];
-      TargetOpc |= static_cast<uint16_t>(MatcherTable[MatcherIndex++]) << 8;
+      uint32_t TargetOpc = MatcherTable[MatcherIndex++];
+      TargetOpc |= (MatcherTable[MatcherIndex++] << 8);
       unsigned EmitNodeInfo;
       if (Opcode >= OPC_EmitNode1None && Opcode <= OPC_EmitNode2Chain) {
         if (Opcode >= OPC_EmitNode0Chain && Opcode <= OPC_EmitNode2Chain)
@@ -4307,14 +4316,22 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
 
       // Get the operand list.
       unsigned NumOps = MatcherTable[MatcherIndex++];
-      SmallVector<SDValue, 8> Ops;
-      for (unsigned i = 0; i != NumOps; ++i) {
-        unsigned RecNo = MatcherTable[MatcherIndex++];
-        if (RecNo & 128)
-          RecNo = GetVBR(RecNo, MatcherTable, MatcherIndex);
 
-        assert(RecNo < RecordedNodes.size() && "Invalid EmitNode");
-        Ops.push_back(RecordedNodes[RecNo].first);
+      SmallVector<SDValue, 8> Ops;
+      if (NumOps != 0) {
+        // Get the index into the OperandLists.
+        size_t OperandIndex = MatcherTable[MatcherIndex++];
+        if (OperandIndex & 128)
+          OperandIndex = GetVBR(OperandIndex, MatcherTable, MatcherIndex);
+
+        for (unsigned i = 0; i != NumOps; ++i) {
+          unsigned RecNo = OperandLists[OperandIndex++];
+          if (RecNo & 128)
+            RecNo = GetVBR(RecNo, OperandLists, OperandIndex);
+
+          assert(RecNo < RecordedNodes.size() && "Invalid EmitNode");
+          Ops.push_back(RecordedNodes[RecNo].first);
+        }
       }
 
       // If there are variadic operands to add, handle them now.
