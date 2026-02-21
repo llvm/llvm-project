@@ -62,7 +62,22 @@ add_entrypoint_object(
   HDRS
     getenv.h
   DEPENDS
-  libc.config.app_h
+    libc.config.app_h
+    .environ_internal
+)
+
+add_object_library(
+  environ_internal
+  SRCS
+    environ_internal.cpp
+  HDRS
+    environ_internal.h
+  DEPENDS
+    libc.config.app_h
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.string_view
+    libc.hdr.func.free
+    libc.hdr.func.malloc
 )
 
 add_entrypoint_object(
@@ -710,6 +725,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.abort
+)
+
+add_entrypoint_object(
+  setenv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setenv
 )
 
 add_entrypoint_object(

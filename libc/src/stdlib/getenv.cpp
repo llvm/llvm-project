@@ -7,39 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/getenv.h"
-#include "config/app.h"
+#include "environ_internal.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
-#include <stddef.h> // For size_t.
-
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(char *, getenv, (const char *name)) {
-  char **env_ptr = reinterpret_cast<char **>(LIBC_NAMESPACE::app.env_ptr);
-
-  if (name == nullptr || env_ptr == nullptr)
+  if (name == nullptr || name[0] == '\0')
     return nullptr;
 
-  LIBC_NAMESPACE::cpp::string_view env_var_name(name);
-  if (env_var_name.size() == 0)
+  auto &env_mgr = internal::EnvironmentManager::get_instance();
+  env_mgr.init();
+
+  cpp::string_view name_view(name);
+  int idx = env_mgr.find_var(name_view);
+  if (idx < 0)
     return nullptr;
-  for (char **env = env_ptr; *env != nullptr; env++) {
-    LIBC_NAMESPACE::cpp::string_view cur(*env);
-    if (!cur.starts_with(env_var_name))
-      continue;
 
-    if (cur[env_var_name.size()] != '=')
-      continue;
-
-    // Remove the name and the equals sign.
-    cur.remove_prefix(env_var_name.size() + 1);
-    // We know that data is null terminated, so this is safe.
-    return const_cast<char *>(cur.data());
-  }
-
-  return nullptr;
+  return env_mgr.get_array()[idx] + name_view.size() + 1;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
