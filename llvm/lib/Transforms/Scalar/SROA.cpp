@@ -1522,12 +1522,14 @@ LLVM_DUMP_METHOD void AllocaSlices::dump() const { print(dbgs()); }
 
 /// Walk the range of a partitioning looking for a common type to cover this
 /// sequence of slices.
-static std::pair<Type *, IntegerType *>
+/// Returns: {CommonType, LargestIntegerType, OnlyIntrinsicUsers}
+static std::tuple<Type *, IntegerType *, bool>
 findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
                uint64_t EndOffset) {
   Type *Ty = nullptr;
   bool TyIsCommon = true;
   IntegerType *ITy = nullptr;
+  bool OnlyIntrinsicUsers = true;
 
   // Note that we need to look at *every* alloca slice's Use to ensure we
   // always get consistent results regardless of the order of slices.
@@ -1535,6 +1537,8 @@ findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
     Use *U = I->getUse();
     if (isa<IntrinsicInst>(*U->getUser()))
       continue;
+    // We found a non-intrinsic user
+    OnlyIntrinsicUsers = false;
     if (I->beginOffset() != B->beginOffset() || I->endOffset() != EndOffset)
       continue;
 
@@ -1568,7 +1572,7 @@ findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
       Ty = UserTy;
   }
 
-  return {TyIsCommon ? Ty : nullptr, ITy};
+  return {TyIsCommon ? Ty : nullptr, ITy, OnlyIntrinsicUsers};
 }
 
 /// PHI instructions that use an alloca and are subsequently loaded can be
@@ -5156,7 +5160,7 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
 
   // Check if there is a common type that all slices of the partition use that
   // spans the partition.
-  auto [CommonUseTy, LargestIntTy] =
+  auto [CommonUseTy, LargestIntTy, OnlyIntrinsicUsers] =
       findCommonType(P.begin(), P.end(), P.endOffset());
   if (CommonUseTy) {
     TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy);
@@ -5193,6 +5197,15 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
         DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size() &&
         isIntegerWideningViable(P, LargestIntTy, DL))
       return {LargestIntTy, true, nullptr};
+
+    // If there are only intrinsic users of an aggregate type, try to
+    // represent as a legal integer type because we are probably just copying
+    // data around and the integer can be promoted.
+    if (OnlyIntrinsicUsers && DL.isLegalInteger(P.size() * 8) &&
+        TypePartitionTy->isAggregateType()) {
+      auto *IntNTy = Type::getIntNTy(C, P.size() * 8);
+      return {IntNTy, isIntegerWideningViable(P, IntNTy, DL), nullptr};
+    }
 
     // Fallback to TypePartitionTy and we probably won't promote.
     return {TypePartitionTy, false, nullptr};
