@@ -1,0 +1,142 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_TEXT_ENCODING
+#define _LIBCPP_TEXT_ENCODING
+
+/* text_encoding synopsis
+namespace std {
+
+struct text_encoding;
+
+// [text.encoding.hash], hash support
+template<class T> struct hash;
+template<> struct hash<text_encoding>;
+
+struct text_encoding
+{
+    static constexpr size_t max_name_length = 63;
+
+    // [text.encoding.id], enumeration text_encoding::id
+    enum class id : int_least32_t {
+      see below
+    };
+    using enum id;
+
+    constexpr text_encoding() = default;
+    constexpr explicit text_encoding(string_view enc) noexcept;
+    constexpr text_encoding(id i) noexcept;
+
+    constexpr id mib() const noexcept;
+    constexpr const char* name() const noexcept;
+
+    // [text.encoding.aliases], class text_encoding::aliases_view
+    // struct aliases_view;
+    constexpr aliases_view aliases() const noexcept;
+
+    friend constexpr bool operator==(const text_encoding& a,
+                                     const text_encoding& b) noexcept;
+    friend constexpr bool operator==(const text_encoding& encoding, id i) noexcept;
+
+    static consteval text_encoding literal() noexcept;
+    static text_encoding environment();
+    template<id i> static bool environment_is();
+
+  private:
+    id mib_ = id::unknown;                                              // exposition only
+    char name_[max_name_length + 1] = {0};                              // exposition only
+    static constexpr bool comp-name(string_view a, string_view b);      // exposition only
+};
+}
+
+*/
+
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/__config>
+#else
+
+#  include <__config>
+#  include <__functional/hash.h>
+#  include <__ranges/enable_borrowed_range.h>
+#  include <__text_encoding/te_impl.h>
+#  include <string_view>
+#  include <version>
+
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
+
+#  if _LIBCPP_STD_VER >= 26
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+struct text_encoding {
+private:
+  __te_impl __impl_;
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit text_encoding(__te_impl&& __imp) : __impl_(__imp) {}
+
+public:
+  static constexpr auto max_name_length = __te_impl::__max_name_length_;
+  using id                              = __te_impl::__id;
+  using aliases_view                    = __te_impl::__aliases_view;
+  using enum id;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr text_encoding() = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit text_encoding(string_view __enc) noexcept : __impl_(__enc) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr text_encoding(id __i) noexcept : __impl_(__i) {}
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr id mib() const noexcept { return __impl_.__mib(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const char* name() const noexcept { return __impl_.__name(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr aliases_view aliases() const { return __impl_.__aliases(); }
+
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const text_encoding& __a, const text_encoding& __b) noexcept {
+    return __a.__impl_ == __b.__impl_;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const text_encoding& __enc, const id __i) noexcept {
+    return __enc.__impl_ == __i;
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static consteval text_encoding literal() noexcept {
+    return text_encoding(__te_impl::__literal());
+  }
+#    if _LIBCPP_HAS_LOCALIZATION && !defined(__ANDROID__)
+  [[nodiscard]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_HIDE_FROM_ABI static text_encoding environment() {
+    return text_encoding(__te_impl::__environment());
+  };
+
+  template <id _Id>
+  [[nodiscard]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_HIDE_FROM_ABI static bool environment_is() {
+    return __te_impl::__environment_is<_Id>();
+  }
+#    else
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static text_encoding environment() = delete;
+
+  template <id _Id>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static bool environment_is() = delete;
+#    endif
+};
+
+template <>
+struct hash<text_encoding> {
+  size_t operator()(const text_encoding& __enc) const noexcept {
+    return std::hash<std::text_encoding::id>()(__enc.mib());
+  }
+};
+
+template <>
+inline constexpr bool ranges::enable_borrowed_range<text_encoding::aliases_view> = true;
+
+_LIBCPP_END_NAMESPACE_STD
+
+#  endif // _LIBCPP_STD_VER >= 26
+
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+
+#endif // _LIBCPP_TEXT_ENCODING

@@ -15,6 +15,7 @@
 #include <__utility/forward.h>
 #include <clocale> // std::lconv
 #include <ctype.h>
+#include <langinfo.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,6 +47,7 @@ namespace __locale {
 #define _LIBCPP_MESSAGES_MASK LC_MESSAGES_MASK
 #define _LIBCPP_ALL_MASK LC_ALL_MASK
 #define _LIBCPP_LC_ALL LC_ALL
+#define _LIBCPP_NL_CODESET CODESET
 
 using __locale_t _LIBCPP_NODEBUG = ::locale_t;
 #if defined(_LIBCPP_BUILDING_LIBRARY)
@@ -180,7 +182,11 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
   return ::mbsrtowcs_l(__dest, __src, __len, __ps, __loc);
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
-#endif   // _LIBCPP_BUILDING_LIBRARY
+
+inline _LIBCPP_HIDE_FROM_ABI const char* __nl_langinfo_l(decltype(_LIBCPP_NL_CODESET) __item, __locale_t __loc) {
+  return ::nl_langinfo_l(__item, __loc);
+}
+#endif // _LIBCPP_BUILDING_LIBRARY
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgcc-compat")

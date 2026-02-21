@@ -75,9 +75,6 @@ module;
 #  if __has_include(<stdfloat>)
 #    error "please update the header information for <stdfloat> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<stdfloat>)
-#  if __has_include(<text_encoding>)
-#    error "please update the header information for <text_encoding> in headers_not_available in utils/libcxx/header_information.py"
-#  endif // __has_include(<text_encoding>)
 #endif // _WIN32
 
 export module std.compat;

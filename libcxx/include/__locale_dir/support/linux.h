@@ -17,6 +17,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctype.h>
+#include <langinfo.h>
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>
@@ -57,6 +58,7 @@ struct __locale_guard {
 #define _LIBCPP_MESSAGES_MASK LC_MESSAGES_MASK
 #define _LIBCPP_ALL_MASK LC_ALL_MASK
 #define _LIBCPP_LC_ALL LC_ALL
+#define _LIBCPP_NL_CODESET CODESET
 
 using __locale_t _LIBCPP_NODEBUG = ::locale_t;
 
@@ -211,7 +213,14 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
   return std::mbsrtowcs(__dest, __src, __len, __ps);
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
-#endif   // _LIBCPP_BUILDING_LIBRARY
+
+// TODO: Android has langinfo.h but not nl_langinfo_l
+#  ifndef __ANDROID__
+inline _LIBCPP_HIDE_FROM_ABI const char* __nl_langinfo_l(decltype(_LIBCPP_NL_CODESET) __item, __locale_t __loc) {
+  return ::nl_langinfo_l(__item, __loc);
+}
+#  endif
+#endif // _LIBCPP_BUILDING_LIBRARY
 
 #ifndef _LIBCPP_COMPILER_GCC // GCC complains that this can't be always_inline due to C-style varargs
 _LIBCPP_HIDE_FROM_ABI
