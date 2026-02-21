@@ -1875,6 +1875,10 @@ module std [system] {
       header "__ranges/chunk_by_view.h"
       export std.functional.bind_back
     }
+    module chunk_view {
+      header "__ranges/chunk_view.h"
+      export std.functional.bind_back
+    }
     module common_view                    { header "__ranges/common_view.h" }
     module concepts                       { header "__ranges/concepts.h" }
     module container_compatible_range     { header "__ranges/container_compatible_range.h" }

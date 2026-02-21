@@ -714,6 +714,7 @@ set(files
   __ranges/all.h
   __ranges/as_rvalue_view.h
   __ranges/chunk_by_view.h
+  __ranges/chunk_view.h
   __ranges/common_view.h
   __ranges/concepts.h
   __ranges/container_compatible_range.h
