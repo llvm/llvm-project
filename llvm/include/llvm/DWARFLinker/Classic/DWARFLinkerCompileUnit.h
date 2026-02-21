@@ -131,7 +131,13 @@ public:
 
   unsigned getUniqueID() const { return ID; }
 
-  void createOutputDIE() { NewUnit.emplace(OrigUnit.getUnitDIE().getTag()); }
+  void createOutputDIE() {
+    NewUnit.emplace(OrigUnit.getUnitDIE().getTag());
+
+    // Propogate the section offset so that DIEntry can compute
+    // correct absolute offsets for DW_FORM_ref_addr references
+    NewUnit->setDebugSectionOffset(StartOffset);
+  }
 
   DIE *getOutputUnitDIE() const {
     if (NewUnit)
@@ -159,7 +165,11 @@ public:
 
   uint64_t getStartOffset() const { return StartOffset; }
   uint64_t getNextUnitOffset() const { return NextUnitOffset; }
-  void setStartOffset(uint64_t DebugInfoSize) { StartOffset = DebugInfoSize; }
+  void setStartOffset(uint64_t DebugInfoSize) {
+    StartOffset = DebugInfoSize;
+    if (NewUnit)
+      NewUnit->setDebugSectionOffset(DebugInfoSize);
+  }
 
   std::optional<uint64_t> getLowPc() const { return LowPc; }
   uint64_t getHighPc() const { return HighPc; }
