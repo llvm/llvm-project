@@ -2571,7 +2571,10 @@ DEF_TRAVERSE_STMT(DeferStmt, {})
 DEF_TRAVERSE_STMT(IfStmt, {})
 DEF_TRAVERSE_STMT(IndirectGotoStmt, {})
 DEF_TRAVERSE_STMT(LabelStmt, {})
-DEF_TRAVERSE_STMT(AttributedStmt, {})
+DEF_TRAVERSE_STMT(AttributedStmt, {
+  for (auto *I : S->getAttrs())
+    TRY_TO(getDerived().TraverseAttr(const_cast<clang::Attr *>(I)));
+})
 DEF_TRAVERSE_STMT(NullStmt, {})
 DEF_TRAVERSE_STMT(ObjCAtCatchStmt, {})
 DEF_TRAVERSE_STMT(ObjCAtFinallyStmt, {})
