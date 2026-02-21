@@ -663,20 +663,97 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
                  DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl)> {
   let summary = "AMDGPU DPP operation";
   let description = [{
-    This operation represents DPP functionality in a GPU program.
-     DPP provides the following operations:
-    - Full crossbar in a group of four (`quad_perm`)
-    - Wavefront shift left by one lane (`wave_shl`)
-    - Wavefront shift right by one lane (`wave_shr`)
-    - Wavefront rotate right by one lane (`wave_ror`)
-    - Wavefront rotate left by one lane (`wave_rol`)
-    - Row shift left by 1–15 lanes (`row_shl`)
-    - Row shift right by 1–15 lanes (`row_shr`)
-    - Row rotate right by 1–15 lanes (`row_ror`)
-    - Reverse within a row (`row_mirror`)
-    - Reverse within a half-row (`row_half_mirror`)
-    - Broadcast the 15th lane of each row to the next row (`row_bcast`)
-    - Broadcast lane 31 to rows 2 and 3 (`row_bcast`)
+    The `amdgpu.dpp` op performs a Data Parallel Primitives (DPP) lane
+    permutation on a source value within a wavefront. Each lane reads its
+    source data from another lane according to the permutation mode specified
+    by `kind`. DPP operates at dword (32-bit) granularity: sub-32-bit types
+    (e.g., f16, i16) are packed into an i32 during lowering, permuted, and
+    extracted back.
+
+    - Lanes are organized into rows of 16.
+    - A Wave64 wavefront has 4 rows of 16 lanes each: row 0 = lanes 0-15,
+      row 1 = lanes 16-31, row 2 = lanes 32-47, row 3 = lanes 48-63.
+    - Similarly, a Wave32 wavefront has two rows of 16 lanes each, organized
+      in the same fashion.
+    - Each row is divided into 4 banks of 4 consecutive lanes: bank 0 =
+      lanes 0-3, bank 1 = lanes 4-7, bank 2 = lanes 8-11, bank 3 =
+      lanes 12-15 (lane numbers shown for row 0; add 16/32/48 for other rows).
+
+    The `kind` attribute selects the permutation. Some modes require a
+    `permArgument`; others take no argument.
+
+    Quad permutation:
+    - `quad_perm([a, b, c, d])`: Full permute within each group of 4
+      consecutive lanes (a quad). Each element is in [0, 3] and selects which
+      lane within the quad to read from. Lane 4k+i reads from lane 4k+perm[i].
+      For example, `quad_perm([1, 0, 3, 2])` swaps adjacent pairs within
+      every quad.
+
+    Row shifts and rotates (operate within each 16-lane row independently):
+    - `row_shl(N)`: Shift left by N (1-15) within the row. Lane n reads from
+      lane (n % 16) + N in the same row. Lanes where the source index exceeds
+      15 are out of bounds (see `bound_ctrl`).
+    - `row_shr(N)`: Shift right by N (1-15) within the row. Lane n reads from
+      lane (n % 16) - N in the same row. Lanes where the source index is
+      negative are out of bounds.
+    - `row_ror(N)`: Rotate right by N (1-15) within the row. Lane n reads from
+      lane ((n % 16) - N) mod 16 in the same row. Always in bounds.
+
+    Wavefront shifts and rotates (not available on RDNA):
+    - `wave_shl`: Shift left by 1. Lane n reads from lane n + 1. The last lane
+      in the wavefront is out of bounds.
+    - `wave_shr`: Shift right by 1. Lane n reads from lane n - 1. Lane 0 is
+      out of bounds.
+    - `wave_rol`: Rotate left by 1. Lane n reads from lane (n + 1) mod W, where
+      W is the wavefront size.
+    - `wave_ror`: Rotate right by 1. Lane n reads from lane (n - 1) mod W, where
+      W is the wavefront size.
+
+    Row mirrors:
+    - `row_mirror`: Reverse lanes within each 16-lane row. Lane n reads from
+      lane 15 - (n % 16) within its row.
+    - `row_half_mirror`: Reverse within each 8-lane half-row. Lane n reads
+      from lane 7 - (n % 8) within its half-row.
+
+    Row broadcasts (not available on RDNA):
+    - `row_bcast_15`: Lane 15 of each row broadcasts to all lanes of the next
+      row. Lanes in row 0 are not affected (retain `old`).
+    - `row_bcast_31`: Lane 31 broadcasts to all lanes in rows 2 and 3.
+      Lanes in rows 0 and 1 are not affected (retain `old`).
+
+    Example:
+    ```mlir
+    // Swap adjacent pairs within each quad (lanes 0<->1, 2<->3, etc.)
+    %0 = amdgpu.dpp %old %src quad_perm( [1, 0, 3, 2] ) : i32
+
+    // Shift right by 1 lane within each 16-lane row.
+    // bound_ctrl=true -> lanes that would read past the row return 0.
+    // row_mask=0x5 (0b0101) -> only rows 0 and 2 apply the shift;
+    // rows 1 and 3 pass through %old unchanged.
+    %1 = amdgpu.dpp %old %src row_shr( 0x1 : i32 )
+      { row_mask = 0x5 : i32, bound_ctrl = true } : f32
+
+    // Rotate left across the full wavefront by 1 lane
+    %2 = amdgpu.dpp %old %src wave_rol : i32
+    ```
+
+    Operands:
+    * `$old`: Fallback value. Lanes that are masked off by `row_mask` /
+      `bank_mask` retain `old`. For lanes with an out-of-bounds source, behavior
+      depends on `bound_ctrl`.
+    * `$src`: Source value to be permuted across lanes.
+    * `$kind`: A `#amdgpu.dpp_perm` enum selecting the permutation mode.
+    * `$permArgument`: Mode-specific argument. Required for `quad_perm`
+      (array of 4 integers in [0, 3]) and `row_shl`/`row_shr`/`row_ror`
+      (integer in [1, 15]). Absent for all other modes.
+    * `$row_mask` (default 0xf): 4-bit mask controlling which rows write
+      results. Bit i enables row i (bit 0 = lanes 0-15, bit 1 = lanes
+      16-31, etc.). Disabled lanes retain `old`.
+    * `$bank_mask` (default 0xf): 4-bit mask controlling which banks write
+      results. Bit i enables bank i (bit 0 = lanes 0-3, 16-19, etc. across all rows).
+      Disabled lanes retain `old`.
+    * `$bound_ctrl` (default false): When false, out of bounds lanes retain
+      `old`. When true, out-of-bounds lanes receive zero.
   }];
   let results = (outs AnyType:$result);
   let assemblyFormat = [{
