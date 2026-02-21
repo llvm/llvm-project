@@ -9270,7 +9270,13 @@ public:
   };
 
   /// Compute the mangling number context for a lambda expression or
-  /// block literal. Also return the extra mangling decl if any.
+  /// block literal that appears in the specified declaration context in
+  /// consideration of the current expression evaluation and template
+  /// instantiation contexts. If the mangling context requires external linkage,
+  /// then a mangling number context is returned in the first tuple
+  /// element. If the mangling context is non-normal (specialized for
+  /// lambda and block types relative to other entities), the overriding
+  /// declaration is returned in the second tuple element.
   ///
   /// \param DC - The DeclContext containing the lambda expression or
   /// block literal.
