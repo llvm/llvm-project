@@ -157,9 +157,18 @@ static LinalgOp replaceWithMatmulVariant(RewriterBase &rewriter, GenericOp op,
 // contains casts that cannot be represented (e.g. output casts or mixed
 // signedness), return std::nullopt.
 static std::optional<TypeFn> getCastTypeForMatmulLikeOp(GenericOp genericOp) {
+  // In addition to output casts, matmul-like named ops cannot represent bit
+  // level casts.
+  bool foundBitCastOp = false;
   bool foundCastForMatmulOutput = false;
   SmallVector<TypeFn> castTyFns;
   genericOp.getBody()->walk([&](CastOpInterface castOp) {
+    // Early return if we encounter a bitcast op.
+    if (isa<arith::BitcastOp>(castOp)) {
+      foundBitCastOp = true;
+      return WalkResult::interrupt();
+    }
+
     // Collect forward slice of the cast op to check if it is for the matmul
     // output.
     SetVector<Operation *> forwardSlice;
@@ -186,7 +195,7 @@ static std::optional<TypeFn> getCastTypeForMatmulLikeOp(GenericOp genericOp) {
     return WalkResult::advance();
   });
 
-  if (foundCastForMatmulOutput)
+  if (foundBitCastOp || foundCastForMatmulOutput)
     return std::nullopt;
 
   if (!castTyFns.empty()) {
