@@ -22050,6 +22050,21 @@ TEST_F(FormatTest, CatchExceptionReferenceBinding) {
 TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
   auto Style = getLLVMStyle();
   Style.AlignArrayOfStructures = FormatStyle::AIAS_Right;
+
+  verifyFormat("auto foo = Items{\n"
+               "    Section{0, barbar()},\n"
+               "    Section{\n"
+               "        1,\n"
+               "        boo(),\n"
+               "    }\n"
+               "};",
+               Style);
+
+  verifyFormat("auto foo = Items{\n"
+               "    Section{0, bar()}\n"
+               "};",
+               Style);
+
   verifyNoCrash("f({\n"
                 "table({}, table({{\"\", false}}, {}))\n"
                 "});",
@@ -22125,11 +22140,14 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
 
   verifyFormat(
       "test demo[] = {\n"
-      "    { 7,    23,\n"
-      "     \"hello world i am a very long line that really, in any\"\n"
-      "     \"just world, ought to be split over multiple lines\"},\n"
-      "    {-1, 93463,                                  \"world\"},\n"
-      "    {56,     5,                                     \"!!\"}\n"
+      "    {\n"
+      "        7,\n"
+      "        23,\n"
+      "        \"hello world i am a very long line that really, in any\"\n"
+      "        \"just world, ought to be split over multiple lines\"\n"
+      "    },\n"
+      "    {-1, 93463, \"world\"},\n"
+      "    {56,     5,    \"!!\"}\n"
       "};",
       Style);
 
@@ -22156,7 +22174,7 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
                "  {\"x\", \"dy\"}},\n"
                "                                {  {\"dx\"},  \"Mul\", {\"dy\""
                ", \"sign\"}},\n"
-               "});",
+               "                            });",
                Style);
 
   Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
@@ -22170,17 +22188,16 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
 
   Style.ColumnLimit = 0;
   verifyFormat(
-      "test demo[] = {\n"
-      "    {56,    23, \"hello world i am a very long line that really, "
-      "in any just world, ought to be split over multiple lines\"},\n"
-      "    {-1, 93463,                                                  "
-      "                                                 \"world\"},\n"
-      "    { 7,     5,                                                  "
-      "                                                    \"!!\"},\n"
-      "};",
-      "test demo[] = {{56, 23, \"hello world i am a very long line "
-      "that really, in any just world, ought to be split over multiple "
-      "lines\"},{-1, 93463, \"world\"},{7, 5, \"!!\"},};",
+      R"(
+test demo[] = {
+    {56,    23, "hello world i am a very long line that really, in any just world, ought to be split over multiple lines"},
+    {-1, 93463,                                                                                                   "world"},
+    { 7,     5,                                                                                                      "!!"},
+};
+)",
+      R"(
+test demo[] = {{56, 23, "hello world i am a very long line that really, in any just world, ought to be split over multiple lines"},{-1, 93463, "world"},{7, 5, "!!"},};
+)",
       Style);
 
   Style.ColumnLimit = 80;
@@ -22209,25 +22226,33 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
   verifyFormat("demo = std::array<\n"
                "    struct test, 3>{\n"
                "    test{\n"
-               "         56,    23,\n"
-               "         \"hello \"\n"
-               "         \"world i \"\n"
-               "         \"am a very \"\n"
-               "         \"long line \"\n"
-               "         \"that \"\n"
-               "         \"really, \"\n"
-               "         \"in any \"\n"
-               "         \"just \"\n"
-               "         \"world, \"\n"
-               "         \"ought to \"\n"
-               "         \"be split \"\n"
-               "         \"over \"\n"
-               "         \"multiple \"\n"
-               "         \"lines\"},\n"
-               "    test{-1, 93463,\n"
-               "         \"world\"},\n"
-               "    test{ 7,     5,\n"
-               "         \"!!\"   },\n"
+               "        56,\n"
+               "        23,\n"
+               "        \"hello \"\n"
+               "        \"world i \"\n"
+               "        \"am a very \"\n"
+               "        \"long line \"\n"
+               "        \"that \"\n"
+               "        \"really, \"\n"
+               "        \"in any \"\n"
+               "        \"just \"\n"
+               "        \"world, \"\n"
+               "        \"ought to \"\n"
+               "        \"be split \"\n"
+               "        \"over \"\n"
+               "        \"multiple \"\n"
+               "        \"lines\"\n"
+               "    },\n"
+               "    test{\n"
+               "        -1,\n"
+               "        93463,\n"
+               "        \"world\"\n"
+               "    },\n"
+               "    test{\n"
+               "        7,\n"
+               "        5,\n"
+               "        \"!!\"\n"
+               "    },\n"
                "};",
                "demo = std::array<struct test, 3>{test{56, 23, \"hello world "
                "i am a very long line that really, in any just world, ought "
@@ -22238,8 +22263,10 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
   Style = getLLVMStyleWithColumns(50);
   Style.AlignArrayOfStructures = FormatStyle::AIAS_Right;
   verifyFormat("static A x = {\n"
-               "    {{init1, init2, init3, init4},\n"
-               "     {init1, init2, init3, init4}}\n"
+               "    {\n"
+               "        {init1, init2, init3, init4},\n"
+               "        {init1, init2, init3, init4}\n"
+               "    }\n"
                "};",
                Style);
   // TODO: Fix the indentations below when this option is fully functional.
@@ -22255,10 +22282,13 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
   Style.ColumnLimit = 100;
   verifyFormat(
       "test demo[] = {\n"
-      "    {56,    23,\n"
-      "     \"hello world i am a very long line that really, in any just world"
-      ", ought to be split over \"\n"
-      "     \"multiple lines\"  },\n"
+      "    {\n"
+      "        56,\n"
+      "        23,\n"
+      "        \"hello world i am a very long line that really, in any just "
+      "world, ought to be split over \"\n"
+      "        \"multiple lines\"\n"
+      "    },\n"
       "    {-1, 93463, \"world\"},\n"
       "    { 7,     5,    \"!!\"},\n"
       "};",
@@ -22275,8 +22305,10 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
                "    { 7,     5,    \"!!\"}\n"
                "};\n"
                "static A x = {\n"
-               "    {{init1, init2, init3, init4},\n"
-               "     {init1, init2, init3, init4}}\n"
+               "    {\n"
+               "        {init1, init2, init3, init4},\n"
+               "        {init1, init2, init3, init4}\n"
+               "    }\n"
                "};",
                Style);
   Style.ColumnLimit = 100;
@@ -22294,37 +22326,559 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
                "    {234,     5,  1, \"gracious\"}  // fourth line\n"
                "};",
                Style);
+
+  verifyFormat(R"(
+test demo[] = {
+    {
+        56,
+        "hello world i am a very long line that really, in any just world, ought to be split over "
+        "multiple lines",
+        23
+    },
+    {-1, "world", 93463},
+    { 7,    "!!",     5},
+};
+)",
+               R"(
+test demo[] = {{56, "hello world i am a very long line that really, in any just world, ought to be split over multiple lines", 23},{-1, "world", 93463},{7, "!!", 5},};
+)",
+               Style);
+
+  verifyFormat(R"(
+test demo[] = {
+    {-1, "world", 93463},
+    {
+        56,
+        "hello world i am a very long line that really, in any just world, ought to be split over "
+        "multiple lines",
+        23
+    },
+    { 7,    "!!",     5},
+};
+)",
+               R"(
+test demo[] = {{-1, "world", 93463},{56, "hello world i am a very long line that really, in any just world, ought to be split over multiple lines", 23},{7, "!!", 5},};
+)",
+               Style);
+}
+
+TEST_F(FormatTest, AlignArrayOfStructuresGithubIssues) {
+
+  // https://github.com/llvm/llvm-project/issues/148833
+  // Summary: Aligning across macro statments doesn't work
+  //
+  // Notes: It looks like we never even see the tokens in the else branch, so
+  // its not the alignment code thats busted, but the code that collects tokens
+  // to format. See UnwrappedLineParser::addUnwrappedLine for where the tokens
+  // are initially added.
+  FormatStyle Style = getLLVMStyleWithColumns(120);
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+
+  // verifyFormat("const struct reg we_WANT[] = {\n"
+  //              "#if A\n"
+  //              "    {abc,    0, format, code},\n"
+  //              "    {abcd2,  0, format, code},\n"
+  //              "#else\n"
+  //              "    {aaaa,   0, why,    why },\n"
+  //              "    {whyyyy, 0, why,    why },\n"
+  //              "#endif\n"
+  //              "}\n",
+  //              Style);
+
+  // FIXED - https://github.com/llvm/llvm-project/issues/138151
+  // Summary: Aligning arrays of structures with UseTab: AlignWithSpaces does
+  // not use spaces to align columns
+  Style = getGoogleStyle();
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+  Style.UseTab = FormatStyle::UT_AlignWithSpaces;
+  Style.IndentWidth = 4;
+  Style.TabWidth = 4;
+
   verifyFormat(
-      "test demo[] = {\n"
-      "    {56,\n"
-      "     \"hello world i am a very long line that really, in any just world"
-      ", ought to be split over \"\n"
-      "     \"multiple lines\",    23},\n"
-      "    {-1,      \"world\", 93463},\n"
-      "    { 7,         \"!!\",     5},\n"
-      "};",
-      "test demo[] = {{56, \"hello world i am a very long line "
-      "that really, in any just world, ought to be split over multiple "
-      "lines\", 23},{-1, \"world\", 93463},{7, \"!!\", 5},};",
+      "std::vector<Foo> foos = {\n"
+      "\t{LONG_NAME,                0,                        i | j},\n"
+      "\t{LONG_NAME,                0,                        i | j},\n"
+      "\t{LONGER_NAME,              0,                        i | j},\n"
+      "\t{LONGER_NAME,              0,                        i    },\n"
+      "\t{THIS_IS_A_VERY_LONG_NAME, 0,                        j    },\n"
+      "\t{LONGER_NAME,              THIS_IS_A_VERY_LONG_NAME, i    },\n"
+      "\t{LONG_NAME,                THIS_IS_A_VERY_LONG_NAME, j    }\n"
+      "};\n",
       Style);
+
+  // FIXED - https://github.com/llvm/llvm-project/issues/85937
+  // Summary: Macro escaped newlines are not aligned properly when both
+  // AlignEscapedNewLines and AlignArrayOfStructures are used
+  Style = getLLVMStyleWithColumns(80);
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+
+  verifyFormat(R"(
+#define DEFINE_COMMAND_PROCESS_TABLE(Enum)      \
+  const STExample TCommand::EXPL_MAIN[] = {     \
+      {Enum::GetName(),      " shows help "  }, \
+      {Enum::GetAttribute(), " do something "}, \
+      {Enum::GetState(),     " do whatever " }, \
+  };
+)",
+               Style);
+
+  // FIXED - https://github.com/llvm/llvm-project/issues/76803
+  // Summary: constructor member initializer list indentation is weird
+  Style = getLLVMStyle();
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+  Style.IndentWidth = 4;
+
+  verifyFormat("struct Foo {\n"
+               "    explicit Foo()\n"
+               "        : data({\n"
+               "              {1, 2},\n"
+               "          }) {}\n"
+               "    const std::map<int, int> data;\n"
+               "};\n",
+               Style);
+
+  // FIXED - https://github.com/llvm/llvm-project/issues/76803
+  // Summary: Array opening and closing brackets are busted even when
+  // AlignArrayOfStructures is None
+  Style = getLLVMStyleWithColumns(100);
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_None;
+  Style.IndentWidth = 2;
+  Style.TabWidth = 2;
+  Style.ContinuationIndentWidth = 2;
+  Style.UseTab = FormatStyle::UT_AlignWithSpaces;
+  Style.AlignAfterOpenBracket = true;
+  Style.BreakAfterOpenBracketBracedList = true;
+  Style.BreakAfterOpenBracketFunction = true;
+  Style.BreakAfterOpenBracketIf = true;
+  Style.BreakBeforeCloseBracketBracedList = true;
+  Style.BreakBeforeCloseBracketFunction = true;
+  Style.BreakBeforeCloseBracketIf = true;
+  Style.BinPackArguments = false;
+  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
+  Style.AlignOperands = FormatStyle::OAS_DontAlign;
+  Style.BreakBeforeTernaryOperators = true;
+  Style.BreakBeforeBraces = FormatStyle::BS_Attach;
+  Style.BinPackArguments = false;
+  Style.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+
+  verifyFormat(
+      R"(VBuffer Renderer::allocateBuffer(AllocateBufferInfo const& info) {
+	VBuffer buf;
+	VkSharingMode sharingMode
+		= info.sharedQueueFamilies.size() >= 2 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE;
+	CHECKVK(vmaCreateBuffer(
+		allocator_,
+		(VkBufferCreateInfo const[1]){{
+			.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+			.size = info.size,
+			.usage = info.bufferUsage,
+			.sharingMode = sharingMode,
+			.queueFamilyIndexCount = uint32_t(info.sharedQueueFamilies.size()),
+			.pQueueFamilyIndices = info.sharedQueueFamilies.data(),
+		}},
+		(VmaAllocationCreateInfo const[1]){{
+			.flags = info.allocationFlags,
+			.usage = info.memoryUsage,
+			.requiredFlags = info.requiredMemoryPropertyFlags,
+		}},
+		&buf.buffer,
+		&buf.allocation,
+		info.allocationInfo
+	));
+	return buf;
+}
+)",
+      Style);
+
+  // FIXED - https://github.com/llvm/llvm-project/issues/76717
+  // Summary: Braced initializer of struct is badly aligned
+  Style = getLLVMStyle();
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+  Style.ColumnLimit = 0;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
+  Style.IndentWidth = 4;
+
+  verifyFormat("static const auto messages = Messages{\n"
+               "    {\n"
+               "        Code::X,\n"
+               "        {\n"
+               "            \"data1\",\n"
+               "            Code::Y,\n"
+               "        },\n"
+               "    },\n"
+               "    {\n"
+               "        Code::Y,\n"
+               "        {\n"
+               "            \"data1\",\n"
+               "            Code::Z,\n"
+               "        },\n"
+               "    },\n"
+               "};\n"
+               "static const Entries entry = {\n"
+               "    { \"data\",   Code::X },\n"
+               "    { \"data1\",  Code::Y },\n"
+               "    { \"data12\", Code::Z },\n"
+               "};\n",
+               Style);
+
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Right;
+
+  verifyFormat("static const auto messages = Messages{\n"
+               "    {\n"
+               "        Code::X,\n"
+               "        {\n"
+               "            \"data1\",\n"
+               "            Code::Y,\n"
+               "        },\n"
+               "    },\n"
+               "    {\n"
+               "        Code::Y,\n"
+               "        {\n"
+               "            \"data1\",\n"
+               "            Code::Z,\n"
+               "        },\n"
+               "    },\n"
+               "};\n"
+               "static const Entries entry = {\n"
+               "    {   \"data\", Code::X },\n"
+               "    {  \"data1\", Code::Y },\n"
+               "    { \"data12\", Code::Z },\n"
+               "};\n",
+               Style);
+
+  // FIXED - https://github.com/llvm/llvm-project/issues/55477
+  // Summary: tabs are not used for the indentation of the closing brace in the
+  // following when UseTab: ForContinuationAndIndentation
+  Style = getLLVMStyle();
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Right;
+  Style.AllowAllArgumentsOnNextLine = false;
+  Style.ContinuationIndentWidth = 1;
+  Style.IndentWidth = 1;
+  Style.Standard = FormatStyle::LS_Latest;
+  Style.TabWidth = 1;
+  Style.LineEnding = FormatStyle::LE_LF;
+  Style.UseTab = FormatStyle::UT_ForContinuationAndIndentation;
+
+  verifyFormat("void func() {\n"
+               "\tstd::vector<std::pair<int, std::string>> in = {\n"
+               "\t\t{13, \"13\"},\n"
+               "\t\t{14, \"14\"},\n"
+               "\t\t{ 1,  \"1\"}\n"
+               "\t};\n"
+               "}\n",
+               Style);
+
+  // FIXED - https://github.com/llvm/llvm-project/issues/55154
+  // Summary: inconsistent use of tabs vs spaces for indentation when both
+  // SpaceBeforeCpp11BracedList is true and UseTab is
+  // ForContinuationAndIndentation
+  Style = getLLVMStyle();
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+  Style.IndentWidth = 4;
+  Style.SpaceBeforeCpp11BracedList = true;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
+  Style.TabWidth = 4;
+  Style.UseTab = FormatStyle::UT_ForContinuationAndIndentation;
+
+  verifyFormat("static type arr[] = {\n"
+               "\t{ fun(arg), arg },\n"
+               "\t{ fun(arg), arg },\n"
+               "\t{ fun(arg), arg },\n"
+               "\t{ fun(arg), arg },\n"
+               "\t{ fun(arg), arg },\n"
+               "\t{ fun(arg), arg },\n"
+               "\t{ fun(arg), arg },\n"
+               "};\n",
+               Style);
+
+  // FIXED - https://github.com/llvm/llvm-project/issues/53442
+  // Summary: alignment of columns does not use spaces when UseTab:
+  // AlignWithSpaces
+  Style = getLLVMStyle();
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+  Style.IndentWidth = 4;
+  Style.TabWidth = 4;
+  Style.UseTab = FormatStyle::UT_AlignWithSpaces;
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+
+  verifyFormat(
+      "const map<string, int64_t> CoreReport::GetGameCountersRolloverInfo()\n"
+      "{\n"
+      "\tstatic map<string, int64_t> counterRolloverInfo{\n"
+      "\t\t{\"CashIn\",                   4000000000},\n"
+      "\t\t{\"CoinIn\",                   4000000000},\n"
+      "\t\t{\"QuantityMultiProgressive\", 65535     },\n"
+      "\t};\n"
+      "\treturn counterRolloverInfo;\n"
+      "}\n",
+      Style);
+
+  // FIXED - https://github.com/llvm/llvm-project/issues/55485
+  // Summary: Alignment with tabs is busted
+  Style = getLLVMStyleWithColumns(120);
+  Style.AlignAfterOpenBracket = true;
+  Style.BreakAfterOpenBracketBracedList = true;
+  Style.BreakAfterOpenBracketFunction = true;
+  Style.BreakAfterOpenBracketIf = true;
+  Style.BreakBeforeCloseBracketBracedList = true;
+  Style.BreakBeforeCloseBracketFunction = true;
+  Style.BreakBeforeCloseBracketIf = true;
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Right;
+  Style.BinPackArguments = false;
+  Style.ContinuationIndentWidth = 1;
+  Style.IndentWidth = 1;
+  Style.TabWidth = 1;
+  Style.LineEnding = FormatStyle::LE_LF;
+  Style.UseTab = FormatStyle::UT_ForContinuationAndIndentation;
+
+  verifyFormat("void func() {\n"
+               "\tint array = {\n"
+               "\t\t//\n"
+               "\t\t10,\n"
+               "\t\t20\n"
+               "\t};\n"
+               "\tmy_class a{\n"
+               "\t\t//\n"
+               "\t\t10,\n"
+               "\t\t20\n"
+               "\t};\n"
+               "}\n",
+               Style);
+
+  // FIXED - https://github.com/llvm/llvm-project/issues/55477
+  // Summary: Alignment doesn't use tabs
+  Style = getLLVMStyleWithColumns(120);
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Right;
+  Style.AllowAllArgumentsOnNextLine = false;
+  Style.ContinuationIndentWidth = 1;
+  Style.IndentWidth = 1;
+  Style.TabWidth = 1;
+  Style.LineEnding = FormatStyle::LE_LF;
+  Style.UseTab = FormatStyle::UT_ForContinuationAndIndentation;
+
+  verifyFormat("void func() {\n"
+               "\tstd::vector<std::pair<int, std::string>> in = {\n"
+               "\t\t{13, \" 13 \"},\n"
+               "\t\t{14, \" 14 \"},\n"
+               "\t\t{ 1,  \" 1 \"}\n"
+               "\t};\n"
+               "}\n",
+               Style);
+
+  // FIXED - https://github.com/llvm/llvm-project/issues/54354
+  // Summary: The comment and array elements do not get indented consistently
+  // Note: The issue does not contain any settings, so these are a guess
+  Style = getLLVMStyleWithColumns(120);
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Right;
+  Style.AllowAllArgumentsOnNextLine = false;
+  Style.ContinuationIndentWidth = 1;
+  Style.TabWidth = 1;
+  Style.LineEnding = FormatStyle::LE_LF;
+  Style.UseTab = FormatStyle::UT_ForContinuationAndIndentation;
+  verifyFormat("std::vector<std::tuple<int, int, int>> input{\n"
+               "\t// Node a, node b, weightage\n"
+               "\t{1, 2, 5},\n"
+               "\t{1, 3, 3},\n"
+               "\t{1, 4, 7},\n"
+               "\t{2, 4, 3},\n"
+               "\t{2, 5, 2},\n"
+               "\t{3, 4, 1},\n"
+               "\t{4, 5, 2}\n"
+               "};\n",
+               Style);
+
+  // FIXED - https://github.com/llvm/llvm-project/issues/51766
+  // Summary: Single row does not have it's columns aligned nicely (they bin
+  // pack??)
+  Style = getMicrosoftStyle(FormatStyle::LK_Cpp);
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Right;
+  verifyFormat("LZ4F_preferences_t prefs = {\n"
+               "    {\n"
+               "        LZ4F_default,\n"
+               "        LZ4F_blockLinked,\n"
+               "        LZ4F_contentChecksumEnabled,\n"
+               "        LZ4F_frame,\n"
+               "        cbSource,\n"
+               "        0,\n"
+               "        LZ4F_blockChecksumEnabled,\n"
+               "    }\n"
+               "};\n",
+               Style);
+
+  verifyFormat("class Derived : Base\n"
+               "{\n"
+               "    void foo()\n"
+               "    {\n"
+               "#ifndef _MSC_VER\n"
+               "        const Object object = {\n"
+               "            {\n"
+               "                SOME_MACRO,\n"
+               "                { opt,\n"
+               "                  someMember }\n"
+               "            }\n"
+               "        };\n"
+               "#else\n"
+               "#endif\n"
+               "    }\n"
+               "};\n",
+               Style);
+
+  // FIXED - https://github.com/llvm/llvm-project/issues/86439
+  // Summary: Alignment is messed up (appears to be because UseTab: Always)
+  Style = getMicrosoftStyle(FormatStyle::LK_Cpp);
+  Style.IndentWidth = 4;
+  Style.ColumnLimit = 100;
+  Style.SpacesBeforeTrailingComments = 2;
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  Style.BinPackArguments = false;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Style.PackConstructorInitializers = FormatStyle::PCIS_Never;
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+  Style.AlignAfterOpenBracket = true;
+  Style.BreakAfterOpenBracketBracedList = true;
+  Style.BreakAfterOpenBracketFunction = true;
+  Style.BreakAfterOpenBracketIf = true;
+  Style.BreakBeforeCloseBracketBracedList = true;
+  Style.BreakBeforeCloseBracketFunction = true;
+  Style.BreakBeforeCloseBracketIf = true;
+  Style.ContinuationIndentWidth = 4;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
+  Style.UseTab = FormatStyle::UT_Always;
+
+  verifyFormat("struct test demo[] = {\n"
+               "\t{ 56, 23,\t \" hello \" },\n"
+               "\t{ -1, 93463, \" world \" },\n"
+               "\t{ 7,  5,\t \" !!\"\t   }\n"
+               "};\n",
+               Style);
+
+  // FIXED - https://github.com/llvm/llvm-project/issues/142072
+  // Summary: Closing brace is aligned with the return, but should be with the
+  // opening brace
+  Style = getLLVMStyleWithColumns(100);
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  Style.IndentWidth = 4;
+  Style.UseTab = FormatStyle::UT_Never;
+  Style.AlignAfterOpenBracket = true;
+  Style.BreakAfterOpenBracketBracedList = true;
+  Style.BreakAfterOpenBracketFunction = true;
+  Style.BreakAfterOpenBracketIf = true;
+  Style.BreakBeforeCloseBracketBracedList = false;
+  Style.BreakBeforeCloseBracketFunction = false;
+  Style.BreakBeforeCloseBracketIf = false;
+  Style.BinPackArguments = false;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Style.ContinuationIndentWidth = 4;
+  Style.PenaltyReturnTypeOnItsOwnLine = 1000;
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+  Style.PointerAlignment = FormatStyle::PAS_Left;
+  verifyFormat("int test(int argc, char* argv[])\n"
+               "{\n"
+               "    return dispatch(\n"
+               "        argc,\n"
+               "        argv,\n"
+               "        {\n"
+               "            {\"option1\", &test_option1},\n"
+               "            {\"option2\", &test_option2}\n"
+               "        });\n"
+               "}\n",
+               Style);
+
+  // FIXED - https://github.com/llvm/llvm-project/issues/89721
+  // Summary: Really long columns mess up alignment for subsequent columns
+  Style = getLLVMStyleWithColumns(120);
+  Style.AlignAfterOpenBracket = true;
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+  Style.AlignConsecutiveAssignments.Enabled = true;
+  Style.BinPackArguments = false;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Style.BreakArrays = true;
+  Style.TabWidth = 4;
+  Style.UseTab = FormatStyle::UT_Never;
+  verifyFormat(R"(const auto test_cases = std::vector<test_configuration>{
+    {
+        "some_long_path/some_folder/111111/some_other_folder/another_folder/11111111/"
+        "some_really_long_file_name.bin",
+        111e1,
+        -1111111,
+        1.11e1,
+        1111111
+    },
+    {
+        "some_long_path/some_folder/111111/some_other_folder/another_folder/11111111/"
+        "some_other_really_long_file_name.bin",
+        111e1,
+        11.1111e1,
+        11.11e1,
+        11111111.11
+    },
+    {"short_folder/folder/other/some_long_file_name.bin", 111111111.111111, 1111111, 111111, 111111},
+};
+)",
+               Style);
+
+  verifyFormat(R"(const auto test_cases = std::vector<test_configuration>{
+    {
+        .filepath_suffix = "some_long_path/some_folder/111111/some_other_folder/another_folder/11111111/"
+                           "some_really_long_file_name.bin",
+        .double1         = 111e1,
+        .double2         = -1111111,
+        .double3         = 1.11e1,
+        .double4         = 1111111,
+    },
+    {
+        .filepath_suffix = "some_long_path/some_folder/111111/some_other_folder/another_folder/11111111/"
+                           "some_other_really_long_file_name.bin",
+        .double1         = 111e1,
+        .double2         = 11.1111e1,
+        .double3         = 11.11e1,
+        .double4         = 11111111.11,
+    },
+    {
+        .filepath_suffix = "short_folder/folder/other/some_long_file_name.bin",
+        .double1         = 111111111.111111,
+        .double2         = 1111111,
+        .double3         = 111111,
+        .double4         = 111111,
+    },
+};
+)",
+               Style);
 }
 
 TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
   auto Style = getLLVMStyle();
   Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
-  /* FIXME: This case gets misformatted.
-  verifyFormat("auto foo = Items{\n"
-               "    Section{0, bar(), },\n"
-               "    Section{1, boo()  }\n"
-               "};",
-               Style);
-  */
   verifyFormat("auto foo = Items{\n"
                "    Section{\n"
-               "            0, bar(),\n"
-               "            }\n"
+               "        0,\n"
+               "        bar(),\n"
+               "    },\n"
+               "    Section{1, boo()}\n"
                "};",
                Style);
+
+  verifyFormat("auto foo = Items{\n"
+               "    Section{\n"
+               "        0,\n"
+               "        bar(),\n"
+               "    }\n"
+               "};",
+               Style);
+
+  verifyFormat("auto foo = Items{\n"
+               "    Section{0, barbar()},\n"
+               "    Section{1, boo()   }\n"
+               "};",
+               Style);
+
+  verifyFormat("auto foo = Items{\n"
+               "    Section{0, bar()}\n"
+               "};",
+               Style);
+
   verifyFormat("struct test demo[] = {\n"
                "    {56, 23,    \"hello\"},\n"
                "    {-1, 93463, \"world\"},\n"
@@ -22383,15 +22937,36 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
                "    {7,  5,     \"!!\"   }\n"
                "};",
                Style);
+
   verifyFormat(
       "test demo[] = {\n"
-      "    {7,  23,\n"
-      "     \"hello world i am a very long line that really, in any\"\n"
-      "     \"just world, ought to be split over multiple lines\"},\n"
-      "    {-1, 93463, \"world\"                                 },\n"
-      "    {56, 5,     \"!!\"                                    }\n"
+      "    {\n"
+      "        7,\n"
+      "        23,\n"
+      "        \"hello world i am a very long line that really, in any\"\n"
+      "        \"just world, ought to be split over multiple lines\"\n"
+      "    },\n"
+      "    {-1, 93463, \"world\"},\n"
+      "    {56, 5,     \"!!\"   }\n"
       "};",
       Style);
+
+  Style = getLLVMStyleWithColumns(100);
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+  verifyFormat(R"(test demo[] = {
+    {
+        4,
+        5,
+        [](int a) {
+          const char *x = "djdjdjdjdjdjdjdjdjdj";
+          return x;
+        }
+    },
+    {6,     -442,    "asd"                                     },
+    {14124, 4324234, "dasdoijoiajsodijoaisjodijoaisjdoijoaijsd"}
+};
+)",
+               Style);
 
   verifyNoCrash("Foo f[] = {\n"
                 "    [0] = { 1, },\n"
@@ -22416,7 +22991,7 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
                "\"dy\"}   },\n"
                "                                {{\"dx\"},   \"Mul\",  "
                "{\"dy\", \"sign\"}},\n"
-               "});",
+               "                            });",
                Style);
 
   verifyNoCrash(
@@ -22450,17 +23025,12 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
 
   Style.ColumnLimit = 0;
   verifyFormat(
-      "test demo[] = {\n"
-      "    {56, 23,    \"hello world i am a very long line that really, in any "
-      "just world, ought to be split over multiple lines\"},\n"
-      "    {-1, 93463, \"world\"                                               "
-      "                                                   },\n"
-      "    {7,  5,     \"!!\"                                                  "
-      "                                                   },\n"
-      "};",
-      "test demo[] = {{56, 23, \"hello world i am a very long line "
-      "that really, in any just world, ought to be split over multiple "
-      "lines\"},{-1, 93463, \"world\"},{7, 5, \"!!\"},};",
+      R"(test demo[] = {
+    {56, 23,    "hello world i am a very long line that really, in any just world, ought to be split over multiple lines"},
+    {-1, 93463, "world"                                                                                                  },
+    {7,  5,     "!!"                                                                                                     },
+};)",
+      R"(test demo[] = {{56, 23, "hello world i am a very long line that really, in any just world, ought to be split over multiple lines"},{-1, 93463, "world"},{7, 5, "!!"},};)",
       Style);
 
   Style.ColumnLimit = 80;
@@ -22496,25 +23066,33 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
       "demo = std::array<\n"
       "    struct test, 3>{\n"
       "    test{\n"
-      "         56, 23,\n"
-      "         \"hello \"\n"
-      "         \"world i \"\n"
-      "         \"am a very \"\n"
-      "         \"long line \"\n"
-      "         \"that \"\n"
-      "         \"really, \"\n"
-      "         \"in any \"\n"
-      "         \"just \"\n"
-      "         \"world, \"\n"
-      "         \"ought to \"\n"
-      "         \"be split \"\n"
-      "         \"over \"\n"
-      "         \"multiple \"\n"
-      "         \"lines\"},\n"
-      "    test{-1, 93463,\n"
-      "         \"world\"},\n"
-      "    test{7,  5,\n"
-      "         \"!!\"   },\n"
+      "        56,\n"
+      "        23,\n"
+      "        \"hello \"\n"
+      "        \"world i \"\n"
+      "        \"am a very \"\n"
+      "        \"long line \"\n"
+      "        \"that \"\n"
+      "        \"really, \"\n"
+      "        \"in any \"\n"
+      "        \"just \"\n"
+      "        \"world, \"\n"
+      "        \"ought to \"\n"
+      "        \"be split \"\n"
+      "        \"over \"\n"
+      "        \"multiple \"\n"
+      "        \"lines\"\n"
+      "    },\n"
+      "    test{\n"
+      "        -1,\n"
+      "        93463,\n"
+      "        \"world\"\n"
+      "    },\n"
+      "    test{\n"
+      "        7,\n"
+      "        5,\n"
+      "        \"!!\"\n"
+      "    },\n"
       "};",
       format("demo = std::array<struct test, 3>{test{56, 23, \"hello world "
              "i am a very long line that really, in any just world, ought "
@@ -22526,17 +23104,22 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
   Style = getLLVMStyleWithColumns(50);
   Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
   verifyFormat("static A x = {\n"
-               "    {{init1, init2, init3, init4},\n"
-               "     {init1, init2, init3, init4}}\n"
+               "    {\n"
+               "        {init1, init2, init3, init4},\n"
+               "        {init1, init2, init3, init4}\n"
+               "    }\n"
                "};",
                Style);
   Style.ColumnLimit = 100;
   verifyFormat(
       "test demo[] = {\n"
-      "    {56, 23,\n"
-      "     \"hello world i am a very long line that really, in any just world"
-      ", ought to be split over \"\n"
-      "     \"multiple lines\"  },\n"
+      "    {\n"
+      "        56,\n"
+      "        23,\n"
+      "        \"hello world i am a very long line that really, in any just "
+      "world, ought to be split over \"\n"
+      "        \"multiple lines\"\n"
+      "    },\n"
       "    {-1, 93463, \"world\"},\n"
       "    {7,  5,     \"!!\"   },\n"
       "};",
@@ -27625,50 +28208,83 @@ TEST_F(FormatTest, AlignArrayOfStructuresLeftAlignmentNonSquare) {
   // crashes, these tests assert that the array is not changed but will
   // also act as regression tests for when it is properly fixed
   verifyFormat("struct test demo[] = {\n"
-               "    {1, 2},\n"
+               "    {1, 2   },\n"
                "    {3, 4, 5},\n"
                "    {6, 7, 8}\n"
                "};",
                Style);
   verifyFormat("struct test demo[] = {\n"
                "    {1, 2, 3, 4, 5},\n"
-               "    {3, 4, 5},\n"
-               "    {6, 7, 8}\n"
+               "    {3, 4, 5      },\n"
+               "    {6, 7, 8      }\n"
                "};",
                Style);
   verifyFormat("struct test demo[] = {\n"
-               "    {1, 2, 3, 4, 5},\n"
-               "    {3, 4, 5},\n"
+               "    {1, 2, 3, 4, 5         },\n"
+               "    {3, 4, 5               },\n"
                "    {6, 7, 8, 9, 10, 11, 12}\n"
                "};",
                Style);
   verifyFormat("struct test demo[] = {\n"
-               "    {1, 2, 3},\n"
-               "    {3, 4, 5},\n"
+               "    {1, 2, 3               },\n"
+               "    {3, 4, 5               },\n"
                "    {6, 7, 8, 9, 10, 11, 12}\n"
                "};",
                Style);
 
   verifyFormat("S{\n"
-               "    {},\n"
-               "    {},\n"
+               "    {    },\n"
+               "    {    },\n"
                "    {a, b}\n"
                "};",
                Style);
   verifyFormat("S{\n"
-               "    {},\n"
-               "    {},\n"
+               "    {    },\n"
+               "    {    },\n"
                "    {a, b},\n"
                "};",
                Style);
   verifyFormat("void foo() {\n"
                "  auto thing = test{\n"
                "      {\n"
-               "       {13},\n"
-               "       {something}, // A\n"
+               "          {13},\n"
+               "          {something}, // A\n"
                "      }\n"
                "  };\n"
                "}",
+               Style);
+  verifyFormat("test demo::a[] = {\n"
+               "    {abcde, foo(\"something\"), extra_bit},\n"
+               "    {\n"
+               "        ab,\n"
+               "        foo(\"something else\"),\n"
+               "    },\n"
+               "    {\n"
+               "        abc,\n"
+               "        foo(\"\"),\n"
+               "    }\n"
+               "};",
+               Style);
+  verifyFormat("struct test demo = {\n"
+               "    {abcde, foo(\"something\"),     extra_bit},\n"
+               "    {ab,    foo(\"something else\")          },\n"
+               "    {abc,   foo(\"\")                        }\n"
+               "};",
+               Style);
+  verifyFormat("struct test demo = {\n"
+               "    {abcde, foo(\"something\"),      extra_bit},\n"
+               "    {ab,    foo(\"something else\")           },\n"
+               "    {ad,    foo(\"something else\"), extra    },\n"
+               "    {abc,   foo(\"\")                         }\n"
+               "};",
+               Style);
+  verifyFormat("struct test demo = {\n"
+               "    {\n"
+               "        very_long_identifier_number_1,\n"
+               "        shorter_identifier,\n"
+               "        very_long_identifier_number_3,\n"
+               "    }\n"
+               "};",
                Style);
 }
 
@@ -27682,50 +28298,83 @@ TEST_F(FormatTest, AlignArrayOfStructuresRightAlignmentNonSquare) {
   // crashes, these tests assert that the array is not changed but will
   // also act as regression tests for when it is properly fixed
   verifyFormat("struct test demo[] = {\n"
-               "    {1, 2},\n"
+               "    {1, 2   },\n"
                "    {3, 4, 5},\n"
                "    {6, 7, 8}\n"
                "};",
                Style);
   verifyFormat("struct test demo[] = {\n"
                "    {1, 2, 3, 4, 5},\n"
-               "    {3, 4, 5},\n"
-               "    {6, 7, 8}\n"
+               "    {3, 4, 5      },\n"
+               "    {6, 7, 8      }\n"
                "};",
                Style);
   verifyFormat("struct test demo[] = {\n"
-               "    {1, 2, 3, 4, 5},\n"
-               "    {3, 4, 5},\n"
+               "    {1, 2, 3, 4,  5        },\n"
+               "    {3, 4, 5               },\n"
                "    {6, 7, 8, 9, 10, 11, 12}\n"
                "};",
                Style);
   verifyFormat("struct test demo[] = {\n"
-               "    {1, 2, 3},\n"
-               "    {3, 4, 5},\n"
+               "    {1, 2, 3               },\n"
+               "    {3, 4, 5               },\n"
                "    {6, 7, 8, 9, 10, 11, 12}\n"
                "};",
                Style);
 
   verifyFormat("S{\n"
-               "    {},\n"
-               "    {},\n"
+               "    {    },\n"
+               "    {    },\n"
                "    {a, b}\n"
                "};",
                Style);
   verifyFormat("S{\n"
-               "    {},\n"
-               "    {},\n"
+               "    {    },\n"
+               "    {    },\n"
                "    {a, b},\n"
                "};",
                Style);
   verifyFormat("void foo() {\n"
                "  auto thing = test{\n"
                "      {\n"
-               "       {13},\n"
-               "       {something}, // A\n"
+               "          {13},\n"
+               "          {something}, // A\n"
                "      }\n"
                "  };\n"
                "}",
+               Style);
+  verifyFormat("test demo::a[] = {\n"
+               "    {abcde, foo(\"something\"), extra_bit},\n"
+               "    {\n"
+               "        ab,\n"
+               "        foo(\"something else\"),\n"
+               "    },\n"
+               "    {\n"
+               "        abc,\n"
+               "        foo(\"\"),\n"
+               "    }\n"
+               "};",
+               Style);
+  verifyFormat("struct test demo = {\n"
+               "    {abcde,      foo(\"something\"), extra_bit},\n"
+               "    {   ab, foo(\"something else\")           },\n"
+               "    {  abc,               foo(\"\")           }\n"
+               "};",
+               Style);
+  verifyFormat("struct test demo = {\n"
+               "    {abcde,      foo(\"something\"), extra_bit},\n"
+               "    {   ab, foo(\"something else\")           },\n"
+               "    {   ad, foo(\"something else\"),     extra},\n"
+               "    {  abc,               foo(\"\")           }\n"
+               "};",
+               Style);
+  verifyFormat("struct test demo = {\n"
+               "    {\n"
+               "        very_long_identifier_number_1,\n"
+               "        shorter_identifier,\n"
+               "        very_long_identifier_number_3,\n"
+               "    }\n"
+               "};",
                Style);
 }
 

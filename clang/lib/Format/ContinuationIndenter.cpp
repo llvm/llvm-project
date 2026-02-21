@@ -343,12 +343,15 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
                                    Current.closesBlockOrBlockTypeList(Style))) {
     return false;
   }
+
   // The opening "{" of a braced list has to be on the same line as the first
-  // element if it is nested in another braced init list or function call.
+  // element if it is nested in another braced init list or function call,
+  // unless it is an array initializer that needs to be aligned.
   if (!Current.MustBreakBefore && Previous.is(tok::l_brace) &&
       Previous.isNot(TT_DictLiteral) && Previous.is(BK_BracedInit) &&
       Previous.Previous &&
-      Previous.Previous->isOneOf(tok::l_brace, tok::l_paren, tok::comma)) {
+      Previous.Previous->isOneOf(tok::l_brace, tok::l_paren, tok::comma) &&
+      !Previous.opensAlignedArrayInitializer(Style)) {
     return false;
   }
   // This prevents breaks like:
@@ -452,6 +455,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   }
   if (CurrentState.BreakBeforeClosingBrace &&
       (Current.closesBlockOrBlockTypeList(Style) ||
+       Current.closesAlignedArrayInitializer(Style) ||
        (Current.is(tok::r_brace) && Current.MatchingParen &&
         Current.isBlockIndentedInitRBrace(Style)))) {
     return true;
@@ -857,6 +861,13 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       Previous.is(TT_InheritanceColon)) {
     CurrentState.NoLineBreak = true;
   }
+
+  // If this is the first element of an array initializer that needs to have
+  // it's columns aligned, do not allow any further elements to break the line.
+  // If we need to break the line for some reason, then this token must be
+  // placed on its own line as well, and the current state should be discarded.
+  if (Previous.opensAlignedArrayInitializer(Style) && Style.ColumnLimit > 0)
+    CurrentState.NoLineBreak = true;
 
   if (Current.is(TT_SelectorName) && !CurrentState.ObjCSelectorNameFound) {
     unsigned MinIndent =
@@ -2055,12 +2066,35 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
       NewIndent = CurrentState.LastSpace + Style.ContinuationIndentWidth;
     }
     const FormatToken *NextNonComment = Current.getNextNonComment();
-    AvoidBinPacking = EndsInComma || Current.is(TT_DictLiteral) ||
-                      Style.isProto() || !Style.BinPackArguments ||
-                      (NextNonComment && NextNonComment->isOneOf(
-                                             TT_DesignatedInitializerPeriod,
-                                             TT_DesignatedInitializerLSquare));
+
+    bool AlignedArrayInitializer = Current.opensAlignedArrayInitializer(Style);
+
+    AvoidBinPacking =
+        EndsInComma || Current.is(TT_DictLiteral) || Style.isProto() ||
+        !Style.BinPackArguments ||
+        (NextNonComment &&
+         NextNonComment->isOneOf(TT_DesignatedInitializerPeriod,
+                                 TT_DesignatedInitializerLSquare)) ||
+        (Style.AlignArrayOfStructures != FormatStyle::AIAS_None &&
+         State.Line->Type == LineType::LT_ArrayOfStructInitializer) ||
+        AlignedArrayInitializer;
+
     BreakBeforeParameter = EndsInComma;
+
+    // If this is an array initializer that will have it's columns aligned, and
+    // the value is too long to fit on a line, we break before each parameter
+    // because trying to align columns across multiple lines has too many corner
+    // cases to do properly. This way, either we align columns all on the same
+    // line, or we don't align columns at all because they are all on their own
+    // line.
+    if (AlignedArrayInitializer && Style.ColumnLimit) {
+      const unsigned LengthToMatchingParen =
+          getLengthToMatchingParen(Current, State.Stack) + State.Column;
+
+      if (LengthToMatchingParen > getColumnLimit(State))
+        BreakBeforeParameter = true;
+    }
+
     if (Current.ParameterCount > 1)
       NestedBlockIndent = std::max(NestedBlockIndent, State.Column + 1);
   } else {

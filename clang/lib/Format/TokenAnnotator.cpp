@@ -4320,13 +4320,17 @@ void TokenAnnotator::calculateArrayInitializerColumnList(
   if (Line.First == Line.Last)
     return;
   auto *CurrentToken = Line.First;
-  CurrentToken->ArrayInitializerLineStart = true;
   unsigned Depth = 0;
   while (CurrentToken && CurrentToken != Line.Last) {
     if (CurrentToken->is(tok::l_brace)) {
       CurrentToken->IsArrayInitializer = true;
       if (CurrentToken->Next)
         CurrentToken->Next->MustBreakBefore = true;
+
+      // Ensure the end brace of the outer array is on its own line
+      if (CurrentToken->MatchingParen)
+        CurrentToken->MatchingParen->MustBreakBefore = true;
+
       CurrentToken =
           calculateInitializerColumnList(Line, CurrentToken->Next, Depth + 1);
     } else {
@@ -4342,11 +4346,40 @@ FormatToken *TokenAnnotator::calculateInitializerColumnList(
       ++Depth;
     else if (CurrentToken->is(tok::r_brace))
       --Depth;
+
+    // Ensure each outer array element starts on its own line
+    if (Depth == 1 && CurrentToken->is(tok::comma)) {
+      auto *NextNonComment = CurrentToken->getNextNonComment();
+      if (NextNonComment)
+        NextNonComment->MustBreakBefore = true;
+    }
+
     if (Depth == 2 && CurrentToken->isOneOf(tok::l_brace, tok::comma)) {
       CurrentToken = CurrentToken->Next;
       if (!CurrentToken)
         break;
-      CurrentToken->StartsColumn = true;
+
+      // Right (closing) braces should not count as starting a column because
+      // they are aligned using separate logic.
+
+      // Note: This uses startsSequence() so that trailing comments are skipped
+      // when checking if the token after a comma/l-brace is a r_brace. We can't
+      // just ignore comments in general, because an inline comment with
+      // something else after it should still count as starting a column.
+      // IE:
+      //
+      //        { // a
+      //          4
+      //        }
+      //
+      //   vs.
+      //
+      //        { /* a */ 4 }
+      //
+      // In the first case, the comment does not start a column, but in the
+      // second it does.
+      CurrentToken->StartsColumn = !CurrentToken->startsSequence(tok::r_brace);
+
       CurrentToken = CurrentToken->Previous;
     }
     CurrentToken = CurrentToken->Next;
@@ -6304,7 +6337,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   // block-indented initialization list.
   if (Right.is(tok::r_brace)) {
     return Right.MatchingParen && (Right.MatchingParen->is(BK_Block) ||
-                                   (Right.isBlockIndentedInitRBrace(Style)));
+                                   Right.isBlockIndentedInitRBrace(Style) ||
+                                   Right.closesAlignedArrayInitializer(Style));
   }
 
   // We can break before r_paren if we're in a block indented context or
