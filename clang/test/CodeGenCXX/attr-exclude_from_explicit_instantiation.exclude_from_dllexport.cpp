@@ -14,7 +14,7 @@
 // GNU: ModuleID = {{.*}}exclude_from_dllexport.cpp
 // GNU: source_filename = {{.*}}exclude_from_dllexport.cpp
 
-#define EXCLUDE_FROM_EXPLICIT_INSTANTIATION __attribute__((exclude_from_explicit_instantiation))
+#define EXCLUDE_ATTR __attribute__((exclude_from_explicit_instantiation))
 
 template <class T>
 struct C {
@@ -24,13 +24,13 @@ struct C {
 
   // This will be instantiated implicitly as an exported function because it is
   // marked as dllexport explicitly.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION __declspec(dllexport) void to_be_exported_explicitly();
+  EXCLUDE_ATTR __declspec(dllexport) void to_be_exported_explicitly();
 
   // This will be instantiated implicitly but won't be exported.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void not_to_be_exported();
+  EXCLUDE_ATTR void not_to_be_exported();
 
   // This won't be instantiated.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void not_to_be_instantiated();
+  EXCLUDE_ATTR void not_to_be_instantiated();
 };
 
 template <class T> void C<T>::to_be_exported() {}
@@ -42,7 +42,7 @@ template <class T> void C<T>::not_to_be_instantiated() {}
 template <class T>
 struct __declspec(dllexport) D {
   // This will be exported if and only if no explicit instantiations are provided.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void to_be_exported_iff_no_explicit_instantiation();
+  EXCLUDE_ATTR void to_be_exported_iff_no_explicit_instantiation();
 };
 
 template <class T> void D<T>::to_be_exported_iff_no_explicit_instantiation() {}
@@ -56,10 +56,10 @@ struct E {
   // This will be instantiated by the VTable definition, regardless of
   // `exclude_from_explicit_instantiation`.
   // The dllexport attribute won't be inherited.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION virtual void to_be_instantiated();
+  EXCLUDE_ATTR virtual void to_be_instantiated();
 
   // This too, but will be exported by the member attribute.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION __declspec(dllexport) virtual void to_be_exported_explicitly();
+  EXCLUDE_ATTR __declspec(dllexport) virtual void to_be_exported_explicitly();
 };
 
 template <class T> void E<T>::to_be_exported() {}

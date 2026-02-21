@@ -14,7 +14,7 @@
 // GNU: ModuleID = {{.*}}exclude_from_dllimport.cpp
 // GNU: source_filename = {{.*}}exclude_from_dllimport.cpp
 
-#define EXCLUDE_FROM_EXPLICIT_INSTANTIATION __attribute__((exclude_from_explicit_instantiation))
+#define EXCLUDE_ATTR __attribute__((exclude_from_explicit_instantiation))
 
 template <class T>
 struct C {
@@ -24,13 +24,13 @@ struct C {
 
   // This will be instantiated implicitly as an imported function because it is
   // marked as dllimport explicitly.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION __declspec(dllimport) void to_be_imported_explicitly();
+  EXCLUDE_ATTR __declspec(dllimport) void to_be_imported_explicitly();
 
   // This will be instantiated implicitly but won't be imported.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void not_to_be_imported();
+  EXCLUDE_ATTR void not_to_be_imported();
 
   // This won't be instantiated.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void not_to_be_instantiated();
+  EXCLUDE_ATTR void not_to_be_instantiated();
 };
 
 template <class T> void C<T>::to_be_imported() {}
@@ -41,7 +41,7 @@ template <class T> void C<T>::not_to_be_instantiated() {}
 template <class T>
 struct __declspec(dllimport) D {
   // This will be imported if and only if no explicit instantiations are provided.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION void to_be_imported_iff_no_explicit_instantiation();
+  EXCLUDE_ATTR void to_be_imported_iff_no_explicit_instantiation();
 };
 
 template <class T> void D<T>::to_be_imported_iff_no_explicit_instantiation() {}
@@ -54,7 +54,7 @@ struct E {
   // functions regardless `exclude_from_explicit_instantiation`.
   // For the Itanium ABI: Emitting the VTable is suppressed by implicit
   // instantiation declaration so virtual member functions won't be instantiated.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION explicit E(int);
+  EXCLUDE_ATTR explicit E(int);
 
   // This constructor doesn't trigger the instantiation of the VTable.
   // In this case, declaration of virtual member functions are absent too.
@@ -66,10 +66,10 @@ struct E {
 
   // The body of this should be emitted if the VTable is instantiated, even if
   // the instantiation of this class template is declared with dllimport.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION virtual void to_be_instantiated();
+  EXCLUDE_ATTR virtual void to_be_instantiated();
 
   // The body of this shouldn't be emitted since that comes from an external DLL.
-  EXCLUDE_FROM_EXPLICIT_INSTANTIATION __declspec(dllimport) virtual void to_be_imported_explicitly();
+  EXCLUDE_ATTR __declspec(dllimport) virtual void to_be_imported_explicitly();
 
 };
 
