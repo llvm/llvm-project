@@ -2088,6 +2088,19 @@ For example:
     The first three options are mutually exclusive, and the remaining options
     describe more details of how the function behaves. The remaining options
     are invalid for "free"-type functions.
+
+    Calls to functions annotated with ``allockind`` are subject to allocation
+    elision: Calls to allocator functions can be removed, and the allocation
+    served from a "virtual" allocator instead. Notably, this is allowed even if
+    the allocator calls have side-effects. In other words, for each allocation
+    there is a non-deterministic choice between calling the allocator as usual,
+    or using a virtual, side-effect-free allocator instead.
+
+    If multiple allocation functions operate on the same allocation,
+    allocation elision is only allowed for pairs of "alloc" and "free" with the
+    same ``"alloc-family"`` attribute. For this purpose, a "realloc" call may
+    be decomposed into "alloc" and "free" operations, as long as at least one
+    of them will be elided.
 ``"alloc-variant-zeroed"="FUNCTION"``
     This attribute indicates that another function is equivalent to an allocator function,
     but returns zeroed memory. The function must have "zeroed" allocation behavior,
