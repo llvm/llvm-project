@@ -277,7 +277,7 @@ void ARMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     return;
   }
 
-  // Combine 2 GPRs from disassember into a GPRPair to match with instr def.
+  // Combine 2 GPRs from disassembler into a GPRPair to match with instr def.
   // ldrexd/strexd require even/odd GPR pair. To enforce this constraint,
   // a single GPRPair reg operand is used in the .td file to replace the two
   // GPRs. However, when decoding them, the two GRPs cannot be automatically

@@ -3543,7 +3543,7 @@ static SDValue promoteToConstantPool(const ARMTargetLowering *TLI,
   // size (implying the constant is no larger than 4 bytes).
   const Function &F = DAG.getMachineFunction().getFunction();
 
-  // We rely on this decision to inline being idemopotent and unrelated to the
+  // We rely on this decision to inline being idempotent and unrelated to the
   // use-site. We know that if we inline a variable at one use site, we'll
   // inline it elsewhere too (and reuse the constant pool entry). Fast-isel
   // doesn't know about this optimization, so bail out if it's enabled else
@@ -4985,7 +4985,7 @@ static bool isLowerSaturate(const SDValue LHS, const SDValue RHS,
 // pattern. This function tries to match one of these and will return a SSAT
 // node if successful.
 //
-// USAT works similarily to SSAT but bounds on the interval [0, k] where k + 1
+// USAT works similarly to SSAT but bounds on the interval [0, k] where k + 1
 // is a power of 2.
 static SDValue LowerSaturatingConditional(SDValue Op, SelectionDAG &DAG) {
   EVT VT = Op.getValueType();
@@ -7313,7 +7313,7 @@ static bool isVMOVNTruncMask(ArrayRef<int> M, EVT ToVT, bool rev) {
   if (NumElts != M.size())
     return false;
 
-  // Test if the Trunc can be convertable to a VMOVN with this shuffle. We are
+  // Test if the Trunc can be convertible to a VMOVN with this shuffle. We are
   // looking for patterns of:
   // !rev: 0 N/2 1 N/2+1 2 N/2+2 ...
   //  rev: N/2 0 N/2+1 1 N/2+2 2 ...
@@ -14924,7 +14924,7 @@ static SDValue PerformCMPZCombine(SDNode *N, SelectionDAG &DAG) {
 }
 
 static SDValue PerformCSETCombine(SDNode *N, SelectionDAG &DAG) {
-  // Fold away an unneccessary CMPZ/CSINC
+  // Fold away an unnecessary CMPZ/CSINC
   // CSXYZ A, B, C1 (CMPZ (CSINC 0, 0, C2, D), 0) ->
   // if C1==EQ -> CSXYZ A, B, C2, D
   // if C1==NE -> CSXYZ A, B, NOT(C2), D
@@ -15918,7 +15918,7 @@ static bool TryCombineBaseUpdate(struct BaseUpdateTarget &Target,
   //   intrinsics, so, likewise, there's nothing to do.
   // - generic load/store instructions: the alignment is specified as an
   //   explicit operand, rather than implicitly as the standard alignment
-  //   of the memory type (like the intrisics).  We need to change the
+  //   of the memory type (like the intrinsics).  We need to change the
   //   memory type to match the explicit alignment.  That way, we don't
   //   generate non-standard-aligned ARMISD::VLDx nodes.
   if (isa<LSBaseSDNode>(N)) {
@@ -16548,7 +16548,7 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
   if (FromVT.getVectorNumElements() % NumElements != 0)
     return SDValue();
 
-  // Test if the Trunc will be convertable to a VMOVN with a shuffle, and if so
+  // Test if the Trunc will be convertible to a VMOVN with a shuffle, and if so
   // use the VMOVN over splitting the store. We are looking for patterns of:
   // !rev: 0 N 1 N+1 2 N+2 ...
   //  rev: N 0 N+1 1 N+2 2 ...
@@ -16808,7 +16808,7 @@ static SDValue PerformVCVTCombine(SDNode *N, SelectionDAG &DAG,
     // These instructions only exist converting from f32 to i32. We can handle
     // smaller integers by generating an extra truncate, but larger ones would
     // be lossy. We also can't handle anything other than 2 or 4 lanes, since
-    // these intructions only support v2i32/v4i32 types.
+    // these instructions only support v2i32/v4i32 types.
     return SDValue();
   }
 
@@ -16949,7 +16949,7 @@ static SDValue PerformVMulVCTPCombine(SDNode *N, SelectionDAG &DAG,
     // These instructions only exist converting from i32 to f32. We can handle
     // smaller integers by generating an extra extend, but larger ones would
     // be lossy. We also can't handle anything other than 2 or 4 lanes, since
-    // these intructions only support v2i32/v4i32 types.
+    // these instructions only support v2i32/v4i32 types.
     return SDValue();
   }
 
@@ -18335,7 +18335,7 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
   if (!VT.isInteger())
       return SDValue();
 
-  // Fold away an unneccessary CMPZ/CMOV
+  // Fold away an unnecessary CMPZ/CMOV
   // CMOV A, B, C1, (CMPZ (CMOV 1, 0, C2, D), 0) ->
   // if C1==EQ -> CMOV A, B, C2, D
   // if C1==NE -> CMOV A, B, NOT(C2), D

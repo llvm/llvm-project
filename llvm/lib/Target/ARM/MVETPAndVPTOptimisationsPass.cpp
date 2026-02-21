@@ -858,7 +858,7 @@ bool MVETPAndVPTOptimisations::ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB) {
       if (MachineOperand *MO =
               Instr.findRegisterUseOperand(PrevVCMP->getOperand(0).getReg(),
                                            /*TRI=*/nullptr, /*isKill*/ true)) {
-        // If we come accross the instr that kills PrevVCMP's result, record it
+        // If we come across the instr that kills PrevVCMP's result, record it
         // so we can remove the kill flag later if we need to.
         PrevVCMPResultKiller = MO;
       }

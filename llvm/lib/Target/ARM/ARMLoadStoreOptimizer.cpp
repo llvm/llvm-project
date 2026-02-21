@@ -1577,7 +1577,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
   } else {
     MachineOperand &MO = MI->getOperand(0);
     // FIXME: post-indexed stores use am2offset_imm, which still encodes
-    // the vestigal zero-reg offset register. When that's fixed, this clause
+    // the vestigial zero-reg offset register. When that's fixed, this clause
     // can be removed entirely.
     if (isAM2 && NewOpc == ARM::STR_POST_IMM) {
       int Imm = ARM_AM::getAM2Opc(AddSub, abs(Offset), ARM_AM::no_shift);
@@ -2363,7 +2363,7 @@ bool ARMPreAllocLoadStoreOpt::RescheduleOps(
       if (NumMove == InstReorderLimit)
         break;
 
-      // Found a mergable instruction; save information about it.
+      // Found a mergeable instruction; save information about it.
       ++NumMove;
       LastOffset = Offset;
       LastBytes = Bytes;
@@ -2984,7 +2984,7 @@ static bool isPreIndex(MachineInstr &MI) {
 // could be easily converted to one where that was valid. For example converting
 // t2LDRi12 to t2LDRi8 for negative offsets. Works in conjunction with
 // AdjustBaseAndOffset below.
-static bool isLegalOrConvertableAddressImm(unsigned Opcode, int Imm,
+static bool isLegalOrConvertibleAddressImm(unsigned Opcode, int Imm,
                                            const TargetInstrInfo *TII,
                                            int &CodesizeEstimate) {
   if (isLegalAddressImm(Opcode, Imm, TII))
@@ -3042,7 +3042,7 @@ static void AdjustBaseAndOffset(MachineInstr *MI, Register NewBaseReg,
       ConvOpcode = ARM::t2STRBi8;
       break;
     default:
-      llvm_unreachable("Unhandled convertable opcode");
+      llvm_unreachable("Unhandled convertible opcode");
     }
     assert(isLegalAddressImm(ConvOpcode, OldOffset - Offset, TII) &&
            "Illegal Address Immediate after convert!");
@@ -3229,7 +3229,7 @@ bool ARMPreAllocLoadStoreOpt::DistributeIncrements(Register Base) {
     if (DT->dominates(BaseAccess, Use)) {
       SuccessorAccesses.insert(Use);
       unsigned BaseOp = getBaseOperandIndex(*Use);
-      if (!isLegalOrConvertableAddressImm(Use->getOpcode(),
+      if (!isLegalOrConvertibleAddressImm(Use->getOpcode(),
                                           Use->getOperand(BaseOp + 1).getImm() -
                                               IncrementOffset,
                                           TII, CodesizeEstimate)) {

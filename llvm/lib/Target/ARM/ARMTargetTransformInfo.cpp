@@ -540,7 +540,7 @@ InstructionCost ARMTTIImpl::getCFInstrCost(unsigned Opcode,
                                            const Instruction *I) const {
   if (CostKind == TTI::TCK_RecipThroughput &&
       (ST->hasNEON() || ST->hasMVEIntegerOps())) {
-    // FIXME: The vectorizer is highly sensistive to the cost of these
+    // FIXME: The vectorizer is highly sensitive to the cost of these
     // instructions, which suggests that it may be using the costs incorrectly.
     // But, for now, just make them free to avoid performance regressions for
     // vector targets.
@@ -2172,7 +2172,7 @@ ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     bool IsSigned = Opc == Intrinsic::fptosi_sat;
     auto LT = getTypeLegalizationCost(ICA.getArgTypes()[0]);
     EVT MTy = TLI->getValueType(DL, ICA.getReturnType());
-    // Check for the legal types, with the corect subtarget features.
+    // Check for the legal types, with the correct subtarget features.
     if ((ST->hasVFP2Base() && LT.second == MVT::f32 && MTy == MVT::i32) ||
         (ST->hasFP64() && LT.second == MVT::f64 && MTy == MVT::i32) ||
         (ST->hasFullFP16() && LT.second == MVT::f16 && MTy == MVT::i32))
@@ -2484,7 +2484,7 @@ static bool canTailPredicateInstruction(Instruction &I, int &ICmpCount) {
   // so is not tail predicated as per the condition above. In order to get the
   // same performance we treat min and max the same as an icmp for tailpred
   // purposes for the moment (we often rely on non-tailpred and higher VF's to
-  // pick more optimial instructions like VQDMULH. They need to be recognized
+  // pick more optimal instructions like VQDMULH. They need to be recognized
   // directly by the vectorizer).
   if (auto *II = dyn_cast<IntrinsicInst>(&I))
     if ((II->getIntrinsicID() == Intrinsic::smin ||
@@ -2778,7 +2778,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // innermost loop is often detrimental to performance. In these cases the loop
   // remainder gets unrolled into a series of compare-and-jump blocks, which in
   // deeply nested loops get executed multiple times, negating the benefits of
-  // LOB. This is particularly noticable when the loop trip count of the
+  // LOB. This is particularly noticeable when the loop trip count of the
   // innermost loop varies within the outer loop, such as in the case of
   // triangular matrix decompositions. In these cases we will prefer to not
   // unroll the innermost loop, with the intention for it to be executed as a

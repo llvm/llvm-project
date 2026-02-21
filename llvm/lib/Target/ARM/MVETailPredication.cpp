@@ -385,7 +385,7 @@ void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
   PHINode *Processed = Builder.CreatePHI(Ty, 2);
   Processed->addIncoming(Start, L->getLoopPreheader());
 
-  // Replace @llvm.get.active.mask() with the ARM specific VCTP intrinic, and
+  // Replace @llvm.get.active.mask() with the ARM specific VCTP intrinsic, and
   // thus represent the effect of tail predication.
   Builder.SetInsertPoint(ActiveLaneMask);
   ConstantInt *Factor = ConstantInt::get(cast<IntegerType>(Ty), VectorWidth);

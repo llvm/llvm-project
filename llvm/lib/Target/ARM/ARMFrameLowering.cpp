@@ -2473,7 +2473,7 @@ checkNumAlignedDPRCS2Regs(MachineFunction &MF, BitVector &SavedRegs) {
 
 bool ARMFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   // For CMSE entry functions, we want to save the FPCXT_NS immediately
-  // upon function entry (resp. restore it immmediately before return)
+  // upon function entry (resp. restore it immediately before return)
   if (STI.hasV8_1MMainlineOps() &&
       MF.getInfo<ARMFunctionInfo>()->isCmseNSEntryFunction())
     return false;
