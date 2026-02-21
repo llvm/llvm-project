@@ -657,12 +657,12 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimpleGPU) {
     ++NumBodiesGenerated;
 
     Builder.restoreIP(AllocIP);
-    PrivAI = Builder.CreateAlloca(F->arg_begin()->getType());
+    Type *PrivType = F->arg_begin()->getType();
+    PrivAI = Builder.CreateAlloca(PrivType);
     Builder.CreateStore(F->arg_begin(), PrivAI);
 
     Builder.restoreIP(CodeGenIP);
-    Value *PrivLoad =
-        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
+    Value *PrivLoad = Builder.CreateLoad(PrivType, PrivAI, "local.use");
     Value *Cmp = Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
     Instruction *ThenTerm, *ElseTerm;
     SplitBlockAndInsertIfThenElse(Cmp, CodeGenIP.getBlock()->getTerminator(),
@@ -788,12 +788,12 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
     ++NumBodiesGenerated;
 
     Builder.restoreIP(AllocIP);
-    PrivAI = Builder.CreateAlloca(F->arg_begin()->getType());
+    Type *PrivType = F->arg_begin()->getType();
+    PrivAI = Builder.CreateAlloca(PrivType);
     Builder.CreateStore(F->arg_begin(), PrivAI);
 
     Builder.restoreIP(CodeGenIP);
-    Value *PrivLoad =
-        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
+    Value *PrivLoad = Builder.CreateLoad(PrivType, PrivAI, "local.use");
     Value *Cmp = Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
     Instruction *ThenTerm, *ElseTerm;
     SplitBlockAndInsertIfThenElse(Cmp, CodeGenIP.getBlock()->getTerminator(),
@@ -1126,12 +1126,12 @@ TEST_F(OpenMPIRBuilderTest, ParallelIfCond) {
     ++NumBodiesGenerated;
 
     Builder.restoreIP(AllocIP);
-    PrivAI = Builder.CreateAlloca(F->arg_begin()->getType());
+    Type *PrivType = F->arg_begin()->getType();
+    PrivAI = Builder.CreateAlloca(PrivType);
     Builder.CreateStore(F->arg_begin(), PrivAI);
 
     Builder.restoreIP(CodeGenIP);
-    Value *PrivLoad =
-        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
+    Value *PrivLoad = Builder.CreateLoad(PrivType, PrivAI, "local.use");
     Value *Cmp = Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
     Instruction *ThenTerm, *ElseTerm;
     SplitBlockAndInsertIfThenElse(Cmp, &*Builder.GetInsertPoint(), &ThenTerm,
@@ -2029,9 +2029,9 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdCustomAligned) {
   IRBuilder<> Builder(BB);
   const int AlignmentValue = 32;
   llvm::BasicBlock *sourceBlock = Builder.GetInsertBlock();
-  AllocaInst *Alloc1 =
-      Builder.CreateAlloca(Builder.getPtrTy(), Builder.getInt64(1));
-  LoadInst *Load1 = Builder.CreateLoad(Alloc1->getAllocatedType(), Alloc1);
+  Type *Alloc1Ty = Builder.getPtrTy();
+  AllocaInst *Alloc1 = Builder.CreateAlloca(Alloc1Ty, Builder.getInt64(1));
+  LoadInst *Load1 = Builder.CreateLoad(Alloc1Ty, Alloc1);
   MapVector<Value *, Value *> AlignedVars;
   AlignedVars.insert({Load1, Builder.getInt64(AlignmentValue)});
 
@@ -2242,8 +2242,8 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdIf) {
   // Generation of if condition
   Builder.CreateStore(ConstantInt::get(Type::getInt32Ty(Ctx), 0U), Alloc1);
   Builder.CreateStore(ConstantInt::get(Type::getInt32Ty(Ctx), 1U), Alloc2);
-  LoadInst *Load1 = Builder.CreateLoad(Alloc1->getAllocatedType(), Alloc1);
-  LoadInst *Load2 = Builder.CreateLoad(Alloc2->getAllocatedType(), Alloc2);
+  LoadInst *Load1 = Builder.CreateLoad(Builder.getInt32Ty(), Alloc1);
+  LoadInst *Load2 = Builder.CreateLoad(Builder.getInt32Ty(), Alloc2);
 
   Value *IfCmp = Builder.CreateICmpNE(Load1, Load2);
 
@@ -2911,7 +2911,8 @@ TEST_F(OpenMPIRBuilderTest, MasterDirective) {
       Builder.restoreIP(AllocIP);
     else
       Builder.SetInsertPoint(&*(F->getEntryBlock().getFirstInsertionPt()));
-    PrivAI = Builder.CreateAlloca(F->arg_begin()->getType());
+    Type *PrivType = F->arg_begin()->getType();
+    PrivAI = Builder.CreateAlloca(PrivType);
     Builder.CreateStore(F->arg_begin(), PrivAI);
 
     llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
@@ -2925,8 +2926,7 @@ TEST_F(OpenMPIRBuilderTest, MasterDirective) {
     EntryBB = ThenBB->getUniquePredecessor();
 
     // simple instructions for body
-    Value *PrivLoad =
-        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
+    Value *PrivLoad = Builder.CreateLoad(PrivType, PrivAI, "local.use");
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
@@ -2994,7 +2994,8 @@ TEST_F(OpenMPIRBuilderTest, MaskedDirective) {
       Builder.restoreIP(AllocIP);
     else
       Builder.SetInsertPoint(&*(F->getEntryBlock().getFirstInsertionPt()));
-    PrivAI = Builder.CreateAlloca(F->arg_begin()->getType());
+    Type *PrivType = F->arg_begin()->getType();
+    PrivAI = Builder.CreateAlloca(PrivType);
     Builder.CreateStore(F->arg_begin(), PrivAI);
 
     llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
@@ -3008,8 +3009,7 @@ TEST_F(OpenMPIRBuilderTest, MaskedDirective) {
     EntryBB = ThenBB->getUniquePredecessor();
 
     // simple instructions for body
-    Value *PrivLoad =
-        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
+    Value *PrivLoad = Builder.CreateLoad(PrivType, PrivAI, "local.use");
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
@@ -3067,7 +3067,8 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
 
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
-  AllocaInst *PrivAI = Builder.CreateAlloca(F->arg_begin()->getType());
+  Type *PrivType = F->arg_begin()->getType();
+  AllocaInst *PrivAI = Builder.CreateAlloca(PrivType);
 
   auto BodyGenCB = [&](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
                        ArrayRef<InsertPointTy> DeallocIPs) {
@@ -3079,8 +3080,7 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
     // body begin
     Builder.restoreIP(CodeGenIP);
     Builder.CreateStore(F->arg_begin(), PrivAI);
-    Value *PrivLoad =
-        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
+    Value *PrivLoad = Builder.CreateLoad(PrivType, PrivAI, "local.use");
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
@@ -3321,8 +3321,8 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveThreads) {
 
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
-  AllocaInst *PrivAI =
-      Builder.CreateAlloca(F->arg_begin()->getType(), nullptr, "priv.inst");
+  Type *PrivType = F->arg_begin()->getType();
+  AllocaInst *PrivAI = Builder.CreateAlloca(PrivType, nullptr, "priv.inst");
 
   auto BodyGenCB = [&](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
                        ArrayRef<InsertPointTy> DeallocIPs) {
@@ -3332,8 +3332,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveThreads) {
 
     Builder.restoreIP(CodeGenIP);
     Builder.CreateStore(F->arg_begin(), PrivAI);
-    Value *PrivLoad =
-        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
+    Value *PrivLoad = Builder.CreateLoad(PrivType, PrivAI, "local.use");
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
@@ -3399,8 +3398,8 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveSimd) {
 
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
-  AllocaInst *PrivAI =
-      Builder.CreateAlloca(F->arg_begin()->getType(), nullptr, "priv.inst");
+  Type *PrivType = F->arg_begin()->getType();
+  AllocaInst *PrivAI = Builder.CreateAlloca(PrivType, nullptr, "priv.inst");
 
   auto BodyGenCB = [&](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
                        ArrayRef<InsertPointTy> DeallocIPs) {
@@ -3410,8 +3409,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveSimd) {
 
     Builder.restoreIP(CodeGenIP);
     Builder.CreateStore(F->arg_begin(), PrivAI);
-    Value *PrivLoad =
-        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
+    Value *PrivLoad = Builder.CreateLoad(PrivType, PrivAI, "local.use");
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
@@ -3516,7 +3514,8 @@ TEST_F(OpenMPIRBuilderTest, SingleDirective) {
       Builder.restoreIP(AllocIP);
     else
       Builder.SetInsertPoint(&*(F->getEntryBlock().getFirstInsertionPt()));
-    PrivAI = Builder.CreateAlloca(F->arg_begin()->getType());
+    Type *PrivType = F->arg_begin()->getType();
+    PrivAI = Builder.CreateAlloca(PrivType);
     Builder.CreateStore(F->arg_begin(), PrivAI);
 
     llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
@@ -3530,8 +3529,7 @@ TEST_F(OpenMPIRBuilderTest, SingleDirective) {
     EntryBB = ThenBB->getUniquePredecessor();
 
     // simple instructions for body
-    Value *PrivLoad =
-        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
+    Value *PrivLoad = Builder.CreateLoad(PrivType, PrivAI, "local.use");
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
@@ -3611,7 +3609,8 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveNowait) {
       Builder.restoreIP(AllocIP);
     else
       Builder.SetInsertPoint(&*(F->getEntryBlock().getFirstInsertionPt()));
-    PrivAI = Builder.CreateAlloca(F->arg_begin()->getType());
+    Type *PrivType = F->arg_begin()->getType();
+    PrivAI = Builder.CreateAlloca(PrivType);
     Builder.CreateStore(F->arg_begin(), PrivAI);
 
     llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
@@ -3625,8 +3624,7 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveNowait) {
     EntryBB = ThenBB->getUniquePredecessor();
 
     // simple instructions for body
-    Value *PrivLoad =
-        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
+    Value *PrivLoad = Builder.CreateLoad(PrivType, PrivAI, "local.use");
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
@@ -3734,7 +3732,8 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveCopyPrivate) {
       Builder.restoreIP(AllocIP);
     else
       Builder.SetInsertPoint(&*(F->getEntryBlock().getFirstInsertionPt()));
-    PrivAI = Builder.CreateAlloca(F->arg_begin()->getType());
+    Type *PrivType = F->arg_begin()->getType();
+    PrivAI = Builder.CreateAlloca(PrivType);
     Builder.CreateStore(F->arg_begin(), PrivAI);
 
     llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
@@ -3748,8 +3747,7 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveCopyPrivate) {
     EntryBB = ThenBB->getUniquePredecessor();
 
     // simple instructions for body
-    Value *PrivLoad =
-        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
+    Value *PrivLoad = Builder.CreateLoad(PrivType, PrivAI, "local.use");
     Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
   };
 
@@ -4686,11 +4684,11 @@ TEST_F(OpenMPIRBuilderTest, CreateTeams) {
     Builder.restoreIP(CodeGenIP);
     // Loading and storing captured pointer and values
     Builder.CreateStore(Val128, Local128);
-    Value *Val32 = Builder.CreateLoad(ValPtr32->getAllocatedType(), ValPtr32,
-                                      "bodygen.load32");
+    Value *Val32 =
+        Builder.CreateLoad(Builder.getInt32Ty(), ValPtr32, "bodygen.load32");
 
-    LoadInst *PrivLoad128 = Builder.CreateLoad(
-        Local128->getAllocatedType(), Local128, "bodygen.local.load128");
+    LoadInst *PrivLoad128 = Builder.CreateLoad(Builder.getInt128Ty(), Local128,
+                                               "bodygen.local.load128");
     Value *Cmp = Builder.CreateICmpNE(
         Val32, Builder.CreateTrunc(PrivLoad128, Val32->getType()));
     Instruction *ThenTerm, *ElseTerm;
@@ -7282,11 +7280,11 @@ TEST_F(OpenMPIRBuilderTest, CreateTask) {
     Builder.restoreIP(CodeGenIP);
     // Loading and storing captured pointer and values
     Builder.CreateStore(Val128, Local128);
-    Value *Val32 = Builder.CreateLoad(ValPtr32->getAllocatedType(), ValPtr32,
-                                      "bodygen.load32");
+    Value *Val32 =
+        Builder.CreateLoad(Builder.getInt32Ty(), ValPtr32, "bodygen.load32");
 
-    LoadInst *PrivLoad128 = Builder.CreateLoad(
-        Local128->getAllocatedType(), Local128, "bodygen.local.load128");
+    LoadInst *PrivLoad128 = Builder.CreateLoad(Builder.getInt128Ty(), Local128,
+                                               "bodygen.local.load128");
     Value *Cmp = Builder.CreateICmpNE(
         Val32, Builder.CreateTrunc(PrivLoad128, Val32->getType()));
     Instruction *ThenTerm, *ElseTerm;
@@ -7710,10 +7708,10 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskgroup) {
     Builder.restoreIP(CodeGenIP);
     // Loading and storing captured pointer and values
     InternalStoreInst = Builder.CreateStore(Val128, Local128);
-    InternalLoad32 = Builder.CreateLoad(ValPtr32->getAllocatedType(), ValPtr32,
-                                        "bodygen.load32");
+    InternalLoad32 =
+        Builder.CreateLoad(Builder.getInt32Ty(), ValPtr32, "bodygen.load32");
 
-    InternalLoad128 = Builder.CreateLoad(Local128->getAllocatedType(), Local128,
+    InternalLoad128 = Builder.CreateLoad(Builder.getInt128Ty(), Local128,
                                          "bodygen.local.load128");
     InternalIfCmp = Builder.CreateICmpNE(
         InternalLoad32,
@@ -7804,8 +7802,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskgroupWithTasks) {
     auto TaskBodyGenCB1 = [&](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
                               ArrayRef<InsertPointTy> DeallocIPs) {
       Builder.restoreIP(CodeGenIP);
-      LoadInst *LoadValue =
-          Builder.CreateLoad(Alloca64->getAllocatedType(), Alloca64);
+      LoadInst *LoadValue = Builder.CreateLoad(Builder.getInt64Ty(), Alloca64);
       Value *AddInst = Builder.CreateAdd(LoadValue, Builder.getInt64(64));
       Builder.CreateStore(AddInst, Alloca64);
       return Error::success();
@@ -7819,8 +7816,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskgroupWithTasks) {
     auto TaskBodyGenCB2 = [&](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
                               ArrayRef<InsertPointTy> DeallocIPs) {
       Builder.restoreIP(CodeGenIP);
-      LoadInst *LoadValue =
-          Builder.CreateLoad(Alloca32->getAllocatedType(), Alloca32);
+      LoadInst *LoadValue = Builder.CreateLoad(Builder.getInt32Ty(), Alloca32);
       Value *AddInst = Builder.CreateAdd(LoadValue, Builder.getInt32(32));
       Builder.CreateStore(AddInst, Alloca32);
       return Error::success();
