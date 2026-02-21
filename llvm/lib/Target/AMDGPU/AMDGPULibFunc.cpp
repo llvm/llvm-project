@@ -254,8 +254,11 @@ static constexpr ManglingRule manglingRules[] = {
 { "normalize"                       , {1},   {E_ANY}},
 { "popcount"                        , {1},   {E_ANY}},
 { "pow"                             , {1},   {E_ANY,E_COPY}},
+{ "__pow_fast"                      , {1},   {E_ANY,E_COPY}},
 { "pown"                            , {1},   {E_ANY,E_SETBASE_I32}},
+{ "__pown_fast"                     , {1},   {E_ANY,E_SETBASE_I32}},
 { "powr"                            , {1},   {E_ANY,E_COPY}},
+{ "__powr_fast"                     , {1},   {E_ANY,E_COPY}},
 { "prefetch"                        , {1},   {E_CONSTPTR_ANY,EX_SIZET}},
 { "radians"                         , {1},   {E_ANY}},
 { "recip"                           , {1},   {E_ANY}},
@@ -266,6 +269,7 @@ static constexpr ManglingRule manglingRules[] = {
 { "rhadd"                           , {1},   {E_ANY,E_COPY}},
 { "rint"                            , {1},   {E_ANY}},
 { "rootn"                           , {1},   {E_ANY,E_SETBASE_I32}},
+{ "__rootn_fast"                    , {1},   {E_ANY,E_SETBASE_I32}},
 { "rotate"                          , {1},   {E_ANY,E_COPY}},
 { "round"                           , {1},   {E_ANY}},
 { "rsqrt"                           , {1},   {E_ANY}},
@@ -1079,6 +1083,21 @@ Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {
   if (!fInfo.isCompatibleSignature(*M, F->getFunctionType()))
     return nullptr;
 
+  switch (fInfo.getId()) {
+  case AMDGPULibFunc::EI_POW_FAST:
+  case AMDGPULibFunc::EI_POWR_FAST:
+  case AMDGPULibFunc::EI_POWN_FAST:
+  case AMDGPULibFunc::EI_ROOTN_FAST:
+    // TODO: Remove this. This is not a real module flag used anywhere. This is
+    // a bringup hack so this transform is testable prior to the library
+    // functions existing.
+    if (!M->getModuleFlag("amdgpu-libcall-have-fast-pow"))
+      return nullptr;
+    break;
+  default:
+    break;
+  }
+
   return F;
 }
 
@@ -1157,6 +1176,8 @@ AMDGPULibFunc::AMDGPULibFunc(const AMDGPULibFunc &F) {
 AMDGPULibFunc &AMDGPULibFunc::operator=(const AMDGPULibFunc &F) {
   if (this == &F)
     return *this;
+
+  this->~AMDGPULibFunc();
   new (this) AMDGPULibFunc(F);
   return *this;
 }

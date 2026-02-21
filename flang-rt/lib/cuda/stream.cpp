@@ -29,6 +29,14 @@ int RTDECL(CUFSetDefaultStream)(cudaStream_t stream) {
 }
 
 cudaStream_t RTDECL(CUFGetDefaultStream)() { return defaultStream; }
+
+int RTDECL(CUFStreamSynchronize)(cudaStream_t stream) {
+  return cudaStreamSynchronize(stream);
+}
+
+int RTDECL(CUFStreamSynchronizeNull)() {
+  return cudaStreamSynchronize(RTNAME(CUFGetDefaultStream)());
+}
 }
 
 } // namespace Fortran::runtime::cuda

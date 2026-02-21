@@ -2307,6 +2307,7 @@ static void genFuseOp(Fortran::lower::AbstractConverter &converter,
   mlir::omp::LooprangeClauseOps looprangeClause;
   ClauseProcessor cp(converter, semaCtx, item->clauses);
   bool looprange = cp.processLooprange(stmtCtx, looprangeClause, count);
+  cp.processTODO<clause::Depth>(loc, llvm::omp::Directive::OMPD_fuse);
 
   llvm::SmallVector<mlir::Value> applyees;
   for (auto &child : eval.getNestedEvaluations()) {
