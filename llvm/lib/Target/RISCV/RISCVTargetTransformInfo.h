@@ -482,6 +482,8 @@ public:
     llvm_unreachable("unknown register class");
   }
 
+  bool canMacroFuseCmp() const override;
+
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) const override;
 

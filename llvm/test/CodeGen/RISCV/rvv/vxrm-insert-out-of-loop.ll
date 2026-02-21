@@ -155,402 +155,294 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64P670-LABEL: test1:
 ; RV64P670:       # %bb.0: # %entry
 ; RV64P670-NEXT:    csrwi vxrm, 0
-; RV64P670-NEXT:    blez a7, .LBB0_12
+; RV64P670-NEXT:    blez a7, .LBB0_9
 ; RV64P670-NEXT:  # %bb.1: # %for.cond1.preheader.lr.ph
-; RV64P670-NEXT:    blez a6, .LBB0_12
+; RV64P670-NEXT:    blez a6, .LBB0_9
 ; RV64P670-NEXT:  # %bb.2: # %for.cond1.preheader.us.preheader
-; RV64P670-NEXT:    addi sp, sp, -48
-; RV64P670-NEXT:    .cfi_def_cfa_offset 48
-; RV64P670-NEXT:    sd s0, 40(sp) # 8-byte Folded Spill
-; RV64P670-NEXT:    sd s1, 32(sp) # 8-byte Folded Spill
-; RV64P670-NEXT:    sd s2, 24(sp) # 8-byte Folded Spill
-; RV64P670-NEXT:    sd s3, 16(sp) # 8-byte Folded Spill
-; RV64P670-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
-; RV64P670-NEXT:    .cfi_offset s0, -8
-; RV64P670-NEXT:    .cfi_offset s1, -16
-; RV64P670-NEXT:    .cfi_offset s2, -24
-; RV64P670-NEXT:    .cfi_offset s3, -32
-; RV64P670-NEXT:    .cfi_offset s4, -40
-; RV64P670-NEXT:    addi s1, a7, -1
-; RV64P670-NEXT:    add s0, a0, a6
+; RV64P670-NEXT:    addi t1, a7, -1
+; RV64P670-NEXT:    add t2, a0, a6
+; RV64P670-NEXT:    csrr t5, vlenb
 ; RV64P670-NEXT:    li t0, 0
-; RV64P670-NEXT:    li t1, 0
-; RV64P670-NEXT:    zext.w s1, s1
-; RV64P670-NEXT:    mul t2, a1, s1
-; RV64P670-NEXT:    add t4, s0, t2
-; RV64P670-NEXT:    mul t2, a3, s1
-; RV64P670-NEXT:    add s0, a2, a6
-; RV64P670-NEXT:    mul s1, a5, s1
-; RV64P670-NEXT:    add t3, s0, t2
-; RV64P670-NEXT:    add s0, a4, a6
-; RV64P670-NEXT:    csrr t2, vlenb
-; RV64P670-NEXT:    add t5, s0, s1
-; RV64P670-NEXT:    sltu s1, a0, t3
-; RV64P670-NEXT:    sltu s0, a2, t4
-; RV64P670-NEXT:    slli t3, t2, 1
-; RV64P670-NEXT:    and s0, s0, s1
-; RV64P670-NEXT:    or s1, a1, a3
-; RV64P670-NEXT:    srli s1, s1, 63
-; RV64P670-NEXT:    or t6, s0, s1
-; RV64P670-NEXT:    sltu s1, a0, t5
-; RV64P670-NEXT:    sltu s0, a4, t4
-; RV64P670-NEXT:    add t4, a0, a6
-; RV64P670-NEXT:    and s0, s0, s1
-; RV64P670-NEXT:    or s1, a1, a5
-; RV64P670-NEXT:    srli s1, s1, 63
-; RV64P670-NEXT:    or s0, s0, s1
-; RV64P670-NEXT:    li s1, 32
-; RV64P670-NEXT:    maxu s1, t3, s1
-; RV64P670-NEXT:    or s0, t6, s0
-; RV64P670-NEXT:    sltu s1, a6, s1
-; RV64P670-NEXT:    or s0, s0, s1
-; RV64P670-NEXT:    andi t5, s0, 1
+; RV64P670-NEXT:    zext.w t1, t1
+; RV64P670-NEXT:    mul t3, a1, t1
+; RV64P670-NEXT:    mul t4, a3, t1
+; RV64P670-NEXT:    mul t1, a5, t1
+; RV64P670-NEXT:    add t2, t2, t3
+; RV64P670-NEXT:    add t3, a2, a6
+; RV64P670-NEXT:    add t3, t3, t4
+; RV64P670-NEXT:    add t4, a4, a6
+; RV64P670-NEXT:    sltu t6, a2, t2
+; RV64P670-NEXT:    sltu t2, a4, t2
+; RV64P670-NEXT:    add t4, t4, t1
+; RV64P670-NEXT:    sltu t3, a0, t3
+; RV64P670-NEXT:    slli t1, t5, 1
+; RV64P670-NEXT:    slli t5, t5, 28
+; RV64P670-NEXT:    and t3, t3, t6
+; RV64P670-NEXT:    or t6, a1, a3
+; RV64P670-NEXT:    sltu t4, a0, t4
+; RV64P670-NEXT:    srli t6, t6, 63
+; RV64P670-NEXT:    and t2, t4, t2
+; RV64P670-NEXT:    or t4, a1, a5
+; RV64P670-NEXT:    or t3, t3, t6
+; RV64P670-NEXT:    li t6, 32
+; RV64P670-NEXT:    srli t4, t4, 63
+; RV64P670-NEXT:    maxu t6, t1, t6
+; RV64P670-NEXT:    or t2, t2, t4
+; RV64P670-NEXT:    or t2, t3, t2
+; RV64P670-NEXT:    sltu t3, a6, t6
+; RV64P670-NEXT:    or t2, t3, t2
+; RV64P670-NEXT:    sub t3, t5, t1
+; RV64P670-NEXT:    andi t2, t2, 1
+; RV64P670-NEXT:    and t3, t3, a6
 ; RV64P670-NEXT:    j .LBB0_4
 ; RV64P670-NEXT:  .LBB0_3: # %for.cond1.for.cond.cleanup3_crit_edge.us
 ; RV64P670-NEXT:    # in Loop: Header=BB0_4 Depth=1
 ; RV64P670-NEXT:    add a0, a0, a1
 ; RV64P670-NEXT:    add a2, a2, a3
 ; RV64P670-NEXT:    add a4, a4, a5
-; RV64P670-NEXT:    addiw t1, t1, 1
-; RV64P670-NEXT:    addi t0, t0, 1
-; RV64P670-NEXT:    beq t1, a7, .LBB0_11
+; RV64P670-NEXT:    addiw t0, t0, 1
+; RV64P670-NEXT:    beq t0, a7, .LBB0_9
 ; RV64P670-NEXT:  .LBB0_4: # %for.cond1.preheader.us
 ; RV64P670-NEXT:    # =>This Loop Header: Depth=1
-; RV64P670-NEXT:    # Child Loop BB0_7 Depth 2
-; RV64P670-NEXT:    # Child Loop BB0_10 Depth 2
-; RV64P670-NEXT:    beqz t5, .LBB0_6
-; RV64P670-NEXT:  # %bb.5: # in Loop: Header=BB0_4 Depth=1
-; RV64P670-NEXT:    li t6, 0
-; RV64P670-NEXT:    j .LBB0_9
-; RV64P670-NEXT:  .LBB0_6: # %vector.ph
+; RV64P670-NEXT:    # Child Loop BB0_6 Depth 2
+; RV64P670-NEXT:    # Child Loop BB0_8 Depth 2
+; RV64P670-NEXT:    li t4, 0
+; RV64P670-NEXT:    bnez t2, .LBB0_8
+; RV64P670-NEXT:  # %bb.5: # %vector.ph
 ; RV64P670-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; RV64P670-NEXT:    slli s1, t2, 28
-; RV64P670-NEXT:    mv s2, a2
-; RV64P670-NEXT:    mv s3, a4
-; RV64P670-NEXT:    mv s4, a0
-; RV64P670-NEXT:    sub s1, s1, t3
-; RV64P670-NEXT:    vsetvli s0, zero, e8, m2, ta, ma
-; RV64P670-NEXT:    and t6, s1, a6
-; RV64P670-NEXT:    mv s1, t6
-; RV64P670-NEXT:  .LBB0_7: # %vector.body
+; RV64P670-NEXT:    vsetvli t5, zero, e8, m2, ta, ma
+; RV64P670-NEXT:  .LBB0_6: # %vector.body
 ; RV64P670-NEXT:    # Parent Loop BB0_4 Depth=1
 ; RV64P670-NEXT:    # => This Inner Loop Header: Depth=2
-; RV64P670-NEXT:    vl2r.v v8, (s2)
-; RV64P670-NEXT:    sub s1, s1, t3
-; RV64P670-NEXT:    add s2, s2, t3
-; RV64P670-NEXT:    vl2r.v v10, (s3)
-; RV64P670-NEXT:    add s3, s3, t3
+; RV64P670-NEXT:    add t5, a2, t4
+; RV64P670-NEXT:    vl2r.v v8, (t5)
+; RV64P670-NEXT:    add t5, a4, t4
+; RV64P670-NEXT:    vl2r.v v10, (t5)
+; RV64P670-NEXT:    add t5, a0, t4
+; RV64P670-NEXT:    add t4, t4, t1
 ; RV64P670-NEXT:    vaaddu.vv v8, v8, v10
-; RV64P670-NEXT:    vs2r.v v8, (s4)
-; RV64P670-NEXT:    add s4, s4, t3
-; RV64P670-NEXT:    bnez s1, .LBB0_7
-; RV64P670-NEXT:  # %bb.8: # %middle.block
+; RV64P670-NEXT:    vs2r.v v8, (t5)
+; RV64P670-NEXT:    bne t3, t4, .LBB0_6
+; RV64P670-NEXT:  # %bb.7: # %middle.block
 ; RV64P670-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; RV64P670-NEXT:    beq t6, a6, .LBB0_3
-; RV64P670-NEXT:  .LBB0_9: # %for.body4.us.preheader
-; RV64P670-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; RV64P670-NEXT:    mul s2, a1, t0
-; RV64P670-NEXT:    add s1, a0, t6
-; RV64P670-NEXT:    add s4, a4, t6
-; RV64P670-NEXT:    add t6, t6, a2
-; RV64P670-NEXT:    add s2, s2, t4
-; RV64P670-NEXT:  .LBB0_10: # %for.body4.us
+; RV64P670-NEXT:    mv t4, t3
+; RV64P670-NEXT:    beq t3, a6, .LBB0_3
+; RV64P670-NEXT:  .LBB0_8: # %for.body4.us
 ; RV64P670-NEXT:    # Parent Loop BB0_4 Depth=1
 ; RV64P670-NEXT:    # => This Inner Loop Header: Depth=2
-; RV64P670-NEXT:    lbu s3, 0(t6)
-; RV64P670-NEXT:    lbu s0, 0(s4)
-; RV64P670-NEXT:    addi s4, s4, 1
-; RV64P670-NEXT:    addi t6, t6, 1
-; RV64P670-NEXT:    add s0, s0, s3
-; RV64P670-NEXT:    addi s0, s0, 1
-; RV64P670-NEXT:    srli s0, s0, 1
-; RV64P670-NEXT:    sb s0, 0(s1)
-; RV64P670-NEXT:    addi s1, s1, 1
-; RV64P670-NEXT:    bne s1, s2, .LBB0_10
+; RV64P670-NEXT:    add t5, a2, t4
+; RV64P670-NEXT:    add t6, a4, t4
+; RV64P670-NEXT:    lbu t5, 0(t5)
+; RV64P670-NEXT:    lbu t6, 0(t6)
+; RV64P670-NEXT:    add t5, t5, t6
+; RV64P670-NEXT:    add t6, a0, t4
+; RV64P670-NEXT:    addi t4, t4, 1
+; RV64P670-NEXT:    addi t5, t5, 1
+; RV64P670-NEXT:    srli t5, t5, 1
+; RV64P670-NEXT:    sb t5, 0(t6)
+; RV64P670-NEXT:    bne a6, t4, .LBB0_8
 ; RV64P670-NEXT:    j .LBB0_3
-; RV64P670-NEXT:  .LBB0_11:
-; RV64P670-NEXT:    ld s0, 40(sp) # 8-byte Folded Reload
-; RV64P670-NEXT:    ld s1, 32(sp) # 8-byte Folded Reload
-; RV64P670-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
-; RV64P670-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
-; RV64P670-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
-; RV64P670-NEXT:    .cfi_restore s0
-; RV64P670-NEXT:    .cfi_restore s1
-; RV64P670-NEXT:    .cfi_restore s2
-; RV64P670-NEXT:    .cfi_restore s3
-; RV64P670-NEXT:    .cfi_restore s4
-; RV64P670-NEXT:    addi sp, sp, 48
-; RV64P670-NEXT:    .cfi_def_cfa_offset 0
-; RV64P670-NEXT:  .LBB0_12: # %for.cond.cleanup
+; RV64P670-NEXT:  .LBB0_9: # %for.cond.cleanup
 ; RV64P670-NEXT:    ret
 ;
 ; RV64X60-LABEL: test1:
 ; RV64X60:       # %bb.0: # %entry
 ; RV64X60-NEXT:    csrwi vxrm, 0
-; RV64X60-NEXT:    blez a7, .LBB0_12
+; RV64X60-NEXT:    blez a7, .LBB0_9
 ; RV64X60-NEXT:  # %bb.1: # %for.cond1.preheader.lr.ph
-; RV64X60-NEXT:    blez a6, .LBB0_12
+; RV64X60-NEXT:    blez a6, .LBB0_9
 ; RV64X60-NEXT:  # %bb.2: # %for.cond1.preheader.us.preheader
-; RV64X60-NEXT:    addi sp, sp, -48
-; RV64X60-NEXT:    .cfi_def_cfa_offset 48
-; RV64X60-NEXT:    sd s0, 40(sp) # 8-byte Folded Spill
-; RV64X60-NEXT:    sd s1, 32(sp) # 8-byte Folded Spill
-; RV64X60-NEXT:    sd s2, 24(sp) # 8-byte Folded Spill
-; RV64X60-NEXT:    sd s3, 16(sp) # 8-byte Folded Spill
-; RV64X60-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
-; RV64X60-NEXT:    .cfi_offset s0, -8
-; RV64X60-NEXT:    .cfi_offset s1, -16
-; RV64X60-NEXT:    .cfi_offset s2, -24
-; RV64X60-NEXT:    .cfi_offset s3, -32
-; RV64X60-NEXT:    .cfi_offset s4, -40
 ; RV64X60-NEXT:    li t0, 0
-; RV64X60-NEXT:    li t1, 0
-; RV64X60-NEXT:    addi s1, a7, -1
-; RV64X60-NEXT:    zext.w s1, s1
-; RV64X60-NEXT:    mul t3, a1, s1
-; RV64X60-NEXT:    mul t5, a3, s1
-; RV64X60-NEXT:    mul t4, a5, s1
-; RV64X60-NEXT:    add s1, a0, a6
-; RV64X60-NEXT:    csrr t2, vlenb
-; RV64X60-NEXT:    add s0, a2, a6
-; RV64X60-NEXT:    add s2, s1, t3
-; RV64X60-NEXT:    add t3, a4, a6
-; RV64X60-NEXT:    add t5, t5, s0
-; RV64X60-NEXT:    or t6, a1, a3
-; RV64X60-NEXT:    add t4, t4, t3
-; RV64X60-NEXT:    sltu s0, a0, t5
-; RV64X60-NEXT:    sltu s1, a2, s2
-; RV64X60-NEXT:    and t5, s0, s1
-; RV64X60-NEXT:    slli t3, t2, 1
-; RV64X60-NEXT:    sltu t4, a0, t4
-; RV64X60-NEXT:    sltu s0, a4, s2
-; RV64X60-NEXT:    srli s1, t6, 63
-; RV64X60-NEXT:    and s0, t4, s0
-; RV64X60-NEXT:    or t4, t5, s1
-; RV64X60-NEXT:    or s1, a1, a5
-; RV64X60-NEXT:    li t5, 32
-; RV64X60-NEXT:    srli s1, s1, 63
-; RV64X60-NEXT:    or s0, s0, s1
-; RV64X60-NEXT:    maxu s1, t3, t5
-; RV64X60-NEXT:    or s0, t4, s0
-; RV64X60-NEXT:    sltu s1, a6, s1
-; RV64X60-NEXT:    or s0, s0, s1
+; RV64X60-NEXT:    addi t1, a7, -1
+; RV64X60-NEXT:    zext.w t1, t1
+; RV64X60-NEXT:    mul t2, a1, t1
+; RV64X60-NEXT:    mul t3, a3, t1
+; RV64X60-NEXT:    mul t1, a5, t1
 ; RV64X60-NEXT:    add t4, a0, a6
-; RV64X60-NEXT:    andi t5, s0, 1
+; RV64X60-NEXT:    add t5, a2, a6
+; RV64X60-NEXT:    add t6, a4, a6
+; RV64X60-NEXT:    add t2, t2, t4
+; RV64X60-NEXT:    csrr t4, vlenb
+; RV64X60-NEXT:    add t3, t3, t5
+; RV64X60-NEXT:    add t6, t6, t1
+; RV64X60-NEXT:    sltu t1, a0, t3
+; RV64X60-NEXT:    sltu t3, a2, t2
+; RV64X60-NEXT:    or t5, a1, a3
+; RV64X60-NEXT:    and t3, t1, t3
+; RV64X60-NEXT:    slli t1, t4, 1
+; RV64X60-NEXT:    srli t5, t5, 63
+; RV64X60-NEXT:    sltu t6, a0, t6
+; RV64X60-NEXT:    sltu t2, a4, t2
+; RV64X60-NEXT:    and t2, t6, t2
+; RV64X60-NEXT:    or t6, a1, a5
+; RV64X60-NEXT:    or t3, t3, t5
+; RV64X60-NEXT:    srli t5, t6, 63
+; RV64X60-NEXT:    li t6, 32
+; RV64X60-NEXT:    or t2, t2, t5
+; RV64X60-NEXT:    maxu t5, t1, t6
+; RV64X60-NEXT:    or t2, t3, t2
+; RV64X60-NEXT:    sltu t3, a6, t5
+; RV64X60-NEXT:    slli t4, t4, 28
+; RV64X60-NEXT:    or t2, t3, t2
+; RV64X60-NEXT:    sub t3, t4, t1
+; RV64X60-NEXT:    andi t2, t2, 1
+; RV64X60-NEXT:    and t3, t3, a6
 ; RV64X60-NEXT:    j .LBB0_4
 ; RV64X60-NEXT:  .LBB0_3: # %for.cond1.for.cond.cleanup3_crit_edge.us
 ; RV64X60-NEXT:    # in Loop: Header=BB0_4 Depth=1
 ; RV64X60-NEXT:    add a0, a0, a1
+; RV64X60-NEXT:    addiw t0, t0, 1
 ; RV64X60-NEXT:    add a2, a2, a3
-; RV64X60-NEXT:    addiw t1, t1, 1
 ; RV64X60-NEXT:    add a4, a4, a5
-; RV64X60-NEXT:    addi t0, t0, 1
-; RV64X60-NEXT:    beq t1, a7, .LBB0_11
+; RV64X60-NEXT:    beq t0, a7, .LBB0_9
 ; RV64X60-NEXT:  .LBB0_4: # %for.cond1.preheader.us
 ; RV64X60-NEXT:    # =>This Loop Header: Depth=1
-; RV64X60-NEXT:    # Child Loop BB0_7 Depth 2
-; RV64X60-NEXT:    # Child Loop BB0_10 Depth 2
-; RV64X60-NEXT:    beqz t5, .LBB0_6
-; RV64X60-NEXT:  # %bb.5: # in Loop: Header=BB0_4 Depth=1
-; RV64X60-NEXT:    li t6, 0
-; RV64X60-NEXT:    j .LBB0_9
-; RV64X60-NEXT:  .LBB0_6: # %vector.ph
+; RV64X60-NEXT:    # Child Loop BB0_6 Depth 2
+; RV64X60-NEXT:    # Child Loop BB0_8 Depth 2
+; RV64X60-NEXT:    li t4, 0
+; RV64X60-NEXT:    bnez t2, .LBB0_8
+; RV64X60-NEXT:  # %bb.5: # %vector.ph
 ; RV64X60-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; RV64X60-NEXT:    slli s1, t2, 28
-; RV64X60-NEXT:    sub s1, s1, t3
-; RV64X60-NEXT:    and t6, s1, a6
-; RV64X60-NEXT:    mv s2, a2
-; RV64X60-NEXT:    mv s3, a4
-; RV64X60-NEXT:    mv s4, a0
-; RV64X60-NEXT:    mv s1, t6
-; RV64X60-NEXT:    vsetvli s0, zero, e8, m2, ta, ma
-; RV64X60-NEXT:  .LBB0_7: # %vector.body
+; RV64X60-NEXT:    vsetvli t5, zero, e8, m2, ta, ma
+; RV64X60-NEXT:  .LBB0_6: # %vector.body
 ; RV64X60-NEXT:    # Parent Loop BB0_4 Depth=1
 ; RV64X60-NEXT:    # => This Inner Loop Header: Depth=2
-; RV64X60-NEXT:    vl2r.v v8, (s2)
-; RV64X60-NEXT:    vl2r.v v10, (s3)
+; RV64X60-NEXT:    add t5, a2, t4
+; RV64X60-NEXT:    vl2r.v v8, (t5)
+; RV64X60-NEXT:    add t5, a4, t4
+; RV64X60-NEXT:    vl2r.v v10, (t5)
 ; RV64X60-NEXT:    vaaddu.vv v8, v8, v10
-; RV64X60-NEXT:    sub s1, s1, t3
-; RV64X60-NEXT:    vs2r.v v8, (s4)
-; RV64X60-NEXT:    add s4, s4, t3
-; RV64X60-NEXT:    add s3, s3, t3
-; RV64X60-NEXT:    add s2, s2, t3
-; RV64X60-NEXT:    bnez s1, .LBB0_7
-; RV64X60-NEXT:  # %bb.8: # %middle.block
+; RV64X60-NEXT:    add t5, a0, t4
+; RV64X60-NEXT:    add t4, t4, t1
+; RV64X60-NEXT:    vs2r.v v8, (t5)
+; RV64X60-NEXT:    bne t3, t4, .LBB0_6
+; RV64X60-NEXT:  # %bb.7: # %middle.block
 ; RV64X60-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; RV64X60-NEXT:    beq t6, a6, .LBB0_3
-; RV64X60-NEXT:  .LBB0_9: # %for.body4.us.preheader
-; RV64X60-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; RV64X60-NEXT:    mul s2, a1, t0
-; RV64X60-NEXT:    add s0, a0, t6
-; RV64X60-NEXT:    add s2, s2, t4
-; RV64X60-NEXT:    add s4, a4, t6
-; RV64X60-NEXT:    add t6, t6, a2
-; RV64X60-NEXT:  .LBB0_10: # %for.body4.us
+; RV64X60-NEXT:    mv t4, t3
+; RV64X60-NEXT:    beq t3, a6, .LBB0_3
+; RV64X60-NEXT:  .LBB0_8: # %for.body4.us
 ; RV64X60-NEXT:    # Parent Loop BB0_4 Depth=1
 ; RV64X60-NEXT:    # => This Inner Loop Header: Depth=2
-; RV64X60-NEXT:    lbu s3, 0(t6)
-; RV64X60-NEXT:    lbu s1, 0(s4)
-; RV64X60-NEXT:    add s1, s1, s3
-; RV64X60-NEXT:    addi s1, s1, 1
-; RV64X60-NEXT:    srli s1, s1, 1
-; RV64X60-NEXT:    sb s1, 0(s0)
-; RV64X60-NEXT:    addi s0, s0, 1
-; RV64X60-NEXT:    addi s4, s4, 1
-; RV64X60-NEXT:    addi t6, t6, 1
-; RV64X60-NEXT:    bne s0, s2, .LBB0_10
+; RV64X60-NEXT:    add t5, a2, t4
+; RV64X60-NEXT:    add t6, a4, t4
+; RV64X60-NEXT:    lbu t5, 0(t5)
+; RV64X60-NEXT:    lbu t6, 0(t6)
+; RV64X60-NEXT:    add t5, t5, t6
+; RV64X60-NEXT:    addi t5, t5, 1
+; RV64X60-NEXT:    srli t5, t5, 1
+; RV64X60-NEXT:    add t6, a0, t4
+; RV64X60-NEXT:    addi t4, t4, 1
+; RV64X60-NEXT:    sb t5, 0(t6)
+; RV64X60-NEXT:    bne a6, t4, .LBB0_8
 ; RV64X60-NEXT:    j .LBB0_3
-; RV64X60-NEXT:  .LBB0_11:
-; RV64X60-NEXT:    ld s0, 40(sp) # 8-byte Folded Reload
-; RV64X60-NEXT:    ld s1, 32(sp) # 8-byte Folded Reload
-; RV64X60-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
-; RV64X60-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
-; RV64X60-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
-; RV64X60-NEXT:    .cfi_restore s0
-; RV64X60-NEXT:    .cfi_restore s1
-; RV64X60-NEXT:    .cfi_restore s2
-; RV64X60-NEXT:    .cfi_restore s3
-; RV64X60-NEXT:    .cfi_restore s4
-; RV64X60-NEXT:    addi sp, sp, 48
-; RV64X60-NEXT:    .cfi_def_cfa_offset 0
-; RV64X60-NEXT:  .LBB0_12: # %for.cond.cleanup
+; RV64X60-NEXT:  .LBB0_9: # %for.cond.cleanup
 ; RV64X60-NEXT:    ret
 ;
 ; RV64-LABEL: test1:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    blez a7, .LBB0_14
+; RV64-NEXT:    blez a7, .LBB0_12
 ; RV64-NEXT:  # %bb.1: # %for.cond1.preheader.lr.ph
-; RV64-NEXT:    blez a6, .LBB0_14
+; RV64-NEXT:    blez a6, .LBB0_12
 ; RV64-NEXT:  # %bb.2: # %for.cond1.preheader.us.preheader
-; RV64-NEXT:    addi sp, sp, -48
-; RV64-NEXT:    .cfi_def_cfa_offset 48
-; RV64-NEXT:    sd s0, 40(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 32(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s2, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s3, 16(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset s0, -8
-; RV64-NEXT:    .cfi_offset s1, -16
-; RV64-NEXT:    .cfi_offset s2, -24
-; RV64-NEXT:    .cfi_offset s3, -32
-; RV64-NEXT:    .cfi_offset s4, -40
-; RV64-NEXT:    addi t1, a7, -1
-; RV64-NEXT:    add t5, a0, a6
-; RV64-NEXT:    add s0, a2, a6
-; RV64-NEXT:    add t6, a4, a6
-; RV64-NEXT:    csrr t0, vlenb
-; RV64-NEXT:    li t2, 32
-; RV64-NEXT:    slli t1, t1, 32
-; RV64-NEXT:    srli t3, t1, 32
-; RV64-NEXT:    mul t1, a1, t3
-; RV64-NEXT:    add t5, t5, t1
-; RV64-NEXT:    mul t1, a3, t3
-; RV64-NEXT:    add s0, s0, t1
-; RV64-NEXT:    slli t1, t0, 1
-; RV64-NEXT:    mul t3, a5, t3
-; RV64-NEXT:    add t6, t6, t3
-; RV64-NEXT:    mv t4, t1
-; RV64-NEXT:    bltu t2, t1, .LBB0_4
-; RV64-NEXT:  # %bb.3: # %for.cond1.preheader.us.preheader
-; RV64-NEXT:    li t4, 32
-; RV64-NEXT:  .LBB0_4: # %for.cond1.preheader.us.preheader
-; RV64-NEXT:    li t2, 0
-; RV64-NEXT:    li t3, 0
-; RV64-NEXT:    sltu s0, a0, s0
-; RV64-NEXT:    sltu s1, a2, t5
-; RV64-NEXT:    and s0, s0, s1
-; RV64-NEXT:    sltu t6, a0, t6
-; RV64-NEXT:    sltu t5, a4, t5
-; RV64-NEXT:    and t5, t6, t5
-; RV64-NEXT:    or t6, a1, a3
-; RV64-NEXT:    srli t6, t6, 63
-; RV64-NEXT:    or t6, s0, t6
-; RV64-NEXT:    or s0, a1, a5
-; RV64-NEXT:    srli s0, s0, 63
-; RV64-NEXT:    or t5, t5, s0
-; RV64-NEXT:    sltu s0, a6, t4
-; RV64-NEXT:    or t5, t6, t5
+; RV64-NEXT:    addi t0, a7, -1
 ; RV64-NEXT:    add t4, a0, a6
-; RV64-NEXT:    or t5, s0, t5
-; RV64-NEXT:    andi t5, t5, 1
+; RV64-NEXT:    add t6, a2, a6
+; RV64-NEXT:    add t5, a4, a6
+; RV64-NEXT:    csrr t2, vlenb
+; RV64-NEXT:    li t1, 32
+; RV64-NEXT:    slli t0, t0, 32
+; RV64-NEXT:    srli t3, t0, 32
+; RV64-NEXT:    mul t0, a1, t3
+; RV64-NEXT:    add t4, t4, t0
+; RV64-NEXT:    mul t0, a3, t3
+; RV64-NEXT:    add t6, t6, t0
+; RV64-NEXT:    slli t0, t2, 1
+; RV64-NEXT:    mul t3, a5, t3
+; RV64-NEXT:    add t5, t5, t3
+; RV64-NEXT:    mv t3, t0
+; RV64-NEXT:    bltu t1, t0, .LBB0_4
+; RV64-NEXT:  # %bb.3: # %for.cond1.preheader.us.preheader
+; RV64-NEXT:    li t3, 32
+; RV64-NEXT:  .LBB0_4: # %for.cond1.preheader.us.preheader
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    .cfi_def_cfa_offset 16
+; RV64-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset s0, -8
+; RV64-NEXT:    li t1, 0
+; RV64-NEXT:    sltu t6, a0, t6
+; RV64-NEXT:    sltu s0, a2, t4
+; RV64-NEXT:    and t6, t6, s0
+; RV64-NEXT:    sltu t5, a0, t5
+; RV64-NEXT:    sltu t4, a4, t4
+; RV64-NEXT:    and t4, t5, t4
+; RV64-NEXT:    or t5, a1, a3
+; RV64-NEXT:    srli t5, t5, 63
+; RV64-NEXT:    or t5, t6, t5
+; RV64-NEXT:    or t6, a1, a5
+; RV64-NEXT:    sltu t3, a6, t3
+; RV64-NEXT:    slli t2, t2, 28
+; RV64-NEXT:    srli t6, t6, 63
+; RV64-NEXT:    sub s0, t2, t0
+; RV64-NEXT:    or t2, t4, t6
+; RV64-NEXT:    or t2, t5, t2
+; RV64-NEXT:    or t2, t3, t2
+; RV64-NEXT:    andi t2, t2, 1
+; RV64-NEXT:    and t3, s0, a6
 ; RV64-NEXT:    csrwi vxrm, 0
 ; RV64-NEXT:    j .LBB0_6
 ; RV64-NEXT:  .LBB0_5: # %for.cond1.for.cond.cleanup3_crit_edge.us
 ; RV64-NEXT:    # in Loop: Header=BB0_6 Depth=1
 ; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a2, a2, a3
+; RV64-NEXT:    addiw t1, t1, 1
 ; RV64-NEXT:    add a4, a4, a5
-; RV64-NEXT:    addiw t3, t3, 1
-; RV64-NEXT:    addi t2, t2, 1
-; RV64-NEXT:    beq t3, a7, .LBB0_13
+; RV64-NEXT:    beq t1, a7, .LBB0_11
 ; RV64-NEXT:  .LBB0_6: # %for.cond1.preheader.us
 ; RV64-NEXT:    # =>This Loop Header: Depth=1
-; RV64-NEXT:    # Child Loop BB0_9 Depth 2
-; RV64-NEXT:    # Child Loop BB0_12 Depth 2
-; RV64-NEXT:    beqz t5, .LBB0_8
-; RV64-NEXT:  # %bb.7: # in Loop: Header=BB0_6 Depth=1
-; RV64-NEXT:    li t6, 0
-; RV64-NEXT:    j .LBB0_11
-; RV64-NEXT:  .LBB0_8: # %vector.ph
+; RV64-NEXT:    # Child Loop BB0_8 Depth 2
+; RV64-NEXT:    # Child Loop BB0_10 Depth 2
+; RV64-NEXT:    li t4, 0
+; RV64-NEXT:    bnez t2, .LBB0_10
+; RV64-NEXT:  # %bb.7: # %vector.ph
 ; RV64-NEXT:    # in Loop: Header=BB0_6 Depth=1
-; RV64-NEXT:    slli t6, t0, 28
-; RV64-NEXT:    sub t6, t6, t1
-; RV64-NEXT:    and t6, t6, a6
-; RV64-NEXT:    mv s0, a2
-; RV64-NEXT:    mv s1, a4
-; RV64-NEXT:    mv s2, a0
-; RV64-NEXT:    mv s3, t6
-; RV64-NEXT:    vsetvli s4, zero, e8, m2, ta, ma
-; RV64-NEXT:  .LBB0_9: # %vector.body
+; RV64-NEXT:    vsetvli t5, zero, e8, m2, ta, ma
+; RV64-NEXT:  .LBB0_8: # %vector.body
 ; RV64-NEXT:    # Parent Loop BB0_6 Depth=1
 ; RV64-NEXT:    # => This Inner Loop Header: Depth=2
-; RV64-NEXT:    vl2r.v v8, (s0)
-; RV64-NEXT:    vl2r.v v10, (s1)
-; RV64-NEXT:    sub s3, s3, t1
-; RV64-NEXT:    add s1, s1, t1
+; RV64-NEXT:    add t5, a2, t4
+; RV64-NEXT:    vl2r.v v8, (t5)
+; RV64-NEXT:    add t5, a4, t4
+; RV64-NEXT:    vl2r.v v10, (t5)
+; RV64-NEXT:    add t5, a0, t4
 ; RV64-NEXT:    vaaddu.vv v8, v8, v10
-; RV64-NEXT:    vs2r.v v8, (s2)
-; RV64-NEXT:    add s2, s2, t1
-; RV64-NEXT:    add s0, s0, t1
-; RV64-NEXT:    bnez s3, .LBB0_9
-; RV64-NEXT:  # %bb.10: # %middle.block
+; RV64-NEXT:    add t4, t4, t0
+; RV64-NEXT:    vs2r.v v8, (t5)
+; RV64-NEXT:    bne t3, t4, .LBB0_8
+; RV64-NEXT:  # %bb.9: # %middle.block
 ; RV64-NEXT:    # in Loop: Header=BB0_6 Depth=1
-; RV64-NEXT:    beq t6, a6, .LBB0_5
-; RV64-NEXT:  .LBB0_11: # %for.body4.us.preheader
-; RV64-NEXT:    # in Loop: Header=BB0_6 Depth=1
-; RV64-NEXT:    mul s2, a1, t2
-; RV64-NEXT:    add s0, a0, t6
-; RV64-NEXT:    add s1, a4, t6
-; RV64-NEXT:    add s2, t4, s2
-; RV64-NEXT:    add t6, a2, t6
-; RV64-NEXT:  .LBB0_12: # %for.body4.us
+; RV64-NEXT:    mv t4, t3
+; RV64-NEXT:    beq t3, a6, .LBB0_5
+; RV64-NEXT:  .LBB0_10: # %for.body4.us
 ; RV64-NEXT:    # Parent Loop BB0_6 Depth=1
 ; RV64-NEXT:    # => This Inner Loop Header: Depth=2
-; RV64-NEXT:    lbu s3, 0(t6)
-; RV64-NEXT:    lbu s4, 0(s1)
-; RV64-NEXT:    add s3, s3, s4
-; RV64-NEXT:    addi s3, s3, 1
-; RV64-NEXT:    srli s3, s3, 1
-; RV64-NEXT:    sb s3, 0(s0)
-; RV64-NEXT:    addi s0, s0, 1
-; RV64-NEXT:    addi s1, s1, 1
-; RV64-NEXT:    addi t6, t6, 1
-; RV64-NEXT:    bne s0, s2, .LBB0_12
+; RV64-NEXT:    add t5, a2, t4
+; RV64-NEXT:    add t6, a4, t4
+; RV64-NEXT:    lbu t5, 0(t5)
+; RV64-NEXT:    lbu t6, 0(t6)
+; RV64-NEXT:    add t5, t5, t6
+; RV64-NEXT:    add t6, a0, t4
+; RV64-NEXT:    addi t5, t5, 1
+; RV64-NEXT:    srli t5, t5, 1
+; RV64-NEXT:    addi t4, t4, 1
+; RV64-NEXT:    sb t5, 0(t6)
+; RV64-NEXT:    bne a6, t4, .LBB0_10
 ; RV64-NEXT:    j .LBB0_5
-; RV64-NEXT:  .LBB0_13:
-; RV64-NEXT:    ld s0, 40(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s1, 32(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:  .LBB0_11:
+; RV64-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore s0
-; RV64-NEXT:    .cfi_restore s1
-; RV64-NEXT:    .cfi_restore s2
-; RV64-NEXT:    .cfi_restore s3
-; RV64-NEXT:    .cfi_restore s4
-; RV64-NEXT:    addi sp, sp, 48
+; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
-; RV64-NEXT:  .LBB0_14: # %for.cond.cleanup
+; RV64-NEXT:  .LBB0_12: # %for.cond.cleanup
 ; RV64-NEXT:    ret
 entry:
   %cmp29 = icmp sgt i32 %i_height, 0
