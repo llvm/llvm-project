@@ -17,7 +17,7 @@
 #define EXCLUDE_ATTR __attribute__((exclude_from_explicit_instantiation))
 
 template <class T>
-struct C {
+struct BasicCase {
   // This will be instantiated explicitly as an imported function because it
   // inherits dllimport from the class instantiation.
   void to_be_imported();
@@ -33,32 +33,33 @@ struct C {
   EXCLUDE_ATTR void not_to_be_instantiated();
 };
 
-template <class T> void C<T>::to_be_imported() {}
-template <class T> void C<T>::not_to_be_imported() {}
-template <class T> void C<T>::not_to_be_instantiated() {}
+// Member functions can't be inlined since clang in MinGW mode doesn't export/import them that are inlined.
+template <class T> void BasicCase<T>::to_be_imported() {}
+template <class T> void BasicCase<T>::not_to_be_imported() {}
+template <class T> void BasicCase<T>::not_to_be_instantiated() {}
 
 // Attach the attribute to class template declaration instead of instantiation declaration.
 template <class T>
-struct __declspec(dllimport) D {
+struct __declspec(dllimport) ImportWholeTemplate {
   // This will be imported if and only if no explicit instantiations are provided.
   EXCLUDE_ATTR void to_be_imported_iff_no_explicit_instantiation();
 };
 
-template <class T> void D<T>::to_be_imported_iff_no_explicit_instantiation() {}
+template <class T> void ImportWholeTemplate<T>::to_be_imported_iff_no_explicit_instantiation() {}
 
 // Interaction with VTables.
 template <class T>
-struct E {
+struct Polymorphic {
   // For the MSVC ABI: this constructor causes implicit instantiation of
   // the VTable, which triggers instantiating all virtual member
   // functions regardless `exclude_from_explicit_instantiation`.
   // For the Itanium ABI: Emitting the VTable is suppressed by implicit
   // instantiation declaration so virtual member functions won't be instantiated.
-  EXCLUDE_ATTR explicit E(int);
+  EXCLUDE_ATTR explicit Polymorphic(int);
 
   // This constructor doesn't trigger the instantiation of the VTable.
   // In this case, declaration of virtual member functions are absent too.
-  explicit E(long);
+  explicit Polymorphic(long);
 
   // The body of this shouldn't be emitted since instantiation is suppressed
   // by the explicit instantiation declaration.
@@ -73,98 +74,98 @@ struct E {
 
 };
 
-template <class T> E<T>::E(int) {}
-template <class T> E<T>::E(long) {}
-template <class T> void E<T>::to_be_imported() {}
-template <class T> void E<T>::to_be_instantiated() {}
+template <class T> Polymorphic<T>::Polymorphic(int) {}
+template <class T> Polymorphic<T>::Polymorphic(long) {}
+template <class T> void Polymorphic<T>::to_be_imported() {}
+template <class T> void Polymorphic<T>::to_be_instantiated() {}
 
-// MSC: $"?not_to_be_imported@?$C@H@@QEAAXXZ" = comdat any
-// MSC: $"?to_be_imported_iff_no_explicit_instantiation@?$D@H@@QEAAXXZ" = comdat any
-// MSC: $"?to_be_instantiated@?$E@H@@UEAAXXZ" = comdat any
-// MSC: $"?to_be_instantiated@?$E@I@@UEAAXXZ" = comdat any
-// GNU: $_ZN1CIiE18not_to_be_importedEv = comdat any
-// GNU: $_ZN1DIiE44to_be_imported_iff_no_explicit_instantiationEv = comdat any
-// GNU: @_ZTV1EIiE = external dllimport unnamed_addr
-// GNU: @_ZTV1EIjE = external unnamed_addr
+// MSC: $"?not_to_be_imported@?$BasicCase@H@@QEAAXXZ" = comdat any
+// MSC: $"?to_be_imported_iff_no_explicit_instantiation@?$ImportWholeTemplate@H@@QEAAXXZ" = comdat any
+// MSC: $"?to_be_instantiated@?$Polymorphic@H@@UEAAXXZ" = comdat any
+// MSC: $"?to_be_instantiated@?$Polymorphic@I@@UEAAXXZ" = comdat any
+// GNU: $_ZN9BasicCaseIiE18not_to_be_importedEv = comdat any
+// GNU: $_ZN19ImportWholeTemplateIiE44to_be_imported_iff_no_explicit_instantiationEv = comdat any
+// GNU: @_ZTV11PolymorphicIiE = external dllimport unnamed_addr
+// GNU: @_ZTV11PolymorphicIjE = external unnamed_addr
 
-// MSC: @0 = private unnamed_addr constant {{.*}}, comdat($"??_S?$E@H@@6B@")
-// MSC: @1 = private unnamed_addr constant {{.*}}, comdat($"??_7?$E@I@@6B@")
-// MSC: @"??_S?$E@H@@6B@" =
-// MSC: @"??_7?$E@I@@6B@" =
+// MSC: @0 = private unnamed_addr constant {{.*}}, comdat($"??_S?$Polymorphic@H@@6B@")
+// MSC: @1 = private unnamed_addr constant {{.*}}, comdat($"??_7?$Polymorphic@I@@6B@")
+// MSC: @"??_S?$Polymorphic@H@@6B@" =
+// MSC: @"??_7?$Polymorphic@I@@6B@" =
 
-extern template struct __declspec(dllimport) C<int>;
+extern template struct __declspec(dllimport) BasicCase<int>;
 
-extern template struct D<int>; // No dllimport here.
-// Don't provide explicit instantiation for D<unsigned>.
+extern template struct ImportWholeTemplate<int>; // No dllimport here.
+// Don't provide explicit instantiation for ImportWholeTemplate<unsigned>.
 
-extern template struct __declspec(dllimport) E<int>;      // $E@H, 1EIiE
-extern template struct E<unsigned>;                       // $E@I, 1EIjE
-extern template struct __declspec(dllimport) E<long int>; // $E@J, 1EIlE
-extern template struct E<unsigned long int>;              // $E@K, 1EImE
+extern template struct __declspec(dllimport) Polymorphic<int>;
+extern template struct Polymorphic<unsigned>;
+extern template struct __declspec(dllimport) Polymorphic<long int>;
+extern template struct Polymorphic<unsigned long int>;
 
 void use() {
-  C<int> c;
+  BasicCase<int> c;
 
-  // MSC: call void @"?to_be_imported@?$C@H@@QEAAXXZ"
-  // GNU: call void @_ZN1CIiE14to_be_importedEv
+  // MSC: call void @"?to_be_imported@?$BasicCase@H@@QEAAXXZ"
+  // GNU: call void @_ZN9BasicCaseIiE14to_be_importedEv
   c.to_be_imported();
 
-  // MSC: call void @"?to_be_imported_explicitly@?$C@H@@QEAAXXZ"
-  // GNU: call void @_ZN1CIiE25to_be_imported_explicitlyEv
+  // MSC: call void @"?to_be_imported_explicitly@?$BasicCase@H@@QEAAXXZ"
+  // GNU: call void @_ZN9BasicCaseIiE25to_be_imported_explicitlyEv
   c.to_be_imported_explicitly(); // implicitly instantiated here
 
-  // MSC: call void @"?not_to_be_imported@?$C@H@@QEAAXXZ"
-  // GNU: call void @_ZN1CIiE18not_to_be_importedEv
+  // MSC: call void @"?not_to_be_imported@?$BasicCase@H@@QEAAXXZ"
+  // GNU: call void @_ZN9BasicCaseIiE18not_to_be_importedEv
   c.not_to_be_imported(); // implicitly instantiated here
 
-  D<int> di;
+  ImportWholeTemplate<int> di;
 
-  // MSC: call void @"?to_be_imported_iff_no_explicit_instantiation@?$D@H@@QEAAXXZ"
-  // GNU: call void @_ZN1DIiE44to_be_imported_iff_no_explicit_instantiationEv
+  // MSC: call void @"?to_be_imported_iff_no_explicit_instantiation@?$ImportWholeTemplate@H@@QEAAXXZ"
+  // GNU: call void @_ZN19ImportWholeTemplateIiE44to_be_imported_iff_no_explicit_instantiationEv
   di.to_be_imported_iff_no_explicit_instantiation(); // implicitly instantiated here
 
-  D<unsigned> dj;
+  ImportWholeTemplate<unsigned> dj;
 
-  // MSC: call void @"?to_be_imported_iff_no_explicit_instantiation@?$D@I@@QEAAXXZ"
-  // GNU: call void @_ZN1DIjE44to_be_imported_iff_no_explicit_instantiationEv
+  // MSC: call void @"?to_be_imported_iff_no_explicit_instantiation@?$ImportWholeTemplate@I@@QEAAXXZ"
+  // GNU: call void @_ZN19ImportWholeTemplateIjE44to_be_imported_iff_no_explicit_instantiationEv
   dj.to_be_imported_iff_no_explicit_instantiation(); // implicitly instantiated here
 
-  E<int> ei{1};
+  Polymorphic<int> ei{1};
 
-  E<unsigned> ej{1};
+  Polymorphic<unsigned> ej{1};
 
-  E<long int> el{1L};
+  Polymorphic<long int> el{1L};
 
-  E<unsigned long int> em{1L};
+  Polymorphic<unsigned long int> em{1L};
 }
 
-// MSC: declare dllimport void @"?to_be_imported@?$C@H@@QEAAXXZ"
-// GNU: declare dllimport void @_ZN1CIiE14to_be_importedEv
+// MSC: declare dllimport void @"?to_be_imported@?$BasicCase@H@@QEAAXXZ"
+// GNU: declare dllimport void @_ZN9BasicCaseIiE14to_be_importedEv
 
-// MSC: declare dllimport void @"?to_be_imported_explicitly@?$C@H@@QEAAXXZ"
-// GNU: declare dllimport void @_ZN1CIiE25to_be_imported_explicitlyEv
+// MSC: declare dllimport void @"?to_be_imported_explicitly@?$BasicCase@H@@QEAAXXZ"
+// GNU: declare dllimport void @_ZN9BasicCaseIiE25to_be_imported_explicitlyEv
 
-// MSC: define linkonce_odr dso_local void @"?not_to_be_imported@?$C@H@@QEAAXXZ"
-// GNU: define linkonce_odr dso_local void @_ZN1CIiE18not_to_be_importedEv
+// MSC: define linkonce_odr dso_local void @"?not_to_be_imported@?$BasicCase@H@@QEAAXXZ"
+// GNU: define linkonce_odr dso_local void @_ZN9BasicCaseIiE18not_to_be_importedEv
 
-// MSC: define linkonce_odr dso_local void @"?to_be_imported_iff_no_explicit_instantiation@?$D@H@@QEAAXXZ"
-// MSC: declare dllimport void @"?to_be_imported_iff_no_explicit_instantiation@?$D@I@@QEAAXXZ"
-// GNU: define linkonce_odr dso_local void @_ZN1DIiE44to_be_imported_iff_no_explicit_instantiationEv
-// GNU: declare dllimport void @_ZN1DIjE44to_be_imported_iff_no_explicit_instantiationEv
+// MSC: define linkonce_odr dso_local void @"?to_be_imported_iff_no_explicit_instantiation@?$ImportWholeTemplate@H@@QEAAXXZ"
+// MSC: declare dllimport void @"?to_be_imported_iff_no_explicit_instantiation@?$ImportWholeTemplate@I@@QEAAXXZ"
+// GNU: define linkonce_odr dso_local void @_ZN19ImportWholeTemplateIiE44to_be_imported_iff_no_explicit_instantiationEv
+// GNU: declare dllimport void @_ZN19ImportWholeTemplateIjE44to_be_imported_iff_no_explicit_instantiationEv
 
-// MSC: declare dllimport noundef ptr @"??0?$E@J@@QEAA@J@Z"
-// MSC: declare dso_local noundef ptr @"??0?$E@K@@QEAA@J@Z"
-// GNU: define linkonce_odr dso_local void @_ZN1EIiEC1Ei
-// GNU: define linkonce_odr dso_local void @_ZN1EIjEC1Ei
-// GNU: declare dllimport void @_ZN1EIlEC1El
-// GNU: declare dso_local void @_ZN1EImEC1El
-// GNU: define linkonce_odr dso_local void @_ZN1EIiEC2Ei
-// GNU: define linkonce_odr dso_local void @_ZN1EIjEC2Ei
+// MSC: declare dllimport noundef ptr @"??0?$Polymorphic@J@@QEAA@J@Z"
+// MSC: declare dso_local noundef ptr @"??0?$Polymorphic@K@@QEAA@J@Z"
+// GNU: define linkonce_odr dso_local void @_ZN11PolymorphicIiEC1Ei
+// GNU: define linkonce_odr dso_local void @_ZN11PolymorphicIjEC1Ei
+// GNU: declare dllimport void @_ZN11PolymorphicIlEC1El
+// GNU: declare dso_local void @_ZN11PolymorphicImEC1El
+// GNU: define linkonce_odr dso_local void @_ZN11PolymorphicIiEC2Ei
+// GNU: define linkonce_odr dso_local void @_ZN11PolymorphicIjEC2Ei
 
-// MSC: declare dllimport void @"?to_be_imported@?$E@H@@UEAAXXZ"
-// MSC: define linkonce_odr dso_local void @"?to_be_instantiated@?$E@H@@UEAAXXZ"
-// MSC: declare dllimport void @"?to_be_imported_explicitly@?$E@H@@UEAAXXZ"
+// MSC: declare dllimport void @"?to_be_imported@?$Polymorphic@H@@UEAAXXZ"
+// MSC: define linkonce_odr dso_local void @"?to_be_instantiated@?$Polymorphic@H@@UEAAXXZ"
+// MSC: declare dllimport void @"?to_be_imported_explicitly@?$Polymorphic@H@@UEAAXXZ"
 
-// MSC: declare dso_local void @"?to_be_imported@?$E@I@@UEAAXXZ"
-// MSC: define linkonce_odr dso_local void @"?to_be_instantiated@?$E@I@@UEAAXXZ"
-// MSC: declare dllimport void @"?to_be_imported_explicitly@?$E@I@@UEAAXXZ"
+// MSC: declare dso_local void @"?to_be_imported@?$Polymorphic@I@@UEAAXXZ"
+// MSC: define linkonce_odr dso_local void @"?to_be_instantiated@?$Polymorphic@I@@UEAAXXZ"
+// MSC: declare dllimport void @"?to_be_imported_explicitly@?$Polymorphic@I@@UEAAXXZ"
