@@ -67,7 +67,7 @@ void l1() {
 // CIR-NEXT:       cir.yield
 // CIR-NEXT:     }
 // CIR-NEXT:   }
-// CIR-NEXT:   cir.return
+// CIR-NEXT:   cir.return implicit
 // CIR-NEXT: }
 
 // LLVM: define{{.*}} void @_Z2l1v(){{.*}}
@@ -117,7 +117,7 @@ void l2() {
 // CIR-NEXT:       cir.yield
 // CIR-NEXT:     }
 // CIR-NEXT:   }
-// CIR-NEXT:   cir.return
+// CIR-NEXT:   cir.return implicit
 // CIR-NEXT: }
 
 // LLVM: define{{.*}} void @_Z2l2v(){{.*}}
@@ -165,7 +165,7 @@ void l3() {
 // CIR-NEXT:       cir.yield
 // CIR-NEXT:     }
 // CIR-NEXT:   }
-// CIR-NEXT:   cir.return
+// CIR-NEXT:   cir.return implicit
 // CIR-NEXT: }
 
 // LLVM: define{{.*}} void @_Z2l3v(){{.*}}

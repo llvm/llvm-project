@@ -14,7 +14,7 @@ void C::f() {}
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>, ["this", init]
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]] : !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
-// CIR:   cir.return
+// CIR:   cir.return implicit 
 // CIR: }
 
 void C::f2(int a, int b) {}
@@ -27,7 +27,7 @@ void C::f2(int a, int b) {}
 // CIR-NEXT:   cir.store %[[A_ARG]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT:   cir.store %[[B_ARG]], %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
-// CIR-NEXT:   cir.return
+// CIR-NEXT:   cir.return implicit
 // CIR-NEXT: }
 
 void test1() {
@@ -42,5 +42,5 @@ void test1() {
 // CIR-NEXT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR-NEXT:   %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
 // CIR-NEXT:   cir.call @_ZN1C2f2Eii(%[[C_ADDR]], %[[ONE]], %[[TWO]]) : (!cir.ptr<!rec_C>, !s32i, !s32i) -> ()
-// CIR-NEXT:   cir.return
+// CIR-NEXT:   cir.return implicit
 // CIR-NEXT: }

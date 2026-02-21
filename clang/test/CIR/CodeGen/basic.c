@@ -118,7 +118,7 @@ void f4(void) {
 }
 
 //      CIR: cir.func{{.*}} @f4()
-// CIR-NEXT:   cir.return
+// CIR-NEXT:   cir.return implicit
 
 //      LLVM: define{{.*}} void @f4()
 // LLVM-NEXT:   ret void
@@ -144,7 +144,7 @@ void f5(void) {
 // CIR-NEXT:        cir.yield
 // CIR-NEXT:      }
 // CIR-NEXT:   }
-// CIR-NEXT:   cir.return
+// CIR-NEXT:   cir.return implicit 
 // CIR-NEXT: }
 
 // LLVM: define{{.*}} void @f5()
@@ -258,7 +258,7 @@ int f8(int *p) {
 void f9() {}
 
 //      CIR: cir.func{{.*}} @f9()
-// CIR-NEXT:   cir.return
+// CIR-NEXT:   cir.return implicit
 
 //      LLVM: define{{.*}} void @f9()
 // LLVM-NEXT:   ret void
@@ -272,7 +272,7 @@ void f10(int arg0, ...) {}
 //      CIR: cir.func{{.*}} @f10(%[[ARG0:.*]]: !s32i loc({{.*}}), ...)
 // CIR-NEXT:   %[[ARG0_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["arg0", init] {alignment = 4 : i64}
 // CIR-NEXT:   cir.store{{.*}} %[[ARG0]], %[[ARG0_PTR]] : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:   cir.return
+// CIR-NEXT:   cir.return implicit
 
 //      LLVM: define{{.*}} void @f10(i32 %[[ARG0:.*]], ...)
 // LLVM-NEXT:   %[[ARG0_PTR:.*]] = alloca i32, i64 1, align 4
