@@ -1172,32 +1172,6 @@ static const SCEV *minusSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
   return nullptr;
 }
 
-/// Returns \p A * \p B if it guaranteed not to signed wrap. Otherwise returns
-/// nullptr. \p A and \p B must have the same integer type.
-static const SCEV *mulSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
-                                           ScalarEvolution &SE) {
-  if (SE.willNotOverflow(Instruction::Mul, /*Signed=*/true, A, B))
-    return SE.getMulExpr(A, B);
-  return nullptr;
-}
-
-/// Returns the absolute value of \p A. In the context of dependence analysis,
-/// we need an absolute value in a mathematical sense. If \p A is the signed
-/// minimum value, we cannot represent it unless extending the original type.
-/// Thus if we cannot prove that \p A is not the signed minimum value, returns
-/// nullptr.
-static const SCEV *absSCEVNoSignedOverflow(const SCEV *A, ScalarEvolution &SE) {
-  IntegerType *Ty = cast<IntegerType>(A->getType());
-  if (!Ty)
-    return nullptr;
-
-  const SCEV *SMin =
-      SE.getConstant(APInt::getSignedMinValue(Ty->getBitWidth()));
-  if (!SE.isKnownPredicate(CmpInst::ICMP_NE, A, SMin))
-    return nullptr;
-  return SE.getAbsExpr(A, /*IsNSW=*/true);
-}
-
 /// Returns true iff \p Test is enabled.
 static bool isDependenceTestEnabled(DependenceTestType Test) {
   if (EnableDependenceTest == DependenceTestType::All)
@@ -1261,14 +1235,18 @@ bool DependenceInfo::testZIV(const SCEV *Src, const SCEV *Dst,
 //                { > if d < 0
 //
 // Return true if dependence disproved.
-bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
-                                   const SCEV *DstConst, const Loop *CurSrcLoop,
-                                   const Loop *CurDstLoop, unsigned Level,
+bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
+                                   const SCEVAddRecExpr *Dst, unsigned Level,
                                    FullDependence &Result,
                                    bool UnderRuntimeAssumptions) {
   if (!isDependenceTestEnabled(DependenceTestType::StrongSIV))
     return false;
 
+  const SCEV *Coeff = Src->getStepRecurrence(*SE);
+  assert(Coeff == Dst->getStepRecurrence(*SE) &&
+         "Expecting same coefficient in Strong SIV test");
+  const SCEV *SrcConst = Src->getStart();
+  const SCEV *DstConst = Dst->getStart();
   LLVM_DEBUG(dbgs() << "\tStrong SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    Coeff = " << *Coeff);
   LLVM_DEBUG(dbgs() << ", " << *Coeff->getType() << "\n");
@@ -1280,6 +1258,47 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   assert(0 < Level && Level <= CommonLevels && "level out of range");
   Level--;
 
+  // Src: [a*0 + c1], [a*1 + c1], [a*2 + c1], ..., [a*BTC + c1]
+  // Dst: [a*0 + c2], [a*1 + c2], [a*2 + c2], ..., [a*BTC + c2]
+  //
+  // When 0 <=s a, we can prove independence if:
+  //
+  //   (a*BTC + c1 <s a*0 + c2) or (a*BTC + c2 <s a*0 + c1)
+  //
+  // When a <s 0, we can prove independence if:
+  //
+  //   (a*0 + c1 <s a*BTC + c2) or (a*0 + c2 <s a*BTC + c1)
+  //
+  // These can be combined by computing the smin and smax of the Src and Dst.
+  //
+  // FIXME: Currently the nowrap properties of Src and Dst are not checked.
+  // Therefore, evaluating them at the last iteration may produce incorrect
+  // results.
+  bool IsNoOverlap = [&] {
+    const SCEV *UpperBound = collectUpperBound(Src->getLoop(), Src->getType());
+    if (!UpperBound)
+      return false;
+    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound);
+    LLVM_DEBUG(dbgs() << ", " << *UpperBound->getType() << "\n");
+
+    const SCEV *SrcBegin = SrcConst;
+    const SCEV *DstBegin = DstConst;
+    const SCEV *SrcEnd = Src->evaluateAtIteration(UpperBound, *SE);
+    const SCEV *DstEnd = Dst->evaluateAtIteration(UpperBound, *SE);
+    const SCEV *SrcMin = SE->getSMinExpr(SrcBegin, SrcEnd);
+    const SCEV *SrcMax = SE->getSMaxExpr(SrcBegin, SrcEnd);
+    const SCEV *DstMin = SE->getSMinExpr(DstBegin, DstEnd);
+    const SCEV *DstMax = SE->getSMaxExpr(DstBegin, DstEnd);
+    return SE->isKnownPredicate(ICmpInst::ICMP_SLT, SrcMax, DstMin) ||
+           SE->isKnownPredicate(ICmpInst::ICMP_SLT, DstMax, SrcMin);
+  }();
+  if (IsNoOverlap) {
+    // Distance greater than trip count - no dependence
+    ++StrongSIVindependence;
+    ++StrongSIVsuccesses;
+    return true;
+  }
+
   const SCEV *Delta = minusSCEVNoSignedOverflow(SrcConst, DstConst, *SE);
   if (!Delta) {
     Result.Consistent = false;
@@ -1287,30 +1306,6 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   }
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta);
   LLVM_DEBUG(dbgs() << ", " << *Delta->getType() << "\n");
-
-  // check that |Delta| < iteration count
-  bool IsDeltaLarge = [&] {
-    const SCEV *UpperBound = collectUpperBound(CurSrcLoop, Delta->getType());
-    if (!UpperBound)
-      return false;
-
-    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound);
-    LLVM_DEBUG(dbgs() << ", " << *UpperBound->getType() << "\n");
-    const SCEV *AbsDelta = absSCEVNoSignedOverflow(Delta, *SE);
-    const SCEV *AbsCoeff = absSCEVNoSignedOverflow(Coeff, *SE);
-    if (!AbsDelta || !AbsCoeff)
-      return false;
-    const SCEV *Product = mulSCEVNoSignedOverflow(UpperBound, AbsCoeff, *SE);
-    if (!Product)
-      return false;
-    return SE->isKnownPredicate(CmpInst::ICMP_SGT, AbsDelta, Product);
-  }();
-  if (IsDeltaLarge) {
-    // Distance greater than trip count - no dependence
-    ++StrongSIVindependence;
-    ++StrongSIVsuccesses;
-    return true;
-  }
 
   // Can we compute distance?
   if (isa<SCEVConstant>(Delta) && isa<SCEVConstant>(Coeff)) {
@@ -2357,9 +2352,8 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
     Level = mapSrcLoop(CurSrcLoop);
     bool disproven;
     if (SrcCoeff == DstCoeff)
-      disproven =
-          strongSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop, CurDstLoop,
-                        Level, Result, UnderRuntimeAssumptions);
+      disproven = strongSIVtest(SrcAddRec, DstAddRec, Level, Result,
+                                UnderRuntimeAssumptions);
     else if (SrcCoeff == SE->getNegativeSCEV(DstCoeff))
       disproven = weakCrossingSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
                                       CurDstLoop, Level, Result);
