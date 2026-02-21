@@ -171,6 +171,44 @@ INITIALIZE_PASS_END(X86PreLegalizerCombiner, DEBUG_TYPE,
                     false)
 
 namespace llvm {
+
+PreservedAnalyses
+X86PreLegalizerCombinerPass::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  if (MF.getProperties().hasFailedISel())
+    return PreservedAnalyses::all();
+
+  X86PreLegalizerCombinerImplRuleConfig RuleConfig;
+  if (!RuleConfig.parseCommandLineOption())
+    report_fatal_error("Invalid rule identifier");
+
+  auto &CSEInfo = MFAM.getResult<GISelCSEAnalysis>(MF);
+
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  const LegalizerInfo *LI = ST.getLegalizerInfo();
+
+  const Function &F = MF.getFunction();
+  bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOptLevel::None;
+  GISelValueTracking &VT = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
+  MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  CombinerInfo CInfo(/*AllowIllegalOps=*/true, /*ShouldLegalizeIllegal=*/false,
+                     /*LegalizerInfo=*/LI, EnableOpt, F.hasOptSize(),
+                     F.hasMinSize());
+
+  // This is the first Combiner, so the input IR might contain dead
+  // instructions.
+  CInfo.EnableFullDCE = true;
+  X86PreLegalizerCombinerImpl Impl(MF, CInfo, nullptr, VT, CSEInfo.get(),
+                                   RuleConfig, ST, &MDT, LI);
+  Impl.combineMachineInstrs();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserve<GISelCSEAnalysis>();
+  PA.preserve<GISelValueTrackingAnalysis>();
+  PA.preserve<MachineDominatorTreeAnalysis>();
+  return PA;
+}
+
 FunctionPass *createX86PreLegalizerCombiner() {
   return new X86PreLegalizerCombiner();
 }

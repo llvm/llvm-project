@@ -56,6 +56,7 @@ public:
   // TODO(boomanaiden154): We need to add addRegAssignAndRewriteOptimized here
   // once it is available to support AMX.
   void addAsmPrinter(PassManagerWrapper &PMW, CreateMCStreamer) const;
+  void addPreLegalizeMachineIR(PassManagerWrapper &PMW) const;
 };
 
 void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
@@ -248,6 +249,11 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   if (TT.isOSWindows() && TT.isX86_64()) {
     addMachineFunctionPass(X86WinEHUnwindV2Pass(), PMW);
   }
+}
+
+void X86CodeGenPassBuilder::addPreLegalizeMachineIR(
+    PassManagerWrapper &PMW) const {
+  addMachineFunctionPass(X86PreLegalizerCombinerPass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW,
