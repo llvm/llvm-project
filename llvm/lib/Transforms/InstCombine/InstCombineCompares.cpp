@@ -7523,6 +7523,44 @@ static Instruction *foldICmpInvariantGroup(ICmpInst &I) {
   return nullptr;
 }
 
+static Instruction *foldICmpOfVectorReduce(ICmpInst &I, const DataLayout &DL,
+                                           IRBuilderBase &Builder) {
+  if (!ICmpInst::isEquality(I.getPredicate()))
+    return nullptr;
+
+  // The caller puts constants after non-constants.
+  Value *Op = I.getOperand(0);
+  Value *Const = I.getOperand(1);
+
+  // For Cond an equality condition, fold
+  //
+  //   icmp (eq|ne) (vreduce_(or|and) Op), (Zero|AllOnes) ->
+  //   icmp (eq|ne) Op, (Zero|AllOnes)
+  //
+  // with a bitcast.
+  Value *Vec;
+  if ((match(Const, m_ZeroInt()) &&
+       match(Op, m_Intrinsic<Intrinsic::vector_reduce_or>(m_Value(Vec)))) ||
+      (match(Const, m_AllOnes()) &&
+       match(Op, m_Intrinsic<Intrinsic::vector_reduce_and>(m_Value(Vec))))) {
+    auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+    if (!VecTy)
+      return nullptr;
+    Type *VecEltTy = VecTy->getElementType();
+    unsigned ScalarBW =
+        DL.getTypeSizeInBits(VecEltTy) * VecTy->getNumElements();
+    if (!DL.fitsInLegalInteger(ScalarBW))
+      return nullptr;
+    Type *ScalarTy = IntegerType::get(I.getContext(), ScalarBW);
+    Value *NewConst = match(Const, m_ZeroInt())
+                          ? ConstantInt::get(ScalarTy, 0)
+                          : ConstantInt::getAllOnesValue(ScalarTy);
+    return CmpInst::Create(Instruction::ICmp, I.getPredicate(),
+                           Builder.CreateBitCast(Vec, ScalarTy), NewConst);
+  }
+  return nullptr;
+}
+
 /// This function folds patterns produced by lowering of reduce idioms, such as
 /// llvm.vector.reduce.and which are lowered into instruction chains. This code
 /// attempts to generate fewer number of scalar comparisons instead of vector
@@ -7996,6 +8034,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
 
   if (Instruction *Res = foldICmpOfUAddOv(I))
+    return Res;
+
+  if (Instruction *Res = foldICmpOfVectorReduce(I, DL, Builder))
     return Res;
 
   // The 'cmpxchg' instruction returns an aggregate containing the old value and
