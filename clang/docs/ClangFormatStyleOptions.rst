@@ -4751,8 +4751,8 @@ the configuration (without a prefix: ``Auto``).
 .. _IntegerLiteralSeparator:
 
 **IntegerLiteralSeparator** (``IntegerLiteralSeparatorStyle``) :versionbadge:`clang-format 16` :ref:`¶ <IntegerLiteralSeparator>`
-  Format integer literal separators (``'`` for C++ and ``_`` for C#, Java,
-  and JavaScript).
+  Format integer literal separators (``'`` for C, C++ and ``_`` for C#, Java,
+  and JavaScript).  Note that using the separator with C requires a C23+ compiler.
 
   Nested configuration flags:
 
