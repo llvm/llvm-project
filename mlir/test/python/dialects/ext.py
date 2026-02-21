@@ -24,7 +24,7 @@ def testMyInt():
         value: IntegerAttr
         cst: Result[i32]
 
-    class AddOp(MyInt.Operation, name="add"):
+    class AddOp(Operation, dialect=MyInt, name="add"):
         lhs: Operand[i32]
         rhs: Operand[i32]
         res: Result[i32]
