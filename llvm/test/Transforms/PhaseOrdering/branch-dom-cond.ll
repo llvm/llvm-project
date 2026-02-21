@@ -12,7 +12,7 @@ define void @growTables(ptr %p) {
 ; CHECK-NEXT:    [[I_02:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[CALL9:%.*]] = load volatile ptr, ptr [[P]], align 8
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_02]], 1
-; CHECK-NEXT:    [[CMP7:%.*]] = icmp slt i32 [[INC]], [[CALL]]
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp samesign ult i32 [[INC]], [[CALL]]
 ; CHECK-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY]], label %[[FOR_BODY12:.*]]
 ; CHECK:       [[FOR_BODY12]]:
 ; CHECK-NEXT:    [[CALL14:%.*]] = load volatile ptr, ptr [[P]], align 8

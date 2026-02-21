@@ -15,7 +15,7 @@ define void @basic(i32 %K, i32 %N) {
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[J_INC:%.*]], [[INNER]] ], [ 3, [[INNER_PEEL2]] ]
 ; CHECK-NEXT:    [[J_INC]] = add nuw nsw i32 [[J]], 1
-; CHECK-NEXT:    [[CMP_INNER:%.*]] = icmp slt i32 [[J_INC]], [[K]]
+; CHECK-NEXT:    [[CMP_INNER:%.*]] = icmp samesign ult i32 [[J_INC]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP_INNER]], label [[INNER]], label [[OUTER_BACKEDGE]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       outer.backedge:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1

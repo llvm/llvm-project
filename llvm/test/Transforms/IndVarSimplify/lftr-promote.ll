@@ -26,7 +26,7 @@ define void @foo(ptr %p, i32 %n) nounwind {
 ; CHECK-NEXT:    [[TMP7]] = add nuw nsw i32 [[I_01]], 1
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i32 [[TMP7]], [[N]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp samesign ult i32 [[TMP7]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[BB2]], label [[BB3_RETURN_CRIT_EDGE:%.*]]
 ; CHECK:       bb3.return_crit_edge:
 ; CHECK-NEXT:    br label [[RETURN]]

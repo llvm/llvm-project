@@ -161,7 +161,7 @@ define void @ult_const_max(i64 %n) {
 ; CHECK-NEXT:    br i1 true, label [[LATCH]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    call void @side_effect()
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[IV]], [[N]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i64 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP]], label [[EXIT_LOOPEXIT]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
