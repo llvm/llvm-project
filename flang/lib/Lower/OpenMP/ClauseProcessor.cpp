@@ -1616,12 +1616,23 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
 
   auto callbackFn = [&](const auto &clause, const parser::CharBlock &source) {
     mlir::Location clauseLocation = converter.genLocation(source);
-    const auto &[expectation, mapper, iterator, objects] = clause.t;
+    const auto &[expectation, mappers, iterator, objects] = clause.t;
 
-    // TODO Support motion modifiers: mapper, iterator.
-    if (mapper) {
-      TODO(clauseLocation, "Mapper modifier is not supported yet");
-    } else if (iterator) {
+    std::string mapperIdName = "";
+    if (mappers) {
+      assert(mappers->size() == 1 && "more than one mapper");
+      const semantics::Symbol *mapperSym = mappers->front().v.id().symbol;
+      mapperIdName = mapperSym->name().ToString();
+      if (mapperIdName != "default") {
+        // Mangle with the ultimate owner so that use-associated mapper
+        // identifiers resolve to the same symbol as their defining scope.
+        const semantics::Symbol &ultimate = mapperSym->GetUltimate();
+        mapperIdName = converter.mangleName(mapperIdName, ultimate.owner());
+      }
+    }
+
+    // TODO Support motion modifiers: iterator.
+    if (iterator) {
       TODO(clauseLocation, "Iterator modifier is not supported yet");
     }
 
@@ -1632,7 +1643,8 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
     if (expectation && *expectation == omp::clause::To::Expectation::Present)
       mapTypeBits |= mlir::omp::ClauseMapFlags::present;
     processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
-                      parentMemberIndices, result.mapVars, mapSymbols);
+                      parentMemberIndices, result.mapVars, mapSymbols,
+                      mapperIdName);
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::To>(callbackFn);
