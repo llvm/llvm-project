@@ -447,3 +447,16 @@ declaration kind), all of which are optional:
     - Selector: "initWithFrame:"
       MethodKind: Instance
       DesignatedInit: true
+
+:Lifetimebound:
+  
+  Used for methods and functions (excluding ``this``). Parameters are identified by a 0-based
+  'Position'. Equivalent to ``[[clang::lifetimebound]]``.
+
+  ::
+
+    Functions:
+    - Name: funcToAnnotate
+      Parameters:
+      - Position: 0
+        Lifetimebound: true
