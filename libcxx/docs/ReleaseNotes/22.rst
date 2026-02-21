@@ -55,6 +55,8 @@ Implemented Papers
 - P3567R2: ``flat_meow`` Fixes (`Github <https://llvm.org/PR162022>`__)
 - P3836R2: Make ``optional<T&>`` trivially copyable (`Github <https://llvm.org/PR171275>`__)
 - P1789R3: Library Support for Expansion Statements (`Github <https://llvm.org/PR167184>`__)
+- P0881R7: A Proposal to add stacktrace library (`Github <https://llvm.org/PR105131>`__)
+- P2301R1: Add a `pmr` alias for `std::stacktrace` (`Github <https://llvm.org/PR105167>`__)
 
 Improvements and New Features
 -----------------------------

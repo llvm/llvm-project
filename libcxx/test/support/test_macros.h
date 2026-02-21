@@ -360,6 +360,26 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #define TEST_NOINLINE
 #endif
 
+// Disables tail-call optimization for "outbound" calls
+// performed in the function annotated with this attribute.
+#if __has_cpp_attribute(_Clang::__disable_tail_calls__)
+#  define TEST_NO_TAIL_CALLS_OUT [[_Clang::__disable_tail_calls__]]
+#elif __has_cpp_attribute(__gnu__::__optimize__)
+#  define TEST_NO_TAIL_CALLS_OUT [[__gnu__::__optimize__("no-optimize-sibling-calls")]]
+#else
+#  define TEST_NO_TAIL_CALLS_OUT
+#endif
+
+// Disables tail-call optimization for "inbound" calls -- that is,
+// calls from some other function calling the one having this attribute.
+#if __has_cpp_attribute(_Clang::__not_tail_called__)
+#  define TEST_NO_TAIL_CALLS_IN [[_Clang::__not_tail_called__]]
+#else
+#  define TEST_NO_TAIL_CALLS_IN
+#endif
+
+#define TEST_NO_TAIL_CALLS TEST_NO_TAIL_CALLS_IN TEST_NO_TAIL_CALLS_OUT
+
 #ifdef _WIN32
 #define TEST_NOT_WIN32(...) ((void)0)
 #else
@@ -377,8 +397,8 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 //
 // The same goes on IBM zOS.
 // The same goes on AIX.
-#define ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(...) ((void)(__VA_ARGS__))
-#define TEST_SUPPORTS_LIBRARY_INTERNAL_ALLOCATIONS 0
+#  define ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(...) ((void)(__VA_ARGS__))
+#  define TEST_SUPPORTS_LIBRARY_INTERNAL_ALLOCATIONS 0
 #else
 #define ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(...) assert(__VA_ARGS__)
 #define TEST_SUPPORTS_LIBRARY_INTERNAL_ALLOCATIONS 1
@@ -399,7 +419,7 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 // the end user executable, and these fallbacks work even in DLL configurations.
 // In MinGW configurations when built as a DLL, and on zOS, these fallbacks
 // don't work though.
-#define ASSERT_WITH_OPERATOR_NEW_FALLBACKS(...) ((void)(__VA_ARGS__))
+#  define ASSERT_WITH_OPERATOR_NEW_FALLBACKS(...) ((void)(__VA_ARGS__))
 #else
 #define ASSERT_WITH_OPERATOR_NEW_FALLBACKS(...) assert(__VA_ARGS__)
 #endif

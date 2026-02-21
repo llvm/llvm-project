@@ -104,6 +104,12 @@
 {'is_defined': True, 'name': '_ZNKSt3__110moneypunctIwLb1EE16do_negative_signEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__110moneypunctIwLb1EE16do_positive_signEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__110moneypunctIwLb1EE16do_thousands_sepEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt3__112__stacktrace6_Entry4hashEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt3__112__stacktrace6_Entry8write_toERNS_13basic_ostreamIcNS_11char_traitsIcEEEE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt3__112__stacktrace6_Entry9to_stringEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt3__112__stacktrace6_Trace4hashEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt3__112__stacktrace6_Trace8write_toERNS_13basic_ostreamIcNS_11char_traitsIcEEEE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt3__112__stacktrace6_Trace9to_stringEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__112bad_weak_ptr4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE12find_last_ofEPKcmm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE13find_first_ofEPKcmm', 'type': 'FUNC'}
@@ -623,6 +629,9 @@
 {'is_defined': True, 'name': '_ZNSt3__112__rs_defaultD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__rs_defaultD2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__rs_defaultclEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__112__stacktrace6_Trace15populate_imagesEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__112__stacktrace7_ImagesC1Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__112__stacktrace7_ImagesC2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112bad_weak_ptrD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112bad_weak_ptrD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112bad_weak_ptrD2Ev', 'type': 'FUNC'}

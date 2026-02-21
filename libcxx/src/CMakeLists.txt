@@ -40,6 +40,12 @@ set(LIBCXX_SOURCES
   ryu/d2fixed.cpp
   ryu/d2s.cpp
   ryu/f2s.cpp
+  stacktrace/default_impl.cpp
+  stacktrace/entry.cpp
+  stacktrace/images.h
+  stacktrace/macos_impl.cpp
+  stacktrace/trace.cpp
+  stacktrace/windows_impl.cpp
   stdexcept.cpp
   string.cpp
   support/runtime/exception_fallback.ipp

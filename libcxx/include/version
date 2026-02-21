@@ -537,7 +537,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # undef  __cpp_lib_shift
 # define __cpp_lib_shift                                202202L
 // # define __cpp_lib_spanstream                           202106L
-// # define __cpp_lib_stacktrace                           202011L
+# if _LIBCPP_AVAILABILITY_HAS_STACKTRACE
+#   define __cpp_lib_stacktrace                         202011L
+# endif
 # define __cpp_lib_stdatomic_h                          202011L
 # define __cpp_lib_string_contains                      202011L
 # define __cpp_lib_string_resize_and_overwrite          202110L
