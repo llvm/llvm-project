@@ -671,8 +671,8 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
     extracted back.
 
     A Wave64 wavefront has 64 lanes (0--63) organized hierarchically:
-    - 4 rows of 16 lanes each: row 0 = lanes 0--15, row 1 = lanes 16--31,
-      row 2 = lanes 32--47, row 3 = lanes 48--63.
+    - 4 rows of 16 lanes each: row 0 = lanes 0-15, row 1 = lanes 16-31,
+      row 2 = lanes 32-47, row 3 = lanes 48-63.
     - Each row is divided into 4 banks of 4 consecutive lanes: bank 0 =
       lanes 0-3, bank 1 = lanes 4-7, bank 2 = lanes 8-11, bank 3 =
       lanes 12-15 (lane numbers shown for row 0; add 16/32/48 for other rows).
