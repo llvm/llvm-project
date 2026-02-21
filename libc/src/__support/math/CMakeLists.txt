@@ -2051,6 +2051,17 @@ add_header_library(
 )
 
 add_header_library(
+  sqrti
+  HDRS
+    sqrti.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   dfmal
   HDRS
     dfmal.h

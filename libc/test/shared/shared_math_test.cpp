@@ -158,6 +158,11 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fmaxf(0.0f, 0.0f));
 }
 
+TEST(LlvmLibcSharedMathTest, AllInteger) {
+  EXPECT_EQ(3u, LIBC_NAMESPACE::shared::sqrti(10u));
+  EXPECT_EQ(65535u, LIBC_NAMESPACE::shared::sqrti(4294836225u));
+}
+
 TEST(LlvmLibcSharedMathTest, AllDouble) {
   double sin, cos;
   LIBC_NAMESPACE::shared::sincos(0.0, &sin, &cos);
