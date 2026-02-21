@@ -934,25 +934,27 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
     const ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(C);
     const ConstantVector *CV = dyn_cast<ConstantVector>(C);
     const ConstantAggregateZero *CAZ = dyn_cast<ConstantAggregateZero>(C);
+    const ConstantInt *CI = dyn_cast<ConstantInt>(C);
+    const ConstantFP *CFP = dyn_cast<ConstantFP>(C);
 
     if (CDV) {
         elemNum = CDV->getNumElements();
         ElemTy = CDV->getElementType();
-    } else if (CV || CAZ) {
+    } else if (CV || CAZ || CI || CFP) {
       auto *VTy = cast<FixedVectorType>(C->getType());
       elemNum = VTy->getNumElements();
       ElemTy = VTy->getElementType();
     } else {
-        llvm_unreachable("Unknown constant vector type!");
+      llvm_unreachable("Unknown constant vector type!");
     }
 
     Result.AggregateVal.resize(elemNum);
     // Check if vector holds floats.
     if(ElemTy->isFloatTy()) {
-      if (CAZ) {
-        GenericValue floatZero;
-        floatZero.FloatVal = 0.f;
-        llvm::fill(Result.AggregateVal, floatZero);
+      if (CAZ || CFP) {
+        GenericValue floatVal;
+        floatVal.FloatVal = CAZ ? 0.f : CFP->getValueAPF().convertToFloat();
+        llvm::fill(Result.AggregateVal, floatVal);
         break;
       }
       if(CV) {
@@ -970,10 +972,10 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
     }
     // Check if vector holds doubles.
     if (ElemTy->isDoubleTy()) {
-      if (CAZ) {
-        GenericValue doubleZero;
-        doubleZero.DoubleVal = 0.0;
-        llvm::fill(Result.AggregateVal, doubleZero);
+      if (CAZ || CFP) {
+        GenericValue doubleVal;
+        doubleVal.DoubleVal = CAZ ? 0.0 : CFP->getValueAPF().convertToDouble();
+        llvm::fill(Result.AggregateVal, doubleVal);
         break;
       }
       if(CV) {
@@ -991,10 +993,11 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
     }
     // Check if vector holds integers.
     if (ElemTy->isIntegerTy()) {
-      if (CAZ) {
-        GenericValue intZero;
-        intZero.IntVal = APInt(ElemTy->getScalarSizeInBits(), 0ull);
-        llvm::fill(Result.AggregateVal, intZero);
+      if (CAZ || CI) {
+        GenericValue intVal;
+        intVal.IntVal =
+            CAZ ? APInt(ElemTy->getScalarSizeInBits(), 0ull) : CI->getValue();
+        llvm::fill(Result.AggregateVal, intVal);
         break;
       }
       if(CV) {
