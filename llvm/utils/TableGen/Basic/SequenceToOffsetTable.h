@@ -153,6 +153,9 @@ public:
         OS.write_escaped(StringRef(&*Terminator, 1));
       OS << "\"\n";
     }
+    // Print dummy element ("?") if the array would be empty otherwise.
+    if (Size == 0)
+      OS << "  /* dummy */ \"?\"\n";
     OS << "};\n"
        << "#ifdef __GNUC__\n"
        << "#pragma GCC diagnostic pop\n"

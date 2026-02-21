@@ -257,7 +257,8 @@ public:
 
 private:
   const TargetRegisterInfoDesc *InfoDesc;     // Extra desc array for codegen
-  const char *const *SubRegIndexNames;        // Names of subreg indexes.
+  const char *SubRegIndexStrings;             // Names of subreg indexes.
+  ArrayRef<uint32_t> SubRegIndexNameOffsets;
   const SubRegCoveredBits *SubRegIdxRanges;   // Pointer to the subreg covered
                                               // bit ranges array.
 
@@ -272,7 +273,8 @@ private:
 
 protected:
   TargetRegisterInfo(const TargetRegisterInfoDesc *ID, regclass_iterator RCB,
-                     regclass_iterator RCE, const char *const *SRINames,
+                     regclass_iterator RCE, const char *SRIStrings,
+                     ArrayRef<uint32_t> SRINameOffsets,
                      const SubRegCoveredBits *SubIdxRanges,
                      const LaneBitmask *SRILaneMasks, LaneBitmask CoveringLanes,
                      const RegClassInfo *const RCIs,
@@ -403,12 +405,12 @@ public:
     return InfoDesc->InAllocatableClass[RegNo];
   }
 
-  /// Return the human-readable symbolic target-specific
-  /// name for the specified SubRegIndex.
+  /// Return the human-readable symbolic target-specific name for the specified
+  /// SubRegIndex.
   const char *getSubRegIndexName(unsigned SubIdx) const {
     assert(SubIdx && SubIdx < getNumSubRegIndices() &&
            "This is not a subregister index");
-    return SubRegIndexNames[SubIdx-1];
+    return SubRegIndexStrings + SubRegIndexNameOffsets[SubIdx - 1];
   }
 
   /// Get the size of the bit range covered by a sub-register index.
