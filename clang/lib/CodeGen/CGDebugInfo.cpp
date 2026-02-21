@@ -2332,6 +2332,12 @@ CGDebugInfo::GetMethodLinkageName(const CXXMethodDecl *Method) const {
   return CGM.getMangledName(Method);
 }
 
+bool CGDebugInfo::shouldGenerateVirtualCallSite() const {
+  // Check general conditions for call site generation.
+  return ((getCallSiteRelatedAttrs() != llvm::DINode::FlagZero) &&
+          (CGM.getCodeGenOpts().DwarfVersion >= 5));
+}
+
 llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     const CXXMethodDecl *Method, llvm::DIFile *Unit, llvm::DIType *RecordTy) {
   assert(Method);
@@ -4983,6 +4989,23 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
 
   if (IsDeclForCallSite)
     Fn->setSubprogram(SP);
+}
+
+void CGDebugInfo::addCallTargetIfVirtual(const FunctionDecl *FD,
+                                         llvm::CallBase *CI) {
+  if (!shouldGenerateVirtualCallSite())
+    return;
+
+  if (!FD)
+    return;
+
+  assert(CI && "Invalid Call Instruction.");
+  if (!CI->isIndirectCall())
+    return;
+
+  // Always get the method declaration.
+  if (llvm::DISubprogram *MD = getFunctionDeclaration(FD))
+    CI->setMetadata(llvm::LLVMContext::MD_call_target, MD);
 }
 
 void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,

@@ -3343,8 +3343,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Call site info for function parameters tracking and call base type info.
   MachineFunction::CallSiteInfo CSInfo;
   // Set type id for call site info.
-  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
-    CSInfo = MachineFunction::CallSiteInfo(*CB);
+  setTypeIdForCallsiteInfo(CB, MF, CSInfo);
 
   // Check if it's really possible to do a tail call.
   // For non-musttail calls, restrict to functions that won't require $gp
