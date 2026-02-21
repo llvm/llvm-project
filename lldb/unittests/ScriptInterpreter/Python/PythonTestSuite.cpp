@@ -171,6 +171,16 @@ lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data) {
   return nullptr;
 }
 
+void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFileSpec(PyObject *data) {
+  return nullptr;
+}
+
+void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBModule(PyObject *data) {
+  return nullptr;
+}
+
 lldb::ValueObjectSP
 lldb_private::python::SWIGBridge::LLDBSWIGPython_GetValueObjectSPFromSBValue(
     void *data) {

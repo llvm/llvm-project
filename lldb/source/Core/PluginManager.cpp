@@ -1489,18 +1489,21 @@ struct SymbolLocatorInstance
       SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file,
       SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file,
       SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle,
+      SymbolLocatorLocateSourceFile locate_source_file,
       DebuggerInitializeCallback debugger_init_callback)
       : PluginInstance<SymbolLocatorCreateInstance>(
             name, description, create_callback, debugger_init_callback),
         locate_executable_object_file(locate_executable_object_file),
         locate_executable_symbol_file(locate_executable_symbol_file),
         download_object_symbol_file(download_object_symbol_file),
-        find_symbol_file_in_bundle(find_symbol_file_in_bundle) {}
+        find_symbol_file_in_bundle(find_symbol_file_in_bundle),
+        locate_source_file(locate_source_file) {}
 
   SymbolLocatorLocateExecutableObjectFile locate_executable_object_file;
   SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file;
   SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file;
   SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle;
+  SymbolLocatorLocateSourceFile locate_source_file;
 };
 typedef PluginInstances<SymbolLocatorInstance> SymbolLocatorInstances;
 
@@ -1516,11 +1519,12 @@ bool PluginManager::RegisterPlugin(
     SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file,
     SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file,
     SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle,
+    SymbolLocatorLocateSourceFile locate_source_file,
     DebuggerInitializeCallback debugger_init_callback) {
   return GetSymbolLocatorInstances().RegisterPlugin(
       name, description, create_callback, locate_executable_object_file,
       locate_executable_symbol_file, download_object_symbol_file,
-      find_symbol_file_in_bundle, debugger_init_callback);
+      find_symbol_file_in_bundle, locate_source_file, debugger_init_callback);
 }
 
 bool PluginManager::UnregisterPlugin(
@@ -1597,6 +1601,21 @@ FileSpec PluginManager::FindSymbolFileInBundle(const FileSpec &symfile_bundle,
     if (instance.find_symbol_file_in_bundle) {
       std::optional<FileSpec> result =
           instance.find_symbol_file_in_bundle(symfile_bundle, uuid, arch);
+      if (result)
+        return *result;
+    }
+  }
+  return {};
+}
+
+FileSpec PluginManager::LocateSourceFile(const lldb::TargetSP &target_sp,
+                                         const lldb::ModuleSP &module_sp,
+                                         const FileSpec &original_source_file) {
+  auto instances = GetSymbolLocatorInstances().GetSnapshot();
+  for (auto &instance : instances) {
+    if (instance.locate_source_file) {
+      std::optional<FileSpec> result = instance.locate_source_file(
+          target_sp, module_sp, original_source_file);
       if (result)
         return *result;
     }

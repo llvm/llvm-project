@@ -172,6 +172,18 @@ ScriptInterpreter::GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const {
   return locker.GetLockedSP(*value.m_opaque_sp);
 }
 
+std::optional<FileSpec> ScriptInterpreter::GetOpaqueTypeFromSBFileSpec(
+    const lldb::SBFileSpec &file_spec) const {
+  if (file_spec.m_opaque_up)
+    return *file_spec.m_opaque_up;
+  return {};
+}
+
+lldb::ModuleSP ScriptInterpreter::GetOpaqueTypeFromSBModule(
+    const lldb::SBModule &module) const {
+  return module.m_opaque_sp;
+}
+
 lldb::ScriptLanguage
 ScriptInterpreter::StringToLanguage(const llvm::StringRef &language) {
   if (language.equals_insensitive(LanguageToString(eScriptLanguageNone)))

@@ -595,6 +595,32 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *d
   return sb_ptr;
 }
 
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFileSpec(PyObject *
+                                                                    data) {
+  lldb::SBFileSpec *sb_ptr = NULL;
+
+  int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
+                                   SWIGTYPE_p_lldb__SBFileSpec, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBModule(PyObject *
+                                                                   data) {
+  lldb::SBModule *sb_ptr = NULL;
+
+  int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
+                                   SWIGTYPE_p_lldb__SBModule, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommand(
     const char *python_function_name, const char *session_dictionary_name,
     lldb::DebuggerSP debugger, const char *args,

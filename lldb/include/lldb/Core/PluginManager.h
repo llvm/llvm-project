@@ -465,6 +465,7 @@ public:
       SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file =
           nullptr,
       SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle = nullptr,
+      SymbolLocatorLocateSourceFile locate_source_file = nullptr,
       DebuggerInitializeCallback debugger_init_callback = nullptr);
 
   static bool UnregisterPlugin(SymbolLocatorCreateInstance create_callback);
@@ -488,6 +489,10 @@ public:
   static FileSpec FindSymbolFileInBundle(const FileSpec &dsym_bundle_fspec,
                                          const UUID *uuid,
                                          const ArchSpec *arch);
+
+  static FileSpec LocateSourceFile(const lldb::TargetSP &target_sp,
+                                   const lldb::ModuleSP &module_sp,
+                                   const FileSpec &original_source_file);
 
   // Trace
   static bool RegisterPlugin(

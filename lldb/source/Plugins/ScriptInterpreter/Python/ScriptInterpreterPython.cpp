@@ -1529,6 +1529,11 @@ ScriptInterpreterPythonImpl::CreateScriptedFrameProviderInterface() {
   return std::make_shared<ScriptedFrameProviderPythonInterface>(*this);
 }
 
+ScriptedSymbolLocatorInterfaceSP
+ScriptInterpreterPythonImpl::CreateScriptedSymbolLocatorInterface() {
+  return std::make_shared<ScriptedSymbolLocatorPythonInterface>(*this);
+}
+
 ScriptedThreadPlanInterfaceSP
 ScriptInterpreterPythonImpl::CreateScriptedThreadPlanInterface() {
   return std::make_shared<ScriptedThreadPlanPythonInterface>(*this);
