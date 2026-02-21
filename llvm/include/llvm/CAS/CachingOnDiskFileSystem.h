@@ -36,7 +36,8 @@ public:
 
   /// An extra API to pull out the \a CASID if \p Path refers to a file.
   virtual ErrorOr<vfs::Status> statusAndFileID(const Twine &Path,
-                                               std::optional<CASID> &FileID) = 0;
+                                               std::optional<CASID> &FileID,
+                                               bool FollowSymlinks) = 0;
 
   /// Start tracking all stats (and other accesses). Only affects this
   /// filesystem instance, not current (or future) proxies.

@@ -86,7 +86,8 @@ public:
   preloadRealPath(DirectoryEntry &From, StringRef Remaining);
 
   ErrorOr<vfs::Status> statusAndFileID(const Twine &Path,
-                                       std::optional<CASID> &FileID) final;
+                                       std::optional<CASID> &FileID,
+                                       bool FollowSymlinks) final;
   ErrorOr<vfs::Status> status(const Twine &Path) final;
   bool exists(const Twine &Path) final;
   Expected<std::unique_ptr<CASBackedFile>>
@@ -220,7 +221,9 @@ CachingOnDiskFileSystem::CachingOnDiskFileSystem(ObjectStore &DB) : DB(DB) {}
 
 class CachingOnDiskFileSystemImpl::VFSFile final : public CASBackedFile {
 public:
-  ErrorOr<vfs::Status> status() final { return Entry->getStatus(Name); }
+  ErrorOr<vfs::Status> status() final {
+    return Entry->getStatus(Name, /*FollowSymlinks=*/true);
+  }
 
   ErrorOr<std::string> getName() final { return Name; }
 
@@ -406,9 +409,8 @@ CachingOnDiskFileSystemImpl::makeEntry(
   return makeFile(Parent, TreePathStorage.Path, *F, Status);
 }
 
-ErrorOr<vfs::Status>
-CachingOnDiskFileSystemImpl::statusAndFileID(const Twine &Path,
-                                             std::optional<CASID> &FileID) {
+ErrorOr<vfs::Status> CachingOnDiskFileSystemImpl::statusAndFileID(
+    const Twine &Path, std::optional<CASID> &FileID, bool FollowSymlinks) {
   FileID = std::nullopt;
   PathStorage PathStorage(Path);
   StringRef PathRef = PathStorage.Path;
@@ -418,13 +420,14 @@ CachingOnDiskFileSystemImpl::statusAndFileID(const Twine &Path,
   //
   // FIXME: Translate the error to a filesystem-like error to encapsulate the
   // user from CAS issues.
-  Expected<DirectoryEntry *> ExpectedEntry = lookupPath(PathRef);
+  Expected<DirectoryEntry *> ExpectedEntry =
+      lookupPath(PathRef, FollowSymlinks);
   if (!ExpectedEntry)
     return errorToErrorCode(ExpectedEntry.takeError());
 
   // Errors indicate a broken symlink.
   DirectoryEntry *Entry = *ExpectedEntry;
-  ErrorOr<vfs::Status> StatusOrErr = Entry->getStatus(PathRef);
+  ErrorOr<vfs::Status> StatusOrErr = Entry->getStatus(PathRef, FollowSymlinks);
   if (!StatusOrErr)
     return StatusOrErr.getError();
   if (Entry->isFile())
@@ -460,7 +463,7 @@ CachingOnDiskFileSystemImpl::getRealPath(const Twine &Path,
 
 ErrorOr<vfs::Status> CachingOnDiskFileSystemImpl::status(const Twine &Path) {
   std::optional<CASID> IgnoredID;
-  return statusAndFileID(Path, IgnoredID);
+  return statusAndFileID(Path, IgnoredID, /*FollowSymlinks=*/true);
 }
 
 bool CachingOnDiskFileSystemImpl::exists(const Twine &Path) {

@@ -13,9 +13,8 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
+#include "llvm/CAS/CASFSBuilder.h"
 #include "llvm/CAS/CASFileSystem.h"
-#include "llvm/CAS/CachingOnDiskFileSystem.h"
-#include "llvm/CAS/HierarchicalTreeBuilder.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeSchema.h"
 #include "llvm/CAS/Utils.h"
@@ -28,7 +27,6 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PrefixMapper.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <system_error>
@@ -563,66 +561,19 @@ int traverseGraph(ObjectStore &CAS, const CASID &ID) {
   return 0;
 }
 
-static Error
-recursiveAccess(CachingOnDiskFileSystem &FS, StringRef Path,
-                llvm::DenseSet<llvm::sys::fs::UniqueID> &SeenDirectories) {
-  auto ST = FS.status(Path);
-
-  // Ignore missing entries, which can be a symlink to a missing file, which is
-  // not an error in the filesystem itself.
-  // FIXME: add status(follow=false) to VFS instead, which would let us detect
-  // this case directly.
-  if (ST.getError() == llvm::errc::no_such_file_or_directory)
-    return Error::success();
-
-  if (!ST)
-    return createFileError(Path, ST.getError());
-
-  // Check that this is the first time we see the directory to prevent infinite
-  // recursion into symlinks. The status() above will ensure all symlinks are
-  // ingested.
-  // FIXME: add status(follow=false) to VFS instead, and then only traverse
-  // a directory and not a symlink to a directory.
-  if (ST->isDirectory() && SeenDirectories.insert(ST->getUniqueID()).second) {
-    std::error_code EC;
-    for (llvm::vfs::directory_iterator I = FS.dir_begin(Path, EC), IE;
-         !EC && I != IE; I.increment(EC)) {
-      auto Err = recursiveAccess(FS, I->path(), SeenDirectories);
-      if (Err)
-        return Err;
-    }
-  }
-
-  return Error::success();
-}
-
 static Expected<ObjectProxy>
 ingestFileSystemImpl(ObjectStore &CAS, ArrayRef<std::string> Paths,
                      ArrayRef<std::string> PrefixMapPaths) {
-  auto FS = createCachingOnDiskFileSystem(CAS);
-  if (!FS)
-    return FS.takeError();
-
-  TreePathPrefixMapper Mapper(*FS);
   SmallVector<llvm::MappedPrefix> Split;
-  if (!PrefixMapPaths.empty()) {
+  if (!PrefixMapPaths.empty())
     MappedPrefix::transformJoinedIfValid(PrefixMapPaths, Split);
-    Mapper.addRange(Split);
-    Mapper.sort();
-  }
 
-  (*FS)->trackNewAccesses();
-
-  llvm::DenseSet<llvm::sys::fs::UniqueID> SeenDirectories;
+  CASFSBuilder Builder(CAS, Split);
   for (auto &Path : Paths)
-    if (Error E = recursiveAccess(**FS, Path, SeenDirectories))
+    if (Error E = Builder.ingestFileSystemPath(Path))
       return E;
 
-  return (*FS)->createTreeFromNewAccesses(
-      [&](const llvm::vfs::CachedDirectoryEntry &Entry,
-          SmallVectorImpl<char> &Storage) {
-        return Mapper.mapDirEntry(Entry, Storage);
-      });
+  return Builder.finish();
 }
 
 /// Check that we are not attempting to ingest the CAS into itself, which can
@@ -661,22 +612,21 @@ static int ingestFileSystem(ObjectStore &CAS, std::optional<StringRef> CASPath,
 static int mergeTrees(ObjectStore &CAS, ArrayRef<std::string> Objects) {
   ExitOnError ExitOnErr("llvm-cas: merge: ");
 
-  HierarchicalTreeBuilder Builder;
+  CASFSBuilder Builder(CAS);
   for (const auto &Object : Objects) {
     auto ID = CAS.parseID(Object);
     if (ID) {
       if (std::optional<ObjectRef> Ref = CAS.getReference(*ID))
-        Builder.pushTreeContent(*Ref, "");
+        Builder.mergeCASFSRoot(*Ref);
       else
         ExitOnErr(createStringError("unknown node with id: " + ID->toString()));
     } else {
       consumeError(ID.takeError());
-      auto Ref = ExitOnErr(ingestFileSystemImpl(CAS, Object, {}));
-      Builder.pushTreeContent(Ref.getRef(), "");
+      ExitOnErr(Builder.ingestFileSystemPath(Object));
     }
   }
 
-  auto Ref = ExitOnErr(Builder.create(CAS));
+  auto Ref = ExitOnErr(Builder.finish());
   outs() << Ref.getID() << "\n";
   return 0;
 }
