@@ -1915,38 +1915,22 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
         else
           body << "1";
       };
-      if (op.getDialect().usePropertiesForAttributes()) {
-        body << "::llvm::copy(::llvm::ArrayRef<int32_t>({";
-        llvm::interleaveComma(op.getOperands(), body, interleaveFn);
-        body << formatv("}), "
-                        "result.getOrAddProperties<{0}::Properties>()."
-                        "operandSegmentSizes.begin());\n",
-                        op.getCppClassName());
-      } else {
-        body << "  result.addAttribute(\"operandSegmentSizes\", "
-             << "parser.getBuilder().getDenseI32ArrayAttr({";
-        llvm::interleaveComma(op.getOperands(), body, interleaveFn);
-        body << "}));\n";
-      }
+      body << "::llvm::copy(::llvm::ArrayRef<int32_t>({";
+      llvm::interleaveComma(op.getOperands(), body, interleaveFn);
+      body << formatv("}), "
+                      "result.getOrAddProperties<{0}::Properties>()."
+                      "operandSegmentSizes.begin());\n",
+                      op.getCppClassName());
     }
     for (const NamedTypeConstraint &operand : op.getOperands()) {
       if (!operand.isVariadicOfVariadic())
         continue;
-      if (op.getDialect().usePropertiesForAttributes()) {
-        body << formatv(
-            "  result.getOrAddProperties<{0}::Properties>().{1} = "
-            "parser.getBuilder().getDenseI32ArrayAttr({2}OperandGroupSizes);\n",
-            op.getCppClassName(),
-            operand.constraint.getVariadicOfVariadicSegmentSizeAttr(),
-            operand.name);
-      } else {
-        body << formatv(
-            "  result.addAttribute(\"{0}\", "
-            "parser.getBuilder().getDenseI32ArrayAttr({1}OperandGroupSizes));"
-            "\n",
-            operand.constraint.getVariadicOfVariadicSegmentSizeAttr(),
-            operand.name);
-      }
+      body << formatv(
+          "  result.getOrAddProperties<{0}::Properties>().{1} = "
+          "parser.getBuilder().getDenseI32ArrayAttr({2}OperandGroupSizes);\n",
+          op.getCppClassName(),
+          operand.constraint.getVariadicOfVariadicSegmentSizeAttr(),
+          operand.name);
     }
   }
 
@@ -1959,19 +1943,12 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
       else
         body << "1";
     };
-    if (op.getDialect().usePropertiesForAttributes()) {
-      body << "::llvm::copy(::llvm::ArrayRef<int32_t>({";
-      llvm::interleaveComma(op.getResults(), body, interleaveFn);
-      body << formatv("}), "
-                      "result.getOrAddProperties<{0}::Properties>()."
-                      "resultSegmentSizes.begin());\n",
-                      op.getCppClassName());
-    } else {
-      body << "  result.addAttribute(\"resultSegmentSizes\", "
-           << "parser.getBuilder().getDenseI32ArrayAttr({";
-      llvm::interleaveComma(op.getResults(), body, interleaveFn);
-      body << "}));\n";
-    }
+    body << "::llvm::copy(::llvm::ArrayRef<int32_t>({";
+    llvm::interleaveComma(op.getResults(), body, interleaveFn);
+    body << formatv("}), "
+                    "result.getOrAddProperties<{0}::Properties>()."
+                    "resultSegmentSizes.begin());\n",
+                    op.getCppClassName());
   }
 }
 
