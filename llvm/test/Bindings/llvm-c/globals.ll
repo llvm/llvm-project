@@ -5,3 +5,6 @@
 
 @bar = common global i32 0, align 4
 ;CHECK: GlobalDefinition: bar ptr
+
+@baz = external global i64
+;CHECK: GlobalDeclaration: baz ptr
