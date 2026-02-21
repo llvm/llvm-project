@@ -38,6 +38,7 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Support/CommandLine.h"
 
 /// By default fir memory operation fir::AllocMemOp/fir::FreeMemOp are used.

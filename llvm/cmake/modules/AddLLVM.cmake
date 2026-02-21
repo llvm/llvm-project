@@ -79,6 +79,70 @@ function(llvm_update_compile_flags name)
   target_compile_definitions(${name} PRIVATE ${LLVM_COMPILE_DEFINITIONS})
 endfunction()
 
+function(llvm_update_pch name)
+  if(LLVM_REQUIRES_RTTI OR LLVM_REQUIRES_EH)
+    # Non-default RTTI/EH results in incompatible flags, precluding PCH reuse.
+    set(ARG_DISABLE_PCH_REUSE ON)
+  endif()
+
+  get_property(srcs TARGET ${name} PROPERTY SOURCES)
+  foreach(src ${srcs})
+    get_filename_component(extension ${src} EXT)
+    if(extension STREQUAL ".c")
+      set(HAS_C_SRC ON)
+    elseif(extension STREQUAL ".mm")
+      set(HAS_MM_SRC ON)
+    endif()
+  endforeach()
+
+  if(HAS_C_SRC AND NOT ARG_PRECOMPILE_HEADERS)
+    # We only use PCH for C++. For targets with C source files that re-use a
+    # precompiled headers from another target, CMake complains that there is no
+    # PCH for C. There doesn't seem to be a disable PCH reuse for C files only,
+    # so disable PCH reuse for targets that contain C sources.
+    set(ARG_DISABLE_PCH_REUSE ON)
+  endif()
+  if(HAS_MM_SRC)
+    # Disable for Objective-C as well to avoid errors due to mixed languages.
+    set(ARG_DISABLE_PCH_REUSE ON)
+  endif()
+
+  # Find PCH with highest priority from dependencies. We reuse the first PCH
+  # with the highest priority. If the target has its own set of PCH, we give it
+  # a higher priority so that dependents will prefer the new PCH. We don't do
+  # transitive PCH reuse, because this causes too many unrelated naming
+  # collisions (e.g., in A -> B -> C{pch}, only B would reuse the PCH of C).
+  set(pch_priority 0)
+  llvm_map_components_to_libnames(libs
+    ${LLVM_LINK_COMPONENTS}
+  )
+  list(APPEND libs ${ARG_LINK_LIBS})
+  foreach(lib ${libs})
+    if(TARGET ${lib})
+      get_target_property(lib_pch_priority ${lib} LLVM_PCH_PRIORITY)
+      if(${lib_pch_priority} GREATER ${pch_priority})
+        set(pch_priority ${lib_pch_priority})
+        set(pch_reuse ${lib})
+      endif()
+    endif()
+  endforeach()
+
+  if(ARG_PRECOMPILE_HEADERS)
+    message(DEBUG "Adding PCH ${ARG_PRECOMPILE_HEADERS} for ${name} (prio ${pch_priority})")
+    target_precompile_headers(${name} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${ARG_PRECOMPILE_HEADERS}>)
+    if(NOT ARG_DISABLE_PCH_REUSE)
+      # Set priority so that dependants can reuse the PCH.
+      math(EXPR pch_priority "${pch_priority} + 1")
+      set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
+    endif()
+  elseif(pch_reuse AND NOT ARG_DISABLE_PCH_REUSE)
+    message(DEBUG "Using PCH ${pch_reuse} for ${name} (prio ${pch_priority})")
+    target_precompile_headers(${name} REUSE_FROM ${pch_reuse})
+  else()
+    message(DEBUG "Using NO PCH for ${name}")
+  endif()
+endfunction()
+
 function(add_llvm_symbol_exports target_name export_file)
   if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
     set(native_export_file "${target_name}.exports")
@@ -485,6 +549,13 @@ endfunction(set_windows_version_resource_properties)
 #     Corresponds to OUTPUT_NAME in target properties.
 #   DEPENDS targets...
 #     Same semantics as add_dependencies().
+#   PRECOMPILE_HEADERS include_directives...
+#     Pre-compiled C++ headers to use. PCH can be reused by dependants. If
+#     specified, no PCHs from dependencies will be reused.
+#   DISABLE_PCH_REUSE
+#     Disable reuse of pre-compiled headers in both directions: the library will
+#     not reuse the PCH of a dependency and a defined PCH will not be offered
+#     for reuse by dependants.
 #   LINK_COMPONENTS components...
 #     Same as the variable LLVM_LINK_COMPONENTS.
 #   LINK_LIBS lib_targets...
@@ -504,11 +575,12 @@ endfunction(set_windows_version_resource_properties)
 #   )
 function(llvm_add_library name)
   cmake_parse_arguments(ARG
-    "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME;NO_INSTALL_RPATH;COMPONENT_LIB"
+    "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME;NO_INSTALL_RPATH;COMPONENT_LIB;DISABLE_PCH_REUSE"
     "OUTPUT_NAME;PLUGIN_TOOL;ENTITLEMENTS;BUNDLE_PATH"
-    "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS;OBJLIBS"
+    "ADDITIONAL_HEADERS;PRECOMPILE_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS;OBJLIBS"
     ${ARGN})
   list(APPEND LLVM_COMMON_DEPENDS ${ARG_DEPENDS})
+  list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
   if(ARG_ADDITIONAL_HEADERS)
     # Pass through ADDITIONAL_HEADERS.
     set(ARG_ADDITIONAL_HEADERS ADDITIONAL_HEADERS ${ARG_ADDITIONAL_HEADERS})
@@ -550,6 +622,7 @@ function(llvm_add_library name)
       ${ALL_FILES}
       )
     llvm_update_compile_flags(${obj_name})
+    llvm_update_pch(${obj_name})
     if(CMAKE_GENERATOR STREQUAL "Xcode")
       set(DUMMY_FILE ${CMAKE_CURRENT_BINARY_DIR}/Dummy.c)
       file(WRITE ${DUMMY_FILE} "// This file intentionally empty\n")
@@ -604,7 +677,7 @@ function(llvm_add_library name)
       ${output_name}
       OBJLIBS ${ALL_FILES} # objlib
       LINK_LIBS ${ARG_LINK_LIBS}
-      LINK_COMPONENTS ${ARG_LINK_COMPONENTS}
+      LINK_COMPONENTS ${LLVM_LINK_COMPONENTS}
       )
     set_target_properties(${name_static} PROPERTIES FOLDER "${subproject_title}/Libraries")
 
@@ -676,6 +749,11 @@ function(llvm_add_library name)
   # $<TARGET_OBJECTS> doesn't require compile flags.
   if(NOT obj_name)
     llvm_update_compile_flags(${name})
+    llvm_update_pch(${name})
+  else()
+    target_precompile_headers(${name} REUSE_FROM ${obj_name})
+    get_target_property(pch_priority ${obj_name} LLVM_PCH_PRIORITY)
+    set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
   endif()
   add_link_opts( ${name} )
   if(ARG_OUTPUT_NAME)
@@ -758,8 +836,7 @@ function(llvm_add_library name)
         target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
       endif()
       llvm_map_components_to_libnames(llvm_libs
-       ${ARG_LINK_COMPONENTS}
-       ${LLVM_LINK_COMPONENTS}
+        ${LLVM_LINK_COMPONENTS}
        )
     endif()
   else()
@@ -770,7 +847,7 @@ function(llvm_add_library name)
     # It would be nice to verify that we have the dependencies for this library
     # name, but using get_property(... SET) doesn't suffice to determine if a
     # property has been set to an empty value.
-    set_property(TARGET ${name} PROPERTY LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS} ${LLVM_LINK_COMPONENTS})
+    set_property(TARGET ${name} PROPERTY LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS})
 
     # This property is an internal property only used to make sure the
     # link step applied in LLVMBuildResolveComponentsLink uses the same
@@ -993,6 +1070,7 @@ macro(generate_llvm_objects name)
       ${ALL_FILES}
       )
     llvm_update_compile_flags(${obj_name})
+    llvm_update_pch(${obj_name})
     set(ALL_FILES "$<TARGET_OBJECTS:${obj_name}>")
     if(ARG_DEPENDS)
       add_dependencies(${obj_name} ${ARG_DEPENDS})
@@ -1039,7 +1117,7 @@ endmacro()
 
 macro(add_llvm_executable name)
   cmake_parse_arguments(ARG
-    "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO;NO_INSTALL_RPATH;SUPPORT_PLUGINS;EXPORT_SYMBOLS"
+    "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO;NO_INSTALL_RPATH;SUPPORT_PLUGINS;EXPORT_SYMBOLS;DISABLE_PCH_REUSE"
     "ENTITLEMENTS;BUNDLE_PATH"
     ""
     ${ARGN})
@@ -1077,9 +1155,23 @@ macro(add_llvm_executable name)
     set_windows_version_resource_properties(${name} ${windows_resource_file})
   endif()
 
+  # CMake position-independent code sets -fPIE for source files in executables.
+  # With LLVM_ENABLE_PIC, we add -fPIC to all source files, but -fPIE is added
+  # later and therefore wins. To avoid option mismatch between the PCH (-fPIC)
+  # and the executable (-fPIE), disable PCH reuse for PIE.
+  get_target_property(cmake_pie ${name} POSITION_INDEPENDENT_CODE)
+  if(${cmake_pie})
+    set(ARG_DISABLE_PCH_REUSE ON)
+  endif()
+
   # $<TARGET_OBJECTS> doesn't require compile flags.
   if(NOT LLVM_ENABLE_OBJLIB)
     llvm_update_compile_flags(${name})
+    llvm_update_pch(${name})
+  elseif(NOT ARG_DISABLE_PCH_REUSE)
+    target_precompile_headers(${name} REUSE_FROM ${obj_name})
+    get_target_property(pch_priority ${obj_name} LLVM_PCH_PRIORITY)
+    set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
   endif()
 
   if (ARG_SUPPORT_PLUGINS AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
@@ -1787,7 +1879,7 @@ function(add_unittest test_suite test_name)
   endif()
 
   list(APPEND LLVM_LINK_COMPONENTS Support) # gtest needs it for raw_ostream
-  add_llvm_executable(${test_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH ${ARGN})
+  add_llvm_executable(${test_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH DISABLE_PCH_REUSE ${ARGN})
   get_subproject_title(subproject_title)
   set_target_properties(${test_name} PROPERTIES FOLDER "${subproject_title}/Tests/Unit")
 
