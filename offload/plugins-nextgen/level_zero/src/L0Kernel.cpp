@@ -101,7 +101,7 @@ void L0KernelTy::decideKernelGroupArguments(L0DeviceTy &Device,
   bool MaxGroupSizeForced = false;
   bool MaxGroupCountForced = false;
   uint32_t MaxGroupSize = Device.getMaxGroupSize();
-  const auto &Option = LevelZeroPluginTy::getOptions();
+  const auto &Option = Device.getPlugin().getOptions();
   const auto OptSubscRate = Option.SubscriptionRate;
   auto &GroupCounts = KEnv.GroupCounts;
 
@@ -192,7 +192,7 @@ Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
 
   bool IsXeHPG = Device.isDeviceArch(DeviceArchTy::DeviceArch_XeHPG);
   KEnv.HalfNumThreads =
-      LevelZeroPluginTy::getOptions().ZeDebugEnabled && IsXeHPG;
+      Device.getPlugin().getOptions().ZeDebugEnabled && IsXeHPG;
   uint32_t KernelWidth = KernelPR.Width;
   uint32_t SIMDWidth = KernelPR.SIMDWidth;
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
@@ -427,7 +427,7 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   auto &Plugin = l0Device.getPlugin();
   auto *IdStr = l0Device.getZeIdCStr();
-  auto &Options = LevelZeroPluginTy::getOptions();
+  auto &Options = Plugin.getOptions();
   bool IsAsync = AsyncInfo && l0Device.asyncEnabled();
   if (IsAsync && !AsyncInfo->Queue) {
     AsyncInfo->Queue = reinterpret_cast<void *>(Plugin.getAsyncQueue());
