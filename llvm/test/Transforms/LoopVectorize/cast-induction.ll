@@ -322,7 +322,6 @@ define void @test_start_zext(i32 %start, ptr %dst) {
 ; VF4-SAME: i32 [[START:%.*]], ptr [[DST:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
 ; VF4-NEXT:    [[START_EXT:%.*]] = zext i32 [[START]] to i64
-; VF4-NEXT:    [[TMP0:%.*]] = sub i64 100, [[START_EXT]]
 ; VF4-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; VF4:       [[VECTOR_SCEVCHECK]]:
 ; VF4-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[START]], 1
