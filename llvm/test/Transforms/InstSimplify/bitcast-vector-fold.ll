@@ -83,6 +83,22 @@ define <1 x i1> @test10() {
   ret <1 x i1> %ret
 }
 
+define <4 x i24> @test11() {
+; CHECK-LABEL: @test11(
+; CHECK-NEXT:    ret <4 x i24> <i24 1, i24 256, i24 65536, i24 0>
+;
+  %c = bitcast <3 x i32> <i32 1, i32 1, i32 1> to <4 x i24>
+  ret <4 x i24> %c
+}
+
+define <8 x i24> @test12() {
+; CHECK-LABEL: @test12(
+; CHECK-NEXT:    ret <8 x i24> splat (i24 1)
+;
+  %c = bitcast <3 x i64> <i64 281474993487873, i64 72057598332895488, i64 1099511693312> to <8 x i24>
+  ret <8 x i24> %c
+}
+
 ; from MultiSource/Benchmarks/Bullet
 define <2 x float> @foo() {
 ; CHECK-LABEL: @foo(
@@ -275,6 +291,14 @@ define <16 x i8> @bitcast_constexpr_16i8_8i16_u256uuu256uu() {
 ;
   %cast = bitcast <8 x i16><i16 undef, i16 256, i16 undef, i16 undef, i16 undef, i16 256, i16 undef, i16 undef> to <16 x i8>
   ret <16 x i8> %cast
+}
+
+define <4 x i24> @bitcast_constexpr_4i24_3i32_u1u() {
+; CHECK-LABEL: @bitcast_constexpr_4i24_3i32_u1u(
+; CHECK-NEXT:    ret <4 x i24> <i24 0, i24 256, i24 0, i24 0>
+;
+  %cast = bitcast <3 x i32><i32 undef, i32 1, i32 undef> to <4 x i24>
+  ret <4 x i24> %cast
 }
 
 define <1 x i32> @bitcast_constexpr_scalar_fp_to_vector_int() {
