@@ -303,6 +303,20 @@ std::string CGNVCUDARuntime::getDeviceSideName(const NamedDecl *ND) {
     CGM.printPostfixForExternalizedDecl(Out, ND);
     DeviceSideName = std::string(Out.str());
   }
+
+  // Make unique name for static global tetxure variable for HIP/CUDA.
+  if (const VarDecl *VD = dyn_cast<VarDecl>(ND)) {
+    if (VD->getType()->isCUDADeviceBuiltinTextureType() &&
+        VD->getStorageClass() == SC_Static && VD->hasGlobalStorage() &&
+        !VD->isStaticDataMember()) {
+      SmallString<256> Buffer;
+      llvm::raw_svector_ostream Out(Buffer);
+      Out << DeviceSideName;
+      CGM.printPostfixForExternalizedDecl(Out, ND);
+      DeviceSideName = std::string(Out.str());
+    }
+  }
+
   return DeviceSideName;
 }
 

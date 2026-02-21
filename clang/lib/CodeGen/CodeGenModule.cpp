@@ -2220,6 +2220,15 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
       CGM.getLangOpts().CUDAIsDevice)
     CGM.printPostfixForExternalizedDecl(Out, ND);
 
+  // Make unique name for static global tetxure variable for HIP/CUDA.
+  if (const VarDecl *VD = dyn_cast<VarDecl>(ND)) {
+    if (VD->getType()->isCUDADeviceBuiltinTextureType() &&
+        VD->getStorageClass() == SC_Static && VD->hasGlobalStorage() &&
+        !VD->isStaticDataMember()) {
+      CGM.printPostfixForExternalizedDecl(Out, ND);
+    }
+  }
+
   return std::string(Out.str());
 }
 
@@ -6251,6 +6260,12 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
 
   // Set the llvm linkage type as appropriate.
   llvm::GlobalValue::LinkageTypes Linkage = getLLVMLinkageVarDefinition(D);
+
+  // Make static global texture variable externally visible.
+  if (D->getType()->isCUDADeviceBuiltinTextureType() &&
+      D->getStorageClass() == SC_Static && !D->isStaticDataMember()) {
+    Linkage = llvm::GlobalValue::ExternalLinkage;
+  }
 
   // CUDA B.2.1 "The __device__ qualifier declares a variable that resides on
   // the device. [...]"
