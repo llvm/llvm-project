@@ -3,6 +3,7 @@
 
 declare void @llvm.assume(i1)
 declare void @use(i8)
+declare void @use32(i32)
 declare void @usev2xi8(<2 x i8>)
 
 
@@ -776,6 +777,38 @@ define i1 @eq_mul_constants_with_tz(i32 %x, i32 %y) {
 ;
   %A = mul i32 %x, 12
   %B = mul i32 %y, 12
+  %C = icmp ne i32 %A, %B
+  ret i1 %C
+}
+
+define i1 @eq_mul_constants_with_tz_extra_use1(i32 %x, i32 %y) {
+; CHECK-LABEL: @eq_mul_constants_with_tz_extra_use1(
+; CHECK-NEXT:    [[A:%.*]] = mul i32 [[X:%.*]], 12
+; CHECK-NEXT:    call void @use32(i32 [[A]])
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[Y:%.*]], 12
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %A = mul i32 %x, 12
+  call void @use32(i32 %A)
+  %B = mul i32 %y, 12
+  %C = icmp ne i32 %A, %B
+  ret i1 %C
+}
+
+define i1 @eq_mul_constants_with_tz_extra_use2(i32 %x, i32 %y) {
+; CHECK-LABEL: @eq_mul_constants_with_tz_extra_use2(
+; CHECK-NEXT:    [[A:%.*]] = mul i32 [[X:%.*]], 12
+; CHECK-NEXT:    call void @use32(i32 [[A]])
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[Y:%.*]], 12
+; CHECK-NEXT:    call void @use32(i32 [[B]])
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %A = mul i32 %x, 12
+  call void @use32(i32 %A)
+  %B = mul i32 %y, 12
+  call void @use32(i32 %B)
   %C = icmp ne i32 %A, %B
   ret i1 %C
 }

@@ -5567,7 +5567,6 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   }
 
   if (BO0 && BO1 && BO0->getOpcode() == BO1->getOpcode() &&
-      (BO0->hasOneUse() || BO1->hasOneUse()) &&
       BO0->getOperand(1) == BO1->getOperand(1)) {
     switch (BO0->getOpcode()) {
     default:
@@ -5600,7 +5599,8 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
         break;
 
       const APInt *C;
-      if (match(BO0->getOperand(1), m_APInt(C)) && !C->isZero() &&
+      if (BO0->hasOneUse() && BO1->hasOneUse() &&
+          match(BO0->getOperand(1), m_APInt(C)) && !C->isZero() &&
           !C->isOne()) {
         // icmp eq/ne (X * C), (Y * C) --> icmp (X & Mask), (Y & Mask)
         // Mask = -1 >> count-trailing-zeros(C).
