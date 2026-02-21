@@ -76,6 +76,30 @@ protected:
   std::unique_ptr<SelectionDAG> DAG;
 };
 
+TEST_F(X86SelectionDAGTest, computeKnownBits_FAND) {
+  SDLoc Loc;
+
+  auto SrcF32 = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 1, MVT::f32);
+  auto ZeroF32 = DAG->getConstantFP(+0.0, Loc, MVT::f32);
+  auto OpF32 = DAG->getNode(X86ISD::FAND, Loc, MVT::f32, ZeroF32, SrcF32);
+  KnownBits KnownF32 = DAG->computeKnownBits(OpF32);
+  EXPECT_TRUE(KnownF32.isZero());
+
+  auto Src2xF64 = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 1, MVT::v2f64);
+  auto ZeroF64 = DAG->getConstantFP(+0.0, Loc, MVT::f64);
+  auto SignBitF64 = DAG->getConstantFP(-0.0, Loc, MVT::f64);
+  auto LoZeroHiSign2xF64 =
+      DAG->getBuildVector(MVT::v2f64, Loc, {ZeroF64, SignBitF64});
+  auto Op2xF64 =
+      DAG->getNode(X86ISD::FAND, Loc, MVT::v2f64, LoZeroHiSign2xF64, Src2xF64);
+  KnownBits KnownAll2xF64 = DAG->computeKnownBits(Op2xF64);
+  KnownBits KnownLo2xF64 = DAG->computeKnownBits(Op2xF64, APInt(2, 1));
+  KnownBits KnownHi2xF64 = DAG->computeKnownBits(Op2xF64, APInt(2, 2));
+  EXPECT_FALSE(KnownAll2xF64.isZero());
+  EXPECT_TRUE(KnownLo2xF64.isZero());
+  EXPECT_FALSE(KnownHi2xF64.isZero());
+}
+
 TEST_F(X86SelectionDAGTest, computeKnownBits_FANDN) {
   SDLoc Loc;
 
