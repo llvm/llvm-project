@@ -48,6 +48,13 @@ private:
 public:
   LowerTypes(LowerModule &lm);
   ~LowerTypes() = default;
+
+  LowerModule &getLm() const { return lm; }
+//   CIRLowerContext &getContext() { return context; }
+//   const clang::TargetInfo &getTarget() const { return target; }
+//   const cir::CIRDataLayout &getDataLayout() const { return dataLayout; }
+//   CIRCXXABI &getCXXABI() const { return CXXABI; }
+//   mlir::MLIRContext *getMLIRContext() { return mlirContext; }
 };
 
 } // namespace cir
