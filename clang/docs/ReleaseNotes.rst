@@ -313,6 +313,7 @@ Miscellaneous Bug Fixes
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a crash when an ``asm goto`` statement referenced an undeclared label in the presence of a variable with ``__attribute__((cleanup))``. (#GH175314)
 
 - Fixed a crash when attempting to jump over initialization of a variable with variably modified type. (#GH175540)
 - Fixed a crash when using loop hint with a value dependent argument inside a
