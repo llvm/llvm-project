@@ -125,13 +125,19 @@ public:
 
     node_type extract(const_iterator position);                                       // C++17
     node_type extract(const key_type& x);                                             // C++17
+    template <class K>
+      node_type extract(K&& k);                                                       // C++23
+
     insert_return_type insert(node_type&& nh);                                        // C++17
     iterator insert(const_iterator hint, node_type&& nh);                             // C++17
 
     iterator  erase(const_iterator position);
     iterator  erase(iterator position);  // C++14
     size_type erase(const key_type& k);
+    template <class K>
+      size_type erase(K&& k); // C++23
     iterator  erase(const_iterator first, const_iterator last);
+
     void clear() noexcept;
 
     template<class C2>
@@ -370,6 +376,9 @@ public:
 
     node_type extract(const_iterator position);                                       // C++17
     node_type extract(const key_type& x);                                             // C++17
+    template <class K>
+      node_type extract(K&& k);                                                       // C++23
+
     iterator insert(node_type&& nh);                                                  // C++17
     iterator insert(const_iterator hint, node_type&& nh);                             // C++17
 
@@ -377,6 +386,9 @@ public:
     iterator  erase(iterator position);  // C++14
     size_type erase(const key_type& k);
     iterator  erase(const_iterator first, const_iterator last);
+    template <class K>
+      size_type erase(K&& k); // C++23
+
     void clear() noexcept;
 
     template<class C2>
@@ -770,6 +782,18 @@ public:
   _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __p) { return __tree_.erase(__p); }
   _LIBCPP_HIDE_FROM_ABI size_type erase(const key_type& __k) { return __tree_.__erase_unique(__k); }
   _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __f, const_iterator __l) { return __tree_.erase(__f, __l); }
+
+#  if _LIBCPP_STD_VER >= 23
+
+  template <class _Kp>
+    requires(__is_transparent_v<_Compare> && !is_convertible_v<_Kp &&, iterator> &&
+             !is_convertible_v<_Kp &&, const_iterator>)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type erase(_Kp&& __kp) {
+    return __tree_.__erase_unique(__kp);
+  }
+
+#  endif // _LIBCPP_STD_VER >= 23
+
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __tree_.clear(); }
 
 #  if _LIBCPP_STD_VER >= 17
@@ -787,8 +811,20 @@ public:
     return __tree_.template __node_handle_extract<node_type>(__key);
   }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI node_type extract(const_iterator __it) {
-    return __tree_.template __node_handle_extract<node_type>(__it);
+    return __tree_.template __node_handle_extract_from_iterator<node_type>(__it);
   }
+
+#    if _LIBCPP_STD_VER >= 23
+
+  template <class _Kp>
+    requires(__is_transparent_v<_Compare> && !is_convertible_v<_Kp &&, iterator> &&
+             !is_convertible_v<_Kp &&, const_iterator>)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(_Kp&& __kp) {
+    return __tree_.template __node_handle_extract<node_type>(__kp);
+  }
+
+#    endif // _LIBCPP_STD_VER >= 23
+
   template <class _Compare2>
   _LIBCPP_HIDE_FROM_ABI void merge(set<key_type, _Compare2, allocator_type>& __source) {
     _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
@@ -1245,6 +1281,18 @@ public:
   _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __p) { return __tree_.erase(__p); }
   _LIBCPP_HIDE_FROM_ABI size_type erase(const key_type& __k) { return __tree_.__erase_multi(__k); }
   _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __f, const_iterator __l) { return __tree_.erase(__f, __l); }
+
+#  if _LIBCPP_STD_VER >= 23
+
+  template <class _Kp>
+    requires(__is_transparent_v<_Compare> && !is_convertible_v<_Kp &&, iterator> &&
+             !is_convertible_v<_Kp &&, const_iterator>)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type erase(_Kp&& __kp) {
+    return __tree_.__erase_multi(__kp);
+  }
+
+#  endif // _LIBCPP_STD_VER >= 23
+
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __tree_.clear(); }
 
 #  if _LIBCPP_STD_VER >= 17
@@ -1262,8 +1310,20 @@ public:
     return __tree_.template __node_handle_extract<node_type>(__key);
   }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI node_type extract(const_iterator __it) {
-    return __tree_.template __node_handle_extract<node_type>(__it);
+    return __tree_.template __node_handle_extract_from_iterator<node_type>(__it);
   }
+
+#    if _LIBCPP_STD_VER >= 23
+
+  template <class _Kp>
+    requires(__is_transparent_v<_Compare> && !is_convertible_v<_Kp &&, iterator> &&
+             !is_convertible_v<_Kp &&, const_iterator>)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(_Kp&& __kp) {
+    return __tree_.template __node_handle_extract<node_type>(__kp);
+  }
+
+#    endif // _LIBCPP_STD_VER >= 23
+
   template <class _Compare2>
   _LIBCPP_HIDE_FROM_ABI void merge(multiset<key_type, _Compare2, allocator_type>& __source) {
     _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(

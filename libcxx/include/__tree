@@ -1206,10 +1206,10 @@ public:
   template <class _Comp2>
   _LIBCPP_HIDE_FROM_ABI void __node_handle_merge_multi(__tree<_Tp, _Comp2, _Allocator>& __source);
 
+  template <class _NodeHandle, class _Key>
+  _LIBCPP_HIDE_FROM_ABI _NodeHandle __node_handle_extract(const _Key&);
   template <class _NodeHandle>
-  _LIBCPP_HIDE_FROM_ABI _NodeHandle __node_handle_extract(key_type const&);
-  template <class _NodeHandle>
-  _LIBCPP_HIDE_FROM_ABI _NodeHandle __node_handle_extract(const_iterator);
+  _LIBCPP_HIDE_FROM_ABI _NodeHandle __node_handle_extract_from_iterator(const_iterator);
 #endif
 
   _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __p);
@@ -1997,17 +1997,18 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_unique(const_iterator __
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-template <class _NodeHandle>
-_LIBCPP_HIDE_FROM_ABI _NodeHandle __tree<_Tp, _Compare, _Allocator>::__node_handle_extract(key_type const& __key) {
+template <class _NodeHandle, class _Key>
+_LIBCPP_HIDE_FROM_ABI _NodeHandle __tree<_Tp, _Compare, _Allocator>::__node_handle_extract(const _Key& __key) {
   iterator __it = find(__key);
   if (__it == end())
     return _NodeHandle();
-  return __node_handle_extract<_NodeHandle>(__it);
+  return __node_handle_extract_from_iterator<_NodeHandle>(__it);
 }
 
 template <class _Tp, class _Compare, class _Allocator>
 template <class _NodeHandle>
-_LIBCPP_HIDE_FROM_ABI _NodeHandle __tree<_Tp, _Compare, _Allocator>::__node_handle_extract(const_iterator __p) {
+_LIBCPP_HIDE_FROM_ABI _NodeHandle
+__tree<_Tp, _Compare, _Allocator>::__node_handle_extract_from_iterator(const_iterator __p) {
   __node_pointer __np = __p.__get_np();
   __remove_node_pointer(__np);
   return _NodeHandle(__np, __alloc());

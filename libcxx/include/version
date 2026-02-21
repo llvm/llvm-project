@@ -487,7 +487,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #if _LIBCPP_STD_VER >= 23
 # define __cpp_lib_adaptor_iterator_pair_constructor    202106L
 # define __cpp_lib_allocate_at_least                    202302L
-// # define __cpp_lib_associative_heterogeneous_erasure    202110L
+# define __cpp_lib_associative_heterogeneous_erasure    202110L
 # define __cpp_lib_bind_back                            202202L
 # define __cpp_lib_byteswap                             202110L
 # define __cpp_lib_constexpr_bitset                     202207L

@@ -152,7 +152,6 @@ feature_test_macros = [
             "name": "__cpp_lib_associative_heterogeneous_erasure",
             "values": {"c++23": 202110},
             "headers": ["map", "set", "unordered_map", "unordered_set"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_associative_heterogeneous_insertion",
