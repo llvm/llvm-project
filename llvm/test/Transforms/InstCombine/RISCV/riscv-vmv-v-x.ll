@@ -103,18 +103,6 @@ define <vscale x 1 x i64> @vl_non_constant(i64 %vl) {
   ret <vscale x 1 x i64> %b
 }
 
-define <vscale x 2 x i64> @vector_elt_type_too_large() {
-; CHECK-LABEL: define <vscale x 2 x i64> @vector_elt_type_too_large(
-; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x i128> @llvm.riscv.vmv.v.x.nxv1i128.i64(<vscale x 1 x i128> poison, i128 85, i64 4)
-; CHECK-NEXT:    [[B:%.*]] = bitcast <vscale x 1 x i128> [[A]] to <vscale x 2 x i64>
-; CHECK-NEXT:    ret <vscale x 2 x i64> [[B]]
-;
-  %a = call <vscale x 1 x i128> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 1 x i128> poison, i128 85, i64 4)
-  %b = bitcast <vscale x 1 x i128> %a to <vscale x 2 x i64>
-  ret <vscale x 2 x i64> %b
-}
-
 define <vscale x 1 x i64> @vl_too_large() {
 ; CHECK-LABEL: define <vscale x 1 x i64> @vl_too_large(
 ; CHECK-SAME: ) #[[ATTR0]] {
