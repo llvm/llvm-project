@@ -351,3 +351,96 @@ func.func @_QPtest_expr_rhs(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.
 // CHECK:           hlfir.destroy %[[VAL_10]] : !hlfir.expr<?x!fir.logical<4>>
 // CHECK:           return
 // CHECK:         }
+
+// Test that two ALLOCATABLE TARGET globals do not alias,
+// thus hlfir.assign may be inlined.
+// Original code (compiled with -fno-realloc-lhs):
+// module test_global_allocatable_target
+//   real, allocatable, target :: a(:)
+//   real, allocatable, target :: b(:)
+// contains
+//   subroutine test
+//     a = b
+//   end subroutine test
+// end module test_global_allocatable_target
+
+// CHECK-LABEL:   func.func @_QMtest_global_allocatable_targetPtest() {
+// CHECK-NOT: hlfir.assign{{.*}}!fir.array
+func.func @_QMtest_global_allocatable_targetPtest() {
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.address_of(@_QMtest_global_allocatable_targetEa) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %2:2 = hlfir.declare %1 {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMtest_global_allocatable_targetEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+  %3 = fir.address_of(@_QMtest_global_allocatable_targetEb) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4:2 = hlfir.declare %3 {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMtest_global_allocatable_targetEb"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+  %5 = fir.load %4#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %6 = fir.load %2#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  hlfir.assign %5 to %6 : !fir.box<!fir.heap<!fir.array<?xf32>>>, !fir.box<!fir.heap<!fir.array<?xf32>>>
+  return
+}
+fir.global @_QMtest_global_allocatable_targetEa target : !fir.box<!fir.heap<!fir.array<?xf32>>>
+fir.global @_QMtest_global_allocatable_targetEb target : !fir.box<!fir.heap<!fir.array<?xf32>>>
+
+// Test that two TARGET global arrays do not alias,
+// thus hlfir.assign may be inlined.
+// Original code:
+// module test_global_shaped_target
+//   real, target :: a1(100)
+//   real, target :: b1(100)
+// contains
+//   subroutine test
+//     a1 = b1
+//   end subroutine test
+// end module test_global_shaped_target
+
+// CHECK-LABEL:   func.func @_QMtest_global_shaped_targetPtest() {
+// CHECK-NOT: hlfir.assign{{.*}}!fir.array
+func.func @_QMtest_global_shaped_targetPtest() {
+  %c100 = arith.constant 100 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.address_of(@_QMtest_global_shaped_targetEa1) : !fir.ref<!fir.array<100xf32>>
+  %2 = fir.shape %c100 : (index) -> !fir.shape<1>
+  %3:2 = hlfir.declare %1(%2) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMtest_global_shaped_targetEa1"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %4 = fir.address_of(@_QMtest_global_shaped_targetEb1) : !fir.ref<!fir.array<100xf32>>
+  %5:2 = hlfir.declare %4(%2) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMtest_global_shaped_targetEb1"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  hlfir.assign %5#0 to %3#0 : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>
+  return
+}
+fir.global @_QMtest_global_shaped_targetEa1 target : !fir.array<100xf32>
+fir.global @_QMtest_global_shaped_targetEb1 target : !fir.array<100xf32>
+
+// Test disjoint array sections: a(n+1, :) = a(n, :) for a 2D array
+// The first index differs by 1 (n vs n+1), so ArraySectionAnalyzer detects them as disjoint.
+func.func @_QPtest_disjoint(%arg0: !fir.ref<!fir.array<10x10xf32>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %0 = fir.shape %c10, %c10 : (index, index) -> !fir.shape<2>
+  %1:2 = hlfir.declare %arg0(%0) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEa"} : (!fir.ref<!fir.array<10x10xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>)
+  %2 = fir.alloca index
+  %n = fir.load %2 : !fir.ref<index>
+  %n_plus_1 = arith.addi %n, %c1 : index
+  %3 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %4 = hlfir.designate %1#0 (%n, %c1:%c10:%c1) shape %3 : (!fir.ref<!fir.array<10x10xf32>>, index, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %5 = hlfir.designate %1#0 (%n_plus_1, %c1:%c10:%c1) shape %3 : (!fir.ref<!fir.array<10x10xf32>>, index, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  hlfir.assign %4 to %5 : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>
+  return
+}
+// CHECK-LABEL:   func.func @_QPtest_disjoint(
+// CHECK-SAME:                                %[[VAL_0:.*]]: !fir.ref<!fir.array<10x10xf32>>) {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 10 : index
+// CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
+// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEa"} : (!fir.ref<!fir.array<10x10xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>)
+// CHECK:           %[[VAL_5:.*]] = fir.alloca index
+// CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]] : !fir.ref<index>
+// CHECK:           %[[VAL_7:.*]] = arith.addi %[[VAL_6]], %[[VAL_1]] : index
+// CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_9:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_6]], %[[VAL_1]]:%[[VAL_2]]:%[[VAL_1]]) shape %[[VAL_8]] : (!fir.ref<!fir.array<10x10xf32>>, index, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+// CHECK:           %[[VAL_10:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_7]], %[[VAL_1]]:%[[VAL_2]]:%[[VAL_1]]) shape %[[VAL_8]] : (!fir.ref<!fir.array<10x10xf32>>, index, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+// CHECK:           fir.do_loop %[[VAL_11:.*]] = %[[VAL_1]] to %[[VAL_2]] step %[[VAL_1]] unordered {
+// CHECK:             %[[VAL_12:.*]] = hlfir.designate %[[VAL_9]] (%[[VAL_11]])  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+// CHECK:             %[[VAL_13:.*]] = fir.load %[[VAL_12]] : !fir.ref<f32>
+// CHECK:             %[[VAL_14:.*]] = hlfir.designate %[[VAL_10]] (%[[VAL_11]])  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+// CHECK:             hlfir.assign %[[VAL_13]] to %[[VAL_14]] : f32, !fir.ref<f32>
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }

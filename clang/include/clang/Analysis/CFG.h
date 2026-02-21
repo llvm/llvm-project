@@ -62,6 +62,7 @@ public:
     NewAllocator,
     LifetimeEnds,
     LoopExit,
+    FullExprCleanup,
     // stmt kind
     Statement,
     Constructor,
@@ -81,12 +82,12 @@ public:
 
 protected:
   // The int bits are used to mark the kind.
-  llvm::PointerIntPair<void *, 2> Data1;
-  llvm::PointerIntPair<void *, 2> Data2;
+  llvm::PointerIntPair<const void *, 2> Data1;
+  llvm::PointerIntPair<const void *, 2> Data2;
 
   CFGElement(Kind kind, const void *Ptr1, const void *Ptr2 = nullptr)
-      : Data1(const_cast<void*>(Ptr1), ((unsigned) kind) & 0x3),
-        Data2(const_cast<void*>(Ptr2), (((unsigned) kind) >> 2) & 0x3) {
+      : Data1(Ptr1, ((unsigned)kind) & 0x3),
+        Data2(Ptr2, (((unsigned)kind) >> 2) & 0x3) {
     assert(getKind() == kind);
   }
 
@@ -160,11 +161,11 @@ public:
                           const ConstructionContext *C)
       : CFGStmt(CE, Constructor) {
     assert(C);
-    Data2.setPointer(const_cast<ConstructionContext *>(C));
+    Data2.setPointer(C);
   }
 
   const ConstructionContext *getConstructionContext() const {
-    return static_cast<ConstructionContext *>(Data2.getPointer());
+    return static_cast<const ConstructionContext *>(Data2.getPointer());
   }
 
 private:
@@ -206,11 +207,11 @@ public:
                  isa<ConstructorInitializerConstructionContext>(C) ||
                  isa<ArgumentConstructionContext>(C) ||
                  isa<LambdaCaptureConstructionContext>(C)));
-    Data2.setPointer(const_cast<ConstructionContext *>(C));
+    Data2.setPointer(C);
   }
 
   const ConstructionContext *getConstructionContext() const {
-    return static_cast<ConstructionContext *>(Data2.getPointer());
+    return static_cast<const ConstructionContext *>(Data2.getPointer());
   }
 
 private:
@@ -230,8 +231,8 @@ public:
   explicit CFGInitializer(const CXXCtorInitializer *initializer)
       : CFGElement(Initializer, initializer) {}
 
-  CXXCtorInitializer* getInitializer() const {
-    return static_cast<CXXCtorInitializer*>(Data1.getPointer());
+  const CXXCtorInitializer *getInitializer() const {
+    return static_cast<const CXXCtorInitializer *>(Data1.getPointer());
   }
 
 private:
@@ -252,7 +253,7 @@ public:
 
   // Get the new expression.
   const CXXNewExpr *getAllocatorExpr() const {
-    return static_cast<CXXNewExpr *>(Data1.getPointer());
+    return static_cast<const CXXNewExpr *>(Data1.getPointer());
   }
 
 private:
@@ -276,7 +277,7 @@ public:
   explicit CFGLoopExit(const Stmt *stmt) : CFGElement(LoopExit, stmt) {}
 
   const Stmt *getLoopStmt() const {
-    return static_cast<Stmt *>(Data1.getPointer());
+    return static_cast<const Stmt *>(Data1.getPointer());
   }
 
 private:
@@ -296,11 +297,11 @@ public:
       : CFGElement(LifetimeEnds, var, stmt) {}
 
   const VarDecl *getVarDecl() const {
-    return static_cast<VarDecl *>(Data1.getPointer());
+    return static_cast<const VarDecl *>(Data1.getPointer());
   }
 
   const Stmt *getTriggerStmt() const {
-    return static_cast<Stmt *>(Data2.getPointer());
+    return static_cast<const Stmt *>(Data2.getPointer());
   }
 
 private:
@@ -310,6 +311,32 @@ private:
 
   static bool isKind(const CFGElement &elem) {
     return elem.getKind() == LifetimeEnds;
+  }
+};
+
+class CFGFullExprCleanup : public CFGElement {
+
+public:
+  using MTEVecTy = BumpVector<const MaterializeTemporaryExpr *>;
+  explicit CFGFullExprCleanup(const MTEVecTy *MTEs)
+      : CFGElement(FullExprCleanup, MTEs, nullptr) {}
+
+  ArrayRef<const MaterializeTemporaryExpr *> getExpiringMTEs() const {
+    const MTEVecTy *ExpiringMTEs =
+        static_cast<const MTEVecTy *>(Data1.getPointer());
+    if (!ExpiringMTEs)
+      return {};
+    return ArrayRef<const MaterializeTemporaryExpr *>(ExpiringMTEs->begin(),
+                                                      ExpiringMTEs->end());
+  }
+
+private:
+  friend class CFGElement;
+
+  CFGFullExprCleanup() = default;
+
+  static bool isKind(const CFGElement &elem) {
+    return elem.getKind() == FullExprCleanup;
   }
 };
 
@@ -323,12 +350,12 @@ public:
 
   // Get statement that triggered a new scope.
   const Stmt *getTriggerStmt() const {
-    return static_cast<Stmt*>(Data2.getPointer());
+    return static_cast<const Stmt *>(Data2.getPointer());
   }
 
   // Get VD that triggered a new scope.
   const VarDecl *getVarDecl() const {
-    return static_cast<VarDecl *>(Data1.getPointer());
+    return static_cast<const VarDecl *>(Data1.getPointer());
   }
 
 private:
@@ -347,11 +374,11 @@ public:
   CFGScopeEnd(const VarDecl *VD, const Stmt *S) : CFGElement(ScopeEnd, VD, S) {}
 
   const VarDecl *getVarDecl() const {
-    return static_cast<VarDecl *>(Data1.getPointer());
+    return static_cast<const VarDecl *>(Data1.getPointer());
   }
 
   const Stmt *getTriggerStmt() const {
-    return static_cast<Stmt *>(Data2.getPointer());
+    return static_cast<const Stmt *>(Data2.getPointer());
   }
 
 private:
@@ -395,7 +422,7 @@ public:
   }
 
   const VarDecl *getVarDecl() const {
-    return static_cast<VarDecl *>(Data1.getPointer());
+    return static_cast<const VarDecl *>(Data1.getPointer());
   }
 
   /// Returns the function to be called when cleaning up the var decl.
@@ -421,12 +448,12 @@ public:
       : CFGImplicitDtor(AutomaticObjectDtor, var, stmt) {}
 
   const VarDecl *getVarDecl() const {
-    return static_cast<VarDecl*>(Data1.getPointer());
+    return static_cast<const VarDecl *>(Data1.getPointer());
   }
 
   // Get statement end of which triggered the destructor call.
   const Stmt *getTriggerStmt() const {
-    return static_cast<Stmt*>(Data2.getPointer());
+    return static_cast<const Stmt *>(Data2.getPointer());
   }
 
 private:
@@ -446,12 +473,12 @@ public:
       : CFGImplicitDtor(DeleteDtor, RD, DE) {}
 
   const CXXRecordDecl *getCXXRecordDecl() const {
-    return static_cast<CXXRecordDecl*>(Data1.getPointer());
+    return static_cast<const CXXRecordDecl *>(Data1.getPointer());
   }
 
   // Get Delete expression which triggered the destructor call.
   const CXXDeleteExpr *getDeleteExpr() const {
-    return static_cast<CXXDeleteExpr *>(Data2.getPointer());
+    return static_cast<const CXXDeleteExpr *>(Data2.getPointer());
   }
 
 private:
@@ -1095,11 +1122,7 @@ public:
   /// C itself, while this method would only return C.
   const Expr *getLastCondition() const;
 
-  Stmt *getTerminatorCondition(bool StripParens = true);
-
-  const Stmt *getTerminatorCondition(bool StripParens = true) const {
-    return const_cast<CFGBlock*>(this)->getTerminatorCondition(StripParens);
-  }
+  const Stmt *getTerminatorCondition(bool StripParens = true) const;
 
   const Stmt *getLoopTarget() const { return LoopTarget; }
 
@@ -1187,6 +1210,11 @@ public:
     Elements.push_back(CFGLifetimeEnds(VD, S), C);
   }
 
+  void appendFullExprCleanup(BumpVector<const MaterializeTemporaryExpr *> *BV,
+                             BumpVectorContext &C) {
+    Elements.push_back(CFGFullExprCleanup(BV), C);
+  }
+
   void appendLoopExit(const Stmt *LoopStmt, BumpVectorContext &C) {
     Elements.push_back(CFGLoopExit(LoopStmt), C);
   }
@@ -1240,6 +1268,11 @@ public:
     bool AddInitializers = false;
     bool AddImplicitDtors = false;
     bool AddLifetime = false;
+    // Add lifetime markers for function parameters. In principle, function
+    // parameters are constructed and destructed in the caller context but
+    // analyses could still choose to include these in the callee's CFG to
+    // represent the lifetime ends of parameters on function exit.
+    bool AddParameterLifetimes = false;
     bool AddLoopExit = false;
     bool AddTemporaryDtors = false;
     bool AddScopes = false;
@@ -1398,7 +1431,7 @@ public:
     for (CFGBlock *BB : *this)
       for (const CFGElement &Elem : *BB) {
         if (std::optional<CFGStmt> stmt = Elem.getAs<CFGStmt>())
-          O(const_cast<Stmt *>(stmt->getStmt()));
+          O(stmt->getStmt());
       }
   }
 

@@ -11,6 +11,7 @@
 ; and refs).
 ^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold), (callee: ^16, hotness: none, tail: 1)), refs: (writeonly ^14, readonly ^13, ^11))))
 
+;; relbf is deprecated, but we support reading old files.
 ; Function with a call that has relative block frequency instead of profile
 ; hotness.
 ^3 = gv: (guid: 2, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 10, calls: ((callee: ^15, relbf: 256, tail: 1)))))
@@ -81,7 +82,7 @@
 ; CHECK: ^1 = module: (path: "thinlto-summary2.o", hash: (2998369023, 4283347029, 1195487472, 2757298015, 1852134156))
 ; CHECK: ^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold), (callee: ^16, hotness: none, tail: 1)), refs: (^11, readonly ^13, writeonly ^14))))
 ;; relbf is not emitted since this is a combined summary, and that is only
-;; emitted for per-module summaries.
+;; emitted for per-module summaries. Additionally, it is now deprecated.
 ; CHECK: ^3 = gv: (guid: 2, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition), insts: 10, calls: ((callee: ^15, tail: 1)))))
 ; CHECK: ^4 = gv: (guid: 3, summaries: (function: (module: ^0, flags: (linkage: internal, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0, importType: definition), insts: 1)))
 ; CHECK: ^5 = gv: (guid: 4, summaries: (alias: (module: ^0, flags: (linkage: private, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0, importType: definition), aliasee: ^14)))

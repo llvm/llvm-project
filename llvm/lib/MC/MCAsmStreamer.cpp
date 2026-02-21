@@ -19,6 +19,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCPseudoProbe.h"
@@ -69,6 +70,17 @@ class MCAsmStreamer final : public MCStreamer {
                                raw_svector_ostream &OS) const;
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
+
+  /// Helper to emit common .loc directive flags, isa, and discriminator.
+  void emitDwarfLocDirectiveFlags(unsigned Flags, unsigned Isa,
+                                  unsigned Discriminator);
+
+  /// Helper to emit the common suffix of .loc directives (flags, comment, EOL,
+  /// parent call).
+  void emitDwarfLocDirectiveSuffix(unsigned FileNo, unsigned Line,
+                                   unsigned Column, unsigned Flags,
+                                   unsigned Isa, unsigned Discriminator,
+                                   StringRef FileName, StringRef Comment);
 
 public:
   MCAsmStreamer(MCContext &Context, std::unique_ptr<formatted_raw_ostream> os,
@@ -123,7 +135,7 @@ public:
     EmitCommentsAndEOL();
   }
 
-  void emitSyntaxDirective() override;
+  void emitSyntaxDirective(StringRef Syntax, StringRef Options) override;
 
   void EmitCommentsAndEOL();
 
@@ -274,6 +286,7 @@ public:
 
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
+  void emitPrefAlign(Align Alignment) override;
 
   void emitValueToOffset(const MCExpr *Offset,
                          unsigned char Value,
@@ -296,6 +309,16 @@ public:
                              unsigned Discriminator, StringRef FileName,
                              StringRef Location = {}) override;
   void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) override;
+
+  /// This is same as emitDwarfLocDirective, except also emits inlined function
+  /// and inlined callsite information.
+  void emitDwarfLocDirectiveWithInlinedAt(unsigned FileNo, unsigned Line,
+                                          unsigned Column, unsigned FileIA,
+                                          unsigned LineIA, unsigned ColIA,
+                                          const MCSymbol *Sym, unsigned Flags,
+                                          unsigned Isa, unsigned Discriminator,
+                                          StringRef FileName,
+                                          StringRef Comment = {}) override;
 
   MCSymbol *getDwarfLineTableSymbol(unsigned CUID) override;
 
@@ -375,8 +398,7 @@ public:
   void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) override;
   void emitWinCFIEndProc(SMLoc Loc) override;
   void emitWinCFIFuncletOrFuncEnd(SMLoc Loc) override;
-  void emitWinCFIStartChained(SMLoc Loc) override;
-  void emitWinCFIEndChained(SMLoc Loc) override;
+  void emitWinCFISplitChained(SMLoc Loc) override;
   void emitWinCFIPushReg(MCRegister Register, SMLoc Loc) override;
   void emitWinCFISetFrame(MCRegister Register, unsigned Offset,
                           SMLoc Loc) override;
@@ -774,6 +796,9 @@ bool MCAsmStreamer::emitSymbolAttribute(MCSymbol *Symbol,
     // Assemblers currently do not support a .cold directive.
   case MCSA_Exported:
     // Non-AIX assemblers currently do not support exported visibility.
+  case MCSA_OSLinkage:
+  case MCSA_XPLinkage:
+    // Only for HLASM.
     return false;
   case MCSA_Memtag:
     OS << "\t.memtag\t";
@@ -796,14 +821,11 @@ void MCAsmStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   EmitEOL();
 }
 
-void MCAsmStreamer::emitSyntaxDirective() {
-  if (MAI->getAssemblerDialect() == 1) {
-    OS << "\t.intel_syntax noprefix";
-    EmitEOL();
-  }
-  // FIXME: Currently emit unprefix'ed registers.
-  // The intel_syntax directive has one optional argument
-  // with may have a value of prefix or noprefix.
+void MCAsmStreamer::emitSyntaxDirective(StringRef Syntax, StringRef Options) {
+  OS << "\t." << Syntax << "_syntax";
+  if (!Options.empty())
+    OS << " " << Options;
+  EmitEOL();
 }
 
 void MCAsmStreamer::beginCOFFSymbolDef(const MCSymbol *Symbol) {
@@ -1540,6 +1562,11 @@ void MCAsmStreamer::emitCodeAlignment(Align Alignment,
     emitAlignmentDirective(Alignment.value(), std::nullopt, 1, MaxBytesToEmit);
 }
 
+void MCAsmStreamer::emitPrefAlign(Align Alignment) {
+  OS << "\t.prefalign\t" << Alignment.value();
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitValueToOffset(const MCExpr *Offset,
                                       unsigned char Value,
                                       SMLoc Loc) {
@@ -1675,6 +1702,57 @@ void MCAsmStreamer::emitDwarfFile0Directive(
     emitRawText(OS1.str());
 }
 
+/// Helper to emit common .loc directive flags, isa, and discriminator.
+void MCAsmStreamer::emitDwarfLocDirectiveFlags(unsigned Flags, unsigned Isa,
+                                               unsigned Discriminator) {
+  if (!MAI->supportsExtendedDwarfLocDirective())
+    return;
+
+  if (Flags & DWARF2_FLAG_BASIC_BLOCK)
+    OS << " basic_block";
+  if (Flags & DWARF2_FLAG_PROLOGUE_END)
+    OS << " prologue_end";
+  if (Flags & DWARF2_FLAG_EPILOGUE_BEGIN)
+    OS << " epilogue_begin";
+
+  const unsigned OldFlags = getContext().getCurrentDwarfLoc().getFlags();
+  if ((Flags & DWARF2_FLAG_IS_STMT) != (OldFlags & DWARF2_FLAG_IS_STMT)) {
+    OS << " is_stmt ";
+    OS << ((Flags & DWARF2_FLAG_IS_STMT) ? "1" : "0");
+  }
+
+  if (Isa)
+    OS << " isa " << Isa;
+  if (Discriminator)
+    OS << " discriminator " << Discriminator;
+}
+
+/// Helper to emit the common suffix of .loc directives.
+void MCAsmStreamer::emitDwarfLocDirectiveSuffix(unsigned FileNo, unsigned Line,
+                                                unsigned Column, unsigned Flags,
+                                                unsigned Isa,
+                                                unsigned Discriminator,
+                                                StringRef FileName,
+                                                StringRef Comment) {
+  // Emit flags, isa, and discriminator.
+  emitDwarfLocDirectiveFlags(Flags, Isa, Discriminator);
+
+  // Emit verbose comment if enabled.
+  if (IsVerboseAsm) {
+    OS.PadToColumn(MAI->getCommentColumn());
+    OS << MAI->getCommentString() << ' ';
+    if (Comment.empty())
+      OS << FileName << ':' << Line << ':' << Column;
+    else
+      OS << Comment;
+  }
+
+  // Emit end of line and update the baseclass state.
+  EmitEOL();
+  MCStreamer::emitDwarfLocDirective(FileNo, Line, Column, Flags, Isa,
+                                    Discriminator, FileName, Comment);
+}
+
 void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                           unsigned Column, unsigned Flags,
                                           unsigned Isa, unsigned Discriminator,
@@ -1691,42 +1769,29 @@ void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
     return;
   }
 
+  // Emit the basic .loc directive.
   OS << "\t.loc\t" << FileNo << " " << Line << " " << Column;
-  if (MAI->supportsExtendedDwarfLocDirective()) {
-    if (Flags & DWARF2_FLAG_BASIC_BLOCK)
-      OS << " basic_block";
-    if (Flags & DWARF2_FLAG_PROLOGUE_END)
-      OS << " prologue_end";
-    if (Flags & DWARF2_FLAG_EPILOGUE_BEGIN)
-      OS << " epilogue_begin";
 
-    unsigned OldFlags = getContext().getCurrentDwarfLoc().getFlags();
-    if ((Flags & DWARF2_FLAG_IS_STMT) != (OldFlags & DWARF2_FLAG_IS_STMT)) {
-      OS << " is_stmt ";
+  // Emit common suffix (flags, comment, EOL, parent call).
+  emitDwarfLocDirectiveSuffix(FileNo, Line, Column, Flags, Isa, Discriminator,
+                              FileName, Comment);
+}
 
-      if (Flags & DWARF2_FLAG_IS_STMT)
-        OS << "1";
-      else
-        OS << "0";
-    }
+/// This is same as emitDwarfLocDirective, except also emits inlined function
+/// and inlined callsite information.
+void MCAsmStreamer::emitDwarfLocDirectiveWithInlinedAt(
+    unsigned FileNo, unsigned Line, unsigned Column, unsigned FileIA,
+    unsigned LineIA, unsigned ColIA, const MCSymbol *Sym, unsigned Flags,
+    unsigned Isa, unsigned Discriminator, StringRef FileName,
+    StringRef Comment) {
+  // Emit the basic .loc directive with NVPTX-specific extensions.
+  OS << "\t.loc\t" << FileNo << " " << Line << " " << Column;
+  OS << ", function_name " << *Sym;
+  OS << ", inlined_at " << FileIA << " " << LineIA << " " << ColIA;
 
-    if (Isa)
-      OS << " isa " << Isa;
-    if (Discriminator)
-      OS << " discriminator " << Discriminator;
-  }
-
-  if (IsVerboseAsm) {
-    OS.PadToColumn(MAI->getCommentColumn());
-    OS << MAI->getCommentString() << ' ';
-    if (Comment.empty())
-      OS << FileName << ':' << Line << ':' << Column;
-    else
-      OS << Comment;
-  }
-  EmitEOL();
-  this->MCStreamer::emitDwarfLocDirective(FileNo, Line, Column, Flags, Isa,
-                                          Discriminator, FileName, Comment);
+  // Emit common suffix (flags, comment, EOL, parent call).
+  emitDwarfLocDirectiveSuffix(FileNo, Line, Column, Flags, Isa, Discriminator,
+                              FileName, Comment);
 }
 
 void MCAsmStreamer::emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) {
@@ -2175,17 +2240,10 @@ void MCAsmStreamer::emitWinCFIFuncletOrFuncEnd(SMLoc Loc) {
   EmitEOL();
 }
 
-void MCAsmStreamer::emitWinCFIStartChained(SMLoc Loc) {
-  MCStreamer::emitWinCFIStartChained(Loc);
+void MCAsmStreamer::emitWinCFISplitChained(SMLoc Loc) {
+  MCStreamer::emitWinCFISplitChained(Loc);
 
-  OS << "\t.seh_startchained";
-  EmitEOL();
-}
-
-void MCAsmStreamer::emitWinCFIEndChained(SMLoc Loc) {
-  MCStreamer::emitWinCFIEndChained(Loc);
-
-  OS << "\t.seh_endchained";
+  OS << "\t.seh_splitchained";
   EmitEOL();
 }
 
@@ -2437,6 +2495,9 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
 void MCAsmStreamer::emitInstruction(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
+  if (LFIRewriter && LFIRewriter->rewriteInst(Inst, *this, STI))
+    return;
+
   if (CurFrag) {
     MCSection *Sec = getCurrentSectionOnly();
     Sec->setHasInstructions(true);

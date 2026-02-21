@@ -52,7 +52,7 @@ public:
     using Throwables = llvm::SmallDenseMap<const Type *, ThrowInfo, 2>;
 
     static ExceptionInfo createUnknown() { return {State::Unknown}; }
-    static ExceptionInfo createNonThrowing() { return {State::Throwing}; }
+    static ExceptionInfo createNonThrowing() { return {State::NotThrowing}; }
 
     /// By default the exception situation is unknown and must be
     /// clarified step-wise.
@@ -111,6 +111,12 @@ public:
     /// occur. If there is an 'Unknown' element this can not be guaranteed.
     bool containsUnknownElements() const { return ContainsUnknown; }
 
+    void registerUnknownException() {
+      Behaviour = State::Throwing;
+      ThrowsUnknown = true;
+      ContainsUnknown = true;
+    }
+
   private:
     /// Recalculate the 'Behaviour' for example after filtering.
     void reevaluateBehaviour();
@@ -124,12 +130,25 @@ public:
     /// after filtering.
     bool ContainsUnknown;
 
+    /// True if the entity is determined to be Throwing due to an unknown cause,
+    /// based on analyzer configuration.
+    bool ThrowsUnknown = false;
+
     /// 'ThrownException' is empty if the 'Behaviour' is either 'NotThrowing' or
     /// 'Unknown'.
     Throwables ThrownExceptions;
   };
 
   ExceptionAnalyzer() = default;
+
+  void assumeUnannotatedFunctionsAsThrowing(bool AssumeUnannotatedAsThrowing) {
+    AssumeUnannotatedFunctionsAsThrowing = AssumeUnannotatedAsThrowing;
+  }
+  void assumeMissingDefinitionsFunctionsAsThrowing(
+      bool AssumeMissingDefinitionsAsThrowing) {
+    AssumeMissingDefinitionsFunctionsAsThrowing =
+        AssumeMissingDefinitionsAsThrowing;
+  }
 
   void ignoreBadAlloc(bool ShallIgnore) { IgnoreBadAlloc = ShallIgnore; }
   void ignoreExceptions(llvm::StringSet<> ExceptionNames) {
@@ -154,6 +173,8 @@ private:
   bool IgnoreBadAlloc = true;
   llvm::StringSet<> IgnoredExceptions;
   llvm::DenseMap<const FunctionDecl *, ExceptionInfo> FunctionCache{32U};
+  bool AssumeUnannotatedFunctionsAsThrowing = false;
+  bool AssumeMissingDefinitionsFunctionsAsThrowing = false;
 };
 
 } // namespace clang::tidy::utils

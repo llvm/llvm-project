@@ -126,3 +126,54 @@ loop:
 exit:
   ret void
 }
+
+define void @pr173761(i8 %c, ptr %p, ptr noalias %q, ptr noalias %r) {
+; CHECK-LABEL: define void @pr173761
+; CHECK-SAME: (i8 [[C:%.*]], ptr [[P:%.*]], ptr noalias [[Q:%.*]], ptr noalias [[R:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[C]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x ptr> poison, ptr [[P]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT1]], <4 x ptr> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT3]], <4 x ptr> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i8> [[BROADCAST_SPLAT]] to <4 x i1>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x ptr> [[BROADCAST_SPLAT4]], <4 x ptr> [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    store i8 [[TMP3]], ptr [[R]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x ptr> [[TMP2]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
+; CHECK-NEXT:    store i8 [[TMP5]], ptr [[Q]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %loop ]
+  %ld.p = load i8, ptr %p
+  store i8 %ld.p, ptr %r
+  %gep.inv = getelementptr inbounds nuw i8, ptr %p, i64 16
+  %c.trunc = trunc i8 %c to i1
+  %sel.inv = select i1 %c.trunc, ptr %gep.inv, ptr %p
+  %ld.sel.inv = load i8, ptr %sel.inv
+  store i8 %ld.sel.inv, ptr %q
+  %iv.next = add i16 %iv, 1
+  %ec = icmp ne i16 %iv.next, 1024
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}

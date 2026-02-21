@@ -408,6 +408,8 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
+  const Driver &D = getDriver();
+
   if (std::optional<std::string> Path = getStdlibIncludePath())
     addSystemInclude(DriverArgs, CC1Args, *Path);
 
@@ -416,6 +418,12 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     for (const Multilib &M : getOrderedMultilibs()) {
       SmallString<128> Dir(SysRootDir);
       llvm::sys::path::append(Dir, M.includeSuffix());
+      llvm::sys::path::append(Dir, "include");
+      addSystemInclude(DriverArgs, CC1Args, Dir.str());
+    }
+    SmallString<128> Dir(SysRootDir);
+    llvm::sys::path::append(Dir, getTripleString());
+    if (D.getVFS().exists(Dir)) {
       llvm::sys::path::append(Dir, "include");
       addSystemInclude(DriverArgs, CC1Args, Dir.str());
     }
@@ -498,7 +506,7 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
         addSystemInclude(DriverArgs, CC1Args, TargetDir.str());
         break;
       }
-      // Add generic path if nothing else succeeded so far.
+      // Add generic paths if nothing else succeeded so far.
       llvm::sys::path::append(Dir, "include", "c++", "v1");
       addSystemInclude(DriverArgs, CC1Args, Dir.str());
       break;
@@ -527,6 +535,17 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
       break;
     }
     }
+  }
+  switch (GetCXXStdlibType(DriverArgs)) {
+  case ToolChain::CST_Libcxx: {
+    SmallString<128> Dir(SysRootDir);
+    llvm::sys::path::append(Dir, Target, "include", "c++", "v1");
+    if (D.getVFS().exists(Dir))
+      addSystemInclude(DriverArgs, CC1Args, Dir.str());
+    break;
+  }
+  case ToolChain::CST_Libstdcxx:
+    break;
   }
 }
 
@@ -714,7 +733,7 @@ SanitizerMask BareMetal::getSupportedSanitizers() const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64 ||
                          getTriple().getArch() == llvm::Triple::aarch64_be;
-  const bool IsRISCV64 = getTriple().getArch() == llvm::Triple::riscv64;
+  const bool IsRISCV64 = getTriple().isRISCV64();
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::KernelAddress;

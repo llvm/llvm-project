@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_SCRIPTEDINTERFACEUSAGES_H
-#define LLDB_INTERPRETER_SCRIPTEDINTERFACEUSAGES_H
+#ifndef LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACEUSAGES_H
+#define LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACEUSAGES_H
 
 #include "lldb/lldb-types.h"
 
@@ -40,4 +40,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_SCRIPTEDINTERFACEUSAGES_H
+#endif // LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACEUSAGES_H

@@ -160,7 +160,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
   uint64_t args_sizes[num_lanes] = {0};
   void *args[num_lanes] = {nullptr};
 
-  // Recieve the format string and arguments from the client.
+  // Receive the format string and arguments from the client.
   port.recv_n(format, format_sizes,
               [&](uint64_t size) { return temp_storage.alloc(size); });
 
@@ -169,9 +169,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
     if (!format[lane])
       continue;
 
-    printf_core::WriteBuffer<
-        printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>
-        wb(nullptr, 0);
+    printf_core::DropOverflowBuffer wb(nullptr, 0);
     printf_core::Writer writer(wb);
 
     internal::DummyArgList<packed> printf_args;
@@ -198,9 +196,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
     if (!format[lane])
       continue;
 
-    printf_core::WriteBuffer<
-        printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>
-        wb(nullptr, 0);
+    printf_core::DropOverflowBuffer wb(nullptr, 0);
     printf_core::Writer writer(wb);
 
     internal::StructArgList<packed> printf_args(args[lane], args_sizes[lane]);
@@ -227,7 +223,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
     buffer_size[lane] = writer.get_chars_written();
   }
 
-  // Recieve any strings from the client and push them into a buffer.
+  // Receive any strings from the client and push them into a buffer.
   TempVector<void *> copied_strs[num_lanes];
   auto HasPendingCopies = [](TempVector<void *> v[num_lanes]) {
     for (uint32_t i = 0; i < num_lanes; ++i)
@@ -262,9 +258,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
       continue;
 
     char *buffer = temp_storage.alloc(buffer_size[lane]);
-    printf_core::WriteBuffer<
-        printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>
-        wb(buffer, buffer_size[lane]);
+    printf_core::DropOverflowBuffer wb(buffer, buffer_size[lane]);
     printf_core::Writer writer(wb);
 
     internal::StructArgList<packed> printf_args(args[lane], args_sizes[lane]);

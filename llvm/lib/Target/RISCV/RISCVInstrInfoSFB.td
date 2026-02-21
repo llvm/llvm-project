@@ -18,10 +18,10 @@ def PseudoCCMOVGPR : Pseudo<(outs GPR:$dst),
                             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                              GPR:$falsev, GPR:$truev),
                             [(set GPR:$dst,
-                              (riscv_selectcc_frag:$cc (XLenVT GPR:$lhs),
-                                                       GPR:$rhs, cond,
-                                                       (XLenVT GPR:$truev),
-                                                       GPR:$falsev))]>,
+                              (riscv_selectcc (XLenVT GPR:$lhs), GPR:$rhs,
+                                              riscv_cond:$cc,
+                                              (XLenVT GPR:$truev),
+                                              GPR:$falsev))]>,
                      Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
                             ReadSFBALU, ReadSFBALU]>;
 }
@@ -37,10 +37,10 @@ def PseudoCCMOVGPRNoX0 : Pseudo<(outs GPRNoX0:$dst),
                                 (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
                                  GPRNoX0:$falsev, GPRNoX0:$truev),
                                 [(set GPRNoX0:$dst,
-                                  (riscv_selectcc_frag:$cc (XLenVT GPR:$lhs),
-                                                           (XLenVT GPR:$rhs),
-                                                           cond, (XLenVT GPRNoX0:$truev),
-                                                           (XLenVT GPRNoX0:$falsev)))]>,
+                                  (riscv_selectcc (XLenVT GPR:$lhs), GPR:$rhs,
+                                                  riscv_cond:$cc,
+                                                  (XLenVT GPRNoX0:$truev),
+                                                  GPRNoX0:$falsev))]>,
                          Sched<[]>;
 }
 
@@ -75,6 +75,17 @@ class SFBLUI
                   uimm20_lui:$imm), []> {
   let hasSideEffects = 0;
   let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 8;
+  let Constraints = "$dst = $falsev";
+}
+
+class SFBLoad
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+                  simm12_lo:$imm), []> {
+  let hasSideEffects = 0;
+  let mayLoad = 1;
   let mayStore = 0;
   let Size = 8;
   let Constraints = "$dst = $falsev";
@@ -166,3 +177,13 @@ def PseudoCCMINU : SFBALU_rr;
 
 let Predicates = [HasShortForwardBranchIMul] in
 def PseudoCCMUL : SFBALU_rr;
+
+let Predicates = [HasShortForwardBranchILoad] in {
+def PseudoCCLB : SFBLoad;
+def PseudoCCLH : SFBLoad;
+def PseudoCCLW : SFBLoad;
+def PseudoCCLHU : SFBLoad;
+def PseudoCCLBU : SFBLoad;
+def PseudoCCLWU : SFBLoad;
+def PseudoCCLD : SFBLoad;
+}

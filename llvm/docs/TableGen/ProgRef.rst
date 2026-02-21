@@ -1654,10 +1654,6 @@ operator produces a boolean result, the result value will be 1 for true or 0
 for false. When an operator tests a boolean argument, it interprets 0 as false
 and non-0 as true.
 
-.. warning::
-  The ``!getop`` and ``!setop`` bang operators are deprecated in favor of
-  ``!getdagop`` and ``!setdagop``.
-
 ``!add(``\ *a*\ ``,`` *b*\ ``, ...)``
     This operator adds *a*, *b*, etc., and produces the sum.
 

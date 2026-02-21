@@ -13,16 +13,20 @@ add_clang_library(clangCIR
   CIRGenBuilder.cpp
   CIRGenBuiltin.cpp
   CIRGenBuiltinAArch64.cpp
+  CIRGenBuiltinAMDGPU.cpp
   CIRGenBuiltinX86.cpp
   CIRGenCall.cpp
   CIRGenClass.cpp
   CIRGenCleanup.cpp
   CIRGenCoroutine.cpp
+  CIRGenCUDANV.cpp
+  CIRGenCUDARuntime.cpp
   CIRGenCXX.cpp
   CIRGenCXXABI.cpp
   CIRGenDecl.cpp
   CIRGenDeclCXX.cpp
   CIRGenDeclOpenACC.cpp
+  CIRGenDeclOpenMP.cpp
   CIRGenException.cpp
   CIRGenExpr.cpp
   CIRGenExprAggregate.cpp
@@ -36,11 +40,13 @@ add_clang_library(clangCIR
   CIRGenOpenACC.cpp
   CIRGenOpenACCClause.cpp
   CIRGenOpenACCRecipe.cpp
+  CIRGenOpenMPClause.cpp
   CIRGenPointerAuth.cpp
   CIRGenRecordLayoutBuilder.cpp
   CIRGenStmt.cpp
   CIRGenStmtOpenACC.cpp
   CIRGenStmtOpenACCLoop.cpp
+  CIRGenStmtOpenMP.cpp
   CIRGenTypes.cpp
   CIRGenVTables.cpp
   TargetInfo.cpp

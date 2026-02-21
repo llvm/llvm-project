@@ -2398,6 +2398,30 @@ void MachOObjectFile::getRelocationTypeName(
         res = Table[RType];
       break;
     }
+    case Triple::riscv32: {
+      static const char *const Table[] = {
+          "RISCV_RELOC_UNSIGNED", "RISCV_RELOC_SUBTRACTOR",
+          "RISCV_RELOC_BRANCH21", "RISCV_RELOC_HI20",
+          "RISCV_RELOC_LO12",     "RISCV_RELOC_GOT_HI20",
+          "RISCV_RELOC_GOT_LO12", "RISCV_RELOC_POINTER_TO_GOT",
+          "RISCV_RELOC_ADDEND",
+      };
+
+      if (RType >= std::size(Table))
+        res = "Unknown";
+      else
+        res = Table[RType];
+      Result.append(res.begin(), res.end());
+      if ((RType == MachO::RISCV_RELOC_HI20 ||
+           RType == MachO::RISCV_RELOC_GOT_HI20 ||
+           RType == MachO::RISCV_RELOC_LO12 ||
+           RType == MachO::RISCV_RELOC_GOT_LO12) &&
+          getAnyRelocationPCRel(getRelocation(Rel))) {
+        StringRef PCRel("(pcrel)");
+        Result.append(PCRel.begin(), PCRel.end());
+      }
+      return;
+    }
     case Triple::UnknownArch:
       res = "Unknown";
       break;
@@ -2690,6 +2714,8 @@ StringRef MachOObjectFile::getFileFormatName() const {
       return "Mach-O arm64 (ILP32)";
     case MachO::CPU_TYPE_POWERPC:
       return "Mach-O 32-bit ppc";
+    case MachO::CPU_TYPE_RISCV:
+      return "Mach-O 32-bit RISC-V";
     default:
       return "Mach-O 32-bit unknown";
     }
@@ -2723,6 +2749,8 @@ Triple::ArchType MachOObjectFile::getArch(uint32_t CPUType, uint32_t CPUSubType)
     return Triple::ppc;
   case MachO::CPU_TYPE_POWERPC64:
     return Triple::ppc64;
+  case MachO::CPU_TYPE_RISCV:
+    return Triple::riscv32;
   default:
     return Triple::UnknownArch;
   }
@@ -2857,6 +2885,15 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
       if (ArchFlag)
         *ArchFlag = "ppc64";
       return Triple("ppc64-apple-darwin");
+    default:
+      return Triple();
+    }
+  case MachO::CPU_TYPE_RISCV:
+    switch (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) {
+    case MachO::CPU_SUBTYPE_RISCV_ALL:
+      if (ArchFlag)
+        *ArchFlag = "riscv32";
+      return Triple("riscv32-apple-macho");
     default:
       return Triple();
     }

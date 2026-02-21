@@ -192,7 +192,7 @@ define [2 x <vscale x 4 x i1>] @sve_signature_pred_2xv4i1([2 x <vscale x 4 x i1>
 }
 
 ; Test that a scalable predicate argument in [1 x <vscale x 32 x i1>] type is assigned to two P registers.
-; CHECK-LABLE: name: sve_signature_pred_1xv32i1
+; CHECK-LABEL: name: sve_signature_pred_1xv32i1
 ; CHECK: [[RES1:%[0-9]+]]:ppr = COPY $p3
 ; CHECK: [[RES0:%[0-9]+]]:ppr = COPY $p2
 ; CHECK: $p0 = COPY [[RES0]]
@@ -203,7 +203,7 @@ define [1 x <vscale x 32 x i1>] @sve_signature_pred_1xv32i1([1 x <vscale x 32 x 
 }
 
 ; Test that a scalable predicate argument in [2 x <vscale x 32 x i1>] type is assigned to four P registers.
-; CHECK-LABLE: name: sve_signature_pred_2xv32i1
+; CHECK-LABEL: name: sve_signature_pred_2xv32i1
 ; CHECK: [[RES3:%[0-9]+]]:ppr = COPY $p3
 ; CHECK: [[RES2:%[0-9]+]]:ppr = COPY $p2
 ; CHECK: [[RES1:%[0-9]+]]:ppr = COPY $p1

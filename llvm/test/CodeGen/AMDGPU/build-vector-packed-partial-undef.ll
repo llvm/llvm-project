@@ -586,14 +586,33 @@ define void @undef_hi_op_v2f16(half %arg0) {
 ; GFX9-NEXT:    ;;#ASMEND
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: undef_hi_op_v2f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
-; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:    ; use v0
-; GFX11-NEXT:    ;;#ASMEND
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-FAKE16-LABEL: undef_hi_op_v2f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    ;;#ASMSTART
+; GFX11-FAKE16-NEXT:    ; use v0
+; GFX11-FAKE16-NEXT:    ;;#ASMEND
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-SDAG-LABEL: undef_hi_op_v2f16:
+; GFX11-TRUE16-SDAG:       ; %bb.0:
+; GFX11-TRUE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-SDAG-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
+; GFX11-TRUE16-SDAG-NEXT:    v_mov_b16_e32 v0.h, 0x7e00
+; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMSTART
+; GFX11-TRUE16-SDAG-NEXT:    ; use v0
+; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMEND
+; GFX11-TRUE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-GISEL-LABEL: undef_hi_op_v2f16:
+; GFX11-TRUE16-GISEL:       ; %bb.0:
+; GFX11-TRUE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-GISEL-NEXT:    v_pk_add_f16 v0, v0, 1.0 op_sel_hi:[1,0]
+; GFX11-TRUE16-GISEL-NEXT:    ;;#ASMSTART
+; GFX11-TRUE16-GISEL-NEXT:    ; use v0
+; GFX11-TRUE16-GISEL-NEXT:    ;;#ASMEND
+; GFX11-TRUE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %undef.hi = insertelement <2 x half> poison, half %arg0, i32 0
   %op = fadd <2 x half> %undef.hi, <half 1.0, half 1.0>
   call void asm sideeffect "; use $0", "v"(<2 x half> %op);
@@ -663,7 +682,7 @@ define void @undef_hi_op_v2i16(i16 %arg0) {
 ; GFX11-TRUE16-SDAG-LABEL: undef_hi_op_v2i16:
 ; GFX11-TRUE16-SDAG:       ; %bb.0:
 ; GFX11-TRUE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-SDAG-NEXT:    v_pk_add_u16 v0, 0x63, v0 op_sel_hi:[0,1]
+; GFX11-TRUE16-SDAG-NEXT:    v_add_nc_u16 v0.l, 0x63, v0.l
 ; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMSTART
 ; GFX11-TRUE16-SDAG-NEXT:    ; use v0
 ; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMEND

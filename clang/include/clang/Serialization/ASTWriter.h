@@ -640,6 +640,7 @@ private:
   void WriteDeclsWithEffectsToVerify(Sema &SemaRef);
   void WriteModuleFileExtension(Sema &SemaRef,
                                 ModuleFileExtensionWriter &Writer);
+  void WriteRISCVIntrinsicPragmas(Sema &SemaRef);
 
   unsigned DeclParmVarAbbrev = 0;
   unsigned DeclContextLexicalAbbrev = 0;
@@ -772,12 +773,17 @@ public:
   /// Is this a local declaration (that is, one that will be written to
   /// our AST file)? This is the case for declarations that are neither imported
   /// from another AST file nor predefined.
-  bool IsLocalDecl(const Decl *D) {
+  bool IsLocalDecl(const Decl *D) const {
     if (D->isFromASTFile())
       return false;
     auto I = DeclIDs.find(D);
     return (I == DeclIDs.end() || I->second >= clang::NUM_PREDEF_DECL_IDS);
   };
+
+  /// Collect the first declaration from each module file that provides a
+  /// declaration of D.
+  llvm::MapVector<serialization::ModuleFile *, const Decl *>
+  CollectFirstDeclFromEachModule(const Decl *D, bool IncludeLocal);
 
   void AddLookupOffsets(const LookupBlockOffsets &Offsets,
                         RecordDataImpl &Record);
@@ -955,6 +961,10 @@ private:
                               Expr *ThisArg) override;
   void ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
                                   const FunctionDecl *Delete) override;
+  void ResolvedOperatorArrayDelete(const CXXDestructorDecl *DD,
+                                   const FunctionDecl *Delete) override;
+  void ResolvedOperatorGlobArrayDelete(const CXXDestructorDecl *DD,
+                                       const FunctionDecl *Delete) override;
   void CompletedImplicitDefinition(const FunctionDecl *D) override;
   void InstantiationRequested(const ValueDecl *D) override;
   void VariableDefinitionInstantiated(const VarDecl *D) override;

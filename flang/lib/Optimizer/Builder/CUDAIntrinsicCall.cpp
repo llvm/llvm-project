@@ -19,6 +19,7 @@
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Runtime/entry-names.h"
 #include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -381,6 +382,26 @@ static constexpr IntrinsicHandler cudaHandlers[]{
      static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(
          &CI::genClusterDimBlocks),
      {},
+     /*isElemental=*/false},
+    {"cudagetstreamdefaultarg",
+     static_cast<CUDAIntrinsicLibrary::ExtendedGenerator>(
+         &CI::genCUDAGetDefaultStreamArg),
+     {{{"devptr", asAddr}}},
+     /*isElemental=*/false},
+    {"cudagetstreamdefaultnull",
+     static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(
+         &CI::genCUDAGetDefaultStreamNull),
+     {},
+     /*isElemental=*/false},
+    {"cudasetstreamarray",
+     static_cast<CUDAIntrinsicLibrary::ExtendedGenerator>(
+         &CI::genCUDASetDefaultStreamArray),
+     {{{"devptr", asAddr}, {"stream", asValue}}},
+     /*isElemental=*/false},
+    {"cudasetstreamdefault",
+     static_cast<CUDAIntrinsicLibrary::ExtendedGenerator>(
+         &CI::genCUDASetDefaultStream),
+     {{{"stream", asValue}}},
      /*isElemental=*/false},
     {"fence_proxy_async",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
@@ -1010,7 +1031,7 @@ CUDAIntrinsicLibrary::genBarrierTryWait(mlir::Type resultType,
   mlir::Value beforeArg = beforeBlock->addArgument(resultType, loc);
   builder.setInsertionPointToStart(beforeBlock);
   mlir::Value condition = mlir::arith::CmpIOp::create(
-      builder, loc, mlir::arith::CmpIPredicate::ne, beforeArg, zero);
+      builder, loc, mlir::arith::CmpIPredicate::eq, beforeArg, zero);
   mlir::scf::ConditionOp::create(builder, loc, condition, beforeArg);
   mlir::Block *afterBlock = builder.createBlock(&whileOp.getAfter());
   afterBlock->addArgument(resultType, loc);
@@ -1101,6 +1122,99 @@ CUDAIntrinsicLibrary::genClusterDimBlocks(mlir::Type resultType,
   mlir::Value z = mlir::NVVM::ClusterDimBlocksZOp::create(builder, loc, i32Ty);
   insertValueAtPos(builder, loc, recTy, res, z, 2);
   return res;
+}
+
+// CUDASETSTREAMDEFAULT
+fir::ExtendedValue CUDAIntrinsicLibrary::genCUDASetDefaultStream(
+    mlir::Type resTy, llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value stream = fir::getBase(args[0]);
+  mlir::Type i64Ty = builder.getI64Type();
+  auto ctx = builder.getContext();
+  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {i64Ty}, {resTy});
+  auto funcOp =
+      builder.createFunction(loc, RTNAME_STRING(CUFSetDefaultStream), ftype);
+  auto call = fir::CallOp::create(builder, loc, funcOp, {stream});
+  return call.getResult(0);
+}
+
+// CUDASETSTREAMARRAY
+fir::ExtendedValue CUDAIntrinsicLibrary::genCUDASetDefaultStreamArray(
+    mlir::Type resTy, llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value arg = fir::getBase(args[0]);
+  mlir::Value stream = fir::getBase(args[1]);
+
+  if (mlir::isa<fir::BaseBoxType>(arg.getType()))
+    arg = fir::BoxAddrOp::create(builder, loc, arg);
+  mlir::Type i64Ty = builder.getI64Type();
+  mlir::Type i32Ty = builder.getI32Type();
+  auto ctx = builder.getContext();
+  mlir::Type voidPtrTy =
+      fir::LLVMPointerType::get(ctx, mlir::IntegerType::get(ctx, 8));
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(ctx, {voidPtrTy, i64Ty}, {i32Ty});
+  mlir::Value voidPtr = builder.createConvert(loc, voidPtrTy, arg);
+  auto funcOp =
+      builder.createFunction(loc, RTNAME_STRING(CUFSetAssociatedStream), ftype);
+  auto call = fir::CallOp::create(builder, loc, funcOp, {voidPtr, stream});
+  return call.getResult(0);
+}
+
+// CUDASTREAMSYNCHRONIZE
+fir::ExtendedValue CUDAIntrinsicLibrary::genCUDAStreamSynchronize(
+    mlir::Type resTy, llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value stream = fir::getBase(args[0]);
+  mlir::Type i64Ty = builder.getI64Type();
+  auto ctx = builder.getContext();
+  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {i64Ty}, {resTy});
+  auto funcOp =
+      builder.createFunction(loc, RTNAME_STRING(CUFStreamSynchronize), ftype);
+  auto call = fir::CallOp::create(builder, loc, funcOp, {stream});
+  return call.getResult(0);
+}
+
+// CUDASTREAMSYNCHRONIZENULL
+mlir::Value CUDAIntrinsicLibrary::genCUDAStreamSynchronizeNull(
+    mlir::Type resTy, llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0);
+  auto ctx = builder.getContext();
+  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {}, {resTy});
+  auto funcOp = builder.createFunction(
+      loc, RTNAME_STRING(CUFStreamSynchronizeNull), ftype);
+  auto call = fir::CallOp::create(builder, loc, funcOp, {});
+  return call.getResult(0);
+}
+
+// CUDAGETDEFAULTSTREAMARG
+fir::ExtendedValue CUDAIntrinsicLibrary::genCUDAGetDefaultStreamArg(
+    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value devptr = fir::getBase(args[0]);
+  mlir::Type i64Ty = builder.getI64Type();
+  auto ctx = builder.getContext();
+  mlir::Type voidPtrTy =
+      fir::LLVMPointerType::get(ctx, mlir::IntegerType::get(ctx, 8));
+  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {voidPtrTy}, {i64Ty});
+  mlir::Value voidPtr = builder.createConvert(loc, voidPtrTy, devptr);
+  auto funcOp =
+      builder.createFunction(loc, RTNAME_STRING(CUFGetAssociatedStream), ftype);
+  auto call = fir::CallOp::create(builder, loc, funcOp, {voidPtr});
+  return call.getResult(0);
+}
+
+// CUDAGETDEFAULTSTREAMNULL
+mlir::Value CUDAIntrinsicLibrary::genCUDAGetDefaultStreamNull(
+    mlir::Type resultType, llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0);
+  mlir::Type i64Ty = builder.getI64Type();
+  auto ctx = builder.getContext();
+  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {}, {i64Ty});
+  auto funcOp =
+      builder.createFunction(loc, RTNAME_STRING(CUFGetDefaultStream), ftype);
+  auto call = fir::CallOp::create(builder, loc, funcOp, {});
+  return call.getResult(0);
 }
 
 // FENCE_PROXY_ASYNC

@@ -736,16 +736,24 @@ bool BT::MachineEvaluator::evaluate(const MachineInstr &MI,
     case TargetOpcode::COPY: {
       // COPY can transfer a smaller register into a wider one.
       // If that is the case, fill the remaining high bits with 0.
+      // COPY can also transfer a wider register into a narrower one,
+      // in which case the high bits are simply truncated.
       RegisterRef RD = MI.getOperand(0);
       RegisterRef RS = MI.getOperand(1);
       assert(RD.Sub == 0);
       uint16_t WD = getRegBitWidth(RD);
       uint16_t WS = getRegBitWidth(RS);
-      assert(WD >= WS);
       RegisterCell Src = getCell(RS, Inputs);
       RegisterCell Res(WD);
-      Res.insert(Src, BitMask(0, WS-1));
-      Res.fill(WS, WD, BitValue::Zero);
+      if (WD <= WS) {
+        // Truncating copy: extract low WD bits from source.
+        RegisterCell Trunc = Src.extract(BitMask(0, WD - 1));
+        Res.insert(Trunc, BitMask(0, WD - 1));
+      } else {
+        // Widening copy: insert all source bits, zero-fill high bits.
+        Res.insert(Src, BitMask(0, WS - 1));
+        Res.fill(WS, WD, BitValue::Zero);
+      }
       putCell(RD, Res, Outputs);
       break;
     }

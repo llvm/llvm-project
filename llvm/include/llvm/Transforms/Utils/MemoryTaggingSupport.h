@@ -19,6 +19,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Alignment.h"
 
 namespace llvm {
@@ -28,6 +29,14 @@ class PostDominatorTree;
 class AllocaInst;
 class Instruction;
 namespace memtag {
+struct AllocaInfo {
+  AllocaInst *AI;
+  SmallVector<IntrinsicInst *, 2> LifetimeStart;
+  SmallVector<IntrinsicInst *, 2> LifetimeEnd;
+  SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
+  MapVector<BasicBlock *, Intrinsic::ID> LastBBLifetime;
+};
+
 // For an alloca valid between lifetime markers Start and Ends, call the
 // Callback for all possible exits out of the lifetime in the containing
 // function, which can return from the instructions in RetVec.
@@ -36,24 +45,14 @@ namespace memtag {
 // the caller should remove Ends to ensure that work done at the other
 // exits does not happen outside of the lifetime.
 bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
-                          const LoopInfo &LI, const Instruction *Start,
-                          const SmallVectorImpl<IntrinsicInst *> &Ends,
+                          const LoopInfo &LI, const AllocaInfo &AInfo,
                           const SmallVectorImpl<Instruction *> &RetVec,
                           llvm::function_ref<void(Instruction *)> Callback);
 
-bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
-                        const SmallVectorImpl<IntrinsicInst *> &LifetimeEnd,
-                        const DominatorTree *DT, const LoopInfo *LI,
-                        size_t MaxLifetimes);
+bool isStandardLifetime(const AllocaInfo &AInfo, const DominatorTree *DT,
+                        const LoopInfo *LI, size_t MaxLifetimes);
 
 Instruction *getUntagLocationIfFunctionExit(Instruction &Inst);
-
-struct AllocaInfo {
-  AllocaInst *AI;
-  SmallVector<IntrinsicInst *, 2> LifetimeStart;
-  SmallVector<IntrinsicInst *, 2> LifetimeEnd;
-  SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
-};
 
 struct StackInfo {
   MapVector<AllocaInst *, AllocaInfo> AllocasToInstrument;
@@ -92,10 +91,11 @@ Value *readRegister(IRBuilder<> &IRB, StringRef Name);
 Value *getFP(IRBuilder<> &IRB);
 Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB);
 Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot);
+Value *getDarwinSlotPtr(IRBuilder<> &IRB, int Slot);
 
 void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag);
 Value *incrementThreadLong(IRBuilder<> &IRB, Value *ThreadLong,
-                           unsigned int Inc);
+                           unsigned int Inc, bool IsMemtagDarwin = false);
 
 } // namespace memtag
 } // namespace llvm

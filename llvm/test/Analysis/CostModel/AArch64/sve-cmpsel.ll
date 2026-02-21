@@ -61,7 +61,7 @@ define void @cmp_legal_fp() #0 {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:1 for: %1 = fcmp oge <vscale x 2 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:1 for: %2 = fcmp oge <vscale x 4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:1 for: %3 = fcmp oge <vscale x 8 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:5 Lat:5 SizeLat:5 for: %4 = fcmp oge <vscale x 8 x bfloat> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:11 Lat:11 SizeLat:11 for: %4 = fcmp oge <vscale x 8 x bfloat> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %1 = fcmp oge <vscale x 2 x double> undef, undef
@@ -158,5 +158,29 @@ define <vscale x 32 x i1> @sel_nxv32i1() {
   %res = select <vscale x 32 x i1> undef, <vscale x 32 x i1> undef, <vscale x 32 x i1> undef
   ret <vscale x 32 x i1> %res
 }
+
+define void @uscmp() {
+; CHECK-LABEL: 'uscmp'
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %uv16i8 = call <vscale x 16 x i8> @llvm.ucmp.nxv16i8.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %uv8i16 = call <vscale x 8 x i16> @llvm.ucmp.nxv8i16.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %uv4i32 = call <vscale x 4 x i32> @llvm.ucmp.nxv4i32.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %uv2i64 = call <vscale x 2 x i64> @llvm.ucmp.nxv2i64.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %sv16i8 = call <vscale x 16 x i8> @llvm.scmp.nxv16i8.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %sv8i16 = call <vscale x 8 x i16> @llvm.scmp.nxv8i16.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %sv4i32 = call <vscale x 4 x i32> @llvm.scmp.nxv4i32.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %sv2i64 = call <vscale x 2 x i64> @llvm.scmp.nxv2i64.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %uv16i8 = call <vscale x 16 x i8> @llvm.ucmp(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
+  %uv8i16 = call <vscale x 8 x i16> @llvm.ucmp(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
+  %uv4i32 = call <vscale x 4 x i32> @llvm.ucmp(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
+  %uv2i64 = call <vscale x 2 x i64> @llvm.ucmp(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
+  %sv16i8 = call <vscale x 16 x i8> @llvm.scmp(<vscale x 16 x i8> undef, <vscale x 16 x i8> undef)
+  %sv8i16 = call <vscale x 8 x i16> @llvm.scmp(<vscale x 8 x i16> undef, <vscale x 8 x i16> undef)
+  %sv4i32 = call <vscale x 4 x i32> @llvm.scmp(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef)
+  %sv2i64 = call <vscale x 2 x i64> @llvm.scmp(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
+  ret void
+}
+
 
 attributes #0 = { "target-features"="+sve,+bf16" }

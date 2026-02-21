@@ -167,7 +167,6 @@ void ImportedFunctionsInliningStatistics::dump(const bool Verbose) {
                  "non-imported functions inlined into importing module",
                  InlinedNotImportedFunctionsToImportingModuleCount,
                  NotImportedFuncCount, "non-imported functions");
-  Ostream.flush();
   dbgs() << Out;
 }
 

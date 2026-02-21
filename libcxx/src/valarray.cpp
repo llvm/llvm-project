@@ -10,8 +10,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// These two symbols are part of the v1 ABI but not part of the >=v2 ABI.
-#if _LIBCPP_ABI_VERSION == 1
+#if _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 9
 template _LIBCPP_EXPORTED_FROM_ABI valarray<size_t>::valarray(size_t);
 template _LIBCPP_EXPORTED_FROM_ABI valarray<size_t>::~valarray();
 #endif

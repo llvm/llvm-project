@@ -77,7 +77,7 @@ void SplitDelimiters() {
   // CHECK-MESSAGES: [[@LINE-1]]:25: warning: absl::StrSplit()
   // CHECK-FIXES: absl::StrSplit("ABC", 'A', [](absl::string_view) { return true; });
 
-  // Doesn't do anything with other strings lenghts.
+  // Doesn't do anything with other strings lengths.
   absl::StrSplit("ABC", "AB");
   absl::StrSplit("ABC", absl::ByAnyChar(""));
   absl::StrSplit("ABC", absl::ByAnyChar(" \t"));

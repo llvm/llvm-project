@@ -1,7 +1,3 @@
-# Flaky on Linux, see https://github.com/llvm/llvm-project/issues/142726
-# UNSUPPORTED: system-linux
-# XFAIL: *
-
 # Test disallowed variables inside the
 # plugin.cplusplus.display.function-name-format setting.
 
@@ -23,5 +19,4 @@ run
 bt
 
 # CHECK: bt
-# CHECK-NOT: custom-frame
-# CHECK: main
+# CHECK: custom-frame 'main

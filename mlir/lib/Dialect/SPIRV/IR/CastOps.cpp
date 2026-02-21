@@ -87,13 +87,13 @@ LogicalResult BitcastOp::verify() {
   if (operandType == resultType) {
     return emitError("result type must be different from operand type");
   }
-  if (llvm::isa<spirv::PointerType>(operandType) &&
-      !llvm::isa<spirv::PointerType>(resultType)) {
+  if (isa<spirv::PointerType>(operandType) &&
+      !isa<spirv::PointerType>(resultType)) {
     return emitError(
         "unhandled bit cast conversion from pointer type to non-pointer type");
   }
-  if (!llvm::isa<spirv::PointerType>(operandType) &&
-      llvm::isa<spirv::PointerType>(resultType)) {
+  if (!isa<spirv::PointerType>(operandType) &&
+      isa<spirv::PointerType>(resultType)) {
     return emitError(
         "unhandled bit cast conversion from non-pointer type to pointer type");
   }
@@ -112,8 +112,8 @@ LogicalResult BitcastOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult ConvertPtrToUOp::verify() {
-  auto operandType = llvm::cast<spirv::PointerType>(getPointer().getType());
-  auto resultType = llvm::cast<spirv::ScalarType>(getResult().getType());
+  auto operandType = cast<spirv::PointerType>(getPointer().getType());
+  auto resultType = cast<spirv::ScalarType>(getResult().getType());
   if (!resultType || !resultType.isSignlessInteger())
     return emitError("result must be a scalar type of unsigned integer");
   auto spirvModule = (*this)->getParentOfType<spirv::ModuleOp>();
@@ -133,8 +133,8 @@ LogicalResult ConvertPtrToUOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult ConvertUToPtrOp::verify() {
-  auto operandType = llvm::cast<spirv::ScalarType>(getOperand().getType());
-  auto resultType = llvm::cast<spirv::PointerType>(getResult().getType());
+  auto operandType = cast<spirv::ScalarType>(getOperand().getType());
+  auto resultType = cast<spirv::PointerType>(getResult().getType());
   if (!operandType || !operandType.isSignlessInteger())
     return emitError("result must be a scalar type of unsigned integer");
   auto spirvModule = (*this)->getParentOfType<spirv::ModuleOp>();
@@ -154,8 +154,8 @@ LogicalResult ConvertUToPtrOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult PtrCastToGenericOp::verify() {
-  auto operandType = llvm::cast<spirv::PointerType>(getPointer().getType());
-  auto resultType = llvm::cast<spirv::PointerType>(getResult().getType());
+  auto operandType = cast<spirv::PointerType>(getPointer().getType());
+  auto resultType = cast<spirv::PointerType>(getResult().getType());
 
   spirv::StorageClass operandStorage = operandType.getStorageClass();
   if (operandStorage != spirv::StorageClass::Workgroup &&
@@ -182,8 +182,8 @@ LogicalResult PtrCastToGenericOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GenericCastToPtrOp::verify() {
-  auto operandType = llvm::cast<spirv::PointerType>(getPointer().getType());
-  auto resultType = llvm::cast<spirv::PointerType>(getResult().getType());
+  auto operandType = cast<spirv::PointerType>(getPointer().getType());
+  auto resultType = cast<spirv::PointerType>(getResult().getType());
 
   spirv::StorageClass operandStorage = operandType.getStorageClass();
   if (operandStorage != spirv::StorageClass::Generic)
@@ -210,8 +210,8 @@ LogicalResult GenericCastToPtrOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GenericCastToPtrExplicitOp::verify() {
-  auto operandType = llvm::cast<spirv::PointerType>(getPointer().getType());
-  auto resultType = llvm::cast<spirv::PointerType>(getResult().getType());
+  auto operandType = cast<spirv::PointerType>(getPointer().getType());
+  auto resultType = cast<spirv::PointerType>(getResult().getType());
 
   spirv::StorageClass operandStorage = operandType.getStorageClass();
   if (operandStorage != spirv::StorageClass::Generic)

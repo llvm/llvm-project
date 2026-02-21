@@ -1089,6 +1089,10 @@ extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SomeInteger> &);
 extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
+extern template semantics::UnorderedSymbolSet CollectSymbols(
+    const ProcedureDesignator &);
+extern template semantics::UnorderedSymbolSet CollectSymbols(
+    const Assignment &);
 
 // Collects Symbols of interest for the CUDA data transfer in an expression
 template <typename A>
@@ -1341,16 +1345,20 @@ template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
 // device attribute.
 template <typename A, typename B>
 inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
-  int lhsNbManagedSymbols = {GetNbOfCUDAManagedOrUnifiedSymbols(lhs)};
-  int rhsNbManagedSymbols = {GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
+  int lhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(lhs)};
+  int rhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
   int rhsNbSymbols{GetNbOfCUDADeviceSymbols(rhs)};
 
-  // Special cases perforemd on the host:
+  if (lhsNbManagedSymbols >= 1 && lhs.Rank() > 0 && rhsNbSymbols == 0 &&
+      rhsNbManagedSymbols == 0 && (IsVariable(rhs) || IsConstantExpr(rhs))) {
+    return true; // Managed arrays initialization is performed on the device.
+  }
+
+  // Special cases performed on the host:
   // - Only managed or unifed symbols are involved on RHS and LHS.
   // - LHS is managed or unified and the RHS is host only.
-  if ((lhsNbManagedSymbols == 1 && rhsNbManagedSymbols == 1 &&
-          rhsNbSymbols == 1) ||
-      (lhsNbManagedSymbols == 1 && rhsNbSymbols == 0)) {
+  if ((lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
+      (lhsNbManagedSymbols >= 1 && rhsNbSymbols == 0)) {
     return false;
   }
   return HasCUDADeviceAttrs(lhs) || rhsNbSymbols > 0;
@@ -1634,6 +1642,9 @@ common::IgnoreTKRSet GetIgnoreTKR(const Symbol &);
 std::optional<int> GetDummyArgumentNumber(const Symbol *);
 
 const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule);
+
+// Given a Cray pointee symbol, returns the related Cray pointer symbol.
+const Symbol &GetCrayPointer(const Symbol &crayPointee);
 
 } // namespace Fortran::semantics
 

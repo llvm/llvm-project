@@ -104,8 +104,22 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
   if (T->isConstantMatrixType()) {
     const Type *Ty = Context.getCanonicalType(T).getTypePtr();
     const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
-    return llvm::ArrayType::get(ConvertType(MT->getElementType()),
-                                MT->getNumRows() * MT->getNumColumns());
+    llvm::Type *IRElemTy = ConvertType(MT->getElementType());
+    if (Context.getLangOpts().HLSL) {
+      if (T->isConstantMatrixBoolType())
+        IRElemTy = ConvertTypeForMem(Context.BoolTy);
+
+      unsigned NumRows = MT->getNumRows();
+      unsigned NumCols = MT->getNumColumns();
+      bool IsRowMajor =
+          CGM.getContext().getLangOpts().getDefaultMatrixMemoryLayout() ==
+          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      unsigned VecLen = IsRowMajor ? NumCols : NumRows;
+      unsigned ArrayLen = IsRowMajor ? NumRows : NumCols;
+      llvm::Type *VecTy = llvm::FixedVectorType::get(IRElemTy, VecLen);
+      return llvm::ArrayType::get(VecTy, ArrayLen);
+    }
+    return llvm::ArrayType::get(IRElemTy, MT->getNumElementsFlattened());
   }
 
   llvm::Type *R = ConvertType(T);
@@ -176,6 +190,16 @@ llvm::Type *CodeGenTypes::convertTypeForLoadStore(QualType T,
   if (LLVMTy->isIntegerTy(1))
     return llvm::IntegerType::get(getLLVMContext(),
                                   (unsigned)Context.getTypeSize(T));
+
+  if (T->isConstantMatrixBoolType()) {
+    // Matrices are loaded and stored atomically as vectors. Therefore we
+    // construct a FixedVectorType here instead of returning
+    // ConvertTypeForMem(T) which would return an ArrayType instead.
+    const Type *Ty = Context.getCanonicalType(T).getTypePtr();
+    const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
+    llvm::Type *IRElemTy = ConvertTypeForMem(MT->getElementType());
+    return llvm::FixedVectorType::get(IRElemTy, MT->getNumElementsFlattened());
+  }
 
   if (T->isExtVectorBoolType())
     return ConvertTypeForMem(T);
@@ -769,6 +793,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
     ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
+    break;
+  case Type::OverflowBehavior:
+    ResultType =
+        ConvertType(dyn_cast<OverflowBehaviorType>(Ty)->getUnderlyingType());
     break;
   }
 

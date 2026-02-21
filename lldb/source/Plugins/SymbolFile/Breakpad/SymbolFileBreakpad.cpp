@@ -498,7 +498,7 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
 }
 
 llvm::Expected<lldb::addr_t>
-SymbolFileBreakpad::GetParameterStackSize(Symbol &symbol) {
+SymbolFileBreakpad::GetParameterStackSize(const Symbol &symbol) {
   ParseUnwindData();
   if (auto *entry = m_unwind_data->win.FindEntryThatContains(
           symbol.GetAddress().GetFileAddress())) {

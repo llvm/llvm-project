@@ -28,6 +28,14 @@ define <4 x i32> @dot_nonzero() {
   ret <4 x i32> %res
 }
 
+define <4 x i32> @dot_one_negative() {
+; CHECK-LABEL: define <4 x i32> @dot_one_negative() {
+; CHECK-NEXT:    ret <4 x i32> splat (i32 -2)
+;
+  %res = tail call <4 x i32> @llvm.wasm.dot(<8 x i16> splat (i16 1), <8 x i16> splat (i16 -1))
+  ret <4 x i32> %res
+}
+
 define <4 x i32> @dot_doubly_negative() {
 ; CHECK-LABEL: define <4 x i32> @dot_doubly_negative() {
 ; CHECK-NEXT:    ret <4 x i32> splat (i32 2)

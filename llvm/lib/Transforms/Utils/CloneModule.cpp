@@ -79,7 +79,7 @@ std::unique_ptr<Module> llvm::CloneModule(
   // Loop over the functions in the module, making external functions as before
   for (const Function &I : M) {
     Function *NF =
-        Function::Create(cast<FunctionType>(I.getValueType()), I.getLinkage(),
+        Function::Create(I.getFunctionType(), I.getLinkage(),
                          I.getAddressSpace(), I.getName(), New.get());
     NF->copyAttributesFrom(&I);
     VMap[&I] = NF;

@@ -147,6 +147,11 @@ static cl::opt<bool> TrapOnAVX512(
     cl::init(false), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
 bool shouldPrint(const BinaryFunction &Function) {
+  // PLT stubs are disassembled for BTI binaries, therefore they should be
+  // printed.
+  if (Function.getBinaryContext().usesBTI() && Function.isPLTFunction())
+    return true;
+
   if (Function.isIgnored())
     return false;
 
@@ -3251,6 +3256,30 @@ void BinaryFunction::clearDisasmState() {
   clearList(TakenBranches);
 }
 
+void BinaryFunction::resetState() {
+  clearDisasmState();
+
+  // Clear CFG state too.
+  if (hasCFG()) {
+    releaseCFG();
+
+    for (BinaryBasicBlock *BB : BasicBlocks)
+      delete BB;
+    clearList(BasicBlocks);
+
+    for (BinaryBasicBlock *BB : DeletedBasicBlocks)
+      delete BB;
+    clearList(DeletedBasicBlocks);
+
+    Layout.clear();
+  }
+
+  IsSimple = false;
+  IsIgnored = true;
+
+  CurrentState = State::Empty;
+}
+
 void BinaryFunction::setTrapOnEntry() {
   clearDisasmState();
 
@@ -3285,24 +3314,7 @@ void BinaryFunction::setIgnored() {
   if (CurrentState == State::Empty)
     return;
 
-  clearDisasmState();
-
-  // Clear CFG state too.
-  if (hasCFG()) {
-    releaseCFG();
-
-    for (BinaryBasicBlock *BB : BasicBlocks)
-      delete BB;
-    clearList(BasicBlocks);
-
-    for (BinaryBasicBlock *BB : DeletedBasicBlocks)
-      delete BB;
-    clearList(DeletedBasicBlocks);
-
-    Layout.clear();
-  }
-
-  CurrentState = State::Empty;
+  resetState();
 
   // Fix external references in the original function body.
   if (BC.HasRelocations) {
@@ -4827,6 +4839,11 @@ bool BinaryFunction::isAArch64Veneer() const {
   }
 
   return true;
+}
+
+bool BinaryFunction::isPossibleVeneer() const {
+  return BC.isAArch64() &&
+         (isAArch64Veneer() || getOneName().starts_with("__AArch64"));
 }
 
 void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,

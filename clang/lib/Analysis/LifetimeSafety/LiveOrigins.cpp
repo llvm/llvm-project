@@ -8,6 +8,7 @@
 
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "Dataflow.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace clang::lifetimes::internal {
@@ -56,8 +57,12 @@ struct Lattice {
 static SourceLocation GetFactLoc(CausingFactType F) {
   if (const auto *UF = F.dyn_cast<const UseFact *>())
     return UF->getUseExpr()->getExprLoc();
-  if (const auto *OEF = F.dyn_cast<const OriginEscapesFact *>())
-    return OEF->getEscapeExpr()->getExprLoc();
+  if (const auto *OEF = F.dyn_cast<const OriginEscapesFact *>()) {
+    if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
+      return ReturnEsc->getReturnExpr()->getExprLoc();
+    if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
+      return FieldEsc->getFieldDecl()->getLocation();
+  }
   llvm_unreachable("unhandled causing fact in PointerUnion");
 }
 
@@ -121,13 +126,21 @@ public:
   /// dominates this program point. A write operation kills the liveness of
   /// the origin since it overwrites the value.
   Lattice transfer(Lattice In, const UseFact &UF) {
-    OriginID OID = UF.getUsedOrigin();
-    // Write kills liveness.
-    if (UF.isWritten())
-      return Lattice(Factory.remove(In.LiveOrigins, OID));
-    // Read makes origin live with definite confidence (dominates this point).
-    return Lattice(Factory.add(In.LiveOrigins, OID,
-                               LivenessInfo(&UF, LivenessKind::Must)));
+    Lattice Out = In;
+    for (const OriginList *Cur = UF.getUsedOrigins(); Cur;
+         Cur = Cur->peelOuterOrigin()) {
+      OriginID OID = Cur->getOuterOriginID();
+      // Write kills liveness.
+      if (UF.isWritten()) {
+        Out = Lattice(Factory.remove(Out.LiveOrigins, OID));
+      } else {
+        // Read makes origin live with definite confidence (dominates this
+        // point).
+        Out = Lattice(Factory.add(Out.LiveOrigins, OID,
+                                  LivenessInfo(&UF, LivenessKind::Must)));
+      }
+    }
+    return Out;
   }
 
   /// An escaping origin (e.g., via return) makes the origin live with definite
@@ -157,7 +170,7 @@ public:
 
   // Dump liveness values on all test points in the program.
   void dump(llvm::raw_ostream &OS,
-            llvm::StringMap<ProgramPoint> TestPoints) const {
+            const llvm::StringMap<ProgramPoint> &TestPoints) const {
     llvm::dbgs() << "==========================================\n";
     llvm::dbgs() << getAnalysisName() << " results:\n";
     llvm::dbgs() << "==========================================\n";
@@ -191,8 +204,9 @@ LivenessMap LiveOriginsAnalysis::getLiveOriginsAt(ProgramPoint P) const {
   return PImpl->getLiveOriginsAt(P);
 }
 
-void LiveOriginsAnalysis::dump(llvm::raw_ostream &OS,
-                               llvm::StringMap<ProgramPoint> TestPoints) const {
+void LiveOriginsAnalysis::dump(
+    llvm::raw_ostream &OS,
+    const llvm::StringMap<ProgramPoint> &TestPoints) const {
   PImpl->dump(OS, TestPoints);
 }
 } // namespace clang::lifetimes::internal

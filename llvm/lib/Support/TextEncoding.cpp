@@ -177,7 +177,7 @@ TextEncodingConverterICU::convertString(StringRef Source,
           return std::error_code(E2BIG, std::generic_category());
         }
       }
-      // Some other error occured.
+      // Some other error occurred.
       Result.resize(Output - Result.data());
       return std::error_code(EILSEQ, std::generic_category());
     }
@@ -249,14 +249,14 @@ TextEncodingConverterIconv::convertString(StringRef Source,
   auto HandleError = [&Capacity, &Output, &OutputLength, &Result,
                       this](size_t Ret) {
     if (Ret == static_cast<size_t>(-1)) {
-      // An error occured. Check if we can gracefully handle it.
+      // An error occurred. Check if we can gracefully handle it.
       if (errno == E2BIG && Capacity < Result.max_size()) {
         HandleOverflow(Capacity, Output, OutputLength, Result);
         // Reset converter
         reset();
         return std::error_code();
       } else {
-        // Some other error occured.
+        // Some other error occurred.
         Result.resize(Output - Result.data());
         return std::error_code(errno, std::generic_category());
       }

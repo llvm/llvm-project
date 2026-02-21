@@ -272,3 +272,21 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
         self.assertEqual(err_ty.GetIntegerValue(), lldb.eErrorTypeExpression)
         diags = data.GetValueForKey("errors").GetItemAtIndex(0)
         check_error(diags)
+
+    def test_no_location(self):
+        """Test the error reporting for missing locations"""
+        self.build()
+
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "// Break here", self.main_source_spec
+        )
+        self.ci.HandleCommand(
+            "settings set testing.inject-variable-location-error true", self.res
+        )
+        if not self.res.Succeeded():
+            # This test needs assertions.
+            return
+        frame = thread.GetFrameAtIndex(0)
+        value = frame.EvaluateExpression("f")
+        error = value.GetError()
+        self.assertIn("variable not available", str(error))

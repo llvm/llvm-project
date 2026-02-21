@@ -29,102 +29,6 @@
 
 namespace llvm {
 
-namespace HexagonISD {
-
-// clang-format off
-enum NodeType : unsigned {
-  OP_BEGIN = ISD::BUILTIN_OP_END,
-
-  CONST32 = OP_BEGIN,
-  CONST32_GP,  // For marking data present in GP.
-  ADDC,        // Add with carry: (X, Y, Cin) -> (X+Y, Cout).
-  SUBC,        // Sub with carry: (X, Y, Cin) -> (X+~Y+Cin, Cout).
-  ALLOCA,
-
-  AT_GOT,      // Index in GOT.
-  AT_PCREL,    // Offset relative to PC.
-
-  CALL,        // Function call.
-  CALLnr,      // Function call that does not return.
-  CALLR,
-
-  RET_GLUE,    // Return with a glue operand.
-  BARRIER,     // Memory barrier.
-  JT,          // Jump table.
-  CP,          // Constant pool.
-
-  COMBINE,
-  VASL,        // Vector shifts by a scalar value
-  VASR,
-  VLSR,
-  MFSHL,       // Funnel shifts with the shift amount guaranteed to be
-  MFSHR,       // within the range of the bit width of the element.
-
-  SSAT,        // Signed saturate.
-  USAT,        // Unsigned saturate.
-  SMUL_LOHI,   // Same as ISD::SMUL_LOHI, but opaque to the combiner.
-  UMUL_LOHI,   // Same as ISD::UMUL_LOHI, but opaque to the combiner.
-               // We want to legalize MULH[SU] to [SU]MUL_LOHI, but the
-               // combiner will keep rewriting it back to MULH[SU].
-  USMUL_LOHI,  // Like SMUL_LOHI, but unsigned*signed.
-
-  TSTBIT,
-  INSERT,
-  EXTRACTU,
-  VEXTRACTW,
-  VINSERTW0,
-  VROR,
-  TC_RETURN,
-  EH_RETURN,
-  DCFETCH,
-  READCYCLE,
-  READTIMER,
-  THREAD_POINTER,
-  PTRUE,
-  PFALSE,
-  D2P,         // Convert 8-byte value to 8-bit predicate register. [*]
-  P2D,         // Convert 8-bit predicate register to 8-byte value. [*]
-  V2Q,         // Convert HVX vector to a vector predicate reg. [*]
-  Q2V,         // Convert vector predicate to an HVX vector. [*]
-               // [*] The equivalence is defined as "Q <=> (V != 0)",
-               //     where the != operation compares bytes.
-               // Note: V != 0 is implemented as V >u 0.
-  QCAT,
-  QTRUE,
-  QFALSE,
-
-  TL_EXTEND,   // Wrappers for ISD::*_EXTEND and ISD::TRUNCATE to prevent DAG
-  TL_TRUNCATE, // from auto-folding operations, e.g.
-               // (i32 ext (i16 ext i8)) would be folded to (i32 ext i8).
-               // To simplify the type legalization, we want to keep these
-               // single steps separate during type legalization.
-               // TL_[EXTEND|TRUNCATE] Inp, i128 _, i32 Opc
-               // * Inp is the original input to extend/truncate,
-               // * _ is a dummy operand with an illegal type (can be undef),
-               // * Opc is the original opcode.
-               // The legalization process (in Hexagon lowering code) will
-               // first deal with the "real" types (i.e. Inp and the result),
-               // and once all of them are processed, the wrapper node will
-               // be replaced with the original ISD node. The dummy illegal
-               // operand is there to make sure that the legalization hooks
-               // are called again after everything else is legal, giving
-               // us the opportunity to undo the wrapping.
-
-  TYPECAST,    // No-op that's used to convert between different legal
-               // types in a register.
-  VALIGN,      // Align two vectors (in Op0, Op1) to one that would have
-               // been loaded from address in Op2.
-  VALIGNADDR,  // Align vector address: Op0 & -Op1, except when it is
-               // an address in a vector load, then it's a no-op.
-  ISEL,        // Marker for nodes that were created during ISel, and
-               // which need explicit selection (would have been left
-               // unselected otherwise).
-  OP_END
-};
-
-} // end namespace HexagonISD
-// clang-format on
-
 class HexagonSubtarget;
 
 class HexagonTargetLowering : public TargetLowering {
@@ -145,8 +49,8 @@ public:
       const SmallVectorImpl<SDValue> &OutVals,
       const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG& DAG) const;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                          MachineFunction &MF,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                          const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
   bool isTruncateFree(Type *Ty1, Type *Ty2) const override;
@@ -189,7 +93,6 @@ public:
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
 
-  const char *getTargetNodeName(unsigned Opcode) const override;
   std::pair<MVT, unsigned>
   handleMaskRegisterForCallingConv(const HexagonSubtarget &Subtarget,
                                    EVT VT) const;
@@ -379,13 +282,12 @@ public:
   AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
   AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
   AtomicExpansionKind
-  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
+  shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 
   AtomicExpansionKind
-  shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override {
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override {
     return AtomicExpansionKind::LLSC;
   }
-  bool softPromoteHalfType() const override { return true; }
 
 private:
   void initializeHVXLowering();
@@ -583,8 +485,11 @@ private:
   SDValue LowerHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPred32ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPred64ToFp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxPartialReduceMLA(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxStore(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxLoad(SDValue Op, SelectionDAG &DAG) const;
 
   VectorPair SplitVectorOp(SDValue Op, SelectionDAG &DAG) const;
 
@@ -592,7 +497,6 @@ private:
   SDValue WidenHvxLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue WidenHvxStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue WidenHvxSetCC(SDValue Op, SelectionDAG &DAG) const;
-  SDValue WidenHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const;
   SDValue LegalizeHvxResize(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxResizeIntoSteps(SDValue Op, SelectionDAG &DAG) const;
   SDValue EqualizeFpIntConversion(SDValue Op, SelectionDAG &DAG) const;
@@ -616,10 +520,14 @@ private:
   SDValue combineTruncateBeforeLegal(SDValue Op, DAGCombinerInfo &DCI) const;
   SDValue combineConcatVectorsBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
       const;
-  SDValue combineVectorShuffleBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
-      const;
-
-  SDValue PerformHvxDAGCombine(SDNode * N, DAGCombinerInfo & DCI) const;
+  SDValue expandVecReduceAdd(SDNode *N, SelectionDAG &DAG) const;
+  SDValue createExtendingPartialReduceMLA(
+      unsigned Opcode, EVT AccEltType, unsigned AccNumElements, EVT InputType,
+      const SDValue &A, const SDValue &B, unsigned &RemainingReductionRatio,
+      const SDLoc &DL, SelectionDAG &DAG) const;
+  SDValue splitVecReduceAdd(SDNode *N, SelectionDAG &DAG) const;
+  SDValue splitExtendingPartialReduceMLA(SDNode *N, SelectionDAG &DAG) const;
+  SDValue PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 };
 
 } // end namespace llvm

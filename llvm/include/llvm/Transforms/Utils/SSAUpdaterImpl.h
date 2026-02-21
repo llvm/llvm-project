@@ -427,7 +427,7 @@ public:
   bool CheckIfPHIMatches(PhiT *PHI, BlockListTy &TaggedBlocks) {
     // Match failed: clear all the PHITag values. Only need to clear visited
     // blocks.
-    auto Cleanup = make_scope_exit([&]() {
+    scope_exit Cleanup([&]() {
       for (BBInfo *TaggedBlock : TaggedBlocks)
         TaggedBlock->PHITag = nullptr;
       TaggedBlocks.clear();

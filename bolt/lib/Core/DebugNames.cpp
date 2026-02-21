@@ -648,9 +648,9 @@ void DWARF5AcceleratorTable::writeEntries() {
         if (const auto Iter = EntryRelativeOffsets.find(*ParentOffset);
             Iter != EntryRelativeOffsets.end()) {
           const uint64_t PatchOffset = Entry->getPatchOffset();
-          uint32_t *Ptr =
-              reinterpret_cast<uint32_t *>(&EntriesBuffer->data()[PatchOffset]);
-          *Ptr = Iter->second;
+          uint32_t RelativeOffset = Iter->second;
+          memcpy(&EntriesBuffer->data()[PatchOffset], &RelativeOffset,
+                 sizeof(uint32_t));
         } else {
           BC.errs() << "BOLT-WARNING: [internal-dwarf-warning]: Could not find "
                        "entry with offset "
@@ -677,11 +677,11 @@ static constexpr uint32_t getDebugNamesHeaderSize() {
   constexpr uint32_t BucketCountLength = sizeof(uint32_t);
   constexpr uint32_t NameCountLength = sizeof(uint32_t);
   constexpr uint32_t AbbrevTableSizeLength = sizeof(uint32_t);
-  constexpr uint32_t AugmentationStringSizeLenght = sizeof(uint32_t);
+  constexpr uint32_t AugmentationStringSizeLength = sizeof(uint32_t);
   return VersionLength + PaddingLength + CompUnitCountLength +
          LocalTypeUnitCountLength + ForeignTypeUnitCountLength +
          BucketCountLength + NameCountLength + AbbrevTableSizeLength +
-         AugmentationStringSizeLenght;
+         AugmentationStringSizeLength;
 }
 
 void DWARF5AcceleratorTable::emitHeader() const {

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "src/__support/OSUtil/linux/vdso.h"
+#include "hdr/elf_proxy.h"
 #include "hdr/link_macros.h"
 #include "hdr/sys_auxv_macros.h"
 #include "src/__support/CPP/array.h"
@@ -14,7 +15,6 @@
 #include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/threads/callonce.h"
 #include "src/__support/threads/linux/futex_word.h"
-#include <linux/auxvec.h>
 
 // TODO: This is a temporary workaround to avoid including elf.h
 // Include our own headers for ElfW and friends once we have them.
@@ -26,35 +26,10 @@ Symbol::VDSOArray Symbol::global_cache{};
 CallOnceFlag Symbol::once_flag = callonce_impl::NOT_CALLED;
 
 namespace {
-// See https://refspecs.linuxfoundation.org/LSB_1.3.0/gLSB/gLSB/symverdefs.html
-struct Verdaux {
-  ElfW(Word) vda_name; /* Version or dependency names */
-  ElfW(Word) vda_next; /* Offset in bytes to next verdaux
-                          entry */
-};
-struct Verdef {
-  ElfW(Half) vd_version; /* Version revision */
-  ElfW(Half) vd_flags;   /* Version information */
-  ElfW(Half) vd_ndx;     /* Version Index */
-  ElfW(Half) vd_cnt;     /* Number of associated aux entries */
-  ElfW(Word) vd_hash;    /* Version name hash value */
-  ElfW(Word) vd_aux;     /* Offset in bytes to verdaux array */
-  ElfW(Word) vd_next;    /* Offset in bytes to next verdef entry */
-  Verdef *next() const {
-    if (vd_next == 0)
-      return nullptr;
-    return reinterpret_cast<Verdef *>(reinterpret_cast<uintptr_t>(this) +
-                                      vd_next);
-  }
-  Verdaux *aux() const {
-    return reinterpret_cast<Verdaux *>(reinterpret_cast<uintptr_t>(this) +
-                                       vd_aux);
-  }
-};
 
 // version search procedure specified by
 // https://refspecs.linuxfoundation.org/LSB_1.3.0/gLSB/gLSB/symversion.html#SYMVERTBL
-cpp::string_view find_version(Verdef *verdef, ElfW(Half) * versym,
+cpp::string_view find_version(ElfW(Verdef) * verdef, ElfW(Half) * versym,
                               const char *strtab, size_t idx) {
 #ifndef VER_FLG_BASE
   constexpr ElfW(Half) VER_FLG_BASE = 0x1;
@@ -63,7 +38,10 @@ cpp::string_view find_version(Verdef *verdef, ElfW(Half) * versym,
     return "";
   ElfW(Half) identifier = versym[idx] & 0x7FFF;
   // iterate through all version definitions
-  for (Verdef *def = verdef; def != nullptr; def = def->next()) {
+
+  for (ElfW(Verdef) *def = verdef; def != nullptr;
+       def = reinterpret_cast<ElfW(Verdef) *>(reinterpret_cast<uintptr_t>(def) +
+                                              def->vd_next)) {
     // skip if this is a file-level version
     if (def->vd_flags & VER_FLG_BASE)
       continue;
@@ -71,7 +49,8 @@ cpp::string_view find_version(Verdef *verdef, ElfW(Half) * versym,
     // whether the symbol is local. Only lower 15 bits are used for version
     // identifier.
     if ((def->vd_ndx & 0x7FFF) == identifier) {
-      Verdaux *aux = def->aux();
+      ElfW(Verdaux) *aux = reinterpret_cast<ElfW(Verdaux) *>(
+          reinterpret_cast<uintptr_t>(def) + def->vd_aux);
       return strtab + aux->vda_name;
     }
   }
@@ -96,8 +75,8 @@ struct VDSOSymbolTable {
   const char *strtab;
   ElfW(Sym) * symtab;
   // The following can be nullptr if the vDSO does not have versioning
-  ElfW(Half) * versym;
-  Verdef *verdef;
+  ElfW(Versym) * versym;
+  ElfW(Verdef) * verdef;
 
   void populate_symbol_cache(Symbol::VDSOArray &symbol_table,
                              size_t symbol_count, ElfW(Addr) vdso_addr) {
@@ -155,8 +134,8 @@ struct PhdrInfo {
   cpp::optional<VDSOSymbolTable> populate_symbol_table() {
     const char *strtab = nullptr;
     ElfW(Sym) *symtab = nullptr;
-    ElfW(Half) *versym = nullptr;
-    Verdef *verdef = nullptr;
+    ElfW(Versym) *versym = nullptr;
+    ElfW(Verdef) *verdef = nullptr;
     for (ElfW(Dyn) *d = vdso_dyn; d->d_tag != DT_NULL; ++d) {
       switch (d->d_tag) {
       case DT_STRTAB:
@@ -169,7 +148,7 @@ struct PhdrInfo {
         versym = reinterpret_cast<uint16_t *>(vdso_addr + d->d_un.d_ptr);
         break;
       case DT_VERDEF:
-        verdef = reinterpret_cast<Verdef *>(vdso_addr + d->d_un.d_ptr);
+        verdef = reinterpret_cast<ElfW(Verdef) *>(vdso_addr + d->d_un.d_ptr);
         break;
       }
       if (strtab && symtab && versym && verdef)

@@ -60,7 +60,7 @@ jobs:
           fetch-depth: 2
       - name: Get subprojects that have doc changes
         id: docs-changed-subprojects
-        uses: tj-actions/changed-files@24d32ffd492484c1d75e0c0b894501ddb9d30d62 # v47.0.0
+        uses: tj-actions/changed-files@e0021407031f5be11a464abee9a0776171c79891 # v47.0.1
         with:
           skip_initial_fetch: true
           base_sha: 'HEAD~1'
@@ -186,10 +186,10 @@ jobs:
           steps.docs-changed-subprojects.outputs.openmp_any_changed == 'true' ||
           steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
         run: |
-          cmake -B openmp-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;openmp" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          cmake -B openmp-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="openmp" -DLLVM_ENABLE_SPHINX=ON -DLLVM_INCLUDE_TESTS=OFF ./runtimes
           TZ=UTC ninja -C openmp-build docs-openmp-html
           mkdir built-docs/openmp
-          cp -r openmp-build/docs/* built-docs/openmp/
+          cp -r openmp-build/openmp/docs/* built-docs/openmp/
       - name: Build Polly docs
         if: |
           steps.docs-changed-subprojects.outputs.polly_any_changed == 'true' ||
@@ -209,7 +209,7 @@ jobs:
           mkdir built-docs/flang
           cp -r flang-build/docs/* built-docs/flang/
       - name: Upload docs
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: docs-output
           path: built-docs/

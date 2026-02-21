@@ -822,7 +822,7 @@ void GVNHoist::fillChiArgs(BasicBlock *BB, OutValuesType &CHIBBs,
                      << ", VN: " << C.VN.first << ", " << C.VN.second);
         }
         // Move to next CHI of a different value
-        It = std::find_if(It, VCHI.end(), [It](CHIArg &A) { return A != *It; });
+        It = std::find_if(It, VCHI.end(), not_equal_to(*It));
       } else
         ++It;
     }
@@ -846,7 +846,7 @@ void GVNHoist::findHoistableCandidates(OutValuesType &CHIBBs,
     auto TI = BB->getTerminator();
     auto B = CHIs.begin();
     // [PreIt, PHIIt) form a range of CHIs which have identical VNs.
-    auto PHIIt = llvm::find_if(CHIs, [B](CHIArg &A) { return A != *B; });
+    auto PHIIt = llvm::find_if(CHIs, not_equal_to(*B));
     auto PrevIt = CHIs.begin();
     while (PrevIt != PHIIt) {
       // Collect values which satisfy safety checks.
@@ -1001,7 +1001,7 @@ void GVNHoist::raMPHIuw(MemoryUseOrDef *NewMemAcc) {
 
   for (MemoryPhi *Phi : UsePhis) {
     auto In = Phi->incoming_values();
-    if (llvm::all_of(In, [&](Use &U) { return U == NewMemAcc; })) {
+    if (llvm::all_of(In, equal_to(NewMemAcc))) {
       Phi->replaceAllUsesWith(NewMemAcc);
       MSSAUpdater->removeMemoryAccess(Phi);
     }

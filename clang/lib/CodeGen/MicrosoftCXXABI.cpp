@@ -27,6 +27,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/VTableBuilder.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
@@ -71,8 +72,8 @@ public:
       switch (GD.getDtorType()) {
       case Dtor_Complete:
       case Dtor_Deleting:
+      case Dtor_VectorDeleting:
         return true;
-
       case Dtor_Base:
         return false;
 
@@ -269,7 +270,11 @@ public:
 
         // There's only Dtor_Deleting in vftable but it shares the this
         // adjustment with the base one, so look up the deleting one instead.
-        LookupGD = GlobalDecl(DD, Dtor_Deleting);
+        LookupGD = GlobalDecl(
+            DD, CGM.getContext().getTargetInfo().emitVectorDeletingDtors(
+                    CGM.getContext().getLangOpts())
+                    ? Dtor_VectorDeleting
+                    : Dtor_Deleting);
       }
       MethodVFTableLocation ML =
           CGM.getMicrosoftVTableContext().getMethodVFTableLocation(LookupGD);
@@ -351,8 +356,9 @@ public:
 
   void adjustCallArgsForDestructorThunk(CodeGenFunction &CGF, GlobalDecl GD,
                                         CallArgList &CallArgs) override {
-    assert(GD.getDtorType() == Dtor_Deleting &&
-           "Only deleting destructor thunks are available in this ABI");
+    assert((GD.getDtorType() == Dtor_VectorDeleting ||
+            GD.getDtorType() == Dtor_Deleting) &&
+           "Only vector deleting destructor thunks are available in this ABI");
     CallArgs.add(RValue::get(getStructorImplicitParamValue(CGF)),
                  getContext().IntTy);
   }
@@ -629,8 +635,9 @@ private:
                                        int32_t VBTableOffset,
                                        llvm::Value **VBPtr = nullptr) {
     assert(VBTableOffset % 4 == 0 && "should be byte offset into table of i32s");
-    llvm::Value *VBPOffset = llvm::ConstantInt::get(CGM.IntTy, VBPtrOffset),
-                *VBTOffset = llvm::ConstantInt::get(CGM.IntTy, VBTableOffset);
+    llvm::Value *VBPOffset =
+        llvm::ConstantInt::getSigned(CGM.IntTy, VBPtrOffset);
+    llvm::Value *VBTOffset = llvm::ConstantInt::get(CGM.IntTy, VBTableOffset);
     return GetVBaseOffsetFromVBPtr(CGF, Base, VBPOffset, VBTOffset, VBPtr);
   }
 
@@ -1107,7 +1114,8 @@ bool MicrosoftCXXABI::HasThisReturn(GlobalDecl GD) const {
 
 static bool isDeletingDtor(GlobalDecl GD) {
   return isa<CXXDestructorDecl>(GD.getDecl()) &&
-         GD.getDtorType() == Dtor_Deleting;
+         (GD.getDtorType() == Dtor_Deleting ||
+          GD.getDtorType() == Dtor_VectorDeleting);
 }
 
 bool MicrosoftCXXABI::hasMostDerivedReturn(GlobalDecl GD) const {
@@ -1360,7 +1368,8 @@ MicrosoftCXXABI::buildStructorSignature(GlobalDecl GD,
   AddedStructorArgCounts Added;
   // TODO: 'for base' flag
   if (isa<CXXDestructorDecl>(GD.getDecl()) &&
-      GD.getDtorType() == Dtor_Deleting) {
+      (GD.getDtorType() == Dtor_Deleting ||
+       GD.getDtorType() == Dtor_VectorDeleting)) {
     // The scalar deleting destructor takes an implicit int parameter.
     ArgTys.push_back(getContext().IntTy);
     ++Added.Suffix;
@@ -1392,7 +1401,7 @@ void MicrosoftCXXABI::setCXXDestructorDLLStorage(llvm::GlobalValue *GV,
                                                  CXXDtorType DT) const {
   // Deleting destructor variants are never imported or exported. Give them the
   // default storage class.
-  if (DT == Dtor_Deleting) {
+  if (DT == Dtor_Deleting || DT == Dtor_VectorDeleting) {
     GV->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
   } else {
     const NamedDecl *ND = Dtor;
@@ -1428,6 +1437,12 @@ llvm::GlobalValue::LinkageTypes MicrosoftCXXABI::getCXXDestructorLinkage(
     return llvm::GlobalValue::LinkOnceODRLinkage;
   case Dtor_Unified:
     llvm_unreachable("MS C++ ABI does not support unified dtors");
+  case Dtor_VectorDeleting:
+    // Use the weak, non-ODR linkage for vector deleting destructors to block
+    // inlining. This enables an MS ABI code-size saving optimization that
+    // allows us to avoid emitting array deletion code when arrays of a given
+    // type are not allocated within the final linkage unit.
+    return llvm::GlobalValue::WeakAnyLinkage;
   case Dtor_Comdat:
     llvm_unreachable("MS C++ ABI does not support comdat dtors");
   }
@@ -1459,7 +1474,11 @@ MicrosoftCXXABI::getVirtualFunctionPrologueThisAdjustment(GlobalDecl GD) {
 
     // There's no Dtor_Base in vftable but it shares the this adjustment with
     // the deleting one, so look it up instead.
-    GD = GlobalDecl(DD, Dtor_Deleting);
+    GD =
+        GlobalDecl(DD, CGM.getContext().getTargetInfo().emitVectorDeletingDtors(
+                           CGM.getContext().getLangOpts())
+                           ? Dtor_VectorDeleting
+                           : Dtor_Deleting);
   }
 
   MethodVFTableLocation ML =
@@ -1508,7 +1527,11 @@ Address MicrosoftCXXABI::adjustThisArgumentForVirtualFunctionCall(
 
     // There's only Dtor_Deleting in vftable but it shares the this adjustment
     // with the base one, so look up the deleting one instead.
-    LookupGD = GlobalDecl(DD, Dtor_Deleting);
+    LookupGD =
+        GlobalDecl(DD, CGM.getContext().getTargetInfo().emitVectorDeletingDtors(
+                           CGM.getContext().getLangOpts())
+                           ? Dtor_VectorDeleting
+                           : Dtor_Deleting);
   }
   MethodVFTableLocation ML =
       CGM.getMicrosoftVTableContext().getMethodVFTableLocation(LookupGD);
@@ -2018,24 +2041,30 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
   auto *CE = dyn_cast<const CXXMemberCallExpr *>(E);
   auto *D = dyn_cast<const CXXDeleteExpr *>(E);
   assert((CE != nullptr) ^ (D != nullptr));
-  assert(CE == nullptr || CE->arguments().empty());
-  assert(DtorType == Dtor_Deleting || DtorType == Dtor_Complete);
+  assert(CE == nullptr || CE->arg_begin() == CE->arg_end());
+  assert(DtorType == Dtor_VectorDeleting || DtorType == Dtor_Complete ||
+         DtorType == Dtor_Deleting);
 
   // We have only one destructor in the vftable but can get both behaviors
   // by passing an implicit int parameter.
-  GlobalDecl GD(Dtor, Dtor_Deleting);
+  ASTContext &Context = getContext();
+  bool VectorDeletingDtorsEnabled =
+      Context.getTargetInfo().emitVectorDeletingDtors(Context.getLangOpts());
+  GlobalDecl GD(Dtor, VectorDeletingDtorsEnabled ? Dtor_VectorDeleting
+                                                 : Dtor_Deleting);
   const CGFunctionInfo *FInfo =
       &CGM.getTypes().arrangeCXXStructorDeclaration(GD);
   llvm::FunctionType *Ty = CGF.CGM.getTypes().GetFunctionType(*FInfo);
   CGCallee Callee = CGCallee::forVirtual(CE, GD, This, Ty);
 
-  ASTContext &Context = getContext();
   bool IsDeleting = DtorType == Dtor_Deleting;
+  bool IsArrayDelete = D && D->isArrayForm() && VectorDeletingDtorsEnabled;
   bool IsGlobalDelete = D && D->isGlobalDelete() &&
                         Context.getTargetInfo().callGlobalDeleteInDeletingDtor(
                             Context.getLangOpts());
   llvm::Value *ImplicitParam =
-      CGF.Builder.getInt32((IsDeleting ? 1 : 0) | (IsGlobalDelete ? 4 : 0));
+      CGF.Builder.getInt32((IsDeleting ? 1 : 0) | (IsGlobalDelete ? 4 : 0) |
+                           (IsArrayDelete ? 2 : 0));
 
   QualType ThisTy;
   if (CE) {
@@ -2043,6 +2072,9 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
   } else {
     ThisTy = D->getDestroyedType();
   }
+
+  while (const ArrayType *ATy = Context.getAsArrayType(ThisTy))
+    ThisTy = ATy->getElementType();
 
   This = adjustThisArgumentForVirtualFunctionCall(CGF, GD, This, true);
   RValue RV =
@@ -2207,7 +2239,8 @@ void MicrosoftCXXABI::emitVBTableDefinition(const VPtrInfo &VBT,
 
   // The offset from ObjectWithVPtr's vbptr to itself always leads.
   CharUnits VBPtrOffset = BaseLayout.getVBPtrOffset();
-  Offsets[0] = llvm::ConstantInt::get(CGM.IntTy, -VBPtrOffset.getQuantity());
+  Offsets[0] =
+      llvm::ConstantInt::getSigned(CGM.IntTy, -VBPtrOffset.getQuantity());
 
   MicrosoftVTableContext &Context = CGM.getMicrosoftVTableContext();
   for (const auto &I : ObjectWithVPtr->vbases()) {
@@ -2224,7 +2257,8 @@ void MicrosoftCXXABI::emitVBTableDefinition(const VPtrInfo &VBT,
 
     unsigned VBIndex = Context.getVBTableIndex(ObjectWithVPtr, VBase);
     assert(Offsets[VBIndex] == nullptr && "The same vbindex seen twice?");
-    Offsets[VBIndex] = llvm::ConstantInt::get(CGM.IntTy, Offset.getQuantity());
+    Offsets[VBIndex] =
+        llvm::ConstantInt::getSigned(CGM.IntTy, Offset.getQuantity());
   }
 
   assert(Offsets.size() ==
@@ -2608,7 +2642,7 @@ struct ResetGuardBit final : EHScopeStack::Cleanup {
     CGBuilderTy &Builder = CGF.Builder;
     llvm::LoadInst *LI = Builder.CreateLoad(Guard);
     llvm::ConstantInt *Mask =
-        llvm::ConstantInt::get(CGF.IntTy, ~(1ULL << GuardNum));
+        llvm::ConstantInt::getSigned(CGF.IntTy, ~(1ULL << GuardNum));
     Builder.CreateStore(Builder.CreateAnd(LI, Mask), Guard);
   }
 };
@@ -2882,8 +2916,8 @@ MicrosoftCXXABI::EmitFullMemberPointer(llvm::Constant *FirstField,
   fields.push_back(FirstField);
 
   if (inheritanceModelHasNVOffsetField(IsMemberFunction, Inheritance))
-    fields.push_back(llvm::ConstantInt::get(
-      CGM.IntTy, NonVirtualBaseAdjustment.getQuantity()));
+    fields.push_back(llvm::ConstantInt::getSigned(
+        CGM.IntTy, NonVirtualBaseAdjustment.getQuantity()));
 
   if (inheritanceModelHasVBPtrOffsetField(Inheritance)) {
     CharUnits Offs = CharUnits::Zero();
@@ -2934,6 +2968,7 @@ llvm::Constant *MicrosoftCXXABI::EmitMemberPointer(const APValue &MP,
     // the class in which it was declared, and convert from there if necessary.
     // For indirect field decls, get the outermost anonymous field and use the
     // parent class.
+    Ctx.recordMemberDataPointerEvaluation(MPD);
     CharUnits FieldOffset = Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(MPD));
     const FieldDecl *FD = dyn_cast<FieldDecl>(MPD);
     if (!FD)
@@ -3215,11 +3250,8 @@ llvm::Value *MicrosoftCXXABI::AdjustVirtualBase(
     CharUnits offs = CharUnits::Zero();
     if (!RD->hasDefinition()) {
       DiagnosticsEngine &Diags = CGF.CGM.getDiags();
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "member pointer representation requires a "
-          "complete class type for %0 to perform this expression");
-      Diags.Report(E->getExprLoc(), DiagID) << RD << E->getSourceRange();
+      Diags.Report(E->getExprLoc(), diag::err_member_ptr_requires_complete_type)
+          << RD << E->getSourceRange();
     } else if (RD->getNumVBases())
       offs = getContext().getASTRecordLayout(RD).getVBPtrOffset();
     VBPtrOffset = llvm::ConstantInt::get(CGM.IntTy, offs.getQuantity());
@@ -3448,7 +3480,7 @@ llvm::Value *MicrosoftCXXABI::EmitNonNullMemberPointerConversion(
   // Set the VBPtrOffset to zero if the vbindex is zero.  Otherwise, initialize
   // it to the offset of the vbptr.
   if (inheritanceModelHasVBPtrOffsetField(DstInheritance)) {
-    llvm::Value *DstVBPtrOffset = llvm::ConstantInt::get(
+    llvm::Value *DstVBPtrOffset = llvm::ConstantInt::getSigned(
         CGM.IntTy,
         getContext().getASTRecordLayout(DstRD).getVBPtrOffset().getQuantity());
     VBPtrOffset =
@@ -3882,7 +3914,7 @@ MSRTTIBuilder::getBaseClassDescriptor(const MSRTTIClass &Class) {
           ABI.getAddrOfRTTIDescriptor(Context.getCanonicalTagType(Class.RD))),
       llvm::ConstantInt::get(CGM.IntTy, Class.NumBases),
       llvm::ConstantInt::get(CGM.IntTy, Class.OffsetInVBase),
-      llvm::ConstantInt::get(CGM.IntTy, VBPtrOffset),
+      llvm::ConstantInt::getSigned(CGM.IntTy, VBPtrOffset),
       llvm::ConstantInt::get(CGM.IntTy, OffsetInVBTable),
       llvm::ConstantInt::get(CGM.IntTy, Class.Flags),
       ABI.getImageRelativeConstant(
@@ -4074,6 +4106,18 @@ void MicrosoftCXXABI::emitCXXStructor(GlobalDecl GD) {
   if (GD.getDtorType() == Dtor_Base && !CGM.TryEmitBaseDestructorAsAlias(dtor))
     return;
 
+  if (GD.getDtorType() == Dtor_VectorDeleting &&
+      !getContext().classNeedsVectorDeletingDestructor(dtor->getParent())) {
+    // Create GlobalDecl object with the correct type for the scalar
+    // deleting destructor.
+    GlobalDecl ScalarDtorGD(dtor, Dtor_Deleting);
+
+    // Emit an alias from the vector deleting destructor to the scalar deleting
+    // destructor.
+    CGM.EmitDefinitionAsAlias(GD, ScalarDtorGD);
+    return;
+  }
+
   llvm::Function *Fn = CGM.codegenCXXStructor(GD);
   if (Fn->isWeakForLinker())
     Fn->setComdat(CGM.getModule().getOrInsertComdat(Fn->getName()));
@@ -4260,13 +4304,13 @@ llvm::Constant *MicrosoftCXXABI::getCatchableType(QualType T,
     Flags |= 16;
 
   llvm::Constant *Fields[] = {
-      llvm::ConstantInt::get(CGM.IntTy, Flags),       // Flags
-      TD,                                             // TypeDescriptor
-      llvm::ConstantInt::get(CGM.IntTy, NVOffset),    // NonVirtualAdjustment
-      llvm::ConstantInt::get(CGM.IntTy, VBPtrOffset), // OffsetToVBPtr
-      llvm::ConstantInt::get(CGM.IntTy, VBIndex),     // VBTableIndex
-      llvm::ConstantInt::get(CGM.IntTy, Size),        // Size
-      CopyCtor                                        // CopyCtor
+      llvm::ConstantInt::get(CGM.IntTy, Flags),    // Flags
+      TD,                                          // TypeDescriptor
+      llvm::ConstantInt::get(CGM.IntTy, NVOffset), // NonVirtualAdjustment
+      llvm::ConstantInt::getSigned(CGM.IntTy, VBPtrOffset), // OffsetToVBPtr
+      llvm::ConstantInt::get(CGM.IntTy, VBIndex),           // VBTableIndex
+      llvm::ConstantInt::get(CGM.IntTy, Size),              // Size
+      CopyCtor                                              // CopyCtor
   };
   llvm::StructType *CTType = getCatchableTypeType();
   auto *GV = new llvm::GlobalVariable(

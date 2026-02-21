@@ -742,11 +742,13 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
 
   // For NEON intrinsics which are overloaded on vector element type, validate
   // the immediate which specifies which variant to emit.
-  unsigned ImmArg = TheCall->getNumArgs() - 1;
   if (mask) {
+    unsigned ImmArg = TheCall->getNumArgs() - 1;
     if (SemaRef.BuiltinConstantArg(TheCall, ImmArg, Result))
       return true;
 
+    // FIXME: This is effectively dead code. Change the logic above so that the
+    // following check is actually run.
     TV = Result.getLimitedValue(64);
     if ((TV > 63) || (mask & (1ULL << TV)) == 0)
       return Diag(TheCall->getBeginLoc(), diag::err_invalid_neon_type_code)
@@ -1120,6 +1122,19 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
            SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 3) ||
            SemaRef.BuiltinConstantArgRange(TheCall, 3, 0, 1) ||
            SemaRef.BuiltinConstantArgRange(TheCall, 4, 0, 1);
+  }
+
+  if (BuiltinID == AArch64::BI__builtin_arm_range_prefetch_x) {
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 1) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 3, -2097152, 2097151) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 4, 1, 65536) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 5, -2097152, 2097151);
+  }
+
+  if (BuiltinID == AArch64::BI__builtin_arm_range_prefetch) {
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 1);
   }
 
   if (BuiltinID == AArch64::BI__builtin_arm_rsr64 ||

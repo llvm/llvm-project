@@ -887,7 +887,7 @@ bool LoopInfo::invalidate(Function &F, const PreservedAnalyses &PA,
 void LoopInfo::erase(Loop *Unloop) {
   assert(!Unloop->isInvalid() && "Loop has already been erased!");
 
-  auto InvalidateOnExit = make_scope_exit([&]() { destroy(Unloop); });
+  llvm::scope_exit InvalidateOnExit([&]() { destroy(Unloop); });
 
   // First handle the special case of no parent loop to simplify the algorithm.
   if (Unloop->isOutermost()) {

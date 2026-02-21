@@ -99,14 +99,18 @@ using FileFrameClass = FileFrame<ExternalFileUnit>;
 #else // defined(RT_USE_PSEUDO_FILE_UNIT)
 using OpenFileClass = PseudoOpenFile;
 // Use not so big buffer for the pseudo file unit frame.
-using FileFrameClass = FileFrame<ExternalFileUnit, 1024>;
+using FileFrameClass = FileFrame<ExternalFileUnit, 256>;
 #endif // defined(RT_USE_PSEUDO_FILE_UNIT)
 
 class ExternalFileUnit : public ConnectionState,
                          public OpenFileClass,
                          public FileFrameClass {
 public:
+#ifdef RT_USE_PSEUDO_FILE_UNIT
+  static constexpr int maxAsyncIds{64};
+#else
   static constexpr int maxAsyncIds{64 * 16};
+#endif
 
   explicit RT_API_ATTRS ExternalFileUnit(int unitNumber)
       : unitNumber_{unitNumber} {
@@ -124,15 +128,15 @@ public:
     return createdForInternalChildIo_;
   }
 
-  static RT_API_ATTRS ExternalFileUnit *LookUp(int unit);
+  static RT_API_ATTRS ExternalFileUnit *LookUp(int unit, Terminator &);
   static RT_API_ATTRS ExternalFileUnit *LookUpOrCreate(
       int unit, const Terminator &, bool &wasExtant);
   static RT_API_ATTRS ExternalFileUnit *LookUpOrCreateAnonymous(int unit,
       Direction, common::optional<bool> isUnformatted, IoErrorHandler &);
   static RT_API_ATTRS ExternalFileUnit *LookUp(
-      const char *path, std::size_t pathLen);
+      const char *path, std::size_t pathLen, Terminator &);
   static RT_API_ATTRS ExternalFileUnit &CreateNew(int unit, const Terminator &);
-  static RT_API_ATTRS ExternalFileUnit *LookUpForClose(int unit);
+  static RT_API_ATTRS ExternalFileUnit *LookUpForClose(int unit, Terminator &);
   static RT_API_ATTRS ExternalFileUnit &NewUnit(
       const Terminator &, bool forChildIo);
   static RT_API_ATTRS void CloseAll(IoErrorHandler &);
@@ -145,7 +149,7 @@ public:
   RT_API_ATTRS bool OpenAnonymousUnit(common::optional<OpenStatus>,
       common::optional<Action>, Position, Convert, IoErrorHandler &);
   RT_API_ATTRS void CloseUnit(CloseStatus, IoErrorHandler &);
-  RT_API_ATTRS void DestroyClosed();
+  RT_API_ATTRS void DestroyClosed(Terminator &);
 
   RT_API_ATTRS Iostat SetDirection(Direction);
 
@@ -203,8 +207,8 @@ public:
   }
 
 private:
-  static RT_API_ATTRS UnitMap &CreateUnitMap();
-  static RT_API_ATTRS UnitMap &GetUnitMap();
+  static RT_API_ATTRS UnitMap &CreateUnitMap(const Terminator &);
+  static RT_API_ATTRS UnitMap &GetUnitMap(const Terminator &);
   RT_API_ATTRS const char *FrameNextInput(IoErrorHandler &, std::size_t);
   RT_API_ATTRS void SetPosition(std::int64_t zeroBasedPos);
   RT_API_ATTRS void Sought(std::int64_t zeroBasedPos);

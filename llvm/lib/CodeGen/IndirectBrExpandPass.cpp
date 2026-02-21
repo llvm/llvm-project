@@ -53,9 +53,7 @@ class IndirectBrExpandLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  IndirectBrExpandLegacyPass() : FunctionPass(ID) {
-    initializeIndirectBrExpandLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+  IndirectBrExpandLegacyPass() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addPreserved<DominatorTreeWrapperPass>();

@@ -315,30 +315,34 @@ TEST(TypePrinter, NestedNameSpecifiers) {
       Code, {}, varDecl(hasName("imem"), hasType(qualType().bind("id"))),
       "struct (unnamed)", [](PrintingPolicy &Policy) {
         Policy.FullyQualifiedName = true;
-        Policy.AnonymousTagLocations = false;
+        Policy.AnonymousTagNameStyle =
+            llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
       }));
 
   ASSERT_TRUE(PrintedTypeMatches(
       Code, {}, varDecl(hasName("imem"), hasType(qualType().bind("id"))),
       "struct (unnamed)", [](PrintingPolicy &Policy) {
         Policy.FullyQualifiedName = false;
-        Policy.AnonymousTagLocations = false;
+        Policy.AnonymousTagNameStyle =
+            llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
       }));
 
   // Further levels of nesting print the entire scope.
   ASSERT_TRUE(PrintedTypeMatches(
       Code, {}, fieldDecl(hasName("u"), hasType(qualType().bind("id"))),
-      "union level1()::Inner::Inner(int)::(anonymous struct)::(unnamed)",
+      "union level1()::Inner::Inner(int)::(unnamed struct)::(unnamed)",
       [](PrintingPolicy &Policy) {
         Policy.FullyQualifiedName = true;
-        Policy.AnonymousTagLocations = false;
+        Policy.AnonymousTagNameStyle =
+            llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
       }));
 
   ASSERT_TRUE(PrintedTypeMatches(
       Code, {}, fieldDecl(hasName("u"), hasType(qualType().bind("id"))),
       "union (unnamed)", [](PrintingPolicy &Policy) {
         Policy.FullyQualifiedName = false;
-        Policy.AnonymousTagLocations = false;
+        Policy.AnonymousTagNameStyle =
+            llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
       }));
 }
 
@@ -357,6 +361,7 @@ TEST(TypePrinter, NestedNameSpecifiersTypedef) {
       Code, {}, fieldDecl(hasName("bar"), hasType(qualType().bind("id"))),
       "struct foo::(anonymous struct)::(unnamed)", [](PrintingPolicy &Policy) {
         Policy.FullyQualifiedName = true;
-        Policy.AnonymousTagLocations = false;
+        Policy.AnonymousTagNameStyle =
+            llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
       }));
 }

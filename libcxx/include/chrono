@@ -1038,6 +1038,49 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 }  // chrono_literals
 }  // literals
 
+namespace std {
+  template<class T>
+    struct hash;                                            // C++26
+  template<class Rep, class Period>
+    struct hash<chrono::duration<Rep, Period>>;             // C++26
+  template<class Clock, class Duration>
+    struct hash<chrono::time_point<Clock, Duration>>;       // C++26
+  template<>
+    struct hash<chrono::day>;                               // C++26
+  template<>
+    struct hash<chrono::month>;                             // C++26
+  template<>
+    struct hash<chrono::year>;                              // C++26
+  template<>
+    struct hash<chrono::weekday>;                           // C++26
+  template<>
+    struct hash<chrono::weekday_indexed>;                   // C++26
+  template<>
+    struct hash<chrono::weekday_last>;                      // C++26
+  template<>
+    struct hash<chrono::month_day>;                         // C++26
+  template<>
+    struct hash<chrono::month_day_last>;                    // C++26
+  template<>
+    struct hash<chrono::month_weekday>;                     // C++26
+  template<>
+    struct hash<chrono::month_weekday_last>;                // C++26
+  template<>
+    struct hash<chrono::year_month>;                        // C++26
+  template<>
+    struct hash<chrono::year_month_day>;                    // C++26
+  template<>
+    struct hash<chrono::year_month_day_last>;               // C++26
+  template<>
+    struct hash<chrono::year_month_weekday>;                // C++26
+  template<>
+    struct hash<chrono::year_month_weekday_last>;           // C++26
+  template<class Duration, class TimeZonePtr>
+    struct hash<chrono::zoned_time<Duration, TimeZonePtr>>; // C++26
+  template<>
+    struct hash<chrono::leap_second>;                       // C++26
+} // namespace std
+
 }  // std
 */
 

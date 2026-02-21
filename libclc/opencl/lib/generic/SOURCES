@@ -1,5 +1,4 @@
 subnormal_config.cl
-subnormal_helper_func.ll
 async/async_work_group_copy.cl
 async/async_work_group_strided_copy.cl
 async/prefetch.cl
@@ -47,6 +46,10 @@ common/radians.cl
 common/sign.cl
 common/smoothstep.cl
 common/step.cl
+conversion/convert_float2float.cl
+conversion/convert_float2int.cl
+conversion/convert_int2float.cl
+conversion/convert_integer.cl
 geometric/cross.cl
 geometric/distance.cl
 geometric/dot.cl

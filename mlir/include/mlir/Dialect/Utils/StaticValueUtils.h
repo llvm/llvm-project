@@ -24,8 +24,15 @@
 
 namespace mlir {
 
-/// Return true if `v` is an IntegerAttr with value `0`.
+/// Return "true" if `v` is an integer value/attribute with constant value `0`.
 bool isZeroInteger(OpFoldResult v);
+
+/// Return "true" if `v` is a float value/attribute with constant value `0.0`.
+bool isZeroFloat(OpFoldResult v);
+
+/// Return "true" if `v` is an integer/float value/attribute with constant
+/// value zero.
+bool isZeroIntegerOrFloat(OpFoldResult v);
 
 /// Return true if `v` is an IntegerAttr with value `1`.
 bool isOneInteger(OpFoldResult v);
@@ -84,10 +91,9 @@ getSimplifiedOfrAndStaticSizePair(OpFoldResult ofr, Builder &b);
 /// Extract integer values from the assumed ArrayAttr of IntegerAttr.
 template <typename IntTy>
 SmallVector<IntTy> extractFromIntegerArrayAttr(Attribute attr) {
-  return llvm::to_vector(
-      llvm::map_range(cast<ArrayAttr>(attr), [](Attribute a) -> IntTy {
-        return cast<IntegerAttr>(a).getInt();
-      }));
+  return llvm::map_to_vector(cast<ArrayAttr>(attr), [](Attribute a) -> IntTy {
+    return cast<IntegerAttr>(a).getInt();
+  });
 }
 
 /// Given a value, try to extract a constant Attribute. If this fails, return
@@ -205,10 +211,15 @@ foldDynamicOffsetSizeList(SmallVectorImpl<OpFoldResult> &offsetsOrSizes);
 LogicalResult foldDynamicStrideList(SmallVectorImpl<OpFoldResult> &strides);
 
 /// Return the number of iterations for a loop with a lower bound `lb`, upper
-/// bound `ub` and step `step`. The `isSigned` flag indicates whether the loop
-/// comparison between lb and ub is signed or unsigned. A negative step or a
-/// lower bound greater than the upper bound are considered invalid and will
-/// yield a zero trip count.
+/// bound `ub` and step `step`, as an unsigned integer. The `isSigned` flag
+/// indicates whether the loop comparison between lb and ub is signed or
+/// unsigned. (The result of this function must be interpreted as an unsigned
+/// integer.) A lower bound greater than the upper bound is considered invalid
+/// and will yield a zero trip count.
+///
+/// Note: The loops modeled here use a less-than comparison (`<`), meaning the
+/// loop continues while `iv < ub`. This is different from arbitrary C++ loops
+/// which can use various comparison operators.
 /// The `computeUbMinusLb` callback is invoked to compute the difference between
 /// the upper and lower bound when not constant. It can be used by the client
 /// to compute a static difference when the bounds are not constant.

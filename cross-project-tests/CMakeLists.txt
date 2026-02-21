@@ -12,12 +12,15 @@ add_llvm_executable(check-gdb-llvm-support
 )
 target_link_libraries(check-gdb-llvm-support PRIVATE LLVMSupport)
 
+add_subdirectory(debuginfo-tests/llvm-prettyprinters/lldb)
+
 set(CROSS_PROJECT_TESTS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(CROSS_PROJECT_TESTS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(CROSS_PROJECT_TEST_DEPS
   FileCheck
   check-gdb-llvm-support
+  ${LLDB_FORMATTER_TESTS}
   count
   llvm-ar
   llvm-config

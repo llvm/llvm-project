@@ -16,7 +16,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 killed $x0, 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
-  ; CHECK-NEXT:   renamable $v10m2 = PseudoVMV_V_I_M2 undef renamable $v10m2, 0, -1, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   renamable $v10m2 = PseudoVMV_V_I_M2 undef renamable $v10m2, 0, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x04000000), %bb.2(0x7c000000)
@@ -30,8 +30,8 @@ body:             |
   ; CHECK-NEXT:   liveins: $v8m2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $x0 = PseudoVSETVLI [[DEF]], 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
-  ; CHECK-NEXT:   renamable $v10 = PseudoVMV_S_X undef renamable $v10, undef %2:gpr, $noreg, 5 /* e32 */, implicit $vl, implicit $vtype
-  ; CHECK-NEXT:   dead renamable $v8 = PseudoVREDSUM_VS_M2_E32 undef renamable $v8, killed undef renamable $v8m2, killed undef renamable $v10, $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   renamable $v10 = PseudoVMV_S_X undef renamable $v10, undef %2:gpr, $noreg /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   dead renamable $v8 = PseudoVREDSUM_VS_M2_E32 undef renamable $v8, killed undef renamable $v8m2, killed undef renamable $v10, $noreg /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   BNE undef %3:gpr, $x0, %bb.1
   ; CHECK-NEXT:   PseudoBR %bb.4
   ; CHECK-NEXT: {{  $}}

@@ -65,6 +65,7 @@ add_host_subdirectory(posix
   )
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+  add_subdirectory(windows/PythonPathSetup)
   add_host_subdirectory(windows
     windows/ConnectionGenericFileWindows.cpp
     windows/FileSystem.cpp
@@ -76,6 +77,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     windows/MainLoopWindows.cpp
     windows/PipeWindows.cpp
     windows/ProcessLauncherWindows.cpp
+    windows/PseudoConsole.cpp
     windows/ProcessRunLock.cpp
     )
 else()

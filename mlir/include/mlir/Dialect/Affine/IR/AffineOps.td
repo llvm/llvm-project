@@ -16,6 +16,7 @@
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -35,7 +36,8 @@ class Affine_Op<string mnemonic, list<Trait> traits = []> :
 def ImplicitAffineTerminator
     : SingleBlockImplicitTerminator<"AffineYieldOp">;
 
-def AffineApplyOp : Affine_Op<"apply", [Pure]> {
+def AffineApplyOp : Affine_Op<"apply",
+    [Pure, DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let summary = "affine apply operation";
   let description = [{
     The `affine.apply` operation applies an [affine mapping](#affine-maps)
@@ -126,7 +128,7 @@ def AffineForOp : Affine_Op<"for",
       "getLoopUpperBounds", "getYieldedValuesMutable",
       "replaceWithAdditionalYields"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
-     ["getEntrySuccessorOperands"]>]> {
+     ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
   let summary = "for operation";
   let description = [{
     Syntax:
@@ -338,7 +340,8 @@ def AffineForOp : Affine_Op<"for",
 def AffineIfOp : Affine_Op<"if",
                            [ImplicitAffineTerminator, RecursivelySpeculatable,
                             RecursiveMemoryEffects, NoRegionArguments,
-                            DeclareOpInterfaceMethods<RegionBranchOpInterface>
+                            DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                ["getSuccessorInputs"]>
                            ]> {
   let summary = "if-then-else operation";
   let description = [{

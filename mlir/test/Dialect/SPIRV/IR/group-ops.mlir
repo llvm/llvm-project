@@ -220,7 +220,7 @@ func.func @group_non_uniform_ballot_bit_count_wrong_scope(%value: vector<4xi32>)
 // -----
 
 func.func @group_non_uniform_ballot_bit_count_wrong_value_len(%value: vector<3xi32>) -> i32 {
-  // expected-error @+1 {{operand #0 must be vector of 32-bit signless/unsigned integer values of length 4, but got 'vector<3xi32>'}}
+  // expected-error @+1 {{operand #0 must be vector of 32-bit signless/unsigned integer values of length 4 of ranks 1, but got 'vector<3xi32>'}}
   %0 = spirv.GroupNonUniformBallotBitCount <Subgroup> <InclusiveScan> %value : vector<3xi32> -> i32
   return %0: i32
 }
@@ -228,7 +228,7 @@ func.func @group_non_uniform_ballot_bit_count_wrong_value_len(%value: vector<3xi
 // -----
 
 func.func @group_non_uniform_ballot_bit_count_wrong_value_type(%value: vector<4xi8>) -> i32 {
-  // expected-error @+1 {{operand #0 must be vector of 32-bit signless/unsigned integer values of length 4, but got 'vector<4xi8>'}}
+  // expected-error @+1 {{operand #0 must be vector of 32-bit signless/unsigned integer values of length 4 of ranks 1, but got 'vector<4xi8>'}}
   %0 = spirv.GroupNonUniformBallotBitCount <Subgroup> <InclusiveScan> %value : vector<4xi8> -> i32
   return %0: i32
 }
@@ -236,7 +236,7 @@ func.func @group_non_uniform_ballot_bit_count_wrong_value_type(%value: vector<4x
 // -----
 
 func.func @group_non_uniform_ballot_bit_count_value_sign(%value: vector<4xsi32>) -> i32 {
-  // expected-error @+1 {{operand #0 must be vector of 32-bit signless/unsigned integer values of length 4, but got 'vector<4xsi32>'}}
+  // expected-error @+1 {{operand #0 must be vector of 32-bit signless/unsigned integer values of length 4 of ranks 1, but got 'vector<4xsi32>'}}
   %0 = spirv.GroupNonUniformBallotBitCount <Subgroup> <InclusiveScan> %value : vector<4xsi32> -> i32
   return %0: i32
 }

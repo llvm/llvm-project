@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_NativeProcessSoftwareSingleStep_h
-#define lldb_NativeProcessSoftwareSingleStep_h
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NATIVEPROCESSSOFTWARESINGLESTEP_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NATIVEPROCESSSOFTWARESINGLESTEP_H
 
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
@@ -29,4 +29,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // #ifndef lldb_NativeProcessSoftwareSingleStep_h
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NATIVEPROCESSSOFTWARESINGLESTEP_H

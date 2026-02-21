@@ -219,13 +219,13 @@ public:
   template <typename... Pn,
             std::enable_if_t<std::is_invocable_v<T, Pn...>, int> = 0>
   decltype(auto) operator()(Pn &&...Params) {
-    return (*Obj)(std::forward<Pn>(Params)...);
+    return std::invoke(*Obj, std::forward<Pn>(Params)...);
   }
 
   template <typename... Pn,
             std::enable_if_t<std::is_invocable_v<T const, Pn...>, int> = 0>
   decltype(auto) operator()(Pn &&...Params) const {
-    return (*Obj)(std::forward<Pn>(Params)...);
+    return std::invoke(*Obj, std::forward<Pn>(Params)...);
   }
 
   bool valid() const { return Obj != std::nullopt; }
@@ -330,7 +330,7 @@ template <typename T> auto drop_end(T &&RangeOrContainer, size_t N = 1) {
 
 template <typename ItTy, typename FuncTy,
           typename ReferenceTy =
-              decltype(std::declval<FuncTy>()(*std::declval<ItTy>()))>
+              std::invoke_result_t<FuncTy, decltype(*std::declval<ItTy>())>>
 class mapped_iterator
     : public iterator_adaptor_base<
           mapped_iterator<ItTy, FuncTy>, ItTy,
@@ -360,6 +360,8 @@ inline mapped_iterator<ItTy, FuncTy> map_iterator(ItTy I, FuncTy F) {
   return mapped_iterator<ItTy, FuncTy>(std::move(I), std::move(F));
 }
 
+/// Return a range that applies \p F to the elements of \p C. \p F can be a
+/// function, lambda, or member pointer.
 template <class ContainerTy, class FuncTy>
 auto map_range(ContainerTy &&C, FuncTy F) {
   return make_range(map_iterator(adl_begin(C), F), map_iterator(adl_end(C), F));
@@ -1790,6 +1792,42 @@ OutputIt copy_if(R &&Range, OutputIt Out, UnaryPredicate P) {
   return std::copy_if(adl_begin(Range), adl_end(Range), Out, P);
 }
 
+/// Provide wrappers to std::search which searches for the first occurrence of
+/// Range2 within Range1.
+/// \returns An iterator to the start of Range2 within Range1 if found, or
+///          the end iterator of Range1 if not found.
+template <typename R1, typename R2> auto search(R1 &&Range1, R2 &&Range2) {
+  return std::search(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
+                     adl_end(Range2));
+}
+
+/// Provide wrappers to std::search which searches for the first occurrence of
+/// Range2 within Range1 using predicate `P`.
+/// \returns An iterator to the start of Range2 within Range1 if found, or
+///          the end iterator of Range1 if not found.
+template <typename R1, typename R2, typename BinaryPredicate>
+auto search(R1 &&Range1, R2 &&Range2, BinaryPredicate P) {
+  return std::search(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
+                     adl_end(Range2), P);
+}
+
+/// Provide wrappers to std::adjacent_find which finds the first pair of
+/// adjacent elements that are equal.
+/// \returns An iterator to the first adjacent element within Range1 if found,
+///          or the end iterator of Range1 if not found.
+template <typename R> auto adjacent_find(R &&Range) {
+  return std::adjacent_find(adl_begin(Range), adl_end(Range));
+}
+
+/// Provide wrappers to std::adjacent_find which finds the first pair of
+/// adjacent elements that are satisfy `P`.
+/// \returns An iterator to the first adjacent element within Range1 if found,
+///          or the end iterator of Range1 if not found.
+template <typename R, typename BinaryPredicate>
+auto adjacent_find(R &&Range, BinaryPredicate P) {
+  return std::adjacent_find(adl_begin(Range), adl_end(Range), P);
+}
+
 /// Return the single value in \p Range that satisfies
 /// \p P(<member of \p Range> *, AllowRepeats)->T * returning nullptr
 /// when no values or multiple values were found.
@@ -1937,6 +1975,14 @@ template <typename R, typename Compare> bool is_sorted(R &&Range, Compare C) {
 /// are sorted in non-descending order.
 template <typename R> bool is_sorted(R &&Range) {
   return std::is_sorted(adl_begin(Range), adl_end(Range));
+}
+
+/// Check if elements in a range \p R are sorted with respect to a comparator \p
+/// C. constexpr allows use in static_assert
+/// TODO: Remove and use std::is_sorted once upgraded to Cpp20
+template <typename R, typename Cmp = std::less<>>
+constexpr bool is_sorted_constexpr(R &&Range, Cmp C = Cmp{}) {
+  return llvm::is_sorted_constexpr(adl_begin(Range), adl_end(Range), C);
 }
 
 /// Provide wrappers to std::includes which take ranges instead of having to
@@ -2121,6 +2167,20 @@ template <typename T> bool all_equal(std::initializer_list<T> Values) {
   return all_equal<std::initializer_list<T>>(std::move(Values));
 }
 
+/// Functor variant of std::equal_to that can be used as a UnaryPredicate in
+/// functional algorithms like all_of. `Args` is forwarded and stored by value.
+/// If you would like to pass by reference, use `std::ref` or `std::cref`.
+template <typename T> constexpr auto equal_to(T &&Arg) {
+  return llvm::bind_front(std::equal_to<>{}, std::forward<T>(Arg));
+}
+
+/// Functor variant of std::not_equal_to that can be used as a UnaryPredicate in
+/// functional algorithms like all_of. `Args` is forwarded and stored by value.
+/// If you would like to pass by reference, use `std::ref` or `std::cref`.
+template <typename T> constexpr auto not_equal_to(T &&Arg) {
+  return llvm::bind_front(std::not_equal_to<>{}, std::forward<T>(Arg));
+}
+
 /// Provide a container algorithm similar to C++ Library Fundamentals v2's
 /// `erase_if` which is equivalent to:
 ///
@@ -2152,7 +2212,17 @@ void append_range(Container &C, Range &&R) {
 /// Appends all `Values` to container `C`.
 template <typename Container, typename... Args>
 void append_values(Container &C, Args &&...Values) {
-  C.reserve(range_size(C) + sizeof...(Args));
+  if (size_t InitialSize = range_size(C); InitialSize == 0) {
+    // Only reserve if the container is empty. Reserving on a non-empty
+    // container may interfere with the exponential growth strategy, if the
+    // container does not round up the capacity. Consider `append_values` called
+    // repeatedly in a loop: each call would reserve exactly `size + N`, causing
+    // the capacity to grow linearly (e.g., 100 -> 105 -> 110 -> ...) instead of
+    // exponentially (e.g., 100 -> 200 -> ...). Linear growth turns the
+    // amortized O(1) append into O(n) because every few insertions trigger a
+    // reallocation and copy of all elements.
+    C.reserve(InitialSize + sizeof...(Args));
+  }
   // Append all values one by one.
   ((void)C.insert(C.end(), std::forward<Args>(Values)), ...);
 }

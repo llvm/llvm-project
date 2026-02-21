@@ -61,6 +61,7 @@
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
@@ -68,6 +69,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Hash.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/TargetParser/X86TargetParser.h"
@@ -223,7 +225,9 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     return createMSP430TargetCodeGenInfo(CGM);
 
   case llvm::Triple::riscv32:
-  case llvm::Triple::riscv64: {
+  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be: {
     StringRef ABIStr = Target.getABI();
     unsigned XLen = Target.getPointerWidth(LangAS::Default);
     unsigned ABIFLen = 0;
@@ -378,15 +382,11 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
     Check("bfloat", llvm::Type::getBFloatTy(Context), Target.BFloat16Align);
   Check("float", llvm::Type::getFloatingPointTy(Context, *Target.FloatFormat),
         Target.FloatAlign);
-  // FIXME: AIX specifies wrong double alignment in DataLayout
-  if (!Triple.isOSAIX()) {
-    Check("double",
-          llvm::Type::getFloatingPointTy(Context, *Target.DoubleFormat),
-          Target.DoubleAlign);
-    Check("long double",
-          llvm::Type::getFloatingPointTy(Context, *Target.LongDoubleFormat),
-          Target.LongDoubleAlign);
-  }
+  Check("double", llvm::Type::getFloatingPointTy(Context, *Target.DoubleFormat),
+        Target.DoubleAlign);
+  Check("long double",
+        llvm::Type::getFloatingPointTy(Context, *Target.LongDoubleFormat),
+        Target.LongDoubleAlign);
   if (Target.hasFloat128Type())
     Check("__float128", llvm::Type::getFP128Ty(Context), Target.Float128Align);
   if (Target.hasIbm128Type())
@@ -494,10 +494,8 @@ CodeGenModule::CodeGenModule(ASTContext &C,
         CodeGenOpts.ProfileInstrumentUsePath, *FS,
         CodeGenOpts.ProfileRemappingFile);
     if (auto E = ReaderOrErr.takeError()) {
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error, "Error in reading profile %0: %1");
       llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
-        Diags.Report(DiagID)
+        Diags.Report(diag::err_reading_profile)
             << CodeGenOpts.ProfileInstrumentUsePath << EI.message();
       });
       return;
@@ -541,12 +539,9 @@ CodeGenModule::CodeGenModule(ASTContext &C,
           this->MSHotPatchFunctions.push_back(std::string{*I});
       } else {
         auto &DE = Context.getDiagnostics();
-        unsigned DiagID =
-            DE.getCustomDiagID(DiagnosticsEngine::Error,
-                               "failed to open hotpatch functions file "
-                               "(-fms-hotpatch-functions-file): %0 : %1");
-        DE.Report(DiagID) << CGO.MSSecureHotPatchFunctionsFile
-                          << BufOrErr.getError().message();
+        DE.Report(diag::err_open_hotpatch_file_failed)
+            << CGO.MSSecureHotPatchFunctionsFile
+            << BufOrErr.getError().message();
       }
     }
 
@@ -958,6 +953,22 @@ static bool isStackProtectorOn(const LangOptions &LangOpts,
   return LangOpts.getStackProtector() == Mode;
 }
 
+std::optional<llvm::Attribute::AttrKind>
+CodeGenModule::StackProtectorAttribute(const Decl *D) const {
+  if (D && D->hasAttr<NoStackProtectorAttr>())
+    ; // Do nothing.
+  else if (D && D->hasAttr<StrictGuardStackCheckAttr>() &&
+           isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPOn))
+    return llvm::Attribute::StackProtectStrong;
+  else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPOn))
+    return llvm::Attribute::StackProtect;
+  else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPStrong))
+    return llvm::Attribute::StackProtectStrong;
+  else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq))
+    return llvm::Attribute::StackProtectReq;
+  return std::nullopt;
+}
+
 void CodeGenModule::Release() {
   Module *Primary = getContext().getCurrentNamedModule();
   if (CXX20ModuleInits && Primary && !Primary->isHeaderLikeModule())
@@ -969,6 +980,7 @@ void CodeGenModule::Release() {
   applyGlobalValReplacements();
   applyReplacements();
   emitMultiVersionFunctions();
+  emitPFPFieldsWithEvaluatedOffset();
 
   if (Context.getLangOpts().IncrementalExtensions &&
       GlobalTopLevelStmtBlockInFlight.first) {
@@ -1130,11 +1142,15 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Warning, "CodeViewGHash", 1);
   }
   if (CodeGenOpts.ControlFlowGuard) {
-    // Function ID tables and checks for Control Flow Guard (cfguard=2).
-    getModule().addModuleFlag(llvm::Module::Warning, "cfguard", 2);
+    // Function ID tables and checks for Control Flow Guard.
+    getModule().addModuleFlag(
+        llvm::Module::Warning, "cfguard",
+        static_cast<unsigned>(llvm::ControlFlowGuardMode::Enabled));
   } else if (CodeGenOpts.ControlFlowGuardNoChecks) {
-    // Function ID tables for Control Flow Guard (cfguard=1).
-    getModule().addModuleFlag(llvm::Module::Warning, "cfguard", 1);
+    // Function ID tables for Control Flow Guard.
+    getModule().addModuleFlag(
+        llvm::Module::Warning, "cfguard",
+        static_cast<unsigned>(llvm::ControlFlowGuardMode::TableOnly));
   }
   if (CodeGenOpts.EHContGuard) {
     // Function ID tables for EH Continuation Guard.
@@ -1401,6 +1417,36 @@ void CodeGenModule::Release() {
       }
     }
   }
+  if ((T.isARM() || T.isThumb()) && getTriple().isTargetAEABI() &&
+      getTriple().isOSBinFormatELF()) {
+    uint32_t TagVal = 0;
+    llvm::Module::ModFlagBehavior DenormalTagBehavior = llvm::Module::Max;
+    if (getCodeGenOpts().FPDenormalMode ==
+        llvm::DenormalMode::getPositiveZero()) {
+      TagVal = llvm::ARMBuildAttrs::PositiveZero;
+    } else if (getCodeGenOpts().FPDenormalMode ==
+               llvm::DenormalMode::getIEEE()) {
+      TagVal = llvm::ARMBuildAttrs::IEEEDenormals;
+      DenormalTagBehavior = llvm::Module::Override;
+    } else if (getCodeGenOpts().FPDenormalMode ==
+               llvm::DenormalMode::getPreserveSign()) {
+      TagVal = llvm::ARMBuildAttrs::PreserveFPSign;
+    }
+    getModule().addModuleFlag(DenormalTagBehavior, "arm-eabi-fp-denormal",
+                              TagVal);
+
+    if (getLangOpts().getDefaultExceptionMode() !=
+        LangOptions::FPExceptionModeKind::FPE_Ignore)
+      getModule().addModuleFlag(llvm::Module::Min, "arm-eabi-fp-exceptions",
+                                llvm::ARMBuildAttrs::Allowed);
+
+    if (getLangOpts().NoHonorNaNs && getLangOpts().NoHonorInfs)
+      TagVal = llvm::ARMBuildAttrs::AllowIEEENormal;
+    else
+      TagVal = llvm::ARMBuildAttrs::AllowIEEE754;
+    getModule().addModuleFlag(llvm::Module::Min, "arm-eabi-fp-number-model",
+                              TagVal);
+  }
 
   if (CodeGenOpts.StackClashProtector)
     getModule().addModuleFlag(
@@ -1586,16 +1632,39 @@ void CodeGenModule::Release() {
   setVisibilityFromDLLStorageClass(LangOpts, getModule());
 
   // Check the tail call symbols are truly undefined.
-  if (getTriple().isPPC() && !MustTailCallUndefinedGlobals.empty()) {
-    for (auto &I : MustTailCallUndefinedGlobals) {
-      if (!I.first->isDefined())
-        getDiags().Report(I.second, diag::err_ppc_impossible_musttail) << 2;
-      else {
-        StringRef MangledName = getMangledName(GlobalDecl(I.first));
-        llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
-        if (!Entry || Entry->isWeakForLinker() ||
-            Entry->isDeclarationForLinker())
+  if (!MustTailCallUndefinedGlobals.empty()) {
+    if (getTriple().isPPC()) {
+      for (auto &I : MustTailCallUndefinedGlobals) {
+        if (!I.first->isDefined())
           getDiags().Report(I.second, diag::err_ppc_impossible_musttail) << 2;
+        else {
+          StringRef MangledName = getMangledName(GlobalDecl(I.first));
+          llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
+          if (!Entry || Entry->isWeakForLinker() ||
+              Entry->isDeclarationForLinker())
+            getDiags().Report(I.second, diag::err_ppc_impossible_musttail) << 2;
+        }
+      }
+    } else if (getTriple().isMIPS()) {
+      for (auto &I : MustTailCallUndefinedGlobals) {
+        const FunctionDecl *FD = I.first;
+        StringRef MangledName = getMangledName(GlobalDecl(FD));
+        llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
+
+        if (!Entry)
+          continue;
+
+        bool CalleeIsLocal;
+        if (Entry->isDeclarationForLinker()) {
+          // For declarations, only visibility can indicate locality.
+          CalleeIsLocal =
+              Entry->hasHiddenVisibility() || Entry->hasProtectedVisibility();
+        } else {
+          CalleeIsLocal = Entry->isDSOLocal();
+        }
+
+        if (!CalleeIsLocal)
+          getDiags().Report(I.second, diag::err_mips_impossible_musttail) << 1;
       }
     }
   }
@@ -1763,20 +1832,25 @@ void CodeGenModule::Error(SourceLocation loc, StringRef message) {
 /// ErrorUnsupported - Print out an error that codegen doesn't support the
 /// specified stmt yet.
 void CodeGenModule::ErrorUnsupported(const Stmt *S, const char *Type) {
-  unsigned DiagID = getDiags().getCustomDiagID(DiagnosticsEngine::Error,
-                                               "cannot compile this %0 yet");
   std::string Msg = Type;
-  getDiags().Report(Context.getFullLoc(S->getBeginLoc()), DiagID)
+  getDiags().Report(Context.getFullLoc(S->getBeginLoc()),
+                    diag::err_codegen_unsupported)
       << Msg << S->getSourceRange();
+}
+
+void CodeGenModule::ErrorUnsupported(const Stmt *S, llvm::StringRef Type) {
+  getDiags().Report(Context.getFullLoc(S->getBeginLoc()),
+                    diag::err_codegen_unsupported)
+      << Type << S->getSourceRange();
 }
 
 /// ErrorUnsupported - Print out an error that codegen doesn't support the
 /// specified decl yet.
 void CodeGenModule::ErrorUnsupported(const Decl *D, const char *Type) {
-  unsigned DiagID = getDiags().getCustomDiagID(DiagnosticsEngine::Error,
-                                               "cannot compile this %0 yet");
   std::string Msg = Type;
-  getDiags().Report(Context.getFullLoc(D->getLocation()), DiagID) << Msg;
+  getDiags().Report(Context.getFullLoc(D->getLocation()),
+                    diag::err_codegen_unsupported)
+      << Msg;
 }
 
 void CodeGenModule::runWithSufficientStackSpace(SourceLocation Loc,
@@ -2735,17 +2809,10 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (!hasUnwindExceptions(LangOpts))
     B.addAttribute(llvm::Attribute::NoUnwind);
 
-  if (D && D->hasAttr<NoStackProtectorAttr>())
-    ; // Do nothing.
-  else if (D && D->hasAttr<StrictGuardStackCheckAttr>() &&
-           isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPOn))
-    B.addAttribute(llvm::Attribute::StackProtectStrong);
-  else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPOn))
-    B.addAttribute(llvm::Attribute::StackProtect);
-  else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPStrong))
-    B.addAttribute(llvm::Attribute::StackProtectStrong);
-  else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq))
-    B.addAttribute(llvm::Attribute::StackProtectReq);
+  if (std::optional<llvm::Attribute::AttrKind> Attr =
+          StackProtectorAttribute(D)) {
+    B.addAttribute(*Attr);
+  }
 
   if (!D) {
     // Non-entry HLSL functions must always be inlined.
@@ -2862,6 +2929,11 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       B.addAttribute(llvm::Attribute::MinSize);
   }
 
+  // Add `nooutline` if Outlining is disabled with a command-line flag or a
+  // function attribute.
+  if (CodeGenOpts.DisableOutlining || D->hasAttr<NoOutlineAttr>())
+    B.addAttribute(llvm::Attribute::NoOutline);
+
   F->addFnAttrs(B);
 
   unsigned alignment = D->getMaxAlignment() / Context.getCharWidth();
@@ -2932,6 +3004,24 @@ void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
     addUsedOrCompilerUsedGlobal(GV);
 }
 
+/// Get the feature delta from the default feature map for the given target CPU.
+static std::vector<std::string>
+getFeatureDeltaFromDefault(const CodeGenModule &CGM, StringRef TargetCPU,
+                           llvm::StringMap<bool> &FeatureMap) {
+  llvm::StringMap<bool> DefaultFeatureMap;
+  CGM.getTarget().initFeatureMap(
+      DefaultFeatureMap, CGM.getContext().getDiagnostics(), TargetCPU, {});
+
+  std::vector<std::string> Delta;
+  for (const auto &[K, V] : FeatureMap) {
+    auto DefaultIt = DefaultFeatureMap.find(K);
+    if (DefaultIt == DefaultFeatureMap.end() || DefaultIt->getValue() != V)
+      Delta.push_back((V ? "+" : "-") + K.str());
+  }
+
+  return Delta;
+}
+
 bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                                 llvm::AttrBuilder &Attrs,
                                                 bool SetTargetFeatures) {
@@ -2952,10 +3042,6 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
   if (TD || TV || SD || TC) {
     llvm::StringMap<bool> FeatureMap;
     getContext().getFunctionFeatureMap(FeatureMap, GD);
-
-    // Produce the canonical string for this set of features.
-    for (const llvm::StringMap<bool>::value_type &Entry : FeatureMap)
-      Features.push_back((Entry.getValue() ? "+" : "-") + Entry.getKey().str());
 
     // Now add the target-cpu and target-features to the function.
     // While we populated the feature map above, we still need to
@@ -2979,10 +3065,34 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
       // favor this processor.
       TuneCPU = SD->getCPUName(GD.getMultiVersionIndex())->getName();
     }
+
+    // For AMDGPU, only emit delta features (features that differ from the
+    // target CPU's defaults). Other targets might want to follow a similar
+    // pattern.
+    if (getTarget().getTriple().isAMDGPU()) {
+      Features = getFeatureDeltaFromDefault(*this, TargetCPU, FeatureMap);
+    } else {
+      // Produce the canonical string for this set of features.
+      for (const llvm::StringMap<bool>::value_type &Entry : FeatureMap)
+        Features.push_back((Entry.getValue() ? "+" : "-") +
+                           Entry.getKey().str());
+    }
   } else {
     // Otherwise just add the existing target cpu and target features to the
     // function.
-    Features = getTarget().getTargetOpts().Features;
+    if (SetTargetFeatures && getTarget().getTriple().isAMDGPU()) {
+      llvm::StringMap<bool> FeatureMap;
+      if (FD) {
+        getContext().getFunctionFeatureMap(FeatureMap, GD);
+      } else {
+        getTarget().initFeatureMap(FeatureMap, getContext().getDiagnostics(),
+                                   TargetCPU,
+                                   getTarget().getTargetOpts().Features);
+      }
+      Features = getFeatureDeltaFromDefault(*this, TargetCPU, FeatureMap);
+    } else {
+      Features = getTarget().getTargetOpts().Features;
+    }
   }
 
   if (!TargetCPU.empty()) {
@@ -4674,6 +4784,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
     // in this TU. For other architectures it is always emitted.
     bool ShouldEmitResolver = !getTarget().getTriple().isAArch64();
     SmallVector<CodeGenFunction::FMVResolverOption, 10> Options;
+    llvm::DenseMap<llvm::Function *, const FunctionDecl *> DeclMap;
 
     getContext().forEachMultiversionedFunctionVersion(
         FD, [&](const FunctionDecl *CurFD) {
@@ -4684,11 +4795,13 @@ void CodeGenModule::emitMultiVersionFunctions() {
             assert(getTarget().getTriple().isX86() && "Unsupported target");
             TA->getX86AddedFeatures(Feats);
             llvm::Function *Func = createFunction(CurFD);
+            DeclMap.insert({Func, CurFD});
             Options.emplace_back(Func, Feats, TA->getX86Architecture());
           } else if (const auto *TVA = CurFD->getAttr<TargetVersionAttr>()) {
             if (TVA->isDefaultVersion() && IsDefined)
               ShouldEmitResolver = true;
             llvm::Function *Func = createFunction(CurFD);
+            DeclMap.insert({Func, CurFD});
             char Delim = getTarget().getTriple().isAArch64() ? '+' : ',';
             TVA->getFeatures(Feats, Delim);
             Options.emplace_back(Func, Feats);
@@ -4699,6 +4812,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
               if (TC->isDefaultVersion(I) && IsDefined)
                 ShouldEmitResolver = true;
               llvm::Function *Func = createFunction(CurFD, I);
+              DeclMap.insert({Func, CurFD});
               Feats.clear();
               if (getTarget().getTriple().isX86()) {
                 TC->getX86Feature(Feats, I);
@@ -4744,6 +4858,24 @@ void CodeGenModule::emitMultiVersionFunctions() {
                        const CodeGenFunction::FMVResolverOption &RHS) {
           return getFMVPriority(TI, LHS).ugt(getFMVPriority(TI, RHS));
         });
+
+    // Diagnose unreachable function versions.
+    if (getTarget().getTriple().isAArch64()) {
+      for (auto I = Options.begin() + 1, E = Options.end(); I != E; ++I) {
+        llvm::APInt RHS = llvm::AArch64::getCpuSupportsMask(I->Features);
+        if (std::any_of(Options.begin(), I, [RHS](auto RO) {
+              llvm::APInt LHS = llvm::AArch64::getCpuSupportsMask(RO.Features);
+              return LHS.isSubsetOf(RHS);
+            })) {
+          Diags.Report(DeclMap[I->Function]->getLocation(),
+                       diag::warn_unreachable_version)
+              << I->Function->getName();
+          assert(I->Function->user_empty() && "unexpected users");
+          I->Function->eraseFromParent();
+          I->Function = nullptr;
+        }
+      }
+    }
     CodeGenFunction CGF(*this);
     CGF.EmitMultiVersionResolver(ResolverFunc, Options);
 
@@ -4763,6 +4895,40 @@ void CodeGenModule::emitMultiVersionFunctions() {
   // deferred decls or the multiversion functions themselves are emitted.
   if (!MultiVersionFuncs.empty())
     emitMultiVersionFunctions();
+}
+
+// Symbols with this prefix are used as deactivation symbols for PFP fields.
+// See clang/docs/StructureProtection.rst for more information.
+static const char PFPDeactivationSymbolPrefix[] = "__pfp_ds_";
+
+llvm::GlobalValue *
+CodeGenModule::getPFPDeactivationSymbol(const FieldDecl *FD) {
+  std::string DSName = PFPDeactivationSymbolPrefix + getPFPFieldName(FD);
+  llvm::GlobalValue *DS = TheModule.getNamedValue(DSName);
+  if (!DS) {
+    DS = new llvm::GlobalVariable(TheModule, Int8Ty, false,
+                                  llvm::GlobalVariable::ExternalWeakLinkage,
+                                  nullptr, DSName);
+    DS->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  }
+  return DS;
+}
+
+void CodeGenModule::emitPFPFieldsWithEvaluatedOffset() {
+  llvm::Constant *Nop = llvm::ConstantExpr::getIntToPtr(
+      llvm::ConstantInt::get(Int64Ty, 0xd503201f), VoidPtrTy);
+  for (auto *FD : getContext().PFPFieldsWithEvaluatedOffset) {
+    std::string DSName = PFPDeactivationSymbolPrefix + getPFPFieldName(FD);
+    llvm::GlobalValue *OldDS = TheModule.getNamedValue(DSName);
+    llvm::GlobalValue *DS = llvm::GlobalAlias::create(
+        Int8Ty, 0, llvm::GlobalValue::ExternalLinkage, DSName, Nop, &TheModule);
+    DS->setVisibility(llvm::GlobalValue::HiddenVisibility);
+    if (OldDS) {
+      DS->takeName(OldDS);
+      OldDS->replaceAllUsesWith(DS);
+      OldDS->eraseFromParent();
+    }
+  }
 }
 
 static void replaceDeclarationWith(llvm::GlobalValue *Old,
@@ -5595,11 +5761,9 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
       D ? D->getType().getAddressSpace()
         : (LangOpts.OpenCL ? LangAS::opencl_global : LangAS::Default);
   assert(getContext().getTargetAddressSpace(ExpectedAS) == TargetAS);
-  if (DAddrSpace != ExpectedAS) {
-    return getTargetCodeGenInfo().performAddrSpaceCast(
-        *this, GV, DAddrSpace,
-        llvm::PointerType::get(getLLVMContext(), TargetAS));
-  }
+  if (DAddrSpace != ExpectedAS)
+    return performAddrSpaceCast(
+        GV, llvm::PointerType::get(getLLVMContext(), TargetAS));
 
   return GV;
 }
@@ -5831,11 +5995,10 @@ castStringLiteralToDefaultAddressSpace(CodeGenModule &CGM,
   if (!CGM.getLangOpts().OpenCL) {
     auto AS = CGM.GetGlobalConstantAddressSpace();
     if (AS != LangAS::Default)
-      Cast = CGM.getTargetCodeGenInfo().performAddrSpaceCast(
-          CGM, GV, AS,
-          llvm::PointerType::get(
-              CGM.getLLVMContext(),
-              CGM.getContext().getTargetAddressSpace(LangAS::Default)));
+      Cast = CGM.performAddrSpaceCast(
+          GV, llvm::PointerType::get(
+                  CGM.getLLVMContext(),
+                  CGM.getContext().getTargetAddressSpace(LangAS::Default)));
   }
   return Cast;
 }
@@ -6109,9 +6272,11 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     getCUDARuntime().handleVarRegistration(D, *GV);
   }
 
-  if (LangOpts.HLSL && GetGlobalVarAddressSpace(D) == LangAS::hlsl_input) {
+  if (LangOpts.HLSL &&
+      hlsl::isInitializedByPipeline(GetGlobalVarAddressSpace(D))) {
     // HLSL Input variables are considered to be set by the driver/pipeline, but
-    // only visible to a single thread/wave.
+    // only visible to a single thread/wave. Push constants are also externally
+    // initialized, but constant, hence cross-wave visibility is not relevant.
     GV->setExternallyInitialized(true);
   } else {
     GV->setInitializer(Init);
@@ -6162,10 +6327,11 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       !D->hasAttr<ConstInitAttr>())
     Linkage = llvm::GlobalValue::InternalLinkage;
 
-  // HLSL variables in the input address space maps like memory-mapped
-  // variables. Even if they are 'static', they are externally initialized and
-  // read/write by the hardware/driver/pipeline.
-  if (LangOpts.HLSL && GetGlobalVarAddressSpace(D) == LangAS::hlsl_input)
+  // HLSL variables in the input or push-constant address space maps are like
+  // memory-mapped variables. Even if they are 'static', they are externally
+  // initialized and read/write by the hardware/driver/pipeline.
+  if (LangOpts.HLSL &&
+      hlsl::isInitializedByPipeline(GetGlobalVarAddressSpace(D)))
     Linkage = llvm::GlobalValue::ExternalLinkage;
 
   GV->setLinkage(Linkage);
@@ -7255,11 +7421,10 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
     setTLSMode(GV, *VD);
   llvm::Constant *CV = GV;
   if (AddrSpace != LangAS::Default)
-    CV = getTargetCodeGenInfo().performAddrSpaceCast(
-        *this, GV, AddrSpace,
-        llvm::PointerType::get(
-            getLLVMContext(),
-            getContext().getTargetAddressSpace(LangAS::Default)));
+    CV = performAddrSpaceCast(
+        GV, llvm::PointerType::get(
+                getLLVMContext(),
+                getContext().getTargetAddressSpace(LangAS::Default)));
 
   // Update the map with the new temporary. If we created a placeholder above,
   // replace it with the new global now.
@@ -8266,11 +8431,7 @@ bool CodeGenModule::stopAutoInit() {
       return true;
     }
     if (!NumAutoVarInit) {
-      unsigned DiagID = getDiags().getCustomDiagID(
-          DiagnosticsEngine::Warning,
-          "-ftrivial-auto-var-init-stop-after=%0 has been enabled to limit the "
-          "number of times ftrivial-auto-var-init=%1 gets applied.");
-      getDiags().Report(DiagID)
+      getDiags().Report(diag::warn_trivial_auto_var_limit)
           << StopAfter
           << (getContext().getLangOpts().getTrivialAutoVarInit() ==
                       LangOptions::TrivialAutoVarInitKind::Zero
@@ -8347,4 +8508,13 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
   NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
 
   NewBuilder->ABI->MangleCtx = std::move(ABI->MangleCtx);
+}
+
+std::string CodeGenModule::getPFPFieldName(const FieldDecl *FD) {
+  std::string OutName;
+  llvm::raw_string_ostream Out(OutName);
+  getCXXABI().getMangleContext().mangleCanonicalTypeName(
+      getContext().getCanonicalTagType(FD->getParent()), Out, false);
+  Out << "." << FD->getName();
+  return OutName;
 }

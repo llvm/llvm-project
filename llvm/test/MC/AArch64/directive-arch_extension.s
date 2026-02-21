@@ -110,11 +110,9 @@ rcwswp x0, x1, [x2]
 // CHECK: rcwswp x0, x1, [x2]
 
 // This needs to come after `.arch_extension the` as it uses an instruction that
-// requires both the and d128
+// requires the extension.
 .arch_extension d128
-sysp #0, c2, c0, #0, x0, x1
 rcwcasp   x0, x1, x6, x7, [x4]
-// CHECK: sysp #0, c2, c0, #0, x0, x1
 // CHECK: rcwcasp   x0, x1, x6, x7, [x4]
 
 .arch_extension rasv2
@@ -197,3 +195,36 @@ fmmla v1.8h, v2.16b, v3.16b
 .arch_extension f8f32mm
 fmmla v1.4s, v2.16b, v3.16b
 // CHECK: fmmla v1.4s, v2.16b, v3.16b
+
+.arch_extension dit
+msr DIT, #1
+// CHECK: msr DIT, #1
+
+.arch_extension brbe
+brb iall
+// CHECK: brb iall
+
+.arch_extension pauth-lr
+autiasppc #0
+// CHECK: autiasppc #0
+
+.arch_extension wfxt
+wfit x0
+// CHECK: wfit x0
+
+.arch armv8-a
+.arch_extension ssve-fexpa
+fexpa z0.s, z31.s
+// CHECK: fexpa z0.s, z31.s
+
+.arch_extension jscvt
+fjcvtzs w0, d0
+// CHECK: fjcvtzs w0, d0
+
+.arch_extension fcma
+fcmla v0.4s, v1.4s, v2.4s, #0
+// CHECK: fcmla v0.4s, v1.4s, v2.4s, #0
+
+.arch_extension bti
+bti c
+// CHECK: bti c

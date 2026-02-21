@@ -400,7 +400,8 @@ private:
   FragmentsSetTy ParentFragments;
 
   /// Indicate if the function body was folded into another function.
-  /// Used by ICF optimization.
+  /// Used by ICF optimization. Always points to the root parent function
+  /// (i.e., a function that is not itself folded).
   BinaryFunction *FoldedIntoFunction{nullptr};
 
   /// All fragments for a parent function.
@@ -735,11 +736,12 @@ private:
     Symbols.push_back(BC.Ctx->getOrCreateSymbol(Name));
   }
 
-  /// This constructor is used to create an injected function
+  /// This constructor is used to create an injected function, i.e. a function
+  /// that didn't originate in the input file.
   BinaryFunction(const std::string &Name, BinaryContext &BC, bool IsSimple)
       : Address(0), Size(0), BC(BC), IsSimple(IsSimple),
-        CodeSectionName(buildCodeSectionName(Name, BC)),
-        ColdCodeSectionName(buildColdCodeSectionName(Name, BC)),
+        CodeSectionName(BC.getInjectedCodeSectionName()),
+        ColdCodeSectionName(BC.getInjectedColdCodeSectionName()),
         FunctionNumber(++Count) {
     Symbols.push_back(BC.Ctx->getOrCreateSymbol(Name));
     IsInjected = true;
@@ -769,6 +771,9 @@ private:
   /// Clear state of the function that could not be disassembled or if its
   /// disassembled state was later invalidated.
   void clearDisasmState();
+
+  /// Reset the function state into Empty state, i.e. pre-disassembly form.
+  void resetState();
 
   /// Release memory allocated for CFG and instructions.
   /// We still keep basic blocks for address translation/mapping purposes.
@@ -2581,6 +2586,10 @@ public:
 
   /// Return true if the function is an AArch64 linker inserted veneer
   bool isAArch64Veneer() const;
+
+  /// Return true if the function signature matches veneer or it was established
+  /// to be a veneer.
+  bool isPossibleVeneer() const;
 
   virtual ~BinaryFunction();
 };

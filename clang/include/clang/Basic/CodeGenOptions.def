@@ -120,6 +120,8 @@ CODEGENOPT(StackSizeSection  , 1, 0, Benign) ///< Set when -fstack-size-section 
 ///< Set when -femit-compact-unwind-non-canonical is enabled.
 CODEGENOPT(EmitCompactUnwindNonCanonical, 1, 0, Benign)
 
+CODEGENOPT(EmitSFrameUnwind, 1, 0, Benign) ///< Set when -sframe is enabled.
+
 ///< Set when -fxray-always-emit-customevents is enabled.
 CODEGENOPT(XRayAlwaysEmitCustomEvents , 1, 0, Benign)
 
@@ -189,12 +191,15 @@ CODEGENOPT(EnableSegmentedStacks , 1, 0, Benign) ///< Set when -fsplit-stack is 
 CODEGENOPT(StackClashProtector, 1, 0, Benign) ///< Set when -fstack-clash-protection is enabled.
 CODEGENOPT(NoImplicitFloat   , 1, 0, Benign) ///< Set when -mno-implicit-float is enabled.
 CODEGENOPT(NullPointerIsValid , 1, 0, Benign) ///< Assume Null pointer deference is defined.
+CODEGENOPT(StrictLifetimes , 1, 0, Benign) ///< Assume an object is dead
+                                           ///< after its destructor returns.
 CODEGENOPT(OpenCLCorrectlyRoundedDivSqrt, 1, 0, Benign) ///< -cl-fp32-correctly-rounded-divide-sqrt
 CODEGENOPT(HIPCorrectlyRoundedDivSqrt, 1, 1, Benign) ///< -fno-hip-fp32-correctly-rounded-divide-sqrt
 CODEGENOPT(DisableBlockSignatureString, 1, 0, Benign) ///< Set when -fdisable-block-signature-string is enabled.
 CODEGENOPT(HIPSaveKernelArgName, 1, 0, Benign) ///< Set when -fhip-kernel-arg-name is enabled.
 CODEGENOPT(UniqueInternalLinkageNames, 1, 0, Benign) ///< Internal Linkage symbols get unique names.
 CODEGENOPT(SplitMachineFunctions, 1, 0, Benign) ///< Split machine functions using profile information.
+CODEGENOPT(PartitionStaticDataSections, 1, 0, Benign) /// < Partition static data sections using profile information.
 CODEGENOPT(PPCUseFullRegisterNames, 1, 0, Benign) ///< Print full register names in assembly
 CODEGENOPT(X86RelaxRelocations, 1, 1, Benign) ///< -Wa,-mrelax-relocations={yes,no}
 CODEGENOPT(X86Sse2Avx        , 1, 0, Benign)   ///< -Wa,-msse2avx
@@ -210,6 +215,8 @@ ENUM_CODEGENOPT(ObjCDispatchMethod, ObjCDispatchMethodKind, 2, Legacy, Benign)
 /// Replace certain message sends with calls to ObjC runtime entrypoints
 CODEGENOPT(ObjCConvertMessagesToRuntimeCalls , 1, 1, Benign)
 CODEGENOPT(ObjCAvoidHeapifyLocalBlocks, 1, 0, Benign)
+/// Generate direct method precondition thunks to expose symbols and optimize nil checks.
+CODEGENOPT(ObjCDirectPreconditionThunk, 1, 0, Benign)
 
 
 // The optimization options affect frontend options, which in turn do affect the AST.
@@ -272,6 +279,8 @@ CODEGENOPT(SanitizeMinimalRuntime, 1, 0, Benign) ///< Use "_minimal" sanitizer r
                                                  ///< diagnostics.
 CODEGENOPT(SanitizeHandlerPreserveAllRegs, 1, 0, Benign) ///< Use "_preserve" sanitizer runtime for
                                                  ///< diagnostics.
+CODEGENOPT(SanitizeTrapLoop, 1, 0, Benign) ///< In trapping mode, use an infinite loop to halt the
+                                           ///< program in case of check failure.
 CODEGENOPT(SanitizeCfiICallGeneralizePointers, 1, 0, Benign) ///< Generalize pointer types in
                                                              ///< CFI icall function signatures
 CODEGENOPT(SanitizeCfiICallNormalizeIntegers, 1, 0, Benign) ///< Normalize integer types in
@@ -461,6 +470,10 @@ CODEGENOPT(AAPCSBitfieldWidth, 1, 1, Benign)
 /// propagate signaling NaN inputs per IEEE 754-2008 (AMDGPU Only)
 CODEGENOPT(EmitIEEENaNCompliantInsts, 1, 1, Benign)
 
+/// Enable expanded waitcnt for profiling (AMDGPU Only)
+/// Expands s_waitcnt instructions to help PC-sampling profilers identify stalls.
+CODEGENOPT(AMDGPUExpandWaitcntProfiling, 1, 0, Benign)
+
 // Whether to emit Swift Async function extended frame information: auto,
 // never, always.
 ENUM_CODEGENOPT(SwiftAsyncFramePointer, SwiftAsyncFramePointerKind, 2,
@@ -485,13 +498,19 @@ CODEGENOPT(ImportCallOptimization, 1, 0, Benign)
 /// (BlocksRuntime) on Windows.
 CODEGENOPT(StaticClosure, 1, 0, Benign)
 
-/// Assume that UAVs/SRVs may alias
+/// Assume that UAVs/SRVs may alias if enabled
 CODEGENOPT(ResMayAlias, 1, 0, Benign)
+
+/// Assume that all resources are bound if enabled
+CODEGENOPT(AllResourcesBound, 1, 0, Benign)
 
 /// Controls how unwind v2 (epilog) information should be generated for x64
 /// Windows.
 ENUM_CODEGENOPT(WinX64EHUnwindV2, WinX64EHUnwindV2Mode,
                 2, WinX64EHUnwindV2Mode::Disabled, Benign)
+
+/// Adds attributes that prevent outlining (`-mno-outline`)
+CODEGENOPT(DisableOutlining, 1, 0, Benign)
 
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"

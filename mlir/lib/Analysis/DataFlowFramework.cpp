@@ -20,7 +20,7 @@
 
 #define DEBUG_TYPE "dataflow"
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-#define DATAFLOW_DEBUG(X) LLVM_DEBUG(X)
+#define DATAFLOW_DEBUG(X) X
 #else
 #define DATAFLOW_DEBUG(X)
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -67,8 +67,12 @@ void ProgramPoint::print(raw_ostream &os) const {
        << OpWithFlags(getPrevOp(), OpPrintingFlags().skipRegions());
     return;
   }
-  os << "<before operation>:"
-     << OpWithFlags(getNextOp(), OpPrintingFlags().skipRegions());
+  if (!isBlockEnd()) {
+    os << "<before operation>:"
+       << OpWithFlags(getNextOp(), OpPrintingFlags().skipRegions());
+    return;
+  }
+  os << "<beginning of empty block>";
 }
 
 //===----------------------------------------------------------------------===//
@@ -108,10 +112,10 @@ Location LatticeAnchor::getLoc() const {
 LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
   // Enable enqueue to the worklist.
   isRunning = true;
-  auto guard = llvm::make_scope_exit([&]() { isRunning = false; });
+  llvm::scope_exit guard([&]() { isRunning = false; });
 
   bool isInterprocedural = config.isInterprocedural();
-  auto restoreInterprocedural = llvm::make_scope_exit(
+  llvm::scope_exit restoreInterprocedural(
       [&]() { config.setInterprocedural(isInterprocedural); });
   if (isInterprocedural && !top->hasTrait<OpTrait::SymbolTable>())
     config.setInterprocedural(false);

@@ -207,6 +207,10 @@ TargetStats::ToJSON(Target &target,
     if (process_sp->GetDynamicLoader())
       dyld_plugin_name = process_sp->GetDynamicLoader()->GetPluginName();
     target_metrics_json.try_emplace("dyldPluginName", dyld_plugin_name);
+
+    if (process_sp->GetCoreFile())
+      target_metrics_json.try_emplace("coreFile",
+                                      process_sp->GetCoreFile().GetFilename());
   }
   target_metrics_json.try_emplace("sourceMapDeduceCount",
                                   m_source_map_deduce_count);

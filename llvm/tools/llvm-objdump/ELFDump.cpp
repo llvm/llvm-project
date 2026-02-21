@@ -164,7 +164,6 @@ static Error getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
           : "+") << format("0x%" PRIx64,
                           (Addend < 0 ? -(uint64_t)Addend : (uint64_t)Addend));
   }
-  Fmt.flush();
   Result.append(FmtBuf.begin(), FmtBuf.end());
   return Error::success();
 }

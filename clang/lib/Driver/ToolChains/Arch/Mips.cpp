@@ -388,6 +388,8 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                    "virt");
   AddTargetFeature(Args, Features, options::OPT_mginv, options::OPT_mno_ginv,
                    "ginv");
+  AddTargetFeature(Args, Features, options::OPT_mfix_r5900,
+                   options::OPT_mno_fix_r5900, "fix-r5900");
 
   if (Arg *A = Args.getLastArg(options::OPT_mindirect_jump_EQ)) {
     StringRef Val = StringRef(A->getValue());

@@ -40,19 +40,50 @@ define i32 @test_bitcast(i32 %i) {
 
 declare void @use(i32)
 
+define void @test_branch(<4 x float> %in, i32 %a, i1 %cond) {
+; CHECK-LABEL: define void @test_branch(
+; CHECK-SAME: <4 x float> [[IN:%.*]], i32 [[A:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[I:%.*]] = add i32 [[A]], -2
+; CHECK-NEXT:    br i1 [[COND]], label %[[TRUE:.*]], label %[[FALSE:.*]]
+; CHECK:       [[TRUE]]:
+; CHECK-NEXT:    call void @use(i32 [[I]])
+; CHECK-NEXT:    br label %[[DONE:.*]]
+; CHECK:       [[FALSE]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[IN]], i32 [[I]]
+; CHECK-NEXT:    [[ELEM:%.*]] = fptosi float [[TMP0]] to i32
+; CHECK-NEXT:    call void @use(i32 [[ELEM]])
+; CHECK-NEXT:    br label %[[DONE]]
+; CHECK:       [[DONE]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %vi = fptosi <4 x float> %in to <4 x i32>
+  %i = add i32 %a, -2
+  br i1 %cond, label %true, label %false
+true:
+  call void @use(i32 %i)
+  br label %done
+false:
+  %elem = extractelement <4 x i32> %vi, i32 %i
+  call void @use(i32 %elem)
+  br label %done
+done:
+  ret void
+}
+
 define void @test_loop(<4 x float> %in) {
 ; CHECK-LABEL: define void @test_loop(
 ; CHECK-SAME: <4 x float> [[IN:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[R:%.*]] = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> [[IN]], i32 9)
+; CHECK-NEXT:    [[VI:%.*]] = fptosi <4 x float> [[IN]] to <4 x i32>
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[NEXT:%.*]], %[[LATCH:.*]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ult i32 [[I]], 4
 ; CHECK-NEXT:    br i1 [[COND]], label %[[BODY:.*]], label %[[DONE:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[R]], i32 [[I]]
-; CHECK-NEXT:    [[ELEM:%.*]] = fptosi float [[TMP0]] to i32
+; CHECK-NEXT:    [[ELEM:%.*]] = extractelement <4 x i32> [[VI]], i32 [[I]]
 ; CHECK-NEXT:    call void @use(i32 [[ELEM]])
 ; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
@@ -62,8 +93,7 @@ define void @test_loop(<4 x float> %in) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %r = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %in, i32 9)
-  %vi = fptosi <4 x float> %r to <4 x i32>
+  %vi = fptosi <4 x float> %in to <4 x i32>
   br label %loop
 loop:
   %i = phi i32 [ 0, %entry ], [ %next, %latch ]

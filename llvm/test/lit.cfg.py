@@ -31,8 +31,8 @@ if lit_shell_env:
 # testFormat: The test format to use to interpret tests.
 extra_substitutions = extra_substitutions = (
     [
-        (r"FileCheck .*", "cat > /dev/null"),
         (r"not FileCheck .*", "cat > /dev/null"),
+        (r"FileCheck .*", "cat > /dev/null"),
     ]
     if config.enable_profcheck
     else []
@@ -69,6 +69,29 @@ if config.enable_profcheck:
     config.excludes.append("Instrumentation")
     # profiling doesn't work quite well on GPU, excluding
     config.excludes.append("AMDGPU")
+    # TODO targets where profiling may make sense but will be addressed later
+    config.excludes.extend(
+        ["Hexagon", "NVPTX", "PowerPC", "RISCV", "SPARC", "WebAssembly"]
+    )
+    # these passes aren't hooked up to the pass pipeline:
+    config.excludes.extend(["IRCE", "LoopBoundSplit", "LoopInterchange", "Scalarizer"])
+    # Not on by default in any standard CPU pipeline.
+    config.excludes.extend(
+        [
+            "Attributor",
+            "IROutliner",
+            "BlockExtractor",
+            "CodeExtractor",
+            "HotColdSplit",
+            "LowerGlobalDestructors",
+            "LowerSwitch",
+            "StructurizeCFG",
+            "UnifyLoopExits",
+        ]
+    )
+    # Not aimed at being used for peak-optimized binaries. These will be
+    # addressed later. PhaseOrdering has a couple of merge function tests.
+    config.excludes.extend(["GCOVProfiling", "MergeFunc", "PhaseOrdering"])
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -229,6 +252,7 @@ tools.extend(
         "dsymutil",
         "lli",
         "lli-child-target",
+        "llubi",
         "llvm-ar",
         "llvm-as",
         "llvm-addr2line",
@@ -511,7 +535,7 @@ elif uname_r.endswith("microsoft-standard-WSL2"):
 if config.has_plugins:
     config.available_features.add("plugins")
 
-if config.build_examples:
+if config.include_examples:
     config.available_features.add("examples")
 
 if config.linked_bye_extension:

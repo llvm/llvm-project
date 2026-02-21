@@ -241,7 +241,7 @@ public:
     if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
       return true;
 
-    if (Callee && TFA.isTrivial(Callee) && !Callee->isVirtualAsWritten())
+    if (Callee && TFA.isTrivial(Callee))
       return true;
 
     if (isTrivialBuiltinFunction(Callee))

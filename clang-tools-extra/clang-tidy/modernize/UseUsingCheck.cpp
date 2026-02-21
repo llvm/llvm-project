@@ -26,11 +26,11 @@ AST_MATCHER(clang::LinkageSpecDecl, isExternCLinkage) {
 
 namespace clang::tidy::modernize {
 
-static constexpr llvm::StringLiteral ExternCDeclName = "extern-c-decl";
-static constexpr llvm::StringLiteral ParentDeclName = "parent-decl";
-static constexpr llvm::StringLiteral TagDeclName = "tag-decl";
-static constexpr llvm::StringLiteral TypedefName = "typedef";
-static constexpr llvm::StringLiteral DeclStmtName = "decl-stmt";
+static constexpr StringRef ExternCDeclName = "extern-c-decl";
+static constexpr StringRef ParentDeclName = "parent-decl";
+static constexpr StringRef TagDeclName = "tag-decl";
+static constexpr StringRef TypedefName = "typedef";
+static constexpr StringRef DeclStmtName = "decl-stmt";
 
 UseUsingCheck::UseUsingCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -119,7 +119,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   if (StartLoc.isMacroID() && IgnoreMacros)
     return;
 
-  static constexpr llvm::StringLiteral UseUsingWarning =
+  static constexpr StringRef UseUsingWarning =
       "use 'using' instead of 'typedef'";
 
   // Warn at StartLoc but do not fix if there is macro or array.
@@ -130,17 +130,36 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
 
   const TypeLoc TL = MatchedDecl->getTypeSourceInfo()->getTypeLoc();
 
-  auto [Type, QualifierStr] = [MatchedDecl, this, &TL, &SM,
+  bool FunctionPointerCase = false;
+  auto [Type, QualifierStr] = [MatchedDecl, this, &TL, &FunctionPointerCase,
+                               &SM,
                                &LO]() -> std::pair<std::string, std::string> {
     SourceRange TypeRange = TL.getSourceRange();
 
     // Function pointer case, get the left and right side of the identifier
     // without the identifier.
     if (TypeRange.fullyContains(MatchedDecl->getLocation())) {
-      const auto RangeLeftOfIdentifier = CharSourceRange::getCharRange(
-          TypeRange.getBegin(), MatchedDecl->getLocation());
+      FunctionPointerCase = true;
+      SourceLocation StartLoc = MatchedDecl->getLocation();
+      SourceLocation EndLoc = MatchedDecl->getLocation();
+
+      while (true) {
+        const std::optional<Token> Prev =
+            utils::lexer::getPreviousToken(StartLoc, SM, LO);
+        const std::optional<Token> Next =
+            utils::lexer::findNextTokenSkippingComments(EndLoc, SM, LO);
+        if (!Prev || Prev->isNot(tok::l_paren) || !Next ||
+            Next->isNot(tok::r_paren))
+          break;
+
+        StartLoc = Prev->getLocation();
+        EndLoc = Next->getLocation();
+      }
+
+      const auto RangeLeftOfIdentifier =
+          CharSourceRange::getCharRange(TypeRange.getBegin(), StartLoc);
       const auto RangeRightOfIdentifier = CharSourceRange::getCharRange(
-          Lexer::getLocForEndOfToken(MatchedDecl->getLocation(), 0, SM, LO),
+          Lexer::getLocForEndOfToken(EndLoc, 0, SM, LO),
           Lexer::getLocForEndOfToken(TypeRange.getEnd(), 0, SM, LO));
       const std::string VerbatimType =
           (Lexer::getSourceText(RangeLeftOfIdentifier, SM, LO) +
@@ -205,8 +224,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (!ReplaceRange.getEnd().isMacroID()) {
-    const SourceLocation::IntTy Offset =
-        MatchedDecl->getFunctionType() ? 0 : Name.size();
+    const SourceLocation::IntTy Offset = FunctionPointerCase ? 0 : Name.size();
     LastReplacementEnd = ReplaceRange.getEnd().getLocWithOffset(Offset);
   }
 

@@ -1594,6 +1594,9 @@ void GVNPass::eliminatePartiallyRedundantLoad(
       NewLoad->setMetadata(LLVMContext::MD_invariant_group, InvGroupMD);
     if (auto *RangeMD = Load->getMetadata(LLVMContext::MD_range))
       NewLoad->setMetadata(LLVMContext::MD_range, RangeMD);
+    if (auto *NoFPClassMD = Load->getMetadata(LLVMContext::MD_nofpclass))
+      NewLoad->setMetadata(LLVMContext::MD_nofpclass, NoFPClassMD);
+
     if (auto *AccessMD = Load->getMetadata(LLVMContext::MD_access_group))
       if (LI->getLoopFor(Load->getParent()) == LI->getLoopFor(UnavailableBlock))
         NewLoad->setMetadata(LLVMContext::MD_access_group, AccessMD);
@@ -3088,7 +3091,6 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
 
   LLVM_DEBUG(dbgs() << "GVN PRE removed: " << *CurInst << '\n');
   removeInstruction(CurInst);
-  ++NumGVNInstr;
 
   return true;
 }
@@ -3192,6 +3194,7 @@ void GVNPass::removeInstruction(Instruction *I) {
 #endif
   ICF->removeInstruction(I);
   I->eraseFromParent();
+  ++NumGVNInstr;
 }
 
 /// Verify that the specified instruction does not occur in our

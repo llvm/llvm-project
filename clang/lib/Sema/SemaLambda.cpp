@@ -235,10 +235,10 @@ getGenericLambdaTemplateParameterList(LambdaScopeInfo *LSI, Sema &SemaRef) {
   if (!LSI->GLTemplateParameterList && !LSI->TemplateParams.empty()) {
     LSI->GLTemplateParameterList = TemplateParameterList::Create(
         SemaRef.Context,
-        /*Template kw loc*/ SourceLocation(),
+        /*Begin loc of the lambda expression*/ LSI->IntroducerRange.getBegin(),
         /*L angle loc*/ LSI->ExplicitTemplateParamsRange.getBegin(),
         LSI->TemplateParams,
-        /*R angle loc*/LSI->ExplicitTemplateParamsRange.getEnd(),
+        /*R angle loc*/ LSI->ExplicitTemplateParamsRange.getEnd(),
         LSI->RequiresClause.get());
   }
   return LSI->GLTemplateParameterList;
@@ -298,21 +298,23 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   // definition, as well as the initializers of data members, receive special
   // treatment. Identify them.
   Kind = [&]() {
+    // See discussion in https://github.com/itanium-cxx-abi/cxx-abi/issues/186
+    //
+    // zygoloid:
+    //    Yeah, I think the only cases left where lambdas don't need a
+    //    mangling are when they have (effectively) internal linkage or appear
+    //    in a non-inline function in a non-module translation unit.
+    if (auto *ND = dyn_cast<NamedDecl>(ManglingContextDecl ? ManglingContextDecl
+                                                           : cast<Decl>(DC));
+        ND && (ND->isInNamedModule() || ND->isFromGlobalModule()) &&
+        ND->isExternallyVisible()) {
+      if (!ManglingContextDecl)
+        ManglingContextDecl = const_cast<Decl *>(cast<Decl>(DC));
+      return NonInlineInModulePurview;
+    }
+
     if (!ManglingContextDecl)
       return Normal;
-
-    if (auto *ND = dyn_cast<NamedDecl>(ManglingContextDecl)) {
-      // See discussion in https://github.com/itanium-cxx-abi/cxx-abi/issues/186
-      //
-      // zygoloid:
-      //    Yeah, I think the only cases left where lambdas don't need a
-      //    mangling are when they have (effectively) internal linkage or appear
-      //    in a non-inline function in a non-module translation unit.
-      Module *M = ManglingContextDecl->getOwningModule();
-      if (M && M->getTopLevelModule()->isNamedModuleUnit() &&
-          ND->isExternallyVisible())
-        return NonInlineInModulePurview;
-    }
 
     if (ParmVarDecl *Param = dyn_cast<ParmVarDecl>(ManglingContextDecl)) {
       if (const DeclContext *LexicalDC
@@ -1101,7 +1103,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       CXXRecordDecl::LDK_Unknown;
   if (CurScope->getTemplateParamParent() != nullptr) {
     LambdaDependencyKind = CXXRecordDecl::LDK_AlwaysDependent;
-  } else if (Scope *P = CurScope->getParent()) {
+  } else if (Scope *ParentScope = CurScope->getParent()) {
     // Given a lambda defined inside a requires expression,
     //
     // struct S {
@@ -1112,10 +1114,14 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
     // The parameter var is not injected into the function Decl at the point of
     // parsing lambda. In such scenarios, perceiving it as dependent could
     // result in the constraint being evaluated, which matches what GCC does.
-    while (P->getEntity() && P->getEntity()->isRequiresExprBody())
-      P = P->getParent();
-    if (P->isFunctionDeclarationScope() &&
-        llvm::any_of(P->decls(), [](Decl *D) {
+    Scope *LookupScope = ParentScope;
+    while (LookupScope->getEntity() &&
+           LookupScope->getEntity()->isRequiresExprBody())
+      LookupScope = LookupScope->getParent();
+
+    if (LookupScope != ParentScope &&
+        LookupScope->isFunctionDeclarationScope() &&
+        llvm::any_of(LookupScope->decls(), [](Decl *D) {
           return isa<ParmVarDecl>(D) &&
                  cast<ParmVarDecl>(D)->getType()->isTemplateTypeParmType();
         }))
@@ -2160,7 +2166,12 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
   // set as CurContext seems more faithful to the source.
   TemplateOrNonTemplateCallOperatorDecl->setLexicalDeclContext(Class);
 
-  PopExpressionEvaluationContext();
+  {
+    // TreeTransform of immediate functions may call getCurLambda, which
+    // requires both the paired LSI and the lambda DeclContext.
+    ContextRAII SavedContext(*this, CallOperator, /*NewThisContext=*/false);
+    PopExpressionEvaluationContext();
+  }
 
   sema::AnalysisBasedWarnings::Policy WP =
       AnalysisWarnings.getPolicyInEffectAt(EndLoc);

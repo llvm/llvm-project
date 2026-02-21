@@ -9,6 +9,8 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
@@ -91,6 +93,10 @@ std::string mlir::acc::getVariableName(mlir::Value v) {
 
   // Walk through view operations until a name is found or can't go further
   while (Operation *definingOp = current.getDefiningOp()) {
+    // For integer constants, return their value as a string.
+    if (std::optional<int64_t> constVal = getConstantIntValue(current))
+      return std::to_string(*constVal);
+
     // Check for `acc.var_name` attribute
     if (auto varNameAttr =
             definingOp->getAttrOfType<VarNameAttr>(getVarNameAttrName()))
@@ -153,7 +159,7 @@ std::string mlir::acc::getRecipeName(mlir::acc::RecipeKind kind,
 
 mlir::Value mlir::acc::getBaseEntity(mlir::Value val) {
   if (auto partialEntityAccessOp =
-          dyn_cast<PartialEntityAccessOpInterface>(val.getDefiningOp())) {
+          val.getDefiningOp<PartialEntityAccessOpInterface>()) {
     if (!partialEntityAccessOp.isCompleteView())
       return partialEntityAccessOp.getBaseEntity();
   }
@@ -182,6 +188,13 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
                 mlir::acc::FirstprivateRecipeOp>(definingOp))
     return true;
 
+  // Check if the defining op is a global variable that is device data.
+  // Device data is already resident on the device and does not need mapping.
+  if (auto globalVar =
+          mlir::dyn_cast<mlir::acc::GlobalVariableOpInterface>(definingOp))
+    if (globalVar.isDeviceData())
+      return true;
+
   // Check if the defining op is a function
   if (auto func =
           mlir::dyn_cast_if_present<mlir::FunctionOpInterface>(definingOp)) {
@@ -206,6 +219,61 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   // A declare attribute is needed for symbol references.
   bool hasDeclare = definingOp->hasAttr(mlir::acc::getDeclareAttrName());
   return hasDeclare;
+}
+
+bool mlir::acc::isDeviceValue(mlir::Value val) {
+  // Check if the value is device data via type interfaces.
+  // Device data is already resident on the device and does not need mapping.
+  if (auto mappableTy = dyn_cast<mlir::acc::MappableType>(val.getType()))
+    if (mappableTy.isDeviceData(val))
+      return true;
+
+  if (auto pointerLikeTy = dyn_cast<mlir::acc::PointerLikeType>(val.getType()))
+    if (pointerLikeTy.isDeviceData(val))
+      return true;
+
+  // Handle operations that access a partial entity - check if the base entity
+  // is device data.
+  if (auto *defOp = val.getDefiningOp()) {
+    if (auto partialAccess =
+            dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
+      if (mlir::Value base = partialAccess.getBaseEntity())
+        return isDeviceValue(base);
+    }
+
+    // Handle address_of - check if the referenced global is device data.
+    if (auto addrOfIface =
+            dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
+      auto symbol = addrOfIface.getSymbol();
+      if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
+              mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
+        return global.isDeviceData();
+    }
+  }
+
+  return false;
+}
+
+bool mlir::acc::isValidValueUse(mlir::Value val, mlir::Region &region) {
+  // Types that can be passed by value are legal.
+  Type type = val.getType();
+  if (type.isIntOrIndexOrFloat() || isa<mlir::ComplexType>(type) ||
+      llvm::isa<mlir::VectorType>(type))
+    return true;
+
+  // If this is produced by an ACC data entry operation, it is valid.
+  if (isa_and_nonnull<ACC_DATA_ENTRY_OPS>(val.getDefiningOp()))
+    return true;
+
+  // If the value is only used by private clauses, it is not a live-in.
+  if (isOnlyUsedByPrivateClauses(val, region))
+    return true;
+
+  // If this is device data, it is valid.
+  if (isDeviceValue(val))
+    return true;
+
+  return false;
 }
 
 llvm::SmallVector<mlir::Value>
@@ -265,4 +333,30 @@ mlir::acc::getDominatingDataClauses(mlir::Operation *computeConstructOp,
   });
 
   return dominatingDataClauses.takeVector();
+}
+
+mlir::remark::detail::InFlightRemark
+mlir::acc::emitRemark(mlir::Operation *op,
+                      const std::function<std::string()> &messageFn,
+                      llvm::StringRef category) {
+  using namespace mlir::remark;
+  mlir::Location loc = op->getLoc();
+  auto *engine = loc->getContext()->getRemarkEngine();
+  if (!engine)
+    return remark::detail::InFlightRemark{};
+
+  llvm::StringRef funcName;
+  if (auto func = dyn_cast<mlir::FunctionOpInterface>(op))
+    funcName = func.getName();
+  else if (auto funcOp = op->getParentOfType<mlir::FunctionOpInterface>())
+    funcName = funcOp.getName();
+
+  auto opts = RemarkOpts::name("openacc").category(category);
+  if (!funcName.empty())
+    opts = opts.function(funcName);
+
+  auto remark = engine->emitOptimizationRemark(loc, opts);
+  if (remark)
+    remark << messageFn();
+  return remark;
 }

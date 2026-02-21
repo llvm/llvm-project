@@ -22,6 +22,10 @@
 #include <tuple>
 #include <vector>
 
+namespace lldb_private {
+class StackFrame;
+}
+
 namespace lldb_private::dil {
 
 enum class ErrorCode : unsigned char {
@@ -30,6 +34,9 @@ enum class ErrorCode : unsigned char {
   kUndeclaredIdentifier,
   kUnknown,
 };
+
+llvm::Expected<lldb::TypeSystemSP>
+GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx);
 
 // The following is modeled on class OptionParseError.
 class DILDiagnosticError
@@ -95,7 +102,6 @@ private:
 
   std::string ParseIdExpression();
   std::string ParseUnqualifiedId();
-  std::optional<int64_t> ParseIntegerConstant();
   ASTNodeUP ParseNumericLiteral();
   ASTNodeUP ParseIntegerLiteral();
   ASTNodeUP ParseFloatingPointLiteral();
@@ -104,6 +110,9 @@ private:
   ASTNodeUP ParseCastExpression();
   std::optional<CompilerType> ParseBuiltinType();
   std::optional<CompilerType> ParseTypeId();
+  void ParseTypeSpecifierSeq(std::string &type_name);
+  std::optional<std::string> ParseTypeSpecifier();
+  std::optional<std::string> ParseTypeName();
   CompilerType ResolveTypeDeclarators(CompilerType type,
                                       const std::vector<Token> &ptr_operators);
 

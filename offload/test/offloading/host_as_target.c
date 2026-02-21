@@ -6,6 +6,7 @@
 // - Works whether it's specified directly or as the default device.
 
 // RUN: %libomptarget-compile-run-and-check-generic
+// XFAIL: intelgpu
 
 #include <omp.h>
 #include <stdio.h>

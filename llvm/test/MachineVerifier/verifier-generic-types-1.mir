@@ -1,4 +1,4 @@
-# RUN: not --crash llc -o - %s -mtriple=x86_64-- -verify-machineinstrs -run-pass=none 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=x86_64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: x86-registered-target
 
 # CHECK-NOT: Type mismatch
@@ -12,9 +12,9 @@
 # CHECK-NOT: Type mismatch
 
 ---
-name:              first_type_of_a_type_index_missing_and_no_mismatches
+name: first_type_of_a_type_index_missing_and_no_mismatches
 tracksRegLiveness: true
-body:              |
+body: |
   bb.0:
     liveins: $rdi, $rsi
 

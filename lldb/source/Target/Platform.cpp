@@ -79,7 +79,7 @@ llvm::StringRef PlatformProperties::GetSettingName() {
 
 PlatformProperties::PlatformProperties() {
   m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-  m_collection_sp->Initialize(g_platform_properties);
+  m_collection_sp->Initialize(g_platform_properties_def);
 
   auto module_cache_dir = GetModuleCacheDirectory();
   if (module_cache_dir)
@@ -169,7 +169,7 @@ Status Platform::GetSharedModule(
     // by getting target from module_spec and calling
     // target->GetExecutableSearchPaths()
     return ModuleList::GetSharedModule(module_spec, module_sp, old_modules,
-                                       did_create_ptr, false);
+                                       did_create_ptr);
 
   // Module resolver lambda.
   auto resolver = [&](const ModuleSpec &spec) {
@@ -182,14 +182,14 @@ Status Platform::GetSharedModule(
       resolved_spec.GetFileSpec().PrependPathComponent(m_sdk_sysroot);
       // Try to get shared module with resolved spec.
       error = ModuleList::GetSharedModule(resolved_spec, module_sp, old_modules,
-                                          did_create_ptr, false);
+                                          did_create_ptr);
     }
     // If we don't have sysroot or it didn't work then
     // try original module spec.
     if (!error.Success()) {
       resolved_spec = spec;
       error = ModuleList::GetSharedModule(resolved_spec, module_sp, old_modules,
-                                          did_create_ptr, false);
+                                          did_create_ptr);
     }
     if (error.Success() && module_sp)
       module_sp->SetPlatformFileSpec(resolved_spec.GetFileSpec());
@@ -1054,10 +1054,12 @@ lldb::ProcessSP Platform::DebugProcess(ProcessLaunchInfo &launch_info,
         // been used where the secondary side was given as the file to open for
         // stdin/out/err after we have already opened the primary so we can
         // read/write stdin/out/err.
+#ifndef _WIN32
         int pty_fd = launch_info.GetPTY().ReleasePrimaryFileDescriptor();
         if (pty_fd != PseudoTerminal::invalid_fd) {
           process_sp->SetSTDIOFileDescriptor(pty_fd);
         }
+#endif
       } else {
         LLDB_LOGF(log, "Platform::%s Attach() failed: %s", __FUNCTION__,
                   error.AsCString());
@@ -1671,7 +1673,7 @@ void Platform::CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
   cached_module_spec.SetObjectOffset(0);
 
   error = ModuleList::GetSharedModule(cached_module_spec, module_sp, nullptr,
-                                      did_create_ptr, false, false);
+                                      did_create_ptr, false);
   if (error.Success() && module_sp) {
     // Succeeded to load the module file.
     LLDB_LOGF(log, "%s: locate module callback succeeded: module=%s symbol=%s",

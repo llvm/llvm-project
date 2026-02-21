@@ -239,6 +239,14 @@ public:
     return *this;
   }
 
+  /// Reset all properties and re-establish baseline invariants.
+  MachineFunctionProperties &resetToInitial() {
+    reset();
+    setIsSSA();
+    setTracksLiveness();
+    return *this;
+  }
+
   MachineFunctionProperties &set(const MachineFunctionProperties &MFP) {
     Properties |= MFP.Properties;
     return *this;
@@ -818,6 +826,10 @@ public:
       Alignment = A;
   }
 
+  /// Returns the preferred alignment which comes from the function attributes
+  /// (optsize, minsize, prefalign) and TargetLowering.
+  Align getPreferredAlignment() const;
+
   /// exposesReturnsTwice - Returns true if the function calls setjmp or
   /// any other similar functions with attribute "returns twice" without
   /// having the attribute itself.
@@ -1264,6 +1276,8 @@ public:
   /// Notes the global and target flags for a call site.
   void addCalledGlobal(const MachineInstr *MI, CalledGlobalInfo Details) {
     assert(MI && "MI must not be null");
+    assert(MI->isCandidateForAdditionalCallInfo() &&
+           "Cannot store called global info for this instruction");
     assert(Details.Callee && "Global must not be null");
     CalledGlobalsInfo.insert({MI, Details});
   }

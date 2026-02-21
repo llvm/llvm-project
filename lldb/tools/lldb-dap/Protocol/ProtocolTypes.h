@@ -21,16 +21,17 @@
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_TYPES_H
 
 #include "Protocol/DAPTypes.h"
+#include "Protocol/ProtocolBase.h"
 #include "lldb/lldb-defines.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
 #include <optional>
-#include <string>
 
-#define LLDB_DAP_INVALID_VAR_REF INT64_MAX
 #define LLDB_DAP_INVALID_SRC_REF 0
 #define LLDB_DAP_INVALID_VALUE_LOC 0
+#define LLDB_DAP_INVALID_STACK_FRAME_ID UINT64_MAX
 
 namespace lldb_dap::protocol {
 
@@ -39,14 +40,14 @@ namespace lldb_dap::protocol {
 struct ExceptionBreakpointsFilter {
   /// The internal ID of the filter option. This value is passed to the
   /// `setExceptionBreakpoints` request.
-  std::string filter;
+  String filter;
 
   /// The name of the filter option. This is shown in the UI.
-  std::string label;
+  String label;
 
   /// A help text providing additional information about the exception filter.
   /// This string is typically shown as a hover and can be translated.
-  std::string description;
+  String description;
 
   /// Initial value of the filter option. If not specified a value false is
   /// assumed.
@@ -58,7 +59,7 @@ struct ExceptionBreakpointsFilter {
 
   /// A help text providing information about the condition. This string is
   /// shown as the placeholder text for a text box and can be translated.
-  std::string conditionDescription;
+  String conditionDescription;
 };
 bool fromJSON(const llvm::json::Value &, ExceptionBreakpointsFilter &,
               llvm::json::Path);
@@ -80,14 +81,14 @@ llvm::json::Value toJSON(const ColumnType &);
 /// customization.
 struct ColumnDescriptor {
   /// Name of the attribute rendered in this column.
-  std::string attributeName;
+  String attributeName;
 
   /// Header UI label of column.
-  std::string label;
+  String label;
 
   /// Format to use for the rendered values in this column. TBD how the format
   /// strings looks like.
-  std::optional<std::string> format;
+  std::optional<String> format;
 
   /// Datatype of values in this column. Defaults to `string` if not specified.
   /// Values: 'string', 'number', 'boolean', 'unixTimestampUTC'.
@@ -142,19 +143,19 @@ llvm::json::Value toJSON(const CompletionItemType &);
 struct CompletionItem {
   /// The label of this completion item. By default this is also the text that
   /// is inserted when selecting this completion.
-  std::string label;
+  String label;
 
   /// If text is returned and not an empty string, then it is inserted instead
   /// of the label.
-  std::string text;
+  String text;
 
   /// A string that should be used when comparing this item with other items. If
   /// not returned or an empty string, the `label` is used instead.
-  std::string sortText;
+  String sortText;
 
   /// A human-readable string with additional information about this item, like
   /// type or symbol information.
-  std::string detail;
+  String detail;
 
   /// The item's type. Typically the client uses this information to render the
   /// item in the UI with an icon.
@@ -166,24 +167,24 @@ struct CompletionItem {
   /// whether it is 0- or 1-based. If the start position is omitted the text
   /// is added at the location specified by the `column` attribute of the
   /// `completions` request.
-  int64_t start = 0;
+  uint64_t start = 0;
 
   /// Length determines how many characters are overwritten by the completion
   /// text and it is measured in UTF-16 code units. If missing the value 0 is
   /// assumed which results in the completion text being inserted.
-  int64_t length = 0;
+  uint64_t length = 0;
 
   /// Determines the start of the new selection after the text has been
   /// inserted (or replaced). `selectionStart` is measured in UTF-16 code
   /// units and must be in the range 0 and length of the completion text. If
   /// omitted the selection starts at the end of the completion text.
-  int64_t selectionStart = 0;
+  uint64_t selectionStart = 0;
 
   /// Determines the length of the new selection after the text has been
   /// inserted (or replaced) and it is measured in UTF-16 code units. The
   /// selection can not extend beyond the bounds of the completion text. If
   /// omitted the length is assumed to be 0.
-  int64_t selectionLength = 0;
+  uint64_t selectionLength = 0;
 };
 bool fromJSON(const llvm::json::Value &, CompletionItem &, llvm::json::Path);
 llvm::json::Value toJSON(const CompletionItem &);
@@ -210,14 +211,14 @@ llvm::json::Value toJSON(const BreakpointModeApplicability &);
 struct BreakpointMode {
   /// The internal ID of the mode. This value is passed to the `setBreakpoints`
   /// request.
-  std::string mode;
+  String mode;
 
   /// The name of the breakpoint mode. This is shown in the UI.
-  std::string label;
+  String label;
 
   /// A help text providing additional information about the breakpoint mode.
   /// This string is typically shown as a hover and can be translated.
-  std::optional<std::string> description;
+  std::optional<String> description;
 
   /// Describes one or more type of breakpoint this mode applies to.
   std::vector<BreakpointModeApplicability> appliesTo;
@@ -341,7 +342,7 @@ struct Capabilities {
 
   /// The set of characters that should trigger completion in a REPL. If not
   /// specified, the UI should assume the `.` character.
-  std::vector<std::string> completionTriggerCharacters;
+  std::vector<String> completionTriggerCharacters;
 
   /// The set of additional module information exposed by the debug adapter.
   std::vector<ColumnDescriptor> additionalModuleColumns;
@@ -361,7 +362,7 @@ struct Capabilities {
   /// @{
 
   /// The version of the adapter.
-  std::string lldbExtVersion;
+  String lldbExtVersion;
 
   /// @}
 };
@@ -373,16 +374,16 @@ llvm::json::Value toJSON(const Capabilities &);
 struct ExceptionFilterOptions {
   /// ID of an exception filter returned by the `exceptionBreakpointFilters`
   /// capability.
-  std::string filterId;
+  String filterId;
 
   /// An expression for conditional exceptions.
   /// The exception breaks into the debugger if the result of the condition is
   /// true.
-  std::string condition;
+  String condition;
 
   /// The mode of this exception breakpoint. If defined, this must be one of the
   /// `breakpointModes` the debug adapter advertised in its `Capabilities`.
-  std::string mode;
+  String mode;
 };
 bool fromJSON(const llvm::json::Value &, ExceptionFilterOptions &,
               llvm::json::Path);
@@ -401,12 +402,12 @@ struct Source {
   /// The short name of the source. Every source returned from the debug adapter
   /// has a name. When sending a source to the debug adapter this name is
   /// optional.
-  std::optional<std::string> name;
+  std::optional<String> name;
 
   /// The path of the source to be shown in the UI. It is only used to locate
   /// and load the content of the source if no `sourceReference` is specified
   /// (or its value is 0).
-  std::optional<std::string> path;
+  std::optional<String> path;
 
   /// If the value > 0 the contents of the source must be retrieved through the
   /// `source` request (even if a path is specified). Since a `sourceReference`
@@ -444,7 +445,7 @@ struct Scope {
   /// Name of the scope such as 'Arguments', 'Locals', or 'Registers'. This
   /// string is shown in the UI as is and can be translated.
   ////
-  std::string name;
+  String name;
 
   /// A hint for how to present this scope in the UI. If this attribute is
   /// missing, the scope is shown with a generic UI.
@@ -462,7 +463,7 @@ struct Scope {
   /// remains suspended. See 'Lifetime of Object References' in the Overview
   /// section for details.
   ////
-  uint64_t variablesReference = LLDB_DAP_INVALID_VAR_REF;
+  var_ref_t variablesReference{var_ref_t::k_invalid_var_ref};
 
   /// The number of named variables in this scope.
   /// The client can use this information to present the variables in a paged UI
@@ -529,7 +530,7 @@ struct StepInTarget {
   lldb::addr_t id = LLDB_INVALID_ADDRESS;
 
   /// The name of the step-in target (shown in the UI).
-  std::string label;
+  String label;
 
   /// The line of the step-in target.
   uint32_t line = LLDB_INVALID_LINE_NUMBER;
@@ -555,7 +556,7 @@ struct Thread {
   /// Unique identifier for the thread.
   lldb::tid_t id = LLDB_INVALID_THREAD_ID;
   /// The name of the thread.
-  std::string name;
+  String name;
 };
 bool fromJSON(const llvm::json::Value &, Thread &, llvm::json::Path);
 llvm::json::Value toJSON(const Thread &);
@@ -615,7 +616,7 @@ struct Breakpoint {
   /// A message about the state of the breakpoint.
   /// This is shown to the user and can be used to explain why a breakpoint
   /// could not be verified.
-  std::optional<std::string> message;
+  std::optional<String> message;
 
   /// The source where the breakpoint is located.
   std::optional<Source> source;
@@ -638,7 +639,7 @@ struct Breakpoint {
   std::optional<uint32_t> endColumn;
 
   /// A memory reference to where the breakpoint is set.
-  std::optional<std::string> instructionReference;
+  std::optional<String> instructionReference;
 
   /// The offset from the instruction reference.
   /// This can be negative.
@@ -666,7 +667,7 @@ struct SourceBreakpoint {
   /// The expression for conditional breakpoints.
   /// It is only honored by a debug adapter if the corresponding capability
   /// `supportsConditionalBreakpoints` is true.
-  std::optional<std::string> condition;
+  std::optional<String> condition;
 
   /// The expression that controls how many hits of the breakpoint are ignored.
   /// The debug adapter is expected to interpret the expression as needed.
@@ -675,7 +676,7 @@ struct SourceBreakpoint {
   /// If both this property and `condition` are specified, `hitCondition` should
   /// be evaluated only if the `condition` is met, and the debug adapter should
   /// stop only if both conditions are met.
-  std::optional<std::string> hitCondition;
+  std::optional<String> hitCondition;
 
   /// If this attribute exists and is non-empty, the debug adapter must not
   /// 'break' (stop)
@@ -684,11 +685,11 @@ struct SourceBreakpoint {
   /// capability `supportsLogPoints` is true.
   /// If either `hitCondition` or `condition` is specified, then the message
   /// should only be logged if those conditions are met.
-  std::optional<std::string> logMessage;
+  std::optional<String> logMessage;
 
   /// The mode of this breakpoint. If defined, this must be one of the
   /// `breakpointModes` the debug adapter advertised in its `Capabilities`.
-  std::optional<std::string> mode;
+  std::optional<String> mode;
 };
 bool fromJSON(const llvm::json::Value &, SourceBreakpoint &, llvm::json::Path);
 llvm::json::Value toJSON(const SourceBreakpoint &);
@@ -696,18 +697,18 @@ llvm::json::Value toJSON(const SourceBreakpoint &);
 /// Properties of a breakpoint passed to the `setFunctionBreakpoints` request.
 struct FunctionBreakpoint {
   /// The name of the function.
-  std::string name;
+  String name;
 
   /// An expression for conditional breakpoints.
   /// It is only honored by a debug adapter if the corresponding capability
   /// `supportsConditionalBreakpoints` is true.
-  std::optional<std::string> condition;
+  std::optional<String> condition;
 
   /// An expression that controls how many hits of the breakpoint are ignored.
   /// The debug adapter is expected to interpret the expression as needed.
   /// The attribute is only honored by a debug adapter if the corresponding
   /// capability `supportsHitConditionalBreakpoints` is true.
-  std::optional<std::string> hitCondition;
+  std::optional<String> hitCondition;
 };
 bool fromJSON(const llvm::json::Value &, FunctionBreakpoint &,
               llvm::json::Path);
@@ -728,17 +729,17 @@ llvm::json::Value toJSON(const DataBreakpointAccessType &);
 struct DataBreakpoint {
   /// An id representing the data. This id is returned from the
   /// `dataBreakpointInfo` request.
-  std::string dataId;
+  String dataId;
 
   /// The access type of the data.
   std::optional<DataBreakpointAccessType> accessType;
 
   /// An expression for conditional breakpoints.
-  std::optional<std::string> condition;
+  std::optional<String> condition;
 
   /// An expression that controls how many hits of the breakpoint are ignored.
   /// The debug adapter is expected to interpret the expression as needed.
-  std::optional<std::string> hitCondition;
+  std::optional<String> hitCondition;
 };
 bool fromJSON(const llvm::json::Value &, DataBreakpoint &, llvm::json::Path);
 llvm::json::Value toJSON(const DataBreakpoint &);
@@ -749,7 +750,7 @@ struct InstructionBreakpoint {
   /// This should be a memory or instruction pointer reference from an
   /// `EvaluateResponse`, `Variable`, `StackFrame`, `GotoTarget`, or
   /// `Breakpoint`.
-  std::string instructionReference;
+  String instructionReference;
 
   /// The offset from the instruction reference in bytes.
   /// This can be negative.
@@ -758,17 +759,17 @@ struct InstructionBreakpoint {
   /// An expression for conditional breakpoints.
   /// It is only honored by a debug adapter if the corresponding capability
   /// `supportsConditionalBreakpoints` is true.
-  std::optional<std::string> condition;
+  std::optional<String> condition;
 
   /// An expression that controls how many hits of the breakpoint are ignored.
   /// The debug adapter is expected to interpret the expression as needed.
   /// The attribute is only honored by a debug adapter if the corresponding
   /// capability `supportsHitConditionalBreakpoints` is true.
-  std::optional<std::string> hitCondition;
+  std::optional<String> hitCondition;
 
   /// The mode of this breakpoint. If defined, this must be one of the
   /// `breakpointModes` the debug adapter advertised in its `Capabilities`.
-  std::optional<std::string> mode;
+  std::optional<String> mode;
 };
 bool fromJSON(const llvm::json::Value &, InstructionBreakpoint &,
               llvm::json::Path);
@@ -787,15 +788,15 @@ struct DisassembledInstruction {
 
   /// Raw bytes representing the instruction and its operands, in an
   /// implementation-defined format.
-  std::optional<std::string> instructionBytes;
+  std::optional<String> instructionBytes;
 
   /// Text representing the instruction and its operands, in an
   /// implementation-defined format.
-  std::string instruction;
+  String instruction;
 
   /// Name of the symbol that corresponds with the location of this instruction,
   /// if any.
-  std::optional<std::string> symbol;
+  std::optional<String> symbol;
 
   /// Source location that corresponds to this instruction, if any.
   /// Should always be set (if available) on the first instruction returned,
@@ -833,15 +834,15 @@ llvm::json::Value toJSON(const DisassembledInstruction &);
 
 struct Module {
   /// Unique identifier for the module.
-  std::string id;
+  String id;
 
   /// A name of the module.
-  std::string name;
+  String name;
 
   /// Logical full path to the module. The exact definition is implementation
   /// defined, but usually this would be a full path to the on-disk file for the
   /// module.
-  std::string path;
+  String path;
 
   /// True if the module is optimized.
   bool isOptimized = false;
@@ -851,21 +852,21 @@ struct Module {
   bool isUserCode = false;
 
   /// Version of Module.
-  std::string version;
+  String version;
 
   /// User-understandable description of if symbols were found for the module
   /// (ex: 'Symbols Loaded', 'Symbols not found', etc.)
-  std::string symbolStatus;
+  String symbolStatus;
 
   /// Logical full path to the symbol file. The exact definition is
   /// implementation defined.
-  std::string symbolFilePath;
+  String symbolFilePath;
 
   /// Module created or modified, encoded as an RFC 3339 timestamp.
-  std::string dateTimeStamp;
+  String dateTimeStamp;
 
   /// Address range covered by this module.
-  std::string addressRange;
+  String addressRange;
 
   /// Custom fields
   /// @{
@@ -882,15 +883,15 @@ llvm::json::Value toJSON(const Module &);
 struct VariablePresentationHint {
   /// The kind of variable. Before introducing additional values, try to use the
   /// listed values.
-  std::string kind;
+  String kind;
 
   /// Set of attributes represented as an array of strings. Before introducing
   /// additional values, try to use the listed values.
-  std::vector<std::string> attributes;
+  std::vector<String> attributes;
 
   /// Visibility of variable. Before introducing additional values, try to use
   /// the listed values.
-  std::string visibility;
+  String visibility;
 
   /// If true, clients can present the variable with a UI that supports a
   /// specific gesture to trigger its evaluation.
@@ -928,7 +929,7 @@ bool fromJSON(const llvm::json::Value &, VariablePresentationHint &,
 /// and fetch them in chunks.
 struct Variable {
   /// The variable's name.
-  std::string name;
+  String name;
 
   /// The variable's value.
   ///
@@ -940,14 +941,14 @@ struct Variable {
   /// its children are not yet visible.
   ///
   /// An empty string can be used if no value should be shown in the UI.
-  std::string value;
+  String value;
 
   /// The type of the variable's value. Typically shown in the UI when hovering
   /// over the value.
   ///
   /// This attribute should only be returned by a debug adapter if the
   /// corresponding capability `supportsVariableType` is true.
-  std::string type;
+  String type;
 
   /// Properties of a variable that can be used to determine how to render the
   /// variable in the UI.
@@ -955,13 +956,13 @@ struct Variable {
 
   /// The evaluatable name of this variable which can be passed to the
   /// `evaluate` request to fetch the variable's value.
-  std::string evaluateName;
+  String evaluateName;
 
   /// If `variablesReference` is > 0, the variable is structured and its
   /// children can be retrieved by passing `variablesReference` to the
   /// `variables` request as long as execution remains suspended. See 'Lifetime
   /// of Object References' in the Overview section for details.
-  uint64_t variablesReference = 0;
+  var_ref_t variablesReference{var_ref_t::k_no_child};
 
   /// The number of named child variables.
   ///
@@ -1018,25 +1019,118 @@ llvm::json::Value toJSON(ExceptionBreakMode);
 
 struct ExceptionDetails {
   /// Message contained in the exception.
-  std::string message;
+  String message;
 
   /// Short type name of the exception object.
-  std::string typeName;
+  String typeName;
 
   /// Fully-qualified type name of the exception object.
-  std::string fullTypeName;
+  String fullTypeName;
 
   /// An expression that can be evaluated in the current scope to obtain the
   /// exception object.
-  std::string evaluateName;
+  String evaluateName;
 
   /// Stack trace at the time the exception was thrown.
-  std::string stackTrace;
+  String stackTrace;
 
   /// Details of the exception contained by this exception, if any.
   std::vector<ExceptionDetails> innerException;
 };
 llvm::json::Value toJSON(const ExceptionDetails &);
+
+struct CompileUnit {
+  /// Path of compile unit.
+  String compileUnitPath;
+};
+llvm::json::Value toJSON(const CompileUnit &);
+
+/// Provides formatting information for a stack frame.
+struct StackFrameFormat {
+  /// Displays parameters for the stack frame.
+  bool parameters = false;
+
+  /// Displays the types of parameters for the stack frame.
+  bool parameterTypes = false;
+
+  /// Displays the names of parameters for the stack frame.
+  bool parameterNames = false;
+
+  /// Displays the values of parameters for the stack frame.
+  bool parameterValues = false;
+
+  /// Displays the line number of the stack frame.
+  bool line = false;
+
+  /// Displays the module of the stack frame.
+  bool module = false;
+
+  /// Includes all stack frames, including those the debug adapter might
+  /// otherwise hide.
+  bool includeAll = false;
+};
+bool fromJSON(const llvm::json::Value &, StackFrameFormat &, llvm::json::Path);
+
+/// A Stackframe contains the source location.
+struct StackFrame {
+  enum PresentationHint : unsigned {
+    ePresentationHintNone,
+    ePresentationHintNormal,
+    ePresentationHintLabel,
+    ePresentationHintSubtle,
+  };
+
+  /// An identifier for the stack frame. It must be unique across all threads.
+  /// This id can be used to retrieve the scopes of the frame with the `scopes`
+  /// request or to restart the execution of a stack frame.
+  lldb::tid_t id = LLDB_DAP_INVALID_STACK_FRAME_ID;
+
+  /// The name of the stack frame, typically a method name.
+  String name;
+
+  /// The source of the frame.
+  std::optional<Source> source;
+
+  /// The line within the source of the frame. If the source attribute is
+  /// missing or doesn't exist, `line` is 0 and should be ignored by the client.
+  uint32_t line = LLDB_INVALID_LINE_NUMBER;
+
+  /// Start position of the range covered by the stack frame. It is measured in
+  /// UTF-16 code units and the client capability `columnsStartAt1` determines
+  /// whether it is 0- or 1-based. If attribute `source` is missing or doesn't
+  /// exist, `column` is 0 and should be ignored by the client.
+  uint32_t column = LLDB_INVALID_COLUMN_NUMBER;
+
+  /// The end line of the range covered by the stack frame.
+  uint32_t endLine = LLDB_INVALID_LINE_NUMBER;
+
+  /// End position of the range covered by the stack frame. It is measured in
+  /// UTF-16 code units and the client capability `columnsStartAt1` determines
+  /// whether it is 0- or 1-based.
+  uint32_t endColumn = LLDB_INVALID_COLUMN_NUMBER;
+
+  /// Indicates whether this frame can be restarted with the `restartFrame`
+  /// request. Clients should only use this if the debug adapter supports the
+  /// `restart` request and the corresponding capability `supportsRestartFrame`
+  /// is true. If a debug adapter has this capability, then `canRestart`
+  /// defaults to `true` if the property is absent.
+  bool canRestart = false;
+
+  /// A memory reference for the current instruction pointer in this frame.
+  lldb::addr_t instructionPointerReference = LLDB_INVALID_ADDRESS;
+
+  /// The module associated with this frame, if any.
+  std::optional<String> moduleId;
+
+  /// A hint for how to present this frame in the UI. A value of `label` can be
+  /// used to indicate that the frame is an artificial frame that is used as a
+  /// visual label or separator. A value of `subtle` can be used to change the
+  /// appearance of a frame in a 'subtle' way. Values: 'normal', 'label',
+  /// 'subtle'
+  PresentationHint presentationHint = ePresentationHintNone;
+};
+llvm::json::Value toJSON(const StackFrame::PresentationHint &);
+llvm::json::Value toJSON(const StackFrame &);
 
 } // namespace lldb_dap::protocol
 

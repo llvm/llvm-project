@@ -22,7 +22,7 @@ def HWI16:  PatLeaf<(VecPI16 HvxWR:$R)>;
 def HWI32:  PatLeaf<(VecPI32 HvxWR:$R)>;
 def HWF16:  PatLeaf<(VecPF16 HvxWR:$R)>;
 def HWF32:  PatLeaf<(VecPF32 HvxWR:$R)>;
-def HWBF16: PatLeaf<(VecBF16 HvxWR:$R)>;
+def HWBF16: PatLeaf<(VecPBF16 HvxWR:$R)>;
 
 def SDTVecUnaryOp:
   SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
@@ -75,6 +75,12 @@ def VSxtb: OutPatFrag<(ops node:$Vs), (V6_vunpackb  $Vs)>;
 def VSxth: OutPatFrag<(ops node:$Vs), (V6_vunpackh  $Vs)>;
 def VZxtb: OutPatFrag<(ops node:$Vs), (V6_vunpackub $Vs)>;
 def VZxth: OutPatFrag<(ops node:$Vs), (V6_vunpackuh $Vs)>;
+
+def VShuff: OutPatFrag<(ops node:$Vs, node:$S),
+                       (V6_vshuffvdd (HiVec $Vs), (LoVec $Vs), (A2_tfrsi $S))>;
+
+def VDeal: OutPatFrag<(ops node:$Vs, node:$S),
+                      (V6_vdealvdd (HiVec $Vs), (LoVec $Vs), (A2_tfrsi $S))>;
 
 class VSubi<InstHexagon VSub, InstHexagon VSplati>:
   OutPatFrag<(ops node:$Imm, node:$Vs), (VSub (VSplati (i32 $Imm)), $Vs)>;
@@ -261,16 +267,6 @@ let Predicates = [UseHVX] in {
   defm: NopCast_pat<VecPI16, VecPI32, HvxWR>;
 }
 
-let Predicates = [UseHVXV68] in {
-  defm: NopCast_pat<VecI8,   VecF16,  HvxVR>;
-  defm: NopCast_pat<VecI16,  VecF16,  HvxVR>;
-  defm: NopCast_pat<VecI32,  VecF16,  HvxVR>;
-  defm: NopCast_pat<VecF32,  VecF16,  HvxVR>;
-  defm: NopCast_pat<VecPI8,  VecPF32,  HvxWR>;
-  defm: NopCast_pat<VecPI16,  VecPF32,  HvxWR>;
-  defm: NopCast_pat<VecPI32,  VecPF32,  HvxWR>;
-}
-
 let Predicates = [UseHVX, UseHVXFloatingPoint] in {
   defm: NopCast_pat<VecI8,   VecF16,  HvxVR>;
   defm: NopCast_pat<VecI8,   VecBF16, HvxVR>;
@@ -317,8 +313,6 @@ let Predicates = [UseHVX] in {
            (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
   def: Pat<(VecPI32 (concat_vectors HVI32:$Vs, HVI32:$Vt)),
            (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
-  def: Pat<(VecPF32 (concat_vectors HVF32:$Vs, HVF32:$Vt)),
-           (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
 
   def: Pat<(VecQ8  (qcat HQ16:$Qs, HQ16:$Qt)), (Combineq $Qt, $Qs)>;
   def: Pat<(VecQ16 (qcat HQ32:$Qs, HQ32:$Qt)), (Combineq $Qt, $Qs)>;
@@ -354,10 +348,14 @@ let Predicates = [UseHVX, UseHVXFloatingPoint] in {
 
   def: Pat<(VecPF16 (concat_vectors HVF16:$Vs, HVF16:$Vt)),
            (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
+  def: Pat<(VecPBF16 (concat_vectors HVBF16:$Vs, HVBF16:$Vt)),
+           (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
   def: Pat<(VecPF32 (concat_vectors HVF32:$Vs, HVF32:$Vt)),
            (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
 
   def: Pat<(HexagonVINSERTW0 HVF16:$Vu, I32:$Rt),
+           (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
+  def: Pat<(HexagonVINSERTW0 HVBF16:$Vu, I32:$Rt),
            (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
   def: Pat<(HexagonVINSERTW0 HVF32:$Vu, I32:$Rt),
            (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
@@ -401,6 +399,71 @@ class Vneg1<ValueType VecTy>
 
 class Vnot<ValueType VecTy>
   : PatFrag<(ops node:$Vs), (xor $Vs, Vneg1<VecTy>)>;
+
+class ExtOp_pat<InstHexagon MI, PatFrag Op, PatFrag Ext, ValueType ResType,
+                 PatFrag VPred, int Shuff>
+  : Pat<(ResType (Op (Ext VPred:$Vs), (Ext VPred:$Vt))),
+        (VShuff (MI VPred:$Vs, VPred:$Vt), Shuff)>;
+
+class VOpAcc_pat<InstHexagon MI, PatFrag Op, PatFrag Ext, ValueType ResType,
+                  PatFrag VxPred, PatFrag VsPred, int Shuff>
+  : Pat<(ResType (add VxPred:$Vx, (Op (Ext VsPred:$Vs), (Ext VsPred:$Vt)))),
+        (VShuff (MI (VDeal $Vx, Shuff), VsPred:$Vs, VsPred:$Vt), Shuff)>;
+
+let Predicates = [UseHVX] in {
+  let AddedComplexity = 200 in {
+    def : ExtOp_pat<V6_vaddubh, Add, Zext, VecPI16, HVI8, -2>;
+    def : ExtOp_pat<V6_vadduhw, Add, Zext, VecPI32, HVI16, -4>;
+    def : ExtOp_pat<V6_vaddhw, Add, Sext, VecPI32, HVI16, -4>;
+
+    def : ExtOp_pat<V6_vsububh, Sub, Zext, VecPI16, HVI8, -2>;
+    def : ExtOp_pat<V6_vsubuhw, Sub, Zext, VecPI32, HVI16, -4>;
+    def : ExtOp_pat<V6_vsubhw, Sub, Sext, VecPI32, HVI16, -4>;
+
+    def : ExtOp_pat<V6_vmpybv, Mul, Sext, VecPI16, HVI8, -2>;
+    def : ExtOp_pat<V6_vmpyhv, Mul, Sext, VecPI32, HVI16, -4>;
+    def : ExtOp_pat<V6_vmpyubv, Mul, Zext, VecPI16, HVI8, -2>;
+    def : ExtOp_pat<V6_vmpyuhv, Mul, Zext, VecPI32, HVI16, -4>;
+
+    // The first operand in V6_vmpybusv is unsigned.
+    def : Pat<(VecPI16 (mul (VecPI16 (zext HVI8:$Vs)),
+                            (VecPI16 (sext HVI8:$Vv)))),
+              (VShuff (V6_vmpybusv HVI8:$Vs, HVI8:$Vv), -2)>;
+
+    // The second operand in V6_vmpyhus is unsigned.
+    def : Pat<(VecPI32 (mul (VecPI32 (sext HVI16:$Vs)),
+                            (VecPI32 (zext HVI16:$Vv)))),
+              (VShuff (V6_vmpyhus HVI16:$Vs, HVI16:$Vv), -4)>;
+
+    def : VOpAcc_pat<V6_vaddubh_acc, Add, Zext, VecPI16, HWI16, HVI8, -2>;
+    def : VOpAcc_pat<V6_vadduhw_acc, Add, Zext, VecPI32, HWI32, HVI16, -4>;
+    def : VOpAcc_pat<V6_vaddhw_acc, Add, Sext, VecPI32, HWI32, HVI16, -4>;
+
+    def : VOpAcc_pat<V6_vmpybv_acc, Mul, Sext, VecPI16, HWI16, HVI8, -2>;
+    def : VOpAcc_pat<V6_vmpyubv_acc, Mul, Zext, VecPI16, HWI16, HVI8, -2>;
+    def : VOpAcc_pat<V6_vmpyhv_acc, Mul, Sext, VecPI32, HWI32, HVI16, -4>;
+    def : VOpAcc_pat<V6_vmpyuhv_acc, Mul, Zext, VecPI32, HWI32, HVI16, -4>;
+
+    // The second operand in V6_vmpybusv_acc is unsigned.
+    def : Pat<(VecPI16 (add HWI16:$Vx , (mul (VecPI16 (zext HVI8:$Vs)),
+                                             (VecPI16 (sext HVI8:$Vt))))),
+              (VShuff (V6_vmpybusv_acc (VDeal $Vx, -2),
+                                       HVI8:$Vs, HVI8:$Vt), -2)>;
+
+    // The third operand in V6_vmpyhus_acc is unsigned.
+    def : Pat<(add HWI32:$Vx, (mul (VecPI32 (sext HVI16:$Vs)),
+                                   (VecPI32 (zext HVI16:$Vt)))),
+              (VShuff (V6_vmpyhus_acc (VDeal $Vx, -4),
+                                      HVI16:$Vs, HVI16:$Vt), -4)>;
+  }
+
+  def : Pat<(VecI32 (partial_reduce_umla VecI32:$Acc, HVI8:$A, HVI8:$B)),
+            (V6_vrmpyubv_acc $Acc, $A, $B)>;
+  def : Pat<(VecI32 (partial_reduce_smla VecI32:$Acc, HVI8:$A, HVI8:$B)),
+            (V6_vrmpybv_acc $Acc, $A, $B)>;
+  def : Pat<(VecI32 (partial_reduce_sumla VecI32:$Acc, HVI8:$A, HVI8:$B)),
+            (V6_vrmpybusv_acc $Acc, $B, $A)>;
+}
 
 let Predicates = [UseHVX] in {
   let AddedComplexity = 200 in {

@@ -70,7 +70,7 @@ static void visit(Operation *op, DenseSet<Operation *> &visited) {
 
   // Traverse the operands / parent.
   TypeSwitch<Operation *>(op)
-      .Case<OperationOp>([&visited](auto operation) {
+      .Case([&visited](OperationOp operation) {
         for (Value operand : operation.getOperandValues())
           visit(operand.getDefiningOp(), visited);
       })

@@ -103,7 +103,7 @@ bool Fortran::lower::CallerInterface::requireDispatchCall() const {
       return true;
   }
   // calls with PASS attribute have the passed-object already set in its
-  // arguments. Just check if their is one.
+  // arguments. Just check if there is one.
   std::optional<unsigned> passArg = getPassArgIndex();
   if (passArg)
     return true;
@@ -1579,9 +1579,14 @@ Fortran::lower::CallInterface<T>::getProcedureAttrs(
       if (sym->attrs().test(Fortran::semantics::Attr::NON_RECURSIVE) ||
           (sym->owner().context().languageFeatures().IsEnabled(
                Fortran::common::LanguageFeature::DefaultSave) &&
-           !sym->attrs().test(Fortran::semantics::Attr::RECURSIVE))) {
+           !sym->attrs().test(Fortran::semantics::Attr::RECURSIVE)))
         flags = flags | fir::FortranProcedureFlagsEnum::non_recursive;
-      }
+
+      // Set RECURSIVE if the attribute is explicitly present.  This is only
+      // used for debug info generation to maintain consistency with pre-F2018
+      // compilers.
+      if (sym->attrs().test(Fortran::semantics::Attr::RECURSIVE))
+        flags = flags | fir::FortranProcedureFlagsEnum::recursive;
     }
   }
   if (flags != fir::FortranProcedureFlagsEnum::none)

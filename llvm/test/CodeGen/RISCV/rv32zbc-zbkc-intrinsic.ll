@@ -4,6 +4,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zbkc -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32ZBC-ZBKC
 
+; NOTE: This intrinsic has been removed so this tests autoupgrade to llvm.clmul.
 define i32 @clmul32(i32 %a, i32 %b) nounwind {
 ; RV32ZBC-ZBKC-LABEL: clmul32:
 ; RV32ZBC-ZBKC:       # %bb.0:
@@ -20,4 +21,26 @@ define i32 @clmul32h(i32 %a, i32 %b) nounwind {
 ; RV32ZBC-ZBKC-NEXT:    ret
   %tmp = call i32 @llvm.riscv.clmulh.i32(i32 %a, i32 %b)
   ret i32 %tmp
+}
+
+define i32 @llvm_clmul_i32(i32 %a, i32 %b) nounwind {
+; RV32ZBC-ZBKC-LABEL: llvm_clmul_i32:
+; RV32ZBC-ZBKC:       # %bb.0:
+; RV32ZBC-ZBKC-NEXT:    clmul a0, a0, a1
+; RV32ZBC-ZBKC-NEXT:    ret
+  %tmp = call i32 @llvm.clmul.i32(i32 %a, i32 %b)
+  ret i32 %tmp
+}
+
+define i32 @llvm_clmulh_i32(i32 %a, i32 %b) nounwind {
+; RV32ZBC-ZBKC-LABEL: llvm_clmulh_i32:
+; RV32ZBC-ZBKC:       # %bb.0:
+; RV32ZBC-ZBKC-NEXT:    clmulh a0, a0, a1
+; RV32ZBC-ZBKC-NEXT:    ret
+  %tmp1 = zext i32 %a to i64
+  %tmp2 = zext i32 %b to i64
+  %tmp3 = call i64 @llvm.clmul.i64(i64 %tmp1, i64 %tmp2)
+  %tmp4 = lshr i64 %tmp3, 32
+  %tmp5 = trunc i64 %tmp4 to i32
+  ret i32 %tmp5
 }

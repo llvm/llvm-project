@@ -21,8 +21,7 @@
 ; CHECK-NEXT:   ModulePass Manager
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:     FunctionPass Manager
-; CHECK-NEXT:       Expand large div/rem
-; CHECK-NEXT:       Expand fp
+; CHECK-NEXT:       Expand IR instructions
 ; CHECK-NEXT:       Expand Atomic instructions
 ; CHECK-NEXT:       RISC-V Zacas ABI fix 
 ; CHECK-NEXT:       Module Verifier
@@ -33,7 +32,7 @@
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Exception handling preparation
-; CHECK-NEXT:       Prepare callbr
+; CHECK-NEXT:       Prepare inline asm insts
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
 ; CHECK-NEXT:       Module Verifier

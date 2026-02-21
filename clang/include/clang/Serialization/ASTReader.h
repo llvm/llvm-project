@@ -254,7 +254,7 @@ public:
   /// \returns true to continue receiving the next input file, false to stop.
   virtual bool visitInputFileAsRequested(StringRef FilenameAsRequested,
                                          StringRef Filename, bool isSystem,
-                                         bool isOverridden,
+                                         bool isOverridden, time_t StoredTime,
                                          bool isExplicitModule) {
     return true;
   }
@@ -1079,6 +1079,9 @@ private:
   /// The IDs of all decls with function effects to be checked.
   SmallVector<GlobalDeclID> DeclsWithEffectsToVerify;
 
+  /// The RISC-V intrinsic pragma(including RVV, SiFive and Andes).
+  SmallVector<bool, 3> RISCVVecIntrinsicPragma;
+
 private:
   struct ImportedSubmodule {
     serialization::SubmoduleID ID;
@@ -1538,7 +1541,6 @@ public:
   /// If we have any unloaded specialization for \p D
   bool haveUnloadedSpecializations(const Decl *D) const;
 
-private:
   struct ImportedModule {
     ModuleFile *Mod;
     ModuleFile *ImportedBy;
@@ -1556,6 +1558,8 @@ private:
                             off_t ExpectedSize, time_t ExpectedModTime,
                             ASTFileSignature ExpectedSignature,
                             unsigned ClientLoadCapabilities);
+
+private:
   ASTReadResult ReadControlBlock(ModuleFile &F,
                                  SmallVectorImpl<ImportedModule> &Loaded,
                                  const ModuleFile *ImportedBy,
@@ -2021,7 +2025,8 @@ public:
       StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
       const PCHContainerReader &PCHContainerRdr, const LangOptions &LangOpts,
       const CodeGenOptions &CGOpts, const TargetOptions &TargetOpts,
-      const PreprocessorOptions &PPOpts, StringRef ExistingModuleCachePath,
+      const PreprocessorOptions &PPOpts, const HeaderSearchOptions &HSOpts,
+      StringRef SpecificModuleCachePath,
       bool RequireStrictOptionMatches = false);
 
   /// Returns the suggested contents of the predefines buffer,

@@ -1,5 +1,4 @@
-# RUN: not --crash llc -mtriple=i686 -o - %s -run-pass=none -verify-machineinstrs \
-# RUN:   2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=i686 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: x86-registered-target
 #
 # Check that MachineVerifier catches corrupt operands where MO->isReg()
@@ -9,21 +8,21 @@
 
 # CHECK-LABEL: fun
 
-# CHECK: *** Bad machine code: Expected a register operand. ***
+# CHECK: Bad machine code: Expected a register operand
 # CHECK: - instruction: %1:gr32 = XOR32rm -1, %fixed-stack.1, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %fixed-stack.1, align 8)
 # CHECK: - operand 1:   -1
 
-# CHECK: *** Bad machine code: Expected a non-register operand. ***
+# CHECK: Bad machine code: Expected a non-register operand
 # CHECK: - instruction: %2:gr32 = OR32ri %1:gr32(tied-def 0), %0:gr32, implicit-def dead $eflags
 # CHECK: - operand 2:   %0:gr32
 
 
-name:            fun
+name: fun
 tracksRegLiveness: true
 fixedStack:
   - { id: 1, offset: 8, size: 4, alignment: 8, isImmutable: true }
   - { id: 3, size: 4, alignment: 16, isImmutable: true }
-body:             |
+body: |
   bb.0:
     %0:gr32 = MOV32rm %fixed-stack.3, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.3, align 16)
     ; Was: %1:gr32 = XOR32rm %0, %fixed-stack.1, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %fixed-stack.1, align 8)

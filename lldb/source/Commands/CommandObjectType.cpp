@@ -2181,10 +2181,12 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
 
   ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
 
-  if (interpreter &&
-      !interpreter->CheckObjectExists(impl->GetPythonClassName()))
-    result.AppendWarning("The provided class does not exist - please define it "
-                         "before attempting to use this synthetic provider");
+  const char *python_class_name = impl->GetPythonClassName();
+  if (interpreter && !interpreter->CheckObjectExists(python_class_name))
+    result.AppendWarningWithFormatv(
+        "The provided class '{0}' does not exist - please define it "
+        "before attempting to use this synthetic provider",
+        llvm::StringRef(python_class_name));
 
   // now I have a valid provider, let's add it to every type
 
@@ -2534,7 +2536,7 @@ protected:
     if (lang_type != lldb::eLanguageTypeUnknown)
       return lang_type;
 
-    Symbol *s = frame->GetSymbolContext(eSymbolContextSymbol).symbol;
+    const Symbol *s = frame->GetSymbolContext(eSymbolContextSymbol).symbol;
     if (s)
       lang_type = s->GetMangled().GuessLanguage();
 

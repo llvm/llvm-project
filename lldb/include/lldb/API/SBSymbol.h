@@ -90,8 +90,9 @@ public:
   /// Get the ID of this symbol, usually the original symbol table index.
   ///
   /// \returns
-  ///   Returns the ID of this symbol.
-  uint32_t GetID();
+  ///     LLDB_INVALID_SYMBOL_ID if this object does not contain a valid symbol
+  ///     object. Otherwise, Returns a valid symbol ID.
+  uint32_t GetID() const;
 
   bool operator==(const lldb::SBSymbol &rhs) const;
 
@@ -108,7 +109,7 @@ public:
   bool IsSynthetic();
 
   /// Returns true if the symbol is a debug symbol.
-  bool IsDebug();
+  bool IsDebug() const;
 
   /// Get the string representation of a symbol type.
   static const char *GetTypeAsString(lldb::SymbolType symbol_type);

@@ -30,21 +30,19 @@ def XSfmmVTypeOp : RISCVOp {
   }];
 }
 
+def twiden : RISCVOp {
+  let OperandType = "OPERAND_XSFMM_TWIDEN";
+}
+
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class SFInstSetSingle<dag outs, dag ins, bits<5> rs2, string opcodestr,
                       string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
-  bits<5> rs1;
-  bits<5> rd;
+    : RVInstIBase<OPCFG.Value, OPC_OP_V, outs, ins, opcodestr, argstr> {
 
   let Inst{31-25} = 0b1000010;
   let Inst{24-20} = rs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = OPCFG.Value;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = OPC_OP_V.Value;
 
-  let Defs = [VTYPE, VL];
+  let Defs = [VL, VTYPE];
 }
 
 class SFInstTileMemOp<dag outs, dag ins, bits<3> nf, RISCVOpcode opcode,
@@ -63,7 +61,7 @@ class SFInstTileMemOp<dag outs, dag ins, bits<3> nf, RISCVOpcode opcode,
   let Inst{11-7} = 0b00000;
   let Inst{6-0} = opcode.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let ReadsPastVL = 1;
 }
 
@@ -93,7 +91,7 @@ class SFInstTileMoveOp<bits<6> funct6, dag outs, dag ins, string opcodestr,
   let Inst{11-7} = vd;
   let Inst{6-0} = OPC_OP_V.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let ReadsPastVL = 1;
 }
 
@@ -113,7 +111,7 @@ class SFInstMatmulF<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{8-7} = 0b00;
   let Inst{6-0} = OPC_OP_VE.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let ReadsPastVL = 1;
 }
 
@@ -136,7 +134,7 @@ class SFInstMatmulF8<bit a, bit b, dag outs, dag ins,
   let Inst{7} = b;
   let Inst{6-0} = OPC_OP_VE.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let ReadsPastVL = 1;
 }
 
@@ -169,7 +167,7 @@ class SFInstMatmulI8<bit funct6_1, bit a, bit b, dag outs, dag ins,
   let Inst{7} = b;
   let Inst{6-0} = OPC_OP_VE.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let ReadsPastVL = 1;
 }
 
@@ -197,7 +195,7 @@ class SFInstSetZero<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{7} = 0;
   let Inst{6-0} = OPC_OP_V.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
 }
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
@@ -278,8 +276,8 @@ let Uses = [FRM], mayRaiseFPException = true in {
 } // DecoderNamespace = "XSfvector"
 
 class VPseudoSF_VTileLoad
-    : RISCVVPseudo<(outs), (ins GPR:$rs2, GPR:$rs1, GPRNoX0:$atn, ixlenimm:$sew,
-                                ixlenimm:$twiden)> {
+    : RISCVVPseudo<(outs), (ins GPR:$rs2, GPR:$rs1, GPRNoX0:$atn, sew:$sew,
+                                twiden:$twiden)> {
   let mayLoad = 1;
   let mayStore = 0;
   let HasVLOp = 1; // Tn
@@ -289,8 +287,8 @@ class VPseudoSF_VTileLoad
 }
 
 class VPseudoSF_VTileStore
-    : RISCVVPseudo<(outs), (ins GPR:$rs2, GPR:$rs1, GPRNoX0:$atn, ixlenimm:$sew,
-                                ixlenimm:$twiden)> {
+    : RISCVVPseudo<(outs), (ins GPR:$rs2, GPR:$rs1, GPRNoX0:$atn, sew:$sew,
+                                twiden:$twiden)> {
   let mayLoad = 0;
   let mayStore = 1;
   let HasVLOp = 1; // Tn
@@ -300,8 +298,8 @@ class VPseudoSF_VTileStore
 }
 
 class VPseudoSF_VTileMove_V_T
-    : RISCVVPseudo<(outs VRM8:$vd), (ins GPR:$rs1, GPRNoX0:$atn, ixlenimm:$sew,
-                                         ixlenimm:$twiden)> {
+    : RISCVVPseudo<(outs VRM8:$vd), (ins GPR:$rs1, GPRNoX0:$atn, sew:$sew,
+                                         twiden:$twiden)> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasVLOp = 1; // Tn
@@ -311,8 +309,8 @@ class VPseudoSF_VTileMove_V_T
 }
 
 class VPseudoSF_VTileMove_T_V
-    : RISCVVPseudo<(outs), (ins GPR:$rs1, VRM8:$vs2, GPRNoX0:$atn, ixlenimm:$sew,
-                                ixlenimm:$twiden)> {
+    : RISCVVPseudo<(outs), (ins GPR:$rs1, VRM8:$vs2, GPRNoX0:$atn, sew:$sew,
+                                twiden:$twiden)> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasVLOp = 1; // Tn
@@ -324,8 +322,8 @@ class VPseudoSF_VTileMove_T_V
 class VPseudoSF_MatMul<RegisterClass mtd_class>
     : RISCVVPseudo<(outs),
                    (ins mtd_class:$rd, VRM8:$vs2, VRM8:$vs1, GPRNoX0:$atm,
-                        GPRNoX0:$atn, GPRNoX0:$atk, ixlenimm:$sew,
-                        ixlenimm:$twiden)> {
+                        GPRNoX0:$atn, GPRNoX0:$atk, sew:$sew,
+                        twiden:$twiden)> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasTmOp = 1;
@@ -338,9 +336,9 @@ class VPseudoSF_MatMul<RegisterClass mtd_class>
 
 class VPseudoSF_MatMul_FRM<RegisterClass mtd_class>
     : RISCVVPseudo<(outs),
-                   (ins mtd_class:$rd, VRM8:$vs2, VRM8:$vs1, ixlenimm:$frm,
-                        GPRNoX0:$atm, GPRNoX0:$atn, GPRNoX0:$atk, ixlenimm:$sew,
-                        ixlenimm:$twiden), []> {
+                   (ins mtd_class:$rd, VRM8:$vs2, VRM8:$vs1, vec_rm:$rm,
+                        GPRNoX0:$atm, GPRNoX0:$atn, GPRNoX0:$atk, sew:$sew,
+                        twiden:$twiden), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let HasTmOp = 1;
@@ -376,12 +374,12 @@ let Defs = [VL, VTYPE] in {
 let Defs = [VTYPE], Uses = [VTYPE], HasTWidenOp = 1, HasSEWOp = 1 in {
   def PseudoSF_VSETTM
       : Pseudo<(outs GPR:$rd),
-               (ins GPR:$rs1, ixlenimm:$log2sew, ixlenimm:$twiden), []>,
+               (ins GPR:$rs1, sew:$sew, twiden:$twiden), []>,
         PseudoInstExpansion<(SF_VSETTM GPR:$rd, GPR:$rs1)>,
         Sched<[WriteVSETVLI, ReadVSETVLI]>;
   def PseudoSF_VSETTK
       : Pseudo<(outs GPR:$rd),
-               (ins GPR:$rs1, ixlenimm:$logwsew, ixlenimm:$twiden), []>,
+               (ins GPR:$rs1, sew:$sew, twiden:$twiden), []>,
         PseudoInstExpansion<(SF_VSETTK GPR:$rd, GPR:$rs1)>,
         Sched<[WriteVSETVLI, ReadVSETVLI]>;
 }
@@ -414,8 +412,8 @@ let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
   let HasVLOp = 1, HasTmOp = 1, HasTWidenOp = 1, HasSEWOp = 1 in
     def PseudoSF_VTZERO_T
         : RISCVVPseudo<(outs),
-                       (ins TR:$rd, GPRNoX0:$atm, GPRNoX0:$atn, ixlenimm:$sew,
-                            ixlenimm:$twiden)>;
+                       (ins TR:$rd, GPRNoX0:$atm, GPRNoX0:$atn, sew:$sew,
+                            twiden:$twiden)>;
   def PseudoSF_VTDISCARD : RISCVVPseudo<(outs), (ins), []>;
 }
 

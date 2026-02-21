@@ -63,21 +63,21 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit single_view(in_place_t, _Args&&... __args)
       : __value_{in_place, std::forward<_Args>(__args)...} {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp* begin() noexcept { return data(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp* begin() noexcept { return data(); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* begin() const noexcept { return data(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* begin() const noexcept { return data(); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp* end() noexcept { return data() + 1; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp* end() noexcept { return data() + 1; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* end() const noexcept { return data() + 1; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* end() const noexcept { return data() + 1; }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool empty() noexcept { return false; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr bool empty() noexcept { return false; }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr size_t size() noexcept { return 1; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr size_t size() noexcept { return 1; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp* data() noexcept { return __value_.operator->(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp* data() noexcept { return __value_.operator->(); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* data() const noexcept { return __value_.operator->(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* data() const noexcept { return __value_.operator->(); }
 };
 
 template <class _Tp>

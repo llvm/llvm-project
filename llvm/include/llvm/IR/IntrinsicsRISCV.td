@@ -78,7 +78,6 @@ let TargetPrefix = "riscv" in {
   def int_riscv_orc_b : RISCVBitManipGPRIntrinsics;
 
   // Zbc or Zbkc
-  def int_riscv_clmul  : RISCVBitManipGPRGPRIntrinsics;
   def int_riscv_clmulh : RISCVBitManipGPRGPRIntrinsics;
 
   // Zbc
@@ -357,13 +356,32 @@ let TargetPrefix = "riscv" in {
                     [IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 3;
   }
-  // For destination vector type is the same as first and second source vector.
+  // For mask logical operations without passthru operand.
   // Input: (vector_in, vector_in, vl)
-  class RISCVBinaryAAAUnMasked
+  class RISCVMaskLogical
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 2;
+  }
+  // For destination vector type is the same as first and second source vector.
+  // Input: (passthru, vector_in, vector_in, vl)
+  class RISCVBinaryAAAUnMasked
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>,
+                     LLVMMatchType<0>, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic {
+    let VLOperand = 3;
+  }
+  // For destination vector type is the same as first and second source vector (with mask).
+  // Input: (passthru, vector_in, vector_in, mask, vl, policy)
+  class RISCVBinaryAAAMasked
+       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                   [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
+                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty,
+                    LLVMMatchType<1>],
+                   [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
+    let VLOperand = 4;
   }
   // For destination vector type is the same as first and second source vector.
   // Input: (passthru, vector_in, int_vector_in, vl)
@@ -1204,6 +1222,10 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" # NAME : RISCVBinaryAAXUnMaskedRoundingMode;
     def "int_riscv_" # NAME # "_mask" : RISCVBinaryAAXMaskedRoundingMode;
   }
+  multiclass RISCVBinaryAAA {
+    def "int_riscv_" # NAME : RISCVBinaryAAAUnMasked;
+    def "int_riscv_" # NAME # "_mask" : RISCVBinaryAAAMasked;
+  }
   // Like RISCVBinaryAAX, but the second operand is used a shift amount so it
   // must be a vector or an XLen scalar.
   multiclass RISCVBinaryAAShift {
@@ -1611,14 +1633,14 @@ let TargetPrefix = "riscv" in {
     defm vfwredosum : RISCVReductionRoundingMode;
   }
 
-  def int_riscv_vmand: RISCVBinaryAAAUnMasked;
-  def int_riscv_vmnand: RISCVBinaryAAAUnMasked;
-  def int_riscv_vmandn: RISCVBinaryAAAUnMasked;
-  def int_riscv_vmxor: RISCVBinaryAAAUnMasked;
-  def int_riscv_vmor: RISCVBinaryAAAUnMasked;
-  def int_riscv_vmnor: RISCVBinaryAAAUnMasked;
-  def int_riscv_vmorn: RISCVBinaryAAAUnMasked;
-  def int_riscv_vmxnor: RISCVBinaryAAAUnMasked;
+  def int_riscv_vmand: RISCVMaskLogical;
+  def int_riscv_vmnand: RISCVMaskLogical;
+  def int_riscv_vmandn: RISCVMaskLogical;
+  def int_riscv_vmxor: RISCVMaskLogical;
+  def int_riscv_vmor: RISCVMaskLogical;
+  def int_riscv_vmnor: RISCVMaskLogical;
+  def int_riscv_vmorn: RISCVMaskLogical;
+  def int_riscv_vmxnor: RISCVMaskLogical;
   def int_riscv_vmclr : RISCVNullaryIntrinsic;
   def int_riscv_vmset : RISCVNullaryIntrinsic;
 
@@ -1909,6 +1931,17 @@ let TargetPrefix = "riscv" in {
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
+// Zvabd - Vector Absolute Difference
+//===----------------------------------------------------------------------===//
+let TargetPrefix = "riscv" in {
+  defm vabs    : RISCVUnaryAA;
+  defm vabd    : RISCVBinaryAAA;
+  defm vabdu   : RISCVBinaryAAA;
+  defm vwabda  : RISCVTernaryWide;
+  defm vwabdau : RISCVTernaryWide;
+} // TargetPrefix = "riscv"
+
+//===----------------------------------------------------------------------===//
 // Zvqdotq - Vector quad widening 4D Dot Product
 //
 // 8-bit Integer dot-product instructions performing the dot product between two
@@ -1957,6 +1990,26 @@ let TargetPrefix = "riscv" in {
 //===----------------------------------------------------------------------===//
 let TargetPrefix = "riscv" in
 def int_riscv_pause : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+
+
+//===----------------------------------------------------------------------===//
+// Zvfofp8min - OFP8 conversion extension
+// The Zvfofp8min extension provides basic support for the two 8-bit
+// floating-point formats defined in the Open Compute Project OFP8
+// specification, OFP8 E4M3 and OFP8 E5M2.
+let TargetPrefix = "riscv" in {
+  // OFP8 to BF16 conversion instructions
+  defm vfwcvt_f_f_v_alt : RISCVConversion;
+  // BF16 to OFP8 conversion instructions
+  defm vfncvt_sat_f_f_w : RISCVConversionRoundingMode;
+  defm vfncvt_f_f_w_alt : RISCVConversionRoundingMode;
+  defm vfncvt_sat_f_f_w_alt : RISCVConversionRoundingMode;
+  // FP32 to OFP8 conversion instructions
+  defm vfncvt_f_f_q : RISCVConversionRoundingMode;
+  defm vfncvt_f_f_q_alt : RISCVConversionRoundingMode;
+  defm vfncvt_sat_f_f_q : RISCVConversionRoundingMode;
+  defm vfncvt_sat_f_f_q_alt : RISCVConversionRoundingMode;
+} // TargetPrefix = "riscv"
 
 // Vendor extensions
 //===----------------------------------------------------------------------===//

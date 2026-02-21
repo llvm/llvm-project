@@ -874,13 +874,12 @@ static PlatformVersion parsePlatformVersion(const Arg *arg) {
           .Default(PLATFORM_UNKNOWN);
   if (platformVersion.platform == PLATFORM_UNKNOWN)
     error(Twine("malformed platform: ") + platformStr);
-  // TODO: check validity of version strings, which varies by platform
-  // NOTE: ld64 accepts version strings with 5 components
-  // llvm::VersionTuple accepts no more than 4 components
-  // Has Apple ever published version strings with 5 components?
-  if (platformVersion.minimum.tryParse(minVersionStr))
+  // The underlying load command only supports 3 components.
+  if (platformVersion.minimum.tryParse(minVersionStr) ||
+      platformVersion.minimum.getBuild())
     error(Twine("malformed minimum version: ") + minVersionStr);
-  if (platformVersion.sdk.tryParse(sdkVersionStr))
+  if (platformVersion.sdk.tryParse(sdkVersionStr) ||
+      platformVersion.sdk.getBuild())
     error(Twine("malformed sdk version: ") + sdkVersionStr);
   return platformVersion;
 }
@@ -1999,6 +1998,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->ignoreAutoLinkOptions.insert(arg->getValue());
   config->strictAutoLink = args.hasArg(OPT_strict_auto_link);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
+  config->emitLLVM = args.hasArg(OPT_lto_emit_llvm);
   config->codegenDataGeneratePath =
       args.getLastArgValue(OPT_codegen_data_generate_path);
   config->csProfileGenerate = args.hasArg(OPT_cs_profile_generate);
@@ -2352,10 +2352,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     resolveLCLinkerOptions();
 
-    // If --thinlto-index-only is given, we should create only "index
-    // files" and not object files. Index file creation is already done
-    // in compileBitcodeFiles, so we are done if that's the case.
-    if (config->thinLTOIndexOnly)
+    // If either --thinlto-index-only or --lto-emit-llvm is given, we should
+    // not create object files. Index file creation is already done in
+    // compileBitcodeFiles, so we are done if that's the case.
+    if (config->thinLTOIndexOnly || config->emitLLVM)
       return errorCount() == 0;
 
     // LTO may emit a non-hidden (extern) object file symbol even if the

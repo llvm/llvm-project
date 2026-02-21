@@ -49,9 +49,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::fill(vector<int>)", std_fill);
     bm.operator()<std::deque<int>>("std::fill(deque<int>)", std_fill);
     bm.operator()<std::list<int>>("std::fill(list<int>)", std_fill);
-    bm.operator()<std::vector<int>>("rng::fill(vector<int>)", std::ranges::fill);
-    bm.operator()<std::deque<int>>("rng::fill(deque<int>)", std::ranges::fill);
-    bm.operator()<std::list<int>>("rng::fill(list<int>)", std::ranges::fill);
   }
 
   // {std,ranges}::fill(vector<bool>)
@@ -71,9 +68,6 @@ int main(int argc, char** argv) {
       })->Range(64, 1 << 20);
     };
     bm("std::fill(vector<bool>)", std_fill);
-#if TEST_STD_VER >= 23 // vector<bool>::iterator is not an output_iterator before C++23
-    bm("rng::fill(vector<bool>)", std::ranges::fill);
-#endif
   }
 
   benchmark::Initialize(&argc, argv);

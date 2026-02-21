@@ -2822,6 +2822,18 @@ TEST(CompletionTest, ArgumentListsPolicy) {
                                          named("FOO"), snippetSuffix("($0)"))));
   }
   {
+    auto Results = completions(
+        R"cpp(
+      void function() {
+        auto Lambda = [](int a, const double &b) {return 1.f;};
+        Lam^
+      })cpp",
+        {}, Opts);
+    EXPECT_THAT(
+        Results.Completions,
+        UnorderedElementsAre(AllOf(named("Lambda"), snippetSuffix("($0)"))));
+  }
+  {
     Opts.ArgumentLists = Config::ArgumentListsPolicy::None;
     auto Results = completions(
         R"cpp(
@@ -4689,6 +4701,64 @@ TEST(CompletionTest, ListExplicitObjectOverloads) {
                                    snippetSuffix("(${1:float a})")),
                              AllOf(named("foo3"), signature("(int a) const"),
                                    snippetSuffix("(${1:int a})"))));
+  }
+}
+
+TEST(CompletionTest, FuzzyMatchMacro) {
+  Annotations Code(R"cpp(
+  #define gl_foo() 42
+  #define _gl_foo() 42
+  #define glfbar() 42
+
+  int gl_frob();
+  int _gl_frob();
+
+  int main() {
+    int y = glf$c1^;
+    int y = _gl$c2^;
+  }
+  )cpp");
+
+  auto TU = TestTU::withCode(Code.code());
+
+  // Exact prefix should match macro or symbol
+  {
+    CodeCompleteOptions Opts{};
+    EXPECT_EQ(Opts.MacroFilter, Config::MacroFilterPolicy::ExactPrefix);
+
+    {
+      auto Results = completions(TU, Code.point("c1"), {}, Opts);
+      EXPECT_THAT(
+          Results.Completions,
+          ElementsAre(named("gl_frob"), named("_gl_frob"), named("glfbar")));
+    }
+
+    {
+      auto Results = completions(TU, Code.point("c2"), {}, Opts);
+      EXPECT_THAT(Results.Completions,
+                  ElementsAre(named("_gl_frob"), named("_gl_foo")));
+    }
+  }
+
+  // but with fuzzy match
+  {
+    CodeCompleteOptions Opts{};
+    Opts.MacroFilter = Config::MacroFilterPolicy::FuzzyMatch;
+
+    // don't suggest underscore macros in general,
+    {
+      auto Results = completions(TU, Code.point("c1"), {}, Opts);
+      EXPECT_THAT(Results.Completions,
+                  ElementsAre(named("gl_frob"), named("_gl_frob"),
+                              named("glfbar"), named("gl_foo")));
+    }
+
+    // but do suggest when macro contains exact prefix
+    {
+      auto Results = completions(TU, Code.point("c2"), {}, Opts);
+      EXPECT_THAT(Results.Completions,
+                  ElementsAre(named("_gl_frob"), named("_gl_foo")));
+    }
   }
 }
 

@@ -76,12 +76,12 @@ declare spir_func <8 x i8> @_Z24__spirv_BitFieldUExtractDv8_hjj(<8 x i8>, i32, i
 ; }
 define spir_kernel void @testBitReverse_SPIRVFriendly(<4 x i64> %b, ptr addrspace(1) nocapture align 32 %res) #3 {
 entry:
-  %call = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %b)
+  %call = call <4 x i64> @_Z18__spirv_BitReverseDv4_l(<4 x i64> %b)
   store <4 x i64> %call, ptr addrspace(1) %res, align 32
   ret void
 }
 
-declare <4 x i64> @llvm.bitreverse.v4i64(<4 x i64>) #4
+declare <4 x i64> @_Z18__spirv_BitReverseDv4_l(<4 x i64>) #4
 
 
 

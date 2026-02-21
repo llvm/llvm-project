@@ -65,3 +65,9 @@ int main() {
   Two foo __attribute__((init_priority(1001))); // expected-error {{can only use 'init_priority' attribute on file-scope definitions of objects of class type}}
 // unknown-warning@-1 {{unknown attribute 'init_priority' ignored}}
 }
+
+struct S1 {} s1;
+[[gnu::init_priority(1001)]] auto auto_var = s1;
+// unknown-warning@-1 {{unknown attribute 'gnu::init_priority' ignored}}
+[[gnu::init_priority(1001)]] S1 struct_var = s1;
+// unknown-warning@-1 {{unknown attribute 'gnu::init_priority' ignored}}

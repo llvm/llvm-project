@@ -27,7 +27,7 @@
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "src/string/memory_utils/riscv/inline_memset.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_riscv
-#elif defined(LIBC_TARGET_ARCH_IS_GPU)
+#elif defined(LIBC_TARGET_ARCH_IS_GPU) || defined(LIBC_TARGET_ARCH_IS_WASM)
 #include "src/string/memory_utils/generic/builtin.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_builtin
 #else

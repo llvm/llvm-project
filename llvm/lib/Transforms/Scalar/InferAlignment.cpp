@@ -56,6 +56,13 @@ static bool tryToImproveAlign(
       return true;
     }
   }
+  if (match(I, m_Trunc(m_PtrToIntOrAddr(m_Value(PtrOp))))) {
+    Align ActualAlign = Fn(PtrOp, Align(1), Align(1));
+    if (Log2(ActualAlign) >= I->getType()->getScalarSizeInBits()) {
+      I->replaceAllUsesWith(Constant::getNullValue(I->getType()));
+      return true;
+    }
+  }
 
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(I);
   if (!II)

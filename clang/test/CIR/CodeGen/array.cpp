@@ -5,6 +5,13 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[FUNC2_ARR:.*]] = #cir.const_array<[#cir.int<5> : !s32i, #cir.int<0> : !s32i]> : !cir.array<!s32i x 2>
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[FUNC3_ARR:.*]] = #cir.const_array<[#cir.int<5> : !s32i, #cir.int<6> : !s32i]> : !cir.array<!s32i x 2>
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[FUNC4_ARR:.*]] = #cir.const_array<[#cir.const_array<[#cir.int<5> : !s32i]> : !cir.array<!s32i x 1>, #cir.const_array<[#cir.int<6> : !s32i]> : !cir.array<!s32i x 1>]> : !cir.array<!cir.array<!s32i x 1> x 2>
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[FUNC5_ARR:.*]] = #cir.const_array<[#cir.const_array<[#cir.int<5> : !s32i]> : !cir.array<!s32i x 1>, #cir.zero : !cir.array<!s32i x 1>]> : !cir.array<!cir.array<!s32i x 1> x 2>
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[FUNC7_ARR:.*]] = #cir.zero : !cir.array<!cir.ptr<!s32i> x 1>
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[COMPLEX_ARR:.*]] =
+
 int a[10];
 // CIR: cir.global external @a = #cir.zero : !cir.array<!s32i x 10>
 
@@ -113,13 +120,11 @@ void func() {
 // CIR: %[[INIT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init]
 // CIR: %[[INIT_2:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e2", init]
 // CIR: %[[IDX:.*]] = cir.const #cir.int<0> : !s32i
-// CIR: %[[ARR_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
-// CIR: %[[ELE_PTR:.*]] = cir.ptr_stride %[[ARR_PTR]], %[[IDX]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+// CIR: %[[ELE_PTR:.*]] = cir.get_element %[[ARR]][%[[IDX]] : !s32i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[ELE_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR" cir.store %[[TMP]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[IDX:.*]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[ARR_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
-// CIR: %[[ELE_PTR:.*]] = cir.ptr_stride %[[ARR_PTR]], %[[IDX]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+// CIR: %[[ELE_PTR:.*]] = cir.get_element %[[ARR]][%[[IDX]] : !s32i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[ELE_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR" cir.store %[[TMP]], %[[INIT_2]] : !s32i, !cir.ptr<!s32i>
 
@@ -127,12 +132,10 @@ void func() {
 // LLVM-NEXT: %[[ARR:.*]] = alloca [10 x i32], i64 1, align 16
 // LLVM-NEXT: %[[INIT:.*]] = alloca i32, i64 1, align 4
 // LLVM-NEXT: %[[INIT_2:.*]] = alloca i32, i64 1, align 4
-// LLVM-NEXT: %[[ARR_PTR:.*]] = getelementptr i32, ptr %[[ARR]], i32 0
-// LLVM-NEXT: %[[ELE_PTR:.*]] = getelementptr i32, ptr %[[ARR_PTR]], i64 0
+// LLVM-NEXT: %[[ELE_PTR:.*]] = getelementptr [10 x i32], ptr %[[ARR]], i32 0, i64 0
 // LLVM-NEXT: %[[TMP_1:.*]] = load i32, ptr %[[ELE_PTR]], align 16
 // LLVM-NEXT: store i32 %[[TMP_1]], ptr %[[INIT]], align 4
-// LLVM-NEXT: %[[ARR_PTR:.*]] = getelementptr i32, ptr %[[ARR]], i32 0
-// LLVM-NEXT: %[[ELE_PTR:.*]] = getelementptr i32, ptr %[[ARR_PTR]], i64 1
+// LLVM-NEXT: %[[ELE_PTR:.*]] = getelementptr [10 x i32], ptr %[[ARR]], i32 0, i64 1
 // LLVM-NEXT: %[[TMP_2:.*]] = load i32, ptr %[[ELE_PTR]], align 4
 // LLVM-NEXT: store i32 %[[TMP_2]], ptr %[[INIT_2]], align 4
 
@@ -151,12 +154,12 @@ void func2() {
 }
 
 // CIR: %[[ARR2:.*]] = cir.alloca !cir.array<!s32i x 2>, !cir.ptr<!cir.array<!s32i x 2>>, ["arr", init]
-// CIR: %[[CONST:.*]] = cir.const #cir.const_array<[#cir.int<5> : !s32i, #cir.int<0> : !s32i]> : !cir.array<!s32i x 2>
-// CIR: cir.store{{.*}} %[[CONST]], %[[ARR2]] : !cir.array<!s32i x 2>, !cir.ptr<!cir.array<!s32i x 2>>
+// CIR: %[[CONST:.*]] = cir.get_global @[[FUNC2_ARR]] : !cir.ptr<!cir.array<!s32i x 2>>
+// CIR: cir.copy %[[CONST]] to %[[ARR2]] : !cir.ptr<!cir.array<!s32i x 2>>
 
 // LLVM: define{{.*}} void @_Z5func2v(){{.*}}
 // LLVM:   %[[ARR:.*]] = alloca [2 x i32], i64 1, align 4
-// LLVM:   store [2 x i32] [i32 5, i32 0], ptr %[[ARR]], align 4
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[ARR]], ptr @[[FUNC2_ARR:.*]], i64 8, i1 false)
 
 // OGCG: %[[ARR:.*]] = alloca [2 x i32], align 4
 // OGCG: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[ARR]], ptr align 4 @[[FUN2_ARR]], i64 8, i1 false)
@@ -171,13 +174,12 @@ void func3() {
 // CIR: %[[ARR:.*]] = cir.alloca !cir.array<!s32i x 2>, !cir.ptr<!cir.array<!s32i x 2>>, ["arr", init]
 // CIR: %[[IDX:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["idx", init]
 // CIR: %[[INIT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init]
-// CIR: %[[CONST:.*]] = cir.const #cir.const_array<[#cir.int<5> : !s32i, #cir.int<6> : !s32i]> : !cir.array<!s32i x 2>
-// CIR: cir.store{{.*}} %[[CONST]], %[[ARR]] : !cir.array<!s32i x 2>, !cir.ptr<!cir.array<!s32i x 2>>
+// CIR: %[[CONST:.*]] = cir.get_global @[[FUNC3_ARR]] : !cir.ptr<!cir.array<!s32i x 2>>
+// CIR: cir.copy %[[CONST]] to %[[ARR]] : !cir.ptr<!cir.array<!s32i x 2>>
 // CIR: %[[IDX_V:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store{{.*}} %[[IDX_V]], %[[IDX]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[TMP_IDX:.*]] = cir.load{{.*}} %[[IDX]] : !cir.ptr<!s32i>, !s32i
-// CIR: %[[ARR_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
-// CIR: %[[ELE_PTR:.*]] = cir.ptr_stride %[[ARR_PTR]], %[[TMP_IDX]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+// CIR: %[[ELE_PTR:.*]] = cir.get_element %[[ARR]][%[[TMP_IDX]] : !s32i] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
 // CIR: %[[ELE_TMP:.*]] = cir.load{{.*}} %[[ELE_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store{{.*}} %[[ELE_TMP]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
@@ -185,12 +187,11 @@ void func3() {
 // LLVM:  %[[ARR:.*]] = alloca [2 x i32], i64 1, align 4
 // LLVM:  %[[IDX:.*]] = alloca i32, i64 1, align 4
 // LLVM:  %[[INIT:.*]] = alloca i32, i64 1, align 4
-// LLVM:  store [2 x i32] [i32 5, i32 6], ptr %[[ARR]], align 4
+// LLVM:  call void @llvm.memcpy.p0.p0.i64(ptr %[[ARR]], ptr @[[FUNC3_ARR:.*]], i64 8, i1 false)
 // LLVM:  store i32 1, ptr %[[IDX]], align 4
 // LLVM:  %[[TMP1:.*]] = load i32, ptr %[[IDX]], align 4
-// LLVM:  %[[ARR_PTR:.*]] = getelementptr i32, ptr %[[ARR]], i32 0
 // LLVM:  %[[IDX_I64:.*]] = sext i32 %[[TMP1]] to i64
-// LLVM:  %[[ELE:.*]] = getelementptr i32, ptr %[[ARR_PTR]], i64 %[[IDX_I64]]
+// LLVM:  %[[ELE:.*]] = getelementptr [2 x i32], ptr %[[ARR]], i32 0, i64 %[[IDX_I64]]
 // LLVM:  %[[TMP2:.*]] = load i32, ptr %[[ELE]], align 4
 // LLVM:  store i32 %[[TMP2]], ptr %[[INIT]], align 4
 
@@ -212,25 +213,21 @@ void func4() {
 
 // CIR: %[[ARR:.*]] = cir.alloca !cir.array<!cir.array<!s32i x 1> x 2>, !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>>, ["arr", init]
 // CIR: %[[INIT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init]
-// CIR: %[[CONST:.*]] = cir.const #cir.const_array<[#cir.const_array<[#cir.int<5> : !s32i]> : !cir.array<!s32i x 1>, #cir.const_array<[#cir.int<6> : !s32i]> : !cir.array<!s32i x 1>]> : !cir.array<!cir.array<!s32i x 1> x 2>
-// CIR: cir.store{{.*}} %[[CONST]], %[[ARR]] : !cir.array<!cir.array<!s32i x 1> x 2>, !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>>
+// CIR: %[[CONST:.*]] = cir.get_global @[[FUNC4_ARR]] : !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>>
+// CIR: cir.copy %[[CONST]] to %[[ARR]] : !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>>
 // CIR: %[[IDX:.*]] = cir.const #cir.int<0> : !s32i
 // CIR: %[[IDX_1:.*]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[ARR_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>> -> !cir.ptr<!cir.array<!s32i x 1>>
-// CIR: %[[ARR_1:.*]] = cir.ptr_stride %[[ARR_PTR]], %[[IDX_1]] : (!cir.ptr<!cir.array<!s32i x 1>>, !s32i) -> !cir.ptr<!cir.array<!s32i x 1>>
-// CIR: %[[ARR_1_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR_1]] : !cir.ptr<!cir.array<!s32i x 1>> -> !cir.ptr<!s32i>
-// CIR: %[[ELE_0:.*]] = cir.ptr_stride %[[ARR_1_PTR]], %[[IDX]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+// CIR: %[[ARR_1:.*]] = cir.get_element %[[ARR]][%[[IDX_1]] : !s32i] : !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>> -> !cir.ptr<!cir.array<!s32i x 1>>
+// CIR: %[[ELE_0:.*]] = cir.get_element %[[ARR_1]][%[[IDX]] : !s32i] : !cir.ptr<!cir.array<!s32i x 1>> -> !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[ELE_0]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store{{.*}} %[[TMP]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: define{{.*}} void @_Z5func4v(){{.*}}
 // LLVM:  %[[ARR:.*]] = alloca [2 x [1 x i32]], i64 1, align 4
 // LLVM:  %[[INIT:.*]] = alloca i32, i64 1, align 4
-// LLVM:  store [2 x [1 x i32]] {{\[}}[1 x i32] [i32 5], [1 x i32] [i32 6]], ptr %[[ARR]], align 4
-// LLVM:  %[[ARR_PTR:.*]] = getelementptr [1 x i32], ptr %[[ARR]], i32 0
-// LLVM:  %[[ARR_1:.*]] = getelementptr [1 x i32], ptr %[[ARR_PTR]], i64 1
-// LLVM:  %[[ARR_1_0:.*]] = getelementptr i32, ptr %[[ARR_1]], i32 0
-// LLVM:  %[[ELE_PTR:.*]] = getelementptr i32, ptr %[[ARR_1_0]], i64 0
+// LLVM:  call void @llvm.memcpy.p0.p0.i64(ptr %[[ARR]], ptr @[[FUNC4_ARR:.*]], i64 8, i1 false)
+// LLVM:  %[[ARR_1:.*]] = getelementptr [2 x [1 x i32]], ptr %[[ARR]], i32 0, i64 1
+// LLVM:  %[[ELE_PTR:.*]] = getelementptr [1 x i32], ptr %[[ARR_1]], i32 0, i64 0
 // LLVM:  %[[TMP:.*]] = load i32, ptr %[[ELE_PTR]], align 4
 // LLVM:  store i32 %[[TMP]], ptr %[[INIT]], align 4
 
@@ -247,15 +244,15 @@ void func5() {
 }
 
 // CIR: %[[ARR:.*]] = cir.alloca !cir.array<!cir.array<!s32i x 1> x 2>, !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>>, ["arr", init]
-// CIR: %[[CONST:.*]] = cir.const #cir.const_array<[#cir.const_array<[#cir.int<5> : !s32i]> : !cir.array<!s32i x 1>, #cir.zero : !cir.array<!s32i x 1>]> : !cir.array<!cir.array<!s32i x 1> x 2>
-// CIR: cir.store{{.*}} %[[CONST]], %[[ARR]] : !cir.array<!cir.array<!s32i x 1> x 2>, !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>>
+// CIR: %[[CONST:.*]] = cir.get_global @[[FUNC5_ARR]] : !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>>
+// CIR: cir.copy %[[CONST]] to %[[ARR]] : !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>>
 
 // LLVM: define{{.*}} void @_Z5func5v(){{.*}}
 // LLVM:   %[[ARR:.*]] = alloca [2 x [1 x i32]], i64 1, align 4
-// LLVM:   store [2 x [1 x i32]] {{\[}}[1 x i32] [i32 5], [1 x i32] zeroinitializer], ptr %[[ARR]], align 4
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[ARR]], ptr @[[FUNC5_ARR:.*]], i64 8, i1 false)
 
-// ORGC: %[[ARR:.*]] = alloca [2 x [1 x i32]], align 4
-// ORGC: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[ARR]], ptr align 4 @[[FUN5_ARR]], i64 8, i1 false)
+// OGCG: %[[ARR:.*]] = alloca [2 x [1 x i32]], align 4
+// OGCG: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[ARR]], ptr align 4 @[[FUN5_ARR]], i64 8, i1 false)
 
 void func6() {
   int x = 4;
@@ -297,12 +294,12 @@ void func7() {
 }
 
 // CIR: %[[ARR:.*]] = cir.alloca !cir.array<!cir.ptr<!s32i> x 1>, !cir.ptr<!cir.array<!cir.ptr<!s32i> x 1>>, ["arr", init]
-// CIR: %[[CONST:.*]] = cir.const #cir.zero : !cir.array<!cir.ptr<!s32i> x 1>
-// CIR: cir.store{{.*}} %[[CONST]], %[[ARR]] : !cir.array<!cir.ptr<!s32i> x 1>, !cir.ptr<!cir.array<!cir.ptr<!s32i> x 1>>
+// CIR: %[[CONST:.*]] = cir.get_global @[[FUNC7_ARR]] : !cir.ptr<!cir.array<!cir.ptr<!s32i> x 1>>
+// CIR: cir.copy %[[CONST]] to %[[ARR]] : !cir.ptr<!cir.array<!cir.ptr<!s32i> x 1>>
 
 // LLVM: define{{.*}} void @_Z5func7v(){{.*}}
 // LLVM:   %[[ARR:.*]] = alloca [1 x ptr], i64 1, align 8
-// LLVM:   store [1 x ptr] zeroinitializer, ptr %[[ARR]], align 8
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[ARR]], ptr @[[FUNC7_ARR:.*]], i64 8, i1 false)
 
 // OGCG: %[[ARR:.*]] = alloca [1 x ptr], align 8
 // OGCG: call void @llvm.memset.p0.i64(ptr align 8 %[[ARR]], i8 0, i64 8, i1 false)
@@ -367,8 +364,7 @@ void func9(int arr[10][5]) {
 // CIR:  %[[IDX_1:.*]] = cir.const #cir.int<1> : !s32i
 // CIR:  %[[TMP_1:.*]] = cir.load{{.*}} %[[ARR]] : !cir.ptr<!cir.ptr<!cir.array<!s32i x 5>>>, !cir.ptr<!cir.array<!s32i x 5>>
 // CIR:  %[[ARR_1:.*]] = cir.ptr_stride %[[TMP_1]], %[[IDX_1]] : (!cir.ptr<!cir.array<!s32i x 5>>, !s32i) -> !cir.ptr<!cir.array<!s32i x 5>>
-// CIR:  %[[ARR_1_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR_1]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
-// CIR:  %[[ARR_1_2:.*]] = cir.ptr_stride %[[ARR_1_PTR]], %[[IDX]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+// CIR: %[[ARR_1_2:.*]] = cir.get_element %[[ARR_1]][%[[IDX]] : !s32i] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
 // CIR:  %[[TMP_2:.*]] = cir.load{{.*}} %[[ARR_1_2]] : !cir.ptr<!s32i>, !s32i
 // CIR:  cir.store{{.*}} %[[TMP_2]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
@@ -378,8 +374,7 @@ void func9(int arr[10][5]) {
 // LLVM:  store ptr %[[ARG]], ptr %[[ARR]], align 8
 // LLVM:  %[[TMP_1:.*]] = load ptr, ptr %[[ARR]], align 8
 // LLVM:  %[[ARR_1:.*]] = getelementptr [5 x i32], ptr %[[TMP_1]], i64 1
-// LLVM:  %[[ARR_1_PTR:.*]] = getelementptr i32, ptr %[[ARR_1]], i32 0
-// LLVM:  %[[ARR_1_2:.*]] = getelementptr i32, ptr %[[ARR_1_PTR]], i64 2
+// LLVM:  %[[ARR_1_2:.*]] = getelementptr [5 x i32], ptr %[[ARR_1]], i32 0, i64 2
 // LLVM:  %[[TMP_2:.*]] = load i32, ptr %[[ARR_1_2]], align 4
 // LLVM:  store i32 %[[TMP_2]], ptr %[[INIT]], align 4
 
@@ -451,11 +446,11 @@ void array_with_complex_elements() {
 }
 
 // CIR: %[[ARR_ADDR:.*]] = cir.alloca !cir.array<!cir.complex<!cir.float> x 2>, !cir.ptr<!cir.array<!cir.complex<!cir.float> x 2>>, ["arr", init]
-// CIR: %[[CONST:.*]] = cir.const #cir.const_array<[#cir.const_complex<#cir.fp<1.100000e+00> : !cir.float, #cir.fp<2.200000e+00> : !cir.float> : !cir.complex<!cir.float>, #cir.const_complex<#cir.fp<3.300000e+00> : !cir.float, #cir.fp<4.400000e+00> : !cir.float> : !cir.complex<!cir.float>]> : !cir.array<!cir.complex<!cir.float> x 2>
-// CIR: cir.store{{.*}} %[[CONST]], %[[ARR_ADDR]] : !cir.array<!cir.complex<!cir.float> x 2>, !cir.ptr<!cir.array<!cir.complex<!cir.float> x 2>>
+// CIR: %[[CONST:.*]] = cir.get_global @[[COMPLEX_ARR]] : !cir.ptr<!cir.array<!cir.complex<!cir.float> x 2>>
+// CIR: cir.copy %[[CONST]] to %[[ARR_ADDR]] : !cir.ptr<!cir.array<!cir.complex<!cir.float> x 2>>
 
 // LLVM: %[[ARR_ADDR:.*]] = alloca [2 x { float, float }], i64 1, align 16
-// LLVM: store [2 x { float, float }] [{ float, float } { float 0x3FF19999A0000000, float 0x40019999A0000000 }, { float, float } { float 0x400A666660000000, float 0x40119999A0000000 }], ptr %[[ARR_ADDR]], align 16
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr %[[ARR_ADDR]], ptr @[[COMPLEX_ARR:.*]], i64 16, i1 false)
 
 // OGCG: %[[ARR_ADDR:.*]] = alloca [2 x { float, float }], align 16
 // OGCG: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[ARR_ADDR]], ptr align 16 @__const._Z27array_with_complex_elementsv.arr, i64 16, i1 false)

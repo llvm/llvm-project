@@ -1,9 +1,13 @@
 ;RUN: opt -mtriple='arm64-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
 
+; CHECK-LABEL: define swifttailcc void @coroutineA
+; CHECK-SAME:    (ptr swiftasync %[[frame_ptr:.*]],
 ; CHECK:  %.debug = alloca double, align 8
 ; CHECK-NEXT:    #dbg_declare(ptr %{{.*}}, !{{[0-9]+}}, !DIExpression(DW_OP_deref), !{{[0-9]+}})
 ; CHECK-NEXT:  store double %{{[0-9]+}}, ptr %{{.*}}, align 8
-; CHECK-NEXT:    #dbg_declare(ptr %arg, !{{[0-9]+}}, !DIExpression(DW_OP_plus_uconst, 24), !{{[0-9]+}})
+; CHECK:       %[[frame_ptr_alloca:.*]] = alloca ptr,
+; CHECK-NEXT:  #dbg_declare(ptr %[[frame_ptr_alloca]], !{{[0-9]+}}, !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 24), !{{[0-9]+}})
+; CHECK-NEXT:  store ptr %[[frame_ptr]], ptr %[[frame_ptr_alloca]]
 
 ; ModuleID = '/Users/srastogi/Development/llvm-project-2/llvm/test/Transforms/Coroutines/declare-value.ll'
 source_filename = "/Users/srastogi/Development/llvm-project-2/llvm/test/Transforms/Coroutines/declare-value.ll"

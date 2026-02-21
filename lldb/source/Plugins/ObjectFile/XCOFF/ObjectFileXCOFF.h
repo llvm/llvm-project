@@ -38,23 +38,24 @@ public:
   }
 
   static lldb_private::ObjectFile *
-  CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
-                 lldb::offset_t data_offset, const lldb_private::FileSpec *file,
-                 lldb::offset_t file_offset, lldb::offset_t length);
+  CreateInstance(const lldb::ModuleSP &module_sp,
+                 lldb::DataExtractorSP extractor_sp, lldb::offset_t data_offset,
+                 const lldb_private::FileSpec *file, lldb::offset_t file_offset,
+                 lldb::offset_t length);
 
   static lldb_private::ObjectFile *CreateMemoryInstance(
       const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
       const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
   static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
-                                        lldb::DataBufferSP &data_sp,
+                                        lldb::DataExtractorSP &extractor_sp,
                                         lldb::offset_t data_offset,
                                         lldb::offset_t file_offset,
                                         lldb::offset_t length,
                                         lldb_private::ModuleSpecList &specs);
 
-  static bool MagicBytesMatch(lldb::DataBufferSP &data_sp, lldb::addr_t offset,
-                              lldb::addr_t length);
+  static bool MagicBytesMatch(lldb::DataExtractorSP &extractor_sp,
+                              lldb::addr_t offset, lldb::addr_t length);
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
@@ -88,7 +89,8 @@ public:
 
   ObjectFile::Strata CalculateStrata() override;
 
-  ObjectFileXCOFF(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
+  ObjectFileXCOFF(const lldb::ModuleSP &module_sp,
+                  lldb::DataExtractorSP extractor_sp,
                   lldb::offset_t data_offset,
                   const lldb_private::FileSpec *file, lldb::offset_t offset,
                   lldb::offset_t length);
@@ -120,4 +122,4 @@ private:
   std::unique_ptr<llvm::object::XCOFFObjectFile> m_binary;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILE_H
+#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILEXCOFF_H

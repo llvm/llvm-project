@@ -304,6 +304,10 @@ def : ProcessorModel<"gfx1153", GFX11SpeedModel,
   FeatureISAVersion11_5_3.Features
 >;
 
+def : ProcessorModel<"gfx1170", GFX11SpeedModel,
+  FeatureISAVersion11_7_0.Features
+>;
+
 // [gfx1100, gfx1101, gfx1102, gfx1103, gfx1150, gfx1151, gfx1152, gfx1153]
 def : ProcessorModel<"gfx11-generic", GFX11SpeedModel,
   FeatureISAVersion11_Generic.Features
@@ -332,4 +336,12 @@ def : ProcessorModel<"gfx1250", GFX1250SpeedModel,
 
 def : ProcessorModel<"gfx1251", GFX1250SpeedModel,
   FeatureISAVersion12_51.Features
+>;
+
+//===----------------------------------------------------------------------===//
+// GCN GFX13.
+//===----------------------------------------------------------------------===//
+
+def : ProcessorModel<"gfx1310", GFX12SpeedModel,
+  FeatureISAVersion13.Features
 >;

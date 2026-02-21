@@ -128,20 +128,25 @@ protected:
     // null.
     assert((!AllocInfo.HasHungOffUses || !getOperandList()) &&
            "Error in initializing hung off uses for User");
+
+    Use *Operands = reinterpret_cast<Use *>(this) - NumUserOperands;
+    for (unsigned I = 0; I < NumUserOperands; ++I)
+      new (&Operands[I]) Use(this);
   }
 
   /// Allocate the array of Uses, followed by a pointer
   /// (with bottom bit set) to the User.
-  /// \param IsPhi identifies callers which are phi nodes and which need
-  /// N BasicBlock* allocated along with N
-  LLVM_ABI void allocHungoffUses(unsigned N, bool IsPhi = false);
+  /// \param WithExtraValues identifies callers which need N Value* allocated
+  /// along the N operands.
+  LLVM_ABI void allocHungoffUses(unsigned N, bool WithExtraValues = false);
 
   /// Grow the number of hung off uses.  Note that allocHungoffUses
   /// should be called if there are no uses.
-  LLVM_ABI void growHungoffUses(unsigned N, bool IsPhi = false);
+  LLVM_ABI void growHungoffUses(unsigned N, bool WithExtraValues = false);
 
 protected:
-  ~User() = default; // Use deleteValue() to delete a generic Instruction.
+  // Use deleteValue() to delete a generic User.
+  LLVM_ABI ~User();
 
 public:
   User(const User &) = delete;
@@ -149,42 +154,12 @@ public:
   /// Free memory allocated for User and Use objects.
   LLVM_ABI void operator delete(void *Usr);
   /// Placement delete - required by std, called if the ctor throws.
-  void operator delete(void *Usr, HungOffOperandsAllocMarker) {
-    // Note: If a subclass manipulates the information which is required to
-    // calculate the Usr memory pointer, e.g. NumUserOperands, the operator
-    // delete of that subclass has to restore the changed information to the
-    // original value, since the dtor of that class is not called if the ctor
-    // fails.
-    User::operator delete(Usr);
-
-#ifndef LLVM_ENABLE_EXCEPTIONS
-    llvm_unreachable("Constructor throws?");
-#endif
-  }
+  LLVM_ABI void operator delete(void *Usr, HungOffOperandsAllocMarker);
   /// Placement delete - required by std, called if the ctor throws.
-  void operator delete(void *Usr, IntrusiveOperandsAllocMarker) {
-    // Note: If a subclass manipulates the information which is required to calculate the
-    // Usr memory pointer, e.g. NumUserOperands, the operator delete of that subclass has
-    // to restore the changed information to the original value, since the dtor of that class
-    // is not called if the ctor fails.
-    User::operator delete(Usr);
-
-#ifndef LLVM_ENABLE_EXCEPTIONS
-    llvm_unreachable("Constructor throws?");
-#endif
-  }
+  LLVM_ABI void operator delete(void *Usr,
+                                IntrusiveOperandsAndDescriptorAllocMarker);
   /// Placement delete - required by std, called if the ctor throws.
-  void operator delete(void *Usr, IntrusiveOperandsAndDescriptorAllocMarker) {
-    // Note: If a subclass manipulates the information which is required to calculate the
-    // Usr memory pointer, e.g. NumUserOperands, the operator delete of that subclass has
-    // to restore the changed information to the original value, since the dtor of that class
-    // is not called if the ctor fails.
-    User::operator delete(Usr);
-
-#ifndef LLVM_ENABLE_EXCEPTIONS
-    llvm_unreachable("Constructor throws?");
-#endif
-  }
+  LLVM_ABI void operator delete(void *Usr, IntrusiveOperandsAllocMarker Marker);
 
 protected:
   template <int Idx, typename U> static Use &OpFrom(const U *that) {

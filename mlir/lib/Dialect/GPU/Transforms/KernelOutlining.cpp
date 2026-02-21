@@ -211,6 +211,10 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
   if (auto gridBounds =
           maybeConstantDimsAttr(launchOp.getGridSizeOperandValues()))
     outlinedFunc.setKnownGridSizeAttr(gridBounds);
+  if (auto clusterSize = launchOp.getClusterSizeOperandValues()) {
+    if (auto clusterBounds = maybeConstantDimsAttr(*clusterSize))
+      outlinedFunc.setKnownClusterSizeAttr(clusterBounds);
+  }
 
   IRMapping map;
 

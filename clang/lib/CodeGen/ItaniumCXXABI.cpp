@@ -35,6 +35,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 #include <optional>
@@ -93,6 +94,8 @@ public:
         llvm_unreachable("emitting dtor comdat as function?");
       case Dtor_Unified:
         llvm_unreachable("emitting unified dtor as function?");
+      case Dtor_VectorDeleting:
+        llvm_unreachable("unexpected dtor kind for this ABI");
       }
       llvm_unreachable("bad dtor kind");
     }
@@ -458,7 +461,8 @@ public:
        if (!IsInlined)
          continue;
 
-       StringRef Name = CGM.getMangledName(VtableComponent.getGlobalDecl());
+       StringRef Name = CGM.getMangledName(
+           VtableComponent.getGlobalDecl(/*HasVectorDeletingDtors=*/false));
        auto *Entry = CGM.GetGlobalValue(Name);
        // This checks if virtual inline function has already been emitted.
        // Note that it is possible that this inline function would be emitted
@@ -912,7 +916,7 @@ static llvm::Constant *pointerAuthResignConstant(
     return nullptr;
 
   assert(CPA->getKey()->getZExtValue() == CurAuthInfo.getKey() &&
-         CPA->getAddrDiscriminator()->isZeroValue() &&
+         CPA->getAddrDiscriminator()->isNullValue() &&
          CPA->getDiscriminator() == CurAuthInfo.getDiscriminator() &&
          "unexpected key or discriminators");
 
@@ -1254,6 +1258,7 @@ llvm::Constant *ItaniumCXXABI::EmitMemberPointer(const APValue &MP,
     return pointerAuthResignMemberFunctionPointer(Src, MPType, SrcType, CGM);
   }
 
+  getContext().recordMemberDataPointerEvaluation(MPD);
   CharUnits FieldOffset =
     getContext().toCharUnitsFromBits(getContext().getFieldOffset(MPD));
   return EmitMemberDataPointer(MPT, ThisAdjustment + FieldOffset);
@@ -1624,7 +1629,7 @@ llvm::Value *ItaniumCXXABI::EmitTypeid(CodeGenFunction &CGF,
     // Load the type info.
     Value = CGF.Builder.CreateCall(
         CGM.getIntrinsic(llvm::Intrinsic::load_relative, {CGM.Int32Ty}),
-        {Value, llvm::ConstantInt::get(CGM.Int32Ty, -4)});
+        {Value, llvm::ConstantInt::getSigned(CGM.Int32Ty, -4)});
   } else {
     // Load the type info.
     Value =
@@ -1653,7 +1658,7 @@ llvm::Value *ItaniumCXXABI::emitDynamicCastCall(
   // Compute the offset hint.
   const CXXRecordDecl *SrcDecl = SrcRecordTy->getAsCXXRecordDecl();
   const CXXRecordDecl *DestDecl = DestRecordTy->getAsCXXRecordDecl();
-  llvm::Value *OffsetHint = llvm::ConstantInt::get(
+  llvm::Value *OffsetHint = llvm::ConstantInt::getSigned(
       PtrDiffLTy,
       computeOffsetHint(CGF.getContext(), SrcDecl, DestDecl).getQuantity());
 
@@ -3616,8 +3621,17 @@ llvm::GlobalVariable *ItaniumRTTIBuilder::GetAddrOfTypeName(
   // We know that the mangled name of the type starts at index 4 of the
   // mangled name of the typename, so we can just index into it in order to
   // get the mangled name of the type.
-  llvm::Constant *Init = llvm::ConstantDataArray::getString(VMContext,
-                                                            Name.substr(4));
+  llvm::Constant *Init;
+  if (CGM.getTriple().isOSzOS()) {
+    // On z/OS, typename is stored as 2 encodings: EBCDIC followed by ASCII.
+    SmallString<256> DualEncodedName;
+    llvm::ConverterEBCDIC::convertToEBCDIC(Name.substr(4), DualEncodedName);
+    DualEncodedName += '\0';
+    DualEncodedName += Name.substr(4);
+    Init = llvm::ConstantDataArray::getString(VMContext, DualEncodedName);
+  } else
+    Init = llvm::ConstantDataArray::getString(VMContext, Name.substr(4));
+
   auto Align = CGM.getContext().getTypeAlignInChars(CGM.getContext().CharTy);
 
   llvm::GlobalVariable *GV = CGM.CreateOrReplaceCXXRuntimeVariable(
@@ -3959,6 +3973,7 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
 
   case Type::Builtin:
   case Type::BitInt:
+  case Type::OverflowBehavior:
   // GCC treats vector and complex types as fundamental types.
   case Type::Vector:
   case Type::ExtVector:
@@ -4061,8 +4076,7 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
     // The vtable address point is 8 bytes after its start:
     // 4 for the offset to top + 4 for the relative offset to rtti.
     llvm::Constant *Eight = llvm::ConstantInt::get(CGM.Int32Ty, 8);
-    VTable =
-        llvm::ConstantExpr::getInBoundsGetElementPtr(CGM.Int8Ty, VTable, Eight);
+    VTable = llvm::ConstantExpr::getInBoundsPtrAdd(VTable, Eight);
   } else {
     llvm::Constant *Two = llvm::ConstantInt::get(PtrDiffTy, 2);
     VTable = llvm::ConstantExpr::getInBoundsGetElementPtr(CGM.GlobalsInt8PtrTy,
@@ -4313,6 +4327,9 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
     // No fields, at least for the moment.
     break;
 
+  case Type::OverflowBehavior:
+    break;
+
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
     llvm_unreachable("HLSL doesn't support RTTI");
@@ -4553,7 +4570,7 @@ void ItaniumRTTIBuilder::BuildVMIClassTypeInfo(const CXXRecordDecl *RD) {
     if (Base.getAccessSpecifier() == AS_public)
       OffsetFlags |= BCTI_Public;
 
-    Fields.push_back(llvm::ConstantInt::get(OffsetFlagsLTy, OffsetFlags));
+    Fields.push_back(llvm::ConstantInt::getSigned(OffsetFlagsLTy, OffsetFlags));
   }
 }
 

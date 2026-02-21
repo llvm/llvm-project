@@ -13,11 +13,11 @@
 ;;   res[0] = a > b;
 ;; }
 
-define dso_local spir_kernel void @testUGreaterThan(<2 x i32> noundef %a, <2 x i32> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testUGreaterThan(<2 x i32> noundef %a, <2 x i32> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %cmp = icmp ugt <2 x i32> %a, %b
   %sext = sext <2 x i1> %cmp to <2 x i32>
-  store <2 x i32> %sext, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %sext, ptr addrspace(1) %res, align 8
   ret void
 }
 
@@ -31,11 +31,11 @@ entry:
 ;;   res[0] = a > b;
 ;; }
 
-define dso_local spir_kernel void @testSGreaterThan(<2 x i32> noundef %a, <2 x i32> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testSGreaterThan(<2 x i32> noundef %a, <2 x i32> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %cmp = icmp sgt <2 x i32> %a, %b
   %sext = sext <2 x i1> %cmp to <2 x i32>
-  store <2 x i32> %sext, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %sext, ptr addrspace(1) %res, align 8
   ret void
 }
 
@@ -49,11 +49,11 @@ entry:
 ;;   res[0] = a >= b;
 ;; }
 
-define dso_local spir_kernel void @testUGreaterThanEqual(<2 x i32> noundef %a, <2 x i32> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testUGreaterThanEqual(<2 x i32> noundef %a, <2 x i32> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %cmp = icmp uge <2 x i32> %a, %b
   %sext = sext <2 x i1> %cmp to <2 x i32>
-  store <2 x i32> %sext, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %sext, ptr addrspace(1) %res, align 8
   ret void
 }
 
@@ -67,11 +67,11 @@ entry:
 ;;   res[0] = a >= b;
 ;; }
 
-define dso_local spir_kernel void @testSGreaterThanEqual(<2 x i32> noundef %a, <2 x i32> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testSGreaterThanEqual(<2 x i32> noundef %a, <2 x i32> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %cmp = icmp sge <2 x i32> %a, %b
   %sext = sext <2 x i1> %cmp to <2 x i32>
-  store <2 x i32> %sext, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %sext, ptr addrspace(1) %res, align 8
   ret void
 }
 
@@ -85,11 +85,11 @@ entry:
 ;;   res[0] = a < b;
 ;; }
 
-define dso_local spir_kernel void @testULessThan(<2 x i32> noundef %a, <2 x i32> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testULessThan(<2 x i32> noundef %a, <2 x i32> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %cmp = icmp ult <2 x i32> %a, %b
   %sext = sext <2 x i1> %cmp to <2 x i32>
-  store <2 x i32> %sext, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %sext, ptr addrspace(1) %res, align 8
   ret void
 }
 
@@ -103,11 +103,11 @@ entry:
 ;;   res[0] = a < b;
 ;; }
 
-define dso_local spir_kernel void @testSLessThan(<2 x i32> noundef %a, <2 x i32> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testSLessThan(<2 x i32> noundef %a, <2 x i32> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %cmp = icmp slt <2 x i32> %a, %b
   %sext = sext <2 x i1> %cmp to <2 x i32>
-  store <2 x i32> %sext, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %sext, ptr addrspace(1) %res, align 8
   ret void
 }
 
@@ -121,11 +121,11 @@ entry:
 ;;   res[0] = a <= b;
 ;; }
 
-define dso_local spir_kernel void @testULessThanEqual(<2 x i32> noundef %a, <2 x i32> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testULessThanEqual(<2 x i32> noundef %a, <2 x i32> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %cmp = icmp ule <2 x i32> %a, %b
   %sext = sext <2 x i1> %cmp to <2 x i32>
-  store <2 x i32> %sext, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %sext, ptr addrspace(1) %res, align 8
   ret void
 }
 
@@ -139,11 +139,11 @@ entry:
 ;;   res[0] = a <= b;
 ;; }
 
-define dso_local spir_kernel void @testSLessThanEqual(<2 x i32> noundef %a, <2 x i32> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testSLessThanEqual(<2 x i32> noundef %a, <2 x i32> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %cmp = icmp sle <2 x i32> %a, %b
   %sext = sext <2 x i1> %cmp to <2 x i32>
-  store <2 x i32> %sext, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %sext, ptr addrspace(1) %res, align 8
   ret void
 }
 
@@ -157,11 +157,11 @@ entry:
 ;;   res[0] = a == b;
 ;; }
 
-define dso_local spir_kernel void @testFOrdEqual(<2 x float> noundef %a, <2 x float> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testFOrdEqual(<2 x float> noundef %a, <2 x float> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %cmp = fcmp oeq <2 x float> %a, %b
   %sext = sext <2 x i1> %cmp to <2 x i32>
-  store <2 x i32> %sext, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %sext, ptr addrspace(1) %res, align 8
   ret void
 }
 
@@ -175,11 +175,11 @@ entry:
 ;;   res[0] = a != b;
 ;; }
 
-define dso_local spir_kernel void @testFUnordNotEqual(<2 x float> noundef %a, <2 x float> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testFUnordNotEqual(<2 x float> noundef %a, <2 x float> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %cmp = fcmp une <2 x float> %a, %b
   %sext = sext <2 x i1> %cmp to <2 x i32>
-  store <2 x i32> %sext, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %sext, ptr addrspace(1) %res, align 8
   ret void
 }
 
@@ -193,11 +193,11 @@ entry:
 ;;   res[0] = a > b;
 ;; }
 
-define dso_local spir_kernel void @testFOrdGreaterThan(<2 x float> noundef %a, <2 x float> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testFOrdGreaterThan(<2 x float> noundef %a, <2 x float> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %cmp = fcmp ogt <2 x float> %a, %b
   %sext = sext <2 x i1> %cmp to <2 x i32>
-  store <2 x i32> %sext, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %sext, ptr addrspace(1) %res, align 8
   ret void
 }
 
@@ -211,11 +211,11 @@ entry:
 ;;   res[0] = a >= b;
 ;; }
 
-define dso_local spir_kernel void @testFOrdGreaterThanEqual(<2 x float> noundef %a, <2 x float> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testFOrdGreaterThanEqual(<2 x float> noundef %a, <2 x float> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %cmp = fcmp oge <2 x float> %a, %b
   %sext = sext <2 x i1> %cmp to <2 x i32>
-  store <2 x i32> %sext, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %sext, ptr addrspace(1) %res, align 8
   ret void
 }
 
@@ -229,11 +229,11 @@ entry:
 ;;   res[0] = a < b;
 ;; }
 
-define dso_local spir_kernel void @testFOrdLessThan(<2 x float> noundef %a, <2 x float> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testFOrdLessThan(<2 x float> noundef %a, <2 x float> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %cmp = fcmp olt <2 x float> %a, %b
   %sext = sext <2 x i1> %cmp to <2 x i32>
-  store <2 x i32> %sext, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %sext, ptr addrspace(1) %res, align 8
   ret void
 }
 
@@ -247,10 +247,10 @@ entry:
 ;;   res[0] = a <= b;
 ;; }
 
-define dso_local spir_kernel void @testFOrdLessThanEqual(<2 x float> noundef %a, <2 x float> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testFOrdLessThanEqual(<2 x float> noundef %a, <2 x float> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %cmp = fcmp ole <2 x float> %a, %b
   %sext = sext <2 x i1> %cmp to <2 x i32>
-  store <2 x i32> %sext, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %sext, ptr addrspace(1) %res, align 8
   ret void
 }

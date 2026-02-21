@@ -95,7 +95,7 @@ void ProBoundsAvoidUncheckedContainerAccessCheck::registerMatchers(
               cxxMethodDecl(
                   hasOverloadedOperatorName("[]"),
                   anyOf(parameterCountIs(0), parameterCountIs(1)),
-                  unless(matchers::matchesAnyListedName(ExcludedClasses)))
+                  unless(matchers::matchesAnyListedRegexName(ExcludedClasses)))
                   .bind("operator")))
           .bind("caller"),
       this);

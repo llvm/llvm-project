@@ -22,10 +22,12 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/BranchProbability.h"
-
 using namespace llvm;
 
 #define DEBUG_TYPE "si-pre-emit-peephole"
@@ -36,8 +38,11 @@ class SIPreEmitPeephole {
 private:
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
+  MachineLoopInfo *MLI = nullptr;
 
   bool optimizeVccBranch(MachineInstr &MI) const;
+  void updateMLIBeforeRemovingEdge(MachineBasicBlock *From,
+                                   MachineBasicBlock *To) const;
   bool optimizeSetGPR(MachineInstr &First, MachineInstr &MI) const;
   bool getBlockDestinations(MachineBasicBlock &SrcMBB,
                             MachineBasicBlock *&TrueMBB,
@@ -65,11 +70,11 @@ private:
   // this transformation.
   void performF32Unpacking(MachineInstr &I);
   // Select corresponding unpacked instruction
-  uint16_t mapToUnpackedOpcode(MachineInstr &I);
+  uint32_t mapToUnpackedOpcode(MachineInstr &I);
   // Creates the unpacked instruction to be inserted. Adds source modifiers to
   // the unpacked instructions based on the source modifiers in the packed
   // instruction.
-  MachineInstrBuilder createUnpackedMI(MachineInstr &I, uint16_t UnpackedOpcode,
+  MachineInstrBuilder createUnpackedMI(MachineInstr &I, uint32_t UnpackedOpcode,
                                        bool IsHiBits);
   // Process operands/source modifiers from packed instructions and insert the
   // appropriate source modifers and operands into the unpacked instructions.
@@ -77,19 +82,25 @@ private:
                          bool IsHiBits, const MachineOperand &SrcMO);
 
 public:
-  bool run(MachineFunction &MF);
+  bool run(MachineFunction &MF, MachineLoopInfo *MLI);
 };
 
 class SIPreEmitPeepholeLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SIPreEmitPeepholeLegacy() : MachineFunctionPass(ID) {
-    initializeSIPreEmitPeepholeLegacyPass(*PassRegistry::getPassRegistry());
+  SIPreEmitPeepholeLegacy() : MachineFunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addUsedIfAvailable<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    return SIPreEmitPeephole().run(MF);
+    auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+    MachineLoopInfo *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
+    return SIPreEmitPeephole().run(MF, MLI);
   }
 };
 
@@ -101,6 +112,51 @@ INITIALIZE_PASS(SIPreEmitPeepholeLegacy, DEBUG_TYPE,
 char SIPreEmitPeepholeLegacy::ID = 0;
 
 char &llvm::SIPreEmitPeepholeID = SIPreEmitPeepholeLegacy::ID;
+
+void SIPreEmitPeephole::updateMLIBeforeRemovingEdge(
+    MachineBasicBlock *From, MachineBasicBlock *To) const {
+  if (!MLI)
+    return;
+
+  // Only handle back-edges: To must be a loop header with From inside the loop.
+  MachineLoop *Loop = MLI->getLoopFor(To);
+  if (!Loop || Loop->getHeader() != To || !Loop->contains(From))
+    return;
+
+  // Count back-edges
+  unsigned BackEdgeCount = 0;
+  for (MachineBasicBlock *Pred : To->predecessors()) {
+    if (Loop->contains(Pred))
+      BackEdgeCount++;
+  }
+
+  if (BackEdgeCount > 1)
+    return;
+
+  MachineLoop *ParentLoop = Loop->getParentLoop();
+
+  // Re-map blocks directly owned by this loop to the parent.
+  for (MachineBasicBlock *BB : Loop->blocks()) {
+    if (MLI->getLoopFor(BB) == Loop)
+      MLI->changeLoopFor(BB, ParentLoop);
+  }
+
+  // Reparent all child loops.
+  while (!Loop->isInnermost()) {
+    MachineLoop *Child = Loop->removeChildLoop(std::prev(Loop->end()));
+    if (ParentLoop)
+      ParentLoop->addChildLoop(Child);
+    else
+      MLI->addTopLevelLoop(Child);
+  }
+
+  if (ParentLoop)
+    ParentLoop->removeChildLoop(Loop);
+  else
+    MLI->removeLoop(llvm::find(*MLI, Loop));
+
+  MLI->destroy(Loop);
+}
 
 bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   // Match:
@@ -153,11 +209,12 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
 
   MachineOperand &Op1 = A->getOperand(1);
   MachineOperand &Op2 = A->getOperand(2);
-  if (Op1.getReg() != ExecReg && Op2.isReg() && Op2.getReg() == ExecReg) {
+  if ((!Op1.isReg() || Op1.getReg() != ExecReg) && Op2.isReg() &&
+      Op2.getReg() == ExecReg) {
     TII->commuteInstruction(*A);
     Changed = true;
   }
-  if (Op1.getReg() != ExecReg)
+  if (!Op1.isReg() || Op1.getReg() != ExecReg)
     return Changed;
   if (Op2.isImm() && !(Op2.getImm() == -1 || Op2.getImm() == 0))
     return Changed;
@@ -250,11 +307,13 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
     for (auto *BranchMI : ToRemove) {
       MachineOperand &Dst = BranchMI->getOperand(0);
       assert(Dst.isMBB() && "destination is not basic block");
+      updateMLIBeforeRemovingEdge(Parent, Dst.getMBB());
       Parent->removeSuccessor(Dst.getMBB());
       BranchMI->eraseFromParent();
     }
 
     if (MachineBasicBlock *Succ = Parent->getFallThrough()) {
+      updateMLIBeforeRemovingEdge(Parent, Succ);
       Parent->removeSuccessor(Succ);
     }
 
@@ -264,7 +323,9 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
     // Will never branch
     MachineOperand &Dst = MI.getOperand(0);
     assert(Dst.isMBB() && "destination is not basic block");
-    MI.getParent()->removeSuccessor(Dst.getMBB());
+    MachineBasicBlock *Parent = MI.getParent();
+    updateMLIBeforeRemovingEdge(Parent, Dst.getMBB());
+    Parent->removeSuccessor(Dst.getMBB());
     MI.eraseFromParent();
     return true;
   } else if (MaskValue == -1) {
@@ -508,7 +569,7 @@ bool SIPreEmitPeephole::canUnpackingClobberRegister(const MachineInstr &MI) {
   return false;
 }
 
-uint16_t SIPreEmitPeephole::mapToUnpackedOpcode(MachineInstr &I) {
+uint32_t SIPreEmitPeephole::mapToUnpackedOpcode(MachineInstr &I) {
   unsigned Opcode = I.getOpcode();
   // Use 64 bit encoding to allow use of VOP3 instructions.
   // VOP3 e64 instructions allow source modifiers
@@ -521,7 +582,7 @@ uint16_t SIPreEmitPeephole::mapToUnpackedOpcode(MachineInstr &I) {
   case AMDGPU::V_PK_FMA_F32:
     return AMDGPU::V_FMA_F32_e64;
   default:
-    return std::numeric_limits<uint16_t>::max();
+    return std::numeric_limits<uint32_t>::max();
   }
   llvm_unreachable("Fully covered switch");
 }
@@ -592,9 +653,9 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
 
   for (auto I = std::next(BeginMI.getIterator()); I != E; ++I) {
     MachineInstr &Instr = *I;
-    uint16_t UnpackedOpCode = mapToUnpackedOpcode(Instr);
+    uint32_t UnpackedOpCode = mapToUnpackedOpcode(Instr);
     bool IsUnpackable =
-        !(UnpackedOpCode == std::numeric_limits<uint16_t>::max());
+        !(UnpackedOpCode == std::numeric_limits<uint32_t>::max());
     if (Instr.isMetaInstruction())
       continue;
     if ((Instr.isTerminator()) ||
@@ -642,8 +703,8 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
 void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
   const MachineOperand &DstOp = I.getOperand(0);
 
-  uint16_t UnpackedOpcode = mapToUnpackedOpcode(I);
-  assert(UnpackedOpcode != std::numeric_limits<uint16_t>::max() &&
+  uint32_t UnpackedOpcode = mapToUnpackedOpcode(I);
+  assert(UnpackedOpcode != std::numeric_limits<uint32_t>::max() &&
          "Unsupported Opcode");
 
   MachineInstrBuilder Op0LOp1L =
@@ -666,7 +727,7 @@ void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
 }
 
 MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
-                                                        uint16_t UnpackedOpcode,
+                                                        uint32_t UnpackedOpcode,
                                                         bool IsHiBits) {
   MachineBasicBlock &MBB = *I.getParent();
   const DebugLoc &DL = I.getDebugLoc();
@@ -705,16 +766,29 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
 PreservedAnalyses
 llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
-  if (!SIPreEmitPeephole().run(MF))
-    return PreservedAnalyses::all();
+  auto *MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
+  auto *MPDT = MFAM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
+  auto *MLI = MFAM.getCachedResult<MachineLoopAnalysis>(MF);
+  SIPreEmitPeephole Impl;
 
-  return getMachineFunctionPassPreservedAnalyses();
+  if (Impl.run(MF, MLI)) {
+    auto PA = getMachineFunctionPassPreservedAnalyses();
+    PA.preserve<MachineLoopAnalysis>();
+    return PA;
+  }
+
+  if (MDT)
+    MDT->updateBlockNumbers();
+  if (MPDT)
+    MPDT->updateBlockNumbers();
+  return PreservedAnalyses::all();
 }
 
-bool SIPreEmitPeephole::run(MachineFunction &MF) {
+bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
+  MLI = LoopInfo;
   bool Changed = false;
 
   MF.RenumberBlocks();

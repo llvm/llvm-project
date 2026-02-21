@@ -10,6 +10,7 @@
 
 // constexpr drop_view(V base, range_difference_t<V> count);  // explicit since C++23
 
+#include <cassert>
 #include <ranges>
 
 #include "test_convertible.h"

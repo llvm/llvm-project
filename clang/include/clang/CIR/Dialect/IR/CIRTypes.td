@@ -422,13 +422,15 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 ]> {
   let summary = "CIR vector type";
   let description = [{
-    The `!cir.vector` type represents a fixed-size, one-dimensional vector.
-    It takes two parameters: the element type and the number of elements.
+    The `!cir.vector` type represents a one-dimensional vector.
+    It takes three parameters: the element type, the number of elements and the
+    scalability flag (optional, defaults to `false`).
 
     Syntax:
 
     ```mlir
     vector-type ::= !cir.vector<size x element-type>
+    size ::= (decimal-literal | `[` decimal-literal `]`)
     element-type ::= float-type | integer-type | pointer-type
     ```
 
@@ -441,22 +443,27 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     !cir.vector<4 x !cir.int<u, 8>>
     !cir.vector<2 x !cir.float>
     ```
+
+    Scalable vectors are indicated by enclosing size in square brackets.
+
+    Example:
+    ```mlir
+    !cir.vector<[4] x !cir.int<u, 8>>
+    ```
   }];
 
   let parameters = (ins
-    CIR_VectorElementType:$elementType,
-    "uint64_t":$size
+    CIR_VectorElementType:$element_type,
+    "uint64_t":$size,
+    OptionalParameter<"bool">:$is_scalable
   );
-
-  let assemblyFormat = [{
-    `<` $size `x` $elementType `>`
-  }];
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$elementType, "uint64_t":$size
+      "mlir::Type":$element_type, "uint64_t":$size, CArg<"bool",
+      "false">:$is_scalable
     ), [{
-        return $_get(elementType.getContext(), elementType, size);
+        return $_get(element_type.getContext(), element_type, size, is_scalable);
     }]>,
   ];
 
@@ -467,6 +474,8 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   }];
 
   let genVerifyDecl = 1;
+  let skipDefaultBuilders = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -539,6 +548,34 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
     /// Returns a clone of this function type with the given argument
     /// and result types.
     FuncType clone(mlir::TypeRange inputs, mlir::TypeRange results) const;
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MethodType
+//===----------------------------------------------------------------------===//
+
+def CIR_MethodType : CIR_Type<"Method", "method",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
+  let summary = "CIR type that represents C++ pointer-to-member-function type";
+  let description = [{
+    `cir.method` models the pointer-to-member-function type in C++. The layout
+    of this type is ABI-dependent.
+  }];
+
+  let parameters = (ins "cir::FuncType":$member_func_ty,
+                        "cir::RecordType":$class_ty);
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "cir::FuncType":$member_func_ty, "cir::RecordType":$class_ty
+    ), [{
+      return $_get(member_func_ty.getContext(), member_func_ty, class_ty);
+    }]>,
+  ];
+
+  let assemblyFormat = [{
+    `<` qualified($member_func_ty) `in` $class_ty `>`
   }];
 }
 
@@ -717,13 +754,54 @@ def CIRRecordType : Type<
   CPred<"::mlir::isa<::cir::RecordType>($_self)">, "CIR record type">;
 
 //===----------------------------------------------------------------------===//
+// Exception Handling Token Types
+//===----------------------------------------------------------------------===//
+
+def CIR_EhTokenType : CIR_Type<"EhToken", "eh_token"> {
+  let summary = "CIR exception handling token type";
+  let description = [{
+    `!cir.eh_token` is an opaque type used to track exception handling state
+    in flattened CIR. It is returned by `cir.eh.initiate` and passed to
+    `cir.eh.dispatch`, `cir.begin_cleanup`, and `cir.begin_catch` operations.
+
+    This token represents an in-flight exception and is used during ABI-lowering
+    to generate the appropriate exception handling code.
+  }];
+}
+
+def CIR_CleanupTokenType : CIR_Type<"CleanupToken", "cleanup_token"> {
+  let summary = "CIR cleanup token type";
+  let description = [{
+    `!cir.cleanup_token` is an opaque type used to track cleanup handling state
+    in flattened CIR. It is returned by `cir.begin_cleanup` and consumed by
+    `cir.end_cleanup`.
+
+    This token ensures that cleanup regions are properly paired and allows
+    the ABI lowering pass to generate appropriate cleanup handling code.
+  }];
+}
+
+def CIR_CatchTokenType : CIR_Type<"CatchToken", "catch_token"> {
+  let summary = "CIR catch token type";
+  let description = [{
+    `!cir.catch_token` is an opaque type used to track catch handling state
+    in flattened CIR. It is returned by `cir.begin_catch` and consumed by
+    `cir.end_catch`.
+
+    This token ensures that catch handlers are properly paired and allows
+    the ABI lowering pass to generate appropriate exception catching code.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Global type constraints
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
   CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_RecordType,
-  CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType
+  CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType, CIR_MethodType,
+  CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType
 ]>;
 
 #endif // CLANG_CIR_DIALECT_IR_CIRTYPES_TD

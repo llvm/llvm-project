@@ -32,11 +32,11 @@
 #include "mlir/Conversion/SCFToEmitC/SCFToEmitC.h"
 #include "mlir/Conversion/UBToLLVM/UBToLLVM.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
-#include "mlir/Conversion/XeVMToLLVM/XeVMToLLVM.h"
 #include "mlir/Dialect/AMX/Transforms.h"
 #include "mlir/Dialect/Affine/TransformOps/AffineTransformOps.h"
 #include "mlir/Dialect/ArmNeon/TransformOps/ArmNeonVectorTransformOps.h"
 #include "mlir/Dialect/ArmSVE/TransformOps/ArmSVEVectorTransformOps.h"
+#include "mlir/Dialect/Bufferization/Extensions/AllExtensions.h"
 #include "mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.h"
 #include "mlir/Dialect/DLTI/TransformOps/DLTITransformOps.h"
 #include "mlir/Dialect/Func/Extensions/AllExtensions.h"
@@ -73,6 +73,7 @@ void mlir::registerAllExtensions(DialectRegistry &registry) {
   // Register all conversions to LLVM extensions.
   registerConvertArithToEmitCInterface(registry);
   arith::registerConvertArithToLLVMInterface(registry);
+  bufferization::registerAllExtensions(registry);
   registerConvertComplexToLLVMInterface(registry);
   cf::registerConvertControlFlowToLLVMInterface(registry);
   func::registerAllExtensions(registry);
@@ -93,7 +94,6 @@ void mlir::registerAllExtensions(DialectRegistry &registry) {
   gpu::registerConvertGpuToLLVMInterface(registry);
   NVVM::registerConvertGpuToNVVMInterface(registry);
   vector::registerConvertVectorToLLVMInterface(registry);
-  registerConvertXeVMToLLVMInterface(registry);
 
   // Register all transform dialect extensions.
   affine::registerTransformDialectExtension(registry);

@@ -297,11 +297,16 @@ void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded) {
 Type RecordType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
   assert(isUnion() && "Only call getLargestMember on unions");
   llvm::ArrayRef<Type> members = getMembers();
+  if (members.empty())
+    return {};
+
   // If the union is padded, we need to ignore the last member,
   // which is the padding.
+  auto endIt = getPadded() ? std::prev(members.end()) : members.end();
+  if (endIt == members.begin())
+    return {};
   return *std::max_element(
-      members.begin(), getPadded() ? members.end() - 1 : members.end(),
-      [&](Type lhs, Type rhs) {
+      members.begin(), endIt, [&](Type lhs, Type rhs) {
         return dataLayout.getTypeABIAlignment(lhs) <
                    dataLayout.getTypeABIAlignment(rhs) ||
                (dataLayout.getTypeABIAlignment(lhs) ==
@@ -735,6 +740,33 @@ FuncType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// MethodType Definitions
+//===----------------------------------------------------------------------===//
+
+static mlir::Type getMethodLayoutType(mlir::MLIRContext *ctx) {
+  // With Itanium ABI, member function pointers have the same layout as the
+  // following struct: struct { fnptr_t, ptrdiff_t }, where fnptr_t is a
+  // function pointer type.
+  // TODO: consider member function pointer layout in other ABIs
+  auto voidPtrTy = cir::PointerType::get(cir::VoidType::get(ctx));
+  mlir::Type fields[2]{voidPtrTy, voidPtrTy};
+  return cir::RecordType::get(ctx, fields, /*packed=*/false,
+                              /*padded=*/false, cir::RecordType::Struct);
+}
+
+llvm::TypeSize
+MethodType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                              mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeSizeInBits(getMethodLayoutType(getContext()));
+}
+
+uint64_t
+MethodType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                            mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeSizeInBits(getMethodLayoutType(getContext()));
+}
+
+//===----------------------------------------------------------------------===//
 // BoolType
 //===----------------------------------------------------------------------===//
 
@@ -822,10 +854,79 @@ cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 
 mlir::LogicalResult cir::VectorType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    mlir::Type elementType, uint64_t size) {
+    mlir::Type elementType, uint64_t size, bool scalable) {
   if (size == 0)
     return emitError() << "the number of vector elements must be non-zero";
   return success();
+}
+
+mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
+
+  llvm::SMLoc odsLoc = odsParser.getCurrentLocation();
+  mlir::Builder odsBuilder(odsParser.getContext());
+  mlir::FailureOr<::mlir::Type> elementType;
+  mlir::FailureOr<uint64_t> size;
+  bool isScalabe = false;
+
+  // Parse literal '<'
+  if (odsParser.parseLess())
+    return {};
+
+  // Parse literal '[', if present, and set the scalability flag accordingly
+  if (odsParser.parseOptionalLSquare().succeeded())
+    isScalabe = true;
+
+  // Parse variable 'size'
+  size = mlir::FieldParser<uint64_t>::parse(odsParser);
+  if (mlir::failed(size)) {
+    odsParser.emitError(odsParser.getCurrentLocation(),
+                        "failed to parse CIR_VectorType parameter 'size' which "
+                        "is to be a `uint64_t`");
+    return {};
+  }
+
+  // Parse literal ']', which is expected when dealing with scalable
+  // dim sizes
+  if (isScalabe && odsParser.parseRSquare().failed()) {
+    odsParser.emitError(odsParser.getCurrentLocation(),
+                        "missing closing `]` for scalable dim size");
+    return {};
+  }
+
+  // Parse literal 'x'
+  if (odsParser.parseKeyword("x"))
+    return {};
+
+  // Parse variable 'elementType'
+  elementType = mlir::FieldParser<::mlir::Type>::parse(odsParser);
+  if (mlir::failed(elementType)) {
+    odsParser.emitError(odsParser.getCurrentLocation(),
+                        "failed to parse CIR_VectorType parameter "
+                        "'elementType' which is to be a `mlir::Type`");
+    return {};
+  }
+
+  // Parse literal '>'
+  if (odsParser.parseGreater())
+    return {};
+  return odsParser.getChecked<VectorType>(odsLoc, odsParser.getContext(),
+                                          mlir::Type((*elementType)),
+                                          uint64_t((*size)), isScalabe);
+}
+
+void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
+  mlir::Builder odsBuilder(getContext());
+  odsPrinter << "<";
+  if (this->getIsScalable())
+    odsPrinter << "[";
+
+  odsPrinter.printStrippedAttrOrType(getSize());
+  if (this->getIsScalable())
+    odsPrinter << "]";
+  odsPrinter << ' ' << "x";
+  odsPrinter << ' ';
+  odsPrinter.printStrippedAttrOrType(getElementType());
+  odsPrinter << ">";
 }
 
 //===----------------------------------------------------------------------===//

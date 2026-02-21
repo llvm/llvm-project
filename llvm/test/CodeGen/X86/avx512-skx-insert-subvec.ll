@@ -98,12 +98,10 @@ define <16 x i1> @test6(<2 x i1> %a, <2 x i1>%b) {
 define <32 x i1> @test7(<4 x i1> %a, <4 x i1>%b) {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
-; CHECK-NEXT:    vpmovd2m %xmm1, %k0
-; CHECK-NEXT:    vpslld $31, %xmm0, %xmm0
-; CHECK-NEXT:    vpmovd2m %xmm0, %k1
-; CHECK-NEXT:    kshiftlb $4, %k0, %k0
-; CHECK-NEXT:    korb %k0, %k1, %k0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpslld $31, %ymm0, %ymm0
+; CHECK-NEXT:    vpmovd2m %ymm0, %k0
 ; CHECK-NEXT:    vpmovm2b %k0, %ymm0
 ; CHECK-NEXT:    retq
 

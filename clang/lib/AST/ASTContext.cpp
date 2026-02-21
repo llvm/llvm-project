@@ -781,6 +781,42 @@ ASTContext::insertCanonicalTemplateTemplateParmDeclInternal(
   return CanonTTP;
 }
 
+/// For the purposes of overflow pattern exclusion, does this match the
+/// while(i--) pattern?
+static bool matchesPostDecrInWhile(const UnaryOperator *UO, ASTContext &Ctx) {
+  if (UO->getOpcode() != UO_PostDec)
+    return false;
+
+  if (!UO->getType()->isUnsignedIntegerType())
+    return false;
+
+  // -fsanitize-undefined-ignore-overflow-pattern=unsigned-post-decr-while
+  if (!Ctx.getLangOpts().isOverflowPatternExcluded(
+          LangOptions::OverflowPatternExclusionKind::PostDecrInWhile))
+    return false;
+
+  // all Parents (usually just one) must be a WhileStmt
+  return llvm::all_of(
+      Ctx.getParentMapContext().getParents(*UO),
+      [](const DynTypedNode &P) { return P.get<WhileStmt>() != nullptr; });
+}
+
+bool ASTContext::isUnaryOverflowPatternExcluded(const UnaryOperator *UO) {
+  // -fsanitize-undefined-ignore-overflow-pattern=negated-unsigned-const
+  // ... like -1UL;
+  if (UO->getOpcode() == UO_Minus &&
+      getLangOpts().isOverflowPatternExcluded(
+          LangOptions::OverflowPatternExclusionKind::NegUnsignedConst) &&
+      UO->isIntegerConstantExpr(*this)) {
+    return true;
+  }
+
+  if (matchesPostDecrInWhile(UO, *this))
+    return true;
+
+  return false;
+}
+
 /// Check if a type can have its sanitizer instrumentation elided based on its
 /// presence within an ignorelist.
 bool ASTContext::isTypeIgnoredBySanitizer(const SanitizerMask &Mask,
@@ -1927,6 +1963,11 @@ bool ASTContext::isPromotableIntegerType(QualType T) const {
     return true;
   }
 
+  // OverflowBehaviorTypes are promotable if their underlying type is promotable
+  if (const auto *OBT = T->getAs<OverflowBehaviorType>()) {
+    return isPromotableIntegerType(OBT->getUnderlyingType());
+  }
+
   return false;
 }
 
@@ -2470,6 +2511,10 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
   case Type::BTFTagAttributed:
     return getTypeInfo(
         cast<BTFTagAttributedType>(T)->getWrappedType().getTypePtr());
+
+  case Type::OverflowBehavior:
+    return getTypeInfo(
+        cast<OverflowBehaviorType>(T)->getUnderlyingType().getTypePtr());
 
   case Type::HLSLAttributedResource:
     return getTypeInfo(
@@ -3504,6 +3549,9 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
   case Type::HLSLInlineSpirv:
     llvm_unreachable("should never get here");
     break;
+  case Type::OverflowBehavior:
+    llvm_unreachable("should never get here");
+    break;
   case Type::DeducedTemplateSpecialization:
   case Type::Auto:
 #define NON_CANONICAL_TYPE(Class, Base) case Type::Class:
@@ -3646,6 +3694,12 @@ ASTContext::adjustType(QualType Orig,
     const auto *BTFT = dyn_cast<BTFTagAttributedType>(Orig);
     return getBTFTagAttributedType(BTFT->getAttr(),
                                    adjustType(BTFT->getWrappedType(), Adjust));
+  }
+
+  case Type::OverflowBehavior: {
+    const auto *OB = dyn_cast<OverflowBehaviorType>(Orig);
+    return getOverflowBehaviorType(OB->getBehaviorKind(),
+                                   adjustType(OB->getUnderlyingType(), Adjust));
   }
 
   case Type::Paren:
@@ -4215,6 +4269,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::ArrayParameter:
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
+  case Type::OverflowBehavior:
     llvm_unreachable("type should never be variably-modified");
 
   // These types can be variably-modified but should never need to
@@ -4712,7 +4767,7 @@ QualType ASTContext::getConstantMatrixType(QualType ElementTy, unsigned NumRows,
   ConstantMatrixType::Profile(ID, ElementTy, NumRows, NumColumns,
                               Type::ConstantMatrix);
 
-  assert(MatrixType::isValidElementType(ElementTy) &&
+  assert(MatrixType::isValidElementType(ElementTy, getLangOpts()) &&
          "need a valid element type");
   assert(NumRows > 0 && NumRows <= LangOpts.MaxMatrixDimension &&
          NumColumns > 0 && NumColumns <= LangOpts.MaxMatrixDimension &&
@@ -5677,6 +5732,53 @@ QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
   Types.push_back(Ty);
   BTFTagAttributedTypes.InsertNode(Ty, InsertPos);
 
+  return QualType(Ty, 0);
+}
+
+QualType ASTContext::getOverflowBehaviorType(const OverflowBehaviorAttr *Attr,
+                                             QualType Underlying) const {
+  const IdentifierInfo *II = Attr->getBehaviorKind();
+  StringRef IdentName = II->getName();
+  OverflowBehaviorType::OverflowBehaviorKind Kind;
+  if (IdentName == "wrap") {
+    Kind = OverflowBehaviorType::OverflowBehaviorKind::Wrap;
+  } else if (IdentName == "trap") {
+    Kind = OverflowBehaviorType::OverflowBehaviorKind::Trap;
+  } else {
+    return Underlying;
+  }
+
+  return getOverflowBehaviorType(Kind, Underlying);
+}
+
+QualType ASTContext::getOverflowBehaviorType(
+    OverflowBehaviorType::OverflowBehaviorKind Kind,
+    QualType Underlying) const {
+  assert(!Underlying->isOverflowBehaviorType() &&
+         "Cannot have underlying types that are themselves OBTs");
+  llvm::FoldingSetNodeID ID;
+  OverflowBehaviorType::Profile(ID, Underlying, Kind);
+  void *InsertPos = nullptr;
+
+  if (OverflowBehaviorType *OBT =
+          OverflowBehaviorTypes.FindNodeOrInsertPos(ID, InsertPos)) {
+    return QualType(OBT, 0);
+  }
+
+  QualType Canonical;
+  if (!Underlying.isCanonical() || Underlying.hasLocalQualifiers()) {
+    SplitQualType canonSplit = getCanonicalType(Underlying).split();
+    Canonical = getOverflowBehaviorType(Kind, QualType(canonSplit.Ty, 0));
+    Canonical = getQualifiedType(Canonical, canonSplit.Quals);
+    assert(!OverflowBehaviorTypes.FindNodeOrInsertPos(ID, InsertPos) &&
+           "Shouldn't be in the map");
+  }
+
+  OverflowBehaviorType *Ty = new (*this, alignof(OverflowBehaviorType))
+      OverflowBehaviorType(Canonical, Underlying, Kind);
+
+  Types.push_back(Ty);
+  OverflowBehaviorTypes.InsertNode(Ty, InsertPos);
   return QualType(Ty, 0);
 }
 
@@ -8099,6 +8201,9 @@ unsigned ASTContext::getIntegerRank(const Type *T) const {
   if (const auto *EIT = dyn_cast<BitIntType>(T))
     return 0 + (EIT->getNumBits() << 3);
 
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(T))
+    return getIntegerRank(OBT->getUnderlyingType().getTypePtr());
+
   switch (cast<BuiltinType>(T)->getKind()) {
   default: llvm_unreachable("getIntegerRank(): not a built-in integer");
   case BuiltinType::Bool:
@@ -8214,6 +8319,14 @@ QualType ASTContext::getPromotedIntegerType(QualType Promotable) const {
   assert(isPromotableIntegerType(Promotable));
   if (const auto *ED = Promotable->getAsEnumDecl())
     return ED->getPromotionType();
+
+  // OverflowBehaviorTypes promote their underlying type and preserve OBT
+  // qualifier.
+  if (const auto *OBT = Promotable->getAs<OverflowBehaviorType>()) {
+    QualType PromotedUnderlying =
+        getPromotedIntegerType(OBT->getUnderlyingType());
+    return getOverflowBehaviorType(OBT->getBehaviorKind(), PromotedUnderlying);
+  }
 
   if (const auto *BT = Promotable->getAs<BuiltinType>()) {
     // C++ [conv.prom]: A prvalue of type char16_t, char32_t, or wchar_t
@@ -9578,6 +9691,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
 
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
+  case Type::OverflowBehavior:
     llvm_unreachable("unexpected type");
 
   case Type::ArrayParameter:
@@ -10543,6 +10657,37 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
     }
   }
   return false;
+}
+
+bool ASTContext::areCompatibleOverflowBehaviorTypes(QualType LHS,
+                                                    QualType RHS) {
+  auto Result = checkOBTAssignmentCompatibility(LHS, RHS);
+  return Result != OBTAssignResult::IncompatibleKinds;
+}
+
+ASTContext::OBTAssignResult
+ASTContext::checkOBTAssignmentCompatibility(QualType LHS, QualType RHS) {
+  const auto *LHSOBT = LHS->getAs<OverflowBehaviorType>();
+  const auto *RHSOBT = RHS->getAs<OverflowBehaviorType>();
+
+  if (!LHSOBT && !RHSOBT)
+    return OBTAssignResult::Compatible;
+
+  if (LHSOBT && RHSOBT) {
+    if (LHSOBT->getBehaviorKind() != RHSOBT->getBehaviorKind())
+      return OBTAssignResult::IncompatibleKinds;
+    return OBTAssignResult::Compatible;
+  }
+
+  QualType LHSUnderlying = LHSOBT ? LHSOBT->desugar() : LHS;
+  QualType RHSUnderlying = RHSOBT ? RHSOBT->desugar() : RHS;
+
+  if (RHSOBT && !LHSOBT) {
+    if (LHSUnderlying->isIntegerType() && RHSUnderlying->isIntegerType())
+      return OBTAssignResult::Discards;
+  }
+
+  return OBTAssignResult::NotApplicable;
 }
 
 /// getRVVTypeSize - Return RVV vector register size.
@@ -11613,6 +11758,48 @@ QualType ASTContext::mergeTagDefinitions(QualType LHS, QualType RHS) {
   return Ctx.IsEquivalent(LHS, RHS) ? LHS : QualType{};
 }
 
+std::optional<QualType> ASTContext::tryMergeOverflowBehaviorTypes(
+    QualType LHS, QualType RHS, bool OfBlockPointer, bool Unqualified,
+    bool BlockReturnType, bool IsConditionalOperator) {
+  const auto *LHSOBT = LHS->getAs<OverflowBehaviorType>();
+  const auto *RHSOBT = RHS->getAs<OverflowBehaviorType>();
+
+  if (!LHSOBT && !RHSOBT)
+    return std::nullopt;
+
+  if (LHSOBT) {
+    if (RHSOBT) {
+      if (LHSOBT->getBehaviorKind() != RHSOBT->getBehaviorKind())
+        return QualType();
+
+      QualType MergedUnderlying = mergeTypes(
+          LHSOBT->getUnderlyingType(), RHSOBT->getUnderlyingType(),
+          OfBlockPointer, Unqualified, BlockReturnType, IsConditionalOperator);
+
+      if (MergedUnderlying.isNull())
+        return QualType();
+
+      if (getCanonicalType(LHSOBT) == getCanonicalType(RHSOBT)) {
+        if (LHSOBT->getUnderlyingType() == RHSOBT->getUnderlyingType())
+          return getCommonSugaredType(LHS, RHS);
+        return getOverflowBehaviorType(
+            LHSOBT->getBehaviorKind(),
+            getCanonicalType(LHSOBT->getUnderlyingType()));
+      }
+
+      // For different underlying types that successfully merge, wrap the
+      // merged underlying type with the common overflow behavior
+      return getOverflowBehaviorType(LHSOBT->getBehaviorKind(),
+                                     MergedUnderlying);
+    }
+    return mergeTypes(LHSOBT->getUnderlyingType(), RHS, OfBlockPointer,
+                      Unqualified, BlockReturnType, IsConditionalOperator);
+  }
+
+  return mergeTypes(LHS, RHSOBT->getUnderlyingType(), OfBlockPointer,
+                    Unqualified, BlockReturnType, IsConditionalOperator);
+}
+
 QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
                                 bool Unqualified, bool BlockReturnType,
                                 bool IsConditionalOperator) {
@@ -11632,6 +11819,11 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
                       OfBlockPointer, Unqualified, BlockReturnType);
   if (LHSRefTy || RHSRefTy)
     return {};
+
+  if (std::optional<QualType> MergedOBT =
+          tryMergeOverflowBehaviorTypes(LHS, RHS, OfBlockPointer, Unqualified,
+                                        BlockReturnType, IsConditionalOperator))
+    return *MergedOBT;
 
   if (Unqualified) {
     LHS = LHS.getUnqualifiedType();
@@ -11755,6 +11947,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
   case Type::VariableArray:
   case Type::FunctionProto:
   case Type::ExtVector:
+  case Type::OverflowBehavior:
     llvm_unreachable("Types are eliminated above");
 
   case Type::Pointer:
@@ -12163,6 +12356,12 @@ QualType ASTContext::getCorrespondingUnsignedType(QualType T) const {
   // For _BitInt, return an unsigned _BitInt with same width.
   if (const auto *EITy = T->getAs<BitIntType>())
     return getBitIntType(/*Unsigned=*/true, EITy->getNumBits());
+
+  // For the overflow behavior types, construct a new unsigned variant
+  if (const auto *OBT = T->getAs<OverflowBehaviorType>())
+    return getOverflowBehaviorType(
+        OBT->getBehaviorKind(),
+        getCorrespondingUnsignedType(OBT->getUnderlyingType()));
 
   // For enums, get the underlying integer type of the enum, and let the general
   // integer type signchanging code handle it.
@@ -13224,6 +13423,18 @@ MangleContext *ASTContext::createDeviceMangleContext(const TargetInfo &T) {
   llvm_unreachable("Unsupported ABI");
 }
 
+MangleContext *ASTContext::cudaNVInitDeviceMC() {
+  // If the host and device have different C++ ABIs, mark it as the device
+  // mangle context so that the mangling needs to retrieve the additional
+  // device lambda mangling number instead of the regular host one.
+  if (getAuxTargetInfo() && getTargetInfo().getCXXABI().isMicrosoft() &&
+      getAuxTargetInfo()->getCXXABI().isItaniumFamily()) {
+    return createDeviceMangleContext(*getAuxTargetInfo());
+  }
+
+  return createMangleContext(getAuxTargetInfo());
+}
+
 CXXABI::~CXXABI() = default;
 
 size_t ASTContext::getSideTableAllocatedMemory() const {
@@ -13346,6 +13557,91 @@ void ASTContext::setIsTypeAwareOperatorNewOrDelete(const FunctionDecl *FD,
 
 bool ASTContext::isTypeAwareOperatorNewOrDelete(const FunctionDecl *FD) const {
   return TypeAwareOperatorNewAndDeletes.contains(FD->getCanonicalDecl());
+}
+
+void ASTContext::addOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
+                                           FunctionDecl *OperatorDelete,
+                                           OperatorDeleteKind K) const {
+  switch (K) {
+  case OperatorDeleteKind::Regular:
+    OperatorDeletesForVirtualDtor[Dtor->getCanonicalDecl()] = OperatorDelete;
+    break;
+  case OperatorDeleteKind::GlobalRegular:
+    GlobalOperatorDeletesForVirtualDtor[Dtor->getCanonicalDecl()] =
+        OperatorDelete;
+    break;
+  case OperatorDeleteKind::Array:
+    ArrayOperatorDeletesForVirtualDtor[Dtor->getCanonicalDecl()] =
+        OperatorDelete;
+    break;
+  case OperatorDeleteKind::ArrayGlobal:
+    GlobalArrayOperatorDeletesForVirtualDtor[Dtor->getCanonicalDecl()] =
+        OperatorDelete;
+    break;
+  }
+}
+
+bool ASTContext::dtorHasOperatorDelete(const CXXDestructorDecl *Dtor,
+                                       OperatorDeleteKind K) const {
+  switch (K) {
+  case OperatorDeleteKind::Regular:
+    return OperatorDeletesForVirtualDtor.contains(Dtor->getCanonicalDecl());
+  case OperatorDeleteKind::GlobalRegular:
+    return GlobalOperatorDeletesForVirtualDtor.contains(
+        Dtor->getCanonicalDecl());
+  case OperatorDeleteKind::Array:
+    return ArrayOperatorDeletesForVirtualDtor.contains(
+        Dtor->getCanonicalDecl());
+  case OperatorDeleteKind::ArrayGlobal:
+    return GlobalArrayOperatorDeletesForVirtualDtor.contains(
+        Dtor->getCanonicalDecl());
+  }
+  return false;
+}
+
+FunctionDecl *
+ASTContext::getOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
+                                      OperatorDeleteKind K) const {
+  const CXXDestructorDecl *Canon = Dtor->getCanonicalDecl();
+  switch (K) {
+  case OperatorDeleteKind::Regular:
+    if (OperatorDeletesForVirtualDtor.contains(Canon))
+      return OperatorDeletesForVirtualDtor[Canon];
+    return nullptr;
+  case OperatorDeleteKind::GlobalRegular:
+    if (GlobalOperatorDeletesForVirtualDtor.contains(Canon))
+      return GlobalOperatorDeletesForVirtualDtor[Canon];
+    return nullptr;
+  case OperatorDeleteKind::Array:
+    if (ArrayOperatorDeletesForVirtualDtor.contains(Canon))
+      return ArrayOperatorDeletesForVirtualDtor[Canon];
+    return nullptr;
+  case OperatorDeleteKind::ArrayGlobal:
+    if (GlobalArrayOperatorDeletesForVirtualDtor.contains(Canon))
+      return GlobalArrayOperatorDeletesForVirtualDtor[Canon];
+    return nullptr;
+  }
+  return nullptr;
+}
+
+bool ASTContext::classNeedsVectorDeletingDestructor(const CXXRecordDecl *RD) {
+  if (!getTargetInfo().emitVectorDeletingDtors(getLangOpts()))
+    return false;
+  CXXDestructorDecl *Dtor = RD->getDestructor();
+  // The compiler can't know if new[]/delete[] will be used outside of the DLL,
+  // so just force vector deleting destructor emission if dllexport is present.
+  // This matches MSVC behavior.
+  if (Dtor && Dtor->isVirtual() && Dtor->hasAttr<DLLExportAttr>())
+    return true;
+
+  return RequireVectorDeletingDtor.count(RD);
+}
+
+void ASTContext::setClassNeedsVectorDeletingDestructor(
+    const CXXRecordDecl *RD) {
+  if (!getTargetInfo().emitVectorDeletingDtors(getLangOpts()))
+    return;
+  RequireVectorDeletingDtor.insert(RD);
 }
 
 MangleNumberingContext &
@@ -13806,21 +14102,28 @@ static QualType getCommonElementType(const ASTContext &Ctx, const T *X,
   return Ctx.getCommonSugaredType(X->getElementType(), Y->getElementType());
 }
 
-template <class T>
-static QualType getCommonArrayElementType(const ASTContext &Ctx, const T *X,
-                                          Qualifiers &QX, const T *Y,
-                                          Qualifiers &QY) {
-  QualType EX = X->getElementType(), EY = Y->getElementType();
-  QualType R = Ctx.getCommonSugaredType(EX, EY,
+static QualType getCommonTypeWithQualifierLifting(const ASTContext &Ctx,
+                                                  QualType X, QualType Y,
+                                                  Qualifiers &QX,
+                                                  Qualifiers &QY) {
+  QualType R = Ctx.getCommonSugaredType(X, Y,
                                         /*Unqualified=*/true);
   // Qualifiers common to both element types.
   Qualifiers RQ = R.getQualifiers();
   // For each side, move to the top level any qualifiers which are not common to
   // both element types. The caller must assume top level qualifiers might
   // be different, even if they are the same type, and can be treated as sugar.
-  QX += EX.getQualifiers() - RQ;
-  QY += EY.getQualifiers() - RQ;
+  QX += X.getQualifiers() - RQ;
+  QY += Y.getQualifiers() - RQ;
   return R;
+}
+
+template <class T>
+static QualType getCommonArrayElementType(const ASTContext &Ctx, const T *X,
+                                          Qualifiers &QX, const T *Y,
+                                          Qualifiers &QY) {
+  return getCommonTypeWithQualifierLifting(Ctx, X->getElementType(),
+                                           Y->getElementType(), QX, QY);
 }
 
 template <class T>
@@ -14223,6 +14526,15 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
         getCommonTypeKeyword(NX, NY, /*IsSame=*/true),
         getCommonQualifier(Ctx, NX, NY, /*IsSame=*/true), NX->getIdentifier());
   }
+  case Type::OverflowBehavior: {
+    const auto *NX = cast<OverflowBehaviorType>(X),
+               *NY = cast<OverflowBehaviorType>(Y);
+    assert(NX->getBehaviorKind() == NY->getBehaviorKind());
+    return Ctx.getOverflowBehaviorType(
+        NX->getBehaviorKind(),
+        getCommonTypeWithQualifierLifting(Ctx, NX->getUnderlyingType(),
+                                          NY->getUnderlyingType(), QX, QY));
+  }
   case Type::UnaryTransform: {
     const auto *TX = cast<UnaryTransformType>(X),
                *TY = cast<UnaryTransformType>(Y);
@@ -14296,6 +14608,7 @@ static QualType getCommonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     CANONICAL_TYPE(ObjCInterface)
     CANONICAL_TYPE(ObjCObject)
     CANONICAL_TYPE(ObjCObjectPointer)
+    CANONICAL_TYPE(OverflowBehavior)
     CANONICAL_TYPE(Pipe)
     CANONICAL_TYPE(Pointer)
     CANONICAL_TYPE(Record)
@@ -14556,7 +14869,8 @@ QualType ASTContext::getCommonSugaredType(QualType X, QualType Y,
   // The desired behaviour is the same as for the 'Unqualified' case here:
   // treat the redundant qualifiers as sugar, remove the ones which are not
   // common to both sides.
-  bool KeepCommonQualifiers = Unqualified || isa<ArrayType>(SX.Ty);
+  bool KeepCommonQualifiers =
+      Unqualified || isa<ArrayType, OverflowBehaviorType>(SX.Ty);
 
   if (SX.Ty != SY.Ty) {
     // The canonical nodes differ. Build a common canonical node out of the two,
@@ -15141,4 +15455,98 @@ bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
   bool Result = SimplifiedThunkNames.contains(MangledName);
   ThunksToBeAbbreviated[VirtualMethodDecl] = std::move(SimplifiedThunkNames);
   return Result;
+}
+
+bool ASTContext::arePFPFieldsTriviallyCopyable(const RecordDecl *RD) const {
+  // Check for trivially-destructible here because non-trivially-destructible
+  // types will always cause the type and any types derived from it to be
+  // considered non-trivially-copyable. The same cannot be said for
+  // trivially-copyable because deleting special members of a type derived from
+  // a non-trivially-copyable type can cause the derived type to be considered
+  // trivially copyable.
+  if (getLangOpts().PointerFieldProtectionTagged)
+    return !isa<CXXRecordDecl>(RD) ||
+           cast<CXXRecordDecl>(RD)->hasTrivialDestructor();
+  return true;
+}
+
+static void findPFPFields(const ASTContext &Ctx, QualType Ty, CharUnits Offset,
+                          std::vector<PFPField> &Fields, bool IncludeVBases) {
+  if (auto *AT = Ctx.getAsConstantArrayType(Ty)) {
+    if (auto *ElemDecl = AT->getElementType()->getAsCXXRecordDecl()) {
+      const ASTRecordLayout &ElemRL = Ctx.getASTRecordLayout(ElemDecl);
+      for (unsigned i = 0; i != AT->getSize(); ++i)
+        findPFPFields(Ctx, AT->getElementType(), Offset + i * ElemRL.getSize(),
+                      Fields, true);
+    }
+  }
+  auto *Decl = Ty->getAsCXXRecordDecl();
+  // isPFPType() is inherited from bases and members (including via arrays), so
+  // we can early exit if it is false. Unions are excluded per the API
+  // documentation.
+  if (!Decl || !Decl->isPFPType() || Decl->isUnion())
+    return;
+  const ASTRecordLayout &RL = Ctx.getASTRecordLayout(Decl);
+  for (FieldDecl *Field : Decl->fields()) {
+    CharUnits FieldOffset =
+        Offset +
+        Ctx.toCharUnitsFromBits(RL.getFieldOffset(Field->getFieldIndex()));
+    if (Ctx.isPFPField(Field))
+      Fields.push_back({FieldOffset, Field});
+    findPFPFields(Ctx, Field->getType(), FieldOffset, Fields,
+                  /*IncludeVBases=*/true);
+  }
+  // Pass false for IncludeVBases below because vbases are only included in
+  // layout for top-level types, i.e. not bases or vbases.
+  for (CXXBaseSpecifier &Base : Decl->bases()) {
+    if (Base.isVirtual())
+      continue;
+    CharUnits BaseOffset =
+        Offset + RL.getBaseClassOffset(Base.getType()->getAsCXXRecordDecl());
+    findPFPFields(Ctx, Base.getType(), BaseOffset, Fields,
+                  /*IncludeVBases=*/false);
+  }
+  if (IncludeVBases) {
+    for (CXXBaseSpecifier &Base : Decl->vbases()) {
+      CharUnits BaseOffset =
+          Offset + RL.getVBaseClassOffset(Base.getType()->getAsCXXRecordDecl());
+      findPFPFields(Ctx, Base.getType(), BaseOffset, Fields,
+                    /*IncludeVBases=*/false);
+    }
+  }
+}
+
+std::vector<PFPField> ASTContext::findPFPFields(QualType Ty) const {
+  std::vector<PFPField> PFPFields;
+  ::findPFPFields(*this, Ty, CharUnits::Zero(), PFPFields, true);
+  return PFPFields;
+}
+
+bool ASTContext::hasPFPFields(QualType Ty) const {
+  return !findPFPFields(Ty).empty();
+}
+
+bool ASTContext::isPFPField(const FieldDecl *FD) const {
+  if (auto *RD = dyn_cast<CXXRecordDecl>(FD->getParent()))
+    return RD->isPFPType() && FD->getType()->isPointerType() &&
+           !FD->hasAttr<NoFieldProtectionAttr>();
+  return false;
+}
+
+void ASTContext::recordMemberDataPointerEvaluation(const ValueDecl *VD) {
+  auto *FD = dyn_cast<FieldDecl>(VD);
+  if (!FD)
+    FD = cast<FieldDecl>(cast<IndirectFieldDecl>(VD)->chain().back());
+  if (isPFPField(FD))
+    PFPFieldsWithEvaluatedOffset.insert(FD);
+}
+
+void ASTContext::recordOffsetOfEvaluation(const OffsetOfExpr *E) {
+  if (E->getNumComponents() == 0)
+    return;
+  OffsetOfNode Comp = E->getComponent(E->getNumComponents() - 1);
+  if (Comp.getKind() != OffsetOfNode::Field)
+    return;
+  if (FieldDecl *FD = Comp.getField(); isPFPField(FD))
+    PFPFieldsWithEvaluatedOffset.insert(FD);
 }

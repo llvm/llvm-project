@@ -22,6 +22,7 @@
 #include "AMDGPUCtorDtorLowering.h"
 #include "AMDGPUExportClustering.h"
 #include "AMDGPUExportKernelRuntimeHandles.h"
+#include "AMDGPUHazardLatency.h"
 #include "AMDGPUIGroupLP.h"
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPULowerVGPREncoding.h"
@@ -74,6 +75,7 @@
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
+#include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
@@ -142,29 +144,36 @@ public:
                            const CGPassBuilderOption &Opts,
                            PassInstrumentationCallbacks *PIC);
 
-  void addIRPasses(AddIRPass &) const;
-  void addCodeGenPrepare(AddIRPass &) const;
-  void addPreISel(AddIRPass &addPass) const;
-  void addILPOpts(AddMachinePass &) const;
-  void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
-  Error addInstSelector(AddMachinePass &) const;
-  void addPreRewrite(AddMachinePass &) const;
-  void addMachineSSAOptimization(AddMachinePass &) const;
-  void addPostRegAlloc(AddMachinePass &) const;
-  void addPreEmitPass(AddMachinePass &) const;
-  void addPreEmitRegAlloc(AddMachinePass &) const;
-  Error addRegAssignmentOptimized(AddMachinePass &) const;
-  void addPreRegAlloc(AddMachinePass &) const;
-  void addOptimizedRegAlloc(AddMachinePass &) const;
-  void addPreSched2(AddMachinePass &) const;
+  void addIRPasses(PassManagerWrapper &PMW) const;
+  void addCodeGenPrepare(PassManagerWrapper &PMW) const;
+  void addPreISel(PassManagerWrapper &PMW) const;
+  void addILPOpts(PassManagerWrapper &PMWM) const;
+  void addAsmPrinter(PassManagerWrapper &PMW, CreateMCStreamer) const;
+  Error addInstSelector(PassManagerWrapper &PMW) const;
+  void addPreRewrite(PassManagerWrapper &PMW) const;
+  void addMachineSSAOptimization(PassManagerWrapper &PMW) const;
+  void addPostRegAlloc(PassManagerWrapper &PMW) const;
+  void addPreEmitPass(PassManagerWrapper &PMWM) const;
+  void addPreEmitRegAlloc(PassManagerWrapper &PMW) const;
+  Error addRegAssignmentFast(PassManagerWrapper &PMW) const;
+  Error addRegAssignmentOptimized(PassManagerWrapper &PMW) const;
+  void addPreRegAlloc(PassManagerWrapper &PMW) const;
+  Error addFastRegAlloc(PassManagerWrapper &PMW) const;
+  Error addOptimizedRegAlloc(PassManagerWrapper &PMW) const;
+  void addPreSched2(PassManagerWrapper &PMW) const;
+  void addPostBBSections(PassManagerWrapper &PMW) const;
 
+private:
+  Error validateRegAllocOptions() const;
+
+public:
   /// Check if a pass is enabled given \p Opt option. The option always
   /// overrides defaults if explicitly used. Otherwise its default will be used
   /// given that a pass shall work at an optimization \p Level minimum.
   bool isPassEnabled(const cl::opt<bool> &Opt,
                      CodeGenOptLevel Level = CodeGenOptLevel::Default) const;
-  void addEarlyCSEOrGVNPass(AddIRPass &) const;
-  void addStraightLineScalarOptimizationPasses(AddIRPass &) const;
+  void addEarlyCSEOrGVNPass(PassManagerWrapper &PMW) const;
+  void addStraightLineScalarOptimizationPasses(PassManagerWrapper &PMW) const;
 };
 
 class SGPRRegisterRegAlloc : public RegisterRegAllocBase<SGPRRegisterRegAlloc> {
@@ -238,6 +247,63 @@ static cl::opt<WWMRegisterRegAlloc::FunctionPassCtor, false,
     WWMRegAlloc("wwm-regalloc", cl::Hidden,
                 cl::init(&useDefaultRegisterAllocator),
                 cl::desc("Register allocator to use for WWM registers"));
+
+// New pass manager register allocator options for AMDGPU
+static cl::opt<RegAllocType, false, RegAllocTypeParser> SGPRRegAllocNPM(
+    "sgpr-regalloc-npm", cl::Hidden, cl::init(RegAllocType::Default),
+    cl::desc("Register allocator for SGPRs (new pass manager)"));
+
+static cl::opt<RegAllocType, false, RegAllocTypeParser> VGPRRegAllocNPM(
+    "vgpr-regalloc-npm", cl::Hidden, cl::init(RegAllocType::Default),
+    cl::desc("Register allocator for VGPRs (new pass manager)"));
+
+static cl::opt<RegAllocType, false, RegAllocTypeParser> WWMRegAllocNPM(
+    "wwm-regalloc-npm", cl::Hidden, cl::init(RegAllocType::Default),
+    cl::desc("Register allocator for WWM registers (new pass manager)"));
+
+/// Check if the given RegAllocType is supported for AMDGPU NPM register
+/// allocation. Only Fast and Greedy are supported; Basic and PBQP are not.
+static Error checkRegAllocSupported(RegAllocType RAType, StringRef RegName) {
+  if (RAType == RegAllocType::Basic || RAType == RegAllocType::PBQP) {
+    return make_error<StringError>(
+        Twine("unsupported register allocator '") +
+            (RAType == RegAllocType::Basic ? "basic" : "pbqp") + "' for " +
+            RegName + " registers",
+        inconvertibleErrorCode());
+  }
+  return Error::success();
+}
+
+Error AMDGPUCodeGenPassBuilder::validateRegAllocOptions() const {
+  // 1. Generic --regalloc-npm is not supported for AMDGPU.
+  if (Opt.RegAlloc != RegAllocType::Unset) {
+    return make_error<StringError>(
+        "-regalloc-npm not supported for amdgcn. Use -sgpr-regalloc-npm, "
+        "-vgpr-regalloc-npm, and -wwm-regalloc-npm",
+        inconvertibleErrorCode());
+  }
+
+  // 2. Legacy PM regalloc options are not compatible with NPM.
+  if (SGPRRegAlloc.getNumOccurrences() > 0 ||
+      VGPRRegAlloc.getNumOccurrences() > 0 ||
+      WWMRegAlloc.getNumOccurrences() > 0) {
+    return make_error<StringError>(
+        "-sgpr-regalloc, -vgpr-regalloc, and -wwm-regalloc are legacy PM "
+        "options. Use -sgpr-regalloc-npm, -vgpr-regalloc-npm, and "
+        "-wwm-regalloc-npm with the new pass manager",
+        inconvertibleErrorCode());
+  }
+
+  // 3. Only Fast and Greedy allocators are supported for AMDGPU.
+  if (auto Err = checkRegAllocSupported(SGPRRegAllocNPM, "SGPR"))
+    return Err;
+  if (auto Err = checkRegAllocSupported(WWMRegAllocNPM, "WWM"))
+    return Err;
+  if (auto Err = checkRegAllocSupported(VGPRRegAllocNPM, "VGPR"))
+    return Err;
+
+  return Error::success();
+}
 
 static void initializeDefaultSGPRRegisterAllocatorOnce() {
   RegisterRegAlloc::FunctionPassCtor Ctor = SGPRRegisterRegAlloc::getDefault();
@@ -649,6 +715,7 @@ createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation(C->MF));
+  DAG->addMutation(createAMDGPUHazardLatencyDAGMutation(C->MF));
   return DAG;
 }
 
@@ -670,6 +737,7 @@ createGCNMaxMemoryClauseMachineScheduler(MachineSchedContext *C) {
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation(C->MF));
+  DAG->addMutation(createAMDGPUHazardLatencyDAGMutation(C->MF));
   return DAG;
 }
 
@@ -813,7 +881,8 @@ static bool mustPreserveGV(const GlobalValue &GV) {
 }
 
 void AMDGPUTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
-  AAM.registerFunctionAnalysis<AMDGPUAA>();
+  if (EnableAMDGPUAliasAnalysis)
+    AAM.registerFunctionAnalysis<AMDGPUAA>();
 }
 
 static Expected<ScanOptions>
@@ -1211,6 +1280,7 @@ GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
     DAG->addMutation(createVOPDPairingMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation(C->MF));
+  DAG->addMutation(createAMDGPUHazardLatencyDAGMutation(C->MF));
   return DAG;
 }
 //===----------------------------------------------------------------------===//
@@ -2096,68 +2166,74 @@ AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
   // Exceptions and StackMaps are not supported, so these passes will never do
   // anything.
   // Garbage collection is not supported.
-  disablePass<StackMapLivenessPass, FuncletLayoutPass,
-              ShadowStackGCLoweringPass>();
+  disablePass<StackMapLivenessPass, FuncletLayoutPass, PatchableFunctionPass,
+              ShadowStackGCLoweringPass, GCLoweringPass>();
 }
 
-void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
-  if (RemoveIncompatibleFunctions && TM.getTargetTriple().isAMDGCN())
-    addPass(AMDGPURemoveIncompatibleFunctionsPass(TM));
+void AMDGPUCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
+  if (RemoveIncompatibleFunctions && TM.getTargetTriple().isAMDGCN()) {
+    flushFPMsToMPM(PMW);
+    addModulePass(AMDGPURemoveIncompatibleFunctionsPass(TM), PMW);
+  }
 
-  addPass(AMDGPUPrintfRuntimeBindingPass());
+  flushFPMsToMPM(PMW);
+  addModulePass(AMDGPUPrintfRuntimeBindingPass(), PMW);
   if (LowerCtorDtor)
-    addPass(AMDGPUCtorDtorLoweringPass());
+    addModulePass(AMDGPUCtorDtorLoweringPass(), PMW);
 
   if (isPassEnabled(EnableImageIntrinsicOptimizer))
-    addPass(AMDGPUImageIntrinsicOptimizerPass(TM));
+    addFunctionPass(AMDGPUImageIntrinsicOptimizerPass(TM), PMW);
 
   if (EnableUniformIntrinsicCombine)
-    addPass(AMDGPUUniformIntrinsicCombinePass());
+    addFunctionPass(AMDGPUUniformIntrinsicCombinePass(), PMW);
   // This can be disabled by passing ::Disable here or on the command line
   // with --expand-variadics-override=disable.
-  addPass(ExpandVariadicsPass(ExpandVariadicsMode::Lowering));
+  flushFPMsToMPM(PMW);
+  addModulePass(ExpandVariadicsPass(ExpandVariadicsMode::Lowering), PMW);
 
-  addPass(AMDGPUAlwaysInlinePass());
-  addPass(AlwaysInlinerPass());
+  addModulePass(AMDGPUAlwaysInlinePass(), PMW);
+  addModulePass(AlwaysInlinerPass(), PMW);
 
-  addPass(AMDGPUExportKernelRuntimeHandlesPass());
+  addModulePass(AMDGPUExportKernelRuntimeHandlesPass(), PMW);
 
   if (EnableLowerExecSync)
-    addPass(AMDGPULowerExecSyncPass());
+    addModulePass(AMDGPULowerExecSyncPass(), PMW);
 
   if (EnableSwLowerLDS)
-    addPass(AMDGPUSwLowerLDSPass(TM));
+    addModulePass(AMDGPUSwLowerLDSPass(TM), PMW);
 
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS)
-    addPass(AMDGPULowerModuleLDSPass(TM));
+    addModulePass(AMDGPULowerModuleLDSPass(TM), PMW);
 
   // Run atomic optimizer before Atomic Expand
   if (TM.getOptLevel() >= CodeGenOptLevel::Less &&
       (AMDGPUAtomicOptimizerStrategy != ScanOptions::None))
-    addPass(AMDGPUAtomicOptimizerPass(TM, AMDGPUAtomicOptimizerStrategy));
+    addFunctionPass(
+        AMDGPUAtomicOptimizerPass(TM, AMDGPUAtomicOptimizerStrategy), PMW);
 
-  addPass(AtomicExpandPass(TM));
+  addFunctionPass(AtomicExpandPass(TM), PMW);
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
-    addPass(AMDGPUPromoteAllocaPass(TM));
+    addFunctionPass(AMDGPUPromoteAllocaPass(TM), PMW);
     if (isPassEnabled(EnableScalarIRPasses))
-      addStraightLineScalarOptimizationPasses(addPass);
+      addStraightLineScalarOptimizationPasses(PMW);
 
     // TODO: Handle EnableAMDGPUAliasAnalysis
 
     // TODO: May want to move later or split into an early and late one.
-    addPass(AMDGPUCodeGenPreparePass(TM));
+    addFunctionPass(AMDGPUCodeGenPreparePass(TM), PMW);
 
     // Try to hoist loop invariant parts of divisions AMDGPUCodeGenPrepare may
     // have expanded.
     if (TM.getOptLevel() > CodeGenOptLevel::Less) {
-      addPass(createFunctionToLoopPassAdaptor(LICMPass(LICMOptions()),
-                                              /*UseMemorySSA=*/true));
+      addFunctionPass(createFunctionToLoopPassAdaptor(LICMPass(LICMOptions()),
+                                                      /*UseMemorySSA=*/true),
+                      PMW);
     }
   }
 
-  Base::addIRPasses(addPass);
+  Base::addIRPasses(PMW);
 
   // EarlyCSE is not always strong enough to clean up what LSR produces. For
   // example, GVN can combine
@@ -2172,20 +2248,23 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
   //
   // but EarlyCSE can do neither of them.
   if (isPassEnabled(EnableScalarIRPasses))
-    addEarlyCSEOrGVNPass(addPass);
+    addEarlyCSEOrGVNPass(PMW);
 }
 
-void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
-    addPass(AMDGPUPreloadKernelArgumentsPass(TM));
+void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(
+    PassManagerWrapper &PMW) const {
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
+    flushFPMsToMPM(PMW);
+    addModulePass(AMDGPUPreloadKernelArgumentsPass(TM), PMW);
+  }
 
   if (EnableLowerKernelArguments)
-    addPass(AMDGPULowerKernelArgumentsPass(TM));
+    addFunctionPass(AMDGPULowerKernelArgumentsPass(TM), PMW);
 
-  Base::addCodeGenPrepare(addPass);
+  Base::addCodeGenPrepare(PMW);
 
   if (isPassEnabled(EnableLoadStoreVectorizer))
-    addPass(LoadStoreVectorizerPass());
+    addFunctionPass(LoadStoreVectorizerPass(), PMW);
 
   // This lowering has been placed after codegenprepare to take advantage of
   // address mode matching (which is why it isn't put with the LDS lowerings).
@@ -2194,105 +2273,160 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
   // but has been put before switch lowering and CFG flattening so that those
   // passes can run on the more optimized control flow this pass creates in
   // many cases.
-  addPass(AMDGPULowerBufferFatPointersPass(TM));
-  addPass.requireCGSCCOrder();
+  flushFPMsToMPM(PMW);
+  addModulePass(AMDGPULowerBufferFatPointersPass(TM), PMW);
+  flushFPMsToMPM(PMW);
+  requireCGSCCOrder(PMW);
 
-  addPass(AMDGPULowerIntrinsicsPass(TM));
+  addModulePass(AMDGPULowerIntrinsicsPass(TM), PMW);
 
   // LowerSwitch pass may introduce unreachable blocks that can cause unexpected
   // behavior for subsequent passes. Placing it here seems better that these
   // blocks would get cleaned up by UnreachableBlockElim inserted next in the
   // pass flow.
-  addPass(LowerSwitchPass());
+  addFunctionPass(LowerSwitchPass(), PMW);
 }
 
-void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
+void AMDGPUCodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) const {
 
   // Require AMDGPUArgumentUsageAnalysis so that it's available during ISel.
-  addPass(RequireAnalysisPass<AMDGPUArgumentUsageAnalysis, Module>());
+  flushFPMsToMPM(PMW);
+  addModulePass(RequireAnalysisPass<AMDGPUArgumentUsageAnalysis, Module>(),
+                PMW);
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
-    addPass(FlattenCFGPass());
-    addPass(SinkingPass());
-    addPass(AMDGPULateCodeGenPreparePass(TM));
+    addFunctionPass(FlattenCFGPass(), PMW);
+    addFunctionPass(SinkingPass(), PMW);
+    addFunctionPass(AMDGPULateCodeGenPreparePass(TM), PMW);
   }
 
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.
 
-  addPass(AMDGPUUnifyDivergentExitNodesPass());
-  addPass(FixIrreduciblePass());
-  addPass(UnifyLoopExitsPass());
-  addPass(StructurizeCFGPass(/*SkipUniformRegions=*/false));
+  addFunctionPass(AMDGPUUnifyDivergentExitNodesPass(), PMW);
+  addFunctionPass(FixIrreduciblePass(), PMW);
+  addFunctionPass(UnifyLoopExitsPass(), PMW);
+  addFunctionPass(StructurizeCFGPass(/*SkipUniformRegions=*/false), PMW);
 
-  addPass(AMDGPUAnnotateUniformValuesPass());
+  addFunctionPass(AMDGPUAnnotateUniformValuesPass(), PMW);
 
-  addPass(SIAnnotateControlFlowPass(TM));
+  addFunctionPass(SIAnnotateControlFlowPass(TM), PMW);
 
   // TODO: Move this right after structurizeCFG to avoid extra divergence
   // analysis. This depends on stopping SIAnnotateControlFlow from making
   // control flow modifications.
-  addPass(AMDGPURewriteUndefForPHIPass());
+  addFunctionPass(AMDGPURewriteUndefForPHIPass(), PMW);
 
   if (!getCGPassBuilderOption().EnableGlobalISelOption ||
       !isGlobalISelAbortEnabled() || !NewRegBankSelect)
-    addPass(LCSSAPass());
+    addFunctionPass(LCSSAPass(), PMW);
 
-  if (TM.getOptLevel() > CodeGenOptLevel::Less)
-    addPass(AMDGPUPerfHintAnalysisPass(TM));
+  if (TM.getOptLevel() > CodeGenOptLevel::Less) {
+    flushFPMsToMPM(PMW);
+    addModulePass(AMDGPUPerfHintAnalysisPass(TM), PMW);
+  }
 
   // FIXME: Why isn't this queried as required from AMDGPUISelDAGToDAG, and why
   // isn't this in addInstSelector?
-  addPass(RequireAnalysisPass<UniformityInfoAnalysis, Function>(),
-          /*Force=*/true);
+  addFunctionPass(RequireAnalysisPass<UniformityInfoAnalysis, Function>(), PMW,
+                  /*Force=*/true);
 }
 
-void AMDGPUCodeGenPassBuilder::addILPOpts(AddMachinePass &addPass) const {
+void AMDGPUCodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) const {
   if (EnableEarlyIfConversion)
-    addPass(EarlyIfConverterPass());
+    addMachineFunctionPass(EarlyIfConverterPass(), PMW);
 
-  Base::addILPOpts(addPass);
+  Base::addILPOpts(PMW);
 }
 
-void AMDGPUCodeGenPassBuilder::addAsmPrinter(AddMachinePass &addPass,
+void AMDGPUCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW,
                                              CreateMCStreamer) const {
   // TODO: Add AsmPrinter.
 }
 
-Error AMDGPUCodeGenPassBuilder::addInstSelector(AddMachinePass &addPass) const {
-  addPass(AMDGPUISelDAGToDAGPass(TM));
-  addPass(SIFixSGPRCopiesPass());
-  addPass(SILowerI1CopiesPass());
+Error AMDGPUCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
+  addMachineFunctionPass(AMDGPUISelDAGToDAGPass(TM), PMW);
+  addMachineFunctionPass(SIFixSGPRCopiesPass(), PMW);
+  addMachineFunctionPass(SILowerI1CopiesPass(), PMW);
   return Error::success();
 }
 
-void AMDGPUCodeGenPassBuilder::addPreRewrite(AddMachinePass &addPass) const {
+void AMDGPUCodeGenPassBuilder::addPreRewrite(PassManagerWrapper &PMW) const {
   if (EnableRegReassign) {
-    addPass(GCNNSAReassignPass());
+    addMachineFunctionPass(GCNNSAReassignPass(), PMW);
   }
+
+  addMachineFunctionPass(AMDGPURewriteAGPRCopyMFMAPass(), PMW);
 }
 
 void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
-    AddMachinePass &addPass) const {
-  Base::addMachineSSAOptimization(addPass);
+    PassManagerWrapper &PMW) const {
+  Base::addMachineSSAOptimization(PMW);
 
-  addPass(SIFoldOperandsPass());
+  addMachineFunctionPass(SIFoldOperandsPass(), PMW);
   if (EnableDPPCombine) {
-    addPass(GCNDPPCombinePass());
+    addMachineFunctionPass(GCNDPPCombinePass(), PMW);
   }
-  addPass(SILoadStoreOptimizerPass());
+  addMachineFunctionPass(SILoadStoreOptimizerPass(), PMW);
   if (isPassEnabled(EnableSDWAPeephole)) {
-    addPass(SIPeepholeSDWAPass());
-    addPass(EarlyMachineLICMPass());
-    addPass(MachineCSEPass());
-    addPass(SIFoldOperandsPass());
+    addMachineFunctionPass(SIPeepholeSDWAPass(), PMW);
+    addMachineFunctionPass(EarlyMachineLICMPass(), PMW);
+    addMachineFunctionPass(MachineCSEPass(), PMW);
+    addMachineFunctionPass(SIFoldOperandsPass(), PMW);
   }
-  addPass(DeadMachineInstructionElimPass());
-  addPass(SIShrinkInstructionsPass());
+  addMachineFunctionPass(DeadMachineInstructionElimPass(), PMW);
+  addMachineFunctionPass(SIShrinkInstructionsPass(), PMW);
 }
 
-void AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
-    AddMachinePass &addPass) const {
+Error AMDGPUCodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) const {
+  insertPass<PHIEliminationPass>(SILowerControlFlowPass());
+
+  insertPass<TwoAddressInstructionPass>(SIWholeQuadModePass());
+
+  return Base::addFastRegAlloc(PMW);
+}
+
+Error AMDGPUCodeGenPassBuilder::addRegAssignmentFast(
+    PassManagerWrapper &PMW) const {
+  if (auto Err = validateRegAllocOptions())
+    return Err;
+
+  addMachineFunctionPass(GCNPreRALongBranchRegPass(), PMW);
+
+  // SGPR allocation - default to fast at -O0.
+  if (SGPRRegAllocNPM == RegAllocType::Greedy)
+    addMachineFunctionPass(RAGreedyPass({onlyAllocateSGPRs, "sgpr"}), PMW);
+  else
+    addMachineFunctionPass(RegAllocFastPass({onlyAllocateSGPRs, "sgpr", false}),
+                           PMW);
+
+  // Equivalent of PEI for SGPRs.
+  addMachineFunctionPass(SILowerSGPRSpillsPass(), PMW);
+
+  // To Allocate wwm registers used in whole quad mode operations (for shaders).
+  addMachineFunctionPass(SIPreAllocateWWMRegsPass(), PMW);
+
+  // WWM allocation - default to fast at -O0.
+  if (WWMRegAllocNPM == RegAllocType::Greedy)
+    addMachineFunctionPass(RAGreedyPass({onlyAllocateWWMRegs, "wwm"}), PMW);
+  else
+    addMachineFunctionPass(
+        RegAllocFastPass({onlyAllocateWWMRegs, "wwm", false}), PMW);
+
+  addMachineFunctionPass(SILowerWWMCopiesPass(), PMW);
+  addMachineFunctionPass(AMDGPUReserveWWMRegsPass(), PMW);
+
+  // VGPR allocation - default to fast at -O0.
+  if (VGPRRegAllocNPM == RegAllocType::Greedy)
+    addMachineFunctionPass(RAGreedyPass({onlyAllocateVGPRs, "vgpr"}), PMW);
+  else
+    addMachineFunctionPass(RegAllocFastPass({onlyAllocateVGPRs, "vgpr"}), PMW);
+
+  return Error::success();
+}
+
+Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
+    PassManagerWrapper &PMW) const {
   if (EnableDCEInRA)
     insertPass<DetectDeadLanesPass>(DeadMachineInstructionElimPass());
 
@@ -2327,89 +2461,108 @@ void AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
   if (TM.getOptLevel() > CodeGenOptLevel::Less)
     insertPass<MachineSchedulerPass>(SIFormMemoryClausesPass());
 
-  Base::addOptimizedRegAlloc(addPass);
+  return Base::addOptimizedRegAlloc(PMW);
 }
 
-void AMDGPUCodeGenPassBuilder::addPreRegAlloc(AddMachinePass &addPass) const {
+void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) const {
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(AMDGPUPrepareAGPRAllocPass());
+    addMachineFunctionPass(AMDGPUPrepareAGPRAllocPass(), PMW);
 }
 
 Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
-    AddMachinePass &addPass) const {
-  // TODO: Check --regalloc-npm option
+    PassManagerWrapper &PMW) const {
+  if (auto Err = validateRegAllocOptions())
+    return Err;
 
-  addPass(GCNPreRALongBranchRegPass());
+  addMachineFunctionPass(GCNPreRALongBranchRegPass(), PMW);
 
-  addPass(RAGreedyPass({onlyAllocateSGPRs, "sgpr"}));
+  // SGPR allocation - default to greedy at -O1 and above.
+  if (SGPRRegAllocNPM == RegAllocType::Fast)
+    addMachineFunctionPass(RegAllocFastPass({onlyAllocateSGPRs, "sgpr", false}),
+                           PMW);
+  else
+    addMachineFunctionPass(RAGreedyPass({onlyAllocateSGPRs, "sgpr"}), PMW);
 
   // Commit allocated register changes. This is mostly necessary because too
   // many things rely on the use lists of the physical registers, such as the
   // verifier. This is only necessary with allocators which use LiveIntervals,
   // since FastRegAlloc does the replacements itself.
-  addPass(VirtRegRewriterPass(false));
+  addMachineFunctionPass(VirtRegRewriterPass(false), PMW);
 
   // At this point, the sgpr-regalloc has been done and it is good to have the
   // stack slot coloring to try to optimize the SGPR spill stack indices before
   // attempting the custom SGPR spill lowering.
-  addPass(StackSlotColoringPass());
+  addMachineFunctionPass(StackSlotColoringPass(), PMW);
 
   // Equivalent of PEI for SGPRs.
-  addPass(SILowerSGPRSpillsPass());
+  addMachineFunctionPass(SILowerSGPRSpillsPass(), PMW);
 
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
-  addPass(SIPreAllocateWWMRegsPass());
+  addMachineFunctionPass(SIPreAllocateWWMRegsPass(), PMW);
 
-  // For allocating other wwm register operands.
-  addPass(RAGreedyPass({onlyAllocateWWMRegs, "wwm"}));
-  addPass(SILowerWWMCopiesPass());
-  addPass(VirtRegRewriterPass(false));
-  addPass(AMDGPUReserveWWMRegsPass());
+  // WWM allocation - default to greedy at -O1 and above.
+  if (WWMRegAllocNPM == RegAllocType::Fast)
+    addMachineFunctionPass(
+        RegAllocFastPass({onlyAllocateWWMRegs, "wwm", false}), PMW);
+  else
+    addMachineFunctionPass(RAGreedyPass({onlyAllocateWWMRegs, "wwm"}), PMW);
+  addMachineFunctionPass(SILowerWWMCopiesPass(), PMW);
+  addMachineFunctionPass(VirtRegRewriterPass(false), PMW);
+  addMachineFunctionPass(AMDGPUReserveWWMRegsPass(), PMW);
 
-  // For allocating per-thread VGPRs.
-  addPass(RAGreedyPass({onlyAllocateVGPRs, "vgpr"}));
+  // VGPR allocation - default to greedy at -O1 and above.
+  if (VGPRRegAllocNPM == RegAllocType::Fast)
+    addMachineFunctionPass(RegAllocFastPass({onlyAllocateVGPRs, "vgpr"}), PMW);
+  else
+    addMachineFunctionPass(RAGreedyPass({onlyAllocateVGPRs, "vgpr"}), PMW);
 
+  addPreRewrite(PMW);
+  addMachineFunctionPass(VirtRegRewriterPass(true), PMW);
 
-  addPreRewrite(addPass);
-  addPass(VirtRegRewriterPass(true));
-
-  addPass(AMDGPUMarkLastScratchLoadPass());
+  addMachineFunctionPass(AMDGPUMarkLastScratchLoadPass(), PMW);
   return Error::success();
 }
 
-void AMDGPUCodeGenPassBuilder::addPostRegAlloc(AddMachinePass &addPass) const {
-  addPass(SIFixVGPRCopiesPass());
+void AMDGPUCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
+  addMachineFunctionPass(SIFixVGPRCopiesPass(), PMW);
   if (TM.getOptLevel() > CodeGenOptLevel::None)
-    addPass(SIOptimizeExecMaskingPass());
-  Base::addPostRegAlloc(addPass);
+    addMachineFunctionPass(SIOptimizeExecMaskingPass(), PMW);
+  Base::addPostRegAlloc(PMW);
 }
 
-void AMDGPUCodeGenPassBuilder::addPreSched2(AddMachinePass &addPass) const {
+void AMDGPUCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) const {
   if (TM.getOptLevel() > CodeGenOptLevel::None)
-    addPass(SIShrinkInstructionsPass());
-  addPass(SIPostRABundlerPass());
+    addMachineFunctionPass(SIShrinkInstructionsPass(), PMW);
+  addMachineFunctionPass(SIPostRABundlerPass(), PMW);
 }
 
-void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
+void AMDGPUCodeGenPassBuilder::addPostBBSections(
+    PassManagerWrapper &PMW) const {
+  // We run this later to avoid passes like livedebugvalues and BBSections
+  // having to deal with the apparent multi-entry functions we may generate.
+  addMachineFunctionPass(AMDGPUPreloadKernArgPrologPass(), PMW);
+}
+
+void AMDGPUCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
   if (isPassEnabled(EnableVOPD, CodeGenOptLevel::Less)) {
-    addPass(GCNCreateVOPDPass());
+    addMachineFunctionPass(GCNCreateVOPDPass(), PMW);
   }
 
-  addPass(SIMemoryLegalizerPass());
-  addPass(SIInsertWaitcntsPass());
+  addMachineFunctionPass(SIMemoryLegalizerPass(), PMW);
+  addMachineFunctionPass(SIInsertWaitcntsPass(), PMW);
 
-  addPass(SIModeRegisterPass());
+  addMachineFunctionPass(SIModeRegisterPass(), PMW);
 
   if (TM.getOptLevel() > CodeGenOptLevel::None)
-    addPass(SIInsertHardClausesPass());
+    addMachineFunctionPass(SIInsertHardClausesPass(), PMW);
 
-  addPass(SILateBranchLoweringPass());
+  addMachineFunctionPass(SILateBranchLoweringPass(), PMW);
 
   if (isPassEnabled(EnableSetWavePriority, CodeGenOptLevel::Less))
-    addPass(AMDGPUSetWavePriorityPass());
+    addMachineFunctionPass(AMDGPUSetWavePriorityPass(), PMW);
 
   if (TM.getOptLevel() > CodeGenOptLevel::None)
-    addPass(SIPreEmitPeepholePass());
+    addMachineFunctionPass(SIPreEmitPeepholePass(), PMW);
 
   // The hazard recognizer that runs as part of the post-ra scheduler does not
   // guarantee to be able handle all hazards correctly. This is because if there
@@ -2419,15 +2572,15 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
   //
   // Here we add a stand-alone hazard recognizer pass which can handle all
   // cases.
-  addPass(PostRAHazardRecognizerPass());
-  addPass(AMDGPUWaitSGPRHazardsPass());
-  addPass(AMDGPULowerVGPREncodingPass());
+  addMachineFunctionPass(PostRAHazardRecognizerPass(), PMW);
+  addMachineFunctionPass(AMDGPUWaitSGPRHazardsPass(), PMW);
+  addMachineFunctionPass(AMDGPULowerVGPREncodingPass(), PMW);
 
   if (isPassEnabled(EnableInsertDelayAlu, CodeGenOptLevel::Less)) {
-    addPass(AMDGPUInsertDelayAluPass());
+    addMachineFunctionPass(AMDGPUInsertDelayAluPass(), PMW);
   }
 
-  addPass(BranchRelaxationPass());
+  addMachineFunctionPass(BranchRelaxationPass(), PMW);
 }
 
 bool AMDGPUCodeGenPassBuilder::isPassEnabled(const cl::opt<bool> &Opt,
@@ -2439,32 +2592,33 @@ bool AMDGPUCodeGenPassBuilder::isPassEnabled(const cl::opt<bool> &Opt,
   return Opt;
 }
 
-void AMDGPUCodeGenPassBuilder::addEarlyCSEOrGVNPass(AddIRPass &addPass) const {
+void AMDGPUCodeGenPassBuilder::addEarlyCSEOrGVNPass(
+    PassManagerWrapper &PMW) const {
   if (TM.getOptLevel() == CodeGenOptLevel::Aggressive)
-    addPass(GVNPass());
+    addFunctionPass(GVNPass(), PMW);
   else
-    addPass(EarlyCSEPass());
+    addFunctionPass(EarlyCSEPass(), PMW);
 }
 
 void AMDGPUCodeGenPassBuilder::addStraightLineScalarOptimizationPasses(
-    AddIRPass &addPass) const {
+    PassManagerWrapper &PMW) const {
   if (isPassEnabled(EnableLoopPrefetch, CodeGenOptLevel::Aggressive))
-    addPass(LoopDataPrefetchPass());
+    addFunctionPass(LoopDataPrefetchPass(), PMW);
 
-  addPass(SeparateConstOffsetFromGEPPass());
+  addFunctionPass(SeparateConstOffsetFromGEPPass(), PMW);
 
   // ReassociateGEPs exposes more opportunities for SLSR. See
   // the example in reassociate-geps-and-slsr.ll.
-  addPass(StraightLineStrengthReducePass());
+  addFunctionPass(StraightLineStrengthReducePass(), PMW);
 
   // SeparateConstOffsetFromGEP and SLSR creates common expressions which GVN or
   // EarlyCSE can reuse.
-  addEarlyCSEOrGVNPass(addPass);
+  addEarlyCSEOrGVNPass(PMW);
 
   // Run NaryReassociate after EarlyCSE/GVN to be more effective.
-  addPass(NaryReassociatePass());
+  addFunctionPass(NaryReassociatePass(), PMW);
 
   // NaryReassociate on GEPs creates redundant common expressions, so run
   // EarlyCSE after it.
-  addPass(EarlyCSEPass());
+  addFunctionPass(EarlyCSEPass(), PMW);
 }

@@ -496,9 +496,15 @@ static mlir::GenRegistration
 // directly use the constant value as attribute in SPIR-V dialect. So need
 // to handle them separately from normal enum attributes.
 constexpr llvm::StringLiteral constantIdEnumAttrs[] = {
-    "SPIRV_ScopeAttr", "SPIRV_KHR_CooperativeMatrixUseAttr",
-    "SPIRV_KHR_CooperativeMatrixLayoutAttr", "SPIRV_MemorySemanticsAttr",
-    "SPIRV_MatrixLayoutAttr"};
+    "SPIRV_ScopeAttr",
+    "SPIRV_KHR_CooperativeMatrixUseAttr",
+    "SPIRV_KHR_CooperativeMatrixLayoutAttr",
+    "SPIRV_MemorySemanticsAttr",
+    "SPIRV_MatrixLayoutAttr",
+    "SPIRV_TosaExtAccTypeAttr",
+    "SPIRV_TosaExtNaNPropagationModeAttr",
+    "SPIRV_QuadSwapDirectionAttr",
+};
 
 /// Generates code to serialize attributes of a SPIRV_Op `op` into `os`. The
 /// generates code extracts the attribute with name `attrName` from
@@ -552,6 +558,19 @@ static void emitAttributeSerialization(const Attribute &attr,
     os << tabs << "    return failure();\n";
     os << tabs << "  }\n";
     os << tabs << formatv("  {0}.push_back(attrTypeID);\n", operandList);
+  } else if (llvm::is_contained({"SPIRV_BoolConstAttr",
+                                 "SPIRV_TensorArmAxisAttr",
+                                 "SPIRV_TosaNumericalAttr"},
+                                attr.getAttrDefName())) {
+    os << tabs
+       << formatv(
+              "  {0}.push_back(prepareConstantScalar({1}.getLoc(), attr));\n",
+              operandList, opVar);
+  } else if (attr.getAttrDefName().contains("TensorArm")) {
+    os << tabs
+       << formatv("  {0}.push_back(prepareConstant({1}.getLoc(), "
+                  "llvm::cast<DenseElementsAttr>(attr).getType(), attr));\n",
+                  operandList, opVar);
   } else {
     PrintFatalError(
         loc,
@@ -846,6 +865,26 @@ static void emitAttributeDeserialization(const Attribute &attr,
        << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
                   "TypeAttr::get(getType({2}[{3}++]))));\n",
                   attrList, attrName, words, wordIndex);
+  } else if (llvm::is_contained(
+                 {"SPIRV_BoolConstAttr", "SPIRV_TosaNumericalAttr"},
+                 attr.getAttrDefName()) ||
+             attr.getAttrDefName().contains("TensorArm")) {
+    os << tabs
+       << formatv("std::optional<std::pair<Attribute, Type>> c = "
+                  "getConstant({0}[{1}++]);\n",
+                  words, wordIndex);
+    os << tabs << "if (!c.has_value()) {\n";
+    os << tabs
+       << formatv("  "
+                  "return emitError(unknownLoc, \"could not fetch "
+                  "constant attribute for {0}\") << "
+                  "{1} << \" of \" << {2}.size() << \" processed\";\n",
+                  attrName, wordIndex, words);
+    os << tabs << "}\n";
+    os << tabs
+       << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
+                  "c.value().first));\n",
+                  attrList, attrName);
   } else {
     PrintFatalError(
         loc, llvm::Twine(

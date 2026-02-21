@@ -107,6 +107,10 @@ static cl::opt<bool> PreserveAssemblyUseListOrder(
     "preserve-ll-uselistorder", cl::Hidden, cl::init(false),
     cl::desc("Preserve use-list order when writing LLVM assembly."));
 
+static cl::opt<bool> PrintAddrspaceName("print-addrspace-name", cl::Hidden,
+                                        cl::init(false),
+                                        cl::desc("Print address space names"));
+
 // Make virtual table appear in this compilation unit.
 AssemblyAnnotationWriter::~AssemblyAnnotationWriter() = default;
 
@@ -521,9 +525,9 @@ static void printShuffleMask(raw_ostream &Out, Type *Ty, ArrayRef<int> Mask) {
   if (isa<ScalableVectorType>(Ty))
     Out << "vscale x ";
   Out << Mask.size() << " x i32> ";
-  if (all_of(Mask, [](int Elt) { return Elt == 0; })) {
+  if (all_of(Mask, equal_to(0))) {
     Out << "zeroinitializer";
-  } else if (all_of(Mask, [](int Elt) { return Elt == PoisonMaskElem; })) {
+  } else if (all_of(Mask, equal_to(PoisonMaskElem))) {
     Out << "poison";
   } else {
     Out << "<";
@@ -543,7 +547,8 @@ namespace {
 
 class TypePrinting {
 public:
-  TypePrinting(const Module *M = nullptr) : DeferredM(M) {}
+  TypePrinting(const Module *M = nullptr)
+      : M(M), TypesIncorporated(M == nullptr) {}
 
   TypePrinting(const TypePrinting &) = delete;
   TypePrinting &operator=(const TypePrinting &) = delete;
@@ -563,8 +568,9 @@ public:
 private:
   void incorporateTypes();
 
-  /// A module to process lazily when needed. Set to nullptr as soon as used.
-  const Module *DeferredM;
+  /// A module to process lazily.
+  const Module *M;
+  bool TypesIncorporated;
 
   TypeFinder NamedTypes;
 
@@ -605,11 +611,11 @@ bool TypePrinting::empty() {
 }
 
 void TypePrinting::incorporateTypes() {
-  if (!DeferredM)
+  if (TypesIncorporated)
     return;
 
-  NamedTypes.run(*DeferredM, false);
-  DeferredM = nullptr;
+  NamedTypes.run(*M, false);
+  TypesIncorporated = true;
 
   // The list of struct types we got back includes all the struct types, split
   // the unnamed ones out to a numbering and remove the anonymous structs.
@@ -628,6 +634,21 @@ void TypePrinting::incorporateTypes() {
   }
 
   NamedTypes.erase(NextToUse, NamedTypes.end());
+}
+
+static void printAddressSpace(const Module *M, unsigned AS, raw_ostream &OS,
+                              StringRef Prefix = " ", StringRef Suffix = "",
+                              bool ForcePrint = false) {
+  if (AS == 0 && !ForcePrint)
+    return;
+  OS << Prefix << "addrspace(";
+  StringRef ASName =
+      PrintAddrspaceName && M ? M->getDataLayout().getAddressSpaceName(AS) : "";
+  if (!ASName.empty())
+    OS << "\"" << ASName << "\"";
+  else
+    OS << AS;
+  OS << ")" << Suffix;
 }
 
 /// Write the specified type to the specified raw_ostream, making use of type
@@ -686,8 +707,7 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
   case Type::PointerTyID: {
     PointerType *PTy = cast<PointerType>(Ty);
     OS << "ptr";
-    if (unsigned AddressSpace = PTy->getAddressSpace())
-      OS << " addrspace(" << AddressSpace << ')';
+    printAddressSpace(M, PTy->getAddressSpace(), OS);
     return;
   }
   case Type::ArrayTyID: {
@@ -990,13 +1010,13 @@ int ModuleSlotTracker::getLocalSlot(const Value *V) {
 void ModuleSlotTracker::setProcessHook(
     std::function<void(AbstractSlotTrackerStorage *, const Module *, bool)>
         Fn) {
-  ProcessModuleHookFn = Fn;
+  ProcessModuleHookFn = std::move(Fn);
 }
 
 void ModuleSlotTracker::setProcessHook(
     std::function<void(AbstractSlotTrackerStorage *, const Function *, bool)>
         Fn) {
-  ProcessFunctionHookFn = Fn;
+  ProcessFunctionHookFn = std::move(Fn);
 }
 
 static SlotTracker *createSlotTracker(const Value *V) {
@@ -1284,13 +1304,13 @@ int SlotTracker::getGlobalSlot(const GlobalValue *V) {
 void SlotTracker::setProcessHook(
     std::function<void(AbstractSlotTrackerStorage *, const Module *, bool)>
         Fn) {
-  ProcessModuleHookFn = Fn;
+  ProcessModuleHookFn = std::move(Fn);
 }
 
 void SlotTracker::setProcessHook(
     std::function<void(AbstractSlotTrackerStorage *, const Function *, bool)>
         Fn) {
-  ProcessFunctionHookFn = Fn;
+  ProcessFunctionHookFn = std::move(Fn);
 }
 
 /// getMetadataSlot - Get the slot number of a MDNode.
@@ -3485,8 +3505,6 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
       Out << "(callee: ^" << Machine.getGUIDSlot(Call.first.getGUID());
       if (Call.second.getHotness() != CalleeInfo::HotnessType::Unknown)
         Out << ", hotness: " << getHotnessName(Call.second.getHotness());
-      else if (Call.second.RelBlockFreq)
-        Out << ", relbf: " << Call.second.RelBlockFreq;
       // Follow the convention of emitting flags as a boolean value, but only
       // emit if true to avoid unnecessary verbosity and test churn.
       if (Call.second.HasTailCall)
@@ -3896,10 +3914,10 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
   printThreadLocalModel(GV->getThreadLocalMode(), Out);
   StringRef UA = getUnnamedAddrEncoding(GV->getUnnamedAddr());
   if (!UA.empty())
-      Out << UA << ' ';
+    Out << UA << ' ';
 
-  if (unsigned AddressSpace = GV->getType()->getAddressSpace())
-    Out << "addrspace(" << AddressSpace << ") ";
+  printAddressSpace(GV->getParent(), GV->getType()->getAddressSpace(), Out,
+                    /*Prefix=*/"", /*Suffix=*/" ");
   if (GV->isExternallyInitialized()) Out << "externally_initialized ";
   Out << (GV->isConstant() ? "constant " : "global ");
   TypePrinter.print(GV->getValueType(), Out);
@@ -4174,9 +4192,10 @@ void AssemblyWriter::printFunction(const Function *F) {
   // a module with a non-zero program address space or if there is no valid
   // Module* so that the file can be parsed without the datalayout string.
   const Module *Mod = F->getParent();
-  if (F->getAddressSpace() != 0 || !Mod ||
-      Mod->getDataLayout().getProgramAddressSpace() != 0)
-    Out << " addrspace(" << F->getAddressSpace() << ")";
+  bool ForcePrintAddressSpace =
+      !Mod || Mod->getDataLayout().getProgramAddressSpace() != 0;
+  printAddressSpace(Mod, F->getAddressSpace(), Out, /*Prefix=*/" ",
+                    /*Suffix=*/"", ForcePrintAddressSpace);
   if (Attrs.hasFnAttrs())
     Out << " #" << Machine.getAttributeGroupSlot(Attrs.getFnAttrs());
   if (F->hasSection()) {
@@ -4192,6 +4211,8 @@ void AssemblyWriter::printFunction(const Function *F) {
   maybePrintComdat(Out, *F);
   if (MaybeAlign A = F->getAlign())
     Out << " align " << A->value();
+  if (MaybeAlign A = F->getPreferredAlignment())
+    Out << " prefalign(" << A->value() << ')';
   if (F->hasGC())
     Out << " gc \"" << F->getGC() << '"';
   if (F->hasPrefixData()) {
@@ -4352,23 +4373,21 @@ void AssemblyWriter::printInfoComment(const Value &V, bool isMaterializable) {
 
 static void maybePrintCallAddrSpace(const Value *Operand, const Instruction *I,
                                     raw_ostream &Out) {
-  // We print the address space of the call if it is non-zero.
   if (Operand == nullptr) {
     Out << " <cannot get addrspace!>";
     return;
   }
+
+  // We print the address space of the call if it is non-zero.
+  // We also print it if it is zero but not equal to the program address space
+  // or if we can't find a valid Module* to make it possible to parse
+  // the resulting file even without a datalayout string.
   unsigned CallAddrSpace = Operand->getType()->getPointerAddressSpace();
-  bool PrintAddrSpace = CallAddrSpace != 0;
-  if (!PrintAddrSpace) {
-    const Module *Mod = getModuleFromVal(I);
-    // We also print it if it is zero but not equal to the program address space
-    // or if we can't find a valid Module* to make it possible to parse
-    // the resulting file even without a datalayout string.
-    if (!Mod || Mod->getDataLayout().getProgramAddressSpace() != 0)
-      PrintAddrSpace = true;
-  }
-  if (PrintAddrSpace)
-    Out << " addrspace(" << CallAddrSpace << ")";
+  const Module *Mod = getModuleFromVal(I);
+  bool ForcePrintAddrSpace =
+      !Mod || Mod->getDataLayout().getProgramAddressSpace() != 0;
+  printAddressSpace(Mod, CallAddrSpace, Out, /*Prefix=*/" ", /*Suffix=*/"",
+                    ForcePrintAddrSpace);
 }
 
 // This member is called for each Instruction in a function..
@@ -4735,9 +4754,8 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       Out << ", align " << A->value();
     }
 
-    unsigned AddrSpace = AI->getAddressSpace();
-    if (AddrSpace != 0)
-      Out << ", addrspace(" << AddrSpace << ')';
+    printAddressSpace(AI->getModule(), AI->getAddressSpace(), Out,
+                      /*Prefix=*/", ");
   } else if (isa<CastInst>(I)) {
     if (Operand) {
       Out << ' ';

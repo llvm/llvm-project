@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
 }
 
 TEST(CommandLineInitTest, GetPresetOptions) {
-  StringMap<cl::Option *> &Map =
+  DenseMap<StringRef, cl::Option *> &Map =
       cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
 
   for (auto *Str :

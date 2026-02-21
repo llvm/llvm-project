@@ -549,7 +549,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
   // Populate all patterns from all dialects that implement the
   // `ConvertToLLVMPatternInterface` interface.
   for (Dialect *dialect : context->getLoadedDialects()) {
-    auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+    auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
     if (!iface)
       continue;
     iface->populateConvertToLLVMConversionPatterns(target, converter, patterns);

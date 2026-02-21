@@ -13,7 +13,7 @@ define void @widen_extractvalue(ptr %dst, {i64, i64} %sv) #0 {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i32 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 1000, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 1000, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[EXTRACT0:%.*]] = extractvalue { i64, i64 } [[SV]], 0
