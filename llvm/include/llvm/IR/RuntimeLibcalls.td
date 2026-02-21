@@ -27,6 +27,7 @@ def isPS : RuntimeLibcallPredicate<"TT.isPS()">;
 def isMacOSX : RuntimeLibcallPredicate<[{TT.isMacOSX()}]>;
 def isNotOSWindowsOrIsCygwinMinGW
   : RuntimeLibcallPredicate<"!TT.isOSWindows() || TT.isOSCygMing()">;
+
 def isWindowsMSVCEnvironment : RuntimeLibcallPredicate<
   [{TT.isWindowsMSVCEnvironment()}]>;
 
@@ -47,6 +48,8 @@ def hasStackChkFail : RuntimeLibcallPredicate<
 
 def isWindowsMSVCOrItaniumEnvironment : RuntimeLibcallPredicate<
   [{TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()}]>;
+
+def isAndroid : RuntimeLibcallPredicate<"TT.isAndroid()">;
 
 def isGNUEnvironment : RuntimeLibcallPredicate<"TT.isGNUEnvironment()">;
 def darwinHasSinCosStret : RuntimeLibcallPredicate<"darwinHasSinCosStret(TT)">;
@@ -479,6 +482,9 @@ def STACK_SMASH_HANDLER : RuntimeLibcall;
 
 // Safe stack
 def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall;
+
+// Really a global variable, not a function
+def SAFESTACK_UNSAFE_STACK_PTR : RuntimeLibcall;
 
 def STACK_PROBE : RuntimeLibcall;
 def SECURITY_CHECK_COOKIE : RuntimeLibcall;
@@ -1142,6 +1148,7 @@ foreach lc = LibCalls__atomic in {
 
 // Safe stack.
 def __safestack_pointer_address : RuntimeLibcallImpl<SAFESTACK_POINTER_ADDRESS>;
+def __safestack_unsafe_stack_ptr : RuntimeLibcallImpl<SAFESTACK_UNSAFE_STACK_PTR>;
 
 // Deoptimization
 def __llvm_deoptimize : RuntimeLibcallImpl<DEOPTIMIZE>;
@@ -2055,6 +2062,14 @@ defvar has___guard_local = LibcallImpls<(add __guard_local), isOSOpenBSD>;
 defvar DefaultStackProtector = (add has__stack_chk_fail, has__stack_chk_guard,
     has__stack_smash_handler, has___guard_local);
 
+defvar LibcSafestackPointerAddress =
+    LibcallImpls<(add __safestack_pointer_address), isAndroid>;
+
+// compiler-rt sources suggest this is only available if
+// (TT.isOSLinux() || TT.isOSFreeBSD() || TT.isOSNetBSD() ||
+// TT.isOSSolaris()), but tests exist for other os targets.
+defvar DefaultSafeStackGlobals = (add __safestack_unsafe_stack_ptr);
+
 //===----------------------------------------------------------------------===//
 // Objective-C Runtime Libcalls
 //===----------------------------------------------------------------------===//
@@ -2165,7 +2180,8 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        LibcallImpls<(add __chkstk), isOSWindows>,
        SMEABI_LibCalls_PreserveMost_From_X0,
        SMEABI_LibCalls_PreserveMost_From_X1,
-       SMEABI_LibCalls_PreserveMost_From_X2)
+       SMEABI_LibCalls_PreserveMost_From_X2,
+       LibcSafestackPointerAddress)
 >;
 
 // Prepend a # to every name
@@ -2649,6 +2665,7 @@ def ARMSystemLibrary
            DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern,
            LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
            DefaultLibmExp10,
+           LibcSafestackPointerAddress,
 
            AEABICalls,
            AEABI45MemCalls,
@@ -2667,7 +2684,8 @@ def ARMSystemLibrary
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
                         RuntimeLibcallPredicate<[{TT.isOSBinFormatMachO() &&
                                                   (!TT.isiOS() || !TT.isOSVersionLT(5, 0))}]>>,
-           DefaultStackProtector)> {
+           DefaultStackProtector,
+           DefaultSafeStackGlobals)> {
   let DefaultLibcallCallingConv = LibcallCallingConv<[{
      TT.isOSDarwin() ? CallingConv::C :
         (FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP
@@ -3216,7 +3234,8 @@ def RISCVSystemLibrary
            exp10f, exp10, exp10l_f128,
            __riscv_flush_icache,
            LibcallImpls<(add Int128RTLibcalls), isRISCV64>,
-           DefaultStackProtector)>;
+           DefaultStackProtector,
+           DefaultSafeStackGlobals)>;
 
 //===----------------------------------------------------------------------===//
 // SPARC Runtime Libcalls
@@ -3371,11 +3390,13 @@ defvar X86CommonLibcalls =
        // hack for one test relying on it.
        __powitf2_f128,
        DefaultStackProtector,
+       DefaultSafeStackGlobals,
        LibcallImpls<(add MemChkLibcalls), isNotPS>,
        LibcallImpls<(add ___chkstk_ms), isCygwinMinGW64>,
        LibcallImpls<(add __chkstk), isWin64NotCygMing>,
        LibcallImpls<(add _alloca), isCygwinMinGW32>,
-       LibcallImpls<(add _chkstk), isWin32NotCygMing>
+       LibcallImpls<(add _chkstk), isWin32NotCygMing>,
+       LibcSafestackPointerAddress
 );
 
 defvar Windows32DivRemMulCalls =
@@ -3555,7 +3576,7 @@ def LegacyDefaultSystemLibrary
          exp10f, exp10, exp10l_f128,
          __powisf2, __powidf2, __powitf2_f128,
          LibcallImpls<(add Int128RTLibcalls), isArch64Bit>,
-         DefaultStackProtector
+         DefaultStackProtector, DefaultSafeStackGlobals
 )>;
 
 //===----------------------------------------------------------------------===//
