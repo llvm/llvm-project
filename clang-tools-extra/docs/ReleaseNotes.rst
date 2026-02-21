@@ -121,6 +121,12 @@ New checks
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
+- New :doc:`misc-header-guard
+  <clang-tidy/checks/misc/header-guard>` check.
+
+  Finds and fixes header guards that do not conform to the configured style
+  options from this check.
+
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 
