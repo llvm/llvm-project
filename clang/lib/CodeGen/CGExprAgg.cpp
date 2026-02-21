@@ -136,7 +136,7 @@ public:
 
     if (llvm::Value *Result = ConstantEmitter(CGF).tryEmitConstantExpr(E)) {
       CGF.CreateCoercedStore(
-          Result, Dest.getAddress(),
+          Result, E->getType(), Dest.getAddress(),
           llvm::TypeSize::getFixed(
               Dest.getPreferredSize(CGF.getContext(), E->getType())
                   .getQuantity()),
@@ -3195,6 +3195,7 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
 
   auto *Inst = Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, isVolatile);
   addInstToCurrentSourceAtom(Inst, nullptr);
+  emitPFPPostCopyUpdates(DestPtr, SrcPtr, Ty);
 
   // Determine the metadata to describe the position of any padding in this
   // memcpy, as well as the TBAA tags for the members of the struct, in case
