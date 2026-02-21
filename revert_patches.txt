@@ -12,9 +12,3 @@ fails 2 JSON tests in merge
 disable JSON NoReadPermission and WriteStreamOpenFailure
 clang/unittests/Analysis/Scalable/Serialization/JSONFormatTest.cpp
 ---
-breaks accel2023 456.spF wrong answer
-[X86] combineCMov - fold CMOV(LOAD(PTR0),LOAD(PTR1)) -> LOAD(CMOV(PTR0,PTR1)) (#182084)
----
-breaks openmpapps lulesh-mp4
-[ValueTracking] Fix crash in PR175590 (#180355)
----
