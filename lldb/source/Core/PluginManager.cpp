@@ -97,7 +97,7 @@ template <typename FPtrTy> static FPtrTy CastToFPtr(void *VPtr) {
 static constexpr llvm::StringLiteral g_plugin_prefix = "liblldbPlugin";
 struct PluginDir {
   enum LoadPolicy {
-    /// Try to load anything that looks like a shared library
+    /// Try to load anything that looks like a shared library.
     LoadAnyDylib,
 
     /// Only load shared libraries who's filename start with g_plugin_prefix.
@@ -168,8 +168,8 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
                    llvm::StringRef path) {
   namespace fs = llvm::sys::fs;
 
-  static constexpr llvm::StringLiteral g_dylibext(".dylib");
-  static constexpr llvm::StringLiteral g_solibext(".so");
+  static constexpr std::array<llvm::StringLiteral, 3>
+      g_shared_library_extension = {".dylib", ".so", ".dll"};
 
   // If we have a regular file, a symbolic link or unknown file type, try and
   // process the file. We must handle unknown as sometimes the directory
@@ -181,12 +181,12 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
     FileSystem::Instance().Resolve(plugin_file_spec);
 
     // Don't try to load unknown extensions.
-    if (plugin_file_spec.GetFileNameExtension() != g_dylibext &&
-        plugin_file_spec.GetFileNameExtension() != g_solibext)
+    if (!llvm::is_contained(g_shared_library_extension,
+                            plugin_file_spec.GetFileNameExtension()))
       return FileSystem::eEnumerateDirectoryResultNext;
 
-    // Don't try to load libraries that don't start with g_plugin_prefix when
-    // filtering.
+    // Don't try to load libraries that don't start with g_plugin_prefix if so
+    // requested.
     PluginDir::LoadPolicy *policy = (PluginDir::LoadPolicy *)baton;
     if (*policy == PluginDir::LoadOnlyWithLLDBPrefix &&
         !plugin_file_spec.GetFilename().GetStringRef().starts_with(
