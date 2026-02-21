@@ -34,6 +34,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PrintPasses.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -53,6 +54,10 @@ bool llvm::VerifyLoopInfo = false;
 static cl::opt<bool, true>
     VerifyLoopInfoX("verify-loop-info", cl::location(VerifyLoopInfo),
                     cl::Hidden, cl::desc("Verify loop info (time consuming)"));
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
 
 //===----------------------------------------------------------------------===//
 // Loop implementation
@@ -79,6 +84,7 @@ bool Loop::makeLoopInvariant(Value *V, bool &Changed, Instruction *InsertPt,
 bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
                              Instruction *InsertPt, MemorySSAUpdater *MSSAU,
                              ScalarEvolution *SE) const {
+  BasicBlock *OriginalParent = I->getParent();
   // Test if the value is already loop-invariant.
   if (isLoopInvariant(I))
     return true;
@@ -109,11 +115,27 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
       MSSAU->moveToPlace(MUD, InsertPt->getParent(),
                          MemorySSA::BeforeTerminator);
 
+  // We want to preserve profile metadata if possible. However, we need to
+  // ensure that profile metadata would remain the same outside of the loop.
+  // Given at this point we know the conditional is loop-invariant, we just
+  // need to worry about other control flow in the loop conditioned on values
+  // that are potentially not independent of the condition of the instruction
+  // we are interested in hoisting. Given this is not knowable in the general
+  // case, we only hoist from a loop header or unique latch (constitutes the
+  // majority of cases), where we are guaranteed to not run into problems.
+  SmallVector<unsigned, 1> ProfileMetadataToPreserve;
+  if (!ProfcheckDisableMetadataFixes)
+    if (OriginalParent == getHeader() || OriginalParent == getLoopLatch())
+      ProfileMetadataToPreserve.push_back(LLVMContext::MD_prof);
+
   // There is possibility of hoisting this instruction above some arbitrary
   // condition. Any metadata defined on it can be control dependent on this
   // condition. Conservatively strip it here so that we don't give any wrong
   // information to the optimizer.
-  I->dropUnknownNonDebugMetadata();
+  I->dropUnknownNonDebugMetadata(ProfileMetadataToPreserve);
+
+  if (ProfileMetadataToPreserve.empty() && isa<SelectInst>(I))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*I, "LoopInfo");
 
   if (SE)
     SE->forgetBlockAndLoopDispositions(I);
