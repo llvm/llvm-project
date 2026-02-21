@@ -148,7 +148,7 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
       Result += "i" + utostr(cast<IntegerType>(Ty)->getBitWidth());
       break;
     case Type::ByteTyID:
-      Result += "b" + utostr(cast<IntegerType>(Ty)->getBitWidth());
+      Result += "b" + utostr(cast<ByteType>(Ty)->getBitWidth());
       break;
     }
   }

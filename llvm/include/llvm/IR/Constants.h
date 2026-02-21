@@ -359,12 +359,6 @@ public:
   /// Return the sign extended value.
   inline int64_t getSExtValue() const { return Val.getSExtValue(); }
 
-  /// A helper method that can be used to determine if the constant contained
-  /// within is equal to a constant.  This only works for very small values,
-  /// because this is all that can be represented with all types.
-  /// Determine if this constant's value is same as an unsigned char.
-  bool equalsByte(uint64_t V) const { return Val == V; }
-
   /// Variant of the getType() method to always return a ByteType, which
   /// reduces the amount of casting needed in parts of the compiler.
   inline ByteType *getByteType() const {
@@ -413,13 +407,6 @@ public:
     else
       return Val.isMinValue();
   }
-
-  /// This function will return true iff this constant represents a value with
-  /// active bits bigger than 64 bits or a value greater than the given uint64_t
-  /// value.
-  /// @returns true iff this constant is greater or equal to the given number.
-  /// Determine if the value is greater or equal to the given number.
-  bool uge(uint64_t Num) const { return Val.uge(Num); }
 
   /// Methods to support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {

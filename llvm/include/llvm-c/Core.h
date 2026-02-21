@@ -2439,7 +2439,7 @@ LLVM_C_ABI LLVMValueRef LLVMConstByteOfArbitraryPrecision(
  */
 LLVM_C_ABI LLVMValueRef LLVMConstByteOfStringAndSize(LLVMTypeRef ByteTy,
                                                      const char *Text,
-                                                     unsigned SLen,
+                                                     size_t SLen,
                                                      uint8_t Radix);
 
 /**

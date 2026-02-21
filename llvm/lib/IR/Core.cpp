@@ -660,40 +660,10 @@ char *LLVMPrintTypeToString(LLVMTypeRef Ty) {
 
 /*--.. Operations on byte types ............................................--*/
 
-LLVMTypeRef LLVMByte8TypeInContext(LLVMContextRef C) {
-  return (LLVMTypeRef)Type::getByte8Ty(*unwrap(C));
-}
-LLVMTypeRef LLVMByte16TypeInContext(LLVMContextRef C) {
-  return (LLVMTypeRef)Type::getByte16Ty(*unwrap(C));
-}
-LLVMTypeRef LLVMByte32TypeInContext(LLVMContextRef C) {
-  return (LLVMTypeRef)Type::getByte32Ty(*unwrap(C));
-}
-LLVMTypeRef LLVMByte64TypeInContext(LLVMContextRef C) {
-  return (LLVMTypeRef)Type::getByte64Ty(*unwrap(C));
-}
-LLVMTypeRef LLVMByte128TypeInContext(LLVMContextRef C) {
-  return (LLVMTypeRef)Type::getByte128Ty(*unwrap(C));
-}
 LLVMTypeRef LLVMByteTypeInContext(LLVMContextRef C, unsigned NumBits) {
   return wrap(ByteType::get(*unwrap(C), NumBits));
 }
 
-LLVMTypeRef LLVMByte8Type(void) {
-  return LLVMByte8TypeInContext(getGlobalContextForCAPI());
-}
-LLVMTypeRef LLVMByte16Type(void) {
-  return LLVMByte16TypeInContext(getGlobalContextForCAPI());
-}
-LLVMTypeRef LLVMByte32Type(void) {
-  return LLVMByte32TypeInContext(getGlobalContextForCAPI());
-}
-LLVMTypeRef LLVMByte64Type(void) {
-  return LLVMByte64TypeInContext(getGlobalContextForCAPI());
-}
-LLVMTypeRef LLVMByte128Type(void) {
-  return LLVMByte128TypeInContext(getGlobalContextForCAPI());
-}
 LLVMTypeRef LLVMByteType(unsigned NumBits) {
   return LLVMByteTypeInContext(getGlobalContextForCAPI(), NumBits);
 }
@@ -1621,7 +1591,7 @@ LLVMValueRef LLVMConstByteOfString(LLVMTypeRef ByteTy, const char Str[],
 }
 
 LLVMValueRef LLVMConstByteOfStringAndSize(LLVMTypeRef ByteTy, const char Str[],
-                                          unsigned SLen, uint8_t Radix) {
+                                          size_t SLen, uint8_t Radix) {
   return wrap(
       ConstantByte::get(unwrap<ByteType>(ByteTy), StringRef(Str, SLen), Radix));
 }

@@ -77,7 +77,6 @@ class DXILBitcodeWriter {
     // CONSTANTS_BLOCK abbrev id's.
     CONSTANTS_SETTYPE_ABBREV = bitc::FIRST_APPLICATION_ABBREV,
     CONSTANTS_INTEGER_ABBREV,
-    CONSTANTS_BYTE_ABBREV,
     CONSTANTS_CE_CAST_Abbrev,
     CONSTANTS_NULL_Abbrev,
 
@@ -2014,24 +2013,6 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
           emitSignedInt64(Record, RawWords[i]);
         }
         Code = bitc::CST_CODE_WIDE_INTEGER;
-      }
-    } else if (const ConstantByte *BV = dyn_cast<ConstantByte>(C)) {
-      if (BV->getBitWidth() <= 64) {
-        uint64_t V = BV->getZExtValue();
-        emitSignedInt64(Record, V);
-        Code = bitc::CST_CODE_BYTE;
-        AbbrevToUse = CONSTANTS_BYTE_ABBREV;
-      } else { // Wide bytes, > 64 bits in size.
-        // We have an arbitrary precision byte value to write whose
-        // bit width is > 64. However, in canonical unsigned integer
-        // format it is likely that the high bits are going to be zero.
-        // So, we only write the number of active words.
-        unsigned NWords = BV->getValue().getActiveWords();
-        const uint64_t *RawWords = BV->getValue().getRawData();
-        for (unsigned i = 0; i != NWords; ++i) {
-          emitSignedInt64(Record, RawWords[i]);
-        }
-        Code = bitc::CST_CODE_WIDE_BYTE;
       }
     } else if (const ConstantFP *CFP = dyn_cast<ConstantFP>(C)) {
       Code = bitc::CST_CODE_FLOAT;

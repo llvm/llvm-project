@@ -318,7 +318,7 @@ IntegerType *Type::getIntNTy(LLVMContext &C, unsigned N) {
   return IntegerType::get(C, N);
 }
 
-Type *Type::getIntByteType(Type *Ty) {
+Type *Type::getIntFromByteType(Type *Ty) {
   assert(Ty->isByteOrByteVectorTy() && "Expected a byte or byte vector type.");
   unsigned NumBits = Ty->getScalarSizeInBits();
   IntegerType *IntTy = IntegerType::get(Ty->getContext(), NumBits);
@@ -327,7 +327,7 @@ Type *Type::getIntByteType(Type *Ty) {
   return IntTy;
 }
 
-Type *Type::getByteIntType(Type *Ty) {
+Type *Type::getByteFromIntType(Type *Ty) {
   assert(!Ty->isPtrOrPtrVectorTy() &&
          "Expected a non-pointer or non-pointer vector type.");
   unsigned NumBits = Ty->getScalarSizeInBits();
@@ -388,15 +388,15 @@ ByteType *ByteType::get(LLVMContext &C, unsigned NumBits) {
   // Check for the built-in byte types
   switch (NumBits) {
   case 8:
-    return cast<ByteType>(Type::getByte8Ty(C));
+    return Type::getByte8Ty(C);
   case 16:
-    return cast<ByteType>(Type::getByte16Ty(C));
+    return Type::getByte16Ty(C);
   case 32:
-    return cast<ByteType>(Type::getByte32Ty(C));
+    return Type::getByte32Ty(C);
   case 64:
-    return cast<ByteType>(Type::getByte64Ty(C));
+    return Type::getByte64Ty(C);
   case 128:
-    return cast<ByteType>(Type::getByte128Ty(C));
+    return Type::getByte128Ty(C);
   default:
     break;
   }

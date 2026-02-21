@@ -4441,8 +4441,8 @@ Byte Type
 
 The byte type represents raw memory data in SSA registers. It should be used
 when it cannot be determined whether a value holds a pointer or another type at
-run time, or if the value contains uninitialized data. Frontends are expected to
-use a byte type when:
+run time, or if the value contains uninitialized or poison data. Frontends are
+expected to use a byte type when:
 
 #. Lowering memory operations like `memcpy` and `memmove` to load/store pairs
    without knowing the underlying type being copied.
@@ -11781,6 +11781,8 @@ If the value being loaded is of aggregate type, the bytes that correspond to
 padding may be accessed but are ignored, because it is impossible to observe
 padding from the loaded aggregate value.
 If ``<pointer>`` is not a well-defined value, the behavior is undefined.
+The behavior of loading a value of a type that differs from the type used to
+store it is described in the :ref:`bitcast <i_bitcast>` section.
 
 Examples:
 """""""""
