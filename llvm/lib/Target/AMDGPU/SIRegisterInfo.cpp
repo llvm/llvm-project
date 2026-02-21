@@ -1536,12 +1536,39 @@ void SIRegisterInfo::buildSpillLoadStore(
   const bool IsAGPR = !ST.hasGFX90AInsts() && isAGPRClass(RC);
   const unsigned RegWidth = AMDGPU::getRegBitWidth(*RC) / 8;
 
+  // On targets with register tuple alignment requirements,
+  // for unaligned tuples, break the spill into 32-bit pieces.
+  // TODO: Optimize misaligned spills by using larger aligned chunks instead of
+  // 32-bit splits.
+  bool IsRegMisaligned = false;
+  if (!IsBlock && RegWidth > 4) {
+    unsigned SpillOpcode =
+        getFlatScratchSpillOpcode(TII, LoadStoreOp, std::min(RegWidth, 16u));
+    int VDataIdx =
+        IsStore ? AMDGPU::getNamedOperandIdx(SpillOpcode, AMDGPU::OpName::vdata)
+                : 0; // Restore Ops have data reg as the first (output) operand.
+    const TargetRegisterClass *ExpectedRC =
+        TII->getRegClass(TII->get(SpillOpcode), VDataIdx);
+    unsigned NumRegs = std::min(RegWidth / 4, 4u);
+    unsigned SubIdx = getSubRegFromChannel(0, NumRegs);
+    const TargetRegisterClass *MatchRC =
+        getMatchingSuperRegClass(RC, ExpectedRC, SubIdx);
+    // getMatchingSuperRegClass can return null for same-size VReg/AV pairs
+    // (e.g. VReg_64_Align2 vs AV_64_Align2). Just to be sure, check for a
+    // common subclass as well.
+    if (!MatchRC)
+      MatchRC = getCommonSubClass(RC, ExpectedRC);
+    if (MatchRC && !MatchRC->contains(ValueReg))
+      IsRegMisaligned = true;
+  }
   // Always use 4 byte operations for AGPRs because we need to scavenge
   // a temporary VGPR.
   // If we're using a block operation, the element should be the whole block.
-  unsigned EltSize = IsBlock               ? RegWidth
-                     : (IsFlat && !IsAGPR) ? std::min(RegWidth, 16u)
-                                           : 4u;
+  // For misaligned registers, use 4-byte elements to avoid alignment errors.
+  unsigned EltSize = IsBlock ? RegWidth
+                     : (IsFlat && !IsAGPR && !IsRegMisaligned)
+                         ? std::min(RegWidth, 16u)
+                         : 4u;
   unsigned NumSubRegs = RegWidth / EltSize;
   unsigned Size = NumSubRegs * EltSize;
   unsigned RemSize = RegWidth - Size;
