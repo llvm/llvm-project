@@ -483,6 +483,16 @@ struct VPlanTransforms {
   /// are only valid for a subset of VFs in Range, Range.End is updated.
   static void createPartialReductions(VPlan &Plan, VPCostContext &CostCtx,
                                       VFRange &Range);
+
+  /// Run test transforms specified by semi-colon-separated \p Pipeline names.
+  LLVM_ABI_FOR_TEST static void runTestTransforms(VPlan &Plan,
+                                                  StringRef Pipeline,
+                                                  const TargetLibraryInfo *TLI);
+
+  /// Convert VPInstructions to recipes based on !vplan.widen metadata.
+  /// For testing recipe-level transforms without full legality analysis.
+  LLVM_ABI_FOR_TEST static void widenFromMetadata(VPlan &Plan,
+                                                  const TargetLibraryInfo *TLI);
 };
 
 } // namespace llvm

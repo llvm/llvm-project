@@ -27,6 +27,7 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
@@ -42,6 +43,7 @@
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
+#include <functional>
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
@@ -6217,4 +6219,33 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   for (auto &[Phi, Chains] : ChainsByPhi)
     for (const VPPartialReductionChain &Chain : Chains)
       transformToPartialReduction(Chain, CostCtx.Types, Plan, Phi);
+}
+
+void VPlanTransforms::runTestTransforms(VPlan &Plan, StringRef Pipeline,
+                                        const TargetLibraryInfo *TLI) {
+  StringMap<std::function<void()>> TestTransforms = {
+      {"cse", std::bind(VPlanTransforms::cse, std::ref(Plan))},
+      {"create-loop-regions",
+       std::bind(VPlanTransforms::createLoopRegions, std::ref(Plan))},
+      {"simplify-recipes",
+       std::bind(VPlanTransforms::simplifyRecipes, std::ref(Plan))},
+      {"remove-dead-recipes",
+       std::bind(VPlanTransforms::removeDeadRecipes, std::ref(Plan))},
+      {"simplify-blends", std::bind(simplifyBlends, std::ref(Plan))},
+      {"merge-blocks", std::bind(mergeBlocksIntoPredecessors, std::ref(Plan))},
+      {"licm", std::bind(licm, std::ref(Plan))},
+      {"optimize", std::bind(VPlanTransforms::optimize, std::ref(Plan))},
+      {"widen-from-metadata",
+       std::bind(VPlanTransforms::widenFromMetadata, std::ref(Plan), TLI)},
+  };
+
+  SmallVector<StringRef> Passes;
+  Pipeline.split(Passes, ';');
+
+  for (StringRef PassName : Passes) {
+    auto It = TestTransforms.find(PassName);
+    if (It == TestTransforms.end())
+      report_fatal_error("Unknown VPlan test transform: " + PassName);
+    It->second();
+  }
 }

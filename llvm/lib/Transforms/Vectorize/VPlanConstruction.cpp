@@ -20,6 +20,7 @@
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -183,6 +184,9 @@ VPValue *PlainCFGBuilder::getOrCreateVPOperand(Value *IRVal) {
 void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
                                                   BasicBlock *BB) {
   VPIRBuilder.setInsertPoint(VPBB);
+  unsigned VPlanWidenKind = BB->getContext().getMDKindID("vplan.widen");
+  unsigned VPlanReplicateKind = BB->getContext().getMDKindID("vplan.replicate");
+
   // TODO: Model and preserve debug intrinsics in VPlan.
   for (Instruction &InstRef : BB->instructionsWithoutDebug(false)) {
     Instruction *Inst = &InstRef;
@@ -253,6 +257,13 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
         if (NoAliasMD)
           MD.setMetadata(LLVMContext::MD_noalias, NoAliasMD);
       }
+
+      // Preserve vplan.widen and vplan.replicate metadata for testing VPlan
+      // transforms.
+      if (MDNode *WidenMD = Inst->getMetadata(VPlanWidenKind))
+        MD.setMetadata(VPlanWidenKind, WidenMD);
+      if (MDNode *ReplicateMD = Inst->getMetadata(VPlanReplicateKind))
+        MD.setMetadata(VPlanReplicateKind, ReplicateMD);
 
       // Translate LLVM-IR operands into VPValue operands and set them in the
       // new VPInstruction.
@@ -1768,4 +1779,39 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     FindIVRdxResult->setOperand(0, FinalIVSelect);
   }
   return true;
+}
+
+void VPlanTransforms::widenFromMetadata(VPlan &Plan,
+                                        const TargetLibraryInfo *TLI) {
+  unsigned VPlanWidenKind = Plan.getContext().getMDKindID("vplan.widen");
+  unsigned VPlanReplicateKind =
+      Plan.getContext().getMDKindID("vplan.replicate");
+  VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
+
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      VectorRegion);
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (!VPI)
+        continue;
+
+      VPRecipeBase *NewR = nullptr;
+      if (VPI->getMetadata(VPlanWidenKind)) {
+        NewR = new VPWidenRecipe(*VPI->getUnderlyingInstr(), VPI->operands(),
+                                 *VPI, *VPI, VPI->getDebugLoc());
+      } else if (VPI->getMetadata(VPlanReplicateKind)) {
+        NewR = new VPReplicateRecipe(VPI->getUnderlyingInstr(), VPI->operands(),
+                                     /*IsSingleScalar=*/false,
+                                     /*Mask=*/nullptr, *VPI, *VPI,
+                                     VPI->getDebugLoc());
+      } else {
+        continue;
+      }
+
+      NewR->insertBefore(VPI);
+      VPI->replaceAllUsesWith(NewR->getVPSingleValue());
+      VPI->eraseFromParent();
+    }
+  }
 }
