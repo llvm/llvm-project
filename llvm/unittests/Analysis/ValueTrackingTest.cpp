@@ -3394,6 +3394,113 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     // If we don't know the value of x.2, we don't know the value of x.1.
     EXPECT_TRUE(CR1.isFullSet());
   }
+  {
+    auto M = parseModule(R"(
+  define void @test(i8 %x) {
+    %sext = sext i8 %x to i32
+    %zext = zext i8 %x to i32
+    ret void
+  })");
+    Function *F = M->getFunction("test");
+    AssumptionCache AC(*F);
+    Instruction *SExt = &findInstructionByName(F, "sext");
+    Instruction *ZExt = &findInstructionByName(F, "zext");
+    ConstantRange SExtCR = computeConstantRange(SExt, true, true, &AC, SExt);
+    EXPECT_EQ(SExtCR.getSignedMin().getSExtValue(), -128);
+    EXPECT_EQ(SExtCR.getSignedMax().getSExtValue(), 127);
+    ConstantRange ZExtCR = computeConstantRange(ZExt, false, true, &AC, ZExt);
+    EXPECT_EQ(ZExtCR.getUnsignedMin().getZExtValue(), 0u);
+    EXPECT_EQ(ZExtCR.getUnsignedMax().getZExtValue(), 255u);
+  }
+  {
+    auto M = parseModule(R"(
+  define i32 @test(i8 %x) {
+    %ext = sext i8 %x to i32
+    %add = add nsw i32 %ext, 10
+    ret i32 %add
+  })");
+    Function *F = M->getFunction("test");
+    AssumptionCache AC(*F);
+    Instruction *Add = &findInstructionByName(F, "add");
+    ConstantRange CR = computeConstantRange(Add, true, true, &AC, Add);
+    EXPECT_EQ(CR.getSignedMin().getSExtValue(), -118);
+    EXPECT_EQ(CR.getSignedMax().getSExtValue(), 137);
+  }
+  {
+    auto M = parseModule(R"(
+  define i32 @test(i8 %x, i8 %y) {
+    %ext.x = zext i8 %x to i32
+    %ext.y = zext i8 %y to i32
+    %sub = sub i32 %ext.x, %ext.y
+    ret i32 %sub
+  })");
+    Function *F = M->getFunction("test");
+    AssumptionCache AC(*F);
+    Instruction *Sub = &findInstructionByName(F, "sub");
+    ConstantRange CR = computeConstantRange(Sub, true, true, &AC, Sub);
+    EXPECT_EQ(CR.getSignedMin().getSExtValue(), -255);
+    EXPECT_EQ(CR.getSignedMax().getSExtValue(), 255);
+  }
+  {
+    // trunc
+    auto M = parseModule(R"(
+  define void @test(i32 %x) {
+    %narrow = trunc i32 %x to i8
+    ret void
+  })");
+    Function *F = M->getFunction("test");
+    AssumptionCache AC(*F);
+    Instruction *Trunc = &findInstructionByName(F, "narrow");
+    ConstantRange CR = computeConstantRange(Trunc, false, true, &AC, Trunc);
+    EXPECT_TRUE(CR.isFullSet());
+    EXPECT_EQ(CR.getBitWidth(), 8u);
+  }
+  {
+    // trunc with restricted input range
+    auto M = parseModule(R"(
+  define i8 @test(i32 %x) {
+    %clamped = and i32 %x, 127
+    %narrow = trunc i32 %clamped to i8
+    ret i8 %narrow
+  })");
+    Function *F = M->getFunction("test");
+    AssumptionCache AC(*F);
+    Instruction *Trunc = &findInstructionByName(F, "narrow");
+    ConstantRange CR = computeConstantRange(Trunc, false, true, &AC, Trunc);
+    EXPECT_EQ(CR.getUnsignedMin().getZExtValue(), 0u);
+    EXPECT_EQ(CR.getUnsignedMax().getZExtValue(), 127u);
+  }
+  {
+    // Chained adds from i1
+    auto M = parseModule(R"(
+  define i32 @test(i1 %x) {
+    %ext = sext i1 %x to i32
+    %add1 = add nsw i32 %ext, %ext
+    %add2 = add nsw i32 %add1, %ext
+    ret i32 %add2
+  })");
+    Function *F = M->getFunction("test");
+    AssumptionCache AC(*F);
+    Instruction *Add2 = &findInstructionByName(F, "add2");
+    ConstantRange CR = computeConstantRange(Add2, true, true, &AC, Add2);
+    EXPECT_EQ(CR.getSignedMin().getSExtValue(), -3);
+    EXPECT_EQ(CR.getSignedMax().getSExtValue(), 0);
+  }
+  {
+    auto M = parseModule(R"(
+  define i32 @test(i8 %x, i8 %y) {
+    %ext.x = zext i8 %x to i32
+    %ext.y = zext i8 %y to i32
+    %or = or disjoint i32 %ext.x, %ext.y
+    ret i32 %or
+  })");
+    Function *F = M->getFunction("test");
+    AssumptionCache AC(*F);
+    Instruction *Or = &findInstructionByName(F, "or");
+    ConstantRange CR = computeConstantRange(Or, false, true, &AC, Or);
+    EXPECT_EQ(CR.getUnsignedMin().getZExtValue(), 0u);
+    EXPECT_EQ(CR.getUnsignedMax().getZExtValue(), 510u);
+  }
 }
 
 struct FindAllocaForValueTestParams {

@@ -1111,8 +1111,7 @@ define <3 x i8> @test_vector_usub_add_nuw_no_ov_nonsplat1_poison(<3 x i8> %a) {
 ; Can be optimized if the add nuw RHS constant range handles non-splat vectors.
 define <2 x i8> @test_vector_usub_add_nuw_no_ov_nonsplat2(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_usub_add_nuw_no_ov_nonsplat2(
-; CHECK-NEXT:    [[B:%.*]] = add nuw <2 x i8> [[A:%.*]], <i8 10, i8 9>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[B]], <2 x i8> splat (i8 9))
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[A:%.*]], <i8 1, i8 0>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %b = add nuw <2 x i8> %a, <i8 10, i8 9>
@@ -1188,7 +1187,7 @@ define <2 x i8> @test_vector_ssub_add_nsw_no_ov_nonsplat2(<2 x i8> %a, <2 x i8> 
 ; CHECK-LABEL: @test_vector_ssub_add_nsw_no_ov_nonsplat2(
 ; CHECK-NEXT:    [[AA:%.*]] = add nsw <2 x i8> [[A:%.*]], <i8 7, i8 8>
 ; CHECK-NEXT:    [[BB:%.*]] = and <2 x i8> [[B:%.*]], splat (i8 7)
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> [[AA]], <2 x i8> [[BB]])
+; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> [[AA]], [[BB]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %aa = add nsw <2 x i8> %a, <i8 7, i8 8>

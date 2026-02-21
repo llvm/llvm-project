@@ -271,6 +271,72 @@ entry:
   ret i32 %load_
 }
 
+; CHECK-LABEL: Function: zext_propagate_range
+; CHECK: NoAlias: i32* %gep, i32* %gep128
+define void @zext_propagate_range(ptr %p, i8 %idx) {
+  %narrow = and i8 %idx, 127
+  %wide = zext i8 %narrow to i64
+  %gep = getelementptr i32, ptr %p, i64 %wide
+  %gep128 = getelementptr i32, ptr %p, i64 128
+  load i32, ptr %gep
+  load i32, ptr %gep128
+  ret void
+}
+
+; CHECK-LABEL: Function: sext_propagate_range
+; CHECK: NoAlias: i32* %gep, i32* %gep128
+define void @sext_propagate_range(ptr %p, i8 %idx) {
+  %clamped = and i8 %idx, 100
+  %wide = sext i8 %clamped to i64
+  %gep = getelementptr i32, ptr %p, i64 %wide
+  %gep128 = getelementptr i32, ptr %p, i64 128
+  load i32, ptr %gep
+  load i32, ptr %gep128
+  ret void
+}
+
+; CHECK-LABEL: Function: zext_add_range
+; CHECK: NoAlias: i32* %gep, i32* %gep512
+define void @zext_add_range(ptr %p, i8 %x, i8 %y) {
+  %ext.x = zext i8 %x to i64
+  %ext.y = zext i8 %y to i64
+  %sum = add i64 %ext.x, %ext.y
+  %gep = getelementptr i32, ptr %p, i64 %sum
+  %gep512 = getelementptr i32, ptr %p, i64 512
+  load i32, ptr %gep
+  load i32, ptr %gep512
+  ret void
+}
+
+; CHECK-LABEL: Function: zext_sub_range
+; CHECK: NoAlias: i32* %gep, i32* %gep256
+; CHECK: NoAlias: i32* %gep, i32* %gepneg256
+define void @zext_sub_range(ptr %p, i8 %x, i8 %y) {
+  %ext.x = zext i8 %x to i64
+  %ext.y = zext i8 %y to i64
+  %diff = sub i64 %ext.x, %ext.y
+  %gep = getelementptr i32, ptr %p, i64 %diff
+  %gep256 = getelementptr i32, ptr %p, i64 256
+  %gepneg256 = getelementptr i32, ptr %p, i64 -256
+  load i32, ptr %gep
+  load i32, ptr %gep256
+  load i32, ptr %gepneg256
+  ret void
+}
+
+; CHECK-LABEL: Function: trunc_propagate_range
+; CHECK: NoAlias: i32* %gep, i32* %gep64
+define void @trunc_propagate_range(ptr %p, i64 %idx) {
+  %clamped = and i64 %idx, 63
+  %narrow = trunc i64 %clamped to i8
+  %wide = zext i8 %narrow to i64
+  %gep = getelementptr i32, ptr %p, i64 %wide
+  %gep64 = getelementptr i32, ptr %p, i64 64
+  load i32, ptr %gep
+  load i32, ptr %gep64
+  ret void
+}
+
 declare void @llvm.assume(i1)
 
 !0 = !{ i32 0, i32 2 }
