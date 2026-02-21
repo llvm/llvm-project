@@ -11,6 +11,7 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -J %t %t/omp-declare-mapper-7.use.f90 -o - | FileCheck %t/omp-declare-mapper-7.use.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -module-dir %t %t/omp-declare-mapper-8.mod.f90 -o - >/dev/null
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -J %t %t/omp-declare-mapper-8.use.f90 -o - | FileCheck %t/omp-declare-mapper-8.use.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-9.f90 -o - | FileCheck %t/omp-declare-mapper-9.f90
 
 !--- omp-declare-mapper-1.f90
 subroutine declare_mapper_1
@@ -360,3 +361,27 @@ program use_module_default_mapper
     a%x = 8
   !$omp end target
 end program use_module_default_mapper
+
+!--- omp-declare-mapper-9.f90
+
+subroutine declare_mapper_9
+   type my_type
+      integer              :: x, y
+   end type
+
+   !CHECK: omp.declare_mapper @[[MY_TYPE_MAPPER2:_QQFdeclare_mapper_9map_y]] : [[MY_TYPE:!fir\.type<_QFdeclare_mapper_9Tmy_type\{x:i32,y:i32\}>]]
+   !CHECK: omp.declare_mapper @[[MY_TYPE_MAPPER1:_QQFdeclare_mapper_9map_x]] : [[MY_TYPE:!fir\.type<_QFdeclare_mapper_9Tmy_type\{x:i32,y:i32\}>]]
+   !$omp declare mapper (map_x : my_type :: var) map (var%x)
+   !$omp declare mapper (map_y : my_type :: var) map (var%y)
+
+   type(my_type) :: instance
+
+   !CHECK: %[[DECLARE_MAPPER_ENTRY:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(to) capture(ByRef) mapper(@[[MY_TYPE_MAPPER1]]) -> !fir.ref<[[MY_TYPE]]> {name = "instance"}
+   !CHECK: omp.target_update map_entries(%[[DECLARE_MAPPER_ENTRY]] : !fir.ref<[[MY_TYPE]]>)
+
+   !$omp target update to(mapper(map_x) : instance)
+
+   !CHECK: %[[DECLARE_MAPPER_ENTRY2:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(from) capture(ByRef) mapper(@[[MY_TYPE_MAPPER2]]) -> !fir.ref<[[MY_TYPE]]> {name = "instance"}
+   !CHECK: omp.target_update map_entries(%[[DECLARE_MAPPER_ENTRY2]] : !fir.ref<[[MY_TYPE]]>)
+   !$omp target update from(mapper(map_y) : instance)
+end subroutine declare_mapper_9
