@@ -663,11 +663,9 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
     Arguments:
 
     - `source`: represents the memory region to be loaded from, which can be either a
-        tensor_desc or a 1D memref or pointer (ui64, ui32, i64 or i32).
-        In case of tensor_desc, offsets are encoded in the descriptor.
-        tensor_desc cannot be used at lane level.
+        1D memref or pointer (ui64, ui32, i64 or i32).
 
-    - `offsets`: represents offsets from source. required if `source` in not a TensorDescType.
+    - `offsets`: represents offsets from source.
         offsets is a vector of `index` type and vector length is either the subgroup size
         or 1 at lane level. scalar offset is also valid for lane level.
 
@@ -794,11 +792,9 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
     Arguments:
 
     - `source`: represents the memory region to be loaded from, which can be either a
-        tensor_desc or a 1D memref or pointer (ui64, ui32, i64 or i32).
-        In case of tensor_desc, offsets are encoded in the descriptor.
-        tensor_desc cannot be used at lane level.
+        1D memref or pointer (ui64, ui32, i64 or i32).
 
-    - `offsets`: represents offsets from source. required if `source` in not a TensorDescType.
+    - `offsets`: represents offsets from source.
         offsets is a vector of `index` type and vector length is either the subgroup size
         or 1 at lane level. scalar offset is also valid for lane level.
 
@@ -816,31 +812,9 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
     Results:
     - `res`: represents loaded data
 
-
-  Example 1 (Workgroup level):
-  ```mlir
-    %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>,
-                             l2_hint = #xegpu.cache_hint<uncached>,
-                             l3_hint = #xegpu.cache_hint<uncached>},
-                             layout = #xegpu.layout<sg_layout = [8], sg_data = [32]>>
-          : !xegpu.tensor_desc<256xf32, #xegpu.scatter_tdesc_attr<memory_space=global>>,
-            vector<256xi1> -> vector<256xf32>
-  ```
-
-  Example 2 (Subgroup level):
-  ```mlir
-    %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>,
-                             l2_hint = #xegpu.cache_hint<uncached>,
-                             l3_hint = #xegpu.cache_hint<uncached>},
-                             layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8]>>
-          : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>>,
-            vector<16xi1> -> vector<16x8xf32>
-  ```
-
-  Example 3 (Subgroup level):
-  A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc.
-  It combines "create scattered TensorTdesc" and "load with scattered TensorTdesc".
-  The source operand could be a raw pointer (ui64, ui32, i64, i32).
+  Example 1 (Subgroup level):
+  A variant accepts memref as base pointer or the source operand
+  could be a raw pointer (ui64, ui32, i64, i32).
   ```mlir
     %a = memref.alloc() : memref<1024xf32>
     %offsets = vector.step : vector<16xindex>
@@ -852,7 +826,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
       : memref<1024xf32>, vector<16xi1>, vector<16xindex> -> vector<16xf32>
   ```
 
-  Example 4 (lane level):
+  Example 2 (lane level):
   lane level only accepts the offsets variant. chunk_size can be inferred from result
   type. In this example, chunk_size is 8.
   ```mlir
@@ -964,11 +938,9 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
     - `value`: represents the data to be stored.
 
     - `dest`: represents the memory region to be stored to, which can be either a
-        tensor_desc or a 1D memref or pointer (ui64, ui32, i64 or i32).
-        In case of tensor_desc, offsets are encoded in the descriptor.
-        tensor_desc cannot be used at lane level.
+        1D memref or pointer (ui64, ui32, i64 or i32).
 
-    - `offsets`: represents offsets from dest. required if `source` in not a TensorDescType.
+    - `offsets`: represents offsets from dest.
         offsets is a vector of `index` type and vector length is either the subgroup size
         or 1 at lane level. scalar offset is also valid for lane level.
 
@@ -984,27 +956,8 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
       to be stored. Only valid at workgroup and subgroup levels.
 
 
-  Example 1 (Workgroup level):
-  ```mlir
-    xegpu.store %0, %1, %2 <{l1_hint = #xegpu.cache_hint<uncached>,
-                             l2_hint = #xegpu.cache_hint<write_back>,
-                             l3_hint = #xegpu.cache_hint<write_through>,
-                             layout = #xegpu.layout<sg_layout = [8], sg_data = [16]>}>
-          : vector<256xf32>, !xegpu.tensor_desc<256xf32, #xegpu.scattered_tdesc_attr<>>, vector<256xi1>
-  ```
-
-  Example 2 (Subgroup level):
-  ```mlir
-    xegpu.store %0, %1, %2 <{l1_hint = #xegpu.cache_hint<uncached>,
-                             l2_hint = #xegpu.cache_hint<write_back>,
-                             l3_hint = #xegpu.cache_hint<write_through>,
-                             layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8]>}>
-          : vector<16x8xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>>, vector<16xi1>
-  ```
-
-  Example 3 (Subgroup level):
-  A variant accepts memref as base pointer and an offset instead of scattered TensorTdesc.
-  It combines "create scattered TensorTdesc" and "store with scattered TensorTdesc".
+  Example 1 (Subgroup level):
+  A variant accepts memref as base pointer and an offset.
   The dest operand could be a raw pointer (uint64_t).
   ```mlir
     %a = memref.alloc() : memref<1024xf32>
@@ -1018,7 +971,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
       : vector<16xf32>, memref<1024xf32>, vector<16xi1>, vector<16xindex>
   ```
 
-  Example 4 (Lane level):
+  Example 2 (Lane level):
   Lane level IR only accepts the offsets variant. chunk_size can be inferred from value
   type. In this example, chunk_size is 8.
   ```mlir
