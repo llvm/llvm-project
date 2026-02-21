@@ -4975,7 +4975,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
         // passed by address. For the rest, GNU uses by-address and C11 uses
         // by-value.
         assert(Form != Load);
-        if (Form == Arithmetic && ValType->isPointerType() && TakesPointerDiffForAtomicPointer)
+        if (Form == Arithmetic && ValType->isPointerType() &&
+            TakesPointerDiffForAtomicPointer)
           Ty = Context.getPointerDiffType();
         else if (Form == Init || Form == Arithmetic)
           Ty = ValType;
