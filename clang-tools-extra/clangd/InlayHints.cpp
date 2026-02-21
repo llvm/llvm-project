@@ -774,11 +774,25 @@ private:
     bool HasNonDefaultArgs = false;
 
     ArrayRef<const ParmVarDecl *> Params, ForwardedParams;
+
     // Resolve parameter packs to their forwarded parameter
     SmallVector<const ParmVarDecl *> ForwardedParamsStorage;
+    // If args are direct-initialized
+    const CXXRecordDecl *CxxRecord{};
+
     if (Callee.Decl) {
       Params = maybeDropCxxExplicitObjectParameters(Callee.Decl->parameters());
-      ForwardedParamsStorage = resolveForwardingParameters(Callee.Decl);
+
+      auto ParamsOrRecord = resolveForwardingParameters(Callee.Decl);
+      if (std::holds_alternative<decltype(ForwardedParamsStorage)>(
+              ParamsOrRecord)) {
+        ForwardedParamsStorage =
+            std::get<decltype(ForwardedParamsStorage)>(ParamsOrRecord);
+      }
+      if (std::holds_alternative<decltype(CxxRecord)>(ParamsOrRecord)) {
+        CxxRecord = std::get<decltype(CxxRecord)>(ParamsOrRecord);
+      }
+
       ForwardedParams =
           maybeDropCxxExplicitObjectParameters(ForwardedParamsStorage);
     } else {
@@ -787,6 +801,20 @@ private:
     }
 
     NameVec ParameterNames = chooseParameterNames(ForwardedParams);
+
+    if (CxxRecord) {
+      const auto ParamArgs = Args.drop_front(CxxRecord->getNumBases());
+      const auto Iter = llvm::zip(ParamArgs, CxxRecord->fields());
+
+      for (const auto &[ParamArg, Field] : Iter) {
+        addInlayHint(ParamArg->getSourceRange(), HintSide::Left,
+                     InlayHintKind::Parameter,
+                     Field->getType()->isReferenceType() ? "&." : ".",
+                     Field->getName(), ": ");
+      }
+
+      return;
+    }
 
     // Exclude setters (i.e. functions with one argument whose name begins with
     // "set"), and builtins like std::move/forward/... as their parameter name

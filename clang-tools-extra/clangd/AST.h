@@ -17,6 +17,7 @@
 #include "index/Symbol.h"
 #include "index/SymbolID.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
@@ -241,10 +242,11 @@ bool hasUnstableLinkage(const Decl *D);
 bool isDeeplyNested(const Decl *D, unsigned MaxDepth = 10);
 
 /// Recursively resolves the parameters of a FunctionDecl that forwards its
-/// parameters to another function via variadic template parameters. This can
-/// for example be used to retrieve the constructor parameter ParmVarDecl for a
+/// parameters to another function, or direct initialization of a structure via
+/// variadic template parameters. This can for example be used to retrieve the
+/// constructor parameter ParmVarDecl or the CXXRecordDecl target for a
 /// make_unique or emplace_back call.
-llvm::SmallVector<const ParmVarDecl *>
+std::variant<SmallVector<const ParmVarDecl *>, const CXXRecordDecl *>
 resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth = 10);
 
 /// Checks whether D is instantiated from a function parameter pack
