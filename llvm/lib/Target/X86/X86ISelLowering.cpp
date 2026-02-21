@@ -6545,8 +6545,8 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     narrowShuffleMaskElts(MaskSize / SrcMask0.size(), SrcMask0, Mask0);
     narrowShuffleMaskElts(MaskSize / SrcMask1.size(), SrcMask1, Mask1);
     for (int i = 0; i != (int)MaskSize; ++i) {
-      // NOTE: Don't handle SM_SentinelUndef, as we can end up in infinite
-      // loops converting between OR and BLEND shuffles due to
+      // NOTE: Don't handle demanded SM_SentinelUndef, as we can end up in
+      // infinite loops converting between OR and BLEND shuffles due to
       // canWidenShuffleElements merging away undef elements, meaning we
       // fail to recognise the OR as the undef element isn't known zero.
       if (Mask0[i] == SM_SentinelZero && Mask1[i] == SM_SentinelZero)
@@ -6555,6 +6555,8 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
         Mask.push_back(i);
       else if (Mask0[i] == SM_SentinelZero)
         Mask.push_back(i + MaskSize);
+      else if (MaskSize == NumElts && !DemandedElts[i])
+        Mask.push_back(SM_SentinelUndef);
       else
         return false;
     }
