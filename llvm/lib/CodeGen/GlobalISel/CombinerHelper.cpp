@@ -7046,21 +7046,8 @@ bool CombinerHelper::matchFPSelectToMinMax(Register Dst, Register Cond,
     return false;
   // Decide what type of max/min this should be based off of the predicate.
   unsigned Opc = getFPMinMaxOpcForSelect(Pred, DstTy, ResWithKnownNaNInfo);
-  if (!Opc || !isLegal({Opc, {DstTy}}))
+  if (!Opc || !isLegalOrBeforeLegalizer({Opc, {DstTy}}))
     return false;
-  // Comparisons between signed zero and zero may have different results...
-  // unless we have fmaximum/fminimum. In that case, we know -0 < 0.
-  if (Opc != TargetOpcode::G_FMAXIMUM && Opc != TargetOpcode::G_FMINIMUM) {
-    // We don't know if a comparison between two 0s will give us a consistent
-    // result. Be conservative and only proceed if at least one side is
-    // non-zero.
-    auto KnownNonZeroSide = getFConstantVRegValWithLookThrough(CmpLHS, MRI);
-    if (!KnownNonZeroSide || !KnownNonZeroSide->Value.isNonZero()) {
-      KnownNonZeroSide = getFConstantVRegValWithLookThrough(CmpRHS, MRI);
-      if (!KnownNonZeroSide || !KnownNonZeroSide->Value.isNonZero())
-        return false;
-    }
-  }
   MatchInfo = [=](MachineIRBuilder &B) {
     B.buildInstr(Opc, {Dst}, {CmpLHS, CmpRHS});
   };
