@@ -516,11 +516,21 @@ Error LVReader::doPrint() {
     if (options().getReportParents() || options().getReportView())
       if (Error Err = printScopes())
         return Err;
-
+    // Requested debugger report.
+    if (options().getReportDebugger())
+      if (Error Err = printDebugger())
+        return Err;
     return Error::success();
   }
 
   return printScopes();
+}
+
+Error LVReader::printDebugger() {
+  if (Error Err = createSplitFolder())
+    return Err;
+
+  return Root->doPrintDebugger(OutputSplit, outs());
 }
 
 Error LVReader::printScopes() {
