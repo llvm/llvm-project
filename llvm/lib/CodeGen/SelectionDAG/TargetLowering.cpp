@@ -6811,6 +6811,11 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   const unsigned SVTBits = SVT.getSizeInBits();
 
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
+  const bool HasWideVT64MULHU =
+      isOperationLegalOrCustom(ISD::MULHU, MVT::i64, IsAfterLegalization);
+  const bool HasWideVT64UMUL_LOHI =
+      isOperationLegalOrCustom(ISD::UMUL_LOHI, MVT::i64, IsAfterLegalization);
+  bool UseWiden = false;
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
 
   auto BuildUDIVPattern = [&](ConstantSDNode *C) {
@@ -6828,11 +6833,20 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
       PreShift = PostShift = DAG.getUNDEF(ShSVT);
       MagicFactor = NPQFactor = DAG.getUNDEF(SVT);
     } else {
+      const bool AllowWiden = (EltBits == 32 && !VT.isVector() &&
+                               (HasWideVT64MULHU || HasWideVT64UMUL_LOHI));
       UnsignedDivisionByConstantInfo magics =
           UnsignedDivisionByConstantInfo::get(
-              Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()));
+              Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()),
+              /*AllowEvenDivisorOptimization=*/true,
+              /*AllowWidenOptimization=*/AllowWiden);
 
-      MagicFactor = DAG.getConstant(magics.Magic.zext(SVTBits), dl, SVT);
+      if (magics.Widen) {
+        UseWiden = true;
+        MagicFactor = DAG.getConstant(magics.Magic, dl, MVT::i64);
+      } else {
+        MagicFactor = DAG.getConstant(magics.Magic.zext(SVTBits), dl, SVT);
+      }
 
       assert(magics.PreShift < Divisor.getBitWidth() &&
              "We shouldn't generate an undefined shift!");
@@ -6882,6 +6896,25 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     PreShift = PreShifts[0];
     MagicFactor = MagicFactors[0];
     PostShift = PostShifts[0];
+  }
+
+  if (UseWiden) {
+    // Compute: (i64(x) * MagicFactor) >> 64
+    SDValue X64 = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, N0);
+
+    // Perform 64x64 -> 128 multiplication and extract high 64 bits
+    SDValue High;
+    if (HasWideVT64MULHU) {
+      High = DAG.getNode(ISD::MULHU, dl, MVT::i64, X64, MagicFactor);
+    } else {
+      SDValue LoHi =
+          DAG.getNode(ISD::UMUL_LOHI, dl, DAG.getVTList(MVT::i64, MVT::i64),
+                      X64, MagicFactor);
+      High = SDValue(LoHi.getNode(), 1);
+    }
+
+    Created.push_back(High.getNode());
+    return DAG.getNode(ISD::TRUNCATE, dl, VT, High);
   }
 
   SDValue Q = N0;
