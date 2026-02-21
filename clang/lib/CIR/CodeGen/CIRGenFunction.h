@@ -63,6 +63,19 @@ private:
   /// is where the next operations will be introduced.
   CIRGenBuilderTy &builder;
 
+  /// State used to communicate OpenMP loop bounds from `emitOMPForDirective`
+  /// to `emitForStmt`.
+  struct LoopBounds {
+    mlir::Value lowerBound;
+    mlir::Value upperBound;
+    mlir::Value step;
+    mlir::Type inductionVarType;
+    const VarDecl *inductionVar;
+    bool inclusive;
+  };
+
+  std::optional<LoopBounds> currentOMPLoopBounds;
+
   /// A jump destination is an abstract label, branching to which may
   /// require a jump out through normal cleanups.
   struct JumpDest {
