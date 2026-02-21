@@ -13,6 +13,7 @@ unittest("ClangAnalysisTests") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "CFGBackEdgesTest.cpp",
     "CFGDominatorTree.cpp",
     "CFGTest.cpp",
     "CloneDetectionTest.cpp",

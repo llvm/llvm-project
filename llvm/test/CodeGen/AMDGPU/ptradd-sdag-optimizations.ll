@@ -327,7 +327,7 @@ define void @global_load_lds_dword_saddr_and_vaddr(ptr addrspace(1) nocapture in
 ; GFX942-NEXT:    s_mov_b32 m0, s2
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    global_load_lds_dword v1, s[0:1] offset:48 sc1
-; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 main_body:
   %voffset.64 = zext i32 %voffset to i64

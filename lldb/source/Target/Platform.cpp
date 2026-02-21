@@ -79,7 +79,7 @@ llvm::StringRef PlatformProperties::GetSettingName() {
 
 PlatformProperties::PlatformProperties() {
   m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-  m_collection_sp->Initialize(g_platform_properties);
+  m_collection_sp->Initialize(g_platform_properties_def);
 
   auto module_cache_dir = GetModuleCacheDirectory();
   if (module_cache_dir)

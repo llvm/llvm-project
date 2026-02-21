@@ -7487,13 +7487,38 @@ void testPointerAliasEscapeAndReset(Foo *f) {
 // A function that may do anything to the objects referred to by the inputs.
 void escapeAliasMultiple(void *, void *, void *);
 void testPointerAliasEscapeMultiple(Foo *F) {
-    Foo *L;
-    F->mu.Lock(); // expected-note{{mutex acquired here}}
-    Foo *Fp = F;
-    escapeAliasMultiple(&L, &L, &Fp);
-    Fp->mu.Unlock(); // expected-warning{{releasing mutex 'Fp->mu' that was not held}}
+  Foo *L;
+  F->mu.Lock(); // expected-note{{mutex acquired here}}
+  Foo *Fp = F;
+  escapeAliasMultiple(&L, &L, &Fp);
+  Fp->mu.Unlock(); // expected-warning{{releasing mutex 'Fp->mu' that was not held}}
 } // expected-warning{{mutex 'F->mu' is still held at the end of function}}
-  
+
+void unlockFooWithEscapablePointer(Foo **Fp) EXCLUSIVE_UNLOCK_FUNCTION((*Fp)->mu);
+void testEscapeInvalidationHappensRightAfterTheCall(Foo* F) {
+  Foo* L;
+  L = F;
+  L->mu.Lock();
+  // Release the lock held by 'L' before clearing its definition.
+  unlockFooWithEscapablePointer(&L);
+}
+
+void testEscapeInvalidationHappensRightAfterTheCtorCall(Foo* F) {
+  Foo* L = F;
+  MutexLock ScopeLock(&L->mu);
+
+  struct {
+    int DataMember GUARDED_BY(F->mu);
+  } Data;
+
+  Data.DataMember = 0;
+}
+
+void testCleanUpFunctionWithLocalVarUpdated(Foo* F) {
+  F->mu.Lock();
+  Foo * __attribute__((unused, cleanup(unlockFooWithEscapablePointer))) L = F;
+}
+
 void testPointerAliasTryLock1() {
   Foo *ptr = returnsFoo();
   if (ptr->mu.TryLock()) {
@@ -7770,3 +7795,39 @@ void testLoopConditionalReassignment(Foo *f1, Foo *f2, bool cond) {
   ptr->mu.Unlock(); // expected-warning{{releasing mutex 'ptr->mu' that was not held}}
 } // expected-warning{{mutex 'f1->mu' is still held at the end of function}}
 }  // namespace CapabilityAliases
+
+namespace WideStringLiteral {
+
+class Foo {
+ public:
+  Mutex mu;
+  Mutex* getMu(const wchar_t* s) { return &mu; }
+  Mutex* getMu2(const char16_t* s) { return &mu; }
+  Mutex* getMu3(const char32_t* s) { return &mu; }
+
+  int a GUARDED_BY(getMu(L"abc"));
+  int b GUARDED_BY(getMu2(u"abc"));
+  int c GUARDED_BY(getMu3(U"abc"));
+};
+
+Foo g_foo;
+
+void test() {
+  g_foo.getMu(L"abc")->Lock();
+  g_foo.a = 0;
+  g_foo.getMu(L"abc")->Unlock();
+}
+
+void test2() {
+  g_foo.getMu2(u"abc")->Lock();
+  g_foo.b = 0;
+  g_foo.getMu2(u"abc")->Unlock();
+}
+
+void test3() {
+  g_foo.getMu3(U"abc")->Lock();
+  g_foo.c = 0;
+  g_foo.getMu3(U"abc")->Unlock();
+}
+
+} // namespace WideStringLiteral

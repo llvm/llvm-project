@@ -590,10 +590,12 @@ private:
     if (Snippet->empty())
       return "";
 
-    bool MayHaveArgList = Completion.Kind == CompletionItemKind::Function ||
-                          Completion.Kind == CompletionItemKind::Method ||
-                          Completion.Kind == CompletionItemKind::Constructor ||
-                          Completion.Kind == CompletionItemKind::Text /*Macro*/;
+    bool MayHaveArgList =
+        Completion.Kind == CompletionItemKind::Function ||
+        Completion.Kind == CompletionItemKind::Method ||
+        Completion.Kind == CompletionItemKind::Constructor ||
+        Completion.Kind == CompletionItemKind::Text /*Macro*/ ||
+        Completion.Kind == CompletionItemKind::Variable /*Lambda*/;
     // If likely arg list already exists, don't add new parens & placeholders.
     //   Snippet: function(int x, int y)
     //   func^(1,2) -> function(1, 2)
@@ -628,7 +630,7 @@ private:
       return *Snippet;
 
     // Replace argument snippets with a simplified pattern.
-    if (MayHaveArgList) {
+    if (MayHaveArgList && llvm::StringRef(*Snippet).contains("(")) {
       // Functions snippets can be of 2 types:
       // - containing only function arguments, e.g.
       //   foo(${1:int p1}, ${2:int p2});

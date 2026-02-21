@@ -148,6 +148,16 @@ MACRO1  // This should be fine because it is never actually reached
 #if __has_include(stdint.h>)
 #endif
 
+// expected-error@+2 {{missing '(' after '__has_include'}}
+// expected-error@+1 {{expected "FILENAME" or <FILENAME>}}
+#if __has_include(__has_include)
+#endif
+
+// expected-error@+2 {{missing '(' after '__has_embed'}}
+// expected-error@+1 {{expected "FILENAME" or <FILENAME>}}
+#if __has_include(__has_embed)
+#endif
+
 // expected-error@+1 {{'__has_include' must be used within a preprocessing directive}}
 __has_include
 

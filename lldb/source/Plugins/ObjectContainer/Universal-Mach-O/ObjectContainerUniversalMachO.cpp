@@ -195,8 +195,8 @@ size_t ObjectContainerUniversalMachO::GetModuleSpecifications(
   if (!extractor_sp)
     return initial_count;
 
-  DataExtractorSP data_extractor_sp = extractor_sp->GetSubsetExtractorSP(
-      data_offset, extractor_sp->GetByteSize());
+  DataExtractorSP data_extractor_sp =
+      extractor_sp->GetSubsetExtractorSP(data_offset);
   if (ObjectContainerUniversalMachO::MagicBytesMatch(*data_extractor_sp)) {
     llvm::MachO::fat_header header;
     std::vector<FatArch> fat_archs;

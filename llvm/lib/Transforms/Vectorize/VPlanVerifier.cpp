@@ -103,9 +103,9 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
       return false;
     }
 
-    if (isa<VPEVLBasedIVPHIRecipe>(RecipeI) &&
+    if (isa<VPCurrentIterationPHIRecipe>(RecipeI) &&
         !isa_and_nonnull<VPCanonicalIVPHIRecipe>(std::prev(RecipeI))) {
-      errs() << "EVL based IV is not immediately after canonical IV\n";
+      errs() << "CurrentIteration PHI is not immediately after canonical IV\n";
       return false;
     }
 
@@ -162,7 +162,18 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
     }
     return true;
   };
-  return all_of(EVL.users(), [this, &VerifyEVLUse](VPUser *U) {
+  auto VerifyEVLUseInVecEndPtr = [&EVL](auto &VEPRs) {
+    if (all_of(VEPRs, [&EVL](VPUser *U) {
+          auto *VEPR = cast<VPVectorEndPointerRecipe>(U);
+          return match(VEPR->getOffset(),
+                       m_c_Mul(m_SpecificSInt(VEPR->getStride()),
+                               m_Sub(m_Specific(&EVL), m_One())));
+        }))
+      return true;
+    errs() << "Expected VectorEndPointer with EVL operand\n";
+    return false;
+  };
+  return all_of(EVL.users(), [&](VPUser *U) {
     return TypeSwitch<const VPUser *, bool>(U)
         .Case([&](const VPWidenIntrinsicRecipe *S) {
           return VerifyEVLUse(*S, S->getNumOperands() - 1);
@@ -184,9 +195,22 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
             [&](const VPInstructionWithType *S) { return VerifyEVLUse(*S, 0); })
         .Case([&](const VPInstruction *I) {
           if (I->getOpcode() == Instruction::PHI ||
-              I->getOpcode() == Instruction::ICmp ||
-              I->getOpcode() == Instruction::Sub)
+              I->getOpcode() == Instruction::ICmp)
             return VerifyEVLUse(*I, 1);
+          if (I->getOpcode() == Instruction::Sub) {
+            // If Sub has a single user that's a SingleDefRecipe (which is
+            // expected to be a Mul), filter its users, in turn, to get
+            // VectorEndPointerRecipes, and verify that all the offsets match
+            // (EVL - 1) * Stride.
+            if (auto *Def = dyn_cast_if_present<VPSingleDefRecipe>(
+                    I->getSingleUser())) {
+              auto VEPRs = make_filter_range(Def->users(),
+                                             IsaPred<VPVectorEndPointerRecipe>);
+              if (!VEPRs.empty())
+                return VerifyEVLUseInVecEndPtr(VEPRs);
+            }
+            return VerifyEVLUse(*I, 1);
+          }
           switch (I->getOpcode()) {
           case Instruction::Add:
             break;
@@ -209,9 +233,10 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
             errs() << "EVL used by unexpected VPInstruction\n";
             return false;
           }
-          if (!VerifyLate && !isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
+          if (!VerifyLate &&
+              !isa<VPCurrentIterationPHIRecipe>(*I->users().begin())) {
             errs() << "Result of VPInstruction::Add with EVL operand is "
-                      "not used by VPEVLBasedIVPHIRecipe\n";
+                      "not used by VPCurrentIterationPHIRecipe\n";
             return false;
           }
           return true;

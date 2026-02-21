@@ -959,14 +959,7 @@ bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
 /// Optimize a select instruction.
 bool PeepholeOptimizer::optimizeSelect(
     MachineInstr &MI, SmallPtrSetImpl<MachineInstr *> &LocalMIs) {
-  unsigned TrueOp = 0;
-  unsigned FalseOp = 0;
-  bool Optimizable = false;
-  SmallVector<MachineOperand, 4> Cond;
-  if (TII->analyzeSelect(MI, Cond, TrueOp, FalseOp, Optimizable))
-    return false;
-  if (!Optimizable)
-    return false;
+  assert(MI.isSelect() && "Should only be called when MI->isSelect() is true");
   if (!TII->optimizeSelect(MI, LocalMIs))
     return false;
   LLVM_DEBUG(dbgs() << "Deleting select: " << MI);
@@ -1937,9 +1930,7 @@ ValueTrackerResult ValueTracker::getNextSourceFromCopy() {
     if (SrcReg.isVirtual()) {
       // TODO: Try constraining on rewrite if we can
       const TargetRegisterClass *RegRC = MRI.getRegClass(SrcReg);
-      const TargetRegisterClass *SrcWithSubRC =
-          TRI->getSubClassWithSubReg(RegRC, SubReg);
-      if (RegRC != SrcWithSubRC)
+      if (!TRI->isSubRegValidForRegClass(RegRC, SubReg))
         return ValueTrackerResult();
     } else {
       if (!TRI->getSubReg(SrcReg, SubReg))
@@ -2047,9 +2038,7 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
     //
     // TODO: Should we modify the register class to support the index?
     const TargetRegisterClass *SrcRC = MRI.getRegClass(RegSeqInput.Reg);
-    const TargetRegisterClass *SrcWithSubRC =
-        TRI->getSubClassWithSubReg(SrcRC, ComposedDefInSrcReg1);
-    if (SrcRC != SrcWithSubRC)
+    if (!TRI->isSubRegValidForRegClass(SrcRC, ComposedDefInSrcReg1))
       return ValueTrackerResult();
 
     return ValueTrackerResult(RegSeqInput.Reg, ComposedDefInSrcReg1);

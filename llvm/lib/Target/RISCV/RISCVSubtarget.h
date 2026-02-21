@@ -147,6 +147,8 @@ public:
     return &TLInfo;
   }
 
+  void mirFileLoaded(MachineFunction &MF) const override;
+
   bool enableMachineScheduler() const override { return true; }
 
   bool enablePostRAScheduler() const override { return UsePostRAScheduler; }
@@ -170,8 +172,9 @@ public:
   bool GETTER() const { return ATTRIBUTE; }
 #include "RISCVGenSubtargetInfo.inc"
 
-  // FIXME: Remove these and use hasStdExtZcd/hasStdExtZcf() instead.
+  LLVM_DEPRECATED("Now Equivalent to hasStdExtZcd", "hasStdExtZcd")
   bool hasStdExtCOrZcd() const { return HasStdExtZcd; }
+  LLVM_DEPRECATED("Now Equivalent to hasStdExtZcf", "hasStdExtZcf")
   bool hasStdExtCOrZcfOrZce() const { return HasStdExtZcf; }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }

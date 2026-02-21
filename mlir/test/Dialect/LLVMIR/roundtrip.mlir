@@ -161,6 +161,27 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.call @baz() {allocsize = array<i32: 3, 5>} : () -> ()
   llvm.call @baz() {allocsize = array<i32: 3, 5>} : () -> ()
 
+// CHECK: llvm.call @baz() {minsize} : () -> ()
+  llvm.call @baz() {minsize} : () -> ()
+
+// CHECK: llvm.call @baz() {optsize} : () -> ()
+  llvm.call @baz() {optsize} : () -> ()
+
+// CHECK: llvm.call @baz() {nobuiltin} : () -> ()
+  llvm.call @baz() {nobuiltin} : () -> ()
+
+// CHECK: llvm.call @baz() {save_reg_params} : () -> ()
+  llvm.call @baz() {save_reg_params} : () -> ()
+
+// CHECK: llvm.call @baz() {zero_call_used_regs = "all"} : () -> ()
+  llvm.call @baz() {zero_call_used_regs="all"} : () -> ()
+
+// CHECK: llvm.call @baz() {zero_call_used_regs = "thing"} : () -> ()
+  llvm.call @baz() {zero_call_used_regs="thing"} : () -> ()
+
+// CHECK: llvm.call @baz() {default_func_attrs = {justKey, key = "value"}} : () -> ()
+  llvm.call @baz() {default_func_attrs={justKey, key = "value"}} : () -> ()
+
 // Terminator operations and their successors.
 //
 // CHECK: llvm.br ^[[BB1:.*]]

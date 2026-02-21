@@ -2221,5 +2221,5 @@ declare half @llvm.canonicalize.f16(half) #0
 declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #0
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-attributes #1 = { "denormal-fp-math"="ieee,preserve-sign" }
-attributes #2 = { "denormal-fp-math"="ieee,dynamic" }
+attributes #1 = { denormal_fpenv(ieee|preservesign) }
+attributes #2 = { denormal_fpenv(ieee|dynamic) }

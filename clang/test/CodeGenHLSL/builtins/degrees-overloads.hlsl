@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm \
-// RUN:   -Wdeprecated-declarations -Wconversion -o - | FileCheck %s --check-prefixes=CHECK \
+// RUN:   -Wdeprecated-declarations -o - | FileCheck %s --check-prefixes=CHECK \
 // RUN:   -DFNATTRS="hidden noundef nofpclass(nan inf)" -DTARGET=dx
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple \
 // RUN:   spirv-unknown-vulkan-compute %s -emit-llvm \
-// RUN:   -Wdeprecated-declarations -Wconversion -o - | FileCheck %s --check-prefixes=CHECK \
+// RUN:   -Wdeprecated-declarations -o - | FileCheck %s --check-prefixes=CHECK \
 // RUN:   -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" -DTARGET=spv
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s  \
 // RUN:   -verify -verify-ignore-unexpected=note

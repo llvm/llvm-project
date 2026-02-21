@@ -103,7 +103,7 @@ declare void @use_foo(ptr)
 
 define void @ptr32_to_ptr(ptr %f, ptr addrspace(1) %i) {
 entry:
-; CHECK-LABEL: ptr32_to_ptr:
+; CHECK-LABEL: ptr32_to_ptr DS 0H
 ; CHECK:       llgtr 0,2
 ; CHECK-NEXT:  stg   0,8(1)
   %0 = addrspacecast ptr addrspace(1) %i to ptr
@@ -115,7 +115,7 @@ entry:
 
 define void @ptr_to_ptr32(ptr %f, ptr %i) {
 entry:
-; CHECK-LABEL: ptr_to_ptr32:
+; CHECK-LABEL: ptr_to_ptr32 DS 0H
 ; CHECK:       nilh 2,32767
 ; CHECK-NEXT:  st   2,0(1)
   %0 = addrspacecast ptr %i to ptr addrspace(1)
@@ -127,7 +127,7 @@ entry:
 
 define void @ptr32_to_ptr32(ptr %f, ptr addrspace(1) %i) {
 entry:
-; CHECK-LABEL: ptr32_to_ptr32:
+; CHECK-LABEL: ptr32_to_ptr32 DS 0H
 ; CHECK:       st 2,0(1)
   %p32 = getelementptr inbounds %struct.Foo, ptr %f, i64 0, i32 0
   store ptr addrspace(1) %i, ptr %p32, align 8
@@ -136,7 +136,7 @@ entry:
 }
 
 define void @ptr_to_ptr(ptr %f, ptr %i) {
-; CHECK-LABEL: ptr_to_ptr:
+; CHECK-LABEL: ptr_to_ptr DS 0H
 ; CHECK:       stg 2,8(1)
   %p64 = getelementptr inbounds %struct.Foo, ptr %f, i64 0, i32 1
   store ptr %i, ptr %p64, align 8
@@ -146,7 +146,7 @@ define void @ptr_to_ptr(ptr %f, ptr %i) {
 
 define void @test_indexing(ptr %f) {
 entry:
-; CHECK-LABEL: test_indexing:
+; CHECK-LABEL: test_indexing DS 0H
 ; CHECK:       l     0,1032
 ; CHECK:       llgtr 0,0
 ; CHECK:       stg   0,16(1)
@@ -160,7 +160,7 @@ entry:
 
 define void @test_indexing_2(ptr %f) {
 entry:
-; CHECK-LABEL: test_indexing_2:
+; CHECK-LABEL: test_indexing_2 DS 0H
 ; CHECK:       lhi   0,16
 ; CHECK-NEXT:  a     0,1032
 ; CHECK-NEXT:  llgtr 2,0
@@ -181,7 +181,7 @@ entry:
 
 define ptr @test_misc() {
 entry:
-; CHECK-LABEL: test_misc:
+; CHECK-LABEL: test_misc DS 0H
 ; CHECK:       lhi   0,88
 ; CHECK-NEXT:  a     0,1208
 ; CHECK-NEXT:  llgtr 1,0
@@ -204,7 +204,7 @@ entry:
 
 define ptr addrspace(1) @test_misc_2() {
 entry:
-; CHECK-LABEL: test_misc_2:
+; CHECK-LABEL: test_misc_2 DS 0H
 ; CHECK:       lhi   0,544
 ; CHECK:       a     0,16
 ; CHECK:       llgtr 1,0
@@ -221,7 +221,7 @@ entry:
 
 define zeroext i16 @test_misc_3() {
 entry:
-; CHECK-LABEL: test_misc_3:
+; CHECK-LABEL: test_misc_3 DS 0H
 ; CHECK:       a     0,548
 ; CHECK-NEXT:  llgtr 1,0
 ; CHECK-NEXT:  llgh  3,0(1)
@@ -235,7 +235,7 @@ entry:
 
 define signext i32 @test_misc_4() {
 entry:
-; CHECK-LABEL: test_misc_4:
+; CHECK-LABEL: test_misc_4 DS 0H
 ; CHECK:       lhi   0,88
 ; CHECK-NEXT:  a     0,1208
 ; CHECK-NEXT:  llgtr 1,0
@@ -261,7 +261,7 @@ entry:
 
 define void @test_misc_5(ptr %f) {
 entry:
-; CHECK-LABEL: test_misc_5:
+; CHECK-LABEL: test_misc_5 DS 0H
 ; CHECK:       l     0,548
 ; CHECK-NEXT:  lg  6,8(5)
 ; CHECK-NEXT:  lg  5,0(5)
@@ -277,7 +277,7 @@ entry:
 
 define signext i32 @get_processor_count() {
 entry:
-; CHECK-LABEL: get_processor_count:
+; CHECK-LABEL: get_processor_count DS 0H
 ; CHECK: lhi 0,660
 ; CHECK-NEXT: a 0,16
 ; CHECK-NEXT: llgtr 1,0
@@ -296,7 +296,7 @@ entry:
 
 define void @spill_ptr32_args_to_registers(i8 addrspace(1)* %p) {
 entry:
-; CHECK-LABEL: spill_ptr32_args_to_registers:
+; CHECK-LABEL: spill_ptr32_args_to_registers DS 0H
 ; CHECK:         stmg 6,7,1872(4)
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    lgr 2,1
@@ -327,7 +327,7 @@ declare void @g(i32 signext, ...)
 ; cast to __ptr32, setting the upper 32 bit to zero.
 ;
 define signext i32 @setlength() {
-; CHECK-LABEL: setlength:
+; CHECK-LABEL: setlength DS 0H
 ; CHECK: basr    7,6
 ; CHECK: lgr     [[MALLOC:[0-9]+]],3
 ; CHECK: basr    7,6
@@ -351,7 +351,7 @@ entry:
 ; the function now returns a __ptr32.
 ;
 define signext i32 @setlength2() {
-; CHECK-LABEL: setlength2:
+; CHECK-LABEL: setlength2 DS 0H
 ; CHECK: basr    7,6
 ; CHECK: lgr     [[MALLOC:[0-9]+]],3
 ; CHECK: basr    7,6

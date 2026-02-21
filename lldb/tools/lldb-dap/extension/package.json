@@ -22,7 +22,7 @@
     "LLDB"
   ],
   "engines": {
-    "vscode": "^1.75.0"
+    "vscode": "^1.90.0"
   },
   "categories": [
     "Debuggers"
@@ -34,7 +34,7 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "^18.19.41",
     "@types/tabulator-tables": "^6.2.10",
-    "@types/vscode": "1.75.0",
+    "@types/vscode": "1.90.0",
     "@types/vscode-webview": "^1.57.5",
     "@vscode/debugprotocol": "^1.68.0",
     "@vscode/test-cli": "^0.0.12",

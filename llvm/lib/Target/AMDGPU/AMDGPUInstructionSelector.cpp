@@ -2376,17 +2376,32 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_init_whole_wave:
     return selectInitWholeWave(I);
   case Intrinsic::amdgcn_raw_buffer_load_lds:
+  case Intrinsic::amdgcn_raw_buffer_load_async_lds:
   case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds:
   case Intrinsic::amdgcn_struct_buffer_load_lds:
+  case Intrinsic::amdgcn_struct_buffer_load_async_lds:
   case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds:
     return selectBufferLoadLds(I);
   // Until we can store both the address space of the global and the LDS
   // arguments by having tto MachineMemOperands on an intrinsic, we just trust
   // that the argument is a global pointer (buffer pointers have been handled by
   // a LLVM IR-level lowering).
   case Intrinsic::amdgcn_load_to_lds:
+  case Intrinsic::amdgcn_load_async_to_lds:
   case Intrinsic::amdgcn_global_load_lds:
+  case Intrinsic::amdgcn_global_load_async_lds:
     return selectGlobalLoadLds(I);
+  case Intrinsic::amdgcn_tensor_load_to_lds:
+  case Intrinsic::amdgcn_tensor_store_from_lds:
+    return selectTensorLoadStore(I, IntrinsicID);
+  case Intrinsic::amdgcn_asyncmark:
+  case Intrinsic::amdgcn_wait_asyncmark:
+    // FIXME: Not supported on GFX12 yet. Will need a new feature when we do.
+    if (!Subtarget->hasVMemToLDSLoad())
+      return false;
+    break;
   case Intrinsic::amdgcn_exp_compr:
     if (!STI.hasCompressedExport()) {
       Function &F = I.getMF()->getFunction();
@@ -2401,6 +2416,22 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
     return selectDSBvhStackIntrinsic(I);
+  case Intrinsic::amdgcn_s_alloc_vgpr: {
+    // S_ALLOC_VGPR doesn't have a destination register, it just implicitly sets
+    // SCC. We then need to COPY it into the result vreg.
+    MachineBasicBlock *MBB = I.getParent();
+    const DebugLoc &DL = I.getDebugLoc();
+
+    Register ResReg = I.getOperand(0).getReg();
+
+    MachineInstr *AllocMI = BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_ALLOC_VGPR))
+                                .add(I.getOperand(2));
+    (void)BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), ResReg)
+        .addReg(AMDGPU::SCC);
+    I.eraseFromParent();
+    constrainSelectedInstRegOperands(*AllocMI, TII, TRI, RBI);
+    return RBI.constrainGenericRegister(ResReg, AMDGPU::SReg_32RegClass, *MRI);
+  }
   case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_signal_var:
     return selectNamedBarrierInit(I, IntrinsicID);
@@ -3432,11 +3463,25 @@ bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
   return true;
 }
 
+static bool isAsyncLDSDMA(Intrinsic::ID Intr) {
+  switch (Intr) {
+  case Intrinsic::amdgcn_raw_buffer_load_async_lds:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds:
+  case Intrinsic::amdgcn_struct_buffer_load_async_lds:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds:
+  case Intrinsic::amdgcn_load_async_to_lds:
+  case Intrinsic::amdgcn_global_load_async_lds:
+    return true;
+  }
+  return false;
+}
+
 bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
   if (!Subtarget->hasVMemToLDSLoad())
     return false;
   unsigned Opc;
   unsigned Size = MI.getOperand(3).getImm();
+  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
 
   // The struct intrinsic variants add one additional operand over raw.
   const bool HasVIndex = MI.getNumOperands() == 9;
@@ -3526,6 +3571,7 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
       Aux & (IsGFX12Plus ? AMDGPU::CPol::SWZ : AMDGPU::CPol::SWZ_pregfx12)
           ? 1
           : 0); // swz
+  MIB.addImm(isAsyncLDSDMA(IntrinsicID));
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
   // Don't set the offset value here because the pointer points to the base of
@@ -3648,6 +3694,7 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
 
   unsigned Opc;
   unsigned Size = MI.getOperand(3).getImm();
+  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
 
   switch (Size) {
   default:
@@ -3718,6 +3765,7 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
 
   unsigned Aux = MI.getOperand(5).getImm();
   MIB.addImm(Aux & ~AMDGPU::CPol::VIRTUAL_BITS); // cpol
+  MIB.addImm(isAsyncLDSDMA(IntrinsicID));
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
   MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
@@ -3739,6 +3787,47 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
 
   MI.eraseFromParent();
   constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+  return true;
+}
+
+bool AMDGPUInstructionSelector::selectTensorLoadStore(MachineInstr &MI,
+                                                      Intrinsic::ID IID) const {
+  bool IsLoad = IID == Intrinsic::amdgcn_tensor_load_to_lds;
+  unsigned Opc =
+      IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS : AMDGPU::TENSOR_STORE_FROM_LDS;
+  int NumGroups = 4;
+
+  // A lamda function to check whether an operand is a vector of all 0s.
+  const auto isAllZeros = [&](MachineOperand &Opnd) {
+    const MachineInstr *DefMI = MRI->getVRegDef(Opnd.getReg());
+    if (!DefMI)
+      return false;
+    return llvm::isBuildVectorAllZeros(*DefMI, *MRI, true);
+  };
+
+  // Use _D2 version if both group 2 and 3 are zero-initialized.
+  if (isAllZeros(MI.getOperand(3)) && isAllZeros(MI.getOperand(4))) {
+    NumGroups = 2;
+    Opc = IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS_D2
+                 : AMDGPU::TENSOR_STORE_FROM_LDS_D2;
+  }
+
+  // TODO: Handle the fifth group: MI.getOpetand(5), which is silently ignored
+  // for now because all existing targets only support up to 4 groups.
+  MachineBasicBlock *MBB = MI.getParent();
+  auto MIB = BuildMI(*MBB, &MI, MI.getDebugLoc(), TII.get(Opc))
+                 .add(MI.getOperand(1))  // D# group 0
+                 .add(MI.getOperand(2)); // D# group 1
+
+  if (NumGroups >= 4) {         // Has at least 4 groups
+    MIB.add(MI.getOperand(3))   // D# group 2
+        .add(MI.getOperand(4)); // D# group 3
+  }
+
+  MIB.addImm(0)               // r128
+      .add(MI.getOperand(6)); // cpol
+
+  MI.eraseFromParent();
   return true;
 }
 
@@ -4945,14 +5034,14 @@ public:
     const MachineInstr *MI = MRI.getVRegDef(Reg);
     unsigned Opc = MI->getOpcode();
 
-    if (Opc < TargetOpcode::GENERIC_OP_END) {
-      // Keep same for generic op.
-      HasNeg = true;
-    } else if (Opc == TargetOpcode::G_INTRINSIC) {
+    if (Opc == TargetOpcode::G_INTRINSIC) {
       Intrinsic::ID IntrinsicID = cast<GIntrinsic>(*MI).getIntrinsicID();
       // Only float point intrinsic has neg & neg_hi bits.
       if (IntrinsicID == Intrinsic::amdgcn_fdot2)
         HasNeg = true;
+    } else if (TargetInstrInfo::isGenericOpcode(Opc)) {
+      // Keep same for generic op.
+      HasNeg = true;
     }
   }
   bool checkOptions(SrcStatus Stat) const {

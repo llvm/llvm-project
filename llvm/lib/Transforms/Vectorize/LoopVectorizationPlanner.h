@@ -233,15 +233,19 @@ public:
     return createNaryOp(VPInstruction::LogicalAnd, {LHS, RHS}, DL, Name);
   }
 
-  VPInstruction *
-  createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
-               DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "",
-               std::optional<FastMathFlags> FMFs = std::nullopt) {
-    if (!FMFs)
-      return createNaryOp(Instruction::Select, {Cond, TrueVal, FalseVal}, DL,
-                          Name);
+  VPInstruction *createLogicalOr(VPValue *LHS, VPValue *RHS,
+                                 DebugLoc DL = DebugLoc::getUnknown(),
+                                 const Twine &Name = "") {
+    return createNaryOp(VPInstruction::LogicalOr, {LHS, RHS}, DL, Name);
+  }
+
+  VPInstruction *createSelect(VPValue *Cond, VPValue *TrueVal,
+                              VPValue *FalseVal,
+                              DebugLoc DL = DebugLoc::getUnknown(),
+                              const Twine &Name = "",
+                              const VPIRFlags &Flags = {}) {
     return tryInsertInstruction(new VPInstruction(
-        Instruction::Select, {Cond, TrueVal, FalseVal}, *FMFs, {}, DL, Name));
+        Instruction::Select, {Cond, TrueVal, FalseVal}, Flags, {}, DL, Name));
   }
 
   /// Create a new ICmp VPInstruction with predicate \p Pred and operands \p A
@@ -291,9 +295,10 @@ public:
                           GEPNoWrapFlags::none(), {}, DL, Name));
   }
 
-  VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues, DebugLoc DL,
-                         const Twine &Name = "") {
-    return tryInsertInstruction(new VPPhi(IncomingValues, DL, Name));
+  VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues,
+                         DebugLoc DL = DebugLoc::getUnknown(),
+                         const Twine &Name = "", const VPIRFlags &Flags = {}) {
+    return tryInsertInstruction(new VPPhi(IncomingValues, Flags, DL, Name));
   }
 
   VPValue *createElementCount(Type *Ty, ElementCount EC) {
@@ -651,8 +656,8 @@ private:
   /// legal to vectorize the loop. This method creates VPlans using VPRecipes.
   void buildVPlansWithVPRecipes(ElementCount MinVF, ElementCount MaxVF);
 
-  /// Add recipes to compute the final reduction result (ComputeFindIVResult,
-  /// ComputeAnyOfResult, ComputeReductionResult depending on the reduction) in
+  /// Add recipes to compute the final reduction result (ComputeAnyOfResult,
+  /// ComputeReductionResult depending on the reduction) in
   /// the middle block. Selects are introduced for reductions between the phi
   /// and users outside the vector region when folding the tail.
   void addReductionResultComputation(VPlanPtr &Plan,

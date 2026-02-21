@@ -238,11 +238,6 @@ value llvm_dispose_context(value C) {
   return Val_unit;
 }
 
-/* unit -> llcontext */
-value llvm_global_context(value Unit) {
-  return to_val(LLVMGetGlobalContext());
-}
-
 /* llcontext -> string -> int */
 value llvm_mdkind_id(value C, value Name) {
   unsigned MDKindID = LLVMGetMDKindIDInContext(Context_val(C), String_val(Name),

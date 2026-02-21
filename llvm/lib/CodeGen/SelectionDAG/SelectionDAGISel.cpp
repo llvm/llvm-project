@@ -3168,7 +3168,8 @@ static size_t IsPredicateKnownToFail(
   case SelectionDAGISel::OPC_CheckType:
   case SelectionDAGISel::OPC_CheckTypeI32:
   case SelectionDAGISel::OPC_CheckTypeI64:
-  case SelectionDAGISel::OPC_CheckTypeByHwMode: {
+  case SelectionDAGISel::OPC_CheckTypeByHwMode:
+  case SelectionDAGISel::OPC_CheckTypeByHwMode0: {
     MVT VT;
     switch (Opcode) {
     case SelectionDAGISel::OPC_CheckTypeI32:
@@ -3179,6 +3180,9 @@ static size_t IsPredicateKnownToFail(
       break;
     case SelectionDAGISel::OPC_CheckTypeByHwMode:
       VT = getHwModeVT(Table, Index, SDISel);
+      break;
+    case SelectionDAGISel::OPC_CheckTypeByHwMode0:
+      VT = SDISel.getValueTypeForHwMode(0);
       break;
     default:
       VT = getSimpleVT(Table, Index);
@@ -3756,7 +3760,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_CheckType:
     case OPC_CheckTypeI32:
     case OPC_CheckTypeI64:
-    case OPC_CheckTypeByHwMode: {
+    case OPC_CheckTypeByHwMode:
+    case OPC_CheckTypeByHwMode0: {
       MVT VT;
       switch (Opcode) {
       case OPC_CheckTypeI32:
@@ -3767,6 +3772,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         break;
       case OPC_CheckTypeByHwMode:
         VT = getHwModeVT(MatcherTable, MatcherIndex, *this);
+        break;
+      case OPC_CheckTypeByHwMode0:
+        VT = getValueTypeForHwMode(0);
         break;
       default:
         VT = getSimpleVT(MatcherTable, MatcherIndex);
@@ -4227,8 +4235,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_MorphNodeTo2GlueInput:
     case OPC_MorphNodeTo1GlueOutput:
     case OPC_MorphNodeTo2GlueOutput: {
-      uint16_t TargetOpc = MatcherTable[MatcherIndex++];
-      TargetOpc |= static_cast<uint16_t>(MatcherTable[MatcherIndex++]) << 8;
+      uint32_t TargetOpc = MatcherTable[MatcherIndex++];
+      TargetOpc |= (MatcherTable[MatcherIndex++] << 8);
       unsigned EmitNodeInfo;
       if (Opcode >= OPC_EmitNode1None && Opcode <= OPC_EmitNode2Chain) {
         if (Opcode >= OPC_EmitNode0Chain && Opcode <= OPC_EmitNode2Chain)

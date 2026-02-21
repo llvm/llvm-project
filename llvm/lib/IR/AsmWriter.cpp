@@ -4211,6 +4211,8 @@ void AssemblyWriter::printFunction(const Function *F) {
   maybePrintComdat(Out, *F);
   if (MaybeAlign A = F->getAlign())
     Out << " align " << A->value();
+  if (MaybeAlign A = F->getPreferredAlignment())
+    Out << " prefalign(" << A->value() << ')';
   if (F->hasGC())
     Out << " gc \"" << F->getGC() << '"';
   if (F->hasPrefixData()) {

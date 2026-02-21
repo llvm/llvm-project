@@ -16,20 +16,31 @@
 
 #if defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE)
 #include "range_reduction_fma.h"
-// using namespace LIBC_NAMESPACE::fma;
-using LIBC_NAMESPACE::fma::FAST_PASS_BOUND;
-using LIBC_NAMESPACE::fma::large_range_reduction;
-using LIBC_NAMESPACE::fma::small_range_reduction;
-
 #else
 #include "range_reduction.h"
-// using namespace LIBC_NAMESPACE::generic;
-using LIBC_NAMESPACE::generic::FAST_PASS_BOUND;
-using LIBC_NAMESPACE::generic::large_range_reduction;
-using LIBC_NAMESPACE::generic::small_range_reduction;
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 namespace LIBC_NAMESPACE_DECL {
+
+namespace math {
+
+namespace sincosf_utils_internal {
+
+#if defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE)
+
+// using namespace LIBC_NAMESPACE::fma;
+using math::trigonometric_fma_utils_internal::FAST_PASS_BOUND;
+using math::trigonometric_fma_utils_internal::large_range_reduction;
+using math::trigonometric_fma_utils_internal::small_range_reduction;
+
+#else
+
+// using namespace LIBC_NAMESPACE::generic;
+using math::trigonometric_func_utils_internal::FAST_PASS_BOUND;
+using math::trigonometric_func_utils_internal::large_range_reduction;
+using math::trigonometric_func_utils_internal::small_range_reduction;
+
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 // Lookup table for sin(k * pi / 32) with k = 0, ..., 63.
 // Table is generated with Sollya as follow:
@@ -119,6 +130,10 @@ LIBC_INLINE void sincospif_eval(double xd, double &sin_k, double &cos_k,
   int64_t k = range_reduction_sincospi(xd, y);
   sincosf_poly_eval(k, y, sin_k, cos_k, sin_y, cosm1_y);
 }
+
+} // namespace sincosf_utils_internal
+
+} // namespace math
 
 } // namespace LIBC_NAMESPACE_DECL
 

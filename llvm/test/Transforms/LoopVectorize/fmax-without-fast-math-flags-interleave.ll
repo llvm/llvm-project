@@ -329,8 +329,7 @@ define float @fmaxnum_tailfold(ptr %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP60]], <4 x float> [[TMP61]])
 ; CHECK-NEXT:    [[TMP63:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX]])
 ; CHECK-NEXT:    [[TMP64:%.*]] = xor i1 [[TMP57]], true
-; CHECK-NEXT:    [[TMP65:%.*]] = and i1 true, [[TMP64]]
-; CHECK-NEXT:    br i1 [[TMP65]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
+; CHECK-NEXT:    br i1 [[TMP64]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:

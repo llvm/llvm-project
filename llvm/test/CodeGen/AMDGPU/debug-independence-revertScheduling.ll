@@ -80,10 +80,10 @@ for.body71.preheader:                             ; preds = %entry
   br label %if.end82
 
 if.end82:                                         ; preds = %for.body71.preheader, %entry
-  %f9 = load <2 x float>, ptr addrspace(3) null, align 8
+  %f9 = load <2 x float>, ptr addrspace(3) zeroinitializer, align 8
   tail call void @llvm.amdgcn.s.barrier()
   %f10 = load float, ptr addrspace(3) %add.ptr10, align 4
-  %f11 = load float, ptr addrspace(3) null, align 4
+  %f11 = load float, ptr addrspace(3) zeroinitializer, align 4
   fence acquire
   %f12 = load float, ptr addrspace(3) %add.ptr10, align 4
   %f13 = load float, ptr addrspace(3) %arrayidx53, align 4
@@ -98,9 +98,9 @@ if.end82:                                         ; preds = %for.body71.preheade
   %f17 = shufflevector <14 x float> zeroinitializer, <14 x float> %f16, <14 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 14, i32 15>
   %f18 = insertelement <14 x float> %f17, float %f11, i64 13
   %f19 = shufflevector <14 x float> %f18, <14 x float> zeroinitializer, <2 x i32> <i32 12, i32 13>
-  %f20 = load <2 x float>, ptr addrspace(3) null, align 8
+  %f20 = load <2 x float>, ptr addrspace(3) zeroinitializer, align 8
   %f21 = fmul contract <2 x float> zeroinitializer, %f20
-  store float 0.000000e+00, ptr addrspace(3) null, align 4
+  store float 0.000000e+00, ptr addrspace(3) zeroinitializer, align 4
   %f22 = load <2 x float>, ptr addrspace(3) %arrayidx75.3.6, align 8
   %f23 = fmul <2 x float> zeroinitializer, %f22
   %f24 = shufflevector <2 x float> %f23, <2 x float> zeroinitializer, <14 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -109,7 +109,7 @@ if.end82:                                         ; preds = %for.body71.preheade
   %f27 = shufflevector <2 x float> %f26, <2 x float> zeroinitializer, <14 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %f28 = shufflevector <14 x float> %f25, <14 x float> %f27, <14 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 14, i32 15>
   %f29 = extractelement <14 x float> %f28, i64 0
-  %f30 = load <2 x float>, ptr addrspace(3) null, align 4
+  %f30 = load <2 x float>, ptr addrspace(3) zeroinitializer, align 4
   %f31 = shufflevector <14 x float> %f28, <14 x float> zeroinitializer, <2 x i32> <i32 11, i32 12>
   %f32 = fsub <2 x float> zeroinitializer, %f14
   %f33 = fmul contract <2 x float> %f32, zeroinitializer
