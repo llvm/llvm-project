@@ -280,6 +280,7 @@ Clang-Tidy Checks
    :doc:`misc-predictable-rand <misc/predictable-rand>`,
    :doc:`misc-redundant-expression <misc/redundant-expression>`, "Yes"
    :doc:`misc-static-assert <misc/static-assert>`, "Yes"
+   :doc:`misc-static-initialization-cycle <misc/static-initialization-cycle>`,
    :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
    :doc:`misc-unconventional-assign-operator <misc/unconventional-assign-operator>`,
    :doc:`misc-uniqueptr-reset-release <misc/uniqueptr-reset-release>`, "Yes"
