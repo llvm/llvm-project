@@ -770,13 +770,13 @@ class OpenMP_LinearClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let arguments = (ins Variadic<AnyType>:$linear_vars,
-      Variadic<I32>:$linear_step_vars,
+      Variadic<AnySignlessInteger>:$linear_step_vars,
       OptionalAttr<ArrayAttr>:$linear_var_types);
 
   let optAssemblyFormat = [{
     `linear` `(`
       custom<LinearClause>($linear_vars, type($linear_vars),
-                           $linear_step_vars) `)`
+                           $linear_step_vars, type($linear_step_vars)) `)`
   }];
 
   let description = [{

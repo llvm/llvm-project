@@ -423,7 +423,8 @@ static ParseResult parseLinearClause(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &linearVars,
     SmallVectorImpl<Type> &linearTypes,
-    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &linearStepVars) {
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &linearStepVars,
+    SmallVectorImpl<Type> &linearStepTypes) {
   return parser.parseCommaSeparatedList([&]() {
     OpAsmParser::UnresolvedOperand var;
     Type type;
@@ -442,7 +443,8 @@ static ParseResult parseLinearClause(
 /// Print Linear Clause
 static void printLinearClause(OpAsmPrinter &p, Operation *op,
                               ValueRange linearVars, TypeRange linearTypes,
-                              ValueRange linearStepVars) {
+                              ValueRange linearStepVars,
+                              TypeRange linearStepTypes) {
   size_t linearVarsSize = linearVars.size();
   for (unsigned i = 0; i < linearVarsSize; ++i) {
     std::string separator = i == linearVarsSize - 1 ? "" : ", ";
