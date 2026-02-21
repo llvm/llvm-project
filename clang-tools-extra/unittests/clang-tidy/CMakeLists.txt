@@ -15,7 +15,6 @@ endif()
 get_filename_component(CLANG_LINT_SOURCE_DIR
   ${CMAKE_CURRENT_SOURCE_DIR}/../../clang-tidy REALPATH)
 include_directories(${CLANG_LINT_SOURCE_DIR})
-include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/../../include-cleaner/include")
 
 add_extra_unittest(ClangTidyTests
   AddConstTest.cpp
