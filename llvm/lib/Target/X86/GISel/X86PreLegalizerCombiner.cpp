@@ -55,8 +55,7 @@ public:
       MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
       GISelCSEInfo *CSEInfo,
       const X86PreLegalizerCombinerImplRuleConfig &RuleConfig,
-      const X86Subtarget &STI, MachineDominatorTree *MDT,
-      const LegalizerInfo *LI);
+      MachineDominatorTree *MDT, const LegalizerInfo *LI);
 
   static const char *getName() { return "X86PreLegalizerCombiner"; }
 
@@ -78,10 +77,10 @@ X86PreLegalizerCombinerImpl::X86PreLegalizerCombinerImpl(
     MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
     GISelCSEInfo *CSEInfo,
     const X86PreLegalizerCombinerImplRuleConfig &RuleConfig,
-    const X86Subtarget &STI, MachineDominatorTree *MDT, const LegalizerInfo *LI)
+    MachineDominatorTree *MDT, const LegalizerInfo *LI)
     : Combiner(MF, CInfo, &VT, CSEInfo),
       Helper(Observer, B, /*IsPreLegalize=*/true, &VT, MDT, LI),
-      RuleConfig(RuleConfig), STI(STI),
+      RuleConfig(RuleConfig), STI(MF.getSubtarget<X86Subtarget>()),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "X86GenPreLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -154,7 +153,7 @@ bool X86PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   // This is the first Combiner, so the input IR might contain dead
   // instructions.
   CInfo.EnableFullDCE = true;
-  X86PreLegalizerCombinerImpl Impl(MF, CInfo, *VT, CSEInfo, RuleConfig, ST, MDT,
+  X86PreLegalizerCombinerImpl Impl(MF, CInfo, *VT, CSEInfo, RuleConfig, MDT,
                                    LI);
   return Impl.combineMachineInstrs();
 }
@@ -198,14 +197,14 @@ X86PreLegalizerCombinerPass::run(MachineFunction &MF,
   // This is the first Combiner, so the input IR might contain dead
   // instructions.
   CInfo.EnableFullDCE = true;
-  X86PreLegalizerCombinerImpl Impl(MF, CInfo, nullptr, VT, CSEInfo.get(),
-                                   RuleConfig, ST, &MDT, LI);
+  X86PreLegalizerCombinerImpl Impl(MF, CInfo, VT, CSEInfo.get(),
+                                   RuleConfig, &MDT, LI);
   Impl.combineMachineInstrs();
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
   PA.preserve<GISelCSEAnalysis>();
   PA.preserve<GISelValueTrackingAnalysis>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
   return PA;
 }
 

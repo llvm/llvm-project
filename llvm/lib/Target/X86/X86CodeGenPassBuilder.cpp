@@ -46,6 +46,7 @@ public:
   void addIRPasses(PassManagerWrapper &PMW) const;
   void addPreISel(PassManagerWrapper &PMW) const;
   Error addInstSelector(PassManagerWrapper &PMW) const;
+  void addPreLegalizeMachineIR(PassManagerWrapper &PMW) const;
   void addILPOpts(PassManagerWrapper &PMW) const;
   void addPreRegBankSelect(PassManagerWrapper &PMW) const;
   void addMachineSSAOptimization(PassManagerWrapper &PMW) const;
@@ -61,7 +62,6 @@ public:
   void addAsmPrinterBegin(PassManagerWrapper &PMW) const;
   void addAsmPrinter(PassManagerWrapper &PMW) const;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) const;
-  void addPreLegalizeMachineIR(PassManagerWrapper &PMW) const;
 };
 
 void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
@@ -116,6 +116,11 @@ Error X86CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
   addMachineFunctionPass(X86GlobalBaseRegPass(), PMW);
   addMachineFunctionPass(X86ArgumentStackSlotPass(), PMW);
   return Error::success();
+}
+
+void X86CodeGenPassBuilder::addPreLegalizeMachineIR(
+    PassManagerWrapper &PMW) const {
+  addMachineFunctionPass(X86PreLegalizerCombinerPass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) const {
@@ -254,11 +259,6 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   if (TT.isOSWindows() && TT.isX86_64()) {
     addMachineFunctionPass(X86WinEHUnwindV2Pass(), PMW);
   }
-}
-
-void X86CodeGenPassBuilder::addPreLegalizeMachineIR(
-    PassManagerWrapper &PMW) const {
-  addMachineFunctionPass(X86PreLegalizerCombinerPass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) const {
