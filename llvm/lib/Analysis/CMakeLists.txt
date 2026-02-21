@@ -143,6 +143,7 @@ add_llvm_component_library(LLVMAnalysis
   ScalarEvolutionAliasAnalysis.cpp
   ScalarEvolutionDivision.cpp
   ScalarEvolutionNormalization.cpp
+  Semilattice.cpp
   StaticDataProfileInfo.cpp
   StackLifetime.cpp
   StackSafetyAnalysis.cpp
