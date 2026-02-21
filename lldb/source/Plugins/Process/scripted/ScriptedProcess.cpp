@@ -29,10 +29,10 @@
 
 #include <mutex>
 
-LLDB_PLUGIN_DEFINE(ScriptedProcess)
-
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE(ScriptedProcess)
 
 llvm::StringRef ScriptedProcess::GetPluginDescriptionStatic() {
   return "Scripted Process plug-in.";
