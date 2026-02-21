@@ -490,6 +490,10 @@ ENUM_CODEGENOPT(ZeroCallUsedRegs, ZeroCallUsedRegsKind,
 /// non-deleting destructors. (No effect on Microsoft ABI.)
 CODEGENOPT(CtorDtorReturnThis, 1, 0, Benign)
 
+/// Set via -Xclang -sloppy-temporary-lifetimes to disable emission of lifetime
+/// marker intrinsic calls.
+CODEGENOPT(NoLifetimeMarkersForTemporaries, 1, 0, Benign)
+
 /// Enables emitting Import Call sections on supported targets that can be used
 /// by the Windows kernel to enable import call optimization.
 CODEGENOPT(ImportCallOptimization, 1, 0, Benign)

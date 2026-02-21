@@ -5071,7 +5071,27 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     return;
   }
 
-  args.add(EmitAnyExprToTemp(E), type);
+  AggValueSlot ArgSlot = AggValueSlot::ignored();
+  // For arguments with aggregate type, create an alloca to store
+  // the value.  If the argument's type has a destructor, that destructor
+  // will run at the end of the full-expression; emit matching lifetime
+  // markers.
+  //
+  // FIXME: For types which don't have a destructor, consider using a
+  // narrower lifetime bound.
+  if (hasAggregateEvaluationKind(E->getType())) {
+    RawAddress ArgSlotAlloca = Address::invalid();
+    ArgSlot = CreateAggTemp(E->getType(), "agg.tmp", &ArgSlotAlloca);
+
+    // Emit a lifetime start/end for this temporary at the end of the full
+    // expression.
+    if (!CGM.getCodeGenOpts().NoLifetimeMarkersForTemporaries &&
+        EmitLifetimeStart(ArgSlotAlloca.getPointer()))
+      pushFullExprCleanup<CallLifetimeEnd>(CleanupKind::NormalEHLifetimeMarker,
+                                           ArgSlotAlloca);
+  }
+
+  args.add(EmitAnyExpr(E, ArgSlot), type);
 }
 
 QualType CodeGenFunction::getVarArgType(const Expr *Arg) {
