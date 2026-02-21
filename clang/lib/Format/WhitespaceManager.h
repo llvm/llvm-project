@@ -357,6 +357,8 @@ private:
   /// Link the Cell pointers in the list of Cells.
   static CellDescriptions linkCells(CellDescriptions &&CellDesc);
 
+  void setChangeSpaces(unsigned Start, unsigned Spaces);
+
   /// Fill \c Replaces with the replacements for all effective changes.
   void generateChanges();
 

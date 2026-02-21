@@ -22581,6 +22581,68 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
                Style);
 }
 
+TEST_F(FormatTest, AlignArrayOfStructuresGithubIssues) {
+  // https://github.com/llvm/llvm-project/issues/138151
+  // Summary: Aligning arrays of structures with UseTab: AlignWithSpaces does
+  // not use spaces to align columns
+  FormatStyle Style = getGoogleStyle();
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+  Style.UseTab = FormatStyle::UT_AlignWithSpaces;
+  Style.IndentWidth = 4;
+  Style.TabWidth = 4;
+
+  verifyFormat(
+      "std::vector<Foo> foos = {\n"
+      "\t{LONG_NAME,                0,                        i | j},\n"
+      "\t{LONG_NAME,                0,                        i | j},\n"
+      "\t{LONGER_NAME,              0,                        i | j},\n"
+      "\t{LONGER_NAME,              0,                        i    },\n"
+      "\t{THIS_IS_A_VERY_LONG_NAME, 0,                        j    },\n"
+      "\t{LONGER_NAME,              THIS_IS_A_VERY_LONG_NAME, i    },\n"
+      "\t{LONG_NAME,                THIS_IS_A_VERY_LONG_NAME, j    }\n"
+      "};\n",
+      Style);
+
+  // https://github.com/llvm/llvm-project/issues/85937
+  // Summary: Macro escaped newlines are not aligned properly when both
+  // AlignEscapedNewLines and AlignArrayOfStructures are used
+  Style = getLLVMStyleWithColumns(80);
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+
+  verifyFormat(R"(
+#define DEFINE_COMMAND_PROCESS_TABLE(Enum)      \
+  const STExample TCommand::EXPL_MAIN[] = {     \
+      {Enum::GetName(),      " shows help "  }, \
+      {Enum::GetAttribute(), " do something "}, \
+      {Enum::GetState(),     " do whatever " }, \
+  };
+)",
+               Style);
+
+  // https://github.com/llvm/llvm-project/issues/53442
+  // Summary: alignment of columns does not use spaces when UseTab:
+  // AlignWithSpaces
+  Style = getLLVMStyle();
+  Style.AlignArrayOfStructures = FormatStyle::AIAS_Left;
+  Style.IndentWidth = 4;
+  Style.TabWidth = 4;
+  Style.UseTab = FormatStyle::UT_AlignWithSpaces;
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+
+  verifyFormat(
+      "const map<string, int64_t> CoreReport::GetGameCountersRolloverInfo()\n"
+      "{\n"
+      "\tstatic map<string, int64_t> counterRolloverInfo{\n"
+      "\t\t{\"CashIn\",                   4000000000},\n"
+      "\t\t{\"CoinIn\",                   4000000000},\n"
+      "\t\t{\"QuantityMultiProgressive\", 65535     },\n"
+      "\t};\n"
+      "\treturn counterRolloverInfo;\n"
+      "}\n",
+      Style);
+}
+
 TEST_F(FormatTest, UnderstandsPragmas) {
   verifyFormat("#pragma omp reduction(| : var)");
   verifyFormat("#pragma omp reduction(+ : var)");
