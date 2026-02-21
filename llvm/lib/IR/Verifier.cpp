@@ -3324,6 +3324,17 @@ void Verifier::visitFunction(const Function &F) {
   }
   }
 
+  // Verify AnyTypeOf type constraints for intrinsic declarations.
+  if (F.isIntrinsic()) {
+    std::string ConstraintErrMsg;
+    SmallVector<Type *, 4> ArgTys;
+    Intrinsic::getIntrinsicSignature(F.getIntrinsicID(), F.getFunctionType(),
+                                     ArgTys, &ConstraintErrMsg);
+    if (!ConstraintErrMsg.empty())
+      CheckFailed("Intrinsic declaration '" + F.getName().str() +
+                  "' violates AnyTypeOf constraint: " + ConstraintErrMsg);
+  }
+
   auto *N = F.getSubprogram();
   HasDebugInfo = (N != nullptr);
   if (!HasDebugInfo)
