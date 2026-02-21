@@ -688,6 +688,7 @@ struct __is_std_optional<optional<_Tp>> : true_type {};
 template <class _Tp, class... _Args>
 inline constexpr bool __is_constructible_for_optional_v = is_constructible_v<_Tp, _Args...>;
 
+// TODO(LLVM 23): Remove this workaround.
 template <class _Tp, class... _Args>
 struct __is_constructible_for_optional : bool_constant<__is_constructible_for_optional_v<_Tp, _Args...>> {};
 
@@ -901,11 +902,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr optional(optional&&)      = default;
   _LIBCPP_HIDE_FROM_ABI constexpr optional(nullopt_t) noexcept {}
 
-  template <
-      class _InPlaceT,
-      class... _Args,
-      enable_if_t<_And<_IsSame<_InPlaceT, in_place_t>, __is_constructible_for_optional<_Tp, _Args...>>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit optional(_InPlaceT, _Args&&... __args)
+  // TODO(LLVM 23): Use _v instead of ::value.
+  template <class... _Args, enable_if_t<__is_constructible_for_optional<_Tp, _Args...>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit optional(in_place_t, _Args&&... __args)
       : __base(in_place, std::forward<_Args>(__args)...) {}
 
   template <class _Up,
@@ -1073,7 +1072,8 @@ public:
     return *this;
   }
 
-  template <class... _Args, enable_if_t<__is_constructible_for_optional_v<_Tp, _Args...>, int> = 0>
+  // TODO(LLVM 23): Use _v instead of ::value.
+  template <class... _Args, enable_if_t<__is_constructible_for_optional<_Tp, _Args...>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& emplace(_Args&&... __args)
 #    if _LIBCPP_STD_VER >= 26
       noexcept(is_lvalue_reference_v<_Tp> && is_nothrow_constructible_v<_Tp, _Args...>)
