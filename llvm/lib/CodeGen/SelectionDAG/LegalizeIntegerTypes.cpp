@@ -4205,6 +4205,50 @@ void DAGTypeLegalizer::ExpandIntRes_CTPOP(SDNode *N, SDValue &Lo, SDValue &Hi) {
     // If the function is not available, fall back on the expansion.
   }
 
+  // Optimization: if the integer fits in a legal vector type and the target
+  // has efficient vector CTPOP, use bitcast -> vector ctpop -> horizontal sum.
+  // This avoids extracting to scalar for each word (e.g. on x86, this enables
+  // VPOPCNTDQ instead of 4x scalar popcntq).
+  //
+  // We require >= 256 bits because for 128-bit integers the scalar expansion
+  // (2x popcntq + add) is already efficient, while the vector path introduces
+  // costly GPR-to-XMM domain crossings when the value is in registers.
+  unsigned BitWidth = VT.getSizeInBits();
+  if (BitWidth >= 256 && isPowerOf2_32(BitWidth)) {
+    MVT EltVT = MVT::i64;
+    unsigned NumElts = BitWidth / 64;
+    MVT VecVT = MVT::getVectorVT(EltVT, NumElts);
+    if (VecVT != MVT::INVALID_SIMPLE_VALUE_TYPE && TLI.isTypeLegal(VecVT) &&
+        TLI.isOperationLegal(ISD::CTPOP, VecVT)) {
+      // Bitcast integer to vector (free at register level).
+      SDValue Vec = DAG.getBitcast(VecVT, Op);
+      // Per-element popcount (target lowers to PSHUFB+PSADBW or VPOPCNTDQ).
+      SDValue PopVec = DAG.getNode(ISD::CTPOP, DL, VecVT, Vec);
+      // Sum all elements via shuffle+add pyramid reduction. Using
+      // VECTOR_SHUFFLE (rather than EXTRACT_SUBVECTOR) enables
+      // matchBinOpReduction to recognize the pattern and fold to PSADBW.
+      unsigned ReduxWidth = NumElts;
+      while (ReduxWidth > 1) {
+        unsigned HalfWidth = ReduxWidth / 2;
+        SmallVector<int, 16> ShufMask(NumElts, -1);
+        for (unsigned i = 0; i < HalfWidth; ++i)
+          ShufMask[i] = i + HalfWidth;
+        SDValue Shuf = DAG.getVectorShuffle(VecVT, DL, PopVec,
+                                            DAG.getUNDEF(VecVT), ShufMask);
+        PopVec = DAG.getNode(ISD::ADD, DL, VecVT, PopVec, Shuf);
+        ReduxWidth = HalfWidth;
+      }
+      // Extract scalar i64 result.
+      SDValue Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64,
+                                   PopVec, DAG.getVectorIdxConstant(0, DL));
+      // Split into Lo/Hi for type legalization.
+      EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+      Lo = DAG.getNode(ISD::ZERO_EXTEND, DL, NVT, Result);
+      Hi = DAG.getConstant(0, DL, NVT);
+      return;
+    }
+  }
+
   // ctpop(HiLo) -> ctpop(Hi)+ctpop(Lo)
   GetExpandedInteger(Op, Lo, Hi);
   EVT NVT = Lo.getValueType();
