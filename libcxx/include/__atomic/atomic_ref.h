@@ -403,6 +403,34 @@ struct atomic_ref<_Tp*> : public __atomic_ref_base<_Tp*> {
   _LIBCPP_HIDE_FROM_ABI _Tp* fetch_sub(ptrdiff_t __arg, memory_order __order = memory_order_seq_cst) const noexcept {
     return __atomic_fetch_sub(this->__ptr_, __arg * sizeof(_Tp), std::__to_gcc_order(__order));
   }
+#  if _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI _Tp* fetch_max(_Tp* __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+#    if __has_builtin(__atomic_fetch_max)
+    return reinterpret_cast<_Tp*>(__atomic_fetch_max(
+        reinterpret_cast<uintptr_t*>(this->__ptr_), reinterpret_cast<uintptr_t>(__arg), std::__to_gcc_order(__order)));
+#    else
+    _Tp __old = this->load(memory_order_relaxed);
+    _Tp __new;
+    do {
+      __new = __old > __arg ? __old : __arg;
+    } while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed));
+    return __old;
+#    endif
+  }
+  _LIBCPP_HIDE_FROM_ABI _Tp* fetch_min(_Tp* __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+#    if __has_builtin(__atomic_fetch_min)
+    return reinterpret_cast<_Tp*>(__atomic_fetch_min(
+        reinterpret_cast<uintptr_t*>(this->__ptr_), reinterpret_cast<uintptr_t>(__arg), std::__to_gcc_order(__order)));
+#    else
+    _Tp __old = this->load(memory_order_relaxed);
+    _Tp __new;
+    do {
+      __new = __old < __arg ? __old : __arg;
+    } while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed));
+    return __old;
+#    endif
+  }
+#  endif
 
   _LIBCPP_HIDE_FROM_ABI _Tp* operator++(int) const noexcept { return fetch_add(1); }
   _LIBCPP_HIDE_FROM_ABI _Tp* operator--(int) const noexcept { return fetch_sub(1); }

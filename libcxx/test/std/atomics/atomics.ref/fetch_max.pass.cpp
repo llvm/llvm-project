@@ -33,29 +33,56 @@ struct TestDoesNotHaveFetchMax {
 template <typename T>
 struct TestFetchMax {
   void operator()() const {
-    static_assert(std::is_integral_v<T> && has_fetch_max<T>);
+    static_assert((std::is_integral_v<T> || std::is_pointer_v<T>) && has_fetch_max<T>);
 
-    alignas(std::atomic_ref<T>::required_alignment) T x(T(1));
-    std::atomic_ref<T> const a(x);
+    if constexpr (std::is_integral_v<T>) {
+      alignas(std::atomic_ref<T>::required_alignment) T x(T(1));
+      std::atomic_ref<T> const a(x);
 
-    {
-      std::same_as<T> decltype(auto) y = a.fetch_max(T(2));
-      assert(y == T(1));
-      assert(x == T(2));
-      y = a.fetch_max(T(0));
-      assert(y == T(2));
-      assert(x == T(2));
-      ASSERT_NOEXCEPT(a.fetch_max(T(0)));
-    }
+      {
+        std::same_as<T> decltype(auto) y = a.fetch_max(T(2));
+        assert(y == T(1));
+        assert(x == T(2));
+        y = a.fetch_max(T(0));
+        assert(y == T(2));
+        assert(x == T(2));
+        ASSERT_NOEXCEPT(a.fetch_max(T(0)));
+      }
 
-    {
-      std::same_as<T> decltype(auto) y = a.fetch_max(T(3), std::memory_order_relaxed);
-      assert(y == T(2));
-      assert(x == T(3));
-      y = a.fetch_max(T(0));
-      assert(y == T(3));
-      assert(x == T(3));
-      ASSERT_NOEXCEPT(a.fetch_max(T(0), std::memory_order_relaxed));
+      {
+        std::same_as<T> decltype(auto) y = a.fetch_max(T(3), std::memory_order_relaxed);
+        assert(y == T(2));
+        assert(x == T(3));
+        y = a.fetch_max(T(0));
+        assert(y == T(3));
+        assert(x == T(3));
+        ASSERT_NOEXCEPT(a.fetch_max(T(0), std::memory_order_relaxed));
+      }
+    } else if constexpr (std::is_pointer_v<T>) {
+      using U = std::remove_pointer_t<T>;
+      U t[9]  = {};
+      alignas(std::atomic_ref<T>::required_alignment) T x{&t[1]};
+      std::atomic_ref<T> const a(x);
+
+      {
+        std::same_as<T> decltype(auto) y = a.fetch_max(&t[2]);
+        assert(y == &t[1]);
+        assert(x == &t[2]);
+        y = a.fetch_max(&t[0]);
+        assert(y == &t[2]);
+        assert(x == &t[2]);
+        ASSERT_NOEXCEPT(a.fetch_max(&t[0]));
+      }
+
+      {
+        std::same_as<T> decltype(auto) y = a.fetch_max(&t[3], std::memory_order_relaxed);
+        assert(y == &t[2]);
+        assert(a == &t[3]);
+        y = a.fetch_max(&t[0]);
+        assert(y == &t[3]);
+        assert(x == &t[3]);
+        ASSERT_NOEXCEPT(a.fetch_max(&t[0], std::memory_order_relaxed));
+      }
     }
   }
 };
@@ -65,7 +92,7 @@ int main(int, char**) {
 
   TestEachFloatingPointType<TestDoesNotHaveFetchMax>()();
 
-  TestEachPointerType<TestDoesNotHaveFetchMax>()();
+  TestEachPointerType<TestFetchMax>()();
 
   TestDoesNotHaveFetchMax<bool>()();
   TestDoesNotHaveFetchMax<UserAtomicType>()();

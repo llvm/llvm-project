@@ -244,6 +244,10 @@ struct atomic<T*>
     T* fetch_add(ptrdiff_t op, memory_order m = memory_order_seq_cst) noexcept;
     T* fetch_sub(ptrdiff_t op, memory_order m = memory_order_seq_cst) volatile noexcept;
     T* fetch_sub(ptrdiff_t op, memory_order m = memory_order_seq_cst) noexcept;
+    T* fetch_max(T*, memory_order = memory_order_seq_cst) volatile noexcept;
+    T* fetch_max(T*, memory_order = memory_order_seq_cst) noexcept;
+    T* fetch_min(T*, memory_order = memory_order_seq_cst) volatile noexcept;
+    T* fetch_min(T*, memory_order = memory_order_seq_cst) noexcept;
 
     T* operator++(int) volatile noexcept;
     T* operator++(int) noexcept;

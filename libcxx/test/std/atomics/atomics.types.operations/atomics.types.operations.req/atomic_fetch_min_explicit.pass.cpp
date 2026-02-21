@@ -47,7 +47,8 @@ void test_impl() {
   }
   {
     MaybeVolatile<std::atomic<T>> t(T(3));
-    assert(std::atomic_fetch_min_explicit(&t, T(2), std::memory_order_seq_cst) == T(3));
+    std::same_as<T> decltype(auto) r = t.fetch_min(T(2), std::memory_order_seq_cst);
+    assert(r == T(3));
     assert(t == T(2));
   }
 

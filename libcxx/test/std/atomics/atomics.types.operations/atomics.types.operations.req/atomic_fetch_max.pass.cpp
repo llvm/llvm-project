@@ -44,7 +44,8 @@ void test_impl() {
   }
   {
     MaybeVolatile<std::atomic<T>> t(T(3));
-    assert(std::atomic_fetch_max(&t, T(2)) == T(3));
+    std::same_as<T> decltype(auto) r = t.fetch_max(T(2));
+    assert(r == T(3));
     assert(t == T(3));
   }
 
