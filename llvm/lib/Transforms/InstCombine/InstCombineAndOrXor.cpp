@@ -2994,31 +2994,53 @@ InstCombinerImpl::convertOrOfShiftsToFunnelShift(Instruction &Or) {
       if (!isPowerOf2_32(Width))
         return nullptr;
 
-      // The shift amount may be masked with negation:
-      // (shl ShVal, (X & (Width - 1))) | (lshr ShVal, ((-X) & (Width - 1)))
+      // Check that L and R operate on the same value X. Since the bitwidth of X
+      // can differ from L and R, there are multiple possible locations of ZExt
+      // or Trunc.
       Value *X;
+      const APInt *LMask = nullptr;
+      const APInt *RMask = nullptr;
       unsigned Mask = Width - 1;
-      if (match(L, m_And(m_Value(X), m_SpecificInt(Mask))) &&
-          match(R, m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask))))
-        return X;
+      // L is essentially a no-op except for changing the type of X.
+      // There are multiple pattern like X & LMask or ZExt/Trunc
+      match(L, m_TruncOrZExtOrSelf(m_CombineOr(
+                   m_And(m_TruncOrZExtOrSelf(m_Value(X)), m_APInt(LMask)),
+                   m_Value(X))));
 
-      // (shl ShVal, X) | (lshr ShVal, ((-X) & (Width - 1)))
-      if (match(R, m_And(m_Neg(m_Specific(L)), m_SpecificInt(Mask))))
+      // R should be -X, sometimes (-X) & RMask is used, which is equivalent if
+      // RMask >= BitWidth - 1
+      const Value *ValueToNegate = nullptr;
+      if (!match(R, m_TruncOrZExtOrSelf(m_CombineOr(
+                        m_And(m_Neg(m_Value(ValueToNegate)), m_APInt(RMask)),
+                        m_Neg(m_Value(ValueToNegate))))) ||
+          (RMask && RMask->ult(Mask)))
+        return nullptr;
+
+      // ValueToNegate can be L if the rotate uses a bitwise-and on the shift
+      // amount before the rotate pattern.
+      if (!match(ValueToNegate, m_TruncOrZExtOrSelf(
+                                    m_CombineOr(m_Specific(X), m_Specific(L)))))
+        return nullptr;
+
+      // L is a no-op, and L is guaranteed to be the same type as the rotate.
+      // We reuse the existing Zext/Trunc.
+      if (!LMask)
         return L;
 
-      // Similar to above, but the shift amount may be extended after masking,
-      // so return the extended value as the parameter for the intrinsic.
-      if (match(L, m_ZExt(m_And(m_Value(X), m_SpecificInt(Mask)))) &&
-          match(R,
-                m_And(m_Neg(m_ZExt(m_And(m_Specific(X), m_SpecificInt(Mask)))),
-                      m_SpecificInt(Mask))))
-        return L;
+      // We can still fold with an LMask < Mask if R soley depends on L (not on
+      // X directly)
+      if (LMask->ult(Mask))
+        return (match(ValueToNegate, m_TruncOrZExtOrSelf(m_Specific(L))))
+                   ? L
+                   : nullptr;
 
-      if (match(L, m_ZExt(m_And(m_Value(X), m_SpecificInt(Mask)))) &&
-          match(R, m_ZExt(m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask)))))
-        return L;
+      // X has the same width as L and LMask >= BitWidth - 1, so L is a no-op.
+      Value *matchedX;
+      if (match(L, m_And(m_Value(matchedX), m_Value())))
+        return matchedX;
 
-      return nullptr;
+      // L is Zext(And(...)), we can't reuse the Zext/Trunc.
+      return L;
     };
 
     Value *ShAmt = matchShiftAmount(ShAmt0, ShAmt1, Width);

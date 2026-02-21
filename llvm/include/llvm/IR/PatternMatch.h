@@ -2298,6 +2298,13 @@ m_ZExtOrSelf(const OpTy &Op) {
 }
 
 template <typename OpTy>
+inline match_combine_or<CastInst_match<OpTy, TruncInst>,
+                        match_combine_or<CastInst_match<OpTy, ZExtInst>, OpTy>>
+m_TruncOrZExtOrSelf(const OpTy &Op) {
+  return m_CombineOr(m_Trunc(Op), m_ZExtOrSelf(Op));
+}
+
+template <typename OpTy>
 inline match_combine_or<CastInst_match<OpTy, SExtInst>, OpTy>
 m_SExtOrSelf(const OpTy &Op) {
   return m_CombineOr(m_SExt(Op), Op);

@@ -698,6 +698,104 @@ define i64 @rotateleft_64_zext_neg_mask_amount(i64 %0, i32 %1) {
   ret i64 %10
 }
 
+define i64 @rotateright_64_zext_double_conversion(i64 %x, i32 %y) {
+; CHECK-LABEL: @rotateright_64_zext_double_conversion(
+; CHECK-NEXT:    [[Z:%.*]] = zext nneg i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[OR:%.*]] = call i64 @llvm.fshr.i64(i64 [[X:%.*]], i64 [[X]], i64 [[Z]])
+; CHECK-NEXT:    ret i64 [[OR]]
+;
+  %z = zext i32 %y to i64
+  %neg = sub nsw i32 0, %y
+  %and2 = and i32 %neg, 63
+  %conv = zext i32 %and2 to i64
+  %shl = shl i64 %x, %conv
+  %shr = lshr i64 %x, %z
+  %or = or i64 %shr, %shl
+  ret i64 %or
+}
+
+define i32 @rotateright_32_trunc_early(i32 %x, i64 %y) {
+; CHECK-LABEL: @rotateright_32_trunc_early(
+; CHECK-NEXT:    [[Z:%.*]] = trunc i64 [[Y:%.*]] to i32
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshr.i32(i32 [[X:%.*]], i32 [[X]], i32 [[Z]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %z = trunc i64 %y to i32
+  %neg = sub nsw i32 0, %z
+  %and2 = and i32 %neg, 31
+  %shl = shl i32 %x, %and2
+  %shr = lshr i32 %x, %z
+  %or = or i32 %shr, %shl
+  ret i32 %or
+}
+
+define i32 @rotateright_32_trunc_neg_mask_amount(i32 %x, i64 %y) {
+; CHECK-LABEL: @rotateright_32_trunc_neg_mask_amount(
+; CHECK-NEXT:    [[Z:%.*]] = trunc i64 [[Y:%.*]] to i32
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshr.i32(i32 [[X:%.*]], i32 [[X]], i32 [[Z]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %z = trunc i64 %y to i32
+  %neg = sub  i64 0, %y
+  %and2 = and i64 %neg, 31
+  %conv = trunc i64 %and2 to i32
+  %shl = shl i32 %x, %conv
+  %shr = lshr i32 %x, %z
+  %or = or i32 %shr, %shl
+  ret i32 %or
+}
+
+; restrict the shift amount before rotating
+
+define i32 @rotateleft_32_restricted_shamt(i32 %x, i32 %shAmt) {
+; CHECK-LABEL: @rotateleft_32_restricted_shamt(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHAMT:%.*]], 30
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[AND]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %and = and i32 %shAmt, 30
+  %shl = shl i32 %x, %and
+  %sub = sub i32 0, %and
+  %shr = lshr i32 %x, %sub
+  %or = or i32 %shl, %shr
+  ret i32 %or
+}
+
+; unncessarily large and masks
+
+define i32 @rotateleft_32_non_restricted_shamt(i32 %x, i32 %t) {
+; CHECK-LABEL: @rotateleft_32_non_restricted_shamt(
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[T:%.*]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %and = and i32 %t, 31
+  %shl = shl i32 %x, %and
+  %sub = sub nsw i32 0, %and
+  %and2 = and i32 %sub, 31
+  %shr = lshr i32 %x, %and2
+  %or = or i32 %shl, %shr
+  ret i32 %or
+}
+
+; negative test - right and mask is too small (should be >=31)
+
+define i32 @rotateleft_32_incorrect_right_mask(i32 %x, i32  %t) {
+; CHECK-LABEL: @rotateleft_32_incorrect_right_mask(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[T:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[T]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], 30
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], [[AND]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], [[SHR]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shl = shl i32 %x, %t
+  %sub = sub nsw i32 0, %t
+  %and = and i32 %sub, 30
+  %shr = lshr i32 %x, %and
+  %or = or i32 %shl, %shr
+  ret i32 %or
+}
+
 ; Non-power-of-2 types. This could be transformed, but it's not a typical rotate pattern.
 
 define i9 @rotateleft_9_neg_mask_wide_amount_commute(i9 %v, i33 %shamt) {
@@ -1086,3 +1184,42 @@ define i32 @not_rotl_i32_add_less(i32 %x, i32 %y) {
   %r = add i32 %shr, %shl
   ret i32 %r
 }
+
+; multi-use tests
+define i32 @rotateleft_32_use_zext(i32 %x, i16 %shAmt) {
+; CHECK-LABEL: @rotateleft_32_use_zext(
+; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[SHAMT:%.*]] to i32
+; CHECK-NEXT:    call void @use(i32 [[CONV]])
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[CONV]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %conv = zext i16 %shAmt to i32
+  call void @use(i32 %conv)
+  %shl = shl i32 %x, %conv
+  %sub = sub i32 0, %conv
+  %shr = lshr i32 %x, %sub
+  %or = or i32 %shl, %shr
+  ret i32 %or
+}
+
+define i64 @rotateleft_64_use_and(i64 %x, i32 %y) {
+; CHECK-LABEL: @rotateleft_64_use_and(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], 63
+; CHECK-NEXT:    [[Z:%.*]] = zext nneg i32 [[AND]] to i64
+; CHECK-NEXT:    call void @use(i64 [[Z]])
+; CHECK-NEXT:    [[OR:%.*]] = call i64 @llvm.fshr.i64(i64 [[X:%.*]], i64 [[X]], i64 [[Z]])
+; CHECK-NEXT:    ret i64 [[OR]]
+;
+  %and = and i32 %y, 63
+  %z = zext i32 %and to i64
+  call void @use(i64 %z)
+  %neg = sub nsw i32 0, %y
+  %and2 = and i32 %neg, 63
+  %conv = zext i32 %and2 to i64
+  %shl = shl i64 %x, %conv
+  %shr = lshr i64 %x, %z
+  %or = or i64 %shr, %shl
+  ret i64 %or
+}
+
+declare void @use(i32)
