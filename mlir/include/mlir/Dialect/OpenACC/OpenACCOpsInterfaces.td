@@ -135,6 +135,14 @@ def OffloadRegionOpInterface : OpInterface<"OffloadRegionOpInterface"> {
     their regions will be extracted and compiled separately (e.g., as
     device kernels or outlined functions).
   }];
+
+  let methods = [
+    InterfaceMethod<"Get the offload region", "::mlir::Region&",
+      "getOffloadRegion",
+      (ins), [{
+        return $_op.getRegion();
+      }]>,
+  ];
 }
 
 #endif // OPENACC_OPS_INTERFACES

@@ -803,6 +803,9 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
   case tok::annot_pragma_attribute:
     HandlePragmaAttribute();
     return nullptr;
+  case tok::annot_pragma_export:
+    HandlePragmaExport();
+    return nullptr;
   case tok::semi:
     // Either a C++11 empty-declaration or attribute-declaration.
     SingleDecl =
@@ -1185,7 +1188,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // declaration-specifiers are completely optional in the grammar.
   if (getLangOpts().isImplicitIntRequired() && D.getDeclSpec().isEmpty()) {
     Diag(D.getIdentifierLoc(), diag::warn_missing_type_specifier)
-        << D.getDeclSpec().getSourceRange();
+        << D.getDeclSpec().getSourceRange()
+        << FixItHint::CreateInsertion(D.getDeclSpec().getBeginLoc(), "int ");
     const char *PrevSpec;
     unsigned DiagID;
     const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();

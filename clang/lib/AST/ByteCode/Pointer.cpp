@@ -521,7 +521,7 @@ void Pointer::startLifetime() const {
       IM.setInitMap(new InitMap(Desc->getNumElems(), IM.allInitialized()));
 
     IM->startElementLifetime(getIndex());
-    assert(this->getLifetime() == Lifetime::Started);
+    assert(isArrayRoot() || (this->getLifetime() == Lifetime::Started));
     return;
   }
 
@@ -541,7 +541,7 @@ void Pointer::endLifetime() const {
       IM.setInitMap(new InitMap(Desc->getNumElems(), IM.allInitialized()));
 
     IM->endElementLifetime(getIndex());
-    assert(this->getLifetime() == Lifetime::Ended);
+    assert(isArrayRoot() || (this->getLifetime() == Lifetime::Ended));
     return;
   }
 
@@ -937,6 +937,10 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
     llvm_unreachable("invalid value to return");
   };
 
+  // Can't return functions as rvalues.
+  if (ResultType->isFunctionType())
+    return std::nullopt;
+
   // Invalid to read from.
   if (isDummy() || !isLive() || isPastEnd())
     return std::nullopt;
@@ -947,6 +951,8 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
   // Just load primitive types.
   if (OptPrimType T = Ctx.classify(ResultType)) {
+    if (!canDeref(*T))
+      return std::nullopt;
     TYPE_SWITCH(*T, return this->deref<T>().toAPValue(ASTCtx));
   }
 

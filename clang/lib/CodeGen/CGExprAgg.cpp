@@ -38,10 +38,6 @@ using namespace CodeGen;
 //                        Aggregate Expression Emitter
 //===----------------------------------------------------------------------===//
 
-namespace llvm {
-extern cl::opt<bool> EnableSingleByteCoverage;
-} // namespace llvm
-
 namespace {
 class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
   CodeGenFunction &CGF;
@@ -138,7 +134,7 @@ public:
 
     if (llvm::Value *Result = ConstantEmitter(CGF).tryEmitConstantExpr(E)) {
       CGF.CreateCoercedStore(
-          Result, Dest.getAddress(),
+          Result, E->getType(), Dest.getAddress(),
           llvm::TypeSize::getFixed(
               Dest.getPreferredSize(CGF.getContext(), E->getType())
                   .getQuantity()),
@@ -1374,10 +1370,7 @@ void AggExprEmitter::VisitAbstractConditionalOperator(
 
   eval.begin(CGF);
   CGF.EmitBlock(LHSBlock);
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(E->getTrueExpr());
-  else
-    CGF.incrementProfileCounter(E);
+  CGF.incrementProfileCounter(CGF.UseExecPath, E);
   Visit(E->getTrueExpr());
   eval.end(CGF);
 
@@ -1392,8 +1385,7 @@ void AggExprEmitter::VisitAbstractConditionalOperator(
 
   eval.begin(CGF);
   CGF.EmitBlock(RHSBlock);
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(E->getFalseExpr());
+  CGF.incrementProfileCounter(CGF.UseSkipPath, E);
   Visit(E->getFalseExpr());
   eval.end(CGF);
 
@@ -1402,8 +1394,6 @@ void AggExprEmitter::VisitAbstractConditionalOperator(
                     E->getType());
 
   CGF.EmitBlock(ContBlock);
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(E);
 }
 
 void AggExprEmitter::VisitChooseExpr(const ChooseExpr *CE) {
@@ -2344,6 +2334,7 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
 
   auto *Inst = Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, isVolatile);
   addInstToCurrentSourceAtom(Inst, nullptr);
+  emitPFPPostCopyUpdates(DestPtr, SrcPtr, Ty);
 
   // Determine the metadata to describe the position of any padding in this
   // memcpy, as well as the TBAA tags for the members of the struct, in case

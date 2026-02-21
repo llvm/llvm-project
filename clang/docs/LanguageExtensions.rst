@@ -842,20 +842,20 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_max(T x, T y)          return x or y, whichever is larger                                     integer and floating point types
                                                 For floating point types, follows semantics of maxNum
                                                 in IEEE 754-2008. See `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_min(T x, T y)          return x or y, whichever is smaller                                    integer and floating point types
                                                 For floating point types, follows semantics of minNum
                                                 in IEEE 754-2008. See `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_maxnum(T x, T y)       return x or y, whichever is larger. Follows IEEE 754-2008              floating point types
                                                 semantics (maxNum) with +0.0>-0.0. See `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_minnum(T x, T y)       return x or y, whichever is smaller. Follows IEEE 754-2008             floating point types
                                                 semantics (minNum) with +0.0>-0.0. See `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_add_sat(T x, T y)      return the sum of x and y, clamped to the range of                     integer types
                                                 representable values for the signed/unsigned integer type.
@@ -863,19 +863,19 @@ of different sizes and signs is forbidden in binary and ternary builtins.
                                                 representable values for the signed/unsigned integer type.
  T __builtin_elementwise_maximum(T x, T y)      return x or y, whichever is larger. Follows IEEE 754-2019              floating point types
                                                 semantics, see `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_minimum(T x, T y)      return x or y, whichever is smaller. Follows IEEE 754-2019             floating point types
                                                 semantics, see `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_maximumnum(T x, T y)   return x or y, whichever is larger. Follows IEEE 754-2019              floating point types
                                                 semantics, see `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_minimumnum(T x, T y)   return x or y, whichever is smaller. Follows IEEE 754-2019             floating point types
                                                 semantics, see `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
 T __builtin_elementwise_fshl(T x, T y, T z)     perform a funnel shift left. Concatenate x and y (x is the most        integer types
                                                 significant bits of the wide value), the combined value is shifted
@@ -940,11 +940,11 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
  ET __builtin_reduce_xor(VT a)           ^                                                                      integer types
  ET __builtin_reduce_maximum(VT a)       return the largest element of the vector. Follows IEEE 754-2019        floating point types
                                          semantics, see `LangRef
-                                         <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                         <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                          for the comparison.
  ET __builtin_reduce_minimum(VT a)       return the smallest element of the vector. Follows IEEE 754-2019       floating point types
                                          semantics, see `LangRef
-                                         <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                         <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                          for the comparison.
 ======================================= ====================================================================== ==================================
 
@@ -1192,6 +1192,177 @@ certain library facilities with ``_Float16``; for example, there is no ``printf`
 specifier for ``_Float16``, and (unlike ``float``) it will not be implicitly promoted to
 ``double`` when passed to ``printf``, so the programmer must explicitly cast it to
 ``double`` before using it with an ``%f`` or similar specifier.
+
+Pragmas
+=======
+
+#pragma export
+--------------
+
+Clang supports the export pragma used to indicate an
+external symbol is to be exported from the shared library being built.  The
+syntax for the pragma is:
+
+.. code-block:: c++
+
+  #pragma export (name)
+
+where ``name`` is the name of the external function or variable to be
+exported.  The symbol needs to have external linkage.  The pragma may appear
+before or after the declaration of ``name``, but must precede the
+definition.  The pragma must also appear at file scope.  If ``name`` is not
+defined, the pragma will have no effect.  The pragma needs to be specified
+in the same translation unit as ``name`` is defined.
+
+The pragma has the same effect as adding ``__attribute__((visibility("default")))``
+to the declaration of ``name``.
+
+In C++, the function being exported must be declared as ``extern "C"``.  If the
+function has overloads, the pragma only applies to the overload with ``extern "C"``
+linkage.  For example:
+
+.. code-block:: c++
+
+  #pragma export(func)
+  int func(double) { return 0; }
+  extern "C" int func(int) { return 4;}
+
+In the code above the pragma will export ``func(int)`` but not ``func(double)``.
+
+If none of the overloads are declared with ``extern "C"`` a warning will be
+generated saying the pragma didn't resolve to a declaration.  For example:
+
+.. code-block:: c++
+
+  #pragma export(func)
+  int func(double) { return 0; } // warning: failed to resolve '#pragma export' to a declaration
+
+Overflow behavior types
+=======================
+
+Clang provides an extension that allows developers to annotate integer types
+with explicit overflow behavior. This enables fine-grained control over whether
+arithmetic operations should wrap on overflow (with two's complement semantics)
+or be checked for overflow (trapping or reporting via sanitizers).
+
+This feature is experimental and must be enabled with the ``-cc1`` option
+``-fexperimental-overflow-behavior-types``.
+
+Query for this feature with ``__has_extension(overflow_behavior_types)``.
+
+Syntax
+------
+
+Overflow behavior can be specified using either attribute syntax or keyword
+syntax:
+
+**Attribute syntax:**
+
+.. code-block:: c
+
+  typedef int __attribute__((overflow_behavior(wrap))) wrapping_int;
+  typedef int __attribute__((overflow_behavior(trap))) checked_int;
+
+**Keyword syntax:**
+
+.. code-block:: c
+
+  typedef int __ob_wrap wrapping_int;
+  typedef int __ob_trap checked_int;
+
+The annotation can also be applied directly to variable declarations:
+
+.. code-block:: c
+
+  int __ob_wrap counter = 0;
+  unsigned __ob_trap safe_index = 0;
+
+Semantics
+---------
+
+**wrap behavior:**
+
+When an integer type is annotated with ``wrap`` (or ``__ob_wrap``), arithmetic
+operations on values of that type use two's complement wrapping semantics on
+overflow. This behavior is well-defined regardless of signedness. Compilers
+must not optimize based on the assumption that overflow does not occur.
+
+**trap behavior:**
+
+When an integer type is annotated with ``trap`` (or ``__ob_trap``), arithmetic
+operations on values of that type are checked for overflow. If overflow occurs,
+the program traps or reports via sanitizers (depending on compiler settings).
+
+Integer Promotions and Conversions
+----------------------------------
+
+Overflow behavior types follow standard C integer promotion and conversion
+rules. The overflow behavior annotation is preserved through implicit
+promotions and conversions.
+
+**Standard promotion rules apply:**
+
+Integer literals without a suffix have type ``int`` (or a larger type if the
+value requires it), following normal C rules. When such a literal is used in
+an operation with an overflow behavior type, standard promotion rules determine
+the result type, and the overflow behavior is propagated:
+
+.. code-block:: c
+
+  typedef int __ob_wrap wrap_int;
+  wrap_int x = 100;
+  wrap_int y = x + 1;  // 1 is promoted; result is __ob_wrap int
+
+**Combining different overflow behaviors:**
+
+When operands have different overflow behaviors, ``trap`` takes precedence
+over ``wrap``:
+
+.. code-block:: c
+
+  typedef int __ob_wrap wrap_int;
+  typedef int __ob_trap trap_int;
+  wrap_int a = 1;
+  trap_int b = 2;
+  auto c = a + b;  // Result is __ob_trap int (trap dominates)
+
+**Conversion to standard types:**
+
+When an overflow behavior type is converted to a standard integer type (without
+an overflow behavior annotation), the overflow behavior is discarded. Compilers
+may warn about this:
+
+.. code-block:: c
+
+  typedef int __ob_wrap wrap_int;
+  wrap_int w = 42;
+  int i = w;  // Warning: discards overflow behavior
+
+Interaction with Compiler Flags
+-------------------------------
+
+Overflow behavior annotations take precedence over global compiler flags:
+
+- A ``wrap`` type wraps on overflow even when ``-ftrapv`` is enabled.
+- A ``trap`` type is checked for overflow even when ``-fwrapv`` is enabled.
+
+This allows mixing different overflow behaviors within the same program,
+enabling developers to selectively apply wrapping or checking to specific
+types while using different defaults elsewhere.
+
+Incompatible Assignments
+------------------------
+
+Direct assignment between types with different overflow behaviors (``wrap``
+vs ``trap``) is an error:
+
+.. code-block:: c
+
+  int __ob_wrap w;
+  int __ob_trap t;
+  w = t;  // Error: incompatible overflow behaviors
+
+For more detailed documentation, see :doc:`OverflowBehaviorTypes`.
 
 Messages on ``deprecated`` and ``unavailable`` Attributes
 =========================================================
@@ -2424,6 +2595,50 @@ Clang provides support for Microsoft extensions to support enumerations with no 
 
   typedef enum empty { } A;
 
+Microsoft Anonymous Structs and Unions
+--------------------------------------
+
+Clang provides support for a Microsoft extension that allows use of named struct or union types to
+declare anonymous members inside another struct or union, making their fields directly accessible
+from the enclosing type.
+
+For example, consider the following code:
+
+.. code-block:: c
+
+    struct Inner {
+        int x;
+        int y;
+    };
+
+    struct Outer {
+        struct Inner;  /* Microsoft extension: named anonymous struct member */
+    };
+
+    void f(struct Outer *o) {
+        o->x = 1;      /* accesses x member of anonymous member of type Inner directly */
+        o->y = 1;      /* accesses x member of anonymous member of type Inner directly */
+    }
+
+Without this extension, such declarations generate a warning that the declaration does not
+declare anything, the associated member names are not available for access, and the layout
+of types containing such declarations are affected accordingly.
+
+This extension can be controlled independently of other Microsoft extensions:
+
+* ``-fms-anonymous-structs``
+    Enable named anonymous struct/union support
+
+* ``-fno-ms-anonymous-structs``
+    Disable anonymous struct/union support
+
+This extension is also **implicitly enabled** when either of the following options is used:
+
+* ``-fms-extensions``
+* ``-fms-compatibility``
+
+When multiple controlling options are specified, the last option on the command line takes
+precedence.
 
 Interoperability with C++11 lambdas
 -----------------------------------
@@ -2839,6 +3054,50 @@ between the host and device is known to be compatible.
     global OnlySL *d
   );
   #pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : disable
+
+``__cl_clang_function_scope_local_variables``
+----------------------------------------------
+
+This extension allows declaring variables in the local address space within
+function scope, including non-kernel functions or nested scopes within a kernel,
+using regular OpenCL extension pragma mechanism detailed in `the OpenCL
+Extension Specification, section 1.2
+<https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#extensions-overview>`_.
+
+This relaxes the `Declaration Scopes and Variable Types
+<https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_C.html#_usage_for_declaration_scopes_and_variable_types>`_
+rule that limits local-address-space variable declarations to the outermost
+compound statement inside the body of the kernel function.
+
+To expose static local allocations at kernel scope, targets can either force-
+inline non-kernel functions that declare local memory or pass a kernel-allocated
+local buffer to those functions via an implicit argument.
+
+.. code-block:: c++
+
+  #pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : enable
+  kernel void kernel1(...)
+  {
+    {
+      local float a; // compiled - no diagnostic generated
+    }
+  }
+  void foo()
+  {
+    local float c; // compiled - no diagnostic generated
+  }
+
+  #pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : disable
+  kernel void kernel2(...)
+  {
+    {
+      local float a; // error - variables in the local address space can only be declared in the outermost scope of a kernel function
+    }
+  }
+  void bar()
+  {
+    local float c; // error - non-kernel function variable cannot be declared in local address space
+  }
 
 Remove address space builtin function
 -------------------------------------
@@ -4859,6 +5118,20 @@ The syntax and semantics are similar to GCC-compatible __atomic_* builtins.
 The builtins work with signed and unsigned integers and require to specify memory ordering.
 The return value is the original value that was stored in memory before comparison.
 
+Clang provides two additional atomic builtins with incrementing behavior. These
+builtins perform an unsigned increment or decrement modulo a  wrap-around value.
+
+* ``__atomic_fetch_uinc``
+* ``__atomic_fetch_udec``
+
+See the LLVM IR `atomicrmw <https://llvm.org/docs/LangRef.html#atomicrmw-instruction>`_
+instruction for the complete semantics of uinc_wrap and udec_wrap.
+
+Atomic memory scopes are designed to assist optimizations for systems with
+several levels of memory hierarchy like GPUs. The following memory scopes are
+currently supported:
+
+
 Example:
 
 .. code-block:: c
@@ -4925,18 +5198,6 @@ are identical to the standard GNU / GCC atomic builtins but taking an extra
 memory scope argument. These are designed to be a generic alternative to the
 ``__opencl_atomic_*`` builtin functions for targets that support atomic memory
 scopes.
-
-Clang provides two additional __scoped_atomic builtins:
-
-* ``__scoped_atomic_uinc_wrap``
-* ``__scoped_atomic_udec_wrap``
-
-See LLVM IR `atomicrmw <https://llvm.org/docs/LangRef.html#atomicrmw-instruction>`_
-instruction for the semantics of uinc_wrap and udec_wrap.
-
-Atomic memory scopes are designed to assist optimizations for systems with
-several levels of memory hierarchy like GPUs. The following memory scopes are
-currently supported:
 
 * ``__MEMORY_SCOPE_SYSTEM``
 * ``__MEMORY_SCOPE_DEVICE``

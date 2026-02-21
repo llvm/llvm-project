@@ -289,7 +289,7 @@ public:
   static XCOFF::StorageClass getStorageClassForGlobal(const GlobalValue *GV);
 
   MCSection *
-  getSectionForFunctionDescriptor(const Function *F,
+  getSectionForFunctionDescriptor(const GlobalObject *F,
                                   const TargetMachine &TM) const override;
   MCSection *getSectionForTOCEntry(const MCSymbol *Sym,
                                    const TargetMachine &TM) const override;
@@ -325,12 +325,15 @@ public:
 
   void getModuleMetadata(Module &M) override;
 
+  bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
+                                           const Function &F) const override;
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
   MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
                                       const TargetMachine &TM) const override;
   MCSection *getSectionForLSDA(const Function &F, const MCSymbol &FnSym,
                                const TargetMachine &TM) const override;
+  MCSection *getStaticXtorSection(unsigned Priority) const;
 };
 
 } // end namespace llvm

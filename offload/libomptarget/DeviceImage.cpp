@@ -30,15 +30,21 @@ DeviceImageTy::DeviceImageTy(__tgt_bin_desc &BinaryDesc,
   llvm::StringRef ImageStr(static_cast<char *>(Image.ImageStart),
                            utils::getPtrDiff(Image.ImageEnd, Image.ImageStart));
 
-  auto BinaryOrErr =
+  auto BinariesOrErr =
       llvm::object::OffloadBinary::create(llvm::MemoryBufferRef(ImageStr, ""));
 
-  if (!BinaryOrErr) {
-    consumeError(BinaryOrErr.takeError());
+  if (!BinariesOrErr) {
+    consumeError(BinariesOrErr.takeError());
     return;
   }
 
-  Binary = std::move(*BinaryOrErr);
+  auto &Binaries = *BinariesOrErr;
+  if (Binaries.empty())
+    return;
+
+  // Offload Binary V2 supports multiple images, but in this context we only
+  // expect one image per Offload Binary.
+  Binary = std::move(Binaries[0]);
   void *Begin = const_cast<void *>(
       static_cast<const void *>(Binary->getImage().bytes_begin()));
   void *End = const_cast<void *>(

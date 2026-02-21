@@ -161,3 +161,16 @@ body: |
     MOVM32pm -8, $sp, 16
 
 ...
+--- # CollapseMOVEM_Overlapping_Regs
+#
+# CHECK-LABEL: CollapseMOVEM_Overlapping_Regs
+# CHECK:       movem.l %d1-%d2, (0,%sp)
+# CHECK-NEXT:  movem.l %d2, (-4,%sp)
+name: CollapseMOVEM_Overlapping_Regs
+body: |
+  bb.0:
+    MOVM32pm 0, $sp, 2
+    MOVM32pm 4, $sp, 4
+    MOVM32pm -4, $sp, 4
+
+...

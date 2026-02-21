@@ -309,10 +309,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
 
   IndexFileIn Index;
   auto Action = createStaticIndexingAction(
-      IndexOpts, [&](SymbolSlab S) { Index.Symbols = std::move(S); },
-      [&](RefSlab R) { Index.Refs = std::move(R); },
-      [&](RelationSlab R) { Index.Relations = std::move(R); },
-      [&](IncludeGraph IG) { Index.Sources = std::move(IG); });
+      IndexOpts, [&](IndexFileIn Result) { Index = std::move(Result); });
 
   // We're going to run clang here, and it could potentially crash.
   // We could use CrashRecoveryContext to try to make indexing crashes nonfatal,

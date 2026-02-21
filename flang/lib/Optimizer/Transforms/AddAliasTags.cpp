@@ -213,10 +213,7 @@ public:
   void processFunctionScopes(mlir::func::FuncOp func);
   // For the given fir.declare returns the dominating fir.dummy_scope
   // operation.
-  fir::DummyScopeOp getDeclarationScope(fir::DeclareOp declareOp) const;
-  // For the given fir.declare returns the outermost fir.dummy_scope
-  // in the current function.
-  fir::DummyScopeOp getOutermostScope(fir::DeclareOp declareOp) const;
+  fir::DummyScopeOp getDeclarationScope(fir::DeclareOp declareOp);
   // Returns true, if the given type of a memref of a FirAliasTagOpInterface
   // operation is a descriptor or contains a descriptor
   // (e.g. !fir.ref<!fir.type<Derived{f:!fir.box<!fir.heap<f32>>}>>).
@@ -356,8 +353,9 @@ void PassState::processFunctionScopes(mlir::func::FuncOp func) {
   }
 }
 
-fir::DummyScopeOp
-PassState::getDeclarationScope(fir::DeclareOp declareOp) const {
+// For the given fir.declare returns the dominating fir.dummy_scope
+// operation.
+fir::DummyScopeOp PassState::getDeclarationScope(fir::DeclareOp declareOp) {
   auto func = declareOp->getParentOfType<mlir::func::FuncOp>();
   assert(func && "fir.declare does not have parent func.func");
   auto &scopeOps = sortedScopeOperations.at(func);
@@ -365,15 +363,6 @@ PassState::getDeclarationScope(fir::DeclareOp declareOp) const {
     if (domInfo.dominates(&**II, &*declareOp))
       return *II;
   }
-  return nullptr;
-}
-
-fir::DummyScopeOp PassState::getOutermostScope(fir::DeclareOp declareOp) const {
-  auto func = declareOp->getParentOfType<mlir::func::FuncOp>();
-  assert(func && "fir.declare does not have parent func.func");
-  auto &scopeOps = sortedScopeOperations.at(func);
-  if (!scopeOps.empty())
-    return scopeOps[0];
   return nullptr;
 }
 
@@ -829,15 +818,6 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       name = alloc.getUniqName();
     else
       unknownAllocOp = true;
-
-    if (auto declOp = source.origin.instantiationPoint) {
-      // Use the outermost scope for local allocations,
-      // because using the innermost scope may result
-      // in incorrect TBAA, when calls are inlined in MLIR.
-      auto declareOp = mlir::dyn_cast<fir::DeclareOp>(declOp);
-      assert(declareOp && "Instantiation point must be fir.declare");
-      scopeOp = state.getOutermostScope(declareOp);
-    }
 
     if (unknownAllocOp) {
       LLVM_DEBUG(llvm::dbgs().indent(2)

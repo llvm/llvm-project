@@ -226,8 +226,8 @@ static bool should_show_stop_line_with_ansi(DebuggerSP debugger_sp) {
 
 size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
     uint32_t start_line, uint32_t count, uint32_t curr_line, uint32_t column,
-    const char *current_line_cstr, Stream *s,
-    const SymbolContextList *bp_locs) {
+    const char *current_line_cstr, Stream *s, const SymbolContextList *bp_locs,
+    lldb::LanguageType language_type) {
   if (count == 0)
     return 0;
 
@@ -288,8 +288,8 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
       if (line == curr_line && column)
         columnToHighlight = column - 1;
 
-      size_t this_line_size =
-          last_file_sp->DisplaySourceLines(line, columnToHighlight, 0, 0, s);
+      size_t this_line_size = last_file_sp->DisplaySourceLines(
+          line, columnToHighlight, 0, 0, s, language_type);
       if (column != 0 && line == curr_line &&
           should_show_stop_column_with_caret(debugger_sp)) {
         // Display caret cursor.
@@ -326,8 +326,8 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
 size_t SourceManager::DisplaySourceLinesWithLineNumbers(
     SupportFileNSP support_file_nsp, uint32_t line, uint32_t column,
     uint32_t context_before, uint32_t context_after,
-    const char *current_line_cstr, Stream *s,
-    const SymbolContextList *bp_locs) {
+    const char *current_line_cstr, Stream *s, const SymbolContextList *bp_locs,
+    lldb::LanguageType language_type) {
   assert(support_file_nsp && "SupportFile must be valid");
   FileSP file_sp(GetFile(support_file_nsp));
 
@@ -346,11 +346,13 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbers(
   }
 
   return DisplaySourceLinesWithLineNumbersUsingLastFile(
-      start_line, count, line, column, current_line_cstr, s, bp_locs);
+      start_line, count, line, column, current_line_cstr, s, bp_locs,
+      language_type);
 }
 
 size_t SourceManager::DisplayMoreWithLineNumbers(
-    Stream *s, uint32_t count, bool reverse, const SymbolContextList *bp_locs) {
+    Stream *s, uint32_t count, bool reverse, const SymbolContextList *bp_locs,
+    lldb::LanguageType language_type) {
   // If we get called before anybody has set a default file and line, then try
   // to figure it out here.
   FileSP last_file_sp(GetLastFile());
@@ -383,7 +385,8 @@ size_t SourceManager::DisplayMoreWithLineNumbers(
 
     const uint32_t column = 0;
     return DisplaySourceLinesWithLineNumbersUsingLastFile(
-        m_last_line, m_last_count, UINT32_MAX, column, "", s, bp_locs);
+        m_last_line, m_last_count, UINT32_MAX, column, "", s, bp_locs,
+        language_type);
   }
   return 0;
 }
@@ -673,11 +676,9 @@ bool SourceManager::File::PathRemappingIsStale() const {
   return false;
 }
 
-size_t SourceManager::File::DisplaySourceLines(uint32_t line,
-                                               std::optional<size_t> column,
-                                               uint32_t context_before,
-                                               uint32_t context_after,
-                                               Stream *s) {
+size_t SourceManager::File::DisplaySourceLines(
+    uint32_t line, std::optional<size_t> column, uint32_t context_before,
+    uint32_t context_after, Stream *s, lldb::LanguageType language_type) {
   // Nothing to write if there's no stream.
   if (!s)
     return 0;
@@ -706,7 +707,7 @@ size_t SourceManager::File::DisplaySourceLines(uint32_t line,
       GetSupportFile()->GetSpecOnly().GetPath(/*denormalize*/ false);
   // FIXME: Find a way to get the definitive language this file was written in
   // and pass it to the highlighter.
-  const auto &h = mgr.getHighlighterFor(lldb::eLanguageTypeUnknown, path);
+  const auto &h = mgr.getHighlighterFor(language_type, path);
 
   const uint32_t start_line =
       line <= context_before ? 1 : line - context_before;

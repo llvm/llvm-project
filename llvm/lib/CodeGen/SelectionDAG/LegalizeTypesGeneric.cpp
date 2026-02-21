@@ -49,7 +49,6 @@ void DAGTypeLegalizer::ExpandRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi) {
     case TargetLowering::TypeLegal:
     case TargetLowering::TypePromoteInteger:
       break;
-    case TargetLowering::TypePromoteFloat:
     case TargetLowering::TypeSoftPromoteHalf:
       llvm_unreachable("Bitcast of a promotion-needing float should never need"
                        "expansion");
@@ -598,6 +597,16 @@ void DAGTypeLegalizer::SplitVecRes_AssertZext(SDNode *N, SDValue &Lo,
 
   Lo = DAG.getNode(ISD::AssertZext, dl, L.getValueType(), L, N->getOperand(1));
   Hi = DAG.getNode(ISD::AssertZext, dl, H.getValueType(), H, N->getOperand(1));
+}
+
+void DAGTypeLegalizer::SplitVecRes_AssertSext(SDNode *N, SDValue &Lo,
+                                              SDValue &Hi) {
+  SDValue L, H;
+  SDLoc dl(N);
+  GetSplitOp(N->getOperand(0), L, H);
+
+  Lo = DAG.getNode(ISD::AssertSext, dl, L.getValueType(), L, N->getOperand(1));
+  Hi = DAG.getNode(ISD::AssertSext, dl, H.getValueType(), H, N->getOperand(1));
 }
 
 void DAGTypeLegalizer::SplitRes_FREEZE(SDNode *N, SDValue &Lo, SDValue &Hi) {

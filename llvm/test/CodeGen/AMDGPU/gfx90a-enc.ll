@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX9,GFX908 %s
 
-; Make sure flag is ignored
-; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -amdgpu-mfma-vgpr-form=1 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX9,GFX908 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -show-mc-encoding < %s | FileCheck -check-prefixes=GFX9,GFX90A %s
+; Make sure flag is ignored for gfx908
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -amdgpu-mfma-vgpr-form=0 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX9,GFX908 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -amdgpu-mfma-vgpr-form=0 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX9,GFX90A %s
 
 ; GFX9-DAG:   buffer_load_format_xyzw v[{{[0-9:]+}}], v{{[0-9]+}}, s[{{[0-9:]+}}], 0 idxen ; encoding:
 ; GFX9-DAG:   buffer_load_format_d16_xyzw v[{{[0-9:]+}}], v{{[0-9]+}}, s[{{[0-9:]+}}], 0 idxen ; encoding:

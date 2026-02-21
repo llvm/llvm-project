@@ -12,20 +12,12 @@
 #include <__atomic/atomic_waitable_traits.h>
 #include <__atomic/contention_t.h>
 #include <__atomic/memory_order.h>
-#include <__atomic/to_gcc_order.h>
 #include <__chrono/duration.h>
 #include <__config>
 #include <__memory/addressof.h>
 #include <__thread/poll_with_backoff.h>
 #include <__thread/timed_backoff_policy.h>
-#include <__type_traits/conjunction.h>
 #include <__type_traits/decay.h>
-#include <__type_traits/has_unique_object_representation.h>
-#include <__type_traits/invoke.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/is_trivially_copyable.h>
-#include <__type_traits/void_t.h>
-#include <__utility/declval.h>
 #include <cstdint>
 #include <cstring>
 

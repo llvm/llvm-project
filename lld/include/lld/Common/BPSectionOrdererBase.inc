@@ -161,7 +161,7 @@ auto BPOrderer<D>::computeOrder(
     sectionToIdx.try_emplace(isec, i);
 
   BPFunctionNode::UtilityNodeT maxUN = 0;
-  DenseMap<unsigned, UtilityNodes> startupSectionIdxUNs;
+  MapVector<unsigned, UtilityNodes> startupSectionIdxUNs;
   // Used to define the initial order for startup functions.
   DenseMap<unsigned, size_t> sectionIdxToTimestamp;
   std::unique_ptr<InstrProfReader> reader;
@@ -177,7 +177,7 @@ auto BPOrderer<D>::computeOrder(
     }
     auto &traces = reader->getTemporalProfTraces();
 
-    DenseMap<unsigned, BPFunctionNode::UtilityNodeT> sectionIdxToFirstUN;
+    MapVector<unsigned, BPFunctionNode::UtilityNodeT> sectionIdxToFirstUN;
     for (size_t traceIdx = 0; traceIdx < traces.size(); traceIdx++) {
       uint64_t currentSize = 0, cutoffSize = 1;
       size_t cutoffTimestamp = 1;
@@ -224,7 +224,7 @@ auto BPOrderer<D>::computeOrder(
   SmallVector<unsigned> sectionIdxsForFunctionCompression,
       sectionIdxsForDataCompression;
   for (unsigned sectionIdx = 0; sectionIdx < sections.size(); sectionIdx++) {
-    if (startupSectionIdxUNs.count(sectionIdx))
+    if (startupSectionIdxUNs.contains(sectionIdx))
       continue;
     const auto *isec = sections[sectionIdx];
     if (D::isCodeSection(*isec)) {

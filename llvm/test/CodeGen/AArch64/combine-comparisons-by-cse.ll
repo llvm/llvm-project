@@ -949,6 +949,75 @@ return:                                           ; preds = %if.end, %land.lhs.t
   ret i32 %retval.0
 }
 
+; Negative test: cross-block with different registers should not be optimized.
+; Identical to combine_gt_ge_10, but lor.lhs.false compares @b instead of @a.
+; (a > 10 && b == c) || (b >= 10 && b == d)
+define i32 @combine_gt_ge_different_regs() #0 {
+; CHECK-LABEL: combine_gt_ge_different_regs:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    adrp x8, :got:a
+; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
+; CHECK-NEXT:    ldr w10, [x8]
+; CHECK-NEXT:    adrp x8, :got:b
+; CHECK-NEXT:    ldr x8, [x8, :got_lo12:b]
+; CHECK-NEXT:    cmp w10, #11
+; CHECK-NEXT:    ldr w9, [x8]
+; CHECK-NEXT:    b.lt .LBB15_3
+; CHECK-NEXT:  // %bb.1: // %land.lhs.true
+; CHECK-NEXT:    adrp x10, :got:c
+; CHECK-NEXT:    ldr x10, [x10, :got_lo12:c]
+; CHECK-NEXT:    ldr w10, [x10]
+; CHECK-NEXT:    cmp w9, w10
+; CHECK-NEXT:    b.ne .LBB15_4
+; CHECK-NEXT:  // %bb.2:
+; CHECK-NEXT:    mov w0, #1 // =0x1
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB15_3: // %lor.lhs.false
+; CHECK-NEXT:    cmp w9, #10
+; CHECK-NEXT:    b.lt .LBB15_6
+; CHECK-NEXT:  .LBB15_4: // %land.lhs.true3
+; CHECK-NEXT:    adrp x9, :got:d
+; CHECK-NEXT:    ldr x9, [x9, :got_lo12:d]
+; CHECK-NEXT:    ldr w8, [x8]
+; CHECK-NEXT:    ldr w9, [x9]
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    b.ne .LBB15_6
+; CHECK-NEXT:  // %bb.5:
+; CHECK-NEXT:    mov w0, #1 // =0x1
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB15_6: // %if.end
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i32, ptr @a, align 4
+  %cmp = icmp sgt i32 %0, 10
+  br i1 %cmp, label %land.lhs.true, label %lor.lhs.false
+
+land.lhs.true:                                    ; preds = %entry
+  %1 = load i32, ptr @b, align 4
+  %2 = load i32, ptr @c, align 4
+  %cmp1 = icmp eq i32 %1, %2
+  br i1 %cmp1, label %return, label %land.lhs.true3
+
+lor.lhs.false:                                    ; preds = %entry
+  %3 = load i32, ptr @b, align 4
+  %cmp2 = icmp sgt i32 %3, 9
+  br i1 %cmp2, label %land.lhs.true3, label %if.end
+
+land.lhs.true3:                                   ; preds = %lor.lhs.false, %land.lhs.true
+  %4 = load i32, ptr @b, align 4
+  %5 = load i32, ptr @d, align 4
+  %cmp4 = icmp eq i32 %4, %5
+  br i1 %cmp4, label %return, label %if.end
+
+if.end:                                           ; preds = %land.lhs.true3, %lor.lhs.false
+  br label %return
+
+return:                                           ; preds = %if.end, %land.lhs.true3, %land.lhs.true
+  %retval.0 = phi i32 [ 0, %if.end ], [ 1, %land.lhs.true3 ], [ 1, %land.lhs.true ]
+  ret i32 %retval.0
+}
+
 declare i32 @zoo(i32)
 
 declare double @yoo(i32)

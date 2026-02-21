@@ -671,7 +671,7 @@ TEST_F(OpenMPDecompositionTest, ThreadLimit1) {
   omp::Object x{"x"};
 
   omp::List<omp::Clause> Clauses{
-      {OMPC_thread_limit, omp::clause::ThreadLimit{omp::ExprTy{}}},
+      {OMPC_thread_limit, omp::clause::ThreadLimit{{omp::ExprTy{}}}},
   };
 
   omp::ConstructDecomposition Dec(AnyVersion, Helper,

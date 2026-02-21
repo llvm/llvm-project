@@ -165,6 +165,32 @@ MLIR_CAPI_EXPORTED int64_t mlirIntegerAttrGetValueSInt(MlirAttribute attr);
 /// is of unsigned type and fits into an unsigned 64-bit integer.
 MLIR_CAPI_EXPORTED uint64_t mlirIntegerAttrGetValueUInt(MlirAttribute attr);
 
+/// Returns the bit width of the integer attribute's underlying APInt value.
+/// This is useful for determining the size of the integer, especially for
+/// values larger than 64 bits.
+MLIR_CAPI_EXPORTED unsigned mlirIntegerAttrGetValueBitWidth(MlirAttribute attr);
+
+/// Returns the number of 64-bit words that make up the integer attribute's
+/// underlying APInt value. For integers <= 64 bits, this returns 1.
+MLIR_CAPI_EXPORTED unsigned mlirIntegerAttrGetValueNumWords(MlirAttribute attr);
+
+/// Copies the 64-bit words making up the integer attribute's APInt value into
+/// the provided buffer. The buffer must have space for at least
+/// mlirIntegerAttrGetValueNumWords(attr) elements. Words are stored in
+/// little-endian order (least significant word first). The sign information
+/// is not encoded in the words themselves; use the type's signedness to
+/// interpret the value correctly.
+MLIR_CAPI_EXPORTED void mlirIntegerAttrGetValueWords(MlirAttribute attr,
+                                                     uint64_t *words);
+
+/// Creates an integer attribute of the given type from an array of 64-bit
+/// words. This is useful for creating integer attributes with values with
+/// widths larger than 64 bits. Words are in little-endian order (least
+/// significant word first). The number of words must match the bit width of the
+/// type: numWords = ceil(bitWidth / 64).
+MLIR_CAPI_EXPORTED MlirAttribute mlirIntegerAttrGetFromWords(
+    MlirType type, unsigned numWords, const uint64_t *words);
+
 /// Returns the typeID of an Integer attribute.
 MLIR_CAPI_EXPORTED MlirTypeID mlirIntegerAttrGetTypeID(void);
 

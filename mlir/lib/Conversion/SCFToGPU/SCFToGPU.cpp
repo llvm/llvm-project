@@ -705,7 +705,7 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       // Ensure reduction region is isolated from above.
       llvm::SetVector<Value> externalValues;
       getUsedValuesDefinedAbove(reduceOp.getRegion(0), externalValues);
-      if (externalValues.size())
+      if (!externalValues.empty())
         return failure();
       // Replace by gpu.all_reduce.
       auto gpuRedOp = gpu::AllReduceOp::create(rewriter, loc, newValue);

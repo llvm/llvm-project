@@ -700,23 +700,15 @@ define <16 x i8> @insert4_v16i8(<8 x i8> %a, <16 x i8> %b, <8 x i8> %c, <16 x i8
 define <16 x i16> @test(<2 x double> %l213, <2 x double> %l231, <2 x double> %l249, <2 x double> %l267, <2 x double> %l285, <2 x double> %l303, <2 x double> %l321, <2 x double> %l339) {
 ; CHECK-LABEL: test:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintm v0.2d, v0.2d
-; CHECK-NEXT:    frintm v4.2d, v4.2d
+; CHECK-NEXT:    fcvtms v0.2d, v0.2d
+; CHECK-NEXT:    fcvtms v4.2d, v4.2d
 ; CHECK-NEXT:    adrp x8, .LCPI16_0
-; CHECK-NEXT:    frintm v1.2d, v1.2d
-; CHECK-NEXT:    frintm v5.2d, v5.2d
-; CHECK-NEXT:    frintm v2.2d, v2.2d
-; CHECK-NEXT:    frintm v6.2d, v6.2d
-; CHECK-NEXT:    frintm v3.2d, v3.2d
-; CHECK-NEXT:    frintm v7.2d, v7.2d
-; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-NEXT:    fcvtzs v4.2d, v4.2d
-; CHECK-NEXT:    fcvtzs v1.2d, v1.2d
-; CHECK-NEXT:    fcvtzs v5.2d, v5.2d
-; CHECK-NEXT:    fcvtzs v2.2d, v2.2d
-; CHECK-NEXT:    fcvtzs v6.2d, v6.2d
-; CHECK-NEXT:    fcvtzs v3.2d, v3.2d
-; CHECK-NEXT:    fcvtzs v7.2d, v7.2d
+; CHECK-NEXT:    fcvtms v1.2d, v1.2d
+; CHECK-NEXT:    fcvtms v5.2d, v5.2d
+; CHECK-NEXT:    fcvtms v2.2d, v2.2d
+; CHECK-NEXT:    fcvtms v6.2d, v6.2d
+; CHECK-NEXT:    fcvtms v3.2d, v3.2d
+; CHECK-NEXT:    fcvtms v7.2d, v7.2d
 ; CHECK-NEXT:    xtn v16.2s, v0.2d
 ; CHECK-NEXT:    xtn v20.2s, v4.2d
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI16_0]

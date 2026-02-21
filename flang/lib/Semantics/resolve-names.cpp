@@ -14,6 +14,7 @@
 #include "resolve-directives.h"
 #include "resolve-names-utils.h"
 #include "rewrite-parse-tree.h"
+#include "flang/Common/Fortran-consts.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/restorer.h"
 #include "flang/Common/visit.h"
@@ -445,6 +446,7 @@ private:
 // 6. POINTER(p,x(10))
 class ArraySpecVisitor : public virtual BaseVisitor {
 public:
+  void Post(const parser::RankClause &);
   void Post(const parser::ArraySpec &);
   void Post(const parser::ComponentArraySpec &);
   void Post(const parser::CoarraySpec &);
@@ -1567,6 +1569,8 @@ void AccVisitor::Post(const parser::OpenACCCombinedConstruct &x) { PopScope(); }
 class OmpVisitor : public virtual DeclarationVisitor {
 public:
   void AddOmpSourceRange(const parser::CharBlock &);
+  void PushScopeWithSource(
+      Scope::Kind kind, parser::CharBlock source, Symbol *symbol = nullptr);
 
   static bool NeedsScope(const parser::OmpBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
@@ -1590,8 +1594,8 @@ public:
     Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
 
-  bool Pre(const parser::OpenMPLoopConstruct &) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
+  bool Pre(const parser::OpenMPLoopConstruct &x) {
+    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
     return true;
   }
   void Post(const parser::OpenMPLoopConstruct &) { PopScope(); }
@@ -1614,6 +1618,20 @@ public:
   bool Pre(const parser::OmpStylizedInstance &);
   void Post(const parser::OmpStylizedInstance &);
 
+  void Post(const parser::OmpObjectList &x) {
+    // The objects from OMP clauses should have already been resolved,
+    // except common blocks (the ResolveNamesVisitor does not visit
+    // parser::Name, those are dealt with as members of other structures).
+    // Iterate over elements of x, and resolve any common blocks that
+    // are still unresolved.
+    for (const parser::OmpObject &obj : x.v) {
+      auto *name{std::get_if<parser::Name>(&obj.u)};
+      if (name && !name->symbol) {
+        Resolve(*name, currScope().MakeCommonBlock(name->source, name->source));
+      }
+    }
+  }
+
   bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
     AddOmpSourceRange(x.source);
     return true;
@@ -1635,8 +1653,8 @@ public:
   }
   bool Pre(const parser::OmpMapClause &);
 
-  bool Pre(const parser::OpenMPSectionsConstruct &) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
+  bool Pre(const parser::OpenMPSectionsConstruct &x) {
+    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
     return true;
   }
   void Post(const parser::OpenMPSectionsConstruct &) { PopScope(); }
@@ -1742,7 +1760,7 @@ public:
   }
   bool Pre(const parser::OmpClause &x) {
     if (NeedsScope(x)) {
-      PushScope(Scope::Kind::OtherClause, nullptr);
+      PushScopeWithSource(Scope::Kind::OtherClause, x.source);
     }
     return true;
   }
@@ -1811,9 +1829,15 @@ void OmpVisitor::AddOmpSourceRange(const parser::CharBlock &source) {
   currScope().AddSourceRange(source);
 }
 
+void OmpVisitor::PushScopeWithSource(
+    Scope::Kind kind, parser::CharBlock source, Symbol *symbol) {
+  PushScope(kind, symbol);
+  currScope().AddSourceRange(source);
+}
+
 bool OmpVisitor::Pre(const parser::OmpBlockConstruct &x) {
   if (NeedsScope(x)) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
+    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
   }
   return true;
 }
@@ -2722,6 +2746,27 @@ bool ImplicitRulesVisitor::HandleImplicitNone(
 }
 
 // ArraySpecVisitor implementation
+
+void ArraySpecVisitor::Post(const parser::RankClause &x) {
+  // RANK(n) is equivalent to DIMENSION with n deferred shape specs (:)
+  CHECK(arraySpec_.empty());
+
+  // Evaluate the rank value (must be a constant expression)
+  if (auto rank{EvaluateInt64(context(), x.v)}) {
+    if (*rank < 0 || *rank > common::maxRank) {
+      Say(currStmtSource().value(),
+          "RANK value (%lld) must be between 0 and %d"_err_en_US,
+          static_cast<long long>(*rank), common::maxRank);
+    } else {
+      // Create n deferred shape specs (:)
+      for (int i = 0; i < *rank; ++i) {
+        arraySpec_.push_back(ShapeSpec::MakeDeferred());
+      }
+    }
+  } else {
+    Say("RANK value must be a constant expression"_err_en_US);
+  }
+}
 
 void ArraySpecVisitor::Post(const parser::ArraySpec &x) {
   CHECK(arraySpec_.empty());
@@ -5106,7 +5151,7 @@ void SubprogramVisitor::CreateEntry(
   if (subpFlag == Symbol::Flag::Subroutine || distinctResultName) {
     Symbol &assoc{MakeSymbol(entryName.source)};
     assoc.set_details(HostAssocDetails{*entrySymbol});
-    assoc.set(Symbol::Flag::Subroutine);
+    assoc.set(subpFlag);
   }
   Resolve(entryName, *entrySymbol);
   std::set<SourceName> dummies;
@@ -9514,6 +9559,11 @@ static bool IsLocallyImplicitGlobalSymbol(
 // Check and set the Function or Subroutine flag on symbol; false on error.
 bool ResolveNamesVisitor::SetProcFlag(
     const parser::Name &name, Symbol &symbol, Symbol::Flag flag) {
+  if (symbol.has<ProcBindingDetails>()) {
+    // Binding function-vs-subroutine errors are caught later in
+    // expression semantics and procedure compatibility checking.
+    return true;
+  }
   if (symbol.test(Symbol::Flag::Function) && flag == Symbol::Flag::Subroutine) {
     SayWithDecl(
         name, symbol, "Cannot call function '%s' like a subroutine"_err_en_US);
@@ -10161,12 +10211,14 @@ void ResolveNamesVisitor::Post(const parser::AssignStmt &x) {
   if (auto *name{ResolveName(std::get<parser::Name>(x.t))}) {
     CheckEntryDummyUse(name->source, name->symbol);
     ConvertToObjectEntity(DEREF(name->symbol));
+    context().NoteDefinedSymbol(*name->symbol);
   }
 }
 void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
   if (auto *name{ResolveName(std::get<parser::Name>(x.t))}) {
     CheckEntryDummyUse(name->source, name->symbol);
     ConvertToObjectEntity(DEREF(name->symbol));
+    context().NoteUsedSymbol(*name->symbol);
   }
 }
 
@@ -10187,16 +10239,18 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
   }
   if (const auto *tkr{
           std::get_if<std::list<parser::CompilerDirective::IgnoreTKR>>(&x.u)}) {
-    if (currScope().IsTopLevel() ||
-        GetProgramUnitContaining(currScope()).kind() !=
-            Scope::Kind::Subprogram) {
+    if (currScope().IsTopLevel()) {
       Say(x.source,
-          "!DIR$ IGNORE_TKR directive must appear in a subroutine or function"_err_en_US);
+          "!DIR$ IGNORE_TKR directive must appear in a program unit"_err_en_US);
       return;
-    }
-    if (!inSpecificationPart_) {
-      Say(x.source,
-          "!DIR$ IGNORE_TKR directive must appear in the specification part"_err_en_US);
+    } else if (GetProgramUnitContaining(currScope()).kind() !=
+        Scope::Kind::Subprogram) {
+      context().Warn(common::UsageWarning::MisplacedIgnoreTKR, x.source,
+          "!DIR$ IGNORE_TKR directive should appear in a subroutine or function"_warn_en_US);
+      return;
+    } else if (!inSpecificationPart_) {
+      context().Warn(common::UsageWarning::MisplacedIgnoreTKR, x.source,
+          "!DIR$ IGNORE_TKR directive should appear in the specification part"_warn_en_US);
       return;
     }
     if (tkr->empty()) {

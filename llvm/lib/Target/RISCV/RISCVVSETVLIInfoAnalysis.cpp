@@ -31,16 +31,20 @@ static VNInfo *getVNInfoFromReg(Register Reg, const MachineInstr &MI,
   return LI.getVNInfoBefore(SI);
 }
 
-static unsigned getVLOpNum(const MachineInstr &MI) {
-  return RISCVII::getVLOpNum(MI.getDesc());
+static const MachineOperand &getVLOp(const MachineInstr &MI) {
+  return MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
 }
 
-static unsigned getSEWOpNum(const MachineInstr &MI) {
-  return RISCVII::getSEWOpNum(MI.getDesc());
+static const MachineOperand &getSEWOp(const MachineInstr &MI) {
+  return MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc()));
 }
 
-static unsigned getVecPolicyOpNum(const MachineInstr &MI) {
-  return RISCVII::getVecPolicyOpNum(MI.getDesc());
+static const MachineOperand &getVecPolicyOp(const MachineInstr &MI) {
+  return MI.getOperand(RISCVII::getVecPolicyOpNum(MI.getDesc()));
+}
+
+static const MachineOperand &getTWidenOp(const MachineInstr &MI) {
+  return MI.getOperand(RISCVII::getTWidenOpNum(MI.getDesc()));
 }
 
 /// Get the EEW for a load or store instruction.  Return std::nullopt if MI is
@@ -77,7 +81,7 @@ static std::optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
 static bool isMaskRegOp(const MachineInstr &MI) {
   if (!RISCVII::hasSEWOp(MI.getDesc().TSFlags))
     return false;
-  const unsigned Log2SEW = MI.getOperand(getSEWOpNum(MI)).getImm();
+  const unsigned Log2SEW = getSEWOp(MI).getImm();
   // A Log2SEW of 0 is an operation on mask registers only.
   return Log2SEW == 0;
 }
@@ -188,7 +192,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
   if (RISCVII::hasSEWOp(TSFlags)) {
     Res.demandVTYPE();
     if (RISCVII::hasVLOp(TSFlags))
-      if (const MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
+      if (const MachineOperand &VLOp = getVLOp(MI);
           !VLOp.isReg() || !VLOp.isUndef())
         Res.demandVL();
 
@@ -254,7 +258,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
   }
 
   if (RISCVII::hasVLOp(MI.getDesc().TSFlags)) {
-    const MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
+    const MachineOperand &VLOp = getVLOp(MI);
     // A slidedown/slideup with an *undefined* passthru can freely clobber
     // elements not copied from the source vector (e.g. masked off, tail, or
     // slideup's prefix). Notes:
@@ -412,7 +416,7 @@ RISCVVSETVLIInfoAnalysis::computeInfoForInstr(const MachineInstr &MI) const {
 
     // If there is a policy operand, use it.
     if (RISCVII::hasVecPolicyOp(TSFlags)) {
-      const MachineOperand &Op = MI.getOperand(getVecPolicyOpNum(MI));
+      const MachineOperand &Op = getVecPolicyOp(MI);
       uint64_t Policy = Op.getImm();
       assert(Policy <=
                  (RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC) &&
@@ -430,14 +434,13 @@ RISCVVSETVLIInfoAnalysis::computeInfoForInstr(const MachineInstr &MI) const {
   bool AltFmt = RISCVII::getAltFmtType(TSFlags) == RISCVII::AltFmtType::AltFmt;
   InstrInfo.setAltFmt(AltFmt);
 
-  unsigned Log2SEW = MI.getOperand(getSEWOpNum(MI)).getImm();
+  unsigned Log2SEW = getSEWOp(MI).getImm();
   // A Log2SEW of 0 is an operation on mask registers only.
   unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
   assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
 
   if (RISCVII::hasTWidenOp(TSFlags)) {
-    const MachineOperand &TWidenOp =
-        MI.getOperand(MI.getNumExplicitOperands() - 1);
+    const MachineOperand &TWidenOp = getTWidenOp(MI);
     unsigned TWiden = TWidenOp.getImm();
 
     InstrInfo.setAVLVLMAX();
@@ -456,7 +459,7 @@ RISCVVSETVLIInfoAnalysis::computeInfoForInstr(const MachineInstr &MI) const {
   }
 
   if (RISCVII::hasVLOp(TSFlags)) {
-    const MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
+    const MachineOperand &VLOp = getVLOp(MI);
     if (VLOp.isImm()) {
       int64_t Imm = VLOp.getImm();
       // Convert the VLMax sentintel to X0 register.

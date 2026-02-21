@@ -137,25 +137,14 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
   SmallVector<Operation *> dataEntryOps;
   SmallVector<Operation *> dataExitOps;
   SmallVector<Operation *> firstprivateOps;
+  SmallVector<Operation *> privateOps;
   SmallVector<Operation *> reductionOps;
 
   // Collect data entry operations
-  for (Value operand : computeConstructOp.getDataClauseOperands()) {
+  for (Value operand : computeConstructOp.getDataClauseOperands())
     if (Operation *defOp = operand.getDefiningOp())
       if (isa<ACC_DATA_ENTRY_OPS>(defOp))
         dataEntryOps.push_back(defOp);
-  }
-  // Collect firstprivate operations
-  for (Value operand : computeConstructOp.getFirstprivateOperands()) {
-    if (Operation *defOp = operand.getDefiningOp())
-      firstprivateOps.push_back(defOp);
-  }
-
-  // Collect reduction operations
-  for (Value operand : computeConstructOp.getReductionOperands()) {
-    if (Operation *defOp = operand.getDefiningOp())
-      reductionOps.push_back(defOp);
-  }
 
   // Find corresponding exit operations for each entry operation.
   // Iterate backwards through entry ops since exit ops appear in reverse order.
@@ -163,6 +152,16 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
     for (Operation *user : dataEntryOp->getUsers())
       if (isa<ACC_DATA_EXIT_OPS>(user))
         dataExitOps.push_back(user);
+
+  // Collect firstprivate, private, and reduction operations
+  auto collectOps = [&](SmallVector<Operation *> &ops, OperandRange operands) {
+    for (Value operand : operands)
+      if (Operation *defOp = operand.getDefiningOp())
+        ops.push_back(defOp);
+  };
+  collectOps(firstprivateOps, computeConstructOp.getFirstprivateOperands());
+  collectOps(privateOps, computeConstructOp.getPrivateOperands());
+  collectOps(reductionOps, computeConstructOp.getReductionOperands());
 
   // Create scf.if with device and host execution paths
   auto ifOp = scf::IfOp::create(rewriter, computeConstructOp.getLoc(),
@@ -178,25 +177,23 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
   // Clone data entry operations
   SmallVector<Value> deviceDataOperands;
   SmallVector<Value> firstprivateOperands;
+  SmallVector<Value> privateOperands;
   SmallVector<Value> reductionOperands;
 
   // Map the data entry and firstprivate ops for the cloned region
   IRMapping deviceMapping;
-  for (Operation *dataOp : dataEntryOps) {
-    Operation *clonedDataOp = rewriter.clone(*dataOp, deviceMapping);
-    deviceDataOperands.push_back(clonedDataOp->getResult(0));
-    deviceMapping.map(dataOp->getResult(0), clonedDataOp->getResult(0));
-  }
-  for (Operation *firstprivateOp : firstprivateOps) {
-    Operation *clonedOp = rewriter.clone(*firstprivateOp, deviceMapping);
-    firstprivateOperands.push_back(clonedOp->getResult(0));
-    deviceMapping.map(firstprivateOp->getResult(0), clonedOp->getResult(0));
-  }
-  for (Operation *reductionOp : reductionOps) {
-    Operation *clonedOp = rewriter.clone(*reductionOp, deviceMapping);
-    reductionOperands.push_back(clonedOp->getResult(0));
-    deviceMapping.map(reductionOp->getResult(0), clonedOp->getResult(0));
-  }
+  auto cloneAndMapOps = [&](SmallVector<Operation *> &ops,
+                            SmallVector<Value> &operands) {
+    for (Operation *op : ops) {
+      Operation *clonedOp = rewriter.clone(*op, deviceMapping);
+      operands.push_back(clonedOp->getResult(0));
+      deviceMapping.map(op->getResult(0), clonedOp->getResult(0));
+    }
+  };
+  cloneAndMapOps(dataEntryOps, deviceDataOperands);
+  cloneAndMapOps(firstprivateOps, firstprivateOperands);
+  cloneAndMapOps(privateOps, privateOperands);
+  cloneAndMapOps(reductionOps, reductionOperands);
 
   // Create new compute op without if condition for device execution by
   // cloning
@@ -205,6 +202,7 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
   newComputeOp.getIfCondMutable().clear();
   newComputeOp.getDataClauseOperandsMutable().assign(deviceDataOperands);
   newComputeOp.getFirstprivateOperandsMutable().assign(firstprivateOperands);
+  newComputeOp.getPrivateOperandsMutable().assign(privateOperands);
   newComputeOp.getReductionOperandsMutable().assign(reductionOperands);
 
   // Clone data exit operations
@@ -244,18 +242,16 @@ void ACCIfClauseLowering::lowerIfClauseForComputeConstruct(
 
   // The new host code may contain uses of the acc variables. Replace them by
   // the host values.
-  for (Operation *dataOp : dataEntryOps) {
-    getAccVar(dataOp).replaceAllUsesWith(getVar(dataOp));
-    eraseOps.push_back(dataOp);
-  }
-  for (Operation *firstprivateOp : firstprivateOps) {
-    getAccVar(firstprivateOp).replaceAllUsesWith(getVar(firstprivateOp));
-    eraseOps.push_back(firstprivateOp);
-  }
-  for (Operation *reductionOp : reductionOps) {
-    getAccVar(reductionOp).replaceAllUsesWith(getVar(reductionOp));
-    eraseOps.push_back(reductionOp);
-  }
+  auto replaceAndEraseOps = [&](SmallVector<Operation *> &ops) {
+    for (Operation *op : ops) {
+      getAccVar(op).replaceAllUsesWith(getVar(op));
+      eraseOps.push_back(op);
+    }
+  };
+  replaceAndEraseOps(dataEntryOps);
+  replaceAndEraseOps(firstprivateOps);
+  replaceAndEraseOps(privateOps);
+  replaceAndEraseOps(reductionOps);
 }
 
 void ACCIfClauseLowering::runOnOperation() {

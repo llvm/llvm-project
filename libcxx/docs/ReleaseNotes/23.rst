@@ -38,11 +38,20 @@ What's New in Libc++ 23.0.0?
 Implemented Papers
 ------------------
 
+- P2440R1: ``ranges::iota``, ``ranges::shift_left`` and ``ranges::shift_right`` (`Github <https://llvm.org/PR105184>`__)
+
 Improvements and New Features
 -----------------------------
 
+- The ``std::ranges::fold_left_with_iter`` algorithm has been optimized for
+  segmented iterators, resulting in a performance improvement of up to 1.38x
+  for ``std::deque<int>`` iterators.
+
 Deprecations and Removals
 -------------------------
+
+- The ``std::launch::any`` enumerator that was accidentally provided as an extension is now deprecated.
+  It will be removed in LLVM 25.
 
 Potentially breaking changes
 ----------------------------

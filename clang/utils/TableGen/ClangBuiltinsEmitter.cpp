@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TableGen/Error.h"
@@ -265,7 +267,9 @@ private:
     if (T.consume_back("*")) {
       // Pointers may have an address space qualifier immediately before them.
       std::optional<unsigned> AS = ConsumeAddrSpace();
-      ParseType(T);
+      // Pointers can apply to already parsed types, like vectors.
+      if (!T.empty())
+        ParseType(T);
       Type += "*";
       if (AS)
         Type += std::to_string(*AS);
@@ -602,4 +606,185 @@ void clang::EmitClangBuiltins(const RecordKeeper &Records, raw_ostream &OS) {
 #endif // ATOMIC_BUILTIN
 #undef ATOMIC_BUILTIN
 )c++";
+}
+
+//===----------------------------------------------------------------------===//
+// Builtin documentation emitter
+//===----------------------------------------------------------------------===//
+
+/// Holds the data needed to emit documentation for a single builtin.
+namespace {
+struct BuiltinDocData {
+  const Record *Documentation = nullptr;
+  const Record *BuiltinRecord = nullptr;
+  std::string Heading;
+
+  BuiltinDocData(const Record *D, const Record *B)
+      : Documentation(D), BuiltinRecord(B) {
+    // Use the Heading field if set, otherwise use the builtin's first
+    // spelling.
+    StringRef HeadingStr = D->getValueAsString("Heading");
+    if (HeadingStr.empty()) {
+      std::vector<StringRef> Spellings =
+          B->getValueAsListOfStrings("Spellings");
+      if (!Spellings.empty())
+        Heading = Spellings[0].str();
+      else
+        Heading = B->getName().str();
+    } else {
+      Heading = HeadingStr.str();
+    }
+  }
+};
+} // namespace
+
+static void writeCategoryHeader(const Record *Category, raw_ostream &OS) {
+  StringRef CategoryName = Category->getValueAsString("Name");
+  OS << "\n" << CategoryName << "\n";
+  for (size_t I = 0, E = CategoryName.size(); I < E; ++I)
+    OS << "=";
+  OS << "\n\n";
+
+  StringRef CategoryContent = Category->getValueAsString("Content");
+  if (!CategoryContent.trim().empty())
+    OS << CategoryContent.trim() << "\n\n";
+}
+
+/// Split a parameter list string into individual parameter type strings,
+/// respecting nested angle brackets (e.g. address_space<4>, _ExtVector<4,
+/// float>).
+static SmallVector<StringRef> splitParams(StringRef Params) {
+  SmallVector<StringRef> Result;
+  if (Params.empty())
+    return Result;
+
+  int Depth = 0;
+  size_t Start = 0;
+  for (size_t I = 0, E = Params.size(); I < E; ++I) {
+    if (Params[I] == '<') {
+      ++Depth;
+    } else if (Params[I] == '>') {
+      --Depth;
+    } else if (Params[I] == ',' && Depth == 0) {
+      Result.push_back(Params.substr(Start, I - Start).trim());
+      Start = I + 1;
+    }
+  }
+  // Add the last parameter.
+  StringRef Last = Params.substr(Start).trim();
+  if (!Last.empty())
+    Result.push_back(Last);
+  return Result;
+}
+
+static void writeBuiltinDocumentation(const BuiltinDocData &Doc,
+                                      raw_ostream &OS) {
+  // Write heading with '-' underline (subsection).
+  std::string HeadingText = "``" + Doc.Heading + "``";
+  OS << HeadingText << "\n";
+  for (size_t I = 0, E = HeadingText.size(); I < E; ++I)
+    OS << "-";
+  OS << "\n\n";
+
+  // Write prototype as a code block.
+  StringRef Prototype = Doc.BuiltinRecord->getValueAsString("Prototype");
+  if (!Prototype.empty()) {
+    std::vector<StringRef> Spellings =
+        Doc.BuiltinRecord->getValueAsListOfStrings("Spellings");
+    StringRef Name =
+        Spellings.empty() ? Doc.BuiltinRecord->getName() : Spellings[0];
+
+    // Split prototype into return type and params at the first '('.
+    size_t ParenPos = Prototype.find('(');
+    if (ParenPos != StringRef::npos) {
+      StringRef RetType = Prototype.substr(0, ParenPos).rtrim();
+      StringRef ParamStr =
+          Prototype.substr(ParenPos + 1, Prototype.size() - ParenPos - 2);
+
+      OS << "**Prototype:**\n\n";
+      OS << ".. code-block:: c\n\n";
+      OS << "  " << RetType << " " << Name << "(";
+
+      std::vector<StringRef> ArgNames =
+          Doc.BuiltinRecord->getValueAsListOfStrings("ArgNames");
+      if (!ArgNames.empty()) {
+        SmallVector<StringRef> ParamTypes = splitParams(ParamStr);
+        bool IsVariadic = !ParamTypes.empty() && ParamTypes.back() == "...";
+        size_t NamedParams = ParamTypes.size() - (IsVariadic ? 1 : 0);
+        if (ArgNames.size() != NamedParams)
+          PrintFatalError(Doc.BuiltinRecord->getLoc(),
+                          "number of ArgNames (" + Twine(ArgNames.size()) +
+                              ") does not match number of prototype "
+                              "parameters (" +
+                              Twine(NamedParams) + ")");
+        for (size_t I = 0, E = ParamTypes.size(); I < E; ++I) {
+          if (I > 0)
+            OS << ", ";
+          if (I < NamedParams)
+            OS << ParamTypes[I] << " " << ArgNames[I];
+          else
+            OS << ParamTypes[I];
+        }
+      } else {
+        OS << ParamStr;
+      }
+
+      OS << ")\n\n";
+    }
+  }
+
+  // Write target features if this is a TargetBuiltin with features.
+  if (Doc.BuiltinRecord->isSubClassOf("TargetBuiltin")) {
+    StringRef Features = Doc.BuiltinRecord->getValueAsString("Features");
+    if (!Features.empty())
+      OS << "**Target Features:** " << Features << "\n\n";
+  }
+
+  // Write documentation content.
+  StringRef Content = Doc.Documentation->getValueAsString("Content");
+  OS << Content.trim() << "\n\n\n";
+}
+
+void clang::EmitClangBuiltinDocs(const RecordKeeper &Records, raw_ostream &OS) {
+  // Get the documentation introduction paragraph.
+  const Record *Doc = Records.getDef("GlobalDocumentation");
+  if (!Doc) {
+    PrintFatalError("The GlobalDocumentation top-level definition is missing, "
+                    "no documentation will be generated.");
+  }
+
+  OS << Doc->getValueAsString("Intro") << "\n";
+
+  // Gather documentation from each builtin, grouped by category.
+  llvm::MapVector<const Record *, std::vector<BuiltinDocData>> SplitDocs;
+
+  for (const Record *B : Records.getAllDerivedDefinitions("Builtin")) {
+    for (const Record *D : B->getValueAsListOfDefs("Documentation")) {
+      const Record *Category = D->getValueAsDef("Category");
+      StringRef Cat = Category->getValueAsString("Name");
+      // Skip builtins that are explicitly internal-only.
+      if (Cat == "InternalOnly")
+        continue;
+      SplitDocs[Category].emplace_back(D, B);
+    }
+  }
+
+  // Sort categories alphabetically by name for deterministic output.
+  llvm::sort(SplitDocs, [](const auto &A, const auto &B) {
+    return A.first->getValueAsString("Name") <
+           B.first->getValueAsString("Name");
+  });
+
+  // Write out each category and its builtins.
+  for (auto &[Category, Docs] : SplitDocs) {
+    writeCategoryHeader(Category, OS);
+
+    // Sort entries alphabetically by heading.
+    llvm::sort(Docs, [](const BuiltinDocData &A, const BuiltinDocData &B) {
+      return A.Heading < B.Heading;
+    });
+
+    for (const BuiltinDocData &D : Docs)
+      writeBuiltinDocumentation(D, OS);
+  }
 }

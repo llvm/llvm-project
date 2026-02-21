@@ -452,7 +452,10 @@ __isl_give isl_multi_val *isl_point_get_multi_val(__isl_keep isl_point *pnt)
 __isl_give isl_point *isl_point_set_coordinate_val(__isl_take isl_point *pnt,
 	enum isl_dim_type type, int pos, __isl_take isl_val *v)
 {
-	if (!pnt || !v)
+	isl_size off;
+
+	off = isl_space_offset(isl_point_peek_space(pnt), type);
+	if (off < 0 || !v)
 		goto error;
 	if (isl_point_is_void(pnt))
 		isl_die(isl_point_get_ctx(pnt), isl_error_invalid,
@@ -463,7 +466,7 @@ __isl_give isl_point *isl_point_set_coordinate_val(__isl_take isl_point *pnt,
 		isl_die(isl_point_get_ctx(pnt), isl_error_invalid,
 			"expecting rational value", goto error);
 
-	pos += isl_space_offset(isl_point_peek_space(pnt), type);
+	pos += off;
 	if (isl_int_eq(pnt->vec->el[1 + pos], v->n) &&
 	    isl_int_eq(pnt->vec->el[0], v->d)) {
 		isl_val_free(v);
@@ -821,8 +824,12 @@ static __isl_give isl_printer *print_coordinate(__isl_take isl_printer *p,
 	struct isl_print_space_data *data, unsigned pos)
 {
 	isl_point *pnt = data->user;
+	isl_size off;
 
-	pos += isl_space_offset(data->space, data->type);
+	off = isl_space_offset(data->space, data->type);
+	if (off < 0)
+		return isl_printer_free(p);
+	pos += off;
 	p = isl_printer_print_isl_int(p, pnt->vec->el[1 + pos]);
 	if (!isl_int_is_one(pnt->vec->el[0])) {
 		p = isl_printer_print_str(p, "/");

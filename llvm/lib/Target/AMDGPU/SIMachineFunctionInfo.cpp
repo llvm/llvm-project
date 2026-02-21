@@ -37,7 +37,7 @@ static cl::opt<bool, true> MFMAVGPRFormOpt(
     "amdgpu-mfma-vgpr-form",
     cl::desc("Whether to force use VGPR for Opc and Dest of MFMA. If "
              "unspecified, default to compiler heuristics"),
-    cl::location(SIMachineFunctionInfo::MFMAVGPRForm), cl::init(false),
+    cl::location(SIMachineFunctionInfo::MFMAVGPRForm), cl::init(true),
     cl::Hidden);
 
 const GCNTargetMachine &getTM(const GCNSubtarget *STI) {
@@ -114,7 +114,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     FrameOffsetReg = AMDGPU::SGPR33;
     StackPtrOffsetReg = AMDGPU::SGPR32;
 
-    if (!ST.enableFlatScratch()) {
+    if (!ST.hasFlatScratchEnabled()) {
       // Non-entry functions have no special inputs for now, other registers
       // required for scratch access.
       ScratchRSrcReg = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
@@ -169,7 +169,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     if (WorkItemIDZ)
       WorkItemIDY = true;
 
-    if (!ST.flatScratchIsArchitected()) {
+    if (!ST.hasArchitectedFlatScratch()) {
       PrivateSegmentWaveByteOffset = true;
 
       // HS and GS always have the scratch wave offset in SGPR5 on GFX9.
@@ -692,7 +692,7 @@ convertArgumentInfo(const AMDGPUFunctionArgInfo &ArgInfo,
     if (Arg.isMasked())
       SA.Mask = Arg.getMask();
 
-    A = SA;
+    A = std::move(SA);
     return true;
   };
 
@@ -744,9 +744,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
     : ExplicitKernArgSize(MFI.getExplicitKernArgSize()),
       MaxKernArgAlign(MFI.getMaxKernArgAlign()), LDSSize(MFI.getLDSSize()),
       GDSSize(MFI.getGDSSize()), DynLDSAlign(MFI.getDynLDSAlign()),
-      IsEntryFunction(MFI.isEntryFunction()),
-      NoSignedZerosFPMath(MFI.hasNoSignedZerosFPMath()),
-      MemoryBound(MFI.isMemoryBound()), WaveLimiter(MFI.needsWaveLimiter()),
+      IsEntryFunction(MFI.isEntryFunction()), MemoryBound(MFI.isMemoryBound()),
+      WaveLimiter(MFI.needsWaveLimiter()),
       HasSpilledSGPRs(MFI.hasSpilledSGPRs()),
       HasSpilledVGPRs(MFI.hasSpilledVGPRs()),
       NumWaveDispatchSGPRs(MFI.getNumWaveDispatchSGPRs()),
@@ -803,7 +802,6 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   HighBitsOf32BitAddress = YamlMFI.HighBitsOf32BitAddress;
   Occupancy = YamlMFI.Occupancy;
   IsEntryFunction = YamlMFI.IsEntryFunction;
-  NoSignedZerosFPMath = YamlMFI.NoSignedZerosFPMath;
   MemoryBound = YamlMFI.MemoryBound;
   WaveLimiter = YamlMFI.WaveLimiter;
   HasSpilledSGPRs = YamlMFI.HasSpilledSGPRs;

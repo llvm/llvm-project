@@ -159,8 +159,8 @@ enum FusedCompareType {
 } // end namespace SystemZII
 
 namespace SystemZ {
-int getTwoOperandOpcode(uint16_t Opcode);
-int getTargetMemOpcode(uint16_t Opcode);
+int32_t getTwoOperandOpcode(uint32_t Opcode);
+int32_t getTargetMemOpcode(uint32_t Opcode);
 
 // Return a version of comparison CC mask CCMask in which the LT and GT
 // actions are swapped.
@@ -391,6 +391,8 @@ public:
 
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
+
+  MCInst getNop() const override;
 };
 
 } // end namespace llvm

@@ -73,11 +73,6 @@ static llvm::cl::opt<bool> enableSymbolRemapping(
     llvm::cl::desc("Whether to remap symbols that appears in data clauses."),
     llvm::cl::init(true));
 
-static llvm::cl::opt<bool> enableDevicePtrRemap(
-    "openacc-remap-device-ptr-symbols",
-    llvm::cl::desc("sub-option of openacc-remap-symbols for deviceptr clause"),
-    llvm::cl::init(false));
-
 // Special value for * passed in device_type or gang clauses.
 static constexpr std::int64_t starCst = -1;
 
@@ -780,16 +775,9 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
       if (auto *defOp = op.getVar().getDefiningOp())
         addDeclareAttr(builder, defOp, dataClause);
 
-    // TODO: no_create remapping could currently cause segfaults because of the
-    // fir.box_addr that may be inserted in the remapping in the region.
-    // This is an issue if the variable is not mapped (which is OK if its
-    // accesses are not reached inside the construct).
-    bool isNoCreateWithBounds =
-        std::is_same_v<Op, mlir::acc::NoCreateOp> && !bounds.empty();
-
     // Track the symbol and its corresponding mlir::Value if requested so that
     // accesses inside regions can be remapped.
-    if (dataMap && !isNoCreateWithBounds) {
+    if (dataMap) {
       if (componentRef)
         dataMap->emplaceComponent(op.getAccVar(), std::move(*componentRef),
                                   baseAddr);
@@ -2434,12 +2422,11 @@ static Op createComputeOp(
     } else if (const auto *devicePtrClause =
                    std::get_if<Fortran::parser::AccClause::Deviceptr>(
                        &clause.u)) {
-      AccDataMap *symPairs = enableDevicePtrRemap ? &dataMap : nullptr;
       genDataOperandOperations<mlir::acc::DevicePtrOp>(
           devicePtrClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_deviceptr,
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
-          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, symPairs);
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, &dataMap);
     } else if (const auto *attachClause =
                    std::get_if<Fortran::parser::AccClause::Attach>(&clause.u)) {
       auto crtDataStart = dataClauseOperands.size();
@@ -4310,20 +4297,26 @@ genACC(Fortran::lower::AbstractConverter &converter,
           fir::substBase(hostExv, cacheOp.getAccVar());
       converter.bindSymbol(symbol, cacheExv);
     } else {
-      // Must be a derived type component reference.
+      // Derived type component reference.
       assert(designator && "expected designator for non-symbol cache operand");
       std::optional<Fortran::evaluate::Component> componentRef =
           extractComponentFromDesignator(designator);
       assert(componentRef &&
              "expected component reference for derived type cache operand");
-      // Component references are lowered to designate operations.
-      auto designate = base.getDefiningOp<hlfir::DesignateOp>();
-      assert(designate && "expected designate op for component reference");
+      // When component is mapped via a data clause, base may be a declare op
+      // instead of a designate op.
+      auto varIface = base.getDefiningOp<fir::FortranVariableOpInterface>();
+      assert(varIface &&
+             "expected FortranVariableOpInterface for component reference");
+      fir::FortranVariableFlagsAttr attrs;
+      if (auto fortranAttrs = varIface.getFortranAttrs())
+        attrs = fir::FortranVariableFlagsAttr::get(builder.getContext(),
+                                                   *fortranAttrs);
       auto declareOp = hlfir::DeclareOp::create(
           builder, operandLocation, cacheOp.getAccVar(), asFortran.str(),
-          designate.getShape(), designate.getTypeparams(),
+          varIface.getShape(), varIface.getExplicitTypeParams(),
           /*dummyScope=*/nullptr, /*storage=*/nullptr,
-          /*storageOffset=*/0, designate.getFortranAttrsAttr());
+          /*storageOffset=*/0, attrs);
       converter.getSymbolMap().addComponentOverride(*componentRef, declareOp);
     }
   }

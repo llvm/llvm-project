@@ -2494,9 +2494,9 @@ multiclass MVE_VCLSCLZ_p<string opname, bit opcode, MVEVectorVTInfo VTI,
   }
 }
 
-defm MVE_VCLSs8  : MVE_VCLSCLZ_p<"cls", 0, MVE_v16s8, int_arm_mve_vcls>;
-defm MVE_VCLSs16 : MVE_VCLSCLZ_p<"cls", 0, MVE_v8s16, int_arm_mve_vcls>;
-defm MVE_VCLSs32 : MVE_VCLSCLZ_p<"cls", 0, MVE_v4s32, int_arm_mve_vcls>;
+defm MVE_VCLSs8  : MVE_VCLSCLZ_p<"cls", 0, MVE_v16s8, ctls>;
+defm MVE_VCLSs16 : MVE_VCLSCLZ_p<"cls", 0, MVE_v8s16, ctls>;
+defm MVE_VCLSs32 : MVE_VCLSCLZ_p<"cls", 0, MVE_v4s32, ctls>;
 
 defm MVE_VCLZs8  : MVE_VCLSCLZ_p<"clz", 1, MVE_v16i8, ctlz>;
 defm MVE_VCLZs16 : MVE_VCLSCLZ_p<"clz", 1, MVE_v8i16, ctlz>;
@@ -3605,12 +3605,12 @@ multiclass MVE_VRINT_m<MVEVectorVTInfo VTI, string suffix, bits<3> opcode,
 }
 
 multiclass MVE_VRINT_ops<MVEVectorVTInfo VTI> {
-  defm N : MVE_VRINT_m<VTI, "n", 0b000, froundeven>;
-  defm X : MVE_VRINT_m<VTI, "x", 0b001, frint>;
-  defm A : MVE_VRINT_m<VTI, "a", 0b010, fround>;
-  defm Z : MVE_VRINT_m<VTI, "z", 0b011, ftrunc>;
-  defm M : MVE_VRINT_m<VTI, "m", 0b101, ffloor>;
-  defm P : MVE_VRINT_m<VTI, "p", 0b111, fceil>;
+  defm N : MVE_VRINT_m<VTI, "n", 0b000, any_froundeven>;
+  defm X : MVE_VRINT_m<VTI, "x", 0b001, any_frint>;
+  defm A : MVE_VRINT_m<VTI, "a", 0b010, any_fround>;
+  defm Z : MVE_VRINT_m<VTI, "z", 0b011, any_ftrunc>;
+  defm M : MVE_VRINT_m<VTI, "m", 0b101, any_ffloor>;
+  defm P : MVE_VRINT_m<VTI, "p", 0b111, any_fceil>;
 }
 
 defm MVE_VRINTf16 : MVE_VRINT_ops<MVE_v8f16>;

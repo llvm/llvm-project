@@ -1332,12 +1332,13 @@ bool ModuleMap::parseModuleMapFile(FileEntryRef File, bool IsSystem,
 
   // If the module map file wasn't already entered, do so now.
   if (ID.isInvalid()) {
-    ID = SourceMgr.translateFile(File);
-    if (ID.isInvalid() || SourceMgr.isLoadedFileID(ID)) {
+    FileID &LocalFID = ModuleMapLocalFileID[File];
+    if (LocalFID.isInvalid()) {
       auto FileCharacter =
           IsSystem ? SrcMgr::C_System_ModuleMap : SrcMgr::C_User_ModuleMap;
-      ID = SourceMgr.createFileID(File, ExternModuleLoc, FileCharacter);
+      LocalFID = SourceMgr.createFileID(File, ExternModuleLoc, FileCharacter);
     }
+    ID = LocalFID;
   }
 
   std::optional<llvm::MemoryBufferRef> Buffer = SourceMgr.getBufferOrNone(ID);
@@ -2247,16 +2248,17 @@ bool ModuleMap::parseAndLoadModuleMapFile(FileEntryRef File, bool IsSystem,
 
   // If the module map file wasn't already entered, do so now.
   if (ID.isInvalid()) {
-    ID = SourceMgr.translateFile(File);
     // TODO: The way we compute affecting module maps requires this to be a
     //       local FileID. This should be changed to reuse loaded FileIDs when
     //       available, and change the way that affecting module maps are
     //       computed to not require this.
-    if (ID.isInvalid() || SourceMgr.isLoadedFileID(ID)) {
+    FileID &LocalFID = ModuleMapLocalFileID[File];
+    if (LocalFID.isInvalid()) {
       auto FileCharacter =
           IsSystem ? SrcMgr::C_System_ModuleMap : SrcMgr::C_User_ModuleMap;
-      ID = SourceMgr.createFileID(File, ExternModuleLoc, FileCharacter);
+      LocalFID = SourceMgr.createFileID(File, ExternModuleLoc, FileCharacter);
     }
+    ID = LocalFID;
   }
 
   assert(Target && "Missing target information");

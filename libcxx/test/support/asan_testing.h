@@ -55,7 +55,7 @@ TEST_CONSTEXPR bool is_double_ended_contiguous_container_asan_correct(const std:
 }
 #endif
 
-#if TEST_HAS_FEATURE(address_sanitizer)
+#if TEST_HAS_FEATURE(address_sanitizer) && _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING
 template <typename ChrT, typename TraitsT, typename Alloc>
 TEST_CONSTEXPR bool is_string_asan_correct(const std::basic_string<ChrT, TraitsT, Alloc>& c) {
   if (TEST_IS_CONSTANT_EVALUATED)

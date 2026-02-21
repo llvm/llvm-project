@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "DAPError.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
+#include "Protocol/DAPTypes.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
@@ -23,24 +25,66 @@ using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
 
+static bool RunExpressionAsLLDBCommand(DAP &dap, lldb::SBFrame &frame,
+                                       std::string &expression,
+                                       EvaluateContext context) {
+  if (context != eEvaluateContextRepl && context != eEvaluateContextUnknown)
+    return false;
+
+  // Since we don't know this context do not try to repeat the last command;
+  if (context == eEvaluateContextUnknown && expression.empty())
+    return false;
+
+  const bool repeat_last_command =
+      expression.empty() && dap.last_valid_variable_expression.empty();
+  if (repeat_last_command)
+    return true;
+
+  const ReplMode repl_mode = dap.DetectReplMode(frame, expression, false);
+  return repl_mode == ReplMode::Command;
+}
+
+static lldb::SBValue EvaluateVariableExpression(lldb::SBTarget &target,
+                                                lldb::SBFrame &frame,
+                                                const std::string &expression,
+                                                bool run_as_expression) {
+  const char *expression_cstr = expression.c_str();
+
+  lldb::SBValue value;
+  if (frame) {
+    // Check if it is a variable or an expression path for a variable. i.e.
+    // 'foo->bar' finds the 'bar' variable. It is more reliable than the
+    // expression parser in many cases and it is faster.
+    value = frame.GetValueForVariablePath(
+        expression_cstr, lldb::eDynamicDontRunTarget, lldb::eDILModeLegacy);
+    if (value || !run_as_expression)
+      return value;
+
+    return frame.EvaluateExpression(expression_cstr);
+  }
+
+  if (run_as_expression)
+    value = target.EvaluateExpression(expression_cstr);
+
+  return value;
+}
+
 /// Evaluates the given expression in the context of a stack frame.
 ///
 /// The expression has access to any variables and arguments that are in scope.
 Expected<EvaluateResponseBody>
 EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
+
   EvaluateResponseBody body;
   lldb::SBFrame frame = dap.GetLLDBFrame(arguments.frameId);
-  std::string expression = arguments.expression;
-  bool repeat_last_command =
-      expression.empty() && dap.last_nonempty_var_expression.empty();
+  std::string expression = llvm::StringRef(arguments.expression).trim().str();
+  const EvaluateContext evaluate_context = arguments.context;
+  const bool is_repl_context = evaluate_context == eEvaluateContextRepl;
 
-  if (arguments.context == protocol::eEvaluateContextRepl &&
-      (repeat_last_command ||
-       (!expression.empty() &&
-        dap.DetectReplMode(frame, expression, false) == ReplMode::Command))) {
+  if (RunExpressionAsLLDBCommand(dap, frame, expression, evaluate_context)) {
     // Since the current expression is not for a variable, clear the
-    // last_nonempty_var_expression field.
-    dap.last_nonempty_var_expression.clear();
+    // last_valid_variable_expression field.
+    dap.last_valid_variable_expression.clear();
     // If we're evaluating a command relative to the current frame, set the
     // focus_tid to the current frame for any thread related events.
     if (frame.IsValid()) {
@@ -54,54 +98,51 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
     return body;
   }
 
-  if (arguments.context == eEvaluateContextRepl) {
-    // If the expression is empty and the last expression was for a
-    // variable, set the expression to the previous expression (repeat the
-    // evaluation); otherwise save the current non-empty expression for the
-    // next (possibly empty) variable expression.
-    if (expression.empty())
-      expression = dap.last_nonempty_var_expression;
-    else
-      dap.last_nonempty_var_expression = expression;
-  }
+  if (dap.ProcessIsNotStopped())
+    return llvm::make_error<DAPError>(
+        "Cannot evaluate expressions while the process is running. Pause "
+        "the process and try again.",
+        /**error_code=*/llvm::inconvertibleErrorCode(),
+        /**show_user=*/false);
 
-  // Always try to get the answer from the local variables if possible. If
-  // this fails, then if the context is not "hover", actually evaluate an
-  // expression using the expression parser.
-  //
-  // "frame variable" is more reliable than the expression parser in
-  // many cases and it is faster.
-  lldb::SBValue value = frame.GetValueForVariablePath(
-      expression.data(), lldb::eDynamicDontRunTarget);
+  // If the user expression is empty, evaluate the last valid variable
+  // expression.
+  if (expression.empty() && is_repl_context)
+    expression = dap.last_valid_variable_expression;
 
-  // Freeze dry the value in case users expand it later in the debug console
-  if (value.GetError().Success() && arguments.context == eEvaluateContextRepl)
-    value = value.Persist();
-
-  if (value.GetError().Fail() && arguments.context != eEvaluateContextHover)
-    value = frame.EvaluateExpression(expression.data());
+  const bool run_as_expression = evaluate_context != eEvaluateContextHover;
+  lldb::SBValue value = EvaluateVariableExpression(
+      dap.target, frame, expression, run_as_expression);
 
   if (value.GetError().Fail())
     return ToError(value.GetError(), /*show_user=*/false);
 
-  const bool hex = arguments.format ? arguments.format->hex : false;
+  if (is_repl_context) {
+    // save the new variable expression
+    dap.last_valid_variable_expression = std::move(expression);
 
+    // Freeze dry the value in case users expand it later in the debug console
+    value = value.Persist();
+  }
+
+  const bool hex = arguments.format ? arguments.format->hex : false;
   VariableDescription desc(value, dap.configuration.enableAutoVariableSummaries,
                            hex);
 
-  body.result = desc.GetResult(arguments.context);
+  body.result = desc.GetResult(evaluate_context);
   body.type = desc.display_type_name;
 
   if (value.MightHaveChildren() || ValuePointsToCode(value))
-    body.variablesReference = dap.variables.InsertVariable(
-        value, /*is_permanent=*/arguments.context == eEvaluateContextRepl);
+    body.variablesReference = dap.reference_storage.InsertVariable(
+        value, /*is_permanent=*/is_repl_context);
 
   if (lldb::addr_t addr = value.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
     body.memoryReference = EncodeMemoryReference(addr);
 
   if (ValuePointsToCode(value) &&
-      body.variablesReference != LLDB_DAP_INVALID_VAR_REF)
-    body.valueLocationReference = PackLocation(body.variablesReference, true);
+      body.variablesReference.Kind() != eReferenceKindInvalid)
+    body.valueLocationReference =
+        PackLocation(body.variablesReference.AsUInt32(), true);
 
   return body;
 }

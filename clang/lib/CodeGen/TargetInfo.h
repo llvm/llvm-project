@@ -321,41 +321,21 @@ public:
   /// Get the AST address space for alloca.
   virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
 
-  Address performAddrSpaceCast(CodeGen::CodeGenFunction &CGF, Address Addr,
-                               LangAS SrcAddr, llvm::Type *DestTy,
-                               bool IsNonNull = false) const;
-
-  /// Perform address space cast of an expression of pointer type.
-  /// \param V is the LLVM value to be casted to another address space.
-  /// \param SrcAddr is the language address space of \p V.
-  /// \param DestAddr is the targeted language address space.
-  /// \param DestTy is the destination LLVM pointer type.
-  /// \param IsNonNull is the flag indicating \p V is known to be non null.
-  virtual llvm::Value *performAddrSpaceCast(CodeGen::CodeGenFunction &CGF,
-                                            llvm::Value *V, LangAS SrcAddr,
-                                            llvm::Type *DestTy,
-                                            bool IsNonNull = false) const;
-
-  /// Perform address space cast of a constant expression of pointer type.
-  /// \param V is the LLVM constant to be casted to another address space.
-  /// \param SrcAddr is the language address space of \p V.
-  /// \param DestAddr is the targeted language address space.
-  /// \param DestTy is the destination LLVM pointer type.
-  virtual llvm::Constant *performAddrSpaceCast(CodeGenModule &CGM,
-                                               llvm::Constant *V,
-                                               LangAS SrcAddr,
-                                               llvm::Type *DestTy) const;
-
   /// Get address space of pointer parameter for __cxa_atexit.
   virtual LangAS getAddrSpaceOfCxaAtexitPtrParam() const {
     return LangAS::Default;
   }
 
-  /// Get the syncscope used in LLVM IR.
-  virtual llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
-                                                 SyncScope Scope,
-                                                 llvm::AtomicOrdering Ordering,
-                                                 llvm::LLVMContext &Ctx) const;
+  /// Get the syncscope used in LLVM IR as a string
+  virtual StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts,
+                                        SyncScope Scope,
+                                        llvm::AtomicOrdering Ordering) const;
+
+  /// Get the syncscope used in LLVM IR as a SyncScope ID.
+  llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
+                                         SyncScope Scope,
+                                         llvm::AtomicOrdering Ordering,
+                                         llvm::LLVMContext &Ctx) const;
 
   /// Allow the target to apply other metadata to an atomic instruction
   virtual void setTargetAtomicMetadata(CodeGenFunction &CGF,

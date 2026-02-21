@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h"
+#include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <string>
 #include <utility>
@@ -24,6 +25,15 @@ std::vector<std::string> CXXABILoweringPatterns;
 std::vector<std::string> CXXABILoweringPatternsList;
 std::vector<std::string> LLVMLoweringPatterns;
 std::vector<std::string> LLVMLoweringPatternsList;
+
+struct CustomLoweringCtor {
+  struct Param {
+    std::string Type;
+    std::string Name;
+  };
+
+  std::vector<Param> Params;
+};
 
 // Adapted from mlir/lib/TableGen/Operator.cpp
 // Returns the C++ class name of the operation, which is the name of the
@@ -60,6 +70,34 @@ std::string GetOpLLVMLoweringPatternName(llvm::StringRef OpName) {
   Name += "Lowering";
   return Name;
 }
+std::optional<CustomLoweringCtor> parseCustomLoweringCtor(const Record *R) {
+  if (!R)
+    return std::nullopt;
+
+  CustomLoweringCtor Ctor;
+  const DagInit *Args = R->getValueAsDag("dagParams");
+
+  for (const auto &[Arg, Name] : Args->getArgAndNames()) {
+    Ctor.Params.push_back(
+        {Arg->getAsUnquotedString(), Name->getAsUnquotedString()});
+  }
+
+  return Ctor;
+}
+
+void emitCustomParamList(raw_ostream &Code,
+                         ArrayRef<CustomLoweringCtor::Param> Params) {
+  for (const CustomLoweringCtor::Param &Param : Params) {
+    Code << ", ";
+    Code << Param.Type << " " << Param.Name;
+  }
+}
+
+void emitCustomInitList(raw_ostream &Code,
+                        ArrayRef<CustomLoweringCtor::Param> Params) {
+  for (const CustomLoweringCtor::Param &P : Params)
+    Code << ", " << P.Name << "(" << P.Name << ")";
+}
 
 void GenerateABILoweringPattern(llvm::StringRef OpName,
                                 llvm::StringRef PatternName) {
@@ -93,37 +131,50 @@ void GenerateABILoweringPattern(llvm::StringRef OpName,
 
 void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
                                  llvm::StringRef PatternName, bool IsRecursive,
-                                 llvm::StringRef ExtraDecl) {
+                                 llvm::StringRef ExtraDecl,
+                                 const Record *CustomCtorRec) {
+  std::optional<CustomLoweringCtor> CustomCtor =
+      parseCustomLoweringCtor(CustomCtorRec);
   std::string CodeBuffer;
   llvm::raw_string_ostream Code(CodeBuffer);
 
   Code << "class " << PatternName
        << " : public mlir::OpConversionPattern<cir::" << OpName << "> {\n";
-  Code << "  [[maybe_unused]] cir::LowerModule *lowerMod;\n";
   Code << "  [[maybe_unused]] mlir::DataLayout const &dataLayout;\n";
+
+  if (CustomCtor) {
+    for (const CustomLoweringCtor::Param &P : CustomCtor->Params)
+      Code << "  " << P.Type << " " << P.Name << ";\n";
+  }
+
   Code << "\n";
 
   Code << "public:\n";
   Code << "  using mlir::OpConversionPattern<cir::" << OpName
        << ">::OpConversionPattern;\n";
 
+  // Constructor
   Code << "  " << PatternName
-       << "(mlir::TypeConverter const "
-          "&typeConverter, mlir::MLIRContext *context, "
-          "cir::LowerModule *lowerMod, mlir::DataLayout const "
-          "&dataLayout)\n";
-  Code << "    : OpConversionPattern<cir::" << OpName
-       << ">(typeConverter, context), lowerMod(lowerMod), "
-          "dataLayout(dataLayout)";
-  if (IsRecursive) {
-    Code << " {\n";
-    Code << "    setHasBoundedRewriteRecursion();\n";
-    Code << "  }\n";
-  } else {
-    Code << " {}\n";
-  }
+       << "(const mlir::TypeConverter &typeConverter, "
+          "mlir::MLIRContext *context, const mlir::DataLayout &dataLayout";
 
-  Code << "\n";
+  if (CustomCtor)
+    emitCustomParamList(Code, CustomCtor->Params);
+
+  Code << ")\n";
+
+  Code << "    : OpConversionPattern<cir::" << OpName
+       << ">(typeConverter, context), dataLayout(dataLayout)";
+
+  if (CustomCtor)
+    emitCustomInitList(Code, CustomCtor->Params);
+
+  Code << " {\n";
+
+  if (IsRecursive)
+    Code << "    setHasBoundedRewriteRecursion();\n";
+
+  Code << "  }\n\n";
 
   Code << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
        << " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
@@ -151,11 +202,18 @@ void Generate(const Record *OpRecord) {
   if (OpRecord->getValueAsBit("hasLLVMLowering")) {
     std::string PatternName = GetOpLLVMLoweringPatternName(OpName);
     bool IsRecursive = OpRecord->getValueAsBit("isLLVMLoweringRecursive");
+    const Record *CustomCtor =
+        OpRecord->getValueAsOptionalDef("customLLVMLoweringConstructorDecl");
     llvm::StringRef ExtraDecl =
         OpRecord->getValueAsString("extraLLVMLoweringPatternDecl");
 
-    GenerateLLVMLoweringPattern(OpName, PatternName, IsRecursive, ExtraDecl);
-    LLVMLoweringPatternsList.push_back(std::move(PatternName));
+    GenerateLLVMLoweringPattern(OpName, PatternName, IsRecursive, ExtraDecl,
+                                CustomCtor);
+    // Only automatically register patterns that use the default constructor.
+    // Patterns with a custom constructor must be manually registered by the
+    // lowering pass.
+    if (!CustomCtor)
+      LLVMLoweringPatternsList.push_back(std::move(PatternName));
   }
 }
 } // namespace

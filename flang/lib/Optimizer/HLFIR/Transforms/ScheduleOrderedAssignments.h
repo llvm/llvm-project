@@ -15,8 +15,29 @@
 #define OPTIMIZER_HLFIR_TRANSFORM_SCHEDULEORDEREDASSIGNMENTS_H
 
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include <list>
 
 namespace hlfir {
+
+struct ElementalTree {
+  // build an elemental tree given a masked region terminator.
+  static ElementalTree buildElementalTree(mlir::Operation &regionTerminator);
+  // Check if op is an ElementalOpInterface that is part of this elemental tree.
+  bool contains(mlir::Operation *op) const;
+
+  std::optional<bool> isOrdered(mlir::Operation *op) const;
+
+private:
+  void gatherElementalTree(hlfir::ElementalOpInterface elemental,
+                           bool isAppliedInOrder);
+  void insert(hlfir::ElementalOpInterface elementalOp, bool isAppliedInOrder);
+  // List of ElementalOpInterface operation forming this tree, as well as a
+  // Boolean to indicate if they are applied in order (that is, if their
+  // indexing space is the same as the one for the array yielded by the mask
+  // region that owns this tree).
+  llvm::SmallVector<std::pair<mlir::Operation *, bool>> tree;
+};
 
 /// Structure to represent that the value yielded by some region
 /// must be fully evaluated and saved for all index values at
@@ -27,6 +48,37 @@ struct SaveEntity {
   mlir::Region *yieldRegion;
   /// Returns the hlfir.yield op argument.
   mlir::Value getSavedValue();
+};
+
+/// Wrapper class around mlir::MemoryEffects::EffectInstance that
+/// allows providing an extra array value that indicates that the
+/// effect is done element by element in array order (one element
+/// accessed at each iteration of the ordered assignment iteration
+/// space).
+class DetailedEffectInstance {
+public:
+  DetailedEffectInstance(mlir::MemoryEffects::Effect *effect,
+                         mlir::OpOperand *value = nullptr,
+                         mlir::Value orderedElementalEffectOn = nullptr);
+  DetailedEffectInstance(mlir::MemoryEffects::EffectInstance effectInstance,
+                         mlir::Value orderedElementalEffectOn = nullptr);
+
+  static DetailedEffectInstance getArrayReadEffect(mlir::OpOperand *array);
+  static DetailedEffectInstance getArrayWriteEffect(mlir::OpOperand *array);
+
+  mlir::Value getValue() const { return effectInstance.getValue(); }
+  mlir::MemoryEffects::Effect *getEffect() const {
+    return effectInstance.getEffect();
+  }
+  mlir::Value getOrderedElementalEffectOn() const {
+    return orderedElementalEffectOn;
+  }
+
+private:
+  mlir::MemoryEffects::EffectInstance effectInstance;
+  // Array whose elements are affected in array order by the
+  // ordered assignment iterations. Null value otherwise.
+  mlir::Value orderedElementalEffectOn;
 };
 
 /// A run is a list of actions required to evaluate an ordered assignment tree
@@ -42,11 +94,11 @@ struct Run {
   /// the assignment part of an hlfir::RegionAssignOp.
   using Action = std::variant<hlfir::RegionAssignOp, SaveEntity>;
   llvm::SmallVector<Action> actions;
-  llvm::SmallVector<mlir::MemoryEffects::EffectInstance> memoryEffects;
+  llvm::SmallVector<DetailedEffectInstance> memoryEffects;
 };
 
 /// List of runs to be executed in order to evaluate an order assignment tree.
-using Schedule = llvm::SmallVector<Run>;
+using Schedule = std::list<Run>;
 
 /// Example of schedules and run, and what they mean:
 ///  Fortran: forall (i=i:10) x(i) = y(i)

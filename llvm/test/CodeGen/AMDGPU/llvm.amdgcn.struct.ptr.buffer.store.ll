@@ -157,41 +157,19 @@ define amdgpu_ps void @struct_ptr_buffer_store_f16(ptr addrspace(8) inreg %rsrc,
 }
 
 define amdgpu_ps void @struct_ptr_buffer_store_v2f16(ptr addrspace(8) inreg %rsrc, <2 x half> %v1, i32 %index) {
-; SI-LABEL: struct_ptr_buffer_store_v2f16:
-; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; SI-NEXT:    v_or_b32_e32 v0, v0, v1
-; SI-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 idxen
-; SI-NEXT:    s_endpgm
-;
-; VI-LABEL: struct_ptr_buffer_store_v2f16:
-; VI:       ; %bb.0:
-; VI-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 idxen
-; VI-NEXT:    s_endpgm
+; CHECK-LABEL: struct_ptr_buffer_store_v2f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 idxen
+; CHECK-NEXT:    s_endpgm
   call void @llvm.amdgcn.struct.ptr.buffer.store.v2f16(<2 x half> %v1, ptr addrspace(8) %rsrc, i32 %index, i32 0, i32 0, i32 0)
   ret void
 }
 
 define amdgpu_ps void @struct_ptr_buffer_store_v4f16(ptr addrspace(8) inreg %rsrc, <4 x half> %v1, i32 %index) {
-; SI-LABEL: struct_ptr_buffer_store_v4f16:
-; SI:       ; %bb.0:
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-NEXT:    v_cvt_f16_f32_e32 v5, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v3
-; SI-NEXT:    v_or_b32_e32 v1, v2, v1
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v5
-; SI-NEXT:    v_or_b32_e32 v0, v0, v2
-; SI-NEXT:    buffer_store_dwordx2 v[0:1], v4, s[0:3], 0 idxen
-; SI-NEXT:    s_endpgm
-;
-; VI-LABEL: struct_ptr_buffer_store_v4f16:
-; VI:       ; %bb.0:
-; VI-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[0:3], 0 idxen
-; VI-NEXT:    s_endpgm
+; CHECK-LABEL: struct_ptr_buffer_store_v4f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[0:3], 0 idxen
+; CHECK-NEXT:    s_endpgm
   call void @llvm.amdgcn.struct.ptr.buffer.store.v4f16(<4 x half> %v1, ptr addrspace(8) %rsrc, i32 %index, i32 0, i32 0, i32 0)
   ret void
 }
@@ -210,38 +188,19 @@ main_body:
 }
 
 define amdgpu_ps void @struct_ptr_buffer_store_vif16(ptr addrspace(8) inreg %rsrc, <2 x i16> %v1, i32 %index) {
-; SI-LABEL: struct_ptr_buffer_store_vif16:
-; SI:       ; %bb.0:
-; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_or_b32_e32 v0, v0, v1
-; SI-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 idxen
-; SI-NEXT:    s_endpgm
-;
-; VI-LABEL: struct_ptr_buffer_store_vif16:
-; VI:       ; %bb.0:
-; VI-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 idxen
-; VI-NEXT:    s_endpgm
+; CHECK-LABEL: struct_ptr_buffer_store_vif16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 idxen
+; CHECK-NEXT:    s_endpgm
   call void @llvm.amdgcn.struct.ptr.buffer.store.v2i16(<2 x i16> %v1, ptr addrspace(8) %rsrc, i32 %index, i32 0, i32 0, i32 0)
   ret void
 }
 
 define amdgpu_ps void @struct_ptr_buffer_store_v4i16(ptr addrspace(8) inreg %rsrc, <4 x i16> %v1, i32 %index) {
-; SI-LABEL: struct_ptr_buffer_store_v4i16:
-; SI:       ; %bb.0:
-; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_or_b32_e32 v2, v2, v3
-; SI-NEXT:    v_or_b32_e32 v1, v0, v1
-; SI-NEXT:    buffer_store_dwordx2 v[1:2], v4, s[0:3], 0 idxen
-; SI-NEXT:    s_endpgm
-;
-; VI-LABEL: struct_ptr_buffer_store_v4i16:
-; VI:       ; %bb.0:
-; VI-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[0:3], 0 idxen
-; VI-NEXT:    s_endpgm
+; CHECK-LABEL: struct_ptr_buffer_store_v4i16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[0:3], 0 idxen
+; CHECK-NEXT:    s_endpgm
   call void @llvm.amdgcn.struct.ptr.buffer.store.v4i16(<4 x i16> %v1, ptr addrspace(8) %rsrc, i32 %index, i32 0, i32 0, i32 0)
   ret void
 }

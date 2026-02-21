@@ -19,8 +19,6 @@
 
 namespace llvm {
 
-void initializeAMDGPUArgumentUsageInfoWrapperLegacyPass(PassRegistry &);
-
 class Function;
 class LLT;
 class raw_ostream;
@@ -200,10 +198,7 @@ class AMDGPUArgumentUsageInfoWrapperLegacy : public ImmutablePass {
 public:
   static char ID;
 
-  AMDGPUArgumentUsageInfoWrapperLegacy() : ImmutablePass(ID) {
-    initializeAMDGPUArgumentUsageInfoWrapperLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AMDGPUArgumentUsageInfoWrapperLegacy() : ImmutablePass(ID) {}
 
   AMDGPUArgumentUsageInfo &getArgUsageInfo() { return *AUIP; }
   const AMDGPUArgumentUsageInfo &getArgUsageInfo() const { return *AUIP; }

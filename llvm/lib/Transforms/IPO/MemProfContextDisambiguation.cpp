@@ -265,7 +265,8 @@ public:
   CallsiteContextGraph(CallsiteContextGraph &&) = default;
 
   /// Main entry point to perform analysis and transformations on graph.
-  bool process();
+  bool process(function_ref<void(StringRef, StringRef, const Twine &)>
+                   EmitRemark = nullptr);
 
   /// Perform cloning on the graph necessary to uniquely identify the allocation
   /// behavior of an allocation based on its context.
@@ -280,7 +281,9 @@ public:
 
   void dump() const;
   void print(raw_ostream &OS) const;
-  void printTotalSizes(raw_ostream &OS) const;
+  void printTotalSizes(raw_ostream &OS,
+                       function_ref<void(StringRef, StringRef, const Twine &)>
+                           EmitRemark = nullptr) const;
 
   friend raw_ostream &operator<<(raw_ostream &OS,
                                  const CallsiteContextGraph &CCG) {
@@ -489,7 +492,7 @@ public:
     void eraseCalleeEdge(const ContextEdge *Edge);
     void eraseCallerEdge(const ContextEdge *Edge);
 
-    void setCall(CallInfo C) { Call = C; }
+    void setCall(CallInfo C) { Call = std::move(C); }
 
     bool hasCall() const { return (bool)Call.call(); }
 
@@ -3336,7 +3339,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::print(
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
-    raw_ostream &OS) const {
+    raw_ostream &OS,
+    function_ref<void(StringRef, StringRef, const Twine &)> EmitRemark) const {
   using GraphType = const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *;
   for (const auto Node : nodes<GraphType>(this)) {
     if (Node->isRemoved())
@@ -3353,17 +3357,19 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
       auto CSI = ContextIdToContextSizeInfos.find(Id);
       if (CSI != ContextIdToContextSizeInfos.end()) {
         for (auto &Info : CSI->second) {
-          OS << "MemProf hinting: "
-             << getAllocTypeString((uint8_t)TypeI->second)
-             << " full allocation context " << Info.FullStackId
-             << " with total size " << Info.TotalSize << " is "
-             << getAllocTypeString(Node->AllocTypes) << " after cloning";
+          std::string Msg =
+              "MemProf hinting: " + getAllocTypeString((uint8_t)TypeI->second) +
+              " full allocation context " + std::to_string(Info.FullStackId) +
+              " with total size " + std::to_string(Info.TotalSize) + " is " +
+              getAllocTypeString(Node->AllocTypes) + " after cloning";
           if (allocTypeToUse(Node->AllocTypes) != AllocTypeFromCall)
-            OS << " marked " << getAllocTypeString((uint8_t)AllocTypeFromCall)
-               << " due to cold byte percent";
+            Msg += " marked " + getAllocTypeString((uint8_t)AllocTypeFromCall) +
+                   " due to cold byte percent";
           // Print the internal context id to aid debugging and visualization.
-          OS << " (context id " << Id << ")";
-          OS << "\n";
+          Msg += " (context id " + std::to_string(Id) + ")";
+          OS << Msg << "\n";
+          if (EmitRemark)
+            EmitRemark(DEBUG_TYPE, "MemProfReport", Msg);
         }
       }
     }
@@ -6297,7 +6303,8 @@ void MemProfContextDisambiguation::performICP(
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
-bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::process() {
+bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::process(
+    function_ref<void(StringRef, StringRef, const Twine &)> EmitRemark) {
   if (DumpCCG) {
     dbgs() << "CCG before cloning:\n";
     dbgs() << *this;
@@ -6332,7 +6339,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::process() {
     exportToDot("clonefuncassign");
 
   if (MemProfReportHintedSizes)
-    printTotalSizes(errs());
+    printTotalSizes(errs(), EmitRemark);
 
   return Changed;
 }
@@ -6421,7 +6428,8 @@ PreservedAnalyses MemProfContextDisambiguation::run(Module &M,
 void MemProfContextDisambiguation::run(
     ModuleSummaryIndex &Index,
     llvm::function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-        isPrevailing) {
+        isPrevailing,
+    function_ref<void(StringRef, StringRef, const Twine &)> EmitRemark) {
   // TODO: If/when other types of memprof cloning are enabled beyond just for
   // hot and cold, we will need to change this to individually control the
   // AllocationType passed to addStackNodesForMIB during CCG construction.
@@ -6431,7 +6439,7 @@ void MemProfContextDisambiguation::run(
     return;
 
   IndexCallsiteContextGraph CCG(Index, isPrevailing);
-  CCG.process();
+  CCG.process(EmitRemark);
 }
 
 // Strips MemProf attributes and metadata. Can be invoked by the pass pipeline

@@ -718,6 +718,7 @@
 // RUN:     -resource-dir=asdf \
 // RUN:     -Wunused-variable \
 // RUN:     -fmacro-backtrace-limit=0 \
+// RUN:     -fmacro-prefix-map=../.. \
 // RUN:     -fstandalone-debug \
 // RUN:     -feliminate-unused-debug-types \
 // RUN:     -fno-eliminate-unused-debug-types \

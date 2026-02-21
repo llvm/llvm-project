@@ -35,6 +35,8 @@ public:
     return &Subtarget;
   }
 
+  SPIRVSubtarget *getMutableSubtargetImpl() { return &Subtarget; }
+
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;

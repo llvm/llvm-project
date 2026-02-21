@@ -265,6 +265,7 @@ AARCH64_OUTLINE_ATOMICS = [
         "2",
         "3",
         "4",
+        "5",
     ]
     if pat == "cas" or size != "16"
 ]
@@ -301,6 +302,7 @@ filegroup(
             "lib/builtins/aarch64/*.S",
             "lib/builtins/aarch64/*.c",
             "lib/builtins/aarch64/*.cpp",
+            "lib/builtins/aarch64/*.h",
         ],
         allow_empty = True,
         exclude = [
@@ -317,6 +319,7 @@ BUILTINS_ARM_VFP_SRCS_PATTERNS = [
     "lib/builtins/arm/*vfp*.S",
     "lib/builtins/arm/*vfp*.c",
     "lib/builtins/arm/*vfp*.cpp",
+    "lib/builtins/arm/*vfp*.h",
 ]
 
 # Source files for the ARM VFP-specific builtins.
@@ -336,6 +339,7 @@ filegroup(
             "lib/builtins/arm/*.S",
             "lib/builtins/arm/*.c",
             "lib/builtins/arm/*.cpp",
+            "lib/builtins/arm/*.h",
         ],
         allow_empty = True,
         exclude = BUILTINS_ARM_VFP_SRCS_PATTERNS,
@@ -350,6 +354,7 @@ filegroup(
             "lib/builtins/ppc/*.S",
             "lib/builtins/ppc/*.c",
             "lib/builtins/ppc/*.cpp",
+            "lib/builtins/ppc/*.h",
         ],
         allow_empty = True,
     ),
@@ -386,6 +391,7 @@ filegroup(
             "lib/builtins/x86_64/*.S",
             "lib/builtins/x86_64/*.c",
             "lib/builtins/x86_64/*.cpp",
+            "lib/builtins/x86_64/*.h",
         ],
         allow_empty = True,
     ),
@@ -399,6 +405,7 @@ filegroup(
             "lib/builtins/i386/*.S",
             "lib/builtins/i386/*.c",
             "lib/builtins/i386/*.cpp",
+            "lib/builtins/i386/*.h",
         ],
         allow_empty = True,
         exclude = [

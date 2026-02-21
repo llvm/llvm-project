@@ -80,6 +80,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -100,6 +101,7 @@ namespace {
 
 class AArch64ConditionOptimizer : public MachineFunctionPass {
   const TargetInstrInfo *TII;
+  const TargetRegisterInfo *TRI;
   MachineDominatorTree *DomTree;
   const MachineRegisterInfo *MRI;
 
@@ -113,6 +115,8 @@ public:
   AArch64ConditionOptimizer() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool registersMatch(MachineInstr *FirstMI, MachineInstr *SecondMI);
+  bool nzcvLivesOut(MachineBasicBlock *MBB);
   MachineInstr *findSuitableCompare(MachineBasicBlock *MBB);
   CmpInfo adjustCmp(MachineInstr *CmpMI, AArch64CC::CondCode Cmp);
   void modifyCmp(MachineInstr *CmpMI, const CmpInfo &Info);
@@ -148,6 +152,36 @@ void AArch64ConditionOptimizer::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
+// Ensure both compare MIs use the same register, tracing through copies.
+bool AArch64ConditionOptimizer::registersMatch(MachineInstr *FirstMI,
+                                               MachineInstr *SecondMI) {
+  Register FirstReg = FirstMI->getOperand(1).getReg();
+  Register SecondReg = SecondMI->getOperand(1).getReg();
+  Register FirstCmpReg =
+      FirstReg.isVirtual() ? TRI->lookThruCopyLike(FirstReg, MRI) : FirstReg;
+  Register SecondCmpReg =
+      SecondReg.isVirtual() ? TRI->lookThruCopyLike(SecondReg, MRI) : SecondReg;
+  if (FirstCmpReg != SecondCmpReg) {
+    LLVM_DEBUG(dbgs() << "CMPs compare different registers\n");
+    return false;
+  }
+
+  return true;
+}
+
+// Check if NZCV lives out to any successor block.
+bool AArch64ConditionOptimizer::nzcvLivesOut(MachineBasicBlock *MBB) {
+  for (auto *SuccBB : MBB->successors()) {
+    if (SuccBB->isLiveIn(AArch64::NZCV)) {
+      LLVM_DEBUG(dbgs() << "NZCV live into successor "
+                        << printMBBReference(*SuccBB) << " from "
+                        << printMBBReference(*MBB) << '\n');
+      return true;
+    }
+  }
+  return false;
+}
+
 // Finds compare instruction that corresponds to supported types of branching.
 // Returns the instruction or nullptr on failures or detecting unsupported
 // instructions.
@@ -161,9 +195,8 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
     return nullptr;
 
   // Since we may modify cmp of this MBB, make sure NZCV does not live out.
-  for (auto *SuccBB : MBB->successors())
-    if (SuccBB->isLiveIn(AArch64::NZCV))
-      return nullptr;
+  if (nzcvLivesOut(MBB))
+    return nullptr;
 
   // Now find the instruction controlling the terminator.
   for (MachineBasicBlock::iterator B = MBB->begin(), It = Term; It != B;) {
@@ -392,10 +425,12 @@ bool AArch64ConditionOptimizer::optimizeIntraBlock(MachineBasicBlock &MBB) {
     return false;
   }
 
-  if (FirstCmp->getOperand(1).getReg() != SecondCmp->getOperand(1).getReg()) {
-    LLVM_DEBUG(dbgs() << "CMPs compare different registers\n");
+  // Since we may modify cmps in this MBB, make sure NZCV does not live out.
+  if (nzcvLivesOut(&MBB))
     return false;
-  }
+
+  if (!registersMatch(FirstCmp, SecondCmp))
+    return false;
 
   if (!isPureCmp(*FirstCmp) || !isPureCmp(*SecondCmp)) {
     LLVM_DEBUG(dbgs() << "One or both CMPs are not pure\n");
@@ -421,11 +456,6 @@ bool AArch64ConditionOptimizer::optimizeIntraBlock(MachineBasicBlock &MBB) {
       return false;
     }
   }
-
-  // Since we may modify a cmp in this MBB, make sure NZCV does not live out.
-  for (auto *SuccBB : MBB.successors())
-    if (SuccBB->isLiveIn(AArch64::NZCV))
-      return false;
 
   // Extract condition codes from both CSINCs (operand 3)
   AArch64CC::CondCode FirstCond =
@@ -503,6 +533,10 @@ bool AArch64ConditionOptimizer::optimizeCrossBlock(MachineBasicBlock &HBB) {
 
   MachineInstr *TrueCmpMI = findSuitableCompare(TBB);
   if (!TrueCmpMI) {
+    return false;
+  }
+
+  if (!registersMatch(HeadCmpMI, TrueCmpMI)) {
     return false;
   }
 
@@ -589,6 +623,7 @@ bool AArch64ConditionOptimizer::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   TII = MF.getSubtarget().getInstrInfo();
+  TRI = MF.getSubtarget().getRegisterInfo();
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MRI = &MF.getRegInfo();
 

@@ -2098,7 +2098,8 @@ void NewGVN::addAdditionalUsers(ExprResult &Res, Instruction *User) const {
   if (Res.PredDep) {
     if (const auto *PBranch = dyn_cast<PredicateBranch>(Res.PredDep))
       PredicateToUsers[PBranch->Condition].insert(User);
-    else if (const auto *PAssume = dyn_cast<PredicateAssume>(Res.PredDep))
+    else if (const auto *PAssume =
+                 dyn_cast<PredicateConditionAssume>(Res.PredDep))
       PredicateToUsers[PAssume->Condition].insert(User);
   }
   Res.PredDep = nullptr;

@@ -66,7 +66,15 @@ define void @use_noundef_range() {
   ret void
 }
 
-
+; INTERESTING-LABEL: define void @use_nofpclass(
+; REDUCED-LABEL: define void @use_nofpclass(float nofpclass(nan) %load, <2 x float> nofpclass(inf) %load_vec) {
+define void @use_nofpclass() {
+  %load = load float, ptr null, !nofpclass !{i32 3}
+  %load_vec = load <2 x float>, ptr null, !nofpclass !{i32 516}
+  store float %load, ptr null
+  store <2 x float> %load_vec, ptr null
+  ret void
+}
 
 !0 = !{}
 !1 = !{i64 16}

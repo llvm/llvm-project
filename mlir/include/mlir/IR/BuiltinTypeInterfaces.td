@@ -237,6 +237,10 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
     /// Return the number of elements present in the given shape.
     static int64_t getNumElements(ArrayRef<int64_t> shape);
 
+    /// Return the number of elements present in the given shape, or
+    /// std::nullopt if the computation would overflow.
+    static std::optional<int64_t> tryGetNumElements(ArrayRef<int64_t> shape);
+
     /// Return a clone of this type with the given new shape and element type.
     /// The returned type is ranked, even if this type is unranked.
     auto clone(::llvm::ArrayRef<int64_t> shape, Type elementType) {
@@ -274,6 +278,13 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
     int64_t getNumElements() const {
       assert(hasStaticShape() && "cannot get element count of dynamic shaped type");
       return ::mlir::ShapedType::getNumElements($_type.getShape());
+    }
+
+    /// Return the number of elements, or std::nullopt if the computation would overflow.
+    /// Precondition: `hasStaticShape()`, otherwise abort.
+    std::optional<int64_t> tryGetNumElements() const {
+      assert(hasStaticShape() && "cannot get element count of dynamic shaped type");
+      return ::mlir::ShapedType::tryGetNumElements($_type.getShape());
     }
 
     /// Returns true if this dimension has a dynamic size (for ranked types);

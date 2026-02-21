@@ -451,7 +451,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  addHIPRuntimeLibArgs(ToolChain, C, Args, CmdArgs);
+  ToolChain.addOffloadRTLibs(C.getActiveOffloadKinds(), Args, CmdArgs);
 
   // The profile runtime also needs access to system libraries.
   getToolChain().addProfileRTLibs(Args, CmdArgs);
@@ -672,7 +672,9 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     break;
   }
   case llvm::Triple::riscv32:
-  case llvm::Triple::riscv64: {
+  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be: {
     StringRef ABIName = riscv::getRISCVABI(Args, getToolChain().getTriple());
     CmdArgs.push_back("-mabi");
     CmdArgs.push_back(ABIName.data());
@@ -1088,7 +1090,7 @@ static bool findMipsMuslMultilibs(const Driver &D,
     });
   }
   if (MuslMipsMultilibs.select(D, Flags, Result.SelectedMultilibs)) {
-    Result.Multilibs = MuslMipsMultilibs;
+    Result.Multilibs = std::move(MuslMipsMultilibs);
     return true;
   }
   return false;
@@ -1499,7 +1501,7 @@ static void findAndroidArmMultilibs(const Driver &D,
   addMultilibFlag(IsThumbMode, "-mthumb", Flags);
 
   if (AndroidArmMultilibs.select(D, Flags, Result.SelectedMultilibs))
-    Result.Multilibs = AndroidArmMultilibs;
+    Result.Multilibs = std::move(AndroidArmMultilibs);
 }
 
 static bool findMSP430Multilibs(const Driver &D,
@@ -1592,7 +1594,7 @@ static void findCSKYMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
           .FilterOut(NonExistent);
 
   if (CSKYMultilibs.select(D, Flags, Result.SelectedMultilibs))
-    Result.Multilibs = CSKYMultilibs;
+    Result.Multilibs = std::move(CSKYMultilibs);
 }
 
 /// Extend the multi-lib re-use selection mechanism for RISC-V.
@@ -1607,7 +1609,7 @@ static void findCSKYMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
 ///     atomic operation can't work together correctly.
 static bool
 selectRISCVMultilib(const Driver &D, const MultilibSet &RISCVMultilibSet,
-                    StringRef Arch, const Multilib::flags_list &Flags,
+                    const Multilib::flags_list &Flags,
                     llvm::SmallVectorImpl<Multilib> &SelectedMultilibs) {
   // Try to find the perfect matching multi-lib first.
   if (RISCVMultilibSet.select(D, Flags, SelectedMultilibs))
@@ -1615,6 +1617,17 @@ selectRISCVMultilib(const Driver &D, const MultilibSet &RISCVMultilibSet,
 
   Multilib::flags_list NewFlags;
   std::vector<MultilibBuilder> NewMultilibs;
+
+  // Collect all flags and extract Arch from march
+  StringRef Arch;
+  for (StringRef Flag : Flags) {
+    if (Flag.consume_front("-march=")) {
+      Arch = Flag;
+      continue;
+    }
+
+    NewFlags.push_back(Flag.str());
+  }
 
   llvm::Expected<std::unique_ptr<llvm::RISCVISAInfo>> ParseResult =
       llvm::RISCVISAInfo::parseArchString(
@@ -1628,14 +1641,6 @@ selectRISCVMultilib(const Driver &D, const MultilibSet &RISCVMultilibSet,
 
   addMultilibFlag(ISAInfo->getXLen() == 32, "-m32", NewFlags);
   addMultilibFlag(ISAInfo->getXLen() == 64, "-m64", NewFlags);
-
-  // Collect all flags except march=*
-  for (StringRef Flag : Flags) {
-    if (Flag.starts_with("!march=") || Flag.starts_with("-march="))
-      continue;
-
-    NewFlags.push_back(Flag.str());
-  }
 
   llvm::StringSet<> AllArchExts;
   // Reconstruct multi-lib list, and break march option into separated
@@ -1737,35 +1742,30 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
             .flag(Twine("-march=", Element.march).str())
             .flag(Twine("-mabi=", Element.mabi).str()));
   }
+
+  StringRef EndiannessSuffix = TargetTriple.isLittleEndian() ? "" : "be";
   MultilibSet RISCVMultilibs =
       MultilibSetBuilder()
           .Either(Ms)
           .makeMultilibSet()
           .FilterOut(NonExistent)
-          .setFilePathsCallback([](const Multilib &M) {
+          .setFilePathsCallback([EndiannessSuffix](const Multilib &M) {
             return std::vector<std::string>(
                 {M.gccSuffix(),
-                 "/../../../../riscv64-unknown-elf/lib" + M.gccSuffix(),
-                 "/../../../../riscv32-unknown-elf/lib" + M.gccSuffix()});
+                 "/../../../../riscv64" + EndiannessSuffix.str() +
+                     "-unknown-elf/lib" + M.gccSuffix(),
+                 "/../../../../riscv32" + EndiannessSuffix.str() +
+                     "-unknown-elf/lib" + M.gccSuffix()});
           });
 
   Multilib::flags_list Flags;
-  llvm::StringSet<> Added_ABIs;
   StringRef ABIName = tools::riscv::getRISCVABI(Args, TargetTriple);
   std::string MArch = tools::riscv::getRISCVArch(Args, TargetTriple);
-  for (auto Element : RISCVMultilibSet) {
-    addMultilibFlag(MArch == Element.march,
-                    Twine("-march=", Element.march).str(), Flags);
-    if (!Added_ABIs.count(Element.mabi)) {
-      Added_ABIs.insert(Element.mabi);
-      addMultilibFlag(ABIName == Element.mabi,
-                      Twine("-mabi=", Element.mabi).str(), Flags);
-    }
-  }
+  Flags.push_back("-march=" + MArch);
+  Flags.push_back("-mabi=" + ABIName.str());
 
-  if (selectRISCVMultilib(D, RISCVMultilibs, MArch, Flags,
-                          Result.SelectedMultilibs))
-    Result.Multilibs = RISCVMultilibs;
+  if (selectRISCVMultilib(D, RISCVMultilibs, Flags, Result.SelectedMultilibs))
+    Result.Multilibs = std::move(RISCVMultilibs);
 }
 
 static void findRISCVMultilibs(const Driver &D,
@@ -1794,7 +1794,7 @@ static void findRISCVMultilibs(const Driver &D,
           .FilterOut(NonExistent);
 
   Multilib::flags_list Flags;
-  bool IsRV64 = TargetTriple.getArch() == llvm::Triple::riscv64;
+  bool IsRV64 = TargetTriple.isRISCV64();
   StringRef ABIName = tools::riscv::getRISCVABI(Args, TargetTriple);
 
   addMultilibFlag(!IsRV64, "-m32", Flags);
@@ -1807,7 +1807,7 @@ static void findRISCVMultilibs(const Driver &D,
   addMultilibFlag(ABIName == "lp64d", "-mabi=lp64d", Flags);
 
   if (RISCVMultilibs.select(D, Flags, Result.SelectedMultilibs))
-    Result.Multilibs = RISCVMultilibs;
+    Result.Multilibs = std::move(RISCVMultilibs);
 }
 
 static bool findBiarchMultilibs(const Driver &D,
@@ -2441,6 +2441,15 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   static const char *const RISCV64Triples[] = {"riscv64-unknown-linux-gnu",
                                                "riscv64-unknown-elf"};
 
+  static const char *const RISCV32beLibDirs[] = {"/lib32", "/lib"};
+  static const char *const RISCV32beTriples[] = {"riscv32be-unknown-linux-gnu",
+                                                 "riscv32be-linux-gnu",
+                                                 "riscv32be-unknown-elf"};
+  static const char *const RISCV64beLibDirs[] = {"/lib64", "/lib"};
+  static const char *const RISCV64beTriples[] = {"riscv64be-unknown-linux-gnu",
+                                                 "riscv64be-linux-gnu",
+                                                 "riscv64be-unknown-elf"};
+
   static const char *const SPARCv8LibDirs[] = {"/lib32", "/lib"};
   static const char *const SPARCv8Triples[] = {"sparc-linux-gnu",
                                                "sparcv8-linux-gnu"};
@@ -2735,6 +2744,18 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     TripleAliases.append(begin(RISCV64Triples), end(RISCV64Triples));
     BiarchLibDirs.append(begin(RISCV32LibDirs), end(RISCV32LibDirs));
     BiarchTripleAliases.append(begin(RISCV32Triples), end(RISCV32Triples));
+    break;
+  case llvm::Triple::riscv32be:
+    LibDirs.append(begin(RISCV32beLibDirs), end(RISCV32beLibDirs));
+    TripleAliases.append(begin(RISCV32beTriples), end(RISCV32beTriples));
+    BiarchLibDirs.append(begin(RISCV64beLibDirs), end(RISCV64beLibDirs));
+    BiarchTripleAliases.append(begin(RISCV64beTriples), end(RISCV64beTriples));
+    break;
+  case llvm::Triple::riscv64be:
+    LibDirs.append(begin(RISCV64beLibDirs), end(RISCV64beLibDirs));
+    TripleAliases.append(begin(RISCV64beTriples), end(RISCV64beTriples));
+    BiarchLibDirs.append(begin(RISCV32beLibDirs), end(RISCV32beLibDirs));
+    BiarchTripleAliases.append(begin(RISCV32beTriples), end(RISCV32beTriples));
     break;
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
@@ -3051,6 +3072,8 @@ Generic_GCC::getDefaultUnwindTableLevel(const ArgList &Args) const {
   case llvm::Triple::ppc64le:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     return UnwindTableLevel::Asynchronous;

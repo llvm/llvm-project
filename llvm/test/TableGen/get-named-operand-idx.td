@@ -64,8 +64,8 @@ defm : RemapAllTargetPseudoPointerOperands<RegClass>;
 // CHECK-NEXT:    NUM_OPERAND_NAMES = 5,
 // CHECK-NEXT:  }; // enum class OpName
 // CHECK-EMPTY:
-// CHECK-NEXT:  LLVM_READONLY int16_t getNamedOperandIdx(uint16_t Opcode, OpName Name);
-// CHECK-NEXT:  LLVM_READONLY OpName getOperandIdxName(uint16_t Opcode, int16_t Idx);
+// CHECK-NEXT:  LLVM_READONLY int16_t getNamedOperandIdx(uint32_t Opcode, OpName Name);
+// CHECK-NEXT:  LLVM_READONLY OpName getOperandIdxName(uint32_t Opcode, int16_t Idx);
 // CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm::MyNamespace
 // CHECK-EMPTY:
@@ -76,7 +76,7 @@ defm : RemapAllTargetPseudoPointerOperands<RegClass>;
 // CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm::MyNamespace {
 // CHECK-EMPTY:
-// CHECK-NEXT:  LLVM_READONLY static uint8_t getInstructionIndexForOpLookup(uint16_t Opcode) {
+// CHECK-NEXT:  LLVM_READONLY static uint8_t getInstructionIndexForOpLookup(uint32_t Opcode) {
 // CHECK-NEXT:    static constexpr uint8_t InstructionIndex[] = {
 // CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 // CHECK-NEXT:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -102,7 +102,7 @@ defm : RemapAllTargetPseudoPointerOperands<RegClass>;
 // CHECK-NEXT:    };
 // CHECK-NEXT:    return InstructionIndex[Opcode];
 // CHECK-NEXT:  }
-// CHECK-NEXT:  LLVM_READONLY int16_t getNamedOperandIdx(uint16_t Opcode, OpName Name) {
+// CHECK-NEXT:  LLVM_READONLY int16_t getNamedOperandIdx(uint32_t Opcode, OpName Name) {
 // CHECK-NEXT:    assert(Name != OpName::NUM_OPERAND_NAMES);
 // CHECK-NEXT:    static constexpr int8_t OperandMap[][5] = {
 // CHECK-NEXT:      {-1, -1, -1, -1, -1, },
@@ -112,7 +112,7 @@ defm : RemapAllTargetPseudoPointerOperands<RegClass>;
 // CHECK-NEXT:    unsigned InstrIdx = getInstructionIndexForOpLookup(Opcode);
 // CHECK-NEXT:    return OperandMap[InstrIdx][(unsigned)Name];
 // CHECK-NEXT:  }
-// CHECK-NEXT:  LLVM_READONLY OpName getOperandIdxName(uint16_t Opcode, int16_t Idx) {
+// CHECK-NEXT:  LLVM_READONLY OpName getOperandIdxName(uint32_t Opcode, int16_t Idx) {
 // CHECK-NEXT:    assert(Idx >= 0 && Idx < 3);
 // CHECK-NEXT:    static constexpr OpName OperandMap[][3] = {
 // CHECK-NEXT:      {OpName::NUM_OPERAND_NAMES, OpName::NUM_OPERAND_NAMES, OpName::NUM_OPERAND_NAMES, },

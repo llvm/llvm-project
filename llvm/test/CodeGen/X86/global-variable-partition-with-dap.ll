@@ -10,7 +10,16 @@ target triple = "x86_64-unknown-linux-gnu"
 ; RUN:     -partition-static-data-sections=true \
 ; RUN:     -debug-only=static-data-profile-info \
 ; RUN:     -data-sections=true  -unique-section-names=false \
-; RUN:     input-with-data-access-prof-on.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOG,IR
+; RUN:     input-with-data-access-prof-on.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,IRCOMMON,IR
+
+;; Repeat command above, but with string literals handled in the codegen pass,
+;; with -memprof-annotate-string-literal-section-prefix=true.
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
+; RUN:     -partition-static-data-sections=true \
+; RUN:     -debug-only=static-data-profile-info \
+; RUN:     -data-sections=true  -unique-section-names=false \
+; RUN:     -memprof-annotate-string-literal-section-prefix=true \
+; RUN:     input-with-data-access-prof-on.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,LOGSTR,IRCOMMON,IRSTR
 
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
 ; RUN:     -partition-static-data-sections=true \
@@ -18,17 +27,44 @@ target triple = "x86_64-unknown-linux-gnu"
 ; RUN:     -data-sections=true  -unique-section-names=false \
 ; RUN:     input-with-data-access-prof-off.ll -o - 2>&1 | FileCheck %s --check-prefixes=OFF
 
-; LOG: hot_bss has section prefix hot, the max from data access profiles as hot and PGO counters as hot
-; LOG: data_unknown_hotness has section prefix <empty>, the max from data access profiles as <empty> and PGO counters as unlikely
-; LOG: external_relro_array has section prefix unlikely, solely from data access profiles
+; LOGCOMMON: hot_bss has section prefix hot, the max from data access profiles as hot and PGO counters as hot
+; LOGCOMMON: data_unknown_hotness has section prefix <empty>, the max from data access profiles as <empty> and PGO counters as unlikely
 
-; IR:          .type   hot_bss,@object
-; IR-NEXT:     .section .bss.hot.,"aw"
-; IR:          .type   data_unknown_hotness,@object
-; IR-NEXT:    .section .data,"aw"
-; IR:          .type   external_relro_array,@object
-; IR-NEXT:     .section        .data.rel.ro.unlikely.,"aw"
+; LOGSTR: .str has section prefix <empty>, the max from data access profiles as <empty> and PGO counters as unlikely
+; LOGSTR: .str.1 has section prefix hot, the max from data access profiles as unlikely and PGO counters as hot
 
+; LOGCOMMON: external_relro_array has section prefix unlikely, solely from data access profiles
+
+; LOGSTR: .str.llvm.98765 has section prefix <empty>, solely from data access profiles
+; LOGSTR: .str.2 has section prefix hot, solely from data access profiles
+
+; IRCOMMON:          .type   hot_bss,@object
+; IRCOMMON-NEXT:     .section .bss.hot.,"aw"
+; IRCOMMON:          .type   data_unknown_hotness,@object
+; IRCOMMON-NEXT:    .section .data,"aw"
+
+; IRSTR:         .section        .rodata,"a",@progbits
+; IR:            .section        .rodata.unlikely.,"a",@progbits
+; IRCOMMON-NEXT:    .L.str:
+; IRCOMMON-NEXT:    .ascii  "abcde"
+
+; IRCOMMON:         .section        .rodata.hot.,"a"
+; IRCOMMON-NEXT:    .str.1:
+; IRCOMMON-NEXT:    .ascii  "obj.a"
+
+; IRCOMMON:          .type   external_relro_array,@object
+; IRCOMMON-NEXT:     .section        .data.rel.ro.unlikely.,"aw"
+
+; IRCOMMON:         .section        .rodata,"a",@progbits
+; IRCOMMON-NEXT:    .globl  .str.llvm.98765
+; IRCOMMON-NEXT:    .str.llvm.98765:
+; IRCOMMON-NEXT:    .ascii  "Joins"
+
+; IRSTR:         .section        .rodata.hot.,"a",@progbits
+; IR:            .section        .rodata,"a",@progbits
+; IRSTR-NEXT:    .globl  .str.2
+; IRSTR-NEXT:    .str.2:
+; IRSTR-NEXT:    .ascii  "*ptr != nullptr"
 
 ; OFF:        .type   hot_bss,@object
 ; OFF-NEXT:   .section        .bss.hot.,"aw"
@@ -36,7 +72,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; OFF-NEXT:   .section        .data.unlikely.,"aw"
 ;; Global variable section prefix metadata is not used when
 ;; module flag `EnableDataAccessProf` is 0, and @external_relro_array has
-;; external linkage, so analysis based on PGO counters doesn't apply. 
+;; external linkage, so analysis based on PGO counters doesn't apply.
 ; OFF:        .type   external_relro_array,@object    # @external_relro_array
 ; OFF-NEXT:   .section        .data.rel.ro,"aw"
 
@@ -44,18 +80,25 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Internal vars
 @hot_bss = internal global i32 0, !section_prefix !17
 @data_unknown_hotness = internal global i32 1
+@.str = private constant [5 x i8] c"abcde"
+@.str.1 = internal constant [5 x i8] c"obj.a", !section_prefix !18
 ; External vars
 @external_relro_array = constant [2 x ptr] [ptr @hot_bss, ptr @data_unknown_hotness], !section_prefix !18
 
+;; <empty> -> <empty>
+@.str.llvm.98765 = constant [5 x i8] c"Joins"
+
+@.str.2 = constant [15 x i8] c"*ptr != nullptr", !section_prefix !17
+
 define void @cold_func() !prof !15 {
   %9 = load i32, ptr @data_unknown_hotness
-  %11 = call i32 (...) @func_taking_arbitrary_param(i32 %9)
+  %11 = call i32 (...) @func_taking_arbitrary_param(i32 %9, ptr @.str)
   ret void
 }
 
 define void @hot_func() !prof !14 {
   %9 = load i32, ptr @hot_bss
-  %11 = call i32 (...) @func_taking_arbitrary_param(i32 %9)
+  %11 = call i32 (...) @func_taking_arbitrary_param(i32 %9, ptr @.str.1)
   ret void
 }
 

@@ -296,7 +296,8 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMDICompositeTypeAttrGetName(void);
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIDerivedTypeAttrGet(
     MlirContext ctx, unsigned int tag, MlirAttribute name,
     MlirAttribute baseType, uint64_t sizeInBits, uint32_t alignInBits,
-    uint64_t offsetInBits, int64_t dwarfAddressSpace, MlirAttribute extraData);
+    uint64_t offsetInBits, int64_t dwarfAddressSpace, int64_t flags,
+    MlirAttribute extraData);
 
 MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMDIDerivedTypeAttrGetName(void);
 

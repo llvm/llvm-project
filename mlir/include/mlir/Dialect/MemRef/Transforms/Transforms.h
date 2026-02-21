@@ -83,9 +83,11 @@ void populateMemRefWideIntEmulationConversions(
 
 /// Appends patterns for emulating memref operations over narrow types with ops
 /// over wider types.
+/// When `disableAtomicRMW` is true, the store patterns generate non-atomic
+/// read-modify-write sequences instead of atomic operations.
 void populateMemRefNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
-    RewritePatternSet &patterns);
+    RewritePatternSet &patterns, bool disableAtomicRMW = false);
 
 /// Appends type conversions for emulating memref operations over narrow types
 /// with ops over wider types.

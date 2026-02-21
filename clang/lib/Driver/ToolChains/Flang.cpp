@@ -203,6 +203,12 @@ void Flang::addCodegenOptions(const ArgList &Args,
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
 
+  // -fno-protect-parens is the default for -Ofast.
+  if (!Args.hasFlag(options::OPT_fprotect_parens,
+                    options::OPT_fno_protect_parens,
+                    /*Default=*/!Args.hasArg(options::OPT_Ofast)))
+    CmdArgs.push_back("-fno-protect-parens");
+
   if (Args.hasFlag(options::OPT_funsafe_cray_pointers,
                    options::OPT_fno_unsafe_cray_pointers, false)) {
     // TODO: currently passed as MLIR option
@@ -1140,6 +1146,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  renderGlobalISelOptions(D, Args, CmdArgs, Triple);
   renderCommonIntegerOverflowOptions(Args, CmdArgs);
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");

@@ -9,7 +9,7 @@
 #include <clc/atomic/clc_atomic_dec.h>
 
 #define __CLC_FUNCTION __clc_atomic_dec
-#define __CLC_IMPL_FUNCTION __scoped_atomic_udec_wrap
+#define __CLC_IMPL_FUNCTION __scoped_atomic_fetch_udec
 #define __CLC_INC_DEC
 
 #define __CLC_BODY <clc_atomic_def.inc>

@@ -5219,12 +5219,12 @@ define void @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(ptr addrspace
   ret void
 }
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { strictfp "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { denormal_fpenv(float: preservesign) }
+attributes #1 = { strictfp denormal_fpenv(float: preservesign) }
 attributes #2 = { strictfp }
-attributes #3 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #4 = { "denormal-fp-math-f32"="dynamic,dynamic" }
-attributes #5 = { "denormal-fp-math"="dynamic,dynamic" }
+attributes #3 = { denormal_fpenv(float: preservesign) }
+attributes #4 = { denormal_fpenv(float: dynamic) }
+attributes #5 = { denormal_fpenv(dynamic) }
 
 !0 = !{}
 !1 = !{i32 5, i32 6}

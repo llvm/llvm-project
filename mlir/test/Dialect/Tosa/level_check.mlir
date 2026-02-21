@@ -521,7 +521,7 @@ func.func @test_identity_rank_valid(%arg0: tensor<i32>) -> tensor<i32> {
 // -----
 
 func.func @test_avgpool2d_kernel_y(%arg0: tensor<1x8194x32x8xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> tensor<1x2x32x8xf32> {
-  // expected-error@+1 {{'tosa.avg_pool2d' op failed level check: kernel <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.avg_pool2d' op failed level check: kernel <= MAX_KERNEL (8192), got 8193}}
   %0 = "tosa.avg_pool2d"(%arg0, %arg1, %arg2) {kernel = array<i64: 8193, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, acc_type = f32} :
          (tensor<1x8194x32x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x2x32x8xf32>
   return %0 : tensor<1x2x32x8xf32>
@@ -530,7 +530,7 @@ func.func @test_avgpool2d_kernel_y(%arg0: tensor<1x8194x32x8xf32>, %arg1: tensor
 // -----
 
 func.func @test_avgpool2d_kernel_x(%arg0: tensor<1x32x8194x8xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> tensor<1x32x2x8xf32> {
-  // expected-error@+1 {{'tosa.avg_pool2d' op failed level check: kernel <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.avg_pool2d' op failed level check: kernel <= MAX_KERNEL (8192), got 8193}}
   %0 = "tosa.avg_pool2d"(%arg0, %arg1, %arg2) {kernel = array<i64: 1, 8193>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, acc_type = f32} :
          (tensor<1x32x8194x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x2x8xf32>
   return %0 : tensor<1x32x2x8xf32>
@@ -539,7 +539,7 @@ func.func @test_avgpool2d_kernel_x(%arg0: tensor<1x32x8194x8xf32>, %arg1: tensor
 // -----
 
 func.func @test_avgpool2d_stride_y(%arg0: tensor<1x8194x32x8xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> tensor<1x2x32x8xf32> {
-  // expected-error@+1 {{'tosa.avg_pool2d' op failed level check: stride <= MAX_STRIDE}}
+  // expected-error@+1 {{'tosa.avg_pool2d' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
   %0 = "tosa.avg_pool2d"(%arg0, %arg1, %arg2) {kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 8193, 1>, acc_type = f32} :
          (tensor<1x8194x32x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x2x32x8xf32>
   return %0 : tensor<1x2x32x8xf32>
@@ -548,7 +548,7 @@ func.func @test_avgpool2d_stride_y(%arg0: tensor<1x8194x32x8xf32>, %arg1: tensor
 // -----
 
 func.func @test_avgpool2d_stride_x(%arg0: tensor<1x32x8194x8xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> tensor<1x32x2x8xf32> {
-  // expected-error@+1 {{'tosa.avg_pool2d' op failed level check: stride <= MAX_STRIDE}}
+  // expected-error@+1 {{'tosa.avg_pool2d' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
   %0 = "tosa.avg_pool2d"(%arg0, %arg1, %arg2) {kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 8193>, acc_type = f32} :
          (tensor<1x32x8194x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x2x8xf32>
   return %0 : tensor<1x32x2x8xf32>
@@ -557,7 +557,7 @@ func.func @test_avgpool2d_stride_x(%arg0: tensor<1x32x8194x8xf32>, %arg1: tensor
 // -----
 
 func.func @test_conv2d_dilation_y(%arg0: tensor<1x8192x8192x1xf32>, %arg1: tensor<16x1025x1024x1xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>) -> tensor<1x1x7170x16xf32> {
-  // expected-error@+1 {{'tosa.conv2d' op failed level check: dilation_y * KH <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.conv2d' op failed level check: dilation_y * KH <= MAX_KERNEL (8192), got 8200}}
   %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg3 {acc_type = f32, dilation = array<i64: 8, 1>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 1, 1>} :
             (tensor<1x8192x8192x1xf32>, tensor<16x1025x1024x1xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1x7170x16xf32>
   return %0 : tensor<1x1x7170x16xf32>
@@ -566,7 +566,7 @@ func.func @test_conv2d_dilation_y(%arg0: tensor<1x8192x8192x1xf32>, %arg1: tenso
 // -----
 
 func.func @test_conv2d_dilation_x(%arg0: tensor<1x8192x8192x1xf32>, %arg1: tensor<16x1024x1025x1xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>) -> tensor<1x7170x1x16xf32> {
-  // expected-error@+1 {{'tosa.conv2d' op failed level check: dilation_x * KW <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.conv2d' op failed level check: dilation_x * KW <= MAX_KERNEL (8192), got 8200}}
   %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg3 {acc_type = f32, dilation = array<i64: 1, 8>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 1, 1>} :
             (tensor<1x8192x8192x1xf32>, tensor<16x1024x1025x1xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x7170x1x16xf32>
   return %0 : tensor<1x7170x1x16xf32>
@@ -575,7 +575,7 @@ func.func @test_conv2d_dilation_x(%arg0: tensor<1x8192x8192x1xf32>, %arg1: tenso
 // -----
 
 func.func @test_conv2d_pad_top(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x2x2x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>) -> tensor<1x8225x32x16xf32> {
-  // expected-error@+1 {{'tosa.conv2d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.conv2d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg3 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 8193, 1, 0, 1>, stride = array<i64: 1, 1>} :
             (tensor<1x32x32x8xf32>, tensor<16x2x2x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x8225x32x16xf32>
   return %0 : tensor<1x8225x32x16xf32>
@@ -584,7 +584,7 @@ func.func @test_conv2d_pad_top(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x2x
 // -----
 
 func.func @test_conv2d_pad_bottom(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x2x2x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>) -> tensor<1x8224x32x16xf32> {
-  // expected-error@+1 {{'tosa.conv2d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.conv2d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg3 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 8193, 0, 1>, stride = array<i64: 1, 1>} :
             (tensor<1x32x32x8xf32>, tensor<16x2x2x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x8224x32x16xf32>
   return %0 : tensor<1x8224x32x16xf32>
@@ -593,7 +593,7 @@ func.func @test_conv2d_pad_bottom(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16
 // -----
 
 func.func @test_conv2d_pad_left(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x2x2x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>) -> tensor<1x32x8225x16xf32> {
-  // expected-error@+1 {{'tosa.conv2d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.conv2d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg3 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 1, 8193, 1>, stride = array<i64: 1, 1>} :
             (tensor<1x32x32x8xf32>, tensor<16x2x2x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x8225x16xf32>
   return %0 : tensor<1x32x8225x16xf32>
@@ -602,7 +602,7 @@ func.func @test_conv2d_pad_left(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x2
 // -----
 
 func.func @test_conv2d_pad_right(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x2x2x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>) -> tensor<1x32x8224x16xf32> {
-  // expected-error@+1 {{'tosa.conv2d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.conv2d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg3 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 1, 0, 8193>, stride = array<i64: 1, 1>} :
             (tensor<1x32x32x8xf32>, tensor<16x2x2x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x8224x16xf32>
   return %0 : tensor<1x32x8224x16xf32>
@@ -611,7 +611,7 @@ func.func @test_conv2d_pad_right(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x
 // -----
 
 func.func @test_conv2d_stride_y(%arg0: tensor<1x8194x33x8xf32>, %arg1: tensor<16x2x2x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>) -> tensor<1x2x33x16xf32> {
-  // expected-error@+1 {{'tosa.conv2d' op failed level check: stride <= MAX_STRIDE}}
+  // expected-error@+1 {{'tosa.conv2d' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
   %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg3 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 8193, 1>} :
             (tensor<1x8194x33x8xf32>, tensor<16x2x2x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x2x33x16xf32>
   return %0 : tensor<1x2x33x16xf32>
@@ -620,7 +620,7 @@ func.func @test_conv2d_stride_y(%arg0: tensor<1x8194x33x8xf32>, %arg1: tensor<16
 // -----
 
 func.func @test_conv2d_stride_x(%arg0: tensor<1x33x8194x8xf32>, %arg1: tensor<16x2x2x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>) -> tensor<1x33x2x16xf32> {
-  // expected-error@+1 {{'tosa.conv2d' op failed level check: stride <= MAX_STRIDE}}
+  // expected-error@+1 {{'tosa.conv2d' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
   %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg3 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 1, 8193>} :
             (tensor<1x33x8194x8xf32>, tensor<16x2x2x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x33x2x16xf32>
   return %0 : tensor<1x33x2x16xf32>
@@ -629,7 +629,7 @@ func.func @test_conv2d_stride_x(%arg0: tensor<1x33x8194x8xf32>, %arg1: tensor<16
 // -----
 
 func.func @test_conv3d_dilation_d(%arg0: tensor<1x8192x1x1x8xf32>, %arg1: tensor<16x1025x1x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x1x2x2x16xf32> {
-  // expected-error@+1 {{'tosa.conv3d' op failed level check: dilation_d * KD <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.conv3d' op failed level check: dilation_d * KD <= MAX_KERNEL (8192), got 8200}}
   %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 8, 1, 1>, pad = array<i64: 0, 1, 0, 1, 0, 1>, stride = array<i64: 1, 1, 1>} :
             (tensor<1x8192x1x1x8xf32>, tensor<16x1025x1x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1x2x2x16xf32>
   return %0 : tensor<1x1x2x2x16xf32>
@@ -638,7 +638,7 @@ func.func @test_conv3d_dilation_d(%arg0: tensor<1x8192x1x1x8xf32>, %arg1: tensor
 // -----
 
 func.func @test_conv3d_dilation_y(%arg0: tensor<1x1x8192x1x8xf32>, %arg1: tensor<16x1x1025x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x2x1x2x16xf32> {
-  // expected-error@+1 {{'tosa.conv3d' op failed level check: dilation_y * KH <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.conv3d' op failed level check: dilation_y * KH <= MAX_KERNEL (8192), got 8200}}
   %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 8, 1>, pad = array<i64: 0, 1, 0, 1, 0, 1>, stride = array<i64: 1, 1, 1>} :
             (tensor<1x1x8192x1x8xf32>, tensor<16x1x1025x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x2x1x2x16xf32>
   return %0 : tensor<1x2x1x2x16xf32>
@@ -647,7 +647,7 @@ func.func @test_conv3d_dilation_y(%arg0: tensor<1x1x8192x1x8xf32>, %arg1: tensor
 // -----
 
 func.func @test_conv3d_dilation_x(%arg0: tensor<1x1x1x8192x8xf32>, %arg1: tensor<16x1x1x1025x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x2x2x1x16xf32> {
-  // expected-error@+1 {{'tosa.conv3d' op failed level check: dilation_x * KW <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.conv3d' op failed level check: dilation_x * KW <= MAX_KERNEL (8192), got 8200}}
   %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1, 8>, pad = array<i64: 0, 1, 0, 1, 0, 1>, stride = array<i64: 1, 1, 1>} :
             (tensor<1x1x1x8192x8xf32>, tensor<16x1x1x1025x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x2x2x1x16xf32>
   return %0 : tensor<1x2x2x1x16xf32>
@@ -656,7 +656,7 @@ func.func @test_conv3d_dilation_x(%arg0: tensor<1x1x1x8192x8xf32>, %arg1: tensor
 // -----
 
 func.func @test_conv3d_pad_d0(%arg0: tensor<1x1x32x32x8xf32>, %arg1: tensor<16x2x2x2x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x8194x32x32x16xf32> {
-  // expected-error@+1 {{'tosa.conv3d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.conv3d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1, 1>, pad = array<i64: 8193, 1, 0, 1, 0, 1>, stride = array<i64: 1, 1, 1>} :
             (tensor<1x1x32x32x8xf32>, tensor<16x2x2x2x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x8194x32x32x16xf32>
   return %0 : tensor<1x8194x32x32x16xf32>
@@ -665,7 +665,7 @@ func.func @test_conv3d_pad_d0(%arg0: tensor<1x1x32x32x8xf32>, %arg1: tensor<16x2
 // -----
 
 func.func @test_conv3d_pad_d1(%arg0: tensor<1x1x32x32x8xf32>, %arg1: tensor<16x2x2x2x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x8194x32x32x16xf32> {
-  // expected-error@+1 {{'tosa.conv3d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.conv3d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1, 1>, pad = array<i64: 1, 8193, 0, 1, 0, 1>, stride = array<i64: 1, 1, 1>} :
             (tensor<1x1x32x32x8xf32>, tensor<16x2x2x2x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x8194x32x32x16xf32>
   return %0 : tensor<1x8194x32x32x16xf32>
@@ -674,7 +674,7 @@ func.func @test_conv3d_pad_d1(%arg0: tensor<1x1x32x32x8xf32>, %arg1: tensor<16x2
 // -----
 
 func.func @test_conv3d_pad_top(%arg0: tensor<1x1x32x32x8xf32>, %arg1: tensor<16x2x2x2x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x1x8225x32x16xf32> {
-  // expected-error@+1 {{'tosa.conv3d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.conv3d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1, 1>, pad = array<i64: 0, 1, 8193, 1, 0, 1>, stride = array<i64: 1, 1, 1>} :
             (tensor<1x1x32x32x8xf32>, tensor<16x2x2x2x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1x8225x32x16xf32>
   return %0 : tensor<1x1x8225x32x16xf32>
@@ -683,7 +683,7 @@ func.func @test_conv3d_pad_top(%arg0: tensor<1x1x32x32x8xf32>, %arg1: tensor<16x
 // -----
 
 func.func @test_conv3d_pad_bottom(%arg0: tensor<1x1x32x32x8xf32>, %arg1: tensor<16x2x2x2x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x1x8224x32x16xf32> {
-  // expected-error@+1 {{'tosa.conv3d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.conv3d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1, 1>, pad = array<i64: 0, 1, 0, 8193, 0, 1>, stride = array<i64: 1, 1, 1>} :
             (tensor<1x1x32x32x8xf32>, tensor<16x2x2x2x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1x8224x32x16xf32>
   return %0 : tensor<1x1x8224x32x16xf32>
@@ -692,7 +692,7 @@ func.func @test_conv3d_pad_bottom(%arg0: tensor<1x1x32x32x8xf32>, %arg1: tensor<
 // -----
 
 func.func @test_conv3d_pad_left(%arg0: tensor<1x1x32x32x8xf32>, %arg1: tensor<16x2x2x2x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x1x32x8225x16xf32> {
-  // expected-error@+1 {{'tosa.conv3d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.conv3d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1, 1>, pad = array<i64: 0, 1, 0, 1, 8193, 1>, stride = array<i64: 1, 1, 1>} :
             (tensor<1x1x32x32x8xf32>, tensor<16x2x2x2x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1x32x8225x16xf32>
   return %0 : tensor<1x1x32x8225x16xf32>
@@ -701,7 +701,7 @@ func.func @test_conv3d_pad_left(%arg0: tensor<1x1x32x32x8xf32>, %arg1: tensor<16
 // -----
 
 func.func @test_conv3d_pad_right(%arg0: tensor<1x1x32x32x8xf32>, %arg1: tensor<16x2x2x2x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x1x32x8224x16xf32> {
-  // expected-error@+1 {{'tosa.conv3d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.conv3d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1, 1>, pad = array<i64: 0, 1, 0, 1, 0, 8193>, stride = array<i64: 1, 1, 1>} :
             (tensor<1x1x32x32x8xf32>, tensor<16x2x2x2x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1x32x8224x16xf32>
   return %0 : tensor<1x1x32x8224x16xf32>
@@ -710,7 +710,7 @@ func.func @test_conv3d_pad_right(%arg0: tensor<1x1x32x32x8xf32>, %arg1: tensor<1
 // -----
 
 func.func @test_conv3d_stride_d(%arg0: tensor<1x1x32x32x8xf32>, %arg1: tensor<16x2x2x2x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x1x32x32x16xf32>{
-  // expected-error@+1 {{'tosa.conv3d' op failed level check: stride <= MAX_STRIDE}}
+  // expected-error@+1 {{'tosa.conv3d' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
   %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1, 1>, pad = array<i64: 0, 1, 0, 1, 0, 1>, stride = array<i64: 8193, 1, 1>} :
             (tensor<1x1x32x32x8xf32>, tensor<16x2x2x2x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1x32x32x16xf32>
   return %0 : tensor<1x1x32x32x16xf32>
@@ -719,7 +719,7 @@ func.func @test_conv3d_stride_d(%arg0: tensor<1x1x32x32x8xf32>, %arg1: tensor<16
 // -----
 
 func.func @test_conv3d_stride_y(%arg0: tensor<1x1x8194x32x8xf32>, %arg1: tensor<16x2x2x2x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x1x2x32x16xf32> {
-  // expected-error@+1 {{'tosa.conv3d' op failed level check: stride <= MAX_STRIDE}}
+  // expected-error@+1 {{'tosa.conv3d' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
   %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1, 1>, pad = array<i64: 0, 1, 0, 1, 0, 1>, stride = array<i64: 1, 8193, 1>} :
             (tensor<1x1x8194x32x8xf32>, tensor<16x2x2x2x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1x2x32x16xf32>
   return %0 : tensor<1x1x2x32x16xf32>
@@ -728,7 +728,7 @@ func.func @test_conv3d_stride_y(%arg0: tensor<1x1x8194x32x8xf32>, %arg1: tensor<
 // -----
 
 func.func @test_conv3d_stride_x(%arg0: tensor<1x1x32x8194x8xf32>, %arg1: tensor<16x2x2x2x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x1x32x2x16xf32> {
-  // expected-error@+1 {{'tosa.conv3d' op failed level check: stride <= MAX_STRIDE}}
+  // expected-error@+1 {{'tosa.conv3d' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
   %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1, 1>, pad = array<i64: 0, 1, 0, 1, 0, 1>, stride = array<i64: 1, 1, 8193>} :
             (tensor<1x1x32x8194x8xf32>, tensor<16x2x2x2x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1x32x2x16xf32>
   return %0 : tensor<1x1x32x2x16xf32>
@@ -737,7 +737,7 @@ func.func @test_conv3d_stride_x(%arg0: tensor<1x1x32x8194x8xf32>, %arg1: tensor<
 // -----
 
 func.func @test_depthwise_conv2d_dilation_y(%arg0: tensor<1x8192x8192x4xf32>, %arg1: tensor<1025x16x4x1xf32>, %arg2: tensor<4xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x1x8178x4xf32> {
-  // expected-error@+1 {{'tosa.depthwise_conv2d' op failed level check: dilation_y * KH <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.depthwise_conv2d' op failed level check: dilation_y * KH <= MAX_KERNEL (8192), got 8200}}
   %0 = tosa.depthwise_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 8, 1>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 1, 1>} :
             (tensor<1x8192x8192x4xf32>, tensor<1025x16x4x1xf32>, tensor<4xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1x8178x4xf32>
   return %0 : tensor<1x1x8178x4xf32>
@@ -746,7 +746,7 @@ func.func @test_depthwise_conv2d_dilation_y(%arg0: tensor<1x8192x8192x4xf32>, %a
 // -----
 
 func.func @test_depthwise_conv2d_dilation_x(%arg0: tensor<1x8192x8192x4xf32>, %arg1: tensor<16x1025x4x1xf32>, %arg2: tensor<4xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x8178x1x4xf32> {
-  // expected-error@+1 {{'tosa.depthwise_conv2d' op failed level check: dilation_x * KW <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.depthwise_conv2d' op failed level check: dilation_x * KW <= MAX_KERNEL (8192), got 8200}}
   %0 = tosa.depthwise_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 8>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 1, 1>} :
             (tensor<1x8192x8192x4xf32>, tensor<16x1025x4x1xf32>, tensor<4xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x8178x1x4xf32>
   return %0 : tensor<1x8178x1x4xf32>
@@ -755,7 +755,7 @@ func.func @test_depthwise_conv2d_dilation_x(%arg0: tensor<1x8192x8192x4xf32>, %a
 // -----
 
 func.func @test_depthwise_conv2d_pad_top(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<2x2x8x8xf32>, %arg2: tensor<64xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x8225x32x64xf32> {
-  // expected-error@+1 {{'tosa.depthwise_conv2d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.depthwise_conv2d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.depthwise_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 8193, 1, 0, 1>, stride = array<i64: 1, 1>} :
             (tensor<1x32x32x8xf32>, tensor<2x2x8x8xf32>, tensor<64xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x8225x32x64xf32>
   return %0 : tensor<1x8225x32x64xf32>
@@ -764,7 +764,7 @@ func.func @test_depthwise_conv2d_pad_top(%arg0: tensor<1x32x32x8xf32>, %arg1: te
 // -----
 
 func.func @test_depthwise_conv2d_pad_bottom(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<2x2x8x8xf32>, %arg2: tensor<64xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x8224x32x64xf32> {
-  // expected-error@+1 {{'tosa.depthwise_conv2d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.depthwise_conv2d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.depthwise_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 8193, 0, 1>, stride = array<i64: 1, 1>} :
             (tensor<1x32x32x8xf32>, tensor<2x2x8x8xf32>, tensor<64xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x8224x32x64xf32>
   return %0 : tensor<1x8224x32x64xf32>
@@ -774,7 +774,7 @@ func.func @test_depthwise_conv2d_pad_bottom(%arg0: tensor<1x32x32x8xf32>, %arg1:
 // -----
 
 func.func @test_depthwise_conv2d_pad_left(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<2x2x8x8xf32>, %arg2: tensor<64xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x32x8225x64xf32> {
-  // expected-error@+1 {{'tosa.depthwise_conv2d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.depthwise_conv2d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.depthwise_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 1, 8193, 1>, stride = array<i64: 1, 1>} :
             (tensor<1x32x32x8xf32>, tensor<2x2x8x8xf32>, tensor<64xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x8225x64xf32>
   return %0 : tensor<1x32x8225x64xf32>
@@ -783,7 +783,7 @@ func.func @test_depthwise_conv2d_pad_left(%arg0: tensor<1x32x32x8xf32>, %arg1: t
 // -----
 
 func.func @test_depthwise_conv2d_pad_right(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<2x2x8x8xf32>, %arg2: tensor<64xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x32x8224x64xf32> {
-  // expected-error@+1 {{'tosa.depthwise_conv2d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.depthwise_conv2d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.depthwise_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 1, 0, 8193>, stride = array<i64: 1, 1>} :
             (tensor<1x32x32x8xf32>, tensor<2x2x8x8xf32>, tensor<64xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x8224x64xf32>
   return %0 : tensor<1x32x8224x64xf32>
@@ -792,7 +792,7 @@ func.func @test_depthwise_conv2d_pad_right(%arg0: tensor<1x32x32x8xf32>, %arg1: 
 // -----
 
 func.func @test_depthwise_conv2d_stride_y(%arg0: tensor<1x8194x32x8xf32>, %arg1: tensor<2x2x8x8xf32>, %arg2: tensor<64xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x2x32x64xf32> {
-  // expected-error@+1 {{'tosa.depthwise_conv2d' op failed level check: stride <= MAX_STRIDE}}
+  // expected-error@+1 {{'tosa.depthwise_conv2d' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
   %0 = tosa.depthwise_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 8193, 1>} :
             (tensor<1x8194x32x8xf32>, tensor<2x2x8x8xf32>, tensor<64xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x2x32x64xf32>
   return %0 : tensor<1x2x32x64xf32>
@@ -801,7 +801,7 @@ func.func @test_depthwise_conv2d_stride_y(%arg0: tensor<1x8194x32x8xf32>, %arg1:
 // -----
 
 func.func @test_depthwise_conv2d_stride_x(%arg0: tensor<1x32x8194x8xf32>, %arg1: tensor<2x2x8x8xf32>, %arg2: tensor<64xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x32x2x64xf32> {
-  // expected-error@+1 {{'tosa.depthwise_conv2d' op failed level check: stride <= MAX_STRIDE}}
+  // expected-error@+1 {{'tosa.depthwise_conv2d' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
   %0 = tosa.depthwise_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 1, 8193>} :
             (tensor<1x32x8194x8xf32>, tensor<2x2x8x8xf32>, tensor<64xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x2x64xf32>
   return %0 : tensor<1x32x2x64xf32>
@@ -810,7 +810,7 @@ func.func @test_depthwise_conv2d_stride_x(%arg0: tensor<1x32x8194x8xf32>, %arg1:
 // -----
 
 func.func @test_fft2d_real_h(%arg0: tensor<32x16384x32xf32>, %arg1: tensor<32x16384x32xf32>) -> (tensor<32x16384x32xf32>, tensor<32x16384x32xf32>) {
-  // expected-error@+1 {{'tosa.fft2d' op failed level check: H <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.fft2d' op failed level check: H <= MAX_KERNEL (8192), got 16384}}
   %0, %1 = "tosa.fft2d"(%arg0, %arg1) { inverse = false } :
             (tensor<32x16384x32xf32>, tensor<32x16384x32xf32>) -> (tensor<32x16384x32xf32>, tensor<32x16384x32xf32>)
   return %0, %1 : tensor<32x16384x32xf32>, tensor<32x16384x32xf32>
@@ -819,7 +819,7 @@ func.func @test_fft2d_real_h(%arg0: tensor<32x16384x32xf32>, %arg1: tensor<32x16
 // -----
 
 func.func @test_fft2d_real_w(%arg0: tensor<32x32x16384xf32>, %arg1: tensor<32x32x16384xf32>) -> (tensor<32x32x16384xf32>, tensor<32x32x16384xf32>) {
-  // expected-error@+1 {{'tosa.fft2d' op failed level check: W <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.fft2d' op failed level check: W <= MAX_KERNEL (8192), got 16384}}
   %0, %1 = "tosa.fft2d"(%arg0, %arg1) { inverse = false } :
             (tensor<32x32x16384xf32>, tensor<32x32x16384xf32>) -> (tensor<32x32x16384xf32>, tensor<32x32x16384xf32>)
   return %0, %1 : tensor<32x32x16384xf32>, tensor<32x32x16384xf32>
@@ -828,7 +828,7 @@ func.func @test_fft2d_real_w(%arg0: tensor<32x32x16384xf32>, %arg1: tensor<32x32
 // -----
 
 func.func @test_fft2d_imag_h(%arg0: tensor<32x16384x32xf32>, %arg1: tensor<32x16384x32xf32>) -> (tensor<32x16384x32xf32>, tensor<32x16384x32xf32>) {
-  // expected-error@+1 {{'tosa.fft2d' op failed level check: H <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.fft2d' op failed level check: H <= MAX_KERNEL (8192), got 16384}}
   %0, %1 = "tosa.fft2d"(%arg0, %arg1) { inverse = false } :
             (tensor<32x16384x32xf32>, tensor<32x16384x32xf32>) -> (tensor<32x16384x32xf32>, tensor<32x16384x32xf32>)
   return %0, %1 : tensor<32x16384x32xf32>, tensor<32x16384x32xf32>
@@ -837,7 +837,7 @@ func.func @test_fft2d_imag_h(%arg0: tensor<32x16384x32xf32>, %arg1: tensor<32x16
 // -----
 
 func.func @test_fft2d_imag_w(%arg0: tensor<32x32x16384xf32>, %arg1: tensor<32x32x16384xf32>) -> (tensor<32x32x16384xf32>, tensor<32x32x16384xf32>) {
-  // expected-error@+1 {{'tosa.fft2d' op failed level check: W <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.fft2d' op failed level check: W <= MAX_KERNEL (8192), got 16384}}
   %0, %1 = "tosa.fft2d"(%arg0, %arg1) { inverse = false } :
             (tensor<32x32x16384xf32>, tensor<32x32x16384xf32>) -> (tensor<32x32x16384xf32>, tensor<32x32x16384xf32>)
   return %0, %1 : tensor<32x32x16384xf32>, tensor<32x32x16384xf32>
@@ -846,7 +846,7 @@ func.func @test_fft2d_imag_w(%arg0: tensor<32x32x16384xf32>, %arg1: tensor<32x32
 // -----
 
 func.func @test_maxpool2d_kernel_y(%arg0: tensor<1x8194x32x8xf32>) -> tensor<1x2x32x8xf32> {
-  // expected-error@+1 {{'tosa.max_pool2d' op failed level check: kernel <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.max_pool2d' op failed level check: kernel <= MAX_KERNEL (8192), got 8193}}
   %0 = "tosa.max_pool2d"(%arg0) {kernel = array<i64: 8193, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} :
          (tensor<1x8194x32x8xf32>) -> tensor<1x2x32x8xf32>
   return %0 : tensor<1x2x32x8xf32>
@@ -855,7 +855,7 @@ func.func @test_maxpool2d_kernel_y(%arg0: tensor<1x8194x32x8xf32>) -> tensor<1x2
 // -----
 
 func.func @test_maxpool2d_kernel_x(%arg0: tensor<1x32x8194x8xf32>) -> tensor<1x32x2x8xf32> {
-  // expected-error@+1 {{'tosa.max_pool2d' op failed level check: kernel <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.max_pool2d' op failed level check: kernel <= MAX_KERNEL (8192), got 8193}}
   %0 = "tosa.max_pool2d"(%arg0) {kernel = array<i64: 1, 8193>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} :
          (tensor<1x32x8194x8xf32>) -> tensor<1x32x2x8xf32>
   return %0 : tensor<1x32x2x8xf32>
@@ -864,7 +864,7 @@ func.func @test_maxpool2d_kernel_x(%arg0: tensor<1x32x8194x8xf32>) -> tensor<1x3
 // -----
 
 func.func @test_maxpool2d_stride_y(%arg0: tensor<1x8194x32x8xf32>) -> tensor<1x2x32x8xf32> {
-  // expected-error@+1 {{'tosa.max_pool2d' op failed level check: stride <= MAX_STRIDE}}
+  // expected-error@+1 {{'tosa.max_pool2d' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
   %0 = "tosa.max_pool2d"(%arg0) {kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 8193, 1>} :
          (tensor<1x8194x32x8xf32>) -> tensor<1x2x32x8xf32>
   return %0 : tensor<1x2x32x8xf32>
@@ -873,7 +873,7 @@ func.func @test_maxpool2d_stride_y(%arg0: tensor<1x8194x32x8xf32>) -> tensor<1x2
 // -----
 
 func.func @test_maxpool2d_stride_x(%arg0: tensor<1x32x8194x8xf32>) -> tensor<1x32x2x8xf32> {
-  // expected-error@+1 {{'tosa.max_pool2d' op failed level check: stride <= MAX_STRIDE}}
+  // expected-error@+1 {{'tosa.max_pool2d' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
   %0 = "tosa.max_pool2d"(%arg0) {kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 8193>} :
          (tensor<1x32x8194x8xf32>) -> tensor<1x32x2x8xf32>
   return %0 : tensor<1x32x2x8xf32>
@@ -882,7 +882,7 @@ func.func @test_maxpool2d_stride_x(%arg0: tensor<1x32x8194x8xf32>) -> tensor<1x3
 // -----
 
 func.func @test_rfft2d_input_h(%arg0: tensor<13x16384x16xf32>) -> (tensor<13x16384x9xf32>, tensor<13x16384x9xf32>) {
-  // expected-error@+1 {{'tosa.rfft2d' op failed level check: H <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.rfft2d' op failed level check: H <= MAX_KERNEL (8192), got 16384}}
   %0, %1 = "tosa.rfft2d"(%arg0) {} : (tensor<13x16384x16xf32>) -> (tensor<13x16384x9xf32>, tensor<13x16384x9xf32>)
   return %0, %1 : tensor<13x16384x9xf32>, tensor<13x16384x9xf32>
 }
@@ -890,7 +890,7 @@ func.func @test_rfft2d_input_h(%arg0: tensor<13x16384x16xf32>) -> (tensor<13x163
 // -----
 
 func.func @test_rfft2d_input_w(%arg0: tensor<13x8x16384xf32>) -> (tensor<13x8x8193xf32>, tensor<13x8x8193xf32>) {
-  // expected-error@+1 {{'tosa.rfft2d' op failed level check: W <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.rfft2d' op failed level check: W <= MAX_KERNEL (8192), got 16384}}
   %0, %1 = "tosa.rfft2d"(%arg0) {} : (tensor<13x8x16384xf32>) -> (tensor<13x8x8193xf32>, tensor<13x8x8193xf32>)
   return %0, %1 : tensor<13x8x8193xf32>, tensor<13x8x8193xf32>
 }
@@ -898,7 +898,7 @@ func.func @test_rfft2d_input_w(%arg0: tensor<13x8x16384xf32>) -> (tensor<13x8x81
 // -----
 
 func.func @test_transpose_conv2d_weight_h(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x8193x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x8224x32x16xf32> {
-  // expected-error@+1 {{'tosa.transpose_conv2d' op failed level check: KH <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.transpose_conv2d' op failed level check: KH <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} :
               (tensor<1x32x32x8xf32>, tensor<16x8193x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x8224x32x16xf32>
   return %0 : tensor<1x8224x32x16xf32>
@@ -907,7 +907,7 @@ func.func @test_transpose_conv2d_weight_h(%arg0: tensor<1x32x32x8xf32>, %arg1: t
 // -----
 
 func.func @test_transpose_conv2d_weight_w(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x8193x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x32x8224x16xf32> {
-  // expected-error@+1 {{'tosa.transpose_conv2d' op failed level check: KW <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.transpose_conv2d' op failed level check: KW <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} :
               (tensor<1x32x32x8xf32>, tensor<16x1x8193x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x8224x16xf32>
   return %0 : tensor<1x32x8224x16xf32>
@@ -916,7 +916,7 @@ func.func @test_transpose_conv2d_weight_w(%arg0: tensor<1x32x32x8xf32>, %arg1: t
 // -----
 
 func.func @test_transpose_conv2d_pad_top(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x8225x32x16xf32> {
-  // expected-error@+1 {{'tosa.transpose_conv2d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.transpose_conv2d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 8193, 0, 0, 0>, stride = array<i64: 1, 1>} :
               (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x8225x32x16xf32>
   return %0 : tensor<1x8225x32x16xf32>
@@ -925,7 +925,7 @@ func.func @test_transpose_conv2d_pad_top(%arg0: tensor<1x32x32x8xf32>, %arg1: te
 // -----
 
 func.func @test_transpose_conv2d_pad_bottom(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x8225x32x16xf32> {
-  // expected-error@+1 {{'tosa.transpose_conv2d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.transpose_conv2d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 0, 8193, 0, 0>, stride = array<i64: 1, 1>} :
               (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x8225x32x16xf32>
   return %0 : tensor<1x8225x32x16xf32>
@@ -934,7 +934,7 @@ func.func @test_transpose_conv2d_pad_bottom(%arg0: tensor<1x32x32x8xf32>, %arg1:
 // -----
 
 func.func @test_transpose_conv2d_pad_left(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x32x8225x16xf32> {
-  // expected-error@+1 {{'tosa.transpose_conv2d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.transpose_conv2d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 0, 0, 8193, 0>, stride = array<i64: 1, 1>} :
               (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x8225x16xf32>
   return %0 : tensor<1x32x8225x16xf32>
@@ -943,7 +943,7 @@ func.func @test_transpose_conv2d_pad_left(%arg0: tensor<1x32x32x8xf32>, %arg1: t
 // -----
 
 func.func @test_transpose_conv2d_pad_right(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x32x8225x16xf32> {
-  // expected-error@+1 {{'tosa.transpose_conv2d' op failed level check: pad <= MAX_KERNEL}}
+  // expected-error@+1 {{'tosa.transpose_conv2d' op failed level check: pad <= MAX_KERNEL (8192), got 8193}}
   %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 0, 0, 0, 8193>, stride = array<i64: 1, 1>} :
               (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x8225x16xf32>
   return %0 : tensor<1x32x8225x16xf32>
@@ -952,7 +952,7 @@ func.func @test_transpose_conv2d_pad_right(%arg0: tensor<1x32x32x8xf32>, %arg1: 
 // -----
 
 func.func @test_transpose_conv2d_stride_y(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x253984x32x16xf32> {
-  // expected-error@+1 {{'tosa.transpose_conv2d' op failed level check: stride <= MAX_STRIDE}}
+  // expected-error@+1 {{'tosa.transpose_conv2d' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
   %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 8193, 1>} :
               (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x253984x32x16xf32>
   return %0 : tensor<1x253984x32x16xf32>
@@ -961,7 +961,7 @@ func.func @test_transpose_conv2d_stride_y(%arg0: tensor<1x32x32x8xf32>, %arg1: t
 // -----
 
 func.func @test_transpose_conv2d_stride_x(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x32x253984x16xf32> {
-  // expected-error@+1 {{'tosa.transpose_conv2d' op failed level check: stride <= MAX_STRIDE}}
+  // expected-error@+1 {{'tosa.transpose_conv2d' op failed level check: stride <= MAX_STRIDE (8192), got 8193}}
   %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 8193>} :
               (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x253984x16xf32>
   return %0 : tensor<1x32x253984x16xf32>
@@ -973,7 +973,7 @@ func.func @test_resize_scale_y(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x7970x64
   %scale = tosa.const_shape { values = dense<[257, 1, 4, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
   %offset = tosa.const_shape { values = dense<[-1, -1]> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { values = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
-  // expected-error@+1 {{'tosa.resize' op failed level check: scale_y_n/scale_y_d <= MAX_SCALE}}
+  // expected-error@+1 {{'tosa.resize' op failed level check: scale_y_n/scale_y_d <= MAX_SCALE (256), got 257}}
   %1 = tosa.resize %arg0, %scale, %offset, %border {mode = BILINEAR} :
                 (tensor<1x32x32x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x7970x64x8xf32>
   return %1 : tensor<1x7970x64x8xf32>
@@ -985,7 +985,7 @@ func.func @test_resize_scale_x(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x7970
   %scale = tosa.const_shape { values = dense<[4, 2, 257, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
   %offset = tosa.const_shape { values = dense<[-1, -1]> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { values = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
-  // expected-error@+1 {{'tosa.resize' op failed level check: scale_x_n/scale_x_d <= MAX_SCALE}}
+  // expected-error@+1 {{'tosa.resize' op failed level check: scale_x_n/scale_x_d <= MAX_SCALE (256), got 257}}
   %1 = tosa.resize %arg0, %scale, %offset, %border {mode = BILINEAR} :
                 (tensor<1x32x32x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x7970x8xf32>
   return %1 : tensor<1x64x7970x8xf32>
@@ -1004,7 +1004,7 @@ func.func @test_tensor_size_valid(%arg0: tensor<1x536870911xf32>) {
 
 func.func @test_slice_tensor_size_invalid(%arg0: tensor<1x536870912xf32>) {
   %0 = tosa.const_shape {values = dense<0> : tensor<2xindex>} : () -> !tosa.shape<2>
-  %1 = tosa.const_shape {values = dense<536870912> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %1 = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.slice' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
   %2= tosa.slice %arg0, %0, %1 : (tensor<1x536870912xf32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x1xf32>
   return
@@ -1261,7 +1261,7 @@ func.func @test_tensor_size_ok(%arg0: tensor<1x536870911xf32>) {
 // CHECK-LABEL: test_concat_tensor_list_size
 func.func @test_concat_tensor_list_size() {
   %0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
-  // expected-error@+1 {{'tosa.concat' op failed level check for MAX_TENSOR_LIST_SIZE: input1}}
+  // expected-error@+1 {{'tosa.concat' op failed level check: length(tensor_list_shape(input1)) <= MAX_TENSOR_LIST_SIZE (64), got 65}}
   %1= tosa.concat %0, %0, %0, %0, %0, %0, %0, %0,
                   %0, %0, %0, %0, %0, %0, %0, %0,
                   %0, %0, %0, %0, %0, %0, %0, %0,
@@ -1290,7 +1290,7 @@ func.func @test_concat_tensor_list_size() {
 // CHECK-LABEL: test_custom_tensor_list_size
 func.func @test_custom_tensor_list_size() {
   %0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
-  // expected-error@+1 {{'tosa.custom' op failed level check for MAX_TENSOR_LIST_SIZE: input_list}}
+  // expected-error@+1 {{'tosa.custom' op failed level check: length(tensor_list_shape(input_list)) <= MAX_TENSOR_LIST_SIZE (64), got 65}}
   %1= tosa.custom %0, %0, %0, %0, %0, %0, %0, %0,
                   %0, %0, %0, %0, %0, %0, %0, %0,
                   %0, %0, %0, %0, %0, %0, %0, %0,
@@ -1320,7 +1320,7 @@ func.func @test_custom_tensor_list_size() {
 func.func @test_custom_tensor_list_size_results() {
   %0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
 
-  // expected-error@+1 {{'tosa.custom' op failed level check for MAX_TENSOR_LIST_SIZE: output_list}}
+  // expected-error@+1 {{'tosa.custom' op failed level check: length(tensor_list_shape(output_list)) <= MAX_TENSOR_LIST_SIZE (64), got 65}}
   %r:65 = tosa.custom %0 { domain_name = "tosa_mlir_test", operator_name = "custom_test", implementation_attrs = "" }:
                   ( tensor<1xi32> )
                   -> (
@@ -1342,7 +1342,7 @@ func.func @test_custom_tensor_list_size_results() {
 // CHECK-LABEL: test_if_tensor_list_size
 func.func @test_if_tensor_list_size(%arg0 : tensor<i1>) {
   %0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
-  // expected-error@+1 {{'tosa.cond_if' op failed level check for MAX_TENSOR_LIST_SIZE: inputs}}
+  // expected-error@+1 {{'tosa.cond_if' op failed level check: length(tensor_list_shape(inputs)) <= MAX_TENSOR_LIST_SIZE (64), got 65}}
   %1 = "tosa.cond_if"(%arg0,   // condition
                   %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
                   %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
@@ -1389,7 +1389,7 @@ func.func @test_if_tensor_list_size(%arg0 : tensor<i1>) {
 func.func @test_if_tensor_list_size_outputs(%arg0 : tensor<i1>) {
   %cst_0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
 
-  // expected-error@+1 {{'tosa.cond_if' op failed level check for MAX_TENSOR_LIST_SIZE: outputs}}
+  // expected-error@+1 {{'tosa.cond_if' op failed level check: length(tensor_list_shape(outputs)) <= MAX_TENSOR_LIST_SIZE (64), got 65}}
   %r:65 = "tosa.cond_if"(%arg0, %cst_0) ({
   ^bb0(%0: tensor<1xi32>):
     "tosa.yield"(%0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
@@ -1443,7 +1443,7 @@ func.func @test_if_tensor_list_size_outputs(%arg0 : tensor<i1>) {
 // CHECK-LABEL: test_while_tensor_list_size
 func.func @test_while_tensor_list_size(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: tensor<1xi32>) {
   %0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
-  // expected-error@+1 {{'tosa.while_loop' op failed level check for MAX_TENSOR_LIST_SIZE: inputs}}
+  // expected-error@+1 {{'tosa.while_loop' op failed level check: length(tensor_list_shape(inputs)) <= MAX_TENSOR_LIST_SIZE (64), got 65}}
   %1:65 = "tosa.while_loop"(%0, %arg0,
                   %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
                   %0, %0, %0, %0, %0, %0, %0, %0, %0, %0,
@@ -1526,7 +1526,7 @@ func.func @test_cond_if_max_nested_depth(%arg0: tensor<f32>, %arg1: tensor<f32>,
       %2 = tosa.cond_if %arg2 : tensor<i1> -> tensor<f32> {
         %3 = tosa.cond_if %arg3 : tensor<i1> -> tensor<f32> {
           %4 = tosa.cond_if %arg2 : tensor<i1>  -> tensor<f32> {
-            // expected-error@+1 {{'tosa.cond_if' op failed level check: 6 >= MAX_NESTING}}
+            // expected-error@+1 {{'tosa.cond_if' op failed level check: tosa_nesting_depth < MAX_NESTING (6), got 6}}
             %5 = tosa.cond_if %arg3 : tensor<i1> -> tensor<f32> {
               %res = tosa.sub %arg0, %arg1 : (tensor<f32>, tensor<f32>) -> tensor<f32>
               tosa.yield %res : tensor<f32>
@@ -1588,7 +1588,7 @@ func.func @test_while_loop_max_nested_depth(%arg0: tensor<i32>) {
             tosa.yield %2 : tensor<i1>
           } do {
           ^bb0(%arg10: tensor<i32>, %arg10b: tensor<i32>):
-            // expected-error@+1 {{'tosa.while_loop' op failed level check: 6 >= MAX_NESTING}}
+            // expected-error@+1 {{'tosa.while_loop' op failed level check: tosa_nesting_depth < MAX_NESTING (6), got 6}}
             %1:2 = tosa.while_loop (%arg12 = %init_0, %arg13 = %arg0) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>) {
               %2 = tosa.greater_equal %arg13, %arg12 : (tensor<i32>, tensor<i32>) -> tensor<i1>
               tosa.yield %2 : tensor<i1>
@@ -1689,34 +1689,6 @@ func.func @test_dim(%arg0: tensor<1x2x3x4x5x6x7x8xi32>) -> !tosa.shape<1> {
   // expected-error@+1 {{'tosa.dim' op failed level check: operand rank(shape) <= MAX_RANK}}
   %0 = tosa.dim %arg0 {axis = 2 : i32} : (tensor<1x2x3x4x5x6x7x8xi32>) -> !tosa.shape<1>
   return %0 : !tosa.shape<1>
-}
-
-// -----
-
-func.func @test_concat_shape_invalid_list_size() {
-  %0 = tosa.const_shape {values = dense<[]> : tensor<0xindex>} : () -> !tosa.shape<0>
-  // expected-error@+1 {{'tosa.concat_shape' op failed level check for MAX_TENSOR_LIST_SIZE: input}}
-  %1 = tosa.concat_shape %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0 :
-                         (
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>
-                         ) -> !tosa.shape<0>
-  return
 }
 
 // -----

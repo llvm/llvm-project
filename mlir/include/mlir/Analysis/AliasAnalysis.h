@@ -254,6 +254,11 @@ public:
   ///     - This method returns a `ModRefResult` that corresponds to the
   ///       modify-reference behavior of `op` on the given `location`. The
   ///       conservative "I don't know" result of this method should be ModRef.
+  ///       Note that operations that only allocate or/and free memory
+  ///       do not have modify-reference behavior on any location.
+  ///       MLIR transformations should make sure to keep the order
+  ///       of operations correct, i.e. do not move reads/writes
+  ///       across allocate/free for the same memory location.
   template <typename AnalysisT>
   void addAnalysisImplementation(AnalysisT &&analysis) {
     aliasImpls.push_back(
