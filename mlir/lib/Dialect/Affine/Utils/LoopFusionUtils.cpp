@@ -584,8 +584,11 @@ bool mlir::affine::getFusionComputeCost(AffineForOp srcForOp,
   if (!buildSliceTripCountMap(slice, &sliceTripCountMap))
     return false;
   // Checks whether a store to load forwarding will happen.
-  int64_t sliceIterationCount = getSliceIterationCount(sliceTripCountMap);
-  assert(sliceIterationCount > 0);
+  uint64_t sliceIterationCount = getSliceIterationCount(sliceTripCountMap);
+  // It's possible it's zero due to an overflow and a wraparound; being a cost
+  // model, we fail.
+  if (sliceIterationCount == 0)
+    return false;
   bool storeLoadFwdGuaranteed = (sliceIterationCount == 1);
   auto *insertPointParent = slice.insertPoint->getParentOp();
 
