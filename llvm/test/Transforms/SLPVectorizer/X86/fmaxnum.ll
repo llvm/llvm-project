@@ -445,73 +445,18 @@ define float @reduction_v4f32_nnan(ptr %p) {
 ; Negative test - must have nnan.
 
 define float @reduction_v4f32_not_fast(ptr %p) {
-; SSE-LABEL: @reduction_v4f32_not_fast(
-; SSE-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
-; SSE-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; SSE-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-; SSE-NEXT:    [[M1:%.*]] = tail call float @llvm.maxnum.f32(float [[TMP3]], float [[TMP2]])
-; SSE-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-; SSE-NEXT:    [[M2:%.*]] = tail call float @llvm.maxnum.f32(float [[TMP4]], float [[M1]])
-; SSE-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-; SSE-NEXT:    [[M3:%.*]] = tail call float @llvm.maxnum.f32(float [[TMP5]], float [[M2]])
-; SSE-NEXT:    ret float [[M3]]
-;
-; COREI7-LABEL: @reduction_v4f32_not_fast(
-; COREI7-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
-; COREI7-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; COREI7-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-; COREI7-NEXT:    [[M1:%.*]] = tail call float @llvm.maxnum.f32(float [[TMP3]], float [[TMP2]])
-; COREI7-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-; COREI7-NEXT:    [[M2:%.*]] = tail call float @llvm.maxnum.f32(float [[TMP4]], float [[M1]])
-; COREI7-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-; COREI7-NEXT:    [[M3:%.*]] = tail call float @llvm.maxnum.f32(float [[TMP5]], float [[M2]])
-; COREI7-NEXT:    ret float [[M3]]
-;
-; BDVER1-LABEL: @reduction_v4f32_not_fast(
-; BDVER1-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
-; BDVER1-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; BDVER1-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-; BDVER1-NEXT:    [[M1:%.*]] = tail call float @llvm.maxnum.f32(float [[TMP3]], float [[TMP2]])
-; BDVER1-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-; BDVER1-NEXT:    [[M2:%.*]] = tail call float @llvm.maxnum.f32(float [[TMP4]], float [[M1]])
-; BDVER1-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-; BDVER1-NEXT:    [[M3:%.*]] = tail call float @llvm.maxnum.f32(float [[TMP5]], float [[M2]])
-; BDVER1-NEXT:    ret float [[M3]]
-;
-; AVX2-LABEL: @reduction_v4f32_not_fast(
-; AVX2-NEXT:    [[G1:%.*]] = getelementptr inbounds float, ptr [[P:%.*]], i64 1
-; AVX2-NEXT:    [[G2:%.*]] = getelementptr inbounds float, ptr [[P]], i64 2
-; AVX2-NEXT:    [[G3:%.*]] = getelementptr inbounds float, ptr [[P]], i64 3
-; AVX2-NEXT:    [[T0:%.*]] = load float, ptr [[P]], align 4
-; AVX2-NEXT:    [[T1:%.*]] = load float, ptr [[G1]], align 4
-; AVX2-NEXT:    [[T2:%.*]] = load float, ptr [[G2]], align 4
-; AVX2-NEXT:    [[T3:%.*]] = load float, ptr [[G3]], align 4
-; AVX2-NEXT:    [[M1:%.*]] = tail call float @llvm.maxnum.f32(float [[T1]], float [[T0]])
-; AVX2-NEXT:    [[M2:%.*]] = tail call float @llvm.maxnum.f32(float [[T2]], float [[M1]])
-; AVX2-NEXT:    [[M3:%.*]] = tail call float @llvm.maxnum.f32(float [[T3]], float [[M2]])
-; AVX2-NEXT:    ret float [[M3]]
-;
-; AVX512-LABEL: @reduction_v4f32_not_fast(
-; AVX512-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
-; AVX512-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; AVX512-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-; AVX512-NEXT:    [[M1:%.*]] = tail call float @llvm.maxnum.f32(float [[TMP3]], float [[TMP2]])
-; AVX512-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-; AVX512-NEXT:    [[M2:%.*]] = tail call float @llvm.maxnum.f32(float [[TMP4]], float [[M1]])
-; AVX512-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-; AVX512-NEXT:    [[M3:%.*]] = tail call float @llvm.maxnum.f32(float [[TMP5]], float [[M2]])
-; AVX512-NEXT:    ret float [[M3]]
-;
-; AVX256-LABEL: @reduction_v4f32_not_fast(
-; AVX256-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
-; AVX256-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; AVX256-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-; AVX256-NEXT:    [[M1:%.*]] = tail call float @llvm.maxnum.f32(float [[TMP3]], float [[TMP2]])
-; AVX256-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-; AVX256-NEXT:    [[M2:%.*]] = tail call float @llvm.maxnum.f32(float [[TMP4]], float [[M1]])
-; AVX256-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-; AVX256-NEXT:    [[M3:%.*]] = tail call float @llvm.maxnum.f32(float [[TMP5]], float [[M2]])
-; AVX256-NEXT:    ret float [[M3]]
+; CHECK-LABEL: @reduction_v4f32_not_fast(
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds float, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds float, ptr [[P]], i64 2
+; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds float, ptr [[P]], i64 3
+; CHECK-NEXT:    [[T0:%.*]] = load float, ptr [[P]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = load float, ptr [[G1]], align 4
+; CHECK-NEXT:    [[T2:%.*]] = load float, ptr [[G2]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = load float, ptr [[G3]], align 4
+; CHECK-NEXT:    [[M1:%.*]] = tail call float @llvm.maxnum.f32(float [[T1]], float [[T0]])
+; CHECK-NEXT:    [[M2:%.*]] = tail call float @llvm.maxnum.f32(float [[T2]], float [[M1]])
+; CHECK-NEXT:    [[M3:%.*]] = tail call float @llvm.maxnum.f32(float [[T3]], float [[M2]])
+; CHECK-NEXT:    ret float [[M3]]
 ;
 ; PREF-AVX256-LABEL: @reduction_v4f32_not_fast(
 ; PREF-AVX256-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
@@ -604,77 +549,18 @@ define double @reduction_v4f64_fast(ptr %p) {
 ; Negative test - must have nnan.
 
 define double @reduction_v4f64_wrong_fmf(ptr %p) {
-; SSE-LABEL: @reduction_v4f64_wrong_fmf(
-; SSE-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[P:%.*]], align 4
-; SSE-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
-; SSE-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
-; SSE-NEXT:    [[M1:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[TMP3]], double [[TMP2]])
-; SSE-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP1]], i32 2
-; SSE-NEXT:    [[M2:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[TMP4]], double [[M1]])
-; SSE-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP1]], i32 3
-; SSE-NEXT:    [[M3:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[TMP5]], double [[M2]])
-; SSE-NEXT:    ret double [[M3]]
-;
-; COREI7-LABEL: @reduction_v4f64_wrong_fmf(
-; COREI7-NEXT:    [[G1:%.*]] = getelementptr inbounds double, ptr [[P:%.*]], i64 1
-; COREI7-NEXT:    [[G2:%.*]] = getelementptr inbounds double, ptr [[P]], i64 2
-; COREI7-NEXT:    [[G3:%.*]] = getelementptr inbounds double, ptr [[P]], i64 3
-; COREI7-NEXT:    [[T0:%.*]] = load double, ptr [[P]], align 4
-; COREI7-NEXT:    [[T1:%.*]] = load double, ptr [[G1]], align 4
-; COREI7-NEXT:    [[T2:%.*]] = load double, ptr [[G2]], align 4
-; COREI7-NEXT:    [[T3:%.*]] = load double, ptr [[G3]], align 4
-; COREI7-NEXT:    [[M1:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T1]], double [[T0]])
-; COREI7-NEXT:    [[M2:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T2]], double [[M1]])
-; COREI7-NEXT:    [[M3:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T3]], double [[M2]])
-; COREI7-NEXT:    ret double [[M3]]
-;
-; BDVER1-LABEL: @reduction_v4f64_wrong_fmf(
-; BDVER1-NEXT:    [[G1:%.*]] = getelementptr inbounds double, ptr [[P:%.*]], i64 1
-; BDVER1-NEXT:    [[G2:%.*]] = getelementptr inbounds double, ptr [[P]], i64 2
-; BDVER1-NEXT:    [[G3:%.*]] = getelementptr inbounds double, ptr [[P]], i64 3
-; BDVER1-NEXT:    [[T0:%.*]] = load double, ptr [[P]], align 4
-; BDVER1-NEXT:    [[T1:%.*]] = load double, ptr [[G1]], align 4
-; BDVER1-NEXT:    [[T2:%.*]] = load double, ptr [[G2]], align 4
-; BDVER1-NEXT:    [[T3:%.*]] = load double, ptr [[G3]], align 4
-; BDVER1-NEXT:    [[M1:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T1]], double [[T0]])
-; BDVER1-NEXT:    [[M2:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T2]], double [[M1]])
-; BDVER1-NEXT:    [[M3:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T3]], double [[M2]])
-; BDVER1-NEXT:    ret double [[M3]]
-;
-; AVX2-LABEL: @reduction_v4f64_wrong_fmf(
-; AVX2-NEXT:    [[G1:%.*]] = getelementptr inbounds double, ptr [[P:%.*]], i64 1
-; AVX2-NEXT:    [[G2:%.*]] = getelementptr inbounds double, ptr [[P]], i64 2
-; AVX2-NEXT:    [[G3:%.*]] = getelementptr inbounds double, ptr [[P]], i64 3
-; AVX2-NEXT:    [[T0:%.*]] = load double, ptr [[P]], align 4
-; AVX2-NEXT:    [[T1:%.*]] = load double, ptr [[G1]], align 4
-; AVX2-NEXT:    [[T2:%.*]] = load double, ptr [[G2]], align 4
-; AVX2-NEXT:    [[T3:%.*]] = load double, ptr [[G3]], align 4
-; AVX2-NEXT:    [[M1:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T1]], double [[T0]])
-; AVX2-NEXT:    [[M2:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T2]], double [[M1]])
-; AVX2-NEXT:    [[M3:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T3]], double [[M2]])
-; AVX2-NEXT:    ret double [[M3]]
-;
-; AVX512-LABEL: @reduction_v4f64_wrong_fmf(
-; AVX512-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[P:%.*]], align 4
-; AVX512-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
-; AVX512-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
-; AVX512-NEXT:    [[M1:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[TMP3]], double [[TMP2]])
-; AVX512-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP1]], i32 2
-; AVX512-NEXT:    [[M2:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[TMP4]], double [[M1]])
-; AVX512-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP1]], i32 3
-; AVX512-NEXT:    [[M3:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[TMP5]], double [[M2]])
-; AVX512-NEXT:    ret double [[M3]]
-;
-; AVX256-LABEL: @reduction_v4f64_wrong_fmf(
-; AVX256-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[P:%.*]], align 4
-; AVX256-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
-; AVX256-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
-; AVX256-NEXT:    [[M1:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[TMP3]], double [[TMP2]])
-; AVX256-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP1]], i32 2
-; AVX256-NEXT:    [[M2:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[TMP4]], double [[M1]])
-; AVX256-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP1]], i32 3
-; AVX256-NEXT:    [[M3:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[TMP5]], double [[M2]])
-; AVX256-NEXT:    ret double [[M3]]
+; CHECK-LABEL: @reduction_v4f64_wrong_fmf(
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds double, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds double, ptr [[P]], i64 2
+; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds double, ptr [[P]], i64 3
+; CHECK-NEXT:    [[T0:%.*]] = load double, ptr [[P]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = load double, ptr [[G1]], align 4
+; CHECK-NEXT:    [[T2:%.*]] = load double, ptr [[G2]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = load double, ptr [[G3]], align 4
+; CHECK-NEXT:    [[M1:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T1]], double [[T0]])
+; CHECK-NEXT:    [[M2:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T2]], double [[M1]])
+; CHECK-NEXT:    [[M3:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T3]], double [[M2]])
+; CHECK-NEXT:    ret double [[M3]]
 ;
 ; PREF-AVX256-LABEL: @reduction_v4f64_wrong_fmf(
 ; PREF-AVX256-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[P:%.*]], align 4

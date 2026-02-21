@@ -9,14 +9,13 @@ define double @test01() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> align 8 [[TMP2]], <2 x i1> splat (i1 true), <2 x double> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd double [[TMP5]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x double> [[TMP4]], i32 3
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd double [[TMP8]], [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd double 0.000000e+00, 0.000000e+00
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd double [[TMP5]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = fadd double [[TMP11]], [[TMP9]]
-; CHECK-NEXT:    ret double [[TMP12]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd double [[TMP5]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x double> [[TMP4]], i32 3
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd double [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd double 0.000000e+00, 0.000000e+00
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd double [[TMP5]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd double [[TMP10]], [[TMP8]]
+; CHECK-NEXT:    ret double [[TMP11]]
 ;
   %1 = load i32, ptr null, align 8
   %2 = load i32, ptr getelementptr inbounds (i32, ptr null, i32 1), align 4

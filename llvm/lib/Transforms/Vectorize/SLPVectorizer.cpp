@@ -16375,6 +16375,11 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
     return true;
   }
 
+  if (VectorizableTree.size() == 1 && !ForReduction &&
+      VectorizableTree.front()->isGather() &&
+      VectorizableTree.front()->hasState() &&
+      VectorizableTree.front()->getOpcode() == Instruction::ExtractElement)
+    return true;
   // No need to vectorize inserts of gathered values.
   if (VectorizableTree.size() == 2 &&
       isa<InsertElementInst>(VectorizableTree[0]->Scalars[0]) &&
@@ -25677,14 +25682,15 @@ public:
       ReducedValsToOps[V].push_back(I);
   }
 
-  bool matchReductionForOperands() const {
+  bool matchReductionForOperands() {
     // Analyze "regular" integer/FP types for reductions - no target-specific
     // types or pointers.
     assert(ReductionRoot && "Reduction root is not set!");
-    return isVectorizable(RdxKind, cast<Instruction>(ReductionRoot),
-                          all_of(ReducedVals, [](ArrayRef<Value *> Ops) {
-                            return Ops.size() == 2;
-                          })) != ReductionKind::None;
+    RK = isVectorizable(RdxKind, cast<Instruction>(ReductionRoot),
+                        all_of(ReducedVals, [](ArrayRef<Value *> Ops) {
+                          return Ops.size() == 2;
+                        }));
+    return RK != ReductionKind::None;
   }
 
   /// Try to find a reduction tree.
@@ -25706,7 +25712,7 @@ public:
     // have only single use.
     if (auto *Sel = dyn_cast<SelectInst>(Root))
       if (!Sel->getCondition()->hasOneUse())
-        return false;
+        RK = ReductionKind::Ordered;
 
     ReductionRoot = Root;
 
@@ -25716,6 +25722,7 @@ public:
     bool IsCmpSelMinMax = isCmpSelMinMax(Root);
     SmallVector<std::pair<Instruction *, unsigned>> Worklist(
         1, std::make_pair(Root, 0));
+    SmallVector<std::pair<Instruction *, unsigned>> PossibleOrderedReductionOps;
     // Checks if the operands of the \p TreeN instruction are also reduction
     // operations or should be treated as reduced values or an extra argument,
     // which is not part of the reduction.
@@ -25734,11 +25741,18 @@ public:
         // foldable.
         bool IsReducedVal = !EdgeInst || Level > RecursionMaxDepth ||
                             getRdxKind(EdgeInst) != RdxKind ||
-                            IsCmpSelMinMax != isCmpSelMinMax(EdgeInst) ||
-                            !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst);
+                            IsCmpSelMinMax != isCmpSelMinMax(EdgeInst);
         ReductionKind CurrentRK = IsReducedVal
                                       ? ReductionKind::None
                                       : isVectorizable(RdxKind, EdgeInst);
+        if (!IsReducedVal && CurrentRK == ReductionKind::Unordered &&
+            RK == ReductionKind::Unordered &&
+            !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst)) {
+          IsReducedVal = true;
+          CurrentRK = ReductionKind::None;
+          if (PossibleReducedVals.size() < ReductionLimit)
+            PossibleOrderedReductionOps.emplace_back(EdgeInst, Level);
+        }
         if (CurrentRK == ReductionKind::None ||
             (R.isAnalyzedReductionRoot(EdgeInst) &&
              all_of(EdgeInst->operands(), IsaPred<Constant>))) {
@@ -25795,22 +25809,43 @@ public:
       return hash_value(LI->getPointerOperand());
     };
 
+    SmallVector<Value *> ReducedValsCandidates;
     while (!Worklist.empty()) {
       auto [TreeN, Level] = Worklist.pop_back_val();
       SmallVector<Value *> PossibleRedVals;
       SmallVector<Instruction *> PossibleReductionOps;
       CheckOperands(TreeN, PossibleRedVals, PossibleReductionOps, Level);
       addReductionOps(TreeN);
-      // Add reduction values. The values are sorted for better vectorization
-      // results.
-      for (Value *V : PossibleRedVals) {
-        size_t Key, Idx;
-        std::tie(Key, Idx) = generateKeySubkey(V, &TLI, GenerateLoadsSubkey,
-                                               /*AllowAlternate=*/false);
-        ++PossibleReducedVals[Key][Idx].try_emplace(V, 0).first->second;
-      }
+      ReducedValsCandidates.append(PossibleRedVals.begin(),
+                                   PossibleRedVals.end());
       for (Instruction *I : reverse(PossibleReductionOps))
         Worklist.emplace_back(I, I->getParent() == BB ? 0 : Level + 1);
+      // If not enough elements for unordered vectorization, check if there are
+      // potential candidates for the ordered vectorization and try to add them
+      // to the worklist.
+      if (Worklist.empty() && ReducedValsCandidates.size() < ReductionLimit &&
+          !PossibleOrderedReductionOps.empty() &&
+          RK == ReductionKind::Unordered) {
+        RK = ReductionKind::Ordered;
+        SmallPtrSet<const Instruction *, 4> Ops;
+        for (const auto &P : PossibleOrderedReductionOps)
+          Ops.insert(P.first);
+        erase_if(ReducedValsCandidates, [&](Value *V) {
+          auto *I = dyn_cast<Instruction>(V);
+          return I && Ops.contains(I);
+        });
+        Worklist.append(PossibleOrderedReductionOps.begin(),
+                        PossibleOrderedReductionOps.end());
+        PossibleOrderedReductionOps.clear();
+      }
+    }
+    // Add reduction values. The values are sorted for better vectorization
+    // results.
+    for (Value *V : ReducedValsCandidates) {
+      size_t Key, Idx;
+      std::tie(Key, Idx) = generateKeySubkey(V, &TLI, GenerateLoadsSubkey,
+                                             /*AllowAlternate=*/false);
+      ++PossibleReducedVals[Key][Idx].try_emplace(V, 0).first->second;
     }
     auto PossibleReducedValsVect = PossibleReducedVals.takeVector();
     // Sort values by the total number of values kinds to start the reduction
@@ -26177,7 +26212,8 @@ public:
       unsigned PrevReduxWidth = ReduxWidth;
       bool CheckForReusedReductionOpsLocal = false;
       auto AdjustReducedVals = [&](bool IgnoreVL = false) {
-        bool IsAnyRedOpGathered = !IgnoreVL && V.isAnyGathered(IgnoreList);
+        bool IsAnyRedOpGathered = !IgnoreVL && (RK == ReductionKind::Ordered ||
+                                                V.isAnyGathered(IgnoreList));
         if (!CheckForReusedReductionOpsLocal && PrevReduxWidth == ReduxWidth) {
           // Check if any of the reduction ops are gathered. If so, worth
           // trying again with less number of reduction ops.
@@ -26225,7 +26261,8 @@ public:
             }))
           break;
         V.buildTree(VL, IgnoreList);
-        if (V.isTreeTinyAndNotFullyVectorizable(/*ForReduction=*/true)) {
+        if (V.isTreeTinyAndNotFullyVectorizable(RK ==
+                                                ReductionKind::Unordered)) {
           if (!AdjustReducedVals())
             V.analyzedReductionVals(VL);
           continue;
@@ -26234,7 +26271,8 @@ public:
         // No need to reorder the root node at all for reassociative reduction.
         V.reorderBottomToTop(/*IgnoreReorder=*/RdxFMF.allowReassoc() ||
                              VL.front()->getType()->isIntOrIntVectorTy() ||
-                             ReductionLimit > 2);
+                             ReductionLimit > 2 ||
+                             RK == ReductionKind::Ordered);
         // Keep extracted other reduction values, if they are used in the
         // vectorization trees.
         BoUpSLP::ExtraValueToDebugLocsMap LocalExternallyUsedValues(
@@ -26299,7 +26337,8 @@ public:
 
         // Estimate cost.
         InstructionCost ReductionCost;
-        if (V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot())
+        if (RK == ReductionKind::Ordered || V.isReducedBitcastRoot() ||
+            V.isReducedCmpBitcastRoot())
           ReductionCost = 0;
         else
           ReductionCost =
@@ -26362,7 +26401,7 @@ public:
         Value *VectorizedRoot = V.vectorizeTree(
             LocalExternallyUsedValues, InsertPt, VectorValuesAndScales);
         if (RK == ReductionKind::Ordered) {
-          // No need to generate reduction here, eit extractelements instead in
+          // No need to generate reduction here, emit extractelements instead in
           // the tree vectorizer.
           assert(VectorizedRoot && "Expected vectorized tree");
           // Count vectorized reduced values to exclude them from final
