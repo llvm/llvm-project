@@ -2531,7 +2531,7 @@ the configuration (without a prefix: ``Auto``).
         foo();
       } while (1);
 
-  * ``bool IndentBraces`` Indent the wrapped braces themselves.
+  * ``IndentBracesOptions IndentBraces`` Controls indenting of wrapped braces.
 
   * ``bool SplitEmptyFunction`` If ``false``, empty function body can be put on a single line.
     This option is used only if the opening brace of the function has

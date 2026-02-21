@@ -245,7 +245,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, BeforeElse);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, BeforeLambdaBody);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, BeforeWhile);
-  CHECK_PARSE_NESTED_BOOL(BraceWrapping, IndentBraces);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyFunction);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyRecord);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyNamespace);
@@ -785,6 +784,23 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("BraceWrapping:\n"
               "  AfterControlStatement: false",
               BraceWrapping.AfterControlStatement, FormatStyle::BWACS_Never);
+
+  Style.BraceWrapping.IndentBraces.Enabled = false;
+  CHECK_PARSE("BraceWrapping:\n"
+              "  IndentBraces:\n"
+              "    Enabled: true",
+              BraceWrapping.IndentBraces.Enabled, true);
+  CHECK_PARSE("BraceWrapping:\n"
+              "  IndentBraces:\n"
+              "    Enabled: false",
+              BraceWrapping.IndentBraces.Enabled, false);
+  // For backward compatibility:
+  CHECK_PARSE("BraceWrapping:\n"
+              "  IndentBraces: true",
+              BraceWrapping.IndentBraces.Enabled, true);
+  CHECK_PARSE("BraceWrapping:\n"
+              "  IndentBraces: false",
+              BraceWrapping.IndentBraces.Enabled, false);
 
   Style.BreakAfterReturnType = FormatStyle::RTBS_All;
   CHECK_PARSE("BreakAfterReturnType: None", BreakAfterReturnType,

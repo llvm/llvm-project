@@ -1350,6 +1350,18 @@ struct FormatStyle {
     BWACS_Always
   };
 
+  /// Options for indenting wrapped braces.
+  struct IndentBracesOptions {
+    /// Indent wrapped braces.
+    bool Enabled;
+    bool operator==(const IndentBracesOptions &R) const {
+      return Enabled == R.Enabled;
+    }
+    bool operator!=(const IndentBracesOptions &R) const {
+      return !(*this == R);
+    }
+  };
+
   /// Precise control over the wrapping of braces.
   /// \code
   ///   # Should be declared this way:
@@ -1540,8 +1552,8 @@ struct FormatStyle {
     ///   } while (1);
     /// \endcode
     bool BeforeWhile;
-    /// Indent the wrapped braces themselves.
-    bool IndentBraces;
+    /// Controls indenting of wrapped braces.
+    IndentBracesOptions IndentBraces;
     /// If ``false``, empty function body can be put on a single line.
     /// This option is used only if the opening brace of the function has
     /// already been wrapped, i.e. the ``AfterFunction`` brace wrapping mode is

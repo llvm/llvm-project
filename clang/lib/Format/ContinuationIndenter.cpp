@@ -1430,7 +1430,7 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
   }
 
   if (Style.BraceWrapping.BeforeLambdaBody &&
-      Style.BraceWrapping.IndentBraces && Current.is(TT_LambdaLBrace)) {
+      Style.BraceWrapping.IndentBraces.Enabled && Current.is(TT_LambdaLBrace)) {
     const auto From = Style.LambdaBodyIndentation == FormatStyle::LBI_Signature
                           ? CurrentState.Indent
                           : State.FirstIndent;
@@ -2228,7 +2228,8 @@ void ContinuationIndenter::moveStateToNewBlock(LineState &State, bool NewLine) {
   if (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
       State.NextToken->is(TT_LambdaLBrace) &&
       !State.Line->MightBeFunctionDecl) {
-    const auto Indent = Style.IndentWidth * Style.BraceWrapping.IndentBraces;
+    const auto Indent =
+        Style.IndentWidth * Style.BraceWrapping.IndentBraces.Enabled;
     State.Stack.back().NestedBlockIndent = State.FirstIndent + Indent;
   }
   unsigned NestedBlockIndent = State.Stack.back().NestedBlockIndent;

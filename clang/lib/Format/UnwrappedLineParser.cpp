@@ -135,7 +135,7 @@ public:
       : CompoundStatementIndenter(Parser, LineLevel,
                                   Style.BraceWrapping.AfterControlStatement ==
                                       FormatStyle::BWACS_Always,
-                                  Style.BraceWrapping.IndentBraces) {}
+                                  Style.BraceWrapping.IndentBraces.Enabled) {}
   CompoundStatementIndenter(UnwrappedLineParser *Parser, unsigned &LineLevel,
                             bool WrapBrace, bool IndentBrace)
       : LineLevel(LineLevel), OldLineLevel(LineLevel) {
@@ -3366,9 +3366,9 @@ void UnwrappedLineParser::parseLabel(bool LeftAlignLabel) {
   if (!Style.IndentCaseBlocks && CommentsBeforeNextToken.empty() &&
       FormatTok->is(tok::l_brace)) {
 
-    CompoundStatementIndenter Indenter(this, Line->Level,
-                                       Style.BraceWrapping.AfterCaseLabel,
-                                       Style.BraceWrapping.IndentBraces);
+    CompoundStatementIndenter Indenter(
+        this, Line->Level, Style.BraceWrapping.AfterCaseLabel,
+        Style.BraceWrapping.IndentBraces.Enabled);
     parseBlock();
     if (FormatTok->is(tok::kw_break)) {
       if (Style.BraceWrapping.AfterControlStatement ==
