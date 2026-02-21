@@ -1,18 +1,12 @@
 // RUN: %clang_cc1 -triple x86_64-win32 -fms-extensions -emit-llvm -o - %s | \
-// RUN:     FileCheck %s --check-prefixes=MSC --implicit-check-not=to_be_ --implicit-check-not=dllimport
+// RUN:     FileCheck %s --check-prefixes=MSC --implicit-check-not=to_be_ --implicit-check-not=" dllimport"
 // RUN: %clang_cc1 -triple x86_64-mingw                 -emit-llvm -o - %s | \
-// RUN:     FileCheck %s --check-prefixes=GNU --implicit-check-not=to_be_ --implicit-check-not=dllimport
+// RUN:     FileCheck %s --check-prefixes=GNU --implicit-check-not=to_be_ --implicit-check-not=" dllimport"
 // RUN: %clang_cc1 -triple x86_64-cygwin                -emit-llvm -o - %s | \
-// RUN:     FileCheck %s --check-prefixes=GNU --implicit-check-not=to_be_ --implicit-check-not=dllimport
+// RUN:     FileCheck %s --check-prefixes=GNU --implicit-check-not=to_be_ --implicit-check-not=" dllimport"
 
 // Test that __declspec(dllimport) doesn't instantiate entities marked with
 // the exclude_from_explicit_instantiation attribute unless marked as dllimport explicitly.
-
-// Silence --implicit-check-not=dllimport.
-// MSC: ModuleID = {{.*}}exclude_from_dllimport.cpp
-// MSC: source_filename = {{.*}}exclude_from_dllimport.cpp
-// GNU: ModuleID = {{.*}}exclude_from_dllimport.cpp
-// GNU: source_filename = {{.*}}exclude_from_dllimport.cpp
 
 #define EXCLUDE_ATTR __attribute__((exclude_from_explicit_instantiation))
 
@@ -28,7 +22,7 @@ struct BasicCase {
 
   // This will be instantiated implicitly as an imported function because it is
   // marked as dllimport explicitly.
-  EXCLUDE_ATTR __declspec(dllimport) void to_be_imported_explicitly();
+  EXCLUDE_ATTR __declspec(dllimport) void to_be_memberwise_imported();
 
   // This will be instantiated implicitly but won't be imported.
   EXCLUDE_ATTR void not_to_be_imported();
@@ -70,7 +64,7 @@ struct Polymorphic {
   EXCLUDE_ATTR virtual void to_be_instantiated();
 
   // The body of this shouldn't be emitted since that comes from an external DLL.
-  EXCLUDE_ATTR __declspec(dllimport) virtual void to_be_imported_explicitly();
+  EXCLUDE_ATTR __declspec(dllimport) virtual void to_be_memberwise_imported();
 
 };
 
@@ -106,9 +100,9 @@ void use() {
   // GNU: call void @_ZN9BasicCaseI13WithImportTagE14to_be_importedEv
   c.to_be_imported();
 
-  // MSC: call void @"?to_be_imported_explicitly@?$BasicCase@UWithImportTag@@@@QEAAXXZ"
-  // GNU: call void @_ZN9BasicCaseI13WithImportTagE25to_be_imported_explicitlyEv
-  c.to_be_imported_explicitly(); // implicitly instantiated here
+  // MSC: call void @"?to_be_memberwise_imported@?$BasicCase@UWithImportTag@@@@QEAAXXZ"
+  // GNU: call void @_ZN9BasicCaseI13WithImportTagE25to_be_memberwise_importedEv
+  c.to_be_memberwise_imported(); // implicitly instantiated here
 
   // MSC: call void @"?not_to_be_imported@?$BasicCase@UWithImportTag@@@@QEAAXXZ"
   // GNU: call void @_ZN9BasicCaseI13WithImportTagE18not_to_be_importedEv
@@ -134,8 +128,8 @@ void use() {
 // MSC: declare dllimport void @"?to_be_imported@?$BasicCase@UWithImportTag@@@@QEAAXXZ"
 // GNU: declare dllimport void @_ZN9BasicCaseI13WithImportTagE14to_be_importedEv
 
-// MSC: declare dllimport void @"?to_be_imported_explicitly@?$BasicCase@UWithImportTag@@@@QEAAXXZ"
-// GNU: declare dllimport void @_ZN9BasicCaseI13WithImportTagE25to_be_imported_explicitlyEv
+// MSC: declare dllimport void @"?to_be_memberwise_imported@?$BasicCase@UWithImportTag@@@@QEAAXXZ"
+// GNU: declare dllimport void @_ZN9BasicCaseI13WithImportTagE25to_be_memberwise_importedEv
 
 // MSC: define linkonce_odr dso_local void @"?not_to_be_imported@?$BasicCase@UWithImportTag@@@@QEAAXXZ"
 // GNU: define linkonce_odr dso_local void @_ZN9BasicCaseI13WithImportTagE18not_to_be_importedEv
@@ -147,8 +141,8 @@ void use() {
 
 // MSC: declare dllimport void @"?to_be_imported@?$Polymorphic@UWithImportTag@@@@UEAAXXZ"
 // MSC: define linkonce_odr dso_local void @"?to_be_instantiated@?$Polymorphic@UWithImportTag@@@@UEAAXXZ"
-// MSC: declare dllimport void @"?to_be_imported_explicitly@?$Polymorphic@UWithImportTag@@@@UEAAXXZ"
+// MSC: declare dllimport void @"?to_be_memberwise_imported@?$Polymorphic@UWithImportTag@@@@UEAAXXZ"
 
 // MSC: declare dso_local void @"?to_be_imported@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ"
 // MSC: define linkonce_odr dso_local void @"?to_be_instantiated@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ"
-// MSC: declare dllimport void @"?to_be_imported_explicitly@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ"
+// MSC: declare dllimport void @"?to_be_memberwise_imported@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ"
