@@ -803,7 +803,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
 
 // Returns true if a use is either in an ICmp/PtrToInt or a Phi/Select that only
 // feeds into them.
-static bool isPointerUseReplacable(const Use &U, bool HasNonAddressBits) {
+static bool isPointerUseReplaceable(const Use &U, bool HasNonAddressBits) {
   unsigned Limit = 40;
   SmallVector<const User *> Worklist({U.getUser()});
   SmallPtrSet<const User *, 8> Visited;
@@ -859,7 +859,7 @@ bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
 
   bool HasNonAddressBits =
       DL.getAddressSizeInBits(Ty) != DL.getPointerTypeSizeInBits(Ty);
-  return isPointerUseReplacable(U, HasNonAddressBits);
+  return isPointerUseReplaceable(U, HasNonAddressBits);
 }
 
 bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,
