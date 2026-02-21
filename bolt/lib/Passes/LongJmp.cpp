@@ -73,13 +73,6 @@ static BinaryBasicBlock *getBBAtHotColdSplitPoint(BinaryFunction &Func) {
 }
 
 static bool mayNeedStub(const BinaryContext &BC, const MCInst &Inst) {
-  if (BC.isAArch64() && BC.MIB->isShortRangeBranch(Inst) &&
-      !opts::CompactCodeModel) {
-    BC.errs() << "BOLT-ERROR: short range branch not supported"
-              << " outside compact code model\n";
-    BC.printInstruction(BC.errs(), Inst);
-    exit(1);
-  }
   return (BC.MIB->isBranch(Inst) || BC.MIB->isCall(Inst)) &&
          !BC.MIB->isIndirectBranch(Inst) && !BC.MIB->isIndirectCall(Inst);
 }
@@ -541,6 +534,16 @@ bool LongJmpPass::needsStub(const BinaryBasicBlock &BB, const MCInst &Inst,
   const BinaryContext &BC = Func.getBinaryContext();
   const MCSymbol *TgtSym = BC.MIB->getTargetSymbol(Inst);
   assert(TgtSym && "getTargetSymbol failed");
+
+  // AArch64 Compare-and-Branch instructions need a stub if their target
+  // resides in a different fragment, and we are not using the compact code
+  // model. That is because they don't have a correspoding relocation type.
+  if (BC.isAArch64() && BC.MIB->isShortRangeBranch(Inst) &&
+      !opts::CompactCodeModel) {
+    const BinaryBasicBlock *TakenBB = BB.getConditionalSuccessor(true);
+    if (BB.getFragmentNum() != TakenBB->getFragmentNum())
+      return true;
+  }
 
   const BinaryBasicBlock *TgtBB = Func.getBasicBlockForLabel(TgtSym);
   // Check for shared stubs from foreign functions
