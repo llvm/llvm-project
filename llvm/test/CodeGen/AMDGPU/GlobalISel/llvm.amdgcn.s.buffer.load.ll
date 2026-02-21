@@ -8143,6 +8143,90 @@ define amdgpu_ps float @s_buffer_load_f32_offset_or_vgpr_imm(<4 x i32> inreg %rs
   ret float %val
 }
 
+define amdgpu_gs i32 @s_buffer_load_pointer_derived_offset(i32 inreg %offset.base) {
+  ; GFX6-LABEL: name: s_buffer_load_pointer_derived_offset
+  ; GFX6: bb.1.entry:
+  ; GFX6-NEXT:   liveins: $sgpr2
+  ; GFX6-NEXT: {{  $}}
+  ; GFX6-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX6-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; GFX6-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
+  ; GFX6-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2
+  ; GFX6-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], [[S_MOV_B32_1]], implicit-def dead $scc
+  ; GFX6-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 16
+  ; GFX6-NEXT:   [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_MOV_B32_2]], [[S_LSHL_B32_]], implicit-def dead $scc
+  ; GFX6-NEXT:   [[S_ADD_U32_1:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_ADD_U32_]], [[S_MOV_B32_2]], implicit-def dead $scc
+  ; GFX6-NEXT:   [[S_BUFFER_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[REG_SEQUENCE]], [[S_ADD_U32_1]], 0 :: (dereferenceable invariant load (s32))
+  ; GFX6-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_BUFFER_LOAD_DWORD_SGPR]]
+  ; GFX6-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY1]], implicit $exec
+  ; GFX6-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
+  ; GFX6-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0
+  ;
+  ; GFX7-LABEL: name: s_buffer_load_pointer_derived_offset
+  ; GFX7: bb.1.entry:
+  ; GFX7-NEXT:   liveins: $sgpr2
+  ; GFX7-NEXT: {{  $}}
+  ; GFX7-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX7-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; GFX7-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
+  ; GFX7-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2
+  ; GFX7-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], [[S_MOV_B32_1]], implicit-def dead $scc
+  ; GFX7-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 16
+  ; GFX7-NEXT:   [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_MOV_B32_2]], [[S_LSHL_B32_]], implicit-def dead $scc
+  ; GFX7-NEXT:   [[S_ADD_U32_1:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_ADD_U32_]], [[S_MOV_B32_2]], implicit-def dead $scc
+  ; GFX7-NEXT:   [[S_BUFFER_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[REG_SEQUENCE]], [[S_ADD_U32_1]], 0 :: (dereferenceable invariant load (s32))
+  ; GFX7-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_BUFFER_LOAD_DWORD_SGPR]]
+  ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY1]], implicit $exec
+  ; GFX7-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
+  ; GFX7-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0
+  ;
+  ; GFX8-LABEL: name: s_buffer_load_pointer_derived_offset
+  ; GFX8: bb.1.entry:
+  ; GFX8-NEXT:   liveins: $sgpr2
+  ; GFX8-NEXT: {{  $}}
+  ; GFX8-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX8-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; GFX8-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
+  ; GFX8-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2
+  ; GFX8-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], [[S_MOV_B32_1]], implicit-def dead $scc
+  ; GFX8-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 16
+  ; GFX8-NEXT:   [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_MOV_B32_2]], [[S_LSHL_B32_]], implicit-def dead $scc
+  ; GFX8-NEXT:   [[S_ADD_U32_1:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_ADD_U32_]], [[S_MOV_B32_2]], implicit-def dead $scc
+  ; GFX8-NEXT:   [[S_BUFFER_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[REG_SEQUENCE]], [[S_ADD_U32_1]], 0 :: (dereferenceable invariant load (s32))
+  ; GFX8-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_BUFFER_LOAD_DWORD_SGPR]]
+  ; GFX8-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY1]], implicit $exec
+  ; GFX8-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
+  ; GFX8-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0
+  ;
+  ; GFX1200_1250-LABEL: name: s_buffer_load_pointer_derived_offset
+  ; GFX1200_1250: bb.1.entry:
+  ; GFX1200_1250-NEXT:   liveins: $sgpr2
+  ; GFX1200_1250-NEXT: {{  $}}
+  ; GFX1200_1250-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX1200_1250-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; GFX1200_1250-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
+  ; GFX1200_1250-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2
+  ; GFX1200_1250-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], [[S_MOV_B32_1]], implicit-def dead $scc
+  ; GFX1200_1250-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 16
+  ; GFX1200_1250-NEXT:   [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_MOV_B32_2]], [[S_LSHL_B32_]], implicit-def dead $scc
+  ; GFX1200_1250-NEXT:   [[S_ADD_U32_1:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_ADD_U32_]], [[S_MOV_B32_2]], implicit-def dead $scc
+  ; GFX1200_1250-NEXT:   [[S_BUFFER_LOAD_DWORD_SGPR_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR_IMM [[REG_SEQUENCE]], [[S_ADD_U32_1]], 0, 0 :: (dereferenceable invariant load (s32))
+  ; GFX1200_1250-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_BUFFER_LOAD_DWORD_SGPR_IMM]]
+  ; GFX1200_1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY1]], implicit $exec
+  ; GFX1200_1250-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
+  ; GFX1200_1250-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0
+entry:
+  %offset.i64 = sext i32 %offset.base to i64
+  %base.ptr = getelementptr i32, ptr addrspace(6) inttoptr (i64 16 to ptr addrspace(6)), i64 %offset.i64
+  %final.ptr = getelementptr i8, ptr addrspace(6) %base.ptr, i64 16
+
+  %ptr.as.int = ptrtoint ptr addrspace(6) %final.ptr to i64
+  %offset = trunc i64 %ptr.as.int to i32
+
+  %res = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> zeroinitializer, i32 %offset, i32 0)
+  ret i32 %res
+}
+
 declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg)
 declare <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32>, i32, i32 immarg)
 declare <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32>, i32, i32 immarg)

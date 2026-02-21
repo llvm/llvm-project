@@ -6928,6 +6928,14 @@ AMDGPUInstructionSelector::selectSMRDBufferSgprImm(MachineOperand &Root) const {
   if (!SOffset)
     return std::nullopt;
 
+  // AMDGPU::getBaseWithConstantOffset may return a pointer type for sequences
+  // like: G_PTRTOINT (G_PTR_ADD (G_INTTOPTR(base), const)) while SMRD
+  // instructions require integer offsets in scalar registers. A PTRTOINT could
+  // be inserted here, but there is not enough info to build instructions in
+  // this context.
+  if (MRI->getType(SOffset).isPointer())
+    return std::nullopt;
+
   std::optional<int64_t> EncodedOffset =
       AMDGPU::getSMRDEncodedOffset(STI, Offset, /* IsBuffer */ true);
   if (!EncodedOffset)
