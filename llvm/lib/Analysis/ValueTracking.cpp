@@ -5936,24 +5936,18 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         continue;
       Value *R, *L, *Init;
       PHINode *PN;
-      const Function *F = II->getFunction();
-      const auto &FltSem = II->getType()->getScalarType()->getFltSemantics();
-      DenormalMode Mode =
-          F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
-      if (matchSimpleTernaryIntrinsicRecurrence(II, PN, Init, L, R)) {
+      if (matchSimpleTernaryIntrinsicRecurrence(II, PN, Init, L, R) && PN == P) {
         switch (II->getIntrinsicID()) {
         case Intrinsic::fma:
         case Intrinsic::fmuladd: {
-          KnownFPClass KnownStart, KnownL;
+          KnownFPClass KnownStart;
           computeKnownFPClass(Init, DemandedElts, InterestedClasses, KnownStart,
                               Q, Depth + 1);
           if (KnownStart.isUnknown())
             break;
-          computeKnownFPClass(L, DemandedElts, InterestedClasses, KnownL, Q,
-                              Depth + 1);
-          if (L == R &&
+          if (KnownStart.cannotBeOrderedLessThanZero() && L == R &&
               isGuaranteedNotToBeUndef(L, Q.AC, Q.CxtI, Q.DT, Depth + 1))
-            Known = KnownFPClass::fma_square(KnownL, KnownStart, Mode);
+                Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
           break;
         }
         }
