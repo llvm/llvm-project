@@ -306,3 +306,9 @@ void test_loops() {
   // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
   // CHECK-FIXES: for (auto it = std::ranges::find(v, 2); (it == std::ranges::end(v)); ) { break; }
 }
+
+void test_invalid_fixit() {
+  int arr[] = {1, 2, 3};
+  if (int* it2 = std::find(arr, arr + 3, 2)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+}

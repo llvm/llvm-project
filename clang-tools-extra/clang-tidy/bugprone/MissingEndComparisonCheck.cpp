@@ -34,6 +34,16 @@ constexpr llvm::StringRef RangeAlgorithms[] = {
     "::std::ranges::max_element",   "::std::ranges::find_first_of",
     "::std::ranges::adjacent_find", "::std::ranges::is_sorted_until"};
 
+AST_MATCHER(DeclStmt, isConditionVariableStatement) {
+  return !match(
+              declStmt(hasAncestor(stmt(anyOf(
+                  ifStmt(hasConditionVariableStatement(equalsNode(&Node))),
+                  whileStmt(hasConditionVariableStatement(equalsNode(&Node))),
+                  forStmt(hasConditionVariableStatement(equalsNode(&Node))))))),
+              Node, Finder->getASTContext())
+              .empty();
+}
+
 } // namespace
 
 void MissingEndComparisonCheck::registerMatchers(MatchFinder *Finder) {
@@ -61,7 +71,8 @@ void MissingEndComparisonCheck::registerMatchers(MatchFinder *Finder) {
   // FIXME: This only handles variables initialized directly by the algorithm.
   // We may need to introduce more accurate dataflow analysis in the future.
   const auto VarWithAlgoInit =
-      varDecl(hasInitializer(ignoringParenImpCasts(AnyAlgoCall)));
+      varDecl(hasInitializer(ignoringParenImpCasts(AnyAlgoCall)))
+          .bind("initVar");
 
   const auto IsVariableBoolUsage =
       anyOf(implicitCastExpr(hasCastKind(CK_PointerToBoolean),
@@ -163,24 +174,47 @@ void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
            "result of standard algorithm used in boolean context; did "
            "you mean to compare with the end iterator?");
 
-  if (!EndExprText.empty()) {
-    if (IsNegated) {
-      // !it -> (it == end)
-      Diag << FixItHint::CreateReplacement(NotOp->getOperatorLoc(), "(");
-      Diag << FixItHint::CreateInsertion(
-          Lexer::getLocForEndOfToken(BoolOp->getEndLoc(), 0,
-                                     *Result.SourceManager,
-                                     Result.Context->getLangOpts()),
-          " == " + EndExprText + ")");
-    } else {
-      // it -> (it != end)
-      Diag << FixItHint::CreateInsertion(BoolOp->getBeginLoc(), "(");
-      Diag << FixItHint::CreateInsertion(
-          Lexer::getLocForEndOfToken(BoolOp->getEndLoc(), 0,
-                                     *Result.SourceManager,
-                                     Result.Context->getLangOpts()),
-          " != " + EndExprText + ")");
+  if (EndExprText.empty())
+    return;
+
+  // Suppress fix-it if the expression is part of a variable declaration or a
+  // condition variable declaration.
+  if (const auto *InitVar = Result.Nodes.getNodeAs<VarDecl>("initVar")) {
+    if (InitVar->getType()->isBooleanType())
+      return;
+
+    const auto &Parents = Result.Context->getParents(*InitVar);
+    if (!Parents.empty()) {
+      if (const auto *ParentDecl = Parents[0].get<DeclStmt>()) {
+        if (!match(declStmt(isConditionVariableStatement()), *ParentDecl,
+                   *Result.Context)
+                 .empty()) {
+          return;
+        }
+      }
     }
+  }
+
+  const auto &Parents = Result.Context->getParents(*BoolOp);
+  if (!Parents.empty() && Parents[0].get<VarDecl>())
+    return;
+
+  if (IsNegated) {
+    // !it -> (it == end)
+    Diag << FixItHint::CreateReplacement(NotOp->getOperatorLoc(), "(");
+    Diag << FixItHint::CreateInsertion(
+        Lexer::getLocForEndOfToken(BoolOp->getEndLoc(), 0,
+                                   *Result.SourceManager,
+                                   Result.Context->getLangOpts()),
+        " == " + EndExprText + ")");
+  } else {
+    // it -> (it != end)
+    Diag << FixItHint::CreateInsertion(BoolOp->getBeginLoc(), "(");
+    Diag << FixItHint::CreateInsertion(
+        Lexer::getLocForEndOfToken(BoolOp->getEndLoc(), 0,
+                                   *Result.SourceManager,
+                                   Result.Context->getLangOpts()),
+        " != " + EndExprText + ")");
   }
 }
 
