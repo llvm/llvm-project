@@ -392,6 +392,14 @@ InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86RegisterBankInfo &);
 
 FunctionPass *createX86PostLegalizerCombiner();
+
+class X86PreLegalizerCombinerPass
+    : public PassInfoMixin<X86PreLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 FunctionPass *createX86PreLegalizerCombiner();
 
 class X86LoadValueInjectionLoadHardeningPass
