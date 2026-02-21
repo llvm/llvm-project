@@ -1337,21 +1337,6 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
     xegpu::DistributeLayoutAttr sourceLayout =
         xegpu::getTemporaryLayout(reductionOp->getOpOperand(0));
 
-    // before get distribute vec type for source, first set its shape to be unit
-    // for the reduction dimension
-    SmallVector<int64_t, 2> sourceShape(sourceType.getShape().begin(),
-                                        sourceType.getShape().end());
-    int64_t reductionDimSize = sourceShape[reductionDim];
-    // sourceShape[reductionDim] = 1;
-    // VectorType modifiedSourceType =
-    //     VectorType::get(sourceShape, sourceType.getElementType());
-
-    // print out modifiedSourceType and sourceLayout for debugging
-    //  LLVM_DEBUG({
-    //    llvm::dbgs() << "modifiedSourceType: " << modifiedSourceType << "\n";
-    //    llvm::dbgs() << "sourceLayout: " << sourceLayout << "\n";
-    //  });
-
     FailureOr<VectorType> sourceDistTypeOrFailure =
         getDistVecTypeBasedOnLaneLayout(sourceLayout, sourceType);
     if (failed(sourceDistTypeOrFailure))
@@ -1387,17 +1372,6 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
 
     bool isReductionLaneLocal = (sourceDistDim == 0 && reductionDim == 1) ||
                                 (sourceDistDim == 1 && reductionDim == 0);
-    // print here all these five variables for debugging
-    LLVM_DEBUG({
-      llvm::dbgs() << "sourceDistDim: " << sourceDistDim << "\n";
-      llvm::dbgs() << "reductionDim: " << reductionDim << "\n";
-      llvm::dbgs() << "isReductionLaneLocal: " << isReductionLaneLocal << "\n";
-      llvm::dbgs() << "resultDistributed: " << resultDistributed << "\n";
-      llvm::dbgs() << "sourceDistType: " << sourceDistType << "\n";
-      llvm::dbgs() << "distributedResultType: " << distributedResultType
-                   << "\n";
-    });
-
     if (isReductionLaneLocal && !resultDistributed)
       return rewriter.notifyMatchFailure(
           warpOp, "Expecting a distributed result for lane-local reduction.");
@@ -1407,46 +1381,33 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
           warpOp,
           "Expecting a broadcasted result for non-lane-local reduction.");
 
-    // Yield the source and acc vectors from the WarpOp.
-    SmallVector<size_t> newRetIndices;
-    auto newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, {reductionOp.getSource(), reductionOp.getAcc()},
-        {sourceDistType, distributedResultType}, newRetIndices);
-    rewriter.setInsertionPointAfter(newWarpOp);
-
-    Value result;
     // Handle lane-local reduction case. In this case we fully distribute the
     // reduction result.
     if (isReductionLaneLocal) {
-
-      result = xegpu::lowerToVectorReductions(
+      // Yield the source and acc vectors from the WarpOp.
+      SmallVector<size_t> newRetIndices;
+      auto newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+          rewriter, warpOp, {reductionOp.getSource(), reductionOp.getAcc()},
+          {sourceDistType, distributedResultType}, newRetIndices);
+      rewriter.setInsertionPointAfter(newWarpOp);
+      Value result = xegpu::lowerToVectorReductions(
           cast<TypedValue<VectorType>>(newWarpOp->getResult(newRetIndices[0])),
           cast<TypedValue<VectorType>>(newWarpOp->getResult(newRetIndices[1])),
           reductionOp.getKind(), reductionDim, reductionOp.getLoc(), rewriter);
-      // print the reduction op for debugging
-      LLVM_DEBUG({
-        llvm::dbgs() << "reductionOp1: " << *reductionOp << "\n";
-        llvm::dbgs() << "lowered reduction result1: " << result << "\n";
-      });
-
-    } else {
-      // For non-lane-local case, we simply rewrite the MultiReductionOp in
-      // terms of multiple ReductionOps. Actual distribution is done by the
-      // WarpOpReduction pattern.
-      // rewriter.setInsertionPointAfter(reductionOp);
-      result = xegpu::lowerToVectorReductionsCrossLane(
-          cast<TypedValue<VectorType>>(newWarpOp->getResult(newRetIndices[0])),
-          cast<TypedValue<VectorType>>(newWarpOp->getResult(newRetIndices[1])),
-          reductionOp.getKind(), reductionDim, reductionDimSize,
-          reductionOp.getLoc(), rewriter);
-      // print the reduction op for debugging
-      LLVM_DEBUG({
-        llvm::dbgs() << "reductionOp2: " << *reductionOp << "\n";
-        llvm::dbgs() << "lowered reduction result2: " << result << "\n";
-      });
+      // Replace the warp op result with the final result.
+      rewriter.replaceAllUsesWith(newWarpOp.getResult(operandIdx), result);
+      return success();
     }
+    // For non-lane-local case, we simply rewrite the MultiReductionOp in terms
+    // of multiple ReductionOps. Actual distribution is done by the
+    // WarpOpReduction pattern.
+    rewriter.setInsertionPointAfter(reductionOp);
+    Value result = xegpu::lowerToVectorReductions(
+        cast<TypedValue<VectorType>>(reductionOp.getSource()),
+        cast<TypedValue<VectorType>>(reductionOp.getAcc()),
+        reductionOp.getKind(), reductionDim, reductionOp.getLoc(), rewriter);
     // Replace the warp op result with the final result.
-    rewriter.replaceAllUsesWith(newWarpOp.getResult(operandIdx), result);
+    rewriter.replaceAllUsesWith(reductionOp.getResult(), result);
     return success();
   }
 };
