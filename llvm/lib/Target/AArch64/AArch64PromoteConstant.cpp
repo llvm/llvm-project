@@ -246,7 +246,7 @@ static bool isConstantUsingVectorTy(const Type *CstTy) {
   return false;
 }
 
-// Returns true if \p C contains only ConstantData leafs and no global values,
+// Returns true if \p C contains only ConstantData leaves and no global values,
 // block addresses or constant expressions. Traverses ConstantAggregates.
 static bool containsOnlyConstantData(const Constant *C) {
   if (isa<ConstantData>(C))

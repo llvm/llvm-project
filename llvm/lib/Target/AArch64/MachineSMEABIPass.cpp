@@ -1129,7 +1129,7 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
   // This section handles: LOCAL_COMMITTED -> (OFF|LOCAL_SAVED)
   case transitionFrom(ZAState::LOCAL_COMMITTED).to(ZAState::OFF):
   case transitionFrom(ZAState::LOCAL_COMMITTED).to(ZAState::LOCAL_SAVED):
-    // These transistions are a no-op.
+    // These transitions are a no-op.
     break;
 
   // This section handles: LOCAL_(SAVED|COMMITTED) -> ACTIVE[_ZT0_SAVED]
@@ -1145,7 +1145,7 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
       emitZT0SaveRestore(Context, MBB, InsertPt, /*IsSave=*/false);
     break;
 
-  // This section handles transistions to OFF (not previously covered)
+  // This section handles transitions to OFF (not previously covered)
   case transitionFrom(ZAState::ACTIVE).to(ZAState::OFF):
   case transitionFrom(ZAState::ACTIVE_ZT0_SAVED).to(ZAState::OFF):
   case transitionFrom(ZAState::LOCAL_SAVED).to(ZAState::OFF):

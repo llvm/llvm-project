@@ -251,7 +251,7 @@ void AArch64Arm64ECCallLowering::getThunkRetType(
         // actually equivalent to just passing and returning a void* pointer
         // as the first or second argument. Translate it that way, instead of
         // trying to model "inreg" in the thunk's calling convention; this
-        // simplfies the rest of the code, and matches MSVC mangling.
+        // simplifies the rest of the code, and matches MSVC mangling.
         Out << "i8";
         Arm64RetTy = I64Ty;
         X64RetTy = I64Ty;

@@ -4625,7 +4625,7 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
   SDLoc DL(N);
 
   // Essentially: rotr (xor(x, y), imm) -> xar (x, y, imm)
-  // Rotate by a constant is a funnel shift in IR which is exanded to
+  // Rotate by a constant is a funnel shift in IR which is expanded to
   // an OR with shifted operands.
   // We do the following transform:
   //   OR N0, N1 -> xar (x, y, imm)

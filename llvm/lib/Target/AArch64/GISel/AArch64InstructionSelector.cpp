@@ -4547,7 +4547,7 @@ MachineInstr *AArch64InstructionSelector::emitFPCompare(
            P == CmpInst::FCMP_UEQ || P == CmpInst::FCMP_UNE;
   };
   if (!ShouldUseImm && Pred && IsEqualityPred(*Pred)) {
-    // Try commutating the operands.
+    // Try commuting the operands.
     const ConstantFP *LHSImm = getConstantFPVRegVal(LHS, MRI);
     if (LHSImm && (LHSImm->isZero() && !LHSImm->isNegative())) {
       ShouldUseImm = true;
