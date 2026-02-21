@@ -3,9 +3,9 @@
 
 define void @test_drop(i8 %a) !prof !0 {
 ; CHECK-LABEL: define void @test_drop(
-; CHECK-SAME: i8 [[A:%.*]]) !prof [[PROF0]] {
+; CHECK-SAME: i8 [[A:%.*]]) !prof [[PROF0:![0-9]+]] {
 ; CHECK-NEXT:  [[HEADER_BACKEDGE2:.*:]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 true, i1 true, i1 false, !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 true, i1 true, i1 false, !prof [[PROF1:![0-9]+]]
 ; CHECK-NEXT:    br label %[[HEADER:.*]]
 ; CHECK:       [[HEADER]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 0
@@ -35,6 +35,5 @@ exit:
 !1 = !{!"branch_weights", i32 4, i32 1}
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1000}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 4, i32 1}
-; CHECK: [[PROF2]] = !{!"unknown", !"LoopInfo"}
+; CHECK: [[PROF1]] = !{!"unknown", !"LoopInfo"}
 ;.
