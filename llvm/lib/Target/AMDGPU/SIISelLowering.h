@@ -127,8 +127,11 @@ private:
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerTrig(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFSQRTF16(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFSQRTF32Impl(SDLoc DL, SDValue X, SDNodeFlags Flags,
+                            SelectionDAG &DAG, bool NeedsCorrection) const;
   SDValue lowerFSQRTF32(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFSQRTF64(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFSQRTBF16(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
