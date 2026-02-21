@@ -40,6 +40,7 @@
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -469,10 +470,30 @@ Interpreter::Parse(llvm::StringRef Code) {
   // printing could cause it.
   getCompilerInstance()->getDiagnostics().setSeverity(
       clang::diag::warn_unused_expr, diag::Severity::Ignored, SourceLocation());
+  // Suppress [[nodiscard]] warnings during parsing since we don't know yet
+  // if the expression has a missing semicolon (value printed) or not.
+  // If the value is printed, it's considered "used" so no warning is needed.
+  getCompilerInstance()->getDiagnostics().setSeverity(
+      clang::diag::warn_unused_result, diag::Severity::Ignored,
+      SourceLocation());
 
   llvm::Expected<TranslationUnitDecl *> TuOrErr = IncrParser->Parse(Code);
   if (!TuOrErr)
     return TuOrErr.takeError();
+
+  // After parsing, re-enable [[nodiscard]] warnings and diagnose for
+  // top-level expressions where the semicolon IS present (value discarded).
+  // Expressions without semicolons have their values printed, so they are
+  // considered "used" and should not trigger [[nodiscard]] warnings.
+  getCompilerInstance()->getDiagnostics().setSeverity(
+      clang::diag::warn_unused_result, diag::Severity::Warning,
+      SourceLocation());
+  for (Decl *D : (*TuOrErr)->decls()) {
+    if (auto *TLSD = llvm::dyn_cast<TopLevelStmtDecl>(D))
+      if (!TLSD->isSemiMissing())
+        getCompilerInstance()->getSema().DiagnoseUnusedExprResult(
+            TLSD->getStmt(), diag::warn_unused_result);
+  }
 
   PartialTranslationUnit &LastPTU = IncrParser->RegisterPTU(*TuOrErr);
 
