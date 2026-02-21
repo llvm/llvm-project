@@ -1286,6 +1286,8 @@ public:
                    ProtectedOperationKind POK);
   void checkPtAccess(const FactSet &FSet, const Expr *Exp, AccessKind AK,
                      ProtectedOperationKind POK);
+
+  void checkMismatchedFunctionAttrs(const NamedDecl *ND);
 };
 
 } // namespace
@@ -2581,6 +2583,37 @@ static bool neverReturns(const CFGBlock *B) {
   return false;
 }
 
+template <typename AttrT>
+static CapExprSet collectAttrArgs(SExprBuilder &SxBuilder, const Decl *D) {
+  CapExprSet Caps;
+  for (const auto *A : D->specific_attrs<AttrT>()) {
+    for (const Expr *E : A->args())
+      Caps.push_back_nodup(SxBuilder.translateAttrExpr(E, nullptr));
+  }
+  return Caps;
+}
+
+template <typename AttrT>
+static void maybeDiagnoseFunctionAttrs(const NamedDecl *ND,
+                                       SExprBuilder &SxBuilder,
+                                       ThreadSafetyHandler &Handler) {
+
+  // FIXME: The diagnostic here is suboptimal. It would be better to print
+  // what attributes are missing in the first declaration.
+  CapExprSet NDArgs = collectAttrArgs<AttrT>(SxBuilder, ND);
+  for (const Decl *D = ND->getPreviousDecl(); D; D = D->getPreviousDecl()) {
+    CapExprSet DArgs = collectAttrArgs<AttrT>(SxBuilder, D);
+
+    if (NDArgs.size() != DArgs.size())
+      Handler.handleAttributeMismatch(ND, cast<NamedDecl>(D));
+  }
+}
+
+void ThreadSafetyAnalyzer::checkMismatchedFunctionAttrs(const NamedDecl *ND) {
+  maybeDiagnoseFunctionAttrs<RequiresCapabilityAttr>(ND, SxBuilder, Handler);
+  maybeDiagnoseFunctionAttrs<ReleaseCapabilityAttr>(ND, SxBuilder, Handler);
+}
+
 /// Check a function's CFG for thread-safety violations.
 ///
 /// We traverse the blocks in the CFG, compute the set of mutexes that are held
@@ -2599,6 +2632,8 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
   CFG *CFGraph = walker.getGraph();
   const NamedDecl *D = walker.getDecl();
   CurrentFunction = dyn_cast<FunctionDecl>(D);
+
+  checkMismatchedFunctionAttrs(D);
 
   if (D->hasAttr<NoThreadSafetyAnalysisAttr>())
     return;
