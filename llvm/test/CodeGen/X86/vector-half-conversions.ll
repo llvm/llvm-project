@@ -2,7 +2,6 @@
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx -verify-machineinstrs | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx2 -verify-machineinstrs | FileCheck %s --check-prefixes=AVX,AVX2
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+f16c -verify-machineinstrs | FileCheck %s --check-prefixes=F16C
-; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+f16c -verify-machineinstrs | FileCheck %s --check-prefixes=F16C
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+f16c,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle -verify-machineinstrs | FileCheck %s --check-prefixes=F16C
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+f16c,+fast-variable-perlane-shuffle -verify-machineinstrs | FileCheck %s --check-prefixes=F16C
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx512f -verify-machineinstrs | FileCheck %s --check-prefixes=AVX512,AVX512F
