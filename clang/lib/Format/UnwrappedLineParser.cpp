@@ -762,12 +762,12 @@ FormatToken *UnwrappedLineParser::parseBlock(bool MustBeDeclaration,
   const bool MacroBlock = FormatTok->is(TT_MacroBlockBegin);
   FormatTok->setBlockKind(BK_Block);
 
-  const bool Whitesmiths =
+  const bool IsWhitesmiths =
       Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths;
 
   // For Whitesmiths mode, jump to the next level prior to skipping over the
   // braces.
-  if (!VerilogHierarchy && AddLevels > 0 && Whitesmiths)
+  if (!VerilogHierarchy && AddLevels > 0 && IsWhitesmiths)
     ++Line->Level;
 
   size_t PPStartHash = computePPHash();
@@ -807,7 +807,7 @@ FormatToken *UnwrappedLineParser::parseBlock(bool MustBeDeclaration,
   // Whitesmiths logic has already added a level by this point, so avoid
   // adding it twice.
   if (AddLevels > 0u)
-    Line->Level += AddLevels - (Whitesmiths ? 1 : 0);
+    Line->Level += AddLevels - (IsWhitesmiths ? 1 : 0);
 
   FormatToken *IfLBrace = nullptr;
   const bool SimpleBlock = parseLevel(Tok, IfKind, &IfLBrace);
