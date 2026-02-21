@@ -6539,6 +6539,8 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
     return;
   }
 
+  TemplateSpecializationKind TSK = Class->getTemplateSpecializationKind();
+
   if (Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
       !ClassAttr->isInherited()) {
     // Diagnose dll attributes on members of class with dll attribute.
@@ -6547,6 +6549,11 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
         continue;
       InheritableAttr *MemberAttr = getDLLAttr(Member);
       if (!MemberAttr || MemberAttr->isInherited() || Member->isInvalidDecl())
+        continue;
+
+      if ((TSK == TSK_ExplicitInstantiationDeclaration ||
+           TSK == TSK_ExplicitInstantiationDefinition) &&
+          Member->hasAttr<ExcludeFromExplicitInstantiationAttr>())
         continue;
 
       Diag(MemberAttr->getLocation(),
@@ -6571,8 +6578,6 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
       !ClassExported &&
       cast<DLLImportAttr>(ClassAttr)->wasPropagatedToBaseTemplate();
 
-  TemplateSpecializationKind TSK = Class->getTemplateSpecializationKind();
-
   // Ignore explicit dllexport on explicit class template instantiation
   // declarations, except in MinGW mode.
   if (ClassExported && !ClassAttr->isInherited() &&
@@ -6592,6 +6597,11 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   // seem to be true in practice?
 
   for (Decl *Member : Class->decls()) {
+    if ((TSK == TSK_ExplicitInstantiationDeclaration ||
+         TSK == TSK_ExplicitInstantiationDefinition) &&
+        Member->hasAttr<ExcludeFromExplicitInstantiationAttr>())
+      continue;
+
     VarDecl *VD = dyn_cast<VarDecl>(Member);
     CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Member);
 
@@ -19119,8 +19129,20 @@ bool Sema::DefineUsedVTables() {
         }
       }
 
-      if (IsExplicitInstantiationDeclaration)
-        DefineVTable = false;
+      if (IsExplicitInstantiationDeclaration) {
+        const bool HasExcludeFromExplicitInstantiation =
+            llvm::any_of(Class->methods(), [](CXXMethodDecl *method) {
+              // If the class has a member function declared with
+              // `__attribute__((exclude_from_explicit_instantiation))`, the
+              // explicit instantiation declaration should not suppress emitting
+              // the vtable, since the corresponding explicit instantiation
+              // definition might not emit the vtable if a triggering method is
+              // excluded.
+              return method->hasAttr<ExcludeFromExplicitInstantiationAttr>();
+            });
+        if (!HasExcludeFromExplicitInstantiation)
+          DefineVTable = false;
+      }
     }
 
     // The exception specifications for all virtual members may be needed even
