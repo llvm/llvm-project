@@ -8145,6 +8145,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       RUN_VPLAN_PASS(VPlanTransforms::optimize, *Plan);
       // TODO: try to put addExplicitVectorLength close to addActiveLaneMask
       if (CM.foldTailWithEVL()) {
+        RUN_VPLAN_PASS(VPlanTransforms::addCurrentIterationPhi, *Plan);
         RUN_VPLAN_PASS(VPlanTransforms::addExplicitVectorLength, *Plan,
                        CM.getMaxSafeElements());
         RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);
