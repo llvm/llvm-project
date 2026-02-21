@@ -44,6 +44,7 @@ add_header(in_addr HDR in_addr.h DEPENDS .in_addr_t)
 add_header(ino_t HDR ino_t.h)
 add_header(mbstate_t HDR mbstate_t.h)
 add_header(mode_t HDR mode_t.h)
+add_header(key_t HDR key_t.h)
 add_header(mtx_t HDR mtx_t.h DEPENDS .__futex_word .__mutex_type)
 add_header(nfds_t HDR nfds_t.h)
 add_header(nl_catd HDR nl_catd.h)
@@ -79,6 +80,14 @@ add_header(dl_info HDR Dl_info.h)
 add_header(struct_f_owner_ex HDR struct_f_owner_ex.h DEPENDS .pid_t)
 add_header(struct_flock HDR struct_flock.h DEPENDS .off_t .pid_t)
 add_header(struct_flock64 HDR struct_flock64.h DEPENDS .off64_t .pid_t)
+add_header(
+  struct_ipc_perm
+  HDR struct_ipc_perm.h
+  DEPENDS
+    .key_t
+    .uid_t
+    .gid_t
+)
 add_header(struct_pollfd HDR struct_pollfd.h)
 add_header(struct_rlimit HDR struct_rlimit.h DEPENDS .rlim_t)
 add_header(struct_sched_param HDR struct_sched_param.h)

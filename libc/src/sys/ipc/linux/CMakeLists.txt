@@ -1,0 +1,10 @@
+add_entrypoint_object(
+  ftok
+  SRCS
+    ftok.cpp
+  HDRS
+    ../ftok.h
+  DEPENDS
+    libc.include.sys_ipc
+    libc.src.sys.stat.stat
+)
