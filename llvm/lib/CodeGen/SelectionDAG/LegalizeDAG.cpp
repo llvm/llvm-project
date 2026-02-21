@@ -3528,6 +3528,243 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Op);
     break;
   }
+  case ISD::CONVERT_FROM_ARBITRARY_FP: {
+    // Expand conversion from arbitrary FP format stored in an integer to a
+    // native IEEE float type using integer bit manipulation.
+    //
+    // TODO: currently only conversions from FP4, FP6 and FP8 formats from OCP
+    // specification are expanded. Remaining arbitrary FP types: Float8E4M3,
+    // Float8E3M4, Float8E5M2FNUZ, Float8E4M3FNUZ, Float8E4M3B11FNUZ,
+    // Float8E8M0FNU.
+    EVT DstVT = Node->getValueType(0);
+
+    SDValue IntVal = Node->getOperand(0);
+    const uint64_t SemEnum = Node->getConstantOperandVal(1);
+    const auto Sem = static_cast<APFloatBase::Semantics>(SemEnum);
+
+    // Supported source formats.
+    switch (Sem) {
+    case APFloatBase::S_Float8E5M2:
+    case APFloatBase::S_Float8E4M3FN:
+    case APFloatBase::S_Float6E3M2FN:
+    case APFloatBase::S_Float6E2M3FN:
+    case APFloatBase::S_Float4E2M1FN:
+      break;
+    default:
+      DAG.getContext()->emitError("CONVERT_FROM_ARBITRARY_FP: not implemented "
+                                  "source format (semantics enum " +
+                                  Twine(SemEnum) + ")");
+      Results.push_back(DAG.getPOISON(DstVT));
+      break;
+    }
+    if (!Results.empty())
+      break;
+
+    const fltSemantics &SrcSem = APFloatBase::EnumToSemantics(Sem);
+
+    const unsigned SrcBits = APFloat::getSizeInBits(SrcSem);
+    const unsigned SrcPrecision = APFloat::semanticsPrecision(SrcSem);
+    const unsigned SrcMant = SrcPrecision - 1;
+    const unsigned SrcExp = SrcBits - SrcMant - 1;
+    const int SrcBias = 1 - APFloat::semanticsMinExponent(SrcSem);
+
+    const fltNonfiniteBehavior NFBehavior = SrcSem.nonFiniteBehavior;
+    const fltNanEncoding NanEnc = SrcSem.nanEncoding;
+
+    // Destination format parameters.
+    const fltSemantics &DstSem = DstVT.getFltSemantics();
+
+    const unsigned DstBits = APFloat::getSizeInBits(DstSem);
+    const unsigned DstMant = APFloat::semanticsPrecision(DstSem) - 1;
+    const unsigned DstExpBits = DstBits - DstMant - 1;
+    const int DstMinExp = APFloat::semanticsMinExponent(DstSem);
+    const int DstBias = 1 - DstMinExp;
+    const uint64_t DstExpAllOnes = (1ULL << DstExpBits) - 1;
+
+    // Work in an integer type matching the destination float width.
+    // Use zero-extend to preserve the raw bit-pattern.
+    EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), DstBits);
+    SDValue Src = DAG.getZExtOrTrunc(IntVal, dl, IntVT);
+
+    EVT SetCCVT = getSetCCResultType(IntVT);
+
+    SDValue Zero = DAG.getConstant(0, dl, IntVT);
+    SDValue One = DAG.getConstant(1, dl, IntVT);
+
+    // Extract bit fields.
+    const uint64_t MantMask = (SrcMant > 0) ? ((1ULL << SrcMant) - 1) : 0;
+    const uint64_t ExpMask = (1ULL << SrcExp) - 1;
+
+    SDValue MantField = DAG.getNode(ISD::AND, dl, IntVT, Src,
+                                    DAG.getConstant(MantMask, dl, IntVT));
+
+    SDValue ExpField =
+        DAG.getNode(ISD::AND, dl, IntVT,
+                    DAG.getNode(ISD::SRL, dl, IntVT, Src,
+                                DAG.getShiftAmountConstant(SrcMant, IntVT, dl)),
+                    DAG.getConstant(ExpMask, dl, IntVT));
+
+    SDValue SignBit =
+        DAG.getNode(ISD::SRL, dl, IntVT, Src,
+                    DAG.getShiftAmountConstant(SrcBits - 1, IntVT, dl));
+
+    // Precompute sign shifted to MSB of destination.
+    SDValue SignShifted =
+        DAG.getNode(ISD::SHL, dl, IntVT, SignBit,
+                    DAG.getShiftAmountConstant(DstBits - 1, IntVT, dl));
+
+    // Classify the input value based on compile-time format properties.
+    SDValue ExpAllOnes = DAG.getConstant(ExpMask, dl, IntVT);
+    SDValue IsExpAllOnes =
+        DAG.getSetCC(dl, SetCCVT, ExpField, ExpAllOnes, ISD::SETEQ);
+    SDValue IsExpZero = DAG.getSetCC(dl, SetCCVT, ExpField, Zero, ISD::SETEQ);
+    SDValue IsMantZero = DAG.getSetCC(dl, SetCCVT, MantField, Zero, ISD::SETEQ);
+    SDValue IsMantNonZero =
+        DAG.getSetCC(dl, SetCCVT, MantField, Zero, ISD::SETNE);
+
+    // NaN detection.
+    SDValue IsNaN;
+    if (NFBehavior == fltNonfiniteBehavior::FiniteOnly) {
+      // FiniteOnly formats (E2M1FN, E3M2FN, E2M3FN) never produce NaN.
+      IsNaN = DAG.getBoolConstant(false, dl, SetCCVT, IntVT);
+    } else if (NFBehavior == fltNonfiniteBehavior::IEEE754) {
+      // E5M2 produces NaN when exp == all-ones AND mantissa != 0.
+      IsNaN = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpAllOnes, IsMantNonZero);
+    } else {
+      // NanOnly + AllOnes (E4M3FN): NaN when all exp and mantissa bits are 1.
+      assert(NanEnc == fltNanEncoding::AllOnes);
+      SDValue MantAllOnes = DAG.getConstant(MantMask, dl, IntVT);
+      SDValue IsMantAllOnes =
+          DAG.getSetCC(dl, SetCCVT, MantField, MantAllOnes, ISD::SETEQ);
+      IsNaN = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpAllOnes, IsMantAllOnes);
+    }
+
+    // Inf detection.
+    SDValue IsInf;
+    if (NFBehavior == fltNonfiniteBehavior::IEEE754) {
+      // E5M2: Inf when exp == all-ones AND mantissa == 0.
+      IsInf = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpAllOnes, IsMantZero);
+    } else {
+      // NanOnly and FiniteOnly formats have no Inf representation.
+      IsInf = DAG.getBoolConstant(false, dl, SetCCVT, IntVT);
+    }
+
+    // Zero detection.
+    SDValue IsZero = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpZero, IsMantZero);
+
+    // Denorm detection: exp == 0 AND mant != 0.
+    SDValue IsDenorm =
+        DAG.getNode(ISD::AND, dl, SetCCVT, IsExpZero, IsMantNonZero);
+
+    // Normal value conversion.
+    // dst_exp = exp_field + (DstBias - SrcBias)
+    // dst_mant = mant << (DstMant - SrcMant)
+    const int BiasAdjust = DstBias - SrcBias;
+    SDValue NormDstExp = DAG.getNode(
+        ISD::ADD, dl, IntVT, ExpField,
+        DAG.getConstant(APInt(DstBits, BiasAdjust, true), dl, IntVT));
+
+    SDValue NormDstMant;
+    if (DstMant > SrcMant) {
+      SDValue NormDstMantShift =
+          DAG.getShiftAmountConstant(DstMant - SrcMant, IntVT, dl);
+      NormDstMant =
+          DAG.getNode(ISD::SHL, dl, IntVT, MantField, NormDstMantShift);
+    } else {
+      NormDstMant = MantField;
+    }
+
+    // Assemble normal result.
+    SDValue DstMantShift = DAG.getShiftAmountConstant(DstMant, IntVT, dl);
+    SDValue NormExpShifted =
+        DAG.getNode(ISD::SHL, dl, IntVT, NormDstExp, DstMantShift);
+    SDValue NormResult = DAG.getNode(
+        ISD::OR, dl, IntVT,
+        DAG.getNode(ISD::OR, dl, IntVT, SignShifted, NormExpShifted),
+        NormDstMant);
+
+    // Denormal value conversion.
+    // For a denormal source (exp_field == 0, mant != 0), normalize by finding
+    // the MSB position of mant using CTLZ, then compute the correct
+    // exponent and mantissa for the destination format.
+    SDValue DenormResult;
+    {
+      const unsigned IntVTBits = DstBits;
+      SDValue LeadingZeros =
+          DAG.getNode(ISD::CTLZ_ZERO_UNDEF, dl, IntVT, MantField);
+
+      // dst_exp_denorm = (IntVTBits + DstBias - SrcBias - SrcMant) -
+      // LeadingZeros
+      const int DenormExpConst =
+          (int)IntVTBits + DstBias - SrcBias - (int)SrcMant;
+      SDValue DenormDstExp = DAG.getNode(
+          ISD::SUB, dl, IntVT,
+          DAG.getConstant(APInt(DstBits, DenormExpConst, true), dl, IntVT),
+          LeadingZeros);
+
+      // MSB position of the mantissa (0-indexed from LSB).
+      SDValue MantMSB =
+          DAG.getNode(ISD::SUB, dl, IntVT,
+                      DAG.getConstant(IntVTBits - 1, dl, IntVT), LeadingZeros);
+
+      // leading_one = 1 << MantMSB
+      SDValue LeadingOne = DAG.getNode(ISD::SHL, dl, IntVT, One, MantMSB);
+
+      // frac = mant XOR leading_one (strip the implicit 1)
+      SDValue Frac = DAG.getNode(ISD::XOR, dl, IntVT, MantField, LeadingOne);
+
+      // shift_amount = DstMant - MantMSB
+      //              = DstMant - (IntVTBits - 1 - LeadingZeros)
+      //              = LeadingZeros - (IntVTBits - 1 - DstMant)
+      const unsigned ShiftSub = IntVTBits - 1 - DstMant; // always >= 0
+      SDValue ShiftAmount = DAG.getNode(ISD::SUB, dl, IntVT, LeadingZeros,
+                                        DAG.getConstant(ShiftSub, dl, IntVT));
+
+      SDValue DenormDstMant =
+          DAG.getNode(ISD::SHL, dl, IntVT, Frac, ShiftAmount);
+
+      // Assemble denorm as sign | (denorm_dst_exp << DstMant) | denorm_dst_mant
+      SDValue DenormExpShifted =
+          DAG.getNode(ISD::SHL, dl, IntVT, DenormDstExp, DstMantShift);
+      DenormResult = DAG.getNode(
+          ISD::OR, dl, IntVT,
+          DAG.getNode(ISD::OR, dl, IntVT, SignShifted, DenormExpShifted),
+          DenormDstMant);
+    }
+
+    // Select between normal and denorm paths.
+    SDValue FiniteResult =
+        DAG.getSelect(dl, IntVT, IsDenorm, DenormResult, NormResult);
+
+    // Build special-value results.
+    // NaN -> canonical quiet NaN: sign=0, exp=all-ones, qNaN bit set.
+    // Encoding: (DstExpAllOnes << DstMant) | (1 << (DstMant - 1))
+    const uint64_t QNaNBit = (DstMant > 0) ? (1ULL << (DstMant - 1)) : 0;
+    SDValue NaNResult =
+        DAG.getConstant((DstExpAllOnes << DstMant) | QNaNBit, dl, IntVT);
+
+    // Inf -> destination Inf.
+    // sign | (DstExpAllOnes << DstMant)
+    SDValue InfResult =
+        DAG.getNode(ISD::OR, dl, IntVT, SignShifted,
+                    DAG.getConstant(DstExpAllOnes << DstMant, dl, IntVT));
+
+    // Zero -> signed zero.
+    // Sign bit only.
+    SDValue ZeroResult = SignShifted;
+
+    // Final selection goes in order: NaN takes priority, then Inf, then Zero.
+    SDValue Result = FiniteResult;
+    Result = DAG.getSelect(dl, IntVT, IsZero, ZeroResult, Result);
+    Result = DAG.getSelect(dl, IntVT, IsInf, InfResult, Result);
+    Result = DAG.getSelect(dl, IntVT, IsNaN, NaNResult, Result);
+
+    // Bitcast integer result to destination float type.
+    Result = DAG.getNode(ISD::BITCAST, dl, DstVT, Result);
+
+    Results.push_back(Result);
+    break;
+  }
   case ISD::FCANONICALIZE: {
     // This implements llvm.canonicalize.f* by multiplication with 1.0, as
     // suggested in
