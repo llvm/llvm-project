@@ -498,6 +498,8 @@ Improvements to Clang's diagnostics
 - Clang now generates a fix-it for C++20 designated initializers when the 
   initializers do not match the declaration order in the structure. 
 
+- Clang now doesn't throw assertion errors when comparing unsigned vectors(#173614)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
