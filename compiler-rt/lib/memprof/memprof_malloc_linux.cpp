@@ -14,9 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_platform.h"
-#if !SANITIZER_LINUX
-#error Unsupported OS
-#endif
+#if SANITIZER_LINUX
 
 #include "memprof_allocator.h"
 #include "memprof_interceptors.h"
@@ -163,3 +161,5 @@ INTERCEPTOR(void, malloc_stats, void) { __memprof_print_accumulated_stats(); }
 namespace __memprof {
 void ReplaceSystemMalloc() {}
 } // namespace __memprof
+
+#endif // SANITIZER_LINUX

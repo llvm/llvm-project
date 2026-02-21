@@ -20,7 +20,7 @@
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_list.h"
 
-#if !defined(__x86_64__)
+#if !defined(__x86_64__) && !defined(__aarch64__)
 #error Unsupported platform
 #endif
 #if !SANITIZER_CAN_USE_ALLOCATOR64
@@ -102,6 +102,11 @@ int memprof_posix_memalign(void **memptr, uptr alignment, uptr size,
 uptr memprof_malloc_usable_size(const void *ptr);
 
 void PrintInternalAllocatorStats();
+
+// Mac-specific malloc zone functions.
+uptr memprof_mz_size(const void *ptr);
+void memprof_mz_force_lock();
+void memprof_mz_force_unlock();
 
 } // namespace __memprof
 #endif // MEMPROF_ALLOCATOR_H

@@ -1684,6 +1684,11 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
       AddLinkRuntimeLib(Args, CmdArgs, "stats_client", RLO_AlwaysLink);
       AddLinkSanitizerLibArgs(Args, CmdArgs, "stats");
     }
+    if (Sanitize.needsMemProfRt()) {
+      assert(Sanitize.needsSharedRt() &&
+             "Static sanitizer runtimes not supported");
+      AddLinkSanitizerLibArgs(Args, CmdArgs, "memprof");
+    }
   }
 
   if (Sanitize.needsMemProfRt())

@@ -9,6 +9,7 @@
 #include "sanitizer_common/sanitizer_procmaps.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
+#include "sanitizer_common/sanitizer_vector.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -47,8 +48,9 @@ TEST(MemProf, Basic) {
   __sanitizer::LoadedModule FakeModule;
   FakeModule.addAddressRange(/*begin=*/0x10, /*end=*/0x20, /*executable=*/true,
                              /*writable=*/false, /*name=*/"");
-  const char uuid[MEMPROF_BUILDID_MAX_SIZE] = {0xC, 0x0, 0xF, 0xF, 0xE, 0xE};
-  FakeModule.setUuid(uuid, MEMPROF_BUILDID_MAX_SIZE);
+  const char uuid[__sanitizer::kModuleUUIDSize] = {0xC, 0x0, 0xF,
+                                                   0xF, 0xE, 0xE};
+  FakeModule.setUuid(uuid, __sanitizer::kModuleUUIDSize);
   __sanitizer::ArrayRef<__sanitizer::LoadedModule> Modules(&FakeModule,
                                                            (&FakeModule) + 1);
 
@@ -60,12 +62,18 @@ TEST(MemProf, Basic) {
   FakeMIB.AllocCount = 0x1;
   FakeMIB.TotalAccessCount = 0x2;
 
+  // Use large enough PC values to avoid underflow when
+  // GetPreviousInstructionPc subtracts an architecture-dependent value.
   uint64_t FakeIds[2];
-  FakeIds[0] = PopulateFakeMap(FakeMIB, /*StackPCBegin=*/2, FakeMap);
-  FakeIds[1] = PopulateFakeMap(FakeMIB, /*StackPCBegin=*/3, FakeMap);
+  FakeIds[0] = PopulateFakeMap(FakeMIB, /*StackPCBegin=*/100, FakeMap);
+  FakeIds[1] = PopulateFakeMap(FakeMIB, /*StackPCBegin=*/200, FakeMap);
 
   char *Ptr = nullptr;
-  uint64_t NumBytes = SerializeToRawProfile(FakeMap, Modules, Ptr);
+  __sanitizer::Vector<__sanitizer::u64> FakeAddresses;
+  FakeAddresses.PushBack(0x100);
+  FakeAddresses.PushBack(0x200);
+  uint64_t NumBytes =
+      SerializeToRawProfile(FakeMap, Modules, FakeAddresses, Ptr);
   const char *Buffer = Ptr;
 
   ASSERT_GT(NumBytes, 0ULL);
@@ -78,39 +86,54 @@ TEST(MemProf, Basic) {
   const uint64_t SegmentOffset = Read(Ptr);
   const uint64_t MIBOffset = Read(Ptr);
   const uint64_t StackOffset = Read(Ptr);
+  const uint64_t MemAddressOffset = Read(Ptr);
 
   // ============= Check sizes and padding.
   EXPECT_EQ(TotalSize, NumBytes);
   EXPECT_EQ(TotalSize % 8, 0ULL);
 
-  // Should be equal to the size of the raw profile header.
-  EXPECT_EQ(SegmentOffset, 48ULL);
+  // Should be equal to the size of the raw profile header (7 fields * 8 bytes).
+  EXPECT_EQ(SegmentOffset, 56ULL);
 
   // We expect only 1 segment entry, 8b for the count and 64b for SegmentEntry
   // in memprof_rawprofile.cpp.
   EXPECT_EQ(MIBOffset - SegmentOffset, 72ULL);
 
-  EXPECT_EQ(MIBOffset, 120ULL);
+  EXPECT_EQ(MIBOffset, 128ULL);
   // We expect 2 mib entry, 8b for the count and sizeof(uint64_t) +
   // sizeof(MemInfoBlock) contains stack id + MeminfoBlock.
   EXPECT_EQ(StackOffset - MIBOffset, 8 + 2 * (8 + sizeof(MemInfoBlock)));
 
-  EXPECT_EQ(StackOffset, 432ULL);
+  EXPECT_EQ(StackOffset, 440ULL);
   // We expect 2 stack entries, with 5 frames - 8b for total count,
   // 2 * (8b for id, 8b for frame count and 5*8b for fake frames).
-  // Since this is the last section, there may be additional padding at the end
-  // to make the total profile size 8b aligned.
-  EXPECT_GE(TotalSize - StackOffset, 8ULL + 2 * (8 + 8 + 5 * 8));
+  // Since this is no longer the last section, check the exact size.
+  EXPECT_GE(MemAddressOffset - StackOffset, 8ULL + 2 * (8 + 8 + 5 * 8));
+
+  // We expect 2 address entries: 8b for count + 2 * 8b for addresses.
+  EXPECT_GE(TotalSize - MemAddressOffset, 8ULL + 2 * 8);
 
   // ============= Check contents.
-  unsigned char ExpectedSegmentBytes[72] = {
-      0x01, 0,   0,   0,   0,   0,  0, 0, // Number of entries
-      0x10, 0,   0,   0,   0,   0,  0, 0, // Start
-      0x20, 0,   0,   0,   0,   0,  0, 0, // End
-      0x0,  0,   0,   0,   0,   0,  0, 0, // Offset
-      0x20, 0,   0,   0,   0,   0,  0, 0, // UuidSize
-      0xC,  0x0, 0xF, 0xF, 0xE, 0xE       // Uuid
-  };
+  // Build expected segment bytes dynamically since uuid size varies by
+  // platform (kModuleUUIDSize is 16 on Apple, 32 on Linux).
+  unsigned char ExpectedSegmentBytes[72] = {};
+  // Number of entries = 1
+  ExpectedSegmentBytes[0] = 0x01;
+  // Start = 0x10
+  ExpectedSegmentBytes[8] = 0x10;
+  // End = 0x20
+  ExpectedSegmentBytes[16] = 0x20;
+  // Offset = 0x0 (base_address_ is 0 for default-constructed LoadedModule)
+  // BuildIdSize = kModuleUUIDSize
+  ExpectedSegmentBytes[32] =
+      static_cast<unsigned char>(__sanitizer::kModuleUUIDSize);
+  // Uuid
+  ExpectedSegmentBytes[40] = 0xC;
+  ExpectedSegmentBytes[41] = 0x0;
+  ExpectedSegmentBytes[42] = 0xF;
+  ExpectedSegmentBytes[43] = 0xF;
+  ExpectedSegmentBytes[44] = 0xE;
+  ExpectedSegmentBytes[45] = 0xE;
   EXPECT_EQ(memcmp(Buffer + SegmentOffset, ExpectedSegmentBytes, 72), 0);
 
   // Check that the number of entries is 2.
@@ -139,21 +162,19 @@ TEST(MemProf, Basic) {
   // Check that the 1st stack id is set.
   EXPECT_EQ(*reinterpret_cast<const uint64_t *>(Buffer + StackOffset + 8),
             FakeIds[0]);
-  // Contents are num pcs, value of each pc - 1.
-  unsigned char ExpectedStackBytes[2][6 * 8] = {
-      {
-          0x5, 0, 0, 0, 0, 0, 0, 0, // Number of PCs
-          0x1, 0, 0, 0, 0, 0, 0, 0, // PC ...
-          0x2, 0, 0, 0, 0, 0, 0, 0, 0x3, 0, 0, 0, 0, 0, 0, 0,
-          0x4, 0, 0, 0, 0, 0, 0, 0, 0x5, 0, 0, 0, 0, 0, 0, 0,
-      },
-      {
-          0x5, 0, 0, 0, 0, 0, 0, 0, // Number of PCs
-          0x2, 0, 0, 0, 0, 0, 0, 0, // PC ...
-          0x3, 0, 0, 0, 0, 0, 0, 0, 0x4, 0, 0, 0, 0, 0, 0, 0,
-          0x5, 0, 0, 0, 0, 0, 0, 0, 0x6, 0, 0, 0, 0, 0, 0, 0,
-      },
-  };
+  // Build expected stack bytes dynamically since GetPreviousInstructionPc
+  // applies an architecture-dependent adjustment (e.g., -1 on x86_64, -4 on
+  // arm64).
+  unsigned char ExpectedStackBytes[2][6 * 8] = {};
+  for (int s = 0; s < 2; s++) {
+    uintptr_t StackPCBegin = (s == 0) ? 100 : 200;
+    // Number of PCs = 5
+    ExpectedStackBytes[s][0] = 0x5;
+    for (int i = 0; i < 5; i++) {
+      uint64_t pc = StackTrace::GetPreviousInstructionPc(StackPCBegin + i);
+      memcpy(&ExpectedStackBytes[s][(i + 1) * 8], &pc, sizeof(pc));
+    }
+  }
   EXPECT_EQ(memcmp(Buffer + StackOffset + 16, ExpectedStackBytes[0],
                    sizeof(ExpectedStackBytes[0])),
             0);

@@ -213,6 +213,26 @@ readMemInfoBlocksV5(const char *Ptr) {
   return readMemInfoBlocksCommon(Ptr, /*IsHistogramEncoded=*/true);
 }
 
+// V6 uses the same MIB format as V5.
+llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
+readMemInfoBlocksV6(const char *Ptr) {
+  return readMemInfoBlocksCommon(Ptr, /*IsHistogramEncoded=*/true);
+}
+
+llvm::SmallVector<uint64_t> readMemBlockAddresses(const char *Ptr) {
+  using namespace support;
+
+  const uint64_t NumEntries =
+      endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+  llvm::SmallVector<uint64_t> Addresses;
+  Addresses.reserve(NumEntries);
+  for (uint64_t I = 0; I < NumEntries; I++) {
+    Addresses.push_back(
+        endian::readNext<uint64_t, llvm::endianness::little>(Ptr));
+  }
+  return Addresses;
+}
+
 CallStackMap readStackInfo(const char *Ptr) {
   using namespace support;
 
@@ -261,6 +281,7 @@ bool isRuntimePath(const StringRef Path) {
   // This list should be updated in case new files with additional interceptors
   // are added to the memprof runtime.
   return Filename == "memprof_malloc_linux.cpp" ||
+         Filename == "memprof_malloc_mac.cpp" ||
          Filename == "memprof_interceptors.cpp" ||
          Filename == "memprof_new_delete.cpp";
 }
@@ -707,6 +728,8 @@ RawMemProfReader::readMemInfoBlocks(const char *Ptr) {
     return readMemInfoBlocksV4(Ptr);
   if (MemprofRawVersion == 5ULL)
     return readMemInfoBlocksV5(Ptr);
+  if (MemprofRawVersion == 6ULL)
+    return readMemInfoBlocksV6(Ptr);
   llvm_unreachable(
       "Panic: Unsupported version number when reading MemInfoBlocks");
 }
@@ -771,6 +794,14 @@ Error RawMemProfReader::readRawProfile(
         return make_error<InstrProfError>(
             instrprof_error::malformed,
             "memprof raw profile got different call stack for same id");
+    }
+
+    // Read in memory block addresses for V6+.
+    if (MemprofRawVersion >= 6ULL) {
+      for (const auto &Addr :
+           readMemBlockAddresses(Next + Header->MemAddressOffset)) {
+        MemBlockAddresses.push_back(Addr);
+      }
     }
 
     Next += Header->TotalSize;

@@ -31,16 +31,27 @@
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
+#if SANITIZER_LINUX
 #include <sched.h>
+#elif SANITIZER_APPLE
+#include <dlfcn.h>
+#endif
 #include <time.h>
 
 #define MAX_HISTOGRAM_PRINT_SIZE 32U
 
 extern bool __memprof_histogram;
+extern bool __memprof_fine_granularity;
 
 namespace __memprof {
 namespace {
 using ::llvm::memprof::MemInfoBlock;
+
+// Returns true if the shadow uses fine (8-byte) granularity, which is the
+// case for both histogram mode and fine-granularity mode.
+static bool UseFineGranularity() {
+  return __memprof_histogram || __memprof_fine_granularity;
+}
 
 void Print(const MemInfoBlock &M, const u64 id, bool print_terse) {
   u64 p;
@@ -84,13 +95,26 @@ void Print(const MemInfoBlock &M, const u64 id, bool print_terse) {
 }
 } // namespace
 
+#if SANITIZER_APPLE
+using OsCpuNumberFn = int (*)();
+static OsCpuNumberFn os_cpu_number_fn = nullptr;
+#endif
+
 static int GetCpuId(void) {
   // _memprof_preinit is called via the preinit_array, which subsequently calls
   // malloc. Since this is before _dl_init calls VDSO_SETUP, sched_getcpu
   // will seg fault as the address of __vdso_getcpu will be null.
   if (!memprof_inited)
     return -1;
+#if SANITIZER_LINUX
   return sched_getcpu();
+#elif SANITIZER_APPLE
+  if (os_cpu_number_fn)
+    return os_cpu_number_fn();
+  return -1;
+#else
+  return -1;
+#endif
 }
 
 // Compute the timestamp in ms.
@@ -248,7 +272,7 @@ void ClearShadow(uptr addr, uptr size) {
   CHECK(REAL(memset));
   uptr shadow_beg;
   uptr shadow_end;
-  if (__memprof_histogram) {
+  if (UseFineGranularity()) {
     shadow_beg = HISTOGRAM_MEM_TO_SHADOW(addr);
     shadow_end = HISTOGRAM_MEM_TO_SHADOW(addr + size);
   } else {
@@ -314,6 +338,13 @@ struct Allocator {
   static MemInfoBlock CreateNewMIB(uptr p, MemprofChunk *m, u64 user_size) {
     if (__memprof_histogram) {
       return CreateNewMIBWithHistogram(p, m, user_size);
+    } else if (__memprof_fine_granularity) {
+      // Fine granularity uses histogram-style shadow layout for counting,
+      // but does not collect per-bucket histograms.
+      u64 c = GetShadowCountHistogram(p, user_size);
+      long curtime = GetTimestamp();
+      return MemInfoBlock(user_size, c, m->timestamp_ms, curtime, m->cpu_id,
+                          GetCpuId(), 0, 0);
     } else {
       return CreateNewMIBWithoutHistogram(p, m, user_size);
     }
@@ -354,13 +385,38 @@ struct Allocator {
 
     allocator.ForceLock();
 
-    InsertLiveBlocks();
+    Vector<u64> MemBlockAddresses;
+    InsertLiveBlocks(MemBlockAddresses);
     if (flags()->print_text) {
       if (!flags()->print_terse)
         Printf("Recorded MIBs (incl. live on exit):\n");
       MIBMap.ForEach(PrintCallback,
                      reinterpret_cast<void *>(flags()->print_terse));
+      // On Apple platforms, StackDepotPrintAll() calls
+      // StackTrace::Print() which triggers symbolization via dladdr().
+      // During atexit, this can deadlock because dladdr() acquires dyld
+      // internal locks that may already be held. Instead, print raw
+      // unsymbolized addresses that can be post-processed offline with
+      // atos or llvm-symbolizer.
+#if SANITIZER_APPLE
+      Vector<u64> StackIds;
+      MIBMap.ForEach(
+          [](const uptr Key, LockedMemInfoBlock *const &, void *Arg) {
+            auto *StackIds = reinterpret_cast<Vector<u64> *>(Arg);
+            StackIds->PushBack(Key);
+          },
+          reinterpret_cast<void *>(&StackIds));
+      for (uptr i = 0; i < StackIds.Size(); i++) {
+        u32 Id = static_cast<u32>(StackIds[i]);
+        StackTrace St = StackDepotGet(Id);
+        Printf("Stack for id %u:\n", Id);
+        for (u32 j = 0; j < St.size; j++)
+          Printf("  #%u 0x%zx\n", j, St.trace[j]);
+        Printf("\n");
+      }
+#else
       StackDepotPrintAll();
+#endif
     } else {
       // Serialize the contents to a raw profile. Format documented in
       // memprof_rawprofile.h.
@@ -369,7 +425,8 @@ struct Allocator {
       __sanitizer::ListOfModules List;
       List.init();
       ArrayRef<LoadedModule> Modules(List.begin(), List.end());
-      u64 BytesSerialized = SerializeToRawProfile(MIBMap, Modules, Buffer);
+      u64 BytesSerialized =
+          SerializeToRawProfile(MIBMap, Modules, MemBlockAddresses, Buffer);
       CHECK(Buffer && BytesSerialized && "could not serialize to buffer");
       report_file.Write(Buffer, BytesSerialized);
     }
@@ -378,20 +435,27 @@ struct Allocator {
   }
 
   // Inserts any blocks which have been allocated but not yet deallocated.
-  void InsertLiveBlocks() {
+  // Also records their addresses in MemBlockAddresses.
+  void InsertLiveBlocks(Vector<u64> &MemBlockAddresses) {
+    struct InsertLiveBlocksCtx {
+      Allocator *A;
+      Vector<u64> *Addrs;
+    };
+    InsertLiveBlocksCtx Ctx{this, &MemBlockAddresses};
     allocator.ForEachChunk(
-        [](uptr chunk, void *alloc) {
+        [](uptr chunk, void *arg) {
+          auto *Ctx = (InsertLiveBlocksCtx *)arg;
           u64 user_requested_size;
-          Allocator *A = (Allocator *)alloc;
           MemprofChunk *m =
-              A->GetMemprofChunk((void *)chunk, user_requested_size);
+              Ctx->A->GetMemprofChunk((void *)chunk, user_requested_size);
           if (!m)
             return;
           uptr user_beg = ((uptr)m) + kChunkHeaderSize;
           MemInfoBlock newMIB = CreateNewMIB(user_beg, m, user_requested_size);
-          InsertOrMerge(m->alloc_context_id, newMIB, A->MIBMap);
+          InsertOrMerge(m->alloc_context_id, newMIB, Ctx->A->MIBMap);
+          Ctx->Addrs->PushBack(static_cast<u64>(user_beg));
         },
-        this);
+        &Ctx);
   }
 
   void InitLinkerInitialized() {
@@ -641,7 +705,12 @@ static Allocator instance(LINKER_INITIALIZED);
 
 static MemprofAllocator &get_allocator() { return instance.allocator; }
 
-void InitializeAllocator() { instance.InitLinkerInitialized(); }
+void InitializeAllocator() {
+  instance.InitLinkerInitialized();
+#if SANITIZER_APPLE
+  os_cpu_number_fn = (OsCpuNumberFn)dlsym(RTLD_DEFAULT, "_os_cpu_number");
+#endif
+}
 
 void MemprofThreadLocalMallocStorage::CommitBack() {
   instance.CommitBack(this);
@@ -765,6 +834,14 @@ uptr memprof_malloc_usable_size(const void *ptr) {
   uptr usable_size = instance.AllocationSize(reinterpret_cast<uptr>(ptr));
   return usable_size;
 }
+
+uptr memprof_mz_size(const void *ptr) {
+  return memprof_malloc_usable_size(ptr);
+}
+
+void memprof_mz_force_lock() { instance.ForceLock(); }
+
+void memprof_mz_force_unlock() { instance.ForceUnlock(); }
 
 } // namespace __memprof
 
