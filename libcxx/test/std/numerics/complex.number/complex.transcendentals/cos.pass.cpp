@@ -32,29 +32,26 @@ test()
     test(std::complex<T>(0, 0), std::complex<T>(1, 0));
 }
 
-void test_edges()
-{
-    const unsigned N = sizeof(testcases) / sizeof(testcases[0]);
-    for (unsigned i = 0; i < N; ++i)
-    {
-        std::complex<double> r = cos(testcases[i]);
-        std::complex<double> t1(-imag(testcases[i]), real(testcases[i]));
-        std::complex<double> z = cosh(t1);
-        if (std::isnan(real(r)))
-            assert(std::isnan(real(z)));
-        else
-        {
-            assert(real(r) == real(z));
-            assert(std::signbit(real(r)) == std::signbit(real(z)));
-        }
-        if (std::isnan(imag(r)))
-            assert(std::isnan(imag(z)));
-        else
-        {
-            assert(imag(r) == imag(z));
-            assert(std::signbit(imag(r)) == std::signbit(imag(z)));
-        }
+template <class T>
+void test_edges() {
+  const unsigned N = sizeof(testcases<T>) / sizeof(testcases<T>[0]);
+  for (unsigned i = 0; i < N; ++i) {
+    std::complex<T> r = cos(testcases<T>[i]);
+    std::complex<T> t1(-imag(testcases<T>[i]), real(testcases<T>[i]));
+    std::complex<T> z = cosh(t1);
+    if (std::isnan(real(r)))
+      assert(std::isnan(real(z)));
+    else {
+      assert(real(r) == real(z));
+      assert(std::signbit(real(r)) == std::signbit(real(z)));
     }
+    if (std::isnan(imag(r)))
+      assert(std::isnan(imag(z)));
+    else {
+      assert(imag(r) == imag(z));
+      assert(std::signbit(imag(r)) == std::signbit(imag(z)));
+    }
+  }
 }
 
 int main(int, char**)
@@ -62,7 +59,9 @@ int main(int, char**)
     test<float>();
     test<double>();
     test<long double>();
-    test_edges();
+    test_edges<float>();
+    test_edges<double>();
+    test_edges<long double>();
 
-  return 0;
+    return 0;
 }
