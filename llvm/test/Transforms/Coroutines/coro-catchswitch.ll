@@ -13,7 +13,7 @@ define void @f(i1 %cond) presplitcoroutine personality i32 0 {
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 16)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 4
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[F_FRAME:%.*]], ptr [[HDL]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 4
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 4
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_ELSE:.*]], label %[[IF_THEN:.*]]
 ; CHECK:       [[IF_THEN]]:
@@ -25,7 +25,7 @@ define void @f(i1 %cond) presplitcoroutine personality i32 0 {
 ; CHECK:       [[CATCH_DISPATCH]]:
 ; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ 1, %[[IF_THEN]] ], [ 2, %[[IF_ELSE]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = cleanuppad within none []
-; CHECK-NEXT:    [[VAL_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 2
+; CHECK-NEXT:    [[VAL_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store i32 [[VAL]], ptr [[VAL_SPILL_ADDR]], align 4
 ; CHECK-NEXT:    cleanupret from [[TMP0]] unwind label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
@@ -34,7 +34,7 @@ define void @f(i1 %cond) presplitcoroutine personality i32 0 {
 ; CHECK-NEXT:    [[PAD:%.*]] = catchpad within [[SWITCH]] [ptr null, i32 64, ptr null]
 ; CHECK-NEXT:    catchret from [[PAD]] to label %[[COROSAVE:.*]]
 ; CHECK:       [[COROSAVE]]:
-; CHECK-NEXT:    [[INDEX_ADDR3:%.*]] = getelementptr inbounds nuw [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[INDEX_ADDR3:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 12
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR3]], align 1
 ; CHECK-NEXT:    br i1 false, label %[[RESUME:.*]], label %[[AFTERCOROEND]]
 ; CHECK:       [[RESUME]]:

@@ -8,7 +8,8 @@
 ; 3. Then see that we only copy the x as y was not modified prior to
 ;    coro.begin.
 
-; CHECK: %f.Frame = type { ptr, ptr, i64, i64, i64, i64, i1 }
+
+target datalayout = "e-m:e-p:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 define ptr @f() presplitcoroutine {
 ; CHECK-LABEL: define ptr @f() {
@@ -27,17 +28,15 @@ define ptr @f() presplitcoroutine {
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @myAlloc(i32 56)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[F_FRAME:%.*]], ptr [[HDL]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X_ADDR]], align 4
-; CHECK-NEXT:    store i64 [[TMP1]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 5
-; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[Z_ADDR]], align 4
-; CHECK-NEXT:    store i64 [[TMP3]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[Y_ADDR_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 4
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 24
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP0]], ptr align 8 [[X_ADDR]], i64 8, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 40
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP1]], ptr align 8 [[Z_ADDR]], i64 8, i1 false)
+; CHECK-NEXT:    [[Y_ADDR_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 32
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr [[Y_ADDR_RELOAD_ADDR]], i8 1, i32 4, i1 false)
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds nuw [[F_FRAME]], ptr [[HDL]], i32 0, i32 6
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 48
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
