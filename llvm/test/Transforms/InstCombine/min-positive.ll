@@ -84,8 +84,9 @@ define <2 x i1> @smin_commute_vec_poison_elts(<2 x i32> %x, <2 x i32> %other) {
 define i1 @maybe_not_positive(i32 %other) {
 ; CHECK-LABEL: @maybe_not_positive(
 ; CHECK-NEXT:    [[POSITIVE:%.*]] = load i32, ptr @g, align 4, !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.smin.i32(i32 [[POSITIVE]], i32 [[OTHER:%.*]])
-; CHECK-NEXT:    [[TEST:%.*]] = icmp sgt i32 [[SEL]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[POSITIVE]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[OTHER:%.*]], 0
+; CHECK-NEXT:    [[TEST:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[TEST]]
 ;
   %positive = load i32, ptr @g, !range !{i32 0, i32 2048}
@@ -98,8 +99,9 @@ define i1 @maybe_not_positive(i32 %other) {
 define <2 x i1> @maybe_not_positive_vec(<2 x i32> %x, <2 x i32> %other) {
 ; CHECK-LABEL: @maybe_not_positive_vec(
 ; CHECK-NEXT:    [[NOTNEG:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 7)
-; CHECK-NEXT:    [[SEL:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[NOTNEG]], <2 x i32> [[OTHER:%.*]])
-; CHECK-NEXT:    [[TEST:%.*]] = icmp sgt <2 x i32> [[SEL]], zeroinitializer
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i32> [[NOTNEG]], zeroinitializer
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt <2 x i32> [[OTHER:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TEST:%.*]] = and <2 x i1> [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[TEST]]
 ;
   %notneg = and <2 x i32> %x, <i32 7, i32 7>

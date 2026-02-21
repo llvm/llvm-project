@@ -2718,3 +2718,78 @@ define i8 @test_smin_and_multiuse(i8 %x, i8 %y) {
   %res = call i8 @llvm.smin.i8(i8 %x1, i8 %y1)
   ret i8 %res
 }
+
+define i1 @smin_sgt_decompose(i8 %x, i8 %y) {
+; CHECK-LABEL: @smin_sgt_decompose(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[Y:%.*]], 5
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %v = call i8 @llvm.smin.i8(i8 %x, i8 %y)
+  %cmp = icmp sgt i8 %v, 5
+  ret i1 %cmp
+}
+
+define i1 @smax_sgt_decompose(i8 %x, i8 %y) {
+; CHECK-LABEL: @smax_sgt_decompose(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[Y:%.*]], 5
+; CHECK-NEXT:    [[RES:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %v = call i8 @llvm.smax.i8(i8 %x, i8 %y)
+  %cmp = icmp sgt i8 %v, 5
+  ret i1 %cmp
+}
+
+define i1 @umin_ult_decompose(i8 %x, i8 %y) {
+; CHECK-LABEL: @umin_ult_decompose(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i8 [[Y:%.*]], 5
+; CHECK-NEXT:    [[RES:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %v = call i8 @llvm.umin.i8(i8 %x, i8 %y)
+  %cmp = icmp ult i8 %v, 5
+  ret i1 %cmp
+}
+
+; smin(sub nsw Y X, sub nsw C X) sgt 0 --> (X slt C) and (Y sgt X)
+define i1 @smin_of_sub_nsw_sgt_zero_decompose(i16 %arg0, i16 %arg1) {
+; CHECK-LABEL: @smin_of_sub_nsw_sgt_zero_decompose(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i16 [[ARG0:%.*]], 32
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i16 [[ARG1:%.*]], [[ARG0]]
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %v0 = sub nsw i16 %arg1, %arg0
+  %v1 = sub nsw i16 32, %arg0
+  %v2 = call i16 @llvm.smin.i16(i16 %v1, i16 %v0)
+  %v3 = icmp sgt i16 %v2, 0
+  ret i1 %v3
+}
+
+define i1 @smin_sgt_decompose_multiuse(i8 %x, i8 %y) {
+; CHECK-LABEL: @smin_sgt_decompose_multiuse(
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.smin.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    call void @use(i8 [[V]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[V]], 5
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v = call i8 @llvm.smin.i8(i8 %x, i8 %y)
+  call void @use(i8 %v)
+  %cmp = icmp sgt i8 %v, 5
+  ret i1 %cmp
+}
+
+define i1 @smax_sgt_variable(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @smax_sgt_variable(
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[V]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v = call i8 @llvm.smax.i8(i8 %x, i8 %y)
+  %cmp = icmp sgt i8 %v, %z
+  ret i1 %cmp
+}
