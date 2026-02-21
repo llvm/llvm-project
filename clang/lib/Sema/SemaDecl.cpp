@@ -16354,6 +16354,32 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
 
   maybeAddDeclWithEffects(FD);
 
+  if (FD && !FD->isInvalidDecl() && FD->hasAttr<SYCLKernelEntryPointAttr>() &&
+      FnBodyScope) {
+    // An implicit call expression is synthesized for functions declared with
+    // the sycl_kernel_entry_point attribute. The call may resolve to a
+    // function template, a member function template, or a call operator
+    // of a variable template depending on the results of unqualified lookup
+    // for 'sycl_kernel_launch' from the beginning of the function body.
+    // Performing that lookup requires the stack of parsing scopes active
+    // when the definition is parsed and is thus done here; the result is
+    // cached in FunctionScopeInfo and used to synthesize the (possibly
+    // unresolved) call expression after the function body has been parsed.
+    const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
+    if (!SKEPAttr->isInvalidAttr()) {
+      ExprResult LaunchIdExpr =
+          SYCL().BuildSYCLKernelLaunchIdExpr(FD, SKEPAttr->getKernelName());
+      // Do not mark 'FD' as invalid if construction of `LaunchIDExpr` produces
+      // an invalid result. Name lookup failure for 'sycl_kernel_launch' is
+      // treated as an error in the definition of 'FD'; treating it as an error
+      // of the declaration would affect overload resolution which would
+      // potentially result in additional errors. If construction of
+      // 'LaunchIDExpr' failed, then 'SYCLKernelLaunchIdExpr' will be assigned
+      // a null pointer value below; that is expected.
+      getCurFunction()->SYCLKernelLaunchIdExpr = LaunchIdExpr.get();
+    }
+  }
+
   return D;
 }
 
@@ -16555,12 +16581,37 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
       SKEPAttr->setInvalidAttr();
     }
 
-    if (Body && !FD->isTemplated() && !SKEPAttr->isInvalidAttr()) {
-      StmtResult SR =
-          SYCL().BuildSYCLKernelCallStmt(FD, cast<CompoundStmt>(Body));
-      if (SR.isInvalid())
-        return nullptr;
-      Body = SR.get();
+    // Build an unresolved SYCL kernel call statement for a function template,
+    // validate that a SYCL kernel call statement was instantiated for an
+    // (implicit or explicit) instantiation of a function template, or otherwise
+    // build a (resolved) SYCL kernel call statement for a non-templated
+    // function or an explicit specialization.
+    if (Body && !SKEPAttr->isInvalidAttr()) {
+      StmtResult SR;
+      if (FD->isTemplateInstantiation()) {
+        // The function body should already be a SYCLKernelCallStmt in this
+        // case, but might not be if there were previous errors.
+        SR = Body;
+      } else if (!getCurFunction()->SYCLKernelLaunchIdExpr) {
+        // If name lookup for a template named sycl_kernel_launch failed
+        // earlier, don't try to build a SYCL kernel call statement as that
+        // would cause additional errors to be issued; just proceed with the
+        // original function body.
+        SR = Body;
+      } else if (FD->isTemplated()) {
+        SR = SYCL().BuildUnresolvedSYCLKernelCallStmt(
+            cast<CompoundStmt>(Body), getCurFunction()->SYCLKernelLaunchIdExpr);
+      } else {
+        SR = SYCL().BuildSYCLKernelCallStmt(
+            FD, cast<CompoundStmt>(Body),
+            getCurFunction()->SYCLKernelLaunchIdExpr);
+      }
+      // If construction of the replacement body fails, just continue with the
+      // original function body. An early error return here is not valid; the
+      // current declaration context and function scopes must be popped before
+      // returning.
+      if (SR.isUsable())
+        Body = SR.get();
     }
   }
 
@@ -21031,7 +21082,9 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
 
   // SYCL functions can be template, so we check if they have appropriate
   // attribute prior to checking if it is a template.
-  if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelAttr>())
+  if (LangOpts.SYCLIsDevice && (FD->hasAttr<SYCLKernelAttr>() ||
+                                FD->hasAttr<SYCLKernelEntryPointAttr>() ||
+                                FD->hasAttr<SYCLExternalAttr>()))
     return FunctionEmissionStatus::Emitted;
 
   // Templates are emitted when they're instantiated.

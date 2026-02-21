@@ -383,6 +383,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     break;
 
   case Stmt::SYCLKernelCallStmtClass:
+  case Stmt::UnresolvedSYCLKernelCallStmtClass:
     K = CXCursor_UnexposedStmt;
     break;
 

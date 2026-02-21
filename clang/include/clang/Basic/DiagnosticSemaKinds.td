@@ -13326,19 +13326,24 @@ def warn_sycl_external_missing_on_first_decl : Warning<
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<
   "the %0 attribute cannot be applied to a %enum_select<InvalidSKEPReason>{"
-      "%NonStaticMemberFn{non-static member function}|"
       "%VariadicFn{variadic function}|"
       "%DeletedFn{deleted function}|"
       "%DefaultedFn{defaulted function}|"
+      "%Constructor{constructor}|"
+      "%Destructor{destructor}|"
+      "%Coroutine{coroutine}|"
       "%ConstexprFn{constexpr function}|"
       "%ConstevalFn{consteval function}|"
       "%NoreturnFn{function declared with the 'noreturn' attribute}|"
-      "%Coroutine{coroutine}|"
-      "%FunctionTryBlock{function defined with a function try block}"
+      "%FunctionTryBlock{function defined with a function try block}|"
+      "%ExplicitObjectFn{function with an explicit object parameter}|"
       "}1">;
 def err_sycl_entry_point_invalid_redeclaration : Error<
   "the %0 kernel name argument does not match prior"
   " declaration%diff{: $ vs $|}1,2">;
+def err_sycl_entry_point_invalid_this : Error<
+  "'this' cannot be%select{| implicitly}0 used in a potentially evaluated"
+  " expression in the body of a function declared with the %1 attribute">;
 def err_sycl_kernel_name_conflict : Error<
   "the %0 kernel name argument conflicts with a previous declaration">;
 def warn_sycl_kernel_name_not_a_class_type : Warning<
@@ -13354,6 +13359,18 @@ def err_sycl_entry_point_return_type : Error<
 def err_sycl_entry_point_deduced_return_type : Error<
   "the %0 attribute only applies to functions with a non-deduced 'void' return"
   " type">;
+def note_sycl_runtime_defect : Note<
+  "this error is due to a defect in SYCL runtime header files; please report"
+  " this problem to your SYCL runtime provider">;
+def note_sycl_kernel_launch_lookup_here : Note<
+  "in implicit call to 'sycl_kernel_launch' with template argument %0 required"
+  " here">;
+def note_sycl_kernel_launch_overload_resolution_here : Note<
+  "in implicit call to 'sycl_kernel_launch' with template argument %0 and"
+  " function arguments %1 required here">;
+def err_sycl_entry_point_device_use : Error<
+  "function %0 cannot be used in device code because it is declared with the"
+  " %1 attribute">;
 
 def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "

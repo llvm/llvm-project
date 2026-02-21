@@ -1,6 +1,9 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-device -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-device -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fsyntax-only -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-host -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-device -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-host -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-device -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fsyntax-only -fsycl-is-host -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fsyntax-only -fsycl-is-device -fcxx-exceptions -verify %s
 
 // These tests validate appertainment for the sycl_kernel_entry_point attribute.
 
@@ -37,6 +40,9 @@ struct coroutine_traits {
 // A unique kernel name type is required for each declared kernel entry point.
 template<int, int = 0> struct KN;
 
+// A generic kernel launch function.
+template<typename KNT, typename... Ts>
+void sycl_kernel_launch(const char *, Ts...) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Valid declarations.
@@ -131,6 +137,16 @@ struct S15 {
   static T ok15();
 };
 
+struct S16 {
+  // Non-static member function declaration.
+  [[clang::sycl_kernel_entry_point(KN<16>)]]
+  void ok16();
+};
+
+#if __cplusplus >= 202302L
+auto ok17 = [] [[clang::sycl_kernel_entry_point(KN<17>)]] -> void {};
+#endif
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Invalid declarations.
@@ -161,13 +177,6 @@ struct B2 {
   // expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute only applies to functions}}
   [[clang::sycl_kernel_entry_point(BADKN<2>)]]
   static int bad2;
-};
-
-struct B3 {
-  // Non-static member function declaration.
-  // expected-error@+1 {{the 'clang::sycl_kernel_entry_point' attribute cannot be applied to a non-static member function}}
-  [[clang::sycl_kernel_entry_point(BADKN<3>)]]
-  void bad3();
 };
 
 // expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute only applies to functions}}
@@ -244,13 +253,13 @@ void bad19() {
 #endif
 
 struct B20 {
-  // expected-error@+1 {{the 'clang::sycl_kernel_entry_point' attribute cannot be applied to a non-static member function}}
+  // expected-error@+1 {{the 'clang::sycl_kernel_entry_point' attribute cannot be applied to a constructor}}
   [[clang::sycl_kernel_entry_point(BADKN<20>)]]
   B20();
 };
 
 struct B21 {
-  // expected-error@+1 {{the 'clang::sycl_kernel_entry_point' attribute cannot be applied to a non-static member function}}
+  // expected-error@+1 {{the 'clang::sycl_kernel_entry_point' attribute cannot be applied to a destructor}}
   [[clang::sycl_kernel_entry_point(BADKN<21>)]]
   ~B21();
 };
@@ -338,11 +347,6 @@ struct B34 {
 };
 
 #if __cplusplus >= 202302L
-// expected-error@+1 {{the 'clang::sycl_kernel_entry_point' attribute cannot be applied to a non-static member function}}
-auto bad35 = [] [[clang::sycl_kernel_entry_point(BADKN<35>)]] -> void {};
-#endif
-
-#if __cplusplus >= 202302L
 // expected-error@+1 {{the 'clang::sycl_kernel_entry_point' attribute only applies to functions with a non-deduced 'void' return type}}
 auto bad36 = [] [[clang::sycl_kernel_entry_point(BADKN<36>)]] static {};
 #endif
@@ -373,3 +377,29 @@ struct B42 {
   // expected-warning@+1 {{declaration does not declare anything}}
   [[clang::sycl_kernel_entry_point(BADKN<42>)]];
 };
+
+#if __cplusplus >= 202302L
+struct B43 {
+  // expected-error@+2 {{the 'clang::sycl_kernel_entry_point' attribute cannot be applied to a function with an explicit object parameter}}
+  template<typename KNT>
+  [[clang::sycl_kernel_entry_point(KNT)]]
+  void bad43(this B43) {}
+};
+#endif
+
+#if __cplusplus >= 202302L
+struct B44 {
+  // expected-error@+1 {{the 'clang::sycl_kernel_entry_point' attribute cannot be applied to a function with an explicit object parameter}}
+  [[clang::sycl_kernel_entry_point(BADKN<44>)]]
+  void bad44(this B44);
+};
+#endif
+
+#if __cplusplus >= 202302L
+template<typename KNT>
+struct B45 {
+  // expected-error@+1 {{the 'clang::sycl_kernel_entry_point' attribute cannot be applied to a function with an explicit object parameter}}
+  [[clang::sycl_kernel_entry_point(KNT)]]
+  void bad45(this B45);
+};
+#endif

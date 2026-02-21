@@ -13077,6 +13077,31 @@ ExprResult TreeTransform<Derived>::TransformSYCLUniqueStableNameExpr(
 }
 
 template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
+    UnresolvedSYCLKernelCallStmt *S) {
+  auto *FD = cast<FunctionDecl>(SemaRef.CurContext);
+  const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
+  if (!SKEPAttr || SKEPAttr->isInvalidAttr())
+    return StmtError();
+
+  ExprResult IdExpr = getDerived().TransformExpr(S->getKernelLaunchIdExpr());
+  if (IdExpr.isInvalid())
+    return StmtError();
+
+  StmtResult Body = getDerived().TransformStmt(S->getOriginalStmt());
+  if (Body.isInvalid())
+    return StmtError();
+
+  StmtResult SR = SemaRef.SYCL().BuildSYCLKernelCallStmt(
+      cast<FunctionDecl>(SemaRef.CurContext), cast<CompoundStmt>(Body.get()),
+      IdExpr.get());
+  if (SR.isInvalid())
+    return StmtError();
+
+  return SR;
+}
+
+template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformCXXReflectExpr(CXXReflectExpr *E) {
   // TODO(reflection): Implement its transform
   assert(false && "not implemented yet");
