@@ -556,36 +556,65 @@ def Dangling : DiagGroup<"dangling", [DanglingAssignment,
                                       DanglingGsl,
                                       ReturnStackAddress]>;
 
+// Use-After-Scope
+def LifetimeSafetyUseAfterScope : DiagGroup<"lifetime-safety-use-after-scope"> {
+  code Documentation = [{
+Warning to detect dangling references introduced by use-after-scope.
+  }];
+}
+def LifetimeSafetyUseAfterScopeMoved : DiagGroup<"lifetime-safety-use-after-scope-moved"> {
+  code Documentation = [{
+Warning to detect dangling references introduced by use-after-scope.
+This may contain false-positives, e.g. when the borrowed storage is potentially moved and is not destroyed at scope exit.
+  }];
+}
+
+// Return-Stack-Address (aka Use-After-Return)
+def LifetimeSafetyReturnStackAddr : DiagGroup<"lifetime-safety-return-stack-addr"> {
+  code Documentation = [{
+Warning to detect use-after-return introduced by returning stack address.
+  }];
+}
+def LifetimeSafetyReturnStackAddrMoved : DiagGroup<"lifetime-safety-return-stack-addr-moved"> {
+  code Documentation = [{
+Warning to detect use-after-return introduced by returning stack address.
+This may contain false-positives, e.g. when the borrowed storage is potentially moved and is not destroyed at function exit.
+  }];
+}
+
+// Dangling-Field (aka Escape-To-Field)
 def LifetimeSafetyDanglingField : DiagGroup<"lifetime-safety-dangling-field"> {
   code Documentation = [{
-    Warning to detect dangling field references.
+Warning to detect dangling field references.
   }];
 }
-
-def LifetimeSafetyDanglingFieldStrict : DiagGroup<"lifetime-safety-dangling-field-strict"> {
+def LifetimeSafetyDanglingFieldMoved : DiagGroup<"lifetime-safety-dangling-field-moved"> {
   code Documentation = [{
-    Warning to detect dangling field references.
-    This may contain false-positives, e.g. when the borrowed storage is potentially moved and is not destroyed at function exit.
+Warning to detect dangling field references.
+This may contain false-positives, e.g. when the borrowed storage is potentially moved and is not destroyed at function exit.
   }];
 }
-
 
 def LifetimeSafetyInvalidation : DiagGroup<"lifetime-safety-invalidation"> {
   code Documentation = [{
-    Warning to detect invalidation of references.
+Warning to detect invalidation of references.
   }];
 }
 
 def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
-                                         [LifetimeSafetyDanglingField]>;
+                                         [LifetimeSafetyUseAfterScope,
+                                         LifetimeSafetyReturnStackAddr,
+                                         LifetimeSafetyDanglingField]>;
 def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
-                                    [LifetimeSafetyDanglingFieldStrict,
+                                    [LifetimeSafetyUseAfterScopeMoved,
+                                    LifetimeSafetyReturnStackAddrMoved,
+                                    LifetimeSafetyDanglingFieldMoved,
                                     LifetimeSafetyInvalidation]>;
 
 def LifetimeSafety : DiagGroup<"lifetime-safety",
                                [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
   code Documentation = [{
-    Warnings to detect use-after-free and related temporal safety bugs based on lifetime safety analysis.
+Warnings to detect use-after-free and related temporal safety bugs based on lifetime safety analysis.
   }];
 }
 
@@ -598,13 +627,31 @@ def LifetimeSafetySuggestions
                 [LifetimeSafetyCrossTUSuggestions,
                  LifetimeSafetyIntraTUSuggestions]> {
   code Documentation = [{
-    Lifetime annotation suggestions for function parameters that should be marked [[clang::lifetimebound]] based on lifetime analysis.
+Lifetime annotation suggestions for function parameters that should be marked [[clang::lifetimebound]] based on lifetime analysis.
   }];
 }
+
 def LifetimeSafetyNoescape
     : DiagGroup<"lifetime-safety-noescape"> {
   code Documentation = [{
-    Detects misuse of [[clang::noescape]] annotation where the parameter escapes (for example, through return).
+Detects misuse of [[clang::noescape]] annotation where the parameter escapes (for example, through return).
+  }];
+}
+
+def LifetimeSafetyValidations : DiagGroup<"lifetime-safety-validations",
+                                          [LifetimeSafetyNoescape]> {
+  code Documentation = [{
+Verify function implementations adhere to the annotated lifetime contracts through lifetime safety
+like verifying [[clang::noescape]] and [[clang::lifetimebound]] (upcoming).
+  }];
+}
+
+def LifetimeSafetyAll : DiagGroup<"lifetime-safety-all",
+                                  [LifetimeSafety,
+                                  LifetimeSafetySuggestions,
+                                  LifetimeSafetyValidations]> {
+  code Documentation = [{
+Turns on all the warnings in the lifetime-safety umbrella.
   }];
 }
 
