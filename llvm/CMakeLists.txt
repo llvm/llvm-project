@@ -1427,6 +1427,17 @@ if (LLVM_INCLUDE_UTILS)
   add_subdirectory(utils/llvm-lit)
 endif()
 
+set(LLVM_INSTALL_BACKEND_HEADERS
+    OFF
+    CACHE BOOL "Install back-end specific headers and table-genned files")
+if(LLVM_INSTALL_BACKEND_HEADERS AND LLVM_INSTALL_TOOLCHAIN_ONLY)
+  message(
+    FATAL_ERROR
+      "LLVM_INSTALL_BACKEND_HEADERS only works if "
+      "LLVM_INSTALL_TOOLCHAIN_ONLY is set to OFF as it installs component "
+      "library headers")
+endif()
+
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/llvm include/llvm-c
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
@@ -1439,6 +1450,41 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "LICENSE.TXT"
     )
 
+  if (LLVM_INSTALL_BACKEND_HEADERS)
+    # Install table-genned files into include install dir.
+    install(DIRECTORY ${CMAKE_BINARY_DIR}/lib/
+      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm"
+      COMPONENT llvm-headers
+      FILES_MATCHING
+      PATTERN "*.inc"
+      PATTERN "*.h"
+      PATTERN "*.def"
+      PATTERN "CMakeFiles" EXCLUDE
+      )
+
+    # Installing a generated config is not ideal, but
+    # lots of generated headers depend on it. It's assumed
+    # that exported static libraries will be consumed with the
+    # same toolchain LLVM was built with.
+    install(DIRECTORY ${CMAKE_BINARY_DIR}/include/
+      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+      COMPONENT llvm-headers
+      FILES_MATCHING
+      PATTERN "*config.h"
+      )
+
+    # Such installs lead to lots of empty directories because
+    # of a cmake issue:
+    # https://gitlab.kitware.com/cmake/cmake/-/issues/17122
+    foreach(target ${LLVM_TARGETS_TO_BUILD})
+      install(DIRECTORY lib/Target/${target}/
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm/Target/${target}"
+        COMPONENT llvm-headers
+        FILES_MATCHING
+        PATTERN "*.h"
+        )
+    endforeach()
+  endif()
   install(DIRECTORY ${LLVM_INCLUDE_DIR}/llvm ${LLVM_INCLUDE_DIR}/llvm-c
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT llvm-headers
