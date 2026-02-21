@@ -8187,10 +8187,10 @@ as it is not affected by the ``llvm.loop.disable_nonforced`` metadata.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``llvm.access.group`` metadata can be attached to any instruction that
-potentially accesses memory. It can point to a single distinct metadata
-node, which we call access group. This node represents all memory access
-instructions referring to it via ``llvm.access.group``. When an
-instruction belongs to multiple access groups, it can also point to a
+potentially accesses or allocates memory. It can point to a single distinct
+metadata node, which we call access group. This node represents all memory
+access or allocation instructions referring to it via ``llvm.access.group``.
+When an instruction belongs to multiple access groups, it can also point to a
 list of accesses groups, illustrated by the following example.
 
 .. code-block:: llvm
@@ -8212,42 +8212,62 @@ situation that the content must be updated which, because metadata is
 immutable by design, would required finding and updating all references
 to the access group node.
 
-The access group can be used to refer to a memory access instruction
-without pointing to it directly (which is not possible in global
+The access group can be used to refer to a memory access or allocation
+instruction without pointing to it directly (which is not possible in global
 metadata). Currently, the only metadata making use of it is
 ``llvm.loop.parallel_accesses``.
 
 '``llvm.loop.parallel_accesses``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``llvm.loop.parallel_accesses`` metadata refers to one or more
-access group metadata nodes (see ``llvm.access.group``). It denotes that
-no loop-carried memory dependence exist between it and other instructions
-in the loop with this metadata.
+The ``llvm.loop.parallel_accesses`` metadata is used to explicitly declare a
+loop as "trivially parallel", indicating that there are no memory dependencies
+between iterations. If a loop has this metadata but also has memory dependencies
+between iterations, the behavior is undefined.
+
+``llvm.loop.parallel_accesses`` refers to one or more access group metadata
+nodes (see ``llvm.access.group``). In a loop with this metadata, instructions
+may have the ``llvm.access.group`` metadata to denote that no loop-carried
+memory dependence exist between those instructions, as long as the access group
+is listed in ``llvm.loop.parallel_accesses``.
 
 Let ``m1`` and ``m2`` be two instructions that both have the
-``llvm.access.group`` metadata to the access group ``g1``, respectively
-``g2`` (which might be identical). If a loop contains both access groups
-in its ``llvm.loop.parallel_accesses`` metadata, then the compiler can
+``llvm.access.group`` metadata to the access groups ``g1`` and ``g2``
+respectively (the groups can be identical). If a loop contains both access
+groups in its ``llvm.loop.parallel_accesses`` metadata, then the compiler can
 assume that there is no dependency between ``m1`` and ``m2`` carried by
 this loop. Instructions that belong to multiple access groups are
 considered having this property if at least one of the access groups
 matches the ``llvm.loop.parallel_accesses`` list.
 
-If all memory-accessing instructions in a loop have
-``llvm.access.group`` metadata that each refer to one of the access
-groups of a loop's ``llvm.loop.parallel_accesses`` metadata, then the
-loop has no loop carried memory dependencies and is considered to be a
-parallel loop. If there is a loop-carried dependency, the behavior is
-undefined.
+A loop is declared to be trivially parallel (as in, there are no memory
+dependencies between loop iterations) if it has the
+``llvm.loop.parallel_accesses`` metadata referring to a set of access groups
+``G`` and fulfills the following conditions:
 
-Note that if not all memory access instructions belong to an access
-group referred to by ``llvm.loop.parallel_accesses``, then the loop must
-not be considered trivially parallel. Additional
-memory dependence analysis is required to make that determination. As a
-fail-safe mechanism, this causes loops that were originally parallel to be considered
-sequential (if optimization passes that are unaware of the parallel semantics
-insert new memory instructions into the loop body).
+- All memory-accessing instructions in the loop must have ``llvm.access.group``
+  metadata referring to at least one access group in ``G``.
+- If the loop has one or more instructions that write to memory allocated via
+  ``alloca``, the corresponding ``alloca`` instruction(s) must have the
+  ``llvm.access.group`` metadata referring to at least one access group in ``G``.
+
+If the above conditions are not fulfilled, the loop must not be considered as
+trivially parallel without further memory dependence analysis.
+
+These conditions exist as a fail-safe mechanism to cause loops that were
+originally explicitly parallel to be demoted to normal sequential loops when
+optimization passes that are unaware of the parallel semantics perform
+transformations or insert new instructions into the loop body. Note that even
+if the loop is no longer considered trivially parallel, it may still be
+vectorizable. In such cases the loop must be analyzed as any sequential loop is.
+
+For example, if a pass adds a new memory-accessing instruction into the
+loop body without being aware of the parallel semantics, that instruction will
+not have the corresponding ``llvm.access.group`` metadata, thereby demoting the
+loop into a sequential one. Another example where the fail-safe triggers is
+when a pass hoists an ``alloca`` instruction outside of the loop body. Without
+the fail-safe, this would cause the same allocation to be shared across
+iterations, introducing race conditions in a parallel loop.
 
 Example of a loop that is considered parallel due to its correct use of
 both ``llvm.access.group`` and ``llvm.loop.parallel_accesses``
