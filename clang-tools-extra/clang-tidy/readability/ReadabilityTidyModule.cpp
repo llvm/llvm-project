@@ -14,6 +14,7 @@
 #include "AvoidReturnWithVoidValueCheck.h"
 #include "AvoidUnconditionalPreprocessorIfCheck.h"
 #include "BracesAroundStatementsCheck.h"
+#include "ConditionalToIfCheck.h"
 #include "ConstReturnTypeCheck.h"
 #include "ContainerContainsCheck.h"
 #include "ContainerDataPointerCheck.h"
@@ -86,6 +87,8 @@ public:
         "readability-avoid-unconditional-preprocessor-if");
     CheckFactories.registerCheck<BracesAroundStatementsCheck>(
         "readability-braces-around-statements");
+    CheckFactories.registerCheck<ConditionalToIfCheck>(
+        "readability-conditional-to-if");
     CheckFactories.registerCheck<ConstReturnTypeCheck>(
         "readability-const-return-type");
     CheckFactories.registerCheck<ContainerContainsCheck>(
