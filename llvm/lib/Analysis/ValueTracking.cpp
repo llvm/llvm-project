@@ -8336,7 +8336,8 @@ static SelectPatternResult matchFastFloatClamp(CmpInst::Predicate Pred,
   RHS = FalseVal;
 
   const APFloat *FC1;
-  if (CmpRHS != TrueVal || !match(CmpRHS, m_APFloat(FC1)) || !FC1->isFinite())
+  if (CmpRHS != TrueVal || !match(CmpRHS, m_APFloat(FC1)) || !FC1->isFinite() ||
+      !isGuaranteedNotToBePoison(FalseVal))
     return {SPF_UNKNOWN, SPNB_NA, false};
 
   const APFloat *FC2;
