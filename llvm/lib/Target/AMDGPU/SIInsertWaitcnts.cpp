@@ -3134,21 +3134,19 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
   // Walk over the instructions.
   MachineInstr *OldWaitcntInstr = nullptr;
 
+  // NOTE: We may append instrs after Inst while iterating.
   for (MachineBasicBlock::instr_iterator Iter = Block.instr_begin(),
                                          E = Block.instr_end();
-       Iter != E;) {
+       Iter != E; ++Iter) {
     MachineInstr &Inst = *Iter;
-    if (Inst.isMetaInstruction()) {
-      ++Iter;
+    if (Inst.isMetaInstruction())
       continue;
-    }
     // Track pre-existing waitcnts that were added in earlier iterations or by
     // the memory legalizer.
     if (isWaitInstr(Inst) ||
         (IsExpertMode && Inst.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR)) {
       if (!OldWaitcntInstr)
         OldWaitcntInstr = &Inst;
-      ++Iter;
       continue;
     }
 
@@ -3160,7 +3158,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       // FIXME: Not supported on GFX12 yet. Will need a new feature when we do.
       assert(ST->getGeneration() < AMDGPUSubtarget::GFX12);
       ScoreBrackets.recordAsyncMark(Inst);
-      ++Iter;
       continue;
     }
 
@@ -3216,6 +3213,8 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     updateEventWaitcntAfter(Inst, &ScoreBrackets);
 
+    // Note: insertForcedWaitAfter() may add instrs after Iter that need to be
+    // visited by the loop.
     Modified |= insertForcedWaitAfter(Inst, Block, ScoreBrackets);
 
     LLVM_DEBUG({
@@ -3236,8 +3235,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       VCCZCorrect = true;
       Modified = true;
     }
-
-    ++Iter;
   }
 
   // Flush counters at the end of the block if needed (for preheaders with no
@@ -3373,7 +3370,6 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   PreheaderFlushFlags Flags;
   bool HasVMemLoad = false;
   bool HasVMemStore = false;
-  bool SeenDSStoreInLoop = false;
   bool UsesVgprLoadedOutsideVMEM = false;
   bool UsesVgprLoadedOutsideDS = false;
   bool VMemInvalidated = false;
@@ -3384,20 +3380,20 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   DenseSet<MCRegUnit> VgprDefDS;
 
   for (MachineBasicBlock *MBB : ML->blocks()) {
-    bool SeenDSStoreInCurrMBB = false;
     for (MachineInstr &MI : *MBB) {
       if (isVMEMOrFlatVMEM(MI)) {
         HasVMemLoad |= MI.mayLoad();
         HasVMemStore |= MI.mayStore();
       }
-      if (mayStoreIncrementingDSCNT(MI))
-        SeenDSStoreInCurrMBB = true;
-      // Stores postdominated by a barrier will have a wait at the barrier
-      // and thus no need to be waited at the loop header. Barrier found
-      // later in the same MBB during in-order traversal is used here as a
-      // cheaper alternative to postdomination check.
-      if (MI.getOpcode() == AMDGPU::S_BARRIER)
-        SeenDSStoreInCurrMBB = false;
+      // TODO: Can we relax DSStore check? There may be cases where
+      // these DS stores are drained prior to the end of MBB (or loop).
+      if (mayStoreIncrementingDSCNT(MI)) {
+        // Early exit if both optimizations are invalidated.
+        // Otherwise, set invalid status and continue.
+        if (VMemInvalidated)
+          return Flags;
+        DSInvalidated = true;
+      }
       for (const MachineOperand &Op : MI.all_uses()) {
         if (Op.isDebug() || !TRI->isVectorRegister(*MRI, Op.getReg()))
           continue;
@@ -3463,8 +3459,6 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
         }
       }
     }
-    // Accumulate unprotected DS stores from this MBB
-    SeenDSStoreInLoop |= SeenDSStoreInCurrMBB;
   }
 
   // VMEM flush decision
@@ -3478,7 +3472,7 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   // are not used in the loop.
   // DSInvalidated is pre-set to true on non-GFX12+ targets where DS_CNT
   // is LGKM_CNT which also tracks FLAT/SMEM.
-  if (!DSInvalidated && !SeenDSStoreInLoop && UsesVgprLoadedOutsideDS)
+  if (!DSInvalidated && UsesVgprLoadedOutsideDS)
     Flags.FlushDsCnt = true;
 
   return Flags;

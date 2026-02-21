@@ -717,20 +717,19 @@ UnrollCostEstimator::UnrollCostEstimator(
 }
 
 bool UnrollCostEstimator::canUnroll() const {
-  switch (Convergence) {
-  case ConvergenceKind::ExtendedLoop:
-    LLVM_DEBUG(dbgs().indent(1) << "Convergence prevents unrolling.\n");
+  if (Convergence == ConvergenceKind::ExtendedLoop) {
+    LLVM_DEBUG(dbgs().indent(1)
+               << "Not unrolling: contains convergent operations.\n");
     return false;
-  default:
-    break;
   }
   if (!LoopSize.isValid()) {
-    LLVM_DEBUG(dbgs().indent(1) << "Invalid loop size prevents unrolling.\n");
+    LLVM_DEBUG(dbgs().indent(1)
+               << "Not unrolling: loop size could not be computed.\n");
     return false;
   }
   if (NotDuplicatable) {
     LLVM_DEBUG(dbgs().indent(1)
-               << "Non-duplicatable blocks prevent unrolling.\n");
+               << "Not unrolling: contains non-duplicatable instructions.\n");
     return false;
   }
   return true;
@@ -1137,7 +1136,7 @@ bool llvm::computeUnrollCount(
 
     using namespace ore;
 
-    if (unrollCountPragmaValue(L) > 0 && !UP.AllowRemainder)
+    if (PragmaCount > 0 && !UP.AllowRemainder)
       ORE->emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE,
                                         "DifferentUnrollCountFromDirected",
@@ -1242,10 +1241,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
 
   UnrollCostEstimator UCE(L, TTI, EphValues, UP.BEInsns);
-  if (!UCE.canUnroll()) {
-    LLVM_DEBUG(dbgs().indent(1) << "Loop not considered unrollable.\n");
+  if (!UCE.canUnroll())
     return LoopUnrollResult::Unmodified;
-  }
 
   unsigned LoopSize = UCE.getRolledLoopSize();
   LLVM_DEBUG(dbgs() << "Loop Size = " << LoopSize << "\n");

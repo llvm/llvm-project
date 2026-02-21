@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple \
 // RUN:   spirv-unknown-vulkan-compute %s -emit-llvm \
-// RUN:   -Wdeprecated-declarations -Wconversion -o - | FileCheck %s --check-prefixes=CHECK \
+// RUN:   -Wdeprecated-declarations -o - | FileCheck %s --check-prefixes=CHECK \
 // RUN:   -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)"
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-compute %s  \
 // RUN:   -verify -verify-ignore-unexpected=note

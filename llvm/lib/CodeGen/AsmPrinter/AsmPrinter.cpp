@@ -999,8 +999,20 @@ void AsmPrinter::emitFunctionHeader() {
     emitVisibility(CurrentFnSym, F.getVisibility());
 
   emitLinkage(&F, CurrentFnSym);
-  if (MAI->hasFunctionAlignment())
-    emitAlignment(MF->getAlignment(), &F);
+  if (MAI->hasFunctionAlignment()) {
+    // The preferred alignment directive will not have the intended effect
+    // unless function sections are enabled.
+    if (MAI->useIntegratedAssembler() && MAI->hasPreferredAlignment() &&
+        TM.getFunctionSections()) {
+      Align Alignment = MF->getAlignment();
+      Align PrefAlignment = MF->getPreferredAlignment();
+      emitAlignment(Alignment, &F);
+      if (Alignment != PrefAlignment)
+        OutStreamer->emitPrefAlign(PrefAlignment);
+    } else {
+      emitAlignment(MF->getPreferredAlignment(), &F);
+    }
+  }
 
   if (MAI->hasDotTypeDotSizeDirective())
     OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_ELF_TypeFunction);
@@ -5094,8 +5106,8 @@ void AsmPrinter::emitCOFFFeatureSymbol(Module &M) {
     Feat00Value |= COFF::Feat00Flags::SafeSEH;
   }
 
-  if (M.getControlFlowGuardMode() != ControlFlowGuardMode::Disabled) {
-    // Object is CFG-aware.
+  if (M.getControlFlowGuardMode() == ControlFlowGuardMode::Enabled) {
+    // Object is CFG-aware. Only set if we actually inserted the checks.
     Feat00Value |= COFF::Feat00Flags::GuardCF;
   }
 
