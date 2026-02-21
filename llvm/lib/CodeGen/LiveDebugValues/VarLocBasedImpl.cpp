@@ -997,13 +997,6 @@ private:
     return *VLS;
   }
 
-  const VarLocSet &getVarLocsInMBB(const MachineBasicBlock *MBB,
-                                   const VarLocInMBB &Locs) const {
-    auto It = Locs.find(MBB);
-    assert(It != Locs.end() && "MBB not in map");
-    return *It->second;
-  }
-
   /// Tests whether this instruction is a spill to a stack location.
   bool isSpillInstruction(const MachineInstr &MI, MachineFunction *MF);
 
@@ -1284,9 +1277,10 @@ void VarLocBasedLDV::printVarLocInMBB(const MachineFunction &MF,
                                        raw_ostream &Out) const {
   Out << '\n' << msg << '\n';
   for (const MachineBasicBlock &BB : MF) {
-    if (!V.count(&BB))
+    auto It = V.find(&BB);
+    if (It == V.end())
       continue;
-    const VarLocSet &L = getVarLocsInMBB(&BB, V);
+    const VarLocSet &L = *It->second;
     if (L.empty())
       continue;
     SmallVector<VarLoc, 32> VarLocs;
