@@ -33,7 +33,8 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
       : OutgoingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override;
+                        const CCValAssign &VA,
+                        ISD::ArgFlagsTy Flags = {}) override;
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             const MachinePointerInfo &MPO,
                             const CCValAssign &VA) override;
@@ -46,7 +47,8 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
 } // namespace
 
 void OutgoingArgHandler::assignValueToReg(Register ValVReg, Register PhysReg,
-                                          const CCValAssign &VA) {
+                                          const CCValAssign &VA,
+                                          ISD::ArgFlagsTy Flags) {
   MIB.addUse(PhysReg, RegState::Implicit);
   Register ExtReg = extendRegister(ValVReg, VA);
   MIRBuilder.buildCopy(PhysReg, ExtReg);
@@ -141,7 +143,8 @@ bool PPCCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
 void PPCIncomingValueHandler::assignValueToReg(Register ValVReg,
                                                Register PhysReg,
-                                               const CCValAssign &VA) {
+                                               const CCValAssign &VA,
+                                               ISD::ArgFlagsTy Flags) {
   markPhysRegUsed(PhysReg);
   IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
 }
