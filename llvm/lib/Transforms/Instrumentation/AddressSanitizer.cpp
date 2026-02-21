@@ -1447,8 +1447,9 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
        !AI.isUsedWithInAlloca() &&
        // swifterror allocas are register promoted by ISel
        !AI.isSwiftError() &&
-       // safe allocas are not interesting
-       !(SSGI && SSGI->isSafe(AI)));
+       // safe allocas are not interesting, but for ASan we also need to ensure
+       // the address doesn't escape to calls (callee may access shadow memory)
+       !(SSGI && SSGI->isSafe(AI) && !SSGI->addressEscapesToCall(AI)));
 
   It->second = IsInteresting;
   return IsInteresting;
