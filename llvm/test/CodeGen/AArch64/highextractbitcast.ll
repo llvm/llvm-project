@@ -140,9 +140,8 @@ entry:
 define <4 x i32> @test_smull_high_s16_bitcasta1_wrongindex(<2 x i64> %aa, <8 x i16> %b) #0 {
 ; CHECK-LE-LABEL: test_smull_high_s16_bitcasta1_wrongindex:
 ; CHECK-LE:       // %bb.0: // %entry
-; CHECK-LE-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
+; CHECK-LE-NEXT:    ext v0.16b, v0.16b, v0.16b, #4
 ; CHECK-LE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-LE-NEXT:    ext v0.8b, v0.8b, v2.8b, #4
 ; CHECK-LE-NEXT:    smull v0.4s, v0.4h, v1.4h
 ; CHECK-LE-NEXT:    ret
 ;
@@ -176,9 +175,8 @@ entry:
 define <4 x i32> @test_smull_high_s16_bitcastb1_wrongindex(<8 x i16> %a, <16 x i8> %bb) #0 {
 ; CHECK-LE-LABEL: test_smull_high_s16_bitcastb1_wrongindex:
 ; CHECK-LE:       // %bb.0: // %entry
-; CHECK-LE-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
 ; CHECK-LE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-LE-NEXT:    ext v1.8b, v1.8b, v2.8b, #6
+; CHECK-LE-NEXT:    ext v1.16b, v1.16b, v0.16b, #6
 ; CHECK-LE-NEXT:    smull v0.4s, v0.4h, v1.4h
 ; CHECK-LE-NEXT:    ret
 ;
@@ -189,7 +187,7 @@ define <4 x i32> @test_smull_high_s16_bitcastb1_wrongindex(<8 x i16> %a, <16 x i
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #6
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v0.16b, #6
 ; CHECK-BE-NEXT:    smull v0.4s, v0.4h, v1.4h
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
@@ -249,7 +247,7 @@ define <4 x i32> @test_smull_high_s16_bitcastb2_wrongindex(<8 x i16> %a, <16 x i
 ; CHECK-LE-LABEL: test_smull_high_s16_bitcastb2_wrongindex:
 ; CHECK-LE:       // %bb.0: // %entry
 ; CHECK-LE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-LE-NEXT:    ext v1.16b, v1.16b, v1.16b, #4
+; CHECK-LE-NEXT:    ext v1.16b, v1.16b, v0.16b, #4
 ; CHECK-LE-NEXT:    smull v0.4s, v0.4h, v1.4h
 ; CHECK-LE-NEXT:    ret
 ;
@@ -259,7 +257,7 @@ define <4 x i32> @test_smull_high_s16_bitcastb2_wrongindex(<8 x i16> %a, <16 x i
 ; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #4
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v0.16b, #4
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    rev16 v1.8b, v1.8b
 ; CHECK-BE-NEXT:    smull v0.4s, v0.4h, v1.4h
@@ -345,8 +343,8 @@ entry:
 define <4 x i32> @test_smull_high_s16_splata2(<4 x i32> %a, <8 x i16> %b) #0 {
 ; CHECK-LE-LABEL: test_smull_high_s16_splata2:
 ; CHECK-LE:       // %bb.0: // %entry
-; CHECK-LE-NEXT:    dup v0.2s, v0.s[3]
 ; CHECK-LE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-LE-NEXT:    dup v0.4s, v0.s[3]
 ; CHECK-LE-NEXT:    smull v0.4s, v0.4h, v1.4h
 ; CHECK-LE-NEXT:    ret
 ;
@@ -356,7 +354,7 @@ define <4 x i32> @test_smull_high_s16_splata2(<4 x i32> %a, <8 x i16> %b) #0 {
 ; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-BE-NEXT:    dup v0.2s, v0.s[3]
+; CHECK-BE-NEXT:    dup v0.4s, v0.s[3]
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    rev32 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    smull v0.4s, v0.4h, v1.4h

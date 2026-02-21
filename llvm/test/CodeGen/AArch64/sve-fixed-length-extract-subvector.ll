@@ -67,10 +67,11 @@ entry:
 define void @extract_v32i8_half_unaligned(ptr %in, ptr %out) #0 vscale_range(2,2) {
 ; CHECK-LABEL: extract_v32i8_half_unaligned:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    adrp x8, .LCPI4_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI4_0
 ; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
-; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #4
+; CHECK-NEXT:    ldr z1, [x8]
+; CHECK-NEXT:    tbl z0.s, { z0.s }, z1.s
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
 entry:

@@ -51,7 +51,8 @@ entry:
 define <2 x float> @test_vbfdot_laneq_f32(<2 x float> %r, <4 x bfloat> %a, <8 x bfloat> %b) {
 ; CHECK-LABEL: test_vbfdot_laneq_f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdot.bf16 d0, d1, d3[1]
+; CHECK-NEXT:    vdup.32 q8, d3[1]
+; CHECK-NEXT:    vdot.bf16 d0, d1, d16
 ; CHECK-NEXT:    bx lr
 entry:
   %.cast = bitcast <8 x bfloat> %b to <4 x float>

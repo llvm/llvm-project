@@ -414,8 +414,9 @@ define void @and_extract_subvector_not_combine_v32i8(ptr %pa, ptr %dst) nounwind
 ; CHECK-LABEL: and_extract_subvector_not_combine_v32i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
-; CHECK-NEXT:    vnori.b $vr0, $vr0, 251
+; CHECK-NEXT:    xvxori.b $xr0, $xr0, 255
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 14
+; CHECK-NEXT:    vandi.b $vr0, $vr0, 4
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
   %a = load volatile <32 x i8>, ptr %pa
@@ -432,9 +433,11 @@ define void @and_extract_subvector_not_combine_v16i16(ptr %pa, ptr %dst) nounwin
 ; CHECK-LABEL: and_extract_subvector_not_combine_v16i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    xvrepli.b $xr1, -1
+; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 14
 ; CHECK-NEXT:    vrepli.h $vr1, 4
-; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
   %a = load volatile <16 x i16>, ptr %pa
@@ -450,9 +453,11 @@ define void @and_extract_subvector_not_combine_v8i32(ptr %pa, ptr %dst) nounwind
 ; CHECK-LABEL: and_extract_subvector_not_combine_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    xvrepli.b $xr1, -1
+; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 14
 ; CHECK-NEXT:    vrepli.w $vr1, 4
-; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
   %a = load volatile <8 x i32>, ptr %pa
@@ -467,9 +472,11 @@ define void @and_extract_subvector_not_combine_v4i64(ptr %pa, ptr %dst) nounwind
 ; CHECK-LABEL: and_extract_subvector_not_combine_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    xvrepli.b $xr1, -1
+; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 14
 ; CHECK-NEXT:    vrepli.d $vr1, 4
-; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
   %a = load volatile <4 x i64>, ptr %pa

@@ -218,7 +218,8 @@ define void @addCombineToVPADD_i8(ptr %cbcr, ptr %X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADD_i8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
-; CHECK-NEXT:    vpadd.i8 d16, d16, d17
+; CHECK-NEXT:    vuzp.8 q8, q9
+; CHECK-NEXT:    vadd.i8 d16, d18, d16
 ; CHECK-NEXT:    vstr d16, [r1]
 ; CHECK-NEXT:    mov pc, lr
   %tmp = load <16 x i8>, ptr %cbcr
@@ -235,7 +236,8 @@ define void @addCombineToVPADD_i16(ptr %cbcr, ptr %X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADD_i16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
-; CHECK-NEXT:    vpadd.i16 d16, d16, d17
+; CHECK-NEXT:    vuzp.16 q8, q9
+; CHECK-NEXT:    vadd.i16 d16, d18, d16
 ; CHECK-NEXT:    vstr d16, [r1]
 ; CHECK-NEXT:    mov pc, lr
   %tmp = load <8 x i16>, ptr %cbcr
@@ -251,7 +253,8 @@ define void @addCombineToVPADD_i32(ptr %cbcr, ptr %X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADD_i32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
-; CHECK-NEXT:    vpadd.i32 d16, d16, d17
+; CHECK-NEXT:    vuzp.32 q8, q9
+; CHECK-NEXT:    vadd.i32 d16, d18, d16
 ; CHECK-NEXT:    vstr d16, [r1]
 ; CHECK-NEXT:    mov pc, lr
   %tmp = load <4 x i32>, ptr %cbcr
@@ -267,7 +270,8 @@ define void @addCombineToVPADDLq_s8(ptr %cbcr, ptr %X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDLq_s8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
-; CHECK-NEXT:    vpaddl.s8 q8, q8
+; CHECK-NEXT:    vuzp.8 q8, q9
+; CHECK-NEXT:    vaddl.s8 q8, d18, d16
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    mov pc, lr
   %tmp = load <16 x i8>, ptr %cbcr
@@ -308,7 +312,8 @@ define void @addCombineToVPADDLq_u8(ptr %cbcr, ptr %X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDLq_u8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
-; CHECK-NEXT:    vpaddl.u8 q8, q8
+; CHECK-NEXT:    vuzp.8 q8, q9
+; CHECK-NEXT:    vaddl.u8 q8, d18, d16
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    mov pc, lr
   %tmp = load <16 x i8>, ptr %cbcr
@@ -387,7 +392,8 @@ define void @addCombineToVPADDLq_s16(ptr %cbcr, ptr %X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDLq_s16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
-; CHECK-NEXT:    vpaddl.s16 q8, q8
+; CHECK-NEXT:    vuzp.16 q8, q9
+; CHECK-NEXT:    vaddl.s16 q8, d18, d16
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    mov pc, lr
   %tmp = load <8 x i16>, ptr %cbcr
@@ -405,7 +411,8 @@ define void @addCombineToVPADDLq_u16(ptr %cbcr, ptr %X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDLq_u16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
-; CHECK-NEXT:    vpaddl.u16 q8, q8
+; CHECK-NEXT:    vuzp.16 q8, q9
+; CHECK-NEXT:    vaddl.u16 q8, d18, d16
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    mov pc, lr
   %tmp = load <8 x i16>, ptr %cbcr
@@ -423,7 +430,8 @@ define void @addCombineToVPADDLq_s32(ptr %cbcr, ptr %X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDLq_s32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
-; CHECK-NEXT:    vpaddl.s32 q8, q8
+; CHECK-NEXT:    vuzp.32 q8, q9
+; CHECK-NEXT:    vaddl.s32 q8, d18, d16
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    mov pc, lr
   %tmp = load <4 x i32>, ptr %cbcr
@@ -441,7 +449,8 @@ define void @addCombineToVPADDLq_u32(ptr %cbcr, ptr %X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDLq_u32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
-; CHECK-NEXT:    vpaddl.u32 q8, q8
+; CHECK-NEXT:    vuzp.32 q8, q9
+; CHECK-NEXT:    vaddl.u32 q8, d18, d16
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r1]
 ; CHECK-NEXT:    mov pc, lr
   %tmp = load <4 x i32>, ptr %cbcr

@@ -519,10 +519,16 @@ entry:
 declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
 
 define <2 x float> @test_vfma_laneq_f32(<2 x float> %a, <2 x float> %b, <4 x float> %v) {
-; CHECK-LABEL: test_vfma_laneq_f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmla v0.2s, v1.2s, v2.s[3]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_vfma_laneq_f32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    dup v2.4s, v2.s[3]
+; CHECK-SD-NEXT:    fmla v0.2s, v1.2s, v2.2s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_vfma_laneq_f32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmla v0.2s, v1.2s, v2.s[3]
+; CHECK-GI-NEXT:    ret
 entry:
   %lane = shufflevector <4 x float> %v, <4 x float> undef, <2 x i32> <i32 3, i32 3>
   %0 = tail call <2 x float> @llvm.fma.v2f32(<2 x float> %lane, <2 x float> %b, <2 x float> %a)
@@ -569,7 +575,9 @@ entry:
 define <2 x float> @test_vfms_laneq_f32(<2 x float> %a, <2 x float> %b, <4 x float> %v) {
 ; CHECK-LABEL: test_vfms_laneq_f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmls v0.2s, v1.2s, v2.s[3]
+; CHECK-NEXT:    fneg v2.4s, v2.4s
+; CHECK-NEXT:    dup v2.4s, v2.s[3]
+; CHECK-NEXT:    fmla v0.2s, v1.2s, v2.2s
 ; CHECK-NEXT:    ret
 entry:
   %sub = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %v
@@ -2262,7 +2270,8 @@ define <4 x i16> @test_vadd_lane2_i16_bitcast_bigger_aligned(<4 x i16> %a, <16 x
 define <4 x i16> @test_vadd_lane5_i16_bitcast_bigger_aligned(<4 x i16> %a, <16 x i8> %v) {
 ; CHECK-SD-LABEL: test_vadd_lane5_i16_bitcast_bigger_aligned:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    dup v1.4h, v1.h[5]
+; CHECK-SD-NEXT:    dup v1.2d, v1.d[1]
+; CHECK-SD-NEXT:    dup v1.4h, v1.h[1]
 ; CHECK-SD-NEXT:    add v0.4h, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    ret
 ;

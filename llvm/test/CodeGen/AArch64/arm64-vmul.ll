@@ -3102,7 +3102,9 @@ declare double @llvm.fma.f64(double, double, double)
 define <2 x float> @fmls_with_fneg_before_extract_v2f32(<2 x float> %accum, <2 x float> %lhs, <4 x float> %rhs) {
 ; CHECK-LABEL: fmls_with_fneg_before_extract_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmls v0.2s, v1.2s, v2.s[3]
+; CHECK-NEXT:    fneg v2.4s, v2.4s
+; CHECK-NEXT:    dup v2.4s, v2.s[3]
+; CHECK-NEXT:    fmla v0.2s, v2.2s, v1.2s
 ; CHECK-NEXT:    ret
   %rhs_neg = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %rhs
   %splat = shufflevector <4 x float> %rhs_neg, <4 x float> undef, <2 x i32> <i32 3, i32 3>
