@@ -1037,17 +1037,24 @@ __m128h test_mm_mask_min_sh(__m128h __W, __mmask8 __U, __m128h __A, __m128h __B)
   // CHECK: @llvm.x86.avx512fp16.mask.min.sh.round
   return _mm_mask_min_sh(__W, __U, __A, __B);
 }
+TEST_CONSTEXPR(match_m128h(_mm_mask_min_sh((__m128h)(__v8hf){1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f},(__mmask8)0x01,(__m128h)(__v8hf){10.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f},(__m128h)(__v8hf){100.0f,200.0f,300.0f,400.0f,500.0f,600.0f,700.0f,800.0f}),10.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f));
+TEST_CONSTEXPR(match_m128h(_mm_mask_min_sh((__m128h)(__v8hf){1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f},(__mmask8)0x00,(__m128h)(__v8hf){10.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f},(__m128h)(__v8hf){100.0f,200.0f,300.0f,400.0f,500.0f,600.0f,700.0f,800.0f}),1.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f));
+
 __m128h test_mm_maskz_min_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_maskz_min_sh
   // CHECK: @llvm.x86.avx512fp16.mask.min.sh.round
   return _mm_maskz_min_sh(__U, __A, __B);
 }
+TEST_CONSTEXPR(match_m128h(_mm_maskz_min_sh((__mmask8)0x01,(__m128h)(__v8hf){10.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f},(__m128h)(__v8hf){100.0f,200.0f,300.0f,400.0f,500.0f,600.0f,700.0f,800.0f}),10.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f));
+TEST_CONSTEXPR(match_m128h(_mm_maskz_min_sh((__mmask8)0x00,(__m128h)(__v8hf){10.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f},(__m128h)(__v8hf){100.0f,200.0f,300.0f,400.0f,500.0f,600.0f,700.0f,800.0f}),0.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f));
 
 __m128h test_mm_min_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_min_sh
   // CHECK: @llvm.x86.avx512fp16.mask.min.sh.round
   return _mm_min_sh(__A, __B);
 }
+TEST_CONSTEXPR(match_m128h(_mm_min_sh((__m128h)(__v8hf){10.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f},(__m128h)(__v8hf){100.0f,200.0f,300.0f,400.0f,500.0f,600.0f,700.0f,800.0f}),10.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f));
+TEST_CONSTEXPR(match_m128h(_mm_min_sh((__m128h)(__v8hf){+0.0f,+0.0f,+0.0f,+0.0f,+0.0f,+0.0f,+0.0f,+0.0f},(__m128h)(__v8hf){-0.0f,-0.0f,-0.0f,-0.0f,-0.0f,-0.0f,-0.0f,-0.0f}),-0.0f,+0.0f,+0.0f,+0.0f,+0.0f,+0.0f,+0.0f,+0.0f));
 
 __m128h test_mm_max_round_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_max_round_sh
@@ -1069,17 +1076,25 @@ __m128h test_mm_mask_max_sh(__m128h __W, __mmask8 __U, __m128h __A, __m128h __B)
   // CHECK: @llvm.x86.avx512fp16.mask.max.sh.round
   return _mm_mask_max_sh(__W, __U, __A, __B);
 }
+TEST_CONSTEXPR(match_m128h(_mm_mask_max_sh((__m128h)(__v8hf){1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f},(__mmask8)0x01,(__m128h)(__v8hf){10.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f},(__m128h)(__v8hf){100.0f,200.0f,300.0f,400.0f,500.0f,600.0f,700.0f,800.0f}),100.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f));
+TEST_CONSTEXPR(match_m128h(_mm_mask_max_sh((__m128h)(__v8hf){1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f,8.0f},(__mmask8)0x00,(__m128h)(__v8hf){10.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f},(__m128h)(__v8hf){100.0f,200.0f,300.0f,400.0f,500.0f,600.0f,700.0f,800.0f}),1.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f));
+
 __m128h test_mm_maskz_max_sh(__mmask8 __U, __m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_maskz_max_sh
   // CHECK: @llvm.x86.avx512fp16.mask.max.sh.round
   return _mm_maskz_max_sh(__U, __A, __B);
 }
+TEST_CONSTEXPR(match_m128h(_mm_maskz_max_sh((__mmask8)0x01,(__m128h)(__v8hf){10.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f},(__m128h)(__v8hf){100.0f,200.0f,300.0f,400.0f,500.0f,600.0f,700.0f,800.0f}),100.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f));
+TEST_CONSTEXPR(match_m128h(_mm_maskz_max_sh((__mmask8)0x00,(__m128h)(__v8hf){10.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f},(__m128h)(__v8hf){100.0f,200.0f,300.0f,400.0f,500.0f,600.0f,700.0f,800.0f}),0.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f));
 
 __m128h test_mm_max_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_max_sh
   // CHECK: @llvm.x86.avx512fp16.mask.max.sh.round
   return _mm_max_sh(__A, __B);
 }
+TEST_CONSTEXPR(match_m128h(_mm_max_sh((__m128h)(__v8hf){10.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f},(__m128h)(__v8hf){100.0f,200.0f,300.0f,400.0f,500.0f,600.0f,700.0f,800.0f}),100.0f,20.0f,30.0f,40.0f,50.0f,60.0f,70.0f,80.0f));
+TEST_CONSTEXPR(match_m128h(_mm_max_sh((__m128h)(__v8hf){+0.0f,+0.0f,+0.0f,+0.0f,+0.0f,+0.0f,+0.0f,+0.0f},(__m128h)(__v8hf){-0.0f,-0.0f,-0.0f,-0.0f,-0.0f,-0.0f,-0.0f,-0.0f}),-0.0f,+0.0f,+0.0f,+0.0f,+0.0f,+0.0f,+0.0f,+0.0f));
+
 __mmask32 test_mm512_cmp_round_ph_mask(__m512h a, __m512h b) {
   // CHECK-LABEL: test_mm512_cmp_round_ph_mask
   // CHECK: fcmp oeq <32 x half> %{{.*}}, %{{.*}}
