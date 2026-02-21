@@ -29,7 +29,7 @@ define void @smin_simplify_with_guard(i32 %n) {
 ; CHECK-LABEL: 'smin_simplify_with_guard'
 ; CHECK-NEXT:  Classifying expressions for: @smin_simplify_with_guard
 ; CHECK-NEXT:    %i.011 = phi i32 [ %n, %for.body.lr.ph ], [ %dec, %for.body ]
-; CHECK-NEXT:    --> {%n,+,-1}<nsw><%for.body> U: full-set S: full-set Exits: 0 LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {%n,+,-1}<nw><%for.body> U: full-set S: full-set Exits: 0 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %dec = add nsw i32 %i.011, -1
 ; CHECK-NEXT:    --> {(-1 + %n),+,-1}<nw><%for.body> U: full-set S: full-set Exits: -1 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @smin_simplify_with_guard
@@ -64,7 +64,7 @@ define void @smin_to_smax(i32 %n) {
 ; CHECK-LABEL: 'smin_to_smax'
 ; CHECK-NEXT:  Classifying expressions for: @smin_to_smax
 ; CHECK-NEXT:    %i.011 = phi i32 [ %n, %for.body.lr.ph ], [ %dec, %for.body ]
-; CHECK-NEXT:    --> {%n,+,-1}<nsw><%for.body> U: full-set S: full-set Exits: (0 smin %n) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {%n,+,-1}<nw><%for.body> U: full-set S: full-set Exits: (0 smin %n) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %dec = add nsw i32 %i.011, -1
 ; CHECK-NEXT:    --> {(-1 + %n),+,-1}<nw><%for.body> U: full-set S: full-set Exits: (-1 + (0 smin %n)) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @smin_to_smax

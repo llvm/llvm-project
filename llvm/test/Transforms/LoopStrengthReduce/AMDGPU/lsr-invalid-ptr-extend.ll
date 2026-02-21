@@ -12,22 +12,24 @@ define amdgpu_kernel void @scaledregtest() local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       loopexit:
-; CHECK-NEXT:    [[SCEVGEP11_LCSSA:%.*]] = phi ptr addrspace(5) [ [[SCEVGEP11:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[SCEVGEP13_LCSSA:%.*]] = phi ptr [ [[SCEVGEP13:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT4_LCSSA:%.*]] = phi i32 [ [[LSR_IV_NEXT4:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[LSR_IV_NEXT4_LCSSA]], -1
+; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY_1:%.*]]
 ; CHECK:       for.body.1:
-; CHECK-NEXT:    [[LSR_IV5:%.*]] = phi ptr addrspace(5) [ [[SCEVGEP6:%.*]], [[FOR_BODY_1]] ], [ [[SCEVGEP11_LCSSA]], [[LOOPEXIT:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP2:%.*]], [[FOR_BODY_1]] ], [ [[SCEVGEP13_LCSSA]], [[LOOPEXIT]] ]
+; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi i32 [ [[LSR_IV_NEXT2:%.*]], [[FOR_BODY_1]] ], [ [[LSR_IV_NEXT4_LCSSA]], [[LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    [[CONV_1:%.*]] = phi i64 [ [[CONV_2:%.*]], [[FOR_BODY_1]] ], [ [[CONV]], [[LOOPEXIT]] ]
+; CHECK-NEXT:    [[IDXPROM:%.*]] = trunc i64 [[CONV_1]] to i32
+; CHECK-NEXT:    [[LSR_IV5:%.*]] = getelementptr inbounds ptr, ptr addrspace(5) null, i32 [[IDXPROM]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[LSR_IV5]], align 8
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = getelementptr inbounds ptr, ptr null, i64 [[CONV_1]]
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[LSR_IV1]], align 8
-; CHECK-NEXT:    [[SCEVGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 8
-; CHECK-NEXT:    [[SCEVGEP6]] = getelementptr i8, ptr addrspace(5) [[LSR_IV5]], i32 8
+; CHECK-NEXT:    [[CONV_2]] = zext i32 [[LSR_IV2]] to i64
+; CHECK-NEXT:    [[LSR_IV_NEXT2]] = add i32 [[LSR_IV2]], 1
 ; CHECK-NEXT:    br label [[FOR_BODY_1]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[LSR_IV12:%.*]] = phi ptr [ [[SCEVGEP13]], [[FOR_BODY]] ], [ null, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV10:%.*]] = phi ptr addrspace(5) [ [[SCEVGEP11]], [[FOR_BODY]] ], [ null, [[ENTRY]] ]
-; CHECK-NEXT:    [[SCEVGEP11]] = getelementptr i8, ptr addrspace(5) [[LSR_IV10]], i32 64
-; CHECK-NEXT:    [[SCEVGEP13]] = getelementptr i8, ptr [[LSR_IV12]], i64 64
+; CHECK-NEXT:    [[LSR_IV3:%.*]] = phi i32 [ [[LSR_IV_NEXT4]], [[FOR_BODY]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT4]] = add i32 [[LSR_IV3]], 8
 ; CHECK-NEXT:    br i1 false, label [[LOOPEXIT]], label [[FOR_BODY]]
 ;
 entry:

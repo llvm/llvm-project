@@ -8,8 +8,8 @@ define i32 @fn2() personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[INDVARS1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    [[INDVARS1:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_INC:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = sext i32 [[INDVARS1]] to i64
 ; CHECK-NEXT:    invoke void @fn1(i64 [[INDVARS_IV]])
 ; CHECK-NEXT:            to label [[FOR_INC]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       catch.dispatch:
@@ -21,7 +21,7 @@ define i32 @fn2() personality ptr @__CxxFrameHandler3 {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 [[C_0_LCSSA]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[INDVARS1]], 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ;
 entry:

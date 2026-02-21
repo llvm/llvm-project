@@ -2273,10 +2273,16 @@ private:
   bool isSCEVExprNeverPoison(const Instruction *I);
 
   /// This is like \c isSCEVExprNeverPoison but it specifically works for
-  /// instructions that will get mapped to SCEV add recurrences.  Return true
-  /// if \p I will never generate poison under the assumption that \p I is an
-  /// add recurrence on the loop \p L.
-  bool isAddRecNeverPoison(const Instruction *I, const Loop *L);
+  /// instructions that will get mapped to SCEV post-inc add recurrences.
+  /// Return true if \p I will never generate poison under the assumption that
+  /// \p I is an add recurrence on the loop \p L.
+  bool isPostIncAddRecNeverPoison(const Instruction *I, const Loop *L);
+
+  /// Check whether nowrap flags from the IR increment operation can be
+  /// transferred to the pre-inc addrec.
+  bool canPreservePreIncAddRecNoWrapFlags(const Instruction *PreIncI,
+                                          const Instruction *PostIncI,
+                                          const Loop *L);
 
   /// Similar to createAddRecFromPHI, but with the additional flexibility of
   /// suggesting runtime overflow checks in case casts are encountered.
