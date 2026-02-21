@@ -1,5 +1,6 @@
 import { DebugProtocol } from "@vscode/debugprotocol";
 import * as vscode from "vscode";
+import { AndroidPlatform } from "./android/android-platform";
 
 export interface LLDBDapCapabilities extends DebugProtocol.Capabilities {
   /** The debug adapter supports the `moduleSymbols` request. */
@@ -86,6 +87,8 @@ export class DebugSessionTracker
     let stopping = false;
     return {
       onError: (error) => !stopping && this.logger.error(error), // Can throw benign read errors when shutting down.
+      onWillReceiveMessage: (message) =>
+        this.onWillReceiveMessage(session, message),
       onDidSendMessage: (message) => this.onDidSendMessage(session, message),
       onWillStopSession: () => (stopping = true),
       onExit: () => this.onExit(session),
@@ -103,6 +106,13 @@ export class DebugSessionTracker
 
   /** Clear information from the active session. */
   private onExit(session: vscode.DebugSession) {
+    const androidDebugSession = AndroidPlatform.getDebugSession(session);
+    if (androidDebugSession) {
+      this.logger.info(
+        `Stopping android APK "${session.configuration.androidComponent}"`,
+      );
+      androidDebugSession.stop().catch();
+    }
     this.modules.delete(session);
     this.modulesChanged.fire(undefined);
   }
@@ -124,6 +134,21 @@ export class DebugSessionTracker
     if (session == vscode.debug.activeDebugSession) {
       const sessionHasModules = this.modules.get(session) != undefined;
       this.showModulesTreeView(sessionHasModules);
+    }
+  }
+
+  private onWillReceiveMessage(
+    session: vscode.DebugSession,
+    message: DebugProtocol.Request,
+  ) {
+    if (message.command === "configurationDone") {
+      const androidDebugSession = AndroidPlatform.getDebugSession(session);
+      if (androidDebugSession) {
+        this.logger.info(
+          `Dismissing Waiting-For-Debugger dialog on Android APK "${session.configuration.androidComponent}"`,
+        );
+        androidDebugSession.dismissWaitingForDebuggerDialog().catch();
+      }
     }
   }
 
