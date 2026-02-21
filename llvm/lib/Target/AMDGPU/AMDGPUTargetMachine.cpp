@@ -563,6 +563,12 @@ static cl::opt<bool> EnableImageIntrinsicOptimizer(
     cl::desc("Enable image intrinsic optimizer pass"), cl::init(true),
     cl::Hidden);
 
+// Gate insertion of the AMDGPU LDS Buffering pass into the default pipeline.
+static cl::opt<bool> EnableLDSBuffering(
+    "amdgpu-enable-lds-buffering",
+    cl::desc("Enable AMDGPU LDS Buffering pass in the default pipeline"),
+    cl::init(false), cl::Hidden);
+
 static cl::opt<bool>
     EnableLoopPrefetch("amdgpu-loop-prefetch",
                        cl::desc("Enable loop data prefetch on AMDGPU"),
@@ -652,6 +658,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPreLegalizerCombinerPass(*PR);
   initializeAMDGPURegBankCombinerPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
+  initializeAMDGPULDSBufferingLegacyPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
   initializeAMDGPULateCodeGenPrepareLegacyPass(*PR);
   initializeAMDGPURemoveIncompatibleFunctionsLegacyPass(*PR);
@@ -898,6 +905,30 @@ parseAMDGPUAtomicOptimizerStrategy(StringRef Params) {
   if (Result)
     return *Result;
   return make_error<StringError>("invalid parameter", inconvertibleErrorCode());
+}
+
+static Expected<unsigned> parseAMDGPULDSBufferingMaxBytes(StringRef Params) {
+  unsigned Result = 64;
+  while (!Params.empty()) {
+    StringRef Param;
+    std::tie(Param, Params) = Params.split(';');
+    if (Param.empty())
+      continue;
+    if (!Param.consume_front("max-bytes=")) {
+      return make_error<StringError>(
+          formatv("invalid AMDGPULDSBuffering pass parameter '{0}' ", Param)
+              .str(),
+          inconvertibleErrorCode());
+    }
+    unsigned Parsed = 0;
+    if (Param.getAsInteger(10, Parsed)) {
+      return make_error<StringError>(
+          formatv("invalid AMDGPULDSBuffering max-bytes '{0}' ", Param).str(),
+          inconvertibleErrorCode());
+    }
+    Result = Parsed;
+  }
+  return Result;
 }
 
 Expected<AMDGPUAttributorOptions>
@@ -1432,6 +1463,9 @@ void AMDGPUPassConfig::addIRPasses() {
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addPass(createAMDGPUPromoteAlloca());
+    // Run per-thread LDS buffering after promote-alloca to use leftover LDS.
+    if (TM.getTargetTriple().isAMDGCN() && EnableLDSBuffering)
+      addPass(createAMDGPULDSBufferingLegacyPass());
 
     if (isPassEnabled(EnableScalarIRPasses))
       addStraightLineScalarOptimizationPasses();
@@ -2216,6 +2250,9 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addFunctionPass(AMDGPUPromoteAllocaPass(TM), PMW);
+    // Run per-thread LDS buffering after promote-alloca to use leftover LDS.
+    if (TM.getTargetTriple().isAMDGCN() && EnableLDSBuffering)
+      addFunctionPass(AMDGPULDSBufferingPass(TM), PMW);
     if (isPassEnabled(EnableScalarIRPasses))
       addStraightLineScalarOptimizationPasses(PMW);
 

@@ -71,11 +71,14 @@ FUNCTION_PASS("amdgpu-promote-kernel-arguments",
               AMDGPUPromoteKernelArgumentsPass())
 FUNCTION_PASS("amdgpu-rewrite-undef-for-phi", AMDGPURewriteUndefForPHIPass())
 FUNCTION_PASS("amdgpu-simplifylib", AMDGPUSimplifyLibCallsPass())
+FUNCTION_PASS("amdgpu-uniform-intrinsic-combine",
+              AMDGPUUniformIntrinsicCombinePass())
 FUNCTION_PASS("amdgpu-unify-divergent-exit-nodes",
               AMDGPUUnifyDivergentExitNodesPass())
 FUNCTION_PASS("amdgpu-usenative", AMDGPUUseNativeCallsPass())
-FUNCTION_PASS("si-annotate-control-flow", SIAnnotateControlFlowPass(*static_cast<const GCNTargetMachine *>(this)))
-FUNCTION_PASS("amdgpu-uniform-intrinsic-combine", AMDGPUUniformIntrinsicCombinePass())
+FUNCTION_PASS(
+    "si-annotate-control-flow",
+    SIAnnotateControlFlowPass(*static_cast<const GCNTargetMachine *>(this)))
 #undef FUNCTION_PASS
 
 #ifndef FUNCTION_ANALYSIS
@@ -93,6 +96,10 @@ FUNCTION_ALIAS_ANALYSIS("amdgpu-aa", AMDGPUAA())
 #ifndef FUNCTION_PASS_WITH_PARAMS
 #define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
 #endif
+FUNCTION_PASS_WITH_PARAMS(
+    "amdgpu-lds-buffering", "AMDGPULDSBufferingPass",
+    [=](unsigned MaxBytes) { return AMDGPULDSBufferingPass(*this, MaxBytes); },
+    parseAMDGPULDSBufferingMaxBytes, "max-bytes")
 FUNCTION_PASS_WITH_PARAMS(
     "amdgpu-atomic-optimizer",
     "AMDGPUAtomicOptimizerPass",

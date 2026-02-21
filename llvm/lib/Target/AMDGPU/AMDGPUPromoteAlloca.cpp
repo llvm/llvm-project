@@ -28,6 +28,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "Utils/AMDGPULDSUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
@@ -1433,129 +1434,24 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToLDS(AllocaAnalysis &AA) const {
 }
 
 bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
-
-  FunctionType *FTy = F.getFunctionType();
-  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
-
-  // If the function has any arguments in the local address space, then it's
-  // possible these arguments require the entire local memory space, so
-  // we cannot use local memory in the pass.
-  for (Type *ParamTy : FTy->params()) {
-    PointerType *PtrTy = dyn_cast<PointerType>(ParamTy);
-    if (PtrTy && PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
-      LocalMemLimit = 0;
+  AMDGPU::AMDGPULDSBudget Budget = AMDGPU::computeLDSBudget(F, TM);
+  CurrentLocalMemUsage = Budget.currentUsage;
+  LocalMemLimit = Budget.limit;
+  if (!Budget.promotable) {
+    if (Budget.disabledDueToLocalArg) {
       LLVM_DEBUG(dbgs() << "Function has local memory argument. Promoting to "
                            "local memory disabled.\n");
-      return false;
     }
-  }
-
-  LocalMemLimit = ST.getAddressableLocalMemorySize();
-  if (LocalMemLimit == 0)
-    return false;
-
-  SmallVector<const Constant *, 16> Stack;
-  SmallPtrSet<const Constant *, 8> VisitedConstants;
-  SmallPtrSet<const GlobalVariable *, 8> UsedLDS;
-
-  auto visitUsers = [&](const GlobalVariable *GV, const Constant *Val) -> bool {
-    for (const User *U : Val->users()) {
-      if (const Instruction *Use = dyn_cast<Instruction>(U)) {
-        if (Use->getFunction() == &F)
-          return true;
-      } else {
-        const Constant *C = cast<Constant>(U);
-        if (VisitedConstants.insert(C).second)
-          Stack.push_back(C);
-      }
-    }
-
-    return false;
-  };
-
-  for (GlobalVariable &GV : Mod->globals()) {
-    if (GV.getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
-      continue;
-
-    if (visitUsers(&GV, &GV)) {
-      UsedLDS.insert(&GV);
-      Stack.clear();
-      continue;
-    }
-
-    // For any ConstantExpr uses, we need to recursively search the users until
-    // we see a function.
-    while (!Stack.empty()) {
-      const Constant *C = Stack.pop_back_val();
-      if (visitUsers(&GV, C)) {
-        UsedLDS.insert(&GV);
-        Stack.clear();
-        break;
-      }
-    }
-  }
-
-  const DataLayout &DL = Mod->getDataLayout();
-  SmallVector<std::pair<uint64_t, Align>, 16> AllocatedSizes;
-  AllocatedSizes.reserve(UsedLDS.size());
-
-  for (const GlobalVariable *GV : UsedLDS) {
-    Align Alignment =
-        DL.getValueOrABITypeAlignment(GV->getAlign(), GV->getValueType());
-    uint64_t AllocSize = GV->getGlobalSize(DL);
-
-    // HIP uses an extern unsized array in local address space for dynamically
-    // allocated shared memory.  In that case, we have to disable the promotion.
-    if (GV->hasExternalLinkage() && AllocSize == 0) {
-      LocalMemLimit = 0;
+    if (Budget.disabledDueToExternDynShared) {
       LLVM_DEBUG(dbgs() << "Function has a reference to externally allocated "
                            "local memory. Promoting to local memory "
                            "disabled.\n");
-      return false;
     }
-
-    AllocatedSizes.emplace_back(AllocSize, Alignment);
-  }
-
-  // Sort to try to estimate the worst case alignment padding
-  //
-  // FIXME: We should really do something to fix the addresses to a more optimal
-  // value instead
-  llvm::sort(AllocatedSizes, llvm::less_second());
-
-  // Check how much local memory is being used by global objects
-  CurrentLocalMemUsage = 0;
-
-  // FIXME: Try to account for padding here. The real padding and address is
-  // currently determined from the inverse order of uses in the function when
-  // legalizing, which could also potentially change. We try to estimate the
-  // worst case here, but we probably should fix the addresses earlier.
-  for (auto Alloc : AllocatedSizes) {
-    CurrentLocalMemUsage = alignTo(CurrentLocalMemUsage, Alloc.second);
-    CurrentLocalMemUsage += Alloc.first;
-  }
-
-  unsigned MaxOccupancy =
-      ST.getWavesPerEU(ST.getFlatWorkGroupSizes(F), CurrentLocalMemUsage, F)
-          .second;
-
-  // Round up to the next tier of usage.
-  unsigned MaxSizeWithWaveCount =
-      ST.getMaxLocalMemSizeWithWaveCount(MaxOccupancy, F);
-
-  // Program may already use more LDS than is usable at maximum occupancy.
-  if (CurrentLocalMemUsage > MaxSizeWithWaveCount)
     return false;
-
-  LocalMemLimit = MaxSizeWithWaveCount;
+  }
 
   LLVM_DEBUG(dbgs() << F.getName() << " uses " << CurrentLocalMemUsage
-                    << " bytes of LDS\n"
-                    << "  Rounding size to " << MaxSizeWithWaveCount
-                    << " with a maximum occupancy of " << MaxOccupancy << '\n'
-                    << " and " << (LocalMemLimit - CurrentLocalMemUsage)
-                    << " available for promotion\n");
-
+                    << " bytes of LDS\n");
   return true;
 }
 
