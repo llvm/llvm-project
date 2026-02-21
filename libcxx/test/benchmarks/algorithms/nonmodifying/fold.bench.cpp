@@ -13,6 +13,7 @@
 #include <deque>
 #include <iterator>
 #include <list>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -21,7 +22,13 @@
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
-  // ranges::{fold_left,fold_right}
+  auto std_ranges_fold_left = [](auto first, auto last, auto init, auto func) {
+    return std::ranges::fold_left(first, last, init, func);
+  };
+  auto std_ranges_fold_left_first = [](auto first, auto last, auto, auto func) {
+    return std::ranges::fold_left_first(first, last, func);
+  };
+  // ranges::{fold_left,fold_left_first,fold_right,fold_right_last}
   {
     auto bm = []<class Container>(std::string name, auto fold) {
       benchmark::RegisterBenchmark(
@@ -56,9 +63,13 @@ int main(int argc, char** argv) {
           ->Arg(8192)
           ->Arg(1 << 20);
     };
-    bm.operator()<std::vector<unsigned int>>("rng::fold_left(vector<int>)", std::ranges::fold_left);
-    bm.operator()<std::deque<unsigned int>>("rng::fold_left(deque<int>)", std::ranges::fold_left);
-    bm.operator()<std::list<unsigned int>>("rng::fold_left(list<int>)", std::ranges::fold_left);
+    bm.operator()<std::vector<unsigned int>>("rng::fold_left(vector<int>)", std_ranges_fold_left);
+    bm.operator()<std::deque<unsigned int>>("rng::fold_left(deque<int>)", std_ranges_fold_left);
+    bm.operator()<std::list<unsigned int>>("rng::fold_left(list<int>)", std_ranges_fold_left);
+
+    bm.operator()<std::vector<unsigned int>>("rng::fold_left_first(vector<int>)", std_ranges_fold_left_first);
+    bm.operator()<std::deque<unsigned int>>("rng::fold_left_first(deque<int>)", std_ranges_fold_left_first);
+    bm.operator()<std::list<unsigned int>>("rng::fold_left_first(list<int>)", std_ranges_fold_left_first);
 
     // TODO: fold_right not implemented yet
     // bm.operator()<std::vector<unsigned int>>("rng::fold_right(vector<int>)", std::ranges::fold_right);
