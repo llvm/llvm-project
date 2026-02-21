@@ -805,14 +805,14 @@ void SimplifyBooleanExprCheck::replaceWithAssignment(const ASTContext &Context,
             Range, Replacement);
 }
 
-/// Swaps a \c BinaryOperator opcode from `&&` to `||` or vice-versa.
+/// Swaps \p BO from `&&` to `||` or vice-versa.
 static bool flipDemorganOperator(llvm::SmallVectorImpl<FixItHint> &Output,
-                                 const BinaryOperator *BO) {
-  assert(BO->isLogicalOp());
-  if (BO->getOperatorLoc().isMacroID())
+                                 BinaryOperatorKind BO, SourceLocation BOLoc) {
+  assert(BinaryOperator::isLogicalOp(BO));
+  if (BOLoc.isMacroID())
     return true;
-  Output.push_back(FixItHint::CreateReplacement(
-      BO->getOperatorLoc(), BO->getOpcode() == BO_LAnd ? "||" : "&&"));
+  Output.push_back(
+      FixItHint::CreateReplacement(BOLoc, BO == BO_LAnd ? "||" : "&&"));
   return false;
 }
 
@@ -825,22 +825,24 @@ static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
                              const ASTContext &Ctx, const Expr *E,
                              std::optional<BinaryOperatorKind> OuterBO);
 
-/// Inverts \p BinOp, Removing \p Parens if they exist and are safe to remove.
-/// returns \c true if there is any issue building the Fixes, \c false
-/// otherwise.
+/// Inverts \p BO, \p LHS, and \p RHS, Removing \p Parens if they exist and are
+/// safe to remove. returns \c true if there is any issue building the Fixes, \c
+/// false otherwise.
 static bool
 flipDemorganBinaryOperator(SmallVectorImpl<FixItHint> &Fixes,
-                           const ASTContext &Ctx, const BinaryOperator *BinOp,
+                           const ASTContext &Ctx, BinaryOperatorKind BO,
+                           const Expr *LHS, const Expr *RHS,
+                           SourceRange ExprRange, SourceLocation BOLoc,
                            std::optional<BinaryOperatorKind> OuterBO,
                            const ParenExpr *Parens = nullptr) {
-  switch (BinOp->getOpcode()) {
+  switch (BO) {
   case BO_LAnd:
   case BO_LOr: {
     // if we have 'a && b' or 'a || b', use demorgan to flip it to '!a || !b'
     // or '!a && !b'.
-    if (flipDemorganOperator(Fixes, BinOp))
+    if (flipDemorganOperator(Fixes, BO, BOLoc))
       return true;
-    auto NewOp = getDemorganFlippedOperator(BinOp->getOpcode());
+    auto NewOp = getDemorganFlippedOperator(BO);
     if (OuterBO) {
       // The inner parens are technically needed in a fix for
       // `!(!A1 && !(A2 || A3)) -> (A1 || (A2 && A3))`,
@@ -858,16 +860,16 @@ flipDemorganBinaryOperator(SmallVectorImpl<FixItHint> &Fixes,
         }
       }
       if (*OuterBO == BO_LAnd && NewOp == BO_LOr && !Parens) {
-        Fixes.push_back(FixItHint::CreateInsertion(BinOp->getBeginLoc(), "("));
+        Fixes.push_back(FixItHint::CreateInsertion(ExprRange.getBegin(), "("));
         Fixes.push_back(FixItHint::CreateInsertion(
-            Lexer::getLocForEndOfToken(BinOp->getEndLoc(), 0,
+            Lexer::getLocForEndOfToken(ExprRange.getEnd(), 0,
                                        Ctx.getSourceManager(),
                                        Ctx.getLangOpts()),
             ")"));
       }
     }
-    if (flipDemorganSide(Fixes, Ctx, BinOp->getLHS(), NewOp) ||
-        flipDemorganSide(Fixes, Ctx, BinOp->getRHS(), NewOp))
+    if (flipDemorganSide(Fixes, Ctx, LHS, NewOp) ||
+        flipDemorganSide(Fixes, Ctx, RHS, NewOp))
       return true;
     return false;
   };
@@ -878,12 +880,11 @@ flipDemorganBinaryOperator(SmallVectorImpl<FixItHint> &Fixes,
   case BO_EQ:
   case BO_NE:
     // For comparison operators, just negate the comparison.
-    if (BinOp->getOperatorLoc().isMacroID())
+    if (BOLoc.isMacroID())
       return true;
     Fixes.push_back(FixItHint::CreateReplacement(
-        BinOp->getOperatorLoc(),
-        BinaryOperator::getOpcodeStr(
-            BinaryOperator::negateComparisonOp(BinOp->getOpcode()))));
+        BOLoc,
+        BinaryOperator::getOpcodeStr(BinaryOperator::negateComparisonOp(BO))));
     return false;
   default:
     // for any other binary operator, just use logical not and wrap in
@@ -893,11 +894,11 @@ flipDemorganBinaryOperator(SmallVectorImpl<FixItHint> &Fixes,
         return true;
       Fixes.push_back(FixItHint::CreateInsertion(Parens->getBeginLoc(), "!"));
     } else {
-      if (BinOp->getBeginLoc().isMacroID() || BinOp->getEndLoc().isMacroID())
+      if (ExprRange.getBegin().isMacroID() || ExprRange.getEnd().isMacroID())
         return true;
-      Fixes.append({FixItHint::CreateInsertion(BinOp->getBeginLoc(), "!("),
+      Fixes.append({FixItHint::CreateInsertion(ExprRange.getBegin(), "!("),
                     FixItHint::CreateInsertion(
-                        Lexer::getLocForEndOfToken(BinOp->getEndLoc(), 0,
+                        Lexer::getLocForEndOfToken(ExprRange.getEnd(), 0,
                                                    Ctx.getSourceManager(),
                                                    Ctx.getLangOpts()),
                         ")")});
@@ -905,6 +906,28 @@ flipDemorganBinaryOperator(SmallVectorImpl<FixItHint> &Fixes,
     break;
   }
   return false;
+}
+
+static bool
+flipDemorganBinaryOperator(SmallVectorImpl<FixItHint> &Fixes,
+                           const ASTContext &Ctx, const BinaryOperator *BinOp,
+                           std::optional<BinaryOperatorKind> OuterBO,
+                           const ParenExpr *Parens = nullptr) {
+  return flipDemorganBinaryOperator(
+      Fixes, Ctx, BinOp->getOpcode(), BinOp->getLHS(), BinOp->getRHS(),
+      BinOp->getSourceRange(), BinOp->getOperatorLoc(), OuterBO, Parens);
+}
+
+static bool
+flipDemorganOverloadedBinaryOperator(SmallVectorImpl<FixItHint> &Fixes,
+                                     const ASTContext &Ctx,
+                                     const CXXOperatorCallExpr *OpCall,
+                                     std::optional<BinaryOperatorKind> OuterBO,
+                                     const ParenExpr *Parens = nullptr) {
+  auto BO = BinaryOperator::getOverloadedOpcode(OpCall->getOperator());
+  return flipDemorganBinaryOperator(Fixes, Ctx, BO, OpCall->getArg(0),
+                                    OpCall->getArg(1), OpCall->getSourceRange(),
+                                    OpCall->getOperatorLoc(), OuterBO, Parens);
 }
 
 static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
@@ -923,6 +946,17 @@ static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
   if (const auto *Paren = dyn_cast<ParenExpr>(E)) {
     if (const auto *BinOp = dyn_cast<BinaryOperator>(Paren->getSubExpr()))
       return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO, Paren);
+  }
+  if (const auto *OpCall = dyn_cast<CXXOperatorCallExpr>(E);
+      OpCall && OpCall->isInfixBinaryOp()) {
+    return flipDemorganOverloadedBinaryOperator(Fixes, Ctx, OpCall, OuterBO);
+  }
+  if (const auto *Paren = dyn_cast<ParenExpr>(E)) {
+    if (const auto *OpCall = dyn_cast<CXXOperatorCallExpr>(Paren->getSubExpr());
+        OpCall && OpCall->isInfixBinaryOp()) {
+      return flipDemorganOverloadedBinaryOperator(Fixes, Ctx, OpCall, OuterBO,
+                                                  Paren);
+    }
   }
   // Fallback case just insert a logical not operator.
   if (E->getBeginLoc().isMacroID())
@@ -985,7 +1019,7 @@ bool SimplifyBooleanExprCheck::reportDeMorgan(const ASTContext &Context,
   } else {
     Fixes.push_back(FixItHint::CreateRemoval(Outer->getOperatorLoc()));
   }
-  if (flipDemorganOperator(Fixes, Inner))
+  if (flipDemorganOperator(Fixes, Inner->getOpcode(), Inner->getOperatorLoc()))
     return false;
   if (flipDemorganSide(Fixes, Context, Inner->getLHS(), NewOpcode) ||
       flipDemorganSide(Fixes, Context, Inner->getRHS(), NewOpcode))

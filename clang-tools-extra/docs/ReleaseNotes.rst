@@ -266,6 +266,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
   crash from invalid ``Abbreviations`` option.
 
+- Improved :doc:`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check to handle
+  overloaded binary operators when applying De Morgan's law.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
