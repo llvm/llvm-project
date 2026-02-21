@@ -1335,6 +1335,15 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
         }
       }
     }
+
+    // If outgoing arguments are passed via the stack, we cannot tail call
+    for (const ISD::OutputArg &Out : CLI.Outs) {
+      if (Out.Flags.isByVal() && Out.Flags.getByValSize() != 0) {
+        NoTail(
+            "WebAssembly does not support tail calling with stack arguments");
+        break;
+      }
+    }
   }
 
   SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
