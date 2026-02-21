@@ -136,6 +136,13 @@ endforeach()
 
 # TODO: Add support for running tests on iOS and iOS simulator.
 
+if ("x86_64" IN_LIST COMPILER_RT_DEFAULT_TARGET_ARCH)
+  list(APPEND BUILTINS_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit/cpu_model)
+  list(APPEND BUILTINS_TEST_DEPS BuiltinsCPUModelUnitTests)
+endif()
+
 add_lit_testsuite(check-builtins "Running the Builtins tests"
   ${BUILTINS_TESTSUITES}
   DEPENDS ${BUILTINS_TEST_DEPS})
+
+add_subdirectory(Unit/cpu_model)
