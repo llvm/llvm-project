@@ -50,7 +50,6 @@ class EntityPointerLevel {
 public:
   EntityId getEntity() const { return Entity; }
   unsigned getPointerLevel() const { return PointerLevel; }
-  bool hasValidPointerLevel() const { return PointerLevel > 0; }
 
   bool operator==(const EntityPointerLevel &Other) const {
     return Entity == Other.Entity && PointerLevel == Other.PointerLevel;

@@ -237,10 +237,12 @@ buildEntityPointerLevels(std::set<const Expr *> &&UnsafePointers,
     Expected<EntityPointerLevelSet> Translation = Translator.Visit(Ptr);
 
     if (Translation) {
-      // Filter out those invalid EntityPointerLevels associated with `&E`
-      // pointers:
+      // Filter out those temporary invalid EntityPointerLevels associated with
+      // `&E` pointers:
       auto FilteredTranslation = llvm::make_filter_range(
-          *Translation, std::mem_fn(&EntityPointerLevel::hasValidPointerLevel));
+          *Translation, [](const EntityPointerLevel &E) -> bool {
+            return E.getPointerLevel() > 0;
+          });
       Result.insert(FilteredTranslation.begin(), FilteredTranslation.end());
       continue;
     }
