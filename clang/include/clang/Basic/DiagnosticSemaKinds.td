@@ -8784,6 +8784,8 @@ def err_conditional_vector_has_void : Error<
   "GNU vector conditional operand cannot be %select{void|a throw expression}0">;
 def err_conditional_vector_operand_type
     : Error<"enumeration type %0 is not allowed in a vector conditional">;
+def err_conditional_vector_result_pointer_type
+    : Error<"pointer type %0 is not allowed in a vector conditional">;
 def err_conditional_vector_cond_result_mismatch
     : Error<"cannot mix vectors and %select{sizeless|extended}0 vectors in a vector conditional">;
 def err_conditional_vector_mismatched
