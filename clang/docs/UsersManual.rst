@@ -5505,12 +5505,26 @@ follows:
 
 2. Consult the environment.
 
-    TODO: This is not yet implemented.
+    - `/external:env:[VARIABLE]`
 
-    This will consult the environment variables:
+      This command line option specifies a user identified environment variable
+      which is treated as a path delimited (`;`) list of system header paths.
 
-    - `WindowsSdkDir`
-    - `UCRTVersion`
+    - `INCLUDE`
+
+      This environment variable is treated as a path delimited (`;`) list of
+      system header paths.
+
+    - `EXTERNAL_INCLUDE`
+
+      This environment variable is treated as a path delimited (`;`) list of
+      system header paths.
+
+    The following environment variables will be consulted and used to form paths
+    to validate and load content from as appropriate:
+
+      - `WindowsSdkDir`
+      - `UCRTVersion`
 
 3. Fallback to the registry.
 
@@ -5521,6 +5535,8 @@ follows:
 The Visual C++ Toolset has a slightly more elaborate mechanism for detection.
 
 1. Consult the command line.
+
+    Anything the user specifies is always given precedence.
 
     - `/winsysroot:`
 
@@ -5539,21 +5555,30 @@ The Visual C++ Toolset has a slightly more elaborate mechanism for detection.
 
 2. Consult the environment.
 
-    - `/external:[VARIABLE]`
+    - `/external:env:[VARIABLE]`
 
-      This specifies a user identified environment variable which is treated as
-      a path delimiter (`;`) separated list of paths to map into `-imsvc`
-      arguments which are treated as `-isystem`.
+      This command line option specifies a user identified environment variable
+      which is treated as a path delimited (`;`) list of external header search
+      paths. Additionally, any header search path provided by other means that
+      has a prefix that matches one of these paths is treated as an external
+      header search path.
 
-    - `INCLUDE` and `EXTERNAL_INCLUDE`
+    - `INCLUDE`
 
-      The path delimiter (`;`) separated list of paths will be mapped to
-      `-imsvc` arguments which are treated as `-isystem`.
+      This environment variable is treated as a path delimited (`;`) list of
+      header search paths.
+
+    - `EXTERNAL_INCLUDE`
+
+      This environment variable is treated as a path delimited (`;`) list of
+      external header search paths. Additionally, any header search path
+      provided by other means that has a prefix that matches one of these paths
+      is treated as an external header search path.
 
     - `LIB` (indirectly)
 
       The linker `link.exe` or `lld-link.exe` will honour the environment
-      variable `LIB` which is a path delimiter (`;`) set of paths to consult for
+      variable `LIB` which is a path delimited (`;`) set of paths to consult for
       the import libraries to use when linking the final target.
 
     The following environment variables will be consulted and used to form paths

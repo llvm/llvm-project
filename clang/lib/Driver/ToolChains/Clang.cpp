@@ -1059,6 +1059,19 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     } else if (A->getOption().matches(options::OPT_ibuiltininc)) {
       // This is used only by the driver. No need to pass to cc1.
       continue;
+    } else if (A->getOption().matches(options::OPT_iexternal)) {
+      // This option has to retain relative order with other -I options.
+      continue;
+    } else if (A->getOption().matches(options::OPT_isystem_env_EQ)) {
+      A->claim();
+      ToolChain::addSystemIncludesFromEnv(Args, CmdArgs, A->getValue(),
+                                          /*Internal*/ false);
+      continue;
+    } else if (A->getOption().matches(options::OPT_iexternal_env_EQ)) {
+      A->claim();
+      ToolChain::addExternalSystemIncludesFromEnv(Args, CmdArgs, A->getValue(),
+                                                  /*Internal*/ false);
+      continue;
     }
 
     // Not translated, render as usual.
@@ -1088,9 +1101,9 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     }
   }
 
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_D, options::OPT_U, options::OPT_I_Group,
-                   options::OPT_F, options::OPT_embed_dir_EQ});
+  Args.addAllArgs(CmdArgs, {options::OPT_D, options::OPT_U,
+                            options::OPT_I_Group, options::OPT_F,
+                            options::OPT_iexternal, options::OPT_embed_dir_EQ});
 
   // Add -Wp, and -Xpreprocessor if using the preprocessor.
 
@@ -8393,6 +8406,9 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
 
   ProcessVSRuntimeLibrary(getToolChain(), Args, CmdArgs);
 
+  if (!Args.hasArg(options::OPT_fheader_search))
+    CmdArgs.push_back("-fheader-search=microsoft");
+
   if (Arg *ShowIncludes =
           Args.getLastArg(options::OPT__SLASH_showIncludes,
                           options::OPT__SLASH_showIncludes_user)) {
@@ -8746,7 +8762,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   (void)Args.hasArg(options::OPT_force__cpusubtype__ALL);
 
   // Pass along any -I options so we get proper .include search paths.
-  Args.AddAllArgs(CmdArgs, options::OPT_I_Group);
+  Args.addAllArgs(CmdArgs, {options::OPT_I_Group, options::OPT_iexternal});
 
   // Pass along any --embed-dir or similar options so we get proper embed paths.
   Args.AddAllArgs(CmdArgs, options::OPT_embed_dir_EQ);

@@ -349,6 +349,49 @@ Android Support
 Windows Support
 ^^^^^^^^^^^^^^^
 
+- Clang now matches MSVC behavior regarding the handling of duplicate header
+  search paths when run via the ``clang-cl`` driver (by default) or with the
+  ``-fheader-search=microsoft`` option otherwise. Historically, Clang has
+  mimicked GCC behavior in which user search paths are ordered before system
+  search paths, user search paths that duplicate a (later) system search
+  path are ignored, and search paths that duplicate an earlier search path of
+  the same user/system kind are ignored. This ordering is not compatible with
+  the ordering that MSVC uses when paths are duplicated across ``/I`` options
+  and the ``INCLUDE`` environment variable.
+
+  The order that MSVC uses and that Clang now replicates when the
+  ``-fheader-search=microsoft`` option is enabled follows.
+
+  - Paths specified by the ``/I`` and ``/external:I`` options are processed in
+    the order that they appear. Paths specified by ``/I`` that duplicate a path
+    specified by ``/external:I`` are ignored regardless of the order of the
+    options. Paths specified by ``/I`` that duplicate a path from a prior ``/I``
+    option are ignored. Paths specified by ``/external:I`` that duplicate a
+    path from a later ``/external:I`` option are ignored.
+
+  - Paths specified by ``/external:env`` are processed in the order that they
+    appear. Paths that duplicate a path from a ``/I`` or ``/external:I`` option
+    are ignored regardless of the order of the options. Paths that duplicate a
+    path from a prior ``/external:env`` option or an earlier path from the same
+    ``/external:env`` option are ignored.
+
+  - Paths specified by the ``INCLUDE`` environment variable are processed in
+    the order they appear. Paths that duplicate a path from a ``/I``,
+    ``/external:I``, or ``/external:env`` option are ignored. Paths that
+    duplicate an earlier path in the ``INCLUDE`` environment variable are
+    ignored.
+
+  - Paths specified by the ``EXTERNAL_INCLUDE`` environment variable are
+    processed in the order they appear. Paths that duplicate a path from a
+    ``/I``, ``/external:I``, or ``/external:env`` option are ignored. Paths that
+    duplicate a path from the ``INCLUDE`` environment variable are ignored.
+    Paths that duplicate an earlier path in the ``EXTERNAL_INCLUDE``
+    environment variable are ignored.
+
+  The ``-fheader-search=gcc`` option can be used to opt in to GCC duplicate
+  header search path handling (which remains the default behavior for the GCC
+  compatible drivers).
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 

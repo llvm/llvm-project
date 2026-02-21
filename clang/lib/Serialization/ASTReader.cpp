@@ -6637,8 +6637,8 @@ bool ASTReader::ParseHeaderSearchOptions(const RecordData &Record,
                                          ASTReaderListener &Listener) {
   HeaderSearchOptions HSOpts;
   unsigned Idx = 0;
+  HSOpts.Mode = static_cast<HeaderSearchMode>(Record[Idx++]);
   HSOpts.Sysroot = ReadString(Record, Idx);
-
   HSOpts.ResourceDir = ReadString(Record, Idx);
   HSOpts.ModuleCachePath = ReadString(Record, Idx);
   HSOpts.ModuleUserBuildPath = ReadString(Record, Idx);

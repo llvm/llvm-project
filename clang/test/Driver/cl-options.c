@@ -40,7 +40,11 @@
 
 // RUN: %clang_cl /external:Ipath  -### -- %s 2>&1 | FileCheck -check-prefix=EXTERNAL_I %s
 // RUN: %clang_cl /external:I path -### -- %s 2>&1 | FileCheck -check-prefix=EXTERNAL_I %s
-// EXTERNAL_I: "-isystem" "path"
+// EXTERNAL_I: "-iexternal" "path"
+
+// RUN: env EXTPATH="path1%{pathsep}path2" %clang_cl /external:env:EXTPATH -### -- %s 2>&1 | FileCheck -check-prefix=EXTERNAL_ENV %s
+// EXTERNAL_ENV: "-iexternal-system" "path1"
+// EXTERNAL_ENV: "-iexternal-system" "path2"
 
 // RUN: %clang_cl /fp:fast /fp:except -### -- %s 2>&1 | FileCheck -check-prefix=fpexcept %s
 // fpexcept-NOT: -funsafe-math-optimizations
@@ -458,7 +462,6 @@
 // RUN:     /experimental:preprocessor \
 // RUN:     /exportHeader /headerName:foo \
 // RUN:     /external:anglebrackets \
-// RUN:     /external:env:var \
 // RUN:     /external:W0 \
 // RUN:     /external:W1 \
 // RUN:     /external:W2 \

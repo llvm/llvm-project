@@ -1441,8 +1441,11 @@ void ToolChain::addExternCSystemIncludeIfExists(const ArgList &DriverArgs,
 /// Utility function to add a system include directory to CC1 arguments.
 /*static*/ void ToolChain::addSystemInclude(const ArgList &DriverArgs,
                                             ArgStringList &CC1Args,
-                                            const Twine &Path) {
-  CC1Args.push_back("-internal-isystem");
+                                            const Twine &Path, bool Internal) {
+  if (Internal)
+    CC1Args.push_back("-internal-isystem");
+  else
+    CC1Args.push_back("-isystem");
   CC1Args.push_back(DriverArgs.MakeArgString(Path));
 }
 
@@ -1459,11 +1462,67 @@ void ToolChain::addSystemFrameworkIncludes(const ArgList &DriverArgs,
 /// Utility function to add a list of system include directories to CC1.
 void ToolChain::addSystemIncludes(const ArgList &DriverArgs,
                                   ArgStringList &CC1Args,
-                                  ArrayRef<StringRef> Paths) {
+                                  ArrayRef<StringRef> Paths, bool Internal) {
   for (const auto &Path : Paths) {
-    CC1Args.push_back("-internal-isystem");
+    if (Internal)
+      CC1Args.push_back("-internal-isystem");
+    else
+      CC1Args.push_back("-isystem");
     CC1Args.push_back(DriverArgs.MakeArgString(Path));
   }
+}
+
+/// Utility function to add a list of environment path separator delimited
+/// directories specified in an environment variable to the system include
+/// path list for CC1. Returns true if the variable is set and not empty.
+/*static*/ bool ToolChain::addSystemIncludesFromEnv(const ArgList &DriverArgs,
+                                                    ArgStringList &CC1Args,
+                                                    StringRef Var,
+                                                    bool Internal) {
+  if (auto Val = llvm::sys::Process::GetEnv(Var)) {
+    SmallVector<StringRef, 8> Dirs;
+    StringRef(*Val).split(Dirs, llvm::sys::EnvPathSeparator, /*MaxSplit=*/-1,
+                          /*KeepEmpty=*/false);
+    if (!Dirs.empty()) {
+      addSystemIncludes(DriverArgs, CC1Args, Dirs, Internal);
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Utility function to add a list of directories to the end of the external
+/// include path list for CC1.
+/*static*/ void ToolChain::addExternalSystemIncludes(const ArgList &DriverArgs,
+                                                     ArgStringList &CC1Args,
+                                                     ArrayRef<StringRef> Paths,
+                                                     bool Internal) {
+  for (const auto &Path : Paths) {
+    if (Internal)
+      CC1Args.push_back("-internal-iexternal-system");
+    else
+      CC1Args.push_back("-iexternal-system");
+    CC1Args.push_back(DriverArgs.MakeArgString(Path));
+  }
+}
+
+/// Utility function to add a list of environment path separator delimited
+/// directories specified in an environment variable to the external include
+/// path list for CC1. Returns true if the variable is set and not empty.
+/*static*/ bool
+ToolChain::addExternalSystemIncludesFromEnv(const ArgList &DriverArgs,
+                                            ArgStringList &CC1Args,
+                                            StringRef Var, bool Internal) {
+  if (auto Val = llvm::sys::Process::GetEnv(Var)) {
+    SmallVector<StringRef, 8> Dirs;
+    StringRef(*Val).split(Dirs, llvm::sys::EnvPathSeparator, /*MaxSplit=*/-1,
+                          /*KeepEmpty=*/false);
+    if (!Dirs.empty()) {
+      addExternalSystemIncludes(DriverArgs, CC1Args, Dirs, Internal);
+      return true;
+    }
+  }
+  return false;
 }
 
 std::string ToolChain::concat(StringRef Path, const Twine &A, const Twine &B,
