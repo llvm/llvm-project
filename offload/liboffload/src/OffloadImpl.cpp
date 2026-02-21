@@ -1001,6 +1001,13 @@ Error olIsValidBinary_impl(ol_device_handle_t Device, const void *ProgData,
   return Error::success();
 }
 
+Error olGetProgramDeviceImage_impl(ol_program_handle_t Program, const char **ImageData,
+                           size_t *ImageSize) {
+  *ImageData = Program->DeviceImage.getBufferStart();
+  *ImageSize = Program->DeviceImage.getBufferSize();
+  return Error::success();
+}
+
 Error olDestroyProgram_impl(ol_program_handle_t Program) {
   auto &Device = Program->Image->getDevice();
   if (auto Err = Device.unloadBinary(Program->Image))
