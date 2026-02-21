@@ -3620,23 +3620,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return eraseInstFromFunction(*II);
     }
 
-    // assume( (load addr) != null ) -> add 'nonnull' metadata to load
-    // (if assume is valid at the load)
-    Instruction *LHS;
-    if (match(IIOperand, m_SpecificICmp(ICmpInst::ICMP_NE, m_Instruction(LHS),
-                                        m_Zero())) &&
-        LHS->getOpcode() == Instruction::Load &&
-        LHS->getType()->isPointerTy() &&
-        isValidAssumeForContext(II, LHS, &DT)) {
-      MDNode *MD = MDNode::get(II->getContext(), {});
-      LHS->setMetadata(LLVMContext::MD_nonnull, MD);
-      LHS->setMetadata(LLVMContext::MD_noundef, MD);
-      return RemoveConditionFromAssume(II);
-
-      // TODO: apply nonnull return attributes to calls and invokes
-      // TODO: apply range metadata for range check patterns?
-    }
-
     for (unsigned Idx = 0; Idx < II->getNumOperandBundles(); Idx++) {
       OperandBundleUse OBU = II->getOperandBundleAt(Idx);
 
@@ -3691,11 +3674,24 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (OBU.getTagName() == "nonnull" && OBU.Inputs.size() == 1) {
         RetainedKnowledge RK = getKnowledgeFromOperandInAssume(
             *cast<AssumeInst>(II), II->arg_size() + Idx);
-        if (!RK || RK.AttrKind != Attribute::NonNull ||
-            !isKnownNonZero(RK.WasOn,
-                            getSimplifyQuery().getWithInstruction(II)))
+        if (!RK || RK.AttrKind != Attribute::NonNull)
           continue;
-        return CallBase::removeOperandBundle(II, OBU.getTagID());
+
+        // Drop assume if we can prove nonnull without it
+        if (isKnownNonZero(RK.WasOn, getSimplifyQuery().getWithInstruction(II)))
+          return CallBase::removeOperandBundle(II, OBU.getTagID());
+
+        // Fold the assume into metadata if it's valid at the load
+        if (auto *LI = dyn_cast<LoadInst>(RK.WasOn);
+            LI &&
+            isValidAssumeForContext(II, LI, &DT, /*AllowEphemerals=*/true)) {
+          MDNode *MD = MDNode::get(II->getContext(), {});
+          LI->setMetadata(LLVMContext::MD_nonnull, MD);
+          LI->setMetadata(LLVMContext::MD_noundef, MD);
+          return CallBase::removeOperandBundle(II, OBU.getTagID());
+        }
+
+        // TODO: apply nonnull return attributes to calls and invokes
       }
     }
 
@@ -3704,14 +3700,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // call void @llvm.assume(i1 %A)
     // into
     // call void @llvm.assume(i1 true) [ "nonnull"(i32* %PTR) ]
-    if (EnableKnowledgeRetention &&
-        match(IIOperand,
+    if (match(IIOperand,
               m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(A), m_Zero())) &&
         A->getType()->isPointerTy()) {
       if (auto *Replacement = buildAssumeFromKnowledge(
               {RetainedKnowledge{Attribute::NonNull, 0, A}}, Next, &AC, &DT)) {
 
-        Replacement->insertBefore(Next->getIterator());
+        InsertNewInstBefore(Replacement, Next->getIterator());
         AC.registerAssumption(Replacement);
         return RemoveConditionFromAssume(II);
       }
