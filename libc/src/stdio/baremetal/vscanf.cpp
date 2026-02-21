@@ -8,7 +8,7 @@
 
 #include "src/stdio/vscanf.h"
 
-#include "hdr/stdio_macros.h"
+#include "src/__support/File/baremetal/file.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/baremetal/vfscanf_internal.h"

@@ -174,6 +174,7 @@ add_entrypoint_object(
     .file_internal
     libc.hdr.types.FILE
     libc.src.errno.errno
+    libc.src.__support.File.baremetal.file
 )
 
 add_entrypoint_object(
@@ -194,8 +195,8 @@ add_entrypoint_object(
     ../printf.h
   DEPENDS
     .vfprintf_internal
-    libc.hdr.stdio_macros
     libc.src.__support.arg_list
+    libc.src.__support.File.baremetal.file
 )
 
 add_entrypoint_object(
@@ -207,6 +208,7 @@ add_entrypoint_object(
   DEPENDS
     .file_internal
     libc.hdr.stdio_macros
+    libc.src.__support.File.baremetal.file
     libc.src.errno.errno
 )
 
@@ -220,6 +222,7 @@ add_entrypoint_object(
     .file_internal
     libc.hdr.stdio_macros
     libc.hdr.types.FILE
+    libc.src.__support.File.baremetal.file
     libc.src.errno.errno
 )
 
@@ -232,6 +235,7 @@ add_entrypoint_object(
   DEPENDS
     .file_internal
     libc.hdr.stdio_macros
+    libc.src.__support.File.baremetal.file
     libc.src.errno.errno
 )
 
@@ -246,6 +250,7 @@ add_entrypoint_object(
     libc.hdr.types.FILE
     libc.hdr.stdio_macros
     libc.src.__support.arg_list
+    libc.src.__support.File.baremetal.file
 )
 
 add_entrypoint_object(
@@ -284,6 +289,7 @@ add_entrypoint_object(
     .vfprintf_internal
     libc.hdr.stdio_macros
     libc.src.__support.arg_list
+    libc.src.__support.File.baremetal.file
 )
 
 add_entrypoint_object(
@@ -296,4 +302,5 @@ add_entrypoint_object(
     .vfscanf_internal
     libc.hdr.stdio_macros
     libc.src.__support.arg_list
+    libc.src.__support.File.baremetal.file
 )
