@@ -990,7 +990,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
 
   NamespaceEmitter LlvmNS(OS, "llvm");
 
-  const std::string &TargetName = Target.getName().str();
+  StringRef TargetName = Target.getName();
 
   // Emit the shared table of differential lists.
   OS << "extern const int16_t " << TargetName << "RegDiffLists[] = {\n";
@@ -1329,14 +1329,24 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   VTSeqs.emit(OS, printSimpleValueType);
   OS << "};\n";
 
+  StringRef TargetName = Target.getName();
   // Emit SubRegIndex names, skipping 0.
-  OS << "\nstatic const char *SubRegIndexNameTable[] = { \"";
+  SequenceToOffsetTable<std::string> SubRegIndexStrings;
+  for (const auto &Idx : SubRegIndices)
+    SubRegIndexStrings.add(Idx.getName());
+  SubRegIndexStrings.layout();
 
-  for (const auto &Idx : SubRegIndices) {
-    OS << Idx.getName();
-    OS << "\", \"";
-  }
-  OS << "\" };\n\n";
+  SubRegIndexStrings.emitStringLiteralDef(OS, Twine("static constexpr char ") +
+                                                  TargetName +
+                                                  "SubRegIndexStrings[]");
+
+  OS << "\nstatic constexpr uint32_t " << TargetName
+     << "SubRegIndexNameOffsets[] = {\n";
+  for (const auto &Idx : SubRegIndices)
+    OS << "  " << SubRegIndexStrings.get(Idx.getName()) << ", \n";
+  if (SubRegIndices.empty())
+    OS << "  /*dummy */ 0\n";
+  OS << "};\n\n";
 
   // Emit the table of sub-register index sizes.
   OS << "static const TargetRegisterInfo::SubRegCoveredBits "
@@ -1524,7 +1534,6 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   }
 
   // Emit extra information about registers.
-  const std::string &TargetName = Target.getName().str();
   const auto &Regs = RegBank.getRegisters();
   unsigned NumRegCosts = 1;
   for (const auto &Reg : Regs)
@@ -1722,15 +1731,16 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
 
   EmitRegMappingTables(OS, Regs, true);
 
-  OS << ClassName << "::\n"
-     << ClassName
-     << "(unsigned RA, unsigned DwarfFlavour, unsigned EHFlavour,\n"
-        "      unsigned PC, unsigned HwMode)\n"
-     << "  : TargetRegisterInfo(&" << TargetName << "RegInfoDesc"
-     << ", RegisterClasses, RegisterClasses+" << RegisterClasses.size() << ",\n"
-     << "             SubRegIndexNameTable, SubRegIdxRangeTable, "
-        "SubRegIndexLaneMaskTable,\n"
-     << "             ";
+  OS << formatv(R"(
+{0}::
+{0}(unsigned RA, unsigned DwarfFlavour, unsigned EHFlavour,
+    unsigned PC, unsigned HwMode)
+  : TargetRegisterInfo(&{1}RegInfoDesc, RegisterClasses, RegisterClasses+{2},
+      {1}SubRegIndexStrings, {1}SubRegIndexNameOffsets,
+      SubRegIdxRangeTable, SubRegIndexLaneMaskTable,
+
+  )",
+                ClassName, TargetName, RegisterClasses.size());
   printMask(OS, RegBank.CoveringLanes);
   OS << ", RegClassInfos, VTLists, HwMode) {\n"
      << "  InitMCRegisterInfo(" << TargetName << "RegDesc, " << Regs.size() + 1
