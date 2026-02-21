@@ -2718,7 +2718,15 @@ static unsigned PrintActions1(const Compilation &C, Action *A,
   int SibKind = HeadSibAction;
   os << Action::getClassName(A->getKind()) << ", ";
   if (InputAction *IA = dyn_cast<InputAction>(A)) {
-    os << "\"" << IA->getInputArg().getValue() << "\"";
+    llvm::StringRef InputValue{};
+    const auto &Opt = IA->getInputArg().getOption();
+    if (Opt.matches(options::OPT_Z_reserved_lib_stdcxx))
+      InputValue = "stdc++";
+    else if(Opt.matches(options::OPT_Z_reserved_lib_cckext))
+      InputValue = "cc_kext";
+    else
+      InputValue = IA->getInputArg().getValue();
+    os << "\"" << InputValue << "\"";
   } else if (BindArchAction *BIA = dyn_cast<BindArchAction>(A)) {
     os << '"' << BIA->getArchName() << '"' << ", {"
        << PrintActions1(C, *BIA->input_begin(), Ids, SibIndent, SibKind) << "}";
