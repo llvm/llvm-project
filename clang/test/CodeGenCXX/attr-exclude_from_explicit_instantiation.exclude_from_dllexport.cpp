@@ -16,6 +16,10 @@
 
 #define EXCLUDE_ATTR __attribute__((exclude_from_explicit_instantiation))
 
+struct NoAttrTag {};
+struct WithExportTag {};
+struct ImplicitTag {};
+
 template <class T>
 struct BasicCase {
   // This will be instantiated explicitly as an exported function because it
@@ -67,116 +71,115 @@ template <class T> void Polymorphic<T>::to_be_exported() {}
 template <class T> void Polymorphic<T>::to_be_instantiated() {}
 template <class T> void Polymorphic<T>::to_be_exported_explicitly() {}
 
-// MSC: $"?to_be_exported@?$BasicCase@H@@QEAAXXZ" = comdat any
-// MSC: $"?to_be_exported@?$Polymorphic@H@@UEAAXXZ" = comdat any
-// MSC: $"?to_be_exported@?$Polymorphic@I@@UEAAXXZ" = comdat any
-// MSC: $"?to_be_exported_explicitly@?$BasicCase@H@@QEAAXXZ" = comdat any
-// MSC: $"?not_to_be_exported@?$BasicCase@H@@QEAAXXZ" = comdat any
-// MSC: $"?to_be_exported_iff_no_explicit_instantiation@?$ExportWholeTemplate@H@@QEAAXXZ" = comdat any
-// MSC: $"?to_be_exported_iff_no_explicit_instantiation@?$ExportWholeTemplate@I@@QEAAXXZ" = comdat any
-// MSC: $"?to_be_instantiated@?$Polymorphic@H@@UEAAXXZ" = comdat any
-// MSC: $"?to_be_exported_explicitly@?$Polymorphic@H@@UEAAXXZ" = comdat any
-// MSC: $"?to_be_instantiated@?$Polymorphic@I@@UEAAXXZ" = comdat any
-// MSC: $"?to_be_exported_explicitly@?$Polymorphic@I@@UEAAXXZ" = comdat any
-// GNU: $_ZN9BasicCaseIiE14to_be_exportedEv = comdat any
-// GNU: $_ZN11PolymorphicIiE14to_be_exportedEv = comdat any
-// GNU: $_ZN11PolymorphicIjE14to_be_exportedEv = comdat any
-// GNU: $_ZN9BasicCaseIiE25to_be_exported_explicitlyEv = comdat any
-// GNU: $_ZN9BasicCaseIiE18not_to_be_exportedEv = comdat any
-// GNU: $_ZN19ExportWholeTemplateIiE44to_be_exported_iff_no_explicit_instantiationEv = comdat any
-// GNU: $_ZN19ExportWholeTemplateIjE44to_be_exported_iff_no_explicit_instantiationEv = comdat any
-// GNU: $_ZN11PolymorphicIiE18to_be_instantiatedEv = comdat any
-// GNU: $_ZN11PolymorphicIiE25to_be_exported_explicitlyEv = comdat any
-// GNU: $_ZN11PolymorphicIjE18to_be_instantiatedEv = comdat any
-// GNU: $_ZN11PolymorphicIjE25to_be_exported_explicitlyEv = comdat any
+// MSC: $"?to_be_exported@?$BasicCase@UWithExportTag@@@@QEAAXXZ" = comdat any
+// MSC: $"?to_be_exported@?$Polymorphic@UWithExportTag@@@@UEAAXXZ" = comdat any
+// MSC: $"?to_be_exported@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ" = comdat any
+// MSC: $"?to_be_exported_explicitly@?$BasicCase@UWithExportTag@@@@QEAAXXZ" = comdat any
+// MSC: $"?not_to_be_exported@?$BasicCase@UWithExportTag@@@@QEAAXXZ" = comdat any
+// MSC: $"?to_be_exported_iff_no_explicit_instantiation@?$ExportWholeTemplate@UNoAttrTag@@@@QEAAXXZ" = comdat any
+// MSC: $"?to_be_exported_iff_no_explicit_instantiation@?$ExportWholeTemplate@UImplicitTag@@@@QEAAXXZ" = comdat any
+// MSC: $"?to_be_instantiated@?$Polymorphic@UWithExportTag@@@@UEAAXXZ" = comdat any
+// MSC: $"?to_be_exported_explicitly@?$Polymorphic@UWithExportTag@@@@UEAAXXZ" = comdat any
+// MSC: $"?to_be_instantiated@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ" = comdat any
+// MSC: $"?to_be_exported_explicitly@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ" = comdat any
+// GNU: $_ZN9BasicCaseI13WithExportTagE14to_be_exportedEv = comdat any
+// GNU: $_ZN11PolymorphicI13WithExportTagE14to_be_exportedEv = comdat any
+// GNU: $_ZN11PolymorphicI9NoAttrTagE14to_be_exportedEv = comdat any
+// GNU: $_ZN9BasicCaseI13WithExportTagE25to_be_exported_explicitlyEv = comdat any
+// GNU: $_ZN9BasicCaseI13WithExportTagE18not_to_be_exportedEv = comdat any
+// GNU: $_ZN19ExportWholeTemplateI9NoAttrTagE44to_be_exported_iff_no_explicit_instantiationEv = comdat any
+// GNU: $_ZN19ExportWholeTemplateI11ImplicitTagE44to_be_exported_iff_no_explicit_instantiationEv = comdat any
+// GNU: $_ZN11PolymorphicI13WithExportTagE18to_be_instantiatedEv = comdat any
+// GNU: $_ZN11PolymorphicI13WithExportTagE25to_be_exported_explicitlyEv = comdat any
+// GNU: $_ZN11PolymorphicI9NoAttrTagE18to_be_instantiatedEv = comdat any
+// GNU: $_ZN11PolymorphicI9NoAttrTagE25to_be_exported_explicitlyEv = comdat any
 
-// MSC: @0 = private unnamed_addr constant {{.*}}, comdat($"??_7?$Polymorphic@H@@6B@")
-// MSC: @1 = private unnamed_addr constant {{.*}}, comdat($"??_7?$Polymorphic@I@@6B@")
-// MSC: @"??_7?$Polymorphic@H@@6B@" = dllexport unnamed_addr
-// MSC: @"??_7?$Polymorphic@I@@6B@" = unnamed_addr
-// GNU: @_ZTV11PolymorphicIiE = weak_odr dso_local dllexport unnamed_addr constant {{.*}}, comdat
-// GNU: @_ZTV11PolymorphicIjE = weak_odr dso_local unnamed_addr constant {{.*}}, comdat
+// MSC: @0 = private unnamed_addr constant {{.*}}, comdat($"??_7?$Polymorphic@UWithExportTag@@@@6B@")
+// MSC: @1 = private unnamed_addr constant {{.*}}, comdat($"??_7?$Polymorphic@UNoAttrTag@@@@6B@")
+// MSC: @"??_7?$Polymorphic@UWithExportTag@@@@6B@" = dllexport unnamed_addr
+// MSC: @"??_7?$Polymorphic@UNoAttrTag@@@@6B@" = unnamed_addr
+// GNU: @_ZTV11PolymorphicI13WithExportTagE = weak_odr dso_local dllexport unnamed_addr constant {{.*}}, comdat
+// GNU: @_ZTV11PolymorphicI9NoAttrTagE = weak_odr dso_local unnamed_addr constant {{.*}}, comdat
 
-// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$BasicCase@H@@QEAAAEAU0@AEBU0@@Z"
-// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$BasicCase@H@@QEAAAEAU0@$$QEAU0@@Z"
-// MSC: define weak_odr dso_local dllexport{{.*}} void @"?to_be_exported@?$BasicCase@H@@QEAAXXZ"
-// GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN9BasicCaseIiEaSERKS0_
-// GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN9BasicCaseIiEaSEOS0_
-// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN9BasicCaseIiE14to_be_exportedEv
-template struct __declspec(dllexport) BasicCase<int>;
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$BasicCase@UWithExportTag@@@@QEAAAEAU0@AEBU0@@Z"
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$BasicCase@UWithExportTag@@@@QEAAAEAU0@$$QEAU0@@Z"
+// MSC: define weak_odr dso_local dllexport{{.*}} void @"?to_be_exported@?$BasicCase@UWithExportTag@@@@QEAAXXZ"
+// GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN9BasicCaseI13WithExportTagEaSERKS1_
+// GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN9BasicCaseI13WithExportTagEaSEOS1_
+// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN9BasicCaseI13WithExportTagE14to_be_exportedEv
+template struct __declspec(dllexport) BasicCase<WithExportTag>;
 
-// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$ExportWholeTemplate@H@@QEAAAEAU0@AEBU0@@Z"
-// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$ExportWholeTemplate@H@@QEAAAEAU0@$$QEAU0@@Z"
-// GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN19ExportWholeTemplateIiEaSERKS0_
-// GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN19ExportWholeTemplateIiEaSEOS0_
-template struct ExportWholeTemplate<int>; // No dllexport here.
-// Don't provide explicit instantiation for ExportWholeTemplate<unsigned>.
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$ExportWholeTemplate@UNoAttrTag@@@@QEAAAEAU0@AEBU0@@Z"
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$ExportWholeTemplate@UNoAttrTag@@@@QEAAAEAU0@$$QEAU0@@Z"
+// GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN19ExportWholeTemplateI9NoAttrTagEaSERKS1_
+// GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN19ExportWholeTemplateI9NoAttrTagEaSEOS1_
+template struct ExportWholeTemplate<NoAttrTag>;
 
-// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$Polymorphic@H@@QEAAAEAU0@AEBU0@@Z"
-// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$Polymorphic@H@@QEAAAEAU0@$$QEAU0@@Z"
-// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??0?$Polymorphic@H@@QEAA@XZ"
-// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??0?$Polymorphic@H@@QEAA@AEBU0@@Z"
-// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??0?$Polymorphic@H@@QEAA@$$QEAU0@@Z"
-// MSC: define weak_odr dso_local dllexport{{.*}} void @"?to_be_exported@?$Polymorphic@H@@UEAAXXZ"
-// GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN11PolymorphicIiEaSERKS0_
-// GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN11PolymorphicIiEaSEOS0_
-// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN11PolymorphicIiEC2Ev
-// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN11PolymorphicIiEC1Ev
-// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN11PolymorphicIiEC2ERKS0_
-// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN11PolymorphicIiEC1ERKS0_
-// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN11PolymorphicIiEC2EOS0_
-// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN11PolymorphicIiEC1EOS0_
-// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN11PolymorphicIiE14to_be_exportedEv
-template struct __declspec(dllexport) Polymorphic<int>;
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$Polymorphic@UWithExportTag@@@@QEAAAEAU0@AEBU0@@Z"
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$Polymorphic@UWithExportTag@@@@QEAAAEAU0@$$QEAU0@@Z"
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??0?$Polymorphic@UWithExportTag@@@@QEAA@XZ"
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??0?$Polymorphic@UWithExportTag@@@@QEAA@AEBU0@@Z"
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??0?$Polymorphic@UWithExportTag@@@@QEAA@$$QEAU0@@Z"
+// MSC: define weak_odr dso_local dllexport{{.*}} void @"?to_be_exported@?$Polymorphic@UWithExportTag@@@@UEAAXXZ"
+// GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN11PolymorphicI13WithExportTagEaSERKS1_
+// GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN11PolymorphicI13WithExportTagEaSEOS1_
+// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN11PolymorphicI13WithExportTagEC2Ev
+// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN11PolymorphicI13WithExportTagEC1Ev
+// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN11PolymorphicI13WithExportTagEC2ERKS1_
+// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN11PolymorphicI13WithExportTagEC1ERKS1_
+// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN11PolymorphicI13WithExportTagEC2EOS1_
+// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN11PolymorphicI13WithExportTagEC1EOS1_
+// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN11PolymorphicI13WithExportTagE14to_be_exportedEv
+template struct __declspec(dllexport) Polymorphic<WithExportTag>;
 
-// MSC: define weak_odr dso_local{{.*}} void @"?to_be_exported@?$Polymorphic@I@@UEAAXXZ"
-// GNU: define weak_odr dso_local{{.*}} void @_ZN11PolymorphicIjE14to_be_exportedEv
-template struct Polymorphic<unsigned int>;
+// MSC: define weak_odr dso_local{{.*}} void @"?to_be_exported@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ"
+// GNU: define weak_odr dso_local{{.*}} void @_ZN11PolymorphicI9NoAttrTagE14to_be_exportedEv
+template struct Polymorphic<NoAttrTag>;
 
-// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$ExportWholeTemplate@I@@QEAAAEAU0@AEBU0@@Z"
-// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$ExportWholeTemplate@I@@QEAAAEAU0@$$QEAU0@@Z"
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$ExportWholeTemplate@UImplicitTag@@@@QEAAAEAU0@AEBU0@@Z"
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$ExportWholeTemplate@UImplicitTag@@@@QEAAAEAU0@$$QEAU0@@Z"
 
 void use() {
-  BasicCase<int> c;
+  BasicCase<WithExportTag> c;
 
-  // MSC: call void @"?to_be_exported_explicitly@?$BasicCase@H@@QEAAXXZ"
-  // GNU: call void @_ZN9BasicCaseIiE25to_be_exported_explicitlyEv
+  // MSC: call void @"?to_be_exported_explicitly@?$BasicCase@UWithExportTag@@@@QEAAXXZ"
+  // GNU: call void @_ZN9BasicCaseI13WithExportTagE25to_be_exported_explicitlyEv
   c.to_be_exported_explicitly(); // implicitly instantiated here
 
-  // MSC: call void @"?not_to_be_exported@?$BasicCase@H@@QEAAXXZ"
-  // GNU: call void @_ZN9BasicCaseIiE18not_to_be_exportedEv
+  // MSC: call void @"?not_to_be_exported@?$BasicCase@UWithExportTag@@@@QEAAXXZ"
+  // GNU: call void @_ZN9BasicCaseI13WithExportTagE18not_to_be_exportedEv
   c.not_to_be_exported(); // implicitly instantiated here
 
-  ExportWholeTemplate<int> di;
+  ExportWholeTemplate<NoAttrTag> di;
 
-  // MSC: call void @"?to_be_exported_iff_no_explicit_instantiation@?$ExportWholeTemplate@H@@QEAAXXZ"
-  // GNU: call void @_ZN19ExportWholeTemplateIiE44to_be_exported_iff_no_explicit_instantiationEv
+  // MSC: call void @"?to_be_exported_iff_no_explicit_instantiation@?$ExportWholeTemplate@UNoAttrTag@@@@QEAAXXZ"
+  // GNU: call void @_ZN19ExportWholeTemplateI9NoAttrTagE44to_be_exported_iff_no_explicit_instantiationEv
   di.to_be_exported_iff_no_explicit_instantiation(); // implicitly instantiated here
 
-  ExportWholeTemplate<unsigned> dj;
+  ExportWholeTemplate<ImplicitTag> dj;
 
-  // MSC: call void @"?to_be_exported_iff_no_explicit_instantiation@?$ExportWholeTemplate@I@@QEAAXXZ"
-  // GNU: call void @_ZN19ExportWholeTemplateIjE44to_be_exported_iff_no_explicit_instantiationEv
+  // MSC: call void @"?to_be_exported_iff_no_explicit_instantiation@?$ExportWholeTemplate@UImplicitTag@@@@QEAAXXZ"
+  // GNU: call void @_ZN19ExportWholeTemplateI11ImplicitTagE44to_be_exported_iff_no_explicit_instantiationEv
   dj.to_be_exported_iff_no_explicit_instantiation(); // implicitly instantiated here
 }
 
-// MSC: define weak_odr dso_local dllexport{{.*}} void @"?to_be_exported_explicitly@?$BasicCase@H@@QEAAXXZ"
-// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN9BasicCaseIiE25to_be_exported_explicitlyEv
+// MSC: define weak_odr dso_local dllexport{{.*}} void @"?to_be_exported_explicitly@?$BasicCase@UWithExportTag@@@@QEAAXXZ"
+// GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN9BasicCaseI13WithExportTagE25to_be_exported_explicitlyEv
 
-// MSC: define linkonce_odr dso_local void @"?not_to_be_exported@?$BasicCase@H@@QEAAXXZ"
-// GNU: define linkonce_odr dso_local void @_ZN9BasicCaseIiE18not_to_be_exportedEv
+// MSC: define linkonce_odr dso_local void @"?not_to_be_exported@?$BasicCase@UWithExportTag@@@@QEAAXXZ"
+// GNU: define linkonce_odr dso_local void @_ZN9BasicCaseI13WithExportTagE18not_to_be_exportedEv
 
-// MSC: define linkonce_odr dso_local void @"?to_be_exported_iff_no_explicit_instantiation@?$ExportWholeTemplate@H@@QEAAXXZ"
-// MSC: define weak_odr dso_local dllexport void @"?to_be_exported_iff_no_explicit_instantiation@?$ExportWholeTemplate@I@@QEAAXXZ"
-// GNU: define linkonce_odr dso_local void @_ZN19ExportWholeTemplateIiE44to_be_exported_iff_no_explicit_instantiationEv
-// GNU: define weak_odr dso_local dllexport void @_ZN19ExportWholeTemplateIjE44to_be_exported_iff_no_explicit_instantiationEv
+// MSC: define linkonce_odr dso_local void @"?to_be_exported_iff_no_explicit_instantiation@?$ExportWholeTemplate@UNoAttrTag@@@@QEAAXXZ"
+// MSC: define weak_odr dso_local dllexport void @"?to_be_exported_iff_no_explicit_instantiation@?$ExportWholeTemplate@UImplicitTag@@@@QEAAXXZ"
+// GNU: define linkonce_odr dso_local void @_ZN19ExportWholeTemplateI9NoAttrTagE44to_be_exported_iff_no_explicit_instantiationEv
+// GNU: define weak_odr dso_local dllexport void @_ZN19ExportWholeTemplateI11ImplicitTagE44to_be_exported_iff_no_explicit_instantiationEv
 
-// MSC: define linkonce_odr dso_local void @"?to_be_instantiated@?$Polymorphic@H@@UEAAXXZ"
-// MSC: define weak_odr dso_local dllexport void @"?to_be_exported_explicitly@?$Polymorphic@H@@UEAAXXZ"
-// GNU: define linkonce_odr dso_local void @_ZN11PolymorphicIiE18to_be_instantiatedEv
-// GNU: define weak_odr dso_local dllexport void @_ZN11PolymorphicIiE25to_be_exported_explicitlyEv
+// MSC: define linkonce_odr dso_local void @"?to_be_instantiated@?$Polymorphic@UWithExportTag@@@@UEAAXXZ"
+// MSC: define weak_odr dso_local dllexport void @"?to_be_exported_explicitly@?$Polymorphic@UWithExportTag@@@@UEAAXXZ"
+// GNU: define linkonce_odr dso_local void @_ZN11PolymorphicI13WithExportTagE18to_be_instantiatedEv
+// GNU: define weak_odr dso_local dllexport void @_ZN11PolymorphicI13WithExportTagE25to_be_exported_explicitlyEv
 
-// MSC: define linkonce_odr dso_local void @"?to_be_instantiated@?$Polymorphic@I@@UEAAXXZ"
-// MSC: define weak_odr dso_local dllexport void @"?to_be_exported_explicitly@?$Polymorphic@I@@UEAAXXZ"
-// GNU: define linkonce_odr dso_local void @_ZN11PolymorphicIjE18to_be_instantiatedEv
-// GNU: define weak_odr dso_local dllexport void @_ZN11PolymorphicIjE25to_be_exported_explicitlyEv
+// MSC: define linkonce_odr dso_local void @"?to_be_instantiated@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ"
+// MSC: define weak_odr dso_local dllexport void @"?to_be_exported_explicitly@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ"
+// GNU: define linkonce_odr dso_local void @_ZN11PolymorphicI9NoAttrTagE18to_be_instantiatedEv
+// GNU: define weak_odr dso_local dllexport void @_ZN11PolymorphicI9NoAttrTagE25to_be_exported_explicitlyEv
