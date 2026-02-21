@@ -210,9 +210,7 @@ size_t StringRef::rfind_insensitive(char C, size_t From) const {
 ///
 /// \return - The index of the last occurrence of \arg Str, or npos if not
 /// found.
-size_t StringRef::rfind(StringRef Str) const {
-  return std::string_view(*this).rfind(Str);
-}
+size_t StringRef::rfind(StringRef Str) const { return View.rfind(Str); }
 
 size_t StringRef::rfind_insensitive(StringRef Str) const {
   size_t N = Str.size();
@@ -245,7 +243,7 @@ StringRef::size_type StringRef::find_first_of(StringRef Chars,
 /// find_first_not_of - Find the first character in the string that is not
 /// \arg C or npos if not found.
 StringRef::size_type StringRef::find_first_not_of(char C, size_t From) const {
-  return std::string_view(*this).find_first_not_of(C, From);
+  return View.find_first_not_of(C, From);
 }
 
 /// find_first_not_of - Find the first character in the string that is not
