@@ -415,6 +415,7 @@ Clang-Tidy Checks
    :doc:`readability-redundant-member-init <readability/redundant-member-init>`, "Yes"
    :doc:`readability-redundant-parentheses <readability/redundant-parentheses>`, "Yes"
    :doc:`readability-redundant-preprocessor <readability/redundant-preprocessor>`,
+   :doc:`readability-redundant-qualified-alias <readability/redundant-qualified-alias>`, "Yes"
    :doc:`readability-redundant-smartptr-get <readability/redundant-smartptr-get>`, "Yes"
    :doc:`readability-redundant-string-cstr <readability/redundant-string-cstr>`, "Yes"
    :doc:`readability-redundant-string-init <readability/redundant-string-init>`, "Yes"
