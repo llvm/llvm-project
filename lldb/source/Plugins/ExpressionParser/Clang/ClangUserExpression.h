@@ -215,6 +215,9 @@ private:
   void
   FixupCVRParseErrorDiagnostics(DiagnosticManager &diagnostic_manager) const;
 
+  void
+  FixupTemplateLookupDiagnostics(DiagnosticManager &diagnostic_manager) const;
+
   /// Defines how the current expression should be wrapped.
   ClangExpressionSourceCode::WrapKind GetWrapKind() const;
   bool SetupPersistentState(DiagnosticManager &diagnostic_manager,

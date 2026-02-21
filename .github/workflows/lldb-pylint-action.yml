@@ -1,0 +1,60 @@
+name: "LLDB Python Lint"
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - 'lldb/test/API/**.py'
+      - '.github/workflows/lldb-pylint-action.yml'
+
+jobs:
+  code_linter:
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          fetch-depth: 2
+
+      - name: Setup python
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: '3.14'
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --require-hashes -r ./llvm/utils/git/requirements_pylint.txt
+      
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@e0021407031f5be11a464abee9a0776171c79891 # v47.0.1
+        with:
+          separator: " "
+          skip_initial_fetch: true
+          base_sha: 'HEAD~1'
+          sha: 'HEAD'
+          files: |
+            **/*.py
+      
+      - name: List files
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+      - name: Run Python test-name linter
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        # Only run pylint if we have any changed files at this point.
+        # Otherwise pylint errors out.
+        if: ${{ env.CHANGED_FILES != '' }}
+        run: |
+          pylint --disable=all --enable=E0102 $CHANGED_FILES

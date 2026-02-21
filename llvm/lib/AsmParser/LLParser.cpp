@@ -755,7 +755,8 @@ bool LLParser::parseDeclare() {
 ///   ::= 'define' FunctionHeader (!dbg !56)* '{' ...
 bool LLParser::parseDefine() {
   assert(Lex.getKind() == lltok::kw_define);
-  FileLoc FunctionStart(Lex.getTokLineColumnPos());
+
+  FileLoc FunctionStart = getTokLineColumnPos();
   Lex.Lex();
 
   Function *F;
@@ -767,7 +768,7 @@ bool LLParser::parseDefine() {
       parseFunctionBody(*F, FunctionNumber, UnnamedArgNums);
   if (ParserContext)
     ParserContext->addFunctionLocation(
-        F, FileLocRange(FunctionStart, Lex.getPrevTokEndLineColumnPos()));
+        F, FileLocRange(FunctionStart, getPrevTokEndLineColumnPos()));
 
   return RetValue;
 }
@@ -2470,6 +2471,35 @@ bool LLParser::parseOptionalAlignment(MaybeAlign &Alignment, bool AllowParens) {
   return false;
 }
 
+/// parseOptionalPrefAlignment
+///   ::= /* empty */
+///   ::= 'prefalign' '(' 4 ')'
+bool LLParser::parseOptionalPrefAlignment(MaybeAlign &Alignment) {
+  Alignment = std::nullopt;
+  if (!EatIfPresent(lltok::kw_prefalign))
+    return false;
+  LocTy AlignLoc = Lex.getLoc();
+  uint64_t Value = 0;
+
+  LocTy ParenLoc = Lex.getLoc();
+  if (!EatIfPresent(lltok::lparen))
+    return error(ParenLoc, "expected '('");
+
+  if (parseUInt64(Value))
+    return true;
+
+  ParenLoc = Lex.getLoc();
+  if (!EatIfPresent(lltok::rparen))
+    return error(ParenLoc, "expected ')'");
+
+  if (!isPowerOf2_64(Value))
+    return error(AlignLoc, "alignment is not a power of two");
+  if (Value > Value::MaximumAlignment)
+    return error(AlignLoc, "huge alignments are not supported yet");
+  Alignment = Align(Value);
+  return false;
+}
+
 /// parseOptionalCodeModel
 ///   ::= /* empty */
 ///   ::= 'code_model' "large"
@@ -3536,18 +3566,18 @@ bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
       bool Unnamed = false;
       if (Lex.getKind() == lltok::LocalVar) {
         Name = Lex.getStrVal();
-        IdentStart = Lex.getTokLineColumnPos();
+        IdentStart = getTokLineColumnPos();
         Lex.Lex();
-        IdentEnd = Lex.getPrevTokEndLineColumnPos();
+        IdentEnd = getPrevTokEndLineColumnPos();
       } else {
         unsigned ArgID;
         if (Lex.getKind() == lltok::LocalVarID) {
           ArgID = Lex.getUIntVal();
-          IdentStart = Lex.getTokLineColumnPos();
+          IdentStart = getTokLineColumnPos();
           if (checkValueID(TypeLoc, "argument", "%", CurValID, ArgID))
             return true;
           Lex.Lex();
-          IdentEnd = Lex.getPrevTokEndLineColumnPos();
+          IdentEnd = getPrevTokEndLineColumnPos();
         } else {
           ArgID = CurValID;
           Unnamed = true;
@@ -6830,11 +6860,12 @@ bool LLParser::parseValue(Type *Ty, Value *&V, PerFunctionState *PFS) {
   V = nullptr;
   ValID ID;
 
-  FileLoc Start = Lex.getTokLineColumnPos();
+  FileLoc Start = getTokLineColumnPos();
   bool Ret = parseValID(ID, PFS, Ty) || convertValIDToValue(Ty, ID, V, PFS);
-  FileLoc End = Lex.getPrevTokEndLineColumnPos();
-  if (!Ret && ParserContext)
+  if (!Ret && ParserContext) {
+    FileLoc End = getPrevTokEndLineColumnPos();
     ParserContext->addValueReferenceAtLocation(V, FileLocRange(Start, End));
+  }
   return Ret;
 }
 
@@ -6951,7 +6982,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   LocTy BuiltinLoc;
   std::string Section;
   std::string Partition;
-  MaybeAlign Alignment;
+  MaybeAlign Alignment, PrefAlignment;
   std::string GC;
   GlobalValue::UnnamedAddr UnnamedAddr = GlobalValue::UnnamedAddr::None;
   unsigned AddrSpace = 0;
@@ -6969,6 +7000,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
       (EatIfPresent(lltok::kw_partition) && parseStringConstant(Partition)) ||
       parseOptionalComdat(FunctionName, C) ||
       parseOptionalAlignment(Alignment) ||
+      parseOptionalPrefAlignment(PrefAlignment) ||
       (EatIfPresent(lltok::kw_gc) && parseStringConstant(GC)) ||
       (EatIfPresent(lltok::kw_prefix) && parseGlobalTypeAndValue(Prefix)) ||
       (EatIfPresent(lltok::kw_prologue) && parseGlobalTypeAndValue(Prologue)) ||
@@ -7070,6 +7102,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   Fn->setUnnamedAddr(UnnamedAddr);
   if (Alignment)
     Fn->setAlignment(*Alignment);
+  Fn->setPreferredAlignment(PrefAlignment);
   Fn->setSection(Section);
   Fn->setPartition(Partition);
   Fn->setComdat(C);
@@ -7200,7 +7233,7 @@ bool LLParser::parseFunctionBody(Function &Fn, unsigned FunctionNumber,
 /// parseBasicBlock
 ///   ::= (LabelStr|LabelID)? Instruction*
 bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
-  FileLoc BBStart(Lex.getTokLineColumnPos());
+  FileLoc BBStart = getTokLineColumnPos();
 
   // If this basic block starts out with a name, remember it.
   std::string Name;
@@ -7243,7 +7276,7 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
       TrailingDbgRecord.emplace_back(DR, DeleteDbgRecord);
     }
 
-    FileLoc InstStart(Lex.getTokLineColumnPos());
+    FileLoc InstStart = getTokLineColumnPos();
     // This instruction may have three possibilities for a name: a) none
     // specified, b) name specified "%foo =", c) number specified: "%4 =".
     LocTy NameLoc = Lex.getLoc();
@@ -7295,13 +7328,13 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
     TrailingDbgRecord.clear();
     if (ParserContext) {
       ParserContext->addInstructionOrArgumentLocation(
-          Inst, FileLocRange(InstStart, Lex.getPrevTokEndLineColumnPos()));
+          Inst, FileLocRange(InstStart, getPrevTokEndLineColumnPos()));
     }
   } while (!Inst->isTerminator());
 
   if (ParserContext)
     ParserContext->addBlockLocation(
-        BB, FileLocRange(BBStart, Lex.getPrevTokEndLineColumnPos()));
+        BB, FileLocRange(BBStart, getPrevTokEndLineColumnPos()));
 
   assert(TrailingDbgRecord.empty() &&
          "All debug values should have been attached to an instruction.");

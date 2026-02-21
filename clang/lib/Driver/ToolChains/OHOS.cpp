@@ -50,7 +50,7 @@ static bool findOHOSMuslMultilibs(const Driver &D,
                {"-mcpu=cortex-a7", "-mfloat-abi=hard", "-mfpu=neon-vfpv4"}));
 
   if (Multilibs.select(D, Flags, Result.SelectedMultilibs)) {
-    Result.Multilibs = Multilibs;
+    Result.Multilibs = std::move(Multilibs);
     return true;
   }
   return false;

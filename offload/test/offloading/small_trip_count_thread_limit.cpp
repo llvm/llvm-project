@@ -4,7 +4,6 @@
 // RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic
 
 // REQUIRES: gpu
-// XFAIL: intelgpu
 
 int main(int argc, char *argv[]) {
   constexpr const int block_size = 256;

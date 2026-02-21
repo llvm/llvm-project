@@ -24,8 +24,7 @@ namespace lldb_dap {
 // `supportsStepInTargetsRequest` is true.
 llvm::Expected<StepInTargetsResponseBody>
 StepInTargetsRequestHandler::Run(const StepInTargetsArguments &args) const {
-  const lldb::StateType process_state = dap.target.GetProcess().GetState();
-  if (!lldb::SBDebugger::StateIsStoppedState(process_state))
+  if (dap.ProcessIsNotStopped())
     return llvm::make_error<NotStoppedError>();
 
   dap.step_in_targets.clear();

@@ -146,7 +146,7 @@ public:
 
   PluginProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_processgdbremote_properties);
+    m_collection_sp->Initialize(g_processgdbremote_properties_def);
   }
 
   ~PluginProperties() override = default;
@@ -269,13 +269,14 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
       m_async_listener_sp(
           Listener::MakeListener("lldb.process.gdb-remote.async-listener")),
       m_async_thread_state_mutex(), m_thread_ids(), m_thread_pcs(),
-      m_jstopinfo_sp(), m_jthreadsinfo_sp(), m_continue_c_tids(),
-      m_continue_C_tids(), m_continue_s_tids(), m_continue_S_tids(),
-      m_max_memory_size(0), m_remote_stub_max_memory_size(0),
-      m_addr_to_mmap_size(), m_thread_create_bp_sp(),
-      m_waiting_for_attach(false), m_command_sp(), m_breakpoint_pc_offset(0),
-      m_initial_tid(LLDB_INVALID_THREAD_ID), m_allow_flash_writes(false),
-      m_erased_flash_ranges(), m_vfork_in_progress_count(0) {
+      m_jstopinfo_sp(), m_jthreadsinfo_sp(), m_shared_cache_info_sp(),
+      m_shared_cache_info_mutex(), m_continue_c_tids(), m_continue_C_tids(),
+      m_continue_s_tids(), m_continue_S_tids(), m_max_memory_size(0),
+      m_remote_stub_max_memory_size(0), m_addr_to_mmap_size(),
+      m_thread_create_bp_sp(), m_waiting_for_attach(false), m_command_sp(),
+      m_breakpoint_pc_offset(0), m_initial_tid(LLDB_INVALID_THREAD_ID),
+      m_allow_flash_writes(false), m_erased_flash_ranges(),
+      m_vfork_in_progress_count(0) {
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncThreadShouldExit,
                                    "async thread should exit");
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncContinue,
@@ -1248,6 +1249,7 @@ Status ProcessGDBRemote::WillResume() {
   m_continue_S_tids.clear();
   m_jstopinfo_sp.reset();
   m_jthreadsinfo_sp.reset();
+  m_shared_cache_info_sp.reset();
   return Status();
 }
 
@@ -2546,7 +2548,7 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
 Status ProcessGDBRemote::DoHalt(bool &caused_stop) {
   Status error;
 
-  if (m_public_state.GetValue() == eStateAttaching) {
+  if (GetPublicState() == eStateAttaching) {
     // We are being asked to halt during an attach. We used to just close our
     // file handle and debugserver will go away, but with remote proxies, it
     // is better to send a positive signal, so let's send the interrupt first...
@@ -2595,7 +2597,7 @@ Status ProcessGDBRemote::DoDestroy() {
   std::string exit_string;
 
   if (m_gdb_comm.IsConnected()) {
-    if (m_public_state.GetValue() != eStateAttaching) {
+    if (GetPublicState() != eStateAttaching) {
       llvm::Expected<int> kill_res = m_gdb_comm.KillProcess(GetID());
 
       if (kill_res) {
@@ -4335,35 +4337,59 @@ StructuredData::ObjectSP ProcessGDBRemote::GetDynamicLoaderProcessState() {
 }
 
 StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
-  StructuredData::ObjectSP object_sp;
+  std::lock_guard<std::mutex> guard(m_shared_cache_info_mutex);
   StructuredData::ObjectSP args_dict(new StructuredData::Dictionary());
 
-  if (m_gdb_comm.GetSharedCacheInfoSupported()) {
-    StreamString packet;
-    packet << "jGetSharedCacheInfo:";
-    args_dict->Dump(packet, false);
+  if (m_shared_cache_info_sp || !m_gdb_comm.GetSharedCacheInfoSupported())
+    return m_shared_cache_info_sp;
 
-    // FIXME the final character of a JSON dictionary, '}', is the escape
-    // character in gdb-remote binary mode.  lldb currently doesn't escape
-    // these characters in its packet output -- so we add the quoted version of
-    // the } character here manually in case we talk to a debugserver which un-
-    // escapes the characters at packet read time.
-    packet << (char)(0x7d ^ 0x20);
+  StreamString packet;
+  packet << "jGetSharedCacheInfo:";
+  args_dict->Dump(packet, false);
 
-    StringExtractorGDBRemote response;
-    response.SetResponseValidatorToJSON();
-    if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response) ==
-        GDBRemoteCommunication::PacketResult::Success) {
-      StringExtractorGDBRemote::ResponseType response_type =
-          response.GetResponseType();
-      if (response_type == StringExtractorGDBRemote::eResponse) {
-        if (!response.Empty()) {
-          object_sp = StructuredData::ParseJSON(response.GetStringRef());
+  StringExtractorGDBRemote response;
+  response.SetResponseValidatorToJSON();
+  if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response) ==
+      GDBRemoteCommunication::PacketResult::Success) {
+    StringExtractorGDBRemote::ResponseType response_type =
+        response.GetResponseType();
+    if (response_type == StringExtractorGDBRemote::eResponse) {
+      if (response.Empty())
+        return {};
+      StructuredData::ObjectSP response_sp =
+          StructuredData::ParseJSON(response.GetStringRef());
+      if (!response_sp)
+        return {};
+      StructuredData::Dictionary *dict = response_sp->GetAsDictionary();
+      if (!dict)
+        return {};
+      if (!dict->HasKey("shared_cache_uuid"))
+        return {};
+      llvm::StringRef uuid_str;
+      if (!dict->GetValueForKeyAsString("shared_cache_uuid", uuid_str, "") ||
+          uuid_str == "00000000-0000-0000-0000-000000000000")
+        return {};
+      if (dict->HasKey("shared_cache_path")) {
+        UUID uuid;
+        uuid.SetFromStringRef(uuid_str);
+        FileSpec sc_path(
+            dict->GetValueForKey("shared_cache_path")->GetStringValue());
+
+        SymbolSharedCacheUse sc_mode =
+            ModuleList::GetGlobalModuleListProperties()
+                .GetSharedCacheBinaryLoading();
+
+        if (sc_mode == eSymbolSharedCacheUseHostAndInferiorSharedCache ||
+            sc_mode == eSymbolSharedCacheUseInferiorSharedCacheOnly) {
+          // Attempt to open the shared cache at sc_path, and
+          // if the uuid matches, index all the files.
+          HostInfo::SharedCacheIndexFiles(sc_path, uuid, sc_mode);
         }
       }
+      m_shared_cache_info_sp = response_sp;
     }
   }
-  return object_sp;
+  return m_shared_cache_info_sp;
 }
 
 Status ProcessGDBRemote::ConfigureStructuredData(

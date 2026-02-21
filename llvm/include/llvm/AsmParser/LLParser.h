@@ -194,6 +194,18 @@ namespace llvm {
 
     std::string SourceFileName;
 
+    FileLoc getTokLineColumnPos() {
+      if (ParserContext)
+        return Lex.getTokLineColumnPos();
+      return {0u, 0u};
+    }
+
+    FileLoc getPrevTokEndLineColumnPos() {
+      if (ParserContext)
+        return Lex.getPrevTokEndLineColumnPos();
+      return {0u, 0u};
+    }
+
   public:
     LLParser(StringRef F, SourceMgr &SM, SMDiagnostic &Err, Module *M,
              ModuleSummaryIndex *Index, LLVMContext &Context,
@@ -322,6 +334,7 @@ namespace llvm {
     bool parseOptionalCallingConv(unsigned &CC);
     bool parseOptionalAlignment(MaybeAlign &Alignment,
                                 bool AllowParens = false);
+    bool parseOptionalPrefAlignment(MaybeAlign &Alignment);
     bool parseOptionalCodeModel(CodeModel::Model &model);
     bool parseOptionalAttrBytes(lltok::Kind AttrKind,
                                 std::optional<uint64_t> &Bytes,

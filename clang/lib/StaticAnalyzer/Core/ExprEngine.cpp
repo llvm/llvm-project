@@ -995,6 +995,7 @@ void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
       return;
     case CFGElement::LifetimeEnds:
     case CFGElement::CleanupFunction:
+    case CFGElement::FullExprCleanup:
     case CFGElement::ScopeBegin:
     case CFGElement::ScopeEnd:
       return;
@@ -1088,7 +1089,7 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
   // For each node in CheckedSet, generate CleanedNodes that have the
   // environment, the store, and the constraints cleaned up but have the
   // user-supplied states as the predecessors.
-  StmtNodeBuilder Bldr(CheckedSet, Out, *currBldrCtx);
+  NodeBuilder Bldr(CheckedSet, Out, *currBldrCtx);
   for (const auto I : CheckedSet) {
     ProgramStateRef CheckerState = I->getState();
 
@@ -1599,8 +1600,8 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
   }
 
   ExplodedNodeSet CleanDtorState;
-  StmtNodeBuilder StmtBldr(Pred, CleanDtorState, *currBldrCtx);
-  StmtBldr.generateNode(D.getBindTemporaryExpr(), Pred, State);
+  NodeBuilder Builder(Pred, CleanDtorState, *currBldrCtx);
+  Builder.generateNode(D.getBindTemporaryExpr(), Pred, State);
 
   QualType T = D.getBindTemporaryExpr()->getSubExpr()->getType();
   // FIXME: Currently CleanDtorState can be empty here due to temporaries being
@@ -1650,7 +1651,7 @@ void ExprEngine::processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
                                                ExplodedNodeSet &Dst,
                                                const CFGBlock *DstT,
                                                const CFGBlock *DstF) {
-  BranchNodeBuilder TempDtorBuilder(Pred, Dst, BldCtx, DstT, DstF);
+  BranchNodeBuilder TempDtorBuilder(Dst, BldCtx, DstT, DstF);
   ProgramStateRef State = Pred->getState();
   const LocationContext *LC = Pred->getLocationContext();
   if (getObjectUnderConstruction(State, BTE, LC)) {
@@ -1672,7 +1673,7 @@ void ExprEngine::VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
     Dst = PreVisit;
     return;
   }
-  StmtNodeBuilder StmtBldr(PreVisit, Dst, *currBldrCtx);
+  NodeBuilder Builder(PreVisit, Dst, *currBldrCtx);
   for (ExplodedNode *Node : PreVisit) {
     ProgramStateRef State = Node->getState();
     const LocationContext *LC = Node->getLocationContext();
@@ -1683,7 +1684,7 @@ void ExprEngine::VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
       // temporary destructor nodes.
       State = addObjectUnderConstruction(State, BTE, LC, UnknownVal());
     }
-    StmtBldr.generateNode(BTE, Node, State);
+    Builder.generateNode(BTE, Node, State);
   }
 }
 
@@ -1719,13 +1720,14 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
   PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
                                 S->getBeginLoc(), "Error evaluating statement");
   ExplodedNodeSet Dst;
-  StmtNodeBuilder Bldr(Pred, DstTop, *currBldrCtx);
+  NodeBuilder Bldr(Pred, DstTop, *currBldrCtx);
 
   assert(!isa<Expr>(S) || S == cast<Expr>(S)->IgnoreParens());
 
   switch (S->getStmtClass()) {
     // C++, OpenMP and ARC stuff we don't support yet.
     case Stmt::CXXDependentScopeMemberExprClass:
+    case Stmt::CXXReflectExprClass:
     case Stmt::CXXTryStmtClass:
     case Stmt::CXXTypeidExprClass:
     case Stmt::CXXUuidofExprClass:
@@ -1930,6 +1932,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::DesignatedInitUpdateExprClass:
     case Stmt::ArrayInitIndexExprClass:
     case Stmt::ExtVectorElementExprClass:
+    case Stmt::MatrixElementExprClass:
     case Stmt::ImaginaryLiteralClass:
     case Stmt::ObjCAtCatchStmtClass:
     case Stmt::ObjCAtFinallyStmtClass:
@@ -2000,7 +2003,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
 
       ExplodedNodeSet Tmp;
-      StmtNodeBuilder Bldr2(PreVisit, Tmp, *currBldrCtx);
+      NodeBuilder Bldr2(PreVisit, Tmp, *currBldrCtx);
 
       const Expr *ArgE;
       if (const auto *DefE = dyn_cast<CXXDefaultArgExpr>(S))
@@ -2047,7 +2050,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       getCheckerManager().runCheckersForPreStmt(preVisit, Pred, S, *this);
 
       ExplodedNodeSet Tmp;
-      StmtNodeBuilder Bldr2(preVisit, Tmp, *currBldrCtx);
+      NodeBuilder Bldr2(preVisit, Tmp, *currBldrCtx);
 
       const auto *Ex = cast<Expr>(S);
       QualType resultType = Ex->getType();
@@ -2557,19 +2560,23 @@ static const LocationContext *getInlinedLocationContext(ExplodedNode *Node,
 }
 
 /// Block entrance.  (Update counters).
+/// FIXME: `BlockEdge &L` is only used for debug statistics, consider removing
+/// it and using `BlockEntrance &BE` (where `BlockEntrance` is a subtype of
+/// `ProgramPoint`) for statistical purposes.
 void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
-                                         NodeBuilderWithSinks &nodeBuilder,
+                                         const BlockEntrance &BE,
+                                         NodeBuilder &Builder,
                                          ExplodedNode *Pred) {
   // If we reach a loop which has a known bound (and meets
   // other constraints) then consider completely unrolling it.
   if(AMgr.options.ShouldUnrollLoops) {
     unsigned maxBlockVisitOnPath = AMgr.options.maxBlockVisitOnPath;
-    const Stmt *Term = nodeBuilder.getContext().getBlock()->getTerminatorStmt();
+    const Stmt *Term = Builder.getContext().getBlock()->getTerminatorStmt();
     if (Term) {
       ProgramStateRef NewState = updateLoopStack(Term, AMgr.getASTContext(),
                                                  Pred, maxBlockVisitOnPath);
       if (NewState != Pred->getState()) {
-        ExplodedNode *UpdatedNode = nodeBuilder.generateNode(NewState, Pred);
+        ExplodedNode *UpdatedNode = Builder.generateNode(BE, NewState, Pred);
         if (!UpdatedNode)
           return;
         Pred = UpdatedNode;
@@ -2582,10 +2589,10 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
 
   // If this block is terminated by a loop and it has already been visited the
   // maximum number of times, widen the loop.
-  unsigned int BlockCount = nodeBuilder.getContext().blockCount();
+  unsigned int BlockCount = Builder.getContext().blockCount();
   if (BlockCount == AMgr.options.maxBlockVisitOnPath - 1 &&
       AMgr.options.ShouldWidenLoops) {
-    const Stmt *Term = nodeBuilder.getContext().getBlock()->getTerminatorStmt();
+    const Stmt *Term = Builder.getContext().getBlock()->getTerminatorStmt();
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
       return;
 
@@ -2600,16 +2607,17 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     // Here we just pass the the first CFG element in the block.
     ProgramStateRef WidenedState =
         getWidenedLoopState(Pred->getState(), LCtx, BlockCount,
-                            *nodeBuilder.getContext().getBlock()->ref_begin());
-    nodeBuilder.generateNode(WidenedState, Pred);
+                            *Builder.getContext().getBlock()->ref_begin());
+    Builder.generateNode(BE, WidenedState, Pred);
     return;
   }
 
   // FIXME: Refactor this into a checker.
   if (BlockCount >= AMgr.options.maxBlockVisitOnPath) {
-    static SimpleProgramPointTag tag(TagProviderName, "Block count exceeded");
+    static SimpleProgramPointTag Tag(TagProviderName, "Block count exceeded");
+    const ProgramPoint TaggedLoc = BE.withTag(&Tag);
     const ExplodedNode *Sink =
-                   nodeBuilder.generateSink(Pred->getState(), Pred, &tag);
+        Builder.generateSink(TaggedLoc, Pred->getState(), Pred);
 
     if (const LocationContext *LC = getInlinedLocationContext(Pred, G)) {
       // FIXME: This will unconditionally prevent inlining this function (even
@@ -2843,7 +2851,7 @@ void ExprEngine::processBranch(
 
   // Check for NULL conditions; e.g. "for(;;)"
   if (!Condition) {
-    BranchNodeBuilder NullCondBldr(Pred, Dst, BldCtx, DstT, DstF);
+    BranchNodeBuilder NullCondBldr(Dst, BldCtx, DstT, DstF);
     NullCondBldr.generateNode(Pred->getState(), true, Pred);
     return;
   }
@@ -2863,11 +2871,8 @@ void ExprEngine::processBranch(
   if (CheckersOutSet.empty())
     return;
 
-  BranchNodeBuilder Builder(CheckersOutSet, Dst, BldCtx, DstT, DstF);
+  BranchNodeBuilder Builder(Dst, BldCtx, DstT, DstF);
   for (ExplodedNode *PredN : CheckersOutSet) {
-    if (PredN->isSink())
-      continue;
-
     ProgramStateRef PrevState = PredN->getState();
 
     ProgramStateRef StTrue = PrevState, StFalse = PrevState;
@@ -2972,7 +2977,7 @@ void ExprEngine::processStaticInitializer(
   const auto *VD = cast<VarDecl>(DS->getSingleDecl());
   ProgramStateRef state = Pred->getState();
   bool initHasRun = state->contains<InitializedGlobalsSet>(VD);
-  BranchNodeBuilder Builder(Pred, Dst, BuilderCtx, DstT, DstF);
+  BranchNodeBuilder Builder(Dst, BuilderCtx, DstT, DstF);
 
   if (!initHasRun) {
     state = state->add<InitializedGlobalsSet>(VD);
@@ -2985,25 +2990,18 @@ void ExprEngine::processStaticInitializer(
 
 /// processIndirectGoto - Called by CoreEngine.  Used to generate successor
 ///  nodes by processing the 'effects' of a computed goto jump.
-void ExprEngine::processIndirectGoto(IndirectGotoNodeBuilder &builder) {
-  ProgramStateRef state = builder.getState();
-  SVal V = state->getSVal(builder.getTarget(), builder.getLocationContext());
+void ExprEngine::processIndirectGoto(IndirectGotoNodeBuilder &Builder,
+                                     ExplodedNode *Pred) {
+  ProgramStateRef State = Pred->getState();
+  SVal V = State->getSVal(Builder.getTarget(), Builder.getLocationContext());
 
-  // Three possibilities:
-  //
-  //   (1) We know the computed label.
-  //   (2) The label is NULL (or some other constant), or Undefined.
-  //   (3) We have no clue about the label.  Dispatch to all targets.
-  //
-
-  using iterator = IndirectGotoNodeBuilder::iterator;
-
+  // Case 1: We know the computed label.
   if (std::optional<loc::GotoLabel> LV = V.getAs<loc::GotoLabel>()) {
     const LabelDecl *L = LV->getLabel();
 
-    for (iterator Succ : builder) {
-      if (Succ.getLabel() == L) {
-        builder.generateNode(Succ, state);
+    for (const CFGBlock *Succ : Builder) {
+      if (cast<LabelStmt>(Succ->getLabel())->getDecl() == L) {
+        Builder.generateNode(Succ, State, Pred);
         return;
       }
     }
@@ -3011,19 +3009,16 @@ void ExprEngine::processIndirectGoto(IndirectGotoNodeBuilder &builder) {
     llvm_unreachable("No block with label.");
   }
 
+  // Case 2: The label is NULL (or some other constant), or Undefined.
   if (isa<UndefinedVal, loc::ConcreteInt>(V)) {
-    // Dispatch to the first target and mark it as a sink.
-    //ExplodedNode* N = builder.generateNode(builder.begin(), state, true);
-    // FIXME: add checker visit.
-    //    UndefBranches.insert(N);
+    // FIXME: Emit warnings when the jump target is undefined or numerical.
     return;
   }
 
-  // This is really a catch-all.  We don't support symbolics yet.
+  // Case 3: We have no clue about the label.  Dispatch to all targets.
   // FIXME: Implement dispatch for symbolic pointers.
-
-  for (iterator Succ : builder)
-    builder.generateNode(Succ, state);
+  for (const CFGBlock *Succ : Builder)
+    Builder.generateNode(Succ, State, Pred);
 }
 
 void ExprEngine::processBeginOfFunction(NodeBuilderContext &BC,
@@ -3107,74 +3102,85 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
 
 /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
 ///  nodes by processing the 'effects' of a switch statement.
-void ExprEngine::processSwitch(const SwitchStmt *Switch, CoreEngine &CoreEng,
-                               const CFGBlock *B, ExplodedNode *Pred) {
+void ExprEngine::processSwitch(NodeBuilderContext &BC, const SwitchStmt *Switch,
+                               ExplodedNode *Pred, ExplodedNodeSet &Dst) {
+  currBldrCtx = &BC;
   const Expr *Condition = Switch->getCond();
 
-  SwitchNodeBuilder Builder(Pred, B, CoreEng);
+  SwitchNodeBuilder Builder(Dst, BC);
+  ExplodedNodeSet CheckersOutSet;
 
-  ProgramStateRef State = Pred->getState();
-  SVal CondV = State->getSVal(Condition, Pred->getLocationContext());
+  getCheckerManager().runCheckersForBranchCondition(
+      Condition->IgnoreParens(), CheckersOutSet, Pred, *this);
 
-  if (CondV.isUndef()) {
-    // ExplodedNode* N = builder.generateDefaultCaseNode(state, true);
-    //  FIXME: add checker
-    // UndefBranches.insert(N);
-    return;
-  }
+  for (ExplodedNode *Node : CheckersOutSet) {
+    ProgramStateRef State = Node->getState();
 
-  std::optional<NonLoc> CondNL = CondV.getAs<NonLoc>();
-
-  for (const CFGBlock *Block : Builder) {
-    // Successor may be pruned out during CFG construction.
-    if (!Block)
+    SVal CondV = State->getSVal(Condition, Node->getLocationContext());
+    if (CondV.isUndef()) {
+      // This can only happen if core.uninitialized.Branch is disabled.
       continue;
-
-    const CaseStmt *Case = cast<CaseStmt>(Block->getLabel());
-
-    // Evaluate the LHS of the case value.
-    llvm::APSInt V1 = Case->getLHS()->EvaluateKnownConstInt(getContext());
-    assert(V1.getBitWidth() == getContext().getIntWidth(Condition->getType()));
-
-    // Get the RHS of the case, if it exists.
-    llvm::APSInt V2;
-    if (const Expr *E = Case->getRHS())
-      V2 = E->EvaluateKnownConstInt(getContext());
-    else
-      V2 = V1;
-
-    ProgramStateRef StateMatching;
-    if (CondNL) {
-      // Split the state: this "case:" matches / does not match.
-      std::tie(StateMatching, State) =
-          State->assumeInclusiveRange(*CondNL, V1, V2);
-    } else {
-      // The switch condition is UnknownVal, so we enter each "case:" without
-      // any state update.
-      StateMatching = State;
     }
 
-    if (StateMatching)
-      Builder.generateCaseStmtNode(Block, StateMatching);
+    std::optional<NonLoc> CondNL = CondV.getAs<NonLoc>();
 
-    // If _not_ entering the current case is infeasible, we are done with
-    // processing this branch.
+    for (const CFGBlock *Block : Builder) {
+      // Successor may be pruned out during CFG construction.
+      if (!Block)
+        continue;
+
+      const CaseStmt *Case = cast<CaseStmt>(Block->getLabel());
+
+      // Evaluate the LHS of the case value.
+      llvm::APSInt V1 = Case->getLHS()->EvaluateKnownConstInt(getContext());
+      assert(V1.getBitWidth() ==
+             getContext().getIntWidth(Condition->getType()));
+
+      // Get the RHS of the case, if it exists.
+      llvm::APSInt V2;
+      if (const Expr *E = Case->getRHS())
+        V2 = E->EvaluateKnownConstInt(getContext());
+      else
+        V2 = V1;
+
+      ProgramStateRef StateMatching;
+      if (CondNL) {
+        // Split the state: this "case:" matches / does not match.
+        std::tie(StateMatching, State) =
+            State->assumeInclusiveRange(*CondNL, V1, V2);
+      } else {
+        // The switch condition is UnknownVal, so we enter each "case:" without
+        // any state update.
+        StateMatching = State;
+      }
+
+      if (StateMatching)
+        Builder.generateCaseStmtNode(Block, StateMatching, Node);
+
+      // If _not_ entering the current case is infeasible, then we are done
+      // with processing the paths through the current Node.
+      if (!State)
+        break;
+    }
     if (!State)
-      return;
-  }
-  // If we have switch(enum value), the default branch is not
-  // feasible if all of the enum constants not covered by 'case:' statements
-  // are not feasible values for the switch condition.
-  //
-  // Note that this isn't as accurate as it could be.  Even if there isn't
-  // a case for a particular enum value as long as that enum value isn't
-  // feasible then it shouldn't be considered for making 'default:' reachable.
-  if (Condition->IgnoreParenImpCasts()->getType()->isEnumeralType()) {
-    if (Switch->isAllEnumCasesCovered())
-      return;
+      continue;
+
+    // If we have switch(enum value), the default branch is not
+    // feasible if all of the enum constants not covered by 'case:' statements
+    // are not feasible values for the switch condition.
+    //
+    // Note that this isn't as accurate as it could be.  Even if there isn't
+    // a case for a particular enum value as long as that enum value isn't
+    // feasible then it shouldn't be considered for making 'default:' reachable.
+    if (Condition->IgnoreParenImpCasts()->getType()->isEnumeralType()) {
+      if (Switch->isAllEnumCasesCovered())
+        continue;
+    }
+
+    Builder.generateDefaultCaseNode(State, Node);
   }
 
-  Builder.generateDefaultCaseNode(State);
+  currBldrCtx = nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3184,7 +3190,7 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, CoreEngine &CoreEng,
 void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
                                         ExplodedNode *Pred,
                                         ExplodedNodeSet &Dst) {
-  StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
 
   ProgramStateRef state = Pred->getState();
   const LocationContext *LCtx = Pred->getLocationContext();
@@ -3349,7 +3355,7 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
   getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, Ex, *this);
 
   ExplodedNodeSet EvalSet;
-  StmtNodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
+  NodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
 
   const Expr *Arr = Ex->getCommonExpr()->getSourceExpr();
 
@@ -3450,7 +3456,7 @@ void ExprEngine::VisitArraySubscriptExpr(const ArraySubscriptExpr *A,
   getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, A, *this);
 
   ExplodedNodeSet EvalSet;
-  StmtNodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
+  NodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
 
   bool IsVectorType = A->getBase()->getType()->isVectorType();
 
@@ -3506,7 +3512,7 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
     for (const auto I : CheckedSet)
       VisitCommonDeclRefExpr(M, Member, I, EvalSet);
   } else {
-    StmtNodeBuilder Bldr(CheckedSet, EvalSet, *currBldrCtx);
+    NodeBuilder Bldr(CheckedSet, EvalSet, *currBldrCtx);
     ExplodedNodeSet Tmp;
 
     for (const auto I : CheckedSet) {
@@ -3588,7 +3594,7 @@ void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
   // FIXME: Ideally we should model the behavior of the atomics precisely here.
 
   ExplodedNodeSet AfterInvalidateSet;
-  StmtNodeBuilder Bldr(AfterPreSet, AfterInvalidateSet, *currBldrCtx);
+  NodeBuilder Bldr(AfterPreSet, AfterInvalidateSet, *currBldrCtx);
 
   for (const auto I : AfterPreSet) {
     ProgramStateRef State = I->getState();
@@ -3730,7 +3736,7 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
   getCheckerManager().runCheckersForBind(CheckedSet, Pred, location, Val,
                                          StoreE, AtDeclInit, *this, *PP);
 
-  StmtNodeBuilder Bldr(CheckedSet, Dst, *currBldrCtx);
+  NodeBuilder Bldr(CheckedSet, Dst, *currBldrCtx);
 
   // If the location is not a 'Loc', it will already be handled by
   // the checkers.  There is nothing left to do.
@@ -3813,7 +3819,7 @@ void ExprEngine::evalLoad(ExplodedNodeSet &Dst,
   if (Tmp.empty())
     return;
 
-  StmtNodeBuilder Bldr(Tmp, Dst, *currBldrCtx);
+  NodeBuilder Bldr(Tmp, Dst, *currBldrCtx);
   if (location.isUndef())
     return;
 
@@ -3841,7 +3847,7 @@ void ExprEngine::evalLocation(ExplodedNodeSet &Dst,
                               ProgramStateRef state,
                               SVal location,
                               bool isLoad) {
-  StmtNodeBuilder BldrTop(Pred, Dst, *currBldrCtx);
+  NodeBuilder BldrTop(Pred, Dst, *currBldrCtx);
   // Early checks for performance reason.
   if (location.isUnknown()) {
     return;
@@ -3849,7 +3855,7 @@ void ExprEngine::evalLocation(ExplodedNodeSet &Dst,
 
   ExplodedNodeSet Src;
   BldrTop.takeNodes(Pred);
-  StmtNodeBuilder Bldr(Pred, Src, *currBldrCtx);
+  NodeBuilder Bldr(Pred, Src, *currBldrCtx);
   if (Pred->getState() != state) {
     // Associate this new state with an ExplodedNode.
     // FIXME: If I pass null tag, the graph is incorrect, e.g for
@@ -3886,7 +3892,7 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(LastEagerlyAssumeExprIfSuccessful,
 void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
                                               ExplodedNodeSet &Src,
                                               const Expr *Ex) {
-  StmtNodeBuilder Bldr(Src, Dst, *currBldrCtx);
+  NodeBuilder Bldr(Src, Dst, *currBldrCtx);
 
   for (ExplodedNode *Pred : Src) {
     // Test if the previous node was as the same expression.  This can happen
@@ -3935,7 +3941,7 @@ bool ExprEngine::didEagerlyAssumeBifurcateAt(ProgramStateRef State,
 
 void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
                                  ExplodedNodeSet &Dst) {
-  StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
   // We have processed both the inputs and the outputs.  All of the outputs
   // should evaluate to Locs.  Nuke all of their values.
 
@@ -3972,7 +3978,7 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
 
 void ExprEngine::VisitMSAsmStmt(const MSAsmStmt *A, ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst) {
-  StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
   Bldr.generateNode(A, Pred, Pred->getState());
 }
 
@@ -4139,7 +4145,7 @@ void ExprEngine::ConstructInitList(const Expr *E, ArrayRef<Expr *> Args,
 
   const LocationContext *LC = Pred->getLocationContext();
 
-  StmtNodeBuilder B(Pred, Dst, *currBldrCtx);
+  NodeBuilder B(Pred, Dst, *currBldrCtx);
   ProgramStateRef S = Pred->getState();
   QualType T = E->getType().getCanonicalType();
 

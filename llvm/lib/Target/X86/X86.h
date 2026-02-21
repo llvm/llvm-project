@@ -16,6 +16,7 @@
 
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/IR/Analysis.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/PassInfo.h"
 #include "llvm/Support/CodeGen.h"
@@ -35,12 +36,25 @@ class X86TargetMachine;
 FunctionPass *createX86ISelDag(X86TargetMachine &TM, CodeGenOptLevel OptLevel);
 
 /// This pass initializes a global base register for PIC on x86-32.
-FunctionPass *createX86GlobalBaseRegPass();
+class X86GlobalBaseRegPass : public PassInfoMixin<X86GlobalBaseRegPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86GlobalBaseRegLegacyPass();
 
 /// This pass combines multiple accesses to local-dynamic TLS variables so that
 /// the TLS base address for the module is only fetched once per execution path
 /// through the function.
-FunctionPass *createCleanupLocalDynamicTLSPass();
+class X86CleanupLocalDynamicTLSPass
+    : public PassInfoMixin<X86CleanupLocalDynamicTLSPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createCleanupLocalDynamicTLSLegacyPass();
 
 /// This function returns a pass which converts floating-point register
 /// references and pseudo instructions into floating-point stack references and
@@ -59,7 +73,14 @@ FunctionPass *createX86IssueVZeroUpperPass();
 
 /// This pass inserts ENDBR instructions before indirect jump/call
 /// destinations as part of CET IBT mechanism.
-FunctionPass *createX86IndirectBranchTrackingPass();
+class X86IndirectBranchTrackingPass
+    : public PassInfoMixin<X86IndirectBranchTrackingPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86IndirectBranchTrackingLegacyPass();
 
 /// Return a pass that pads short functions with NOOPs.
 /// This will prevent a stall when returning on the Atom.
@@ -220,7 +241,13 @@ FunctionPass *createX86CallFrameOptimizationLegacyPass();
 /// Return an IR pass that inserts EH registration stack objects and explicit
 /// EH state updates. This pass must run after EH preparation, which does
 /// Windows-specific but architecture-neutral preparation.
-FunctionPass *createX86WinEHStatePass();
+class X86WinEHStatePass : public PassInfoMixin<X86WinEHStatePass> {
+public:
+  X86WinEHStatePass() = default;
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+FunctionPass *createX86WinEHStateLegacyPass();
 
 /// Return a Machine IR pass that expands X86-specific pseudo
 /// instructions into a sequence of actual instructions. This pass
@@ -290,7 +317,12 @@ FunctionPass *createX86ReturnThunksLegacyPass();
 
 /// This pass insert wait instruction after X87 instructions which could raise
 /// fp exceptions when strict-fp enabled.
-FunctionPass *createX86InsertX87waitPass();
+class X86InsertX87WaitPass : public PassInfoMixin<X86InsertX87WaitPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &);
+};
+
+FunctionPass *createX86InsertX87WaitLegacyPass();
 
 /// This pass optimizes arithmetic based on knowledge that is only used by
 /// a reduction sequence and is therefore safe to reassociate in interesting
@@ -414,7 +446,7 @@ void initializeX86ArgumentStackSlotLegacyPass(PassRegistry &);
 void initializeX86AsmPrinterPass(PassRegistry &);
 void initializeX86FixupInstTuningLegacyPass(PassRegistry &);
 void initializeX86FixupVectorConstantsLegacyPass(PassRegistry &);
-void initializeWinEHStatePassPass(PassRegistry &);
+void initializeWinEHStateLegacyPass(PassRegistry &);
 void initializeX86AvoidSFBLegacyPass(PassRegistry &);
 void initializeX86AvoidTrailingCallLegacyPassPass(PassRegistry &);
 void initializeX86CallFrameOptimizationLegacyPass(PassRegistry &);
@@ -429,6 +461,7 @@ void initializeX86FastPreTileConfigLegacyPass(PassRegistry &);
 void initializeX86FastTileConfigLegacyPass(PassRegistry &);
 void initializeX86FixupSetCCLegacyPass(PassRegistry &);
 void initializeX86FlagsCopyLoweringLegacyPass(PassRegistry &);
+void initializeX86IndirectBranchTrackingLegacyPass(PassRegistry &);
 void initializeX86LoadValueInjectionLoadHardeningLegacyPass(PassRegistry &);
 void initializeX86LoadValueInjectionRetHardeningLegacyPass(PassRegistry &);
 void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);

@@ -1105,12 +1105,11 @@ void passing_temporary_to_lifetime_bound_function() {
   use(a); // expected-note {{later used here}}
 }
 
-// FIXME: We expect to be warned of use-after-free at use(a), but this is not the
-// case as current analysis does not handle trivially destructed temporaries.
 void use_trivial_temporary_after_destruction() {
   View a;
-  a = trivially_destructed_temporary();
-  use(a);
+  a = trivially_destructed_temporary(); // expected-warning {{object whose reference is captured does not live long enough}} \
+                expected-note {{destroyed here}}
+  use(a); // expected-note {{later used here}}
 }
 
 namespace GH162834 {
@@ -1456,6 +1455,18 @@ void wrong_use_of_move_is_permissive() {
   }         // expected-note {{destroyed here}}
   (void)p;  // expected-note {{later used here}}
 }
+
+void take(int*);
+void test_release_no_uaf() {
+  int* r;
+  // Calling release() marks p as moved from, so its destruction doesn't invalidate r.
+  {
+    std::unique_ptr<int> p;
+    r = p.get();        // expected-warning-re {{object whose reference {{.*}} may have been moved}}
+    take(p.release());  // expected-note {{potentially moved here}}
+  }                     // expected-note {{destroyed here}}
+  (void)*r;             // expected-note {{later used here}}
+}
 } // namespace strict_warn_on_move
 
 // Implicit this annotations with redecls.
@@ -1474,7 +1485,9 @@ void bar() {
     {
         S s;
         x = s.x(); // expected-warning {{object whose reference is captured does not live long enough}}
-        View y = S().x(); // FIXME: Handle temporaries.
+        View y = S().x(); // expected-warning {{object whose reference is captured does not live long enough}} \
+                             expected-note {{destroyed here}}
+        (void)y; // expected-note {{used here}}
     } // expected-note {{destroyed here}}
     (void)x; // expected-note {{used here}}
 }

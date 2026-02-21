@@ -95,7 +95,8 @@ void X86CodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) const {
   // Only add this pass for 32-bit x86 Windows.
   const Triple &TT = TM.getTargetTriple();
   if (TT.isOSWindows() && TT.isX86_32()) {
-    // TODO(boomanaiden154): Add X86WinEHStatePass here once it has been ported.
+    flushFPMsToMPM(PMW);
+    addModulePass(X86WinEHStatePass(), PMW);
   }
 }
 
@@ -105,12 +106,10 @@ Error X86CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
   // For ELF, cleanup any local-dynamic TLS accesses
   if (TM.getTargetTriple().isOSBinFormatELF() &&
       getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add CleanupLocalDynamicTLSPass here once it has
-    // been ported.
+    addMachineFunctionPass(X86CleanupLocalDynamicTLSPass(), PMW);
   }
 
-  // TODO(boomanaiden154): Add X86GlobalPassRegPass here once it has been
-  // ported.
+  addMachineFunctionPass(X86GlobalBaseRegPass(), PMW);
   addMachineFunctionPass(X86ArgumentStackSlotPass(), PMW);
   return Error::success();
 }
@@ -174,8 +173,7 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
     addMachineFunctionPass(BreakFalseDepsPass(), PMW);
   }
 
-  // TODO(boomanaiden154): Add X86IndirectBranchTrackingPass here once it has
-  // been ported.
+  addMachineFunctionPass(X86IndirectBranchTrackingPass(), PMW);
   // TODO(boomanaiden154): Add X86IssueVZeroUpperPass here once it has been
   // ported.
 
@@ -188,7 +186,7 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
     addMachineFunctionPass(X86FixupVectorConstantsPass(), PMW);
   }
   addMachineFunctionPass(X86CompressEVEXPass(), PMW);
-  // TODO(boomanaiden154): Add InsertX86WaitPass here once it has been ported.
+  addMachineFunctionPass(X86InsertX87WaitPass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {

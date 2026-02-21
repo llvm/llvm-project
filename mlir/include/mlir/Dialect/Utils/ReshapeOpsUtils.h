@@ -372,7 +372,8 @@ struct ComposeExpandOfCollapseOp : public OpRewritePattern<ExpandOpTy> {
     if (hasNonIdentityLayout(expandOp.getSrc().getType()) ||
         hasNonIdentityLayout(collapseOp.getSrc().getType()) ||
         hasNonIdentityLayout(collapseOp.getResult().getType())) {
-      if (CastOpTy::areCastCompatible(srcType, resultType)) {
+      if (srcType.hasStaticShape() &&
+          CastOpTy::areCastCompatible(srcType, resultType)) {
         rewriter.replaceOpWithNewOp<CastOpTy>(expandOp, resultType,
                                               collapseOp.getSrc());
         return success();

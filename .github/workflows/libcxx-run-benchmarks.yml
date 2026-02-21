@@ -63,23 +63,25 @@ jobs:
           fetch-tags: true # This job requires access to all the Git branches so it can diff against (usually) main
           path: repo # Avoid nuking the workspace, where we have the Python virtualenv
 
-      - name: Run baseline
+      - name: Build and run baseline
         env:
           BENCHMARKS: ${{ steps.vars.outputs.benchmarks }}
         run: |
           source .venv/bin/activate && cd repo
           python -m pip install -r libcxx/utils/requirements.txt
           baseline_commit=$(git merge-base ${{ steps.vars.outputs.pr_base }} ${{ steps.vars.outputs.pr_head }})
-          ./libcxx/utils/test-at-commit --commit ${baseline_commit} -B build/baseline -- -sv -j1 --param optimization=speed "$BENCHMARKS"
-          ./libcxx/utils/consolidate-benchmarks build/baseline | tee baseline.lnt
+          ./libcxx/utils/build-at-commit --commit ${baseline_commit} --install-dir install/baseline -- -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee baseline.lnt
 
-      - name: Run candidate
+      - name: Build and run candidate
         env:
           BENCHMARKS: ${{ steps.vars.outputs.benchmarks }}
         run: |
           source .venv/bin/activate && cd repo
-          ./libcxx/utils/test-at-commit --commit ${{ steps.vars.outputs.pr_head }} -B build/candidate -- -sv -j1 --param optimization=speed "$BENCHMARKS"
-          ./libcxx/utils/consolidate-benchmarks build/candidate | tee candidate.lnt
+          ./libcxx/utils/build-at-commit --commit ${{ steps.vars.outputs.pr_head }} --install-dir install/candidate -- -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+          ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee candidate.lnt
 
       - name: Compare baseline and candidate runs
         run: |

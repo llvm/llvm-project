@@ -3934,11 +3934,9 @@ static const struct Extension {
     {"sve-f16f32mm", {AArch64::FeatureSVE_F16F32MM}},
     {"lsui", {AArch64::FeatureLSUI}},
     {"occmo", {AArch64::FeatureOCCMO}},
-    {"pcdphint", {AArch64::FeaturePCDPHINT}},
     {"ssve-bitperm", {AArch64::FeatureSSVE_BitPerm}},
     {"sme-mop4", {AArch64::FeatureSME_MOP4}},
     {"sme-tmop", {AArch64::FeatureSME_TMOP}},
-    {"cmh", {AArch64::FeatureCMH}},
     {"lscp", {AArch64::FeatureLSCP}},
     {"tlbid", {AArch64::FeatureTLBID}},
     {"mpamv2", {AArch64::FeatureMPAMv2}},
@@ -4262,27 +4260,18 @@ bool AArch64AsmParser::parseSyspAlias(StringRef Name, SMLoc NameLoc,
   SMLoc S = Tok.getLoc();
 
   if (Mnemonic == "tlbip") {
-    bool HasnXSQualifier = Op.ends_with_insensitive("nXS");
-    if (HasnXSQualifier) {
-      Op = Op.drop_back(3);
-    }
-    const AArch64TLBIP::TLBIP *TLBIPorig = AArch64TLBIP::lookupTLBIPByName(Op);
-    if (!TLBIPorig)
+    const AArch64TLBIP::TLBIP *TLBIP = AArch64TLBIP::lookupTLBIPByName(Op);
+    if (!TLBIP)
       return TokError("invalid operand for TLBIP instruction");
-    const AArch64TLBIP::TLBIP TLBIP(
-        TLBIPorig->Name, TLBIPorig->Encoding | (HasnXSQualifier ? (1 << 7) : 0),
-        TLBIPorig->NeedsReg, TLBIPorig->OptionalReg,
-        HasnXSQualifier
-            ? TLBIPorig->FeaturesRequired | FeatureBitset({AArch64::FeatureXS})
-            : TLBIPorig->FeaturesRequired);
-    if (!TLBIP.haveFeatures(getSTI().getFeatureBits())) {
-      std::string Name =
-          std::string(TLBIP.Name) + (HasnXSQualifier ? "nXS" : "");
-      std::string Str("TLBIP " + Name + " requires: ");
-      setRequiredFeatureString(TLBIP.getRequiredFeatures(), Str);
+    if (!getSTI().hasFeature(AArch64::FeatureD128) &&
+        !getSTI().hasFeature(AArch64::FeatureAll))
+      return TokError("instruction requires: d128");
+    if (!TLBIP->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("instruction requires: ");
+      setRequiredFeatureString(TLBIP->getRequiredFeatures(), Str);
       return TokError(Str);
     }
-    createSysAlias(TLBIP.Encoding, Operands, S);
+    createSysAlias(TLBIP->Encoding, Operands, S);
   }
 
   Lex(); // Eat operand.

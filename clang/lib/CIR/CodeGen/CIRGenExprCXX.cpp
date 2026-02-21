@@ -467,7 +467,7 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
   const Expr *arraySize = *e->getArraySize();
   mlir::Attribute constNumElements =
       ConstantEmitter(cgf.cgm, &cgf)
-          .emitAbstract(arraySize, arraySize->getType());
+          .tryEmitAbstract(arraySize, arraySize->getType());
   if (constNumElements) {
     // Get an APInt from the constant
     const llvm::APInt &count =
@@ -522,9 +522,113 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
       size = cgf.getBuilder().getConstInt(loc, allocationSize);
     }
   } else {
-    // TODO: Handle the variable size case
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "emitCXXNewAllocSize: variable array size");
+    // Create a value for the variable number of elements
+    numElements = cgf.emitScalarExpr(*e->getArraySize());
+    auto numElementsType = mlir::cast<cir::IntType>(numElements.getType());
+    unsigned numElementsWidth = numElementsType.getWidth();
+
+    // We might need check for overflow.
+
+    mlir::Value hasOverflow;
+    // Classic codegen checks for the size variable being signed, having a
+    // smaller width than size_t, and having a larger width than size_t.
+    // However, the AST implicitly casts the size variable to size_t so none of
+    // these conditions will ever be met.
+    assert(
+        !(*e->getArraySize())->getType()->isSignedIntegerOrEnumerationType() &&
+        (numElementsWidth == sizeWidth) &&
+        (numElements.getType() == cgf.sizeTy) &&
+        "Expected array size to be implicitly cast to size_t!");
+
+    // There are up to three conditions we need to test for:
+    // 1) if minElements > 0, we need to check whether numElements is smaller
+    //    than that.
+    // 2) we need to compute
+    //      sizeWithoutCookie := numElements * typeSizeMultiplier
+    //    and check whether it overflows; and
+    // 3) if we need a cookie, we need to compute
+    //      size := sizeWithoutCookie + cookieSize
+    //    and check whether it overflows.
+
+    if (minElements) {
+      // Don't allow allocation of fewer elements than we have initializers.
+      if (!hasOverflow) {
+        // FIXME: Avoid creating this twice. It may happen above.
+        mlir::Value minElementsV = cgf.getBuilder().getConstInt(
+            loc, llvm::APInt(sizeWidth, minElements));
+        hasOverflow = cgf.getBuilder().createCompare(loc, cir::CmpOpKind::lt,
+                                                     numElements, minElementsV);
+      }
+    }
+
+    size = numElements;
+
+    // Multiply by the type size if necessary.  This multiplier
+    // includes all the factors for nested arrays.
+    //
+    // This step also causes numElements to be scaled up by the
+    // nested-array factor if necessary.  Overflow on this computation
+    // can be ignored because the result shouldn't be used if
+    // allocation fails.
+    if (typeSizeMultiplier != 1) {
+      mlir::Value tsmV = cgf.getBuilder().getConstInt(loc, typeSizeMultiplier);
+      auto mulOp = cir::BinOpOverflowOp::create(
+          cgf.getBuilder(), loc, mlir::cast<cir::IntType>(cgf.sizeTy),
+          cir::BinOpOverflowKind::Mul, size, tsmV);
+
+      if (hasOverflow)
+        hasOverflow =
+            cgf.getBuilder().createOr(loc, hasOverflow, mulOp.getOverflow());
+      else
+        hasOverflow = mulOp.getOverflow();
+
+      size = mulOp.getResult();
+
+      // Also scale up numElements by the array size multiplier.
+      if (arraySizeMultiplier != 1) {
+        // If the base element type size is 1, then we can re-use the
+        // multiply we just did.
+        if (typeSize.isOne()) {
+          assert(arraySizeMultiplier == typeSizeMultiplier);
+          numElements = size;
+
+          // Otherwise we need a separate multiply.
+        } else {
+          mlir::Value asmV =
+              cgf.getBuilder().getConstInt(loc, arraySizeMultiplier);
+          numElements = cgf.getBuilder().createMul(loc, numElements, asmV);
+        }
+      }
+    } else {
+      // numElements doesn't need to be scaled.
+      assert(arraySizeMultiplier == 1);
+    }
+
+    // Add in the cookie size if necessary.
+    if (cookieSize != 0) {
+      sizeWithoutCookie = size;
+      mlir::Value cookieSizeV = cgf.getBuilder().getConstInt(loc, cookieSize);
+      auto addOp = cir::BinOpOverflowOp::create(
+          cgf.getBuilder(), loc, mlir::cast<cir::IntType>(cgf.sizeTy),
+          cir::BinOpOverflowKind::Add, size, cookieSizeV);
+
+      if (hasOverflow)
+        hasOverflow =
+            cgf.getBuilder().createOr(loc, hasOverflow, addOp.getOverflow());
+      else
+        hasOverflow = addOp.getOverflow();
+
+      size = addOp.getResult();
+    }
+
+    // If we had any possibility of dynamic overflow, make a select to
+    // overwrite 'size' with an all-ones value, which should cause
+    // operator new to throw.
+    if (hasOverflow) {
+      mlir::Value allOnes =
+          cgf.getBuilder().getConstInt(loc, llvm::APInt::getAllOnes(sizeWidth));
+      size = cgf.getBuilder().createSelect(loc, hasOverflow, allOnes, size);
+    }
   }
 
   if (cookieSize == 0)
@@ -976,6 +1080,16 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
 
   // If there is a brace-initializer, cannot allocate fewer elements than inits.
   unsigned minElements = 0;
+  if (e->isArray() && e->hasInitializer()) {
+    const InitListExpr *ile = dyn_cast<InitListExpr>(e->getInitializer());
+    if (ile && ile->isStringLiteralInit())
+      minElements =
+          cast<ConstantArrayType>(ile->getType()->getAsArrayTypeUnsafe())
+              ->getSize()
+              .getZExtValue();
+    else if (ile)
+      minElements = ile->getNumInits();
+  }
 
   mlir::Value numElements = nullptr;
   mlir::Value allocSizeWithoutCookie = nullptr;

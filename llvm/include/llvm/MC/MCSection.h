@@ -413,7 +413,6 @@ class MCSymbolIdFragment : public MCFragment {
 public:
   MCSymbolIdFragment(const MCSymbol *Sym) : MCFragment(FT_SymbolId), Sym(Sym) {}
 
-  const MCSymbol *getSymbol() { return Sym; }
   const MCSymbol *getSymbol() const { return Sym; }
 
   static bool classof(const MCFragment *F) {

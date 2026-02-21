@@ -40,6 +40,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
@@ -495,7 +496,7 @@ static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
 /// }
 ///
 /// Replace fp to integer with generated code.
-static void expandFPToI(Instruction *FPToI) {
+static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
   // clang-format on
   IRBuilder<> Builder(FPToI);
   auto *FloatVal = FPToI->getOperand(0);
@@ -537,12 +538,15 @@ static void expandFPToI(Instruction *FPToI) {
   BasicBlock *Entry = Builder.GetInsertBlock();
   Function *F = Entry->getParent();
   Entry->setName(Twine(Entry->getName(), "fp-to-i-entry"));
+  BasicBlock *CheckSaturateBB, *SaturateBB;
   BasicBlock *End =
       Entry->splitBasicBlock(Builder.GetInsertPoint(), "fp-to-i-cleanup");
-  BasicBlock *CheckSaturateBB = BasicBlock::Create(
-      Builder.getContext(), "fp-to-i-if-check.saturate", F, End);
-  BasicBlock *SaturateBB =
-      BasicBlock::Create(Builder.getContext(), "fp-to-i-if-saturate", F, End);
+  if (IsSaturating) {
+    CheckSaturateBB = BasicBlock::Create(Builder.getContext(),
+                                         "fp-to-i-if-check.saturate", F, End);
+    SaturateBB =
+        BasicBlock::Create(Builder.getContext(), "fp-to-i-if-saturate", F, End);
+  }
   BasicBlock *CheckExpSizeBB = BasicBlock::Create(
       Builder.getContext(), "fp-to-i-if-check.exp.size", F, End);
   BasicBlock *ExpSmallBB =
@@ -563,40 +567,56 @@ static void expandFPToI(Instruction *FPToI) {
     FloatVal =
         Builder.CreateFPExt(FloatVal, Type::getFP128Ty(Builder.getContext()));
   Value *ARep = Builder.CreateBitCast(FloatVal, FloatIntTy);
-  Value *PosOrNeg =
-      Builder.CreateICmpSGT(ARep, ConstantInt::getSigned(FloatIntTy, -1));
-  Value *Sign = Builder.CreateSelect(PosOrNeg, ConstantInt::getSigned(IntTy, 1),
-                                     ConstantInt::getSigned(IntTy, -1), "sign");
+  Value *PosOrNeg, *Sign;
+  if (IsSigned) {
+    PosOrNeg =
+        Builder.CreateICmpSGT(ARep, ConstantInt::getSigned(FloatIntTy, -1));
+    Sign = Builder.CreateSelect(PosOrNeg, ConstantInt::getSigned(IntTy, 1),
+                                ConstantInt::getSigned(IntTy, -1), "sign");
+  }
   Value *And =
       Builder.CreateLShr(ARep, Builder.getIntN(FloatWidth, FPMantissaWidth));
   Value *BiasedExp = Builder.CreateAnd(
       And, Builder.getIntN(FloatWidth, (1 << ExponentWidth) - 1), "biased.exp");
   Value *Abs = Builder.CreateAnd(ARep, SignificandMask);
   Value *Significand = Builder.CreateOr(Abs, ImplicitBit, "significand");
-  Value *ExpIsNegative = Builder.CreateICmpULT(
+  Value *ZeroResultCond = Builder.CreateICmpULT(
       BiasedExp, Builder.getIntN(FloatWidth, ExponentBias), "exp.is.negative");
-  Builder.CreateCondBr(ExpIsNegative, End, CheckSaturateBB);
+  if (IsSaturating) {
+    Value *IsNaN = Builder.CreateFCmpUNO(FloatVal, FloatVal, "is.nan");
+    ZeroResultCond = Builder.CreateOr(ZeroResultCond, IsNaN);
+    if (!IsSigned) {
+      Value *IsNeg = Builder.CreateIsNeg(ARep);
+      ZeroResultCond = Builder.CreateOr(ZeroResultCond, IsNeg);
+    }
+  }
+  Builder.CreateCondBr(ZeroResultCond, End,
+                       IsSaturating ? CheckSaturateBB : CheckExpSizeBB);
 
-  // check.saturate:
-  Builder.SetInsertPoint(CheckSaturateBB);
-  Value *Add1 = Builder.CreateAdd(
-      BiasedExp,
-      ConstantInt::getSigned(FloatIntTy,
-                             -static_cast<int64_t>(ExponentBias + BitWidth)));
-  Value *Cmp3 = Builder.CreateICmpULT(
-      Add1,
-      ConstantInt::getSigned(FloatIntTy, -static_cast<int64_t>(BitWidth)));
-  Builder.CreateCondBr(Cmp3, SaturateBB, CheckExpSizeBB);
+  Value *Saturated;
+  if (IsSaturating) {
+    // check.saturate:
+    Builder.SetInsertPoint(CheckSaturateBB);
+    Value *Cmp3 = Builder.CreateICmpUGE(
+        BiasedExp, ConstantInt::getSigned(
+                       FloatIntTy, static_cast<int64_t>(ExponentBias +
+                                                        BitWidth - IsSigned)));
+    Builder.CreateCondBr(Cmp3, SaturateBB, CheckExpSizeBB);
 
-  // saturate:
-  Builder.SetInsertPoint(SaturateBB);
-  Value *SignedMax =
-      ConstantInt::get(IntTy, APInt::getSignedMaxValue(BitWidth));
-  Value *SignedMin =
-      ConstantInt::get(IntTy, APInt::getSignedMinValue(BitWidth));
-  Value *Saturated =
-      Builder.CreateSelect(PosOrNeg, SignedMax, SignedMin, "saturated");
-  Builder.CreateBr(End);
+    // saturate:
+    Builder.SetInsertPoint(SaturateBB);
+    if (IsSigned) {
+      Value *SignedMax =
+          ConstantInt::get(IntTy, APInt::getSignedMaxValue(BitWidth));
+      Value *SignedMin =
+          ConstantInt::get(IntTy, APInt::getSignedMinValue(BitWidth));
+      Saturated =
+          Builder.CreateSelect(PosOrNeg, SignedMax, SignedMin, "saturated");
+    } else {
+      Saturated = ConstantInt::getAllOnesValue(IntTy);
+    }
+    Builder.CreateBr(End);
+  }
 
   // if.end9:
   Builder.SetInsertPoint(CheckExpSizeBB);
@@ -609,9 +629,10 @@ static void expandFPToI(Instruction *FPToI) {
   Builder.SetInsertPoint(ExpSmallBB);
   Value *Sub13 = Builder.CreateSub(
       Builder.getIntN(FloatWidth, ExponentBias + FPMantissaWidth), BiasedExp);
-  Value *Shr14 =
+  Value *ExpSmallRes =
       Builder.CreateZExtOrTrunc(Builder.CreateLShr(Significand, Sub13), IntTy);
-  Value *Mul = Builder.CreateMul(Shr14, Sign);
+  if (IsSigned)
+    ExpSmallRes = Builder.CreateMul(ExpSmallRes, Sign);
   Builder.CreateBr(End);
 
   // exp.large:
@@ -621,18 +642,20 @@ static void expandFPToI(Instruction *FPToI) {
       ConstantInt::getSigned(
           FloatIntTy, -static_cast<int64_t>(ExponentBias + FPMantissaWidth)));
   Value *SignificandCast = Builder.CreateZExtOrTrunc(Significand, IntTy);
-  Value *Shl = Builder.CreateShl(SignificandCast,
-                                 Builder.CreateZExtOrTrunc(Sub15, IntTy));
-  Value *Mul16 = Builder.CreateMul(Shl, Sign);
+  Value *ExpLargeRes = Builder.CreateShl(
+      SignificandCast, Builder.CreateZExtOrTrunc(Sub15, IntTy));
+  if (IsSigned)
+    ExpLargeRes = Builder.CreateMul(ExpLargeRes, Sign);
   Builder.CreateBr(End);
 
   // cleanup:
   Builder.SetInsertPoint(End, End->begin());
-  PHINode *Retval0 = Builder.CreatePHI(FPToI->getType(), 4);
+  PHINode *Retval0 = Builder.CreatePHI(FPToI->getType(), 3 + IsSaturating);
 
-  Retval0->addIncoming(Saturated, SaturateBB);
-  Retval0->addIncoming(Mul, ExpSmallBB);
-  Retval0->addIncoming(Mul16, ExpLargeBB);
+  if (IsSaturating)
+    Retval0->addIncoming(Saturated, SaturateBB);
+  Retval0->addIncoming(ExpSmallRes, ExpSmallBB);
+  Retval0->addIncoming(ExpLargeRes, ExpLargeBB);
   Retval0->addIncoming(Builder.getIntN(BitWidth, 0), Entry);
 
   FPToI->replaceAllUsesWith(Retval0);
@@ -742,8 +765,17 @@ static void expandIToFP(Instruction *IToFP) {
   unsigned FloatWidth = PowerOf2Ceil(FPMantissaWidth);
   bool IsSigned = IToFP->getOpcode() == Instruction::SIToFP;
 
-  assert(BitWidth > FloatWidth && "Unexpected conversion. expandIToFP() "
-                                  "assumes integer width is larger than fp.");
+  // We're going to introduce branches on the value, so freeze it.
+  if (!isGuaranteedNotToBeUndefOrPoison(IntVal))
+    IntVal = Builder.CreateFreeze(IntVal);
+
+  // The expansion below assumes that int width >= float width. Zero or sign
+  // extend the integer accordingly.
+  if (BitWidth < FloatWidth) {
+    BitWidth = FloatWidth;
+    IntTy = Builder.getIntNTy(BitWidth);
+    IntVal = Builder.CreateIntCast(IntVal, IntTy, IsSigned);
+  }
 
   Value *Temp1 =
       Builder.CreateShl(Builder.getIntN(BitWidth, 1),
@@ -1080,6 +1112,16 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
              // The backend has peephole optimizations for powers of two.
              // TODO: We don't consider vectors here.
              && !isConstantPowerOfTwo(I.getOperand(1), isSigned(I.getOpcode()));
+    case Instruction::Call: {
+      auto *II = dyn_cast<IntrinsicInst>(&I);
+      if (II && (II->getIntrinsicID() == Intrinsic::fptoui_sat ||
+                 II->getIntrinsicID() == Intrinsic::fptosi_sat)) {
+        return !DisableExpandLargeFp &&
+               cast<IntegerType>(Ty->getScalarType())->getIntegerBitWidth() >
+                   MaxLegalFpConvertBitWidth;
+      }
+      return false;
+    }
     }
 
     return false;
@@ -1115,8 +1157,10 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     }
 
     case Instruction::FPToUI:
+      expandFPToI(I, /*IsSaturating=*/false, /*IsSigned=*/false);
+      break;
     case Instruction::FPToSI:
-      expandFPToI(I);
+      expandFPToI(I, /*IsSaturating=*/false, /*IsSigned=*/true);
       break;
 
     case Instruction::UIToFP:
@@ -1132,6 +1176,15 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     case Instruction::SRem:
       expandRemainder(cast<BinaryOperator>(I));
       break;
+
+    case Instruction::Call: {
+      auto *II = cast<IntrinsicInst>(I);
+      assert(II->getIntrinsicID() == Intrinsic::fptoui_sat ||
+             II->getIntrinsicID() == Intrinsic::fptosi_sat);
+      expandFPToI(I, /*IsSaturating=*/true,
+                  /*IsSigned=*/II->getIntrinsicID() == Intrinsic::fptosi_sat);
+      break;
+    }
     }
   }
 

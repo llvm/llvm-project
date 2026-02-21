@@ -669,8 +669,8 @@ public:
 };
 
 template <class _Key, class _MapValueT, class _Compare>
-struct __make_transparent<__map_value_compare<_Key, _MapValueT, _Compare> > {
-  using type _LIBCPP_NODEBUG = __map_value_compare<_Key, _MapValueT, __make_transparent_t<_Compare> >;
+struct __make_transparent<_Key, __map_value_compare<_Key, _MapValueT, _Compare> > {
+  using type _LIBCPP_NODEBUG = __map_value_compare<_Key, _MapValueT, __make_transparent_t<_Key, _Compare> >;
 };
 
 #  if _LIBCPP_STD_VER >= 14
