@@ -4530,8 +4530,14 @@ SymbolFileDWARF::GetContainingDeclContext(const DWARFDIE &die) {
 }
 
 LanguageType SymbolFileDWARF::LanguageTypeFromDWARF(uint64_t val) {
-  if (val <= eLanguageTypeLastStandardLanguage)
-    return static_cast<LanguageType>(val);
+  if (val <= eLanguageTypeLastStandardLanguage) {
+    LanguageType lang = static_cast<LanguageType>(val);
+    // Remap HIP to C++ since HIP is C++ with GPU extensions.
+    // This allows HIP code to use the C++ language plugin and type system.
+    if (lang == eLanguageTypeHIP)
+      return eLanguageTypeC_plus_plus;
+    return lang;
+  }
 
   // Note: user languages between lo_user and hi_user must be handled
   // explicitly here.

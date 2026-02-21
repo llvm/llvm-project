@@ -694,7 +694,9 @@ static llvm::dwarf::SourceLanguage GetSourceLanguage(const CodeGenModule &CGM) {
 
   llvm::dwarf::SourceLanguage LangTag;
   if (LO.CPlusPlus) {
-    if (LO.ObjC)
+    if (LO.HIP)
+      LangTag = llvm::dwarf::DW_LANG_HIP;
+    else if (LO.ObjC)
       LangTag = llvm::dwarf::DW_LANG_ObjC_plus_plus;
     else if (CGO.DebugStrictDwarf && CGO.DwarfVersion < 5)
       LangTag = llvm::dwarf::DW_LANG_C_plus_plus;
@@ -730,7 +732,9 @@ GetDISourceLanguageName(const CodeGenModule &CGM) {
   uint32_t LangVersion = 0;
   llvm::dwarf::SourceLanguageName LangTag;
   if (LO.CPlusPlus) {
-    if (LO.ObjC) {
+    if (LO.HIP) {
+      LangTag = llvm::dwarf::DW_LNAME_HIP;
+    } else if (LO.ObjC) {
       LangTag = llvm::dwarf::DW_LNAME_ObjC_plus_plus;
     } else {
       LangTag = llvm::dwarf::DW_LNAME_C_plus_plus;
@@ -1322,6 +1326,7 @@ static bool hasCXXMangling(llvm::dwarf::SourceLanguage Lang, bool IsTagDecl) {
   case llvm::dwarf::DW_LANG_C_plus_plus:
   case llvm::dwarf::DW_LANG_C_plus_plus_11:
   case llvm::dwarf::DW_LANG_C_plus_plus_14:
+  case llvm::dwarf::DW_LANG_HIP:
     return true;
   case llvm::dwarf::DW_LANG_ObjC_plus_plus:
     return IsTagDecl;
@@ -1334,6 +1339,7 @@ static bool hasCXXMangling(llvm::dwarf::SourceLanguageName Lang,
                            bool IsTagDecl) {
   switch (Lang) {
   case llvm::dwarf::DW_LNAME_C_plus_plus:
+  case llvm::dwarf::DW_LNAME_HIP:
     return true;
   case llvm::dwarf::DW_LNAME_ObjC_plus_plus:
     return IsTagDecl;
