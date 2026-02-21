@@ -590,9 +590,13 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // We cannot sextinreg(i1).  Expand to shifts.
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
-  // Custom handling for PowerPC ucmp instruction
+  // Custom handling for ucmp
   setOperationAction(ISD::UCMP, MVT::i32, Custom);
   setOperationAction(ISD::UCMP, MVT::i64, isPPC64 ? Custom : Expand);
+
+  // Custom handling for abdu
+  setOperationAction(ISD::ABDU, MVT::i32, Custom);
+  setOperationAction(ISD::ABDU, MVT::i64, isPPC64 ? Custom : Expand);
 
   // NOTE: EH_SJLJ_SETJMP/_LONGJMP supported here is NOT intended to support
   // SjLj exception handling but a light-weight setjmp/longjmp replacement to
@@ -12588,6 +12592,71 @@ SDValue PPCTargetLowering::LowerSADDO(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getMergeValues({Sum, OverflowTrunc}, dl);
 }
 
+SDValue PPCTargetLowering::LowerABDU(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  EVT OpVT = LHS.getValueType();
+  EVT VT = Op.getValueType();
+  bool IsNonNegative = DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS);
+
+  // If the subtract doesn't overflow then just use abs(sub()).
+  if (DAG.willNotOverflowSub(IsNonNegative, LHS, RHS))
+    return DAG.getNode(ISD::ABS, DL, VT,
+                       DAG.getNode(ISD::SUB, DL, VT, LHS, RHS));
+
+  if (DAG.willNotOverflowSub(IsNonNegative, RHS, LHS))
+    return DAG.getNode(ISD::ABS, DL, VT,
+                       DAG.getNode(ISD::SUB, DL, VT, RHS, LHS));
+
+  // On PPC64, i32 carries are affected by the upper 32 bits of the registers.
+  // We must zero-extend to i64 to ensure the carry reflects the 32-bit unsigned
+  // comparison.
+  if (Subtarget.isPPC64() && OpVT == MVT::i32) {
+    LHS = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, LHS);
+    RHS = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, RHS);
+    OpVT = MVT::i64;
+  }
+
+  // General path: use SUBC (or ADDC when RHS is 0-X) to get
+  // subtract-with-flags, then CMOV to select a-b or b-a. ADDC/SUBC produce the
+  // flags we need.
+  unsigned Opcode = PPCISD::SUBC;
+
+  // Check if RHS is a negation (0 - X). If so, we can use ADDC instead of SUBC:
+  //   a - (0 - x) = a + x (mod 2^n)
+  // Same semantics as in LowerCMP; apply same safety checks.
+  if (RHS.getOpcode() == ISD::SUB) {
+    SDValue SubLHS = RHS.getOperand(0);
+    SDValue SubRHS = RHS.getOperand(1);
+
+    if (isNullConstant(SubLHS) && DAG.isKnownNeverZero(SubRHS)) {
+      Opcode = PPCISD::ADDC;
+      RHS = SubRHS;
+    }
+  }
+
+  // Calculate LHS - RHS and capture the carry (CA)
+  SDVTList VTs = DAG.getVTList(OpVT, MVT::i32);
+
+  SDValue Res = DAG.getNode(Opcode, DL, VTs, LHS, RHS);
+
+  SDValue CA0 = Res.getValue(1);
+
+  // t2 = A - B + CA0 using SUBE.
+  SDValue ZeroOrNeg1 = DAG.getNode(PPCISD::SUBE, DL, VTs, Res, Res, CA0);
+
+  SDValue Xor = DAG.getNode(ISD::XOR, DL, OpVT, Res, ZeroOrNeg1);
+
+  Res = DAG.getNode(ISD::SUB, DL, OpVT, Xor, ZeroOrNeg1);
+
+  // Truncate back to i32
+  if (OpVT != VT)
+    Res = DAG.getNode(ISD::TRUNCATE, DL, VT, Res);
+
+  return Res;
+}
+
 // Lower unsigned 3-way compare producing -1/0/1.
 SDValue PPCTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -12733,6 +12802,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerADDSUBO_CARRY(Op, DAG);
   case ISD::UCMP:
     return LowerUCMP(Op, DAG);
+  case ISD::ABDU:
+    return LowerABDU(Op, DAG);
   case ISD::STRICT_LRINT:
   case ISD::STRICT_LLRINT:
   case ISD::STRICT_LROUND:
