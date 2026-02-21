@@ -316,10 +316,9 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
           CheckPointee();
       }
       if (const auto *AT = dyn_cast<ArrayType>(VT)) {
-        if (!AT->getElementType().isConstQualified()) {
-          assert(AT->getElementType()->isPointerType());
+        assert(AT->getElementType()->isPointerType());
+        if (!AT->getElementType()->getPointeeType().isConstQualified())
           CheckPointee();
-        }
       }
     }
     return;
