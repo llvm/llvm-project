@@ -511,7 +511,10 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
               m_thread.shared_from_this(), m_frames.size(), idx, reg_ctx_sp,
               cfa, pc, behaves_like_zeroth_frame, nullptr);
           unwind_frame_sp->m_frame_list_id = GetIdentifier();
-          m_frames.push_back(unwind_frame_sp);
+          {
+            std::unique_lock<std::shared_mutex> guard(m_list_mutex);
+            m_frames.push_back(unwind_frame_sp);
+          }
         }
       } else {
         unwind_frame_sp = m_frames.front();
@@ -546,7 +549,10 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       SynthesizeTailCallFrames(*unwind_frame_sp.get());
 
       unwind_frame_sp->m_frame_list_id = GetIdentifier();
-      m_frames.push_back(unwind_frame_sp);
+      {
+        std::unique_lock<std::shared_mutex> guard(m_list_mutex);
+        m_frames.push_back(unwind_frame_sp);
+      }
     }
 
     assert(unwind_frame_sp);
