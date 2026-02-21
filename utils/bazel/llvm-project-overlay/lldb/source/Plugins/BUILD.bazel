@@ -14,7 +14,18 @@ package(
 licenses(["notice"])
 
 cc_library(
-    name = "PluginClangHighlighter",
+    name = "PluginHighlighterDefault",
+    srcs = glob(["Highlighter/Default/*.cpp"]),
+    hdrs = glob(["Highlighter/Default/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:CoreHeaders",
+        "//lldb:Utility",
+    ],
+)
+
+cc_library(
+    name = "PluginHighlighterClang",
     srcs = glob(["Highlighter/Clang/*.cpp"]),
     hdrs = glob(["Highlighter/Clang/*.h"]),
     includes = [".."],
@@ -34,7 +45,7 @@ cc_library(
     hdrs = glob(["Language/ObjC/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginClangHighlighter",
+        ":PluginHighlighterClang",
         ":PluginExpressionParserClangHeaders",
         "//lldb:CoreHeaders",
     ],
@@ -782,7 +793,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginCPPRuntime",
-        ":PluginClangHighlighter",
+        ":PluginHighlighterClang",
         ":PluginTypeSystemClang",
         "//lldb:Core",
         "//lldb:DataFormatters",
@@ -868,7 +879,7 @@ cc_library(
     hdrs = glob(["Language/ObjCPlusPlus/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginClangHighlighter",
+        ":PluginHighlighterClang",
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Target",
@@ -894,7 +905,7 @@ cc_library(
     hdrs = glob(["Language/CPlusPlus/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginClangHighlighter",
+        ":PluginHighlighterClang",
         ":PluginExpressionParserClangHeaders",
         "//lldb:CoreHeaders",
     ],
@@ -908,7 +919,7 @@ cc_library(
         ":LanguageCPlusPlusProperties",
         ":PluginCPPRuntime",
         ":PluginCPlusPlusLanguageHeaders",
-        ":PluginClangHighlighter",
+        ":PluginHighlighterClang",
         ":PluginExpressionParserClangHeaders",
         ":PluginTypeSystemClang",
         ":PluginTypeSystemClangHeaders",
