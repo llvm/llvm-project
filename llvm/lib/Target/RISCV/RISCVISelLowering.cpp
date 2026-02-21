@@ -21711,7 +21711,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                            Val, Cond.getOperand(0));
     }
 
-    // Remove SRL from bittest patterns (srl (and X, (1 << C), C)) if the and
+    // Remove SRL from bittest patterns (srl (and X, (1 << C)), C) if the and
     // is an ANDI. Because only 1 bit can be set after the AND, it doesn't
     // matter if we shift it.
     if (Cond.getOpcode() == ISD::SRL &&
