@@ -16,7 +16,7 @@ define void @derived_int_ivs(ptr noalias %a, ptr noalias %b, i64 %end) {
 ; VF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 2
 ; VF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
-; VF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
+; VF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 1
 ; VF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; VF2-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], 16
 ; VF2-NEXT:    [[TMP4:%.*]] = add i64 16, [[TMP3]]
@@ -30,8 +30,8 @@ define void @derived_int_ivs(ptr noalias %a, ptr noalias %b, i64 %end) {
 ; VF2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[OFFSET_IDX]]
 ; VF2-NEXT:    store <2 x double> [[WIDE_LOAD]], ptr [[TMP7]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
-; VF2-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; VF2-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF2-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; VF2-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; VF2-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
@@ -46,7 +46,7 @@ define void @derived_int_ivs(ptr noalias %a, ptr noalias %b, i64 %end) {
 ; VF2IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; VF2IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF2IC2:       [[VECTOR_PH]]:
-; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
 ; VF2IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], 16
 ; VF2IC2-NEXT:    [[TMP4:%.*]] = add i64 16, [[TMP3]]
@@ -154,7 +154,7 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; VF2-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
-; VF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; VF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 1
 ; VF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; VF2-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], 16
 ; VF2-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP9]]
@@ -170,8 +170,8 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[NEXT_GEP]], align 8
 ; VF2-NEXT:    store <2 x double> [[WIDE_LOAD]], ptr [[NEXT_GEP7]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
-; VF2-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; VF2-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF2-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; VF2-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; VF2-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
@@ -203,7 +203,7 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2IC2-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; VF2IC2-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; VF2IC2:       [[VECTOR_PH]]:
-; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
+; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
 ; VF2IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; VF2IC2-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], 16
 ; VF2IC2-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP9]]
@@ -324,9 +324,8 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF2-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
 ; VF2-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2-NEXT:    br i1 true, [[EXIT1:label %.*]], label %[[EXIT:.*]]
 ; VF2:       [[EXIT]]:
-; VF2-NEXT:    ret void
 ;
 ; VF2IC2-LABEL: define void @narrow_with_uniform_add_and_gep(
 ; VF2IC2-SAME: ptr noalias [[P:%.*]]) {
@@ -350,9 +349,8 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF2IC2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
 ; VF2IC2-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
-; VF2IC2-NEXT:    br label %[[EXIT:.*]]
+; VF2IC2-NEXT:    br i1 true, [[EXIT1:label %.*]], label %[[EXIT:.*]]
 ; VF2IC2:       [[EXIT]]:
-; VF2IC2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @narrow_with_uniform_add_and_gep(
 ; VF4-SAME: ptr noalias [[P:%.*]]) {

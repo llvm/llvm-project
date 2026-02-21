@@ -22,9 +22,8 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; VF2-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2-NEXT:    br i1 true, [[EXIT1:label %.*]], label %[[EXIT:.*]]
 ; VF2:       [[EXIT]]:
-; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @load_store_interleave_group(
 ; VF4-SAME: ptr noalias [[DATA:%.*]]) {
@@ -87,11 +86,10 @@ define void @load_store_interleave_group_different_objecs(ptr noalias %src, ptr 
 ; VF2-NEXT:    store <2 x i64> [[WIDE_LOAD1]], ptr [[TMP7]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP6]], 1
 ; VF2-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; VF2-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; VF2-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2-NEXT:    br i1 true, [[EXIT1:label %.*]], label %[[EXIT:.*]]
 ; VF2:       [[EXIT]]:
-; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @load_store_interleave_group_different_objecs(
 ; VF4-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
@@ -223,11 +221,10 @@ define void @same_constant_store_interleave_group(i64 %x, ptr noalias %dst) {
 ; VF2-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP1]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; VF2-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; VF2-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2-NEXT:    br i1 true, [[EXIT1:label %.*]], label %[[EXIT:.*]]
 ; VF2:       [[EXIT]]:
-; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @same_constant_store_interleave_group(
 ; VF4-SAME: i64 [[X:%.*]], ptr noalias [[DST:%.*]]) {
@@ -341,11 +338,10 @@ define void @same_live_in_store_interleave_group(i64 %x, ptr noalias %dst) {
 ; VF2-NEXT:    store <2 x i64> [[BROADCAST_SPLAT]], ptr [[TMP1]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; VF2-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; VF2-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2-NEXT:    br i1 true, [[EXIT1:label %.*]], label %[[EXIT:.*]]
 ; VF2:       [[EXIT]]:
-; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @same_live_in_store_interleave_group(
 ; VF4-SAME: i64 [[X:%.*]], ptr noalias [[DST:%.*]]) {
@@ -476,11 +472,10 @@ define void @single_uniform_load_store_interleave_group(ptr noalias %src, ptr no
 ; VF2-NEXT:    store <2 x i64> [[BROADCAST_SPLAT]], ptr [[TMP2]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; VF2-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; VF2-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2-NEXT:    br i1 true, [[EXIT1:label %.*]], label %[[EXIT:.*]]
 ; VF2:       [[EXIT]]:
-; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @single_uniform_load_store_interleave_group(
 ; VF4-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
@@ -620,11 +615,10 @@ define void @multiple_store_groups_storing_same_load_group(ptr noalias %A, ptr n
 ; VF2-NEXT:    store <2 x double> [[WIDE_LOAD1]], ptr [[TMP2]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; VF2-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; VF2-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2-NEXT:    br i1 true, [[EXIT1:label %.*]], label %[[EXIT:.*]]
 ; VF2:       [[EXIT]]:
-; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @multiple_store_groups_storing_same_load_group(
 ; VF4-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) {
