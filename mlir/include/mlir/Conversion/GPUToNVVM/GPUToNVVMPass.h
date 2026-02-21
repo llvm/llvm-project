@@ -36,12 +36,6 @@ void configureGpuToNVVMConversionLegality(ConversionTarget &target);
 /// GPU dialect to NVVM.
 void configureGpuToNVVMTypeConverter(LLVMTypeConverter &converter);
 
-/// Populate patterns that lower certain arith and math dialect ops to
-/// libdevice calls.
-void populateLibDeviceConversionPatterns(const LLVMTypeConverter &converter,
-                                         RewritePatternSet &patterns,
-                                         PatternBenefit benefit = 1);
-
 /// Collect a set of patterns to convert from the GPU dialect to NVVM.
 void populateGpuToNVVMConversionPatterns(const LLVMTypeConverter &converter,
                                          RewritePatternSet &patterns,

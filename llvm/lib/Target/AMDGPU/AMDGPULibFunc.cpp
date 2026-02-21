@@ -1176,6 +1176,8 @@ AMDGPULibFunc::AMDGPULibFunc(const AMDGPULibFunc &F) {
 AMDGPULibFunc &AMDGPULibFunc::operator=(const AMDGPULibFunc &F) {
   if (this == &F)
     return *this;
+
+  this->~AMDGPULibFunc();
   new (this) AMDGPULibFunc(F);
   return *this;
 }
