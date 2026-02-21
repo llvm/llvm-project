@@ -212,5 +212,12 @@ int __llvm_write_binary_ids(ProfDataWriter *Writer);
 int lprofWriteOneBinaryId(ProfDataWriter *Writer, uint64_t BinaryIdLen,
                           const uint8_t *BinaryIdData,
                           uint64_t BinaryIdPadding);
+#ifdef __cplusplus
+extern "C" {
+#endif
+COMPILER_RT_VISIBILITY int __llvm_profile_hip_collect_device_data(void);
+#ifdef __cplusplus
+}
+#endif
 
 #endif

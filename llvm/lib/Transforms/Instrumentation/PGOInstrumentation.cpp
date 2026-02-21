@@ -118,6 +118,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <cstdlib>
 #include <memory>
 #include <numeric>
 #include <optional>
@@ -379,8 +380,14 @@ class FunctionInstrumenter final {
   // values. Supporting other values is relatively straight-forward - just
   // another counter range within the context.
   bool isValueProfilingDisabled() const {
+    // Value profiling is disabled for GPU targets because the device-side
+    // profiling runtime does not yet implement __llvm_profile_instrument_target.
+    // The existing compiler-rt implementation uses a linked-list with locks and
+    // eviction policy that is not efficient for massively parallel GPU
+    // execution. A GPU-optimized implementation is left as future work.
     return DisableValueProfiling ||
-           InstrumentationType == PGOInstrumentationType::CTXPROF;
+           InstrumentationType == PGOInstrumentationType::CTXPROF ||
+           isGPUProfTarget(M);
   }
 
   bool shouldInstrumentEntryBB() const {
@@ -1201,6 +1208,9 @@ public:
   // Annotate the irreducible loop header weights.
   void annotateIrrLoopHeaderWeights();
 
+  // Annotate per-block uniformity info for offload profiling.
+  void setBlockUniformityAttribute();
+
   // The hotness of the function from the profile count.
   enum FuncFreqAttr { FFA_Normal, FFA_Cold, FFA_Hot };
 
@@ -1307,11 +1317,34 @@ bool PGOUseFunc::setInstrumentedCounts(
 
   setupBBInfoEdges(FuncInfo);
 
-  unsigned NumCounters =
-      InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
+  unsigned NumInstrumentedBBs = InstrumentBBs.size();
+  unsigned NumSelects = FuncInfo.SIVisitor.getNumOfSelectInsts();
+  unsigned NumCounters = NumInstrumentedBBs + NumSelects;
   // The number of counters here should match the number of counters
   // in profile. Return if they mismatch.
   if (NumCounters != CountFromProfile.size()) {
+    LLVM_DEBUG({
+      dbgs() << "PGO COUNTER MISMATCH for function " << F.getName() << ":\n";
+      dbgs() << "  Expected counters: " << NumCounters << "\n";
+      dbgs() << "    - From instrumented edges: " << NumInstrumentedBBs << "\n";
+      for (size_t i = 0; i < InstrumentBBs.size(); ++i) {
+        dbgs() << "      " << i << ": " << InstrumentBBs[i]->getName() << "\n";
+      }
+      dbgs() << "    - From select instructions: " << NumSelects << "\n";
+      dbgs() << "  Actual counters from profile: " << CountFromProfile.size()
+             << "\n";
+
+      // Dump module
+      std::error_code EC;
+      std::string Filename = "pgo_mismatch_" + F.getName().str() + ".ll";
+      raw_fd_ostream OS(Filename, EC);
+      if (!EC) {
+        dbgs() << "Dumping module to " << Filename << "\n";
+        M->print(OS, nullptr);
+      } else {
+        dbgs() << "Error opening file " << Filename << " for writing\n";
+      }
+    });
     return false;
   }
   auto *FuncEntry = &*F.begin();
@@ -1319,6 +1352,7 @@ bool PGOUseFunc::setInstrumentedCounts(
   // Set the profile count to the Instrumented BBs.
   uint32_t I = 0;
   for (BasicBlock *InstrBB : InstrumentBBs) {
+
     uint64_t CountValue = CountFromProfile[I++];
     PGOUseBBInfo &Info = getBBInfo(InstrBB);
     // If we reach here, we know that we have some nonzero count
@@ -1762,6 +1796,46 @@ void PGOUseFunc::annotateIrrLoopHeaderWeights() {
       setIrrLoopHeaderMetadata(M, TI, *BBCountInfo.Count);
     }
   }
+}
+
+void PGOUseFunc::setBlockUniformityAttribute() {
+  if (ProfileRecord.UniformityBits.empty())
+    return;
+
+  // Annotate uniformity on each instrumented IR basic block so later codegen
+  // passes (MachineFunction) can consume it without relying on fragile block
+  // numbering heuristics.
+  //
+  // Metadata kind: LLVMContext::MD_block_uniformity_profile
+  // Payload: i1 (true = uniform, false = divergent)
+
+  std::vector<BasicBlock *> InstrumentBBs;
+  FuncInfo.getInstrumentBBs(InstrumentBBs);
+
+  LLVMContext &Ctx = F.getContext();
+  Type *Int1Ty = Type::getInt1Ty(Ctx);
+
+  for (size_t I = 0, E = InstrumentBBs.size(); I < E; ++I) {
+    BasicBlock *BB = InstrumentBBs[I];
+    if (!BB || !BB->getTerminator())
+      continue;
+    bool IsUniform = ProfileRecord.isBlockUniform(I);
+    auto *MD = MDNode::get(
+        Ctx, ConstantAsMetadata::get(ConstantInt::get(Int1Ty, IsUniform)));
+    BB->getTerminator()->setMetadata(LLVMContext::MD_block_uniformity_profile,
+                                     MD);
+  }
+
+  // Keep a function attribute for debugging / IR inspection.
+  // Format: "U" for uniform, "D" for divergent, one per instrumented block.
+  std::string UniformityStr;
+  UniformityStr.reserve(InstrumentBBs.size());
+  for (size_t I = 0, E = InstrumentBBs.size(); I < E; ++I)
+    UniformityStr += ProfileRecord.isBlockUniform(I) ? 'U' : 'D';
+  F.addFnAttr("block-uniformity-profile", UniformityStr);
+
+  LLVM_DEBUG(dbgs() << "PGO: Set block uniformity profile for " << F.getName()
+                    << ": " << UniformityStr << "\n");
 }
 
 void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
@@ -2275,6 +2349,7 @@ static bool annotateAllFunctions(
     Func.setBranchWeights();
     Func.annotateValueSites();
     Func.annotateIrrLoopHeaderWeights();
+    Func.setBlockUniformityAttribute();
     PGOUseFunc::FuncFreqAttr FreqAttr = Func.getFuncFreqAttr();
     if (FreqAttr == PGOUseFunc::FFA_Cold)
       ColdFunctions.push_back(&F);
@@ -2412,11 +2487,12 @@ void llvm::setProfMetadata(Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
   LLVM_DEBUG(dbgs() << "Weight is: "; for (const auto &W
                                            : Weights) {
     dbgs() << W << " ";
-  } dbgs() << "\n";);
+  } dbgs() << "\n");
 
   misexpect::checkExpectAnnotations(*TI, Weights, /*IsFrontend=*/false);
 
   setBranchWeights(*TI, Weights, /*IsExpected=*/false);
+
   if (EmitBranchProbability) {
     std::string BrCondStr = getBranchCondString(TI);
     if (BrCondStr.empty())

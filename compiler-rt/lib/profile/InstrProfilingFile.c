@@ -1198,6 +1198,8 @@ int __llvm_profile_write_file(void) {
   if (rc)
     PROF_ERR("Failed to write file \"%s\": %s\n", Filename, strerror(errno));
 
+  __llvm_profile_hip_collect_device_data();
+
   // Restore SIGKILL.
   if (PDeathSig == 1)
     lprofRestoreSigKill();
@@ -1282,14 +1284,16 @@ COMPILER_RT_VISIBILITY int __llvm_profile_set_file_object(FILE *File,
 }
 
 #ifndef __APPLE__
-int __llvm_write_custom_profile(const char *Target,
+int __llvm_write_custom_profile(const char *Target, const char *TUSuffix,
                                 const __llvm_profile_data *DataBegin,
                                 const __llvm_profile_data *DataEnd,
                                 const char *CountersBegin,
-                                const char *CountersEnd, const char *NamesBegin,
-                                const char *NamesEnd,
+                                const char *CountersEnd,
+                                const char *UniformCountersBegin,
+                                const char *UniformCountersEnd,
+                                const char *NamesBegin, const char *NamesEnd,
                                 const uint64_t *VersionOverride) {
-  int ReturnValue = 0, FilenameLength, TargetLength;
+  int ReturnValue = 0, FilenameLength, TargetLength, TUSuffixLength;
   char *FilenameBuf, *TargetFilename;
   const char *Filename;
 
@@ -1307,7 +1311,8 @@ int __llvm_write_custom_profile(const char *Target,
   }
 
   /* Check if there is llvm/runtime version mismatch.  */
-  if (GET_VERSION(__llvm_profile_get_version()) != INSTR_PROF_RAW_VERSION) {
+  if (VersionOverride == NULL &&
+      GET_VERSION(__llvm_profile_get_version()) != INSTR_PROF_RAW_VERSION) {
     PROF_ERR("Runtime and instrumentation version mismatch : "
              "expected %d, but get %d\n",
              INSTR_PROF_RAW_VERSION,
@@ -1331,9 +1336,12 @@ int __llvm_write_custom_profile(const char *Target,
   }
 
   /* Allocate new space for our target-specific PGO filename */
+  /* Format: <dir>/<basename_without_ext>.<target>.<TUSuffix>.<ext> */
+  /* This matches the HIP convention for backward compatibility */
   TargetLength = strlen(Target);
-  TargetFilename =
-      (char *)COMPILER_RT_ALLOCA(FilenameLength + TargetLength + 2);
+  TUSuffixLength = TUSuffix ? strlen(TUSuffix) : 0;
+  TargetFilename = (char *)COMPILER_RT_ALLOCA(FilenameLength + TargetLength +
+                                              TUSuffixLength + 3);
 
   /* Find file basename and path sizes */
   int32_t DirEnd = FilenameLength - 1;
@@ -1342,15 +1350,34 @@ int __llvm_write_custom_profile(const char *Target,
   }
   uint32_t DirSize = DirEnd + 1, BaseSize = FilenameLength - DirSize;
 
-  /* Prepend "TARGET." to current filename */
+  /* Find extension within basename */
+  const char *Basename = Filename + DirSize;
+  const char *Extension = strrchr(Basename, '.');
+  uint32_t BasenameNoExtSize =
+      Extension ? (uint32_t)(Extension - Basename) : BaseSize;
+  uint32_t ExtSize = Extension ? (uint32_t)(BaseSize - BasenameNoExtSize) : 0;
+
+  /* Build filename: <dir>/<basename_without_ext>.<target>.<TUSuffix>.<ext> */
+  char *p = TargetFilename;
   if (DirSize > 0) {
-    memcpy(TargetFilename, Filename, DirSize);
+    memcpy(p, Filename, DirSize);
+    p += DirSize;
   }
-  memcpy(TargetFilename + DirSize, Target, TargetLength);
-  TargetFilename[TargetLength + DirSize] = '.';
-  memcpy(TargetFilename + DirSize + 1 + TargetLength, Filename + DirSize,
-         BaseSize);
-  TargetFilename[FilenameLength + 1 + TargetLength] = 0;
+  memcpy(p, Basename, BasenameNoExtSize);
+  p += BasenameNoExtSize;
+  *p++ = '.';
+  memcpy(p, Target, TargetLength);
+  p += TargetLength;
+  if (TUSuffixLength > 0) {
+    *p++ = '.';
+    memcpy(p, TUSuffix, TUSuffixLength);
+    p += TUSuffixLength;
+  }
+  if (ExtSize > 0) {
+    memcpy(p, Extension, ExtSize);
+    p += ExtSize;
+  }
+  *p = '\0';
 
   /* Open and truncate target-specific PGO file */
   FILE *OutputFile = fopen(TargetFilename, "w");
@@ -1380,6 +1407,47 @@ int __llvm_write_custom_profile(const char *Target,
                          CountersEnd, NULL, NULL, lprofGetVPDataReader(), NULL,
                          NULL, NULL, NULL, NamesBegin, NamesEnd, 0, Version);
   closeFileObject(OutputFile);
+
+  /* Write uniform counters to a separate file if provided */
+  if (ReturnValue == 0 && UniformCountersBegin && UniformCountersEnd &&
+      UniformCountersEnd > UniformCountersBegin) {
+    size_t UniformCountersSize = UniformCountersEnd - UniformCountersBegin;
+
+    /* Create uniform counters filename by replacing extension with .unifcnts */
+    size_t TargetFilenameLen = strlen(TargetFilename);
+    char *UniformFilename = (char *)COMPILER_RT_ALLOCA(TargetFilenameLen + 10);
+    strcpy(UniformFilename, TargetFilename);
+
+    /* Find and replace extension */
+    char *ext = strrchr(UniformFilename, '.');
+    if (ext) {
+      strcpy(ext, ".unifcnts");
+    } else {
+      strcat(UniformFilename, ".unifcnts");
+    }
+
+    FILE *UniformFile = fopen(UniformFilename, "wb");
+    if (UniformFile) {
+      /* Write a simple header: magic, version, num_counters, counters_size */
+      uint64_t UniformMagic = 0x55434E5450524F46ULL; /* "UCNTPROF" in ASCII */
+      uint64_t UniformVersion = 1;
+      uint64_t NumUniformCounters = UniformCountersSize / sizeof(uint64_t);
+
+      if (fwrite(&UniformMagic, sizeof(uint64_t), 1, UniformFile) != 1 ||
+          fwrite(&UniformVersion, sizeof(uint64_t), 1, UniformFile) != 1 ||
+          fwrite(&NumUniformCounters, sizeof(uint64_t), 1, UniformFile) != 1 ||
+          fwrite(&UniformCountersSize, sizeof(uint64_t), 1, UniformFile) != 1 ||
+          fwrite(UniformCountersBegin, 1, UniformCountersSize, UniformFile) !=
+              UniformCountersSize) {
+        PROF_WARN("Failed to write uniform counters to %s\n", UniformFilename);
+        ReturnValue = -1;
+      }
+      fclose(UniformFile);
+    } else {
+      PROF_WARN("Failed to open %s for writing uniform counters\n",
+                UniformFilename);
+    }
+  }
 
   // Restore SIGKILL.
   if (PDeathSig == 1)

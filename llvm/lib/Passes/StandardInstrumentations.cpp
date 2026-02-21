@@ -2031,7 +2031,8 @@ DotCfgDiff::DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
 
     assert(NodePosition.count(Source) == 1 && "Expected to find node.");
     DotCfgDiffNode &SourceNode = Nodes[NodePosition[Source]];
-    assert(NodePosition.count(Sink) == 1 && "Expected to find node.");
+    if (NodePosition.count(Sink) == 0)
+      continue;
     unsigned SinkNode = NodePosition[Sink];
     StringRef Colour = E.second;
 
@@ -2251,7 +2252,12 @@ void DotCfgChangeReporter::handleFunctionCompare(
   // Use the before entry block if the after entry block was removed.
   if (EntryBlockName == "")
     EntryBlockName = Before.getEntryBlockName();
-  assert(EntryBlockName != "" && "Expected to find entry block");
+
+  if (EntryBlockName.empty()) {
+    errs() << "Warning: could not find entry block for function " << Name
+           << ", skipping dot-cfg output for pass " << PassID << ".\n";
+    return;
+  }
 
   DotCfgDiffDisplayGraph DG = Diff.createDisplayGraph(Text, EntryBlockName);
   DG.generateDotFile(DotFile);
