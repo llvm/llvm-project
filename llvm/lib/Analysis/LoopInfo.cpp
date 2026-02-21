@@ -84,7 +84,7 @@ bool Loop::makeLoopInvariant(Value *V, bool &Changed, Instruction *InsertPt,
 bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
                              Instruction *InsertPt, MemorySSAUpdater *MSSAU,
                              ScalarEvolution *SE) const {
-  BasicBlock* OriginalParent = I->getParent();
+  BasicBlock *OriginalParent = I->getParent();
   // Test if the value is already loop-invariant.
   if (isLoopInvariant(I))
     return true;
@@ -133,7 +133,7 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   // condition. Conservatively strip it here so that we don't give any wrong
   // information to the optimizer.
   I->dropUnknownNonDebugMetadata(ProfileMetadataToPreserve);
-  
+
   if (ProfileMetadataToPreserve.empty() && isa<SelectInst>(I))
     setExplicitlyUnknownBranchWeightsIfProfiled(*I, "LoopInfo");
 
