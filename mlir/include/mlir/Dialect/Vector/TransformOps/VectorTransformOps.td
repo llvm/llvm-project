@@ -267,14 +267,15 @@ def ApplyMultiReductionUnrollingPatternsOp: Op<Transform_Dialect,
     "apply_patterns.vector.multi_reduction_unrolling",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Indicates that 2-D vector multi_reduction operations should be unrolled
+    Indicates that vector multi_reduction operations should be unrolled
     into either a sequence of vector.reduction ops (innerreduction) or
     element-wise arith ops (innerparallel).
 
     This populates the patterns from
     `populateVectorMultiReductionUnrollingPatterns`, i.e.:
     * `TwoDimMultiReductionToReduction` (innerreduction)
-    * `TwoDimMultiReductionToElementWise` (innerparallel)
+    * `UnrollMultiReductionInnerParallelBaseCase`
+    * `UnrollMultiReductionInnerParallelGeneralCase`
   }];
 
   let arguments = (ins DefaultValuedAttr<VectorMultiReductionLoweringAttr,
