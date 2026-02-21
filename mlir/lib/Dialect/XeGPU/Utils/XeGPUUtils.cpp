@@ -750,7 +750,7 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
   return reductionResult;
 }
 
-Value xegpu::lowerToVectorReductionsCrossLane(
+Value xegpu::lowerCrossLaneReductionToShuffles(
     TypedValue<VectorType> src, TypedValue<VectorType> acc,
     vector::CombiningKind kind, int64_t reductionDim, int64_t reductionSize,
     Location loc, PatternRewriter &rewriter) {

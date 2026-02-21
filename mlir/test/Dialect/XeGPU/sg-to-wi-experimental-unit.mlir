@@ -236,63 +236,56 @@ gpu.func @vector_multi_reduction_dim1_distributed_dim1_reduction(%laneid: index)
   gpu.return
 }
 
-// CHECK-LABEL: gpu.func @vector_multi_reduction_dim1_distributed_dim1_reduction_over_partial_sg_size
-// CHECK: %0 = vector.extract_strided_slice %cst {offsets = [0, 0], sizes = [1, 1], strides = [1, 1]} : vector<1x1xf32> to vector<1x1xf32>
-// CHECK: %1 = vector.shape_cast %0 : vector<1x1xf32> to vector<1xf32>
-// CHECK: %2 = vector.extract %cst_0[0] : f32 from vector<1xf32>
-// CHECK: %3 = vector.reduction <add>, %1 : vector<1xf32> into f32
-// CHECK: %c4_i32 = arith.constant 4 : i32
-// CHECK: %c1_i32 = arith.constant 1 : i32
-// CHECK: %shuffleResult, %valid = gpu.shuffle  xor %3, %c1_i32, %c4_i32 : f32
-// CHECK: %4 = arith.addf %3, %shuffleResult : f32
-// CHECK: %c4_i32_2 = arith.constant 4 : i32
-// CHECK: %c2_i32 = arith.constant 2 : i32
-// CHECK: %shuffleResult_3, %valid_4 = gpu.shuffle  xor %4, %c2_i32, %c4_i32_2 : f32
-// CHECK: %5 = arith.addf %4, %shuffleResult_3 : f32
-// CHECK: %6 = arith.addf %5, %2 : f32
-// CHECK: %7 = vector.insert %6, %cst_1 [0] : f32 into vector<1xf32>
-gpu.func @vector_multi_reduction_dim1_distributed_dim1_reduction_over_partial_sg_size(%laneid: index) {
-  %c0 = arith.constant 0 : index
-  %src = arith.constant
-      {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
-      dense<0.0>  : vector<1x4xf32>
-    %acc = arith.constant
-      {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>}
-      dense<0.0>  : vector<1xf32>
-    %1 = vector.multi_reduction <add>, %src, %acc
-      {
-        layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>
-      }
-      [1] : vector<1x4xf32> to vector<1xf32>
-  gpu.return
-}
-
 // CHECK-LABEL: gpu.func @vector_multi_reduction_dim0_distributed_dim0_reduction
 // CHECK: %2 = vector.extract_strided_slice %1 {offsets = [0, 0], sizes = [1, 1], strides = [1, 1]} : vector<1x2xf32> to vector<1x1xf32>
 // CHECK: %3 = vector.shape_cast %2 : vector<1x1xf32> to vector<1xf32>
 // CHECK: %4 = vector.extract %cst[0] : f32 from vector<2xf32>
 // CHECK: %5 = vector.reduction <add>, %3 : vector<1xf32> into f32
-// CHECK: %c2_i32 = arith.constant 2 : i32
+// CHECK: %c16_i32 = arith.constant 16 : i32
 // CHECK: %c1_i32 = arith.constant 1 : i32
-// CHECK: %shuffleResult, %valid = gpu.shuffle  xor %5, %c1_i32, %c2_i32 : f32
+// CHECK: %shuffleResult, %valid = gpu.shuffle  xor %5, %c1_i32, %c16_i32 : f32
 // CHECK: %6 = arith.addf %5, %shuffleResult : f32
-// CHECK: %7 = arith.addf %6, %4 : f32
-// CHECK: %8 = vector.insert %7, %cst_0 [0] : f32 into vector<2xf32>
-// CHECK: %9 = vector.extract_strided_slice %1 {offsets = [0, 1], sizes = [1, 1], strides = [1, 1]} : vector<1x2xf32> to vector<1x1xf32>
-// CHECK: %10 = vector.shape_cast %9 : vector<1x1xf32> to vector<1xf32>
-// CHECK: %11 = vector.extract %cst[1] : f32 from vector<2xf32>
-// CHECK: %12 = vector.reduction <add>, %10 : vector<1xf32> into f32
-// CHECK: %c2_i32_1 = arith.constant 2 : i32
-// CHECK: %c1_i32_2 = arith.constant 1 : i32
-// CHECK: %shuffleResult_3, %valid_4 = gpu.shuffle  xor %12, %c1_i32_2, %c2_i32_1 : f32
-// CHECK: %13 = arith.addf %12, %shuffleResult_3 : f32
-// CHECK: %14 = arith.addf %13, %11 : f32
-// CHECK: %15 = vector.insert %14, %8 [1] : f32 into vector<2xf32>
+// CHECK: %c16_i32_1 = arith.constant 16 : i32
+// CHECK: %c2_i32 = arith.constant 2 : i32
+// CHECK: %shuffleResult_2, %valid_3 = gpu.shuffle  xor %6, %c2_i32, %c16_i32_1 : f32
+// CHECK: %7 = arith.addf %6, %shuffleResult_2 : f32
+// CHECK: %c16_i32_4 = arith.constant 16 : i32
+// CHECK: %c4_i32 = arith.constant 4 : i32
+// CHECK: %shuffleResult_5, %valid_6 = gpu.shuffle  xor %7, %c4_i32, %c16_i32_4 : f32
+// CHECK: %8 = arith.addf %7, %shuffleResult_5 : f32
+// CHECK: %c16_i32_7 = arith.constant 16 : i32
+// CHECK: %c8_i32 = arith.constant 8 : i32
+// CHECK: %shuffleResult_8, %valid_9 = gpu.shuffle  xor %8, %c8_i32, %c16_i32_7 : f32
+// CHECK: %9 = arith.addf %8, %shuffleResult_8 : f32
+// CHECK: %10 = arith.addf %9, %4 : f32
+// CHECK: %11 = vector.insert %10, %cst_0 [0] : f32 into vector<2xf32>
+// CHECK: %12 = vector.extract_strided_slice %1 {offsets = [0, 1], sizes = [1, 1], strides = [1, 1]} : vector<1x2xf32> to vector<1x1xf32>
+// CHECK: %13 = vector.shape_cast %12 : vector<1x1xf32> to vector<1xf32>
+// CHECK: %14 = vector.extract %cst[1] : f32 from vector<2xf32>
+// CHECK: %15 = vector.reduction <add>, %13 : vector<1xf32> into f32
+// CHECK: %c16_i32_10 = arith.constant 16 : i32
+// CHECK: %c1_i32_11 = arith.constant 1 : i32
+// CHECK: %shuffleResult_12, %valid_13 = gpu.shuffle  xor %15, %c1_i32_11, %c16_i32_10 : f32
+// CHECK: %16 = arith.addf %15, %shuffleResult_12 : f32
+// CHECK: %c16_i32_14 = arith.constant 16 : i32
+// CHECK: %c2_i32_15 = arith.constant 2 : i32
+// CHECK: %shuffleResult_16, %valid_17 = gpu.shuffle  xor %16, %c2_i32_15, %c16_i32_14 : f32
+// CHECK: %17 = arith.addf %16, %shuffleResult_16 : f32
+// CHECK: %c16_i32_18 = arith.constant 16 : i32
+// CHECK: %c4_i32_19 = arith.constant 4 : i32
+// CHECK: %shuffleResult_20, %valid_21 = gpu.shuffle  xor %17, %c4_i32_19, %c16_i32_18 : f32
+// CHECK: %18 = arith.addf %17, %shuffleResult_20 : f32
+// CHECK: %c16_i32_22 = arith.constant 16 : i32
+// CHECK: %c8_i32_23 = arith.constant 8 : i32
+// CHECK: %shuffleResult_24, %valid_25 = gpu.shuffle  xor %18, %c8_i32_23, %c16_i32_22 : f32
+// CHECK: %19 = arith.addf %18, %shuffleResult_24 : f32
+// CHECK: %20 = arith.addf %19, %14 : f32
+// CHECK: %21 = vector.insert %20, %11 [1] : f32 into vector<2xf32>
 gpu.func @vector_multi_reduction_dim0_distributed_dim0_reduction(%laneid: index) {
   %c0 = arith.constant 0 : index
     %src = "some_def"()
       {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}
-      : () -> (vector<2x2xf32>)
+      : () -> (vector<16x2xf32>)
     %acc = arith.constant
       {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [0]>}
       dense<0.0>  : vector<2xf32>
@@ -300,7 +293,7 @@ gpu.func @vector_multi_reduction_dim0_distributed_dim0_reduction(%laneid: index)
       {
         layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [0]>
       }
-      [0] : vector<2x2xf32> to vector<2xf32>
+      [0] : vector<16x2xf32> to vector<2xf32>
   gpu.return
 }
 

@@ -470,6 +470,10 @@ struct SgToWiMultiDimReduction
   matchAndRewrite(vector::MultiDimReductionOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Value result;
+    ArrayRef<int64_t> reductionDims = op.getReductionDims();
+    assert(reductionDims.size() == 1 &&
+           "Expecting single reduction dimension for subgroup multi "
+           "reduction op");
     // Only lane-local reduction is handled here.
     if (isReductionLaneLocal(op)) {
       auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
@@ -482,10 +486,7 @@ struct SgToWiMultiDimReduction
           rewriter, op.getLoc(), resDistVecTyOrFailure.value(), op.getKind(),
           adaptor.getSource(), adaptor.getAcc(), op.getReductionDims());
     } else {
-      ArrayRef<int64_t> reductionDims = op.getReductionDims();
-      assert(reductionDims.size() == 1 &&
-             "Expecting single reduction dimension for subgroup multi "
-             "reduction op");
+
       // print adaptor.getSource() and adaptor.getAcc() for debugging
       LLVM_DEBUG({
         llvm::dbgs() << "adaptor.getSource(): " << adaptor.getSource() << "\n";
@@ -499,7 +500,7 @@ struct SgToWiMultiDimReduction
       SmallVector<int64_t, 2> sourceShape(sourceType.getShape().begin(),
                                           sourceType.getShape().end());
       int64_t reductionDimSize = sourceShape[reductionDim];
-      result = xegpu::lowerToVectorReductionsCrossLane(
+      result = xegpu::lowerCrossLaneReductionToShuffles(
           cast<TypedValue<VectorType>>(adaptor.getSource()),
           cast<TypedValue<VectorType>>(adaptor.getAcc()), op.getKind(),
           reductionDim, reductionDimSize, op.getLoc(), rewriter);
