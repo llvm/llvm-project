@@ -664,15 +664,17 @@ const LandingPadInst *BasicBlock::getLandingPadInst() const {
 
 std::optional<uint64_t> BasicBlock::getIrrLoopHeaderWeight() const {
   const Instruction *TI = getTerminator();
-  if (MDNode *MDIrrLoopHeader =
-      TI->getMetadata(LLVMContext::MD_irr_loop)) {
-    MDString *MDName = cast<MDString>(MDIrrLoopHeader->getOperand(0));
-    if (MDName->getString() == "loop_header_weight") {
-      auto *CI = mdconst::extract<ConstantInt>(MDIrrLoopHeader->getOperand(1));
-      return std::optional<uint64_t>(CI->getValue().getZExtValue());
-    }
-  }
-  return std::nullopt;
+  if (!TI)
+    return std::nullopt;
+  MDNode *MDIrrLoopHeader = TI->getMetadata(LLVMContext::MD_irr_loop);
+  if (!MDIrrLoopHeader)
+    return std::nullopt;
+  MDString *MDName = cast<MDString>(MDIrrLoopHeader->getOperand(0));
+  assert(MDName);
+  if (MDName->getString() != "loop_header_weight")
+    return std::nullopt;
+  auto *CI = mdconst::extract<ConstantInt>(MDIrrLoopHeader->getOperand(1));
+  return std::optional<uint64_t>(CI->getValue().getZExtValue());
 }
 
 BasicBlock::iterator llvm::skipDebugIntrinsics(BasicBlock::iterator It) {
