@@ -105,6 +105,9 @@ public:
   ///
   bool getRegistersAreIntervals() const;
 
+  /// Returns the CompactRegisterNames flag value for this target.
+  bool getCompactRegisterNames() const;
+
   /// getAsmParser - Return the AssemblyParser definition for this target.
   ///
   const Record *getAsmParser() const;

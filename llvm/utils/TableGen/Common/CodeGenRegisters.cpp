@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
@@ -533,6 +534,64 @@ unsigned CodeGenRegister::getWeight(const CodeGenRegBank &RegBank) const {
 //                               RegisterTuples
 //===----------------------------------------------------------------------===//
 
+static std::string getNameFromParts(ArrayRef<StringRef> Parts,
+                                    bool CompactNames) {
+  auto GetSuffix = [](StringRef Part, StringRef Prefix, uint64_t &Suffix) {
+    if (!Part.starts_with(Prefix))
+      return true;
+    return Part.drop_front(Prefix.size()).getAsInteger(10, Suffix);
+  };
+
+  auto CompactName = [&]() -> std::optional<std::string> {
+    if (Parts.size() == 1 || !CompactNames)
+      return std::nullopt;
+
+    // When joining 3 or more parts, check if we can use the compact form. For
+    // that, piece out the suffix, start, and stride from the first 2 parts, and
+    // then verify all remaining parts conform to that suffix and stride.
+    StringRef First = Parts[0];
+    StringRef Second = Parts[1];
+
+    // Find the first non-digit from the end. Note that the first character of
+    // each part is a non-digit, so `Index` will never underflow.
+    uint64_t Index = Parts[0].size() - 1;
+    for (; isDigit(First[Index]); --Index)
+      ;
+
+    if (Index == First.size() - 1)
+      return std::nullopt;
+    size_t PrefixSize = Index + 1;
+    StringRef Prefix = First.take_front(PrefixSize);
+
+    uint64_t FirstSuffix;
+    if (GetSuffix(First, Prefix, FirstSuffix))
+      return std::nullopt;
+
+    uint64_t NextSuffix;
+    if (GetSuffix(Second, Prefix, NextSuffix) || NextSuffix <= FirstSuffix)
+      return std::nullopt;
+
+    uint64_t Stride = NextSuffix - FirstSuffix;
+
+    Index = 2;
+    for (StringRef Part : Parts.drop_front(2)) {
+      if (GetSuffix(Part, Prefix, NextSuffix))
+        return std::nullopt;
+      if (NextSuffix != FirstSuffix + Index * Stride)
+        return std::nullopt;
+      ++Index;
+    }
+
+    // All checks successful.
+    std::string CompactName = Prefix.str() + std::to_string(FirstSuffix) +
+                              "_to_" + std::to_string(NextSuffix);
+    if (Stride != 1)
+      CompactName += "_by_" + std::to_string(Stride);
+    return CompactName;
+  }();
+  return CompactName ? *CompactName : llvm::join(Parts, "_");
+}
+
 // A RegisterTuples def is used to generate pseudo-registers from lists of
 // sub-registers. We provide a SetTheory expander class that returns the new
 // registers.
@@ -545,9 +604,11 @@ struct TupleExpander : SetTheory::Expander {
 
   // Track all synthesized tuple names in order to detect duplicate definitions.
   llvm::StringSet<> TupleNames;
+  bool CompactNames;
 
-  TupleExpander(std::vector<std::unique_ptr<Record>> &SynthDefs)
-      : SynthDefs(SynthDefs) {}
+  TupleExpander(std::vector<std::unique_ptr<Record>> &SynthDefs,
+                bool CompactNames)
+      : SynthDefs(SynthDefs), CompactNames(CompactNames) {}
 
   void expand(SetTheory &ST, const Record *Def,
               SetTheory::RecSet &Elts) override {
@@ -581,16 +642,17 @@ struct TupleExpander : SetTheory::Expander {
     // Zip them up.
     RecordKeeper &RK = Def->getRecords();
     for (unsigned n = 0; n != Length; ++n) {
-      std::string Name;
+      SmallVector<StringRef> NameParts;
+
       const Record *Proto = Lists[0][n];
       std::vector<Init *> Tuple;
       for (unsigned i = 0; i != Dim; ++i) {
         const Record *Reg = Lists[i][n];
-        if (i)
-          Name += '_';
-        Name += Reg->getName();
+        NameParts.push_back(Reg->getName());
         Tuple.push_back(Reg->getDefInit());
       }
+
+      std::string Name = getNameFromParts(NameParts, CompactNames);
 
       // Take the cost list of the first register in the tuple.
       const ListInit *CostList = Proto->getValueAsListInit("CostPerUse");
@@ -1130,14 +1192,16 @@ CodeGenRegisterCategory::CodeGenRegisterCategory(CodeGenRegBank &RegBank,
 
 CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
                                const CodeGenHwModes &Modes,
-                               const bool RegistersAreIntervals)
+                               bool RegistersAreIntervals,
+                               bool CompactRegisterNames)
     : Records(Records), CGH(Modes),
-      RegistersAreIntervals(RegistersAreIntervals) {
+      RegistersAreIntervals(RegistersAreIntervals),
+      CompactRegisterNames(CompactRegisterNames) {
   // Configure register Sets to understand register classes and tuples.
   Sets.addFieldExpander("RegisterClass", "MemberList");
   Sets.addFieldExpander("CalleeSavedRegs", "SaveList");
-  Sets.addExpander("RegisterTuples",
-                   std::make_unique<TupleExpander>(SynthDefs));
+  Sets.addExpander("RegisterTuples", std::make_unique<TupleExpander>(
+                                         SynthDefs, CompactRegisterNames));
 
   // Read in the user-defined (named) sub-register indices.
   // More indices will be synthesized later.
@@ -1368,13 +1432,13 @@ CodeGenSubRegIndex *CodeGenRegBank::getConcatSubRegIndex(
     return Idx;
 
   // None exists, synthesize one.
-  std::string Name = Parts.front()->getName();
+  SmallVector<StringRef> NameParts;
   const unsigned UnknownSize = (uint16_t)-1;
 
-  for (const CodeGenSubRegIndex *Part : ArrayRef(Parts).drop_front()) {
-    Name += '_';
-    Name += Part->getName();
-  }
+  for (const CodeGenSubRegIndex *Part : Parts)
+    NameParts.push_back(Part->getName());
+
+  std::string Name = getNameFromParts(NameParts, CompactRegisterNames);
 
   Idx = createSubRegIndex(Name, Parts.front()->getNamespace());
   Idx->ConcatenationOf.assign(Parts.begin(), Parts.end());
