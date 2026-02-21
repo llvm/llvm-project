@@ -35,21 +35,9 @@ struct Lattice {
       OS << "  <empty>\n";
     for (const auto &Entry : LiveOrigins) {
       OriginID OID = Entry.first;
-      const LivenessInfo &Info = Entry.second;
       OS << "  ";
       OM.dump(OID, OS);
-      OS << " is ";
-      switch (Info.Kind) {
-      case LivenessKind::Must:
-        OS << "definitely";
-        break;
-      case LivenessKind::Maybe:
-        OS << "maybe";
-        break;
-      case LivenessKind::Dead:
-        llvm_unreachable("liveness kind of live origins should not be dead.");
-      }
-      OS << " live at this point\n";
+      OS << " is live at this point\n";
     }
   }
 };
@@ -67,8 +55,7 @@ static SourceLocation GetFactLoc(CausingFactType F) {
 }
 
 /// The analysis that tracks which origins are live, with granular information
-/// about the causing use fact and confidence level. This is a backward
-/// analysis.
+/// about the causing use fact. This is a backward analysis.
 class AnalysisImpl
     : public DataflowAnalysis<AnalysisImpl, Lattice, Direction::Backward> {
 
@@ -83,8 +70,6 @@ public:
   Lattice getInitialState() { return Lattice(Factory.getEmptyMap()); }
 
   /// Merges two lattices by combining liveness information.
-  /// When the same origin has different confidence levels, we take the lower
-  /// one.
   Lattice join(Lattice L1, Lattice L2) const {
     LivenessMap Merged = L1.LiveOrigins;
     // Take the earliest Fact to make the join hermetic and commutative.
@@ -96,34 +81,24 @@ public:
         return A;
       return GetFactLoc(A) < GetFactLoc(B) ? A : B;
     };
-    auto CombineLivenessKind = [](LivenessKind K1,
-                                  LivenessKind K2) -> LivenessKind {
-      assert(K1 != LivenessKind::Dead && "LivenessKind should not be dead.");
-      assert(K2 != LivenessKind::Dead && "LivenessKind should not be dead.");
-      // Only return "Must" if both paths are "Must", otherwise Maybe.
-      if (K1 == LivenessKind::Must && K2 == LivenessKind::Must)
-        return LivenessKind::Must;
-      return LivenessKind::Maybe;
-    };
     auto CombineLivenessInfo = [&](const LivenessInfo *L1,
                                    const LivenessInfo *L2) -> LivenessInfo {
       assert((L1 || L2) && "unexpectedly merging 2 empty sets");
       if (!L1)
-        return LivenessInfo(L2->CausingFact, LivenessKind::Maybe);
+        return LivenessInfo(L2->CausingFact);
       if (!L2)
-        return LivenessInfo(L1->CausingFact, LivenessKind::Maybe);
-      return LivenessInfo(CombineCausingFact(L1->CausingFact, L2->CausingFact),
-                          CombineLivenessKind(L1->Kind, L2->Kind));
+        return LivenessInfo(L1->CausingFact);
+      return LivenessInfo(CombineCausingFact(L1->CausingFact, L2->CausingFact));
     };
     return Lattice(utils::join(
         L1.LiveOrigins, L2.LiveOrigins, Factory, CombineLivenessInfo,
         // A symmetric join is required here. If an origin is live on one
-        // branch but not the other, its confidence must be demoted to `Maybe`.
+        // branch but not the other, it is live in the joined state.
         utils::JoinKind::Symmetric));
   }
 
-  /// A read operation makes the origin live with definite confidence, as it
-  /// dominates this program point. A write operation kills the liveness of
+  /// A read operation makes the origin live, as it dominates this program
+  /// point. A write operation kills the liveness of
   /// the origin since it overwrites the value.
   Lattice transfer(Lattice In, const UseFact &UF) {
     Lattice Out = In;
@@ -134,21 +109,17 @@ public:
       if (UF.isWritten()) {
         Out = Lattice(Factory.remove(Out.LiveOrigins, OID));
       } else {
-        // Read makes origin live with definite confidence (dominates this
-        // point).
-        Out = Lattice(Factory.add(Out.LiveOrigins, OID,
-                                  LivenessInfo(&UF, LivenessKind::Must)));
+        // Read makes origin live.
+        Out = Lattice(Factory.add(Out.LiveOrigins, OID, LivenessInfo(&UF)));
       }
     }
     return Out;
   }
 
-  /// An escaping origin (e.g., via return) makes the origin live with definite
-  /// confidence, as it dominates this program point.
+  /// An escaping origin (e.g., via return) makes the origin live.
   Lattice transfer(Lattice In, const OriginEscapesFact &OEF) {
     OriginID OID = OEF.getEscapedOriginID();
-    return Lattice(Factory.add(In.LiveOrigins, OID,
-                               LivenessInfo(&OEF, LivenessKind::Must)));
+    return Lattice(Factory.add(In.LiveOrigins, OID, LivenessInfo(&OEF)));
   }
 
   /// Issuing a new loan to an origin kills its liveness.
