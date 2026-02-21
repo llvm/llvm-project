@@ -24,7 +24,7 @@ const float cf = f;
 // expected-error@#func{{'auto' return without trailing return type; deduced return types are a C++14 extension}}
 // expected-warning@#func{{'auto' type specifier is a HLSL 202y extension}}
 auto func() { // #func
-  return f;
+  return f; // expected-warning{{implicit conversion turns floating-point number into integer: 'float' to 'int'}}
 }
 
 void other() {

@@ -3005,6 +3005,37 @@ void AMDGPUDAGToDAGISel::SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID) {
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {MMO});
 }
 
+void AMDGPUDAGToDAGISel::SelectTensorLoadStore(SDNode *N, unsigned IntrID) {
+  bool IsLoad = IntrID == Intrinsic::amdgcn_tensor_load_to_lds;
+  unsigned Opc =
+      IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS : AMDGPU::TENSOR_STORE_FROM_LDS;
+
+  SmallVector<SDValue, 7> TensorOps;
+  // First two groups
+  TensorOps.push_back(N->getOperand(2)); // D# group 0
+  TensorOps.push_back(N->getOperand(3)); // D# group 1
+
+  // Use _D2 version if both group 2 and 3 are zero-initialized.
+  SDValue Group2 = N->getOperand(4);
+  SDValue Group3 = N->getOperand(5);
+  if (ISD::isBuildVectorAllZeros(Group2.getNode()) &&
+      ISD::isBuildVectorAllZeros(Group3.getNode())) {
+    Opc = IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS_D2
+                 : AMDGPU::TENSOR_STORE_FROM_LDS_D2;
+  } else {                       // Has at least 4 groups
+    TensorOps.push_back(Group2); // D# group 2
+    TensorOps.push_back(Group3); // D# group 3
+  }
+
+  // TODO: Handle the fifth group: N->getOperand(6), which is silently ignored
+  // for now because all existing targets only support up to 4 groups.
+  TensorOps.push_back(CurDAG->getTargetConstant(0, SDLoc(N), MVT::i1)); // r128
+  TensorOps.push_back(N->getOperand(7)); // cache policy
+  TensorOps.push_back(N->getOperand(0)); // chain
+
+  (void)CurDAG->SelectNodeTo(N, Opc, MVT::Other, TensorOps);
+}
+
 static unsigned gwsIntrinToOpcode(unsigned IntrID) {
   switch (IntrID) {
   case Intrinsic::amdgcn_ds_gws_init:
@@ -3286,6 +3317,10 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
   case Intrinsic::amdgcn_ds_gws_sema_p:
   case Intrinsic::amdgcn_ds_gws_sema_release_all:
     SelectDS_GWS(N, IntrID);
+    return;
+  case Intrinsic::amdgcn_tensor_load_to_lds:
+  case Intrinsic::amdgcn_tensor_store_from_lds:
+    SelectTensorLoadStore(N, IntrID);
     return;
   default:
     break;

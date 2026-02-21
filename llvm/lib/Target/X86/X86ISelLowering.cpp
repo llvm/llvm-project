@@ -49944,37 +49944,6 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // Attempt to fold CMOV(LOAD(PTR0),LOAD(PTR1)) -> LOAD(CMOV(PTR0,PTR1))
-  // TODO: Allow matching extloads?
-  if (TrueOp.getResNo() == 0 && ISD::isNormalLoad(TrueOp.getNode()) &&
-      FalseOp.getResNo() == 0 && ISD::isNormalLoad(FalseOp.getNode()) &&
-      TrueOp.hasOneUse() && FalseOp.hasOneUse()) {
-    auto *TrueLd = cast<LoadSDNode>(TrueOp);
-    auto *FalseLd = cast<LoadSDNode>(FalseOp);
-    // Ensure the loads and pointers are as similar as possible.
-    EVT PtrVT = FalseLd->getBasePtr().getValueType();
-    if (TrueLd->getChain() == FalseLd->getChain() &&
-        TrueLd->getPointerInfo().getAddrSpace() ==
-            FalseLd->getPointerInfo().getAddrSpace() &&
-        TrueLd->getMemOperand()->getFlags() ==
-            FalseLd->getMemOperand()->getFlags() &&
-        TrueLd->isSimple() && FalseLd->isSimple() &&
-        !TrueLd->isPredecessorOf(Cond.getNode()) &&
-        !FalseLd->isPredecessorOf(Cond.getNode())) {
-      SDValue Ops[] = {FalseLd->getBasePtr(), TrueLd->getBasePtr(),
-                       DAG.getTargetConstant(CC, DL, MVT::i8), Cond};
-      SDValue NewPtr = DAG.getNode(X86ISD::CMOV, DL, PtrVT, Ops);
-      SDValue NewLd = DAG.getLoad(
-          VT, DL, FalseLd->getChain(), NewPtr,
-          MachinePointerInfo(FalseLd->getPointerInfo().getAddrSpace()),
-          std::min(FalseLd->getAlign(), TrueLd->getAlign()),
-          FalseLd->getMemOperand()->getFlags());
-      DAG.makeEquivalentMemoryOrdering(TrueLd, NewLd);
-      DAG.makeEquivalentMemoryOrdering(FalseLd, NewLd);
-      return NewLd;
-    }
-  }
-
   // If this is a select between two integer constants, try to do some
   // optimizations.  Note that the operands are ordered the opposite of SELECT
   // operands.
@@ -59028,29 +58997,14 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
     if (N0.getValueType() != TruncVT)
       return SDValue();
 
-    unsigned NumElts = TruncVT.getVectorNumElements();
-    SmallVector<SDValue, 32> MulConsts;
-    MulConsts.reserve(NumElts);
-
-    auto *BV = dyn_cast<BuildVectorSDNode>(Mul.getOperand(1));
-    if (!BV || BV->getNumOperands() != NumElts)
+    // A shift by more than 15 would overflow an i16.
+    if (!ISD::matchUnaryPredicate(Mul.getOperand(1), [](ConstantSDNode *C) {
+          return C->getAPIntValue().ule(15);
+        }))
       return SDValue();
 
-    for (unsigned i = 0; i != NumElts; ++i) {
-      SDValue E = BV->getOperand(i);
-      if (E.isUndef())
-        return SDValue();
-      auto *C = dyn_cast<ConstantSDNode>(E);
-      if (!C)
-        return SDValue();
-      unsigned ShiftAmount = C->getZExtValue();
-      // A shift by more than 15 would overflow an i16.
-      if (ShiftAmount > 15)
-        return SDValue();
-      MulConsts.push_back(DAG.getConstant(1ull << ShiftAmount, DL, MVT::i16));
-    }
-
-    N1 = DAG.getBuildVector(TruncVT, DL, MulConsts);
+    N1 = DAG.getNode(ISD::SHL, DL, TruncVT, DAG.getConstant(1, DL, TruncVT),
+                     DAG.getZExtOrTrunc(Mul.getOperand(1), DL, TruncVT));
   } else {
     assert(Mul.getOpcode() == ISD::SIGN_EXTEND);
 
