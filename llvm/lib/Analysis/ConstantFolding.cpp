@@ -2002,7 +2002,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case 'i':
     return Name == "ilogb" || Name == "ilogbf";
   case 'l':
-    return Name == "log" || Name == "logf" || Name == "logl" ||
+    return Name == "ldexp" || Name == "ldexpf" || Name == "ldexpl" ||
+           Name == "log" || Name == "logf" || Name == "logl" ||
            Name == "log2" || Name == "log2f" || Name == "log10" ||
            Name == "log10f" || Name == "logb" || Name == "logbf" ||
            Name == "log1p" || Name == "log1pf";
@@ -2016,9 +2017,10 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
            Name == "round" || Name == "roundf" ||
            Name == "roundeven" || Name == "roundevenf";
   case 's':
-    return Name == "sin" || Name == "sinf" ||
-           Name == "sinh" || Name == "sinhf" ||
-           Name == "sqrt" || Name == "sqrtf";
+    return Name == "scalbn" || Name == "scalbnf" || Name == "scalbnl" ||
+           Name == "scalbln" || Name == "scalblnf" || Name == "scalblnl" ||
+           Name == "sin" || Name == "sinf" || Name == "sinh" ||
+           Name == "sinhf" || Name == "sqrt" || Name == "sqrtf";
   case 't':
     return Name == "tan" || Name == "tanf" ||
            Name == "tanh" || Name == "tanhf" ||
@@ -3187,8 +3189,33 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
     return nullptr;
 
   const auto *Op2 = dyn_cast<ConstantFP>(Operands[1]);
-  if (!Op2)
+  if (!Op2) {
+    const auto *Op2i = dyn_cast<ConstantInt>(Operands[1]);
+    if (!Op2i)
+      return nullptr;
+    const APFloat &Op1V = Op1->getValueAPF();
+    const APInt &Op2Vi = Op2i->getValue();
+    switch (Func) {
+    default:
+      break;
+    case LibFunc_ldexp:
+    case LibFunc_ldexpf:
+    case LibFunc_ldexpl:
+    case LibFunc_scalbn:
+    case LibFunc_scalbnf:
+    case LibFunc_scalbnl:
+    case LibFunc_scalbln:
+    case LibFunc_scalblnf:
+    case LibFunc_scalblnl:
+      if (TLI->has(Func)) {
+        APFloat ret =
+            scalbn(Op1V, Op2Vi.getSExtValue(), RoundingMode::TowardZero);
+        return ConstantFP::get(Ty->getContext(), ret);
+      }
+      break;
+    }
     return nullptr;
+  }
 
   const APFloat &Op1V = Op1->getValueAPF();
   const APFloat &Op2V = Op2->getValueAPF();
