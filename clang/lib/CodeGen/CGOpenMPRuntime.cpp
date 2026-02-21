@@ -8056,11 +8056,17 @@ private:
           if (!StrideExpr)
             return false;
 
+          assert(StrideExpr->getType()->isIntegerType() &&
+                 "Stride expression must be of integer type");
+
+          // If stride is not evaluatable as a constant, treat as
+          // non-contiguous.
           const auto Constant =
               StrideExpr->getIntegerConstantExpr(CGF.getContext());
           if (!Constant)
-            return false;
+            return true;
 
+          // Treat non-unitary strides as non-contiguous.
           return !Constant->isOne();
         });
 
