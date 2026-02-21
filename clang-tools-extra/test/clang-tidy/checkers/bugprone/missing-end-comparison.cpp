@@ -62,6 +62,30 @@ namespace std {
       void* operator()(I first, S last, const T& value) const;
     };
     inline constexpr FindFn find;
+
+    struct FindFirstOfFn {
+      template<typename R1, typename R2>
+      void* operator()(R1&& r1, R2&& r2) const;
+      template<typename I1, typename S1, typename I2, typename S2>
+      void* operator()(I1 f1, S1 l1, I2 f2, S2 l2) const;
+    };
+    inline constexpr FindFirstOfFn find_first_of;
+
+    struct AdjacentFindFn {
+      template<typename R>
+      void* operator()(R&& r) const;
+      template<typename I, typename S>
+      void* operator()(I f, S l) const;
+    };
+    inline constexpr AdjacentFindFn adjacent_find;
+
+    struct IsSortedUntilFn {
+      template<typename R>
+      void* operator()(R&& r) const;
+      template<typename I, typename S>
+      void* operator()(I f, S l) const;
+    };
+    inline constexpr IsSortedUntilFn is_sorted_until;
   }
 }
 
@@ -132,6 +156,35 @@ void test_ranges() {
   if (it) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
   // CHECK-FIXES: if ((it != std::ranges::end(v))) {}
+
+  std::vector<int> v1, v2;
+  int arr[] = {1, 2, 3};
+  int *begin = arr;
+  int *end = arr + 3;
+
+  if (std::ranges::find_first_of(v1, v2)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+  // CHECK-FIXES: if ((std::ranges::find_first_of(v1, v2) != std::ranges::end(v1))) {}
+
+  if (std::ranges::find_first_of(begin, end, begin, end)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+  // CHECK-FIXES: if ((std::ranges::find_first_of(begin, end, begin, end) != end)) {}
+
+  if (std::ranges::adjacent_find(v1)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+  // CHECK-FIXES: if ((std::ranges::adjacent_find(v1) != std::ranges::end(v1))) {}
+
+  if (std::ranges::adjacent_find(begin, end)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+  // CHECK-FIXES: if ((std::ranges::adjacent_find(begin, end) != end)) {}
+
+  if (std::ranges::is_sorted_until(v1)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+  // CHECK-FIXES: if ((std::ranges::is_sorted_until(v1) != std::ranges::end(v1))) {}
+
+  if (std::ranges::is_sorted_until(begin, end)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+  // CHECK-FIXES: if ((std::ranges::is_sorted_until(begin, end) != end)) {}
 }
 
 void test_ranges_iterator_pair() {
@@ -229,4 +282,27 @@ void test_execution_policy() {
   if (std::lower_bound(std::execution::seq, begin, end, 2)) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
   // CHECK-FIXES: if ((std::lower_bound(std::execution::seq, begin, end, 2) != end)) {}
+}
+
+void test_loops() {
+  int arr[] = {1, 2, 3};
+  int *begin = arr;
+  int *end = arr + 3;
+
+  while (std::find(begin, end, 2)) { break; }
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+  // CHECK-FIXES: while ((std::find(begin, end, 2) != end)) { break; }
+
+  do { } while (std::find(begin, end, 2));
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+  // CHECK-FIXES: do { } while ((std::find(begin, end, 2) != end));
+
+  for (auto it = std::find(begin, end, 2); it; ) { break; }
+  // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+  // CHECK-FIXES: for (auto it = std::find(begin, end, 2); (it != end); ) { break; }
+
+  std::vector<int> v;
+  for (auto it = std::ranges::find(v, 2); !it; ) { break; }
+  // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: result of standard algorithm used in boolean context; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+  // CHECK-FIXES: for (auto it = std::ranges::find(v, 2); (it == std::ranges::end(v)); ) { break; }
 }

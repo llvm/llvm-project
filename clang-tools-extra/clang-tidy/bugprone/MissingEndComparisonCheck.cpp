@@ -28,10 +28,11 @@ constexpr llvm::StringRef IteratorAlgorithms[] = {
     "::std::adjacent_find", "::std::is_sorted_until"};
 
 constexpr llvm::StringRef RangeAlgorithms[] = {
-    "::std::ranges::find",        "::std::ranges::find_if",
-    "::std::ranges::find_if_not", "::std::ranges::lower_bound",
-    "::std::ranges::upper_bound", "::std::ranges::min_element",
-    "::std::ranges::max_element"};
+    "::std::ranges::find",          "::std::ranges::find_if",
+    "::std::ranges::find_if_not",   "::std::ranges::lower_bound",
+    "::std::ranges::upper_bound",   "::std::ranges::min_element",
+    "::std::ranges::max_element",   "::std::ranges::find_first_of",
+    "::std::ranges::adjacent_find", "::std::ranges::is_sorted_until"};
 
 } // namespace
 

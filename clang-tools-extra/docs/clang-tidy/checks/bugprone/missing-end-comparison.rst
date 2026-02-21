@@ -18,29 +18,30 @@ Examples:
 
 .. code-block:: c++
 
-  int arr[] = {1, 2, 3};
-  int* begin = std::begin(arr);
-  int* end = std::end(arr);
+  void example() {
+    int arr[] = {1, 2, 3};
+    int* begin = std::begin(arr);
+    int* end = std::end(arr);
 
-  // Problematic:
-  if (std::find(begin, end, 2)) {
-    // ...
-  }
+    if (std::find(begin, end, 2)) {
+      // ...
+    }
 
-  // Fixed by the check:
-  if ((std::find(begin, end, 2) != end)) {
-    // ...
-  }
+    // Fixed by the check:
+    if ((std::find(begin, end, 2) != end)) {
+      // ...
+    }
 
-  // C++20 ranges:
-  std::vector<int> v = {1, 2, 3};
-  if (std::ranges::find(v, 2)) { // Problematic
-    // ...
-  }
+    // C++20 ranges:
+    int v[] = {1, 2, 3};
+    if (std::ranges::find(v, 2)) {
+      // ...
+    }
 
-  // Fixed by the check:
-  if ((std::ranges::find(v, 2) != std::ranges::end(v))) {
-    // ...
+    // Fixed by the check:
+    if ((std::ranges::find(v, 2) != std::ranges::end(v))) {
+      // ...
+    }
   }
 
 The check also handles range-based algorithms introduced in C++20.
@@ -68,3 +69,6 @@ Supported algorithms:
 - ``std::ranges::upper_bound``
 - ``std::ranges::min_element``
 - ``std::ranges::max_element``
+- ``std::ranges::find_first_of``
+- ``std::ranges::adjacent_find``
+- ``std::ranges::is_sorted_until``
