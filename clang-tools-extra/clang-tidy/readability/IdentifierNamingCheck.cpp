@@ -291,8 +291,10 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
   const bool IgnoreMainLike = Options.get("IgnoreMainLikeFunctions", false);
   const bool CheckAnonFieldInParent =
       Options.get("CheckAnonFieldInParent", false);
-  return {std::move(Styles), std::move(HNOption), IgnoreMainLike,
-          CheckAnonFieldInParent};
+  const bool TrimPrefixes = Options.get("TrimPrefixes", false);
+  const bool TrimSuffixes = Options.get("TrimSuffixes", false);
+  return {std::move(Styles),      std::move(HNOption), IgnoreMainLike,
+          CheckAnonFieldInParent, TrimPrefixes,        TrimSuffixes};
 }
 
 std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
@@ -859,6 +861,8 @@ void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 MainFileStyle->isIgnoringMainLikeFunction());
   Options.store(Opts, "CheckAnonFieldInParent",
                 MainFileStyle->isCheckingAnonFieldInParentScope());
+  Options.store(Opts, "TrimPrefixes", MainFileStyle->isTrimmingPrefixes());
+  Options.store(Opts, "TrimSuffixes", MainFileStyle->isTrimmingSuffixes());
 }
 
 bool IdentifierNamingCheck::matchesStyle(
@@ -1084,11 +1088,34 @@ bool IdentifierNamingCheck::isParamInMainLikeFunction(
   return Matcher.match(FDecl->getName());
 }
 
+static void trimPrefixesAndSuffixes(
+    StringRef &Mid,
+    ArrayRef<std::optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
+    bool TrimPrefixes, bool TrimSuffixes) {
+  bool LoopWhileToRemove = true;
+  while (LoopWhileToRemove) {
+    LoopWhileToRemove = false;
+    for (unsigned I = 0; I < SK_Count; ++I) {
+      if (const std::optional<IdentifierNamingCheck::NamingStyle> &OtherStyle =
+              NamingStyles[I]) {
+        while (TrimPrefixes && !OtherStyle->Prefix.empty() &&
+               Mid.consume_front(OtherStyle->Prefix))
+          LoopWhileToRemove = true;
+
+        while (TrimSuffixes && !OtherStyle->Suffix.empty() &&
+               Mid.consume_back(OtherStyle->Suffix))
+          LoopWhileToRemove = true;
+      }
+    }
+  }
+}
+
 std::string IdentifierNamingCheck::fixupWithStyle(
     StringRef Type, StringRef Name,
     const IdentifierNamingCheck::NamingStyle &Style,
+    ArrayRef<std::optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
     const IdentifierNamingCheck::HungarianNotationOption &HNOption,
-    const Decl *D) const {
+    bool TrimPrefixes, bool TrimSuffixes, const Decl *D) const {
   Name.consume_front(Style.Prefix);
   Name.consume_back(Style.Suffix);
   std::string Fixed = fixupWithCase(
@@ -1108,6 +1135,7 @@ std::string IdentifierNamingCheck::fixupWithStyle(
     }
   }
   StringRef Mid = StringRef(Fixed).trim("_");
+  trimPrefixesAndSuffixes(Mid, NamingStyles, TrimPrefixes, TrimSuffixes);
   if (Mid.empty())
     Mid = "_";
 
@@ -1337,7 +1365,8 @@ IdentifierNamingCheck::getFailureInfo(
     SourceLocation Location,
     ArrayRef<std::optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
     const IdentifierNamingCheck::HungarianNotationOption &HNOption,
-    StyleKind SK, const SourceManager &SM, bool IgnoreFailedSplit) const {
+    StyleKind SK, const SourceManager &SM, bool IgnoreFailedSplit,
+    bool TrimPrefixes, bool TrimSuffixes) const {
   if (SK == SK_Invalid)
     return std::nullopt;
 
@@ -1359,7 +1388,8 @@ IdentifierNamingCheck::getFailureInfo(
                           IdentifierNamingCheck::CT_LowerCase);
   llvm::replace(KindName, '_', ' ');
 
-  std::string Fixup = fixupWithStyle(Type, Name, Style, HNOption, ND);
+  std::string Fixup = fixupWithStyle(Type, Name, Style, NamingStyles, HNOption,
+                                     TrimPrefixes, TrimSuffixes, ND);
   if (StringRef(Fixup) == Name) {
     if (!IgnoreFailedSplit) {
       LLVM_DEBUG(Location.print(llvm::dbgs(), SM);
@@ -1390,7 +1420,8 @@ IdentifierNamingCheck::getDeclFailureInfo(const NamedDecl *Decl,
       findStyleKind(Decl, FileStyle.getStyles(),
                     FileStyle.isIgnoringMainLikeFunction(),
                     FileStyle.isCheckingAnonFieldInParentScope()),
-      SM, IgnoreFailedSplit);
+      SM, IgnoreFailedSplit, FileStyle.isTrimmingPrefixes(),
+      FileStyle.isTrimmingSuffixes());
 }
 
 std::optional<RenamerClangTidyCheck::FailureInfo>
@@ -1408,7 +1439,8 @@ IdentifierNamingCheck::getMacroFailureInfo(const Token &MacroNameTok,
 
   return getFailureInfo("", MacroNameTok.getIdentifierInfo()->getName(),
                         nullptr, Loc, Style.getStyles(), Style.getHNOption(),
-                        UsedKind, SM, IgnoreFailedSplit);
+                        UsedKind, SM, IgnoreFailedSplit,
+                        Style.isTrimmingPrefixes(), Style.isTrimmingSuffixes());
 }
 
 RenamerClangTidyCheck::DiagInfo
