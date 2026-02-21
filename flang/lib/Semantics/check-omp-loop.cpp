@@ -718,6 +718,12 @@ void OmpStructureChecker::Leave(const parser::OmpEndLoopDirective &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpClause::Depth &x) {
+  CheckAllowedClause(llvm::omp::Clause::OMPC_depth);
+
+  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_depth, x.v);
+}
+
 void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_ordered);
 

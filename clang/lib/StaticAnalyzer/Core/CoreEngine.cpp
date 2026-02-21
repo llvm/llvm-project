@@ -528,6 +528,12 @@ void CoreEngine::HandlePostStmt(const CFGBlock *B, unsigned StmtIdx,
   assert(B);
   assert(!B->empty());
 
+  // We no-op by skipping any FullExprCleanup
+  while (StmtIdx < B->size() &&
+         (*B)[StmtIdx].getKind() == CFGElement::FullExprCleanup) {
+    StmtIdx++;
+  }
+
   if (StmtIdx == B->size())
     HandleBlockExit(B, Pred);
   else {
