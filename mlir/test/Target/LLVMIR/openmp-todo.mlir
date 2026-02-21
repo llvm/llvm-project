@@ -473,15 +473,3 @@ llvm.func @wsloop_order(%lb : i32, %ub : i32, %step : i32) {
   }
   llvm.return
 }
-
-// -----
-llvm.func @task_affinity(%ptr : !llvm.ptr, %len : i64) {
-  // expected-error@below {{not yet implemented: omp.affinity_entry}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.affinity_entry}}
-  %ae = omp.affinity_entry %ptr, %len
-    : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
-  omp.task affinity(%ae : !omp.affinity_entry_ty<!llvm.ptr, i64>) {
-    omp.terminator
-  }
-  llvm.return
-}
