@@ -155,7 +155,7 @@
 "`P2781R9 <https://wg21.link/P2781R9>`__","``std::constant_wrapper``","2025-06 (Sofia)","","","`#148179 <https://github.com/llvm/llvm-project/issues/148179>`__",""
 "`P3697R1 <https://wg21.link/P3697R1>`__","Minor additions to C++26 standard library hardening","2025-06 (Sofia)","","","`#148180 <https://github.com/llvm/llvm-project/issues/148180>`__",""
 "`P3552R3 <https://wg21.link/P3552R3>`__","Add a Coroutine Task Type","2025-06 (Sofia)","","","`#148182 <https://github.com/llvm/llvm-project/issues/148182>`__",""
-"`P1317R2 <https://wg21.link/P1317R2>`__","Remove return type deduction in ``std::apply``","2025-06 (Sofia)","","","`#148183 <https://github.com/llvm/llvm-project/issues/148183>`__",""
+"`P1317R2 <https://wg21.link/P1317R2>`__","Remove return type deduction in ``std::apply``","2025-06 (Sofia)","|In Progress|","","`#148183 <https://github.com/llvm/llvm-project/issues/148183>`__",""
 "","","","","","",""
 "`P3920R0 <https://wg21.link/P3920R0>`__","Wording for NB comment resolution on trivial relocation","2025-11 (Kona)","|Nothing To Do|","","`#171269 <https://github.com/llvm/llvm-project/issues/171269>`__",""
 "`P3016R6 <https://wg21.link/P3016R6>`__","Resolve inconsistencies in begin/end for ``valarray`` and braced initializer lists","2025-11 (Kona)","","","`#171271 <https://github.com/llvm/llvm-project/issues/171271>`__",""

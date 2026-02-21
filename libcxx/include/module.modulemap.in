@@ -15,6 +15,35 @@ module std_config [system] {
 }
 
 module std_core [system] {
+  module concepts {
+    module arithmetic               { header "__concepts/arithmetic.h" }
+    module assignable               { header "__concepts/assignable.h" }
+    module boolean_testable         { header "__concepts/boolean_testable.h" }
+    module class_or_enum            { header "__concepts/class_or_enum.h" }
+    module common_reference_with    { header "__concepts/common_reference_with.h" }
+    module common_with              { header "__concepts/common_with.h" }
+    module comparison_common_type   { header "__concepts/comparison_common_type.h" }
+    module constructible            { header "__concepts/constructible.h" }
+    module convertible_to           { header "__concepts/convertible_to.h" }
+    module copyable                 { header "__concepts/copyable.h" }
+    module derived_from             { header "__concepts/derived_from.h" }
+    module destructible             { header "__concepts/destructible.h" }
+    module different_from           { header "__concepts/different_from.h" }
+    module equality_comparable      { header "__concepts/equality_comparable.h" }
+    module invocable                { header "__concepts/invocable.h" }
+    module movable                  { header "__concepts/movable.h" }
+    module predicate                { header "__concepts/predicate.h" }
+    module regular                  { header "__concepts/regular.h" }
+    module relation                 { header "__concepts/relation.h" }
+    module same_as                  { header "__concepts/same_as.h" }
+    module semiregular              { header "__concepts/semiregular.h" }
+    module swappable                { header "__concepts/swappable.h" }
+    module totally_ordered          { header "__concepts/totally_ordered.h" }
+
+    header "concepts"
+    export *
+  }
+
   module cstddef {
     module byte         { header "__cstddef/byte.h" }
     module max_align_t  {
@@ -24,6 +53,9 @@ module std_core [system] {
     module nullptr_t    { header "__cstddef/nullptr_t.h" }
     module ptrdiff_t    { header "__cstddef/ptrdiff_t.h" }
     module size_t       { header "__cstddef/size_t.h" }
+
+    header "cstddef"
+    export *
   }
 
   module cstdint {
@@ -31,11 +63,45 @@ module std_core [system] {
     export *
   }
 
+  // Only the truly dependency-free parts of __functional are here
+  module functional {
+    module invoke   { header "__functional/invoke.h" }
+  }
+
   module fwd {
+    module array        { header "__fwd/array.h" }
+    module complex      { header "__fwd/complex.h" }
     module byte         { header "__fwd/byte.h" }
     module functional   { header "__fwd/functional.h" }
+    module get {
+      header "__fwd/get.h"
+      export std_core.fwd.pair
+      export std_core.fwd.tuple
+      export std_core.fwd.array
+      export std_core.fwd.complex
+      export std_core.fwd.subrange
+      export std_core.fwd.variant
+    }
     module pair         { header "__fwd/pair.h" }
+    module subrange     { header "__fwd/subrange.h" }
     module tuple        { header "__fwd/tuple.h" }
+    module variant      { header "__fwd/variant.h" }
+  }
+
+  // Only the truly dependency-free parts of __iterator are here
+  module iterator {
+    module concepts {
+      header "__iterator/concepts.h"
+      export std_core.type_traits.common_reference
+    }
+    module incrementable_traits       { header "__iterator/incrementable_traits.h" }
+    module iter_move                  { header "__iterator/iter_move.h" }
+    module iterator_traits {
+      header "__iterator/iterator_traits.h"
+      export std_core.type_traits.integral_constant
+      export std_core.type_traits.is_convertible
+    }
+    module readable_traits            { header "__iterator/readable_traits.h" }
   }
 
   module limits {
@@ -64,6 +130,20 @@ module std_core [system] {
     module special_functions                { header "__math/special_functions.h" }
     module traits                           { header "__math/traits.h" }
     module trigonometric_functions          { header "__math/trigonometric_functions.h" }
+  }
+
+  // Only the truly dependency-free parts of __memory are here
+  module memory {
+    module addressof                          { header "__memory/addressof.h" }
+    module pointer_traits                     { header "__memory/pointer_traits.h" }
+  }
+
+  // Only the truly dependency-free parts of __tuple are here
+  module tuple {
+    module tuple_element            { header "__tuple/tuple_element.h" }
+    module tuple_like               { header "__tuple/tuple_like.h" }
+    module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
+    module tuple_size               { header "__tuple/tuple_size.h" }
   }
 
   module type_traits {
@@ -109,6 +189,10 @@ module std_core [system] {
     module is_allocator { header "__type_traits/is_allocator.h" }
     module is_always_bitcastable {
       header "__type_traits/is_always_bitcastable.h"
+      export std_core.type_traits.integral_constant
+    }
+    module is_applicable {
+      header "__type_traits/is_applicable.h"
       export std_core.type_traits.integral_constant
     }
     module is_arithmetic {
@@ -384,9 +468,12 @@ module std_core [system] {
 
   // Only the truly dependency-free parts of __utility are here
   module utility_core {
-    module declval  { header "__utility/declval.h" }
-    module empty    { header "__utility/empty.h" }
-    module forward  { header "__utility/forward.h" }
+    module declval            { header "__utility/declval.h" }
+    module empty              { header "__utility/empty.h" }
+    module exchange           { header "__utility/exchange.h" }
+    module forward            { header "__utility/forward.h" }
+    module integer_sequence   { header "__utility/integer_sequence.h" }
+    module move               { header "__utility/move.h" }
   }
 } // module std_core
 
@@ -443,9 +530,9 @@ module std [system] {
     module iter_swap                              { header "__algorithm/iter_swap.h" }
     module iterator_operations {
       header "__algorithm/iterator_operations.h"
+      export std_core.iterator.iter_move
       export std.iterator.advance
       export std.iterator.distance
-      export std.iterator.iter_move
       export std.iterator.iter_swap
       export std.iterator.next
       export std.iterator.prev
@@ -863,8 +950,6 @@ module std [system] {
   }
 
   module array {
-    module fwd { header "__fwd/array.h" }
-
     header "array"
     export *
     export std.iterator.reverse_iterator
@@ -1062,40 +1147,10 @@ module std [system] {
   }
 
   module complex {
-    module fwd { header "__fwd/complex.h" }
-
     header "complex"
     export *
   }
 
-  module concepts {
-    module arithmetic               { header "__concepts/arithmetic.h" }
-    module assignable               { header "__concepts/assignable.h" }
-    module boolean_testable         { header "__concepts/boolean_testable.h" }
-    module class_or_enum            { header "__concepts/class_or_enum.h" }
-    module common_reference_with    { header "__concepts/common_reference_with.h" }
-    module common_with              { header "__concepts/common_with.h" }
-    module comparison_common_type   { header "__concepts/comparison_common_type.h" }
-    module constructible            { header "__concepts/constructible.h" }
-    module convertible_to           { header "__concepts/convertible_to.h" }
-    module copyable                 { header "__concepts/copyable.h" }
-    module derived_from             { header "__concepts/derived_from.h" }
-    module destructible             { header "__concepts/destructible.h" }
-    module different_from           { header "__concepts/different_from.h" }
-    module equality_comparable      { header "__concepts/equality_comparable.h" }
-    module invocable                { header "__concepts/invocable.h" }
-    module movable                  { header "__concepts/movable.h" }
-    module predicate                { header "__concepts/predicate.h" }
-    module regular                  { header "__concepts/regular.h" }
-    module relation                 { header "__concepts/relation.h" }
-    module same_as                  { header "__concepts/same_as.h" }
-    module semiregular              { header "__concepts/semiregular.h" }
-    module swappable                { header "__concepts/swappable.h" }
-    module totally_ordered          { header "__concepts/totally_ordered.h" }
-
-    header "concepts"
-    export *
-  }
 
   module condition_variable {
     module condition_variable   { header "__condition_variable/condition_variable.h" }
@@ -1180,11 +1235,6 @@ module std [system] {
 
   module cstdbool {
     header "cstdbool"
-    export *
-  }
-
-  module cstddef {
-    header "cstddef"
     export *
   }
 
@@ -1427,7 +1477,6 @@ module std [system] {
     module function                     { header "__functional/function.h" }
     module hash                         { header "__functional/hash.h" }
     module identity                     { header "__functional/identity.h" }
-    module invoke                       { header "__functional/invoke.h" }
     module is_transparent               { header "__functional/is_transparent.h" }
     module mem_fn                       { header "__functional/mem_fn.h" }
     module mem_fun_ref                  { header "__functional/mem_fun_ref.h" }
@@ -1502,10 +1551,6 @@ module std [system] {
     module back_insert_iterator       { header "__iterator/back_insert_iterator.h" }
     module bounded_iter               { header "__iterator/bounded_iter.h" }
     module common_iterator            { header "__iterator/common_iterator.h" }
-    module concepts {
-      header "__iterator/concepts.h"
-      export std_core.type_traits.common_reference
-    }
     module counted_iterator           { header "__iterator/counted_iterator.h" }
     module cpp17_iterator_concepts    { header "__iterator/cpp17_iterator_concepts.h" }
     module data                       { header "__iterator/data.h" }
@@ -1514,7 +1559,6 @@ module std [system] {
     module empty                      { header "__iterator/empty.h" }
     module erase_if_container         { header "__iterator/erase_if_container.h" }
     module front_insert_iterator      { header "__iterator/front_insert_iterator.h" }
-    module incrementable_traits       { header "__iterator/incrementable_traits.h" }
     module indirectly_comparable      { header "__iterator/indirectly_comparable.h" }
     module insert_iterator            { header "__iterator/insert_iterator.h" }
     module istream_iterator           { header "__iterator/istream_iterator.h" }
@@ -1522,13 +1566,7 @@ module std [system] {
       header "__iterator/istreambuf_iterator.h"
       export std.string.char_traits
     }
-    module iter_move                  { header "__iterator/iter_move.h" }
     module iter_swap                  { header "__iterator/iter_swap.h" }
-    module iterator_traits {
-      header "__iterator/iterator_traits.h"
-      export std_core.type_traits.integral_constant
-      export std_core.type_traits.is_convertible
-    }
     module iterator_with_data         { header "__iterator/iterator_with_data.h" }
     module iterator                   { header "__iterator/iterator.h" }
     module mergeable                  { header "__iterator/mergeable.h" }
@@ -1545,7 +1583,6 @@ module std [system] {
     module product_iterator           { header "__iterator/product_iterator.h" }
     module projected                  { header "__iterator/projected.h" }
     module ranges_iterator_traits     { header "__iterator/ranges_iterator_traits.h" }
-    module readable_traits            { header "__iterator/readable_traits.h" }
     module reverse_access             { header "__iterator/reverse_access.h" }
     module reverse_iterator           { header "__iterator/reverse_iterator.h" }
     module segmented_iterator         { header "__iterator/segmented_iterator.h" }
@@ -1641,7 +1678,6 @@ module std [system] {
   }
 
   module memory {
-    module addressof                          { header "__memory/addressof.h" }
     module align                              { header "__memory/align.h" }
     module allocate_at_least                  { header "__memory/allocate_at_least.h" }
     module allocation_guard                   { header "__memory/allocation_guard.h" }
@@ -1665,7 +1701,6 @@ module std [system] {
     module is_sufficiently_aligned            { header "__memory/is_sufficiently_aligned.h" }
     module noexcept_move_assign_container     { header "__memory/noexcept_move_assign_container.h" }
     module out_ptr                            { header "__memory/out_ptr.h" }
-    module pointer_traits                     { header "__memory/pointer_traits.h" }
     module ranges_construct_at                { header "__memory/ranges_construct_at.h" }
     module ranges_destroy                     { header "__memory/ranges_destroy.h" }
     module ranges_uninitialized_algorithms {
@@ -1933,10 +1968,7 @@ module std [system] {
     }
     module subrange {
       header "__ranges/subrange.h"
-      export std.ranges.subrange_fwd
-    }
-    module subrange_fwd {
-      header "__fwd/subrange.h"
+      export std_core.fwd.subrange
     }
     module take_view {
       header "__ranges/take_view.h"
@@ -2131,10 +2163,6 @@ module std [system] {
     module find_index               { header "__tuple/find_index.h" }
     module ignore                   { header "__tuple/ignore.h" }
     module sfinae_helpers           { header "__tuple/sfinae_helpers.h" }
-    module tuple_element            { header "__tuple/tuple_element.h" }
-    module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
-    module tuple_like               { header "__tuple/tuple_like.h" }
-    module tuple_size               { header "__tuple/tuple_size.h" }
     module tuple_trasnform          { header "__tuple/tuple_transform.h" }
 
     header "tuple"
@@ -2175,16 +2203,13 @@ module std [system] {
     module default_three_way_comparator    { header "__utility/default_three_way_comparator.h" }
     module element_count                   { header "__utility/element_count.h" }
     module exception_guard                 { header "__utility/exception_guard.h" }
-    module exchange                        { header "__utility/exchange.h" }
     module forward_like                    { header "__utility/forward_like.h" }
     module in_place                        {
       header "__utility/in_place.h"
       export std_core.type_traits.integral_constant
     }
-    module integer_sequence                { header "__utility/integer_sequence.h" }
     module is_pointer_in_range             { header "__utility/is_pointer_in_range.h" }
     module lazy_synth_three_way_comparator { header "__utility/lazy_synth_three_way_comparator.h" }
-    module move                            { header "__utility/move.h" }
     module no_destroy                      { header "__utility/no_destroy.h" }
     module pair                            {
       header "__utility/pair.h"
@@ -2211,7 +2236,6 @@ module std [system] {
   }
 
   module variant {
-    module fwd       { header "__fwd/variant.h" }
     module monostate { header "__variant/monostate.h" }
 
     header "variant"
@@ -2287,16 +2311,6 @@ module std [system] {
     module randomize_range              { header "__debug_utils/randomize_range.h" }
     module sanitizers                   { header "__debug_utils/sanitizers.h" }
     module strict_weak_ordering_check   { header "__debug_utils/strict_weak_ordering_check.h" }
-  }
-
-  module get_fwd {
-    header "__fwd/get.h"
-    export std_core.fwd.pair
-    export std_core.fwd.tuple
-    export std.array.fwd
-    export std.complex.fwd
-    export std.ranges.subrange_fwd
-    export std.variant.fwd
   }
 
   module pstl {
