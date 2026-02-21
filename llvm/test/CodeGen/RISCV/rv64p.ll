@@ -425,15 +425,12 @@ define i128 @srl_large_i128(i128 %x, i128 %y) {
   ret i128 %b
 }
 
-; FIXME: Using srx instead of slx would avoid the mv.
 define i128 @srli_i128(i128 %x) {
 ; CHECK-LABEL: srli_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:    li a3, 15
+; CHECK-NEXT:    li a2, 49
+; CHECK-NEXT:    srx a0, a1, a2
 ; CHECK-NEXT:    srli a1, a1, 49
-; CHECK-NEXT:    slx a2, a0, a3
-; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    ret
   %a = lshr i128 %x, 49
   ret i128 %a
@@ -486,15 +483,12 @@ define i128 @sra_large_i128(i128 %x, i128 %y) {
   ret i128 %b
 }
 
-; FIXME: Using srx instead of slx would avoid the mv.
 define i128 @srai_i128(i128 %x) {
 ; CHECK-LABEL: srai_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:    li a3, 15
+; CHECK-NEXT:    li a2, 49
+; CHECK-NEXT:    srx a0, a1, a2
 ; CHECK-NEXT:    srai a1, a1, 49
-; CHECK-NEXT:    slx a2, a0, a3
-; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    ret
   %a = ashr i128 %x, 49
   ret i128 %a

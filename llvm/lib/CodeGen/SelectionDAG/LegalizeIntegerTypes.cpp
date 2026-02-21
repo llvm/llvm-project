@@ -3299,12 +3299,18 @@ void DAGTypeLegalizer::ExpandShiftByConstant(SDNode *N, const APInt &Amt,
     } else {
       Lo = DAG.getNode(ISD::SHL, DL, NVT, InL,
                        DAG.getShiftAmountConstant(Amt, NVT, DL));
-      Hi = DAG.getNode(
-          ISD::OR, DL, NVT,
-          DAG.getNode(ISD::SHL, DL, NVT, InH,
-                      DAG.getShiftAmountConstant(Amt, NVT, DL)),
-          DAG.getNode(ISD::SRL, DL, NVT, InL,
-                      DAG.getShiftAmountConstant(-Amt + NVTBits, NVT, DL)));
+      // Use FSHL if legal so we don't need to combine it later.
+      if (TLI.isOperationLegal(ISD::FSHL, NVT)) {
+        Hi = DAG.getNode(ISD::FSHL, DL, NVT, InH, InL,
+                         DAG.getShiftAmountConstant(Amt, NVT, DL));
+      } else {
+        Hi = DAG.getNode(
+            ISD::OR, DL, NVT,
+            DAG.getNode(ISD::SHL, DL, NVT, InH,
+                        DAG.getShiftAmountConstant(Amt, NVT, DL)),
+            DAG.getNode(ISD::SRL, DL, NVT, InL,
+                        DAG.getShiftAmountConstant(-Amt + NVTBits, NVT, DL)));
+      }
     }
     return;
   }
@@ -3320,12 +3326,18 @@ void DAGTypeLegalizer::ExpandShiftByConstant(SDNode *N, const APInt &Amt,
       Lo = InH;
       Hi = DAG.getConstant(0, DL, NVT);
     } else {
-      Lo = DAG.getNode(
-          ISD::OR, DL, NVT,
-          DAG.getNode(ISD::SRL, DL, NVT, InL,
-                      DAG.getShiftAmountConstant(Amt, NVT, DL)),
-          DAG.getNode(ISD::SHL, DL, NVT, InH,
-                      DAG.getShiftAmountConstant(-Amt + NVTBits, NVT, DL)));
+      // Use FSHR if legal so we don't need to combine it later.
+      if (TLI.isOperationLegal(ISD::FSHR, NVT)) {
+        Lo = DAG.getNode(ISD::FSHR, DL, NVT, InH, InL,
+                         DAG.getShiftAmountConstant(Amt, NVT, DL));
+      } else {
+        Lo = DAG.getNode(
+            ISD::OR, DL, NVT,
+            DAG.getNode(ISD::SRL, DL, NVT, InL,
+                        DAG.getShiftAmountConstant(Amt, NVT, DL)),
+            DAG.getNode(ISD::SHL, DL, NVT, InH,
+                        DAG.getShiftAmountConstant(-Amt + NVTBits, NVT, DL)));
+      }
       Hi = DAG.getNode(ISD::SRL, DL, NVT, InH,
                        DAG.getShiftAmountConstant(Amt, NVT, DL));
     }
@@ -3346,12 +3358,18 @@ void DAGTypeLegalizer::ExpandShiftByConstant(SDNode *N, const APInt &Amt,
     Hi = DAG.getNode(ISD::SRA, DL, NVT, InH,
                      DAG.getShiftAmountConstant(NVTBits - 1, NVT, DL));
   } else {
-    Lo = DAG.getNode(
-        ISD::OR, DL, NVT,
-        DAG.getNode(ISD::SRL, DL, NVT, InL,
-                    DAG.getShiftAmountConstant(Amt, NVT, DL)),
-        DAG.getNode(ISD::SHL, DL, NVT, InH,
-                    DAG.getShiftAmountConstant(-Amt + NVTBits, NVT, DL)));
+    // Use FSHR if legal so we don't need to combine it later.
+    if (TLI.isOperationLegal(ISD::FSHR, NVT)) {
+      Lo = DAG.getNode(ISD::FSHR, DL, NVT, InH, InL,
+                       DAG.getShiftAmountConstant(Amt, NVT, DL));
+    } else {
+      Lo = DAG.getNode(
+          ISD::OR, DL, NVT,
+          DAG.getNode(ISD::SRL, DL, NVT, InL,
+                      DAG.getShiftAmountConstant(Amt, NVT, DL)),
+          DAG.getNode(ISD::SHL, DL, NVT, InH,
+                      DAG.getShiftAmountConstant(-Amt + NVTBits, NVT, DL)));
+    }
     Hi = DAG.getNode(ISD::SRA, DL, NVT, InH,
                      DAG.getShiftAmountConstant(Amt, NVT, DL));
   }
