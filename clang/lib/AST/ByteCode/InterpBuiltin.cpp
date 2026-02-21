@@ -4196,8 +4196,8 @@ static bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
   bool IsScalar = false;
   if (HasImmArg) {
     Predicate = popToUInt64(S, Call->getArg(2));
-    IsScalar = ID == X86::BI__builtin_ia32_cmpss ||
-               ID == X86::BI__builtin_ia32_cmpsd;
+    IsScalar =
+        ID == X86::BI__builtin_ia32_cmpss || ID == X86::BI__builtin_ia32_cmpsd;
   } else {
     switch (ID) {
     case X86::BI__builtin_ia32_cmpeqss:
@@ -4332,8 +4332,7 @@ static bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
     if (Matches) {
       llvm::APFloat True(Sem, llvm::APInt::getAllOnes(BitWidth));
       Dst.elem<Floating>(I) = Floating(True);
-    }
-    else {
+    } else {
       llvm::APFloat False(Sem, llvm::APInt(BitWidth, 0));
       Dst.elem<Floating>(I) = Floating(False);
     }
@@ -5307,14 +5306,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pblendd128:
   case clang::X86::BI__builtin_ia32_pblendd256:
     return interp__builtin_ia32_shuffle_generic(
-      S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
-        // Bit index for mask.
-        unsigned MaskBit = (ShuffleMask >> (DstIdx % 8)) & 0x1;
-        unsigned SrcVecIdx = MaskBit ? 1 : 0;  // 1 = TrueVec, 0 = FalseVec
-        return std::pair<unsigned, int>{SrcVecIdx, static_cast<int>(DstIdx)};
-      });
-
-
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+          // Bit index for mask.
+          unsigned MaskBit = (ShuffleMask >> (DstIdx % 8)) & 0x1;
+          unsigned SrcVecIdx = MaskBit ? 1 : 0; // 1 = TrueVec, 0 = FalseVec
+          return std::pair<unsigned, int>{SrcVecIdx, static_cast<int>(DstIdx)};
+        });
 
   case clang::X86::BI__builtin_ia32_blendvpd:
   case clang::X86::BI__builtin_ia32_blendvpd256:
