@@ -221,7 +221,8 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-using
   <clang-tidy/checks/modernize/use-using>` check by avoiding the generation
-  of invalid code for function types with redundant parentheses.
+  of invalid code for function types with redundant parentheses and preserving
+  inline comment blocks that appear between the typedef's parts.
 
 - Improved :doc:`performance-enum-size
   <clang-tidy/checks/performance/enum-size>` check:

@@ -160,6 +160,86 @@ getTrailingCommentsInRange(CharSourceRange Range, const SourceManager &SM,
   return Comments;
 }
 
+std::string getSourceText(CharSourceRange Range, const SourceManager &SM,
+                          const LangOptions &LangOpts) {
+  if (!Range.isValid())
+    return {};
+
+  const CharSourceRange FileRange =
+      Lexer::makeFileCharRange(Range, SM, LangOpts);
+  if (!FileRange.isValid())
+    return {};
+
+  bool Invalid = false;
+  const StringRef Text =
+      Lexer::getSourceText(FileRange, SM, LangOpts, &Invalid);
+  if (Invalid)
+    return {};
+  return Text.str();
+}
+
+TokenRangeInfo analyzeTokenRange(CharSourceRange Range, const SourceManager &SM,
+                                 const LangOptions &LangOpts) {
+  TokenRangeInfo Info;
+  if (!Range.isValid())
+    return Info;
+
+  const CharSourceRange FileRange =
+      Lexer::makeFileCharRange(Range, SM, LangOpts);
+  if (!FileRange.isValid())
+    return Info;
+
+  const std::pair<FileID, unsigned> BeginLoc =
+      SM.getDecomposedLoc(FileRange.getBegin());
+  const std::pair<FileID, unsigned> EndLoc =
+      SM.getDecomposedLoc(FileRange.getEnd());
+
+  if (BeginLoc.first != EndLoc.first)
+    return Info;
+
+  bool Invalid = false;
+  const StringRef Buffer = SM.getBufferData(BeginLoc.first, &Invalid);
+  if (Invalid)
+    return Info;
+
+  const char *StrData = Buffer.data() + BeginLoc.second;
+
+  Lexer TheLexer(SM.getLocForStartOfFile(BeginLoc.first), LangOpts,
+                 Buffer.begin(), StrData, Buffer.end());
+  // Use raw lexing with comment retention to capture comment tokens even
+  // though they are not part of the AST.
+  TheLexer.SetCommentRetentionState(true);
+
+  while (true) {
+    Token Tok;
+    if (TheLexer.LexFromRawLexer(Tok))
+      break;
+
+    // Stop once we leave the requested file range.
+    if (Tok.is(tok::eof) || Tok.getLocation() == FileRange.getEnd() ||
+        SM.isBeforeInTranslationUnit(FileRange.getEnd(), Tok.getLocation()))
+      break;
+
+    if (Tok.is(tok::comment)) {
+      Info.HasComment = true;
+      continue;
+    }
+
+    if (Tok.isOneOf(tok::star, tok::amp))
+      Info.HasPointerOrRef = true;
+
+    // Treat only identifiers and a small set of typedef-relevant keywords as
+    // "identifier-like" to avoid over-reporting on unrelated tokens.
+    if (tok::isAnyIdentifier(Tok.getKind()) ||
+        Tok.isOneOf(tok::kw_typedef, tok::kw_struct, tok::kw_class,
+                    tok::kw_union, tok::kw_enum, tok::kw_typename,
+                    tok::kw_template))
+      Info.HasIdentifier = true;
+  }
+
+  return Info;
+}
+
 std::optional<Token> getQualifyingToken(tok::TokenKind TK,
                                         CharSourceRange Range,
                                         const ASTContext &Context,
