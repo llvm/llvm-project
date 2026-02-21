@@ -20,21 +20,29 @@ struct correct_size_int {
 };
 
 template <class Source, class Result>
-void test_abs() {
-  Source neg_val = -5;
-  Source pos_val = 5;
-  Result res     = 5;
+TEST_CONSTEXPR_CXX23 void test_abs() {
+  TEST_CONSTEXPR_CXX23 Source neg_val = -5;
+  TEST_CONSTEXPR_CXX23 Source pos_val = 5;
+  TEST_CONSTEXPR_CXX23 Result res     = 5;
 
   ASSERT_SAME_TYPE(decltype(std::abs(neg_val)), Result);
-
-  assert(std::abs(neg_val) == res);
-  assert(std::abs(pos_val) == res);
+  #if TEST_STD_VER >= 23
+    static_assert(std::abs(neg_val) == res);
+    static_assert(std::abs(pos_val) == res);
+  #else 
+    assert(std::abs(neg_val) == res);
+    assert(std::abs(pos_val) == res);
+  #endif
 }
 
-void test_big() {
-  long long int big_value          = std::numeric_limits<long long int>::max(); // a value too big for ints to store
-  long long int negative_big_value = -big_value;
-  assert(std::abs(negative_big_value) == big_value); // make sure it doesn't get casted to a smaller type
+TEST_CONSTEXPR_CXX23 void test_big() {
+  TEST_CONSTEXPR_CXX23 long long int big_value          = std::numeric_limits<long long int>::max(); // a value too big for ints to store
+  TEST_CONSTEXPR_CXX23 long long int negative_big_value = -big_value;
+  #if TEST_STD_VER >= 23
+    static_assert(std::abs(negative_big_value) == big_value); // make sure it doesn't get casted to a smaller type
+  #else
+    assert(std::abs(negative_big_value) == big_value); // make sure it doesn't get casted to a smaller type
+  #endif
 }
 
 // The following is helpful to keep in mind:
