@@ -5,6 +5,10 @@ public:
   PyErr_Cleaner(bool print = false) : m_print(print) {}
 
   ~PyErr_Cleaner() {
+    Clean();
+  }
+
+  void Clean() {
     if (PyErr_Occurred()) {
       if (m_print && !PyErr_ExceptionMatches(PyExc_SystemExit))
         PyErr_Print();
@@ -624,6 +628,11 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommand(
     pfunc(debugger_arg, PythonString(args),
           SWIGBridge::ToSWIGWrapper(std::move(exe_ctx_ref_sp)), cmd_retobj_arg.obj(), dict);
 
+  if (PyErr_Occurred())
+    // Set status to Failed.
+    cmd_retobj.AppendErrorWithFormatv("Scripted command ({0}) threw an uncaught exception",
+                                      python_function_name);
+
   return true;
 }
 
@@ -644,6 +653,16 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommandObject(
 
   pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger)), PythonString(args),
         SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), cmd_retobj_arg.obj());
+
+  if (PyErr_Occurred()) {
+    py_err_cleaner.Clean();
+    auto command_class = self.ResolveName("__class__");
+    auto module_name = command_class.ResolveName<PythonString>("__module__");
+    auto class_name = command_class.ResolveName<PythonString>("__name__");
+    // Set status to Failed.
+    cmd_retobj.AppendErrorWithFormatv("Scripted command ({0}.{1}) threw an uncaught exception",
+                                      module_name.GetString(), class_name.GetString());
+  }
 
   return true;
 }
@@ -743,8 +762,6 @@ lldb_private::python::SWIGBridge::LLDBSwigPythonHandleOptionArgumentCompletionFo
   return dict_sp;
 }
 
-#include "lldb/Interpreter/CommandReturnObject.h"
-
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
     PyObject *implementor, lldb::DebuggerSP debugger, lldb_private::StructuredDataImpl &args_impl,
     lldb_private::CommandReturnObject &cmd_retobj,
@@ -762,6 +779,16 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
 
   pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger)), SWIGBridge::ToSWIGWrapper(args_impl),
         SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), SWIGBridge::ToSWIGWrapper(cmd_retobj).obj());
+
+  if (PyErr_Occurred()) {
+    py_err_cleaner.Clean();
+    auto command_class = self.ResolveName("__class__");
+    auto module_name = command_class.ResolveName<PythonString>("__module__");
+    auto class_name = command_class.ResolveName<PythonString>("__name__");
+    // Set status to Failed.
+    cmd_retobj.AppendErrorWithFormatv("Scripted command ({0}.{1}) threw an uncaught exception",
+                                      module_name.GetString(), class_name.GetString());
+  }
 
   return true;
 }
