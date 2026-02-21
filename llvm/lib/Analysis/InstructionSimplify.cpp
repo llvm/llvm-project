@@ -3847,6 +3847,21 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
                                const SimplifyQuery &Q, unsigned MaxRecurse) {
   assert(CmpInst::isIntPredicate(Pred) && "Not an integer compare!");
 
+  // volatile check
+  // %mark = load volatile ptr, ptr %1, align 8
+  // icmp eq ptr %mark, null
+  if (const auto LHSInstr = dyn_cast<Instruction>(LHS)) {
+     if (LHSInstr->isVolatile()) {
+       return nullptr;
+     }
+  }
+
+  if (const auto RHSInstr = dyn_cast<Instruction>(RHS)) { 
+     if (RHSInstr->isVolatile()) {
+        return nullptr;
+     }
+  }
+
   if (Constant *CLHS = dyn_cast<Constant>(LHS)) {
     if (Constant *CRHS = dyn_cast<Constant>(RHS))
       return ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL, Q.TLI);
