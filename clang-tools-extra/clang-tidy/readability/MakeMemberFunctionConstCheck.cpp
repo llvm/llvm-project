@@ -154,6 +154,16 @@ public:
       // 1) has builtin type (a 'const int' cannot be modified),
       // 2) or it's a public member (the pointee of a public 'int * const' can
       // can be modified by any user of the class).
+
+      // Union members are never safe for pointer/reference types
+      // (all union members share memory).
+      if (const auto *Field = dyn_cast<FieldDecl>(Member->getMemberDecl());
+          Field->getParent()->isUnion()) {
+        const QualType MemberType = Field->getType();
+        if (MemberType->isPointerType() || MemberType->isReferenceType())
+          return false;
+      }
+
       if (Member->getFoundDecl().getAccess() != AS_public &&
           !Cast->getType()->isBuiltinType())
         return false;
