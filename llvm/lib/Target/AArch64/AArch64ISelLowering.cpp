@@ -16371,6 +16371,45 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     return Val;
   }
 
+  // Handle 64-bit constant BUILD_VECTORs by packing them into an i64 immediate.
+  // This is cheaper than a load if the immediate can be materialized in a few
+  // mov instructions. This optimization is disabled for big-endian targets for
+  // now.
+  if (BVN->isConstant() && VT.isFixedLengthVector() &&
+      VT.getSizeInBits() == 64 && !DAG.getDataLayout().isBigEndian()) {
+    const SDLoc DL(Op);
+    APInt PackedVal(64, 0);
+    unsigned BitPos = 0;
+
+    unsigned EltSizeInBits = VT.getScalarSizeInBits();
+    for (unsigned i = 0, e = BVN->getNumOperands(); i != e; ++i) {
+      const SDValue &LaneOp = BVN->getOperand(i);
+      APInt LaneBits;
+      if (LaneOp.getOpcode() == ISD::UNDEF)
+        LaneBits = APInt(EltSizeInBits, 0);
+      else if (auto *C = dyn_cast<ConstantSDNode>(LaneOp))
+        LaneBits = C->getAPIntValue();
+      else if (auto *CFP = dyn_cast<ConstantFPSDNode>(LaneOp))
+        LaneBits = CFP->getValueAPF().bitcastToAPInt();
+      else
+        return SDValue();
+
+      PackedVal |= LaneBits.trunc(VT.getScalarSizeInBits()).zext(64) << BitPos;
+      BitPos += EltSizeInBits;
+    }
+
+    // This optimization kicks in if the number of mov instructions
+    // is under 2
+    SmallVector<AArch64_IMM::ImmInsnModel, 4> Insns;
+    AArch64_IMM::expandMOVImm(PackedVal.getZExtValue(), 64, Insns);
+    if (Insns.size() > 2)
+      return SDValue();
+
+    SDValue ScalarConst = DAG.getConstant(PackedVal, DL, MVT::i64);
+    // Use BITCAST to reinterpret the scalar constant's bits as a vector.
+    return DAG.getNode(ISD::BITCAST, DL, VT, ScalarConst);
+  }
+
   // This will generate a load from the constant pool.
   if (isConstant) {
     LLVM_DEBUG(

@@ -151,8 +151,9 @@ define <4 x i16> @interleave2_same_const_splat_v4i16() {
 define <4 x i16> @interleave2_diff_const_splat_v4i16() {
 ; CHECK-SD-LABEL: interleave2_diff_const_splat_v4i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI11_0
-; CHECK-SD-NEXT:    ldr d0, [x8, :lo12:.LCPI11_0]
+; CHECK-SD-NEXT:    mov x8, #1125899907104768 // =0x4000000040000
+; CHECK-SD-NEXT:    orr x8, x8, #0x300000003
+; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: interleave2_diff_const_splat_v4i16:
