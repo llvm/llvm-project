@@ -560,6 +560,17 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::bpfel:
   case Triple::bpfeb:
     return computeBPFDataLayout(*this);
+  case Triple::connex:
+    // From https://llvm.org/docs/LangRef.html#langref-datalayout
+    return "e" // little endian
+           "-m:e" // ELF LLVM name mangling
+           "-p:64:64:64:64" // 64-bit pointers, 64 bit aligned
+           "-p1:64:64:64:64" // addr space 1: 64-bit pointers, 64 bit aligned
+           "-i64:64" // 64 bit integers, 64 bit aligned
+           "-n32:64" // 32-bit and 64-bit native integer widths
+           "-S128"   // 128-bit natural stack alignment
+           "-v128:128:128" // 128-bit (v8i16) vector is 128-bit aligned
+           "-v2048:2048:2048"; // 2048-bit (v128i16) vector is 2048-bit aligned
   case Triple::csky:
     return computeCSKYDataLayout(*this);
   case Triple::dxil:
