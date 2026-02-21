@@ -153,8 +153,7 @@ define dso_local double @negzero_sel(i16 noundef %a, double noundef %d) nounwind
 ; CHECKRV32ZDINX-NEXT:    mv a3, a2
 ; CHECKRV32ZDINX-NEXT:    mv a2, a1
 ; CHECKRV32ZDINX-NEXT:  .LBB4_3: # %entry
-; CHECKRV32ZDINX-NEXT:    mv a0, a2
-; CHECKRV32ZDINX-NEXT:    mv a1, a3
+; CHECKRV32ZDINX-NEXT:    fmv.d a0, a2
 ; CHECKRV32ZDINX-NEXT:    ret
 ;
 ; CHECKRV64ZDINX-LABEL: negzero_sel:
