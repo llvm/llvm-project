@@ -1,8 +1,12 @@
+; Test a simgple cross module promotion where two same-name same-file static functions
+; are in both modules respectively.
+
 ; RUN: opt -thinlto-bc %s -o %t1.bc
 ; RUN: opt -thinlto-bc %p/Inputs/reduce-promotion-same-file-local-name.ll -o %t2.bc
 ;
 ; RUN: llvm-lto2 run %t1.bc %t2.bc \
 ; RUN:  --whole-program-visibility-enabled-in-lto=true \
+; RUN:  -disable-always-rename-promoted-locals \
 ; RUN:  -save-temps -o %t3 \
 ; RUN:  -r %t1.bc,m1,px \
 ; RUN:  -r %t2.bc,m2,p \

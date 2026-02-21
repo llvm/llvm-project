@@ -140,7 +140,7 @@ template <> struct MappingTraits<TypeIdSummary> {
 struct GlobalValueSummaryYaml {
   // Commonly used fields
   unsigned Linkage, Visibility;
-  bool NotEligibleToImport, Live, IsLocal, CanAutoHide, NotRenameOnPromotion;
+  bool NotEligibleToImport, Live, IsLocal, CanAutoHide, NoRenameOnPromotion;
   unsigned ImportType;
   // Fields for AliasSummary
   std::optional<uint64_t> Aliasee;
@@ -191,7 +191,7 @@ template <> struct MappingTraits<GlobalValueSummaryYaml> {
     io.mapOptional("Local", summary.IsLocal);
     io.mapOptional("CanAutoHide", summary.CanAutoHide);
     io.mapOptional("ImportType", summary.ImportType);
-    io.mapOptional("NotRenameOnPromotion", summary.NotRenameOnPromotion);
+    io.mapOptional("NoRenameOnPromotion", summary.NoRenameOnPromotion);
     io.mapOptional("Aliasee", summary.Aliasee);
     io.mapOptional("Refs", summary.Refs);
     io.mapOptional("TypeTests", summary.TypeTests);
@@ -230,7 +230,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
           GVSum.NotEligibleToImport, GVSum.Live, GVSum.IsLocal,
           GVSum.CanAutoHide,
           static_cast<GlobalValueSummary::ImportKind>(GVSum.ImportType),
-          GVSum.NotRenameOnPromotion);
+          GVSum.NoRenameOnPromotion);
       if (GVSum.Aliasee) {
         auto ASum = std::make_unique<AliasSummary>(GVFlags);
         V.try_emplace(*GVSum.Aliasee, /*IsAnalysis=*/false);
@@ -275,7 +275,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
               static_cast<bool>(FSum->flags().DSOLocal),
               static_cast<bool>(FSum->flags().CanAutoHide),
               FSum->flags().ImportType,
-              static_cast<bool>(FSum->flags().NotRenameOnPromotion),
+              static_cast<bool>(FSum->flags().NoRenameOnPromotion),
               /*Aliasee=*/std::nullopt, Refs, FSum->type_tests(),
               FSum->type_test_assume_vcalls(), FSum->type_checked_load_vcalls(),
               FSum->type_test_assume_const_vcalls(),
@@ -289,7 +289,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
               static_cast<bool>(ASum->flags().DSOLocal),
               static_cast<bool>(ASum->flags().CanAutoHide),
               ASum->flags().ImportType,
-              static_cast<bool>(ASum->flags().NotRenameOnPromotion),
+              static_cast<bool>(ASum->flags().NoRenameOnPromotion),
               /*Aliasee=*/ASum->getAliaseeGUID()});
         }
       }

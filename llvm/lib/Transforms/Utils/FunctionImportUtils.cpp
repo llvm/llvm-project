@@ -28,9 +28,12 @@ static cl::opt<bool> UseSourceFilenameForPromotedLocals(
              "This requires that the source filename has a unique name / "
              "path to avoid name collisions."));
 
-static cl::opt<bool>
-    AlwaysRenamePromotedLocals("always-rename-promoted-locals", cl::Hidden,
-                               cl::desc("Always rename promoted locals."));
+/// FIXME: The current optimization that avoids unnecessary renaming of
+/// promoted locals is incompatible with distributed ThinLTO and therefore
+/// must be disabled by default.
+cl::opt<bool> DisableAlwaysRenamePromotedLocals(
+    "disable-always-rename-promoted-locals", cl::init(false), cl::Hidden,
+    cl::desc("Disable always rename promoted locals."));
 
 cl::list<GlobalValue::GUID> MoveSymbolGUID(
     "thinlto-move-symbols",
@@ -316,8 +319,8 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
   if (GV.hasLocalLinkage() && shouldPromoteLocalToGlobal(&GV, Summary)) {
     // Save the original name string before we rename GV below.
     auto Name = GV.getName().str();
-    if (AlwaysRenamePromotedLocals || !Summary ||
-        !Summary->notRenameOnPromotion())
+    if (!DisableAlwaysRenamePromotedLocals || !Summary ||
+        !Summary->noRenameOnPromotion())
       GV.setName(getPromotedName(&GV));
 
     GV.setLinkage(getLinkage(&GV, /* DoPromote */ true));
