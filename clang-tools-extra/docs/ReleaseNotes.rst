@@ -121,6 +121,13 @@ New checks
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
+- New :doc:`misc-bool-bitwise-operation
+  <clang-tidy/checks/misc/bool-bitwise-operation>` check.
+
+  Finds potentially inefficient use of bitwise operators such as ``&``,  ``|``
+  and their compound analogues on Boolean values where logical operators like
+  ``&&`` and ``||`` would be more appropriate.
+
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 
