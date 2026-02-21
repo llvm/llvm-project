@@ -17,6 +17,7 @@ struct basic_string {
   bool starts_with(const Char *) const;
   bool ends_with(const Char *) const;
   bool contains(const Char *) const;
+  basic_string& operator+=(const Char *);
 };
 
 typedef basic_string<char> string;
@@ -102,6 +103,17 @@ void StringFind() {
   Str.contains("a");
   // CHECK-MESSAGES: [[@LINE-1]]:16: warning: 'contains' called with a
   // CHECK-FIXES: Str.contains('a');
+  Str += "a";
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: 'operator+=' called with a
+  // CHECK-FIXES: Str += 'a';
+  ((Str += "a") += "b") += "c";
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'operator+=' called with a
+  // CHECK-MESSAGES: [[@LINE-2]]:20: warning: 'operator+=' called with a
+  // CHECK-MESSAGES: [[@LINE-3]]:28: warning: 'operator+=' called with a
+  // CHECK-FIXES: ((Str += 'a') += 'b') += 'c';
+  Str.operator+=("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:18: warning: 'operator+=' called with a
+  // CHECK-FIXES: Str.operator+=('a');
 
   // std::wstring should work.
   std::wstring WStr;
