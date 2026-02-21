@@ -720,13 +720,13 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
     Example:
     ```mlir
     // Swap adjacent pairs within each quad (lanes 0<->1, 2<->3, etc.)
-    %0 = amdgpu.dpp %old %src quad_perm([1, 0, 3, 2]) : i32
+    %0 = amdgpu.dpp %old %src quad_perm( [1, 0, 3, 2] ) : i32
 
     // Shift right by 1 lane within each 16-lane row.
     // bound_ctrl=true -> lanes that would read past the row return 0.
     // row_mask=0x5 (0b0101) -> only rows 0 and 2 apply the shift;
     // rows 1 and 3 pass through %old unchanged.
-    %1 = amdgpu.dpp %old %src row_shr(0x1 : i32)
+    %1 = amdgpu.dpp %old %src row_shr( 0x1 : i32 )
       { row_mask = 0x5 : i32, bound_ctrl = true } : f32
 
     // Rotate left across the full wavefront by 1 lane
