@@ -330,7 +330,8 @@ static unsigned ComputeNumSignBits(const Value *V, const SimplifyQuery &Q,
   auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
-  return ComputeNumSignBits(V, DemandedElts, Q, Depth);
+  SimplifyQuery CtxQ = Q.getWithInstruction(Depth ? dyn_cast<Instruction>(V) : Q.CxtI);
+  return ComputeNumSignBits(V, DemandedElts, CtxQ, Depth);
 }
 
 unsigned llvm::ComputeNumSignBits(const Value *V, const DataLayout &DL,
@@ -1010,10 +1011,11 @@ static void computeKnownBitsFromCond(const Value *V, Value *Cond,
   Value *A, *B;
   if (Depth < MaxAnalysisRecursionDepth &&
       match(Cond, m_LogicalOp(m_Value(A), m_Value(B)))) {
+    SimplifyQuery CtxQ = SQ.getWithInstruction(cast<Instruction>(Cond));
     KnownBits Known2(Known.getBitWidth());
     KnownBits Known3(Known.getBitWidth());
-    computeKnownBitsFromCond(V, A, Known2, SQ, Invert, Depth + 1);
-    computeKnownBitsFromCond(V, B, Known3, SQ, Invert, Depth + 1);
+    computeKnownBitsFromCond(V, A, Known2, CtxQ, Invert, Depth + 1);
+    computeKnownBitsFromCond(V, B, Known3, CtxQ, Invert, Depth + 1);
     if (Invert ? match(Cond, m_LogicalOr(m_Value(), m_Value()))
                : match(Cond, m_LogicalAnd(m_Value(), m_Value())))
       Known2 = Known2.unionWith(Known3);
@@ -1043,8 +1045,10 @@ static void computeKnownBitsFromCond(const Value *V, Value *Cond,
     return;
   }
 
-  if (Depth < MaxAnalysisRecursionDepth && match(Cond, m_Not(m_Value(A))))
-    computeKnownBitsFromCond(V, A, Known, SQ, !Invert, Depth + 1);
+  if (Depth < MaxAnalysisRecursionDepth && match(Cond, m_Not(m_Value(A)))) {
+    SimplifyQuery CtxQ = SQ.getWithInstruction(cast<Instruction>(Cond));
+    computeKnownBitsFromCond(V, A, Known, CtxQ, !Invert, Depth + 1);
+  }
 }
 
 void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
@@ -1285,8 +1289,8 @@ KnownBits llvm::analyzeKnownBitsFromAndXorOr(const Operator *I,
   auto *FVTy = dyn_cast<FixedVectorType>(I->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
-
-  return getKnownBitsFromAndXorOr(I, DemandedElts, KnownLHS, KnownRHS, SQ,
+  SimplifyQuery CtxQ = SQ.getWithInstruction(Depth ? dyn_cast<Instruction>(I) : SQ.CxtI);
+  return getKnownBitsFromAndXorOr(I, DemandedElts, KnownLHS, KnownRHS, CtxQ,
                                   Depth);
 }
 
@@ -2548,8 +2552,10 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
     return;
   }
 
-  if (const Operator *I = dyn_cast<Operator>(V))
-    computeKnownBitsFromOperator(I, DemandedElts, Known, Q, Depth);
+  if (const Operator *I = dyn_cast<Operator>(V)) {
+    SimplifyQuery CtxQ = Q.getWithInstruction(Depth ? dyn_cast<Instruction>(I) : Q.CxtI);
+    computeKnownBitsFromOperator(I, DemandedElts, Known, CtxQ, Depth);
+  }
   else if (const GlobalValue *GV = dyn_cast<GlobalValue>(V)) {
     if (std::optional<ConstantRange> CR = GV->getAbsoluteSymbolRange())
       Known = CR->toKnownBits();
@@ -3764,7 +3770,10 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
   }
 
   if (const auto *I = dyn_cast<Operator>(V))
-    if (isKnownNonZeroFromOperator(I, DemandedElts, Q, Depth))
+    if (isKnownNonZeroFromOperator(
+            I, DemandedElts,
+            Q.getWithInstruction(Depth ? dyn_cast<Instruction>(I) : Q.CxtI),
+            Depth))
       return true;
 
   if (!isa<Constant>(V) &&
@@ -3914,6 +3923,7 @@ static bool isModifyingBinopOfNonZero(const Value *V1, const Value *V2,
   const BinaryOperator *BO = dyn_cast<BinaryOperator>(V1);
   if (!BO)
     return false;
+  SimplifyQuery CtxQ = Q.getWithInstruction(dyn_cast<Instruction>(BO));
   switch (BO->getOpcode()) {
   default:
     break;
@@ -3930,7 +3940,7 @@ static bool isModifyingBinopOfNonZero(const Value *V1, const Value *V2,
       Op = BO->getOperand(0);
     else
       return false;
-    return isKnownNonZero(Op, DemandedElts, Q, Depth + 1);
+    return isKnownNonZero(Op, DemandedElts, CtxQ, Depth + 1);
   }
   return false;
 }
@@ -3942,10 +3952,11 @@ static bool isNonEqualMul(const Value *V1, const Value *V2,
                           unsigned Depth) {
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(V2)) {
     const APInt *C;
+    SimplifyQuery CtxQ = Q.getWithInstruction(dyn_cast<Instruction>(OBO));
     return match(OBO, m_Mul(m_Specific(V1), m_APInt(C))) &&
            (OBO->hasNoUnsignedWrap() || OBO->hasNoSignedWrap()) &&
            !C->isZero() && !C->isOne() &&
-           isKnownNonZero(V1, DemandedElts, Q, Depth + 1);
+           isKnownNonZero(V1, DemandedElts, CtxQ, Depth + 1);
   }
   return false;
 }
@@ -3957,9 +3968,10 @@ static bool isNonEqualShl(const Value *V1, const Value *V2,
                           unsigned Depth) {
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(V2)) {
     const APInt *C;
+    SimplifyQuery CtxQ = Q.getWithInstruction(dyn_cast<Instruction>(OBO));
     return match(OBO, m_Shl(m_Specific(V1), m_APInt(C))) &&
            (OBO->hasNoUnsignedWrap() || OBO->hasNoSignedWrap()) &&
-           !C->isZero() && isKnownNonZero(V1, DemandedElts, Q, Depth + 1);
+           !C->isZero() && isKnownNonZero(V1, DemandedElts, CtxQ, Depth + 1);
   }
   return false;
 }
@@ -4003,16 +4015,18 @@ static bool isNonEqualSelect(const Value *V1, const Value *V2,
     return false;
 
   if (const SelectInst *SI2 = dyn_cast<SelectInst>(V2)) {
+    SimplifyQuery CtxQ = Q.getWithInstruction(SI2);
     const Value *Cond1 = SI1->getCondition();
     const Value *Cond2 = SI2->getCondition();
     if (Cond1 == Cond2)
       return isKnownNonEqual(SI1->getTrueValue(), SI2->getTrueValue(),
-                             DemandedElts, Q, Depth + 1) &&
+                             DemandedElts, CtxQ, Depth + 1) &&
              isKnownNonEqual(SI1->getFalseValue(), SI2->getFalseValue(),
-                             DemandedElts, Q, Depth + 1);
+                             DemandedElts, CtxQ, Depth + 1);
   }
-  return isKnownNonEqual(SI1->getTrueValue(), V2, DemandedElts, Q, Depth + 1) &&
-         isKnownNonEqual(SI1->getFalseValue(), V2, DemandedElts, Q, Depth + 1);
+  SimplifyQuery CtxQ = Q.getWithInstruction(SI1);
+  return isKnownNonEqual(SI1->getTrueValue(), V2, DemandedElts, CtxQ, Depth + 1) &&
+         isKnownNonEqual(SI1->getFalseValue(), V2, DemandedElts, CtxQ, Depth + 1);
 }
 
 // Check to see if A is both a GEP and is the incoming value for a PHI in the
@@ -4927,7 +4941,8 @@ static void computeKnownFPClass(const Value *V, KnownFPClass &Known,
   auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
-  computeKnownFPClass(V, DemandedElts, InterestedClasses, Known, Q, Depth);
+  SimplifyQuery CtxQ = Q.getWithInstruction(Depth ? dyn_cast<Instruction>(V) : Q.CxtI);
+  computeKnownFPClass(V, DemandedElts, InterestedClasses, Known, CtxQ, Depth);
 }
 
 static void computeKnownFPClassForFPTrunc(const Operator *Op,
