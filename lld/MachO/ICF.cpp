@@ -419,11 +419,35 @@ void ICF::run() {
         // When using safe_thunks, ensure that we first sort by icfEqClass and
         // then by keepUnique (descending). This guarantees that within an
         // equivalence class, the keepUnique inputs are always first.
-        if (config->icfLevel == ICFLevel::safe_thunks)
-          if (a->icfEqClass[0] == b->icfEqClass[0])
-            return a->keepUnique > b->keepUnique;
+        if (a->icfEqClass[0] == b->icfEqClass[0]) {
+          if (config->icfLevel == ICFLevel::safe_thunks) {
+            if (a->keepUnique != b->keepUnique)
+              return a->keepUnique > b->keepUnique;
+          }
+          // Within each equivalence class, sort by symbol name for determinism.
+          // If a section has an external symbol at offset 0, use that name.
+          // If either section doesn't have such a symbol, retain the original
+          // order.
+          auto getExternalSymbolName =
+              [](const ConcatInputSection *isec) -> std::optional<StringRef> {
+            for (const Symbol *sym : isec->symbols) {
+              if (const auto *d = dyn_cast<Defined>(sym)) {
+                if (d->value == 0 && d->isExternal())
+                  return d->getName();
+              }
+            }
+            return std::nullopt;
+          };
+          auto nameA = getExternalSymbolName(a);
+          auto nameB = getExternalSymbolName(b);
+          // For determinism, define a strict ordering only when both sections
+          // have a primary symbol. Otherwise, they are considered equivalent
+          // (the expression returns false), preserving the stable sort order.
+          return nameA && nameB && *nameA < *nameB;
+        }
         return a->icfEqClass[0] < b->icfEqClass[0];
       });
+
   forEachClass([&](size_t begin, size_t end) {
     segregate(begin, end, &ICF::equalsConstant);
   });
