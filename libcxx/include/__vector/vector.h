@@ -937,10 +937,7 @@ vector<_Tp, _Allocator>::__recommend(size_type __new_size) const {
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__construct_at_end(size_type __n) {
   _ConstructTransaction __tx(*this, __n);
-  const_pointer __new_end = __tx.__new_end_;
-  for (pointer __pos = __tx.__pos_; __pos != __new_end; __tx.__pos_ = ++__pos) {
-    __alloc_traits::construct(this->__alloc_, std::__to_address(__pos));
-  }
+  __tx.__pos_ = std::__uninitialized_allocator_value_construct_n(this->__alloc_, this->__end_, __n);
 }
 
 //  Copy constructs __n objects starting at __end_ from __x
@@ -953,10 +950,7 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline void
 vector<_Tp, _Allocator>::__construct_at_end(size_type __n, const_reference __x) {
   _ConstructTransaction __tx(*this, __n);
-  const_pointer __new_end = __tx.__new_end_;
-  for (pointer __pos = __tx.__pos_; __pos != __new_end; __tx.__pos_ = ++__pos) {
-    __alloc_traits::construct(this->__alloc_, std::__to_address(__pos), __x);
-  }
+  __tx.__pos_ = std::__uninitialized_allocator_fill_n(this->__alloc_, this->__end_, __n, __x);
 }
 
 template <class _Tp, class _Allocator>
