@@ -1,8 +1,8 @@
 ; RUN: llvm-as %s -o %t.o
-; RUN: %ld64 -lto_library %llvmshlibdir/libLTO.dylib -dylib -arch x86_64 -macos_version_min 10.10.0 -o %t.dylib %t.o -save-temps  -undefined dynamic_lookup -exported_symbol _bar -lSystem -mllvm -lto-discard-value-names
+; RUN: %ld64 -lto_library %llvmshlibdir/libLTO.dylib -dylib -arch x86_64 -macos_version_min 10.10.0 -o %t.dylib %t.o -save-temps  -undefined dynamic_lookup -exported_symbol _bar -L/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib -lSystem -mllvm -lto-discard-value-names
 ; RUN: llvm-dis %t.dylib.lto.opt.bc -o - | FileCheck --check-prefix=DISCARD %s
 
-; RUN: %ld64 -lto_library %llvmshlibdir/libLTO.dylib -dylib -arch x86_64 -macos_version_min 10.10.0 -o %t.dylib %t.o -save-temps  -undefined dynamic_lookup -exported_symbol _bar -lSystem -mllvm -lto-discard-value-names=false
+; RUN: %ld64 -lto_library %llvmshlibdir/libLTO.dylib -dylib -arch x86_64 -macos_version_min 10.10.0 -o %t.dylib %t.o -save-temps  -undefined dynamic_lookup -exported_symbol _bar -L/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib -lSystem -mllvm -lto-discard-value-names=false
 ; RUN: llvm-dis %t.dylib.lto.opt.bc -o - | FileCheck --check-prefix=KEEP %s
 
 ; The test requires asserts, as it depends on the default value for
