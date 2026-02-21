@@ -2330,9 +2330,14 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   }
   case Instruction::ExtractValue: {
     assert(getNumOperands() == 2 && "expected single level extractvalue");
-    Value *Op = State.get(getOperand(0));
+    // Fetch the struct operand as a scalar so that extractvalue is valid
+    // on the struct type, regardless of whether it is a widened struct of
+    // vectors or a scalar struct constant folded by VPlan simplification.
+    Value *Op = State.get(getOperand(0), /*NeedsScalar=*/true);
     Value *Extract = Builder.CreateExtractValue(
         Op, cast<VPConstantInt>(getOperand(1))->getZExtValue());
+    if (!Extract->getType()->isVectorTy())
+      Extract = Builder.CreateVectorSplat(State.VF, Extract);
     State.set(this, Extract);
     break;
   }
