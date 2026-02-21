@@ -413,3 +413,86 @@ body:             |
     $x0 = COPY %add
     RET_ReallyLR implicit $x0
 
+...
+---
+name:   AMinusBMinusC_oneUse
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+
+
+    ; CHECK-LABEL: name: AMinusBMinusC_oneUse
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = COPY $x0
+    ; CHECK-NEXT: %b:_(s64) = COPY $x1
+    ; CHECK-NEXT: %c:_(s64) = COPY $x2
+    ; CHECK-NEXT: %sub1:_(s64) = G_SUB %b, %c
+    ; CHECK-NEXT: %sub2:_(s64) = G_SUB %a, %sub1
+    ; CHECK-NEXT: %mul:_(s64) = G_MUL %sub2, %sub1
+    ; CHECK-NEXT: $x0 = COPY %mul(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(s64) = COPY $x0
+    %b:_(s64) = COPY $x1
+    %c:_(s64) = COPY $x2
+    %sub1:_(s64) = G_SUB %b, %c
+    %sub2:_(s64) = G_SUB %a, %sub1
+    %mul:_(s64) = G_MUL %sub2, %sub1
+    $x0 = COPY %mul
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:   AMinusBMinusC_multi
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+
+    ; CHECK-LABEL: name: AMinusBMinusC_multi
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = COPY $x0
+    ; CHECK-NEXT: %b:_(s64) = COPY $x1
+    ; CHECK-NEXT: %c:_(s64) = COPY $x2
+    ; CHECK-NEXT: %sub1:_(s64) = G_SUB %b, %c
+    ; CHECK-NEXT: %sub2:_(s64) = G_SUB %a, %sub1
+    ; CHECK-NEXT: %mul:_(s64) = G_MUL %sub2, %sub1
+    ; CHECK-NEXT: %add:_(s64) = G_ADD %mul, %sub1
+    ; CHECK-NEXT: $x0 = COPY %add(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(s64) = COPY $x0
+    %b:_(s64) = COPY $x1
+    %c:_(s64) = COPY $x2
+    %sub1:_(s64) = G_SUB %b, %c
+    %sub2:_(s64) = G_SUB %a, %sub1
+    %mul:_(s64) = G_MUL %sub2, %sub1
+    %add:_(s64) = G_ADD %mul, %sub1
+    $x0 = COPY %add
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:   AMinusBMinusC
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+
+
+    ; CHECK-LABEL: name: AMinusBMinusC
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s64) = COPY $x0
+    ; CHECK-NEXT: %b:_(s64) = COPY $x1
+    ; CHECK-NEXT: %c:_(s64) = COPY $x2
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB %c, %b
+    ; CHECK-NEXT: %sub2:_(s64) = G_ADD %a, [[SUB]]
+    ; CHECK-NEXT: $x0 = COPY %sub2(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %a:_(s64) = COPY $x0
+    %b:_(s64) = COPY $x1
+    %c:_(s64) = COPY $x2
+    %sub1:_(s64) = G_SUB %b, %c
+    %sub2:_(s64) = G_SUB %a, %sub1
+    $x0 = COPY %sub2
+    RET_ReallyLR implicit $x0
+
