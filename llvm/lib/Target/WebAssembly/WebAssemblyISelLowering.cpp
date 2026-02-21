@@ -3407,6 +3407,45 @@ static SDValue TryMatchTrue(SDNode *N, EVT VecVT, SelectionDAG &DAG) {
   return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
 }
 
+// Combine a setcc of a vecreduce, for example:
+//
+// setcc (vecreduce_or(v4i32 V128:$vec)), (i32 0), SETNE
+//  ==> ANYTRUE V128:$vec
+//
+// setcc (i32 (vecreduce_and(v4i32 V128:$vec))), (i32 0), SETNE
+//  ==> ALLTRUE_I32x4 V128:$vec
+static SDValue combineSetCCVecReduce(SDNode *SetCC,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue Reduce = SetCC->getOperand(0);
+  SDValue Constant = SetCC->getOperand(1);
+  SDValue Cond = SetCC->getOperand(2);
+
+  unsigned ReduceIntrinsic;
+  if (Reduce->getOpcode() == ISD::VECREDUCE_OR) {
+    ReduceIntrinsic = Intrinsic::wasm_anytrue;
+  } else if (Reduce->getOpcode() == ISD::VECREDUCE_AND) {
+    ReduceIntrinsic = Intrinsic::wasm_alltrue;
+  } else {
+    return SDValue();
+  }
+
+  if (cast<CondCodeSDNode>(Cond)->get() != ISD::SETNE)
+    return SDValue();
+
+  if (cast<ConstantSDNode>(Constant)->getSExtValue() != 0)
+    return SDValue();
+
+  SDLoc DL(SetCC);
+  SelectionDAG &DAG = DCI.DAG;
+
+  SDValue Match = Reduce->getOperand(0);
+  SDValue Intrinsic = DAG.getConstant(ReduceIntrinsic, DL, MVT::i32);
+  SDValue Chain =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32, {Intrinsic, Match});
+
+  return DAG.getZExtOrTrunc(Chain, DL, MVT::i1);
+}
+
 /// Try to convert a i128 comparison to a v16i8 comparison before type
 /// legalization splits it up into chunks
 static SDValue
@@ -3465,6 +3504,9 @@ static SDValue performSETCCCombine(SDNode *N,
     return SDValue();
 
   if (SDValue V = combineVectorSizedSetCCEquality(N, DCI, Subtarget))
+    return V;
+
+  if (SDValue V = combineSetCCVecReduce(N, DCI))
     return V;
 
   SDValue LHS = N->getOperand(0);
