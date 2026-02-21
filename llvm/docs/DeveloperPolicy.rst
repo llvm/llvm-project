@@ -913,6 +913,69 @@ their patch with every possible configuration.
 * 3rd step: If Galina could not help you, please escalate to the
   `Infrastructure Working Group <mailto:iwg@llvm.org>`_.
 
+Guidelines for fuzzer-generated issues
+--------------------------------------
+
+Fuzzing is a valuable tool for finding compiler bugs, and the LLVM project
+welcomes fuzzer-generated test cases. However, some additional guidelines
+should be followed to make such reports maximally useful.
+
+Fuzzer-generated issues should indicate that they are such, either in the
+issue description, or (for organization members) by applying the
+``fuzzer-generated`` label.
+
+Issues should include a minimized reproducer (including both the necessary code
+and command line arguments) both as part of the issue description and as a
+godbolt.org link. An effort should be made to deduplicate issues that likely
+have the same root cause, and check whether a similar issue has already been
+reported. Reports should always be submitted against current LLVM ``main``,
+not a released version.
+
+If possible, provide information on when an issue was introduced (e.g. by
+checking older versions on godbolt). A regression from the last LLVM release
+has higher priority than an issue that existed for decades.
+
+The remaining guidelines depend on the type of issue the fuzzer detects.
+
+**For miscompilations:** These issues are usually detected by looking for
+different results when using ``-O0`` and ``-O2``, or similar. When reporting
+miscompilations, please make sure that your fuzzing methodology can only
+generate well-defined, deterministic code. Results between optimizations levels
+can legitimately differ if the code invokes undefined behavior, or includes
+non-deterministic operations. Note that running cleanly under sanitizers is
+not sufficient to establish absense of undefined behavior.
+
+Reports using ``-Ofast``, ``-ffast-math``, or other flags that permit
+floating-point reassociation/approximation must include a credible root cause
+analysis, as behavior differences are likely to be caused by legal transforms.
+
+**For crashes / assertion failures:** Crashes that occur on valid code are more
+valuable than crashes on invalid code. Both can be reported, but the former is
+more likely to see a timely fix.
+
+Fuzzing can be performed at multiple levels, where higher levels are less likely
+to produce false positives. For example, a crash triggered by valid C code will
+generally indicate a real bug. However, a crash triggered by syntactically
+well-formed LLVM IR may not. For example, a target that does not support
+scalable vectors may break when provided IR using them. When fuzzing at a lower
+level, it is encouraged to verify the plausibility of the results.
+
+When fuzzing LLVM IR, fatal errors that do not generate a stack trace should
+not be reported. They indicate an incorrect use of LLVM, rather than a bug.
+
+**For missed optimizations:** There is an infinite number of optimizations that
+*could* be implemented, but only a small subset of them is relevant for
+real-world code. As such, fuzzer-generated reports for missed optimizations are
+only accepted if plausible real-world usefulness can be shown.
+
+For example, a valid strategy is to take a corpus of real-world code and use a
+super-optimizer to find missed optimization opportunities. An invalid strategy
+is to generate random code and check whether GCC generates less code than Clang.
+
+Fuzzer-generated missed optimization reports that are not derived from
+real-world code must include a root-cause analysis, and an explanation for why
+you believe that the missed optimization has real-world relevance.
+
 .. _new-llvm-components:
 
 Introducing New Components into LLVM
