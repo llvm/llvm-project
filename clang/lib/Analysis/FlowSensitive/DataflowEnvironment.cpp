@@ -422,7 +422,9 @@ public:
         isa<BuiltinBitCastExpr>(E) ||
         // The result object of co_await is <op>.await_resume(), but there is
         // no expression for that to propagate to.
-        isa<CoawaitExpr>(E)) {
+        isa<CoawaitExpr>(E) ||
+        // co_yield is equivalent to `co_await promise.yield_value(expr)`
+        isa<CoyieldExpr>(E)) {
       return;
     }
     if (auto *Op = dyn_cast<BinaryOperator>(E);
