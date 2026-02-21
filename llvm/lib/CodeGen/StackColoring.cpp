@@ -42,8 +42,10 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Use.h"
@@ -372,6 +374,40 @@ STATISTIC(EscapedAllocas, "Number of allocas that escaped the lifetime region");
 // If in RPO ordering chosen to walk the CFG  we happen to visit the b[k]
 // before visiting the memcpy block (which will contain the lifetime start
 // for "b" then it will appear that 'b' has a degenerate lifetime.
+//
+// Volatile after setjmp:
+// ----------------------
+//
+// Stack slots that are being accessed with volatile specifier cannot be merged
+// if they have a setjmp instruction as a predecessor. Volatile variables
+// (stack slots that are being accessed with volatile memoperand) must not be
+// clobbered by longjmp. Example:
+
+//  volatile int tmp = 0;
+//  volatile int volatile_counter;
+//
+//  if (setjmp(jump_buffer) == 0) {
+//    volatile_counter = 100;
+//    longjmp(jump_buffer, 5);
+//  } else {
+//    if (tmp)
+//      return volatile_counter;
+//    tmp = 1;
+//    int tmp2[100];
+//    foo(tmp2);
+//    longjmp(jump_buffer, 1);
+//  }
+//
+//  return volatile_counter;
+//
+// If tmp2 slot is merged with volatile_counter slot, then the stack slot will
+// be potentially overwritten in the call to foo function. After longjmp is
+// performed the value of volatilve_counter should still be 100, but because of
+// merging it may be overwritten.
+//
+// To handle this we collect all MBBs that have a call with return twice
+// attribute and we iterate over all successors of such blocks to record stack
+// slots that are being accessed with volatile qualifier.
 
 namespace {
 
@@ -433,8 +469,15 @@ class StackColoring {
   /// slots lifetime-start-on-first-use is disabled).
   BitVector ConservativeSlots;
 
+  /// FI slots that are 1) volatile 2) have setjmp (return twice) as a
+  /// predecessor
+  BitVector VolatileAfterSetjmp;
+
   /// Number of iterations taken during data flow analysis.
   unsigned NumIterations;
+
+  // Map between variable and its occupied slot.
+  SmallMapVector<StringRef, int, 16> NameToSlot;
 
 public:
   StackColoring(SlotIndexes *Indexes) : Indexes(Indexes) {}
@@ -470,7 +513,7 @@ private:
   bool applyFirstUse(int Slot) {
     if (!LifetimeStartOnFirstUse || ProtectFromEscapedAllocas)
       return false;
-    if (ConservativeSlots.test(Slot))
+    if (ConservativeSlots.test(Slot) || VolatileAfterSetjmp.test(Slot))
       return false;
     return true;
   }
@@ -632,10 +675,13 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
   InterestingSlots.resize(NumSlot);
   ConservativeSlots.clear();
   ConservativeSlots.resize(NumSlot);
+  VolatileAfterSetjmp.clear();
+  VolatileAfterSetjmp.resize(NumSlot);
 
   // number of start and end lifetime ops for each slot
   SmallVector<int, 8> NumStartLifetimes(NumSlot, 0);
   SmallVector<int, 8> NumEndLifetimes(NumSlot, 0);
+  SmallPtrSet<const MachineBasicBlock *, 4> SetjmpBlocks;
 
   // Step 1: collect markers and populate the "InterestingSlots"
   // and "ConservativeSlots" sets.
@@ -671,6 +717,7 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
         }
         const AllocaInst *Allocation = MFI->getObjectAllocation(Slot);
         if (Allocation) {
+          NameToSlot.insert({Allocation->getName(), Slot});
           LLVM_DEBUG(dbgs() << "Found a lifetime ");
           LLVM_DEBUG(dbgs() << (MI.getOpcode() == TargetOpcode::LIFETIME_START
                                     ? "start"
@@ -683,6 +730,11 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
         MarkersFound += 1;
       } else {
         for (const MachineOperand &MO : MI.operands()) {
+          if (MO.isGlobal()) {
+            auto *F = dyn_cast<Function>(MO.getGlobal());
+            if (F && F->hasFnAttribute(Attribute::ReturnsTwice))
+              SetjmpBlocks.insert(MBB);
+          }
           if (!MO.isFI())
             continue;
           int Slot = MO.getIndex();
@@ -706,6 +758,29 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
   for (unsigned slot = 0; slot < NumSlot; ++slot) {
     if (NumStartLifetimes[slot] > 1 || NumEndLifetimes[slot] > 1)
       ConservativeSlots.set(slot);
+  }
+
+  // Detect volatile accesses to stack slots in successors of setjmp blocks.
+  // Such slots cannot be merged because they must survive potential longjmp.
+  if (MF->exposesReturnsTwice()) {
+    df_iterator_default_set<const MachineBasicBlock *> Visited;
+
+    for (auto *SetJmpBlok : SetjmpBlocks) {
+      for (auto *MBB : depth_first_ext(SetJmpBlok, Visited)) {
+        for (const MachineInstr &MI : *MBB) {
+          if (MI.isDebugInstr())
+            continue;
+
+          for (auto *MO : MI.memoperands()) {
+            if (!MO->isVolatile())
+              continue;
+            VolatileAfterSetjmp.set(NameToSlot.at(MO->getValue()->getName()));
+          }
+        }
+      }
+    }
+
+    LLVM_DEBUG(dumpBV("Volatile slots after setjmp", VolatileAfterSetjmp));
   }
 
   // The write to the catch object by the personality function is not propely
