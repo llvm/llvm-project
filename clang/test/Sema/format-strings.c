@@ -986,7 +986,7 @@ void test_promotion(void) {
 
 void test_bool(_Bool b, _Bool* bp)
 {
-#ifndef __arm__
+#if defined(__LP64__) || defined(_WIN32)
   printf("%zu", b); // expected-warning-re{{format specifies type 'size_t' (aka '{{.+}}') but the argument has type '_Bool'}}
   printf("%td", b); // expected-warning-re{{format specifies type 'ptrdiff_t' (aka '{{.+}}') but the argument has type '_Bool'}}
 #else
