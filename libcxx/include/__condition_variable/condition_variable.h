@@ -118,21 +118,23 @@ public:
     using namespace chrono;
     using __clock_tp_ns = time_point<_Clock, nanoseconds>;
 
-    typename _Clock::time_point __now = _Clock::now();
+    const typename _Clock::time_point __now = _Clock::now();
     if (__t <= __now)
       return cv_status::timeout;
+    const typename _Clock::time_point __t_local = __t;
 
-    __clock_tp_ns __t_ns = __clock_tp_ns(std::__safe_nanosecond_cast(__t.time_since_epoch()));
+    __clock_tp_ns __t_ns = __clock_tp_ns(std::__safe_nanosecond_cast(__t_local.time_since_epoch()));
 
     __do_timed_wait(__lk, __t_ns);
-    return _Clock::now() < __t ? cv_status::no_timeout : cv_status::timeout;
+    return _Clock::now() < __t_local ? cv_status::no_timeout : cv_status::timeout;
   }
 
   template <class _Clock, class _Duration, class _Predicate>
   _LIBCPP_HIDE_FROM_ABI bool
   wait_until(unique_lock<mutex>& __lk, const chrono::time_point<_Clock, _Duration>& __t, _Predicate __pred) {
+    const typename _Clock::time_point __t_local = __t;
     while (!__pred()) {
-      if (wait_until(__lk, __t) == cv_status::timeout)
+      if (wait_until(__lk, __t_local) == cv_status::timeout)
         return __pred();
     }
     return true;
@@ -144,7 +146,8 @@ public:
     if (__d <= __d.zero())
       return cv_status::timeout;
     using __ns_rep                   = nanoseconds::rep;
-    steady_clock::time_point __c_now = steady_clock::now();
+    const steady_clock::time_point __c_now  = steady_clock::now();
+    const duration<_Rep, _Period> __d_local = __d;
 
 #  if _LIBCPP_HAS_COND_CLOCKWAIT
     using __clock_tp_ns     = time_point<steady_clock, nanoseconds>;
@@ -154,7 +157,7 @@ public:
     __ns_rep __now_count_ns = std::__safe_nanosecond_cast(system_clock::now().time_since_epoch()).count();
 #  endif
 
-    __ns_rep __d_ns_count = std::__safe_nanosecond_cast(__d).count();
+    __ns_rep __d_ns_count = std::__safe_nanosecond_cast(__d_local).count();
 
     if (__now_count_ns > numeric_limits<__ns_rep>::max() - __d_ns_count) {
       __do_timed_wait(__lk, __clock_tp_ns::max());
@@ -162,7 +165,7 @@ public:
       __do_timed_wait(__lk, __clock_tp_ns(nanoseconds(__now_count_ns + __d_ns_count)));
     }
 
-    return steady_clock::now() - __c_now < __d ? cv_status::no_timeout : cv_status::timeout;
+    return steady_clock::now() - __c_now < __d_local ? cv_status::no_timeout : cv_status::timeout;
   }
 
   template <class _Rep, class _Period, class _Predicate>
