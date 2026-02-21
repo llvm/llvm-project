@@ -5419,25 +5419,26 @@ define amdgpu_ps <4 x float> @ssubsat_i128_vs(i128 %lhs, i128 inreg %rhs) {
 ; GFX6-NEXT:    v_subrev_i32_e32 v4, vcc, s0, v0
 ; GFX6-NEXT:    v_subb_u32_e32 v5, vcc, v1, v5, vcc
 ; GFX6-NEXT:    v_mov_b32_e32 v6, s2
-; GFX6-NEXT:    v_cmp_gt_u64_e64 s[0:1], s[0:1], 0
 ; GFX6-NEXT:    v_mov_b32_e32 v7, s3
 ; GFX6-NEXT:    v_subb_u32_e32 v6, vcc, v2, v6, vcc
 ; GFX6-NEXT:    v_subb_u32_e32 v7, vcc, v3, v7, vcc
-; GFX6-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
 ; GFX6-NEXT:    v_cmp_lt_u64_e32 vcc, v[4:5], v[0:1]
-; GFX6-NEXT:    v_cmp_gt_i64_e64 s[0:1], s[2:3], 0
+; GFX6-NEXT:    v_cmp_gt_u64_e64 s[0:1], s[0:1], 0
 ; GFX6-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX6-NEXT:    v_cmp_lt_i64_e32 vcc, v[6:7], v[2:3]
-; GFX6-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX6-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
-; GFX6-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[2:3], 0
+; GFX6-NEXT:    v_cmp_gt_i64_e64 s[0:1], s[2:3], 0
 ; GFX6-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX6-NEXT:    v_cmp_eq_u64_e32 vcc, v[6:7], v[2:3]
-; GFX6-NEXT:    s_cselect_b32 s5, 1, 0
+; GFX6-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX6-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
 ; GFX6-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; GFX6-NEXT:    s_cselect_b32 s0, s4, s5
-; GFX6-NEXT:    v_xor_b32_e32 v0, s0, v0
+; GFX6-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX6-NEXT:    v_cmp_eq_u64_e64 vcc, s[2:3], 0
+; GFX6-NEXT:    v_mov_b32_e32 v1, s4
+; GFX6-NEXT:    v_mov_b32_e32 v2, s0
+; GFX6-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v0, v1, v0
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v2, 31, v7
 ; GFX6-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX6-NEXT:    v_add_i32_e32 v3, vcc, 0x80000000, v2

@@ -657,9 +657,9 @@ define <2 x i8> @test_signed_v2f64_v2i8(<2 x double> %f) {
 ; GFX12-GI-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GI-NEXT:    v_cvt_i32_f64_e32 v0, v[0:1]
 ; GFX12-GI-NEXT:    v_cvt_i32_f64_e32 v1, v[2:3]
-; GFX12-GI-NEXT:    v_mov_b32_e32 v2, 0xffffff80
-; GFX12-GI-NEXT:    v_med3_i32 v0, v0, v2, 0x7f
-; GFX12-GI-NEXT:    v_med3_i32 v1, v1, v2, 0x7f
+; GFX12-GI-NEXT:    v_mov_b32_e32 v2, 0x7f
+; GFX12-GI-NEXT:    v_med3_i32 v0, 0xffffff80, v0, v2
+; GFX12-GI-NEXT:    v_med3_i32 v1, 0xffffff80, v1, v2
 ; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
     %x = call <2 x i8> @llvm.fptosi.sat.v2f64.v2i8(<2 x double> %f)
     ret <2 x i8> %x
@@ -742,9 +742,9 @@ define <2 x i16> @test_signed_v2f64_v2i16(<2 x double> %f) {
 ; GFX12-GI-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GI-NEXT:    v_cvt_i32_f64_e32 v2, v[2:3]
 ; GFX12-GI-NEXT:    v_cvt_i32_f64_e32 v0, v[0:1]
-; GFX12-GI-NEXT:    v_mov_b32_e32 v1, 0xffff8000
-; GFX12-GI-NEXT:    v_med3_i32 v2, v2, v1, 0x7fff
-; GFX12-GI-NEXT:    v_med3_i32 v0, v0, v1, 0x7fff
+; GFX12-GI-NEXT:    v_mov_b32_e32 v1, 0x7fff
+; GFX12-GI-NEXT:    v_med3_i32 v2, 0xffff8000, v2, v1
+; GFX12-GI-NEXT:    v_med3_i32 v0, 0xffff8000, v0, v1
 ; GFX12-GI-NEXT:    v_mov_b16_e32 v0.h, v2.l
 ; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
     %x = call <2 x i16> @llvm.fptosi.sat.v2f64.v2i16(<2 x double> %f)
@@ -1252,15 +1252,15 @@ define <4 x i8> @test_signed_v4f16_v4i8(<4 x half> %f) {
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v0, v0.h
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v3, v1.l
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v1, v1.h
-; GFX12-GI-NEXT:    v_mov_b32_e32 v4, 0xffffff80
+; GFX12-GI-NEXT:    v_mov_b32_e32 v4, 0x7f
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v5, v0
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v3, v3
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v6, v1
-; GFX12-GI-NEXT:    v_med3_i32 v0, v2, v4, 0x7f
-; GFX12-GI-NEXT:    v_med3_i32 v1, v5, v4, 0x7f
-; GFX12-GI-NEXT:    v_med3_i32 v2, v3, v4, 0x7f
-; GFX12-GI-NEXT:    v_med3_i32 v3, v6, v4, 0x7f
+; GFX12-GI-NEXT:    v_med3_i32 v0, 0xffffff80, v2, v4
+; GFX12-GI-NEXT:    v_med3_i32 v1, 0xffffff80, v5, v4
+; GFX12-GI-NEXT:    v_med3_i32 v2, 0xffffff80, v3, v4
+; GFX12-GI-NEXT:    v_med3_i32 v3, 0xffffff80, v6, v4
 ; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
     %x = call <4 x i8> @llvm.fptosi.sat.v4f16.v4i8(<4 x half> %f)
     ret <4 x i8> %x
@@ -1394,15 +1394,15 @@ define <4 x i16> @test_signed_v4f16_v4i16(<4 x half> %f) {
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v3, v1.h
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v1, v1.l
-; GFX12-GI-NEXT:    v_mov_b32_e32 v4, 0xffff8000
+; GFX12-GI-NEXT:    v_mov_b32_e32 v4, 0x7fff
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v3, v3
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v1, v1
-; GFX12-GI-NEXT:    v_med3_i32 v2, v2, v4, 0x7fff
-; GFX12-GI-NEXT:    v_med3_i32 v3, v3, v4, 0x7fff
-; GFX12-GI-NEXT:    v_med3_i32 v0, v0, v4, 0x7fff
-; GFX12-GI-NEXT:    v_med3_i32 v1, v1, v4, 0x7fff
+; GFX12-GI-NEXT:    v_med3_i32 v2, 0xffff8000, v2, v4
+; GFX12-GI-NEXT:    v_med3_i32 v3, 0xffff8000, v3, v4
+; GFX12-GI-NEXT:    v_med3_i32 v0, 0xffff8000, v0, v4
+; GFX12-GI-NEXT:    v_med3_i32 v1, 0xffff8000, v1, v4
 ; GFX12-GI-NEXT:    v_mov_b16_e32 v0.h, v2.l
 ; GFX12-GI-NEXT:    v_mov_b16_e32 v1.h, v3.l
 ; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
@@ -2132,29 +2132,29 @@ define <8 x i8> @test_signed_v8f16_v8i8(<8 x half> %f) {
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v4, v0.l
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v0, v0.h
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v5, v1.l
-; GFX12-GI-NEXT:    v_mov_b32_e32 v7, 0xffffff80
+; GFX12-GI-NEXT:    v_mov_b32_e32 v7, 0x7f
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v9, v1.h
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v4, v4
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v6, v0
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v5, v5
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v10, v2.l
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v2, v2.h
-; GFX12-GI-NEXT:    v_med3_i32 v0, v4, v7, 0x7f
+; GFX12-GI-NEXT:    v_med3_i32 v0, 0xffffff80, v4, v7
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v4, v3.l
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v3, v3.h
-; GFX12-GI-NEXT:    v_med3_i32 v1, v6, v7, 0x7f
-; GFX12-GI-NEXT:    v_med3_i32 v8, v5, v7, 0x7f
+; GFX12-GI-NEXT:    v_med3_i32 v1, 0xffffff80, v6, v7
+; GFX12-GI-NEXT:    v_med3_i32 v8, 0xffffff80, v5, v7
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v5, v9
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v6, v10
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v9, v4
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v10, v3
-; GFX12-GI-NEXT:    v_med3_i32 v3, v5, v7, 0x7f
-; GFX12-GI-NEXT:    v_med3_i32 v5, v2, v7, 0x7f
+; GFX12-GI-NEXT:    v_med3_i32 v3, 0xffffff80, v5, v7
+; GFX12-GI-NEXT:    v_med3_i32 v5, 0xffffff80, v2, v7
 ; GFX12-GI-NEXT:    v_mov_b32_e32 v2, v8
-; GFX12-GI-NEXT:    v_med3_i32 v4, v6, v7, 0x7f
-; GFX12-GI-NEXT:    v_med3_i32 v6, v9, v7, 0x7f
-; GFX12-GI-NEXT:    v_med3_i32 v7, v10, v7, 0x7f
+; GFX12-GI-NEXT:    v_med3_i32 v4, 0xffffff80, v6, v7
+; GFX12-GI-NEXT:    v_med3_i32 v6, 0xffffff80, v9, v7
+; GFX12-GI-NEXT:    v_med3_i32 v7, 0xffffff80, v10, v7
 ; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
     %x = call <8 x i8> @llvm.fptosi.sat.v8f16.v8i8(<8 x half> %f)
     ret <8 x i8> %x
@@ -2363,28 +2363,28 @@ define <8 x i16> @test_signed_v8f16_v8i16(<8 x half> %f) {
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v5, v1.l
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v4, v0.l
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v0, v0.h
-; GFX12-GI-NEXT:    v_mov_b32_e32 v6, 0xffff8000
+; GFX12-GI-NEXT:    v_mov_b32_e32 v6, 0x7fff
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v8, v1.h
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v5, v5
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v4, v4
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v7, v0
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v9, v2.l
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v2, v2.h
-; GFX12-GI-NEXT:    v_med3_i32 v1, v5, v6, 0x7fff
+; GFX12-GI-NEXT:    v_med3_i32 v1, 0xffff8000, v5, v6
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v5, v3.h
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v3, v3.l
-; GFX12-GI-NEXT:    v_med3_i32 v0, v4, v6, 0x7fff
-; GFX12-GI-NEXT:    v_med3_i32 v4, v7, v6, 0x7fff
+; GFX12-GI-NEXT:    v_med3_i32 v0, 0xffff8000, v4, v6
+; GFX12-GI-NEXT:    v_med3_i32 v4, 0xffff8000, v7, v6
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v7, v8
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v8, v9
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v9, v2
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v5, v5
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v3, v3
-; GFX12-GI-NEXT:    v_med3_i32 v7, v7, v6, 0x7fff
-; GFX12-GI-NEXT:    v_med3_i32 v2, v8, v6, 0x7fff
-; GFX12-GI-NEXT:    v_med3_i32 v8, v9, v6, 0x7fff
-; GFX12-GI-NEXT:    v_med3_i32 v5, v5, v6, 0x7fff
-; GFX12-GI-NEXT:    v_med3_i32 v3, v3, v6, 0x7fff
+; GFX12-GI-NEXT:    v_med3_i32 v7, 0xffff8000, v7, v6
+; GFX12-GI-NEXT:    v_med3_i32 v2, 0xffff8000, v8, v6
+; GFX12-GI-NEXT:    v_med3_i32 v8, 0xffff8000, v9, v6
+; GFX12-GI-NEXT:    v_med3_i32 v5, 0xffff8000, v5, v6
+; GFX12-GI-NEXT:    v_med3_i32 v3, 0xffff8000, v3, v6
 ; GFX12-GI-NEXT:    v_mov_b16_e32 v0.h, v4.l
 ; GFX12-GI-NEXT:    v_mov_b16_e32 v1.h, v7.l
 ; GFX12-GI-NEXT:    v_mov_b16_e32 v2.h, v8.l

@@ -74,6 +74,12 @@ public:
     Register Val0, Val1, Val2;
   };
 
+  struct CopySccVccMatchInfo {
+    Register VccReg;
+    Register TrueReg;
+    Register FalseReg;
+  };
+
   MinMaxMedOpc getMinMaxPair(unsigned Opc) const;
 
   template <class m_Cst, typename CstTy>
@@ -92,6 +98,9 @@ public:
   bool combineD16Load(MachineInstr &MI) const;
   bool applyD16Load(unsigned D16Opc, MachineInstr &DstMI,
                     MachineInstr *SmallLoad, Register ToOverwriteD16) const;
+
+  bool matchCopySccVcc(MachineInstr &MI, CopySccVccMatchInfo &MatchInfo) const;
+  void applyCopySccVcc(MachineInstr &MI, CopySccVccMatchInfo &MatchInfo) const;
 
 private:
   SIModeRegisterDefaults getMode() const;
@@ -137,6 +146,17 @@ Register AMDGPURegBankCombinerImpl::getAsVgpr(Register Reg) const {
   if (isVgprRegBank(Reg))
     return Reg;
 
+  const RegisterBank &VgprRB = RBI.getRegBank(AMDGPU::VGPRRegBankID);
+
+  // Build constants directly in VGPR instead of copying from SGPR.
+  std::optional<ValueAndVReg> Val =
+      getIConstantVRegValWithLookThrough(Reg, MRI);
+  if (Val) {
+    auto VgprCst = B.buildConstant(MRI.getType(Reg), Val->Value);
+    MRI.setRegBank(VgprCst.getReg(0), VgprRB);
+    return VgprCst.getReg(0);
+  }
+
   // Search for existing copy of Reg to vgpr.
   for (MachineInstr &Use : MRI.use_instructions(Reg)) {
     Register Def = Use.getOperand(0).getReg();
@@ -146,7 +166,7 @@ Register AMDGPURegBankCombinerImpl::getAsVgpr(Register Reg) const {
 
   // Copy Reg to vgpr.
   Register VgprReg = B.buildCopy(MRI.getType(Reg), Reg).getReg(0);
-  MRI.setRegBank(VgprReg, RBI.getRegBank(AMDGPU::VGPRRegBankID));
+  MRI.setRegBank(VgprReg, VgprRB);
   return VgprReg;
 }
 
@@ -476,6 +496,49 @@ bool AMDGPURegBankCombinerImpl::applyD16Load(
       .setMemRefs(SmallLoad->memoperands());
   DstMI.eraseFromParent();
   return true;
+}
+
+// Eliminate VCC->SGPR->VGPR register bounce for uniform boolean in VCC.
+// Match: COPY (G_SELECT (G_AMDGPU_COPY_SCC_VCC %vcc), %true, %false)
+// Replace with: G_SELECT %vcc, %vgpr_true, %vgpr_false
+bool AMDGPURegBankCombinerImpl::matchCopySccVcc(
+    MachineInstr &MI, CopySccVccMatchInfo &MatchInfo) const {
+  assert(MI.getOpcode() == AMDGPU::COPY);
+
+  // TODO: Add a heuristic to determine whether the combine is profitable.
+  Register VgprDst = MI.getOperand(0).getReg();
+  Register SgprSrc = MI.getOperand(1).getReg();
+
+  if (!VgprDst.isVirtual() || !SgprSrc.isVirtual())
+    return false;
+
+  if (!isVgprRegBank(VgprDst))
+    return false;
+
+  MachineInstr *CondDef;
+  Register TrueReg, FalseReg;
+  if (!mi_match(SgprSrc, MRI,
+                m_GISelect(m_MInstr(CondDef), m_Reg(TrueReg), m_Reg(FalseReg))))
+    return false;
+
+  if (CondDef->getOpcode() != AMDGPU::G_AMDGPU_COPY_SCC_VCC)
+    return false;
+
+  MatchInfo.VccReg = CondDef->getOperand(1).getReg();
+  MatchInfo.TrueReg = TrueReg;
+  MatchInfo.FalseReg = FalseReg;
+  return true;
+}
+
+void AMDGPURegBankCombinerImpl::applyCopySccVcc(
+    MachineInstr &MI, CopySccVccMatchInfo &MatchInfo) const {
+  Register VgprDst = MI.getOperand(0).getReg();
+
+  Register VgprTrue = getAsVgpr(MatchInfo.TrueReg);
+  Register VgprFalse = getAsVgpr(MatchInfo.FalseReg);
+
+  B.buildSelect(VgprDst, MatchInfo.VccReg, VgprTrue, VgprFalse);
+  MI.eraseFromParent();
 }
 
 SIModeRegisterDefaults AMDGPURegBankCombinerImpl::getMode() const {
