@@ -1329,7 +1329,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   return true;
 }
 
-bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
+bool VPlanTransforms::handleFindLastReductions(VPlan &Plan, bool FoldTail) {
   if (Plan.hasScalarVFOnly())
     return false;
 
@@ -1354,6 +1354,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
   //   ...extract-last-active replaces compute-reduction-result.
   //   result = extract-last-active vp<new.data>, vp<new.mask>, ir<default.val>
 
+  VPValue *HeaderMask = FoldTail ? vputils::findHeaderMask(Plan) : nullptr;
   for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
     if (!PhiR || !RecurrenceDescriptor::isFindLastRecurrenceKind(
@@ -1361,7 +1362,16 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
       continue;
 
     // Find the condition for the select/blend.
-    auto *SelectR = cast<VPSingleDefRecipe>(&PhiR->getBackedgeRecipe());
+    VPValue *BackedgeSelect = PhiR->getBackedgeRecipe().getVPSingleValue();
+    VPValue *CondSelect = BackedgeSelect;
+
+    // If there's a header mask the backedge select will not be the find-last
+    // select.
+    if (HeaderMask && !match(BackedgeSelect,
+                             m_Select(m_Specific(HeaderMask),
+                                      m_VPValue(CondSelect), m_Specific(PhiR))))
+      return false;
+
     VPValue *Cond = nullptr, *Op1 = nullptr, *Op2 = nullptr;
 
     // If we're matching a blend rather than a select, there should be one
@@ -1385,9 +1395,21 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
       return NumIncomingDataValues == 1;
     };
 
+    VPSingleDefRecipe *SelectR =
+        cast<VPSingleDefRecipe>(CondSelect->getDefiningRecipe());
     if (!match(SelectR,
                m_Select(m_VPValue(Cond), m_VPValue(Op1), m_VPValue(Op2))) &&
         !MatchBlend(SelectR))
+      return false;
+
+    assert(Cond != HeaderMask && "Cond must not be HeaderMask");
+
+    // Find final reduction computation and replace it with an
+    // extract.last.active intrinsic.
+    auto *RdxResult =
+        vputils::findUserOf<VPInstruction::ComputeReductionResult>(
+            BackedgeSelect);
+    if (!RdxResult)
       return false;
 
     // Add mask phi.
@@ -1406,6 +1428,9 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     }
     assert(Op2 == PhiR && "data value must be selected if Cond is true");
 
+    if (HeaderMask)
+      Cond = Builder.createAnd(Cond, HeaderMask);
+
     VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
     VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
     MaskPHI->addOperand(MaskSelect);
@@ -1416,13 +1441,6 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     SelectR->replaceAllUsesWith(DataSelect);
     SelectR->eraseFromParent();
 
-    // Find final reduction computation and replace it with an
-    // extract.last.active intrinsic.
-    auto *RdxResult =
-        vputils::findUserOf<VPInstruction::ComputeReductionResult>(DataSelect);
-    // TODO: Handle tail-folding.
-    if (!RdxResult)
-      return false;
     Builder.setInsertPoint(RdxResult);
     auto *ExtractLastActive =
         Builder.createNaryOp(VPInstruction::ExtractLastActive,
