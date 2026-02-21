@@ -2078,7 +2078,7 @@ static CSFC_Result CollectStatementsForCase(const Stmt *S,
 
   // If this is the switchcase (case 4: or default) that we're looking for, then
   // we're in business.  Just add the substatement.
-  if (const SwitchCase *SC = dyn_cast<SwitchCase>(S)) {
+  while (const SwitchCase *SC = dyn_cast<SwitchCase>(S)) {
     if (S == Case) {
       FoundCase = true;
       return CollectStatementsForCase(SC->getSubStmt(), nullptr, FoundCase,
@@ -2086,8 +2086,7 @@ static CSFC_Result CollectStatementsForCase(const Stmt *S,
     }
 
     // Otherwise, this is some other case or default statement, just ignore it.
-    return CollectStatementsForCase(SC->getSubStmt(), Case, FoundCase,
-                                    ResultStmts);
+    S = SC->getSubStmt();
   }
 
   // If we are in the live part of the code and we found our break statement,

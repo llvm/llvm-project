@@ -1666,30 +1666,37 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
 /// this statement is not executed normally, it not containing a label means
 /// that we can just remove the code.
 bool CodeGenFunction::ContainsLabel(const Stmt *S, bool IgnoreCaseStmts) {
-  // Null statement, not a label!
-  if (!S) return false;
+  llvm::SmallVector<std::pair<const Stmt *, bool>, 32> WorkList;
+  WorkList.emplace_back(S, IgnoreCaseStmts);
 
-  // If this is a label, we have to emit the code, consider something like:
-  // if (0) {  ...  foo:  bar(); }  goto foo;
-  //
-  // TODO: If anyone cared, we could track __label__'s, since we know that you
-  // can't jump to one from outside their declared region.
-  if (isa<LabelStmt>(S))
-    return true;
+  while (!WorkList.empty()) {
+    auto [CurStmt, CurIgnoreCaseStmts] = WorkList.pop_back_val();
 
-  // If this is a case/default statement, and we haven't seen a switch, we have
-  // to emit the code.
-  if (isa<SwitchCase>(S) && !IgnoreCaseStmts)
-    return true;
+    // Null statement, not a label!
+    if (!CurStmt)
+      continue;
 
-  // If this is a switch statement, we want to ignore cases below it.
-  if (isa<SwitchStmt>(S))
-    IgnoreCaseStmts = true;
-
-  // Scan subexpressions for verboten labels.
-  for (const Stmt *SubStmt : S->children())
-    if (ContainsLabel(SubStmt, IgnoreCaseStmts))
+    // If this is a label, we have to emit the code, consider something like:
+    // if (0) {  ...  foo:  bar(); }  goto foo;
+    //
+    // TODO: If anyone cared, we could track __label__'s, since we know that you
+    // can't jump to one from outside their declared region.
+    if (isa<LabelStmt>(CurStmt))
       return true;
+
+    // If this is a case/default statement, and we haven't seen a switch, we
+    // have to emit the code.
+    if (isa<SwitchCase>(CurStmt) && !CurIgnoreCaseStmts)
+      return true;
+
+    // If this is a switch statement, we want to ignore cases below it.
+    if (isa<SwitchStmt>(CurStmt))
+      CurIgnoreCaseStmts = true;
+
+    // Scan subexpressions for verboten labels.
+    for (const Stmt *SubStmt : CurStmt->children())
+      WorkList.emplace_back(SubStmt, CurIgnoreCaseStmts);
+  }
 
   return false;
 }
@@ -1698,46 +1705,57 @@ bool CodeGenFunction::ContainsLabel(const Stmt *S, bool IgnoreCaseStmts) {
 /// If the statement (recursively) contains a switch or loop with a break
 /// inside of it, this is fine.
 bool CodeGenFunction::containsBreak(const Stmt *S) {
-  // Null statement, not a label!
-  if (!S) return false;
+  llvm::SmallVector<const Stmt *, 32> WorkList;
+  WorkList.push_back(S);
+  while (!WorkList.empty()) {
+    const Stmt *CurStmt = WorkList.pop_back_val();
 
-  // If this is a switch or loop that defines its own break scope, then we can
-  // include it and anything inside of it.
-  if (isa<SwitchStmt>(S) || isa<WhileStmt>(S) || isa<DoStmt>(S) ||
-      isa<ForStmt>(S))
-    return false;
+    // Null statement, not a label!
+    if (!CurStmt)
+      continue;
 
-  if (isa<BreakStmt>(S))
-    return true;
+    // If this is a switch or loop that defines its own break scope, then we can
+    // include it and anything inside of it.
+    if (isa<SwitchStmt>(CurStmt) || isa<WhileStmt>(CurStmt) ||
+        isa<DoStmt>(CurStmt) || isa<ForStmt>(CurStmt))
+      continue;
 
-  // Scan subexpressions for verboten breaks.
-  for (const Stmt *SubStmt : S->children())
-    if (containsBreak(SubStmt))
+    if (isa<BreakStmt>(CurStmt))
       return true;
 
+    // Scan subexpressions for verboten breaks.
+    for (const Stmt *SubStmt : CurStmt->children())
+      WorkList.push_back(SubStmt);
+  }
   return false;
 }
 
 bool CodeGenFunction::mightAddDeclToScope(const Stmt *S) {
-  if (!S) return false;
+  llvm::SmallVector<const Stmt *, 32> WorkList;
+  WorkList.push_back(S);
+  while (!WorkList.empty()) {
+    const Stmt *CurStmt = WorkList.pop_back_val();
 
-  // Some statement kinds add a scope and thus never add a decl to the current
-  // scope. Note, this list is longer than the list of statements that might
-  // have an unscoped decl nested within them, but this way is conservatively
-  // correct even if more statement kinds are added.
-  if (isa<IfStmt>(S) || isa<SwitchStmt>(S) || isa<WhileStmt>(S) ||
-      isa<DoStmt>(S) || isa<ForStmt>(S) || isa<CompoundStmt>(S) ||
-      isa<CXXForRangeStmt>(S) || isa<CXXTryStmt>(S) ||
-      isa<ObjCForCollectionStmt>(S) || isa<ObjCAtTryStmt>(S))
-    return false;
+    if (!CurStmt)
+      continue;
 
-  if (isa<DeclStmt>(S))
-    return true;
+    // Some statement kinds add a scope and thus never add a decl to the current
+    // scope. Note, this list is longer than the list of statements that might
+    // have an unscoped decl nested within them, but this way is conservatively
+    // correct even if more statement kinds are added.
+    if (isa<IfStmt>(CurStmt) || isa<SwitchStmt>(CurStmt) ||
+        isa<WhileStmt>(CurStmt) || isa<DoStmt>(CurStmt) ||
+        isa<ForStmt>(CurStmt) || isa<CompoundStmt>(CurStmt) ||
+        isa<CXXForRangeStmt>(CurStmt) || isa<CXXTryStmt>(CurStmt) ||
+        isa<ObjCForCollectionStmt>(CurStmt) || isa<ObjCAtTryStmt>(CurStmt))
+      continue;
 
-  for (const Stmt *SubStmt : S->children())
-    if (mightAddDeclToScope(SubStmt))
+    if (isa<DeclStmt>(CurStmt))
       return true;
 
+    for (const Stmt *SubStmt : CurStmt->children())
+      WorkList.push_back(SubStmt);
+  }
   return false;
 }
 
