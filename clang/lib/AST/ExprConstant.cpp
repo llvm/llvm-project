@@ -20230,6 +20230,43 @@ public:
       // The argument is not evaluated!
       return true;
 
+    case Builtin::BI__builtin_assume_dereferenceable: {
+      assert(E->getType()->isVoidType());
+      assert(E->getNumArgs() == 2);
+
+      APSInt ReqSizeVal;
+      if (!::EvaluateInteger(E->getArg(1), ReqSizeVal, Info))
+        return false;
+      if (ReqSizeVal.isZero())
+        return true;
+
+      LValue Pointer;
+      if (!EvaluatePointer(E->getArg(0), Pointer, Info))
+        return false;
+      if (Pointer.Designator.Invalid)
+        return false;
+      if (Pointer.isNullPointer()) {
+        Info.FFDiag(E, diag::note_constexpr_access_null) << AK_Read;
+        return false;
+      }
+      if (Pointer.Designator.isOnePastTheEnd()) {
+        Info.FFDiag(E, diag::note_constexpr_access_past_end) << AK_Read;
+        return false;
+      }
+
+      uint64_t ReqSize = ReqSizeVal.getZExtValue();
+      CharUnits EndOffset;
+      if (!determineEndOffset(Info, E->getExprLoc(), 0, Pointer, EndOffset))
+        return false;
+
+      uint64_t AvailSize =
+          (EndOffset - Pointer.getLValueOffset()).getQuantity();
+      if (AvailSize < ReqSize) {
+        Info.FFDiag(E, diag::note_constexpr_access_past_end) << AK_Read;
+        return false;
+      }
+      return true;
+    }
     case Builtin::BI__builtin_operator_delete:
       return HandleOperatorDeleteCall(Info, E);
 
