@@ -181,23 +181,59 @@ bool HexagonTfrCleanup::rewriteIfImm(MachineInstr *MI, ImmediateMap &IMap,
     return false;
   }
 
-  unsigned DstR = MI->getOperand(0).getReg();
-  unsigned SrcR = MI->getOperand(1).getReg();
-  bool Tmp, Is32;
-  if (!isIntReg(DstR, Is32) || !isIntReg(SrcR, Tmp))
+  Register DstBase = MI->getOperand(0).getReg();
+  Register SrcBase = MI->getOperand(1).getReg();
+  unsigned DstSub = MI->getOperand(0).getSubReg();
+  unsigned SrcSub = MI->getOperand(1).getSubReg();
+
+  if (!DstBase.isPhysical() || !SrcBase.isPhysical())
     return false;
-  assert(Tmp == Is32 && "Register size mismatch");
+
+  // Determine effective registers and widths, accounting for subregs.
+  bool Is32Dst = false, Is32Src = false;
+  unsigned DstR = DstBase;
+  unsigned SrcR = SrcBase;
+
+  if (DstSub) {
+    if (DstSub != Hexagon::isub_lo && DstSub != Hexagon::isub_hi)
+      return false;
+    Is32Dst = true;
+    DstR = TRI->getSubReg(DstBase, DstSub);
+  } else {
+    if (!isIntReg(DstBase, Is32Dst))
+      return false;
+  }
+
+  if (SrcSub) {
+    if (SrcSub != Hexagon::isub_lo && SrcSub != Hexagon::isub_hi)
+      return false;
+    if (!Hexagon::DoubleRegsRegClass.contains(SrcBase))
+      return false;
+    Is32Src = true;
+    SrcR = TRI->getSubReg(SrcBase, SrcSub);
+  } else {
+    if (!isIntReg(SrcBase, Is32Src))
+      return false;
+  }
+
+  // After resolving subregs, check that effective register sizes match.
+  bool Is32DstResolved = Hexagon::IntRegsRegClass.contains(DstR);
+  bool Is32SrcResolved = Hexagon::IntRegsRegClass.contains(SrcR);
+  if (Is32DstResolved != Is32SrcResolved)
+    return false;
+
   uint64_t Val;
   bool Found = getReg(SrcR, Val, IMap);
   if (!Found)
     return false;
 
   MachineBasicBlock &B = *MI->getParent();
+  MachineFunction *F = B.getParent();
   DebugLoc DL = MI->getDebugLoc();
-  int64_t SVal = Is32 ? int32_t(Val) : Val;
-  auto &HST = B.getParent()->getSubtarget<HexagonSubtarget>();
+  int64_t SVal = Is32Dst ? int32_t(Val) : Val;
+  auto &HST = F->getSubtarget<HexagonSubtarget>();
   MachineInstr *NewMI;
-  if (Is32)
+  if (Is32Dst)
     NewMI = BuildMI(B, MI, DL, HII->get(A2_tfrsi), DstR).addImm(SVal);
   else if (isInt<8>(SVal))
     NewMI = BuildMI(B, MI, DL, HII->get(A2_tfrpi), DstR).addImm(SVal);
@@ -259,6 +295,10 @@ bool HexagonTfrCleanup::eraseIfRedundant(MachineInstr *MI,
 }
 
 bool HexagonTfrCleanup::runOnMachineFunction(MachineFunction &MF) {
+  // This pass is intended to run post-RA. If virtual registers are present,
+  // skip safely to avoid touching non-physical registers.
+  if (!MF.getProperties().hasNoVRegs())
+    return false;
   bool Changed = false;
   // Map: 32-bit register -> immediate value.
   // 64-bit registers are stored through their subregisters.
