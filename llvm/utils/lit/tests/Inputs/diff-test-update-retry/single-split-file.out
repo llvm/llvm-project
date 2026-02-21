@@ -1,0 +1,8 @@
+# ALLOW_RETRIES: 1
+
+# RUN: split-file %s %t
+# RUN: cp %S/1.in %t/out.txt
+# RUN: diff --strip-trailing-cr %t/test.expected %t/out.txt
+
+#--- test.expected
+FOO

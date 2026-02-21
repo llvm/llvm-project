@@ -34,10 +34,11 @@ class NormalFileTarget:
 
 
 class SplitFileTarget:
-    def __init__(self, slice_start_idx, test_path, lines):
+    def __init__(self, slice_start_idx, test_path, lines, filename):
         self.slice_start_idx = slice_start_idx
         self.test_path = test_path
         self.lines = lines
+        self.filename = filename
 
     def copyFrom(self, source):
         lines_before = self.lines[: self.slice_start_idx + 1]
@@ -58,7 +59,7 @@ class SplitFileTarget:
                 f.write(l)
 
     def __str__(self):
-        return f"slice in {self.test_path}"
+        return f"slice {self.filename} in {self.test_path}"
 
     @staticmethod
     def get_target_dir(commands, test_path):
@@ -89,7 +90,7 @@ class SplitFileTarget:
                 break
         else:
             return None
-        return SplitFileTarget(idx, test_path, lines)
+        return SplitFileTarget(idx, test_path, lines, p)
 
     @staticmethod
     def _get_split_line_path(l):
