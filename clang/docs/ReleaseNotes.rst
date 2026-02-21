@@ -46,6 +46,9 @@ C++ Specific Potentially Breaking Changes
 - Clang now more aggressively optimizes away stores to objects after they are
   dead. This behavior can be disabled with ``-fno-lifetime-dse``.
 
+- Clang now emits errors for coroutine `await_suspend` functions whose return type is not
+  one of `void`, `bool`, or `std::coroutine_handle`.
+
 ABI Changes in This Version
 ---------------------------
 
