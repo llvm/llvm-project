@@ -28,7 +28,8 @@ CIRLowerContext::CIRLowerContext(mlir::ModuleOp module,
 
 CIRLowerContext::~CIRLowerContext() {}
 
-mlir::Type CIRLowerContext::initBuiltinType(clang::BuiltinType::Kind builtinKind) {
+mlir::Type
+CIRLowerContext::initBuiltinType(clang::BuiltinType::Kind builtinKind) {
   mlir::Type ty;
 
   // NOTE(cir): Clang does more stuff here. Not sure if we need to do the same.

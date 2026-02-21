@@ -48,7 +48,7 @@ static std::unique_ptr<TargetLoweringInfo>
 createTargetLoweringInfo(LowerModule &lm) {
   const clang::TargetInfo &target = lm.getTarget();
   const llvm::Triple &triple = target.getTriple();
-  
+
   switch (triple.getArch()) {
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
@@ -63,9 +63,11 @@ LowerModule::LowerModule(clang::LangOptions langOpts,
                          clang::CodeGenOptions codeGenOpts,
                          mlir::ModuleOp &module,
                          std::unique_ptr<clang::TargetInfo> target)
-    : context(module, std::move(langOpts), std::move(codeGenOpts)), module(module), target(std::move(target)), abi(createCXXABI(*this)), types(*this) {
-      context.initBuiltinTypes(*target);
-    }
+    : context(module, std::move(langOpts), std::move(codeGenOpts)),
+      module(module), target(std::move(target)), abi(createCXXABI(*this)),
+      types(*this) {
+  context.initBuiltinTypes(*target);
+}
 
 const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
   if (!targetLoweringInfo)

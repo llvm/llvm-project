@@ -69,7 +69,6 @@ private:
 
 public:
   mlir::MLIRContext *getMLIRContext() const { return mlirContext; }
-
 };
 
 } // namespace cir
