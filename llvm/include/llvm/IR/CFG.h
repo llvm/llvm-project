@@ -180,6 +180,7 @@ private:
   };
 
 public:
+  SuccIterator() : Inst(nullptr), Idx(0) {}
   // begin iterator
   explicit inline SuccIterator(InstructionT *Inst) : Inst(Inst), Idx(0) {}
   // end iterator

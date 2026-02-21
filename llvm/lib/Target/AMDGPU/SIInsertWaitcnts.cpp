@@ -487,6 +487,270 @@ public:
   AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
 };
 
+class SIInsertWaitcnts;
+
+// This objects maintains the current score brackets of each wait counter, and
+// a per-register scoreboard for each wait counter.
+//
+// We also maintain the latest score for every event type that can change the
+// waitcnt in order to know if there are multiple types of events within
+// the brackets. When multiple types of event happen in the bracket,
+// wait count may get decreased out of order, therefore we need to put in
+// "s_waitcnt 0" before use.
+class WaitcntBrackets {
+public:
+  WaitcntBrackets(const SIInsertWaitcnts *Context);
+#ifndef NDEBUG
+  ~WaitcntBrackets() {
+    unsigned NumUnusedVmem = 0, NumUnusedSGPRs = 0;
+    for (auto &[ID, Val] : VMem) {
+      if (Val.empty())
+        ++NumUnusedVmem;
+    }
+    for (auto &[ID, Val] : SGPRs) {
+      if (Val.empty())
+        ++NumUnusedSGPRs;
+    }
+
+    if (NumUnusedVmem || NumUnusedSGPRs) {
+      errs() << "WaitcntBracket had unused entries at destruction time: "
+             << NumUnusedVmem << " VMem and " << NumUnusedSGPRs
+             << " SGPR unused entries\n";
+      std::abort();
+    }
+  }
+#endif
+
+  bool isSmemCounter(InstCounterType T) const;
+
+  unsigned getSgprScoresIdx(InstCounterType T) const {
+    assert(isSmemCounter(T) && "Invalid SMEM counter");
+    return T == X_CNT ? 1 : 0;
+  }
+
+  unsigned getOutstanding(InstCounterType T) const {
+    return ScoreUBs[T] - ScoreLBs[T];
+  }
+
+  bool hasPendingVMEM(VMEMID ID, InstCounterType T) const {
+    return getVMemScore(ID, T) > getScoreLB(T);
+  }
+
+  /// \Return true if we have no score entries for counter \p T.
+  bool empty(InstCounterType T) const { return getScoreRange(T) == 0; }
+
+private:
+  unsigned getScoreLB(InstCounterType T) const {
+    assert(T < NUM_INST_CNTS);
+    return ScoreLBs[T];
+  }
+
+  unsigned getScoreUB(InstCounterType T) const {
+    assert(T < NUM_INST_CNTS);
+    return ScoreUBs[T];
+  }
+
+  unsigned getScoreRange(InstCounterType T) const {
+    return getScoreUB(T) - getScoreLB(T);
+  }
+
+  unsigned getSGPRScore(MCRegUnit RU, InstCounterType T) const {
+    auto It = SGPRs.find(RU);
+    return It != SGPRs.end() ? It->second.Scores[getSgprScoresIdx(T)] : 0;
+  }
+
+  unsigned getVMemScore(VMEMID TID, InstCounterType T) const {
+    auto It = VMem.find(TID);
+    return It != VMem.end() ? It->second.Scores[T] : 0;
+  }
+
+public:
+  bool merge(const WaitcntBrackets &Other);
+
+  bool counterOutOfOrder(InstCounterType T) const;
+  void simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const {
+    simplifyWaitcnt(Wait, Wait);
+  }
+  void simplifyWaitcnt(const AMDGPU::Waitcnt &CheckWait,
+                       AMDGPU::Waitcnt &UpdateWait) const;
+  void simplifyWaitcnt(InstCounterType T, unsigned &Count) const;
+  void simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
+                    AMDGPU::Waitcnt &UpdateWait) const;
+  void simplifyVmVsrc(const AMDGPU::Waitcnt &CheckWait,
+                      AMDGPU::Waitcnt &UpdateWait) const;
+
+  void determineWaitForPhysReg(InstCounterType T, MCPhysReg Reg,
+                               AMDGPU::Waitcnt &Wait) const;
+  void determineWaitForLDSDMA(InstCounterType T, VMEMID TID,
+                              AMDGPU::Waitcnt &Wait) const;
+  AMDGPU::Waitcnt determineAsyncWait(unsigned N);
+  void tryClearSCCWriteEvent(MachineInstr *Inst);
+
+  void applyWaitcnt(const AMDGPU::Waitcnt &Wait);
+  void applyWaitcnt(InstCounterType T, unsigned Count);
+  void updateByEvent(WaitEventType E, MachineInstr &MI);
+  void recordAsyncMark(MachineInstr &MI);
+
+  bool hasPendingEvent() const { return !PendingEvents.empty(); }
+  bool hasPendingEvent(WaitEventType E) const {
+    return PendingEvents.contains(E);
+  }
+  bool hasPendingEvent(InstCounterType T) const;
+  bool hasMixedPendingEvents(InstCounterType T) const;
+
+  bool hasPendingFlat() const {
+    return ((LastFlat[DS_CNT] > ScoreLBs[DS_CNT] &&
+             LastFlat[DS_CNT] <= ScoreUBs[DS_CNT]) ||
+            (LastFlat[LOAD_CNT] > ScoreLBs[LOAD_CNT] &&
+             LastFlat[LOAD_CNT] <= ScoreUBs[LOAD_CNT]));
+  }
+
+  void setPendingFlat() {
+    LastFlat[LOAD_CNT] = ScoreUBs[LOAD_CNT];
+    LastFlat[DS_CNT] = ScoreUBs[DS_CNT];
+  }
+
+  bool hasPendingGDS() const {
+    return LastGDS > ScoreLBs[DS_CNT] && LastGDS <= ScoreUBs[DS_CNT];
+  }
+
+  unsigned getPendingGDSWait() const;
+
+  void setPendingGDS() { LastGDS = ScoreUBs[DS_CNT]; }
+
+  // Return true if there might be pending writes to the vgpr-interval by VMEM
+  // instructions with types different from V.
+  bool hasOtherPendingVmemTypes(MCPhysReg Reg, VmemType V) const;
+
+  void clearVgprVmemTypes(MCPhysReg Reg) {
+    for (MCRegUnit RU : regunits(Reg)) {
+      if (auto It = VMem.find(toVMEMID(RU)); It != VMem.end()) {
+        It->second.VMEMTypes = 0;
+        if (It->second.empty())
+          VMem.erase(It);
+      }
+    }
+  }
+
+  void setStateOnFunctionEntryOrReturn();
+
+  ArrayRef<const MachineInstr *> getLDSDMAStores() const {
+    return LDSDMAStores;
+  }
+
+  bool hasPointSampleAccel(const MachineInstr &MI) const;
+  bool hasPointSamplePendingVmemTypes(const MachineInstr &MI,
+                                      MCPhysReg RU) const;
+
+  void print(raw_ostream &) const;
+  void dump() const { print(dbgs()); }
+
+  // Free up memory by removing empty entries from the DenseMap that track event
+  // scores.
+  void purgeEmptyTrackingData();
+
+private:
+  struct MergeInfo {
+    unsigned OldLB;
+    unsigned OtherLB;
+    unsigned MyShift;
+    unsigned OtherShift;
+  };
+
+  using CounterValueArray = std::array<unsigned, NUM_INST_CNTS>;
+
+  void determineWaitForScore(InstCounterType T, unsigned Score,
+                             AMDGPU::Waitcnt &Wait) const;
+
+  static bool mergeScore(const MergeInfo &M, unsigned &Score,
+                         unsigned OtherScore);
+  bool mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
+                       ArrayRef<CounterValueArray> OtherMarks);
+
+  iterator_range<MCRegUnitIterator> regunits(MCPhysReg Reg) const;
+
+  void setScoreLB(InstCounterType T, unsigned Val) {
+    assert(T < NUM_INST_CNTS);
+    ScoreLBs[T] = Val;
+  }
+
+  void setScoreUB(InstCounterType T, unsigned Val);
+  void setRegScore(MCPhysReg Reg, InstCounterType T, unsigned Val);
+  void setVMemScore(VMEMID TID, InstCounterType T, unsigned Val) {
+    VMem[TID].Scores[T] = Val;
+  }
+
+  void setScoreByOperand(const MachineOperand &Op, InstCounterType CntTy,
+                         unsigned Val);
+
+  const SIInsertWaitcnts *Context;
+
+  unsigned ScoreLBs[NUM_INST_CNTS] = {0};
+  unsigned ScoreUBs[NUM_INST_CNTS] = {0};
+  WaitEventSet PendingEvents;
+  // Remember the last flat memory operation.
+  unsigned LastFlat[NUM_INST_CNTS] = {0};
+  // Remember the last GDS operation.
+  unsigned LastGDS = 0;
+
+  // The score tracking logic is fragmented as follows:
+  // - VMem: VGPR RegUnits and LDS DMA IDs, see the VMEMID encoding.
+  // - SGPRs: SGPR RegUnits
+  // - SCC: Non-allocatable and not general purpose: not a SGPR.
+  //
+  // For the VMem case, if the key is within the range of LDS DMA IDs,
+  // then the corresponding index into the `LDSDMAStores` vector below is:
+  //   Key - LDSDMA_BEGIN - 1
+  // This is because LDSDMA_BEGIN is a generic entry and does not have an
+  // associated MachineInstr.
+  //
+  // TODO: Could we track SCC alongside SGPRs so it's not longer a special case?
+
+  struct VMEMInfo {
+    // Scores for all instruction counters. Zero-initialized.
+    CounterValueArray Scores{};
+    // Bitmask of the VmemTypes of VMEM instructions for this VGPR.
+    unsigned VMEMTypes = 0;
+
+    bool empty() const { return all_of(Scores, equal_to(0)) && !VMEMTypes; }
+  };
+
+  struct SGPRInfo {
+    // Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
+    // pre-gfx12) or KM_CNT (gfx12+ only), and X_CNT (gfx1250) are relevant.
+    // Row 0 represents the score for either DS_CNT or KM_CNT and row 1 keeps
+    // the X_CNT score.
+    std::array<unsigned, 2> Scores = {0};
+
+    bool empty() const { return !Scores[0] && !Scores[1]; }
+  };
+
+  DenseMap<VMEMID, VMEMInfo> VMem; // VGPR + LDS DMA
+  DenseMap<MCRegUnit, SGPRInfo> SGPRs;
+
+  // Reg score for SCC.
+  unsigned SCCScore = 0;
+  // The unique instruction that has an SCC write pending, if there is one.
+  const MachineInstr *PendingSCCWrite = nullptr;
+
+  // Store representative LDS DMA operations. The only useful info here is
+  // alias info. One store is kept per unique AAInfo.
+  SmallVector<const MachineInstr *> LDSDMAStores;
+
+  // State of all counters at each async mark encountered so far.
+  SmallVector<CounterValueArray> AsyncMarks;
+
+  // But in the rare pathological case, a nest of loops that pushes marks
+  // without waiting on any mark can cause AsyncMarks to grow very large. We cap
+  // it to a reasonable limit. We can tune this later or potentially introduce a
+  // user option to control the value.
+  static constexpr unsigned MaxAsyncMarks = 16;
+
+  // Track the upper bound score for async operations that are not part of a
+  // mark yet. Initialized to all zeros.
+  CounterValueArray AsyncScore{};
+};
+
 // Flags indicating which counters should be flushed in a loop preheader.
 struct PreheaderFlushFlags {
   bool FlushVmCnt = false;
@@ -674,332 +938,6 @@ public:
   }
 };
 
-// This objects maintains the current score brackets of each wait counter, and
-// a per-register scoreboard for each wait counter.
-//
-// We also maintain the latest score for every event type that can change the
-// waitcnt in order to know if there are multiple types of events within
-// the brackets. When multiple types of event happen in the bracket,
-// wait count may get decreased out of order, therefore we need to put in
-// "s_waitcnt 0" before use.
-class WaitcntBrackets {
-public:
-  WaitcntBrackets(const SIInsertWaitcnts *Context) : Context(Context) {
-    assert(Context->TRI->getNumRegUnits() < REGUNITS_END);
-  }
-
-#ifndef NDEBUG
-  ~WaitcntBrackets() {
-    unsigned NumUnusedVmem = 0, NumUnusedSGPRs = 0;
-    for (auto &[ID, Val] : VMem) {
-      if (Val.empty())
-        ++NumUnusedVmem;
-    }
-    for (auto &[ID, Val] : SGPRs) {
-      if (Val.empty())
-        ++NumUnusedSGPRs;
-    }
-
-    if (NumUnusedVmem || NumUnusedSGPRs) {
-      errs() << "WaitcntBracket had unused entries at destruction time: "
-             << NumUnusedVmem << " VMem and " << NumUnusedSGPRs
-             << " SGPR unused entries\n";
-      std::abort();
-    }
-  }
-#endif
-
-  bool isSmemCounter(InstCounterType T) const {
-    return T == Context->SmemAccessCounter || T == X_CNT;
-  }
-
-  unsigned getSgprScoresIdx(InstCounterType T) const {
-    assert(isSmemCounter(T) && "Invalid SMEM counter");
-    return T == X_CNT ? 1 : 0;
-  }
-
-  unsigned getOutstanding(InstCounterType T) const {
-    return ScoreUBs[T] - ScoreLBs[T];
-  }
-
-  bool hasPendingVMEM(VMEMID ID, InstCounterType T) const {
-    return getVMemScore(ID, T) > getScoreLB(T);
-  }
-
-  /// \Return true if we have no score entries for counter \p T.
-  bool empty(InstCounterType T) const { return getScoreRange(T) == 0; }
-
-private:
-  unsigned getScoreLB(InstCounterType T) const {
-    assert(T < NUM_INST_CNTS);
-    return ScoreLBs[T];
-  }
-
-  unsigned getScoreUB(InstCounterType T) const {
-    assert(T < NUM_INST_CNTS);
-    return ScoreUBs[T];
-  }
-
-  unsigned getScoreRange(InstCounterType T) const {
-    return getScoreUB(T) - getScoreLB(T);
-  }
-
-  unsigned getSGPRScore(MCRegUnit RU, InstCounterType T) const {
-    auto It = SGPRs.find(RU);
-    return It != SGPRs.end() ? It->second.Scores[getSgprScoresIdx(T)] : 0;
-  }
-
-  unsigned getVMemScore(VMEMID TID, InstCounterType T) const {
-    auto It = VMem.find(TID);
-    return It != VMem.end() ? It->second.Scores[T] : 0;
-  }
-
-public:
-  bool merge(const WaitcntBrackets &Other);
-
-  bool counterOutOfOrder(InstCounterType T) const;
-  void simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const {
-    simplifyWaitcnt(Wait, Wait);
-  }
-  void simplifyWaitcnt(const AMDGPU::Waitcnt &CheckWait,
-                       AMDGPU::Waitcnt &UpdateWait) const;
-  void simplifyWaitcnt(InstCounterType T, unsigned &Count) const;
-  void simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
-                    AMDGPU::Waitcnt &UpdateWait) const;
-  void simplifyVmVsrc(const AMDGPU::Waitcnt &CheckWait,
-                      AMDGPU::Waitcnt &UpdateWait) const;
-
-  void determineWaitForPhysReg(InstCounterType T, MCPhysReg Reg,
-                               AMDGPU::Waitcnt &Wait) const;
-  void determineWaitForLDSDMA(InstCounterType T, VMEMID TID,
-                              AMDGPU::Waitcnt &Wait) const;
-  AMDGPU::Waitcnt determineAsyncWait(unsigned N);
-  void tryClearSCCWriteEvent(MachineInstr *Inst);
-
-  void applyWaitcnt(const AMDGPU::Waitcnt &Wait);
-  void applyWaitcnt(InstCounterType T, unsigned Count);
-  void updateByEvent(WaitEventType E, MachineInstr &MI);
-  void recordAsyncMark(MachineInstr &MI);
-
-  bool hasPendingEvent() const { return !PendingEvents.empty(); }
-  bool hasPendingEvent(WaitEventType E) const {
-    return PendingEvents.contains(E);
-  }
-  bool hasPendingEvent(InstCounterType T) const {
-    bool HasPending = PendingEvents & Context->getWaitEvents(T);
-    assert(HasPending == !empty(T) &&
-           "Expected pending events iff scoreboard is not empty");
-    return HasPending;
-  }
-
-  bool hasMixedPendingEvents(InstCounterType T) const {
-    WaitEventSet Events = PendingEvents & Context->getWaitEvents(T);
-    // Return true if more than one bit is set in Events.
-    return Events.twoOrMore();
-  }
-
-  bool hasPendingFlat() const {
-    return ((LastFlat[DS_CNT] > ScoreLBs[DS_CNT] &&
-             LastFlat[DS_CNT] <= ScoreUBs[DS_CNT]) ||
-            (LastFlat[LOAD_CNT] > ScoreLBs[LOAD_CNT] &&
-             LastFlat[LOAD_CNT] <= ScoreUBs[LOAD_CNT]));
-  }
-
-  void setPendingFlat() {
-    LastFlat[LOAD_CNT] = ScoreUBs[LOAD_CNT];
-    LastFlat[DS_CNT] = ScoreUBs[DS_CNT];
-  }
-
-  bool hasPendingGDS() const {
-    return LastGDS > ScoreLBs[DS_CNT] && LastGDS <= ScoreUBs[DS_CNT];
-  }
-
-  unsigned getPendingGDSWait() const {
-    return std::min(getScoreUB(DS_CNT) - LastGDS,
-                    getWaitCountMax(Context->getLimits(), DS_CNT) - 1);
-  }
-
-  void setPendingGDS() { LastGDS = ScoreUBs[DS_CNT]; }
-
-  // Return true if there might be pending writes to the vgpr-interval by VMEM
-  // instructions with types different from V.
-  bool hasOtherPendingVmemTypes(MCPhysReg Reg, VmemType V) const {
-    for (MCRegUnit RU : regunits(Reg)) {
-      auto It = VMem.find(toVMEMID(RU));
-      if (It != VMem.end() && (It->second.VMEMTypes & ~(1 << V)))
-        return true;
-    }
-    return false;
-  }
-
-  void clearVgprVmemTypes(MCPhysReg Reg) {
-    for (MCRegUnit RU : regunits(Reg)) {
-      if (auto It = VMem.find(toVMEMID(RU)); It != VMem.end()) {
-        It->second.VMEMTypes = 0;
-        if (It->second.empty())
-          VMem.erase(It);
-      }
-    }
-  }
-
-  void setStateOnFunctionEntryOrReturn() {
-    setScoreUB(STORE_CNT, getScoreUB(STORE_CNT) +
-                              getWaitCountMax(Context->getLimits(), STORE_CNT));
-    PendingEvents |= Context->getWaitEvents(STORE_CNT);
-  }
-
-  ArrayRef<const MachineInstr *> getLDSDMAStores() const {
-    return LDSDMAStores;
-  }
-
-  bool hasPointSampleAccel(const MachineInstr &MI) const;
-  bool hasPointSamplePendingVmemTypes(const MachineInstr &MI,
-                                      MCPhysReg RU) const;
-
-  void print(raw_ostream &) const;
-  void dump() const { print(dbgs()); }
-
-  // Free up memory by removing empty entries from the DenseMap that track event
-  // scores.
-  void purgeEmptyTrackingData();
-
-private:
-  struct MergeInfo {
-    unsigned OldLB;
-    unsigned OtherLB;
-    unsigned MyShift;
-    unsigned OtherShift;
-  };
-
-  using CounterValueArray = std::array<unsigned, NUM_INST_CNTS>;
-
-  void determineWaitForScore(InstCounterType T, unsigned Score,
-                             AMDGPU::Waitcnt &Wait) const;
-
-  static bool mergeScore(const MergeInfo &M, unsigned &Score,
-                         unsigned OtherScore);
-  bool mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
-                       ArrayRef<CounterValueArray> OtherMarks);
-
-  iterator_range<MCRegUnitIterator> regunits(MCPhysReg Reg) const {
-    assert(Reg != AMDGPU::SCC && "Shouldn't be used on SCC");
-    if (!Context->TRI->isInAllocatableClass(Reg))
-      return {{}, {}};
-    const TargetRegisterClass *RC = Context->TRI->getPhysRegBaseClass(Reg);
-    unsigned Size = Context->TRI->getRegSizeInBits(*RC);
-    if (Size == 16 && Context->ST->hasD16Writes32BitVgpr())
-      Reg = Context->TRI->get32BitRegister(Reg);
-    return Context->TRI->regunits(Reg);
-  }
-
-  void setScoreLB(InstCounterType T, unsigned Val) {
-    assert(T < NUM_INST_CNTS);
-    ScoreLBs[T] = Val;
-  }
-
-  void setScoreUB(InstCounterType T, unsigned Val) {
-    assert(T < NUM_INST_CNTS);
-    ScoreUBs[T] = Val;
-
-    if (T != EXP_CNT)
-      return;
-
-    if (getScoreRange(EXP_CNT) > getWaitCountMax(Context->getLimits(), EXP_CNT))
-      ScoreLBs[EXP_CNT] =
-          ScoreUBs[EXP_CNT] - getWaitCountMax(Context->getLimits(), EXP_CNT);
-  }
-
-  void setRegScore(MCPhysReg Reg, InstCounterType T, unsigned Val) {
-    const SIRegisterInfo *TRI = Context->TRI;
-    if (Reg == AMDGPU::SCC) {
-      SCCScore = Val;
-    } else if (TRI->isVectorRegister(*Context->MRI, Reg)) {
-      for (MCRegUnit RU : regunits(Reg))
-        VMem[toVMEMID(RU)].Scores[T] = Val;
-    } else if (TRI->isSGPRReg(*Context->MRI, Reg)) {
-      auto STy = getSgprScoresIdx(T);
-      for (MCRegUnit RU : regunits(Reg))
-        SGPRs[RU].Scores[STy] = Val;
-    } else {
-      llvm_unreachable("Register cannot be tracked/unknown register!");
-    }
-  }
-
-  void setVMemScore(VMEMID TID, InstCounterType T, unsigned Val) {
-    VMem[TID].Scores[T] = Val;
-  }
-
-  void setScoreByOperand(const MachineOperand &Op, InstCounterType CntTy,
-                         unsigned Val);
-
-  const SIInsertWaitcnts *Context;
-
-  unsigned ScoreLBs[NUM_INST_CNTS] = {0};
-  unsigned ScoreUBs[NUM_INST_CNTS] = {0};
-  WaitEventSet PendingEvents;
-  // Remember the last flat memory operation.
-  unsigned LastFlat[NUM_INST_CNTS] = {0};
-  // Remember the last GDS operation.
-  unsigned LastGDS = 0;
-
-  // The score tracking logic is fragmented as follows:
-  // - VMem: VGPR RegUnits and LDS DMA IDs, see the VMEMID encoding.
-  // - SGPRs: SGPR RegUnits
-  // - SCC: Non-allocatable and not general purpose: not a SGPR.
-  //
-  // For the VMem case, if the key is within the range of LDS DMA IDs,
-  // then the corresponding index into the `LDSDMAStores` vector below is:
-  //   Key - LDSDMA_BEGIN - 1
-  // This is because LDSDMA_BEGIN is a generic entry and does not have an
-  // associated MachineInstr.
-  //
-  // TODO: Could we track SCC alongside SGPRs so it's not longer a special case?
-
-  struct VMEMInfo {
-    // Scores for all instruction counters. Zero-initialized.
-    CounterValueArray Scores{};
-    // Bitmask of the VmemTypes of VMEM instructions for this VGPR.
-    unsigned VMEMTypes = 0;
-
-    bool empty() const { return all_of(Scores, equal_to(0)) && !VMEMTypes; }
-  };
-
-  struct SGPRInfo {
-    // Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
-    // pre-gfx12) or KM_CNT (gfx12+ only), and X_CNT (gfx1250) are relevant.
-    // Row 0 represents the score for either DS_CNT or KM_CNT and row 1 keeps
-    // the X_CNT score.
-    std::array<unsigned, 2> Scores = {0};
-
-    bool empty() const { return !Scores[0] && !Scores[1]; }
-  };
-
-  DenseMap<VMEMID, VMEMInfo> VMem; // VGPR + LDS DMA
-  DenseMap<MCRegUnit, SGPRInfo> SGPRs;
-
-  // Reg score for SCC.
-  unsigned SCCScore = 0;
-  // The unique instruction that has an SCC write pending, if there is one.
-  const MachineInstr *PendingSCCWrite = nullptr;
-
-  // Store representative LDS DMA operations. The only useful info here is
-  // alias info. One store is kept per unique AAInfo.
-  SmallVector<const MachineInstr *> LDSDMAStores;
-
-  // State of all counters at each async mark encountered so far.
-  SmallVector<CounterValueArray> AsyncMarks;
-
-  // But in the rare pathological case, a nest of loops that pushes marks
-  // without waiting on any mark can cause AsyncMarks to grow very large. We cap
-  // it to a reasonable limit. We can tune this later or potentially introduce a
-  // user option to control the value.
-  static constexpr unsigned MaxAsyncMarks = 16;
-
-  // Track the upper bound score for async operations that are not part of a
-  // mark yet. Initialized to all zeros.
-  CounterValueArray AsyncScore{};
-};
-
 class SIInsertWaitcntsLegacy : public MachineFunctionPass {
 public:
   static char ID;
@@ -1020,6 +958,90 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
+
+WaitcntBrackets::WaitcntBrackets(const SIInsertWaitcnts *Context)
+    : Context{Context} {
+  assert(Context->TRI->getNumRegUnits() < REGUNITS_END);
+}
+
+bool WaitcntBrackets::isSmemCounter(InstCounterType T) const {
+  return T == Context->SmemAccessCounter || T == X_CNT;
+}
+
+bool WaitcntBrackets::hasPendingEvent(InstCounterType T) const {
+  bool HasPending = PendingEvents & Context->getWaitEvents(T);
+  assert(HasPending == !empty(T) &&
+         "Expected pending events iff scoreboard is not empty");
+  return HasPending;
+}
+
+bool WaitcntBrackets::hasMixedPendingEvents(InstCounterType T) const {
+  WaitEventSet Events = PendingEvents & Context->getWaitEvents(T);
+  // Return true if more than one bit is set in Events.
+  return Events.twoOrMore();
+}
+
+unsigned WaitcntBrackets::getPendingGDSWait() const {
+  return std::min(getScoreUB(DS_CNT) - LastGDS,
+                  getWaitCountMax(Context->getLimits(), DS_CNT) - 1);
+}
+
+bool WaitcntBrackets::hasOtherPendingVmemTypes(MCPhysReg Reg,
+                                               VmemType V) const {
+  for (MCRegUnit RU : regunits(Reg)) {
+    auto It = VMem.find(toVMEMID(RU));
+    if (It != VMem.end() && (It->second.VMEMTypes & ~(1 << V)))
+      return true;
+  }
+  return false;
+}
+
+void WaitcntBrackets::setStateOnFunctionEntryOrReturn() {
+  setScoreUB(STORE_CNT, getScoreUB(STORE_CNT) +
+                            getWaitCountMax(Context->getLimits(), STORE_CNT));
+  PendingEvents |= Context->getWaitEvents(STORE_CNT);
+}
+
+iterator_range<MCRegUnitIterator>
+WaitcntBrackets::regunits(MCPhysReg Reg) const {
+  assert(Reg != AMDGPU::SCC && "Shouldn't be used on SCC");
+  if (!Context->TRI->isInAllocatableClass(Reg))
+    return {{}, {}};
+  const TargetRegisterClass *RC = Context->TRI->getPhysRegBaseClass(Reg);
+  unsigned Size = Context->TRI->getRegSizeInBits(*RC);
+  if (Size == 16 && Context->ST->hasD16Writes32BitVgpr())
+    Reg = Context->TRI->get32BitRegister(Reg);
+  return Context->TRI->regunits(Reg);
+}
+
+void WaitcntBrackets::setScoreUB(InstCounterType T, unsigned Val) {
+  assert(T < NUM_INST_CNTS);
+  ScoreUBs[T] = Val;
+
+  if (T != EXP_CNT)
+    return;
+
+  if (getScoreRange(EXP_CNT) > getWaitCountMax(Context->getLimits(), EXP_CNT))
+    ScoreLBs[EXP_CNT] =
+        ScoreUBs[EXP_CNT] - getWaitCountMax(Context->getLimits(), EXP_CNT);
+}
+
+void WaitcntBrackets::setRegScore(MCPhysReg Reg, InstCounterType T,
+                                  unsigned Val) {
+  const SIRegisterInfo *TRI = Context->TRI;
+  if (Reg == AMDGPU::SCC) {
+    SCCScore = Val;
+  } else if (TRI->isVectorRegister(*Context->MRI, Reg)) {
+    for (MCRegUnit RU : regunits(Reg))
+      VMem[toVMEMID(RU)].Scores[T] = Val;
+  } else if (TRI->isSGPRReg(*Context->MRI, Reg)) {
+    auto STy = getSgprScoresIdx(T);
+    for (MCRegUnit RU : regunits(Reg))
+      SGPRs[RU].Scores[STy] = Val;
+  } else {
+    llvm_unreachable("Register cannot be tracked/unknown register!");
+  }
+}
 
 } // end anonymous namespace
 

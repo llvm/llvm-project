@@ -40,6 +40,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
+BPFAsmPrinter::BPFAsmPrinter(TargetMachine &TM,
+                             std::unique_ptr<MCStreamer> Streamer)
+    : AsmPrinter(TM, std::move(Streamer), ID), BTF(nullptr), TM(TM) {}
+
 bool BPFAsmPrinter::doInitialization(Module &M) {
   AsmPrinter::doInitialization(M);
 
