@@ -1,5 +1,4 @@
 // RUN: %check_clang_tidy -std=c++14,c++17 %s readability-use-anyofallof %t -- -- -fexceptions
-// FIXME: Fix the checker to work in C++20 mode.
 
 bool good_any_of() {
   int v[] = {1, 2, 3};
@@ -8,6 +7,7 @@ bool good_any_of() {
     if (i)
       return true;
   return false;
+  // CHECK-FIXES: return std::any_of(std::begin(v), std::end(v), [](int i) { return i; });
 }
 
 bool cond(int i);
@@ -176,9 +176,20 @@ bool bad_any_of7() {
 
 bool good_all_of() {
   int v[] = {1, 2, 3};
-  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: replace loop by 'std::all_of()' [readability-use-anyofallof]
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: replace loop by 'std::none_of()' [readability-use-anyofallof]
   for (int i : v)
     if (i)
       return false;
   return true;
+  // CHECK-FIXES: return std::none_of(std::begin(v), std::end(v), [](int i) { return i; });
+}
+
+bool good_all_of_negated_condition() {
+  int v[] = {1, 2, 3};
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: replace loop by 'std::all_of()' [readability-use-anyofallof]
+  for (int i : v)
+    if (!cond(i))
+      return false;
+  return true;
+  // CHECK-FIXES: return std::all_of(std::begin(v), std::end(v), [](int i) { return cond(i); });
 }
