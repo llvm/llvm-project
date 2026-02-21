@@ -68,6 +68,7 @@ static llvm::BitVector computePersistentOrigins(const FactManager &FactMgr,
       case Fact::Kind::Expire:
       case Fact::Kind::TestPoint:
       case Fact::Kind::InvalidateOrigin:
+      case Fact::Kind::ExpireOrigin:
         break;
       }
     }
@@ -179,6 +180,11 @@ public:
     LoanSet MergedLoans = utils::join(DestLoans, SrcLoans, LoanSetFactory);
 
     return setLoans(In, DestOID, MergedLoans);
+  }
+
+  /// Prevents a dead origin from holding stale loans past its lifetime.
+  Lattice transfer(Lattice In, const ExpireOriginFact &F) {
+    return setLoans(In, F.getExpiredOriginID(), LoanSetFactory.getEmptySet());
   }
 
   LoanSet getLoans(OriginID OID, ProgramPoint P) const {

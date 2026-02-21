@@ -89,6 +89,13 @@ void InvalidateOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
   OS << ")\n";
 }
 
+void ExpireOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                            const OriginManager &OM) const {
+  OS << "ExpireOrigin (";
+  OM.dump(getExpiredOriginID(), OS);
+  OS << ")\n";
+}
+
 void TestPointFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                          const OriginManager &) const {
   OS << "TestPoint (Annotation: \"" << getAnnotation() << "\")\n";
