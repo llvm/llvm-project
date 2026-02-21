@@ -4229,6 +4229,9 @@ static void checkMoreSpecializedThanPrimary(Sema &S, PartialSpecDecl *Partial) {
          diag::ext_partial_spec_not_more_specialized_than_primary)
       << isa<VarTemplateDecl>(Template);
 
+  // An invalid partial specialization should not be deduced.
+  Partial->setInvalidDecl();
+
   if (Info.hasSFINAEDiagnostic()) {
     PartialDiagnosticAt Diag = {SourceLocation(),
                                 PartialDiagnostic::NullDiagnostic()};
@@ -9113,7 +9116,9 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   if (SkipBody && SkipBody->ShouldSkip)
     return SkipBody->Previous;
 
-  Specialization->setInvalidDecl(Invalid);
+  // Don't clear an invalid flag already set by earlier checks.
+  if (Invalid)
+    Specialization->setInvalidDecl();
   inferGslOwnerPointerAttribute(Specialization);
   return Specialization;
 }

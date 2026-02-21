@@ -391,10 +391,7 @@ namespace partial_order_different_types {
   template<int N, typename T, typename U, T V> struct A<0, N, T, U, V> {}; // #P1
   template<int N, typename T, typename U, U V> struct A<0, N, T, U, V>;    // #P2
   // expected-error@-1 {{class template partial specialization is not more specialized than the primary template}}
-  A<0, 0, int, int, 0> a;
-  // expected-error@-1 {{ambiguous partial specializations}}
-  // expected-note@#P1 {{partial specialization matches}}
-  // expected-note@#P2 {{partial specialization matches}}
+  A<0, 0, int, int, 0> a; // OK: #P2 is invalid and excluded; only #P1 matches.
 }
 
 namespace partial_order_references {
