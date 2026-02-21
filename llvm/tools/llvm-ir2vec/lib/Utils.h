@@ -94,6 +94,10 @@ private:
 public:
   explicit IR2VecTool(Module &M) : M(M) {}
 
+  /// Creates the embedding object for downstream embedding streaming
+  Expected<std::unique_ptr<Embedder>> getIR2VecEmbedder(const Function &F,
+                                                        IR2VecKind Kind) const;
+
   /// Initialize the IR2Vec vocabulary from the specified file path.
   Error initializeVocabulary(StringRef VocabPath);
 
@@ -127,6 +131,9 @@ public:
   /// Get embeddings for all basic blocks in a function
   Expected<BBEmbeddingsMap> getBBEmbeddingsMap(const Function &F,
                                                IR2VecKind Kind) const;
+  /// Get embeddings for all instructions in a function
+  Expected<InstEmbeddingsMap> getInstEmbeddingsMap(const Function &F,
+                                                   IR2VecKind Kind) const;
 
   /// Generate embeddings for the entire module
   void writeEmbeddingsToStream(raw_ostream &OS, EmbeddingLevel Level) const;
