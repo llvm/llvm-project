@@ -725,10 +725,19 @@ struct __init_with_sentinel_tag {};
 template <size_t _PaddingSize>
 struct __padding {
   char __padding_[_PaddingSize];
+  static _LIBCPP_CONSTEXPR_SINCE_CXX20 __padding empty() {
+    __padding __initialized = {0};
+    return __initialized;
+  }
 };
 
 template <>
-struct __padding<0> {};
+struct __padding<0> {
+  static _LIBCPP_CONSTEXPR_SINCE_CXX20 __padding empty() {
+    __padding __initialized;
+    return __initialized;
+  }
+};
 
 template <class _CharT, class _Traits, class _Allocator>
 class basic_string {
@@ -825,6 +834,39 @@ private:
 
 #  ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
+  // The __long structure contains at least a `pointer` to an allocated buffer,
+  // and two `size_type` (the second one being a bitfield container). This
+  // struct, only used by `sizeof`, is the minimum that will fit those fields.
+  struct __long_min {
+    pointer __data_;
+    size_type __size_;
+    size_type __bitfield_container;
+  };
+
+  // The __short structure has a byte-sized bitfield container at the end, and
+  // the rest of it can be taken up by value_type. We want at least two
+  // value_type, or more if they will fit.
+  enum { __fit_cap = (sizeof(__long_min) - 1) / sizeof(value_type) };
+  enum { __min_cap = __fit_cap > 2 ? __fit_cap : 2 };
+
+  // Now we know how many value_type will fit, calculate how much space they
+  // take up in total; add one byte for the final bitfield container; and round
+  // up to the nearest multiple of the alignment. That's the total size of the
+  // structure.
+  enum { __short_packed_size = sizeof(value_type) * __min_cap + 1 };
+  union __union_alignment_check {
+    __long_min __long_;
+    value_type v;
+  };
+  enum { __union_alignment = _LIBCPP_ALIGNOF(__union_alignment_check) };
+  enum {
+    __full_size = (static_cast<size_t>(__short_packed_size) + static_cast<size_t>(__union_alignment) - 1) &
+                -static_cast<size_t>(__union_alignment)
+  };
+
+  // Now define both structures for real, with padding to ensure they are both
+  // exactly the calculated size.
+
   struct __long {
     __long() = default;
 
@@ -835,18 +877,23 @@ private:
 
     pointer __data_;
     size_type __size_;
+    _LIBCPP_NO_UNIQUE_ADDRESS __padding<static_cast<size_t>(__full_size) - sizeof(__long_min)> __padding_;
     size_type __cap_ : sizeof(size_type) * CHAR_BIT - 1;
     size_type __is_long_ : 1;
   };
 
-  enum { __min_cap = (sizeof(__long) - 1) / sizeof(value_type) > 2 ? (sizeof(__long) - 1) / sizeof(value_type) : 2 };
-
   struct __short {
     value_type __data_[__min_cap];
-    _LIBCPP_NO_UNIQUE_ADDRESS __padding<sizeof(value_type) - 1> __padding_;
+    _LIBCPP_NO_UNIQUE_ADDRESS __padding<static_cast<size_t>(__full_size) - static_cast<size_t>(__short_packed_size)>
+        __padding_;
     unsigned char __size_    : 7;
     unsigned char __is_long_ : 1;
   };
+
+  // Finally, check that we got it all right, and that both structures have
+  // exactly the expected size.
+  static_assert(sizeof(__long) == __full_size, "Miscalculated size for __long");
+  static_assert(sizeof(__short) == __full_size, "Miscalculated size for __short");
 
   // The __endian_factor is required because the field we use to store the size
   // has one fewer bit than it would if it were not a bitfield.
@@ -893,6 +940,13 @@ private:
     };
     size_type __size_;
     pointer __data_;
+
+    // No padding is needed in this version of the structure, but we add a
+    // zero-sized __padding_ member anyway to match the
+    // `_LIBCPP_ABI_ALTERNATE_STRING_LAYOUT` version, so that
+    // `__padding::empty()` can be used unconditionally in code common to
+    // both layouts.
+    _LIBCPP_NO_UNIQUE_ADDRESS __padding<0> __padding_;
   };
 
   enum { __min_cap = (sizeof(__long) - 1) / sizeof(value_type) > 2 ? (sizeof(__long) - 1) / sizeof(value_type) : 2 };
@@ -906,9 +960,9 @@ private:
     value_type __data_[__min_cap];
   };
 
-#  endif // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
-
   static_assert(sizeof(__short) == (sizeof(value_type) * (__min_cap + 1)), "__short has an unexpected size.");
+
+#  endif // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
   union __rep {
     __short __s;
@@ -2366,6 +2420,10 @@ private:
   }
   enum { __alignment = 8 };
 
+  static _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_power_of_2(size_type __s) _NOEXCEPT {
+    return __s != 0 && (__s & (__s - 1)) == 0;
+  }
+
   // This makes sure that we're using a capacity with some extra alignment, since allocators almost always over-align
   // the allocations anyways, improving memory usage. More importantly, this ensures that the lowest bit is never set
   // if __endian_factor == 2, allowing us to store whether we're in the long string inside the lowest bit.
@@ -2373,11 +2431,28 @@ private:
   __align_allocation_size(size_type __size) _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(
         !__fits_in_sso(__size), "Trying to align allocation of a size which would fit into the SSO");
-    const size_type __boundary = sizeof(value_type) < __alignment ? __alignment / sizeof(value_type) : __endian_factor;
-    size_type __guess          = __align_it<__boundary>(__size + 1);
-    if (__guess == __min_cap + 1)
-      __guess += __endian_factor;
 
+    size_type __guess;
+
+    if (__is_power_of_2(sizeof(value_type))) {
+      // If the size of a _Char is itself a power of 2, then we can align the
+      // total allocation size in bytes by aligning the count of characters to
+      // an appropriate power of 2.
+      const size_type __boundary =
+          sizeof(value_type) < __alignment ? __alignment / sizeof(value_type) : __endian_factor;
+      __guess = __align_it<__boundary>(__size + 1);
+      if (__guess == __min_cap + 1)
+        __guess += __endian_factor;
+    } else {
+      // Otherwise, we must align the size in bytes and then calculate the
+      // count of characters by division.
+      const size_type __even_size       = __align_it<__endian_factor>(__size + 1);
+      const size_type __unaligned_bytes = __even_size * sizeof(value_type);
+      const size_type __aligned_bytes   = __align_it<__alignment>(__unaligned_bytes);
+      __guess                           = (__aligned_bytes / (sizeof(value_type) * __endian_factor)) * __endian_factor;
+    }
+
+    _LIBCPP_ASSERT_INTERNAL(__guess % __endian_factor == 0, "aligned allocation size is odd but __endian_factor == 2");
     _LIBCPP_ASSERT_INTERNAL(__guess >= __size, "aligned allocation size is below the requested size");
     return __guess;
   }
@@ -2771,6 +2846,7 @@ _LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Trait
   // This is -1 to make sure the caller sets the size properly, since old versions of this function didn't set the size
   // at all.
   __buffer.__size_ = -1;
+  __buffer.__padding_ = decltype(__buffer.__padding_)::empty();
   __reset_internal_buffer(__buffer);
 }
 
