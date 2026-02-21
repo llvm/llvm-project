@@ -18,6 +18,8 @@
 #include <cstring>
 
 #if defined(__linux__)
+#include "lldb/Host/posix/Support.h"
+#include "llvm/Support/LineIterator.h"
 #include <fcntl.h>
 #include <poll.h>
 #include <sys/eventfd.h>
@@ -44,7 +46,7 @@ public:
   ~MemoryMonitorLinux() {
     if (m_memory_monitor_thread.IsJoinable())
       m_memory_monitor_thread.Join(nullptr);
-    if (m_stop_fd != 1)
+    if (m_stop_fd != -1)
       ::close(m_stop_fd);
   }
 
@@ -96,8 +98,8 @@ private:
 
     llvm::scope_exit cleanup([&]() { ::close(pfds[pressure_idx].fd); });
 
-    // Detect a 50ms stall in a 2 second time window.
-    constexpr llvm::StringRef trigger = "some 50000 2000000";
+    // Detect a 200ms stall in a 2 second time window.
+    constexpr llvm::StringRef trigger = "some 200000 2000000";
     if (::write(pfds[pressure_idx].fd, trigger.data(), trigger.size() + 1) < 0)
       return {};
 
@@ -109,14 +111,57 @@ private:
         if (pfds[stop_idx].revents & (POLLIN | POLLERR))
           return {};
 
-        if (pfds[pressure_idx].revents & POLLERR)
+        const short pressure_revents = pfds[stop_idx].revents;
+        if (pressure_revents & POLLERR)
           return {};
-        if (pfds[pressure_idx].revents & POLLPRI)
-          m_callback();
+        if (pressure_revents & POLLPRI) {
+          if (const std::optional<bool> is_low_opt = IsLowMemory();
+              is_low_opt && *is_low_opt)
+            m_callback();
+        }
       }
     }
     return {};
   }
+
+  static std::optional<bool> IsLowMemory() {
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> buffer_or_err =
+        getProcFile("meminfo");
+
+    if (!buffer_or_err)
+      return std::nullopt;
+
+    uint64_t mem_total = 0;
+    uint64_t mem_available = 0;
+    const int radix = 10;
+    bool parse_error = false;
+
+    for (llvm::line_iterator iter(**buffer_or_err, true); !iter.is_at_end();
+         ++iter) {
+      llvm::StringRef line = *iter;
+      if (line.consume_front("MemTotal:"))
+        parse_error = line.ltrim().consumeInteger(radix, mem_total);
+      else if (line.consume_front("MemAvailable:"))
+        parse_error = line.ltrim().consumeInteger(radix, mem_available);
+
+      if (parse_error)
+        return std::nullopt;
+
+      if (mem_total && mem_available)
+        break;
+    }
+
+    if (mem_total == 0)
+      return std::nullopt;
+
+    if (mem_available == 0) // We are actually out of memory.
+      return true;
+
+    const uint64_t approx_memory_percent = (mem_available * 100) / mem_total;
+    const uint64_t low_memory_percent = 20;
+    return approx_memory_percent < low_memory_percent;
+  }
+
   int m_stop_fd = -1;
   HostThread m_memory_monitor_thread;
 };

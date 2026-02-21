@@ -67,7 +67,7 @@ end function target_function_test_device
 !! -----
 
 ! DEVICE-LABEL: func.func @_QPimplicitly_captured_recursive
-! DEVICE-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to), automap = false>{{.*}}}
+! DEVICE-SAME: {{.*}}attributes {{.*}}omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to), automap = false>{{.*}}}
 recursive function implicitly_captured_recursive(increment) result(k)
    integer :: increment, k
    if (increment == 10) then

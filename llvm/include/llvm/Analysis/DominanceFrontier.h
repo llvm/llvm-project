@@ -101,8 +101,8 @@ public:
 #endif
 
   void analyze(DomTreeT &DT) {
-    assert(IsPostDom || DT.root_size() == 1 &&
-                            "Only one entry block for forward domfronts!");
+    assert((IsPostDom || DT.root_size() == 1) &&
+           "Only one entry block for forward domfronts!");
     assert(DT.root_size() == 1 &&
            "Support for post-dom frontiers with multiple roots hasn't been "
            "implemented yet!");

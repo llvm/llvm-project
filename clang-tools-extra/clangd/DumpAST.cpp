@@ -347,8 +347,8 @@ public:
     });
   }
   bool TraverseTemplateName(const TemplateName &TN) {
-    return traverseNode("template name", TN,
-                        [&] { Base::TraverseTemplateName(TN); });
+    return TN.isNull() || traverseNode("template name", TN,
+                                       [&] { Base::TraverseTemplateName(TN); });
   }
   bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &TAL) {
     return traverseNode("template argument", TAL,
