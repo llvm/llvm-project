@@ -877,11 +877,11 @@ define i1 @pow2_and_i128(i128 %num, i128 %shift) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edx, %ecx
 ; CHECK-NEXT:    andb $32, %cl
-; CHECK-NEXT:    shrdq %cl, %rsi, %rdi
 ; CHECK-NEXT:    shrq %cl, %rsi
+; CHECK-NEXT:    shrq %cl, %rdi
 ; CHECK-NEXT:    testb $64, %dl
-; CHECK-NEXT:    cmoveq %rdi, %rsi
-; CHECK-NEXT:    btl %edx, %esi
+; CHECK-NEXT:    cmovneq %rsi, %rdi
+; CHECK-NEXT:    btl %edx, %edi
 ; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
   %mask = shl nuw i128 1, %shift
