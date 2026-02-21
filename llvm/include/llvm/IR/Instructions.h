@@ -1920,6 +1920,20 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(InsertElementInst, Value)
 //                           ShuffleVectorInst Class
 //===----------------------------------------------------------------------===//
 
+struct ShuffleMaskAttrs {
+  bool SingleSource : 1;
+  bool Identity : 1;
+  bool Reverse : 1;
+  bool ZeroEltSplat : 1;
+  bool Select : 1;
+  bool Transpose : 1;
+  bool Splice : 1;
+  int SpliceIndex;
+};
+
+static_assert(sizeof(ShuffleMaskAttrs) <= sizeof(uint64_t),
+              "ShuffleMaskAttrs is too large!");
+
 constexpr int PoisonMaskElem = -1;
 
 /// This instruction constructs a fixed permutation of two
@@ -1937,6 +1951,27 @@ class ShuffleVectorInst : public Instruction {
 
   SmallVector<int, 4> ShuffleMask;
   Constant *ShuffleMaskForBitcode;
+  ShuffleMaskAttrs ShuffleAttrs;
+
+  // (Re)compute the shuffle mask attributes.
+  void computeShuffleAttrs() {
+    ShuffleAttrs = {}; // reset
+    ShuffleAttrs.SingleSource =
+        !changesLength() && isSingleSourceMask(ShuffleMask, ShuffleMask.size());
+    ShuffleAttrs.Identity =
+        !changesLength() && isIdentityMask(ShuffleMask, ShuffleMask.size());
+    ShuffleAttrs.Select =
+        !changesLength() && isSelectMask(ShuffleMask, ShuffleMask.size());
+    ShuffleAttrs.Reverse =
+        !changesLength() && isReverseMask(ShuffleMask, ShuffleMask.size());
+    ShuffleAttrs.ZeroEltSplat =
+        !changesLength() && isZeroEltSplatMask(ShuffleMask, ShuffleMask.size());
+    ShuffleAttrs.Transpose =
+        !changesLength() && isTransposeMask(ShuffleMask, ShuffleMask.size());
+    ShuffleAttrs.Splice =
+        !changesLength() &&
+        isSpliceMask(ShuffleMask, ShuffleMask.size(), ShuffleAttrs.SpliceIndex);
+  }
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -2050,10 +2085,7 @@ public:
   /// vector without changing the length of that vector.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <3,0,undef,3>
   /// TODO: Optionally allow length-changing shuffles.
-  bool isSingleSource() const {
-    return !changesLength() &&
-           isSingleSourceMask(ShuffleMask, ShuffleMask.size());
-  }
+  bool isSingleSource() const { return ShuffleAttrs.SingleSource; }
 
   /// Return true if this shuffle mask chooses elements from exactly one source
   /// vector without lane crossings. A shuffle using this mask is not
@@ -2084,7 +2116,7 @@ public:
     if (isa<ScalableVectorType>(getType()))
       return false;
 
-    return !changesLength() && isIdentityMask(ShuffleMask, ShuffleMask.size());
+    return ShuffleAttrs.Identity;
   }
 
   /// Return true if this shuffle lengthens exactly one source vector with
@@ -2124,9 +2156,7 @@ public:
   /// This returns false if the mask does not choose from both input vectors.
   /// In that case, the shuffle is better classified as an identity shuffle.
   /// TODO: Optionally allow length-changing shuffles.
-  bool isSelect() const {
-    return !changesLength() && isSelectMask(ShuffleMask, ShuffleMask.size());
-  }
+  bool isSelect() const { return ShuffleAttrs.Select; }
 
   /// Return true if this shuffle mask swaps the order of elements from exactly
   /// one source vector.
@@ -2145,9 +2175,7 @@ public:
   /// one source vector.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <3,undef,1,undef>
   /// TODO: Optionally allow length-changing shuffles.
-  bool isReverse() const {
-    return !changesLength() && isReverseMask(ShuffleMask, ShuffleMask.size());
-  }
+  bool isReverse() const { return ShuffleAttrs.Reverse; }
 
   /// Return true if this shuffle mask chooses all elements with the same value
   /// as the first element of exactly one source vector.
@@ -2168,10 +2196,7 @@ public:
   /// Example: shufflevector <4 x n> A, <4 x n> B, <undef,0,undef,0>
   /// TODO: Optionally allow length-changing shuffles.
   /// TODO: Optionally allow splats from other elements.
-  bool isZeroEltSplat() const {
-    return !changesLength() &&
-           isZeroEltSplatMask(ShuffleMask, ShuffleMask.size());
-  }
+  bool isZeroEltSplat() const { return ShuffleAttrs.ZeroEltSplat; }
 
   /// Return true if this shuffle mask is a transpose mask.
   /// Transpose vector masks transpose a 2xn matrix. They read corresponding
@@ -2218,9 +2243,7 @@ public:
   /// merge or interleave. See the description for isTransposeMask() for the
   /// exact specification.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <0,4,2,6>
-  bool isTranspose() const {
-    return !changesLength() && isTransposeMask(ShuffleMask, ShuffleMask.size());
-  }
+  bool isTranspose() const { return ShuffleAttrs.Transpose; }
 
   /// Return true if this shuffle mask is a splice mask, concatenating the two
   /// inputs together and then extracts an original width vector starting from
@@ -2242,8 +2265,9 @@ public:
   /// then extracts an original width vector starting from the splice index.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
   bool isSplice(int &Index) const {
-    return !changesLength() &&
-           isSpliceMask(ShuffleMask, ShuffleMask.size(), Index);
+    if (ShuffleAttrs.Splice)
+      Index = ShuffleAttrs.SpliceIndex;
+    return ShuffleAttrs.Splice;
   }
 
   /// Return true if this shuffle mask is an extract subvector mask.
