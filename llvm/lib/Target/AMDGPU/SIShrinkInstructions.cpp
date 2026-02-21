@@ -13,6 +13,8 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
@@ -37,6 +39,10 @@ class SIShrinkInstructions {
   const SIRegisterInfo *TRI;
   bool IsPostRA;
 
+  using PendingSwapMap =
+      SmallDenseMap<std::pair<uint64_t, uint64_t>,
+                    std::pair<MachineInstr *, uint32_t>, 4>;
+
   bool foldImmediates(MachineInstr &MI, bool TryToCommute = true) const;
   bool shouldShrinkTrue16(MachineInstr &MI) const;
   bool isKImmOperand(const MachineOperand &Src) const;
@@ -58,6 +64,8 @@ class SIShrinkInstructions {
                                                    unsigned I) const;
   void dropInstructionKeepingImpDefs(MachineInstr &MI) const;
   MachineInstr *matchSwap(MachineInstr &MovT) const;
+  MachineInstr *matchSwapB16(MachineInstr &Perm,
+                             PendingSwapMap &SwapCandidates) const;
 
 public:
   SIShrinkInstructions() = default;
@@ -843,6 +851,227 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   return nullptr;
 }
 
+MachineInstr *SIShrinkInstructions::matchSwapB16(
+    MachineInstr &Perm, PendingSwapMap &SwapCandidates) const {
+  assert(Perm.getOpcode() == AMDGPU::V_PERM_B32_e64);
+  if (IsPostRA)
+    return nullptr;
+
+  if (ST->getGeneration() < AMDGPUSubtarget::GFX11 ||
+      !ST->useRealTrue16Insts() ||
+      TII->pseudoToMCOpcode(AMDGPU::V_SWAP_B16) == -1)
+    return nullptr;
+
+  const int Src0Idx =
+      AMDGPU::getNamedOperandIdx(Perm.getOpcode(), AMDGPU::OpName::src0);
+  const int Src1Idx =
+      AMDGPU::getNamedOperandIdx(Perm.getOpcode(), AMDGPU::OpName::src1);
+  const int Src2Idx =
+      AMDGPU::getNamedOperandIdx(Perm.getOpcode(), AMDGPU::OpName::src2);
+
+  // Trace mask immediate back through COPYs and moves if necessary/possible.
+  auto getPermMaskImm = [&](MachineInstr &MI, uint32_t &Mask) {
+    const MachineOperand &Op = MI.getOperand(Src2Idx);
+    if (Op.isImm()) {
+      Mask = static_cast<uint32_t>(Op.getImm());
+      return true;
+    }
+    if (!Op.isReg() || !Op.getReg().isVirtual())
+      return false;
+
+    Register Reg = Op.getReg();
+    SmallDenseSet<Register, 4> Seen;
+    while (Reg.isVirtual() && Seen.insert(Reg).second) {
+      MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
+      if (!Def)
+        return false;
+      if (Def->isMoveImmediate()) {
+        const MachineOperand &ImmOp = Def->getOperand(1);
+        if (!ImmOp.isImm())
+          return false;
+        Mask = static_cast<uint32_t>(ImmOp.getImm());
+        return true;
+      }
+      if (!Def->isCopy() || !Def->getOperand(1).isReg())
+        return false;
+
+      if (Def->getOperand(0).getSubReg() != AMDGPU::NoSubRegister ||
+          Def->getOperand(1).getSubReg() != AMDGPU::NoSubRegister)
+        return false;
+      Reg = Def->getOperand(1).getReg();
+    }
+    return false;
+  };
+
+  const MachineOperand &S0 = Perm.getOperand(Src0Idx);
+  const MachineOperand &S1 = Perm.getOperand(Src1Idx);
+  if (!S0.isReg() || !S1.isReg())
+    return nullptr;
+  Register Src0Reg = S0.getReg();
+  Register Src1Reg = S1.getReg();
+  unsigned Src0Sub = S0.getSubReg();
+  unsigned Src1Sub = S1.getSubReg();
+  if (!Src0Reg.isVirtual() || !Src1Reg.isVirtual())
+    return nullptr;
+  if (!TRI->isVGPR(*MRI, Src0Reg) || !TRI->isVGPR(*MRI, Src1Reg))
+    return nullptr;
+  if (Src0Reg == Src1Reg && Src0Sub == Src1Sub)
+    return nullptr;
+
+  uint32_t Mask = 0;
+  if (!getPermMaskImm(Perm, Mask))
+    return nullptr;
+
+  // For two v_perms with common operands {src0, src1} and complementary,
+  // eligible masks {S0Mask, S1Mask}, we emit a v_swap_b16 which swaps
+  // src0.S0Sub and src1.S1Sub. S0 and S1 indicate the Perm whose destination
+  // register will be replaced by an INSERT_SUBREG which has src0 or src1 as
+  // its base.
+  struct SwapCase {
+    uint32_t S1Mask;
+    uint32_t S0Mask;
+    unsigned S0Sub;
+    unsigned S1Sub;
+  };
+  static constexpr SwapCase Cases[] = {
+      {0x05040100u, 0x07060302u, AMDGPU::hi16, AMDGPU::lo16},
+      {0x07060100u, 0x03020504u, AMDGPU::hi16, AMDGPU::hi16},
+      {0x03020706u, 0x01000504u, AMDGPU::lo16, AMDGPU::hi16},
+  };
+
+  // If current v_perm's mask is not in above list, bail.
+  bool IsSwapEligible = false;
+  for (const SwapCase &C : Cases) {
+    if (Mask == C.S1Mask || Mask == C.S0Mask) {
+      IsSwapEligible = true;
+      break;
+    }
+  }
+  if (!IsSwapEligible)
+    return nullptr;
+
+  auto PackRegKey = [](Register Reg, unsigned Sub) {
+    return (uint64_t(Reg.id()) << 32) | Sub;
+  };
+  // Allow for paired v_perms to have swapped src0 and src1 operands.
+  std::pair<uint64_t, uint64_t> Key = {PackRegKey(Src0Reg, Src0Sub),
+                                        PackRegKey(Src1Reg, Src1Sub)};
+  std::pair<uint64_t, uint64_t> RevKey = {PackRegKey(Src1Reg, Src1Sub),
+                                           PackRegKey(Src0Reg, Src0Sub)};
+
+  // Current v_perm is now candidate. Search for another v_perm with same src0
+  // and src1 operands or record current v_perm and continue.
+  auto It = SwapCandidates.find(Key);
+  bool Reversed = false;
+  if (It == SwapCandidates.end()) {
+    It = SwapCandidates.find(RevKey);
+    if (It != SwapCandidates.end())
+      Reversed = true;
+  }
+  if (It == SwapCandidates.end()) {
+    SwapCandidates[Key] = {&Perm, Mask};
+    return nullptr;
+  }
+
+  // Define P0 as previously found v_perm and P1 as current v_perm.
+  auto [P0, M0] = It->second;
+  if (Reversed)
+    M0 ^= 0x04040404;
+  MachineInstr *P1 = &Perm;
+  uint32_t M1 = Mask;
+
+  // Check if P0 and P1 masks are complementary.
+  unsigned S1Sub = AMDGPU::NoSubRegister;
+  unsigned S0Sub = AMDGPU::NoSubRegister;
+  Register S1Dst, S0Dst;
+  for (const SwapCase &C : Cases) {
+    if (M0 == C.S0Mask && M1 == C.S1Mask) {
+      S1Sub = C.S1Sub;
+      S0Sub = C.S0Sub;
+      S1Dst = P1->getOperand(0).getReg();
+      S0Dst = P0->getOperand(0).getReg();
+      break;
+    } else if (M0 == C.S1Mask && M1 == C.S0Mask) {
+      S1Sub = C.S1Sub;
+      S0Sub = C.S0Sub;
+      S1Dst = P0->getOperand(0).getReg();
+      S0Dst = P1->getOperand(0).getReg();
+      break;
+    }
+  }
+  // If non-complementary, replace P0 with P1 in candidates map.
+  if (S1Sub == AMDGPU::NoSubRegister) {
+    It->second = {&Perm, Mask};
+    return nullptr;
+  }
+
+  SwapCandidates.erase(It);
+
+  // Ensure that we can use Lo128 registers for operands of the v_swap.
+  if (!MRI->constrainRegClass(S1Dst, &AMDGPU::VGPR_32_Lo128RegClass) ||
+      !MRI->constrainRegClass(S0Dst, &AMDGPU::VGPR_32_Lo128RegClass))
+    return nullptr;
+  if (!Src1Sub &&
+      !MRI->constrainRegClass(Src1Reg, &AMDGPU::VGPR_32_Lo128RegClass))
+    return nullptr;
+  if (!Src0Sub &&
+      !MRI->constrainRegClass(Src0Reg, &AMDGPU::VGPR_32_Lo128RegClass))
+    return nullptr;
+
+  MachineBasicBlock &MBB = *P0->getParent();
+  MachineBasicBlock::iterator I = P0->getIterator();
+  const DebugLoc &DL = P0->getDebugLoc();
+
+  // Extract the two 16-bit halves to be swapped, S1In and S0In.
+  Register S1In = MRI->createVirtualRegister(&AMDGPU::VGPR_16_Lo128RegClass);
+  Register S0In = MRI->createVirtualRegister(&AMDGPU::VGPR_16_Lo128RegClass);
+  unsigned S1InSub = TRI->composeSubRegIndices(Src1Sub, S1Sub);
+  unsigned S0InSub = TRI->composeSubRegIndices(Src0Sub, S0Sub);
+  BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), S1In)
+      .addReg(Src1Reg, {}, S1InSub);
+  BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), S0In)
+      .addReg(Src0Reg, {}, S0InSub);
+
+  // Swap. S1Out = S0In; S0Out = S1In;
+  Register S1Out = MRI->createVirtualRegister(&AMDGPU::VGPR_16_Lo128RegClass);
+  Register S0Out = MRI->createVirtualRegister(&AMDGPU::VGPR_16_Lo128RegClass);
+  auto *SwapMI = BuildMI(MBB, I, DL, TII->get(AMDGPU::V_SWAP_B16))
+                     .addDef(S1Out)
+                     .addDef(S0Out)
+                     .addReg(S0In)
+                     .addReg(S1In)
+                     .getInstr();
+
+  // If P0/P1's operands were subregisters, COPY into new 32-bit registers.
+  Register S1Base = Src1Reg;
+  Register S0Base = Src0Reg;
+  if (Src1Sub) {
+    S1Base = MRI->createVirtualRegister(&AMDGPU::VGPR_32_Lo128RegClass);
+    BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), S1Base)
+        .addReg(Src1Reg, {}, Src1Sub);
+  }
+  if (Src0Sub) {
+    S0Base = MRI->createVirtualRegister(&AMDGPU::VGPR_32_Lo128RegClass);
+    BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), S0Base)
+        .addReg(Src0Reg, {}, Src0Sub);
+  }
+
+  BuildMI(MBB, I, DL, TII->get(TargetOpcode::INSERT_SUBREG), S1Dst)
+      .addReg(S1Base)
+      .addReg(S1Out)
+      .addImm(S1Sub);
+
+  BuildMI(MBB, I, DL, TII->get(TargetOpcode::INSERT_SUBREG), S0Dst)
+      .addReg(S0Base)
+      .addReg(S0Out)
+      .addImm(S0Sub);
+
+  dropInstructionKeepingImpDefs(*P1);
+  dropInstructionKeepingImpDefs(*P0);
+
+  return SwapMI->getNextNode() ? SwapMI->getNextNode() : SwapMI;
+}
+
 // If an instruction has dead sdst replace it with NULL register on gfx1030+
 bool SIShrinkInstructions::tryReplaceDeadSDST(MachineInstr &MI) const {
   if (!ST->hasGFX10_3Insts())
@@ -872,10 +1101,15 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
+    PendingSwapMap SwapCandidates;
     MachineBasicBlock::iterator I, Next;
     for (I = MBB.begin(); I != MBB.end(); I = Next) {
       Next = std::next(I);
       MachineInstr &MI = *I;
+
+      if (!SwapCandidates.empty() &&
+          instModifiesReg(&MI, AMDGPU::EXEC, AMDGPU::NoSubRegister))
+        SwapCandidates.clear();
 
       if (MI.getOpcode() == AMDGPU::V_MOV_B32_e32) {
         // If this has a literal constant source that is the same as the
@@ -917,6 +1151,14 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
         if (CK == ChangeKind::UpdateHint)
           continue;
         Changed |= (CK == ChangeKind::UpdateInst);
+      }
+
+      if (MI.getOpcode() == AMDGPU::V_PERM_B32_e64) {
+        if (auto *NextMI = matchSwapB16(MI, SwapCandidates)) {
+          Next = NextMI->getIterator();
+          Changed = true;
+          continue;
+        }
       }
 
       // Try to use S_ADDK_I32 and S_MULK_I32.

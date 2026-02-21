@@ -110,3 +110,70 @@ loop:
 ret:
   ret half %x
 }
+
+define void @swap_shuffle_v4i8(ptr %out0, ptr %out1, ptr %in0, ptr %in1) {
+; GFX11-TRUE16-LABEL: swap_shuffle_v4i8:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    flat_load_b32 v4, v[4:5]
+; GFX11-TRUE16-NEXT:    flat_load_b32 v5, v[6:7]
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_swap_b16 v5.h, v4.l
+; GFX11-TRUE16-NEXT:    flat_store_b32 v[0:1], v4
+; GFX11-TRUE16-NEXT:    flat_store_b32 v[2:3], v5
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: swap_shuffle_v4i8:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    flat_load_b32 v4, v[4:5]
+; GFX11-FAKE16-NEXT:    flat_load_b32 v5, v[6:7]
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v6, v4, v5, 0x1000504
+; GFX11-FAKE16-NEXT:    v_perm_b32 v4, v4, v5, 0x3020706
+; GFX11-FAKE16-NEXT:    flat_store_b32 v[0:1], v6
+; GFX11-FAKE16-NEXT:    flat_store_b32 v[2:3], v4
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-TRUE16-LABEL: swap_shuffle_v4i8:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    flat_load_b32 v4, v[4:5]
+; GFX12-TRUE16-NEXT:    flat_load_b32 v5, v[6:7]
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-TRUE16-NEXT:    v_swap_b16 v5.h, v4.l
+; GFX12-TRUE16-NEXT:    flat_store_b32 v[0:1], v4
+; GFX12-TRUE16-NEXT:    flat_store_b32 v[2:3], v5
+; GFX12-TRUE16-NEXT:    s_wait_dscnt 0x0
+; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FAKE16-LABEL: swap_shuffle_v4i8:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    flat_load_b32 v4, v[4:5]
+; GFX12-FAKE16-NEXT:    flat_load_b32 v5, v[6:7]
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FAKE16-NEXT:    v_perm_b32 v6, v4, v5, 0x1000504
+; GFX12-FAKE16-NEXT:    v_perm_b32 v4, v4, v5, 0x3020706
+; GFX12-FAKE16-NEXT:    flat_store_b32 v[0:1], v6
+; GFX12-FAKE16-NEXT:    flat_store_b32 v[2:3], v4
+; GFX12-FAKE16-NEXT:    s_wait_dscnt 0x0
+; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <4 x i8>, ptr %in0, align 4
+  %b = load <4 x i8>, ptr %in1, align 4
+  %lo = shufflevector <4 x i8> %a, <4 x i8> %b, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %hi = shufflevector <4 x i8> %a, <4 x i8> %b, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+  store <4 x i8> %lo, ptr %out0, align 4
+  store <4 x i8> %hi, ptr %out1, align 4
+  ret void
+}
