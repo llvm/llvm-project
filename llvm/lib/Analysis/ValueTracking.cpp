@@ -9267,18 +9267,18 @@ static bool matchTwoInputRecurrence(const PHINode *PN, InstTy *&Inst,
     return false;
 
   for (unsigned I = 0; I != 2; ++I) {
-    if (auto *Operation = dyn_cast<InstTy>(PN->getIncomingValue(I));
-        Operation && Operation->getNumOperands() >= 2) {
-      Value *LHS = Operation->getOperand(0);
-      Value *RHS = Operation->getOperand(1);
-      if (LHS != PN && RHS != PN)
-        continue;
+    auto *Operation = dyn_cast<InstTy>(PN->getIncomingValue(I));
+    if (!Operation || Operation->getNumOperands() != 2)
+      continue;
+    Value *LHS = Operation->getOperand(0);
+    Value *RHS = Operation->getOperand(1);
+    if (LHS != PN && RHS != PN)
+      continue;
 
-      Inst = Operation;
-      Init = PN->getIncomingValue(!I);
-      OtherOp = (LHS == PN) ? RHS : LHS;
-      return true;
-    }
+    Inst = Operation;
+    Init = PN->getIncomingValue(!I);
+    OtherOp = (LHS == PN) ? RHS : LHS;
+    return true;
   }
   return false;
 }
@@ -9291,29 +9291,29 @@ static bool matchThreeInputRecurrence(const PHINode *PN, InstTy *&Inst,
     return false;
 
   for (unsigned I = 0; I != 2; ++I) {
-    if (auto *Operation = dyn_cast<InstTy>(PN->getIncomingValue(I));
-        Operation && Operation->arg_size() == 3) {
-      Value *Op0 = Operation->getOperand(0);
-      Value *Op1 = Operation->getOperand(1);
-      Value *Op2 = Operation->getOperand(2);
+    auto *Operation = dyn_cast<InstTy>(PN->getIncomingValue(I));
+    if (!Operation || Operation->arg_size() != 3)
+      continue;
+    Value *Op0 = Operation->getOperand(0);
+    Value *Op1 = Operation->getOperand(1);
+    Value *Op2 = Operation->getOperand(2);
 
-      if (Op0 != PN && Op1 != PN && Op2 != PN)
-        continue;
+    if (Op0 != PN && Op1 != PN && Op2 != PN)
+      continue;
 
-      Inst = Operation;
-      Init = PN->getIncomingValue(!I);
-      if (Op0 == PN) {
-        OtherOp0 = Op1;
-        OtherOp1 = Op2;
-      } else if (Op1 == PN) {
-        OtherOp0 = Op0;
-        OtherOp1 = Op2;
-      } else {
-        OtherOp0 = Op0;
-        OtherOp1 = Op1;
-      }
-      return true;
+    Inst = Operation;
+    Init = PN->getIncomingValue(!I);
+    if (Op0 == PN) {
+      OtherOp0 = Op1;
+      OtherOp1 = Op2;
+    } else if (Op1 == PN) {
+      OtherOp0 = Op0;
+      OtherOp1 = Op2;
+    } else {
+      OtherOp0 = Op0;
+      OtherOp1 = Op1;
     }
+    return true;
   }
   return false;
 }
