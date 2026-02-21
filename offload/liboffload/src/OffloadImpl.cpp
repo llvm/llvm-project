@@ -1205,5 +1205,12 @@ Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
   return Error::success();
 }
 
+Error olDataFence_impl(ol_queue_handle_t Queue) {
+  if (Queue->AsyncInfo->Queue) {
+    if (auto Err = Queue->Device->Device->dataFence(Queue->AsyncInfo))
+      return Err;
+  }
+}
+
 } // namespace offload
 } // namespace llvm
