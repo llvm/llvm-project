@@ -4821,6 +4821,14 @@ def Reinitializes : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def DefaultConstructedAfterMove : InheritableAttr {
+  let Spellings = [Clang<"default_constructed_after_move", 0>];
+  let Subjects = SubjectList<[CXXRecord], ErrorDiag>;
+  let Documentation = [DefaultConstructedAfterMoveDocs];
+  let SimpleHandler = 1;
+  let PragmaAttributeSupport = 0;
+}
+
 def NoDestroy : InheritableAttr {
   let Spellings = [Clang<"no_destroy", 0>];
   let Subjects = SubjectList<[Var]>;
