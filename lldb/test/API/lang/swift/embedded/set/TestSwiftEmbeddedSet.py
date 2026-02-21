@@ -29,6 +29,5 @@ class TestSwiftEmbeddedSet(TestBase):
             elements.add(int(child.GetValue()))
         self.assertEqual(elements, {1, 2, 3, 4, 5})
         
-        # rdar://170883616
-        # emptySet = frame.FindVariable("emptySet")
-        # lldbutil.check_variable(self, emptySet, False, summary="0 values")
+        emptySet = frame.FindVariable("emptySet")
+        lldbutil.check_variable(self, emptySet, False, summary="0 values")
