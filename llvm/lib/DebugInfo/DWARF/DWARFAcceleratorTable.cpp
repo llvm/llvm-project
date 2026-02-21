@@ -744,7 +744,19 @@ void DWARFDebugNames::Entry::dump(ScopedPrinter &W) const {
       dumpParentIdx(W, FormValue);
     else
       FormValue.dump(W.getOStream());
-    W.getOStream() << '\n';
+
+    if (Index != dwarf::Index::DW_IDX_die_offset) {
+      W.getOStream() << '\n';
+      continue;
+    }
+
+    if (const std::optional<uint64_t> DieOfset = getDIEUnitOffset()) {
+      if (getForeignTUTypeSignature())
+        continue;
+      const std::optional<uint64_t> TUOffset = getLocalTUOffset();
+      const uint64_t CUTUOffset = TUOffset ? *TUOffset : *getRelatedCUOffset();
+      W.getOStream() << format("\t// 0x%8.8x", *DieOfset + CUTUOffset) << '\n';
+    }
   }
 }
 
