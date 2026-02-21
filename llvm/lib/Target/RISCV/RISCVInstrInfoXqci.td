@@ -838,34 +838,31 @@ class QCIRVInst48EJ<bits<2> func2, string opcodestr>
 
 class SFBQC_LI
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev,
+             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev,
                   simm20_li:$imm), []> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
-  let Size = 8;
   let Constraints = "$dst = $falsev";
 }
 
 class SFBQC_E_LI
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev,
+             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev,
                   bare_simm32:$imm), []> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
-  let Size = 10;
   let Constraints = "$dst = $falsev";
 }
 
 class SFBQCLoad
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
                   simm26:$imm), []> {
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
-  let Size = 10;
   let Constraints = "$dst = $falsev";
 }
 
