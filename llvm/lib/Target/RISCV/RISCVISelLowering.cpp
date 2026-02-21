@@ -12291,6 +12291,38 @@ SDValue RISCVTargetLowering::lowerVECREDUCE(SDValue Op,
 
   MVT VecVT = VecEVT.getSimpleVT();
   MVT VecEltVT = VecVT.getVectorElementType();
+
+  // Scalarize vecreduce_(and|or|xor) for loaded values of fixed-vector pow-of-2
+  // types, if the entire vector fits into a scalar.
+  if (isa<LoadSDNode>(Vec) &&
+      is_contained({ISD::VECREDUCE_AND, ISD::VECREDUCE_OR, ISD::VECREDUCE_XOR},
+                   Op.getOpcode()) &&
+      VecVT.isFixedLengthVector() && VecVT.isPow2VectorType() &&
+      VecVT.bitsLE(Subtarget.getXLenVT())) {
+    auto GetArithOpcode = [](unsigned Opcode) {
+      switch (Opcode) {
+      case ISD::VECREDUCE_AND:
+        return ISD::AND;
+      case ISD::VECREDUCE_OR:
+        return ISD::OR;
+      case ISD::VECREDUCE_XOR:
+        return ISD::XOR;
+      }
+      llvm_unreachable("Unexpected opcode");
+    };
+    ISD::NodeType ArithOpcode = GetArithOpcode(Op.getOpcode());
+    unsigned NumElts = VecVT.getVectorNumElements();
+    EVT ScalarVT = EVT::getIntegerVT(*DAG.getContext(), VecVT.getSizeInBits());
+    SDValue Scalar = DAG.getBitcast(ScalarVT, Vec);
+    for (unsigned Shift = NumElts / 2; Shift > 0; Shift /= 2) {
+      SDValue ShiftAmt = DAG.getShiftAmountConstant(
+          Shift * VecEltVT.getSizeInBits(), ScalarVT, DL);
+      SDValue Shifted = DAG.getNode(ISD::SRL, DL, ScalarVT, Scalar, ShiftAmt);
+      Scalar = DAG.getNode(ArithOpcode, DL, ScalarVT, Scalar, Shifted);
+    }
+    return DAG.getAnyExtOrTrunc(Scalar, DL, Op.getValueType());
+  }
+
   unsigned RVVOpcode = getRVVReductionOp(Op.getOpcode());
 
   MVT ContainerVT = VecVT;

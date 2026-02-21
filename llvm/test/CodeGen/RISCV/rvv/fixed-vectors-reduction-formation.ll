@@ -472,14 +472,21 @@ define i32 @reduce_sum_4xi32_reduce_order(<4 x i32> %v) {
 ;; makes sure that other opcodes work as expected.
 
 define i32 @reduce_xor_16xi32_prefix2(ptr %p) {
-; CHECK-LABEL: reduce_xor_16xi32_prefix2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vredxor.vs v8, v8, v9
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    ret
+; RV32-LABEL: reduce_xor_16xi32_prefix2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v8, (a0)
+; RV32-NEXT:    vmv.s.x v9, zero
+; RV32-NEXT:    vredxor.vs v8, v8, v9
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: reduce_xor_16xi32_prefix2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ld a0, 0(a0)
+; RV64-NEXT:    srli a1, a0, 32
+; RV64-NEXT:    xor a0, a0, a1
+; RV64-NEXT:    ret
   %v = load <16 x i32>, ptr %p, align 256
   %e0 = extractelement <16 x i32> %v, i32 0
   %e1 = extractelement <16 x i32> %v, i32 1
@@ -510,13 +517,20 @@ define i32 @reduce_xor_16xi32_prefix5(ptr %p) {
 }
 
 define i32 @reduce_and_16xi32_prefix2(ptr %p) {
-; CHECK-LABEL: reduce_and_16xi32_prefix2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vredand.vs v8, v8, v8
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    ret
+; RV32-LABEL: reduce_and_16xi32_prefix2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v8, (a0)
+; RV32-NEXT:    vredand.vs v8, v8, v8
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: reduce_and_16xi32_prefix2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ld a0, 0(a0)
+; RV64-NEXT:    srli a1, a0, 32
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    ret
   %v = load <16 x i32>, ptr %p, align 256
   %e0 = extractelement <16 x i32> %v, i32 0
   %e1 = extractelement <16 x i32> %v, i32 1
@@ -549,13 +563,20 @@ define i32 @reduce_and_16xi32_prefix5(ptr %p) {
 }
 
 define i32 @reduce_or_16xi32_prefix2(ptr %p) {
-; CHECK-LABEL: reduce_or_16xi32_prefix2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vredor.vs v8, v8, v8
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    ret
+; RV32-LABEL: reduce_or_16xi32_prefix2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v8, (a0)
+; RV32-NEXT:    vredor.vs v8, v8, v8
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: reduce_or_16xi32_prefix2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ld a0, 0(a0)
+; RV64-NEXT:    srli a1, a0, 32
+; RV64-NEXT:    or a0, a0, a1
+; RV64-NEXT:    ret
   %v = load <16 x i32>, ptr %p, align 256
   %e0 = extractelement <16 x i32> %v, i32 0
   %e1 = extractelement <16 x i32> %v, i32 1
