@@ -1158,6 +1158,18 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
         Actions.getASTContext().getSourceManager());
   });
 
+  if (DS->getStorageClassSpec() != DeclSpec::SCS_unspecified) {
+  // Check if the next token starts a class/struct/union/enum declaration
+    if (Tok.isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union, tok::kw_enum)) {
+      // Emit an error: storage class specifiers are not allowed before class declarations
+      Diag(DS->getStorageClassSpecLoc(), diag::err_storage_class_before_class_decl)
+          << DeclSpec::getSpecifierName(DS->getStorageClassSpec());
+
+      // Optionally, consume the storage class specifier to continue parsing
+      DS->ClearStorageClassSpecs();
+    }
+  }
+
   if (DS) {
     return ParseDeclOrFunctionDefInternal(Attrs, DeclSpecAttrs, *DS, AS);
   } else {

@@ -470,6 +470,8 @@ def err_typename_invalid_constexpr : Error<
   "to be specified">;
 def err_typename_identifiers_only : Error<
   "typename is allowed for identifiers only">;
+def err_storage_class_before_class_decl : Error<
+  "'%0' is not allowed before a class declaration">;
 
 def err_friend_invalid_in_context : Error<
   "'friend' used outside of class">;
