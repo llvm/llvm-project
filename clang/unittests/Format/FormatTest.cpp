@@ -27321,6 +27321,23 @@ TEST_F(FormatTest, IndentAccessModifiers) {
                "    int i;\n"
                "};",
                Style);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
+  verifyFormat("struct S\n"
+               "  {\n"
+               "  public:\n"
+               "    int i;\n"
+               "\n"
+               "  private:\n"
+               "    class C\n"
+               "      {\n"
+               "      private:\n"
+               "        int j;\n"
+               "      };\n"
+               "  };\n",
+               Style);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Attach;
   // Enumerations are not records and should be unaffected.
   Style.AllowShortEnumsOnASingleLine = false;
   verifyFormat("enum class E {\n"
