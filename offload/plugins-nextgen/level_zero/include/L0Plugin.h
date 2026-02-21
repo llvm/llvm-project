@@ -43,8 +43,8 @@ private:
   // Table containing per-thread information for each Context using TLS.
   L0ContextTLSTableTy ContextTLSTable;
 
-  /// L0 plugin global options.
-  static L0OptionsTy Options;
+  /// L0 plugin options.
+  L0OptionsTy Options;
 
   /// Common pool of AsyncQueue.
   AsyncQueuePoolTy AsyncQueuePool;
@@ -66,7 +66,7 @@ public:
     return ContextTLSTable.get(Context);
   }
 
-  static const L0OptionsTy &getOptions() { return Options; }
+  const L0OptionsTy &getOptions() { return Options; }
 
   const L0DeviceTy &getDeviceFromId(int32_t DeviceId) const {
     return static_cast<const L0DeviceTy &>(getDevice(DeviceId));
