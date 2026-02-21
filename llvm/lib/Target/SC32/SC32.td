@@ -62,20 +62,20 @@ def SDT_SC32Ret : SDTypeProfile<0, 0, []>;
 def call : SDNode<"SC32ISD::CALL", SDT_SC32Call, [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
 def retglue : SDNode<"SC32ISD::RET_GLUE", SDT_SC32Ret, [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
-def LO16 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() & 0xFFFF, SDLoc(N), MVT::i32);
+def LO20 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() & 0xFFFFF, SDLoc(N), MVT::i32);
 }]>;
 
-def HI16 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() >> 16, SDLoc(N), MVT::i32);
+def HI20 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() >> 12, SDLoc(N), MVT::i32);
 }]>;
 
 def LLIimm : PatLeaf<(imm), [{
-  return isUInt<16>(N->getZExtValue());
+  return isUInt<20>(N->getZExtValue());
 }]>;
 
 def LUIimm : PatLeaf<(imm), [{
-  return isShiftedUInt<16, 16>(N->getZExtValue());
+  return isShiftedUInt<20, 12>(N->getZExtValue());
 }]>;
 
 def uimm20 : PatLeaf<(imm), [{
@@ -268,9 +268,9 @@ let Namespace = "SC32" in {
 
 def : Pat<(i32 LLIimm:$val), (LLI imm:$val)>;
 
-def : Pat<(i32 LUIimm:$val), (LUI (HI16 imm:$val))>;
+def : Pat<(i32 LUIimm:$val), (LUI (HI20 imm:$val))>;
 
-def : Pat<(i32 imm:$val), (ORI (LUI (HI16 imm:$val)), (LO16 imm:$val))>;
+def : Pat<(i32 imm:$val), (ORI (LUI (HI20 imm:$val)), (LO20 imm:$val))>;
 
 def : Pat<(store i32:$val, i32:$addr), (ST i32:$val, i32:$addr, (i32 0))>;
 def : Pat<(truncstorei8 i32:$val, i32:$addr), (STB i32:$val, i32:$addr, (i32 0))>;
