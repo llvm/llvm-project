@@ -3185,13 +3185,13 @@ void CombinerHelper::applySimplifyAddToSub(
   MI.eraseFromParent();
 }
 
-bool CombinerHelper::matchBinopWithNegInner(Register MaybeInner, Register Other,
-                                             unsigned RootOpc, Register Dst,
-                                             LLT Ty,
-                                             BuildFnTy &MatchInfo) const {
+bool CombinerHelper::matchBinopWithNegInner(Register MInner, Register Other,
+                                            unsigned RootOpc, Register Dst,
+                                            LLT Ty,
+                                            BuildFnTy &MatchInfo) const {
   /// Helper function for matchBinopWithNeg: tries to match one commuted form
   /// of `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`.
-  MachineInstr *InnerDef = MRI.getVRegDef(MaybeInner);
+  MachineInstr *InnerDef = MRI.getVRegDef(MInner);
   if (!InnerDef)
     return false;
 
@@ -3199,7 +3199,7 @@ bool CombinerHelper::matchBinopWithNegInner(Register MaybeInner, Register Other,
   if (InnerOpc != TargetOpcode::G_ADD && InnerOpc != TargetOpcode::G_SUB)
     return false;
 
-  if (!MRI.hasOneNonDBGUse(MaybeInner))
+  if (!MRI.hasOneNonDBGUse(MInner))
     return false;
 
   Register InnerLHS = InnerDef->getOperand(1).getReg();

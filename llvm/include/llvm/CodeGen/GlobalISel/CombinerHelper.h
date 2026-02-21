@@ -1056,7 +1056,7 @@ private:
 
   /// Helper function for matchBinopWithNeg: tries to match one commuted form
   /// of `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`.
-  bool matchBinopWithNegInner(Register MaybeInner, Register Other,
+  bool matchBinopWithNegInner(Register MInner, Register Other,
                                unsigned RootOpc, Register Dst, LLT Ty,
                                BuildFnTy &MatchInfo) const;
   /// Given a non-indexed load or store instruction \p MI, find an offset that
