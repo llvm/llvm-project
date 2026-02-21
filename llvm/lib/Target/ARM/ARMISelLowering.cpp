@@ -14596,9 +14596,61 @@ static SDValue PerformORCombine_i1(SDNode *N, SelectionDAG &DAG,
   return DAG.getLogicalNOT(DL, And, VT);
 }
 
+// Try to form a NEON shift-{right, left}-and-insert (VSRI/VSLI) from:
+//   (or (and X, splat (i32 C1)), (srl Y, splat (i32 C2))) -> VSRI X, Y, #C2
+//   (or (and X, splat (i32 C1)), (shl Y, splat (i32 C2))) -> VSLI X, Y, #C2
+// where C1 is a mask that preserves the bits not written by the shift/insert,
+// i.e. `C1 == (1 << C2) - 1`.
+static SDValue PerformORCombineToShiftInsert(SelectionDAG &DAG, SDValue AndOp,
+                                             SDValue ShiftOp, EVT VT,
+                                             SDLoc dl) {
+  // Match (and X, Mask)
+  if (AndOp.getOpcode() != ISD::AND)
+    return SDValue();
+
+  SDValue X = AndOp.getOperand(0);
+  SDValue Mask = AndOp.getOperand(1);
+
+  ConstantSDNode *MaskC = isConstOrConstSplat(Mask);
+  if (!MaskC)
+    return SDValue();
+  APInt MaskBits = MaskC->getAPIntValue();
+
+  // Match shift (srl/shl Y, CntVec)
+  int64_t Cnt = 0;
+  bool IsShiftRight = false;
+  SDValue Y;
+  SDValue CntOp;
+
+  if (ShiftOp.getOpcode() == ISD::SRL) {
+    IsShiftRight = true;
+    Y = ShiftOp.getOperand(0);
+    CntOp = ShiftOp.getOperand(1);
+    if (!isVShiftRImm(CntOp, VT, /*isNarrow=*/false,
+                      /*isIntrinsic=*/false, Cnt))
+      return SDValue();
+  } else if (ShiftOp.getOpcode() == ISD::SHL) {
+    Y = ShiftOp.getOperand(0);
+    CntOp = ShiftOp.getOperand(1);
+    if (!isVShiftLImm(CntOp, VT, /*isLong=*/false, Cnt))
+      return SDValue();
+  } else {
+    return SDValue();
+  }
+
+  unsigned ElemBits = VT.getScalarSizeInBits();
+  APInt RequiredMask = IsShiftRight
+                           ? APInt::getHighBitsSet(ElemBits, (unsigned)Cnt)
+                           : APInt::getLowBitsSet(ElemBits, (unsigned)Cnt);
+  if (MaskBits != RequiredMask)
+    return SDValue();
+
+  unsigned Opc = IsShiftRight ? ARMISD::VSRIIMM : ARMISD::VSLIIMM;
+  return DAG.getNode(Opc, dl, VT, X, Y, DAG.getConstant(Cnt, dl, MVT::i32));
+}
+
 /// PerformORCombine - Target-specific dag combine xforms for ISD::OR
-static SDValue PerformORCombine(SDNode *N,
-                                TargetLowering::DAGCombinerInfo &DCI,
+static SDValue PerformORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const ARMSubtarget *Subtarget) {
   // Attempt to use immediate-form VORR
   BuildVectorSDNode *BVN = dyn_cast<BuildVectorSDNode>(N->getOperand(1));
@@ -14606,7 +14658,7 @@ static SDValue PerformORCombine(SDNode *N,
   EVT VT = N->getValueType(0);
   SelectionDAG &DAG = DCI.DAG;
 
-  if(!DAG.getTargetLoweringInfo().isTypeLegal(VT))
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
 
   if (Subtarget->hasMVEIntegerOps() && (VT == MVT::v2i1 || VT == MVT::v4i1 ||
@@ -14643,6 +14695,19 @@ static SDValue PerformORCombine(SDNode *N,
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+
+  // (or (and X, C1), (srl Y, C2)) -> VSRI X, Y, #C2
+  // (or (and X, C1), (shl Y, C2)) -> VSLI X, Y, #C2
+  if (Subtarget->hasNEON() && VT.isVector() &&
+      DAG.getTargetLoweringInfo().isTypeLegal(VT)) {
+    if (SDValue ShiftInsert =
+            PerformORCombineToShiftInsert(DAG, N0, N1, VT, dl))
+      return ShiftInsert;
+
+    if (SDValue ShiftInsert =
+            PerformORCombineToShiftInsert(DAG, N1, N0, VT, dl))
+      return ShiftInsert;
+  }
 
   // (or (and B, A), (and C, ~A)) => (VBSL A, B, C) when A is a constant.
   if (Subtarget->hasNEON() && N1.getOpcode() == ISD::AND && VT.isVector() &&
