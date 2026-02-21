@@ -129,8 +129,17 @@ IncrementalParser::Parse(llvm::StringRef input) {
   SourceLocation NewLoc = SM.getLocForStartOfFile(SM.getMainFileID());
 
   // Create FileID for the current buffer.
-  FileID FID = SM.createFileID(std::move(MB), SrcMgr::C_User, /*LoadedID=*/0,
-                               /*LoadedOffset=*/0, NewLoc);
+  FileID FID;
+  // Create FileEntry and FileID for the current buffer.
+  FileEntryRef FE = SM.getFileManager().getVirtualFileRef(
+      SourceName.str(), InputSize, 0 /* mod time*/);
+  SM.overrideFileContents(FE, std::move(MB));
+
+  // Ensure HeaderFileInfo exists before lookup to prevent assertion
+  HeaderSearch &HS = PP.getHeaderSearchInfo();
+  HS.getFileInfo(FE);
+
+  FID = SM.createFileID(FE, NewLoc, SrcMgr::C_User);
 
   // NewLoc only used for diags.
   if (PP.EnterSourceFile(FID, /*DirLookup=*/nullptr, NewLoc))
