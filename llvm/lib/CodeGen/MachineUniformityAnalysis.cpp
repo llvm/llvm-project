@@ -69,6 +69,23 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
 }
 
 template <>
+void llvm::GenericUniformityAnalysisImpl<
+    MachineSSAContext>::finalizeUniformValues() {
+  // Populate UniformValues with all virtual registers that were NOT marked
+  // divergent. This enables safe uniformity queries where unknown registers
+  // are conservatively treated as divergent.
+  for (const MachineBasicBlock &BB : F) {
+    for (const MachineInstr &MI : BB.instrs()) {
+      for (const MachineOperand &Op : MI.all_defs()) {
+        Register Reg = Op.getReg();
+        if (Reg.isVirtual() && !DivergentValues.count(Reg))
+          UniformValues.insert(Reg);
+      }
+    }
+  }
+}
+
+template <>
 void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::pushUsers(
     Register Reg) {
   assert(isDivergent(Reg));

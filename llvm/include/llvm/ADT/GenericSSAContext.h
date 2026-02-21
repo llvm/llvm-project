@@ -94,6 +94,7 @@ public:
                                const BlockT &block);
 
   static bool isConstantOrUndefValuePhi(const InstructionT &Instr);
+  static bool isNeverDivergent(ConstValueRefT V);
   const BlockT *getDefBlock(ConstValueRefT value) const;
 
   Printable print(const BlockT *block) const;

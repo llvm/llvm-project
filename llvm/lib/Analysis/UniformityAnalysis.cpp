@@ -51,6 +51,23 @@ template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
 }
 
 template <>
+void llvm::GenericUniformityAnalysisImpl<SSAContext>::finalizeUniformValues() {
+  // Populate UniformValues with all values that were NOT marked divergent.
+  // This enables safe uniformity queries where unknown values (e.g., newly
+  // created instructions) are conservatively treated as divergent.
+  for (const Argument &Arg : F.args()) {
+    if (!DivergentValues.count(&Arg))
+      UniformValues.insert(&Arg);
+  }
+  for (const BasicBlock &BB : F) {
+    for (const Instruction &I : BB) {
+      if (!DivergentValues.count(&I))
+        UniformValues.insert(&I);
+    }
+  }
+}
+
+template <>
 void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
     const Value *V) {
   for (const auto *User : V->users()) {
