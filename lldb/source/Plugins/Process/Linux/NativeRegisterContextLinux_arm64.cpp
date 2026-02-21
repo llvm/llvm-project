@@ -65,6 +65,10 @@
 #define NT_ARM_FPMR 0x40e /* Floating point mode register */
 #endif
 
+#ifndef NT_ARM_POE
+#define NT_ARM_POE 0x40f /* Permission Overlay registers */
+#endif
+
 #ifndef NT_ARM_GCS
 #define NT_ARM_GCS 0x410 /* Guarded Control Stack control registers */
 #endif
@@ -76,6 +80,8 @@
 #define HWCAP2_MTE (1 << 18)
 
 #define HWCAP2_FPMR (1UL << 48)
+
+#define HWCAP2_POE (1ULL << 63)
 
 using namespace lldb;
 using namespace lldb_private;
@@ -159,6 +165,8 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
         opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskFPMR);
       if (*auxv_at_hwcap & HWCAP_GCS)
         opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskGCS);
+      if (*auxv_at_hwcap2 & HWCAP2_POE)
+        opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskPOE);
     }
 
     opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskTLS);
@@ -206,6 +214,7 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   ::memset(&m_tls_regs, 0, sizeof(m_tls_regs));
   ::memset(&m_sme_pseudo_regs, 0, sizeof(m_sme_pseudo_regs));
   ::memset(&m_gcs_regs, 0, sizeof(m_gcs_regs));
+  ::memset(&m_poe_regs, 0, sizeof(m_poe_regs));
   std::fill(m_zt_reg.begin(), m_zt_reg.end(), 0);
 
   m_mte_ctrl_reg = 0;
@@ -227,6 +236,7 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   m_zt_buffer_is_valid = false;
   m_fpmr_is_valid = false;
   m_gcs_is_valid = false;
+  m_poe_is_valid = false;
 
   // SME adds the tpidr2 register
   m_tls_size = GetRegisterInfo().IsSSVEPresent() ? sizeof(m_tls_regs)
@@ -455,6 +465,14 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
     offset = reg_info->byte_offset - GetRegisterInfo().GetGCSOffset();
     assert(offset < GetGCSBufferSize());
     src = (uint8_t *)GetGCSBuffer() + offset;
+  } else if (IsPOE(reg)) {
+    error = ReadPOE();
+    if (error.Fail())
+      return error;
+
+    offset = reg_info->byte_offset - GetRegisterInfo().GetPOEOffset();
+    assert(offset < GetPOEBufferSize());
+    src = (uint8_t *)GetPOEBuffer() + offset;
   } else
     return Status::FromErrorString(
         "failed - register wasn't recognized to be a GPR or an FPR, "
@@ -690,6 +708,17 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
     return WriteGCS();
+  } else if (IsPOE(reg)) {
+    error = ReadPOE();
+    if (error.Fail())
+      return error;
+
+    offset = reg_info->byte_offset - GetRegisterInfo().GetPOEOffset();
+    assert(offset < GetPOEBufferSize());
+    dst = (uint8_t *)GetPOEBuffer() + offset;
+    ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
+
+    return WritePOE();
   }
 
   return Status::FromErrorString("Failed to write register value");
@@ -706,6 +735,7 @@ enum RegisterSetType : uint32_t {
   SME2, // ZT only.
   FPMR,
   GCS, // Guarded Control Stack registers.
+  POE, // Permission Overlay registers.
 };
 
 static uint8_t *AddRegisterSetType(uint8_t *dst,
@@ -796,6 +826,13 @@ NativeRegisterContextLinux_arm64::CacheAllRegisters(uint32_t &cached_size) {
   if (GetRegisterInfo().IsGCSPresent()) {
     cached_size += sizeof(RegisterSetType) + GetGCSBufferSize();
     error = ReadGCS();
+    if (error.Fail())
+      return error;
+  }
+
+  if (GetRegisterInfo().IsPOEPresent()) {
+    cached_size += sizeof(RegisterSetType) + GetPOEBufferSize();
+    error = ReadPOE();
     if (error.Fail())
       return error;
   }
@@ -911,6 +948,11 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   if (GetRegisterInfo().IsGCSPresent()) {
     dst = AddSavedRegisters(dst, RegisterSetType::GCS, GetGCSBuffer(),
                             GetGCSBufferSize());
+  }
+
+  if (GetRegisterInfo().IsPOEPresent()) {
+    dst = AddSavedRegisters(dst, RegisterSetType::POE, GetPOEBuffer(),
+                            GetPOEBufferSize());
   }
 
   dst = AddSavedRegisters(dst, RegisterSetType::TLS, GetTLSBuffer(),
@@ -1066,7 +1108,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
           GetFPMRBuffer(), &src, GetFPMRBufferSize(), m_fpmr_is_valid,
           std::bind(&NativeRegisterContextLinux_arm64::WriteFPMR, this));
       break;
-    case RegisterSetType::GCS:
+    case RegisterSetType::GCS: {
       // It is not permitted to enable GCS via ptrace. We can disable it, but
       // to keep things simple we will not revert any change to the
       // PR_SHADOW_STACK_ENABLE bit. Instead patch in the current enable bit
@@ -1088,6 +1130,12 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
           std::bind(&NativeRegisterContextLinux_arm64::WriteGCS, this));
       src += GetGCSBufferSize();
 
+      break;
+    }
+    case RegisterSetType::POE:
+      error = RestoreRegisters(
+          GetPOEBuffer(), &src, GetPOEBufferSize(), m_poe_is_valid,
+          std::bind(&NativeRegisterContextLinux_arm64::WritePOE, this));
       break;
     }
 
@@ -1138,6 +1186,10 @@ bool NativeRegisterContextLinux_arm64::IsFPMR(unsigned reg) const {
 
 bool NativeRegisterContextLinux_arm64::IsGCS(unsigned reg) const {
   return GetRegisterInfo().IsGCSReg(reg);
+}
+
+bool NativeRegisterContextLinux_arm64::IsPOE(unsigned reg) const {
+  return GetRegisterInfo().IsPOEReg(reg);
 }
 
 llvm::Error NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
@@ -1244,6 +1296,7 @@ void NativeRegisterContextLinux_arm64::InvalidateAllRegisters() {
   m_zt_buffer_is_valid = false;
   m_fpmr_is_valid = false;
   m_gcs_is_valid = false;
+  m_poe_is_valid = false;
 
   // Update SVE and ZA registers in case there is change in configuration.
   ConfigureRegisterContext();
@@ -1589,6 +1642,40 @@ Status NativeRegisterContextLinux_arm64::WriteFPMR() {
   m_fpmr_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetFPMRBufferSize(), NT_ARM_FPMR);
+}
+
+Status NativeRegisterContextLinux_arm64::ReadPOE() {
+  Status error;
+
+  if (m_poe_is_valid)
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetPOEBuffer();
+  ioVec.iov_len = GetPOEBufferSize();
+
+  error = ReadRegisterSet(&ioVec, GetPOEBufferSize(), NT_ARM_POE);
+
+  if (error.Success())
+    m_poe_is_valid = true;
+
+  return error;
+}
+
+Status NativeRegisterContextLinux_arm64::WritePOE() {
+  Status error;
+
+  error = ReadPOE();
+  if (error.Fail())
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetPOEBuffer();
+  ioVec.iov_len = GetPOEBufferSize();
+
+  m_poe_is_valid = false;
+
+  return WriteRegisterSet(&ioVec, GetPOEBufferSize(), NT_ARM_POE);
 }
 
 void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
