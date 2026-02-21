@@ -26,27 +26,66 @@ to the tree traversal strategy. The different strategies may lead to different
 results and different time complexity. You can run as
 `-reduction-tree='traversal-mode=0'` to select the mode for example.
 
+### Example MLIR input
+
+```mlir
+// query-test.mlir
+func.func @func1() {
+  // A func can be pruned if it's not relevant to the error.
+  return
+}
+
+func.func @func2() -> i32 {
+  %0 = arith.constant 1 : i32
+  %1 = arith.constant 2 : i32
+  %2 = arith.constant 2.2 : f32
+  %3 = arith.constant 5.3 : f32
+  %4 = arith.addi %0, %1 : i32
+  %5 = arith.addf %2, %3 : f32
+  %6 = arith.muli %4, %4 : i32
+  %7 = arith.subi %6, %4 : i32
+  %8 = arith.fptosi %5 : f32 to i32
+  %9 = arith.addi %7, %8 : i32
+  return %9 : i32
+}
+```
+
 ### Write the script for testing interestingness
 
-As mentioned, you need to provide a command to `mlir-reduce` which identifies
-cases you're interested in. For each intermediate output generated during
-reduction, `mlir-reduce` will run the command over the it, the script should
-returns 1 for interesting case, 0 otherwise. The sample script,
+You need to provide a command to `mlir-reduce` which identifies cases you're
+interested in. For each intermediate output generated during reduction,
+`mlir-reduce` will run the command over the it, the script should returns 1 for
+interesting case, 0 otherwise. For the IR above, a sample script might simply
+look for the presence of the `arith.fptosi` operation. A more realistic script
+would check for the presence of a particular kind of error message in stderr.
 
 ```shell
-mlir-opt -convert-vector-to-spirv $1 | grep "failed to materialize"
-if [[ $? -eq 1 ]]; then
+# query-test.sh
+# `2>&1` redirects stderr (where errors and diagnostics are printed) to stdout
+# so it can be piped to grep.
+mlir-opt $1 2>&1 | grep "arith.fptosi"
+
+# grep's exit code is 0 if the queried string is found
+if [[ $? -eq 0 ]]; then
   exit 1
 else
   exit 0
 fi
 ```
 
-The sample usage will be like, note that the `test` argument is part of the mode
-argument.
+### Running the example
+
+The sample usage will be as follows, noting that the `test` argument is part of
+the mode argument.
 
 ```shell
-mlir-reduce $INPUT -reduction-tree='traversal-mode=0 test=$TEST_SCRIPT'
+mlir-reduce query-test.mlir -reduction-tree='traversal-mode=0 test=query-test.sh'
+```
+
+The output:
+
+```
+TODO: the usage above produces a stack trace
 ```
 
 ## Available reduction strategies
