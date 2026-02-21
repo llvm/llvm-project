@@ -116,6 +116,40 @@ void do_test_r(Fn* func) {
     }
 }
 
+// P2255R2 disallows binding returned reference to temporary since C++23.
+struct ConditionalTemporaryReturner {
+  constexpr const int& operator()(std::false_type) const { return std::integral_constant<int, 42>::value; }
+  constexpr int operator()(std::true_type) const { return 42; }
+};
+
+TEST_CONSTEXPR_CXX20 bool test_temporary_binding() {
+#if TEST_STD_VER >= 23
+  constexpr bool can_bind_to_temporary = false;
+#else
+  constexpr bool can_bind_to_temporary = true;
+#endif
+
+  auto bound1 = std::bind<const int&>(ConditionalTemporaryReturner{}, std::false_type{});
+
+  static_assert(CheckCall<decltype(bound1)>(), "");
+  static_assert(CheckCall<decltype(bound1)>(), "");
+  static_assert(CheckCall<const decltype(bound1)>(), "");
+  static_assert(CheckCall<const decltype(bound1)>(), "");
+
+  assert(bound1() == 42);
+  assert((&bound1() == &std::integral_constant<int, 42>::value));
+
+  auto bound2 = std::bind<const int&>(ConditionalTemporaryReturner{}, std::true_type{});
+  (void)bound2;
+
+  static_assert(CheckCall<decltype(bound2)>() == can_bind_to_temporary, "");
+  static_assert(CheckCall<decltype(bound2)>() == can_bind_to_temporary, "");
+  static_assert(CheckCall<const decltype(bound2)>() == can_bind_to_temporary, "");
+  static_assert(CheckCall<const decltype(bound2)>() == can_bind_to_temporary, "");
+
+  return true;
+}
+
 int main(int, char**)
 {
     do_test<int>(return_value);
@@ -130,6 +164,10 @@ int main(int, char**)
     do_test_r<long>(return_rvalue);
     do_test_r<long>(return_const_rvalue);
 
+    test_temporary_binding();
+#if TEST_STD_VER >= 20
+    static_assert(test_temporary_binding());
+#endif
 
-  return 0;
+    return 0;
 }

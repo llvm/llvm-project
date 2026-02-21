@@ -630,6 +630,11 @@ private:
       if constexpr (is_void_v<_Rp>) {
         std::__invoke(std::forward<_Visitor>(__visitor), std::forward<_Alts>(__alts).__value...);
       } else {
+#      if _LIBCPP_STD_VER >= 23 && _LIBCPP_STD_VER < 26
+        static_assert(
+            !__is_invocable_r_from_temporary<_Rp, _Visitor, decltype((std::forward<_Alts>(__alts).__value))...>,
+            "returning reference to local temporary object");
+#      endif
         return std::__invoke(std::forward<_Visitor>(__visitor), std::forward<_Alts>(__alts).__value...);
       }
     }
