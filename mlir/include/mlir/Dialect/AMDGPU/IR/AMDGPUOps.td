@@ -670,7 +670,7 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
     (e.g., f16, i16) are packed into an i32 during lowering, permuted, and
     extracted back.
 
-    A Wave64 wavefront has 64 lanes (0--63) organized hierarchically:
+    A Wave64 wavefront has 64 lanes (0-63) organized hierarchically:
     - 4 rows of 16 lanes each: row 0 = lanes 0-15, row 1 = lanes 16-31,
       row 2 = lanes 32-47, row 3 = lanes 48-63.
     - Each row is divided into 4 banks of 4 consecutive lanes: bank 0 =
