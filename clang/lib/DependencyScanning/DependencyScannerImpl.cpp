@@ -979,12 +979,7 @@ bool DependencyScanningAction::runInvocation(
       Service, *OriginalInvocation, Controller, *MaybePrebuiltModulesASTMap,
       StableDirs, EmitDependencyFile);
 
-  std::unique_ptr<FrontendAction> Action;
-
-  if (Service.getOpts().Format == ScanningOutputFormat::P1689)
-    Action = std::make_unique<PreprocessOnlyAction>();
-  else
-    Action = std::make_unique<ReadPCHAndPreprocessAction>();
+  ReadPCHAndPreprocessAction Action;
 
   // Normally this would be handled by GeneratePCHAction
   if (ScanInstance.getFrontendOpts().ProgramAction == frontend::GeneratePCH)
@@ -1005,7 +1000,7 @@ bool DependencyScanningAction::runInvocation(
   // ExecuteAction is responsible for calling finish.
   DiagConsumerFinished = true;
 
-  const bool Result = ScanInstance.ExecuteAction(*Action);
+  const bool Result = ScanInstance.ExecuteAction(Action);
 
   if (Result) {
     if (MDC)
