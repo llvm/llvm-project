@@ -24,6 +24,7 @@ using namespace llvm;
 STATISTIC(TotalInsts, "Number of instructions (of all types)");
 STATISTIC(TotalBlocks, "Number of basic blocks");
 STATISTIC(TotalFuncs, "Number of non-external functions");
+STATISTIC(MaxFunctionSize, "Instruction size of biggest function");
 
 #define HANDLE_INST(N, OPCODE, CLASS)                                          \
   STATISTIC(Num##OPCODE##Inst, "Number of " #OPCODE " insts");
@@ -34,7 +35,12 @@ namespace {
 class InstCount : public InstVisitor<InstCount> {
   friend class InstVisitor<InstCount>;
 
-  void visitFunction(Function &F) { ++TotalFuncs; }
+  void visitFunction(Function &F) {
+    ++TotalFuncs;
+    unsigned NumInsts = F.getInstructionCount();
+    if (NumInsts > MaxFunctionSize)
+      MaxFunctionSize = NumInsts;
+  }
   void visitBasicBlock(BasicBlock &BB) { ++TotalBlocks; }
 
 #define HANDLE_INST(N, OPCODE, CLASS)                                          \
