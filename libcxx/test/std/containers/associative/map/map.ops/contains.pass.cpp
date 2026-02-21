@@ -13,10 +13,12 @@
 
 // <map>
 
-// bool contains(const key_type& x) const;
+// bool contains(const key_type& x) const; // constexpr since C++26
+
+#include "test_macros.h"
 
 template <typename T, typename P, typename B, typename... Pairs>
-void test(B bad, Pairs... args) {
+TEST_CONSTEXPR_CXX26 bool test(B bad, Pairs... args) {
   T map;
   P pairs[] = {args...};
 
@@ -26,6 +28,8 @@ void test(B bad, Pairs... args) {
     assert(map.contains(p.first));
 
   assert(!map.contains(bad));
+
+  return true;
 }
 
 struct E {
@@ -34,7 +38,7 @@ struct E {
   char c   = 1;
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     test<std::map<char, int>, std::pair<char, int> >(
         'e', std::make_pair('a', 10), std::make_pair('b', 11), std::make_pair('c', 12), std::make_pair('d', 13));
@@ -45,7 +49,8 @@ int main(int, char**) {
     test<std::map<int, E>, std::pair<int, E> >(
         -1, std::make_pair(1, E{}), std::make_pair(2, E{}), std::make_pair(3, E{}), std::make_pair(4, E{}));
   }
-  {
+  // FIXME: remove when multimap is made constexpr
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     test<std::multimap<char, int>, std::pair<char, int> >(
         'e', std::make_pair('a', 10), std::make_pair('b', 11), std::make_pair('c', 12), std::make_pair('d', 13));
 
@@ -55,6 +60,13 @@ int main(int, char**) {
     test<std::multimap<int, E>, std::pair<int, E> >(
         -1, std::make_pair(1, E{}), std::make_pair(2, E{}), std::make_pair(3, E{}), std::make_pair(4, E{}));
   }
+  return true;
+}
 
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

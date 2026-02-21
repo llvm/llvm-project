@@ -10,7 +10,7 @@
 
 // class map
 
-// size_type count(const key_type& k) const;
+// size_type count(const key_type& k) const; // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -23,12 +23,12 @@
 #if TEST_STD_VER >= 11
 template <class T>
 struct FinalCompare final {
-  bool operator()(const T& x, const T& y) const { return x < y; }
+  TEST_CONSTEXPR_CXX26 bool operator()(const T& x, const T& y) const { return x < y; }
 };
 #endif
 
 template <class Map, class ArgType = typename Map::key_type>
-void test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   typedef typename Map::value_type V;
   typedef typename Map::size_type R;
 
@@ -45,9 +45,11 @@ void test() {
     R r = m.count(ArgType(i));
     assert(r == 1);
   }
+
+  return true;
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   test<std::map<int, double> >();
 #if TEST_STD_VER >= 11
   typedef std::pair<const int, double> V;
@@ -85,5 +87,14 @@ int main(int, char**) {
     }
   }
 #endif // TEST_STD_VER >= 14
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

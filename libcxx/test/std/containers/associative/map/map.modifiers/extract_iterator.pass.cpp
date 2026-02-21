@@ -12,7 +12,7 @@
 
 // class map
 
-// node_type extract(const_iterator);
+// node_type extract(const_iterator); // constexpr since C++26
 
 #include <map>
 #include "test_macros.h"
@@ -20,7 +20,7 @@
 #include "Counter.h"
 
 template <class Container>
-void test(Container& c) {
+TEST_CONSTEXPR_CXX26 bool test(Container& c) {
   std::size_t sz = c.size();
 
   auto some_key = c.cbegin()->first;
@@ -29,17 +29,21 @@ void test(Container& c) {
     auto key_value                  = first->first;
     typename Container::node_type t = c.extract(first++);
     --sz;
-    assert(t.key() == key_value);
-    t.key() = some_key;
-    assert(t.key() == some_key);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      // FIXME: CWG1514: key() is not `constexpr`
+      assert(t.key() == key_value);
+      t.key() = some_key;
+      assert(t.key() == some_key);
+    }
     assert(t.get_allocator() == c.get_allocator());
     assert(sz == c.size());
   }
 
   assert(c.size() == 0);
+  return true;
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     using map_type = std::map<int, int>;
     map_type m     = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
@@ -47,17 +51,24 @@ int main(int, char**) {
   }
 
   {
+    using min_alloc_map = std::map<int, int, std::less<int>, min_allocator<std::pair<const int, int>>>;
+    min_alloc_map m     = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
+    test(m);
+  }
+  return true;
+}
+
+int main(int, char**) {
+  {
     std::map<Counter<int>, Counter<int>> m = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
     assert(Counter_base::gConstructed == 12);
     test(m);
     assert(Counter_base::gConstructed == 0);
   }
 
-  {
-    using min_alloc_map = std::map<int, int, std::less<int>, min_allocator<std::pair<const int, int>>>;
-    min_alloc_map m     = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
-    test(m);
-  }
-
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

@@ -77,6 +77,7 @@ __cpp_lib_constexpr_forward_list                        202502L <forward_list>
 __cpp_lib_constexpr_functional                          201907L <functional>
 __cpp_lib_constexpr_iterator                            201811L <iterator>
 __cpp_lib_constexpr_list                                202502L <list>
+__cpp_lib_constexpr_map                                 202502L <map>
 __cpp_lib_constexpr_memory                              202202L <memory>
                                                         201811L // C++20
 __cpp_lib_constexpr_new                                 202406L <new>
@@ -561,6 +562,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_constexpr_flat_set                   202502L
 # define __cpp_lib_constexpr_forward_list               202502L
 # define __cpp_lib_constexpr_list                       202502L
+# define __cpp_lib_constexpr_map                        202502L
 # if !defined(_LIBCPP_ABI_VCRUNTIME)
 #   define __cpp_lib_constexpr_new                      202406L
 # endif
