@@ -312,3 +312,19 @@ void testPPConditionals() {
   }
 #endif
 }
+
+void testSwitchCaseWithoutInnerCompound(int i, bool b) {
+  switch (i) {
+  case 0:
+    if (b) {
+      return;
+    } else {
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'return'
+      // CHECK-FIXES: {{^}}    }
+      f(0);
+    }
+    break;
+  default:
+    break;
+  }
+}

@@ -243,6 +243,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/container-size-empty>` check by fixing a crash
   when a member expression has a non-identifier name.
 
+- Improved :doc:`readability-else-after-return
+  <clang-tidy/checks/readability/else-after-return>` check by fixing missed
+  diagnostics when ``if`` statements appear in unbraced ``switch`` case labels
+
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
   now uses separate note diagnostics for each uninitialized enumerator, making
