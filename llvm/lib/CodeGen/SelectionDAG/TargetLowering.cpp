@@ -8755,6 +8755,16 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Node->getValueType(0);
 
+  if (DstVT == MVT::bf16) {
+    SDLoc Loc(Node);
+    SDValue Operand = Node->getOperand(0);
+
+    Result = DAG.getNode(ISD::FP_ROUND, Loc, MVT::bf16,
+        DAG.getNode(ISD::UINT_TO_FP, Loc, MVT::f32, Operand),
+        DAG.getIntPtrConstant(0, Loc));
+    return true;
+  }
+
   // If the input is known to be non-negative and SINT_TO_FP is legal then use
   // it.
   if (Node->getFlags().hasNonNeg() &&
