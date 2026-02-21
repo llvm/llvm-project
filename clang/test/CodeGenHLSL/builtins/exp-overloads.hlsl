@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
-// RUN:   -Wdeprecated-declarations -Wconversion  -emit-llvm -o - | \
+// RUN:   -Wdeprecated-declarations  -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK -DFNATTRS="hidden noundef nofpclass(nan inf)"
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
 // RUN:   -verify -verify-ignore-unexpected=note

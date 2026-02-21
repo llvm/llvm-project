@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -Wconversion -fnative-half-type %s -verify
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -fnative-half-type %s -verify
 
 static double D = 2.0;
 static int I = D; // expected-warning{{implicit conversion turns floating-point number into integer: 'double' to 'int'}}

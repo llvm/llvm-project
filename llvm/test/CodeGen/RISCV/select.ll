@@ -3009,3 +3009,58 @@ entry:
   store ptr %4, ptr %1, align 8
   ret void
 }
+
+define i64 @single_bit_condition(i64 %x) {
+; RV32IM-LABEL: single_bit_condition:
+; RV32IM:       # %bb.0: # %entry
+; RV32IM-NEXT:    slli a2, a0, 21
+; RV32IM-NEXT:    srli a2, a2, 31
+; RV32IM-NEXT:    addi a2, a2, -1
+; RV32IM-NEXT:    and a0, a2, a0
+; RV32IM-NEXT:    and a1, a2, a1
+; RV32IM-NEXT:    ret
+;
+; RV64IM-LABEL: single_bit_condition:
+; RV64IM:       # %bb.0: # %entry
+; RV64IM-NEXT:    slli a1, a0, 53
+; RV64IM-NEXT:    srli a1, a1, 63
+; RV64IM-NEXT:    addi a1, a1, -1
+; RV64IM-NEXT:    and a0, a1, a0
+; RV64IM-NEXT:    ret
+;
+; RV64IMXVTCONDOPS-LABEL: single_bit_condition:
+; RV64IMXVTCONDOPS:       # %bb.0: # %entry
+; RV64IMXVTCONDOPS-NEXT:    andi a1, a0, 1024
+; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a0, a0, a1
+; RV64IMXVTCONDOPS-NEXT:    ret
+;
+; RV32IMZICOND-LABEL: single_bit_condition:
+; RV32IMZICOND:       # %bb.0: # %entry
+; RV32IMZICOND-NEXT:    slli a2, a0, 21
+; RV32IMZICOND-NEXT:    srli a2, a2, 31
+; RV32IMZICOND-NEXT:    czero.nez a0, a0, a2
+; RV32IMZICOND-NEXT:    czero.nez a1, a1, a2
+; RV32IMZICOND-NEXT:    ret
+;
+; RV64IMZICOND-LABEL: single_bit_condition:
+; RV64IMZICOND:       # %bb.0: # %entry
+; RV64IMZICOND-NEXT:    andi a1, a0, 1024
+; RV64IMZICOND-NEXT:    czero.nez a0, a0, a1
+; RV64IMZICOND-NEXT:    ret
+;
+; RV32IXQCI-LABEL: single_bit_condition:
+; RV32IXQCI:       # %bb.0: # %entry
+; RV32IXQCI-NEXT:    slli a2, a0, 21
+; RV32IXQCI-NEXT:    srli a2, a2, 31
+; RV32IXQCI-NEXT:    mv a3, a2
+; RV32IXQCI-NEXT:    qc.selectieqi a2, 0, a1, 0
+; RV32IXQCI-NEXT:    qc.selectieqi a3, 0, a0, 0
+; RV32IXQCI-NEXT:    mv a0, a3
+; RV32IXQCI-NEXT:    mv a1, a2
+; RV32IXQCI-NEXT:    ret
+entry:
+  %and = and i64 %x, 1024
+  %tobool.not = icmp ne i64 %and, 0
+  %cond = select i1 %tobool.not, i64 0, i64 %x
+  ret i64 %cond
+}
