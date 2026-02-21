@@ -441,7 +441,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   if (Style.BraceWrapping.BeforeLambdaBody && Current.CanBreakBefore &&
       Current.is(TT_LambdaLBrace) && Previous.isNot(TT_LineComment)) {
     auto LambdaBodyLength = getLengthToMatchingParen(Current, State.Stack);
-    return LambdaBodyLength > getColumnLimit(State);
+    return Current.MustBreakBefore || LambdaBodyLength > getColumnLimit(State);
   }
   if (Current.MustBreakBefore ||
       (Current.is(TT_InlineASMColon) &&
@@ -780,6 +780,15 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
 
     if (Prev->BlockParameterCount == 0)
       return false;
+
+    // If any lambda brace in the argument list has MustBreakBefore set
+    // (e.g. for Allman-style BeforeLambdaBody), the "all arguments on one
+    // line" strategy is impossible, so allow natural line wrapping.
+    for (const auto *Tok = Prev->Next; Tok && Tok != Prev->MatchingParen;
+         Tok = Tok->Next) {
+      if (Tok->is(TT_LambdaLBrace) && Tok->MustBreakBefore)
+        return false;
+    }
 
     // Multiple lambdas in the same function call.
     if (Prev->BlockParameterCount > 1)

@@ -24325,6 +24325,64 @@ TEST_F(FormatTest, FormatsLambdas) {
                "  })));\n"
                "}",
                Style);
+
+  // Verify that BeforeLambdaBody does not cause arguments before the lambda to
+  // be wrapped to a new line when the lambda is not the last argument.
+  FormatStyle BeforeLambdaBodyStyle = getLLVMStyle();
+  BeforeLambdaBodyStyle.BreakBeforeBraces = FormatStyle::BS_Custom;
+  BeforeLambdaBodyStyle.BraceWrapping.BeforeLambdaBody = true;
+  BeforeLambdaBodyStyle.AllowShortLambdasOnASingleLine =
+      FormatStyle::ShortLambdaStyle::SLS_None;
+
+  // Lambda followed by another argument: args before lambda stay on first line.
+  verifyFormat("void test() {\n"
+               "  func(a, b,\n"
+               "       [](int x)\n"
+               "       {\n"
+               "         return x;\n"
+               "       },\n"
+               "       c);\n"
+               "}",
+               BeforeLambdaBodyStyle);
+  // Two lambdas as arguments: args before lambdas stay on first line.
+  verifyFormat("void test() {\n"
+               "  func(a, b,\n"
+               "       [](int x)\n"
+               "       {\n"
+               "         return x;\n"
+               "       },\n"
+               "       [](int y)\n"
+               "       {\n"
+               "         return y;\n"
+               "       });\n"
+               "}",
+               BeforeLambdaBodyStyle);
+
+  BeforeLambdaBodyStyle.AllowShortLambdasOnASingleLine =
+      FormatStyle::ShortLambdaStyle::SLS_Empty;
+  // With SLS_Empty, lambda followed by another argument.
+  verifyFormat("void test() {\n"
+               "  func(a, b,\n"
+               "       [](int x)\n"
+               "       {\n"
+               "         return x;\n"
+               "       },\n"
+               "       c);\n"
+               "}",
+               BeforeLambdaBodyStyle);
+  // With SLS_Empty, two lambdas as arguments.
+  verifyFormat("void test() {\n"
+               "  func(a, b,\n"
+               "       [](int x)\n"
+               "       {\n"
+               "         return x;\n"
+               "       },\n"
+               "       [](int y)\n"
+               "       {\n"
+               "         return y;\n"
+               "       });\n"
+               "}",
+               BeforeLambdaBodyStyle);
 }
 
 TEST_F(FormatTest, LambdaWithLineComments) {
