@@ -3398,9 +3398,12 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
     return;
 
   // The AVL may be capped to a safe distance.
-  VPValue *SafeAVL;
-  if (match(AVL, m_Select(m_VPValue(), m_VPValue(SafeAVL), m_VPValue())))
-    AVL = SafeAVL;
+  VPValue *SafeAVL, *UnsafeAVL;
+  if (match(AVL,
+            m_Select(m_SpecificICmp(CmpInst::ICMP_ULT, m_VPValue(UnsafeAVL),
+                                    m_VPValue(SafeAVL)),
+                     m_Deferred(UnsafeAVL), m_Deferred(SafeAVL))))
+    AVL = UnsafeAVL;
 
   VPValue *AVLNext;
   [[maybe_unused]] bool FoundAVLNext =
