@@ -229,13 +229,13 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   __c11_atomic_fetch_min(p, 1, memory_order_seq_cst); // expected-error {{incompatible integer to pointer conversion passing 'int' to parameter of type 'int *'}}
   __c11_atomic_fetch_min(f, 1.0f, memory_order_seq_cst);
   __c11_atomic_fetch_min(d, 1.0, memory_order_seq_cst);
-  __c11_atomic_fetch_min(ld, 1.0, memory_order_seq_cst); // fp80-error {{must be a pointer to atomic integer or supported floating point type}}
+  __c11_atomic_fetch_min(ld, 1.0, memory_order_seq_cst); // fp80-error {{must be a pointer to atomic integer, pointer or supported floating point type}}
   __c11_atomic_fetch_max(i, 1, memory_order_seq_cst);
   __c11_atomic_fetch_max(p, I, memory_order_seq_cst);
   __c11_atomic_fetch_max(p, 1, memory_order_seq_cst); // expected-error {{incompatible integer to pointer conversion passing 'int' to parameter of type 'int *'}}
   __c11_atomic_fetch_max(f, 1.0f, memory_order_seq_cst);
   __c11_atomic_fetch_max(d, 1.0, memory_order_seq_cst);
-  __c11_atomic_fetch_max(ld, 1.0, memory_order_seq_cst); // fp80-error {{must be a pointer to atomic integer or supported floating point type}}
+  __c11_atomic_fetch_max(ld, 1.0, memory_order_seq_cst); // fp80-error {{must be a pointer to atomic integer, pointer or supported floating point type}}
 
   __atomic_fetch_add(i, 3, memory_order_seq_cst); // expected-error {{pointer to integer, pointer or supported floating point type}}
   __atomic_fetch_sub(I, 3, memory_order_seq_cst);
