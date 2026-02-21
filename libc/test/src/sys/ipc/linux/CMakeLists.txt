@@ -1,0 +1,19 @@
+add_custom_target(libc_sys_ipc_unittests)
+
+add_libc_unittest(
+  ftok_test
+  SUITE
+    libc_sys_ipc_unittests
+  SRCS
+    ftok_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.include.sys_ipc
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.sys.ipc.ftok
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
