@@ -26,6 +26,7 @@
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdlib> // ::getenv
+#include <string_view>
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -2876,8 +2877,11 @@ void AppleMachO::AddClangCXXStdlibIncludeArgs(
 
   llvm::SmallString<128> Sysroot = GetEffectiveSysroot(DriverArgs);
 
-  switch (GetCXXStdlibType(DriverArgs)) {
-  case ToolChain::CST_Libcxx: {
+  auto cxxstdlib = GetCXXStdlibType(DriverArgs);
+  switch (cxxstdlib) {
+  case ToolChain::CST_Libcxx:
+    [[fallthrough]];
+  case ToolChain::CST_Msstl: {
     // On Darwin, libc++ can be installed in one of the following places:
     // 1. Alongside the compiler in <clang-executable-folder>/../include/c++/v1
     // 2. In a SDK (or a custom sysroot) in <sysroot>/usr/include/c++/v1
@@ -2891,8 +2895,14 @@ void AppleMachO::AddClangCXXStdlibIncludeArgs(
     // Get from '<install>/bin' to '<install>/include/c++/v1'.
     // Note that InstallBin can be relative, so we use '..' instead of
     // parent_path.
+    std::string_view cxxstrname;
+    if (cxxstdlib == CST_Msstl) {
+      cxxstrname = "msstl";
+    } else {
+      cxxstrname = "v1";
+    }
     llvm::SmallString<128> InstallBin(getDriver().Dir); // <install>/bin
-    llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
+    llvm::sys::path::append(InstallBin, "..", "include", "c++", cxxstrname);
     if (getVFS().exists(InstallBin)) {
       addSystemInclude(DriverArgs, CC1Args, InstallBin);
       return;
@@ -2903,7 +2913,7 @@ void AppleMachO::AddClangCXXStdlibIncludeArgs(
 
     // Otherwise, check for (2)
     llvm::SmallString<128> SysrootUsr = Sysroot;
-    llvm::sys::path::append(SysrootUsr, "usr", "include", "c++", "v1");
+    llvm::sys::path::append(SysrootUsr, "usr", "include", "c++", cxxstrname);
     if (getVFS().exists(SysrootUsr)) {
       addSystemInclude(DriverArgs, CC1Args, SysrootUsr);
       return;
@@ -2916,9 +2926,10 @@ void AppleMachO::AddClangCXXStdlibIncludeArgs(
     break;
   }
 
-  case ToolChain::CST_Libstdcxx:
+  case ToolChain::CST_Libstdcxx: {
     AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args);
     break;
+  }
   }
 }
 
@@ -3012,6 +3023,9 @@ void AppleMachO::AddCXXStdlibLibArgs(const ArgList &Args,
 
     // Otherwise, let the linker search.
     CmdArgs.push_back("-lstdc++");
+    break;
+
+  default:
     break;
   }
 }

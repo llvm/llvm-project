@@ -5581,3 +5581,76 @@ Restrictions and Limitations compared to Clang
 Strict aliasing (TBAA) is always off by default in clang-cl whereas in clang,
 strict aliasing is turned on by default for all optimization levels. For more
 details, see :ref:`Strict aliasing <strict_aliasing>`.
+
+Using clang/clang++ with MSVC Targets
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+While ``clang-cl`` emulates the MSVC compiler interface, users may prefer to invoke ``clang`` or ``clang++`` directly for greater control and platform consistency. When targeting MSVC environments, Clang supports the use of ``--target=`` and ``--sysroot=`` following the same conventions as Unix-style cross-compilation.
+
+This approach avoids reliance on a Windows environment, Wine, or environmental variables, instead using a predictable and portable sysroot layout:
+
+Headers
+-------
+
+- Windows + CRT headers: ``include/``
+
+- C++ standard library headers (selected via ``-stdlib=``):
+
+  - ``-stdlib=msstl`` → ``include/c++/msstl``  
+    Microsoft STL (MSVC's standard library implementation)
+
+  - ``-stdlib=libc++`` → ``include/c++/v1``  
+    LLVM libc++ (Clang's standard library implementation)
+
+  - ``-stdlib=libstdc++`` → ``include/c++/<version>`` (e.g. ``16.0.0``)  
+    GNU libstdc++ (GCC's standard library implementation)
+
+Library Naming Conventions
+--------------------------
+
+When targeting ``${cpu}-unknown-windows-msvc``, the naming of runtime libraries differs from GNU-style targets:
+
+- **LLVM libc++**:
+  - MSVC target: ``c++.dll``, ``c++.lib``
+  - GNU target: ``libc++.dll``, ``libc++.a``
+
+- **GNU libstdc++**:
+  - MSVC target: ``stdc++-6.dll``, ``stdc++.lib``
+  - GNU target: ``libstdc++-6.dll``, ``libstdc++.a``
+
+These naming conventions reflect platform-specific linker and runtime expectations. The MSVC target omits the ``lib`` prefix and uses `.lib` import libraries, while GNU targets retain the traditional Unix-style naming.
+
+Libraries
+---------
+
+The sysroot must contain libraries in the following fallback order:
+
+1. ``lib/${cpu}-unknown-windows-msvc``
+2. ``lib/``
+
+Example for ``x86_64-unknown-windows-msvc``:
+``lib/x86_64-unknown-windows-msvc`` → ``lib/``
+
+This structure allows toolchains to support both target-specific and shared libraries, enabling clean fallback behavior and simplifying multi-target packaging.
+
+Binaries
+--------
+
+The sysroot must also contain binaries in the following fallback order:
+
+1. ``bin/${cpu}-unknown-windows-msvc``
+2. ``bin/``
+
+Example for ``x86_64-unknown-windows-msvc``:
+``bin/x86_64-unknown-windows-msvc`` → ``bin/``
+
+This layout supports future scenarios such as universal binaries and ensures consistent tool resolution across architectures.
+
+Case Sensitivity
+----------------
+
+All header and library paths must use lowercase file names. This ensures compatibility across case-sensitive filesystems such as Linux and macOS, and matches the behavior of ``mingw-w64-crt``. Windows itself is case-insensitive, but relying on mixed-case paths can lead to portability issues.
+
+This layout is fully compatible with Clang’s standard sysroot resolution logic and requires no MSVC-specific flags. It enables clean cross-compilation workflows and portable toolchain packaging.
+
+For a reference implementation, see `windows-msvc-sysroot <https://github.com/trcrsired/windows-msvc-sysroot>`_.

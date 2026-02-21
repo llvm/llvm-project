@@ -2638,6 +2638,8 @@ bool Driver::HandleImmediateArgs(Compilation &C) {
     case ToolChain::RLT_Libgcc:
       llvm::outs() << GetFilePath("libgcc.a", TC) << "\n";
       break;
+    default:
+      break;
     }
     return false;
   }
@@ -6675,6 +6677,48 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
   return std::string(Name);
 }
 
+static std::optional<std::string>
+CxxModulePathEvaluate(const Driver &D, const ToolChain &TC,
+                      ToolChain::CXXStdlibType cxxstdlib, const char *library) {
+  const char *modulejsonfilename = "modules.json";
+  switch (cxxstdlib) {
+  case ToolChain::CST_Libcxx: {
+    // Note when there are multiple flavours of libc++ the module json needs
+    // to look at the command-line arguments for the proper json. These
+    // flavours do not exist at the moment, but there are plans to provide a
+    // variant that is built with sanitizer instrumentation enabled.
+
+    // For example
+    //    const SanitizerArgs &Sanitize = TC.getSanitizerArgs(C.getArgs());
+    //    if (Sanitize.needsAsanRt())
+    //      modulejsonfilename = "libc++.modules-asan.json";
+    //    modulejsonfilename = "libc++.modules.json";
+    modulejsonfilename = "libc++.modules.json";
+    break;
+  }
+  case ToolChain::CST_Libstdcxx: {
+    modulejsonfilename = "libstdc++.modules.json";
+    break;
+  }
+  default: {
+    break;
+  }
+  }
+
+  if (library == nullptr) {
+    library = modulejsonfilename;
+  }
+  std::string lib = D.GetFilePath(library, TC);
+
+  SmallString<128> path(lib.begin(), lib.end());
+  llvm::sys::path::remove_filename(path);
+  llvm::sys::path::append(path, modulejsonfilename);
+  if (TC.getVFS().exists(path))
+    return static_cast<std::string>(path);
+
+  return {};
+}
+
 std::string Driver::GetStdModuleManifestPath(const Compilation &C,
                                              const ToolChain &TC) const {
   std::string error = "<NOT PRESENT>";
@@ -6682,56 +6726,30 @@ std::string Driver::GetStdModuleManifestPath(const Compilation &C,
   if (C.getArgs().hasArg(options::OPT_nostdlib))
     return error;
 
-  switch (TC.GetCXXStdlibType(C.getArgs())) {
+  auto cxxstdlib = TC.GetCXXStdlibType(C.getArgs());
+  switch (cxxstdlib) {
   case ToolChain::CST_Libcxx: {
-    auto evaluate = [&](const char *library) -> std::optional<std::string> {
-      std::string lib = GetFilePath(library, TC);
-
-      // Note when there are multiple flavours of libc++ the module json needs
-      // to look at the command-line arguments for the proper json. These
-      // flavours do not exist at the moment, but there are plans to provide a
-      // variant that is built with sanitizer instrumentation enabled.
-
-      // For example
-      //  StringRef modules = [&] {
-      //    const SanitizerArgs &Sanitize = TC.getSanitizerArgs(C.getArgs());
-      //    if (Sanitize.needsAsanRt())
-      //      return "libc++.modules-asan.json";
-      //    return "libc++.modules.json";
-      //  }();
-
-      SmallString<128> path(lib.begin(), lib.end());
-      llvm::sys::path::remove_filename(path);
-      llvm::sys::path::append(path, "libc++.modules.json");
-      if (TC.getVFS().exists(path))
-        return static_cast<std::string>(path);
-
-      return {};
-    };
-
-    if (std::optional<std::string> result = evaluate("libc++.so"); result)
+    if (std::optional<std::string> result =
+            CxxModulePathEvaluate(*this, TC, cxxstdlib, "libc++.so");
+        result)
       return *result;
 
-    return evaluate("libc++.a").value_or(error);
+    return CxxModulePathEvaluate(*this, TC, cxxstdlib, "libc++.a")
+        .value_or(error);
   }
 
   case ToolChain::CST_Libstdcxx: {
-    auto evaluate = [&](const char *library) -> std::optional<std::string> {
-      std::string lib = GetFilePath(library, TC);
-
-      SmallString<128> path(lib.begin(), lib.end());
-      llvm::sys::path::remove_filename(path);
-      llvm::sys::path::append(path, "libstdc++.modules.json");
-      if (TC.getVFS().exists(path))
-        return static_cast<std::string>(path);
-
-      return {};
-    };
-
-    if (std::optional<std::string> result = evaluate("libstdc++.so"); result)
+    if (std::optional<std::string> result =
+            CxxModulePathEvaluate(*this, TC, cxxstdlib, "libstdc++.so");
+        result)
       return *result;
 
-    return evaluate("libstdc++.a").value_or(error);
+    return CxxModulePathEvaluate(*this, TC, cxxstdlib, "libstdc++.a")
+        .value_or(error);
+  }
+
+  default: {
+    return CxxModulePathEvaluate(*this, TC, cxxstdlib, nullptr).value_or(error);
   }
   }
 
