@@ -45,9 +45,14 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Alignment.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cassert>
 #include <optional>
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -4538,6 +4543,26 @@ static Value *simplifyWithOpsReplaced(Value *V,
       if (NewOps.size() == 2 && match(NewOps[1], m_Zero()))
         return NewOps[0];
     }
+
+    if (SelectInst *SI = dyn_cast<SelectInst>(I)) {
+      Value *SimplifiedValue = nullptr;
+
+      // Cond ? V : V -> V
+      if (NewOps[1] == NewOps[2] && !impliesPoison(SI, NewOps[0]))
+        SimplifiedValue = NewOps[1];
+
+      // If we could do any simplification check if it has any poison generating
+      // flags and handle them.
+      if (SimplifiedValue) {
+        if (SI->hasPoisonGeneratingAnnotations()) {
+          if (!DropFlags)
+            return nullptr;
+          DropFlags->push_back(SI);
+        }
+        return SimplifiedValue;
+      }
+    }
+
   } else {
     // The simplification queries below may return the original value. Consider:
     //   %div = udiv i32 %arg, %arg2
@@ -5198,6 +5223,36 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
       return ConstantVector::get(NewC);
   }
 
+  CmpPredicate Pred1, Pred2;
+  Value *V1, *V2, *EQV;
+  if (match(Cond,
+            m_And(m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(V1), m_Value(EQV)),
+                  m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(V2),
+                                 m_Deferred(EQV)))))
+    if (Value *V = simplifySelectWithEquivalence(
+            {{V2, EQV}, {V1, EQV}}, TrueVal, FalseVal, Q, MaxRecurse)) {
+      // We should only throw away a select if we get a select in place of that
+      // because of the poison barrier property.
+      SelectInst *VasSI = dyn_cast<SelectInst>(V);
+      // Also we have to check if the removing of the current select doesn't
+      // introduce any new poison. We should only remove the current select if
+      // its condition is poison in every case where the new select condition is
+      // poison.
+      if (VasSI && impliesPoison(VasSI->getCondition(), Cond))
+        return V;
+    }
+
+// TODO: I'll have to finish this. There is still testing to be done here!
+//  if (match(Cond,
+//            m_Or(m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(V1), m_Value(EQV)),
+//                 m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(V2), m_Deferred(EQV))))) {
+//    
+//    if (Value *V = simplifySelectWithEquivalence({{V2, EQV}}, TrueVal, FalseVal, Q, MaxRecurse))
+//      return V;
+//    if (Value *V = simplifySelectWithEquivalence({{V1, EQV}}, TrueVal, FalseVal, Q, MaxRecurse))
+//      return V;
+//  }
+  
   if (Value *V =
           simplifySelectWithICmpCond(Cond, TrueVal, FalseVal, Q, MaxRecurse))
     return V;
