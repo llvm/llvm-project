@@ -5905,7 +5905,15 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
       assert(!RHS && "LHS and RHS types must match");
       return nullptr;
     }
-    return Builder.CreateSelect(CondV, LHS, RHS, "cond");
+    llvm::Value *Select = Builder.CreateSelect(CondV, LHS, RHS, "cond");
+    if (auto *SelectI = dyn_cast<llvm::Instruction>(Select)) {
+      if (llvm::MDNode *Unpredictable =
+              CGF.getUnpredictableMetadata(condExpr)) {
+        SelectI->setMetadata(llvm::LLVMContext::MD_unpredictable,
+                             Unpredictable);
+      }
+    }
+    return Select;
   }
 
   // If the top of the logical operator nest, reset the MCDC temp to 0.

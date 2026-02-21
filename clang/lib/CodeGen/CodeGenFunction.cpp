@@ -1887,6 +1887,21 @@ void CodeGenFunction::EmitBranchToCounterBlock(
   EmitBranch(NextBlock);
 }
 
+llvm::MDNode *CodeGenFunction::getUnpredictableMetadata(const Expr *Cond) {
+  // If the branch has a condition wrapped by __builtin_unpredictable,
+  // create metadata that specifies that the branch is unpredictable.
+  // Don't bother if not optimizing because that metadata would not be used.
+  auto *Call = dyn_cast<CallExpr>(Cond->IgnoreImpCasts());
+  if (Call && CGM.getCodeGenOpts().OptimizationLevel != 0) {
+    auto *FD = dyn_cast_or_null<FunctionDecl>(Call->getCalleeDecl());
+    if (FD && FD->getBuiltinID() == Builtin::BI__builtin_unpredictable) {
+      llvm::MDBuilder MDHelper(getLLVMContext());
+      return MDHelper.createUnpredictable();
+    }
+  }
+  return nullptr;
+}
+
 /// EmitBranchOnBoolExpr - Emit a branch on a boolean condition (e.g. for an if
 /// statement) to the specified blocks.  Based on the condition, this might try
 /// to simplify the codegen of the conditional based on the branch.
@@ -2125,19 +2140,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
   }
 
   llvm::MDNode *Weights = nullptr;
-  llvm::MDNode *Unpredictable = nullptr;
-
-  // If the branch has a condition wrapped by __builtin_unpredictable,
-  // create metadata that specifies that the branch is unpredictable.
-  // Don't bother if not optimizing because that metadata would not be used.
-  auto *Call = dyn_cast<CallExpr>(Cond->IgnoreImpCasts());
-  if (Call && CGM.getCodeGenOpts().OptimizationLevel != 0) {
-    auto *FD = dyn_cast_or_null<FunctionDecl>(Call->getCalleeDecl());
-    if (FD && FD->getBuiltinID() == Builtin::BI__builtin_unpredictable) {
-      llvm::MDBuilder MDHelper(getLLVMContext());
-      Unpredictable = MDHelper.createUnpredictable();
-    }
-  }
+  llvm::MDNode *Unpredictable = getUnpredictableMetadata(Cond);
 
   // If there is a Likelihood knowledge for the cond, lower it.
   // Note that if not optimizing this won't emit anything.

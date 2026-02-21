@@ -5252,6 +5252,11 @@ public:
                                 Stmt::Likelihood LH = Stmt::LH_None,
                                 const Expr *CntrIdx = nullptr);
 
+  // getUnpredictableMetadata - If the expression is a call to
+  // __builtin_unpredictable, get the corresponding metadata. Otherwise returns
+  // nullptr.
+  llvm::MDNode *getUnpredictableMetadata(const Expr *Cond);
+
   /// EmitBranchOnBoolExpr - Emit a branch on a boolean condition (e.g. for an
   /// if statement) to the specified blocks.  Based on the condition, this might
   /// try to simplify the codegen of the conditional based on the branch.
