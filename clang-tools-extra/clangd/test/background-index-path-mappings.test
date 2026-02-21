@@ -1,0 +1,39 @@
+# Generate a canonical index at %/t, then copy the shards to a second workspace
+# at %/t2. Using --background-index-path-mappings, the second client should
+# reuse the transferred shards without reindexing and go-to-definition should
+# return local paths.
+
+# Build the canonical index at %/t
+# RUN: rm -rf %/t
+# RUN: cp -r %/S/Inputs/background-index %/t
+# RUN: sed -e "s|DIRECTORY|%/t|" %/t/definition.jsonrpc.tmpl > %/t/definition.jsonrpc.1
+# RUN: sed -e "s|DIRECTORY|%/t|" %/t/compile_commands.json.tmpl > %/t/compile_commands.json
+# On Windows, we need the URI in didOpen to look like "uri":"file:///C:/..."
+# RUN: sed -E -e 's|"file://([A-Z]):/|"file:///\1:/|g' %/t/definition.jsonrpc.1 > %/t/definition.jsonrpc
+# RUN: clangd -background-index -lit-test < %/t/definition.jsonrpc | FileCheck %/t/definition.jsonrpc
+
+# Set up a second workspace at %/t2 with the same source and copied shards
+# RUN: rm -rf %/t2
+# RUN: mkdir -p %/t2
+# RUN: cp -r %/S/Inputs/background-index/* %/t2/
+# RUN: mkdir -p %/t2/.cache/clangd/index
+# RUN: cp %/t/.cache/clangd/index/*.idx %/t2/.cache/clangd/index/
+# RUN: mkdir -p %/t2/sub_dir/.cache/clangd/index
+# RUN: cp %/t/sub_dir/.cache/clangd/index/*.idx %/t2/sub_dir/.cache/clangd/index/
+# RUN: sed -e "s|DIRECTORY|%/t2|" %/S/Inputs/background-index/compile_commands.json.tmpl > %/t2/compile_commands.json
+# RUN: sed -e "s|DIRECTORY|%/t2|" %/S/Inputs/background-index/definition.jsonrpc.tmpl > %/t2/definition.jsonrpc.1
+# RUN: sed -E -e 's|"file://([A-Z]):/|"file:///\1:/|g' %/t2/definition.jsonrpc.1 > %/t2/definition.jsonrpc
+
+# Run clangd in the second workspace with a path mapping from local to canonical
+# RUN: clangd -background-index --background-index-path-mappings=%/t2=%/t -lit-test < %/t2/definition.jsonrpc > %/t2/clangd-output.json
+
+# Go-to-definition should work and return a local (%/t2) path
+# RUN: FileCheck %/t2/definition.jsonrpc < %/t2/clangd-output.json
+# On Windows, strip the extra / from file:///C:/ URIs to normalize for FileCheck.
+# RUN: sed -E -e 's|"file:///([A-Z]):/|"file://\1:/|g' %/t2/clangd-output.json | FileCheck --check-prefix=LOCAL-RESULT %s -DDIR=%/t2
+# LOCAL-RESULT: "uri": "file://[[DIR]]/foo.cpp"
+
+# The shard filenames must be unchanged, proving that no reindexing occurred
+# RUN: ls %/t/.cache/clangd/index/ | sort > %/t/shards-canonical.txt
+# RUN: ls %/t2/.cache/clangd/index/ | sort > %/t2/shards-local.txt
+# RUN: diff %/t/shards-canonical.txt %/t2/shards-local.txt
