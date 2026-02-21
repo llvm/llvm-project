@@ -461,6 +461,8 @@ def ext_warn_gnu_final : ExtWarn<
 // Declarations.
 def err_typename_requires_specqual : Error<
   "type name requires a specifier or qualifier">;
+def err_annotation_used_on : Error<
+  "annotations are not permitted on %select{defining-type-id}0">;
 def err_typename_invalid_storageclass : Error<
   "type name does not allow storage class to be specified">;
 def err_typename_invalid_functionspec : Error<
@@ -800,6 +802,10 @@ def err_cxx11_attribute_forbids_ellipsis : Error<
 def warn_cxx14_compat_using_attribute_ns : Warning<
   "default scope specifier for attributes is incompatible with C++ standards "
   "before C++17">, InGroup<CXXPre17Compat>, DefaultIgnore;
+def err_cxx26_compat_annotation : ExtWarn<
+  "annotations are a C++26 extension">, InGroup<CXXPre26Compat>, DefaultError;
+def err_mixed_attributes_and_annotations : Error<
+  "attribute specifier cannot contain both attributes and annotations">;
 def ext_using_attribute_ns : ExtWarn<
   "default scope specifier for attributes is a C++17 extension">,
   InGroup<CXX17>;
@@ -1850,6 +1856,8 @@ def err_placeholder_expected_auto_or_decltype_auto : Error<
 let CategoryName = "Reflection Diagnostics" in {
 def err_cannot_reflect_operand : Error<
   "unknown or unimplemented reflectable entity">;
+def err_annotation_with_using : Error<
+  "annotations are not permitted following an attribute-using-prefix">;
 }
 
 def warn_max_tokens : Warning<

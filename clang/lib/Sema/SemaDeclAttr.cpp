@@ -6611,6 +6611,85 @@ static void handleRequiresCapabilityAttr(Sema &S, Decl *D,
   D->addAttr(RCA);
 }
 
+static void handleCxx26AnnotationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  Expr *CE = AL.getArgAsExpr(0);
+  // If the expression is dependent we merely attach an unevaluated annotation
+  // to be later evaluated at instantiation.
+  if (CE->isValueDependent()) {
+    D->addAttr(CXX26AnnotationAttr::Create(S.Context, CE, AL));
+    return;
+  }
+
+  // Let E be the expression std​::​meta​::​reflect_constant(CE). E
+  // shall be a constant expression; the result of E is the underlying constant
+  // of the annotation. Among other requirements it means we need to check that
+  // the type obeys is_copy_construbtible.
+  if (const CXXRecordDecl *RD = CE->getType()->getAsCXXRecordDecl()) {
+    for (auto *Ctor : RD->ctors()) {
+      if (Ctor->isCopyOrMoveConstructor() &&
+          (Ctor->isDeleted() || Ctor->getAccess() == AS_private)) {
+        S.Diag(CE->getBeginLoc(),
+               diag::err_annotation_argument_copy_precondition);
+        S.NoteDeletedFunction(const_cast<CXXConstructorDecl *>(Ctor));
+        return;
+      }
+    }
+  }
+
+  // Create a copy
+  if (CE->isLValue()) {
+    if (CE->getType()->isRecordType()) {
+      InitializedEntity Entity = InitializedEntity::InitializeTemporary(
+          CE->getType().getUnqualifiedType());
+      InitializationKind Kind =
+          InitializationKind::CreateCopy(CE->getExprLoc(), SourceLocation());
+      InitializationSequence Seq(S, Entity, Kind, CE);
+
+      ExprResult CopyResult = Seq.Perform(S, Entity, Kind, CE);
+      if (CopyResult.isInvalid()) {
+        S.Diag(CE->getBeginLoc(),
+               diag::err_annotation_argument_copy_precondition);
+        return;
+      }
+      CE = CopyResult.get();
+    } else {
+      ExprResult RVExprResult = S.DefaultLvalueConversion(AL.getArgAsExpr(0));
+      assert(!RVExprResult.isInvalid() && RVExprResult.get());
+      CE = RVExprResult.get();
+    }
+  }
+
+  Expr::EvalResult Result;
+
+  SmallVector<PartialDiagnosticAt, 4> Notes;
+  Result.Diag = &Notes;
+
+  // Argument to annotation must be of structural type.
+  if (!CE->getType()->isStructuralType()) {
+    S.Diag(CE->getBeginLoc(), diag::err_attribute_argument_type)
+        << "C++26 annotation" << /*value or structural type*/ 5
+        << CE->getSourceRange();
+    return;
+  }
+  // Argument to annotation must be usable as template argument.
+  ConstantExprKind CEKind = (CE->getType()->isClassType()
+                                 ? ConstantExprKind::ClassTemplateArgument
+                                 : ConstantExprKind::NonClassTemplateArgument);
+  if (!CE->EvaluateAsConstantExpr(Result, S.Context, CEKind)) {
+    S.Diag(CE->getBeginLoc(), diag::err_attribute_argument_type)
+        << "C++26 annotation" << /*template arg=*/4 << CE->getSourceRange();
+    for (auto P : Notes)
+      S.Diag(P.first, P.second);
+    return;
+  }
+  auto *Annot = CXX26AnnotationAttr::Create(S.Context, CE, AL);
+  if (Result.Val.hasValue()) {
+    Annot->setValue(Result.Val);
+    Annot->setEqLoc(AL.getLoc());
+  }
+  D->addAttr(Annot);
+}
+
 static void handleDeprecatedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (const auto *NSD = dyn_cast<NamespaceDecl>(D)) {
     if (NSD->isAnonymousNamespace()) {
@@ -7453,6 +7532,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Constructor:
       handleConstructorAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_CXX26Annotation:
+    handleCxx26AnnotationAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Deprecated:
     handleDeprecatedAttr(S, D, AL);

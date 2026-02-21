@@ -61,7 +61,10 @@ public:
 
     /// The attibute has no source code manifestation and is only created
     /// implicitly.
-    AS_Implicit
+    AS_Implicit,
+
+    /// The attribute is a C++26 annotation.
+    AS_Annotation,
   };
 
   enum Kind {
@@ -133,6 +136,7 @@ public:
     static Form ContextSensitiveKeyword() { return AS_ContextSensitiveKeyword; }
     static Form HLSLAnnotation() { return AS_HLSLAnnotation; }
     static Form Implicit() { return AS_Implicit; }
+    static Form Annotation() { return AS_Annotation; }
 
   private:
     constexpr Form(Syntax SyntaxUsed)
@@ -156,7 +160,7 @@ public:
         SpellingIndex(FormUsed.getSpellingIndex()),
         IsAlignas(FormUsed.isAlignas()),
         IsRegularKeywordAttribute(FormUsed.isRegularKeywordAttribute()) {
-    assert(SyntaxUsed >= AS_GNU && SyntaxUsed <= AS_Implicit &&
+    assert(SyntaxUsed >= AS_GNU && SyntaxUsed <= AS_Annotation &&
            "Invalid syntax!");
   }
 
@@ -189,6 +193,7 @@ public:
     return Form(getSyntax(), SpellingIndex, IsAlignas,
                 IsRegularKeywordAttribute);
   }
+
   const IdentifierInfo *getAttrName() const { return AttrName; }
   void setAttrName(const IdentifierInfo *AttrNameII) { AttrName = AttrNameII; }
   SourceLocation getLoc() const { return AttrRange.getBegin(); }
@@ -225,6 +230,8 @@ public:
   bool isClangScope() const;
 
   bool isCXX11Attribute() const { return SyntaxUsed == AS_CXX11 || IsAlignas; }
+
+  bool isCXX26Annotation() const { return SyntaxUsed == AS_Annotation; }
 
   bool isC23Attribute() const { return SyntaxUsed == AS_C23; }
 

@@ -3439,9 +3439,12 @@ def err_attribute_sizeless_type : Error<
 def err_attribute_argument_n_type : Error<
   "%0 attribute requires parameter %1 to be %select{int or bool|an integer "
   "constant|a string|an identifier|a constant expression|a builtin function}2">;
+def err_annotation_argument_copy_precondition : Error<
+  "annotation requires an eligible copy constructor">;
 def err_attribute_argument_type : Error<
   "%0 attribute requires %select{int or bool|an integer "
-  "constant|a string|an identifier}1">;
+  "constant|a string|an identifier|an expression usable as a template argument|"
+  "a value of structural type}1">;
 def err_attribute_argument_out_of_range : Error<
   "%0 attribute requires integer constant between %1 and %2 inclusive">;
 def err_init_priority_object_attr : Error<

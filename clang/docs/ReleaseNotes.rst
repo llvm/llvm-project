@@ -173,6 +173,7 @@ Removed Compiler Flags
 Attribute Changes in Clang
 --------------------------
 
+- Annotations for C++26, originally proposed in P3394, are supported and gated under the `-freflection` flag (still experimental).
 - Added new attribute ``stack_protector_ignore`` to opt specific local variables out of
   the analysis which determines if a function should get a stack protector.  A function
   will still generate a stack protector if other local variables or command line flags

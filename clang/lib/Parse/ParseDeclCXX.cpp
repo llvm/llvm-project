@@ -17,6 +17,7 @@
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DiagnosticParse.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/LiteralSupport.h"
@@ -4368,6 +4369,23 @@ static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
   }
 }
 
+void Parser::ParseAnnotationSpecifier(ParsedAttributes &Attrs,
+                                      SourceLocation *EndLoc) {
+  assert(Tok.is(tok::equal) && "not an annotation");
+  SourceLocation EqLoc = ConsumeToken();
+
+  ExprResult AnnotExpr = ParseConstantExpression();
+  if (AnnotExpr.isInvalid() || AnnotExpr.get()->containsErrors())
+    return;
+
+  ArgsVector ArgExprs;
+  ArgExprs.push_back(AnnotExpr.get());
+  Attrs.addNew(EqLoc, {}, ArgExprs.data(), 1, ParsedAttr::Form::Annotation());
+
+  if (EndLoc)
+    *EndLoc = AnnotExpr.get()->getEndLoc();
+}
+
 bool Parser::ParseCXXAssumeAttributeArg(
     ParsedAttributes &Attrs, IdentifierInfo *AttrName,
     SourceLocation AttrNameLoc, IdentifierInfo *ScopeName,
@@ -4607,24 +4625,50 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
       Diag(Tok.getLocation(), diag::err_expected) << tok::colon;
   }
 
-  bool AttrParsed = false;
+  bool HasAttribute = false;
+  bool HasAnnotation = false;
   while (!Tok.isOneOf(tok::r_square, tok::semi, tok::eof)) {
-    if (AttrParsed) {
-      // If we parsed an attribute, a comma is required before parsing any
-      // additional attributes.
+    // If we parsed an attribute/annotation, a comma is required before parsing
+    // any additional ones.
+    if (HasAttribute || HasAnnotation) {
       if (ExpectAndConsume(tok::comma)) {
         SkipUntil(tok::r_square, StopAtSemi | StopBeforeMatch);
         continue;
       }
-      AttrParsed = false;
     }
 
-    // Eat all remaining superfluous commas before parsing the next attribute.
+    // Eat all remaining superfluous commas before parsing the next attribute
+    // or annotation.
     while (TryConsumeToken(tok::comma))
       ;
 
     SourceLocation ScopeLoc, AttrLoc;
     IdentifierInfo *ScopeName = nullptr, *AttrName = nullptr;
+
+    // A '=' token marks the beginning of an annotation with the restriction
+    //  - must not be in C++ < 26,
+    //  - must not have seen 'using X::',
+    //  - must not mix with an attribute.
+    if (Tok.is(tok::equal)) {
+      if (!getLangOpts().CPlusPlus26) {
+        Diag(Tok.getLocation(), diag::err_cxx26_compat_annotation);
+        SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
+        continue;
+      }
+      if (CommonScopeName) {
+        Diag(Tok.getLocation(), diag::err_annotation_with_using);
+        SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
+        continue;
+      }
+      if (HasAttribute) {
+        Diag(Tok.getLocation(), diag::err_mixed_attributes_and_annotations);
+        SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
+        continue;
+      }
+      ParseAnnotationSpecifier(Attrs, EndLoc);
+      HasAnnotation = true;
+      continue;
+    }
 
     AttrName = TryParseCXX11AttributeIdentifier(
         AttrLoc, SemaCodeCompletion::AttributeCompletion::Attribute,
@@ -4658,12 +4702,17 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
       }
     }
 
-    // Parse attribute arguments
-    if (Tok.is(tok::l_paren))
-      AttrParsed = ParseCXX11AttributeArgs(AttrName, AttrLoc, Attrs, EndLoc,
+    // Parse attribute arguments.
+    HasAttribute = Tok.is(tok::l_paren) &&
+                   ParseCXX11AttributeArgs(AttrName, AttrLoc, Attrs, EndLoc,
                                            ScopeName, ScopeLoc, OpenMPTokens);
 
-    if (!AttrParsed) {
+    if (!HasAttribute) {
+      if (HasAnnotation) {
+        Diag(Tok.getLocation(), diag::err_mixed_attributes_and_annotations);
+        SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
+        continue;
+      }
       Attrs.addNew(AttrName,
                    SourceRange(ScopeLoc.isValid() && CommonScopeLoc.isInvalid()
                                    ? ScopeLoc
@@ -4673,7 +4722,7 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
                    nullptr, 0,
                    getLangOpts().CPlusPlus ? ParsedAttr::Form::CXX11()
                                            : ParsedAttr::Form::C23());
-      AttrParsed = true;
+      HasAttribute = true;
     }
 
     if (TryConsumeToken(tok::ellipsis))
