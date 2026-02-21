@@ -23,6 +23,7 @@ class LinuxCoreTestCase(TestBase):
     _ppc64le_pid = 28147
     _riscv64_gpr_fpr_pid = 1089
     _riscv64_gpr_only_pid = 97
+    _riscv32_gpr_csr_pid = 0
     _loongarch64_pid = 456735
 
     _aarch64_regions = 4
@@ -31,6 +32,7 @@ class LinuxCoreTestCase(TestBase):
     _s390x_regions = 2
     _ppc64le_regions = 2
     _riscv64_regions = 4
+    _riscv32_regions = 1
     _loongarch64_regions = 4
 
     @skipIfLLVMTargetMissing("AArch64")
@@ -82,6 +84,21 @@ class LinuxCoreTestCase(TestBase):
             self._riscv64_gpr_only_pid,
             self._riscv64_regions,
             "a.out",
+        )
+
+    @skipIfLLVMTargetMissing("RISCV")
+    def test_riscv32_gpr_csr(self):
+        """Test that lldb can read the process information from a riscv32 bare-
+        metal core file made for a RV32IMCXQCIXQCCMP target having GP and CS
+        registers."""
+        # NB: The value of 'elf_prstatus.pr_pid' in 'NT_PRSTATUS' within
+        # 'riscv32-imcxqcixqccmp.gpr_csr.core' has been updated from '1' to '0'
+        # to ensure consistency between the process and thread IDs.
+        self.do_test(
+            "riscv32-imcxqcixqccmp.gpr_csr",
+            self._riscv32_gpr_csr_pid,
+            self._riscv32_regions,
+            None,
         )
 
     @skipIfLLVMTargetMissing("LoongArch")
@@ -895,6 +912,132 @@ class LinuxCoreTestCase(TestBase):
             matching=False,
             substrs=["registers were unavailable"],
         )
+
+    @skipIfLLVMTargetMissing("RISCV")
+    def test_riscv32_regs_gpr_csr(self):
+        # check basic registers using 32 bit RISC-V core file
+        target = self.dbg.CreateTarget(None)
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LoadCore("riscv32-imcxqcixqccmp.gpr_csr.core")
+
+        gpr_values = {
+            'pc': ("0x0000052e", None),
+            'ra': ("0x00000514", "x1"),
+            'sp': ("0x0001efa0", "x2"),
+            'gp': ("0x00000d70", "x3"),
+            'tp': ("0x0002f000", "x4"),
+            't0': ("0xffffffff", "x5"),
+            't1': ("0x00000000", "x6"),
+            't2': ("0x00000000", "x7"),
+            'fp': ("0x0001efc0", "x8"),
+            's1': ("0x00000000", "x9"),
+            'a0': ("0x0000002f", "x10"),
+            'a1': ("0x00000000", "x11"),
+            'a2': ("0x00000000", "x12"),
+            'a3': ("0x00000000", "x13"),
+            'a4': ("0x00000000", "x14"),
+            'a5': ("0x00000000", "x15"),
+            'a6': ("0x00000000", "x16"),
+            'a7': ("0x00000000", "x17"),
+            's2': ("0x00000000", "x18"),
+            's3': ("0x00000000", "x19"),
+            's4': ("0x00000000", "x20"),
+            's5': ("0x00000000", "x21"),
+            's6': ("0x00000000", "x22"),
+            's7': ("0x00000000", "x23"),
+            's8': ("0x00000000", "x24"),
+            's9': ("0x00000000", "x25"),
+            's10': ("0x00000000", "x26"),
+            's11': ("0x00000000", "x27"),
+            't3': ("0x00000000", "x28"),
+            't4': ("0x00000000", "x29"),
+            't5': ("0x00000000", "x30"),
+            't6': ("0x00000000", "x31"),
+            'zero': ("0x00000000", "x0"),
+        }
+
+        csr_values= {
+            'mstatus': ("0x00001800", "768"),
+            'mie': ("0x00000000", "772"),
+            'mtvec': ("0x00000004", "773"),
+            'mepc': ("0x00000000", "833"),
+            'mcause': ("0x00000000", "834"),
+            'mip': ("0x00000000", "836"),
+            '1984': ("0x00081000", None),
+            'mnepc': ("0x00000000", "1857"),
+            'mncause': ("0x00000000", "1858"),
+            '1987': ("0x00000004", None),
+            '2000': ("0x00000000", None),
+            '2004': ("0x00000000", None),
+            'mscratch': ("0x00000000", "832"),
+            'mnscratch': ("0x00000000", "1856"),
+            '1992': ("0x00000000", None),
+            'mcycle': ("0x00000000", "2816"),
+            'mimpid': ("0x00000100", "3859"),
+            'mhartid': ("0x00000000", "3860"),
+            '2032': ("0x00000000", None),
+            '2033': ("0x00000000", None),
+            '2034': ("0x00000000", None),
+            '2035': ("0x00000000", None),
+            '2036': ("0x00000000", None),
+            '2037': ("0x00000000", None),
+            '2038': ("0x00000000", None),
+            '2039': ("0x00000000", None),
+            '2040': ("0xfffffffe", None),
+            '2041': ("0x00000000", None),
+            '2042': ("0x00000000", None),
+            '2043': ("0x00000000", None),
+            '2044': ("0x00000000", None),
+            '2045': ("0x00000000", None),
+            '2046': ("0x00000000", None),
+            '2047': ("0x00000000", None),
+            '3008': ("0x00000000", None),
+            '3009': ("0x00000000", None),
+            '3010': ("0x00000000", None),
+            '3011': ("0x00000000", None),
+            '3012': ("0x00000000", None),
+            '3013': ("0x00000000", None),
+            '3014': ("0x00000000", None),
+            '3015': ("0x00000000", None),
+            '3016': ("0x00000000", None),
+            '3017': ("0x00000000", None),
+            '3018': ("0x00000000", None),
+            '3019': ("0x00000000", None),
+            '3020': ("0x00000000", None),
+            '3021': ("0x00000000", None),
+            '3022': ("0x00000000", None),
+            '3023': ("0x00000000", None),
+            '3024': ("0x00000000", None),
+            '3025': ("0x00000000", None),
+            '3026': ("0x00000000", None),
+            '3027': ("0x00000000", None),
+            '3028': ("0x00000000", None),
+            '3029': ("0x00000000", None),
+            '3030': ("0x00000000", None),
+            '3031': ("0x00000000", None),
+            '3032': ("0x00000000", None),
+            '3033': ("0x00000000", None),
+            '3034': ("0x00000000", None),
+            '3035': ("0x00000000", None),
+            '3036': ("0x00000000", None),
+            '3037': ("0x00000000", None),
+            '3038': ("0x00000000", None),
+            '3039': ("0x00000000", None),
+        }
+
+        for regname, values in {**gpr_values, **csr_values}.items():
+            value, alias = values
+            self.expect(
+                "register read {}".format(regname),
+                substrs=["{} = {}".format(regname, value)],
+            )
+            if alias:
+                self.expect(
+                    "register read {}".format(alias),
+                    substrs=["{} = {}".format(regname, value)],
+                )
+
+        self.expect("register read --all")
 
     @skipIfLLVMTargetMissing("LoongArch")
     def test_loongarch64_regs(self):
