@@ -29,13 +29,15 @@ class ARMMachObjectWriter : public MCMachObjectTargetWriter {
   void recordARMScatteredRelocation(MachObjectWriter *Writer,
                                     const MCAssembler &Asm,
                                     const MCFragment *Fragment,
-                                    const MCFixup &Fixup, MCValue Target,
+                                    const MCFixup &Fixup,
+                                    const MCValue &Target,
                                     unsigned Type, unsigned Log2Size,
                                     uint64_t &FixedValue);
   void recordARMScatteredHalfRelocation(MachObjectWriter *Writer,
                                         const MCAssembler &Asm,
                                         const MCFragment *Fragment,
-                                        const MCFixup &Fixup, MCValue Target,
+                                        const MCFixup &Fixup,
+                                        const MCValue &Target,
                                         uint64_t &FixedValue);
 
   bool requiresExternRelocation(MachObjectWriter *Writer,
@@ -132,7 +134,7 @@ static bool getARMFixupKindMachOInfo(unsigned Kind, unsigned &RelocType,
 
 void ARMMachObjectWriter::recordARMScatteredHalfRelocation(
     MachObjectWriter *Writer, const MCAssembler &Asm,
-    const MCFragment *Fragment, const MCFixup &Fixup, MCValue Target,
+    const MCFragment *Fragment, const MCFixup &Fixup, const MCValue &Target,
     uint64_t &FixedValue) {
   uint32_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
 
@@ -239,7 +241,7 @@ void ARMMachObjectWriter::recordARMScatteredHalfRelocation(
 
 void ARMMachObjectWriter::recordARMScatteredRelocation(
     MachObjectWriter *Writer, const MCAssembler &Asm,
-    const MCFragment *Fragment, const MCFixup &Fixup, MCValue Target,
+    const MCFragment *Fragment, const MCFixup &Fixup, const MCValue &Target,
     unsigned Type, unsigned Log2Size, uint64_t &FixedValue) {
   uint32_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
 

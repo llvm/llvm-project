@@ -12,8 +12,8 @@
 
 using namespace llvm;
 
-static msgpack::DocNode getNode(msgpack::DocNode DN, msgpack::Type Type,
-                                MCValue Val) {
+static msgpack::DocNode getNode(const msgpack::DocNode &DN, msgpack::Type Type,
+                                const MCValue &Val) {
   msgpack::Document *Doc = DN.getDocument();
   switch (Type) {
   default:

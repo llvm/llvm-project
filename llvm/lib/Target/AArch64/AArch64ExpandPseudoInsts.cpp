@@ -62,8 +62,8 @@ private:
                 MachineBasicBlock::iterator &NextMBBI);
   bool expandMultiVecPseudo(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI,
-                            TargetRegisterClass ContiguousClass,
-                            TargetRegisterClass StridedClass,
+                            const TargetRegisterClass &ContiguousClass,
+                            const TargetRegisterClass &StridedClass,
                             unsigned ContiguousOpc, unsigned StridedOpc);
   bool expandFormTuplePseudo(MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MBBI,
@@ -1188,7 +1188,8 @@ AArch64ExpandPseudo::expandCondSMToggle(MachineBasicBlock &MBB,
 
 bool AArch64ExpandPseudo::expandMultiVecPseudo(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    TargetRegisterClass ContiguousClass, TargetRegisterClass StridedClass,
+    const TargetRegisterClass &ContiguousClass,
+    const TargetRegisterClass &StridedClass,
     unsigned ContiguousOp, unsigned StridedOpc) {
   MachineInstr &MI = *MBBI;
   Register Tuple = MI.getOperand(0).getReg();

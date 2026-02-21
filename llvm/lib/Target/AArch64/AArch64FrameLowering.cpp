@@ -3080,7 +3080,7 @@ public:
   }
   // Add an instruction to be replaced. Instructions must be added in the
   // ascending order of Offset, and have to be adjacent.
-  void addInstruction(TagStoreInstr I) {
+  void addInstruction(const TagStoreInstr &I) {
     assert((TagStores.empty() ||
             TagStores.back().Offset + TagStores.back().Size == I.Offset) &&
            "Non-adjacent tag store instructions.");

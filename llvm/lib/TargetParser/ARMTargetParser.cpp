@@ -667,7 +667,7 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   llvm_unreachable("invalid arch name");
 }
 
-void ARM::PrintSupportedExtensions(StringMap<StringRef> DescMap) {
+void ARM::PrintSupportedExtensions(StringMap<StringRef> &DescMap) {
   outs() << "All available -march extensions for ARM\n\n"
          << "    " << left_justify("Name", 20)
          << (DescMap.empty() ? "\n" : "Description\n");

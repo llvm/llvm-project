@@ -44,13 +44,13 @@ private:
   struct CmpConstants;
   struct InsertInfo;
 
-  bool selectCmp(CmpConstants Helper, MachineInstrBuilder &MIB,
+  bool selectCmp(const CmpConstants &Helper, MachineInstrBuilder &MIB,
                  MachineRegisterInfo &MRI) const;
 
   // Helper for inserting a comparison sequence that sets \p ResReg to either 1
   // if \p LHSReg and \p RHSReg are in the relationship defined by \p Cond, or
   // \p PrevRes otherwise. In essence, it computes PrevRes OR (LHS Cond RHS).
-  bool insertComparison(CmpConstants Helper, InsertInfo I, unsigned ResReg,
+  bool insertComparison(const CmpConstants &Helper, InsertInfo I, unsigned ResReg,
                         ARMCC::CondCodes Cond, unsigned LHSReg, unsigned RHSReg,
                         unsigned PrevRes) const;
 
@@ -525,7 +525,7 @@ bool ARMInstructionSelector::validReg(MachineRegisterInfo &MRI, unsigned Reg,
   return true;
 }
 
-bool ARMInstructionSelector::selectCmp(CmpConstants Helper,
+bool ARMInstructionSelector::selectCmp(const CmpConstants &Helper,
                                        MachineInstrBuilder &MIB,
                                        MachineRegisterInfo &MRI) const {
   const InsertInfo I(MIB);
@@ -572,7 +572,7 @@ bool ARMInstructionSelector::selectCmp(CmpConstants Helper,
   return true;
 }
 
-bool ARMInstructionSelector::insertComparison(CmpConstants Helper, InsertInfo I,
+bool ARMInstructionSelector::insertComparison(const CmpConstants &Helper, InsertInfo I,
                                               unsigned ResReg,
                                               ARMCC::CondCodes Cond,
                                               unsigned LHSReg, unsigned RHSReg,
