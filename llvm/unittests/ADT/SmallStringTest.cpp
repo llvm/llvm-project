@@ -27,7 +27,7 @@ protected:
 
   StringType theString;
 
-  void assertEmpty(StringType & v) {
+  void assertEmpty(StringType &v) {
     // Size tests
     EXPECT_EQ(0u, v.size());
     EXPECT_TRUE(v.empty());
@@ -113,6 +113,37 @@ TEST_F(SmallStringTest, AppendStringRefs) {
   theString.append({Jkl, Mno, Pqr, Stu});
   EXPECT_EQ(21u, theString.size());
   EXPECT_STREQ("abcdefghijklmnopqrstu", theString.c_str());
+}
+
+TEST(SmallStringTest, StartsWith) {
+  SmallString<32> Str("hello");
+  EXPECT_TRUE(Str.starts_with(""));
+  EXPECT_TRUE(Str.starts_with("he"));
+  EXPECT_FALSE(Str.starts_with("helloworld"));
+  EXPECT_FALSE(Str.starts_with("hi"));
+  EXPECT_TRUE(Str.starts_with('h'));
+  EXPECT_FALSE(Str.starts_with('i'));
+}
+
+TEST(SmallStringTest, EndsWith) {
+  SmallString<32> Str("hello");
+  EXPECT_TRUE(Str.ends_with(""));
+  EXPECT_TRUE(Str.ends_with("lo"));
+  EXPECT_FALSE(Str.ends_with("helloworld"));
+  EXPECT_FALSE(Str.ends_with("worldhello"));
+  EXPECT_FALSE(Str.ends_with("so"));
+  EXPECT_TRUE(Str.ends_with('o'));
+  EXPECT_FALSE(Str.ends_with('p'));
+}
+
+TEST(SmallStringTest, Contains) {
+  SmallString<32> Str("hello");
+  EXPECT_TRUE(Str.contains(""));
+  EXPECT_TRUE(Str.contains("ell"));
+  EXPECT_TRUE(Str.contains("hello"));
+  EXPECT_FALSE(Str.contains("world"));
+  EXPECT_TRUE(Str.contains('e'));
+  EXPECT_FALSE(Str.contains('w'));
 }
 
 TEST_F(SmallStringTest, StringRefConversion) {
@@ -203,37 +234,38 @@ TEST_F(SmallStringTest, Realloc) {
 }
 
 TEST_F(SmallStringTest, Comparisons) {
-  EXPECT_GT( 0, SmallString<10>("aab").compare("aad"));
-  EXPECT_EQ( 0, SmallString<10>("aab").compare("aab"));
-  EXPECT_LT( 0, SmallString<10>("aab").compare("aaa"));
-  EXPECT_GT( 0, SmallString<10>("aab").compare("aabb"));
-  EXPECT_LT( 0, SmallString<10>("aab").compare("aa"));
-  EXPECT_LT( 0, SmallString<10>("\xFF").compare("\1"));
+  EXPECT_GT(0, SmallString<10>("aab").compare("aad"));
+  EXPECT_EQ(0, SmallString<10>("aab").compare("aab"));
+  EXPECT_LT(0, SmallString<10>("aab").compare("aaa"));
+  EXPECT_GT(0, SmallString<10>("aab").compare("aabb"));
+  EXPECT_LT(0, SmallString<10>("aab").compare("aa"));
+  EXPECT_LT(0, SmallString<10>("\xFF").compare("\1"));
 
   EXPECT_EQ(-1, SmallString<10>("AaB").compare_insensitive("aAd"));
-  EXPECT_EQ( 0, SmallString<10>("AaB").compare_insensitive("aab"));
-  EXPECT_EQ( 1, SmallString<10>("AaB").compare_insensitive("AAA"));
+  EXPECT_EQ(0, SmallString<10>("AaB").compare_insensitive("aab"));
+  EXPECT_EQ(1, SmallString<10>("AaB").compare_insensitive("AAA"));
   EXPECT_EQ(-1, SmallString<10>("AaB").compare_insensitive("aaBb"));
-  EXPECT_EQ( 1, SmallString<10>("AaB").compare_insensitive("aA"));
-  EXPECT_EQ( 1, SmallString<10>("\xFF").compare_insensitive("\1"));
+  EXPECT_EQ(1, SmallString<10>("AaB").compare_insensitive("aA"));
+  EXPECT_EQ(1, SmallString<10>("\xFF").compare_insensitive("\1"));
 
   EXPECT_EQ(-1, SmallString<10>("aab").compare_numeric("aad"));
-  EXPECT_EQ( 0, SmallString<10>("aab").compare_numeric("aab"));
-  EXPECT_EQ( 1, SmallString<10>("aab").compare_numeric("aaa"));
+  EXPECT_EQ(0, SmallString<10>("aab").compare_numeric("aab"));
+  EXPECT_EQ(1, SmallString<10>("aab").compare_numeric("aaa"));
   EXPECT_EQ(-1, SmallString<10>("aab").compare_numeric("aabb"));
-  EXPECT_EQ( 1, SmallString<10>("aab").compare_numeric("aa"));
+  EXPECT_EQ(1, SmallString<10>("aab").compare_numeric("aa"));
   EXPECT_EQ(-1, SmallString<10>("1").compare_numeric("10"));
-  EXPECT_EQ( 0, SmallString<10>("10").compare_numeric("10"));
-  EXPECT_EQ( 0, SmallString<10>("10a").compare_numeric("10a"));
-  EXPECT_EQ( 1, SmallString<10>("2").compare_numeric("1"));
-  EXPECT_EQ( 0, SmallString<10>("llvm_v1i64_ty").compare_numeric("llvm_v1i64_ty"));
-  EXPECT_EQ( 1, SmallString<10>("\xFF").compare_numeric("\1"));
-  EXPECT_EQ( 1, SmallString<10>("V16").compare_numeric("V1_q0"));
+  EXPECT_EQ(0, SmallString<10>("10").compare_numeric("10"));
+  EXPECT_EQ(0, SmallString<10>("10a").compare_numeric("10a"));
+  EXPECT_EQ(1, SmallString<10>("2").compare_numeric("1"));
+  EXPECT_EQ(0,
+            SmallString<10>("llvm_v1i64_ty").compare_numeric("llvm_v1i64_ty"));
+  EXPECT_EQ(1, SmallString<10>("\xFF").compare_numeric("\1"));
+  EXPECT_EQ(1, SmallString<10>("V16").compare_numeric("V1_q0"));
   EXPECT_EQ(-1, SmallString<10>("V1_q0").compare_numeric("V16"));
   EXPECT_EQ(-1, SmallString<10>("V8_q0").compare_numeric("V16"));
-  EXPECT_EQ( 1, SmallString<10>("V16").compare_numeric("V8_q0"));
+  EXPECT_EQ(1, SmallString<10>("V16").compare_numeric("V8_q0"));
   EXPECT_EQ(-1, SmallString<10>("V1_q0").compare_numeric("V8_q0"));
-  EXPECT_EQ( 1, SmallString<10>("V8_q0").compare_numeric("V1_q0"));
+  EXPECT_EQ(1, SmallString<10>("V8_q0").compare_numeric("V1_q0"));
 }
 
 // Check gtest prints SmallString as a string instead of a container of chars.
