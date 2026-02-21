@@ -579,7 +579,7 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
 // Try to fold sequences of the form:
 //   Hi/lo:    qc.e.li vreg1, s           -> qc.e.li vreg1, s+imm
 //   TailAdd:  shxadd vreg2, vreg3, vreg1 -> deleted
-//   Tail:     lx vreg4, imm(vreg2)       -> qc.lrx vreg4, vreg1, vreg3, (1/2/3)
+//   Tail:     lx vreg4, imm(vreg2)       -> qc.lrx vreg4, vreg1, vreg3, (1-7)
 bool RISCVMergeBaseOffsetOpt::foldShxaddIntoScaledMemory(MachineInstr &Hi,
                                                          MachineInstr &Lo) {
   if (!ST->hasVendorXqcisls() || ST->is64Bit())
@@ -676,16 +676,12 @@ bool RISCVMergeBaseOffsetOpt::foldShxaddIntoScaledMemory(MachineInstr &Hi,
   // Build scaled load/store.
   auto *TII = ST->getInstrInfo();
   auto *MBB = TailMem.getParent();
-  RegState DestRegState;
-  DestRegState = TailMem.mayLoad()
-                     ? RegState::Define
-                     : getKillRegState(TailMem.getOperand(0).isKill());
 
   // Ensure index register satisfies GPRNoX0 class required by QC_LR*/QC_SR*.
   MRI->constrainRegClass(IndexReg, &RISCV::GPRNoX0RegClass);
 
   BuildMI(*MBB, TailMem, TailMem.getDebugLoc(), TII->get(NewOpc))
-      .addReg(TailMem.getOperand(0).getReg(), DestRegState)
+      .add(TailMem.getOperand(0))
       .addReg(BaseReg, getKillRegState(ShxAdd.getOperand(2).isKill()))
       .addReg(IndexReg, getKillRegState(ShxAdd.getOperand(1).isKill()))
       .addImm(ShAmt)
