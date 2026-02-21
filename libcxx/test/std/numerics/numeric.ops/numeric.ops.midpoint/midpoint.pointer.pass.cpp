@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // MSVC warning C5215: a function parameter with a volatile qualified type is deprecated in C++20
 // MSVC warning C5216: a volatile qualified return type is deprecated in C++20
@@ -16,83 +16,72 @@
 
 // template <class _Tp>
 // _Tp* midpoint(_Tp* __a, _Tp* __b) noexcept
-//
+// Constraints:
+//  - T is a complete object type.
 
-#include <numeric>
 #include <cassert>
+#include <cstddef>
+#include <numeric>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 
-
+using FuncPtr = void (*)();
+struct Incomplete;
 
 template <typename T>
-constexpr void constexpr_test()
-{
-    constexpr T array[1000] = {};
-    ASSERT_SAME_TYPE(decltype(std::midpoint(array, array)), const T*);
-    ASSERT_NOEXCEPT(          std::midpoint(array, array));
+concept has_midpoint = requires(T a, T b) { std::midpoint(a, b); };
 
-    static_assert(std::midpoint(array, array)        == array, "");
-    static_assert(std::midpoint(array, array + 1000) == array + 500, "");
+static_assert(!has_midpoint<std::nullptr_t>);
+static_assert(!has_midpoint<FuncPtr>);
+LIBCPP_STATIC_ASSERT(!has_midpoint<Incomplete*>);
 
-    static_assert(std::midpoint(array, array +    9) == array + 4, "");
-    static_assert(std::midpoint(array, array +   10) == array + 5, "");
-    static_assert(std::midpoint(array, array +   11) == array + 5, "");
-    static_assert(std::midpoint(array +    9, array) == array + 5, "");
-    static_assert(std::midpoint(array +   10, array) == array + 5, "");
-    static_assert(std::midpoint(array +   11, array) == array + 6, "");
+static_assert(!has_midpoint<void*>);
+static_assert(!has_midpoint<const void*>);
+static_assert(!has_midpoint<volatile void*>);
+static_assert(!has_midpoint<const volatile void*>);
+
+template <typename T>
+constexpr bool check(T* base, std::ptrdiff_t i, std::ptrdiff_t j, std::ptrdiff_t expect) {
+  return std::midpoint(base + i, base + j) == base + expect;
 }
 
 template <typename T>
-void runtime_test()
-{
-    T array[1000] = {}; // we need an array to make valid pointers
-    ASSERT_SAME_TYPE(decltype(std::midpoint(array, array)), T*);
-    ASSERT_NOEXCEPT(          std::midpoint(array, array));
+constexpr bool test_pointer() {
+  ASSERT_SAME_TYPE(decltype(std::midpoint(std::declval<T*>(), std::declval<T*>())), T*);
+  ASSERT_NOEXCEPT(std::midpoint(std::declval<T*>(), std::declval<T*>()));
 
-    assert(std::midpoint(array, array)        == array);
-    assert(std::midpoint(array, array + 1000) == array + 500);
+  std::remove_cv_t<T> array[20] = {};
+  assert(check(array, 0, 0, 0));
+  assert(check(array, 1, 1, 1));
+  assert(check(array, 0, 9, 4));
+  assert(check(array, 0, 10, 5));
+  assert(check(array, 0, 11, 5));
+  assert(check(array, 9, 0, 5));
+  assert(check(array, 10, 0, 5));
+  assert(check(array, 11, 0, 6));
+  assert(check(array, 0, 18, 9));
+  assert(check(array, 2, 12, 7));
 
-    assert(std::midpoint(array, array +    9) == array + 4);
-    assert(std::midpoint(array, array +   10) == array + 5);
-    assert(std::midpoint(array, array +   11) == array + 5);
-    assert(std::midpoint(array +    9, array) == array + 5);
-    assert(std::midpoint(array +   10, array) == array + 5);
-    assert(std::midpoint(array +   11, array) == array + 6);
-
-    // explicit instantiation
-    ASSERT_SAME_TYPE(decltype(std::midpoint<T>(array, array)), T*);
-    ASSERT_NOEXCEPT(std::midpoint<T>(array, array));
-    assert(std::midpoint<T>(array, array) == array);
-    assert(std::midpoint<T>(array, array + 1000) == array + 500);
+  return true;
 }
 
 template <typename T>
-void pointer_test()
-{
-    runtime_test<               T>();
-    runtime_test<const          T>();
-    runtime_test<      volatile T>();
-    runtime_test<const volatile T>();
+void test() {
+  assert(test_pointer<T>());
+  assert(test_pointer<const T>());
+  assert(test_pointer<volatile T>());
+  assert(test_pointer<const volatile T>());
 
-//  The constexpr tests are always const, but we can test them anyway.
-    constexpr_test<               T>();
-    constexpr_test<const          T>();
-
-//  GCC 9.0.1 (unreleased as of 2019-03) barfs on this, but we have a bot for it.
-//  Uncomment when gcc 9.1 is released
-#ifndef TEST_COMPILER_GCC
-    constexpr_test<      volatile T>();
-    constexpr_test<const volatile T>();
-#endif
+  static_assert(test_pointer<T>());
+  static_assert(test_pointer<const T>());
 }
 
+int main(int, char**) {
+  test<char>();
+  test<int>();
+  test<double>();
 
-int main(int, char**)
-{
-    pointer_test<char>();
-    pointer_test<int>();
-    pointer_test<double>();
-
-    return 0;
+  return 0;
 }

@@ -5,140 +5,122 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
+
 // <numeric>
 
 // template <class _Tp>
 // _Tp midpoint(_Tp __a, _Tp __b) noexcept
-//
+// Constraints:
+//   - T is an arithmetic type other than bool.
 
-#include <stdint.h>
+#include <cassert>
+#include <concepts>
+#include <cstddef>
 #include <limits>
 #include <numeric>
-#include <cassert>
-#include <cstddef>
-#include <cstdint>
+
 #include "test_macros.h"
+#include "type_algorithms.h"
 
 template <typename T>
-void signed_test()
-{
-    constexpr T zero{0};
-    constexpr T one{1};
-    constexpr T two{2};
-    constexpr T three{3};
-    constexpr T four{4};
+concept has_midpoint = requires(T a, T b) { std::midpoint(a, b); };
 
-    ASSERT_SAME_TYPE(decltype(std::midpoint(T(), T())), T);
-    ASSERT_NOEXCEPT(          std::midpoint(T(), T()));
-    using limits = std::numeric_limits<T>;
+static_assert(!has_midpoint<bool>);
+static_assert(!has_midpoint<const bool>);
+static_assert(!has_midpoint<volatile bool>);
+static_assert(!has_midpoint<const volatile bool>);
 
-    static_assert(std::midpoint(one, three) == two, "");
-    static_assert(std::midpoint(three, one) == two, "");
+template <typename T>
+constexpr void test_signed() {
+  ASSERT_SAME_TYPE(decltype(std::midpoint(T{}, T{})), T);
+  ASSERT_NOEXCEPT(std::midpoint(T{}, T{}));
+  using limits = std::numeric_limits<T>;
 
-    assert(std::midpoint(zero, zero) == zero);
-    assert(std::midpoint(zero, two)  == one);
-    assert(std::midpoint(two, zero)  == one);
-    assert(std::midpoint(two, two)   == two);
+  assert(std::midpoint(T{1}, T{3}) == T{2});
+  assert(std::midpoint(T{3}, T{1}) == T{2});
 
-    assert(std::midpoint(one, four)    == two);
-    assert(std::midpoint(four, one)    == three);
-    assert(std::midpoint(three, four)  == three);
-    assert(std::midpoint(four, three)  == four);
+  assert(std::midpoint(T{0}, T{0}) == T{0});
+  assert(std::midpoint(T{0}, T{2}) == T{1});
+  assert(std::midpoint(T{2}, T{0}) == T{1});
+  assert(std::midpoint(T{2}, T{2}) == T{2});
 
-    assert(std::midpoint(T( 3), T( 4)) == T(3));
-    assert(std::midpoint(T( 4), T( 3)) == T(4));
-    assert(std::midpoint(T(-3), T( 4)) == T(0));
-    assert(std::midpoint(T(-4), T( 3)) == T(-1));
-    assert(std::midpoint(T( 3), T(-4)) == T(0));
-    assert(std::midpoint(T( 4), T(-3)) == T(1));
-    assert(std::midpoint(T(-3), T(-4)) == T(-3));
-    assert(std::midpoint(T(-4), T(-3)) == T(-4));
+  assert(std::midpoint(T{1}, T{4}) == T{2});
+  assert(std::midpoint(T{4}, T{1}) == T{3});
+  assert(std::midpoint(T{3}, T{4}) == T{3});
+  assert(std::midpoint(T{4}, T{3}) == T{4});
 
-    static_assert(std::midpoint(limits::min(), limits::max()) == T(-1), "");
-    static_assert(std::midpoint(limits::max(), limits::min()) == T( 0), "");
+  assert(std::midpoint(T{-3}, T{4}) == T{0});
+  assert(std::midpoint(T{-4}, T{3}) == T{-1});
+  assert(std::midpoint(T{3}, T{-4}) == T{0});
+  assert(std::midpoint(T{4}, T{-3}) == T{1});
+  assert(std::midpoint(T{-3}, T{-4}) == T{-3});
+  assert(std::midpoint(T{-4}, T{-3}) == T{-4});
 
-    static_assert(std::midpoint(limits::min(), T(6)) == limits::min()/2 + 3, "");
-    assert(       std::midpoint(T(6), limits::min()) == limits::min()/2 + 3);
-    assert(       std::midpoint(limits::max(), T(6)) == limits::max()/2 + 4);
-    static_assert(std::midpoint(T(6), limits::max()) == limits::max()/2 + 3, "");
+  assert(std::midpoint(limits::min(), limits::max()) == T{-1});
+  assert(std::midpoint(limits::max(), limits::min()) == T{0});
 
-    assert(       std::midpoint(limits::min(), T(-6)) == limits::min()/2 - 3);
-    static_assert(std::midpoint(T(-6), limits::min()) == limits::min()/2 - 3, "");
-    static_assert(std::midpoint(limits::max(), T(-6)) == limits::max()/2 - 2, "");
-    assert(       std::midpoint(T(-6), limits::max()) == limits::max()/2 - 3);
+  assert(std::midpoint(limits::min(), T{6}) == T{limits::min() / 2 + 3});
+  assert(std::midpoint(T{6}, limits::min()) == T{limits::min() / 2 + 3});
+
+  assert(std::midpoint(limits::max(), T{6}) == T{limits::max() / 2 + 4});
+  assert(std::midpoint(T{6}, limits::max()) == T{limits::max() / 2 + 3});
+
+  assert(std::midpoint(limits::min(), T{-6}) == T{limits::min() / 2 - 3});
+  assert(std::midpoint(T{-6}, limits::min()) == T{limits::min() / 2 - 3});
+
+  assert(std::midpoint(limits::max(), T{-6}) == T{limits::max() / 2 - 2});
+  assert(std::midpoint(T{-6}, limits::max()) == T{limits::max() / 2 - 3});
 }
 
 template <typename T>
-void unsigned_test()
-{
-    constexpr T zero{0};
-    constexpr T one{1};
-    constexpr T two{2};
-    constexpr T three{3};
-    constexpr T four{4};
+constexpr void test_unsigned() {
+  ASSERT_SAME_TYPE(decltype(std::midpoint(T{}, T{})), T);
+  ASSERT_NOEXCEPT(std::midpoint(T{}, T{}));
 
-    ASSERT_SAME_TYPE(decltype(std::midpoint(T(), T())), T);
-    ASSERT_NOEXCEPT(          std::midpoint(T(), T()));
-    using limits = std::numeric_limits<T>;
-    const T half_way = (limits::max() - limits::min())/2;
+  using limits     = std::numeric_limits<T>;
+  const T half_way = (limits::max() - limits::min()) / 2;
 
-    static_assert(std::midpoint(one, three) == two, "");
-    static_assert(std::midpoint(three, one) == two, "");
+  assert(std::midpoint(T{1}, T{3}) == T{2});
+  assert(std::midpoint(T{3}, T{1}) == T{2});
 
-    assert(std::midpoint(zero, zero) == zero);
-    assert(std::midpoint(zero, two)  == one);
-    assert(std::midpoint(two, zero)  == one);
-    assert(std::midpoint(two, two)   == two);
+  assert(std::midpoint(T{0}, T{0}) == T{0});
+  assert(std::midpoint(T{0}, T{2}) == T{1});
+  assert(std::midpoint(T{2}, T{0}) == T{1});
+  assert(std::midpoint(T{2}, T{2}) == T{2});
 
-    assert(std::midpoint(one, four)    == two);
-    assert(std::midpoint(four, one)    == three);
-    assert(std::midpoint(three, four)  == three);
-    assert(std::midpoint(four, three)  == four);
+  assert(std::midpoint(T{1}, T{4}) == T{2});
+  assert(std::midpoint(T{4}, T{1}) == T{3});
+  assert(std::midpoint(T{3}, T{4}) == T{3});
+  assert(std::midpoint(T{4}, T{3}) == T{4});
 
-    assert(std::midpoint(limits::min(), limits::max()) == T(half_way));
-    assert(std::midpoint(limits::max(), limits::min()) == T(half_way + 1));
+  assert(std::midpoint(limits::min(), limits::max()) == half_way);
+  assert(std::midpoint(limits::max(), limits::min()) == T{half_way + 1});
 
-    static_assert(std::midpoint(limits::min(), T(6)) == limits::min()/2 + 3, "");
-    assert(       std::midpoint(T(6), limits::min()) == limits::min()/2 + 3);
-    assert(       std::midpoint(limits::max(), T(6)) == half_way + 4);
-    static_assert(std::midpoint(T(6), limits::max()) == half_way + 3, "");
+  assert(std::midpoint(limits::min(), T{6}) == T{3});
+  assert(std::midpoint(T{6}, limits::min()) == T{3});
+
+  assert(std::midpoint(limits::max(), T{6}) == T{half_way + 4});
+  assert(std::midpoint(T{6}, limits::max()) == T{half_way + 3});
 }
 
+constexpr bool test() {
+  types::for_each(types::integer_types(), []<class T>() {
+    if constexpr (!std::same_as<T, bool>) {
+      if constexpr (std::signed_integral<T>) {
+        test_signed<T>();
+      } else {
+        test_unsigned<T>();
+      }
+    }
+  });
+  return true;
+}
 
-int main(int, char**)
-{
-    signed_test<signed char>();
-    signed_test<short>();
-    signed_test<int>();
-    signed_test<long>();
-    signed_test<long long>();
+int main(int, char**) {
+  test();
+  static_assert(test());
 
-    signed_test<std::int8_t>();
-    signed_test<std::int16_t>();
-    signed_test<std::int32_t>();
-    signed_test<std::int64_t>();
-
-    unsigned_test<unsigned char>();
-    unsigned_test<unsigned short>();
-    unsigned_test<unsigned int>();
-    unsigned_test<unsigned long>();
-    unsigned_test<unsigned long long>();
-
-    unsigned_test<std::uint8_t>();
-    unsigned_test<std::uint16_t>();
-    unsigned_test<std::uint32_t>();
-    unsigned_test<std::uint64_t>();
-
-#ifndef TEST_HAS_NO_INT128
-    unsigned_test<__uint128_t>();
-    signed_test<__int128_t>();
-#endif
-
-//     int_test<char>();
-    signed_test<std::ptrdiff_t>();
-    unsigned_test<std::size_t>();
-
-    return 0;
+  return 0;
 }
