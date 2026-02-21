@@ -6958,6 +6958,42 @@ the configuration (without a prefix: ``Auto``).
   This option is **deprecated**. See ``InCStyleCasts`` of
   ``SpacesInParensOptions``.
 
+.. _SpacesInComments:
+
+**SpacesInComments** (``SpacesInCommentsStyle``) :versionbadge:`clang-format 21` :ref:`¶ <SpacesInComments>`
+  Controls whitespace around block comment delimiters.
+
+  .. note::
+
+   This option is not applied to comments starting with ``/*!`` or ``/**``,
+   or to comments ending with ``=`` before the closing ``*/``.
+
+  Possible values:
+
+  * ``SICS_Never`` (in configuration: ``Never``)
+    Ensure no space is present in block comments.
+
+    .. code-block:: c++
+
+      /*comment*/
+
+  * ``SICS_Always`` (in configuration: ``Always``)
+    Ensure a space is present in block comments.
+
+    .. code-block:: c++
+
+      /* comment */
+
+  * ``SICS_Leave`` (in configuration: ``Leave``)
+    Preserve existing spaces, making no formatting changes.
+
+    .. code-block:: c++
+
+      /* comment */
+      /*comment*/
+
+
+
 .. _SpacesInConditionalStatement:
 
 **SpacesInConditionalStatement** (``Boolean``) :versionbadge:`clang-format 10` :ref:`¶ <SpacesInConditionalStatement>`

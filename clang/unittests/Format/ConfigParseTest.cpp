@@ -1088,6 +1088,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               SpacesInLineCommentPrefix.Maximum, 1u);
   EXPECT_EQ(Style.SpacesInLineCommentPrefix.Minimum, 1u);
 
+  Style.SpacesInComments = FormatStyle::SICS_Leave;
+  CHECK_PARSE("SpacesInComments: Never", SpacesInComments,
+              FormatStyle::SICS_Never);
+  CHECK_PARSE("SpacesInComments: Always", SpacesInComments,
+              FormatStyle::SICS_Always);
+  CHECK_PARSE("SpacesInComments: Leave", SpacesInComments,
+              FormatStyle::SICS_Leave);
+
   Style.SpacesInAngles = FormatStyle::SIAS_Always;
   CHECK_PARSE("SpacesInAngles: Never", SpacesInAngles, FormatStyle::SIAS_Never);
   CHECK_PARSE("SpacesInAngles: Always", SpacesInAngles,

@@ -27,6 +27,103 @@ namespace format {
 
 static constexpr StringRef Blanks(" \t\v\f\r");
 
+static FormatStyle::SpacesInCommentsStyle
+resolveCommentSpaceMode(CommentKind Kind,
+                        FormatStyle::SpacesInCommentsStyle GeneralMode) {
+  switch (Kind) {
+  case CommentKind::Plain:
+    return GeneralMode;
+  case CommentKind::Parameter:
+  case CommentKind::DocString:
+    return FormatStyle::SICS_Leave;
+  }
+  llvm_unreachable("Unhandled CommentKind");
+}
+
+static StringRef getTargetWhitespace(FormatStyle::SpacesInCommentsStyle Mode,
+                                     StringRef Original) {
+  switch (Mode) {
+  case FormatStyle::SICS_Always:
+    return " ";
+  case FormatStyle::SICS_Never:
+    return "";
+  case FormatStyle::SICS_Leave:
+    return Original;
+  }
+  llvm_unreachable("Unhandled SpacesInCommentsStyle");
+}
+
+struct CommentLineParts {
+  StringRef LeadingSpace;
+  StringRef Content;
+  StringRef TrailingSpace;
+};
+
+static CommentLineParts splitCommentLine(StringRef Text) {
+  const StringRef Content = Text.trim(Blanks);
+  const size_t LeadingSpaceLength = Content.data() - Text.data();
+  return CommentLineParts{Text.take_front(LeadingSpaceLength), Content,
+                          Text.drop_front(LeadingSpaceLength + Content.size())};
+}
+
+static void applySpaceInBlockComment(const FormatToken &Tok,
+                                     const FormatStyle &Style,
+                                     WhitespaceManager &Whitespaces,
+                                     bool InPPDirective) {
+  const StringRef Text = Tok.TokenText;
+  if (!Text.starts_with("/*") || !Text.ends_with("*/") || Text.size() <= 4)
+    return;
+  const StringRef Body = Text.drop_front(2).drop_back(2);
+
+  const auto SpaceMode = resolveCommentSpaceMode(Tok.getBlockCommentKind(),
+                                                 Style.SpacesInComments);
+  if (SpaceMode == FormatStyle::SICS_Leave)
+    return;
+
+  const auto ReplacePart = [&](StringRef Part, StringRef Replacement) {
+    if (Part == Replacement)
+      return;
+    const size_t Offset = Part.data() - Text.data();
+    Whitespaces.replaceWhitespaceInToken(Tok, Offset, Part.size(), "",
+                                         Replacement, InPPDirective,
+                                         /*Newlines=*/0, /*Spaces=*/0);
+  };
+
+  if (Body.trim(Blanks).empty()) {
+    if (SpaceMode == FormatStyle::SICS_Never)
+      ReplacePart(Body, "");
+    else if (SpaceMode == FormatStyle::SICS_Always)
+      ReplacePart(Body, " ");
+    return;
+  }
+
+  if (Body.find('\n') == StringRef::npos) {
+    const CommentLineParts Parts = splitCommentLine(Body);
+    if (!Parts.Content.empty()) {
+      ReplacePart(Parts.LeadingSpace,
+                  getTargetWhitespace(SpaceMode, Parts.LeadingSpace));
+      ReplacePart(Parts.TrailingSpace,
+                  getTargetWhitespace(SpaceMode, Parts.TrailingSpace));
+    }
+    return;
+  }
+
+  const size_t FirstNL = Body.find('\n');
+  const StringRef FirstLine = Body.take_front(FirstNL);
+  const CommentLineParts FirstParts = splitCommentLine(FirstLine);
+  if (!FirstParts.Content.empty()) {
+    ReplacePart(FirstParts.LeadingSpace,
+                getTargetWhitespace(SpaceMode, FirstParts.LeadingSpace));
+  }
+  const size_t LastNL = Body.rfind('\n');
+  const StringRef LastLine = Body.drop_front(LastNL + 1);
+  const CommentLineParts LastParts = splitCommentLine(LastLine);
+  if (!LastParts.Content.empty()) {
+    ReplacePart(LastParts.TrailingSpace,
+                getTargetWhitespace(SpaceMode, LastParts.TrailingSpace));
+  }
+}
+
 static StringRef getLineCommentIndentPrefix(StringRef Comment,
                                             const FormatStyle &Style) {
   static constexpr StringRef KnownCStylePrefixes[] = {"///<", "//!<", "///",
@@ -536,9 +633,15 @@ BreakableBlockComment::BreakableBlockComment(
         // trailing */. We also need to preserve whitespace, so that */ is
         // correctly indented.
         LastLineNeedsDecoration = false;
-        // Align the star in the last '*/' with the stars on the previous lines.
-        if (e >= 2 && !Decoration.empty())
+        if (Style.SpacesInComments != FormatStyle::SICS_Leave) {
+          // Align the closing '*/' with the beginning of the comment when
+          // spacing is explicitly controlled.
+          ContentColumn[i] = StartColumn;
+        } else if (e >= 2 && !Decoration.empty()) {
+          // Align the star in the last '*/' with the stars on the previous
+          // lines by default.
           ContentColumn[i] = DecorationColumn;
+        }
       } else if (Decoration.empty()) {
         // For all other lines, set the start column to 0 if they're empty, so
         // we do not insert trailing whitespace anywhere.
@@ -599,9 +702,44 @@ BreakableToken::Split BreakableBlockComment::getSplit(
   // Don't break lines matching the comment pragmas regex.
   if (!AlwaysReflow || CommentPragmasRegex.match(Content[LineIndex]))
     return Split(StringRef::npos, 0);
-  return getCommentSplit(Content[LineIndex].substr(TailOffset),
-                         ContentStartColumn, ColumnLimit, Style.TabWidth,
-                         Encoding, Style, Decoration.ends_with("*"));
+  const auto SpaceMode = resolveCommentSpaceMode(Tok.getBlockCommentKind(),
+                                                 Style.SpacesInComments);
+  StringRef Text = Content[LineIndex].substr(TailOffset);
+  if (SpaceMode == FormatStyle::SICS_Leave) {
+    return getCommentSplit(Text, ContentStartColumn, ColumnLimit,
+                           Style.TabWidth, Encoding, Style,
+                           Decoration.ends_with("*"));
+  }
+  const bool IsStartLine = LineIndex == 0;
+  const bool IsEndLine = LineIndex + 1 == Lines.size();
+  const CommentLineParts Parts = splitCommentLine(Text);
+  const bool HasContent = !Parts.Content.empty();
+
+  StringRef NewLeadingSpace = Parts.LeadingSpace;
+  StringRef NewTrailingSpace = Parts.TrailingSpace;
+  if (HasContent && IsStartLine)
+    NewLeadingSpace = getTargetWhitespace(SpaceMode, Parts.LeadingSpace);
+  if (HasContent && IsEndLine)
+    NewTrailingSpace = getTargetWhitespace(SpaceMode, Parts.TrailingSpace);
+  if (NewLeadingSpace == Parts.LeadingSpace &&
+      NewTrailingSpace == Parts.TrailingSpace) {
+    return getCommentSplit(Text, ContentStartColumn, ColumnLimit,
+                           Style.TabWidth, Encoding, Style,
+                           Decoration.ends_with("*"));
+  }
+
+  unsigned AdjustedContentStartColumn = ContentStartColumn;
+  const unsigned LeadingSpaceWidth = encoding::columnWidthWithTabs(
+      NewLeadingSpace, AdjustedContentStartColumn, Style.TabWidth, Encoding);
+  const unsigned ContentColumnWithLeading =
+      AdjustedContentStartColumn + LeadingSpaceWidth;
+
+  Split S = getCommentSplit(Parts.Content, ContentColumnWithLeading,
+                            ColumnLimit, Style.TabWidth, Encoding, Style,
+                            Decoration.ends_with("*"));
+  if (S.first != StringRef::npos)
+    S.first += Parts.LeadingSpace.size();
+  return S;
 }
 
 void BreakableBlockComment::adjustWhitespace(unsigned LineIndex,
@@ -645,9 +783,55 @@ unsigned BreakableBlockComment::getRangeLength(unsigned LineIndex,
                                                unsigned Offset,
                                                StringRef::size_type Length,
                                                unsigned StartColumn) const {
-  return encoding::columnWidthWithTabs(
-      Content[LineIndex].substr(Offset, Length), StartColumn, Style.TabWidth,
-      Encoding);
+  const auto SpaceMode = resolveCommentSpaceMode(Tok.getBlockCommentKind(),
+                                                 Style.SpacesInComments);
+  if (SpaceMode == FormatStyle::SICS_Leave) {
+    return encoding::columnWidthWithTabs(
+        Content[LineIndex].substr(Offset, Length), StartColumn, Style.TabWidth,
+        Encoding);
+  }
+  const bool IsStartLine = LineIndex == 0;
+  const bool IsEndLine = LineIndex + 1 == Lines.size();
+  const CommentLineParts Parts = splitCommentLine(Content[LineIndex]);
+  const bool HasContent = !Parts.Content.empty();
+
+  int LeadingSpaceDelta = 0;
+  int TrailingSpaceDelta = 0;
+  if (HasContent && IsStartLine && Offset == 0) {
+    LeadingSpaceDelta =
+        static_cast<int>(encoding::columnWidthWithTabs(
+            getTargetWhitespace(SpaceMode, Parts.LeadingSpace), StartColumn,
+            Style.TabWidth, Encoding)) -
+        static_cast<int>(encoding::columnWidthWithTabs(
+            Parts.LeadingSpace, StartColumn, Style.TabWidth, Encoding));
+  }
+  const bool ReachesLineEnd =
+      Length == StringRef::npos || Offset + Length >= Content[LineIndex].size();
+  if (HasContent && IsEndLine && ReachesLineEnd) {
+    StringRef NewTrailingSpace =
+        getTargetWhitespace(SpaceMode, Parts.TrailingSpace);
+    const size_t TrailingStart =
+        Content[LineIndex].size() - Parts.TrailingSpace.size();
+    const size_t PrefixLength =
+        Offset < TrailingStart ? TrailingStart - Offset : 0;
+    const unsigned PrefixWidth = encoding::columnWidthWithTabs(
+        Content[LineIndex].substr(Offset, PrefixLength), StartColumn,
+        Style.TabWidth, Encoding);
+    const unsigned TrailingColumn = StartColumn + PrefixWidth;
+    TrailingSpaceDelta =
+        static_cast<int>(encoding::columnWidthWithTabs(
+            NewTrailingSpace, TrailingColumn, Style.TabWidth, Encoding)) -
+        static_cast<int>(encoding::columnWidthWithTabs(
+            Parts.TrailingSpace, TrailingColumn, Style.TabWidth, Encoding));
+  }
+
+  const unsigned BaseLength =
+      encoding::columnWidthWithTabs(Content[LineIndex].substr(Offset, Length),
+                                    StartColumn, Style.TabWidth, Encoding);
+  int AdjustedLength =
+      static_cast<int>(BaseLength) + LeadingSpaceDelta + TrailingSpaceDelta;
+
+  return AdjustedLength < 0 ? 0 : static_cast<unsigned>(AdjustedLength);
 }
 
 unsigned BreakableBlockComment::getRemainingLength(unsigned LineIndex,
@@ -778,6 +962,7 @@ void BreakableBlockComment::reflow(unsigned LineIndex,
 void BreakableBlockComment::adaptStartOfLine(
     unsigned LineIndex, WhitespaceManager &Whitespaces) const {
   if (LineIndex == 0) {
+    applySpaceInBlockComment(Tok, Style, Whitespaces, InPPDirective);
     if (DelimitersOnNewline) {
       // Since we're breaking at index 1 below, the break position and the
       // break length are the same.

@@ -4343,6 +4343,31 @@ TEST_F(TokenAnnotatorTest, LineCommentTrailingBackslash) {
   EXPECT_TOKEN(Tokens[1], tok::comment, TT_LineComment);
 }
 
+TEST_F(TokenAnnotatorTest, ClassifiesBlockCommentKinds) {
+  static constexpr struct {
+    StringRef Code;
+    CommentKind Kind;
+  } Cases[] = {
+      {"int value; /* comment */\n", CommentKind::Plain},
+      {"int value; /** doc */\n", CommentKind::DocString},
+      {"call(/*Arg=*/value);", CommentKind::Parameter},
+  };
+
+  for (const auto &Test : Cases) {
+    const auto Tokens = annotate(Test.Code);
+    FormatToken *Comment = nullptr;
+    for (FormatToken *Tok : Tokens) {
+      if (Tok->is(tok::comment)) {
+        Comment = Tok;
+        break;
+      }
+    }
+    ASSERT_NE(Comment, nullptr) << "Missing comment token in: " << Test.Code;
+    EXPECT_EQ(Comment->getBlockCommentKind(), Test.Kind)
+        << "Comment text: " << Comment->TokenText;
+  }
+}
+
 TEST_F(TokenAnnotatorTest, ArrowAfterSubscript) {
   auto Tokens =
       annotate("return (getStructType()->getElements())[eIdx]->getName();");
