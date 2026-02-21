@@ -157,7 +157,7 @@ define i8 @t9(float %a) {
   ret i8 %3
 }
 
-  ; Either operand could be NaN, but fast modifier applied.
+; Either operand could be NaN, but fast modifier applied.
 define i8 @t11(float %a, float %b) {
 ; CHECK-LABEL: @t11(
 ; CHECK-NEXT:    [[DOTV:%.*]] = call nnan ninf nsz float @llvm.minnum.f32(float [[B:%.*]], float [[A:%.*]])
@@ -228,7 +228,7 @@ define i8 @t14_commute(float %a) {
 
 define i8 @t15(float %a) {
 ; CHECK-LABEL: @t15(
-; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp nsz oge float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp oge float [[A:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[DOTINV]], float 0.000000e+00, float [[A]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fptosi float [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[TMP2]]

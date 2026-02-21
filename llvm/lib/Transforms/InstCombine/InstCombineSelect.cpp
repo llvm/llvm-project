@@ -4569,13 +4569,34 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         CmpInst::Predicate MinMaxPred = getMinMaxPred(SPF, SPR.Ordered);
 
         Value *Cmp;
-        if (CmpInst::isIntPredicate(MinMaxPred))
+        Value *NewSI;
+        if (CmpInst::isIntPredicate(MinMaxPred)) {
           Cmp = Builder.CreateICmp(MinMaxPred, LHS, RHS);
-        else
-          Cmp = Builder.CreateFCmpFMF(MinMaxPred, LHS, RHS,
-                                      cast<Instruction>(SI.getCondition()));
+          NewSI = Builder.CreateSelect(Cmp, LHS, RHS, SI.getName(), &SI);
+        } else {
+          // Intersect fast-math flags between the original select and its
+          // condition before forming a min/max fcmp+select pattern.
+          //
+          // Therefore, only retain fast-math flags that were already required
+          // by both the original select and its condition.
+          FastMathFlags CmpFMF =
+              cast<Instruction>(SI.getCondition())->getFastMathFlags();
 
-        Value *NewSI = Builder.CreateSelect(Cmp, LHS, RHS, SI.getName(), &SI);
+          // We can't unconditionally query fast-math flags from the select
+          // because only selects that produce floating-point values implement
+          // FPMathOperator. Treat non-FP selects as having no fast-math
+          // guarantees.
+          FastMathFlags SelFMF;
+          if (SIFPOp)
+            SelFMF = SI.getFastMathFlags();
+
+          FastMathFlags NewFMF = SelFMF & CmpFMF;
+
+          Cmp = Builder.CreateFCmpFMF(MinMaxPred, LHS, RHS, NewFMF);
+
+          NewSI = Builder.CreateSelectFMF(Cmp, LHS, RHS, NewFMF);
+        }
+
         if (!IsCastNeeded)
           return replaceInstUsesWith(SI, NewSI);
 
