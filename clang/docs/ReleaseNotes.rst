@@ -402,6 +402,9 @@ AST Matchers
 - Add ``functionTypeLoc`` matcher for matching ``FunctionTypeLoc``.
 - Add missing support for ``TraversalKind`` in some ``addMatcher()`` overloads.
 
+- Fixed `isStaticStorageClass` not matching the definition if the definition was
+  not marked `static` as well.
+
 clang-format
 ------------
 - Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the

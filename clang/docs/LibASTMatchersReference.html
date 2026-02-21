@@ -4811,8 +4811,10 @@ Given:
   static int i = 0;
   extern int j;
   int k;
+  static void l();
+  void l() {}
 functionDecl(isStaticStorageClass())
-  matches the function declaration f.
+  matches the function declaration of f and l, and the definition of l.
 varDecl(isStaticStorageClass())
   matches the variable declaration i.
 </pre></td></tr>
