@@ -1466,6 +1466,20 @@ template <> struct DocumentListTraits<std::vector<FormatStyle>> {
     return Seq[Index];
   }
 };
+
+template <> struct ScalarEnumerationTraits<FormatStyle::IndentGotoLabelStyle> {
+  static void enumeration(IO &IO, FormatStyle::IndentGotoLabelStyle &Value) {
+    IO.enumCase(Value, "NoIndent", FormatStyle::IGLS_NoIndent);
+    IO.enumCase(Value, "OuterIndent", FormatStyle::IGLS_OuterIndent);
+    IO.enumCase(Value, "InnerIndent", FormatStyle::IGLS_InnerIndent);
+    IO.enumCase(Value, "HalfIndent", FormatStyle::IGLS_HalfIndent);
+
+    // For backward compatibility.
+    IO.enumCase(Value, "false", FormatStyle::IGLS_NoIndent);
+    IO.enumCase(Value, "true", FormatStyle::IGLS_OuterIndent);
+  }
+};
+
 } // namespace yaml
 } // namespace llvm
 
@@ -1760,7 +1774,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.IndentCaseLabels = false;
   LLVMStyle.IndentExportBlock = true;
   LLVMStyle.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
-  LLVMStyle.IndentGotoLabels = true;
+  LLVMStyle.IndentGotoLabels = FormatStyle::IGLS_OuterIndent;
   LLVMStyle.IndentPPDirectives = FormatStyle::PPDIS_None;
   LLVMStyle.IndentRequiresClause = true;
   LLVMStyle.IndentWidth = 2;

@@ -1710,7 +1710,7 @@ void UnwrappedLineParser::parseStructuralElement(
       if (!Line->InMacroBody || CurrentLines->size() > 1)
         Line->Tokens.begin()->Tok->MustBreakBefore = true;
       FormatTok->setFinalizedType(TT_GotoLabelColon);
-      parseLabel(!Style.IndentGotoLabels);
+      parseLabel(Style.IndentGotoLabels);
       if (HasLabel)
         *HasLabel = true;
       return;
@@ -3354,14 +3354,23 @@ void UnwrappedLineParser::parseDoWhile() {
   parseStructuralElement();
 }
 
-void UnwrappedLineParser::parseLabel(bool LeftAlignLabel) {
+void UnwrappedLineParser::parseLabel(
+    FormatStyle::IndentGotoLabelStyle IndentGotoLabels) {
   nextToken();
   unsigned OldLineLevel = Line->Level;
 
-  if (LeftAlignLabel)
+  switch (IndentGotoLabels) {
+  case FormatStyle::IGLS_NoIndent:
     Line->Level = 0;
-  else if (Line->Level > 1 || (!Line->InPPDirective && Line->Level > 0))
-    --Line->Level;
+    break;
+  case FormatStyle::IGLS_OuterIndent:
+    if (Line->Level > 1 || (!Line->InPPDirective && Line->Level > 0))
+      --Line->Level;
+    break;
+  case FormatStyle::IGLS_HalfIndent:
+  case FormatStyle::IGLS_InnerIndent:
+    break;
+  }
 
   if (!Style.IndentCaseBlocks && CommentsBeforeNextToken.empty() &&
       FormatTok->is(tok::l_brace)) {
