@@ -1915,6 +1915,43 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
     return Res;
 
+  {
+    Value *X;
+    const APInt *C1, *C2;
+    if (match(&I,
+              m_Add(m_NNegZExt(m_Add(m_Value(X), m_APInt(C1))), m_APInt(C2)))) {
+      // Check if inner const C1 is negative C1 < 0 and outer const C2 >= 0
+      if (!C1->isNegative() || C2->isNegative())
+        return nullptr;
+
+      APInt Sum = C1->sext(C2->getBitWidth()) + *C2;
+
+      if (!Sum.isSignedIntN(C1->getBitWidth()))
+        return nullptr;
+
+      Value *Inner;
+
+      if (Sum.isZero()) {
+        Inner = X;
+      } else {
+        unsigned XWidth = X->getType()->getIntegerBitWidth();
+        APInt MinX = APInt::getSignedMinValue(XWidth);
+        if ((MinX + Sum.trunc(XWidth)).isNegative())
+          return nullptr;
+
+        auto *ZExt = cast<ZExtInst>(I.getOperand(0));
+        auto *InnerAdd = ZExt->getOperand(0);
+        if (!ZExt->hasOneUse() || !InnerAdd->hasOneUse())
+          return nullptr;
+
+        Inner = Builder.CreateAdd(
+            X, ConstantInt::get(X->getType(), Sum.trunc(C1->getBitWidth())));
+      }
+
+      return new ZExtInst(Inner, I.getType());
+    }
+  }
+
   // Re-enqueue users of the induction variable of add recurrence if we infer
   // new nuw/nsw flags.
   if (Changed) {
