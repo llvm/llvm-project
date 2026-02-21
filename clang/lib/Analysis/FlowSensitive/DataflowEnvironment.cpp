@@ -420,11 +420,11 @@ public:
         // it may not even be casting from a record type -- and even if it is,
         // the two objects are in general of unrelated type.
         isa<BuiltinBitCastExpr>(E) ||
+        // This covers both co_await and co_yield.
         // The result object of co_await is <op>.await_resume(), but there is
-        // no expression for that to propagate to.
-        isa<CoawaitExpr>(E) ||
-        // co_yield is equivalent to `co_await promise.yield_value(expr)`
-        isa<CoyieldExpr>(E)) {
+        // no expression for that to prpagate to.
+        // co_yield is equivalent to `co_await promise.yield_value(expr)`.
+        isa<CoroutineSuspendExpr>(E)) {
       return;
     }
     if (auto *Op = dyn_cast<BinaryOperator>(E);
