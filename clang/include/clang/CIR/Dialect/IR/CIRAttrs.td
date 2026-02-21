@@ -1348,4 +1348,6 @@ def CIR_ASTVarDeclAttr : CIR_AST<"VarDecl", "var.decl", [
   ASTVarDeclInterface
 ]>;
 
+include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"
+
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD
