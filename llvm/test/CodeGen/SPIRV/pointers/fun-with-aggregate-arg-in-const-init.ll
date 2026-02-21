@@ -1,5 +1,10 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | not spirv-val 2>&1 | FileCheck --check-prefix=SPIRV-VAL %s %}
+
+; spirv-val poorly supports the SPV_INTEL_function_pointers extension.
+; In this case the function is declared after the constant so it fails.
+; SPIRV-VAL: ID '{{.*}}[%f0]' has not been defined
+; SPIRV-VAL: OpConstantFunctionPointerINTEL %_ptr_CodeSectionINTEL_11 %f0
 
 ; CHECK: OpCapability Kernel
 ; CHECK-DAG: OpCapability FunctionPointersINTEL
