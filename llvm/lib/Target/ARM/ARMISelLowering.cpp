@@ -597,8 +597,12 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   if (!Subtarget->hasV8_1MMainlineOps())
     setOperationAction(ISD::UCMP, MVT::i32, Custom);
 
-  if (!Subtarget->isThumb1Only())
+  if (!Subtarget->isThumb1Only()) {
     setOperationAction(ISD::ABS, MVT::i32, Custom);
+    setOperationAction(ISD::ABDS, MVT::i32, Custom);
+  }
+
+  setOperationAction(ISD::ABDU, MVT::i32, Custom);
 
   setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
   setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
@@ -5277,6 +5281,88 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     Result = getCMOV(dl, VT, Result, TrueVal, ARMcc2, Cmp, DAG);
   }
   return Result;
+}
+
+SDValue ARMTargetLowering::LowerABD(SDValue Op, SelectionDAG &DAG) const {
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+
+  bool IsSigned = Op.getOpcode() == ISD::ABDS;
+  bool IsNonNegative = DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS);
+
+  // If the subtract doesn't overflow then just use abs(sub()).
+  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, LHS, RHS))
+    return DAG.getNode(ISD::ABS, DL, VT,
+                       DAG.getNode(ISD::SUB, DL, VT, LHS, RHS));
+
+  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, RHS, LHS))
+    return DAG.getNode(ISD::ABS, DL, VT,
+                       DAG.getNode(ISD::SUB, DL, VT, RHS, LHS));
+
+  // General path: use SUBC (or ADDC when RHS is 0-X) to get
+  // subtract-with-flags, then CMOV to select a-b or b-a. ADDC/SUBC produce the
+  // flags we need.
+  unsigned Opcode = ARMISD::SUBC;
+
+  // Check if RHS is a negation (0 - X). If so, we can use ADDC instead of SUBC:
+  //   a - (0 - x) = a + x (mod 2^n)
+  // Same semantics as in LowerCMP; apply same safety checks.
+  if (RHS.getOpcode() == ISD::SUB) {
+    SDValue SubLHS = RHS.getOperand(0);
+    SDValue SubRHS = RHS.getOperand(1);
+
+    if (isNullConstant(SubLHS)) {
+      bool CanUseAdd = false;
+      if (IsSigned) {
+        if (RHS->getFlags().hasNoSignedWrap() || !DAG.computeKnownBits(SubRHS)
+                                                      .getSignedMinValue()
+                                                      .isMinSignedValue())
+          CanUseAdd = true;
+      } else {
+        if (DAG.isKnownNeverZero(SubRHS))
+          CanUseAdd = true;
+      }
+
+      if (CanUseAdd) {
+        Opcode = ARMISD::ADDC;
+        RHS = SubRHS;
+      }
+    }
+  }
+
+  SDValue SubWithFlags =
+      DAG.getNode(Opcode, DL, DAG.getVTList(VT, FlagsVT), LHS, RHS);
+
+  if (Subtarget->isThumb1Only() && !IsSigned) {
+    // First subtraction: LHS - RHS
+    SDValue Flags1 = SubWithFlags.getValue(1);
+
+    // sbcs r1,r1,r1 (mask from borrow)
+    SDValue Sbc1 = DAG.getNode(ARMISD::SUBE, DL, DAG.getVTList(VT, FlagsVT),
+                               RHS, RHS, Flags1);
+
+    // eors (XOR)
+    SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, SubWithFlags, Sbc1.getValue(0));
+
+    // subs (final subtraction)
+    return DAG.getNode(ISD::SUB, DL, VT, Xor, Sbc1.getValue(0));
+  }
+
+  SDValue SubResult = SubWithFlags.getValue(0);
+  SDValue Flags = SubWithFlags.getValue(1);
+
+  SDValue Neg = DAG.getNegative(SubResult, DL, VT);
+
+  // getCMOV(FalseVal, TrueVal, CC, Flags) selects TrueVal when CC holds,
+  // FalseVal otherwise. We want a >= b -> SubResult (a-b), a < b -> Neg (b-a),
+  // so use LT/LO (a < b) with (SubResult, Neg): when LT/LO holds we get Neg,
+  // otherwise SubResult.
+  ARMCC::CondCodes CC = IsSigned ? ARMCC::LT : ARMCC::LO;
+  SDValue ARMcc = DAG.getConstant(CC, DL, MVT::i32);
+
+  return getCMOV(DL, VT, SubResult, Neg, ARMcc, Flags, DAG);
 }
 
 /// canChangeToInt - Given the fp compare operand, return true if it is suitable
@@ -10397,6 +10483,9 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::GlobalTLSAddress: return LowerGlobalTLSAddress(Op, DAG);
   case ISD::SELECT:        return LowerSELECT(Op, DAG);
   case ISD::SELECT_CC:     return LowerSELECT_CC(Op, DAG);
+  case ISD::ABDS:
+  case ISD::ABDU:
+    return LowerABD(Op, DAG);
   case ISD::BRCOND:        return LowerBRCOND(Op, DAG);
   case ISD::BR_CC:         return LowerBR_CC(Op, DAG);
   case ISD::BR_JT:         return LowerBR_JT(Op, DAG);
