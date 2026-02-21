@@ -5362,7 +5362,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                        ExponentKnownBits, Q, Depth + 1);
 
       KnownFPClass KnownSrc;
-      if (!ExponentKnownBits.isEven()) {
+      if (ExponentKnownBits.isZero() || !ExponentKnownBits.isEven()) {
         computeKnownFPClass(II->getArgOperand(0), DemandedElts, fcNegative,
                             KnownSrc, Q, Depth + 1);
       }
