@@ -1,8 +1,12 @@
 add_clang_library(MLIRCIRTargetLowering
+  ABIInfo.cpp
   CIRCXXABI.cpp
+  CIRLowerContext.cpp
   LowerModule.cpp
+  LowerTypes.cpp
   LowerItaniumCXXABI.cpp
   TargetLoweringInfo.cpp
+  Targets/NVPTX.cpp
 
   DEPENDS
   clangBasic

@@ -15,6 +15,40 @@
 #ifndef CLANG_CIR_MISSINGFEATURES_H
 #define CLANG_CIR_MISSINGFEATURES_H
 
+constexpr bool cirCConvAssertionMode =
+    true; // Change to `false` to use llvm_unreachable
+
+#define CIR_CCONV_NOTE                                                         \
+  " Target lowering is now required. To workaround use "                       \
+  "-fno-clangir-call-conv-lowering. This flag is going to be removed at some"  \
+  " point."
+
+// Special assertion to be used in the target lowering library.
+#define cir_cconv_assert(cond)                                                 \
+  do {                                                                         \
+    if (!(cond))                                                               \
+      llvm::errs() << CIR_CCONV_NOTE << "\n";                                  \
+    assert((cond));                                                            \
+  } while (0)
+
+// Special version of llvm_unreachable to give more info to the user on how
+// to temporarily disable target lowering.
+#define cir_cconv_unreachable(msg)                                             \
+  do {                                                                         \
+    llvm_unreachable(msg CIR_CCONV_NOTE);                                      \
+  } while (0)
+
+// Some assertions knowingly generate incorrect code. This macro allows us to
+// switch between using `assert` and `llvm_unreachable` for these cases.
+#define cir_cconv_assert_or_abort(cond, msg)                                   \
+  do {                                                                         \
+    if (cirCConvAssertionMode) {                                               \
+      assert((cond) && msg CIR_CCONV_NOTE);                                    \
+    } else {                                                                   \
+      llvm_unreachable(msg CIR_CCONV_NOTE);                                    \
+    }                                                                          \
+  } while (0)
+
 namespace cir {
 
 // As a way to track features that haven't yet been implemented this class
@@ -189,6 +223,8 @@ struct MissingFeatures {
   static bool lowerModuleCodeGenOpts() { return false; }
   static bool lowerModuleLangOpts() { return false; }
   static bool targetLoweringInfo() { return false; }
+  static bool extParamInfo() { return false; }
+  static bool qualifiedTypes() { return false; }
 
   // Extra checks for lowerGetMethod in ItaniumCXXABI
   static bool emitCFICheck() { return false; }

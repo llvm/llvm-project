@@ -13,6 +13,7 @@
 
 #include "LowerModule.h"
 #include "CIRCXXABI.h"
+#include "TargetInfo.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
@@ -45,15 +46,26 @@ static std::unique_ptr<CIRCXXABI> createCXXABI(LowerModule &lm) {
 
 static std::unique_ptr<TargetLoweringInfo>
 createTargetLoweringInfo(LowerModule &lm) {
-  assert(!cir::MissingFeatures::targetLoweringInfo());
-  return std::make_unique<TargetLoweringInfo>();
+  const clang::TargetInfo &target = lm.getTarget();
+  const llvm::Triple &triple = target.getTriple();
+  
+  switch (triple.getArch()) {
+  case llvm::Triple::nvptx:
+  case llvm::Triple::nvptx64:
+    return createNVPTXTargetLoweringInfo(lm);
+
+  default:
+    cir_cconv_unreachable("ABI NYI");
+  }
 }
 
 LowerModule::LowerModule(clang::LangOptions langOpts,
                          clang::CodeGenOptions codeGenOpts,
                          mlir::ModuleOp &module,
                          std::unique_ptr<clang::TargetInfo> target)
-    : module(module), target(std::move(target)), abi(createCXXABI(*this)) {}
+    : context(module, std::move(langOpts), std::move(codeGenOpts)), module(module), target(std::move(target)), abi(createCXXABI(*this)), types(*this) {
+      context.initBuiltinTypes(*target);
+    }
 
 const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
   if (!targetLoweringInfo)
