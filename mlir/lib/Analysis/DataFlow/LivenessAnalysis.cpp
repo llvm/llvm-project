@@ -17,6 +17,7 @@
 #include <mlir/IR/Operation.h>
 #include <mlir/IR/Value.h>
 #include <mlir/Interfaces/CallInterfaces.h>
+#include <mlir/Interfaces/FunctionInterfaces.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
 
@@ -236,6 +237,12 @@ RunLivenessAnalysis::RunLivenessAnalysis(Operation *op) {
       for (auto &block : region) {
         for (auto blockArg : llvm::enumerate(block.getArguments())) {
           if (getLiveness(blockArg.value()))
+            continue;
+          // Skip block args of ops with regions that are not
+          // RegionBranchOpInterface or FunctionOpInterface
+          // (e.g. gpu.launch) - solver doesn't analyze their regions
+          if (!isa<RegionBranchOpInterface>(op) &&
+              !isa<FunctionOpInterface>(op))
             continue;
           LDBG() << "Block argument: " << blockArg.index() << " of "
                  << OpWithFlags(op, OpPrintingFlags().skipRegions())

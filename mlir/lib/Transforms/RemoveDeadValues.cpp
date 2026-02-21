@@ -235,6 +235,15 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
   // "dead" if it had a side-effecting user that is reachable.
   bool hasDeadOperand =
       markLives(op->getOperands(), nonLiveSet, la).flip().any();
+
+  if (!isMemoryEffectFree(op) || hasLive(op->getResults(), nonLiveSet, la)) {
+    LDBG() << "Simple op is not memory effect free or has live results, "
+              "preserving it: "
+           << OpWithFlags(op,
+                          OpPrintingFlags().skipRegions().printGenericOpForm());
+    return;
+  }
+
   if (hasDeadOperand) {
     LDBG() << "Simple op has dead operands, so the op must be dead: "
            << OpWithFlags(op,
@@ -244,14 +253,6 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
     cl.operations.push_back(op);
     collectNonLiveValues(nonLiveSet, op->getResults(),
                          BitVector(op->getNumResults(), true));
-    return;
-  }
-
-  if (!isMemoryEffectFree(op) || hasLive(op->getResults(), nonLiveSet, la)) {
-    LDBG() << "Simple op is not memory effect free or has live results, "
-              "preserving it: "
-           << OpWithFlags(op,
-                          OpPrintingFlags().skipRegions().printGenericOpForm());
     return;
   }
 
@@ -511,8 +512,10 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
     // Do (2)
     BitVector successorNonLive =
         markLives(operandValues, nonLiveSet, la).flip();
-    collectNonLiveValues(nonLiveSet, successorBlock->getArguments(),
-                         successorNonLive);
+    if (std::distance(successorBlock->pred_begin(),
+                      successorBlock->pred_end()) <= 1)
+      collectNonLiveValues(nonLiveSet, successorBlock->getArguments(),
+                           successorNonLive);
 
     // Do (3)
     cl.blocks.push_back({successorBlock, successorNonLive});
@@ -561,6 +564,7 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
   // 1. Blocks, We must remove the block arguments and successor operands before
   // deleting the operation, as they may reside in the region operation.
   LDBG() << "Cleaning up " << list.blocks.size() << " block argument lists";
+  DenseSet<Block *> processedBlocks;
   for (auto &b : list.blocks) {
     // blocks that are accessed via multiple codepaths processed once
     if (b.b->getNumArguments() != b.nonLiveArgs.size())
@@ -573,6 +577,20 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
          << OpWithFlags(b.b->getParent()->getParentOp(),
                         OpPrintingFlags().skipRegions().printGenericOpForm());
     });
+    // Skip if already processed
+    if (processedBlocks.count(b.b))
+      continue;
+    // Check if any entry has this block with live args
+    bool hasLiveFromAnyPred = false;
+    for (auto &other : list.blocks) {
+      if (other.b == b.b && other.nonLiveArgs.none()) {
+        hasLiveFromAnyPred = true;
+        break;
+      }
+    }
+    if (hasLiveFromAnyPred)
+      continue;
+    processedBlocks.insert(b.b);
     // Note: Iterate from the end to make sure that that indices of not yet
     // processes arguments do not change.
     for (int i = b.nonLiveArgs.size() - 1; i >= 0; --i) {
@@ -599,6 +617,19 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
          << OpWithFlags(op.branch.getOperation(),
                         OpPrintingFlags().skipRegions().printGenericOpForm());
     });
+
+    // Check if any other branch to same block has live operands
+    Block *succBlock = op.branch->getSuccessor(op.successorIndex);
+    bool otherLivePred = false;
+    for (auto &other : list.successorOperands) {
+      Block *otherSucc = other.branch->getSuccessor(other.successorIndex);
+      if (otherSucc == succBlock && other.nonLiveOperands.none()) {
+        otherLivePred = true;
+        break;
+      }
+    }
+    if (otherLivePred)
+      continue;
     // it iterates backwards because erase invalidates all successor indexes
     for (int i = successorOperands.size() - 1; i >= 0; --i) {
       if (!op.nonLiveOperands[i])
