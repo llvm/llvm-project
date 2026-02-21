@@ -50,6 +50,14 @@ createTargetLoweringInfo(LowerModule &lm) {
   const llvm::Triple &triple = target.getTriple();
 
   switch (triple.getArch()) {
+  case llvm::Triple::x86_64: {
+    switch (triple.getOS()) {
+    case llvm::Triple::Win32:
+      cir_cconv_unreachable("Windows ABI NYI");
+    default:
+      return createX86_64TargetLoweringInfo(lm, X86AVXABILevel::None);
+    }
+  }
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
     return createNVPTXTargetLoweringInfo(lm);

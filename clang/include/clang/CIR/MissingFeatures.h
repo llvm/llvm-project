@@ -225,6 +225,7 @@ struct MissingFeatures {
   static bool targetLoweringInfo() { return false; }
   static bool extParamInfo() { return false; }
   static bool qualifiedTypes() { return false; }
+  static bool swift() { return false; }
 
   // Extra checks for lowerGetMethod in ItaniumCXXABI
   static bool emitCFICheck() { return false; }

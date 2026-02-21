@@ -19,8 +19,15 @@
 
 namespace cir {
 
+/// The AVX ABI level for X86 targets.
+enum class X86AVXABILevel {
+  None,
+  AVX,
+  AVX512,
+};
+
 std::unique_ptr<TargetLoweringInfo>
-createNVPTXTargetLoweringInfo(LowerModule &cgm);
+createX86_64TargetLoweringInfo(LowerModule &lm, X86AVXABILevel avxLevel);
 
 } // namespace cir
 
