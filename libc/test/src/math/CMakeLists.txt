@@ -1994,7 +1994,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fmabf16
     libc.src.stdlib.rand
-    libc.src.stdlib.srandq
+    libc.src.stdlib.srand
     libc.src.__support.FPUtil.bfloat16
 )
 
