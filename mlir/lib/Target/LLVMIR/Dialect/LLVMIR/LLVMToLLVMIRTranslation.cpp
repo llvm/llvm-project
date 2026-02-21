@@ -817,6 +817,17 @@ amendOperationImpl(Operation &op, ArrayRef<llvm::Instruction *> instructions,
       inst->setMetadata(llvm::LLVMContext::MD_mmra, mmraMd);
     return success();
   }
+
+  // Handle llvm.array_bounds attribute - marks assumes as array bounds checks
+  // that should be dropped before vectorization.
+  if (name == "llvm.array_bounds") {
+    llvm::LLVMContext &ctx = moduleTranslation.getLLVMContext();
+    llvm::MDNode *md = llvm::MDNode::get(ctx, {});
+    for (llvm::Instruction *inst : instructions)
+      inst->setMetadata("llvm.array.bounds", md);
+    return success();
+  }
+
   return success();
 }
 
