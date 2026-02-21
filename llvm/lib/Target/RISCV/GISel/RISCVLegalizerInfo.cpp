@@ -440,9 +440,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_BRINDIRECT).legalFor({p0});
 
   getActionDefinitionsBuilder(G_PHI)
-      .legalFor({p0, s32, sXLen})
+      .legalFor({p0, s32})
+      .legalFor(XLen == 64 || ST.hasStdExtD(), {s64})
       .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, sXLen);
+      .clampScalar(0, s32, (XLen == 64 || ST.hasStdExtD()) ? s64 : s32);
 
   getActionDefinitionsBuilder({G_GLOBAL_VALUE, G_JUMP_TABLE, G_CONSTANT_POOL})
       .legalFor({p0});
