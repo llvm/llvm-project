@@ -2,6 +2,7 @@
 ; RUN: opt -p instcombine -mtriple=riscv32 -mattr=+v -S %s | FileCheck %s --check-prefixes=CHECK,RV32
 ; RUN: opt -p instcombine -mtriple=riscv64 -mattr=+v -S %s | FileCheck %s --check-prefixes=CHECK,RV64
 ; RUN: opt -p instcombine -mtriple=riscv32 -mattr=+zve32x -S %s | FileCheck %s --check-prefixes=CHECK,ZVE32X
+; RUN: opt -p instcombine -mtriple=riscv64 -mattr=+zve32x -S %s | FileCheck %s --check-prefixes=CHECK,ZVE32X
 
 define <vscale x 1 x i64> @scalable() {
 ; CHECK-LABEL: define <vscale x 1 x i64> @scalable(
