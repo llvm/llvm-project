@@ -1899,7 +1899,8 @@ bool TargetLowering::SimplifyDemandedBits(
           EVT SmallVT = EVT::getIntegerVT(*TLO.DAG.getContext(), SmallVTBits);
           if (isNarrowingProfitable(Op.getNode(), VT, SmallVT) &&
               isTypeDesirableForOp(ISD::SHL, SmallVT) &&
-              isTruncateFree(VT, SmallVT) && isZExtFree(SmallVT, VT) &&
+              isTruncateFree(Op.getOperand(0), SmallVT) &&
+              isZExtFree(SmallVT, VT) &&
               (!TLO.LegalOperations() || isOperationLegal(ISD::SHL, SmallVT))) {
             assert(DemandedSize <= SmallVTBits &&
                    "Narrowed below demanded bits?");
@@ -1923,7 +1924,7 @@ bool TargetLowering::SimplifyDemandedBits(
         EVT HalfVT = EVT::getIntegerVT(*TLO.DAG.getContext(), HalfWidth);
         if (isNarrowingProfitable(Op.getNode(), VT, HalfVT) &&
             isTypeDesirableForOp(ISD::SHL, HalfVT) &&
-            isTruncateFree(VT, HalfVT) && isZExtFree(HalfVT, VT) &&
+            isTruncateFree(Op0, HalfVT) && isZExtFree(HalfVT, VT) &&
             (!TLO.LegalOperations() || isOperationLegal(ISD::SHL, HalfVT))) {
           // If we're demanding the upper bits at all, we must ensure
           // that the upper bits of the shift result are known to be zero,
@@ -2037,7 +2038,7 @@ bool TargetLowering::SimplifyDemandedBits(
         EVT HalfVT = EVT::getIntegerVT(*TLO.DAG.getContext(), BitWidth / 2);
         if (isNarrowingProfitable(Op.getNode(), VT, HalfVT) &&
             isTypeDesirableForOp(ISD::SRL, HalfVT) &&
-            isTruncateFree(VT, HalfVT) && isZExtFree(HalfVT, VT) &&
+            isTruncateFree(Op0, HalfVT) && isZExtFree(HalfVT, VT) &&
             (!TLO.LegalOperations() || isOperationLegal(ISD::SRL, HalfVT)) &&
             ((InDemandedMask.countLeadingZeros() >= (BitWidth / 2)) ||
              TLO.DAG.MaskedValueIsZero(Op0, HiBits))) {
@@ -4203,12 +4204,12 @@ SDValue TargetLowering::foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
   // TODO: This conservatively checks for type legality on the source and
   //       destination types. That may inhibit optimizations, but it also
   //       allows setcc->shift transforms that may be more beneficial.
-  auto *AndC = dyn_cast<ConstantSDNode>(N0.getOperand(1));
+  auto *AndC = isConstOrConstSplat(N0.getOperand(1), true);
   if (AndC && isNullConstant(N1) && AndC->getAPIntValue().isPowerOf2() &&
       isTypeLegal(OpVT) && N0.hasOneUse()) {
     EVT NarrowVT = EVT::getIntegerVT(*DAG.getContext(),
                                      AndC->getAPIntValue().getActiveBits());
-    if (isTruncateFree(OpVT, NarrowVT) && isTypeLegal(NarrowVT)) {
+    if (isTypeLegal(NarrowVT) && isTruncateFree(N0.getOperand(0), NarrowVT)) {
       SDValue Trunc = DAG.getZExtOrTrunc(N0.getOperand(0), DL, NarrowVT);
       SDValue Zero = DAG.getConstant(0, DL, NarrowVT);
       return DAG.getSetCC(DL, VT, Trunc, Zero,
