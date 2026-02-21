@@ -143,7 +143,7 @@
 "`LWG3180 <https://wg21.link/LWG3180>`__","Inconsistently named return type for ``ranges::minmax_element``\ ","2019-02 (Kona)","|Complete|","15","`#103844 <https://github.com/llvm/llvm-project/issues/103844>`__",""
 "`LWG3182 <https://wg21.link/LWG3182>`__","Specification of ``Same``\  could be clearer","2019-02 (Kona)","|Complete|","15","`#103845 <https://github.com/llvm/llvm-project/issues/103845>`__",""
 "","","","","","",""
-"`LWG2899 <https://wg21.link/LWG2899>`__","``is_(nothrow_)move_constructible``\  and ``tuple``\ , ``optional``\  and ``unique_ptr``\ ","2019-07 (Cologne)","","","`#100255 <https://github.com/llvm/llvm-project/issues/100255>`__",""
+"`LWG2899 <https://wg21.link/LWG2899>`__","``is_(nothrow_)move_constructible``\  and ``tuple``\ , ``optional``\  and ``unique_ptr``\ ","2019-07 (Cologne)","|Complete|","23","`#100255 <https://github.com/llvm/llvm-project/issues/100255>`__",""
 "`LWG3055 <https://wg21.link/LWG3055>`__","``path::operator+=(*single-character*)``\  misspecified","2019-07 (Cologne)","|Complete|","7","`#103846 <https://github.com/llvm/llvm-project/issues/103846>`__",""
 "`LWG3158 <https://wg21.link/LWG3158>`__","``tuple(allocator_arg_t, const Alloc&)``\  should be conditionally explicit","2019-07 (Cologne)","|Complete|","10","`#103847 <https://github.com/llvm/llvm-project/issues/103847>`__",""
 "`LWG3169 <https://wg21.link/LWG3169>`__","``ranges``\  permutation generators discard useful information","2019-07 (Cologne)","|Complete|","15","`#103848 <https://github.com/llvm/llvm-project/issues/103848>`__",""
