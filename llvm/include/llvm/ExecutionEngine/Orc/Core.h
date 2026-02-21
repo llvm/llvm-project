@@ -189,6 +189,9 @@ inline JITDylibSearchOrder makeJITDylibSearchOrder(
   return O;
 }
 
+using NonOwningSymbolLookupSet =
+    std::vector<std::pair<NonOwningSymbolStringPtr, SymbolLookupFlags>>;
+
 /// A set of symbols to look up, each associated with a SymbolLookupFlags
 /// value.
 ///
@@ -1744,8 +1747,8 @@ private:
   /// match a given query from the set of candidate symbols to generate
   /// definitions for (no need to generate a definition if one already exists).
   Error IL_updateCandidatesFor(JITDylib &JD, JITDylibLookupFlags JDLookupFlags,
-                               SymbolLookupSet &Candidates,
-                               SymbolLookupSet *NonCandidates);
+                               NonOwningSymbolLookupSet &Candidates,
+                               NonOwningSymbolLookupSet *NonCandidates);
 
   /// Handle resumption of a lookup after entering a generator.
   void OL_resumeLookupAfterGeneration(InProgressLookupState &IPLS);
