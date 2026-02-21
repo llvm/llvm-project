@@ -111,7 +111,7 @@ void SymbolLocatorDebuginfod::Initialize() {
     PluginManager::RegisterPlugin(
         GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
         LocateExecutableObjectFile, LocateExecutableSymbolFile, nullptr,
-        nullptr, SymbolLocatorDebuginfod::DebuggerInitialize);
+        nullptr, LocateSourceFile, SymbolLocatorDebuginfod::DebuggerInitialize);
     llvm::HTTPClient::initialize();
   });
 }
@@ -208,4 +208,34 @@ std::optional<ModuleSpec> SymbolLocatorDebuginfod::LocateExecutableObjectFile(
 std::optional<FileSpec> SymbolLocatorDebuginfod::LocateExecutableSymbolFile(
     const ModuleSpec &module_spec, const FileSpecList &default_search_paths) {
   return GetFileForModule(module_spec, llvm::getDebuginfodDebuginfoUrlPath);
+}
+
+std::optional<FileSpec>
+SymbolLocatorDebuginfod::LocateSourceFile(const ModuleSpec &module_spec,
+                                          const FileSpec &file_spec) {
+
+  const UUID &module_uuid = module_spec.GetUUID();
+  const std::string file_path = file_spec.GetPath();
+  // Don't bother if we don't have a path or valid UUID, Debuginfod isn't
+  // available, or if the 'symbols.enable-external-lookup' setting is false.
+  if (file_path.empty() || !module_uuid.IsValid() ||
+      !llvm::canUseDebuginfod() ||
+      !ModuleList::GetGlobalModuleListProperties().GetEnableExternalLookup())
+    return {};
+
+  llvm::SmallVector<llvm::StringRef> debuginfod_urls =
+      llvm::getDefaultDebuginfodUrls();
+
+  llvm::object::BuildID build_id(module_uuid.GetBytes());
+
+  llvm::Expected<std::string> result =
+      llvm::getCachedOrDownloadSource(build_id, file_path);
+  if (result)
+    return FileSpec(*result);
+
+  Log *log = GetLog(LLDBLog::Source);
+  auto err_message = llvm::toString(result.takeError());
+  LLDB_LOGV(log, "Debuginfod failed to download source file {0} with error {1}",
+            file_path, err_message);
+  return std::nullopt;
 }

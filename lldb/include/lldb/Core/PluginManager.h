@@ -465,6 +465,7 @@ public:
       SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file =
           nullptr,
       SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle = nullptr,
+      SymbolLocatorLocateSourceFile locate_source_file = nullptr,
       DebuggerInitializeCallback debugger_init_callback = nullptr);
 
   static bool UnregisterPlugin(SymbolLocatorCreateInstance create_callback);
@@ -479,6 +480,9 @@ public:
   LocateExecutableSymbolFile(const ModuleSpec &module_spec,
                              const FileSpecList &default_search_paths,
                              StatisticsMap &map);
+
+  static std::optional<FileSpec> LocateSourceFile(const ModuleSpec &module_spec,
+                                                  const FileSpec &file_spec);
 
   static bool DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                                           Status &error,

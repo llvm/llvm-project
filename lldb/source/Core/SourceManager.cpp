@@ -15,6 +15,7 @@
 #include "lldb/Core/Highlighter.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
@@ -564,6 +565,31 @@ void SourceManager::File::CommonInitializerImpl(SupportFileNSP support_file_nsp,
           if (remapped)
             SetSupportFile(std::make_shared<SupportFile>(
                 *remapped, support_file_nsp->GetChecksum()));
+        }
+      }
+      // Try Plugins
+      {
+        FileSpec file_spec = GetSupportFile()->GetSpecOnly();
+        if (!FileSystem::Instance().Exists(file_spec)) {
+
+          bool check_inlines = false;
+          SymbolContextList sc_list;
+          size_t num_matches =
+              target_sp->GetImages().ResolveSymbolContextForFilePath(
+                  file_spec.GetFilename().AsCString(), 0, check_inlines,
+                  eSymbolContextModule | eSymbolContextCompUnit, sc_list);
+          if (num_matches > 0) {
+            SymbolContext sc;
+            sc_list.GetContextAtIndex(0, sc);
+            ModuleSpec module_spec;
+            module_spec.GetUUID() = sc.module_sp->GetUUID();
+            const std::optional<FileSpec> result =
+                PluginManager::LocateSourceFile(module_spec, file_spec);
+            if (result.has_value()) {
+              SetSupportFile(std::make_shared<SupportFile>(
+                  *result, support_file_sp->GetChecksum()));
+            }
+          }
         }
       }
     }
