@@ -2216,8 +2216,11 @@ Error RewriteInstance::readSpecialSections() {
                   "Use -update-debug-sections to keep it.\n";
   }
 
-  HasTextRelocations = (bool)BC->getUniqueSectionByName(
-      ".rela" + std::string(BC->getMainCodeSectionName()));
+  const char *code_sec = BC->getMainCodeSectionName();
+  HasTextRelocations = !!BC->getUniqueSectionByName(std::string{".rela"} + code_sec);
+  if (!HasTextRelocations)
+    HasTextRelocations = !!BC->getUniqueSectionByName(std::string{".crel"} + code_sec);
+
   HasSymbolTable = (bool)BC->getUniqueSectionByName(".symtab");
   EHFrameSection = BC->getUniqueSectionByName(".eh_frame");
 
@@ -2436,6 +2439,11 @@ int64_t getRelocationAddend(const ELFObjectFile<ELFT> *Obj,
     llvm_unreachable("unexpected relocation section type");
   case ELF::SHT_REL:
     break;
+  case ELF::SHT_CREL: {
+    auto ERela = Obj->getCrel(Rel);
+    Addend = ERela.r_addend;
+    break; 
+  }
   case ELF::SHT_RELA: {
     const Elf_Rela *RelA = Obj->getRela(Rel);
     Addend = RelA->r_addend;
