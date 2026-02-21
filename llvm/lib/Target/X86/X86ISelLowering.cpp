@@ -46983,27 +46983,32 @@ static SDValue createPSADBW(SelectionDAG &DAG, SDValue N0, SDValue N1,
 
 // Attempt to replace an min/max v8i16/v16i8 horizontal reduction with
 // PHMINPOSUW.
-static SDValue combineMinMaxReduction(SDNode *Extract, SelectionDAG &DAG,
-                                      const X86Subtarget &Subtarget) {
+static std::pair<SDValue, bool>
+combineMinMaxReduction(SDNode *Extract, SelectionDAG &DAG,
+                       const X86Subtarget &Subtarget) {
+  const std::pair<SDValue, bool> NoMatch{};
+
   // Bail without SSE41.
   if (!Subtarget.hasSSE41())
-    return SDValue();
+    return NoMatch;
 
   EVT ExtractVT = Extract->getValueType(0);
   if (ExtractVT != MVT::i16 && ExtractVT != MVT::i8)
-    return SDValue();
+    return NoMatch;
 
   // Check for SMAX/SMIN/UMAX/UMIN horizontal reduction patterns.
   ISD::NodeType BinOp;
   SDValue Src = DAG.matchBinOpReduction(
       Extract, BinOp, {ISD::SMAX, ISD::SMIN, ISD::UMAX, ISD::UMIN}, true);
   if (!Src)
-    return SDValue();
+    return NoMatch;
+
+  bool FoundPartialReduction = Src.getOpcode() == ISD::EXTRACT_SUBVECTOR;
 
   EVT SrcVT = Src.getValueType();
   EVT SrcSVT = SrcVT.getScalarType();
   if (SrcSVT != ExtractVT || (SrcVT.getSizeInBits() % 128) != 0)
-    return SDValue();
+    return NoMatch;
 
   SDLoc DL(Extract);
   SDValue MinPos = Src;
@@ -47052,8 +47057,9 @@ static SDValue combineMinMaxReduction(SDNode *Extract, SelectionDAG &DAG,
   if (Mask)
     MinPos = DAG.getNode(ISD::XOR, DL, SrcVT, Mask, MinPos);
 
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtractVT, MinPos,
-                     DAG.getVectorIdxConstant(0, DL));
+  return {DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtractVT, MinPos,
+                      DAG.getVectorIdxConstant(0, DL)),
+          FoundPartialReduction};
 }
 
 // Attempt to replace an all_of/any_of/parity style horizontal reduction with a MOVMSK.
@@ -47267,6 +47273,9 @@ static SDValue combineVPDPBUSDPattern(SDNode *Extract, SelectionDAG &DAG,
                      Extract->getOperand(1));
 }
 
+// Check whether this extract is the root of a sum of absolute differences
+// pattern. This has to be done here because we really want it to happen
+// pre-legalizatio.
 static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
   using namespace SDPatternMatch;
@@ -47704,19 +47713,24 @@ static SDValue scalarizeExtEltFP(SDNode *ExtElt, SelectionDAG &DAG,
 
 /// Try to convert a vector reduction sequence composed of binops and shuffles
 /// into horizontal ops.
-static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
-                                     const X86Subtarget &Subtarget) {
+static std::pair<SDValue, bool>
+combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
+                      const X86Subtarget &Subtarget) {
   assert(ExtElt->getOpcode() == ISD::EXTRACT_VECTOR_ELT && "Unexpected caller");
+
+  const std::pair<SDValue, bool> NoMatch{};
 
   // We need at least SSE2 to anything here.
   if (!Subtarget.hasSSE2())
-    return SDValue();
+    return NoMatch;
 
   ISD::NodeType Opc;
   SDValue Rdx = DAG.matchBinOpReduction(ExtElt, Opc,
                                         {ISD::ADD, ISD::MUL, ISD::FADD}, true);
   if (!Rdx)
-    return SDValue();
+    return NoMatch;
+
+  bool FoundPartialReduction = Rdx.getOpcode() == ISD::EXTRACT_SUBVECTOR;
 
   SDValue Index = ExtElt->getOperand(1);
   assert(isNullConstant(Index) &&
@@ -47725,7 +47739,7 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
   EVT VT = ExtElt->getValueType(0);
   EVT VecVT = Rdx.getValueType();
   if (VecVT.getScalarType() != VT)
-    return SDValue();
+    return NoMatch;
 
   SDLoc DL(ExtElt);
   unsigned NumElts = VecVT.getVectorNumElements();
@@ -47752,7 +47766,7 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
   // vXi8 mul reduction - promote to vXi16 mul reduction.
   if (Opc == ISD::MUL) {
     if (VT != MVT::i8 || NumElts < 4 || !isPowerOf2_32(NumElts))
-      return SDValue();
+      return NoMatch;
     if (VecVT.getSizeInBits() >= 128) {
       EVT WideVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16, NumElts / 2);
       SDValue Lo = getUnpackl(DAG, DL, VecVT, Rdx, DAG.getUNDEF(VecVT));
@@ -47780,7 +47794,8 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
                       DAG.getVectorShuffle(MVT::v8i16, DL, Rdx, Rdx,
                                            {1, -1, -1, -1, -1, -1, -1, -1}));
     Rdx = DAG.getBitcast(MVT::v16i8, Rdx);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index);
+    return {DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index),
+            FoundPartialReduction};
   }
 
   // vXi8 add reduction - sub 128-bit vector.
@@ -47789,12 +47804,13 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
     Rdx = DAG.getNode(X86ISD::PSADBW, DL, MVT::v2i64, Rdx,
                       DAG.getConstant(0, DL, MVT::v16i8));
     Rdx = DAG.getBitcast(MVT::v16i8, Rdx);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index);
+    return {DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index),
+            FoundPartialReduction};
   }
 
   // Must be a >=128-bit vector with pow2 elements.
   if ((VecVT.getSizeInBits() % 128) != 0 || !isPowerOf2_32(NumElts))
-    return SDValue();
+    return NoMatch;
 
   // vXi8 add reduction - sum lo/hi halves then use PSADBW.
   if (VT == MVT::i8) {
@@ -47813,7 +47829,8 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
     Rdx = DAG.getNode(X86ISD::PSADBW, DL, MVT::v2i64, Rdx,
                       getZeroVector(MVT::v16i8, Subtarget, DAG, DL));
     Rdx = DAG.getBitcast(MVT::v16i8, Rdx);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index);
+    return {DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index),
+            FoundPartialReduction};
   }
 
   // See if we can use vXi8 PSADBW add reduction for larger zext types.
@@ -47860,12 +47877,13 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
 
     VecVT = MVT::getVectorVT(VT.getSimpleVT(), 128 / VT.getSizeInBits());
     Rdx = DAG.getBitcast(VecVT, Rdx);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index);
+    return {DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index),
+            FoundPartialReduction};
   }
 
   // Only use (F)HADD opcodes if they aren't microcoded or minimizes codesize.
   if (!shouldUseHorizontalOp(true, DAG, Subtarget))
-    return SDValue();
+    return NoMatch;
 
   unsigned HorizOpcode = Opc == ISD::ADD ? X86ISD::HADD : X86ISD::FHADD;
 
@@ -47883,14 +47901,15 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
   }
   if (!((VecVT == MVT::v8i16 || VecVT == MVT::v4i32) && Subtarget.hasSSSE3()) &&
       !((VecVT == MVT::v4f32 || VecVT == MVT::v2f64) && Subtarget.hasSSE3()))
-    return SDValue();
+    return NoMatch;
 
   // extract (add (shuf X), X), 0 --> extract (hadd X, X), 0
   unsigned ReductionSteps = Log2_32(VecVT.getVectorNumElements());
   for (unsigned i = 0; i != ReductionSteps; ++i)
     Rdx = DAG.getNode(HorizOpcode, DL, VecVT, Rdx, Rdx);
 
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index);
+  return {DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index),
+          FoundPartialReduction};
 }
 
 /// Detect vector gather/scatter index generation and convert it from being a
@@ -47984,26 +48003,29 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(X86ISD::MMX_MOVD2W, dl, MVT::i32,
                        InputVector.getOperand(0));
 
-  // Check whether this extract is the root of a sum of absolute differences
-  // pattern. This has to be done here because we really want it to happen
-  // pre-legalization,
-  if (SDValue SAD = combineBasicSADPattern(N, DAG, Subtarget))
-    return SAD;
+  SDValue BinOpReduction;
+  bool IsPartialReduction = false;
+  if (auto Result = std::tie(BinOpReduction, IsPartialReduction);
+      (BinOpReduction = combineBasicSADPattern(N, DAG, Subtarget)) ||
+      (BinOpReduction = combineVPDPBUSDPattern(N, DAG, Subtarget)) ||
+      (BinOpReduction = combinePredicateReduction(N, DAG, Subtarget)) ||
+      ((Result = combineMinMaxReduction(N, DAG, Subtarget)), BinOpReduction) ||
+      ((Result = combineArithReduction(N, DAG, Subtarget)), BinOpReduction)) {
+    SDValue ExtractEltOperand = N->getOperand(0);
+    DCI.CombineTo(N, BinOpReduction);
 
-  if (SDValue VPDPBUSD = combineVPDPBUSDPattern(N, DAG, Subtarget))
-    return VPDPBUSD;
+    if (!IsPartialReduction) {
+      // Replace also ExtractEltOperand.
+      // This is safe to do, because N resulted directly from a full reduction,
+      // which means all the elements are undefined except for the 0th element.
+      SDValue V =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(BinOpReduction),
+                      ExtractEltOperand->getValueType(0), BinOpReduction);
+      DCI.CombineTo(ExtractEltOperand.getNode(), V);
+    }
 
-  // Attempt to replace an all_of/any_of horizontal reduction with a MOVMSK.
-  if (SDValue Cmp = combinePredicateReduction(N, DAG, Subtarget))
-    return Cmp;
-
-  // Attempt to replace min/max v8i16/v16i8 reductions with PHMINPOSUW.
-  if (SDValue MinMax = combineMinMaxReduction(N, DAG, Subtarget))
-    return MinMax;
-
-  // Attempt to optimize ADD/FADD/MUL reductions with HADD, promotion etc..
-  if (SDValue V = combineArithReduction(N, DAG, Subtarget))
-    return V;
+    return SDValue(N, 0); // Return N so it doesn't get rechecked!
+  }
 
   if (SDValue V = scalarizeExtEltFP(N, DAG, Subtarget, DCI))
     return V;
