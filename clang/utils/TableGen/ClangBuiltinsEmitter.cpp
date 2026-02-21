@@ -618,6 +618,23 @@ struct BuiltinDocData {
   const Record *Documentation = nullptr;
   const Record *BuiltinRecord = nullptr;
   std::string Heading;
+
+  BuiltinDocData(const Record *D, const Record *B)
+      : Documentation(D), BuiltinRecord(B) {
+    // Use the Heading field if set, otherwise use the builtin's first
+    // spelling.
+    StringRef HeadingStr = D->getValueAsString("Heading");
+    if (HeadingStr.empty()) {
+      std::vector<StringRef> Spellings =
+          B->getValueAsListOfStrings("Spellings");
+      if (!Spellings.empty())
+        Heading = Spellings[0].str();
+      else
+        Heading = B->getName().str();
+    } else {
+      Heading = HeadingStr.str();
+    }
+  }
 };
 } // namespace
 
@@ -734,7 +751,6 @@ void clang::EmitClangBuiltinDocs(const RecordKeeper &Records, raw_ostream &OS) {
   if (!Doc) {
     PrintFatalError("The GlobalDocumentation top-level definition is missing, "
                     "no documentation will be generated.");
-    return;
   }
 
   OS << Doc->getValueAsString("Intro") << "\n";
@@ -746,30 +762,10 @@ void clang::EmitClangBuiltinDocs(const RecordKeeper &Records, raw_ostream &OS) {
     for (const Record *D : B->getValueAsListOfDefs("Documentation")) {
       const Record *Category = D->getValueAsDef("Category");
       StringRef Cat = Category->getValueAsString("Name");
-
       // Skip builtins that are explicitly internal-only.
       if (Cat == "InternalOnly")
         continue;
-
-      BuiltinDocData Data;
-      Data.Documentation = D;
-      Data.BuiltinRecord = B;
-
-      // Use the Heading field if set, otherwise use the builtin's first
-      // spelling.
-      StringRef Heading = D->getValueAsString("Heading");
-      if (Heading.empty()) {
-        std::vector<StringRef> Spellings =
-            B->getValueAsListOfStrings("Spellings");
-        if (!Spellings.empty())
-          Data.Heading = Spellings[0];
-        else
-          Data.Heading = B->getName().str();
-      } else {
-        Data.Heading = Heading.str();
-      }
-
-      SplitDocs[Category].push_back(std::move(Data));
+      SplitDocs[Category].emplace_back(D, B);
     }
   }
 
