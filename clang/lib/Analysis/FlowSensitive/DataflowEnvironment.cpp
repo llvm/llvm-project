@@ -420,7 +420,7 @@ public:
         // it may not even be casting from a record type -- and even if it is,
         // the two objects are in general of unrelated type.
         isa<BuiltinBitCastExpr>(E) ||
-        // TODO: consider properly progating the Loc into the await_resume()
+        // TODO: consider properly propagating the Loc into the await_resume()
         // of the result of the getOperand().
         isa<CoawaitExpr>(E)) {
       return;
