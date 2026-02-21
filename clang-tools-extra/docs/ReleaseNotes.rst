@@ -188,6 +188,14 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
   member pointers are correctly flagged as uninitialized.
 
+- Improved :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by:
+
+  - Correctly handling forwarding in deeply nested lambdas.
+
+  - Fixing a false negative when multiple parameters are used in a lambda and
+    only some of them are forwarded.
+
 - Improved :doc:`cppcoreguidelines-pro-type-vararg
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer
   warning on builtins with custom type checking (e.g., type-generic builtins
