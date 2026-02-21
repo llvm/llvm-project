@@ -205,6 +205,9 @@ Changes in existing checks
   - Added support for analyzing function parameters with the `AnalyzeParameters`
     option.
 
+  - Fixed false positive where an array of pointers to ``const`` was
+    incorrectly diagnosed as allowing the pointee to be made ``const``.
+
 - Improved :doc:`modernize-pass-by-value
   <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
   option to suppress warnings in macros.
