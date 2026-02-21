@@ -681,7 +681,7 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
     `permArgument`; others take no argument.
 
     Quad permutation:
-    - `quad_perm([a, b, c, d])`: Full crossbar within each group of 4
+    - `quad_perm([a, b, c, d])`: Full permute within each group of 4
       consecutive lanes (a quad). Each element is in [0, 3] and selects which
       lane within the quad to read from. Lane 4k+i reads from lane 4k+perm[i].
       For example, `quad_perm([1, 0, 3, 2])` swaps adjacent pairs within
