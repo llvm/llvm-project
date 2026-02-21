@@ -37,7 +37,9 @@ public:
 
 public:
   typedef input_iterator_tag iterator_category;
-  typedef bidirectional_iterator_tag iterator_concept;
+#  if _LIBCPP_STD_VER >= 20
+  using iterator_concept = bidirectional_iterator_tag;
+#  endif
 
   typedef path value_type;
   typedef ptrdiff_t difference_type;
