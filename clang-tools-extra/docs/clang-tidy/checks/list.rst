@@ -319,6 +319,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-emplace <modernize/use-emplace>`, "Yes"
    :doc:`modernize-use-equals-default <modernize/use-equals-default>`, "Yes"
    :doc:`modernize-use-equals-delete <modernize/use-equals-delete>`, "Yes"
+   :doc:`modernize-use-from-range-container-constructor <modernize/modernize-use-from-range-container-constructor>`, "Yes"
    :doc:`modernize-use-integer-sign-comparison <modernize/use-integer-sign-comparison>`, "Yes"
    :doc:`modernize-use-nodiscard <modernize/use-nodiscard>`, "Yes"
    :doc:`modernize-use-noexcept <modernize/use-noexcept>`, "Yes"
