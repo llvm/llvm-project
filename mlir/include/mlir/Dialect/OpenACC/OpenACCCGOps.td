@@ -72,7 +72,8 @@ def OpenACC_KernelEnvironmentOp
                   NoTerminator,
                   DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                             ["getSuccessorInputs"]>,
-                  MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                  MemoryEffects<[MemRead<OpenACC_ConstructResource>,
+                                 MemWrite<OpenACC_ConstructResource>,
                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "Decomposition of compute constructs to capture data mapping "
                 "and asynchronous behavior information";

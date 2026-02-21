@@ -95,6 +95,7 @@ mlir_target_link_libraries(MLIRTestDialect PUBLIC
   MLIRTransforms
   MLIRValueBoundsOpInterface
   MLIRBufferizationDialect
+  MLIRSideEffectInterfaces
 )
 
 add_mlir_translation_library(MLIRTestFromLLVMIRTranslation
