@@ -12,11 +12,8 @@
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4:![0-9]+]], !align [[META5:![0-9]+]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    store float [[TMP2]], ptr [[TMP1]], align 4
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP1]], align 4
 // CHECK-NEXT:    ret void
 //
 void StoreScalarAtMat00(out float4x4 A, float F) {
@@ -31,12 +28,9 @@ void StoreScalarAtMat00(out float4x4 A, float F) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 1
-// CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 1
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 void StoreScalarAtMat01(out float4x4 A, float F) {
@@ -51,12 +45,9 @@ void StoreScalarAtMat01(out float4x4 A, float F) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 2
-// CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 2
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 void StoreScalarAtMat02(out float4x4 A, float F) {
@@ -71,12 +62,9 @@ void StoreScalarAtMat02(out float4x4 A, float F) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 3
-// CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 3
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 void StoreScalarAtMat03(out float4x4 A, float F) {
@@ -91,12 +79,9 @@ void StoreScalarAtMat03(out float4x4 A, float F) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 4
-// CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 4
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 void StoreScalarAtMat10(out float4x4 A, float F) {
@@ -111,12 +96,9 @@ void StoreScalarAtMat10(out float4x4 A, float F) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 5
-// CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 5
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 void StoreScalarAtMat11(out float4x4 A, float F) {
@@ -131,12 +113,9 @@ void StoreScalarAtMat11(out float4x4 A, float F) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 6
-// CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 6
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 void StoreScalarAtMat12(out float4x4 A, float F) {
@@ -151,12 +130,9 @@ void StoreScalarAtMat12(out float4x4 A, float F) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 7
-// CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 7
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 void StoreScalarAtMat13(out float4x4 A, float F) {
@@ -171,12 +147,9 @@ void StoreScalarAtMat13(out float4x4 A, float F) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 8
-// CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 8
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 void StoreScalarAtMat20(out float4x4 A, float F) {
@@ -191,12 +164,9 @@ void StoreScalarAtMat20(out float4x4 A, float F) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 9
-// CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 9
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 void StoreScalarAtMat21(out float4x4 A, float F) {
@@ -211,12 +181,9 @@ void StoreScalarAtMat21(out float4x4 A, float F) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 10
-// CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 10
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 void StoreScalarAtMat22(out float4x4 A, float F) {
@@ -231,12 +198,9 @@ void StoreScalarAtMat22(out float4x4 A, float F) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 11
-// CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 11
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 void StoreScalarAtMat23(out float4x4 A, float F) {
@@ -251,12 +215,9 @@ void StoreScalarAtMat23(out float4x4 A, float F) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 12
-// CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 12
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 void StoreScalarAtMat30(out float4x4 A, float F) {
@@ -271,12 +232,9 @@ void StoreScalarAtMat30(out float4x4 A, float F) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 13
-// CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 13
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 void StoreScalarAtMat31(out float4x4 A, float F) {
@@ -291,12 +249,9 @@ void StoreScalarAtMat31(out float4x4 A, float F) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 14
-// CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 14
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 void StoreScalarAtMat32(out float4x4 A, float F) {
@@ -311,12 +266,9 @@ void StoreScalarAtMat32(out float4x4 A, float F) {
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store float [[F]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLAT_SPLAT]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 15
-// CHECK-NEXT:    store float [[TMP2]], ptr [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x float>, ptr [[TMP1]], i32 0, i32 15
+// CHECK-NEXT:    store float [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
 void StoreScalarAtMat33(out float4x4 A, float F) {

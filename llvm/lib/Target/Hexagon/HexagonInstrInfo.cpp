@@ -882,6 +882,33 @@ void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       .addReg(SrcReg).addReg(SrcReg, KillFlag);
     return;
   }
+  if (Hexagon::IntRegsRegClass.contains(DestReg) &&
+      Hexagon::DoubleRegsRegClass.contains(SrcReg)) {
+    // Truncating copy: extract the specified or low sub-register.
+    unsigned SrcSub = Hexagon::isub_lo;
+    if (I->isCopy()) {
+      unsigned OpSub = I->getOperand(1).getSubReg();
+      if (OpSub == Hexagon::isub_lo || OpSub == Hexagon::isub_hi)
+        SrcSub = OpSub;
+    }
+    Register SrcHalf = HRI.getSubReg(SrcReg, SrcSub);
+    BuildMI(MBB, I, DL, get(Hexagon::A2_tfr), DestReg)
+        .addReg(SrcHalf, KillFlag);
+    return;
+  }
+  if (Hexagon::DoubleRegsRegClass.contains(DestReg) &&
+      Hexagon::IntRegsRegClass.contains(SrcReg)) {
+    // Inserting copy: write into the specified or low sub-register half.
+    unsigned DstSub = Hexagon::isub_lo;
+    if (I->isCopy()) {
+      unsigned OpSub = I->getOperand(0).getSubReg();
+      if (OpSub == Hexagon::isub_lo || OpSub == Hexagon::isub_hi)
+        DstSub = OpSub;
+    }
+    Register DstHalf = HRI.getSubReg(DestReg, DstSub);
+    BuildMI(MBB, I, DL, get(Hexagon::A2_tfr), DstHalf).addReg(SrcReg, KillFlag);
+    return;
+  }
   if (Hexagon::CtrRegsRegClass.contains(DestReg) &&
       Hexagon::IntRegsRegClass.contains(SrcReg)) {
     BuildMI(MBB, I, DL, get(Hexagon::A2_tfrrcr), DestReg)
