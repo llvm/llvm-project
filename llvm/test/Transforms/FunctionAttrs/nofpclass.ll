@@ -193,7 +193,7 @@ define internal float @mutually_recursive1(float %arg) {
 
 define internal void @infer_arg_from_constants(float %a, <2 x half> %b, float %c, float %d) {
 ; CHECK-LABEL: define internal void @infer_arg_from_constants(
-; CHECK-SAME: float [[A:%.*]], <2 x half> [[B:%.*]], float [[C:%.*]], float [[D:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float nofpclass(nan inf nzero sub norm) [[A:%.*]], <2 x half> [[B:%.*]], float [[C:%.*]], float nofpclass(snan inf zero sub norm) [[D:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
   ret void

@@ -47,6 +47,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -66,6 +67,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "function-attrs"
 
@@ -2418,8 +2420,15 @@ static bool addNoFPClassAttrsTopDown(Function &F) {
       return false;
 
     RetNoFPClass &= CB->getRetNoFPClass();
-    for (unsigned I = 0; I != NumArgs; ++I)
-      ArgsNoFPClass[I] &= CB->getParamNoFPClass(I);
+    for (unsigned I = 0; I != NumArgs; ++I) {
+      // TODO: Consider computeKnownFPClass, at least with a small search
+      // depth. This will currently not catch non-splat vectors.
+      const APFloat *Cst;
+      if (match(CB->getArgOperand(I), m_APFloat(Cst)))
+        ArgsNoFPClass[I] &= ~Cst->classify();
+      else
+        ArgsNoFPClass[I] &= CB->getParamNoFPClass(I);
+    }
   }
 
   LLVMContext &Ctx = F.getContext();
@@ -2427,7 +2436,7 @@ static bool addNoFPClassAttrsTopDown(Function &F) {
   if (RetNoFPClass != fcNone) {
     FPClassTest OldAttr = F.getAttributes().getRetNoFPClass();
     if (OldAttr != RetNoFPClass) {
-      F.addRetAttr(Attribute::getWithNoFPClass(Ctx, RetNoFPClass | OldAttr));
+      F.addRetAttr(Attribute::getWithNoFPClass(Ctx, RetNoFPClass));
       Changed = true;
     }
   }
@@ -2440,7 +2449,7 @@ static bool addNoFPClassAttrsTopDown(Function &F) {
     if (OldAttr == ArgNoFPClass)
       continue;
 
-    F.addParamAttr(I, Attribute::getWithNoFPClass(Ctx, ArgNoFPClass | OldAttr));
+    F.addParamAttr(I, Attribute::getWithNoFPClass(Ctx, ArgNoFPClass));
     Changed = true;
   }
 
