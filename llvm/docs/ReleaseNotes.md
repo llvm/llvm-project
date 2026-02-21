@@ -216,6 +216,8 @@ Changes to LLDB
   from any platform.
 * The crashed thread is now automatically selected on start.
 * Threads are listed in incrmental order by pid then by tid.
+* Unread kernel messages saved in msgbufp are now printed when lldb starts. This information is printed only
+  when lldb is in the interactive mode (i.e. not in batch mode).
 
 Changes to BOLT
 ---------------
