@@ -1,7 +1,7 @@
 // RUN: mlir-translate --mlir-to-llvmir -verify-diagnostics -split-input-file %s
 
 llvm.func @fence_sync_restrict() {
-  // expected-error @below {{only acquire and release semantics are supported}}
+  // expected-error @below {{attribute 'order' failed to satisfy constraint: NVVM Memory Ordering kind whose value is one of {acquire, release}}}
   nvvm.fence.sync_restrict {order = #nvvm.mem_order<weak>}
   llvm.return
 }
@@ -9,7 +9,7 @@ llvm.func @fence_sync_restrict() {
 // -----
 
 llvm.func @fence_sync_restrict() {
-  // expected-error @below {{only acquire and release semantics are supported}}
+  // expected-error @below {{attribute 'order' failed to satisfy constraint: NVVM Memory Ordering kind whose value is one of {acquire, release}}}
   nvvm.fence.sync_restrict {order = #nvvm.mem_order<mmio>}
   llvm.return
 }
@@ -65,7 +65,7 @@ llvm.func @fence_proxy_release() {
 // -----
 
 llvm.func @fence_proxy_sync_restrict() {
-  // expected-error @below {{only acquire and release semantics are supported}}
+  // expected-error @below {{attribute 'order' failed to satisfy constraint: NVVM Memory Ordering kind whose value is one of {acquire, release}}}
   nvvm.fence.proxy.sync_restrict {order = #nvvm.mem_order<mmio>}
   llvm.return
 }
