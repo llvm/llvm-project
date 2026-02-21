@@ -35,7 +35,7 @@ __shift_left(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::templat
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n >= 0, "n must be greater than or equal to 0");
 
   if (__n == 0) {
-    _Iter __end = _IterOps<_AlgPolicy>::next(__first, __last);
+    _Iter __end = _IterOps<_AlgPolicy>::__next_until(__first, __last);
     return {std::move(__first), std::move(__end)};
   }
 

@@ -117,8 +117,8 @@ __set_intersection(
         __first2 == __first2_next, __first1, __first2, __result, __prev_may_be_equal);
   }
   return __set_intersection_result<_InForwardIter1, _InForwardIter2, _OutIter>(
-      _IterOps<_AlgPolicy>::next(std::move(__first1), std::move(__last1)),
-      _IterOps<_AlgPolicy>::next(std::move(__first2), std::move(__last2)),
+      _IterOps<_AlgPolicy>::__next_until(std::move(__first1), std::move(__last1)),
+      _IterOps<_AlgPolicy>::__next_until(std::move(__first2), std::move(__last2)),
       std::move(__result));
 }
 
@@ -155,8 +155,8 @@ __set_intersection(
   }
 
   return __set_intersection_result<_InInputIter1, _InInputIter2, _OutIter>(
-      _IterOps<_AlgPolicy>::next(std::move(__first1), std::move(__last1)),
-      _IterOps<_AlgPolicy>::next(std::move(__first2), std::move(__last2)),
+      _IterOps<_AlgPolicy>::__next_until(std::move(__first1), std::move(__last1)),
+      _IterOps<_AlgPolicy>::__next_until(std::move(__first2), std::move(__last2)),
       std::move(__result));
 }
 

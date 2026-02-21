@@ -14,6 +14,7 @@
 #include <__assert>
 #include <__config>
 #include <__iterator/advance.h>
+#include <__iterator/concepts.h>
 #include <__iterator/distance.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>
@@ -56,11 +57,32 @@ struct _IterOps<_RangeAlgPolicy> {
   template <class _Iter>
   using __difference_type _LIBCPP_NODEBUG = iter_difference_t<_Iter>;
 
-  static constexpr auto advance      = ranges::advance;
+  template <input_or_output_iterator _Iter>
+  _LIBCPP_HIDE_FROM_ABI static constexpr void advance(_Iter& __iter, iter_difference_t<_Iter> __n) {
+    ranges::__advance::__advance_n(__iter, __n);
+  }
+
+  template <input_or_output_iterator _Iter>
+  _LIBCPP_HIDE_FROM_ABI static constexpr _Iter __next_n(_Iter __iter) {
+    ++__iter;
+    return __iter;
+  }
+
+  template <input_or_output_iterator _Iter>
+  _LIBCPP_HIDE_FROM_ABI static constexpr _Iter __next_n(_Iter __iter, iter_difference_t<_Iter> __n) {
+    ranges::__advance::__advance_n(__iter, __n);
+    return __iter;
+  }
+
+  template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
+  _LIBCPP_HIDE_FROM_ABI static constexpr _Ip __next_until(_Ip __x, _Sp __bound_sentinel) {
+    ranges::__advance::__advance_until(__x, __bound_sentinel);
+    return __x;
+  }
+
   static constexpr auto distance     = ranges::distance;
   static constexpr auto __iter_move  = ranges::iter_move;
   static constexpr auto iter_swap    = ranges::iter_swap;
-  static constexpr auto next         = ranges::next;
   static constexpr auto prev         = ranges::prev;
   static constexpr auto __advance_to = ranges::advance;
 };
@@ -140,13 +162,13 @@ struct _IterOps<_ClassicAlgPolicy> {
 
   // next
   template <class _Iterator>
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iterator next(_Iterator, _Iterator __last) {
+  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iterator __next_until(_Iterator, _Iterator __last) {
     return __last;
   }
 
   template <class _Iter>
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX14 __remove_cvref_t<_Iter>
-  next(_Iter&& __it, typename iterator_traits<__remove_cvref_t<_Iter> >::difference_type __n = 1) {
+  __next_n(_Iter&& __it, typename iterator_traits<__remove_cvref_t<_Iter> >::difference_type __n = 1) {
     return std::next(std::forward<_Iter>(__it), __n);
   }
 

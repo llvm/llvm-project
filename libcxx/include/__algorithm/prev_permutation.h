@@ -32,7 +32,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_BidirectionalIterator,
 __prev_permutation(_BidirectionalIterator __first, _Sentinel __last, _Compare&& __comp) {
   using _Result = pair<_BidirectionalIterator, bool>;
 
-  _BidirectionalIterator __last_iter = _IterOps<_AlgPolicy>::next(__first, __last);
+  _BidirectionalIterator __last_iter = _IterOps<_AlgPolicy>::__next_until(__first, __last);
   _BidirectionalIterator __i         = __last_iter;
   if (__first == __last || __first == --__i)
     return _Result(std::move(__last_iter), false);

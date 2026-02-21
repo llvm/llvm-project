@@ -42,7 +42,7 @@ struct __move_backward_impl {
   template <class _InIter, class _Sent, class _OutIter>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
   operator()(_InIter __first, _Sent __last, _OutIter __result) const {
-    auto __last_iter          = _IterOps<_AlgPolicy>::next(__first, __last);
+    auto __last_iter          = _IterOps<_AlgPolicy>::__next_until(__first, __last);
     auto __original_last_iter = __last_iter;
 
     while (__first != __last_iter) {

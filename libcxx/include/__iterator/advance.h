@@ -74,6 +74,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 void advance(_InputIter& __i
 
 // [range.iter.op.advance]
 
+template <class _AlgPolicy>
+struct _IterOps;
+
 namespace ranges {
 struct __advance {
 private:
@@ -93,10 +96,12 @@ private:
     }
   }
 
-public:
+  template <class _AlgPolicy>
+  friend struct std::_IterOps;
+
   // Preconditions: If `I` does not model `bidirectional_iterator`, `n` is not negative.
   template <input_or_output_iterator _Ip>
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Ip& __i, iter_difference_t<_Ip> __n) const {
+  _LIBCPP_HIDE_FROM_ABI static constexpr void __advance_n(_Ip& __i, iter_difference_t<_Ip> __n) {
     _LIBCPP_ASSERT_PEDANTIC(bidirectional_iterator<_Ip> || __n >= 0,
                             "ranges::advance: Can only pass a negative `n` with a bidirectional_iterator.");
 
@@ -120,7 +125,7 @@ public:
   // Preconditions: Either `assignable_from<I&, S> || sized_sentinel_for<S, I>` is modeled, or [i, bound_sentinel)
   // denotes a range.
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Ip& __i, _Sp __bound_sentinel) const {
+  _LIBCPP_HIDE_FROM_ABI static constexpr void __advance_until(_Ip& __i, _Sp __bound_sentinel) {
     // If `I` and `S` model `assignable_from<I&, S>`, equivalent to `i = std::move(bound_sentinel)`.
     if constexpr (assignable_from<_Ip&, _Sp>) {
       __i = std::move(__bound_sentinel);
@@ -128,7 +133,7 @@ public:
     // Otherwise, if `S` and `I` model `sized_sentinel_for<S, I>`, equivalent to `ranges::advance(i, bound_sentinel -
     // i)`.
     else if constexpr (sized_sentinel_for<_Sp, _Ip>) {
-      (*this)(__i, __bound_sentinel - __i);
+      __advance_n(__i, __bound_sentinel - __i);
     }
     // Otherwise, while `bool(i != bound_sentinel)` is true, increments `i`.
     else {
@@ -136,6 +141,17 @@ public:
         ++__i;
       }
     }
+  }
+
+public:
+  template <input_or_output_iterator _Ip>
+  _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Ip& __i, iter_difference_t<_Ip> __n) const {
+    return __advance_n(__i, __n);
+  }
+
+  template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
+  _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Ip& __i, _Sp __bound_sentinel) const {
+    __advance_until(__i, std::move(__bound_sentinel));
   }
 
   // Preconditions:

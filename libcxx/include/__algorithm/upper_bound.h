@@ -38,7 +38,7 @@ __upper_bound(_Iter __first, _Sent __last, const _Tp& __value, _Compare&& __comp
   auto __len = _IterOps<_AlgPolicy>::distance(__first, __last);
   while (__len != 0) {
     auto __half_len = std::__half_positive(__len);
-    auto __mid      = _IterOps<_AlgPolicy>::next(__first, __half_len);
+    auto __mid      = _IterOps<_AlgPolicy>::__next_n(__first, __half_len);
     if (std::__invoke(__comp, __value, std::__invoke(__proj, *__mid)))
       __len = __half_len;
     else {

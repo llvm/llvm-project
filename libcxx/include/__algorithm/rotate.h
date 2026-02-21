@@ -39,7 +39,7 @@ __rotate_left(_ForwardIterator __first, _ForwardIterator __last) {
   using _Ops = _IterOps<_AlgPolicy>;
 
   value_type __tmp       = _Ops::__iter_move(__first);
-  _ForwardIterator __lm1 = std::__move<_AlgPolicy>(_Ops::next(__first), __last, __first).second;
+  _ForwardIterator __lm1 = std::__move<_AlgPolicy>(_Ops::__next_n(__first), __last, __first).second;
   *__lm1                 = std::move(__tmp);
   return __lm1;
 }
@@ -119,7 +119,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _ForwardIterator
 __rotate_impl(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __last, std::forward_iterator_tag) {
   typedef typename iterator_traits<_ForwardIterator>::value_type value_type;
   if (is_trivially_move_assignable<value_type>::value) {
-    if (_IterOps<_AlgPolicy>::next(__first) == __middle)
+    if (_IterOps<_AlgPolicy>::__next_n(__first) == __middle)
       return std::__rotate_left<_AlgPolicy>(__first, __last);
   }
   return std::__rotate_forward<_AlgPolicy>(__first, __middle, __last);
@@ -133,9 +133,9 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _BidirectionalIterato
     bidirectional_iterator_tag) {
   typedef typename iterator_traits<_BidirectionalIterator>::value_type value_type;
   if (is_trivially_move_assignable<value_type>::value) {
-    if (_IterOps<_AlgPolicy>::next(__first) == __middle)
+    if (_IterOps<_AlgPolicy>::__next_n(__first) == __middle)
       return std::__rotate_left<_AlgPolicy>(__first, __last);
-    if (_IterOps<_AlgPolicy>::next(__middle) == __last)
+    if (_IterOps<_AlgPolicy>::__next_n(__middle) == __last)
       return std::__rotate_right<_AlgPolicy>(__first, __last);
   }
   return std::__rotate_forward<_AlgPolicy>(__first, __middle, __last);
@@ -149,9 +149,9 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _RandomAccessIterator
     random_access_iterator_tag) {
   typedef typename iterator_traits<_RandomAccessIterator>::value_type value_type;
   if (is_trivially_move_assignable<value_type>::value) {
-    if (_IterOps<_AlgPolicy>::next(__first) == __middle)
+    if (_IterOps<_AlgPolicy>::__next_n(__first) == __middle)
       return std::__rotate_left<_AlgPolicy>(__first, __last);
-    if (_IterOps<_AlgPolicy>::next(__middle) == __last)
+    if (_IterOps<_AlgPolicy>::__next_n(__middle) == __last)
       return std::__rotate_right<_AlgPolicy>(__first, __last);
     return std::__rotate_random_access<_AlgPolicy>(__first, __middle, __last);
   }
@@ -162,7 +162,7 @@ template <class _AlgPolicy, class _Iterator, class _Sentinel>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iterator, _Iterator>
 __rotate(_Iterator __first, _Iterator __middle, _Sentinel __last) {
   using _Ret            = pair<_Iterator, _Iterator>;
-  _Iterator __last_iter = _IterOps<_AlgPolicy>::next(__middle, __last);
+  _Iterator __last_iter = _IterOps<_AlgPolicy>::__next_until(__middle, __last);
 
   if (__first == __middle)
     return _Ret(__last_iter, __last_iter);

@@ -138,7 +138,7 @@ __shuffle(_RandomAccessIterator __first, _Sentinel __last_sentinel, _UniformRand
   typedef uniform_int_distribution<ptrdiff_t> _Dp;
   typedef typename _Dp::param_type _Pp;
 
-  auto __original_last = _IterOps<_AlgPolicy>::next(__first, __last_sentinel);
+  auto __original_last = _IterOps<_AlgPolicy>::__next_until(__first, __last_sentinel);
   auto __last          = __original_last;
   difference_type __d  = __last - __first;
   if (__d > 1) {
