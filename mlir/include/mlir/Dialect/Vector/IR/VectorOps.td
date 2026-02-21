@@ -62,7 +62,10 @@ def Vector_ContractionOp :
     If operands and the result have types of different bitwidths, operands are
     promoted to have the same bitwidth as the result before performing the
     contraction. For integer types, only signless integer types are supported,
-    and the promotion happens via sign extension.
+    and the promotion happens via sign extension. For floating types, promotion
+    does not consider any fast math / denormal flags. These promotion semantics
+    are restricted choices for now, and in future we would like to extend
+    the operation to carry per-operand extension attributes.
 
     An iterator type attribute list must be specified, where each element of
     the list represents an iterator with one of the following types:
