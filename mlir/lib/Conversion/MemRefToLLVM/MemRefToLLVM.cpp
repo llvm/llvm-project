@@ -722,6 +722,11 @@ struct GenericAtomicRMWOpLowering
     // Compute the loaded value and branch to the loop block.
     rewriter.setInsertionPointToEnd(initBlock);
     auto memRefType = cast<MemRefType>(atomicOp.getMemref().getType());
+    if (adaptor.getIndices().size() != (size_t)memRefType.getRank()) {
+      return atomicOp.emitError()
+             << "index count (" << adaptor.getIndices().size()
+             << ") does not match memref rank (" << memRefType.getRank() << ")";
+    }
     auto dataPtr = getStridedElementPtr(
         rewriter, loc, memRefType, adaptor.getMemref(), adaptor.getIndices());
     Value init = LLVM::LoadOp::create(
