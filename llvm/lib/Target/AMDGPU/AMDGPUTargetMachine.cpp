@@ -17,7 +17,6 @@
 #include "AMDGPUTargetMachine.h"
 #include "AMDGPU.h"
 #include "AMDGPUAliasAnalysis.h"
-#include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPUBarrierLatency.h"
 #include "AMDGPUCtorDtorLowering.h"
 #include "AMDGPUExportClustering.h"
@@ -642,7 +641,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULowerExecSyncLegacyPass(*PR);
   initializeAMDGPUSwLowerLDSLegacyPass(*PR);
   initializeAMDGPUAnnotateUniformValuesLegacyPass(*PR);
-  initializeAMDGPUArgumentUsageInfoWrapperLegacyPass(*PR);
   initializeAMDGPUAtomicOptimizerPass(*PR);
   initializeAMDGPULowerKernelArgumentsPass(*PR);
   initializeAMDGPUPromoteKernelArgumentsPass(*PR);
@@ -2288,11 +2286,6 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(
 }
 
 void AMDGPUCodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) const {
-
-  // Require AMDGPUArgumentUsageAnalysis so that it's available during ISel.
-  flushFPMsToMPM(PMW);
-  addModulePass(RequireAnalysisPass<AMDGPUArgumentUsageAnalysis, Module>(),
-                PMW);
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addFunctionPass(FlattenCFGPass(), PMW);
