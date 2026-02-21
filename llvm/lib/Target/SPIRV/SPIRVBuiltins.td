@@ -612,6 +612,8 @@ defm : DemangledNativeBuiltin<"__spirv_AtomicXor", OpenCL_std, Atomic, 4, 4, OpA
 defm : DemangledNativeBuiltin<"atom_and", OpenCL_std, Atomic, 2, 4, OpAtomicAnd>;
 defm : DemangledNativeBuiltin<"atomic_and", OpenCL_std, Atomic, 2, 4, OpAtomicAnd>;
 defm : DemangledNativeBuiltin<"__spirv_AtomicAnd", OpenCL_std, Atomic, 4, 4, OpAtomicAnd>;
+defm : DemangledNativeBuiltin<"atom_xchg", OpenCL_std, Atomic, 2, 2, OpAtomicExchange>;
+defm : DemangledNativeBuiltin<"atomic_xchg", OpenCL_std, Atomic, 2, 2, OpAtomicExchange>;
 defm : DemangledNativeBuiltin<"atomic_exchange", OpenCL_std, Atomic, 2, 4, OpAtomicExchange>;
 defm : DemangledNativeBuiltin<"atomic_exchange_explicit", OpenCL_std, Atomic, 2, 4, OpAtomicExchange>;
 defm : DemangledNativeBuiltin<"AtomicEx__spirv_change", OpenCL_std, Atomic, 2, 4, OpAtomicExchange>;
@@ -636,8 +638,16 @@ defm : DemangledNativeBuiltin<"__spirv_AtomicFlagClear", OpenCL_std, Atomic, 3, 
 defm : DemangledNativeBuiltin<"atomic_flag_clear_explicit", OpenCL_std, Atomic, 2, 3, OpAtomicFlagClear>;
 defm : DemangledNativeBuiltin<"__spirv_AtomicSMin", OpenCL_std, Atomic, 4, 4, OpAtomicSMin>;
 defm : DemangledNativeBuiltin<"__spirv_AtomicSMax", OpenCL_std, Atomic, 4, 4, OpAtomicSMax>;
+defm : DemangledNativeBuiltin<"atom_min", OpenCL_std, Atomic, 2, 2, OpAtomicUMin>;
+defm : DemangledNativeBuiltin<"atomic_min", OpenCL_std, Atomic, 2, 2, OpAtomicUMin>;
 defm : DemangledNativeBuiltin<"__spirv_AtomicUMin", OpenCL_std, Atomic, 4, 4, OpAtomicUMin>;
+defm : DemangledNativeBuiltin<"atom_max", OpenCL_std, Atomic, 2, 2, OpAtomicUMax>;
+defm : DemangledNativeBuiltin<"atomic_max", OpenCL_std, Atomic, 2, 2, OpAtomicUMax>;
 defm : DemangledNativeBuiltin<"__spirv_AtomicUMax", OpenCL_std, Atomic, 4, 4, OpAtomicUMax>;
+defm : DemangledNativeBuiltin<"atom_inc", OpenCL_std, Atomic, 1, 1, OpAtomicIIncrement>;
+defm : DemangledNativeBuiltin<"atomic_inc", OpenCL_std, Atomic, 1, 1, OpAtomicIIncrement>;
+defm : DemangledNativeBuiltin<"atom_dec", OpenCL_std, Atomic, 1, 1, OpAtomicIDecrement>;
+defm : DemangledNativeBuiltin<"atomic_dec", OpenCL_std, Atomic, 1, 1, OpAtomicIDecrement>;
 
 // Pipe Instruction 
 defm : DemangledNativeBuiltin<"__read_pipe_2", OpenCL_std, Pipe,2, 2, OpReadPipe>;
