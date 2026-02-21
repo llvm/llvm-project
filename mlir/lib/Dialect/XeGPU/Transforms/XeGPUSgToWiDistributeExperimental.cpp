@@ -699,11 +699,7 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
   // vector::MultiDimReductionOp op legality.
   target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(
       [=](vector::MultiDimReductionOp op) -> bool {
-        // Check common conditions for subgroup multi reduction op.
-        if (!isValidSubgroupMultiReductionOp(op))
-          return true;
-        // Lane local reductions are illegal at this point and must be lowered.
-        return false; // !isReductionLaneLocal(op);
+        return !isValidSubgroupMultiReductionOp(op);
       });
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   patterns.add<SgToWiCreateNdDesc, SgToWiLoadNd, SgToWiStoreNd, SgToWiDpas,
