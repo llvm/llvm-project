@@ -178,21 +178,21 @@ public:
   }
 
   std::optional<LoanSet> getLoansAtPoint(OriginID OID,
-                                         llvm::StringRef Annotation) {
+                                         llvm::StringRef Annotation) const {
     ProgramPoint PP = Runner.getProgramPoint(Annotation);
     if (!PP)
       return std::nullopt;
     return Analysis.getLoanPropagation().getLoans(OID, PP);
   }
 
-  std::optional<std::vector<std::pair<OriginID, LivenessKind>>>
-  getLiveOriginsAtPoint(llvm::StringRef Annotation) {
+  std::optional<std::vector<OriginID>>
+  getLiveOriginsAtPoint(llvm::StringRef Annotation) const {
     ProgramPoint PP = Runner.getProgramPoint(Annotation);
     if (!PP)
       return std::nullopt;
-    std::vector<std::pair<OriginID, LivenessKind>> Result;
+    std::vector<OriginID> Result;
     for (auto &[OID, Info] : Analysis.getLiveOrigins().getLiveOriginsAt(PP))
-      Result.push_back({OID, Info.Kind});
+      Result.push_back(OID);
     return Result;
   }
 
@@ -316,10 +316,8 @@ MATCHER_P2(HasLoansToImpl, LoanVars, Annotation, "") {
                             ActualLoans, result_listener);
 }
 
-enum class LivenessKindFilter { Maybe, Must, All };
-
 /// Matcher to verify the complete set of live origins at a program point.
-MATCHER_P2(AreLiveAtImpl, Annotation, ConfFilter, "") {
+MATCHER_P(AreLiveAtImpl, Annotation, "") {
   const OriginsInfo &Info = arg;
   auto &Helper = Info.Helper;
   auto ActualLiveSetOpt = Helper.getLiveOriginsAtPoint(Annotation);
@@ -328,17 +326,7 @@ MATCHER_P2(AreLiveAtImpl, Annotation, ConfFilter, "") {
                      << Annotation << "'";
     return false;
   }
-  std::vector<OriginID> ActualLiveOrigins;
-  for (const auto [OID, ActualConfidence] : ActualLiveSetOpt.value()) {
-    if (ConfFilter == LivenessKindFilter::All)
-      ActualLiveOrigins.push_back(OID);
-    if (ActualConfidence == LivenessKind::Maybe &&
-        ConfFilter == LivenessKindFilter::Maybe)
-      ActualLiveOrigins.push_back(OID);
-    if (ActualConfidence == LivenessKind::Must &&
-        ConfFilter == LivenessKindFilter::Must)
-      ActualLiveOrigins.push_back(OID);
-  }
+  std::vector<OriginID> ActualLiveOrigins = ActualLiveSetOpt.value();
 
   std::vector<OriginID> ExpectedLiveOrigins;
   for (const auto &VarName : Info.OriginVars) {
@@ -404,20 +392,8 @@ MATCHER_P2(HasLiveLoanAtExpiryImpl, HelperPtr, Annotation, "") {
   return false;
 }
 
-MATCHER_P(MustBeLiveAt, Annotation, "") {
-  return ExplainMatchResult(AreLiveAtImpl(Annotation, LivenessKindFilter::Must),
-                            arg, result_listener);
-}
-
-MATCHER_P(MaybeLiveAt, Annotation, "") {
-  return ExplainMatchResult(
-      AreLiveAtImpl(Annotation, LivenessKindFilter::Maybe), arg,
-      result_listener);
-}
-
 MATCHER_P(AreLiveAt, Annotation, "") {
-  return ExplainMatchResult(AreLiveAtImpl(Annotation, LivenessKindFilter::All),
-                            arg, result_listener);
+  return ExplainMatchResult(AreLiveAtImpl(Annotation), arg, result_listener);
 }
 
 MATCHER_P(HasLoanToATemporary, Annotation, "") {
@@ -1216,7 +1192,7 @@ TEST_F(LifetimeAnalysisTest, LivenessSimpleReturn) {
       return p;
     }
   )");
-  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p1"));
+  EXPECT_THAT(Origins({"p"}), AreLiveAt("p1"));
 }
 
 TEST_F(LifetimeAnalysisTest, LivenessKilledByReassignment) {
@@ -1230,7 +1206,7 @@ TEST_F(LifetimeAnalysisTest, LivenessKilledByReassignment) {
       return p;
     }
   )");
-  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
+  EXPECT_THAT(Origins({"p"}), AreLiveAt("p2"));
   EXPECT_THAT(NoOrigins(), AreLiveAt("p1"));
 }
 
@@ -1250,8 +1226,8 @@ TEST_F(LifetimeAnalysisTest, LivenessAcrossBranches) {
       return p;
     }
   )");
-  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
-  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p3"));
+  EXPECT_THAT(Origins({"p"}), AreLiveAt("p2"));
+  EXPECT_THAT(Origins({"p"}), AreLiveAt("p3"));
   // Before the `if`, the value of `p` (`nullptr`) is always overwritten before.
   EXPECT_THAT(NoOrigins(), AreLiveAt("p1"));
 }
@@ -1274,15 +1250,10 @@ TEST_F(LifetimeAnalysisTest, LivenessInLoop) {
     }
   )");
 
-  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p4"));
-  EXPECT_THAT(NoOrigins(), MaybeLiveAt("p4"));
-
-  EXPECT_THAT(Origins({"p", "q"}), MaybeLiveAt("p3"));
-
-  EXPECT_THAT(Origins({"q"}), MustBeLiveAt("p2"));
-  EXPECT_THAT(NoOrigins(), MaybeLiveAt("p2"));
-
-  EXPECT_THAT(Origins({"p", "q"}), MaybeLiveAt("p1"));
+  EXPECT_THAT(Origins({"p"}), AreLiveAt("p4"));
+  EXPECT_THAT(Origins({"p", "q"}), AreLiveAt("p3"));
+  EXPECT_THAT(Origins({"q"}), AreLiveAt("p2"));
+  EXPECT_THAT(Origins({"p", "q"}), AreLiveAt("p1"));
 }
 
 TEST_F(LifetimeAnalysisTest, LivenessInLoopAndIf) {
@@ -1309,9 +1280,9 @@ TEST_F(LifetimeAnalysisTest, LivenessInLoopAndIf) {
     }
   )");
   EXPECT_THAT(NoOrigins(), AreLiveAt("p5"));
-  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p4"));
+  EXPECT_THAT(Origins({"p"}), AreLiveAt("p4"));
   EXPECT_THAT(NoOrigins(), AreLiveAt("p3"));
-  EXPECT_THAT(Origins({"p"}), MaybeLiveAt("p2"));
+  EXPECT_THAT(Origins({"p"}), AreLiveAt("p2"));
   EXPECT_THAT(NoOrigins(), AreLiveAt("p1"));
 }
 
@@ -1341,21 +1312,12 @@ TEST_F(LifetimeAnalysisTest, LivenessInLoopAndIf2) {
       }
     }
   )");
-  EXPECT_THAT(Origins({"q"}), MaybeLiveAt("p6"));
-  EXPECT_THAT(NoOrigins(), MustBeLiveAt("p6"));
-
-  EXPECT_THAT(Origins({"p", "q"}), MustBeLiveAt("p5"));
-
-  EXPECT_THAT(Origins({"p", "q"}), MustBeLiveAt("p4"));
-
-  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p3"));
-  EXPECT_THAT(Origins({"q"}), MaybeLiveAt("p3"));
-
-  EXPECT_THAT(Origins({"q"}), MaybeLiveAt("p2"));
-  EXPECT_THAT(NoOrigins(), MustBeLiveAt("p2"));
-
-  EXPECT_THAT(Origins({"q"}), MaybeLiveAt("p1"));
-  EXPECT_THAT(NoOrigins(), MustBeLiveAt("p1"));
+  EXPECT_THAT(Origins({"q"}), AreLiveAt("p6"));
+  EXPECT_THAT(Origins({"p", "q"}), AreLiveAt("p5"));
+  EXPECT_THAT(Origins({"p", "q"}), AreLiveAt("p4"));
+  EXPECT_THAT(Origins({"p", "q"}), AreLiveAt("p3"));
+  EXPECT_THAT(Origins({"q"}), AreLiveAt("p2"));
+  EXPECT_THAT(Origins({"q"}), AreLiveAt("p1"));
 }
 
 TEST_F(LifetimeAnalysisTest, LivenessOutsideLoop) {
@@ -1371,8 +1333,8 @@ TEST_F(LifetimeAnalysisTest, LivenessOutsideLoop) {
       (void)*p;
     }
   )");
-  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
-  EXPECT_THAT(Origins({"p"}), MaybeLiveAt("p1"));
+  EXPECT_THAT(Origins({"p"}), AreLiveAt("p2"));
+  EXPECT_THAT(Origins({"p"}), AreLiveAt("p1"));
 }
 
 TEST_F(LifetimeAnalysisTest, TrivialDestructorsUAF) {
@@ -1388,7 +1350,7 @@ TEST_F(LifetimeAnalysisTest, TrivialDestructorsUAF) {
     }
   )");
   EXPECT_THAT(Origin("ptr"), HasLoansTo({"s"}, "p1"));
-  EXPECT_THAT(Origins({"ptr"}), MustBeLiveAt("p1"));
+  EXPECT_THAT(Origins({"ptr"}), AreLiveAt("p1"));
 }
 
 TEST_F(LifetimeAnalysisTest, TrivialClassDestructorsUAF) {
@@ -1408,7 +1370,7 @@ TEST_F(LifetimeAnalysisTest, TrivialClassDestructorsUAF) {
     }
   )");
   EXPECT_THAT(Origin("ptr"), HasLoansTo({"s"}, "p1"));
-  EXPECT_THAT(Origins({"ptr"}), MustBeLiveAt("p1"));
+  EXPECT_THAT(Origins({"ptr"}), AreLiveAt("p1"));
 }
 
 TEST_F(LifetimeAnalysisTest, SimpleReturnStackAddress) {
@@ -1577,10 +1539,10 @@ TEST_F(LifetimeAnalysisTest, UseAfterScopeThenReturn) {
     }
   )");
   EXPECT_THAT(Origin("p"), HasLoansTo({"local_obj"}, "p2"));
-  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
+  EXPECT_THAT(Origins({"p"}), AreLiveAt("p2"));
 
   EXPECT_THAT(Origin("p"), HasLoansTo({"local_obj"}, "p1"));
-  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p1"));
+  EXPECT_THAT(Origins({"p"}), AreLiveAt("p1"));
 
   EXPECT_THAT("local_obj", HasLiveLoanAtExpiry("p2"));
 }
@@ -1607,7 +1569,7 @@ TEST_F(LifetimeAnalysisTest, ReturnBeforeUseAfterScope) {
   EXPECT_THAT(NoOrigins(), AreLiveAt("p2"));
 
   EXPECT_THAT(Origin("p"), HasLoansTo({"local_obj"}, "p1"));
-  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p1"));
+  EXPECT_THAT(Origins({"p"}), AreLiveAt("p1"));
 }
 
 TEST_F(LifetimeAnalysisTest, TrivialDestructorsUAR) {

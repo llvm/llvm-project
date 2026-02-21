@@ -24,23 +24,10 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 
 namespace clang::lifetimes::internal {
-
-static Confidence livenessKindToConfidence(LivenessKind K) {
-  switch (K) {
-  case LivenessKind::Must:
-    return Confidence::Definite;
-  case LivenessKind::Maybe:
-    return Confidence::Maybe;
-  case LivenessKind::Dead:
-    return Confidence::None;
-  }
-  llvm_unreachable("unknown liveness kind");
-}
 
 namespace {
 
@@ -50,7 +37,6 @@ struct PendingWarning {
   llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> CausingFact;
   const Expr *MovedExpr;
   const Expr *InvalidatedByExpr;
-  Confidence ConfidenceLevel;
 };
 
 using AnnotationTarget =
@@ -68,6 +54,19 @@ private:
   FactManager &FactMgr;
   LifetimeSafetySemaHelper *SemaHelper;
   ASTContext &AST;
+
+  static SourceLocation GetFactLoc(
+      llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> F) {
+    if (const auto *UF = F.dyn_cast<const UseFact *>())
+      return UF->getUseExpr()->getExprLoc();
+    if (const auto *OEF = F.dyn_cast<const OriginEscapesFact *>()) {
+      if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
+        return ReturnEsc->getReturnExpr()->getExprLoc();
+      if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
+        return FieldEsc->getFieldDecl()->getLocation();
+    }
+    llvm_unreachable("unhandled causing fact in PointerUnion");
+  }
 
 public:
   LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
@@ -139,9 +138,7 @@ public:
   ///
   /// This method examines all live origins at the expiry point and determines
   /// if any of them hold the expiring loan. If so, it creates a pending
-  /// warning with the appropriate confidence level based on the liveness
-  /// information. The confidence reflects whether the origin is definitely
-  /// or maybe live at this point.
+  /// warning.
   ///
   /// Note: This implementation considers only the confidence of origin
   /// liveness. Future enhancements could also consider the confidence of loan
@@ -153,34 +150,31 @@ public:
       MovedExpr = *ME;
 
     LivenessMap Origins = LiveOrigins.getLiveOriginsAt(EF);
-    Confidence CurConfidence = Confidence::None;
     // The UseFact or OriginEscapesFact most indicative of a lifetime error,
     // prioritized by earlier source location.
     llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
-        BestCausingFact = nullptr;
+        CausingFact = nullptr;
 
     for (auto &[OID, LiveInfo] : Origins) {
       LoanSet HeldLoans = LoanPropagation.getLoans(OID, EF);
       if (!HeldLoans.contains(ExpiredLoan))
         continue;
-      // Loan is defaulted.
-      Confidence NewConfidence = livenessKindToConfidence(LiveInfo.Kind);
-      if (CurConfidence < NewConfidence) {
-        CurConfidence = NewConfidence;
-        BestCausingFact = LiveInfo.CausingFact;
-      }
+
+      if (!CausingFact ||
+          GetFactLoc(LiveInfo.CausingFact) < GetFactLoc(CausingFact))
+        CausingFact = LiveInfo.CausingFact;
     }
-    if (!BestCausingFact)
+    if (!CausingFact)
       return;
-    // We have a use-after-free.
-    Confidence LastConf = FinalWarningsMap.lookup(ExpiredLoan).ConfidenceLevel;
-    if (LastConf >= CurConfidence)
-      return;
-    FinalWarningsMap[ExpiredLoan] = {/*ExpiryLoc=*/EF->getExpiryLoc(),
-                                     /*BestCausingFact=*/BestCausingFact,
-                                     /*MovedExpr=*/MovedExpr,
-                                     /*InvalidatedByExpr=*/nullptr,
-                                     /*ConfidenceLevel=*/CurConfidence};
+
+    auto It = FinalWarningsMap.find(ExpiredLoan);
+    if (It == FinalWarningsMap.end() ||
+        GetFactLoc(CausingFact) < GetFactLoc(It->second.CausingFact)) {
+      FinalWarningsMap[ExpiredLoan] = {/*ExpiryLoc=*/EF->getExpiryLoc(),
+                                       CausingFact,
+                                       /*MovedExpr=*/MovedExpr,
+                                       /*InvalidatedByExpr=*/nullptr};
+    }
   }
 
   /// Checks for use-after-invalidation errors when a container is modified.
@@ -216,16 +210,15 @@ public:
       LoanSet HeldLoans = LoanPropagation.getLoans(OID, IOF);
       for (LoanID LiveLoanID : HeldLoans)
         if (IsInvalidated(FactMgr.getLoanMgr().getLoan(LiveLoanID))) {
-          Confidence CurConfidence = livenessKindToConfidence(LiveInfo.Kind);
-          Confidence LastConf =
-              FinalWarningsMap.lookup(LiveLoanID).ConfidenceLevel;
-          if (LastConf < CurConfidence) {
+          auto It = FinalWarningsMap.find(LiveLoanID);
+          if (It == FinalWarningsMap.end() ||
+              GetFactLoc(LiveInfo.CausingFact) <
+                  GetFactLoc(It->second.CausingFact)) {
             FinalWarningsMap[LiveLoanID] = {
                 /*ExpiryLoc=*/{},
                 /*CausingFact=*/LiveInfo.CausingFact,
                 /*MovedExpr=*/nullptr,
-                /*InvalidatedByExpr=*/IOF->getInvalidationExpr(),
-                /*ConfidenceLevel=*/CurConfidence};
+                /*InvalidatedByExpr=*/IOF->getInvalidationExpr()};
           }
         }
     }
@@ -245,7 +238,6 @@ public:
         InvalidatedPVD = PL->getParmVarDecl();
       llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
           CausingFact = Warning.CausingFact;
-      Confidence Confidence = Warning.ConfidenceLevel;
       const Expr *MovedExpr = Warning.MovedExpr;
       SourceLocation ExpiryLoc = Warning.ExpiryLoc;
 
@@ -260,13 +252,13 @@ public:
 
         } else
           SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), MovedExpr,
-                                         ExpiryLoc, Confidence);
+                                         ExpiryLoc);
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
         if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
           SemaHelper->reportUseAfterReturn(IssueExpr,
                                            RetEscape->getReturnExpr(),
-                                           MovedExpr, ExpiryLoc, Confidence);
+                                           MovedExpr, ExpiryLoc);
         else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
           SemaHelper->reportDanglingField(
               IssueExpr, FieldEscape->getFieldDecl(), MovedExpr, ExpiryLoc);
