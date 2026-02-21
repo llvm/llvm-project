@@ -3149,6 +3149,9 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
 
   if (Args.hasArg(OPT_clangir_disable_verifier))
     Opts.ClangIRDisableCIRVerifier = true;
+
+  if (Args.hasArg(OPT_fclangir_lib_opt) || Args.hasArg(OPT_fclangir_lib_opt_EQ))
+    Opts.ClangIRLibOptEnabled = true;
 #endif // CLANG_ENABLE_CIR
 
   if (Args.hasArg(OPT_aux_target_cpu))

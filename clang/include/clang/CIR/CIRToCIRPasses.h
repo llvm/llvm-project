@@ -32,8 +32,9 @@ namespace cir {
 mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
                                       mlir::MLIRContext &mlirCtx,
                                       clang::ASTContext &astCtx,
-                                      bool enableVerifier,
-                                      bool enableCIRSimplify);
+                                      bool enableVerifier, bool enableLibOpt,
+                                      bool enableCIRSimplify,
+                                      llvm::StringRef libOptOptions);
 
 } // namespace cir
 

@@ -422,6 +422,14 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ClangIRDisableCIRVerifier : 1;
 
+  /// Enable ClangIR library optimization.
+  /// Set when -fclangir-lib-opt or -fclangir-lib-opt= was passed.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ClangIRLibOptEnabled : 1;
+
+  // Options to control ClangIR library optimization
+  std::string clangIRLibOptOptions;
+
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.
@@ -552,8 +560,8 @@ public:
         EmitSymbolGraphSymbolLabelsForTesting(false),
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
         UseClangIRPipeline(false), ClangIRDisablePasses(false),
-        ClangIRDisableCIRVerifier(false), TimeTraceGranularity(500),
-        TimeTraceVerbose(false) {}
+        ClangIRDisableCIRVerifier(false), ClangIRLibOptEnabled(false),
+        TimeTraceGranularity(500), TimeTraceVerbose(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

@@ -9,6 +9,7 @@ add_clang_library(MLIRCIRTransforms
   HoistAllocas.cpp
   LoweringPrepare.cpp
   GotoSolver.cpp
+  LibOpt.cpp
 
   DEPENDS
   MLIRCIRPassIncGen
