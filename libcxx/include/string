@@ -1065,14 +1065,8 @@ public:
 #  endif // _LIBCPP_CXX03_LANG
 
   template <__enable_if_t<__is_allocator_v<_Allocator>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const _CharT* _LIBCPP_DIAGNOSE_NULLPTR __s) {
-    _LIBCPP_ASSERT_NON_NULL(__s != nullptr, "basic_string(const char*) detected nullptr");
-    __init(__s, traits_type::length(__s));
-  }
-
-  template <__enable_if_t<__is_allocator_v<_Allocator>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-  basic_string(const _CharT* _LIBCPP_DIAGNOSE_NULLPTR __s, const _Allocator& __a)
+  basic_string(const _CharT* _LIBCPP_DIAGNOSE_NULLPTR __s, const _Allocator& __a = _Allocator())
       : __alloc_(__a) {
     _LIBCPP_ASSERT_NON_NULL(__s != nullptr, "basic_string(const char*, allocator) detected nullptr");
     __init(__s, traits_type::length(__s));
@@ -1082,21 +1076,13 @@ public:
   basic_string(nullptr_t) = delete;
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const _CharT* __s, size_type __n)
-      _LIBCPP_DIAGNOSE_NULLPTR_IF(__n != 0 && __s == nullptr, " if n is not zero") {
-    _LIBCPP_ASSERT_NON_NULL(__n == 0 || __s != nullptr, "basic_string(const char*, n) detected nullptr");
-    __init(__s, __n);
-  }
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-  basic_string(const _CharT* __s, size_type __n, const _Allocator& __a)
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const _CharT* __s, size_type __n, const _Allocator& __a = _Allocator())
       _LIBCPP_DIAGNOSE_NULLPTR_IF(__n != 0 && __s == nullptr, " if n is not zero")
       : __alloc_(__a) {
     _LIBCPP_ASSERT_NON_NULL(__n == 0 || __s != nullptr, "basic_string(const char*, n, allocator) detected nullptr");
     __init(__s, __n);
   }
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(size_type __n, _CharT __c) { __init(__n, __c); }
 
 #  if _LIBCPP_STD_VER >= 23
   _LIBCPP_HIDE_FROM_ABI constexpr basic_string(
@@ -1120,7 +1106,8 @@ public:
 #  endif
 
   template <__enable_if_t<__is_allocator_v<_Allocator>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(size_type __n, _CharT __c, const _Allocator& __a)
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(size_type __n, _CharT __c, const _Allocator& __a = _Allocator())
       : __alloc_(__a) {
     __init(__n, __c);
   }
@@ -1159,29 +1146,16 @@ public:
             __enable_if_t<__can_be_converted_to_string_view_v<_CharT, _Traits, _Tp> &&
                               !is_same<__remove_cvref_t<_Tp>, basic_string>::value,
                           int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit basic_string(const _Tp& __t) {
-    __self_view __sv = __t;
-    __init(__sv.data(), __sv.size());
-  }
-
-  template <class _Tp,
-            __enable_if_t<__can_be_converted_to_string_view_v<_CharT, _Traits, _Tp> &&
-                              !is_same<__remove_cvref_t<_Tp>, basic_string>::value,
-                          int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit basic_string(const _Tp& __t, const allocator_type& __a)
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit basic_string(const _Tp& __t, const allocator_type& __a = allocator_type())
       : __alloc_(__a) {
     __self_view __sv = __t;
     __init(__sv.data(), __sv.size());
   }
 
   template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(_InputIterator __first, _InputIterator __last) {
-    __init(__first, __last);
-  }
-
-  template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-  basic_string(_InputIterator __first, _InputIterator __last, const allocator_type& __a)
+  basic_string(_InputIterator __first, _InputIterator __last, const allocator_type& __a = allocator_type())
       : __alloc_(__a) {
     __init(__first, __last);
   }
@@ -1200,11 +1174,8 @@ public:
 #  endif
 
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(initializer_list<_CharT> __il) {
-    __init(__il.begin(), __il.end());
-  }
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(initializer_list<_CharT> __il, const _Allocator& __a)
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(initializer_list<_CharT> __il, const _Allocator& __a = _Allocator())
       : __alloc_(__a) {
     __init(__il.begin(), __il.end());
   }
