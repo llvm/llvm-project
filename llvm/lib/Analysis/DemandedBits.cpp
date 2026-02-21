@@ -153,6 +153,67 @@ void DemandedBits::determineLiveOperandBits(
             AB = AOut.lshr(ShiftAmt);
           else if (OperandNo == 1)
             AB = AOut.shl(BitWidth - ShiftAmt);
+        } else {
+          ComputeKnownBits(BitWidth, UserI->getOperand(2), nullptr);
+          APInt APIntMax = Known.getMaxValue();
+          if (!APIntMax.ult(BitWidth)) {
+            AB = APInt::getAllOnes(BitWidth);
+            return;
+          }
+          uint64_t Min = Known.getMinValue().getZExtValue();
+          uint64_t Max = APIntMax.getZExtValue();
+          bool IsFShr = II->getIntrinsicID() == Intrinsic::fshr;
+          bool ShiftLeft = false;
+          uint64_t SMin = Min, SMax = Max;
+          // fshl(a, b, k ) is defined by concatenating a . b
+          // then doing a left shift by k and then extracting the upper bits.
+          // For BW = 4, k = 2 we have
+          // a4 a3 a2 a1 b4 b3 b2 b1, shift by k = 2 we get
+          // a2 a1 b4 b3.
+          // fshl(a,b,k) = (a << k) | (b >> (BW - k))
+          //
+          // Suppose AOut == 0b0000 0001
+          // [min, max] = [1, 3]
+          // iteration 1 shift by 1 mask is 0b0000 0011
+          // iteration 2 shift by 2 mask is 0b0000 1111
+          // iteration 3, shiftAmnt = 4 > max - min, we stop.
+          //
+          // fshr is defined in a similar way from fshl.
+          // a16 a15 .. a2 a1 b16 b15 ... b2 b1
+          //
+          // doing a right shift by (bw - k) and then extracting the lower bits.
+          // a4 a3 a2 a1 b4 b3 b2 b1, shift right by k = 2 we get
+          // a4 a3 a2 a1 b4 b3, then exracting the lower bits
+          // a2 a1 b4 b3
+          // fshr(a,b,k) = (a >> k) | (b << (BW - k))
+
+          // Skip poison shifts.
+          if (((IsFShr && OperandNo == 0) || (!IsFShr && OperandNo == 1)) &&
+              Min == 0) {
+            AB = APInt::getAllOnes(BitWidth);
+            return;
+          }
+
+          // IsFSHR and Op1 == ShiftLeft: true
+          // IsFSHR and Op0 == ShiftLeft: false
+          // !IsFSHR and Op0 == ShiftLeft: false
+          // !IsFShr and Op1 == ShiftLeft: true;
+          ShiftLeft = OperandNo == 1;
+
+          // ComplementShit
+          // ISFSHR and Op0 == True.
+          // ISFSHR and Op1 == False.
+          // !ISFSHR and Op0 == False.
+          // !ISFSHR and Op1 == true;
+          bool ComplementShift = IsFShr ^ (OperandNo == 1);
+
+          if (ComplementShift) {
+            SMin = BitWidth - Max;
+            SMax = BitWidth - Min;
+            Min = SMin;
+            Max = SMax;
+          }
+          GetShiftedRange(Min, Max, ShiftLeft);
         }
         break;
       }
