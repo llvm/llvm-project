@@ -425,6 +425,14 @@ func.func @expand_shape_illegal_output_shape(%arg0: memref<2xf32>) {
 
 // -----
 
+func.func @expand_shape_output_shape_dynamic_dim_mismatch(%arg0: memref<?xf32>) {
+  // expected-error @+1 {{incorrect number of dynamic sizes, has 0, expected 2}}
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [2, 3] : memref<?xf32> into memref<?x?xf32>
+  return
+}
+
+// -----
+
 func.func @collapse_shape_out_of_bounds(%arg0: memref<?x?xf32>) {
   // expected-error @+1 {{op reassociation index 2 is out of bounds}}
   %0 = memref.collapse_shape %arg0 [[0, 1, 2]] : memref<?x?xf32> into memref<?xf32>

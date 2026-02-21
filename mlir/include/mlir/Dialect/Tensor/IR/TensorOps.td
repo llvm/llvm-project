@@ -1113,16 +1113,18 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
     `src`.
 
     A reassociation is defined as a continuous grouping of dimensions and is
-    represented with an array of DenseI64ArrayAttr attribute.  The reassociation
+    represented with an array of DenseI64ArrayAttr attribute. The reassociation
     maps applied to the result tensor with the higher rank must result in the
     operand tensor with the smaller rank.
 
     The representation for the output shape supports a partially-static
     specification via attributes specified through the `static_output_shape`
-    argument.  A special sentinel value `ShapedType::kDynamic` encodes that the
-    corresponding entry has a dynamic value.  There must be exactly as many SSA
+    argument. A special sentinel value `ShapedType::kDynamic` encodes that the
+    corresponding entry has a dynamic value. There must be exactly as many SSA
     inputs in `output_shape` as there are `ShapedType::kDynamic` entries in
-    `static_output_shape`.
+    `static_output_shape`. Additionally, the number of `ShapedType::kDynamic`
+    entries in `static_output_shape` must match the number of dynamic dimensions
+    in the result type.
 
     Example:
 
