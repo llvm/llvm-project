@@ -403,16 +403,6 @@ static constexpr IntrinsicHandler cudaHandlers[]{
          &CI::genCUDASetDefaultStream),
      {{{"stream", asValue}}},
      /*isElemental=*/false},
-    {"cudastreamsynchronize",
-     static_cast<CUDAIntrinsicLibrary::ExtendedGenerator>(
-         &CI::genCUDAStreamSynchronize),
-     {{{"stream", asValue}}},
-     /*isElemental=*/false},
-    {"cudastreamsynchronizenull",
-     static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(
-         &CI::genCUDAStreamSynchronizeNull),
-     {},
-     /*isElemental=*/false},
     {"fence_proxy_async",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
          &CI::genFenceProxyAsync),
