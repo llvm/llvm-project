@@ -23,8 +23,9 @@ define void @test_2xi64_unary_op_load_interleave_group(ptr noalias %data, ptr no
 ; VF2-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @test_2xi64_unary_op_load_interleave_group(
 ; VF4-SAME: ptr noalias [[DATA:%.*]], ptr noalias [[FACTOR:%.*]]) {
@@ -48,8 +49,9 @@ define void @test_2xi64_unary_op_load_interleave_group(ptr noalias %data, ptr no
 ; VF4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF4-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH:.*:]]
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -98,8 +100,9 @@ define void @test_2xi64_unary_op_wide_load(ptr noalias %data, ptr noalias %A, pt
 ; VF2-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @test_2xi64_unary_op_wide_load(
 ; VF4-SAME: ptr noalias [[DATA:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
@@ -124,8 +127,9 @@ define void @test_2xi64_unary_op_wide_load(ptr noalias %data, ptr noalias %A, pt
 ; VF4-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF4-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH:.*:]]
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -174,8 +178,9 @@ define void @test_2xi64(ptr noalias %data, ptr noalias %factor) {
 ; VF2-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @test_2xi64(
 ; VF4-SAME: ptr noalias [[DATA:%.*]], ptr noalias [[FACTOR:%.*]]) {
@@ -201,8 +206,9 @@ define void @test_2xi64(ptr noalias %data, ptr noalias %factor) {
 ; VF4-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF4-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH:.*:]]
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -254,8 +260,9 @@ define void @test_2xi64_different_opcodes(ptr noalias %data, ptr noalias %factor
 ; VF2-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @test_2xi64_different_opcodes(
 ; VF4-SAME: ptr noalias [[DATA:%.*]], ptr noalias [[FACTOR:%.*]]) {
@@ -281,8 +288,9 @@ define void @test_2xi64_different_opcodes(ptr noalias %data, ptr noalias %factor
 ; VF4-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF4-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH:.*:]]
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -319,23 +327,21 @@ define void @test_2xi64_interleave_loads_order_flipped(ptr noalias %data, ptr no
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[INDEX]]
-; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
+; VF2-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
+; VF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
+; VF2-NEXT:    [[WIDE_LOAD:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; VF2-NEXT:    [[TMP15:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP15]]
-; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP16]], align 8
-; VF2-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
-; VF2-NEXT:    [[TMP20:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
-; VF2-NEXT:    [[TMP21:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP20]]
+; VF2-NEXT:    [[TMP11:%.*]] = load <2 x i64>, ptr [[TMP16]], align 8
 ; VF2-NEXT:    [[TMP24:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP11]]
-; VF2-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP21]], <2 x i64> [[TMP24]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP7]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP16]], align 8
-; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; VF2-NEXT:    store <2 x i64> [[TMP24]], ptr [[TMP16]], align 8
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @test_2xi64_interleave_loads_order_flipped(
 ; VF4-SAME: ptr noalias [[DATA:%.*]], ptr noalias [[FACTOR:%.*]]) {
@@ -361,8 +367,9 @@ define void @test_2xi64_interleave_loads_order_flipped(ptr noalias %data, ptr no
 ; VF4-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF4-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH:.*:]]
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -399,23 +406,21 @@ define void @test_2xi64_store_order_flipped_1(ptr noalias %data, ptr noalias %fa
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[INDEX]]
-; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
+; VF2-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
+; VF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
+; VF2-NEXT:    [[WIDE_LOAD:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; VF2-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP6]]
-; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP7]], align 8
-; VF2-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
-; VF2-NEXT:    [[TMP21:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
-; VF2-NEXT:    [[TMP12:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP11]]
+; VF2-NEXT:    [[TMP21:%.*]] = load <2 x i64>, ptr [[TMP7]], align 8
 ; VF2-NEXT:    [[TMP22:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP21]]
-; VF2-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP22]], <2 x i64> [[TMP12]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP8]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP7]], align 8
-; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; VF2-NEXT:    store <2 x i64> [[TMP22]], ptr [[TMP7]], align 8
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @test_2xi64_store_order_flipped_1(
 ; VF4-SAME: ptr noalias [[DATA:%.*]], ptr noalias [[FACTOR:%.*]]) {
@@ -441,8 +446,9 @@ define void @test_2xi64_store_order_flipped_1(ptr noalias %data, ptr noalias %fa
 ; VF4-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF4-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH:.*:]]
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -479,23 +485,21 @@ define void @test_2xi64_store_order_flipped_2(ptr noalias %data, ptr noalias %fa
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[INDEX]]
-; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
+; VF2-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
+; VF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
+; VF2-NEXT:    [[WIDE_LOAD:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; VF2-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP6]]
-; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP7]], align 8
-; VF2-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
-; VF2-NEXT:    [[TMP21:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
-; VF2-NEXT:    [[TMP12:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP11]]
+; VF2-NEXT:    [[TMP21:%.*]] = load <2 x i64>, ptr [[TMP7]], align 8
 ; VF2-NEXT:    [[TMP22:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP21]]
-; VF2-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP22]], <2 x i64> [[TMP12]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP8]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP7]], align 8
-; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; VF2-NEXT:    store <2 x i64> [[TMP22]], ptr [[TMP7]], align 8
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @test_2xi64_store_order_flipped_2(
 ; VF4-SAME: ptr noalias [[DATA:%.*]], ptr noalias [[FACTOR:%.*]]) {
@@ -521,8 +525,9 @@ define void @test_2xi64_store_order_flipped_2(ptr noalias %data, ptr noalias %fa
 ; VF4-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF4-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH:.*:]]
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -667,8 +672,9 @@ define void @test_3xi64(ptr noalias %data, ptr noalias %factor) {
 ; VF2-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @test_3xi64(
 ; VF4-SAME: ptr noalias [[DATA:%.*]], ptr noalias [[FACTOR:%.*]]) {
@@ -697,8 +703,9 @@ define void @test_3xi64(ptr noalias %data, ptr noalias %factor) {
 ; VF4-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF4-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH:.*:]]
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -954,8 +961,9 @@ define void @test_2xi64_sub_of_wide_loads(ptr noalias %data, ptr noalias %A, ptr
 ; VF2-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 100
 ; VF2-NEXT:    br i1 [[EC]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @test_2xi64_sub_of_wide_loads(
 ; VF4-SAME: ptr noalias [[DATA:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
@@ -979,8 +987,9 @@ define void @test_2xi64_sub_of_wide_loads(ptr noalias %data, ptr noalias %A, ptr
 ; VF4-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF4-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH:.*:]]
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -1031,8 +1040,9 @@ define void @test_2xi64_sub_of_wide_loads_ops_swapped(ptr noalias %data, ptr noa
 ; VF2-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 100
 ; VF2-NEXT:    br i1 [[EC]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @test_2xi64_sub_of_wide_loads_ops_swapped(
 ; VF4-SAME: ptr noalias [[DATA:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
@@ -1057,8 +1067,9 @@ define void @test_2xi64_sub_of_wide_loads_ops_swapped(ptr noalias %data, ptr noa
 ; VF4-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF4-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH:.*:]]
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -1111,8 +1122,9 @@ define void @test_2xi64_sub_of_wide_loads_with_different_base_ptrs(ptr noalias %
 ; VF2-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @test_2xi64_sub_of_wide_loads_with_different_base_ptrs(
 ; VF4-SAME: ptr noalias [[DATA:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) {
@@ -1139,8 +1151,9 @@ define void @test_2xi64_sub_of_wide_loads_with_different_base_ptrs(ptr noalias %
 ; VF4-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF4-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH:.*:]]
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -1191,8 +1204,9 @@ define void @multiple_store_groups_storing_same_wide_bin_op(ptr noalias %A, ptr 
 ; VF2-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; VF2-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br label %[[EXIT:.*]]
+; VF2:       [[EXIT]]:
+; VF2-NEXT:    ret void
 ;
 ; VF4-LABEL: define void @multiple_store_groups_storing_same_wide_bin_op(
 ; VF4-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) {
@@ -1218,8 +1232,9 @@ define void @multiple_store_groups_storing_same_wide_bin_op(ptr noalias %A, ptr 
 ; VF4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; VF4-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH:.*:]]
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
 ;
 entry:
   br label %loop

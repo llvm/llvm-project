@@ -5154,25 +5154,116 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
   return ExpandedSCEVs;
 }
 
-/// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
-/// converted to a narrower recipe. \p V is used by a wide recipe that feeds a
-/// store interleave group at index \p Idx, \p WideMember0 is the recipe feeding
-/// the same interleave group at index 0. A VPWidenLoadRecipe can be narrowed to
-/// an index-independent load if it feeds all wide ops at all indices (\p OpV
-/// must be the operand at index \p OpIdx for both the recipe at lane 0, \p
-/// WideMember0). A VPInterleaveRecipe can be narrowed to a wide load, if \p V
-/// is defined at \p Idx of a load interleave group.
-static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
-                          VPValue *OpV, unsigned Idx) {
-  VPValue *Member0Op = WideMember0->getOperand(OpIdx);
-  VPRecipeBase *Member0OpR = Member0Op->getDefiningRecipe();
-  if (!Member0OpR)
-    return Member0Op == OpV;
-  if (auto *W = dyn_cast<VPWidenLoadRecipe>(Member0OpR))
-    return !W->getMask() && Member0Op == OpV;
-  if (auto *IR = dyn_cast<VPInterleaveRecipe>(Member0OpR))
-    return IR->getInterleaveGroup()->isFull() && IR->getVPValue(Idx) == OpV;
-  return false;
+/// Recursively collects operands of \p R until it hits a recipe of one of \p Ts
+/// types, and returns this recipe.
+template <typename... Ts>
+static VPRecipeBase *findRecipeInOperandChain(VPSingleDefRecipe *R) {
+  SetVector<VPValue *> Operands;
+  Operands.insert(R);
+  VPRecipeBase *RootRecipe = nullptr;
+  for (unsigned I = 0; I != Operands.size(); ++I) {
+    if (!Operands[I]->hasDefiningRecipe())
+      continue;
+    VPRecipeBase *Cur = Operands[I]->getDefiningRecipe();
+    if (isa<Ts...>(Cur)) {
+      RootRecipe = Cur;
+      break;
+    }
+    Operands.insert_range(Cur->operands());
+  }
+  return RootRecipe;
+}
+
+namespace {
+class VPRecursiveHasher {
+  EquivalenceClasses<const VPSingleDefRecipe *> EquivRecipes;
+  DenseMap<hash_code, const VPSingleDefRecipe *> LeaderMap;
+  VPTypeAnalysis &TypeInfo;
+
+  std::optional<hash_code> detectCollision(const VPSingleDefRecipe *R,
+                                           hash_code Code) {
+    if (EquivRecipes.contains(R)) {
+      if (EquivRecipes.getLeaderValue(R) != LeaderMap.at(Code))
+        return {};
+    } else if (LeaderMap.contains(Code)) {
+      EquivRecipes.unionSets(LeaderMap.at(Code), R);
+    } else {
+      LeaderMap.emplace_or_assign(Code, R);
+      EquivRecipes.insert(R);
+    }
+    return Code;
+  }
+
+public:
+  VPRecursiveHasher(VPTypeAnalysis &TypeInfo) : TypeInfo(TypeInfo) {}
+
+  /// Hash the underlying data of \p Def, recursively with operands.
+  std::optional<hash_code> hash(const VPSingleDefRecipe *Def) {
+    std::optional<hash_code> OperandsHash =
+        hash_combine_range(map_range(Def->operands(), [this](VPValue *Op) {
+          if (Op->hasDefiningRecipe()) {
+            if (auto *OpDef =
+                    dyn_cast<VPSingleDefRecipe>(Op->getDefiningRecipe()))
+              if (!OpDef->isPhi())
+                return hash(OpDef);
+            if (auto *IR =
+                    dyn_cast<VPInterleaveRecipe>(Op->getDefiningRecipe()))
+              return std::make_optional(hash_value(IR));
+          }
+          return std::make_optional(hash_value(Op));
+        }));
+    if (!OperandsHash)
+      return std::nullopt;
+    hash_code Result =
+        hash_combine(Def->getVPRecipeID(), getOpcodeOrIntrinsicID(Def),
+                     VPCSEDenseMapInfo::getGEPSourceElementType(Def),
+                     TypeInfo.inferScalarType(Def),
+                     vputils::isSingleScalar(Def), *OperandsHash);
+    if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(Def))
+      if (RFlags->hasPredicate())
+        return hash_combine(Result, RFlags->getPredicate());
+    return Result ? detectCollision(Def, Result) : std::nullopt;
+  }
+};
+} // namespace
+
+/// Returns true iff the interleave group can be narrowed, given its \p
+/// StoredValues.
+static bool canNarrowInterleaveGroup(ArrayRef<VPValue *> StoredValues,
+                                     VPTypeAnalysis &TypeInfo) {
+  // All StoredValues must be some kind of widen recipe.
+  SmallVector<VPSingleDefRecipe *> LeafOps;
+  for (VPValue *V : StoredValues) {
+    if (isa<VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe>(V))
+      LeafOps.push_back(cast<VPSingleDefRecipe>(V->getDefiningRecipe()));
+    else
+      return false;
+  }
+
+  VPSingleDefRecipe *Leaf0 = LeafOps.front();
+  VPRecursiveHasher Hasher(TypeInfo);
+  std::optional<hash_code> LeafHash0 = Hasher.hash(Leaf0);
+  auto *Root0 =
+      findRecipeInOperandChain<VPWidenLoadRecipe, VPInterleaveRecipe>(Leaf0);
+  if (!LeafHash0 || !Root0)
+    return false;
+  if (auto *W = dyn_cast<VPWidenLoadRecipe>(Root0)) {
+    if (W->isMasked())
+      return false;
+  } else {
+    auto *II = cast<VPInterleaveRecipe>(Root0);
+    if (!II->getInterleaveGroup()->isFull())
+      return false;
+  }
+
+  // Recursively check hash of underlying data. This will recurse until RootI
+  // (exactly the same WidenLoad or InterleaveRecipe as Root0). We don't need
+  // to compute RootI explicitly, as we automatically fail the recursive hash
+  // if one is not found.
+  return all_of(drop_begin(LeafOps),
+                [&LeafHash0, &Hasher](VPSingleDefRecipe *L) {
+                  return Hasher.hash(L) == LeafHash0;
+                });
 }
 
 /// Returns VF from \p VFs if \p IR is a full interleave group with factor and
@@ -5271,18 +5362,24 @@ narrowInterleaveGroupOp(VPValue *V, SmallPtrSetImpl<VPValue *> &NarrowedOps) {
     return RepR;
   }
 
-  auto *WideLoad = cast<VPWidenLoadRecipe>(R);
-  VPValue *PtrOp = WideLoad->getAddr();
-  if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(PtrOp))
-    PtrOp = VecPtr->getOperand(0);
-  // Narrow wide load to uniform scalar load, as transformed VPlan will only
-  // process one original iteration.
-  auto *N = new VPReplicateRecipe(&WideLoad->getIngredient(), {PtrOp},
-                                  /*IsUniform*/ true,
-                                  /*Mask*/ nullptr, {}, *WideLoad);
-  N->insertBefore(WideLoad);
-  NarrowedOps.insert(N);
-  return N;
+  if (auto *WideLoad = dyn_cast<VPWidenLoadRecipe>(R)) {
+    VPValue *PtrOp = WideLoad->getAddr();
+    if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(PtrOp))
+      PtrOp = VecPtr->getOperand(0);
+    // Narrow wide load to uniform scalar load, as transformed VPlan will only
+    // process one original iteration.
+    auto *N = new VPReplicateRecipe(&WideLoad->getIngredient(), {PtrOp},
+                                    /*IsUniform*/ true,
+                                    /*Mask*/ nullptr, {}, *WideLoad);
+    N->insertBefore(WideLoad);
+    NarrowedOps.insert(N);
+    return N;
+  }
+
+  assert(isa<VPSingleDefRecipe>(R) &&
+         "Expected exclusively single-def recipes at this point");
+  NarrowedOps.insert(V);
+  return V;
 }
 
 std::unique_ptr<VPlan>
@@ -5374,25 +5471,9 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
       continue;
     }
 
-    // Check if all values feeding InterleaveR are matching wide recipes, which
-    // operands that can be narrowed.
-    auto *WideMember0 =
-        dyn_cast_or_null<VPWidenRecipe>(InterleaveR->getStoredValues()[0]);
-    if (!WideMember0)
-      return nullptr;
-    for (const auto &[I, V] : enumerate(InterleaveR->getStoredValues())) {
-      auto *R = dyn_cast_or_null<VPWidenRecipe>(V);
-      if (!R || R->getOpcode() != WideMember0->getOpcode() ||
-          R->getNumOperands() > 2)
-        return nullptr;
-      if (any_of(enumerate(R->operands()),
-                 [WideMember0, Idx = I](const auto &P) {
-                   const auto &[OpIdx, OpV] = P;
-                   return !canNarrowLoad(WideMember0, OpIdx, OpV, Idx);
-                 }))
-        return nullptr;
-    }
-    StoreGroups.push_back(InterleaveR);
+    // Check if InterleaveR can be narrowed.
+    if (canNarrowInterleaveGroup(InterleaveR->getStoredValues(), TypeInfo))
+      StoreGroups.push_back(InterleaveR);
   }
 
   if (StoreGroups.empty())
@@ -5444,9 +5525,6 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
         Plan.getConstantInt(CanIV->getScalarType(), 1));
   }
   removeDeadRecipes(Plan);
-  assert(none_of(*VectorLoop->getEntryBasicBlock(),
-                 IsaPred<VPVectorPointerRecipe>) &&
-         "All VPVectorPointerRecipes should have been removed");
   return NewPlan;
 }
 
