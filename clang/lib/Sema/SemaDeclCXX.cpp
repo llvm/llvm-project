@@ -6312,6 +6312,12 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
 
       S.MarkFunctionReferenced(Class->getLocation(), MD);
 
+      // Inherited constructors are synthesized, not written in source, so
+      // their definitions won't be encountered later.
+      if (auto *CD = dyn_cast<CXXConstructorDecl>(MD))
+        if (CD->getInheritedConstructor())
+          S.Consumer.HandleTopLevelDecl(DeclGroupRef(MD));
+
       // The function will be passed to the consumer when its definition is
       // encountered.
     } else if (MD->isExplicitlyDefaulted()) {
@@ -6587,6 +6593,19 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
 
   // Force declaration of implicit members so they can inherit the attribute.
   ForceDeclarationOfImplicitMembers(Class);
+
+  // Inherited constructors are created lazily; force their creation now so the
+  // loop below can propagate the DLL attribute to them.
+  if (ClassExported) {
+    SmallVector<ConstructorUsingShadowDecl *, 4> Shadows;
+    for (auto *D : Class->decls())
+      if (auto *S = dyn_cast<ConstructorUsingShadowDecl>(D))
+        Shadows.push_back(S);
+    for (auto *S : Shadows)
+      if (auto *BC = dyn_cast<CXXConstructorDecl>(S->getTargetDecl());
+          BC && !BC->isDeleted())
+        findInheritingConstructor(Class->getLocation(), BC, S);
+  }
 
   // FIXME: MSVC's docs say all bases must be exportable, but this doesn't
   // seem to be true in practice?
@@ -14366,6 +14385,17 @@ Sema::findInheritingConstructor(SourceLocation Loc,
   DerivedCtor->setAccess(BaseCtor->getAccess());
   DerivedCtor->setParams(ParamDecls);
   Derived->addDecl(DerivedCtor);
+
+  // Propagate the class-level DLLExport attribute to the new inherited
+  // constructor so it gets exported. DLLImport is not propagated because the
+  // inherited ctor is an inline definition synthesized by the compiler.
+  if (Derived->hasAttr<DLLExportAttr>() &&
+      !DerivedCtor->hasAttr<DLLExportAttr>()) {
+    auto *NewAttr = ::new (getASTContext())
+        DLLExportAttr(getASTContext(), *Derived->getAttr<DLLExportAttr>());
+    NewAttr->setInherited(true);
+    DerivedCtor->addAttr(NewAttr);
+  }
 
   if (ShouldDeleteSpecialMember(DerivedCtor,
                                 CXXSpecialMemberKind::DefaultConstructor, &ICI))

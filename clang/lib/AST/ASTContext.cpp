@@ -13010,10 +13010,13 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
 
   if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
       isa<CXXConstructorDecl>(FD) &&
-      cast<CXXConstructorDecl>(FD)->isInheritingConstructor())
+      cast<CXXConstructorDecl>(FD)->isInheritingConstructor() &&
+      !FD->hasAttr<DLLExportAttr>())
     // Our approach to inheriting constructors is fundamentally different from
     // that used by the MS ABI, so keep our inheriting constructor thunks
     // internal rather than trying to pick an unambiguous mangling for them.
+    // However, dllexport inherited constructors must be externally visible
+    // to match MSVC's behavior.
     return GVA_Internal;
 
   return GVA_DiscardableODR;
