@@ -3057,6 +3057,52 @@ void x(int x) {
   EXPECT_TRUE(notMatchesWithOpenMP(Source5, Matcher));
 }
 
+TEST(ASTMatchersTestOpenMP, OMPTargetUpdateDirective_CountExpression) {
+  auto Matcher = ompTargetUpdateDirective(hasAnyClause(ompFromClause()));
+
+  StringRef Source0 = R"(
+    void foo() {
+      int len = 16;
+      int arr[100];
+      #pragma omp target update from(arr[0:len/2:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
+
+  auto astUnit =
+      tooling::buildASTFromCodeWithArgs(Source0, {"-fopenmp=libomp"});
+  ASSERT_TRUE(astUnit);
+
+  auto Results = match(ompTargetUpdateDirective().bind("directive"),
+                       astUnit->getASTContext());
+  ASSERT_FALSE(Results.empty());
+
+  const auto *Directive =
+      Results[0].getNodeAs<OMPTargetUpdateDirective>("directive");
+  ASSERT_TRUE(Directive);
+
+  OMPFromClause *FromClause = nullptr;
+  for (auto *Clause : Directive->clauses()) {
+    if ((FromClause = dyn_cast<OMPFromClause>(Clause))) {
+      break;
+    }
+  }
+  ASSERT_TRUE(FromClause);
+
+  for (const auto *VarExpr : FromClause->varlist()) {
+    const auto *ArraySection = dyn_cast<ArraySectionExpr>(VarExpr);
+    if (!ArraySection)
+      continue;
+
+    const Expr *Length = ArraySection->getLength();
+    ASSERT_TRUE(Length);
+    const auto *LengthLiteral = dyn_cast<IntegerLiteral>(Length);
+    EXPECT_FALSE(LengthLiteral)
+        << "Expected length to be a variable expression";
+  }
+}
+
 TEST(ASTMatchersTest, Finder_DynamicOnlyAcceptsSomeMatchers) {
   MatchFinder Finder;
   EXPECT_TRUE(Finder.addDynamicMatcher(decl(), nullptr));
