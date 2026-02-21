@@ -195,7 +195,7 @@ static cl::opt<unsigned> TinyTripCountVectorThreshold(
              "are incurred."));
 
 static cl::opt<unsigned> VectorizeMemoryCheckThreshold(
-    "vectorize-memory-check-threshold", cl::init(128), cl::Hidden,
+    "vectorize-memory-check-threshold", cl::init(256), cl::Hidden,
     cl::desc("The maximum allowed number of runtime memory checks"));
 
 // Option prefer-predicate-over-epilogue indicates that an epilogue is undesired,
