@@ -143,7 +143,7 @@
 "`LWG3598 <https://wg21.link/LWG3598>`__","``system_category().default_error_condition(0)`` is underspecified","2022-02 (Virtual)","","","`#104945 <https://github.com/llvm/llvm-project/issues/104945>`__",""
 "`LWG3601 <https://wg21.link/LWG3601>`__","common_iterator's postfix-proxy needs ``indirectly_readable`` ","2022-02 (Virtual)","","","`#104946 <https://github.com/llvm/llvm-project/issues/104946>`__",""
 "`LWG3607 <https://wg21.link/LWG3607>`__","``contiguous_iterator`` should not be allowed to have custom ``iter_move`` and ``iter_swap`` behavior","2022-02 (Virtual)","|Nothing To Do|","","`#104947 <https://github.com/llvm/llvm-project/issues/104947>`__",""
-"`LWG3610 <https://wg21.link/LWG3610>`__","``iota_view::size`` sometimes rejects integer-class types","2022-02 (Virtual)","","","`#104948 <https://github.com/llvm/llvm-project/issues/104948>`__",""
+"`LWG3610 <https://wg21.link/LWG3610>`__","``iota_view::size`` sometimes rejects integer-class types","2022-02 (Virtual)","|Complete|","22","`#104948 <https://github.com/llvm/llvm-project/issues/104948>`__",""
 "`LWG3612 <https://wg21.link/LWG3612>`__","Inconsistent pointer alignment in ``std::format`` ","2022-02 (Virtual)","|Complete|","14","`#104949 <https://github.com/llvm/llvm-project/issues/104949>`__",""
 "`LWG3616 <https://wg21.link/LWG3616>`__","LWG 3498 seems to miss the non-member ``swap`` for ``basic_syncbuf`` ","2022-02 (Virtual)","|Complete|","18","`#104950 <https://github.com/llvm/llvm-project/issues/104950>`__",""
 "`LWG3618 <https://wg21.link/LWG3618>`__","Unnecessary ``iter_move`` for ``transform_view::iterator`` ","2022-02 (Virtual)","|Complete|","19","`#104951 <https://github.com/llvm/llvm-project/issues/104951>`__",""
