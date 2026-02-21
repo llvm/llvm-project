@@ -401,38 +401,38 @@ private:
     return GenSE.getMulExpr(NewOps);
   }
   const SCEV *visitUMaxExpr(const SCEVUMaxExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getUMaxExpr(NewOps);
   }
   const SCEV *visitSMaxExpr(const SCEVSMaxExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getSMaxExpr(NewOps);
   }
   const SCEV *visitUMinExpr(const SCEVUMinExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getUMinExpr(NewOps);
   }
   const SCEV *visitSMinExpr(const SCEVSMinExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getSMinExpr(NewOps);
   }
   const SCEV *visitSequentialUMinExpr(const SCEVSequentialUMinExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getUMinExpr(NewOps, /*Sequential=*/true);
   }
   const SCEV *visitAddRecExpr(const SCEVAddRecExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
 
     const Loop *L = E->getLoop();

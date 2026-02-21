@@ -66,6 +66,121 @@ enum SCEVTypes : unsigned short;
 
 LLVM_ABI extern bool VerifySCEV;
 
+class SCEV;
+
+struct SCEVUse : public PointerIntPair<const SCEV *, 3> {
+  SCEVUse() : PointerIntPair() { setFromOpaqueValue(nullptr); }
+  SCEVUse(const SCEV *S) : PointerIntPair() { setFromOpaqueValue((void *)S); }
+  SCEVUse(const SCEV *S, int Flags) : PointerIntPair(S, Flags) {}
+
+  operator const SCEV *() const { return getPointer(); }
+  const SCEV *operator->() const { return getPointer(); }
+  const SCEV *operator->() { return getPointer(); }
+
+  void *getRawPointer() const { return getOpaqueValue(); }
+
+  bool isCanonical() const;
+
+  const SCEV *getCanonical() const;
+
+  unsigned getFlags() const { return getInt(); }
+
+  bool operator==(const SCEVUse &RHS) const {
+    assert(isCanonical() && RHS.isCanonical());
+    return getRawPointer() == RHS.getRawPointer();
+  }
+
+  bool operator==(const SCEV *RHS) const { return getRawPointer() == RHS; }
+
+  /// Print out the internal representation of this scalar to the specified
+  /// stream.  This should really only be used for debugging purposes.
+  void print(raw_ostream &OS) const;
+
+  /// This method is used for debugging.
+  void dump() const;
+
+  static const SCEV *computeCanonical(ScalarEvolution &SE, const SCEV *);
+
+  friend hash_code hash_value(const SCEVUse &U) {
+    return hash_value(U.getRawPointer());
+  }
+};
+
+/// Provide PointerLikeTypeTraits for SCEVUse, so it can be used with
+/// SmallPtrSet, among others.
+template <> struct PointerLikeTypeTraits<SCEVUse> {
+  static inline void *getAsVoidPointer(SCEVUse U) { return U.getOpaqueValue(); }
+  static inline SCEVUse getFromVoidPointer(void *P) {
+    SCEVUse U;
+    U.setFromOpaqueValue(P);
+    return U;
+  }
+
+  /// The Low bits are used by the PointerIntPair.
+  static constexpr int NumLowBitsAvailable = 0;
+};
+
+template <> struct DenseMapInfo<SCEVUse> {
+  // The following should hold, but it would require T to be complete:
+  // static_assert(alignof(T) <= (1 << Log2MaxAlign),
+  //               "DenseMap does not support pointer keys requiring more than "
+  //               "Log2MaxAlign bits of alignment");
+  static constexpr uintptr_t Log2MaxAlign = 12;
+
+  static inline SCEVUse getEmptyKey() {
+    uintptr_t Val = static_cast<uintptr_t>(-1);
+    Val <<= Log2MaxAlign;
+    return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
+  }
+
+  static inline SCEVUse getTombstoneKey() {
+    uintptr_t Val = static_cast<uintptr_t>(-2);
+    Val <<= Log2MaxAlign;
+    return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
+  }
+
+  static unsigned getHashValue(SCEVUse U) { return hash_value(U); }
+
+  static bool isEqual(const SCEVUse LHS, const SCEVUse RHS) {
+    return LHS.getRawPointer() == RHS.getRawPointer();
+  }
+};
+
+inline bool SCEVUse::isCanonical() const {
+  assert(getInt() == 0 && "Currently must always be canonical");
+  return getCanonical() == getPointer();
+}
+
+template <typename To> [[nodiscard]] inline decltype(auto) dyn_cast(SCEVUse U) {
+  assert(detail::isPresent(U.getPointer()) &&
+         "dyn_cast on a non-existent value");
+  return CastInfo<To, const SCEV *>::doCastIfPossible(U.getPointer());
+}
+
+template <typename To>
+[[nodiscard]] inline decltype(auto) dyn_cast_if_present(SCEVUse U) {
+  assert(detail::isPresent(U.getPointer()) &&
+         "dyn_cast on a non-existent value");
+  return CastInfo<To, const SCEV *>::doCastIfPossible(U.getPointer());
+}
+
+template <typename To> [[nodiscard]] inline decltype(auto) cast(SCEVUse U) {
+  assert(detail::isPresent(U.getPointer()) &&
+         "dyn_cast on a non-existent value");
+  return CastInfo<To, const SCEV *>::doCast(U.getPointer());
+}
+
+template <typename To> [[nodiscard]] inline bool isa(SCEVUse U) {
+  return CastInfo<To, const SCEV *>::isPossible(U.getPointer());
+}
+
+template <class X> auto dyn_cast_or_null(SCEVUse U) {
+  const SCEV *Val = U.getPointer();
+  if (!detail::isPresent(Val))
+    return CastInfo<X, const SCEV *>::castFailed();
+  return CastInfo<X, const SCEV *>::doCastIfPossible(detail::unwrapValue(Val));
+}
+
 /// This class represents an analyzed expression in the program.  These are
 /// opaque objects that the client is not allowed to do much with directly.
 ///
@@ -86,6 +201,8 @@ protected:
   /// This field is initialized to zero and may be used in subclasses to store
   /// miscellaneous information.
   unsigned short SubclassData = 0;
+
+  const SCEV *CanonicalSCEV;
 
 public:
   /// NoWrapFlags are bitfield indices into SubclassData.
@@ -144,7 +261,7 @@ public:
   LLVM_ABI Type *getType() const;
 
   /// Return operands of this SCEV expression.
-  LLVM_ABI ArrayRef<const SCEV *> operands() const;
+  LLVM_ABI ArrayRef<SCEVUse> operands() const;
 
   /// Return true if the expression is a constant zero.
   LLVM_ABI bool isZero() const;
@@ -177,6 +294,10 @@ public:
 
   /// This method is used for debugging.
   LLVM_ABI void dump() const;
+
+  LLVM_ABI void computeAndSetCanonical(ScalarEvolution &SE);
+
+  LLVM_ABI const SCEV *getCanonical() const { return CanonicalSCEV; }
 };
 
 // Specialize FoldingSetTrait for SCEV to avoid needing to compute
@@ -554,6 +675,7 @@ public:
 
   /// Notify this ScalarEvolution that \p User directly uses SCEVs in \p Ops.
   LLVM_ABI void registerUser(const SCEV *User, ArrayRef<const SCEV *> Ops);
+  LLVM_ABI void registerUser(const SCEV *User, ArrayRef<SCEVUse> Ops);
 
   /// Return true if the SCEV expression contains an undef value.
   LLVM_ABI bool containsUndefs(const SCEV *S) const;
@@ -592,34 +714,65 @@ public:
                                              unsigned Depth = 0);
   LLVM_ABI const SCEV *getCastExpr(SCEVTypes Kind, const SCEV *Op, Type *Ty);
   LLVM_ABI const SCEV *getAnyExtendExpr(const SCEV *Op, Type *Ty);
-  LLVM_ABI const SCEV *getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
+
+  LLVM_ABI const SCEV *getAddExpr(ArrayRef<const SCEV *> Ops,
+                                  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                                  unsigned Depth = 0) {
+    SmallVector<SCEVUse> NewOps;
+    for (auto *Op : Ops)
+      NewOps.emplace_back(Op);
+    return getAddExpr(NewOps, Flags, Depth);
+  }
+
+  LLVM_ABI const SCEV *getAddExpr(const SCEV *LHS, const SCEV *RHS,
+                                  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                                  unsigned Depth = 0) {
+    return getAddExpr(SCEVUse(LHS), SCEVUse(RHS), Flags, Depth);
+  }
+
+  LLVM_ABI const SCEV *getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
                                   SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                                   unsigned Depth = 0);
-  const SCEV *getAddExpr(const SCEV *LHS, const SCEV *RHS,
+  const SCEV *getAddExpr(SCEVUse LHS, SCEVUse RHS,
                          SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                          unsigned Depth = 0) {
-    SmallVector<const SCEV *, 2> Ops = {LHS, RHS};
+    SmallVector<SCEVUse, 2> Ops = {LHS, RHS};
     return getAddExpr(Ops, Flags, Depth);
   }
-  const SCEV *getAddExpr(const SCEV *Op0, const SCEV *Op1, const SCEV *Op2,
+  const SCEV *getAddExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
                          SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                          unsigned Depth = 0) {
-    SmallVector<const SCEV *, 3> Ops = {Op0, Op1, Op2};
+    SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
     return getAddExpr(Ops, Flags, Depth);
   }
-  LLVM_ABI const SCEV *getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
+  LLVM_ABI const SCEV *getMulExpr(ArrayRef<const SCEV *> Ops,
+                                  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                                  unsigned Depth = 0) {
+    SmallVector<SCEVUse> NewOps;
+    for (auto *Op : Ops)
+      NewOps.emplace_back(Op);
+    return getMulExpr(NewOps, Flags, Depth);
+  }
+
+  LLVM_ABI const SCEV *getMulExpr(const SCEV *LHS, const SCEV *RHS,
+                                  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                                  unsigned Depth = 0) {
+    return getMulExpr(SCEVUse(LHS), SCEVUse(RHS), Flags, Depth);
+  }
+
+  LLVM_ABI const SCEV *getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
                                   SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                                   unsigned Depth = 0);
-  const SCEV *getMulExpr(const SCEV *LHS, const SCEV *RHS,
+  const SCEV *getMulExpr(SCEVUse LHS, SCEVUse RHS,
                          SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                          unsigned Depth = 0) {
-    SmallVector<const SCEV *, 2> Ops = {LHS, RHS};
+    SmallVector<SCEVUse, 2> Ops = {LHS, RHS};
     return getMulExpr(Ops, Flags, Depth);
   }
-  const SCEV *getMulExpr(const SCEV *Op0, const SCEV *Op1, const SCEV *Op2,
+  const SCEV *getMulExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
                          SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                          unsigned Depth = 0) {
-    SmallVector<const SCEV *, 3> Ops = {Op0, Op1, Op2};
+    SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
     return getMulExpr(Ops, Flags, Depth);
   }
   LLVM_ABI const SCEV *getUDivExpr(const SCEV *LHS, const SCEV *RHS);
@@ -2315,11 +2468,11 @@ private:
   bool canIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride, bool IsSigned);
 
   /// Get add expr already created or create a new one.
-  const SCEV *getOrCreateAddExpr(ArrayRef<const SCEV *> Ops,
+  const SCEV *getOrCreateAddExpr(ArrayRef<SCEVUse> Ops,
                                  SCEV::NoWrapFlags Flags);
 
   /// Get mul expr already created or create a new one.
-  const SCEV *getOrCreateMulExpr(ArrayRef<const SCEV *> Ops,
+  const SCEV *getOrCreateMulExpr(ArrayRef<SCEVUse> Ops,
                                  SCEV::NoWrapFlags Flags);
 
   // Get addrec expr already created or create a new one.
@@ -2337,6 +2490,7 @@ private:
   /// Look for a SCEV expression with type `SCEVType` and operands `Ops` in
   /// `UniqueSCEVs`.  Return if found, else nullptr.
   SCEV *findExistingSCEVInCache(SCEVTypes SCEVType, ArrayRef<const SCEV *> Ops);
+  SCEV *findExistingSCEVInCache(SCEVTypes SCEVType, ArrayRef<SCEVUse> Ops);
 
   /// Get reachable blocks in this function, making limited use of SCEV
   /// reasoning about conditions.
@@ -2565,6 +2719,10 @@ template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
     return LHS == RHS;
   }
 };
+
+inline const SCEV *SCEVUse::getCanonical() const {
+  return getPointer()->getCanonical();
+}
 
 } // end namespace llvm
 

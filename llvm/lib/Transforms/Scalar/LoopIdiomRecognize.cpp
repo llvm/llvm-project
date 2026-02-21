@@ -889,7 +889,7 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
     return false;
   }
 
-  const SCEV *MemsetSizeSCEV = SE->getSCEV(MSI->getLength());
+  SCEVUse MemsetSizeSCEV = SE->getSCEV(MSI->getLength());
 
   bool IsNegStride = false;
   const bool IsConstantSize = isa<ConstantInt>(MSI->getLength());
@@ -928,9 +928,9 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
 
     // Compare positive direction PointerStrideSCEV with MemsetSizeSCEV
     IsNegStride = PointerStrideSCEV->isNonConstantNegative();
-    const SCEV *PositiveStrideSCEV =
-        IsNegStride ? SE->getNegativeSCEV(PointerStrideSCEV)
-                    : PointerStrideSCEV;
+    SCEVUse PositiveStrideSCEV =
+        IsNegStride ? SCEVUse(SE->getNegativeSCEV(PointerStrideSCEV))
+                    : SCEVUse(PointerStrideSCEV);
     LLVM_DEBUG(dbgs() << "  MemsetSizeSCEV: " << *MemsetSizeSCEV << "\n"
                       << "  PositiveStrideSCEV: " << *PositiveStrideSCEV
                       << "\n");

@@ -13,6 +13,7 @@
 #ifndef LLVM_ANALYSIS_SCALAREVOLUTIONPATTERNMATCH_H
 #define LLVM_ANALYSIS_SCALAREVOLUTIONPATTERNMATCH_H
 
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 namespace llvm {
@@ -20,6 +21,11 @@ namespace SCEVPatternMatch {
 
 template <typename Pattern> bool match(const SCEV *S, const Pattern &P) {
   return P.match(S);
+}
+
+template <typename Pattern> bool match(const SCEVUse U, const Pattern &P) {
+  const SCEV *S = U.getPointer();
+  return const_cast<Pattern &>(P).match(S);
 }
 
 template <typename Predicate> struct cst_pred_ty : public Predicate {
@@ -159,7 +165,8 @@ template <typename SCEVTy, typename Op0_t> struct SCEVUnaryExpr_match {
 
   bool match(const SCEV *S) const {
     auto *E = dyn_cast<SCEVTy>(S);
-    return E && E->getNumOperands() == 1 && Op0.match(E->getOperand(0));
+    return E && E->getNumOperands() == 1 &&
+           Op0.match(E->getOperand(0).getPointer());
   }
 };
 
@@ -215,9 +222,10 @@ struct SCEVBinaryExpr_match {
 
     auto *E = dyn_cast<SCEVTy>(S);
     return E && E->getNumOperands() == 2 &&
-           ((Op0.match(E->getOperand(0)) && Op1.match(E->getOperand(1))) ||
-            (Commutable && Op0.match(E->getOperand(1)) &&
-             Op1.match(E->getOperand(0))));
+           ((Op0.match(E->getOperand(0).getPointer()) &&
+             Op1.match(E->getOperand(1).getPointer())) ||
+            (Commutable && Op0.match(E->getOperand(1).getPointer()) &&
+             Op1.match(E->getOperand(0).getPointer())));
   }
 };
 

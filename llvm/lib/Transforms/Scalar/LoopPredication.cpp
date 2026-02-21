@@ -1006,9 +1006,9 @@ static const SCEV *getMinAnalyzeableBackedgeTakenCount(ScalarEvolution &SE,
   SmallVector<BasicBlock *, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
-  SmallVector<const SCEV *, 4> ExitCounts;
+  SmallVector<SCEVUse, 4> ExitCounts;
   for (BasicBlock *ExitingBB : ExitingBlocks) {
-    const SCEV *ExitCount = SE.getExitCount(L, ExitingBB);
+    SCEVUse ExitCount = SE.getExitCount(L, ExitingBB);
     if (isa<SCEVCouldNotCompute>(ExitCount))
       continue;
     assert(DT.dominates(ExitingBB, L->getLoopLatch()) &&
@@ -1018,7 +1018,10 @@ static const SCEV *getMinAnalyzeableBackedgeTakenCount(ScalarEvolution &SE,
   }
   if (ExitCounts.size() < 2)
     return SE.getCouldNotCompute();
-  return SE.getUMinFromMismatchedTypes(ExitCounts);
+  SmallVector<const SCEV *, 4> ExitCountPtrs;
+  for (SCEVUse U : ExitCounts)
+    ExitCountPtrs.push_back(U.getPointer());
+  return SE.getUMinFromMismatchedTypes(ExitCountPtrs);
 }
 
 /// This implements an analogous, but entirely distinct transform from the main
