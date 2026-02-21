@@ -60,15 +60,21 @@ struct DeferredFunctionBase {
 
   void execute(IOContext &ctx) { execute_(impl_, ctx); }
 
-  static OwningPtr<char> TempString(const char *str) {
+  static OwningPtr<char> TempString(const char *str, std::size_t size) {
     if (!str) {
       return {};
     }
 
-    const auto size = std::strlen(str) + 1;
     OwningPtr<char> temp = SizedNew<char>{Terminator{__FILE__, __LINE__}}(size);
     std::memcpy(temp.get(), str, size);
     return OwningPtr<char>(temp.release());
+  }
+
+  static OwningPtr<char> TempString(const char *str) {
+    if (!str) {
+      return {};
+    }
+    return TempString(str, std::strlen(str) + 1);
   }
 
 private:
@@ -167,6 +173,36 @@ rpc::Status HandleOpcodesImpl(rpc::Server::Port &port) {
           return reinterpret_cast<Cookie>(ctx);
         });
     break;
+  case BeginExternalFormattedOutput_Opcode:
+    rpc::invoke<NumLanes>(port,
+        [](const char *format, std::size_t formatLength,
+            const Descriptor *formatDescriptor, ExternalUnit unitNumber,
+            const char *sourceFile, int sourceLine) -> Cookie {
+          Terminator terminator{__FILE__, __LINE__};
+          if (formatDescriptor)
+            terminator.Crash("Non-trivial format descriptors are unsupported");
+
+          DeferredContext *ctx =
+              new (AllocateMemoryOrCrash(terminator, sizeof(DeferredContext)))
+                  DeferredContext;
+
+          ctx->commands.emplace_back(
+              MakeDeferred(IONAME(BeginExternalFormattedOutput),
+                  DeferredFunctionBase::TempString(format, formatLength),
+                  formatLength, formatDescriptor, unitNumber,
+                  DeferredFunctionBase::TempString(sourceFile), sourceLine));
+
+          return reinterpret_cast<Cookie>(ctx);
+        });
+    break;
+  case EnableHandlers_Opcode:
+    rpc::invoke<NumLanes>(port,
+        [](Cookie cookie, bool hasIoStat, bool hasErr, bool hasEnd, bool hasEor,
+            bool hasIoMsg) -> void {
+          EnqueueDeferred(IONAME(EnableHandlers), cookie, hasIoStat, hasErr,
+              hasEnd, hasEor, hasIoMsg);
+        });
+    break;
   case EndIoStatement_Opcode:
     rpc::invoke<NumLanes>(port, [](Cookie cookie) -> Iostat {
       DeferredContext *ctx = reinterpret_cast<DeferredContext *>(cookie);
@@ -182,13 +218,6 @@ rpc::Status HandleOpcodesImpl(rpc::Server::Port &port) {
 
       return result;
     });
-    break;
-  case OutputAscii_Opcode:
-    rpc::invoke<NumLanes>(
-        port, [](Cookie cookie, const char *x, std::size_t length) -> bool {
-          return EnqueueDeferred(IONAME(OutputAscii), cookie,
-              DeferredFunctionBase::TempString(x), length);
-        });
     break;
   case OutputInteger8_Opcode:
     rpc::invoke<NumLanes>(port, [](Cookie cookie, std::int8_t n) -> bool {
@@ -236,6 +265,20 @@ rpc::Status HandleOpcodesImpl(rpc::Server::Port &port) {
     rpc::invoke<NumLanes>(
         port, [](Cookie cookie, double re, double im) -> bool {
           return EnqueueDeferred(IONAME(OutputComplex64), cookie, re, im);
+        });
+    break;
+  case OutputAscii_Opcode:
+    rpc::invoke<NumLanes>(
+        port, [](Cookie cookie, const char *x, std::size_t length) -> bool {
+          return EnqueueDeferred(IONAME(OutputAscii), cookie,
+              DeferredFunctionBase::TempString(x, length), length);
+        });
+    break;
+  case OutputCharacter_Opcode:
+    rpc::invoke<NumLanes>(port,
+        [](Cookie cookie, const char *x, std::size_t length, int kind) -> bool {
+          return EnqueueDeferred(IONAME(OutputCharacter), cookie,
+              DeferredFunctionBase::TempString(x, length * kind), length, kind);
         });
     break;
   case OutputLogical_Opcode:

@@ -334,6 +334,7 @@ namespace llvm {
     bool parseOptionalCallingConv(unsigned &CC);
     bool parseOptionalAlignment(MaybeAlign &Alignment,
                                 bool AllowParens = false);
+    bool parseOptionalPrefAlignment(MaybeAlign &Alignment);
     bool parseOptionalCodeModel(CodeModel::Model &model);
     bool parseOptionalAttrBytes(lltok::Kind AttrKind,
                                 std::optional<uint64_t> &Bytes,
