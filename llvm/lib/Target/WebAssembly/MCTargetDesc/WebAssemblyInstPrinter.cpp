@@ -381,10 +381,10 @@ void WebAssemblyInstPrinter::printWebAssemblyMemOrderOperand(const MCInst *MI,
 
   switch (Imm) {
   case WebAssembly::MEM_ORDER_ACQ_REL:
-    O << " acq_rel";
+    O << " acqrel";
     break;
   case WebAssembly::MEM_ORDER_SEQ_CST:
-    O << " seq_cst";
+    O << " seqcst";
     break;
   default:
     llvm_unreachable("Unknown memory ordering");
