@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -1567,14 +1568,10 @@ AAAMDGPUClusterDims::createForPosition(const IRPosition &IRP, Attributor &A) {
   llvm_unreachable("AAAMDGPUClusterDims is only valid for function position");
 }
 
-static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
+static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
+                    Module &M, AnalysisGetter &AG, TargetMachine &TM,
                     AMDGPUAttributorOptions Options,
                     ThinOrFullLTOPhase LTOPhase) {
-  SetVector<Function *> Functions;
-  for (Function &F : M) {
-    if (!F.isIntrinsic())
-      Functions.insert(&F);
-  }
 
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
@@ -1591,7 +1588,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
   AC.Allowed = &Allowed;
-  AC.IsModulePass = true;
+  AC.IsModulePass = IsModulePass;
   AC.DefaultInitializeLiveInternals = false;
   AC.IndirectCalleeSpecializationCallback =
       [](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
@@ -1663,7 +1660,44 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   AnalysisGetter AG(FAM);
 
+  SetVector<Function *> Functions;
+  for (Function &F : M) {
+    if (!F.isIntrinsic())
+      Functions.insert(&F);
+  }
+
+  if (Functions.empty())
+    return PreservedAnalyses::all();
+
   // TODO: Probably preserves CFG
-  return runImpl(M, AG, TM, Options, LTOPhase) ? PreservedAnalyses::none()
-                                               : PreservedAnalyses::all();
+  return runImpl(Functions, true /*IsModulePass*/, M, AG, TM, Options, LTOPhase)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
+}
+
+PreservedAnalyses llvm::AMDGPUAttributorCGSCCPass::run(LazyCallGraph::SCC &C,
+                                                       CGSCCAnalysisManager &AM,
+                                                       LazyCallGraph &CG,
+                                                       CGSCCUpdateResult &UR) {
+
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
+  AnalysisGetter AG(FAM);
+
+  SetVector<Function *> Functions;
+  for (LazyCallGraph::Node &N : C) {
+    Function *F = &N.getFunction();
+    if (!F->isIntrinsic())
+      Functions.insert(F);
+  }
+
+  if (Functions.empty())
+    return PreservedAnalyses::all();
+
+  AMDGPUAttributorOptions Options;
+  Module *M = C.begin()->getFunction().getParent();
+  return runImpl(Functions, false /*IsModulePass*/, *M, AG, TM, Options,
+                 ThinOrFullLTOPhase::None)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
 }

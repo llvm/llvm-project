@@ -1,4 +1,5 @@
 ; RUN: opt -mtriple=amdgcn-- -passes=amdgpu-attributor -o %t.bc %s
+; RUN: opt -mtriple=amdgcn-- -passes=amdgpu-attributor-cgscc -o %t.bc %s
 ; RUN: llc -mtriple=amdgcn -mcpu=hawaii < %t.bc | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %t.bc | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
 ; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=hawaii < %t.bc | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s

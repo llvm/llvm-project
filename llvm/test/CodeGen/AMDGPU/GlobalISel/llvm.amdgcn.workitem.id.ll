@@ -1,5 +1,7 @@
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor -o %t.v4.ll
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor-cgscc -o %t.v4.ll
 ; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor -o %t.v6.ll
+; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor-cgscc -o %t.v6.ll
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-unknown-amdhsa < %t.v4.ll | FileCheck --check-prefixes=ALL,HSA,UNPACKED %s
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-- -mcpu=hawaii -mattr=+flat-for-global < %t.v4.ll | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-- -mcpu=tonga -mattr=+flat-for-global < %t.v4.ll | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s

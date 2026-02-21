@@ -1,4 +1,5 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -passes='amdgpu-attributor,amdgpu-preload-kernel-arguments,function(amdgpu-lower-kernel-arguments)' -amdgpu-kernarg-preload-count=16 -S < %s 2>&1 \
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -passes='amdgpu-attributor-cgscc,amdgpu-preload-kernel-arguments,function(amdgpu-lower-kernel-arguments)' -amdgpu-kernarg-preload-count=16 -S < %s 2>&1 \
 ; RUN: | FileCheck --match-full-lines --implicit-check-not='declare' %s
 
 ; Confirms we do not leave behind a declaration which references the same
