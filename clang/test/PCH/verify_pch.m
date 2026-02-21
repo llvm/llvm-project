@@ -17,7 +17,8 @@
 // RUN: echo ' ' >> %t.h
 // RUN: not %clang_cc1 -isystem %t/usr/include -verify-pch %t.pch 2> %t.log.2
 // RUN: FileCheck -check-prefix=CHECK-STALE-DEP %s < %t.log.2
-// CHECK-STALE-DEP: file '{{.*}}.h' has been modified since the precompiled header '{{.*}}.pch' was built: size changed (was {{.*}}, now {{.*}})
+// CHECK-STALE-DEP: file '{{.*}}.h' has been modified since the precompiled header '{{.*}}.pch' was built
+// CHECK-STALE-DEP: note: size changed from expected {{.*}} to {{.*}}
 
 // Stale dependency in system header
 // RUN: %clang_cc1 -isystem %t/usr/include -x objective-c-header -emit-pch -o %t.pch %t.h

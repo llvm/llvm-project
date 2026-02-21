@@ -380,7 +380,8 @@ public:
     };
 
     mlirMemoryEffectsOpInterfaceAttachFallbackModel(
-        ctx->get(), wrap(StringRef(opName.c_str())), callbacks);
+        ctx->get(), mlirStringRefCreate(opName.c_str(), opName.size()),
+        callbacks);
   }
 
   static void bindDerived(ClassTy &cls) {

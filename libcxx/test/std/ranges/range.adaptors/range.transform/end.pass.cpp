@@ -17,7 +17,9 @@
 //   requires common_range<const V> &&
 //            regular_invocable<const F&, range_reference_t<const V>>;
 
+#include <cassert>
 #include <ranges>
+#include <utility>
 
 #include "test_macros.h"
 #include "types.h"

@@ -1159,7 +1159,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 }
 
 int SIInstrInfo::commuteOpcode(unsigned Opcode) const {
-  int64_t NewOpc;
+  int32_t NewOpc;
 
   // Try to map original to commuted opcode
   NewOpc = AMDGPU::getCommuteRev(Opcode);
@@ -5792,13 +5792,13 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       return false;
     }
     if (DC >= DppCtrl::WAVE_SHL1 && DC <= DppCtrl::WAVE_ROR1 &&
-        ST.getGeneration() >= AMDGPUSubtarget::GFX10) {
+        !ST.hasDPPWavefrontShifts()) {
       ErrInfo = "Invalid dpp_ctrl value: "
                 "wavefront shifts are not supported on GFX10+";
       return false;
     }
     if (DC >= DppCtrl::BCAST15 && DC <= DppCtrl::BCAST31 &&
-        ST.getGeneration() >= AMDGPUSubtarget::GFX10) {
+        !ST.hasDPPBroadcasts()) {
       ErrInfo = "Invalid dpp_ctrl value: "
                 "broadcasts are not supported on GFX10+";
       return false;
@@ -8319,6 +8319,26 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       const TargetRegisterClass *SrcRC = RI.getRegClassForReg(MRI, NewDstReg);
       if (const TargetRegisterClass *CommonRC =
               RI.getCommonSubClass(NewDstRC, SrcRC)) {
+        // Also intersect with VGPR-compatible operand register class
+        // constraints from user instructions. This preserves restricted
+        // register classes (e.g., VGPR_32_Lo256 for WMMA scale operands) that
+        // would otherwise be lost when an SGPR is replaced with a VGPR.
+        // Constraints incompatible with VGPRs (e.g., SALU instructions
+        // requiring SReg_32) are skipped because those users will be converted
+        // to VALU by the worklist.
+        for (const MachineOperand &UseMO : MRI.use_operands(DstReg)) {
+          const MachineInstr *UseMI = UseMO.getParent();
+          if (UseMI == &Inst)
+            continue;
+          unsigned OpIdx = UseMI->getOperandNo(&UseMO);
+          if (const TargetRegisterClass *OpRC =
+                  getRegClass(UseMI->getDesc(), OpIdx)) {
+            if (const TargetRegisterClass *Narrowed =
+                    RI.getCommonSubClass(CommonRC, OpRC))
+              CommonRC = Narrowed;
+          }
+        }
+
         // Instead of creating a copy where src and dst are the same register
         // class, we just replace all uses of dst with src.  These kinds of
         // copies interfere with the heuristics MachineSink uses to decide
@@ -10357,9 +10377,9 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
       Opcode = MFMAOp;
   }
 
-  int64_t MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
+  int32_t MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
 
-  if (MCOp == (uint32_t)-1 && ST.hasGFX1250Insts())
+  if (MCOp == AMDGPU::INSTRUCTION_LIST_END && ST.hasGFX1250Insts())
     MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX12);
 
   // -1 means that Opcode is already a native instruction.
@@ -10367,20 +10387,20 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
     return Opcode;
 
   if (ST.hasGFX90AInsts()) {
-    uint32_t NMCOp = (uint32_t)-1;
+    uint32_t NMCOp = AMDGPU::INSTRUCTION_LIST_END;
     if (ST.hasGFX940Insts())
       NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX940);
-    if (NMCOp == (uint32_t)-1)
+    if (NMCOp == AMDGPU::INSTRUCTION_LIST_END)
       NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX90A);
-    if (NMCOp == (uint32_t)-1)
+    if (NMCOp == AMDGPU::INSTRUCTION_LIST_END)
       NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX9);
-    if (NMCOp != (uint32_t)-1)
+    if (NMCOp != AMDGPU::INSTRUCTION_LIST_END)
       MCOp = NMCOp;
   }
 
-  // (uint32_t)-1 means that Opcode is a pseudo instruction that has
-  // no encoding in the given subtarget generation.
-  if (MCOp == (uint32_t)-1)
+  // INSTRUCTION_LIST_END means that Opcode is a pseudo instruction that has no
+  // encoding in the given subtarget generation.
+  if (MCOp == AMDGPU::INSTRUCTION_LIST_END)
     return -1;
 
   if (isAsmOnlyOpcode(MCOp))

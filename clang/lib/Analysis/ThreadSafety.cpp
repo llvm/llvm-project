@@ -1727,9 +1727,6 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
   FactSet FSet;
   // The fact set for the function on exit.
   const FactSet &FunctionExitFSet;
-  // Use `LVarCtx` to keep track of the context at each program point, which
-  // will be used to translate variables (by `SExprBuilder::translateVariable`)
-  // to their canonical definitions:
   LocalVariableMap::Context LVarCtx;
   unsigned CtxIndex;
 

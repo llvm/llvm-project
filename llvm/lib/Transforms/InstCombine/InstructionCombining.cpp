@@ -892,7 +892,7 @@ Instruction *InstCombinerImpl::tryFoldInstWithCtpopWithNot(Instruction *I) {
   if (Opc == Instruction::ICmp && !cast<ICmpInst>(I)->isEquality()) {
     Constant *Cmp =
         ConstantFoldCompareInstOperands(ICmpInst::ICMP_UGT, C, BitWidthC, DL);
-    if (!Cmp || !Cmp->isZeroValue())
+    if (!Cmp || !Cmp->isNullValue())
       return nullptr;
   }
 

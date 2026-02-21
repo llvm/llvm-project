@@ -13,7 +13,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "lldb/Breakpoint/BreakpointList.h"
@@ -39,7 +38,6 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/RealpathPrefixes.h"
-#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
@@ -1707,20 +1705,6 @@ public:
 
   void SaveScriptedLaunchInfo(lldb_private::ProcessInfo &process_info);
 
-  // Scripted symbol locator per-target registration.
-  Status RegisterScriptedSymbolLocator(llvm::StringRef class_name,
-                                       StructuredData::DictionarySP args_sp);
-  void ClearScriptedSymbolLocator();
-  lldb::ScriptedSymbolLocatorInterfaceSP GetScriptedSymbolLocatorInterface();
-  llvm::StringRef GetScriptedSymbolLocatorClassName() const;
-
-  /// Look up a previously cached source file resolution result.
-  /// Returns true if a cached entry exists (even if the result is nullopt).
-  bool LookupScriptedSourceFileCache(llvm::StringRef key,
-                                     std::optional<FileSpec> &result) const;
-  void InsertScriptedSourceFileCache(llvm::StringRef key,
-                                     const std::optional<FileSpec> &result);
-
   /// Add a signal for the target.  This will get copied over to the process
   /// if the signal exists on that target.  Only the values with Yes and No are
   /// set, Calculate values will be ignored.
@@ -1858,13 +1842,6 @@ protected:
   /// more usefully in the Dummy target where you can't know exactly what
   /// signals you will have.
   llvm::StringMap<DummySignalValues> m_dummy_signals;
-
-  /// Per-target scripted symbol locator.
-  /// @{
-  lldb::ScriptedMetadataSP m_scripted_symbol_locator_metadata_sp;
-  lldb::ScriptedSymbolLocatorInterfaceSP m_scripted_symbol_locator_interface_sp;
-  llvm::StringMap<std::optional<FileSpec>> m_scripted_source_file_cache;
-  /// @}
 
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);

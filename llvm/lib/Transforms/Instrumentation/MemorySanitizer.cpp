@@ -1356,7 +1356,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // ZExt cannot convert between vector and scalar
     Value *ConvertedShadow = convertShadowToScalar(Shadow, IRB);
     if (auto *ConstantShadow = dyn_cast<Constant>(ConvertedShadow)) {
-      if (!ClCheckConstantShadow || ConstantShadow->isZeroValue()) {
+      if (!ClCheckConstantShadow || ConstantShadow->isNullValue()) {
         // Origin is not needed: value is initialized or const shadow is
         // ignored.
         return;
@@ -1519,7 +1519,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Value *ConvertedShadow = ShadowData.Shadow;
 
       if (auto *ConstantShadow = dyn_cast<Constant>(ConvertedShadow)) {
-        if (!ClCheckConstantShadow || ConstantShadow->isZeroValue()) {
+        if (!ClCheckConstantShadow || ConstantShadow->isNullValue()) {
           // Skip, value is initialized or const shadow is ignored.
           continue;
         }
@@ -3522,7 +3522,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // If zero poison is requested, mix in with the shadow
     Constant *IsZeroPoison = cast<Constant>(I.getOperand(1));
-    if (!IsZeroPoison->isZeroValue()) {
+    if (!IsZeroPoison->isNullValue()) {
       Value *BoolZeroPoison = IRB.CreateIsNull(Src, "_mscz_bzp");
       OutputShadow = IRB.CreateOr(OutputShadow, BoolZeroPoison, "_mscz_bs");
     }
