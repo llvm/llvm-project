@@ -4785,6 +4785,45 @@ static Value *simplifySelectWithEquivalence(
   return nullptr;
 }
 
+/// Simplifies:
+/// `X > Y ? (X + zext(X > Y)) >= Y : false` to `X > Y`
+/// `X < Y ? (X + zext(X < Y)) <= Y : false` to `X < Y`
+static Value *simplifySelectWithStrictICmp(Value *CondVal, Value *TVal,
+                                           Value *FVal,
+                                           const SimplifyQuery &Q) {
+  if (!match(FVal, m_Zero()))
+    return nullptr;
+
+  ICmpInst::Predicate Pred;
+  Value *CmpLHS, *CmpRHS;
+
+  if (!match(CondVal, m_ICmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS))))
+    return nullptr;
+
+  if (!CmpInst::isStrictPredicate(Pred))
+    return nullptr;
+
+  ICmpInst::Predicate NonStrictPred = ICmpInst::getNonStrictPredicate(Pred);
+  BinaryOperator *BinOp;
+
+  if (!match(TVal,
+             m_SpecificICmp(NonStrictPred, m_BinOp(BinOp), m_Specific(CmpRHS))))
+    return nullptr;
+
+  // This fold works for GT only when it does not wrap.
+  if (Pred == ICmpInst::ICMP_UGT && !Q.IIQ.hasNoUnsignedWrap(BinOp))
+    return nullptr;
+
+  if (Pred == ICmpInst::ICMP_SGT && !Q.IIQ.hasNoSignedWrap(BinOp))
+    return nullptr;
+
+  if (!match(BinOp, m_c_BinOp(Instruction::Add, m_Specific(CmpLHS),
+                              m_ZExt(m_Specific(CondVal)))))
+    return nullptr;
+
+  return CondVal;
+}
+
 /// Try to simplify a select instruction when its condition operand is an
 /// integer comparison.
 static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
@@ -4899,6 +4938,9 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
         return V;
     }
   }
+
+  if (Value *V = simplifySelectWithStrictICmp(CondVal, TrueVal, FalseVal, Q))
+    return V;
 
   return nullptr;
 }
