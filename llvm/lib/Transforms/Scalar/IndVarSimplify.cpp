@@ -1111,10 +1111,45 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
   // dead, it could not be poison on the first iteration in the first place.)
   if (auto *BO = dyn_cast<BinaryOperator>(IncVar)) {
     const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(SE->getSCEV(IncVar));
+
+    // However, if we successfully computed an ExitCount, we can infer nowrap
+    // properties from the original loop exit condition. If the original
+    // comparison was signed and SCEV computed an exit count, then NSW is safe.
+    // Similarly, if it was unsigned, NUW is safe. This is because SCEV's exit
+    // count analysis proves the loop exits before overflow occurs for that
+    // signedness.
+    bool KeepNSW = false;
+    bool KeepNUW = false;
+
+    BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+    if (auto *OrigCmp = dyn_cast<ICmpInst>(BI->getCondition())) {
+      // Check if the chosen IV is actually used in the original comparison.
+      bool IVUsedInOriginalCmp = (OrigCmp->getOperand(0) == IndVar ||
+                                  OrigCmp->getOperand(0) == IncVar ||
+                                  OrigCmp->getOperand(1) == IndVar ||
+                                  OrigCmp->getOperand(1) == IncVar);
+
+      if (IVUsedInOriginalCmp) {
+        ICmpInst::Predicate Pred = OrigCmp->getPredicate();
+
+        // Don't keep flags if the predicate sign was changed by SimplifyIndvar.
+        // The samesign flag indicates the predicate was originally signed but
+        // was canonicalized to unsigned (e.g., slt -> samesign ult).
+        if (!OrigCmp->hasSameSign()) {
+          // If the original comparison was signed, SCEV proved NSW is safe.
+          KeepNSW = ICmpInst::isSigned(Pred);
+          // If the original comparison was unsigned, SCEV proved NUW is safe.
+          KeepNUW = ICmpInst::isUnsigned(Pred);
+        }
+      }
+    }
+
+    // Use SCEV's analysis, but also keep flags if the original comparison
+    // guarantees safety for that signedness.
     if (BO->hasNoUnsignedWrap())
-      BO->setHasNoUnsignedWrap(AR->hasNoUnsignedWrap());
+      BO->setHasNoUnsignedWrap(AR->hasNoUnsignedWrap() || KeepNUW);
     if (BO->hasNoSignedWrap())
-      BO->setHasNoSignedWrap(AR->hasNoSignedWrap());
+      BO->setHasNoSignedWrap(AR->hasNoSignedWrap() || KeepNSW);
   }
 
   // Insert a new icmp_ne or icmp_eq instruction before the branch.
