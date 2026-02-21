@@ -130,7 +130,7 @@
 // CSKY: #define __POINTER_WIDTH__ 32
 // CSKY: #define __PRAGMA_REDEFINE_EXTNAME 1
 // CSKY: #define __PTRDIFF_MAX__ 2147483647
-// CSKY: #define __PTRDIFF_TYPE__ int
+// CSKY: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // CSKY: #define __PTRDIFF_WIDTH__ 32
 // CSKY: #define __SCHAR_MAX__ 127
 // CSKY: #define __SHRT_MAX__ 32767
@@ -150,7 +150,7 @@
 // CSKY: #define __SIZEOF_WCHAR_T__ 4
 // CSKY: #define __SIZEOF_WINT_T__ 4
 // CSKY: #define __SIZE_MAX__ 4294967295U
-// CSKY: #define __SIZE_TYPE__ unsigned int
+// CSKY: #define __SIZE_TYPE__ __typeof(sizeof(0))
 // CSKY: #define __SIZE_WIDTH__ 32
 // CSKY: #define __STDC_HOSTED__ 0
 // CSKY: #define __STDC_UTF_16__ 1

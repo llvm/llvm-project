@@ -140,7 +140,7 @@
 // VE:#define __PTRDIFF_FMTd__ "ld"
 // VE:#define __PTRDIFF_FMTi__ "li"
 // VE:#define __PTRDIFF_MAX__ 9223372036854775807L
-// VE:#define __PTRDIFF_TYPE__ long int
+// VE:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // VE:#define __PTRDIFF_WIDTH__ 64
 // VE:#define __SCHAR_MAX__ 127
 // VE:#define __SHRT_MAX__ 32767
@@ -164,7 +164,7 @@
 // VE:#define __SIZE_FMTu__ "lu"
 // VE:#define __SIZE_FMTx__ "lx"
 // VE:#define __SIZE_MAX__ 18446744073709551615UL
-// VE:#define __SIZE_TYPE__ long unsigned int
+// VE:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // VE:#define __SIZE_WIDTH__ 64
 // VE-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
 // VE-HOSTED:#define __STDC_HOSTED__ 1

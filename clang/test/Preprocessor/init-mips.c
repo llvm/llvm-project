@@ -138,7 +138,7 @@
 // MIPS32BE:#define __MIPSEB__ 1
 // MIPS32BE:#define __POINTER_WIDTH__ 32
 // MIPS32BE:#define __PRAGMA_REDEFINE_EXTNAME 1
-// MIPS32BE:#define __PTRDIFF_TYPE__ int
+// MIPS32BE:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // MIPS32BE:#define __PTRDIFF_WIDTH__ 32
 // MIPS32BE:#define __REGISTER_PREFIX__
 // MIPS32BE:#define __SCHAR_MAX__ 127
@@ -158,7 +158,7 @@
 // MIPS32BE:#define __SIZEOF_WCHAR_T__ 4
 // MIPS32BE:#define __SIZEOF_WINT_T__ 4
 // MIPS32BE:#define __SIZE_MAX__ 4294967295U
-// MIPS32BE:#define __SIZE_TYPE__ unsigned int
+// MIPS32BE:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // MIPS32BE:#define __SIZE_WIDTH__ 32
 // MIPS32BE-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
 // MIPS32BE:#define __STDC_HOSTED__ 0
@@ -359,7 +359,7 @@
 // MIPS32EL:#define __MIPSEL__ 1
 // MIPS32EL:#define __POINTER_WIDTH__ 32
 // MIPS32EL:#define __PRAGMA_REDEFINE_EXTNAME 1
-// MIPS32EL:#define __PTRDIFF_TYPE__ int
+// MIPS32EL:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // MIPS32EL:#define __PTRDIFF_WIDTH__ 32
 // MIPS32EL:#define __REGISTER_PREFIX__
 // MIPS32EL:#define __SCHAR_MAX__ 127
@@ -379,7 +379,7 @@
 // MIPS32EL:#define __SIZEOF_WCHAR_T__ 4
 // MIPS32EL:#define __SIZEOF_WINT_T__ 4
 // MIPS32EL:#define __SIZE_MAX__ 4294967295U
-// MIPS32EL:#define __SIZE_TYPE__ unsigned int
+// MIPS32EL:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // MIPS32EL:#define __SIZE_WIDTH__ 32
 // MIPS32EL:#define __UINT16_C(c) c
 // MIPS32EL:#define __UINT16_C_SUFFIX__
@@ -611,7 +611,7 @@
 // MIPSN32BE: #define __PTRDIFF_FMTd__ "d"
 // MIPSN32BE: #define __PTRDIFF_FMTi__ "i"
 // MIPSN32BE: #define __PTRDIFF_MAX__ 2147483647
-// MIPSN32BE: #define __PTRDIFF_TYPE__ int
+// MIPSN32BE: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // MIPSN32BE: #define __PTRDIFF_WIDTH__ 32
 // MIPSN32BE: #define __REGISTER_PREFIX__
 // MIPSN32BE: #define __SCHAR_MAX__ 127
@@ -635,7 +635,7 @@
 // MIPSN32BE: #define __SIZE_FMTu__ "u"
 // MIPSN32BE: #define __SIZE_FMTx__ "x"
 // MIPSN32BE: #define __SIZE_MAX__ 4294967295U
-// MIPSN32BE: #define __SIZE_TYPE__ unsigned int
+// MIPSN32BE: #define __SIZE_TYPE__ __typeof(sizeof(0))
 // MIPSN32BE: #define __SIZE_WIDTH__ 32
 // MIPSN32BE-CXX: #define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16U
 // MIPSN32BE: #define __STDC_HOSTED__ 0
@@ -929,7 +929,7 @@
 // MIPSN32EL: #define __PTRDIFF_FMTd__ "d"
 // MIPSN32EL: #define __PTRDIFF_FMTi__ "i"
 // MIPSN32EL: #define __PTRDIFF_MAX__ 2147483647
-// MIPSN32EL: #define __PTRDIFF_TYPE__ int
+// MIPSN32EL: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // MIPSN32EL: #define __PTRDIFF_WIDTH__ 32
 // MIPSN32EL: #define __REGISTER_PREFIX__
 // MIPSN32EL: #define __SCHAR_MAX__ 127
@@ -953,7 +953,7 @@
 // MIPSN32EL: #define __SIZE_FMTu__ "u"
 // MIPSN32EL: #define __SIZE_FMTx__ "x"
 // MIPSN32EL: #define __SIZE_MAX__ 4294967295U
-// MIPSN32EL: #define __SIZE_TYPE__ unsigned int
+// MIPSN32EL: #define __SIZE_TYPE__ __typeof(sizeof(0))
 // MIPSN32EL: #define __SIZE_WIDTH__ 32
 // MIPSN32EL: #define __STDC_HOSTED__ 0
 // MIPSN32EL: #define __STDC_UTF_16__ 1
@@ -1215,7 +1215,7 @@
 // MIPS64BE:#define __MIPSEB__ 1
 // MIPS64BE:#define __POINTER_WIDTH__ 64
 // MIPS64BE:#define __PRAGMA_REDEFINE_EXTNAME 1
-// MIPS64BE:#define __PTRDIFF_TYPE__ long int
+// MIPS64BE:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // MIPS64BE:#define __PTRDIFF_WIDTH__ 64
 // MIPS64BE:#define __REGISTER_PREFIX__
 // MIPS64BE:#define __SCHAR_MAX__ 127
@@ -1236,7 +1236,7 @@
 // MIPS64BE:#define __SIZEOF_WCHAR_T__ 4
 // MIPS64BE:#define __SIZEOF_WINT_T__ 4
 // MIPS64BE:#define __SIZE_MAX__ 18446744073709551615UL
-// MIPS64BE:#define __SIZE_TYPE__ long unsigned int
+// MIPS64BE:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // MIPS64BE:#define __SIZE_WIDTH__ 64
 // MIPS64BE-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
 // MIPS64BE:#define __UINT16_C(c) c
@@ -1436,7 +1436,7 @@
 // MIPS64EL:#define __MIPSEL__ 1
 // MIPS64EL:#define __POINTER_WIDTH__ 64
 // MIPS64EL:#define __PRAGMA_REDEFINE_EXTNAME 1
-// MIPS64EL:#define __PTRDIFF_TYPE__ long int
+// MIPS64EL:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // MIPS64EL:#define __PTRDIFF_WIDTH__ 64
 // MIPS64EL:#define __REGISTER_PREFIX__
 // MIPS64EL:#define __SCHAR_MAX__ 127
@@ -1457,7 +1457,7 @@
 // MIPS64EL:#define __SIZEOF_WCHAR_T__ 4
 // MIPS64EL:#define __SIZEOF_WINT_T__ 4
 // MIPS64EL:#define __SIZE_MAX__ 18446744073709551615UL
-// MIPS64EL:#define __SIZE_TYPE__ long unsigned int
+// MIPS64EL:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // MIPS64EL:#define __SIZE_WIDTH__ 64
 // MIPS64EL:#define __UINT16_C(c) c
 // MIPS64EL:#define __UINT16_C_SUFFIX__

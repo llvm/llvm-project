@@ -15,7 +15,7 @@
 // CHECK: #define __ARM_PCS_VFP 1
 // CHECK: #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // CHECK: #define __INTPTR_TYPE__ int
-// CHECK: #define __PTRDIFF_TYPE__ int
+// CHECK: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // CHECK: #define __SIZEOF_DOUBLE__ 8
 // CHECK: #define __SIZEOF_FLOAT__ 4
 // CHECK: #define __SIZEOF_INT__ 4
@@ -28,7 +28,7 @@
 // CHECK: #define __SIZEOF_SIZE_T__ 4
 // CHECK: #define __SIZEOF_WCHAR_T__ 2
 // CHECK: #define __SIZEOF_WINT_T__ 2
-// CHECK: #define __SIZE_TYPE__ unsigned int
+// CHECK: #define __SIZE_TYPE__ __typeof(sizeof(0))
 // CHECK: #define __UINTPTR_TYPE__ unsigned int
 
 // CHECK-NOT: __THUMB_INTERWORK__

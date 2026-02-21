@@ -124,7 +124,7 @@
 // CHECK: #define __LONG_LONG_MAX__ 9223372036854775807LL
 // CHECK: #define __LONG_MAX__ 2147483647L
 // CHECK: #define __POINTER_WIDTH__ 32
-// CHECK: #define __PTRDIFF_TYPE__ long int
+// CHECK: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // CHECK: #define __PTRDIFF_WIDTH__ 32
 // CHECK: #define __SCHAR_MAX__ 127
 // CHECK: #define __SHRT_MAX__ 32767
@@ -143,7 +143,7 @@
 // CHECK: #define __SIZEOF_WCHAR_T__ 4
 // CHECK: #define __SIZEOF_WINT_T__ 4
 // CHECK: #define __SIZE_MAX__ 4294967295UL
-// CHECK: #define __SIZE_TYPE__ long unsigned int
+// CHECK: #define __SIZE_TYPE__ __typeof(sizeof(0))
 // CHECK: #define __SIZE_WIDTH__ 32
 // CHECK: #define __UINT16_C(c) c
 // CHECK: #define __UINT16_C_SUFFIX__ {{$}}

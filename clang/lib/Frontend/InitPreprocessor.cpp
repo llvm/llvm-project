@@ -1154,13 +1154,15 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__UINTMAX_C_SUFFIX__", ConstSuffix);
   Builder.defineMacro("__UINTMAX_C(c)",
                       ConstSuffix.size() ? Twine("c##") + ConstSuffix : "c");
-  DefineType("__PTRDIFF_TYPE__", TI.getPtrDiffType(LangAS::Default), Builder);
-  DefineFmt(LangOpts, "__PTRDIFF", TI.getPtrDiffType(LangAS::Default), TI,
-            Builder);
   DefineType("__INTPTR_TYPE__", TI.getIntPtrType(), Builder);
   DefineFmt(LangOpts, "__INTPTR", TI.getIntPtrType(), TI, Builder);
-  DefineType("__SIZE_TYPE__", TI.getSizeType(), Builder);
+  // Use deduction to obtain the built-in __size_t and __ptrdiff_t types instead
+  // of standard integer types
+  Builder.defineMacro("__SIZE_TYPE__", "__typeof(sizeof(0))");
   DefineFmt(LangOpts, "__SIZE", TI.getSizeType(), TI, Builder);
+  Builder.defineMacro("__PTRDIFF_TYPE__", "__typeof((int*)0-(int*)0)");
+  DefineFmt(LangOpts, "__PTRDIFF", TI.getPtrDiffType(LangAS::Default), TI,
+            Builder);
   DefineType("__WCHAR_TYPE__", TI.getWCharType(), Builder);
   DefineType("__WINT_TYPE__", TI.getWIntType(), Builder);
   DefineTypeSizeAndWidth("__SIG_ATOMIC", TI.getSigAtomicType(), TI, Builder);

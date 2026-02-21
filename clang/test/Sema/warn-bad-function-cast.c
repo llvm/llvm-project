@@ -13,6 +13,9 @@ char *pf1(void);
 int *pf2(void);
 _Fract ff1(void);
 
+typedef __SIZE_TYPE__ size_t;
+typedef __PTRDIFF_TYPE__ ptrdiff_t;
+
 void
 foo(void)
 {
@@ -46,8 +49,8 @@ foo(void)
   (double)cf(); /* expected-warning {{cast from function call of type '_Complex double' to non-matching type 'double'}} */
   (int)ef(); /* expected-warning {{cast from function call of type 'enum e' to non-matching type 'int'}} */
   (int)bf(); /* expected-warning {{cast from function call of type '_Bool' to non-matching type 'int'}} */
-  (__SIZE_TYPE__)pf1(); /* expected-warning {{cast from function call of type 'char *' to non-matching type 'unsigned long'}} */
-  (__PTRDIFF_TYPE__)pf2(); /* expected-warning {{cast from function call of type 'int *' to non-matching type 'long'}} */
+  (size_t)pf1(); /* expected-warning {{cast from function call of type 'char *' to non-matching type 'size_t' (aka 'unsigned long')}} */
+  (ptrdiff_t)pf2(); /* expected-warning {{cast from function call of type 'int *' to non-matching type 'ptrdiff_t' (aka 'long')}} */
   (_Fract) if1();          /* expected-warning{{cast from function call of type 'int' to non-matching type '_Fract'}} */
   (int)ff1();              /* expected-warning{{cast from function call of type '_Fract' to non-matching type 'int'}} */
 }
