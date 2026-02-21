@@ -483,6 +483,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "fake_use";
   case ISD::RELOC_NONE:
     return "reloc_none";
+  case ISD::COND_LOOP:
+    return "cond_loop";
   case ISD::PSEUDO_PROBE:
     return "pseudoprobe";
   case ISD::GC_TRANSITION_START:        return "gc_transition.start";
@@ -732,6 +734,9 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
 
   if (getFlags().hasNoFPExcept())
     OS << " nofpexcept";
+
+  if (getFlags().hasNoConvergent())
+    OS << " noconvergent";
 
   if (const MachineSDNode *MN = dyn_cast<MachineSDNode>(this)) {
     if (!MN->memoperands_empty()) {

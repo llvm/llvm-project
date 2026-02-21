@@ -74,7 +74,24 @@ if config.enable_profcheck:
         ["Hexagon", "NVPTX", "PowerPC", "RISCV", "SPARC", "WebAssembly"]
     )
     # these passes aren't hooked up to the pass pipeline:
-    config.excludes.append("IRCE")
+    config.excludes.extend(["IRCE", "LoopBoundSplit", "LoopInterchange", "Scalarizer"])
+    # Not on by default in any standard CPU pipeline.
+    config.excludes.extend(
+        [
+            "Attributor",
+            "IROutliner",
+            "BlockExtractor",
+            "CodeExtractor",
+            "HotColdSplit",
+            "LowerGlobalDestructors",
+            "LowerSwitch",
+            "StructurizeCFG",
+            "UnifyLoopExits",
+        ]
+    )
+    # Not aimed at being used for peak-optimized binaries. These will be
+    # addressed later. PhaseOrdering has a couple of merge function tests.
+    config.excludes.extend(["GCOVProfiling", "MergeFunc", "PhaseOrdering"])
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -235,6 +252,7 @@ tools.extend(
         "dsymutil",
         "lli",
         "lli-child-target",
+        "llubi",
         "llvm-ar",
         "llvm-as",
         "llvm-addr2line",

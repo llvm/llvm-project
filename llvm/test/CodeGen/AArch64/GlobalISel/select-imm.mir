@@ -62,14 +62,14 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1234
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG [[MOVi32imm]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
     ;
     ; CHECK-TINY-LABEL: name: imm_s64_gpr
     ; CHECK-TINY: liveins: $w0, $w1
     ; CHECK-TINY-NEXT: {{  $}}
     ; CHECK-TINY-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1234
-    ; CHECK-TINY-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK-TINY-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG [[MOVi32imm]], %subreg.sub_32
     ; CHECK-TINY-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
     %0(s64) = G_CONSTANT i64 1234
     $x0 = COPY %0(s64)

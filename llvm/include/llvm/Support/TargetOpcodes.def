@@ -61,14 +61,14 @@ HANDLE_TARGET_OPCODE(IMPLICIT_DEF)
 /// early-clobber result operand.
 HANDLE_TARGET_OPCODE(INIT_UNDEF)
 
-/// SUBREG_TO_REG - Assert the value of bits in a super register.
-/// The result of this instruction is the value of the second operand inserted
-/// into the subregister specified by the third operand. All other bits are
-/// assumed to be equal to the bits in the immediate integer constant in the
-/// first operand. This instruction just communicates information; No code
-/// should be generated.
-/// This is typically used after an instruction where the write to a subregister
-/// implicitly cleared the bits in the super registers.
+/// SUBREG_TO_REG - Expose the value of bits in a super register.
+/// This is typically used after an instruction which writes its result to a
+/// subregister but also, as a side effect, writes some value (often zero) into
+/// a larger super register.
+/// The result of this instruction is the value of the first operand inserted
+/// into the subregister specified by the second operand. All other bits are
+/// left undefined or however they were set by the preceding instruction.
+/// This instruction just communicates information; No code should be generated.
 HANDLE_TARGET_OPCODE(SUBREG_TO_REG)
 
 /// COPY_TO_REGCLASS - This instruction is a placeholder for a plain

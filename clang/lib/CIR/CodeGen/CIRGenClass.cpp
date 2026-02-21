@@ -24,6 +24,25 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
+/// Return the smallest possible amount of storage that might be allocated
+/// starting from the beginning of an object of a particular class.
+///
+/// This may be smaller than sizeof(RD) if RD has virtual base classes.
+CharUnits CIRGenModule::getMinimumClassObjectSize(const CXXRecordDecl *rd) {
+  if (!rd->hasDefinition())
+    return CharUnits::One();
+
+  auto &layout = getASTContext().getASTRecordLayout(rd);
+
+  // If the class is final, then we know that the pointer points to an
+  // object of that type and can use the full alignment.
+  if (rd->isEffectivelyFinal())
+    return layout.getSize();
+
+  // Otherwise, we have to assume it could be a subclass.
+  return std::max(layout.getNonVirtualSize(), CharUnits::One());
+}
+
 /// Checks whether the given constructor is a valid subject for the
 /// complete-to-base constructor delegation optimization, i.e. emitting the
 /// complete constructor as a simple call to the base constructor.

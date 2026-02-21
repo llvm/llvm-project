@@ -13,8 +13,8 @@
 
 #include <string>
 
-#ifndef LLDB_CORE_DEBUGGER_EVENTS_H
-#define LLDB_CORE_DEBUGGER_EVENTS_H
+#ifndef LLDB_CORE_DEBUGGEREVENTS_H
+#define LLDB_CORE_DEBUGGEREVENTS_H
 
 namespace lldb_private {
 class Stream;
@@ -132,4 +132,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_DEBUGGER_EVENTS_H
+#endif // LLDB_CORE_DEBUGGEREVENTS_H
