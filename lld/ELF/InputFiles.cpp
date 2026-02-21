@@ -1741,9 +1741,10 @@ template <class ELFT> void SharedFile::parse() {
 }
 
 static ELFKind getBitcodeELFKind(const Triple &t) {
-  if (t.isLittleEndian())
-    return t.isArch64Bit() ? ELF64LEKind : ELF32LEKind;
-  return t.isArch64Bit() ? ELF64BEKind : ELF32BEKind;
+  if (t.isArch64Bit() && !t.isABIN32() && !t.isX32() &&
+      t.getEnvironment() != Triple::GNUILP32)
+    return t.isLittleEndian() ? ELF64LEKind : ELF64BEKind;
+  return t.isLittleEndian() ? ELF32LEKind : ELF32BEKind;
 }
 
 static uint16_t getBitcodeMachineKind(Ctx &ctx, StringRef path,
@@ -1839,10 +1840,11 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
   obj = CHECK2(lto::InputFile::create(mbref), this);
   obj->setArchivePathAndName(archiveName, mb.getBufferIdentifier());
 
-  Triple t(obj->getTargetTriple());
-  ekind = getBitcodeELFKind(t);
-  emachine = getBitcodeMachineKind(ctx, mb.getBufferIdentifier(), t);
-  osabi = getOsAbi(t);
+  this->triple = Triple(obj->getTargetTriple());
+
+  ekind = getBitcodeELFKind(this->triple);
+  emachine = getBitcodeMachineKind(ctx, mb.getBufferIdentifier(), this->triple);
+  osabi = getOsAbi(this->triple);
 }
 
 static uint8_t mapVisibility(GlobalValue::VisibilityTypes gvVisibility) {
