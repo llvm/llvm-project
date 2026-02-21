@@ -23,6 +23,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/CmpPredicate.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -106,7 +107,7 @@ std::pair<ConstantRange, ConstantRange> ConstantRange::splitPosNeg() const {
   return {intersectWith(PosFilter), intersectWith(NegFilter)};
 }
 
-ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
+ConstantRange ConstantRange::makeAllowedICmpRegion(CmpPredicate Pred,
                                                    const ConstantRange &CR) {
   if (CR.isEmptySet())
     return CR;
@@ -125,7 +126,25 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
     APInt UMax(CR.getUnsignedMax());
     if (UMax.isMinValue())
       return getEmpty(W);
-    return ConstantRange(APInt::getMinValue(W), std::move(UMax));
+    if (!Pred.hasSameSign())
+      return ConstantRange(APInt::getMinValue(W), std::move(UMax));
+    if (W == 1)
+      return getEmpty(W);
+
+    APInt CRUpper = CR.getUpper();
+    if (CR.getUnsignedMax().isMinSignedValue())
+      CRUpper = APInt::getSignedMinValue(W);
+    else if (CR.getSignedMax().isMinValue())
+      CRUpper = APInt::getMinValue(W);
+
+    if (CRUpper == CR.getLower() && !CR.isFullSet())
+      return getEmpty(W);
+
+    ConstantRange Augmented(CR.getLower(), CRUpper);
+    if (Augmented.isAllNonNegative() ||
+        (!Augmented.isAllNegative() && Augmented.isSignWrappedSet()))
+      return getNonEmpty(APInt::getMinValue(W), Augmented.getUnsignedMax());
+    return getNonEmpty(APInt::getSignedMinValue(W), Augmented.getSignedMax());
   }
   case CmpInst::ICMP_SLT: {
     APInt SMax(CR.getSignedMax());
@@ -134,6 +153,11 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
     return ConstantRange(APInt::getSignedMinValue(W), std::move(SMax));
   }
   case CmpInst::ICMP_ULE:
+    if (!Pred.hasSameSign())
+      return getNonEmpty(APInt::getMinValue(W), CR.getUnsignedMax() + 1);
+    if (CR.isAllNegative() ||
+        (!CR.isAllNonNegative() && !CR.isSignWrappedSet()))
+      return getNonEmpty(APInt::getSignedMinValue(W), CR.getSignedMax() + 1);
     return getNonEmpty(APInt::getMinValue(W), CR.getUnsignedMax() + 1);
   case CmpInst::ICMP_SLE:
     return getNonEmpty(APInt::getSignedMinValue(W), CR.getSignedMax() + 1);
@@ -141,7 +165,28 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
     APInt UMin(CR.getUnsignedMin());
     if (UMin.isMaxValue())
       return getEmpty(W);
-    return ConstantRange(std::move(UMin) + 1, APInt::getZero(W));
+    if (!Pred.hasSameSign())
+      return ConstantRange(std::move(UMin) + 1, APInt::getZero(W));
+    if (W == 1)
+      return getEmpty(W);
+
+    // deal with edge cases
+    APInt CRLower = CR.getLower();
+    if (CR.getLower().isMaxSignedValue())
+      CRLower = APInt::getSignedMinValue(W);
+    else if (CR.getLower().isMaxValue())
+      CRLower = APInt::getMinValue(W);
+
+    if (CRLower == CR.getUpper())
+      return getEmpty(W);
+
+    ConstantRange Augmented(CRLower, CR.getUpper());
+    if (Augmented.isAllNegative())
+      return getNonEmpty(Augmented.getSignedMin() + 1, APInt::getZero(W));
+    if (!Augmented.isAllNonNegative() && Augmented.isSignWrappedSet())
+      return getNonEmpty(Augmented.getUnsignedMin() + 1, APInt::getZero(W));
+    return getNonEmpty(Augmented.getSignedMin() + 1,
+                       APInt::getSignedMinValue(W));
   }
   case CmpInst::ICMP_SGT: {
     APInt SMin(CR.getSignedMin());
@@ -150,6 +195,9 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
     return ConstantRange(std::move(SMin) + 1, APInt::getSignedMinValue(W));
   }
   case CmpInst::ICMP_UGE:
+    if (Pred.hasSameSign() && (CR.isAllNonNegative() ||
+                               (!CR.isAllNegative() && !CR.isSignWrappedSet())))
+      return getNonEmpty(CR.getSignedMin(), APInt::getSignedMinValue(W));
     return getNonEmpty(CR.getUnsignedMin(), APInt::getZero(W));
   case CmpInst::ICMP_SGE:
     return getNonEmpty(CR.getSignedMin(), APInt::getSignedMinValue(W));

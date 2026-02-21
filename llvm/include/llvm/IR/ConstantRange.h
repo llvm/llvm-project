@@ -41,6 +41,7 @@ namespace llvm {
 
 class MDNode;
 class raw_ostream;
+class CmpPredicate;
 struct KnownBits;
 
 /// This class represents a range of values.
@@ -106,7 +107,7 @@ public:
   ///
   /// Example: Pred = ult and Other = i8 [2, 5) returns Result = [0, 4)
   LLVM_ABI static ConstantRange
-  makeAllowedICmpRegion(CmpInst::Predicate Pred, const ConstantRange &Other);
+  makeAllowedICmpRegion(CmpPredicate Pred, const ConstantRange &Other);
 
   /// Produce the largest range such that all values in the returned range
   /// satisfy the given predicate with all values contained within Other.

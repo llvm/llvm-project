@@ -3236,6 +3236,106 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
 
   {
     // Assumptions:
+    //  * stride >= 5 (unsigned)
+    //
+    // stride = [5, 0)
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i32 @test(i32 %stride) {
+    %gt = icmp uge i32 %stride, 5
+    call void @llvm.assume(i1 %gt)
+    %stride.plus.one = add nsw nuw i32 %stride, 1
+    ret i32 %stride.plus.one
+  })");
+    Function *F = M->getFunction("test");
+
+    AssumptionCache AC(*F);
+    Value *Stride = &*F->arg_begin();
+
+    Instruction *I = &findInstructionByName(F, "stride.plus.one");
+    ConstantRange CR2 = computeConstantRange(Stride, false, true, &AC, I);
+    EXPECT_EQ(5, CR2.getLower());
+    EXPECT_EQ(0, CR2.getUpper());
+  }
+
+  {
+    // Assumptions:
+    //  * stride > 5 (unsigned)
+    //
+    // stride = [5, 0)
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i32 @test(i32 %stride) {
+    %gt = icmp ugt i32 %stride, 5
+    call void @llvm.assume(i1 %gt)
+    %stride.plus.one = add nsw nuw i32 %stride, 1
+    ret i32 %stride.plus.one
+  })");
+    Function *F = M->getFunction("test");
+
+    AssumptionCache AC(*F);
+    Value *Stride = &*F->arg_begin();
+
+    Instruction *I = &findInstructionByName(F, "stride.plus.one");
+    ConstantRange CR2 = computeConstantRange(Stride, false, true, &AC, I);
+    EXPECT_EQ(6, CR2.getLower());
+    EXPECT_EQ(0, CR2.getUpper());
+  }
+
+  {
+    // Assumptions:
+    //  * stride >= 5 (samesign unsigned)
+    //
+    // stride = [5, MIN_SIGNED)
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i32 @test(i32 %stride) {
+    %gt = icmp samesign uge i32 %stride, 5
+    call void @llvm.assume(i1 %gt)
+    %stride.plus.one = add nsw nuw i32 %stride, 1
+    ret i32 %stride.plus.one
+  })");
+    Function *F = M->getFunction("test");
+
+    AssumptionCache AC(*F);
+    Value *Stride = &*F->arg_begin();
+
+    Instruction *I = &findInstructionByName(F, "stride.plus.one");
+    ConstantRange CR2 = computeConstantRange(Stride, false, true, &AC, I);
+    EXPECT_EQ(5, CR2.getLower());
+    EXPECT_EQ(APInt::getSignedMinValue(32), CR2.getUpper());
+  }
+
+  {
+    // Assumptions:
+    //  * stride > 5 (samesign unsigned)
+    //
+    // stride = [5, MIN_SIGNED)
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+
+  define i32 @test(i32 %stride) {
+    %gt = icmp samesign ugt i32 %stride, 5
+    call void @llvm.assume(i1 %gt)
+    %stride.plus.one = add nsw nuw i32 %stride, 1
+    ret i32 %stride.plus.one
+  })");
+    Function *F = M->getFunction("test");
+
+    AssumptionCache AC(*F);
+    Value *Stride = &*F->arg_begin();
+
+    Instruction *I = &findInstructionByName(F, "stride.plus.one");
+    ConstantRange CR2 = computeConstantRange(Stride, false, true, &AC, I);
+    EXPECT_EQ(6, CR2.getLower());
+    EXPECT_EQ(APInt::getSignedMinValue(32), CR2.getUpper());
+  }
+
+  {
+    // Assumptions:
     //  * stride >= 5
     //  * stride < 200
     //  * stride == 99
