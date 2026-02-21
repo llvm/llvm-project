@@ -1472,7 +1472,9 @@ TEST_F(AArch64SelectionDAGTest, KnownNeverZero_Constants) {
 }
 
 TEST_F(AArch64SelectionDAGTest, KnownNeverZero_Select) {
-  SDLoc Loc; auto Cst0 = DAG->getConstant(0, Loc, MVT::i32); auto Cst3 = DAG->getConstant(3, Loc, MVT::i32);
+  SDLoc Loc;
+  auto Cst0 = DAG->getConstant(0, Loc, MVT::i32);
+  auto Cst3 = DAG->getConstant(3, Loc, MVT::i32);
   auto Cst4 = DAG->getConstant(4, Loc, MVT::i32);
   auto CstBig = DAG->getConstant(2 << 17, Loc, MVT::i32);
 

@@ -6147,7 +6147,7 @@ bool SelectionDAG::isKnownNeverZeroFloat(SDValue Op) const {
 }
 
 bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
-   EVT VT = Op.getValueType();
+  EVT VT = Op.getValueType();
 
   // Since the number of lanes in a scalable vector is unknown at compile time,
   // we track one bit which is implicitly broadcast to all lanes.  This means
@@ -6159,10 +6159,11 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
   return isKnownNeverZero(Op, DemandedElts, Depth);
 }
 
-bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts, unsigned Depth) const {
+bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
+                                    unsigned Depth) const {
   if (Depth >= MaxRecursionDepth)
     return false; // Limit search depth.
-  
+
   EVT OpVT = Op.getValueType();
   unsigned BitWidth = OpVT.getScalarSizeInBits();
 
@@ -6170,9 +6171,9 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts, unsig
          "Floating point types unsupported - use isKnownNeverZeroFloat");
 
   // If the value is a constant, we can obviously see if it is a zero or not.
-  auto IsNeverZero = [BitWidth](const ConstantSDNode *C) { 
+  auto IsNeverZero = [BitWidth](const ConstantSDNode *C) {
     APInt V = C->getAPIntValue().zextOrTrunc(BitWidth);
-    return !V.isZero(); 
+    return !V.isZero();
   };
 
   if (ISD::matchUnaryPredicate(Op, IsNeverZero))
