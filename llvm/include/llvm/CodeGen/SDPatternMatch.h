@@ -600,6 +600,13 @@ m_InsertSubvector(const LHS &Base, const RHS &Sub, const IDX &Idx) {
 
 template <typename T0_P, typename T1_P, typename T2_P>
 inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_SpliceRight(const T0_P &V1, const T1_P &V2, const T2_P &Offset) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::VECTOR_SPLICE_RIGHT, V1, V2,
+                                            Offset);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
 m_TernaryOp(unsigned Opc, const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
   return TernaryOpc_match<T0_P, T1_P, T2_P>(Opc, Op0, Op1, Op2);
 }
@@ -1135,6 +1142,11 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Cttz(const Opnd &Op) {
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_FNeg(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::FNEG, Op);
+}
+
+template <typename Opnd>
+inline UnaryOpc_match<Opnd> m_VectorReverse(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::VECTOR_REVERSE, Op);
 }
 
 // === Constants ===
