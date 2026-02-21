@@ -132,7 +132,7 @@ static cl::opt<bool> EnableConstpoolPromotion(
     "arm-promote-constant", cl::Hidden,
     cl::desc("Enable / disable promotion of unnamed_addr constants into "
              "constant pools"),
-    cl::init(false)); // FIXME: set to true by default once PR32780 is fixed
+    cl::init(true));
 static cl::opt<unsigned> ConstpoolPromotionMaxSize(
     "arm-promote-constant-max-size", cl::Hidden,
     cl::desc("Maximum size of constant to promote into a constant pool"),
@@ -3531,6 +3531,36 @@ static bool allUsersAreInFunction(const Value *V, const Function *F) {
   return true;
 }
 
+// Until issue #32127 is fixed allow the simple case
+// when there is only one use.
+static bool hasOnlyOneUse(const GlobalValue *GV) {
+  if (GV->hasNUsesOrMore(2))
+    return false;
+
+  SmallVector<const User *, 4> Worklist;
+  for (auto *U : GV->users()) {
+    // Be safe. If we cast, don't promote
+    if (isa<BitCastOperator>(U) || isa<PtrToIntOperator>(U))
+      return false;
+    if (isa<ConstantExpr>(U) || isa<GEPOperator>(U))
+      Worklist.push_back(U);
+  }
+  while (!Worklist.empty()) {
+    auto *U = Worklist.pop_back_val();
+    if (U->hasNUsesOrMore(2))
+      return false;
+
+    for (auto *UU : U->users()) {
+      // Be safe. If we cast, don't promote
+      if (isa<BitCastOperator>(UU) || isa<PtrToIntOperator>(UU))
+        return false;
+      if (isa<ConstantExpr>(UU) || isa<GEPOperator>(UU))
+        Worklist.push_back(UU);
+    }
+  }
+  return true;
+}
+
 static SDValue promoteToConstantPool(const ARMTargetLowering *TLI,
                                      const GlobalValue *GV, SelectionDAG &DAG,
                                      EVT PtrVT, const SDLoc &dl) {
@@ -3554,9 +3584,9 @@ static SDValue promoteToConstantPool(const ARMTargetLowering *TLI,
       return SDValue();
 
   auto *GVar = dyn_cast<GlobalVariable>(GV);
-  if (!GVar || !GVar->hasInitializer() ||
-      !GVar->isConstant() || !GVar->hasGlobalUnnamedAddr() ||
-      !GVar->hasLocalLinkage())
+  if (!GVar || !GVar->hasInitializer() || !GVar->isConstant() ||
+      !GVar->hasGlobalUnnamedAddr() || !GVar->hasLocalLinkage() ||
+      !hasOnlyOneUse(GVar))
     return SDValue();
 
   // If we inline a value that contains relocations, we move the relocations

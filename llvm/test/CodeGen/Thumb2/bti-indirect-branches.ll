@@ -61,8 +61,7 @@ define internal i32 @computed_goto(i32 %x) "branch-target-enforcement" {
 ; CHECK-LABEL: computed_goto:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    bti
-; CHECK-NEXT:    movw r1, :lower16:.Lcomputed_goto_cases
-; CHECK-NEXT:    movt r1, :upper16:.Lcomputed_goto_cases
+; CHECK-NEXT:    adr     r1, .LCPI1_0
 ; CHECK-NEXT:    ldr.w r0, [r1, r0, lsl #2]
 ; CHECK-NEXT:    mov pc, r0
 ; CHECK-NEXT:  .Ltmp3: @ Block address taken
@@ -75,6 +74,12 @@ define internal i32 @computed_goto(i32 %x) "branch-target-enforcement" {
 ; CHECK-NEXT:    bti
 ; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align        2
+; CHECK-NEXT:  @ %bb.3:
+; CHECK-NEXT:  .LCPI1_0:
+; CHECK-NEXT:  .Lcomputed_goto_cases:
+; CHECK-NEXT:    .long   .Ltmp3
+; CHECK-NEXT:    .long   .Ltmp4
 entry:
   %arrayidx = getelementptr inbounds [2 x ptr], ptr @computed_goto_cases, i32 0, i32 %x
   %0 = load ptr, ptr %arrayidx, align 4
