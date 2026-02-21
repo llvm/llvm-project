@@ -688,13 +688,13 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
       every quad.
 
     Row shifts and rotates (operate within each 16-lane row independently):
-    - `row_shl(N)`: Shift left by N (1--15) within the row. Lane n reads from
+    - `row_shl(N)`: Shift left by N (1-15) within the row. Lane n reads from
       lane (n % 16) + N in the same row. Lanes where the source index exceeds
       15 are out of bounds (see `bound_ctrl`).
-    - `row_shr(N)`: Shift right by N (1--15) within the row. Lane n reads from
+    - `row_shr(N)`: Shift right by N (1-15) within the row. Lane n reads from
       lane (n % 16) - N in the same row. Lanes where the source index is
       negative are out of bounds.
-    - `row_ror(N)`: Rotate right by N (1--15) within the row. Lane n reads from
+    - `row_ror(N)`: Rotate right by N (1-15) within the row. Lane n reads from
       lane ((n % 16) - N) mod 16 in the same row. Always in bounds.
 
     Wavefront shifts and rotates (operate across all 64 lanes):
