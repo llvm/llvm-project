@@ -1837,6 +1837,11 @@ Decl *CXXRecordDecl::getLambdaContextDecl() const {
   return getLambdaData().ContextDecl.get(Source);
 }
 
+void CXXRecordDecl::setLambdaContextDecl(Decl *ContextDecl) {
+  assert(isLambda() && "Not a lambda closure type!");
+  getLambdaData().ContextDecl = ContextDecl;
+}
+
 void CXXRecordDecl::setLambdaNumbering(LambdaNumbering Numbering) {
   assert(isLambda() && "Not a lambda closure type!");
   getLambdaData().ManglingNumber = Numbering.ManglingNumber;
