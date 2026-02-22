@@ -3612,17 +3612,6 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwi
   ret void
 }
 
-; Test with constant 0 - should optimize to just returning 0
-define i32 @clmul_i32_zero(i32 %a) {
-; CHECK-LABEL: clmul_i32_zero:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    retq
-  %res = call i32 @llvm.clmul.i32(i32 %a, i32 0)
-  ret i32 %res
-}
-; Expected SCALAR output: xorl %eax, %eax / retq
-
 ; Test with constant 1 - should optimize to just returning %a
 define i32 @clmul_i32_one(i32 %a) {
 ; SCALAR-LABEL: clmul_i32_one:

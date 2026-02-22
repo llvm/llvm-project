@@ -8444,17 +8444,17 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
       SDValue ShiftAmt = DAG.getShiftAmountConstant(I, VT, DL);
       SDValue Mask = DAG.getConstant(APInt::getOneBitSet(BW, I), DL, VT);
 
-      if (hasBitTest(Y, Mask)) {
+      SDValue YMasked = DAG.getNode(ISD::AND, DL, VT, Y, Mask);
+
+      if (hasBitTest(Y, ShiftAmt)) {
         // Canonical bit test: (Y & (1 << I)) != 0
-        SDValue BitTest = DAG.getNode(ISD::AND, DL, VT, Y, Mask);
-        SDValue Cond = DAG.getSetCC(DL, SetCCVT, BitTest, Zero, ISD::SETNE);
+        SDValue Cond = DAG.getSetCC(DL, SetCCVT, YMasked, Zero, ISD::SETNE);
 
         SDValue Shifted = DAG.getNode(ISD::SHL, DL, VT, X, ShiftAmt);
         SDValue Selected = DAG.getSelect(DL, VT, Cond, Shifted, Zero);
 
         Res = DAG.getNode(ISD::XOR, DL, VT, Res, Selected);
       } else {
-        SDValue YMasked = DAG.getNode(ISD::AND, DL, VT, Y, Mask);
         SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, X, YMasked);
         Res = DAG.getNode(ISD::XOR, DL, VT, Res, Mul);
       }
