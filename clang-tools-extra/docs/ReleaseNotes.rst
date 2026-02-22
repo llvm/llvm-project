@@ -151,6 +151,11 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`modernize-use-equals-delete
+  <clang-tidy/checks/modernize/use-equals-delete>` check by only warning on 
+  private deleted functions, if they do not have a public overload or are a
+  special member function.
+
 - Improved :doc:`bugprone-argument-comment
   <clang-tidy/checks/bugprone/argument-comment>` to also check for C++11
   inherited constructors.
