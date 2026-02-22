@@ -189,10 +189,12 @@ DefaultInlineAdvisor::getAdviceImpl(CallBase &CB) {
 
 InlineAdvice::InlineAdvice(InlineAdvisor *Advisor, CallBase &CB,
                            OptimizationRemarkEmitter &ORE,
-                           bool IsInliningRecommended)
+                           bool IsInliningRecommended,
+                           std::optional<int> InliningCost)
     : Advisor(Advisor), Caller(CB.getCaller()), Callee(CB.getCalledFunction()),
       DLoc(CB.getDebugLoc()), Block(CB.getParent()), ORE(ORE),
-      IsInliningRecommended(IsInliningRecommended) {}
+      IsInliningRecommended(IsInliningRecommended), InliningCost(InliningCost) {
+}
 
 void InlineAdvice::recordInlineStatsIfNeeded() {
   if (Advisor->ImportedFunctionsStats)
