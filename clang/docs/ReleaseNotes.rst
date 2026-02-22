@@ -408,6 +408,8 @@ clang-format
   '-'/'+' and the return type in Objective-C method declarations
 - Add ``AfterComma`` value to ``BreakConstructorInitializers`` to allow breaking
   constructor initializers after commas, keeping the colon on the same line.
+- Extend ``BreakBinaryOperations`` to accept a structured configuration with
+  per-operator break rules and minimum chain length gating via ``PerOperator``.
 
 libclang
 --------

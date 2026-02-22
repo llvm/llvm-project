@@ -60,9 +60,12 @@ Error L0ProgramTy::deinit() {
 Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
                                     const std::string_view CommonBuildOptions,
                                     ze_module_format_t Format) {
-  const ze_module_constants_t SpecConstants =
-      LevelZeroPluginTy::getOptions().CommonSpecConstants.getModuleConstants();
   auto &l0Device = getL0Device();
+  const ze_module_constants_t SpecConstants =
+      l0Device.getPlugin()
+          .getOptions()
+          .CommonSpecConstants.getModuleConstants();
+
   std::string BuildOptions(CommonBuildOptions);
 
   bool IsLibModule =
