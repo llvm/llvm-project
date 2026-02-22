@@ -133,6 +133,8 @@ ABI_VER_MAJOR(20)
 ///    compatible with scalar deleting destructors emitted by MSVC for the
 ///    cases when the class whose destructor is being emitted defines
 ///    operator delete.
+///   - Always return vector types directly from member functions on x86 and
+///     x86_64 on Windows, which is not compatible with the MSVC ABI.
 ABI_VER_MAJOR(21)
 
 /// Conform to the underlying platform's C and C++ ABIs as closely as we can.
