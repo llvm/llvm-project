@@ -259,6 +259,32 @@ __cxx_atomic_fetch_xor(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_o
       std::addressof(__a->__a_value), __pattern, static_cast<__memory_order_underlying_t>(__order));
 }
 
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+  return __c11_atomic_fetch_max(
+      std::addressof(__a->__a_value), __val, static_cast<__memory_order_underlying_t>(__order));
+}
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+  return __c11_atomic_fetch_max(
+      std::addressof(__a->__a_value), __val, static_cast<__memory_order_underlying_t>(__order));
+}
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+  return __c11_atomic_fetch_min(
+      std::addressof(__a->__a_value), __val, static_cast<__memory_order_underlying_t>(__order));
+}
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+  return __c11_atomic_fetch_min(
+      std::addressof(__a->__a_value), __val, static_cast<__memory_order_underlying_t>(__order));
+}
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___ATOMIC_SUPPORT_C11_H

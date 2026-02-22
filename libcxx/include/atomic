@@ -164,6 +164,10 @@ struct atomic<integral>
     integral fetch_or(integral op, memory_order m = memory_order_seq_cst) noexcept;
     integral fetch_xor(integral op, memory_order m = memory_order_seq_cst) volatile noexcept;
     integral fetch_xor(integral op, memory_order m = memory_order_seq_cst) noexcept;
+    integral fetch_max(integral op, memory_order m = memory_order_seq_cst) volatile noexcept;
+    integral fetch_max(integral op, memory_order m = memory_order_seq_cst) noexcept;
+    integral fetch_min(integral op, memory_order m = memory_order_seq_cst) volatile noexcept;
+    integral fetch_min(integral op, memory_order m = memory_order_seq_cst) noexcept;
 
     integral operator++(int) volatile noexcept;
     integral operator++(int) noexcept;
@@ -240,6 +244,10 @@ struct atomic<T*>
     T* fetch_add(ptrdiff_t op, memory_order m = memory_order_seq_cst) noexcept;
     T* fetch_sub(ptrdiff_t op, memory_order m = memory_order_seq_cst) volatile noexcept;
     T* fetch_sub(ptrdiff_t op, memory_order m = memory_order_seq_cst) noexcept;
+    T* fetch_max(T*, memory_order = memory_order_seq_cst) volatile noexcept;
+    T* fetch_max(T*, memory_order = memory_order_seq_cst) noexcept;
+    T* fetch_min(T*, memory_order = memory_order_seq_cst) volatile noexcept;
+    T* fetch_min(T*, memory_order = memory_order_seq_cst) noexcept;
 
     T* operator++(int) volatile noexcept;
     T* operator++(int) noexcept;
@@ -440,6 +448,26 @@ template<class T>
                               memory_order) noexcept;
 template<class T>
   T atomic_fetch_xor_explicit(atomic<T>*, atomic<T>::value_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_max(volatile atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_fetch_max(atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_fetch_max_explicit(volatile atomic<T>*, atomic<T>::value_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_max_explicit(atomic<T>*, atomic<T>::value_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_min(volatile atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_fetch_min(atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_fetch_min_explicit(volatile atomic<T>*, atomic<T>::value_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_min_explicit(atomic<T>*, atomic<T>::value_type,
                               memory_order) noexcept;
 
 template<class T>

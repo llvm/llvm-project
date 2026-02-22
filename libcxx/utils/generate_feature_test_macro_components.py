@@ -191,7 +191,6 @@ feature_test_macros = [
             "name": "__cpp_lib_atomic_min_max",
             "values": {"c++26": 202403}, # P0493R5: Atomic minimum/maximum
             "headers": ["atomic"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_atomic_ref",

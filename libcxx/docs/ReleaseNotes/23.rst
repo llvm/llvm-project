@@ -39,6 +39,7 @@ Implemented Papers
 ------------------
 
 - P2440R1: ``ranges::iota``, ``ranges::shift_left`` and ``ranges::shift_right`` (`Github <https://llvm.org/PR105184>`__)
+- P0493R5: Atomic minimum/maximum are supported (`Github <https://llvm.org/PR105418>`__)
 
 Improvements and New Features
 -----------------------------
