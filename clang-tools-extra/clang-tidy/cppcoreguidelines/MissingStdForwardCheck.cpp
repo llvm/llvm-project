@@ -46,6 +46,12 @@ AST_MATCHER(ParmVarDecl, isTemplateTypeParameter) {
 
   const QualType ParamType =
       Node.getType().getNonPackExpansionType()->getPointeeType();
+
+  // A type-constrained parameter is not a forwarding reference.
+  if (const auto *TTPT = ParamType->getAs<TemplateTypeParmType>())
+    if (const auto *Decl = TTPT->getDecl(); Decl && Decl->hasTypeConstraint())
+      return false;
+
   const auto *TemplateType = ParamType->getAsCanonical<TemplateTypeParmType>();
   if (!TemplateType)
     return false;
