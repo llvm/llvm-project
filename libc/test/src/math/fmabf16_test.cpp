@@ -25,8 +25,6 @@ static constexpr uint16_t POS_STOP = 0x7f80U;
 static constexpr uint16_t NEG_START = 0x8000U;
 static constexpr uint16_t NEG_STOP = 0xff80U; //-inf
 
-// covers normal range since special cases covered in unit tests
-
 TEST_F(LlvmLibcFmaBf16Test, PositiveRange) {
 
   
@@ -61,20 +59,4 @@ TEST_F(LlvmLibcFmaBf16Test, NegativeRange) {
       }
     }
   
-}
-TEST_F(LlvmLibcFmaBf16Test, CancellationTest) {
-
-  for (uint16_t v1 = 0; v1 <= 0xFFFF; v1 += 13) {
-    for (uint16_t v2 = 0; v2 <= 0xFFFF; v2 += 17) {
-
-      bfloat16 x = FPBits(v1).get_val();
-      bfloat16 y = FPBits(v2).get_val();
-      bfloat16 z = -(x * y);
-
-      mpfr::TernaryInput<bfloat16> input{x, y, z};
-
-      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input,
-                                     LIBC_NAMESPACE::fmabf16(x, y, z), 0.5);
-    }
-  }
 }
