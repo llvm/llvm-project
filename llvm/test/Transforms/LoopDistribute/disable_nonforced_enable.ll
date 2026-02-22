@@ -43,4 +43,4 @@ for.end:
   ret void
 }
 
-!0 = distinct !{!0, !{!"llvm.loop.disable_nonforced"}, !{!"llvm.loop.distribute.enable", i32 1}}
+!0 = distinct !{!0, !{!"llvm.loop.disable_nonforced"}, !{!"llvm.loop.distribute.enable", i1 1}}

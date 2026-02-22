@@ -546,6 +546,7 @@ private:
   void visitAccessGroupMetadata(const MDNode *MD);
   void visitCapturesMetadata(Instruction &I, const MDNode *Captures);
   void visitAllocTokenMetadata(Instruction &I, MDNode *MD);
+  void verifyLoopMetadata(const MDNode *LoopID);
 
   template <class Ty> bool isValidMetadataArray(const MDTuple &N);
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS) void visit##CLASS(const CLASS &N);
@@ -1143,6 +1144,61 @@ void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
   // Check these last, so we diagnose problems in operands first.
   Check(!MD.isTemporary(), "Expected no forward declarations!", &MD);
   Check(MD.isResolved(), "All nodes should be resolved!", &MD);
+}
+
+// Loop attributes that require exactly two operands (name + i1).
+static const char *const LoopBooleanAttributeNames[] = {
+    "llvm.loop.distribute.enable",
+    "llvm.loop.vectorize.enable",
+};
+
+// Loop attributes that allow only a single operand (just the name).
+// TODO: This is not an exhaustive list and can also include attributes
+//       like llvm.loop.licm_versioning.disable.
+static const char *const LoopSingleOperandAttributeNames[] = {
+    "llvm.loop.unroll.disable",
+    "llvm.loop.unroll.enable",
+    "llvm.loop.unroll.full",
+    "llvm.loop.unroll_and_jam.enable",
+    "llvm.loop.unroll_and_jam.disable",
+};
+
+void Verifier::verifyLoopMetadata(const MDNode *LoopID) {
+  // Allow empty loop metadata (!{}) so the verifier does not crash on malformed
+  // IR; skip further checks.
+  if (LoopID->getNumOperands() == 0)
+    return;
+  Check(LoopID->getNumOperands() >= 1,
+        "llvm.loop metadata must have at least one operand", LoopID);
+  for (const MDOperand &Op : llvm::drop_begin(LoopID->operands())) {
+    MDNode *Option = dyn_cast<MDNode>(Op);
+    if (!Option || Option->getNumOperands() < 1)
+      continue;
+    MDString *Name = dyn_cast<MDString>(Option->getOperand(0));
+    if (!Name)
+      continue;
+    StringRef AttrName = Name->getString();
+
+    // Verify single-operand attributes.
+    if (llvm::is_contained(LoopSingleOperandAttributeNames, AttrName)) {
+      Check(Option->getNumOperands() == 1,
+            "llvm.loop attribute must have exactly one operand", Option);
+      continue;
+    }
+
+    // Verify boolean attributes.
+    if (llvm::is_contained(LoopBooleanAttributeNames, AttrName)) {
+      // Boolean loop attribute: exactly 2 operands (name + i1).
+      Check(Option->getNumOperands() == 2,
+            "llvm.loop boolean attribute must have exactly two operands",
+            Option);
+      auto *Val =
+          mdconst::dyn_extract_or_null<ConstantInt>(Option->getOperand(1));
+      Check(Val && Val->getType()->isIntegerTy(1),
+            "llvm.loop boolean attribute second operand must be i1", Option);
+      continue;
+    }
+  }
 }
 
 void Verifier::visitValueAsMetadata(const ValueAsMetadata &MD, Function *F) {
@@ -5831,6 +5887,8 @@ void Verifier::visitInstruction(Instruction &I) {
             ? AreDebugLocsAllowed::Yes
             : AreDebugLocsAllowed::No;
     visitMDNode(*Attachment.second, AllowLocs);
+    if (Kind == LLVMContext::MD_loop)
+      verifyLoopMetadata(Attachment.second);
   }
 
   InstsInThisBlock.insert(&I);
