@@ -120,6 +120,7 @@ public:
   // Preconditions: Either `assignable_from<I&, S> || sized_sentinel_for<S, I>` is modeled, or [i, bound_sentinel)
   // denotes a range.
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
+    requires (!__integer_like<_Sp>) && sentinel_for<_Sp, _Ip>
   _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Ip& __i, _Sp __bound_sentinel) const {
     // If `I` and `S` model `assignable_from<I&, S>`, equivalent to `i = std::move(bound_sentinel)`.
     if constexpr (assignable_from<_Ip&, _Sp>) {

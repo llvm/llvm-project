@@ -49,6 +49,7 @@ struct __next {
   }
 
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
+    requires (!__integer_like<_Sp>) && sentinel_for<_Sp, _Ip>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Ip operator()(_Ip __x, _Sp __bound_sentinel) const {
     ranges::advance(__x, __bound_sentinel);
     return __x;
