@@ -3339,9 +3339,9 @@ LogicalResult OperationConverter::convert(Operation *op,
                                           bool isRecursiveLegalization) {
   const ConversionConfig &config = rewriter.getConfig();
   auto emitFailedToLegalizeDiag = [&](bool wasExplicitlyIllegal) {
-    InFlightDiagnostic diag =
-        op->emitError() << "failed to legalize operation '" << op->getName()
-                        << "'";
+    InFlightDiagnostic diag = op->emitError()
+                              << "failed to legalize operation '"
+                              << op->getName() << "'";
     if (wasExplicitlyIllegal)
       diag << " that was explicitly marked illegal";
 
