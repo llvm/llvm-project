@@ -19,12 +19,21 @@ using namespace dependencies;
 
 namespace {
 class ReaderWriterLock : public llvm::AdvisoryLock {
+  /// Reference to the mutex shared by module cache clients. When unsafe unlock
+  /// is requested, we override it using std::atomic_store(). To obtain it, we
+  /// use std::atomic_load().
+  std::shared_ptr<std::shared_timed_mutex> &SharedMutex;
+  /// The mutex we co-own with other threads. This is kept alive for the entire
+  /// lifetime of this class. Unsafe unlock does not affect it.
+  std::shared_ptr<std::shared_timed_mutex> CoOwnedMutex;
+
   // TODO: Consider using std::atomic::{wait,notify_all} when we move to C++20.
   std::unique_lock<std::shared_timed_mutex> OwningLock;
 
 public:
-  ReaderWriterLock(std::shared_timed_mutex &Mutex)
-      : OwningLock(Mutex, std::defer_lock) {}
+  ReaderWriterLock(std::shared_ptr<std::shared_timed_mutex> &M)
+      : SharedMutex(M), CoOwnedMutex(std::atomic_load(&SharedMutex)),
+        OwningLock(*CoOwnedMutex, std::defer_lock) {}
 
   Expected<bool> tryLock() override { return OwningLock.try_lock(); }
 
@@ -37,11 +46,9 @@ public:
                 : llvm::WaitForUnlockResult::Timeout;
   }
 
-  std::error_code unsafeMaybeUnlock() override {
-    // Only the thread that locked a mutex can unlock it without triggering UB.
-    // We're forced to ignore the request with the understanding that we will
-    // not unblock other threads that are currently waiting, and they will have
-    // to time out themselves.
+  std::error_code unsafeUnlock() override {
+    std::atomic_store(&SharedMutex,
+                      std::make_shared<std::shared_timed_mutex>());
     return {};
   }
 
@@ -63,7 +70,8 @@ public:
   void prepareForGetLock(StringRef Filename) override {}
 
   std::unique_ptr<llvm::AdvisoryLock> getLock(StringRef Filename) override {
-    auto &CompilationMutex = [&]() -> std::shared_timed_mutex & {
+    auto &CompilationMutex =
+        [&]() -> std::shared_ptr<std::shared_timed_mutex> & {
       std::lock_guard<std::mutex> Lock(Entries.Mutex);
       auto &Entry = Entries.Map[Filename];
       if (!Entry)
