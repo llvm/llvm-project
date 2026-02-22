@@ -969,4 +969,16 @@ gpu.module @test_distribution {
     gpu.return
   }
 
+  // CHECK-LABEL: @preserve_anchor_layout
+  // CHECK: arith.constant dense<1.000000e+00> : vector<16x128xf32>
+  // CHECK: xegpu.store_nd %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] <{layout = #xegpu.layout<inst_data = [8, 16]>}>
+  gpu.func @preserve_anchor_layout(%dst: memref<256x128xf32>) {
+    %val = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [16, 1], sg_data = [16, 128]>} dense<1.0> : vector<256x128xf32>
+    %tdesc = xegpu.create_nd_tdesc %dst : memref<256x128xf32>
+      -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [16, 1], sg_data = [16, 128], inst_data = [8, 16]>>
+    xegpu.store_nd %val, %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [16, 1], sg_data = [16, 128], inst_data = [8, 16]>}>
+      : vector<256x128xf32>, !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [16, 1], sg_data = [16, 128], inst_data = [8, 16]>>
+    gpu.return
+  }
+
 }

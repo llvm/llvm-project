@@ -93,7 +93,15 @@ bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
       // layout attributes to.
       if (isa<BlockArgument>(operand.get()))
         continue;
-      auto layout = xegpu::getDistributeLayoutAttr(operand.get());
+      // First, try to get the layout from the consumer (operand) side. This
+      // preserves anchor layouts on ops like load/store, which may carry
+      // user-specified inst_data/lane fields that the defining op (e.g.,
+      // multi_reduction) does not have.
+      auto layout = xegpu::getDistributeLayoutAttr(operand);
+      // Fall back to the producer (Value) side if the consumer side has no
+      // layout.
+      if (!layout)
+        layout = xegpu::getDistributeLayoutAttr(operand.get());
       if (!layout) {
         op->emitWarning("Could not find layout attribute for operand ")
             << operand.getOperandNumber() << " of operation " << op->getName();
