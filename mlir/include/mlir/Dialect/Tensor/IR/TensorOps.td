@@ -1120,11 +1120,10 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
     The representation for the output shape supports a partially-static
     specification via attributes specified through the `static_output_shape`
     argument. A special sentinel value `ShapedType::kDynamic` encodes that the
-    corresponding entry has a dynamic value. There must be exactly as many SSA
-    inputs in `output_shape` as there are `ShapedType::kDynamic` entries in
-    `static_output_shape`. Additionally, the number of `ShapedType::kDynamic`
-    entries in `static_output_shape` must match the number of dynamic dimensions
-    in the result type.
+    corresponding entry has a dynamic value. Both the number of SSA inputs in
+    `output_shape` and the number of `ShapedType::kDynamic` entries in
+    `static_output_shape` match the number of dynamic dimensions in the result
+    type.
 
     Example:
 
