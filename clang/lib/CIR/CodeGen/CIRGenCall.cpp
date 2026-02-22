@@ -1094,13 +1094,17 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   if (auto fnOp = dyn_cast<cir::FuncOp>(calleePtr)) {
     directFuncOp = fnOp;
   } else if (auto getGlobalOp = mlir::dyn_cast<cir::GetGlobalOp>(calleePtr)) {
-    // FIXME(cir): This peephole optimization avoids indirect calls for
-    // builtins. This should be fixed in the builtin declaration instead by
-    // not emitting an unecessary get_global in the first place.
-    // However, this is also used for no-prototype functions.
     mlir::Operation *globalOp = cgm.getGlobalValue(getGlobalOp.getName());
     assert(globalOp && "undefined global function");
     directFuncOp = mlir::cast<cir::FuncOp>(globalOp);
+    // If the existing declaration is non-variadic but the call-site funcInfo
+    // is variadic (e.g. implicit declaration of printf with no prior
+    // #include <stdio.h>), upgrade the declaration and get_global in-place.
+    if (!directFuncOp.getFunctionType().isVarArg() && cirFuncTy.isVarArg()) {
+      directFuncOp.setFunctionTypeAttr(mlir::TypeAttr::get(cirFuncTy));
+      auto newPtrTy = cir::PointerType::get(cirFuncTy);
+      getGlobalOp.getResult().setType(newPtrTy);
+    }
   } else {
     [[maybe_unused]] mlir::ValueTypeRange<mlir::ResultRange> resultTypes =
         calleePtr->getResultTypes();

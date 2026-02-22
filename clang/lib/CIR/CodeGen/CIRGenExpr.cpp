@@ -796,21 +796,31 @@ static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
   assert(!cir::MissingFeatures::sanitizers());
 
+  // Use funcOp's type as it may have been upgraded to variadic
+  // (e.g. after seeing printf called with multiple arguments before
+  // any explicit declaration). convertType(fd->getType()) would return the
+  // stale non-variadic AST type in that case.
   mlir::Type fnTy = funcOp.getFunctionType();
   mlir::Type ptrTy = cir::PointerType::get(fnTy);
   mlir::Value addr = cir::GetGlobalOp::create(cgf.getBuilder(), loc, ptrTy,
                                               funcOp.getSymName());
 
-  if (funcOp.getFunctionType() != cgf.convertType(fd->getType())) {
-    fnTy = cgf.convertType(fd->getType());
-    ptrTy = cir::PointerType::get(fnTy);
-
-    addr = cir::CastOp::create(cgf.getBuilder(), addr.getLoc(), ptrTy,
-                               cir::CastKind::bitcast, addr);
+  mlir::Type astFnTy = cgf.convertType(fd->getType());
+  if (funcOp.getFunctionType() != astFnTy) {
+    // Only bitcast when the funcOp type differs from the AST type for a
+    // reason other than a variadic upgrade. If funcOp is variadic and the
+    // AST type is not, the funcOp is correct and no bitcast is needed.
+    auto funcOpTy = mlir::cast<cir::FuncType>(funcOp.getFunctionType());
+    auto astTy = mlir::cast<cir::FuncType>(astFnTy);
+    if (!(funcOpTy.isVarArg() && !astTy.isVarArg())) {
+      fnTy = astFnTy;
+      ptrTy = cir::PointerType::get(fnTy);
+      addr = cir::CastOp::create(cgf.getBuilder(), addr.getLoc(), ptrTy,
+                                 cir::CastKind::bitcast, addr);
+    }
   }
 
-  return cgf.makeAddrLValue(Address(addr, fnTy, align), e->getType(),
-                            AlignmentSource::Decl);
+  return cgf.makeAddrLValue(Address(addr, fnTy, align), e->getType());
 }
 
 /// Determine whether we can emit a reference to \p vd from the current
@@ -2039,9 +2049,16 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
     assert(!cir::MissingFeatures::opCallChain());
     assert(!cir::MissingFeatures::addressSpace());
     cir::FuncType calleeTy = getTypes().getFunctionType(funcInfo);
-    // get non-variadic function type
-    calleeTy = cir::FuncType::get(calleeTy.getInputs(),
-                                  calleeTy.getReturnType(), false);
+
+    // For unprototyped functions, funcInfo was built with RequiredArgs(0) so
+    // calleeTy.getInputs() is empty. So we build the non-variadic callee type from
+    // the actual promoted argument types instead.
+    SmallVector<mlir::Type, 8> promotedArgTypes;
+    for (const CallArg &arg : args)
+      promotedArgTypes.push_back(convertType(arg.ty));
+    calleeTy = cir::FuncType::get(promotedArgTypes,
+                                calleeTy.getReturnType(), /*isVarArg=*/false);
+
     auto calleePtrTy = cir::PointerType::get(calleeTy);
 
     mlir::Operation *fn = callee.getFunctionPointer();
