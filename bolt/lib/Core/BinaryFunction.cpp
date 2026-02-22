@@ -1908,7 +1908,7 @@ bool BinaryFunction::scanExternalRefs() {
 }
 
 bool BinaryFunction::validateInternalBranches() {
-  if (!isSimple() || TrapsOnEntry)
+  if (!hasInstructions() || !isSimple() || TrapsOnEntry)
     return true;
 
   for (const auto &KV : Labels) {
@@ -3885,8 +3885,9 @@ MCSymbol *BinaryFunction::getSymbolForEntryID(uint64_t EntryID) {
   return nullptr;
 }
 
-uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
-  if (!isMultiEntry())
+std::optional<uint64_t>
+BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
+  if (!isMultiEntry() || !Symbol)
     return 0;
 
   for (const MCSymbol *FunctionSymbol : getSymbols())
@@ -3912,8 +3913,7 @@ uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
       return NumEntries;
     ++NumEntries;
   }
-
-  llvm_unreachable("symbol not found");
+  return std::nullopt;
 }
 
 bool BinaryFunction::forEachEntryPoint(EntryPointCallbackTy Callback) const {
