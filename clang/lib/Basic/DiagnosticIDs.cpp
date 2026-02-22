@@ -562,14 +562,13 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
       return diag::Severity::Ignored;
   }
   // We also ignore warnings due to system macros
-  if (State->SuppressSystemWarnings && Loc.isValid() &&
-      SM.isInSystemMacro(Loc)) {
+  if (State->SuppressSystemWarnings && Loc.isValid()) {
 
     bool ShowInSystemMacro = true;
     if (const StaticDiagInfoRec *Rec = GetDiagInfo(DiagID))
       ShowInSystemMacro = Rec->WarnShowInSystemMacro;
 
-    if (!ShowInSystemMacro)
+    if (!ShowInSystemMacro && SM.isInSystemMacro(Loc))
       return diag::Severity::Ignored;
   }
   // Clang-diagnostics pragmas always take precedence over suppression mapping.
