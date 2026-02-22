@@ -1980,6 +1980,12 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
     Value *InVal = PN->getIncomingValue(i);
     BasicBlock *InBB = PN->getIncomingBlock(i);
 
+    // Avoid repeatedly sinking a freeze into a PHI only for some of the newly
+    // created incoming freezes to be trivially removable again. That pattern
+    // can cause oscillation between freeze(phi(...)) and phi(..., freeze(x), ...).
+    if (isa<FreezeInst>(&I) && isGuaranteedNotToBeUndefOrPoison(InVal))
+      return nullptr;
+
     if (auto *NewVal = simplifyInstructionWithPHI(I, PN, InVal, InBB, DL, SQ)) {
       NewPhiValues.push_back(NewVal);
       continue;
@@ -5212,6 +5218,11 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
 
   auto CanPushFreeze = [](Value *V) {
     if (!isa<Instruction>(V) || isa<PHINode>(V))
+      return false;
+
+    // Don't push through an existing freeze. Otherwise we can repeatedly
+    // create redundant freeze instructions during instcombine iterations.
+    if (isa<FreezeInst>(V))
       return false;
 
     // We can't push the freeze through an instruction which can itself create
