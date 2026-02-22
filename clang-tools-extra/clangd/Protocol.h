@@ -257,6 +257,10 @@ inline bool operator==(const TextEdit &L, const TextEdit &R) {
   return std::tie(L.newText, L.range, L.annotationId) ==
          std::tie(R.newText, R.range, L.annotationId);
 }
+inline bool operator<(const TextEdit &L, const TextEdit &R) {
+  return std::tie(L.newText, L.range, L.annotationId) <
+         std::tie(R.newText, R.range, L.annotationId);
+}
 bool fromJSON(const llvm::json::Value &, TextEdit &, llvm::json::Path);
 llvm::json::Value toJSON(const TextEdit &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const TextEdit &);
