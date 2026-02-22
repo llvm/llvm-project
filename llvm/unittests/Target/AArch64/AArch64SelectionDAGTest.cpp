@@ -1199,6 +1199,17 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_ROTL) {
 
   EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(RotlZero));
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(RotlZero, /*OrZero=*/true));
+
+    // Also verify DemandedElts is forwarded through ROTL for vector lanes.
+    auto VecVT = EVT::getVectorVT(Context, IntVT, 2, /*IsScalable=*/false);
+    auto PowAndZero = DAG->getBuildVector(VecVT, Loc, {Pow2_4, NonPow2_0});
+    auto RotAmountVec = DAG->getBuildVector(VecVT, Loc, {RotAmount, RotAmount});
+    auto RotlPowAndZero =
+      DAG->getNode(ISD::ROTL, Loc, VecVT, PowAndZero, RotAmountVec);
+    APInt DemandAll(2, 3);
+    EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(RotlPowAndZero, DemandAll));
+    EXPECT_TRUE(
+      DAG->isKnownToBeAPowerOfTwo(RotlPowAndZero, DemandAll, /*OrZero=*/true));
 }
 
 TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_ROTR) {
@@ -1219,6 +1230,16 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_ROTR) {
   EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(RotrNonPow2));
   EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(RotrZero));
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(RotrZero, /*OrZero=*/true));
+
+    auto VecVT = EVT::getVectorVT(Context, IntVT, 2, /*IsScalable=*/false);
+    auto PowAndZero = DAG->getBuildVector(VecVT, Loc, {Pow2_16, Zero});
+    auto RotAmountVec = DAG->getBuildVector(VecVT, Loc, {RotAmount, RotAmount});
+    auto RotrPowAndZero =
+      DAG->getNode(ISD::ROTR, Loc, VecVT, PowAndZero, RotAmountVec);
+    APInt DemandAll(2, 3);
+    EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(RotrPowAndZero, DemandAll));
+    EXPECT_TRUE(
+      DAG->isKnownToBeAPowerOfTwo(RotrPowAndZero, DemandAll, /*OrZero=*/true));
 }
 
 TEST_F(AArch64SelectionDAGTest, getRepeatedSequence_Patterns) {

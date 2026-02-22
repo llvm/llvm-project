@@ -4753,7 +4753,7 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
 
   case ISD::ROTL:
   case ISD::ROTR:
-    return isKnownToBeAPowerOfTwo(Val.getOperand(0), false, Depth + 1);
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedElts, OrZero, Depth + 1);
 
   case ISD::SMIN:
   case ISD::SMAX:
