@@ -15,6 +15,9 @@
 
 namespace cir {
 
+TargetLoweringInfo::TargetLoweringInfo(std::unique_ptr<ABIInfo> info)
+    : info(std::move(info)) {}
+
 TargetLoweringInfo::~TargetLoweringInfo() = default;
 
 cir::SyncScopeKind

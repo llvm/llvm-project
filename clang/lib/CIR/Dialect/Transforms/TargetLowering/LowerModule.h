@@ -15,6 +15,7 @@
 #define CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_LOWERMODULE_H
 
 #include "CIRCXXABI.h"
+#include "LowerTypes.h"
 #include "TargetLoweringInfo.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "clang/Basic/CodeGenOptions.h"
@@ -27,10 +28,13 @@
 namespace cir {
 
 class LowerModule {
+  CIRLowerContext context;
   mlir::ModuleOp module;
   const std::unique_ptr<clang::TargetInfo> target;
   std::unique_ptr<TargetLoweringInfo> targetLoweringInfo;
   std::unique_ptr<CIRCXXABI> abi;
+
+  LowerTypes types;
 
 public:
   LowerModule(clang::LangOptions langOpts, clang::CodeGenOptions codeGenOpts,
@@ -43,9 +47,12 @@ public:
     return target->getCXXABI().getKind();
   }
 
-  CIRCXXABI &getCXXABI() const { return *abi; }
-  const clang::TargetInfo &getTarget() const { return *target; }
+  CIRLowerContext &getContext() { return context; }
   mlir::MLIRContext *getMLIRContext() { return module.getContext(); }
+  mlir::ModuleOp &getModule() { return module; }
+  const clang::TargetInfo &getTarget() const { return *target; }
+  CIRCXXABI &getCXXABI() const { return *abi; }
+  LowerTypes &getTypes() { return types; }
 
   const TargetLoweringInfo &getTargetLoweringInfo();
 };

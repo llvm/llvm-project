@@ -14,13 +14,20 @@
 #ifndef LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_TARGETLOWERINGINFO_H
 #define LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_TARGETLOWERINGINFO_H
 
+#include "ABIInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 
 namespace cir {
 
 class TargetLoweringInfo {
+private:
+  std::unique_ptr<ABIInfo> info;
+
 public:
+  TargetLoweringInfo(std::unique_ptr<ABIInfo> info);
   virtual ~TargetLoweringInfo();
+
+  const ABIInfo &getABIInfo() const { return *info; }
 
   virtual cir::SyncScopeKind
   convertSyncScope(cir::SyncScopeKind syncScope) const;
