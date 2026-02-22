@@ -621,6 +621,14 @@ def binop_left_to_zero: GICombineRule<
   (apply (GIReplaceReg $dst, $zero))
 >;
 
+// Fold `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`
+def binop_with_neg : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_AND, G_OR, G_XOR):$root,
+    [{ return Helper.matchBinopWithNeg(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])
+>;
+
 def urem_pow2_to_mask : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_UREM):$root,
@@ -2305,7 +2313,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines, 
-    truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift]>;
+    truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift, binop_with_neg]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and
