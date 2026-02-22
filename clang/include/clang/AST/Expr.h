@@ -1026,6 +1026,10 @@ public:
     return skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
   }
 
+  /// If the expression is a (possibly parenthesized) string literal
+  /// then make a copy of it.
+  Expr *CloneIfIAmAStringLiteral(ASTContext &Ctx);
+
   /// Checks that the two Expr's will refer to the same value as a comparison
   /// operand.  The caller must ensure that the values referenced by the Expr's
   /// are not modified between E1 and E2 or the result my be invalid.
