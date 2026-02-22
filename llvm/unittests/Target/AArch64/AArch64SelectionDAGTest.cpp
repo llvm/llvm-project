@@ -1172,6 +1172,55 @@ TEST_F(AArch64SelectionDAGTest,
   EXPECT_EQ(SplatIdx, 0);
 }
 
+TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_ROTL) {
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 32);
+
+  // Power-of-two values
+  auto Pow2_4 = DAG->getConstant(4, Loc, IntVT);
+  auto Pow2_8 = DAG->getConstant(8, Loc, IntVT);
+
+  // Non-power-of-two values
+  auto NonPow2_5 = DAG->getConstant(5, Loc, IntVT);
+  auto NonPow2_0 = DAG->getConstant(0, Loc, IntVT);
+
+  auto RotAmount = DAG->getConstant(3, Loc, IntVT);
+
+  auto RotlPow2_4 = DAG->getNode(ISD::ROTL, Loc, IntVT, Pow2_4, RotAmount);
+  auto RotlPow2_8 = DAG->getNode(ISD::ROTL, Loc, IntVT, Pow2_8, RotAmount);
+  auto RotlNonPow2_5 =
+      DAG->getNode(ISD::ROTL, Loc, IntVT, NonPow2_5, RotAmount);
+  auto RotlZero = DAG->getNode(ISD::ROTL, Loc, IntVT, NonPow2_0, RotAmount);
+
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(RotlPow2_4));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(RotlPow2_8));
+
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(RotlNonPow2_5));
+
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(RotlZero));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(RotlZero, /*OrZero=*/true));
+}
+
+TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_ROTR) {
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 32);
+
+  auto Pow2_16 = DAG->getConstant(16, Loc, IntVT);
+  auto NonPow2_6 = DAG->getConstant(6, Loc, IntVT);
+  auto Zero = DAG->getConstant(0, Loc, IntVT);
+
+  auto RotAmount = DAG->getConstant(5, Loc, IntVT);
+
+  auto RotrPow2 = DAG->getNode(ISD::ROTR, Loc, IntVT, Pow2_16, RotAmount);
+  auto RotrNonPow2 = DAG->getNode(ISD::ROTR, Loc, IntVT, NonPow2_6, RotAmount);
+  auto RotrZero = DAG->getNode(ISD::ROTR, Loc, IntVT, Zero, RotAmount);
+
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(RotrPow2));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(RotrNonPow2));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(RotrZero));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(RotrZero, /*OrZero=*/true));
+}
+
 TEST_F(AArch64SelectionDAGTest, getRepeatedSequence_Patterns) {
   TargetLowering TL(*TM, *STI);
 
