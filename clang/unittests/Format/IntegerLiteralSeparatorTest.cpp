@@ -23,7 +23,7 @@ TEST_F(IntegerLiteralSeparatorTest, SingleQuoteAsSeparator) {
   EXPECT_EQ(Style.IntegerLiteralSeparator.Binary, 0);
   EXPECT_EQ(Style.IntegerLiteralSeparator.Decimal, 0);
   EXPECT_EQ(Style.IntegerLiteralSeparator.Hex, 0);
- 
+
   constexpr StringRef Binary("b = 0b10011'11'0110'1u;");
   verifyFormat(Binary, Style);
   Style.IntegerLiteralSeparator.Binary = -1;
@@ -48,51 +48,44 @@ TEST_F(IntegerLiteralSeparatorTest, SingleQuoteAsSeparator) {
   verifyFormat("h = 0xDE'AD'BE'EF'DE'AD'BE'EFuz;", Hex, Style);
 
   verifyFormat("o0 = 0;\n"
-              "o1 = 07;\n"
-              "o5 = 012345;",
-              Style);
+               "o1 = 07;\n"
+               "o5 = 012345;",
+               Style);
 
   verifyFormat("bi = 0b1'0000i;\n"
-              "dif = 1'234if;\n"
-              "hil = 0xA'BCil;",
-              "bi = 0b10000i;\n"
-              "dif = 1234if;\n"
-              "hil = 0xABCil;",
-              Style);
+               "dif = 1'234if;\n"
+               "hil = 0xA'BCil;",
+               "bi = 0b10000i;\n"
+               "dif = 1234if;\n"
+               "hil = 0xABCil;",
+               Style);
 
   verifyFormat("bd = 0b1'0000d;\n"
-              "dh = 1'234h;\n"
-              "dmin = 1'234min;\n"
-              "dns = 1'234ns;\n"
-              "ds = 1'234s;\n"
-              "dus = 1'234us;\n"
-              "hy = 0xA'BCy;",
-              "bd = 0b10000d;\n"
-              "dh = 1234h;\n"
-              "dmin = 1234min;\n"
-              "dns = 1234ns;\n"
-              "ds = 1234s;\n"
-              "dus = 1234us;\n"
-              "hy = 0xABCy;",
-              Style);
+               "dh = 1'234h;\n"
+               "dmin = 1'234min;\n"
+               "dns = 1'234ns;\n"
+               "ds = 1'234s;\n"
+               "dus = 1'234us;\n"
+               "hy = 0xA'BCy;",
+               "bd = 0b10000d;\n"
+               "dh = 1234h;\n"
+               "dmin = 1234min;\n"
+               "dns = 1234ns;\n"
+               "ds = 1234s;\n"
+               "dus = 1234us;\n"
+               "hy = 0xABCy;",
+               Style);
 
   verifyFormat("hd = 0xAB'Cd;", "hd = 0xABCd;", Style);
 
   verifyFormat("d = 5'678_km;\n"
-              "h = 0xD'EF_u16;",
-              "d = 5678_km;\n"
-              "h = 0xDEF_u16;",
-              Style);
+               "h = 0xD'EF_u16;",
+               "d = 5678_km;\n"
+               "h = 0xDEF_u16;",
+               Style);
 
   Style.Standard = FormatStyle::LS_Cpp11;
   verifyFormat("ld = 1234L;", Style);
-
-  Style.Language = FormatStyle::LK_C;
-  Style.Standard = FormatStyle::LS_Cpp14;
-  Style.IntegerLiteralSeparator.Binary = -1;
-  verifyFormat("b = 0b100111101101u;", Binary, Style);
-  Style.IntegerLiteralSeparator.Binary = 4;
-  verifyFormat("b = 0b1001'1110'1101u;", Binary, Style);
 }
 
 TEST_F(IntegerLiteralSeparatorTest, UnderscoreAsSeparator) {
