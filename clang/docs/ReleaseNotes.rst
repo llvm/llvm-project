@@ -257,6 +257,10 @@ Improvements to Clang's diagnostics
 
 - The ``-Wloop-analysis`` warning has been extended to catch more cases of
   variable modification inside lambda expressions (#GH132038).
+- Added the ``-Wvla-potential-size-confusion`` diagnostic, which is grouped
+  under ``-Wvla`` to diagnose when a variably-modified type in a function
+  parameter list is using a variable from an outer scope as opposed to a
+  variable declared later in the parameter list.
 
 - Clang now emits ``-Wsizeof-pointer-memaccess`` when snprintf/vsnprintf use the sizeof 
   the destination buffer(dynamically allocated) in the len parameter(#GH162366)

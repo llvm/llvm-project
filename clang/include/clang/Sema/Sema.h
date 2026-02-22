@@ -4262,6 +4262,10 @@ public:
   /// ParmVarDecl pointers.
   void DiagnoseUnusedParameters(ArrayRef<ParmVarDecl *> Parameters);
 
+  /// Diagnose vla size declaration confusion between file scope variables
+  /// and function parameters
+  void DiagnoseVlaSizeParameter(const ArrayRef<ParmVarDecl *> &Params);
+
   /// Diagnose whether the size of parameters or return value of a
   /// function or obj-c method definition is pass-by-value and larger than a
   /// specified threshold.
