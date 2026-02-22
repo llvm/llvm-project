@@ -261,6 +261,8 @@ Improvements to Clang's diagnostics
 - Clang now emits ``-Wsizeof-pointer-memaccess`` when snprintf/vsnprintf use the sizeof 
   the destination buffer(dynamically allocated) in the len parameter(#GH162366)
 
+- Clang now doesn't throw assertion errors when comparing unsigned vectors(#173614)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
