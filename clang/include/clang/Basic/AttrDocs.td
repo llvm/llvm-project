@@ -7286,6 +7286,40 @@ it rather documents the programmer's intent.
   }];
 }
 
+def IndeterminateDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``[[indeterminate]]`` attribute is a C++26 standard attribute that can be
+applied to the definition of a variable with automatic storage duration or to
+a function parameter declaration.
+
+In C++26, reading from an uninitialized variable has *erroneous behavior*
+rather than undefined behavior. Variables are implicitly initialized with
+implementation-defined values. The ``[[indeterminate]]`` attribute opts out
+of this erroneous initialization, restoring the previous behavior where the
+variable has an *indeterminate value* and reading it causes undefined behavior.
+
+This attribute is intended for performance-critical code where the overhead
+of automatic initialization is unacceptable. Use with caution, as reading
+from such variables before proper initialization causes undefined behavior.
+
+.. code-block:: c++
+
+  void example() {
+    int x [[indeterminate]];  // x has indeterminate value (not erroneous)
+    int y;                    // y has erroneous value (reading is erroneous behavior)
+
+    // Reading x before initialization is undefined behavior
+    // Reading y before initialization is erroneous behavior
+  }
+
+  void f([[indeterminate]] int param);  // param has indeterminate value
+
+If a function parameter is declared with the ``[[indeterminate]]`` attribute,
+it must be so declared in the first declaration of its function.
+  }];
+}
+
 def LoaderUninitializedDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{

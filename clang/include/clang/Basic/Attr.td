@@ -100,6 +100,9 @@ class SubsetSubject<AttrSubject base, code check, string diag> : AttrSubject {
 def LocalVar : SubsetSubject<Var,
                               [{S->hasLocalStorage() && !isa<ParmVarDecl>(S)}],
                               "local variables">;
+def AutomaticStorageVar : SubsetSubject<Var,
+                              [{S->hasLocalStorage()}],
+                              "local variables or function parameters">;
 def NonParmVar : SubsetSubject<Var,
                                [{S->getKind() != Decl::ParmVar}],
                                "variables">;
@@ -350,6 +353,10 @@ class CXX11<string namespace, string name, int version = 1>
     : Spelling<name, "CXX11", version> {
   string Namespace = namespace;
 }
+class CXX26<string namespace, string name, int version = 1>
+    : Spelling<name, "CXX26", version> {
+  string Namespace = namespace;
+}
 class C23<string namespace, string name, int version = 1>
     : Spelling<name, "C23", version> {
   string Namespace = namespace;
@@ -432,6 +439,7 @@ def SYCLHost : LangOpt<"SYCLIsHost">;
 def SYCLDevice : LangOpt<"SYCLIsDevice">;
 def COnly : LangOpt<"", "!LangOpts.CPlusPlus">;
 def CPlusPlus : LangOpt<"CPlusPlus">;
+def CPlusPlus26 : LangOpt<"CPlusPlus26">;
 def OpenCL : LangOpt<"OpenCL">;
 def ObjC : LangOpt<"ObjC">;
 def BlocksSupported : LangOpt<"Blocks">;
@@ -4854,6 +4862,20 @@ def Uninitialized : InheritableAttr {
   let Subjects = SubjectList<[LocalVar]>;
   let PragmaAttributeSupport = 1;
   let Documentation = [UninitializedDocs];
+}
+
+// [dcl.attr.indet]/p1:
+// The attribute-token indeterminate may be applied to the definition of a block variable
+// with automatic storage duration or to a parameter-declaration of a function declaration. 
+// No attribute-argument-clause shall be present. The attribute specifies that the storage
+// of an object with automatic storage duration is initially indeterminate rather than
+// erroneous ([basic.indet]).
+def Indeterminate : InheritableAttr {
+  let Spellings = [CXX11<"", "indeterminate", 202403>];
+  let Subjects = SubjectList<[AutomaticStorageVar]>;
+  let LangOpts = [CPlusPlus26];
+  let Documentation = [IndeterminateDocs];
+  let SimpleHandler = 1;
 }
 
 def LoaderUninitialized : Attr {

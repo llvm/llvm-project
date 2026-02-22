@@ -2479,7 +2479,10 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
   switch (Value.getKind()) {
   case APValue::None:
   case APValue::Indeterminate:
+  case APValue::Erroneous:
     // Out-of-lifetime and indeterminate values can be modeled as 'undef'.
+    // For C++ erroneous values, runtime code generation uses a defined pattern,
+    // but for constant expression failures we use undef.
     return llvm::UndefValue::get(CGM.getTypes().ConvertType(DestType));
   case APValue::LValue:
     return ConstantLValueEmitter(*this, Value, DestType,

@@ -1789,7 +1789,9 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
   switch (value.getKind()) {
   case APValue::None:
   case APValue::Indeterminate:
-    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate none or indeterminate");
+  case APValue::Erroneous:
+    cgm.errorNYI(
+        "ConstExprEmitter::tryEmitPrivate none, indeterminate or erroneous");
     return {};
   case APValue::Int: {
     mlir::Type ty = cgm.convertType(destType);

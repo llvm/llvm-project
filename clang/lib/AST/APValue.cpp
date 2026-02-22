@@ -724,6 +724,8 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
   case APValue::Indeterminate:
     Out << "<uninitialized>";
     return;
+  case APValue::Erroneous:
+    Out << "<erroneous>";
   case APValue::Int:
     if (Ty->isBooleanType())
       Out << (getInt().getBoolValue() ? "true" : "false");
@@ -1133,6 +1135,7 @@ LinkageInfo LinkageComputer::getLVForValue(const APValue &V,
   switch (V.getKind()) {
   case APValue::None:
   case APValue::Indeterminate:
+  case APValue::Erroneous:
   case APValue::Int:
   case APValue::Float:
   case APValue::FixedPoint:

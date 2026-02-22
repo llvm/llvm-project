@@ -60,7 +60,7 @@ public:
         N(Spelling.getValueAsString("Name")), OriginalSpelling(Spelling) {
     assert(V != "GCC" && V != "Clang" &&
            "Given a GCC spelling, which means this hasn't been flattened!");
-    if (V == "CXX11" || V == "C23" || V == "Pragma")
+    if (V == "CXX11" || V == "C23" || V == "Pragma" || V == "CXX26")
       NS = Spelling.getValueAsString("Namespace");
   }
 
