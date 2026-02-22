@@ -1205,8 +1205,8 @@ ModuleNameLoc *ModuleNameLoc::Create(Preprocessor &PP, ModuleIdPath Path) {
 bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
                                          SmallVectorImpl<Token> &Suffix,
                                          SmallVectorImpl<IdentifierLoc> &Path,
-                                         bool AllowMacroExpansion,
-                                         bool IsPartition) {
+                                         bool IsPartition,
+                                         bool AllowMacroExpansion) {
   auto ConsumeToken = [&]() {
     if (AllowMacroExpansion)
       Lex(Tok);
@@ -1248,6 +1248,36 @@ bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
 
     ConsumeToken();
   }
+}
+
+bool Preprocessor::HandleModuleName(StringRef DirType, SourceLocation UseLoc,
+                                    Token &Tok,
+                                    SmallVectorImpl<IdentifierLoc> &Path,
+                                    SmallVectorImpl<Token> &DirToks,
+                                    bool IsPartition,
+                                    bool AllowMacroExpansion) {
+  bool LeadingSpace = Tok.hasLeadingSpace();
+  unsigned NumToksInDirective = DirToks.size();
+  if (LexModuleNameContinue(Tok, UseLoc, DirToks, Path, IsPartition,
+                            AllowMacroExpansion)) {
+    if (Tok.isNot(tok::eod))
+      CheckEndOfDirective(DirType,
+                          /*EnableMacros=*/false, &DirToks);
+    EnterModuleSuffixTokenStream(DirToks);
+    return true;
+  }
+
+  // Clean the module-name tokens and replace these tokens with
+  // annot_module_name.
+  DirToks.resize(NumToksInDirective);
+  ModuleNameLoc *NameLoc = ModuleNameLoc::Create(*this, Path);
+  DirToks.emplace_back();
+  DirToks.back().setKind(tok::annot_module_name);
+  DirToks.back().setAnnotationRange(NameLoc->getRange());
+  DirToks.back().setAnnotationValue(static_cast<void *>(NameLoc));
+  DirToks.back().setFlagValue(Token::LeadingSpace, LeadingSpace);
+  DirToks.push_back(Tok);
+  return false;
 }
 
 /// [cpp.pre]/p2:
