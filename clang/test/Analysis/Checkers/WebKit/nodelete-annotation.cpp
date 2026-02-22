@@ -212,6 +212,8 @@ struct ObjectWithConstructor {
   ObjectWithConstructor(void*) { }
   ObjectWithConstructor(int x[3]) { }
   ObjectWithConstructor(void* x[2]) { }
+  enum class E { V1, V2 };
+  ObjectWithConstructor(E) { }
 };
 
 void [[clang::annotate_type("webkit.nodelete")]] makeObjectWithConstructor() {
@@ -223,4 +225,5 @@ void [[clang::annotate_type("webkit.nodelete")]] makeObjectWithConstructor() {
   ObjectWithConstructor obj4(ints);
   void* ptrs[] = { nullptr, nullptr };
   ObjectWithConstructor obj5(ptrs);
+  ObjectWithConstructor obj6(ObjectWithConstructor::E::V1);
 }
