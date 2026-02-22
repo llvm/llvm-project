@@ -1,0 +1,43 @@
+# Validate contents of background index files, ensuring correctly stored file URIs
+#
+# Use a copy of inputs, as we'll mutate it (as will the background index).
+# RUN: rm -rf %/t
+# RUN: cp -r %/S/Inputs/background-index %/t
+# Need to embed the correct temp path in the actual JSON-RPC requests.
+# RUN: sed -e "s|DIRECTORY|%/t|" %/t/definition.jsonrpc.tmpl > %/t/definition.jsonrpc.1
+# RUN: sed -e "s|DIRECTORY|%/t|" %/t/compile_commands.json.tmpl > %/t/compile_commands.json
+# On Windows, we need the URI in didOpen to look like "uri":"file:///C:/..."
+# (with the extra slash in the front), so we add it here
+# RUN: sed -E -e 's|"file://([A-Z]):/|"file:///\1:/|g' %/t/definition.jsonrpc.1 > %/t/definition.jsonrpc
+
+# Create the background index files
+# RUN: clangd -background-index -lit-test < %/t/definition.jsonrpc | FileCheck %/t/definition.jsonrpc
+
+# Copy the index files to hashless, known locations so we can pass them to dexp
+# RUN: cp %/t/.cache/clangd/index/foo.cpp.*.idx %/t/foo.cpp.idx
+# RUN: cp %/t/sub_dir/.cache/clangd/index/foo.h.*.idx %/t/foo.h.idx
+
+# Export the foo.cpp index file to YAML format and validate its contents.
+# The FileURI in the index should contain the full path to foo.cpp.
+# RUN: dexp %/t/foo.cpp.idx -c "export %/t/foo.yaml -format=yaml"
+# RUN: FileCheck --check-prefix=FOO-CONTENT %s < %/t/foo.yaml
+
+# Verify that the foo.cpp index contains the symbol 'foo' with proper file URIs
+# The declaration is in sub_dir/foo.h and the definition is in foo.cpp.
+# FOO-CONTENT: --- !Symbol
+# FOO-CONTENT: Name:{{.*}}foo
+# FOO-CONTENT: CanonicalDeclaration:
+# FOO-CONTENT:   FileURI:{{.*}}sub_dir/foo.h
+# FOO-CONTENT: Definition:
+# FOO-CONTENT:   FileURI:{{.*}}foo.cpp
+
+# Export the foo.h index file to YAML format and validate its contents.
+# The FileURI should contain the path to foo.h in the sub_dir.
+# RUN: dexp %/t/foo.h.idx -c "export %/t/fooh.yaml -format=yaml"
+# RUN: FileCheck --check-prefix=HEADER-CONTENT %s < %/t/fooh.yaml
+
+# Verify that the foo.h index contains the symbol 'foo' with the correct header file URI.
+# HEADER-CONTENT: --- !Symbol
+# HEADER-CONTENT: Name:{{.*}}foo
+# HEADER-CONTENT: CanonicalDeclaration:
+# HEADER-CONTENT:   FileURI:{{.*}}sub_dir/foo.h
