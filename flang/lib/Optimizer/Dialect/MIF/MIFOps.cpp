@@ -9,11 +9,34 @@
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/MIF/MIFDialect.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/SmallVector.h"
+#include <tuple>
+
+// Function used to check if a type has POINTER or ALLOCATABLE component.
+// Currently an allocation of coarray with this kind of component are not yet
+// supported.
+static bool hasAllocatableOrPointerComponent(mlir::Type type) {
+  type = fir::unwrapPassByRefType(type);
+  if (fir::isa_box_type(type))
+    return hasAllocatableOrPointerComponent(type);
+  if (auto recType = mlir::dyn_cast<fir::RecordType>(type)) {
+    for (auto field : recType.getTypeList()) {
+      mlir::Type fieldType = field.second;
+      if (fir::isAllocatableType(fieldType) || fir::isPointerType(fieldType) ||
+          fir::isAllocatableOrPointerArray(fieldType))
+        return true;
+      if (auto fieldRecType = mlir::dyn_cast<fir::RecordType>(fieldType))
+        return hasAllocatableOrPointerComponent(fieldRecType);
+    }
+  }
+  return false;
+}
 
 //===----------------------------------------------------------------------===//
 // NumImagesOp
@@ -200,6 +223,37 @@ static void printChangeTeamOpBody(mlir::OpAsmPrinter &p, mif::ChangeTeamOp op,
                                   mlir::Region &body) {
   p.printRegion(op.getRegion(), /*printEntryBlockArgs=*/true,
                 /*printBlockTerminators=*/true);
+}
+
+//===----------------------------------------------------------------------===//
+// AllocCoarrayOp
+//===----------------------------------------------------------------------===//
+
+void mif::AllocCoarrayOp::build(mlir::OpBuilder &builder,
+                                mlir::OperationState &result, mlir::Value box,
+                                llvm::StringRef symName,
+                                mlir::DenseI64ArrayAttr lcbs,
+                                mlir::DenseI64ArrayAttr ucbs, mlir::Value stat,
+                                mlir::Value errmsg) {
+  mlir::StringAttr nameAttr = builder.getStringAttr(symName);
+  build(builder, result, nameAttr, box, lcbs, ucbs, stat, errmsg);
+}
+
+void mif::AllocCoarrayOp::build(mlir::OpBuilder &builder,
+                                mlir::OperationState &result, mlir::Value box,
+                                llvm::StringRef symName,
+                                mlir::DenseI64ArrayAttr lcbs,
+                                mlir::DenseI64ArrayAttr ucbs) {
+  build(builder, result, symName, box, lcbs, ucbs, /*stat*/ mlir::Value{},
+        /*errmsg*/ mlir::Value{});
+}
+
+llvm::LogicalResult mif::AllocCoarrayOp::verify() {
+  if (hasAllocatableOrPointerComponent(getBox().getType()))
+    TODO(getLoc(),
+         "Derived type coarray with at least one ALLOCATABLE or POINTER "
+         "component");
+  return mlir::success();
 }
 
 #define GET_OP_CLASSES
