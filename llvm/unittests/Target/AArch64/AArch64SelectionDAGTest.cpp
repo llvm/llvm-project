@@ -914,6 +914,56 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_Constants) {
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SplatBig, /*OrZero=*/true));
 }
 
+TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_SHL) {
+  SDLoc Loc;
+  SDValue Cst0 = DAG->getConstant(0, Loc, MVT::i32);
+  SDValue Cst1 = DAG->getConstant(1, Loc, MVT::i32);
+  SDValue Cst3 = DAG->getConstant(3, Loc, MVT::i32);
+  SDValue Cst4 = DAG->getConstant(4, Loc, MVT::i32);
+  SDValue Cst16 = DAG->getConstant(16, Loc, MVT::i32);
+
+  SDValue Cond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 1, MVT::i32);
+  SDValue ShlConst1 = DAG->getNode(ISD::SHL, Loc, MVT::i32, Cst1, Cond);
+
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(ShlConst1));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(ShlConst1, /*OrZero=*/true));
+
+  SDValue And16 = DAG->getNode(ISD::AND, Loc, MVT::i32, Cond, Cst16);
+  SDValue ShlMaybeZero = DAG->getNode(ISD::SHL, Loc, MVT::i32, And16, Cst1);
+
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(ShlMaybeZero));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(ShlMaybeZero, /*OrZero=*/true));
+
+  SDValue ShlUnknown = DAG->getNode(ISD::SHL, Loc, MVT::i32, Cond, Cst1);
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(ShlUnknown));
+
+  SDValue Neg3 = DAG->getNode(ISD::SUB, Loc, MVT::i32, Cst0, Cst3);
+  SDValue AndPow2 = DAG->getNode(ISD::AND, Loc, MVT::i32, Cst3, Neg3);
+  SDValue ShlPow2 = DAG->getNode(ISD::SHL, Loc, MVT::i32, AndPow2, Cst1);
+
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(ShlPow2));
+
+  MVT::SimpleValueType VecVT = MVT::v2i32;
+  SDValue Vec13 = DAG->getBuildVector(VecVT, Loc, {Cst1, Cst3});
+  SDValue Vec04 = DAG->getBuildVector(VecVT, Loc, {Cst0, Cst4});
+  SDValue VecShift = DAG->getBuildVector(VecVT, Loc, {Cst1, Cst1});
+  SDValue VecShl13 = DAG->getNode(ISD::SHL, Loc, VecVT, Vec13, VecShift);
+  SDValue VecShl04 = DAG->getNode(ISD::SHL, Loc, VecVT, Vec04, VecShift);
+
+  APInt DemandLo(2, 1);
+  APInt DemandHi(2, 2);
+  APInt DemandAll(2, 3);
+
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(VecShl13, DemandLo));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(VecShl13, DemandHi));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(VecShl13, DemandAll));
+
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(VecShl04, DemandAll));
+  EXPECT_TRUE(
+      DAG->isKnownToBeAPowerOfTwo(VecShl04, DemandAll, /*OrZero=*/true));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(VecShl04, DemandHi));
+}
+
 TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_Select) {
   SDLoc Loc;
   auto Cst0 = DAG->getConstant(0, Loc, MVT::i32);

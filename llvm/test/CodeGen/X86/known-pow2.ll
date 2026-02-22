@@ -779,14 +779,10 @@ define i1 @pow2_and_fail0(i32 %x, i32 %y) {
 ; CHECK-LABEL: pow2_and_fail0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    movl $4, %eax
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shll %cl, %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    negl %ecx
-; CHECK-NEXT:    andl %eax, %ecx
 ; CHECK-NEXT:    notl %edi
-; CHECK-NEXT:    testl %edi, %ecx
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shrl %cl, %edi
+; CHECK-NEXT:    testb $4, %dil
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %yy = shl i32 4, %y
