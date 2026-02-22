@@ -435,7 +435,7 @@ define i32 @abd_subnsw_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: abd_subnsw_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs w8, w0, w1
-; CHECK-NEXT:    cneg w0, w8, ge
+; CHECK-NEXT:    cneg w0, w8, pl
 ; CHECK-NEXT:    ret
   %sub = sub nsw i32 %a, %b
   %abs = call i32 @llvm.abs.i32(i32 %sub, i1 false)
@@ -447,7 +447,7 @@ define i32 @abd_subnsw_i32_undef(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: abd_subnsw_i32_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs w8, w0, w1
-; CHECK-NEXT:    cneg w0, w8, ge
+; CHECK-NEXT:    cneg w0, w8, pl
 ; CHECK-NEXT:    ret
   %sub = sub nsw i32 %a, %b
   %abs = call i32 @llvm.abs.i32(i32 %sub, i1 true)
@@ -459,7 +459,7 @@ define i64 @abd_subnsw_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: abd_subnsw_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x8, x0, x1
-; CHECK-NEXT:    cneg x0, x8, ge
+; CHECK-NEXT:    cneg x0, x8, pl
 ; CHECK-NEXT:    ret
   %sub = sub nsw i64 %a, %b
   %abs = call i64 @llvm.abs.i64(i64 %sub, i1 false)
@@ -471,7 +471,7 @@ define i64 @abd_subnsw_i64_undef(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: abd_subnsw_i64_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x8, x0, x1
-; CHECK-NEXT:    cneg x0, x8, ge
+; CHECK-NEXT:    cneg x0, x8, pl
 ; CHECK-NEXT:    ret
   %sub = sub nsw i64 %a, %b
   %abs = call i64 @llvm.abs.i64(i64 %sub, i1 true)

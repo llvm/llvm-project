@@ -462,6 +462,8 @@ public:
 
   bool preferSelectsOverBooleanArithmetic(EVT VT) const override;
 
+  bool preferABDSToABSWithNSW(EVT VT) const override { return VT.isVector(); }
+
   bool isComplexDeinterleavingSupported() const override;
   bool isComplexDeinterleavingOperationSupported(
       ComplexDeinterleavingOperation Operation, Type *Ty) const override;

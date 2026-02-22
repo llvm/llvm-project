@@ -7848,11 +7848,11 @@ SDValue AArch64TargetLowering::LowerABD(SDValue Op, SelectionDAG &DAG) const {
   // Compute the negation: -(a - b) = b - a
   SDValue Neg = DAG.getNegative(Cmp.getValue(0), DL, VT);
 
-  // For unsigned: use HS (a >= b) to select a-b, otherwise b-a
-  // For signed: use GE (a >= b) to select a-b, otherwise b-a
+  // For unsigned: use HS (a >= b) to select a - b, otherwise b - a
+  // For signed: use GE (a >= b) to select a - b, otherwise b - a
   AArch64CC::CondCode CC = IsSigned ? AArch64CC::GE : AArch64CC::HS;
 
-  // CSEL: if a >= b, select a-b, otherwise b-a
+  // CSEL: if a >= b, select a - b, otherwise b - a
   return DAG.getNode(AArch64ISD::CSEL, DL, VT, Cmp.getValue(0), Neg,
                      getCondCode(DAG, CC), Cmp.getValue(1));
 }
