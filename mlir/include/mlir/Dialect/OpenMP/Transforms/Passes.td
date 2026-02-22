@@ -11,6 +11,17 @@
 
 include "mlir/Pass/PassBase.td"
 
+def MarkDeclareTargetPass : Pass<"omp-mark-declare-target", "ModuleOp"> {
+  let summary = "Marks all functions called by an OpenMP declare target "
+                "function as declare target";
+  let description = [{
+    Marks functions contained within the module as declare target if they are
+    called from within an explicitly marked declare target function or a target
+    region (omp.target).
+    }];
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+}
+
 def PrepareForOMPOffloadPrivatizationPass : Pass<"omp-offload-privatization-prepare", "ModuleOp"> {
     let summary = "Prepare OpenMP maps for privatization for deferred target tasks";
     let description = [{
