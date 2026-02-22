@@ -225,13 +225,14 @@ endif()
 
 foreach(_name ${LLVM_RUNTIME_TARGETS})
   if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
-    if("${_name}" STREQUAL "amdgcn-amd-amdhsa" OR "${_name}" STREQUAL "nvptx64-nvidia-cuda")
+    if("${_name}" STREQUAL "amdgcn-amd-amdhsa" OR "${_name}" STREQUAL "nvptx64-nvidia-cuda" OR "${_name}" STREQUAL "spirv64-intel-unknown")
       set(LLVM_LIBC_GPU_BUILD ON)
     endif()
   endif()
 endforeach()
 if("${LIBC_TARGET_TRIPLE}" STREQUAL "amdgcn-amd-amdhsa" OR
-   "${LIBC_TARGET_TRIPLE}" STREQUAL "nvptx64-nvidia-cuda")
+   "${LIBC_TARGET_TRIPLE}" STREQUAL "nvptx64-nvidia-cuda" OR
+   "${LIBC_TARGET_TRIPLE}" STREQUAL "spirv64-intel-unknown")
   set(LLVM_LIBC_GPU_BUILD ON)
 endif()
 
@@ -309,6 +310,22 @@ if(LLVM_CCACHE_BUILD)
         set(CCACHE_PROGRAM "CCACHE_DIR=${LLVM_CCACHE_DIR} ${CCACHE_PROGRAM}")
       endif()
       set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_PROGRAM})
+
+      if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        # ccache with PCH can lead to false-positives when only a macro
+        # definition changes with non-Clang compilers, because macro definitions
+        # are not compared in preprocessed mode.
+        # See: https://github.com/ccache/ccache/issues/1668
+        if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
+          message(NOTICE "Using ccache with precompiled headers with non-Clang "
+            "compilers is not supported. CMAKE_DISABLE_PRECOMPILE_HEADERS will be set to ON. "
+            "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override this.")
+          set(CMAKE_DISABLE_PRECOMPILE_HEADERS "ON")
+        elseif(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+          message(WARNING "Using ccache with precompiled headers with non-Clang "
+            "compilers is not supported.")
+        endif()
+      endif()
     else()
       # Until a way to reliably configure ccache on Windows is found,
       # disable precompiled headers for Windows + ccache builds
