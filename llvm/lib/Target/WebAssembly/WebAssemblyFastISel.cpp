@@ -171,6 +171,8 @@ private:
   unsigned getRegForPromotedValue(const Value *V, bool IsSigned);
   unsigned notValue(unsigned Reg);
   unsigned copyValue(unsigned Reg);
+  bool WebAssemblyEmitLoad(unsigned Opc, Register &ResultReg, Address &Addr,
+                           MachineMemOperand *MMO);
 
   // Backend specific FastISel code.
   Register fastMaterializeAlloca(const AllocaInst *AI) override;
@@ -204,6 +206,15 @@ public:
   }
 
   bool fastSelectInstruction(const Instruction *I) override;
+  /// This callback is invoked by the FastISel framework when it detects that
+  /// an operand (specified by OpNo) of the given MachineInstr (MI) is a
+  /// virtual register produced by a LoadInst (LI).
+  ///
+  /// The goal of this function is to determine if the operation of MI can be
+  /// folded together with the load into a single, optimized target-specific
+  /// memory instruction, and if possible, to actually perform the folding.
+  bool tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
+                           const LoadInst *LI) override;
 
 #include "WebAssemblyGenFastISel.inc"
 };
@@ -1093,6 +1104,24 @@ bool WebAssemblyFastISel::selectZExt(const Instruction *I) {
   return true;
 }
 
+static bool isSignedExtLoad(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return false;
+  case WebAssembly::LOAD8_S_I32_A32:
+  case WebAssembly::LOAD8_S_I32_A64:
+  case WebAssembly::LOAD16_S_I32_A32:
+  case WebAssembly::LOAD16_S_I32_A64:
+  case WebAssembly::LOAD8_S_I64_A32:
+  case WebAssembly::LOAD8_S_I64_A64:
+  case WebAssembly::LOAD16_S_I64_A32:
+  case WebAssembly::LOAD16_S_I64_A64:
+  case WebAssembly::LOAD32_S_I64_A32:
+  case WebAssembly::LOAD32_S_I64_A64:
+    return true;
+  }
+}
+
 bool WebAssemblyFastISel::selectSExt(const Instruction *I) {
   const auto *SExt = cast<SExtInst>(I);
 
@@ -1102,6 +1131,16 @@ bool WebAssemblyFastISel::selectSExt(const Instruction *I) {
   Register In = getRegForValue(Op);
   if (In == 0)
     return false;
+
+  MachineInstr *MI = MRI.getUniqueVRegDef(In);
+  if (MI && isSignedExtLoad(MI->getOpcode())) {
+    // The load instruction has already been folded into a signed load
+    // by selectLoad, so we don't need to emit any extension instruction.
+    // Just map the result of this SExt to the signed load register.
+    updateValueMap(I, In);
+    return true;
+  }
+
   unsigned Reg = signExtend(In, Op, From, To);
   if (Reg == 0)
     return false;
@@ -1264,6 +1303,61 @@ bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
   assert(Iter->isBitcast());
   Iter->setPhysRegsDeadExcept(ArrayRef<Register>(), TRI);
   updateValueMap(I, Reg);
+  return true;
+}
+
+static unsigned getSExtLoadOpcode(unsigned Opc, bool A64) {
+  switch (Opc) {
+  default:
+    return false;
+  case WebAssembly::I32_EXTEND8_S_I32:
+    Opc = A64 ? WebAssembly::LOAD8_S_I32_A64 : WebAssembly::LOAD8_S_I32_A32;
+    break;
+  case WebAssembly::I32_EXTEND16_S_I32:
+    Opc = A64 ? WebAssembly::LOAD16_S_I32_A64 : WebAssembly::LOAD16_S_I32_A32;
+    break;
+  case WebAssembly::I64_EXTEND8_S_I64:
+    Opc = A64 ? WebAssembly::LOAD8_S_I64_A64 : WebAssembly::LOAD8_S_I64_A32;
+    break;
+  case WebAssembly::I64_EXTEND16_S_I64:
+    Opc = A64 ? WebAssembly::LOAD16_S_I64_A64 : WebAssembly::LOAD16_S_I64_A32;
+    break;
+  case WebAssembly::I64_EXTEND32_S_I64:
+  case WebAssembly::I64_EXTEND_S_I32:
+    Opc = A64 ? WebAssembly::LOAD32_S_I64_A64 : WebAssembly::LOAD32_S_I64_A32;
+    break;
+  }
+
+  return Opc;
+}
+
+bool WebAssemblyFastISel::WebAssemblyEmitLoad(unsigned Opc, Register &ResultReg,
+                                              Address &Addr,
+                                              MachineMemOperand *MMO) {
+  MachineInstrBuilder MIB =
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc), ResultReg);
+  addLoadStoreOperands(Addr, MIB, MMO);
+  return true;
+}
+
+bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
+                                              const LoadInst *LI) {
+  bool A64 = Subtarget->hasAddr64();
+  unsigned TargetOpc;
+  if (!(TargetOpc = getSExtLoadOpcode(MI->getOpcode(), A64)))
+    return false;
+
+  Address Addr;
+  if (!computeAddress(LI->getPointerOperand(), Addr))
+    return false;
+
+  Register ResultReg = MI->getOperand(0).getReg();
+  if (!WebAssemblyEmitLoad(TargetOpc, ResultReg, Addr,
+                           createMachineMemOperandFor(LI)))
+    return false;
+
+  MachineBasicBlock::iterator Iter(MI);
+  removeDeadCode(Iter, std::next(Iter));
   return true;
 }
 
