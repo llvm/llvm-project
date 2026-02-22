@@ -4253,6 +4253,23 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_asinpif16",
+    hdrs = ["src/__support/math/asinpif16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
+        ":__support_macros_optimization",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_sinpif16",
     hdrs = ["src/__support/math/sinpif16.h"],
     deps = [
@@ -5962,6 +5979,14 @@ libc_math_function(
     name = "sinpif16",
     additional_deps = [
         ":__support_math_sinpif16",
+    ],
+)
+
+libc_math_function(
+    name = "asinpif16",
+    additional_deps = [
+        ":__support_math_asinpif16",
+        ":errno",
     ],
 )
 
