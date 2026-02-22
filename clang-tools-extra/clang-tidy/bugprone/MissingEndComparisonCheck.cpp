@@ -44,14 +44,95 @@ AST_MATCHER(DeclStmt, isConditionVariableStatement) {
               .empty();
 }
 
+static std::optional<std::string>
+getRangesEndText(const MatchFinder::MatchResult &Result, const CallExpr *Call) {
+  const FunctionDecl *Callee = Call->getDirectCallee();
+  assert(Callee && Callee->getNumParams() > 0 &&
+         "Matcher should ensure Callee has parameters");
+
+  // Range overloads take a reference (R&&), Iterator overloads pass by value.
+  const bool IsIterPair =
+      !Callee->getParamDecl(0)->getType()->isReferenceType();
+
+  if (IsIterPair) {
+    if (Call->getNumArgs() < 3)
+      return std::nullopt;
+    // find(CPO, Iter, Sent, Val...) -> Sent is Arg 2.
+    const Expr *EndArg = Call->getArg(2);
+    return tooling::fixit::getText(*EndArg, *Result.Context).str();
+  }
+
+  if (Call->getNumArgs() < 2)
+    return std::nullopt;
+  // find(CPO, Range, Val, Proj) -> Range is Arg 1.
+  const Expr *RangeArg = Call->getArg(1);
+  // Avoid potential side-effects
+  const Expr *InnerRange = RangeArg->IgnoreParenImpCasts();
+  if (isa<DeclRefExpr>(InnerRange) || isa<MemberExpr>(InnerRange)) {
+    const StringRef RangeText =
+        tooling::fixit::getText(*RangeArg, *Result.Context);
+    if (!RangeText.empty())
+      return ("std::ranges::end(" + RangeText + ")").str();
+  }
+  return "";
+}
+
+static std::optional<std::string>
+getStandardEndText(const MatchFinder::MatchResult &Result,
+                   const CallExpr *Call) {
+  if (Call->getNumArgs() < 2)
+    return std::nullopt;
+
+  unsigned EndIdx = 1;
+  const Expr *FirstArg = Call->getArg(0);
+  if (const auto *Record =
+          FirstArg->getType().getNonReferenceType()->getAsCXXRecordDecl()) {
+    if (Record->getName().ends_with("_policy"))
+      EndIdx = 2;
+  }
+
+  if (Call->getNumArgs() <= EndIdx)
+    return std::nullopt;
+
+  const Expr *EndArg = Call->getArg(EndIdx);
+  // Filters nullptr, we assume the intent might be a valid check against null
+  if (EndArg->IgnoreParenCasts()->isNullPointerConstant(
+          *Result.Context, Expr::NPC_ValueDependentIsNull))
+    return std::nullopt;
+
+  return tooling::fixit::getText(*EndArg, *Result.Context).str();
+}
+
+static const UnaryOperator *getLNotAncestor(const Expr *E,
+                                            ASTContext &Context) {
+  const Expr *CurrentExpr = E;
+  while (true) {
+    auto Parents = Context.getParents(*CurrentExpr);
+    if (Parents.empty())
+      break;
+    if (const auto *P = Parents[0].get<ParenExpr>()) {
+      CurrentExpr = P;
+      continue;
+    }
+    if (const auto *U = Parents[0].get<UnaryOperator>()) {
+      if (U->getOpcode() == UO_LNot)
+        return U;
+    }
+    break;
+  }
+  return nullptr;
+}
+
 } // namespace
 
 void MissingEndComparisonCheck::registerMatchers(MatchFinder *Finder) {
-  const auto StdAlgoCall = callExpr(
-      callee(functionDecl(hasAnyName(IteratorAlgorithms), isInStdNamespace())));
+  const auto StdAlgoCall = callExpr(callee(functionDecl(
+      hasAnyName(IteratorAlgorithms), unless(parameterCountIs(0)))));
 
+  // Captures customization point object
   const auto RangesCall = cxxOperatorCallExpr(
       hasOverloadedOperatorName("()"),
+      callee(cxxMethodDecl(unless(parameterCountIs(0)))),
       hasArgument(0, declRefExpr(to(
                          varDecl(hasAnyName(RangeAlgorithms)).bind("cpo")))));
 
@@ -71,8 +152,7 @@ void MissingEndComparisonCheck::registerMatchers(MatchFinder *Finder) {
   // FIXME: This only handles variables initialized directly by the algorithm.
   // We may need to introduce more accurate dataflow analysis in the future.
   const auto VarWithAlgoInit =
-      varDecl(hasInitializer(ignoringParenImpCasts(AnyAlgoCall)))
-          .bind("initVar");
+      varDecl(hasInitializer(expr(hasDescendant(AnyAlgoCall)))).bind("initVar");
 
   const auto IsVariableBoolUsage =
       anyOf(implicitCastExpr(hasCastKind(CK_PointerToBoolean),
@@ -87,94 +167,31 @@ void MissingEndComparisonCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *Call = Result.Nodes.getNodeAs<CallExpr>("algoCall");
   const auto *BoolOp = Result.Nodes.getNodeAs<Expr>("boolOp");
-  const auto *CPO = Result.Nodes.getNodeAs<VarDecl>("cpo");
+  assert(BoolOp);
 
-  if (!Call || !BoolOp)
+  std::optional<std::string> EndExprText;
+
+  if (Result.Nodes.getNodeAs<VarDecl>("cpo")) {
+    const auto *Call = Result.Nodes.getNodeAs<CallExpr>("algoCall");
+    EndExprText = getRangesEndText(Result, Call);
+  } else if (const auto *Call = Result.Nodes.getNodeAs<CallExpr>("algoCall")) {
+    EndExprText = getStandardEndText(Result, Call);
+  } else {
+    llvm_unreachable("Matcher should bind 'algoCall' or 'cpo'");
+  }
+
+  if (!EndExprText)
     return;
 
-  std::string EndExprText;
+  const UnaryOperator *NotOp = getLNotAncestor(BoolOp, *Result.Context);
+  const bool IsNegated = NotOp != nullptr;
 
-  if (!CPO) {
-    if (Call->getNumArgs() < 2)
-      return;
+  const auto Diag = diag(BoolOp->getBeginLoc(),
+                         "result of standard algorithm used as 'bool'; did you "
+                         "mean to compare with the end iterator?");
 
-    unsigned EndIdx = 1;
-    const Expr *FirstArg = Call->getArg(0);
-    if (const auto *Record =
-            FirstArg->getType().getNonReferenceType()->getAsCXXRecordDecl()) {
-      if (Record->getName().ends_with("_policy"))
-        EndIdx = 2;
-    }
-
-    if (Call->getNumArgs() <= EndIdx)
-      return;
-
-    const Expr *EndArg = Call->getArg(EndIdx);
-    // Filters nullptr, we assume the intent might be a valid check against null
-    if (EndArg->IgnoreParenCasts()->isNullPointerConstant(
-            *Result.Context, Expr::NPC_ValueDependentIsNull))
-      return;
-
-    EndExprText = tooling::fixit::getText(*EndArg, *Result.Context).str();
-  } else {
-    const FunctionDecl *Callee = Call->getDirectCallee();
-    if (!Callee || Callee->getNumParams() == 0)
-      return;
-
-    // Range overloads take a reference (R&&), Iterator overloads pass by value.
-    const bool IsIterPair =
-        !Callee->getParamDecl(0)->getType()->isReferenceType();
-
-    if (IsIterPair) {
-      if (Call->getNumArgs() < 3)
-        return;
-      // find(CPO, Iter, Sent, Val...) -> Sent is Arg 2.
-      const Expr *EndArg = Call->getArg(2);
-      EndExprText = tooling::fixit::getText(*EndArg, *Result.Context).str();
-    } else {
-      if (Call->getNumArgs() < 2)
-        return;
-      // find(CPO, Range, Val, Proj) -> Range is Arg 1.
-      const Expr *RangeArg = Call->getArg(1);
-      // Avoid potential side-effects
-      const Expr *InnerRange = RangeArg->IgnoreParenImpCasts();
-      if (isa<DeclRefExpr>(InnerRange) || isa<MemberExpr>(InnerRange)) {
-        const StringRef RangeText =
-            tooling::fixit::getText(*RangeArg, *Result.Context);
-        if (!RangeText.empty())
-          EndExprText = ("std::ranges::end(" + RangeText + ")").str();
-      }
-    }
-  }
-
-  bool IsNegated = false;
-  const UnaryOperator *NotOp = nullptr;
-  const Expr *CurrentExpr = BoolOp;
-  while (true) {
-    auto Parents = Result.Context->getParents(*CurrentExpr);
-    if (Parents.empty())
-      break;
-    if (const auto *P = Parents[0].get<ParenExpr>()) {
-      CurrentExpr = P;
-      continue;
-    }
-    if (const auto *U = Parents[0].get<UnaryOperator>()) {
-      if (U->getOpcode() == UO_LNot) {
-        NotOp = U;
-        IsNegated = true;
-      }
-    }
-    break;
-  }
-
-  const auto Diag =
-      diag(BoolOp->getBeginLoc(),
-           "result of standard algorithm used in boolean context; did "
-           "you mean to compare with the end iterator?");
-
-  if (EndExprText.empty())
+  if (EndExprText->empty())
     return;
 
   // Suppress fix-it if the expression is part of a variable declaration or a
@@ -206,7 +223,7 @@ void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
         Lexer::getLocForEndOfToken(BoolOp->getEndLoc(), 0,
                                    *Result.SourceManager,
                                    Result.Context->getLangOpts()),
-        " == " + EndExprText + ")");
+        " == " + *EndExprText + ")");
   } else {
     // it -> (it != end)
     Diag << FixItHint::CreateInsertion(BoolOp->getBeginLoc(), "(");
@@ -214,7 +231,7 @@ void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
         Lexer::getLocForEndOfToken(BoolOp->getEndLoc(), 0,
                                    *Result.SourceManager,
                                    Result.Context->getLangOpts()),
-        " != " + EndExprText + ")");
+        " != " + *EndExprText + ")");
   }
 }
 
