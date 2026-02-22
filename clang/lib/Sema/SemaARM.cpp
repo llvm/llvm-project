@@ -1107,6 +1107,145 @@ bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
   }
 }
 
+static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
+                                                 CallExpr *TheCall) {
+  Sema &SemaRef = S.SemaRef;
+  ASTContext &Context = S.getASTContext();
+  DeclRefExpr *DRE =
+      cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
+  SourceLocation Loc = DRE->getBeginLoc();
+
+  // Ensure we have the proper number of arguments.
+  if (SemaRef.checkArgCount(TheCall, 4))
+    return true;
+
+  ExprResult PtrRes =
+      SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
+
+  // Bail if conversion failed.
+  if (PtrRes.isInvalid())
+    return true;
+
+  TheCall->setArg(0, PtrRes.get());
+  Expr *PointerArg = PtrRes.get();
+
+  // Check arg 0 is a pointer type, err out if not
+  const PointerType *PointerTy = PointerArg->getType()->getAs<PointerType>();
+  if (!PointerTy) {
+    SemaRef.Diag(Loc, diag::err_atomic_builtin_must_be_pointer)
+        << PointerArg->getType() << 0 << PointerArg->getSourceRange();
+    return true;
+  }
+
+  // Reject const-qualified pointee types, with an error
+  QualType ValType = PointerTy->getPointeeType();
+  if (ValType.isConstQualified()) {
+    SemaRef.Diag(Loc, diag::err_atomic_builtin_cannot_be_const)
+        << PointerArg->getType() << PointerArg->getSourceRange();
+    return true;
+  }
+
+  // Only integer element types are supported.
+  ValType = ValType.getUnqualifiedType();
+  if (!ValType->isIntegerType()) {
+    SemaRef.Diag(Loc, diag::err_arm_atomic_store_with_stshh_bad_type)
+        << PointerArg->getType() << PointerArg->getSourceRange();
+    return true;
+  }
+
+  // Only 8/16/32/64-bit integers are supported.
+  unsigned Bits = Context.getTypeSize(ValType);
+  switch (Bits) {
+  case 8:
+  case 16:
+  case 32:
+  case 64:
+    break;
+  default:
+    SemaRef.Diag(Loc, diag::err_arm_atomic_store_with_stshh_bad_type)
+        << PointerArg->getType() << PointerArg->getSourceRange();
+    return true;
+  }
+
+  ExprResult ValRes =
+      SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(1));
+
+  // Bail if conversion failed.
+  if (ValRes.isInvalid())
+    return true;
+
+  // Check if value is an integer type.
+  Expr *ValArg = ValRes.get();
+  if (!ValArg->getType()->isIntegerType()) {
+    SemaRef.Diag(Loc,
+                 diag::err_arm_atomic_store_with_stshh_bad_value_must_be_integer)
+        << ValArg->getType() << ValArg->getSourceRange();
+    return true;
+  }
+
+  // Value width must match the pointee width.
+  if (Context.getTypeSize(ValArg->getType()) != Bits) {
+    SemaRef.Diag(Loc, diag::err_arm_atomic_store_with_stshh_bad_value_type)
+        << Bits << Context.getTypeSize(ValArg->getType())
+        << ValArg->getSourceRange();
+    return true;
+  }
+
+  // Prepare a cast if the value type differs
+  ExprResult ValArgRes;
+  CastKind CK =
+      ValArg->getType().getCanonicalType() == ValType.getCanonicalType()
+          ? CK_NoOp
+          : CK_IntegralCast;
+
+  // Apply cast to the pointee type.
+  ValArgRes = SemaRef.ImpCastExprToType(ValArg, ValType, CK);
+
+  // Bail if cast failed.
+  if (ValArgRes.isInvalid())
+    return true;
+
+  TheCall->setArg(1, ValArgRes.get());
+  Expr *OrderArg = TheCall->getArg(2);
+
+  // Defer validation for dependent memory_order arguments.
+  if (OrderArg->isValueDependent())
+    return false;
+
+  // Require an order value.
+  std::optional<llvm::APSInt> OrderValOpt =
+      OrderArg->getIntegerConstantExpr(Context);
+  if (!OrderValOpt) {
+    SemaRef.Diag(Loc, diag::err_arm_atomic_store_with_stshh_bad_order)
+        << OrderArg->getSourceRange();
+    return true;
+  }
+
+  // Validate order here; the value is mapped to LLVM ordering in codegen.
+  llvm::APSInt OrderVal = *OrderValOpt;
+  int64_t Order = OrderVal.getSExtValue();
+  // __ATOMIC_RELAXED=0, __ATOMIC_RELEASE=3, __ATOMIC_SEQ_CST=5.
+  constexpr int64_t AtomicRelaxed = 0;
+  constexpr int64_t AtomicRelease = 3;
+  constexpr int64_t AtomicSeqCst = 5;
+  switch (Order) {
+  case AtomicRelaxed:
+  case AtomicRelease:
+  case AtomicSeqCst:
+    break;
+  default:
+    SemaRef.Diag(Loc, diag::err_arm_atomic_store_with_stshh_bad_order)
+        << OrderArg->getSourceRange();
+    return true;
+  }
+
+  // Arg 3 (retention policy) must be between KEEP(0) and STRM(1).
+  if (SemaRef.BuiltinConstantArgRange(TheCall, 3, 0, 1))
+    return true;
+
+  return false;
+}
+
 bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
                                               unsigned BuiltinID,
                                               CallExpr *TheCall) {
@@ -1116,6 +1255,9 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
       BuiltinID == AArch64::BI__builtin_arm_stlex) {
     return CheckARMBuiltinExclusiveCall(TI, BuiltinID, TheCall);
   }
+
+  if (BuiltinID == AArch64::BI__builtin_arm_atomic_store_with_stshh)
+    return CheckAArch64AtomicStoreWithStshhCall(*this, TheCall);
 
   if (BuiltinID == AArch64::BI__builtin_arm_prefetch) {
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1) ||

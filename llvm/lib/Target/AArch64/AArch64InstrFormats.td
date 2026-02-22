@@ -1840,16 +1840,24 @@ def PHintInstOperand : AsmOperandClass {
     let ParserMethod = "tryParsePHintInstOperand";
 }
 
-def phint_op : Operand<i32> {
+def phint_op : Operand<i64> {
     let ParserMatchClass = PHintInstOperand;
-   let PrintMethod = "printPHintOp";
-   let OperandType = "OPERAND_IMMEDIATE";
+    let PrintMethod = "printPHintOp";
+    let OperandType = "OPERAND_IMMEDIATE";
+    let MIOperandInfo = (ops i64imm);
+    let DecoderMethod = "DecodeUImm<3>";
 }
 
 class STSHHI
-    : SimpleSystemI<0, (ins phint_op:$policy), "stshh", "\t$policy", []>,
+    : SimpleSystemI<0, (ins phint_op:$policy), "stshh", "\t$policy",
+                    [(int_aarch64_stshh (i64 imm0_7:$policy))]>,
       Sched<[WriteHint]> {
   bits<3> policy;
+  // NOTE: ideally, this would have mayLoad = 0, mayStore = 0, but we cannot
+  // model patterns with sufficiently fine granularity.
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 1;
   let Inst{20-12} = 0b000011001;
   let Inst{11-8} = 0b0110;
   let Inst{7-5} = policy;
