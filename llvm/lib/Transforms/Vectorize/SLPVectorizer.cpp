@@ -129,11 +129,6 @@ static cl::opt<int>
                      cl::desc("Only vectorize if you gain more than this "
                               "number "));
 
-static cl::opt<bool> SLPSkipEarlyProfitabilityCheck(
-    "slp-skip-early-profitability-check", cl::init(false), cl::Hidden,
-    cl::desc("When true, SLP vectorizer bypasses profitability checks based on "
-             "heuristics and makes vectorization decision via cost modeling."));
-
 static cl::opt<bool>
 ShouldVectorizeHor("slp-vectorize-hor", cl::init(true), cl::Hidden,
                    cl::desc("Attempt to vectorize horizontal reductions"));
@@ -4607,15 +4602,6 @@ private:
         return TE;
     return nullptr;
   }
-
-  /// Check that the operand node of alternate node does not generate
-  /// buildvector sequence. If it is, then probably not worth it to build
-  /// alternate shuffle, if number of buildvector operands + alternate
-  /// instruction > than the number of buildvector instructions.
-  /// \param S the instructions state of the analyzed values.
-  /// \param VL list of the instructions with alternate opcodes.
-  bool areAltOperandsProfitable(const InstructionsState &S,
-                                ArrayRef<Value *> VL) const;
 
   /// Contains all the outputs of legality analysis for a list of values to
   /// vectorize.
@@ -10244,120 +10230,6 @@ static std::pair<size_t, size_t> generateKeySubkey(
 static bool isMainInstruction(Instruction *I, Instruction *MainOp,
                               Instruction *AltOp, const TargetLibraryInfo &TLI);
 
-bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
-                                       ArrayRef<Value *> VL) const {
-  Type *ScalarTy = S.getMainOp()->getType();
-  unsigned Opcode0 = S.getOpcode();
-  unsigned Opcode1 = S.getAltOpcode();
-  SmallBitVector OpcodeMask(getAltInstrMask(VL, ScalarTy, Opcode0, Opcode1));
-  // If this pattern is supported by the target then consider it profitable.
-  if (TTI->isLegalAltInstr(getWidenedType(ScalarTy, VL.size()), Opcode0,
-                           Opcode1, OpcodeMask))
-    return true;
-  SmallVector<ValueList> Operands;
-  for (unsigned I : seq<unsigned>(S.getMainOp()->getNumOperands())) {
-    Operands.emplace_back();
-    // Prepare the operand vector.
-    for (Value *V : VL) {
-      if (isa<PoisonValue>(V)) {
-        Operands.back().push_back(
-            PoisonValue::get(S.getMainOp()->getOperand(I)->getType()));
-        continue;
-      }
-      Operands.back().push_back(cast<Instruction>(V)->getOperand(I));
-    }
-  }
-  if (Operands.size() == 2) {
-    // Try find best operands candidates.
-    for (unsigned I : seq<unsigned>(0, VL.size() - 1)) {
-      SmallVector<std::pair<Value *, Value *>> Candidates(3);
-      Candidates[0] = std::make_pair(Operands[0][I], Operands[0][I + 1]);
-      Candidates[1] = std::make_pair(Operands[0][I], Operands[1][I + 1]);
-      Candidates[2] = std::make_pair(Operands[1][I], Operands[0][I + 1]);
-      std::optional<int> Res = findBestRootPair(Candidates);
-      switch (Res.value_or(0)) {
-      case 0:
-        break;
-      case 1:
-        std::swap(Operands[0][I + 1], Operands[1][I + 1]);
-        break;
-      case 2:
-        std::swap(Operands[0][I], Operands[1][I]);
-        break;
-      default:
-        llvm_unreachable("Unexpected index.");
-      }
-    }
-  }
-  DenseSet<unsigned> UniqueOpcodes;
-  constexpr unsigned NumAltInsts = 3; // main + alt + shuffle.
-  unsigned NonInstCnt = 0;
-  // Estimate number of instructions, required for the vectorized node and for
-  // the buildvector node.
-  unsigned UndefCnt = 0;
-  // Count the number of extra shuffles, required for vector nodes.
-  unsigned ExtraShuffleInsts = 0;
-  // Check that operands do not contain same values and create either perfect
-  // diamond match or shuffled match.
-  if (Operands.size() == 2) {
-    // Do not count same operands twice.
-    if (Operands.front() == Operands.back()) {
-      Operands.erase(Operands.begin());
-    } else if (!allConstant(Operands.front()) &&
-               all_of(Operands.front(), [&](Value *V) {
-                 return is_contained(Operands.back(), V);
-               })) {
-      Operands.erase(Operands.begin());
-      ++ExtraShuffleInsts;
-    }
-  }
-  const Loop *L = LI->getLoopFor(S.getMainOp()->getParent());
-  // Vectorize node, if:
-  // 1. at least single operand is constant or splat.
-  // 2. Operands have many loop invariants (the instructions are not loop
-  // invariants).
-  // 3. At least single unique operands is supposed to vectorized.
-  return none_of(Operands,
-                 [&](ArrayRef<Value *> Op) {
-                   if (allConstant(Op) ||
-                       (!isSplat(Op) && allSameBlock(Op) && allSameType(Op) &&
-                        getSameOpcode(Op, *TLI)))
-                     return false;
-                   DenseMap<Value *, unsigned> Uniques;
-                   for (Value *V : Op) {
-                     if (isa<Constant, ExtractElementInst>(V) ||
-                         isVectorized(V) || (L && L->isLoopInvariant(V))) {
-                       if (isa<UndefValue>(V))
-                         ++UndefCnt;
-                       continue;
-                     }
-                     auto Res = Uniques.try_emplace(V, 0);
-                     // Found first duplicate - need to add shuffle.
-                     if (!Res.second && Res.first->second == 1)
-                       ++ExtraShuffleInsts;
-                     ++Res.first->getSecond();
-                     if (auto *I = dyn_cast<Instruction>(V))
-                       UniqueOpcodes.insert(I->getOpcode());
-                     else if (Res.second)
-                       ++NonInstCnt;
-                   }
-                   return none_of(Uniques, [&](const auto &P) {
-                     return P.first->hasNUsesOrMore(P.second + 1) &&
-                            none_of(P.first->users(), [&](User *U) {
-                              return isVectorized(U) || Uniques.contains(U);
-                            });
-                   });
-                 }) ||
-         // Do not vectorize node, if estimated number of vector instructions is
-         // more than estimated number of buildvector instructions. Number of
-         // vector operands is number of vector instructions + number of vector
-         // instructions for operands (buildvectors). Number of buildvector
-         // instructions is just number_of_operands * number_of_scalars.
-         (UndefCnt < (VL.size() - 1) * S.getMainOp()->getNumOperands() &&
-          (UniqueOpcodes.size() + NonInstCnt + ExtraShuffleInsts +
-           NumAltInsts) < S.getMainOp()->getNumOperands() * VL.size());
-}
-
 /// Builds the arguments types vector for the given call instruction with the
 /// given \p ID for the specified vector factor.
 static SmallVector<Type *>
@@ -10808,13 +10680,6 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       // If this is not an alternate sequence of opcode like add-sub
       // then do not vectorize this instruction.
       LLVM_DEBUG(dbgs() << "SLP: ShuffleVector are not vectorized.\n");
-      return TreeEntry::NeedToGather;
-    }
-    if (!SLPSkipEarlyProfitabilityCheck && !areAltOperandsProfitable(S, VL)) {
-      LLVM_DEBUG(
-          dbgs()
-          << "SLP: ShuffleVector not vectorized, operands are buildvector and "
-             "the whole alt sequence is not profitable.\n");
       return TreeEntry::NeedToGather;
     }
 
@@ -17247,6 +17112,8 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     auto It = MinBWs.find(TE);
     if (It != MinBWs.end())
       ScalarTy = IntegerType::get(ScalarTy->getContext(), It->second.first);
+    if (isa<CmpInst>(TE->Scalars.front()))
+      ScalarTy = TE->Scalars.front()->getType();
     auto *VecTy = getWidenedType(ScalarTy, Sz);
     const unsigned EntryVF = TE->getVectorFactor();
     auto *FinalVecTy = getWidenedType(ScalarTy, EntryVF);
@@ -17275,7 +17142,8 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
           ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, FinalVecTy, Mask);
     // If all scalars are reused in gather node(s) or other vector nodes, there
     // might be extra cost for inserting them.
-    if (all_of(TE->Scalars, [&](Value *V) {
+    if ((!TE->hasState() || !TE->isAltShuffle()) &&
+        all_of(TE->Scalars, [&](Value *V) {
           return (TE->hasCopyableElements() && TE->isCopyableElement(V)) ||
                  isConstant(V) || isGathered(V) || getTreeEntries(V).size() > 1;
         }))
