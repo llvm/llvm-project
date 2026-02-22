@@ -55,10 +55,13 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfileSummary.h"
+#include "llvm/Object/ModuleSymbolTable.h"
+#include "llvm/Object/SymbolicFile.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/ARMBuildAttributes.h"
@@ -1615,6 +1618,11 @@ void CodeGenModule::Release() {
   if (getContext().getTargetInfo().getMaxTLSAlign())
     getModule().addModuleFlag(llvm::Module::Error, "MaxTLSAlign",
                               getContext().getTargetInfo().getMaxTLSAlign());
+
+  // Emit module flags for global inline assembly symbols.
+  llvm::ModuleSymbolTable::EmitModuleFlags(
+      TheModule, getTarget().getTargetOpts().CPU,
+      llvm::join(getTarget().getTargetOpts().Features, ","));
 
   getTargetCodeGenInfo().emitTargetGlobals(*this);
 

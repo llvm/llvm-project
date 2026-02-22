@@ -921,6 +921,37 @@ handleNonPrevailingComdat(GlobalValue &GV,
     GO->setComdat(nullptr);
 }
 
+// Update global-asm-symbols metadata to match inline asm with .lto_discard.
+static void
+discardGlobalAsmSymbols(Module &M,
+                        const SmallSet<StringRef, 2> &DiscardSymbols) {
+  MDTuple *SymbolsMD =
+      dyn_cast_if_present<MDTuple>(M.getModuleFlag("global-asm-symbols"));
+
+  if (!SymbolsMD)
+    return;
+
+  bool Changed = false;
+  SmallVector<Metadata *, 16> NewSymbols;
+  for (Metadata *MD : SymbolsMD->operands()) {
+    const MDTuple *SymMD = cast<MDTuple>(MD);
+    const MDString *Name = cast<MDString>(SymMD->getOperand(0));
+
+    if (DiscardSymbols.contains(Name->getString())) {
+      Changed = true;
+      continue;
+    }
+
+    NewSymbols.push_back(MD);
+  }
+
+  if (!Changed)
+    return;
+
+  M.setModuleFlag(llvm::Module::AppendUnique, "global-asm-symbols",
+                  llvm::MDNode::get(M.getContext(), NewSymbols));
+}
+
 // Add a regular LTO object to the link.
 // The resulting module needs to be linked into the combined LTO module with
 // linkRegularLTO.
@@ -1093,6 +1124,7 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
               NonPrevailingAsmSymbols.erase(Name);
           });
       NewIA += " " + llvm::join(NonPrevailingAsmSymbols, ", ");
+      discardGlobalAsmSymbols(M, NonPrevailingAsmSymbols);
     }
     NewIA += "\n";
     M.setModuleInlineAsm(NewIA + M.getModuleInlineAsm());

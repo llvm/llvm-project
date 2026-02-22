@@ -1,0 +1,93 @@
+RUN: llvm-as %p/Inputs/asm-bar1.ll -o %t-asm-bar1.bc
+RUN: llvm-as %p/Inputs/asm-foo-pauth.ll -o %t-asm-foo-pauth.bc
+
+Test LTO. We use -mattr=+pauth here, because llvm-lto runs CodeGen at
+the end.
+
+RUN: llvm-lto -save-merged-module -mattr=+pauth -filetype=asm %t-asm-bar1.bc %t-asm-foo-pauth.bc -o %t1
+RUN: llvm-dis %t1.merged.bc -o - | FileCheck %s --check-prefix CHECK-1
+RUN: llvm-nm %t1.merged.bc | FileCheck %s --check-prefix CHECK-1-NM
+
+CHECK-1-NOT: module asm
+CHECK-1: module asm ".text"
+CHECK-1: module asm ".balign 16"
+CHECK-1: module asm ".globl bar"
+CHECK-1: module asm "bar:"
+CHECK-1: module asm "  nop"
+CHECK-1: module asm ".symver bar, bar@VER"
+CHECK-1: module asm ".previous"
+CHECK-1: module asm ".text"
+CHECK-1: module asm ".balign 16"
+CHECK-1: module asm ".globl foo"
+CHECK-1: module asm "foo:"
+CHECK-1: module asm "pacib x30, x27"
+CHECK-1: module asm "retab"
+CHECK-1: module asm ".symver foo, foo@VER"
+CHECK-1: module asm ".previous"
+CHECK-1-NOT: module asm
+
+CHECK-1: !{i32 6, !"global-asm-symbols", ![[SYMBOLS:[0-9]+]]}
+CHECK-1: ![[SYMBOLS]] = distinct !{![[SYM_BAR:[0-9]+]], ![[SYM_BAR_VER:[0-9]+]], ![[SYM_FOO:[0-9]+]], ![[SYM_FOO_VER:[0-9]+]]}
+CHECK-1: ![[SYM_BAR]] = !{!"bar", i32 2050}
+CHECK-1: ![[SYM_BAR_VER]] = !{!"bar@VER", i32 2050}
+CHECK-1: ![[SYM_FOO]] = !{!"foo", i32 2050}
+CHECK-1: ![[SYM_FOO_VER]] = !{!"foo@VER", i32 2050}
+CHECK-1: !{i32 6, !"global-asm-symvers", ![[SYMVERS:[0-9]+]]}
+CHECK-1: ![[SYMVERS]] = distinct !{![[SYMVER_BAR:[0-9]+]], ![[SYMVER_FOO:[0-9]+]]}
+CHECK-1: ![[SYMVER_BAR]] = !{!"bar", !"bar@VER"}
+CHECK-1: ![[SYMVER_FOO]] = !{!"foo", !"foo@VER"}
+
+CHECK-1-NM-NOT:      {{bar|foo}}
+CHECK-1-NM:          T bar
+CHECK-1-NM-NEXT:     T bar@VER
+CHECK-1-NM-NEXT:     T foo
+CHECK-1-NM-NEXT:     T foo@VER
+CHECK-1-NM-NOT:      {{bar|foo}}
+
+Test LTO2.
+
+RUN: llvm-lto2 run -save-temps -mattr=+pauth -filetype=asm %t-asm-bar1.bc %t-asm-foo-pauth.bc -o %t2.s \
+RUN:   -r=%t-asm-bar1.bc,bar,p \
+RUN:   -r=%t-asm-bar1.bc,bar@VER,p \
+RUN:   -r=%t-asm-foo-pauth.bc,foo,p \
+RUN:   -r=%t-asm-foo-pauth.bc,foo@VER,p
+RUN: llvm-dis %t2.s.0.5.precodegen.bc -o - | FileCheck %s --check-prefix CHECK-2
+RUN: llvm-nm %t2.s.0.5.precodegen.bc | FileCheck %s --check-prefix CHECK-2-NM
+
+CHECK-2-NOT: module asm
+CHECK-2: module asm ".lto_discard"
+CHECK-2: module asm ".text"
+CHECK-2: module asm ".balign 16"
+CHECK-2: module asm ".globl bar"
+CHECK-2: module asm "bar:"
+CHECK-2: module asm "  nop"
+CHECK-2: module asm ".symver bar, bar@VER"
+CHECK-2: module asm ".previous"
+CHECK-2: module asm ".lto_discard"
+CHECK-2: module asm ".text"
+CHECK-2: module asm ".balign 16"
+CHECK-2: module asm ".globl foo"
+CHECK-2: module asm "foo:"
+CHECK-2: module asm "pacib x30, x27"
+CHECK-2: module asm "retab"
+CHECK-2: module asm ".symver foo, foo@VER"
+CHECK-2: module asm ".previous"
+CHECK-2-NOT: module asm
+
+CHECK-2: !{i32 6, !"global-asm-symbols", ![[SYMBOLS:[0-9]+]]}
+CHECK-2: ![[SYMBOLS]] = distinct !{![[SYM_BAR:[0-9]+]], ![[SYM_BAR_VER:[0-9]+]], ![[SYM_FOO:[0-9]+]], ![[SYM_FOO_VER:[0-9]+]]}
+CHECK-2: ![[SYM_BAR]] = !{!"bar", i32 2050}
+CHECK-2: ![[SYM_BAR_VER]] = !{!"bar@VER", i32 2050}
+CHECK-2: ![[SYM_FOO]] = !{!"foo", i32 2050}
+CHECK-2: ![[SYM_FOO_VER]] = !{!"foo@VER", i32 2050}
+CHECK-2: !{i32 6, !"global-asm-symvers", ![[SYMVERS:[0-9]+]]}
+CHECK-2: ![[SYMVERS]] = distinct !{![[SYMVER_BAR:[0-9]+]], ![[SYMVER_FOO:[0-9]+]]}
+CHECK-2: ![[SYMVER_BAR]] = !{!"bar", !"bar@VER"}
+CHECK-2: ![[SYMVER_FOO]] = !{!"foo", !"foo@VER"}
+
+CHECK-2-NM-NOT:      {{bar|foo}}
+CHECK-2-NM:          T bar
+CHECK-2-NM-NEXT:     T bar@VER
+CHECK-2-NM-NEXT:     T foo
+CHECK-2-NM-NEXT:     T foo@VER
+CHECK-2-NM-NOT:      {{bar|foo}}
