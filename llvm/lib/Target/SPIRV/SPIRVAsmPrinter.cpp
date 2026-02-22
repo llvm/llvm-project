@@ -708,7 +708,7 @@ void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
 
       StringRef AnnotationString;
       [[maybe_unused]] bool Success =
-          getConstantStringInfo(GV, AnnotationString);
+          getConstantStringInfo(GV, AnnotationString, /*CharWidth=*/8);
       assert(Success && "Failed to get annotation string");
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpDecorate);
