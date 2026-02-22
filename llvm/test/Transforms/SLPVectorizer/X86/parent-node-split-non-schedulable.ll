@@ -44,7 +44,6 @@ define i32 @main(ptr %c, i32 %0, i1 %tobool4.not, i16 %1) {
 ; CHECK-NEXT:    [[TMP23:%.*]] = phi <8 x i32> [ [[TMP22]], %[[AH]] ], [ [[TMP20]], %[[IF_END14]] ]
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <8 x i32> [[TMP23]], i32 5
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <8 x i32> [[TMP23]], i32 7
-; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <8 x i32> [[TMP23]], <8 x i32> poison, <2 x i32> <i32 5, i32 7>
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP25]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <8 x i32> [[TMP23]], i32 4
 ; CHECK-NEXT:    [[TMP29:%.*]] = or i32 [[ADD]], [[TMP28]]
