@@ -68,6 +68,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUInstructionSelector.cpp
   AMDGPUISelDAGToDAG.cpp
   AMDGPUISelLowering.cpp
+  AMDGPULanePackedABI.cpp
   AMDGPULateCodeGenPrepare.cpp
   AMDGPULegalizerInfo.cpp
   AMDGPULibCalls.cpp

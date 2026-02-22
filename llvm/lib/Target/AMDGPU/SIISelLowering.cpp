@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPULanePackedABI.h"
 #include "AMDGPUSelectionDAGInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
@@ -3449,8 +3450,14 @@ SDValue SITargetLowering::LowerFormalArguments(
   }
 
   if (!IsKernel) {
-    CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, isVarArg);
-    CCInfo.AnalyzeFormalArguments(Splits, AssignFn);
+    if (isInRegVGPRLanePackingEnabled() &&
+        (CallConv == CallingConv::C || CallConv == CallingConv::Fast ||
+         CallConv == CallingConv::Cold)) {
+      analyzeArgsWithLanePacking(CCInfo, Splits, Subtarget->isWave32());
+    } else {
+      CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, isVarArg);
+      CCInfo.AnalyzeFormalArguments(Splits, AssignFn);
+    }
 
     // This assumes the registers are allocated by CCInfo in ascending order
     // with no gaps.
@@ -3633,6 +3640,19 @@ SDValue SITargetLowering::LowerFormalArguments(
     }
 
     assert(VA.isRegLoc() && "Parameter must be in a register!");
+
+    if (VA.needsCustom()) {
+      Register Reg = MF.addLiveIn(VA.getLocReg(), &AMDGPU::VGPR_32RegClass);
+      SDValue PackedVal = DAG.getCopyFromReg(Chain, DL, Reg, MVT::i32);
+      unsigned Lane = getLaneIndexForPackedArg(ArgLocs, i);
+      SDValue Val = DAG.getNode(
+          ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+          DAG.getTargetConstant(Intrinsic::amdgcn_readlane, DL, MVT::i32),
+          PackedVal, DAG.getConstant(Lane, DL, MVT::i32));
+      Val = convertABITypeToValueType(DAG, Val, VA, DL);
+      InVals.push_back(Val);
+      continue;
+    }
 
     Register Reg = VA.getLocReg();
     const TargetRegisterClass *RC = nullptr;
@@ -4304,7 +4324,13 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (!Subtarget->hasFlatScratchEnabled())
     CCInfo.AllocateReg(Info->getScratchRSrcReg());
 
-  CCInfo.AnalyzeCallOperands(Outs, AssignFn);
+  if (isInRegVGPRLanePackingEnabled() &&
+      (CallConv == CallingConv::C || CallConv == CallingConv::Fast ||
+       CallConv == CallingConv::Cold)) {
+    analyzeArgsWithLanePacking(CCInfo, Outs, Subtarget->isWave32());
+  } else {
+    CCInfo.AnalyzeCallOperands(Outs, AssignFn);
+  }
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getStackSize();
@@ -4349,6 +4375,9 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   MVT PtrVT = MVT::i32;
 
+  DenseMap<MCPhysReg, SmallVector<std::pair<unsigned, SDValue>, 4>>
+      LanePackGroups;
+
   // Walk the register/memloc assignments, inserting copies/loads.
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
@@ -4375,6 +4404,12 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       break;
     default:
       llvm_unreachable("Unknown loc info!");
+    }
+
+    if (VA.needsCustom() && VA.isRegLoc()) {
+      unsigned Lane = getLaneIndexForPackedArg(ArgLocs, i);
+      LanePackGroups[VA.getLocReg()].push_back({Lane, Arg});
+      continue;
     }
 
     if (VA.isRegLoc()) {
@@ -4443,6 +4478,19 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
         MemOpChains.push_back(Store);
       }
     }
+  }
+
+  // Build writelane chains for lane-packed overflow inreg args.
+  SDValue WritelaneID =
+      DAG.getTargetConstant(Intrinsic::amdgcn_writelane, DL, MVT::i32);
+  for (auto &[VGPR, Lanes] : LanePackGroups) {
+    SDValue Packed = DAG.getUNDEF(MVT::i32);
+    for (auto &[LaneIdx, ArgVal] : Lanes) {
+      Packed =
+          DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32, WritelaneID,
+                      ArgVal, DAG.getConstant(LaneIdx, DL, MVT::i32), Packed);
+    }
+    RegsToPass.push_back({VGPR, Packed});
   }
 
   if (!MemOpChains.empty())
