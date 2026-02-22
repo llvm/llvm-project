@@ -4563,25 +4563,74 @@ define <2 x i128> @clmul_v2i128_neon_zext(<2 x i64> %x, <2 x i64> %y) {
   ret <2 x i128> %a
 }
 
-; TODO
-;define <16 x i8> @clmulr_v16i8_neon(<16 x i8> %a, <16 x i8> %b) nounwind {
-;  %a.ext = zext <16 x i8> %a to <16 x i16>
-;  %b.ext = zext <16 x i8> %b to <16 x i16>
-;  %clmul = call <16 x i16> @llvm.clmul.v16i16(<16 x i16> %a.ext, <16 x i16> %b.ext)
-;  %res.ext = lshr <16 x i16> %clmul, splat (i16 7)
-;  %res = trunc <16 x i16> %res.ext to <16 x i8>
-;  ret <16 x i8> %res
-;}
+define <16 x i8> @clmulr_v16i8_neon(<16 x i8> %a, <16 x i8> %b) nounwind {
+; CHECK-LABEL: clmulr_v16i8_neon:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rbit v1.16b, v1.16b
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    pmul v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    ret
+  %a.ext = zext <16 x i8> %a to <16 x i16>
+  %b.ext = zext <16 x i8> %b to <16 x i16>
+  %clmul = call <16 x i16> @llvm.clmul.v16i16(<16 x i16> %a.ext, <16 x i16> %b.ext)
+  %res.ext = lshr <16 x i16> %clmul, splat (i16 7)
+  %res = trunc <16 x i16> %res.ext to <16 x i8>
+  ret <16 x i8> %res
+}
 
-; TODO
-;define <8 x i8> @clmulr_v8i8_neon(<8 x i8> %a, <8 x i8> %b) nounwind {
-;  %a.ext = zext <8 x i8> %a to <8 x i16>
-;  %b.ext = zext <8 x i8> %b to <8 x i16>
-;  %clmul = call <8 x i16> @llvm.clmul.v16i16(<8 x i16> %a.ext, <8 x i16> %b.ext)
-;  %res.ext = lshr <8 x i16> %clmul, splat (i16 7)
-;  %res = trunc <8 x i16> %res.ext to <8 x i8>
-;  ret <8 x i8> %res
-;}
+define <8 x i8> @clmulr_v8i8_neon(<8 x i8> %a, <8 x i8> %b) nounwind {
+; CHECK-LABEL: clmulr_v8i8_neon:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.8h, #2
+; CHECK-NEXT:    movi v3.8h, #1
+; CHECK-NEXT:    movi v4.8h, #4
+; CHECK-NEXT:    movi v5.8h, #8
+; CHECK-NEXT:    movi v6.8h, #16
+; CHECK-NEXT:    movi v7.8h, #32
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    movi v16.8h, #64
+; CHECK-NEXT:    movi v17.8h, #128
+; CHECK-NEXT:    and v2.16b, v1.16b, v2.16b
+; CHECK-NEXT:    and v3.16b, v1.16b, v3.16b
+; CHECK-NEXT:    and v4.16b, v1.16b, v4.16b
+; CHECK-NEXT:    and v5.16b, v1.16b, v5.16b
+; CHECK-NEXT:    and v6.16b, v1.16b, v6.16b
+; CHECK-NEXT:    and v7.16b, v1.16b, v7.16b
+; CHECK-NEXT:    and v16.16b, v1.16b, v16.16b
+; CHECK-NEXT:    and v1.16b, v1.16b, v17.16b
+; CHECK-NEXT:    xtn v2.8b, v2.8h
+; CHECK-NEXT:    xtn v3.8b, v3.8h
+; CHECK-NEXT:    xtn v4.8b, v4.8h
+; CHECK-NEXT:    xtn v5.8b, v5.8h
+; CHECK-NEXT:    xtn v6.8b, v6.8h
+; CHECK-NEXT:    xtn v7.8b, v7.8h
+; CHECK-NEXT:    xtn v16.8b, v16.8h
+; CHECK-NEXT:    xtn v1.8b, v1.8h
+; CHECK-NEXT:    umull v2.8h, v0.8b, v2.8b
+; CHECK-NEXT:    umull v3.8h, v0.8b, v3.8b
+; CHECK-NEXT:    umull v4.8h, v0.8b, v4.8b
+; CHECK-NEXT:    umull v5.8h, v0.8b, v5.8b
+; CHECK-NEXT:    umull v6.8h, v0.8b, v6.8b
+; CHECK-NEXT:    umull v7.8h, v0.8b, v7.8b
+; CHECK-NEXT:    umull v16.8h, v0.8b, v16.8b
+; CHECK-NEXT:    umull v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    eor v2.16b, v3.16b, v2.16b
+; CHECK-NEXT:    eor v3.16b, v4.16b, v5.16b
+; CHECK-NEXT:    eor v4.16b, v6.16b, v7.16b
+; CHECK-NEXT:    eor v2.16b, v2.16b, v3.16b
+; CHECK-NEXT:    eor v3.16b, v4.16b, v16.16b
+; CHECK-NEXT:    eor v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    eor v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    shrn v0.8b, v0.8h, #7
+; CHECK-NEXT:    ret
+  %a.ext = zext <8 x i8> %a to <8 x i16>
+  %b.ext = zext <8 x i8> %b to <8 x i16>
+  %clmul = call <8 x i16> @llvm.clmul.v16i16(<8 x i16> %a.ext, <8 x i16> %b.ext)
+  %res.ext = lshr <8 x i16> %clmul, splat (i16 7)
+  %res = trunc <8 x i16> %res.ext to <8 x i8>
+  ret <8 x i8> %res
+}
 
 define <8 x i16> @clmulr_v8i16_neon(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; CHECK-LABEL: clmulr_v8i16_neon:
@@ -5193,25 +5242,75 @@ define <2 x i32> @clmulr_v2i32_neon(<2 x i32> %a, <2 x i32> %b) nounwind {
 ;  ret <1 x i64> %res
 ;}
 
-; TODO
-;define <16 x i8> @clmulh_v16i8_neon(<16 x i8> %a, <16 x i8> %b) nounwind {
-;  %a.ext = zext <16 x i8> %a to <16 x i16>
-;  %b.ext = zext <16 x i8> %b to <16 x i16>
-;  %clmul = call <16 x i16> @llvm.clmul.v16i16(<16 x i16> %a.ext, <16 x i16> %b.ext)
-;  %res.ext = lshr <16 x i16> %clmul, splat (i16 8)
-;  %res = trunc <16 x i16> %res.ext to <16 x i8>
-;  ret <16 x i8> %res
-;}
+define <16 x i8> @clmulh_v16i8_neon(<16 x i8> %a, <16 x i8> %b) nounwind {
+; CHECK-LABEL: clmulh_v16i8_neon:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rbit v1.16b, v1.16b
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    pmul v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    ushr v0.16b, v0.16b, #1
+; CHECK-NEXT:    ret
+  %a.ext = zext <16 x i8> %a to <16 x i16>
+  %b.ext = zext <16 x i8> %b to <16 x i16>
+  %clmul = call <16 x i16> @llvm.clmul.v16i16(<16 x i16> %a.ext, <16 x i16> %b.ext)
+  %res.ext = lshr <16 x i16> %clmul, splat (i16 8)
+  %res = trunc <16 x i16> %res.ext to <16 x i8>
+  ret <16 x i8> %res
+}
 
-; TODO
-;define <8 x i8> @clmulh_v8i8_neon(<8 x i8> %a, <8 x i8> %b) nounwind {
-;  %a.ext = zext <8 x i8> %a to <8 x i16>
-;  %b.ext = zext <8 x i8> %b to <8 x i16>
-;  %clmul = call <8 x i16> @llvm.clmul.v16i16(<8 x i16> %a.ext, <8 x i16> %b.ext)
-;  %res.ext = lshr <8 x i16> %clmul, splat (i16 8)
-;  %res = trunc <8 x i16> %res.ext to <8 x i8>
-;  ret <8 x i8> %res
-;}
+define <8 x i8> @clmulh_v8i8_neon(<8 x i8> %a, <8 x i8> %b) nounwind {
+; CHECK-LABEL: clmulh_v8i8_neon:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.8h, #2
+; CHECK-NEXT:    movi v3.8h, #1
+; CHECK-NEXT:    movi v4.8h, #4
+; CHECK-NEXT:    movi v5.8h, #8
+; CHECK-NEXT:    movi v6.8h, #16
+; CHECK-NEXT:    movi v7.8h, #32
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    movi v16.8h, #64
+; CHECK-NEXT:    movi v17.8h, #128
+; CHECK-NEXT:    and v2.16b, v1.16b, v2.16b
+; CHECK-NEXT:    and v3.16b, v1.16b, v3.16b
+; CHECK-NEXT:    and v4.16b, v1.16b, v4.16b
+; CHECK-NEXT:    and v5.16b, v1.16b, v5.16b
+; CHECK-NEXT:    and v6.16b, v1.16b, v6.16b
+; CHECK-NEXT:    and v7.16b, v1.16b, v7.16b
+; CHECK-NEXT:    and v16.16b, v1.16b, v16.16b
+; CHECK-NEXT:    and v1.16b, v1.16b, v17.16b
+; CHECK-NEXT:    xtn v2.8b, v2.8h
+; CHECK-NEXT:    xtn v3.8b, v3.8h
+; CHECK-NEXT:    xtn v4.8b, v4.8h
+; CHECK-NEXT:    xtn v5.8b, v5.8h
+; CHECK-NEXT:    xtn v6.8b, v6.8h
+; CHECK-NEXT:    xtn v7.8b, v7.8h
+; CHECK-NEXT:    xtn v16.8b, v16.8h
+; CHECK-NEXT:    xtn v1.8b, v1.8h
+; CHECK-NEXT:    umull v2.8h, v0.8b, v2.8b
+; CHECK-NEXT:    umull v3.8h, v0.8b, v3.8b
+; CHECK-NEXT:    umull v4.8h, v0.8b, v4.8b
+; CHECK-NEXT:    umull v5.8h, v0.8b, v5.8b
+; CHECK-NEXT:    umull v6.8h, v0.8b, v6.8b
+; CHECK-NEXT:    umull v7.8h, v0.8b, v7.8b
+; CHECK-NEXT:    umull v16.8h, v0.8b, v16.8b
+; CHECK-NEXT:    umull v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    eor v2.16b, v3.16b, v2.16b
+; CHECK-NEXT:    eor v3.16b, v4.16b, v5.16b
+; CHECK-NEXT:    eor v4.16b, v6.16b, v7.16b
+; CHECK-NEXT:    eor v2.16b, v2.16b, v3.16b
+; CHECK-NEXT:    eor v3.16b, v4.16b, v16.16b
+; CHECK-NEXT:    eor v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    eor v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    shrn v0.8b, v0.8h, #8
+; CHECK-NEXT:    ret
+  %a.ext = zext <8 x i8> %a to <8 x i16>
+  %b.ext = zext <8 x i8> %b to <8 x i16>
+  %clmul = call <8 x i16> @llvm.clmul.v16i16(<8 x i16> %a.ext, <8 x i16> %b.ext)
+  %res.ext = lshr <8 x i16> %clmul, splat (i16 8)
+  %res = trunc <8 x i16> %res.ext to <8 x i8>
+  ret <8 x i8> %res
+}
 
 define <8 x i16> @clmulh_v8i16_neon(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; CHECK-LABEL: clmulh_v8i16_neon:
