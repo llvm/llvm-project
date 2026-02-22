@@ -16,57 +16,23 @@ namespace clang::tidy::readability {
 
 namespace {
 
-// Predicate structure to check if lifetime of temporary is not extended by
-// ValueDecl pointed out by ID
-struct NotExtendedByDeclBoundToPredicate {
-  bool operator()(const internal::BoundNodesMap &Nodes) const {
-    const auto *Other = Nodes.getNodeAs<ValueDecl>(ID);
-    if (!Other)
-      return true;
-
-    const auto *Self = Node.get<MaterializeTemporaryExpr>();
-    if (!Self)
-      return true;
-
-    return Self->getExtendingDecl() != Other;
-  }
-
-  StringRef ID;
-  ::clang::DynTypedNode Node;
-};
-
-AST_MATCHER_P(MaterializeTemporaryExpr, isExtendedByDeclBoundTo, StringRef,
-              ID) {
-  const NotExtendedByDeclBoundToPredicate Predicate{
-      ID, ::clang::DynTypedNode::create(Node)};
-  return Builder->removeBindings(Predicate);
+AST_MATCHER_P(MaterializeTemporaryExpr, isExtendedBy,
+              ast_matchers::internal::Matcher<ValueDecl>, InnerMatcher) {
+  const ValueDecl *ExtendingDecl = Node.getExtendingDecl();
+  return ExtendingDecl && InnerMatcher.matches(*ExtendingDecl, Finder, Builder);
 }
 
 } // namespace
 
-bool ReferenceToConstructedTemporaryCheck::isLanguageVersionSupported(
-    const LangOptions &LangOpts) const {
-  return LangOpts.CPlusPlus;
-}
-
-std::optional<TraversalKind>
-ReferenceToConstructedTemporaryCheck::getCheckTraversalKind() const {
-  return TK_AsIs;
-}
-
 void ReferenceToConstructedTemporaryCheck::registerMatchers(
     MatchFinder *Finder) {
   Finder->addMatcher(
-      varDecl(unless(isExpansionInSystemHeader()),
-              hasType(qualType(references(qualType().bind("type")))),
-              decl().bind("var"),
-              hasInitializer(expr(hasDescendant(
-                  materializeTemporaryExpr(
-                      isExtendedByDeclBoundTo("var"),
-                      has(expr(anyOf(cxxTemporaryObjectExpr(), initListExpr(),
-                                     cxxConstructExpr()),
-                               hasType(qualType(equalsBoundNode("type"))))))
-                      .bind("temporary"))))),
+      materializeTemporaryExpr(
+          hasType(qualType().bind("type")),
+          isExtendedBy(varDecl(hasType(qualType(references(
+                                   qualType(equalsBoundNode("type"))))))
+                           .bind("var")))
+          .bind("temporary"),
       this);
 }
 
