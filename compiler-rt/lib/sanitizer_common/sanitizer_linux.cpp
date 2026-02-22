@@ -906,6 +906,10 @@ uptr internal_lseek(fd_t fd, OFF_T offset, int whence) {
   return internal_syscall(SYSCALL(lseek), fd, offset, whence);
 }
 
+uptr internal_pipe(fd_t pipefd[2]) {
+  return internal_syscall(SYSCALL(pipe), pipefd);
+}
+
 #    if SANITIZER_LINUX
 uptr internal_prctl(int option, uptr arg2, uptr arg3, uptr arg4, uptr arg5) {
   return internal_syscall(SYSCALL(prctl), option, arg2, arg3, arg4, arg5);
