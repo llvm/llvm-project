@@ -608,6 +608,19 @@ def binop_same_val: GICombineRule<
   (apply (GIReplaceReg $dst, $src))
 >;
 
+// Fold x op x -> 0
+def same_val_zero_frags : GICombinePatFrag<
+  (outs root:$dst), (ins $x),
+  !foreach(op,
+           [G_SUB, G_XOR],
+           (pattern (op $dst, $x, $x)))>;
+
+def same_val_zero: GICombineRule<
+  (defs root:$dst),
+  (match (same_val_zero_frags $dst, $x)),
+  (apply (COPY $dst, (GITypeOf<"$x"> 0)))
+>;
+
 // Fold (0 op x) - > 0
 def binop_left_to_zero_frags : GICombinePatFrag<
   (outs root:$dst, $zero), (ins $rhs),
@@ -2231,7 +2244,7 @@ def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      insert_extract_vec_elt_out_of_bounds]>;
 
 def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
-                                        binop_same_val, binop_left_to_zero,
+                                        binop_same_val, same_val_zero, binop_left_to_zero,
                                         binop_right_to_zero, p2i_to_i2p,
                                         i2p_to_p2i, anyext_trunc_fold,
                                         fneg_fneg_fold, right_identity_one,
