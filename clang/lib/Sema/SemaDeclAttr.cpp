@@ -14,6 +14,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/Availability.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -2695,6 +2696,70 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
              diag::err_availability_unexpected_parameter)
           << "environment" << /* C/C++ */ 1;
     }
+  }
+
+  // Handle anyAppleOS specially: create implicit platform-specific attributes
+  // instead of the original anyAppleOS attribute.
+  if (II->getName() == "anyappleos") {
+    // Validate and correct anyAppleOS versions.
+    auto ValidateAndCorrectVersion =
+        [&](const llvm::VersionTuple &Version,
+            SourceLocation Loc) -> llvm::VersionTuple {
+      if (Version.empty())
+        return Version;
+      auto [IsValid, CorrectedVersion] =
+          AvailabilitySpec::validateAnyAppleOSVersion(Version);
+      if (!IsValid) {
+        S.Diag(Loc, diag::warn_availability_invalid_os_version)
+            << Version.getAsString() << "anyAppleOS";
+        S.Diag(Loc, diag::note_availability_invalid_os_version_adjusted)
+            << CorrectedVersion.getAsString();
+      }
+      return CorrectedVersion;
+    };
+
+    // Correct the versions.
+    auto CorrectedIntroduced =
+        ValidateAndCorrectVersion(Introduced.Version, Introduced.KeywordLoc);
+    auto CorrectedDeprecated =
+        ValidateAndCorrectVersion(Deprecated.Version, Deprecated.KeywordLoc);
+    auto CorrectedObsoleted =
+        ValidateAndCorrectVersion(Obsoleted.Version, Obsoleted.KeywordLoc);
+
+    llvm::Triple T = S.Context.getTargetInfo().getTriple();
+
+    // Only create implicit attributes for Darwin OSes.
+    if (!T.isOSDarwin())
+      return;
+
+    StringRef PlatformName;
+
+    // Determine the platform name based on the target triple.
+    if (T.isMacOSX())
+      PlatformName = "macos";
+    else if (T.getOS() == llvm::Triple::IOS && T.isMacCatalystEnvironment())
+      PlatformName = "maccatalyst";
+    else // For iOS, tvOS, watchOS, visionOS, bridgeOS, etc.
+      PlatformName = llvm::Triple::getOSTypeName(T.getOS());
+
+    IdentifierInfo *NewII = &S.Context.Idents.get(PlatformName);
+
+    // Use the special low-priority value for pragma push anyAppleOS.
+    int ExpandedPriority =
+        (PriorityModifier == Sema::AP_PragmaClangAttribute)
+            ? Sema::AP_PragmaClangAttribute_InferredFromAnyAppleOS
+            : Sema::AP_InferredFromAnyAppleOS;
+
+    AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
+        ND, AL, NewII, /*Implicit=*/true, CorrectedIntroduced,
+        CorrectedDeprecated, CorrectedObsoleted, IsUnavailable, Str, IsStrict,
+        Replacement, AvailabilityMergeKind::None, ExpandedPriority,
+        IIEnvironment);
+    if (NewAttr)
+      D->addAttr(NewAttr);
+
+    // Don't add the original anyAppleOS attribute - only the implicit
+    // platform-specific attributes.
   }
 
   AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(

@@ -4857,7 +4857,16 @@ public:
 
     /// The availability attribute for a specific platform was inferred from
     /// an availability attribute for another platform.
-    AP_InferredFromOtherPlatform = 2
+    AP_InferredFromOtherPlatform = 2,
+
+    /// The availability attribute was inferred from an 'anyAppleOS'
+    /// availability attribute.
+    AP_InferredFromAnyAppleOS = 3,
+
+    /// The availability attribute was inferred from an 'anyAppleOS'
+    /// availability attribute that was applied using '#pragma clang attribute'.
+    /// This has the lowest priority.
+    AP_PragmaClangAttribute_InferredFromAnyAppleOS = 4
   };
 
   /// Describes the reason a calling convention specification was ignored, used

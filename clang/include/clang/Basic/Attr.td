@@ -1113,6 +1113,7 @@ def Availability : InheritableAttr {
              .Case("maccatalyst_app_extension", "macCatalyst (App Extension)")
              .Case("xros", "visionOS")
              .Case("xros_app_extension", "visionOS (App Extension)")
+             .Case("anyappleos", "any Apple OS")
              .Case("swift", "Swift")
              .Case("shadermodel", "Shader Model")
              .Case("ohos", "OpenHarmony OS")
@@ -1132,6 +1133,7 @@ static llvm::StringRef getPlatformNameSourceSpelling(llvm::StringRef Platform) {
              .Case("maccatalyst_app_extension", "macCatalystApplicationExtension")
              .Case("xros", "visionOS")
              .Case("xros_app_extension", "visionOSApplicationExtension")
+             .Case("anyappleos", "anyAppleOS")
              .Case("zos", "z/OS")
              .Case("shadermodel", "ShaderModel")
              .Default(Platform);
@@ -1154,6 +1156,7 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
              .Case("visionOSApplicationExtension", "xros_app_extension")
              .Case("visionos", "xros")
              .Case("visionos_app_extension", "xros_app_extension")
+             .Case("anyAppleOS", "anyappleos")
              .Case("ShaderModel", "shadermodel")
              .Default(Platform);
 }
@@ -1185,6 +1188,8 @@ static std::vector<llvm::StringRef> equivalentPlatformNames(llvm::StringRef Plat
              .Case("xros_app_extension", {"visionOSApplicationExtension", "visionos_app_extension", "xros_app_extension"})
              .Case("visionOSApplicationExtension", {"visionOSApplicationExtension", "visionos_app_extension", "xros_app_extension"})
              .Case("visionos_app_extension", {"visionOSApplicationExtension", "visionos_app_extension", "xros_app_extension"})
+             .Case("anyappleos", {"anyappleos", "anyAppleOS"})
+             .Case("anyAppleOS", {"anyappleos", "anyAppleOS"})
              .Default({Platform});
 }
 static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environment) {
