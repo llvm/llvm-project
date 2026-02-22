@@ -1465,6 +1465,7 @@ CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
   // Don't include a linkage name in line tables only.
   if (CGM.getCodeGenOpts().hasReducedDebugInfo())
     Identifier = getTypeIdentifier(Ty, CGM, TheCU);
+  Ctx = PickCompositeTypeScope(Ctx, Identifier);
   llvm::DICompositeType *RetTy = DBuilder.createReplaceableCompositeType(
       getTagForRecord(RD), RDName, Ctx, DefUnit, Line, 0, Size, Align, Flags,
       Identifier);
@@ -3890,6 +3891,7 @@ llvm::DIType *CGDebugInfo::CreateEnumType(const EnumType *Ty) {
     // FwdDecl with the second and then replace the second with
     // complete type.
     llvm::DIScope *EDContext = getDeclContextDescriptor(ED);
+    EDContext = PickCompositeTypeScope(EDContext, Identifier);
     llvm::DIFile *DefUnit = getOrCreateFile(ED->getLocation());
     llvm::TempDIScope TmpContext(DBuilder.createReplaceableCompositeType(
         llvm::dwarf::DW_TAG_enumeration_type, "", TheCU, DefUnit, 0));
@@ -3929,7 +3931,8 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
 
   llvm::DIFile *DefUnit = getOrCreateFile(ED->getLocation());
   unsigned Line = getLineNumber(ED->getLocation());
-  llvm::DIScope *EnumContext = getDeclContextDescriptor(ED);
+  llvm::DIScope *EnumContext =
+      PickCompositeTypeScope(getDeclContextDescriptor(ED), Identifier);
   llvm::DIType *ClassTy = getOrCreateType(ED->getIntegerType(), DefUnit);
   return DBuilder.createEnumerationType(
       EnumContext, ED->getName(), DefUnit, Line, Size, Align, EltArray, ClassTy,
@@ -4266,6 +4269,57 @@ CGDebugInfo::getOrCreateLimitedType(const RecordType *Ty) {
   return Res;
 }
 
+llvm::DIScope *CGDebugInfo::PickCompositeTypeScope(llvm::DIScope *S,
+                                                   StringRef Identifier) {
+  using llvm::DISubprogram;
+
+  // Only adjust the scope for composite types placed into functions.
+  if (!isa<DISubprogram>(S))
+    return S;
+
+  // We must adjust the scope if the ODR-name of the type is set.
+  if (Identifier.empty())
+    return S;
+
+  // This type has an ODR-name, and might be de-duplicated during LTO. It needs
+  // to be placed in the unique declaration of the function, not a (potentially
+  // duplicated) definition.
+  DISubprogram *SP = cast<DISubprogram>(S);
+  if (DISubprogram *Decl = SP->getDeclaration())
+    return Decl;
+
+  // There is no declaration -- we must produce one and retrofit it to the
+  // existing definition. Assume that we can just harvest the existing
+  // information, clear the definition flag and set as decl.
+  DISubprogram::DISPFlags SPFlags = SP->getSPFlags();
+  SPFlags &= ~DISubprogram::SPFlagDefinition;
+
+  llvm::DINode::DIFlags Flags = SP->getFlags();
+  Flags &= ~llvm::DINode::FlagAllCallsDescribed;
+
+#ifdef EXPENSIVE_CHECKS
+  // If we're looking to be really rigorous and avoid a hard-to-debug mishap,
+  // make sure that there aren't any function definitions in the scope chain.
+  llvm::DIScope *ToCheck = SP->getScope();
+  do {
+    // We should terminate at a DIFile rather than a DICompileUnit -- we're
+    // not fully unique across LTO otherwise.
+    assert(!isa<llvm::DICompileUnit>(ToCheck));
+    if (auto *DISP = dyn_cast<DISubprogram>(ToCheck))
+      assert(!(DISP->getSPFlags() & DISubprogram::SPFlagDefinition));
+    ToCheck = ToCheck->getScope();
+  } while (ToCheck);
+#endif
+
+  DISubprogram *DeclSP = DBuilder.createFunction(
+      SP->getScope(), SP->getName(), SP->getLinkageName(), SP->getFile(),
+      SP->getLine(), SP->getType(), SP->getScopeLine(), Flags, SPFlags,
+      SP->getTemplateParams(), nullptr, nullptr, SP->getAnnotations());
+
+  SP->replaceDeclaration(DeclSP);
+  return DeclSP;
+}
+
 // TODO: Currently used for context chains when limiting debug info.
 llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
   RecordDecl *RD = Ty->getDecl()->getDefinitionOrSelf();
@@ -4304,6 +4358,7 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
   auto Align = getTypeAlignIfRequired(Ty, CGM.getContext());
 
   SmallString<256> Identifier = getTypeIdentifier(Ty, CGM, TheCU);
+  RDContext = PickCompositeTypeScope(RDContext, Identifier);
 
   // Explicitly record the calling convention and export symbols for C++
   // records.

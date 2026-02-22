@@ -508,6 +508,12 @@ public:
   void EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
                         QualType FnType, llvm::Function *Fn = nullptr);
 
+  /// Select the appropriate scope for a composite type, redirecting certain
+  /// types into declaration DISubprograms rather than definition DISubprograms.
+  /// This avoids certain types that LLVM can unique based on their name being
+  /// put in a distinct-storage context.
+  llvm::DIScope *PickCompositeTypeScope(llvm::DIScope *S, StringRef Identifier);
+
   /// Emit debug info for an extern function being called.
   /// This is needed for call site debug info.
   void EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
