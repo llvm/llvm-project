@@ -5270,6 +5270,25 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
   switch (N->getOpcode()) {
   default: break;
 
+  case ISD::UCMP:
+  case ISD::SCMP: {
+    // Catch all UCMP/SCMP cases: e.g. i32 result with i32 operands,
+    // or i32 result with i64 operands. Handling it entirely in C++
+    // ensures a single source of truth since TableGen SDTIntBinOp
+    // cannot express mismatched result/operand types.
+    EVT ResVT = N->getValueType(0);
+
+    SDValue LHS = N->getOperand(0);
+    SDValue RHS = N->getOperand(1);
+    bool IsUnsigned = N->getOpcode() == ISD::UCMP;
+    ISD::CondCode CC = IsUnsigned ? ISD::SETUGT : ISD::SETGT;
+    SDValue CRVal = SelectCC(LHS, RHS, CC, dl);
+    unsigned SetBOpc = (ResVT == MVT::i64) ? PPC::SETB8 : PPC::SETB;
+    CurDAG->SelectNodeTo(N, SetBOpc, ResVT == MVT::i64 ? MVT::i64 : MVT::i32,
+                         CRVal);
+    return;
+  }
+
   case ISD::Constant:
     if (N->getValueType(0) == MVT::i64) {
       ReplaceNode(N, selectI64Imm(CurDAG, N));
