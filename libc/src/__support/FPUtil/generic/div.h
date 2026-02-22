@@ -26,7 +26,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace fputil::generic {
 
 template <typename OutType, typename InType>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
                                  cpp::is_floating_point_v<InType> &&
                                  sizeof(OutType) <= sizeof(InType),
                              OutType>

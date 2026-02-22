@@ -1,4 +1,4 @@
-//===-- Implementation of bf16div function --------------------------------===//
+//===-- Implementation header for bf16div -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/bf16div.h"
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_BF16DIV_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_BF16DIV_H
+
 #include "src/__support/FPUtil/bfloat16.h"
-#include "src/__support/common.h"
+#include "src/__support/FPUtil/generic/div.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/math/bf16div.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace math {
 
-LLVM_LIBC_FUNCTION(bfloat16, bf16div, (double x, double y)) {
-  return math::bf16div(x, y);
+LIBC_INLINE constexpr bfloat16 bf16div(double x, double y) {
+  return fputil::generic::div<bfloat16>(x, y);
 }
 
+} // namespace math
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_BF16DIV_H
