@@ -10910,6 +10910,64 @@ def : Pat<(v8f16 (fadd (AArch64uzp1 (v8f16 FPR128:$Rn), (v8f16 FPR128:$Rm)),
           (v8f16 (FADDPv8f16 $Rn, $Rm))>;
 }
 
+multiclass PairwiseUZPBinPat<SDPatternOperator Op, ValueType VT,
+                            RegisterClass RC, Instruction Inst> {
+  def : Pat<(VT (Op (AArch64uzp1 (VT RC:$Rn), (VT RC:$Rm)),
+                   (AArch64uzp2 (VT RC:$Rn), (VT RC:$Rm)))),
+            (VT (Inst $Rn, $Rm))>;
+}
+
+multiclass PairwiseZIPBinPat<SDPatternOperator Op, ValueType VT,
+                            RegisterClass RC, Instruction Inst> {
+  def : Pat<(VT (Op (AArch64zip1 (VT RC:$Rn), (VT RC:$Rm)),
+                   (AArch64zip2 (VT RC:$Rn), (VT RC:$Rm)))),
+            (VT (Inst $Rn, $Rm))>;
+}
+
+defm : PairwiseZIPBinPat<umax, v2i32, FPR64,  UMAXPv2i32>;
+defm : PairwiseUZPBinPat<umax, v4i32, FPR128, UMAXPv4i32>;
+
+defm : PairwiseUZPBinPat<umax, v4i16, FPR64,  UMAXPv4i16>;
+defm : PairwiseUZPBinPat<umax, v8i16, FPR128, UMAXPv8i16>;
+
+defm : PairwiseUZPBinPat<umax, v8i8,  FPR64,  UMAXPv8i8>;
+defm : PairwiseUZPBinPat<umax, v16i8, FPR128, UMAXPv16i8>;
+
+defm : PairwiseZIPBinPat<umin, v2i32, FPR64,  UMINPv2i32>;
+defm : PairwiseUZPBinPat<umin, v4i32, FPR128, UMINPv4i32>;
+
+defm : PairwiseUZPBinPat<umin, v4i16, FPR64,  UMINPv4i16>;
+defm : PairwiseUZPBinPat<umin, v8i16, FPR128, UMINPv8i16>;
+
+defm : PairwiseUZPBinPat<umin, v8i8,  FPR64,  UMINPv8i8>;
+defm : PairwiseUZPBinPat<umin, v16i8, FPR128, UMINPv16i8>;
+
+defm : PairwiseZIPBinPat<smax, v2i32, FPR64,  SMAXPv2i32>;
+defm : PairwiseUZPBinPat<smax, v4i32, FPR128, SMAXPv4i32>;
+
+defm : PairwiseUZPBinPat<smax, v4i16, FPR64,  SMAXPv4i16>;
+defm : PairwiseUZPBinPat<smax, v8i16, FPR128, SMAXPv8i16>;
+
+defm : PairwiseUZPBinPat<smax, v8i8,  FPR64,  SMAXPv8i8>;
+defm : PairwiseUZPBinPat<smax, v16i8, FPR128, SMAXPv16i8>;
+
+defm : PairwiseZIPBinPat<smin, v2i32, FPR64,  SMINPv2i32>;
+defm : PairwiseUZPBinPat<smin, v4i32, FPR128, SMINPv4i32>;
+
+defm : PairwiseUZPBinPat<smin, v4i16, FPR64,  SMINPv4i16>;
+defm : PairwiseUZPBinPat<smin, v8i16, FPR128, SMINPv8i16>;
+
+defm : PairwiseUZPBinPat<smin, v8i8,  FPR64,  SMINPv8i8>;
+defm : PairwiseUZPBinPat<smin, v16i8, FPR128, SMINPv16i8>;
+
+defm : PairwiseZIPBinPat<any_fmaximum, v2f64, FPR128, FMAXPv2f64>;
+defm : PairwiseZIPBinPat<any_fmaximum, v2f32, FPR64, FMAXPv2f32>;
+defm : PairwiseUZPBinPat<any_fmaximum, v4f32, FPR128, FMAXPv4f32>;
+
+defm : PairwiseZIPBinPat<any_fminimum, v2f64, FPR128, FMINPv2f64>;
+defm : PairwiseZIPBinPat<any_fminimum, v2f32, FPR64, FMINPv2f32>;
+defm : PairwiseUZPBinPat<any_fminimum, v4f32, FPR128, FMINPv4f32>;
+
 // Scalar 64-bit shifts in FPR64 registers.
 def : Pat<(i64 (int_aarch64_neon_sshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
           (SSHLv1i64 FPR64:$Rn, FPR64:$Rm)>;
