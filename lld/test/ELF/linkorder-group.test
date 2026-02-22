@@ -31,7 +31,8 @@ Sections:
     Type:            SHT_GROUP
     Link:            .symtab
     Info:            foo
-    AddressAlign:    4
+## Intentionally misaligned to check that lld works with unaligned SHT_GROUP
+    AddressAlign:    1
     Members:
       - SectionOrType:   GRP_COMDAT
       - SectionOrType:   .bss

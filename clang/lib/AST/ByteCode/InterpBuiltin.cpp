@@ -365,6 +365,8 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
 
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());
   unsigned ElemSize = StrPtr.getFieldDesc()->getElemSize();
+  if (ElemSize != 1 && ElemSize != 2 && ElemSize != 4)
+    return Invalid(S, OpPC);
 
   if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
     const ASTContext &AC = S.getASTContext();
@@ -411,7 +413,8 @@ static bool interp__builtin_nan(InterpState &S, CodePtr OpPC,
   if (!CheckLoad(S, OpPC, Arg))
     return false;
 
-  assert(Arg.getFieldDesc()->isPrimitiveArray());
+  if (!Arg.getFieldDesc()->isPrimitiveArray())
+    return Invalid(S, OpPC);
 
   // Convert the given string to an integer using StringRef's API.
   llvm::APInt Fill;
@@ -1987,11 +1990,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  if (PtrA.isDummy() || PtrB.isDummy())
-    return false;
-
-  if (!CheckRange(S, OpPC, PtrA, AK_Read) ||
-      !CheckRange(S, OpPC, PtrB, AK_Read))
+  if (!CheckLoad(S, OpPC, PtrA, AK_Read) || !CheckLoad(S, OpPC, PtrB, AK_Read))
     return false;
 
   // Now, read both pointers to a buffer and compare those.
@@ -4288,6 +4287,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return APInt(Val.getBitWidth(),
                        Val.getBitWidth() - Val.getSignificantBits());
         });
+  case Builtin::BI__builtin_bitreverseg:
   case Builtin::BI__builtin_bitreverse8:
   case Builtin::BI__builtin_bitreverse16:
   case Builtin::BI__builtin_bitreverse32:

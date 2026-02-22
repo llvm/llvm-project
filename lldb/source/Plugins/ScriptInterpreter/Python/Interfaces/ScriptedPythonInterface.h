@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
-
-#if LLDB_ENABLE_PYTHON
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
 
 #include <optional>
 #include <sstream>
@@ -17,7 +15,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "lldb/Host/Config.h"
 #include "lldb/Interpreter/Interfaces/ScriptedInterface.h"
 #include "lldb/Utility/DataBufferHeap.h"
 
@@ -830,5 +827,4 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
 
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H

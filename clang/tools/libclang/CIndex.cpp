@@ -1748,6 +1748,10 @@ bool CursorVisitor::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   return Visit(TL.getWrappedLoc());
 }
 
+bool CursorVisitor::VisitOverflowBehaviorTypeLoc(OverflowBehaviorTypeLoc TL) {
+  return Visit(TL.getWrappedLoc());
+}
+
 bool CursorVisitor::VisitHLSLAttributedResourceTypeLoc(
     HLSLAttributedResourceTypeLoc TL) {
   return Visit(TL.getWrappedLoc());
@@ -5659,7 +5663,9 @@ clang_PrintingPolicy_getProperty(CXPrintingPolicy Policy,
   case CXPrintingPolicy_ConstantArraySizeAsWritten:
     return P->ConstantArraySizeAsWritten;
   case CXPrintingPolicy_AnonymousTagLocations:
-    return P->AnonymousTagLocations;
+    return P->AnonymousTagNameStyle ==
+           llvm::to_underlying(
+               PrintingPolicy::AnonymousTagMode::SourceLocation);
   case CXPrintingPolicy_SuppressStrongLifetime:
     return P->SuppressStrongLifetime;
   case CXPrintingPolicy_SuppressLifetimeQualifiers:
@@ -5733,7 +5739,9 @@ void clang_PrintingPolicy_setProperty(CXPrintingPolicy Policy,
     P->ConstantArraySizeAsWritten = Value;
     return;
   case CXPrintingPolicy_AnonymousTagLocations:
-    P->AnonymousTagLocations = Value;
+    P->AnonymousTagNameStyle = llvm::to_underlying(
+        Value ? PrintingPolicy::AnonymousTagMode::SourceLocation
+              : PrintingPolicy::AnonymousTagMode::Plain);
     return;
   case CXPrintingPolicy_SuppressStrongLifetime:
     P->SuppressStrongLifetime = Value;
@@ -10173,7 +10181,7 @@ cxindex::Logger::~Logger() {
 }
 
 CXString clang_getBinaryOperatorKindSpelling(enum CXBinaryOperatorKind kind) {
-  if (kind > CXBinaryOperator_Last)
+  if (kind <= CXBinaryOperator_Invalid || kind > CXBinaryOperator_Last)
     return cxstring::createEmpty();
 
   return cxstring::createDup(
@@ -10195,6 +10203,9 @@ enum CXBinaryOperatorKind clang_getCursorBinaryOperatorKind(CXCursor cursor) {
 }
 
 CXString clang_getUnaryOperatorKindSpelling(enum CXUnaryOperatorKind kind) {
+  if (kind <= CXUnaryOperator_Invalid || kind > CXUnaryOperator_Last)
+    return cxstring::createEmpty();
+
   return cxstring::createRef(
       UnaryOperator::getOpcodeStr(static_cast<UnaryOperatorKind>(kind - 1)));
 }

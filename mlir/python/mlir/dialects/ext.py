@@ -27,17 +27,18 @@ ir = _cext.ir
 
 __all__ = [
     "Dialect",
+    "Operation",
     "Operand",
     "Result",
+    "Region",
     "register_dialect",
     "register_operation",
-    "Region",
-    "Operation",
 ]
 
 Operand = ir.Value
 Result = ir.OpResult
 Region = ir.Region
+
 register_dialect = _cext.register_dialect
 register_operation = _cext.register_operation
 
@@ -203,8 +204,14 @@ class Operation(ir.OpView):
     """
     Base class of Python-defined operation.
 
-    NOTE: Usually you don't need to use it directly.
-    Use `Dialect` and `.Operation` of `Dialect` subclasses instead.
+    The following example shows two ways to define operations via this class:
+    ```python
+    class MyOp(MyDialect.Operation, name=..):
+      ...
+
+    class MyOp(Operation, dialect=MyDialect, name=..):
+      ...
+    ```
     """
 
     def __init__(*args, **kwargs):
@@ -215,7 +222,12 @@ class Operation(ir.OpView):
 
     @classmethod
     def __init_subclass__(
-        cls, *, name: str | None = None, traits: list[type] | None = None, **kwargs
+        cls,
+        *,
+        name: str | None = None,
+        traits: list[type] | None = None,
+        dialect: type | None = None,
+        **kwargs,
     ):
         """
         This method is to perform all magic to make a `Operation` subclass works like a dataclass, like:
@@ -245,19 +257,27 @@ class Operation(ir.OpView):
 
         cls._traits = traits
 
+        if dialect:
+            if hasattr(cls, "_dialect_obj"):
+                raise RuntimeError(
+                    f"This operation has already been attached to dialect '{cls._dialect_obj.DIALECT_NAMESPACE}'."
+                )
+            cls._dialect_obj = dialect
+
         # for subclasses without "name" parameter,
         # just treat them as normal classes
         if not name:
             return
 
-        if not hasattr(cls, "_dialect_name") or not hasattr(cls, "_dialect_obj"):
+        if not hasattr(cls, "_dialect_obj"):
             raise RuntimeError(
-                "Operation subclasses must inherit from a Dialect's Operation subclass"
+                "Operation subclasses must either inherit from a Dialect's Operation subclass "
+                "or provide the dialect as a class keyword argument."
             )
 
         op_name = name
         cls._op_name = op_name
-        dialect_name = cls._dialect_name
+        dialect_name = cls._dialect_obj.DIALECT_NAMESPACE
         dialect_obj = cls._dialect_obj
 
         cls._generate_class_attributes(dialect_name, op_name, fields)
@@ -277,7 +297,7 @@ class Operation(ir.OpView):
     @staticmethod
     def _generate_segments(
         operands_or_results: List[Union[OperandDef, ResultDef]],
-    ) -> List[int]:
+    ) -> List[int] | None:
         if any(i.variadicity != Variadicity.single for i in operands_or_results):
             return [
                 Operation._variadicity_to_segment(i.variadicity)
@@ -498,7 +518,8 @@ class Dialect(ir.Dialect):
         cls.Operation = type(
             "Operation",
             (Operation,),
-            {"_dialect_obj": cls, "_dialect_name": name},
+            dict(),
+            dialect=cls,
         )
 
     @classmethod
@@ -528,10 +549,12 @@ class Dialect(ir.Dialect):
 
         irdl.load_dialects(cls._mlir_module)
 
+        for op in cls.operations:
+            op._attach_traits()
+
         if register:
             register_dialect(cls)
 
             register_dialect_operation = register_operation(cls)
             for op in cls.operations:
-                op._attach_traits()
                 register_dialect_operation(op)

@@ -204,6 +204,7 @@
 // CHECK-NEXT:     xsfcease             1.0       'XSfcease' (SiFive sf.cease Instruction)
 // CHECK-NEXT:     xsfmm128t            0.6       'XSfmm128t' (TE=128 configuration)
 // CHECK-NEXT:     xsfmm16t             0.6       'XSfmm16t' (TE=16 configuration)
+// CHECK-NEXT:     xsfmm32a             0.6       'XSfmm32a' (TEW=32-bit accumulation operands - int: 8b; float: fp16, bf16, fp32)
 // CHECK-NEXT:     xsfmm32a16f          0.6       'XSfmm32a16f' (TEW=32-bit accumulation, operands - float: 16b, widen=2 (IEEE, BF))
 // CHECK-NEXT:     xsfmm32a32f          0.6       'XSfmm32a32f' (TEW=32-bit accumulation, operands - float: 32b)
 // CHECK-NEXT:     xsfmm32a8f           0.6       'XSfmm32a8f' (TEW=32-bit accumulation, operands - float: fp8)
