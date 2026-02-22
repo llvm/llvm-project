@@ -2628,7 +2628,7 @@ def : GCNPat <
 >;
 
 class Ext32Pat <SDNode ext> : GCNPat <
-  (i32 (ext i1:$src0)),
+  (i32 (ext i1:$src0)), 
   (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
                      /*src1mod*/(i32 0), /*src1*/(i32 1), i1:$src0)
 >;
@@ -3134,11 +3134,17 @@ def : FPToI1Pat<V_CMP_EQ_F64_e64, CONST.FP64_NEG_ONE, i64, f64, fp_to_sint>;
 // instructions resulting in the copies from SCC to these instructions
 // will be moved to the VALU.
 
+def : GCNPat <
+ (i32 (UniformUnaryFrag<zext> i1:$src)),
+  (S_AND_B32 $src, (i32 1))
+>;
+
 let WaveSizePredicate = isWave64 in {
 def : GCNPat <
   (i1 (and i1:$src0, i1:$src1)),
   (S_AND_B64 $src0, $src1)
 >;
+
 
 def : GCNPat <
   (i1 (or i1:$src0, i1:$src1)),
