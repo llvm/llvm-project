@@ -3162,6 +3162,49 @@ ASTReader::ASTReadResult ASTReader::ReadOptionsBlock(
   }
 }
 
+ASTReader::RelocationResult
+ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
+  // Don't emit module relocation errors if we have -fno-validate-pch.
+  const bool IgnoreError =
+      bool(PP.getPreprocessorOpts().DisablePCHOrModuleValidation &
+           DisableValidationForModuleKind::Module);
+
+  if (!PP.getPreprocessorOpts().ModulesCheckRelocated)
+    return {std::nullopt, IgnoreError};
+
+  const bool IsImplicitModule = F.Kind == MK_ImplicitModule;
+
+  if (!DirectoryCheck &&
+      (!IsImplicitModule || ModuleMgr.begin()->Kind == MK_MainFile))
+    return {std::nullopt, IgnoreError};
+
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
+
+  // When only validating modules once per build session,
+  // Skip check if the timestamp is up to date or module was built in same build
+  // session.
+  if (HSOpts.ModulesValidateOncePerBuildSession && IsImplicitModule) {
+    if (F.InputFilesValidationTimestamp >= HSOpts.BuildSessionTimestamp)
+      return {std::nullopt, IgnoreError};
+    if (static_cast<uint64_t>(F.File.getModificationTime()) >=
+        HSOpts.BuildSessionTimestamp)
+      return {std::nullopt, IgnoreError};
+  }
+
+  Diag(diag::remark_module_check_relocation) << F.ModuleName << F.FileName;
+
+  // If we've already loaded a module map file covering this module, we may
+  // have a better path for it (relative to the current build if doing directory
+  // check).
+  Module *M = PP.getHeaderSearchInfo().lookupModule(
+      F.ModuleName, DirectoryCheck ? SourceLocation() : F.ImportLoc,
+      /*AllowSearch=*/DirectoryCheck,
+      /*AllowExtraModuleMapSearch=*/DirectoryCheck);
+
+  return {M, IgnoreError};
+}
+
 ASTReader::ASTReadResult
 ASTReader::ReadControlBlock(ModuleFile &F,
                             SmallVectorImpl<ImportedModule> &Loaded,
@@ -3561,31 +3604,36 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       assert(!F.ModuleName.empty() &&
              "MODULE_DIRECTORY found before MODULE_NAME");
       F.BaseDirectory = std::string(Blob);
-      if (!PP.getPreprocessorOpts().ModulesCheckRelocated)
+
+      auto [MaybeM, IgnoreError] =
+          getModuleForRelocationChecks(F, /*DirectoryCheck=*/true);
+      if (!MaybeM.has_value())
         break;
-      // If we've already loaded a module map file covering this module, we may
-      // have a better path for it (relative to the current build).
-      Module *M = PP.getHeaderSearchInfo().lookupModule(
-          F.ModuleName, SourceLocation(), /*AllowSearch*/ true,
-          /*AllowExtraModuleMapSearch*/ true);
-      if (M && M->Directory) {
-        // If we're implicitly loading a module, the base directory can't
-        // change between the build and use.
-        // Don't emit module relocation error if we have -fno-validate-pch
-        if (!bool(PP.getPreprocessorOpts().DisablePCHOrModuleValidation &
-                  DisableValidationForModuleKind::Module) &&
-            F.Kind != MK_ExplicitModule && F.Kind != MK_PrebuiltModule) {
-          auto BuildDir = PP.getFileManager().getOptionalDirectoryRef(Blob);
-          if (!BuildDir || *BuildDir != M->Directory) {
-            if (!canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities))
-              Diag(diag::err_imported_module_relocated)
-                  << F.ModuleName << Blob << M->Directory->getName();
-            return OutOfDate;
-          }
-        }
+
+      Module *M = MaybeM.value();
+      if (!M || !M->Directory)
+        break;
+      if (IgnoreError) {
         F.BaseDirectory = std::string(M->Directory->getName());
+        break;
       }
-      break;
+      if ((F.Kind == MK_ExplicitModule) || (F.Kind == MK_PrebuiltModule))
+        break;
+
+      // If we're implicitly loading a module, the base directory can't
+      // change between the build and use.
+      auto BuildDir = PP.getFileManager().getOptionalDirectoryRef(Blob);
+      if (BuildDir && (*BuildDir == M->Directory)) {
+        F.BaseDirectory = std::string(M->Directory->getName());
+        break;
+      }
+      Diag(diag::remark_module_relocated)
+          << F.ModuleName << Blob << M->Directory->getName();
+
+      if (!canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities))
+        Diag(diag::err_imported_module_relocated)
+            << F.ModuleName << Blob << M->Directory->getName();
+      return OutOfDate;
     }
 
     case MODULE_MAP_FILE:
@@ -4578,19 +4626,20 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
   // usable header search context.
   assert(!F.ModuleName.empty() &&
          "MODULE_NAME should come before MODULE_MAP_FILE");
-  if (PP.getPreprocessorOpts().ModulesCheckRelocated &&
-      F.Kind == MK_ImplicitModule && ModuleMgr.begin()->Kind != MK_MainFile) {
+  auto [MaybeM, IgnoreError] =
+      getModuleForRelocationChecks(F, /*DirectoryCheck=*/false);
+  if (MaybeM.has_value()) {
     // An implicitly-loaded module file should have its module listed in some
     // module map file that we've already loaded.
-    Module *M =
-        PP.getHeaderSearchInfo().lookupModule(F.ModuleName, F.ImportLoc);
+    Module *M = MaybeM.value();
     auto &Map = PP.getHeaderSearchInfo().getModuleMap();
     OptionalFileEntryRef ModMap =
         M ? Map.getModuleMapFileForUniquing(M) : std::nullopt;
-    // Don't emit module relocation error if we have -fno-validate-pch
-    if (!bool(PP.getPreprocessorOpts().DisablePCHOrModuleValidation &
-              DisableValidationForModuleKind::Module) &&
-        !ModMap) {
+    if (!IgnoreError && !ModMap) {
+      if (M && M->Directory)
+        Diag(diag::remark_module_relocated)
+            << F.ModuleName << F.BaseDirectory << M->Directory->getName();
+
       if (!canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities)) {
         if (auto ASTFE = M ? M->getASTFile() : std::nullopt) {
           // This module was defined by an imported (explicit) module.

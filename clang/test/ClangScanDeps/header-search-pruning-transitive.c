@@ -41,14 +41,14 @@ module X { header "X.h" }
 [{
   "file": "DIR/test.c",
   "directory": "DIR",
-  "command": "clang -fsyntax-only test.c -fmodules -fimplicit-modules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps -Ibegin -Ia -Ib -Iend"
+  "command": "clang -fsyntax-only DIR/test.c -fmodules -fimplicit-modules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps -IDIR/begin -IDIR/a -IDIR/b -IDIR/end "
 }]
 
 //--- cdb_without_a.json.template
 [{
   "file": "DIR/test.c",
   "directory": "DIR",
-  "command": "clang -fsyntax-only test.c -fmodules -fimplicit-modules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps -Ibegin     -Ib -Iend"
+  "command": "clang -fsyntax-only DIR/test.c -fmodules -fimplicit-modules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps -IDIR/begin     -IDIR/b -IDIR/end -IDIR"
 }]
 
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb_with_a.json.template    > %t/cdb_with_a.json

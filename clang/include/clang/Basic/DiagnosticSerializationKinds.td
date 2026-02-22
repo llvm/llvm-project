@@ -101,6 +101,13 @@ def remark_module_validation : Remark<
   "validating %0 input files in module '%1' from '%2'">,
   ShowInSystemHeader,
   InGroup<ModuleValidation>;
+def remark_module_check_relocation
+    : Remark<"checking if module '%0' from '%1' has relocated">,
+      ShowInSystemHeader,
+      InGroup<ModuleValidation>;
+def remark_module_relocated : Remark<"module '%0' relocated from '%1' to '%2'">,
+                              ShowInSystemHeader,
+                              InGroup<ModuleValidation>;
 
 def err_imported_module_not_found : Error<
     "module '%0' in precompiled file '%1' %select{(imported by precompiled file '%2') |}4"
