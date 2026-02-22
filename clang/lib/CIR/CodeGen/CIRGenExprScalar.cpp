@@ -38,7 +38,7 @@ struct BinOpInfo {
   QualType compType;             // Type used for computations. Element type
                                  // for vectors, otherwise same as FullType.
   BinaryOperator::Opcode opcode; // Opcode of BinOp to perform
-  FPOptions fpfeatures;
+  FPOptions fpFeatures;
   const Expr *e; // Entire expr, for error unsupported.  May not be binop.
 
   /// Check if the binop computes a division or a remainder.
@@ -695,7 +695,7 @@ public:
       cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec vector");
       return {};
     } else if (type->isRealFloatingType()) {
-      assert(!cir::MissingFeatures::cgFPOptionsRAII());
+      CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
 
       if (type->isHalfType() &&
           !cgf.getContext().getLangOpts().NativeHalfType) {
@@ -1066,7 +1066,7 @@ public:
     result.opcode = e->getOpcode();
     result.loc = e->getSourceRange();
     // TODO(cir): Result.FPFeatures
-    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
     result.e = e;
     return result;
   }
@@ -1455,7 +1455,7 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
   if (const auto *vecType = dyn_cast_or_null<VectorType>(opInfo.fullType))
     opInfo.compType = vecType->getElementType();
   opInfo.opcode = e->getOpcode();
-  opInfo.fpfeatures = e->getFPFeaturesInEffect(cgf.getLangOpts());
+  opInfo.fpFeatures = e->getFPFeaturesInEffect(cgf.getLangOpts());
   opInfo.e = e;
   opInfo.loc = e->getSourceRange();
 
@@ -1861,7 +1861,7 @@ mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
     cgf.cgm.errorNYI("unsigned int overflow sanitizer");
 
   if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
-    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
     return builder.createFMul(loc, ops.lhs, ops.rhs);
   }
 
@@ -1920,7 +1920,7 @@ mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
     cgf.cgm.errorNYI("unsigned int overflow sanitizer");
 
   if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
-    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
     return builder.createFAdd(loc, ops.lhs, ops.rhs);
   }
 
@@ -1968,7 +1968,7 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
       cgf.cgm.errorNYI("unsigned int overflow sanitizer");
 
     if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
-      assert(!cir::MissingFeatures::cgFPOptionsRAII());
+      CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
       return builder.createFSub(loc, ops.lhs, ops.rhs);
     }
 
@@ -2351,7 +2351,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
                                      "fixed point casts");
       return {};
     }
-    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ce);
     return emitScalarConversion(Visit(subExpr), subExpr->getType(), destTy,
                                 ce->getExprLoc());
   }
