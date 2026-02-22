@@ -783,7 +783,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
 
   lowerVGPR2SGPRCopies(MF);
   // Postprocessing
-  fixSCCCopies(MF);
+  // fixSCCCopies(MF);
   for (auto *MI : S2VCopies) {
     // Check if it is still valid
     if (MI->isCopy()) {

@@ -3043,6 +3043,16 @@ def : GCNPat <
   (S_AND_B32 $src, (i32 1))
 >;
 
+// since operand of S_AND_B64 is SREG-64 and it does not support i1.
+let AddedComplexity = 10 in
+def : GCNPat <
+  (i64 (UniformUnaryFrag<zext> i1:$src)),
+  (REG_SEQUENCE SReg_64,
+    (S_MOV_B32 (S_AND_B32 $src, (i32 1))), sub0,
+    (S_MOV_B32 (i32 0)), sub1
+  )
+>;
+
 let WaveSizePredicate = isWave64 in {
 def : GCNPat <
   (i1 (and i1:$src0, i1:$src1)),

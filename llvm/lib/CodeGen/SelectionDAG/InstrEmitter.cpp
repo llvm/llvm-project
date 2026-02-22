@@ -106,26 +106,6 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
   MVT VT = Op.getSimpleValueType();
 
   // Stick to the preferred register classes for legal types.
-  if (TLI->isTypeLegal(VT)) {
-    const llvm::TargetRegisterClass *SrcRegRC = TRI->getMinimalPhysRegClass(SrcReg);
-    const llvm::TargetRegisterClass *CrossCopyRC = TRI->getCrossCopyRegClass(SrcRegRC);
-    const llvm::TargetRegisterClass *LegalRC =
-          TLI->getRegClassFor(VT, Op->isDivergent());
-
-    // If there is a sub class relation between CrossCopyRegClass and
-    // natively supported RegClass, the result of getRegClassFor, then
-    // we use natively supported RegClass to stick the existing logic.
-    // For example, on AArch64, the CrossCopyRegClass of x0 is `GPR64arg`
-    // and x0 is natively supported in regclass `GPR64all`, then `GPR64all` is chosen.
-    // However, on AMDGPU, for `scc`, the natively supported regclass is, for
-    // some reasons, SGPR_64 but CrossCopyRegClass is SGPR_32. Since there
-    // is subclass relation, CrossCopyRegClass, SGPR_32 is picked.
-    if (!TRI->isTypeLegalForClass(*CrossCopyRC, VT) || TRI->getCommonSubClass(CrossCopyRC, LegalRC)) {
-      UseRC = LegalRC;
-    } else {
-      UseRC = CrossCopyRC;
-    }
-  }
 
   for (SDNode *User : Op->users()) {
     bool Match = true;
@@ -167,6 +147,14 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
     MatchReg &= Match;
     if (VRBase)
       break;
+  }
+
+
+  if (UseRC == nullptr || !UseRC->isAllocatable()) {
+    // The check is to be removed in other pending PR, it is kept to make System Z happy.
+    if (TLI->isTypeLegal(VT)) {
+      UseRC = TLI->getRegClassFor(VT, Op->isDivergent());
+    }
   }
 
   const TargetRegisterClass *SrcRC = nullptr, *DstRC = nullptr;
