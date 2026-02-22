@@ -1160,6 +1160,8 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
   bool LastIsError = false;
   while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
          Tok.isNot(tok::eof)) {
+    unsigned PrevErrors = Actions.getDiagnostics().getNumErrors();
+
     if (Tok.is(tok::annot_pragma_unused)) {
       HandlePragmaUnused();
       continue;
@@ -1214,7 +1216,14 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
 
     if (R.isUsable())
       Stmts.push_back(R.get());
-    LastIsError = R.isInvalid();
+    // Only treat the last statement as an error if an actual error diagnostic
+    // was emitted during parsing. Constructs like "extern void;" may produce
+    // an invalid StmtResult (via null DeclGroup) with only a warning, which
+    // should not cause the entire compound statement to fail in a stmt-expr.
+    // See https://github.com/llvm/llvm-project/issues/173921
+    LastIsError =
+        R.isInvalid() &&
+        Actions.getDiagnostics().getNumErrors() > PrevErrors;
   }
   // StmtExpr needs to do copy initialization for last statement.
   // If last statement is invalid, the last statement in `Stmts` will be
