@@ -6,70 +6,34 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Symbol/Type.h"
 #include "lldb/Target/DynamicLoader.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "Plugins/DynamicLoader/FreeBSD-Kernel/DynamicLoaderFreeBSDKernel.h"
 #include "ProcessFreeBSDKernel.h"
 #include "ThreadFreeBSDKernel.h"
-
-#if LLDB_ENABLE_FBSDVMCORE
-#include <fvc.h>
-#endif
-#if defined(__FreeBSD__)
-#include <kvm.h>
-#endif
 
 using namespace lldb;
 using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(ProcessFreeBSDKernel)
 
-namespace {
-
-#if LLDB_ENABLE_FBSDVMCORE
-class ProcessFreeBSDKernelFVC : public ProcessFreeBSDKernel {
-public:
-  ProcessFreeBSDKernelFVC(lldb::TargetSP target_sp, lldb::ListenerSP listener,
-                          fvc_t *fvc, const FileSpec &core_file);
-
-  ~ProcessFreeBSDKernelFVC();
-
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      lldb_private::Status &error) override;
-
-private:
-  fvc_t *m_fvc;
-
-  const char *GetError();
-};
-#endif // LLDB_ENABLE_FBSDVMCORE
-
-#if defined(__FreeBSD__)
-class ProcessFreeBSDKernelKVM : public ProcessFreeBSDKernel {
-public:
-  ProcessFreeBSDKernelKVM(lldb::TargetSP target_sp, lldb::ListenerSP listener,
-                          kvm_t *fvc, const FileSpec &core_file);
-
-  ~ProcessFreeBSDKernelKVM();
-
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      lldb_private::Status &error) override;
-
-private:
-  kvm_t *m_kvm;
-
-  const char *GetError();
-};
-#endif // defined(__FreeBSD__)
-
-} // namespace
-
 ProcessFreeBSDKernel::ProcessFreeBSDKernel(lldb::TargetSP target_sp,
-                                           ListenerSP listener_sp,
+                                           ListenerSP listener_sp, kvm_t *kvm,
                                            const FileSpec &core_file)
-    : PostMortemProcess(target_sp, listener_sp, core_file) {}
+    : PostMortemProcess(target_sp, listener_sp, core_file), m_kvm(kvm) {}
+
+ProcessFreeBSDKernel::~ProcessFreeBSDKernel() {
+  if (m_kvm)
+    kvm_close(m_kvm);
+}
 
 lldb::ProcessSP ProcessFreeBSDKernel::CreateInstance(lldb::TargetSP target_sp,
                                                      ListenerSP listener_sp,
@@ -77,23 +41,12 @@ lldb::ProcessSP ProcessFreeBSDKernel::CreateInstance(lldb::TargetSP target_sp,
                                                      bool can_connect) {
   ModuleSP executable = target_sp->GetExecutableModule();
   if (crash_file && !can_connect && executable) {
-#if LLDB_ENABLE_FBSDVMCORE
-    fvc_t *fvc =
-        fvc_open(executable->GetFileSpec().GetPath().c_str(),
-                 crash_file->GetPath().c_str(), nullptr, nullptr, nullptr);
-    if (fvc)
-      return std::make_shared<ProcessFreeBSDKernelFVC>(target_sp, listener_sp,
-                                                       fvc, *crash_file);
-#endif
-
-#if defined(__FreeBSD__)
     kvm_t *kvm =
         kvm_open2(executable->GetFileSpec().GetPath().c_str(),
                   crash_file->GetPath().c_str(), O_RDONLY, nullptr, nullptr);
     if (kvm)
-      return std::make_shared<ProcessFreeBSDKernelKVM>(target_sp, listener_sp,
-                                                       kvm, *crash_file);
-#endif
+      return std::make_shared<ProcessFreeBSDKernel>(target_sp, listener_sp, kvm,
+                                                    *crash_file);
   }
   return nullptr;
 }
@@ -118,7 +71,12 @@ bool ProcessFreeBSDKernel::CanDebug(lldb::TargetSP target_sp,
   return true;
 }
 
-void ProcessFreeBSDKernel::RefreshStateAfterStop() {}
+void ProcessFreeBSDKernel::RefreshStateAfterStop() {
+  if (!m_printed_unread_message) {
+    PrintUnreadMessage();
+    m_printed_unread_message = true;
+  }
+}
 
 bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
                                               ThreadList &new_thread_list) {
@@ -287,50 +245,155 @@ lldb::addr_t ProcessFreeBSDKernel::FindSymbol(const char *name) {
   return sym ? sym->GetLoadAddress(&GetTarget()) : LLDB_INVALID_ADDRESS;
 }
 
-#if LLDB_ENABLE_FBSDVMCORE
+void ProcessFreeBSDKernel::PrintUnreadMessage() {
+  Target &target = GetTarget();
+  Debugger &debugger = target.GetDebugger();
 
-ProcessFreeBSDKernelFVC::ProcessFreeBSDKernelFVC(lldb::TargetSP target_sp,
-                                                 ListenerSP listener_sp,
-                                                 fvc_t *fvc,
-                                                 const FileSpec &core_file)
-    : ProcessFreeBSDKernel(target_sp, listener_sp, crash_file), m_fvc(fvc) {}
+  if (!debugger.GetCommandInterpreter().IsInteractive())
+    return;
 
-ProcessFreeBSDKernelFVC::~ProcessFreeBSDKernelFVC() {
-  if (m_fvc)
-    fvc_close(m_fvc);
-}
+  Status error;
 
-size_t ProcessFreeBSDKernelFVC::DoReadMemory(lldb::addr_t addr, void *buf,
-                                             size_t size, Status &error) {
-  ssize_t rd = 0;
-  rd = fvc_read(m_fvc, addr, buf, size);
-  if (rd < 0 || static_cast<size_t>(rd) != size) {
-    error = Status::FromErrorStringWithFormat("Reading memory failed: %s",
-                                              GetError());
-    return rd > 0 ? rd : 0;
+  // Find msgbufp symbol (pointer to message buffer)
+  lldb::addr_t msgbufp_addr = FindSymbol("msgbufp");
+  if (msgbufp_addr == LLDB_INVALID_ADDRESS)
+    return;
+
+  // Read the pointer value
+  lldb::addr_t msgbufp = ReadPointerFromMemory(msgbufp_addr, error);
+  if (!error.Success() || msgbufp == LLDB_INVALID_ADDRESS)
+    return;
+
+  // Get the type information for struct msgbuf from DWARF
+  TypeQuery query("msgbuf");
+  TypeResults results;
+  target.GetImages().FindTypes(nullptr, query, results);
+
+  uint64_t offset_msg_ptr = 0;
+  uint64_t offset_msg_size = 0;
+  uint64_t offset_msg_wseq = 0;
+  uint64_t offset_msg_rseq = 0;
+
+  if (results.GetTypeMap().GetSize() > 0) {
+    // Found type info - use it to get field offsets
+    CompilerType msgbuf_type =
+        results.GetTypeMap().GetTypeAtIndex(0)->GetForwardCompilerType();
+
+    uint32_t num_fields = msgbuf_type.GetNumFields();
+    int field_found = 0;
+    for (uint32_t i = 0; i < num_fields; i++) {
+      std::string field_name;
+      uint64_t field_offset = 0;
+
+      msgbuf_type.GetFieldAtIndex(i, field_name, &field_offset, nullptr,
+                                  nullptr);
+
+      if (field_name == "msg_ptr") {
+        offset_msg_ptr = field_offset / 8; // Convert bits to bytes
+        field_found++;
+      } else if (field_name == "msg_size") {
+        offset_msg_size = field_offset / 8;
+        field_found++;
+      } else if (field_name == "msg_wseq") {
+        offset_msg_wseq = field_offset / 8;
+        field_found++;
+      } else if (field_name == "msg_rseq") {
+        offset_msg_rseq = field_offset / 8;
+        field_found++;
+      }
+    }
+
+    if (field_found != 4) {
+      LLDB_LOGF(GetLog(LLDBLog::Object),
+                "FreeBSDKernel: Could not find all required fields for msgbuf");
+      return;
+    }
+  } else {
+    // Fallback: use hardcoded offsets based on struct layout
+    // struct msgbuf layout (from sys/sys/msgbuf.h):
+    //   char *msg_ptr;      - offset 0
+    //   u_int msg_magic;    - offset ptr_size
+    //   u_int msg_size;     - offset ptr_size + 4
+    //   u_int msg_wseq;     - offset ptr_size + 8
+    //   u_int msg_rseq;     - offset ptr_size + 12
+    uint32_t ptr_size = GetAddressByteSize();
+    offset_msg_ptr = 0;
+    offset_msg_size = ptr_size + 4;
+    offset_msg_wseq = ptr_size + 8;
+    offset_msg_rseq = ptr_size + 12;
   }
-  return rd;
+
+  // Read struct msgbuf fields
+  lldb::addr_t bufp = ReadPointerFromMemory(msgbufp + offset_msg_ptr, error);
+  if (!error.Success() || bufp == LLDB_INVALID_ADDRESS)
+    return;
+
+  uint32_t size =
+      ReadUnsignedIntegerFromMemory(msgbufp + offset_msg_size, 4, 0, error);
+  if (!error.Success() || size == 0)
+    return;
+
+  uint32_t wseq =
+      ReadUnsignedIntegerFromMemory(msgbufp + offset_msg_wseq, 4, 0, error);
+  if (!error.Success())
+    return;
+
+  uint32_t rseq =
+      ReadUnsignedIntegerFromMemory(msgbufp + offset_msg_rseq, 4, 0, error);
+  if (!error.Success())
+    return;
+
+  // Convert sequences to positions
+  // MSGBUF_SEQ_TO_POS macro in FreeBSD: ((seq) % (size))
+  uint32_t rseq_pos = rseq % size;
+  uint32_t wseq_pos = wseq % size;
+
+  if (rseq_pos == wseq_pos)
+    return;
+
+  // Print crash info at once using stream
+  lldb::StreamSP stream_sp = debugger.GetAsyncOutputStream();
+  if (!stream_sp)
+    return;
+
+  stream_sp->PutCString("\nUnread portion of the kernel message buffer:\n");
+
+  // Read ring buffer in at most two chunks
+  if (rseq_pos < wseq_pos) {
+    // No wrap: read from rseq_pos to wseq_pos
+    size_t len = wseq_pos - rseq_pos;
+    std::string buf(len, '\0');
+    size_t bytes_read = ReadMemory(bufp + rseq_pos, &buf[0], len, error);
+    if (error.Success() && bytes_read > 0) {
+      buf.resize(bytes_read);
+      *stream_sp << buf;
+    }
+  } else {
+    // Wrap around: read from rseq_pos to end, then from start to wseq_pos
+    size_t len1 = size - rseq_pos;
+    std::string buf1(len1, '\0');
+    size_t bytes_read1 = ReadMemory(bufp + rseq_pos, &buf1[0], len1, error);
+    if (error.Success() && bytes_read1 > 0) {
+      buf1.resize(bytes_read1);
+      *stream_sp << buf1;
+    }
+
+    if (wseq_pos > 0) {
+      std::string buf2(wseq_pos, '\0');
+      size_t bytes_read2 = ReadMemory(bufp, &buf2[0], wseq_pos, error);
+      if (error.Success() && bytes_read2 > 0) {
+        buf2.resize(bytes_read2);
+        *stream_sp << buf2;
+      }
+    }
+  }
+
+  stream_sp->PutChar('\n');
+  stream_sp->Flush();
 }
 
-const char *ProcessFreeBSDKernelFVC::GetError() { return fvc_geterr(m_fvc); }
-
-#endif // LLDB_ENABLE_FBSDVMCORE
-
-#if defined(__FreeBSD__)
-
-ProcessFreeBSDKernelKVM::ProcessFreeBSDKernelKVM(lldb::TargetSP target_sp,
-                                                 ListenerSP listener_sp,
-                                                 kvm_t *fvc,
-                                                 const FileSpec &core_file)
-    : ProcessFreeBSDKernel(target_sp, listener_sp, core_file), m_kvm(fvc) {}
-
-ProcessFreeBSDKernelKVM::~ProcessFreeBSDKernelKVM() {
-  if (m_kvm)
-    kvm_close(m_kvm);
-}
-
-size_t ProcessFreeBSDKernelKVM::DoReadMemory(lldb::addr_t addr, void *buf,
-                                             size_t size, Status &error) {
+size_t ProcessFreeBSDKernel::DoReadMemory(lldb::addr_t addr, void *buf,
+                                          size_t size, Status &error) {
   ssize_t rd = 0;
   rd = kvm_read2(m_kvm, addr, buf, size);
   if (rd < 0 || static_cast<size_t>(rd) != size) {
@@ -341,6 +404,4 @@ size_t ProcessFreeBSDKernelKVM::DoReadMemory(lldb::addr_t addr, void *buf,
   return rd;
 }
 
-const char *ProcessFreeBSDKernelKVM::GetError() { return kvm_geterr(m_kvm); }
-
-#endif // defined(__FreeBSD__)
+const char *ProcessFreeBSDKernel::GetError() { return kvm_geterr(m_kvm); }

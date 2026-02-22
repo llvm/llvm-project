@@ -419,112 +419,6 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI,
   llvm_unreachable("Unhandled case in switch");
 }
 
-static SmallVector<Instruction *> collectBlockUseDef(Instruction *Start) {
-  SmallPtrSet<Instruction *, 32> Visited;
-  SmallVector<Instruction *, 32> Worklist;
-  SmallVector<Instruction *> Out;
-  auto *BB = Start->getParent();
-
-  // Seed with direct users in this block.
-  for (User *U : Start->users()) {
-    if (auto *I = dyn_cast<Instruction>(U)) {
-      if (I->getParent() == BB)
-        Worklist.push_back(I);
-    }
-  }
-
-  // BFS over transitive users, constrained to the same block.
-  while (!Worklist.empty()) {
-    Instruction *I = Worklist.pop_back_val();
-    if (!Visited.insert(I).second)
-      continue;
-    Out.push_back(I);
-
-    for (User *U : I->users()) {
-      if (auto *J = dyn_cast<Instruction>(U)) {
-        if (J->getParent() == BB)
-          Worklist.push_back(J);
-      }
-    }
-    for (Use &V : I->operands()) {
-      if (auto *J = dyn_cast<Instruction>(V)) {
-        if (J->getParent() == BB && V != Start)
-          Worklist.push_back(J);
-      }
-    }
-  }
-
-  // Order results in program order.
-  DenseMap<const Instruction *, unsigned> Ord;
-  unsigned Idx = 0;
-  for (Instruction &I : *BB)
-    Ord[&I] = Idx++;
-
-  llvm::sort(Out, [&](Instruction *A, Instruction *B) {
-    return Ord.lookup(A) < Ord.lookup(B);
-  });
-
-  return Out;
-}
-
-static void phiNodeRemapHelper(PHINode *Phi, BasicBlock *BB,
-                               IRBuilder<> &Builder,
-                               SmallVector<Instruction *> &UsesInBlock) {
-
-  ValueToValueMapTy VMap;
-  Value *Val = Phi->getIncomingValueForBlock(BB);
-  VMap[Phi] = Val;
-  Builder.SetInsertPoint(&BB->back());
-  for (Instruction *I : UsesInBlock) {
-    // don't clone over the Phi just remap them
-    if (auto *PhiNested = dyn_cast<PHINode>(I)) {
-      VMap[PhiNested] = PhiNested->getIncomingValueForBlock(BB);
-      continue;
-    }
-    Instruction *Clone = I->clone();
-    RemapInstruction(Clone, VMap,
-                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-    Builder.Insert(Clone);
-    VMap[I] = Clone;
-  }
-}
-
-static void phiNodeReplacement(IntrinsicInst *II,
-                               SmallVectorImpl<Instruction *> &PrevBBDeadInsts,
-                               SetVector<BasicBlock *> &DeadBB) {
-  SmallVector<Instruction *> CurrBBDeadInsts;
-  for (User *U : II->users()) {
-    auto *Phi = dyn_cast<PHINode>(U);
-    if (!Phi)
-      continue;
-
-    IRBuilder<> Builder(Phi);
-    SmallVector<Instruction *> UsesInBlock = collectBlockUseDef(Phi);
-    bool HasReturnUse = isa<ReturnInst>(UsesInBlock.back());
-
-    for (unsigned I = 0, E = Phi->getNumIncomingValues(); I < E; I++) {
-      auto *CurrIncomingBB = Phi->getIncomingBlock(I);
-      phiNodeRemapHelper(Phi, CurrIncomingBB, Builder, UsesInBlock);
-      if (HasReturnUse)
-        PrevBBDeadInsts.push_back(&CurrIncomingBB->back());
-    }
-
-    CurrBBDeadInsts.push_back(Phi);
-
-    for (Instruction *I : UsesInBlock) {
-      CurrBBDeadInsts.push_back(I);
-    }
-    if (HasReturnUse) {
-      BasicBlock *PhiBB = Phi->getParent();
-      DeadBB.insert(PhiBB);
-    }
-  }
-  // Traverse the now-dead instructions in RPO and remove them.
-  for (Instruction *Dead : llvm::reverse(CurrBBDeadInsts))
-    Dead->eraseFromParent();
-  CurrBBDeadInsts.clear();
-}
-
 static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
   SmallVector<User *> Worklist;
   for (User *U : II->users())
@@ -560,27 +454,13 @@ static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
 
 static bool transformResourcePointers(Function &F, DXILResourceTypeMap &DRTM) {
   SmallVector<std::pair<IntrinsicInst *, dxil::ResourceTypeInfo>> Resources;
-  SetVector<BasicBlock *> DeadBB;
-  SmallVector<Instruction *> PrevBBDeadInsts;
-  for (BasicBlock &BB : make_early_inc_range(F)) {
-    for (Instruction &I : make_early_inc_range(BB))
-      if (auto *II = dyn_cast<IntrinsicInst>(&I))
-        if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer)
-          phiNodeReplacement(II, PrevBBDeadInsts, DeadBB);
-
+  for (BasicBlock &BB : make_early_inc_range(F))
     for (Instruction &I : BB)
       if (auto *II = dyn_cast<IntrinsicInst>(&I))
         if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
           auto *HandleTy = cast<TargetExtType>(II->getArgOperand(0)->getType());
           Resources.emplace_back(II, DRTM[HandleTy]);
         }
-  }
-  for (auto *Dead : PrevBBDeadInsts)
-    Dead->eraseFromParent();
-  PrevBBDeadInsts.clear();
-  for (auto *Dead : DeadBB)
-    Dead->eraseFromParent();
-  DeadBB.clear();
 
   for (auto &[II, RI] : Resources)
     replaceAccess(II, RI);

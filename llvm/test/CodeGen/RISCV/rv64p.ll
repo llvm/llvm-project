@@ -391,21 +391,12 @@ define i128 @slli_i128_large(i128 %x) {
 define i128 @srl_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: srl_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a4, a2, -64
 ; CHECK-NEXT:    srl a3, a1, a2
-; CHECK-NEXT:    bltz a4, .LBB32_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a0, a3
-; CHECK-NEXT:    j .LBB32_3
-; CHECK-NEXT:  .LBB32_2:
-; CHECK-NEXT:    srl a0, a0, a2
-; CHECK-NEXT:    not a2, a2
-; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    sll a1, a1, a2
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:  .LBB32_3:
-; CHECK-NEXT:    srai a1, a4, 63
-; CHECK-NEXT:    and a1, a1, a3
+; CHECK-NEXT:    srx a0, a1, a2
+; CHECK-NEXT:    slli a2, a2, 57
+; CHECK-NEXT:    srai a2, a2, 63
+; CHECK-NEXT:    mvm a0, a3, a2
+; CHECK-NEXT:    andn a1, a3, a2
 ; CHECK-NEXT:    ret
   %b = lshr i128 %x, %y
   ret i128 %b
@@ -461,21 +452,12 @@ define i128 @srli_i128_large(i128 %x) {
 define i128 @sra_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: sra_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mv a3, a1
-; CHECK-NEXT:    addi a4, a2, -64
-; CHECK-NEXT:    sra a1, a1, a2
-; CHECK-NEXT:    bltz a4, .LBB37_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srai a3, a3, 63
-; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    mv a1, a3
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB37_2:
-; CHECK-NEXT:    srl a0, a0, a2
-; CHECK-NEXT:    not a2, a2
-; CHECK-NEXT:    slli a3, a3, 1
-; CHECK-NEXT:    sll a2, a3, a2
-; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    sra a3, a1, a2
+; CHECK-NEXT:    srx a0, a1, a2
+; CHECK-NEXT:    slli a2, a2, 57
+; CHECK-NEXT:    srai a2, a2, 63
+; CHECK-NEXT:    mvm a0, a3, a2
+; CHECK-NEXT:    sra a1, a3, a2
 ; CHECK-NEXT:    ret
   %b = ashr i128 %x, %y
   ret i128 %b
