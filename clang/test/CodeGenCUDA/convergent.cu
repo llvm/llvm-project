@@ -76,12 +76,12 @@ __host__ __device__ void bar() {
 // DEVICE: attributes #[[ATTR2:[0-9]+]] = { convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // DEVICE: attributes #[[ATTR3:[0-9]+]] = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // DEVICE: attributes #[[ATTR4]] = { convergent nounwind }
-// DEVICE: attributes #[[ATTR5]] = { convergent nounwind memory(none) }
+// DEVICE: attributes #[[ATTR5]] = { convergent nounwind willreturn memory(none) }
 // DEVICE: attributes #[[ATTR6]] = { nounwind }
 //.
 // HOST: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // HOST: attributes #[[ATTR1:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
-// HOST: attributes #[[ATTR2]] = { nounwind memory(none) }
+// HOST: attributes #[[ATTR2]] = { nounwind willreturn memory(none) }
 // HOST: attributes #[[ATTR3]] = { nounwind }
 //.
 // DEVICE: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}

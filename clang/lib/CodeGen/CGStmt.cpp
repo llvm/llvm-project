@@ -2615,9 +2615,9 @@ static llvm::MDNode *getAsmSrcLocInfo(const StringLiteral *Str,
 }
 
 static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
-                              bool HasUnwindClobber, bool ReadOnly,
-                              bool ReadNone, bool NoMerge, bool NoConvergent,
-                              const AsmStmt &S,
+                              bool HasUnwindClobber,
+                              llvm::MemoryEffects MemoryEffects, bool NoMerge,
+                              bool NoConvergent, const AsmStmt &S,
                               const std::vector<llvm::Type *> &ResultRegTypes,
                               const std::vector<llvm::Type *> &ArgElemTypes,
                               CodeGenFunction &CGF,
@@ -2625,15 +2625,17 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
   if (!HasUnwindClobber)
     Result.addFnAttr(llvm::Attribute::NoUnwind);
 
+  // Assume inline asm will return unless there is a sideeffect (not listed in
+  // the constraints)
+  if (!HasSideEffect)
+    Result.addFnAttr(llvm::Attribute::WillReturn);
+
   if (NoMerge)
     Result.addFnAttr(llvm::Attribute::NoMerge);
-  // Attach readnone and readonly attributes.
-  if (!HasSideEffect) {
-    if (ReadNone)
-      Result.setDoesNotAccessMemory();
-    else if (ReadOnly)
-      Result.setOnlyReadsMemory();
-  }
+
+  // Attach memory effects when known.
+  if (MemoryEffects != llvm::MemoryEffects::unknown())
+    Result.setMemoryEffects(MemoryEffects);
 
   // Add elementtype attribute for indirect constraints.
   for (auto Pair : llvm::enumerate(ArgElemTypes)) {
@@ -2857,13 +2859,19 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   // Keep track of defined physregs.
   llvm::SmallSet<std::string, 8> PhysRegOutputs;
 
-  // An inline asm can be marked readonly if it meets the following conditions:
-  //  - it doesn't have any sideeffects
-  //  - it doesn't clobber memory
-  //  - it doesn't return a value by-reference
-  // It can be marked readnone if it doesn't have any input memory constraints
-  // in addition to meeting the conditions listed above.
-  bool ReadOnly = true, ReadNone = true;
+  // An inline asm is implicitly volatile if it has no ouputs (including simple
+  // asm)
+  bool HasSideEffect = S.isVolatile() || S.getNumOutputs() == 0;
+
+  // Conservatively assume simple (basic) asm has unknown memory access. For
+  // extended asm,
+  //  - add inaccessiblemem if it has sideeffects
+  //  - add argmem read/write for input/output operands with memory constraints
+  //  - fall back to unknown memory access when it clobbers memory
+  llvm::MemoryEffects MemoryEffects =
+      S.isSimple() ? llvm::MemoryEffects::unknown()
+                   : (HasSideEffect ? llvm::MemoryEffects::inaccessibleMemOnly()
+                                    : llvm::MemoryEffects::none());
 
   for (unsigned i = 0, e = S.getNumOutputs(); i != e; i++) {
     TargetInfo::ConstraintInfo &Info = OutputConstraintInfos[i];
@@ -2972,7 +2980,9 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       Args.push_back(DestAddr.emitRawPointer(*this));
       Constraints += "=*";
       Constraints += OutputConstraint;
-      ReadOnly = ReadNone = false;
+      auto MRI =
+          Info.isReadWrite() ? llvm::ModRefInfo::ModRef : llvm::ModRefInfo::Mod;
+      MemoryEffects |= llvm::MemoryEffects::argMemOnly(MRI);
     }
 
     if (Info.isReadWrite()) {
@@ -3027,7 +3037,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     TargetInfo::ConstraintInfo &Info = InputConstraintInfos[i];
 
     if (Info.allowsMemory())
-      ReadNone = false;
+      MemoryEffects |= llvm::MemoryEffects::argMemOnly(llvm::ModRefInfo::Ref);
 
     if (!Constraints.empty())
       Constraints += ',';
@@ -3128,7 +3138,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     std::string Clobber = S.getClobber(i);
 
     if (Clobber == "memory")
-      ReadOnly = ReadNone = false;
+      MemoryEffects = llvm::MemoryEffects::unknown();
     else if (Clobber == "unwind") {
       HasUnwindClobber = true;
       continue;
@@ -3188,8 +3198,6 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   llvm::FunctionType *FTy =
     llvm::FunctionType::get(ResultType, ArgTypes, false);
 
-  bool HasSideEffect = S.isVolatile() || S.getNumOutputs() == 0;
-
   llvm::InlineAsm::AsmDialect GnuAsmDialect =
       CGM.getCodeGenOpts().getInlineAsmDialect() == CodeGenOptions::IAD_ATT
           ? llvm::InlineAsm::AD_ATT
@@ -3207,8 +3215,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   if (IsGCCAsmGoto) {
     CBR = Builder.CreateCallBr(IA, Fallthrough, Transfer, Args);
     EmitBlock(Fallthrough);
-    UpdateAsmCallInst(*CBR, HasSideEffect, /*HasUnwindClobber=*/false, ReadOnly,
-                      ReadNone, InNoMergeAttributedStmt,
+    UpdateAsmCallInst(*CBR, HasSideEffect, /*HasUnwindClobber=*/false,
+                      MemoryEffects, InNoMergeAttributedStmt,
                       InNoConvergentAttributedStmt, S, ResultRegTypes,
                       ArgElemTypes, *this, RegResults);
     // Because we are emitting code top to bottom, we don't have enough
@@ -3239,14 +3247,14 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   } else if (HasUnwindClobber) {
     llvm::CallBase *Result = EmitCallOrInvoke(IA, Args, "");
     UpdateAsmCallInst(*Result, HasSideEffect, /*HasUnwindClobber=*/true,
-                      ReadOnly, ReadNone, InNoMergeAttributedStmt,
+                      MemoryEffects, InNoMergeAttributedStmt,
                       InNoConvergentAttributedStmt, S, ResultRegTypes,
                       ArgElemTypes, *this, RegResults);
   } else {
     llvm::CallInst *Result =
         Builder.CreateCall(IA, Args, getBundlesForFunclet(IA));
     UpdateAsmCallInst(*Result, HasSideEffect, /*HasUnwindClobber=*/false,
-                      ReadOnly, ReadNone, InNoMergeAttributedStmt,
+                      MemoryEffects, InNoMergeAttributedStmt,
                       InNoConvergentAttributedStmt, S, ResultRegTypes,
                       ArgElemTypes, *this, RegResults);
   }
