@@ -31,6 +31,8 @@
 using clang::format::FormatStyle;
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(FormatStyle::RawStringFormat)
+LLVM_YAML_IS_SEQUENCE_VECTOR(FormatStyle::BinaryOperationBreakRule)
+LLVM_YAML_IS_SEQUENCE_VECTOR(clang::tok::TokenKind)
 
 enum BracketAlignmentStyle : int8_t {
   BAS_Align,
@@ -272,6 +274,62 @@ struct ScalarEnumerationTraits<FormatStyle::BreakBinaryOperationsStyle> {
     IO.enumCase(Value, "Never", FormatStyle::BBO_Never);
     IO.enumCase(Value, "OnePerLine", FormatStyle::BBO_OnePerLine);
     IO.enumCase(Value, "RespectPrecedence", FormatStyle::BBO_RespectPrecedence);
+  }
+};
+
+template <> struct ScalarTraits<clang::tok::TokenKind> {
+  static void output(const clang::tok::TokenKind &Value, void *,
+                     llvm::raw_ostream &Out) {
+    if (const char *Spelling = clang::tok::getPunctuatorSpelling(Value))
+      Out << Spelling;
+    else
+      Out << clang::tok::getTokenName(Value);
+  }
+
+  static StringRef input(StringRef Scalar, void *,
+                         clang::tok::TokenKind &Value) {
+    // Map operator spelling strings to tok::TokenKind.
+#define PUNCTUATOR(Name, Spelling)                                             \
+  if (Scalar == Spelling) {                                                    \
+    Value = clang::tok::Name;                                                  \
+    return {};                                                                 \
+  }
+#include "clang/Basic/TokenKinds.def"
+    return "unknown operator";
+  }
+
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+};
+
+template <> struct MappingTraits<FormatStyle::BinaryOperationBreakRule> {
+  static void mapping(IO &IO, FormatStyle::BinaryOperationBreakRule &Value) {
+    IO.mapOptional("Operators", Value.Operators);
+    // Default to OnePerLine since a per-operator rule with Never is a no-op.
+    if (!IO.outputting())
+      Value.Style = FormatStyle::BBO_OnePerLine;
+    IO.mapOptional("Style", Value.Style);
+    IO.mapOptional("MinChainLength", Value.MinChainLength);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::BreakBinaryOperationsOptions> {
+  static void enumInput(IO &IO,
+                        FormatStyle::BreakBinaryOperationsOptions &Value) {
+    IO.enumCase(Value, "Never",
+                FormatStyle::BreakBinaryOperationsOptions(
+                    {FormatStyle::BBO_Never, {}}));
+    IO.enumCase(Value, "OnePerLine",
+                FormatStyle::BreakBinaryOperationsOptions(
+                    {FormatStyle::BBO_OnePerLine, {}}));
+    IO.enumCase(Value, "RespectPrecedence",
+                FormatStyle::BreakBinaryOperationsOptions(
+                    {FormatStyle::BBO_RespectPrecedence, {}}));
+  }
+
+  static void mapping(IO &IO,
+                      FormatStyle::BreakBinaryOperationsOptions &Value) {
+    IO.mapOptional("Default", Value.Default);
+    IO.mapOptional("PerOperator", Value.PerOperator);
   }
 };
 
@@ -1725,7 +1783,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
   LLVMStyle.BreakBeforeTemplateCloser = false;
   LLVMStyle.BreakBeforeTernaryOperators = true;
-  LLVMStyle.BreakBinaryOperations = FormatStyle::BBO_Never;
+  LLVMStyle.BreakBinaryOperations = {FormatStyle::BBO_Never, {}};
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   LLVMStyle.BreakFunctionDefinitionParameters = false;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;

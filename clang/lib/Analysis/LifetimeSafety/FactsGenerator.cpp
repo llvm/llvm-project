@@ -359,6 +359,7 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
   // result should have the same loans as the pointer operand.
   if (BO->isCompoundAssignmentOp())
     return;
+  handleUse(BO->getRHS());
   if (BO->isAssignmentOp())
     handleAssignment(BO->getLHS(), BO->getRHS());
   // TODO: Handle assignments involving dereference like `*p = q`.
@@ -571,7 +572,9 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   if (!FD)
     return;
-
+  // All arguments to a function are a use of the corresponding expressions.
+  for (const Expr *Arg : Args)
+    handleUse(Arg);
   handleInvalidatingCall(Call, FD, Args);
   handleMovedArgsInCall(FD, Args);
   if (!CallList)
@@ -666,24 +669,24 @@ bool FactsGenerator::handleTestPoint(const CXXFunctionalCastExpr *FCE) {
   return false;
 }
 
-// A DeclRefExpr will be treated as a use of the referenced decl. It will be
-// checked for use-after-free unless it is later marked as being written to
-// (e.g. on the left-hand side of an assignment).
-void FactsGenerator::handleUse(const DeclRefExpr *DRE) {
-  OriginList *List = getOriginsList(*DRE);
+void FactsGenerator::handleUse(const Expr *E) {
+  OriginList *List = getOriginsList(*E);
   if (!List)
     return;
-  // Remove the outer layer of origin which borrows from the decl directly
-  // (e.g., when this is not a reference). This is a use of the underlying decl.
-  if (!DRE->getDecl()->getType()->isReferenceType())
+  // For DeclRefExpr: Remove the outer layer of origin which borrows from the
+  // decl directly (e.g., when this is not a reference). This is a use of the
+  // underlying decl.
+  if (auto *DRE = dyn_cast<DeclRefExpr>(E);
+      DRE && !DRE->getDecl()->getType()->isReferenceType())
     List = getRValueOrigins(DRE, List);
   // Skip if there is no inner origin (e.g., when it is not a pointer type).
   if (!List)
     return;
-  UseFact *UF = FactMgr.createFact<UseFact>(DRE, List);
-  CurrentBlockFacts.push_back(UF);
-  assert(!UseFacts.contains(DRE));
-  UseFacts[DRE] = UF;
+  if (!UseFacts.contains(E)) {
+    UseFact *UF = FactMgr.createFact<UseFact>(E, List);
+    CurrentBlockFacts.push_back(UF);
+    UseFacts[E] = UF;
+  }
 }
 
 void FactsGenerator::markUseAsWrite(const DeclRefExpr *DRE) {
